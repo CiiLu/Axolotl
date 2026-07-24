@@ -138,6 +138,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复皮肤选择器「添加皮肤」按钮在聚焦时强调色高亮描边部分边缘被裁剪、显示不完整的问题。',
 				},
+				{
+					'en-US':
+						"Fixed database backups being written to Modrinth's directory; backups are now stored in the launcher's own data directory.",
+					'zh-CN':
+						'修复数据库备份被写入 Modrinth 目录的问题，现在改为保存到启动器自己的应用数据目录。',
+				},
 			],
 		},
 	},
