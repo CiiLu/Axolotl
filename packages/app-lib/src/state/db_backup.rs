@@ -133,7 +133,7 @@ pub fn app_db_backup_dir() -> crate::Result<PathBuf> {
     {
         dir_info.app_identifier.clone()
     } else {
-        "red.ghs.axolotl".to_string()
+        crate::brand::BUNDLE_IDENTIFIER.to_string()
     };
 
     let base =
