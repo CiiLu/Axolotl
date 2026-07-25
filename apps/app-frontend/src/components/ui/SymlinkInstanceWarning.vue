@@ -85,48 +85,50 @@ const messages = defineMessages({
 </script>
 
 <template>
-	<!-- Collapsed: small badge -->
-	<div v-if="showBadge" class="flex">
-		<span
-			v-tooltip="formatMessage(messages.writeBody, { path: props.symlinkTarget })"
-			class="inline-flex items-center gap-1 rounded-full bg-bg-orange px-2 py-0.5 text-xs font-medium text-brand-orange"
-		>
-			<LinkIcon class="size-3" />
-			{{ formatMessage(messages.sharedBadge) }}
-		</span>
-	</div>
-	<!-- Expanded: full warning -->
-	<template v-else>
-		<Admonition
-			v-if="props.variant === 'delete'"
-			type="warning"
-			:header="formatMessage(messages.deleteHeader)"
-		>
-			{{ formatMessage(messages.deleteBody, { path: props.symlinkTarget }) }}
-		</Admonition>
-		<Admonition
-			v-else
-			type="warning"
-			:header="formatMessage(messages.writeHeader)"
-			:dismissible="effectivelyDismissible"
-			@dismiss="handleDismiss"
-		>
-			<span>
-				{{ formatMessage(messages.writeBody, { path: props.symlinkTarget }) }}
-				<template v-if="effectivelyDismissible">
-					{{ ' ' }}
-					<ButtonStyled
-						size="small"
-						type="transparent"
-						color="orange"
-						hover-color-fill="background"
-					>
-						<button type="button" @click="handleDismissPermanently">
-							{{ formatMessage(messages.dismissPermanently) }}
-						</button>
-					</ButtonStyled>
-				</template>
+	<div :class="$attrs.class">
+		<!-- Collapsed: small badge -->
+		<div v-if="showBadge" class="flex">
+			<span
+				v-tooltip="formatMessage(messages.writeBody, { path: props.symlinkTarget })"
+				class="inline-flex items-center gap-1 rounded-full bg-bg-orange px-2 py-0.5 text-xs font-medium text-brand-orange"
+			>
+				<LinkIcon class="size-3" />
+				{{ formatMessage(messages.sharedBadge) }}
 			</span>
-		</Admonition>
-	</template>
+		</div>
+		<!-- Expanded: full warning -->
+		<template v-else>
+			<Admonition
+				v-if="props.variant === 'delete'"
+				type="warning"
+				:header="formatMessage(messages.deleteHeader)"
+			>
+				{{ formatMessage(messages.deleteBody, { path: props.symlinkTarget }) }}
+			</Admonition>
+			<Admonition
+				v-else
+				type="warning"
+				:header="formatMessage(messages.writeHeader)"
+				:dismissible="effectivelyDismissible"
+				@dismiss="handleDismiss"
+			>
+				<span>
+					{{ formatMessage(messages.writeBody, { path: props.symlinkTarget }) }}
+					<template v-if="effectivelyDismissible">
+						{{ ' ' }}
+						<ButtonStyled
+							size="small"
+							type="transparent"
+							color="orange"
+							hover-color-fill="background"
+						>
+							<button type="button" @click="handleDismissPermanently">
+								{{ formatMessage(messages.dismissPermanently) }}
+							</button>
+						</ButtonStyled>
+					</template>
+				</span>
+			</Admonition>
+		</template>
+	</div>
 </template>
