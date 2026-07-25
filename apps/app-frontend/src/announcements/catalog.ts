@@ -44,6 +44,29 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Drag and drop mods, resource packs, shader packs, world saves, schematic files, and launcher instances anywhere in the launcher for instant import — no need to navigate menus.',
+					'zh-CN':
+						'新增全局拖拽功能：直接拖入模组、资源包、光影包、存档、投影文件及启动器，即可快速导入，无需在菜单中翻找。',
+				},
+				{
+					'en-US':
+						'Added schematic file management — import and manage .schematic and .litematica files alongside your mods and worlds.',
+					'zh-CN': '新增原理图管理：支持导入和管理 .schematic 及 .litematica 格式的结构投影文件。',
+				},
+				{
+					'en-US':
+						'Added mod import validation — when installing a mod, the launcher now checks if it is compatible with your current Minecraft version and mod loader, and warns you before installing if something does not match.',
+					'zh-CN':
+						'新增模组导入校验：安装模组时，启动器会自动检测其与当前 Minecraft 版本和加载器的兼容性，不匹配时会提前提醒。',
+				},
+				{
+					'en-US':
+						'Added mod metadata parsing — the launcher can now read mod name, version, supported loader, and other details directly from mod files.',
+					'zh-CN':
+						'新增 Mod 文件元数据解析：启动器可直接从模组文件中读取名称、版本、适用加载器等信息。',
+				},
+				{
+					'en-US':
 						'Installed mods in the instance content tab and the modpack content dialog now show bilingual "中文名 (English)" titles under the Simplified Chinese locale, and installed content can be searched in Chinese.',
 					'zh-CN':
 						'中文界面下，实例内容页与整合包内容弹窗的已装模组现以「中文名 (英文名)」显示，并支持用中文搜索已装内容。',
@@ -101,6 +124,17 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			changed: [
+				{
+					'en-US':
+						'Improved modpack import compatibility — more modpack formats are supported and edge cases are handled better, so more modpacks import successfully.',
+					'zh-CN':
+						'优化整合包导入兼容性：支持更多整合包格式，能更好地处理各种特殊情况，导入成功率更高。',
+				},
+				{
+					'en-US':
+						'Improved mod import compatibility — better detection and handling of different mod file types during the import process.',
+					'zh-CN': '优化模组导入兼容性：导入时能更准确地识别和处理不同类型的模组文件。',
+				},
 				{
 					'en-US':
 						'Java detection is now faster: it reads a metadata file in each installation to determine the version instead of launching a JVM for every candidate, reducing the delay of the first system scan.',
