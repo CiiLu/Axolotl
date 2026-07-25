@@ -45,7 +45,7 @@ const messages = defineMessages({
 		defaultMessage: 'Downloading Java {version}...',
 	},
 	downloadingLabel: {
-		id: 'app.settings.java.download.downloading.status',
+		id: 'app.settings.java.download.downloading-label',
 		defaultMessage: 'Downloading...',
 	},
 	extractingText: {
@@ -59,6 +59,10 @@ const messages = defineMessages({
 	noVersionsFound: {
 		id: 'app.settings.java.download.no-versions',
 		defaultMessage: 'No versions available for this distribution.',
+	},
+	versionLabel: {
+		id: 'app.settings.java.download.version-label',
+		defaultMessage: 'Java {version}',
 	},
 })
 
@@ -166,9 +170,13 @@ async function downloadVersion(version) {
 					<div
 						v-for="distro in distributions"
 						:key="distro.id"
+						role="button"
+						tabindex="0"
 						class="flex items-center gap-3 p-3 rounded-lg border border-button-border bg-button-bg hover:border-accent transition-colors cursor-pointer"
 						:class="{ 'opacity-50 pointer-events-none': downloadingVersion !== null }"
 						@click="selectDistribution(distro)"
+						@keydown.enter="selectDistribution(distro)"
+						@keydown.space.prevent="selectDistribution(distro)"
 					>
 						<div
 							class="w-9 h-9 flex items-center justify-center rounded-full bg-button-bg border border-button-border shrink-0"
@@ -215,7 +223,7 @@ async function downloadVersion(version) {
 						@click="downloadVersion(ver)"
 					>
 						<CoffeeIcon class="h-4 w-4" />
-						<span class="font-semibold text-sm tabular-nums">Java {{ ver }}</span>
+						<span class="font-semibold text-sm tabular-nums">{{ formatMessage(messages.versionLabel, { version: ver }) }}</span>
 						<SpinnerIcon
 							v-if="downloadingVersion === ver"
 							class="animate-spin h-3.5 w-3.5"

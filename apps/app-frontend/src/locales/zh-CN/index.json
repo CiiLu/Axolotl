@@ -2033,6 +2033,15 @@
 	"app.settings.java.download.extracting": {
 		"message": "正在解压文件……"
 	},
+	"app.settings.java.download.background": {
+		"message": "放在后台"
+	},
+	"app.settings.java.download.version-label": {
+		"message": "Java {version}"
+	},
+	"app.settings.java.download.cancelling": {
+		"message": "取消中……"
+	},
 	"app.settings.java.download.downloading-label": {
 		"message": "下载中……"
 	},

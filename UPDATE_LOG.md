@@ -50,3 +50,17 @@
 - 下载 Java 弹窗现使用新的 `JavaDownloadProgressModal` 进度弹窗：点击版本开始下载后，弹窗显示非可关闭的下载进度界面，包含发行商名称、版本号、状态文本和取消按钮；取消仅关闭弹窗，下载在后台继续进行。
 - 重构 `JavaDownloadProgressModal` 的 `defineExpose` API：`show()` 不再返回 Promise，改为仅显示弹窗并初始化状态文本为「Preparing download...」；`complete(path)` 和 `close()` 分别用于下载成功和失败时关闭弹窗。
 - 新增 Java 下载进度弹窗 i18n 中英文消息：progress-title、progress-info、preparing、extracting、downloading-label。
+
+- 修复 Java 版本迁移 SQL 安全性：为 `CREATE TABLE` 添加 `IF NOT EXISTS`、为 `DROP TABLE` 添加 `IF EXISTS` 守卫，`INSERT` 改为 `INSERT OR REPLACE` 并增加 `GROUP BY path` 以处理重复路径边缘情况。
+- 为 `remove_java_version`、`list_java_distribution_versions`、`auto_install_java_distribution`、`cancel_java_download` 四个公开函数添加 `///` 文档注释。
+
+- 修复 `DownloadJavaModal.vue` 中 i18n 消息 ID 不匹配问题：`app.settings.java.download.downloading.status` → `app.settings.java.download.downloading-label`，与 locale 中已有的键名保持一致。
+- 补充 Java 下载进度弹窗缺失的 i18n 消息：新增 `app.settings.java.download.background` 和 `app.settings.java.download.cancelling` 的中英文条目。
+- 修复 `DownloadJavaModal.vue` 中版本按钮硬编码的 `Java {{ ver }}` 前缀，改为通过 `formatMessage(messages.versionLabel, { version: ver })` 使用 i18n 消息。
+
+- 为 Java 管理组件中的纯图标按钮添加 `aria-label` 无障碍标签：
+  - `settings/JavaSettings.vue`：删除按钮添加 `aria-label="Delete Java version"`
+  - `instance_settings/JavaSettings.vue`：单选按钮容器添加 `role="radio"` 和 `:aria-checked`，测试按钮添加 `aria-label="Test Java path"`，检测按钮添加 `aria-label="Detect Java installations"`
+  - `JavaDownloadProgressModal.vue`：咖啡图标容器添加 `aria-hidden="true"`
+  - `JavaSelector.vue`：测试按钮添加 `aria-label="Test Java installation"`，安装按钮添加 `aria-label="Install recommended Java"`，检测按钮添加 `aria-label="Detect Java"`，浏览按钮添加 `aria-label="Browse for Java executable"`
+  - `DownloadJavaModal.vue`：发行版选择卡片添加 `role="button" tabindex="0"` 及键盘事件处理

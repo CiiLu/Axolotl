@@ -210,6 +210,8 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 			<template #cell-_select="{ row }">
 				<div class="flex items-center justify-center">
 					<div
+						role="radio"
+						:aria-checked="selectedVersion === row._select"
 						class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
 						:class="selectedVersion === row._select ? 'border-accent bg-accent' : 'border-button-border'"
 					>
@@ -248,7 +250,7 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 					:color="!hoveringTest && !testingJava ? (javaTestResult === true ? 'green' : 'red') : 'standard'"
 					color-fill="text"
 				>
-					<button :disabled="testingJava" @click="testJavaInstallation(activePath, effectiveJavaVersion, true)" @mouseenter="hoveringTest = true" @mouseleave="hoveringTest = false">
+					<button aria-label="Test Java path" :disabled="testingJava" @click="testJavaInstallation(activePath, effectiveJavaVersion, true)" @mouseenter="hoveringTest = true" @mouseleave="hoveringTest = false">
 						<SpinnerIcon v-if="testingJava" class="animate-spin h-4 w-4" />
 						<CheckCircleIcon v-else-if="javaTestResult === true && !hoveringTest" class="h-4 w-4" />
 						<XCircleIcon v-else-if="javaTestResult !== true && !hoveringTest" class="h-4 w-4" />
@@ -257,7 +259,7 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 				</ButtonStyled>
 			</div>
 			<div class="flex gap-2">
-				<ButtonStyled><button @click="handleDetectJava"><SearchIcon /> {{ formatMessage(messages.detect) }}</button></ButtonStyled>
+				<ButtonStyled><button aria-label="Detect Java installations" @click="handleDetectJava"><SearchIcon /> {{ formatMessage(messages.detect) }}</button></ButtonStyled>
 				<ButtonStyled><button @click="handleBrowseJava"><FolderSearchIcon /> {{ formatMessage(messages.browse) }}</button></ButtonStyled>
 			</div>
 		</div>

@@ -36,6 +36,7 @@ pub async fn get_java_versions() -> crate::Result<Vec<JavaVersion>> {
     JavaVersion::get_all(&state.pool).await
 }
 
+/// Lists available Java major versions from the specified distribution API.
 pub async fn list_java_distribution_versions(
     distribution: String,
 ) -> crate::Result<Vec<u32>> {
@@ -94,10 +95,7 @@ pub async fn list_java_distribution_versions(
             versions.dedup();
             Ok(versions)
         }
-        _ => Err(crate::Error::from(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            format!("Unknown distribution: {distribution}"),
-        ))),
+        _ => Err(crate::ErrorKind::InputError(format!("Unknown distribution: {distribution}")).into()),
     }
 }
 
@@ -107,6 +105,7 @@ pub async fn set_java_version(java_version: JavaVersion) -> crate::Result<()> {
     Ok(())
 }
 
+/// Removes a configured Java version by its executable path.
 pub async fn remove_java_version(path: String) -> crate::Result<()> {
     let state = State::get().await?;
     JavaVersion::delete(&path, &state.pool).await
@@ -349,6 +348,7 @@ pub async fn auto_install_java_with_reporter(
     auto_install_java_inner(java_version, false, Some(reporter)).await
 }
 
+/// Downloads and installs a Java runtime from the specified distribution for the given version.
 pub async fn auto_install_java_distribution(
     distribution: String,
     java_version: u32,
@@ -359,7 +359,11 @@ pub async fn auto_install_java_distribution(
     // Set up a cancellation channel so that cancel_java_download() can abort
     // the running install task.
     let (tx, mut rx) = tokio::sync::oneshot::channel::<()>();
-    *JAVA_CANCEL_TX.lock().unwrap() = Some(tx);
+    let Ok(mut guard) = JAVA_CANCEL_TX.lock() else {
+        tracing::warn!("JAVA_CANCEL_TX lock poisoned");
+        return Err(crate::ErrorKind::InputError("JAVA_CANCEL_TX lock poisoned".to_string()).into());
+    };
+    *guard = Some(tx);
 
     let mut handle = tokio::spawn(async move {
         match distribution.as_str() {
@@ -389,7 +393,11 @@ pub async fn auto_install_java_distribution(
     tokio::select! {
         result = &mut handle => {
             // Download finished (or failed) normally — clear the cancel handle
-            *JAVA_CANCEL_TX.lock().unwrap() = None;
+            let Ok(mut guard) = JAVA_CANCEL_TX.lock() else {
+                tracing::warn!("JAVA_CANCEL_TX lock poisoned");
+                return Err(crate::ErrorKind::InputError("JAVA_CANCEL_TX lock poisoned".to_string()).into());
+            };
+            *guard = None;
             result.map_err(|e| {
                 crate::Error::from(crate::ErrorKind::InputError(
                     format!("Java install task failed: {e}"),
@@ -417,10 +425,13 @@ static JAVA_INSTALL_LOCK: LazyLock<tokio::sync::Mutex<()>> =
 static JAVA_CANCEL_TX: LazyLock<Mutex<Option<tokio::sync::oneshot::Sender<()>>>> =
     LazyLock::new(|| Mutex::new(None));
 
-/// Signal the currently running Java download to cancel. Has no effect if
-/// no download is in progress.
+/// Cancels the currently running Java download, if any.
 pub fn cancel_java_download() {
-    if let Some(tx) = JAVA_CANCEL_TX.lock().unwrap().take() {
+    let Ok(mut guard) = JAVA_CANCEL_TX.lock() else {
+        tracing::warn!("JAVA_CANCEL_TX lock poisoned");
+        return;
+    };
+    if let Some(tx) = guard.take() {
         let _ = tx.send(());
     }
 }
@@ -1334,18 +1345,12 @@ async fn install_adoptium_api_runtime(
         "linux" => "linux",
         "macos" => "mac",
         "windows" => "windows",
-        other => return Err(crate::Error::from(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            format!("Unsupported platform: {other}"),
-        ))),
+        other => return Err(crate::ErrorKind::InputError(format!("Unsupported platform: {other}")).into()),
     };
     let arch = match std::env::consts::ARCH {
         "x86_64" => "x64",
         "aarch64" => "aarch64",
-        other => return Err(crate::Error::from(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            format!("Unsupported arch: {other}"),
-        ))),
+        other => return Err(crate::ErrorKind::InputError(format!("Unsupported arch: {other}")).into()),
     };
 
     let assets_url = format!(
@@ -1533,19 +1538,13 @@ async fn install_semeru_runtime(
         "linux" => "linux",
         "macos" => "mac",
         "windows" => "windows",
-        other => return Err(crate::Error::from(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            format!("Unsupported platform: {other}"),
-        ))),
+        other => return Err(crate::ErrorKind::InputError(format!("Unsupported platform: {other}")).into()),
     };
 
     let arch_tag = match std::env::consts::ARCH {
         "x86_64" => "x64",
         "aarch64" => "aarch64",
-        other => return Err(crate::Error::from(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            format!("Unsupported arch: {other}"),
-        ))),
+        other => return Err(crate::ErrorKind::InputError(format!("Unsupported arch: {other}")).into()),
     };
 
     // IBM Semeru asset naming: ibm-semeru-open-jdk_{arch}_{os}_{version}.tar.gz

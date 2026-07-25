@@ -29,6 +29,7 @@
 			>
 				<button
 					class="!shadow-none"
+					aria-label="Test Java installation"
 					:disabled="testingJava || props.disabled"
 					@click="runTest(props.modelValue?.path)"
 					@mouseenter="!props.disabled && (hoveringTest = true)"
@@ -51,6 +52,7 @@
 						testingJavaSuccess === true ? formatMessage(messages.alreadyInstalled) : undefined
 					"
 					class="!shadow-none"
+					aria-label="Install recommended Java"
 					:disabled="props.disabled || installingJava || testingJavaSuccess === true"
 					@click="reinstallJava"
 				>
@@ -63,7 +65,7 @@
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
-				<button class="!shadow-none" :disabled="props.disabled" @click="autoDetect">
+				<button class="!shadow-none" aria-label="Detect Java" :disabled="props.disabled" @click="autoDetect">
 					<SearchIcon />
 					{{ formatMessage(messages.detect) }}
 				</button>
@@ -79,7 +81,7 @@
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
-				<button class="!shadow-none" :disabled="props.disabled" @click="handleJavaFileInput()">
+				<button class="!shadow-none" aria-label="Browse for Java executable" :disabled="props.disabled" @click="handleJavaFileInput()">
 					<FolderSearchIcon />
 					{{ formatMessage(messages.browse) }}
 				</button>

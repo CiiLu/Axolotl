@@ -82,6 +82,7 @@ async function handleCancel() {
 		<div class="flex flex-col items-center gap-4 py-4">
 			<div
 				class="w-16 h-16 flex items-center justify-center rounded-full bg-button-bg border-2 border-accent animate-pulse"
+				aria-hidden="true"
 			>
 				<CoffeeIcon class="h-8 w-8 text-accent" />
 			</div>
