@@ -131,6 +131,7 @@ export function setupCreationModal(notificationManager: AbstractWebNotificationM
 					launcherName: string
 					path: string
 					instanceName: string
+					instancePath: string
 				}> = []
 				for (const [launcherName, instanceSet] of Object.entries(
 					config.importSelectedInstances.value,
@@ -138,11 +139,13 @@ export function setupCreationModal(notificationManager: AbstractWebNotificationM
 					const launcher = config.importLaunchers.value.find((l) => l.name === launcherName)
 					if (!launcher || instanceSet.size === 0) continue
 					for (const name of instanceSet) {
+						const instanceData = launcher.instances.find((i) => i.name === name)
 						instanceEntries.push({
 							launcherType: launcher.launcherType ?? launcher.name,
 							launcherName: launcher.name,
 							path: launcher.path,
 							instanceName: name,
+							instancePath: instanceData?.path ?? '',
 						})
 					}
 				}
@@ -190,6 +193,7 @@ export function setupCreationModal(notificationManager: AbstractWebNotificationM
 						entry.path,
 						entry.instanceName,
 						useSymlink,
+						entry.instancePath,
 					).catch(handleError)
 				}
 				trackEvent('InstanceCreate', { source: 'CreationModalImport' })

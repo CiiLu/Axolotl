@@ -63,6 +63,27 @@ pub async fn import_instance(
         launcher_type,
         base_path,
         instance_folder,
+        instance_path: None,
+        symlink,
+    })
+    .await
+}
+
+/// Like [`import_instance`] but with a pre-resolved filesystem path.
+/// Used by the frontend when the path is already known from scanning,
+/// avoiding redundant config/registry re-resolution.
+pub async fn import_instance_with_path(
+    launcher_type: crate::api::pack::import::ImportLauncherType,
+    base_path: PathBuf,
+    instance_folder: String,
+    instance_path: Option<String>,
+    symlink: bool,
+) -> crate::Result<InstallJobSnapshot> {
+    start(InstallRequest::ImportInstance {
+        launcher_type,
+        base_path,
+        instance_folder,
+        instance_path,
         symlink,
     })
     .await
@@ -720,6 +741,7 @@ async fn run_request(
             launcher_type,
             base_path,
             instance_folder,
+            instance_path,
             symlink,
         } => {
             tracing::debug!(
@@ -748,6 +770,7 @@ async fn run_request(
                 launcher_type,
                 base_path,
                 instance_folder,
+                instance_path,
                 InstallProgressReporter::new(job_id, job_state.clone()),
                 symlink,
             )

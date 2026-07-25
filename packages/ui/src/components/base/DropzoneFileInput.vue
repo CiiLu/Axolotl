@@ -12,6 +12,7 @@
 		@drop.prevent="handleDrop"
 	>
 		<div
+			v-if="!noIconBox"
 			:class="[
 				'grid place-content-center  text-brand border-brand border-solid border bg-highlight-green',
 				size === 'small' ? 'w-10 h-10' : 'h-14 w-14',
@@ -21,6 +22,12 @@
 			<FolderUpIcon
 				aria-hidden="true"
 				:class="['text-brand', size === 'small' ? 'w-6 h-6' : 'w-8 h-8']"
+			/>
+		</div>
+		<div v-else class="grid place-content-center">
+			<FolderUpIcon
+				aria-hidden="true"
+				:class="['text-secondary', size === 'small' ? 'w-6 h-6' : 'w-8 h-8']"
 			/>
 		</div>
 
@@ -36,9 +43,10 @@
 		<input
 			ref="fileInput"
 			type="file"
-			:multiple="multiple"
-			:accept="accept"
+			:multiple="directory ? false : multiple"
+			:accept="directory ? undefined : accept"
 			:disabled="disabled"
+			:webkitdirectory="directory || undefined"
 			class="hidden"
 			@change="handleChange"
 		/>
@@ -71,11 +79,15 @@ const props = withDefaults(
 		shouldAlwaysReset?: boolean
 		disabled?: boolean
 		size?: 'small' | 'medium' | 'large'
+		directory?: boolean
+		noIconBox?: boolean
 	}>(),
 	{
 		primaryPrompt: 'Drop files here or click to upload',
 		secondaryPrompt: 'Only supported file types will be accepted',
 		size: 'large',
+		directory: false,
+		noIconBox: false,
 	},
 )
 

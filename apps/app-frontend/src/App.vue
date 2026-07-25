@@ -1020,12 +1020,12 @@ async function handleDropConfirm(type: string) {
 	const isLauncherImport =
 		classification?.item_type === 'launcher' || classification?.item_type === 'hmcl_launcher'
 
-	if (!isLauncherImport && !classification?.file_path) {
-		dropDebug('handleDropConfirm: no filePath and not a launcher import, aborting')
+	if (!isLauncherImport && !classification?.file_path && !dropFilePath.value) {
+		dropDebug('handleDropConfirm: no filePath available (classification and dropFilePath both empty), aborting')
 		return
 	}
 
-	const filePath = classification.file_path
+	const filePath = classification?.file_path ?? dropFilePath.value
 	const fileName = filePath?.split('/').pop()
 		?? classification.base_path?.split(/[/\\]/).pop()
 		?? 'file'

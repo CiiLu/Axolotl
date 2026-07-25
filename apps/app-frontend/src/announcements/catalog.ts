@@ -50,20 +50,28 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Transient Windows file locks are now retried during downloads, and persistent lock errors identify the process holding the file when Windows can report it.',
 					'zh-CN':
-						'下载时遇到短暂的 Windows 文件占用将自动重试；若持续失败，Windows 能识别时会在错误中显示占用文件的进程。',
+						'下载时遇到短暂的 Windows 文件占用将自动重试；若持续失败,Windows 能识别时会在错误中显示占用文件的进程。',
 				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Changed the way the module loader is recognized when importing instances, using a more aggressive strategy',
-					'zh-CN': '更改导入实例时模组加载器的识别方式，采用更激进的策略',
+					'zh-CN': '更改导入实例时模组加载器的识别方式,采用更激进的策略。',
 				},
 				{
 					'en-US':
-						'Changed the way the import type is detected, using a more conservative strategy',
-					'zh-CN': '更改导入类型探测的方式，采用更保守的策略',
+						'Changed some frontend code left by vibe and replaced it with native components',
+					'zh-CN':
+						'修改了一些vibe留下的前端代码,换为原生组件。',
 				},
+
+				{
+					'en-US':
+						'Changed the way the import type is detected, using a more conservative strategy',
+					'zh-CN':
+						'更改导入类型探测的方式,采用更保守的策略。',
+				}
 			],
 		},
 	},

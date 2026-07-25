@@ -3222,7 +3222,7 @@
 		"message": "全新创建"
 	},
 	"create.new.description": {
-		"message": "创建一个新的 Minecraft 实例。"
+		"message": "创建一个新的 Minecraft 实例，自选模组加载器。"
 	},
 	"create.import.title": {
 		"message": "导入已有"

@@ -65,33 +65,13 @@
 
 		<!-- ── Right panel: Drop zone ── -->
 		<div class="flex flex-1 flex-col gap-3">
-			<!-- Drop box (fills height) -->
-			<div
-				class="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-surface-4 bg-surface-2 p-6"
-			>
-				<button
-					class="flex cursor-pointer flex-col items-center justify-center gap-4 rounded-xl py-4 transition-colors"
-					:class="isDragOver ? 'bg-brand-highlight' : 'hover:bg-surface-3'"
-					:disabled="ctx.finishDisabled.value"
-					@click="triggerFileInput"
-					@dragover.prevent="onDragOver"
-					@dragleave.prevent="onDragLeave"
-					@drop.prevent="onDrop"
-				>
-					<div
-						class="flex size-14 items-center justify-center rounded-full border-2 border-dashed"
-						:class="isDragOver ? 'border-brand bg-brand-highlight' : 'border-surface-5'"
-					>
-						<FolderUpIcon class="size-7" :class="isDragOver ? 'text-brand' : 'text-secondary'" />
-					</div>
-					<span
-						class="text-sm text-center"
-						:class="isDragOver ? 'text-brand font-medium' : 'text-secondary'"
-					>
-						{{ formatMessage(messages.dropZoneClick) }}
-					</span>
-				</button>
-			</div>
+			<DropzoneFileInput
+				size="small"
+				:secondary-prompt="formatMessage(messages.dropZoneClick)"
+				directory
+				no-icon-box
+				@change="onDropzoneChange"
+			/>
 
 			<!-- Launcher icons + caption (below drop box) -->
 			<div class="flex flex-col items-center gap-2">
@@ -118,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { CompassIcon, FolderUpIcon, ImportIcon, RightArrowIcon } from '@modrinth/assets'
+import { CompassIcon, ImportIcon, RightArrowIcon } from '@modrinth/assets'
 import { commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
 import { defineAsyncComponent, h, onMounted, ref, watch } from 'vue'
 
@@ -128,6 +108,7 @@ import { injectFilePicker } from '../../../../providers'
 import ButtonStyled from '../../../base/ButtonStyled.vue'
 import Card from '../../../base/Card.vue'
 import Combobox from '../../../base/Combobox.vue'
+import DropzoneFileInput from '../../../base/DropzoneFileInput.vue'
 import { injectCreationFlowContext } from '../creation-flow-context'
 
 const debug = useDebugLogger('ImportInstanceStage')
@@ -136,7 +117,6 @@ const filePicker = injectFilePicker()!
 const { formatMessage } = useVIntl()
 
 const searchLoading = ref(false)
-const isDragOver = ref(false)
 
 // ── Launcher icons (3, arc arrangement) ──
 // @ts-ignore — Vite resolves .ico as static asset URL
@@ -184,20 +164,9 @@ const messages = defineMessages({
 	},
 })
 
-// ── Drop zone handlers ──
+// ── Drop zone handler (via DropzoneFileInput) ──
 
-function onDragOver() {
-	isDragOver.value = true
-}
-
-function onDragLeave() {
-	isDragOver.value = false
-}
-
-function onDrop(event: DragEvent) {
-	isDragOver.value = false
-
-	const files = event.dataTransfer?.files
+function onDropzoneChange(files: File[]) {
 	if (!files || files.length === 0) return
 
 	const file = files[0]
