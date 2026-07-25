@@ -82,6 +82,7 @@ function handleImportExisting() {
 					:icon="SparklesIcon"
 					:title="formatMessage(messages.newTitle)"
 					:description="formatMessage(messages.newDescription)"
+					no-icon-box
 					@click="handleStartFresh"
 				/>
 
@@ -89,6 +90,7 @@ function handleImportExisting() {
 					:icon="FolderOpenIcon"
 					:title="formatMessage(messages.importTitle)"
 					:description="formatMessage(messages.importDescription)"
+					no-icon-box
 					@click="handleImportExisting"
 				/>
 			</div>

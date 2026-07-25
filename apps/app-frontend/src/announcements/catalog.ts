@@ -268,6 +268,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added OptiFine support — declared OptiFine in a modpack is automatically installed; standalone, or as a mod alongside other loaders.',
 					'zh-CN': '新增 OptiFine 支持：整合包声明 OptiFine 时自动安装——单独存在时作为加载器。',
 				},
+				{
+					'en-US':
+						'Added drag-and-drop import: drop mods, resource packs, shader packs, world saves, schematics, and launcher instances directly onto the launcher for instant import.',
+					'zh-CN':
+						'新增拖放导入功能：直接拖入模组、资源包、光影包、存档、投影文件及启动器实例，即可快速导入。',
+				},
 			],
 			changed: [
 				{
@@ -285,6 +291,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Greatly improved modpack import compatibility — now handles CurseForge, MCBBS, HMCL, MultiMC, PCL launcher-bundled archives and various non-standard pack formats.',
 					'zh-CN':
 						'大大增强整合包导入兼容性，兼容 CurseForge、MCBBS、HMCL、MultiMC、PCL 等导出的附带启动器的整合包以及各种不完全符合规范的整合包格式。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed world save import failing with "Invalid instance ID" error due to incorrect UUID parsing of local instance IDs.',
+					'zh-CN':
+						'修复世界存档导入时因实例 ID 的 local: 前缀被错误地当作 UUID 解析而导致的导入失败问题。',
+				},
+				{
+					'en-US':
+						'Fixed "[object Object]" being displayed in error notifications instead of the actual error message.',
+					'zh-CN': '修复错误通知中显示 "[object Object]" 而非真实错误信息的问题。',
 				},
 			],
 		},
