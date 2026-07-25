@@ -41,6 +41,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.5.3',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Added translation for new entries, allowing the translation feature to be applied to titles and descriptions outside of entries.',
+					'zh-CN': '新增条目翻译功能，让翻译功能可以应用到条目外的标题和介绍。',
+				},
+			],
 			fixed: [
 				{
 					'en-US': 'Urgent fix for critical bugs in the previous version',
