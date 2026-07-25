@@ -1,23 +1,27 @@
 <template>
-	<div class="flex flex-col gap-2 p-3">
-		<h1 class="text-lg font-semibold text-contrast">
+	<div class="flex flex-col gap-3 p-4">
+		<h1 class="text-xl font-bold text-contrast">
 			{{ formatMessage(messages.title) }}
 		</h1>
 
-		<div class="flex flex-col gap-1.5">
+		<div class="grid grid-cols-1 gap-2 md:grid-cols-2">
 			<Card v-for="section in sections" :key="section.key">
-				<div class="flex items-start gap-2.5 p-2.5">
+				<div class="flex items-center gap-3 p-2.5">
 					<div
-						class="flex size-9 shrink-0 items-center justify-center rounded-lg border border-surface-5 bg-surface-3"
+						class="flex size-8 shrink-0 items-center justify-center rounded-lg border border-surface-5 bg-surface-3"
 					>
-						<component :is="section.icon" class="size-4.5 text-brand" stroke-width="1.5" />
+						<component :is="section.icon" class="size-5 text-brand" stroke-width="1.5" />
 					</div>
-					<div class="flex flex-col gap-0.5 min-w-0">
-						<h3 class="text-sm font-semibold text-contrast">
+					<div class="flex min-w-0 flex-col gap-0.5">
+						<h3 class="text-sm font-semibold leading-tight text-contrast">
 							{{ formatMessage(section.titleMsg) }}
 						</h3>
-						<p class="text-xs text-secondary">{{ formatMessage(section.descMsg) }}</p>
-						<span class="text-[10px] text-tertiary">{{ formatMessage(section.formatsMsg) }}</span>
+						<p class="text-xs leading-normal text-secondary">
+							{{ formatMessage(section.descMsg) }}
+						</p>
+						<span class="text-[11px] leading-normal text-tertiary">
+							{{ formatMessage(section.formatsMsg) }}
+						</span>
 					</div>
 				</div>
 			</Card>

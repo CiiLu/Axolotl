@@ -3156,7 +3156,7 @@
 		"message": "从其他启动器（MultiMC、Prism Launcher等）拖放文件夹来导入 Minecraft 实例。或者拖入 HMCL、PCL、PCL-CE 的启动器"
 	},
 	"drop.help.instances-formats": {
-		"message": "MultiMC / Prism Launcher / PolyMC 实例文件夹"
+		"message": "（MultiMC / Prism Launcher / PolyMC） 实例文件夹或直接放入 （HMCL / PCL / PCL-CE ）启动器。"
 	},
 	"drop.help.mods-title": {
 		"message": "模组"
@@ -3171,7 +3171,7 @@
 		"message": "整合包"
 	},
 	"drop.help.modpacks-desc": {
-		"message": "拖放整合包 ZIP/MRPACK 文件来创建新实例。"
+		"message": "拖放整合包 ZIP/MRPACK 文件来导入整合包。"
 	},
 	"drop.help.modpacks-formats": {
 		"message": ".mrpack / .zip"
@@ -3201,7 +3201,7 @@
 		"message": "拖放存档文件夹来导入到实例。"
 	},
 	"drop.help.worlds-formats": {
-		"message": "Minecraft 存档文件夹（level.dat）"
+		"message": "Minecraft 存档文件夹。"
 	},
 	"drop.help.schematics-title": {
 		"message": "投影"
