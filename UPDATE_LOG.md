@@ -63,4 +63,8 @@
   - `instance_settings/JavaSettings.vue`：单选按钮容器添加 `role="radio"` 和 `:aria-checked`，测试按钮添加 `aria-label="Test Java path"`，检测按钮添加 `aria-label="Detect Java installations"`
   - `JavaDownloadProgressModal.vue`：咖啡图标容器添加 `aria-hidden="true"`
   - `JavaSelector.vue`：测试按钮添加 `aria-label="Test Java installation"`，安装按钮添加 `aria-label="Install recommended Java"`，检测按钮添加 `aria-label="Detect Java"`，浏览按钮添加 `aria-label="Browse for Java executable"`
-  - `DownloadJavaModal.vue`：发行版选择卡片添加 `role="button" tabindex="0"` 及键盘事件处理
+   - `DownloadJavaModal.vue`：发行版选择卡片添加 `role="button" tabindex="0"` 及键盘事件处理
+
+- 修复 `DownloadJavaModal.vue` 中提取状态 i18n 消息 ID `app.settings.java.download.extracting.status` → `app.settings.java.download.extracting`，与 `JavaDownloadProgressModal.vue` 使用的已有键名保持一致；同时在 en-US 和 zh-CN 中添加该键名作为后备。
+
+- 修复 `JAVA_CANCEL_TX` 使用 `std::sync::Mutex` 导致 Tauri 异步命令 `Send` 约束失败的问题：改为 `tokio::sync::Mutex` 并使用 `.lock().await`；同步函数 `cancel_java_download` 改为异步函数，其调用者 `apps/app/src/api/jre.rs` 同步调用改为 `.await`。

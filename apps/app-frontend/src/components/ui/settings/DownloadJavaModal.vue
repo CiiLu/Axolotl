@@ -49,7 +49,7 @@ const messages = defineMessages({
 		defaultMessage: 'Downloading...',
 	},
 	extractingText: {
-		id: 'app.settings.java.download.extracting.status',
+		id: 'app.settings.java.download.extracting',
 		defaultMessage: 'Extracting files...',
 	},
 	loadingVersions: {

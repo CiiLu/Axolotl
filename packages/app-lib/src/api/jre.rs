@@ -359,10 +359,7 @@ pub async fn auto_install_java_distribution(
     // Set up a cancellation channel so that cancel_java_download() can abort
     // the running install task.
     let (tx, mut rx) = tokio::sync::oneshot::channel::<()>();
-    let Ok(mut guard) = JAVA_CANCEL_TX.lock() else {
-        tracing::warn!("JAVA_CANCEL_TX lock poisoned");
-        return Err(crate::ErrorKind::InputError("JAVA_CANCEL_TX lock poisoned".to_string()).into());
-    };
+    let mut guard = JAVA_CANCEL_TX.lock().await;
     *guard = Some(tx);
 
     let mut handle = tokio::spawn(async move {
@@ -393,10 +390,7 @@ pub async fn auto_install_java_distribution(
     tokio::select! {
         result = &mut handle => {
             // Download finished (or failed) normally — clear the cancel handle
-            let Ok(mut guard) = JAVA_CANCEL_TX.lock() else {
-                tracing::warn!("JAVA_CANCEL_TX lock poisoned");
-                return Err(crate::ErrorKind::InputError("JAVA_CANCEL_TX lock poisoned".to_string()).into());
-            };
+            let mut guard = JAVA_CANCEL_TX.lock().await;
             *guard = None;
             result.map_err(|e| {
                 crate::Error::from(crate::ErrorKind::InputError(
@@ -422,15 +416,12 @@ const MOJANG_RUNTIME_INDEX_URL: &str = "https://piston-meta.mojang.com/v1/produc
 static JAVA_INSTALL_LOCK: LazyLock<tokio::sync::Mutex<()>> =
     LazyLock::new(|| tokio::sync::Mutex::new(()));
 
-static JAVA_CANCEL_TX: LazyLock<Mutex<Option<tokio::sync::oneshot::Sender<()>>>> =
-    LazyLock::new(|| Mutex::new(None));
+static JAVA_CANCEL_TX: LazyLock<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<()>>>> =
+    LazyLock::new(|| tokio::sync::Mutex::new(None));
 
 /// Cancels the currently running Java download, if any.
-pub fn cancel_java_download() {
-    let Ok(mut guard) = JAVA_CANCEL_TX.lock() else {
-        tracing::warn!("JAVA_CANCEL_TX lock poisoned");
-        return;
-    };
+pub async fn cancel_java_download() {
+    let mut guard = JAVA_CANCEL_TX.lock().await;
     if let Some(tx) = guard.take() {
         let _ = tx.send(());
     }

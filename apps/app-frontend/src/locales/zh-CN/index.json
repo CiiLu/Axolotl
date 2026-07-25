@@ -2033,6 +2033,9 @@
 	"app.settings.java.download.extracting": {
 		"message": "正在解压文件……"
 	},
+	"app.settings.java.download.extracting.status": {
+		"message": "正在解压文件……"
+	},
 	"app.settings.java.download.background": {
 		"message": "放在后台"
 	},

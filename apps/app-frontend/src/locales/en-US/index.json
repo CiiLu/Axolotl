@@ -2105,6 +2105,9 @@
 	"app.settings.java.download.extracting": {
 		"message": "Extracting files..."
 	},
+	"app.settings.java.download.extracting.status": {
+		"message": "Extracting files..."
+	},
 	"app.settings.java.download.background": {
 		"message": "Background"
 	},

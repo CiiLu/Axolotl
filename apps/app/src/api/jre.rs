@@ -82,7 +82,7 @@ pub async fn jre_auto_install_java_distribution(distribution: String, java_versi
 
 #[tauri::command]
 pub async fn cancel_java_download() -> Result<()> {
-    jre::cancel_java_download();
+    jre::cancel_java_download().await;
     Ok(())
 }
 
