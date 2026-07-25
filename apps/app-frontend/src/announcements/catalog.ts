@@ -33,6 +33,25 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.5.3',
+		version: '1.5.3',
+		publishedAt: '2026-07-25',
+		title: {
+			'en-US': 'Axolotl Launcher 1.5.3',
+			'zh-CN': 'Axolotl Launcher 1.5.3',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed legacy Forge installations failing when dependencies use historical Maven coordinates, with trusted repository fallbacks for future metadata variations.',
+					'zh-CN':
+						'修复旧版 Forge 因依赖使用历史 Maven 坐标而安装失败的问题，并为未来的元数据差异增加可信仓库回退。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.5.2',
 		version: '1.5.2',
 		publishedAt: '2026-07-25',
