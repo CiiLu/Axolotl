@@ -135,11 +135,23 @@ pub fn classify_dropped_item(path: &Path) -> DroppedItemType {
 
     // Step 5: Directory.
     if path.is_dir() {
-        return classify_folder(path);
+        let result = classify_folder(path);
+        tracing::debug!(
+            "classify_dropped_item: directory path={} result={:?}",
+            path.display(),
+            result
+        );
+        return result;
     }
 
     // Step 6: File (non-JAR, non-EXE, non-ZIP).
-    classify_file(path)
+    let result = classify_file(path);
+    tracing::debug!(
+        "classify_dropped_item: file path={} result={:?}",
+        path.display(),
+        result
+    );
+    result
 }
 
 // ─── Step 2: ZIP archive classification ────────────────────────────────────
@@ -554,23 +566,50 @@ fn classify_folder_content(path: &Path) -> DroppedItemType {
         let versions_dir = path.join("versions");
         let has_version_json = if versions_dir.is_dir() {
             match std::fs::read_dir(&versions_dir) {
-                Ok(mut dir) => dir.any(|e| {
-                    e.ok().is_some_and(|entry| {
-                        let p = entry.path();
-                        if p.is_dir() {
-                            let id = p
-                                .file_name()
-                                .and_then(|n| n.to_str())
-                                .unwrap_or("");
-                            p.join(format!("{id}.json")).exists()
-                        } else {
-                            false
-                        }
-                    })
-                }),
-                Err(_) => false,
+                Ok(mut dir) => {
+                    let found = dir.any(|e| {
+                        e.ok().is_some_and(|entry| {
+                            let p = entry.path();
+                            if p.is_dir() {
+                                let id = p
+                                    .file_name()
+                                    .and_then(|n| n.to_str())
+                                    .unwrap_or("");
+                                let json_path = p.join(format!("{id}.json"));
+                                let exists = json_path.exists();
+                                tracing::debug!(
+                                    "classify_folder_content: versions subdir={} json={} exists={}",
+                                    id,
+                                    json_path.display(),
+                                    exists
+                                );
+                                exists
+                            } else {
+                                false
+                            }
+                        })
+                    });
+                    tracing::debug!(
+                        "classify_folder_content: versions_dir={} has_version_json={}",
+                        versions_dir.display(),
+                        found
+                    );
+                    found
+                }
+                Err(e) => {
+                    tracing::debug!(
+                        "classify_folder_content: versions_dir={} read_dir_err={}",
+                        versions_dir.display(),
+                        e
+                    );
+                    false
+                }
             }
         } else {
+            tracing::debug!(
+                "classify_folder_content: versions_dir={} does not exist",
+                versions_dir.display()
+            );
             false
         };
 
@@ -604,7 +643,7 @@ fn classify_folder_content(path: &Path) -> DroppedItemType {
 
     if is_instance {
         return DroppedItemType::Launcher {
-            launcher_type: ImportLauncherType::Unknown,
+            launcher_type: ImportLauncherType::Generic,
             base_path: path.to_path_buf(),
         };
     }

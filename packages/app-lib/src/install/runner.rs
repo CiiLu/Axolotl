@@ -722,6 +722,10 @@ async fn run_request(
             instance_folder,
             symlink,
         } => {
+            tracing::debug!(
+                "InstallRequest::ImportInstance: launcher_type={launcher_type} base_path={} instance_folder={instance_folder} symlink={symlink}",
+                base_path.display()
+            );
             let Some(instance_id) = current_instance_id(job_state) else {
                 return Err(crate::ErrorKind::InputError(
                     "Install job is missing its instance id".to_string(),

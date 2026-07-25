@@ -426,7 +426,7 @@ async fn import_instance_inner(
     symlink: bool,
 ) -> crate::Result<()> {
     tracing::debug!(
-        "Importing instance from {instance_folder} (symlink={symlink})"
+        "Importing instance from {instance_folder} (symlink={symlink}, launcher_type={launcher_type})"
     );
     let details = InstallPhaseDetails::Import {
         launcher_type,

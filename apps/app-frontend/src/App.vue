@@ -1045,9 +1045,9 @@ async function handleDropConfirm(type: string) {
 		}
 		// Treat the .minecraft folder path as a vanilla-style instance source
 		// and scan it for importable instances
-		currentImportContext.value = { launcherType: 'Vanilla', basePath: dropFilePath.value }
+		currentImportContext.value = { launcherType: 'Generic', basePath: dropFilePath.value }
 		scanningInstances.value = true
-		const results = await scanLauncherInstances('Vanilla', dropFilePath.value)
+		const results = await scanLauncherInstances('Generic', dropFilePath.value)
 		scanningInstances.value = false
 		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
 		dropDebug('handleDropConfirm: .minecraft scan result', { totalInstances, results })
@@ -1066,7 +1066,7 @@ async function handleDropConfirm(type: string) {
 				name: single.name,
 				path: single.path,
 			})
-			selectedInstances.value = [{ launcherType: 'Vanilla', basePath: dropFilePath.value, name: single.name, path: single.path }]
+			selectedInstances.value = [{ launcherType: 'Generic', basePath: dropFilePath.value, name: single.name, path: single.path }]
 			const cap = await check_symlink_capability()
 			symlinkCardsModal.value?.show({
 				instanceNames: [single.name],

@@ -12,44 +12,100 @@ pub struct InstanceInfo {
 fn find_json(path: &Path) -> Option<(String, String)> {
     let name = path.file_name()?.to_string_lossy().to_string();
     let primary = path.join(format!("{name}.json"));
+    debug!(
+        "instance_json: path={} looking for primary={}",
+        path.display(),
+        primary.display()
+    );
     if primary.exists() {
         debug!(
             "instance_json: path={} json={} (by name match)",
             path.display(),
             primary.display()
         );
-        return std::fs::read_to_string(&primary).ok().map(|c| (name, c));
+        let content = std::fs::read_to_string(&primary).ok()?;
+        debug!(
+            "instance_json: path={} primary content (len={}, first_200={:?})",
+            path.display(),
+            content.len(),
+            &content[..content.len().min(200)]
+        );
+        return Some((name, content));
     }
+    debug!(
+        "instance_json: path={} primary={} NOT FOUND, enumerating directory",
+        path.display(),
+        primary.display()
+    );
     let mut json_files = Vec::new();
     if let Ok(dir) = std::fs::read_dir(path) {
         for entry in dir.flatten() {
             let p = entry.path();
+            debug!(
+                "instance_json: path={} entry={}",
+                path.display(),
+                p.display()
+            );
             if p.extension().map(|e| e == "json").unwrap_or(false) {
                 json_files.push(p);
             }
         }
     }
+    debug!(
+        "instance_json: path={} found {} json files",
+        path.display(),
+        json_files.len()
+    );
     if json_files.len() == 1 {
         debug!(
             "instance_json: path={} json={} (sole json fallback)",
             path.display(),
             json_files[0].display()
         );
+        let content = std::fs::read_to_string(&json_files[0]).ok()?;
+        debug!(
+            "instance_json: path={} sole json content (len={}, first_200={:?})",
+            path.display(),
+            content.len(),
+            &content[..content.len().min(200)]
+        );
         let name = json_files[0]
             .file_stem()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or(name);
-        return std::fs::read_to_string(&json_files[0])
-            .ok()
-            .map(|c| (name, c));
+        return Some((name, content));
     }
-    if json_files.len() > 1 {
+    // Multiple JSONs: try each one, return the first with a valid version
+    for jf in &json_files {
+        let content = std::fs::read_to_string(jf).ok()?;
         debug!(
-            "instance_json: path={} multiple={} json files, can't pick one",
+            "instance_json: path={} trying json={} (len={}, first_200={:?})",
             path.display(),
-            json_files.len()
+            jf.display(),
+            content.len(),
+            &content[..content.len().min(200)]
         );
+        let json: serde_json::Value = serde_json::from_str(&content).ok()?;
+        let version = extract_version(&json, &content);
+        if !version.is_empty() {
+            let fname = jf
+                .file_stem()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| name.clone());
+            debug!(
+                "instance_json: path={} json={} (multiple-json pick, version={})",
+                path.display(),
+                jf.display(),
+                version
+            );
+            return Some((fname, content));
+        }
     }
+    debug!(
+        "instance_json: path={} multiple={} json files, none yielded a version",
+        path.display(),
+        json_files.len()
+    );
     None
 }
 
@@ -63,6 +119,11 @@ pub fn detect(path: &Path) -> Option<InstanceInfo> {
         }
     };
     let mut vanilla_name = extract_version(&json, &content);
+    debug!(
+        "instance_json: path={} extract_version returned {:?}",
+        path.display(),
+        vanilla_name
+    );
     if vanilla_name.is_empty() {
         debug!(
             "instance_json: path={} version empty or Unknown",
@@ -100,6 +161,7 @@ fn extract_version(json: &Value, json_str: &str) -> String {
     if let Some(v) = json.get("clientVersion").and_then(|v| v.as_str())
         && !v.is_empty()
     {
+        debug!("extract_version: method=① clientVersion value={}", v);
         return v.to_string();
     }
 
@@ -110,6 +172,10 @@ fn extract_version(json: &Value, json_str: &str) -> String {
                 && let Some(ver) = patch.get("version").and_then(|v| v.as_str())
                 && !ver.is_empty()
             {
+                debug!(
+                    "extract_version: method=② patches.game.version value={}",
+                    ver
+                );
                 return ver.to_string();
             }
         }
@@ -124,6 +190,7 @@ fn extract_version(json: &Value, json_str: &str) -> String {
         let mut mark = false;
         for arg in args {
             if mark && let Some(v) = arg.as_str() {
+                debug!("extract_version: method=③ --fml.mcVersion value={}", v);
                 return v.to_string();
             }
             if arg.as_str() == Some("--fml.mcVersion") {
@@ -136,6 +203,7 @@ fn extract_version(json: &Value, json_str: &str) -> String {
     if let Some(v) = json.get("jar").and_then(|v| v.as_str())
         && !v.is_empty()
     {
+        debug!("extract_version: method=④ jar value={}", v);
         return v.to_string();
     }
 
@@ -143,6 +211,7 @@ fn extract_version(json: &Value, json_str: &str) -> String {
     if let Some(v) = json.get("inheritsFrom").and_then(|v| v.as_str())
         && !v.is_empty()
     {
+        debug!("extract_version: method=⑤ inheritsFrom value={}", v);
         return v.to_string();
     }
 
@@ -150,6 +219,7 @@ fn extract_version(json: &Value, json_str: &str) -> String {
     // Use the original JSON string (from find_json) instead of re-serializing
     // the parsed Value, which would allocate a fresh string unnecessarily.
     if let Some(v) = extract_version_from_libraries(json_str) {
+        debug!("extract_version: method=⑥ libraries value={}", v);
         return v;
     }
 
@@ -157,9 +227,11 @@ fn extract_version(json: &Value, json_str: &str) -> String {
     if let Some(id) = json.get("id").and_then(|v| v.as_str())
         && let Some(v) = extract_version_from_id(id)
     {
+        debug!("extract_version: method=⑦ id id={} value={}", id, v);
         return v;
     }
 
+    debug!("extract_version: method=✗ all methods failed");
     String::new()
 }
 
@@ -239,15 +311,23 @@ fn detect_loader(
         "fabric"
     } else if content.contains("org.quiltmc:quilt-loader") {
         "quilt"
-    } else if content.contains("net.neoforge") {
+    } else if content.contains("net.neoforged:neoforge:")
+        || content.contains("net.neoforged.neoforge:neoforge:")
+    {
         "neoforge"
     } else if content.contains("minecraftforge") {
         "forge"
     } else {
+        debug!("detect_loader: no known loader library found in JSON content");
         return None;
     };
 
+    debug!("detect_loader: detected loader_type={}", loader_type);
     let version = extract_loader_version(content, json, loader_type);
+    debug!(
+        "detect_loader: loader_type={} extracted_version={:?}",
+        loader_type, version
+    );
     Some((loader_type.to_string(), version))
 }
 
@@ -260,31 +340,79 @@ fn extract_loader_version(
     if let Some(id) = json.get("id").and_then(|v| v.as_str())
         && let Some(ver) = parse_loader_version_from_id(id, loader_type)
     {
+        debug!(
+            "extract_loader_version: from id field id={} loader={} version={}",
+            id, loader_type, ver
+        );
         return Some(ver);
     }
+    debug!(
+        "extract_loader_version: id field did not yield version for loader={}",
+        loader_type
+    );
 
     // Second: extract from library entries
-    let (needle, split_at) = match loader_type {
-        "forge" => ("minecraftforge:forge:", Some('-')),
-        "neoforge" => ("net.neoforged:neoforge:", None),
-        "fabric" => ("net.fabricmc:fabric-loader:", None),
-        "quilt" => ("org.quiltmc:quilt-loader:", None),
+    let (needle, needle_fallback, split_at) = match loader_type {
+        "forge" => ("minecraftforge:forge:", None, Some('-')),
+        "neoforge" => (
+            "net.neoforged:neoforge:",
+            Some("net.neoforged.neoforge:neoforge:"),
+            None,
+        ),
+        "fabric" => ("net.fabricmc:fabric-loader:", None, None),
+        "quilt" => ("org.quiltmc:quilt-loader:", None, None),
         _ => return None,
     };
 
-    if let Some(pos) = content.find(needle) {
-        let after = &content[pos + needle.len()..];
-        if let Some(end) = after.find(&['"', ',', '\n', '}'] as &[char]) {
-            let ver = &after[..end];
-            if let Some(ch) = split_at
-                && let Some(pos) = ver.rfind(ch)
-            {
-                return Some(ver[pos + 1..].to_string());
-            }
-            return Some(ver.to_string());
+    if let Some(ver) =
+        try_extract_version_from_needle(content, needle, split_at)
+    {
+        debug!(
+            "extract_loader_version: from library needle={} version={}",
+            needle, ver
+        );
+        return Some(ver);
+    }
+    if let Some(fallback) = needle_fallback {
+        debug!(
+            "extract_loader_version: primary needle={} not found, trying fallback={}",
+            needle, fallback
+        );
+        if let Some(ver) =
+            try_extract_version_from_needle(content, fallback, split_at)
+        {
+            debug!(
+                "extract_loader_version: from library fallback={} version={}",
+                fallback, ver
+            );
+            return Some(ver);
         }
+        debug!(
+            "extract_loader_version: fallback={} also not found",
+            fallback
+        );
     }
     None
+}
+
+/// Extracts the loader version string from JSON content by finding a needle
+/// and reading until a terminator character.
+fn try_extract_version_from_needle(
+    content: &str,
+    needle: &str,
+    split_at: Option<char>,
+) -> Option<String> {
+    let pos = content.find(needle)?;
+    let after = &content[pos + needle.len()..];
+    let end = after.find(&['"', ',', '\n', '}'] as &[char])?;
+    let ver = &after[..end];
+    if let Some(ch) = split_at
+        && let Some(pos) = ver.rfind(ch)
+    {
+        Some(ver[pos + 1..].to_string())
+    } else {
+        Some(ver.to_string())
+    }
 }
 
 /// Parses loader version from the instance id.
