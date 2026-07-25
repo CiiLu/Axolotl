@@ -7,7 +7,7 @@
 				@click="emit('clear')"
 			>
 				<XIcon />
-				Clear
+				{{ formatMessage(commonMessages.clearButton) }}
 			</button>
 		</ButtonStyled>
 		<ButtonStyled v-if="showDelete" type="transparent" hover-color-fill="background" color="red">
@@ -17,7 +17,7 @@
 				@click="emit('delete')"
 			>
 				<TrashIcon />
-				Delete
+				{{ formatMessage(commonMessages.deleteLabel) }}
 			</button>
 		</ButtonStyled>
 		<ButtonStyled v-if="hasLogs" type="transparent">
@@ -28,14 +28,14 @@
 			>
 				<SpinnerIcon v-if="sharing" class="animate-spin" />
 				<ShareIcon v-else />
-				Share
+				{{ formatMessage(messages.share) }}
 			</button>
 		</ButtonStyled>
 		<ButtonStyled type="transparent">
 			<button @click="emit('toggle-fullscreen')">
 				<ContractIcon v-if="fullscreen" />
 				<ExpandIcon v-else />
-				{{ fullscreen ? 'Collapse' : 'Expand' }}
+				{{ formatMessage(fullscreen ? messages.collapse : messages.expand) }}
 			</button>
 		</ButtonStyled>
 	</div>
@@ -52,6 +52,8 @@ import {
 } from '@modrinth/assets'
 
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
+import { defineMessages, useVIntl } from '#ui/composables/i18n'
+import { commonMessages } from '#ui/utils/common-messages'
 
 defineProps<{
 	showClear?: boolean
@@ -73,4 +75,12 @@ const emit = defineEmits<{
 	'toggle-fullscreen': []
 	delete: []
 }>()
+
+const { formatMessage } = useVIntl()
+
+const messages = defineMessages({
+	share: { id: 'console.action.share', defaultMessage: 'Share' },
+	expand: { id: 'console.action.expand', defaultMessage: 'Expand' },
+	collapse: { id: 'console.action.collapse', defaultMessage: 'Collapse' },
+})
 </script>

@@ -1,6 +1,6 @@
 <template>
 	<FilterPills v-model="selectedFilters" :options="visibleOptions">
-		<template #all> All </template>
+		<template #all> {{ formatMessage(messages.all) }} </template>
 	</FilterPills>
 </template>
 
@@ -8,22 +8,12 @@
 import { computed } from 'vue'
 
 import FilterPills from '#ui/components/base/FilterPills.vue'
+import { defineMessages, useVIntl } from '#ui/composables/i18n'
 
 import type { ConditionalLevel } from '../composables/console-filtering'
 import type { LogLevel } from '../types'
 
 type FilterValue = LogLevel | 'all'
-
-const ALWAYS_VISIBLE: Array<{ id: LogLevel; label: string }> = [
-	{ id: 'error', label: 'Error' },
-	{ id: 'warn', label: 'Warn' },
-	{ id: 'info', label: 'Info' },
-]
-
-const CONDITIONAL_OPTIONS: Array<{ id: ConditionalLevel; label: string }> = [
-	{ id: 'debug', label: 'Debug' },
-	{ id: 'trace', label: 'Trace' },
-]
 
 const props = defineProps<{
 	presentLevels: Set<ConditionalLevel>
@@ -35,10 +25,34 @@ const emit = defineEmits<{
 	toggle: [value: FilterValue]
 }>()
 
-const visibleOptions = computed(() => [
-	...ALWAYS_VISIBLE,
-	...CONDITIONAL_OPTIONS.filter((opt) => props.presentLevels.has(opt.id)),
-])
+const { formatMessage } = useVIntl()
+
+const messages = defineMessages({
+	all: { id: 'console.filter.all', defaultMessage: 'All' },
+	error: { id: 'console.filter.error', defaultMessage: 'Error' },
+	warn: { id: 'console.filter.warn', defaultMessage: 'Warn' },
+	info: { id: 'console.filter.info', defaultMessage: 'Info' },
+	debug: { id: 'console.filter.debug', defaultMessage: 'Debug' },
+	trace: { id: 'console.filter.trace', defaultMessage: 'Trace' },
+})
+
+const ALWAYS_VISIBLE = [
+	{ id: 'error' as const, message: messages.error },
+	{ id: 'warn' as const, message: messages.warn },
+	{ id: 'info' as const, message: messages.info },
+]
+
+const CONDITIONAL_OPTIONS = [
+	{ id: 'debug' as const, message: messages.debug },
+	{ id: 'trace' as const, message: messages.trace },
+]
+
+const visibleOptions = computed(() =>
+	[
+		...ALWAYS_VISIBLE,
+		...CONDITIONAL_OPTIONS.filter((opt) => props.presentLevels.has(opt.id)),
+	].map((option) => ({ id: option.id, label: formatMessage(option.message) })),
+)
 
 const selectedFilters = computed({
 	get() {
