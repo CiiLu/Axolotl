@@ -607,16 +607,12 @@ pub async fn lookup_mod_hash(path: &Path) -> crate::Result<Option<ModrinthLookup
     .await?;
 
     let project = if let Some(v) = &version {
-        if let Ok(state) = crate::State::get().await {
-            crate::state::CachedEntry::get_project(
-                &v.project_id,
-                Some(crate::state::CacheBehaviour::StaleWhileRevalidateSkipOffline),
-                &state.pool,
-                &state.api_semaphore,
-            ).await?
-        } else {
-            None
-        }
+        crate::state::CachedEntry::get_project(
+            &v.project_id,
+            Some(crate::state::CacheBehaviour::StaleWhileRevalidateSkipOffline),
+            &state.pool,
+            &state.api_semaphore,
+        ).await?
     } else {
         None
     };
