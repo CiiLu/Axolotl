@@ -110,9 +110,12 @@ import {
 	install_create_modpack_instance,
 	install_get_modpack_preview,
 } from '@/helpers/install'
+import { builtInInstanceIcons } from '@/helpers/instance-icons'
 import {
 	add_project_from_path,
+	cache_icon,
 	check_symlink_capability,
+	edit_icon,
 	get as getInstance,
 	import_world_save,
 	list as listInstances,
@@ -1281,6 +1284,8 @@ async function handleDropConfirm(type: string) {
 		const isMrpack = !!fileName?.toLowerCase().endsWith('.mrpack')
 		const location = { type: 'fromFile' as const, path: filePath }
 
+		let previewLoader: string | undefined
+
 		const doInstall = async () => {
 			const job = await install_create_modpack_instance(location).catch(handleError)
 			if (!job) return
@@ -1302,6 +1307,11 @@ async function handleDropConfirm(type: string) {
 						title: formatMessage(messages.dropModpackInstalledSuccess),
 						type: 'success',
 					})
+
+					if (updatedJob.instance_id) {
+						setDefaultInstanceIcon(updatedJob.instance_id, previewLoader)
+					}
+
 					unlisten()
 				} else if (['failed', 'canceled', 'interrupted'].includes(updatedJob.status)) {
 					notificationManager.removeNotification(installingNotification.id)
@@ -1319,6 +1329,8 @@ async function handleDropConfirm(type: string) {
 				return null
 			})
 			if (!preview) return
+
+			previewLoader = preview.modloader
 
 			if (preview.unknownFile) {
 				unknownPackWarningModal.value?.show(doInstall, fileName)
@@ -1610,6 +1622,33 @@ function showForceAnalysisPrompt(classification: ClassificationResult) {
 			},
 		],
 	})
+}
+
+async function setDefaultInstanceIcon(instanceId: string, loader?: string): Promise<void> {
+	const loaderIconMap: Record<string, string> = {
+		vanilla: 'crafting-table',
+		fabric: 'fabric',
+		forge: 'anvil',
+		neoforge: 'neoforge',
+		quilt: 'quilt',
+	}
+
+	const iconId = loader ? loaderIconMap[loader] : undefined
+	if (!iconId) return
+
+	const icon = builtInInstanceIcons.find((i) => i.id === iconId)
+	if (!icon) return
+
+	try {
+		const response = await fetch(icon.url)
+		if (!response.ok) return
+		const blob = await response.blob()
+		const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()))
+		const cachedPath = await cache_icon(`${iconId}.png`, bytes)
+		await edit_icon(instanceId, cachedPath)
+	} catch (e) {
+		console.warn(`Failed to set default icon for instance ${instanceId}:`, e)
+	}
 }
 
 async function handleGenericInstall(instanceId: string) {
