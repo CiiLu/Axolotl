@@ -39,7 +39,7 @@ fn optimize_blocking() -> crate::Result<MemoryOptimizationResult> {
     let direct_result = optimize_windows_memory();
     let result = match direct_result {
         Ok(()) => Ok(()),
-        Err(error) => run_elevated_helper().map(|_| ()),
+        Err(_error) => run_elevated_helper().map(|_| ()),
     };
 
     result.map_err(|error| {
