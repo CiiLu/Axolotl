@@ -61,17 +61,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
-						'Changed some frontend code left by vibe and replaced it with native components',
-					'zh-CN':
-						'修改了一些vibe留下的前端代码,换为原生组件。',
+						'Changed the way the import type is detected, using a more conservative strategy',
+					'zh-CN': '更改导入类型探测的方式,采用更保守的策略。',
 				},
-
+				{
+					'en-US': 'Changed some frontend code left by vibe and replaced it with native components',
+					'zh-CN': '修改了一些曾经vibe留下的前端代码,换为原生组件。',
+				},
 				{
 					'en-US':
-						'Changed the way the import type is detected, using a more conservative strategy',
-					'zh-CN':
-						'更改导入类型探测的方式,采用更保守的策略。',
-				}
+						'Changed the scanning logic to optimize some parts of the import scanning, improving compatibility.',
+					'zh-CN': '修改扫描逻辑，优化导入扫描的部分石山，提升兼容性。',
+				},
 			],
 		},
 	},

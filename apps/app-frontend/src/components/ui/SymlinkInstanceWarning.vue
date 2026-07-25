@@ -86,7 +86,7 @@ const messages = defineMessages({
 
 <template>
 	<!-- Collapsed: small badge -->
-	<div v-if="showBadge" class="inline-flex">
+	<div v-if="showBadge" class="flex">
 		<span
 			v-tooltip="formatMessage(messages.writeBody, { path: props.symlinkTarget })"
 			class="inline-flex items-center gap-1 rounded-full bg-bg-orange px-2 py-0.5 text-xs font-medium text-brand-orange"
@@ -114,7 +114,7 @@ const messages = defineMessages({
 			<span>
 				{{ formatMessage(messages.writeBody, { path: props.symlinkTarget }) }}
 				<template v-if="effectivelyDismissible">
-					{' '}
+					{{ ' ' }}
 					<ButtonStyled
 						size="small"
 						type="transparent"
