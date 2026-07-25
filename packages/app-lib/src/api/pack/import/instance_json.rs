@@ -237,7 +237,26 @@ fn extract_version(json: &Value, json_str: &str) -> String {
 
 /// Extracts Minecraft version from library artifact coordinates in the JSON string.
 /// Matches PCLCE's approach scanning for Forge/OptiFine/FabricLike lib entries.
+/// Order: NeoForge before Forge (NeoForge JSON often also contains forge references).
 fn extract_version_from_libraries(content: &str) -> Option<String> {
+    // NeoForge: net.neoforged:neoforge:1.20.1-44.0.3 → "1.20.1"
+    // Try known Maven coordinate formats (neoforge before forge).
+    for needle in [
+        "net.neoforged:neoforge:",
+        "net.neoforged.neoforge:neoforge:",
+        "net.neoforged.fml:modern:",
+    ] {
+        if let Some(pos) = content.find(needle) {
+            let after = &content[pos + needle.len()..];
+            if let Some(end) = after.find(&['"', ',', '\n', '}'] as &[char]) {
+                let ver = &after[..end];
+                if let Some(dash) = ver.find('-') {
+                    return Some(ver[..dash].to_string());
+                }
+                return Some(ver.to_string());
+            }
+        }
+    }
     // Forge: minecraftforge:forge:1.8.9-11.15.1.1722 → "1.8.9"
     if let Some(pos) = content.find("minecraftforge:forge:") {
         let after = &content[pos + "minecraftforge:forge:".len()..];
@@ -311,11 +330,15 @@ fn detect_loader(
         "fabric"
     } else if content.contains("org.quiltmc:quilt-loader") {
         "quilt"
-    } else if content.contains("net.neoforged:neoforge:")
-        || content.contains("net.neoforged.neoforge:neoforge:")
+    } else if content.contains("net.neoforged")
+        || json
+            .get("id")
+            .and_then(|v| v.as_str())
+            .map(|id| id.to_lowercase().contains("neoforge"))
+            .unwrap_or(false)
     {
         "neoforge"
-    } else if content.contains("minecraftforge") {
+    } else if content.contains("minecraftforge:forge:") {
         "forge"
     } else {
         debug!("detect_loader: no known loader library found in JSON content");
