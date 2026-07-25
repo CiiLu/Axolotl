@@ -155,8 +155,7 @@ pub async fn get_importable_instances(
             let mut instances = Vec::new();
             for (name, path) in hmcl::get_instances(&base_path) {
                 for (iname, ipath) in
-                    scan_instances_at(&PathBuf::from(path), Some(&name))
-                        .await
+                    scan_instances_at(&PathBuf::from(path), Some(&name)).await
                 {
                     instances.push(ImportableInstance {
                         name: iname,
@@ -310,13 +309,12 @@ pub async fn get_importable_instances(
             // for instance.json files (handles .minecraft and other unrecognized launchers)
             if instances.is_empty() {
                 instances.extend(
-                    scan_instances_at(&base_path, None)
-                        .await
-                        .into_iter()
-                        .map(|(n, p)| ImportableInstance {
+                    scan_instances_at(&base_path, None).await.into_iter().map(
+                        |(n, p)| ImportableInstance {
                             name: n,
                             path: p.to_string_lossy().to_string(),
-                        }),
+                        },
+                    ),
                 );
             }
 
