@@ -93,37 +93,38 @@ pub async fn get_importable_instances(
         .await
         .unwrap_or_else(|| "instances".to_string()),
         ImportLauncherType::ModrinthApp => unreachable!("handled above"),
-        ImportLauncherType::PCL2 => {
+        ImportLauncherType::PCL2 | ImportLauncherType::PCL2CE => {
             if !pe_info::folder_has_product(&base_path, "Plain Craft Launcher")
-                || pcl::read_pcl_registry().is_none()
             {
                 return Ok(Vec::new());
             }
             let mut names = Vec::new();
-            for (name, path) in pcl::get_pcl_instances() {
-                names.extend(
-                    scan_instances_at(&PathBuf::from(path), Some(&name))
-                        .await
-                        .into_iter()
-                        .map(|(n, _)| n),
-                );
+            let mut seen = std::collections::HashSet::new();
+            // Try both PCL2 registry and PCLCE config — the user may have
+            // instances registered in either or both sources.
+            if pcl::read_pcl_registry().is_some() {
+                for (name, dir) in pcl::get_pcl_instances() {
+                    for (iname, ipath) in
+                        scan_instances_at(&PathBuf::from(dir), Some(&name))
+                            .await
+                    {
+                        if seen.insert(ipath) {
+                            names.push(iname);
+                        }
+                    }
+                }
             }
-            return Ok(names);
-        }
-        ImportLauncherType::PCL2CE => {
-            if !pe_info::folder_has_product(&base_path, "Plain Craft Launcher")
-                || !pcl::config_exists()
-            {
-                return Ok(Vec::new());
-            }
-            let mut names = Vec::new();
-            for (name, path) in pcl::get_pclce_instances() {
-                names.extend(
-                    scan_instances_at(&PathBuf::from(path), Some(&name))
-                        .await
-                        .into_iter()
-                        .map(|(n, _)| n),
-                );
+            if pcl::config_exists() {
+                for (name, dir) in pcl::get_pclce_instances() {
+                    for (iname, ipath) in
+                        scan_instances_at(&PathBuf::from(dir), Some(&name))
+                            .await
+                    {
+                        if seen.insert(ipath) {
+                            names.push(iname);
+                        }
+                    }
+                }
             }
             return Ok(names);
         }

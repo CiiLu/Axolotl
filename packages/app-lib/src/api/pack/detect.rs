@@ -90,7 +90,7 @@ fn open_error(path: &Path, error: impl std::fmt::Display) -> crate::Error {
     }
 }
 
-fn detect_local_pack_sync(path: &Path) -> crate::Result<DetectedLocalPack> {
+pub fn detect_local_pack_sync(path: &Path) -> crate::Result<DetectedLocalPack> {
     let file =
         std::fs::File::open(path).map_err(|error| open_error(path, error))?;
     let mut archive =

@@ -35,6 +35,8 @@ pub enum ClassificationResult {
     ShaderPack { file_path: String },
     #[serde(rename = "world_save")]
     WorldSave { file_path: String },
+    #[serde(rename = "modpack")]
+    Modpack { file_path: String },
     #[serde(rename = "shortcut_resolved")]
     ShortcutResolved {
         original: String,
@@ -91,6 +93,11 @@ impl From<DroppedItemType> for ClassificationResult {
                 original: original.to_string_lossy().to_string(),
                 resolved_to: Box::new(ClassificationResult::from(*resolved_to)),
             },
+            DroppedItemType::Modpack { file_path } => {
+                ClassificationResult::Modpack {
+                    file_path: file_path.to_string_lossy().to_string(),
+                }
+            }
             DroppedItemType::Unknown { reason } => {
                 ClassificationResult::Unknown { reason }
             }

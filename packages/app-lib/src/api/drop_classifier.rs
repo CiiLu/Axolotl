@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::api::pack::detect::{LocalPackFormat, detect_local_pack_sync};
 use crate::api::pack::import::ImportLauncherType;
 use crate::mod_metadata::manifest::read_jar_manifest;
 
@@ -43,6 +44,8 @@ pub enum DroppedItemType {
         original: PathBuf,
         resolved_to: Box<DroppedItemType>,
     },
+    /// A modpack archive (.mrpack, CurseForge, MultiMC, etc.).
+    Modpack { file_path: PathBuf },
     /// Could not be classified.
     Unknown { reason: String },
 }
@@ -84,6 +87,22 @@ pub fn classify_dropped_item(path: &Path) -> DroppedItemType {
         .is_some_and(|ext| matches!(ext, "zip" | "mrpack" | "ZIP" | "MRPACK"));
 
     if is_zip {
+        // Check if it's a known modpack format before extracting.
+        if let Ok(detected) = detect_local_pack_sync(path) {
+            match detected.format {
+                LocalPackFormat::Mrpack
+                | LocalPackFormat::CurseForge
+                | LocalPackFormat::Mcbbs
+                | LocalPackFormat::Hmcl
+                | LocalPackFormat::MmcExport
+                | LocalPackFormat::LauncherBundled => {
+                    return DroppedItemType::Modpack {
+                        file_path: path.to_path_buf(),
+                    };
+                }
+                _ => {} // PlainArchive / InstanceFolder → classify_zip extraction
+            }
+        }
         return classify_zip(path);
     }
 
@@ -145,7 +164,7 @@ fn classify_zip(path: &Path) -> DroppedItemType {
     let mut probe_has_level_dat = false;
     let mut probe_has_pack_mcmeta = false;
     let mut probe_has_shaders_dir = false;
-    let mut probe_has_version_json = false;
+    // probe_has_version_json — removed, unused
     for i in 0..archive.len() {
         let Ok(entry) = archive.by_index_raw(i) else {
             continue;
@@ -166,13 +185,8 @@ fn classify_zip(path: &Path) -> DroppedItemType {
         if name.starts_with("shaders/") {
             probe_has_shaders_dir = true;
         }
-        // versions/<id>/<id>.json → vanilla launcher instance
-        if let Some(rest) = name.strip_prefix("versions/")
-            && let Some((folder, file)) = rest.split_once('/')
-            && file == format!("{folder}.json")
-        {
-            probe_has_version_json = true;
-        }
+        // versions/<id>/<id>.json → vanilla launcher instance (probe only)
+        // (probe_has_version_json was removed — unused)
 
         // Get the top-level component of the path.
         let top = match name.split_once('/') {
@@ -245,16 +259,9 @@ fn classify_zip(path: &Path) -> DroppedItemType {
             file_path: path.to_path_buf(),
         };
     }
-    if probe_has_version_json {
-        tracing::debug!(
-            "ZIP probe hit: versions/<id>/<id>.json → Launcher(Unknown) — {}",
-            path.display()
-        );
-        return DroppedItemType::Launcher {
-            launcher_type: ImportLauncherType::Unknown,
-            base_path: path.to_path_buf(),
-        };
-    }
+    // NOTE: versions/<id>/<id>.json is NOT an early-return here — we always
+    // continue to extraction so that classify_folder_content can also run the
+    // root .jar + .json scan for modded instance detection.
 
     // ── Extraction fallback: probe was inconclusive ──
     let Ok(temp_dir) = tempfile::tempdir() else {
@@ -519,66 +526,92 @@ fn classify_file(path: &Path) -> DroppedItemType {
 // ─── Step 7: Content-type detection for folders/extracted ZIPs ─────────────
 
 fn classify_folder_content(path: &Path) -> DroppedItemType {
-    // 1. Already checked launcher signatures above — skip.
-
-    // 2. World save: look for level.dat.
+    // 1. World save: look for level.dat.
     if path.join("level.dat").exists() {
         return DroppedItemType::WorldSave {
             file_path: path.to_path_buf(),
         };
     }
 
-    // 3. Resource pack: pack.mcmeta.
+    // 2. Resource pack: pack.mcmeta.
     if path.join("pack.mcmeta").exists() {
         return DroppedItemType::ResourcePack {
             file_path: path.to_path_buf(),
         };
     }
 
-    // 4. Shader pack: shaders/ folder.
+    // 3. Shader pack: shaders/ folder.
     if path.join("shaders").is_dir() {
         return DroppedItemType::ShaderPack {
             file_path: path.to_path_buf(),
         };
     }
 
-    // 5. Generic launcher scan: versions/<id>/<id>.json pattern.
-    let versions_dir = path.join("versions");
-    if versions_dir.is_dir()
-        && let Ok(mut dir) = std::fs::read_dir(&versions_dir)
-    {
-        let has_version_json = dir.any(|e| {
-            e.ok().is_some_and(|entry| {
-                let p = entry.path();
-                if p.is_dir() {
-                    let id =
-                        p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                    p.join(format!("{id}.json")).exists()
-                } else {
-                    false
-                }
-            })
-        });
-        if has_version_json {
-            // Could be a launcher with multiple instances or a plain archive.
-            // Return as a launcher scan result.
-            return DroppedItemType::Launcher {
-                launcher_type: ImportLauncherType::Unknown,
-                base_path: path.to_path_buf(),
-            };
-        }
-    }
+    // 4. Instance detection: check for launcher instance markers.
+    //    a. versions/<id>/<id>.json pattern (vanilla launcher instance).
+    //    b. Root directory has both .jar and .json files (modded instance).
+    let is_instance = {
+        let versions_dir = path.join("versions");
+        let has_version_json = if versions_dir.is_dir() {
+            match std::fs::read_dir(&versions_dir) {
+                Ok(mut dir) => dir.any(|e| {
+                    e.ok().is_some_and(|entry| {
+                        let p = entry.path();
+                        if p.is_dir() {
+                            let id = p
+                                .file_name()
+                                .and_then(|n| n.to_str())
+                                .unwrap_or("");
+                            p.join(format!("{id}.json")).exists()
+                        } else {
+                            false
+                        }
+                    })
+                }),
+                Err(_) => false,
+            }
+        } else {
+            false
+        };
 
-    // 6. Mod JARs: Check for mod metadata files in mods/ subdirectory.
-    let mods_dir = path.join("mods");
-    if mods_dir.is_dir() {
-        return DroppedItemType::Mod {
-            file_path: path.to_path_buf(),
+        let has_root_jar = match std::fs::read_dir(path) {
+            Ok(mut dir) => dir.any(|e| {
+                e.ok().is_some_and(|entry| {
+                    let p = entry.path();
+                    p.is_file()
+                        && p.extension()
+                            .and_then(|ext| ext.to_str())
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("jar"))
+                })
+            }),
+            Err(_) => false,
+        };
+        let has_root_json = match std::fs::read_dir(path) {
+            Ok(mut dir) => dir.any(|e| {
+                e.ok().is_some_and(|entry| {
+                    let p = entry.path();
+                    p.is_file()
+                        && p.extension()
+                            .and_then(|ext| ext.to_str())
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+                })
+            }),
+            Err(_) => false,
+        };
+
+        has_version_json || (has_root_jar && has_root_json)
+    };
+
+    if is_instance {
+        return DroppedItemType::Launcher {
+            launcher_type: ImportLauncherType::Unknown,
+            base_path: path.to_path_buf(),
         };
     }
 
-    // 7. Fallback: check for mod JAR directly if path is a JAR file.
-    // (handled in classify_jar above already)
+    // 5. (Removed) `mods/` → Mod — bare mods/ directories are not valid
+    //    standalone imports; instance folders with mods are caught by the
+    //    root .jar + .json scan above.
 
     DroppedItemType::Unknown {
         reason: format!(

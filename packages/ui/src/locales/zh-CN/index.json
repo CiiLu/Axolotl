@@ -342,10 +342,10 @@
 		"defaultMessage": "刚刚"
 	},
 	"changelog.product.app": {
-		"defaultMessage": "App"
+		"defaultMessage": "应用"
 	},
 	"changelog.product.hosting": {
-		"defaultMessage": "Hosting"
+		"defaultMessage": "托管"
 	},
 	"changelog.product.web": {
 		"defaultMessage": "平台"
@@ -3147,7 +3147,7 @@
 		"defaultMessage": "Amazon 支付"
 	},
 	"payment-method.amex": {
-		"defaultMessage": "American Express"
+		"defaultMessage": "美国运通"
 	},
 	"payment-method.card_display": {
 		"defaultMessage": "{card_brand} 以 {last_four}结尾"
@@ -3162,7 +3162,7 @@
 		"defaultMessage": "慈善"
 	},
 	"payment-method.diners": {
-		"defaultMessage": "Diners Club"
+		"defaultMessage": "大来卡"
 	},
 	"payment-method.discover": {
 		"defaultMessage": "发现"
@@ -4893,7 +4893,7 @@
 		"defaultMessage": "深入了解 Modrinth Hosting"
 	},
 	"servers.list-empty.modrinth-hosting-label": {
-		"defaultMessage": "Modrinth Hosting"
+		"defaultMessage": "Modrinth 托管"
 	},
 	"servers.list-empty.new-server-button": {
 		"defaultMessage": "添加服务器"
@@ -5076,7 +5076,7 @@
 		"defaultMessage": "搜索 {count} {count, plural, other {个服务器}}..."
 	},
 	"servers.manage.servers-title": {
-		"defaultMessage": "Modrinth Hosting"
+		"defaultMessage": "Modrinth 托管"
 	},
 	"servers.manage.settings-hint.description": {
 		"defaultMessage": "他们现在可以在这里找到！"
@@ -5604,7 +5604,7 @@
 		"defaultMessage": "库"
 	},
 	"tag.category.lifesteal": {
-		"defaultMessage": "Lifesteal"
+		"defaultMessage": "生命窃取"
 	},
 	"tag.category.lightweight": {
 		"defaultMessage": "轻量"
@@ -5787,7 +5787,7 @@
 		"defaultMessage": "Babric"
 	},
 	"tag.loader.bta-babric": {
-		"defaultMessage": "BTA (Babric)"
+		"defaultMessage": "BTA（Babric）"
 	},
 	"tag.loader.bukkit": {
 		"defaultMessage": "Bukkit"
@@ -5811,13 +5811,13 @@
 		"defaultMessage": "Forge"
 	},
 	"tag.loader.geyser": {
-		"defaultMessage": "Geyser Extension"
+		"defaultMessage": "Geyser 扩展"
 	},
 	"tag.loader.iris": {
 		"defaultMessage": "Iris"
 	},
 	"tag.loader.java-agent": {
-		"defaultMessage": "Java Agent"
+		"defaultMessage": "Java 代理"
 	},
 	"tag.loader.legacy-fabric": {
 		"defaultMessage": "Legacy Fabric"
@@ -6169,5 +6169,248 @@
 	},
 	"version.supplementary-resources.type": {
 		"defaultMessage": "类型"
+	},
+	"drop.confirm.title": {
+		"message": "你想以什么类型导入？"
+	},
+	"drop.confirm.cancel": {
+		"message": "取消"
+	},
+	"drop.confirm.help": {
+		"message": "我可以拖入什么？"
+	},
+	"drop.confirm.as-mod": {
+		"message": "模组"
+	},
+	"drop.confirm.as-mod-desc": {
+		"message": "将模组 JAR 安装到 Minecraft 实例"
+	},
+	"drop.confirm.as-instance": {
+		"message": "实例"
+	},
+	"drop.confirm.as-instance-desc": {
+		"message": "从其他启动器导入 Minecraft 实例"
+	},
+	"drop.confirm.as-modpack": {
+		"message": "整合包"
+	},
+	"drop.confirm.as-modpack-desc": {
+		"message": "从整合包创建新实例"
+	},
+	"drop.confirm.as-resource-pack": {
+		"message": "资源包"
+	},
+	"drop.confirm.as-resource-pack-desc": {
+		"message": "将资源包安装到实例"
+	},
+	"drop.confirm.as-shader-pack": {
+		"message": "光影包"
+	},
+	"drop.confirm.as-shader-pack-desc": {
+		"message": "将光影包安装到实例"
+	},
+	"drop.confirm.as-world": {
+		"message": "存档"
+	},
+	"drop.confirm.as-world-desc": {
+		"message": "将存档导入到实例中"
+	},
+	"drop.confirm.as-schematic": {
+		"message": "投影"
+	},
+	"drop.confirm.as-schematic-desc": {
+		"message": "导入 Litematic 投影文件"
+	},
+	"drop.confirm.not-this": {
+		"message": "：这不是{type}"
+	},
+	"drop.confirm.as-dot-minecraft": {
+		"message": "Minecraft 文件夹"
+	},
+	"drop.confirm.as-dot-minecraft-desc": {
+		"message": "扫描 .minecraft 文件夹以创建实例"
+	},
+	"drop.confirm.as-launcher": {
+		"message": "启动器"
+	},
+	"drop.confirm.as-hmcl-launcher": {
+		"message": "HMCL 启动器"
+	},
+	"drop.generic_install.title": {
+		"message": "安装 {type}"
+	},
+	"drop.generic_install.search": {
+		"message": "搜索实例..."
+	},
+	"drop.generic_install.install": {
+		"message": "安装"
+	},
+	"drop.generic_install.cancel": {
+		"message": "取消"
+	},
+	"drop.generic_install.create_new": {
+		"message": "创建新实例..."
+	},
+	"drop.generic_install.no_instances": {
+		"message": "未找到实例"
+	},
+	"drop.launcher_import.title": {
+		"message": "从 {launcherName} 导入实例"
+	},
+	"drop.launcher_import.subtitle": {
+		"message": "在 {basePath} 中扫描到 {count} 个实例"
+	},
+	"drop.launcher_import.select_all": {
+		"message": "全选"
+	},
+	"drop.launcher_import.deselect_all": {
+		"message": "取消全选"
+	},
+	"drop.launcher_import.selected": {
+		"message": "已选 {n} 个"
+	},
+	"drop.launcher_import.cancel": {
+		"message": "取消"
+	},
+	"drop.launcher_import.import": {
+		"message": "导入（{n}）"
+	},
+	"drop.launcher_import.no_instances": {
+		"message": "未找到实例"
+	},
+	"app.drop.mod-compatibility-title": {
+		"message": "版本不匹配"
+	},
+	"app.drop.mod-compatibility-confirm": {
+		"message": "仍要安装？"
+	},
+	"app.drop.mod-compatibility-warning": {
+		"message": "此模组目标版本为 {modVersion}（{modLoader}），但实例的版本是 {instVersion}（{instLoader}）。"
+	},
+	"app.drop.mod-version": {
+		"message": "模组版本"
+	},
+	"app.drop.inst-version": {
+		"message": "实例版本"
+	},
+	"app.drop.mod-loader": {
+		"message": "模组加载器"
+	},
+	"app.drop.inst-loader": {
+		"message": "实例加载器"
+	},
+	"app.drop.mod-compatibility-search": {
+		"message": "查找兼容版本"
+	},
+	"drop.symlink_method.title": {
+		"message": "选择导入方式"
+	},
+	"drop.symlink_method.subtitle": {
+		"message": "正在导入 {n} 个实例"
+	},
+	"drop.symlink_method.copy_title": {
+		"message": "复制文件"
+	},
+	"drop.symlink_method.copy_desc": {
+		"message": "复制到 Axolotl 目录"
+	},
+	"drop.symlink_method.copy_detail": {
+		"message": "实例文件将被复制到 Axolotl"
+	},
+	"drop.symlink_method.symlink_title": {
+		"message": "符号链接"
+	},
+	"drop.symlink_method.symlink_desc": {
+		"message": "引用原始位置"
+	},
+	"drop.symlink_method.symlink_detail": {
+		"message": "实例文件保留在原始位置，Axolotl 通过符号链接引用。节省磁盘空间。"
+	},
+	"drop.symlink_method.requires_admin": {
+		"message": "需要管理员权限"
+	},
+	"drop.symlink_method.unsupported_warning": {
+		"message": "此系统不支持符号链接"
+	},
+	"drop.symlink_method.cancel": {
+		"message": "取消"
+	},
+	"drop.symlink_method.confirm": {
+		"message": "确认"
+	},
+	"locale.ar-SA": {
+		"message": "阿拉伯语"
+	},
+	"instances.updater-modal.search-compat": {
+		"message": "查找兼容版本"
+	},
+	"filter.active": {
+		"message": "进行中"
+	},
+	"filter.archived": {
+		"message": "已归档"
+	},
+	"filter.draft": {
+		"message": "草稿"
+	},
+	"filter.mods": {
+		"message": "模组"
+	},
+	"filter.plugins": {
+		"message": "插件"
+	},
+	"filter.resourcepacks": {
+		"message": "资源包"
+	},
+	"filter.modpacks": {
+		"message": "整合包"
+	},
+	"general": {
+		"message": "通用"
+	},
+	"appearance": {
+		"message": "外观"
+	},
+	"privacy": {
+		"message": "隐私"
+	},
+	"language": {
+		"message": "语言"
+	},
+	"beta": {
+		"message": "测试版"
+	},
+	"hidden": {
+		"message": "隐藏标签页"
+	},
+	"java": {
+		"message": "Java 与内存"
+	},
+	"instances": {
+		"message": "默认实例选项"
+	},
+	"resources": {
+		"message": "资源管理"
+	},
+	"window": {
+		"message": "窗口"
+	},
+	"hooks": {
+		"message": "启动钩子"
+	},
+	"long": {
+		"message": "长内容"
+	},
+	"short": {
+		"message": "短内容"
+	},
+	"project-type.schematic.category": {
+		"message": "投影"
+	},
+	"project-type.schematic.capital": {
+		"message": "{count, plural, one {投影} other {投影}}"
+	},
+	"project-type.schematic.lowercase": {
+		"message": "{count, plural, one {投影} other {投影}}"
 	}
 }

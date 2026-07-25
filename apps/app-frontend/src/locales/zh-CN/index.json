@@ -2421,7 +2421,7 @@
 		"message": "效果预览"
 	},
 	"app.translation-settings.style.preview-original-text": {
-		"message": "Explore high-quality Minecraft content on Modrinth."
+		"message": "在 Modrinth 上发现优质的 Minecraft 内容。"
 	},
 	"app.translation-settings.style.preview-text": {
 		"message": "在 Modrinth 上探索高质量的 Minecraft 内容。"
@@ -2631,7 +2631,7 @@
 		"message": "搜索好友…"
 	},
 	"friends.section.heading": {
-		"message": "{title} - {count}"
+		"message": "{title} — {count}"
 	},
 	"friends.sign-in-to-add-friends": {
 		"message": "登录你的 <link>Modrinth 账号</link>，添加好友，看看他们在玩什么！"
@@ -2856,7 +2856,7 @@
 		"message": "环境变量"
 	},
 	"instance.settings.tabs.java.hooks": {
-		"message": "Hooks"
+		"message": "钩子"
 	},
 	"instance.settings.tabs.java.java-arguments": {
 		"message": "Java 参数"
@@ -3165,7 +3165,7 @@
 		"message": "拖放模组 JAR 文件来安装到 Minecraft 实例。"
 	},
 	"drop.help.mods-formats": {
-		"message": ".jar"
+		"message": "格式：.jar"
 	},
 	"drop.help.modpacks-title": {
 		"message": "整合包"
@@ -3174,7 +3174,7 @@
 		"message": "拖放整合包 ZIP/MRPACK 文件来导入整合包。"
 	},
 	"drop.help.modpacks-formats": {
-		"message": ".mrpack / .zip"
+		"message": "格式：.mrpack / .zip"
 	},
 	"drop.help.resource-packs-title": {
 		"message": "资源包"
@@ -3183,7 +3183,7 @@
 		"message": "拖放资源包 ZIP 文件来安装到实例。"
 	},
 	"drop.help.resource-packs-formats": {
-		"message": ".zip"
+		"message": "格式：.zip"
 	},
 	"drop.help.shader-packs-title": {
 		"message": "光影包"
@@ -3192,7 +3192,7 @@
 		"message": "拖放光影包 ZIP 文件来安装到实例。"
 	},
 	"drop.help.shader-packs-formats": {
-		"message": ".zip"
+		"message": "格式：.zip"
 	},
 	"drop.help.worlds-title": {
 		"message": "存档"
@@ -3210,7 +3210,7 @@
 		"message": "拖放 .litematic 文件来导入投影。"
 	},
 	"drop.help.schematics-formats": {
-		"message": ".litematic"
+		"message": "格式：.litematic"
 	},
 	"create.title": {
 		"message": "创建实例"
@@ -3294,10 +3294,10 @@
 		"message": "版本不匹配"
 	},
 	"app.drop.mod-compatibility-confirm": {
-		"message": "保留安装"
+		"message": "仍要安装？"
 	},
 	"app.drop.mod-compatibility-warning": {
-		"message": "此模组目标版本为 {modVersion} ({modLoader})，但实例版本为 {instVersion} ({instLoader})。"
+		"message": "此模组目标版本为 {modVersion}（{modLoader}），但实例的版本是 {instVersion}（{instLoader}）。"
 	},
 	"app.drop.mod-version": {
 		"message": "模组版本"
@@ -3313,5 +3313,32 @@
 	},
 	"app.drop.mod-compatibility-search": {
 		"message": "查找兼容版本"
+	},
+	"app.drop.modpack-not-supported-title": {
+		"message": "整合包导入"
+	},
+	"app.drop.modpack-not-supported-text": {
+		"message": "暂不支持通过拖放导入整合包。请使用「导入」按钮来安装整合包。"
+	},
+	"app.translation-settings.system-prompt": {
+		"message": "系统提示词"
+	},
+	"app.translation-settings.system-prompt-description": {
+		"message": "输入你的自定义系统提示词，留空则使用默认提示词。"
+	},
+	"app.instance.mods.parsing-files": {
+		"message": "正在解析，较大的文件可能会耗费一些时间"
+	},
+	"app.instance.mods.drag-drop-hint": {
+		"message": "释放文件以安装到当前实例"
+	},
+	"app.instance.mods.parse-failed": {
+		"message": "解析失败，这可能不是一个整合包"
+	},
+	"app.instance.mods.file-already-exists": {
+		"message": "添加失败，该文件可能已存在"
+	},
+	"app.instance.mods.dismiss": {
+		"message": "知道了"
 	}
 }

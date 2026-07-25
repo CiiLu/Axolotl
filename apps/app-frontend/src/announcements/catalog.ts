@@ -43,10 +43,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 		changes: {
 			fixed: [
 				{
-					'en-US':
-						'Fixed legacy Forge installations failing when dependencies use historical Maven coordinates, with trusted repository fallbacks for future metadata variations.',
-					'zh-CN':
-						'修复旧版 Forge 因依赖使用历史 Maven 坐标而安装失败的问题，并为未来的元数据差异增加可信仓库回退。',
+					'en-US': 'Urgent fix for critical bugs in the previous version',
+					'zh-CN': '紧急修复上个版本严重bug',
 				},
 			],
 		},

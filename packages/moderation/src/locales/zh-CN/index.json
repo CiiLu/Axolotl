@@ -259,6 +259,24 @@
   },
   "nags.visit-links-settings.title": {
     "defaultMessage": "访问链接设置"
+  },
+  "nags.add-license-details.title": {
+    "defaultMessage": "添加许可协议详情"
+  },
+  "nags.add-license-details.description": {
+    "defaultMessage": "请为你的自定义许可协议提供有效的 URL 和名称或 SPDX 标识符。"
+  },
+  "nags.all-languages.title": {
+    "defaultMessage": "选择准确的语言"
+  },
+  "nags.all-languages.description": {
+    "defaultMessage": "你已选择了所有可用的语言选项。请仅列出你的服务器实际支持的语言。"
+  },
+  "nags.too-many-languages.title": {
+    "defaultMessage": "选择准确的语言"
+  },
+  "nags.too-many-languages.description": {
+    "defaultMessage": "你已选择了 {languageCount, plural, one {# 种语言} other {# 种语言}}。请仅列出你的服务器实际支持的语言。"
   }
 }
 

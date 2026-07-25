@@ -13,11 +13,8 @@
 
 		<!-- Simplified warning when no version data is available (e.g. drag & drop) -->
 		<template v-if="showSimplifiedWarning">
-			<div class="flex flex-col gap-4 p-6">
-				<div class="flex items-start gap-3">
-					<TriangleAlertIcon class="size-6 shrink-0 mt-0.5 text-orange" />
-					<p class="text-sm text-tertiary">{{ warning }}</p>
-				</div>
+			<div class="p-6">
+				<Admonition type="warning" :body="warning ?? ''" />
 			</div>
 		</template>
 
@@ -331,6 +328,7 @@ import {
 import { useTimeoutFn } from '@vueuse/core'
 import { computed, ref, toRef } from 'vue'
 
+import Admonition from '#ui/components/base/Admonition.vue'
 import Avatar from '#ui/components/base/Avatar.vue'
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'

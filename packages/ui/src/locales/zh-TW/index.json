@@ -309,10 +309,10 @@
 		"defaultMessage": "現在"
 	},
 	"changelog.product.app": {
-		"defaultMessage": "App"
+		"defaultMessage": "應用程式"
 	},
 	"changelog.product.hosting": {
-		"defaultMessage": "Hosting"
+		"defaultMessage": "託管"
 	},
 	"changelog.product.web": {
 		"defaultMessage": "平臺"
@@ -4782,7 +4782,7 @@
 		"defaultMessage": "深入了解 Modrinth Hosting"
 	},
 	"servers.list-empty.modrinth-hosting-label": {
-		"defaultMessage": "Modrinth Hosting"
+		"defaultMessage": "Modrinth 託管"
 	},
 	"servers.list-empty.new-server-button": {
 		"defaultMessage": "建立新的伺服器"
@@ -4965,7 +4965,7 @@
 		"defaultMessage": "搜尋 {count} {count, plural, other {個伺服器}}..."
 	},
 	"servers.manage.servers-title": {
-		"defaultMessage": "Modrinth Hosting"
+		"defaultMessage": "Modrinth 託管"
 	},
 	"servers.manage.settings-hint.description": {
 		"defaultMessage": "現在可以在這裡找到伺服器設定！"
@@ -5337,25 +5337,25 @@
 		"defaultMessage": "工作階段"
 	},
 	"tag.category.128x": {
-		"defaultMessage": "128×"
+		"defaultMessage": "128x"
 	},
 	"tag.category.16x": {
-		"defaultMessage": "16×"
+		"defaultMessage": "16x"
 	},
 	"tag.category.256x": {
-		"defaultMessage": "256×"
+		"defaultMessage": "256x"
 	},
 	"tag.category.32x": {
-		"defaultMessage": "32×"
+		"defaultMessage": "32x"
 	},
 	"tag.category.48x": {
-		"defaultMessage": "48×"
+		"defaultMessage": "48x"
 	},
 	"tag.category.512x+": {
 		"defaultMessage": "512× 以上"
 	},
 	"tag.category.64x": {
-		"defaultMessage": "64×"
+		"defaultMessage": "64x"
 	},
 	"tag.category.8x-": {
 		"defaultMessage": "8× 以下"
@@ -5490,7 +5490,7 @@
 		"defaultMessage": "程式庫"
 	},
 	"tag.category.lifesteal": {
-		"defaultMessage": "Lifesteal"
+		"defaultMessage": "生命竊取"
 	},
 	"tag.category.lightweight": {
 		"defaultMessage": "輕量"
@@ -5604,7 +5604,7 @@
 		"defaultMessage": "角色扮演"
 	},
 	"tag.category.rpg": {
-		"defaultMessage": "角色扮演"
+		"defaultMessage": "RPG"
 	},
 	"tag.category.screenshot": {
 		"defaultMessage": "擷圖用"
@@ -5673,7 +5673,7 @@
 		"defaultMessage": "Babric"
 	},
 	"tag.loader.bta-babric": {
-		"defaultMessage": "BTA (Babric)"
+		"defaultMessage": "BTA（Babric）"
 	},
 	"tag.loader.bukkit": {
 		"defaultMessage": "Bukkit"
@@ -5697,13 +5697,13 @@
 		"defaultMessage": "Forge"
 	},
 	"tag.loader.geyser": {
-		"defaultMessage": "Geyser 擴充功能"
+		"defaultMessage": "Geyser 擴充"
 	},
 	"tag.loader.iris": {
 		"defaultMessage": "Iris"
 	},
 	"tag.loader.java-agent": {
-		"defaultMessage": "Java Agent"
+		"defaultMessage": "Java 代理"
 	},
 	"tag.loader.legacy-fabric": {
 		"defaultMessage": "Legacy Fabric"
@@ -6055,5 +6055,362 @@
 	},
 	"version.supplementary-resources.type": {
 		"defaultMessage": "類型"
+	},
+	"files.row.parent-folder": {
+		"message": "Parent folder"
+	},
+	"omorphia.component.loading-indicator.label": {
+		"message": "Loading"
+	},
+	"collection-widget.project-count": {
+		"message": "{count, plural, one {# project} other {# projects}}"
+	},
+	"collection-widget.search-placeholder": {
+		"message": "Search projects"
+	},
+	"collection-widget.loading-projects": {
+		"message": "Loading projects..."
+	},
+	"collection-widget.empty-collection": {
+		"message": "This collection is empty."
+	},
+	"collection-widget.no-search-results": {
+		"message": "No projects match your search."
+	},
+	"external-files.permissions-card.remove-group": {
+		"message": "Remove group"
+	},
+	"external-files.permissions-card.remove-group-error.title": {
+		"message": "Could not remove group"
+	},
+	"creation-flow.modal.import-instance.pick-instance-folder": {
+		"message": "Select instance folder"
+	},
+	"creation-flow.modal.import-instance.import-as-symlink": {
+		"message": "Import as symlink"
+	},
+	"creation-flow.modal.import-instance.import-as-symlink.tooltip": {
+		"message": "Creates a link to the original instance folder instead of copying files. Saves disk space, but changes to the instance will affect the original files."
+	},
+	"drop.confirm.title": {
+		"message": "你想以什麼類型匯入？"
+	},
+	"drop.confirm.cancel": {
+		"message": "取消"
+	},
+	"drop.confirm.help": {
+		"message": "我可以拖入什麼？"
+	},
+	"drop.confirm.as-mod": {
+		"message": "模組"
+	},
+	"drop.confirm.as-mod-desc": {
+		"message": "將模組 JAR 安裝到 Minecraft 實例"
+	},
+	"drop.confirm.as-instance": {
+		"message": "實例"
+	},
+	"drop.confirm.as-instance-desc": {
+		"message": "從其他啟動器匯入 Minecraft 實例"
+	},
+	"drop.confirm.as-modpack": {
+		"message": "整合包"
+	},
+	"drop.confirm.as-modpack-desc": {
+		"message": "從整合包建立新實例"
+	},
+	"drop.confirm.as-resource-pack": {
+		"message": "資源包"
+	},
+	"drop.confirm.as-resource-pack-desc": {
+		"message": "將資源包安裝到實例"
+	},
+	"drop.confirm.as-shader-pack": {
+		"message": "光影包"
+	},
+	"drop.confirm.as-shader-pack-desc": {
+		"message": "將光影包安裝到實例"
+	},
+	"drop.confirm.as-world": {
+		"message": "存檔"
+	},
+	"drop.confirm.as-world-desc": {
+		"message": "將存檔匯入到實例中"
+	},
+	"drop.confirm.as-schematic": {
+		"message": "投影"
+	},
+	"drop.confirm.as-schematic-desc": {
+		"message": "匯入 Litematic 投影檔案"
+	},
+	"drop.confirm.not-this": {
+		"message": "：這不是{type}"
+	},
+	"drop.confirm.as-dot-minecraft": {
+		"message": "Minecraft 資料夾"
+	},
+	"drop.confirm.as-dot-minecraft-desc": {
+		"message": "掃描 .minecraft 資料夾以建立實例"
+	},
+	"drop.confirm.as-launcher": {
+		"message": "啟動器"
+	},
+	"drop.confirm.as-hmcl-launcher": {
+		"message": "HMCL 啟動器"
+	},
+	"drop.generic_install.title": {
+		"message": "安裝 {type}"
+	},
+	"drop.generic_install.search": {
+		"message": "搜尋實例..."
+	},
+	"drop.generic_install.install": {
+		"message": "安裝"
+	},
+	"drop.generic_install.cancel": {
+		"message": "取消"
+	},
+	"drop.generic_install.create_new": {
+		"message": "建立新實例..."
+	},
+	"drop.generic_install.no_instances": {
+		"message": "找不到實例"
+	},
+	"drop.launcher_import.title": {
+		"message": "從 {launcherName} 匯入實例"
+	},
+	"drop.launcher_import.subtitle": {
+		"message": "在 {basePath} 中掃描到 {count} 個實例"
+	},
+	"drop.launcher_import.select_all": {
+		"message": "全選"
+	},
+	"drop.launcher_import.deselect_all": {
+		"message": "取消全選"
+	},
+	"drop.launcher_import.selected": {
+		"message": "已選 {n} 個"
+	},
+	"drop.launcher_import.cancel": {
+		"message": "取消"
+	},
+	"drop.launcher_import.import": {
+		"message": "匯入（{n}）"
+	},
+	"drop.launcher_import.no_instances": {
+		"message": "找不到實例"
+	},
+	"app.drop.mod-compatibility-title": {
+		"message": "版本不相符"
+	},
+	"app.drop.mod-compatibility-confirm": {
+		"message": "仍要安裝？"
+	},
+	"app.drop.mod-compatibility-warning": {
+		"message": "此模組目標版本為 {modVersion}（{modLoader}），但實例的版本是 {instVersion}（{instLoader}）。"
+	},
+	"app.drop.mod-version": {
+		"message": "模組版本"
+	},
+	"app.drop.inst-version": {
+		"message": "實例版本"
+	},
+	"app.drop.mod-loader": {
+		"message": "模組載入器"
+	},
+	"app.drop.inst-loader": {
+		"message": "實例載入器"
+	},
+	"app.drop.mod-compatibility-search": {
+		"message": "尋找相容版本"
+	},
+	"drop.symlink_method.title": {
+		"message": "選擇匯入方式"
+	},
+	"drop.symlink_method.subtitle": {
+		"message": "正在匯入 {n} 個實例"
+	},
+	"drop.symlink_method.copy_title": {
+		"message": "複製檔案"
+	},
+	"drop.symlink_method.copy_desc": {
+		"message": "複製到 Axolotl 目錄"
+	},
+	"drop.symlink_method.copy_detail": {
+		"message": "實例檔案將被複製到 Axolotl"
+	},
+	"drop.symlink_method.symlink_title": {
+		"message": "符號連結"
+	},
+	"drop.symlink_method.symlink_desc": {
+		"message": "引用原始位置"
+	},
+	"drop.symlink_method.symlink_detail": {
+		"message": "實例檔案保留在原始位置，Axolotl 透過符號連結引用。節省磁碟空間。"
+	},
+	"drop.symlink_method.requires_admin": {
+		"message": "需要管理員權限"
+	},
+	"drop.symlink_method.unsupported_warning": {
+		"message": "此系統不支援符號連結"
+	},
+	"drop.symlink_method.cancel": {
+		"message": "取消"
+	},
+	"drop.symlink_method.confirm": {
+		"message": "確認"
+	},
+	"project.versions.filter.toggle-tooltip": {
+		"message": "Toggle filter for {filter}"
+	},
+	"project.versions.platform.modloader.short": {
+		"message": "ModLoader"
+	},
+	"skin.preview.drag-to-rotate": {
+		"message": "Drag to rotate"
+	},
+	"locale.ar-SA": {
+		"message": "阿拉伯語"
+	},
+	"browse.sort.relevance": {
+		"message": "Relevance"
+	},
+	"browse.sort.downloads": {
+		"message": "Downloads"
+	},
+	"browse.sort.followers": {
+		"message": "Followers"
+	},
+	"browse.sort.date-published": {
+		"message": "Date published"
+	},
+	"browse.sort.date-updated": {
+		"message": "Date updated"
+	},
+	"browse.sort.verified-plays": {
+		"message": "Verified plays"
+	},
+	"browse.sort.players": {
+		"message": "Players"
+	},
+	"content.card.pending-manual-download": {
+		"message": "Manual download required"
+	},
+	"app.symlink-warning.write.header": {
+		"message": "Shared instance"
+	},
+	"app.symlink-warning.write.body": {
+		"message": "This instance is linked to "
+	},
+	"instances.updater-modal.search-compat": {
+		"message": "尋找相容版本"
+	},
+	"files.delete-modal.bulk-header": {
+		"message": "Delete multiple items"
+	},
+	"files.delete-modal.deleting-multiple": {
+		"message": "Deleting {count} items"
+	},
+	"files.delete-modal.bulk-warning": {
+		"message": "The selected items will be permanently deleted. This action cannot be undone."
+	},
+	"files.delete-modal.symlink-warning-header": {
+		"message": "Shared instance"
+	},
+	"files.delete-modal.symlink-warning-body": {
+		"message": "You are modifying files in a shared instance linked to "
+	},
+	"filter.active": {
+		"message": "進行中"
+	},
+	"filter.archived": {
+		"message": "已歸檔"
+	},
+	"filter.draft": {
+		"message": "草稿"
+	},
+	"filter.mods": {
+		"message": "模組"
+	},
+	"filter.plugins": {
+		"message": "插件"
+	},
+	"filter.resourcepacks": {
+		"message": "資源包"
+	},
+	"filter.modpacks": {
+		"message": "整合包"
+	},
+	"general": {
+		"message": "一般"
+	},
+	"appearance": {
+		"message": "外觀"
+	},
+	"privacy": {
+		"message": "隱私"
+	},
+	"language": {
+		"message": "語言"
+	},
+	"beta": {
+		"message": "Beta"
+	},
+	"hidden": {
+		"message": "隱藏分頁"
+	},
+	"java": {
+		"message": "Java 與記憶體"
+	},
+	"instances": {
+		"message": "預設實例選項"
+	},
+	"resources": {
+		"message": "資源管理"
+	},
+	"window": {
+		"message": "視窗"
+	},
+	"hooks": {
+		"message": "啟動掛鉤"
+	},
+	"long": {
+		"message": "長內容"
+	},
+	"short": {
+		"message": "短內容"
+	},
+	"button.open-in-browser": {
+		"message": "Open in browser"
+	},
+	"label.server-only": {
+		"message": "Server only"
+	},
+	"button.switch-to-version": {
+		"message": "Switch to version"
+	},
+	"project-type.schematic.category": {
+		"message": "投影"
+	},
+	"project-type.schematic.capital": {
+		"message": "{count, plural, one {投影} other {投影}}"
+	},
+	"project-type.schematic.lowercase": {
+		"message": "{count, plural, one {投影} other {投影}}"
+	},
+	"search.filter_type.advanced.exclude_mod": {
+		"message": "Exclude mods"
+	},
+	"search.filter_type.advanced.exclude_plugin": {
+		"message": "Exclude plugins"
+	},
+	"search.filter_type.advanced.exclude_datapack": {
+		"message": "Exclude data packs"
+	},
+	"search.filter_type.advanced": {
+		"message": "Advanced"
+	},
+	"header.category.cf-extra": {
+		"message": "More CurseForge categories"
 	}
 }

@@ -940,6 +940,7 @@ const modrinthLoginFlowWaitModal = ref()
 const confirmDropModal = ref<InstanceType<typeof ConfirmDropTypeModal> | null>(null)
 const dropClassification = ref<ClassificationResult | null>(null)
 const dropFileName = ref('')
+const dropFilePath = ref('')
 
 const { isInInstance, instanceId } = useInstanceContext()
 const genericInstallModal = ref<InstanceType<typeof GenericContentInstallModal> | null>(null)
@@ -968,7 +969,10 @@ const { isDragging, isProcessing } = useGlobalDrop(
 		classifyFile: classifyDroppedItem,
 		onImportStart: (type, classification) => {
 			dropClassification.value = classification
-			dropFileName.value = classification.file_path?.split('/').pop() ?? 'file'
+			dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
+			dropFileName.value = classification.file_path?.split('/').pop()
+				?? classification.base_path?.split(/[/\\]/).pop()
+				?? 'file'
 			confirmDropModal.value?.show()
 		},
 		onError: (reason) => {
@@ -1022,12 +1026,60 @@ async function handleDropConfirm(type: string) {
 	}
 
 	const filePath = classification.file_path
-	const fileName = filePath?.split('/').pop() ?? 'file'
+	const fileName = filePath?.split('/').pop()
+		?? classification.base_path?.split(/[/\\]/).pop()
+		?? 'file'
 	dropDebug('handleDropConfirm: routing decision', {
 		type,
 		isLauncherImport,
 		item_type: classification?.item_type,
 	})
+
+	if (type === 'dot_minecraft') {
+		dropDebug('handleDropConfirm: .minecraft folder branch', {
+			dropFilePath: dropFilePath.value,
+		})
+		if (!dropFilePath.value) {
+			dropDebug('handleDropConfirm: dot_minecraft — no dropFilePath, aborting')
+			return
+		}
+		// Treat the .minecraft folder path as a vanilla-style instance source
+		// and scan it for importable instances
+		currentImportContext.value = { launcherType: 'Vanilla', basePath: dropFilePath.value }
+		scanningInstances.value = true
+		const results = await scanLauncherInstances('Vanilla', dropFilePath.value)
+		scanningInstances.value = false
+		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
+		dropDebug('handleDropConfirm: .minecraft scan result', { totalInstances, results })
+
+		if (totalInstances === 0) {
+			currentImportContext.value = null
+			scanningInstances.value = false
+			dropDebug('handleDropConfirm: no instances found in .minecraft folder')
+			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
+			return
+		}
+
+		if (totalInstances === 1 && results[0]?.instances[0]) {
+			const single = results[0].instances[0]
+			dropDebug('handleDropConfirm: single instance from .minecraft, showing symlink modal', {
+				name: single.name,
+				path: single.path,
+			})
+			selectedInstances.value = [{ launcherType: 'Vanilla', basePath: dropFilePath.value, name: single.name, path: single.path }]
+			const cap = await check_symlink_capability()
+			symlinkCardsModal.value?.show({
+				instanceNames: [single.name],
+				symlinkCapable: cap,
+			})
+			return
+		}
+
+		// Multiple instances → show selection modal
+		dropDebug('handleDropConfirm: multiple instances from .minecraft, showing launcher import modal')
+		launcherImportModal.value?.show(results)
+		return
+	}
 
 	if (isLauncherImport && type === 'instance') {
 		const launcherType =

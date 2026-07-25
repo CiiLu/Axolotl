@@ -3145,5 +3145,182 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "Unknown file warning"
+	},
+	"app.drop.overlay-title": {
+		"message": "Drop to import"
+	},
+	"app.drop.overlay-subtitle": {
+		"message": "Release to classify and import"
+	},
+	"app.drop.error.multiple-files-title": {
+		"message": "Cannot import multiple files"
+	},
+	"app.drop.error.multiple-files-text": {
+		"message": "Please drop one file at a time."
+	},
+	"app.drop.error.shortcut-title": {
+		"message": "Shortcut resolution failed"
+	},
+	"app.drop.error.shortcut-text": {
+		"message": "Could not resolve the shortcut target."
+	},
+	"app.drop.error.unknown-title": {
+		"message": "Unknown file type"
+	},
+	"app.drop.error.unknown-text": {
+		"message": "Could not determine what kind of file this is."
+	},
+	"app.drop.error.title": {
+		"message": "Drop error"
+	},
+	"app.drop.world-imported-title": {
+		"message": "World imported"
+	},
+	"app.drop.world-imported-text": {
+		"message": "World save has been imported successfully."
+	},
+	"app.drop.content-installed-title": {
+		"message": "Content installed"
+	},
+	"app.drop.content-installed-text": {
+		"message": "File has been installed to the instance."
+	},
+	"app.drop.install-failed-title": {
+		"message": "Installation failed"
+	},
+	"app.drop.instance-imported-title": {
+		"message": "Instance imported"
+	},
+	"app.drop.instance-imported-text": {
+		"message": "{name} imported successfully."
+	},
+	"app.drop.import-failed-title": {
+		"message": "Import failed"
+	},
+	"app.drop.import-failed-text": {
+		"message": "Failed to import {name}: {error}"
+	},
+	"app.drop.no-instances": {
+		"message": "No instances found"
+	},
+	"app.drop.modpack-not-supported-title": {
+		"message": "Modpack import"
+	},
+	"app.drop.modpack-not-supported-text": {
+		"message": "Modpack import is not yet supported via drag & drop. Please use the Import button to install a modpack."
+	},
+	"app.drop.mod-compatibility-title": {
+		"message": "Version Mismatch"
+	},
+	"app.drop.mod-compatibility-warning": {
+		"message": "This mod targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader})."
+	},
+	"app.translation-settings.system-prompt": {
+		"message": "系统提示词"
+	},
+	"app.translation-settings.system-prompt-description": {
+		"message": "输入你的自定义系统提示词，留空则使用默认提示词"
+	},
+	"create.title": {
+		"message": "Create Instance"
+	},
+	"create.subtitle": {
+		"message": "Start a new adventure or bring your existing worlds"
+	},
+	"create.new.title": {
+		"message": "Start Fresh"
+	},
+	"create.new.description": {
+		"message": "Create a new Minecraft instance from scratch."
+	},
+	"create.import.title": {
+		"message": "Import Existing"
+	},
+	"create.import.description": {
+		"message": "Import instances from other launchers or install a modpack."
+	},
+	"create.back": {
+		"message": "Back to Library"
+	},
+	"drop.help.title": {
+		"message": "What can I drop into Axolotl?"
+	},
+	"drop.help.instances-title": {
+		"message": "Launcher Instances"
+	},
+	"drop.help.instances-desc": {
+		"message": "Drag folders from other launchers (MultiMC, Prism Launcher, HMCL, etc.) to import Minecraft instances."
+	},
+	"drop.help.instances-formats": {
+		"message": "MultiMC / Prism Launcher / PolyMC / HMCL instance folders"
+	},
+	"drop.help.mods-title": {
+		"message": "Mods"
+	},
+	"drop.help.mods-desc": {
+		"message": "Drag mod JAR files to install them into a Minecraft instance."
+	},
+	"drop.help.mods-formats": {
+		"message": ".jar"
+	},
+	"drop.help.modpacks-title": {
+		"message": "Modpacks"
+	},
+	"drop.help.modpacks-desc": {
+		"message": "Drag modpack ZIP/MRPACK files to create a new instance."
+	},
+	"drop.help.modpacks-formats": {
+		"message": ".mrpack / .zip"
+	},
+	"drop.help.resource-packs-title": {
+		"message": "Resource Packs"
+	},
+	"drop.help.resource-packs-desc": {
+		"message": "Drag resource pack ZIP files to install them into an instance."
+	},
+	"drop.help.resource-packs-formats": {
+		"message": ".zip"
+	},
+	"drop.help.shader-packs-title": {
+		"message": "Shader Packs"
+	},
+	"drop.help.shader-packs-desc": {
+		"message": "Drag shader pack ZIP files to install them into an instance."
+	},
+	"drop.help.shader-packs-formats": {
+		"message": ".zip"
+	},
+	"drop.help.worlds-title": {
+		"message": "World Saves"
+	},
+	"drop.help.worlds-desc": {
+		"message": "Drag world save folders to import them into an instance."
+	},
+	"drop.help.worlds-formats": {
+		"message": "Minecraft world save folder (level.dat)"
+	},
+	"drop.help.schematics-title": {
+		"message": "Schematics"
+	},
+	"drop.help.schematics-desc": {
+		"message": "Drag .litematic files to import them as schematics."
+	},
+	"drop.help.schematics-formats": {
+		"message": ".litematic"
+	},
+	"app.instance.mods.parsing-files": {
+		"message": "Parsing files, larger files may take a while"
+	},
+	"app.instance.mods.drag-drop-hint": {
+		"message": "Drop files to install to the current instance"
+	},
+	"app.instance.mods.parse-failed": {
+		"message": "Parse failed, this may not be a valid package"
+	},
+	"app.instance.mods.file-already-exists": {
+		"message": "The file may already exist in the instance"
+	},
+	"app.instance.mods.dismiss": {
+		"message": "Got it"
 	}
 }

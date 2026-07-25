@@ -47,7 +47,11 @@
 				<ButtonStyled>
 					<button class="flex items-center gap-2" @click="handleCancel">
 						<XIcon class="size-4" />
-						{{ formatMessage(messages.cancel) }}
+						{{
+							showNotThisType
+								? formatMessage(messages.notThisType, { type: detectedTypeName })
+								: formatMessage(messages.cancel)
+						}}
 					</button>
 				</ButtonStyled>
 			</div>
@@ -91,6 +95,26 @@ const messages = defineMessages({
 	help: {
 		id: 'drop.confirm.help',
 		defaultMessage: 'What can I drop?',
+	},
+	notThisType: {
+		id: 'drop.confirm.not-this',
+		defaultMessage: 'This is not a {type}',
+	},
+	dotMinecraftTitle: {
+		id: 'drop.confirm.as-dot-minecraft',
+		defaultMessage: 'Minecraft Folder',
+	},
+	dotMinecraftDesc: {
+		id: 'drop.confirm.as-dot-minecraft-desc',
+		defaultMessage: 'Scan a .minecraft folder to create instances',
+	},
+	launcherTitle: {
+		id: 'drop.confirm.as-launcher',
+		defaultMessage: 'Launcher',
+	},
+	hmclLauncherTitle: {
+		id: 'drop.confirm.as-hmcl-launcher',
+		defaultMessage: 'HMCL Launcher',
 	},
 	modTitle: {
 		id: 'drop.confirm.as-mod',
@@ -170,6 +194,12 @@ const optionByType: Record<string, DropOption> = {
 		titleMsg: messages.instanceTitle,
 		descMsg: messages.instanceDesc,
 	},
+	dot_minecraft: {
+		type: 'dot_minecraft',
+		icon: FolderOpenIcon,
+		titleMsg: messages.dotMinecraftTitle,
+		descMsg: messages.dotMinecraftDesc,
+	},
 	modpack: {
 		type: 'modpack',
 		icon: GridIcon,
@@ -235,10 +265,47 @@ const OPTION_GROUPS: Record<string, string[]> = {
 	litematic: ['litematic'],
 }
 
+/**
+ * Lookup the user-facing type name for a classification's item_type.
+ *
+ * Uses `optionByType` for content types (mod, modpack, etc.) and falls
+ * back to dedicated launcher messages for launcher types so the cancel
+ * button correctly shows "This is not a Launcher" etc.
+ */
+const detectedTypeName = computed((): string => {
+	const itemType = props.classification?.item_type
+	if (!itemType) return ''
+	// Check display options first (content types)
+	const option = optionByType[itemType]
+	if (option) return formatMessage(option.titleMsg)
+	// Fall back to launcher-type labels
+	switch (itemType) {
+		case 'launcher':
+			return formatMessage(messages.launcherTitle)
+		case 'hmcl_launcher':
+			return formatMessage(messages.hmclLauncherTitle)
+		default:
+			return ''
+	}
+})
+
+/**
+ * Whether to show "这不是{type}" instead of "Cancel".
+ * Only shown when there's a classification with a known type name.
+ * Launcher types (no matching optionByType) fall back to "Cancel".
+ */
+const showNotThisType = computed((): boolean => {
+	return !!props.classification && !!detectedTypeName.value
+})
+
 const visibleOptions = computed((): DropOption[] => {
 	const classification = props.classification
 	if (!classification) {
 		const all = Object.values(optionByType).filter((o) => o.type !== 'instance')
+		// Add .minecraft folder option only in the fallback (manual selection) view
+		if (optionByType.dot_minecraft) {
+			all.push(optionByType.dot_minecraft)
+		}
 		debug('visibleOptions: no classification, showing all options except instance', {
 			count: all.length,
 			types: all.map((o) => o.type),

@@ -6169,5 +6169,248 @@
 	},
 	"version.supplementary-resources.type": {
 		"defaultMessage": "Type"
+	},
+	"drop.confirm.title": {
+		"message": "What would you like to import this as?"
+	},
+	"drop.confirm.cancel": {
+		"message": "Cancel"
+	},
+	"drop.confirm.help": {
+		"message": "What can I drop?"
+	},
+	"drop.confirm.as-mod": {
+		"message": "Mod"
+	},
+	"drop.confirm.as-mod-desc": {
+		"message": "Install a mod JAR to a Minecraft instance"
+	},
+	"drop.confirm.as-instance": {
+		"message": "Instance"
+	},
+	"drop.confirm.as-instance-desc": {
+		"message": "Import Minecraft instances from another launcher"
+	},
+	"drop.confirm.as-modpack": {
+		"message": "Modpack"
+	},
+	"drop.confirm.as-modpack-desc": {
+		"message": "Create a new instance from a modpack"
+	},
+	"drop.confirm.as-resource-pack": {
+		"message": "Resource Pack"
+	},
+	"drop.confirm.as-resource-pack-desc": {
+		"message": "Install a resource pack to an instance"
+	},
+	"drop.confirm.as-shader-pack": {
+		"message": "Shader Pack"
+	},
+	"drop.confirm.as-shader-pack-desc": {
+		"message": "Install a shader pack to an instance"
+	},
+	"drop.confirm.as-world": {
+		"message": "World Save"
+	},
+	"drop.confirm.as-world-desc": {
+		"message": "Import a world save into an instance"
+	},
+	"drop.confirm.as-schematic": {
+		"message": "Schematic"
+	},
+	"drop.confirm.as-schematic-desc": {
+		"message": "Import a Litematic schematic"
+	},
+	"drop.confirm.not-this": {
+		"message": "：This is not a {type}"
+	},
+	"drop.confirm.as-dot-minecraft": {
+		"message": "Minecraft Folder"
+	},
+	"drop.confirm.as-dot-minecraft-desc": {
+		"message": "Scan a .minecraft folder to create instances"
+	},
+	"drop.confirm.as-launcher": {
+		"message": "Launcher"
+	},
+	"drop.confirm.as-hmcl-launcher": {
+		"message": "HMCL Launcher"
+	},
+	"drop.generic_install.title": {
+		"message": "Install {type}"
+	},
+	"drop.generic_install.search": {
+		"message": "Search instances..."
+	},
+	"drop.generic_install.install": {
+		"message": "Install"
+	},
+	"drop.generic_install.cancel": {
+		"message": "Cancel"
+	},
+	"drop.generic_install.create_new": {
+		"message": "Create new instance..."
+	},
+	"drop.generic_install.no_instances": {
+		"message": "No instances found"
+	},
+	"drop.launcher_import.title": {
+		"message": "Import instances from {launcherName}"
+	},
+	"drop.launcher_import.subtitle": {
+		"message": "Scanned {count} instances in {basePath}"
+	},
+	"drop.launcher_import.select_all": {
+		"message": "Select All"
+	},
+	"drop.launcher_import.deselect_all": {
+		"message": "Deselect All"
+	},
+	"drop.launcher_import.selected": {
+		"message": "{n} selected"
+	},
+	"drop.launcher_import.cancel": {
+		"message": "Cancel"
+	},
+	"drop.launcher_import.import": {
+		"message": "Import ({n})"
+	},
+	"drop.launcher_import.no_instances": {
+		"message": "No instances found"
+	},
+	"app.drop.mod-compatibility-title": {
+		"message": "Version Mismatch"
+	},
+	"app.drop.mod-compatibility-confirm": {
+		"message": "Install anyway?"
+	},
+	"app.drop.mod-compatibility-warning": {
+		"message": "This mod targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader})."
+	},
+	"app.drop.mod-version": {
+		"message": "Mod Version"
+	},
+	"app.drop.inst-version": {
+		"message": "Instance Version"
+	},
+	"app.drop.mod-loader": {
+		"message": "Mod Loader"
+	},
+	"app.drop.inst-loader": {
+		"message": "Instance Loader"
+	},
+	"app.drop.mod-compatibility-search": {
+		"message": "Find compatible version"
+	},
+	"drop.symlink_method.title": {
+		"message": "Choose import method"
+	},
+	"drop.symlink_method.subtitle": {
+		"message": "Importing {n} instance(s)"
+	},
+	"drop.symlink_method.copy_title": {
+		"message": "Copy files"
+	},
+	"drop.symlink_method.copy_desc": {
+		"message": "Copy to Axolotl directory"
+	},
+	"drop.symlink_method.copy_detail": {
+		"message": "Instance files will be copied to Axolotl\\"
+	},
+	"drop.symlink_method.symlink_title": {
+		"message": "Symbolic link"
+	},
+	"drop.symlink_method.symlink_desc": {
+		"message": "Reference original location"
+	},
+	"drop.symlink_method.symlink_detail": {
+		"message": "Instance files stay in their original location. Axolotl references them via a symbolic link. Saves disk space."
+	},
+	"drop.symlink_method.requires_admin": {
+		"message": "Administrator permission required"
+	},
+	"drop.symlink_method.unsupported_warning": {
+		"message": "Symbolic links are not supported on this system"
+	},
+	"drop.symlink_method.cancel": {
+		"message": "Cancel"
+	},
+	"drop.symlink_method.confirm": {
+		"message": "Confirm"
+	},
+	"locale.ar-SA": {
+		"message": "Arabic"
+	},
+	"instances.updater-modal.search-compat": {
+		"message": "Find compatible version"
+	},
+	"filter.active": {
+		"message": "Active"
+	},
+	"filter.archived": {
+		"message": "Archived"
+	},
+	"filter.draft": {
+		"message": "Draft"
+	},
+	"filter.mods": {
+		"message": "Mods"
+	},
+	"filter.plugins": {
+		"message": "Plugins"
+	},
+	"filter.resourcepacks": {
+		"message": "Resource Packs"
+	},
+	"filter.modpacks": {
+		"message": "Modpacks"
+	},
+	"general": {
+		"message": "General"
+	},
+	"appearance": {
+		"message": "Appearance"
+	},
+	"privacy": {
+		"message": "Privacy"
+	},
+	"language": {
+		"message": "Language"
+	},
+	"beta": {
+		"message": "Beta"
+	},
+	"hidden": {
+		"message": "Hidden Tab"
+	},
+	"java": {
+		"message": "Java and memory"
+	},
+	"instances": {
+		"message": "Default instance options"
+	},
+	"resources": {
+		"message": "Resource management"
+	},
+	"window": {
+		"message": "Window"
+	},
+	"hooks": {
+		"message": "Launch hooks"
+	},
+	"long": {
+		"message": "Long content"
+	},
+	"short": {
+		"message": "Short content"
+	},
+	"project-type.schematic.category": {
+		"message": "Schematics"
+	},
+	"project-type.schematic.capital": {
+		"message": "{count, plural, one {Schematic} other {Schematics}}"
+	},
+	"project-type.schematic.lowercase": {
+		"message": "{count, plural, one {schematic} other {schematics}}"
 	}
 }

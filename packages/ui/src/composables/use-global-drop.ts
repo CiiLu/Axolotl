@@ -14,6 +14,7 @@ export interface ClassificationResult {
 		| 'launcher'
 		| 'hmcl_launcher'
 		| 'mod'
+		| 'modpack'
 		| 'litematic'
 		| 'resource_pack'
 		| 'shader_pack'

@@ -28,6 +28,7 @@ mod imp {
         }
 
         let mut buffer = vec![0u8; size as usize];
+
         let ok = unsafe {
             GetFileVersionInfoW(
                 PCWSTR::from_raw(wide.as_ptr()),
