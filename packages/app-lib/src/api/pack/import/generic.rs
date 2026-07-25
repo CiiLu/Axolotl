@@ -9,7 +9,7 @@ use crate::{
         import::finish_import,
         install_from::{self, CreatePackDescription, PackDependency},
     },
-    state::instance_types::ModLoader,
+    state::ModLoader,
 };
 
 pub async fn import_generic(
@@ -157,7 +157,10 @@ pub async fn import_generic(
     .await?;
 
     let state = State::get().await?;
-    tracing::debug!("import_generic: finishing import for instance_id={}", instance_id);
+    tracing::debug!(
+        "import_generic: finishing import for instance_id={}",
+        instance_id
+    );
     finish_import(
         instance_id,
         dotminecraft,
