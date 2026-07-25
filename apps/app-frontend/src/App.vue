@@ -51,7 +51,7 @@ import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-co
 import { useQuery } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { Effect, getCurrentWindow } from '@tauri-apps/api/window'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { type as getOsType } from '@tauri-apps/plugin-os'
@@ -174,7 +174,9 @@ const forceSidebar = computed(
 )
 const sidebarVisible = computed(() => sidebarToggled.value || forceSidebar.value)
 const customBackgroundStyle = computed(() => {
-	if (!themeStore.customBackgroundPath) return undefined
+	// A custom image would sit between the desktop and the UI, defeating the
+	// transparent window entirely, so the two are mutually exclusive.
+	if (themeStore.transparentBackground || !themeStore.customBackgroundPath) return undefined
 
 	return {
 		backgroundImage: `url("${convertFileSrc(themeStore.customBackgroundPath)}")`,
@@ -256,6 +258,54 @@ const nativeDecorations = ref(false)
 
 const os = ref('')
 const isDevEnvironment = ref(false)
+
+/**
+ * On Windows the native shadow also draws the window border, which bleeds dark
+ * artifacts into a transparent window's corners, so it has to go while the mode
+ * is on. Windows 10 re-adds it after the window is shown, hence reapplying here
+ * rather than relying on the value set during setup.
+ */
+async function applyWindowShadow() {
+	if (os.value !== 'Windows') return
+
+	try {
+		await getCurrentWindow().setShadow(!themeStore.transparentBackground)
+	} catch (error) {
+		console.warn('Failed to update window shadow', error)
+	}
+}
+
+watch(() => themeStore.transparentBackground, applyWindowShadow)
+
+/**
+ * The frosted glass has to come from the compositor: a webview cannot reach the
+ * pixels behind its own window, so `backdrop-filter` can never blur the desktop.
+ * Acrylic blurs whatever sits behind the window, matching what the transparency
+ * already reveals; Mica would only sample the wallpaper and ignore other
+ * windows. Linux exposes no window effects at all.
+ */
+async function applyWindowEffects() {
+	if (os.value === 'Linux') return
+
+	try {
+		const window = getCurrentWindow()
+		if (!themeStore.transparentBackground || !themeStore.transparentBackgroundBlur) {
+			await window.clearEffects()
+			return
+		}
+
+		await window.setEffects({
+			effects: [os.value === 'MacOS' ? Effect.UnderWindowBackground : Effect.Acrylic],
+		})
+	} catch (error) {
+		console.warn('Failed to update window effects', error)
+	}
+}
+
+watch(
+	() => [themeStore.transparentBackground, themeStore.transparentBackgroundBlur],
+	applyWindowEffects,
+)
 
 const stateInitialized = ref(false)
 const communityAnnouncementModal = ref()
@@ -515,6 +565,9 @@ async function setupApp() {
 		custom_background_path,
 		custom_background_blur,
 		custom_background_opacity,
+		transparent_background,
+		transparent_background_opacity,
+		transparent_background_blur,
 		sidebar_instance_count,
 		developer_mode,
 		feature_flags,
@@ -560,6 +613,12 @@ async function setupApp() {
 	themeStore.customBackgroundPath = custom_background_path
 	themeStore.customBackgroundBlur = custom_background_blur
 	themeStore.customBackgroundOpacity = custom_background_opacity
+	themeStore.transparentBackground = transparent_background
+	themeStore.transparentBackgroundOpacity = transparent_background_opacity
+	themeStore.transparentBackgroundBlur = transparent_background_blur
+	themeStore.setTransparentBackgroundClass()
+	await applyWindowShadow()
+	await applyWindowEffects()
 	themeStore.sidebarInstanceCount = sidebar_instance_count
 	themeStore.devMode = developer_mode
 	themeStore.featureFlags = feature_flags
@@ -1981,7 +2040,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<SplashScreen v-if="!stateFailed" ref="splashScreen" data-tauri-drag-region />
 	<div id="teleports"></div>
 	<div
-		v-if="stateInitialized && themeStore.customBackgroundPath"
+		v-if="stateInitialized && themeStore.customBackgroundPath && !themeStore.transparentBackground"
 		class="launcher-background"
 		:style="customBackgroundStyle"
 	/>
@@ -1990,7 +2049,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		class="app-grid-layout relative"
 		:class="{
 			'disable-advanced-rendering': !themeStore.advancedRendering,
-			'has-custom-background': themeStore.customBackgroundPath,
+			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
+			'has-transparent-background': themeStore.transparentBackground,
 		}"
 	>
 		<Transition name="fade">
@@ -2198,7 +2258,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		:class="{
 			'sidebar-enabled': sidebarVisible,
 			'disable-advanced-rendering': !themeStore.advancedRendering,
-			'has-custom-background': themeStore.customBackgroundPath,
+			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
+			'has-transparent-background': themeStore.transparentBackground,
 		}"
 	>
 		<div class="app-viewport flex-grow router-view">
@@ -2432,7 +2493,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		opacity 180ms ease;
 }
 
-.app-grid-layout.has-custom-background {
+.app-grid-layout.has-custom-background,
+.app-grid-layout.has-transparent-background {
 	background-color: transparent;
 
 	.app-grid-navbar,
@@ -2479,7 +2541,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		grid-template-columns: 1fr 300px;
 	}
 
-	&.has-custom-background {
+	&.has-custom-background,
+	&.has-transparent-background {
 		background-color: color-mix(in srgb, var(--color-bg) 76%, transparent);
 		border-top-left-radius: 0;
 
@@ -2492,6 +2555,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			border-top-left-radius: 0;
 		}
 	}
+}
+
+.app-grid-layout.has-transparent-background {
+	.app-grid-navbar,
+	.app-grid-statusbar {
+		background-color: color-mix(
+			in srgb,
+			var(--surface-3-opaque) var(--window-alpha-chrome),
+			transparent
+		) !important;
+	}
+
+	// Without native decorations or rounded corners the window edge dissolves
+	// into the desktop, so it needs drawing. Dark outside, light inside, to stay
+	// legible over any wallpaper.
+	&::after {
+		content: '';
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		pointer-events: none;
+		box-shadow:
+			inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+			inset 0 0 0 2px rgba(255, 255, 255, 0.14);
+	}
+}
+
+.app-contents.has-transparent-background {
+	// Sourced from the opaque snapshot: `--color-bg` is itself translucent in
+	// this mode, so mixing it again would compound. Sits slightly below the
+	// chosen alpha because pages paint their own surface on top of it.
+	background-color: color-mix(
+		in srgb,
+		var(--surface-1-opaque) calc(var(--window-alpha) * 0.82),
+		transparent
+	);
 }
 
 .loading-indicator-container {
