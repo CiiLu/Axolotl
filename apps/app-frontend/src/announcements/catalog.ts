@@ -45,22 +45,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'You can now write a custom system prompt for OpenAI-compatible translation services (Settings > Translation).',
-					'zh-CN':
-						'现在可以在翻译设置中为 OpenAI 兼容服务编写自定义系统提示词。',
+					'zh-CN': '现在可以在翻译设置中为 OpenAI 兼容服务编写自定义系统提示词。',
 				},
 				{
 					'en-US':
 						'Translation results now appear in staggered batches with a smooth floating animation.',
-					'zh-CN':
-						'翻译结果现在以逐批浮动动画显示，视觉体验更流畅。',
+					'zh-CN': '翻译结果现在以逐批浮动动画显示，视觉体验更流畅。',
 				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Translation requests are now sent in batches (5 segments per batch) to reduce API overhead.',
-					'zh-CN':
-						'翻译请求现在分批发送（每批5个段落），降低 API 调用频率。',
+					'zh-CN': '翻译请求现在分批发送（每批5个段落），降低 API 调用频率。',
 				},
 			],
 		},
@@ -69,7 +66,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
 		id: 'launcher-1.5.2',
 		version: '1.5.2',
-		publishedAt: '2026-07-23',
+		publishedAt: '2026-07-25',
 		title: {
 			'en-US': 'Axolotl Launcher 1.5.2',
 			'zh-CN': 'Axolotl Launcher 1.5.2',
@@ -103,8 +100,22 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'The left sidebar now animates the active highlight sliding between pages when switching sections, matching the content type tabs.',
-					'zh-CN':
-						'左侧导航栏切换页面时，选中高亮改为滑动过渡动画，与顶部内容类型标签栏保持一致。',
+					'zh-CN': '左侧导航栏切换页面时，选中高亮改为滑动过渡动画，与顶部内容类型标签栏保持一致。',
+				},
+				{
+					'en-US':
+						'Added an enabled-by-default option to automatically set the launcher and Java to use the high-performance GPU on Windows.',
+					'zh-CN': '新增默认开启的选项，可在 Windows 上自动将启动器和 Java 设置为使用高性能显卡。',
+				},
+				{
+					'en-US':
+						'Added offline crash diagnosis with evidence lines, actionable fixes, and automatic matching from stack traces to installed Mods.',
+					'zh-CN': '新增离线崩溃诊断，可展示证据行与具体修复建议，并根据堆栈自动匹配已安装模组。',
+				},
+				{
+					'en-US':
+						'Crash context can now be exported as a censored ZIP containing the related logs and local analysis.',
+					'zh-CN': '现在可将相关日志与本地分析一键导出为已脱敏的崩溃上下文 ZIP。',
 				},
 			],
 			changed: [
@@ -119,6 +130,24 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Downloading or launching an instance now scans the system for an already-installed Java of the required version before downloading a new runtime, reusing an existing installation instead of downloading a duplicate.',
 					'zh-CN':
 						'下载或启动实例时，现在会先扫描本机是否已安装所需版本的 Java，找到则复用，仅在确实没有时才下载新的运行时，避免重复下载。',
+				},
+				{
+					'en-US':
+						'Crash analysis now combines the latest run output, debug log, crash report, and JVM crash log before using online Insights.',
+					'zh-CN':
+						'崩溃分析现在会先归集同次运行输出、调试日志、崩溃报告与 JVM 崩溃日志，再调用在线 Insights。',
+				},
+				{
+					'en-US':
+						'The Minecraft crash window now explains how to share useful diagnostics and provides direct actions to export the package or open the analysis.',
+					'zh-CN':
+						'Minecraft 崩溃窗口现在会说明如何提供有效诊断信息，并可直接导出诊断包或打开分析结果。',
+				},
+				{
+					'en-US':
+						'Launch failures and runtime crashes now use one localized window that clearly labels automatic analysis as a possible cause, shows reference evidence, and asks users to export an error report instead of sharing screenshots.',
+					'zh-CN':
+						'启动前失败与运行时崩溃现在统一使用中文化窗口，并明确将自动分析标记为可能原因、展示参考证据，同时提醒用户导出错误报告而不是发送截图。',
 				},
 			],
 			fixed: [
@@ -144,10 +173,44 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复数据库备份被写入 Modrinth 目录的问题，现在改为保存到启动器自己的应用数据目录。',
 				},
+				{
+					'en-US':
+						'Crash diagnosis now keeps the newest result when multiple instances fail close together and no longer updates the dialog after it has been closed during shutdown.',
+					'zh-CN':
+						'多个实例接连失败时，崩溃诊断现在会保留最新结果，并且不会在启动器关闭期间继续更新弹窗。',
+				},
+				{
+					'en-US':
+						'Java processes that exit before launcher initialization are now reported immediately in the localized Minecraft failure dialog with captured logs instead of waiting for the generic launch timeout.',
+					'zh-CN':
+						'Java 进程在启动器初始化完成前退出时，现在会立即保留日志，并通过中文化的 Minecraft 故障弹窗报告，不再等待通用启动超时。',
+				},
+				{
+					'en-US':
+						'Crash guidance now appears when the log confirms an incompatible Java or loader failure even if the game process incorrectly returns a successful exit code.',
+					'zh-CN':
+						'日志确认 Java 不兼容或加载器失败时，即使游戏进程错误地返回成功退出码，现在也会显示崩溃指引。',
+				},
+				{
+					'en-US':
+						'Launch preparation now times out with clear guidance instead of leaving an instance stuck on Starting indefinitely.',
+					'zh-CN': '启动准备异常时现在会超时并显示明确指引，不再让实例无限停留在“启动中”。',
+				},
+				{
+					'en-US':
+						'The launcher now shows crash guidance when an incompatible Java version or Fabric Loader error stops the game before a crash report is created.',
+					'zh-CN':
+						'修复不兼容的 Java 版本或 Fabric Loader 错误在生成崩溃报告前终止游戏时，启动器不显示崩溃指引的问题。',
+				},
+				{
+					'en-US':
+						'Launch errors returned as structured desktop-app objects now open the localized Minecraft diagnosis window instead of the generic error dialog.',
+					'zh-CN':
+						'修复桌面端以结构化对象返回启动错误时仍打开通用英文错误框的问题，现在会统一进入中文化 Minecraft 诊断窗口。',
+				},
 			],
 		},
 	},
-
 	{
 		id: 'launcher-1.5.1',
 		version: '1.5.1',
@@ -179,8 +242,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Java detection now caches results, scans sources concurrently, and refreshes the installation list in the background.',
-					'zh-CN':
-						'Java 检测现在会缓存结果、并行扫描不同来源，并在后台刷新安装列表。',
+					'zh-CN': 'Java 检测现在会缓存结果、并行扫描不同来源，并在后台刷新安装列表。',
 				},
 				{
 					'en-US':
@@ -191,8 +253,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			fixed: [
 				{
-					'en-US':
-						'Improved memory usage reporting and automatic allocation accuracy on macOS.',
+					'en-US': 'Improved memory usage reporting and automatic allocation accuracy on macOS.',
 					'zh-CN': '改进 macOS 上的内存占用显示和自动分配准确性。',
 				},
 				{
@@ -218,32 +279,26 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Added HMCL, PCL2, and PCL2CE launcher instance import — all instances are now discovered and imported directly from these launchers.',
-					'zh-CN':
-						'新增 HMCL、PCL2、PCL2CE 启动器实例导入支持，可直接根据启动器解析出所有实例。',
+					'zh-CN': '新增 HMCL、PCL2、PCL2CE 启动器实例导入支持，可直接根据启动器解析出所有实例。',
 				},
 				{
 					'en-US':
 						'Added generic folder import — any directory containing a .minecraft folder can now be imported as an instance.',
-					'zh-CN':
-						'新增通用文件夹导入功能，可导入任意含 .minecraft 的目录。',
+					'zh-CN': '新增通用文件夹导入功能，可导入任意含 .minecraft 的目录。',
 				},
 				{
 					'en-US':
 						'Added "import as shared instance" support, optionally using symlinks instead of copying to save disk space.',
-					'zh-CN':
-						'新增添加为共享实例功能：导入时可选软链接而非复制。',
+					'zh-CN': '新增添加为共享实例功能：导入时可选软链接而非复制。',
 				},
 				{
-					'en-US':
-						'Added a confirmation dialog when deleting files from the file browser tab.',
-					'zh-CN':
-						'补齐文件标签页删除时的确认弹窗。',
+					'en-US': 'Added a confirmation dialog when deleting files from the file browser tab.',
+					'zh-CN': '补齐文件标签页删除时的确认弹窗。',
 				},
 				{
 					'en-US':
 						'Added OptiFine support — declared OptiFine in a modpack is automatically installed; standalone, or as a mod alongside other loaders.',
-					'zh-CN':
-						'新增 OptiFine 支持：整合包声明 OptiFine 时自动安装——单独存在时作为加载器。',
+					'zh-CN': '新增 OptiFine 支持：整合包声明 OptiFine 时自动安装——单独存在时作为加载器。',
 				},
 			],
 			changed: [
@@ -254,10 +309,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'优化 copy_dotminecraft_with_reporter：串行复制改为并发，时间复杂度由 O(n·t) 降为 O(max(t))，优化进度上报时机。',
 				},
 				{
-					'en-US':
-						'Updated shared instance indicators and warning hints for clarity.',
-					'zh-CN':
-						'更新共享实例标识与警告提示。',
+					'en-US': 'Updated shared instance indicators and warning hints for clarity.',
+					'zh-CN': '更新共享实例标识与警告提示。',
 				},
 				{
 					'en-US':
@@ -305,7 +358,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			changed: [
 				{
-					'en-US': 'Improved the update settings version history with clearer release cards and details.',
+					'en-US':
+						'Improved the update settings version history with clearer release cards and details.',
 					'zh-CN': '优化更新设置中的版本历史，提供更清晰的发布卡片和详情展示。',
 				},
 				{
