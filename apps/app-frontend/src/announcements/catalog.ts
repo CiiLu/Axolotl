@@ -33,6 +33,29 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.5.4',
+		version: '1.5.4',
+		publishedAt: '2026-07-25',
+		title: {
+			'en-US': 'Axolotl Launcher 1.5.4',
+			'zh-CN': 'Axolotl Launcher 1.5.4',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Added a transparent background option in Settings > Appearance, with a slider to control how much of your desktop shows through the launcher window.',
+					'zh-CN': '设置 > 外观新增「透明背景」选项，可通过滑块调节桌面透过启动器窗口显示的程度。',
+				},
+				{
+					'en-US':
+						'Added a background blur toggle for the transparent background, frosting whatever shows through the window.',
+					'zh-CN': '透明背景新增「背景模糊」开关，可将透出的画面做磨砂玻璃处理。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.5.3',
 		version: '1.5.3',
 		publishedAt: '2026-07-25',

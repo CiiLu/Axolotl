@@ -281,6 +281,27 @@
 	"app.appearance-settings.toggle-sidebar.title": {
 		"message": "Toggle sidebar"
 	},
+	"app.appearance-settings.transparent-background.blur-description": {
+		"message": "Frost what shows through the window. Dragging or resizing may feel less smooth while this is on."
+	},
+	"app.appearance-settings.transparent-background.blur-title": {
+		"message": "Background blur"
+	},
+	"app.appearance-settings.transparent-background.conflict": {
+		"message": "Your custom background image is hidden while this is enabled."
+	},
+	"app.appearance-settings.transparent-background.description": {
+		"message": "Let your desktop show through the launcher window."
+	},
+	"app.appearance-settings.transparent-background.opacity": {
+		"message": "Interface opacity"
+	},
+	"app.appearance-settings.transparent-background.opacity-description": {
+		"message": "Lower values show more of your desktop. Panels stay more solid than the background to keep text readable."
+	},
+	"app.appearance-settings.transparent-background.title": {
+		"message": "Transparent background"
+	},
 	"app.appearance-settings.unknown-pack-warning.description": {
 		"message": "If you attempt to install a Modrinth Pack file (.mrpack) that isn't hosted on Modrinth, we'll make sure you understand the risks before installing it."
 	},
