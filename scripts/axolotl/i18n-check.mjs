@@ -22,6 +22,9 @@ const allowedUntranslatedMessages = new Set([
 	'Hooks',
 	'/path/to/java',
 	'https://example.com/api/yggdrasil',
+	'Fabric',
+	'NeoForge',
+	'Quilt',
 ])
 
 function messageText(value) {
