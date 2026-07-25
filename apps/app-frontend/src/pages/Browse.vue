@@ -1660,7 +1660,8 @@ watch(
 		if (isUpdatingProjectHitsFromTranslation) return
 		if (hits && hits.length > 0) {
 			originalProjectHits.value = hits
-			cancelTranslation()
+			const version = cancelTranslation()
+			void autoTranslateNewSearchResults(version, false)
 		}
 	},
 	{ flush: 'sync' },
@@ -1672,11 +1673,33 @@ watch(
 		if (isUpdatingProjectHitsFromTranslation) return
 		if (hits && hits.length > 0) {
 			originalServerHits.value = hits
-			cancelTranslation()
+			const version = cancelTranslation()
+			// Always restart auto-translate since this bumps the version and
+			// cancels the one started by the projectHits watcher.
+			const useServer = originalServerHits.value.length > 0
+			void autoTranslateNewSearchResults(version, useServer)
 		}
 	},
 	{ flush: 'sync' },
 )
+
+async function autoTranslateNewSearchResults(version: number, useServer: boolean) {
+	try {
+		const hits = useServer ? originalServerHits.value : originalProjectHits.value
+		if (!hits?.length) return
+
+		const translated = await translateSearchHits(hits, false)
+		if (isStale(version)) return
+
+		if (translated !== hits) {
+			isUpdatingProjectHitsFromTranslation = true
+			if (useServer) searchState.serverHits.value = translated
+			else searchState.projectHits.value = translated
+			translationActive.value = true
+			isUpdatingProjectHitsFromTranslation = false
+		}
+	} catch {}
+}
 
 async function translateCurrentHits() {
 	const version = startTranslation()

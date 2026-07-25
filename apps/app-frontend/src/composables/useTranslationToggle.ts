@@ -69,11 +69,12 @@ export function useTranslationToggle() {
 		doTranslate()
 	}
 
-	/** Cancel any in-flight translation and reset to inactive state. */
-	function cancel(): void {
+	/** Cancel any in-flight translation and reset to inactive state. Returns the current version. */
+	function cancel(): number {
 		_version++
 		translationActive.value = false
 		translationLoading.value = false
+		return _version
 	}
 
 	return {
