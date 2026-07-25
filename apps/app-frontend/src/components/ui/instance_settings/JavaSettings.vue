@@ -116,8 +116,8 @@ function handleDetectJava() {
 }
 
 const columns = [
-	{ key: '_select' as const, label: '', width: '2.5rem' },
-	{ key: 'parsed_version' as const, label: formatMessage(messages.version), width: '8rem' },
+	{ key: '_select' as const, label: '', width: '2rem' },
+	{ key: 'parsed_version' as const, label: formatMessage(messages.version), width: '6rem' },
 	{ key: 'distribution' as const, label: formatMessage(messages.distribution) },
 	{ key: 'path' as const, label: formatMessage(messages.path) },
 ]
@@ -203,7 +203,7 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 <template>
 	<div>
 		<JavaDetectionModal ref="javaDetectionModal" @submit="(val) => { selectedVersion = SELECT_CUSTOM; customPath = val.path }" />
-		<h2 class="m-0 mb-3 text-lg font-extrabold text-contrast block">
+		<h2 class="m-0 mb-2 text-base font-extrabold text-contrast block">
 			{{ formatMessage(messages.javaInstallation) }}
 		</h2>
 		<Table :columns="columns" :data="tableData" row-key="_select" :row-clickable="true" @row-click="onSelectRow">
@@ -240,7 +240,7 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 			</template>
 		</Table>
 
-		<div v-if="selectedVersion === SELECT_CUSTOM" class="flex flex-col gap-2 p-3 bg-bg rounded-lg border border-button-border mt-2">
+		<div v-if="selectedVersion === SELECT_CUSTOM" class="flex flex-col gap-2 p-2 bg-bg rounded-lg border border-button-border mt-1">
 			<div class="flex gap-2 items-center">
 				<StyledInput
 					v-model="customPath"
@@ -266,15 +266,15 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 			</div>
 		</div>
 
-		<h2 class="mt-4 mb-1 text-lg font-extrabold text-contrast block">{{ formatMessage(messages.javaMemory) }}</h2>
+		<h2 class="mt-3 mb-0.5 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaMemory) }}</h2>
 		<Checkbox v-model="overrideMemorySettings" :label="formatMessage(messages.customMemoryAllocation)" class="mb-2" />
 		<Checkbox v-if="overrideMemorySettings" v-model="memory.automatic" :label="formatMessage(messages.automaticMemory)" class="mb-2" />
 		<Slider id="max-memory" v-model="memory.maximum" :disabled="!overrideMemorySettings || memory.automatic" :min="512" :max="maxMemory" :step="64" :snap-points="snapPoints" :snap-range="512" unit="MB" />
 		<MemoryAllocationDisplay :instance-id="instance.id" :memory="effectiveMemory" />
-		<h2 class="mt-4 mb-1 text-lg font-extrabold text-contrast block">{{ formatMessage(messages.javaArguments) }}</h2>
-		<Checkbox v-model="overrideJavaArgs" :label="formatMessage(messages.customJavaArguments)" class="my-2" />
+		<h2 class="mt-3 mb-0.5 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaArguments) }}</h2>
+		<Checkbox v-model="overrideJavaArgs" :label="formatMessage(messages.customJavaArguments)" class="my-1" />
 		<StyledInput id="java-args" v-model="javaArgs" autocomplete="off" :disabled="!overrideJavaArgs" :placeholder="formatMessage(messages.enterJavaArguments)" wrapper-class="w-full" />
-		<h2 class="mt-4 mb-1 text-lg font-extrabold text-contrast block">{{ formatMessage(messages.javaEnvironmentVariables) }}</h2>
+		<h2 class="mt-3 mb-0.5 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaEnvironmentVariables) }}</h2>
 		<Checkbox v-model="overrideEnvVars" :label="formatMessage(messages.customEnvironmentVariables)" class="mb-2" />
 		<StyledInput id="env-vars" v-model="envVars" autocomplete="off" :disabled="!overrideEnvVars" :placeholder="formatMessage(messages.enterEnvironmentVariables)" wrapper-class="w-full" />
 	</div>
