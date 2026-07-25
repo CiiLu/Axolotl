@@ -48,6 +48,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复旧版 Forge 因依赖使用历史 Maven 坐标而安装失败的问题，并为未来的元数据差异增加可信仓库回退。',
 				},
+				{
+					'en-US':
+						'Transient Windows file locks are now retried during downloads, and persistent lock errors identify the process holding the file when Windows can report it.',
+					'zh-CN':
+						'下载时遇到短暂的 Windows 文件占用将自动重试；若持续失败，Windows 能识别时会在错误中显示占用文件的进程。',
+				},
 			],
 		},
 	},

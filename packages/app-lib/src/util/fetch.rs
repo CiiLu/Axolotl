@@ -1739,11 +1739,23 @@ fn suffixed_path(path: &Path, suffix: &str) -> PathBuf {
 }
 
 async fn remove_if_exists(path: &Path) -> crate::Result<()> {
-    match tokio::fs::remove_file(path).await {
+    match io::retry_windows_sharing_violation(path, "removing", || {
+        tokio::fs::remove_file(path)
+    })
+    .await
+    {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(IOError::with_path(error, path).into()),
+        Err(error) => Err(io::io_error_with_lock_info(error, path).into()),
     }
+}
+
+async fn create_download_file(path: &Path) -> Result<File, IOError> {
+    io::retry_windows_sharing_violation(path, "creating download file", || {
+        File::create(path)
+    })
+    .await
+    .map_err(|error| io::io_error_with_lock_info(error, path))
 }
 
 async fn compute_file_integrity(
@@ -1936,15 +1948,27 @@ async fn finalize_download(
     part_path: &Path,
     destination: &Path,
 ) -> crate::Result<()> {
-    if tokio::fs::try_exists(destination)
-        .await
-        .map_err(|error| IOError::with_path(error, destination))?
+    if io::retry_windows_sharing_violation(destination, "checking", || {
+        tokio::fs::try_exists(destination)
+    })
+    .await
+    .map_err(|error| io::io_error_with_lock_info(error, destination))?
     {
         remove_if_exists(destination).await?;
     }
-    tokio::fs::rename(part_path, destination)
-        .await
-        .map_err(|error| IOError::with_path(error, destination))?;
+    io::retry_windows_sharing_violation(
+        destination,
+        "finalizing download",
+        || tokio::fs::rename(part_path, destination),
+    )
+    .await
+    .map_err(|error| {
+        io::io_error_with_lock_info_for_paths(
+            error,
+            destination,
+            &[destination, part_path],
+        )
+    })?;
     Ok(())
 }
 
@@ -2435,9 +2459,9 @@ async fn download_segment(
     let _range_guard = DownloadRangeGuard(Arc::clone(&range.state));
     let request_started = Instant::now();
     let path = segment_path(part_path, range.index);
-    let mut file = File::create(&path).await.map_err(|error| {
-        SegmentDownloadError::Fatal(IOError::with_path(error, &path).into())
-    })?;
+    let mut file = create_download_file(&path)
+        .await
+        .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
     let mut pending_progress = 0_u64;
     let mut final_url = route.url.clone();
     for attempt in 1..=SEGMENT_RETRY_ATTEMPTS {
@@ -2829,12 +2853,10 @@ async fn try_segmented_download(
     }
 
     ranges.sort_unstable_by_key(|range| range.start);
-    let mut output = match File::create(part_path).await {
+    let mut output = match create_download_file(part_path).await {
         Ok(file) => file,
         Err(error) => {
-            return SegmentedDownloadOutcome::Fatal(
-                IOError::with_path(error, part_path).into(),
-            );
+            return SegmentedDownloadOutcome::Fatal(error.into());
         }
     };
     let mut hashers = IntegrityHashers::new(&request.integrity);
@@ -3192,9 +3214,7 @@ pub async fn download_to_path(
 
                 let starting_size = 0_u64;
                 let mut hashers = IntegrityHashers::new(&request.integrity);
-                let mut file = File::create(&part_path)
-                    .await
-                    .map_err(|error| IOError::with_path(error, &part_path))?;
+                let mut file = create_download_file(&part_path).await?;
                 let response_length = response.content_length().unwrap_or(0);
                 let total_size = request
                     .integrity
@@ -3425,9 +3445,7 @@ pub async fn write(
         io::create_dir_all(parent).await?;
     }
 
-    let mut file = File::create(path).await.map_err(|e| {
-        crate::Error::from(io::io_error_with_lock_info(e, path))
-    })?;
+    let mut file = create_download_file(path).await?;
     file.write_all(bytes).await.map_err(|e| {
         crate::Error::from(io::io_error_with_lock_info(e, path))
     })?;
