@@ -21,10 +21,10 @@ pub fn find_hmcl_data_dir(launcher_dir: &Path) -> Option<PathBuf> {
     }
 
     // 2. System install — standard platform data directory
-    if let Some(system_dir) = system_data_dir() {
-        if system_dir.join("launcher-settings.json").exists() {
-            return Some(system_dir);
-        }
+    if let Some(system_dir) = system_data_dir()
+        && system_dir.join("launcher-settings.json").exists()
+    {
+        return Some(system_dir);
     }
 
     // 3. Environment variable override

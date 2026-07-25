@@ -89,7 +89,9 @@ mod tests {
     use tempfile::tempdir;
 
     /// Helper: create a minimal JAR (ZIP) with an optional MANIFEST.MF.
-    fn create_test_jar(manifest_content: Option<&str>) -> (std::path::PathBuf, tempfile::TempDir) {
+    fn create_test_jar(
+        manifest_content: Option<&str>,
+    ) -> (std::path::PathBuf, tempfile::TempDir) {
         let dir = tempdir().expect("temp dir");
         let jar_path = dir.path().join("test.jar");
 
@@ -102,8 +104,7 @@ mod tests {
                 zip::write::FileOptions::<()>::default(),
             )
             .expect("start manifest entry");
-            zip.write_all(content.as_bytes())
-                .expect("write manifest");
+            zip.write_all(content.as_bytes()).expect("write manifest");
         }
 
         zip.finish().expect("finish zip");
@@ -112,7 +113,8 @@ mod tests {
 
     #[test]
     fn test_hmcl_manifest() {
-        let content = "Manifest-Version: 1.0\nMain-Class: org.jackhuang.hmcl.Main\n";
+        let content =
+            "Manifest-Version: 1.0\nMain-Class: org.jackhuang.hmcl.Main\n";
         let (path, _dir) = create_test_jar(Some(content));
 
         let manifest = read_jar_manifest(&path).expect("should read manifest");
@@ -141,7 +143,8 @@ mod tests {
 
     #[test]
     fn test_nonexistent_file() {
-        let manifest = read_jar_manifest(Path::new("/tmp/nonexistent_file_xyz.jar"));
+        let manifest =
+            read_jar_manifest(Path::new("/tmp/nonexistent_file_xyz.jar"));
         assert!(manifest.is_none(), "nonexistent file should return None");
     }
 
@@ -164,14 +167,8 @@ mod tests {
         let (path, _dir) = create_test_jar(Some(content));
 
         let manifest = read_jar_manifest(&path).expect("should read manifest");
-        assert_eq!(
-            manifest.main_class,
-            Some("com.example.Main".to_string())
-        );
-        assert_eq!(
-            manifest.implementation_title,
-            Some("MyApp".to_string())
-        );
+        assert_eq!(manifest.main_class, Some("com.example.Main".to_string()));
+        assert_eq!(manifest.implementation_title, Some("MyApp".to_string()));
     }
 
     #[test]
@@ -189,20 +186,13 @@ mod tests {
 
     #[test]
     fn test_all_fields_present() {
-        let content =
-            "Manifest-Version: 1.0\nMain-Class: org.example.Main\nImplementation-Title: Example\nImplementation-Version: 1.2.3\n";
+        let content = "Manifest-Version: 1.0\nMain-Class: org.example.Main\nImplementation-Title: Example\nImplementation-Version: 1.2.3\n";
         let (path, _dir) = create_test_jar(Some(content));
 
         let manifest = read_jar_manifest(&path).expect("should read manifest");
         assert_eq!(manifest.main_class, Some("org.example.Main".to_string()));
-        assert_eq!(
-            manifest.implementation_title,
-            Some("Example".to_string())
-        );
-        assert_eq!(
-            manifest.implementation_version,
-            Some("1.2.3".to_string())
-        );
+        assert_eq!(manifest.implementation_title, Some("Example".to_string()));
+        assert_eq!(manifest.implementation_version, Some("1.2.3".to_string()));
     }
 
     #[test]

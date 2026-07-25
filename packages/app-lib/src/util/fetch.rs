@@ -1303,9 +1303,10 @@ async fn fetch_advanced_with_client_and_progress(
                     }
                     if status.is_client_error() || status.is_server_error() {
                         if let Some(fence_key) = fence_key
-                            && status.is_server_error() {
-                                GLOBAL_FETCH_FENCE.record_fail(fence_key);
-                            }
+                            && status.is_server_error()
+                        {
+                            GLOBAL_FETCH_FENCE.record_fail(fence_key);
+                        }
                         record_route_failure(route);
                         let backup_error =
                             resp.error_for_status_ref().unwrap_err();
@@ -2764,8 +2765,7 @@ async fn try_segmented_download(
                     .cloned();
                 if let Some(range) = range
                     && let Ok(permit) = semaphore.0.try_acquire()
-                {
-                    if let Some(new_range) =
+                    && let Some(new_range) =
                         range.split_tail(next_range_index)
                     {
                         tracing::debug!(
@@ -2802,7 +2802,6 @@ async fn try_segmented_download(
                         last_expansion = Instant::now();
                         last_block_reason = None;
                     }
-                }
             }
         }
     }
@@ -3426,12 +3425,12 @@ pub async fn write(
         io::create_dir_all(parent).await?;
     }
 
-    let mut file = File::create(path)
-        .await
-        .map_err(|e| crate::Error::from(io::io_error_with_lock_info(e, path)))?;
-    file.write_all(bytes)
-        .await
-        .map_err(|e| crate::Error::from(io::io_error_with_lock_info(e, path)))?;
+    let mut file = File::create(path).await.map_err(|e| {
+        crate::Error::from(io::io_error_with_lock_info(e, path))
+    })?;
+    file.write_all(bytes).await.map_err(|e| {
+        crate::Error::from(io::io_error_with_lock_info(e, path))
+    })?;
     tracing::trace!("Done writing file {}", path.display());
     Ok(())
 }

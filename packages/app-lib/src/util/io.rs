@@ -59,7 +59,7 @@ pub(crate) fn io_error_with_lock_info(
 
     let is_lock_error = source.kind() == ErrorKind::PermissionDenied
         || source.raw_os_error() == Some(32)   // Windows ERROR_SHARING_VIOLATION
-        || source.raw_os_error() == Some(26);  // Linux ETXTBSY
+        || source.raw_os_error() == Some(26); // Linux ETXTBSY
 
     if is_lock_error {
         let processes = get_locking_processes(path);
@@ -194,7 +194,8 @@ pub async fn write(
     let data = data.as_ref().to_owned();
     spawn_blocking(move || {
         let cloned_path = path.clone();
-        sync_write(data, path).map_err(|e| io_error_with_lock_info(e, &cloned_path))
+        sync_write(data, path)
+            .map_err(|e| io_error_with_lock_info(e, &cloned_path))
     })
     .await
     .map_err(|_| std::io::Error::other("background task failed"))??;
@@ -353,10 +354,7 @@ pub async fn copy_dir(
     let mut entries = WalkDir::new(&from);
     while let Some(entry) = entries.next().await {
         let entry = entry.map_err(|e| {
-            IOError::with_path(
-                std::io::Error::other(e.to_string()),
-                &from,
-            )
+            IOError::with_path(std::io::Error::other(e.to_string()), &from)
         })?;
 
         // Skip macOS resource forks.
@@ -370,18 +368,19 @@ pub async fn copy_dir(
         }
 
         let entry_path = entry.path().to_path_buf();
-        let relative = entry_path
-            .strip_prefix(&from)
-            .map_err(|_| {
-                IOError::with_path(
-                    std::io::Error::other("path prefix mismatch"),
-                    &entry_path,
-                )
-            })?;
+        let relative = entry_path.strip_prefix(&from).map_err(|_| {
+            IOError::with_path(
+                std::io::Error::other("path prefix mismatch"),
+                &entry_path,
+            )
+        })?;
         let target = to.join(relative);
 
         let file_type = entry.file_type().await.map_err(|e| {
-            IOError::with_path(std::io::Error::other(e.to_string()), &entry_path)
+            IOError::with_path(
+                std::io::Error::other(e.to_string()),
+                &entry_path,
+            )
         })?;
 
         if file_type.is_dir() {

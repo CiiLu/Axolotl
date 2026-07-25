@@ -71,12 +71,13 @@ pub fn get_pcl_instance_path(instance_name: &str) -> Option<String> {
             continue;
         }
         if let Some((name, path)) = entry.split_once('>')
-            && name.trim() == instance_name {
-                let path = PathBuf::from(path.trim());
-                if path.is_dir() {
-                    return Some(path.to_string_lossy().to_string());
-                }
+            && name.trim() == instance_name
+        {
+            let path = PathBuf::from(path.trim());
+            if path.is_dir() {
+                return Some(path.to_string_lossy().to_string());
             }
+        }
     }
     None
 }
@@ -89,12 +90,13 @@ pub fn get_pclce_instance_path(instance_name: &str) -> Option<String> {
             continue;
         }
         if let Some((name, path)) = entry.split_once('>')
-            && name.trim() == instance_name {
-                let path = PathBuf::from(path.trim());
-                if path.is_dir() {
-                    return Some(path.to_string_lossy().to_string());
-                }
+            && name.trim() == instance_name
+        {
+            let path = PathBuf::from(path.trim());
+            if path.is_dir() {
+                return Some(path.to_string_lossy().to_string());
             }
+        }
     }
     None
 }

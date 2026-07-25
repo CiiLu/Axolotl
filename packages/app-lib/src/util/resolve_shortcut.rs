@@ -19,7 +19,10 @@ const MAX_DEPTH: u32 = 3;
 /// error, or when `max_depth` reaches 0 (recursion guard).
 pub fn resolve_shortcut(path: &Path, max_depth: u32) -> Option<PathBuf> {
     if max_depth == 0 {
-        warn!("Shortcut resolution exceeded max depth for: {}", path.display());
+        warn!(
+            "Shortcut resolution exceeded max depth for: {}",
+            path.display()
+        );
         return None;
     }
 
@@ -35,7 +38,8 @@ pub fn resolve_shortcut(path: &Path, max_depth: u32) -> Option<PathBuf> {
             } else {
                 target
             };
-            return resolve_shortcut(&absolute, max_depth - 1).or(Some(absolute));
+            return resolve_shortcut(&absolute, max_depth - 1)
+                .or(Some(absolute));
         }
     }
 
@@ -84,7 +88,10 @@ fn resolve_windows_lnk(path: &Path, _max_depth: u32) -> Option<PathBuf> {
     // SAFETY: COM is initialised for this thread. The guard ensures
     // `CoUninitialize` is called exactly once when we're done.
     unsafe {
-        let init = CoInitializeEx(None, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+        let init = CoInitializeEx(
+            None,
+            COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE,
+        );
         if init.is_err() {
             return None;
         }
@@ -163,7 +170,8 @@ fn resolve_macos_app(path: &Path, max_depth: u32) -> Option<PathBuf> {
 
     let executable_path = path.join("Contents").join("MacOS").join(executable);
     if executable_path.exists() {
-        resolve_shortcut(&executable_path, max_depth - 1).or(Some(executable_path))
+        resolve_shortcut(&executable_path, max_depth - 1)
+            .or(Some(executable_path))
     } else {
         None
     }
@@ -184,7 +192,11 @@ fn parse_cfbundle_executable(content: &str) -> Option<String> {
     let value_start = string_start + "<string>".len();
     let value_end = after_key[value_start..].find("</string>")?;
 
-    Some(after_key[value_start..value_start + value_end].trim().to_string())
+    Some(
+        after_key[value_start..value_start + value_end]
+            .trim()
+            .to_string(),
+    )
 }
 
 // ─── Linux .desktop file resolution ────────────────────────────────────────
@@ -279,7 +291,10 @@ mod tests {
             std::os::unix::fs::symlink(&target, &link).expect("symlink");
             let resolved = resolve_shortcut(&link, MAX_DEPTH);
             assert!(resolved.is_some());
-            assert_eq!(resolved.unwrap().canonicalize().ok(), Some(target.canonicalize().ok()).flatten());
+            assert_eq!(
+                resolved.unwrap().canonicalize().ok(),
+                Some(target.canonicalize().ok()).flatten()
+            );
         }
         #[cfg(windows)]
         {
@@ -300,7 +315,8 @@ mod tests {
 
         #[cfg(unix)]
         {
-            std::os::unix::fs::symlink("/nonexistent/path", &_link).expect("symlink");
+            std::os::unix::fs::symlink("/nonexistent/path", &_link)
+                .expect("symlink");
             let resolved = resolve_shortcut(&link, MAX_DEPTH);
             // `read_link` succeeds but the target doesn't exist — resolve_shortcut
             // still returns the target path from read_link.

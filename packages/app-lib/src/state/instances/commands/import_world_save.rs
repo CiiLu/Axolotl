@@ -18,7 +18,8 @@ pub async fn import_world_save(
     let instance_id_str = instance_id.to_string();
 
     // Resolve the instance's saves directory.
-    let instance_path = crate::api::instance::get_full_path(&instance_id_str).await?;
+    let instance_path =
+        crate::api::instance::get_full_path(&instance_id_str).await?;
     let saves_dir = instance_path.join("saves");
 
     // Determine the world folder name and source type.
@@ -43,7 +44,8 @@ pub async fn import_world_save(
                 .file_stem()
                 .ok_or_else(|| {
                     ErrorKind::InputError(
-                        "Cannot determine world name from ZIP file name".to_string(),
+                        "Cannot determine world name from ZIP file name"
+                            .to_string(),
                     )
                 })?
                 .to_string_lossy()
@@ -51,7 +53,8 @@ pub async fn import_world_save(
             (name, true)
         } else {
             return Err(ErrorKind::InputError(
-                "Source file is not a valid ZIP archive or world folder".to_string(),
+                "Source file is not a valid ZIP archive or world folder"
+                    .to_string(),
             )
             .into());
         }
@@ -160,9 +163,8 @@ async fn extract_world_zip(zip_path: &Path, target_dir: &Path) -> Result<()> {
 
             // Create parent directories.
             if let Some(parent) = output_path.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| {
-                    io::IOError::with_path(e, parent)
-                })?;
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| io::IOError::with_path(e, parent))?;
             }
 
             // Extract the file.

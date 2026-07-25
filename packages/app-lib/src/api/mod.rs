@@ -24,12 +24,11 @@ pub mod worlds;
 
 pub mod data {
     pub use crate::state::{
-        AppliedContentSetPatch, CacheBehaviour, CacheValueType, ContentFile,
-        ContentItem, ContentItemOwner, ContentItemProject, ContentItemVersion,
-        ContentProvider, ContentProviderRef, CreateInstance, Credentials,
-        CachedEntry,
-        Dependency, DirectoryInfo, EditInstance, Hooks,
-        InstanceInstallCandidate, InstanceInstallTarget,
+        AppliedContentSetPatch, CacheBehaviour, CacheValueType, CachedEntry,
+        ContentFile, ContentItem, ContentItemOwner, ContentItemProject,
+        ContentItemVersion, ContentProvider, ContentProviderRef,
+        CreateInstance, Credentials, Dependency, DirectoryInfo, EditInstance,
+        Hooks, InstanceInstallCandidate, InstanceInstallTarget,
         InstanceLaunchOverridesPatch, InstanceLink, InstanceMetadata,
         JavaVersion, LinkedModpackInfo, MemorySettings, ModLoader,
         ModrinthCredentials, Organization, OwnerType, ProcessMetadata, Project,

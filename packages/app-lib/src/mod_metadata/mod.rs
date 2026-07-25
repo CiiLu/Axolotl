@@ -60,7 +60,9 @@ pub fn extract_mod_metadata(bytes: &Bytes) -> Option<LocalModMetadata> {
     if let Some(meta) = try_quilt(&mut archive) {
         return Some(meta);
     }
-    if let Some(meta) = try_toml_path(&mut archive, "META-INF/neoforge.mods.toml") {
+    if let Some(meta) =
+        try_toml_path(&mut archive, "META-INF/neoforge.mods.toml")
+    {
         return Some(meta);
     }
     if let Some(meta) = try_toml_path(&mut archive, "META-INF/mods.toml") {
@@ -75,9 +77,12 @@ pub fn extract_mod_metadata(bytes: &Bytes) -> Option<LocalModMetadata> {
 
 // ── format-specific parsers ────────────────────────────────────────────────
 
-fn try_fabric(archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>) -> Option<LocalModMetadata> {
+fn try_fabric(
+    archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
+) -> Option<LocalModMetadata> {
     let mut file = archive.by_name("fabric.mod.json").ok()?;
-    let parsed: fabric::FabricModJson = serde_json::from_reader(&mut file).ok()?;
+    let parsed: fabric::FabricModJson =
+        serde_json::from_reader(&mut file).ok()?;
 
     let authors = merge_authors(&parsed.authors, &parsed.contributors);
 
@@ -89,15 +94,24 @@ fn try_fabric(archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>) -> Option<L
         description: parsed.description,
         url: extract_contact_url(&parsed._contact),
         icon_path: parsed.icon,
-        minecraft_version: fabric::fabric_dep_value(&parsed.depends, "minecraft"),
-        loader_version: fabric::fabric_dep_value(&parsed.depends, "fabricloader"),
+        minecraft_version: fabric::fabric_dep_value(
+            &parsed.depends,
+            "minecraft",
+        ),
+        loader_version: fabric::fabric_dep_value(
+            &parsed.depends,
+            "fabricloader",
+        ),
         loader: Some("fabric".into()),
     })
 }
 
-fn try_quilt(archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>) -> Option<LocalModMetadata> {
+fn try_quilt(
+    archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
+) -> Option<LocalModMetadata> {
     let mut file = archive.by_name("quilt.mod.json").ok()?;
-    let parsed: fabric::QuiltModJson = serde_json::from_reader(&mut file).ok()?;
+    let parsed: fabric::QuiltModJson =
+        serde_json::from_reader(&mut file).ok()?;
 
     let inner = parsed.quilt_loader;
     let authors = merge_authors(&inner.authors, &inner.contributors);
@@ -175,7 +189,9 @@ fn try_toml_path(
     })
 }
 
-fn try_mcmod_info(archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>) -> Option<LocalModMetadata> {
+fn try_mcmod_info(
+    archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
+) -> Option<LocalModMetadata> {
     let mut file = archive.by_name("mcmod.info").ok()?;
     let entries: Vec<mcmod_info::McmodInfoEntry> =
         serde_json::from_reader(&mut file).ok()?;

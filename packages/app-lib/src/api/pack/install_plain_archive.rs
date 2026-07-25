@@ -98,17 +98,16 @@ fn detect_target(version_json: &PlainVersionJson) -> Option<DetectedTarget> {
                     .unwrap_or_else(|| version.to_string());
                 loader_version = Some(forge_version);
             }
-            ("optifine", "OptiFine")
-                if loader == ModLoader::Vanilla => {
-                    loader = ModLoader::OptiFine;
-                    // OptiFine library versions look like `<mc>_HD_U_I6`.
-                    loader_version = Some(
-                        version
-                            .split_once('_')
-                            .map(|(_, of)| of.to_string())
-                            .unwrap_or_else(|| version.to_string()),
-                    );
-                }
+            ("optifine", "OptiFine") if loader == ModLoader::Vanilla => {
+                loader = ModLoader::OptiFine;
+                // OptiFine library versions look like `<mc>_HD_U_I6`.
+                loader_version = Some(
+                    version
+                        .split_once('_')
+                        .map(|(_, of)| of.to_string())
+                        .unwrap_or_else(|| version.to_string()),
+                );
+            }
             _ => {}
         }
     }

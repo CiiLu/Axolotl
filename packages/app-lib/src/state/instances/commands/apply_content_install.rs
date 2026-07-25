@@ -18,13 +18,13 @@ use crate::util::io;
 use crate::util::io::io_error_with_lock_info;
 use async_trait::async_trait;
 use bytes::Bytes;
-use std::path::{Path, PathBuf};
-use tracing::warn;
 use modrinth_content_management::{
     ContentMetadataProvider, ContentType, Error as ResolveError,
     ResolutionPreferences, ResolveContentPlan, ResolveContentRequest,
     ResolvedContent,
 };
+use std::path::{Path, PathBuf};
+use tracing::warn;
 
 pub(crate) struct ContentScope {
     pub instance: Instance,

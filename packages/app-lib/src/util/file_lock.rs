@@ -37,7 +37,11 @@ pub fn get_locking_processes(file_path: &Path) -> Vec<LockingProcess> {
     {
         let procs = get_locking_processes_windows(file_path, &path_str);
         if !procs.is_empty() {
-            warn!("Windows file lock detected on {}: {} process(es)", path_str, procs.len());
+            warn!(
+                "Windows file lock detected on {}: {} process(es)",
+                path_str,
+                procs.len()
+            );
         }
         procs
     }
@@ -46,7 +50,11 @@ pub fn get_locking_processes(file_path: &Path) -> Vec<LockingProcess> {
     {
         let procs = get_locking_processes_linux(file_path, &path_str);
         if !procs.is_empty() {
-            warn!("Linux file lock detected on {}: {} process(es)", path_str, procs.len());
+            warn!(
+                "Linux file lock detected on {}: {} process(es)",
+                path_str,
+                procs.len()
+            );
         }
         procs
     }
@@ -55,7 +63,11 @@ pub fn get_locking_processes(file_path: &Path) -> Vec<LockingProcess> {
     {
         let procs = get_locking_processes_macos(file_path, &path_str);
         if !procs.is_empty() {
-            warn!("macOS file lock detected on {}: {} process(es)", path_str, procs.len());
+            warn!(
+                "macOS file lock detected on {}: {} process(es)",
+                path_str,
+                procs.len()
+            );
         }
         procs
     }
@@ -74,32 +86,26 @@ fn get_locking_processes_windows(
     file_path: &Path,
     path_str: &str,
 ) -> Vec<LockingProcess> {
-    let output = run_subprocess("handle.exe", &[
-        "-a",
-        &file_path.to_string_lossy(),
-    ]);
+    let output =
+        run_subprocess("handle.exe", &["-a", &file_path.to_string_lossy()]);
 
     match output {
         Some(stdout) => parse_handle_exe_output(&stdout, path_str),
         None => {
             // Fallback: try `lsof` if available.
-            let out = run_subprocess("lsof", &[
-                "-t",
-                &file_path.to_string_lossy(),
-            ]);
+            let out =
+                run_subprocess("lsof", &["-t", &file_path.to_string_lossy()]);
             match out {
-                Some(stdout) => {
-                    stdout
-                        .lines()
-                        .filter_map(|l| l.trim().parse::<u32>().ok())
-                        .map(|pid| LockingProcess {
-                            pid,
-                            name: String::new(),
-                            path: path_str.to_string(),
-                            start_time: None,
-                        })
-                        .collect()
-                }
+                Some(stdout) => stdout
+                    .lines()
+                    .filter_map(|l| l.trim().parse::<u32>().ok())
+                    .map(|pid| LockingProcess {
+                        pid,
+                        name: String::new(),
+                        path: path_str.to_string(),
+                        start_time: None,
+                    })
+                    .collect(),
                 None => Vec::new(),
             }
         }
@@ -113,7 +119,10 @@ fn get_locking_processes_windows(
 /// chrome.exe        pid: 1234  type: File    <path>
 /// ```
 #[cfg(windows)]
-fn parse_handle_exe_output(output: &str, path_str: &str) -> Vec<LockingProcess> {
+fn parse_handle_exe_output(
+    output: &str,
+    path_str: &str,
+) -> Vec<LockingProcess> {
     let mut result = Vec::new();
     for line in output.lines() {
         let trimmed = line.trim();
@@ -146,7 +155,8 @@ fn get_locking_processes_linux(
     let pids: Vec<u32> = match output {
         Some(stderr) => parse_fuser_output(&stderr),
         None => {
-            let out = run_subprocess("lsof", &["-t", &file_path.to_string_lossy()]);
+            let out =
+                run_subprocess("lsof", &["-t", &file_path.to_string_lossy()]);
             match out {
                 Some(stdout) => stdout
                     .lines()
@@ -219,10 +229,12 @@ fn read_proc_start_time(pid: u32) -> Option<String> {
 
     let stat_content = std::fs::read_to_string("/proc/stat").ok()?;
     let btime_line = stat_content.lines().find(|l| l.starts_with("btime "))?;
-    let boot_time_secs: u64 = btime_line.strip_prefix("btime ")?.trim().parse().ok()?;
+    let boot_time_secs: u64 =
+        btime_line.strip_prefix("btime ")?.trim().parse().ok()?;
 
     let start_time_secs = boot_time_secs + seconds_since_boot;
-    let dur = std::time::UNIX_EPOCH + std::time::Duration::from_secs(start_time_secs);
+    let dur =
+        std::time::UNIX_EPOCH + std::time::Duration::from_secs(start_time_secs);
     let datetime = chrono::DateTime::<chrono::Utc>::from(dur);
     Some(datetime.to_rfc3339())
 }
@@ -234,11 +246,8 @@ fn get_locking_processes_macos(
     file_path: &Path,
     path_str: &str,
 ) -> Vec<LockingProcess> {
-    let output = run_subprocess("lsof", &[
-        "-F",
-        "pcn",
-        &file_path.to_string_lossy(),
-    ]);
+    let output =
+        run_subprocess("lsof", &["-F", "pcn", &file_path.to_string_lossy()]);
 
     match output {
         Some(stdout) => parse_lsof_output(&stdout, path_str),
@@ -258,7 +267,9 @@ fn parse_lsof_output(output: &str, path_str: &str) -> Vec<LockingProcess> {
         }
         match line.chars().next() {
             Some('p') => {
-                if let (Some(pid), Some(name)) = (current_pid.take(), current_name.take()) {
+                if let (Some(pid), Some(name)) =
+                    (current_pid.take(), current_name.take())
+                {
                     result.push(LockingProcess {
                         pid,
                         name,
@@ -299,7 +310,11 @@ fn run_subprocess(program: &str, args: &[&str]) -> Option<String> {
             let stdout = String::from_utf8_lossy(&output.stdout).to_string();
             let stderr = String::from_utf8_lossy(&output.stderr).to_string();
             let combined = if stdout.is_empty() { stderr } else { stdout };
-            if combined.is_empty() { None } else { Some(combined) }
+            if combined.is_empty() {
+                None
+            } else {
+                Some(combined)
+            }
         }
         _ => None,
     }

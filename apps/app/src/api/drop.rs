@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
-use theseus::drop_classifier::{classify_dropped_item, DroppedItemType, lookup_mod_hash, ModrinthLookupResult};
+use theseus::drop_classifier::{
+    DroppedItemType, ModrinthLookupResult, classify_dropped_item,
+    lookup_mod_hash,
+};
+use theseus::pack::import::{ImportLauncherType, get_importable_instances};
+use theseus::{LockingProcess, get_locking_processes};
 use tracing::{debug, info, warn};
-use theseus::pack::import::{get_importable_instances, ImportLauncherType};
-use theseus::{get_locking_processes, LockingProcess};
 
 /// Serializable classification result mapped from `DroppedItemType`.
 ///
@@ -61,18 +64,26 @@ impl From<DroppedItemType> for ClassificationResult {
             DroppedItemType::Mod { file_path } => ClassificationResult::Mod {
                 file_path: file_path.to_string_lossy().to_string(),
             },
-            DroppedItemType::Litematic { file_path } => ClassificationResult::Litematic {
-                file_path: file_path.to_string_lossy().to_string(),
-            },
-            DroppedItemType::ResourcePack { file_path } => ClassificationResult::ResourcePack {
-                file_path: file_path.to_string_lossy().to_string(),
-            },
-            DroppedItemType::ShaderPack { file_path } => ClassificationResult::ShaderPack {
-                file_path: file_path.to_string_lossy().to_string(),
-            },
-            DroppedItemType::WorldSave { file_path } => ClassificationResult::WorldSave {
-                file_path: file_path.to_string_lossy().to_string(),
-            },
+            DroppedItemType::Litematic { file_path } => {
+                ClassificationResult::Litematic {
+                    file_path: file_path.to_string_lossy().to_string(),
+                }
+            }
+            DroppedItemType::ResourcePack { file_path } => {
+                ClassificationResult::ResourcePack {
+                    file_path: file_path.to_string_lossy().to_string(),
+                }
+            }
+            DroppedItemType::ShaderPack { file_path } => {
+                ClassificationResult::ShaderPack {
+                    file_path: file_path.to_string_lossy().to_string(),
+                }
+            }
+            DroppedItemType::WorldSave { file_path } => {
+                ClassificationResult::WorldSave {
+                    file_path: file_path.to_string_lossy().to_string(),
+                }
+            }
             DroppedItemType::ShortcutResolved {
                 original,
                 resolved_to,
@@ -80,7 +91,9 @@ impl From<DroppedItemType> for ClassificationResult {
                 original: original.to_string_lossy().to_string(),
                 resolved_to: Box::new(ClassificationResult::from(*resolved_to)),
             },
-            DroppedItemType::Unknown { reason } => ClassificationResult::Unknown { reason },
+            DroppedItemType::Unknown { reason } => {
+                ClassificationResult::Unknown { reason }
+            }
         }
     }
 }
@@ -102,7 +115,9 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 /// Returns a `ClassificationResult` with an `item_type` tag that the frontend
 /// can use to decide what UI to show (confirm dialog, error, etc.).
 #[tauri::command]
-pub async fn drop_classify(path: String) -> Result<ClassificationResult, String> {
+pub async fn drop_classify(
+    path: String,
+) -> Result<ClassificationResult, String> {
     debug!("Drop event received: {}", path);
     let path = std::path::PathBuf::from(&path);
     let result = classify_dropped_item(&path);
@@ -120,7 +135,9 @@ pub async fn drop_scan_launcher_instances(
     launcher_type: String,
     base_path: String,
 ) -> Result<Vec<String>, String> {
-    info!("Scanning launcher instances — type: {launcher_type}, path: {base_path}");
+    info!(
+        "Scanning launcher instances — type: {launcher_type}, path: {base_path}"
+    );
     let lt: ImportLauncherType =
         serde_json::from_str(&format!("\"{launcher_type}\"")).map_err(|e| {
             format!("Invalid launcher type '{launcher_type}': {e}")
@@ -138,7 +155,9 @@ pub async fn drop_scan_launcher_instances(
 /// Returns an empty list when detection is unavailable on the current platform
 /// or the required tools are not installed.
 #[tauri::command]
-pub async fn drop_detect_file_lock(path: String) -> Result<Vec<LockingProcess>, String> {
+pub async fn drop_detect_file_lock(
+    path: String,
+) -> Result<Vec<LockingProcess>, String> {
     let path = std::path::PathBuf::from(&path);
     info!("Detecting file lock for: {}", path.display());
     let processes = get_locking_processes(&path);
@@ -161,10 +180,10 @@ pub async fn drop_extract_mod_metadata(path: String) -> Result<String, String> {
         .await
         .map_err(|e| format!("Failed to read file: {e}"))?;
     let bytes = bytes::Bytes::from(file_bytes);
-    let meta = theseus::mod_metadata::extract_mod_metadata(&bytes).ok_or_else(|| {
-        "No mod metadata found in file".to_string()
-    })?;
-    serde_json::to_string(&meta).map_err(|e| format!("Failed to serialize metadata: {e}"))
+    let meta = theseus::mod_metadata::extract_mod_metadata(&bytes)
+        .ok_or_else(|| "No mod metadata found in file".to_string())?;
+    serde_json::to_string(&meta)
+        .map_err(|e| format!("Failed to serialize metadata: {e}"))
 }
 
 /// Look up a mod file by SHA1 hash to find matching Modrinth project and version.
@@ -172,7 +191,9 @@ pub async fn drop_extract_mod_metadata(path: String) -> Result<String, String> {
 /// Computes the SHA1 hash of the given file and queries the Modrinth API
 /// to find matching versions. Returns project and version information if found.
 #[tauri::command]
-pub async fn drop_lookup_mod_hash(path: String) -> Result<Option<ModrinthLookupResult>, String> {
+pub async fn drop_lookup_mod_hash(
+    path: String,
+) -> Result<Option<ModrinthLookupResult>, String> {
     let path = std::path::PathBuf::from(&path);
     info!("Looking up mod hash for: {}", path.display());
 

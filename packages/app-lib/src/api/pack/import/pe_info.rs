@@ -112,9 +112,10 @@ mod imp {
             let p = entry.path();
             if p.extension().map(|e| e == "exe").unwrap_or(false)
                 && let Some(product) = get_product_name(&p)
-                    && product.contains(product_name) {
-                        return true;
-                    }
+                && product.contains(product_name)
+            {
+                return true;
+            }
         }
         false
     }

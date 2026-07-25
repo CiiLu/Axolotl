@@ -29,34 +29,22 @@ pub enum DroppedItemType {
         data_dir: PathBuf,
     },
     /// A mod JAR file.
-    Mod {
-        file_path: PathBuf,
-    },
+    Mod { file_path: PathBuf },
     /// A `.litematic` or `.schematic` file.
-    Litematic {
-        file_path: PathBuf,
-    },
+    Litematic { file_path: PathBuf },
     /// A resource pack or data pack.
-    ResourcePack {
-        file_path: PathBuf,
-    },
+    ResourcePack { file_path: PathBuf },
     /// A shader pack.
-    ShaderPack {
-        file_path: PathBuf,
-    },
+    ShaderPack { file_path: PathBuf },
     /// A Minecraft world save folder or archive.
-    WorldSave {
-        file_path: PathBuf,
-    },
+    WorldSave { file_path: PathBuf },
     /// A shortcut / symlink that was resolved to another item type.
     ShortcutResolved {
         original: PathBuf,
         resolved_to: Box<DroppedItemType>,
     },
     /// Could not be classified.
-    Unknown {
-        reason: String,
-    },
+    Unknown { reason: String },
 }
 
 /// Classify a dropped file or folder path into a `DroppedItemType`.
@@ -67,19 +55,24 @@ pub fn classify_dropped_item(path: &Path) -> DroppedItemType {
     // Step 0: Path must exist.
     if !path.exists() {
         let reason = "Path does not exist".to_string();
-        tracing::warn!("Classification failed for '{}': {reason}", path.display());
+        tracing::warn!(
+            "Classification failed for '{}': {reason}",
+            path.display()
+        );
         return DroppedItemType::Unknown { reason };
     }
 
     // Step 1: Shortcut / symlink resolution.
-    if let Some(resolved) = crate::util::resolve_shortcut::resolve_shortcut(path, 3)
-        && resolved != path {
-            let inner = classify_dropped_item(&resolved);
-            return DroppedItemType::ShortcutResolved {
-                original: path.to_path_buf(),
-                resolved_to: Box::new(inner),
-            };
-        }
+    if let Some(resolved) =
+        crate::util::resolve_shortcut::resolve_shortcut(path, 3)
+        && resolved != path
+    {
+        let inner = classify_dropped_item(&resolved);
+        return DroppedItemType::ShortcutResolved {
+            original: path.to_path_buf(),
+            resolved_to: Box::new(inner),
+        };
+    }
 
     // Step 2: ZIP archive (.zip, .mrpack).
     // NOTE: .jar is deliberately excluded here — JAR files are handled by
@@ -96,29 +89,30 @@ pub fn classify_dropped_item(path: &Path) -> DroppedItemType {
 
     // Step 3: Launcher EXE (Windows .exe).
     if let Some(ext) = path.extension()
-        && ext.eq_ignore_ascii_case("exe") {
-            return classify_launcher_exe(path);
-        }
+        && ext.eq_ignore_ascii_case("exe")
+    {
+        return classify_launcher_exe(path);
+    }
 
     // Step 3.5: .disabled suffix — strip for recognition, keep original path for usage.
     if let Some(ext) = path.extension()
-        && ext.eq_ignore_ascii_case("disabled") {
-            if let Some(stem) = path.file_stem()
-                && let Some(stem_str) = stem.to_str()
-                && let Some(underlying_ext) = stem_str.rsplit('.').next()
-                && underlying_ext.eq_ignore_ascii_case("jar")
-            {
-                // classify_jar reads the original file content (still valid) and stores
-                // the original .jar.disabled path in the result — no path rewrite needed.
-                return classify_jar(path);
-            }
-            // Other .disabled extensions fall through to file classification below.
-        }
+        && ext.eq_ignore_ascii_case("disabled")
+        && let Some(stem) = path.file_stem()
+        && let Some(stem_str) = stem.to_str()
+        && let Some(underlying_ext) = stem_str.rsplit('.').next()
+        && underlying_ext.eq_ignore_ascii_case("jar")
+    {
+        // classify_jar reads the original file content (still valid) and stores
+        // the original .jar.disabled path in the result — no path rewrite needed.
+        return classify_jar(path);
+    }
+    // Other .disabled extensions fall through to file classification below.
 
     if let Some(ext) = path.extension()
-        && ext.eq_ignore_ascii_case("jar") {
-            return classify_jar(path);
-        }
+        && ext.eq_ignore_ascii_case("jar")
+    {
+        return classify_jar(path);
+    }
 
     // Step 5: Directory.
     if path.is_dir() {
@@ -153,7 +147,9 @@ fn classify_zip(path: &Path) -> DroppedItemType {
     let mut probe_has_shaders_dir = false;
     let mut probe_has_version_json = false;
     for i in 0..archive.len() {
-        let Ok(entry) = archive.by_index_raw(i) else { continue };
+        let Ok(entry) = archive.by_index_raw(i) else {
+            continue;
+        };
 
         let name = entry.name().to_string();
         if name.is_empty() || name.ends_with('/') {
@@ -172,11 +168,11 @@ fn classify_zip(path: &Path) -> DroppedItemType {
         }
         // versions/<id>/<id>.json → vanilla launcher instance
         if let Some(rest) = name.strip_prefix("versions/")
-            && let Some((folder, file)) = rest.split_once('/') {
-                if file == format!("{folder}.json") {
-                    probe_has_version_json = true;
-                }
-            }
+            && let Some((folder, file)) = rest.split_once('/')
+            && file == format!("{folder}.json")
+        {
+            probe_has_version_json = true;
+        }
 
         // Get the top-level component of the path.
         let top = match name.split_once('/') {
@@ -195,7 +191,8 @@ fn classify_zip(path: &Path) -> DroppedItemType {
         // Guard against huge archives.
         if top_level.len() > ZIP_TOP_LEVEL_LIMIT {
             return DroppedItemType::Unknown {
-                reason: "ZIP archive has too many top-level entries".to_string(),
+                reason: "ZIP archive has too many top-level entries"
+                    .to_string(),
             };
         }
     }
@@ -266,7 +263,10 @@ fn classify_zip(path: &Path) -> DroppedItemType {
         };
     };
 
-    tracing::debug!("Extracting ZIP to temp dir for classification: {}", path.display());
+    tracing::debug!(
+        "Extracting ZIP to temp dir for classification: {}",
+        path.display()
+    );
 
     // Re-open archive for extraction (archive was consumed by the scan above
     // since `by_index_raw` returns owned entries).
@@ -320,10 +320,7 @@ impl ZipEntryKind {
     }
 }
 
-fn extract_all(
-    archive: &mut zip::ZipArchive<std::fs::File>,
-    base_dir: &Path,
-) {
+fn extract_all(archive: &mut zip::ZipArchive<std::fs::File>, base_dir: &Path) {
     // First pass: collect entry metadata while the archive is mutable-borrowed.
     let entries: Vec<(String, bool)> = (0..archive.len())
         .filter_map(|i| {
@@ -346,9 +343,10 @@ fn extract_all(
         } else if let Some(parent) = out_path.parent() {
             let _ = std::fs::create_dir_all(parent);
             if let Ok(mut reader) = archive.by_name(name)
-                && let Ok(mut writer) = std::fs::File::create(&out_path) {
-                    let _ = std::io::copy(&mut reader, &mut writer);
-                }
+                && let Ok(mut writer) = std::fs::File::create(&out_path)
+            {
+                let _ = std::io::copy(&mut reader, &mut writer);
+            }
         }
     }
 }
@@ -412,16 +410,20 @@ fn classify_jar(path: &Path) -> DroppedItemType {
         // HMCL launcher JAR.
         if mf.main_class.as_deref() == Some("org.jackhuang.hmcl.Main") {
             if let Some(parent) = path.parent()
-                && let Some(data_dir) = find_hmcl_data_dir(parent) {
-                    return DroppedItemType::HmclLauncher {
-                        launcher_dir: parent.to_path_buf(),
-                        data_dir,
-                    };
-                }
+                && let Some(data_dir) = find_hmcl_data_dir(parent)
+            {
+                return DroppedItemType::HmclLauncher {
+                    launcher_dir: parent.to_path_buf(),
+                    data_dir,
+                };
+            }
             // Found HMCL main class but no data dir — still classify as launcher.
             return DroppedItemType::Launcher {
                 launcher_type: ImportLauncherType::HMCL,
-                base_path: path.parent().map(|p| p.to_path_buf()).unwrap_or_default(),
+                base_path: path
+                    .parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_default(),
             };
         }
     }
@@ -453,33 +455,43 @@ fn classify_folder(path: &Path) -> DroppedItemType {
     // ATLauncher: check for instances/<sub>/instance.json pattern.
     if let Ok(mut dir) = std::fs::read_dir(path.join("instances"))
         && dir.any(|e| {
-            e.ok().as_ref().is_some_and(|e| e.path().join("instance.json").exists())
-        }) {
-            // Found ATLauncher-style instance.
-            // Fall through — let content detection handle it.
-        }
+            e.ok()
+                .as_ref()
+                .is_some_and(|e| e.path().join("instance.json").exists())
+        })
+    {
+        // Found ATLauncher-style instance.
+        // Fall through — let content detection handle it.
+    }
 
     // MultiMC/Prism: check for instances/<sub>/instance.cfg pattern.
     if let Ok(mut dir) = std::fs::read_dir(path.join("instances"))
         && dir.any(|e| {
-            e.ok().as_ref().is_some_and(|e| e.path().join("instance.cfg").exists())
-        }) {
-            // instance.cfg → MultiMC or Prism.
-            return DroppedItemType::Launcher {
-                launcher_type: ImportLauncherType::MultiMC,
-                base_path: path.to_path_buf(),
-            };
-        }
+            e.ok()
+                .as_ref()
+                .is_some_and(|e| e.path().join("instance.cfg").exists())
+        })
+    {
+        // instance.cfg → MultiMC or Prism.
+        return DroppedItemType::Launcher {
+            launcher_type: ImportLauncherType::MultiMC,
+            base_path: path.to_path_buf(),
+        };
+    }
 
     // HMCL portable mode.
-    let hmcl_config = path.join(".hmcl").join("config").join("launcher-settings.json");
+    let hmcl_config = path
+        .join(".hmcl")
+        .join("config")
+        .join("launcher-settings.json");
     if hmcl_config.exists()
-        && let Some(data_dir) = find_hmcl_data_dir(path) {
-            return DroppedItemType::HmclLauncher {
-                launcher_dir: path.to_path_buf(),
-                data_dir,
-            };
-        }
+        && let Some(data_dir) = find_hmcl_data_dir(path)
+    {
+        return DroppedItemType::HmclLauncher {
+            launcher_dir: path.to_path_buf(),
+            data_dir,
+        };
+    }
 
     // Step 7: Content-type detection for folders.
     classify_folder_content(path)
@@ -533,27 +545,29 @@ fn classify_folder_content(path: &Path) -> DroppedItemType {
     // 5. Generic launcher scan: versions/<id>/<id>.json pattern.
     let versions_dir = path.join("versions");
     if versions_dir.is_dir()
-        && let Ok(mut dir) = std::fs::read_dir(&versions_dir) {
-            let has_version_json = dir.any(|e| {
-                e.ok().is_some_and(|entry| {
-                    let p = entry.path();
-                    if p.is_dir() {
-                        let id = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                        p.join(format!("{id}.json")).exists()
-                    } else {
-                        false
-                    }
-                })
-            });
-            if has_version_json {
-                // Could be a launcher with multiple instances or a plain archive.
-                // Return as a launcher scan result.
-                return DroppedItemType::Launcher {
-                    launcher_type: ImportLauncherType::Unknown,
-                    base_path: path.to_path_buf(),
-                };
-            }
+        && let Ok(mut dir) = std::fs::read_dir(&versions_dir)
+    {
+        let has_version_json = dir.any(|e| {
+            e.ok().is_some_and(|entry| {
+                let p = entry.path();
+                if p.is_dir() {
+                    let id =
+                        p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    p.join(format!("{id}.json")).exists()
+                } else {
+                    false
+                }
+            })
+        });
+        if has_version_json {
+            // Could be a launcher with multiple instances or a plain archive.
+            // Return as a launcher scan result.
+            return DroppedItemType::Launcher {
+                launcher_type: ImportLauncherType::Unknown,
+                base_path: path.to_path_buf(),
+            };
         }
+    }
 
     // 6. Mod JARs: Check for mod metadata files in mods/ subdirectory.
     let mods_dir = path.join("mods");
@@ -595,7 +609,9 @@ pub struct ModrinthLookupResult {
 ///
 /// Computes the SHA1 hash of the given file and queries the Modrinth API
 /// to find matching versions. Returns project and version information if found.
-pub async fn lookup_mod_hash(path: &Path) -> crate::Result<Option<ModrinthLookupResult>> {
+pub async fn lookup_mod_hash(
+    path: &Path,
+) -> crate::Result<Option<ModrinthLookupResult>> {
     let (_, hash) = crate::util::fetch::sha1_file_async(path).await?;
 
     let state = crate::State::get().await?;
@@ -627,7 +643,8 @@ pub async fn lookup_mod_hash(path: &Path) -> crate::Result<Option<ModrinthLookup
             Some(crate::state::CacheBehaviour::StaleWhileRevalidateSkipOffline),
             &state.pool,
             &state.api_semaphore,
-        ).await?
+        )
+        .await?
     } else {
         None
     };
@@ -639,8 +656,14 @@ pub async fn lookup_mod_hash(path: &Path) -> crate::Result<Option<ModrinthLookup
         project_name: project.as_ref().map(|p| p.title.clone()),
         project_slug: project.as_ref().and_then(|p| p.slug.clone()),
         version_number: version.as_ref().map(|v| v.version_number.clone()),
-        game_versions: version.as_ref().map(|v| v.game_versions.clone()).unwrap_or_default(),
-        loaders: version.as_ref().map(|v| v.loaders.clone()).unwrap_or_default(),
+        game_versions: version
+            .as_ref()
+            .map(|v| v.game_versions.clone())
+            .unwrap_or_default(),
+        loaders: version
+            .as_ref()
+            .map(|v| v.loaders.clone())
+            .unwrap_or_default(),
     }))
 }
 
@@ -655,7 +678,8 @@ pub async fn lookup_mod_hash(path: &Path) -> crate::Result<Option<ModrinthLookup
 /// 3. `$HMCL_DATA_DIR` environment variable
 fn find_hmcl_data_dir(launcher_dir: &Path) -> Option<PathBuf> {
     // Priority 1: Portable mode — .hmcl in launcher directory.
-    let portable_config = launcher_dir.join(".hmcl/config/launcher-settings.json");
+    let portable_config =
+        launcher_dir.join(".hmcl/config/launcher-settings.json");
     if portable_config.exists() {
         return Some(launcher_dir.join(".hmcl"));
     }
@@ -663,9 +687,10 @@ fn find_hmcl_data_dir(launcher_dir: &Path) -> Option<PathBuf> {
     // Priority 2: Platform-specific system data dir.
     let system_dir = find_hmcl_system_data_dir();
     if let Some(ref dir) = system_dir
-        && dir.join("config/launcher-settings.json").exists() {
-            return Some(dir.clone());
-        }
+        && dir.join("config/launcher-settings.json").exists()
+    {
+        return Some(dir.clone());
+    }
 
     // Priority 3: Environment variable override.
     if let Ok(env_dir) = std::env::var("HMCL_DATA_DIR") {
@@ -759,7 +784,8 @@ mod tests {
         let dir = tempdir().expect("temp dir");
         let rp = dir.path().join("my_resource_pack");
         std::fs::create_dir(&rp).expect("create dir");
-        std::fs::write(rp.join("pack.mcmeta"), "{}").expect("write pack.mcmeta");
+        std::fs::write(rp.join("pack.mcmeta"), "{}")
+            .expect("write pack.mcmeta");
 
         let result = classify_dropped_item(&rp);
         assert!(
@@ -773,7 +799,8 @@ mod tests {
         let dir = tempdir().expect("temp dir");
         let world = dir.path().join("New World");
         std::fs::create_dir(&world).expect("create dir");
-        std::fs::write(world.join("level.dat"), "fake").expect("write level.dat");
+        std::fs::write(world.join("level.dat"), "fake")
+            .expect("write level.dat");
 
         let result = classify_dropped_item(&world);
         assert!(

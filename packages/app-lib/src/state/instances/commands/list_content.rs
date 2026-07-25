@@ -1379,25 +1379,29 @@ async fn content_files_to_content_items(
                             })
                         })
                     }),
-                owner: owner.or_else(|| {
-                    curseforge_project
-                        .and_then(|project| project.authors.first())
-                        .map(|author| ContentItemOwner {
-                            id: author.id.to_string(),
-                            name: author.name.clone(),
-                            avatar_url: None,
-                            owner_type: OwnerType::User,
-                        })
-                }).or_else(|| {
-                    local_mod.as_ref().and_then(|meta| {
-                        meta.authors.first().map(|author| ContentItemOwner {
-                            id: format!("local:{author}"),
-                            name: author.clone(),
-                            avatar_url: None,
-                            owner_type: OwnerType::User,
-                        })
+                owner: owner
+                    .or_else(|| {
+                        curseforge_project
+                            .and_then(|project| project.authors.first())
+                            .map(|author| ContentItemOwner {
+                                id: author.id.to_string(),
+                                name: author.name.clone(),
+                                avatar_url: None,
+                                owner_type: OwnerType::User,
+                            })
                     })
-                }),
+                    .or_else(|| {
+                        local_mod.as_ref().and_then(|meta| {
+                            meta.authors.first().map(|author| {
+                                ContentItemOwner {
+                                    id: format!("local:{author}"),
+                                    name: author.clone(),
+                                    avatar_url: None,
+                                    owner_type: OwnerType::User,
+                                }
+                            })
+                        })
+                    }),
                 has_update: file.update_version_id.is_some()
                     || curseforge_update_id.is_some(),
                 update_version_id: file

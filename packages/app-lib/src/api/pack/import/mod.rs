@@ -294,12 +294,13 @@ pub async fn get_importable_instances(
     {
         let path = entry.path();
         if path.is_dir()
-            && is_valid_importable_instance(path.clone(), launcher_type).await {
-                let name = path.file_name();
-                if let Some(name) = name {
-                    instances.push(name.to_string_lossy().to_string());
-                }
+            && is_valid_importable_instance(path.clone(), launcher_type).await
+        {
+            let name = path.file_name();
+            if let Some(name) = name {
+                instances.push(name.to_string_lossy().to_string());
             }
+        }
     }
     Ok(instances)
 }
@@ -328,24 +329,26 @@ async fn scan_instances_at(
     }
     let versions_dir = path.join("versions");
     if versions_dir.is_dir()
-        && let Ok(mut dir) = io::read_dir(&versions_dir).await {
-            while let Ok(Some(entry)) = dir.next_entry().await {
-                if entry.path().is_dir()
-                    && instance_json::detect(&entry.path()).is_some()
-                    && let Some(name) = entry.path().file_name() {
-                        let name = name.to_string_lossy().to_string();
-                        let ipath = entry.path();
-                        instances.push((
-                            if let Some(pre) = prefix {
-                                format!("{pre}:versions/{name}")
-                            } else {
-                                format!("versions/{name}")
-                            },
-                            ipath,
-                        ));
-                    }
+        && let Ok(mut dir) = io::read_dir(&versions_dir).await
+    {
+        while let Ok(Some(entry)) = dir.next_entry().await {
+            if entry.path().is_dir()
+                && instance_json::detect(&entry.path()).is_some()
+                && let Some(name) = entry.path().file_name()
+            {
+                let name = name.to_string_lossy().to_string();
+                let ipath = entry.path();
+                instances.push((
+                    if let Some(pre) = prefix {
+                        format!("{pre}:versions/{name}")
+                    } else {
+                        format!("versions/{name}")
+                    },
+                    ipath,
+                ));
             }
         }
+    }
     tracing::debug!(
         "scan_instances_at: path={} prefix={:?} found={}",
         path.display(),
@@ -812,15 +815,15 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
                     && let (Ok(src_meta), Ok(dst_meta)) = (
                         tokio::fs::metadata(&src).await,
                         tokio::fs::metadata(&dst).await,
-                    ) {
-                        // If files have identical size and modification time, skip copying
-                        if src_meta.len() == dst_meta.len()
-                            && src_meta.modified().ok()
-                                == dst_meta.modified().ok()
-                        {
-                            return Ok::<_, crate::Error>(());
-                        }
+                    )
+                {
+                    // If files have identical size and modification time, skip copying
+                    if src_meta.len() == dst_meta.len()
+                        && src_meta.modified().ok() == dst_meta.modified().ok()
+                    {
+                        return Ok::<_, crate::Error>(());
                     }
+                }
 
                 // Proceed with copy
                 fetch::copy(&src, &dst, io_semaphore).await?;

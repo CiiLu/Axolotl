@@ -107,9 +107,10 @@ pub(crate) async fn sync_instance_content_files(
                 let bytes = bytes::Bytes::from(data);
                 if let Some(meta) =
                     crate::mod_metadata::extract_mod_metadata(&bytes)
-                    && let Ok(json) = serde_json::to_string(&meta) {
-                        file.local_mod_data = Some(json);
-                    }
+                    && let Ok(json) = serde_json::to_string(&meta)
+                {
+                    file.local_mod_data = Some(json);
+                }
             }
             Err(_) => {
                 // File temporarily inaccessible; skip silently.
