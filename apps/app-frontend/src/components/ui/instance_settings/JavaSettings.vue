@@ -206,16 +206,18 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 		<h2 class="m-0 mb-3 text-lg font-extrabold text-contrast block">
 			{{ formatMessage(messages.javaInstallation) }}
 		</h2>
-		<Table :columns="columns" :data="tableData" row-key="_select" @row-click="onSelectRow">
+		<Table :columns="columns" :data="tableData" row-key="_select" :row-clickable="true" @row-click="onSelectRow">
 			<template #cell-_select="{ row }">
 				<div class="flex items-center justify-center">
 					<div
 						role="radio"
 						:aria-checked="selectedVersion === row._select"
-						class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
-						:class="selectedVersion === row._select ? 'border-accent bg-accent' : 'border-button-border'"
+						class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors cursor-pointer"
+						:class="selectedVersion === row._select 
+							? 'border-accent bg-accent scale-110' 
+							: 'border-button-border hover:border-accent'"
 					>
-						<div v-if="selectedVersion === row._select" class="w-2 h-2 rounded-full bg-bg" />
+						<div v-if="selectedVersion === row._select" class="w-2.5 h-2.5 rounded-full bg-bg" />
 					</div>
 				</div>
 			</template>
