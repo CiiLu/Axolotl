@@ -1,8 +1,9 @@
 <script setup>
 import { CoffeeIcon, DownloadIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
 import { NewModal, ButtonStyled, defineMessages, useVIntl, commonMessages } from '@modrinth/ui'
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { cancel_java_download } from '@/helpers/jre'
+import { loading_listener } from '@/helpers/events'
 
 const { formatMessage } = useVIntl()
 
@@ -38,21 +39,41 @@ const modal = ref(null)
 const distributionName = ref('')
 const javaVersion = ref(0)
 const statusText = ref('')
+const progress = ref(0)
+const progressMessage = ref('')
+const progressBar = ref(false)
+let unlistenLoading = null
 
 defineExpose({
 	show(distribution, version) {
 		distributionName.value = distribution.name || distribution.id || ''
 		javaVersion.value = version
+		progress.value = 0
+		progressBar.value = false
 		statusText.value = formatMessage(messages.preparingDownload)
 		modal.value.show()
+
+		loading_listener((payload) => {
+			if (payload.event?.type === 'java_download' && payload.event?.version === version) {
+				progressBar.value = true
+				if (payload.fraction !== null && payload.fraction !== undefined) {
+					progress.value = Math.round(payload.fraction * 100)
+				}
+				if (payload.message) {
+					progressMessage.value = payload.message
+				}
+			}
+		}).then(fn => { unlistenLoading = fn })
 	},
 	updateStatus(text) {
 		statusText.value = text
 	},
 	complete(path) {
+		if (unlistenLoading) { unlistenLoading(); unlistenLoading = null }
 		modal.value.hide()
 	},
 	close() {
+		if (unlistenLoading) { unlistenLoading(); unlistenLoading = null }
 		modal.value.hide()
 	},
 })
@@ -69,6 +90,10 @@ async function handleCancel() {
 	// The download will error with "cancelled by user"
 	// Modal will be closed by the parent when the download call returns
 }
+
+onUnmounted(() => {
+	if (unlistenLoading) { unlistenLoading(); unlistenLoading = null }
+})
 </script>
 <template>
 	<NewModal
@@ -90,7 +115,19 @@ async function handleCancel() {
 				<div class="font-semibold text-contrast">
 					{{ formatMessage(messages.downloadingInfo, { version: javaVersion, distribution: distributionName }) }}
 				</div>
-				<div class="flex items-center justify-center gap-2 mt-2 text-sm text-secondary">
+				<div v-if="progressBar" class="w-full mt-2">
+					<div class="flex justify-between text-xs text-secondary mb-1">
+						<span>{{ progressMessage || statusText }}</span>
+						<span>{{ progress }}%</span>
+					</div>
+					<div class="w-full h-1.5 bg-surface-4 rounded-full overflow-hidden">
+						<div
+							class="h-full bg-accent rounded-full transition-all duration-300 ease-out"
+							:style="{ width: progress + '%' }"
+						/>
+					</div>
+				</div>
+				<div v-else class="flex items-center justify-center gap-2 mt-2 text-sm text-secondary">
 					<SpinnerIcon class="animate-spin h-4 w-4" />
 					{{ statusText }}
 				</div>
