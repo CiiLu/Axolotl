@@ -1,5 +1,4 @@
 use crate::api::Result;
-use dashmap::DashMap;
 use std::path::PathBuf;
 use tauri::plugin::TauriPlugin;
 use theseus::prelude::JavaVersion;
@@ -10,19 +9,22 @@ pub fn init<R: tauri::Runtime>() -> TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             get_java_versions,
             set_java_version,
+            remove_java_version,
             jre_find_filtered_jres,
             jre_get_jre,
             jre_test_jre,
             jre_auto_install_java,
+            jre_auto_install_java_distribution,
             jre_get_max_memory,
             jre_get_memory_status,
             jre_optimize_memory,
+            list_java_distribution_versions,
         ])
         .build()
 }
 
 #[tauri::command]
-pub async fn get_java_versions() -> Result<DashMap<u32, JavaVersion>> {
+pub async fn get_java_versions() -> Result<Vec<JavaVersion>> {
     Ok(jre::get_java_versions().await?)
 }
 
@@ -32,12 +34,19 @@ pub async fn set_java_version(java_version: JavaVersion) -> Result<()> {
     Ok(())
 }
 
+#[tauri::command]
+pub async fn remove_java_version(path: String) -> Result<()> {
+    jre::remove_java_version(path).await?;
+    Ok(())
+}
+
 // Finds the installation of Java 8, if it exists
 #[tauri::command]
 pub async fn jre_find_filtered_jres(
     version: Option<u32>,
+    full_scan: bool,
 ) -> Result<Vec<JavaVersion>> {
-    Ok(jre::find_filtered_jres(version).await?)
+    Ok(jre::find_filtered_jres(version, full_scan).await?)
 }
 
 // Validates JRE at a given path
@@ -57,6 +66,16 @@ pub async fn jre_test_jre(path: PathBuf, major_version: u32) -> Result<bool> {
 #[tauri::command]
 pub async fn jre_auto_install_java(java_version: u32) -> Result<PathBuf> {
     Ok(jre::auto_install_java(java_version).await?)
+}
+
+#[tauri::command]
+pub async fn list_java_distribution_versions(distribution: String) -> Result<Vec<u32>> {
+    Ok(jre::list_java_distribution_versions(distribution).await?)
+}
+
+#[tauri::command]
+pub async fn jre_auto_install_java_distribution(distribution: String, java_version: u32) -> Result<PathBuf> {
+    Ok(jre::auto_install_java_distribution(distribution, java_version).await?)
 }
 
 // Gets the maximum memory a system has available.

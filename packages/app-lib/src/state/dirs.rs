@@ -543,7 +543,7 @@ impl DirectoryInfo {
                 }
 
                 let java_versions = JavaVersion::get_all(exec).await?;
-                for (_, mut java_version) in java_versions {
+                for mut java_version in java_versions {
                     java_version.path = java_version.path.replace(
                         prev_custom_dir,
                         new_dir.trim_end_matches('/').trim_end_matches('\\'),

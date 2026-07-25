@@ -66,6 +66,7 @@ impl DiscoveredJava {
                     version: row.get("full_version"),
                     architecture: row.get("architecture"),
                     path: row.get("path"),
+                    distribution: None,
                 },
                 file_size: row.get("file_size"),
                 file_mtime_ms: row.get("file_mtime_ms"),

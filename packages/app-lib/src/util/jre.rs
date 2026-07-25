@@ -86,8 +86,8 @@ const EXCLUDED_DIR_NAMES: &[&str] = &[
 // launchers' bundled runtimes and a bounded keyword search of likely
 // directories
 #[tracing::instrument]
-pub async fn get_all_jre() -> Result<Vec<JavaVersion>, JREError> {
-    let jre_paths = collect_candidate_paths().await?;
+pub async fn get_all_jre(full_scan: bool) -> Result<Vec<JavaVersion>, JREError> {
+    let jre_paths = collect_candidate_paths(full_scan).await?;
 
     // Get JRE versions from potential paths concurrently
     Ok(check_java_at_filepaths(jre_paths)
@@ -98,7 +98,7 @@ pub async fn get_all_jre() -> Result<Vec<JavaVersion>, JREError> {
 
 // Gathers candidate paths from every source; cheap sources run inline while
 // filesystem-heavy sources run on blocking threads with bounded concurrency
-async fn collect_candidate_paths() -> Result<HashSet<PathBuf>, JREError> {
+async fn collect_candidate_paths(full_scan: bool) -> Result<HashSet<PathBuf>, JREError> {
     let mut jre_paths = HashSet::new();
 
     jre_paths.extend(get_all_jre_path().await);
@@ -122,17 +122,19 @@ async fn collect_candidate_paths() -> Result<HashSet<PathBuf>, JREError> {
         jre_paths.extend(set);
     }
 
-    let found: Vec<HashSet<PathBuf>> = stream::iter(bfs_search_roots())
-        .map(|root| {
-            tokio::task::spawn_blocking(move || bfs_keyword_scan(&root))
-        })
-        .buffer_unordered(COLLECT_CONCURRENCY)
-        .filter_map(|res| async move { res.ok() })
-        .collect()
-        .await;
+    if full_scan {
+        let found: Vec<HashSet<PathBuf>> = stream::iter(bfs_search_roots())
+            .map(|root| {
+                tokio::task::spawn_blocking(move || bfs_keyword_scan(&root))
+            })
+            .buffer_unordered(COLLECT_CONCURRENCY)
+            .filter_map(|res| async move { res.ok() })
+            .collect()
+            .await;
 
-    for set in found {
-        jre_paths.extend(set);
+        for set in found {
+            jre_paths.extend(set);
+        }
     }
 
     Ok(jre_paths)
@@ -623,6 +625,7 @@ pub async fn check_java_at_filepath(path: &Path) -> crate::Result<JavaVersion> {
                 path,
                 version: version.to_string(),
                 architecture: arch.to_string(),
+                distribution: None,
             });
         }
 
@@ -652,6 +655,7 @@ fn java_version_from_release_file(java: &Path) -> Option<JavaVersion> {
 
     let mut version = None;
     let mut os_arch = None;
+    let mut implementor = None;
     for line in contents.lines() {
         let Some((key, value)) = line.split_once('=') else {
             continue;
@@ -660,6 +664,7 @@ fn java_version_from_release_file(java: &Path) -> Option<JavaVersion> {
         match key.trim() {
             "JAVA_VERSION" => version = Some(value.to_string()),
             "OS_ARCH" => os_arch = Some(value.to_string()),
+            "IMPLEMENTOR" => implementor = Some(value.to_string()),
             _ => {}
         }
     }
@@ -672,6 +677,7 @@ fn java_version_from_release_file(java: &Path) -> Option<JavaVersion> {
         path: java.to_string_lossy().to_string(),
         version: parsed_version.to_string(),
         architecture,
+        distribution: implementor,
     })
 }
 

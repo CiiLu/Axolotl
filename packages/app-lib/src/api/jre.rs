@@ -11,7 +11,6 @@ use crate::util::fetch::{
     ContentValidation, DownloadRequest, FetchProgressFn, Integrity,
     ResourceClass, download_to_path, fetch_json,
 };
-use dashmap::DashMap;
 use futures::{TryStreamExt, stream};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
@@ -31,16 +30,86 @@ use crate::{
     util::jre::{self},
 };
 
-pub async fn get_java_versions() -> crate::Result<DashMap<u32, JavaVersion>> {
+pub async fn get_java_versions() -> crate::Result<Vec<JavaVersion>> {
     let state = State::get().await?;
 
     JavaVersion::get_all(&state.pool).await
+}
+
+pub async fn list_java_distribution_versions(
+    distribution: String,
+) -> crate::Result<Vec<u32>> {
+    let state = State::get().await?;
+    match distribution.as_str() {
+        "adoptium" | "temurin" | "default" => {
+            let releases: AdoptiumAvailableReleases = fetch_json(
+                Method::GET,
+                "https://api.adoptium.net/v3/info/available_releases",
+                None, None, None,
+                &state.api_semaphore,
+                &state.pool,
+            ).await?;
+            let mut versions: Vec<u32> = releases.available_releases
+                .into_iter()
+                .filter(|v| *v >= 8)
+                .collect();
+            versions.sort_unstable();
+            Ok(versions)
+        }
+        "semeru" | "openj9" | "ibm" => {
+            let candidate_versions = [8u32, 11, 17, 21, 22, 23, 24, 25, 26];
+            let mut versions = Vec::new();
+
+            for ver in candidate_versions {
+                let url = format!(
+                    "https://api.github.com/repos/ibmruntimes/semeru{}-binaries/releases/latest",
+                    ver
+                );
+                if fetch_json::<serde_json::Value>(
+                    Method::GET, &url, None, None, None,
+                    &state.api_semaphore, &state.pool,
+                ).await.is_ok() {
+                    versions.push(ver);
+                }
+            }
+
+            Ok(versions)
+        }
+        "zulu" => {
+            let platform = std::env::consts::OS;
+            let arch = std::env::consts::ARCH;
+            let url = format!(
+                "https://api.azul.com/metadata/v1/zulu/packages/?os={}&arch={}&java_package_type=jdk&page_size=100",
+                platform, arch
+            );
+            let packages: Vec<AzulPackageSummary> = fetch_json(
+                Method::GET, &url, None, None, None,
+                &state.api_semaphore, &state.pool,
+            ).await?;
+            let mut versions: Vec<u32> = packages.iter()
+                .filter_map(|p| p.java_version.first().copied())
+                .filter(|v| *v >= 8)
+                .collect();
+            versions.sort_unstable();
+            versions.dedup();
+            Ok(versions)
+        }
+        _ => Err(crate::Error::from(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("Unknown distribution: {distribution}"),
+        ))),
+    }
 }
 
 pub async fn set_java_version(java_version: JavaVersion) -> crate::Result<()> {
     let state = State::get().await?;
     java_version.upsert(&state.pool).await?;
     Ok(())
+}
+
+pub async fn remove_java_version(path: String) -> crate::Result<()> {
+    let state = State::get().await?;
+    JavaVersion::delete(&path, &state.pool).await
 }
 
 const JAVA_RESCAN_DEBOUNCE: Duration = Duration::from_secs(60);
@@ -51,8 +120,9 @@ static JAVA_SCAN_STATE: LazyLock<tokio::sync::Mutex<Option<Instant>>> =
 // Searches for jres on the system given a java version (ex: 8, 17, 21)
 pub async fn find_filtered_jres(
     java_version: Option<u32>,
+    full_scan: bool,
 ) -> crate::Result<Vec<JavaVersion>> {
-    let jres = get_available_jres().await?;
+    let jres = get_available_jres(full_scan).await?;
 
     Ok(if let Some(java_version) = java_version {
         jres.into_iter()
@@ -67,8 +137,18 @@ pub async fn find_filtered_jres(
 /// when possible. When the cache is hit, a debounced rescan runs in the
 /// background and a `java_discovery_update` event fires if it changes
 /// anything; the cache being empty forces a full scan instead.
-pub async fn get_available_jres() -> crate::Result<Vec<JavaVersion>> {
+///
+/// When `full_scan` is true the cache is always bypassed and a fresh
+/// full scan (including BFS directory traversal) is performed.
+pub async fn get_available_jres(full_scan: bool) -> crate::Result<Vec<JavaVersion>> {
     let state = State::get().await?;
+
+    if full_scan {
+        let mut last_scan = JAVA_SCAN_STATE.lock().await;
+        let jres = refresh_discovered_javas(&state, true).await?;
+        *last_scan = Some(Instant::now());
+        return Ok(jres);
+    }
 
     let cached = validate_cached_javas(&state).await?;
     if !cached.is_empty() {
@@ -83,7 +163,7 @@ pub async fn get_available_jres() -> crate::Result<Vec<JavaVersion>> {
     if !cached.is_empty() {
         return Ok(cached);
     }
-    let jres = refresh_discovered_javas(&state).await?;
+    let jres = refresh_discovered_javas(&state, false).await?;
     *last_scan = Some(Instant::now());
     Ok(jres)
 }
@@ -130,11 +210,14 @@ async fn validate_cached_javas(
     Ok(valid)
 }
 
-// Runs a full system scan and replaces the discovery cache with its results
+// Runs a system scan and replaces the discovery cache with its results.
+// When `full_scan` is true a BFS directory traversal is performed;
+// otherwise only well-known paths and registry entries are checked.
 async fn refresh_discovered_javas(
     state: &State,
+    full_scan: bool,
 ) -> crate::Result<Vec<JavaVersion>> {
-    let jres = jre::get_all_jre().await?;
+    let jres = jre::get_all_jre(full_scan).await?;
 
     let previous: HashSet<(String, String)> =
         DiscoveredJava::get_all(&state.pool)
@@ -148,6 +231,16 @@ async fn refresh_discovered_javas(
         .filter_map(|java| DiscoveredJava::from_java(java.clone()))
         .collect();
     DiscoveredJava::replace_all(&state.pool, &entries).await?;
+
+    // Also upsert into java_versions so they appear in the settings list
+    for java in &jres {
+        if let Err(e) = java.upsert(&state.pool).await {
+            tracing::warn!(
+                "Failed to upsert discovered Java {} into java_versions: {e}",
+                java.parsed_version
+            );
+        }
+    }
 
     let current: HashSet<(String, String)> = entries
         .iter()
@@ -173,7 +266,7 @@ fn schedule_background_java_rescan() {
         let Ok(state) = State::get().await else {
             return;
         };
-        match refresh_discovered_javas(&state).await {
+        match refresh_discovered_javas(&state, true).await {
             Ok(_) => *last_scan = Some(Instant::now()),
             Err(e) => {
                 tracing::warn!("Background Java rescan failed: {e}");
@@ -220,7 +313,7 @@ pub async fn find_java_for_version(
         return Ok(Some(java));
     }
 
-    let scanned = get_available_jres().await?;
+    let scanned = get_available_jres(false).await?;
     Ok(scanned
         .into_iter()
         .find(|java| java.parsed_version == major_version))
@@ -242,6 +335,32 @@ pub async fn auto_install_java_with_reporter(
     reporter: InstallProgressReporter,
 ) -> crate::Result<PathBuf> {
     auto_install_java_inner(java_version, false, Some(reporter)).await
+}
+
+pub async fn auto_install_java_distribution(
+    distribution: String,
+    java_version: u32,
+) -> crate::Result<PathBuf> {
+    let state = State::get().await?;
+    let _install_guard = JAVA_INSTALL_LOCK.lock().await;
+    match distribution.as_str() {
+        "adoptium" | "temurin" => {
+            if let Some(path) = install_adoptium_runtime(&state, java_version, None, None).await? {
+                return Ok(path);
+            }
+            auto_install_java(java_version).await
+        }
+        "semeru" | "openj9" | "ibm" => {
+            if let Some(path) = install_semeru_runtime(&state, java_version, None, None).await? {
+                return Ok(path);
+            }
+            auto_install_java(java_version).await
+        }
+        "zulu" => {
+            install_azul_runtime(&state, java_version, None, None).await
+        }
+        _ => auto_install_java(java_version).await,
+    }
 }
 
 const JAVA_INSTALL_STEPS: u64 = 4;
@@ -293,6 +412,7 @@ enum MojangRuntimeFile {
 #[derive(Deserialize)]
 struct AzulPackageSummary {
     package_uuid: String,
+    java_version: Vec<u32>,
 }
 
 #[derive(Deserialize)]
@@ -300,6 +420,46 @@ struct AzulPackage {
     download_url: String,
     name: PathBuf,
     sha256_hash: String,
+    size: u64,
+}
+
+// Adoptium (Eclipse Temurin) types
+#[derive(Deserialize)]
+struct AdoptiumAvailableReleases {
+    available_releases: Vec<u32>,
+}
+
+#[derive(Deserialize)]
+struct AdoptiumAsset {
+    binaries: Vec<AdoptiumBinary>,
+}
+
+#[derive(Deserialize)]
+struct AdoptiumBinary {
+    architecture: Option<String>,
+    os: Option<String>,
+    package: AdoptiumPackage,
+}
+
+#[derive(Deserialize)]
+struct AdoptiumPackage {
+    name: String,
+    link: String,
+    checksum: Option<String>,
+    size: u64,
+}
+
+// IBM Semeru (GitHub releases) types
+#[derive(Deserialize)]
+struct GitHubRelease {
+    tag_name: String,
+    assets: Vec<GitHubAsset>,
+}
+
+#[derive(Deserialize)]
+struct GitHubAsset {
+    name: String,
+    browser_download_url: String,
     size: u64,
 }
 
@@ -1104,6 +1264,277 @@ async fn install_azul_runtime(
     };
     validate_installed_java(executable, java_version, reporter, loading_bar)
         .await
+}
+
+async fn install_adoptium_api_runtime(
+    state: &State,
+    java_version: u32,
+    vendor: &str,
+    jvm_impl: &str,
+    dir_prefix: &str,
+    loading_bar: Option<&crate::event::LoadingBarId>,
+    reporter: Option<&InstallProgressReporter>,
+) -> crate::Result<Option<PathBuf>> {
+    let platform = match std::env::consts::OS {
+        "linux" => "linux",
+        "macos" => "mac",
+        "windows" => "windows",
+        other => return Err(crate::Error::from(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            format!("Unsupported platform: {other}"),
+        ))),
+    };
+    let arch = match std::env::consts::ARCH {
+        "x86_64" => "x64",
+        "aarch64" => "aarch64",
+        other => return Err(crate::Error::from(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            format!("Unsupported arch: {other}"),
+        ))),
+    };
+
+    let assets_url = format!(
+        "https://api.adoptium.net/v3/assets/feature_releases/{}/ga?architecture={}&image_type=jdk&jvm_impl={}&os={}&vendor={}",
+        java_version, arch, jvm_impl, platform, vendor
+    );
+
+    update_java_install_progress(
+        reporter,
+        java_version,
+        InstallJavaStep::FetchingMetadata,
+        Some(java_step_progress(1)),
+    ).await?;
+
+    let assets: Vec<AdoptiumAsset> = match fetch_json(
+        Method::GET, &assets_url, None, None, None,
+        &state.api_semaphore, &state.pool,
+    ).await {
+        Ok(assets) => assets,
+        Err(_) => return Ok(None),
+    };
+
+    let all_binaries: Vec<AdoptiumBinary> = assets.into_iter()
+        .flat_map(|a| a.binaries)
+        .filter(|b| {
+            b.architecture.as_deref() == Some(arch)
+            && b.os.as_deref() == Some(platform)
+        })
+        .collect();
+
+    let binary = match all_binaries.into_iter().next() {
+        Some(binary) => binary,
+        None => return Ok(None),
+    };
+
+    let metadata_dir = state.directories.metadata_dir();
+    let java_dir = metadata_dir.join("java_versions");
+    io::create_dir_all(&java_dir).await?;
+    let staging_root = java_dir.join(format!("{dir_prefix}-jdk-{java_version}.staging"));
+    let final_root = java_dir.join(format!("{dir_prefix}-jdk-{java_version}"));
+
+    remove_path_if_present(&staging_root).await?;
+
+    let archive_name = &binary.package.name;
+    validate_archive_file_name(Path::new(archive_name))?;
+    let archive_path = staging_root.join(archive_name);
+
+    io::create_dir_all(&staging_root).await?;
+
+    let integrity = if let Some(sha256) = &binary.package.checksum {
+        Some(Integrity {
+            size: Some(binary.package.size),
+            sha256: Some(sha256.clone()),
+            content: ContentValidation::Jar,
+            ..Integrity::default()
+        })
+    } else {
+        let i: Option<Integrity> = None;
+        i
+    };
+
+    let mut request = DownloadRequest::new(&binary.package.link, ResourceClass::Java);
+    if let Some(i) = integrity {
+        request = request.with_integrity(i);
+    }
+
+    let _ = download_to_path(
+        request,
+        &archive_path,
+        &state.download_semaphore,
+        &state.pool,
+        Some(&mut |_current: u64, _total: u64| {
+            Box::pin(async { Ok(()) })
+        }),
+    ).await?;
+
+    update_java_install_progress(
+        reporter,
+        java_version,
+        InstallJavaStep::Extracting,
+        Some(java_step_progress(2)),
+    ).await?;
+
+    tokio::task::spawn_blocking({
+        let staging_root = staging_root.clone();
+        let archive_path = archive_path.clone();
+        move || {
+            let staging_clone = staging_root;
+            use std::io;
+            let file = std::fs::File::open(&archive_path)?;
+            let mut archive = zip::ZipArchive::new(file)?;
+            archive.extract(&staging_clone)?;
+            io::Result::Ok(())
+        }
+    }).await??;
+
+    io::remove_file(&archive_path).await?;
+
+    let extracted_dir = {
+        let mut entries = std::fs::read_dir(&staging_root)?;
+        let first = entries.next().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::NotFound, "Empty archive")
+        })??;
+        first.path()
+    };
+
+    remove_path_if_present(&final_root).await?;
+    tokio::fs::rename(&extracted_dir, &final_root).await?;
+    remove_path_if_present(&staging_root).await?;
+
+    let executable = if cfg!(target_os = "macos") {
+        final_root.join("Contents/Home/bin/java")
+    } else {
+        final_root.join("bin").join(jre::JAVA_BIN)
+    };
+
+    Ok(Some(
+        validate_installed_java(executable, java_version, reporter, loading_bar).await?,
+    ))
+}
+
+async fn install_adoptium_runtime(
+    state: &State,
+    java_version: u32,
+    loading_bar: Option<&crate::event::LoadingBarId>,
+    reporter: Option<&InstallProgressReporter>,
+) -> crate::Result<Option<PathBuf>> {
+    install_adoptium_api_runtime(state, java_version, "eclipse", "hotspot", "temurin", loading_bar, reporter).await
+}
+
+async fn install_semeru_runtime(
+    state: &State,
+    java_version: u32,
+    loading_bar: Option<&crate::event::LoadingBarId>,
+    reporter: Option<&InstallProgressReporter>,
+) -> crate::Result<Option<PathBuf>> {
+    let release_url = format!(
+        "https://api.github.com/repos/ibmruntimes/semeru{}-binaries/releases/latest",
+        java_version
+    );
+
+    update_java_install_progress(
+        reporter,
+        java_version,
+        InstallJavaStep::FetchingMetadata,
+        Some(java_step_progress(1)),
+    ).await?;
+
+    let release: GitHubRelease = match fetch_json::<GitHubRelease>(
+        Method::GET, &release_url, None, None, None,
+        &state.api_semaphore, &state.pool,
+    ).await {
+        Ok(r) => r,
+        Err(_) => return Ok(None),
+    };
+
+    let platform = match std::env::consts::OS {
+        "linux" => "linux",
+        "macos" => "mac",
+        "windows" => "windows",
+        _ => return Ok(None),
+    };
+
+    let arch_tag = match std::env::consts::ARCH {
+        "x86_64" => "x64",
+        "aarch64" => "aarch64",
+        _ => return Ok(None),
+    };
+
+    // IBM Semeru asset naming: ibm-semeru-open-jdk_{arch}_{os}_{version}.tar.gz
+    let expected_fragment = format!("jdk_{}_{}", arch_tag, platform);
+
+    let asset = match release.assets.iter().find(|a| {
+        a.name.contains(&expected_fragment)
+            && a.name.ends_with(".tar.gz")
+            && a.name.contains("jdk")
+    }) {
+        Some(a) => a,
+        None => return Ok(None),
+    };
+
+    let metadata_dir = state.directories.metadata_dir();
+    let java_dir = metadata_dir.join("java_versions");
+    io::create_dir_all(&java_dir).await?;
+
+    let staging_root = java_dir.join(format!("semeru-jdk-{}.staging", java_version));
+    let final_root = java_dir.join(format!("semeru-jdk-{}", java_version));
+
+    remove_path_if_present(&staging_root).await?;
+
+    let archive_path = staging_root.join(&asset.name);
+    io::create_dir_all(&staging_root).await?;
+
+    let _ = download_to_path(
+        DownloadRequest::new(&asset.browser_download_url, ResourceClass::Java),
+        &archive_path,
+        &state.download_semaphore,
+        &state.pool,
+        Some(&mut |_current: u64, _total: u64| { Box::pin(async { Ok(()) }) }),
+    ).await?;
+
+    update_java_install_progress(
+        reporter,
+        java_version,
+        InstallJavaStep::Extracting,
+        Some(java_step_progress(2)),
+    ).await?;
+
+    tokio::task::spawn_blocking({
+        let staging_root = staging_root.clone();
+        let archive_path = archive_path.clone();
+        move || {
+            let staging_clone = staging_root;
+            use std::io;
+            let file = std::fs::File::open(&archive_path)?;
+            let mut archive = zip::ZipArchive::new(file)?;
+            archive.extract(&staging_clone)?;
+            io::Result::Ok(())
+        }
+    }).await??;
+
+    io::remove_file(&archive_path).await?;
+
+    // Find the extracted directory (should be the first directory in staging)
+    let extracted_dir = {
+        let mut entries = std::fs::read_dir(&staging_root)?;
+        let first = entries.next().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::NotFound, "Empty archive")
+        })??;
+        first.path()
+    };
+
+    remove_path_if_present(&final_root).await?;
+    tokio::fs::rename(&extracted_dir, &final_root).await?;
+    remove_path_if_present(&staging_root).await?;
+
+    let executable = if cfg!(target_os = "macos") {
+        final_root.join("Contents/Home/bin/java")
+    } else {
+        final_root.join("bin").join(jre::JAVA_BIN)
+    };
+
+    let result = validate_installed_java(executable, java_version, reporter, loading_bar).await?;
+    Ok(Some(result))
 }
 
 // Validates JRE at a given at a given path

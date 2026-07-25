@@ -1,9 +1,38 @@
-# Release notes v1.5.4
+# Release notes v1.5.2
 
-- 新增透明背景功能，可让桌面透过启动器窗口显示，并用滑块调节界面不透明度
-- 新增背景模糊开关，可将透出的桌面做磨砂玻璃处理
-- 启用透明背景时会隐藏自定义背景图片
-- 修复正常关闭 Minecraft 时，因 Windows 退出码格式及非致命日志错误而误弹崩溃报告的问题
-- 修复开启透明背景后启动器窗口边框变成直角的问题。
-- 修复创建自定义实例时未自动使用所选加载器图标（Fabric、Forge、Quilt、NeoForge）作为默认图标的问题。
-- 修复加载器等较新内置实例图标带头像边框显示、与其他内置图标不一致的问题。
+- 重构 Adoptium (Temurin) 下载后端，将 `install_adoptium_runtime` 泛化为 `install_adoptium_api_runtime`，支持通过 `vendor`、`jvm_impl`、`dir_prefix` 参数指定不同发行商
+- 新增 IBM Semeru (OpenJ9) 运行时下载支持（`install_semeru_runtime` 包装函数，调用 Adoptium API 获取 IBM/OpenJ9 构建）
+- 新增 Azul Zulu 版本列表查询支持（`list_java_distribution_versions` 增加 `"zulu"` 分支，通过 Azul API 获取可用版本）
+- Java 发行版下载路由（`auto_install_java_distribution`）现支持 `semeru`/`openj9`/`ibm` 映射到 Semeru 下载，`zulu` 映射到 Azul 下载
+- 修复 Adoptium 下载函数中的编译问题：修正 `reporter.as_ref()` 类型错误、闭包签名与 `FetchProgressFn` 不匹配、`io::rename` 改为 `tokio::fs::rename`
+
+- 修复大型文件下载长期停留在单连接的问题：对支持 Range 的大文件主动建立 4 个初始区间，并按聚合吞吐、剩余大小和全局并发余量逐步扩展，最高有效并发为 8。
+- 强化 Range 下载完整性：校验 Content-Range 与资源版本，支持有限断流续传；服务器忽略 Range 时安全回退单连接，并保留哈希校验、取消清理和原子落盘。
+- 优化 MCIM 重定向下载：首批 Range 可并发通过 HTTPS 重定向，后续重试和扩容复用最终地址，避免重定向缓存锁导致连接串行启动。
+- 修复 Java 检测与新手引导 migration 版本冲突，以及 `discovered_javas` 已存在导致的启动失败，并兼容受影响的既有数据库。
+- 中文界面下，实例内容页与整合包内容弹窗的已装模组现以「中文名 (英文名)」显示，与「发现内容」页一致，并支持用中文搜索已装内容
+- 中文界面下，新下载的模组、资源包、光影包和数据包会以「[中文名]原文件名」保存；查不到中文名时保持原样，修复/重装不会产生重复文件，导出整合包时自动还原为原文件名
+- 中文界面下，「发现内容」页直接浏览（不搜索）时也会显示「中文名 (英文名)」双语标题，Modrinth 与 CurseForge 结果均生效
+- 新增游戏语言自动跟随启动器语言：实例首次启动（含导入的整合包）时按游戏版本写入正确的语言代码，中日韩语言同时启用 Unicode 字体；已游玩过的实例保留游戏内语言设置。
+- 修复皮肤选择器「添加皮肤」按钮在聚焦时强调色高亮描边部分边缘被裁剪、显示不完整的问题。
+- 左侧导航栏切换页面时，选中高亮改为滑动过渡动画，与顶部内容类型标签栏保持一致。
+- 优化 Java 检测性能：优先读取安装目录的 release 文件判断版本与架构，仅在文件缺失或架构无法识别时才回退到启动 JVM 探测，减少首次扫描时为每个候选启动进程的开销。
+- 下载或启动实例时，现在会先搜索本机是否已安装所需版本的 Java，找到则复用，仅在确实没有时才下载新的运行时，避免重复下载。
+- 修复 Minecraft 1.12.2、1.8.9 等旧版 Forge 安装时部分 Maven Central 依赖无法解析和下载的问题。
+- 修复数据库备份被写入 Modrinth 目录的问题，现在改为保存到应用自己的数据目录。
+- Java 设置页现改为动态列表，不再限制为 4 个固定版本槽位（Java 8/17/21/25），可自由添加和移除任意版本的 Java 运行时配置。
+- 新增「深度扫描」（Deep Scan）和「扫描中……」（Scanning...）i18n 中英文消息条目。
+- Java 检测现分为快速扫描（常用目录）和深度扫描（全盘 BFS 搜索）两种模式，可在 Java 选择器中按需切换。
+- 新增「快速添加」（Quick add）和「自定义版本」（Custom version）i18n 中英文消息条目。
+- 新增 Java distribution（发行商/实现者）信息采集：从 Java release 文件的 `IMPLEMENTOR` 字段提取发行商信息，存储到 `java_versions` 表新加的 `distribution` 列中，用于后续显示 Java 提供方信息。
+- Java 设置页重构为统一表格布局：所有已配置的 Java 版本在一张表中显示（版本号、发行版名称、路径、删除按钮），下方提供四个操作按钮：寻找 Java（常用目录快速扫描）、强力查找（全盘 BFS 深度扫描）、手动添加（文件选择器）、下载 Java（版本选择弹窗）。
+- Java 扫描结果现在自动添加到已配置版本列表；新增发行版检测（从 JDK release 文件中读取 IMPLEMENTOR 字段）并存储到数据库。
+- Java 下载弹窗现提供 4 种发行版选择：Eclipse Temurin、IBM Semeru（OpenJ9）、Azul Zulu，以及默认的 Auto（Recommended）。
+- 实例设置中的 Java 选择器重构为下拉菜单，支持三种模式：自动使用最优 Java 版本、从已配置的 Java 版本列表中选择、或自定义路径手动输入（附带检测/浏览按钮）。
+- 修复 Adoptium API 下载 Java 时 404 或返回空数组导致崩溃的问题：`install_adoptium_api_runtime` 改为返回 `Option<PathBuf>`，在 API 无结果时优雅返回 `None`，供调用者回退到自动下载逻辑。
+- 修复 `list_java_distribution_versions("default")` 返回「Unknown distribution: default」错误的问题：`"default"` 现已作为合法分发版标识，与 Adoptium 共享版本列表查询。
+- 重构 java_versions 表主键：从 major_version 改为 path，支持同一主版本号安装多个不同发行版的 Java（如两个 Java 21），全局设置和实例设置均已适配。
+- 下载 Java 弹窗移除 Mojang/Auto 选项，仅保留 Eclipse Temurin、IBM Semeru、Azul Zulu 三个显式发行版；修复 Adoptium API 404 和 unknown distribution 错误。
+- 修复 `list_java_distribution_versions` 中 `semeru`/`openj9`/`ibm` 误用 Adoptium available_releases 的问题，改为直接查询 IBM 的 GitHub 仓库（ibmruntimes/semeru{ver}-binaries/releases/latest），只返回 IBM 实际发布的版本。
+- 修复 Adoptium API v3 响应数据模型：`AdoptiumAsset.binary`（单数）改为 `binaries`（复数数组），`AdoptiumBinary` 新增 `architecture` 和 `os` 字段，`AdoptiumPackage.size` 由 `Option<u64>` 改为非可选 `u64`。
+- 修复 `install_adoptium_api_runtime` 对 Adoptium v3 API 的兼容性：改为从 `assets` 的 `binaries` 数组中按 `architecture` 和 `os` 过滤出匹配当前平台的二进制文件，而非直接取首个 asset 的 `binary`。

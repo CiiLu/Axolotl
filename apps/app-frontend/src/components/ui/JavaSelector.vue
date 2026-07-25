@@ -69,6 +69,16 @@
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
+				<button
+					class="!shadow-none"
+					:disabled="props.disabled || deepScanningJava"
+					@click="autoDeepScan"
+				>
+					<ScanEyeIcon />
+					{{ formatMessage(messages.deepScan) }}
+				</button>
+			</ButtonStyled>
+			<ButtonStyled>
 				<button class="!shadow-none" :disabled="props.disabled" @click="handleJavaFileInput()">
 					<FolderSearchIcon />
 					{{ formatMessage(messages.browse) }}
@@ -84,6 +94,7 @@ import {
 	DownloadIcon,
 	FolderSearchIcon,
 	RefreshCwIcon,
+	ScanEyeIcon,
 	SearchIcon,
 	SpinnerIcon,
 	XCircleIcon,
@@ -115,6 +126,7 @@ const messages = defineMessages({
 	},
 	detect: { id: 'app.java.detect', defaultMessage: 'Detect' },
 	browse: { id: 'app.java.browse', defaultMessage: 'Browse' },
+	deepScan: { id: 'app.java.deep-scan', defaultMessage: 'Deep Scan' },
 })
 
 const props = defineProps({
@@ -161,6 +173,7 @@ const {
 } = useJavaTest()
 
 const installingJava = ref(false)
+const deepScanningJava = ref(false)
 const hoveringTest = ref(false)
 let hasInitialized = false
 
@@ -210,10 +223,26 @@ async function autoDetect() {
 	if (!props.compact) {
 		detectJavaModal.value.show(props.version, props.modelValue)
 	} else {
-		const versions = await find_filtered_jres(props.version).catch(handleError)
+		const versions = await find_filtered_jres(props.version, false).catch(handleError)
 		if (versions.length > 0) {
 			emit('update:modelValue', versions[0])
 		}
+	}
+}
+
+async function autoDeepScan() {
+	deepScanningJava.value = true
+	try {
+		if (!props.compact) {
+			detectJavaModal.value.show(props.version, props.modelValue, true)
+		} else {
+			const versions = await find_filtered_jres(props.version, true).catch(handleError)
+			if (versions.length > 0) {
+				emit('update:modelValue', versions[0])
+			}
+		}
+	} finally {
+		deepScanningJava.value = false
 	}
 }
 
