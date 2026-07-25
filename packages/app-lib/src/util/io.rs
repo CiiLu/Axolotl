@@ -3,6 +3,7 @@
 
 use eyre::{Context, ContextCompat, Result, eyre};
 use std::{
+    future::Future,
     io::{ErrorKind, Write},
     path::Path,
 };
@@ -56,22 +57,39 @@ pub(crate) fn io_error_with_lock_info(
     path: impl AsRef<std::path::Path>,
 ) -> IOError {
     let path = path.as_ref();
+    io_error_with_lock_info_for_paths(source, path, &[path])
+}
 
+pub(crate) fn io_error_with_lock_info_for_paths(
+    source: std::io::Error,
+    error_path: &Path,
+    lock_paths: &[&Path],
+) -> IOError {
+    let raw_os_error = source.raw_os_error();
     let is_lock_error = source.kind() == ErrorKind::PermissionDenied
-        || source.raw_os_error() == Some(32)   // Windows ERROR_SHARING_VIOLATION
-        || source.raw_os_error() == Some(26); // Linux ETXTBSY
+        || (cfg!(windows) && raw_os_error == Some(32))
+        || (cfg!(target_os = "linux") && raw_os_error == Some(26));
 
     if is_lock_error {
-        let processes = get_locking_processes(path);
-        if !processes.is_empty() {
+        if let Some((locked_path, processes)) =
+            lock_paths.iter().find_map(|path| {
+                let processes = get_locking_processes(path);
+                (!processes.is_empty()).then_some((*path, processes))
+            })
+        {
             warn!(
                 "File lock detected on {} — {} holding process(es)",
-                path.display(),
+                locked_path.display(),
                 processes.len()
             );
             let detail = processes
                 .iter()
-                .map(|p| format!("  PID {} - {} ({})", p.pid, p.name, p.path))
+                .map(|p| {
+                    format!(
+                        "  PID {} - {} (locked path: {})",
+                        p.pid, p.name, p.path
+                    )
+                })
                 .collect::<Vec<_>>()
                 .join("\n");
             let enhanced = std::io::Error::new(
@@ -80,15 +98,86 @@ pub(crate) fn io_error_with_lock_info(
             );
             return IOError::IOPathError {
                 source: enhanced,
-                path: path.to_string_lossy().to_string(),
+                path: error_path.to_string_lossy().to_string(),
             };
         }
     }
 
     IOError::IOPathError {
         source,
-        path: path.to_string_lossy().to_string(),
+        path: error_path.to_string_lossy().to_string(),
     }
+}
+
+#[cfg(windows)]
+const WINDOWS_SHARING_VIOLATION_RETRY_DELAYS: [std::time::Duration; 5] = [
+    std::time::Duration::from_millis(100),
+    std::time::Duration::from_millis(250),
+    std::time::Duration::from_millis(500),
+    std::time::Duration::from_secs(1),
+    std::time::Duration::from_secs(2),
+];
+
+#[cfg(windows)]
+pub(crate) async fn retry_windows_sharing_violation<T, F, Fut>(
+    path: &Path,
+    operation: &str,
+    action: F,
+) -> std::io::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = std::io::Result<T>>,
+{
+    retry_windows_sharing_violation_with_delays(
+        path,
+        operation,
+        &WINDOWS_SHARING_VIOLATION_RETRY_DELAYS,
+        action,
+    )
+    .await
+}
+
+#[cfg(windows)]
+async fn retry_windows_sharing_violation_with_delays<T, F, Fut>(
+    path: &Path,
+    operation: &str,
+    delays: &[std::time::Duration],
+    mut action: F,
+) -> std::io::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = std::io::Result<T>>,
+{
+    for (retry_index, delay) in delays.iter().enumerate() {
+        match action().await {
+            Err(error) if error.raw_os_error() == Some(32) => {
+                warn!(
+                    "Windows sharing violation while {operation} {}. Retry {}/{} in {} ms",
+                    path.display(),
+                    retry_index + 1,
+                    delays.len(),
+                    delay.as_millis()
+                );
+                tokio::time::sleep(*delay).await;
+            }
+            result => return result,
+        }
+    }
+
+    action().await
+}
+
+#[cfg(not(windows))]
+pub(crate) async fn retry_windows_sharing_violation<T, F, Fut>(
+    _path: &Path,
+    _operation: &str,
+    mut action: F,
+) -> std::io::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = std::io::Result<T>>,
+{
+    action().await
 }
 
 pub fn canonicalize(
@@ -525,5 +614,85 @@ pub async fn create_symlink(
         })
         .await
         .unwrap()
+    }
+}
+
+#[cfg(all(test, windows))]
+mod windows_sharing_violation_tests {
+    use super::*;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    #[tokio::test]
+    async fn retries_sharing_violation_then_succeeds() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let action_attempts = attempts.clone();
+        let delays = [std::time::Duration::ZERO; 2];
+
+        retry_windows_sharing_violation_with_delays(
+            Path::new("locked.test"),
+            "testing",
+            &delays,
+            move || {
+                let attempt = action_attempts.fetch_add(1, Ordering::SeqCst);
+                async move {
+                    if attempt < 2 {
+                        Err(std::io::Error::from_raw_os_error(32))
+                    } else {
+                        Ok(())
+                    }
+                }
+            },
+        )
+        .await
+        .expect("third attempt succeeds");
+
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn does_not_retry_other_errors() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let action_attempts = attempts.clone();
+        let delays = [std::time::Duration::ZERO; 2];
+
+        let error = retry_windows_sharing_violation_with_delays(
+            Path::new("failed.test"),
+            "testing",
+            &delays,
+            move || {
+                action_attempts.fetch_add(1, Ordering::SeqCst);
+                async { Err::<(), _>(std::io::Error::from_raw_os_error(5)) }
+            },
+        )
+        .await
+        .expect_err("access denied must not be retried");
+
+        assert_eq!(error.raw_os_error(), Some(5));
+        assert_eq!(attempts.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn sharing_violation_retries_are_bounded() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let action_attempts = attempts.clone();
+        let delays = [std::time::Duration::ZERO; 2];
+
+        let error = retry_windows_sharing_violation_with_delays(
+            Path::new("locked.test"),
+            "testing",
+            &delays,
+            move || {
+                action_attempts.fetch_add(1, Ordering::SeqCst);
+                async { Err::<(), _>(std::io::Error::from_raw_os_error(32)) }
+            },
+        )
+        .await
+        .expect_err("sharing violation remains after retry budget");
+
+        assert_eq!(error.raw_os_error(), Some(32));
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
     }
 }

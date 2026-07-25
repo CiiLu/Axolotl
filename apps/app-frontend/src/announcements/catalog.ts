@@ -46,6 +46,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Urgent fix for critical bugs in the previous version',
 					'zh-CN': '紧急修复上个版本严重bug',
 				},
+				{
+					'en-US':
+						'Transient Windows file locks are now retried during downloads, and persistent lock errors identify the process holding the file when Windows can report it.',
+					'zh-CN':
+						'下载时遇到短暂的 Windows 文件占用将自动重试；若持续失败，Windows 能识别时会在错误中显示占用文件的进程。',
+				},
 			],
 		},
 	},

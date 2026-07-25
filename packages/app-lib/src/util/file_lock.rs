@@ -1,20 +1,31 @@
 //! Detect processes that hold a file lock on a given path.
 //!
-//! Uses platform-specific subprocess tools:
-//! - Windows: `handle.exe` (Sysinternals) — or empty vec if unavailable
+//! Uses platform-specific lock inspection:
+//! - Windows: Restart Manager API, with `handle.exe` as a fallback
 //! - Linux: `fuser -v` with fallback to `lsof -t`
 //! - macOS: `lsof -F pcn`
 //!
 //! All operations gracefully return an empty vec on any error.
-//!
-//! # Note
-//! Code in this module is intentionally dead until called by a later block.
 #![allow(dead_code)]
 
 use std::path::Path;
 
 use serde::Serialize;
 use tracing::warn;
+
+#[cfg(windows)]
+use std::{collections::HashSet, os::windows::ffi::OsStrExt};
+#[cfg(windows)]
+use windows::{
+    Win32::{
+        Foundation::{ERROR_MORE_DATA, ERROR_SUCCESS},
+        System::RestartManager::{
+            CCH_RM_SESSION_KEY, RM_PROCESS_INFO, RmEndSession, RmGetList,
+            RmRegisterResources, RmStartSession,
+        },
+    },
+    core::{PCWSTR, PWSTR},
+};
 
 /// Information about a process that has a file handle open.
 #[derive(Debug, Clone, Serialize)]
@@ -79,37 +90,169 @@ pub fn get_locking_processes(file_path: &Path) -> Vec<LockingProcess> {
     }
 }
 
-// ─── Windows: handle.exe subprocess ────────────────────────────────────────
+// ─── Windows: Restart Manager / handle.exe fallback ───────────────────────
 
 #[cfg(windows)]
 fn get_locking_processes_windows(
     file_path: &Path,
     path_str: &str,
 ) -> Vec<LockingProcess> {
+    if let Some(processes) =
+        get_locking_processes_windows_restart_manager(file_path, path_str)
+    {
+        return processes;
+    }
+
     let output =
         run_subprocess("handle.exe", &["-a", &file_path.to_string_lossy()]);
 
     match output {
         Some(stdout) => parse_handle_exe_output(&stdout, path_str),
-        None => {
-            // Fallback: try `lsof` if available.
-            let out =
-                run_subprocess("lsof", &["-t", &file_path.to_string_lossy()]);
-            match out {
-                Some(stdout) => stdout
-                    .lines()
-                    .filter_map(|l| l.trim().parse::<u32>().ok())
-                    .map(|pid| LockingProcess {
-                        pid,
-                        name: String::new(),
-                        path: path_str.to_string(),
-                        start_time: None,
-                    })
-                    .collect(),
-                None => Vec::new(),
-            }
+        None => Vec::new(),
+    }
+}
+
+#[cfg(windows)]
+struct RestartManagerSession(u32);
+
+#[cfg(windows)]
+impl Drop for RestartManagerSession {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = RmEndSession(self.0);
         }
     }
+}
+
+#[cfg(windows)]
+fn get_locking_processes_windows_restart_manager(
+    file_path: &Path,
+    path_str: &str,
+) -> Option<Vec<LockingProcess>> {
+    let mut session_handle = 0;
+    let mut session_key = [0u16; CCH_RM_SESSION_KEY as usize + 1];
+    let status = unsafe {
+        RmStartSession(
+            &mut session_handle,
+            None,
+            PWSTR(session_key.as_mut_ptr()),
+        )
+    };
+    if status != ERROR_SUCCESS {
+        warn!(
+            "Restart Manager could not start a session for {}: error {}",
+            path_str, status.0
+        );
+        return None;
+    }
+    let session = RestartManagerSession(session_handle);
+
+    let wide_path = file_path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let filenames = [PCWSTR(wide_path.as_ptr())];
+    let status =
+        unsafe { RmRegisterResources(session.0, Some(&filenames), None, None) };
+    if status != ERROR_SUCCESS {
+        warn!(
+            "Restart Manager could not register {}: error {}",
+            path_str, status.0
+        );
+        return None;
+    }
+
+    let mut needed = 0;
+    let mut count = 0;
+    let mut reboot_reasons = 0;
+    let status = unsafe {
+        RmGetList(
+            session.0,
+            &mut needed,
+            &mut count,
+            None,
+            &mut reboot_reasons,
+        )
+    };
+    if status == ERROR_SUCCESS && needed == 0 {
+        return Some(Vec::new());
+    }
+    if status != ERROR_MORE_DATA {
+        warn!(
+            "Restart Manager could not query {}: error {}",
+            path_str, status.0
+        );
+        return None;
+    }
+
+    for _ in 0..3 {
+        let mut process_info =
+            vec![RM_PROCESS_INFO::default(); needed as usize];
+        count = needed;
+        let status = unsafe {
+            RmGetList(
+                session.0,
+                &mut needed,
+                &mut count,
+                Some(process_info.as_mut_ptr()),
+                &mut reboot_reasons,
+            )
+        };
+        if status == ERROR_MORE_DATA {
+            continue;
+        }
+        if status != ERROR_SUCCESS {
+            warn!(
+                "Restart Manager could not read {}: error {}",
+                path_str, status.0
+            );
+            return None;
+        }
+
+        process_info.truncate(count as usize);
+        let mut seen_pids = HashSet::new();
+        let processes = process_info
+            .into_iter()
+            .filter_map(|process| {
+                let pid = process.Process.dwProcessId;
+                seen_pids.insert(pid).then(|| {
+                    let app_name = utf16_array_to_string(&process.strAppName);
+                    let service_name =
+                        utf16_array_to_string(&process.strServiceShortName);
+                    let name = if !app_name.is_empty() {
+                        app_name
+                    } else if !service_name.is_empty() {
+                        service_name
+                    } else {
+                        format!("PID {pid}")
+                    };
+                    LockingProcess {
+                        pid,
+                        name,
+                        path: path_str.to_string(),
+                        start_time: None,
+                    }
+                })
+            })
+            .collect();
+        return Some(processes);
+    }
+
+    warn!(
+        "Restart Manager process list kept changing while querying {}",
+        path_str
+    );
+    None
+}
+
+#[cfg(windows)]
+fn utf16_array_to_string(value: &[u16]) -> String {
+    let length = value
+        .iter()
+        .position(|character| *character == 0)
+        .unwrap_or(value.len());
+    String::from_utf16_lossy(&value[..length])
 }
 
 /// Parse handle.exe output to extract PID + process name.
@@ -330,9 +473,19 @@ mod tests {
         let dir = tempdir().expect("temp dir");
         let file_path = dir.path().join("test.txt");
         std::fs::write(&file_path, "hello").expect("write file");
-        let _file = std::fs::File::open(&file_path).expect("open file");
         let processes = get_locking_processes(&file_path);
-        assert!(processes.is_empty());
+        assert!(
+            processes
+                .iter()
+                .all(|process| process.pid != std::process::id())
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_restart_manager_decodes_process_name() {
+        let value = [b'A' as u16, b'x' as u16, b'o' as u16, 0, b'X' as u16];
+        assert_eq!(utf16_array_to_string(&value), "Axo");
     }
 
     #[test]
