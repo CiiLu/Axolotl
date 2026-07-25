@@ -95,6 +95,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Legacy (1.14 and below), April fools and snapshot versions of Minecraft can now be installed through instance creation.',
 					'zh-CN': '现在可以通过创建实例安装 Minecraft 的旧版（1.14及以下）、愚人节版和快照版。',
 				},
+				{
+					'en-US': 'Forge, NeoForge, Fabric and Quilt icons will now be auto set.',
+					'zh-CN': 'Forge、NeoForge、Fabric 和 Quilt 的图标现在会自动设置。',
+				},
 			],
 			changed: [
 				{
