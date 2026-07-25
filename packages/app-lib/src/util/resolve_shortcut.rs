@@ -242,14 +242,16 @@ fn parse_desktop_entry(content: &str) -> Option<PathBuf> {
 
     // Parse the Exec value: extract the first token that is not a parameter
     // placeholder like %f, %F, %u, %U, %k, %c.
-    let binary = shlex::split(exec)
-        .iter()
-        .flat_map(|tokens| tokens.iter())
-        .find(|token| {
-            !token.starts_with('%')
-                && !token.starts_with('-')
-                && !token.starts_with("--")
-        })?;
+    let tokens = shlex::split(exec);
+    let binary =
+        tokens
+            .iter()
+            .flat_map(|tokens| tokens.iter())
+            .find(|token| {
+                !token.starts_with('%')
+                    && !token.starts_with('-')
+                    && !token.starts_with("--")
+            })?;
 
     let binary_path = if binary.contains('/') {
         PathBuf::from(binary)
