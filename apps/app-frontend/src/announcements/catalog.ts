@@ -114,6 +114,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Translation requests are now sent in batches (5 segments per batch) to reduce API overhead.',
 					'zh-CN': '翻译请求现在分批发送（每批5个段落），降低 API 调用频率。',
 				},
+				{
+					'en-US':
+						'Offline account creation now warns when a Chinese username may be incompatible with Minecraft 1.18 and newer.',
+					'zh-CN':
+						'创建离线账户时，若使用中文用户名，现在会提示其可能与 Minecraft 1.18 及以上版本不兼容。',
+				},
 			],
 			fixed: [
 				{

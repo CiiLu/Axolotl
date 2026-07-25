@@ -2948,6 +2948,9 @@
 	"minecraft-account.offline-modal.create": {
 		"message": "创建账户"
 	},
+	"minecraft-account.offline-modal.chinese-username-warning": {
+		"message": "Minecraft 1.18 及以上版本可能会拒绝中文用户名，导致无法进入单人世界或服务器。请在旧版本中使用此账户，或为新版本改用英文用户名。"
+	},
 	"minecraft-account.offline-modal.description": {
 		"message": "选择离线游戏中使用的用户名。此账户只能加入允许离线玩家的服务器。"
 	},

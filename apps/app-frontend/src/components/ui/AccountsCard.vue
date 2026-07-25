@@ -140,6 +140,12 @@
 			<p v-if="offlineUsername.length > 0 && !offlineUsernameValid" class="m-0 text-sm text-red">
 				{{ formatMessage(messages.usernameValidation) }}
 			</p>
+			<p
+				v-if="offlineUsernameContainsChinese"
+				class="m-0 rounded-lg border border-solid border-orange bg-highlight-orange p-3 text-sm text-contrast"
+			>
+				{{ formatMessage(messages.chineseUsernameWarning) }}
+			</p>
 			<div class="input-group push-right">
 				<ButtonStyled>
 					<button :disabled="loginDisabled" @click="offlineAccountModal?.hide()">
@@ -358,6 +364,9 @@ const offlineAccountModal = ref<InstanceType<typeof ModalWrapper> | null>(null)
 const offlineUsername = ref('')
 const offlineUsernameValid = computed(() =>
 	/^[\p{L}\p{N}_]{1,16}$/u.test(offlineUsername.value.trim()),
+)
+const offlineUsernameContainsChinese = computed(() =>
+	/\p{Script=Han}/u.test(offlineUsername.value.trim()),
 )
 const yggdrasilAccountModal = ref<InstanceType<typeof ModalWrapper> | null>(null)
 const yggdrasilProfileModal = ref<InstanceType<typeof ModalWrapper> | null>(null)
@@ -921,6 +930,11 @@ const messages = defineMessages({
 	usernameValidation: {
 		id: 'minecraft-account.offline-modal.username-validation',
 		defaultMessage: 'Use 1–16 letters, numbers, or underscores, including Chinese characters.',
+	},
+	chineseUsernameWarning: {
+		id: 'minecraft-account.offline-modal.chinese-username-warning',
+		defaultMessage:
+			'Minecraft 1.18 and newer may reject Chinese usernames when entering singleplayer worlds or servers. Use this account with an older version, or choose an English username for newer versions.',
 	},
 	createOfflineAccount: {
 		id: 'minecraft-account.offline-modal.create',

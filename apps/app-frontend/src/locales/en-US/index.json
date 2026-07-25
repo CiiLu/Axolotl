@@ -2987,6 +2987,9 @@
 	"minecraft-account.offline-modal.create": {
 		"message": "Create account"
 	},
+	"minecraft-account.offline-modal.chinese-username-warning": {
+		"message": "Minecraft 1.18 and newer may reject Chinese usernames when entering singleplayer worlds or servers. Use this account with an older version, or choose an English username for newer versions."
+	},
 	"minecraft-account.offline-modal.description": {
 		"message": "Choose the username used in offline games. This account can only join servers that allow offline players."
 	},
