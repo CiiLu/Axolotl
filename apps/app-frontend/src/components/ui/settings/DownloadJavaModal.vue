@@ -18,6 +18,7 @@ import { ref } from 'vue'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { auto_install_java_distribution, list_java_distribution_versions } from '@/helpers/jre'
+import JavaDownloadProgressModal from '@/components/ui/settings/JavaDownloadProgressModal.vue'
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
@@ -43,6 +44,14 @@ const messages = defineMessages({
 		id: 'app.settings.java.download.downloading',
 		defaultMessage: 'Downloading Java {version}...',
 	},
+	downloadingLabel: {
+		id: 'app.settings.java.download.downloading.status',
+		defaultMessage: 'Downloading...',
+	},
+	extractingText: {
+		id: 'app.settings.java.download.extracting.status',
+		defaultMessage: 'Extracting files...',
+	},
 	loadingVersions: {
 		id: 'app.settings.java.download.loading',
 		defaultMessage: 'Loading versions...',
@@ -56,6 +65,7 @@ const messages = defineMessages({
 const emit = defineEmits(['downloaded'])
 
 const modal = ref(null)
+const progressModal = ref(null)
 const selectedDistribution = ref(null)
 const distributionVersions = ref([])
 const loadingDistroVersions = ref(false)
@@ -89,6 +99,7 @@ defineExpose({
 	show: () => {
 		selectedDistribution.value = null
 		distributionVersions.value = []
+		loadingDistroVersions.value = false
 		downloadingVersion.value = null
 		modal.value.show()
 	},
@@ -112,21 +123,39 @@ function backToDistributions() {
 }
 
 async function downloadVersion(version) {
+	const distro = selectedDistribution.value
+	if (!distro) return
+
 	downloadingVersion.value = version
-	trackEvent('JavaDownload', { distribution: selectedDistribution.value?.id, version })
+	trackEvent('JavaDownload', { distribution: distro.id, version })
 
-	const distroId = selectedDistribution.value?.id
-	const path = await auto_install_java_distribution(distroId, version).catch(handleError)
+	progressModal.value.show(distro, version)
+	progressModal.value.updateStatus(formatMessage(messages.downloadingLabel))
 
-	downloadingVersion.value = null
-	if (path) {
-		emit('downloaded', path, version)
-		modal.value.hide()
+	try {
+		const path = await auto_install_java_distribution(distro.id, version)
+		downloadingVersion.value = null
+
+		if (path) {
+			progressModal.value.complete(path)
+			emit('downloaded', path, version)
+		} else {
+			progressModal.value.close()
+		}
+	} catch (e) {
+		downloadingVersion.value = null
+		progressModal.value.close()
+		// Only show error if it's not a user cancellation
+		const msg = String(e)
+		if (!msg.includes('cancelled') && !msg.includes('canceled')) {
+			handleError(e)
+		}
 	}
 }
 </script>
 <template>
 	<ModalWrapper ref="modal" :header="formatMessage(messages.downloadJava)" :show-ad-on-close="false">
+		<JavaDownloadProgressModal ref="progressModal" />
 		<div class="flex flex-col gap-4 min-h-40">
 			<!-- Step 1: Distribution selection -->
 			<template v-if="!selectedDistribution">

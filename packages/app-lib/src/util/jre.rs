@@ -417,6 +417,31 @@ fn bfs_search_roots() -> Vec<PathBuf> {
     {
         roots.push(PathBuf::from("/opt"));
         roots.push(PathBuf::from("/usr/local"));
+
+        // Scan all mounted non-removable partitions for Java installations
+        let disks = sysinfo::Disks::new_with_refreshed_list();
+        for disk in disks.list() {
+            if disk.is_removable() {
+                continue;
+            }
+            let mount = disk.mount_point().to_path_buf();
+            if mount != PathBuf::from("/") && mount.as_os_str() != "/" {
+                roots.push(mount);
+            }
+        }
+
+        // Also scan common mount directories
+        for common in &["/mnt", "/media", "/run/media"] {
+            if std::path::Path::new(common).is_dir() {
+                if let Ok(entries) = std::fs::read_dir(common) {
+                    for entry in entries.flatten() {
+                        if entry.path().is_dir() {
+                            roots.push(entry.path());
+                        }
+                    }
+                }
+            }
+        }
     }
 
     roots.retain(|root| root.is_dir());

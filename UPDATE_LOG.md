@@ -18,6 +18,8 @@
 - 左侧导航栏切换页面时，选中高亮改为滑动过渡动画，与顶部内容类型标签栏保持一致。
 - 优化 Java 检测性能：优先读取安装目录的 release 文件判断版本与架构，仅在文件缺失或架构无法识别时才回退到启动 JVM 探测，减少首次扫描时为每个候选启动进程的开销。
 - 下载或启动实例时，现在会先搜索本机是否已安装所需版本的 Java，找到则复用，仅在确实没有时才下载新的运行时，避免重复下载。
+- 修复 `install_adoptium_api_runtime` 和 `install_semeru_runtime` 缺少 `set_context` 调用的问题，现在下载前会正确设置错误上下文以提供更清晰的诊断信息。
+- 修复 `install_semeru_runtime` 在不支持的平台/架构上返回 `Ok(None)` 而非返回错误的问题，与 Adoptium 风格保持一致。
 - 修复 Minecraft 1.12.2、1.8.9 等旧版 Forge 安装时部分 Maven Central 依赖无法解析和下载的问题。
 - 修复数据库备份被写入 Modrinth 目录的问题，现在改为保存到应用自己的数据目录。
 - Java 设置页现改为动态列表，不再限制为 4 个固定版本槽位（Java 8/17/21/25），可自由添加和移除任意版本的 Java 运行时配置。
@@ -36,3 +38,15 @@
 - 修复 `list_java_distribution_versions` 中 `semeru`/`openj9`/`ibm` 误用 Adoptium available_releases 的问题，改为直接查询 IBM 的 GitHub 仓库（ibmruntimes/semeru{ver}-binaries/releases/latest），只返回 IBM 实际发布的版本。
 - 修复 Adoptium API v3 响应数据模型：`AdoptiumAsset.binary`（单数）改为 `binaries`（复数数组），`AdoptiumBinary` 新增 `architecture` 和 `os` 字段，`AdoptiumPackage.size` 由 `Option<u64>` 改为非可选 `u64`。
 - 修复 `install_adoptium_api_runtime` 对 Adoptium v3 API 的兼容性：改为从 `assets` 的 `binaries` 数组中按 `architecture` 和 `os` 过滤出匹配当前平台的二进制文件，而非直接取首个 asset 的 `binary`。
+
+- 重构 Java 设置页表格数据：将 `tableData` 从 `ref()` + 手动 `refreshTable()` 改为 `computed()`，删除 5 处冗余的 `refreshTable()` 调用，数据变更时自动响应。
+- 清理 Java 设置页未使用的导入（`PlusIcon`、`auto_install_java`、`java_discovery_listener`）和未使用的变量/函数（`unlistenDiscovery`、`onDiscoveryUpdate`）。
+
+- 修复快速扫描（Quick Scan）始终返回缓存数据的问题：为 `get_available_jres` 和 `find_filtered_jres` 新增 `force_fresh` 参数，设置页快速扫描按钮调用时传入 `forceFresh=true`，确保新安装的 Java 运行时立即出现在列表中而无需深度扫描或后台重新扫描。
+- 修复快速扫描返回缓存数据的问题：新增 force_fresh 参数，"寻找 Java"按钮现在始终执行全新快速扫描，不再使用过期缓存。
+- Linux 深度扫描现覆盖所有已挂载非可移动分区（sysinfo::Disks），并额外扫描 /mnt、/media、/run/media 下的子目录，不再仅限 $HOME、/opt、/usr/local。
+
+- 修复实例设置 Java 页面白屏问题：`useMemorySlider()` 返回值被错误转换为普通类型导致 Vue 模板无法自动解包；`globalSettings` 访问缺少可选链式调用，在 settings 未加载时触发 TypeError。
+- 下载 Java 弹窗现使用新的 `JavaDownloadProgressModal` 进度弹窗：点击版本开始下载后，弹窗显示非可关闭的下载进度界面，包含发行商名称、版本号、状态文本和取消按钮；取消仅关闭弹窗，下载在后台继续进行。
+- 重构 `JavaDownloadProgressModal` 的 `defineExpose` API：`show()` 不再返回 Promise，改为仅显示弹窗并初始化状态文本为「Preparing download...」；`complete(path)` 和 `close()` 分别用于下载成功和失败时关闭弹窗。
+- 新增 Java 下载进度弹窗 i18n 中英文消息：progress-title、progress-info、preparing、extracting、downloading-label。

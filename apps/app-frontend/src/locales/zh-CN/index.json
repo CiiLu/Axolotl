@@ -2021,6 +2021,21 @@
 	"app.settings.java.auto-high-performance-mode-description": {
 		"message": "启动 Minecraft 时，自动在 Windows 图形设置中将启动器和 Java 设为使用高性能显卡。仅支持 Windows。"
 	},
+	"app.settings.java.download.progress-title": {
+		"message": "正在下载 Java"
+	},
+	"app.settings.java.download.progress-info": {
+		"message": "正在从 {distribution} 下载 Java {version}"
+	},
+	"app.settings.java.download.preparing": {
+		"message": "准备下载……"
+	},
+	"app.settings.java.download.extracting": {
+		"message": "正在解压文件……"
+	},
+	"app.settings.java.download.downloading-label": {
+		"message": "下载中……"
+	},
 	"app.settings.resources.app-cache": {
 		"message": "应用缓存"
 	},

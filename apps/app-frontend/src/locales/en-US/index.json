@@ -2093,6 +2093,21 @@
 	"app.settings.java.download.no-versions": {
 		"message": "No versions available for this distribution."
 	},
+	"app.settings.java.download.progress-title": {
+		"message": "Downloading Java"
+	},
+	"app.settings.java.download.progress-info": {
+		"message": "Downloading Java {version} from {distribution}"
+	},
+	"app.settings.java.download.preparing": {
+		"message": "Preparing download..."
+	},
+	"app.settings.java.download.extracting": {
+		"message": "Extracting files..."
+	},
+	"app.settings.java.download.downloading-label": {
+		"message": "Downloading..."
+	},
 	"app.settings.resources.app-cache": {
 		"message": "App cache"
 	},

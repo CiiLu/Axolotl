@@ -117,7 +117,7 @@ defineExpose({
 	show: async (version, currentSelectedJava, fullScan = false) => {
 		lastRequestedVersion.value = version ?? null
 		fullScanRunning.value = false
-		chosenInstallOptions.value = await find_filtered_jres(version, false).catch(handleError)
+		chosenInstallOptions.value = await find_filtered_jres(version, false, false).catch(handleError)
 
 		currentSelected.value = currentSelectedJava
 		if (!currentSelected.value) {
@@ -138,7 +138,7 @@ defineExpose({
 
 async function runFullScan() {
 	fullScanRunning.value = true
-	chosenInstallOptions.value = await find_filtered_jres(lastRequestedVersion.value, true).catch(handleError)
+	chosenInstallOptions.value = await find_filtered_jres(lastRequestedVersion.value, true, false).catch(handleError)
 	fullScanRunning.value = false
 
 	trackEvent('JavaFullScan', {
@@ -149,7 +149,7 @@ async function runFullScan() {
 
 async function refreshInstallOptions() {
 	if (fullScanRunning.value) return
-	const updated = await find_filtered_jres(lastRequestedVersion.value, false).catch(() => null)
+	const updated = await find_filtered_jres(lastRequestedVersion.value, false, false).catch(() => null)
 	if (updated) {
 		chosenInstallOptions.value = updated
 	}

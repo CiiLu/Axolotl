@@ -121,8 +121,9 @@ static JAVA_SCAN_STATE: LazyLock<tokio::sync::Mutex<Option<Instant>>> =
 pub async fn find_filtered_jres(
     java_version: Option<u32>,
     full_scan: bool,
+    force_fresh: bool,
 ) -> crate::Result<Vec<JavaVersion>> {
-    let jres = get_available_jres(full_scan).await?;
+    let jres = get_available_jres(full_scan, force_fresh).await?;
 
     Ok(if let Some(java_version) = java_version {
         jres.into_iter()
@@ -140,7 +141,14 @@ pub async fn find_filtered_jres(
 ///
 /// When `full_scan` is true the cache is always bypassed and a fresh
 /// full scan (including BFS directory traversal) is performed.
-pub async fn get_available_jres(full_scan: bool) -> crate::Result<Vec<JavaVersion>> {
+///
+/// When `force_fresh` is true the cache is bypassed for a fresh quick scan,
+/// ensuring newly installed Java runtimes appear without requiring a deep
+/// scan or background rescan.
+pub async fn get_available_jres(
+    full_scan: bool,
+    force_fresh: bool,
+) -> crate::Result<Vec<JavaVersion>> {
     let state = State::get().await?;
 
     if full_scan {
@@ -150,18 +158,22 @@ pub async fn get_available_jres(full_scan: bool) -> crate::Result<Vec<JavaVersio
         return Ok(jres);
     }
 
-    let cached = validate_cached_javas(&state).await?;
-    if !cached.is_empty() {
-        schedule_background_java_rescan();
-        return Ok(cached);
+    if !force_fresh {
+        let cached = validate_cached_javas(&state).await?;
+        if !cached.is_empty() {
+            schedule_background_java_rescan();
+            return Ok(cached);
+        }
     }
 
     let mut last_scan = JAVA_SCAN_STATE.lock().await;
-    // Re-check after taking the lock: a concurrent caller may have just
-    // finished the initial scan while this one was waiting
-    let cached = validate_cached_javas(&state).await?;
-    if !cached.is_empty() {
-        return Ok(cached);
+    if !force_fresh {
+        // Re-check after taking the lock: a concurrent caller may have just
+        // finished the initial scan while this one was waiting
+        let cached = validate_cached_javas(&state).await?;
+        if !cached.is_empty() {
+            return Ok(cached);
+        }
     }
     let jres = refresh_discovered_javas(&state, false).await?;
     *last_scan = Some(Instant::now());
@@ -313,7 +325,7 @@ pub async fn find_java_for_version(
         return Ok(Some(java));
     }
 
-    let scanned = get_available_jres(false).await?;
+    let scanned = get_available_jres(false, false).await?;
     Ok(scanned
         .into_iter()
         .find(|java| java.parsed_version == major_version))
@@ -343,23 +355,55 @@ pub async fn auto_install_java_distribution(
 ) -> crate::Result<PathBuf> {
     let state = State::get().await?;
     let _install_guard = JAVA_INSTALL_LOCK.lock().await;
-    match distribution.as_str() {
-        "adoptium" | "temurin" => {
-            if let Some(path) = install_adoptium_runtime(&state, java_version, None, None).await? {
-                return Ok(path);
+
+    // Set up a cancellation channel so that cancel_java_download() can abort
+    // the running install task.
+    let (tx, mut rx) = tokio::sync::oneshot::channel::<()>();
+    *JAVA_CANCEL_TX.lock().unwrap() = Some(tx);
+
+    let mut handle = tokio::spawn(async move {
+        match distribution.as_str() {
+            "adoptium" | "temurin" => {
+                if let Some(path) =
+                    install_adoptium_runtime(&state, java_version, None, None).await?
+                {
+                    return Ok::<_, crate::Error>(path);
+                }
+                auto_install_java(java_version).await
             }
-            auto_install_java(java_version).await
-        }
-        "semeru" | "openj9" | "ibm" => {
-            if let Some(path) = install_semeru_runtime(&state, java_version, None, None).await? {
-                return Ok(path);
+            "semeru" | "openj9" | "ibm" => {
+                if let Some(path) =
+                    install_semeru_runtime(&state, java_version, None, None).await?
+                {
+                    return Ok(path);
+                }
+                auto_install_java(java_version).await
             }
-            auto_install_java(java_version).await
+            "zulu" => {
+                install_azul_runtime(&state, java_version, None, None).await
+            }
+            _ => auto_install_java(java_version).await,
         }
-        "zulu" => {
-            install_azul_runtime(&state, java_version, None, None).await
+    });
+
+    tokio::select! {
+        result = &mut handle => {
+            // Download finished (or failed) normally — clear the cancel handle
+            *JAVA_CANCEL_TX.lock().unwrap() = None;
+            result.map_err(|e| {
+                crate::Error::from(crate::ErrorKind::InputError(
+                    format!("Java install task failed: {e}"),
+                ))
+            })?
         }
-        _ => auto_install_java(java_version).await,
+        _ = &mut rx => {
+            // User requested cancellation — abort the spawned task and return
+            handle.abort();
+            Err(crate::ErrorKind::InputError(
+                "Java download cancelled by user".to_string(),
+            )
+            .into())
+        }
     }
 }
 
@@ -369,6 +413,17 @@ const MOJANG_RUNTIME_INDEX_URL: &str = "https://piston-meta.mojang.com/v1/produc
 
 static JAVA_INSTALL_LOCK: LazyLock<tokio::sync::Mutex<()>> =
     LazyLock::new(|| tokio::sync::Mutex::new(()));
+
+static JAVA_CANCEL_TX: LazyLock<Mutex<Option<tokio::sync::oneshot::Sender<()>>>> =
+    LazyLock::new(|| Mutex::new(None));
+
+/// Signal the currently running Java download to cancel. Has no effect if
+/// no download is in progress.
+pub fn cancel_java_download() {
+    if let Some(tx) = JAVA_CANCEL_TX.lock().unwrap().take() {
+        let _ = tx.send(());
+    }
+}
 
 type MojangRuntimeIndex =
     HashMap<String, HashMap<String, Vec<MojangRuntimeRelease>>>;
@@ -1305,6 +1360,19 @@ async fn install_adoptium_api_runtime(
         Some(java_step_progress(1)),
     ).await?;
 
+    if let Some(reporter) = reporter {
+        reporter
+            .set_context(
+                InstallErrorContext::new("fetch Adoptium Java package")
+                    .urls(vec![assets_url.clone()])
+                    .java_version(java_version)
+                    .os(platform)
+                    .arch(arch)
+                    .build(),
+            )
+            .await?;
+    }
+
     let assets: Vec<AdoptiumAsset> = match fetch_json(
         Method::GET, &assets_url, None, None, None,
         &state.api_semaphore, &state.pool,
@@ -1325,6 +1393,7 @@ async fn install_adoptium_api_runtime(
         Some(binary) => binary,
         None => return Ok(None),
     };
+
 
     let metadata_dir = state.directories.metadata_dir();
     let java_dir = metadata_dir.join("java_versions");
@@ -1439,6 +1508,19 @@ async fn install_semeru_runtime(
         Some(java_step_progress(1)),
     ).await?;
 
+    if let Some(reporter) = reporter {
+        reporter
+            .set_context(
+                InstallErrorContext::new("fetch IBM Semeru GitHub release")
+                    .urls(vec![release_url.clone()])
+                    .java_version(java_version)
+                    .os(std::env::consts::OS)
+                    .arch(std::env::consts::ARCH)
+                    .build(),
+            )
+            .await?;
+    }
+
     let release: GitHubRelease = match fetch_json::<GitHubRelease>(
         Method::GET, &release_url, None, None, None,
         &state.api_semaphore, &state.pool,
@@ -1451,13 +1533,19 @@ async fn install_semeru_runtime(
         "linux" => "linux",
         "macos" => "mac",
         "windows" => "windows",
-        _ => return Ok(None),
+        other => return Err(crate::Error::from(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            format!("Unsupported platform: {other}"),
+        ))),
     };
 
     let arch_tag = match std::env::consts::ARCH {
         "x86_64" => "x64",
         "aarch64" => "aarch64",
-        _ => return Ok(None),
+        other => return Err(crate::Error::from(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            format!("Unsupported arch: {other}"),
+        ))),
     };
 
     // IBM Semeru asset naming: ibm-semeru-open-jdk_{arch}_{os}_{version}.tar.gz

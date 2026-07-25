@@ -7,10 +7,9 @@ CREATE TABLE java_versions_new (
 );
 
 INSERT INTO java_versions_new (major_version, full_version, architecture, path, distribution)
-    SELECT major_version, full_version, architecture, path, distribution FROM java_versions;
+    SELECT major_version, full_version, architecture, path, NULL FROM java_versions;
 
 DROP TABLE java_versions;
-
 ALTER TABLE java_versions_new RENAME TO java_versions;
 
 CREATE INDEX idx_java_versions_major_version ON java_versions(major_version);

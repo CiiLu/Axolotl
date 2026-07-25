@@ -34,6 +34,26 @@ import type { AppSettings } from '../../../helpers/types'
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
+const messages = defineMessages({
+	javaInstallation: { id: 'instance.settings.tabs.java.java-installation', defaultMessage: 'Java installation' },
+	version: { id: 'instance.settings.tabs.java.table.version', defaultMessage: 'Version' },
+	distribution: { id: 'instance.settings.tabs.java.table.distribution', defaultMessage: 'Distribution' },
+	path: { id: 'instance.settings.tabs.java.table.path', defaultMessage: 'Path' },
+	autoLabel: { id: 'instance.settings.tabs.java.auto-label', defaultMessage: 'Auto (recommended)' },
+	customLabel: { id: 'instance.settings.tabs.java.custom-label', defaultMessage: 'Custom path...' },
+	javaPathPlaceholder: { id: 'instance.settings.tabs.java.java-path-placeholder', defaultMessage: '/path/to/java' },
+	javaMemory: { id: 'instance.settings.tabs.java.java-memory', defaultMessage: 'Memory allocated' },
+	customMemoryAllocation: { id: 'instance.settings.tabs.java.custom-memory-allocation', defaultMessage: 'Custom memory allocation' },
+	automaticMemory: { id: 'instance.settings.tabs.java.automatic-memory', defaultMessage: 'Automatically allocate memory at launch' },
+	javaArguments: { id: 'instance.settings.tabs.java.java-arguments', defaultMessage: 'Java arguments' },
+	customJavaArguments: { id: 'instance.settings.tabs.java.custom-java-arguments', defaultMessage: 'Custom Java arguments' },
+	enterJavaArguments: { id: 'instance.settings.tabs.java.enter-java-arguments', defaultMessage: 'Enter Java arguments...' },
+	javaEnvironmentVariables: { id: 'instance.settings.tabs.java.environment-variables', defaultMessage: 'Environment variables' },
+	customEnvironmentVariables: { id: 'instance.settings.tabs.java.custom-environment-variables', defaultMessage: 'Custom environment variables' },
+	enterEnvironmentVariables: { id: 'instance.settings.tabs.java.enter-environment-variables', defaultMessage: 'Enter environmental variables...' },
+	detect: { id: 'app.java.detect', defaultMessage: 'Detect' },
+	browse: { id: 'app.java.browse', defaultMessage: 'Browse' },
+})
 const { instance } = injectInstanceSettings()
 
 const globalSettings = (await get().catch(handleError)) as unknown as AppSettings
@@ -153,15 +173,17 @@ function onSelectRow(row: any) {
 }
 
 const overrideJavaArgs = ref((instance.value.extra_launch_args?.length ?? 0) > 0)
-const javaArgs = ref((instance.value.extra_launch_args ?? globalSettings.extra_launch_args).join(' '))
+const javaArgs = ref((instance.value.extra_launch_args ?? globalSettings?.extra_launch_args ?? []).join(' '))
 
 const overrideEnvVars = ref((instance.value.custom_env_vars?.length ?? 0) > 0)
-const envVars = ref((instance.value.custom_env_vars ?? globalSettings.custom_env_vars).map((x: string[]) => x.join('=')).join(' '))
+const envVars = ref((instance.value.custom_env_vars ?? globalSettings?.custom_env_vars ?? []).map((x: string[]) => x.join('=')).join(' '))
 
 const overrideMemorySettings = ref(!!instance.value.memory)
-const memory = ref(instance.value.memory ?? globalSettings.memory)
-const effectiveMemory = computed(() => overrideMemorySettings.value ? memory.value : globalSettings.memory)
-const memSlider = (await useMemorySlider().catch(handleError)) as unknown as { maxMemory: number; snapPoints: number[] }
+const memory = ref(instance.value.memory ?? globalSettings?.memory ?? { maximum: 2048, automatic: true })
+const effectiveMemory = computed(() => overrideMemorySettings.value ? memory.value : (globalSettings?.memory ?? { maximum: 2048, automatic: true }))
+const memData = await useMemorySlider().catch(() => ({ maxMemory: ref(4096), snapPoints: computed(() => []) }))
+const maxMemory = memData.maxMemory
+const snapPoints = memData.snapPoints
 
 const editInstanceObject = computed(() => ({
 	java_path: selectedVersion.value === SELECT_AUTO
@@ -176,26 +198,6 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 	await edit(instance.value.id, editInstanceObject.value).catch(handleError)
 }, { deep: true })
 
-const messages = defineMessages({
-	javaInstallation: { id: 'instance.settings.tabs.java.java-installation', defaultMessage: 'Java installation' },
-	version: { id: 'instance.settings.tabs.java.table.version', defaultMessage: 'Version' },
-	distribution: { id: 'instance.settings.tabs.java.table.distribution', defaultMessage: 'Distribution' },
-	path: { id: 'instance.settings.tabs.java.table.path', defaultMessage: 'Path' },
-	autoLabel: { id: 'instance.settings.tabs.java.auto-label', defaultMessage: 'Auto (recommended)' },
-	customLabel: { id: 'instance.settings.tabs.java.custom-label', defaultMessage: 'Custom path...' },
-	javaPathPlaceholder: { id: 'instance.settings.tabs.java.java-path-placeholder', defaultMessage: '/path/to/java' },
-	javaMemory: { id: 'instance.settings.tabs.java.java-memory', defaultMessage: 'Memory allocated' },
-	customMemoryAllocation: { id: 'instance.settings.tabs.java.custom-memory-allocation', defaultMessage: 'Custom memory allocation' },
-	automaticMemory: { id: 'instance.settings.tabs.java.automatic-memory', defaultMessage: 'Automatically allocate memory at launch' },
-	javaArguments: { id: 'instance.settings.tabs.java.java-arguments', defaultMessage: 'Java arguments' },
-	customJavaArguments: { id: 'instance.settings.tabs.java.custom-java-arguments', defaultMessage: 'Custom Java arguments' },
-	enterJavaArguments: { id: 'instance.settings.tabs.java.enter-java-arguments', defaultMessage: 'Enter Java arguments...' },
-	javaEnvironmentVariables: { id: 'instance.settings.tabs.java.environment-variables', defaultMessage: 'Environment variables' },
-	customEnvironmentVariables: { id: 'instance.settings.tabs.java.custom-environment-variables', defaultMessage: 'Custom environment variables' },
-	enterEnvironmentVariables: { id: 'instance.settings.tabs.java.enter-environment-variables', defaultMessage: 'Enter environmental variables...' },
-	detect: { id: 'app.java.detect', defaultMessage: 'Detect' },
-	browse: { id: 'app.java.browse', defaultMessage: 'Browse' },
-})
 </script>
 
 <template>
@@ -263,7 +265,7 @@ const messages = defineMessages({
 		<h2 class="mt-4 mb-1 text-lg font-extrabold text-contrast block">{{ formatMessage(messages.javaMemory) }}</h2>
 		<Checkbox v-model="overrideMemorySettings" :label="formatMessage(messages.customMemoryAllocation)" class="mb-2" />
 		<Checkbox v-if="overrideMemorySettings" v-model="memory.automatic" :label="formatMessage(messages.automaticMemory)" class="mb-2" />
-		<Slider id="max-memory" v-model="memory.maximum" :disabled="!overrideMemorySettings || memory.automatic" :min="512" :max="memSlider.maxMemory" :step="64" :snap-points="memSlider.snapPoints" :snap-range="512" unit="MB" />
+		<Slider id="max-memory" v-model="memory.maximum" :disabled="!overrideMemorySettings || memory.automatic" :min="512" :max="maxMemory" :step="64" :snap-points="snapPoints" :snap-range="512" unit="MB" />
 		<MemoryAllocationDisplay :instance-id="instance.id" :memory="effectiveMemory" />
 		<h2 class="mt-4 mb-1 text-lg font-extrabold text-contrast block">{{ formatMessage(messages.javaArguments) }}</h2>
 		<Checkbox v-model="overrideJavaArgs" :label="formatMessage(messages.customJavaArguments)" class="my-2" />

@@ -223,8 +223,8 @@ async function autoDetect() {
 	if (!props.compact) {
 		detectJavaModal.value.show(props.version, props.modelValue)
 	} else {
-		const versions = await find_filtered_jres(props.version, false).catch(handleError)
-		if (versions.length > 0) {
+		const versions = await find_filtered_jres(props.version, false, false).catch(handleError)
+		if (versions?.length > 0) {
 			emit('update:modelValue', versions[0])
 		}
 	}
@@ -236,8 +236,8 @@ async function autoDeepScan() {
 		if (!props.compact) {
 			detectJavaModal.value.show(props.version, props.modelValue, true)
 		} else {
-			const versions = await find_filtered_jres(props.version, true).catch(handleError)
-			if (versions.length > 0) {
+			const versions = await find_filtered_jres(props.version, true, false).catch(handleError)
+			if (versions?.length > 0) {
 				emit('update:modelValue', versions[0])
 			}
 		}
@@ -248,26 +248,26 @@ async function autoDeepScan() {
 
 async function reinstallJava() {
 	installingJava.value = true
-	const path = await auto_install_java(props.version).catch(handleError)
-	let result = await get_jre(path)
+	try {
+		const path = await auto_install_java(props.version).catch(handleError)
+		if (!path) return
 
-	if (!result) {
-		result = {
-			path: path,
-			version: props.version.toString(),
-			parsed_version: props.version,
-			architecture: 'x86',
+		let result = await get_jre(path).catch(handleError)
+		if (!result) {
+			result = {
+				path: path,
+				version: props.version?.toString() ?? '',
+				parsed_version: props.version ?? 0,
+				architecture: 'x86',
+			}
 		}
+
+		trackEvent('JavaReInstall', { path: path, version: props.version })
+		emit('update:modelValue', result)
+		runTest(result.path)
+	} finally {
+		installingJava.value = false
 	}
-
-	trackEvent('JavaReInstall', {
-		path: path,
-		version: props.version,
-	})
-
-	emit('update:modelValue', result)
-	installingJava.value = false
-	runTest(result.path)
 }
 </script>
 
