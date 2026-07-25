@@ -90,6 +90,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Added local Minecraft crash diagnosis and exportable diagnostic reports.',
 					'zh-CN': '新增本地 Minecraft 崩溃诊断和可导出的诊断报告。',
 				},
+				{
+					'en-US':
+						'Legacy (1.14 and below), April fools and snapshot versions of Minecraft can now be installed through instance creation.',
+					'zh-CN': '现在可以通过创建实例安装 Minecraft 的旧版（1.14及以下）、愚人节版和快照版。',
+				},
 			],
 			changed: [
 				{
