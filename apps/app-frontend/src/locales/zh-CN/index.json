@@ -3145,5 +3145,173 @@
 	},
 	"app.symlink-capability.cancel": {
 		"message": "取消"
+	},
+	"drop.help.title": {
+		"message": "我可以拖入什么到 Axolotl？"
+	},
+	"drop.help.instances-title": {
+		"message": "启动器实例"
+	},
+	"drop.help.instances-desc": {
+		"message": "从其他启动器（MultiMC、Prism Launcher等）拖放文件夹来导入 Minecraft 实例。或者拖入 HMCL、PCL、PCL-CE 的启动器"
+	},
+	"drop.help.instances-formats": {
+		"message": "MultiMC / Prism Launcher / PolyMC 实例文件夹"
+	},
+	"drop.help.mods-title": {
+		"message": "模组"
+	},
+	"drop.help.mods-desc": {
+		"message": "拖放模组 JAR 文件来安装到 Minecraft 实例。"
+	},
+	"drop.help.mods-formats": {
+		"message": ".jar"
+	},
+	"drop.help.modpacks-title": {
+		"message": "整合包"
+	},
+	"drop.help.modpacks-desc": {
+		"message": "拖放整合包 ZIP/MRPACK 文件来创建新实例。"
+	},
+	"drop.help.modpacks-formats": {
+		"message": ".mrpack / .zip"
+	},
+	"drop.help.resource-packs-title": {
+		"message": "资源包"
+	},
+	"drop.help.resource-packs-desc": {
+		"message": "拖放资源包 ZIP 文件来安装到实例。"
+	},
+	"drop.help.resource-packs-formats": {
+		"message": ".zip"
+	},
+	"drop.help.shader-packs-title": {
+		"message": "光影包"
+	},
+	"drop.help.shader-packs-desc": {
+		"message": "拖放光影包 ZIP 文件来安装到实例。"
+	},
+	"drop.help.shader-packs-formats": {
+		"message": ".zip"
+	},
+	"drop.help.worlds-title": {
+		"message": "存档"
+	},
+	"drop.help.worlds-desc": {
+		"message": "拖放存档文件夹来导入到实例。"
+	},
+	"drop.help.worlds-formats": {
+		"message": "Minecraft 存档文件夹（level.dat）"
+	},
+	"drop.help.schematics-title": {
+		"message": "投影"
+	},
+	"drop.help.schematics-desc": {
+		"message": "拖放 .litematic 文件来导入投影。"
+	},
+	"drop.help.schematics-formats": {
+		"message": ".litematic"
+	},
+	"create.title": {
+		"message": "创建实例"
+	},
+	"create.subtitle": {
+		"message": "实例是带有特定加载器、游戏版本和模组的一套 Minecraft 配置。"
+	},
+	"create.new.title": {
+		"message": "全新创建"
+	},
+	"create.new.description": {
+		"message": "创建一个新的 Minecraft 实例。"
+	},
+	"create.import.title": {
+		"message": "导入已有"
+	},
+	"create.import.description": {
+		"message": "从其他启动器导入实例，或安装整合包。"
+	},
+	"create.back": {
+		"message": "返回库"
+	},
+	"app.drop.overlay-title": {
+		"message": "拖放以导入"
+	},
+	"app.drop.overlay-subtitle": {
+		"message": "松开以分类并导入"
+	},
+	"app.drop.error.multiple-files-title": {
+		"message": "无法导入多个文件"
+	},
+	"app.drop.error.multiple-files-text": {
+		"message": "一次只能拖放一个文件或文件夹。"
+	},
+	"app.drop.error.shortcut-title": {
+		"message": "快捷方式解析失败"
+	},
+	"app.drop.error.shortcut-text": {
+		"message": "无法解析到快捷方式的目标。"
+	},
+	"app.drop.error.unknown-title": {
+		"message": "未知文件类型"
+	},
+	"app.drop.error.unknown-text": {
+		"message": "类型暂不支持"
+	},
+	"app.drop.error.title": {
+		"message": "拖放错误"
+	},
+	"app.drop.world-imported-title": {
+		"message": "存档已导入"
+	},
+	"app.drop.world-imported-text": {
+		"message": "存档已成功导入。"
+	},
+	"app.drop.content-installed-title": {
+		"message": "内容已安装"
+	},
+	"app.drop.content-installed-text": {
+		"message": "文件已安装到实例。"
+	},
+	"app.drop.install-failed-title": {
+		"message": "安装失败"
+	},
+	"app.drop.instance-imported-title": {
+		"message": "实例已导入"
+	},
+	"app.drop.instance-imported-text": {
+		"message": "{name} 导入成功。"
+	},
+	"app.drop.import-failed-title": {
+		"message": "导入失败"
+	},
+	"app.drop.import-failed-text": {
+		"message": "导入 {name} 失败：{error}"
+	},
+	"app.drop.no-instances": {
+		"message": "未找到实例"
+	},
+	"app.drop.mod-compatibility-title": {
+		"message": "版本不匹配"
+	},
+	"app.drop.mod-compatibility-confirm": {
+		"message": "保留安装"
+	},
+	"app.drop.mod-compatibility-warning": {
+		"message": "此模组目标版本为 {modVersion} ({modLoader})，但实例版本为 {instVersion} ({instLoader})。"
+	},
+	"app.drop.mod-version": {
+		"message": "模组版本"
+	},
+	"app.drop.inst-version": {
+		"message": "实例版本"
+	},
+	"app.drop.mod-loader": {
+		"message": "模组加载器"
+	},
+	"app.drop.inst-loader": {
+		"message": "实例加载器"
+	},
+	"app.drop.mod-compatibility-search": {
+		"message": "查找兼容版本"
 	}
 }

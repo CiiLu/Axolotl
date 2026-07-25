@@ -20,7 +20,7 @@ mod imp {
         let size = unsafe {
             GetFileVersionInfoSizeW(
                 PCWSTR::from_raw(wide.as_ptr()),
-                Some(&mut unused),
+                Some(&raw mut unused),
             )
         };
         if size == 0 {
@@ -52,8 +52,8 @@ mod imp {
             VerQueryValueW(
                 buffer.as_ptr() as *const _,
                 PCWSTR::from_raw(sub.as_ptr()),
-                &mut lang_ptr,
-                &mut lang_len,
+                &raw mut lang_ptr,
+                &raw mut lang_len,
             )
         };
         if ok.0 == 0 || lang_len == 0 || lang_ptr.is_null() {
@@ -84,8 +84,8 @@ mod imp {
             VerQueryValueW(
                 buffer.as_ptr() as *const _,
                 PCWSTR::from_raw(block_wide.as_ptr()),
-                &mut val_ptr,
-                &mut val_len,
+                &raw mut val_ptr,
+                &raw mut val_len,
             )
         };
         if ok.0 == 0 || val_len == 0 || val_ptr.is_null() {
@@ -105,19 +105,16 @@ mod imp {
         if !base_path.is_dir() {
             return false;
         }
-        let read_dir = match std::fs::read_dir(base_path) {
-            Ok(d) => d,
-            Err(_) => return false,
+        let Ok(read_dir) = std::fs::read_dir(base_path) else {
+            return false;
         };
         for entry in read_dir.flatten() {
             let p = entry.path();
-            if p.extension().map(|e| e == "exe").unwrap_or(false) {
-                if let Some(product) = get_product_name(&p) {
-                    if product.contains(product_name) {
+            if p.extension().map(|e| e == "exe").unwrap_or(false)
+                && let Some(product) = get_product_name(&p)
+                    && product.contains(product_name) {
                         return true;
                     }
-                }
-            }
         }
         false
     }
@@ -132,3 +129,18 @@ mod imp {
 }
 
 pub use imp::folder_has_product;
+
+pub fn folder_has_product_result(
+    path: &std::path::Path,
+    product_name: &str,
+) -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        Ok(folder_has_product(path, product_name))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (path, product_name);
+        Err("PE detection is only available on Windows".to_string())
+    }
+}

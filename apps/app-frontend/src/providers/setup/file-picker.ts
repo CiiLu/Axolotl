@@ -64,6 +64,15 @@ export function setupFilePickerProvider() {
 					})),
 			)
 		},
+		async pickFolder() {
+			const result = await open({
+				directory: true,
+				multiple: false,
+			})
+			const path = getDialogPath(result)
+			if (!path) return null
+			return { path }
+		},
 		pickImage,
 		pickInstanceIcon: () => instanceIconPickerModal.value?.show() ?? Promise.resolve(null),
 		async setBuiltInInstanceIcon(iconId) {

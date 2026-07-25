@@ -20,7 +20,6 @@ import {
 } from '@modrinth/ui'
 import { arrayBufferToBase64 } from '@modrinth/utils'
 import { useQuery } from '@tanstack/vue-query'
-import { type DragDropEvent, getCurrentWebview } from '@tauri-apps/api/webview'
 import { computedAsync } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
@@ -331,7 +330,6 @@ const hasPendingSkinChange = computed(
 
 let userCheckInterval: number | null = null
 let pendingSkinRefreshTimeout: number | null = null
-let unlistenAddSkinDragDrop: UnlistenFn | null = null
 let isUnmounted = false
 
 const isDraggingSkinFile = ref(false)
@@ -855,56 +853,6 @@ function isPositionOverAddSkinButton(position: { x: number; y: number }) {
 	return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
 }
 
-async function handleAddSkinNativeDragDrop(event: { payload: DragDropEvent }) {
-	if (isSkinManagementReadOnly.value) return
-
-	const payload = event.payload
-
-	if (payload.type === 'leave') {
-		isDraggingSkinFile.value = false
-		isAddSkinButtonDragActive.value = false
-		return
-	}
-
-	if (payload.type === 'enter') {
-		isDraggingSkinFile.value = payload.paths.some(isSkinImagePath)
-	}
-
-	if (payload.type === 'enter' || payload.type === 'over') {
-		isAddSkinButtonDragActive.value =
-			isDraggingSkinFile.value && isPositionOverAddSkinButton(payload.position)
-		return
-	}
-
-	const hasSkinPath = payload.paths.some(isSkinImagePath)
-	const shouldUpload =
-		(isDraggingSkinFile.value || hasSkinPath) && isPositionOverAddSkinButton(payload.position)
-
-	isDraggingSkinFile.value = false
-	isAddSkinButtonDragActive.value = false
-
-	if (!shouldUpload) {
-		return
-	}
-
-	const skinPath = payload.paths.find(isSkinImagePath)
-
-	if (!skinPath) {
-		return
-	}
-
-	try {
-		const data = await get_dragged_skin_data(skinPath)
-		await processSkinFileBuffer(data)
-	} catch (error) {
-		addNotification({
-			title: formatMessage(messages.droppedFileErrorTitle),
-			text: error instanceof Error ? error.message : formatMessage(messages.droppedFileErrorText),
-			type: 'error',
-		})
-	}
-}
-
 function onAddSkinDragOver(event: DragEvent) {
 	if (isSkinManagementReadOnly.value) return
 
@@ -935,21 +883,6 @@ async function onAddSkinDrop(event: DragEvent) {
 	}
 
 	await processSkinFileBuffer(await file.arrayBuffer())
-}
-
-async function setupAddSkinDragDropListener() {
-	try {
-		const unlisten = await getCurrentWebview().onDragDropEvent(handleAddSkinNativeDragDrop)
-
-		if (isUnmounted) {
-			unlisten()
-			return
-		}
-
-		unlistenAddSkinDragDrop = unlisten
-	} catch (error) {
-		handleError(error as Error)
-	}
 }
 
 async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
@@ -983,7 +916,6 @@ watch(isSkinManagementReadOnly, (readOnly) => {
 
 onMounted(() => {
 	userCheckInterval = window.setInterval(checkUserChanges, 250)
-	void setupAddSkinDragDropListener()
 })
 
 onUnmounted(() => {
@@ -995,11 +927,6 @@ onUnmounted(() => {
 	if (pendingSkinRefreshTimeout !== null) {
 		window.clearTimeout(pendingSkinRefreshTimeout)
 		pendingSkinRefreshTimeout = null
-	}
-
-	if (unlistenAddSkinDragDrop) {
-		unlistenAddSkinDragDrop()
-		unlistenAddSkinDragDrop = null
 	}
 })
 

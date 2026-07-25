@@ -240,7 +240,10 @@ const tableItems = computed<ContentCardTableItem[]>(() =>
 			title: item.file_name,
 			icon_url: null,
 		},
-		projectLink: item.project?.id ? `/project/${item.project.id}` : undefined,
+		projectLink:
+			item.project?.id && !item.project.id.startsWith('local:')
+				? `/project/${item.project.id}`
+				: undefined,
 		version: item.version ?? {
 			id: item.file_name,
 			version_number: 'Unknown',

@@ -13,4 +13,8 @@ pub struct InstanceFile {
     pub missing: bool,
     pub added_at: DateTime<Utc>,
     pub modified_at: DateTime<Utc>,
+    /// JSON-encoded `LocalModMetadata` extracted from the JAR's embedded
+    /// mod metadata file (fabric.mod.json, quilt.mod.json, mods.toml, etc.).
+    /// Populated when Modrinth hash lookup provides no match.
+    pub local_mod_data: Option<String>,
 }

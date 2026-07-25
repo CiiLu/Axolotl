@@ -30,6 +30,8 @@ export interface FilePickerProvider {
 	setBuiltInInstanceIcon?: (iconId: string) => Promise<PickedFile | null>
 	/** Pick one or more generic files */
 	pickFiles?: (options?: { multiple?: boolean }) => Promise<PickedFile[]>
+	/** Pick a folder (directory) — returns path only, no file content */
+	pickFolder?: () => Promise<{ path: string } | null>
 	/** Pick a .mrpack modpack file */
 	pickModpackFile: (options?: PickModpackFileOptions) => Promise<PickedModpackFile | null>
 }

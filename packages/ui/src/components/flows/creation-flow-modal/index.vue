@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
+import { computed, inject, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
 import MultiStageModal from '../../base/MultiStageModal.vue'
@@ -40,6 +40,8 @@ const props = withDefaults(
 		getLoaderManifest?: LoaderManifestResolver
 		finishDisabled?: boolean
 		finishDisabledTooltip?: string
+		/** Called when a file is dropped or picked in the import-instance stage */
+		onImportFileReceived?: (payload: { file: File | null; filePath: string | null; source: 'file-picker' | 'drag-drop' }) => void
 	}>(),
 	{
 		type: 'world',
@@ -82,14 +84,33 @@ const ctx = createCreationFlowContext(
 		getLoaderManifest: props.getLoaderManifest,
 		finishDisabled: computed(() => props.finishDisabled ?? false),
 		finishDisabledTooltip: computed(() => props.finishDisabledTooltip),
+		onImportFileReceived: props.onImportFileReceived,
 	},
 )
 provideCreationFlowContext(ctx)
+const setCtx = inject('setCreationFlowCtx', null) as ((c: typeof ctx) => void) | null
+setCtx?.(ctx)
 
-async function show() {
+async function show(options?: {
+	skipSetupType?: boolean
+	initialMode?: 'custom' | 'import'
+	onBack?: () => void
+}) {
+	ctx.skipSetupType.value = options?.skipSetupType ?? false
+	ctx.onBack = options?.onBack ?? null
 	await ctx.reset()
 	void ctx.prefetchLoaderMetadata()
-	modal.value?.setStage(0)
+
+	if (options?.skipSetupType) {
+		if (options.initialMode === 'import') {
+			ctx.setImportMode()
+		} else {
+			ctx.setSetupType('custom')
+		}
+	} else {
+		modal.value?.setStage(0)
+	}
+
 	modal.value?.show()
 }
 

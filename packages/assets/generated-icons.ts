@@ -118,6 +118,7 @@ import _EyeOffIcon from './icons/eye-off.svg?component'
 import _FileIcon from './icons/file.svg?component'
 import _FileArchiveIcon from './icons/file-archive.svg?component'
 import _FileCodeIcon from './icons/file-code.svg?component'
+import _FileDownIcon from './icons/file-down.svg?component'
 import _FileImageIcon from './icons/file-image.svg?component'
 import _FilePlusIcon from './icons/file-plus.svg?component'
 import _FileTextIcon from './icons/file-text.svg?component'
@@ -150,6 +151,7 @@ import _Heading3Icon from './icons/heading-3.svg?component'
 import _HeartIcon from './icons/heart.svg?component'
 import _HeartHandshakeIcon from './icons/heart-handshake.svg?component'
 import _HeartMinusIcon from './icons/heart-minus.svg?component'
+import _HelpCircleIcon from './icons/help-circle.svg?component'
 import _HistoryIcon from './icons/history.svg?component'
 import _HomeIcon from './icons/home.svg?component'
 import _ImageIcon from './icons/image.svg?component'
@@ -182,6 +184,7 @@ import _LogInIcon from './icons/log-in.svg?component'
 import _LogOutIcon from './icons/log-out.svg?component'
 import _MailIcon from './icons/mail.svg?component'
 import _ManageIcon from './icons/manage.svg?component'
+import _MapIcon from './icons/map.svg?component'
 import _MaximizeIcon from './icons/maximize.svg?component'
 import _MemoryStickIcon from './icons/memory-stick.svg?component'
 import _MessageIcon from './icons/message.svg?component'
@@ -214,6 +217,7 @@ import _PinIcon from './icons/pin.svg?component'
 import _PlayIcon from './icons/play.svg?component'
 import _PlugIcon from './icons/plug.svg?component'
 import _PlusIcon from './icons/plus.svg?component'
+import _PlusCircleIcon from './icons/plus-circle.svg?component'
 import _PowerIcon from './icons/power.svg?component'
 import _PowerOffIcon from './icons/power-off.svg?component'
 import _RadioButtonIcon from './icons/radio-button.svg?component'
@@ -243,6 +247,7 @@ import _ShareIcon from './icons/share.svg?component'
 import _ShieldIcon from './icons/shield.svg?component'
 import _ShieldAlertIcon from './icons/shield-alert.svg?component'
 import _ShieldCheckIcon from './icons/shield-check.svg?component'
+import _ShirtIcon from './icons/shirt.svg?component'
 import _SignalIcon from './icons/signal.svg?component'
 import _SignatureIcon from './icons/signature.svg?component'
 import _SkullIcon from './icons/skull.svg?component'
@@ -549,6 +554,7 @@ export const EyeOffIcon = _EyeOffIcon
 export const FileIcon = _FileIcon
 export const FileArchiveIcon = _FileArchiveIcon
 export const FileCodeIcon = _FileCodeIcon
+export const FileDownIcon = _FileDownIcon
 export const FileImageIcon = _FileImageIcon
 export const FilePlusIcon = _FilePlusIcon
 export const FileTextIcon = _FileTextIcon
@@ -581,6 +587,7 @@ export const Heading3Icon = _Heading3Icon
 export const HeartIcon = _HeartIcon
 export const HeartHandshakeIcon = _HeartHandshakeIcon
 export const HeartMinusIcon = _HeartMinusIcon
+export const HelpCircleIcon = _HelpCircleIcon
 export const HistoryIcon = _HistoryIcon
 export const HomeIcon = _HomeIcon
 export const ImageIcon = _ImageIcon
@@ -613,6 +620,7 @@ export const LogInIcon = _LogInIcon
 export const LogOutIcon = _LogOutIcon
 export const MailIcon = _MailIcon
 export const ManageIcon = _ManageIcon
+export const MapIcon = _MapIcon
 export const MaximizeIcon = _MaximizeIcon
 export const MemoryStickIcon = _MemoryStickIcon
 export const MessageIcon = _MessageIcon
@@ -645,6 +653,7 @@ export const PinIcon = _PinIcon
 export const PlayIcon = _PlayIcon
 export const PlugIcon = _PlugIcon
 export const PlusIcon = _PlusIcon
+export const PlusCircleIcon = _PlusCircleIcon
 export const PowerIcon = _PowerIcon
 export const PowerOffIcon = _PowerOffIcon
 export const RadioButtonIcon = _RadioButtonIcon
@@ -674,6 +683,7 @@ export const ShareIcon = _ShareIcon
 export const ShieldIcon = _ShieldIcon
 export const ShieldAlertIcon = _ShieldAlertIcon
 export const ShieldCheckIcon = _ShieldCheckIcon
+export const ShirtIcon = _ShirtIcon
 export const SignalIcon = _SignalIcon
 export const SignatureIcon = _SignatureIcon
 export const SkullIcon = _SkullIcon

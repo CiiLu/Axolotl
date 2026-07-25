@@ -350,7 +350,7 @@ fn parse_wiki_entries(source: &str) -> Vec<WikiEntry> {
         for raw_entry in line.split('¨') {
             let mut parts = raw_entry.split('|');
             let slugs = parts.next().unwrap_or_default();
-            let final_part = parts.last();
+            let final_part = parts.next_back();
             let (curseforge_slug, modrinth_slug) = parse_slugs(slugs);
             let chinese_name = final_part.map(|name| {
                 if name.contains('*') {

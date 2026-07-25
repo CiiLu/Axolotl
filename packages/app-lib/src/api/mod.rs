@@ -2,6 +2,7 @@
 pub mod cache;
 pub mod content_search;
 pub mod curseforge;
+pub mod drop_classifier;
 pub mod friends;
 pub mod handler;
 pub mod instance;
@@ -26,6 +27,7 @@ pub mod data {
         AppliedContentSetPatch, CacheBehaviour, CacheValueType, ContentFile,
         ContentItem, ContentItemOwner, ContentItemProject, ContentItemVersion,
         ContentProvider, ContentProviderRef, CreateInstance, Credentials,
+        CachedEntry,
         Dependency, DirectoryInfo, EditInstance, Hooks,
         InstanceInstallCandidate, InstanceInstallTarget,
         InstanceLaunchOverridesPatch, InstanceLink, InstanceMetadata,

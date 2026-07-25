@@ -15,14 +15,16 @@ use crate::util::fetch::{
     Integrity, ResourceClass, download_to_path,
 };
 use crate::util::io;
+use crate::util::io::io_error_with_lock_info;
 use async_trait::async_trait;
 use bytes::Bytes;
+use std::path::{Path, PathBuf};
+use tracing::warn;
 use modrinth_content_management::{
     ContentMetadataProvider, ContentType, Error as ResolveError,
     ResolutionPreferences, ResolveContentPlan, ResolveContentRequest,
     ResolvedContent,
 };
-use std::path::{Path, PathBuf};
 
 pub(crate) struct ContentScope {
     pub instance: Instance,
@@ -616,7 +618,12 @@ async fn materialize_project_download(
     if destination.exists() {
         io::remove_file(destination).await?;
     }
-    tokio::fs::rename(&temporary, destination).await?;
+    tokio::fs::rename(&temporary, destination)
+        .await
+        .map_err(|e| {
+            warn!("Failed to rename temporary file to destination — checking file lock");
+            crate::Error::from(io_error_with_lock_info(e, destination))
+        })?;
     Ok(())
 }
 
@@ -688,6 +695,13 @@ pub(crate) async fn add_project_bytes(
     .await?;
     fetch::write(&full_path, &bytes, &state.io_semaphore).await?;
 
+    let local_mod_data = if project_type == ProjectType::Mod {
+        crate::mod_metadata::extract_mod_metadata(&bytes)
+            .and_then(|meta| serde_json::to_string(&meta).ok())
+    } else {
+        None
+    };
+
     let file = content_rows::upsert_instance_file_from_parts(
         content_rows::UpsertInstanceFile {
             instance_id: &scope.instance.id,
@@ -697,6 +711,7 @@ pub(crate) async fn add_project_bytes(
             sha1: &sha1,
             size: bytes.len() as u64,
             missing: false,
+            local_mod_data: local_mod_data.as_deref(),
         },
         &state.pool,
     )
@@ -741,6 +756,7 @@ pub(crate) async fn record_project_file(
             sha1,
             size,
             missing: false,
+            local_mod_data: None,
         },
         &state.pool,
     )
@@ -942,6 +958,20 @@ async fn index_existing_file(
             ))
         })?;
 
+    let local_mod_data = if project_type == ProjectType::Mod {
+        // Read the file bytes, extract mod metadata
+        match tokio::fs::read(&full_path).await {
+            Ok(data) => {
+                let bytes = bytes::Bytes::from(data);
+                crate::mod_metadata::extract_mod_metadata(&bytes)
+                    .and_then(|meta| serde_json::to_string(&meta).ok())
+            }
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+
     let file = content_rows::upsert_instance_file_from_parts(
         content_rows::UpsertInstanceFile {
             instance_id: &scope.instance.id,
@@ -951,6 +981,7 @@ async fn index_existing_file(
             sha1: &sha1,
             size,
             missing: false,
+            local_mod_data: local_mod_data.as_deref(),
         },
         &state.pool,
     )
@@ -1024,6 +1055,10 @@ fn infer_project_type(bytes: &Bytes) -> crate::Result<ProjectType> {
         .any(|name| name.starts_with("shaders/"))
     {
         Ok(ProjectType::ShaderPack)
+    } else if archive.file_names().any(|name| name == "Metadata") {
+        // .litematic files (Litematica schematic format) contain a root-level
+        // "Metadata" NBT entry, which is unique among Minecraft content types.
+        Ok(ProjectType::Schematic)
     } else {
         Err(crate::ErrorKind::InputError(
             "Unable to infer project type for input file".to_string(),

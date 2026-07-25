@@ -61,7 +61,7 @@ pub(crate) async fn sync_instance_content_files(
         .collect::<HashMap<_, _>>();
 
     let now = Utc::now();
-    let mut files = Vec::new();
+    let mut files: Vec<InstanceFile> = Vec::new();
 
     for file in scanned {
         let hash_key = file.hash_cache_key.trim_end_matches(".disabled");
@@ -83,7 +83,38 @@ pub(crate) async fn sync_instance_content_files(
             missing: false,
             added_at: existing_file.map(|file| file.added_at).unwrap_or(now),
             modified_at: now,
+            local_mod_data: existing_file
+                .and_then(|f| f.local_mod_data.clone()),
         });
+    }
+
+    // Extract local mod metadata for Mod files that don't already have it
+    // (pre-existing files created before this feature was added).
+    let instance_dir = state.directories.instances_dir().join(&instance.path);
+    for file in &mut files {
+        if file.local_mod_data.is_some() {
+            continue;
+        }
+        let Some(project_type) = project_type_for_file(file) else {
+            continue;
+        };
+        if project_type != ProjectType::Mod {
+            continue;
+        }
+
+        match tokio::fs::read(instance_dir.join(&file.relative_path)).await {
+            Ok(data) => {
+                let bytes = bytes::Bytes::from(data);
+                if let Some(meta) =
+                    crate::mod_metadata::extract_mod_metadata(&bytes)
+                    && let Ok(json) = serde_json::to_string(&meta) {
+                        file.local_mod_data = Some(json);
+                    }
+            }
+            Err(_) => {
+                // File temporarily inaccessible; skip silently.
+            }
+        }
     }
 
     let mut tx = state.pool.begin().await?;

@@ -1060,6 +1060,7 @@ async fn content_projects_for_scope(
                 size: file.size,
                 metadata: file_metadata_from_entry_or_cache(entry, metadata),
                 project_type,
+                local_mod_data: file.local_mod_data,
             },
         );
     }
@@ -1306,6 +1307,15 @@ async fn content_files_to_content_items(
                 resolve_owner(project, &meta.teams, &meta.organizations)
             });
 
+            // Parse local_mod_data for fallback display when Modrinth /
+            // CurseForge has no match for this file.
+            let local_mod = file.local_mod_data.as_ref().and_then(|json| {
+                serde_json::from_str::<crate::mod_metadata::LocalModMetadata>(
+                    json,
+                )
+                .ok()
+            });
+
             ContentItem {
                 file_name: file.file_name.clone(),
                 file_path: path.clone(),
@@ -1330,6 +1340,17 @@ async fn content_files_to_content_items(
                                 .as_ref()
                                 .map(|logo| logo.thumbnail_url.clone()),
                         })
+                    })
+                    .or_else(|| {
+                        local_mod.as_ref().map(|meta| ContentItemProject {
+                            id: format!("local:{}", meta.mod_id),
+                            slug: Some(meta.mod_id.clone()),
+                            title: meta
+                                .name
+                                .clone()
+                                .unwrap_or_else(|| meta.mod_id.clone()),
+                            icon_url: None,
+                        })
                     }),
                 version: version
                     .map(|version| ContentItemVersion {
@@ -1347,6 +1368,16 @@ async fn content_files_to_content_items(
                             file_name: version.file_name.clone(),
                             date_published: Some(version.file_date.clone()),
                         })
+                    })
+                    .or_else(|| {
+                        local_mod.as_ref().and_then(|meta| {
+                            meta.version.clone().map(|v| ContentItemVersion {
+                                id: format!("local:{}", meta.mod_id),
+                                version_number: v,
+                                file_name: file.file_name.clone(),
+                                date_published: None,
+                            })
+                        })
                     }),
                 owner: owner.or_else(|| {
                     curseforge_project
@@ -1357,6 +1388,15 @@ async fn content_files_to_content_items(
                             avatar_url: None,
                             owner_type: OwnerType::User,
                         })
+                }).or_else(|| {
+                    local_mod.as_ref().and_then(|meta| {
+                        meta.authors.first().map(|author| ContentItemOwner {
+                            id: format!("local:{author}"),
+                            name: author.clone(),
+                            avatar_url: None,
+                            owner_type: OwnerType::User,
+                        })
+                    })
                 }),
                 has_update: file.update_version_id.is_some()
                     || curseforge_update_id.is_some(),

@@ -110,7 +110,7 @@ type ContentFile = {
 	}
 }
 
-type ContentFileProjectType = 'mod' | 'datapack' | 'resourcepack' | 'shaderpack'
+type ContentFileProjectType = 'mod' | 'datapack' | 'resourcepack' | 'shaderpack' | 'schematic'
 
 type CacheBehaviour =
 	// Serve expired data. If fetch fails / launcher is offline, errors are ignored

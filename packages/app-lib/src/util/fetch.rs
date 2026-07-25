@@ -270,7 +270,7 @@ fn is_official_modrinth_cdn_redirect(location: Option<&str>) -> bool {
         return false;
     };
     let authority = location[8..]
-        .split(|character| matches!(character, '/' | '?' | '#'))
+        .split(['/', '?', '#'])
         .next()
         .unwrap_or_default();
     authority.eq_ignore_ascii_case("cdn.modrinth.com")
@@ -1302,11 +1302,10 @@ async fn fetch_advanced_with_client_and_progress(
                         break;
                     }
                     if status.is_client_error() || status.is_server_error() {
-                        if let Some(fence_key) = fence_key {
-                            if status.is_server_error() {
+                        if let Some(fence_key) = fence_key
+                            && status.is_server_error() {
                                 GLOBAL_FETCH_FENCE.record_fail(fence_key);
                             }
-                        }
                         record_route_failure(route);
                         let backup_error =
                             resp.error_for_status_ref().unwrap_err();
@@ -2101,8 +2100,7 @@ async fn send_path_request_with_clients(
             .and_then(|value| value.to_str().ok())
             .ok_or_else(|| {
                 ErrorKind::OtherError(format!(
-                    "Redirect from {} did not include a valid Location header",
-                    current
+                    "Redirect from {current} did not include a valid Location header"
                 ))
             })?;
         if !is_safe_redirect_location(location) {
@@ -3094,8 +3092,7 @@ pub async fn download_to_path(
                             record_route_failure(route);
                             last_error = Some(
                                 ErrorKind::OtherError(format!(
-                                    "File transfer failed from {}",
-                                    log_url
+                                    "File transfer failed from {log_url}"
                                 ))
                                 .into(),
                             );
@@ -3431,10 +3428,10 @@ pub async fn write(
 
     let mut file = File::create(path)
         .await
-        .map_err(|e| IOError::with_path(e, path))?;
+        .map_err(|e| crate::Error::from(io::io_error_with_lock_info(e, path)))?;
     file.write_all(bytes)
         .await
-        .map_err(|e| IOError::with_path(e, path))?;
+        .map_err(|e| crate::Error::from(io::io_error_with_lock_info(e, path)))?;
     tracing::trace!("Done writing file {}", path.display());
     Ok(())
 }

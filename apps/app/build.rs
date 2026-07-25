@@ -258,6 +258,7 @@ fn main() {
                         "instance_install_project_with_dependencies",
                         "instance_switch_project_version_with_dependencies",
                         "instance_add_project_from_path",
+                        "instance_import_world_save",
                         "instance_toggle_disable_project",
                         "instance_remove_project",
                         "instance_update_managed_modrinth_version",
@@ -349,6 +350,19 @@ fn main() {
                         "file_extract_zip",
                         "file_save_as",
                         "file_read_dragged_file",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
+                "drop",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "drop_classify",
+                        "drop_scan_launcher_instances",
+                        "drop_detect_file_lock",
+                        "drop_extract_mod_metadata",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

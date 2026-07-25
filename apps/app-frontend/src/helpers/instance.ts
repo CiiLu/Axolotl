@@ -230,6 +230,12 @@ export async function switch_project_version_with_dependencies(
 	})
 }
 
+// Import a world save into an instance
+// Returns the imported world name
+export async function import_world_save(instanceId: string, sourcePath: string): Promise<string> {
+	return await invoke('plugin:instance|instance_import_world_save', { instanceId, sourcePath })
+}
+
 // Add a project to an instance from a path + project_type
 // Returns a path to the new project file
 export async function add_project_from_path(

@@ -8,6 +8,7 @@ export const stageConfig: StageConfigInput<CreationFlowContextValue> = {
 	id: 'setup-type',
 	title: (ctx) => ctx.formatMessage(flowTypeHeadingMessages[ctx.flowType]),
 	stageContent: markRaw(SetupTypeStage),
+	skip: (ctx) => ctx.skipSetupType.value,
 	leftButtonConfig: null,
 	rightButtonConfig: null,
 	maxWidth: '520px',

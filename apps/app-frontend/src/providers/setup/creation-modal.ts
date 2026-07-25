@@ -4,14 +4,16 @@ import type {
 	CreationFlowModal,
 } from '@modrinth/ui'
 import { defineMessages, useVIntl } from '@modrinth/ui'
+import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMethodCards.vue'
 import { confirm } from '@tauri-apps/plugin-dialog'
-import { provide, ref, useTemplateRef } from 'vue'
+import { inject, provide, ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 import { useRouter } from 'vue-router'
 
 import type UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPackWarningModal.vue'
 import type ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
 import { trackEvent } from '@/helpers/analytics'
+import { classifyDroppedItem } from '@/helpers/drop'
 import { get_project_versions, get_search_results } from '@/helpers/cache.js'
 import { import_instance } from '@/helpers/import.js'
 import {
@@ -80,6 +82,14 @@ export function setupCreationModal(notificationManager: AbstractWebNotificationM
 		installationModal.value?.show()
 	})
 
+	provide('showCreationModalWithOptions', (options?: {
+		skipSetupType?: boolean
+		initialMode?: 'custom' | 'import'
+		onBack?: () => void
+	}) => {
+		installationModal.value?.show(options)
+	})
+
 	async function proceedWithModpackCreation(
 		projectId: string,
 		versionId: string,
@@ -115,45 +125,72 @@ export function setupCreationModal(notificationManager: AbstractWebNotificationM
 			installationModal.value?.hide()
 
 			if (config.isImportMode.value) {
-				if (config.importAsSymlink.value) {
-					const capability = await check_symlink_capability()
-					if (capability === 'unsupported') {
-						notificationManager.addNotification({
-							type: 'error',
-							title: formatMessage(symlinkMessages.unsupportedTitle),
-							text: formatMessage(symlinkMessages.unsupportedBody),
-						})
-						return
-					}
-					if (capability === 'requires_admin') {
-						const confirmed = await confirm(
-							formatMessage(symlinkMessages.requiresAdminDescription),
-							{
-								title: formatMessage(symlinkMessages.requiresAdminTitle),
-								okLabel: formatMessage(symlinkMessages.requiresAdminRestartButton),
-								cancelLabel: formatMessage(symlinkMessages.cancel),
-							},
-						)
-						if (confirmed) {
-							restart_as_admin()
-						}
-						return
-					}
-				}
-
+				// Collect all instances to import
+				const instanceEntries: Array<{
+					launcherType: string
+					launcherName: string
+					path: string
+					instanceName: string
+				}> = []
 				for (const [launcherName, instanceSet] of Object.entries(
 					config.importSelectedInstances.value,
 				)) {
 					const launcher = config.importLaunchers.value.find((l) => l.name === launcherName)
 					if (!launcher || instanceSet.size === 0) continue
 					for (const name of instanceSet) {
-						await import_instance(
-							launcher.launcherType ?? launcher.name,
-							launcher.path,
-							name,
-							config.importAsSymlink.value,
-						).catch(handleError)
+						instanceEntries.push({
+							launcherType: launcher.launcherType ?? launcher.name,
+							launcherName: launcher.name,
+							path: launcher.path,
+							instanceName: name,
+						})
 					}
+				}
+
+				if (instanceEntries.length === 0) return
+
+				// Show SymlinkMethodCards for user to choose copy vs symlink
+				const capability = await check_symlink_capability()
+				if (capability === 'unsupported') {
+					notificationManager.addNotification({
+						type: 'error',
+						title: formatMessage(symlinkMessages.unsupportedTitle),
+						text: formatMessage(symlinkMessages.unsupportedBody),
+					})
+					return
+				}
+				if (capability === 'requires_admin') {
+					const confirmed = await confirm(
+						formatMessage(symlinkMessages.requiresAdminDescription),
+						{
+							title: formatMessage(symlinkMessages.requiresAdminTitle),
+							okLabel: formatMessage(symlinkMessages.requiresAdminRestartButton),
+							cancelLabel: formatMessage(symlinkMessages.cancel),
+						},
+					)
+					if (confirmed) {
+						restart_as_admin()
+					}
+					return
+				}
+
+				const chooseImportMethod: (options: {
+					instanceNames: string[]
+					symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
+				}) => Promise<boolean> = inject('chooseImportMethod')!
+
+				const useSymlink = await chooseImportMethod({
+					instanceNames: instanceEntries.map((e) => e.instanceName),
+					symlinkCapable: capability,
+				})
+
+				for (const entry of instanceEntries) {
+					await import_instance(
+						entry.launcherType,
+						entry.path,
+						entry.instanceName,
+						useSymlink,
+					).catch(handleError)
 				}
 				trackEvent('InstanceCreate', { source: 'CreationModalImport' })
 				return
@@ -257,6 +294,30 @@ export function setupCreationModal(notificationManager: AbstractWebNotificationM
 		return versions ?? []
 	}
 
+let currentFlowCtx: CreationFlowContextValue | null = null
+
+	async function onImportFileReceived(payload: {
+		file: File | null
+		filePath: string | null
+		source: 'file-picker' | 'drag-drop'
+	}) {
+		const filePath = payload.filePath
+		if (!filePath) return
+
+		const classification = await classifyDroppedItem(filePath)
+
+		if (currentFlowCtx) {
+			currentFlowCtx.modpackFile.value = null
+			currentFlowCtx.modpackFilePath.value = filePath
+			currentFlowCtx.isImportMode.value = false
+			currentFlowCtx.finish()
+		}
+	}
+
+	provide('setCreationFlowCtx', (ctx: CreationFlowContextValue) => {
+		currentFlowCtx = ctx
+	})
+
 	return {
 		installationModal,
 		unknownPackWarningModal,
@@ -269,5 +330,6 @@ export function setupCreationModal(notificationManager: AbstractWebNotificationM
 		setModpackAlreadyInstalledModal,
 		handleModpackDuplicateCreateAnyway,
 		handleModpackDuplicateGoToInstance,
+		onImportFileReceived,
 	}
 }

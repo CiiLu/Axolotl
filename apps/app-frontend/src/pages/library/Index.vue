@@ -7,8 +7,8 @@ import {
 	NavTabs,
 	useVIntl,
 } from '@modrinth/ui'
-import { inject, onUnmounted, shallowRef } from 'vue'
-import { useRoute } from 'vue-router'
+import { onUnmounted, shallowRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { NewInstanceImage } from '@/assets/icons'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
@@ -17,8 +17,8 @@ import { list } from '@/helpers/instance'
 import { useBreadcrumbs } from '@/store/breadcrumbs.js'
 
 const { handleError } = injectNotificationManager()
-const showCreationModal = inject('showCreationModal')
 const route = useRoute()
+const router = useRouter()
 const breadcrumbs = useBreadcrumbs()
 const { formatMessage } = useVIntl()
 
@@ -76,7 +76,7 @@ onUnmounted(() => {
 				<button
 					data-onboarding-id="create-instance"
 					:disabled="offline"
-					@click="showCreationModal?.()"
+					@click="router.push('/create')"
 				>
 					<PlusIcon />
 					{{ formatMessage(messages.createInstance) }}

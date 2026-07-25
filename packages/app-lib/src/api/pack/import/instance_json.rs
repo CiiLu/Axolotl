@@ -97,23 +97,19 @@ fn normalize_version(raw: &str) -> String {
 
 fn extract_version(json: &Value, json_str: &str) -> String {
     // ① PCL download record clientVersion
-    if let Some(v) = json.get("clientVersion").and_then(|v| v.as_str()) {
-        if !v.is_empty() {
+    if let Some(v) = json.get("clientVersion").and_then(|v| v.as_str())
+        && !v.is_empty() {
             return v.to_string();
         }
-    }
 
     // ② HMCL patches[].version (id == "game")
     if let Some(patches) = json.get("patches").and_then(|v| v.as_array()) {
         for patch in patches {
-            if patch.get("id").and_then(|v| v.as_str()) == Some("game") {
-                if let Some(ver) = patch.get("version").and_then(|v| v.as_str())
-                {
-                    if !ver.is_empty() {
+            if patch.get("id").and_then(|v| v.as_str()) == Some("game")
+                && let Some(ver) = patch.get("version").and_then(|v| v.as_str())
+                    && !ver.is_empty() {
                         return ver.to_string();
                     }
-                }
-            }
         }
     }
 
@@ -125,11 +121,10 @@ fn extract_version(json: &Value, json_str: &str) -> String {
     {
         let mut mark = false;
         for arg in args {
-            if mark {
-                if let Some(v) = arg.as_str() {
+            if mark
+                && let Some(v) = arg.as_str() {
                     return v.to_string();
                 }
-            }
             if arg.as_str() == Some("--fml.mcVersion") {
                 mark = true;
             }
@@ -137,18 +132,16 @@ fn extract_version(json: &Value, json_str: &str) -> String {
     }
 
     // ④ jar field (used with inheritsFrom in version inheritance chains)
-    if let Some(v) = json.get("jar").and_then(|v| v.as_str()) {
-        if !v.is_empty() {
+    if let Some(v) = json.get("jar").and_then(|v| v.as_str())
+        && !v.is_empty() {
             return v.to_string();
         }
-    }
 
     // ⑤ inheritsFrom (version inheritance)
-    if let Some(v) = json.get("inheritsFrom").and_then(|v| v.as_str()) {
-        if !v.is_empty() {
+    if let Some(v) = json.get("inheritsFrom").and_then(|v| v.as_str())
+        && !v.is_empty() {
             return v.to_string();
         }
-    }
 
     // ⑥ libraries string regex fallback (Forge/OptiFine/FabricLike lib versions)
     // Use the original JSON string (from find_json) instead of re-serializing
@@ -158,11 +151,10 @@ fn extract_version(json: &Value, json_str: &str) -> String {
     }
 
     // ⑦ JSON id field → extract leading version
-    if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-        if let Some(v) = extract_version_from_id(id) {
+    if let Some(id) = json.get("id").and_then(|v| v.as_str())
+        && let Some(v) = extract_version_from_id(id) {
             return v;
         }
-    }
 
     String::new()
 }
@@ -261,11 +253,10 @@ fn extract_loader_version(
     loader_type: &str,
 ) -> Option<String> {
     // First: parse from id field (e.g. "1.8.9-forge-11.15.1.1722")
-    if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-        if let Some(ver) = parse_loader_version_from_id(id, loader_type) {
+    if let Some(id) = json.get("id").and_then(|v| v.as_str())
+        && let Some(ver) = parse_loader_version_from_id(id, loader_type) {
             return Some(ver);
         }
-    }
 
     // Second: extract from library entries
     let (needle, split_at) = match loader_type {
@@ -280,11 +271,10 @@ fn extract_loader_version(
         let after = &content[pos + needle.len()..];
         if let Some(end) = after.find(&['"', ',', '\n', '}'] as &[char]) {
             let ver = &after[..end];
-            if let Some(ch) = split_at {
-                if let Some(pos) = ver.rfind(ch) {
+            if let Some(ch) = split_at
+                && let Some(pos) = ver.rfind(ch) {
                     return Some(ver[pos + 1..].to_string());
                 }
-            }
             return Some(ver.to_string());
         }
     }

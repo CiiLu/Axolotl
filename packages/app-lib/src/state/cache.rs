@@ -1484,7 +1484,7 @@ impl CachedEntry {
                         None,
                         None,
                         None,
-                        &fetch_semaphore,
+                        fetch_semaphore,
                         pool,
                     ),
                 )
@@ -1503,7 +1503,7 @@ impl CachedEntry {
                             None,
                             None,
                             None,
-                            &fetch_semaphore,
+                            fetch_semaphore,
                             pool,
                         )
                         .await?
@@ -1519,7 +1519,7 @@ impl CachedEntry {
                             None,
                             None,
                             None,
-                            &fetch_semaphore,
+                            fetch_semaphore,
                             pool,
                         )
                         .await?

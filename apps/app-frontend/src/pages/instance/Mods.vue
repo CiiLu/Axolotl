@@ -119,7 +119,11 @@
 
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
-import { ClipboardCopyIcon, ExternalIcon, FolderOpenIcon } from '@modrinth/assets'
+import {
+	ClipboardCopyIcon,
+	ExternalIcon,
+	FolderOpenIcon,
+} from '@modrinth/assets'
 import {
 	type BulkOperationStatus,
 	CollapsibleAdmonition,
@@ -147,7 +151,6 @@ import {
 } from '@modrinth/ui'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { convertFileSrc } from '@tauri-apps/api/core'
-import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { open } from '@tauri-apps/plugin-dialog'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -239,6 +242,26 @@ const messages = defineMessages({
 	skippedFilesWarningMore: {
 		id: 'app.instance.mods.skipped-files-warning.more',
 		defaultMessage: 'And {count, number} more.',
+	},
+	parsingFiles: {
+		id: 'app.instance.mods.parsing-files',
+		defaultMessage: '正在解析，较大的文件可能会耗费一些时间',
+	},
+	dragDropHint: {
+		id: 'app.instance.mods.drag-drop-hint',
+		defaultMessage: '释放文件以安装到当前实例',
+	},
+	parseFailed: {
+		id: 'app.instance.mods.parse-failed',
+		defaultMessage: '解析失败，这可能不是一个整合包',
+	},
+	fileAlreadyExists: {
+		id: 'app.instance.mods.file-already-exists',
+		defaultMessage: '添加失败，该文件可能已存在',
+	},
+	dismiss: {
+		id: 'app.instance.mods.dismiss',
+		defaultMessage: '知道了',
 	},
 })
 
@@ -1515,7 +1538,7 @@ function getOverflowOptions(item: ContentItem): OverflowMenuOption[] {
 		action: () => highlightModInInstance(props.instance.id, item.file_path),
 	})
 
-	if (item.project?.slug) {
+	if (item.project?.slug && !item.project.id.startsWith('local:')) {
 		options.push({
 			id: formatMessage(commonMessages.copyLinkButton),
 			icon: ClipboardCopyIcon,
@@ -1698,22 +1721,26 @@ provideContentManager({
 			title: item.file_name.replace('.disabled', ''),
 			icon_url: null,
 		},
-		projectLink: item.project?.id
-			? {
-					path:
-						item.primary_provider === 'curseforge'
-							? `/project/curseforge/${item.project.id}`
-							: `/project/${item.project.id}`,
-					query: { i: props.instance.id },
-				}
-			: undefined,
+		projectLink:
+			item.project?.id && !item.project.id.startsWith('local:')
+				? {
+						path:
+							item.primary_provider === 'curseforge'
+								? `/project/curseforge/${item.project.id}`
+								: `/project/${item.project.id}`,
+						query: { i: props.instance.id },
+					}
+				: undefined,
 		version: item.version ?? {
 			id: item.file_name,
 			version_number: formatMessage(commonMessages.unknownLabel),
 			file_name: item.file_name,
 		},
 		versionLink:
-			item.primary_provider !== 'curseforge' && item.project?.id && item.version?.id
+			item.primary_provider !== 'curseforge' &&
+			item.project?.id &&
+			!item.project.id.startsWith('local:') &&
+			item.version?.id
 				? {
 						path: `/project/${item.project.id}/version/${item.version.id}`,
 						query: { i: props.instance.id },
@@ -1723,7 +1750,7 @@ provideContentManager({
 			? {
 					...item.owner,
 					link:
-						item.primary_provider === 'curseforge'
+						item.primary_provider === 'curseforge' || item.owner.id.startsWith('local:')
 							? undefined
 							: () => openUrl(`https://modrinth.com/${item.owner!.type}/${item.owner!.id}`),
 				}
@@ -1773,30 +1800,9 @@ const removeBeforeEach = router.beforeEach(() => {
 })
 
 let isUnmounted = false
-let unlistenDragDrop: UnlistenFn | null = null
 let unlistenInstances: UnlistenFn | null = null
 
 onMounted(() => {
-	void getCurrentWebview()
-		.onDragDropEvent(async (event) => {
-			if (event.payload.type !== 'drop' || !props.instance) return
-
-			for (const file of event.payload.paths) {
-				if (file.endsWith('.mrpack')) continue
-				await add_project_from_path(props.instance.id, file).catch(handleError)
-			}
-			await initProjects()
-		})
-		.then((unlisten) => {
-			if (isUnmounted) {
-				unlisten()
-				return
-			}
-
-			unlistenDragDrop = unlisten
-		})
-		.catch(handleError)
-
 	void instance_listener(async (event: { event: string; instance_id: string }) => {
 		if (
 			props.instance &&
@@ -1854,7 +1860,18 @@ watch(
 onUnmounted(() => {
 	isUnmounted = true
 	removeBeforeEach()
-	unlistenDragDrop?.()
 	unlistenInstances?.()
 })
 </script>
+
+<style>
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.2s ease-in-out;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
+}
+</style>

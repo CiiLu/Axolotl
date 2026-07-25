@@ -94,6 +94,7 @@ sysinfo = { workspace = true, features = ["disk", "system"] }
 tauri = { workspace = true, features = ["unstable"], optional = true }
 tempfile = { workspace = true }
 thiserror = { workspace = true }
+toml = { workspace = true }
 tokio = { workspace = true, features = [
   "fs",
   "io-util",
@@ -133,7 +134,9 @@ libc = { workspace = true }
 junction = { workspace = true }
 windows = { workspace = true, features = [
   "Networking_Connectivity",
-  "Win32_Storage_FileSystem"
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_UI_Shell"
 ] }
 windows-core = { workspace = true }
 winreg = { workspace = true }

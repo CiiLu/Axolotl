@@ -23,7 +23,7 @@ async function readDraggedFile(path: string) {
 export function setupFileDropProvider() {
 	let nativeFileDropPaths: string[] = []
 
-	provideFileDrop({
+	const provider = {
 		async listenNativeFileDrop(handler) {
 			return await getCurrentWebview().onDragDropEvent((event: { payload: DragDropEvent }) => {
 				const payload = event.payload
@@ -38,7 +38,9 @@ export function setupFileDropProvider() {
 					return
 				}
 
-				if (payload.type === 'enter' || payload.type === 'drop') {
+				if (payload.type === 'enter') {
+					nativeFileDropPaths = payload.paths
+				} else if (payload.type === 'drop' && payload.paths?.length) {
 					nativeFileDropPaths = payload.paths
 				}
 
@@ -58,5 +60,8 @@ export function setupFileDropProvider() {
 				paths.map(async (path) => new File([await readDraggedFile(path)], getFileName(path))),
 			)
 		},
-	})
+	}
+
+	provideFileDrop(provider)
+	return provider
 }

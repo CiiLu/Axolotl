@@ -23,11 +23,14 @@ pub mod curseforge;
 pub mod gdlauncher;
 pub(crate) mod generic;
 pub mod hmcl;
+pub mod hmcl_config;
 mod instance_json;
 pub mod mmc;
 mod modrinth_app;
 mod pcl;
-mod pe_info;
+pub use pcl::config_exists;
+pub use pcl::read_pcl_registry;
+pub mod pe_info;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ImportLauncherType {
@@ -261,6 +264,17 @@ pub async fn get_importable_instances(
                 }
             }
 
+            // Generic fallback: scan versions/ subdirectory and base path
+            // for instance.json files (handles .minecraft and other unrecognized launchers)
+            if names.is_empty() {
+                names.extend(
+                    scan_instances_at(&base_path, None)
+                        .await
+                        .into_iter()
+                        .map(|(n, _)| n),
+                );
+            }
+
             names.sort();
             return Ok(names);
         }
@@ -279,14 +293,13 @@ pub async fn get_importable_instances(
         .map_err(|e| IOError::with_path(e, &instances_folder))?
     {
         let path = entry.path();
-        if path.is_dir() {
-            if is_valid_importable_instance(path.clone(), launcher_type).await {
+        if path.is_dir()
+            && is_valid_importable_instance(path.clone(), launcher_type).await {
                 let name = path.file_name();
                 if let Some(name) = name {
                     instances.push(name.to_string_lossy().to_string());
                 }
             }
-        }
     }
     Ok(instances)
 }
@@ -314,13 +327,12 @@ async fn scan_instances_at(
         ));
     }
     let versions_dir = path.join("versions");
-    if versions_dir.is_dir() {
-        if let Ok(mut dir) = io::read_dir(&versions_dir).await {
+    if versions_dir.is_dir()
+        && let Ok(mut dir) = io::read_dir(&versions_dir).await {
             while let Ok(Some(entry)) = dir.next_entry().await {
                 if entry.path().is_dir()
                     && instance_json::detect(&entry.path()).is_some()
-                {
-                    if let Some(name) = entry.path().file_name() {
+                    && let Some(name) = entry.path().file_name() {
                         let name = name.to_string_lossy().to_string();
                         let ipath = entry.path();
                         instances.push((
@@ -332,10 +344,8 @@ async fn scan_instances_at(
                             ipath,
                         ));
                     }
-                }
             }
         }
-    }
     tracing::debug!(
         "scan_instances_at: path={} prefix={:?} found={}",
         path.display(),
@@ -477,7 +487,7 @@ async fn import_instance_inner(
                 instance_id,
                 base_path,
                 instance_folder,
-                |name| pcl::get_pcl_instance_path(name),
+                pcl::get_pcl_instance_path,
                 reporter.clone(),
                 details.clone(),
                 symlink,
@@ -489,7 +499,7 @@ async fn import_instance_inner(
                 instance_id,
                 base_path,
                 instance_folder,
-                |name| pcl::get_pclce_instance_path(name),
+                pcl::get_pclce_instance_path,
                 reporter.clone(),
                 details.clone(),
                 symlink,
@@ -757,9 +767,8 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
     let files: Vec<PathBuf> = files
         .into_iter()
         .filter(|abs_path| {
-            let rel = match abs_path.strip_prefix(&dotminecraft) {
-                Ok(r) => r,
-                Err(_) => return true,
+            let Ok(rel) = abs_path.strip_prefix(&dotminecraft) else {
+                return true;
             };
             // Only filter at root level
             if rel.parent().is_some_and(|p| !p.as_os_str().is_empty()) {
@@ -787,7 +796,7 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
     }
 
     // Build (src, dst) pairs, then copy concurrently bounded by IoSemaphore
-    let pairs: Vec<(PathBuf, PathBuf)> = files
+    let mut copy_tasks: FuturesUnordered<_> = files
         .iter()
         .map(|src| {
             let dst = instance_path.join(
@@ -796,15 +805,11 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
             );
             (src.clone(), dst)
         })
-        .collect();
-
-    let mut copy_tasks: FuturesUnordered<_> = pairs
-        .into_iter()
         .map(|(src, dst)| {
             async move {
                 // Skip copying if destination file exists and is identical
-                if tokio::fs::metadata(&dst).await.is_ok() {
-                    if let (Ok(src_meta), Ok(dst_meta)) = (
+                if tokio::fs::metadata(&dst).await.is_ok()
+                    && let (Ok(src_meta), Ok(dst_meta)) = (
                         tokio::fs::metadata(&src).await,
                         tokio::fs::metadata(&dst).await,
                     ) {
@@ -816,7 +821,6 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
                             return Ok::<_, crate::Error>(());
                         }
                     }
-                }
 
                 // Proceed with copy
                 fetch::copy(&src, &dst, io_semaphore).await?;

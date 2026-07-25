@@ -30,7 +30,14 @@ export const stageConfig: StageConfigInput<CreationFlowContextValue> = {
 	leftButtonConfig: (ctx) => ({
 		label: ctx.formatMessage(commonMessages.backButton),
 		icon: LeftArrowIcon,
-		onClick: () => ctx.modal.value?.setStage('setup-type'),
+		onClick: () => {
+			if (ctx.skipSetupType.value) {
+				ctx.modal.value?.hide()
+				ctx.onBack?.()
+			} else {
+				ctx.modal.value?.setStage('setup-type')
+			}
+		},
 	}),
 	rightButtonConfig: (ctx) => {
 		const isInstance = ctx.flowType === 'instance'

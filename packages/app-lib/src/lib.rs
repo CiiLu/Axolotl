@@ -17,6 +17,7 @@ mod event;
 pub mod install;
 mod launcher;
 mod logger;
+pub mod mod_metadata;
 mod state;
 
 pub use api::*;
@@ -28,6 +29,7 @@ pub use event::{
 pub use logger::start_logger;
 pub use state::State;
 pub use util::fetch::DownloadReason;
+pub use util::file_lock::{get_locking_processes, LockingProcess};
 pub use util::symlink::SymlinkCapability;
 
 pub fn launcher_user_agent() -> String {

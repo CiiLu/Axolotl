@@ -353,10 +353,8 @@ fn legacy_library_repository(artifact_path: &str) -> Option<&'static str> {
 }
 
 fn legacy_library_content_validation(artifact_path: &str) -> ContentValidation {
-    artifact_path
-        .ends_with(".jar")
-        .then_some(ContentValidation::Jar)
-        .unwrap_or(ContentValidation::None)
+    if artifact_path
+        .ends_with(".jar") { ContentValidation::Jar } else { ContentValidation::None }
 }
 
 fn legacy_library_sha1(library: &Library) -> Option<&str> {
