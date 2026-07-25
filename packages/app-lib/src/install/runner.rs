@@ -3,7 +3,7 @@ use super::model::{
     InstallCleanup, InstallErrorContext, InstallErrorView, InstallJobDisplay,
     InstallJobEventKind, InstallJobSnapshot, InstallJobState, InstallJobStatus,
     InstallPhaseDetails, InstallPhaseId, InstallPostInstallEdit,
-    InstallRequest, InstallRollbackState, InstallTarget,
+    InstallProgress, InstallRequest, InstallRollbackState, InstallTarget,
 };
 use super::{diagnostics, recovery, store};
 use crate::ErrorKind;
@@ -1184,6 +1184,23 @@ async fn install_local_pack_file_recursive(
     // If standard detection failed and we're not at max depth, try to look for
     // sub-compressed files to extract and check
     if current_depth < max_depth {
+        // Report progress: scanning/extracting phase (high-latency operation)
+        let filename = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "archive".to_string());
+        reporter
+            .update(
+                InstallPhaseId::ResolvingPack,
+                None,
+                InstallPhaseDetails::Modpack {
+                    project_id: None,
+                    version_id: None,
+                    title: Some(format!("Scanning {filename} (level {current_depth}/{max_depth})")),
+                },
+            )
+            .await?;
+
         let state = State::get().await?;
         let scratch =
             crate::api::pack::archive_util::create_import_scratch_dir(&state)
@@ -1220,6 +1237,22 @@ async fn install_local_pack_file_recursive(
             // Check if it looks like a compressed file
             if lower_name.ends_with(".zip") || lower_name.ends_with(".mrpack") {
                 // Extract this sub-archive
+                reporter
+                    .update(
+                        InstallPhaseId::ExtractingOverrides,
+                        Some(InstallProgress {
+                            current: sub_archive_paths.len() as u64 + 1,
+                            total: archive.len() as u64,
+                            secondary: None,
+                        }),
+                        InstallPhaseDetails::Modpack {
+                            project_id: None,
+                            version_id: None,
+                            title: Some(format!("Extracting {filename}")),
+                        },
+                    )
+                    .await?;
+
                 let mut entry = archive
                     .by_index(i)
                     .map_err(|e| ErrorKind::OtherError(e.to_string()))?;

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use theseus::drop_classifier::{
     DroppedItemType, ModrinthLookupResult, classify_dropped_item,
-    lookup_mod_hash,
+    classify_zip_with_extraction, lookup_mod_hash,
 };
 use theseus::pack::import::{ImportLauncherType, get_importable_instances};
 use theseus::{LockingProcess, get_locking_processes};
@@ -109,6 +109,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("drop")
         .invoke_handler(tauri::generate_handler![
             drop_classify,
+            drop_classify_extract,
             drop_scan_launcher_instances,
             drop_detect_file_lock,
             drop_extract_mod_metadata,
@@ -130,6 +131,23 @@ pub async fn drop_classify(
     let result = classify_dropped_item(&path);
     let classification = ClassificationResult::from(result);
     info!("Classification result: {:?}", classification);
+    Ok(classification)
+}
+
+/// Classify ZIP
+
+#[tauri::command]
+pub async fn drop_classify_extract(
+    path: String,
+) -> Result<ClassificationResult, String> {
+    debug!("Drop classify with extraction: {}", path);
+    let path = std::path::PathBuf::from(&path);
+    let result = classify_zip_with_extraction(&path);
+    let classification = ClassificationResult::from(result);
+    info!(
+        "Classification result (with extraction): {:?}",
+        classification
+    );
     Ok(classification)
 }
 

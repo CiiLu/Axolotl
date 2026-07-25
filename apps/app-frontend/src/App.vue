@@ -94,6 +94,7 @@ import { get_user, get_version } from '@/helpers/cache.js'
 import {
 	type ClassificationResult,
 	classifyDroppedItem,
+	classifyDroppedItemWithExtraction,
 	detectFileLock,
 	extractModMetadata,
 	lookupModHash,
@@ -102,9 +103,13 @@ import {
 	type ScanResult,
 } from '@/helpers/drop'
 import { isVersionInRange, areLoadersCompatible } from '@/helpers/version-compatibility'
-import { command_listener, warning_listener } from '@/helpers/events.js'
+import { command_listener, install_job_listener, warning_listener } from '@/helpers/events.js'
 import { import_instance } from '@/helpers/import.js'
-import { install_create_modpack_instance, install_get_modpack_preview } from '@/helpers/install'
+import {
+	type InstallJobSnapshot,
+	install_create_modpack_instance,
+	install_get_modpack_preview,
+} from '@/helpers/install'
 import {
 	add_project_from_path,
 	check_symlink_capability,
@@ -439,7 +444,11 @@ const messages = defineMessages({
 	},
 	dropOverlaySubtitle: {
 		id: 'app.drop.overlay-subtitle',
-		defaultMessage: 'Release to classify and import',
+		defaultMessage: 'Release to analyze',
+	},
+	dropProcessing: {
+		id: 'app.drop.processing',
+		defaultMessage: 'Processing {name}...',
 	},
 	dropMultipleFilesTitle: {
 		id: 'app.drop.error.multiple-files-title',
@@ -510,14 +519,43 @@ const messages = defineMessages({
 		defaultMessage: 'No instances found',
 	},
 
-	dropModpackNotSupportedTitle: {
-		id: 'app.drop.modpack-not-supported-title',
-		defaultMessage: 'Modpack import',
+	dropModpackInstalling: {
+		id: 'app.drop.modpack-installing',
+		defaultMessage: 'Installing modpack...',
 	},
-	dropModpackNotSupportedText: {
-		id: 'app.drop.modpack-not-supported-text',
+	dropModpackInstalledSuccess: {
+		id: 'app.drop.modpack-installed-success',
+		defaultMessage: 'Modpack installed successfully',
+	},
+	dropModpackInstallFailed: {
+		id: 'app.drop.modpack-install-failed',
+		defaultMessage: 'Failed to install modpack',
+	},
+
+	dropUnknownForceAnalysisTitle: {
+		id: 'app.drop.unknown-force-analysis-title',
+		defaultMessage: 'Unable to identify file type',
+	},
+	dropUnknownForceAnalysisText: {
+		id: 'app.drop.unknown-force-analysis-text',
 		defaultMessage:
-			'Modpack import is not yet supported via drag & drop. Please use the Import button to install a modpack.',
+			'This archive needs to be extracted and deeply analyzed to determine its content type. This may take a while. Force analysis?',
+	},
+	dropUnknownForceAnalysisButton: {
+		id: 'app.drop.unknown-force-analysis-button',
+		defaultMessage: 'Force analysis',
+	},
+	dropUnknownForceAnalyzing: {
+		id: 'app.drop.unknown-force-analyzing',
+		defaultMessage: 'Force analyzing archive...',
+	},
+	dropUnknownForceAnalysisFailedTitle: {
+		id: 'app.drop.unknown-force-analysis-failed-title',
+		defaultMessage: 'Analysis failed',
+	},
+	dropUnknownForceAnalysisFailedText: {
+		id: 'app.drop.unknown-force-analysis-failed-text',
+		defaultMessage: 'Could not identify the file type even after deep analysis.',
 	},
 
 	dropInstallModTitle: {
@@ -1023,18 +1061,46 @@ const currentImportContext = ref<{ launcherType: string; basePath: string } | nu
 
 const dropDebug = useDebugLogger('DropFlow')
 
+const dropProcessingNotificationId = ref<number | null>(null)
+
 const { isDragging, isProcessing } = useGlobalDrop(
 	{
 		classifyFile: classifyDroppedItem,
+		onClassifyStart: () => {
+			// Immediate feedback when a file is dropped — show a notification
+			// with the file name before classification even begins.
+			const fileName = dropFileName.value || 'file'
+			dropProcessingNotificationId.value = addNotification({
+				title: formatMessage(messages.dropProcessing, { name: fileName }),
+				type: 'info',
+				autoCloseMs: null,
+			}).id
+		},
 		onImportStart: (type, classification) => {
+			// Clear the initial processing notification
+			clearDropProcessingNotification()
+
 			dropClassification.value = classification
 			dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
-			dropFileName.value = classification.file_path?.split('/').pop()
-				?? classification.base_path?.split(/[/\\]/).pop()
-				?? 'file'
+			dropFileName.value =
+				classification.file_path?.split('/').pop() ??
+				classification.base_path?.split(/[/\\]/).pop() ??
+				'file'
+
+			// Unknown with extraction reason → skip confirm modal, show force-analysis prompt directly
+			if (type === 'unknown' && classification?.reason?.toLowerCase().includes('extraction')) {
+				showForceAnalysisPrompt(classification)
+				return
+			}
+
 			confirmDropModal.value?.show()
 		},
+		onImportEnd: () => {
+			clearDropProcessingNotification()
+		},
 		onError: (reason) => {
+			clearDropProcessingNotification()
+
 			if (reason === 'multiple-files') {
 				addNotification({
 					title: formatMessage(messages.dropMultipleFilesTitle),
@@ -1065,6 +1131,13 @@ const { isDragging, isProcessing } = useGlobalDrop(
 	fileDrop,
 )
 
+function clearDropProcessingNotification() {
+	if (dropProcessingNotificationId.value !== null) {
+		notificationManager.removeNotification(dropProcessingNotificationId.value)
+		dropProcessingNotificationId.value = null
+	}
+}
+
 async function handleDropConfirm(type: string) {
 	const classification = dropClassification.value
 	dropClassification.value = null
@@ -1080,14 +1153,15 @@ async function handleDropConfirm(type: string) {
 		classification?.item_type === 'launcher' || classification?.item_type === 'hmcl_launcher'
 
 	if (!isLauncherImport && !classification?.file_path && !dropFilePath.value) {
-		dropDebug('handleDropConfirm: no filePath available (classification and dropFilePath both empty), aborting')
+		dropDebug(
+			'handleDropConfirm: no filePath available (classification and dropFilePath both empty), aborting',
+		)
 		return
 	}
 
 	const filePath = classification?.file_path ?? dropFilePath.value
-	const fileName = filePath?.split('/').pop()
-		?? classification.base_path?.split(/[/\\]/).pop()
-		?? 'file'
+	const fileName =
+		filePath?.split('/').pop() ?? classification.base_path?.split(/[/\\]/).pop() ?? 'file'
 	dropDebug('handleDropConfirm: routing decision', {
 		type,
 		isLauncherImport,
@@ -1125,7 +1199,14 @@ async function handleDropConfirm(type: string) {
 				name: single.name,
 				path: single.path,
 			})
-			selectedInstances.value = [{ launcherType: 'Generic', basePath: dropFilePath.value, name: single.name, path: single.path }]
+			selectedInstances.value = [
+				{
+					launcherType: 'Generic',
+					basePath: dropFilePath.value,
+					name: single.name,
+					path: single.path,
+				},
+			]
 			const cap = await check_symlink_capability()
 			symlinkCardsModal.value?.show({
 				instanceNames: [single.name],
@@ -1135,7 +1216,9 @@ async function handleDropConfirm(type: string) {
 		}
 
 		// Multiple instances → show selection modal
-		dropDebug('handleDropConfirm: multiple instances from .minecraft, showing launcher import modal')
+		dropDebug(
+			'handleDropConfirm: multiple instances from .minecraft, showing launcher import modal',
+		)
 		launcherImportModal.value?.show(results)
 		return
 	}
@@ -1187,12 +1270,67 @@ async function handleDropConfirm(type: string) {
 	}
 
 	if (type === 'modpack') {
-		dropDebug('handleDropConfirm: modpack branch — NOT IMPLEMENTED, showing notification')
-		addNotification({
-			title: formatMessage(messages.dropModpackNotSupportedTitle),
-			text: formatMessage(messages.dropModpackNotSupportedText),
-			type: 'info',
-		})
+		dropDebug('handleDropConfirm: modpack branch', { filePath, fileName })
+
+		if (!filePath) {
+			dropDebug('handleDropConfirm: modpack — no filePath, aborting')
+			addNotification({ title: formatMessage(messages.dropModpackInstallFailed), type: 'error' })
+			return
+		}
+
+		const isMrpack = !!fileName?.toLowerCase().endsWith('.mrpack')
+		const location = { type: 'fromFile' as const, path: filePath }
+
+		const doInstall = async () => {
+			const job = await install_create_modpack_instance(location).catch(handleError)
+			if (!job) return
+
+			// Show non-blocking progress notification in top-right corner
+			const installingNotification = addNotification({
+				title: formatMessage(messages.dropModpackInstalling),
+				type: 'info',
+				autoCloseMs: 1000 * 10,
+			})
+
+			// Single-use listener that auto-cleans up when the job reaches a terminal state
+			const unlisten = await install_job_listener((updatedJob: InstallJobSnapshot) => {
+				if (updatedJob.job_id !== job.job_id) return
+
+				if (updatedJob.status === 'succeeded') {
+					notificationManager.removeNotification(installingNotification.id)
+					addNotification({
+						title: formatMessage(messages.dropModpackInstalledSuccess),
+						type: 'success',
+					})
+					unlisten()
+				} else if (['failed', 'canceled', 'interrupted'].includes(updatedJob.status)) {
+					notificationManager.removeNotification(installingNotification.id)
+					unlisten()
+				}
+			})
+		}
+
+		// .mrpack is a well-defined standard — skip preview, install directly.
+		// .zip needs a preview pass to scan entry names and determine what we're dealing with.
+		if (!isMrpack) {
+			const preview = await install_get_modpack_preview(location).catch((e) => {
+				dropDebug('handleDropConfirm: modpack preview failed', { error: e })
+				handleError(e)
+				return null
+			})
+			if (!preview) return
+
+			if (preview.unknownFile) {
+				unknownPackWarningModal.value?.show(doInstall, fileName)
+				trackEvent('InstanceCreate', { source: 'DropConfirmModpack' })
+				await router.push('/library')
+				return
+			}
+		}
+
+		await doInstall()
+		trackEvent('InstanceCreate', { source: 'DropConfirmModpack' })
+		await router.push('/library')
 		return
 	}
 
@@ -1396,6 +1534,82 @@ async function installContentDirectly(type: string, filePath: string, instId: st
 			type: 'error',
 		})
 	}
+}
+
+/**
+ * Show a popup notification asking the user to confirm force-analysis
+ * (extraction + classification) of a ZIP archive that couldn't be identified
+ * from entry names alone.
+ */
+function showForceAnalysisPrompt(classification: ClassificationResult) {
+	const filePath = dropFilePath.value
+	if (!filePath) return
+
+	dropDebug('showForceAnalysisPrompt: showing force-analysis prompt', {
+		reason: classification.reason,
+		filePath,
+	})
+
+	addPopupNotification({
+		title: formatMessage(messages.dropUnknownForceAnalysisTitle),
+		text: formatMessage(messages.dropUnknownForceAnalysisText),
+		type: 'info',
+		autoCloseMs: null,
+		buttons: [
+			{
+				label: formatMessage(messages.dropUnknownForceAnalysisButton),
+				action: async () => {
+					const analyzingNotification = addNotification({
+						title: formatMessage(messages.dropUnknownForceAnalyzing),
+						type: 'info',
+						autoCloseMs: null,
+					})
+
+					try {
+						const result = await classifyDroppedItemWithExtraction(filePath)
+						notificationManager.removeNotification(analyzingNotification.id)
+
+						if (result.item_type === 'unknown') {
+							addNotification({
+								title: formatMessage(messages.dropUnknownForceAnalysisFailedTitle),
+								text: formatMessage(messages.dropUnknownForceAnalysisFailedText),
+								type: 'error',
+							})
+							return
+						}
+
+						// Success
+						// user already confirmed
+						dropClassification.value = result
+						switch (result.item_type) {
+							case 'modpack':
+								await handleDropConfirm('modpack')
+								break
+							case 'world_save':
+								await handleDropConfirm('world_save')
+								break
+							case 'launcher':
+							case 'hmcl_launcher':
+								await handleDropConfirm('instance')
+								break
+							default:
+								// mod, resource_pack, shader_pack, litematic to content install
+								await handleDropConfirm(result.item_type)
+								break
+						}
+					} catch (e) {
+						notificationManager.removeNotification(analyzingNotification.id)
+						addNotification({
+							title: formatMessage(messages.dropUnknownForceAnalysisFailedTitle),
+							text: e instanceof Error ? e.message : String(e),
+							type: 'error',
+						})
+					}
+				},
+				color: 'brand',
+			},
+		],
+	})
 }
 
 async function handleGenericInstall(instanceId: string) {

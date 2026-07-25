@@ -3341,6 +3341,36 @@
 	"app.drop.modpack-not-supported-text": {
 		"message": "暂不支持通过拖放导入整合包。请使用「导入」按钮来安装整合包。"
 	},
+	"app.drop.unknown-force-analysis-title": {
+		"message": "无法识别文件类型"
+	},
+	"app.drop.unknown-force-analysis-text": {
+		"message": "该压缩包无法通过快速扫描识别，需要完整解压后进行深度分析。此操作可能需要一些时间，是否继续？"
+	},
+	"app.drop.unknown-force-analysis-button": {
+		"message": "强力解析"
+	},
+	"app.drop.unknown-force-analyzing": {
+		"message": "正在强力解析压缩包..."
+	},
+	"app.drop.unknown-force-analysis-failed-title": {
+		"message": "分析失败"
+	},
+	"app.drop.unknown-force-analysis-failed-text": {
+		"message": "深度分析后仍无法识别该文件类型。"
+	},
+	"app.drop.processing": {
+		"message": "正在处理 {name}..."
+	},
+	"app.drop.modpack-installing": {
+		"message": "正在安装整合包..."
+	},
+	"app.drop.modpack-installed-success": {
+		"message": "整合包安装完成"
+	},
+	"app.drop.modpack-install-failed": {
+		"message": "整合包安装失败"
+	},
 	"app.translation-settings.system-prompt": {
 		"message": "系统提示词"
 	},

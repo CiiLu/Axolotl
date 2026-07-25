@@ -211,7 +211,8 @@ export function setupCreationModal(notificationManager: AbstractWebNotificationM
 					type: 'fromFile',
 					path: config.modpackFilePath.value,
 				}
-				const preview = await install_get_modpack_preview(location)
+				const preview = await install_get_modpack_preview(location).catch(handleError)
+				if (!preview) return
 
 				if (preview.unknownFile) {
 					const splitPath = config.modpackFilePath.value.split(/[\\/]/)
