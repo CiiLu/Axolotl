@@ -1,7 +1,7 @@
 <template>
 	<button
 		class="group flex w-full hover:cursor-pointer gap-3 rounded-[20px] p-3 text-left transition-all hover:brightness-110 active:scale-[0.98] border-none"
-		:class="[noIconBox ? 'items-start' : 'items-center', selected ? 'bg-brand-highlight' : 'bg-surface-4']"
+		:class="['items-center', selected ? 'bg-brand-highlight' : 'bg-surface-4']"
 		@click="$emit('click')"
 	>
 		<div
@@ -16,13 +16,17 @@
 				stroke-width="1.5"
 			/>
 		</div>
-		<component
+		<div
 			v-else
-			:is="icon"
-			class="size-6 shrink-0 text-secondary"
-			:class="selected ? '!stroke-brand' : ''"
-			stroke-width="1.5"
-		/>
+			class="flex size-12 shrink-0 items-center justify-center"
+		>
+			<component
+				:is="icon"
+				class="size-7 text-secondary"
+				:class="selected ? '!stroke-brand' : ''"
+				stroke-width="1.5"
+			/>
+		</div>
 		<div class="flex flex-1 flex-col gap-1">
 			<span class="text-base font-semibold text-contrast">{{ title }}</span>
 			<span class="text-sm font-medium text-primary">{{ description }}</span>

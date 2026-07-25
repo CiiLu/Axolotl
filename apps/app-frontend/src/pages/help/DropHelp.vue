@@ -4,22 +4,22 @@
 			{{ formatMessage(messages.title) }}
 		</h1>
 
-		<div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+		<div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
 			<Card v-for="section in sections" :key="section.key">
-				<div class="flex items-center gap-3 p-2.5">
+				<div class="flex items-center gap-3">
 					<div
-						class="flex size-8 shrink-0 items-center justify-center rounded-lg border border-surface-5 bg-surface-3"
+						class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-surface-5 bg-surface-3"
 					>
 						<component :is="section.icon" class="size-5 text-brand" stroke-width="1.5" />
 					</div>
 					<div class="flex min-w-0 flex-col gap-0.5">
-						<h3 class="text-sm font-semibold leading-tight text-contrast">
+						<h3 class="text-base font-semibold leading-tight text-contrast">
 							{{ formatMessage(section.titleMsg) }}
 						</h3>
-						<p class="text-xs leading-normal text-secondary">
+						<p class="text-sm leading-normal text-secondary">
 							{{ formatMessage(section.descMsg) }}
 						</p>
-						<span class="text-[11px] leading-normal text-tertiary">
+						<span class="text-xs leading-normal text-tertiary">
 							{{ formatMessage(section.formatsMsg) }}
 						</span>
 					</div>
