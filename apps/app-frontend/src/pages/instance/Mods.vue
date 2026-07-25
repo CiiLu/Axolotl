@@ -1683,17 +1683,22 @@ provideContentManager({
 	skipNonEssentialWarnings,
 	contentTypeLabel: ref(formatMessage(messages.contentTypeProject)),
 	toggleEnabled: toggleDisableDebounced,
-	bulkEnableItems: (items: ContentItem[]) =>
-		Promise.all(
-			items.filter((item) => !item.enabled).map((item) => toggleDisableMod(item, true)),
-		).then(() => {}),
-	bulkDisableItems: (items: ContentItem[]) =>
-		Promise.all(
-			items.filter((item) => item.enabled).map((item) => toggleDisableMod(item, false)),
-		).then(() => {}),
+	bulkEnableItems: async (items: ContentItem[]) => {
+		for (const item of items.filter((item) => !item.enabled)) {
+			await toggleDisableMod(item, true)
+		}
+	},
+	bulkDisableItems: async (items: ContentItem[]) => {
+		for (const item of items.filter((item) => item.enabled)) {
+			await toggleDisableMod(item, false)
+		}
+	},
 	deleteItem: removeMod,
-	bulkDeleteItems: (items: ContentItem[]) =>
-		Promise.all(items.map((item) => removeMod(item))).then(() => {}),
+	bulkDeleteItems: async (items: ContentItem[]) => {
+		for (const item of items) {
+			await removeMod(item)
+		}
+	},
 	getDeleteDependencyWarning,
 	refresh: () => initProjects('must_revalidate'),
 	browse: handleBrowseContent,
