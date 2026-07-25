@@ -2705,6 +2705,18 @@
 	"instance.files.save-as": {
 		"message": "Save as..."
 	},
+	"instance.logs.delete.latest-running": {
+		"message": "Cannot delete latest.log while the instance is running"
+	},
+	"instance.logs.source.live": {
+		"message": "Live Log"
+	},
+	"instance.logs.source.numbered": {
+		"message": "Log {index}"
+	},
+	"instance.logs.source.unknown": {
+		"message": "Unknown"
+	},
 	"instance.server-modal.address": {
 		"message": "Address"
 	},

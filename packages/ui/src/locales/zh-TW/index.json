@@ -320,6 +320,351 @@
   "collections.label.private": {
     "defaultMessage": "私人"
   },
+  "console.action.collapse": {
+    "defaultMessage": "收合"
+  },
+  "console.action.expand": {
+    "defaultMessage": "展開"
+  },
+  "console.action.share": {
+    "defaultMessage": "分享"
+  },
+  "console.command.disabled-placeholder": {
+    "defaultMessage": "指令輸入已停用"
+  },
+  "console.command.server-not-running-placeholder": {
+    "defaultMessage": "伺服器未執行"
+  },
+  "console.crash.export-context": {
+    "defaultMessage": "匯出崩潰內容"
+  },
+  "console.crash.finding.amd-driver.action": {
+    "defaultMessage": "全新安裝最新版 AMD 顯示卡驅動程式，並關閉圖形覆蓋層後重試。"
+  },
+  "console.crash.finding.amd-driver.title": {
+    "defaultMessage": "AMD 顯示卡驅動程式崩潰"
+  },
+  "console.crash.finding.content-verification.action": {
+    "defaultMessage": "從可信來源重新安裝證據中指出的檔案。"
+  },
+  "console.crash.finding.content-verification.title": {
+    "defaultMessage": "jar 簽章驗證失敗"
+  },
+  "console.crash.finding.definite-mod-fabric.action": {
+    "defaultMessage": "更新或暫時移除 Fabric 載入器證據中指出的模組。"
+  },
+  "console.crash.finding.definite-mod-fabric.title": {
+    "defaultMessage": "Fabric 發現特定模組故障"
+  },
+  "console.crash.finding.definite-mod.action": {
+    "defaultMessage": "更新、修復或暫時移除證據和相符 jar 中指出的模組。"
+  },
+  "console.crash.finding.definite-mod.title": {
+    "defaultMessage": "特定模組導致崩潰"
+  },
+  "console.crash.finding.duplicate-mod.action": {
+    "defaultMessage": "在 mods 資料夾中，每個模組只保留一個相容版本。"
+  },
+  "console.crash.finding.duplicate-mod.title": {
+    "defaultMessage": "安裝了重複模組"
+  },
+  "console.crash.finding.extracted-mod.action": {
+    "defaultMessage": "從 mods 資料夾移除解壓縮後的目錄，並安裝原始 jar 檔案。"
+  },
+  "console.crash.finding.extracted-mod.title": {
+    "defaultMessage": "發現已解壓縮的模組"
+  },
+  "console.crash.finding.fabric-solution.action": {
+    "defaultMessage": "依證據中列出的相依性變更處理後再啟動。"
+  },
+  "console.crash.finding.fabric-solution.title": {
+    "defaultMessage": "Fabric 發現不相容模組或缺少相依性"
+  },
+  "console.crash.finding.fallback-action": {
+    "defaultMessage": "檢視下方證據和本機實例中相符的模組。"
+  },
+  "console.crash.finding.fallback-title": {
+    "defaultMessage": "未知診斷：{finding}"
+  },
+  "console.crash.finding.forge-error.action": {
+    "defaultMessage": "檢視 Forge 故障證據，並在撤銷近期變更後測試指出的模組。"
+  },
+  "console.crash.finding.forge-error.title": {
+    "defaultMessage": "Forge 回報了遊戲錯誤"
+  },
+  "console.crash.finding.forge-incomplete.action": {
+    "defaultMessage": "修復或重新安裝此實例的 Forge 載入器。"
+  },
+  "console.crash.finding.forge-incomplete.title": {
+    "defaultMessage": "Forge 安裝不完整"
+  },
+  "console.crash.finding.forge-java-incompatible.action": {
+    "defaultMessage": "使用此 Forge 版本所需的 Java 版本，或更新 Forge。"
+  },
+  "console.crash.finding.forge-java-incompatible.title": {
+    "defaultMessage": "此 Forge 版本與所選 Java 執行環境不相容"
+  },
+  "console.crash.finding.incompatible-mods.action": {
+    "defaultMessage": "依證據中的相容性詳情更新、移除或替換衝突模組。"
+  },
+  "console.crash.finding.incompatible-mods.title": {
+    "defaultMessage": "已安裝的模組互不相容"
+  },
+  "console.crash.finding.intel-driver.action": {
+    "defaultMessage": "安裝最新版 Intel 顯示卡驅動程式，或改用其他可用 GPU 執行 Minecraft。"
+  },
+  "console.crash.finding.intel-driver.title": {
+    "defaultMessage": "Intel 顯示卡驅動程式崩潰"
+  },
+  "console.crash.finding.java-11-required.action": {
+    "defaultMessage": "選擇 Java 11，或安裝與所選 Java 版本相容的模組版本。"
+  },
+  "console.crash.finding.java-11-required.title": {
+    "defaultMessage": "模組需要 Java 11"
+  },
+  "console.crash.finding.java-32bit.action": {
+    "defaultMessage": "安裝並選擇 64 位元 Java 執行環境，然後重試啟動。"
+  },
+  "console.crash.finding.java-32bit.title": {
+    "defaultMessage": "32 位元 Java 執行環境無法配置所需記憶體"
+  },
+  "console.crash.finding.java-incompatible.action": {
+    "defaultMessage": "使用相容的 Java 執行環境，或安裝適用於此 Java 版本的模組版本。"
+  },
+  "console.crash.finding.java-incompatible.title": {
+    "defaultMessage": "模組需要其他 Java 版本"
+  },
+  "console.crash.finding.java-too-new.action": {
+    "defaultMessage": "選擇此 Minecraft 和模組載入器版本所需的 Java 主要版本。"
+  },
+  "console.crash.finding.java-too-new.title": {
+    "defaultMessage": "Java 執行環境版本對此實例過新"
+  },
+  "console.crash.finding.jdk-runtime.action": {
+    "defaultMessage": "為此 Minecraft 版本選擇標準 HotSpot Java 執行環境。"
+  },
+  "console.crash.finding.jdk-runtime.title": {
+    "defaultMessage": "選擇了 JDK 而不是 JRE"
+  },
+  "console.crash.finding.jvm-arguments.action": {
+    "defaultMessage": "移除報告中指出的自訂 JVM 參數，然後重新啟動實例。"
+  },
+  "console.crash.finding.jvm-arguments.title": {
+    "defaultMessage": "JVM 參數無效"
+  },
+  "console.crash.finding.large-resource-pack.action": {
+    "defaultMessage": "停用該資源包，或改用解析度較低的版本。"
+  },
+  "console.crash.finding.large-resource-pack.title": {
+    "defaultMessage": "目前資源包對圖形設定而言過大"
+  },
+  "console.crash.finding.manual-debug-crash.action": {
+    "defaultMessage": "重新啟動，並避免長按手動偵錯崩潰快速鍵。"
+  },
+  "console.crash.finding.manual-debug-crash.title": {
+    "defaultMessage": "觸發了偵錯崩潰快速鍵"
+  },
+  "console.crash.finding.matched-mod": {
+    "defaultMessage": "相符模組：{identity}{modId} - {fileName}"
+  },
+  "console.crash.finding.missing-dependency.action": {
+    "defaultMessage": "安裝所需的相依性版本，或使用與此 Minecraft 版本相符的模組版本。"
+  },
+  "console.crash.finding.missing-dependency.title": {
+    "defaultMessage": "模組相依性缺少或不受支援"
+  },
+  "console.crash.finding.mixin-bootstrap.action": {
+    "defaultMessage": "修復模組載入器安裝，並確認所有模組均適用於已安裝的載入器。"
+  },
+  "console.crash.finding.mixin-bootstrap.title": {
+    "defaultMessage": "缺少 Mixin 啟動程序"
+  },
+  "console.crash.finding.mixin-failure.action": {
+    "defaultMessage": "更新或移除相符的模組，並檢查其 Minecraft 和載入器版本是否相容。"
+  },
+  "console.crash.finding.mixin-failure.title": {
+    "defaultMessage": "模組 Mixin 套用失敗"
+  },
+  "console.crash.finding.mod-config.action": {
+    "defaultMessage": "備份並移除指出的設定檔，讓模組重新產生它。"
+  },
+  "console.crash.finding.mod-config.title": {
+    "defaultMessage": "無法讀取模組設定檔"
+  },
+  "console.crash.finding.mod-filename.action": {
+    "defaultMessage": "使用簡單的拉丁字母檔名重新命名或安裝模組 jar。"
+  },
+  "console.crash.finding.mod-filename.title": {
+    "defaultMessage": "模組檔名包含不支援的字元"
+  },
+  "console.crash.finding.mod-id-limit.action": {
+    "defaultMessage": "移除未使用的模組，或將安裝內容拆分為較小的相容設定檔。"
+  },
+  "console.crash.finding.mod-id-limit.title": {
+    "defaultMessage": "模組過多，超出 ID 限制"
+  },
+  "console.crash.finding.mod-initialization.action": {
+    "defaultMessage": "更新指出的模組，並確認其所需相依性均已安裝。"
+  },
+  "console.crash.finding.mod-initialization.title": {
+    "defaultMessage": "模組初始化失敗"
+  },
+  "console.crash.finding.mod-loader-error.action": {
+    "defaultMessage": "修復載入器安裝，並確認列出的模組檔案與此遊戲版本相符。"
+  },
+  "console.crash.finding.mod-loader-error.title": {
+    "defaultMessage": "模組載入器回報了故障"
+  },
+  "console.crash.finding.mod-loader-failure.action": {
+    "defaultMessage": "修復載入器安裝，並依證據中顯示的故障訊息處理。"
+  },
+  "console.crash.finding.mod-loader-failure.title": {
+    "defaultMessage": "模組載入器在識別模組檔案前失敗"
+  },
+  "console.crash.finding.multiple-forge-versions.action": {
+    "defaultMessage": "修復實例，使其版本設定檔中只包含一個 Forge 安裝。"
+  },
+  "console.crash.finding.multiple-forge-versions.title": {
+    "defaultMessage": "版本設定檔中包含多個 Forge 版本"
+  },
+  "console.crash.finding.nightconfig-bug.action": {
+    "defaultMessage": "備份 config 資料夾，移除損壞設定，讓模組重新產生它。"
+  },
+  "console.crash.finding.nightconfig-bug.title": {
+    "defaultMessage": "NightConfig 無法讀取設定檔"
+  },
+  "console.crash.finding.nvidia-driver.action": {
+    "defaultMessage": "全新安裝最新版 NVIDIA 顯示卡驅動程式，並關閉圖形覆蓋層後重試。"
+  },
+  "console.crash.finding.nvidia-driver.title": {
+    "defaultMessage": "NVIDIA 顯示卡驅動程式崩潰"
+  },
+  "console.crash.finding.opengl-unsupported.action": {
+    "defaultMessage": "安裝 GPU 製造商提供的顯示卡驅動程式，並確認 Minecraft 使用預期的 GPU。"
+  },
+  "console.crash.finding.opengl-unsupported.title": {
+    "defaultMessage": "目前顯示卡驅動程式不支援 OpenGL"
+  },
+  "console.crash.finding.openj9.action": {
+    "defaultMessage": "選擇以 HotSpot 為基礎的 Java 執行環境，例如 Eclipse Temurin 或內建 Minecraft 執行環境。"
+  },
+  "console.crash.finding.openj9.title": {
+    "defaultMessage": "所選 OpenJ9 執行環境不相容"
+  },
+  "console.crash.finding.optifine-incompatible.action": {
+    "defaultMessage": "安裝相容的 OptiFine 版本，或移除 OptiFine 和衝突的光影模組。"
+  },
+  "console.crash.finding.optifine-incompatible.title": {
+    "defaultMessage": "OptiFine 與已安裝的載入器或模組衝突"
+  },
+  "console.crash.finding.optifine-world.action": {
+    "defaultMessage": "移除 OptiFine，或安裝與此 Minecraft 和 Forge 版本相容的版本。"
+  },
+  "console.crash.finding.optifine-world.title": {
+    "defaultMessage": "OptiFine 阻止世界載入"
+  },
+  "console.crash.finding.out-of-memory.action": {
+    "defaultMessage": "增加實例記憶體配置，或移除占用大量記憶體的模組和資源包。"
+  },
+  "console.crash.finding.out-of-memory.title": {
+    "defaultMessage": "Minecraft 記憶體不足"
+  },
+  "console.crash.finding.pixel-format.action": {
+    "defaultMessage": "更新或重新安裝顯示卡驅動程式，停用衝突的覆蓋層後重試。"
+  },
+  "console.crash.finding.pixel-format.title": {
+    "defaultMessage": "顯示卡驅動程式無法設定像素格式"
+  },
+  "console.crash.finding.resource-pack.action": {
+    "defaultMessage": "停用目前光影和資源包，再逐一重新啟用。"
+  },
+  "console.crash.finding.resource-pack.title": {
+    "defaultMessage": "光影或資源包觸發圖形錯誤"
+  },
+  "console.crash.finding.shaders-optifine.action": {
+    "defaultMessage": "移除單獨的光影模組，因為 OptiFine 已提供光影支援。"
+  },
+  "console.crash.finding.shaders-optifine.title": {
+    "defaultMessage": "同時安裝了光影模組和 OptiFine"
+  },
+  "console.crash.finding.short-output.action": {
+    "defaultMessage": "重試一次，然後檢查 Java、載入器安裝和啟動器輸出中較早出現的錯誤。"
+  },
+  "console.crash.finding.short-output.title": {
+    "defaultMessage": "遊戲在產生有效日誌前停止"
+  },
+  "console.crash.finding.specific-block.action": {
+    "defaultMessage": "使用世界備份或世界編輯器，移除證據所示座標處的方塊。"
+  },
+  "console.crash.finding.specific-block.title": {
+    "defaultMessage": "特定方塊導致崩潰"
+  },
+  "console.crash.finding.specific-entity.action": {
+    "defaultMessage": "使用世界備份或世界編輯器，移除證據所示座標處的實體。"
+  },
+  "console.crash.finding.specific-entity.title": {
+    "defaultMessage": "特定實體導致崩潰"
+  },
+  "console.crash.finding.stack-analysis.action": {
+    "defaultMessage": "更新或暫時移除相符的模組，然後重新測試實例。"
+  },
+  "console.crash.finding.stack-analysis.title": {
+    "defaultMessage": "堆疊追蹤指向已安裝的模組"
+  },
+  "console.crash.finding.suspected-mod.action": {
+    "defaultMessage": "更新或暫時移除報告懷疑且本機相符的模組，然後重試。"
+  },
+  "console.crash.finding.suspected-mod.title": {
+    "defaultMessage": "崩潰報告懷疑一個或多個模組"
+  },
+  "console.crash.local-header": {
+    "defaultMessage": "{findings, plural, other {# 項本機診斷結果}}，來自 {sources, plural, other {# 個相關檔案}}"
+  },
+  "console.crash.problems-detected": {
+    "defaultMessage": "偵測到 {count, plural, other {# 個問題}}"
+  },
+  "console.delete-modal.confirmation": {
+    "defaultMessage": "刪除後無法復原此日誌檔案。確定要繼續嗎？"
+  },
+  "console.delete-modal.irreversible-title": {
+    "defaultMessage": "此操作無法復原"
+  },
+  "console.delete-modal.title": {
+    "defaultMessage": "刪除日誌檔案"
+  },
+  "console.filter.all": {
+    "defaultMessage": "全部"
+  },
+  "console.filter.debug": {
+    "defaultMessage": "偵錯"
+  },
+  "console.filter.error": {
+    "defaultMessage": "錯誤"
+  },
+  "console.filter.info": {
+    "defaultMessage": "資訊"
+  },
+  "console.filter.trace": {
+    "defaultMessage": "追蹤"
+  },
+  "console.filter.warn": {
+    "defaultMessage": "警告"
+  },
+  "console.notification.delete-failed": {
+    "defaultMessage": "刪除日誌檔案失敗"
+  },
+  "console.notification.share-failed": {
+    "defaultMessage": "分享日誌失敗"
+  },
+  "console.notification.unknown-error": {
+    "defaultMessage": "未知錯誤。"
+  },
+  "console.search.placeholder": {
+    "defaultMessage": "搜尋日誌"
+  },
+  "console.share-modal.title": {
+    "defaultMessage": "分享日誌"
+  },
   "content-type.content.lowercase": {
     "defaultMessage": "內容"
   },
@@ -5691,4 +6036,3 @@
     "defaultMessage": "類型"
   }
 }
-

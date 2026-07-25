@@ -39,7 +39,7 @@ export interface ConsoleManagerContext {
 	clearDisabledTooltip?: string | Ref<string | undefined> | ComputedRef<string | undefined>
 	onDelete?: () => Promise<void>
 	deleteDisabled?: Ref<boolean> | ComputedRef<boolean>
-	deleteDisabledTooltip?: string
+	deleteDisabledTooltip?: string | Ref<string | undefined> | ComputedRef<string | undefined>
 
 	shareDisabled?: Ref<boolean> | ComputedRef<boolean>
 

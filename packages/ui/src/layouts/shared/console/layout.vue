@@ -14,7 +14,7 @@
 				<ButtonStyled type="outlined">
 					<button :disabled="exportingCrashContext" @click="handleExportCrashContext">
 						<DownloadIcon />
-						Export crash context
+						{{ formatMessage(consoleMessages.exportCrashContext) }}
 					</button>
 				</ButtonStyled>
 			</div>
@@ -32,7 +32,7 @@
 			<StyledInput
 				v-model="searchQuery"
 				:icon="SearchIcon"
-				placeholder="Search logs"
+				:placeholder="formatMessage(consoleMessages.searchLogs)"
 				wrapper-class="flex-1"
 				input-class="!h-10"
 				clearable
@@ -62,7 +62,7 @@
 				:clear-disabled-tooltip="resolvedClearDisabledTooltip"
 				:show-delete="showDelete"
 				:delete-disabled="resolvedDeleteDisabled"
-				:delete-disabled-tooltip="ctx.deleteDisabledTooltip"
+				:delete-disabled-tooltip="resolvedDeleteDisabledTooltip"
 				@clear="handleClear"
 				@share="handleShare"
 				@toggle-fullscreen="toggleFullscreen"
@@ -84,11 +84,24 @@
 			@ready="handleTerminalReady"
 		/>
 	</div>
-	<ShareModal ref="shareModal" header="Share Logs" link :social-buttons="false" />
-	<NewModal ref="deleteModal" header="Delete log file" :fade="'danger'" max-width="500px">
+	<ShareModal
+		ref="shareModal"
+		:header="formatMessage(consoleMessages.shareLogs)"
+		link
+		:social-buttons="false"
+	/>
+	<NewModal
+		ref="deleteModal"
+		:header="formatMessage(consoleMessages.deleteLogFile)"
+		:fade="'danger'"
+		max-width="500px"
+	>
 		<div class="flex flex-col gap-6">
-			<Admonition type="critical" header="This is irreversible">
-				Deleting this log file cannot be undone. Are you sure you want to continue?
+			<Admonition
+				type="critical"
+				:header="formatMessage(consoleMessages.deleteIrreversible)"
+			>
+				{{ formatMessage(consoleMessages.deleteConfirmation) }}
 			</Admonition>
 		</div>
 		<template #actions>
@@ -96,13 +109,13 @@
 				<ButtonStyled type="outlined">
 					<button @click="deleteModal?.hide()">
 						<XIcon />
-						Cancel
+						{{ formatMessage(commonMessages.cancelButton) }}
 					</button>
 				</ButtonStyled>
 				<ButtonStyled color="red">
 					<button :disabled="isDeleting" @click="confirmDelete">
 						<TrashIcon />
-						Delete
+						{{ formatMessage(commonMessages.deleteLabel) }}
 					</button>
 				</ButtonStyled>
 			</div>
@@ -122,12 +135,14 @@ import type { CollapsibleAdmonitionItem } from '#ui/components/base/CollapsibleA
 import CollapsibleAdmonition from '#ui/components/base/CollapsibleAdmonition.vue'
 import Combobox from '#ui/components/base/Combobox.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
+import { useVIntl } from '#ui/composables/i18n'
 import NewModal from '#ui/components/modal/NewModal.vue'
 import ShareModal from '#ui/components/modal/ShareModal.vue'
 import { injectModrinthClient } from '#ui/providers'
 import { injectModalBehavior } from '#ui/providers/modal-behavior'
 import { injectPageContext } from '#ui/providers/page-context'
 import { injectNotificationManager } from '#ui/providers/web-notifications.ts'
+import { commonMessages } from '#ui/utils/common-messages'
 
 import ConsoleActionButtons from './components/ConsoleActionButtons.vue'
 import ConsoleFilterPills from './components/ConsoleFilterPills.vue'
@@ -140,6 +155,7 @@ import {
 	useConsoleFilters,
 } from './composables'
 import type { ConditionalLevel } from './composables/console-filtering'
+import { consoleMessages, localFindingMessages } from './messages'
 import { injectConsoleManager } from './providers'
 import type { LogLevel, LogLine } from './types'
 
@@ -148,231 +164,222 @@ const client = injectModrinthClient()
 const modalBehavior = injectModalBehavior()
 const pageContext = injectPageContext(null)
 const { addNotification } = injectNotificationManager()
+const { formatMessage } = useVIntl()
 
-const localFindingCopy: Record<string, { title: string; action: string }> = {
+const localFindingCopy = {
 	jvm_arguments: {
-		title: 'Invalid JVM arguments',
-		action: 'Remove the reported custom JVM argument, then launch the instance again.',
+		title: localFindingMessages.jvmArgumentsTitle,
+		action: localFindingMessages.jvmArgumentsAction,
 	},
 	out_of_memory: {
-		title: 'Minecraft ran out of memory',
-		action:
-			'Increase the instance memory allocation or remove memory-heavy mods and resource packs.',
+		title: localFindingMessages.outOfMemoryTitle,
+		action: localFindingMessages.outOfMemoryAction,
 	},
 	opengl_unsupported: {
-		title: 'OpenGL is not supported by the active graphics driver',
-		action:
-			'Install the graphics driver from the GPU manufacturer and ensure Minecraft uses the intended GPU.',
+		title: localFindingMessages.openglUnsupportedTitle,
+		action: localFindingMessages.openglUnsupportedAction,
 	},
 	pixel_format: {
-		title: 'The graphics driver could not set a pixel format',
-		action:
-			'Update or reinstall the graphics driver and disable conflicting overlays before retrying.',
+		title: localFindingMessages.pixelFormatTitle,
+		action: localFindingMessages.pixelFormatAction,
 	},
 	openj9: {
-		title: 'The selected OpenJ9 runtime is incompatible',
-		action:
-			'Select a HotSpot-based Java runtime such as Eclipse Temurin or the bundled Minecraft runtime.',
+		title: localFindingMessages.openj9Title,
+		action: localFindingMessages.openj9Action,
 	},
 	java_too_new: {
-		title: 'The Java runtime is too new for this instance',
-		action: 'Select the Java major version expected by this Minecraft and mod-loader version.',
+		title: localFindingMessages.javaTooNewTitle,
+		action: localFindingMessages.javaTooNewAction,
 	},
 	java_incompatible: {
-		title: 'A mod requires a different Java version',
-		action:
-			'Use a compatible Java runtime or install a build of the reported mod for this Java version.',
+		title: localFindingMessages.javaIncompatibleTitle,
+		action: localFindingMessages.javaIncompatibleAction,
 	},
 	jdk_runtime: {
-		title: 'A JDK runtime was selected instead of a JRE',
-		action: 'Select a standard HotSpot Java runtime for this Minecraft version.',
+		title: localFindingMessages.jdkRuntimeTitle,
+		action: localFindingMessages.jdkRuntimeAction,
 	},
 	java_32bit: {
-		title: 'A 32-bit Java runtime cannot allocate the requested memory',
-		action: 'Install and select a 64-bit Java runtime, then retry the launch.',
+		title: localFindingMessages.java32BitTitle,
+		action: localFindingMessages.java32BitAction,
 	},
 	java_11_required: {
-		title: 'A Mod requires Java 11',
-		action: 'Select Java 11 or install a Mod build compatible with the selected Java version.',
+		title: localFindingMessages.java11RequiredTitle,
+		action: localFindingMessages.java11RequiredAction,
 	},
 	forge_incomplete: {
-		title: 'The Forge installation is incomplete',
-		action: 'Repair or reinstall the Forge loader for this instance.',
+		title: localFindingMessages.forgeIncompleteTitle,
+		action: localFindingMessages.forgeIncompleteAction,
 	},
 	duplicate_mod: {
-		title: 'Duplicate Mods are installed',
-		action: 'Keep only one compatible version of each Mod in the mods folder.',
+		title: localFindingMessages.duplicateModTitle,
+		action: localFindingMessages.duplicateModAction,
 	},
 	incompatible_mods: {
-		title: 'The installed Mods are incompatible',
-		action:
-			'Follow the compatibility details in the evidence and update, remove, or replace the conflicting Mods.',
+		title: localFindingMessages.incompatibleModsTitle,
+		action: localFindingMessages.incompatibleModsAction,
 	},
 	missing_dependency: {
-		title: 'A Mod dependency is missing or unsupported',
-		action:
-			'Install the required dependency version or use a Mod build matching this Minecraft version.',
+		title: localFindingMessages.missingDependencyTitle,
+		action: localFindingMessages.missingDependencyAction,
 	},
 	mod_id_limit: {
-		title: 'Too many Mods exceeded the ID limit',
-		action: 'Remove unused Mods or split the installation into smaller compatible profiles.',
+		title: localFindingMessages.modIdLimitTitle,
+		action: localFindingMessages.modIdLimitAction,
 	},
 	forge_error: {
-		title: 'Forge reported a game error',
-		action: 'Review the Forge failure evidence and test the named Mod without recent changes.',
+		title: localFindingMessages.forgeErrorTitle,
+		action: localFindingMessages.forgeErrorAction,
 	},
 	mod_loader_error: {
-		title: 'The Mod loader reported a failure',
-		action:
-			'Repair the loader installation and verify that the listed Mod files match this game version.',
+		title: localFindingMessages.modLoaderErrorTitle,
+		action: localFindingMessages.modLoaderErrorAction,
 	},
 	mod_loader_failure: {
-		title: 'The Mod loader failed before identifying a Mod file',
-		action: 'Repair the loader installation and follow the failure message shown in the evidence.',
+		title: localFindingMessages.modLoaderFailureTitle,
+		action: localFindingMessages.modLoaderFailureAction,
 	},
 	stack_analysis: {
-		title: 'The stack trace points to an installed Mod',
-		action: 'Update or temporarily remove the matched Mod, then test the instance again.',
+		title: localFindingMessages.stackAnalysisTitle,
+		action: localFindingMessages.stackAnalysisAction,
 	},
 	short_output: {
-		title: 'The game stopped before producing a useful log',
-		action:
-			'Retry once, then verify Java, the loader installation, and the launcher output for an earlier error.',
+		title: localFindingMessages.shortOutputTitle,
+		action: localFindingMessages.shortOutputAction,
 	},
 	extracted_mod: {
-		title: 'An extracted Mod was found',
-		action:
-			'Remove the extracted directory from the mods folder and install the original jar file.',
+		title: localFindingMessages.extractedModTitle,
+		action: localFindingMessages.extractedModAction,
 	},
 	mixin_bootstrap: {
-		title: 'Mixin bootstrap is missing',
-		action:
-			'Repair the mod loader installation and verify that every mod targets the installed loader.',
+		title: localFindingMessages.mixinBootstrapTitle,
+		action: localFindingMessages.mixinBootstrapAction,
 	},
 	mixin_failure: {
-		title: 'A Mod Mixin failed to apply',
-		action:
-			'Update or remove the matched Mod and check that its Minecraft and loader versions are compatible.',
+		title: localFindingMessages.mixinFailureTitle,
+		action: localFindingMessages.mixinFailureAction,
 	},
 	fabric_solution: {
-		title: 'Fabric found an incompatible Mod or missing dependency',
-		action: 'Apply the dependency changes listed in the evidence before launching again.',
+		title: localFindingMessages.fabricSolutionTitle,
+		action: localFindingMessages.fabricSolutionAction,
 	},
 	mod_config: {
-		title: 'A Mod configuration file could not be read',
-		action: 'Back up and remove the named configuration file so the Mod can regenerate it.',
+		title: localFindingMessages.modConfigTitle,
+		action: localFindingMessages.modConfigAction,
 	},
 	optifine_incompatible: {
-		title: 'OptiFine conflicts with the installed loader or Mod',
-		action:
-			'Install a compatible OptiFine build or remove OptiFine and the conflicting shader Mod.',
+		title: localFindingMessages.optifineIncompatibleTitle,
+		action: localFindingMessages.optifineIncompatibleAction,
 	},
 	resource_pack: {
-		title: 'A shader or resource pack triggered a graphics error',
-		action: 'Disable the active shader and resource packs, then re-enable them one at a time.',
+		title: localFindingMessages.resourcePackTitle,
+		action: localFindingMessages.resourcePackAction,
 	},
 	large_resource_pack: {
-		title: 'The active resource pack is too large for the graphics configuration',
-		action: 'Disable the resource pack or use a lower-resolution version.',
+		title: localFindingMessages.largeResourcePackTitle,
+		action: localFindingMessages.largeResourcePackAction,
 	},
 	shaders_optifine: {
-		title: 'Shaders Mod and OptiFine are installed together',
-		action: 'Remove the separate Shaders Mod because OptiFine already provides shader support.',
+		title: localFindingMessages.shadersOptifineTitle,
+		action: localFindingMessages.shadersOptifineAction,
 	},
 	multiple_forge_versions: {
-		title: 'The version profile contains multiple Forge versions',
-		action: 'Repair the instance so its version profile contains only one Forge installation.',
+		title: localFindingMessages.multipleForgeVersionsTitle,
+		action: localFindingMessages.multipleForgeVersionsAction,
 	},
 	forge_java_incompatible: {
-		title: 'This Forge version is incompatible with the selected Java runtime',
-		action: 'Use the Java version expected by this Forge release or update Forge.',
+		title: localFindingMessages.forgeJavaIncompatibleTitle,
+		action: localFindingMessages.forgeJavaIncompatibleAction,
 	},
 	content_verification: {
-		title: 'A jar failed signature verification',
-		action: 'Remove and reinstall the file named in the evidence from a trusted source.',
+		title: localFindingMessages.contentVerificationTitle,
+		action: localFindingMessages.contentVerificationAction,
 	},
 	optifine_world: {
-		title: 'OptiFine prevented the world from loading',
-		action: 'Remove OptiFine or install a build compatible with this Minecraft and Forge version.',
+		title: localFindingMessages.optifineWorldTitle,
+		action: localFindingMessages.optifineWorldAction,
 	},
 	nightconfig_bug: {
-		title: 'NightConfig could not read a configuration file',
-		action:
-			'Back up the config folder, remove the damaged configuration, and let the Mod regenerate it.',
+		title: localFindingMessages.nightconfigBugTitle,
+		action: localFindingMessages.nightconfigBugAction,
 	},
 	mod_filename: {
-		title: 'A Mod filename contains unsupported characters',
-		action: 'Rename or reinstall the Mod jar using a simple Latin-letter filename.',
+		title: localFindingMessages.modFilenameTitle,
+		action: localFindingMessages.modFilenameAction,
 	},
 	definite_mod: {
-		title: 'A specific Mod caused the crash',
-		action:
-			'Update, repair, or temporarily remove the Mod identified by the evidence and matched jar.',
+		title: localFindingMessages.definiteModTitle,
+		action: localFindingMessages.definiteModAction,
 	},
 	definite_mod_fabric: {
-		title: 'Fabric identified a specific Mod failure',
-		action: 'Update or temporarily remove the Mod identified by the Fabric loader evidence.',
+		title: localFindingMessages.definiteModFabricTitle,
+		action: localFindingMessages.definiteModFabricAction,
 	},
 	intel_driver: {
-		title: 'The Intel graphics driver crashed',
-		action: 'Install a current Intel graphics driver or run Minecraft on another available GPU.',
+		title: localFindingMessages.intelDriverTitle,
+		action: localFindingMessages.intelDriverAction,
 	},
 	amd_driver: {
-		title: 'The AMD graphics driver crashed',
-		action: 'Clean-install a current AMD graphics driver and retry without graphics overlays.',
+		title: localFindingMessages.amdDriverTitle,
+		action: localFindingMessages.amdDriverAction,
 	},
 	nvidia_driver: {
-		title: 'The NVIDIA graphics driver crashed',
-		action: 'Clean-install a current NVIDIA graphics driver and retry without graphics overlays.',
+		title: localFindingMessages.nvidiaDriverTitle,
+		action: localFindingMessages.nvidiaDriverAction,
 	},
 	manual_debug_crash: {
-		title: 'The debug crash shortcut was triggered',
-		action: 'Launch again and avoid holding the manual debug-crash key combination.',
+		title: localFindingMessages.manualDebugCrashTitle,
+		action: localFindingMessages.manualDebugCrashAction,
 	},
 	suspected_mod: {
-		title: 'The crash report suspects one or more Mods',
-		action: 'Update or temporarily remove the suspected and locally matched Mods, then retry.',
+		title: localFindingMessages.suspectedModTitle,
+		action: localFindingMessages.suspectedModAction,
 	},
 	mod_initialization: {
-		title: 'A Mod failed to initialize',
-		action: 'Update the named Mod and verify that all of its required dependencies are installed.',
+		title: localFindingMessages.modInitializationTitle,
+		action: localFindingMessages.modInitializationAction,
 	},
 	specific_block: {
-		title: 'A specific block caused the crash',
-		action:
-			'Use a world backup or a world editor to remove the block at the coordinates in the evidence.',
+		title: localFindingMessages.specificBlockTitle,
+		action: localFindingMessages.specificBlockAction,
 	},
 	specific_entity: {
-		title: 'A specific entity caused the crash',
-		action:
-			'Use a world backup or a world editor to remove the entity at the coordinates in the evidence.',
+		title: localFindingMessages.specificEntityTitle,
+		action: localFindingMessages.specificEntityAction,
 	},
-}
+} as const
 
 const localCrashHeader = computed(() => {
 	const analysis = ctx.localCrashAnalysis?.value
 	const findings = analysis?.findings.length ?? 0
 	const sources = analysis?.sources.length ?? 0
-	return `${findings} local diagnosis result${findings === 1 ? '' : 's'} from ${sources} related file${sources === 1 ? '' : 's'}`
+	return formatMessage(consoleMessages.localCrashHeader, { findings, sources })
 })
 
 const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 	const analysis = ctx.localCrashAnalysis?.value
 	if (!analysis) return []
 	return analysis.findings.map((finding) => {
-		const copy = localFindingCopy[finding.id] ?? {
-			title: finding.id.replaceAll('_', ' '),
-			action: 'Review the evidence below and the Mods matched from the local instance.',
-		}
+		const copy = localFindingCopy[finding.id as keyof typeof localFindingCopy]
+		const title = copy
+			? formatMessage(copy.title)
+			: formatMessage(consoleMessages.fallbackFindingTitle, { finding: finding.id })
+		const action = copy
+			? formatMessage(copy.action)
+			: formatMessage(consoleMessages.fallbackFindingAction)
 		const evidence = finding.evidence.map((item) => `${item.filename}:${item.line} - ${item.text}`)
 		const mods = analysis.mods.map((mod) => {
 			const identity = mod.name || mod.id || mod.file_name
 			const modId = mod.id && mod.id !== identity ? ` (${mod.id})` : ''
-			return `Matched Mod: ${identity}${modId} - ${mod.file_name}`
+			return formatMessage(consoleMessages.matchedMod, {
+				identity,
+				modId,
+				fileName: mod.file_name,
+			})
 		})
 		return {
-			title: copy.title,
-			descriptions: [copy.action, ...mods, ...evidence],
+			title,
+			descriptions: [action, ...mods, ...evidence],
 		}
 	})
 })
@@ -380,7 +387,7 @@ const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 const crashHeader = computed(() => {
 	const problems = ctx.crashAnalysis?.value?.analysis.problems ?? []
 	const count = problems.length
-	return `${count} problem${count !== 1 ? 's' : ''} detected`
+	return formatMessage(consoleMessages.problemsDetected, { count })
 })
 
 const crashItems = computed<CollapsibleAdmonitionItem[]>(() => {
@@ -493,7 +500,11 @@ const resolvedInputDisabledTooltip = computed(() =>
 )
 
 const resolvedInputDisabledPlaceholder = computed(() =>
-	resolvedInputDisabledTooltip.value ? 'Command input disabled' : 'Server is not running',
+	formatMessage(
+		resolvedInputDisabledTooltip.value
+			? consoleMessages.commandInputDisabled
+			: consoleMessages.serverNotRunning,
+	),
 )
 
 const resolvedShareDisabled = computed(() => {
@@ -509,6 +520,10 @@ const resolvedDeleteDisabled = computed(() => {
 	if (!v) return false
 	return isRef(v) ? v.value : v
 })
+
+const resolvedDeleteDisabledTooltip = computed(() =>
+	resolvedDeleteDisabled.value ? unwrapMaybeRef(ctx.deleteDisabledTooltip) : undefined,
+)
 
 const resolvedClearDisabled = computed(() => {
 	const v = ctx.clearDisabled
@@ -667,8 +682,8 @@ async function confirmDelete() {
 		console.error('Failed to delete log file:', err)
 		addNotification({
 			type: 'error',
-			title: 'Failed to delete log file',
-			text: typeof err === 'string' ? err : 'Unknown error.',
+			title: formatMessage(consoleMessages.deleteFailedTitle),
+			text: typeof err === 'string' ? err : formatMessage(consoleMessages.unknownError),
 		})
 	} finally {
 		isDeleting.value = false
@@ -690,8 +705,8 @@ async function handleShare() {
 		console.error('Failed to share logs:', err)
 		addNotification({
 			type: 'error',
-			title: 'Failed to share logs',
-			text: typeof err === 'string' ? err : 'Unknown error.',
+			title: formatMessage(consoleMessages.shareFailedTitle),
+			text: typeof err === 'string' ? err : formatMessage(consoleMessages.unknownError),
 		})
 	} finally {
 		isSharing.value = false

@@ -2624,6 +2624,18 @@
 	"friends.sign-in-to-add-friends": {
 		"message": "登录你的 <link>Modrinth 账号</link>，添加好友，看看他们在玩什么！"
 	},
+	"instance.logs.delete.latest-running": {
+		"message": "实例运行时无法删除 latest.log"
+	},
+	"instance.logs.source.live": {
+		"message": "实时日志"
+	},
+	"instance.logs.source.numbered": {
+		"message": "日志 {index}"
+	},
+	"instance.logs.source.unknown": {
+		"message": "未知"
+	},
 	"instance.add-server.add-and-play": {
 		"message": "添加并游玩"
 	},

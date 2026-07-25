@@ -111,6 +111,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
+						'The log console and local crash diagnosis are now fully localized in English, Simplified Chinese, and Traditional Chinese.',
+					'zh-CN': '日志控制台与本地崩溃诊断现已完整支持英语、简体中文和繁体中文。',
+				},
+				{
+					'en-US':
+						'Empty log consoles now show Chinese startup guidance with a pink side-view axolotl illustration matching the launcher icon.',
+					'zh-CN': '空日志控制台现在会显示中文启动提示，以及贴近启动器图标的粉色美西螈侧视字符画。',
+				},
+				{
+					'en-US':
 						'Translation requests are now sent in batches (5 segments per batch) to reduce API overhead.',
 					'zh-CN': '翻译请求现在分批发送（每批5个段落），降低 API 调用频率。',
 				},
