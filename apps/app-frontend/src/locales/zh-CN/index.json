@@ -281,6 +281,27 @@
 	"app.appearance-settings.toggle-sidebar.title": {
 		"message": "切换侧边栏"
 	},
+	"app.appearance-settings.transparent-background.blur-description": {
+		"message": "将背景画面模糊处理。占用性能较高"
+	},
+	"app.appearance-settings.transparent-background.blur-title": {
+		"message": "背景模糊"
+	},
+	"app.appearance-settings.transparent-background.conflict": {
+		"message": "启用此项时，你设置的自定义背景图片将被隐藏。"
+	},
+	"app.appearance-settings.transparent-background.description": {
+		"message": "让桌面透过启动器窗口显示出来。"
+	},
+	"app.appearance-settings.transparent-background.opacity": {
+		"message": "界面不透明度"
+	},
+	"app.appearance-settings.transparent-background.opacity-description": {
+		"message": "数值越低，透出的桌面越多。面板会比背景更实一些，以保证文字清晰可读。"
+	},
+	"app.appearance-settings.transparent-background.title": {
+		"message": "透明背景"
+	},
 	"app.appearance-settings.unknown-pack-warning.description": {
 		"message": "如果你尝试安装一个未托管在 Modrinth 上的 Modrinth 整合包文件（.mrpack），我们会确保你在安装之前了解相关风险。"
 	},
