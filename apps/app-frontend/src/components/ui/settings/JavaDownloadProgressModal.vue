@@ -1,11 +1,12 @@
 <script setup>
 import { CoffeeIcon, DownloadIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
-import { NewModal, ButtonStyled, defineMessages, useVIntl, commonMessages } from '@modrinth/ui'
+import { NewModal, ButtonStyled, defineMessages, useVIntl, commonMessages, injectNotificationManager } from '@modrinth/ui'
 import { ref, onUnmounted } from 'vue'
 import { cancel_java_download } from '@/helpers/jre'
 import { loading_listener } from '@/helpers/events'
 
 const { formatMessage } = useVIntl()
+const { addNotification } = injectNotificationManager()
 
 const messages = defineMessages({
 	downloadingJava: {
@@ -27,6 +28,10 @@ const messages = defineMessages({
 	background: {
 		id: 'app.settings.java.download.background',
 		defaultMessage: 'Background',
+	},
+	backgroundHint: {
+		id: 'app.settings.java.download.background-hint',
+		defaultMessage: 'Download continues — check the Downloads page for progress.',
 	},
 	cancelling: {
 		id: 'app.settings.java.download.cancelling',
@@ -81,6 +86,12 @@ defineExpose({
 const cancelling = ref(false)
 
 function handleBackground() {
+	addNotification({
+		type: 'info',
+		title: formatMessage(messages.downloadingJava),
+		text: formatMessage(messages.backgroundHint),
+		autoCloseMs: 8000,
+	})
 	modal.value.hide()
 }
 

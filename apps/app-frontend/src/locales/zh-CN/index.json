@@ -2039,6 +2039,9 @@
 	"app.settings.java.download.background": {
 		"message": "放在后台"
 	},
+	"app.settings.java.download.background-hint": {
+		"message": "下载在后台继续——可在下载页面查看进度。"
+	},
 	"app.settings.java.download.version-label": {
 		"message": "Java {version}"
 	},

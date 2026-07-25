@@ -46,7 +46,7 @@ pub async fn list_java_distribution_versions(
             let platform = std::env::consts::OS;
             let arch = std::env::consts::ARCH;
             let url = format!(
-                "https://api.azul.com/metadata/v1/zulu/packages/?os={}&arch={}&java_package_type=jdk&page_size=100",
+                "https://api.azul.com/metadata/v1/zulu/packages/?os={}&arch={}&archive_type=tar.gz&java_package_type=jre&page_size=1000",
                 platform, arch
             );
             let packages: Vec<AzulPackageSummary> = fetch_json(

@@ -2111,6 +2111,9 @@
 	"app.settings.java.download.background": {
 		"message": "Background"
 	},
+	"app.settings.java.download.background-hint": {
+		"message": "Download continues — check the Downloads page for progress."
+	},
 	"app.settings.java.download.version-label": {
 		"message": "Java {version}"
 	},
