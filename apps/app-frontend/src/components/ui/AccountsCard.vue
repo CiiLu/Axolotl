@@ -279,7 +279,7 @@ import type { Ref } from 'vue'
 import { computed, onUnmounted, ref, watch } from 'vue'
 
 import axolotlLogo from '@/assets/axolotl.png'
-import steveSkinTexture from '@/assets/skins/steve.png'
+import steveSkinTexture from '@/assets/skins/steve.png?inline'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { trackEvent } from '@/helpers/analytics'

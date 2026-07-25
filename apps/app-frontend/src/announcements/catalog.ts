@@ -118,6 +118,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed some account avatars appearing blank after the launcher starts until the account is selected.',
+					'zh-CN': '修复启动器启动后部分账号头像显示空白、需要切换账号才恢复的问题。',
+				},
+				{
+					'en-US':
 						'Improved large-file download throughput with parallel Range requests, safer retries, and redirect reuse.',
 					'zh-CN': '通过并行 Range 请求、安全重试和重定向复用提升大文件下载速度。',
 				},
