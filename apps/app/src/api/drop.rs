@@ -154,7 +154,7 @@ pub async fn drop_scan_launcher_instances(
         .await
         .map_err(|e| e.to_string())?;
     info!("Scan complete — found {} instance(s)", instances.len());
-    Ok(instances)
+    Ok(instances.into_iter().map(|i| i.name).collect())
 }
 
 /// Detect processes holding a file lock on the given path.

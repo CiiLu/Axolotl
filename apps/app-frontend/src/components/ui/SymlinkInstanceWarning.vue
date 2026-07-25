@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { LinkIcon } from '@modrinth/assets'
-import { Admonition, defineMessages, useVIntl } from '@modrinth/ui'
+import { Admonition, ButtonStyled, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
 
 import { injectSymlinkWarningDismiss } from '@/composables/useSymlinkWarningDismiss'
@@ -111,18 +111,22 @@ const messages = defineMessages({
 			:dismissible="effectivelyDismissible"
 			@dismiss="handleDismiss"
 		>
-			{{ formatMessage(messages.writeBody, { path: props.symlinkTarget }) }}
-			<template v-if="effectivelyDismissible" #actions>
-				<div class="flex justify-end">
-					<button
-						type="button"
-						class="text-xs font-medium text-secondary hover:text-contrast transition-colors"
-						@click="handleDismissPermanently"
+			<span>
+				{{ formatMessage(messages.writeBody, { path: props.symlinkTarget }) }}
+				<template v-if="effectivelyDismissible">
+					{' '}
+					<ButtonStyled
+						size="small"
+						type="transparent"
+						color="orange"
+						hover-color-fill="background"
 					>
-						{{ formatMessage(messages.dismissPermanently) }}
-					</button>
-				</div>
-			</template>
+						<button type="button" @click="handleDismissPermanently">
+							{{ formatMessage(messages.dismissPermanently) }}
+						</button>
+					</ButtonStyled>
+				</template>
+			</span>
 		</Admonition>
 	</template>
 </template>
