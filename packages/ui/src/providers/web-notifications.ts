@@ -44,10 +44,10 @@ export abstract class AbstractWebNotificationManager {
 	/**
 	 * @deprecated You should use `addNotification` instead to provide a more human-readable error message to the user.
 	 */
-	handleError = (error: Error): void => {
+	handleError = (error: unknown): void => {
 		this.addNotification({
 			title: '发生错误',
-			text: error.message ?? error,
+			text: error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error),
 			type: 'error',
 		})
 	}

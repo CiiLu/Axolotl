@@ -100,6 +100,21 @@ pub fn classify_dropped_item(path: &Path) -> DroppedItemType {
             return classify_launcher_exe(path);
         }
 
+    // Step 3.5: .disabled suffix — strip for recognition, keep original path for usage.
+    if let Some(ext) = path.extension()
+        && ext.eq_ignore_ascii_case("disabled") {
+            if let Some(stem) = path.file_stem()
+                && let Some(stem_str) = stem.to_str()
+                && let Some(underlying_ext) = stem_str.rsplit('.').next()
+                && underlying_ext.eq_ignore_ascii_case("jar")
+            {
+                // classify_jar reads the original file content (still valid) and stores
+                // the original .jar.disabled path in the result — no path rewrite needed.
+                return classify_jar(path);
+            }
+            // Other .disabled extensions fall through to file classification below.
+        }
+
     if let Some(ext) = path.extension()
         && ext.eq_ignore_ascii_case("jar") {
             return classify_jar(path);

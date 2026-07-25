@@ -470,7 +470,6 @@ const messages = defineMessages({
 			'Modpack import is not yet supported via drag & drop. Please use the Import button to install a modpack.',
 	},
 
-	// ── Drop mod version incompatibility warning modal messages ──
 	dropInstallModTitle: {
 		id: 'app.drop.mod-compatibility-title',
 		defaultMessage: 'Version Mismatch',
@@ -479,30 +478,6 @@ const messages = defineMessages({
 		id: 'app.drop.mod-compatibility-warning',
 		defaultMessage:
 			'This mod targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader}).',
-	},
-	dropInstallModModVersion: {
-		id: 'app.drop.mod-version',
-		defaultMessage: 'Mod Version',
-	},
-	dropInstallModInstVersion: {
-		id: 'app.drop.inst-version',
-		defaultMessage: 'Instance Version',
-	},
-	dropInstallModModLoader: {
-		id: 'app.drop.mod-loader',
-		defaultMessage: 'Mod Loader',
-	},
-	dropInstallModInstLoader: {
-		id: 'app.drop.inst-loader',
-		defaultMessage: 'Instance Loader',
-	},
-	dropInstallModConfirm: {
-		id: 'app.drop.mod-compatibility-confirm',
-		defaultMessage: 'Install anyway',
-	},
-	dropInstallModSearch: {
-		id: 'app.drop.mod-compatibility-search',
-		defaultMessage: 'Find compatible version',
 	},
 })
 
@@ -879,6 +854,68 @@ const {
 	handleIncompatibilityWarningCancel: handleContentInstallIncompatibilityWarningCancel,
 } = contentInstall
 
+/**
+ * Handles @update from ContentUpdaterModal (incompatibility-warning mode).
+ * In drag & drop mode (pendingDropIncompatibility set), installs the local file.
+ * In normal content-install mode, delegates to the provider handler.
+ */
+async function handleIncompatibilityWarningUpdate(
+	version: Labrinth.Versions.v2.Version,
+	event: MouseEvent,
+) {
+	const pending = pendingDropIncompatibility.value
+	if (pending) {
+		pendingDropIncompatibility.value = null
+		const projectTypeMap: Record<string, ContentFileProjectType | undefined> = {
+			mod: 'mod',
+			resource_pack: 'resourcepack',
+			shader_pack: 'shaderpack',
+			litematic: 'schematic',
+			schematic: 'schematic',
+		}
+		const projectType = projectTypeMap[pending.type]
+		try {
+			await add_project_from_path(pending.instId, pending.filePath, projectType)
+			addNotification({
+				title: formatMessage(messages.dropContentInstalledTitle),
+				text: formatMessage(messages.dropContentInstalledText),
+				type: 'success',
+			})
+		} catch (e) {
+			addNotification({
+				title: formatMessage(messages.dropInstallFailedTitle),
+				text: e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e),
+				type: 'error',
+			})
+		}
+		return
+	}
+	await handleContentInstallIncompatibilityWarningInstall(version, event)
+}
+
+/**
+ * Handles @cancel from ContentUpdaterModal. Clears drag & drop state if set.
+ */
+function handleIncompatibilityWarningCancel() {
+	pendingDropIncompatibility.value = null
+	handleContentInstallIncompatibilityWarningCancel()
+}
+
+/**
+ * Handles @searchCompat from ContentUpdaterModal simplified warning mode.
+ * Navigates to the Modrinth project page or browse/search page.
+ */
+function handleDropInstallSearchCompat() {
+	const pending = pendingDropIncompatibility.value
+	if (!pending) return
+	const searchName = pending.meta?.name ?? pending.meta?.mod_id ?? 'mod'
+	const searchUrl = pending.modrinthLookup
+		? `/project/${pending.modrinthLookup.project_id}`
+		: `/browse/mod?q=${encodeURIComponent(searchName)}&i=${pending.instId}`
+	pendingDropIncompatibility.value = null
+	router.push(searchUrl)
+}
+
 const serverInstall = createServerInstall({ router, handleError, popupNotificationManager })
 provideServerInstall(serverInstall)
 const {
@@ -907,18 +944,17 @@ const dropFileName = ref('')
 const { isInInstance, instanceId } = useInstanceContext()
 const genericInstallModal = ref<InstanceType<typeof GenericContentInstallModal> | null>(null)
 const launcherImportModal = ref<InstanceType<typeof LauncherImportModal> | null>(null)
-const modVersionWarningModal = ref<InstanceType<typeof NewModal> | null>(null)
 const symlinkCardsModal = ref<InstanceType<typeof SymlinkMethodCards> | null>(null)
 const scanningInstances = ref(false)
 const pendingInstall = ref<{ type: string; filePath: string } | null>(null)
-const pendingModInstall = ref<{
-	type: string
+const pendingDropIncompatibility = ref<{
 	filePath: string
 	instId: string
+	type: string
 	instVersion: string | undefined
 	instLoader: string | undefined
+	meta: { name?: string; mod_id?: string } | null
 	modrinthLookup: ModrinthLookupResult | null
-	meta: { minecraft_version?: string; loader?: string; name?: string; mod_id?: string } | null
 } | null>(null)
 const selectedInstances = ref<
 	Array<{ launcherType: string; basePath: string; name: string; path: string }>
@@ -1184,16 +1220,30 @@ async function installContentDirectly(type: string, filePath: string, instId: st
 				})
 
 				if (versionMismatch || loaderMismatch) {
-					pendingModInstall.value = {
-						type,
+					pendingDropIncompatibility.value = {
 						filePath,
 						instId,
+						type,
 						instVersion,
 						instLoader,
-						modrinthLookup,
 						meta,
+						modrinthLookup,
 					}
-					modVersionWarningModal.value?.show()
+					const warning = formatMessage(messages.dropInstallModWarning, {
+						modVersion: modMcVersion ?? 'any',
+						modLoader: modLoader ?? 'any',
+						instVersion: instVersion ?? 'any',
+						instLoader: instLoader ?? 'none',
+					})
+					contentInstallIncompatibilityWarningVersions.value = []
+					contentInstallIncompatibilityWarningCurrentGameVersion.value = instVersion ?? ''
+					contentInstallIncompatibilityWarningCurrentLoader.value = instLoader ?? ''
+					contentInstallIncompatibilityWarningProjectType.value = 'mod'
+					contentInstallIncompatibilityWarningProjectName.value = meta?.name ?? 'Mod'
+					contentInstallIncompatibilityWarningMessage.value = warning
+					contentInstallIncompatibilityWarningInstalling.value = false
+					await nextTick()
+					incompatibilityWarningModal.value?.show()
 					return
 				}
 			} else {
@@ -1219,7 +1269,7 @@ async function installContentDirectly(type: string, filePath: string, instId: st
 			type: 'success',
 		})
 	} catch (e) {
-		let errMsg = String(e)
+		let errMsg = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 		try {
 			const lockInfo = await detectFileLock(filePath)
 			if (lockInfo.length > 0) {
@@ -1234,50 +1284,6 @@ async function installContentDirectly(type: string, filePath: string, instId: st
 			text: errMsg,
 			type: 'error',
 		})
-	}
-}
-
-async function handleModVersionWarningKeep() {
-	const pending = pendingModInstall.value
-	if (!pending) return
-
-	pendingModInstall.value = null
-
-	const projectTypeMap: Record<string, ContentFileProjectType | undefined> = {
-		mod: 'mod',
-		resource_pack: 'resourcepack',
-		shader_pack: 'shaderpack',
-		litematic: 'schematic',
-		schematic: 'schematic',
-	}
-	const projectType = projectTypeMap[pending.type]
-	try {
-		await add_project_from_path(pending.instId, pending.filePath, projectType)
-		addNotification({
-			title: formatMessage(messages.dropContentInstalledTitle),
-			text: formatMessage(messages.dropContentInstalledText),
-			type: 'success',
-		})
-	} catch (e) {
-		addNotification({
-			title: formatMessage(messages.dropInstallFailedTitle),
-			text: String(e),
-			type: 'error',
-		})
-	}
-}
-
-async function handleModVersionWarningSwitch() {
-	const pending = pendingModInstall.value
-	if (!pending) return
-
-	pendingModInstall.value = null
-
-	if (pending.modrinthLookup) {
-		router.push(`/project/${pending.modrinthLookup.project_id}`)
-	} else {
-		const searchName = pending.meta?.name ?? pending.meta?.mod_id ?? 'mod'
-		router.push(`/browse/mod?q=${encodeURIComponent(searchName)}&i=${pending.instId}`)
 	}
 }
 
@@ -2261,8 +2267,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		:project-name="contentInstallIncompatibilityWarningProjectName"
 		:warning="contentInstallIncompatibilityWarningMessage"
 		:action-loading="contentInstallIncompatibilityWarningInstalling"
-		@update="handleContentInstallIncompatibilityWarningInstall"
-		@cancel="handleContentInstallIncompatibilityWarningCancel"
+		@update="handleIncompatibilityWarningUpdate"
+		@cancel="handleIncompatibilityWarningCancel"
+		@searchCompat="handleDropInstallSearchCompat"
 	/>
 	<ModpackAlreadyInstalledModal
 		ref="contentInstallModpackAlreadyInstalledModal"
@@ -2324,77 +2331,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		@confirm="onImportSelected"
 		@cancel="launcherImportModal?.hide()"
 	/>
-
-	<!-- Mod version compatibility warning modal -->
-	<NewModal
-		ref="modVersionWarningModal"
-		fade="warning"
-		max-width="480px"
-		@hide="pendingModInstall = null"
-	>
-		<template #title>
-			<span class="font-extrabold text-contrast text-lg">{{
-				formatMessage(messages.dropInstallModTitle)
-			}}</span>
-		</template>
-		<div v-if="pendingModInstall" class="flex flex-col gap-4">
-			<Admonition type="warning">
-				<p class="text-sm text-tertiary">
-					{{
-						formatMessage(messages.dropInstallModWarning, {
-							modVersion: pendingModInstall.meta?.minecraft_version ?? 'any',
-							modLoader: pendingModInstall.meta?.loader ?? 'any',
-							instVersion: pendingModInstall.instVersion ?? 'any',
-							instLoader: pendingModInstall.instLoader ?? 'none',
-						})
-					}}
-				</p>
-			</Admonition>
-
-			<div class="grid grid-cols-2 gap-2">
-				<div class="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
-					<span class="text-xs text-tertiary">{{
-						formatMessage(messages.dropInstallModModVersion)
-					}}</span>
-					<span class="font-medium">{{
-						pendingModInstall.meta?.minecraft_version ?? 'unknown'
-					}}</span>
-				</div>
-				<div class="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
-					<span class="text-xs text-tertiary">{{
-						formatMessage(messages.dropInstallModInstVersion)
-					}}</span>
-					<span class="font-medium">{{ pendingModInstall.instVersion ?? 'unknown' }}</span>
-				</div>
-				<div class="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
-					<span class="text-xs text-tertiary">{{
-						formatMessage(messages.dropInstallModModLoader)
-					}}</span>
-					<span class="font-medium">{{ pendingModInstall.meta?.loader ?? 'unknown' }}</span>
-				</div>
-				<div class="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
-					<span class="text-xs text-tertiary">{{
-						formatMessage(messages.dropInstallModInstLoader)
-					}}</span>
-					<span class="font-medium">{{ pendingModInstall.instLoader ?? 'unknown' }}</span>
-				</div>
-			</div>
-		</div>
-		<template #actions>
-			<div class="flex gap-3 w-full">
-				<ButtonStyled>
-					<button @click="handleModVersionWarningKeep">
-						{{ formatMessage(messages.dropInstallModConfirm) }}
-					</button>
-				</ButtonStyled>
-				<ButtonStyled color="brand">
-					<button @click="handleModVersionWarningSwitch">
-						{{ formatMessage(messages.dropInstallModSearch) }}
-					</button>
-				</ButtonStyled>
-			</div>
-		</template>
-	</NewModal>
 
 	<!-- Symlink method selection modal -->
 	<SymlinkMethodCards

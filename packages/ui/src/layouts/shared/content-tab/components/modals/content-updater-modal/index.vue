@@ -1,258 +1,296 @@
 <template>
 	<NewModal
 		ref="modal"
-		:max-width="'min(928px, calc(95vw - 10rem))'"
-		:width="'min(928px, calc(95vw - 10rem))'"
+		:max-width="showSimplifiedWarning ? '480px' : 'min(928px, calc(95vw - 10rem))'"
+		:width="showSimplifiedWarning ? '480px' : 'min(928px, calc(95vw - 10rem))'"
 		:on-hide="handleModalHide"
-		no-padding
+		:no-padding="!showSimplifiedWarning"
 	>
 		<template #title>
 			<Avatar v-if="projectIconUrl" :src="projectIconUrl" size="3rem" :tint-by="projectName" />
 			<span class="text-lg font-extrabold text-contrast">{{ header ?? defaultHeader }}</span>
 		</template>
-		<div
-			class="flex h-[min(550px,calc(95vh-10rem))] border-solid border-transparent border-[1px] border-b-surface-4"
-		>
-			<div class="w-[300px] flex flex-col relative bg-surface-3">
-				<div class="p-4 pb-2">
-					<StyledInput
-						v-model="searchQuery"
-						:icon="SearchIcon"
-						type="text"
-						:placeholder="formatMessage(messages.searchVersionPlaceholder)"
-						wrapper-class="w-full"
-					/>
-				</div>
 
-				<div class="flex-1 overflow-y-auto px-4" :class="isModpack ? 'pb-4' : 'pb-16'">
-					<div v-if="loading" class="flex flex-col items-center justify-center h-full gap-2">
-						<SpinnerIcon class="h-8 w-8 animate-spin text-secondary" />
-						<span class="text-sm text-secondary">{{
-							formatMessage(messages.loadingVersions)
-						}}</span>
-					</div>
-					<div v-else class="min-h-full">
-						<div class="flex flex-col gap-1.5" role="listbox">
-							<button
-								v-for="version in filteredVersions"
-								:key="version.id"
-								role="option"
-								:aria-selected="selectedVersion?.id === version.id"
-								class="flex items-center h-10 px-4 py-2.5 rounded-xl border-none cursor-pointer transition-colors"
-								:class="[
-									selectedVersion?.id === version.id
-										? 'bg-brand-highlight'
-										: 'bg-transparent hover:bg-button-bg',
-								]"
-								@mouseenter="handleVersionMouseEnter(version)"
-								@mouseleave="handleVersionMouseLeave"
-								@focus="emit('versionHover', version)"
-								@click="handleVersionSelect(version)"
-							>
-								<div class="flex items-center justify-between w-full gap-2">
-									<div class="flex items-center gap-2 min-w-0">
-										<VersionChannelIndicator
-											:channel="version.version_type"
-											size="sm"
-											class="shrink-0"
-										/>
-										<span
-											v-tooltip="version.version_number"
-											class="font-semibold text-contrast truncate"
-										>
-											{{ version.version_number }}
-										</span>
-									</div>
-									<span
-										v-if="shouldShowBadge(version)"
-										class="rounded-full text-sm font-medium flex items-center flex-shrink-0 border border-solid"
-										:class="[
-											getBadgeClasses(version),
-											shouldShowIncompatibleBadge(version) ? 'p-1' : 'px-2.5 py-0.5',
-										]"
-									>
-										<CircleAlertIcon
-											v-if="shouldShowIncompatibleBadge(version)"
-											v-tooltip="formatMessage(messages.incompatibleBadge)"
-											class="size-4"
-										/>
-										<template v-else>{{ getBadgeLabel(version) }}</template>
-									</span>
-								</div>
-							</button>
-						</div>
-						<div
-							v-if="filteredVersions.length === 0"
-							class="p-4 text-center text-secondary text-sm"
-						>
-							{{ formatMessage(messages.noVersionsFound) }}
-						</div>
-					</div>
-				</div>
-
-				<div
-					v-if="!isModpack && !incompatibilityWarningMode"
-					class="absolute bottom-0 left-0 right-0 pointer-events-none flex flex-col items-center justify-end bg-gradient-to-b from-transparent to-bg-raised to-70% pb-3 h-24"
-				>
-					<div class="pointer-events-auto">
-						<ButtonStyled type="transparent" :circular="true">
-							<button
-								class="flex items-center gap-1.5"
-								:aria-label="
-									hideIncompatibleState
-										? formatMessage(messages.showIncompatible)
-										: formatMessage(messages.hideIncompatible)
-								"
-								@click="hideIncompatibleState = !hideIncompatibleState"
-							>
-								<EyeIcon v-if="hideIncompatibleState" class="h-6 w-6" />
-								<EyeOffIcon v-else class="h-6 w-6" />
-								<span class="font-medium">{{
-									hideIncompatibleState
-										? formatMessage(messages.showIncompatible)
-										: formatMessage(messages.hideIncompatible)
-								}}</span>
-							</button>
-						</ButtonStyled>
-					</div>
+		<!-- Simplified warning when no version data is available (e.g. drag & drop) -->
+		<template v-if="showSimplifiedWarning">
+			<div class="flex flex-col gap-4 p-6">
+				<div class="flex items-start gap-3">
+					<TriangleAlertIcon class="size-6 shrink-0 mt-0.5 text-orange" />
+					<p class="text-sm text-tertiary">{{ warning }}</p>
 				</div>
 			</div>
+		</template>
 
-			<div class="w-px bg-divider" />
-
-			<div class="flex-1 flex flex-col min-w-0 min-h-0 relative bg-surface-1" aria-live="polite">
-				<div v-if="selectedVersion" class="flex-1 flex flex-col min-w-0 min-h-0 relative">
-					<div class="bg-bg p-4">
-						<div class="flex flex-col gap-1.5">
-							<div class="flex items-center justify-between">
-								<div class="flex items-center gap-2">
-									<span class="font-semibold text-xl text-contrast">
-										{{ selectedVersion.version_number }}
-									</span>
-									<span
-										class="px-2.5 py-0.5 rounded-full text-sm font-medium flex items-center flex-shrink-0 border border-solid"
-										:class="getVersionTypeBadgeClasses(selectedVersion)"
-									>
-										{{ capitalizeString(selectedVersion.version_type) }}
-									</span>
-								</div>
-								<span class="font-medium text-primary">
-									{{ formatLongDate(selectedVersion.date_published) }}
-								</span>
-							</div>
-							<div class="flex items-center gap-2">
-								<div class="flex items-center gap-2 rounded-xl">
-									<FileTextIcon class="h-6 w-6 text-primary" />
-									<span class="font-medium text-primary">{{
-										formatMessage(commonMessages.changelogLabel)
-									}}</span>
-								</div>
-								<span class="w-1.5 h-1.5 rounded-full bg-divider" />
-								<span class="font-medium text-primary">
-									{{ formatLoaderGameVersion(selectedVersion) }}
-								</span>
-							</div>
-						</div>
+		<!-- Full version picker layout -->
+		<template v-else>
+			<div
+				class="flex h-[min(550px,calc(95vh-10rem))] border-solid border-transparent border-[1px] border-b-surface-4"
+			>
+				<div class="w-[300px] flex flex-col relative bg-surface-3">
+					<div class="p-4 pb-2">
+						<StyledInput
+							v-model="searchQuery"
+							:icon="SearchIcon"
+							type="text"
+							:placeholder="formatMessage(messages.searchVersionPlaceholder)"
+							wrapper-class="w-full"
+						/>
 					</div>
 
-					<div class="h-px bg-divider" />
-
-					<div class="flex-1 min-h-0 bg-bg p-4 overflow-y-auto">
-						<div
-							v-if="loadingChangelog"
-							class="flex flex-col items-center justify-center h-full gap-2"
-						>
-							<SpinnerIcon class="h-6 w-6 animate-spin text-secondary" />
+					<div class="flex-1 overflow-y-auto px-4" :class="isModpack ? 'pb-4' : 'pb-16'">
+						<div v-if="loading" class="flex flex-col items-center justify-center h-full gap-2">
+							<SpinnerIcon class="h-8 w-8 animate-spin text-secondary" />
 							<span class="text-sm text-secondary">{{
-								formatMessage(messages.loadingChangelog)
+								formatMessage(messages.loadingVersions)
 							}}</span>
 						</div>
-						<div
-							v-else-if="selectedVersion.changelog"
-							class="markdown [&_img]:max-w-full [&_img]:h-auto"
-							v-html="renderHighlightedString(selectedVersion.changelog)"
-						/>
-						<div v-else class="text-secondary italic">
-							{{ formatMessage(messages.noChangelog) }}
+						<div v-else class="min-h-full">
+							<div class="flex flex-col gap-1.5" role="listbox">
+								<button
+									v-for="version in filteredVersions"
+									:key="version.id"
+									role="option"
+									:aria-selected="selectedVersion?.id === version.id"
+									class="flex items-center h-10 px-4 py-2.5 rounded-xl border-none cursor-pointer transition-colors"
+									:class="[
+										selectedVersion?.id === version.id
+											? 'bg-brand-highlight'
+											: 'bg-transparent hover:bg-button-bg',
+									]"
+									@mouseenter="handleVersionMouseEnter(version)"
+									@mouseleave="handleVersionMouseLeave"
+									@focus="emit('versionHover', version)"
+									@click="handleVersionSelect(version)"
+								>
+									<div class="flex items-center justify-between w-full gap-2">
+										<div class="flex items-center gap-2 min-w-0">
+											<VersionChannelIndicator
+												:channel="version.version_type"
+												size="sm"
+												class="shrink-0"
+											/>
+											<span
+												v-tooltip="version.version_number"
+												class="font-semibold text-contrast truncate"
+											>
+												{{ version.version_number }}
+											</span>
+										</div>
+										<span
+											v-if="shouldShowBadge(version)"
+											class="rounded-full text-sm font-medium flex items-center flex-shrink-0 border border-solid"
+											:class="[
+												getBadgeClasses(version),
+												shouldShowIncompatibleBadge(version) ? 'p-1' : 'px-2.5 py-0.5',
+											]"
+										>
+											<CircleAlertIcon
+												v-if="shouldShowIncompatibleBadge(version)"
+												v-tooltip="formatMessage(messages.incompatibleBadge)"
+												class="size-4"
+											/>
+											<template v-else>{{ getBadgeLabel(version) }}</template>
+										</span>
+									</div>
+								</button>
+							</div>
+							<div
+								v-if="filteredVersions.length === 0"
+								class="p-4 text-center text-secondary text-sm"
+							>
+								{{ formatMessage(messages.noVersionsFound) }}
+							</div>
 						</div>
 					</div>
 
 					<div
-						class="absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t from-bg to-transparent pointer-events-none"
-					/>
+						v-if="!isModpack && !incompatibilityWarningMode"
+						class="absolute bottom-0 left-0 right-0 pointer-events-none flex flex-col items-center justify-end bg-gradient-to-b from-transparent to-bg-raised to-70% pb-3 h-24"
+					>
+						<div class="pointer-events-auto">
+							<ButtonStyled type="transparent" :circular="true">
+								<button
+									class="flex items-center gap-1.5"
+									:aria-label="
+										hideIncompatibleState
+											? formatMessage(messages.showIncompatible)
+											: formatMessage(messages.hideIncompatible)
+									"
+									@click="hideIncompatibleState = !hideIncompatibleState"
+								>
+									<EyeIcon v-if="hideIncompatibleState" class="h-6 w-6" />
+									<EyeOffIcon v-else class="h-6 w-6" />
+									<span class="font-medium">{{
+										hideIncompatibleState
+											? formatMessage(messages.showIncompatible)
+											: formatMessage(messages.hideIncompatible)
+									}}</span>
+								</button>
+							</ButtonStyled>
+						</div>
+					</div>
 				</div>
-				<div
-					v-else-if="loading || loadingChangelog || props.versions.length > 0"
-					class="flex-1 flex flex-col items-center justify-center h-full gap-2 text-secondary bg-bg"
-				>
-					<SpinnerIcon class="h-6 w-6 animate-spin" />
-					<span class="text-sm">{{ formatMessage(messages.loadingChangelog) }}</span>
-				</div>
-				<div v-else class="flex-1 flex items-center justify-center text-secondary bg-bg">
-					{{ formatMessage(messages.selectVersionPrompt) }}
-				</div>
-			</div>
-		</div>
 
-		<div
-			class="w-full flex flex-row items-center gap-4 p-4 border-solid border-x-0 border-b-0 border-t border-surface-4"
-		>
-			<div
-				v-if="showUpdateWarning"
-				class="flex flex-row items-center gap-2 max-w-[55%] flex-1 text-orange mr-auto"
-			>
-				<TriangleAlertIcon class="size-6 shrink-0" />
-				<span>{{
-					warning ??
-					formatMessage(
-						incompatibilityWarningMode
-							? messages.incompatibilityWarning
-							: isApp
-								? messages.updateWarningApp
-								: messages.updateWarningWeb,
-					)
-				}}</span>
+				<div class="w-px bg-divider" />
+
+				<div class="flex-1 flex flex-col min-w-0 min-h-0 relative bg-surface-1" aria-live="polite">
+					<div v-if="selectedVersion" class="flex-1 flex flex-col min-w-0 min-h-0 relative">
+						<div class="bg-bg p-4">
+							<div class="flex flex-col gap-1.5">
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-2">
+										<span class="font-semibold text-xl text-contrast">
+											{{ selectedVersion.version_number }}
+										</span>
+										<span
+											class="px-2.5 py-0.5 rounded-full text-sm font-medium flex items-center flex-shrink-0 border border-solid"
+											:class="getVersionTypeBadgeClasses(selectedVersion)"
+										>
+											{{ capitalizeString(selectedVersion.version_type) }}
+										</span>
+									</div>
+									<span class="font-medium text-primary">
+										{{ formatLongDate(selectedVersion.date_published) }}
+									</span>
+								</div>
+								<div class="flex items-center gap-2">
+									<div class="flex items-center gap-2 rounded-xl">
+										<FileTextIcon class="h-6 w-6 text-primary" />
+										<span class="font-medium text-primary">{{
+											formatMessage(commonMessages.changelogLabel)
+										}}</span>
+									</div>
+									<span class="w-1.5 h-1.5 rounded-full bg-divider" />
+									<span class="font-medium text-primary">
+										{{ formatLoaderGameVersion(selectedVersion) }}
+									</span>
+								</div>
+							</div>
+						</div>
+
+						<div class="h-px bg-divider" />
+
+						<div class="flex-1 min-h-0 bg-bg p-4 overflow-y-auto">
+							<div
+								v-if="loadingChangelog"
+								class="flex flex-col items-center justify-center h-full gap-2"
+							>
+								<SpinnerIcon class="h-6 w-6 animate-spin text-secondary" />
+								<span class="text-sm text-secondary">{{
+									formatMessage(messages.loadingChangelog)
+								}}</span>
+							</div>
+							<div
+								v-else-if="selectedVersion.changelog"
+								class="markdown [&_img]:max-w-full [&_img]:h-auto"
+								v-html="renderHighlightedString(selectedVersion.changelog)"
+							/>
+							<div v-else class="text-secondary italic">
+								{{ formatMessage(messages.noChangelog) }}
+							</div>
+						</div>
+
+						<div
+							class="absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t from-bg to-transparent pointer-events-none"
+						/>
+					</div>
+					<div
+						v-else-if="loading || loadingChangelog || props.versions.length > 0"
+						class="flex-1 flex flex-col items-center justify-center h-full gap-2 text-secondary bg-bg"
+					>
+						<SpinnerIcon class="h-6 w-6 animate-spin" />
+						<span class="text-sm">{{ formatMessage(messages.loadingChangelog) }}</span>
+					</div>
+					<div v-else class="flex-1 flex items-center justify-center text-secondary bg-bg">
+						{{ formatMessage(messages.selectVersionPrompt) }}
+					</div>
+				</div>
 			</div>
-			<div class="flex flex-row gap-2 shrink-0 ml-auto">
-				<ButtonStyled type="outlined">
+
+			<div
+				class="w-full flex flex-row items-center gap-4 p-4 border-solid border-x-0 border-b-0 border-t border-surface-4"
+			>
+				<div
+					v-if="showUpdateWarning"
+					class="flex flex-row items-center gap-2 max-w-[55%] flex-1 text-orange mr-auto"
+				>
+					<TriangleAlertIcon class="size-6 shrink-0" />
+					<span>{{
+						warning ??
+						formatMessage(
+							incompatibilityWarningMode
+								? messages.incompatibilityWarning
+								: isApp
+									? messages.updateWarningApp
+									: messages.updateWarningWeb,
+						)
+					}}</span>
+				</div>
+				<div class="flex flex-row gap-2 shrink-0 ml-auto">
+					<ButtonStyled type="outlined">
+						<button @click="handleCancel">
+							<XIcon />
+							{{ formatMessage(commonMessages.cancelButton) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled :color="incompatibilityWarningMode ? 'orange' : 'brand'">
+						<button
+							v-tooltip="props.actionDisabled ? props.actionDisabledTooltip : undefined"
+							:disabled="
+								actionLoading ||
+								props.actionDisabled ||
+								!selectedVersion ||
+								(!incompatibilityWarningMode && selectedVersion.id === currentVersionId)
+							"
+							@click="handleUpdate"
+						>
+							<SpinnerIcon v-if="actionLoading" class="size-5 animate-spin" />
+							<DownloadIcon v-else />
+							{{
+								actionLoading
+									? formatMessage(commonMessages.installingLabel)
+									: incompatibilityWarningMode
+										? formatMessage(messages.installAnywayButton)
+										: formatMessage(
+												isDowngrade
+													? messages.downgradeToVersion
+													: switchMode
+														? messages.switchToVersion
+														: messages.updateToVersion,
+												{
+													version: selectedVersion?.version_number ?? '...',
+												},
+											)
+							}}
+						</button>
+					</ButtonStyled>
+				</div>
+			</div>
+		</template>
+
+		<!-- Simplified warning mode actions -->
+		<template v-if="showSimplifiedWarning" #actions>
+			<div class="flex gap-3 w-full">
+				<ButtonStyled>
 					<button @click="handleCancel">
-						<XIcon />
 						{{ formatMessage(commonMessages.cancelButton) }}
 					</button>
 				</ButtonStyled>
-				<ButtonStyled :color="incompatibilityWarningMode ? 'orange' : 'brand'">
-					<button
-						v-tooltip="props.actionDisabled ? props.actionDisabledTooltip : undefined"
-						:disabled="
-							actionLoading ||
-							props.actionDisabled ||
-							!selectedVersion ||
-							(!incompatibilityWarningMode && selectedVersion.id === currentVersionId)
-						"
-						@click="handleUpdate"
-					>
+				<ButtonStyled color="brand">
+					<button @click="handleSearchCompat">
+						<SearchIcon class="size-4" />
+						{{ formatMessage(messages.searchCompatButton) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled color="orange">
+					<button :disabled="actionLoading" @click="handleUpdate">
 						<SpinnerIcon v-if="actionLoading" class="size-5 animate-spin" />
 						<DownloadIcon v-else />
-						{{
-							actionLoading
-								? formatMessage(commonMessages.installingLabel)
-								: incompatibilityWarningMode
-									? formatMessage(messages.installAnywayButton)
-									: formatMessage(
-											isDowngrade
-												? messages.downgradeToVersion
-												: switchMode
-													? messages.switchToVersion
-													: messages.updateToVersion,
-											{
-												version: selectedVersion?.version_number ?? '...',
-											},
-										)
-						}}
+						{{ formatMessage(messages.installAnywayButton) }}
 					</button>
 				</ButtonStyled>
 			</div>
-		</div>
+		</template>
 	</NewModal>
 
 	<ConfirmModal
@@ -415,6 +453,10 @@ const messages = defineMessages({
 		id: 'instances.updater-modal.install-anyway',
 		defaultMessage: 'Install anyway',
 	},
+	searchCompatButton: {
+		id: 'instances.updater-modal.search-compat',
+		defaultMessage: 'Find compatible version',
+	},
 })
 
 const props = withDefaults(
@@ -438,6 +480,8 @@ const props = withDefaults(
 		loadingChangelog?: boolean
 		actionDisabled?: boolean
 		actionDisabledTooltip?: string
+		/** When set in incompatibility-warning mode, adds a "Find compatible version" button */
+		searchHref?: string
 	}>(),
 	{
 		projectType: undefined,
@@ -451,11 +495,16 @@ const props = withDefaults(
 		loadingChangelog: false,
 		actionDisabled: false,
 		actionDisabledTooltip: undefined,
+		searchHref: undefined,
 	},
 )
 
 const isModpack = computed(() => props.projectType === 'modpack')
 const incompatibilityWarningMode = computed(() => props.mode === 'incompatibility-warning')
+/** Simplified warning when in incompatibility-warning mode without version data */
+const showSimplifiedWarning = computed(
+	() => incompatibilityWarningMode.value && props.versions.length === 0 && props.warning,
+)
 const defaultHeader = computed(() => {
 	if (incompatibilityWarningMode.value) {
 		return formatMessage(messages.incompatibilityWarningHeader)
@@ -476,6 +525,8 @@ const emit = defineEmits<{
 	/** Emitted when user selects a version, so parent can fetch full version data with changelog */
 	versionSelect: [version: Labrinth.Versions.v2.Version]
 	versionHover: [version: Labrinth.Versions.v2.Version]
+	/** Emitted when user clicks "Find compatible version" in simplified warning mode */
+	searchCompat: []
 }>()
 
 const modal = ref<InstanceType<typeof NewModal>>()
@@ -640,6 +691,11 @@ function handleVersionSelect(version: Labrinth.Versions.v2.Version) {
 
 function handleUpdate(event: MouseEvent) {
 	if (props.actionLoading || props.actionDisabled) return
+	if (showSimplifiedWarning.value) {
+		emit('update', undefined as unknown as Labrinth.Versions.v2.Version, event)
+		hide()
+		return
+	}
 	if (selectedVersion.value) {
 		if (incompatibilityWarningMode.value) {
 			emitUpdate(selectedVersion.value, event, { hide: false })
@@ -707,6 +763,11 @@ function emitUpdate(
 
 function handleCancel() {
 	emit('cancel')
+	hide()
+}
+
+function handleSearchCompat() {
+	emit('searchCompat')
 	hide()
 }
 

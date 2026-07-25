@@ -2,7 +2,6 @@ use crate::state::State;
 use crate::util::io;
 use crate::{ErrorKind, Result};
 use std::path::Path;
-use uuid::Uuid;
 
 /// Import a world save from a source path into an instance's saves directory.
 ///
@@ -13,7 +12,7 @@ use uuid::Uuid;
 /// Returns the name of the imported world.
 pub async fn import_world_save(
     _state: &State,
-    instance_id: Uuid,
+    instance_id: &str,
     source_path: &Path,
 ) -> Result<String> {
     let instance_id_str = instance_id.to_string();
