@@ -111,6 +111,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Loader and other newer built-in instance icons now display without the avatar frame, matching the rest of the built-in icons.',
 					'zh-CN': '加载器及其他较新的内置实例图标现在与其余内置图标一致，不再带边框显示。',
 				},
+				{
+					'en-US':
+						'Fixed the launcher failing to start with a "Cannot save an incomplete Java installation" error when a leftover unfinished Java download was found while changing the app directory or migrating old launcher data.',
+					'zh-CN':
+						'修复更改应用目录或迁移旧启动器数据时，遗留的未完成 Java 下载会导致启动器无法启动并报 "Cannot save an incomplete Java installation" 错误的问题。',
+				},
 			],
 		},
 	},
