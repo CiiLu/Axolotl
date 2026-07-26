@@ -66,6 +66,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed frontend display errors during modpack import.',
 					'zh-CN': '修复整合包导入时的前端显示错误',
 				},
+				{
+					'en-US':
+						'Fixed incomplete Java downloads being detected and launched before installation finished.',
+					'zh-CN': '修复尚未安装完成的 Java 被误识别并用于启动游戏的问题。',
+				},
 			],
 		},
 	},
