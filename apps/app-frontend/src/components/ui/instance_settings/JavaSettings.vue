@@ -215,7 +215,7 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 							? 'border-accent bg-accent'
 							: 'border-button-border group-hover:border-accent'"
 					>
-						<div v-if="selectedVersion === row._select" class="w-2 h-2 rounded-full bg-bg" />
+						<div v-if="selectedVersion === row._select" class="w-2 h-2 rounded-full bg-white" />
 					</div>
 				</div>
 				<div class="flex-1 min-w-0">

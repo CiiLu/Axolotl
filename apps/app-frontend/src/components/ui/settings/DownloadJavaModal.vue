@@ -13,7 +13,7 @@ import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { auto_install_java, list_java_distribution_versions } from '@/helpers/jre'
 
-const { handleError } = injectNotificationManager()
+const { handleError, addNotification } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
@@ -22,6 +22,8 @@ const messages = defineMessages({
 	loadingVersions: { id: 'app.settings.java.download.loading', defaultMessage: 'Loading versions...' },
 	noVersionsFound: { id: 'app.settings.java.download.no-versions', defaultMessage: 'No versions available.' },
 	versionLabel: { id: 'app.settings.java.download.version-label', defaultMessage: 'Java {version}' },
+	downloadComplete: { id: 'app.settings.java.download.download-complete', defaultMessage: 'Java {version} installed' },
+	downloadCompleteHint: { id: 'app.settings.java.download.download-complete-hint', defaultMessage: 'Download complete. Scanning for the new installation...' },
 })
 
 const emit = defineEmits(['downloaded'])
@@ -52,6 +54,11 @@ async function downloadVersion(version) {
 	downloadingVersion.value = null
 
 	if (path) {
+		addNotification({
+			type: 'success',
+			title: formatMessage(messages.downloadComplete),
+			text: formatMessage(messages.downloadCompleteHint, { version }),
+		})
 		modal.value.hide()
 		emit('downloaded', path, version)
 	}
