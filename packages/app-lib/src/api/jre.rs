@@ -1446,7 +1446,22 @@ pub async fn download_java_from_feed(
         ..Integrity::default()
     };
 
-    emit_loading(&loading_bar, 50.0, Some("Downloading..."))?;
+    // Track real download progress as a fraction of the loading bar (0–50%)
+    let mut download_pct = 0_f64;
+    let mut progress = |current: u64, total: u64| -> Pin<Box<dyn Future<Output = crate::Result<()>> + Send>> {
+        let pct = if total > 0 {
+            (current as f64 / total as f64) * 50.0
+        } else {
+            0.0
+        };
+        let delta = pct - download_pct;
+        download_pct = pct;
+        let lb = loading_bar.clone();
+        Box::pin(async move {
+            let _ = emit_loading(&lb, delta, Some("Downloading..."));
+            Ok(())
+        })
+    };
 
     download_to_path(
         DownloadRequest::new(&pkg.url, ResourceClass::Java)
@@ -1454,7 +1469,7 @@ pub async fn download_java_from_feed(
         &archive_path,
         &state.download_semaphore,
         &state.pool,
-        None,
+        Some(&mut progress as &mut FetchProgressFn<'_>),
     )
     .await
     .map_err(|e| {
@@ -1469,7 +1484,12 @@ pub async fn download_java_from_feed(
         .into()
     })?;
 
-    emit_loading(&loading_bar, 30.0, Some("Extracting..."))?;
+    // Emit remaining delta to reach exactly 50 % before extraction
+    emit_loading(
+        &loading_bar,
+        (50.0 - download_pct).max(0.0),
+        Some("Extracting..."),
+    )?;
 
     // Extract archive (zip or tar.gz)
     let staging_for_extract = staging_root.clone();
