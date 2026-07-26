@@ -33,6 +33,24 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.5.5',
+		version: '1.5.5',
+		publishedAt: '2026-07-26',
+		title: {
+			'en-US': 'Axolotl Launcher 1.5.5',
+			'zh-CN': 'Axolotl Launcher 1.5.5',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Changing the app directory now moves shared instance links without moving or copying their original files.',
+					'zh-CN': '更改应用目录时，现在仅迁移共享实例链接，不再移动或复制其原始文件。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.5.4',
 		version: '1.5.4',
 		publishedAt: '2026-07-25',
