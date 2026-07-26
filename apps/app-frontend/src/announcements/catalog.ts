@@ -52,6 +52,20 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added a background blur toggle for the transparent background, frosting whatever shows through the window.',
 					'zh-CN': '透明背景新增「背景模糊」开关，可将透出的画面做磨砂玻璃处理。',
 				},
+				{
+					'en-US': 'Added powerful modpack parsing functionality.',
+					'zh-CN': '整合包强力解析功能',
+				},
+				{
+					'en-US': 'Automatically set instance icons to match their mod loader.',
+					'zh-CN': '自动设置实例图标为加载器图标。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed frontend display errors during modpack import.',
+					'zh-CN': '修复整合包导入时的前端显示错误',
+				},
 			],
 		},
 	},

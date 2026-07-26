@@ -659,42 +659,145 @@ pub(crate) fn classify_folder_content(path: &Path) -> DroppedItemType {
             false
         };
 
-        let has_root_jar = match std::fs::read_dir(path) {
-            Ok(mut dir) => dir.any(|e| {
-                e.ok().is_some_and(|entry| {
-                    let p = entry.path();
-                    p.is_file()
-                        && p.extension()
-                            .and_then(|ext| ext.to_str())
-                            .is_some_and(|ext| ext.eq_ignore_ascii_case("jar"))
-                })
-            }),
-            Err(_) => false,
+        let has_root_jar = {
+            let mut found = false;
+            let mut total = 0u32;
+            match std::fs::read_dir(path) {
+                Ok(dir) => {
+                    for entry in dir.flatten() {
+                        let p = entry.path();
+                        if !p.is_file() {
+                            continue;
+                        }
+                        total += 1;
+                        let ext = p
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let is_jar = ext.eq_ignore_ascii_case("jar");
+                        tracing::debug!(
+                            "classify_folder_content: root_jar_check path={} file={} ext={} is_jar={}",
+                            path.display(),
+                            p.display(),
+                            ext,
+                            is_jar
+                        );
+                        if is_jar {
+                            found = true;
+                        }
+                    }
+                    tracing::debug!(
+                        "classify_folder_content: has_root_jar path={} total_root_files={} result={}",
+                        path.display(),
+                        total,
+                        found
+                    );
+                    found
+                }
+                Err(e) => {
+                    tracing::debug!(
+                        "classify_folder_content: has_root_jar path={} read_dir_err={}",
+                        path.display(),
+                        e
+                    );
+                    false
+                }
+            }
         };
-        let has_root_json = match std::fs::read_dir(path) {
-            Ok(mut dir) => dir.any(|e| {
-                e.ok().is_some_and(|entry| {
-                    let p = entry.path();
-                    p.is_file()
-                        && p.extension()
-                            .and_then(|ext| ext.to_str())
-                            .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
-                })
-            }),
-            Err(_) => false,
+        let has_root_json = {
+            let mut found = false;
+            let mut total = 0u32;
+            match std::fs::read_dir(path) {
+                Ok(dir) => {
+                    for entry in dir.flatten() {
+                        let p = entry.path();
+                        if !p.is_file() {
+                            continue;
+                        }
+                        total += 1;
+                        let ext = p
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let is_json = ext.eq_ignore_ascii_case("json");
+                        tracing::debug!(
+                            "classify_folder_content: root_json_check path={} file={} ext={} is_json={}",
+                            path.display(),
+                            p.display(),
+                            ext,
+                            is_json
+                        );
+                        if is_json {
+                            found = true;
+                        }
+                    }
+                    tracing::debug!(
+                        "classify_folder_content: has_root_json path={} total_root_files={} result={}",
+                        path.display(),
+                        total,
+                        found
+                    );
+                    found
+                }
+                Err(e) => {
+                    tracing::debug!(
+                        "classify_folder_content: has_root_json path={} read_dir_err={}",
+                        path.display(),
+                        e
+                    );
+                    false
+                }
+            }
         };
 
-        let has_mods_jar = match std::fs::read_dir(path.join("mods")) {
-            Ok(mut dir) => dir.any(|e| {
-                e.ok().is_some_and(|entry| {
-                    let p = entry.path();
-                    p.is_file()
-                        && p.extension()
-                            .and_then(|ext| ext.to_str())
-                            .is_some_and(|ext| ext.eq_ignore_ascii_case("jar"))
-                })
-            }),
-            Err(_) => false,
+        let has_mods_jar = {
+            let mods_dir = path.join("mods");
+            match std::fs::read_dir(&mods_dir) {
+                Ok(dir) => {
+                    let mut found = false;
+                    let mut total = 0u32;
+                    for entry in dir.flatten() {
+                        let p = entry.path();
+                        if !p.is_file() {
+                            continue;
+                        }
+                        total += 1;
+                        let ext = p
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let is_jar = ext.eq_ignore_ascii_case("jar");
+                        tracing::debug!(
+                            "classify_folder_content: mods_jar_check path={} file={} ext={} is_jar={}",
+                            mods_dir.display(),
+                            p.display(),
+                            ext,
+                            is_jar
+                        );
+                        if is_jar {
+                            found = true;
+                        }
+                    }
+                    tracing::debug!(
+                        "classify_folder_content: has_mods_jar path={} mods_total_files={} result={}",
+                        mods_dir.display(),
+                        total,
+                        found
+                    );
+                    found
+                }
+                Err(e) => {
+                    tracing::debug!(
+                        "classify_folder_content: has_mods_jar mods_dir={} read_dir_err={}",
+                        mods_dir.display(),
+                        e
+                    );
+                    false
+                }
+            }
         };
 
         has_version_json || (has_root_jar && has_root_json) || has_mods_jar

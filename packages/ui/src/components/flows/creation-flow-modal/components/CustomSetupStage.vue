@@ -360,28 +360,6 @@ watch(selectedGameVersion, () => {
 	}
 })
 
-// Loader -> built-in icon mapping
-const loaderIconMap: Record<string, string> = {
-	vanilla: 'grass-block',
-	fabric: 'fabric',
-	forge: 'anvil',
-	neoforge: 'neoforge',
-	quilt: 'quilt',
-}
-
-// When loader changes, auto-set the corresponding built-in icon
-watch(selectedLoader, async (loader) => {
-	if (!loader || ctx.flowType !== 'instance') return
-	const iconId = loaderIconMap[loader]
-	if (!iconId) return
-	const picked = await filePicker.setBuiltInInstanceIcon?.(iconId)
-	if (picked) {
-		ctx.instanceIcon.value = picked.file
-		ctx.instanceIconUrl.value = picked.previewUrl
-		ctx.instanceIconPath.value = picked.path ?? null
-	}
-})
-
 // Pre-select loader and game version from initial values
 onMounted(() => {
 	debug('mounted, initialLoader:', ctx.initialLoader, 'initialGameVersion:', ctx.initialGameVersion)

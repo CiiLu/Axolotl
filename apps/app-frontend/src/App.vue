@@ -110,12 +110,9 @@ import {
 	install_create_modpack_instance,
 	install_get_modpack_preview,
 } from '@/helpers/install'
-import { builtInInstanceIcons } from '@/helpers/instance-icons'
 import {
 	add_project_from_path,
-	cache_icon,
 	check_symlink_capability,
-	edit_icon,
 	get as getInstance,
 	import_world_save,
 	list as listInstances,
@@ -1069,10 +1066,9 @@ const dropProcessingNotificationId = ref<number | null>(null)
 const { isDragging, isProcessing } = useGlobalDrop(
 	{
 		classifyFile: classifyDroppedItem,
-		onClassifyStart: () => {
+		onClassifyStart: (fileName) => {
 			// Immediate feedback when a file is dropped — show a notification
 			// with the file name before classification even begins.
-			const fileName = dropFileName.value || 'file'
 			dropProcessingNotificationId.value = addNotification({
 				title: formatMessage(messages.dropProcessing, { name: fileName }),
 				type: 'info',
@@ -1080,9 +1076,6 @@ const { isDragging, isProcessing } = useGlobalDrop(
 			}).id
 		},
 		onImportStart: (type, classification) => {
-			// Clear the initial processing notification
-			clearDropProcessingNotification()
-
 			dropClassification.value = classification
 			dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
 			dropFileName.value =
@@ -1090,17 +1083,45 @@ const { isDragging, isProcessing } = useGlobalDrop(
 				classification.base_path?.split(/[/\\]/).pop() ??
 				'file'
 
-			// Unknown with extraction reason → skip confirm modal, show force-analysis prompt directly
 			if (type === 'unknown' && classification?.reason?.toLowerCase().includes('extraction')) {
+				clearDropProcessingNotification()
 				showForceAnalysisPrompt(classification)
+				return
+			}
+
+			if (type === 'unknown') {
+				clearDropProcessingNotification()
+				const unknownFile =
+					classification?.file_path?.split(/[/\\]/).pop() ??
+					classification?.base_path?.split(/[/\\]/).pop() ??
+					''
+
+				// .tmp files are OS-level temp copies from drag-and-drop (browser, archive, etc.)
+				const isTempFile = unknownFile.startsWith('.tmp') || unknownFile.startsWith('tmp')
+				if (isTempFile) {
+					addNotification({
+						title: 'Temporary file detected',
+						text:
+							`The file "${unknownFile}" appears to be a temporary copy. ` +
+							`Try dragging the file from its original folder instead of from a browser, ` +
+							`archive, or cloud storage.`,
+						type: 'warning',
+					})
+				} else {
+					addNotification({
+						title: formatMessage(messages.dropUnknownTitle),
+						text: classification?.reason
+							? classification.reason
+							: formatMessage(messages.dropUnknownText),
+						type: 'error',
+					})
+				}
 				return
 			}
 
 			confirmDropModal.value?.show()
 		},
-		onImportEnd: () => {
-			clearDropProcessingNotification()
-		},
+		onImportEnd: () => {},
 		onError: (reason) => {
 			clearDropProcessingNotification()
 
@@ -1139,6 +1160,11 @@ function clearDropProcessingNotification() {
 		notificationManager.removeNotification(dropProcessingNotificationId.value)
 		dropProcessingNotificationId.value = null
 	}
+}
+
+function handleDropCancel() {
+	clearDropProcessingNotification()
+	dropClassification.value = null
 }
 
 async function handleDropConfirm(type: string) {
@@ -1281,40 +1307,38 @@ async function handleDropConfirm(type: string) {
 			return
 		}
 
+		// ── Replace "Processing..." with "Installing..." immediately (pure frontend) ──
+		clearDropProcessingNotification()
+		let installingNotify = addNotification({
+			title: formatMessage(messages.dropModpackInstalling),
+			type: 'info',
+			autoCloseMs: null,
+		})
+
 		const isMrpack = !!fileName?.toLowerCase().endsWith('.mrpack')
 		const location = { type: 'fromFile' as const, path: filePath }
 
-		let previewLoader: string | undefined
-
 		const doInstall = async () => {
 			const job = await install_create_modpack_instance(location).catch(handleError)
-			if (!job) return
-
-			// Show non-blocking progress notification in top-right corner
-			const installingNotification = addNotification({
-				title: formatMessage(messages.dropModpackInstalling),
-				type: 'info',
-				autoCloseMs: 1000 * 10,
-			})
+			if (!job) {
+				notificationManager.removeNotification(installingNotify.id)
+				return
+			}
 
 			// Single-use listener that auto-cleans up when the job reaches a terminal state
 			const unlisten = await install_job_listener((updatedJob: InstallJobSnapshot) => {
 				if (updatedJob.job_id !== job.job_id) return
 
 				if (updatedJob.status === 'succeeded') {
-					notificationManager.removeNotification(installingNotification.id)
+					notificationManager.removeNotification(installingNotify.id)
 					addNotification({
 						title: formatMessage(messages.dropModpackInstalledSuccess),
 						type: 'success',
 					})
 
-					if (updatedJob.instance_id) {
-						setDefaultInstanceIcon(updatedJob.instance_id, previewLoader)
-					}
-
 					unlisten()
 				} else if (['failed', 'canceled', 'interrupted'].includes(updatedJob.status)) {
-					notificationManager.removeNotification(installingNotification.id)
+					notificationManager.removeNotification(installingNotify.id)
 					unlisten()
 				}
 			})
@@ -1325,15 +1349,23 @@ async function handleDropConfirm(type: string) {
 		if (!isMrpack) {
 			const preview = await install_get_modpack_preview(location).catch((e) => {
 				dropDebug('handleDropConfirm: modpack preview failed', { error: e })
+				notificationManager.removeNotification(installingNotify.id)
 				handleError(e)
 				return null
 			})
 			if (!preview) return
 
-			previewLoader = preview.modloader
-
 			if (preview.unknownFile) {
-				unknownPackWarningModal.value?.show(doInstall, fileName)
+				// Clear "Installing..." — warning modal will handle re-showing on confirm
+				notificationManager.removeNotification(installingNotify.id)
+				unknownPackWarningModal.value?.show(async () => {
+					installingNotify = addNotification({
+						title: formatMessage(messages.dropModpackInstalling),
+						type: 'info',
+						autoCloseMs: null,
+					})
+					await doInstall()
+				}, fileName)
 				trackEvent('InstanceCreate', { source: 'DropConfirmModpack' })
 				await router.push('/library')
 				return
@@ -1622,33 +1654,6 @@ function showForceAnalysisPrompt(classification: ClassificationResult) {
 			},
 		],
 	})
-}
-
-async function setDefaultInstanceIcon(instanceId: string, loader?: string): Promise<void> {
-	const loaderIconMap: Record<string, string> = {
-		vanilla: 'crafting-table',
-		fabric: 'fabric',
-		forge: 'anvil',
-		neoforge: 'neoforge',
-		quilt: 'quilt',
-	}
-
-	const iconId = loader ? loaderIconMap[loader] : undefined
-	if (!iconId) return
-
-	const icon = builtInInstanceIcons.find((i) => i.id === iconId)
-	if (!icon) return
-
-	try {
-		const response = await fetch(icon.url)
-		if (!response.ok) return
-		const blob = await response.blob()
-		const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()))
-		const cachedPath = await cache_icon(`${iconId}.png`, bytes)
-		await edit_icon(instanceId, cachedPath)
-	} catch (e) {
-		console.warn(`Failed to set default icon for instance ${instanceId}:`, e)
-	}
 }
 
 async function handleGenericInstall(instanceId: string) {
@@ -2679,7 +2684,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		:classification="dropClassification"
 		:file-name="dropFileName"
 		@confirm="handleDropConfirm"
-		@cancel="dropClassification = null"
+		@cancel="handleDropCancel"
 		@help="handleDropHelp"
 	/>
 
