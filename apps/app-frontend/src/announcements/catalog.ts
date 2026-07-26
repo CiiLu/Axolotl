@@ -63,6 +63,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			fixed: [
 				{
+					'en-US':
+						'Closing Minecraft normally no longer triggers a false crash report because of harmless errors found in the game log.',
+					'zh-CN': '正常关闭 Minecraft 时，不再因游戏日志中的非致命错误误弹崩溃报告。',
+				},
+				{
 					'en-US': 'Fixed frontend display errors during modpack import.',
 					'zh-CN': '修复整合包导入时的前端显示错误',
 				},
