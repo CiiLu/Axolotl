@@ -3236,6 +3236,36 @@
 	"app.drop.modpack-not-supported-text": {
 		"message": "Modpack import is not yet supported via drag & drop. Please use the Import button to install a modpack."
 	},
+	"app.drop.unknown-force-analysis-title": {
+		"message": "Unable to identify file type"
+	},
+	"app.drop.unknown-force-analysis-text": {
+		"message": "This archive needs to be extracted and deeply analyzed to determine its content type. This may take a while. Force analysis?"
+	},
+	"app.drop.unknown-force-analysis-button": {
+		"message": "Force analysis"
+	},
+	"app.drop.unknown-force-analyzing": {
+		"message": "Force analyzing archive..."
+	},
+	"app.drop.unknown-force-analysis-failed-title": {
+		"message": "Analysis failed"
+	},
+	"app.drop.unknown-force-analysis-failed-text": {
+		"message": "Could not identify the file type even after deep analysis."
+	},
+	"app.drop.processing": {
+		"message": "Processing {name}..."
+	},
+	"app.drop.modpack-installing": {
+		"message": "Installing modpack..."
+	},
+	"app.drop.modpack-installed-success": {
+		"message": "Modpack installed successfully"
+	},
+	"app.drop.modpack-install-failed": {
+		"message": "Failed to install modpack"
+	},
 	"app.drop.mod-compatibility-title": {
 		"message": "Version Mismatch"
 	},

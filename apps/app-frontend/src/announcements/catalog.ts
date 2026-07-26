@@ -52,6 +52,35 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added a background blur toggle for the transparent background, frosting whatever shows through the window.',
 					'zh-CN': '透明背景新增「背景模糊」开关，可将透出的画面做磨砂玻璃处理。',
 				},
+				{
+					'en-US': 'Added powerful modpack parsing functionality.',
+					'zh-CN': '整合包强力解析功能',
+				},
+				{
+					'en-US': 'Automatically set instance icons to match their mod loader.',
+					'zh-CN': '自动设置实例图标为加载器图标。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Closing Minecraft normally no longer triggers a false crash report because of harmless errors found in the game log.',
+					'zh-CN': '正常关闭 Minecraft 时，不再因游戏日志中的非致命错误误弹崩溃报告。',
+				},
+				{
+					'en-US': 'Fixed frontend display errors during modpack import.',
+					'zh-CN': '修复整合包导入时的前端显示错误',
+				},
+				{
+					'en-US':
+						'Fixed incomplete Java downloads being detected and launched before installation finished.',
+					'zh-CN': '修复尚未安装完成的 Java 被误识别并用于启动游戏的问题。',
+				},
+				{
+					'en-US':
+						'The launcher now finishes opening without waiting for an unavailable automatic translation service to time out.',
+					'zh-CN': '自动翻译服务不可用时，启动器现在无需等待请求超时即可完成启动。',
+				},
 			],
 		},
 	},
@@ -64,7 +93,20 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.5.3',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Added translation for new entries, allowing the translation feature to be applied to titles and descriptions outside of entries.',
+					'zh-CN': '新增条目翻译功能，让翻译功能可以应用到条目外的标题和介绍。',
+				},
+			],
 			fixed: [
+				{
+					'en-US':
+						'Fixed instance imports opened from the folder picker or drag and drop, including .minecraft folders, launcher shortcuts, instances stored outside launcher defaults, responsive cancellation, and faster local .mrpack confirmation.',
+					'zh-CN':
+						'修复通过文件夹选择器或拖拽导入实例无响应、选择弹窗无法取消及本地 .mrpack 确认弹窗出现过慢的问题，现支持 .minecraft 文件夹、启动器快捷方式及存放在非默认位置的实例。',
+				},
 				{
 					'en-US': 'Urgent fix for critical bugs in the previous version',
 					'zh-CN': '紧急修复上个版本严重bug',
@@ -73,19 +115,28 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Transient Windows file locks are now retried during downloads, and persistent lock errors identify the process holding the file when Windows can report it.',
 					'zh-CN':
-						'下载时遇到短暂的 Windows 文件占用将自动重试；若持续失败，Windows 能识别时会在错误中显示占用文件的进程。',
+						'下载时遇到短暂的 Windows 文件占用将自动重试；若持续失败,Windows 能识别时会在错误中显示占用文件的进程。',
 				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Changed the way the module loader is recognized when importing instances, using a more aggressive strategy',
-					'zh-CN': '更改导入实例时模组加载器的识别方式，采用更激进的策略',
+					'zh-CN': '更改导入实例时模组加载器的识别方式,采用更激进的策略。',
 				},
 				{
 					'en-US':
 						'Changed the way the import type is detected, using a more conservative strategy',
-					'zh-CN': '更改导入类型探测的方式，采用更保守的策略',
+					'zh-CN': '更改导入类型探测的方式,采用更保守的策略。',
+				},
+				{
+					'en-US': 'Changed some frontend code left by vibe and replaced it with native components',
+					'zh-CN': '修改了一些曾经vibe留下的前端代码,换为原生组件。',
+				},
+				{
+					'en-US':
+						'Changed the scanning logic to optimize some parts of the import scanning, improving compatibility.',
+					'zh-CN': '修改扫描逻辑，优化导入扫描的部分石山，提升兼容性。',
 				},
 			],
 		},

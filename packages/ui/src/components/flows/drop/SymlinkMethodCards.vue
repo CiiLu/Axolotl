@@ -9,85 +9,42 @@
 				</span>
 			</div>
 
-			<div class="h-px bg-surface-5" />
+			<HorizontalRule />
 
-			<!-- Copy card -->
-			<button
-				class="group flex flex-col rounded-xl border-2 p-4 transition-all duration-300 cursor-pointer text-left"
-				:class="selected === 'copy' ? 'border-brand bg-brand-highlight' : 'border-surface-4 bg-surface-2 hover:border-surface-5'"
-				@click="select('copy')"
+			<SelectionCard
+				:icon="CopyIcon"
+				:title="formatMessage(messages.copyTitle)"
+				:description="formatMessage(messages.copyDesc)"
+				:selected="selected === 'copy'"
+				value="copy"
+				@select="select"
 			>
-				<div class="flex items-center gap-3">
-					<div
-						class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-surface-5 bg-surface-3"
-					>
-						<CopyIcon class="size-5 text-secondary" stroke-width="1.5" />
-					</div>
-					<div class="flex flex-col min-w-0 flex-1">
-						<span class="text-sm font-semibold text-contrast">{{ formatMessage(messages.copyTitle) }}</span>
-						<span class="text-xs text-secondary">{{ formatMessage(messages.copyDesc) }}</span>
-					</div>
-					<CheckIcon
-						v-if="selected === 'copy'"
-						class="size-5 text-brand shrink-0"
-						stroke-width="2.5"
-					/>
-				</div>
-				<!-- Expandable detail on hover/select -->
-				<div
-					class="overflow-hidden transition-all duration-300"
-					:class="selected === 'copy' ? 'max-h-20 mt-3 opacity-100' : 'max-h-0 group-hover:max-h-20 group-hover:mt-3 group-hover:opacity-100 opacity-0'"
-				>
-					<p class="text-xs text-secondary m-0">{{ formatMessage(messages.copyDetail) }}</p>
-				</div>
-			</button>
+				<p class="text-xs text-secondary m-0">{{ formatMessage(messages.copyDetail) }}</p>
+			</SelectionCard>
 
-			<!-- Symlink card -->
-			<button
-				class="group flex flex-col rounded-xl border-2 p-4 transition-all duration-300 cursor-pointer text-left"
-				:class="[
-					selected === 'symlink' ? 'border-brand bg-brand-highlight' : 'border-surface-4 bg-surface-2 hover:border-surface-5',
-					!symlinkAllowed ? 'opacity-60 pointer-events-none' : '',
-				]"
-				@click="select('symlink')"
+			<SelectionCard
+				:icon="LinkIcon"
+				:title="formatMessage(messages.symlinkTitle)"
+				:description="formatMessage(messages.symlinkDesc)"
+				:selected="selected === 'symlink'"
+				value="symlink"
+				:disabled="!symlinkAllowed"
+				@select="select"
 			>
-				<div class="flex items-center gap-3">
-					<div
-						class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-surface-5 bg-surface-3"
-					>
-						<LinkIcon class="size-5 text-secondary" stroke-width="1.5" />
-					</div>
-					<div class="flex flex-col min-w-0 flex-1">
-						<span class="text-sm font-semibold text-contrast">{{ formatMessage(messages.symlinkTitle) }}</span>
-						<span class="text-xs text-secondary">{{ formatMessage(messages.symlinkDesc) }}</span>
-					</div>
-					<CheckIcon
-						v-if="selected === 'symlink'"
-						class="size-5 text-brand shrink-0"
-						stroke-width="2.5"
-					/>
-				</div>
-				<!-- Expandable detail on hover/select -->
-				<div
-					class="overflow-hidden transition-all duration-300"
-					:class="selected === 'symlink' ? 'max-h-24 mt-3 opacity-100' : 'max-h-0 group-hover:max-h-24 group-hover:mt-3 group-hover:opacity-100 opacity-0'"
+				<p class="text-xs text-secondary m-0">{{ formatMessage(messages.symlinkDetail) }}</p>
+				<span
+					v-if="internalSymlinkCapable === 'requires_admin'"
+					class="text-xs text-warning mt-1 block"
 				>
-					<p class="text-xs text-secondary m-0">{{ formatMessage(messages.symlinkDetail) }}</p>
-					<!-- Warning for requires_admin -->
-					<span
-						v-if="internalSymlinkCapable === 'requires_admin'"
-						class="text-xs text-warning mt-1 block"
-					>
-						{{ formatMessage(messages.requiresAdmin) }}
-					</span>
-					<span
-						v-else-if="internalSymlinkCapable === 'unsupported'"
-						class="text-xs text-danger mt-1 block"
-					>
-						{{ formatMessage(messages.unsupportedWarning) }}
-					</span>
-				</div>
-			</button>
+					{{ formatMessage(messages.requiresAdmin) }}
+				</span>
+				<span
+					v-else-if="internalSymlinkCapable === 'unsupported'"
+					class="text-xs text-danger mt-1 block"
+				>
+					{{ formatMessage(messages.unsupportedWarning) }}
+				</span>
+			</SelectionCard>
 		</div>
 
 		<template #actions>
@@ -106,12 +63,14 @@
 </template>
 
 <script setup lang="ts">
-import { CheckIcon, CopyIcon, LinkIcon } from '@modrinth/assets'
+import { CopyIcon, LinkIcon } from '@modrinth/assets'
 import type { PropType } from 'vue'
 import { computed, ref } from 'vue'
 
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
+import HorizontalRule from '#ui/components/base/HorizontalRule.vue'
 import NewModal from '#ui/components/modal/NewModal.vue'
+import SelectionCard from '#ui/components/base/SelectionCard.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 
 const { formatMessage } = useVIntl()

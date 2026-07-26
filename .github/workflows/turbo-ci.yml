@@ -138,6 +138,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - uses: ./.github/actions/replace-gradle-mirror
+
       - name: Set app environment
         working-directory: packages/app-lib
         run: cp .env.staging .env
