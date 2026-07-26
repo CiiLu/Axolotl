@@ -1119,7 +1119,6 @@ async fn install_azul_runtime(
     let download_result = download_to_path(
         DownloadRequest::new(&download.download_url, ResourceClass::Java)
             .with_integrity(Integrity {
-                size: Some(download.size),
                 sha256: Some(download.sha256_hash.clone()),
                 content: ContentValidation::Jar,
                 ..Integrity::default()

@@ -72,3 +72,5 @@
 - 修复 `DownloadJavaModal.vue` 中提取状态 i18n 消息 ID `app.settings.java.download.extracting.status` → `app.settings.java.download.extracting`，与 `JavaDownloadProgressModal.vue` 使用的已有键名保持一致；同时在 en-US 和 zh-CN 中添加该键名作为后备。
 
 - 修复 `JAVA_CANCEL_TX` 使用 `std::sync::Mutex` 导致 Tauri 异步命令 `Send` 约束失败的问题：改为 `tokio::sync::Mutex` 并使用 `.lock().await`；同步函数 `cancel_java_download` 改为异步函数，其调用者 `apps/app/src/api/jre.rs` 同步调用改为 `.await`。
+- 修复实例设置 Java 页面选项中选中态内圆点颜色在强调色背景上对比度不足的问题：`bg-bg` 改为 `bg-surface-1`。
+- 修复 Azul Zulu 下载因 Zulu API 返回过期大小信息导致「文件大小不匹配」错误的问题：从 Integrity 校验中去掉 `size` 字段，仅以 SHA-256 验证完整性。
