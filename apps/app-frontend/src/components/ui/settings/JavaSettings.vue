@@ -10,15 +10,18 @@ import {
 import {
 	ButtonStyled,
 	Table,
+	Toggle,
 	defineMessages,
 	injectNotificationManager,
 	useVIntl,
 } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
-import { ref } from 'vue'
+import { platform } from '@tauri-apps/plugin-os'
+import { ref, watch } from 'vue'
 
 import DownloadJavaModal from '@/components/ui/settings/DownloadJavaModal.vue'
 import { trackEvent } from '@/helpers/analytics'
+import { get, set } from '@/helpers/settings.ts'
 import {
 	find_filtered_jres,
 	get_java_versions,
@@ -63,6 +66,8 @@ const messages = defineMessages({
 		id: 'app.settings.java.download-java',
 		defaultMessage: 'Download Java',
 	},
+	autoHighPerformanceMode: { id: 'app.settings.java.auto-high-performance-mode', defaultMessage: 'Automatically use high-performance GPU for Java' },
+	autoHighPerformanceModeDescription: { id: 'app.settings.java.auto-high-performance-mode-description', defaultMessage: 'Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only.' },
 	scanning: {
 		id: 'app.settings.java.scanning',
 		defaultMessage: 'Scanning...',
@@ -89,6 +94,15 @@ const javaVersions = ref(await get_java_versions().catch(handleError))
 const scanning = ref(false)
 const scanMode = ref('')
 const downloadJavaModal = ref(null)
+
+const isWindows = (await platform()) === 'windows'
+const settings = ref(await get().catch(handleError))
+const autoHighPerformanceMode = ref(settings.value?.auto_set_java_high_performance_mode ?? false)
+
+watch(autoHighPerformanceMode, async (val) => {
+    settings.value = { ...settings.value, auto_set_java_high_performance_mode: val }
+    await set(settings.value).catch(handleError)
+})
 
 const columns = [
 	{ key: 'parsed_version', label: formatMessage(messages.version), width: '8rem' },
@@ -243,6 +257,16 @@ async function onJavaDownloaded(_path, _parsedVersion) {
 				<ButtonStyled type="outlined">
 					<button @click="showDeepScanConfirm = false">{{ formatMessage(messages.cancel) }}</button>
 				</ButtonStyled>
+			</div>
+		</div>
+
+		<div v-if="isWindows" class="flex flex-col gap-1 pt-2 border-t border-button-border">
+			<div class="flex items-center justify-between">
+				<div class="flex flex-col">
+					<span class="text-sm font-semibold">{{ formatMessage(messages.autoHighPerformanceMode) }}</span>
+					<span class="text-xs text-secondary">{{ formatMessage(messages.autoHighPerformanceModeDescription) }}</span>
+				</div>
+				<Toggle id="auto-java-high-performance-mode" v-model="autoHighPerformanceMode" />
 			</div>
 		</div>
 	</div>
