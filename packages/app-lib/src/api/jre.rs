@@ -1546,7 +1546,7 @@ async fn download_java_from_feed_inner(
             "Failed to download Java from vendor {vendor} at URL {}: {e}",
             pkg.url
         );
-        crate::Error::from(crate::ErrorKind::LauncherError(format!(
+        crate::Error::from(crate::ErrorKind::OtherError(format!(
             "Failed to download Java from {}: {e}",
             vendor
         )))
