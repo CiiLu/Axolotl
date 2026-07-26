@@ -1380,16 +1380,20 @@ pub async fn download_java_from_feed(
     let state = State::get().await?;
     let _install_guard = JAVA_INSTALL_LOCK.lock().await;
 
-    let loading_bar = init_loading(
-        LoadingBarType::JavaDownload {
-            version: jdk_version_major,
-        },
-        100.0,
-        "Downloading java version",
-    )
-    .await?;
+    let loading_bar = Some(
+        init_loading(
+            LoadingBarType::JavaDownload {
+                version: jdk_version_major,
+            },
+            100.0,
+            "Downloading java version",
+        )
+        .await?,
+    );
 
-    emit_loading(&loading_bar, 0.0, Some("Fetching metadata"))?;
+    if let Some(loading_bar) = &loading_bar {
+        emit_loading(loading_bar, 0.0, Some("Fetching metadata"))?;
+    }
 
     let feed = fetch_jdk_feed().await?;
     let os = map_platform_to_feed_os();
@@ -1461,7 +1465,9 @@ pub async fn download_java_from_feed(
         download_pct = pct;
         let lb = loading_bar.clone();
         Box::pin(async move {
-            emit_loading(&lb, delta, Some("Downloading..."))?;
+            if let Some(lb) = &lb {
+                emit_loading(lb, delta, Some("Downloading..."))?;
+            }
             Ok(())
         })
     };
@@ -1487,11 +1493,13 @@ pub async fn download_java_from_feed(
     })?;
 
     // Emit remaining delta to reach exactly 50 % before extraction
-    emit_loading(
-        &loading_bar,
-        (50.0 - download_pct).max(0.0),
-        Some("Extracting..."),
-    )?;
+    if let Some(loading_bar) = &loading_bar {
+        emit_loading(
+            loading_bar,
+            (50.0 - download_pct).max(0.0),
+            Some("Extracting..."),
+        )?;
+    }
 
     // Extract archive (zip or tar.gz)
     let staging_for_extract = staging_root.clone();
@@ -1526,12 +1534,16 @@ pub async fn download_java_from_feed(
     };
 
     // Advance from 50 % (post-download) to 90 % to reflect installation work
-    emit_loading(&loading_bar, 40.0, Some("Verifying installation"))?;
+    if let Some(loading_bar) = &loading_bar {
+        emit_loading(loading_bar, 40.0, Some("Verifying installation"))?;
+    }
 
     let result = check_jre(executable).await?;
 
     // Complete the remaining 10 % of the bar
-    emit_loading(&loading_bar, 10.0, None)?;
+    if let Some(loading_bar) = &loading_bar {
+        emit_loading(loading_bar, 10.0, None)?;
+    }
 
     Ok(result.path.into())
 }
