@@ -1380,6 +1380,17 @@ pub async fn download_java_from_feed(
     let state = State::get().await?;
     let _install_guard = JAVA_INSTALL_LOCK.lock().await;
 
+    let loading_bar = init_loading(
+        LoadingBarType::JavaDownload {
+            version: jdk_version_major,
+        },
+        100.0,
+        "Downloading java version",
+    )
+    .await?;
+
+    emit_loading(&loading_bar, 0.0, Some("Fetching metadata"))?;
+
     let feed = fetch_jdk_feed().await?;
     let os = map_platform_to_feed_os();
     let arch = map_arch_to_feed_arch();
@@ -1435,6 +1446,8 @@ pub async fn download_java_from_feed(
         ..Integrity::default()
     };
 
+    emit_loading(&loading_bar, 50.0, Some("Downloading..."))?;
+
     download_to_path(
         DownloadRequest::new(&pkg.url, ResourceClass::Java)
             .with_integrity(integrity),
@@ -1444,6 +1457,8 @@ pub async fn download_java_from_feed(
         None,
     )
     .await?;
+
+    emit_loading(&loading_bar, 30.0, Some("Extracting..."))?;
 
     // Extract archive (zip or tar.gz)
     let staging_for_extract = staging_root.clone();
@@ -1478,6 +1493,9 @@ pub async fn download_java_from_feed(
     };
 
     let result = check_jre(executable).await?;
+
+    emit_loading(&loading_bar, 20.0, None)?;
+
     Ok(result.path.into())
 }
 

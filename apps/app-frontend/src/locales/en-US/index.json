@@ -2027,6 +2027,9 @@
 	"app.settings.java.auto-high-performance-mode-description": {
 		"message": "Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only."
 	},
+	"app.settings.java.cancel": {
+		"message": "Cancel"
+	},
 	"app.settings.java.location": {
 		"message": "Java {version} location"
 	},
@@ -2048,11 +2051,17 @@
 	"app.settings.java.deep-scan": {
 		"message": "Deep Scan"
 	},
+	"app.settings.java.deep-scan-confirm": {
+		"message": "This will scan ALL directories on ALL drives. May take several minutes."
+	},
 	"app.settings.java.manual-add": {
 		"message": "Manual Add"
 	},
 	"app.settings.java.download-java": {
 		"message": "Download Java"
+	},
+	"app.settings.java.scan-anyway": {
+		"message": "Scan Anyway"
 	},
 	"app.settings.java.scanning": {
 		"message": "Scanning..."
