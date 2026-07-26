@@ -56,18 +56,46 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 	const { formatMessage } = useVIntl()
 
 	const persistKey = computed(() => toValue(config?.persistKey) ?? '')
-
-	const selectedTypeFilter = persistKey.value
-		? useSessionStorage<string | null>(`content-filters-type:${persistKey.value}`, null)
-		: ref<string | null>(null)
-
-	const selectedStatusFilters = persistKey.value
-		? useSessionStorage<string[]>(`content-filters-status:${persistKey.value}`, [])
-		: ref<string[]>([])
-
 	const showTypeFilters = computed(() => toValue(config?.showTypeFilters) ?? false)
 	const showUpdateFilter = computed(() => toValue(config?.showUpdateFilter) ?? false)
 	const showWarningsFilter = computed(() => toValue(config?.showWarningsFilter) ?? false)
+
+	const selectedTypeFilter = ref<string | null>(null)
+	const selectedStatusFilters = ref<string[]>([])
+
+	watch(
+		persistKey,
+		(newKey, oldKey) => {
+			if (oldKey && newKey !== oldKey) {
+				const typeFilter = useSessionStorage<string | null>(`content-filters-type:${newKey}`, null)
+				const statusFilters = useSessionStorage<string[]>(`content-filters-status:${newKey}`, [])
+				selectedTypeFilter.value = typeFilter.value
+				selectedStatusFilters.value = statusFilters.value
+			} else if (newKey) {
+				const typeFilter = useSessionStorage<string | null>(`content-filters-type:${newKey}`, null)
+				const statusFilters = useSessionStorage<string[]>(`content-filters-status:${newKey}`, [])
+				selectedTypeFilter.value = typeFilter.value
+				selectedStatusFilters.value = statusFilters.value
+			}
+		},
+		{ immediate: true },
+	)
+
+	watch(selectedTypeFilter, (val) => {
+		if (persistKey.value) {
+			useSessionStorage<string | null>(`content-filters-type:${persistKey.value}`, null).value = val
+		}
+	})
+
+	watch(
+		selectedStatusFilters,
+		(val) => {
+			if (persistKey.value) {
+				useSessionStorage<string[]>(`content-filters-status:${persistKey.value}`, []).value = val
+			}
+		},
+		{ deep: true },
+	)
 
 	const typeFilteredItems = computed(() => {
 		if (!selectedTypeFilter.value) return items.value

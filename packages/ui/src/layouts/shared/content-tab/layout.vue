@@ -39,7 +39,7 @@ import {
 	useBulkOperation,
 	useChangingItems,
 	useContentFilters,
-	useContentSearch,
+	useContentGrouping,
 	useContentSelection,
 } from './composables'
 import { injectContentManager } from './providers/content-manager'
@@ -211,42 +211,19 @@ function sortItems(items: ContentItem[]): ContentItem[] {
 	}
 }
 
-const sortedItems = computed(() => {
-	return sortItems(ctx.items.value)
-})
-
-const allItemsForSearch = computed(() => {
-	const modpackItems = ctx.modpackItems?.value ?? []
-	return [...sortedItems.value, ...modpackItems]
-})
-
-const { searchQuery, search } = useContentSearch(allItemsForSearch, [
-	'project.title',
-	'owner.name',
-	'file_name',
-])
-
-const modpackItemsNoUpdate = computed(() => {
-	return sortItems(
-		(ctx.modpackItems?.value ?? []).map((item) => ({
-			...item,
-			has_update: false,
-		})),
-	)
-})
-
-const modpackChildIdSet = computed(() => {
-	return new Set((ctx.modpackItems?.value ?? []).map((item) => getItemId(item)))
-})
-
-const searchedAllItems = computed(() => {
-	const modpackSearched = search(modpackItemsNoUpdate.value).filter((item) =>
-		modpackChildIdSet.value.has(getItemId(item)),
-	)
-	const regularSearched = search(sortedItems.value).filter(
-		(item) => !modpackChildIdSet.value.has(getItemId(item)),
-	)
-	return [...modpackSearched, ...regularSearched]
+const {
+	searchQuery,
+	sortedItems,
+	modpackItemsNoUpdate,
+	modpackChildIdSet,
+	searchedAllItems,
+	searchableItemCount,
+	search,
+} = useContentGrouping({
+	items: ctx.items,
+	modpackItems: ctx.modpackItems,
+	sortItems,
+	getItemId,
 })
 
 const {
@@ -357,14 +334,6 @@ function mapToTableItem(item: ContentItem, group?: string): ContentCardTableItem
 	}
 }
 
-const searchableItemCount = computed(() => {
-	const modpackItems = ctx.modpackItems?.value ?? []
-	const regularItems = ctx.items.value.filter(
-		(item) => !modpackChildIdSet.value.has(getItemId(item)),
-	)
-	return modpackItems.length + regularItems.length
-})
-
 const tableItems = computed<ContentCardTableItem[]>(() => {
 	const items: ContentCardTableItem[] = []
 
@@ -374,6 +343,7 @@ const tableItems = computed<ContentCardTableItem[]>(() => {
 	if (modpack && modpack.project && modpackItems.length > 0) {
 		const groupItems: ContentCardTableItem[] = []
 		const childIds = modpackItems.map((item) => getItemId(item))
+		const allChildrenDisabled = modpackItems.every((item) => item.enabled === false)
 		if (expandedGroups.value.has('modpack')) {
 			for (const item of modpackItems) {
 				groupItems.push(mapToTableItem(item, 'modpack'))
@@ -406,7 +376,8 @@ const tableItems = computed<ContentCardTableItem[]>(() => {
 			owner: modpack.owner,
 			enabled: true,
 			hasUpdate: modpack.hasUpdate,
-			disabled: modpack.disabled || ctx.isBusy.value || isBulkOperating.value,
+			disabled:
+				modpack.disabled || ctx.isBusy.value || isBulkOperating.value || allChildrenDisabled,
 			disabledTooltip:
 				modpack.disabledText ?? (ctx.isBusy.value ? (ctx.busyMessage?.value ?? null) : null),
 			downloads: modpack.project.downloads ?? null,

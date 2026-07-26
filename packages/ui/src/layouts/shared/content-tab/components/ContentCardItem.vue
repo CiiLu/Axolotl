@@ -178,8 +178,8 @@ const deleteHovered = ref(false)
 	<div
 		v-if="isGroupHeader"
 		role="row"
-		class="flex h-[74px] cursor-pointer items-center justify-between gap-4 px-3 bg-surface-3 hover:bg-surface-4"
-		:class="groupExpanded ? 'sticky top-12 z-[9]' : ''"
+		class="flex h-[74px] cursor-pointer items-center justify-between gap-4 px-3 hover:bg-[hsla(0,0%,50%,0.1)]"
+		:class="{ 'opacity-50': disabled }"
 		@click="handleRowClick"
 	>
 		<div

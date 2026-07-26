@@ -8,6 +8,7 @@ import { useStickyObserver } from '#ui/composables/sticky-observer'
 import { useVirtualScroll } from '#ui/composables/virtual-scroll'
 import { commonMessages } from '#ui/utils/common-messages'
 
+import { useGroupSelection } from '../composables/group-selection'
 import type {
 	ContentCardTableItem,
 	ContentCardTableSortColumn,
@@ -104,93 +105,19 @@ defineExpose({
 })
 
 // Selection logic
-const allSelected = computed(() => {
-	if (props.items.length === 0) return false
-	return props.items.every((item) => selectedIds.value.includes(item.id))
+const {
+	allSelected,
+	someSelected,
+	getGroupCheckboxState,
+	isItemSelected,
+	toggleSelectAll,
+	toggleItemSelection,
+} = useGroupSelection({
+	items: toRef(props, 'items'),
+	selectedIds,
 })
-
-const someSelected = computed(() => {
-	return props.items.some((item) => selectedIds.value.includes(item.id)) && !allSelected.value
-})
-
-function toggleSelectAll() {
-	if (allSelected.value || someSelected.value) {
-		selectedIds.value = []
-	} else {
-		const ids = new Set<string>()
-		for (const item of props.items) {
-			ids.add(item.id)
-			if (item.isGroupHeader && item.groupChildIds) {
-				for (const childId of item.groupChildIds) {
-					ids.add(childId)
-				}
-			}
-		}
-		selectedIds.value = [...ids]
-	}
-}
 
 const lastSelectedIndex = ref<number | null>(null)
-
-function toggleItemSelection(
-	itemId: string,
-	selected: boolean,
-	index?: number,
-	event?: MouseEvent,
-	item?: ContentCardTableItem,
-) {
-	if (selected && event?.shiftKey && lastSelectedIndex.value !== null && index !== undefined) {
-		const start = Math.min(lastSelectedIndex.value, index)
-		const end = Math.max(lastSelectedIndex.value, index)
-		const rangeIds = props.items.slice(start, end + 1).map((item) => item.id)
-		const merged = new Set([...selectedIds.value, ...rangeIds])
-		selectedIds.value = [...merged]
-	} else if (selected) {
-		if (!selectedIds.value.includes(itemId)) {
-			selectedIds.value = [...selectedIds.value, itemId]
-		}
-	} else {
-		selectedIds.value = selectedIds.value.filter((id) => id !== itemId)
-	}
-
-	if (item?.isGroupHeader && item.groupChildIds) {
-		if (selected) {
-			const merged = new Set([...selectedIds.value, ...item.groupChildIds])
-			selectedIds.value = [...merged]
-		} else {
-			const childIds = new Set(item.groupChildIds)
-			selectedIds.value = selectedIds.value.filter((id) => !childIds.has(id))
-		}
-	}
-
-	if (index !== undefined) {
-		lastSelectedIndex.value = index
-	}
-}
-
-function isItemSelected(itemId: string): boolean {
-	return selectedIds.value.includes(itemId)
-}
-
-function getGroupCheckboxState(item: ContentCardTableItem): {
-	checked: boolean
-	indeterminate: boolean
-} {
-	if (!item.isGroupHeader || !item.groupChildIds) {
-		return { checked: false, indeterminate: false }
-	}
-	if (item.groupChildIds.length === 0) {
-		return { checked: false, indeterminate: false }
-	}
-	const selectedCount = item.groupChildIds.filter((id) => selectedIds.value.includes(id)).length
-	if (selectedCount === item.groupChildIds.length) {
-		return { checked: true, indeterminate: false }
-	}
-	if (selectedCount > 0) {
-		return { checked: false, indeterminate: true }
-	}
-	return { checked: false, indeterminate: false }
-}
 
 function handleSort(column: ContentCardTableSortColumn) {
 	if (!props.sortable) return
@@ -351,7 +278,14 @@ function handleSort(column: ContentCardTableSortColumn) {
 					]"
 					@select="
 						(val, event) =>
-							toggleItemSelection(item.id, val ?? false, visibleRange.start + idx, event, item)
+							toggleItemSelection(
+								item.id,
+								val ?? false,
+								lastSelectedIndex,
+								visibleRange.start + idx,
+								event,
+								item,
+							)
 					"
 					@update:enabled="(val) => emit('update:enabled', item.id, val)"
 					@delete="(e: MouseEvent) => emit('delete', item.id, e)"
@@ -423,7 +357,10 @@ function handleSort(column: ContentCardTableSortColumn) {
 					'border-0 border-t border-solid border-surface-4',
 					index === items.length - 1 && !flat ? 'rounded-b-[20px]' : '',
 				]"
-				@select="(val, event) => toggleItemSelection(item.id, val ?? false, index, event, item)"
+				@select="
+					(val, event) =>
+						toggleItemSelection(item.id, val ?? false, lastSelectedIndex, index, event, item)
+				"
 				@update:enabled="(val) => emit('update:enabled', item.id, val)"
 				@delete="(e: MouseEvent) => emit('delete', item.id, e)"
 				@update="emit('update', item.id)"
