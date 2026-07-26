@@ -9,7 +9,6 @@ import {
 	DownloadIcon,
 	DropdownIcon,
 	FileIcon,
-	FilterIcon,
 	FolderOpenIcon,
 	LinkIcon,
 	RefreshCwIcon,
@@ -167,6 +166,11 @@ const sortLabels: Record<SortMode, () => string> = {
 	'date-added-oldest': () => formatMessage(messages.sortDateAddedOldest),
 }
 
+const sortTooltipConfig = computed(() => ({
+	content: formatMessage(messages.sortByLabel, { mode: sortLabels[sortMode.value]() }),
+	triggers: ['hover'],
+}))
+
 function cycleSortMode() {
 	const modes: SortMode[] = [
 		'alphabetical-asc',
@@ -220,16 +224,23 @@ const { searchQuery, search } = useContentSearch(sortedItems, [
 	'file_name',
 ])
 
-const { selectedFilters, filterOptions, toggleFilter, applyFilters } = useContentFilters(
-	ctx.items,
-	{
-		showTypeFilters: true,
-		showUpdateFilter: ctx.hasUpdateSupport,
-		showWarningsFilter: true,
-		isPackLocked: ctx.isPackLocked,
-		persistKey: ctx.filterPersistKey,
-	},
-)
+const {
+	selectedTypeFilter,
+	selectedStatusFilters,
+	row1FilterOptions,
+	row2FilterOptions,
+	totalCount,
+	filterCounts,
+	toggleTypeFilter,
+	toggleStatusFilter,
+	applyFilters,
+} = useContentFilters(ctx.items, {
+	showTypeFilters: true,
+	showUpdateFilter: ctx.hasUpdateSupport,
+	showWarningsFilter: true,
+	isPackLocked: ctx.isPackLocked,
+	persistKey: ctx.filterPersistKey,
+})
 
 const { selectedIds, selectedItems, clearSelection, removeFromSelection } = useContentSelection(
 	ctx.items,
@@ -737,7 +748,7 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 								"
 							/>
 
-							<div class="flex gap-2">
+							<div class="flex items-center gap-2">
 								<ButtonStyled color="brand">
 									<button
 										v-tooltip="
@@ -769,96 +780,38 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 							</div>
 						</div>
 
-						<div class="@container flex flex-wrap items-center justify-between gap-2">
+						<div class="@container flex flex-col gap-2">
 							<div class="flex flex-wrap items-center gap-1.5">
-								<FilterIcon class="size-5 text-secondary" />
 								<button
-									class="cursor-pointer rounded-full border border-solid px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
+									class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
 									:class="
-										selectedFilters.length === 0
-											? 'border-brand bg-brand-highlight text-brand'
-											: 'border-surface-5 bg-surface-4 text-primary hover:bg-surface-5'
+										!selectedTypeFilter
+											? 'bg-brand-highlight text-brand'
+											: 'bg-surface-4 text-primary hover:bg-surface-5'
 									"
-									:aria-pressed="selectedFilters.length === 0"
-									@click="selectedFilters = []"
+									:aria-pressed="!selectedTypeFilter"
+									@click="selectedTypeFilter = null"
 								>
 									{{ formatMessage(commonMessages.allProjectType) }}
+									<span class="ml-1 text-sm font-normal opacity-70">{{ totalCount }}</span>
 								</button>
 								<button
-									v-for="option in filterOptions"
+									v-for="option in row1FilterOptions"
 									:key="option.id"
-									class="cursor-pointer rounded-full border border-solid px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
+									class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
 									:class="
-										selectedFilters.includes(option.id)
-											? 'border-brand bg-brand-highlight text-brand'
-											: 'border-surface-5 bg-surface-4 text-primary hover:bg-surface-5'
+										selectedTypeFilter === option.id
+											? 'bg-brand-highlight text-brand'
+											: 'bg-surface-4 text-primary hover:bg-surface-5'
 									"
-									:aria-pressed="selectedFilters.includes(option.id)"
-									@click="toggleFilter(option.id)"
+									:aria-pressed="selectedTypeFilter === option.id"
+									@click="toggleTypeFilter(option.id)"
 								>
 									{{ option.label }}
+									<span class="ml-1 text-sm font-normal opacity-70">{{
+										filterCounts[option.id] ?? 0
+									}}</span>
 								</button>
-								<div class="hidden @[900px]:block">
-									<ButtonStyled type="transparent">
-										<button
-											:aria-label="
-												formatMessage(messages.sortByLabel, { mode: sortLabels[sortMode]() })
-											"
-											@click="cycleSortMode"
-										>
-											<ArrowUpZAIcon v-if="sortMode === 'alphabetical-desc'" /><ClockArrowDownIcon
-												v-else-if="sortMode === 'date-added-newest'"
-											/><ClockArrowUpIcon
-												v-else-if="sortMode === 'date-added-oldest'"
-											/><ArrowDownAZIcon v-else />
-											{{ sortLabels[sortMode]() }}
-										</button>
-									</ButtonStyled>
-								</div>
-							</div>
-
-							<div class="flex items-center gap-2">
-								<div class="@[900px]:hidden">
-									<ButtonStyled type="transparent">
-										<button
-											:aria-label="
-												formatMessage(messages.sortByLabel, { mode: sortLabels[sortMode]() })
-											"
-											@click="cycleSortMode"
-										>
-											<ArrowUpZAIcon v-if="sortMode === 'alphabetical-desc'" /><ClockArrowDownIcon
-												v-else-if="sortMode === 'date-added-newest'"
-											/><ClockArrowUpIcon
-												v-else-if="sortMode === 'date-added-oldest'"
-											/><ArrowDownAZIcon v-else />
-											{{ sortLabels[sortMode]() }}
-										</button>
-									</ButtonStyled>
-								</div>
-
-								<ButtonStyled
-									v-if="hasBulkUpdateSupport && hasOutdatedProjects"
-									color="green"
-									type="transparent"
-									color-fill="text"
-									hover-color-fill="background"
-								>
-									<button
-										v-tooltip="formatMessage(messages.updateAll)"
-										:disabled="isBulkOperating"
-										@click="promptUpdateAll"
-									>
-										<DownloadIcon />
-										{{ formatMessage(messages.updateAll) }}
-									</button>
-								</ButtonStyled>
-
-								<ButtonStyled type="transparent">
-									<button :disabled="refreshing" @click="handleRefresh">
-										<RefreshCwIcon :class="refreshing ? 'animate-spin' : ''" />
-										{{ formatMessage(commonMessages.refreshButton) }}
-									</button>
-								</ButtonStyled>
 							</div>
 						</div>
 
@@ -871,6 +824,88 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 							@update="handleUpdateById"
 							@switch-version="handleSwitchVersionById"
 						>
+							<template #header-project>
+								<div class="flex items-center gap-4">
+									<button
+										class="relative pb-1 text-base font-semibold transition-colors"
+										:class="
+											selectedStatusFilters.length === 0
+												? 'text-brand'
+												: 'text-secondary hover:text-primary'
+										"
+										@click="selectedStatusFilters = []"
+									>
+										{{ formatMessage(commonMessages.allProjectType) }}
+										<span
+											v-if="selectedStatusFilters.length === 0"
+											class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
+										/>
+									</button>
+									<button
+										v-for="option in row2FilterOptions"
+										:key="option.id"
+										class="relative pb-1 text-base font-semibold transition-colors"
+										:class="
+											selectedStatusFilters.includes(option.id)
+												? 'text-brand'
+												: 'text-secondary hover:text-primary'
+										"
+										@click="selectedStatusFilters = [option.id]"
+									>
+										{{ option.label }}
+										<span
+											v-if="selectedStatusFilters.includes(option.id)"
+											class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
+										/>
+									</button>
+								</div>
+							</template>
+							<template #header-actions>
+								<div class="flex items-center justify-end gap-2">
+									<ButtonStyled circular type="transparent">
+										<button
+											v-tooltip="sortTooltipConfig"
+											:aria-label="
+												formatMessage(messages.sortByLabel, { mode: sortLabels[sortMode]() })
+											"
+											@click="cycleSortMode"
+										>
+											<ArrowUpZAIcon v-if="sortMode === 'alphabetical-desc'" /><ClockArrowDownIcon
+												v-else-if="sortMode === 'date-added-newest'"
+											/><ClockArrowUpIcon
+												v-else-if="sortMode === 'date-added-oldest'"
+											/><ArrowDownAZIcon v-else />
+										</button>
+									</ButtonStyled>
+
+									<ButtonStyled
+										v-if="hasBulkUpdateSupport && hasOutdatedProjects"
+										circular
+										color="green"
+										type="transparent"
+										color-fill="text"
+										hover-color-fill="background"
+									>
+										<button
+											v-tooltip="formatMessage(messages.updateAll)"
+											:disabled="isBulkOperating"
+											@click="promptUpdateAll"
+										>
+											<DownloadIcon />
+										</button>
+									</ButtonStyled>
+
+									<ButtonStyled circular type="transparent">
+										<button
+											v-tooltip="formatMessage(commonMessages.refreshButton)"
+											:disabled="refreshing"
+											@click="handleRefresh"
+										>
+											<RefreshCwIcon :class="refreshing ? 'animate-spin' : ''" />
+										</button>
+									</ButtonStyled>
+								</div>
+							</template>
 							<template #empty>
 								<span>{{ formatMessage(messages.noContentFound) }}</span>
 							</template>

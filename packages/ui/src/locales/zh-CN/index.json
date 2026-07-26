@@ -846,7 +846,7 @@
 		"defaultMessage": "已启用"
 	},
 	"content.filter.updates": {
-		"defaultMessage": "更新"
+		"defaultMessage": "可更新"
 	},
 	"content.filter.warnings": {
 		"defaultMessage": "警告"

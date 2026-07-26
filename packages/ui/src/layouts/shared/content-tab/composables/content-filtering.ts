@@ -36,7 +36,7 @@ export interface ContentFilterConfig {
 const messages = defineMessages({
 	updates: {
 		id: 'content.filter.updates',
-		defaultMessage: 'Updates',
+		defaultMessage: '可更新',
 	},
 	warnings: {
 		id: 'content.filter.warnings',
@@ -55,18 +55,30 @@ const messages = defineMessages({
 export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFilterConfig) {
 	const { formatMessage } = useVIntl()
 
-	const selectedFilters = config?.persistKey
-		? useSessionStorage<string[]>(`content-filters:${config.persistKey}`, [])
+	const selectedTypeFilter = config?.persistKey
+		? useSessionStorage<string | null>(`content-filters-type:${config.persistKey}`, null)
+		: ref<string | null>(null)
+
+	const selectedStatusFilters = config?.persistKey
+		? useSessionStorage<string[]>(`content-filters-status:${config.persistKey}`, [])
 		: ref<string[]>([])
 
+	const typeFilteredItems = computed(() => {
+		if (!selectedTypeFilter.value) return items.value
+		return items.value.filter(
+			(item) => normalizeProjectType(item.project_type) === selectedTypeFilter.value,
+		)
+	})
+
 	const availableStatusFilters = computed<Array<'enabled' | 'disabled'>>(() => {
-		const hasEnabledContent = items.value.some((m) => m.enabled)
-		const hasDisabledContent = items.value.some((m) => !m.enabled)
+		const source = typeFilteredItems.value
+		const hasEnabledContent = source.some((m) => m.enabled)
+		const hasDisabledContent = source.some((m) => !m.enabled)
 
 		return hasEnabledContent && hasDisabledContent ? ['enabled', 'disabled'] : []
 	})
 
-	const filterOptions = computed<ContentFilterOption[]>(() => {
+	const row1FilterOptions = computed<ContentFilterOption[]>(() => {
 		const options: ContentFilterOption[] = []
 
 		if (config?.showTypeFilters) {
@@ -84,11 +96,18 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 			}
 		}
 
-		if (config?.showUpdateFilter && items.value.some((m) => m.has_update)) {
+		return options
+	})
+
+	const row2FilterOptions = computed<ContentFilterOption[]>(() => {
+		const source = typeFilteredItems.value
+		const options: ContentFilterOption[] = []
+
+		if (config?.showUpdateFilter && source.some((m) => m.has_update)) {
 			options.push({ id: 'updates', label: formatMessage(messages.updates) })
 		}
 
-		if (config?.showWarningsFilter && items.value.some((m) => getClientWarningType(m) !== null)) {
+		if (config?.showWarningsFilter && source.some((m) => getClientWarningType(m) !== null)) {
 			options.push({ id: 'warnings', label: formatMessage(messages.warnings) })
 		}
 
@@ -102,64 +121,104 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 		return options
 	})
 
+	const allFilterOptions = computed<ContentFilterOption[]>(() => {
+		return [...row1FilterOptions.value, ...row2FilterOptions.value]
+	})
+
+	const totalCount = computed(() => items.value.length)
+
+	const filterCounts = computed(() => {
+		const counts: Record<string, number> = {}
+
+		for (const item of items.value) {
+			const type = normalizeProjectType(item.project_type)
+			counts[type] = (counts[type] || 0) + 1
+		}
+
+		const source = typeFilteredItems.value
+
+		counts['updates'] = source.filter((m) => m.has_update).length
+		counts['enabled'] = source.filter((m) => m.enabled).length
+		counts['disabled'] = source.filter((m) => !m.enabled).length
+		counts['warnings'] = source.filter((m) => getClientWarningType(m) !== null).length
+
+		return counts
+	})
+
 	watch(
-		filterOptions,
+		allFilterOptions,
 		() => {
-			selectedFilters.value = selectedFilters.value.filter((f) =>
-				filterOptions.value.some((opt) => opt.id === f),
-			)
+			const validIds = new Set(allFilterOptions.value.map((opt) => opt.id))
+			if (selectedTypeFilter.value && !validIds.has(selectedTypeFilter.value)) {
+				selectedTypeFilter.value = null
+			}
+			selectedStatusFilters.value = selectedStatusFilters.value.filter((f) => validIds.has(f))
 		},
 		{ immediate: true },
 	)
 
-	function toggleFilter(filterId: string) {
+	function toggleTypeFilter(filterId: string) {
+		if (selectedTypeFilter.value !== filterId) {
+			selectedTypeFilter.value = filterId
+		}
+	}
+
+	function toggleStatusFilter(filterId: string) {
 		if (filterId === 'enabled' || filterId === 'disabled') {
-			const index = selectedFilters.value.indexOf(filterId)
+			const index = selectedStatusFilters.value.indexOf(filterId)
 			const otherStatusFilter = filterId === 'enabled' ? 'disabled' : 'enabled'
 			if (index === -1) {
-				selectedFilters.value = [
-					...selectedFilters.value.filter((filter) => filter !== otherStatusFilter),
+				selectedStatusFilters.value = [
+					...selectedStatusFilters.value.filter((filter) => filter !== otherStatusFilter),
 					filterId,
 				]
 			} else {
-				selectedFilters.value.splice(index, 1)
+				selectedStatusFilters.value.splice(index, 1)
 			}
 			return
 		}
 
-		const index = selectedFilters.value.indexOf(filterId)
+		const index = selectedStatusFilters.value.indexOf(filterId)
 		if (index === -1) {
-			selectedFilters.value.push(filterId)
+			selectedStatusFilters.value.push(filterId)
 		} else {
-			selectedFilters.value.splice(index, 1)
+			selectedStatusFilters.value.splice(index, 1)
 		}
 	}
 
 	function applyFilters(source: ContentItem[]): ContentItem[] {
-		if (selectedFilters.value.length === 0) return source
+		let result = source
 
-		const attributeFilters = new Set(['updates', 'enabled', 'disabled', 'warnings'])
-		const typeFilters = selectedFilters.value.filter((f) => !attributeFilters.has(f))
-		const activeAttributes = selectedFilters.value.filter((f) => attributeFilters.has(f))
+		if (selectedTypeFilter.value) {
+			result = result.filter(
+				(item) => normalizeProjectType(item.project_type) === selectedTypeFilter.value,
+			)
+		}
 
-		return source.filter((item) => {
-			if (
-				typeFilters.length > 0 &&
-				!typeFilters.includes(normalizeProjectType(item.project_type))
-			) {
-				return false
-			}
+		if (selectedStatusFilters.value.length > 0) {
+			result = result.filter((item) => {
+				for (const filter of selectedStatusFilters.value) {
+					if (filter === 'updates' && !item.has_update) return false
+					if (filter === 'enabled' && !item.enabled) return false
+					if (filter === 'disabled' && item.enabled) return false
+					if (filter === 'warnings' && getClientWarningType(item) === null) return false
+				}
+				return true
+			})
+		}
 
-			for (const filter of activeAttributes) {
-				if (filter === 'updates' && !item.has_update) return false
-				if (filter === 'enabled' && !item.enabled) return false
-				if (filter === 'disabled' && item.enabled) return false
-				if (filter === 'warnings' && getClientWarningType(item) === null) return false
-			}
-
-			return true
-		})
+		return result
 	}
 
-	return { selectedFilters, filterOptions, toggleFilter, applyFilters }
+	return {
+		selectedTypeFilter,
+		selectedStatusFilters,
+		row1FilterOptions,
+		row2FilterOptions,
+		totalCount,
+		filterCounts,
+		toggleTypeFilter,
+		toggleStatusFilter,
+		applyFilters,
+	}
 }

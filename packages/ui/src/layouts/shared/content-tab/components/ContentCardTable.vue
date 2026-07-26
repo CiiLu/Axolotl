@@ -193,8 +193,11 @@ function handleSort(column: ContentCardTableSortColumn) {
 					@update:model-value="toggleSelectAll"
 				/>
 
+				<template v-if="$slots['header-project']">
+					<slot name="header-project" />
+				</template>
 				<button
-					v-if="sortable"
+					v-else-if="sortable"
 					role="columnheader"
 					:aria-sort="
 						sortBy === 'project' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
@@ -236,10 +239,12 @@ function handleSort(column: ContentCardTableSortColumn) {
 				}}</span>
 			</div>
 
-			<div v-if="hasAnyActions" role="columnheader" class="min-w-[160px] shrink-0 text-right">
-				<span class="font-semibold text-secondary">{{
-					formatMessage(commonMessages.actionsLabel)
-				}}</span>
+			<div
+				v-if="hasAnyActions || $slots['header-actions']"
+				role="columnheader"
+				class="min-w-[160px] shrink-0"
+			>
+				<slot name="header-actions" />
 			</div>
 		</div>
 
