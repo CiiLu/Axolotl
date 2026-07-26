@@ -1251,7 +1251,10 @@
 		"defaultMessage": "浏览整合包"
 	},
 	"creation-flow.modal.import-instance.drop-zone.click": {
-		"defaultMessage": "点击选择文件，或拖拽任意文件/文件夹"
+		"defaultMessage": "选择文件夹，或拖拽任意文件/文件夹"
+	},
+	"creation-flow.modal.import-instance.drop-zone.primary": {
+		"defaultMessage": "拖到此处，或点击选择文件夹"
 	},
 	"creation-flow.modal.import-instance.import-prompt": {
 		"defaultMessage": "拖拽启动器文件夹、整合包文件或 .minecraft 文件夹即可一键导入实例"

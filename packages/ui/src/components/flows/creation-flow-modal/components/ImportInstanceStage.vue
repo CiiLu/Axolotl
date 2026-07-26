@@ -4,10 +4,11 @@
 		class="flex flex-col items-center gap-6 py-4"
 	>
 		<DropzoneFileInput
+			:primary-prompt="formatMessage(messages.dropZonePrimary)"
 			:secondary-prompt="formatMessage(messages.dropZoneClick)"
-			directory
+			native-picker
 			no-icon-box
-			@change="onDropzoneChange"
+			@browse="browseForImport"
 		/>
 
 		<!-- Launcher icons + caption -->
@@ -36,10 +37,12 @@
 <script setup lang="ts">
 import { defineMessages, useVIntl } from '@modrinth/ui'
 
+import { injectInstanceImport } from '../../../../providers'
 import DropzoneFileInput from '../../../base/DropzoneFileInput.vue'
 import { injectCreationFlowContext } from '../creation-flow-context'
 
 const ctx = injectCreationFlowContext()
+const importProvider = injectInstanceImport()
 const { formatMessage } = useVIntl()
 
 // ── Launcher icons (3, arc arrangement) ──
@@ -57,9 +60,13 @@ const launcherIcons = [
 ]
 
 const messages = defineMessages({
+	dropZonePrimary: {
+		id: 'creation-flow.modal.import-instance.drop-zone.primary',
+		defaultMessage: 'Drop here or click to select a folder',
+	},
 	dropZoneClick: {
 		id: 'creation-flow.modal.import-instance.drop-zone.click',
-		defaultMessage: 'Click to select a file or drag & drop any file/folder',
+		defaultMessage: 'Select a folder, or drag & drop any file/folder',
 	},
 	importPrompt: {
 		id: 'creation-flow.modal.import-instance.import-prompt',
@@ -70,31 +77,17 @@ const messages = defineMessages({
 
 // ── Drop zone handler (via DropzoneFileInput) ──
 
-function onDropzoneChange(files: File[]) {
-	if (!files || files.length === 0) return
-
-	const file = files[0]
-	// Tauri adds a `path` property to File objects from native drag-drop
-	const filePath: string | null = (file as any).path ?? null
-
-	if (ctx.onImportFileReceived) {
-		ctx.onImportFileReceived({
-			file: filePath ? null : file,
-			filePath,
-			source: 'drag-drop',
-		})
-		return
-	}
-
-	// Fallback: treat as file-picker import
-	ctx.modpackFile.value = filePath ? null : file
-	ctx.modpackFilePath.value = filePath
+async function browseForImport() {
 	if (ctx.finishDisabled.value) return
-	if (ctx.flowType === 'instance') {
-		ctx.finish()
-	} else {
-		ctx.modal.value?.setStage('final-config')
-	}
+
+	const filePath = await importProvider.selectDirectory()
+	if (!filePath) return
+
+	ctx.onImportFileReceived?.({
+		file: null,
+		filePath,
+		source: 'file-picker',
+	})
 }
 
 // ── File handling (reserved interface) ──

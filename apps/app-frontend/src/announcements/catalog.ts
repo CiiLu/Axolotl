@@ -92,6 +92,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			fixed: [
 				{
+					'en-US':
+						'Fixed instance imports opened from the folder picker or drag and drop, including .minecraft folders, launcher shortcuts, instances stored outside launcher defaults, responsive cancellation, and faster local .mrpack confirmation.',
+					'zh-CN':
+						'修复通过文件夹选择器或拖拽导入实例无响应、选择弹窗无法取消及本地 .mrpack 确认弹窗出现过慢的问题，现支持 .minecraft 文件夹、启动器快捷方式及存放在非默认位置的实例。',
+				},
+				{
 					'en-US': 'Urgent fix for critical bugs in the previous version',
 					'zh-CN': '紧急修复上个版本严重bug',
 				},

@@ -3,7 +3,9 @@ use theseus::drop_classifier::{
     DroppedItemType, ModrinthLookupResult, classify_dropped_item,
     classify_zip_with_extraction, lookup_mod_hash,
 };
-use theseus::pack::import::{ImportLauncherType, get_importable_instances};
+use theseus::pack::import::{
+    ImportLauncherType, ImportableInstance, get_importable_instances,
+};
 use theseus::{LockingProcess, get_locking_processes};
 use tracing::{debug, info, warn};
 
@@ -159,7 +161,7 @@ pub async fn drop_classify_extract(
 pub async fn drop_scan_launcher_instances(
     launcher_type: String,
     base_path: String,
-) -> Result<Vec<String>, String> {
+) -> Result<Vec<ImportableInstance>, String> {
     info!(
         "Scanning launcher instances — type: {launcher_type}, path: {base_path}"
     );
@@ -172,7 +174,7 @@ pub async fn drop_scan_launcher_instances(
         .await
         .map_err(|e| e.to_string())?;
     info!("Scan complete — found {} instance(s)", instances.len());
-    Ok(instances.into_iter().map(|i| i.name).collect())
+    Ok(instances)
 }
 
 /// Detect processes holding a file lock on the given path.

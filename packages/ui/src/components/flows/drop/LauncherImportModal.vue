@@ -61,8 +61,10 @@
 
 		<template #actions>
 			<div class="flex w-full items-center justify-between">
-				<ButtonStyled type="transparent" @click="emit('cancel')">
-					{{ formatMessage(messages.cancel) }}
+				<ButtonStyled type="transparent">
+					<button @click="handleCancel">
+						{{ formatMessage(messages.cancel) }}
+					</button>
 				</ButtonStyled>
 				<ButtonStyled :disabled="selectedCount === 0">
 					<button class="flex items-center gap-2" @click="handleConfirm">
@@ -193,6 +195,10 @@ function onHide() {
 		return
 	}
 	emit('cancel')
+}
+
+function handleCancel() {
+	modal.value?.hide()
 }
 
 function toggleInstance(launcherType: string, launcherName: string, inst: InstanceInfo) {

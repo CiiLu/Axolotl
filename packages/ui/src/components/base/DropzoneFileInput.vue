@@ -10,6 +10,7 @@
 		@dragover.prevent="onDragOver"
 		@dragleave.prevent="onDragLeave"
 		@drop.prevent="handleDrop"
+		@click="handleBrowse"
 	>
 		<div
 			v-if="!noIconBox"
@@ -41,6 +42,7 @@
 		</div>
 
 		<input
+			v-if="!nativePicker"
 			ref="fileInput"
 			type="file"
 			:multiple="directory ? false : multiple"
@@ -67,6 +69,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 const emit = defineEmits<{
 	(e: 'change', files: File[]): void
+	(e: 'browse'): void
 }>()
 
 const props = withDefaults(
@@ -81,6 +84,7 @@ const props = withDefaults(
 		size?: 'small' | 'medium' | 'large'
 		directory?: boolean
 		noIconBox?: boolean
+		nativePicker?: boolean
 	}>(),
 	{
 		primaryPrompt: 'Drop files here or click to upload',
@@ -88,6 +92,7 @@ const props = withDefaults(
 		size: 'large',
 		directory: false,
 		noIconBox: false,
+		nativePicker: false,
 	},
 )
 
@@ -154,6 +159,12 @@ function addFiles(incoming: FileList, shouldNotReset = false) {
 }
 
 const isDragOver = ref(false)
+
+function handleBrowse(event: MouseEvent) {
+	if (!props.nativePicker) return
+	event.preventDefault()
+	emit('browse')
+}
 
 function onDragOver() {
 	isDragOver.value = true

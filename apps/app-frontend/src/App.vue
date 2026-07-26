@@ -248,7 +248,6 @@ const {
 	setModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance,
-	onImportFileReceived,
 	fileDrop,
 } = setupProviders(notificationManager, popupNotificationManager)
 
@@ -1162,6 +1161,60 @@ function clearDropProcessingNotification() {
 	}
 }
 
+async function handleImportFileReceived(payload: {
+	file: File | null
+	filePath: string | null
+	source: 'file-picker' | 'drag-drop'
+}) {
+	if (!payload.filePath) return
+
+	installationModal.value?.hide()
+	await scanAndShowLauncherInstances('Unknown', payload.filePath)
+}
+
+async function scanAndShowLauncherInstances(launcherType: string, basePath: string) {
+	currentImportContext.value = { launcherType, basePath }
+	scanningInstances.value = true
+
+	let results: ScanResult[]
+	try {
+		results = await scanLauncherInstances(launcherType, basePath)
+	} catch (error) {
+		currentImportContext.value = null
+		handleError(error)
+		return
+	} finally {
+		scanningInstances.value = false
+	}
+
+	const totalInstances = results.reduce((sum, result) => sum + result.instances.length, 0)
+	if (totalInstances === 0) {
+		currentImportContext.value = null
+		addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
+		return
+	}
+
+	if (totalInstances === 1 && results[0]?.instances[0]) {
+		const instance = results[0].instances[0]
+		selectedInstances.value = [
+			{
+				launcherType,
+				basePath,
+				name: instance.name,
+				path: instance.path,
+			},
+		]
+		const capability = await check_symlink_capability()
+		symlinkCardsModal.value?.show({
+			instanceNames: [instance.name],
+			symlinkCapable: capability,
+		})
+		return
+	}
+
+	launcherImportModal.value?.show(results)
+}
+
 function handleDropCancel() {
 	clearDropProcessingNotification()
 	dropClassification.value = null
@@ -1711,6 +1764,11 @@ async function onImportSelected(
 	})
 }
 
+function onLauncherImportCancelled() {
+	currentImportContext.value = null
+	selectedInstances.value = []
+}
+
 function onSymlinkMethodCancelled() {
 	if (symlinkChoiceResolve) {
 		symlinkChoiceResolve(false)
@@ -1741,6 +1799,7 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 				ctx?.basePath ?? inst.path,
 				inst.name,
 				symlink,
+				inst.path,
 			)
 			addNotification({
 				title: formatMessage(messages.dropInstanceImportedTitle),
@@ -1862,18 +1921,28 @@ async function handleCommand(e) {
 	if (e.event === 'RunMRPack') {
 		// RunMRPack should directly install a local modpack file given a path;
 		// non-mrpack archives (CurseForge/MCBBS/HMCL/MultiMC zips) are format-sniffed by the backend
-		if (e.path.endsWith('.mrpack') || e.path.endsWith('.zip')) {
+		const lowerPath = e.path.toLowerCase()
+		if (lowerPath.endsWith('.mrpack') || lowerPath.endsWith('.zip')) {
 			const location = { type: 'fromFile', path: e.path }
-			const preview = await install_get_modpack_preview(location).catch(handleError)
-			if (preview?.unknownFile) {
-				const splitPath = e.path.split(/[\\/]/)
-				const fileName = splitPath ? splitPath[splitPath.length - 1] : e.path
+			const splitPath = e.path.split(/[\\/]/)
+			const fileName = splitPath ? splitPath[splitPath.length - 1] : e.path
+
+			if (lowerPath.endsWith('.mrpack')) {
+				await nextTick()
 				unknownPackWarningModal.value?.show(
 					() => install_create_modpack_instance(location).then(() => undefined),
 					fileName,
 				)
 			} else {
-				await install_create_modpack_instance(location).catch(handleError)
+				const preview = await install_get_modpack_preview(location).catch(handleError)
+				if (preview?.unknownFile) {
+					unknownPackWarningModal.value?.show(
+						() => install_create_modpack_instance(location).then(() => undefined),
+						fileName,
+					)
+				} else if (preview) {
+					await install_create_modpack_instance(location).catch(handleError)
+				}
 			}
 			trackEvent('InstanceCreate', {
 				source: 'CreationModalFileDrop',
@@ -2341,7 +2410,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			:search-modpacks="searchModpacks"
 			:get-project-versions="getProjectVersions"
 			:get-loader-manifest="getLoaderManifest"
-			:on-import-file-received="onImportFileReceived"
+			:on-import-file-received="handleImportFileReceived"
 			@create="handleCreate"
 			@browse-modpacks="handleBrowseModpacks"
 		/>
@@ -2700,7 +2769,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<LauncherImportModal
 		ref="launcherImportModal"
 		@confirm="onImportSelected"
-		@cancel="launcherImportModal?.hide()"
+		@cancel="onLauncherImportCancelled"
 	/>
 
 	<!-- Symlink method selection modal -->
