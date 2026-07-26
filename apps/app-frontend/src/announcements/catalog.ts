@@ -47,12 +47,48 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'The offline mode notice now has a refresh button to re-check the session server connection without restarting the launcher.',
 					'zh-CN': '离线模式提示中新增刷新按钮，无需重启启动器即可重新检测会话服务器连接状态。',
 				},
+				{
+					'en-US':
+						'Interrupted downloads of large files now resume from where they left off instead of restarting from zero, including after switching download sources or retrying a failed install.',
+					'zh-CN':
+						'大文件下载中断后现在会从断点继续，而不是从头重新下载——切换下载源或重试失败的安装时同样生效。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						"Checking a modpack's contents no longer loads the entire pack file into memory; it now streams to the download cache and is reused by a later install of the same version.",
+					'zh-CN':
+						'解析整合包内容时不再将整个整合包文件载入内存，而是流式下载到缓存，之后安装同一版本时可直接复用。',
+				},
+				{
+					'en-US':
+						'Leftover partial download files that have not been touched for a week are now cleaned up automatically on launch.',
+					'zh-CN': '启动时会自动清理超过一周未使用的下载临时文件。',
+				},
 			],
 			fixed: [
 				{
 					'en-US':
 						'Fixed a freeze caused by an infinite loop when closing the import method dialog, and its Cancel action is now a real button.',
 					'zh-CN': '修复了关闭导入方式弹窗时因无限循环导致卡死的问题，同时「取消」现在是真正的按钮。',
+				},
+				{
+					'en-US':
+						'Forge, Fabric, and NeoForge files can now fall back to their official servers when download mirrors are unavailable or have not synced a newly released version yet.',
+					'zh-CN':
+						'当下载镜像不可用或尚未同步新发布的版本时，Forge、Fabric 和 NeoForge 文件现在会回退到官方服务器下载。',
+				},
+				{
+					'en-US':
+						'Servers that mishandle multi-connection downloads are now remembered during a session, so large files stop wasting a doomed segmented attempt before every download.',
+					'zh-CN':
+						'不支持多线程分段下载的服务器现在会在会话内被记住，大文件不再每次下载都先经历一轮注定失败的分段尝试。',
+				},
+				{
+					'en-US':
+						'Two downloads writing the same file at the same time can no longer corrupt each other’s temporary data.',
+					'zh-CN': '同时写入同一文件的两个下载任务不再会相互破坏临时数据。',
 				},
 				{
 					'en-US':
@@ -74,6 +110,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Loader and other newer built-in instance icons now display without the avatar frame, matching the rest of the built-in icons.',
 					'zh-CN': '加载器及其他较新的内置实例图标现在与其余内置图标一致，不再带边框显示。',
+				},
+				{
+					'en-US':
+						'Fixed the launcher failing to start with a "Cannot save an incomplete Java installation" error when a leftover unfinished Java download was found while changing the app directory or migrating old launcher data.',
+					'zh-CN':
+						'修复更改应用目录或迁移旧启动器数据时，遗留的未完成 Java 下载会导致启动器无法启动并报 "Cannot save an incomplete Java installation" 错误的问题。',
 				},
 			],
 		},

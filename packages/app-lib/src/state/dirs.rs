@@ -471,6 +471,17 @@ impl DirectoryInfo {
                         prev_custom_dir,
                         new_dir.trim_end_matches('/').trim_end_matches('\\'),
                     );
+                    if crate::util::jre::is_java_install_staging_path(
+                        Path::new(&java_version.path),
+                    ) {
+                        tracing::warn!(
+                            java = %java_version.path,
+                            "Dropping incomplete Java installation during directory migration"
+                        );
+                        JavaVersion::remove(java_version.parsed_version, exec)
+                            .await?;
+                        continue;
+                    }
                     java_version.upsert(exec).await?
                 }
 
