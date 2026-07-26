@@ -392,9 +392,13 @@ const isPaperLike = computed(
 // Icon upload handling
 const filePicker = injectFilePicker()
 
+/** Once the user picks or removes an icon themselves, stop auto-assigning loader icons. */
+const iconManuallyChanged = ref(false)
+
 async function triggerIconInput() {
 	const picked = await (filePicker.pickInstanceIcon?.() ?? filePicker.pickImage())
 	if (picked) {
+		iconManuallyChanged.value = true
 		ctx.instanceIcon.value = picked.file
 		ctx.instanceIconUrl.value = picked.previewUrl
 		ctx.instanceIconPath.value = picked.path ?? null
@@ -402,10 +406,34 @@ async function triggerIconInput() {
 }
 
 function removeIcon() {
+	iconManuallyChanged.value = true
 	ctx.instanceIcon.value = null
 	ctx.instanceIconUrl.value = null
 	ctx.instanceIconPath.value = null
 }
+
+const loaderDefaultIconIds: Record<string, string> = {
+	vanilla: 'grass-block',
+	fabric: 'fabric',
+	forge: 'anvil',
+	neoforge: 'neoforge',
+	quilt: 'quilt',
+}
+
+let loaderIconWatchId = 0
+
+// Default the instance icon to the selected loader's built-in icon
+watch(selectedLoader, async (loader) => {
+	if (ctx.flowType !== 'instance' || iconManuallyChanged.value) return
+	const iconId = loader ? loaderDefaultIconIds[loader] : undefined
+	if (!iconId) return
+	const watchId = ++loaderIconWatchId
+	const picked = await filePicker.setBuiltInInstanceIcon?.(iconId)
+	if (!picked || watchId !== loaderIconWatchId || iconManuallyChanged.value) return
+	ctx.instanceIcon.value = picked.file
+	ctx.instanceIconUrl.value = picked.previewUrl
+	ctx.instanceIconPath.value = picked.path ?? null
+})
 
 const loaderVersionsLoading = ref(false)
 const loaderVersionsData = ref<LoaderVersionEntry[]>([])

@@ -47,6 +47,17 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Changing the app directory now moves shared instance links without moving or copying their original files.',
 					'zh-CN': '更改应用目录时，现在仅迁移共享实例链接，不再移动或复制其原始文件。',
 				},
+				{
+					'en-US':
+						'Creating a custom instance once again defaults its icon to the selected mod loader (Fabric, Forge, Quilt, NeoForge) instead of the generic placeholder.',
+					'zh-CN':
+						'创建自定义实例时，图标重新默认使用所选加载器的图标（Fabric、Forge、Quilt、NeoForge），不再是通用占位图。',
+				},
+				{
+					'en-US':
+						'Loader and other newer built-in instance icons now display without the avatar frame, matching the rest of the built-in icons.',
+					'zh-CN': '加载器及其他较新的内置实例图标现在与其余内置图标一致，不再带边框显示。',
+				},
 			],
 		},
 	},
