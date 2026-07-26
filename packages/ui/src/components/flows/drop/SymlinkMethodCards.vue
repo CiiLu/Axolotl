@@ -1,5 +1,5 @@
 <template>
-	<NewModal ref="modal" max-width="480px" :closable="true" hide-header @hide="emit('cancel')">
+	<NewModal ref="modal" max-width="480px" :closable="true" hide-header @hide="onModalHide">
 		<div class="flex flex-col gap-4 p-6">
 			<!-- Title -->
 			<div class="flex flex-col gap-1">
@@ -49,11 +49,13 @@
 
 		<template #actions>
 			<div class="flex w-full items-center justify-between p-4 pt-0">
-				<ButtonStyled type="transparent" @click="emit('cancel')">
-					{{ formatMessage(messages.cancel) }}
+				<ButtonStyled type="transparent">
+					<button @click="handleCancel">
+						{{ formatMessage(messages.cancel) }}
+					</button>
 				</ButtonStyled>
-				<ButtonStyled :disabled="!selected">
-					<button class="flex items-center gap-2" @click="handleConfirm">
+				<ButtonStyled>
+					<button class="flex items-center gap-2" :disabled="!selected" @click="handleConfirm">
 						{{ formatMessage(messages.confirm) }}
 					</button>
 				</ButtonStyled>
@@ -143,6 +145,7 @@ const emit = defineEmits<{
 }>()
 
 const modal = ref<InstanceType<typeof NewModal> | null>(null)
+const isOpen = ref(false)
 const selected = ref<'copy' | 'symlink' | null>(null)
 const internalInstanceNames = ref<string[]>([])
 const internalSymlinkCapable = ref<'supported' | 'requires_admin' | 'unsupported'>('supported')
@@ -157,18 +160,34 @@ function select(value: 'copy' | 'symlink') {
 
 function handleConfirm() {
 	if (!selected.value) return
+	isOpen.value = false
 	modal.value?.hide()
 	emit('confirm', selected.value === 'symlink')
+}
+
+function handleCancel() {
+	isOpen.value = false
+	modal.value?.hide()
+	emit('cancel')
+}
+
+function onModalHide() {
+	if (!isOpen.value) return
+	isOpen.value = false
+	emit('cancel')
 }
 
 function show(options: { instanceNames: string[]; symlinkCapable: 'supported' | 'requires_admin' | 'unsupported' }) {
 	internalInstanceNames.value = options.instanceNames
 	internalSymlinkCapable.value = options.symlinkCapable
 	selected.value = null
+	isOpen.value = true
 	modal.value?.show()
 }
 
 function hide() {
+	if (!isOpen.value) return
+	isOpen.value = false
 	modal.value?.hide()
 }
 

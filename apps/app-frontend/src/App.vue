@@ -109,6 +109,7 @@ import {
 	type InstallJobSnapshot,
 	install_create_modpack_instance,
 	install_get_modpack_preview,
+	wait_for_install_job,
 } from '@/helpers/install'
 import {
 	add_project_from_path,
@@ -1795,13 +1796,14 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 
 	for (const inst of instances) {
 		try {
-			await import_instance(
+			const job = await import_instance(
 				ctx?.launcherType ?? inst.launcherType,
 				ctx?.basePath ?? inst.path,
 				inst.name,
 				symlink,
 				inst.path,
 			)
+			await wait_for_install_job(job.job_id)
 			addNotification({
 				title: formatMessage(messages.dropInstanceImportedTitle),
 				text: formatMessage(messages.dropInstanceImportedText, { name: inst.name }),

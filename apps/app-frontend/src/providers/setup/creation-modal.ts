@@ -27,6 +27,7 @@ import {
 	install_create_instance,
 	install_create_modpack_instance,
 	install_get_modpack_preview,
+	wait_for_install_job,
 } from '@/helpers/install'
 import { check_symlink_capability, list, restart_as_admin } from '@/helpers/instance'
 import { install_job_listener } from '@/helpers/events.js'
@@ -199,13 +200,18 @@ export function setupCreationModal(
 				})
 
 				for (const entry of instanceEntries) {
-					await import_instance(
-						entry.launcherType,
-						entry.path,
-						entry.instanceName,
-						useSymlink,
-						entry.instancePath,
-					).catch(handleError)
+					try {
+						const job = await import_instance(
+							entry.launcherType,
+							entry.path,
+							entry.instanceName,
+							useSymlink,
+							entry.instancePath,
+						)
+						await wait_for_install_job(job.job_id)
+					} catch (error) {
+						handleError(error)
+					}
 				}
 				trackEvent('InstanceCreate', { source: 'CreationModalImport' })
 				return

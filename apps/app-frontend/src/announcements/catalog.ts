@@ -44,6 +44,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed a freeze caused by an infinite loop when closing the import method dialog, and its Cancel action is now a real button.',
+					'zh-CN': '修复了关闭导入方式弹窗时因无限循环导致卡死的问题，同时「取消」现在是真正的按钮。',
+				},
+				{
+					'en-US':
+						'Importing an instance no longer shows a success notification before the import actually finishes — failures now report an error instead of a false success.',
+					'zh-CN': '导入实例不再在导入真正完成前提示成功——导入失败时现在会提示错误，而不是错误地提示成功。',
+				},
+				{
+					'en-US':
 						'Changing the app directory now moves shared instance links without moving or copying their original files.',
 					'zh-CN': '更改应用目录时，现在仅迁移共享实例链接，不再移动或复制其原始文件。',
 				},
