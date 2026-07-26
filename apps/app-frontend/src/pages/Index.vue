@@ -115,29 +115,34 @@ async function fetchFeaturedMods() {
 }
 
 async function refreshFeaturedProjects() {
-	cancelTranslation()
+	const version = cancelTranslation()
 
 	await Promise.all([fetchFeaturedModpacks(), fetchFeaturedMods()])
 
 	// Save pristine copies for the toggle-to-original flow.
 	originalFeaturedModpacks.value = featuredModpacks.value
 	originalFeaturedMods.value = featuredMods.value
+	void autoTranslateFeaturedProjects(version)
+}
 
-	// Auto-translate if the user has enabled the setting.
+async function autoTranslateFeaturedProjects(version: number) {
 	try {
+		const modpacks = originalFeaturedModpacks.value
+		const mods = originalFeaturedMods.value
 		const [translatedModpacks, translatedMods] = await Promise.all([
-			translateSearchHits(featuredModpacks.value),
-			translateSearchHits(featuredMods.value),
+			translateSearchHits(modpacks),
+			translateSearchHits(mods),
 		])
-		if (translatedModpacks !== featuredModpacks.value) {
+		if (isStale(version)) return
+
+		const hasTranslations = translatedModpacks !== modpacks || translatedMods !== mods
+		if (translatedModpacks !== modpacks) {
 			featuredModpacks.value = translatedModpacks
 		}
-		if (translatedMods !== featuredMods.value) {
+		if (translatedMods !== mods) {
 			featuredMods.value = translatedMods
 		}
-		if (translatedModpacks !== featuredModpacks.value || translatedMods !== featuredMods.value) {
-			translationActive.value = true
-		}
+		if (hasTranslations) translationActive.value = true
 	} catch {
 		// Translation errors are non-critical; keep original content.
 	}

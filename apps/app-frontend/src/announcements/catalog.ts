@@ -71,6 +71,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed incomplete Java downloads being detected and launched before installation finished.',
 					'zh-CN': '修复尚未安装完成的 Java 被误识别并用于启动游戏的问题。',
 				},
+				{
+					'en-US':
+						'The launcher now finishes opening without waiting for an unavailable automatic translation service to time out.',
+					'zh-CN': '自动翻译服务不可用时，启动器现在无需等待请求超时即可完成启动。',
+				},
 			],
 		},
 	},
