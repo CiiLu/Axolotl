@@ -7,6 +7,7 @@ import {
 	get_importable_instances,
 	import_instance,
 } from '@/helpers/import.js'
+import { wait_for_install_job } from '@/helpers/install'
 
 export function setupInstanceImportProvider(notificationManager: AbstractWebNotificationManager) {
 	const { handleError } = notificationManager
@@ -48,9 +49,18 @@ export function setupInstanceImportProvider(notificationManager: AbstractWebNoti
 			for (let i = 0; i < sel.instanceNames.length; i++) {
 				const instanceName = sel.instanceNames[i]
 				const instancePath = sel.instancePaths?.[i]
-				await import_instance(sel.launcherType ?? sel.launcher, sel.path, instanceName, false, instancePath).catch(
-					handleError,
-				)
+				try {
+					const job = await import_instance(
+						sel.launcherType ?? sel.launcher,
+						sel.path,
+						instanceName,
+						false,
+						instancePath,
+					)
+					await wait_for_install_job(job.job_id)
+				} catch (error) {
+					handleError(error)
+				}
 			}
 		}
 	},

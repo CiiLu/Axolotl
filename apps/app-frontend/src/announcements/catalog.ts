@@ -33,6 +33,52 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.5.5',
+		version: '1.5.5',
+		publishedAt: '2026-07-26',
+		title: {
+			'en-US': 'Axolotl Launcher 1.5.5',
+			'zh-CN': 'Axolotl Launcher 1.5.5',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'The offline mode notice now has a refresh button to re-check the session server connection without restarting the launcher.',
+					'zh-CN': '离线模式提示中新增刷新按钮，无需重启启动器即可重新检测会话服务器连接状态。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed a freeze caused by an infinite loop when closing the import method dialog, and its Cancel action is now a real button.',
+					'zh-CN': '修复了关闭导入方式弹窗时因无限循环导致卡死的问题，同时「取消」现在是真正的按钮。',
+				},
+				{
+					'en-US':
+						'Importing an instance no longer shows a success notification before the import actually finishes — failures now report an error instead of a false success.',
+					'zh-CN': '导入实例不再在导入真正完成前提示成功——导入失败时现在会提示错误，而不是错误地提示成功。',
+				},
+				{
+					'en-US':
+						'Changing the app directory now moves shared instance links without moving or copying their original files.',
+					'zh-CN': '更改应用目录时，现在仅迁移共享实例链接，不再移动或复制其原始文件。',
+				},
+				{
+					'en-US':
+						'Creating a custom instance once again defaults its icon to the selected mod loader (Fabric, Forge, Quilt, NeoForge) instead of the generic placeholder.',
+					'zh-CN':
+						'创建自定义实例时，图标重新默认使用所选加载器的图标（Fabric、Forge、Quilt、NeoForge），不再是通用占位图。',
+				},
+				{
+					'en-US':
+						'Loader and other newer built-in instance icons now display without the avatar frame, matching the rest of the built-in icons.',
+					'zh-CN': '加载器及其他较新的内置实例图标现在与其余内置图标一致，不再带边框显示。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.5.4',
 		version: '1.5.4',
 		publishedAt: '2026-07-25',
