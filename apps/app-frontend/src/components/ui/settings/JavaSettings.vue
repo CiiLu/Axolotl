@@ -225,13 +225,13 @@ async function onJavaDownloaded(_path, _parsedVersion) {
 			<ButtonStyled>
 				<button class="!shadow-none" :disabled="scanning" @click="runScan(false)">
 					<SearchIcon class="h-4 w-4" />
-					{{ scanning && scanMode === 'quick' ? 'Scanning...' : 'Find Java' }}
+					{{ scanning && scanMode === 'quick' ? formatMessage(messages.scanning) : formatMessage(messages.findJava) }}
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
 				<button class="!shadow-none" :disabled="scanning" @click="runScan(true)">
 					<ScanEyeIcon class="h-4 w-4" />
-					{{ scanning && scanMode === 'deep' ? 'Scanning...' : 'Deep Scan' }}
+					{{ scanning && scanMode === 'deep' ? formatMessage(messages.scanning) : formatMessage(messages.deepScan) }}
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>

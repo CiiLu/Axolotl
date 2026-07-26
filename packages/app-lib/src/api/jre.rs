@@ -1456,7 +1456,18 @@ pub async fn download_java_from_feed(
         &state.pool,
         None,
     )
-    .await?;
+    .await
+    .map_err(|e| {
+        tracing::warn!(
+            "Failed to download Java from vendor {vendor} at URL {}: {e}",
+            pkg.url
+        );
+        crate::ErrorKind::LauncherError(format!(
+            "Failed to download Java from {}: {e}",
+            vendor
+        ))
+        .into()
+    })?;
 
     emit_loading(&loading_bar, 30.0, Some("Extracting..."))?;
 
