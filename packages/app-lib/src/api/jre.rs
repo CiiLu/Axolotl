@@ -1438,11 +1438,14 @@ pub async fn download_java_from_feed(
 
     let archive_path = staging_root.join(&pkg.install_folder_name);
 
-    // Download with integrity verification
+    // Download with integrity verification.
+    // The JetBrains feed serves both .tar.gz and .zip archives, so we skip
+    // ContentValidation::Jar (which only validates zip files) – SHA-256
+    // verification already guarantees file integrity.
     let integrity = Integrity {
         size: Some(pkg.archive_size),
         sha256: Some(pkg.sha256.clone()),
-        content: ContentValidation::Jar,
+        content: ContentValidation::None,
         ..Integrity::default()
     };
 
@@ -1458,7 +1461,7 @@ pub async fn download_java_from_feed(
         download_pct = pct;
         let lb = loading_bar.clone();
         Box::pin(async move {
-            let _ = emit_loading(&lb, delta, Some("Downloading..."));
+            emit_loading(&lb, delta, Some("Downloading..."))?;
             Ok(())
         })
     };
@@ -1477,11 +1480,10 @@ pub async fn download_java_from_feed(
             "Failed to download Java from vendor {vendor} at URL {}: {e}",
             pkg.url
         );
-        crate::ErrorKind::LauncherError(format!(
+        crate::Error::from(crate::ErrorKind::LauncherError(format!(
             "Failed to download Java from {}: {e}",
             vendor
-        ))
-        .into()
+        )))
     })?;
 
     // Emit remaining delta to reach exactly 50 % before extraction
@@ -1523,9 +1525,13 @@ pub async fn download_java_from_feed(
         final_root.join("bin").join(jre::JAVA_BIN)
     };
 
+    // Advance from 50 % (post-download) to 90 % to reflect installation work
+    emit_loading(&loading_bar, 40.0, Some("Verifying installation"))?;
+
     let result = check_jre(executable).await?;
 
-    emit_loading(&loading_bar, 20.0, None)?;
+    // Complete the remaining 10 % of the bar
+    emit_loading(&loading_bar, 10.0, None)?;
 
     Ok(result.path.into())
 }
