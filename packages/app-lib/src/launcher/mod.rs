@@ -194,7 +194,7 @@ pub async fn get_java_version_from_launch_context(
             java = %java.path,
             "Removing incomplete Java installation from launcher settings"
         );
-        JavaVersion::remove(key, &state.pool).await?;
+        JavaVersion::delete(&java.path, &state.pool).await?;
         return Ok(None);
     }
 
