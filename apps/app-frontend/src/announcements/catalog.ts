@@ -53,6 +53,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'大文件下载中断后现在会从断点继续，而不是从头重新下载——切换下载源或重试失败的安装时同样生效。',
 				},
+				{
+					'en-US':
+						'Project pages now link to the matching MC Mod (mcmod.cn) wiki page — in the sidebar links and the top-right menu — when the project is found in the bundled wiki index. Works for both Modrinth and CurseForge projects.',
+					'zh-CN':
+						'项目详情页现在会链接到对应的 MC 百科（mcmod.cn）页面——位于侧栏相关链接和右上角菜单中，仅当项目能在内置百科索引中找到时显示。Modrinth 和 CurseForge 项目均支持。',
+				},
 			],
 			changed: [
 				{

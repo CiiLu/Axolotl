@@ -3407,6 +3407,9 @@
 	"project.about.links.issues": {
 		"defaultMessage": "报告问题"
 	},
+	"project.about.links.mcmod": {
+		"defaultMessage": "MC Mod"
+	},
 	"project.about.links.site": {
 		"defaultMessage": "访问网站"
 	},
