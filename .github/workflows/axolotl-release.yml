@@ -123,6 +123,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Replace Gradle mirror with official distribution URL
+        if: runner.os != 'Windows'
+        run: |
+          sed -i.bak 's|https\\://mirrors\.cloud\.tencent\.com/gradle/|https\\://services.gradle.org/distributions/|' packages/app-lib/java/gradle/wrapper/gradle-wrapper.properties
+          rm -f packages/app-lib/java/gradle/wrapper/gradle-wrapper.properties.bak
+      - name: Replace Gradle mirror with official distribution URL (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          (Get-Content packages/app-lib/java/gradle/wrapper/gradle-wrapper.properties) -replace 'https\\://mirrors\.cloud\.tencent\.com/gradle/', 'https\://services.gradle.org/distributions/' | Set-Content packages/app-lib/java/gradle/wrapper/gradle-wrapper.properties
+
       - name: Set release version
         run: node scripts/axolotl/set-version.mjs "${{ github.ref_name }}"
 
