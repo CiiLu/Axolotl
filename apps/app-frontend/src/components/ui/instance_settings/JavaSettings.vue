@@ -14,7 +14,6 @@ import {
 	injectNotificationManager,
 	Slider,
 	StyledInput,
-	Table,
 	useVIntl,
 } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -36,9 +35,6 @@ const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 const messages = defineMessages({
 	javaInstallation: { id: 'instance.settings.tabs.java.java-installation', defaultMessage: 'Java installation' },
-	version: { id: 'instance.settings.tabs.java.table.version', defaultMessage: 'Version' },
-	distribution: { id: 'instance.settings.tabs.java.table.distribution', defaultMessage: 'Distribution' },
-	path: { id: 'instance.settings.tabs.java.table.path', defaultMessage: 'Path' },
 	autoLabel: { id: 'instance.settings.tabs.java.auto-label', defaultMessage: 'Auto (recommended)' },
 	customLabel: { id: 'instance.settings.tabs.java.custom-label', defaultMessage: 'Custom path...' },
 	javaPathPlaceholder: { id: 'instance.settings.tabs.java.java-path-placeholder', defaultMessage: '/path/to/java' },
@@ -114,13 +110,6 @@ async function handleBrowseJava() {
 function handleDetectJava() {
 	javaDetectionModal.value?.show(effectiveJavaVersion.value, { path: activePath.value })
 }
-
-const columns = [
-	{ key: '_select' as const, label: '', width: '2rem' },
-	{ key: 'parsed_version' as const, label: formatMessage(messages.version), width: '6rem' },
-	{ key: 'distribution' as const, label: formatMessage(messages.distribution) },
-	{ key: 'path' as const, label: formatMessage(messages.path) },
-]
 
 const tableData = computed(() => {
 	const rows: any[] = []
@@ -203,44 +192,65 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 <template>
 	<div>
 		<JavaDetectionModal ref="javaDetectionModal" @submit="(val) => { selectedVersion = SELECT_CUSTOM; customPath = val.path }" />
-		<h2 class="m-0 mb-2 text-base font-extrabold text-contrast block">
+		<h2 class="m-0 mb-3 text-base font-extrabold text-contrast block">
 			{{ formatMessage(messages.javaInstallation) }}
 		</h2>
-		<Table :columns="columns" :data="tableData" row-key="_select" :row-clickable="true" @row-click="onSelectRow">
-			<template #cell-_select="{ row }">
-				<div class="flex items-center justify-center">
+
+		<div class="flex flex-col gap-1">
+			<div
+				v-for="row in tableData"
+				:key="row._select"
+				class="flex items-start gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors border-l-[3px]"
+				:class="selectedVersion === row._select
+					? 'border-accent bg-accent/5'
+					: 'border-transparent hover:bg-button-bg'"
+				@click="onSelectRow(row)"
+			>
+				<div class="flex items-center justify-center mt-0.5 shrink-0">
 					<div
 						role="radio"
 						:aria-checked="selectedVersion === row._select"
-						class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors cursor-pointer"
-						:class="selectedVersion === row._select 
-							? 'border-accent bg-accent scale-110' 
-							: 'border-button-border hover:border-accent'"
+						class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
+						:class="selectedVersion === row._select
+							? 'border-accent bg-accent'
+							: 'border-button-border group-hover:border-accent'"
 					>
-						<div v-if="selectedVersion === row._select" class="w-2.5 h-2.5 rounded-full bg-bg" />
+						<div v-if="selectedVersion === row._select" class="w-2 h-2 rounded-full bg-bg" />
 					</div>
 				</div>
-			</template>
-			<template #cell-parsed_version="{ row }">
-				<span v-if="row._isAuto" class="font-semibold italic">
-					{{ row.parsed_version ? 'Java ' + row.parsed_version : '—' }}
-				</span>
-				<span v-else-if="row._isCustom" class="italic text-secondary">—</span>
-				<span v-else class="font-semibold tabular-nums">Java {{ row.parsed_version }}</span>
-			</template>
-			<template #cell-distribution="{ row }">
-				<span v-if="row._isAuto" class="text-accent font-semibold text-sm">{{ row.distribution }}</span>
-				<span v-else-if="row._isCustom" class="italic text-secondary text-sm">{{ row.distribution }}</span>
-				<span v-else class="text-sm">{{ row.distribution || '—' }}</span>
-			</template>
-			<template #cell-path="{ row }">
-				<span v-if="row._isCustom && selectedVersion === SELECT_CUSTOM" />
-				<span v-else-if="row.path" v-tooltip="row.path" class="block truncate font-mono text-xs max-w-56">{{ row.path }}</span>
-				<span v-else class="text-xs text-secondary">—</span>
-			</template>
-		</Table>
+				<div class="flex-1 min-w-0">
+					<div class="flex items-center gap-2">
+						<span
+							v-if="row._isAuto"
+							class="text-sm font-semibold text-accent"
+						>
+							{{ formatMessage(messages.autoLabel) }}
+						</span>
+						<span
+							v-else-if="row._isCustom"
+							class="text-sm font-semibold italic text-secondary"
+						>
+							{{ formatMessage(messages.customLabel) }}
+						</span>
+						<span v-else class="text-sm font-semibold tabular-nums">
+							Java {{ row.parsed_version }}
+						</span>
+						<span v-if="!row._isAuto && !row._isCustom && row.distribution" class="text-xs text-secondary">
+							{{ row.distribution }}
+						</span>
+					</div>
+					<div v-if="row._isAuto" class="text-xs text-secondary mt-0.5">
+						Java {{ row.parsed_version }}
+						<span v-if="row.distribution"> — {{ row.distribution }}</span>
+					</div>
+					<div v-else-if="row.path" v-tooltip="row.path" class="text-xs text-secondary font-mono truncate mt-0.5">
+						{{ row.path }}
+					</div>
+				</div>
+			</div>
+		</div>
 
-		<div v-if="selectedVersion === SELECT_CUSTOM" class="flex flex-col gap-2 p-2 bg-bg rounded-lg border border-button-border mt-1">
+		<div v-if="selectedVersion === SELECT_CUSTOM" class="flex flex-col gap-2 p-2 bg-bg rounded-lg border border-button-border mt-2">
 			<div class="flex gap-2 items-center">
 				<StyledInput
 					v-model="customPath"
@@ -266,15 +276,15 @@ watch([selectedVersion, customPath, overrideJavaArgs, javaArgs, overrideEnvVars,
 			</div>
 		</div>
 
-		<h2 class="mt-3 mb-0.5 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaMemory) }}</h2>
+		<h2 class="mt-4 mb-1 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaMemory) }}</h2>
 		<Checkbox v-model="overrideMemorySettings" :label="formatMessage(messages.customMemoryAllocation)" class="mb-2" />
 		<Checkbox v-if="overrideMemorySettings" v-model="memory.automatic" :label="formatMessage(messages.automaticMemory)" class="mb-2" />
 		<Slider id="max-memory" v-model="memory.maximum" :disabled="!overrideMemorySettings || memory.automatic" :min="512" :max="maxMemory" :step="64" :snap-points="snapPoints" :snap-range="512" unit="MB" />
 		<MemoryAllocationDisplay :instance-id="instance.id" :memory="effectiveMemory" />
-		<h2 class="mt-3 mb-0.5 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaArguments) }}</h2>
+		<h2 class="mt-4 mb-1 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaArguments) }}</h2>
 		<Checkbox v-model="overrideJavaArgs" :label="formatMessage(messages.customJavaArguments)" class="my-1" />
 		<StyledInput id="java-args" v-model="javaArgs" autocomplete="off" :disabled="!overrideJavaArgs" :placeholder="formatMessage(messages.enterJavaArguments)" wrapper-class="w-full" />
-		<h2 class="mt-3 mb-0.5 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaEnvironmentVariables) }}</h2>
+		<h2 class="mt-4 mb-1 text-base font-extrabold text-contrast block">{{ formatMessage(messages.javaEnvironmentVariables) }}</h2>
 		<Checkbox v-model="overrideEnvVars" :label="formatMessage(messages.customEnvironmentVariables)" class="mb-2" />
 		<StyledInput id="env-vars" v-model="envVars" autocomplete="off" :disabled="!overrideEnvVars" :placeholder="formatMessage(messages.enterEnvironmentVariables)" wrapper-class="w-full" />
 	</div>
