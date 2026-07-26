@@ -28,7 +28,6 @@ import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages, formatContentTypeSentence } from '#ui/utils/common-messages'
 
 import ContentCardTable from './components/ContentCardTable.vue'
-import ContentModpackCard from './components/ContentModpackCard.vue'
 import ContentSelectionBar from './components/ContentSelectionBar.vue'
 import ConfirmBulkUpdateModal from './components/modals/ConfirmBulkUpdateModal.vue'
 import ConfirmDeletionModal from './components/modals/ConfirmDeletionModal.vue'
@@ -67,10 +66,6 @@ const messages = defineMessages({
 		id: 'content.page-layout.failed-to-load',
 		defaultMessage: 'Failed to load content',
 	},
-	additionalContent: {
-		id: 'content.page-layout.additional-content',
-		defaultMessage: 'Additional content',
-	},
 	searchPlaceholder: {
 		id: 'content.page-layout.search-placeholder',
 		defaultMessage: 'Search {count, number} {contentType}...',
@@ -103,17 +98,9 @@ const messages = defineMessages({
 		id: 'content.page-layout.no-content-found',
 		defaultMessage: 'No content found.',
 	},
-	noExtraContentInstalled: {
-		id: 'content.page-layout.empty.no-extra-content-installed',
-		defaultMessage: 'No extra content installed',
-	},
 	noContentInstalled: {
 		id: 'content.page-layout.empty.no-content-installed',
 		defaultMessage: 'No content installed',
-	},
-	emptyModpackHint: {
-		id: 'content.page-layout.empty.modpack-hint',
-		defaultMessage: 'Add additional content on top of this modpack',
 	},
 	emptyHint: {
 		id: 'content.page-layout.empty.hint',
@@ -817,250 +804,212 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 			</div>
 
 			<template v-else>
-				<ContentModpackCard
-					v-if="ctx.modpack.value"
-					:project="ctx.modpack.value.project"
-					:project-link="ctx.modpack.value.projectLink"
-					:version="ctx.modpack.value.version"
-					:version-link="ctx.modpack.value.versionLink"
-					:owner="ctx.modpack.value.owner"
-					:categories="ctx.modpack.value.categories"
-					:has-update="ctx.modpack.value.hasUpdate"
-					:disabled="ctx.modpack.value.disabled || ctx.isBusy.value || isBulkOperating"
-					:disabled-text="
-						ctx.modpack.value.disabledText ??
-						(ctx.isBusy.value ? (ctx.busyMessage?.value ?? undefined) : undefined)
-					"
-					:show-content-hint="
-						!!(ctx.showContentHint?.value && ctx.modpack.value && ctx.items.value.length === 0)
-					"
-					v-on="{
-						...(ctx.updateModpack ? { update: () => ctx.updateModpack?.() } : {}),
-						...(ctx.viewModpackContent ? { content: () => ctx.viewModpackContent?.() } : {}),
-						...(ctx.unlinkModpack ? { unlink: () => confirmUnlinkModal?.show() } : {}),
-						...(ctx.openSettings ? { settings: () => ctx.openSettings?.() } : {}),
-					}"
-					@dismiss-content-hint="ctx.dismissContentHint?.()"
-				/>
+				<template v-if="ctx.items.value.length > 0 || (ctx.modpackItems?.value?.length ?? 0) > 0">
+					<div class="flex flex-wrap items-center gap-2">
+						<StyledInput
+							v-model="searchQuery"
+							:icon="SearchIcon"
+							type="text"
+							autocomplete="off"
+							:spellcheck="false"
+							input-class="!h-10"
+							wrapper-class="flex-1 min-w-0"
+							clearable
+							:placeholder="
+								formatMessage(messages.searchPlaceholder, {
+									count: searchableItemCount,
+									contentType: formatContentTypeSentence(
+										formatMessage,
+										ctx.contentTypeLabel.value,
+										searchableItemCount,
+									),
+								})
+							"
+						/>
 
-				<template v-if="ctx.items.value.length > 0">
-					<div class="flex flex-col gap-4">
-						<span v-if="ctx.modpack.value" class="text-xl font-semibold text-contrast">
-							{{ formatMessage(messages.additionalContent) }}
-						</span>
-
-						<div class="flex flex-wrap items-center gap-2">
-							<StyledInput
-								v-model="searchQuery"
-								:icon="SearchIcon"
-								type="text"
-								autocomplete="off"
-								:spellcheck="false"
-								input-class="!h-10"
-								wrapper-class="flex-1 min-w-0"
-								clearable
-								:placeholder="
-									formatMessage(messages.searchPlaceholder, {
-										count: searchableItemCount,
-										contentType: formatContentTypeSentence(
-											formatMessage,
-											ctx.contentTypeLabel.value,
-											searchableItemCount,
-										),
-									})
-								"
-							/>
-
-							<div class="flex items-center gap-2">
-								<ButtonStyled color="brand">
-									<button
-										v-tooltip="
-											ctx.busyMessage?.value ??
-											(ctx.disableAddContent?.value ? ctx.disableAddContentTooltip : undefined)
-										"
-										:disabled="ctx.isBusy.value || ctx.disableAddContent?.value"
-										class="!h-10 flex items-center gap-2"
-										@click="ctx.browse"
-									>
-										<CompassIcon class="size-5" />
-										<span>{{ formatMessage(messages.browseContent) }}</span>
-									</button>
-								</ButtonStyled>
-								<ButtonStyled type="outlined">
-									<button
-										v-tooltip="
-											ctx.busyMessage?.value ??
-											(ctx.disableAddContent?.value ? ctx.disableAddContentTooltip : undefined)
-										"
-										:disabled="ctx.isBusy.value || ctx.disableAddContent?.value"
-										class="!h-10"
-										@click="ctx.uploadFiles"
-									>
-										<FolderOpenIcon class="size-5" />
-										{{ formatMessage(messages.uploadFiles) }}
-									</button>
-								</ButtonStyled>
-							</div>
-						</div>
-
-						<div class="@container flex flex-col gap-2">
-							<div class="flex flex-wrap items-center gap-1.5">
+						<div class="flex items-center gap-2">
+							<ButtonStyled color="brand">
 								<button
-									class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
-									:class="
-										!selectedTypeFilter
-											? 'bg-brand-highlight text-brand'
-											: 'bg-surface-4 text-primary hover:bg-surface-5'
+									v-tooltip="
+										ctx.busyMessage?.value ??
+										(ctx.disableAddContent?.value ? ctx.disableAddContentTooltip : undefined)
 									"
-									:aria-pressed="!selectedTypeFilter"
-									@click="selectedTypeFilter = null"
+									:disabled="ctx.isBusy.value || ctx.disableAddContent?.value"
+									class="!h-10 flex items-center gap-2"
+									@click="ctx.browse"
+								>
+									<CompassIcon class="size-5" />
+									<span>{{ formatMessage(messages.browseContent) }}</span>
+								</button>
+							</ButtonStyled>
+							<ButtonStyled type="outlined">
+								<button
+									v-tooltip="
+										ctx.busyMessage?.value ??
+										(ctx.disableAddContent?.value ? ctx.disableAddContentTooltip : undefined)
+									"
+									:disabled="ctx.isBusy.value || ctx.disableAddContent?.value"
+									class="!h-10"
+									@click="ctx.uploadFiles"
+								>
+									<FolderOpenIcon class="size-5" />
+									{{ formatMessage(messages.uploadFiles) }}
+								</button>
+							</ButtonStyled>
+						</div>
+					</div>
+
+					<div class="@container flex flex-col gap-2">
+						<div class="flex flex-wrap items-center gap-1.5">
+							<button
+								class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
+								:class="
+									!selectedTypeFilter
+										? 'bg-brand-highlight text-brand'
+										: 'bg-surface-4 text-primary hover:bg-surface-5'
+								"
+								:aria-pressed="!selectedTypeFilter"
+								@click="selectedTypeFilter = null"
+							>
+								{{ formatMessage(commonMessages.allProjectType) }}
+								<span class="ml-1 text-sm font-normal opacity-70">{{ totalCount }}</span>
+							</button>
+							<button
+								v-for="option in row1FilterOptions"
+								:key="option.id"
+								class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
+								:class="
+									selectedTypeFilter === option.id
+										? 'bg-brand-highlight text-brand'
+										: 'bg-surface-4 text-primary hover:bg-surface-5'
+								"
+								:aria-pressed="selectedTypeFilter === option.id"
+								@click="toggleTypeFilter(option.id)"
+							>
+								{{ option.label }}
+								<span class="ml-1 text-sm font-normal opacity-70">{{
+									filterCounts[option.id] ?? 0
+								}}</span>
+							</button>
+						</div>
+					</div>
+
+					<ContentCardTable
+						v-model:selected-ids="selectedIds"
+						:items="tableItems"
+						:show-selection="true"
+						:expanded-groups="expandedGroups"
+						@update:enabled="handleToggleEnabledById"
+						@delete="handleDeleteById"
+						@update="handleUpdateById"
+						@switch-version="handleSwitchVersionById"
+						@toggle-expand="toggleGroupExpand"
+					>
+						<template #header-project>
+							<div class="flex items-center gap-4">
+								<button
+									class="relative pb-1 text-base font-semibold transition-colors"
+									:class="
+										selectedStatusFilters.length === 0
+											? 'text-brand'
+											: 'text-secondary hover:text-primary'
+									"
+									@click="selectedStatusFilters = []"
 								>
 									{{ formatMessage(commonMessages.allProjectType) }}
-									<span class="ml-1 text-sm font-normal opacity-70">{{ totalCount }}</span>
+									<span
+										v-if="selectedStatusFilters.length === 0"
+										class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
+									/>
 								</button>
 								<button
-									v-for="option in row1FilterOptions"
+									v-for="option in row2FilterOptions"
 									:key="option.id"
-									class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
+									class="relative pb-1 text-base font-semibold transition-colors"
 									:class="
-										selectedTypeFilter === option.id
-											? 'bg-brand-highlight text-brand'
-											: 'bg-surface-4 text-primary hover:bg-surface-5'
+										selectedStatusFilters.includes(option.id)
+											? 'text-brand'
+											: 'text-secondary hover:text-primary'
 									"
-									:aria-pressed="selectedTypeFilter === option.id"
-									@click="toggleTypeFilter(option.id)"
+									@click="selectedStatusFilters = [option.id]"
 								>
 									{{ option.label }}
 									<span class="ml-1 text-sm font-normal opacity-70">{{
 										filterCounts[option.id] ?? 0
 									}}</span>
+									<span
+										v-if="selectedStatusFilters.includes(option.id)"
+										class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
+									/>
 								</button>
 							</div>
-						</div>
-
-						<ContentCardTable
-							v-model:selected-ids="selectedIds"
-							:items="tableItems"
-							:show-selection="true"
-							:expanded-groups="expandedGroups"
-							@update:enabled="handleToggleEnabledById"
-							@delete="handleDeleteById"
-							@update="handleUpdateById"
-							@switch-version="handleSwitchVersionById"
-							@toggle-expand="toggleGroupExpand"
-						>
-							<template #header-project>
-								<div class="flex items-center gap-4">
+						</template>
+						<template #header-actions>
+							<div class="flex items-center justify-end gap-2">
+								<ButtonStyled circular type="transparent">
 									<button
-										class="relative pb-1 text-base font-semibold transition-colors"
-										:class="
-											selectedStatusFilters.length === 0
-												? 'text-brand'
-												: 'text-secondary hover:text-primary'
+										v-tooltip="sortTooltipConfig"
+										:aria-label="
+											formatMessage(messages.sortByLabel, { mode: sortLabels[sortMode]() })
 										"
-										@click="selectedStatusFilters = []"
+										@click="cycleSortMode"
 									>
-										{{ formatMessage(commonMessages.allProjectType) }}
-										<span
-											v-if="selectedStatusFilters.length === 0"
-											class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
-										/>
+										<ArrowUpZAIcon v-if="sortMode === 'alphabetical-desc'" /><ClockArrowDownIcon
+											v-else-if="sortMode === 'date-added-newest'"
+										/><ClockArrowUpIcon
+											v-else-if="sortMode === 'date-added-oldest'"
+										/><ArrowDownAZIcon v-else />
 									</button>
+								</ButtonStyled>
+
+								<ButtonStyled
+									v-if="hasBulkUpdateSupport && hasOutdatedProjects"
+									circular
+									color="green"
+									type="transparent"
+									color-fill="text"
+									hover-color-fill="background"
+								>
 									<button
-										v-for="option in row2FilterOptions"
-										:key="option.id"
-										class="relative pb-1 text-base font-semibold transition-colors"
-										:class="
-											selectedStatusFilters.includes(option.id)
-												? 'text-brand'
-												: 'text-secondary hover:text-primary'
-										"
-										@click="selectedStatusFilters = [option.id]"
+										v-tooltip="formatMessage(messages.updateAll)"
+										:disabled="isBulkOperating"
+										@click="promptUpdateAll"
 									>
-										{{ option.label }}
-										<span class="ml-1 text-sm font-normal opacity-70">{{
-											filterCounts[option.id] ?? 0
-										}}</span>
-										<span
-											v-if="selectedStatusFilters.includes(option.id)"
-											class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
-										/>
+										<DownloadIcon />
 									</button>
-								</div>
-							</template>
-							<template #header-actions>
-								<div class="flex items-center justify-end gap-2">
-									<ButtonStyled circular type="transparent">
-										<button
-											v-tooltip="sortTooltipConfig"
-											:aria-label="
-												formatMessage(messages.sortByLabel, { mode: sortLabels[sortMode]() })
-											"
-											@click="cycleSortMode"
-										>
-											<ArrowUpZAIcon v-if="sortMode === 'alphabetical-desc'" /><ClockArrowDownIcon
-												v-else-if="sortMode === 'date-added-newest'"
-											/><ClockArrowUpIcon
-												v-else-if="sortMode === 'date-added-oldest'"
-											/><ArrowDownAZIcon v-else />
-										</button>
-									</ButtonStyled>
+								</ButtonStyled>
 
-									<ButtonStyled
-										v-if="hasBulkUpdateSupport && hasOutdatedProjects"
-										circular
-										color="green"
-										type="transparent"
-										color-fill="text"
-										hover-color-fill="background"
+								<ButtonStyled circular type="transparent">
+									<button
+										v-tooltip="formatMessage(commonMessages.refreshButton)"
+										:disabled="refreshing"
+										@click="handleRefresh"
 									>
-										<button
-											v-tooltip="formatMessage(messages.updateAll)"
-											:disabled="isBulkOperating"
-											@click="promptUpdateAll"
-										>
-											<DownloadIcon />
-										</button>
-									</ButtonStyled>
-
-									<ButtonStyled circular type="transparent">
-										<button
-											v-tooltip="formatMessage(commonMessages.refreshButton)"
-											:disabled="refreshing"
-											@click="handleRefresh"
-										>
-											<RefreshCwIcon :class="refreshing ? 'animate-spin' : ''" />
-										</button>
-									</ButtonStyled>
-								</div>
-							</template>
-							<template #empty>
-								<span>{{ formatMessage(messages.noContentFound) }}</span>
-							</template>
-						</ContentCardTable>
-					</div>
+										<RefreshCwIcon :class="refreshing ? 'animate-spin' : ''" />
+									</button>
+								</ButtonStyled>
+							</div>
+						</template>
+						<template #empty>
+							<span>{{ formatMessage(messages.noContentFound) }}</span>
+						</template>
+					</ContentCardTable>
 				</template>
 
 				<EmptyState v-else type="empty-inbox">
 					<template #heading>
-						{{
-							formatMessage(
-								ctx.modpack.value ? messages.noExtraContentInstalled : messages.noContentInstalled,
-							)
-						}}
+						{{ formatMessage(messages.noContentInstalled) }}
 					</template>
 					<template #description>
 						{{
-							ctx.modpack.value
-								? formatMessage(messages.emptyModpackHint)
-								: formatMessage(messages.emptyHint, {
-										contentType: formatContentTypeSentence(
-											formatMessage,
-											ctx.contentTypeLabel.value,
-											2,
-											'content',
-										),
-									})
+							formatMessage(messages.emptyHint, {
+								contentType: formatContentTypeSentence(
+									formatMessage,
+									ctx.contentTypeLabel.value,
+									2,
+									'content',
+								),
+							})
 						}}
 					</template>
 					<template #actions>
