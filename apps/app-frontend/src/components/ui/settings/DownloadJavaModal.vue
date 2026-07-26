@@ -22,8 +22,7 @@ const messages = defineMessages({
 	loadingVersions: { id: 'app.settings.java.download.loading', defaultMessage: 'Loading versions...' },
 	noVersionsFound: { id: 'app.settings.java.download.no-versions', defaultMessage: 'No versions available.' },
 	versionLabel: { id: 'app.settings.java.download.version-label', defaultMessage: 'Java {version}' },
-	downloadComplete: { id: 'app.settings.java.download.download-complete', defaultMessage: 'Java {version} installed' },
-	downloadCompleteHint: { id: 'app.settings.java.download.download-complete-hint', defaultMessage: 'Download complete. Scanning for the new installation...' },
+	downloadComplete: { id: 'app.settings.java.download.download-complete', defaultMessage: 'Download complete. Click Find Java to scan.' },
 })
 
 const emit = defineEmits(['downloaded'])
@@ -54,12 +53,11 @@ async function downloadVersion(version) {
 	downloadingVersion.value = null
 
 	if (path) {
+		modal.value.hide()
 		addNotification({
 			type: 'success',
-			title: formatMessage(messages.downloadComplete),
-			text: formatMessage(messages.downloadCompleteHint, { version }),
+			text: formatMessage(messages.downloadComplete),
 		})
-		modal.value.hide()
 		emit('downloaded', path, version)
 	}
 }
