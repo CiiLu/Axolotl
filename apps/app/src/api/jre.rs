@@ -21,6 +21,7 @@ pub fn init<R: tauri::Runtime>() -> TauriPlugin<R> {
             list_java_feed_vendors,
             list_java_feed_versions,
             download_java_from_feed,
+            download_java,
         ])
         .build()
 }
@@ -116,4 +117,9 @@ pub async fn list_java_feed_versions(vendor: String) -> Result<Vec<JdkVersionInf
 #[tauri::command]
 pub async fn download_java_from_feed(vendor: String, jdk_version_major: u32) -> Result<PathBuf> {
     Ok(jre::download_java_from_feed(&vendor, jdk_version_major).await?)
+}
+
+#[tauri::command]
+pub async fn download_java(vendor: String, version: u32) -> Result<theseus::install::InstallJobSnapshot> {
+    Ok(theseus::install::download_java(vendor, version).await?)
 }

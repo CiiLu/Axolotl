@@ -1377,23 +1377,52 @@ pub async fn download_java_from_feed(
     vendor: &str,
     jdk_version_major: u32,
 ) -> crate::Result<PathBuf> {
+    download_java_from_feed_inner(vendor, jdk_version_major, None).await
+}
+
+/// Downloads Java from the JetBrains feed with an install progress reporter,
+/// so the caller can observe progress through the install-job system.
+pub async fn download_java_from_feed_with_reporter(
+    vendor: &str,
+    jdk_version_major: u32,
+    reporter: InstallProgressReporter,
+) -> crate::Result<PathBuf> {
+    download_java_from_feed_inner(vendor, jdk_version_major, Some(reporter)).await
+}
+
+async fn download_java_from_feed_inner(
+    vendor: &str,
+    jdk_version_major: u32,
+    reporter: Option<InstallProgressReporter>,
+) -> crate::Result<PathBuf> {
     let state = State::get().await?;
     let _install_guard = JAVA_INSTALL_LOCK.lock().await;
 
-    let loading_bar = Some(
-        init_loading(
-            LoadingBarType::JavaDownload {
-                version: jdk_version_major,
-            },
-            100.0,
-            "Downloading java version",
+    let loading_bar = if reporter.is_none() {
+        Some(
+            init_loading(
+                LoadingBarType::JavaDownload {
+                    version: jdk_version_major,
+                },
+                100.0,
+                "Downloading java version",
+            )
+            .await?,
         )
-        .await?,
-    );
+    } else {
+        None
+    };
 
     if let Some(loading_bar) = &loading_bar {
         emit_loading(loading_bar, 0.0, Some("Fetching metadata"))?;
     }
+    update_java_install_progress(
+        reporter.as_ref(),
+        jdk_version_major,
+        InstallJavaStep::FetchingMetadata,
+        Some(java_step_progress(1)),
+    )
+    .await?;
 
     let feed = fetch_jdk_feed().await?;
     let os = map_platform_to_feed_os();
@@ -1425,6 +1454,19 @@ pub async fn download_java_from_feed(
             )
         })?;
 
+    if let Some(reporter) = &reporter {
+        reporter
+            .set_context(
+                InstallErrorContext::new("download Java from feed")
+                    .urls(vec![pkg.url.clone()])
+                    .java_version(jdk_version_major)
+                    .os(std::env::consts::OS)
+                    .arch(std::env::consts::ARCH)
+                    .build(),
+            )
+            .await?;
+    }
+
     let metadata_dir = state.directories.metadata_dir();
     let java_dir = metadata_dir.join("java_versions");
     io::create_dir_all(&java_dir).await?;
@@ -1453,23 +1495,41 @@ pub async fn download_java_from_feed(
         ..Integrity::default()
     };
 
-    // Track real download progress as a fraction of the loading bar (0–50%)
+    // Track real download progress
     let mut download_pct = 0_f64;
+    let reporter_for_progress = reporter.clone();
     let mut progress = |current: u64, total: u64| -> Pin<Box<dyn Future<Output = crate::Result<()>> + Send>> {
-        let pct = if total > 0 {
-            (current as f64 / total as f64) * 50.0
+        if let Some(ref reporter) = reporter_for_progress {
+            let reporter = reporter.clone();
+            Box::pin(async move {
+                update_java_install_progress(
+                    Some(&reporter),
+                    jdk_version_major,
+                    InstallJavaStep::Downloading,
+                    Some(InstallProgress {
+                        current,
+                        total: total.max(1),
+                        secondary: None,
+                    }),
+                )
+                .await
+            })
         } else {
-            0.0
-        };
-        let delta = pct - download_pct;
-        download_pct = pct;
-        let lb = loading_bar.clone();
-        Box::pin(async move {
-            if let Some(lb) = &lb {
-                emit_loading(lb, delta, Some("Downloading..."))?;
-            }
-            Ok(())
-        })
+            let pct = if total > 0 {
+                (current as f64 / total as f64) * 50.0
+            } else {
+                0.0
+            };
+            let delta = pct - download_pct;
+            download_pct = pct;
+            let lb = loading_bar.clone();
+            Box::pin(async move {
+                if let Some(lb) = &lb {
+                    emit_loading(lb, delta, Some("Downloading..."))?;
+                }
+                Ok(())
+            })
+        }
     };
 
     download_to_path(
@@ -1492,7 +1552,18 @@ pub async fn download_java_from_feed(
         )))
     })?;
 
-    // Emit remaining delta to reach exactly 50 % before extraction
+    if let Some(reporter) = &reporter {
+        // Report extracting phase via reporter
+        update_java_install_progress(
+            Some(reporter),
+            jdk_version_major,
+            InstallJavaStep::Extracting,
+            Some(java_step_progress(3)),
+        )
+        .await?;
+    }
+
+    // Emit remaining delta to reach exactly 50 % before extraction (legacy path)
     if let Some(loading_bar) = &loading_bar {
         emit_loading(
             loading_bar,
@@ -1537,6 +1608,15 @@ pub async fn download_java_from_feed(
     if let Some(loading_bar) = &loading_bar {
         emit_loading(loading_bar, 40.0, Some("Verifying installation"))?;
     }
+
+    // Report validating phase via reporter
+    update_java_install_progress(
+        reporter.as_ref(),
+        jdk_version_major,
+        InstallJavaStep::Validating,
+        Some(java_step_progress(4)),
+    )
+    .await?;
 
     let result = check_jre(executable).await?;
 

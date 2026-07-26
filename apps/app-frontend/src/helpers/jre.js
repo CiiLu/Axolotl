@@ -81,3 +81,7 @@ export async function list_java_feed_versions(vendor) {
 export async function download_java_from_feed(vendor, jdkVersionMajor) {
 	return await invoke('plugin:jre|download_java_from_feed', { vendor, jdkVersionMajor })
 }
+
+export async function download_java(vendor, version) {
+	return await invoke('plugin:jre|download_java', { vendor, version })
+}

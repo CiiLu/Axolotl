@@ -11,7 +11,7 @@ import { ref } from 'vue'
 
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
-import { download_java_from_feed, list_java_feed_vendors, list_java_feed_versions } from '@/helpers/jre'
+import { download_java, list_java_feed_vendors, list_java_feed_versions } from '@/helpers/jre'
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
@@ -68,11 +68,11 @@ async function downloadVersion(info) {
 	trackEvent('JavaDownload', { vendor: info.vendor, version: info.major_version })
 	modal.value.hide()
 
-	const path = await download_java_from_feed(info.vendor, info.major_version).catch(handleError)
+	const job = await download_java(info.vendor, info.major_version).catch(handleError)
 	downloading.value = null
 
-	if (path) {
-		emit('downloaded', path, info.major_version)
+	if (job) {
+		emit('downloaded', job)
 	}
 }
 </script>
