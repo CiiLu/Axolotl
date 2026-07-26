@@ -1,7 +1,6 @@
 use crate::api::Result;
 use std::path::PathBuf;
 use tauri::plugin::TauriPlugin;
-use theseus::prelude::JavaVersion;
 use theseus::prelude::*;
 
 pub fn init<R: tauri::Runtime>() -> TauriPlugin<R> {
@@ -19,6 +18,9 @@ pub fn init<R: tauri::Runtime>() -> TauriPlugin<R> {
             jre_get_memory_status,
             jre_optimize_memory,
             list_java_distribution_versions,
+            list_java_feed_vendors,
+            list_java_feed_versions,
+            download_java_from_feed,
         ])
         .build()
 }
@@ -98,4 +100,19 @@ pub async fn jre_get_memory_status(
 pub async fn jre_optimize_memory()
 -> Result<theseus::memory::MemoryOptimizationResult> {
     Ok(theseus::memory::optimize().await?)
+}
+
+#[tauri::command]
+pub async fn list_java_feed_vendors() -> Result<Vec<String>> {
+    Ok(jre::list_java_feed_vendors().await?)
+}
+
+#[tauri::command]
+pub async fn list_java_feed_versions(vendor: String) -> Result<Vec<JdkVersionInfo>> {
+    Ok(jre::list_java_feed_versions(&vendor).await?)
+}
+
+#[tauri::command]
+pub async fn download_java_from_feed(vendor: String, jdk_version_major: u32) -> Result<PathBuf> {
+    Ok(jre::download_java_from_feed(&vendor, jdk_version_major).await?)
 }

@@ -2076,7 +2076,16 @@
 		"message": "Download Java"
 	},
 	"app.settings.java.download.select-version": {
-		"message": "Select a Java version to download and install automatically:"
+		"message": "Select a Java version:"
+	},
+	"app.settings.java.download.select-vendor": {
+		"message": "Choose a distribution:"
+	},
+	"app.settings.java.download.no-vendors": {
+		"message": "No distributions available."
+	},
+	"app.settings.java.download.select-version-feed": {
+		"message": "Select a version of {vendor}:"
 	},
 	"app.settings.java.download.downloading": {
 		"message": "Downloading Java {version}..."

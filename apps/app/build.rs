@@ -124,6 +124,9 @@ fn main() {
                         "jre_get_memory_status",
                         "jre_optimize_memory",
                         "list_java_distribution_versions",
+                        "list_java_feed_vendors",
+                        "list_java_feed_versions",
+                        "download_java_from_feed",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

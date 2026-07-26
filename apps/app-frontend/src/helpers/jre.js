@@ -69,3 +69,15 @@ export async function get_memory_status(instanceId, requestedMemoryMb, automatic
 export async function optimize_memory() {
 	return await invoke('plugin:jre|jre_optimize_memory')
 }
+
+export async function list_java_feed_vendors() {
+	return await invoke('plugin:jre|list_java_feed_vendors')
+}
+
+export async function list_java_feed_versions(vendor) {
+	return await invoke('plugin:jre|list_java_feed_versions', { vendor })
+}
+
+export async function download_java_from_feed(vendor, jdkVersionMajor) {
+	return await invoke('plugin:jre|download_java_from_feed', { vendor, jdkVersionMajor })
+}

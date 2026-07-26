@@ -1,5 +1,5 @@
 <script setup>
-import { CoffeeIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
+import { ArrowLeftIcon, CoffeeIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
 import {
 	ButtonStyled,
 	commonMessages,
@@ -11,93 +11,130 @@ import { ref } from 'vue'
 
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
-import { auto_install_java, list_java_distribution_versions } from '@/helpers/jre'
+import { download_java_from_feed, list_java_feed_vendors, list_java_feed_versions } from '@/helpers/jre'
 
-const { handleError, addNotification } = injectNotificationManager()
+const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
 	downloadJava: { id: 'app.settings.java.download.title', defaultMessage: 'Download Java' },
-	selectVersion: { id: 'app.settings.java.download.select-version', defaultMessage: 'Select a Java version:' },
-	loadingVersions: { id: 'app.settings.java.download.loading', defaultMessage: 'Loading versions...' },
-	noVersionsFound: { id: 'app.settings.java.download.no-versions', defaultMessage: 'No versions available.' },
+	selectVendor: { id: 'app.settings.java.download.select-vendor', defaultMessage: 'Choose a distribution:' },
+	selectVersion: { id: 'app.settings.java.download.select-version-feed', defaultMessage: 'Select a version of {vendor}:' },
+	back: { id: 'app.settings.java.download.back', defaultMessage: 'Back to distributions' },
+	loading: { id: 'app.settings.java.download.loading', defaultMessage: 'Loading...' },
+	noVendors: { id: 'app.settings.java.download.no-vendors', defaultMessage: 'No distributions available.' },
+	noVersions: { id: 'app.settings.java.download.no-versions', defaultMessage: 'No versions available.' },
 	versionLabel: { id: 'app.settings.java.download.version-label', defaultMessage: 'Java {version}' },
-	downloadComplete: { id: 'app.settings.java.download.download-complete', defaultMessage: 'Download complete. Click Find Java to scan.' },
 })
 
 const emit = defineEmits(['downloaded'])
 
 const modal = ref(null)
+const loading = ref(false)
+const vendors = ref([])
+const selectedVendor = ref(null)
 const versions = ref([])
-const loadingVersions = ref(false)
-const downloadingVersion = ref(null)
+const downloading = ref(null)
 
 defineExpose({
 	show: async () => {
+		selectedVendor.value = null
 		versions.value = []
-		downloadingVersion.value = null
-		loadingVersions.value = true
+		downloading.value = null
+		loading.value = true
+		vendors.value = []
 		modal.value.show()
-
-		const result = await list_java_distribution_versions('zulu').catch(handleError)
-		versions.value = (result || []).sort((a, b) => a - b)
-		loadingVersions.value = false
+		vendors.value = await list_java_feed_vendors().catch(handleError) || []
+		loading.value = false
 	},
 })
 
-async function downloadVersion(version) {
-	downloadingVersion.value = version
-	trackEvent('JavaDownload', { version })
+async function selectVendor(vendor) {
+	selectedVendor.value = vendor
+	loading.value = true
+	versions.value = []
+	const result = await list_java_feed_versions(vendor).catch(handleError)
+	versions.value = result || []
+	loading.value = false
+}
 
-	const path = await auto_install_java(version).catch(handleError)
-	downloadingVersion.value = null
+function backToVendors() {
+	selectedVendor.value = null
+	versions.value = []
+}
+
+async function downloadVersion(info) {
+	downloading.value = info.major_version
+	trackEvent('JavaDownload', { vendor: info.vendor, version: info.major_version })
+
+	const path = await download_java_from_feed(info.vendor, info.major_version).catch(handleError)
+	downloading.value = null
 
 	if (path) {
 		modal.value.hide()
-		addNotification({
-			type: 'success',
-			text: formatMessage(messages.downloadComplete),
-		})
-		emit('downloaded', path, version)
+		emit('downloaded', path, info.major_version)
 	}
 }
 </script>
 <template>
 	<ModalWrapper ref="modal" :header="formatMessage(messages.downloadJava)" :show-ad-on-close="false">
 		<div class="flex flex-col gap-4 min-h-32">
-			<p class="text-sm text-secondary">
-				{{ formatMessage(messages.selectVersion) }}
-			</p>
+			<!-- Step 1: Vendor list -->
+			<template v-if="!selectedVendor">
+				<p class="text-sm text-secondary">{{ formatMessage(messages.selectVendor) }}</p>
+				<div v-if="loading" class="flex items-center gap-2 text-sm text-secondary py-4">
+					<SpinnerIcon class="animate-spin h-4 w-4" /> {{ formatMessage(messages.loading) }}
+				</div>
+				<div v-else-if="vendors.length === 0" class="text-sm text-secondary py-4">
+					{{ formatMessage(messages.noVendors) }}
+				</div>
+				<div v-else class="flex flex-col gap-1.5">
+					<button
+						v-for="vendor in vendors"
+						:key="vendor"
+						class="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-button-border bg-button-bg hover:border-accent transition-colors cursor-pointer text-left"
+						@click="selectVendor(vendor)"
+					>
+						<div class="w-8 h-8 flex items-center justify-center rounded-full bg-button-bg border border-button-border shrink-0">
+							<CoffeeIcon class="h-4 w-4" />
+						</div>
+						<span class="font-semibold text-sm">{{ vendor }}</span>
+					</button>
+				</div>
+			</template>
 
-			<div v-if="loadingVersions" class="flex items-center gap-2 text-sm text-secondary py-4">
-				<SpinnerIcon class="animate-spin h-4 w-4" />
-				{{ formatMessage(messages.loadingVersions) }}
-			</div>
-
-			<div v-else-if="versions.length === 0" class="text-sm text-secondary py-4">
-				{{ formatMessage(messages.noVersionsFound) }}
-			</div>
-
-			<div v-else class="grid grid-cols-4 gap-2">
-				<button
-					v-for="ver in versions"
-					:key="ver"
-					class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-button-border bg-button-bg hover:border-accent transition-colors cursor-pointer"
-					:class="{ 'opacity-50 pointer-events-none': downloadingVersion !== null }"
-					:disabled="downloadingVersion !== null"
-					@click="downloadVersion(ver)"
-				>
-					<SpinnerIcon v-if="downloadingVersion === ver" class="animate-spin h-4 w-4 shrink-0" />
-					<CoffeeIcon v-else class="h-4 w-4 shrink-0" />
-					<span class="font-semibold text-sm tabular-nums">{{ formatMessage(messages.versionLabel, { version: ver }) }}</span>
+			<!-- Step 2: Version list -->
+			<template v-else>
+				<button class="flex items-center gap-1 text-sm text-secondary hover:text-contrast transition-colors" @click="backToVendors">
+					<ArrowLeftIcon class="h-3.5 w-3.5" /> {{ formatMessage(messages.back) }}
 				</button>
-			</div>
+				<p class="text-sm text-secondary">{{ formatMessage(messages.selectVersion, { vendor: selectedVendor }) }}</p>
+				<div v-if="loading" class="flex items-center gap-2 text-sm text-secondary py-4">
+					<SpinnerIcon class="animate-spin h-4 w-4" /> {{ formatMessage(messages.loading) }}
+				</div>
+				<div v-else-if="versions.length === 0" class="text-sm text-secondary py-4">
+					{{ formatMessage(messages.noVersions) }}
+				</div>
+				<div v-else class="grid grid-cols-4 gap-2">
+					<button
+						v-for="info in versions"
+						:key="info.major_version"
+						class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-button-border bg-button-bg hover:border-accent transition-colors cursor-pointer"
+						:class="{ 'opacity-50 pointer-events-none': downloading !== null }"
+						:disabled="downloading !== null"
+						@click="downloadVersion(info)"
+					>
+						<SpinnerIcon v-if="downloading === info.major_version" class="animate-spin h-4 w-4 shrink-0" />
+						<CoffeeIcon v-else class="h-4 w-4 shrink-0" />
+						<span class="font-semibold text-sm tabular-nums">{{ formatMessage(messages.versionLabel, { version: info.major_version }) }}</span>
+					</button>
+				</div>
+			</template>
 
 			<div class="flex justify-end pt-2 border-t border-button-border">
 				<ButtonStyled type="outlined">
-					<button class="!shadow-none !border-surface-4 !border" :disabled="downloadingVersion !== null" @click="modal.hide()">
-						<XIcon />
-						{{ formatMessage(commonMessages.cancelButton) }}
+					<button class="!shadow-none !border-surface-4 !border" :disabled="downloading !== null" @click="modal.hide()">
+						<XIcon /> {{ formatMessage(commonMessages.cancelButton) }}
 					</button>
 				</ButtonStyled>
 			</div>
