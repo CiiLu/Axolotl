@@ -127,6 +127,7 @@ fn main() {
                         "list_java_feed_vendors",
                         "list_java_feed_versions",
                         "download_java_from_feed",
+                        "download_java",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
