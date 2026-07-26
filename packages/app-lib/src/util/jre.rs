@@ -86,8 +86,8 @@ const EXCLUDED_DIR_NAMES: &[&str] = &[
 // launchers' bundled runtimes and a bounded keyword search of likely
 // directories
 #[tracing::instrument]
-pub async fn get_all_jre(full_scan: bool) -> Result<Vec<JavaVersion>, JREError> {
-    let jre_paths = collect_candidate_paths(full_scan).await?;
+pub async fn get_all_jre(full_scan: bool, exhaustive: bool) -> Result<Vec<JavaVersion>, JREError> {
+    let jre_paths = collect_candidate_paths(full_scan, exhaustive).await?;
 
     // Get JRE versions from potential paths concurrently
     Ok(check_java_at_filepaths(jre_paths)
@@ -98,7 +98,7 @@ pub async fn get_all_jre(full_scan: bool) -> Result<Vec<JavaVersion>, JREError> 
 
 // Gathers candidate paths from every source; cheap sources run inline while
 // filesystem-heavy sources run on blocking threads with bounded concurrency
-async fn collect_candidate_paths(full_scan: bool) -> Result<HashSet<PathBuf>, JREError> {
+async fn collect_candidate_paths(full_scan: bool, exhaustive: bool) -> Result<HashSet<PathBuf>, JREError> {
     let mut jre_paths = HashSet::new();
 
     jre_paths.extend(get_all_jre_path().await);
@@ -122,10 +122,17 @@ async fn collect_candidate_paths(full_scan: bool) -> Result<HashSet<PathBuf>, JR
         jre_paths.extend(set);
     }
 
-    if full_scan {
+    if full_scan || exhaustive {
         let found: Vec<HashSet<PathBuf>> = stream::iter(bfs_search_roots())
             .map(|root| {
-                tokio::task::spawn_blocking(move || bfs_keyword_scan(&root))
+                let root = root.clone();
+                tokio::task::spawn_blocking(move || {
+                    if exhaustive {
+                        bfs_exhaustive_scan(&root)
+                    } else {
+                        bfs_keyword_scan(&root)
+                    }
+                })
             })
             .buffer_unordered(COLLECT_CONCURRENCY)
             .filter_map(|res| async move { res.ok() })
@@ -177,6 +184,7 @@ fn get_common_install_paths() -> HashSet<PathBuf> {
         r"C:\Program Files (x86)\Java",
         r"C:\Program Files\Eclipse Adoptium",
         r"C:\Program Files (x86)\Eclipse Adoptium",
+        r"C:\Program Files\Microsoft",
     ];
     for java_path in java_paths {
         let Ok(java_subpaths) = std::fs::read_dir(java_path) else {
@@ -184,6 +192,46 @@ fn get_common_install_paths() -> HashSet<PathBuf> {
         };
         for java_subpath in java_subpaths.flatten() {
             jre_paths.insert(java_subpath.path().join("bin"));
+        }
+    }
+
+    // Scan all subdirectories of Program Files for any Java installations
+    let program_files_dirs = [
+        r"C:\Program Files",
+        r"C:\Program Files (x86)",
+    ];
+    for pf_dir in program_files_dirs {
+        let Ok(subdirs) = std::fs::read_dir(pf_dir) else {
+            continue;
+        };
+        for entry in subdirs.flatten() {
+            let subdir = entry.path();
+            jre_paths.insert(subdir.join("bin"));
+            jre_paths.insert(subdir.join("jre").join("bin"));
+        }
+    }
+
+    // LocalAppData programs (e.g. Eclipse Adoptium installs here)
+    if let Some(local_app_data) = dirs::data_local_dir() {
+        let programs = local_app_data.join("Programs");
+        if programs.is_dir() {
+            if let Ok(dir) = std::fs::read_dir(programs) {
+                for entry in dir.flatten() {
+                    jre_paths.insert(entry.path().join("bin"));
+                }
+            }
+        }
+    }
+
+    // Roaming AppData — check for jdk/jre directories
+    if let Some(app_data) = dirs::data_dir() {
+        if let Ok(dir) = std::fs::read_dir(app_data) {
+            for entry in dir.flatten() {
+                let name = entry.file_name().to_string_lossy().to_lowercase();
+                if name.contains("java") || name.contains("jdk") || name.contains("jre") {
+                    jre_paths.insert(entry.path().join("bin"));
+                }
+            }
         }
     }
 
@@ -212,6 +260,28 @@ fn get_common_install_paths() -> HashSet<PathBuf> {
         }
     }
 
+    // User-local JavaVirtualMachines
+    if let Some(home) = dirs::home_dir() {
+        let user_jvm = home.join("Library").join("Java").join("JavaVirtualMachines");
+        if user_jvm.is_dir() {
+            if let Ok(dir) = std::fs::read_dir(user_jvm) {
+                for entry in dir.flatten() {
+                    jre_paths.insert(entry.path().join("Contents/Home/bin"));
+                }
+            }
+        }
+
+        // sdkman candidates
+        let sdkman_path = home.join(".sdkman").join("candidates").join("java");
+        if sdkman_path.is_dir() {
+            if let Ok(dir) = std::fs::read_dir(sdkman_path) {
+                for entry in dir.flatten() {
+                    jre_paths.insert(entry.path().join("bin"));
+                }
+            }
+        }
+    }
+
     jre_paths
 }
 
@@ -237,6 +307,49 @@ fn get_common_install_paths() -> HashSet<PathBuf> {
                 let entry_path = entry.path();
                 jre_paths.insert(entry_path.join("jre").join("bin"));
                 jre_paths.insert(entry_path.join("bin"));
+            }
+        }
+    }
+
+    // Additional Java version manager directories
+    if let Some(home) = dirs::home_dir() {
+        // sdkman candidates
+        let sdkman_path = home.join(".sdkman").join("candidates").join("java");
+        if sdkman_path.is_dir() {
+            if let Ok(dir) = std::fs::read_dir(sdkman_path) {
+                for entry in dir.flatten() {
+                    jre_paths.insert(entry.path().join("bin"));
+                }
+            }
+        }
+
+        // asdf installs
+        let asdf_path = home.join(".asdf").join("installs").join("java");
+        if asdf_path.is_dir() {
+            if let Ok(dir) = std::fs::read_dir(asdf_path) {
+                for entry in dir.flatten() {
+                    jre_paths.insert(entry.path().join("bin"));
+                }
+            }
+        }
+
+        // jabba jdk
+        let jabba_path = home.join(".jabba").join("jdk");
+        if jabba_path.is_dir() {
+            if let Ok(dir) = std::fs::read_dir(jabba_path) {
+                for entry in dir.flatten() {
+                    jre_paths.insert(entry.path().join("bin"));
+                }
+            }
+        }
+    }
+
+    // Snap packages
+    let snap_path = PathBuf::from("/snap");
+    if snap_path.is_dir() {
+        if let Ok(dir) = std::fs::read_dir(snap_path) {
+            for entry in dir.flatten() {
+                jre_paths.insert(entry.path().join("bin"));
             }
         }
     }
@@ -501,6 +614,41 @@ fn bfs_keyword_scan(root: &Path) -> HashSet<PathBuf> {
             } else if depth + 1 < BFS_MAX_DEPTH {
                 queue.push_back((path, depth + 1));
             }
+        }
+    }
+
+    found
+}
+
+fn bfs_exhaustive_scan(root: &Path) -> HashSet<PathBuf> {
+    let mut found = HashSet::new();
+    let mut scanned_dirs = 0usize;
+    let mut queue = VecDeque::new();
+    queue.push_back((root.to_path_buf(), 0usize));
+
+    while let Some((dir, depth)) = queue.pop_front() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+
+            // No keyword filter at any depth — scan ALL directories
+
+            scanned_dirs += 1;
+            if scanned_dirs > 100_000 {
+                return found;
+            }
+
+            let java_bin = path.join(JAVA_BIN);
+            if java_bin.is_file() {
+                found.insert(java_bin);
+            }
+            // No depth limit — keep going
+            queue.push_back((path, depth + 1));
         }
     }
 

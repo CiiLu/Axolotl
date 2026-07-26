@@ -48,8 +48,9 @@ pub async fn jre_find_filtered_jres(
     version: Option<u32>,
     full_scan: bool,
     force_fresh: bool,
+    exhaustive: bool,
 ) -> Result<Vec<JavaVersion>> {
-    Ok(jre::find_filtered_jres(version, full_scan, force_fresh).await?)
+    Ok(jre::find_filtered_jres(version, full_scan, force_fresh, exhaustive).await?)
 }
 
 // Validates JRE at a given path

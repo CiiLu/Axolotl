@@ -4,7 +4,7 @@ import { platform } from '@tauri-apps/plugin-os'
 import { ref, watch } from 'vue'
 
 import JavaSelector from '@/components/ui/JavaSelector.vue'
-import { get_java_versions, set_java_version } from '@/helpers/jre'
+import { find_filtered_jres, get_java_versions, set_java_version } from '@/helpers/jre'
 import { get, set } from '@/helpers/settings.ts'
 
 const { handleError } = injectNotificationManager()
@@ -38,6 +38,29 @@ watch(
 	},
 )
 
+const showDeepScanConfirm = ref(false)
+
+async function runScan(deep) {
+	if (deep) {
+		showDeepScanConfirm.value = true
+		return
+	}
+	const jres = await find_filtered_jres(null, false, true, false).catch(handleError)
+	if (jres) {
+		javaVersions.value = await get_java_versions().catch(handleError)
+	}
+}
+
+function confirmDeepScan() {
+	showDeepScanConfirm.value = false
+	find_filtered_jres(null, true, true, true)
+		.then(() => get_java_versions())
+		.then((versions) => {
+			javaVersions.value = versions
+		})
+		.catch(handleError)
+}
+
 async function updateJavaVersion(version) {
 	if (version?.path === '') {
 		version.path = undefined
@@ -52,6 +75,20 @@ async function updateJavaVersion(version) {
 </script>
 <template>
 	<div class="flex flex-col gap-6">
+		<div class="flex items-center gap-2">
+			<ButtonStyled @click="runScan(false)">
+				{{ 'Find Java' }}
+			</ButtonStyled>
+			<ButtonStyled type="outlined" @click="runScan(true)">
+				{{ 'Deep Scan' }}
+			</ButtonStyled>
+		</div>
+		<div v-if="showDeepScanConfirm" class="flex items-center gap-2 p-2 bg-warning/10 rounded-lg border border-warning text-sm">
+			<span>This will scan ALL directories on ALL drives. May take several minutes.</span>
+			<ButtonStyled color="red" @click="confirmDeepScan">Scan Anyway</ButtonStyled>
+			<ButtonStyled type="outlined" @click="showDeepScanConfirm = false">Cancel</ButtonStyled>
+		</div>
+
 		<div v-if="settings" class="flex items-center justify-between gap-4">
 			<div class="flex flex-col gap-1">
 				<h2 class="m-0 text-lg font-semibold text-contrast">

@@ -28,8 +28,8 @@ export async function remove_java_version(path) {
 
 // Finds all the installation of the given Java version, if it exists
 // Returns [JavaVersion]
-export async function find_filtered_jres(version, fullScan = false, forceFresh = false) {
-	return await invoke('plugin:jre|jre_find_filtered_jres', { version, fullScan, forceFresh })
+export async function find_filtered_jres(version, fullScan = false, forceFresh = false, exhaustive = false) {
+	return await invoke('plugin:jre|jre_find_filtered_jres', { version, fullScan, forceFresh, exhaustive })
 }
 
 // Gets java version from a specific path by trying to run 'java -version' on it.

@@ -66,12 +66,12 @@ function backToVendors() {
 async function downloadVersion(info) {
 	downloading.value = info.major_version
 	trackEvent('JavaDownload', { vendor: info.vendor, version: info.major_version })
+	modal.value.hide()
 
 	const path = await download_java_from_feed(info.vendor, info.major_version).catch(handleError)
 	downloading.value = null
 
 	if (path) {
-		modal.value.hide()
 		emit('downloaded', path, info.major_version)
 	}
 }

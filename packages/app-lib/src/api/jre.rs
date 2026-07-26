@@ -88,8 +88,9 @@ pub async fn find_filtered_jres(
     java_version: Option<u32>,
     full_scan: bool,
     force_fresh: bool,
+    exhaustive: bool,
 ) -> crate::Result<Vec<JavaVersion>> {
-    let jres = get_available_jres(full_scan, force_fresh).await?;
+    let jres = get_available_jres(full_scan, force_fresh, exhaustive).await?;
 
     Ok(if let Some(java_version) = java_version {
         jres.into_iter()
@@ -114,12 +115,13 @@ pub async fn find_filtered_jres(
 pub async fn get_available_jres(
     full_scan: bool,
     force_fresh: bool,
+    exhaustive: bool,
 ) -> crate::Result<Vec<JavaVersion>> {
     let state = State::get().await?;
 
-    if full_scan {
+    if full_scan || exhaustive {
         let mut last_scan = JAVA_SCAN_STATE.lock().await;
-        let jres = refresh_discovered_javas(&state, true).await?;
+        let jres = refresh_discovered_javas(&state, true, exhaustive).await?;
         *last_scan = Some(Instant::now());
         return Ok(jres);
     }
@@ -141,7 +143,7 @@ pub async fn get_available_jres(
             return Ok(cached);
         }
     }
-    let jres = refresh_discovered_javas(&state, false).await?;
+        let jres = refresh_discovered_javas(&state, false, false).await?;
     *last_scan = Some(Instant::now());
     Ok(jres)
 }
@@ -194,8 +196,9 @@ async fn validate_cached_javas(
 async fn refresh_discovered_javas(
     state: &State,
     full_scan: bool,
+    exhaustive: bool,
 ) -> crate::Result<Vec<JavaVersion>> {
-    let jres = jre::get_all_jre(full_scan).await?;
+    let jres = jre::get_all_jre(full_scan, exhaustive).await?;
 
     let previous: HashSet<(String, String)> =
         DiscoveredJava::get_all(&state.pool)
@@ -244,7 +247,7 @@ fn schedule_background_java_rescan() {
         let Ok(state) = State::get().await else {
             return;
         };
-        match refresh_discovered_javas(&state, true).await {
+        match refresh_discovered_javas(&state, true, false).await {
             Ok(_) => *last_scan = Some(Instant::now()),
             Err(e) => {
                 tracing::warn!("Background Java rescan failed: {e}");
@@ -291,7 +294,7 @@ pub async fn find_java_for_version(
         return Ok(Some(java));
     }
 
-    let scanned = get_available_jres(false, false).await?;
+    let scanned = get_available_jres(false, false, false).await?;
     Ok(scanned
         .into_iter()
         .find(|java| java.parsed_version == major_version))
