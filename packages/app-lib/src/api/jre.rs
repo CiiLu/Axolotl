@@ -314,68 +314,12 @@ pub async fn auto_install_java_with_reporter(
     auto_install_java_inner(java_version, false, Some(reporter)).await
 }
 
-/// Downloads and installs a Java runtime from the specified distribution for the given version.
-pub async fn auto_install_java_distribution(
-    distribution: String,
-    java_version: u32,
-) -> crate::Result<PathBuf> {
-    let state = State::get().await?;
-    let _install_guard = JAVA_INSTALL_LOCK.lock().await;
-
-    // Set up a cancellation channel so that cancel_java_download() can abort
-    // the running install task.
-    let (tx, mut rx) = tokio::sync::oneshot::channel::<()>();
-    let mut guard = JAVA_CANCEL_TX.lock().await;
-    *guard = Some(tx);
-
-    let mut handle = tokio::spawn(async move {
-        match distribution.as_str() {
-            "zulu" => {
-                install_azul_runtime(&state, java_version, None, None).await
-            }
-            _ => auto_install_java(java_version).await,
-        }
-    });
-
-    tokio::select! {
-        result = &mut handle => {
-            // Download finished (or failed) normally — clear the cancel handle
-            let mut guard = JAVA_CANCEL_TX.lock().await;
-            *guard = None;
-            result.map_err(|e| {
-                crate::Error::from(crate::ErrorKind::InputError(
-                    format!("Java install task failed: {e}"),
-                ))
-            })?
-        }
-        _ = &mut rx => {
-            // User requested cancellation — abort the spawned task and return
-            handle.abort();
-            Err(crate::ErrorKind::InputError(
-                "Java download cancelled by user".to_string(),
-            )
-            .into())
-        }
-    }
-}
-
 const JAVA_INSTALL_STEPS: u64 = 4;
 const JAVA_DOWNLOAD_PROGRESS_MIN_BYTES: u64 = 256 * 1024;
 const MOJANG_RUNTIME_INDEX_URL: &str = "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json";
 
 static JAVA_INSTALL_LOCK: LazyLock<tokio::sync::Mutex<()>> =
     LazyLock::new(|| tokio::sync::Mutex::new(()));
-
-static JAVA_CANCEL_TX: LazyLock<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<()>>>> =
-    LazyLock::new(|| tokio::sync::Mutex::new(None));
-
-/// Cancels the currently running Java download, if any.
-pub async fn cancel_java_download() {
-    let mut guard = JAVA_CANCEL_TX.lock().await;
-    if let Some(tx) = guard.take() {
-        let _ = tx.send(());
-    }
-}
 
 type MojangRuntimeIndex =
     HashMap<String, HashMap<String, Vec<MojangRuntimeRelease>>>;

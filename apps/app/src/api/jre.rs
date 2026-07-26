@@ -14,8 +14,7 @@ pub fn init<R: tauri::Runtime>() -> TauriPlugin<R> {
             jre_get_jre,
             jre_test_jre,
             jre_auto_install_java,
-            jre_auto_install_java_distribution,
-            cancel_java_download,
+
             jre_get_max_memory,
             jre_get_memory_status,
             jre_optimize_memory,
@@ -73,17 +72,6 @@ pub async fn jre_auto_install_java(java_version: u32) -> Result<PathBuf> {
 #[tauri::command]
 pub async fn list_java_distribution_versions(distribution: String) -> Result<Vec<u32>> {
     Ok(jre::list_java_distribution_versions(distribution).await?)
-}
-
-#[tauri::command]
-pub async fn jre_auto_install_java_distribution(distribution: String, java_version: u32) -> Result<PathBuf> {
-    Ok(jre::auto_install_java_distribution(distribution, java_version).await?)
-}
-
-#[tauri::command]
-pub async fn cancel_java_download() -> Result<()> {
-    jre::cancel_java_download().await;
-    Ok(())
 }
 
 // Gets the maximum memory a system has available.

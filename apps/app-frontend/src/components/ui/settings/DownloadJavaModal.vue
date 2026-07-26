@@ -1,5 +1,5 @@
 <script setup>
-import { CoffeeIcon, DownloadIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
+import { CoffeeIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
 import {
 	ButtonStyled,
 	commonMessages,
@@ -10,27 +10,23 @@ import {
 import { ref } from 'vue'
 
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
-import JavaDownloadProgressModal from '@/components/ui/settings/JavaDownloadProgressModal.vue'
 import { trackEvent } from '@/helpers/analytics'
-import { auto_install_java_distribution, list_java_distribution_versions } from '@/helpers/jre'
+import { auto_install_java, list_java_distribution_versions } from '@/helpers/jre'
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
 	downloadJava: { id: 'app.settings.java.download.title', defaultMessage: 'Download Java' },
-	selectVersion: { id: 'app.settings.java.download.select-version', defaultMessage: 'Select a Java version from Azul Zulu:' },
+	selectVersion: { id: 'app.settings.java.download.select-version', defaultMessage: 'Select a Java version:' },
 	loadingVersions: { id: 'app.settings.java.download.loading', defaultMessage: 'Loading versions...' },
 	noVersionsFound: { id: 'app.settings.java.download.no-versions', defaultMessage: 'No versions available.' },
-	downloadingLabel: { id: 'app.settings.java.download.downloading-label', defaultMessage: 'Downloading...' },
-	extracting: { id: 'app.settings.java.download.extracting', defaultMessage: 'Extracting files...' },
 	versionLabel: { id: 'app.settings.java.download.version-label', defaultMessage: 'Java {version}' },
 })
 
 const emit = defineEmits(['downloaded'])
 
 const modal = ref(null)
-const progressModal = ref(null)
 const versions = ref([])
 const loadingVersions = ref(false)
 const downloadingVersion = ref(null)
@@ -50,33 +46,18 @@ defineExpose({
 
 async function downloadVersion(version) {
 	downloadingVersion.value = version
-	trackEvent('JavaDownload', { distribution: 'zulu', version })
+	trackEvent('JavaDownload', { version })
 
-	progressModal.value.show({ name: 'Azul Zulu', id: 'zulu' }, version)
-	progressModal.value.updateStatus(formatMessage(messages.downloadingLabel))
+	const path = await auto_install_java(version).catch(handleError)
+	downloadingVersion.value = null
 
-	try {
-		const path = await auto_install_java_distribution('zulu', version)
-		downloadingVersion.value = null
-
-		if (path) {
-			progressModal.value.complete()
-			emit('downloaded', path, version)
-		} else {
-			progressModal.value.close()
-		}
-	} catch (e) {
-		downloadingVersion.value = null
-		progressModal.value.close()
-		const msg = String(e)
-		if (!msg.includes('cancelled') && !msg.includes('canceled')) {
-			handleError(e)
-		}
+	if (path) {
+		modal.value.hide()
+		emit('downloaded', path, version)
 	}
 }
 </script>
 <template>
-	<JavaDownloadProgressModal ref="progressModal" />
 	<ModalWrapper ref="modal" :header="formatMessage(messages.downloadJava)" :show-ad-on-close="false">
 		<div class="flex flex-col gap-4 min-h-32">
 			<p class="text-sm text-secondary">

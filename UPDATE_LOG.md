@@ -1,5 +1,9 @@
 # Release notes v1.5.2
 
+- 简化 Java 下载流程：删除自定义 `JavaDownloadProgressModal.vue` 进度弹窗，点击版本后直接调用上游 `auto_install_java`，其内置的 `LoadingBarType::JavaDownload` 进度自动显示在 AppActionBar 中
+- 移除 `auto_install_java_distribution` 和 `cancel_java_download` 函数及相关 Tauri 命令、JS 绑定和 i18n 消息键，清理未使用的 Rust 静态变量 `JAVA_CANCEL_TX`
+- 清理英文和中文 locale 文件中不再使用的 Java 下载消息键
+
 - 重构 Adoptium (Temurin) 下载后端，将 `install_adoptium_runtime` 泛化为 `install_adoptium_api_runtime`，支持通过 `vendor`、`jvm_impl`、`dir_prefix` 参数指定不同发行商
 - 新增 IBM Semeru (OpenJ9) 运行时下载支持（`install_semeru_runtime` 包装函数，调用 Adoptium API 获取 IBM/OpenJ9 构建）
 - 新增 Azul Zulu 版本列表查询支持（`list_java_distribution_versions` 增加 `"zulu"` 分支，通过 Azul API 获取可用版本）

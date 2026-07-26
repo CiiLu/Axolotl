@@ -119,8 +119,7 @@ fn main() {
                         "jre_get_jre",
                         "jre_test_jre",
                         "jre_auto_install_java",
-                        "jre_auto_install_java_distribution",
-                        "cancel_java_download",
+
                         "jre_get_max_memory",
                         "jre_get_memory_status",
                         "jre_optimize_memory",

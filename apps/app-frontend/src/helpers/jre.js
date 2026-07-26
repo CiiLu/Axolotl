@@ -53,14 +53,6 @@ export async function list_java_distribution_versions(distribution) {
 	return await invoke('plugin:jre|list_java_distribution_versions', { distribution })
 }
 
-export async function auto_install_java_distribution(distribution, javaVersion) {
-	return await invoke('plugin:jre|jre_auto_install_java_distribution', { distribution, javaVersion })
-}
-
-export async function cancel_java_download() {
-	return await invoke('plugin:jre|cancel_java_download')
-}
-
 // Get max memory in KiB
 export async function get_max_memory() {
 	return await invoke('plugin:jre|jre_get_max_memory')
