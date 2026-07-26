@@ -1,6 +1,6 @@
 import { useSessionStorage } from '@vueuse/core'
-import type { Ref } from 'vue'
-import { computed, ref, watch } from 'vue'
+import type { MaybeRefOrGetter, Ref } from 'vue'
+import { computed, ref, toValue, watch } from 'vue'
 
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonProjectTypeCategoryMessages, normalizeProjectType } from '#ui/utils/common-messages'
@@ -26,11 +26,11 @@ export interface ContentFilterOption {
 }
 
 export interface ContentFilterConfig {
-	showTypeFilters?: boolean
-	showUpdateFilter?: boolean
-	showWarningsFilter?: boolean
+	showTypeFilters?: MaybeRefOrGetter<boolean>
+	showUpdateFilter?: MaybeRefOrGetter<boolean>
+	showWarningsFilter?: MaybeRefOrGetter<boolean>
 	isPackLocked?: Ref<boolean>
-	persistKey?: string
+	persistKey?: MaybeRefOrGetter<string>
 }
 
 const messages = defineMessages({
@@ -55,19 +55,41 @@ const messages = defineMessages({
 export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFilterConfig) {
 	const { formatMessage } = useVIntl()
 
-	const selectedTypeFilter = config?.persistKey
-		? useSessionStorage<string | null>(`content-filters-type:${config.persistKey}`, null)
+	const persistKey = computed(() => toValue(config?.persistKey) ?? '')
+
+	const selectedTypeFilter = persistKey.value
+		? useSessionStorage<string | null>(`content-filters-type:${persistKey.value}`, null)
 		: ref<string | null>(null)
 
-	const selectedStatusFilters = config?.persistKey
-		? useSessionStorage<string[]>(`content-filters-status:${config.persistKey}`, [])
+	const selectedStatusFilters = persistKey.value
+		? useSessionStorage<string[]>(`content-filters-status:${persistKey.value}`, [])
 		: ref<string[]>([])
+
+	const showTypeFilters = computed(() => toValue(config?.showTypeFilters) ?? false)
+	const showUpdateFilter = computed(() => toValue(config?.showUpdateFilter) ?? false)
+	const showWarningsFilter = computed(() => toValue(config?.showWarningsFilter) ?? false)
 
 	const typeFilteredItems = computed(() => {
 		if (!selectedTypeFilter.value) return items.value
 		return items.value.filter(
 			(item) => normalizeProjectType(item.project_type) === selectedTypeFilter.value,
 		)
+	})
+
+	const statusFilteredItems = computed(() => {
+		let result = items.value
+		if (selectedStatusFilters.value.length > 0) {
+			result = result.filter((item) => {
+				for (const filter of selectedStatusFilters.value) {
+					if (filter === 'updates' && !item.has_update) return false
+					if (filter === 'enabled' && !item.enabled) return false
+					if (filter === 'disabled' && item.enabled) return false
+					if (filter === 'warnings' && getClientWarningType(item) === null) return false
+				}
+				return true
+			})
+		}
+		return result
 	})
 
 	const availableStatusFilters = computed<Array<'enabled' | 'disabled'>>(() => {
@@ -81,7 +103,7 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 	const row1FilterOptions = computed<ContentFilterOption[]>(() => {
 		const options: ContentFilterOption[] = []
 
-		if (config?.showTypeFilters) {
+		if (showTypeFilters.value) {
 			const frequency = items.value.reduce((map: Record<string, number>, item) => {
 				const normalized = normalizeProjectType(item.project_type)
 				map[normalized] = (map[normalized] || 0) + 1
@@ -103,11 +125,11 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 		const source = typeFilteredItems.value
 		const options: ContentFilterOption[] = []
 
-		if (config?.showUpdateFilter && source.some((m) => m.has_update)) {
+		if (showUpdateFilter.value && source.some((m) => m.has_update)) {
 			options.push({ id: 'updates', label: formatMessage(messages.updates) })
 		}
 
-		if (config?.showWarningsFilter && source.some((m) => getClientWarningType(m) !== null)) {
+		if (showWarningsFilter.value && source.some((m) => getClientWarningType(m) !== null)) {
 			options.push({ id: 'warnings', label: formatMessage(messages.warnings) })
 		}
 
@@ -125,12 +147,13 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 		return [...row1FilterOptions.value, ...row2FilterOptions.value]
 	})
 
-	const totalCount = computed(() => items.value.length)
+	const totalCount = computed(() => statusFilteredItems.value.length)
 
 	const filterCounts = computed(() => {
 		const counts: Record<string, number> = {}
 
-		for (const item of items.value) {
+		const statusSource = statusFilteredItems.value
+		for (const item of statusSource) {
 			const type = normalizeProjectType(item.project_type)
 			counts[type] = (counts[type] || 0) + 1
 		}

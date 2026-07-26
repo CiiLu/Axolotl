@@ -156,6 +156,12 @@ function getItemId(item: ContentItem) {
 	return ctx.getItemId?.(item) ?? item.file_path ?? item.file_name ?? item.id
 }
 
+function findContentItem(id: string): ContentItem | undefined {
+	const item = ctx.items.value.find((i) => getItemId(i) === id)
+	if (item) return item
+	return ctx.modpackItems?.value?.find((i) => getItemId(i) === id)
+}
+
 type SortMode = 'alphabetical-asc' | 'alphabetical-desc' | 'date-added-newest' | 'date-added-oldest'
 const sortMode = ref<SortMode>('alphabetical-asc')
 
@@ -182,11 +188,11 @@ function cycleSortMode() {
 	sortMode.value = modes[(idx + 1) % modes.length]
 }
 
-const sortedItems = computed(() => {
-	const items = [...ctx.items.value]
+function sortItems(items: ContentItem[]): ContentItem[] {
+	const arr = [...items]
 	switch (sortMode.value) {
 		case 'alphabetical-desc':
-			return items.sort((a, b) => {
+			return arr.sort((a, b) => {
 				const nameA = a.project?.title ?? a.file_name
 				const nameB = b.project?.title ?? b.file_name
 				return (
@@ -195,19 +201,19 @@ const sortedItems = computed(() => {
 				)
 			})
 		case 'date-added-newest':
-			return items.sort((a, b) => {
+			return arr.sort((a, b) => {
 				const dateA = a.date_added ?? ''
 				const dateB = b.date_added ?? ''
 				return dateB.localeCompare(dateA) || a.file_name.localeCompare(b.file_name)
 			})
 		case 'date-added-oldest':
-			return items.sort((a, b) => {
+			return arr.sort((a, b) => {
 				const dateA = a.date_added ?? ''
 				const dateB = b.date_added ?? ''
 				return dateA.localeCompare(dateB) || a.file_name.localeCompare(b.file_name)
 			})
 		default:
-			return items.sort((a, b) => {
+			return arr.sort((a, b) => {
 				const nameA = a.project?.title ?? a.file_name
 				const nameB = b.project?.title ?? b.file_name
 				return (
@@ -216,13 +222,45 @@ const sortedItems = computed(() => {
 				)
 			})
 	}
+}
+
+const sortedItems = computed(() => {
+	return sortItems(ctx.items.value)
 })
 
-const { searchQuery, search } = useContentSearch(sortedItems, [
+const allItemsForSearch = computed(() => {
+	const modpackItems = ctx.modpackItems?.value ?? []
+	return [...sortedItems.value, ...modpackItems]
+})
+
+const { searchQuery, search } = useContentSearch(allItemsForSearch, [
 	'project.title',
 	'owner.name',
 	'file_name',
 ])
+
+const modpackItemsNoUpdate = computed(() => {
+	return sortItems(
+		(ctx.modpackItems?.value ?? []).map((item) => ({
+			...item,
+			has_update: false,
+		})),
+	)
+})
+
+const modpackChildIdSet = computed(() => {
+	return new Set((ctx.modpackItems?.value ?? []).map((item) => getItemId(item)))
+})
+
+const searchedAllItems = computed(() => {
+	const modpackSearched = search(modpackItemsNoUpdate.value).filter((item) =>
+		modpackChildIdSet.value.has(getItemId(item)),
+	)
+	const regularSearched = search(sortedItems.value).filter(
+		(item) => !modpackChildIdSet.value.has(getItemId(item)),
+	)
+	return [...modpackSearched, ...regularSearched]
+})
 
 const {
 	selectedTypeFilter,
@@ -232,9 +270,8 @@ const {
 	totalCount,
 	filterCounts,
 	toggleTypeFilter,
-	toggleStatusFilter,
 	applyFilters,
-} = useContentFilters(ctx.items, {
+} = useContentFilters(searchedAllItems, {
 	showTypeFilters: true,
 	showUpdateFilter: ctx.hasUpdateSupport,
 	showWarningsFilter: true,
@@ -243,7 +280,9 @@ const {
 })
 
 const { selectedIds, selectedItems, clearSelection, removeFromSelection } = useContentSelection(
-	ctx.items,
+	computed(() => {
+		return [...modpackItemsNoUpdate.value, ...ctx.items.value]
+	}),
 	getItemId,
 )
 
@@ -263,6 +302,24 @@ const bulkStatusMessage = ref<string | null>(null)
 const bulkItemCount = ref(0)
 
 const refreshing = ref(false)
+const expandedGroups = ref(new Set<string>())
+
+function toggleGroupExpand(groupId: string) {
+	const newSet = new Set(expandedGroups.value)
+	if (newSet.has(groupId)) {
+		newSet.delete(groupId)
+	} else {
+		newSet.add(groupId)
+	}
+	expandedGroups.value = newSet
+}
+
+watch(searchQuery, (query) => {
+	if (query.trim()) {
+		expandedGroups.value = new Set([...expandedGroups.value, 'modpack'])
+	}
+})
+
 async function handleRefresh() {
 	if (refreshing.value) return
 	refreshing.value = true
@@ -273,43 +330,109 @@ async function handleRefresh() {
 	}
 }
 
+const filteredModpackItems = computed(() => {
+	if (modpackItemsNoUpdate.value.length === 0) return []
+	const modpackIds = new Set(modpackItemsNoUpdate.value.map((item) => getItemId(item)))
+	const searched = search(modpackItemsNoUpdate.value).filter((item) =>
+		modpackIds.has(getItemId(item)),
+	)
+	return applyFilters(searched)
+})
+
 const filteredItems = computed(() => {
 	const sorted = sortedItems.value
 	const searched = search(sorted)
 	return applyFilters(searched)
 })
-const tableItems = computed<ContentCardTableItem[]>(() => {
-	const items = filteredItems.value.map((item) => {
-		const base = ctx.mapToTableItem(item)
-		const id = getItemId(item)
-		return {
-			...base,
-			id,
-			disabled:
-				isChanging(id) || ctx.isBusy.value || isBulkOperating.value || item.installing === true,
-			disabledTooltip: ctx.isBusy.value ? (ctx.busyMessage?.value ?? null) : null,
-			toggleDisabled: ctx.isBusy.value,
-			toggleDisabledTooltip: ctx.isBusy.value ? (ctx.busyMessage?.value ?? null) : null,
-			installing: item.installing === true,
-			pendingManualDownload: item.pendingManualDownload === true,
-			hasUpdate: item.has_update,
-			isClientOnly:
-				isClientOnlyEnvironment(item.environment) ||
-				!!item.pack_client_retained ||
-				!!item.pack_client_depends,
-			clientWarning: getClientWarningType(item),
-			hideSwitchVersion: !base.versionLink,
-			overflowOptions: ctx.getOverflowOptions?.(item),
-		}
-	})
 
-	const updatable = items.filter((i) => i.hasUpdate)
-	if (updatable.length > 0) {
-		debug('tableItems: items with hasUpdate=true', {
-			count: updatable.length,
-			ids: updatable.map((i) => i.id),
-			isPackLocked: ctx.isPackLocked.value,
+function mapToTableItem(item: ContentItem, group?: string): ContentCardTableItem {
+	const base = ctx.mapToTableItem(item)
+	const id = getItemId(item)
+	return {
+		...base,
+		id,
+		group,
+		disabled:
+			isChanging(id) || ctx.isBusy.value || isBulkOperating.value || item.installing === true,
+		disabledTooltip: ctx.isBusy.value ? (ctx.busyMessage?.value ?? null) : null,
+		toggleDisabled: ctx.isBusy.value,
+		toggleDisabledTooltip: ctx.isBusy.value ? (ctx.busyMessage?.value ?? null) : null,
+		installing: item.installing === true,
+		pendingManualDownload: item.pendingManualDownload === true,
+		hasUpdate: group ? false : item.has_update,
+		isClientOnly:
+			isClientOnlyEnvironment(item.environment) ||
+			!!item.pack_client_retained ||
+			!!item.pack_client_depends,
+		clientWarning: getClientWarningType(item),
+		hideSwitchVersion: !base.versionLink,
+		overflowOptions: ctx.getOverflowOptions?.(item),
+	}
+}
+
+const searchableItemCount = computed(() => {
+	const modpackItems = ctx.modpackItems?.value ?? []
+	const regularItems = ctx.items.value.filter(
+		(item) => !modpackChildIdSet.value.has(getItemId(item)),
+	)
+	return modpackItems.length + regularItems.length
+})
+
+const tableItems = computed<ContentCardTableItem[]>(() => {
+	const items: ContentCardTableItem[] = []
+
+	const modpackItems = filteredModpackItems.value
+	const modpack = ctx.modpack.value
+
+	if (modpack && modpack.project && modpackItems.length > 0) {
+		const groupItems: ContentCardTableItem[] = []
+		const childIds = modpackItems.map((item) => getItemId(item))
+		if (expandedGroups.value.has('modpack')) {
+			for (const item of modpackItems) {
+				groupItems.push(mapToTableItem(item, 'modpack'))
+			}
+		}
+
+		items.push({
+			id: '__modpack_group__',
+			isGroupHeader: true,
+			group: 'modpack',
+			groupItemCount: modpackItems.length,
+			groupChildIds: childIds,
+			groupSwitchVersion: ctx.updateModpack,
+			project: {
+				id: modpack.project.id,
+				slug: modpack.project.slug,
+				title: modpack.project.title,
+				icon_url: modpack.project.icon_url,
+			},
+			projectLink: modpack.projectLink,
+			version: modpack.version
+				? {
+						id: modpack.version.id,
+						version_number: modpack.version.version_number,
+						file_name: '',
+						date_published: modpack.version.date_published,
+					}
+				: undefined,
+			versionLink: modpack.versionLink,
+			owner: modpack.owner,
+			enabled: true,
+			hasUpdate: modpack.hasUpdate,
+			disabled: modpack.disabled || ctx.isBusy.value || isBulkOperating.value,
+			disabledTooltip:
+				modpack.disabledText ?? (ctx.isBusy.value ? (ctx.busyMessage?.value ?? null) : null),
+			downloads: modpack.project.downloads ?? null,
+			followers: modpack.project.followers ?? null,
+			categories: modpack.categories,
 		})
+
+		items.push(...groupItems)
+	}
+
+	for (const item of filteredItems.value) {
+		if (modpackChildIdSet.value.has(getItemId(item))) continue
+		items.push(mapToTableItem(item))
 	}
 
 	return items
@@ -317,19 +440,8 @@ const tableItems = computed<ContentCardTableItem[]>(() => {
 
 const hasOutdatedProjects = computed(() => {
 	const outdated = ctx.items.value.filter((p) => p.has_update)
-	if (outdated.length > 0) {
-		debug('hasOutdatedProjects: raw items with has_update=true', {
-			count: outdated.length,
-			items: outdated.map((p) => ({
-				id: p.id,
-				fileName: p.file_name,
-				title: p.project?.title,
-				has_update: p.has_update,
-				update_version_id: p.update_version_id,
-			})),
-		})
-	}
-	return outdated.length > 0
+	const modpackHasUpdate = ctx.modpack.value?.hasUpdate ?? false
+	return outdated.length > 0 || modpackHasUpdate
 })
 
 //  Deletion
@@ -411,7 +523,7 @@ async function showDeletionConfirmation(event?: MouseEvent) {
 }
 
 async function handleDeleteById(id: string, event?: MouseEvent) {
-	const item = ctx.items.value.find((i) => getItemId(i) === id)
+	const item = findContentItem(id)
 	if (item) {
 		await promptDeleteItems([item], event)
 	}
@@ -509,7 +621,7 @@ async function confirmDelete() {
 
 async function handleToggleEnabledById(id: string, _value: boolean) {
 	if (ctx.isBusy.value) return
-	const item = ctx.items.value.find((i) => getItemId(i) === id)
+	const item = findContentItem(id)
 	if (!item) return
 	markChanging(id)
 	try {
@@ -570,11 +682,15 @@ async function bulkDisable() {
 }
 
 function handleUpdateById(id: string) {
+	if (id === '__modpack_group__') {
+		ctx.updateModpack?.()
+		return
+	}
 	ctx.updateItem?.(id)
 }
 
 function handleSwitchVersionById(id: string) {
-	const item = ctx.items.value.find((i) => getItemId(i) === id)
+	const item = findContentItem(id)
 	if (item) {
 		ctx.switchVersion?.(item)
 	}
@@ -592,7 +708,8 @@ const hasBulkUpdateSupport = computed(
 function promptUpdateAll(event?: MouseEvent) {
 	if (!hasBulkUpdateSupport.value) return
 	const items = ctx.items.value.filter((item) => item.has_update)
-	if (items.length === 0) return
+	const modpackHasUpdate = ctx.modpack.value?.hasUpdate ?? false
+	if (items.length === 0 && !modpackHasUpdate) return
 	pendingBulkUpdateItems.value = items
 	pendingBulkUpdateAll.value = true
 	if ((event?.shiftKey || skipNonEssentialWarnings.value) && !ctx.isBusy.value) {
@@ -618,7 +735,9 @@ function promptUpdateSelected(event?: MouseEvent) {
 async function confirmBulkUpdate() {
 	if (ctx.isBusy.value) return
 	const items = pendingBulkUpdateItems.value
-	if (items.length === 0 || !hasBulkUpdateSupport.value) return
+	const modpackHasUpdate = ctx.modpack.value?.hasUpdate ?? false
+	if (items.length === 0 && !modpackHasUpdate) return
+	if (!hasBulkUpdateSupport.value) return
 
 	const setBulkStatus = (status: BulkOperationStatus) => {
 		bulkStatusMessage.value = status.message ?? null
@@ -629,11 +748,12 @@ async function confirmBulkUpdate() {
 
 	try {
 		if (pendingBulkUpdateAll.value && ctx.bulkUpdateAll) {
+			const totalCount = items.length + (modpackHasUpdate ? 1 : 0)
 			isBulkOperating.value = true
 			bulkOperation.value = 'update'
 			bulkProgress.value = 0
-			bulkTotal.value = items.length
-			bulkItemCount.value = items.length
+			bulkTotal.value = totalCount
+			bulkItemCount.value = totalCount
 			bulkStatusMessage.value = null
 			bulkWaiting.value = true
 			try {
@@ -706,8 +826,11 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 					:owner="ctx.modpack.value.owner"
 					:categories="ctx.modpack.value.categories"
 					:has-update="ctx.modpack.value.hasUpdate"
-					:disabled="ctx.modpack.value.disabled"
-					:disabled-text="ctx.modpack.value.disabledText"
+					:disabled="ctx.modpack.value.disabled || ctx.isBusy.value || isBulkOperating"
+					:disabled-text="
+						ctx.modpack.value.disabledText ??
+						(ctx.isBusy.value ? (ctx.busyMessage?.value ?? undefined) : undefined)
+					"
 					:show-content-hint="
 						!!(ctx.showContentHint?.value && ctx.modpack.value && ctx.items.value.length === 0)
 					"
@@ -738,11 +861,11 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 								clearable
 								:placeholder="
 									formatMessage(messages.searchPlaceholder, {
-										count: tableItems.length,
+										count: searchableItemCount,
 										contentType: formatContentTypeSentence(
 											formatMessage,
 											ctx.contentTypeLabel.value,
-											tableItems.length,
+											searchableItemCount,
 										),
 									})
 								"
@@ -819,10 +942,12 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 							v-model:selected-ids="selectedIds"
 							:items="tableItems"
 							:show-selection="true"
+							:expanded-groups="expandedGroups"
 							@update:enabled="handleToggleEnabledById"
 							@delete="handleDeleteById"
 							@update="handleUpdateById"
 							@switch-version="handleSwitchVersionById"
+							@toggle-expand="toggleGroupExpand"
 						>
 							<template #header-project>
 								<div class="flex items-center gap-4">
@@ -853,6 +978,9 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 										@click="selectedStatusFilters = [option.id]"
 									>
 										{{ option.label }}
+										<span class="ml-1 text-sm font-normal opacity-70">{{
+											filterCounts[option.id] ?? 0
+										}}</span>
 										<span
 											v-if="selectedStatusFilters.includes(option.id)"
 											class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
@@ -1094,7 +1222,10 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 		<ConfirmBulkUpdateModal
 			v-if="hasBulkUpdateSupport"
 			ref="confirmBulkUpdateModal"
-			:count="pendingBulkUpdateItems.length"
+			:count="
+				pendingBulkUpdateItems.length +
+				(pendingBulkUpdateAll && ctx.modpack.value?.hasUpdate ? 1 : 0)
+			"
 			:server="ctx.deletionContext === 'server'"
 			:action-disabled="ctx.isBusy.value"
 			:action-disabled-tooltip="ctx.busyMessage?.value ?? undefined"

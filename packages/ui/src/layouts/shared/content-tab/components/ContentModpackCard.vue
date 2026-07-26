@@ -368,7 +368,7 @@ onUnmounted(() => {
 
 		<div
 			v-if="project.downloads != null || project.followers != null || categories?.length"
-			class="flex flex-wrap items-center gap-3"
+			class="flex flex-nowrap items-center gap-3 overflow-hidden"
 		>
 			<div v-if="project.downloads != null" class="flex items-center gap-2 text-secondary">
 				<DownloadIcon class="size-5" />
@@ -380,7 +380,7 @@ onUnmounted(() => {
 				<span class="font-medium">{{ formatCompact(project.followers) }}</span>
 			</div>
 
-			<div v-if="categories?.length" class="flex flex-wrap items-center gap-1">
+			<div v-if="categories?.length" class="flex flex-nowrap items-center gap-1 overflow-hidden">
 				<TagTagItem
 					v-for="cat in categories"
 					:key="cat.name"
