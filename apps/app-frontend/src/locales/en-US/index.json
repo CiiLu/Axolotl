@@ -2348,6 +2348,12 @@
 	"app.skins.third-party-account.title": {
 		"message": "Third-party skin management"
 	},
+	"app.skins.tabs.saved": {
+		"message": "Saved skins"
+	},
+	"app.skins.tabs.default": {
+		"message": "Official skins"
+	},
 	"app.skins.title": {
 		"message": "Skin selector"
 	},
