@@ -1,5 +1,5 @@
 <script setup>
-import { defineMessages, injectNotificationManager, Toggle, useVIntl } from '@modrinth/ui'
+import { ButtonStyled, defineMessages, injectNotificationManager, Toggle, useVIntl } from '@modrinth/ui'
 import { platform } from '@tauri-apps/plugin-os'
 import { ref, watch } from 'vue'
 
@@ -22,6 +22,18 @@ const messages = defineMessages({
 		id: 'app.settings.java.auto-high-performance-mode-description',
 		defaultMessage:
 			'Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only.',
+	},
+	deepScanConfirm: {
+		id: 'app.settings.java.deep-scan-confirm',
+		defaultMessage: 'This will scan ALL directories on ALL drives. May take several minutes.',
+	},
+	scanAnyway: {
+		id: 'app.settings.java.scan-anyway',
+		defaultMessage: 'Scan Anyway',
+	},
+	cancel: {
+		id: 'app.settings.java.cancel',
+		defaultMessage: 'Cancel',
 	},
 })
 
@@ -84,9 +96,9 @@ async function updateJavaVersion(version) {
 			</ButtonStyled>
 		</div>
 		<div v-if="showDeepScanConfirm" class="flex items-center gap-2 p-2 bg-warning/10 rounded-lg border border-warning text-sm">
-			<span>This will scan ALL directories on ALL drives. May take several minutes.</span>
-			<ButtonStyled color="red" @click="confirmDeepScan">Scan Anyway</ButtonStyled>
-			<ButtonStyled type="outlined" @click="showDeepScanConfirm = false">Cancel</ButtonStyled>
+			<span>{{ formatMessage(messages.deepScanConfirm) }}</span>
+			<ButtonStyled color="red" @click="confirmDeepScan">{{ formatMessage(messages.scanAnyway) }}</ButtonStyled>
+			<ButtonStyled type="outlined" @click="showDeepScanConfirm = false">{{ formatMessage(messages.cancel) }}</ButtonStyled>
 		</div>
 
 		<div v-if="settings" class="flex items-center justify-between gap-4">

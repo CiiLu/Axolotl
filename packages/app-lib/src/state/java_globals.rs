@@ -41,7 +41,7 @@ impl JavaVersion {
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     ) -> crate::Result<Vec<Self>> {
         let rows = sqlx::query!(
-            "SELECT major_version, full_version, architecture, path, distribution FROM java_versions"
+            r#"SELECT major_version, full_version, architecture, path, distribution as "distribution?: String" FROM java_versions"#
         )
         .fetch_all(exec)
         .await?;
