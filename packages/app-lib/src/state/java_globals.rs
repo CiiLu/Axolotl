@@ -88,6 +88,18 @@ impl JavaVersion {
     ) -> crate::Result<()> {
         sqlx::query!("DELETE FROM java_versions WHERE path = $1", path)
             .execute(exec).await?;
-        Ok(())
-    }
+		Ok(())
+	}
+
+	pub async fn remove(
+		major_version: u32,
+		exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
+	) -> crate::Result<()> {
+		let version = major_version as i32;
+		sqlx::query("DELETE FROM java_versions WHERE major_version = $1")
+			.bind(version)
+			.execute(exec)
+			.await?;
+		Ok(())
+	}
 }

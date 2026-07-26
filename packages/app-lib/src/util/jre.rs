@@ -23,6 +23,7 @@ const BFS_MAX_DEPTH: usize = 5;
 const BFS_MAX_DIRS_PER_ROOT: usize = 10_000;
 /// How many blocking collection jobs (registry, BFS roots, ...) run at once.
 const COLLECT_CONCURRENCY: usize = 4;
+const JAVA_INSTALL_STAGING_SUFFIX: &str = ".installing";
 
 /// Directory names (lowercase, substring match) that make the BFS descend
 /// into a top-level directory of a search root.
@@ -651,7 +652,17 @@ fn bfs_exhaustive_scan(root: &Path) -> HashSet<PathBuf> {
         }
     }
 
-    found
+	found
+}
+
+pub(crate) fn is_java_install_staging_path(path: &Path) -> bool {
+	path.components().any(|component| {
+		let std::path::Component::Normal(name) = component else {
+			return false;
+		};
+		let name = name.to_string_lossy().to_ascii_lowercase();
+		name.starts_with('.') && name.ends_with(JAVA_INSTALL_STAGING_SUFFIX)
+	})
 }
 
 // Gets all JREs from the launcher's own auto-installed Java directory
