@@ -39,43 +39,26 @@ impl JavaVersion {
 
     pub async fn get_all(
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
-    ) -> crate::Result<Vec<JavaVersion>> {
-        let res = sqlx::query!(
-            "
-            SELECT
-                major_version, full_version, architecture, path, distribution
-            FROM java_versions
-            "
+    ) -> crate::Result<Vec<Self>> {
+        let rows = sqlx::query!(
+            "SELECT major_version, full_version, architecture, path, distribution FROM java_versions"
         )
         .fetch_all(exec)
         .await?;
 
-        Ok(res
-            .into_iter()
-            .map(|x| JavaVersion {
-                parsed_version: x.major_version as u32,
-                version: x.full_version,
-                architecture: x.architecture,
-                path: x.path,
-                distribution: x.distribution,
-            })
-            .collect())
+        Ok(rows.into_iter().map(|x| JavaVersion {
+            parsed_version: x.major_version as u32,
+            version: x.full_version,
+            architecture: x.architecture,
+            path: x.path,
+            distribution: x.distribution,
+        }).collect())
     }
 
     pub async fn upsert(
         &self,
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     ) -> crate::Result<()> {
-        if crate::util::jre::is_java_install_staging_path(std::path::Path::new(
-            &self.path,
-        )) {
-            return Err(crate::ErrorKind::InputError(format!(
-                "Cannot save an incomplete Java installation: {}",
-                self.path
-            ))
-            .into());
-        }
-
         let major_version = self.parsed_version as i32;
 
         sqlx::query!(
@@ -99,15 +82,12 @@ impl JavaVersion {
 
         Ok(())
     }
-
     pub async fn delete(
         path: &str,
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     ) -> crate::Result<()> {
-        sqlx::query("DELETE FROM java_versions WHERE path = $1")
-            .bind(path)
-            .execute(exec)
-            .await?;
+        sqlx::query!("DELETE FROM java_versions WHERE path = $1", path)
+            .execute(exec).await?;
         Ok(())
     }
 }

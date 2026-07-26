@@ -159,10 +159,6 @@ async fn validate_cached_javas(
 
     for entry in entries {
         let path = PathBuf::from(&entry.java.path);
-        if jre::is_java_install_staging_path(&path) {
-            DiscoveredJava::remove(&entry.java.path, &state.pool).await?;
-            continue;
-        }
         match java_file_signature(&path) {
             Some((size, mtime))
                 if size == entry.file_size && mtime == entry.file_mtime_ms =>
@@ -265,10 +261,6 @@ pub async fn find_cached_java(
     let state = State::get().await?;
 
     for entry in DiscoveredJava::get_all(&state.pool).await? {
-        if jre::is_java_install_staging_path(Path::new(&entry.java.path)) {
-            DiscoveredJava::remove(&entry.java.path, &state.pool).await?;
-            continue;
-        }
         if entry.java.parsed_version != major_version {
             continue;
         }

@@ -248,6 +248,7 @@ const {
 	setModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance,
+	onImportFileReceived,
 	fileDrop,
 } = setupProviders(notificationManager, popupNotificationManager)
 
@@ -264,23 +265,22 @@ const os = ref('')
 const isDevEnvironment = ref(false)
 
 /**
- * Acrylic is rendered by the Windows compositor behind the webview, so CSS
- * cannot clip it. Keep the native rounded frame and hide its border while the
- * CSS-drawn transparent-window border is active.
+ * On Windows the native shadow also draws the window border, which bleeds dark
+ * artifacts into a transparent window's corners, so it has to go while the mode
+ * is on. Windows 10 re-adds it after the window is shown, hence reapplying here
+ * rather than relying on the value set during setup.
  */
-async function applyWindowFrame() {
+async function applyWindowShadow() {
 	if (os.value !== 'Windows') return
 
 	try {
-		await invoke('set_transparent_window_frame', {
-			enabled: themeStore.transparentBackground,
-		})
+		await getCurrentWindow().setShadow(!themeStore.transparentBackground)
 	} catch (error) {
-		console.warn('Failed to update transparent window frame', error)
+		console.warn('Failed to update window shadow', error)
 	}
 }
 
-watch(() => themeStore.transparentBackground, applyWindowFrame)
+watch(() => themeStore.transparentBackground, applyWindowShadow)
 
 /**
  * The frosted glass has to come from the compositor: a webview cannot reach the
@@ -655,7 +655,7 @@ async function setupApp() {
 	themeStore.transparentBackgroundOpacity = transparent_background_opacity
 	themeStore.transparentBackgroundBlur = transparent_background_blur
 	themeStore.setTransparentBackgroundClass()
-	await applyWindowFrame()
+	await applyWindowShadow()
 	await applyWindowEffects()
 	themeStore.sidebarInstanceCount = sidebar_instance_count
 	themeStore.devMode = developer_mode
@@ -1160,60 +1160,6 @@ function clearDropProcessingNotification() {
 		notificationManager.removeNotification(dropProcessingNotificationId.value)
 		dropProcessingNotificationId.value = null
 	}
-}
-
-async function handleImportFileReceived(payload: {
-	file: File | null
-	filePath: string | null
-	source: 'file-picker' | 'drag-drop'
-}) {
-	if (!payload.filePath) return
-
-	installationModal.value?.hide()
-	await scanAndShowLauncherInstances('Unknown', payload.filePath)
-}
-
-async function scanAndShowLauncherInstances(launcherType: string, basePath: string) {
-	currentImportContext.value = { launcherType, basePath }
-	scanningInstances.value = true
-
-	let results: ScanResult[]
-	try {
-		results = await scanLauncherInstances(launcherType, basePath)
-	} catch (error) {
-		currentImportContext.value = null
-		handleError(error)
-		return
-	} finally {
-		scanningInstances.value = false
-	}
-
-	const totalInstances = results.reduce((sum, result) => sum + result.instances.length, 0)
-	if (totalInstances === 0) {
-		currentImportContext.value = null
-		addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
-		return
-	}
-
-	if (totalInstances === 1 && results[0]?.instances[0]) {
-		const instance = results[0].instances[0]
-		selectedInstances.value = [
-			{
-				launcherType,
-				basePath,
-				name: instance.name,
-				path: instance.path,
-			},
-		]
-		const capability = await check_symlink_capability()
-		symlinkCardsModal.value?.show({
-			instanceNames: [instance.name],
-			symlinkCapable: capability,
-		})
-		return
-	}
-
-	launcherImportModal.value?.show(results)
 }
 
 function handleDropCancel() {
@@ -1765,11 +1711,6 @@ async function onImportSelected(
 	})
 }
 
-function onLauncherImportCancelled() {
-	currentImportContext.value = null
-	selectedInstances.value = []
-}
-
 function onSymlinkMethodCancelled() {
 	if (symlinkChoiceResolve) {
 		symlinkChoiceResolve(false)
@@ -1800,7 +1741,6 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 				ctx?.basePath ?? inst.path,
 				inst.name,
 				symlink,
-				inst.path,
 			)
 			addNotification({
 				title: formatMessage(messages.dropInstanceImportedTitle),
@@ -1922,28 +1862,18 @@ async function handleCommand(e) {
 	if (e.event === 'RunMRPack') {
 		// RunMRPack should directly install a local modpack file given a path;
 		// non-mrpack archives (CurseForge/MCBBS/HMCL/MultiMC zips) are format-sniffed by the backend
-		const lowerPath = e.path.toLowerCase()
-		if (lowerPath.endsWith('.mrpack') || lowerPath.endsWith('.zip')) {
+		if (e.path.endsWith('.mrpack') || e.path.endsWith('.zip')) {
 			const location = { type: 'fromFile', path: e.path }
-			const splitPath = e.path.split(/[\\/]/)
-			const fileName = splitPath ? splitPath[splitPath.length - 1] : e.path
-
-			if (lowerPath.endsWith('.mrpack')) {
-				await nextTick()
+			const preview = await install_get_modpack_preview(location).catch(handleError)
+			if (preview?.unknownFile) {
+				const splitPath = e.path.split(/[\\/]/)
+				const fileName = splitPath ? splitPath[splitPath.length - 1] : e.path
 				unknownPackWarningModal.value?.show(
 					() => install_create_modpack_instance(location).then(() => undefined),
 					fileName,
 				)
 			} else {
-				const preview = await install_get_modpack_preview(location).catch(handleError)
-				if (preview?.unknownFile) {
-					unknownPackWarningModal.value?.show(
-						() => install_create_modpack_instance(location).then(() => undefined),
-						fileName,
-					)
-				} else if (preview) {
-					await install_create_modpack_instance(location).catch(handleError)
-				}
+				await install_create_modpack_instance(location).catch(handleError)
 			}
 			trackEvent('InstanceCreate', {
 				source: 'CreationModalFileDrop',
@@ -2379,7 +2309,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
 			'has-transparent-background': themeStore.transparentBackground,
-			'is-maximized': isMaximized,
 		}"
 	>
 		<Transition name="fade">
@@ -2412,7 +2341,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			:search-modpacks="searchModpacks"
 			:get-project-versions="getProjectVersions"
 			:get-loader-manifest="getLoaderManifest"
-			:on-import-file-received="handleImportFileReceived"
+			:on-import-file-received="onImportFileReceived"
 			@create="handleCreate"
 			@browse-modpacks="handleBrowseModpacks"
 		/>
@@ -2771,7 +2700,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<LauncherImportModal
 		ref="launcherImportModal"
 		@confirm="onImportSelected"
-		@cancel="onLauncherImportCancelled"
+		@cancel="launcherImportModal?.hide()"
 	/>
 
 	<!-- Symlink method selection modal -->
@@ -2887,12 +2816,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 }
 
 .app-grid-layout.has-transparent-background {
-	&:not(.is-maximized) {
-		border-radius: 8px;
-		clip-path: inset(0 round 8px);
-		overflow: hidden;
-	}
-
 	.app-grid-navbar,
 	.app-grid-statusbar {
 		background-color: color-mix(
@@ -2909,7 +2832,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		content: '';
 		position: fixed;
 		inset: 0;
-		border-radius: inherit;
 		z-index: 100;
 		pointer-events: none;
 		box-shadow:
