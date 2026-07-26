@@ -3015,7 +3015,10 @@
 		"message": "离线模式"
 	},
 	"minecraft-account.offline-mode.description": {
-		"message": "仅可使用离线账号，并且只能启动已完整下载的实例。这通常是因为你的电脑无法连接到Mojang的认证服务器，请检查网络连接。如果你正在使用代理，请关闭代理后重启Axolotl。"
+		"message": "仅可使用离线账号，并且只能启动已完整下载的实例。这通常是因为你的电脑无法连接到Mojang的认证服务器，请检查网络连接。如果你正在使用代理，请关闭或开启代理后点击下方按钮刷新连接状态。"
+	},
+	"minecraft-account.offline-mode.refresh": {
+		"message": "刷新连接状态"
 	},
 	"minecraft-account.remove-account": {
 		"message": "移除账户"

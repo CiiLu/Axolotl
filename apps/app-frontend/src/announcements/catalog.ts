@@ -41,6 +41,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.5.5',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'The offline mode notice now has a refresh button to re-check the session server connection without restarting the launcher.',
+					'zh-CN': '离线模式提示中新增刷新按钮，无需重启启动器即可重新检测会话服务器连接状态。',
+				},
+			],
 			fixed: [
 				{
 					'en-US':

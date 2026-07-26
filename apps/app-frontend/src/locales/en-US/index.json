@@ -3056,6 +3056,9 @@
 	"minecraft-account.offline-mode.description": {
 		"message": "Only offline accounts are available. You can launch fully downloaded instances."
 	},
+	"minecraft-account.offline-mode.refresh": {
+		"message": "Refresh connection status"
+	},
 	"minecraft-account.remove-account": {
 		"message": "Remove account"
 	},
