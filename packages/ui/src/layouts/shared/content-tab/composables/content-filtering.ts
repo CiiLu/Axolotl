@@ -1,4 +1,3 @@
-import { useSessionStorage } from '@vueuse/core'
 import type { MaybeRefOrGetter, Ref } from 'vue'
 import { computed, ref, toValue, watch } from 'vue'
 
@@ -52,6 +51,23 @@ const messages = defineMessages({
 	},
 })
 
+function readSessionJSON<T>(key: string, fallback: T): T {
+	try {
+		const raw = sessionStorage.getItem(key)
+		return raw !== null ? JSON.parse(raw) : fallback
+	} catch {
+		return fallback
+	}
+}
+
+function writeSessionJSON(key: string, value: unknown) {
+	try {
+		sessionStorage.setItem(key, JSON.stringify(value))
+	} catch {
+		// 存储空间不足时静默失败
+	}
+}
+
 export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFilterConfig) {
 	const { formatMessage } = useVIntl()
 
@@ -66,16 +82,26 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 	watch(
 		persistKey,
 		(newKey, oldKey) => {
-			if (oldKey && newKey !== oldKey) {
-				const typeFilter = useSessionStorage<string | null>(`content-filters-type:${newKey}`, null)
-				const statusFilters = useSessionStorage<string[]>(`content-filters-status:${newKey}`, [])
-				selectedTypeFilter.value = typeFilter.value
-				selectedStatusFilters.value = statusFilters.value
-			} else if (newKey) {
-				const typeFilter = useSessionStorage<string | null>(`content-filters-type:${newKey}`, null)
-				const statusFilters = useSessionStorage<string[]>(`content-filters-status:${newKey}`, [])
-				selectedTypeFilter.value = typeFilter.value
-				selectedStatusFilters.value = statusFilters.value
+			if (newKey && newKey !== oldKey) {
+				// 从 sessionStorage 读取新 key 的持久化值
+				selectedTypeFilter.value = readSessionJSON<string | null>(
+					`content-filters-type:${newKey}`,
+					null,
+				)
+				selectedStatusFilters.value = readSessionJSON<string[]>(
+					`content-filters-status:${newKey}`,
+					[],
+				)
+			} else if (newKey && oldKey === newKey) {
+				// 首次初始化
+				selectedTypeFilter.value = readSessionJSON<string | null>(
+					`content-filters-type:${newKey}`,
+					null,
+				)
+				selectedStatusFilters.value = readSessionJSON<string[]>(
+					`content-filters-status:${newKey}`,
+					[],
+				)
 			}
 		},
 		{ immediate: true },
@@ -83,7 +109,7 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 
 	watch(selectedTypeFilter, (val) => {
 		if (persistKey.value) {
-			useSessionStorage<string | null>(`content-filters-type:${persistKey.value}`, null).value = val
+			writeSessionJSON(`content-filters-type:${persistKey.value}`, val)
 		}
 	})
 
@@ -91,7 +117,7 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 		selectedStatusFilters,
 		(val) => {
 			if (persistKey.value) {
-				useSessionStorage<string[]>(`content-filters-status:${persistKey.value}`, []).value = val
+				writeSessionJSON(`content-filters-status:${persistKey.value}`, val)
 			}
 		},
 		{ deep: true },

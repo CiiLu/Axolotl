@@ -250,7 +250,15 @@ const { selectedIds, selectedItems, clearSelection, removeFromSelection } = useC
 	getItemId,
 )
 
-const { isBulkOperating, bulkProgress, bulkTotal, bulkOperation, runBulk } = useBulkOperation()
+const {
+	isBulkOperating,
+	bulkProgress,
+	bulkTotal,
+	bulkOperation,
+	bulkWaiting,
+	runBulk,
+	runBulkWithWaiting,
+} = useBulkOperation()
 
 // Sync bulk operation state back to the content manager so providers can suppress refreshes
 if (ctx.isBulkOperating) {
@@ -261,7 +269,6 @@ if (ctx.isBulkOperating) {
 
 const { isChanging, markChanging, unmarkChanging } = useChangingItems()
 
-const bulkWaiting = ref(false)
 const bulkStatusMessage = ref<string | null>(null)
 const bulkItemCount = ref(0)
 
@@ -532,22 +539,17 @@ async function confirmDelete() {
 	if (itemsToDelete.length === 0) return
 
 	if (ctx.bulkDeleteItems && itemsToDelete.length > 1) {
-		isBulkOperating.value = true
-		bulkOperation.value = 'delete'
-		bulkProgress.value = 0
-		bulkTotal.value = itemsToDelete.length
-		bulkWaiting.value = true
-		try {
-			await ctx.bulkDeleteItems(itemsToDelete)
-			await disablePendingDependencyWarningDependents()
-		} finally {
-			clearSelection()
-			isBulkOperating.value = false
-			bulkOperation.value = null
-			bulkProgress.value = 0
-			bulkTotal.value = 0
-			bulkWaiting.value = false
-		}
+		await runBulkWithWaiting(
+			'delete',
+			itemsToDelete.length,
+			async () => {
+				await ctx.bulkDeleteItems!(itemsToDelete)
+			},
+			() => {
+				clearSelection()
+			},
+		)
+		await disablePendingDependencyWarningDependents()
 		return
 	}
 
@@ -594,21 +596,14 @@ async function bulkEnable() {
 	const items = selectedItems.value.filter((item) => !item.enabled)
 	if (items.length === 0) return
 	if (ctx.bulkEnableItems) {
-		isBulkOperating.value = true
-		bulkOperation.value = 'enable'
-		bulkProgress.value = 0
-		bulkTotal.value = items.length
-		bulkWaiting.value = true
-		try {
-			await ctx.bulkEnableItems(items)
-		} finally {
-			clearSelection()
-			isBulkOperating.value = false
-			bulkOperation.value = null
-			bulkProgress.value = 0
-			bulkTotal.value = 0
-			bulkWaiting.value = false
-		}
+		await runBulkWithWaiting(
+			'enable',
+			items.length,
+			async () => {
+				await ctx.bulkEnableItems!(items)
+			},
+			clearSelection,
+		)
 		return
 	}
 	await runBulk('enable', items, (item) => ctx.toggleEnabled(item), { onComplete: clearSelection })
@@ -619,21 +614,14 @@ async function bulkDisable() {
 	const items = selectedItems.value.filter((item) => item.enabled)
 	if (items.length === 0) return
 	if (ctx.bulkDisableItems) {
-		isBulkOperating.value = true
-		bulkOperation.value = 'disable'
-		bulkProgress.value = 0
-		bulkTotal.value = items.length
-		bulkWaiting.value = true
-		try {
-			await ctx.bulkDisableItems(items)
-		} finally {
-			clearSelection()
-			isBulkOperating.value = false
-			bulkOperation.value = null
-			bulkProgress.value = 0
-			bulkTotal.value = 0
-			bulkWaiting.value = false
-		}
+		await runBulkWithWaiting(
+			'disable',
+			items.length,
+			async () => {
+				await ctx.bulkDisableItems!(items)
+			},
+			clearSelection,
+		)
 		return
 	}
 	await runBulk('disable', items, (item) => ctx.toggleEnabled(item), { onComplete: clearSelection })
@@ -707,45 +695,33 @@ async function confirmBulkUpdate() {
 	try {
 		if (pendingBulkUpdateAll.value && ctx.bulkUpdateAll) {
 			const totalCount = items.length + (modpackHasUpdate ? 1 : 0)
-			isBulkOperating.value = true
-			bulkOperation.value = 'update'
-			bulkProgress.value = 0
-			bulkTotal.value = totalCount
 			bulkItemCount.value = totalCount
-			bulkStatusMessage.value = null
-			bulkWaiting.value = true
-			try {
-				await ctx.bulkUpdateAll(setBulkStatus)
-			} finally {
-				clearSelection()
-				isBulkOperating.value = false
-				bulkOperation.value = null
-				bulkProgress.value = 0
-				bulkTotal.value = 0
-				bulkItemCount.value = 0
-				bulkStatusMessage.value = null
-				bulkWaiting.value = false
-			}
+			await runBulkWithWaiting(
+				'update',
+				totalCount,
+				async () => {
+					await ctx.bulkUpdateAll(setBulkStatus)
+				},
+				() => {
+					clearSelection()
+					bulkItemCount.value = 0
+					bulkStatusMessage.value = null
+				},
+			)
 		} else if (ctx.bulkUpdateItems) {
-			isBulkOperating.value = true
-			bulkOperation.value = 'update'
-			bulkProgress.value = 0
-			bulkTotal.value = items.length
 			bulkItemCount.value = items.length
-			bulkStatusMessage.value = null
-			bulkWaiting.value = true
-			try {
-				await ctx.bulkUpdateItems(items)
-			} finally {
-				clearSelection()
-				isBulkOperating.value = false
-				bulkOperation.value = null
-				bulkProgress.value = 0
-				bulkTotal.value = 0
-				bulkItemCount.value = 0
-				bulkStatusMessage.value = null
-				bulkWaiting.value = false
-			}
+			await runBulkWithWaiting(
+				'update',
+				items.length,
+				async () => {
+					await ctx.bulkUpdateItems(items)
+				},
+				() => {
+					clearSelection()
+					bulkItemCount.value = 0
+					bulkStatusMessage.value = null
+				},
+			)
 		} else if (ctx.bulkUpdateItem) {
 			await runBulk('update', items, ctx.bulkUpdateItem, { onComplete: clearSelection })
 		}
