@@ -521,6 +521,26 @@ const messages = defineMessages({
 		id: 'app.drop.no-instances',
 		defaultMessage: 'No instances found',
 	},
+	dropImportProgressTitle: {
+		id: 'app.drop.import-progress-title',
+		defaultMessage: 'Importing instances…',
+	},
+	dropImportProgressText: {
+		id: 'app.drop.import-progress-text',
+		defaultMessage: '{current} / {total} instances imported',
+	},
+	dropImportCompletedTitle: {
+		id: 'app.drop.import-completed-title',
+		defaultMessage: 'Import completed',
+	},
+	dropImportCompletedText: {
+		id: 'app.drop.import-completed-text',
+		defaultMessage: 'Successfully imported {count} instances',
+	},
+	dropImportCompletedPartialText: {
+		id: 'app.drop.import-completed-partial-text',
+		defaultMessage: 'Imported {completed} of {total} instances ({failed} failed)',
+	},
 
 	dropModpackInstalling: {
 		id: 'app.drop.modpack-installing',
@@ -1744,7 +1764,9 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 	currentImportContext.value = null
 	if (instances.length === 0) return
 
-	for (const inst of instances) {
+	// Single instance: simple notification (no progress overlay needed)
+	if (instances.length === 1) {
+		const inst = instances[0]
 		try {
 			const job = await import_instance(
 				ctx?.launcherType ?? inst.launcherType,
@@ -1765,6 +1787,73 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 				type: 'error',
 			})
 		}
+		return
+	}
+
+	// Multiple instances: show cumulative progress
+	const total = instances.length
+	let completed = 0
+	let failedCount = 0
+
+	let progressNotif = addNotification({
+		title: formatMessage(messages.dropImportProgressTitle),
+		text: formatMessage(messages.dropImportProgressText, { current: 0, total }),
+		type: 'info',
+		autoCloseMs: null,
+	})
+
+	for (let i = 0; i < instances.length; i++) {
+		const inst = instances[i]
+
+		// Update progress notification
+		notificationManager.removeNotification(progressNotif.id)
+		progressNotif = addNotification({
+			title: formatMessage(messages.dropImportProgressTitle),
+			text: formatMessage(messages.dropImportProgressText, {
+				current: i + 1,
+				total,
+			}),
+			type: 'info',
+			autoCloseMs: null,
+		})
+
+		try {
+			const job = await import_instance(
+				ctx?.launcherType ?? inst.launcherType,
+				ctx?.basePath ?? inst.path,
+				inst.name,
+				symlink,
+			)
+			await wait_for_install_job(job.job_id)
+			completed++
+		} catch (e) {
+			failedCount++
+			addNotification({
+				title: formatMessage(messages.dropImportFailedTitle),
+				text: formatMessage(messages.dropImportFailedText, { name: inst.name, error: String(e) }),
+				type: 'error',
+			})
+		}
+	}
+
+	// Final summary — replace progress notification
+	notificationManager.removeNotification(progressNotif.id)
+	if (failedCount === 0) {
+		addNotification({
+			title: formatMessage(messages.dropImportCompletedTitle),
+			text: formatMessage(messages.dropImportCompletedText, { count: total }),
+			type: 'success',
+		})
+	} else {
+		addNotification({
+			title: formatMessage(messages.dropImportCompletedTitle),
+			text: formatMessage(messages.dropImportCompletedPartialText, {
+				completed,
+				failed: failedCount,
+				total,
+			}),
+			type: 'warning',
+		})
 	}
 }
 

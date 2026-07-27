@@ -435,6 +435,7 @@ fn detect_loader(
     None
 }
 
+#[allow(dead_code)]
 fn extract_loader_version(
     content: &str,
     json: &Value,
@@ -527,6 +528,7 @@ fn try_extract_version_from_needle(
 /// Parses loader version from the instance id.
 /// e.g. "1.8.9-forge-11.15.1.1722" → "11.15.1.1722"
 ///      "1.20.1-fabric-0.15.11" → "0.15.11"
+#[allow(dead_code)]
 fn parse_loader_version_from_id(id: &str, loader_type: &str) -> Option<String> {
     let id_lower = id.to_lowercase();
     let keyword = match loader_type {
