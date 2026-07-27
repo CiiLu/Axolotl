@@ -2154,7 +2154,7 @@
 		"message": "App directory"
 	},
 	"app.settings.resources.app-directory-description": {
-		"message": "The directory where the launcher stores all of its files. Changes apply after restarting the launcher."
+		"message": "The directory where the launcher stores all of its game files. Changes apply after restarting the launcher."
 	},
 	"app.settings.resources.concurrency.manual": {
 		"message": "Manual"
