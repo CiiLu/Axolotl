@@ -168,7 +168,7 @@ async function pollState() {
 		state.value = result
 		errorMessage.value = ''
 	} catch (e: any) {
-		errorMessage.value = String(e)
+		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
 	}
 }
 
@@ -178,7 +178,7 @@ async function startTerracotta() {
 		await invoke('plugin:terracotta|terracotta_start', { autoDownload: true })
 		pollInterval = setInterval(pollState, 1000)
 	} catch (e: any) {
-		errorMessage.value = String(e)
+		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
 	}
 }
 
@@ -192,7 +192,7 @@ async function stopTerracotta() {
 		state.value = null
 		errorMessage.value = ''
 	} catch (e: any) {
-		errorMessage.value = String(e)
+		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
 	}
 }
 
@@ -211,7 +211,7 @@ async function hostGame() {
 			roomCode: null,
 		})
 	} catch (e: any) {
-		errorMessage.value = String(e)
+		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
 	}
 }
 
@@ -237,7 +237,7 @@ async function joinGame() {
 			roomCode: parsed,
 		})
 	} catch (e: any) {
-		errorMessage.value = String(e)
+		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
 	}
 }
 
@@ -245,17 +245,23 @@ async function resetState() {
 	try {
 		await invoke('plugin:terracotta|terracotta_reset')
 	} catch (e: any) {
-		errorMessage.value = String(e)
+		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
 	}
 }
 
 async function downloadTerracotta() {
 	errorMessage.value = ''
 	try {
+		pollInterval = setInterval(pollState, 500)
 		await invoke('plugin:terracotta|terracotta_download')
-		pollInterval = setInterval(pollState, 1000)
 	} catch (e: any) {
-		errorMessage.value = String(e)
+		if (pollInterval) clearInterval(pollInterval)
+		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Download failed'
+	} finally {
+		if (pollInterval) {
+			clearInterval(pollInterval)
+			pollInterval = null
+		}
 	}
 }
 
