@@ -25,6 +25,7 @@ pub struct TerracottaState {
 	pub server_port: Option<u16>,
 	pub players: Vec<PlayerInfo>,
 	pub download_progress: Option<u8>,
+	pub binary_installed: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -409,8 +410,15 @@ async fn poll_terracotta_state(port: u16) {
 	}
 }
 
+fn is_binary_installed() -> bool {
+	let bin_path = terracotta_binary_path();
+	bin_path.exists() || resolve_terracotta_binary_path(&bin_path).exists()
+}
+
 pub async fn get_state() -> TerracottaState {
-	TERRACOTTA_STATE.lock().await.clone()
+	let mut state = TERRACOTTA_STATE.lock().await.clone();
+	state.binary_installed = is_binary_installed();
+	state
 }
 
 pub async fn get_meta() -> eyre::Result<TerracottaMeta> {
@@ -567,6 +575,7 @@ pub async fn stop_terracotta() -> eyre::Result<()> {
 	}
 	let mut state = TERRACOTTA_STATE.lock().await;
 	*state = TerracottaState::default();
+	state.binary_installed = is_binary_installed();
 	Ok(())
 }
 

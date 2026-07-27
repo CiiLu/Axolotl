@@ -275,6 +275,10 @@ onMounted(async () => {
 	} catch (e: any) {
 		platformKey.value = 'unknown'
 	}
+	// Auto-start if binary is installed but process not running
+	if (state.value?.binary_installed && !state.value?.http_port) {
+		await startTerracotta()
+	}
 })
 
 onUnmounted(() => {
@@ -358,7 +362,7 @@ onUnmounted(() => {
 
 		<div v-else class="flex flex-col gap-6">
 			<div
-				v-if="!state?.http_port"
+				v-if="!state?.binary_installed"
 				class="bg-bg-raised rounded-xl p-6 border border-surface-5 text-center"
 			>
 				<div class="text-lg font-semibold mb-2">
@@ -392,7 +396,7 @@ onUnmounted(() => {
 				</Button>
 			</div>
 
-			<div class="bg-bg-raised rounded-xl border border-surface-5 overflow-hidden">
+			<div v-else class="bg-bg-raised rounded-xl border border-surface-5 overflow-hidden">
 				<NavTabs
 					v-model="tab"
 					:tabs="[
