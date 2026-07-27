@@ -405,7 +405,8 @@ pub fn is_same_disk(old_dir: &Path, new_dir: &Path) -> Result<bool> {
                 // Fall back to canonicalization for relative paths, UNC, etc.
                 let old_dir = canonicalize(old_dir)?;
                 let new_dir = canonicalize(new_dir)?;
-                match (old_dir.components().next(), new_dir.components().next()) {
+                match (old_dir.components().next(), new_dir.components().next())
+                {
                     (
                         Some(std::path::Component::Prefix(old)),
                         Some(std::path::Component::Prefix(new)),
