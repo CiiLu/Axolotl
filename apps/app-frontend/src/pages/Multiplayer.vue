@@ -230,7 +230,6 @@ interface TerracottaState {
 const tabIndex = ref(0)
 const playerName = ref('')
 const roomCodeInput = ref('')
-const localError = ref('')
 const state = ref<TerracottaState | null>(null)
 const binaryInstalled = ref(false)
 const platformKey = ref('')
@@ -312,20 +311,15 @@ const isRecoverable = computed(() => {
 	return et !== 'fatal' && et !== 'os'
 })
 
-const currentError = computed(() => {
-	return state.value?.error_message || localError.value || ''
-})
-
 async function pollState() {
 	try {
 		const result = await invoke<any>('plugin:terracotta|terracotta_get_state')
 		if (!isMounted.value) return
 		state.value = result as TerracottaState
 		binaryInstalled.value = result.binary_installed ?? false
-		if (localError.value) localError.value = ''
 	} catch (e: any) {
 		if (!isMounted.value) return
-		localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
+		console.error(e)
 	}
 }
 
@@ -344,30 +338,27 @@ function stopPolling() {
 }
 
 async function startTerracotta() {
-	localError.value = ''
 	try {
 		await invoke('plugin:terracotta|terracotta_start', { autoDownload: true })
 		startPolling()
 	} catch (e: any) {
-		localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Failed to start Terracotta'
+		console.error(e)
 	}
 }
 
 async function stopTerracotta() {
-	localError.value = ''
 	try {
 		await invoke('plugin:terracotta|terracotta_stop')
 		stopPolling()
 		state.value = null
 	} catch (e: any) {
-		localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Failed to stop Terracotta'
+		console.error(e)
 	}
 }
 
 async function hostGame() {
-	localError.value = ''
 	if (!playerName.value.trim()) {
-		localError.value = 'Please enter a player name'
+		console.warn('Please enter a player name')
 		return
 	}
 	try {
@@ -375,18 +366,17 @@ async function hostGame() {
 			playerName: playerName.value.trim(),
 		})
 	} catch (e: any) {
-		localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Failed to host game'
+		console.error(e)
 	}
 }
 
 async function joinGame() {
-	localError.value = ''
 	if (!playerName.value.trim()) {
-		localError.value = 'Please enter a player name'
+		console.warn('Please enter a player name')
 		return
 	}
 	if (!roomCodeInput.value.trim()) {
-		localError.value = 'Please enter a room code'
+		console.warn('Please enter a room code')
 		return
 	}
 	try {
@@ -398,29 +388,27 @@ async function joinGame() {
 			roomCode: parsed,
 		})
 	} catch (e: any) {
-		localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Failed to join game'
+		console.error(e)
 	}
 }
 
 async function resetState() {
-	localError.value = ''
 	try {
 		await invoke('plugin:terracotta|terracotta_reset')
 		await pollState()
 	} catch (e: any) {
-		localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Failed to reset state'
+		console.error(e)
 	}
 }
 
 async function downloadTerracotta() {
-	localError.value = ''
 	try {
 		startPolling(500)
 		await invoke('plugin:terracotta|terracotta_download')
 	} catch (e: any) {
 		stopPolling()
 		if (isMounted.value) {
-			localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Download failed'
+			console.error(e)
 		}
 	}
 }
@@ -468,9 +456,6 @@ onUnmounted(() => {
 						{{ formatMessage(messages.startTerracotta) }}
 					</Button>
 				</template>
-				<div v-if="localError" class="text-red-500 text-sm mt-4">
-					{{ localError }}
-				</div>
 			</div>
 		</template>
 
@@ -511,10 +496,6 @@ onUnmounted(() => {
 				>
 					{{ formatMessage(messages.downloadTerracotta) }}
 				</Button>
-
-				<div v-if="localError" class="text-red-500 text-sm mt-3">
-					{{ localError }}
-				</div>
 			</div>
 		</template>
 
@@ -580,8 +561,6 @@ onUnmounted(() => {
 						}}
 					</div>
 
-					<div v-if="localError" class="text-red-500 text-sm">{{ localError }}</div>
-
 					<div class="flex gap-2">
 						<Button
 							v-if="tabIndex === 0"
@@ -611,7 +590,6 @@ onUnmounted(() => {
 						{{ statusText }}
 					</div>
 				</div>
-				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
 				<div class="text-sm text-secondary mb-4 bg-surface-5 rounded-lg p-3">
 					{{ formatMessage(messages.lanHint) }}
 				</div>
@@ -671,8 +649,6 @@ onUnmounted(() => {
 					</div>
 				</div>
 
-				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
-
 				<div class="flex gap-2">
 					<Button @click="resetState">
 						{{ formatMessage(messages.back) }}
@@ -692,7 +668,6 @@ onUnmounted(() => {
 						{{ statusText }}
 					</div>
 				</div>
-				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
 				<div class="flex gap-2">
 					<Button @click="resetState">
 						{{ formatMessage(messages.back) }}
@@ -739,8 +714,6 @@ onUnmounted(() => {
 					</div>
 				</div>
 
-				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
-
 				<div class="flex gap-2">
 					<Button @click="resetState">
 						{{ formatMessage(messages.back) }}
@@ -764,16 +737,8 @@ onUnmounted(() => {
 					<div class="text-sm text-red-400 font-semibold mb-1">
 						{{ errorTypeLabel }}
 					</div>
-					<div v-if="currentError" class="text-sm text-red-300">
-						{{ currentError }}
-					</div>
-					<div v-if="state.error_type !== 'network' && state.status === 'error'" class="mt-2">
-						<a
-							class="text-xs text-red-400 underline cursor-pointer"
-							@click="localError = formatMessage(messages.checkNetwork)"
-						>
-							{{ formatMessage(messages.checkNetwork) }}
-						</a>
+					<div v-if="state.error_message" class="text-sm text-red-300">
+						{{ state.error_message }}
 					</div>
 					<div class="flex gap-2 mt-3">
 						<Button v-if="isRecoverable" size="small" @click="resetState">
@@ -783,9 +748,6 @@ onUnmounted(() => {
 							{{ formatMessage(messages.stop) }}
 						</Button>
 					</div>
-				</div>
-				<div v-if="localError && state.status !== 'error' && state.status !== 'fatal'" class="text-red-500 text-sm mt-3">
-					{{ localError }}
 				</div>
 			</div>
 		</template>
@@ -801,7 +763,6 @@ onUnmounted(() => {
 				<Button @click="startTerracotta">
 					{{ formatMessage(messages.startTerracotta) }}
 				</Button>
-				<div v-if="localError" class="text-red-500 text-sm mt-4">{{ localError }}</div>
 			</div>
 		</template>
 
