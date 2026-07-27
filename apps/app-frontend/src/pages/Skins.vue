@@ -60,6 +60,7 @@ type VirtualSkinSectionListExpose = {
 
 const PENDING_SKIN_REFRESH_DELAY_MS = 11_000
 const DEFAULT_SKIN_SECTION_SORT_ORDER = ['Default skins', 'Modrinth Pride']
+const SKIN_FAVORITES_STORAGE_KEY = 'axolotl-skin-favorites'
 const messages = defineMessages({
 	skinSelectorTitle: {
 		id: 'app.skins.title',
@@ -347,6 +348,9 @@ const isAddSkinButtonDragActive = ref(false)
 const deleteSkinModal = ref()
 const skinToDelete = ref<Skin | null>(null)
 const skinListTab = ref<'saved' | 'default'>('saved')
+const favoriteFolders = ref<string[]>([])
+const selectedFavoriteFolder = ref<string | null>(null)
+const favoriteAssignments = ref<Record<string, string>>({})
 
 const skinListTabLinks = computed(() => [
 	{
@@ -358,6 +362,72 @@ const skinListTabLinks = computed(() => [
 		label: formatMessage(messages.defaultTab),
 	},
 ])
+
+function getSavedSkinFavoriteKey(skin: Skin) {
+	return `saved-skin-${skin.source}-${skin.texture_key}-${skin.variant}-${skin.cape_id ?? 'no-cape'}`
+}
+
+function loadSkinFavorites() {
+	try {
+		const rawFavorites = window.localStorage.getItem(SKIN_FAVORITES_STORAGE_KEY)
+		if (!rawFavorites) return
+
+		const parsed = JSON.parse(rawFavorites) as {
+			folders?: unknown
+			assignments?: unknown
+			selected?: unknown
+		}
+		favoriteFolders.value = Array.isArray(parsed.folders)
+			? parsed.folders.filter((folder): folder is string => typeof folder === 'string')
+			: []
+		favoriteAssignments.value =
+			parsed.assignments && typeof parsed.assignments === 'object'
+				? Object.fromEntries(
+						Object.entries(parsed.assignments).filter(
+							(entry): entry is [string, string] => typeof entry[1] === 'string',
+						),
+					)
+				: {}
+		selectedFavoriteFolder.value =
+			typeof parsed.selected === 'string' && favoriteFolders.value.includes(parsed.selected)
+				? parsed.selected
+				: null
+	} catch (error) {
+		handleError(error as Error)
+	}
+}
+
+function saveSkinFavorites() {
+	window.localStorage.setItem(
+		SKIN_FAVORITES_STORAGE_KEY,
+		JSON.stringify({
+			folders: favoriteFolders.value,
+			assignments: favoriteAssignments.value,
+			selected: selectedFavoriteFolder.value,
+		}),
+	)
+}
+
+function createFavoriteFolder(name: string) {
+	favoriteFolders.value = [...favoriteFolders.value, name]
+	selectedFavoriteFolder.value = name
+	saveSkinFavorites()
+}
+
+function selectFavoriteFolder(name: string | null) {
+	selectedFavoriteFolder.value = name
+	saveSkinFavorites()
+}
+
+function assignSkinFavoriteFolder(skin: Skin, folderName: string) {
+	if (!favoriteFolders.value.includes(folderName)) return
+
+	favoriteAssignments.value = {
+		...favoriteAssignments.value,
+		[getSavedSkinFavoriteKey(skin)]: folderName,
+	}
+	saveSkinFavorites()
+}
 
 function confirmDeleteSkin(skin: Skin) {
 	if (isSkinManagementReadOnly.value) return
@@ -936,6 +1006,7 @@ watch(isSkinManagementReadOnly, (readOnly) => {
 })
 
 onMounted(() => {
+	loadSkinFavorites()
 	userCheckInterval = window.setInterval(checkUserChanges, 250)
 })
 
@@ -1088,7 +1159,11 @@ await loadSkins()
 				:active-index="skinListTab === 'saved' ? 0 : 1"
 				:links="skinListTabLinks"
 				mode="local"
-				@tab-click="(index: number) => { skinListTab = index === 0 ? 'saved' : 'default' }"
+				@tab-click="
+					(index: number) => {
+						skinListTab = index === 0 ? 'saved' : 'default'
+					}
+				"
 			/>
 			<VirtualSkinSectionList
 				ref="skinSectionList"
@@ -1100,10 +1175,16 @@ await loadSkins()
 				:is-skin-active="isSkinActive"
 				:is-add-skin-button-drag-active="isAddSkinButtonDragActive"
 				:read-only="isSkinManagementReadOnly"
+				:favorite-folders="favoriteFolders"
+				:selected-favorite-folder="selectedFavoriteFolder"
+				:favorite-assignments="favoriteAssignments"
 				@select="changeSkin"
 				@edit="(skin, event) => editSkinModal?.show(event, skin)"
 				@delete="confirmDeleteSkin"
 				@reorder-saved-skins="reorderSavedSkins"
+				@create-favorite-folder="createFavoriteFolder"
+				@select-favorite-folder="selectFavoriteFolder"
+				@assign-skin-favorite-folder="assignSkinFavoriteFolder"
 				@add-skin="openAddSkinFileBrowser"
 				@add-skin-dragenter="onAddSkinDragOver"
 				@add-skin-dragover="onAddSkinDragOver"

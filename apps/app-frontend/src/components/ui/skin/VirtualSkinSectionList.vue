@@ -51,6 +51,7 @@ const SKIN_SECTION_FIRST_SPACING = 4
 const SKIN_SECTION_SPACING = 24
 const SKIN_SECTION_HEADER_HEIGHT = 28
 const SKIN_SECTION_CONTENT_SPACING = 8
+const SAVED_FAVORITES_CONTROL_HEIGHT = 96
 const SKIN_SECTION_OVERSCAN = 900
 const FALLBACK_CARD_WIDTH = 220
 const messages = defineMessages({
@@ -74,6 +75,27 @@ const messages = defineMessages({
 		id: 'app.skins.delete-button',
 		defaultMessage: 'Delete skin',
 	},
+	allFavorites: { id: 'app.skins.favorites.all', defaultMessage: 'All favorites' },
+	createFavoriteButton: {
+		id: 'app.skins.favorites.create-button',
+		defaultMessage: 'Create favorite folder',
+	},
+	createFavoritePlaceholder: {
+		id: 'app.skins.favorites.create-placeholder',
+		defaultMessage: 'Folder name',
+	},
+	emptyFavorite: {
+		id: 'app.skins.favorites.empty',
+		defaultMessage: 'No saved skins are in this favorite folder yet.',
+	},
+	nameRequired: {
+		id: 'app.skins.favorites.error-name-required',
+		defaultMessage: 'Enter a folder name.',
+	},
+	duplicateName: {
+		id: 'app.skins.favorites.error-duplicate-name',
+		defaultMessage: 'A favorite folder with this name already exists.',
+	},
 })
 
 const props = defineProps<{
@@ -85,6 +107,9 @@ const props = defineProps<{
 	isAddSkinButtonDragActive: boolean
 	readOnly?: boolean
 	activeTab?: 'saved' | 'default'
+	favoriteFolders: string[]
+	selectedFavoriteFolder: string | null
+	favoriteAssignments: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -92,6 +117,9 @@ const emit = defineEmits<{
 	edit: [skin: Skin, event: MouseEvent]
 	delete: [skin: Skin]
 	'reorder-saved-skins': [skins: Skin[]]
+	'create-favorite-folder': [name: string]
+	'select-favorite-folder': [name: string | null]
+	'assign-skin-favorite-folder': [skin: Skin, folderName: string]
 	'add-skin': []
 	'add-skin-dragenter': [event: DragEvent]
 	'add-skin-dragover': [event: DragEvent]
@@ -148,7 +176,7 @@ const sections = computed<SkinSection[]>(() => {
 				key: 'saved-skins',
 				title: formatMessage(messages.savedSkinsSection),
 				kind: 'saved',
-				skins: props.savedSkins,
+				skins: filteredSavedSkins.value,
 			},
 		]
 	}
@@ -168,7 +196,7 @@ const sections = computed<SkinSection[]>(() => {
 			key: 'saved-skins',
 			title: formatMessage(messages.savedSkinsSection),
 			kind: 'saved',
-			skins: props.savedSkins,
+			skins: filteredSavedSkins.value,
 		},
 		...props.defaultSkinSections.map((section) => ({
 			key: defaultSkinSectionKey(section.title),
@@ -182,8 +210,24 @@ const sections = computed<SkinSection[]>(() => {
 
 const draggableSavedSkins = ref<Skin[]>([])
 const isDraggingSavedSkin = ref(false)
+const draggedSavedSkin = ref<Skin | null>(null)
+const isFavoriteMenuOpen = ref(false)
+const newFavoriteName = ref('')
+const favoriteError = ref('')
+const filteredSavedSkins = computed(() => {
+	if (!props.selectedFavoriteFolder) return props.savedSkins
+
+	return props.savedSkins.filter(
+		(skin) => props.favoriteAssignments[savedSkinKey(skin)] === props.selectedFavoriteFolder,
+	)
+})
+const selectedFavoriteLabel = computed(
+	() => props.selectedFavoriteFolder ?? formatMessage(messages.allFavorites),
+)
 const canReorderSavedSkins = computed(() => draggableSavedSkins.value.length > 1)
-const fixedSavedSkins = computed(() => props.savedSkins.filter((skin) => !canDragSavedSkin(skin)))
+const fixedSavedSkins = computed(() =>
+	filteredSavedSkins.value.filter((skin) => !canDragSavedSkin(skin)),
+)
 
 const sectionLayouts = computed(() => {
 	const layouts: Array<{ section: SkinSection; top: number; height: number; index: number }> = []
@@ -242,7 +286,7 @@ watch(
 )
 
 watch(
-	() => props.savedSkins,
+	() => filteredSavedSkins.value,
 	(nextSkins) => {
 		if (isDraggingSavedSkin.value) {
 			return
@@ -320,19 +364,69 @@ function doSkinOrdersMatch(firstSkins: Skin[], secondSkins: Skin[]) {
 	)
 }
 
-function onSavedSkinDragStart() {
+function onSavedSkinDragStart(event: { oldIndex?: number }) {
 	isDraggingSavedSkin.value = true
+	draggedSavedSkin.value = draggableSavedSkins.value[event.oldIndex ?? -1] ?? null
+	isFavoriteMenuOpen.value = props.favoriteFolders.length > 0
 }
 
-function onSavedSkinDragEnd() {
+function onSavedSkinDragEnd(event: { originalEvent?: MouseEvent | TouchEvent }) {
+	const targetFolder = getFavoriteDropTarget(event.originalEvent)
+	const skin = draggedSavedSkin.value
 	isDraggingSavedSkin.value = false
+	draggedSavedSkin.value = null
 
-	if (doSkinOrdersMatch(draggableSavedSkins.value, props.savedSkins)) {
-		draggableSavedSkins.value = props.savedSkins.filter(canDragSavedSkin)
+	if (skin && targetFolder) {
+		emit('assign-skin-favorite-folder', skin, targetFolder)
+		draggableSavedSkins.value = filteredSavedSkins.value.filter(canDragSavedSkin)
+		return
+	}
+
+	if (doSkinOrdersMatch(draggableSavedSkins.value, filteredSavedSkins.value)) {
+		draggableSavedSkins.value = filteredSavedSkins.value.filter(canDragSavedSkin)
 		return
 	}
 
 	emit('reorder-saved-skins', [...draggableSavedSkins.value])
+}
+
+function getFavoriteDropTarget(event?: MouseEvent | TouchEvent) {
+	if (!event || typeof document === 'undefined') return null
+
+	const point = 'changedTouches' in event ? event.changedTouches[0] : event
+	const element = document
+		.elementFromPoint(point.clientX, point.clientY)
+		?.closest<HTMLElement>('[data-skin-favorite-drop-target]')
+
+	return element?.dataset.skinFavoriteDropTarget || null
+}
+
+function toggleFavoriteMenu() {
+	isFavoriteMenuOpen.value = !isFavoriteMenuOpen.value
+}
+
+function selectFavoriteFolder(name: string | null) {
+	emit('select-favorite-folder', name)
+	isFavoriteMenuOpen.value = false
+}
+
+function createFavoriteFolder() {
+	const name = newFavoriteName.value.trim()
+	if (!name) {
+		favoriteError.value = formatMessage(messages.nameRequired)
+		return
+	}
+	if (
+		props.favoriteFolders.some(
+			(folder) => folder.localeCompare(name, undefined, { sensitivity: 'accent' }) === 0,
+		)
+	) {
+		favoriteError.value = formatMessage(messages.duplicateName)
+		return
+	}
+	favoriteError.value = ''
+	newFavoriteName.value = ''
+	emit('create-favorite-folder', name)
 }
 
 function isSectionOpen(key: string) {
@@ -362,7 +456,15 @@ function getSectionHeightEstimate(section: SkinSection, index: number) {
 	const rowCount = Math.ceil(cardCount / columnCount.value)
 	const gridHeight = rowCount * cardHeight.value + Math.max(0, rowCount - 1) * SKIN_GRID_GAP
 
-	return spacing + SKIN_SECTION_HEADER_HEIGHT + SKIN_SECTION_CONTENT_SPACING + gridHeight
+	const controlsHeight = section.kind === 'saved' ? SAVED_FAVORITES_CONTROL_HEIGHT : 0
+
+	return (
+		spacing +
+		SKIN_SECTION_HEADER_HEIGHT +
+		SKIN_SECTION_CONTENT_SPACING +
+		controlsHeight +
+		gridHeight
+	)
 }
 
 function getAddSkinButtonElement() {
@@ -431,6 +533,69 @@ defineExpose({ getAddSkinButtonElement })
 						</template>
 					</Tooltip>
 				</template>
+
+				<div v-if="section.kind === 'saved'" class="mb-3 flex flex-wrap items-start gap-2">
+					<div class="relative min-w-56">
+						<button
+							type="button"
+							class="flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-solid border-button-border bg-button-bg px-3 text-left text-sm font-semibold text-primary transition-colors hover:bg-button-bg-hover"
+							:aria-expanded="isFavoriteMenuOpen"
+							@click="toggleFavoriteMenu"
+						>
+							<span class="min-w-0 truncate">{{ selectedFavoriteLabel }}</span>
+							<DropdownIcon
+								class="size-5 shrink-0 transition-transform duration-200"
+								:class="{ 'rotate-180': isFavoriteMenuOpen }"
+							/>
+						</button>
+						<div
+							v-if="isFavoriteMenuOpen"
+							class="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-solid border-button-border bg-bg-raised p-1 shadow-lg"
+						>
+							<button
+								type="button"
+								class="flex w-full items-center rounded-lg border-0 bg-transparent px-3 py-2 text-left text-sm font-semibold text-primary transition-all hover:bg-button-bg-hover"
+								:class="{ 'bg-button-bg-hover': selectedFavoriteFolder === null }"
+								@click="selectFavoriteFolder(null)"
+							>
+								{{ formatMessage(messages.allFavorites) }}
+							</button>
+							<button
+								v-for="folder in favoriteFolders"
+								:key="folder"
+								type="button"
+								:data-skin-favorite-drop-target="folder"
+								class="flex w-full items-center rounded-lg border border-solid border-transparent bg-transparent px-3 py-2 text-left text-sm font-semibold text-primary transition-all hover:scale-[1.02] hover:border-brand hover:bg-bg-blue"
+								:class="{ 'bg-button-bg-hover': selectedFavoriteFolder === folder }"
+								@click="selectFavoriteFolder(folder)"
+							>
+								{{ folder }}
+							</button>
+						</div>
+					</div>
+					<form v-if="!readOnly" class="flex min-w-64 gap-2" @submit.prevent="createFavoriteFolder">
+						<input
+							v-model="newFavoriteName"
+							type="text"
+							class="h-10 min-w-0 rounded-xl border border-solid border-button-border bg-bg-raised px-3 text-sm text-primary"
+							:placeholder="formatMessage(messages.createFavoritePlaceholder)"
+							@input="favoriteError = ''"
+						/>
+						<ButtonStyled circular
+							><button type="submit" :aria-label="formatMessage(messages.createFavoriteButton)">
+								<PlusIcon /></button
+						></ButtonStyled>
+					</form>
+					<p v-if="favoriteError" class="m-0 basis-full text-xs font-semibold text-red">
+						{{ favoriteError }}
+					</p>
+				</div>
+				<p
+					v-if="section.kind === 'saved' && section.skins.length === 0"
+					class="m-0 rounded-xl bg-bg-raised p-4 text-sm font-semibold text-secondary"
+				>
+					{{ formatMessage(messages.emptyFavorite) }}
+				</p>
 
 				<Draggable
 					v-if="section.kind === 'saved'"
