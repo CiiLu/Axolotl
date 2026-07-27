@@ -3643,5 +3643,20 @@
 	},
 	"app.multiplayer.powered-by-terracotta": {
 		"message": "由 Terracotta | 陶瓦联机 强力驱动"
+	},
+	"app.multiplayer.back": {
+		"message": "返回"
+	},
+	"app.multiplayer.start-terracotta": {
+		"message": "启动陶瓦联机"
+	},
+	"app.multiplayer.start-description": {
+		"message": "启动联机服务以创建房间或加入好友的房间。"
+	},
+	"app.multiplayer.loading": {
+		"message": "初始化中..."
+	},
+	"app.multiplayer.no-players": {
+		"message": "暂无玩家"
 	}
 }

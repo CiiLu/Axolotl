@@ -48,6 +48,10 @@ const messages = defineMessages({
 		id: 'app.multiplayer.copy-room-code',
 		defaultMessage: 'Copy room code',
 	},
+	back: {
+		id: 'app.multiplayer.back',
+		defaultMessage: 'Back',
+	},
 	statusIdle: {
 		id: 'app.multiplayer.status.idle',
 		defaultMessage: 'Not connected',
@@ -180,6 +184,22 @@ const messages = defineMessages({
 		id: 'app.multiplayer.powered-by-terracotta',
 		defaultMessage: 'Powered by Terracotta | 陶瓦联机',
 	},
+	startTerracotta: {
+		id: 'app.multiplayer.start-terracotta',
+		defaultMessage: 'Start Terracotta',
+	},
+	startDescription: {
+		id: 'app.multiplayer.start-description',
+		defaultMessage: 'Start the multiplayer service to host games or join friends\' rooms.',
+	},
+	loading: {
+		id: 'app.multiplayer.loading',
+		defaultMessage: 'Initializing...',
+	},
+	noPlayers: {
+		id: 'app.multiplayer.no-players',
+		defaultMessage: 'No players in room',
+	},
 })
 
 interface PlayerInfo {
@@ -203,19 +223,26 @@ interface TerracottaState {
 	profile_index: number | null
 }
 
-const tab = ref<'host' | 'join'>('host')
+const tabIndex = ref(0)
 const playerName = ref('')
 const roomCodeInput = ref('')
 const localError = ref('')
 const state = ref<TerracottaState | null>(null)
+const binaryInstalled = ref(false)
 const platformKey = ref('')
 const isMounted = ref(false)
-const showStopConfirm = ref(false)
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
+const tabLinks = computed(() => [
+	{ label: formatMessage(messages.host), href: 'host' },
+	{ label: formatMessage(messages.join), href: 'join' },
+])
+
+const isRunning = computed(() => !!state.value?.http_port)
+
 const statusText = computed(() => {
-	if (!state.value) return formatMessage(messages.notRunning)
+	if (!state.value) return ''
 	const statusMap: Record<string, any> = {
 		idle: messages.statusIdle,
 		starting: messages.statusStarting,
@@ -238,26 +265,11 @@ const statusIndicatorClass = computed(() => {
 	if (s === 'host_ready' || s === 'guest_ready') return 'bg-green-500'
 	if (s === 'error' || s === 'fatal') return 'bg-red-500'
 	if (s === 'downloading') return 'bg-yellow-500 animate-pulse'
+	if (s === 'starting' || s === 'host_scanning' || s === 'host_starting' || s === 'guest_connecting' || s === 'guest_starting') return 'bg-yellow-500 animate-pulse'
 	return 'bg-yellow-500 animate-pulse'
 })
 
-const isConnected = computed(() => {
-	const s = state.value?.status
-	return s === 'host_ready' || s === 'guest_ready'
-})
-
-const isRunning = computed(() => {
-	return !!state.value?.http_port
-})
-
-const isHosting = computed(() => {
-	const s = state.value?.status
-	return s === 'host_scanning' || s === 'host_starting' || s === 'host_ready'
-})
-
-const playerCount = computed(() => {
-	return state.value?.players?.length ?? 0
-})
+const playerCount = computed(() => state.value?.players?.length ?? 0)
 
 const binaryPathHint = computed(() => {
 	const name = platformKey.value?.includes('windows') ? 'terracotta.exe' : 'terracotta'
@@ -305,6 +317,7 @@ async function pollState() {
 		const result = await invoke<any>('plugin:terracotta|terracotta_get_state')
 		if (!isMounted.value) return
 		state.value = result as TerracottaState
+		binaryInstalled.value = result.binary_installed ?? false
 		if (localError.value) localError.value = ''
 	} catch (e: any) {
 		if (!isMounted.value) return
@@ -312,30 +325,36 @@ async function pollState() {
 	}
 }
 
+function startPolling(intervalMs = 1000) {
+	if (pollInterval) clearInterval(pollInterval)
+	pollInterval = setInterval(() => {
+		if (isMounted.value) pollState()
+	}, intervalMs)
+}
+
+function stopPolling() {
+	if (pollInterval) {
+		clearInterval(pollInterval)
+		pollInterval = null
+	}
+}
+
 async function startTerracotta() {
 	localError.value = ''
 	try {
 		await invoke('plugin:terracotta|terracotta_start', { autoDownload: true })
-		if (!pollInterval) {
-			pollInterval = setInterval(() => {
-				if (isMounted.value) pollState()
-			}, 1000)
-		}
+		startPolling()
 	} catch (e: any) {
 		localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Failed to start Terracotta'
 	}
 }
 
 async function stopTerracotta() {
-	showStopConfirm.value = false
+	localError.value = ''
 	try {
 		await invoke('plugin:terracotta|terracotta_stop')
-		if (pollInterval) {
-			clearInterval(pollInterval)
-			pollInterval = null
-		}
+		stopPolling()
 		state.value = null
-		localError.value = ''
 	} catch (e: any) {
 		localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Failed to stop Terracotta'
 	}
@@ -346,10 +365,6 @@ async function hostGame() {
 	if (!playerName.value.trim()) {
 		localError.value = 'Please enter a player name'
 		return
-	}
-	if (!state.value?.http_port) {
-		await startTerracotta()
-		if (localError.value) return
 	}
 	try {
 		await invoke('plugin:terracotta|terracotta_host', {
@@ -370,10 +385,6 @@ async function joinGame() {
 		localError.value = 'Please enter a room code'
 		return
 	}
-	if (!state.value?.http_port) {
-		await startTerracotta()
-		if (localError.value) return
-	}
 	try {
 		const parsed = await invoke<string>('plugin:terracotta|terracotta_parse_room_code', {
 			roomCode: roomCodeInput.value.trim(),
@@ -388,6 +399,7 @@ async function joinGame() {
 }
 
 async function resetState() {
+	localError.value = ''
 	try {
 		await invoke('plugin:terracotta|terracotta_reset')
 		await pollState()
@@ -399,18 +411,10 @@ async function resetState() {
 async function downloadTerracotta() {
 	localError.value = ''
 	try {
-		if (!pollInterval) {
-			pollInterval = setInterval(() => {
-				if (isMounted.value) pollState()
-			}, 500)
-		}
+		startPolling(500)
 		await invoke('plugin:terracotta|terracotta_download')
-		if (isMounted.value) await startTerracotta()
 	} catch (e: any) {
-		if (pollInterval) {
-			clearInterval(pollInterval)
-			pollInterval = null
-		}
+		stopPolling()
 		if (isMounted.value) {
 			localError.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Download failed'
 		}
@@ -430,17 +434,11 @@ onMounted(async () => {
 		if (name && isMounted.value) playerName.value = name
 	} catch {
 	}
-	if (state.value?.binary_installed && !state.value?.http_port) {
-		await startTerracotta()
-	}
 })
 
 onUnmounted(() => {
 	isMounted.value = false
-	if (pollInterval) {
-		clearInterval(pollInterval)
-		pollInterval = null
-	}
+	stopPolling()
 })
 </script>
 
@@ -450,140 +448,30 @@ onUnmounted(() => {
 			{{ formatMessage(messages.title) }}
 		</h1>
 
-		<template v-if="isConnected">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-3 h-3 rounded-full flex-shrink-0" :class="statusIndicatorClass" />
-					<div>
-						<div class="font-semibold text-lg">{{ statusText }}</div>
-						<div v-if="isHosting && state?.room_code" class="text-sm text-secondary mt-1">
-							{{ formatMessage(messages.shareCode) }}
-						</div>
+		<template v-if="!state">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5 text-center">
+				<div class="flex items-center justify-center gap-3 mb-4">
+					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
+					<div class="text-lg font-semibold">
+						{{ binaryInstalled ? formatMessage(messages.notRunningTitle) : formatMessage(messages.loading) }}
 					</div>
 				</div>
-
-				<div v-if="isHosting && state?.room_code" class="mb-4">
-					<div class="flex items-center gap-2 bg-surface-5 rounded-lg p-3">
-						<code class="text-lg font-mono select-all flex-1">{{ state.room_code }}</code>
-						<CopyCode :text="state.room_code" />
+				<template v-if="binaryInstalled">
+					<div class="text-sm text-secondary mb-4">
+						{{ formatMessage(messages.notRunning) }}
 					</div>
-				</div>
-
-				<div class="mb-4">
-					<div class="text-sm font-semibold text-secondary mb-2">
-						{{ formatMessage(messages.playersInRoom, { count: playerCount }) }}
-					</div>
-					<div v-if="playerCount > 0" class="flex flex-col gap-1">
-						<div
-							v-for="(player, idx) in state?.players"
-							:key="idx"
-							class="flex items-center gap-2 text-sm bg-surface-5 rounded-lg px-3 py-1.5"
-						>
-							<div class="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-							<span>{{ player.name }}</span>
-							<span class="text-secondary text-xs px-1.5 py-0.5 bg-surface-10 rounded ml-auto">
-								{{ player.kind === 'HOST' ? formatMessage(messages.hostLabel) : formatMessage(messages.guestLabel) }}
-							</span>
-						</div>
-					</div>
-					<div v-else class="text-sm text-secondary">
-						{{ formatMessage(messages.statusGuestConnecting) }}
-					</div>
-				</div>
-
-				<div class="flex gap-2">
-					<template v-if="!showStopConfirm">
-						<Button color="danger" @click="showStopConfirm = true">
-							{{ formatMessage(messages.stop) }}
-						</Button>
-					</template>
-					<template v-else>
-						<Button color="danger" @click="stopTerracotta">
-							{{ formatMessage(messages.disconnect) }}
-						</Button>
-						<Button @click="showStopConfirm = false">
-							Cancel
-						</Button>
-					</template>
-				</div>
-			</div>
-		</template>
-
-		<template v-else-if="isRunning">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-3 h-3 rounded-full flex-shrink-0" :class="statusIndicatorClass" />
-					<div>
-						<div class="font-semibold">{{ statusText }}</div>
-						<div v-if="downloadStageText" class="text-sm text-secondary mt-0.5">
-							{{ downloadStageText }}
-						</div>
-					</div>
-				</div>
-
-				<div
-					v-if="state?.status === 'downloading' && state?.download_progress !== null"
-					class="mb-4"
-				>
-					<div class="h-2 bg-surface-5 rounded-full overflow-hidden">
-						<div
-							class="h-full bg-brand rounded-full transition-all duration-300"
-							:style="{ width: (state.download_progress || 0) + '%' }"
-						/>
-					</div>
-					<div class="text-xs text-secondary mt-1">{{ state.download_progress }}%</div>
-				</div>
-
-				<div
-					v-if="state?.status === 'error' || state?.status === 'fatal'"
-					class="mb-4"
-				>
-					<div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
-						<div class="text-sm text-red-400 font-semibold mb-1">
-							{{ errorTypeLabel }}
-						</div>
-						<div v-if="currentError" class="text-sm text-red-300">
-							{{ currentError }}
-						</div>
-						<div v-if="state?.error_type !== 'network' && state?.status === 'error'" class="mt-2">
-							<a class="text-xs text-red-400 underline cursor-pointer" @click="localError = formatMessage(messages.checkNetwork)">
-								{{ formatMessage(messages.checkNetwork) }}
-							</a>
-						</div>
-						<div class="flex gap-2 mt-3">
-							<Button v-if="isRecoverable" size="small" @click="resetState">
-								{{ formatMessage(messages.retry) }}
-							</Button>
-							<Button size="small" color="danger" @click="stopTerracotta">
-								{{ formatMessage(messages.stop) }}
-							</Button>
-						</div>
-					</div>
-				</div>
-
-				<div
-					v-if="localError && state?.status !== 'error' && state?.status !== 'fatal'"
-					class="text-red-500 text-sm mb-4"
-				>
+					<Button @click="startTerracotta">
+						{{ formatMessage(messages.startTerracotta) }}
+					</Button>
+				</template>
+				<div v-if="localError" class="text-red-500 text-sm mt-4">
 					{{ localError }}
 				</div>
-
-				<div
-					v-if="state?.status !== 'error' && state?.status !== 'fatal' && state?.status !== 'downloading'"
-					class="flex gap-2"
-				>
-					<Button @click="stopTerracotta">
-						{{ formatMessage(messages.stop) }}
-					</Button>
-				</div>
 			</div>
 		</template>
 
-		<template v-else>
-			<div
-				v-if="!state?.binary_installed"
-				class="bg-bg-raised rounded-xl p-6 border border-surface-5 text-center"
-			>
+		<template v-else-if="!state.binary_installed">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5 text-center">
 				<div class="text-lg font-semibold mb-2">
 					{{ formatMessage(messages.notRunningTitle) }}
 				</div>
@@ -598,7 +486,7 @@ onUnmounted(() => {
 					</code>
 				</div>
 
-				<div v-if="state?.status === 'downloading'" class="mt-3">
+				<div v-if="state.status === 'downloading'" class="mt-3">
 					<div class="flex items-center gap-2 mb-2 justify-center">
 						<div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse flex-shrink-0" />
 						<span class="text-sm text-secondary">{{ downloadStageText || statusText }}</span>
@@ -613,26 +501,60 @@ onUnmounted(() => {
 				</div>
 
 				<Button
-					v-if="state?.status !== 'downloading'"
+					v-if="state.status !== 'downloading'"
 					class="mt-3"
-					size="small"
 					@click="downloadTerracotta"
 				>
 					{{ formatMessage(messages.downloadTerracotta) }}
 				</Button>
 
-				<div v-if="localError && state?.status !== 'downloading'" class="text-red-500 text-sm mt-3">
+				<div v-if="localError" class="text-red-500 text-sm mt-3">
 					{{ localError }}
 				</div>
 			</div>
+		</template>
 
-			<div v-else class="bg-bg-raised rounded-xl border border-surface-5 overflow-hidden">
+		<template v-else-if="state.status === 'starting'">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
+				<div class="flex items-center gap-3">
+					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
+					<div class="font-semibold text-lg">
+						{{ statusText }}
+					</div>
+				</div>
+			</div>
+		</template>
+
+		<template v-else-if="state.status === 'downloading'">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
+					<div class="font-semibold text-lg">
+						{{ statusText }}
+					</div>
+				</div>
+				<div v-if="state.download_progress !== null" class="mb-2">
+					<div class="flex items-center justify-between text-sm text-secondary mb-1">
+						<span>{{ downloadStageText }}</span>
+						<span>{{ state.download_progress }}%</span>
+					</div>
+					<div class="h-2 bg-surface-5 rounded-full overflow-hidden">
+						<div
+							class="h-full bg-brand rounded-full transition-all duration-300"
+							:style="{ width: (state.download_progress || 0) + '%' }"
+						/>
+					</div>
+				</div>
+			</div>
+		</template>
+
+		<template v-else-if="isRunning && (state.status === 'idle' || state.status === 'waiting')">
+			<div class="bg-bg-raised rounded-xl border border-surface-5 overflow-hidden">
 				<NavTabs
-					v-model="tab"
-					:tabs="[
-						{ id: 'host', label: formatMessage(messages.host) },
-						{ id: 'join', label: formatMessage(messages.join) },
-					]"
+					mode="local"
+					:active-index="tabIndex"
+					:links="tabLinks"
+					@tab-click="tabIndex = $event"
 				/>
 				<div class="p-6 flex flex-col gap-4">
 					<StyledInput
@@ -641,32 +563,241 @@ onUnmounted(() => {
 					/>
 
 					<StyledInput
-						v-if="tab === 'join'"
+						v-if="tabIndex === 1"
 						v-model="roomCodeInput"
 						:placeholder="formatMessage(messages.roomCodePlaceholder)"
 					/>
 
 					<div class="text-sm text-secondary">
-						{{ tab === 'host' ? formatMessage(messages.hostDescription) : formatMessage(messages.joinDescription) }}
+						{{
+							tabIndex === 0
+								? formatMessage(messages.hostDescription)
+								: formatMessage(messages.joinDescription)
+						}}
 					</div>
 
 					<div v-if="localError" class="text-red-500 text-sm">{{ localError }}</div>
 
-					<Button
-						v-if="tab === 'host'"
-						@click="hostGame"
-					>
-						{{ formatMessage(messages.startHosting) }}
+					<div class="flex gap-2">
+						<Button
+							v-if="tabIndex === 0"
+							@click="hostGame"
+						>
+							{{ formatMessage(messages.startHosting) }}
+						</Button>
+						<Button
+							v-else
+							@click="joinGame"
+						>
+							{{ formatMessage(messages.joinRoom) }}
+						</Button>
+						<Button color="danger" @click="stopTerracotta">
+							{{ formatMessage(messages.stop) }}
+						</Button>
+					</div>
+				</div>
+			</div>
+		</template>
+
+		<template v-else-if="state.status === 'host_scanning' || state.status === 'host_starting'">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
+					<div class="font-semibold text-lg">
+						{{ statusText }}
+					</div>
+				</div>
+				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
+				<div class="flex gap-2">
+					<Button @click="resetState">
+						{{ formatMessage(messages.back) }}
 					</Button>
-					<Button
-						v-else
-						@click="joinGame"
-					>
-						{{ formatMessage(messages.joinRoom) }}
+					<Button color="danger" @click="stopTerracotta">
+						{{ formatMessage(messages.stop) }}
 					</Button>
 				</div>
 			</div>
 		</template>
+
+		<template v-else-if="state.status === 'host_ready'">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-4 h-4 rounded-full bg-green-500" />
+					<div>
+						<div class="font-semibold text-lg">
+							{{ statusText }}
+						</div>
+						<div v-if="state.room_code" class="text-sm text-secondary mt-1">
+							{{ formatMessage(messages.shareCode) }}
+						</div>
+					</div>
+				</div>
+
+				<div v-if="state.room_code" class="mb-4">
+					<div class="flex items-center gap-2 bg-surface-5 rounded-lg p-3">
+						<code class="text-lg font-mono select-all flex-1">{{ state.room_code }}</code>
+						<CopyCode :text="state.room_code" />
+					</div>
+				</div>
+
+				<div class="mb-4">
+					<div class="text-sm font-semibold text-secondary mb-2">
+						{{ formatMessage(messages.players) }}
+					</div>
+					<div v-if="state.players.length > 0" class="flex flex-col gap-1">
+						<div
+							v-for="(player, idx) in state.players"
+							:key="idx"
+							class="flex items-center gap-2 text-sm bg-surface-5 rounded-lg px-3 py-1.5"
+						>
+							<div class="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+							<span>{{ player.name }}</span>
+							<span
+								class="text-secondary text-xs px-1.5 py-0.5 bg-surface-10 rounded ml-auto"
+							>
+								{{ player.kind === 'HOST' ? formatMessage(messages.hostLabel) : formatMessage(messages.guestLabel) }}
+							</span>
+						</div>
+					</div>
+					<div v-else class="text-sm text-secondary">
+						{{ formatMessage(messages.noPlayers) }}
+					</div>
+				</div>
+
+				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
+
+				<div class="flex gap-2">
+					<Button @click="resetState">
+						{{ formatMessage(messages.back) }}
+					</Button>
+					<Button color="danger" @click="stopTerracotta">
+						{{ formatMessage(messages.stop) }}
+					</Button>
+				</div>
+			</div>
+		</template>
+
+		<template v-else-if="state.status === 'guest_connecting' || state.status === 'guest_starting'">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
+					<div class="font-semibold text-lg">
+						{{ statusText }}
+					</div>
+				</div>
+				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
+				<div class="flex gap-2">
+					<Button @click="resetState">
+						{{ formatMessage(messages.back) }}
+					</Button>
+					<Button color="danger" @click="stopTerracotta">
+						{{ formatMessage(messages.stop) }}
+					</Button>
+				</div>
+			</div>
+		</template>
+
+		<template v-else-if="state.status === 'guest_ready'">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-4 h-4 rounded-full bg-green-500" />
+					<div>
+						<div class="font-semibold text-lg">
+							{{ statusText }}
+						</div>
+					</div>
+				</div>
+
+				<div class="mb-4">
+					<div class="text-sm font-semibold text-secondary mb-2">
+						{{ formatMessage(messages.players) }}
+					</div>
+					<div v-if="state.players.length > 0" class="flex flex-col gap-1">
+						<div
+							v-for="(player, idx) in state.players"
+							:key="idx"
+							class="flex items-center gap-2 text-sm bg-surface-5 rounded-lg px-3 py-1.5"
+						>
+							<div class="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+							<span>{{ player.name }}</span>
+							<span
+								class="text-secondary text-xs px-1.5 py-0.5 bg-surface-10 rounded ml-auto"
+							>
+								{{ player.kind === 'HOST' ? formatMessage(messages.hostLabel) : formatMessage(messages.guestLabel) }}
+							</span>
+						</div>
+					</div>
+					<div v-else class="text-sm text-secondary">
+						{{ formatMessage(messages.noPlayers) }}
+					</div>
+				</div>
+
+				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
+
+				<div class="flex gap-2">
+					<Button @click="resetState">
+						{{ formatMessage(messages.back) }}
+					</Button>
+					<Button color="danger" @click="stopTerracotta">
+						{{ formatMessage(messages.stop) }}
+					</Button>
+				</div>
+			</div>
+		</template>
+
+		<template v-else-if="state.status === 'error' || state.status === 'fatal'">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-4 h-4 rounded-full bg-red-500" />
+					<div class="font-semibold text-lg">
+						{{ statusText }}
+					</div>
+				</div>
+				<div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+					<div class="text-sm text-red-400 font-semibold mb-1">
+						{{ errorTypeLabel }}
+					</div>
+					<div v-if="currentError" class="text-sm text-red-300">
+						{{ currentError }}
+					</div>
+					<div v-if="state.error_type !== 'network' && state.status === 'error'" class="mt-2">
+						<a
+							class="text-xs text-red-400 underline cursor-pointer"
+							@click="localError = formatMessage(messages.checkNetwork)"
+						>
+							{{ formatMessage(messages.checkNetwork) }}
+						</a>
+					</div>
+					<div class="flex gap-2 mt-3">
+						<Button v-if="isRecoverable" size="small" @click="resetState">
+							{{ formatMessage(messages.retry) }}
+						</Button>
+						<Button size="small" color="danger" @click="stopTerracotta">
+							{{ formatMessage(messages.stop) }}
+						</Button>
+					</div>
+				</div>
+				<div v-if="localError && state.status !== 'error' && state.status !== 'fatal'" class="text-red-500 text-sm mt-3">
+					{{ localError }}
+				</div>
+			</div>
+		</template>
+
+		<template v-else-if="!isRunning">
+			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5 text-center">
+				<div class="text-lg font-semibold mb-4">
+					{{ formatMessage(messages.notRunningTitle) }}
+				</div>
+				<div class="text-sm text-secondary mb-4">
+					{{ formatMessage(messages.startDescription) }}
+				</div>
+				<Button @click="startTerracotta">
+					{{ formatMessage(messages.startTerracotta) }}
+				</Button>
+				<div v-if="localError" class="text-red-500 text-sm mt-4">{{ localError }}</div>
+			</div>
+		</template>
+
 		<div class="text-center mt-6">
 			<span class="text-xs text-tertiary">{{ formatMessage(messages.poweredByTerracotta) }}</span>
 		</div>

@@ -3577,5 +3577,20 @@
 	},
 	"app.multiplayer.powered-by-terracotta": {
 		"message": "Powered by Terracotta | 陶瓦联机"
+	},
+	"app.multiplayer.back": {
+		"message": "Back"
+	},
+	"app.multiplayer.start-terracotta": {
+		"message": "Start Terracotta"
+	},
+	"app.multiplayer.start-description": {
+		"message": "Start the multiplayer service to host games or join friends' rooms."
+	},
+	"app.multiplayer.loading": {
+		"message": "Initializing..."
+	},
+	"app.multiplayer.no-players": {
+		"message": "No players in room"
 	}
 }
