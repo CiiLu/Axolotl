@@ -1,30 +1,34 @@
-<script setup lang="ts">
-import { defineMessages, useVIntl } from '@modrinth/ui'
+<template>
+	<div
+		data-onboarding-id="creation-import"
+		class="flex flex-col items-center gap-6 py-4"
+	>
+		<ButtonStyled color="brand" size="large" type="outlined">
+			<button type="button" @click="handleOpenFilePicker">
+				<FolderUpIcon />
+				{{ formatMessage(messages.selectFile) }}
+			</button>
+		</ButtonStyled>
 
-import DropzoneFileInput from '../../../base/DropzoneFileInput.vue'
+		<span class="text-center text-sm text-secondary">
+			{{ formatMessage(messages.importPrompt) }}
+		</span>
+	</div>
+</template>
+
+<script setup lang="ts">
+import { ButtonStyled, defineMessages, useVIntl } from '@modrinth/ui'
+import { FolderUpIcon } from '@modrinth/assets'
+
 import { injectCreationFlowContext } from '../creation-flow-context'
 
 const ctx = injectCreationFlowContext()
 const { formatMessage } = useVIntl()
 
-// ── Launcher icons (3, arc arrangement) ──
-// @ts-ignore — Vite resolves .ico as static asset URL
-import pcl2CeUrl from '@modrinth/assets/icons/PCL2_CE.ico'
-// @ts-ignore — Vite resolves .ico as static asset URL
-import pcl2Url from '@modrinth/assets/icons/PCL2.ico'
-// @ts-ignore — Vite resolves .ico as static asset URL
-import hmclUrl from '@modrinth/assets/icons/HMCL.ico'
-
-const launcherIcons = [
-	{ key: 'pcl2ce', url: pcl2CeUrl, alt: 'PCL2 CE' },
-	{ key: 'pcl2', url: pcl2Url, alt: 'PCL2' },
-	{ key: 'hmcl', url: hmclUrl, alt: 'HMCL' },
-]
-
 const messages = defineMessages({
-	dropZoneClick: {
-		id: 'creation-flow.modal.import-instance.drop-zone.click',
-		defaultMessage: 'Click to select a file or drag & drop any file/folder',
+	selectFile: {
+		id: 'creation-flow.modal.import-instance.select-file',
+		defaultMessage: 'Select file or folder to import',
 	},
 	importPrompt: {
 		id: 'creation-flow.modal.import-instance.import-prompt',
@@ -33,41 +37,35 @@ const messages = defineMessages({
 	},
 })
 
-// ── Drop zone handler (via DropzoneFileInput) ──
-function onDropzoneChange(paths: string[]) {
-	console.log('[ImportInstanceStage] onDropzoneChange called with paths:', paths)
-	if (!paths || paths.length === 0) {
-		console.log('[ImportInstanceStage] no paths, returning')
-		return
-	}
+// ── Native file picker ──
 
-	const filePath = paths[0]
-	console.log('[ImportInstanceStage] filePath:', filePath)
+async function handleOpenFilePicker() {
+	try {
+		const { open } = await import('@tauri-apps/plugin-dialog')
+		const result = await open({ multiple: false })
+		const filePath = typeof result === 'string' ? result : (result?.path ?? null)
+		if (!filePath) return
 
-	if (ctx.onImportFileReceived) {
-		console.log('[ImportInstanceStage] calling ctx.onImportFileReceived with filePath')
-		ctx.onImportFileReceived({
-			file: null,
-			filePath,
-			source: 'file-picker',
-		})
-		return
-	}
+		if (ctx.onImportFileReceived) {
+			ctx.onImportFileReceived({
+				file: null,
+				filePath,
+				source: 'file-picker',
+			})
+			return
+		}
 
-	// Fallback: set path directly on context
-	console.log('[ImportInstanceStage] ctx.onImportFileReceived not set, using fallback')
-	ctx.modpackFile.value = null
-	ctx.modpackFilePath.value = filePath
-	if (ctx.finishDisabled.value) {
-		console.log('[ImportInstanceStage] finishDisabled is true, returning')
-		return
-	}
-	if (ctx.flowType === 'instance') {
-		console.log('[ImportInstanceStage] finish() called')
-		ctx.finish()
-	} else {
-		console.log('[ImportInstanceStage] setting stage to final-config')
-		ctx.modal.value?.setStage('final-config')
+		// Fallback: set path directly on context
+		ctx.modpackFile.value = null
+		ctx.modpackFilePath.value = filePath
+		if (ctx.finishDisabled.value) return
+		if (ctx.flowType === 'instance') {
+			ctx.finish()
+		} else {
+			ctx.modal.value?.setStage('final-config')
+		}
+	} catch {
+		// do nothing
 	}
 }
 </script>
