@@ -599,7 +599,11 @@ const deleteHovered = ref(false)
 				@update:model-value="(val) => emit('update:enabled', val as boolean)"
 			/>
 
-			<ButtonStyled v-if="hasDeleteListener && !props.hideDelete" circular type="transparent">
+			<ButtonStyled
+				v-if="hasDeleteListener && !props.hideDelete && !props.isGroupChild"
+				circular
+				type="transparent"
+			>
 				<button
 					v-tooltip="
 						isDisabled && disabledTooltip
