@@ -55,6 +55,7 @@ const SKIN_SECTION_CONTENT_SPACING = 8
 const SAVED_FAVORITES_CONTROL_HEIGHT = 48
 const SKIN_SECTION_OVERSCAN = 900
 const FALLBACK_CARD_WIDTH = 220
+const UNCATEGORIZED_FOLDER_KEY = '__uncategorized__'
 const messages = defineMessages({
 	savedSkinsSection: {
 		id: 'app.skins.section.saved-skins',
@@ -76,7 +77,8 @@ const messages = defineMessages({
 		id: 'app.skins.delete-button',
 		defaultMessage: 'Delete skin',
 	},
-	allFavorites: { id: 'app.skins.favorites.all', defaultMessage: 'All favorites' },
+	allFavorites: { id: 'app.skins.favorites.all', defaultMessage: 'All skins' },
+	uncategorized: { id: 'app.skins.favorites.uncategorized', defaultMessage: 'Uncategorized' },
 	createFavoriteButton: {
 		id: 'app.skins.favorites.create-button',
 		defaultMessage: 'Create favorite folder',
@@ -128,7 +130,6 @@ const emit = defineEmits<{
 	'reorder-saved-skins': [skins: Skin[]]
 	'create-favorite-folder': [name: string]
 	'select-favorite-folder': [name: string | null]
-	'assign-skin-favorite-folder': [skin: Skin, folderName: string | null]
 	'delete-favorite-folder': [name: string]
 	'add-skin': []
 	'add-skin-dragenter': [event: DragEvent]
@@ -227,13 +228,21 @@ const favoriteError = ref('')
 const filteredSavedSkins = computed(() => {
 	if (!props.selectedFavoriteFolder) return props.savedSkins
 
+	if (props.selectedFavoriteFolder === UNCATEGORIZED_FOLDER_KEY) {
+		return props.savedSkins.filter(
+			(skin) => !props.favoriteAssignments[savedSkinKey(skin)],
+		)
+	}
+
 	return props.savedSkins.filter(
 		(skin) => props.favoriteAssignments[savedSkinKey(skin)] === props.selectedFavoriteFolder,
 	)
 })
-const selectedFavoriteLabel = computed(
-	() => props.selectedFavoriteFolder ?? formatMessage(messages.allFavorites),
-)
+const selectedFavoriteLabel = computed(() => {
+	if (props.selectedFavoriteFolder === null) return formatMessage(messages.allFavorites)
+	if (props.selectedFavoriteFolder === UNCATEGORIZED_FOLDER_KEY) return formatMessage(messages.uncategorized)
+	return props.selectedFavoriteFolder
+})
 const canReorderSavedSkins = computed(() => draggableSavedSkins.value.length > 1)
 const fixedSavedSkins = computed(() =>
 	filteredSavedSkins.value.filter((skin) => !canDragSavedSkin(skin)),
@@ -377,20 +386,11 @@ function doSkinOrdersMatch(firstSkins: Skin[], secondSkins: Skin[]) {
 function onSavedSkinDragStart(event: { oldIndex?: number }) {
 	isDraggingSavedSkin.value = true
 	draggedSavedSkin.value = draggableSavedSkins.value[event.oldIndex ?? -1] ?? null
-	isFavoriteMenuOpen.value = props.favoriteFolders.length > 0
 }
 
-function onSavedSkinDragEnd(event: { originalEvent?: MouseEvent | TouchEvent }) {
-	const targetFolder = getFavoriteDropTarget(event.originalEvent)
-	const skin = draggedSavedSkin.value
+function onSavedSkinDragEnd() {
 	isDraggingSavedSkin.value = false
 	draggedSavedSkin.value = null
-
-	if (skin && targetFolder !== undefined) {
-		emit('assign-skin-favorite-folder', skin, targetFolder)
-		draggableSavedSkins.value = filteredSavedSkins.value.filter(canDragSavedSkin)
-		return
-	}
 
 	if (doSkinOrdersMatch(draggableSavedSkins.value, filteredSavedSkins.value)) {
 		draggableSavedSkins.value = filteredSavedSkins.value.filter(canDragSavedSkin)
@@ -398,21 +398,6 @@ function onSavedSkinDragEnd(event: { originalEvent?: MouseEvent | TouchEvent }) 
 	}
 
 	emit('reorder-saved-skins', [...draggableSavedSkins.value])
-}
-
-function getFavoriteDropTarget(event?: MouseEvent | TouchEvent) {
-	if (!event || typeof document === 'undefined') return undefined
-
-	const point = 'changedTouches' in event ? event.changedTouches[0] : event
-	const element = document
-		.elementFromPoint(point.clientX, point.clientY)
-		?.closest<HTMLElement>('[data-skin-favorite-drop-target]')
-
-	if (!element) return undefined
-
-	return element.dataset.skinFavoriteDropTarget === '__all__'
-		? null
-		: element.dataset.skinFavoriteDropTarget
 }
 
 function toggleFavoriteMenu() {
@@ -619,12 +604,19 @@ defineExpose({ getAddSkinButtonElement })
 						>
 							<button
 								type="button"
-								data-skin-favorite-drop-target="__all__"
 								class="flex w-full items-center px-4 py-3 text-left text-sm font-semibold text-primary transition-colors hover:brightness-90"
 								:class="{ 'bg-brand text-accent-contrast': selectedFavoriteFolder === null }"
 								@click="selectFavoriteFolder(null)"
 							>
 								{{ formatMessage(messages.allFavorites) }}
+							</button>
+							<button
+								type="button"
+								class="flex w-full items-center px-4 py-3 text-left text-sm font-semibold text-primary transition-colors hover:brightness-90"
+								:class="{ 'bg-brand text-accent-contrast': selectedFavoriteFolder === UNCATEGORIZED_FOLDER_KEY }"
+								@click="selectFavoriteFolder(UNCATEGORIZED_FOLDER_KEY)"
+							>
+								{{ formatMessage(messages.uncategorized) }}
 							</button>
 							<div
 								v-for="folder in favoriteFolders"

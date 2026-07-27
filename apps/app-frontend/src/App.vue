@@ -102,6 +102,7 @@ import {
 	scanLauncherInstances,
 	type ScanResult,
 } from '@/helpers/drop'
+import { arrayBufferToBase64 } from '@modrinth/utils'
 import { isVersionInRange, areLoadersCompatible } from '@/helpers/version-compatibility'
 import { command_listener, install_job_listener, warning_listener } from '@/helpers/events.js'
 import { import_instance } from '@/helpers/import.js'
@@ -1063,6 +1064,25 @@ const currentImportContext = ref<{ launcherType: string; basePath: string } | nu
 const dropDebug = useDebugLogger('DropFlow')
 
 const dropProcessingNotificationId = ref<number | null>(null)
+const pendingSkinDropData = ref<string | null>(null)
+provide('pending-skin-drop', pendingSkinDropData)
+
+function extractPathFromReason(reason: string | undefined): string | undefined {
+	if (!reason) return undefined
+	const match = reason.match(/Unrecognised file type:\s*(.+\.png)\s*$/i)
+	return match?.[1]
+}
+
+async function handleSkinDrop(filePath: string) {
+	try {
+		const bytes: number[] = await invoke('plugin:files|file_read_dragged_file', { path: filePath })
+		const uint8 = new Uint8Array(bytes)
+		const base64 = arrayBufferToBase64(uint8.buffer)
+		pendingSkinDropData.value = `data:image/png;base64,${base64}`
+	} catch (error) {
+		handleError(error as Error)
+	}
+}
 
 const { isDragging, isProcessing } = useGlobalDrop(
 	{
@@ -1092,8 +1112,15 @@ const { isDragging, isProcessing } = useGlobalDrop(
 
 			if (type === 'unknown') {
 				clearDropProcessingNotification()
+
+				const filePath = classification?.file_path ?? extractPathFromReason(classification?.reason)
+				if (filePath?.toLowerCase().endsWith('.png')) {
+					handleSkinDrop(filePath).catch(handleError)
+					return
+				}
+
 				const unknownFile =
-					classification?.file_path?.split(/[/\\]/).pop() ??
+					filePath?.split(/[/\\]/).pop() ??
 					classification?.base_path?.split(/[/\\]/).pop() ??
 					''
 

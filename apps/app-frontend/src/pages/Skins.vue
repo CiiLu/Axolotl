@@ -61,6 +61,7 @@ type VirtualSkinSectionListExpose = {
 const PENDING_SKIN_REFRESH_DELAY_MS = 11_000
 const DEFAULT_SKIN_SECTION_SORT_ORDER = ['Default skins', 'Modrinth Pride']
 const SKIN_FAVORITES_STORAGE_KEY = 'axolotl-skin-favorites'
+const UNCATEGORIZED_FOLDER_KEY = '__uncategorized__'
 const messages = defineMessages({
 	skinSelectorTitle: {
 		id: 'app.skins.title',
@@ -352,6 +353,8 @@ const favoriteFolders = ref<string[]>([])
 const selectedFavoriteFolder = ref<string | null>(null)
 const favoriteAssignments = ref<Record<string, string>>({})
 
+const pendingSkinDropData = inject('pending-skin-drop') as Ref<string | null> | undefined
+
 const skinListTabLinks = computed(() => [
 	{
 		href: 'saved',
@@ -389,7 +392,8 @@ function loadSkinFavorites() {
 					)
 				: {}
 		selectedFavoriteFolder.value =
-			typeof parsed.selected === 'string' && favoriteFolders.value.includes(parsed.selected)
+			typeof parsed.selected === 'string' &&
+			(parsed.selected === UNCATEGORIZED_FOLDER_KEY || favoriteFolders.value.includes(parsed.selected))
 				? parsed.selected
 				: null
 	} catch (error) {
@@ -1024,6 +1028,31 @@ watch(isSkinManagementReadOnly, (readOnly) => {
 	}
 })
 
+watch(
+	() => pendingSkinDropData?.value,
+	async (dataUrl) => {
+		if (!dataUrl) return
+		if (pendingSkinDropData) pendingSkinDropData.value = null
+		if (isSkinManagementReadOnly.value) return
+
+		try {
+			const skinTextureNormalized = await normalize_skin_texture(dataUrl)
+			const skinTexUrl: SkinTextureUrl = {
+				original: dataUrl,
+				normalized: `data:image/png;base64,` + arrayBufferToBase64(skinTextureNormalized),
+			}
+			const defaultFolder =
+				selectedFavoriteFolder.value !== null &&
+				selectedFavoriteFolder.value !== UNCATEGORIZED_FOLDER_KEY
+					? selectedFavoriteFolder.value
+					: undefined
+			editSkinModal.value?.showNew(new MouseEvent('click'), skinTexUrl, defaultFolder)
+		} catch (error) {
+			handleError(error as Error)
+		}
+	},
+)
+
 onMounted(() => {
 	loadSkinFavorites()
 	userCheckInterval = window.setInterval(checkUserChanges, 250)
@@ -1064,8 +1093,11 @@ await loadSkins()
 	<EditSkinModal
 		ref="editSkinModal"
 		:capes="capes"
+		:favorite-folders="favoriteFolders"
+		:favorite-assignments="favoriteAssignments"
 		@saved="onSkinSaved"
 		@deleted="() => loadSkins()"
+		@assign-folder="assignSkinFavoriteFolder"
 	/>
 	<input
 		ref="addSkinFileInput"
@@ -1203,7 +1235,6 @@ await loadSkins()
 				@reorder-saved-skins="reorderSavedSkins"
 				@create-favorite-folder="createFavoriteFolder"
 				@select-favorite-folder="selectFavoriteFolder"
-				@assign-skin-favorite-folder="assignSkinFavoriteFolder"
 				@delete-favorite-folder="deleteFavoriteFolder"
 				@add-skin="openAddSkinFileBrowser"
 				@add-skin-dragenter="onAddSkinDragOver"

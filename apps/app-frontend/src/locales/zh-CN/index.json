@@ -3552,7 +3552,13 @@
 		"message": "知道了"
 	},
 	"app.skins.favorites.all": {
-		"message": "全部收藏夹"
+		"message": "全部皮肤"
+	},
+	"app.skins.favorites.uncategorized": {
+		"message": "未分类皮肤"
+	},
+	"app.skins.favorites.default": {
+		"message": "默认收藏夹"
 	},
 	"app.skins.favorites.create-button": {
 		"message": "创建收藏夹"
@@ -3574,5 +3580,8 @@
 	},
 	"app.skins.favorites.create-confirm": {
 		"message": "创建收藏夹"
+	},
+	"app.skins.modal.favorite-folder-section": {
+		"message": "收藏夹"
 	}
 }

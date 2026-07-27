@@ -3534,7 +3534,13 @@
 		"message": "Got it"
 	},
 	"app.skins.favorites.all": {
-		"message": "All favorites"
+		"message": "All skins"
+	},
+	"app.skins.favorites.uncategorized": {
+		"message": "Uncategorized"
+	},
+	"app.skins.favorites.default": {
+		"message": "Default favorites"
 	},
 	"app.skins.favorites.create-button": {
 		"message": "Create favorite folder"
