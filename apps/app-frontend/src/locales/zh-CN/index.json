@@ -1283,6 +1283,12 @@
 	"app.java.none-found": {
 		"message": "未找到 Java 安装！"
 	},
+	"app.java.deep-scan": {
+		"message": "强力扫描"
+	},
+	"app.java.scanning": {
+		"message": "扫描中……"
+	},
 	"app.java.select": {
 		"message": "选择"
 	},
@@ -2018,6 +2024,18 @@
 	"app.settings.java.location": {
 		"message": "Java {version} 位置"
 	},
+	"app.settings.java.quick-add": {
+		"message": "快速添加"
+	},
+	"app.settings.java.custom-version": {
+		"message": "自定义版本"
+	},
+	"app.settings.java.add": {
+		"message": "添加 Java 版本"
+	},
+	"app.settings.java.version-placeholder": {
+		"message": "版本号..."
+	},
 	"app.settings.java.auto-high-performance-mode": {
 		"message": "自动为 Java 使用高性能显卡"
 	},
@@ -2062,6 +2080,12 @@
 	},
 	"app.settings.java.table.actions": {
 		"message": ""
+	},
+	"app.settings.java.download.downloading": {
+		"message": "正在下载 Java {version}..."
+	},
+	"app.settings.java.download.select-distribution": {
+		"message": "选择发行版："
 	},
 	"app.settings.java.download.select-version": {
 		"message": "选择 Java 版本："
@@ -2998,6 +3022,27 @@
 	},
 	"instance.settings.tabs.java.version": {
 		"message": "Java {version} 版"
+	},
+	"instance.settings.tabs.java.current-path": {
+		"message": "当前路径"
+	},
+	"instance.settings.tabs.java.custom-path-option": {
+		"message": "自定义路径……"
+	},
+	"instance.settings.tabs.java.optimal-label": {
+		"message": "（此实例推荐）"
+	},
+	"instance.settings.tabs.java.select-java": {
+		"message": "选择 Java 版本"
+	},
+	"instance.settings.tabs.java.table.version": {
+		"message": "版本"
+	},
+	"instance.settings.tabs.java.table.distribution": {
+		"message": "发行版"
+	},
+	"instance.settings.tabs.java.table.path": {
+		"message": "路径"
 	},
 	"instance.settings.tabs.java.auto-label": {
 		"message": "自动（推荐）"
