@@ -252,7 +252,7 @@ async function resetState() {
 async function downloadTerracotta() {
 	errorMessage.value = ''
 	try {
-		await invoke('plugin:terracotta|terracotta_download', { version: null as any })
+		await invoke('plugin:terracotta|terracotta_download')
 		pollInterval = setInterval(pollState, 1000)
 	} catch (e: any) {
 		errorMessage.value = String(e)

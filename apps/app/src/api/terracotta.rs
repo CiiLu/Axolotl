@@ -145,15 +145,9 @@ pub async fn terracotta_get_download_url(args: TerracottaDownloadUrlArgs) -> Res
 	))
 }
 
-#[derive(Deserialize)]
-pub struct TerracottaDownloadArgs {
-	#[serde(default)]
-	pub version: Option<String>,
-}
-
 #[tauri::command]
-pub async fn terracotta_download(args: TerracottaDownloadArgs) -> Result<()> {
-	theseus::terracotta::download_terracotta(args.version)
+pub async fn terracotta_download(#[allow(unused)] version: Option<String>) -> Result<()> {
+	theseus::terracotta::download_terracotta(version)
 		.await
 		.map_err(theseus::Error::from)?;
 	Ok(())
