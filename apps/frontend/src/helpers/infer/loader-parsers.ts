@@ -301,3 +301,107 @@ export function createLoaderParsers(
 		},
 	}
 }
+
+/**
+ * Detect Minecraft loaders from an instance JSON file (the {version}.json in versions/ folder).
+ * Implements the full PCL‑CE if‑else chain: OptiFine → LiteLoader (optional) → LabyMod →
+ * Legacy Fabric → Fabric → Quilt → Cleanroom → Forge (excluding NeoForge) → NeoForge.
+ *
+ * @param jsonText The raw string content of the instance JSON.
+ * @returns Loader IDs (e.g. "forge") and optionally a version string.
+ */
+export function detectLoadersFromInstanceJson(jsonText: string): {
+	loaders: string[]
+	version: string | undefined
+} {
+	const lower = jsonText.toLowerCase()
+
+	// OptiFine (optional, can coexist)
+	let optifineVersion: string | undefined
+	if (lower.includes('optifine')) {
+		optifineVersion = jsonText.match(/(?<=HD_U_)[^"":/]+/)?.[0]
+	}
+
+	// LiteLoader (optional, can coexist)
+	let liteLoader = false
+	if (lower.includes('liteloader')) {
+		liteLoader = true
+	}
+
+	// 3. LabyMod
+	if (lower.includes('labymod_data')) {
+		const version = jsonText.match(/"labymod_data"\s*:\s*\{[^}]*"version"\s*:\s*"([^"]+)"/)?.[1]
+		const result = { loaders: ['labymod'] as string[], version }
+		if (optifineVersion) result.loaders.push('optifine')
+		if (liteLoader) result.loaders.push('lite_loader')
+		return result
+	}
+
+	// 4. Legacy Fabric
+	if (lower.includes('net.legacyfabric:intermediary')) {
+		const version = jsonText.match(/(?<=net\.fabricmc:fabric-loader:)[\d.]+(?:\+build\.\d+)?/)?.[0]
+		const result = { loaders: ['legacy_fabric'] as string[], version }
+		if (optifineVersion) result.loaders.push('optifine')
+		if (liteLoader) result.loaders.push('lite_loader')
+		return result
+	}
+
+	// 5. Fabric
+	if (lower.includes('net.fabricmc:fabric-loader')) {
+		const version = jsonText.match(/(?<=net\.fabricmc:fabric-loader:)[\d.]+(?:\+build\.\d+)?/)?.[0]
+		const result = { loaders: ['fabric'] as string[], version }
+		if (optifineVersion) result.loaders.push('optifine')
+		if (liteLoader) result.loaders.push('lite_loader')
+		return result
+	}
+
+	// 6. Quilt
+	if (lower.includes('org.quiltmc:quilt-loader')) {
+		const version = jsonText.match(
+			/(?<=org\.quiltmc:quilt-loader:)[\d.]+(?:\+build\.\d+)?(?:-beta\.\d{1,2})?/,
+		)?.[0]
+		const result = { loaders: ['quilt'] as string[], version }
+		if (optifineVersion) result.loaders.push('optifine')
+		if (liteLoader) result.loaders.push('lite_loader')
+		return result
+	}
+
+	// 7. Cleanroom
+	if (lower.includes('com.cleanroommc:cleanroom:')) {
+		const version = jsonText.match(
+			/(?<=com\.cleanroommc:cleanroom:)[\d.]+(?:\+build\.\d+)?(?:-alpha)?/,
+		)?.[0]
+		const result = { loaders: ['cleanroom'] as string[], version }
+		if (optifineVersion) result.loaders.push('optifine')
+		if (liteLoader) result.loaders.push('lite_loader')
+		return result
+	}
+
+	// 8. Forge (must NOT contain "net.neoforge")
+	if (lower.includes('minecraftforge') && !lower.includes('net.neoforge')) {
+		const version =
+			jsonText.match(/(?<=forge:[\d.]+(?:_pre\d*)?-)[\d.]+/)?.[0] ??
+			jsonText.match(
+				/(?<=net\.minecraftforge:(?:forge|fmlloader):[\d.]+-)[\d\w._+-]+/,
+			)?.[0]
+		const result = { loaders: ['forge'] as string[], version }
+		if (optifineVersion) result.loaders.push('optifine')
+		if (liteLoader) result.loaders.push('lite_loader')
+		return result
+	}
+
+	// 9. NeoForge
+	if (lower.includes('net.neoforge')) {
+		const version = jsonText.match(/"orgeVersion"\s*[^"]*"([^"]+)"/)?.[1]
+		const result = { loaders: ['neoforge'] as string[], version }
+		if (optifineVersion) result.loaders.push('optifine')
+		if (liteLoader) result.loaders.push('lite_loader')
+		return result
+	}
+
+	// No loader detected, but OptiFine / LiteLoader may still be present
+	const result = { loaders: [] as string[], version: undefined as string | undefined }
+	if (optifineVersion) result.loaders.push('optifine')
+	if (liteLoader) result.loaders.push('lite_loader')
+	return result
+}

@@ -1,37 +1,3 @@
-<template>
-	<div
-		data-onboarding-id="creation-import"
-		class="flex flex-col items-center gap-6 py-4"
-	>
-		<DropzoneFileInput
-				:secondary-prompt="formatMessage(messages.dropZoneClick)"
-				no-icon-box
-				@change="onDropzoneChange"
-			/>
-
-		<!-- Launcher icons + caption -->
-		<div class="flex flex-col items-center gap-2">
-			<div class="flex items-end justify-center">
-				<div
-					v-for="(item, i) in launcherIcons"
-					:key="item.key"
-					class="flex size-10 items-center justify-center rounded-xl border border-surface-4 bg-surface-3 shadow-sm"
-					:style="{
-						transform: `rotate(${(i - 1) * 7}deg) translateY(${Math.abs(i - 1) * -4}px)`,
-						marginLeft: i > 0 ? '-4px' : '0',
-						zIndex: 3 - Math.abs(i - 1),
-					}"
-				>
-					<img :src="item.url" class="size-5" :alt="item.alt" />
-				</div>
-			</div>
-			<span class="text-center text-sm text-secondary">
-				{{ formatMessage(messages.importPrompt) }}
-			</span>
-		</div>
-	</div>
-</template>
-
 <script setup lang="ts">
 import { defineMessages, useVIntl } from '@modrinth/ui'
 
@@ -68,13 +34,18 @@ const messages = defineMessages({
 })
 
 // ── Drop zone handler (via DropzoneFileInput) ──
-
 function onDropzoneChange(paths: string[]) {
-	if (!paths || paths.length === 0) return
+	console.log('[ImportInstanceStage] onDropzoneChange called with paths:', paths)
+	if (!paths || paths.length === 0) {
+		console.log('[ImportInstanceStage] no paths, returning')
+		return
+	}
 
 	const filePath = paths[0]
+	console.log('[ImportInstanceStage] filePath:', filePath)
 
 	if (ctx.onImportFileReceived) {
+		console.log('[ImportInstanceStage] calling ctx.onImportFileReceived with filePath')
 		ctx.onImportFileReceived({
 			file: null,
 			filePath,
@@ -84,20 +55,19 @@ function onDropzoneChange(paths: string[]) {
 	}
 
 	// Fallback: set path directly on context
+	console.log('[ImportInstanceStage] ctx.onImportFileReceived not set, using fallback')
 	ctx.modpackFile.value = null
 	ctx.modpackFilePath.value = filePath
-	if (ctx.finishDisabled.value) return
+	if (ctx.finishDisabled.value) {
+		console.log('[ImportInstanceStage] finishDisabled is true, returning')
+		return
+	}
 	if (ctx.flowType === 'instance') {
+		console.log('[ImportInstanceStage] finish() called')
 		ctx.finish()
 	} else {
+		console.log('[ImportInstanceStage] setting stage to final-config')
 		ctx.modal.value?.setStage('final-config')
 	}
-}
-
-// ── File handling (reserved interface) ──
-export interface ImportFilePayload {
-	file: File | null
-	filePath: string | null
-	source: 'file-picker' | 'drag-drop'
 }
 </script>

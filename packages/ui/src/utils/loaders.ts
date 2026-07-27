@@ -17,6 +17,7 @@ export const loaderDisplayNames: Record<string, string> = {
 	labymod: 'LabyMod',
 	cleanroom: 'Cleanroom',
 	legacy_fabric: 'Legacy Fabric',
+	optifine: 'OptiFine',
 }
 
 export const loaderMessages: Record<string, { id: string; defaultMessage: string }> = {
@@ -31,10 +32,11 @@ export const loaderIconMap: Record<string, string> = {
 	vanilla: 'grass-block',
 	fabric: 'fabric',
 	forge: 'anvil',
-	lite_loader: 'diamond',
-	labymod: 'diamond',
-	cleanroom: 'diamond',
-	legacy_fabric: 'diamond',
+	lite_loader: 'grass-block',
+	labymod: 'grass-block',
+	cleanroom: 'grass-block',
+	legacy_fabric: 'grass-block',
+	optifine: 'grass-block',
 	neoforge: 'neoforge',
 	quilt: 'quilt',
 }
