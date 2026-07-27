@@ -91,9 +91,10 @@ pub async fn terracotta_reset() -> Result<()> {
 
 #[tauri::command]
 pub async fn terracotta_parse_room_code(room_code: String) -> Result<String> {
-	theseus::terracotta::parse_room_code(&room_code)
+	let code = theseus::terracotta::parse_room_code(&room_code)
 		.await
-		.map_err(theseus::Error::from)
+		.map_err(theseus::Error::from)?;
+	Ok(code)
 }
 
 #[tauri::command]
