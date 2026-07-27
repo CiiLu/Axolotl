@@ -51,6 +51,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Changed some frontend code left by vibe and replaced it with native components.',
 					'zh-CN': '重写了一些vibe留下的其它代码。',
 				},
+				{
+					'en-US':
+						'To avoid confusion caused by loaders that have not yet been parsed during batch imports, instances are now imported one by one with progress displayed.',
+					'zh-CN': '为避免批量导入过程中还未来得及解析的加载器造成误解，现在逐个导入实例并显示进度',
+				},
 			],
 			fixed: [
 				{
