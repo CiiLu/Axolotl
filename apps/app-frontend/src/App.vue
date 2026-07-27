@@ -267,22 +267,23 @@ const os = ref('')
 const isDevEnvironment = ref(false)
 
 /**
- * On Windows the native shadow also draws the window border, which bleeds dark
- * artifacts into a transparent window's corners, so it has to go while the mode
- * is on. Windows 10 re-adds it after the window is shown, hence reapplying here
- * rather than relying on the value set during setup.
+ * Acrylic is rendered by the Windows compositor behind the webview, so CSS
+ * cannot clip it. Keep the native rounded frame and hide its border while the
+ * CSS-drawn transparent-window border is active.
  */
-async function applyWindowShadow() {
+async function applyWindowFrame() {
 	if (os.value !== 'Windows') return
 
 	try {
-		await getCurrentWindow().setShadow(!themeStore.transparentBackground)
+		await invoke('set_transparent_window_frame', {
+			enabled: themeStore.transparentBackground,
+		})
 	} catch (error) {
-		console.warn('Failed to update window shadow', error)
+		console.warn('Failed to update transparent window frame', error)
 	}
 }
 
-watch(() => themeStore.transparentBackground, applyWindowShadow)
+watch(() => themeStore.transparentBackground, applyWindowFrame)
 
 /**
  * The frosted glass has to come from the compositor: a webview cannot reach the
@@ -657,7 +658,7 @@ async function setupApp() {
 	themeStore.transparentBackgroundOpacity = transparent_background_opacity
 	themeStore.transparentBackgroundBlur = transparent_background_blur
 	themeStore.setTransparentBackgroundClass()
-	await applyWindowShadow()
+	await applyWindowFrame()
 	await applyWindowEffects()
 	themeStore.sidebarInstanceCount = sidebar_instance_count
 	themeStore.devMode = developer_mode
@@ -2319,6 +2320,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
 			'has-transparent-background': themeStore.transparentBackground,
+			'is-maximized': isMaximized,
 		}"
 	>
 		<Transition name="fade">
@@ -2763,6 +2765,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 .app-grid-layout.has-custom-background,
 .app-grid-layout.has-transparent-background {
+	&:not(.is-maximized) {
+		border-radius: 8px;
+		clip-path: inset(0 round 8px);
+		overflow: hidden;
+	}
 	background-color: transparent;
 
 	.app-grid-navbar,
@@ -2842,6 +2849,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		content: '';
 		position: fixed;
 		inset: 0;
+		border-radius: inherit;
 		z-index: 100;
 		pointer-events: none;
 		box-shadow:
