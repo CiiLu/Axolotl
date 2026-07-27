@@ -69,24 +69,22 @@ const messages = defineMessages({
 
 // ── Drop zone handler (via DropzoneFileInput) ──
 
-function onDropzoneChange(files: File[]) {
-	if (!files || files.length === 0) return
+function onDropzoneChange(paths: string[]) {
+	if (!paths || paths.length === 0) return
 
-	const file = files[0]
-	// Tauri adds a `path` property to File objects from native drag-drop
-	const filePath: string | null = (file as any).path ?? null
+	const filePath = paths[0]
 
 	if (ctx.onImportFileReceived) {
 		ctx.onImportFileReceived({
-			file: filePath ? null : file,
+			file: null,
 			filePath,
-			source: 'drag-drop',
+			source: 'file-picker',
 		})
 		return
 	}
 
-	// Fallback: treat as file-picker import
-	ctx.modpackFile.value = filePath ? null : file
+	// Fallback: set path directly on context
+	ctx.modpackFile.value = null
 	ctx.modpackFilePath.value = filePath
 	if (ctx.finishDisabled.value) return
 	if (ctx.flowType === 'instance') {

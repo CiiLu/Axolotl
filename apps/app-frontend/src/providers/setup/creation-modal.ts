@@ -454,7 +454,6 @@ let currentFlowCtx: CreationFlowContextValue | null = null
 		filePath: string | null
 		source: 'file-picker' | 'drag-drop'
 	}) {
-		const filePath = payload.filePath
 		if (!filePath) return
 
 		const fileName = filePath.split(/[/\\]/).pop() || 'file'
