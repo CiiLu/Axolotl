@@ -340,15 +340,6 @@ onUnmounted(() => {
 						'bg-red-500': state.status === 'error',
 					}"
 				/>
-				<div v-if="state.status === 'downloading' && state.download_progress != null" class="mb-3">
-					<div class="h-2 bg-surface-5 rounded-full overflow-hidden">
-						<div
-							class="h-full bg-brand rounded-full transition-all duration-300"
-							:style="{ width: state.download_progress + '%' }"
-						/>
-					</div>
-					<div class="text-xs text-secondary mt-1">{{ state.download_progress }}%</div>
-				</div>
 				<div class="font-semibold">{{ statusText }}</div>
 			</div>
 			<div v-if="errorMessage" class="text-red-500 text-sm mb-4">{{ errorMessage }}</div>
@@ -380,7 +371,20 @@ onUnmounted(() => {
 						{{ binaryPathHint }}
 					</code>
 				</div>
-				<Button class="mt-3" size="small" @click="downloadTerracotta">
+				<div v-if="state?.status === 'downloading'" class="mt-3">
+					<div class="flex items-center gap-2 mb-2">
+						<div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse flex-shrink-0" />
+						<span class="text-sm text-secondary">{{ formatMessage(messages.statusDownloading) }}</span>
+					</div>
+					<div class="h-2 bg-surface-5 rounded-full overflow-hidden">
+						<div
+							class="h-full bg-brand rounded-full transition-all duration-300"
+							:style="{ width: (state.download_progress || 0) + '%' }"
+						/>
+					</div>
+					<div class="text-xs text-secondary mt-1">{{ state.download_progress || 0 }}%</div>
+				</div>
+				<Button v-if="state?.status !== 'downloading'" class="mt-3" size="small" @click="downloadTerracotta">
 					{{ formatMessage(messages.downloadTerracotta) }}
 				</Button>
 			</div>
