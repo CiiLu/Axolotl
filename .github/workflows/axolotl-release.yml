@@ -183,11 +183,9 @@ jobs:
 
             # Sign the portable exe
             $exePath = Resolve-Path "$outDir\$exeName"
-            $keyFile = "$env:TEMP\private.key"
-            [IO.File]::WriteAllText($keyFile, $env:TAURI_SIGNING_PRIVATE_KEY.Trim())
 
             cd apps/app
-            pnpm tauri signer sign -k $keyFile --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$exePath"
+            pnpm tauri signer sign --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$exePath"
             cd ../..
 
             $sigPath = "${exePath}.sig"
