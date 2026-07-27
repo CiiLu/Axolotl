@@ -13,8 +13,9 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 			terracotta_reset,
 			terracotta_parse_room_code,
 			terracotta_get_platform_key,
-			terracotta_get_download_url,
+			terracotta_get_download_urls,
 			terracotta_download,
+			terracotta_get_player_name,
 		])
 		.build()
 }
@@ -103,18 +104,23 @@ pub async fn terracotta_get_platform_key() -> Result<String> {
 }
 
 #[tauri::command]
-pub async fn terracotta_get_download_url(version: Option<String>) -> Result<String> {
+pub async fn terracotta_get_download_urls(version: Option<String>) -> Result<Vec<String>> {
 	let key = theseus::terracotta::terracotta_platform_key();
 	let ver = version.unwrap_or_else(|| "0.4.2".to_string());
-	Ok(format!(
-		"https://gitee.com/burningtnt/Terracotta/releases/download/v{ver}/terracotta-{ver}-{key}-pkg.tar.gz"
-	))
+	let urls = theseus::terracotta::terracotta_download_urls(&ver, key);
+	Ok(urls)
 }
 
 #[tauri::command]
-pub async fn terracotta_download(#[allow(unused)] version: Option<String>) -> Result<()> {
+pub async fn terracotta_download(version: Option<String>) -> Result<()> {
 	theseus::terracotta::download_terracotta(version)
 		.await
 		.map_err(theseus::Error::from)?;
 	Ok(())
+}
+
+#[tauri::command]
+pub async fn terracotta_get_player_name() -> Result<String> {
+	let name = theseus::terracotta::get_player_name().await;
+	Ok(name)
 }

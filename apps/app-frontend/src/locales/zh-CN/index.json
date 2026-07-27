@@ -3595,5 +3595,53 @@
 	},
 	"app.multiplayer.status.downloading": {
 		"message": "下载中..."
+	},
+	"app.multiplayer.status.fatal": {
+		"message": "严重错误"
+	},
+	"app.multiplayer.status.guest-starting": {
+		"message": "正在加入..."
+	},
+	"app.multiplayer.status.host-starting": {
+		"message": "正在启动主机..."
+	},
+	"app.multiplayer.status.waiting": {
+		"message": "等待中..."
+	},
+	"app.multiplayer.check-network": {
+		"message": "检查您的网络连接"
+	},
+	"app.multiplayer.connecting": {
+		"message": "连接中..."
+	},
+	"app.multiplayer.disconnect": {
+		"message": "断开连接"
+	},
+	"app.multiplayer.download-progress": {
+		"message": "下载进度"
+	},
+	"app.multiplayer.error.install": {
+		"message": "安装错误"
+	},
+	"app.multiplayer.error.network": {
+		"message": "网络错误"
+	},
+	"app.multiplayer.error.os": {
+		"message": "系统错误"
+	},
+	"app.multiplayer.error.terracotta": {
+		"message": "陶瓦联机错误"
+	},
+	"app.multiplayer.error.unknown": {
+		"message": "未知错误"
+	},
+	"app.multiplayer.retry": {
+		"message": "重试"
+	},
+	"app.multiplayer.verifying": {
+		"message": "验证中..."
+	},
+	"app.multiplayer.powered-by-terracotta": {
+		"message": "由 Terracotta | 陶瓦联机 强力驱动"
 	}
 }

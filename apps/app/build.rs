@@ -413,8 +413,9 @@ fn main() {
 						"terracotta_reset",
 						"terracotta_parse_room_code",
 						"terracotta_get_platform_key",
-						"terracotta_get_download_url",
+						"terracotta_get_download_urls",
 						"terracotta_download",
+						"terracotta_get_player_name",
 					])
 					.default_permission(
 						DefaultPermissionRule::AllowAllCommands,

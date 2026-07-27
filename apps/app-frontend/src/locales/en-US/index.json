@@ -3529,5 +3529,53 @@
 	},
 	"app.instance.mods.dismiss": {
 		"message": "Got it"
+	},
+	"app.multiplayer.status.waiting": {
+		"message": "Waiting..."
+	},
+	"app.multiplayer.status.host-starting": {
+		"message": "Starting host..."
+	},
+	"app.multiplayer.status.guest-starting": {
+		"message": "Connecting as guest..."
+	},
+	"app.multiplayer.status.fatal": {
+		"message": "Fatal error"
+	},
+	"app.multiplayer.disconnect": {
+		"message": "Disconnect"
+	},
+	"app.multiplayer.retry": {
+		"message": "Retry"
+	},
+	"app.multiplayer.check-network": {
+		"message": "Check your network connection"
+	},
+	"app.multiplayer.download-progress": {
+		"message": "Download progress"
+	},
+	"app.multiplayer.verifying": {
+		"message": "Verifying..."
+	},
+	"app.multiplayer.connecting": {
+		"message": "Connecting..."
+	},
+	"app.multiplayer.error.network": {
+		"message": "Network error"
+	},
+	"app.multiplayer.error.install": {
+		"message": "Installation error"
+	},
+	"app.multiplayer.error.terracotta": {
+		"message": "Terracotta error"
+	},
+	"app.multiplayer.error.unknown": {
+		"message": "Unknown error"
+	},
+	"app.multiplayer.error.os": {
+		"message": "System error"
+	},
+	"app.multiplayer.powered-by-terracotta": {
+		"message": "Powered by Terracotta | 陶瓦联机"
 	}
 }
