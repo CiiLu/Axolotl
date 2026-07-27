@@ -1,5 +1,5 @@
 use eyre::{Context, bail};
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -189,7 +189,7 @@ async fn get_latest_terracotta_version() -> eyre::Result<String> {
 
 pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 	{
-		let mut state = TERRACOTTA_STATE.lock().unwrap();
+		let mut state = TERRACOTTA_STATE.lock().await;
 		state.status = TerracottaStatus::Downloading;
 		state.download_progress = Some(0);
 	}
@@ -243,7 +243,7 @@ pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 
 		if total_size > 0 {
 			let pct = ((downloaded as f64 / total_size as f64) * 100.0) as u8;
-			let mut state = TERRACOTTA_STATE.lock().unwrap();
+			let mut state = TERRACOTTA_STATE.lock().await;
 			state.download_progress = Some(pct);
 		}
 	}
@@ -300,7 +300,7 @@ pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 
 	info!("terracotta v{version} installed to {}", target_dir.display());
 
-	let mut state = TERRACOTTA_STATE.lock().unwrap();
+	let mut state = TERRACOTTA_STATE.lock().await;
 	state.status = TerracottaStatus::Idle;
 	state.download_progress = None;
 	Ok(())
@@ -352,7 +352,7 @@ async fn poll_terracotta_state(port: u16) {
 		tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 		match terracotta_get::<TerracottaApiState>(port, "/state").await {
 			Ok(api_state) => {
-				let mut state = TERRACOTTA_STATE.lock().unwrap();
+				let mut state = TERRACOTTA_STATE.lock().await;
 				state.http_port = Some(port);
 				state.room_code = api_state.room.clone();
 				state.status = match api_state.state.as_str() {
@@ -381,7 +381,7 @@ async fn poll_terracotta_state(port: u16) {
 			}
 			Err(e) => {
 				warn!("failed to poll terracotta state: {e:#}");
-				let mut state = TERRACOTTA_STATE.lock().unwrap();
+				let mut state = TERRACOTTA_STATE.lock().await;
 				state.status = TerracottaStatus::Error;
 				break;
 			}
@@ -390,11 +390,11 @@ async fn poll_terracotta_state(port: u16) {
 }
 
 pub async fn get_state() -> TerracottaState {
-	TERRACOTTA_STATE.lock().unwrap().clone()
+	TERRACOTTA_STATE.lock().await.clone()
 }
 
 pub async fn get_meta() -> eyre::Result<TerracottaMeta> {
-	let state = TERRACOTTA_STATE.lock().unwrap();
+	let state = TERRACOTTA_STATE.lock().await;
 	let port = state
 		.http_port
 		.ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
@@ -427,7 +427,7 @@ pub async fn start_terracotta(
 		);
 	}
 
-	let mut process_guard = PROCESS.lock().unwrap();
+	let mut process_guard = PROCESS.lock().await;
 	if process_guard.is_some() {
 		bail!("terracotta is already running");
 	}
@@ -489,7 +489,7 @@ pub async fn start_terracotta(
 	drop(process_guard);
 
 	{
-		let mut state = TERRACOTTA_STATE.lock().unwrap();
+		let mut state = TERRACOTTA_STATE.lock().await;
 		state.status = TerracottaStatus::Starting;
 	}
 
@@ -515,7 +515,7 @@ pub async fn start_terracotta(
 				let port = port_info.port;
 				tokio::spawn(poll_terracotta_state(port));
 
-				let mut state = TERRACOTTA_STATE.lock().unwrap();
+				let mut state = TERRACOTTA_STATE.lock().await;
 				state.http_port = Some(port);
 				return Ok(());
 			}
@@ -537,7 +537,7 @@ pub async fn start_terracotta(
 }
 
 pub async fn stop_terracotta() -> eyre::Result<()> {
-	let mut process_guard = PROCESS.lock().unwrap();
+	let mut process_guard = PROCESS.lock().await;
 	if let Some(mut process) = process_guard.take() {
 		if let Some(tx) = process.abort_tx.take() {
 			let _ = tx.send(());
@@ -545,7 +545,7 @@ pub async fn stop_terracotta() -> eyre::Result<()> {
 		process.child.start_kill().ok();
 		info!("stopped terracotta");
 	}
-	let mut state = TERRACOTTA_STATE.lock().unwrap();
+	let mut state = TERRACOTTA_STATE.lock().await;
 	*state = TerracottaState::default();
 	Ok(())
 }
@@ -554,7 +554,7 @@ pub async fn start_hosting(
 	room_code: Option<String>,
 	player_name: String,
 ) -> eyre::Result<()> {
-	let state = TERRACOTTA_STATE.lock().unwrap();
+	let state = TERRACOTTA_STATE.lock().await;
 	let port = state
 		.http_port
 		.ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
@@ -590,7 +590,7 @@ pub async fn start_joining(
 	room_code: String,
 	player_name: String,
 ) -> eyre::Result<()> {
-	let state = TERRACOTTA_STATE.lock().unwrap();
+	let state = TERRACOTTA_STATE.lock().await;
 	let port = state
 		.http_port
 		.ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
@@ -619,7 +619,7 @@ pub async fn start_joining(
 }
 
 pub async fn reset_state() -> eyre::Result<()> {
-	let state = TERRACOTTA_STATE.lock().unwrap();
+	let state = TERRACOTTA_STATE.lock().await;
 	let port = state
 		.http_port
 		.ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
@@ -627,7 +627,7 @@ pub async fn reset_state() -> eyre::Result<()> {
 
 	terracotta_get::<serde_json::Value>(port, "/state/ide").await?;
 
-	let mut state = TERRACOTTA_STATE.lock().unwrap();
+	let mut state = TERRACOTTA_STATE.lock().await;
 	state.status = TerracottaStatus::Idle;
 	state.room_code = None;
 	state.server_port = None;
@@ -657,7 +657,7 @@ pub async fn parse_room_code(code: &str) -> eyre::Result<String> {
 }
 
 pub async fn get_logs() -> eyre::Result<String> {
-	let state = TERRACOTTA_STATE.lock().unwrap();
+	let state = TERRACOTTA_STATE.lock().await;
 	let port = state
 		.http_port
 		.ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
