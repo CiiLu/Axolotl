@@ -270,19 +270,69 @@ pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 		let decoder = GzDecoder::new(archive_file);
 		let mut archive = tar::Archive::new(decoder);
 
-		for entry in archive.entries()? {
-			let mut entry = entry?;
-			let path = entry.path()?.to_path_buf();
-			if let Some(name) = path.file_name() {
-				if name == terracotta_binary_name() {
-					entry.unpack_in(&target_dir_clone)?;
-					return Ok(());
+		let bin_name = terracotta_binary_name();
+		let entries: Vec<_> = archive
+			.entries()
+			.map_err(|e| eyre::eyre!("failed to read archive: {e}"))?
+			.filter_map(|e| e.ok())
+			.filter_map(|e| {
+				let path = e.path().ok()?.to_path_buf();
+				let name = path.file_name()?.to_str()?.to_string();
+				Some((path, name))
+			})
+			.collect();
+
+		if entries.is_empty() {
+			bail!("archive is empty");
+		}
+
+		info!(
+			"terracotta archive contains {} entries: {:?}",
+			entries.len(),
+			entries.iter().map(|(_, n)| n).collect::<Vec<_>>()
+		);
+
+		if entries.iter().any(|(_, n)| n == bin_name) {
+			info!("found {bin_name} in archive, extracting");
+		} else {
+			bail!(
+				"terracotta binary '{bin_name}' not found in archive. Files: {:?}",
+				entries.iter().map(|(_, n)| n).collect::<Vec<_>>()
+			);
+		}
+
+		let archive_file = std::fs::File::open(&archive_path_clone)
+			.wrap_err("failed to re-open archive for extraction")?;
+		let decoder = GzDecoder::new(archive_file);
+		let mut archive = tar::Archive::new(decoder);
+		archive
+			.unpack(&target_dir_clone)
+			.wrap_err("failed to extract archive")?;
+
+		Ok(())
+	})
+	.await??;
+
+	let bin_name = terracotta_binary_name();
+	let bin_path = target_dir.join(bin_name);
+	if !bin_path.exists() {
+		let mut found = false;
+		for entry in std::fs::read_dir(&target_dir)? {
+			let entry = entry?;
+			if entry.file_type()?.is_dir() {
+				let inner = entry.path().join(bin_name);
+				if inner.exists() {
+					std::fs::rename(&inner, &bin_path)?;
+					info!("moved {bin_name} from {inner:?} to {}", bin_path.display());
+					found = true;
+					break;
 				}
 			}
 		}
-		bail!("terracotta binary not found in downloaded archive")
-	})
-	.await??;
+		if !found {
+			bail!("{bin_name} not found in extracted files");
+		}
+	}
 
 	let _ = tokio::fs::remove_file(&archive_path).await;
 
