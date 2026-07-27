@@ -462,6 +462,7 @@ pub async fn start_terracotta(
 		tokio::spawn(async move {
 			let reader = BufReader::new(stderr);
 			let mut lines = reader.lines();
+			let mut abort_rx = abort_rx;
 			loop {
 				tokio::select! {
 					_ = &mut abort_rx => break,
