@@ -396,10 +396,29 @@ fn main() {
                         "start_join_singleplayer_world",
                         "start_join_server",
                     ])
-                    .default_permission(
-                        DefaultPermissionRule::AllowAllCommands,
-                    ),
-            ),
+					.default_permission(
+						DefaultPermissionRule::AllowAllCommands,
+					),
+			)
+			.plugin(
+				"terracotta",
+				InlinedPlugin::new()
+					.commands(&[
+						"terracotta_get_state",
+						"terracotta_get_meta",
+						"terracotta_start",
+						"terracotta_stop",
+						"terracotta_host",
+						"terracotta_join",
+						"terracotta_reset",
+						"terracotta_parse_room_code",
+						"terracotta_get_platform_key",
+						"terracotta_get_download_url",
+					])
+					.default_permission(
+						DefaultPermissionRule::AllowAllCommands,
+					),
+			),
     )
     .expect("Failed to run tauri-build");
 }
