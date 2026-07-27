@@ -166,7 +166,9 @@ async function pollState() {
 	try {
 		const result = await invoke('plugin:terracotta|terracotta_get_state')
 		state.value = result
-		errorMessage.value = ''
+		if (errorMessage.value) {
+			errorMessage.value = ''
+		}
 	} catch (e: any) {
 		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
 	}
@@ -176,7 +178,9 @@ async function startTerracotta() {
 	errorMessage.value = ''
 	try {
 		await invoke('plugin:terracotta|terracotta_start', { autoDownload: true })
-		pollInterval = setInterval(pollState, 1000)
+		if (!pollInterval) {
+			pollInterval = setInterval(pollState, 1000)
+		}
 	} catch (e: any) {
 		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
 	}
@@ -256,13 +260,11 @@ async function downloadTerracotta() {
 		// After download, auto-start terracotta so the user can host/join
 		await startTerracotta()
 	} catch (e: any) {
-		if (pollInterval) clearInterval(pollInterval)
-		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Download failed'
-	} finally {
 		if (pollInterval) {
 			clearInterval(pollInterval)
 			pollInterval = null
 		}
+		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Download failed'
 	}
 }
 
