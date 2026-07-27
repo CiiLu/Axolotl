@@ -346,8 +346,6 @@ let isUnmounted = false
 let unlistenNativeDrop: (() => void) | null = null
 
 const isDraggingSkinFile = ref(false)
-
-const isDraggingSkinFile = ref(false)
 const isAddSkinButtonDragActive = ref(false)
 
 const deleteSkinModal = ref()
