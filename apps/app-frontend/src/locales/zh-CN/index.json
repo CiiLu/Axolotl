@@ -3522,7 +3522,7 @@
 		"message": "输入房间码加入好友的虚拟局域网房间。"
 	},
 	"app.multiplayer.player-name": {
-		"message": "玩家名称"
+		"message": "玩家名"
 	},
 	"app.multiplayer.room-code": {
 		"message": "房间码"
@@ -3531,7 +3531,7 @@
 		"message": "例如 U/ABCD-EFGH-IJKL-MNOP"
 	},
 	"app.multiplayer.start-hosting": {
-		"message": "开始创建房间"
+		"message": "创建房间"
 	},
 	"app.multiplayer.join-room": {
 		"message": "加入房间"
@@ -3549,13 +3549,13 @@
 		"message": "启动中..."
 	},
 	"app.multiplayer.status.host-scanning": {
-		"message": "正在创建房间..."
+		"message": "正在扫描..."
 	},
 	"app.multiplayer.status.host-ready": {
 		"message": "房间已就绪"
 	},
 	"app.multiplayer.status.guest-connecting": {
-		"message": "正在加入房间..."
+		"message": "正在加入..."
 	},
 	"app.multiplayer.status.guest-ready": {
 		"message": "已连接到房间"
@@ -3567,7 +3567,7 @@
 		"message": "玩家"
 	},
 	"app.multiplayer.players-in-room": {
-		"message": "房间内 {count} 名玩家"
+		"message": "{count} 位玩家在房间中"
 	},
 	"app.multiplayer.not-running": {
 		"message": "联机服务未运行。请创建房间或加入房间以开始联机。"
@@ -3576,7 +3576,7 @@
 		"message": "开始联机会话"
 	},
 	"app.multiplayer.share-code": {
-		"message": "将此房间码分享给好友，让他们加入："
+		"message": "将此代码分享给好友："
 	},
 	"app.multiplayer.host-label": {
 		"message": "房主"
@@ -3588,7 +3588,7 @@
 		"message": "当前平台：{platform}"
 	},
 	"app.multiplayer.binary-not-found": {
-		"message": "未找到陶瓦联机程序，请下载后放置在以下路径："
+		"message": "未找到陶瓦联机程序，请放置于："
 	},
 	"app.multiplayer.download-terracotta": {
 		"message": "下载陶瓦联机"
@@ -3600,7 +3600,7 @@
 		"message": "严重错误"
 	},
 	"app.multiplayer.status.guest-starting": {
-		"message": "正在加入..."
+		"message": "正在连接..."
 	},
 	"app.multiplayer.status.host-starting": {
 		"message": "正在启动主机..."
@@ -3609,7 +3609,7 @@
 		"message": "等待中..."
 	},
 	"app.multiplayer.check-network": {
-		"message": "检查您的网络连接"
+		"message": "检查网络连接"
 	},
 	"app.multiplayer.connecting": {
 		"message": "连接中..."
