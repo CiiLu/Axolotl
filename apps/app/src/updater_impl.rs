@@ -100,10 +100,7 @@ pub async fn check_app_update<R: Runtime>(
 }
 
 /// 获取便携版的更新信息（下载 URL 和签名）
-async fn get_portable_update(
-    update: &Arc<Update>,
-    source: &str,
-) -> Result<Arc<Update>> {
+async fn get_portable_update(update: &Update, source: &str) -> Result<Update> {
     let version = &update.version;
 
     let (portable_url, portable_sig_url) = match source {
@@ -134,13 +131,13 @@ async fn get_portable_update(
     // 下载签名文件
     let signature = download_signature(&portable_sig_url).await?;
 
-    let mut portable_update = (*update).clone();
+    let mut portable_update = update.clone();
     portable_update.download_url = Url::parse(&portable_url).map_err(|e| {
         theseus::Error::from(theseus::ErrorKind::OtherError(e.to_string()))
     })?;
     portable_update.signature = signature;
 
-    Ok(Arc::new(portable_update))
+    Ok(portable_update)
 }
 
 /// 下载签名文件内容
