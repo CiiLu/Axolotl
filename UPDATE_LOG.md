@@ -27,3 +27,7 @@
 - 联机功能支持自动检测并下载陶瓦联机二进制文件（自动匹配平台/架构，显示下载进度）
 - 修复联机页面组件导入错误（CopyButton→CopyCode, Input→StyledInput）
 - 重构陶瓦联机 API（`terracotta.rs`）：移除 `TheseusError` 别名导入、统一使用 `theseus::Error::from` 错误转换、修复 `parse_room_code` 返回值类型不匹配问题
+- 修复陶瓦联机下载完成后进度条停留未满的问题：下载结束前先将进度设为 100% 并短暂停留，让前端正确显示完成状态，再清除进度
+- 优化陶瓦联机下载流程：下载完成后自动启动陶瓦联机进程，用户无需再手动点击「启动」即可进入托管/加入房间
+- 重构陶瓦联机后端 API（`terracotta.rs`）：将所有 Tauri 命令从 struct-based 参数改为扁平化参数传递；移除 `Deserialize` 导入和 5 个仅用于参数接收的 struct（`TerracottaStartArgs`、`TerracottaHostArgs`、`TerracottaJoinArgs`、`TerracottaParseRoomCodeArgs`、`TerracottaDownloadUrlArgs`）
+- 联机页面前端调整：移除 `terracotta_host` 调用中多余的 `roomCode: null` 参数
