@@ -171,29 +171,36 @@ jobs:
             # Create empty .Axolotl folder to trigger portable mode
             New-Item -ItemType Directory -Force -Path "$buildDir\Axolotl\.Axolotl" | Out-Null
 
-            # Create portable zip (for both manual download and Tauri auto-update)
+            # Create portable zip (for manual download)
             $zipName = "Axolotl_portable_${version}_x64.zip"
             Compress-Archive -Path "$buildDir\Axolotl" -DestinationPath "$outDir\$zipName" -Force
-            Write-Output "Created portable: $outDir\$zipName"
+            Write-Output "Created portable zip: $outDir\$zipName"
 
-            # Sign and upload portable zip
-            $zipPath = "$outDir\$zipName"
-            $zipPath = Resolve-Path $zipPath
-            $keyFile = "$env:TEMP\private.key"
-            Set-Content -Path $keyFile -Value $env:TAURI_SIGNING_PRIVATE_KEY -NoNewline
+            # Create portable exe (for Tauri auto-update, .bin avoids exposing raw .exe in Release)
+            $exeName = "Axolotl_portable_${version}_x64.bin"
+            Copy-Item -Force $appExe "$outDir\$exeName"
+            Write-Output "Created portable exe: $outDir\$exeName"
+
+            # Sign the portable exe
+            $exePath = Resolve-Path "$outDir\$exeName"
 
             cd apps/app
-            pnpm tauri signer sign -k $keyFile --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$zipPath"
+            pnpm tauri signer sign --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$exePath"
             cd ../..
 
-            $sigPath = "${zipPath}.sig"
+            $sigPath = "${exePath}.sig"
             if (Test-Path $sigPath) {
-              gh release upload "${{ github.ref_name }}" $zipPath --clobber
+              gh release upload "${{ github.ref_name }}" $exePath --clobber
               gh release upload "${{ github.ref_name }}" $sigPath --clobber
-              Write-Output "Uploaded $zipName and signature"
+              Write-Output "Uploaded portable exe $exeName and signature"
             } else {
-              Write-Warning "Signature file not generated for $zipName"
+              Write-Error "Signature file not generated for $exeName"
+              exit 1
             }
+
+            # Upload portable zip (for manual download only, no signature needed)
+            $zipPath = Resolve-Path "$outDir\$zipName"
+            gh release upload "${{ github.ref_name }}" "$zipPath" --clobber
           } else {
             Write-Warning "Binary not found at $appExe"
           }

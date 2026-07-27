@@ -106,18 +106,18 @@ async fn get_portable_update(update: &Update, source: &str) -> Result<Update> {
     let (portable_url, portable_sig_url) = match source {
         "github" | "official" => (
             format!(
-                "https://github.com/Mystic-Stars/Axolotl/releases/download/v{version}/Axolotl_portable_{version}_x64.zip"
+                "https://github.com/Mystic-Stars/Axolotl/releases/download/v{version}/Axolotl_portable_{version}_x64.bin"
             ),
             format!(
-                "https://github.com/Mystic-Stars/Axolotl/releases/download/v{version}/Axolotl_portable_{version}_x64.zip.sig"
+                "https://github.com/Mystic-Stars/Axolotl/releases/download/v{version}/Axolotl_portable_{version}_x64.bin.sig"
             ),
         ),
         "cnb" => (
             format!(
-                "https://cnb.cool/axlmc/Axolotl/-/releases/download/v{version}/Axolotl_portable_{version}_x64.zip"
+                "https://cnb.cool/axlmc/Axolotl/-/releases/download/v{version}/Axolotl_portable_{version}_x64.bin"
             ),
             format!(
-                "https://cnb.cool/axlmc/Axolotl/-/releases/download/v{version}/Axolotl_portable_{version}_x64.zip.sig"
+                "https://cnb.cool/axlmc/Axolotl/-/releases/download/v{version}/Axolotl_portable_{version}_x64.bin.sig"
             ),
         ),
         _ => {
