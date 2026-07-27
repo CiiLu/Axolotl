@@ -151,6 +151,10 @@ jobs:
 
       - name: Build portable zip (Windows only)
         if: runner.os == 'Windows'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}" -replace '^v', ''
@@ -168,34 +172,19 @@ jobs:
             New-Item -ItemType Directory -Force -Path "$buildDir\Axolotl\.Axolotl" | Out-Null
 
             # Create portable zip (for both manual download and Tauri auto-update)
-            # Tauri updater only extracts and replaces the binary, ignoring .Axolotl folder
             $zipName = "Axolotl_portable_${version}_x64.zip"
             Compress-Archive -Path "$buildDir\Axolotl" -DestinationPath "$outDir\$zipName" -Force
             Write-Output "Created portable: $outDir\$zipName"
-          } else {
-            Write-Warning "Binary not found at $appExe"
-          }
 
-      - name: Sign and upload portable assets
-        if: runner.os == 'Windows'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        shell: pwsh
-        run: |
-          $version = "${{ github.ref_name }}" -replace '^v', ''
-          $zipName = "Axolotl_portable_${version}_x64.zip"
-          $outDir = "target/release/bundle/nsis"
-
-          $zipPath = "$outDir\$zipName"
-          if (Test-Path $zipPath) {
-            # Write private key to temp file
+            # Sign and upload portable zip
+            $zipPath = "$outDir\$zipName"
+            $zipPath = Resolve-Path $zipPath
             $keyFile = "$env:TEMP\private.key"
             Set-Content -Path $keyFile -Value $env:TAURI_SIGNING_PRIVATE_KEY -NoNewline
 
-            # Generate signature
+            cd apps/app
             pnpm tauri signer sign -k $keyFile --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$zipPath"
+            cd ../..
 
             $sigPath = "${zipPath}.sig"
             if (Test-Path $sigPath) {
@@ -206,7 +195,7 @@ jobs:
               Write-Warning "Signature file not generated for $zipName"
             }
           } else {
-            Write-Warning "Portable zip not found at $zipPath"
+            Write-Warning "Binary not found at $appExe"
           }
 
   verify-and-publish:
