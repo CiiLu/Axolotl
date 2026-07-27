@@ -250,7 +250,6 @@ const {
 	setModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance,
-	onImportFileReceived,
 	fileDrop,
 } = setupProviders(notificationManager, popupNotificationManager)
 
@@ -372,6 +371,73 @@ onUnmounted(async () => {
 
 const { formatMessage } = useVIntl()
 const formatBytes = useFormatBytes()
+
+async function onImportFileReceived({
+	file: _file,
+	filePath,
+	source: _source,
+}: {
+	file: File | null
+	filePath: string | null
+	source: 'file-picker' | 'drag-drop'
+}) {
+	if (!filePath) return
+
+	const fileName = filePath.split(/[/\\]/).pop() || 'file'
+
+	// ── Hide creation modal first ──
+	installationModal.value?.hide()
+
+	// ── Show "Processing..." (matches drag-drop behavior) ──
+	const processingNotify = addNotification({
+		title: formatMessage(messages.dropProcessing, { name: fileName }),
+		type: 'info',
+		autoCloseMs: null,
+	})
+
+	try {
+		// ── Classify the file (same entry point as drag-drop) ──
+		const classification = await classifyDroppedItem(filePath)
+		clearDropProcessingNotification()
+		notificationManager.removeNotification(processingNotify.id)
+
+		// ── Set drop state so handleDropConfirm can read it ──
+		dropClassification.value = classification
+		dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
+		dropFileName.value = fileName
+
+		// ── Unknown + extraction → force analysis prompt ──
+		if (
+			classification.item_type === 'unknown' &&
+			classification.reason?.toLowerCase().includes('extraction')
+		) {
+			showForceAnalysisPrompt(classification)
+			return
+		}
+
+		// ── Unknown (no extraction) → error ──
+		if (classification.item_type === 'unknown') {
+			addNotification({
+				title: formatMessage(messages.dropUnknownTitle),
+				text: classification.reason
+					? classification.reason
+					: formatMessage(messages.dropUnknownText),
+				type: 'error',
+			})
+			return
+		}
+
+		// ── Known types → show the same confirm modal as drag-drop ──
+		confirmDropModal.value?.show()
+	} catch (e) {
+		notificationManager.removeNotification(processingNotify?.id)
+		addNotification({
+			title: 'Failed to process file',
+			text: e instanceof Error ? e.message : String(e),
+			type: 'error',
+		})
+	}
+}
 
 const messages = defineMessages({
 	updateInstalledToastTitle: {
