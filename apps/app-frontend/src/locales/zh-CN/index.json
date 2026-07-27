@@ -2369,6 +2369,12 @@
 	"app.skins.third-party-account.title": {
 		"message": "第三方皮肤管理"
 	},
+	"app.skins.tabs.saved": {
+		"message": "已保存皮肤"
+	},
+	"app.skins.tabs.default": {
+		"message": "官方皮肤"
+	},
 	"app.skins.preview.edit-button": {
 		"message": "编辑皮肤"
 	},
