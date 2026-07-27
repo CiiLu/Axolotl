@@ -26,3 +26,4 @@
 - 联机功能支持多平台架构自动识别（Windows/macOS/Linux x86_64/ARM64），自动匹配正确的陶瓦联机二进制文件名
 - 联机功能支持自动检测并下载陶瓦联机二进制文件（自动匹配平台/架构，显示下载进度）
 - 修复联机页面组件导入错误（CopyButton→CopyCode, Input→StyledInput）
+- 重构陶瓦联机 API（`terracotta.rs`）：移除 `TheseusError` 别名导入、统一使用 `theseus::Error::from` 错误转换、修复 `parse_room_code` 返回值类型不匹配问题
