@@ -115,13 +115,20 @@ fn main() {
                     .commands(&[
                         "get_java_versions",
                         "set_java_version",
+                        "remove_java_version",
                         "jre_find_filtered_jres",
                         "jre_get_jre",
                         "jre_test_jre",
                         "jre_auto_install_java",
+
                         "jre_get_max_memory",
                         "jre_get_memory_status",
                         "jre_optimize_memory",
+                        "list_java_distribution_versions",
+                        "list_java_feed_vendors",
+                        "list_java_feed_versions",
+                        "download_java_from_feed",
+                        "download_java",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

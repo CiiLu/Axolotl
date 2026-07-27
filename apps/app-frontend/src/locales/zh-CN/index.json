@@ -2024,6 +2024,99 @@
 	"app.settings.java.auto-high-performance-mode-description": {
 		"message": "启动 Minecraft 时，自动在 Windows 图形设置中将启动器和 Java 设为使用高性能显卡。仅支持 Windows。"
 	},
+	"app.settings.java.cancel": {
+		"message": "取消"
+	},
+	"app.settings.java.deep-scan": {
+		"message": "强力查找"
+	},
+	"app.settings.java.deep-scan-confirm": {
+		"message": "将扫描全部磁盘的全部目录，可能需要数分钟。"
+	},
+	"app.settings.java.download-java": {
+		"message": "下载 Java"
+	},
+	"app.settings.java.find-java": {
+		"message": "寻找 Java"
+	},
+	"app.settings.java.manual-add": {
+		"message": "手动添加"
+	},
+	"app.settings.java.no-versions": {
+		"message": "未配置 Java 版本，请使用下方按钮查找或添加。"
+	},
+	"app.settings.java.scan-anyway": {
+		"message": "仍然扫描"
+	},
+	"app.settings.java.scanning": {
+		"message": "扫描中……"
+	},
+	"app.settings.java.table.version": {
+		"message": "版本"
+	},
+	"app.settings.java.table.distribution": {
+		"message": "发行版"
+	},
+	"app.settings.java.table.path": {
+		"message": "路径"
+	},
+	"app.settings.java.table.actions": {
+		"message": ""
+	},
+	"app.settings.java.download.select-version": {
+		"message": "选择 Java 版本："
+	},
+	"app.settings.java.download.select-vendor": {
+		"message": "选择发行版："
+	},
+	"app.settings.java.download.no-vendors": {
+		"message": "没有可用的发行版。"
+	},
+	"app.settings.java.download.select-version-feed": {
+		"message": "选择 {vendor} 的版本："
+	},
+	"app.settings.java.download.progress-title": {
+		"message": "正在下载 Java"
+	},
+	"app.settings.java.download.progress-info": {
+		"message": "正在从 {distribution} 下载 Java {version}"
+	},
+	"app.settings.java.download.preparing": {
+		"message": "准备下载……"
+	},
+	"app.settings.java.download.extracting": {
+		"message": "正在解压文件……"
+	},
+	"app.settings.java.download.extracting.status": {
+		"message": "正在解压文件……"
+	},
+	"app.settings.java.download.background": {
+		"message": "放在后台"
+	},
+	"app.settings.java.download.background-hint": {
+		"message": "下载在后台继续——可在下载页面查看进度。"
+	},
+	"app.settings.java.download.version-label": {
+		"message": "Java {version}"
+	},
+	"app.settings.java.download.cancelling": {
+		"message": "取消中……"
+	},
+	"app.settings.java.download.downloading-label": {
+		"message": "下载中……"
+	},
+	"app.settings.java.download.back": {
+		"message": "返回发行版列表"
+	},
+	"app.settings.java.download.loading": {
+		"message": "加载中……"
+	},
+	"app.settings.java.download.no-versions": {
+		"message": "没有可用的版本。"
+	},
+	"app.settings.java.download.title": {
+		"message": "下载 Java"
+	},
 	"app.settings.resources.app-cache": {
 		"message": "应用缓存"
 	},
@@ -2896,6 +2989,12 @@
 	},
 	"instance.settings.tabs.java.version": {
 		"message": "Java {version} 版"
+	},
+	"instance.settings.tabs.java.auto-label": {
+		"message": "自动（推荐）"
+	},
+	"instance.settings.tabs.java.custom-label": {
+		"message": "自定义路径……"
 	},
 	"instance.settings.tabs.window": {
 		"message": "游戏窗口"

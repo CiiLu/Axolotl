@@ -157,23 +157,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			fixed: [
 				{
-					'en-US':
-						'Closing Minecraft normally no longer triggers a false crash report because of harmless errors found in the game log.',
-					'zh-CN': '正常关闭 Minecraft 时，不再因游戏日志中的非致命错误误弹崩溃报告。',
-				},
-				{
 					'en-US': 'Fixed frontend display errors during modpack import.',
 					'zh-CN': '修复整合包导入时的前端显示错误',
-				},
-				{
-					'en-US':
-						'Fixed incomplete Java downloads being detected and launched before installation finished.',
-					'zh-CN': '修复尚未安装完成的 Java 被误识别并用于启动游戏的问题。',
-				},
-				{
-					'en-US':
-						'The launcher now finishes opening without waiting for an unavailable automatic translation service to time out.',
-					'zh-CN': '自动翻译服务不可用时，启动器现在无需等待请求超时即可完成启动。',
 				},
 			],
 		},
@@ -195,17 +180,6 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			fixed: [
-				{
-					'en-US':
-						'Transparent launcher windows now keep rounded corners instead of showing a square frame.',
-					'zh-CN': '透明背景开启后，启动器窗口现在会保持圆角，不再显示为直角边框。',
-				},
-				{
-					'en-US':
-						'Fixed instance imports opened from the folder picker or drag and drop, including .minecraft folders, launcher shortcuts, instances stored outside launcher defaults, responsive cancellation, and faster local .mrpack confirmation.',
-					'zh-CN':
-						'修复通过文件夹选择器或拖拽导入实例无响应、选择弹窗无法取消及本地 .mrpack 确认弹窗出现过慢的问题，现支持 .minecraft 文件夹、启动器快捷方式及存放在非默认位置的实例。',
-				},
 				{
 					'en-US': 'Urgent fix for critical bugs in the previous version',
 					'zh-CN': '紧急修复上个版本严重bug',
