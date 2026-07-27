@@ -249,6 +249,16 @@ async function resetState() {
 	}
 }
 
+async function downloadTerracotta() {
+	errorMessage.value = ''
+	try {
+		await invoke('plugin:terracotta|terracotta_download', { version: null as any })
+		pollInterval = setInterval(pollState, 1000)
+	} catch (e: any) {
+		errorMessage.value = String(e)
+	}
+}
+
 onMounted(async () => {
 	await pollState()
 	try {
@@ -364,6 +374,9 @@ onUnmounted(() => {
 						{{ binaryPathHint }}
 					</code>
 				</div>
+				<Button class="mt-3" size="small" @click="downloadTerracotta">
+					{{ formatMessage(messages.downloadTerracotta) }}
+				</Button>
 			</div>
 
 			<div class="bg-bg-raised rounded-xl border border-surface-5 overflow-hidden">

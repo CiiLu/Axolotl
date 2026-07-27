@@ -14,6 +14,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 			terracotta_parse_room_code,
 			terracotta_get_platform_key,
 			terracotta_get_download_url,
+			terracotta_download,
 		])
 		.build()
 }
@@ -142,4 +143,18 @@ pub async fn terracotta_get_download_url(args: TerracottaDownloadUrlArgs) -> Res
 		version = args.version,
 		key = key,
 	))
+}
+
+#[derive(Deserialize)]
+pub struct TerracottaDownloadArgs {
+	#[serde(default)]
+	pub version: Option<String>,
+}
+
+#[tauri::command]
+pub async fn terracotta_download(args: TerracottaDownloadArgs) -> Result<()> {
+	theseus::terracotta::download_terracotta(args.version)
+		.await
+		.map_err(theseus::Error::from)?;
+	Ok(())
 }

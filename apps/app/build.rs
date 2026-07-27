@@ -414,6 +414,7 @@ fn main() {
 						"terracotta_parse_room_code",
 						"terracotta_get_platform_key",
 						"terracotta_get_download_url",
+						"terracotta_download",
 					])
 					.default_permission(
 						DefaultPermissionRule::AllowAllCommands,
