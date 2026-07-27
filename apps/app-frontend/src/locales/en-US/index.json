@@ -3550,5 +3550,11 @@
 	},
 	"app.skins.favorites.error-duplicate-name": {
 		"message": "A favorite folder with this name already exists."
+	},
+	"app.skins.favorites.create-title": {
+		"message": "Create favorite folder"
+	},
+	"app.skins.favorites.create-confirm": {
+		"message": "Create folder"
 	}
 }

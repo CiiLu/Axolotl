@@ -3568,5 +3568,11 @@
 	},
 	"app.skins.favorites.error-duplicate-name": {
 		"message": "已存在同名收藏夹。"
+	},
+	"app.skins.favorites.create-title": {
+		"message": "创建收藏夹"
+	},
+	"app.skins.favorites.create-confirm": {
+		"message": "创建收藏夹"
 	}
 }
