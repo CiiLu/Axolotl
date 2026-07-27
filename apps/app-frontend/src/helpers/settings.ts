@@ -71,6 +71,9 @@ export type AppSettings = {
 	custom_background_path: string | null
 	custom_background_blur: number
 	custom_background_opacity: number
+	transparent_background: boolean
+	transparent_background_opacity: number
+	transparent_background_blur: boolean
 	sidebar_instance_count: number
 
 	telemetry: boolean
@@ -85,6 +88,7 @@ export type AppSettings = {
 	force_fullscreen: boolean
 	game_resolution: WindowSize
 	hide_on_process_start: boolean
+	auto_set_java_high_performance_mode: boolean
 	hooks: Hooks
 
 	custom_dir?: string | null
@@ -121,6 +125,7 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 		enabled ? 'mirror_preferred' : 'official_only'
 
 	settings.auto_concurrent_downloads ??= true
+	settings.auto_set_java_high_performance_mode ??= true
 	settings.minecraft_metadata_source ??=
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_minecraft_mirror)
 	settings.minecraft_file_source ??=

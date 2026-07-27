@@ -23,11 +23,21 @@ pub mod curseforge;
 pub mod gdlauncher;
 pub(crate) mod generic;
 pub mod hmcl;
+pub mod hmcl_config;
 mod instance_json;
 pub mod mmc;
 mod modrinth_app;
 mod pcl;
-mod pe_info;
+pub use pcl::config_exists;
+pub use pcl::read_pcl_registry;
+pub mod pe_info;
+
+/// A scanned importable instance with its resolved filesystem path.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportableInstance {
+    pub name: String,
+    pub path: String,
+}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ImportLauncherType {
@@ -69,9 +79,16 @@ impl fmt::Display for ImportLauncherType {
 pub async fn get_importable_instances(
     launcher_type: ImportLauncherType,
     base_path: PathBuf,
-) -> crate::Result<Vec<String>> {
+) -> crate::Result<Vec<ImportableInstance>> {
     if launcher_type == ImportLauncherType::ModrinthApp {
-        return modrinth_app::get_importable_instances(base_path).await;
+        let names = modrinth_app::get_importable_instances(base_path).await?;
+        return Ok(names
+            .into_iter()
+            .map(|n| ImportableInstance {
+                name: n.clone(),
+                path: n,
+            })
+            .collect());
     }
     // Some launchers have a different folder structure for instances
     let instances_subfolder = match launcher_type {
@@ -90,64 +107,76 @@ pub async fn get_importable_instances(
         .await
         .unwrap_or_else(|| "instances".to_string()),
         ImportLauncherType::ModrinthApp => unreachable!("handled above"),
-        ImportLauncherType::PCL2 => {
+        ImportLauncherType::PCL2 | ImportLauncherType::PCL2CE => {
             if !pe_info::folder_has_product(&base_path, "Plain Craft Launcher")
-                || pcl::read_pcl_registry().is_none()
             {
                 return Ok(Vec::new());
             }
-            let mut names = Vec::new();
-            for (name, path) in pcl::get_pcl_instances() {
-                names.extend(
-                    scan_instances_at(&PathBuf::from(path), Some(&name))
-                        .await
-                        .into_iter()
-                        .map(|(n, _)| n),
-                );
+            let mut instances = Vec::new();
+            let mut seen = std::collections::HashSet::new();
+            // Try both PCL2 registry and PCLCE config — the user may have
+            // instances registered in either or both sources.
+            if pcl::read_pcl_registry().is_some() {
+                for (name, dir) in pcl::get_pcl_instances() {
+                    for (iname, ipath) in
+                        scan_instances_at(&PathBuf::from(dir), Some(&name))
+                            .await
+                    {
+                        if seen.insert(ipath.clone()) {
+                            instances.push(ImportableInstance {
+                                name: iname,
+                                path: ipath.to_string_lossy().to_string(),
+                            });
+                        }
+                    }
+                }
             }
-            return Ok(names);
-        }
-        ImportLauncherType::PCL2CE => {
-            if !pe_info::folder_has_product(&base_path, "Plain Craft Launcher")
-                || !pcl::config_exists()
-            {
-                return Ok(Vec::new());
+            if pcl::config_exists() {
+                for (name, dir) in pcl::get_pclce_instances() {
+                    for (iname, ipath) in
+                        scan_instances_at(&PathBuf::from(dir), Some(&name))
+                            .await
+                    {
+                        if seen.insert(ipath.clone()) {
+                            instances.push(ImportableInstance {
+                                name: iname,
+                                path: ipath.to_string_lossy().to_string(),
+                            });
+                        }
+                    }
+                }
             }
-            let mut names = Vec::new();
-            for (name, path) in pcl::get_pclce_instances() {
-                names.extend(
-                    scan_instances_at(&PathBuf::from(path), Some(&name))
-                        .await
-                        .into_iter()
-                        .map(|(n, _)| n),
-                );
-            }
-            return Ok(names);
+            return Ok(instances);
         }
         ImportLauncherType::HMCL => {
             if !hmcl::config_exists(&base_path) {
                 return Ok(Vec::new());
             }
-            let mut names = Vec::new();
+            let mut instances = Vec::new();
             for (name, path) in hmcl::get_instances(&base_path) {
-                names.extend(
-                    scan_instances_at(&PathBuf::from(path), Some(&name))
-                        .await
-                        .into_iter()
-                        .map(|(n, _)| n),
-                );
+                for (iname, ipath) in
+                    scan_instances_at(&PathBuf::from(path), Some(&name)).await
+                {
+                    instances.push(ImportableInstance {
+                        name: iname,
+                        path: ipath.to_string_lossy().to_string(),
+                    });
+                }
             }
-            return Ok(names);
+            return Ok(instances);
         }
         ImportLauncherType::Generic => {
             return Ok(scan_instances_at(&base_path, None)
                 .await
                 .into_iter()
-                .map(|(n, _)| n)
+                .map(|(n, p)| ImportableInstance {
+                    name: n,
+                    path: p.to_string_lossy().to_string(),
+                })
                 .collect());
         }
         ImportLauncherType::Unknown => {
-            let mut names: Vec<String> = Vec::new();
+            let mut instances: Vec<ImportableInstance> = Vec::new();
             let mut seen: std::collections::HashSet<PathBuf> =
                 std::collections::HashSet::new();
 
@@ -160,8 +189,11 @@ pub async fn get_importable_instances(
                         scan_instances_at(&PathBuf::from(dir), Some(&name))
                             .await
                     {
-                        if seen.insert(ipath) {
-                            names.push(iname);
+                        if seen.insert(ipath.clone()) {
+                            instances.push(ImportableInstance {
+                                name: iname,
+                                path: ipath.to_string_lossy().to_string(),
+                            });
                         }
                     }
                 }
@@ -176,8 +208,11 @@ pub async fn get_importable_instances(
                         scan_instances_at(&PathBuf::from(dir), Some(&name))
                             .await
                     {
-                        if seen.insert(ipath) {
-                            names.push(iname);
+                        if seen.insert(ipath.clone()) {
+                            instances.push(ImportableInstance {
+                                name: iname,
+                                path: ipath.to_string_lossy().to_string(),
+                            });
                         }
                     }
                 }
@@ -190,8 +225,11 @@ pub async fn get_importable_instances(
                         scan_instances_at(&PathBuf::from(dir), Some(&name))
                             .await
                     {
-                        if seen.insert(ipath) {
-                            names.push(iname);
+                        if seen.insert(ipath.clone()) {
+                            instances.push(ImportableInstance {
+                                name: iname,
+                                path: ipath.to_string_lossy().to_string(),
+                            });
                         }
                     }
                 }
@@ -206,8 +244,11 @@ pub async fn get_importable_instances(
                 .await
                 .unwrap_or_default();
                 for (iname, ipath) in pairs {
-                    if seen.insert(ipath) {
-                        names.push(iname);
+                    if seen.insert(ipath.clone()) {
+                        instances.push(ImportableInstance {
+                            name: iname,
+                            path: ipath.to_string_lossy().to_string(),
+                        });
                     }
                 }
             }
@@ -222,7 +263,7 @@ pub async fn get_importable_instances(
                 ImportLauncherType::Curseforge,
             ];
             for lt in other_types {
-                if let Ok(instances) =
+                if let Ok(found) =
                     Box::pin(get_importable_instances(lt, base_path.clone()))
                         .await
                 {
@@ -252,22 +293,38 @@ pub async fn get_importable_instances(
                         }
                         _ => unreachable!(),
                     };
-                    for instance in instances {
-                        let ipath = instances_folder.join(&instance);
-                        if seen.insert(ipath) {
-                            names.push(instance);
+                    for inst in found {
+                        let ipath = instances_folder.join(&inst.name);
+                        if seen.insert(ipath.clone()) {
+                            instances.push(ImportableInstance {
+                                name: inst.name,
+                                path: ipath.to_string_lossy().to_string(),
+                            });
                         }
                     }
                 }
             }
 
-            names.sort();
-            return Ok(names);
+            // Generic fallback: scan versions/ subdirectory and base path
+            // for instance.json files (handles .minecraft and other unrecognized launchers)
+            if instances.is_empty() {
+                instances.extend(
+                    scan_instances_at(&base_path, None).await.into_iter().map(
+                        |(n, p)| ImportableInstance {
+                            name: n,
+                            path: p.to_string_lossy().to_string(),
+                        },
+                    ),
+                );
+            }
+
+            instances.sort_by(|a, b| a.name.cmp(&b.name));
+            return Ok(instances);
         }
     };
 
     let instances_folder = base_path.join(&instances_subfolder);
-    let mut instances = Vec::new();
+    let mut result = Vec::new();
     let mut dir = io::read_dir(&instances_folder).await.map_err(|_| {
         crate::ErrorKind::InputError(format!(
             "Invalid {launcher_type} launcher path, could not find '{instances_subfolder}' subfolder."
@@ -279,16 +336,20 @@ pub async fn get_importable_instances(
         .map_err(|e| IOError::with_path(e, &instances_folder))?
     {
         let path = entry.path();
-        if path.is_dir() {
-            if is_valid_importable_instance(path.clone(), launcher_type).await {
-                let name = path.file_name();
-                if let Some(name) = name {
-                    instances.push(name.to_string_lossy().to_string());
-                }
+        if path.is_dir()
+            && is_valid_importable_instance(path.clone(), launcher_type).await
+        {
+            let name = path.file_name();
+            if let Some(name) = name {
+                let name = name.to_string_lossy().to_string();
+                result.push(ImportableInstance {
+                    path: path.to_string_lossy().to_string(),
+                    name,
+                });
             }
         }
     }
-    Ok(instances)
+    Ok(result)
 }
 
 async fn scan_instances_at(
@@ -314,25 +375,24 @@ async fn scan_instances_at(
         ));
     }
     let versions_dir = path.join("versions");
-    if versions_dir.is_dir() {
-        if let Ok(mut dir) = io::read_dir(&versions_dir).await {
-            while let Ok(Some(entry)) = dir.next_entry().await {
-                if entry.path().is_dir()
-                    && instance_json::detect(&entry.path()).is_some()
-                {
-                    if let Some(name) = entry.path().file_name() {
-                        let name = name.to_string_lossy().to_string();
-                        let ipath = entry.path();
-                        instances.push((
-                            if let Some(pre) = prefix {
-                                format!("{pre}:versions/{name}")
-                            } else {
-                                format!("versions/{name}")
-                            },
-                            ipath,
-                        ));
-                    }
-                }
+    if versions_dir.is_dir()
+        && let Ok(mut dir) = io::read_dir(&versions_dir).await
+    {
+        while let Ok(Some(entry)) = dir.next_entry().await {
+            if entry.path().is_dir()
+                && instance_json::detect(&entry.path()).is_some()
+                && let Some(name) = entry.path().file_name()
+            {
+                let name = name.to_string_lossy().to_string();
+                let ipath = entry.path();
+                instances.push((
+                    if let Some(pre) = prefix {
+                        format!("{pre}:versions/{name}")
+                    } else {
+                        format!("versions/{name}")
+                    },
+                    ipath,
+                ));
             }
         }
     }
@@ -389,6 +449,7 @@ pub(crate) async fn import_instance_with_reporter(
     launcher_type: ImportLauncherType,
     base_path: PathBuf,
     instance_folder: String,
+    instance_path: Option<String>,
     reporter: InstallProgressReporter,
     symlink: bool,
 ) -> crate::Result<()> {
@@ -397,6 +458,7 @@ pub(crate) async fn import_instance_with_reporter(
         launcher_type,
         base_path,
         instance_folder,
+        instance_path,
         reporter,
         symlink,
     )
@@ -408,11 +470,12 @@ async fn import_instance_inner(
     launcher_type: ImportLauncherType,
     base_path: PathBuf,
     instance_folder: String,
+    instance_path: Option<String>,
     reporter: InstallProgressReporter,
     symlink: bool,
 ) -> crate::Result<()> {
     tracing::debug!(
-        "Importing instance from {instance_folder} (symlink={symlink})"
+        "Importing instance from {instance_folder} (symlink={symlink}, launcher_type={launcher_type})"
     );
     let details = InstallPhaseDetails::Import {
         launcher_type,
@@ -472,29 +535,33 @@ async fn import_instance_inner(
             )
             .await
         }
-        ImportLauncherType::PCL2 => {
-            import_configured_instance(
-                instance_id,
-                base_path,
-                instance_folder,
-                |name| pcl::get_pcl_instance_path(name),
-                reporter.clone(),
-                details.clone(),
-                symlink,
-            )
-            .await
-        }
-        ImportLauncherType::PCL2CE => {
-            import_configured_instance(
-                instance_id,
-                base_path,
-                instance_folder,
-                |name| pcl::get_pclce_instance_path(name),
-                reporter.clone(),
-                details.clone(),
-                symlink,
-            )
-            .await
+        ImportLauncherType::PCL2 | ImportLauncherType::PCL2CE => {
+            if let Some(path) = instance_path {
+                // Pre-resolved path from frontend scanning — skip re-resolution
+                generic::import_generic(
+                    PathBuf::from(path),
+                    instance_id,
+                    reporter.clone(),
+                    details.clone(),
+                    symlink,
+                )
+                .await
+            } else {
+                // Legacy fallback: resolve from config/registry
+                import_configured_instance(
+                    instance_id,
+                    base_path,
+                    instance_folder,
+                    |name| {
+                        pcl::get_pcl_instance_path(name)
+                            .or_else(|| pcl::get_pclce_instance_path(name))
+                    },
+                    reporter.clone(),
+                    details.clone(),
+                    symlink,
+                )
+                .await
+            }
         }
         ImportLauncherType::HMCL => {
             import_configured_instance(
@@ -536,14 +603,15 @@ async fn import_instance_inner(
                 if let Ok(instances) =
                     Box::pin(get_importable_instances(lt, base_path.clone()))
                         .await
-                    && instances.contains(&instance_folder)
+                    && instances.iter().any(|i| i.name == instance_folder)
                 {
                     matched = true;
                     Box::pin(import_instance_inner(
                         instance_id,
                         lt,
-                        base_path,
-                        instance_folder,
+                        base_path.clone(),
+                        instance_folder.clone(),
+                        None, // unknown type — let the specific branch resolve the path
                         reporter.clone(),
                         symlink,
                     ))
@@ -757,9 +825,8 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
     let files: Vec<PathBuf> = files
         .into_iter()
         .filter(|abs_path| {
-            let rel = match abs_path.strip_prefix(&dotminecraft) {
-                Ok(r) => r,
-                Err(_) => return true,
+            let Ok(rel) = abs_path.strip_prefix(&dotminecraft) else {
+                return true;
             };
             // Only filter at root level
             if rel.parent().is_some_and(|p| !p.as_os_str().is_empty()) {
@@ -787,7 +854,7 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
     }
 
     // Build (src, dst) pairs, then copy concurrently bounded by IoSemaphore
-    let pairs: Vec<(PathBuf, PathBuf)> = files
+    let mut copy_tasks: FuturesUnordered<_> = files
         .iter()
         .map(|src| {
             let dst = instance_path.join(
@@ -796,25 +863,20 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
             );
             (src.clone(), dst)
         })
-        .collect();
-
-    let mut copy_tasks: FuturesUnordered<_> = pairs
-        .into_iter()
         .map(|(src, dst)| {
             async move {
                 // Skip copying if destination file exists and is identical
-                if tokio::fs::metadata(&dst).await.is_ok() {
-                    if let (Ok(src_meta), Ok(dst_meta)) = (
+                if tokio::fs::metadata(&dst).await.is_ok()
+                    && let (Ok(src_meta), Ok(dst_meta)) = (
                         tokio::fs::metadata(&src).await,
                         tokio::fs::metadata(&dst).await,
-                    ) {
-                        // If files have identical size and modification time, skip copying
-                        if src_meta.len() == dst_meta.len()
-                            && src_meta.modified().ok()
-                                == dst_meta.modified().ok()
-                        {
-                            return Ok::<_, crate::Error>(());
-                        }
+                    )
+                {
+                    // If files have identical size and modification time, skip copying
+                    if src_meta.len() == dst_meta.len()
+                        && src_meta.modified().ok() == dst_meta.modified().ok()
+                    {
+                        return Ok::<_, crate::Error>(());
                     }
                 }
 

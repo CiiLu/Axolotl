@@ -128,6 +128,10 @@ pub struct ContentFile {
     pub metadata: Option<FileMetadata>,
     pub update_version_id: Option<String>,
     pub project_type: ProjectType,
+    /// JSON-encoded `LocalModMetadata` extracted from the JAR's embedded
+    /// mod metadata file. Populated when Modrinth hash lookup provides
+    /// no match for the SHA1. Used as fallback display data.
+    pub local_mod_data: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -144,6 +148,8 @@ pub enum ProjectType {
     ResourcePack,
     #[serde(alias = "shader")]
     ShaderPack,
+    Schematic,
+    WorldSave,
 }
 
 impl ProjectType {
@@ -162,6 +168,8 @@ impl ProjectType {
             .any(|x| ["vanilla", "canvas", "minecraft"].contains(&&**x))
         {
             Some(ProjectType::ResourcePack)
+        } else if loaders.iter().any(|x| x == "litematica") {
+            Some(ProjectType::Schematic)
         } else {
             None
         }
@@ -179,6 +187,8 @@ impl ProjectType {
             "datapacks" => Some(ProjectType::DataPack),
             "resourcepacks" => Some(ProjectType::ResourcePack),
             "shaderpacks" => Some(ProjectType::ShaderPack),
+            "schematics" => Some(ProjectType::Schematic),
+            "saves" => Some(ProjectType::WorldSave),
             _ => None,
         }
     }
@@ -189,6 +199,8 @@ impl ProjectType {
             ProjectType::DataPack => "datapack",
             ProjectType::ResourcePack => "resourcepack",
             ProjectType::ShaderPack => "shader",
+            ProjectType::Schematic => "schematic",
+            ProjectType::WorldSave => "world_save",
         }
     }
 
@@ -198,6 +210,8 @@ impl ProjectType {
             ProjectType::DataPack => "datapacks",
             ProjectType::ResourcePack => "resourcepacks",
             ProjectType::ShaderPack => "shaderpacks",
+            ProjectType::Schematic => "schematics",
+            ProjectType::WorldSave => "saves",
         }
     }
 
@@ -207,6 +221,8 @@ impl ProjectType {
             ProjectType::DataPack => &["datapack"],
             ProjectType::ResourcePack => &["vanilla", "canvas", "minecraft"],
             ProjectType::ShaderPack => &["iris", "optifine"],
+            ProjectType::Schematic => &["litematica"],
+            ProjectType::WorldSave => &["vanilla"],
         }
     }
 
@@ -216,6 +232,8 @@ impl ProjectType {
             ProjectType::DataPack,
             ProjectType::ResourcePack,
             ProjectType::ShaderPack,
+            ProjectType::Schematic,
+            ProjectType::WorldSave,
         ]
         .iter()
         .copied()
@@ -229,6 +247,10 @@ impl From<ProjectType> for modrinth_content_management::ContentType {
             ProjectType::DataPack => Self::DataPack,
             ProjectType::ResourcePack => Self::ResourcePack,
             ProjectType::ShaderPack => Self::Shader,
+            // Schematic and WorldSave are local-only types that never go through
+            // Modrinth API resolution; map to Mod as a reasonable default.
+            ProjectType::Schematic => Self::Mod,
+            ProjectType::WorldSave => Self::Mod,
         }
     }
 }

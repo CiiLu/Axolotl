@@ -44,6 +44,7 @@ async-tungstenite = { version = "0.31.0", default-features = false, features = [
 ] }
 async-walkdir = "2.1.0"
 async_zip = "0.0.18"
+xz2 = "0.1.7"
 aws-sdk-s3 = { version = "=1.122.0", default-features = false, features = [
   "default-https-client",
   "rt-tokio",
@@ -211,6 +212,7 @@ tikv-jemallocator = "0.6.0"
 tokio = "1.47.1"
 tokio-stream = "0.1.17"
 tokio-util = "0.7.16"
+toml = "0.8.19"
 totp-rs = "5.7.0"
 tracing = "0.1.41"
 tracing-actix-web = { version = "0.7.19", default-features = false }

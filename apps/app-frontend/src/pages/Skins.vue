@@ -15,12 +15,12 @@ import {
 	injectAuth,
 	injectModrinthClient,
 	injectNotificationManager,
+	NavTabs,
 	SkinPreviewRenderer,
 	useVIntl,
 } from '@modrinth/ui'
 import { arrayBufferToBase64 } from '@modrinth/utils'
 import { useQuery } from '@tanstack/vue-query'
-import { type DragDropEvent, getCurrentWebview } from '@tauri-apps/api/webview'
 import { computedAsync } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
@@ -198,6 +198,14 @@ const messages = defineMessages({
 		defaultMessage:
 			'Skins for this account are managed by its Yggdrasil provider. Open the provider website to change skins or capes.',
 	},
+	savedTab: {
+		id: 'app.skins.tabs.saved',
+		defaultMessage: 'Saved skins',
+	},
+	defaultTab: {
+		id: 'app.skins.tabs.default',
+		defaultMessage: 'Official skins',
+	},
 })
 
 const editSkinModal = useTemplateRef('editSkinModal')
@@ -331,7 +339,6 @@ const hasPendingSkinChange = computed(
 
 let userCheckInterval: number | null = null
 let pendingSkinRefreshTimeout: number | null = null
-let unlistenAddSkinDragDrop: UnlistenFn | null = null
 let isUnmounted = false
 
 const isDraggingSkinFile = ref(false)
@@ -339,6 +346,18 @@ const isAddSkinButtonDragActive = ref(false)
 
 const deleteSkinModal = ref()
 const skinToDelete = ref<Skin | null>(null)
+const skinListTab = ref<'saved' | 'default'>('saved')
+
+const skinListTabLinks = computed(() => [
+	{
+		href: 'saved',
+		label: formatMessage(messages.savedTab),
+	},
+	{
+		href: 'default',
+		label: formatMessage(messages.defaultTab),
+	},
+])
 
 function confirmDeleteSkin(skin: Skin) {
 	if (isSkinManagementReadOnly.value) return
@@ -855,56 +874,6 @@ function isPositionOverAddSkinButton(position: { x: number; y: number }) {
 	return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
 }
 
-async function handleAddSkinNativeDragDrop(event: { payload: DragDropEvent }) {
-	if (isSkinManagementReadOnly.value) return
-
-	const payload = event.payload
-
-	if (payload.type === 'leave') {
-		isDraggingSkinFile.value = false
-		isAddSkinButtonDragActive.value = false
-		return
-	}
-
-	if (payload.type === 'enter') {
-		isDraggingSkinFile.value = payload.paths.some(isSkinImagePath)
-	}
-
-	if (payload.type === 'enter' || payload.type === 'over') {
-		isAddSkinButtonDragActive.value =
-			isDraggingSkinFile.value && isPositionOverAddSkinButton(payload.position)
-		return
-	}
-
-	const hasSkinPath = payload.paths.some(isSkinImagePath)
-	const shouldUpload =
-		(isDraggingSkinFile.value || hasSkinPath) && isPositionOverAddSkinButton(payload.position)
-
-	isDraggingSkinFile.value = false
-	isAddSkinButtonDragActive.value = false
-
-	if (!shouldUpload) {
-		return
-	}
-
-	const skinPath = payload.paths.find(isSkinImagePath)
-
-	if (!skinPath) {
-		return
-	}
-
-	try {
-		const data = await get_dragged_skin_data(skinPath)
-		await processSkinFileBuffer(data)
-	} catch (error) {
-		addNotification({
-			title: formatMessage(messages.droppedFileErrorTitle),
-			text: error instanceof Error ? error.message : formatMessage(messages.droppedFileErrorText),
-			type: 'error',
-		})
-	}
-}
-
 function onAddSkinDragOver(event: DragEvent) {
 	if (isSkinManagementReadOnly.value) return
 
@@ -935,21 +904,6 @@ async function onAddSkinDrop(event: DragEvent) {
 	}
 
 	await processSkinFileBuffer(await file.arrayBuffer())
-}
-
-async function setupAddSkinDragDropListener() {
-	try {
-		const unlisten = await getCurrentWebview().onDragDropEvent(handleAddSkinNativeDragDrop)
-
-		if (isUnmounted) {
-			unlisten()
-			return
-		}
-
-		unlistenAddSkinDragDrop = unlisten
-	} catch (error) {
-		handleError(error as Error)
-	}
 }
 
 async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
@@ -983,7 +937,6 @@ watch(isSkinManagementReadOnly, (readOnly) => {
 
 onMounted(() => {
 	userCheckInterval = window.setInterval(checkUserChanges, 250)
-	void setupAddSkinDragDropListener()
 })
 
 onUnmounted(() => {
@@ -995,11 +948,6 @@ onUnmounted(() => {
 	if (pendingSkinRefreshTimeout !== null) {
 		window.clearTimeout(pendingSkinRefreshTimeout)
 		pendingSkinRefreshTimeout = null
-	}
-
-	if (unlistenAddSkinDragDrop) {
-		unlistenAddSkinDragDrop()
-		unlistenAddSkinDragDrop = null
 	}
 })
 
@@ -1135,8 +1083,16 @@ await loadSkins()
 		</div>
 
 		<div class="pt-2">
+			<NavTabs
+				class="mb-4"
+				:active-index="skinListTab === 'saved' ? 0 : 1"
+				:links="skinListTabLinks"
+				mode="local"
+				@tab-click="(index: number) => { skinListTab = index === 0 ? 'saved' : 'default' }"
+			/>
 			<VirtualSkinSectionList
 				ref="skinSectionList"
+				:active-tab="skinListTab"
 				:saved-skins="savedSkins"
 				:default-skin-sections="defaultSkinSections"
 				:get-baked-skin-textures="getBakedSkinTextures"

@@ -347,8 +347,8 @@ impl Credentials {
     fn from_stored(stored: StoredCredentials) -> Self {
         let account_type =
             MinecraftAccountType::from_database(&stored.account_type);
-        let yggdrasil =
-            (account_type == MinecraftAccountType::Yggdrasil).then(|| {
+        let yggdrasil = (account_type == MinecraftAccountType::Yggdrasil)
+            .then_some({
                 YggdrasilAccount {
                     api_root: stored.yggdrasil_api_root,
                     server_name: stored.yggdrasil_server_name,

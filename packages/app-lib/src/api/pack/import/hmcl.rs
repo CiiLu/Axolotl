@@ -1,4 +1,7 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use serde::Deserialize;
 
@@ -13,7 +16,7 @@ struct HmclConfiguration {
     game_dir: String,
 }
 
-fn find_config(base_path: &PathBuf) -> Option<PathBuf> {
+fn find_config(base_path: &Path) -> Option<std::path::PathBuf> {
     let path = base_path.join(".hmcl").join("hmcl.json");
     if path.exists() {
         return Some(path);
@@ -21,25 +24,21 @@ fn find_config(base_path: &PathBuf) -> Option<PathBuf> {
     None
 }
 
-pub fn config_exists(base_path: &PathBuf) -> bool {
+pub fn config_exists(base_path: &Path) -> bool {
     find_config(base_path).is_some()
 }
 
-pub fn get_instances(base_path: &PathBuf) -> Vec<(String, String)> {
-    let config_path = match find_config(base_path) {
-        Some(p) => p,
-        None => return Vec::new(),
+pub fn get_instances(base_path: &Path) -> Vec<(String, String)> {
+    let Some(config_path) = find_config(base_path) else {
+        return Vec::new();
     };
 
-    let content = match std::fs::read_to_string(&config_path) {
-        Ok(c) => c,
-        Err(e) => {
-            tracing::warn!(
-                "hmcl: failed to read config at {}: {e}",
-                config_path.display()
-            );
-            return Vec::new();
-        }
+    let Ok(content) = std::fs::read_to_string(&config_path) else {
+        tracing::warn!(
+            "hmcl: failed to read config at {}",
+            config_path.display()
+        );
+        return Vec::new();
     };
 
     let config: HmclConfig = match serde_json::from_str(&content) {
@@ -70,7 +69,7 @@ pub fn get_instances(base_path: &PathBuf) -> Vec<(String, String)> {
 }
 
 pub fn get_instance_path(
-    base_path: &PathBuf,
+    base_path: &Path,
     instance_key: &str,
 ) -> Option<String> {
     // Reuse get_instances() to avoid parsing the config file twice.

@@ -84,5 +84,12 @@ fn is_scannable_project_file(
         ProjectType::DataPack
         | ProjectType::ResourcePack
         | ProjectType::ShaderPack => extension.eq_ignore_ascii_case("zip"),
+        ProjectType::Schematic => {
+            extension.eq_ignore_ascii_case("litematic")
+                || extension.eq_ignore_ascii_case("schematic")
+        }
+        // WorldSave folders (saves/) are handled separately via worlds.rs,
+        // not scanned as regular project files.
+        ProjectType::WorldSave => false,
     }
 }

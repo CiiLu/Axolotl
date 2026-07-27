@@ -102,6 +102,7 @@ pub(crate) struct InstanceFileRow {
     pub missing: i64,
     pub added_at: i64,
     pub modified_at: i64,
+    pub local_mod_data: Option<String>,
 }
 
 impl TryFrom<InstanceFileRow> for InstanceFile {
@@ -119,6 +120,7 @@ impl TryFrom<InstanceFileRow> for InstanceFile {
             missing: row.missing == 1,
             added_at: timestamp(row.added_at),
             modified_at: timestamp(row.modified_at),
+            local_mod_data: row.local_mod_data,
         })
     }
 }
@@ -456,6 +458,7 @@ pub(crate) async fn upsert_instance_file(
     let missing = i64::from(file.missing);
     let added_at = file.added_at.timestamp();
     let modified_at = file.modified_at.timestamp();
+    let local_mod_data = file.local_mod_data.as_deref();
 
     sqlx::query!(
         "
@@ -469,16 +472,18 @@ pub(crate) async fn upsert_instance_file(
 			size,
 			missing,
 			added_at,
-			modified_at
+			modified_at,
+			local_mod_data
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (instance_id, relative_path) DO UPDATE SET
 			file_name = excluded.file_name,
 			enabled = excluded.enabled,
 			sha1 = excluded.sha1,
 			size = excluded.size,
 			missing = excluded.missing,
-			modified_at = excluded.modified_at
+			modified_at = excluded.modified_at,
+			local_mod_data = COALESCE(excluded.local_mod_data, instance_files.local_mod_data)
 		",
         id,
         instance_id,
@@ -490,6 +495,7 @@ pub(crate) async fn upsert_instance_file(
         missing,
         added_at,
         modified_at,
+        local_mod_data,
     )
     .execute(&mut **tx)
     .await?;
@@ -550,6 +556,7 @@ pub(crate) struct UpsertInstanceFile<'a> {
     pub sha1: &'a str,
     pub size: u64,
     pub missing: bool,
+    pub local_mod_data: Option<&'a str>,
 }
 
 pub(crate) async fn get_instance_file_by_relative_path(
@@ -583,6 +590,11 @@ pub(crate) async fn upsert_instance_file_from_parts(
         pool,
     )
     .await?;
+    let local_mod_data = input
+        .local_mod_data
+        .map(ToString::to_string)
+        .or_else(|| existing.as_ref().and_then(|f| f.local_mod_data.clone()));
+
     let file = InstanceFile {
         id: existing
             .as_ref()
@@ -600,6 +612,7 @@ pub(crate) async fn upsert_instance_file_from_parts(
             .map(|file| file.added_at)
             .unwrap_or_else(Utc::now),
         modified_at: Utc::now(),
+        local_mod_data,
     };
 
     let mut tx = pool.begin().await?;
@@ -1016,6 +1029,8 @@ fn project_type_from_str(value: &str) -> crate::Result<ProjectType> {
         "datapack" => Ok(ProjectType::DataPack),
         "resourcepack" => Ok(ProjectType::ResourcePack),
         "shader" | "shaderpack" => Ok(ProjectType::ShaderPack),
+        "schematic" => Ok(ProjectType::Schematic),
+        "world_save" => Ok(ProjectType::WorldSave),
         other => Err(crate::ErrorKind::InputError(format!(
             "Unknown content project type {other}"
         ))

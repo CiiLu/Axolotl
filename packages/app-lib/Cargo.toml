@@ -93,6 +93,7 @@ symlink-rs = { workspace = true }
 sysinfo = { workspace = true, features = ["disk", "system"] }
 tauri = { workspace = true, features = ["unstable"], optional = true }
 tempfile = { workspace = true }
+tar = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = [
   "fs",
@@ -110,6 +111,7 @@ tokio-util = { workspace = true, features = [
   "rt",
   "time",
 ] }
+toml = { workspace = true }
 tracing = { workspace = true }
 tracing-error = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["chrono", "env-filter"] }
@@ -120,6 +122,7 @@ whoami = { workspace = true }
 zbus = { workspace = true }
 zhconv = { workspace = true }
 zip = { workspace = true }
+xz2 = { workspace = true }
 
 [build-dependencies]
 dotenvy = { workspace = true }
@@ -133,7 +136,11 @@ libc = { workspace = true }
 junction = { workspace = true }
 windows = { workspace = true, features = [
   "Networking_Connectivity",
-  "Win32_Storage_FileSystem"
+  "Win32_Foundation",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_System_RestartManager",
+  "Win32_UI_Shell"
 ] }
 windows-core = { workspace = true }
 winreg = { workspace = true }

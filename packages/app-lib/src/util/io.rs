@@ -3,11 +3,15 @@
 
 use eyre::{Context, ContextCompat, Result, eyre};
 use std::{
+    future::Future,
     io::{ErrorKind, Write},
     path::Path,
 };
 use tempfile::NamedTempFile;
 use tokio::task::spawn_blocking;
+use tracing::warn;
+
+use crate::util::file_lock::get_locking_processes;
 
 #[derive(Debug, thiserror::Error)]
 pub enum IOError {
@@ -43,6 +47,137 @@ impl IOError {
             IOError::IOError(source) => source.kind(),
         }
     }
+}
+
+/// Check if an `std::io::Error` is a permission / sharing-violation that may
+/// indicate another process holds a file lock. If so, attempt to detect the
+/// locking processes and return a richer `IOError` with their details appended.
+pub(crate) fn io_error_with_lock_info(
+    source: std::io::Error,
+    path: impl AsRef<std::path::Path>,
+) -> IOError {
+    let path = path.as_ref();
+    io_error_with_lock_info_for_paths(source, path, &[path])
+}
+
+pub(crate) fn io_error_with_lock_info_for_paths(
+    source: std::io::Error,
+    error_path: &Path,
+    lock_paths: &[&Path],
+) -> IOError {
+    let raw_os_error = source.raw_os_error();
+    let is_lock_error = source.kind() == ErrorKind::PermissionDenied
+        || (cfg!(windows) && raw_os_error == Some(32))
+        || (cfg!(target_os = "linux") && raw_os_error == Some(26));
+
+    if is_lock_error {
+        if let Some((locked_path, processes)) =
+            lock_paths.iter().find_map(|path| {
+                let processes = get_locking_processes(path);
+                (!processes.is_empty()).then_some((*path, processes))
+            })
+        {
+            warn!(
+                "File lock detected on {} — {} holding process(es)",
+                locked_path.display(),
+                processes.len()
+            );
+            let detail = processes
+                .iter()
+                .map(|p| {
+                    format!(
+                        "  PID {} - {} (locked path: {})",
+                        p.pid, p.name, p.path
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            let enhanced = std::io::Error::new(
+                source.kind(),
+                format!("{source}\n\nFile locked by:\n{detail}"),
+            );
+            return IOError::IOPathError {
+                source: enhanced,
+                path: error_path.to_string_lossy().to_string(),
+            };
+        }
+    }
+
+    IOError::IOPathError {
+        source,
+        path: error_path.to_string_lossy().to_string(),
+    }
+}
+
+#[cfg(windows)]
+const WINDOWS_SHARING_VIOLATION_RETRY_DELAYS: [std::time::Duration; 5] = [
+    std::time::Duration::from_millis(100),
+    std::time::Duration::from_millis(250),
+    std::time::Duration::from_millis(500),
+    std::time::Duration::from_secs(1),
+    std::time::Duration::from_secs(2),
+];
+
+#[cfg(windows)]
+pub(crate) async fn retry_windows_sharing_violation<T, F, Fut>(
+    path: &Path,
+    operation: &str,
+    action: F,
+) -> std::io::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = std::io::Result<T>>,
+{
+    retry_windows_sharing_violation_with_delays(
+        path,
+        operation,
+        &WINDOWS_SHARING_VIOLATION_RETRY_DELAYS,
+        action,
+    )
+    .await
+}
+
+#[cfg(windows)]
+async fn retry_windows_sharing_violation_with_delays<T, F, Fut>(
+    path: &Path,
+    operation: &str,
+    delays: &[std::time::Duration],
+    mut action: F,
+) -> std::io::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = std::io::Result<T>>,
+{
+    for (retry_index, delay) in delays.iter().enumerate() {
+        match action().await {
+            Err(error) if error.raw_os_error() == Some(32) => {
+                warn!(
+                    "Windows sharing violation while {operation} {}. Retry {}/{} in {} ms",
+                    path.display(),
+                    retry_index + 1,
+                    delays.len(),
+                    delay.as_millis()
+                );
+                tokio::time::sleep(*delay).await;
+            }
+            result => return result,
+        }
+    }
+
+    action().await
+}
+
+#[cfg(not(windows))]
+pub(crate) async fn retry_windows_sharing_violation<T, F, Fut>(
+    _path: &Path,
+    _operation: &str,
+    mut action: F,
+) -> std::io::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = std::io::Result<T>>,
+{
+    action().await
 }
 
 pub fn canonicalize(
@@ -97,10 +232,7 @@ pub async fn remove_dir_all(
     let path = path.as_ref();
     tokio::fs::remove_dir_all(path)
         .await
-        .map_err(|e| IOError::IOPathError {
-            source: e,
-            path: path.to_string_lossy().to_string(),
-        })
+        .map_err(|e| io_error_with_lock_info(e, path))
 }
 
 /// Reads a text file to a string, automatically detecting its encoding and
@@ -140,10 +272,7 @@ pub async fn read(
     let path = path.as_ref();
     tokio::fs::read(path)
         .await
-        .map_err(|e| IOError::IOPathError {
-            source: e,
-            path: path.to_string_lossy().to_string(),
-        })
+        .map_err(|e| io_error_with_lock_info(e, path))
 }
 
 pub async fn write(
@@ -154,10 +283,8 @@ pub async fn write(
     let data = data.as_ref().to_owned();
     spawn_blocking(move || {
         let cloned_path = path.clone();
-        sync_write(data, path).map_err(|e| IOError::IOPathError {
-            source: e,
-            path: cloned_path.to_string_lossy().to_string(),
-        })
+        sync_write(data, path)
+            .map_err(|e| io_error_with_lock_info(e, &cloned_path))
     })
     .await
     .map_err(|_| std::io::Error::other("background task failed"))??;
@@ -241,10 +368,7 @@ pub async fn rename_or_move(
     if same_disk {
         tokio::fs::rename(from, to)
             .await
-            .map_err(|e| IOError::IOPathError {
-                source: e,
-                path: from.to_string_lossy().to_string(),
-            })
+            .map_err(|e| io_error_with_lock_info(e, from))
             .wrap_err_with(|| eyre!("moving {from:?} to {to:?} on same disk"))
     } else {
         move_recursive(from, to).await.with_context(|| {
@@ -296,10 +420,67 @@ pub async fn copy(
     let to = to.as_ref();
     tokio::fs::copy(from, to)
         .await
-        .map_err(|e| IOError::IOPathError {
-            source: e,
-            path: from.to_string_lossy().to_string(),
-        })
+        .map_err(|e| io_error_with_lock_info(e, from))
+}
+
+/// Recursively copy a directory from `from` to `to`.
+///
+/// Creates the target directory and recursively copies all files and
+/// subdirectories.
+pub async fn copy_dir(
+    from: impl AsRef<std::path::Path>,
+    to: impl AsRef<std::path::Path>,
+) -> Result<(), IOError> {
+    use async_walkdir::WalkDir;
+    use futures::StreamExt as _;
+
+    let from = from.as_ref().to_path_buf();
+    let to = to.as_ref().to_path_buf();
+
+    // Create the target directory.
+    create_dir_all(&to).await?;
+
+    let mut entries = WalkDir::new(&from);
+    while let Some(entry) = entries.next().await {
+        let entry = entry.map_err(|e| {
+            IOError::with_path(std::io::Error::other(e.to_string()), &from)
+        })?;
+
+        // Skip macOS resource forks.
+        if entry
+            .file_name()
+            .to_str()
+            .map(|s| s.starts_with("__MACOSX"))
+            .unwrap_or(false)
+        {
+            continue;
+        }
+
+        let entry_path = entry.path().to_path_buf();
+        let relative = entry_path.strip_prefix(&from).map_err(|_| {
+            IOError::with_path(
+                std::io::Error::other("path prefix mismatch"),
+                &entry_path,
+            )
+        })?;
+        let target = to.join(relative);
+
+        let file_type = entry.file_type().await.map_err(|e| {
+            IOError::with_path(
+                std::io::Error::other(e.to_string()),
+                &entry_path,
+            )
+        })?;
+
+        if file_type.is_dir() {
+            create_dir_all(&target).await?;
+        } else {
+            let bytes = read(&entry_path).await?;
+            write(&target, bytes).await?;
+        }
+    }
+
+    Ok(())
 }
 
 pub async fn remove_file(
@@ -308,10 +489,7 @@ pub async fn remove_file(
     let path = path.as_ref();
     tokio::fs::remove_file(path)
         .await
-        .map_err(|e| IOError::IOPathError {
-            source: e,
-            path: path.to_string_lossy().to_string(),
-        })
+        .map_err(|e| io_error_with_lock_info(e, path))
 }
 
 pub async fn remove_dir(
@@ -320,10 +498,7 @@ pub async fn remove_dir(
     let path = path.as_ref();
     tokio::fs::remove_dir(path)
         .await
-        .map_err(|e| IOError::IOPathError {
-            source: e,
-            path: path.to_string_lossy().to_string(),
-        })
+        .map_err(|e| io_error_with_lock_info(e, path))
 }
 
 pub async fn metadata(
@@ -413,8 +588,7 @@ pub async fn create_symlink(
                         match symlink_rs::symlink_dir(&target, &link) {
                             Ok(()) => Ok(()),
                             Err(symlink_err) => Err(IOError::with_path(
-                                std::io::Error::new(
-                                    std::io::ErrorKind::Other,
+                                std::io::Error::other(
                                     format!(
                                         "junction failed: {junction_err}; symlink failed: {symlink_err}"
                                     ),
@@ -440,5 +614,85 @@ pub async fn create_symlink(
         })
         .await
         .unwrap()
+    }
+}
+
+#[cfg(all(test, windows))]
+mod windows_sharing_violation_tests {
+    use super::*;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    #[tokio::test]
+    async fn retries_sharing_violation_then_succeeds() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let action_attempts = attempts.clone();
+        let delays = [std::time::Duration::ZERO; 2];
+
+        retry_windows_sharing_violation_with_delays(
+            Path::new("locked.test"),
+            "testing",
+            &delays,
+            move || {
+                let attempt = action_attempts.fetch_add(1, Ordering::SeqCst);
+                async move {
+                    if attempt < 2 {
+                        Err(std::io::Error::from_raw_os_error(32))
+                    } else {
+                        Ok(())
+                    }
+                }
+            },
+        )
+        .await
+        .expect("third attempt succeeds");
+
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn does_not_retry_other_errors() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let action_attempts = attempts.clone();
+        let delays = [std::time::Duration::ZERO; 2];
+
+        let error = retry_windows_sharing_violation_with_delays(
+            Path::new("failed.test"),
+            "testing",
+            &delays,
+            move || {
+                action_attempts.fetch_add(1, Ordering::SeqCst);
+                async { Err::<(), _>(std::io::Error::from_raw_os_error(5)) }
+            },
+        )
+        .await
+        .expect_err("access denied must not be retried");
+
+        assert_eq!(error.raw_os_error(), Some(5));
+        assert_eq!(attempts.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn sharing_violation_retries_are_bounded() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let action_attempts = attempts.clone();
+        let delays = [std::time::Duration::ZERO; 2];
+
+        let error = retry_windows_sharing_violation_with_delays(
+            Path::new("locked.test"),
+            "testing",
+            &delays,
+            move || {
+                action_attempts.fetch_add(1, Ordering::SeqCst);
+                async { Err::<(), _>(std::io::Error::from_raw_os_error(32)) }
+            },
+        )
+        .await
+        .expect_err("sharing violation remains after retry budget");
+
+        assert_eq!(error.raw_os_error(), Some(32));
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
     }
 }

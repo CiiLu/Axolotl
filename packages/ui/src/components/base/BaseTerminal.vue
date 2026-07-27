@@ -70,29 +70,39 @@ const props = withDefaults(
 	},
 )
 
-const FROG = [
-	'\x1B[32m     _    _ \x1B[37m',
-	'\x1B[32m    (o)--(o)      \x1B[37m',
-	'\x1B[32m   /.______.\\\x1B[37m',
-	'\x1B[32m   \\________/     \x1B[37m',
-	'\x1B[32m  ./        \\.    \x1B[37m',
-	'\x1B[32m ( .        , )\x1B[37m',
-	'\x1B[32m  \\ \\_\\\\ //_/ /\x1B[37m',
-	'\x1B[32m   ~~  ~~  ~~\x1B[37m',
+const AXOLOTL = [
+	'\x1B[49m                                                   \x1B[39m',
+	'\x1B[49m       \x1B[48;5;170m     \x1B[49m                           \x1B[48;5;170m     \x1B[49m       \x1B[39m',
+	'\x1B[49m       \x1B[48;5;170m     \x1B[49m                           \x1B[48;5;170m     \x1B[49m       \x1B[39m',
+	'\x1B[49m            \x1B[48;5;170m     \x1B[49m                 \x1B[48;5;170m     \x1B[49m            \x1B[39m',
+	'\x1B[49m            \x1B[48;5;170m        \x1B[49m          \x1B[48;5;170m         \x1B[49m            \x1B[39m',
+	'\x1B[49m               \x1B[48;5;170m     \x1B[49m          \x1B[48;5;170m     \x1B[49m                \x1B[39m',
+	'\x1B[49m \x1B[48;5;170m     \x1B[49m         \x1B[48;5;170m     \x1B[49m          \x1B[48;5;170m     \x1B[49m          \x1B[48;5;170m     \x1B[49m \x1B[39m',
+	'\x1B[49m   \x1B[48;5;170m   \x1B[49m  \x1B[48;5;206m                                   \x1B[49m  \x1B[48;5;170m   \x1B[49m   \x1B[39m',
+	'\x1B[49m     \x1B[48;5;170m   \x1B[49m\x1B[48;5;206m                                   \x1B[49m\x1B[48;5;170m   \x1B[49m     \x1B[39m',
+	'\x1B[49m        \x1B[48;5;206m                                   \x1B[49m        \x1B[39m',
+	'\x1B[49m        \x1B[48;5;53m          \x1B[49m\x1B[48;5;206m               \x1B[49m\x1B[48;5;53m          \x1B[49m        \x1B[39m',
+	'\x1B[49m \x1B[48;5;170m     \x1B[49m  \x1B[48;5;53m          \x1B[49m\x1B[48;5;206m               \x1B[49m\x1B[48;5;53m          \x1B[49m  \x1B[48;5;170m     \x1B[49m \x1B[39m',
+	'\x1B[49m   \x1B[48;5;170m   \x1B[49m  \x1B[48;5;53m          \x1B[49m\x1B[48;5;206m               \x1B[49m\x1B[48;5;53m          \x1B[49m  \x1B[48;5;170m   \x1B[49m   \x1B[39m',
+	'\x1B[49m     \x1B[48;5;170m   \x1B[49m\x1B[48;5;206m             \x1B[49m\x1B[48;5;170m         \x1B[49m\x1B[48;5;206m             \x1B[49m\x1B[48;5;170m   \x1B[49m     \x1B[39m',
+	'\x1B[49m     \x1B[48;5;170m   \x1B[49m\x1B[48;5;206m             \x1B[49m\x1B[48;5;170m         \x1B[49m\x1B[48;5;206m             \x1B[49m\x1B[48;5;170m   \x1B[49m     \x1B[39m',
+	'\x1B[49m        \x1B[48;5;206m                                   \x1B[49m        \x1B[39m',
+	'\x1B[49m        \x1B[48;5;206m                                   \x1B[49m        \x1B[39m',
+	'\x1B[49m                                                   \x1B[39m',
 ]
 
 const EMPTY_STATE_BUBBLES: Record<string, string[]> = {
 	server: [
-		'   __________________________________________________',
-		' /  Welcome to your \x1B[32mModrinth Server\x1B[37m!                  \\',
-		'|   Press the green start button to start your server! |',
-		' \\____________________________________________________/',
+		'   ______________________________________________________',
+		' /  欢迎使用 Modrinth 服务器！                          \\',
+		'|   点击绿色启动按钮即可启动服务器！                    |',
+		' \\______________________________________________________/',
 	],
 	instance: [
-		'   _____________________________________________________________',
-		' /  Start your instance in the top right to start               \\',
-		'|   receiving live logs!                                        |',
-		' \\_____________________________________________________________/',
+		'   ____________________________________________________',
+		' /  请点击右上角 开始游戏 按钮                         \\',
+		'|   即可接收实时日志！                                 |',
+		' \\____________________________________________________/',
 	],
 }
 
@@ -136,7 +146,7 @@ function writeEmptyState() {
 	terminal.value.reset()
 	const bubble = EMPTY_STATE_BUBBLES[props.emptyStateType]
 	if (bubble) {
-		for (const line of [...bubble, ...FROG]) {
+		for (const line of [...bubble, ...AXOLOTL]) {
 			terminal.value.writeln(line)
 		}
 	}

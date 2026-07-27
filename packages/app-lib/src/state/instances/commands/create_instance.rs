@@ -299,8 +299,10 @@ fn content_source_kind(link: &InstanceLink) -> ContentSourceKind {
 }
 
 fn sanitize_instance_name(input: &str) -> String {
-    input.replace(
-        ['/', '\\', '?', '*', ':', '\'', '\"', '|', '<', '>', '!'],
-        "_",
-    )
+    input
+        .trim()
+        .replace(
+            ['/', '\\', '?', '*', ':', '\'', '\"', '|', '<', '>', '!'],
+            "_",
+        )
 }

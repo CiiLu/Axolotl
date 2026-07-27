@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { AuthFeature, TauriModrinthClient, VerboseLoggingFeature } from '@modrinth/api-client'
 import {
 	ChangeSkinIcon,
@@ -14,6 +14,7 @@ import {
 	RefreshCwIcon,
 	RightArrowIcon,
 	SettingsIcon,
+	SpinnerIcon,
 	UserIcon,
 	WorldIcon,
 } from '@modrinth/assets'
@@ -28,6 +29,7 @@ import {
 	defineMessages,
 	I18nDebugPanel,
 	LoadingBar,
+	NewModal,
 	NotificationPanel,
 	OverflowMenu,
 	PopupNotificationPanel,
@@ -38,15 +40,21 @@ import {
 	providePopupNotificationManager,
 	useDebugLogger,
 	useFormatBytes,
+	useGlobalDrop,
 	useVIntl,
 } from '@modrinth/ui'
+import ConfirmDropTypeModal from '@modrinth/ui/src/components/flows/drop/ConfirmDropTypeModal.vue'
+import GenericContentInstallModal from '@modrinth/ui/src/components/flows/drop/GenericContentInstallModal.vue'
+import LauncherImportModal from '@modrinth/ui/src/components/flows/drop/LauncherImportModal.vue'
+import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMethodCards.vue'
+import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-context'
 import { useQuery } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { Effect, getCurrentWindow } from '@tauri-apps/api/window'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { type } from '@tauri-apps/plugin-os'
+import { type as getOsType } from '@tauri-apps/plugin-os'
 import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
@@ -61,6 +69,7 @@ import ErrorModal from '@/components/ui/ErrorModal.vue'
 import AddServerToInstanceModal from '@/components/ui/install_flow/AddServerToInstanceModal.vue'
 import UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPackWarningModal.vue'
 import MinecraftAuthErrorModal from '@/components/ui/minecraft-auth-error-modal/MinecraftAuthErrorModal.vue'
+import MinecraftCrashModal from '@/components/ui/MinecraftCrashModal.vue'
 import AppSettingsModal from '@/components/ui/modal/AppSettingsModal.vue'
 import AuthGrantFlowWaitModal from '@/components/ui/modal/AuthGrantFlowWaitModal.vue'
 import CommunityAnnouncementModal from '@/components/ui/modal/CommunityAnnouncementModal.vue'
@@ -76,14 +85,40 @@ import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
 import WindowControls from '@/components/ui/WindowControls.vue'
 import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
+import { minecraftLaunchErrorKey } from '@/composables/useMinecraftLaunchError'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { AxolotlBrandConfig, config, getOfficialLabrinthBaseUrl } from '@/config'
 import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
-import { command_listener, warning_listener } from '@/helpers/events.js'
-import { install_create_modpack_instance, install_get_modpack_preview } from '@/helpers/install'
-import { run } from '@/helpers/instance'
+import {
+	type ClassificationResult,
+	classifyDroppedItem,
+	classifyDroppedItemWithExtraction,
+	detectFileLock,
+	extractModMetadata,
+	lookupModHash,
+	type ModrinthLookupResult,
+	scanLauncherInstances,
+	type ScanResult,
+} from '@/helpers/drop'
+import { isVersionInRange, areLoadersCompatible } from '@/helpers/version-compatibility'
+import { command_listener, install_job_listener, warning_listener } from '@/helpers/events.js'
+import { import_instance } from '@/helpers/import.js'
+import {
+	type InstallJobSnapshot,
+	install_create_modpack_instance,
+	install_get_modpack_preview,
+	wait_for_install_job,
+} from '@/helpers/install'
+import {
+	add_project_from_path,
+	check_symlink_capability,
+	get as getInstance,
+	import_world_save,
+	list as listInstances,
+	run,
+} from '@/helpers/instance'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { get as getSettings, getUpdateSource, set as setSettings } from '@/helpers/settings.ts'
@@ -145,7 +180,9 @@ const forceSidebar = computed(
 )
 const sidebarVisible = computed(() => sidebarToggled.value || forceSidebar.value)
 const customBackgroundStyle = computed(() => {
-	if (!themeStore.customBackgroundPath) return undefined
+	// A custom image would sit between the desktop and the UI, defeating the
+	// transparent window entirely, so the two are mutually exclusive.
+	if (themeStore.transparentBackground || !themeStore.customBackgroundPath) return undefined
 
 	return {
 		backgroundImage: `url("${convertFileSrc(themeStore.customBackgroundPath)}")`,
@@ -166,7 +203,7 @@ const { addPopupNotification } = popupNotificationManager
 
 const appVersion = getVersion()
 const tauriApiClient = new TauriModrinthClient({
-	userAgent: async () => AxolotlBrandConfig.userAgent(await appVersion, await type()),
+	userAgent: async () => AxolotlBrandConfig.userAgent(await appVersion, await getOsType()),
 	labrinthBaseUrl: config.labrinthBaseUrl,
 	features: [
 		...(AxolotlBrandConfig.capabilities.privateModrinthServices
@@ -212,6 +249,8 @@ const {
 	setModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance,
+	onImportFileReceived,
+	fileDrop,
 } = setupProviders(notificationManager, popupNotificationManager)
 
 const { browserOffline, offline, setNetworkReachable } = useNetworkStatus()
@@ -226,9 +265,58 @@ const nativeDecorations = ref(false)
 const os = ref('')
 const isDevEnvironment = ref(false)
 
+/**
+ * On Windows the native shadow also draws the window border, which bleeds dark
+ * artifacts into a transparent window's corners, so it has to go while the mode
+ * is on. Windows 10 re-adds it after the window is shown, hence reapplying here
+ * rather than relying on the value set during setup.
+ */
+async function applyWindowShadow() {
+	if (os.value !== 'Windows') return
+
+	try {
+		await getCurrentWindow().setShadow(!themeStore.transparentBackground)
+	} catch (error) {
+		console.warn('Failed to update window shadow', error)
+	}
+}
+
+watch(() => themeStore.transparentBackground, applyWindowShadow)
+
+/**
+ * The frosted glass has to come from the compositor: a webview cannot reach the
+ * pixels behind its own window, so `backdrop-filter` can never blur the desktop.
+ * Acrylic blurs whatever sits behind the window, matching what the transparency
+ * already reveals; Mica would only sample the wallpaper and ignore other
+ * windows. Linux exposes no window effects at all.
+ */
+async function applyWindowEffects() {
+	if (os.value === 'Linux') return
+
+	try {
+		const window = getCurrentWindow()
+		if (!themeStore.transparentBackground || !themeStore.transparentBackgroundBlur) {
+			await window.clearEffects()
+			return
+		}
+
+		await window.setEffects({
+			effects: [os.value === 'MacOS' ? Effect.UnderWindowBackground : Effect.Acrylic],
+		})
+	} catch (error) {
+		console.warn('Failed to update window effects', error)
+	}
+}
+
+watch(
+	() => [themeStore.transparentBackground, themeStore.transparentBackgroundBlur],
+	applyWindowEffects,
+)
+
 const stateInitialized = ref(false)
 const communityAnnouncementModal = ref()
 const updateAnnouncementModal = ref()
+const minecraftCrashModal = ref()
 const pendingUpdateAnnouncementVersion = ref(null)
 const updateAnnouncementShowing = ref(false)
 
@@ -276,7 +364,6 @@ onUnmounted(async () => {
 	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
 	unsubscribeSidebarToggle()
 	clearDelayedUpdatePopup()
-
 	await unlistenUpdateDownload?.()
 	downloadManager.dispose()
 })
@@ -350,6 +437,137 @@ const messages = defineMessages({
 		id: 'app.notification.export-error-logs',
 		defaultMessage: 'Export error logs',
 	},
+
+	// ── Drop / import notification messages ──
+	dropOverlayTitle: {
+		id: 'app.drop.overlay-title',
+		defaultMessage: 'Drop to import',
+	},
+	dropOverlaySubtitle: {
+		id: 'app.drop.overlay-subtitle',
+		defaultMessage: 'Release to analyze',
+	},
+	dropProcessing: {
+		id: 'app.drop.processing',
+		defaultMessage: 'Processing {name}...',
+	},
+	dropMultipleFilesTitle: {
+		id: 'app.drop.error.multiple-files-title',
+		defaultMessage: 'Cannot import multiple files',
+	},
+	dropMultipleFilesText: {
+		id: 'app.drop.error.multiple-files-text',
+		defaultMessage: 'Please drop one file at a time.',
+	},
+	dropShortcutFailedTitle: {
+		id: 'app.drop.error.shortcut-title',
+		defaultMessage: 'Shortcut resolution failed',
+	},
+	dropShortcutFailedText: {
+		id: 'app.drop.error.shortcut-text',
+		defaultMessage: 'Could not resolve the shortcut target.',
+	},
+	dropUnknownTitle: {
+		id: 'app.drop.error.unknown-title',
+		defaultMessage: 'Unknown file type',
+	},
+	dropUnknownText: {
+		id: 'app.drop.error.unknown-text',
+		defaultMessage: 'Could not determine what kind of file this is.',
+	},
+	dropErrorTitle: {
+		id: 'app.drop.error.title',
+		defaultMessage: 'Drop error',
+	},
+	dropWorldImportedTitle: {
+		id: 'app.drop.world-imported-title',
+		defaultMessage: 'World imported',
+	},
+	dropWorldImportedText: {
+		id: 'app.drop.world-imported-text',
+		defaultMessage: 'World save has been imported successfully.',
+	},
+	dropContentInstalledTitle: {
+		id: 'app.drop.content-installed-title',
+		defaultMessage: 'Content installed',
+	},
+	dropContentInstalledText: {
+		id: 'app.drop.content-installed-text',
+		defaultMessage: 'File has been installed to the instance.',
+	},
+	dropInstallFailedTitle: {
+		id: 'app.drop.install-failed-title',
+		defaultMessage: 'Installation failed',
+	},
+	dropInstanceImportedTitle: {
+		id: 'app.drop.instance-imported-title',
+		defaultMessage: 'Instance imported',
+	},
+	dropInstanceImportedText: {
+		id: 'app.drop.instance-imported-text',
+		defaultMessage: '{name} imported successfully.',
+	},
+	dropImportFailedTitle: {
+		id: 'app.drop.import-failed-title',
+		defaultMessage: 'Import failed',
+	},
+	dropImportFailedText: {
+		id: 'app.drop.import-failed-text',
+		defaultMessage: 'Failed to import {name}: {error}',
+	},
+	dropNoInstances: {
+		id: 'app.drop.no-instances',
+		defaultMessage: 'No instances found',
+	},
+
+	dropModpackInstalling: {
+		id: 'app.drop.modpack-installing',
+		defaultMessage: 'Installing modpack...',
+	},
+	dropModpackInstalledSuccess: {
+		id: 'app.drop.modpack-installed-success',
+		defaultMessage: 'Modpack installed successfully',
+	},
+	dropModpackInstallFailed: {
+		id: 'app.drop.modpack-install-failed',
+		defaultMessage: 'Failed to install modpack',
+	},
+
+	dropUnknownForceAnalysisTitle: {
+		id: 'app.drop.unknown-force-analysis-title',
+		defaultMessage: 'Unable to identify file type',
+	},
+	dropUnknownForceAnalysisText: {
+		id: 'app.drop.unknown-force-analysis-text',
+		defaultMessage:
+			'This archive needs to be extracted and deeply analyzed to determine its content type. This may take a while. Force analysis?',
+	},
+	dropUnknownForceAnalysisButton: {
+		id: 'app.drop.unknown-force-analysis-button',
+		defaultMessage: 'Force analysis',
+	},
+	dropUnknownForceAnalyzing: {
+		id: 'app.drop.unknown-force-analyzing',
+		defaultMessage: 'Force analyzing archive...',
+	},
+	dropUnknownForceAnalysisFailedTitle: {
+		id: 'app.drop.unknown-force-analysis-failed-title',
+		defaultMessage: 'Analysis failed',
+	},
+	dropUnknownForceAnalysisFailedText: {
+		id: 'app.drop.unknown-force-analysis-failed-text',
+		defaultMessage: 'Could not identify the file type even after deep analysis.',
+	},
+
+	dropInstallModTitle: {
+		id: 'app.drop.mod-compatibility-title',
+		defaultMessage: 'Version Mismatch',
+	},
+	dropInstallModWarning: {
+		id: 'app.drop.mod-compatibility-warning',
+		defaultMessage:
+			'This mod targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader}).',
+	},
 })
 
 function getErrorNotificationDetails(notification) {
@@ -386,6 +604,9 @@ async function setupApp() {
 		custom_background_path,
 		custom_background_blur,
 		custom_background_opacity,
+		transparent_background,
+		transparent_background_opacity,
+		transparent_background_blur,
 		sidebar_instance_count,
 		developer_mode,
 		feature_flags,
@@ -431,6 +652,12 @@ async function setupApp() {
 	themeStore.customBackgroundPath = custom_background_path
 	themeStore.customBackgroundBlur = custom_background_blur
 	themeStore.customBackgroundOpacity = custom_background_opacity
+	themeStore.transparentBackground = transparent_background
+	themeStore.transparentBackgroundOpacity = transparent_background_opacity
+	themeStore.transparentBackgroundBlur = transparent_background_blur
+	themeStore.setTransparentBackgroundClass()
+	await applyWindowShadow()
+	await applyWindowEffects()
 	themeStore.sidebarInstanceCount = sidebar_instance_count
 	themeStore.devMode = developer_mode
 	themeStore.featureFlags = feature_flags
@@ -450,20 +677,25 @@ async function setupApp() {
 
 	if (!dev) document.addEventListener('contextmenu', (event) => event.preventDefault())
 
-	const osType = await type()
+	const osType = await getOsType()
 	if (osType === 'macos') {
 		document.getElementsByTagName('html')[0].classList.add('mac')
 	} else {
 		document.getElementsByTagName('html')[0].classList.add('windows')
 	}
 
-	await warning_listener((e) =>
+	await warning_listener(async (e) => {
+		if (e.kind === 'minecraft_crash') {
+			await minecraftCrashModal.value?.handleWarning(e)
+			return
+		}
+
 		addNotification({
 			title: formatMessage(messages.warning),
 			text: e.message,
 			type: 'warn',
-		}),
-	)
+		})
+	})
 
 	get_opening_command().then(handleCommand)
 	fetchCredentials()
@@ -546,6 +778,13 @@ async function scheduleStartupDialogs() {
 }
 
 provide('replayOnboarding', replayOnboarding)
+provide(
+	minecraftLaunchErrorKey,
+	async (launchError, payload) =>
+		(await minecraftCrashModal.value?.handleLaunchError(launchError, payload)) ?? false,
+)
+provide('previewMinecraftCrashModal', () => minecraftCrashModal.value?.showPreview())
+provide('chooseImportMethod', chooseImportMethod)
 provide('previewUpdateAnnouncement', (version = null) => {
 	const previewVersion = version ?? pendingUpdateAnnouncementVersion.value
 	if (previewVersion) updateAnnouncementModal.value?.show(previewVersion)
@@ -667,6 +906,14 @@ watch(
 )
 
 const error = useError()
+error.setMinecraftLaunchErrorHandler((launchError, context) => {
+	if (!minecraftCrashModal.value?.isLaunchFailure(launchError) || !context?.instanceId) return false
+	void minecraftCrashModal.value.handleLaunchError(launchError, {
+		instance_id: context.instanceId,
+		instance_name: 'Minecraft',
+	})
+	return true
+})
 const errorModal = ref()
 const minecraftAuthErrorModal = ref()
 
@@ -705,6 +952,68 @@ const {
 	handleIncompatibilityWarningCancel: handleContentInstallIncompatibilityWarningCancel,
 } = contentInstall
 
+/**
+ * Handles @update from ContentUpdaterModal (incompatibility-warning mode).
+ * In drag & drop mode (pendingDropIncompatibility set), installs the local file.
+ * In normal content-install mode, delegates to the provider handler.
+ */
+async function handleIncompatibilityWarningUpdate(
+	version: Labrinth.Versions.v2.Version,
+	event: MouseEvent,
+) {
+	const pending = pendingDropIncompatibility.value
+	if (pending) {
+		pendingDropIncompatibility.value = null
+		const projectTypeMap: Record<string, ContentFileProjectType | undefined> = {
+			mod: 'mod',
+			resource_pack: 'resourcepack',
+			shader_pack: 'shaderpack',
+			litematic: 'schematic',
+			schematic: 'schematic',
+		}
+		const projectType = projectTypeMap[pending.type]
+		try {
+			await add_project_from_path(pending.instId, pending.filePath, projectType)
+			addNotification({
+				title: formatMessage(messages.dropContentInstalledTitle),
+				text: formatMessage(messages.dropContentInstalledText),
+				type: 'success',
+			})
+		} catch (e) {
+			addNotification({
+				title: formatMessage(messages.dropInstallFailedTitle),
+				text: e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e),
+				type: 'error',
+			})
+		}
+		return
+	}
+	await handleContentInstallIncompatibilityWarningInstall(version, event)
+}
+
+/**
+ * Handles @cancel from ContentUpdaterModal. Clears drag & drop state if set.
+ */
+function handleIncompatibilityWarningCancel() {
+	pendingDropIncompatibility.value = null
+	handleContentInstallIncompatibilityWarningCancel()
+}
+
+/**
+ * Handles @searchCompat from ContentUpdaterModal simplified warning mode.
+ * Navigates to the Modrinth project page or browse/search page.
+ */
+function handleDropInstallSearchCompat() {
+	const pending = pendingDropIncompatibility.value
+	if (!pending) return
+	const searchName = pending.meta?.name ?? pending.meta?.mod_id ?? 'mod'
+	const searchUrl = pending.modrinthLookup
+		? `/project/${pending.modrinthLookup.project_id}`
+		: `/browse/mod?q=${encodeURIComponent(searchName)}&i=${pending.instId}`
+	pendingDropIncompatibility.value = null
+	router.push(searchUrl)
+}
+
 const serverInstall = createServerInstall({ router, handleError, popupNotificationManager })
 provideServerInstall(serverInstall)
 const {
@@ -725,6 +1034,736 @@ const installToPlayModal = ref()
 const updateToPlayModal = ref()
 
 const modrinthLoginFlowWaitModal = ref()
+
+const confirmDropModal = ref<InstanceType<typeof ConfirmDropTypeModal> | null>(null)
+const dropClassification = ref<ClassificationResult | null>(null)
+const dropFileName = ref('')
+const dropFilePath = ref('')
+
+const { isInInstance, instanceId } = useInstanceContext()
+const genericInstallModal = ref<InstanceType<typeof GenericContentInstallModal> | null>(null)
+const launcherImportModal = ref<InstanceType<typeof LauncherImportModal> | null>(null)
+const symlinkCardsModal = ref<InstanceType<typeof SymlinkMethodCards> | null>(null)
+const scanningInstances = ref(false)
+const pendingInstall = ref<{ type: string; filePath: string } | null>(null)
+const pendingDropIncompatibility = ref<{
+	filePath: string
+	instId: string
+	type: string
+	instVersion: string | undefined
+	instLoader: string | undefined
+	meta: { name?: string; mod_id?: string } | null
+	modrinthLookup: ModrinthLookupResult | null
+} | null>(null)
+const selectedInstances = ref<
+	Array<{ launcherType: string; basePath: string; name: string; path: string }>
+>([])
+const currentImportContext = ref<{ launcherType: string; basePath: string } | null>(null)
+
+const dropDebug = useDebugLogger('DropFlow')
+
+const dropProcessingNotificationId = ref<number | null>(null)
+
+const { isDragging, isProcessing } = useGlobalDrop(
+	{
+		classifyFile: classifyDroppedItem,
+		onClassifyStart: (fileName) => {
+			// Immediate feedback when a file is dropped — show a notification
+			// with the file name before classification even begins.
+			dropProcessingNotificationId.value = addNotification({
+				title: formatMessage(messages.dropProcessing, { name: fileName }),
+				type: 'info',
+				autoCloseMs: null,
+			}).id
+		},
+		onImportStart: (type, classification) => {
+			dropClassification.value = classification
+			dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
+			dropFileName.value =
+				classification.file_path?.split('/').pop() ??
+				classification.base_path?.split(/[/\\]/).pop() ??
+				'file'
+
+			if (type === 'unknown' && classification?.reason?.toLowerCase().includes('extraction')) {
+				clearDropProcessingNotification()
+				showForceAnalysisPrompt(classification)
+				return
+			}
+
+			if (type === 'unknown') {
+				clearDropProcessingNotification()
+				const unknownFile =
+					classification?.file_path?.split(/[/\\]/).pop() ??
+					classification?.base_path?.split(/[/\\]/).pop() ??
+					''
+
+				// .tmp files are OS-level temp copies from drag-and-drop (browser, archive, etc.)
+				const isTempFile = unknownFile.startsWith('.tmp') || unknownFile.startsWith('tmp')
+				if (isTempFile) {
+					addNotification({
+						title: 'Temporary file detected',
+						text:
+							`The file "${unknownFile}" appears to be a temporary copy. ` +
+							`Try dragging the file from its original folder instead of from a browser, ` +
+							`archive, or cloud storage.`,
+						type: 'warning',
+					})
+				} else {
+					addNotification({
+						title: formatMessage(messages.dropUnknownTitle),
+						text: classification?.reason
+							? classification.reason
+							: formatMessage(messages.dropUnknownText),
+						type: 'error',
+					})
+				}
+				return
+			}
+
+			confirmDropModal.value?.show()
+		},
+		onImportEnd: () => {},
+		onError: (reason) => {
+			clearDropProcessingNotification()
+
+			if (reason === 'multiple-files') {
+				addNotification({
+					title: formatMessage(messages.dropMultipleFilesTitle),
+					text: formatMessage(messages.dropMultipleFilesText),
+					type: 'error',
+				})
+			} else if (reason === 'shortcut-exceeded') {
+				addNotification({
+					title: formatMessage(messages.dropShortcutFailedTitle),
+					text: formatMessage(messages.dropShortcutFailedText),
+					type: 'error',
+				})
+			} else if (reason === 'unknown') {
+				addNotification({
+					title: formatMessage(messages.dropUnknownTitle),
+					text: formatMessage(messages.dropUnknownText),
+					type: 'error',
+				})
+			} else {
+				addNotification({
+					title: formatMessage(messages.dropErrorTitle),
+					text: reason,
+					type: 'error',
+				})
+			}
+		},
+	},
+	fileDrop,
+)
+
+function clearDropProcessingNotification() {
+	if (dropProcessingNotificationId.value !== null) {
+		notificationManager.removeNotification(dropProcessingNotificationId.value)
+		dropProcessingNotificationId.value = null
+	}
+}
+
+function handleDropCancel() {
+	clearDropProcessingNotification()
+	dropClassification.value = null
+}
+
+async function handleDropConfirm(type: string) {
+	const classification = dropClassification.value
+	dropClassification.value = null
+	confirmDropModal.value?.hide()
+
+	dropDebug('handleDropConfirm: entry', {
+		type,
+		classification_item_type: classification?.item_type,
+		file_path: classification?.file_path,
+	})
+
+	const isLauncherImport =
+		classification?.item_type === 'launcher' || classification?.item_type === 'hmcl_launcher'
+
+	if (!isLauncherImport && !classification?.file_path && !dropFilePath.value) {
+		dropDebug(
+			'handleDropConfirm: no filePath available (classification and dropFilePath both empty), aborting',
+		)
+		return
+	}
+
+	const filePath = classification?.file_path ?? dropFilePath.value
+	const fileName =
+		filePath?.split('/').pop() ?? classification.base_path?.split(/[/\\]/).pop() ?? 'file'
+	dropDebug('handleDropConfirm: routing decision', {
+		type,
+		isLauncherImport,
+		item_type: classification?.item_type,
+	})
+
+	if (type === 'dot_minecraft') {
+		dropDebug('handleDropConfirm: .minecraft folder branch', {
+			dropFilePath: dropFilePath.value,
+		})
+		if (!dropFilePath.value) {
+			dropDebug('handleDropConfirm: dot_minecraft — no dropFilePath, aborting')
+			return
+		}
+		// Treat the .minecraft folder path as a vanilla-style instance source
+		// and scan it for importable instances
+		currentImportContext.value = { launcherType: 'Generic', basePath: dropFilePath.value }
+		scanningInstances.value = true
+		const results = await scanLauncherInstances('Generic', dropFilePath.value)
+		scanningInstances.value = false
+		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
+		dropDebug('handleDropConfirm: .minecraft scan result', { totalInstances, results })
+
+		if (totalInstances === 0) {
+			currentImportContext.value = null
+			scanningInstances.value = false
+			dropDebug('handleDropConfirm: no instances found in .minecraft folder')
+			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
+			return
+		}
+
+		if (totalInstances === 1 && results[0]?.instances[0]) {
+			const single = results[0].instances[0]
+			dropDebug('handleDropConfirm: single instance from .minecraft, showing symlink modal', {
+				name: single.name,
+				path: single.path,
+			})
+			selectedInstances.value = [
+				{
+					launcherType: 'Generic',
+					basePath: dropFilePath.value,
+					name: single.name,
+					path: single.path,
+				},
+			]
+			const cap = await check_symlink_capability()
+			symlinkCardsModal.value?.show({
+				instanceNames: [single.name],
+				symlinkCapable: cap,
+			})
+			return
+		}
+
+		// Multiple instances → show selection modal
+		dropDebug(
+			'handleDropConfirm: multiple instances from .minecraft, showing launcher import modal',
+		)
+		launcherImportModal.value?.show(results)
+		return
+	}
+
+	if (isLauncherImport && type === 'instance') {
+		const launcherType =
+			classification!.item_type === 'hmcl_launcher' ? 'HMCL' : classification!.launcher_type!
+		const basePath =
+			classification!.item_type === 'hmcl_launcher'
+				? classification!.launcher_dir!
+				: classification!.base_path!
+		dropDebug('handleDropConfirm: launcher import branch', { launcherType, basePath })
+
+		currentImportContext.value = { launcherType, basePath }
+		scanningInstances.value = true
+		const results = await scanLauncherInstances(launcherType, basePath)
+		scanningInstances.value = false
+		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
+		dropDebug('handleDropConfirm: launcher scan result', { totalInstances, results })
+
+		if (totalInstances === 0) {
+			currentImportContext.value = null
+			scanningInstances.value = false
+			dropDebug('handleDropConfirm: no instances found')
+			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
+			return
+		}
+
+		if (totalInstances === 1 && results[0]?.instances[0]) {
+			// Single instance → go directly to symlink method selection
+			const single = results[0].instances[0]
+			dropDebug('handleDropConfirm: single instance, showing symlink modal', {
+				name: single.name,
+				path: single.path,
+			})
+			selectedInstances.value = [{ launcherType, basePath, name: single.name, path: single.path }]
+			const cap = await check_symlink_capability()
+			symlinkCardsModal.value?.show({
+				instanceNames: [single.name],
+				symlinkCapable: cap,
+			})
+			return
+		}
+
+		// Multiple instances → show selection modal
+		dropDebug('handleDropConfirm: multiple instances, showing launcher import modal')
+		launcherImportModal.value?.show(results)
+		return
+	}
+
+	if (type === 'modpack') {
+		dropDebug('handleDropConfirm: modpack branch', { filePath, fileName })
+
+		if (!filePath) {
+			dropDebug('handleDropConfirm: modpack — no filePath, aborting')
+			addNotification({ title: formatMessage(messages.dropModpackInstallFailed), type: 'error' })
+			return
+		}
+
+		// ── Replace "Processing..." with "Installing..." immediately (pure frontend) ──
+		clearDropProcessingNotification()
+		let installingNotify = addNotification({
+			title: formatMessage(messages.dropModpackInstalling),
+			type: 'info',
+			autoCloseMs: null,
+		})
+
+		const isMrpack = !!fileName?.toLowerCase().endsWith('.mrpack')
+		const location = { type: 'fromFile' as const, path: filePath }
+
+		const doInstall = async () => {
+			const job = await install_create_modpack_instance(location).catch(handleError)
+			if (!job) {
+				notificationManager.removeNotification(installingNotify.id)
+				return
+			}
+
+			// Single-use listener that auto-cleans up when the job reaches a terminal state
+			const unlisten = await install_job_listener((updatedJob: InstallJobSnapshot) => {
+				if (updatedJob.job_id !== job.job_id) return
+
+				if (updatedJob.status === 'succeeded') {
+					notificationManager.removeNotification(installingNotify.id)
+					addNotification({
+						title: formatMessage(messages.dropModpackInstalledSuccess),
+						type: 'success',
+					})
+
+					unlisten()
+				} else if (['failed', 'canceled', 'interrupted'].includes(updatedJob.status)) {
+					notificationManager.removeNotification(installingNotify.id)
+					unlisten()
+				}
+			})
+		}
+
+		// .mrpack is a well-defined standard — skip preview, install directly.
+		// .zip needs a preview pass to scan entry names and determine what we're dealing with.
+		if (!isMrpack) {
+			const preview = await install_get_modpack_preview(location).catch((e) => {
+				dropDebug('handleDropConfirm: modpack preview failed', { error: e })
+				notificationManager.removeNotification(installingNotify.id)
+				handleError(e)
+				return null
+			})
+			if (!preview) return
+
+			if (preview.unknownFile) {
+				// Clear "Installing..." — warning modal will handle re-showing on confirm
+				notificationManager.removeNotification(installingNotify.id)
+				unknownPackWarningModal.value?.show(async () => {
+					installingNotify = addNotification({
+						title: formatMessage(messages.dropModpackInstalling),
+						type: 'info',
+						autoCloseMs: null,
+					})
+					await doInstall()
+				}, fileName)
+				trackEvent('InstanceCreate', { source: 'DropConfirmModpack' })
+				await router.push('/library')
+				return
+			}
+		}
+
+		await doInstall()
+		trackEvent('InstanceCreate', { source: 'DropConfirmModpack' })
+		await router.push('/library')
+		return
+	}
+
+	// Content types that can be installed
+	const contentTypes = [
+		'mod',
+		'resource_pack',
+		'shader_pack',
+		'world_save',
+		'litematic',
+		'schematic',
+	]
+	if (!contentTypes.includes(type)) {
+		dropDebug('handleDropConfirm: type not in contentTypes — FALLTHROUGH, no handler!', {
+			type,
+			contentTypes,
+		})
+		return
+	}
+
+	dropDebug('handleDropConfirm: content install branch', {
+		type,
+		isInInstance: isInInstance.value,
+		hasInstanceId: !!instanceId.value,
+	})
+
+	if (isInInstance.value && instanceId.value) {
+		dropDebug('handleDropConfirm: installing directly to current instance', {
+			instanceId: instanceId.value,
+		})
+		await installContentDirectly(type, filePath, instanceId.value)
+	} else {
+		// Store pending install info for when an instance is selected
+		dropDebug('handleDropConfirm: storing pending install, showing instance selection modal')
+		pendingInstall.value = { type, filePath }
+
+		// Load all instances for the selection modal
+		let instances: {
+			id: string
+			name: string
+			iconUrl?: string | null
+			gameVersion?: string | null
+			loader?: string | null
+		}[] = []
+		try {
+			const allInstances = await listInstances()
+			instances = allInstances.map((inst) => ({
+				id: inst.id,
+				name: inst.name,
+				iconUrl: inst.icon_path ? convertFileSrc(inst.icon_path) : null,
+				gameVersion: inst.game_version || null,
+				loader: inst.loader || null,
+			}))
+		} catch {
+			// If listing fails, show empty list
+		}
+		genericInstallModal.value?.show({
+			contentType: type,
+			filePath,
+			fileName,
+			instances,
+		})
+	}
+}
+
+async function installContentDirectly(type: string, filePath: string, instId: string) {
+	try {
+		if (type === 'world_save') {
+			await import_world_save(instId, filePath)
+			addNotification({
+				title: formatMessage(messages.dropWorldImportedTitle),
+				text: formatMessage(messages.dropWorldImportedText),
+				type: 'success',
+			})
+			return
+		}
+
+		if (type === 'mod') {
+			let meta: {
+				minecraft_version?: string
+				loader?: string
+				name?: string
+				mod_id?: string
+			} | null = null
+			let modrinthLookup: ModrinthLookupResult | null = null
+
+			const metaStr = await extractModMetadata(filePath)
+			dropDebug('installContentDirectly: mod metadata extraction', { filePath, hasMeta: !!metaStr })
+
+			if (metaStr) {
+				try {
+					meta = JSON.parse(metaStr)
+					dropDebug('installContentDirectly: parsed mod metadata', { meta })
+				} catch (e) {
+					dropDebug('installContentDirectly: failed to parse mod metadata', { error: e })
+				}
+			}
+
+			try {
+				modrinthLookup = await lookupModHash(filePath)
+				dropDebug('installContentDirectly: modrinth hash lookup', { found: !!modrinthLookup })
+			} catch (e) {
+				dropDebug('installContentDirectly: hash lookup failed', { error: e })
+			}
+
+			const inst = await getInstance(instId)
+			dropDebug('installContentDirectly: instance details', {
+				inst: inst?.id,
+				game_version: inst?.game_version,
+				loader: inst?.loader,
+			})
+
+			if (inst && meta?.minecraft_version) {
+				const instVersion = inst.game_version
+				const instLoader = inst.loader
+				const modMcVersion = meta.minecraft_version
+				const modLoader = meta.loader
+
+				let versionMismatch = false
+				if (modMcVersion && instVersion) {
+					versionMismatch = !isVersionInRange(instVersion, modMcVersion)
+				}
+
+				let loaderMismatch = false
+				if (modLoader && instLoader) {
+					loaderMismatch = !areLoadersCompatible(modLoader, instLoader)
+				}
+
+				dropDebug('installContentDirectly: compatibility check', {
+					versionMismatch,
+					loaderMismatch,
+					modMcVersion,
+					instVersion,
+					modLoader,
+					instLoader,
+				})
+
+				if (versionMismatch || loaderMismatch) {
+					pendingDropIncompatibility.value = {
+						filePath,
+						instId,
+						type,
+						instVersion,
+						instLoader,
+						meta,
+						modrinthLookup,
+					}
+					const warning = formatMessage(messages.dropInstallModWarning, {
+						modVersion: modMcVersion ?? 'any',
+						modLoader: modLoader ?? 'any',
+						instVersion: instVersion ?? 'any',
+						instLoader: instLoader ?? 'none',
+					})
+					contentInstallIncompatibilityWarningVersions.value = []
+					contentInstallIncompatibilityWarningCurrentGameVersion.value = instVersion ?? ''
+					contentInstallIncompatibilityWarningCurrentLoader.value = instLoader ?? ''
+					contentInstallIncompatibilityWarningProjectType.value = 'mod'
+					contentInstallIncompatibilityWarningProjectName.value = meta?.name ?? 'Mod'
+					contentInstallIncompatibilityWarningMessage.value = warning
+					contentInstallIncompatibilityWarningInstalling.value = false
+					await nextTick()
+					incompatibilityWarningModal.value?.show()
+					return
+				}
+			} else {
+				dropDebug('installContentDirectly: skipping version check', {
+					hasInstance: !!inst,
+					hasModVersion: !!meta?.minecraft_version,
+				})
+			}
+		}
+
+		const projectTypeMap: Record<string, ContentFileProjectType | undefined> = {
+			mod: 'mod',
+			resource_pack: 'resourcepack',
+			shader_pack: 'shaderpack',
+			litematic: 'schematic',
+			schematic: 'schematic',
+		}
+		const projectType = projectTypeMap[type]
+		await add_project_from_path(instId, filePath, projectType)
+		addNotification({
+			title: formatMessage(messages.dropContentInstalledTitle),
+			text: formatMessage(messages.dropContentInstalledText),
+			type: 'success',
+		})
+	} catch (e) {
+		let errMsg = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
+		try {
+			const lockInfo = await detectFileLock(filePath)
+			if (lockInfo.length > 0) {
+				const lockLines = lockInfo.map((p) => `  PID ${p.pid}: ${p.name} (${p.path})`).join('\n')
+				errMsg += `\n\nFile locked by:\n${lockLines}`
+			}
+		} catch {
+			// Lock detection is best-effort
+		}
+		addNotification({
+			title: formatMessage(messages.dropInstallFailedTitle),
+			text: errMsg,
+			type: 'error',
+		})
+	}
+}
+
+/**
+ * Show a popup notification asking the user to confirm force-analysis
+ * (extraction + classification) of a ZIP archive that couldn't be identified
+ * from entry names alone.
+ */
+function showForceAnalysisPrompt(classification: ClassificationResult) {
+	const filePath = dropFilePath.value
+	if (!filePath) return
+
+	dropDebug('showForceAnalysisPrompt: showing force-analysis prompt', {
+		reason: classification.reason,
+		filePath,
+	})
+
+	addPopupNotification({
+		title: formatMessage(messages.dropUnknownForceAnalysisTitle),
+		text: formatMessage(messages.dropUnknownForceAnalysisText),
+		type: 'info',
+		autoCloseMs: null,
+		buttons: [
+			{
+				label: formatMessage(messages.dropUnknownForceAnalysisButton),
+				action: async () => {
+					const analyzingNotification = addNotification({
+						title: formatMessage(messages.dropUnknownForceAnalyzing),
+						type: 'info',
+						autoCloseMs: null,
+					})
+
+					try {
+						const result = await classifyDroppedItemWithExtraction(filePath)
+						notificationManager.removeNotification(analyzingNotification.id)
+
+						if (result.item_type === 'unknown') {
+							addNotification({
+								title: formatMessage(messages.dropUnknownForceAnalysisFailedTitle),
+								text: formatMessage(messages.dropUnknownForceAnalysisFailedText),
+								type: 'error',
+							})
+							return
+						}
+
+						// Success
+						// user already confirmed
+						dropClassification.value = result
+						switch (result.item_type) {
+							case 'modpack':
+								await handleDropConfirm('modpack')
+								break
+							case 'world_save':
+								await handleDropConfirm('world_save')
+								break
+							case 'launcher':
+							case 'hmcl_launcher':
+								await handleDropConfirm('instance')
+								break
+							default:
+								// mod, resource_pack, shader_pack, litematic to content install
+								await handleDropConfirm(result.item_type)
+								break
+						}
+					} catch (e) {
+						notificationManager.removeNotification(analyzingNotification.id)
+						addNotification({
+							title: formatMessage(messages.dropUnknownForceAnalysisFailedTitle),
+							text: e instanceof Error ? e.message : String(e),
+							type: 'error',
+						})
+					}
+				},
+				color: 'brand',
+			},
+		],
+	})
+}
+
+async function handleGenericInstall(instanceId: string) {
+	genericInstallModal.value?.hide()
+	const pending = pendingInstall.value
+	pendingInstall.value = null
+	if (!pending) return
+
+	await installContentDirectly(pending.type, pending.filePath, instanceId)
+}
+
+async function handleGenericInstallNavigateCreate() {
+	genericInstallModal.value?.hide()
+	router.push('/create')
+}
+
+let symlinkChoiceResolve: ((symlink: boolean) => void) | null = null
+
+function chooseImportMethod(options: {
+	instanceNames: string[]
+	symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
+}): Promise<boolean> {
+	return new Promise((resolve) => {
+		symlinkChoiceResolve = resolve
+		symlinkCardsModal.value?.show(options)
+	})
+}
+
+async function onImportSelected(
+	selections: Array<{
+		launcherType: string
+		launcherName: string
+		instances: Array<{ name: string; path: string }>
+	}>,
+) {
+	const allSelected: Array<{ launcherType: string; basePath: string; name: string; path: string }> =
+		[]
+	for (const sel of selections) {
+		for (const inst of sel.instances) {
+			allSelected.push({
+				launcherType: sel.launcherType,
+				basePath: '',
+				name: inst.name,
+				path: inst.path,
+			})
+		}
+	}
+	if (allSelected.length === 0) return
+	selectedInstances.value = allSelected
+
+	const cap = await check_symlink_capability()
+	symlinkCardsModal.value?.show({
+		instanceNames: allSelected.map((i) => i.name),
+		symlinkCapable: cap,
+	})
+}
+
+function onSymlinkMethodCancelled() {
+	if (symlinkChoiceResolve) {
+		symlinkChoiceResolve(false)
+		symlinkChoiceResolve = null
+	}
+	symlinkCardsModal.value?.hide()
+}
+
+async function onSymlinkMethodConfirmed(symlink: boolean) {
+	// Resolve the promise-based chooser first (if called from creation-modal flow)
+	if (symlinkChoiceResolve) {
+		symlinkChoiceResolve(symlink)
+		symlinkChoiceResolve = null
+		return
+	}
+
+	// Otherwise handle the drop import flow directly
+	const instances = selectedInstances.value
+	selectedInstances.value = []
+	const ctx = currentImportContext.value
+	currentImportContext.value = null
+	if (instances.length === 0) return
+
+	for (const inst of instances) {
+		try {
+			const job = await import_instance(
+				ctx?.launcherType ?? inst.launcherType,
+				ctx?.basePath ?? inst.path,
+				inst.name,
+				symlink,
+			)
+			await wait_for_install_job(job.job_id)
+			addNotification({
+				title: formatMessage(messages.dropInstanceImportedTitle),
+				text: formatMessage(messages.dropInstanceImportedText, { name: inst.name }),
+				type: 'success',
+			})
+		} catch (e) {
+			addNotification({
+				title: formatMessage(messages.dropImportFailedTitle),
+				text: formatMessage(messages.dropImportFailedText, { name: inst.name, error: String(e) }),
+				type: 'error',
+			})
+		}
+	}
+}
+
+function handleDropHelp() {
+	dropClassification.value = null
+	confirmDropModal.value?.hide()
+	router.push('/help/drop')
+}
 
 watch(incompatibilityWarningModal, (modal) => {
 	if (modal) {
@@ -843,12 +1882,23 @@ async function handleCommand(e) {
 			})
 		}
 	} else if (e.event === 'LaunchInstance') {
+		const instance = await getInstance(e.id).catch(() => null)
+		const handleLaunchCommandError = async (launchError) => {
+			const handled =
+				(await minecraftCrashModal.value?.handleLaunchError(launchError, {
+					instance_id: e.id,
+					instance_name: instance?.name || 'Minecraft',
+				})) ?? false
+			if (!handled) handleError(launchError)
+		}
 		if (e.server) {
-			await start_join_server(e.id, e.server).catch(handleError)
+			await start_join_server(e.id, e.server).catch(handleLaunchCommandError)
 		} else if (e.singleplayer_world) {
-			await start_join_singleplayer_world(e.id, e.singleplayer_world).catch(handleError)
+			await start_join_singleplayer_world(e.id, e.singleplayer_world).catch(
+				handleLaunchCommandError,
+			)
 		} else {
-			await run(e.id).catch(handleError)
+			await run(e.id).catch(handleLaunchCommandError)
 		}
 	} else if (e.event === 'InstallServer') {
 		await router.push(`/project/${e.id}`)
@@ -1250,7 +2300,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<SplashScreen v-if="!stateFailed" ref="splashScreen" data-tauri-drag-region />
 	<div id="teleports"></div>
 	<div
-		v-if="stateInitialized && themeStore.customBackgroundPath"
+		v-if="stateInitialized && themeStore.customBackgroundPath && !themeStore.transparentBackground"
 		class="launcher-background"
 		:style="customBackgroundStyle"
 	/>
@@ -1259,7 +2309,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		class="app-grid-layout relative"
 		:class="{
 			'disable-advanced-rendering': !themeStore.advancedRendering,
-			'has-custom-background': themeStore.customBackgroundPath,
+			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
+			'has-transparent-background': themeStore.transparentBackground,
 		}"
 	>
 		<Transition name="fade">
@@ -1292,6 +2343,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			:search-modpacks="searchModpacks"
 			:get-project-versions="getProjectVersions"
 			:get-loader-manifest="getLoaderManifest"
+			:on-import-file-received="onImportFileReceived"
 			@create="handleCreate"
 			@browse-modpacks="handleBrowseModpacks"
 		/>
@@ -1365,7 +2417,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			<NavButton
 				v-tooltip.right="formatMessage(messages.createInstance)"
 				data-onboarding-id="create-instance"
-				:to="() => installationModal?.show()"
+				to="/create"
 				:disabled="offline"
 			>
 				<PlusIcon />
@@ -1466,7 +2518,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		:class="{
 			'sidebar-enabled': sidebarVisible,
 			'disable-advanced-rendering': !themeStore.advancedRendering,
-			'has-custom-background': themeStore.customBackgroundPath,
+			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
+			'has-transparent-background': themeStore.transparentBackground,
 		}"
 	>
 		<div class="app-viewport flex-grow router-view">
@@ -1543,6 +2596,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		:on-error-action="exportNotificationErrorLogs"
 		:error-action-label="formatMessage(messages.exportErrorLogs)"
 	/>
+	<MinecraftCrashModal ref="minecraftCrashModal" @error="handleError" />
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
 	<ErrorModal ref="errorModal" />
@@ -1569,7 +2623,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		@create-anyway="handleModpackDuplicateCreateAnyway"
 		@go-to-instance="handleModpackDuplicateGoToInstance"
 	/>
-	<AddServerToInstanceModal ref="addServerToInstanceModal" :symlink-target="addServerSymlinkTarget" />
+	<AddServerToInstanceModal
+		ref="addServerToInstanceModal"
+		:symlink-target="addServerSymlinkTarget"
+	/>
 	<ContentUpdaterModal
 		ref="incompatibilityWarningModal"
 		mode="incompatibility-warning"
@@ -1583,8 +2640,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		:project-name="contentInstallIncompatibilityWarningProjectName"
 		:warning="contentInstallIncompatibilityWarningMessage"
 		:action-loading="contentInstallIncompatibilityWarningInstalling"
-		@update="handleContentInstallIncompatibilityWarningInstall"
-		@cancel="handleContentInstallIncompatibilityWarningCancel"
+		@update="handleIncompatibilityWarningUpdate"
+		@cancel="handleIncompatibilityWarningCancel"
+		@searchCompat="handleDropInstallSearchCompat"
 	/>
 	<ModpackAlreadyInstalledModal
 		ref="contentInstallModpackAlreadyInstalledModal"
@@ -1597,6 +2655,63 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	/>
 	<InstallToPlayModal ref="installToPlayModal" />
 	<UpdateToPlayModal ref="updateToPlayModal" />
+
+	<!-- Global drop overlay -->
+	<div
+		v-if="isDragging"
+		class="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center pointer-events-none"
+	>
+		<div class="rounded-2xl border-2 border-dashed border-brand bg-surface-2/90 p-8 text-center">
+			<p class="text-lg text-contrast">{{ formatMessage(messages.dropOverlayTitle) }}</p>
+			<p class="text-sm text-secondary mt-2">{{ formatMessage(messages.dropOverlaySubtitle) }}</p>
+		</div>
+	</div>
+
+	<!-- Processing overlay -->
+	<div
+		v-if="(isProcessing || scanningInstances) && !isDragging"
+		class="fixed inset-0 z-[9999] bg-black/20 flex items-center justify-center"
+	>
+		<div class="flex flex-col items-center gap-3">
+			<SpinnerIcon class="h-10 w-10 animate-spin text-contrast" />
+			<span v-if="scanningInstances" class="text-sm text-secondary"
+				>{{ formatMessage(messages.dropNoInstances) }}…</span
+			>
+		</div>
+	</div>
+
+	<!-- Drop type confirmation modal -->
+	<ConfirmDropTypeModal
+		ref="confirmDropModal"
+		:classification="dropClassification"
+		:file-name="dropFileName"
+		@confirm="handleDropConfirm"
+		@cancel="handleDropCancel"
+		@help="handleDropHelp"
+	/>
+
+	<!-- Generic content install modal (instance selection when not in an instance page) -->
+	<GenericContentInstallModal
+		ref="genericInstallModal"
+		@install="handleGenericInstall"
+		@cancel="dropClassification = null"
+		@navigate-create="handleGenericInstallNavigateCreate"
+	/>
+
+	<!-- Launcher import instance selection modal -->
+	<LauncherImportModal
+		ref="launcherImportModal"
+		@confirm="onImportSelected"
+		@cancel="launcherImportModal?.hide()"
+	/>
+
+	<!-- Symlink method selection modal -->
+	<SymlinkMethodCards
+		ref="symlinkCardsModal"
+		@confirm="onSymlinkMethodConfirmed"
+		@cancel="onSymlinkMethodCancelled"
+	/>
+
 	<OnboardingOverlay
 		:visible="showOnboarding"
 		:mode="onboardingMode"
@@ -1638,7 +2753,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		opacity 180ms ease;
 }
 
-.app-grid-layout.has-custom-background {
+.app-grid-layout.has-custom-background,
+.app-grid-layout.has-transparent-background {
 	background-color: transparent;
 
 	.app-grid-navbar,
@@ -1685,7 +2801,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		grid-template-columns: 1fr 300px;
 	}
 
-	&.has-custom-background {
+	&.has-custom-background,
+	&.has-transparent-background {
 		background-color: color-mix(in srgb, var(--color-bg) 76%, transparent);
 		border-top-left-radius: 0;
 
@@ -1698,6 +2815,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			border-top-left-radius: 0;
 		}
 	}
+}
+
+.app-grid-layout.has-transparent-background {
+	.app-grid-navbar,
+	.app-grid-statusbar {
+		background-color: color-mix(
+			in srgb,
+			var(--surface-3-opaque) var(--window-alpha-chrome),
+			transparent
+		) !important;
+	}
+
+	// Without native decorations or rounded corners the window edge dissolves
+	// into the desktop, so it needs drawing. Dark outside, light inside, to stay
+	// legible over any wallpaper.
+	&::after {
+		content: '';
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		pointer-events: none;
+		box-shadow:
+			inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+			inset 0 0 0 2px rgba(255, 255, 255, 0.14);
+	}
+}
+
+.app-contents.has-transparent-background {
+	// Sourced from the opaque snapshot: `--color-bg` is itself translucent in
+	// this mode, so mixing it again would compound. Sits slightly below the
+	// chosen alpha because pages paint their own surface on top of it.
+	background-color: color-mix(
+		in srgb,
+		var(--surface-1-opaque) calc(var(--window-alpha) * 0.82),
+		transparent
+	);
 }
 
 .loading-indicator-container {

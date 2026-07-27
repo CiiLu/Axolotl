@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import * as Pages from '@/pages'
+import * as Help from '@/pages/help'
 import * as Instance from '@/pages/instance'
 import * as Library from '@/pages/library'
 import * as Project from '@/pages/project'
@@ -28,6 +29,12 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/create',
+			name: 'Create',
+			component: () => import('@/pages/Create.vue'),
+			meta: { useRootContext: false },
+		},
+		{
 			path: '/downloads',
 			name: 'Downloads',
 			component: Pages.Downloads,
@@ -42,6 +49,14 @@ export default new createRouter({
 			meta: {
 				useContext: true,
 				breadcrumb: [{ name: '?BrowseTitle' }],
+			},
+		},
+		{
+			path: '/help/drop',
+			name: 'DropHelp',
+			component: Help.DropHelp,
+			meta: {
+				breadcrumb: [{ name: 'Drop help' }],
 			},
 		},
 		{

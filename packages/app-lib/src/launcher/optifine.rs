@@ -233,7 +233,7 @@ async fn ensure_installer(
         })?;
 
     download_to_path(
-        DownloadRequest::new(&entry.download_url(), ResourceClass::Loader)
+        DownloadRequest::new(entry.download_url(), ResourceClass::Loader)
             .with_integrity(Integrity {
                 content: ContentValidation::Jar,
                 ..Integrity::default()

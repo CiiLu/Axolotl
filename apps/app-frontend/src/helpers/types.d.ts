@@ -110,7 +110,7 @@ type ContentFile = {
 	}
 }
 
-type ContentFileProjectType = 'mod' | 'datapack' | 'resourcepack' | 'shaderpack'
+type ContentFileProjectType = 'mod' | 'datapack' | 'resourcepack' | 'shaderpack' | 'schematic'
 
 type CacheBehaviour =
 	// Serve expired data. If fetch fails / launcher is offline, errors are ignored
@@ -175,6 +175,9 @@ type AppSettings = {
 	custom_background_path: string | null
 	custom_background_blur: number
 	custom_background_opacity: number
+	transparent_background: boolean
+	transparent_background_opacity: number
+	transparent_background_blur: boolean
 	worlds_in_home: boolean
 
 	telemetry: boolean
@@ -191,6 +194,7 @@ type AppSettings = {
 	force_fullscreen: boolean
 	game_resolution: [number, number]
 	hide_on_process_start: boolean
+	auto_set_java_high_performance_mode: boolean
 	hooks: Hooks
 
 	custom_dir?: string

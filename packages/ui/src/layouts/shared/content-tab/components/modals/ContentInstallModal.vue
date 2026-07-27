@@ -6,14 +6,7 @@
 			</span>
 		</template>
 
-		<Admonition
-			v-if="symlinkTarget"
-			type="warning"
-			class="mx-6 mt-6"
-			:header="formatMessage(messages.symlinkWarningHeader)"
-		>
-			{{ formatMessage(messages.symlinkWarningBody, { path: symlinkTarget }) }}
-		</Admonition>
+		<SymlinkWarningAdmonition :symlink-target="symlinkTarget" class="mx-6 mt-6" />
 		<div
 			v-if="projectInfo"
 			class="flex items-center gap-2.5 rounded-[20px] bg-surface-2 mx-6 mt-6 p-3"
@@ -294,6 +287,8 @@ import { injectFilePicker } from '#ui/providers'
 import { commonMessages } from '#ui/utils/common-messages'
 import { formatLoaderLabel } from '#ui/utils/loaders'
 
+import SymlinkWarningAdmonition from './SymlinkWarningAdmonition.vue'
+
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
@@ -362,8 +357,6 @@ const messages = defineMessages({
 		id: 'instances.content-install.no-instances',
 		defaultMessage: 'No compatible instances found',
 	},
-	symlinkWarningHeader: { id: 'app.symlink-warning.write.header' },
-	symlinkWarningBody: { id: 'app.symlink-warning.write.body' },
 })
 
 export interface ContentInstallInstance {

@@ -466,11 +466,22 @@ impl DirectoryInfo {
                 }
 
                 let java_versions = JavaVersion::get_all(exec).await?;
-                for (_, mut java_version) in java_versions {
+                for mut java_version in java_versions {
                     java_version.path = java_version.path.replace(
                         prev_custom_dir,
                         new_dir.trim_end_matches('/').trim_end_matches('\\'),
                     );
+                    if crate::util::jre::is_java_install_staging_path(
+                        Path::new(&java_version.path),
+                    ) {
+                        tracing::warn!(
+                            java = %java_version.path,
+                            "Dropping incomplete Java installation during directory migration"
+                        );
+                        JavaVersion::remove(java_version.parsed_version, exec)
+                            .await?;
+                        continue;
+                    }
                     java_version.upsert(exec).await?
                 }
 

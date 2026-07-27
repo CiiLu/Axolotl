@@ -35,9 +35,6 @@
 	"app.action-bar.install.summary.bad-modpack-file": {
 		"message": "Couldn't read modpack"
 	},
-	"app.action-bar.install.summary.unrecognized-format": {
-		"message": "This does not appear to be a modpack archive"
-	},
 	"app.action-bar.install.summary.canceled": {
 		"message": "Canceled"
 	},
@@ -94,6 +91,9 @@
 	},
 	"app.action-bar.install.summary.unexpected-error": {
 		"message": "Something went wrong"
+	},
+	"app.action-bar.install.summary.unrecognized-format": {
+		"message": "This does not appear to be a modpack archive"
 	},
 	"app.action-bar.install.unknown-instance": {
 		"message": "Unknown instance"
@@ -280,6 +280,27 @@
 	},
 	"app.appearance-settings.toggle-sidebar.title": {
 		"message": "Toggle sidebar"
+	},
+	"app.appearance-settings.transparent-background.blur-description": {
+		"message": "Frost what shows through the window. Dragging or resizing may feel less smooth while this is on."
+	},
+	"app.appearance-settings.transparent-background.blur-title": {
+		"message": "Background blur"
+	},
+	"app.appearance-settings.transparent-background.conflict": {
+		"message": "Your custom background image is hidden while this is enabled."
+	},
+	"app.appearance-settings.transparent-background.description": {
+		"message": "Let your desktop show through the launcher window."
+	},
+	"app.appearance-settings.transparent-background.opacity": {
+		"message": "Interface opacity"
+	},
+	"app.appearance-settings.transparent-background.opacity-description": {
+		"message": "Lower values show more of your desktop. Panels stay more solid than the background to keep text readable."
+	},
+	"app.appearance-settings.transparent-background.title": {
+		"message": "Transparent background"
 	},
 	"app.appearance-settings.unknown-pack-warning.description": {
 		"message": "If you attempt to install a Modrinth Pack file (.mrpack) that isn't hosted on Modrinth, we'll make sure you understand the risks before installing it."
@@ -881,6 +902,9 @@
 	"app.instance.confirm-delete.header": {
 		"message": "Delete instance"
 	},
+	"app.instance.confirm-delete.symlink-warning": {
+		"message": "This is a shared instance linked to \"{path}\". Only the link will be removed; the original files will not be deleted."
+	},
 	"app.instance.copy-links": {
 		"message": "Copy links"
 	},
@@ -970,6 +994,18 @@
 	},
 	"app.instance.icon-picker.icon.water-bucket": {
 		"message": "Water Bucket"
+	},
+	"app.instance.icon-picker.icon.anvil": {
+		"message": "Anvil"
+	},
+	"app.instance.icon-picker.icon.fabric": {
+		"message": "Fabric"
+	},
+	"app.instance.icon-picker.icon.neoforge": {
+		"message": "NeoForge"
+	},
+	"app.instance.icon-picker.icon.quilt": {
+		"message": "Quilt"
 	},
 	"app.instance.icon-picker.load-error": {
 		"message": "Failed to load the bundled icon."
@@ -1110,7 +1146,7 @@
 		"message": "Share instance"
 	},
 	"app.instance.starting": {
-		"message": "Starting..."
+		"message": "Starting... {seconds, number}s"
 	},
 	"app.instance.stopping": {
 		"message": "Stopping..."
@@ -1244,6 +1280,12 @@
 	"app.java.detect": {
 		"message": "Detect"
 	},
+	"app.java.deep-scan": {
+		"message": "Deep Scan"
+	},
+	"app.java.scanning": {
+		"message": "Scanning..."
+	},
 	"app.java.install-recommended": {
 		"message": "Install recommended"
 	},
@@ -1292,6 +1334,36 @@
 	"app.library.title": {
 		"message": "Library"
 	},
+	"app.memory-display.available": {
+		"message": "{memory} available"
+	},
+	"app.memory-display.game": {
+		"message": "Game allocation"
+	},
+	"app.memory-display.optimization-description": {
+		"message": "Free unused Windows working sets and standby memory."
+	},
+	"app.memory-display.optimize": {
+		"message": "Optimize memory"
+	},
+	"app.memory-display.optimized": {
+		"message": "Memory optimization complete"
+	},
+	"app.memory-display.optimizing": {
+		"message": "Optimizing..."
+	},
+	"app.memory-display.reclaimed": {
+		"message": "Freed {memory} of memory."
+	},
+	"app.memory-display.remaining": {
+		"message": "Remaining after allocation"
+	},
+	"app.memory-display.unsupported": {
+		"message": "Memory optimization is only available on Windows."
+	},
+	"app.memory-display.used": {
+		"message": "Memory in use"
+	},
 	"app.minecraft-auth.contact-support": {
 		"message": "Contact support"
 	},
@@ -1333,6 +1405,111 @@
 	},
 	"app.minecraft-auth.what-happened": {
 		"message": "What we think happened"
+	},
+	"app.minecraft-crash.analyzing": {
+		"message": "Analyzing the logs from this launch..."
+	},
+	"app.minecraft-crash.body": {
+		"message": "Do not send a screenshot of this window when asking for help. Export the error report instead so the crash report, game logs, debug log, and JVM details can be checked together."
+	},
+	"app.minecraft-crash.diagnosis.forge-java.action": {
+		"message": "You can try using the Java version expected by this Forge release, or updating Forge."
+	},
+	"app.minecraft-crash.diagnosis.forge-java.title": {
+		"message": "Possible issue: Forge is not compatible with the selected Java version"
+	},
+	"app.minecraft-crash.diagnosis.java-11-required.action": {
+		"message": "You can try selecting Java 11, or installing a build of the affected Mod that supports the current Java version."
+	},
+	"app.minecraft-crash.diagnosis.java-11-required.title": {
+		"message": "Possible issue: a Mod requires Java 11"
+	},
+	"app.minecraft-crash.diagnosis.java-32bit.action": {
+		"message": "You can try installing and selecting a 64-bit Java runtime, then launch again."
+	},
+	"app.minecraft-crash.diagnosis.java-32bit.title": {
+		"message": "Possible issue: 32-bit Java cannot allocate enough memory"
+	},
+	"app.minecraft-crash.diagnosis.java-incompatible.action": {
+		"message": "You can try selecting the Java version requested in the error below, or using a compatible build of the affected Mod."
+	},
+	"app.minecraft-crash.diagnosis.java-incompatible.title": {
+		"message": "Possible issue: the Java version is incompatible"
+	},
+	"app.minecraft-crash.diagnosis.java-too-new.action": {
+		"message": "You can try selecting the Java major version required by this Minecraft and Mod loader version, then launch again."
+	},
+	"app.minecraft-crash.diagnosis.java-too-new.title": {
+		"message": "Possible issue: the selected Java version is too new"
+	},
+	"app.minecraft-crash.diagnosis.jdk-runtime.action": {
+		"message": "You can try selecting a standard HotSpot Java runtime for this Minecraft version."
+	},
+	"app.minecraft-crash.diagnosis.jdk-runtime.title": {
+		"message": "Possible issue: the selected JDK is not compatible"
+	},
+	"app.minecraft-crash.diagnosis.jvm-arguments.action": {
+		"message": "You can try removing the JVM argument shown below from the instance settings, then launch again."
+	},
+	"app.minecraft-crash.diagnosis.jvm-arguments.title": {
+		"message": "Possible issue: the JVM arguments are invalid"
+	},
+	"app.minecraft-crash.diagnosis.known-failure.action": {
+		"message": "This is an automatic guess, not a guaranteed diagnosis. Open the log analysis for the full context before applying the suggested fix."
+	},
+	"app.minecraft-crash.diagnosis.known-failure.title": {
+		"message": "Possible issue: a specific launch problem was detected"
+	},
+	"app.minecraft-crash.diagnosis.openj9.action": {
+		"message": "You can try selecting a HotSpot-based Java runtime, such as the bundled Minecraft runtime or Eclipse Temurin."
+	},
+	"app.minecraft-crash.diagnosis.openj9.title": {
+		"message": "Possible issue: OpenJ9 is not compatible with this instance"
+	},
+	"app.minecraft-crash.diagnosis.out-of-memory.action": {
+		"message": "You can try increasing the instance memory allocation, or removing memory-heavy Mods and resource packs."
+	},
+	"app.minecraft-crash.diagnosis.out-of-memory.title": {
+		"message": "Possible issue: Minecraft ran out of memory"
+	},
+	"app.minecraft-crash.evidence": {
+		"message": "Reference evidence: {evidence}"
+	},
+	"app.minecraft-crash.exited-before-initialization": {
+		"message": "The Java process exited before it could connect to the launcher. The selected Java version is probably incompatible with this Minecraft or Mod loader version. Select the Java version required by the instance, then try again."
+	},
+	"app.minecraft-crash.export-context": {
+		"message": "Export Minecraft error report"
+	},
+	"app.minecraft-crash.initialization-timed-out": {
+		"message": "The Java process started but did not connect to the launcher within 15 seconds. Check the selected Java version and any wrapper command, then try again."
+	},
+	"app.minecraft-crash.launch-failed-summary": {
+		"message": "Minecraft failed during launch preparation."
+	},
+	"app.minecraft-crash.launch-failed-title": {
+		"message": "{instanceName} could not start"
+	},
+	"app.minecraft-crash.launch-failure-hint": {
+		"message": "Open the Minecraft logs to view the captured Java output. When asking for help, export and send the complete Minecraft diagnostic package."
+	},
+	"app.minecraft-crash.preparation-timed-out": {
+		"message": "Launch preparation did not finish within 60 seconds and was cancelled. Check the Java path, launch hooks, wrapper command, and network connection, then try again."
+	},
+	"app.minecraft-crash.preview-instance": {
+		"message": "Minecraft test instance"
+	},
+	"app.minecraft-crash.summary": {
+		"message": "Minecraft stopped unexpectedly."
+	},
+	"app.minecraft-crash.support-hint": {
+		"message": "When asking for help, send the exported ZIP. Do not send only a screenshot of this window because it does not contain the diagnostic evidence."
+	},
+	"app.minecraft-crash.title": {
+		"message": "{instanceName} crashed"
+	},
+	"app.minecraft-crash.view-logs": {
+		"message": "View logs and analysis"
 	},
 	"app.minecraft.playing-as": {
 		"message": "Playing as"
@@ -1646,6 +1823,9 @@
 	"app.project.install-context.install-content-to-instance": {
 		"message": "Install content to instance"
 	},
+	"app.project.open-in-mcmod": {
+		"message": "Open in MC Mod"
+	},
 	"app.project.translation.failed": {
 		"message": "Translation failed. The original content was kept. Try again."
 	},
@@ -1730,6 +1910,9 @@
 	"app.settings.about.pcl-source": {
 		"message": "View the Plain Craft Launcher source and license"
 	},
+	"app.settings.about.preview-minecraft-crash-modal": {
+		"message": "Preview Minecraft crash window"
+	},
 	"app.settings.about.product-title": {
 		"message": "About {productName}"
 	},
@@ -1756,6 +1939,12 @@
 	},
 	"app.settings.about.version": {
 		"message": "Version {version}"
+	},
+	"app.settings.defaults.automatic-memory": {
+		"message": "Automatically allocate memory at launch"
+	},
+	"app.settings.defaults.automatic-memory-description": {
+		"message": "Adjusts memory for each launch based on available RAM and installed mods."
 	},
 	"app.settings.defaults.environment-variables": {
 		"message": "Environment variables"
@@ -1787,44 +1976,8 @@
 	"app.settings.defaults.memory": {
 		"message": "Memory allocated"
 	},
-	"app.settings.defaults.automatic-memory": {
-		"message": "Automatically allocate memory at launch"
-	},
-	"app.settings.defaults.automatic-memory-description": {
-		"message": "Adjusts memory for each launch based on available RAM and installed mods."
-	},
 	"app.settings.defaults.memory-description": {
 		"message": "The memory allocated to each instance when it is run."
-	},
-	"app.memory-display.available": {
-		"message": "{memory} available"
-	},
-	"app.memory-display.game": {
-		"message": "Game allocation"
-	},
-	"app.memory-display.optimize": {
-		"message": "Optimize memory"
-	},
-	"app.memory-display.optimized": {
-		"message": "Memory optimization complete"
-	},
-	"app.memory-display.optimizing": {
-		"message": "Optimizing..."
-	},
-	"app.memory-display.optimization-description": {
-		"message": "Free unused Windows working sets and standby memory."
-	},
-	"app.memory-display.remaining": {
-		"message": "Remaining after allocation"
-	},
-	"app.memory-display.reclaimed": {
-		"message": "Freed {memory} of memory."
-	},
-	"app.memory-display.unsupported": {
-		"message": "Memory optimization is only available on Windows."
-	},
-	"app.memory-display.used": {
-		"message": "Memory in use"
 	},
 	"app.settings.defaults.post-exit-description": {
 		"message": "Run after the game closes."
@@ -1871,8 +2024,125 @@
 	"app.settings.feature-flags.reset-to-default": {
 		"message": "Reset to default"
 	},
+	"app.settings.java.auto-high-performance-mode": {
+		"message": "Automatically use high-performance GPU for Java"
+	},
+	"app.settings.java.auto-high-performance-mode-description": {
+		"message": "Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only."
+	},
+	"app.settings.java.cancel": {
+		"message": "Cancel"
+	},
 	"app.settings.java.location": {
 		"message": "Java {version} location"
+	},
+	"app.settings.java.quick-add": {
+		"message": "Quick add"
+	},
+	"app.settings.java.custom-version": {
+		"message": "Custom version"
+	},
+	"app.settings.java.add": {
+		"message": "Add Java version"
+	},
+	"app.settings.java.version-placeholder": {
+		"message": "Version number..."
+	},
+	"app.settings.java.find-java": {
+		"message": "Find Java"
+	},
+	"app.settings.java.deep-scan": {
+		"message": "Deep Scan"
+	},
+	"app.settings.java.deep-scan-confirm": {
+		"message": "This will scan ALL directories on ALL drives. May take several minutes."
+	},
+	"app.settings.java.manual-add": {
+		"message": "Manual Add"
+	},
+	"app.settings.java.download-java": {
+		"message": "Download Java"
+	},
+	"app.settings.java.scan-anyway": {
+		"message": "Scan Anyway"
+	},
+	"app.settings.java.scanning": {
+		"message": "Scanning..."
+	},
+	"app.settings.java.no-versions": {
+		"message": "No Java versions configured. Use the buttons below to find or add Java installations."
+	},
+	"app.settings.java.table.version": {
+		"message": "Java Version"
+	},
+	"app.settings.java.table.distribution": {
+		"message": "Distribution"
+	},
+	"app.settings.java.table.path": {
+		"message": "Path"
+	},
+	"app.settings.java.table.actions": {
+		"message": ""
+	},
+	"app.settings.java.download.title": {
+		"message": "Download Java"
+	},
+	"app.settings.java.download.select-version": {
+		"message": "Select a Java version:"
+	},
+	"app.settings.java.download.select-vendor": {
+		"message": "Choose a distribution:"
+	},
+	"app.settings.java.download.no-vendors": {
+		"message": "No distributions available."
+	},
+	"app.settings.java.download.select-version-feed": {
+		"message": "Select a version of {vendor}:"
+	},
+	"app.settings.java.download.downloading": {
+		"message": "Downloading Java {version}..."
+	},
+	"app.settings.java.download.select-distribution": {
+		"message": "Choose a distribution:"
+	},
+	"app.settings.java.download.back": {
+		"message": "Back to distributions"
+	},
+	"app.settings.java.download.loading": {
+		"message": "Loading versions..."
+	},
+	"app.settings.java.download.no-versions": {
+		"message": "No versions available for this distribution."
+	},
+	"app.settings.java.download.progress-title": {
+		"message": "Downloading Java"
+	},
+	"app.settings.java.download.progress-info": {
+		"message": "Downloading Java {version} from {distribution}"
+	},
+	"app.settings.java.download.preparing": {
+		"message": "Preparing download..."
+	},
+	"app.settings.java.download.extracting": {
+		"message": "Extracting files..."
+	},
+	"app.settings.java.download.extracting.status": {
+		"message": "Extracting files..."
+	},
+	"app.settings.java.download.background": {
+		"message": "Background"
+	},
+	"app.settings.java.download.background-hint": {
+		"message": "Download continues — check the Downloads page for progress."
+	},
+	"app.settings.java.download.version-label": {
+		"message": "Java {version}"
+	},
+	"app.settings.java.download.cancelling": {
+		"message": "Cancelling..."
+	},
+	"app.settings.java.download.downloading-label": {
+		"message": "Downloading..."
 	},
 	"app.settings.resources.app-cache": {
 		"message": "App cache"
@@ -2201,6 +2471,12 @@
 	"app.skins.third-party-account.title": {
 		"message": "Third-party skin management"
 	},
+	"app.skins.tabs.saved": {
+		"message": "Saved skins"
+	},
+	"app.skins.tabs.default": {
+		"message": "Official skins"
+	},
 	"app.skins.title": {
 		"message": "Skin selector"
 	},
@@ -2209,6 +2485,42 @@
 	},
 	"app.splash.updating-app-directory": {
 		"message": "Updating app directory..."
+	},
+	"app.symlink-capability.cancel": {
+		"message": "Cancel"
+	},
+	"app.symlink-capability.requires-admin.description": {
+		"message": "Windows Developer Mode is disabled, so the launcher must restart as administrator to create a shared instance."
+	},
+	"app.symlink-capability.requires-admin.restart-button": {
+		"message": "Restart as administrator"
+	},
+	"app.symlink-capability.requires-admin.title": {
+		"message": "Administrator permission required"
+	},
+	"app.symlink-capability.unsupported": {
+		"message": "This system does not support creating symbolic links."
+	},
+	"app.symlink-capability.unsupported.title": {
+		"message": "Shared instances are unavailable"
+	},
+	"app.symlink-warning.delete.body": {
+		"message": "Deleting this instance removes only the launcher entry. The original files at \"{path}\" will remain."
+	},
+	"app.symlink-warning.delete.header": {
+		"message": "Delete shared instance"
+	},
+	"app.symlink-warning.dismiss-permanently": {
+		"message": "Don't show again for this instance"
+	},
+	"app.symlink-warning.shared-badge": {
+		"message": "Shared"
+	},
+	"app.symlink-warning.write.body": {
+		"message": "This instance is linked to \"{path}\". Changes will also affect the original files."
+	},
+	"app.symlink-warning.write.header": {
+		"message": "Shared instance"
 	},
 	"app.translation-settings.api-key": {
 		"message": "API key"
@@ -2555,6 +2867,18 @@
 	"instance.files.save-as": {
 		"message": "Save as..."
 	},
+	"instance.logs.delete.latest-running": {
+		"message": "Cannot delete latest.log while the instance is running"
+	},
+	"instance.logs.source.live": {
+		"message": "Live Log"
+	},
+	"instance.logs.source.numbered": {
+		"message": "Log {index}"
+	},
+	"instance.logs.source.unknown": {
+		"message": "Unknown"
+	},
 	"instance.server-modal.address": {
 		"message": "Address"
 	},
@@ -2696,6 +3020,9 @@
 	"instance.settings.tabs.java": {
 		"message": "Java and memory"
 	},
+	"instance.settings.tabs.java.automatic-memory": {
+		"message": "Automatically allocate memory at launch"
+	},
 	"instance.settings.tabs.java.custom-environment-variables": {
 		"message": "Custom environment variables"
 	},
@@ -2707,9 +3034,6 @@
 	},
 	"instance.settings.tabs.java.custom-memory-allocation": {
 		"message": "Custom memory allocation"
-	},
-	"instance.settings.tabs.java.automatic-memory": {
-		"message": "Automatically allocate memory at launch"
 	},
 	"instance.settings.tabs.java.enter-environment-variables": {
 		"message": "Enter environmental variables..."
@@ -2737,6 +3061,33 @@
 	},
 	"instance.settings.tabs.java.version": {
 		"message": "Java {version}"
+	},
+	"instance.settings.tabs.java.current-path": {
+		"message": "Active path"
+	},
+	"instance.settings.tabs.java.custom-path-option": {
+		"message": "Custom path..."
+	},
+	"instance.settings.tabs.java.optimal-label": {
+		"message": "(recommended for this instance)"
+	},
+	"instance.settings.tabs.java.select-java": {
+		"message": "Select Java version"
+	},
+	"instance.settings.tabs.java.table.version": {
+		"message": "Version"
+	},
+	"instance.settings.tabs.java.table.distribution": {
+		"message": "Distribution"
+	},
+	"instance.settings.tabs.java.table.path": {
+		"message": "Path"
+	},
+	"instance.settings.tabs.java.auto-label": {
+		"message": "Auto (recommended)"
+	},
+	"instance.settings.tabs.java.custom-label": {
+		"message": "Custom path..."
 	},
 	"instance.settings.tabs.window": {
 		"message": "Window"
@@ -2837,6 +3188,9 @@
 	"minecraft-account.offline-modal.create": {
 		"message": "Create account"
 	},
+	"minecraft-account.offline-modal.chinese-username-warning": {
+		"message": "Minecraft 1.18 and newer may reject Chinese usernames when entering singleplayer worlds or servers. Use this account with an older version, or choose an English username for newer versions."
+	},
 	"minecraft-account.offline-modal.description": {
 		"message": "Choose the username used in offline games. This account can only join servers that allow offline players."
 	},
@@ -2857,6 +3211,9 @@
 	},
 	"minecraft-account.offline-mode.description": {
 		"message": "Only offline accounts are available. You can launch fully downloaded instances."
+	},
+	"minecraft-account.offline-mode.refresh": {
+		"message": "Refresh connection status"
 	},
 	"minecraft-account.remove-account": {
 		"message": "Remove account"
@@ -2969,82 +3326,211 @@
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "Unknown file warning"
 	},
-	"app.downloads.download-resumed": {
-		"message": "{bytes} resumed"
+	"app.drop.overlay-title": {
+		"message": "Drop to import"
 	},
-	"app.downloads.source.tencent-maven": {
-		"message": "Tencent Maven"
+	"app.drop.overlay-subtitle": {
+		"message": "Release to classify and import"
 	},
-	"app.settings.resources.source-health": {
-		"message": "Source health"
+	"app.drop.error.multiple-files-title": {
+		"message": "Cannot import multiple files"
 	},
-	"app.settings.resources.source-health-cooling-down": {
-		"message": "Cooling down"
+	"app.drop.error.multiple-files-text": {
+		"message": "Please drop one file at a time."
 	},
-	"app.settings.resources.source-health-description": {
-		"message": "Connection quality is learned locally from completed downloads and is never uploaded."
+	"app.drop.error.shortcut-title": {
+		"message": "Shortcut resolution failed"
 	},
-	"app.settings.resources.source-health-empty": {
-		"message": "No download measurements have been collected yet."
+	"app.drop.error.shortcut-text": {
+		"message": "Could not resolve the shortcut target."
 	},
-	"app.settings.resources.source-health-range-splitting-disabled": {
-		"message": "Range splitting disabled"
+	"app.drop.error.unknown-title": {
+		"message": "Unknown file type"
 	},
-	"app.settings.resources.source-health-refresh": {
-		"message": "Refresh"
+	"app.drop.error.unknown-text": {
+		"message": "Could not determine what kind of file this is."
 	},
-	"app.settings.resources.source-health-reset": {
-		"message": "Reset learned data"
+	"app.drop.error.title": {
+		"message": "Drop error"
 	},
-	"app.settings.resources.source-health-stats": {
-		"message": "{ttfb} TTFB · {speed} · {successes} successful / {failures} failed"
+	"app.drop.world-imported-title": {
+		"message": "World imported"
 	},
-	"app.instance.confirm-delete.symlink-warning": {
-		"message": "This is a shared instance linked to \"{path}\". Only the link will be removed; the original files will not be deleted."
+	"app.drop.world-imported-text": {
+		"message": "World save has been imported successfully."
 	},
-	"app.symlink-warning.write.header": {
-		"message": "Shared instance"
+	"app.drop.content-installed-title": {
+		"message": "Content installed"
 	},
-	"app.symlink-warning.write.body": {
-		"message": "This is a shared instance. Any changes will also affect {path}."
+	"app.drop.content-installed-text": {
+		"message": "File has been installed to the instance."
 	},
-	"app.symlink-warning.delete.header": {
-		"message": "Shared instance"
+	"app.drop.install-failed-title": {
+		"message": "Installation failed"
 	},
-	"app.symlink-warning.delete.body": {
-		"message": "This is a shared instance. This action will delete the shared files at {path}."
+	"app.drop.instance-imported-title": {
+		"message": "Instance imported"
 	},
-	"app.symlink-warning.dismiss-permanently": {
-		"message": "Don't show again for this instance"
+	"app.drop.instance-imported-text": {
+		"message": "{name} imported successfully."
 	},
-	"app.symlink-warning.shared-badge": {
-		"message": "Shared"
+	"app.drop.import-failed-title": {
+		"message": "Import failed"
 	},
-	"creation-flow.modal.import-instance.import-as-symlink": {
-		"message": "Import as shared instance"
+	"app.drop.import-failed-text": {
+		"message": "Failed to import {name}: {error}"
 	},
-	"creation-flow.modal.import-instance.import-as-symlink.tooltip": {
-		"message": "Uses a symlink to directly reference the original instance folder, sharing one copy of files. All changes will sync to the original instance."
+	"app.drop.no-instances": {
+		"message": "No instances found"
 	},
-	"app.symlink-capability.unsupported": {
-		"message": "Symbolic links are not supported on this system."
+	"app.drop.modpack-not-supported-title": {
+		"message": "Modpack import"
 	},
-	"app.symlink-capability.requires-admin": {
-		"message": "Symbolic links require administrator privileges. Please restart the launcher as an administrator."
+	"app.drop.modpack-not-supported-text": {
+		"message": "Modpack import is not yet supported via drag & drop. Please use the Import button to install a modpack."
 	},
-	"app.symlink-capability.unsupported.title": {
-		"message": "Symbolic links not supported"
+	"app.drop.unknown-force-analysis-title": {
+		"message": "Unable to identify file type"
 	},
-	"app.symlink-capability.requires-admin.title": {
-		"message": "Administrator privileges required"
+	"app.drop.unknown-force-analysis-text": {
+		"message": "This archive needs to be extracted and deeply analyzed to determine its content type. This may take a while. Force analysis?"
 	},
-	"app.symlink-capability.requires-admin.restart-button": {
-		"message": "Restart as admin"
+	"app.drop.unknown-force-analysis-button": {
+		"message": "Force analysis"
 	},
-	"app.symlink-capability.requires-admin.description": {
-		"message": "Creating shared instances requires administrator privileges. Would you like to restart the launcher as an administrator?"
+	"app.drop.unknown-force-analyzing": {
+		"message": "Force analyzing archive..."
 	},
-	"app.symlink-capability.cancel": {
-		"message": "Cancel"
+	"app.drop.unknown-force-analysis-failed-title": {
+		"message": "Analysis failed"
+	},
+	"app.drop.unknown-force-analysis-failed-text": {
+		"message": "Could not identify the file type even after deep analysis."
+	},
+	"app.drop.processing": {
+		"message": "Processing {name}..."
+	},
+	"app.drop.modpack-installing": {
+		"message": "Installing modpack..."
+	},
+	"app.drop.modpack-installed-success": {
+		"message": "Modpack installed successfully"
+	},
+	"app.drop.modpack-install-failed": {
+		"message": "Failed to install modpack"
+	},
+	"app.drop.mod-compatibility-title": {
+		"message": "Version Mismatch"
+	},
+	"app.drop.mod-compatibility-warning": {
+		"message": "This mod targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader})."
+	},
+	"app.translation-settings.system-prompt": {
+		"message": "系统提示词"
+	},
+	"app.translation-settings.system-prompt-description": {
+		"message": "输入你的自定义系统提示词，留空则使用默认提示词"
+	},
+	"create.title": {
+		"message": "Create Instance"
+	},
+	"create.subtitle": {
+		"message": "Start a new adventure or bring your existing worlds"
+	},
+	"create.new.title": {
+		"message": "Start Fresh"
+	},
+	"create.new.description": {
+		"message": "Create a new Minecraft instance from scratch."
+	},
+	"create.import.title": {
+		"message": "Import Existing"
+	},
+	"create.import.description": {
+		"message": "Import instances from other launchers or install a modpack."
+	},
+	"create.back": {
+		"message": "Back to Library"
+	},
+	"drop.help.title": {
+		"message": "What can I drop into Axolotl?"
+	},
+	"drop.help.instances-title": {
+		"message": "Launcher Instances"
+	},
+	"drop.help.instances-desc": {
+		"message": "Drag folders from other launchers (MultiMC, Prism Launcher, HMCL, etc.) to import Minecraft instances."
+	},
+	"drop.help.instances-formats": {
+		"message": "MultiMC / Prism Launcher / PolyMC / HMCL instance folders"
+	},
+	"drop.help.mods-title": {
+		"message": "Mods"
+	},
+	"drop.help.mods-desc": {
+		"message": "Drag mod JAR files to install them into a Minecraft instance."
+	},
+	"drop.help.mods-formats": {
+		"message": ".jar"
+	},
+	"drop.help.modpacks-title": {
+		"message": "Modpacks"
+	},
+	"drop.help.modpacks-desc": {
+		"message": "Drag modpack ZIP/MRPACK files to create a new instance."
+	},
+	"drop.help.modpacks-formats": {
+		"message": ".mrpack / .zip"
+	},
+	"drop.help.resource-packs-title": {
+		"message": "Resource Packs"
+	},
+	"drop.help.resource-packs-desc": {
+		"message": "Drag resource pack ZIP files to install them into an instance."
+	},
+	"drop.help.resource-packs-formats": {
+		"message": ".zip"
+	},
+	"drop.help.shader-packs-title": {
+		"message": "Shader Packs"
+	},
+	"drop.help.shader-packs-desc": {
+		"message": "Drag shader pack ZIP files to install them into an instance."
+	},
+	"drop.help.shader-packs-formats": {
+		"message": ".zip"
+	},
+	"drop.help.worlds-title": {
+		"message": "World Saves"
+	},
+	"drop.help.worlds-desc": {
+		"message": "Drag world save folders to import them into an instance."
+	},
+	"drop.help.worlds-formats": {
+		"message": "Minecraft world save folder (level.dat)"
+	},
+	"drop.help.schematics-title": {
+		"message": "Schematics"
+	},
+	"drop.help.schematics-desc": {
+		"message": "Drag .litematic files to import them as schematics."
+	},
+	"drop.help.schematics-formats": {
+		"message": ".litematic"
+	},
+	"app.instance.mods.parsing-files": {
+		"message": "Parsing files, larger files may take a while"
+	},
+	"app.instance.mods.drag-drop-hint": {
+		"message": "Drop files to install to the current instance"
+	},
+	"app.instance.mods.parse-failed": {
+		"message": "Parse failed, this may not be a valid package"
+	},
+	"app.instance.mods.file-already-exists": {
+		"message": "The file may already exist in the instance"
+	},
+	"app.instance.mods.dismiss": {
+		"message": "Got it"
 	}
 }

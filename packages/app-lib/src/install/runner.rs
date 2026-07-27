@@ -1,9 +1,10 @@
 use super::events::{InstallProgressReporter, emit_install_job};
 use super::model::{
-    InstallCleanup, InstallErrorContext, InstallErrorView, InstallJobDisplay,
-    InstallJobEventKind, InstallJobSnapshot, InstallJobState, InstallJobStatus,
-    InstallPhaseDetails, InstallPhaseId, InstallPostInstallEdit,
-    InstallRequest, InstallRollbackState, InstallTarget,
+    InstallCleanup, InstallErrorContext, InstallErrorView, InstallJavaStep,
+    InstallJobDisplay, InstallJobEventKind, InstallJobSnapshot,
+    InstallJobState, InstallJobStatus, InstallPhaseDetails, InstallPhaseId,
+    InstallPostInstallEdit, InstallProgress, InstallRequest,
+    InstallRollbackState, InstallTarget,
 };
 use super::{diagnostics, recovery, store};
 use crate::ErrorKind;
@@ -63,6 +64,27 @@ pub async fn import_instance(
         launcher_type,
         base_path,
         instance_folder,
+        instance_path: None,
+        symlink,
+    })
+    .await
+}
+
+/// Like [`import_instance`] but with a pre-resolved filesystem path.
+/// Used by the frontend when the path is already known from scanning,
+/// avoiding redundant config/registry re-resolution.
+pub async fn import_instance_with_path(
+    launcher_type: crate::api::pack::import::ImportLauncherType,
+    base_path: PathBuf,
+    instance_folder: String,
+    instance_path: Option<String>,
+    symlink: bool,
+) -> crate::Result<InstallJobSnapshot> {
+    start(InstallRequest::ImportInstance {
+        launcher_type,
+        base_path,
+        instance_folder,
+        instance_path,
         symlink,
     })
     .await
@@ -79,6 +101,13 @@ pub async fn install_existing_instance(
     force: bool,
 ) -> crate::Result<InstallJobSnapshot> {
     start(InstallRequest::InstallExistingInstance { instance_id, force }).await
+}
+
+pub async fn download_java(
+    vendor: String,
+    version: u32,
+) -> crate::Result<InstallJobSnapshot> {
+    start(InstallRequest::DownloadJava { vendor, version }).await
 }
 
 pub async fn install_pack_to_existing_instance(
@@ -430,6 +459,13 @@ async fn prepare_initial_instance(
         } => {
             prepare_existing_rollback(job_state, state, &instance_id).await?;
         }
+        InstallRequest::DownloadJava { vendor, version } => {
+            set_display(
+                job_state,
+                format!("Java {version} ({vendor})"),
+                None,
+            );
+        }
     }
 
     Ok(())
@@ -720,8 +756,13 @@ async fn run_request(
             launcher_type,
             base_path,
             instance_folder,
+            instance_path,
             symlink,
         } => {
+            tracing::debug!(
+                "InstallRequest::ImportInstance: launcher_type={launcher_type} base_path={} instance_folder={instance_folder} symlink={symlink}",
+                base_path.display()
+            );
             let Some(instance_id) = current_instance_id(job_state) else {
                 return Err(crate::ErrorKind::InputError(
                     "Install job is missing its instance id".to_string(),
@@ -744,6 +785,7 @@ async fn run_request(
                 launcher_type,
                 base_path,
                 instance_folder,
+                instance_path,
                 InstallProgressReporter::new(job_id, job_state.clone()),
                 symlink,
             )
@@ -849,6 +891,28 @@ async fn run_request(
             .await?;
             apply_post_install_edit(&instance_id, post_install_edit).await?;
             Ok(Some(instance_id))
+        }
+        InstallRequest::DownloadJava { vendor, version } => {
+            update_progress(
+                job_id,
+                job_state,
+                state,
+                InstallPhaseId::PreparingJava,
+                InstallPhaseDetails::Java {
+                    major_version: version,
+                    step: InstallJavaStep::FetchingMetadata,
+                },
+            )
+            .await?;
+            let reporter = InstallProgressReporter::new(job_id, job_state.clone());
+            let path = crate::api::jre::download_java_from_feed_with_reporter(
+                &vendor,
+                version,
+                reporter,
+            )
+            .await?;
+            let _ = path;
+            Ok(None)
         }
     }
 }
@@ -1157,6 +1221,23 @@ async fn install_local_pack_file_recursive(
     // If standard detection failed and we're not at max depth, try to look for
     // sub-compressed files to extract and check
     if current_depth < max_depth {
+        // Report progress: scanning/extracting phase (high-latency operation)
+        let filename = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "archive".to_string());
+        reporter
+            .update(
+                InstallPhaseId::ResolvingPack,
+                None,
+                InstallPhaseDetails::Modpack {
+                    project_id: None,
+                    version_id: None,
+                    title: Some(format!("Scanning {filename} (level {current_depth}/{max_depth})")),
+                },
+            )
+            .await?;
+
         let state = State::get().await?;
         let scratch =
             crate::api::pack::archive_util::create_import_scratch_dir(&state)
@@ -1193,6 +1274,22 @@ async fn install_local_pack_file_recursive(
             // Check if it looks like a compressed file
             if lower_name.ends_with(".zip") || lower_name.ends_with(".mrpack") {
                 // Extract this sub-archive
+                reporter
+                    .update(
+                        InstallPhaseId::ExtractingOverrides,
+                        Some(InstallProgress {
+                            current: sub_archive_paths.len() as u64 + 1,
+                            total: archive.len() as u64,
+                            secondary: None,
+                        }),
+                        InstallPhaseDetails::Modpack {
+                            project_id: None,
+                            version_id: None,
+                            title: Some(format!("Extracting {filename}")),
+                        },
+                    )
+                    .await?;
+
                 let mut entry = archive
                     .by_index(i)
                     .map_err(|e| ErrorKind::OtherError(e.to_string()))?;

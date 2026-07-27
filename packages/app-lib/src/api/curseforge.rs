@@ -652,7 +652,7 @@ pub async fn get_projects(
 ) -> crate::Result<Vec<CurseForgeProject>> {
     let mut projects = Vec::new();
     let mut missing_ids = Vec::new();
-    for project_id in project_ids.into_iter().collect::<HashSet<_>>() {
+    for project_id in project_ids.into_iter() {
         if let Some(project) = cached_project(project_id) {
             projects.push(project);
         } else {
@@ -1503,7 +1503,7 @@ pub async fn install_modpack_with_reporter(
                             CurseForgeManualDownload {
                                 project_id: manifest_file.project_id,
                                 file_id: manifest_file.file_id,
-                                file_name: file_name.clone(),
+                                file_name,
                                 website_url: curseforge_file_page_url(
                                     project.links.website_url.as_deref(),
                                     manifest_file.file_id,
@@ -1540,8 +1540,7 @@ pub async fn install_modpack_with_reporter(
                         InstallJobEventKind::ContentFileSkipped {
                             path: skipped_path,
                             reason: format!(
-                                "Failed after {} attempts: {}",
-                                MODPACK_FILE_INSTALL_ATTEMPTS, failure_reason
+                                "Failed after {MODPACK_FILE_INSTALL_ATTEMPTS} attempts: {failure_reason}"
                             ),
                             project_id: Some(
                                 manifest_file.project_id.to_string(),
@@ -1952,7 +1951,7 @@ pub(crate) async fn install_local_manifest_files(
                             CurseForgeManualDownload {
                                 project_id: manifest_file.project_id,
                                 file_id: manifest_file.file_id,
-                                file_name: file_name.clone(),
+                                file_name,
                                 website_url: curseforge_file_page_url(
                                     project.links.website_url.as_deref(),
                                     manifest_file.file_id,
@@ -1989,8 +1988,7 @@ pub(crate) async fn install_local_manifest_files(
                         InstallJobEventKind::ContentFileSkipped {
                             path: skipped_path,
                             reason: format!(
-                                "Failed after {} attempts: {}",
-                                MODPACK_FILE_INSTALL_ATTEMPTS, failure_reason
+                                "Failed after {MODPACK_FILE_INSTALL_ATTEMPTS} attempts: {failure_reason}"
                             ),
                             project_id: Some(
                                 manifest_file.project_id.to_string(),

@@ -114,6 +114,7 @@
 		"tags:default",
 		"translation:default",
 		"utils:default",
-		"worlds:default"
+		"worlds:default",
+		"drop:default"
 	]
 }

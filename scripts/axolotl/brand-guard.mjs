@@ -3,7 +3,7 @@ import path from 'node:path'
 
 const roots = ['apps/app', 'apps/app-frontend', 'packages/app-lib']
 const ignoredNames = new Set(['LICENSE', 'COPYING.md'])
-const ignoredDirectories = new Set(['dist', 'build', 'node_modules', 'target', '.gradle', '.sqlx'])
+const ignoredDirectories = new Set(['dist', 'build', 'node_modules', 'target', '.gradle', '.sqlx', 'bin'])
 const forbiddenPatterns = [
 	['official product name', /Modrinth App/g],
 	['official API identity', /modrinth\/theseus/gi],

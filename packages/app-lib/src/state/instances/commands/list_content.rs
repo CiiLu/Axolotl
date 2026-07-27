@@ -15,13 +15,14 @@ use crate::state::{
     OwnerType, Project, ProjectType, ReleaseChannel, TeamMember, Version,
 };
 use crate::util::fetch::{
-    DownloadMeta, DownloadReason, FetchSemaphore, fetch_mirrors, sha1_async,
+    ContentValidation, DownloadMeta, DownloadReason, DownloadRequest,
+    FetchSemaphore, Integrity, ResourceClass, download_to_path, sha1_async,
 };
-use async_zip::base::read::seek::ZipFileReader;
+use async_zip::tokio::read::fs::ZipFileReader;
 use dashmap::DashMap;
 use sqlx::{Row, SqlitePool};
 use std::collections::{HashMap, HashSet};
-use std::io::Cursor;
+use std::path::{Component, Path};
 
 #[derive(Clone, Debug)]
 struct ResolvedContentScope {
@@ -1060,6 +1061,7 @@ async fn content_projects_for_scope(
                 size: file.size,
                 metadata: file_metadata_from_entry_or_cache(entry, metadata),
                 project_type,
+                local_mod_data: file.local_mod_data,
             },
         );
     }
@@ -1306,6 +1308,15 @@ async fn content_files_to_content_items(
                 resolve_owner(project, &meta.teams, &meta.organizations)
             });
 
+            // Parse local_mod_data for fallback display when Modrinth /
+            // CurseForge has no match for this file.
+            let local_mod = file.local_mod_data.as_ref().and_then(|json| {
+                serde_json::from_str::<crate::mod_metadata::LocalModMetadata>(
+                    json,
+                )
+                .ok()
+            });
+
             ContentItem {
                 file_name: file.file_name.clone(),
                 file_path: path.clone(),
@@ -1330,6 +1341,17 @@ async fn content_files_to_content_items(
                                 .as_ref()
                                 .map(|logo| logo.thumbnail_url.clone()),
                         })
+                    })
+                    .or_else(|| {
+                        local_mod.as_ref().map(|meta| ContentItemProject {
+                            id: format!("local:{}", meta.mod_id),
+                            slug: Some(meta.mod_id.clone()),
+                            title: meta
+                                .name
+                                .clone()
+                                .unwrap_or_else(|| meta.mod_id.clone()),
+                            icon_url: None,
+                        })
                     }),
                 version: version
                     .map(|version| ContentItemVersion {
@@ -1347,17 +1369,40 @@ async fn content_files_to_content_items(
                             file_name: version.file_name.clone(),
                             date_published: Some(version.file_date.clone()),
                         })
-                    }),
-                owner: owner.or_else(|| {
-                    curseforge_project
-                        .and_then(|project| project.authors.first())
-                        .map(|author| ContentItemOwner {
-                            id: author.id.to_string(),
-                            name: author.name.clone(),
-                            avatar_url: None,
-                            owner_type: OwnerType::User,
+                    })
+                    .or_else(|| {
+                        local_mod.as_ref().and_then(|meta| {
+                            meta.version.clone().map(|v| ContentItemVersion {
+                                id: format!("local:{}", meta.mod_id),
+                                version_number: v,
+                                file_name: file.file_name.clone(),
+                                date_published: None,
+                            })
                         })
-                }),
+                    }),
+                owner: owner
+                    .or_else(|| {
+                        curseforge_project
+                            .and_then(|project| project.authors.first())
+                            .map(|author| ContentItemOwner {
+                                id: author.id.to_string(),
+                                name: author.name.clone(),
+                                avatar_url: None,
+                                owner_type: OwnerType::User,
+                            })
+                    })
+                    .or_else(|| {
+                        local_mod.as_ref().and_then(|meta| {
+                            meta.authors.first().map(|author| {
+                                ContentItemOwner {
+                                    id: format!("local:{author}"),
+                                    name: author.clone(),
+                                    avatar_url: None,
+                                    owner_type: OwnerType::User,
+                                }
+                            })
+                        })
+                    }),
                 has_update: file.update_version_id.is_some()
                     || curseforge_update_id.is_some(),
                 update_version_id: file
@@ -1730,22 +1775,45 @@ async fn get_modpack_identifiers(
         loader: content_set.loader.as_str().to_string(),
         dependent_on: Some(version_id.to_string()),
     };
-    let mrpack_bytes = fetch_mirrors(
-        &[&primary_file.url],
-        primary_file.hashes.get("sha1").map(String::as_str),
-        Some(&download_meta),
-        None,
-        fetch_semaphore,
+    let state = State::get().await?;
+    let file_name = Path::new(&primary_file.filename);
+    if file_name.components().count() != 1
+        || !matches!(file_name.components().next(), Some(Component::Normal(_)))
+    {
+        return Err(crate::ErrorKind::InputError(
+            "Modrinth returned an invalid modpack file name".to_string(),
+        )
+        .into());
+    }
+    // Stream the pack to the same cache location the installer uses instead
+    // of buffering multi-gigabyte .mrpacks in memory; a later install of this
+    // version can then reuse the already-verified file.
+    let pack_path = state
+        .directories
+        .caches_dir()
+        .join("modpacks")
+        .join(&version.project_id)
+        .join(version_id)
+        .join(file_name);
+    download_to_path(
+        DownloadRequest::new(&primary_file.url, ResourceClass::Modpack)
+            .with_integrity(Integrity {
+                size: Some(primary_file.size as u64),
+                sha1: primary_file.hashes.get("sha1").cloned(),
+                sha512: primary_file.hashes.get("sha512").cloned(),
+                content: ContentValidation::Jar,
+                ..Integrity::default()
+            })
+            .with_download_meta(download_meta),
+        &pack_path,
+        &state.download_semaphore,
         pool,
+        None,
     )
     .await?;
-    let reader = Cursor::new(&mrpack_bytes);
-    let mut zip_reader =
-        ZipFileReader::with_tokio(reader).await.map_err(|_| {
-            crate::ErrorKind::InputError(
-                "Failed to read modpack zip".to_string(),
-            )
-        })?;
+    let zip_reader = ZipFileReader::new(&pack_path).await.map_err(|_| {
+        crate::ErrorKind::InputError("Failed to read modpack zip".to_string())
+    })?;
     let manifest_idx = zip_reader
         .file()
         .entries()

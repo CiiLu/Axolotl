@@ -7,20 +7,38 @@
 <script setup>
 import {
 	ConsolePageLayout,
+	defineMessages,
 	injectModrinthClient,
 	injectNotificationManager,
 	provideConsoleManager,
+	useVIntl,
 } from '@modrinth/ui'
 import { computed, onUnmounted, ref, shallowRef, triggerRef, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 
+import { useCrashAnalysis } from '@/composables/useCrashAnalysis'
 import { useInstanceConsole } from '@/composables/useInstanceConsole'
 import { log_listener, process_listener } from '@/helpers/events.js'
-import { delete_logs_by_filename, get_output_by_filename } from '@/helpers/logs.js'
+import {
+	delete_logs_by_filename,
+	export_crash_context,
+	get_output_by_filename,
+} from '@/helpers/logs.js'
 
 const client = injectModrinthClient()
 const { handleError } = injectNotificationManager()
 const route = useRoute()
+const { formatMessage } = useVIntl()
+
+const messages = defineMessages({
+	liveLog: { id: 'instance.logs.source.live', defaultMessage: 'Live Log' },
+	unknownLog: { id: 'instance.logs.source.unknown', defaultMessage: 'Unknown' },
+	logName: { id: 'instance.logs.source.numbered', defaultMessage: 'Log {index}' },
+	cannotDeleteLatest: {
+		id: 'instance.logs.delete.latest-running',
+		defaultMessage: 'Cannot delete latest.log while the instance is running',
+	},
+})
 
 const props = defineProps({
 	instance: {
@@ -57,6 +75,12 @@ const props = defineProps({
 
 const instanceId = computed(() => route.params.id)
 const {
+	analysis: localCrashAnalysis,
+	loading: crashAnalysisLoading,
+	refresh: refreshCrashAnalysis,
+	clear: clearCrashAnalysis,
+} = useCrashAnalysis(instanceId.value)
+const {
 	liveConsole,
 	historicalConsole,
 	hydrate,
@@ -70,7 +94,7 @@ await hydrate()
 
 function buildLogList(rawLogs) {
 	return [
-		{ name: 'Live Log', live: true },
+		{ name: formatMessage(messages.liveLog), live: true },
 		...rawLogs
 			.filter(
 				(log) =>
@@ -82,7 +106,7 @@ function buildLogList(rawLogs) {
 			)
 			.map((log) => ({
 				...log,
-				name: log.filename || 'Unknown',
+				name: log.filename || formatMessage(messages.unknownLog),
 			})),
 	]
 }
@@ -105,7 +129,7 @@ const filteredLogs = computed(() =>
 const logSources = computed(() =>
 	filteredLogs.value.map((l, i) => ({
 		id: String(i),
-		name: l?.name ?? `Log ${i}`,
+		name: l?.name ?? formatMessage(messages.logName, { index: i }),
 		live: l?.live ?? false,
 	})),
 )
@@ -121,18 +145,23 @@ watchEffect(() => {
 const crashAnalysis = ref(null)
 
 async function analyseForCrash() {
-	const lines = liveConsole.output.value
-	if (lines.length === 0) return
-
-	const content = lines.map((l) => l.text).join('\n')
+	const localAnalysis = await refreshCrashAnalysis().catch((error) => {
+		handleError(error)
+		return null
+	})
+	if (!localAnalysis?.crashed || !localAnalysis.combined_log || props.offline) return
 	try {
-		const data = await client.mclogs.insights_v1.analyse(content)
+		const data = await client.mclogs.insights_v1.analyse(localAnalysis.combined_log)
 		if (data.analysis?.problems?.length > 0) {
 			crashAnalysis.value = data
 		}
-	} catch {
-		// Crash analysis is best-effort
+	} catch (error) {
+		handleError(error)
 	}
+}
+
+async function exportCrashContext() {
+	await export_crash_context(props.instance.id, props.instance.name).catch(handleError)
 }
 
 const selectedLog = computed(() => filteredLogs.value[selectedLogIndex.value])
@@ -165,9 +194,12 @@ provideConsoleManager({
 	},
 	onDelete: deleteSelectedLog,
 	deleteDisabled,
-	deleteDisabledTooltip: 'Cannot delete latest.log while the instance is running',
+	deleteDisabledTooltip: computed(() => formatMessage(messages.cannotDeleteLatest)),
 	shareDisabled: computed(() => props.offline),
 	emptyStateType: 'instance',
+	localCrashAnalysis,
+	crashAnalysisLoading,
+	onExportCrashContext: exportCrashContext,
 	crashAnalysis,
 	onDismissCrash: () => {
 		crashAnalysis.value = null
@@ -215,6 +247,8 @@ const unlistenProcesses = await process_listener(async (e) => {
 	if (e.instance_id !== instanceId.value) return
 	if (e.event === 'launched') {
 		liveConsole.clear()
+		clearCrashAnalysis()
+		crashAnalysis.value = null
 		invalidate()
 		selectedLogIndex.value = 0
 	}

@@ -63,6 +63,7 @@ fn main() {
                     .commands(&[
                         "resolve_chinese_content_search",
                         "lookup_chinese_content_names",
+                        "lookup_content_wiki_ids",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
@@ -114,13 +115,20 @@ fn main() {
                     .commands(&[
                         "get_java_versions",
                         "set_java_version",
+                        "remove_java_version",
                         "jre_find_filtered_jres",
                         "jre_get_jre",
                         "jre_test_jre",
                         "jre_auto_install_java",
+
                         "jre_get_max_memory",
                         "jre_get_memory_status",
                         "jre_optimize_memory",
+                        "list_java_distribution_versions",
+                        "list_java_feed_vendors",
+                        "list_java_feed_versions",
+                        "download_java_from_feed",
+                        "download_java",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
@@ -138,6 +146,8 @@ fn main() {
                         "logs_get_latest_log_cursor",
                         "logs_get_live_log_buffer",
                         "logs_clear_live_log_buffer",
+                        "logs_analyze_crash",
+                        "logs_export_crash_context",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
@@ -256,6 +266,7 @@ fn main() {
                         "instance_install_project_with_dependencies",
                         "instance_switch_project_version_with_dependencies",
                         "instance_add_project_from_path",
+                        "instance_import_world_save",
                         "instance_toggle_disable_project",
                         "instance_remove_project",
                         "instance_update_managed_modrinth_version",
@@ -347,6 +358,19 @@ fn main() {
                         "file_extract_zip",
                         "file_save_as",
                         "file_read_dragged_file",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
+                "drop",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "drop_classify",
+                        "drop_scan_launcher_instances",
+                        "drop_detect_file_lock",
+                        "drop_extract_mod_metadata",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

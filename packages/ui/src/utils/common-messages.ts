@@ -844,6 +844,10 @@ export const commonProjectTypeCategoryMessages = defineMessages({
 		id: 'project-type.project.category',
 		defaultMessage: 'Projects',
 	},
+	schematic: {
+		id: 'project-type.schematic.category',
+		defaultMessage: 'Schematics',
+	},
 })
 
 export const commonProjectTypeTitleMessages = defineMessages({
@@ -879,6 +883,10 @@ export const commonProjectTypeTitleMessages = defineMessages({
 		id: 'project-type.project.capital',
 		defaultMessage: '{count, plural, one {Project} other {Projects}}',
 	},
+	schematic: {
+		id: 'project-type.schematic.capital',
+		defaultMessage: '{count, plural, one {Schematic} other {Schematics}}',
+	},
 })
 
 export const commonProjectTypeSentenceMessages = defineMessages({
@@ -913,6 +921,10 @@ export const commonProjectTypeSentenceMessages = defineMessages({
 	project: {
 		id: 'project-type.project.lowercase',
 		defaultMessage: '{count, plural, one {project} other {projects}}',
+	},
+	schematic: {
+		id: 'project-type.schematic.lowercase',
+		defaultMessage: '{count, plural, one {schematic} other {schematics}}',
 	},
 })
 

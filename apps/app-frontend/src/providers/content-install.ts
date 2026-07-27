@@ -1106,57 +1106,58 @@ export function createContentInstall(opts: {
 	}
 
 	async function handleIncompatibilityWarningInstall(version: Labrinth.Versions.v2.Version) {
-		if (!incompatibilityWarningInstance || !incompatibilityWarningProject) return
+		const instance = incompatibilityWarningInstance
+		const project = incompatibilityWarningProject
+		const callback = incompatibilityWarningCallback
+		if (!instance || !project) return
 
 		incompatibilityWarningInstalling.value = true
-		addInstallingItem(incompatibilityWarningInstance.id, incompatibilityWarningProject, version)
+		addInstallingItem(instance.id, project, version)
 		try {
 			if (currentProvider === 'curseforge') {
 				const result = await installCurrentCurseForgeVersion(
-					incompatibilityWarningInstance,
-					incompatibilityWarningProject,
+					instance,
+					project,
 					version,
 					false,
 				)
 				if (!result.primaryInstalled) {
 					incompatibilityWarningInstalling.value = false
-					removeInstallingItems(incompatibilityWarningInstance.id, [
-						incompatibilityWarningProject.id,
-					])
-					incompatibilityWarningCallback()
+					removeInstallingItems(instance.id, [project.id])
+					callback()
 					return
 				}
 			} else {
-				await add_project_from_version(incompatibilityWarningInstance.id, version.id, 'standalone')
+				await add_project_from_version(instance.id, version.id, 'standalone')
 			}
 		} catch (err) {
 			opts.handleError(err)
 			incompatibilityWarningInstalling.value = false
-			removeInstallingItems(incompatibilityWarningInstance.id, [incompatibilityWarningProject.id])
-			markInstanceContentInstallFailed(incompatibilityWarningInstance.id)
+			removeInstallingItems(instance.id, [project.id])
+			markInstanceContentInstallFailed(instance.id)
 			return
 		}
 
 		incompatibilityWarningInstalling.value = false
 		incompatibilityWarningInstalled = true
-		incompatibilityWarningCallback(version.id, [incompatibilityWarningProject.id])
-		markInstanceContentChanged(incompatibilityWarningInstance.id)
+		callback(version.id, [project.id])
+		markInstanceContentChanged(instance.id)
 		incompatibilityWarningModalRef?.hide()
-		removeInstallingItems(incompatibilityWarningInstance.id, [incompatibilityWarningProject.id])
+		removeInstallingItems(instance.id, [project.id])
 
 		trackEvent('ProjectInstall', {
-			loader: incompatibilityWarningInstance.loader,
-			game_version: incompatibilityWarningInstance.game_version,
-			id: incompatibilityWarningProject.id,
+			loader: instance.loader ?? '',
+			game_version: instance.game_version ?? '',
+			id: project.id,
 			version_id: version.id,
-			project_type: incompatibilityWarningProject.project_type,
-			title: incompatibilityWarningProject.title,
+			project_type: project.project_type,
+			title: project.title,
 			source: 'ProjectIncompatibilityWarningModal',
 		})
 	}
 
 	function handleIncompatibilityWarningCancel() {
-		if (!incompatibilityWarningInstalled) {
+		if (incompatibilityWarningInstance && !incompatibilityWarningInstalled) {
 			incompatibilityWarningCallback()
 		}
 		incompatibilityWarningInstalled = false

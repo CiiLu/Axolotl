@@ -5,6 +5,20 @@
 			isFullscreen ? `fixed inset-0 z-[15] bg-surface-1 p-6 py-8 ${isApp ? 'pt-12' : ''}` : ''
 		"
 	>
+		<div
+			v-if="ctx.localCrashAnalysis?.value?.findings.length && !isFullscreen"
+			class="flex flex-col gap-2"
+		>
+			<CollapsibleAdmonition type="critical" :header="localCrashHeader" :items="localCrashItems" />
+			<div class="flex justify-end">
+				<ButtonStyled type="outlined">
+					<button :disabled="exportingCrashContext" @click="handleExportCrashContext">
+						<DownloadIcon />
+						{{ formatMessage(consoleMessages.exportCrashContext) }}
+					</button>
+				</ButtonStyled>
+			</div>
+		</div>
 		<CollapsibleAdmonition
 			v-if="ctx.crashAnalysis?.value && !isFullscreen"
 			type="critical"
@@ -18,7 +32,7 @@
 			<StyledInput
 				v-model="searchQuery"
 				:icon="SearchIcon"
-				placeholder="Search logs"
+				:placeholder="formatMessage(consoleMessages.searchLogs)"
 				wrapper-class="flex-1"
 				input-class="!h-10"
 				clearable
@@ -48,7 +62,7 @@
 				:clear-disabled-tooltip="resolvedClearDisabledTooltip"
 				:show-delete="showDelete"
 				:delete-disabled="resolvedDeleteDisabled"
-				:delete-disabled-tooltip="ctx.deleteDisabledTooltip"
+				:delete-disabled-tooltip="resolvedDeleteDisabledTooltip"
 				@clear="handleClear"
 				@share="handleShare"
 				@toggle-fullscreen="toggleFullscreen"
@@ -70,11 +84,24 @@
 			@ready="handleTerminalReady"
 		/>
 	</div>
-	<ShareModal ref="shareModal" header="Share Logs" link :social-buttons="false" />
-	<NewModal ref="deleteModal" header="Delete log file" :fade="'danger'" max-width="500px">
+	<ShareModal
+		ref="shareModal"
+		:header="formatMessage(consoleMessages.shareLogs)"
+		link
+		:social-buttons="false"
+	/>
+	<NewModal
+		ref="deleteModal"
+		:header="formatMessage(consoleMessages.deleteLogFile)"
+		:fade="'danger'"
+		max-width="500px"
+	>
 		<div class="flex flex-col gap-6">
-			<Admonition type="critical" header="This is irreversible">
-				Deleting this log file cannot be undone. Are you sure you want to continue?
+			<Admonition
+				type="critical"
+				:header="formatMessage(consoleMessages.deleteIrreversible)"
+			>
+				{{ formatMessage(consoleMessages.deleteConfirmation) }}
 			</Admonition>
 		</div>
 		<template #actions>
@@ -82,13 +109,13 @@
 				<ButtonStyled type="outlined">
 					<button @click="deleteModal?.hide()">
 						<XIcon />
-						Cancel
+						{{ formatMessage(commonMessages.cancelButton) }}
 					</button>
 				</ButtonStyled>
 				<ButtonStyled color="red">
 					<button :disabled="isDeleting" @click="confirmDelete">
 						<TrashIcon />
-						Delete
+						{{ formatMessage(commonMessages.deleteLabel) }}
 					</button>
 				</ButtonStyled>
 			</div>
@@ -97,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { SearchIcon, TrashIcon, XIcon } from '@modrinth/assets'
+import { DownloadIcon, SearchIcon, TrashIcon, XIcon } from '@modrinth/assets'
 import type { Terminal } from '@xterm/xterm'
 import { computed, isRef, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -108,12 +135,14 @@ import type { CollapsibleAdmonitionItem } from '#ui/components/base/CollapsibleA
 import CollapsibleAdmonition from '#ui/components/base/CollapsibleAdmonition.vue'
 import Combobox from '#ui/components/base/Combobox.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
+import { useVIntl } from '#ui/composables/i18n'
 import NewModal from '#ui/components/modal/NewModal.vue'
 import ShareModal from '#ui/components/modal/ShareModal.vue'
 import { injectModrinthClient } from '#ui/providers'
 import { injectModalBehavior } from '#ui/providers/modal-behavior'
 import { injectPageContext } from '#ui/providers/page-context'
 import { injectNotificationManager } from '#ui/providers/web-notifications.ts'
+import { commonMessages } from '#ui/utils/common-messages'
 
 import ConsoleActionButtons from './components/ConsoleActionButtons.vue'
 import ConsoleFilterPills from './components/ConsoleFilterPills.vue'
@@ -126,6 +155,7 @@ import {
 	useConsoleFilters,
 } from './composables'
 import type { ConditionalLevel } from './composables/console-filtering'
+import { consoleMessages, localFindingMessages } from './messages'
 import { injectConsoleManager } from './providers'
 import type { LogLevel, LogLine } from './types'
 
@@ -134,11 +164,230 @@ const client = injectModrinthClient()
 const modalBehavior = injectModalBehavior()
 const pageContext = injectPageContext(null)
 const { addNotification } = injectNotificationManager()
+const { formatMessage } = useVIntl()
+
+const localFindingCopy = {
+	jvm_arguments: {
+		title: localFindingMessages.jvmArgumentsTitle,
+		action: localFindingMessages.jvmArgumentsAction,
+	},
+	out_of_memory: {
+		title: localFindingMessages.outOfMemoryTitle,
+		action: localFindingMessages.outOfMemoryAction,
+	},
+	opengl_unsupported: {
+		title: localFindingMessages.openglUnsupportedTitle,
+		action: localFindingMessages.openglUnsupportedAction,
+	},
+	pixel_format: {
+		title: localFindingMessages.pixelFormatTitle,
+		action: localFindingMessages.pixelFormatAction,
+	},
+	openj9: {
+		title: localFindingMessages.openj9Title,
+		action: localFindingMessages.openj9Action,
+	},
+	java_too_new: {
+		title: localFindingMessages.javaTooNewTitle,
+		action: localFindingMessages.javaTooNewAction,
+	},
+	java_incompatible: {
+		title: localFindingMessages.javaIncompatibleTitle,
+		action: localFindingMessages.javaIncompatibleAction,
+	},
+	jdk_runtime: {
+		title: localFindingMessages.jdkRuntimeTitle,
+		action: localFindingMessages.jdkRuntimeAction,
+	},
+	java_32bit: {
+		title: localFindingMessages.java32BitTitle,
+		action: localFindingMessages.java32BitAction,
+	},
+	java_11_required: {
+		title: localFindingMessages.java11RequiredTitle,
+		action: localFindingMessages.java11RequiredAction,
+	},
+	forge_incomplete: {
+		title: localFindingMessages.forgeIncompleteTitle,
+		action: localFindingMessages.forgeIncompleteAction,
+	},
+	duplicate_mod: {
+		title: localFindingMessages.duplicateModTitle,
+		action: localFindingMessages.duplicateModAction,
+	},
+	incompatible_mods: {
+		title: localFindingMessages.incompatibleModsTitle,
+		action: localFindingMessages.incompatibleModsAction,
+	},
+	missing_dependency: {
+		title: localFindingMessages.missingDependencyTitle,
+		action: localFindingMessages.missingDependencyAction,
+	},
+	mod_id_limit: {
+		title: localFindingMessages.modIdLimitTitle,
+		action: localFindingMessages.modIdLimitAction,
+	},
+	forge_error: {
+		title: localFindingMessages.forgeErrorTitle,
+		action: localFindingMessages.forgeErrorAction,
+	},
+	mod_loader_error: {
+		title: localFindingMessages.modLoaderErrorTitle,
+		action: localFindingMessages.modLoaderErrorAction,
+	},
+	mod_loader_failure: {
+		title: localFindingMessages.modLoaderFailureTitle,
+		action: localFindingMessages.modLoaderFailureAction,
+	},
+	stack_analysis: {
+		title: localFindingMessages.stackAnalysisTitle,
+		action: localFindingMessages.stackAnalysisAction,
+	},
+	short_output: {
+		title: localFindingMessages.shortOutputTitle,
+		action: localFindingMessages.shortOutputAction,
+	},
+	extracted_mod: {
+		title: localFindingMessages.extractedModTitle,
+		action: localFindingMessages.extractedModAction,
+	},
+	mixin_bootstrap: {
+		title: localFindingMessages.mixinBootstrapTitle,
+		action: localFindingMessages.mixinBootstrapAction,
+	},
+	mixin_failure: {
+		title: localFindingMessages.mixinFailureTitle,
+		action: localFindingMessages.mixinFailureAction,
+	},
+	fabric_solution: {
+		title: localFindingMessages.fabricSolutionTitle,
+		action: localFindingMessages.fabricSolutionAction,
+	},
+	mod_config: {
+		title: localFindingMessages.modConfigTitle,
+		action: localFindingMessages.modConfigAction,
+	},
+	optifine_incompatible: {
+		title: localFindingMessages.optifineIncompatibleTitle,
+		action: localFindingMessages.optifineIncompatibleAction,
+	},
+	resource_pack: {
+		title: localFindingMessages.resourcePackTitle,
+		action: localFindingMessages.resourcePackAction,
+	},
+	large_resource_pack: {
+		title: localFindingMessages.largeResourcePackTitle,
+		action: localFindingMessages.largeResourcePackAction,
+	},
+	shaders_optifine: {
+		title: localFindingMessages.shadersOptifineTitle,
+		action: localFindingMessages.shadersOptifineAction,
+	},
+	multiple_forge_versions: {
+		title: localFindingMessages.multipleForgeVersionsTitle,
+		action: localFindingMessages.multipleForgeVersionsAction,
+	},
+	forge_java_incompatible: {
+		title: localFindingMessages.forgeJavaIncompatibleTitle,
+		action: localFindingMessages.forgeJavaIncompatibleAction,
+	},
+	content_verification: {
+		title: localFindingMessages.contentVerificationTitle,
+		action: localFindingMessages.contentVerificationAction,
+	},
+	optifine_world: {
+		title: localFindingMessages.optifineWorldTitle,
+		action: localFindingMessages.optifineWorldAction,
+	},
+	nightconfig_bug: {
+		title: localFindingMessages.nightconfigBugTitle,
+		action: localFindingMessages.nightconfigBugAction,
+	},
+	mod_filename: {
+		title: localFindingMessages.modFilenameTitle,
+		action: localFindingMessages.modFilenameAction,
+	},
+	definite_mod: {
+		title: localFindingMessages.definiteModTitle,
+		action: localFindingMessages.definiteModAction,
+	},
+	definite_mod_fabric: {
+		title: localFindingMessages.definiteModFabricTitle,
+		action: localFindingMessages.definiteModFabricAction,
+	},
+	intel_driver: {
+		title: localFindingMessages.intelDriverTitle,
+		action: localFindingMessages.intelDriverAction,
+	},
+	amd_driver: {
+		title: localFindingMessages.amdDriverTitle,
+		action: localFindingMessages.amdDriverAction,
+	},
+	nvidia_driver: {
+		title: localFindingMessages.nvidiaDriverTitle,
+		action: localFindingMessages.nvidiaDriverAction,
+	},
+	manual_debug_crash: {
+		title: localFindingMessages.manualDebugCrashTitle,
+		action: localFindingMessages.manualDebugCrashAction,
+	},
+	suspected_mod: {
+		title: localFindingMessages.suspectedModTitle,
+		action: localFindingMessages.suspectedModAction,
+	},
+	mod_initialization: {
+		title: localFindingMessages.modInitializationTitle,
+		action: localFindingMessages.modInitializationAction,
+	},
+	specific_block: {
+		title: localFindingMessages.specificBlockTitle,
+		action: localFindingMessages.specificBlockAction,
+	},
+	specific_entity: {
+		title: localFindingMessages.specificEntityTitle,
+		action: localFindingMessages.specificEntityAction,
+	},
+} as const
+
+const localCrashHeader = computed(() => {
+	const analysis = ctx.localCrashAnalysis?.value
+	const findings = analysis?.findings.length ?? 0
+	const sources = analysis?.sources.length ?? 0
+	return formatMessage(consoleMessages.localCrashHeader, { findings, sources })
+})
+
+const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
+	const analysis = ctx.localCrashAnalysis?.value
+	if (!analysis) return []
+	return analysis.findings.map((finding) => {
+		const copy = localFindingCopy[finding.id as keyof typeof localFindingCopy]
+		const title = copy
+			? formatMessage(copy.title)
+			: formatMessage(consoleMessages.fallbackFindingTitle, { finding: finding.id })
+		const action = copy
+			? formatMessage(copy.action)
+			: formatMessage(consoleMessages.fallbackFindingAction)
+		const evidence = finding.evidence.map((item) => `${item.filename}:${item.line} - ${item.text}`)
+		const mods = analysis.mods.map((mod) => {
+			const identity = mod.name || mod.id || mod.file_name
+			const modId = mod.id && mod.id !== identity ? ` (${mod.id})` : ''
+			return formatMessage(consoleMessages.matchedMod, {
+				identity,
+				modId,
+				fileName: mod.file_name,
+			})
+		})
+		return {
+			title,
+			descriptions: [action, ...mods, ...evidence],
+		}
+	})
+})
 
 const crashHeader = computed(() => {
 	const problems = ctx.crashAnalysis?.value?.analysis.problems ?? []
 	const count = problems.length
-	return `${count} problem${count !== 1 ? 's' : ''} detected`
+	return formatMessage(consoleMessages.problemsDetected, { count })
 })
 
 const crashItems = computed<CollapsibleAdmonitionItem[]>(() => {
@@ -153,6 +402,7 @@ const terminalRef = ref<InstanceType<typeof BaseTerminal> | null>(null)
 const shareModal = ref<InstanceType<typeof ShareModal> | null>(null)
 const deleteModal = ref<InstanceType<typeof NewModal> | null>(null)
 const isDeleting = ref(false)
+const exportingCrashContext = ref(false)
 const searchQuery = ref('')
 const isFullscreen = ref(false)
 const fullscreenBodyClass = 'modrinth-console-fullscreen-active'
@@ -181,6 +431,16 @@ const isLiveSource = computed(() => {
 const logSourceOptions = computed(() =>
 	(ctx.logSources?.value ?? []).map((s, i) => ({ value: i, label: s.name })),
 )
+
+async function handleExportCrashContext() {
+	if (!ctx.onExportCrashContext || exportingCrashContext.value) return
+	exportingCrashContext.value = true
+	try {
+		await ctx.onExportCrashContext()
+	} finally {
+		exportingCrashContext.value = false
+	}
+}
 
 function buildCombinedPredicate(): ((line: LogLine) => boolean) | null {
 	const levelPred = buildFilterPredicate()
@@ -240,7 +500,11 @@ const resolvedInputDisabledTooltip = computed(() =>
 )
 
 const resolvedInputDisabledPlaceholder = computed(() =>
-	resolvedInputDisabledTooltip.value ? 'Command input disabled' : 'Server is not running',
+	formatMessage(
+		resolvedInputDisabledTooltip.value
+			? consoleMessages.commandInputDisabled
+			: consoleMessages.serverNotRunning,
+	),
 )
 
 const resolvedShareDisabled = computed(() => {
@@ -256,6 +520,10 @@ const resolvedDeleteDisabled = computed(() => {
 	if (!v) return false
 	return isRef(v) ? v.value : v
 })
+
+const resolvedDeleteDisabledTooltip = computed(() =>
+	resolvedDeleteDisabled.value ? unwrapMaybeRef(ctx.deleteDisabledTooltip) : undefined,
+)
 
 const resolvedClearDisabled = computed(() => {
 	const v = ctx.clearDisabled
@@ -414,8 +682,8 @@ async function confirmDelete() {
 		console.error('Failed to delete log file:', err)
 		addNotification({
 			type: 'error',
-			title: 'Failed to delete log file',
-			text: typeof err === 'string' ? err : 'Unknown error.',
+			title: formatMessage(consoleMessages.deleteFailedTitle),
+			text: typeof err === 'string' ? err : formatMessage(consoleMessages.unknownError),
 		})
 	} finally {
 		isDeleting.value = false
@@ -437,8 +705,8 @@ async function handleShare() {
 		console.error('Failed to share logs:', err)
 		addNotification({
 			type: 'error',
-			title: 'Failed to share logs',
-			text: typeof err === 'string' ? err : 'Unknown error.',
+			title: formatMessage(consoleMessages.shareFailedTitle),
+			text: typeof err === 'string' ? err : formatMessage(consoleMessages.unknownError),
 		})
 	} finally {
 		isSharing.value = false

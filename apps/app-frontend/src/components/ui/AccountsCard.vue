@@ -5,6 +5,13 @@
 	>
 		<span class="font-semibold text-contrast">{{ formatMessage(messages.offlineMode) }}</span>
 		<span class="text-sm text-secondary">{{ formatMessage(messages.offlineModeDescription) }}</span>
+		<ButtonStyled>
+			<button class="mt-1" :disabled="refreshingNetwork" @click="refreshNetworkStatus()">
+				<SpinnerIcon v-if="refreshingNetwork" class="animate-spin" />
+				<RefreshCwIcon v-else />
+				{{ formatMessage(messages.refreshNetworkStatus) }}
+			</button>
+		</ButtonStyled>
 	</div>
 	<div
 		v-if="accounts.length === 0"
@@ -140,6 +147,12 @@
 			<p v-if="offlineUsername.length > 0 && !offlineUsernameValid" class="m-0 text-sm text-red">
 				{{ formatMessage(messages.usernameValidation) }}
 			</p>
+			<p
+				v-if="offlineUsernameContainsChinese"
+				class="m-0 rounded-lg border border-solid border-orange bg-highlight-orange p-3 text-sm text-contrast"
+			>
+				{{ formatMessage(messages.chineseUsernameWarning) }}
+			</p>
 			<div class="input-group push-right">
 				<ButtonStyled>
 					<button :disabled="loginDisabled" @click="offlineAccountModal?.hide()">
@@ -261,6 +274,7 @@ import {
 	PlusIcon,
 	RadioButtonCheckedIcon,
 	RadioButtonIcon,
+	RefreshCwIcon,
 	SpinnerIcon,
 	TrashIcon,
 } from '@modrinth/assets'
@@ -275,11 +289,12 @@ import {
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
+import { useQueryClient } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 
 import axolotlLogo from '@/assets/axolotl.png'
-import steveSkinTexture from '@/assets/skins/steve.png'
+import steveSkinTexture from '@/assets/skins/steve.png?inline'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { trackEvent } from '@/helpers/analytics'
@@ -305,7 +320,27 @@ import { handleSevereError } from '@/store/error.js'
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
-const { offline } = useNetworkStatus()
+const { offline, refreshBrowserOffline } = useNetworkStatus()
+const queryClient = useQueryClient()
+const refreshingNetwork = ref(false)
+
+/**
+ * Re-checks session server reachability on demand so users can leave offline
+ * mode without restarting the launcher. Goes through the shared
+ * `authServerReachability` query so the reachability state and the auth
+ * warning banner stay consistent.
+ */
+async function refreshNetworkStatus() {
+	if (refreshingNetwork.value) return
+	refreshingNetwork.value = true
+	try {
+		refreshBrowserOffline()
+		await nextTick()
+		await queryClient.refetchQueries({ queryKey: ['authServerReachability'] })
+	} finally {
+		refreshingNetwork.value = false
+	}
+}
 
 const emit = defineEmits<{
 	change: []
@@ -358,6 +393,9 @@ const offlineAccountModal = ref<InstanceType<typeof ModalWrapper> | null>(null)
 const offlineUsername = ref('')
 const offlineUsernameValid = computed(() =>
 	/^[\p{L}\p{N}_]{1,16}$/u.test(offlineUsername.value.trim()),
+)
+const offlineUsernameContainsChinese = computed(() =>
+	/\p{Script=Han}/u.test(offlineUsername.value.trim()),
 )
 const yggdrasilAccountModal = ref<InstanceType<typeof ModalWrapper> | null>(null)
 const yggdrasilProfileModal = ref<InstanceType<typeof ModalWrapper> | null>(null)
@@ -438,10 +476,7 @@ async function refreshValues() {
 					headUrl,
 				)
 				if (selectedUser) {
-				accountHeadUrlCache.value = new Map(accountHeadUrlCache.value).set(
-					selectedUser,
-					headUrl,
-				)
+					accountHeadUrlCache.value = new Map(accountHeadUrlCache.value).set(selectedUser, headUrl)
 				}
 			} catch (error) {
 				console.warn('Failed to get head render for equipped skin:', error)
@@ -816,6 +851,10 @@ const messages = defineMessages({
 		defaultMessage:
 			'Only offline accounts are available. You can launch fully downloaded instances.',
 	},
+	refreshNetworkStatus: {
+		id: 'minecraft-account.offline-mode.refresh',
+		defaultMessage: 'Refresh connection status',
+	},
 	notSignedIn: {
 		id: 'minecraft-account.not-signed-in',
 		defaultMessage: 'Not signed in',
@@ -924,6 +963,11 @@ const messages = defineMessages({
 	usernameValidation: {
 		id: 'minecraft-account.offline-modal.username-validation',
 		defaultMessage: 'Use 1–16 letters, numbers, or underscores, including Chinese characters.',
+	},
+	chineseUsernameWarning: {
+		id: 'minecraft-account.offline-modal.chinese-username-warning',
+		defaultMessage:
+			'Minecraft 1.18 and newer may reject Chinese usernames when entering singleplayer worlds or servers. Use this account with an older version, or choose an English username for newer versions.',
 	},
 	createOfflineAccount: {
 		id: 'minecraft-account.offline-modal.create',

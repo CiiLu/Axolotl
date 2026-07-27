@@ -700,7 +700,7 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
     let chinese_naming_enabled =
         Settings::get(&state.pool).await?.locale == "zh-CN";
     let chinese_titles_by_sha1 = Arc::new(if chinese_naming_enabled {
-        resolve_chinese_titles_by_sha1(&file_infos_by_hash, &state).await
+        resolve_chinese_titles_by_sha1(&file_infos_by_hash, state).await
     } else {
         HashMap::new()
     });

@@ -13,7 +13,6 @@ export const DEFAULT_FEATURE_FLAGS = {
 	always_show_app_controls: false,
 	skip_non_essential_warnings: false,
 	skip_unknown_pack_warning: false,
-	pride_fundraiser: true,
 	i18n_debug: false,
 	show_instance_play_time: true,
 	advanced_filters_collapsed: true,
@@ -106,6 +105,9 @@ export type ThemeStore = {
 	customBackgroundPath: string | null
 	customBackgroundBlur: number
 	customBackgroundOpacity: number
+	transparentBackground: boolean
+	transparentBackgroundOpacity: number
+	transparentBackgroundBlur: boolean
 	sidebarInstanceCount: number
 
 	devMode: boolean
@@ -121,6 +123,9 @@ export const DEFAULT_THEME_STORE: ThemeStore = {
 	customBackgroundPath: null,
 	customBackgroundBlur: 12,
 	customBackgroundOpacity: 65,
+	transparentBackground: false,
+	transparentBackgroundOpacity: 55,
+	transparentBackgroundBlur: false,
 	sidebarInstanceCount: 0,
 
 	devMode: false,
@@ -184,6 +189,19 @@ export const useTheming = defineStore('themeStore', {
 			}
 
 			html.classList.add(`${theme}-mode`)
+		},
+		/**
+		 * Applies the transparent window mode to the root element. The palette
+		 * lives on `body` in `global.scss`; this only supplies the toggle and the
+		 * alpha every translucent surface is derived from.
+		 */
+		setTransparentBackgroundClass() {
+			const html = document.documentElement
+			html.classList.toggle('transparent-window', this.transparentBackground)
+			html.style.setProperty(
+				'--transparent-window-alpha',
+				`${Math.min(Math.max(this.transparentBackgroundOpacity, 0), 100)}%`,
+			)
 		},
 		getFeatureFlag(key: FeatureFlag) {
 			return this.featureFlags[key] ?? DEFAULT_FEATURE_FLAGS[key]

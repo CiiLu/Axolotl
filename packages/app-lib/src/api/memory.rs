@@ -39,7 +39,7 @@ fn optimize_blocking() -> crate::Result<MemoryOptimizationResult> {
     let direct_result = optimize_windows_memory();
     let result = match direct_result {
         Ok(()) => Ok(()),
-        Err(error) => run_elevated_helper().map(|_| ()),
+        Err(_error) => run_elevated_helper().map(|_| ()),
     };
 
     result.map_err(|error| {
@@ -68,8 +68,7 @@ fn run_elevated_helper() -> Result<(), String> {
     })?;
     let escaped = executable.to_string_lossy().replace('\'', "''");
     let command = format!(
-        "$process = Start-Process -FilePath '{}' -ArgumentList '--memory-optimize' -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $process.ExitCode",
-        escaped
+        "$process = Start-Process -FilePath '{escaped}' -ArgumentList '--memory-optimize' -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $process.ExitCode"
     );
     let status = Command::new("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", &command])
@@ -190,7 +189,7 @@ fn optimize_windows_memory() -> Result<(), String> {
         OpenProcessToken(
             process,
             TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
-            &mut token,
+            &raw mut token,
         )
     } == 0
     {
@@ -206,7 +205,7 @@ fn optimize_windows_memory() -> Result<(), String> {
             wide.push(0);
             let mut luid = Luid::default();
             if unsafe {
-                LookupPrivilegeValueW(null_mut(), wide.as_ptr(), &mut luid)
+                LookupPrivilegeValueW(null_mut(), wide.as_ptr(), &raw mut luid)
             } == 0
             {
                 return Err(std::io::Error::last_os_error().to_string());
@@ -222,7 +221,7 @@ fn optimize_windows_memory() -> Result<(), String> {
                 AdjustTokenPrivileges(
                     token,
                     0,
-                    &privileges,
+                    &raw const privileges,
                     0,
                     null_mut(),
                     null_mut(),
@@ -238,7 +237,7 @@ fn optimize_windows_memory() -> Result<(), String> {
         statuses.push(unsafe {
             NtSetSystemInformation(
                 80,
-                (&mut info as *mut i32).cast(),
+                (&raw mut info).cast(),
                 size_of::<i32>() as u32,
             )
         });
@@ -250,7 +249,7 @@ fn optimize_windows_memory() -> Result<(), String> {
         statuses.push(unsafe {
             NtSetSystemInformation(
                 81,
-                (&mut cache as *mut SystemFileCacheInformation).cast(),
+                (&raw mut cache).cast(),
                 size_of::<SystemFileCacheInformation>() as u32,
             )
         });
@@ -259,7 +258,7 @@ fn optimize_windows_memory() -> Result<(), String> {
             statuses.push(unsafe {
                 NtSetSystemInformation(
                     80,
-                    (&mut info as *mut i32).cast(),
+                    (&raw mut info).cast(),
                     size_of::<i32>() as u32,
                 )
             });
@@ -269,7 +268,7 @@ fn optimize_windows_memory() -> Result<(), String> {
         statuses.push(unsafe {
             NtSetSystemInformation(
                 130,
-                (&mut combine as *mut MemoryCombineInformationEx).cast(),
+                (&raw mut combine).cast(),
                 size_of::<MemoryCombineInformationEx>() as u32,
             )
         });

@@ -281,6 +281,27 @@
 	"app.appearance-settings.toggle-sidebar.title": {
 		"message": "切换侧边栏"
 	},
+	"app.appearance-settings.transparent-background.blur-description": {
+		"message": "将背景画面模糊处理。占用性能较高"
+	},
+	"app.appearance-settings.transparent-background.blur-title": {
+		"message": "背景模糊"
+	},
+	"app.appearance-settings.transparent-background.conflict": {
+		"message": "启用此项时，你设置的自定义背景图片将被隐藏。"
+	},
+	"app.appearance-settings.transparent-background.description": {
+		"message": "让桌面透过启动器窗口显示出来。"
+	},
+	"app.appearance-settings.transparent-background.opacity": {
+		"message": "界面不透明度"
+	},
+	"app.appearance-settings.transparent-background.opacity-description": {
+		"message": "数值越低，透出的桌面越多。面板会比背景更实一些，以保证文字清晰可读。"
+	},
+	"app.appearance-settings.transparent-background.title": {
+		"message": "透明背景"
+	},
 	"app.appearance-settings.unknown-pack-warning.description": {
 		"message": "如果你尝试安装一个未托管在 Modrinth 上的 Modrinth 整合包文件（.mrpack），我们会确保你在安装之前了解相关风险。"
 	},
@@ -971,6 +992,18 @@
 	"app.instance.icon-picker.icon.water-bucket": {
 		"message": "水桶"
 	},
+	"app.instance.icon-picker.icon.anvil": {
+		"message": "铁砧"
+	},
+	"app.instance.icon-picker.icon.fabric": {
+		"message": "Fabric"
+	},
+	"app.instance.icon-picker.icon.neoforge": {
+		"message": "NeoForge"
+	},
+	"app.instance.icon-picker.icon.quilt": {
+		"message": "Quilt"
+	},
 	"app.instance.icon-picker.load-error": {
 		"message": "无法加载内置图标。"
 	},
@@ -1110,7 +1143,7 @@
 		"message": "分享实例"
 	},
 	"app.instance.starting": {
-		"message": "正在启动……"
+		"message": "正在启动…… {seconds, number} 秒"
 	},
 	"app.instance.stopping": {
 		"message": "正在停止……"
@@ -1333,6 +1366,111 @@
 	},
 	"app.minecraft-auth.what-happened": {
 		"message": "我们推测的原因"
+	},
+	"app.minecraft-crash.body": {
+		"message": "寻求帮助时不要发送此窗口截图。请导出错误报告，这样对方才能同时检查崩溃报告、游戏日志、调试日志和 JVM 信息。"
+	},
+	"app.minecraft-crash.analyzing": {
+		"message": "正在分析本次启动留下的日志……"
+	},
+	"app.minecraft-crash.diagnosis.forge-java.action": {
+		"message": "可以尝试使用此 Forge 版本所需的 Java，或更新 Forge。"
+	},
+	"app.minecraft-crash.diagnosis.forge-java.title": {
+		"message": "可能的问题：Forge 与所选 Java 版本不兼容"
+	},
+	"app.minecraft-crash.diagnosis.java-11-required.action": {
+		"message": "可以尝试选择 Java 11，或安装支持当前 Java 版本的对应模组版本。"
+	},
+	"app.minecraft-crash.diagnosis.java-11-required.title": {
+		"message": "可能的问题：有模组需要 Java 11"
+	},
+	"app.minecraft-crash.diagnosis.java-32bit.action": {
+		"message": "可以尝试安装并选择 64 位 Java，然后重新启动。"
+	},
+	"app.minecraft-crash.diagnosis.java-32bit.title": {
+		"message": "可能的问题：32 位 Java 无法分配足够内存"
+	},
+	"app.minecraft-crash.diagnosis.java-incompatible.action": {
+		"message": "可以尝试选择下方错误所要求的 Java 版本，或改用与当前 Java 兼容的模组版本。"
+	},
+	"app.minecraft-crash.diagnosis.java-incompatible.title": {
+		"message": "可能的问题：Java 版本不兼容"
+	},
+	"app.minecraft-crash.diagnosis.java-too-new.action": {
+		"message": "可以尝试选择此 Minecraft 与模组加载器版本所需的 Java 大版本，然后重新启动。"
+	},
+	"app.minecraft-crash.diagnosis.java-too-new.title": {
+		"message": "可能的问题：所选 Java 版本过高"
+	},
+	"app.minecraft-crash.diagnosis.jdk-runtime.action": {
+		"message": "可以尝试为此 Minecraft 版本选择标准的 HotSpot Java 运行时。"
+	},
+	"app.minecraft-crash.diagnosis.jdk-runtime.title": {
+		"message": "可能的问题：所选 JDK 与实例不兼容"
+	},
+	"app.minecraft-crash.diagnosis.jvm-arguments.action": {
+		"message": "可以尝试从实例设置中删除下方显示的 JVM 参数，然后重新启动。"
+	},
+	"app.minecraft-crash.diagnosis.jvm-arguments.title": {
+		"message": "可能的问题：JVM 参数有误"
+	},
+	"app.minecraft-crash.diagnosis.known-failure.action": {
+		"message": "这是自动推测，不代表一定准确。处理前请打开日志分析查看完整上下文，再参考建议修复。"
+	},
+	"app.minecraft-crash.diagnosis.known-failure.title": {
+		"message": "可能的问题：检测到特定启动异常"
+	},
+	"app.minecraft-crash.diagnosis.openj9.action": {
+		"message": "可以尝试选择基于 HotSpot 的 Java 运行时，例如 Minecraft 自带运行时或 Eclipse Temurin。"
+	},
+	"app.minecraft-crash.diagnosis.openj9.title": {
+		"message": "可能的问题：OpenJ9 与此实例不兼容"
+	},
+	"app.minecraft-crash.diagnosis.out-of-memory.action": {
+		"message": "可以尝试增加实例内存分配，或移除占用内存较多的模组与资源包。"
+	},
+	"app.minecraft-crash.diagnosis.out-of-memory.title": {
+		"message": "可能的问题：Minecraft 内存不足"
+	},
+	"app.minecraft-crash.evidence": {
+		"message": "参考证据：{evidence}"
+	},
+	"app.minecraft-crash.exited-before-initialization": {
+		"message": "Java 进程尚未连接到启动器便已退出。最可能的原因是所选 Java 版本与当前 Minecraft 或模组加载器不兼容。请选择该实例所需的 Java 版本，然后重试。"
+	},
+	"app.minecraft-crash.export-context": {
+		"message": "导出 Minecraft 错误报告"
+	},
+	"app.minecraft-crash.initialization-timed-out": {
+		"message": "Java 进程已经启动，但在 15 秒内未能连接到启动器。请检查所选 Java 版本和包装器命令，然后重试。"
+	},
+	"app.minecraft-crash.launch-failed-summary": {
+		"message": "Minecraft 在启动准备阶段失败。"
+	},
+	"app.minecraft-crash.launch-failed-title": {
+		"message": "{instanceName} 无法启动"
+	},
+	"app.minecraft-crash.launch-failure-hint": {
+		"message": "打开 Minecraft 日志可以查看已捕获的 Java 输出。寻求帮助时，请导出并发送完整的 Minecraft 诊断包。"
+	},
+	"app.minecraft-crash.preparation-timed-out": {
+		"message": "启动准备在 60 秒内未能完成，现已取消。请检查 Java 路径、启动前命令、包装器命令和网络连接，然后重试。"
+	},
+	"app.minecraft-crash.preview-instance": {
+		"message": "Minecraft 测试实例"
+	},
+	"app.minecraft-crash.summary": {
+		"message": "Minecraft 意外停止运行。"
+	},
+	"app.minecraft-crash.support-hint": {
+		"message": "这里显示的是可能原因，不一定准确。寻求帮助时请发送导出的 ZIP，不要只发送此窗口截图，因为截图中没有完整证据。"
+	},
+	"app.minecraft-crash.title": {
+		"message": "{instanceName} 已崩溃"
+	},
+	"app.minecraft-crash.view-logs": {
+		"message": "查看日志与分析"
 	},
 	"app.minecraft.playing-as": {
 		"message": "当前游玩账号："
@@ -1646,6 +1784,9 @@
 	"app.project.install-context.install-content-to-instance": {
 		"message": "将内容安装到实例中"
 	},
+	"app.project.open-in-mcmod": {
+		"message": "在 MC 百科中打开"
+	},
 	"app.project.translation.failed": {
 		"message": "翻译失败，已保留原文。请重试。"
 	},
@@ -1732,6 +1873,9 @@
 	},
 	"app.settings.about.product-title": {
 		"message": "关于 {productName}"
+	},
+	"app.settings.about.preview-minecraft-crash-modal": {
+		"message": "预览 Minecraft 崩溃窗口"
 	},
 	"app.settings.about.project-website": {
 		"message": "访问项目网站"
@@ -1873,6 +2017,105 @@
 	},
 	"app.settings.java.location": {
 		"message": "Java {version} 位置"
+	},
+	"app.settings.java.auto-high-performance-mode": {
+		"message": "自动为 Java 使用高性能显卡"
+	},
+	"app.settings.java.auto-high-performance-mode-description": {
+		"message": "启动 Minecraft 时，自动在 Windows 图形设置中将启动器和 Java 设为使用高性能显卡。仅支持 Windows。"
+	},
+	"app.settings.java.cancel": {
+		"message": "取消"
+	},
+	"app.settings.java.deep-scan": {
+		"message": "强力查找"
+	},
+	"app.settings.java.deep-scan-confirm": {
+		"message": "将扫描全部磁盘的全部目录，可能需要数分钟。"
+	},
+	"app.settings.java.download-java": {
+		"message": "下载 Java"
+	},
+	"app.settings.java.find-java": {
+		"message": "寻找 Java"
+	},
+	"app.settings.java.manual-add": {
+		"message": "手动添加"
+	},
+	"app.settings.java.no-versions": {
+		"message": "未配置 Java 版本，请使用下方按钮查找或添加。"
+	},
+	"app.settings.java.scan-anyway": {
+		"message": "仍然扫描"
+	},
+	"app.settings.java.scanning": {
+		"message": "扫描中……"
+	},
+	"app.settings.java.table.version": {
+		"message": "版本"
+	},
+	"app.settings.java.table.distribution": {
+		"message": "发行版"
+	},
+	"app.settings.java.table.path": {
+		"message": "路径"
+	},
+	"app.settings.java.table.actions": {
+		"message": ""
+	},
+	"app.settings.java.download.select-version": {
+		"message": "选择 Java 版本："
+	},
+	"app.settings.java.download.select-vendor": {
+		"message": "选择发行版："
+	},
+	"app.settings.java.download.no-vendors": {
+		"message": "没有可用的发行版。"
+	},
+	"app.settings.java.download.select-version-feed": {
+		"message": "选择 {vendor} 的版本："
+	},
+	"app.settings.java.download.progress-title": {
+		"message": "正在下载 Java"
+	},
+	"app.settings.java.download.progress-info": {
+		"message": "正在从 {distribution} 下载 Java {version}"
+	},
+	"app.settings.java.download.preparing": {
+		"message": "准备下载……"
+	},
+	"app.settings.java.download.extracting": {
+		"message": "正在解压文件……"
+	},
+	"app.settings.java.download.extracting.status": {
+		"message": "正在解压文件……"
+	},
+	"app.settings.java.download.background": {
+		"message": "放在后台"
+	},
+	"app.settings.java.download.background-hint": {
+		"message": "下载在后台继续——可在下载页面查看进度。"
+	},
+	"app.settings.java.download.version-label": {
+		"message": "Java {version}"
+	},
+	"app.settings.java.download.cancelling": {
+		"message": "取消中……"
+	},
+	"app.settings.java.download.downloading-label": {
+		"message": "下载中……"
+	},
+	"app.settings.java.download.back": {
+		"message": "返回发行版列表"
+	},
+	"app.settings.java.download.loading": {
+		"message": "加载中……"
+	},
+	"app.settings.java.download.no-versions": {
+		"message": "没有可用的版本。"
+	},
+	"app.settings.java.download.title": {
+		"message": "下载 Java"
 	},
 	"app.settings.resources.app-cache": {
 		"message": "应用缓存"
@@ -2129,6 +2372,12 @@
 	"app.skins.third-party-account.title": {
 		"message": "第三方皮肤管理"
 	},
+	"app.skins.tabs.saved": {
+		"message": "已保存皮肤"
+	},
+	"app.skins.tabs.default": {
+		"message": "官方皮肤"
+	},
 	"app.skins.preview.edit-button": {
 		"message": "编辑皮肤"
 	},
@@ -2298,7 +2547,7 @@
 		"message": "效果预览"
 	},
 	"app.translation-settings.style.preview-original-text": {
-		"message": "Explore high-quality Minecraft content on Modrinth."
+		"message": "在 Modrinth 上发现优质的 Minecraft 内容。"
 	},
 	"app.translation-settings.style.preview-text": {
 		"message": "在 Modrinth 上探索高质量的 Minecraft 内容。"
@@ -2508,10 +2757,22 @@
 		"message": "搜索好友…"
 	},
 	"friends.section.heading": {
-		"message": "{title} - {count}"
+		"message": "{title} — {count}"
 	},
 	"friends.sign-in-to-add-friends": {
 		"message": "登录你的 <link>Modrinth 账号</link>，添加好友，看看他们在玩什么！"
+	},
+	"instance.logs.delete.latest-running": {
+		"message": "实例运行时无法删除 latest.log"
+	},
+	"instance.logs.source.live": {
+		"message": "实时日志"
+	},
+	"instance.logs.source.numbered": {
+		"message": "日志 {index}"
+	},
+	"instance.logs.source.unknown": {
+		"message": "未知"
 	},
 	"instance.add-server.add-and-play": {
 		"message": "添加并游玩"
@@ -2721,7 +2982,7 @@
 		"message": "环境变量"
 	},
 	"instance.settings.tabs.java.hooks": {
-		"message": "Hooks"
+		"message": "钩子"
 	},
 	"instance.settings.tabs.java.java-arguments": {
 		"message": "Java 参数"
@@ -2737,6 +2998,12 @@
 	},
 	"instance.settings.tabs.java.version": {
 		"message": "Java {version} 版"
+	},
+	"instance.settings.tabs.java.auto-label": {
+		"message": "自动（推荐）"
+	},
+	"instance.settings.tabs.java.custom-label": {
+		"message": "自定义路径……"
 	},
 	"instance.settings.tabs.window": {
 		"message": "游戏窗口"
@@ -2837,6 +3104,9 @@
 	"minecraft-account.offline-modal.create": {
 		"message": "创建账户"
 	},
+	"minecraft-account.offline-modal.chinese-username-warning": {
+		"message": "Minecraft 1.18 及以上版本可能会拒绝中文用户名，导致无法进入单人世界或服务器。请在旧版本中使用此账户，或为新版本改用英文用户名。"
+	},
 	"minecraft-account.offline-modal.description": {
 		"message": "选择离线游戏中使用的用户名。此账户只能加入允许离线玩家的服务器。"
 	},
@@ -2856,7 +3126,10 @@
 		"message": "离线模式"
 	},
 	"minecraft-account.offline-mode.description": {
-		"message": "仅可使用离线账号，并且只能启动已完整下载的实例。这通常是因为你的电脑无法连接到Mojang的认证服务器，请检查网络连接。如果你正在使用代理，请关闭代理后重启Axolotl。"
+		"message": "仅可使用离线账号，并且只能启动已完整下载的实例。这通常是因为你的电脑无法连接到Mojang的认证服务器，请检查网络连接。如果你正在使用代理，请关闭或开启代理后点击下方按钮刷新连接状态。"
+	},
+	"minecraft-account.offline-mode.refresh": {
+		"message": "刷新连接状态"
 	},
 	"minecraft-account.remove-account": {
 		"message": "移除账户"
@@ -2969,36 +3242,6 @@
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "未知文件警告"
 	},
-	"app.downloads.download-resumed": {
-		"message": "已续传 {bytes}"
-	},
-	"app.downloads.source.tencent-maven": {
-		"message": "腾讯 Maven"
-	},
-	"app.settings.resources.source-health": {
-		"message": "下载源健康状态"
-	},
-	"app.settings.resources.source-health-cooling-down": {
-		"message": "冷却中"
-	},
-	"app.settings.resources.source-health-description": {
-		"message": "连接质量仅根据本机已完成的下载进行学习，数据不会上传。"
-	},
-	"app.settings.resources.source-health-empty": {
-		"message": "尚未收集到下载测量数据。"
-	},
-	"app.settings.resources.source-health-refresh": {
-		"message": "刷新"
-	},
-	"app.settings.resources.source-health-range-splitting-disabled": {
-		"message": "Range 分片已停用"
-	},
-	"app.settings.resources.source-health-reset": {
-		"message": "重置学习数据"
-	},
-	"app.settings.resources.source-health-stats": {
-		"message": "TTFB {ttfb} · {speed} · 成功 {successes} 次 / 失败 {failures} 次"
-	},
 	"app.instance.confirm-delete.symlink-warning": {
 		"message": "这是一个链接到“{path}”的共享实例。仅会删除链接，原始文件不会被删除。"
 	},
@@ -3020,17 +3263,8 @@
 	"app.symlink-warning.shared-badge": {
 		"message": "共享"
 	},
-	"creation-flow.modal.import-instance.import-as-symlink": {
-		"message": "以共享实例导入"
-	},
-	"creation-flow.modal.import-instance.import-as-symlink.tooltip": {
-		"message": "通过软链接，直接使用原始实例文件夹，共享一份文件。所有的更改都将同步到原始实例。"
-	},
 	"app.symlink-capability.unsupported": {
 		"message": "系统不支持软链接。"
-	},
-	"app.symlink-capability.requires-admin": {
-		"message": "创建软链接需要管理员权限。请以管理员身份重新启动启动器。"
 	},
 	"app.symlink-capability.unsupported.title": {
 		"message": "软链接不支持"
@@ -3046,5 +3280,230 @@
 	},
 	"app.symlink-capability.cancel": {
 		"message": "取消"
+	},
+	"drop.help.title": {
+		"message": "我可以拖入什么到 Axolotl？"
+	},
+	"drop.help.instances-title": {
+		"message": "启动器实例"
+	},
+	"drop.help.instances-desc": {
+		"message": "从其他启动器（MultiMC、Prism Launcher等）拖放文件夹来导入 Minecraft 实例。或者拖入 HMCL、PCL、PCL-CE 的启动器"
+	},
+	"drop.help.instances-formats": {
+		"message": "（MultiMC / Prism Launcher / PolyMC） 实例文件夹或直接放入 （HMCL / PCL / PCL-CE ）启动器。"
+	},
+	"drop.help.mods-title": {
+		"message": "模组"
+	},
+	"drop.help.mods-desc": {
+		"message": "拖放模组 JAR 文件来安装到 Minecraft 实例。"
+	},
+	"drop.help.mods-formats": {
+		"message": "格式：.jar"
+	},
+	"drop.help.modpacks-title": {
+		"message": "整合包"
+	},
+	"drop.help.modpacks-desc": {
+		"message": "拖放整合包 ZIP/MRPACK 文件来导入整合包。"
+	},
+	"drop.help.modpacks-formats": {
+		"message": "格式：.mrpack / .zip"
+	},
+	"drop.help.resource-packs-title": {
+		"message": "资源包"
+	},
+	"drop.help.resource-packs-desc": {
+		"message": "拖放资源包 ZIP 文件来安装到实例。"
+	},
+	"drop.help.resource-packs-formats": {
+		"message": "格式：.zip"
+	},
+	"drop.help.shader-packs-title": {
+		"message": "光影包"
+	},
+	"drop.help.shader-packs-desc": {
+		"message": "拖放光影包 ZIP 文件来安装到实例。"
+	},
+	"drop.help.shader-packs-formats": {
+		"message": "格式：.zip"
+	},
+	"drop.help.worlds-title": {
+		"message": "存档"
+	},
+	"drop.help.worlds-desc": {
+		"message": "拖放存档文件夹来导入到实例。"
+	},
+	"drop.help.worlds-formats": {
+		"message": "Minecraft 存档文件夹。"
+	},
+	"drop.help.schematics-title": {
+		"message": "投影"
+	},
+	"drop.help.schematics-desc": {
+		"message": "拖放 .litematic 文件来导入投影。"
+	},
+	"drop.help.schematics-formats": {
+		"message": "格式：.litematic"
+	},
+	"create.title": {
+		"message": "创建实例"
+	},
+	"create.subtitle": {
+		"message": "实例是带有特定加载器、游戏版本和模组的一套 Minecraft 配置。"
+	},
+	"create.new.title": {
+		"message": "全新创建"
+	},
+	"create.new.description": {
+		"message": "创建一个新的 Minecraft 实例，自选模组加载器。"
+	},
+	"create.import.title": {
+		"message": "导入已有"
+	},
+	"create.import.description": {
+		"message": "从其他启动器导入实例，或安装整合包。"
+	},
+	"create.back": {
+		"message": "返回库"
+	},
+	"app.drop.overlay-title": {
+		"message": "拖放以导入"
+	},
+	"app.drop.overlay-subtitle": {
+		"message": "松开以分类并导入"
+	},
+	"app.drop.error.multiple-files-title": {
+		"message": "无法导入多个文件"
+	},
+	"app.drop.error.multiple-files-text": {
+		"message": "一次只能拖放一个文件或文件夹。"
+	},
+	"app.drop.error.shortcut-title": {
+		"message": "快捷方式解析失败"
+	},
+	"app.drop.error.shortcut-text": {
+		"message": "无法解析到快捷方式的目标。"
+	},
+	"app.drop.error.unknown-title": {
+		"message": "未知文件类型"
+	},
+	"app.drop.error.unknown-text": {
+		"message": "类型暂不支持"
+	},
+	"app.drop.error.title": {
+		"message": "拖放错误"
+	},
+	"app.drop.world-imported-title": {
+		"message": "存档已导入"
+	},
+	"app.drop.world-imported-text": {
+		"message": "存档已成功导入。"
+	},
+	"app.drop.content-installed-title": {
+		"message": "内容已安装"
+	},
+	"app.drop.content-installed-text": {
+		"message": "文件已安装到实例。"
+	},
+	"app.drop.install-failed-title": {
+		"message": "安装失败"
+	},
+	"app.drop.instance-imported-title": {
+		"message": "实例已导入"
+	},
+	"app.drop.instance-imported-text": {
+		"message": "{name} 导入成功。"
+	},
+	"app.drop.import-failed-title": {
+		"message": "导入失败"
+	},
+	"app.drop.import-failed-text": {
+		"message": "导入 {name} 失败：{error}"
+	},
+	"app.drop.no-instances": {
+		"message": "未找到实例"
+	},
+	"app.drop.mod-compatibility-title": {
+		"message": "版本不匹配"
+	},
+	"app.drop.mod-compatibility-confirm": {
+		"message": "仍要安装？"
+	},
+	"app.drop.mod-compatibility-warning": {
+		"message": "此模组目标版本为 {modVersion}（{modLoader}），但实例的版本是 {instVersion}（{instLoader}）。"
+	},
+	"app.drop.mod-version": {
+		"message": "模组版本"
+	},
+	"app.drop.inst-version": {
+		"message": "实例版本"
+	},
+	"app.drop.mod-loader": {
+		"message": "模组加载器"
+	},
+	"app.drop.inst-loader": {
+		"message": "实例加载器"
+	},
+	"app.drop.mod-compatibility-search": {
+		"message": "查找兼容版本"
+	},
+	"app.drop.modpack-not-supported-title": {
+		"message": "整合包导入"
+	},
+	"app.drop.modpack-not-supported-text": {
+		"message": "暂不支持通过拖放导入整合包。请使用「导入」按钮来安装整合包。"
+	},
+	"app.drop.unknown-force-analysis-title": {
+		"message": "无法识别文件类型"
+	},
+	"app.drop.unknown-force-analysis-text": {
+		"message": "该压缩包无法通过快速扫描识别，需要完整解压后进行深度分析。此操作可能需要一些时间，是否继续？"
+	},
+	"app.drop.unknown-force-analysis-button": {
+		"message": "强力解析"
+	},
+	"app.drop.unknown-force-analyzing": {
+		"message": "正在强力解析压缩包..."
+	},
+	"app.drop.unknown-force-analysis-failed-title": {
+		"message": "分析失败"
+	},
+	"app.drop.unknown-force-analysis-failed-text": {
+		"message": "深度分析后仍无法识别该文件类型。"
+	},
+	"app.drop.processing": {
+		"message": "正在处理 {name}..."
+	},
+	"app.drop.modpack-installing": {
+		"message": "正在安装整合包..."
+	},
+	"app.drop.modpack-installed-success": {
+		"message": "整合包安装完成"
+	},
+	"app.drop.modpack-install-failed": {
+		"message": "整合包安装失败"
+	},
+	"app.translation-settings.system-prompt": {
+		"message": "系统提示词"
+	},
+	"app.translation-settings.system-prompt-description": {
+		"message": "输入你的自定义系统提示词，留空则使用默认提示词。"
+	},
+	"app.instance.mods.parsing-files": {
+		"message": "正在解析，较大的文件可能会耗费一些时间"
+	},
+	"app.instance.mods.drag-drop-hint": {
+		"message": "释放文件以安装到当前实例"
+	},
+	"app.instance.mods.parse-failed": {
+		"message": "解析失败，这可能不是一个整合包"
+	},
+	"app.instance.mods.file-already-exists": {
+		"message": "添加失败，该文件可能已存在"
+	},
+	"app.instance.mods.dismiss": {
+		"message": "知道了"
 	}
 }

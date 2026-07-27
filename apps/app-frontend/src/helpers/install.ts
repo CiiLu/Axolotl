@@ -128,6 +128,7 @@ export interface InstallJobSnapshot {
 		| 'duplicate_instance'
 		| 'install_existing_instance'
 		| 'install_pack_to_existing_instance'
+		| 'download_java'
 	status: InstallJobStatus
 	provider: 'modrinth' | 'curse_forge' | 'minecraft' | 'java' | 'application' | 'local'
 	target:
@@ -225,11 +226,13 @@ export async function install_import_instance(
 	basePath: string,
 	instanceFolder: string,
 	symlink?: boolean,
+	instancePath?: string,
 ) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_import_instance', {
 		launcherType,
 		basePath,
 		instanceFolder,
+		instancePath,
 		symlink,
 	})
 }

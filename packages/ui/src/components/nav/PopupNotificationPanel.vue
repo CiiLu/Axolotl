@@ -287,7 +287,8 @@ async function handleErrorAction(notification: PopupNotification): Promise<void>
 	try {
 		await onErrorAction(notification)
 	} finally {
-		delete exporting.value[notification.id]
+		const { [notification.id]: _, ...rest } = exporting.value
+		exporting.value = rest as Record<string | number, boolean>
 	}
 }
 
@@ -306,17 +307,11 @@ function progressColorForType(type: PopupNotification['type']) {
 	return 'green'
 }
 
-const { hasSidebar, onErrorAction, errorActionLabel } = withDefaults(
-	defineProps<{
-		hasSidebar?: boolean
-		onErrorAction?: (notification: PopupNotification) => void | Promise<void>
-		errorActionLabel?: string
-	}>(),
-	{
-		hasSidebar: false,
-		errorActionLabel: 'Export error logs',
-	},
-)
+const { hasSidebar = false, onErrorAction, errorActionLabel = 'Export error logs' } = defineProps<{
+	hasSidebar?: boolean
+	onErrorAction?: (notification: PopupNotification) => void | Promise<void>
+	errorActionLabel?: string
+}>()
 </script>
 
 <style scoped>

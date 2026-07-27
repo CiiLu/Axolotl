@@ -2,6 +2,7 @@
 pub mod cache;
 pub mod content_search;
 pub mod curseforge;
+pub mod drop_classifier;
 pub mod friends;
 pub mod handler;
 pub mod instance;
@@ -23,11 +24,11 @@ pub mod worlds;
 
 pub mod data {
     pub use crate::state::{
-        AppliedContentSetPatch, CacheBehaviour, CacheValueType, ContentFile,
-        ContentItem, ContentItemOwner, ContentItemProject, ContentItemVersion,
-        ContentProvider, ContentProviderRef, CreateInstance, Credentials,
-        Dependency, DirectoryInfo, EditInstance, Hooks,
-        InstanceInstallCandidate, InstanceInstallTarget,
+        AppliedContentSetPatch, CacheBehaviour, CacheValueType, CachedEntry,
+        ContentFile, ContentItem, ContentItemOwner, ContentItemProject,
+        ContentItemVersion, ContentProvider, ContentProviderRef,
+        CreateInstance, Credentials, Dependency, DirectoryInfo, EditInstance,
+        Hooks, InstanceInstallCandidate, InstanceInstallTarget,
         InstanceLaunchOverridesPatch, InstanceLink, InstanceMetadata,
         JavaVersion, LinkedModpackInfo, MemorySettings, ModLoader,
         ModrinthCredentials, Organization, OwnerType, ProcessMetadata, Project,
@@ -46,8 +47,9 @@ pub mod prelude {
         State,
         data::*,
         event::CommandPayload,
-        install, instance, jre, metadata, minecraft_auth, mr_auth, pack,
-        process, settings,
+        install, instance,
+        jre::{self, JdkVersionInfo},
+        metadata, minecraft_auth, mr_auth, pack, process, settings,
         state::{ReleaseChannel, db_backup::app_db_backup_dir},
         translation,
         util::{

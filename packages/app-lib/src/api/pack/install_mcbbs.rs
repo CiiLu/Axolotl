@@ -198,7 +198,7 @@ pub(crate) async fn install_mcbbs_pack_with_reporter(
             let jvm_args = launch_info
                 .java_argument
                 .as_ref()
-                .map(|value| join_arguments(value))
+                .map(join_arguments)
                 .filter(|args| !args.is_empty())?;
             Some(InstanceLaunchOverridesPatch {
                 extra_launch_args: Some(Some(jvm_args)),

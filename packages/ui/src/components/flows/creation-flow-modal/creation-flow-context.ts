@@ -191,6 +191,9 @@ export interface CreationFlowContextValue {
 	finishDisabled: ComputedRef<boolean>
 	finishDisabledTooltip: ComputedRef<string | undefined>
 
+	// Skip setup type (used when creation flow is entered from /create page)
+	skipSetupType: Ref<boolean>
+
 	// Backup state (set by InlineBackupCreator in reset-server flow)
 	isBackingUp: Ref<boolean>
 	cancelBackup: Ref<(() => void) | null>
@@ -201,6 +204,13 @@ export interface CreationFlowContextValue {
 
 	// Callbacks
 	onBack: (() => void) | null
+
+	/** @see ImportInstanceStage.vue — ImportFilePayload documentation */
+	onImportFileReceived?: (payload: {
+		file: File | null
+		filePath: string | null
+		source: 'file-picker' | 'drag-drop'
+	}) => void
 
 	// Methods
 	reset: (instanceCount?: number) => Promise<void>
@@ -238,6 +248,13 @@ export interface CreationFlowOptions {
 	getLoaderManifest?: LoaderManifestResolver
 	finishDisabled?: ComputedRef<boolean>
 	finishDisabledTooltip?: ComputedRef<string | undefined>
+
+	/** @see ImportInstanceStage.vue — ImportFilePayload documentation */
+	onImportFileReceived?: (payload: {
+		file: File | null
+		filePath: string | null
+		source: 'file-picker' | 'drag-drop'
+	}) => void
 }
 
 export function createCreationFlowContext(
@@ -260,6 +277,7 @@ export function createCreationFlowContext(
 	const initialLoader = options.initialLoader ?? null
 	const initialGameVersion = options.initialGameVersion ?? null
 	const onBack = options.onBack ?? null
+	const onImportFileReceived = options.onImportFileReceived
 	const searchModpacks = options.searchModpacks!
 	const getProjectVersions = options.getProjectVersions!
 	const getLoaderManifest = options.getLoaderManifest ?? null
@@ -337,6 +355,7 @@ export function createCreationFlowContext(
 	const importAsSymlink = ref(false)
 
 	const hardReset = ref(isInitialSetup)
+	const skipSetupType = ref(false)
 	const loading = ref(false)
 	const isBackingUp = ref(false)
 	const cancelBackup = ref<(() => void) | null>(null)
@@ -482,7 +501,7 @@ export function createCreationFlowContext(
 			selectedLoader.value = null
 			selectedLoaderVersion.value = null
 			loaderVersionType.value = 'stable'
-			modal.value?.setStage('modpack')
+			modal.value?.setStage('import-instance')
 		} else {
 			modpackSelection.value = null
 			modpackFile.value = null
@@ -595,6 +614,7 @@ export function createCreationFlowContext(
 		importSearchQuery,
 		importAsSymlink,
 		hardReset,
+		skipSetupType,
 		loading,
 		finishDisabled,
 		finishDisabledTooltip,
@@ -603,6 +623,7 @@ export function createCreationFlowContext(
 		modal,
 		stageConfigs: resolvedStageConfigs,
 		onBack,
+		onImportFileReceived,
 		reset,
 		setSetupType,
 		setImportMode,

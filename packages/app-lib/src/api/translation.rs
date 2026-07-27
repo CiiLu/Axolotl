@@ -931,12 +931,9 @@ fn cache_key(
     hasher.update(request.context.description.as_bytes());
     hasher.update(segment.format.as_str());
     hasher.update(segment.text.as_bytes());
-    match settings.settings.provider {
-        TranslationProvider::OpenaiCompatible => {
-            hasher.update(settings.settings.openai_base_url.as_bytes());
-            hasher.update(settings.settings.openai_model.as_bytes());
-        }
-        _ => {}
+    if settings.settings.provider == TranslationProvider::OpenaiCompatible {
+        hasher.update(settings.settings.openai_base_url.as_bytes());
+        hasher.update(settings.settings.openai_model.as_bytes());
     }
     format!("{:x}", hasher.finalize())
 }

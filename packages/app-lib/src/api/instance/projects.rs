@@ -214,6 +214,20 @@ pub async fn add_project_from_path(
 }
 
 #[tracing::instrument]
+pub async fn import_world_save(
+    instance_id: &str,
+    source_path: &Path,
+) -> crate::Result<String> {
+    let state = State::get().await?;
+    crate::state::instances::commands::import_world_save(
+        &state,
+        instance_id,
+        source_path,
+    )
+    .await
+}
+
+#[tracing::instrument]
 pub async fn toggle_disable_project(
     instance_id: &str,
     project: &str,

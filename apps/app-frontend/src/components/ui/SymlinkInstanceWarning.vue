@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { LinkIcon } from '@modrinth/assets'
-import { defineMessages, useVIntl } from '@modrinth/ui'
-import { Admonition } from '@modrinth/ui'
+import { Admonition, ButtonStyled, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
 
 import { injectSymlinkWarningDismiss } from '@/composables/useSymlinkWarningDismiss'
@@ -58,15 +57,21 @@ function handleDismissPermanently() {
 const messages = defineMessages({
 	writeHeader: {
 		id: 'app.symlink-warning.write.header',
+		defaultMessage: 'Shared instance',
 	},
 	writeBody: {
 		id: 'app.symlink-warning.write.body',
+		defaultMessage:
+			'This instance is linked to "{path}". Changes will also affect the original files.',
 	},
 	deleteHeader: {
 		id: 'app.symlink-warning.delete.header',
+		defaultMessage: 'Delete shared instance',
 	},
 	deleteBody: {
 		id: 'app.symlink-warning.delete.body',
+		defaultMessage:
+			'Deleting this instance removes only the launcher entry. The original files at "{path}" will remain.',
 	},
 	dismissPermanently: {
 		id: 'app.symlink-warning.dismiss-permanently',
@@ -80,44 +85,50 @@ const messages = defineMessages({
 </script>
 
 <template>
-	<!-- Collapsed: small badge -->
-	<div v-if="showBadge" class="inline-flex">
-		<span
-			v-tooltip="formatMessage(messages.writeBody, { path: props.symlinkTarget })"
-			class="inline-flex items-center gap-1 rounded-full bg-bg-orange px-2 py-0.5 text-xs font-medium text-brand-orange"
-		>
-			<LinkIcon class="size-3" />
-			{{ formatMessage(messages.sharedBadge) }}
-		</span>
+	<div :class="$attrs.class">
+		<!-- Collapsed: small badge -->
+		<div v-if="showBadge" class="flex">
+			<span
+				v-tooltip="formatMessage(messages.writeBody, { path: props.symlinkTarget })"
+				class="inline-flex items-center gap-1 rounded-full bg-bg-orange px-2 py-0.5 text-xs font-medium text-brand-orange"
+			>
+				<LinkIcon class="size-3" />
+				{{ formatMessage(messages.sharedBadge) }}
+			</span>
+		</div>
+		<!-- Expanded: full warning -->
+		<template v-else>
+			<Admonition
+				v-if="props.variant === 'delete'"
+				type="warning"
+				:header="formatMessage(messages.deleteHeader)"
+			>
+				{{ formatMessage(messages.deleteBody, { path: props.symlinkTarget }) }}
+			</Admonition>
+			<Admonition
+				v-else
+				type="warning"
+				:header="formatMessage(messages.writeHeader)"
+				:dismissible="effectivelyDismissible"
+				@dismiss="handleDismiss"
+			>
+				<span>
+					{{ formatMessage(messages.writeBody, { path: props.symlinkTarget }) }}
+					<template v-if="effectivelyDismissible">
+						{{ ' ' }}
+						<ButtonStyled
+							size="small"
+							type="transparent"
+							color="orange"
+							hover-color-fill="background"
+						>
+							<button type="button" @click="handleDismissPermanently">
+								{{ formatMessage(messages.dismissPermanently) }}
+							</button>
+						</ButtonStyled>
+					</template>
+				</span>
+			</Admonition>
+		</template>
 	</div>
-	<!-- Expanded: full warning -->
-	<template v-else>
-		<Admonition
-			v-if="props.variant === 'delete'"
-			type="warning"
-			:header="formatMessage(messages.deleteHeader)"
-		>
-			{{ formatMessage(messages.deleteBody, { path: props.symlinkTarget }) }}
-		</Admonition>
-		<Admonition
-			v-else
-			type="warning"
-			:header="formatMessage(messages.writeHeader)"
-			:dismissible="effectivelyDismissible"
-			@dismiss="handleDismiss"
-		>
-			{{ formatMessage(messages.writeBody, { path: props.symlinkTarget }) }}
-			<template v-if="effectivelyDismissible" #actions>
-				<div class="flex justify-end">
-					<button
-						type="button"
-						class="text-xs font-medium text-secondary hover:text-contrast transition-colors"
-						@click="handleDismissPermanently"
-					>
-						{{ formatMessage(messages.dismissPermanently) }}
-					</button>
-				</div>
-			</template>
-		</Admonition>
-	</template>
 </template>
