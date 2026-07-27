@@ -33,6 +33,38 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.5.6',
+		version: '1.5.6',
+		publishedAt: '2026-07-27',
+		title: {
+			'en-US': 'Axolotl Launcher 1.5.6',
+			'zh-CN': 'Axolotl Launcher 1.5.6',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US': 'Changed the way the launcher handles modpack parsing.',
+					'zh-CN': '重写了加载器版本和类型的解析方式。',
+				},
+				{
+					'en-US':
+						'Changed some frontend code left by vibe and replaced it with native components.',
+					'zh-CN': '重写了一些vibe留下的其它代码。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed the skin page failing to import skins.',
+					'zh-CN': '修复了皮肤页面无法导入皮肤的问题。',
+				},
+				{
+					'en-US': 'Fixed the import page failing to import instances.',
+					'zh-CN': '修复了导入界面无法正常导入的bug。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.5.5',
 		version: '1.5.5',
 		publishedAt: '2026-07-26',
@@ -77,7 +109,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed a freeze caused by an infinite loop when closing the import method dialog, and its Cancel action is now a real button.',
-					'zh-CN': '修复了关闭导入方式弹窗时因无限循环导致卡死的问题，同时「取消」现在是真正的按钮。',
+					'zh-CN':
+						'修复了关闭导入方式弹窗时因无限循环导致卡死的问题，同时「取消」现在是真正的按钮。',
 				},
 				{
 					'en-US':
@@ -99,7 +132,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Importing an instance no longer shows a success notification before the import actually finishes — failures now report an error instead of a false success.',
-					'zh-CN': '导入实例不再在导入真正完成前提示成功——导入失败时现在会提示错误，而不是错误地提示成功。',
+					'zh-CN':
+						'导入实例不再在导入真正完成前提示成功——导入失败时现在会提示错误，而不是错误地提示成功。',
 				},
 				{
 					'en-US':

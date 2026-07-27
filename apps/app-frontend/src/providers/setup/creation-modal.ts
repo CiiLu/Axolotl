@@ -449,14 +449,18 @@ let currentFlowCtx: CreationFlowContextValue | null = null
 		}
 	}
 
-	async function onImportFileReceived(payload: {
-		file: File | null
-		filePath: string | null
-		source: 'file-picker' | 'drag-drop'
-	}) {
-		if (!filePath) return
-
-		const fileName = filePath.split(/[/\\]/).pop() || 'file'
+		async function onImportFileReceived({
+			file: _file,
+			filePath,
+			source: _source,
+		}: {
+			file: File | null
+			filePath: string | null
+			source: 'file-picker' | 'drag-drop'
+		}) {
+			if (!filePath) return
+	
+			const fileName = filePath.split(/[/\\]/).pop() || 'file'
 
 		// ── Show "Processing..." immediately (pure frontend) ──
 		let currentNotify = notificationManager.addNotification({
