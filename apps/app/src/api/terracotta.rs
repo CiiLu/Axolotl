@@ -1,5 +1,5 @@
 use crate::api::Result;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 	tauri::plugin::Builder::new("terracotta")
@@ -49,17 +49,9 @@ pub async fn terracotta_get_meta() -> Result<TerracottaMetaResponse> {
 	})
 }
 
-#[derive(Deserialize)]
-pub struct TerracottaStartArgs {
-	#[serde(default)]
-	pub binary_path: Option<String>,
-	#[serde(default)]
-	pub auto_download: bool,
-}
-
 #[tauri::command]
-pub async fn terracotta_start(args: TerracottaStartArgs) -> Result<()> {
-	theseus::terracotta::start_terracotta(args.binary_path, args.auto_download)
+pub async fn terracotta_start(binary_path: Option<String>, auto_download: Option<bool>) -> Result<()> {
+	theseus::terracotta::start_terracotta(binary_path, auto_download.unwrap_or(true))
 		.await
 		.map_err(theseus::Error::from)?;
 	Ok(())
@@ -73,30 +65,17 @@ pub async fn terracotta_stop() -> Result<()> {
 	Ok(())
 }
 
-#[derive(Deserialize)]
-pub struct TerracottaHostArgs {
-	#[serde(default)]
-	pub room_code: Option<String>,
-	pub player_name: String,
-}
-
 #[tauri::command]
-pub async fn terracotta_host(args: TerracottaHostArgs) -> Result<()> {
-	theseus::terracotta::start_hosting(args.room_code, args.player_name)
+pub async fn terracotta_host(room_code: Option<String>, player_name: String) -> Result<()> {
+	theseus::terracotta::start_hosting(room_code, player_name)
 		.await
 		.map_err(theseus::Error::from)?;
 	Ok(())
 }
 
-#[derive(Deserialize)]
-pub struct TerracottaJoinArgs {
-	pub room_code: String,
-	pub player_name: String,
-}
-
 #[tauri::command]
-pub async fn terracotta_join(args: TerracottaJoinArgs) -> Result<()> {
-	theseus::terracotta::start_joining(args.room_code, args.player_name)
+pub async fn terracotta_join(room_code: String, player_name: String) -> Result<()> {
+	theseus::terracotta::start_joining(room_code, player_name)
 		.await
 		.map_err(theseus::Error::from)?;
 	Ok(())
@@ -110,19 +89,11 @@ pub async fn terracotta_reset() -> Result<()> {
 	Ok(())
 }
 
-#[derive(Deserialize)]
-pub struct TerracottaParseRoomCodeArgs {
-	pub room_code: String,
-}
-
 #[tauri::command]
-pub async fn terracotta_parse_room_code(
-	args: TerracottaParseRoomCodeArgs,
-) -> Result<String> {
-	let code = theseus::terracotta::parse_room_code(&args.room_code)
+pub async fn terracotta_parse_room_code(room_code: String) -> Result<String> {
+	theseus::terracotta::parse_room_code(&room_code)
 		.await
-		.map_err(theseus::Error::from)?;
-	Ok(code)
+		.map_err(theseus::Error::from)
 }
 
 #[tauri::command]
@@ -130,18 +101,12 @@ pub async fn terracotta_get_platform_key() -> Result<String> {
 	Ok(theseus::terracotta::terracotta_platform_key().to_string())
 }
 
-#[derive(Deserialize)]
-pub struct TerracottaDownloadUrlArgs {
-	pub version: String,
-}
-
 #[tauri::command]
-pub async fn terracotta_get_download_url(args: TerracottaDownloadUrlArgs) -> Result<String> {
+pub async fn terracotta_get_download_url(version: Option<String>) -> Result<String> {
 	let key = theseus::terracotta::terracotta_platform_key();
+	let ver = version.unwrap_or_else(|| "0.4.2".to_string());
 	Ok(format!(
-		"https://gitee.com/burningtnt/Terracotta/releases/download/v{version}/terracotta-{version}-{key}-pkg.tar.gz",
-		version = args.version,
-		key = key,
+		"https://gitee.com/burningtnt/Terracotta/releases/download/v{ver}/terracotta-{ver}-{key}-pkg.tar.gz"
 	))
 }
 

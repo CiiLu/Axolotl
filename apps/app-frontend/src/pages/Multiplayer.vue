@@ -208,7 +208,6 @@ async function hostGame() {
 	try {
 		await invoke('plugin:terracotta|terracotta_host', {
 			playerName: playerName.value.trim(),
-			roomCode: null,
 		})
 	} catch (e: any) {
 		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Unknown error'
