@@ -254,6 +254,8 @@ async function downloadTerracotta() {
 	try {
 		pollInterval = setInterval(pollState, 500)
 		await invoke('plugin:terracotta|terracotta_download')
+		// After download, auto-start terracotta so the user can host/join
+		await startTerracotta()
 	} catch (e: any) {
 		if (pollInterval) clearInterval(pollInterval)
 		errorMessage.value = typeof e === 'string' ? e : e?.message || e?.toString() || 'Download failed'

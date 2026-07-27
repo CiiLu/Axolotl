@@ -317,6 +317,10 @@ pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 	info!("terracotta v{version} installed to {}", target_dir.display());
 
 	let mut state = TERRACOTTA_STATE.lock().await;
+	state.download_progress = Some(100);
+	drop(state);
+	tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+	let mut state = TERRACOTTA_STATE.lock().await;
 	state.status = TerracottaStatus::Idle;
 	state.download_progress = None;
 	Ok(())
