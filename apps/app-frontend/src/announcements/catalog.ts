@@ -69,6 +69,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			changed: [
 				{
 					'en-US':
+						'Saved skin favorite folders now use the launcher dropdown style, create folders from a confirmation dialog, and support deleting folders or moving skins into them by drag and drop.',
+					'zh-CN':
+						'已保存皮肤收藏夹现在使用启动器下拉菜单样式，通过确认弹窗创建，并支持删除收藏夹或拖放皮肤移动到收藏夹。',
+				},
+				{
+					'en-US':
 						"Checking a modpack's contents no longer loads the entire pack file into memory; it now streams to the download cache and is reused by a later install of the same version.",
 					'zh-CN':
 						'解析整合包内容时不再将整个整合包文件载入内存，而是流式下载到缓存，之后安装同一版本时可直接复用。',

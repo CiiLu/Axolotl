@@ -419,12 +419,31 @@ function selectFavoriteFolder(name: string | null) {
 	saveSkinFavorites()
 }
 
-function assignSkinFavoriteFolder(skin: Skin, folderName: string) {
+function deleteFavoriteFolder(name: string) {
+	favoriteFolders.value = favoriteFolders.value.filter((folder) => folder !== name)
+	if (selectedFavoriteFolder.value === name) {
+		selectedFavoriteFolder.value = null
+	}
+	favoriteAssignments.value = Object.fromEntries(
+		Object.entries(favoriteAssignments.value).filter(([, folder]) => folder !== name),
+	)
+	saveSkinFavorites()
+}
+
+function assignSkinFavoriteFolder(skin: Skin, folderName: string | null) {
+	const skinKey = getSavedSkinFavoriteKey(skin)
+	if (folderName === null) {
+		const { [skinKey]: _removed, ...nextAssignments } = favoriteAssignments.value
+		favoriteAssignments.value = nextAssignments
+		saveSkinFavorites()
+		return
+	}
+
 	if (!favoriteFolders.value.includes(folderName)) return
 
 	favoriteAssignments.value = {
 		...favoriteAssignments.value,
-		[getSavedSkinFavoriteKey(skin)]: folderName,
+		[skinKey]: folderName,
 	}
 	saveSkinFavorites()
 }
@@ -1185,6 +1204,7 @@ await loadSkins()
 				@create-favorite-folder="createFavoriteFolder"
 				@select-favorite-folder="selectFavoriteFolder"
 				@assign-skin-favorite-folder="assignSkinFavoriteFolder"
+				@delete-favorite-folder="deleteFavoriteFolder"
 				@add-skin="openAddSkinFileBrowser"
 				@add-skin-dragenter="onAddSkinDragOver"
 				@add-skin-dragover="onAddSkinDragOver"

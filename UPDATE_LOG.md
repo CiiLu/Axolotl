@@ -22,3 +22,5 @@
 - 修复更改应用目录或迁移旧启动器数据时，数据库中遗留的未完成 Java 安装（.installing 暂存路径）会触发 "Cannot save an incomplete Java installation" 错误、导致启动器初始化失败无法启动的问题；现在会自动跳过并清理这类脏记录。
 - 新增 MC 百科（mcmod.cn）跳转：模组/内容详情页的「相关链接」侧栏新增「MC Mod」项，右上角三点菜单新增「在 MC 百科中打开」，仅当项目 Slug 能在内置百科词表中查到 WikiId 时显示，点击跳转 https://www.mcmod.cn/class/{WikiId}.html；Modrinth 与 CurseForge 详情页均支持。
 - 为已保存皮肤页面新增自定义收藏夹筛选、创建与拖拽归类功能，并补充中英文国际化文案。
+
+- 优化了已保存皮肤收藏夹的下拉菜单、创建弹窗、删除和拖放移动体验。
