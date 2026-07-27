@@ -464,7 +464,7 @@ pub async fn start_terracotta(
 			let mut lines = reader.lines();
 			loop {
 				tokio::select! {
-					_ = abort_rx.closed() => break,
+					_ = &mut abort_rx => break,
 					line = lines.next_line() => {
 						match line {
 							Ok(Some(text)) => {
@@ -574,11 +574,12 @@ pub async fn start_hosting(
 	let resp = client.get(&url).send().await.wrap_err_with(|| {
 		format!("failed to send hosting request to terracotta at {url}")
 	})?;
-	if !resp.status().is_success() {
+	let status = resp.status();
+	if !status.is_success() {
 		let body = resp.text().await.unwrap_or_default();
 		bail!(
 			"terracotta hosting failed with status {}: {body}",
-			resp.status().as_u16()
+			status.as_u16()
 		);
 	}
 	Ok(())
@@ -605,11 +606,12 @@ pub async fn start_joining(
 	let resp = client.get(&url).send().await.wrap_err_with(|| {
 		format!("failed to send joining request to terracotta at {url}")
 	})?;
-	if !resp.status().is_success() {
+	let status = resp.status();
+	if !status.is_success() {
 		let body = resp.text().await.unwrap_or_default();
 		bail!(
 			"terracotta joining failed with status {}: {body}",
-			resp.status().as_u16()
+			status.as_u16()
 		);
 	}
 	Ok(())
