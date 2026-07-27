@@ -168,6 +168,7 @@ import { ModrinthMirrorFallbackFeature } from './providers/modrinth-mirror-fallb
 const themeStore = useTheming()
 const router = useRouter()
 const route = useRoute()
+const onSkinsPage = computed(() => route.path === '/skins')
 const APP_LEFT_NAV_WIDTH = '4rem'
 const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
@@ -1066,8 +1067,14 @@ const dropProcessingNotificationId = ref<number | null>(null)
 
 const { isDragging, isProcessing } = useGlobalDrop(
 	{
-		classifyFile: classifyDroppedItem,
+		classifyFile: async (path) => {
+			if (onSkinsPage.value) {
+				return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
+			}
+			return classifyDroppedItem(path)
+		},
 		onClassifyStart: (fileName) => {
+			if (onSkinsPage.value) return
 			// Immediate feedback when a file is dropped — show a notification
 			// with the file name before classification even begins.
 			dropProcessingNotificationId.value = addNotification({
@@ -1077,6 +1084,7 @@ const { isDragging, isProcessing } = useGlobalDrop(
 			}).id
 		},
 		onImportStart: (type, classification) => {
+			if (type === 'unknown' && classification?.reason === 'skipped') return
 			dropClassification.value = classification
 			dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
 			dropFileName.value =
@@ -2658,7 +2666,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	<!-- Global drop overlay -->
 	<div
-		v-if="isDragging"
+		v-if="isDragging && !onSkinsPage"
 		class="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center pointer-events-none"
 	>
 		<div class="rounded-2xl border-2 border-dashed border-brand bg-surface-2/90 p-8 text-center">
@@ -2669,7 +2677,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	<!-- Processing overlay -->
 	<div
-		v-if="(isProcessing || scanningInstances) && !isDragging"
+		v-if="(isProcessing || scanningInstances) && !isDragging && !onSkinsPage"
 		class="fixed inset-0 z-[9999] bg-black/20 flex items-center justify-center"
 	>
 		<div class="flex flex-col items-center gap-3">
