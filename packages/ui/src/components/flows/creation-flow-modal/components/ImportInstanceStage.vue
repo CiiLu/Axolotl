@@ -4,11 +4,10 @@
 		class="flex flex-col items-center gap-6 py-4"
 	>
 		<DropzoneFileInput
-			:secondary-prompt="formatMessage(messages.dropZoneClick)"
-			directory
-			no-icon-box
-			@change="onDropzoneChange"
-		/>
+				:secondary-prompt="formatMessage(messages.dropZoneClick)"
+				no-icon-box
+				@change="onDropzoneChange"
+			/>
 
 		<!-- Launcher icons + caption -->
 		<div class="flex flex-col items-center gap-2">
