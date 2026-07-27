@@ -262,6 +262,7 @@ pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 		.await
 		.wrap_err("failed to create terracotta directory")?;
 
+	let bin_name = terracotta_binary_name();
 	let target_dir_clone = target_dir.clone();
 	let archive_path_clone = archive_path.clone();
 	tokio::task::spawn_blocking(move || -> eyre::Result<()> {
@@ -269,68 +270,33 @@ pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 			.wrap_err("failed to open downloaded archive")?;
 		let decoder = GzDecoder::new(archive_file);
 		let mut archive = tar::Archive::new(decoder);
-
-		let bin_name = terracotta_binary_name();
-		let entries: Vec<_> = archive
-			.entries()
-			.map_err(|e| eyre::eyre!("failed to read archive: {e}"))?
-			.filter_map(|e| e.ok())
-			.filter_map(|e| {
-				let path = e.path().ok()?.to_path_buf();
-				let name = path.file_name()?.to_str()?.to_string();
-				Some((path, name))
-			})
-			.collect();
-
-		if entries.is_empty() {
-			bail!("archive is empty");
-		}
-
-		info!(
-			"terracotta archive contains {} entries: {:?}",
-			entries.len(),
-			entries.iter().map(|(_, n)| n).collect::<Vec<_>>()
-		);
-
-		if entries.iter().any(|(_, n)| n == bin_name) {
-			info!("found {bin_name} in archive, extracting");
-		} else {
-			bail!(
-				"terracotta binary '{bin_name}' not found in archive. Files: {:?}",
-				entries.iter().map(|(_, n)| n).collect::<Vec<_>>()
-			);
-		}
-
-		let archive_file = std::fs::File::open(&archive_path_clone)
-			.wrap_err("failed to re-open archive for extraction")?;
-		let decoder = GzDecoder::new(archive_file);
-		let mut archive = tar::Archive::new(decoder);
 		archive
 			.unpack(&target_dir_clone)
-			.wrap_err("failed to extract archive")?;
-
+			.wrap_err("failed to extract terracotta archive")?;
 		Ok(())
 	})
 	.await??;
 
-	let bin_name = terracotta_binary_name();
-	let bin_path = target_dir.join(bin_name);
-	if !bin_path.exists() {
+	let expected_path = target_dir.join(bin_name);
+	if !expected_path.exists() {
 		let mut found = false;
 		for entry in std::fs::read_dir(&target_dir)? {
 			let entry = entry?;
-			if entry.file_type()?.is_dir() {
-				let inner = entry.path().join(bin_name);
-				if inner.exists() {
-					std::fs::rename(&inner, &bin_path)?;
-					info!("moved {bin_name} from {inner:?} to {}", bin_path.display());
-					found = true;
-					break;
-				}
+			let name = entry.file_name();
+			let name_str = name.to_string_lossy();
+			if name_str.starts_with("terracotta") && !name_str.ends_with(".tar.gz") {
+				std::fs::rename(entry.path(), &expected_path)
+					.wrap_err("failed to rename terracotta binary")?;
+				info!("renamed {name_str} to {bin_name}");
+				found = true;
+				break;
 			}
 		}
 		if !found {
-			bail!("{bin_name} not found in extracted files");
+			bail!(
+				"terracotta binary not found in extracted files at {}",
+				target_dir.display()
+			);
 		}
 	}
 
