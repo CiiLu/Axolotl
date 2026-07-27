@@ -137,12 +137,6 @@ fn terracotta_binary_path() -> PathBuf {
 
 fn terracotta_download_url(version: &str, platform: &str) -> String {
 	format!(
-		"https://github.com/burningtnt/Terracotta/releases/download/v{version}/terracotta-{version}-{platform}-pkg.tar.gz"
-	)
-}
-
-fn terracotta_mirror_url(version: &str, platform: &str) -> String {
-	format!(
 		"https://gitee.com/burningtnt/Terracotta/releases/download/v{version}/terracotta-{version}-{platform}-pkg.tar.gz"
 	)
 }
@@ -214,36 +208,14 @@ pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 		);
 	}
 
-	let primary_url = terracotta_download_url(&version, platform);
-	let mirror_url = terracotta_mirror_url(&version, platform);
-	info!("downloading terracotta v{version} for {platform}");
+	let download_url = terracotta_download_url(&version, platform);
+	info!("downloading terracotta v{version} for {platform} from gitee");
 
-	let response = match crate::util::fetch::INSECURE_REQWEST_CLIENT
-		.get(&primary_url)
+	let response = crate::util::fetch::INSECURE_REQWEST_CLIENT
+		.get(&download_url)
 		.send()
 		.await
-	{
-		Ok(r) if r.status().is_success() => r,
-		Ok(r) => {
-			warn!(
-				"primary download returned HTTP {}, trying mirror",
-				r.status()
-			);
-			crate::util::fetch::INSECURE_REQWEST_CLIENT
-				.get(&mirror_url)
-				.send()
-				.await
-				.wrap_err_with(|| format!("failed to download terracotta from mirror {mirror_url}"))?
-		}
-		Err(e) => {
-			warn!("primary download failed: {e:#}, trying mirror");
-			crate::util::fetch::INSECURE_REQWEST_CLIENT
-				.get(&mirror_url)
-				.send()
-				.await
-				.wrap_err_with(|| format!("failed to download terracotta from mirror {mirror_url}"))?
-		}
-	};
+		.wrap_err_with(|| format!("failed to download terracotta from {download_url}"))?;
 
 	if !response.status().is_success() {
 		bail!(

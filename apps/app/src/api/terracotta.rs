@@ -139,7 +139,7 @@ pub struct TerracottaDownloadUrlArgs {
 pub async fn terracotta_get_download_url(args: TerracottaDownloadUrlArgs) -> Result<String> {
 	let key = theseus::terracotta::terracotta_platform_key();
 	Ok(format!(
-		"https://github.com/burningtnt/Terracotta/releases/download/v{version}/terracotta-{version}-{key}-pkg.tar.gz",
+		"https://gitee.com/burningtnt/Terracotta/releases/download/v{version}/terracotta-{version}-{key}-pkg.tar.gz",
 		version = args.version,
 		key = key,
 	))
