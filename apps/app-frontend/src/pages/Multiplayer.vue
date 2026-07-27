@@ -40,14 +40,6 @@ const messages = defineMessages({
 		id: 'app.multiplayer.join-room',
 		defaultMessage: 'Join room',
 	},
-	stop: {
-		id: 'app.multiplayer.stop',
-		defaultMessage: 'Stop',
-	},
-	disconnect: {
-		id: 'app.multiplayer.disconnect',
-		defaultMessage: 'Disconnect',
-	},
 	copyRoomCode: {
 		id: 'app.multiplayer.copy-room-code',
 		defaultMessage: 'Copy room code',
@@ -346,18 +338,6 @@ async function startTerracotta() {
 	}
 }
 
-async function stopTerracotta() {
-	try {
-		await invoke('plugin:terracotta|terracotta_stop')
-		stopPolling()
-		await pollState()
-	} catch (e: any) {
-		console.error(e)
-		stopPolling()
-		await pollState()
-	}
-}
-
 async function hostGame() {
 	if (!playerName.value.trim()) {
 		console.warn('Please enter a player name')
@@ -576,9 +556,6 @@ onUnmounted(() => {
 						>
 							{{ formatMessage(messages.joinRoom) }}
 						</Button>
-						<Button color="danger" @click="stopTerracotta">
-							{{ formatMessage(messages.stop) }}
-						</Button>
 					</div>
 				</div>
 			</div>
@@ -598,9 +575,6 @@ onUnmounted(() => {
 				<div class="flex gap-2">
 					<Button @click="resetState">
 						{{ formatMessage(messages.back) }}
-					</Button>
-					<Button color="danger" @click="stopTerracotta">
-						{{ formatMessage(messages.stop) }}
 					</Button>
 				</div>
 			</div>
@@ -655,9 +629,6 @@ onUnmounted(() => {
 					<Button @click="resetState">
 						{{ formatMessage(messages.back) }}
 					</Button>
-					<Button color="danger" @click="stopTerracotta">
-						{{ formatMessage(messages.stop) }}
-					</Button>
 				</div>
 			</div>
 		</template>
@@ -673,9 +644,6 @@ onUnmounted(() => {
 				<div class="flex gap-2">
 					<Button @click="resetState">
 						{{ formatMessage(messages.back) }}
-					</Button>
-					<Button color="danger" @click="stopTerracotta">
-						{{ formatMessage(messages.stop) }}
 					</Button>
 				</div>
 			</div>
@@ -720,9 +688,6 @@ onUnmounted(() => {
 					<Button @click="resetState">
 						{{ formatMessage(messages.back) }}
 					</Button>
-					<Button color="danger" @click="stopTerracotta">
-						{{ formatMessage(messages.stop) }}
-					</Button>
 				</div>
 			</div>
 		</template>
@@ -742,12 +707,9 @@ onUnmounted(() => {
 					<div v-if="state.error_message" class="text-sm text-red-300">
 						{{ state.error_message }}
 					</div>
-					<div class="flex gap-2 mt-3">
-						<Button v-if="isRecoverable" size="small" @click="resetState">
+					<div v-if="isRecoverable" class="mt-3">
+						<Button size="small" @click="resetState">
 							{{ formatMessage(messages.retry) }}
-						</Button>
-						<Button size="small" color="danger" @click="stopTerracotta">
-							{{ formatMessage(messages.stop) }}
 						</Button>
 					</div>
 				</div>
