@@ -173,9 +173,6 @@ fn terracotta_binary_path() -> PathBuf {
 pub fn terracotta_download_urls(version: &str, platform: &str) -> Vec<String> {
 	vec![
 		format!(
-			"https://github.com/burningtnt/Terracotta/releases/download/v{version}/terracotta-{version}-{platform}-pkg.tar.gz"
-		),
-		format!(
 			"https://gitee.com/burningtnt/Terracotta/releases/download/v{version}/terracotta-{version}-{platform}-pkg.tar.gz"
 		),
 	]
