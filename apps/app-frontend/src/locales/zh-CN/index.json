@@ -3653,6 +3653,9 @@
 	"app.multiplayer.start-description": {
 		"message": "启动联机服务以创建房间或加入好友的房间。"
 	},
+	"app.multiplayer.lan-hint": {
+		"message": "请打开 Minecraft 进入世界，按 ESC → 对局域网开放 → 选择一个端口，陶瓦联机会自动检测。"
+	},
 	"app.multiplayer.loading": {
 		"message": "初始化中..."
 	},

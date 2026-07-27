@@ -12,6 +12,10 @@ const messages = defineMessages({
 		id: 'app.multiplayer.host-description',
 		defaultMessage: 'Create a virtual LAN room so friends can connect directly to your game.',
 	},
+	lanHint: {
+		id: 'app.multiplayer.lan-hint',
+		defaultMessage: 'Open your Minecraft world, then press Esc → Open to LAN → choose a port. Terracotta will detect it automatically.',
+	},
 	joinDescription: {
 		id: 'app.multiplayer.join-description',
 		defaultMessage: 'Enter a room code to join a friend\'s virtual LAN room.',
@@ -608,6 +612,9 @@ onUnmounted(() => {
 					</div>
 				</div>
 				<div v-if="localError" class="text-red-500 text-sm mb-4">{{ localError }}</div>
+				<div class="text-sm text-secondary mb-4 bg-surface-5 rounded-lg p-3">
+					{{ formatMessage(messages.lanHint) }}
+				</div>
 				<div class="flex gap-2">
 					<Button @click="resetState">
 						{{ formatMessage(messages.back) }}

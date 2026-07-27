@@ -3587,6 +3587,9 @@
 	"app.multiplayer.start-description": {
 		"message": "Start the multiplayer service to host games or join friends' rooms."
 	},
+	"app.multiplayer.lan-hint": {
+		"message": "Open your Minecraft world, then press Esc → Open to LAN → choose a port. Terracotta will detect it automatically."
+	},
 	"app.multiplayer.loading": {
 		"message": "Initializing..."
 	},
