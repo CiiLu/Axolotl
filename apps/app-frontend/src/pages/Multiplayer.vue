@@ -350,9 +350,11 @@ async function stopTerracotta() {
 	try {
 		await invoke('plugin:terracotta|terracotta_stop')
 		stopPolling()
-		state.value = null
+		await pollState()
 	} catch (e: any) {
 		console.error(e)
+		stopPolling()
+		await pollState()
 	}
 }
 
