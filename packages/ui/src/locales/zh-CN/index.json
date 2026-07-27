@@ -1254,7 +1254,7 @@
 		"defaultMessage": "点击选择文件，或拖拽任意文件/文件夹"
 	},
 	"creation-flow.modal.import-instance.import-prompt": {
-		"defaultMessage": "拖拽启动器文件夹、整合包文件或 .minecraft 文件夹即可一键导入实例"
+		"defaultMessage": "选择或拖拽启动器、整合包、.minecraft 文件夹即可一键导入实例\n支持PCL2(CE)、HMCL等启动器"
 	},
 	"creation-flow.modal.modpack.action.browse": {
 		"defaultMessage": "浏览整合包"
