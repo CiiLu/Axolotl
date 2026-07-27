@@ -413,6 +413,10 @@ const messages = defineMessages({
 		id: 'app.navigation.library',
 		defaultMessage: 'Library',
 	},
+	multiplayer: {
+		id: 'app.navigation.multiplayer',
+		defaultMessage: 'Multiplayer',
+	},
 	downloads: {
 		id: 'app.navigation.downloads',
 		defaultMessage: 'Downloads',
@@ -2378,6 +2382,14 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 					to="/skins"
 				>
 					<ChangeSkinIcon />
+				</NavButton>
+				<NavButton
+					v-tooltip.right="formatMessage(messages.multiplayer)"
+					data-onboarding-id="nav-multiplayer"
+					to="/multiplayer"
+					:is-primary="(r) => r.path === '/multiplayer'"
+				>
+					<WorldIcon />
 				</NavButton>
 				<NavButton
 					v-tooltip.right="formatMessage(messages.library)"

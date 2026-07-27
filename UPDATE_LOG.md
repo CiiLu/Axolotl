@@ -21,3 +21,8 @@
 - 新增启动时自动清理：超过 7 天未使用的下载临时文件（.part 及分段残留）会被自动删除，避免被放弃的下载永久占用磁盘。
 - 修复更改应用目录或迁移旧启动器数据时，数据库中遗留的未完成 Java 安装（.installing 暂存路径）会触发 "Cannot save an incomplete Java installation" 错误、导致启动器初始化失败无法启动的问题；现在会自动跳过并清理这类脏记录。
 - 新增 MC 百科（mcmod.cn）跳转：模组/内容详情页的「相关链接」侧栏新增「MC Mod」项，右上角三点菜单新增「在 MC 百科中打开」，仅当项目 Slug 能在内置百科词表中查到 WikiId 时显示，点击跳转 https://www.mcmod.cn/class/{WikiId}.html；Modrinth 与 CurseForge 详情页均支持。
+- 修复项目无法使用 SOCKS5 代理的问题（为 reqwest 添加 socks feature 支持）
+- 新增联机功能选项卡，集成陶瓦联机（Terracotta）支持，可创建虚拟局域网房间或加入好友房间进行联机
+- 联机功能支持多平台架构自动识别（Windows/macOS/Linux x86_64/ARM64），自动匹配正确的陶瓦联机二进制文件名
+- 联机功能支持自动检测并下载陶瓦联机二进制文件（自动匹配平台/架构，显示下载进度）
+- 修复联机页面组件导入错误（CopyButton→CopyCode, Input→StyledInput）

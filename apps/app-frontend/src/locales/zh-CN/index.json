@@ -3502,5 +3502,98 @@
 	},
 	"app.instance.mods.dismiss": {
 		"message": "知道了"
+	},
+	"app.navigation.multiplayer": {
+		"message": "联机"
+	},
+	"app.multiplayer.title": {
+		"message": "联机"
+	},
+	"app.multiplayer.host": {
+		"message": "创建房间"
+	},
+	"app.multiplayer.join": {
+		"message": "加入房间"
+	},
+	"app.multiplayer.host-description": {
+		"message": "创建虚拟局域网房间，让好友直接连接到你的游戏。"
+	},
+	"app.multiplayer.join-description": {
+		"message": "输入房间码加入好友的虚拟局域网房间。"
+	},
+	"app.multiplayer.player-name": {
+		"message": "玩家名称"
+	},
+	"app.multiplayer.room-code": {
+		"message": "房间码"
+	},
+	"app.multiplayer.room-code-placeholder": {
+		"message": "例如 U/ABCD-EFGH-IJKL-MNOP"
+	},
+	"app.multiplayer.start-hosting": {
+		"message": "开始创建房间"
+	},
+	"app.multiplayer.join-room": {
+		"message": "加入房间"
+	},
+	"app.multiplayer.stop": {
+		"message": "停止"
+	},
+	"app.multiplayer.copy-room-code": {
+		"message": "复制房间码"
+	},
+	"app.multiplayer.status.idle": {
+		"message": "未连接"
+	},
+	"app.multiplayer.status.starting": {
+		"message": "启动中..."
+	},
+	"app.multiplayer.status.host-scanning": {
+		"message": "正在创建房间..."
+	},
+	"app.multiplayer.status.host-ready": {
+		"message": "房间已就绪"
+	},
+	"app.multiplayer.status.guest-connecting": {
+		"message": "正在加入房间..."
+	},
+	"app.multiplayer.status.guest-ready": {
+		"message": "已连接到房间"
+	},
+	"app.multiplayer.status.error": {
+		"message": "错误"
+	},
+	"app.multiplayer.players": {
+		"message": "玩家"
+	},
+	"app.multiplayer.players-in-room": {
+		"message": "房间内 {count} 名玩家"
+	},
+	"app.multiplayer.not-running": {
+		"message": "联机服务未运行。请创建房间或加入房间以开始联机。"
+	},
+	"app.multiplayer.not-running-title": {
+		"message": "开始联机会话"
+	},
+	"app.multiplayer.share-code": {
+		"message": "将此房间码分享给好友，让他们加入："
+	},
+	"app.multiplayer.host-label": {
+		"message": "房主"
+	},
+	"app.multiplayer.guest-label": {
+		"message": "访客"
+	},
+	"app.multiplayer.platform-info": {
+		"message": "当前平台：{platform}"
+	},
+	"app.multiplayer.binary-not-found": {
+		"message": "未找到陶瓦联机程序，请下载后放置在以下路径："
+	},
+	"app.multiplayer.download-terracotta": {
+		"message": "下载陶瓦联机"
+	},
+	"app.multiplayer.status.downloading": {
+		"message": "下载中..."
 	}
 }
