@@ -44,6 +44,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Saved skins can now be organized into custom favorite folders, with filtering, quick creation, and drag-and-drop assignment.',
+					'zh-CN': '已保存皮肤现在可整理到自定义收藏夹中，并支持筛选、快速创建和拖拽归类。',
+				},
+
+				{
+					'en-US':
 						'The offline mode notice now has a refresh button to re-check the session server connection without restarting the launcher.',
 					'zh-CN': '离线模式提示中新增刷新按钮，无需重启启动器即可重新检测会话服务器连接状态。',
 				},
@@ -77,7 +83,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed a freeze caused by an infinite loop when closing the import method dialog, and its Cancel action is now a real button.',
-					'zh-CN': '修复了关闭导入方式弹窗时因无限循环导致卡死的问题，同时「取消」现在是真正的按钮。',
+					'zh-CN':
+						'修复了关闭导入方式弹窗时因无限循环导致卡死的问题，同时「取消」现在是真正的按钮。',
 				},
 				{
 					'en-US':
@@ -99,7 +106,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Importing an instance no longer shows a success notification before the import actually finishes — failures now report an error instead of a false success.',
-					'zh-CN': '导入实例不再在导入真正完成前提示成功——导入失败时现在会提示错误，而不是错误地提示成功。',
+					'zh-CN':
+						'导入实例不再在导入真正完成前提示成功——导入失败时现在会提示错误，而不是错误地提示成功。',
 				},
 				{
 					'en-US':

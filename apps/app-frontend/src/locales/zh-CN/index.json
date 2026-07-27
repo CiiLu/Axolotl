@@ -3550,5 +3550,23 @@
 	},
 	"app.instance.mods.dismiss": {
 		"message": "知道了"
+	},
+	"app.skins.favorites.all": {
+		"message": "全部收藏夹"
+	},
+	"app.skins.favorites.create-button": {
+		"message": "创建收藏夹"
+	},
+	"app.skins.favorites.create-placeholder": {
+		"message": "收藏夹名称"
+	},
+	"app.skins.favorites.empty": {
+		"message": "这个收藏夹中还没有已保存皮肤。"
+	},
+	"app.skins.favorites.error-name-required": {
+		"message": "请输入收藏夹名称。"
+	},
+	"app.skins.favorites.error-duplicate-name": {
+		"message": "已存在同名收藏夹。"
 	}
 }

@@ -3532,5 +3532,23 @@
 	},
 	"app.instance.mods.dismiss": {
 		"message": "Got it"
+	},
+	"app.skins.favorites.all": {
+		"message": "All favorites"
+	},
+	"app.skins.favorites.create-button": {
+		"message": "Create favorite folder"
+	},
+	"app.skins.favorites.create-placeholder": {
+		"message": "Folder name"
+	},
+	"app.skins.favorites.empty": {
+		"message": "No saved skins are in this favorite folder yet."
+	},
+	"app.skins.favorites.error-name-required": {
+		"message": "Enter a folder name."
+	},
+	"app.skins.favorites.error-duplicate-name": {
+		"message": "A favorite folder with this name already exists."
 	}
 }
