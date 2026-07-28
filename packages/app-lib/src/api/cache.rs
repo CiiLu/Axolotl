@@ -1,7 +1,7 @@
 use crate::state::{
-    CacheBehaviour, CacheValueType, CachedEntry, Organization, Project,
-    ProjectV3, SearchResults, SearchResultsV3, TeamMember, User, Version,
-    ModrinthProjectId, ModrinthVersionId,
+    CacheBehaviour, CacheValueType, CachedEntry, ModrinthProjectId,
+    ModrinthVersionId, Organization, Project, ProjectV3, SearchResults,
+    SearchResultsV3, TeamMember, User, Version,
 };
 
 macro_rules! impl_cache_methods {
@@ -51,8 +51,13 @@ pub async fn get_project(
 ) -> crate::Result<Option<Project>> {
     let id = ModrinthProjectId::new(id.to_string())?;
     let state = crate::State::get().await?;
-    CachedEntry::get_project(&id, cache_behaviour, &state.pool, &state.api_semaphore)
-        .await
+    CachedEntry::get_project(
+        &id,
+        cache_behaviour,
+        &state.pool,
+        &state.api_semaphore,
+    )
+    .await
 }
 
 #[tracing::instrument]
@@ -81,8 +86,13 @@ pub async fn get_version(
 ) -> crate::Result<Option<Version>> {
     let id = ModrinthVersionId::new(id.to_string())?;
     let state = crate::State::get().await?;
-    CachedEntry::get_version(&id, cache_behaviour, &state.pool, &state.api_semaphore)
-        .await
+    CachedEntry::get_version(
+        &id,
+        cache_behaviour,
+        &state.pool,
+        &state.api_semaphore,
+    )
+    .await
 }
 
 #[tracing::instrument]

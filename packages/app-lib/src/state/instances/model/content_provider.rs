@@ -31,7 +31,14 @@ impl ContentProvider {
 macro_rules! modrinth_id {
     ($name:ident, $kind:literal) => {
         #[derive(
-            Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+            Clone,
+            Debug,
+            Eq,
+            Hash,
+            Ord,
+            PartialEq,
+            PartialOrd,
+            Serialize,
             Deserialize,
         )]
         #[serde(transparent)]
@@ -68,7 +75,15 @@ modrinth_id!(ModrinthProjectId, "Modrinth project ID");
 modrinth_id!(ModrinthVersionId, "Modrinth version ID");
 
 #[derive(
-    Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
     Deserialize,
 )]
 #[serde(transparent)]
@@ -92,7 +107,15 @@ impl CurseForgeProjectId {
 }
 
 #[derive(
-    Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
     Deserialize,
 )]
 #[serde(transparent)]
@@ -149,13 +172,13 @@ impl ContentProviderRef {
                     .transpose()?,
             }),
             ContentProvider::CurseForge => Ok(Self::CurseForge {
-                project_id: CurseForgeProjectId::new(project_id.parse().map_err(
-                    |_| {
+                project_id: CurseForgeProjectId::new(
+                    project_id.parse().map_err(|_| {
                         crate::ErrorKind::InputError(format!(
                             "Invalid CurseForge project ID {project_id}"
                         ))
-                    },
-                )?)?,
+                    })?,
+                )?,
                 file_id: match release_id {
                     Some(value) => Some(CurseForgeFileId::new(
                         value.parse().map_err(|_| {
@@ -173,9 +196,7 @@ impl ContentProviderRef {
     pub fn database_project_id(&self) -> String {
         match self {
             Self::Modrinth { project_id, .. } => project_id.to_string(),
-            Self::CurseForge { project_id, .. } => {
-                project_id.get().to_string()
-            }
+            Self::CurseForge { project_id, .. } => project_id.get().to_string(),
         }
     }
 
@@ -214,8 +235,13 @@ mod tests {
     fn provider_ids_cannot_be_cross_parsed() {
         let curseforge_project = CurseForgeProjectId::new(42).unwrap();
         let curseforge_file = CurseForgeFileId::new(7).unwrap();
-        assert!(ModrinthProjectId::new(curseforge_project.get().to_string()).is_ok());
-        assert!(ModrinthVersionId::new(curseforge_file.get().to_string()).is_ok());
+        assert!(
+            ModrinthProjectId::new(curseforge_project.get().to_string())
+                .is_ok()
+        );
+        assert!(
+            ModrinthVersionId::new(curseforge_file.get().to_string()).is_ok()
+        );
 
         let reference = ContentProviderRef::CurseForge {
             project_id: curseforge_project,
@@ -227,18 +253,18 @@ mod tests {
 
     #[test]
     fn malformed_database_references_are_rejected() {
-        assert!(ContentProviderRef::from_database(
-            "curseforge",
-            "not-a-number",
-            Some("7"),
-        )
-        .is_err());
-        assert!(ContentProviderRef::from_database(
-            "unknown",
-            "project",
-            None,
-        )
-        .is_err());
+        assert!(
+            ContentProviderRef::from_database(
+                "curseforge",
+                "not-a-number",
+                Some("7"),
+            )
+            .is_err()
+        );
+        assert!(
+            ContentProviderRef::from_database("unknown", "project", None,)
+                .is_err()
+        );
     }
 
     #[test]

@@ -3522,7 +3522,7 @@
 		"message": "RoseGarden 渐变"
 	},
 	"app.lab.gradient-text.adapter.chat-colors": {
-		"message": "Chat Colors"
+		"message": "聊天颜色"
 	},
 	"app.lab.gradient-text.adapter.motd": {
 		"message": "服务器 MOTD"

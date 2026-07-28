@@ -3,8 +3,8 @@ use crate::state::instances::{
     adapters::sqlite::{content_rows, instance_rows},
 };
 use crate::state::{
-    CacheBehaviour, CachedEntry, ContentProviderRef, Dependency, DependencyType,
-    ModrinthVersionId, State, Version,
+    CacheBehaviour, CachedEntry, ContentProviderRef, Dependency,
+    DependencyType, ModrinthVersionId, State, Version,
 };
 use crate::util::fetch::DownloadReason;
 use futures::stream::{FuturesUnordered, StreamExt};
@@ -210,13 +210,9 @@ pub(crate) async fn update_all_projects(
 
     for update in &plan.curseforge_updates {
         let relative_path = update.relative_path().to_string();
-        let new_path = apply_content_update(
-            instance_id,
-            &relative_path,
-            update,
-            state,
-        )
-        .await?;
+        let new_path =
+            apply_content_update(instance_id, &relative_path, update, state)
+                .await?;
         changed.insert(relative_path, new_path);
     }
 
@@ -381,15 +377,11 @@ async fn plan_bulk_update(
         .iter()
         .filter(|project| updateable_paths.contains(&project.relative_path))
         .filter_map(|project| project.version_id.clone())
-        .chain(
-            updates
-                .iter()
-                .filter_map(|update| {
-                    update
-                        .modrinth_ids()
-                        .map(|(_, _, target)| target.to_string())
-                }),
-        )
+        .chain(updates.iter().filter_map(|update| {
+            update
+                .modrinth_ids()
+                .map(|(_, _, target)| target.to_string())
+        }))
         .collect::<HashSet<_>>();
     let version_id_refs = version_ids
         .iter()
@@ -497,8 +489,9 @@ async fn installed_projects(
         let Some(entry) = entries_by_file_id.get(file.id.as_str()) else {
             continue;
         };
-        let refs = content_rows::get_content_provider_refs(&entry.id, &state.pool)
-            .await?;
+        let refs =
+            content_rows::get_content_provider_refs(&entry.id, &state.pool)
+                .await?;
         if let Some(project) = installed_project_from_row(&file, entry, &refs) {
             installed.push(project);
         }
@@ -512,15 +505,17 @@ fn installed_project_from_row(
     entry: &ContentEntry,
     provider_refs: &[ContentProviderRef],
 ) -> Option<InstalledProject> {
-    let (project_id, version_id) = provider_refs.iter().find_map(|reference| {
-        match reference {
+    let (project_id, version_id) =
+        provider_refs.iter().find_map(|reference| match reference {
             ContentProviderRef::Modrinth {
                 project_id,
                 version_id: Some(version_id),
-            } => Some((Some(project_id.to_string()), Some(version_id.to_string()))),
+            } => Some((
+                Some(project_id.to_string()),
+                Some(version_id.to_string()),
+            )),
             _ => None,
-        }
-    })?;
+        })?;
 
     Some(InstalledProject {
         relative_path: file.relative_path.clone(),

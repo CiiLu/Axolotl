@@ -594,7 +594,9 @@ mod tests {
                 migration.version
                     == RECONCILE_PROVIDER_QUALIFIED_CONTENT_MIGRATION_VERSION
             })
-            .expect("provider content reconciliation migration should be embedded")
+            .expect(
+                "provider content reconciliation migration should be embedded",
+            )
     }
 
     fn checksum(contents: &[u8]) -> Vec<u8> {
@@ -803,7 +805,9 @@ mod tests {
             .await
             .unwrap();
         sqlx::raw_sql(
-            reconcile_provider_qualified_content_migration().sql.as_ref(),
+            reconcile_provider_qualified_content_migration()
+                .sql
+                .as_ref(),
         )
         .execute(&pool)
         .await
@@ -891,7 +895,7 @@ mod tests {
 
     #[tokio::test]
     async fn reconciles_applied_single_provider_schema_before_forward_migration()
-    {
+     {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
@@ -995,7 +999,9 @@ mod tests {
         );
 
         sqlx::raw_sql(
-            reconcile_provider_qualified_content_migration().sql.as_ref(),
+            reconcile_provider_qualified_content_migration()
+                .sql
+                .as_ref(),
         )
         .execute(&pool)
         .await

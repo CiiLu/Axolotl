@@ -3198,7 +3198,7 @@
     "defaultMessage": "{count, plural, one {插件} other {插件集}}"
   },
   "project-type.project.capital": {
-    "defaultMessage": "项目"
+    "message": "{count, plural, one {项目} other {项目}}"
   },
   "project-type.project.category": {
     "defaultMessage": "项目"
@@ -4656,7 +4656,7 @@
     "defaultMessage": "删除{count, plural, one {备份} other { # 个备份}}"
   },
   "servers.backups.delete-modal.header": {
-    "defaultMessage": "删除备份"
+    "message": "删除 {count, plural, other {# 个备份}}"
   },
   "servers.backups.empty.description": {
     "defaultMessage": "创建你的第一个备份"

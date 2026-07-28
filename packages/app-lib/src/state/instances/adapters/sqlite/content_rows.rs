@@ -131,10 +131,10 @@ impl TryFrom<InstanceFileRow> for InstanceFile {
 pub(crate) struct ContentEntryRow {
     pub id: String,
     pub instance_id: String,
-	pub content_set_id: String,
-	pub file_id: Option<String>,
-	pub project_type: String,
-	pub source_kind: String,
+    pub content_set_id: String,
+    pub file_id: Option<String>,
+    pub project_type: String,
+    pub source_kind: String,
     pub server_requirement: String,
     pub client_requirement: String,
     pub enabled: i64,
@@ -149,10 +149,10 @@ impl TryFrom<ContentEntryRow> for ContentEntry {
         Ok(Self {
             id: row.id,
             instance_id: row.instance_id,
-			content_set_id: row.content_set_id,
-			file_id: row.file_id,
-			project_type: project_type_from_str(&row.project_type)?,
-			source_kind: ContentSourceKind::from_str(&row.source_kind)?,
+            content_set_id: row.content_set_id,
+            file_id: row.file_id,
+            project_type: project_type_from_str(&row.project_type)?,
+            source_kind: ContentSourceKind::from_str(&row.source_kind)?,
             server_requirement: ContentRequirement::from_str(
                 &row.server_requirement,
             )?,
@@ -168,26 +168,26 @@ impl TryFrom<ContentEntryRow> for ContentEntry {
 
 #[derive(Debug, sqlx::FromRow)]
 pub(crate) struct ContentUpdateCheckRow {
-	pub content_entry_id: String,
-	pub update_channel: String,
-	pub provider: Option<String>,
-	pub provider_project_id: Option<String>,
-	pub provider_release_id: Option<String>,
-	pub checked_at: i64,
+    pub content_entry_id: String,
+    pub update_channel: String,
+    pub provider: Option<String>,
+    pub provider_project_id: Option<String>,
+    pub provider_release_id: Option<String>,
+    pub checked_at: i64,
 }
 
 impl From<ContentUpdateCheckRow> for ContentUpdateCheck {
     fn from(row: ContentUpdateCheckRow) -> Self {
-		Self {
-			content_entry_id: row.content_entry_id,
-			update_channel: ReleaseChannel::from_key(&row.update_channel),
-			provider: row
-				.provider
-				.as_deref()
-				.and_then(|value| ContentProvider::from_str(value).ok()),
-			provider_project_id: row.provider_project_id,
-			provider_release_id: row.provider_release_id,
-			checked_at: timestamp(row.checked_at),
+        Self {
+            content_entry_id: row.content_entry_id,
+            update_channel: ReleaseChannel::from_key(&row.update_channel),
+            provider: row
+                .provider
+                .as_deref()
+                .and_then(|value| ContentProvider::from_str(value).ok()),
+            provider_project_id: row.provider_project_id,
+            provider_release_id: row.provider_release_id,
+            checked_at: timestamp(row.checked_at),
         }
     }
 }
@@ -515,8 +515,8 @@ pub(crate) async fn get_content_entries<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>,
 {
-	let rows = sqlx::query_as::<_, ContentEntryRow>(
-		"
+    let rows = sqlx::query_as::<_, ContentEntryRow>(
+        "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
 			source_kind, server_requirement, client_requirement, enabled,
 			added_at, modified_at
@@ -524,8 +524,8 @@ where
 		WHERE content_set_id = ?
 		ORDER BY added_at ASC, id ASC
 		",
-	)
-	.bind(content_set_id)
+    )
+    .bind(content_set_id)
     .fetch_all(exec)
     .await?;
 
@@ -539,15 +539,15 @@ pub(crate) async fn get_content_update_check<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>,
 {
-	let row = sqlx::query_as::<_, ContentUpdateCheckRow>(
-		"
+    let row = sqlx::query_as::<_, ContentUpdateCheckRow>(
+        "
 		SELECT content_entry_id, update_channel, provider,
 			provider_project_id, provider_release_id, checked_at
 		FROM instance_content_update_checks
 		WHERE content_entry_id = ?
 		",
-	)
-	.bind(content_entry_id)
+    )
+    .bind(content_entry_id)
     .fetch_optional(exec)
     .await?;
 
@@ -591,8 +591,8 @@ pub(crate) async fn upsert_instance_file_from_parts(
     pool: &SqlitePool,
 ) -> crate::Result<InstanceFile> {
     let mut tx = pool.begin().await?;
-    let file = upsert_instance_file_from_parts_in_transaction(input, &mut tx)
-        .await?;
+    let file =
+        upsert_instance_file_from_parts_in_transaction(input, &mut tx).await?;
     tx.commit().await?;
     Ok(file)
 }
@@ -778,9 +778,9 @@ pub(crate) async fn remove_instance_file_by_relative_path(
 pub(crate) struct UpsertContentEntry<'a> {
     pub instance_id: &'a str,
     pub content_set_id: &'a str,
-	pub file_id: Option<&'a str>,
-	pub project_type: ProjectType,
-	pub source_kind: ContentSourceKind,
+    pub file_id: Option<&'a str>,
+    pub project_type: ProjectType,
+    pub source_kind: ContentSourceKind,
     pub server_requirement: ContentRequirement,
     pub client_requirement: ContentRequirement,
     pub enabled: bool,
@@ -790,16 +790,16 @@ pub(crate) async fn get_content_entry_by_id(
     id: &str,
     pool: &SqlitePool,
 ) -> crate::Result<Option<ContentEntry>> {
-	let row = sqlx::query_as::<_, ContentEntryRow>(
-		"
+    let row = sqlx::query_as::<_, ContentEntryRow>(
+        "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
 			source_kind, server_requirement, client_requirement, enabled,
 			added_at, modified_at
 		FROM instance_content_entries
 		WHERE id = ?
 		",
-	)
-	.bind(id)
+    )
+    .bind(id)
     .fetch_optional(pool)
     .await?;
 
@@ -811,8 +811,8 @@ pub(crate) async fn get_content_entry_by_file(
     file_id: &str,
     pool: &SqlitePool,
 ) -> crate::Result<Option<ContentEntry>> {
-	let row = sqlx::query_as::<_, ContentEntryRow>(
-		"
+    let row = sqlx::query_as::<_, ContentEntryRow>(
+        "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
 			source_kind, server_requirement, client_requirement, enabled,
 			added_at, modified_at
@@ -821,9 +821,9 @@ pub(crate) async fn get_content_entry_by_file(
 		ORDER BY modified_at DESC
 		LIMIT 1
 		",
-	)
-	.bind(content_set_id)
-	.bind(file_id)
+    )
+    .bind(content_set_id)
+    .bind(file_id)
     .fetch_optional(pool)
     .await?;
 
@@ -834,41 +834,41 @@ pub(crate) async fn upsert_content_entry_from_parts(
     input: UpsertContentEntry<'_>,
     pool: &SqlitePool,
 ) -> crate::Result<ContentEntry> {
-	let mut tx = pool.begin().await?;
-	let entry = upsert_content_entry_from_parts_in_transaction(input, &mut tx)
-		.await?;
-	tx.commit().await?;
-	Ok(entry)
+    let mut tx = pool.begin().await?;
+    let entry =
+        upsert_content_entry_from_parts_in_transaction(input, &mut tx).await?;
+    tx.commit().await?;
+    Ok(entry)
 }
 
 pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
     input: UpsertContentEntry<'_>,
     tx: &mut Transaction<'_, Sqlite>,
 ) -> crate::Result<ContentEntry> {
-	let existing_id = if let Some(file_id) = input.file_id {
-		sqlx::query_scalar::<_, String>(
-			"SELECT id
+    let existing_id = if let Some(file_id) = input.file_id {
+        sqlx::query_scalar::<_, String>(
+            "SELECT id
 			 FROM instance_content_entries
 			 WHERE content_set_id = ? AND file_id = ?
 			 ORDER BY modified_at DESC
 			 LIMIT 1",
-		)
-		.bind(input.content_set_id)
-		.bind(file_id)
-		.fetch_optional(&mut **tx)
-		.await?
-	} else {
-		None
-	};
+        )
+        .bind(input.content_set_id)
+        .bind(file_id)
+        .fetch_optional(&mut **tx)
+        .await?
+    } else {
+        None
+    };
     let now = Utc::now();
     let entry = ContentEntry {
         id: existing_id
             .unwrap_or_else(|| format!("content-entry:{}", Uuid::new_v4())),
         instance_id: input.instance_id.to_string(),
-		content_set_id: input.content_set_id.to_string(),
-		file_id: input.file_id.map(ToString::to_string),
-		project_type: input.project_type,
-		source_kind: input.source_kind,
+        content_set_id: input.content_set_id.to_string(),
+        file_id: input.file_id.map(ToString::to_string),
+        project_type: input.project_type,
+        source_kind: input.source_kind,
         server_requirement: input.server_requirement,
         client_requirement: input.client_requirement,
         enabled: input.enabled,
@@ -877,20 +877,20 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
     };
 
     let original_added_at = sqlx::query_scalar::<_, i64>(
-		"SELECT added_at FROM instance_content_entries WHERE id = ?",
-	)
-	.bind(&entry.id)
-	.fetch_optional(&mut **tx)
-	.await?
-	.map(|timestamp| Utc.timestamp_opt(timestamp, 0).single())
-	.flatten()
-	.unwrap_or(entry.added_at);
+        "SELECT added_at FROM instance_content_entries WHERE id = ?",
+    )
+    .bind(&entry.id)
+    .fetch_optional(&mut **tx)
+    .await?
+    .map(|timestamp| Utc.timestamp_opt(timestamp, 0).single())
+    .flatten()
+    .unwrap_or(entry.added_at);
     let id = entry.id.as_str();
     let entry_instance_id = entry.instance_id.as_str();
     let content_set_id = entry.content_set_id.as_str();
     let file_id = entry.file_id.as_deref();
     let project_type = entry.project_type.get_name();
-	let source_kind = entry.source_kind.as_str();
+    let source_kind = entry.source_kind.as_str();
     let server_requirement = entry.server_requirement.as_str();
     let client_requirement = entry.client_requirement.as_str();
     let enabled = i64::from(entry.enabled);
@@ -923,24 +923,24 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
 			modified_at = excluded.modified_at
 		",
     )
-	.bind(id)
-	.bind(entry_instance_id)
-	.bind(content_set_id)
-	.bind(file_id)
-	.bind(project_type)
-	.bind(source_kind)
-	.bind(server_requirement)
-	.bind(client_requirement)
-	.bind(enabled)
-	.bind(added_at)
-	.bind(modified_at)
-	.execute(&mut **tx)
-	.await?;
+    .bind(id)
+    .bind(entry_instance_id)
+    .bind(content_set_id)
+    .bind(file_id)
+    .bind(project_type)
+    .bind(source_kind)
+    .bind(server_requirement)
+    .bind(client_requirement)
+    .bind(enabled)
+    .bind(added_at)
+    .bind(modified_at)
+    .execute(&mut **tx)
+    .await?;
 
-	Ok(ContentEntry {
-		added_at: original_added_at,
-		..entry
-	})
+    Ok(ContentEntry {
+        added_at: original_added_at,
+        ..entry
+    })
 }
 
 pub(crate) async fn upsert_content_provider_ref(
@@ -949,23 +949,23 @@ pub(crate) async fn upsert_content_provider_ref(
     origin: bool,
     pool: &SqlitePool,
 ) -> crate::Result<()> {
-	let mut tx = pool.begin().await?;
-	upsert_content_provider_ref_in_transaction(
-		content_entry_id,
-		provider_ref,
-		origin,
-		&mut tx,
-	)
-	.await?;
-	tx.commit().await?;
-	Ok(())
+    let mut tx = pool.begin().await?;
+    upsert_content_provider_ref_in_transaction(
+        content_entry_id,
+        provider_ref,
+        origin,
+        &mut tx,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 pub(crate) async fn upsert_content_provider_ref_in_transaction(
-	content_entry_id: &str,
-	provider_ref: &ContentProviderRef,
-	origin: bool,
-	tx: &mut Transaction<'_, Sqlite>,
+    content_entry_id: &str,
+    provider_ref: &ContentProviderRef,
+    origin: bool,
+    tx: &mut Transaction<'_, Sqlite>,
 ) -> crate::Result<()> {
     let provider = provider_ref.provider().as_str();
     let project_id = provider_ref.database_project_id();
@@ -1038,7 +1038,8 @@ pub(crate) async fn get_content_provider_refs(
     for row in rows {
         let provider = row.try_get::<String, _>("provider")?;
         let project_id = row.try_get::<String, _>("provider_project_id")?;
-        let release_id = row.try_get::<Option<String>, _>("provider_release_id")?;
+        let release_id =
+            row.try_get::<Option<String>, _>("provider_release_id")?;
         let provider_ref = ContentProviderRef::from_database(
             &provider,
             &project_id,
@@ -1120,19 +1121,19 @@ pub(crate) async fn remove_content_entries_for_file(
 }
 
 pub(crate) async fn upsert_content_update_check(
-	content_entry_id: &str,
-	update_channel: ReleaseChannel,
-	provider: Option<ContentProvider>,
-	provider_project_id: Option<&str>,
-	provider_release_id: Option<&str>,
-	pool: &SqlitePool,
+    content_entry_id: &str,
+    update_channel: ReleaseChannel,
+    provider: Option<ContentProvider>,
+    provider_project_id: Option<&str>,
+    provider_release_id: Option<&str>,
+    pool: &SqlitePool,
 ) -> crate::Result<()> {
-	let update_channel = update_channel.key();
-	let provider = provider.map(ContentProvider::as_str);
-	let checked_at = Utc::now().timestamp();
+    let update_channel = update_channel.key();
+    let provider = provider.map(ContentProvider::as_str);
+    let checked_at = Utc::now().timestamp();
 
-	sqlx::query(
-		"
+    sqlx::query(
+        "
 		INSERT INTO instance_content_update_checks (
 			content_entry_id,
 			update_channel,
@@ -1149,14 +1150,14 @@ pub(crate) async fn upsert_content_update_check(
 			provider_release_id = excluded.provider_release_id,
 			checked_at = excluded.checked_at
 		",
-	)
-	.bind(content_entry_id)
-	.bind(update_channel)
-	.bind(provider)
-	.bind(provider_project_id)
-	.bind(provider_release_id)
-	.bind(checked_at)
-	.execute(pool)
+    )
+    .bind(content_entry_id)
+    .bind(update_channel)
+    .bind(provider)
+    .bind(provider_project_id)
+    .bind(provider_release_id)
+    .bind(checked_at)
+    .execute(pool)
     .await?;
 
     Ok(())

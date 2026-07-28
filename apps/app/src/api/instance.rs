@@ -623,14 +623,19 @@ pub async fn instance_check_installed(
         theseus::instance::get_projects(instance_id, None).await
     {
         Ok(projects.into_iter().any(|(_, project)| {
-            project.provider_refs.iter().any(|reference| match reference {
-                theseus::data::ContentProviderRef::Modrinth { project_id: id, .. } => {
-                    project_id == id.as_str()
-                }
-                theseus::data::ContentProviderRef::CurseForge { project_id: id, .. } => {
-                    project_id == format!("curseforge:{}", id.get())
-                }
-            })
+            project
+                .provider_refs
+                .iter()
+                .any(|reference| match reference {
+                    theseus::data::ContentProviderRef::Modrinth {
+                        project_id: id,
+                        ..
+                    } => project_id == id.as_str(),
+                    theseus::data::ContentProviderRef::CurseForge {
+                        project_id: id,
+                        ..
+                    } => project_id == format!("curseforge:{}", id.get()),
+                })
         }))
     } else {
         Ok(false)

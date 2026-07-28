@@ -438,10 +438,8 @@ mod tests {
 
     #[test]
     fn download_request_update_matches_frontend_event_contract() {
-        let job_id = Uuid::parse_str(
-            "e7df84c8-b960-4ddb-a75b-bc9012405f1e",
-        )
-        .unwrap();
+        let job_id =
+            Uuid::parse_str("e7df84c8-b960-4ddb-a75b-bc9012405f1e").unwrap();
         let update = DownloadRequestUpdate::Started {
             job_id,
             id: "mods/example.jar".to_string(),

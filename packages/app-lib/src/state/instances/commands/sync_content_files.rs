@@ -142,15 +142,21 @@ fn cleanup_install_temporary_files(
         if !folder.is_dir() {
             continue;
         }
-        for entry in std::fs::read_dir(&folder).map_err(crate::util::io::IOError::from)? {
+        for entry in std::fs::read_dir(&folder)
+            .map_err(crate::util::io::IOError::from)?
+        {
             let path = entry.map_err(crate::util::io::IOError::from)?.path();
-            let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default();
             if name.ends_with(".installing")
                 || name.ends_with(".installing.previous")
                 || name.ends_with(".installing.download")
             {
                 if path.is_file() {
-                    std::fs::remove_file(path).map_err(crate::util::io::IOError::from)?;
+                    std::fs::remove_file(path)
+                        .map_err(crate::util::io::IOError::from)?;
                 }
             }
         }

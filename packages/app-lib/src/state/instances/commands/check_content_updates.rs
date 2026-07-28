@@ -39,11 +39,8 @@ impl ContentUpdate {
 
     pub fn modrinth_ids(
         &self,
-    ) -> Option<(
-        &ModrinthProjectId,
-        &ModrinthVersionId,
-        &ModrinthVersionId,
-    )> {
+    ) -> Option<(&ModrinthProjectId, &ModrinthVersionId, &ModrinthVersionId)>
+    {
         match self {
             Self::Modrinth {
                 project_id,
@@ -166,12 +163,10 @@ pub(crate) async fn check_content_updates(
             continue;
         };
         let project_id = ModrinthProjectId::new(metadata.project_id.clone())?;
-        let current_version_id = ModrinthVersionId::new(metadata.version_id.clone())?;
+        let current_version_id =
+            ModrinthVersionId::new(metadata.version_id.clone())?;
         candidates.push(UpdateCandidate {
-            entry: entries_by_file_id
-                .get(file.id.as_str())
-                .copied()
-                .cloned(),
+            entry: entries_by_file_id.get(file.id.as_str()).copied().cloned(),
             file,
             project_type,
             project_id,
@@ -185,75 +180,77 @@ pub(crate) async fn check_content_updates(
             installed_update_channels(&candidates, cache_behaviour, state)
                 .await?;
         let update_keys = candidates
-        .iter()
-        .map(|candidate| {
-            update_cache_key(
-                &candidate.file,
-                candidate.project_type,
-                effective_update_channel(
-                    instance.update_channel,
-                    installed_channels.get(&candidate.file.sha1).copied(),
-                ),
-                &content_set.game_version,
-                content_set.loader.as_str(),
-            )
-        })
-        .collect::<Vec<_>>();
+            .iter()
+            .map(|candidate| {
+                update_cache_key(
+                    &candidate.file,
+                    candidate.project_type,
+                    effective_update_channel(
+                        instance.update_channel,
+                        installed_channels.get(&candidate.file.sha1).copied(),
+                    ),
+                    &content_set.game_version,
+                    content_set.loader.as_str(),
+                )
+            })
+            .collect::<Vec<_>>();
         let update_key_refs = update_keys
-        .iter()
-        .map(|key| key.as_str())
-        .collect::<Vec<_>>();
+            .iter()
+            .map(|key| key.as_str())
+            .collect::<Vec<_>>();
         let updates = CachedEntry::get_file_update_many(
-        &update_key_refs,
-        cache_behaviour,
-        &state.pool,
-        &state.api_semaphore,
-    )
-    .await?;
+            &update_key_refs,
+            cache_behaviour,
+            &state.pool,
+            &state.api_semaphore,
+        )
+        .await?;
         let mut updates_by_hash: HashMap<String, Vec<String>> = HashMap::new();
         for update in updates {
-        updates_by_hash
-            .entry(update.hash)
-            .or_default()
-            .push(update.update_version_id);
-    }
+            updates_by_hash
+                .entry(update.hash)
+                .or_default()
+                .push(update.update_version_id);
+        }
 
         for candidate in candidates {
-        let update_version_id = updates_by_hash
-            .remove(&candidate.file.sha1)
-            .unwrap_or_default()
-            .into_iter()
-            .find(|update_version_id| update_version_id != candidate.current_version_id.as_str())
-            .map(|update_version_id| ModrinthVersionId::new(update_version_id))
-            .transpose()?;
+            let update_version_id = updates_by_hash
+                .remove(&candidate.file.sha1)
+                .unwrap_or_default()
+                .into_iter()
+                .find(|update_version_id| {
+                    update_version_id != candidate.current_version_id.as_str()
+                })
+                .map(|update_version_id| {
+                    ModrinthVersionId::new(update_version_id)
+                })
+                .transpose()?;
 
-        if let Some(entry) = &candidate.entry {
-            content_rows::upsert_content_update_check(
-                &entry.id,
-                instance.update_channel,
-                Some(ContentProvider::Modrinth),
-                Some(candidate.project_id.as_str()),
-                update_version_id.as_ref().map(ModrinthVersionId::as_str),
-                &state.pool,
-            )
-            .await?;
-        }
+            if let Some(entry) = &candidate.entry {
+                content_rows::upsert_content_update_check(
+                    &entry.id,
+                    instance.update_channel,
+                    Some(ContentProvider::Modrinth),
+                    Some(candidate.project_id.as_str()),
+                    update_version_id.as_ref().map(ModrinthVersionId::as_str),
+                    &state.pool,
+                )
+                .await?;
+            }
 
-        if let Some(update_version_id) = update_version_id {
-            output.push(ContentUpdate::Modrinth {
-                relative_path: candidate.file.relative_path,
-                project_id: candidate.project_id,
-                current_version_id: candidate.current_version_id,
-                update_version_id,
-            });
-        }
+            if let Some(update_version_id) = update_version_id {
+                output.push(ContentUpdate::Modrinth {
+                    relative_path: candidate.file.relative_path,
+                    project_id: candidate.project_id,
+                    current_version_id: candidate.current_version_id,
+                    update_version_id,
+                });
+            }
         }
     }
 
-    let curseforge_projects = curseforge_projects_for_updates(
-        &provider_refs_by_file_id,
-    )
-    .await?;
+    let curseforge_projects =
+        curseforge_projects_for_updates(&provider_refs_by_file_id).await?;
     for (file_id, refs) in &provider_refs_by_file_id {
         if origin_provider_by_file_id
             .get(file_id)
@@ -280,18 +277,20 @@ pub(crate) async fn check_content_updates(
         let Some(project) = curseforge_projects.get(&project_id.get()) else {
             continue;
         };
-        let Some(target_file_id) = project.latest_files_indexes.iter().find_map(
-            |index| {
+        let Some(target_file_id) =
+            project.latest_files_indexes.iter().find_map(|index| {
                 if index.game_version != content_set.game_version
                     || (project_type == ProjectType::Mod
                         && index.mod_loader
-                            != curseforge_loader_type(content_set.loader.as_str()))
+                            != curseforge_loader_type(
+                                content_set.loader.as_str(),
+                            ))
                 {
                     return None;
                 }
-                (index.file_id != current_file_id.get()).then_some(index.file_id)
-            },
-        )
+                (index.file_id != current_file_id.get())
+                    .then_some(index.file_id)
+            })
         else {
             continue;
         };
@@ -341,13 +340,13 @@ async fn curseforge_projects_for_updates(
     if project_ids.is_empty() {
         return Ok(HashMap::new());
     }
-    Ok(crate::api::curseforge::get_projects(
-        project_ids.into_iter().collect(),
+    Ok(
+        crate::api::curseforge::get_projects(project_ids.into_iter().collect())
+            .await?
+            .into_iter()
+            .map(|project| (project.id, project))
+            .collect(),
     )
-    .await?
-    .into_iter()
-    .map(|project| (project.id, project))
-    .collect())
 }
 
 fn curseforge_loader_type(loader: &str) -> Option<u32> {
@@ -367,9 +366,7 @@ async fn installed_update_channels(
 ) -> crate::Result<HashMap<String, ReleaseChannel>> {
     let version_ids = candidates
         .iter()
-        .filter_map(|candidate| {
-            Some(candidate.current_version_id.clone())
-        })
+        .filter_map(|candidate| Some(candidate.current_version_id.clone()))
         .collect::<Vec<_>>();
     let versions = CachedEntry::get_version_many(
         &version_ids,

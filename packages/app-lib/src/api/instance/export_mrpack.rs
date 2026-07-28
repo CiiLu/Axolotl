@@ -8,8 +8,8 @@ use crate::pack::install_from::{
     EnvType, PackDependency, PackFile, PackFileHash, PackFormat,
 };
 use crate::state::{
-    CacheBehaviour, CachedEntry, ContentProviderRef, InstanceMetadata, ModLoader,
-    ModrinthVersionId, SideType, State,
+    CacheBehaviour, CachedEntry, ContentProviderRef, InstanceMetadata,
+    ModLoader, ModrinthVersionId, SideType, State,
 };
 use crate::util::io::{self, IOError};
 use async_zip::tokio::write::ZipFileWriter;
@@ -307,117 +307,119 @@ pub async fn create_mrpack_json(
     let mut files = Vec::new();
     let mut remote_paths = HashSet::new();
     for (path, content_file) in projects {
-            let disk_path = instance_path.join(path.as_str());
-            let Ok((disk_size, local_sha1)) =
-                crate::util::fetch::sha1_file_async(&disk_path).await
-            else {
-                continue;
-            };
-            let Some(file_size) = u32::try_from(disk_size).ok() else {
-                continue;
-            };
-            let mut remote: Option<(HashMap<PackFileHash, String>, String)> = None;
-            for reference in &content_file.provider_refs {
-                match reference {
-                    ContentProviderRef::Modrinth {
-                        version_id: Some(version_id),
-                        ..
-                    } => {
-                        let Some(version) = versions_by_id.get(version_id.as_str())
-                        else { continue };
-                        if let Some(version_file) = version.files.iter().find(|file| {
+        let disk_path = instance_path.join(path.as_str());
+        let Ok((disk_size, local_sha1)) =
+            crate::util::fetch::sha1_file_async(&disk_path).await
+        else {
+            continue;
+        };
+        let Some(file_size) = u32::try_from(disk_size).ok() else {
+            continue;
+        };
+        let mut remote: Option<(HashMap<PackFileHash, String>, String)> = None;
+        for reference in &content_file.provider_refs {
+            match reference {
+                ContentProviderRef::Modrinth {
+                    version_id: Some(version_id),
+                    ..
+                } => {
+                    let Some(version) = versions_by_id.get(version_id.as_str())
+                    else {
+                        continue;
+                    };
+                    if let Some(version_file) =
+                        version.files.iter().find(|file| {
                             file.size == file_size
-                                && file
-                                    .hashes
-                                    .get("sha1")
-                                    .is_some_and(|hash| {
-                                        hash.eq_ignore_ascii_case(&local_sha1)
-                                    })
+                                && file.hashes.get("sha1").is_some_and(|hash| {
+                                    hash.eq_ignore_ascii_case(&local_sha1)
+                                })
                                 && !file.url.trim().is_empty()
-                        }) {
-                            remote = Some((
-                                version_file
-                                    .hashes
-                                    .clone()
-                                    .into_iter()
-                                    .map(|(kind, hash)| {
-                                        (PackFileHash::from(kind), hash)
-                                    })
-                                    .collect(),
-                                version_file.url.clone(),
-                            ));
-                            break;
-                        }
+                        })
+                    {
+                        remote = Some((
+                            version_file
+                                .hashes
+                                .clone()
+                                .into_iter()
+                                .map(|(kind, hash)| {
+                                    (PackFileHash::from(kind), hash)
+                                })
+                                .collect(),
+                            version_file.url.clone(),
+                        ));
+                        break;
                     }
-                    ContentProviderRef::CurseForge {
-                        project_id,
-                        file_id: Some(file_id),
-                    } => {
-                        let Ok(file) = crate::api::curseforge::get_file(
-                            project_id.get(),
-                            file_id.get(),
-                        )
-                        .await
-                        else { continue };
-                        let allowed = crate::api::curseforge::get_project(
-                            project_id.get(),
-                        )
-                        .await
-                        .ok()
-                        .and_then(|project| project.allow_mod_distribution)
-                        .unwrap_or(true);
-                        if !allowed {
-                            continue;
-                        }
-                        let hash = file
-                            .hashes
-                            .iter()
-                            .find(|hash| hash.algo == 1)
-                            .map(|hash| hash.value.as_str());
-                        if file.file_length == u64::from(file_size)
-                            && hash.is_some_and(|hash| {
-                                hash.eq_ignore_ascii_case(&local_sha1)
-                            })
-                            && file
-                                .download_url
-                                .as_deref()
-                                .is_some_and(|url| !url.trim().is_empty())
-                        {
-                            let mut hashes = HashMap::new();
-                            if let Some(hash) = hash {
-                                hashes.insert(PackFileHash::Sha1, hash.to_string());
-                            }
-                            remote = Some((
-                                hashes,
-                                file.download_url.unwrap_or_default(),
-                            ));
-                            break;
-                        }
-                    }
-                    _ => {}
                 }
+                ContentProviderRef::CurseForge {
+                    project_id,
+                    file_id: Some(file_id),
+                } => {
+                    let Ok(file) = crate::api::curseforge::get_file(
+                        project_id.get(),
+                        file_id.get(),
+                    )
+                    .await
+                    else {
+                        continue;
+                    };
+                    let allowed =
+                        crate::api::curseforge::get_project(project_id.get())
+                            .await
+                            .ok()
+                            .and_then(|project| project.allow_mod_distribution)
+                            .unwrap_or(true);
+                    if !allowed {
+                        continue;
+                    }
+                    let hash = file
+                        .hashes
+                        .iter()
+                        .find(|hash| hash.algo == 1)
+                        .map(|hash| hash.value.as_str());
+                    if file.file_length == u64::from(file_size)
+                        && hash.is_some_and(|hash| {
+                            hash.eq_ignore_ascii_case(&local_sha1)
+                        })
+                        && file
+                            .download_url
+                            .as_deref()
+                            .is_some_and(|url| !url.trim().is_empty())
+                    {
+                        let mut hashes = HashMap::new();
+                        if let Some(hash) = hash {
+                            hashes.insert(PackFileHash::Sha1, hash.to_string());
+                        }
+                        remote = Some((
+                            hashes,
+                            file.download_url.unwrap_or_default(),
+                        ));
+                        break;
+                    }
+                }
+                _ => {}
             }
-            let Some((hashes, download)) = remote else {
-                continue;
-            };
-            let Ok(path) = SafeRelativeUtf8UnixPathBuf::try_from(
-                original_content_relative_path(path.as_str()),
-            ) else {
-                continue;
-            };
-            if !remote_paths.insert(path.as_str().to_string()) {
-                continue;
-            }
-            let mut env = HashMap::new();
-            env.insert(EnvType::Client, SideType::Required);
-            env.insert(EnvType::Server, SideType::Required);
-            files.push(PackFile {
-                path,
-                hashes,
-                env: Some(env),
-                downloads: vec![download],
-                file_size,
-            });
+        }
+        let Some((hashes, download)) = remote else {
+            continue;
+        };
+        let Ok(path) = SafeRelativeUtf8UnixPathBuf::try_from(
+            original_content_relative_path(path.as_str()),
+        ) else {
+            continue;
+        };
+        if !remote_paths.insert(path.as_str().to_string()) {
+            continue;
+        }
+        let mut env = HashMap::new();
+        env.insert(EnvType::Client, SideType::Required);
+        env.insert(EnvType::Server, SideType::Required);
+        files.push(PackFile {
+            path,
+            hashes,
+            env: Some(env),
+            downloads: vec![download],
+            file_size,
+        });
     }
 
     Ok(PackFormat {
