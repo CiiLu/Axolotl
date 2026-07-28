@@ -166,6 +166,35 @@ export async function list(): Promise<GameInstance[]> {
 	return await invoke('plugin:instance|instance_list')
 }
 
+export type DailyPlaytime = {
+	date: string
+	played_seconds: number
+	session_count: number
+	top_instance_name?: string | null
+}
+
+export async function set_pinned(instanceId: string, pinned: boolean): Promise<GameInstance> {
+	return await invoke('plugin:instance|instance_set_pinned', { instanceId, pinned })
+}
+
+export async function get_daily_playtime(
+	startDate: string,
+	endDate: string,
+): Promise<DailyPlaytime[]> {
+	return await invoke('plugin:instance|instance_get_daily_playtime', { startDate, endDate })
+}
+
+export type DailyPlaytimeEntry = {
+	instance_id: string
+	instance_name: string
+	played_seconds: number
+	session_count: number
+}
+
+export async function get_daily_playtime_details(date: string): Promise<DailyPlaytimeEntry[]> {
+	return await invoke('plugin:instance|instance_get_daily_playtime_details', { date })
+}
+
 export async function check_installed(instanceId: string, projectId: string): Promise<boolean> {
 	return await invoke('plugin:instance|instance_check_installed', { instanceId, projectId })
 }

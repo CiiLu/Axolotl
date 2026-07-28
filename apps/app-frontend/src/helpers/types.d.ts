@@ -23,6 +23,7 @@ export type GameInstance = {
 	created: Date
 	modified: Date
 	last_played?: Date
+	pinned_at?: Date
 
 	submitted_time_played: number
 	recent_time_played: number
@@ -189,7 +190,10 @@ type AppSettings = {
 	transparent_background: boolean
 	transparent_background_opacity: number
 	transparent_background_blur: boolean
+	auto_hide_downloads_button: boolean
 	worlds_in_home: boolean
+	home_layout: 'standard' | 'minimal'
+	minimal_home_instance_id: string | null
 
 	telemetry: boolean
 	discord_rpc: boolean
