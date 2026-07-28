@@ -33,6 +33,43 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.5.6',
+		version: '1.5.6',
+		publishedAt: '2026-07-27',
+		title: {
+			'en-US': 'Axolotl Launcher 1.5.6',
+			'zh-CN': 'Axolotl Launcher 1.5.6',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US': 'Changed the way the launcher handles modpack parsing.',
+					'zh-CN': '重写了加载器版本和类型的解析方式。',
+				},
+				{
+					'en-US':
+						'Changed some frontend code left by vibe and replaced it with native components.',
+					'zh-CN': '重写了一些vibe留下的其它代码。',
+				},
+				{
+					'en-US':
+						'To avoid confusion caused by loaders that have not yet been parsed during batch imports, instances are now imported one by one with progress displayed.',
+					'zh-CN': '为避免批量导入过程中还未来得及解析的加载器造成误解，现在逐个导入实例并显示进度',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed the skin page failing to import skins.',
+					'zh-CN': '修复了皮肤页面无法导入皮肤的问题。',
+				},
+				{
+					'en-US': 'Fixed the import page failing to import instances.',
+					'zh-CN': '修复了导入界面无法正常导入的bug。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.5.5',
 		version: '1.5.5',
 		publishedAt: '2026-07-26',
