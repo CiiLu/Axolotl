@@ -96,8 +96,10 @@ export default defineConfig({
 	// https://v2.tauri.app/reference/environment-variables/#tauri-cli-hook-commands
 	envPrefix: ['VITE_', 'TAURI_', 'MODRINTH_'],
 	build: {
-		rolldownOptions: {
+		rollupOptions: {
 			external: ['@tauri-apps/plugin-dialog'],
+		},
+		rolldownOptions: {
 			onwarn(warning, defaultHandler) {
 				if (warning.code === 'INEFFECTIVE_DYNAMIC_IMPORT') return
 				defaultHandler(warning)
