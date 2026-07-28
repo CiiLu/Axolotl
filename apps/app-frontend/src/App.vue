@@ -168,6 +168,7 @@ import { ModrinthMirrorFallbackFeature } from './providers/modrinth-mirror-fallb
 const themeStore = useTheming()
 const router = useRouter()
 const route = useRoute()
+const onSkinsPage = computed(() => route.path === '/skins')
 const APP_LEFT_NAV_WIDTH = '4rem'
 const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
@@ -249,7 +250,6 @@ const {
 	setModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance,
-	onImportFileReceived,
 	fileDrop,
 } = setupProviders(notificationManager, popupNotificationManager)
 
@@ -266,22 +266,23 @@ const os = ref('')
 const isDevEnvironment = ref(false)
 
 /**
- * On Windows the native shadow also draws the window border, which bleeds dark
- * artifacts into a transparent window's corners, so it has to go while the mode
- * is on. Windows 10 re-adds it after the window is shown, hence reapplying here
- * rather than relying on the value set during setup.
+ * Acrylic is rendered by the Windows compositor behind the webview, so CSS
+ * cannot clip it. Keep the native rounded frame and hide its border while the
+ * CSS-drawn transparent-window border is active.
  */
-async function applyWindowShadow() {
+async function applyWindowFrame() {
 	if (os.value !== 'Windows') return
 
 	try {
-		await getCurrentWindow().setShadow(!themeStore.transparentBackground)
+		await invoke('set_transparent_window_frame', {
+			enabled: themeStore.transparentBackground,
+		})
 	} catch (error) {
-		console.warn('Failed to update window shadow', error)
+		console.warn('Failed to update transparent window frame', error)
 	}
 }
 
-watch(() => themeStore.transparentBackground, applyWindowShadow)
+watch(() => themeStore.transparentBackground, applyWindowFrame)
 
 /**
  * The frosted glass has to come from the compositor: a webview cannot reach the
@@ -370,6 +371,73 @@ onUnmounted(async () => {
 
 const { formatMessage } = useVIntl()
 const formatBytes = useFormatBytes()
+
+async function onImportFileReceived({
+	file: _file,
+	filePath,
+	source: _source,
+}: {
+	file: File | null
+	filePath: string | null
+	source: 'file-picker' | 'drag-drop'
+}) {
+	if (!filePath) return
+
+	const fileName = filePath.split(/[/\\]/).pop() || 'file'
+
+	// ── Hide creation modal first ──
+	installationModal.value?.hide()
+
+	// ── Show "Processing..." (matches drag-drop behavior) ──
+	const processingNotify = addNotification({
+		title: formatMessage(messages.dropProcessing, { name: fileName }),
+		type: 'info',
+		autoCloseMs: null,
+	})
+
+	try {
+		// ── Classify the file (same entry point as drag-drop) ──
+		const classification = await classifyDroppedItem(filePath)
+		clearDropProcessingNotification()
+		notificationManager.removeNotification(processingNotify.id)
+
+		// ── Set drop state so handleDropConfirm can read it ──
+		dropClassification.value = classification
+		dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
+		dropFileName.value = fileName
+
+		// ── Unknown + extraction → force analysis prompt ──
+		if (
+			classification.item_type === 'unknown' &&
+			classification.reason?.toLowerCase().includes('extraction')
+		) {
+			showForceAnalysisPrompt(classification)
+			return
+		}
+
+		// ── Unknown (no extraction) → error ──
+		if (classification.item_type === 'unknown') {
+			addNotification({
+				title: formatMessage(messages.dropUnknownTitle),
+				text: classification.reason
+					? classification.reason
+					: formatMessage(messages.dropUnknownText),
+				type: 'error',
+			})
+			return
+		}
+
+		// ── Known types → show the same confirm modal as drag-drop ──
+		confirmDropModal.value?.show()
+	} catch (e) {
+		notificationManager.removeNotification(processingNotify?.id)
+		addNotification({
+			title: 'Failed to process file',
+			text: e instanceof Error ? e.message : String(e),
+			type: 'error',
+		})
+	}
+}
 
 const messages = defineMessages({
 	updateInstalledToastTitle: {
@@ -523,6 +591,26 @@ const messages = defineMessages({
 		id: 'app.drop.no-instances',
 		defaultMessage: 'No instances found',
 	},
+	dropImportProgressTitle: {
+		id: 'app.drop.import-progress-title',
+		defaultMessage: 'Importing instances…',
+	},
+	dropImportProgressText: {
+		id: 'app.drop.import-progress-text',
+		defaultMessage: '{current} / {total} instances imported',
+	},
+	dropImportCompletedTitle: {
+		id: 'app.drop.import-completed-title',
+		defaultMessage: 'Import completed',
+	},
+	dropImportCompletedText: {
+		id: 'app.drop.import-completed-text',
+		defaultMessage: 'Successfully imported {count} instances',
+	},
+	dropImportCompletedPartialText: {
+		id: 'app.drop.import-completed-partial-text',
+		defaultMessage: 'Imported {completed} of {total} instances ({failed} failed)',
+	},
 
 	dropModpackInstalling: {
 		id: 'app.drop.modpack-installing',
@@ -660,7 +748,7 @@ async function setupApp() {
 	themeStore.transparentBackgroundOpacity = transparent_background_opacity
 	themeStore.transparentBackgroundBlur = transparent_background_blur
 	themeStore.setTransparentBackgroundClass()
-	await applyWindowShadow()
+	await applyWindowFrame()
 	await applyWindowEffects()
 	themeStore.sidebarInstanceCount = sidebar_instance_count
 	themeStore.devMode = developer_mode
@@ -1070,8 +1158,14 @@ const dropProcessingNotificationId = ref<number | null>(null)
 
 const { isDragging, isProcessing } = useGlobalDrop(
 	{
-		classifyFile: classifyDroppedItem,
+		classifyFile: async (path) => {
+			if (onSkinsPage.value) {
+				return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
+			}
+			return classifyDroppedItem(path)
+		},
 		onClassifyStart: (fileName) => {
+			if (onSkinsPage.value) return
 			// Immediate feedback when a file is dropped — show a notification
 			// with the file name before classification even begins.
 			dropProcessingNotificationId.value = addNotification({
@@ -1081,6 +1175,7 @@ const { isDragging, isProcessing } = useGlobalDrop(
 			}).id
 		},
 		onImportStart: (type, classification) => {
+			if (type === 'unknown' && classification?.reason === 'skipped') return
 			dropClassification.value = classification
 			dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
 			dropFileName.value =
@@ -1739,7 +1834,9 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 	currentImportContext.value = null
 	if (instances.length === 0) return
 
-	for (const inst of instances) {
+	// Single instance: simple notification (no progress overlay needed)
+	if (instances.length === 1) {
+		const inst = instances[0]
 		try {
 			const job = await import_instance(
 				ctx?.launcherType ?? inst.launcherType,
@@ -1760,6 +1857,73 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 				type: 'error',
 			})
 		}
+		return
+	}
+
+	// Multiple instances: show cumulative progress
+	const total = instances.length
+	let completed = 0
+	let failedCount = 0
+
+	let progressNotif = addNotification({
+		title: formatMessage(messages.dropImportProgressTitle),
+		text: formatMessage(messages.dropImportProgressText, { current: 0, total }),
+		type: 'info',
+		autoCloseMs: null,
+	})
+
+	for (let i = 0; i < instances.length; i++) {
+		const inst = instances[i]
+
+		// Update progress notification
+		notificationManager.removeNotification(progressNotif.id)
+		progressNotif = addNotification({
+			title: formatMessage(messages.dropImportProgressTitle),
+			text: formatMessage(messages.dropImportProgressText, {
+				current: i + 1,
+				total,
+			}),
+			type: 'info',
+			autoCloseMs: null,
+		})
+
+		try {
+			const job = await import_instance(
+				ctx?.launcherType ?? inst.launcherType,
+				ctx?.basePath ?? inst.path,
+				inst.name,
+				symlink,
+			)
+			await wait_for_install_job(job.job_id)
+			completed++
+		} catch (e) {
+			failedCount++
+			addNotification({
+				title: formatMessage(messages.dropImportFailedTitle),
+				text: formatMessage(messages.dropImportFailedText, { name: inst.name, error: String(e) }),
+				type: 'error',
+			})
+		}
+	}
+
+	// Final summary — replace progress notification
+	notificationManager.removeNotification(progressNotif.id)
+	if (failedCount === 0) {
+		addNotification({
+			title: formatMessage(messages.dropImportCompletedTitle),
+			text: formatMessage(messages.dropImportCompletedText, { count: total }),
+			type: 'success',
+		})
+	} else {
+		addNotification({
+			title: formatMessage(messages.dropImportCompletedTitle),
+			text: formatMessage(messages.dropImportCompletedPartialText, {
+				completed,
+				failed: failedCount,
+				total,
+			}),
+			type: 'warning',
+		})
 	}
 }
 
@@ -2315,6 +2479,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
 			'has-transparent-background': themeStore.transparentBackground,
+			'is-maximized': isMaximized,
 		}"
 	>
 		<Transition name="fade">
@@ -2670,7 +2835,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	<!-- Global drop overlay -->
 	<div
-		v-if="isDragging"
+		v-if="isDragging && !onSkinsPage"
 		class="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center pointer-events-none"
 	>
 		<div class="rounded-2xl border-2 border-dashed border-brand bg-surface-2/90 p-8 text-center">
@@ -2681,7 +2846,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	<!-- Processing overlay -->
 	<div
-		v-if="(isProcessing || scanningInstances) && !isDragging"
+		v-if="(isProcessing || scanningInstances) && !isDragging && !onSkinsPage"
 		class="fixed inset-0 z-[9999] bg-black/20 flex items-center justify-center"
 	>
 		<div class="flex flex-col items-center gap-3">
@@ -2767,6 +2932,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 .app-grid-layout.has-custom-background,
 .app-grid-layout.has-transparent-background {
+	&:not(.is-maximized) {
+		border-radius: 8px;
+		clip-path: inset(0 round 8px);
+		overflow: hidden;
+	}
 	background-color: transparent;
 
 	.app-grid-navbar,
@@ -2846,6 +3016,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		content: '';
 		position: fixed;
 		inset: 0;
+		border-radius: inherit;
 		z-index: 100;
 		pointer-events: none;
 		box-shadow:

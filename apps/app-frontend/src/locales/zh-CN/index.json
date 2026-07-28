@@ -375,7 +375,7 @@
 		"message": "所有来源"
 	},
 	"app.browse.source.curseforge": {
-		"message": "CurseForge 来源"
+		"message": "CurseForge"
 	},
 	"app.browse.source.modrinth": {
 		"message": "Modrinth"
@@ -3469,6 +3469,21 @@
 	},
 	"app.drop.no-instances": {
 		"message": "未找到实例"
+	},
+	"app.drop.import-progress-title": {
+		"message": "正在导入实例…"
+	},
+	"app.drop.import-progress-text": {
+		"message": "已导入 {current} / {total} 个实例"
+	},
+	"app.drop.import-completed-title": {
+		"message": "导入完成"
+	},
+	"app.drop.import-completed-text": {
+		"message": "成功导入 {count} 个实例"
+	},
+	"app.drop.import-completed-partial-text": {
+		"message": "已导入 {completed} / {total} 个实例（{failed} 个失败）"
 	},
 	"app.drop.mod-compatibility-title": {
 		"message": "版本不匹配"
