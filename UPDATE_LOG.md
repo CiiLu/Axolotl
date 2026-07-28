@@ -31,3 +31,5 @@
 - 优化陶瓦联机下载流程：下载完成后自动启动陶瓦联机进程，用户无需再手动点击「启动」即可进入托管/加入房间
 - 重构陶瓦联机后端 API（`terracotta.rs`）：将所有 Tauri 命令从 struct-based 参数改为扁平化参数传递；移除 `Deserialize` 导入和 5 个仅用于参数接收的 struct（`TerracottaStartArgs`、`TerracottaHostArgs`、`TerracottaJoinArgs`、`TerracottaParseRoomCodeArgs`、`TerracottaDownloadUrlArgs`）
 - 联机页面前端调整：移除 `terracotta_host` 调用中多余的 `roomCode: null` 参数
+- 优化 Linux 桌面文件（.desktop）：补充 Comment、Keywords、StartupWMClass、StartupNotify 等字段，添加 x-scheme-handler/axolotl 协议关联与中文本地化，并为 Exec 添加 WEBKIT_DISABLE_DMABUF_RENDERER=1 环境变量。
+- 将 Linux 桌面文件模板从 Tauri 模板变量格式改为固定值格式，确保编译后的 .desktop 文件直接使用 "Axolotl Launcher" 作为名称、图标和可执行文件。
