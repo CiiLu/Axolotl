@@ -6,7 +6,8 @@ use crate::state::instances::{
     InstanceLaunchOverrides, InstanceLaunchOverridesData, playtime_to_storage,
 };
 use crate::state::{
-    CacheValue, CachedEntry, CachedFile, CachedFileHash, CachedFileUpdate,
+    CacheValue, CachedEntry, CachedFileHash, CachedFileUpdate,
+    ModrinthHashMatch,
     Credentials, DefaultPage, DependencyType, DeviceToken, DeviceTokenKey,
     DeviceTokenPair, FileType, Hooks, InstanceInstallStage,
     LauncherFeatureVersion, MemorySettings, MinecraftAccountType,
@@ -250,7 +251,7 @@ where
                             ));
                         }
 
-                        cached_entries.push(CacheValue::File(CachedFile {
+                                cached_entries.push(CacheValue::File(ModrinthHashMatch {
                             hash: sha1.clone(),
                             project_id: version.project_id.clone(),
                             version_id: version.id.clone(),

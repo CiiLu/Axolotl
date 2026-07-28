@@ -569,16 +569,18 @@ pub async fn instance_check_installed(
     instance_id: &str,
     project_id: &str,
 ) -> Result<bool> {
-    let check_project_id = project_id;
-
     if let Ok(projects) =
         theseus::instance::get_projects(instance_id, None).await
     {
         Ok(projects.into_iter().any(|(_, project)| {
-            project
-                .metadata
-                .as_ref()
-                .is_some_and(|metadata| check_project_id == metadata.project_id)
+            project.provider_refs.iter().any(|reference| match reference {
+                theseus::data::ContentProviderRef::Modrinth { project_id: id, .. } => {
+                    project_id == id.as_str()
+                }
+                theseus::data::ContentProviderRef::CurseForge { project_id: id, .. } => {
+                    project_id == format!("curseforge:{}", id.get())
+                }
+            })
         }))
     } else {
         Ok(false)

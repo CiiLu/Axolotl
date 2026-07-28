@@ -108,10 +108,17 @@ export type InstanceLoader = 'vanilla' | 'forge' | 'fabric' | 'quilt' | 'neoforg
 
 type ContentFile = {
 	enabled: boolean
-	metadata?: {
+	modrinth?: {
 		project_id: string
 		version_id: string
 	}
+	provider_refs: Array<{
+		provider: 'modrinth' | 'curseforge'
+		project_id: string | number
+		version_id?: string | null
+		file_id?: number | null
+	}>
+	origin_provider: 'modrinth' | 'curseforge' | null
 }
 
 type ContentFileProjectType = 'mod' | 'datapack' | 'resourcepack' | 'shaderpack' | 'schematic'
