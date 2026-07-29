@@ -2599,7 +2599,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				</NavButton>
 			</NavRail>
 			<div class="h-px w-6 mx-auto my-2 bg-surface-5"></div>
-			<div class="flex-1 min-h-0 overflow-y-auto">
+			<div class="quick-instance-scroll flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
 				<suspense>
 					<QuickInstanceSwitcher />
 				</suspense>
@@ -2928,6 +2928,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	//z-index: 0;
 	background-color: var(--color-raised-bg);
 	height: 100vh;
+}
+
+.quick-instance-scroll {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
 }
 
 .launcher-background {
