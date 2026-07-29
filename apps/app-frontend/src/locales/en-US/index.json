@@ -548,6 +548,9 @@
 	"app.downloads.manual-download-required": {
 		"message": "CurseForge requires this file to be downloaded manually."
 	},
+	"app.downloads.new-download": {
+		"message": "New download"
+	},
 	"app.downloads.no-file-details": {
 		"message": "No file details were recorded for this download."
 	},

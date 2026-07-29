@@ -545,6 +545,9 @@
 	"app.downloads.local": {
 		"message": "本地"
 	},
+	"app.downloads.new-download": {
+		"message": "新建下载"
+	},
 	"app.downloads.no-file-details": {
 		"message": "此下载任务没有记录文件级详细信息。"
 	},

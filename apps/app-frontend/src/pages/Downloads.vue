@@ -1,12 +1,20 @@
 <template>
 	<div class="flex flex-col gap-3 p-6">
-		<div data-onboarding-id="downloads-tabs">
-			<NavTabs
-				:active-index="tab === 'active' ? 0 : 1"
-				:links="downloadTabs"
-				mode="local"
-				@tab-click="selectTab"
-			/>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div data-onboarding-id="downloads-tabs">
+				<NavTabs
+					:active-index="tab === 'active' ? 0 : 1"
+					:links="downloadTabs"
+					mode="local"
+					@tab-click="selectTab"
+				/>
+			</div>
+			<ButtonStyled color="brand">
+				<button @click="router.push('/create')">
+					<PlusIcon />
+					{{ formatMessage(messages.newDownload) }}
+				</button>
+			</ButtonStyled>
 		</div>
 
 		<div class="flex flex-wrap items-center gap-2">
@@ -319,6 +327,7 @@ import {
 	ExternalIcon,
 	GlobeIcon,
 	ModrinthIcon,
+	PlusIcon,
 	RefreshCwIcon,
 	SearchIcon,
 	TrashIcon,
@@ -375,6 +384,7 @@ const busy = ref(new Set<string>())
 const clearHistoryModal = ref<InstanceType<typeof ConfirmModal>>()
 
 const messages = defineMessages({
+	newDownload: { id: 'app.downloads.new-download', defaultMessage: 'New download' },
 	inProgress: { id: 'app.downloads.in-progress', defaultMessage: 'In progress' },
 	history: { id: 'app.downloads.history', defaultMessage: 'History' },
 	search: { id: 'app.downloads.search', defaultMessage: 'Search downloads' },
