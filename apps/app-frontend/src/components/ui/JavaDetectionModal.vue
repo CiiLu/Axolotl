@@ -111,7 +111,9 @@ defineExpose({
 })
 
 async function refreshInstallOptions() {
-	const updated = await find_filtered_jres(lastRequestedVersion.value, false, false).catch(() => null)
+	const updated = await find_filtered_jres(lastRequestedVersion.value, false, false).catch(
+		() => null,
+	)
 	if (updated) {
 		chosenInstallOptions.value = updated
 	}

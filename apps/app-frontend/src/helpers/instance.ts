@@ -136,10 +136,13 @@ export async function get_dependencies_as_content_items(
 	dependencies: Labrinth.Versions.v3.Dependency[],
 	cacheBehaviour?: CacheBehaviour,
 ): Promise<ContentItem[]> {
-	const items = await invoke<ContentItem[]>('plugin:instance|instance_get_dependencies_as_content_items', {
-		dependencies,
-		cacheBehaviour,
-	})
+	const items = await invoke<ContentItem[]>(
+		'plugin:instance|instance_get_dependencies_as_content_items',
+		{
+			dependencies,
+			cacheBehaviour,
+		},
+	)
 	return items
 }
 

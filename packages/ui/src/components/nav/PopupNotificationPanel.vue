@@ -307,7 +307,11 @@ function progressColorForType(type: PopupNotification['type']) {
 	return 'green'
 }
 
-const { hasSidebar = false, onErrorAction, errorActionLabel = 'Export error logs' } = defineProps<{
+const {
+	hasSidebar = false,
+	onErrorAction,
+	errorActionLabel = 'Export error logs',
+} = defineProps<{
 	hasSidebar?: boolean
 	onErrorAction?: (notification: PopupNotification) => void | Promise<void>
 	errorActionLabel?: string

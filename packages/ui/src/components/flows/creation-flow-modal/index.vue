@@ -41,7 +41,11 @@ const props = withDefaults(
 		finishDisabled?: boolean
 		finishDisabledTooltip?: string
 		/** Called when a file is dropped or picked in the import-instance stage */
-		onImportFileReceived?: (payload: { file: File | null; filePath: string | null; source: 'file-picker' | 'drag-drop' }) => void
+		onImportFileReceived?: (payload: {
+			file: File | null
+			filePath: string | null
+			source: 'file-picker' | 'drag-drop'
+		}) => void
 	}>(),
 	{
 		type: 'world',

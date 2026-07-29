@@ -1,10 +1,5 @@
 <template>
-	<NewModal
-		ref="modal"
-		fade="warning"
-		max-width="480px"
-		@hide="$emit('close')"
-	>
+	<NewModal ref="modal" fade="warning" max-width="480px" @hide="$emit('close')">
 		<template #title>
 			<span class="font-extrabold text-contrast text-lg">{{ formatMessage(messages.title) }}</span>
 		</template>
@@ -59,8 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineMessages } from '@modrinth/ui'
-import { useVIntl } from '@modrinth/ui'
+import { defineMessages, useVIntl } from '@modrinth/ui'
 
 import Admonition from '../../base/Admonition.vue'
 import ButtonStyled from '../../base/ButtonStyled.vue'
@@ -69,7 +63,7 @@ import NewModal from '../../modal/NewModal.vue'
 
 const { formatMessage } = useVIntl()
 
-const props = defineProps<{
+defineProps<{
 	modVersion?: string
 	modLoader?: string
 	instVersion?: string

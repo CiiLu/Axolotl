@@ -100,12 +100,12 @@ export interface ContentItem extends Omit<
 				provider: 'modrinth'
 				project_id: string
 				version_id: string | null
-			}
+		  }
 		| {
 				provider: 'curseforge'
 				project_id: number
 				file_id: number | null
-			}
+		  }
 	>
 }
 

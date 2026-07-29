@@ -34,15 +34,15 @@ defineEmits<{
 				<span class="text-sm font-semibold text-contrast">{{ title }}</span>
 				<span class="text-xs text-secondary">{{ description }}</span>
 			</div>
-			<CheckIcon
-				v-if="selected"
-				class="size-5 text-brand shrink-0"
-				stroke-width="2.5"
-			/>
+			<CheckIcon v-if="selected" class="size-5 text-brand shrink-0" stroke-width="2.5" />
 		</div>
 		<div
 			class="overflow-hidden transition-all duration-300"
-			:class="selected ? 'max-h-24 mt-3 opacity-100' : 'max-h-0 group-hover:max-h-24 group-hover:mt-3 group-hover:opacity-100 opacity-0'"
+			:class="
+				selected
+					? 'max-h-24 mt-3 opacity-100'
+					: 'max-h-0 group-hover:max-h-24 group-hover:mt-3 group-hover:opacity-100 opacity-0'
+			"
 		>
 			<slot />
 		</div>

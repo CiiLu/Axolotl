@@ -133,14 +133,13 @@ export interface InstanceInfo {
 	loader?: string | null
 }
 
-const props = defineProps<{
+defineProps<{
 	instances?: InstanceInfo[]
 }>()
 
 const emit = defineEmits<{
 	(e: 'install', instanceId: string): void
-	(e: 'cancel'): void
-	(e: 'navigateCreate'): void
+	(e: 'cancel' | 'navigateCreate'): void
 }>()
 
 const modal = ref<InstanceType<typeof NewModal> | null>(null)

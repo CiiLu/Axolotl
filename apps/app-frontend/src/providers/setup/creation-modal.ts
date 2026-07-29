@@ -5,7 +5,6 @@ import type {
 	CreationFlowModal,
 } from '@modrinth/ui'
 import { defineMessages, useVIntl } from '@modrinth/ui'
-import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMethodCards.vue'
 import { confirm } from '@tauri-apps/plugin-dialog'
 import { inject, provide, ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
@@ -15,22 +14,18 @@ import type UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPa
 import type ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_search_results } from '@/helpers/cache.js'
-import {
-	type ClassificationResult,
-	classifyDroppedItem,
-	classifyDroppedItemWithExtraction,
-} from '@/helpers/drop'
+import { type ClassificationResult, classifyDroppedItemWithExtraction } from '@/helpers/drop'
+import { install_job_listener } from '@/helpers/events.js'
 import { import_instance } from '@/helpers/import.js'
 import {
 	type CreatePackLocation,
-	type InstallJobSnapshot,
 	install_create_instance,
 	install_create_modpack_instance,
 	install_get_modpack_preview,
+	type InstallJobSnapshot,
 	wait_for_install_job,
 } from '@/helpers/install'
 import { check_symlink_capability, list, restart_as_admin } from '@/helpers/instance'
-import { install_job_listener } from '@/helpers/events.js'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata.js'
 import type { InstanceLoader } from '@/helpers/types'
 import { useTheming } from '@/store/state'
@@ -94,13 +89,16 @@ export function setupCreationModal(
 		installationModal.value?.show()
 	})
 
-	provide('showCreationModalWithOptions', (options?: {
-		skipSetupType?: boolean
-		initialMode?: 'custom' | 'import'
-		onBack?: () => void
-	}) => {
-		installationModal.value?.show(options)
-	})
+	provide(
+		'showCreationModalWithOptions',
+		(options?: {
+			skipSetupType?: boolean
+			initialMode?: 'custom' | 'import'
+			onBack?: () => void
+		}) => {
+			installationModal.value?.show(options)
+		},
+	)
 
 	async function proceedWithModpackCreation(
 		projectId: string,
@@ -175,14 +173,11 @@ export function setupCreationModal(
 					return
 				}
 				if (capability === 'requires_admin') {
-					const confirmed = await confirm(
-						formatMessage(symlinkMessages.requiresAdminDescription),
-						{
-							title: formatMessage(symlinkMessages.requiresAdminTitle),
-							okLabel: formatMessage(symlinkMessages.requiresAdminRestartButton),
-							cancelLabel: formatMessage(symlinkMessages.cancel),
-						},
-					)
+					const confirmed = await confirm(formatMessage(symlinkMessages.requiresAdminDescription), {
+						title: formatMessage(symlinkMessages.requiresAdminTitle),
+						okLabel: formatMessage(symlinkMessages.requiresAdminRestartButton),
+						cancelLabel: formatMessage(symlinkMessages.cancel),
+					})
 					if (confirmed) {
 						restart_as_admin()
 					}
@@ -239,10 +234,7 @@ export function setupCreationModal(
 						? splitPath[splitPath.length - 1]
 						: config.modpackFilePath.value
 					if (unknownPackWarningModal.value) {
-						unknownPackWarningModal.value?.show(
-							() => doInstallModpackFile(location),
-							fileName,
-						)
+						unknownPackWarningModal.value?.show(() => doInstallModpackFile(location), fileName)
 					} else {
 						await doInstallModpackFile(location)
 					}
@@ -350,10 +342,10 @@ export function setupCreationModal(
 		return versions ?? []
 	}
 
-let currentFlowCtx: CreationFlowContextValue | null = null
+	let _currentFlowCtx: CreationFlowContextValue | null = null
 
 	/** Show a popup notification prompting the user to force-analyse an unclassified file. */
-	function showForceAnalysisPopup(classification: ClassificationResult) {
+	function _showForceAnalysisPopup(classification: ClassificationResult) {
 		addPopupNotification({
 			title: `Unknown file type`,
 			text: `This file couldn't be identified from its contents. Perform a deep analysis?`,
@@ -410,7 +402,7 @@ let currentFlowCtx: CreationFlowContextValue | null = null
 
 	/** Install a modpack file with continuous feedback notifications. */
 	async function installModpackFromPath(filePath: string, fileName: string) {
-		let currentNotify = notificationManager.addNotification({
+		const currentNotify = notificationManager.addNotification({
 			title: `Installing ${fileName}...`,
 			type: 'info',
 			autoCloseMs: null,
@@ -432,12 +424,9 @@ let currentFlowCtx: CreationFlowContextValue | null = null
 
 				if (preview.unknownFile) {
 					notificationManager.removeNotification(currentNotify.id)
-					unknownPackWarningModal.value?.show(
-						async () => {
-							await doInstallModpackFile(location)
-						},
-						fileName,
-					)
+					unknownPackWarningModal.value?.show(async () => {
+						await doInstallModpackFile(location)
+					}, fileName)
 					return
 				}
 			}
@@ -449,8 +438,8 @@ let currentFlowCtx: CreationFlowContextValue | null = null
 		}
 	}
 
-		provide('setCreationFlowCtx', (ctx: CreationFlowContextValue) => {
-		currentFlowCtx = ctx
+	provide('setCreationFlowCtx', (ctx: CreationFlowContextValue) => {
+		_currentFlowCtx = ctx
 	})
 
 	return {

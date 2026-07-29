@@ -1673,8 +1673,8 @@ const searchState = useBrowseSearch({
 })
 
 /** Translation state for search result titles and descriptions. */
-const originalProjectHits = shallowRef<any[]>([])
-const originalServerHits = shallowRef<any[]>([])
+const originalProjectHits = shallowRef<typeof searchState.projectHits.value>([])
+const originalServerHits = shallowRef<typeof searchState.serverHits.value>([])
 let isUpdatingProjectHitsFromTranslation = false
 const {
 	translationActive,
@@ -1731,7 +1731,9 @@ async function autoTranslateNewSearchResults(version: number, useServer: boolean
 			translationActive.value = true
 			isUpdatingProjectHitsFromTranslation = false
 		}
-	} catch {}
+	} catch (error) {
+		debugLog('Automatic search result translation failed', error)
+	}
 }
 
 async function translateCurrentHits() {

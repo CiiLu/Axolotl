@@ -1,12 +1,12 @@
 <script setup>
+import { DownloadIcon, FolderSearchIcon, ListIcon, ScanEyeIcon, SearchIcon } from '@modrinth/assets'
 import {
-	DownloadIcon,
-	FolderSearchIcon,
-	ListIcon,
-	ScanEyeIcon,
-	SearchIcon,
-} from '@modrinth/assets'
-import { ButtonStyled, defineMessages, injectNotificationManager, Toggle, useVIntl } from '@modrinth/ui'
+	ButtonStyled,
+	defineMessages,
+	injectNotificationManager,
+	Toggle,
+	useVIntl,
+} from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
 import { platform } from '@tauri-apps/plugin-os'
 import { ref, watch } from 'vue'

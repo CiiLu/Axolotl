@@ -215,8 +215,7 @@ onUnmounted(() => {
 				<div class="relative shrink-0">
 					<Avatar
 						:src="
-							serverData[server.world.address]?.status?.favicon ??
-							(server.world.icon || undefined)
+							serverData[server.world.address]?.status?.favicon ?? (server.world.icon || undefined)
 						"
 						:tint-by="server.world.address"
 						size="36px"

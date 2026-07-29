@@ -632,20 +632,11 @@
   "console.delete-modal.title": {
     "defaultMessage": "刪除日誌檔案"
   },
-  "console.filter.all": {
-    "defaultMessage": "全部"
-  },
-  "console.filter.debug": {
-    "defaultMessage": "偵錯"
-  },
   "console.filter.error": {
     "defaultMessage": "錯誤"
   },
   "console.filter.info": {
     "defaultMessage": "資訊"
-  },
-  "console.filter.trace": {
-    "defaultMessage": "追蹤"
   },
   "console.filter.warn": {
     "defaultMessage": "警告"

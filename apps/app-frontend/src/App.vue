@@ -30,7 +30,6 @@ import {
 	defineMessages,
 	I18nDebugPanel,
 	LoadingBar,
-	NewModal,
 	NotificationPanel,
 	OverflowMenu,
 	PopupNotificationPanel,
@@ -102,7 +101,6 @@ import {
 	lookupModHash,
 	type ModrinthLookupResult,
 	scanLauncherInstances,
-	type ScanResult,
 } from '@/helpers/drop'
 import {
 	command_listener,
@@ -140,7 +138,7 @@ import {
 	isNetworkMetered,
 	setRestartAfterPendingUpdate,
 } from '@/helpers/utils.js'
-import { areLoadersCompatible,isVersionInRange } from '@/helpers/version-compatibility'
+import { areLoadersCompatible, isVersionInRange } from '@/helpers/version-compatibility'
 import { start_join_server, start_join_singleplayer_world } from '@/helpers/worlds.ts'
 import i18n, { resolveInitialLocale } from '@/i18n.config'
 import {

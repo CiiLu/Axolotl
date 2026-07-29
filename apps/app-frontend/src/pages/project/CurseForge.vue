@@ -71,12 +71,7 @@
 							}}
 						</button>
 					</ButtonStyled>
-					<ButtonStyled
-						v-if="data.site_url || mcmodUrl"
-						size="large"
-						circular
-						type="transparent"
-					>
+					<ButtonStyled v-if="data.site_url || mcmodUrl" size="large" circular type="transparent">
 						<OverflowMenu
 							:tooltip="formatMessage(commonMessages.moreOptionsButton)"
 							:options="[

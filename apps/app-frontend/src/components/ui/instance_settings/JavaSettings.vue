@@ -96,7 +96,9 @@ watch(overrideJavaInstall, (enabled) => {
 })
 
 const overrideJavaArgs = ref((instance.value.extra_launch_args?.length ?? 0) > 0)
-const javaArgs = ref((instance.value.extra_launch_args ?? globalSettings?.extra_launch_args ?? []).join(' '))
+const javaArgs = ref(
+	(instance.value.extra_launch_args ?? globalSettings?.extra_launch_args ?? []).join(' '),
+)
 
 const overrideEnvVars = ref((instance.value.custom_env_vars?.length ?? 0) > 0)
 const envVars = ref(
@@ -106,7 +108,9 @@ const envVars = ref(
 )
 
 const overrideMemorySettings = ref(!!instance.value.memory)
-const memory = ref(instance.value.memory ?? globalSettings?.memory ?? { maximum: 2048, automatic: true })
+const memory = ref(
+	instance.value.memory ?? globalSettings?.memory ?? { maximum: 2048, automatic: true },
+)
 const effectiveMemory = computed(() =>
 	overrideMemorySettings.value
 		? memory.value

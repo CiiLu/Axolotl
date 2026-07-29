@@ -71,8 +71,8 @@ import { computed, ref } from 'vue'
 
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import HorizontalRule from '#ui/components/base/HorizontalRule.vue'
-import NewModal from '#ui/components/modal/NewModal.vue'
 import SelectionCard from '#ui/components/base/SelectionCard.vue'
+import NewModal from '#ui/components/modal/NewModal.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 
 const { formatMessage } = useVIntl()
@@ -96,7 +96,8 @@ const messages = defineMessages({
 	},
 	copyDetail: {
 		id: 'drop.symlink_method.copy_detail',
-		defaultMessage: 'Instance files will be copied to Axolotl\'s data directory. This is the default option with the best compatibility.',
+		defaultMessage:
+			"Instance files will be copied to Axolotl's data directory. This is the default option with the best compatibility.",
 	},
 	symlinkTitle: {
 		id: 'drop.symlink_method.symlink_title',
@@ -108,7 +109,8 @@ const messages = defineMessages({
 	},
 	symlinkDetail: {
 		id: 'drop.symlink_method.symlink_detail',
-		defaultMessage: 'Instance files stay in their original location. Axolotl references them via a symbolic link. Saves disk space.',
+		defaultMessage:
+			'Instance files stay in their original location. Axolotl references them via a symbolic link. Saves disk space.',
 	},
 	requiresAdmin: {
 		id: 'drop.symlink_method.requires_admin',
@@ -128,7 +130,7 @@ const messages = defineMessages({
 	},
 })
 
-const props = defineProps({
+defineProps({
 	instanceNames: {
 		type: Array<string>,
 		default: () => [],
@@ -177,7 +179,10 @@ function onModalHide() {
 	emit('cancel')
 }
 
-function show(options: { instanceNames: string[]; symlinkCapable: 'supported' | 'requires_admin' | 'unsupported' }) {
+function show(options: {
+	instanceNames: string[]
+	symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
+}) {
 	internalInstanceNames.value = options.instanceNames
 	internalSymlinkCapable.value = options.symlinkCapable
 	selected.value = null

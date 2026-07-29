@@ -176,7 +176,9 @@ async function downloadVersion(info) {
 								<CoffeeIcon v-else class="size-5 text-secondary" aria-hidden="true" />
 							</span>
 							<span class="flex min-w-0 flex-1 flex-col items-start text-left leading-tight">
-								<span class="w-full truncate text-left text-sm font-semibold text-contrast">{{ vendor }}</span>
+								<span class="w-full truncate text-left text-sm font-semibold text-contrast">{{
+									vendor
+								}}</span>
 								<span
 									v-if="vendorBranding[vendor]"
 									class="w-full truncate text-left text-xs font-normal text-secondary"

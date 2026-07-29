@@ -101,7 +101,11 @@ html.transparent-window body {
 	--surface-1: color-mix(in srgb, var(--surface-1-opaque) var(--window-alpha), transparent);
 	--surface-1-5: color-mix(in srgb, var(--surface-1-5-opaque) var(--window-alpha-1-5), transparent);
 	--surface-2: color-mix(in srgb, var(--surface-2-opaque) var(--window-alpha-2), transparent);
-	--surface-2-5: color-mix(in srgb, var(--surface-2-5-opaque) var(--window-alpha-chrome), transparent);
+	--surface-2-5: color-mix(
+		in srgb,
+		var(--surface-2-5-opaque) var(--window-alpha-chrome),
+		transparent
+	);
 	--surface-3: color-mix(in srgb, var(--surface-3-opaque) var(--window-alpha-3), transparent);
 	--surface-4: color-mix(in srgb, var(--surface-4-opaque) var(--window-alpha-4), transparent);
 	--surface-5: color-mix(in srgb, var(--surface-5-opaque) var(--window-alpha-5), transparent);
@@ -112,7 +116,11 @@ html.transparent-window body {
 	--color-raised-bg: color-mix(in srgb, var(--surface-3-opaque) var(--window-alpha-3), transparent);
 	--color-button-bg: color-mix(in srgb, var(--surface-4-opaque) var(--window-alpha-4), transparent);
 	--color-divider: color-mix(in srgb, var(--surface-5-opaque) var(--window-alpha-5), transparent);
-	--color-divider-dark: color-mix(in srgb, var(--surface-5-opaque) var(--window-alpha-5), transparent);
+	--color-divider-dark: color-mix(
+		in srgb,
+		var(--surface-5-opaque) var(--window-alpha-5),
+		transparent
+	);
 	--color-tooltip-bg: var(--surface-3-opaque);
 }
 

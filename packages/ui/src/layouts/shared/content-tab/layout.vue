@@ -23,7 +23,6 @@ import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import EmptyState from '#ui/components/base/EmptyState.vue'
 import OverflowMenu from '#ui/components/base/OverflowMenu.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
-import { useDebugLogger } from '#ui/composables/debug-logger'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages, formatContentTypeSentence } from '#ui/utils/common-messages'
 
@@ -46,7 +45,6 @@ import { injectContentManager } from './providers/content-manager'
 import type { BulkOperationStatus, ContentCardTableItem, ContentItem } from './types'
 
 const { formatMessage } = useVIntl()
-const debug = useDebugLogger('ContentPageLayout')
 
 const props = withDefaults(
 	defineProps<{

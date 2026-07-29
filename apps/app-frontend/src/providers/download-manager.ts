@@ -50,8 +50,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 	let unlistenLoading: (() => void) | null = null
 	let initializing = false
 	const pendingInitialUpdates: Array<
-		| { kind: 'job'; job: InstallJobSnapshot }
-		| { kind: 'request'; update: DownloadRequestUpdate }
+		{ kind: 'job'; job: InstallJobSnapshot } | { kind: 'request'; update: DownloadRequestUpdate }
 	> = []
 	const pendingRequestUpdates = new Map<string, DownloadRequestUpdate[]>()
 

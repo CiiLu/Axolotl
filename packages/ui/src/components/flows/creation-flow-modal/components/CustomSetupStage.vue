@@ -178,9 +178,9 @@ import type { LoaderVersionEntry, LoaderVersionType } from '../creation-flow-con
 import { injectCreationFlowContext } from '../creation-flow-context'
 import {
 	formatLoaderLabel,
-	loaderIconMap,
 	type GameVersionType,
 	isVersionTypeMatch,
+	loaderIconMap,
 } from '../shared'
 
 const localizedFormatLoaderLabel = (item: string) => formatLoaderLabel(item, formatMessage)

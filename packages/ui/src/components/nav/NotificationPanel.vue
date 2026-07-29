@@ -178,7 +178,11 @@ onMounted(() => {
 
 const { hasModal: hasModalActive } = useModalStack()
 
-const { hasSidebar = false, onErrorAction, errorActionLabel = 'Export error logs' } = defineProps<{
+const {
+	hasSidebar = false,
+	onErrorAction,
+	errorActionLabel = 'Export error logs',
+} = defineProps<{
 	hasSidebar?: boolean
 	onErrorAction?: (notification: WebNotification) => void | Promise<void>
 	errorActionLabel?: string

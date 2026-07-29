@@ -114,9 +114,7 @@ const weekTopInstance = computed(() => {
 	return topName
 })
 
-const hasAnyPlaytime = computed(() =>
-	dailyPlaytime.value.some((entry) => entry.played_seconds > 0),
-)
+const hasAnyPlaytime = computed(() => dailyPlaytime.value.some((entry) => entry.played_seconds > 0))
 
 function formatDuration(seconds: number): string {
 	const roundedSeconds = Math.max(0, Math.round(seconds))
@@ -173,17 +171,11 @@ onUnmounted(() => {
 				<ClockIcon class="size-4 shrink-0 text-secondary" aria-hidden="true" />
 				<span class="min-w-0">{{ thisWeekLine }}</span>
 			</li>
-			<li
-				v-if="streakDays > 0"
-				class="flex min-w-0 items-center gap-2 text-sm text-primary"
-			>
+			<li v-if="streakDays > 0" class="flex min-w-0 items-center gap-2 text-sm text-primary">
 				<TrendingUpIcon class="size-4 shrink-0 text-secondary" aria-hidden="true" />
 				<span class="min-w-0">{{ formatMessage(messages.streak, { days: streakDays }) }}</span>
 			</li>
-			<li
-				v-if="weekTopInstance"
-				class="flex min-w-0 items-center gap-2 text-sm text-primary"
-			>
+			<li v-if="weekTopInstance" class="flex min-w-0 items-center gap-2 text-sm text-primary">
 				<GameIcon class="size-4 shrink-0 text-secondary" aria-hidden="true" />
 				<span class="min-w-0 truncate">
 					{{ formatMessage(messages.weekTop, { name: weekTopInstance }) }}

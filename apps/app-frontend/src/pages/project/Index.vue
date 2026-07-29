@@ -750,13 +750,11 @@ async function fetchProjectData() {
 	versions.value = versions.value.sort((a, b) => dayjs(b.date_published) - dayjs(a.date_published))
 
 	if (instanceProjects.value) {
-		const installedFile = Object.values(instanceProjects.value).find(
-			(x) =>
-				x.provider_refs.some(
-					(reference) =>
-						reference.provider === 'modrinth' &&
-						String(reference.project_id) === data.value.id,
-				),
+		const installedFile = Object.values(instanceProjects.value).find((x) =>
+			x.provider_refs.some(
+				(reference) =>
+					reference.provider === 'modrinth' && String(reference.project_id) === data.value.id,
+			),
 		)
 		if (installedFile?.origin_provider === 'modrinth') {
 			installed.value = true
