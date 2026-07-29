@@ -750,14 +750,15 @@ pub async fn check_java_at_filepath(path: &Path) -> crate::Result<JavaVersion> {
 
     // Checks for existence of Java at this filepath
     // Adds JAVA_BIN to the end of the path if it is not already there
-    let java = if path
-        .file_name()
-        .and_then(|x| x.to_str())
-        .is_some_and(|x| x != JAVA_BIN)
-    {
-        path.join(JAVA_BIN)
-    } else {
+    let file_name = path.file_name().and_then(|x| x.to_str());
+    let java = if file_name.is_some_and(|x| x == JAVA_BIN) {
         path
+    } else if cfg!(target_os = "windows")
+        && file_name.is_some_and(|x| x.eq_ignore_ascii_case("java.exe"))
+    {
+        path.with_file_name(JAVA_BIN)
+    } else {
+        path.join(JAVA_BIN)
     };
 
     if !java.exists() {

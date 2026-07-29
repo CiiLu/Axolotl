@@ -211,6 +211,13 @@ pub struct JavaDiscoveryPayload {
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct JavaDownloadConfirmationPayload {
+    pub request_id: Uuid,
+    pub version: u32,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct InstanceBulkUpdateProgressPayload {
     pub instance_id: String,
     pub stage: InstanceBulkUpdateProgressStage,

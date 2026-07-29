@@ -463,10 +463,10 @@ pub async fn install_minecraft_with_reporter(
             )
             .await?;
     }
-    let (java_version, set_java) = if let Some(java_version) =
+    let java_installation = if let Some(java_version) =
         get_java_version_from_launch_context(context, &version_info).await?
     {
-        (std::path::PathBuf::from(java_version.path), false)
+        Some((std::path::PathBuf::from(java_version.path), false))
     } else if let Some(discovered) = crate::api::jre::find_java_for_version(key)
         .await
         .unwrap_or_default()
@@ -476,9 +476,9 @@ pub async fn install_minecraft_with_reporter(
             discovered.version,
             discovered.path
         );
-        (std::path::PathBuf::from(discovered.path), true)
+        Some((std::path::PathBuf::from(discovered.path), true))
     } else {
-        let path = if let Some(reporter) = &reporter {
+        if let Some(reporter) = &reporter {
             crate::api::jre::auto_install_java_with_reporter(
                 key,
                 reporter.clone(),
@@ -486,33 +486,37 @@ pub async fn install_minecraft_with_reporter(
             .await?
         } else {
             crate::api::jre::auto_install_java_with_loading(key, true).await?
-        };
-
-        (path, true)
+        }
+        .map(|path| (path, true))
     };
 
-    // Test jre version
-    if let Some(reporter) = &reporter {
-        reporter
-            .update(
-                InstallPhaseId::PreparingJava,
-                Some(InstallProgress {
-                    current: 4,
-                    total: 4,
-                    secondary: None,
-                }),
-                InstallPhaseDetails::Java {
-                    major_version: key,
-                    step: InstallJavaStep::Validating,
-                },
-            )
-            .await?;
-    }
-    let java_version = crate::api::jre::check_jre(java_version.clone()).await?;
+    let java_version = if let Some((java_path, set_java)) = java_installation {
+        if let Some(reporter) = &reporter {
+            reporter
+                .update(
+                    InstallPhaseId::PreparingJava,
+                    Some(InstallProgress {
+                        current: 4,
+                        total: 4,
+                        secondary: None,
+                    }),
+                    InstallPhaseDetails::Java {
+                        major_version: key,
+                        step: InstallJavaStep::Validating,
+                    },
+                )
+                .await?;
+        }
+        let java_version = crate::api::jre::check_jre(java_path).await?;
 
-    if set_java {
-        java_version.upsert(&state.pool).await?;
-    }
+        if set_java {
+            java_version.upsert(&state.pool).await?;
+        }
+
+        Some(java_version)
+    } else {
+        None
+    };
 
     // Download minecraft (5-90)
     if let Some(reporter) = &reporter {
@@ -528,7 +532,10 @@ pub async fn install_minecraft_with_reporter(
         &state,
         &version_info,
         loading_bar.as_ref(),
-        &java_version.architecture,
+        java_version
+            .as_ref()
+            .map(|java| java.architecture.as_str())
+            .unwrap_or(std::env::consts::ARCH),
         repairing,
         minecraft_updated,
         reporter.clone(),
@@ -540,6 +547,37 @@ pub async fn install_minecraft_with_reporter(
         .directories
         .version_dir(&version_jar)
         .join(format!("{version_jar}.jar"));
+
+    let Some(java_version) = java_version else {
+        let protocol_version =
+            read_protocol_version_from_jar(client_path).await?;
+        crate::state::instances::commands::set_applied_content_set_protocol_version(
+            &instance.id,
+            protocol_version,
+            &state.pool,
+        )
+        .await?;
+        crate::state::instances::commands::set_instance_install_stage(
+            &instance.id,
+            InstanceInstallStage::NotInstalled,
+            &state.pool,
+        )
+        .await?;
+        emit_instance(&instance.id, InstancePayloadType::Edited).await?;
+        if let Some(loading_bar) = &loading_bar {
+            emit_loading(
+                loading_bar,
+                1.0,
+                Some("Finished downloading Minecraft resources"),
+            )?;
+        }
+        tracing::info!(
+            java_version = key,
+            instance_id = instance.id,
+            "Postponed Java setup after downloading Minecraft resources"
+        );
+        return Ok(());
+    };
 
     if content_set.loader == ModLoader::OptiFine
         && let Some(loader_version) = &loader_version

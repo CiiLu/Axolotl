@@ -1250,11 +1250,29 @@
 	"app.instances.view-instance": {
 		"message": "查看实例"
 	},
+	"app.java-download-confirmation.body": {
+		"message": "未找到兼容的 Java {version} 安装。你可以立即下载，也可以稍后设置 Java；其他游戏资源仍会继续下载。"
+	},
+	"app.java-download-confirmation.download": {
+		"message": "下载 Java"
+	},
+	"app.java-download-confirmation.later-description": {
+		"message": "稍后配置 Java {version} 后，请修复实例以完成安装。"
+	},
+	"app.java-download-confirmation.set-up-later": {
+		"message": "稍后设置"
+	},
+	"app.java-download-confirmation.title": {
+		"message": "下载 Java {version}？"
+	},
 	"app.java.already-installed": {
 		"message": "已安装"
 	},
 	"app.java.browse": {
 		"message": "浏览"
+	},
+	"app.java.browse-for-executable": {
+		"message": "浏览 Java 可执行文件"
 	},
 	"app.java.detect": {
 		"message": "检测"
@@ -1276,6 +1294,9 @@
 	},
 	"app.java.select-version": {
 		"message": "选择 Java 版本"
+	},
+	"app.java.test-installation": {
+		"message": "测试 Java 安装"
 	},
 	"app.java.table.actions": {
 		"message": "操作"
@@ -2018,6 +2039,21 @@
 	"app.settings.java.find-java": {
 		"message": "寻找 Java"
 	},
+	"app.settings.java.installed.empty": {
+		"message": "未找到 Java 安装。"
+	},
+	"app.settings.java.installed.loading": {
+		"message": "正在加载已安装的 Java……"
+	},
+	"app.settings.java.installed.remove": {
+		"message": "移除 Java 安装"
+	},
+	"app.settings.java.installed.title": {
+		"message": "已安装的 Java"
+	},
+	"app.settings.java.location": {
+		"message": "Java {version} 位置"
+	},
 	"app.settings.java.manual-add": {
 		"message": "手动添加"
 	},
@@ -2041,6 +2077,9 @@
 	},
 	"app.settings.java.table.actions": {
 		"message": ""
+	},
+	"app.settings.java.view-installed": {
+		"message": "查看已安装 Java"
 	},
 	"app.settings.java.download.downloading": {
 		"message": "正在下载 Java {version}..."
@@ -2914,6 +2953,9 @@
 	},
 	"instance.settings.tabs.java.custom-java-arguments": {
 		"message": "自定义Java参数"
+	},
+	"instance.settings.tabs.java.custom-java-installation": {
+		"message": "为此实例使用自定义 Java"
 	},
 	"instance.settings.tabs.java.custom-memory-allocation": {
 		"message": "自定义内存分配"

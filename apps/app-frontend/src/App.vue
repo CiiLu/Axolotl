@@ -77,6 +77,7 @@ import CommunityAnnouncementModal from '@/components/ui/modal/CommunityAnnouncem
 import CurseForgeManualDownloadsModal from '@/components/ui/modal/CurseForgeManualDownloadsModal.vue'
 import InstallToPlayModal from '@/components/ui/modal/InstallToPlayModal.vue'
 import InstanceIconPickerModal from '@/components/ui/modal/InstanceIconPickerModal.vue'
+import JavaDownloadConfirmationModal from '@/components/ui/modal/JavaDownloadConfirmationModal.vue'
 import ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
 import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
@@ -103,7 +104,12 @@ import {
 	scanLauncherInstances,
 	type ScanResult,
 } from '@/helpers/drop'
-import { command_listener, install_job_listener, warning_listener } from '@/helpers/events.js'
+import {
+	command_listener,
+	install_job_listener,
+	java_download_confirmation_listener,
+	warning_listener,
+} from '@/helpers/events.js'
 import { import_instance } from '@/helpers/import.js'
 import {
 	install_create_modpack_instance,
@@ -319,6 +325,7 @@ const stateInitialized = ref(false)
 const communityAnnouncementModal = ref()
 const updateAnnouncementModal = ref()
 const minecraftCrashModal = ref()
+const javaDownloadConfirmationModal = ref()
 const pendingUpdateAnnouncementVersion = ref(null)
 const updateAnnouncementShowing = ref(false)
 
@@ -794,6 +801,9 @@ async function setupApp() {
 			text: e.message,
 			type: 'warn',
 		})
+	})
+	await java_download_confirmation_listener((request) => {
+		javaDownloadConfirmationModal.value?.show(request)
 	})
 
 	get_opening_command().then(handleCommand)
@@ -2787,6 +2797,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		:error-action-label="formatMessage(messages.exportErrorLogs)"
 	/>
 	<MinecraftCrashModal ref="minecraftCrashModal" @error="handleError" />
+	<JavaDownloadConfirmationModal ref="javaDownloadConfirmationModal" />
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
 	<ErrorModal ref="errorModal" />

@@ -39,9 +39,10 @@ pub async fn get_optimal_jre_key(
     )
     .await?;
 
-    crate::launcher::get_java_version_from_launch_context(
-        &context,
-        &version_info,
-    )
-    .await
+    let major_version = version_info
+        .java_version
+        .as_ref()
+        .map_or(8, |java| java.major_version);
+
+    crate::api::jre::find_java_for_version(major_version).await
 }

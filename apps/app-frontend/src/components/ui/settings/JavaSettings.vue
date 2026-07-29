@@ -2,30 +2,26 @@
 import {
 	DownloadIcon,
 	FolderSearchIcon,
-	PlusIcon,
+	ListIcon,
 	ScanEyeIcon,
 	SearchIcon,
-	TrashIcon,
 } from '@modrinth/assets'
-import {
-	ButtonStyled,
-	defineMessages,
-	injectNotificationManager,
-	Table,
-	Toggle,
-	useVIntl,
-} from '@modrinth/ui'
+import { ButtonStyled, defineMessages, injectNotificationManager, Toggle, useVIntl } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
 import { platform } from '@tauri-apps/plugin-os'
 import { ref, watch } from 'vue'
 
+import JavaSelector from '@/components/ui/JavaSelector.vue'
 import DownloadJavaModal from '@/components/ui/settings/DownloadJavaModal.vue'
+import InstalledJavaModal from '@/components/ui/settings/InstalledJavaModal.vue'
 import { trackEvent } from '@/helpers/analytics'
+import { wait_for_install_job } from '@/helpers/install'
 import {
 	find_filtered_jres,
-	get_java_versions,
+	get_java_default_versions,
 	get_jre,
-	remove_java_version,
+	remove_java_default_version,
+	set_java_default_version,
 	set_java_version,
 } from '@/helpers/jre'
 import { get, set } from '@/helpers/settings.ts'
@@ -34,21 +30,9 @@ const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
-	version: {
-		id: 'app.settings.java.table.version',
-		defaultMessage: 'Java Version',
-	},
-	distribution: {
-		id: 'app.settings.java.table.distribution',
-		defaultMessage: 'Distribution',
-	},
-	path: {
-		id: 'app.settings.java.table.path',
-		defaultMessage: 'Path',
-	},
-	actions: {
-		id: 'app.settings.java.table.actions',
-		defaultMessage: '',
+	javaLocation: {
+		id: 'app.settings.java.location',
+		defaultMessage: 'Java {version} location',
 	},
 	findJava: {
 		id: 'app.settings.java.find-java',
@@ -66,15 +50,22 @@ const messages = defineMessages({
 		id: 'app.settings.java.download-java',
 		defaultMessage: 'Download Java',
 	},
-	autoHighPerformanceMode: { id: 'app.settings.java.auto-high-performance-mode', defaultMessage: 'Automatically use high-performance GPU for Java' },
-	autoHighPerformanceModeDescription: { id: 'app.settings.java.auto-high-performance-mode-description', defaultMessage: 'Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only.' },
+	viewInstalled: {
+		id: 'app.settings.java.view-installed',
+		defaultMessage: 'View installed Java',
+	},
+	autoHighPerformanceMode: {
+		id: 'app.settings.java.auto-high-performance-mode',
+		defaultMessage: 'Automatically use high-performance GPU for Java',
+	},
+	autoHighPerformanceModeDescription: {
+		id: 'app.settings.java.auto-high-performance-mode-description',
+		defaultMessage:
+			'Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only.',
+	},
 	scanning: {
 		id: 'app.settings.java.scanning',
 		defaultMessage: 'Scanning...',
-	},
-	noVersions: {
-		id: 'app.settings.java.no-versions',
-		defaultMessage: 'No Java versions configured. Use the buttons below to find or add Java installations.',
 	},
 	deepScanConfirm: {
 		id: 'app.settings.java.deep-scan-confirm',
@@ -90,47 +81,74 @@ const messages = defineMessages({
 	},
 })
 
-const javaVersions = ref(await get_java_versions().catch(handleError))
+const supportedJavaVersions = [25, 21, 17, 8]
+const javaDefaults = ref({})
 const scanning = ref(false)
 const scanMode = ref('')
+const showDeepScanConfirm = ref(false)
 const downloadJavaModal = ref(null)
+const installedJavaModal = ref(null)
+const defaultSaveQueues = new Map()
 
 const isWindows = (await platform()) === 'windows'
 const settings = ref(await get().catch(handleError))
 const autoHighPerformanceMode = ref(settings.value?.auto_set_java_high_performance_mode ?? false)
 
-watch(autoHighPerformanceMode, async (val) => {
-    settings.value = { ...settings.value, auto_set_java_high_performance_mode: val }
-    await set(settings.value).catch(handleError)
+watch(autoHighPerformanceMode, async (value) => {
+	if (!settings.value) return
+	settings.value = { ...settings.value, auto_set_java_high_performance_mode: value }
+	await set(settings.value).catch(handleError)
 })
 
-const columns = [
-	{ key: 'parsed_version', label: formatMessage(messages.version), width: '8rem' },
-	{ key: 'distribution', label: formatMessage(messages.distribution) },
-	{ key: 'path', label: formatMessage(messages.path) },
-	{ key: 'actions', label: formatMessage(messages.actions), align: 'right', width: '3rem' },
-]
+async function reloadDefaults() {
+	const defaults = await get_java_default_versions().catch(handleError)
+	if (!defaults) return
 
-const tableData = ref([])
-function refreshTable() {
-	if (!javaVersions.value) {
-		tableData.value = []
+	javaDefaults.value = Object.fromEntries(
+		defaults.map((javaVersion) => [javaVersion.parsed_version, javaVersion]),
+	)
+}
+
+await reloadDefaults()
+
+async function persistDefault(majorVersion, javaVersion) {
+	const path = javaVersion?.path?.trim()
+	if (!path) {
+		const removed = await remove_java_default_version(majorVersion)
+			.then(() => true)
+			.catch((error) => {
+				handleError(error)
+				return false
+			})
+		if (removed) {
+			javaDefaults.value[majorVersion] = undefined
+		} else {
+			await reloadDefaults()
+		}
 		return
 	}
-	tableData.value = javaVersions.value
-		.map((val) => ({
-			parsed_version: val.parsed_version,
-			distribution: val.distribution || null,
-			path: val.path || '',
-			_java: val,
-		}))
-		.sort((a, b) => b.parsed_version - a.parsed_version)
-}
-refreshTable()
 
-async function reloadJavaVersions() {
-	javaVersions.value = await get_java_versions().catch(handleError)
-	refreshTable()
+	const validated = await set_java_default_version(majorVersion, path).catch((error) => {
+		handleError(error)
+		return null
+	})
+	if (validated) {
+		javaDefaults.value[majorVersion] = validated
+	} else {
+		await reloadDefaults()
+	}
+}
+
+function saveDefault(majorVersion, javaVersion) {
+	const previous = defaultSaveQueues.get(majorVersion) ?? Promise.resolve()
+	const operation = previous.then(() => persistDefault(majorVersion, javaVersion))
+	defaultSaveQueues.set(majorVersion, operation)
+
+	return operation.finally(() => {
+		if (defaultSaveQueues.get(majorVersion) === operation) {
+			defaultSaveQueues.delete(majorVersion)
+		}
+	})
 }
 
 async function runScan(exhaustive) {
@@ -138,26 +156,29 @@ async function runScan(exhaustive) {
 		showDeepScanConfirm.value = true
 		return
 	}
+
 	scanning.value = true
 	scanMode.value = 'quick'
 	trackEvent('JavaQuickScan', { source: 'settings' })
-	await find_filtered_jres(null, false, true, false).catch(handleError)
-	await reloadJavaVersions()
-	scanning.value = false
-	scanMode.value = ''
+	try {
+		await find_filtered_jres(null, false, true, false).catch(handleError)
+	} finally {
+		scanning.value = false
+		scanMode.value = ''
+	}
 }
-
-const showDeepScanConfirm = ref(false)
 
 async function confirmDeepScan() {
 	showDeepScanConfirm.value = false
 	scanning.value = true
 	scanMode.value = 'deep'
 	trackEvent('JavaDeepScan', { source: 'settings' })
-	await find_filtered_jres(null, true, true, true).catch(handleError)
-	await reloadJavaVersions()
-	scanning.value = false
-	scanMode.value = ''
+	try {
+		await find_filtered_jres(null, true, true, true).catch(handleError)
+	} finally {
+		scanning.value = false
+		scanMode.value = ''
+	}
 }
 
 async function handleManualAdd() {
@@ -165,106 +186,116 @@ async function handleManualAdd() {
 	if (!result) return
 
 	const filePath = result.path ?? result
-	let javaInfo = await get_jre(filePath).catch(handleError)
-	if (!javaInfo) {
-		javaInfo = {
-			parsed_version: 0,
-			path: filePath,
-			version: '',
-			architecture: 'x86',
-			distribution: null,
-		}
-	}
+	const javaInfo = await get_jre(filePath).catch(handleError)
+	if (!javaInfo) return
 
 	await set_java_version(javaInfo).catch(handleError)
 	trackEvent('JavaManualSelect', { path: filePath })
-	await reloadJavaVersions()
 }
 
-async function removeJavaEntry(javaVersion) {
-	await remove_java_version(javaVersion.path).catch(handleError)
-	javaVersions.value = javaVersions.value.filter((jv) => jv.path !== javaVersion.path)
-	refreshTable()
+async function onJavaDownloaded(job) {
+	if (job?.job_id) {
+		await wait_for_install_job(job.job_id).catch(handleError)
+	}
+	await reloadDefaults()
 }
-
-async function onJavaDownloaded(_path, _parsedVersion) {
-	await reloadJavaVersions()
-}
-
-
 </script>
+
 <template>
 	<DownloadJavaModal ref="downloadJavaModal" @downloaded="onJavaDownloaded" />
-	<div class="flex flex-col gap-3">
-		<Table :columns="columns" :data="tableData" row-key="path">
-			<template #cell-parsed_version="{ value }">
-				<span class="font-semibold tabular-nums">Java {{ value }}</span>
-			</template>
-			<template #cell-distribution="{ value }">
-				<span class="text-sm">{{ value || '—' }}</span>
-			</template>
-			<template #cell-path="{ value }">
-				<span v-tooltip="value" class="block truncate font-mono text-xs max-w-72">{{ value }}</span>
-			</template>
-			<template #cell-actions="{ row }">
-				<button
-					class="p-1 text-secondary hover:text-red transition-colors"
-					@click="removeJavaEntry(row._java)"
-				>
-					<TrashIcon class="h-4 w-4" />
-				</button>
-			</template>
-			<template #empty-state>
-				<div class="py-8 text-center text-sm text-secondary">
-					{{ formatMessage(messages.noVersions) }}
-				</div>
-			</template>
-		</Table>
+	<InstalledJavaModal ref="installedJavaModal" @changed="reloadDefaults" />
 
-		<div class="flex flex-wrap gap-2 pt-3 border-t border-button-border">
+	<div class="flex flex-col gap-6">
+		<div
+			v-for="(javaVersion, index) in supportedJavaVersions"
+			:key="`java-${javaVersion}`"
+			class="flex flex-col gap-2.5"
+		>
+			<h2 class="m-0 text-lg font-semibold text-contrast" :class="{ 'mt-2': index !== 0 }">
+				{{ formatMessage(messages.javaLocation, { version: javaVersion }) }}
+			</h2>
+			<JavaSelector
+				:id="`java-selector-${javaVersion}`"
+				v-model="javaDefaults[javaVersion]"
+				:version="javaVersion"
+				@commit="saveDefault(javaVersion, $event)"
+			/>
+		</div>
+
+		<div class="flex flex-wrap gap-2 border-0 border-t border-solid border-button-border pt-5">
 			<ButtonStyled>
-				<button class="!shadow-none" :disabled="scanning" @click="runScan(false)">
-					<SearchIcon class="h-4 w-4" />
-					{{ scanning && scanMode === 'quick' ? formatMessage(messages.scanning) : formatMessage(messages.findJava) }}
+				<button type="button" class="!shadow-none" :disabled="scanning" @click="runScan(false)">
+					<SearchIcon aria-hidden="true" />
+					{{
+						scanning && scanMode === 'quick'
+							? formatMessage(messages.scanning)
+							: formatMessage(messages.findJava)
+					}}
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
-				<button class="!shadow-none" :disabled="scanning" @click="runScan(true)">
-					<ScanEyeIcon class="h-4 w-4" />
-					{{ scanning && scanMode === 'deep' ? formatMessage(messages.scanning) : formatMessage(messages.deepScan) }}
+				<button type="button" class="!shadow-none" :disabled="scanning" @click="runScan(true)">
+					<ScanEyeIcon aria-hidden="true" />
+					{{
+						scanning && scanMode === 'deep'
+							? formatMessage(messages.scanning)
+							: formatMessage(messages.deepScan)
+					}}
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
-				<button class="!shadow-none" :disabled="scanning" @click="handleManualAdd">
-					<FolderSearchIcon class="h-4 w-4" />
+				<button type="button" class="!shadow-none" :disabled="scanning" @click="handleManualAdd">
+					<FolderSearchIcon aria-hidden="true" />
 					{{ formatMessage(messages.manualAdd) }}
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
-				<button class="!shadow-none" :disabled="scanning" @click="downloadJavaModal?.show()">
-					<DownloadIcon class="h-4 w-4" />
+				<button
+					type="button"
+					class="!shadow-none"
+					:disabled="scanning"
+					@click="downloadJavaModal?.show()"
+				>
+					<DownloadIcon aria-hidden="true" />
 					{{ formatMessage(messages.downloadJava) }}
+				</button>
+			</ButtonStyled>
+			<ButtonStyled>
+				<button type="button" class="!shadow-none" @click="installedJavaModal?.show()">
+					<ListIcon aria-hidden="true" />
+					{{ formatMessage(messages.viewInstalled) }}
 				</button>
 			</ButtonStyled>
 		</div>
 
-		<div v-if="showDeepScanConfirm" class="flex flex-col gap-2 p-2 bg-warning/10 rounded-lg border border-warning text-sm">
+		<div
+			v-if="showDeepScanConfirm"
+			class="flex flex-col gap-2 rounded-lg border border-warning bg-warning/10 p-3 text-sm"
+		>
 			<span>{{ formatMessage(messages.deepScanConfirm) }}</span>
-			<div class="flex gap-2">
+			<div class="flex flex-wrap gap-2">
 				<ButtonStyled color="red">
-					<button @click="confirmDeepScan">{{ formatMessage(messages.scanAnyway) }}</button>
+					<button type="button" @click="confirmDeepScan">
+						{{ formatMessage(messages.scanAnyway) }}
+					</button>
 				</ButtonStyled>
 				<ButtonStyled type="outlined">
-					<button @click="showDeepScanConfirm = false">{{ formatMessage(messages.cancel) }}</button>
+					<button type="button" @click="showDeepScanConfirm = false">
+						{{ formatMessage(messages.cancel) }}
+					</button>
 				</ButtonStyled>
 			</div>
 		</div>
 
-		<div v-if="isWindows" class="flex flex-col gap-1 pt-2 border-t border-button-border">
-			<div class="flex items-center justify-between">
-				<div class="flex flex-col">
-					<span class="text-sm font-semibold">{{ formatMessage(messages.autoHighPerformanceMode) }}</span>
-					<span class="text-xs text-secondary">{{ formatMessage(messages.autoHighPerformanceModeDescription) }}</span>
+		<div v-if="isWindows" class="border-0 border-t border-solid border-button-border pt-5">
+			<div class="flex items-center justify-between gap-4">
+				<div class="flex min-w-0 flex-col gap-1">
+					<span class="text-sm font-semibold text-contrast">
+						{{ formatMessage(messages.autoHighPerformanceMode) }}
+					</span>
+					<span class="text-xs text-secondary">
+						{{ formatMessage(messages.autoHighPerformanceModeDescription) }}
+					</span>
 				</div>
 				<Toggle id="auto-java-high-performance-mode" v-model="autoHighPerformanceMode" />
 			</div>

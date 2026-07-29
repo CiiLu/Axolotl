@@ -2995,6 +2995,8 @@ function clampWorldCoordinate(value: number) {
 }
 
 .seed-map-toolbar {
+	position: relative;
+	z-index: 20;
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;

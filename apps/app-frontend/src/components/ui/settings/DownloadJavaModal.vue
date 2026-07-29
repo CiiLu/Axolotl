@@ -5,11 +5,22 @@ import {
 	commonMessages,
 	defineMessages,
 	injectNotificationManager,
+	NewModal,
 	useVIntl,
 } from '@modrinth/ui'
 import { ref } from 'vue'
 
-import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
+import AlibabaLogo from '@/assets/java-vendors/alibaba.png'
+import AmazonLogo from '@/assets/java-vendors/amazon.png'
+import AzulLogo from '@/assets/java-vendors/azul.png'
+import BellSoftLogo from '@/assets/java-vendors/bellsoft.png'
+import EclipseLogo from '@/assets/java-vendors/eclipse.png'
+import GraalVmLogo from '@/assets/java-vendors/graalvm.png'
+import IbmLogo from '@/assets/java-vendors/ibm.png'
+import JetBrainsLogo from '@/assets/java-vendors/jetbrains.png'
+import MicrosoftLogo from '@/assets/java-vendors/microsoft.png'
+import OracleLogo from '@/assets/java-vendors/oracle.png'
+import SapLogo from '@/assets/java-vendors/sap.png'
 import { trackEvent } from '@/helpers/analytics'
 import { download_java, list_java_feed_vendors, list_java_feed_versions } from '@/helpers/jre'
 
@@ -42,6 +53,20 @@ const messages = defineMessages({
 	},
 })
 
+const vendorBranding = {
+	Alibaba: { logo: AlibabaLogo, product: 'Dragonwell' },
+	Amazon: { logo: AmazonLogo, product: 'Corretto' },
+	Azul: { logo: AzulLogo, product: 'Zulu' },
+	BellSoft: { logo: BellSoftLogo, product: 'Liberica JDK' },
+	Eclipse: { logo: EclipseLogo, product: 'Temurin' },
+	GraalVM: { logo: GraalVmLogo, product: 'Community Edition' },
+	IBM: { logo: IbmLogo, product: 'Semeru' },
+	JetBrains: { logo: JetBrainsLogo, product: 'Runtime' },
+	Microsoft: { logo: MicrosoftLogo, product: 'OpenJDK' },
+	Oracle: { logo: OracleLogo, product: 'OpenJDK / GraalVM' },
+	SAP: { logo: SapLogo, product: 'SapMachine' },
+}
+
 const emit = defineEmits(['downloaded'])
 
 const modal = ref(null)
@@ -50,38 +75,50 @@ const vendors = ref([])
 const selectedVendor = ref(null)
 const versions = ref([])
 const downloading = ref(null)
+let requestId = 0
 
-defineExpose({
-	show: async () => {
-		selectedVendor.value = null
-		versions.value = []
-		downloading.value = null
-		loading.value = true
-		vendors.value = []
-		modal.value.show()
-		vendors.value = (await list_java_feed_vendors().catch(handleError)) || []
-		loading.value = false
-	},
-})
+async function show() {
+	const currentRequestId = ++requestId
+	selectedVendor.value = null
+	versions.value = []
+	downloading.value = null
+	loading.value = true
+	vendors.value = []
+	modal.value?.show()
+
+	const result = await list_java_feed_vendors().catch(handleError)
+	if (currentRequestId !== requestId) return
+
+	vendors.value = result || []
+	loading.value = false
+}
+
+defineExpose({ show })
 
 async function selectVendor(vendor) {
+	const currentRequestId = ++requestId
 	selectedVendor.value = vendor
 	loading.value = true
 	versions.value = []
+
 	const result = await list_java_feed_versions(vendor).catch(handleError)
+	if (currentRequestId !== requestId || selectedVendor.value !== vendor) return
+
 	versions.value = result || []
 	loading.value = false
 }
 
 function backToVendors() {
+	requestId += 1
 	selectedVendor.value = null
 	versions.value = []
+	loading.value = false
 }
 
 async function downloadVersion(info) {
 	downloading.value = info.major_version
 	trackEvent('JavaDownload', { vendor: info.vendor, version: info.major_version })
-	modal.value.hide()
+	modal.value?.hide()
 
 	const job = await download_java(info.vendor, info.major_version).catch(handleError)
 	downloading.value = null
@@ -91,91 +128,136 @@ async function downloadVersion(info) {
 	}
 }
 </script>
+
 <template>
-	<ModalWrapper
+	<NewModal
 		ref="modal"
 		:header="formatMessage(messages.downloadJava)"
-		:show-ad-on-close="false"
+		:closable="downloading === null"
+		max-width="720px"
+		width="min(720px, calc(100vw - 2rem))"
+		max-content-height="min(34rem, 70vh)"
+		scrollable
+		actions-divider
 	>
-		<div class="flex flex-col gap-4 min-h-32">
-			<!-- Step 1: Vendor list -->
+		<div class="flex min-h-40 flex-col gap-4">
 			<template v-if="!selectedVendor">
 				<span class="font-semibold text-contrast">{{ formatMessage(messages.selectVendor) }}</span>
-				<div v-if="loading" class="flex items-center gap-2 text-sm text-secondary py-4">
-					<SpinnerIcon class="animate-spin h-4 w-4" /> {{ formatMessage(messages.loading) }}
+				<div
+					v-if="loading"
+					class="flex min-h-32 items-center justify-center gap-2 text-sm text-secondary"
+					role="status"
+				>
+					<SpinnerIcon class="size-4 animate-spin" aria-hidden="true" />
+					{{ formatMessage(messages.loading) }}
 				</div>
-				<div v-else-if="vendors.length === 0" class="text-sm text-secondary py-4">
+				<div
+					v-else-if="vendors.length === 0"
+					class="flex min-h-32 items-center justify-center text-sm text-secondary"
+				>
 					{{ formatMessage(messages.noVendors) }}
 				</div>
-				<div v-else class="grid grid-cols-3 gap-2">
-					<button
-						v-for="vendor in vendors"
-						:key="vendor"
-						class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-button-border bg-button-bg hover:border-accent transition-colors cursor-pointer text-left"
-						@click="selectVendor(vendor)"
-					>
-						<div
-							class="w-8 h-8 flex items-center justify-center rounded-full bg-button-bg border border-button-border shrink-0"
+				<div v-else class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+					<ButtonStyled v-for="vendor in vendors" :key="vendor">
+						<button
+							type="button"
+							class="!h-16 !w-full !min-w-0 !justify-start !gap-3 !rounded-lg !px-3 !py-2 !text-left !shadow-none"
+							@click="selectVendor(vendor)"
 						>
-							<CoffeeIcon class="h-4 w-4" />
-						</div>
-						<span class="font-semibold text-sm">{{ vendor }}</span>
-					</button>
+							<span
+								class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md p-1"
+							>
+								<img
+									v-if="vendorBranding[vendor]"
+									:src="vendorBranding[vendor].logo"
+									alt=""
+									class="size-full object-contain"
+								/>
+								<CoffeeIcon v-else class="size-5 text-secondary" aria-hidden="true" />
+							</span>
+							<span class="flex min-w-0 flex-1 flex-col items-start text-left leading-tight">
+								<span class="w-full truncate text-left text-sm font-semibold text-contrast">{{ vendor }}</span>
+								<span
+									v-if="vendorBranding[vendor]"
+									class="w-full truncate text-left text-xs font-normal text-secondary"
+								>
+									{{ vendorBranding[vendor].product }}
+								</span>
+							</span>
+						</button>
+					</ButtonStyled>
 				</div>
 			</template>
 
-			<!-- Step 2: Version list -->
 			<template v-else>
-				<span class="font-semibold text-contrast">
-					{{ formatMessage(messages.selectVersion, { vendor: selectedVendor }) }}
-				</span>
-				<div v-if="loading" class="flex items-center gap-2 text-sm text-secondary py-4">
-					<SpinnerIcon class="animate-spin h-4 w-4" /> {{ formatMessage(messages.loading) }}
+				<div class="flex items-center gap-3">
+					<span
+						class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md p-1"
+					>
+						<img
+							v-if="vendorBranding[selectedVendor]"
+							:src="vendorBranding[selectedVendor].logo"
+							alt=""
+							class="size-full object-contain"
+						/>
+						<CoffeeIcon v-else class="size-5 text-secondary" aria-hidden="true" />
+					</span>
+					<span class="min-w-0 font-semibold text-contrast">
+						{{ formatMessage(messages.selectVersion, { vendor: selectedVendor }) }}
+					</span>
 				</div>
-				<div v-else-if="versions.length === 0" class="text-sm text-secondary py-4">
+				<div
+					v-if="loading"
+					class="flex min-h-32 items-center justify-center gap-2 text-sm text-secondary"
+					role="status"
+				>
+					<SpinnerIcon class="size-4 animate-spin" aria-hidden="true" />
+					{{ formatMessage(messages.loading) }}
+				</div>
+				<div
+					v-else-if="versions.length === 0"
+					class="flex min-h-32 items-center justify-center text-sm text-secondary"
+				>
 					{{ formatMessage(messages.noVersions) }}
 				</div>
-				<div v-else class="grid grid-cols-4 gap-2">
-					<button
-						v-for="info in versions"
-						:key="info.major_version"
-						class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-button-border bg-button-bg hover:border-accent transition-colors cursor-pointer"
-						:class="{ 'opacity-50 pointer-events-none': downloading !== null }"
-						:disabled="downloading !== null"
-						@click="downloadVersion(info)"
-					>
-						<SpinnerIcon
-							v-if="downloading === info.major_version"
-							class="animate-spin h-4 w-4 shrink-0"
-						/>
-						<CoffeeIcon v-else class="h-4 w-4 shrink-0" />
-						<span class="font-semibold text-sm tabular-nums">{{
-							formatMessage(messages.versionLabel, { version: info.major_version })
-						}}</span>
-					</button>
+				<div v-else class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+					<ButtonStyled v-for="info in versions" :key="info.major_version">
+						<button
+							type="button"
+							class="!h-12 !w-full !min-w-0 !rounded-lg !px-3 !shadow-none"
+							:disabled="downloading !== null"
+							@click="downloadVersion(info)"
+						>
+							<SpinnerIcon
+								v-if="downloading === info.major_version"
+								class="animate-spin"
+								aria-hidden="true"
+							/>
+							<CoffeeIcon v-else aria-hidden="true" />
+							<span class="truncate text-sm font-semibold tabular-nums">
+								{{ formatMessage(messages.versionLabel, { version: info.major_version }) }}
+							</span>
+						</button>
+					</ButtonStyled>
 				</div>
 			</template>
+		</div>
 
-			<div class="flex justify-end gap-2 pt-2 border-t border-button-border">
+		<template #actions>
+			<div class="flex flex-wrap justify-end gap-2">
 				<ButtonStyled v-if="selectedVendor" type="outlined">
-					<button
-						class="!shadow-none !border-surface-4 !border"
-						:disabled="downloading !== null"
-						@click="backToVendors"
-					>
-						<ArrowLeftIcon /> {{ formatMessage(messages.back) }}
+					<button type="button" :disabled="downloading !== null" @click="backToVendors">
+						<ArrowLeftIcon aria-hidden="true" />
+						{{ formatMessage(messages.back) }}
 					</button>
 				</ButtonStyled>
 				<ButtonStyled type="outlined">
-					<button
-						class="!shadow-none !border-surface-4 !border"
-						:disabled="downloading !== null"
-						@click="modal.hide()"
-					>
-						<XIcon /> {{ formatMessage(commonMessages.cancelButton) }}
+					<button type="button" :disabled="downloading !== null" @click="modal?.hide()">
+						<XIcon aria-hidden="true" />
+						{{ formatMessage(commonMessages.cancelButton) }}
 					</button>
 				</ButtonStyled>
 			</div>
-		</div>
-	</ModalWrapper>
+		</template>
+	</NewModal>
 </template>

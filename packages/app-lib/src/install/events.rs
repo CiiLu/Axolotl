@@ -3,6 +3,7 @@ use super::model::{
     InstallJobState, InstallPhaseDetails, InstallPhaseId, InstallProgress,
 };
 use super::store;
+use std::collections::HashSet;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
@@ -27,6 +28,7 @@ struct InstallProgressReporterState {
     last_persisted_at: Instant,
     last_persisted_progress: Option<(InstallPhaseId, u64)>,
     initialized_from_store: bool,
+    postponed_java_versions: HashSet<u32>,
 }
 
 #[derive(serde::Serialize)]
@@ -66,6 +68,7 @@ impl InstallProgressReporter {
                             last_persisted_at: Instant::now(),
                             last_persisted_progress: None,
                             initialized_from_store: false,
+                            postponed_java_versions: HashSet::new(),
                         }));
                     entry.insert(Arc::downgrade(&state));
                     state
@@ -78,6 +81,7 @@ impl InstallProgressReporter {
                         last_persisted_at: Instant::now(),
                         last_persisted_progress: None,
                         initialized_from_store: false,
+                        postponed_java_versions: HashSet::new(),
                     }));
                 entry.insert(Arc::downgrade(&state));
                 state
@@ -115,6 +119,22 @@ impl InstallProgressReporter {
 
     pub async fn clear_context(&self) -> crate::Result<()> {
         self.update_context(None, true).await
+    }
+
+    pub async fn is_java_download_postponed(&self, version: u32) -> bool {
+        self.state
+            .lock()
+            .await
+            .postponed_java_versions
+            .contains(&version)
+    }
+
+    pub async fn postpone_java_download(&self, version: u32) {
+        self.state
+            .lock()
+            .await
+            .postponed_java_versions
+            .insert(version);
     }
 
     async fn sync_latest(
@@ -434,6 +454,26 @@ mod tests {
         let second = InstallProgressReporter::new(job_id, state);
 
         assert!(Arc::ptr_eq(&first.state, &second.state));
+    }
+
+    #[tokio::test]
+    async fn postponed_java_download_is_shared_by_job_reporters() {
+        let job_id = Uuid::new_v4();
+        let state = InstallJobState::new(InstallRequest::CreateInstance {
+            name: "Test".to_string(),
+            game_version: "1.21.1".to_string(),
+            loader: ModLoader::Vanilla,
+            loader_version: None,
+            icon_path: None,
+            link: InstanceLink::Unmanaged,
+        });
+        let first = InstallProgressReporter::new(job_id, state.clone());
+        let second = InstallProgressReporter::new(job_id, state);
+
+        first.postpone_java_download(21).await;
+
+        assert!(second.is_java_download_postponed(21).await);
+        assert!(!second.is_java_download_postponed(17).await);
     }
 
     #[test]

@@ -33,8 +33,96 @@ use xz2::read::XzDecoder;
 
 pub async fn get_java_versions() -> crate::Result<Vec<JavaVersion>> {
     let state = State::get().await?;
+    register_managed_java_versions(&state).await?;
 
     JavaVersion::get_all(&state.pool).await
+}
+
+async fn register_managed_java_versions(state: &State) -> crate::Result<()> {
+    let root = state.directories.java_versions_dir();
+    let mut entries = match tokio::fs::read_dir(&root).await {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(());
+        }
+        Err(error) => return Err(error.into()),
+    };
+
+    while let Some(entry) = entries.next_entry().await? {
+        let install_root = entry.path();
+        if !entry.file_type().await?.is_dir()
+            || jre::is_java_install_staging_path(&install_root)
+        {
+            continue;
+        }
+
+        let mut candidates = vec![
+            install_root.join("bin").join(jre::JAVA_BIN),
+            install_root.join("Contents/Home/bin").join(jre::JAVA_BIN),
+            install_root
+                .join("jre.bundle/Contents/Home/bin")
+                .join(jre::JAVA_BIN),
+        ];
+        let legacy_pointer = install_root.join("bin");
+        if legacy_pointer.is_file()
+            && let Ok(relative) =
+                tokio::fs::read_to_string(&legacy_pointer).await
+        {
+            let relative = relative.trim();
+            if !relative.is_empty() {
+                candidates.push(install_root.join(relative));
+            }
+        }
+
+        for candidate in candidates {
+            let Ok(java) = jre::check_java_at_filepath(&candidate).await else {
+                continue;
+            };
+            let set_default = entry
+                .file_name()
+                .to_string_lossy()
+                .rsplit_once("-jdk-")
+                .and_then(|(_, version)| version.parse::<u32>().ok())
+                == Some(java.parsed_version)
+                && JavaVersion::get(java.parsed_version, &state.pool)
+                    .await?
+                    .is_none();
+            let mut transaction = state.pool.begin().await?;
+            java.upsert(&mut *transaction).await?;
+            if set_default {
+                JavaVersion::set_default(
+                    java.parsed_version,
+                    &java.path,
+                    &mut *transaction,
+                )
+                .await?;
+            }
+            if let Some(discovered) = DiscoveredJava::from_java(java) {
+                discovered.upsert(&mut *transaction).await?;
+            }
+            transaction.commit().await?;
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn get_java_default_versions() -> crate::Result<Vec<JavaVersion>> {
+    let state = State::get().await?;
+    register_managed_java_versions(&state).await?;
+
+    JavaVersion::get_all_defaults(&state.pool).await
+}
+
+#[cfg(feature = "tauri")]
+pub fn respond_to_java_download_confirmation(
+    request_id: uuid::Uuid,
+    approved: bool,
+) -> bool {
+    crate::event::emit::respond_to_java_download_confirmation(
+        request_id, approved,
+    )
 }
 
 /// Lists available Java major versions from the specified distribution API.
@@ -82,10 +170,48 @@ pub async fn set_java_version(java_version: JavaVersion) -> crate::Result<()> {
     Ok(())
 }
 
+pub async fn set_java_default_version(
+    major_version: u32,
+    path: String,
+) -> crate::Result<JavaVersion> {
+    let java_version = check_jre(PathBuf::from(path)).await?;
+    if java_version.parsed_version != major_version {
+        return Err(crate::ErrorKind::InputError(format!(
+            "Java {} cannot be used as the Java {major_version} default",
+            java_version.parsed_version
+        ))
+        .into());
+    }
+
+    let state = State::get().await?;
+    let mut transaction = state.pool.begin().await?;
+    java_version.upsert(&mut *transaction).await?;
+    JavaVersion::set_default(
+        major_version,
+        &java_version.path,
+        &mut *transaction,
+    )
+    .await?;
+    transaction.commit().await?;
+
+    Ok(java_version)
+}
+
+pub async fn remove_java_default_version(
+    major_version: u32,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    JavaVersion::remove_default(major_version, &state.pool).await
+}
+
 /// Removes a configured Java version by its executable path.
 pub async fn remove_java_version(path: String) -> crate::Result<()> {
     let state = State::get().await?;
-    JavaVersion::delete(&path, &state.pool).await
+    let mut transaction = state.pool.begin().await?;
+    JavaVersion::remove_default_for_path(&path, &mut *transaction).await?;
+    JavaVersion::delete(&path, &mut *transaction).await?;
+    transaction.commit().await?;
+    Ok(())
 }
 
 const JAVA_RESCAN_DEBOUNCE: Duration = Duration::from_secs(60);
@@ -100,7 +226,10 @@ pub async fn find_filtered_jres(
     force_fresh: bool,
     exhaustive: bool,
 ) -> crate::Result<Vec<JavaVersion>> {
-    let jres = get_available_jres(full_scan, force_fresh, exhaustive).await?;
+    get_available_jres(full_scan, force_fresh, exhaustive).await?;
+
+    let state = State::get().await?;
+    let jres = JavaVersion::get_all(&state.pool).await?;
 
     Ok(if let Some(java_version) = java_version {
         jres.into_iter()
@@ -292,6 +421,26 @@ pub async fn find_cached_java(
 pub async fn find_java_for_version(
     major_version: u32,
 ) -> crate::Result<Option<JavaVersion>> {
+    let state = State::get().await?;
+    if let Some(configured) =
+        JavaVersion::get(major_version, &state.pool).await?
+    {
+        let path = PathBuf::from(&configured.path);
+        if let Ok(java) = jre::check_java_at_filepath(&path).await
+            && java.parsed_version == major_version
+        {
+            java.upsert(&state.pool).await?;
+            return Ok(Some(java));
+        }
+
+        tracing::warn!(
+            major_version,
+            path = %configured.path,
+            "Configured Java default is no longer valid"
+        );
+        JavaVersion::remove_default(major_version, &state.pool).await?;
+    }
+
     if let Some(java) = find_cached_java(major_version).await? {
         return Ok(Some(java));
     }
@@ -302,22 +451,24 @@ pub async fn find_java_for_version(
         .find(|java| java.parsed_version == major_version))
 }
 
-pub async fn auto_install_java(java_version: u32) -> crate::Result<PathBuf> {
-    auto_install_java_with_loading(java_version, true).await
+pub async fn auto_install_java(
+    java_version: u32,
+) -> crate::Result<Option<PathBuf>> {
+    auto_install_java_inner(java_version, true, None, false).await
 }
 
 pub async fn auto_install_java_with_loading(
     java_version: u32,
     show_loading: bool,
-) -> crate::Result<PathBuf> {
-    auto_install_java_inner(java_version, show_loading, None).await
+) -> crate::Result<Option<PathBuf>> {
+    auto_install_java_inner(java_version, show_loading, None, true).await
 }
 
 pub async fn auto_install_java_with_reporter(
     java_version: u32,
     reporter: InstallProgressReporter,
-) -> crate::Result<PathBuf> {
-    auto_install_java_inner(java_version, false, Some(reporter)).await
+) -> crate::Result<Option<PathBuf>> {
+    auto_install_java_inner(java_version, false, Some(reporter), true).await
 }
 
 const JAVA_INSTALL_STEPS: u64 = 4;
@@ -476,13 +627,39 @@ fn java_step_progress(current: u64) -> InstallProgress {
     }
 }
 
+async fn confirm_java_download(
+    java_version: u32,
+    reporter: Option<&InstallProgressReporter>,
+) -> crate::Result<bool> {
+    if let Some(reporter) = reporter
+        && reporter.is_java_download_postponed(java_version).await
+    {
+        return Ok(false);
+    }
+
+    let approved =
+        crate::event::emit::request_java_download_confirmation(java_version)
+            .await?;
+    if !approved && let Some(reporter) = reporter {
+        reporter.postpone_java_download(java_version).await;
+    }
+
+    Ok(approved)
+}
+
 async fn auto_install_java_inner(
     java_version: u32,
     show_loading: bool,
     reporter: Option<InstallProgressReporter>,
-) -> crate::Result<PathBuf> {
+    confirm_download: bool,
+) -> crate::Result<Option<PathBuf>> {
     let state = State::get().await?;
     let _install_guard = JAVA_INSTALL_LOCK.lock().await;
+    if confirm_download
+        && !confirm_java_download(java_version, reporter.as_ref()).await?
+    {
+        return Ok(None);
+    }
 
     let loading_bar = if show_loading {
         Some(
@@ -518,7 +695,7 @@ async fn auto_install_java_inner(
     )
     .await?
     {
-        return Ok(path);
+        return Ok(Some(path));
     }
 
     install_azul_runtime(
@@ -528,6 +705,7 @@ async fn auto_install_java_inner(
         reporter.as_ref(),
     )
     .await
+    .map(Some)
 }
 
 fn mojang_runtime_component(java_version: u32) -> Option<&'static str> {
@@ -1666,6 +1844,18 @@ async fn download_java_from_feed_inner(
     .await?;
 
     let result = check_jre(executable).await?;
+    let mut transaction = state.pool.begin().await?;
+    result.upsert(&mut *transaction).await?;
+    JavaVersion::set_default(
+        result.parsed_version,
+        &result.path,
+        &mut *transaction,
+    )
+    .await?;
+    if let Some(discovered) = DiscoveredJava::from_java(result.clone()) {
+        discovered.upsert(&mut *transaction).await?;
+    }
+    transaction.commit().await?;
 
     // Complete the remaining 10 % of the bar
     if let Some(loading_bar) = &loading_bar {
