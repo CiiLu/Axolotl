@@ -140,12 +140,16 @@ fn main() {
                 InlinedPlugin::new()
                     .commands(&[
                         "get_java_versions",
+                        "get_java_default_versions",
                         "set_java_version",
+                        "set_java_default_version",
+                        "remove_java_default_version",
                         "remove_java_version",
                         "jre_find_filtered_jres",
                         "jre_get_jre",
                         "jre_test_jre",
                         "jre_auto_install_java",
+                        "jre_respond_to_download_confirmation",
                         "jre_get_max_memory",
                         "jre_get_memory_status",
                         "jre_optimize_memory",

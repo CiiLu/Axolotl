@@ -1778,7 +1778,7 @@ provideContentManager({
 			? {
 					...item.owner,
 					link:
-							item.origin_provider !== 'modrinth' || item.owner.id.startsWith('local:')
+						item.origin_provider !== 'modrinth' || item.owner.id.startsWith('local:')
 							? undefined
 							: () => openUrl(`https://modrinth.com/${item.owner!.type}/${item.owner!.id}`),
 				}

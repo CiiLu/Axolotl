@@ -369,7 +369,7 @@ pub(crate) async fn install_optifine_mod(
         .java_version
         .as_ref()
         .map_or(8, |java| java.major_version);
-    let java = crate::state::JavaVersion::get(java_key, &state.pool)
+    let java = crate::api::jre::find_java_for_version(java_key)
         .await?
         .ok_or_else(|| {
             crate::ErrorKind::LauncherError(format!(

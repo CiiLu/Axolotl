@@ -21,6 +21,9 @@ import {
 } from '@modrinth/ui'
 import { arrayBufferToBase64 } from '@modrinth/utils'
 import { useQuery } from '@tanstack/vue-query'
+import { invoke } from '@tauri-apps/api/core'
+import type { DragDropEvent } from '@tauri-apps/api/webview'
+import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { computedAsync } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
@@ -42,7 +45,6 @@ import {
 	flush_pending_skin_change_for_profile,
 	get_available_capes,
 	get_available_skins,
-	get_dragged_skin_data,
 	get_normalized_skin_texture,
 	normalize_skin_texture,
 	remove_custom_skin,
@@ -52,11 +54,7 @@ import {
 import { hasPride26Badge } from '@/helpers/user-campaigns.ts'
 import { handleSevereError } from '@/store/error'
 import { useTheming } from '@/store/state'
-import { getCurrentWebview } from '@tauri-apps/api/webview'
-import type { DragDropEvent } from '@tauri-apps/api/webview'
-import { invoke } from '@tauri-apps/api/core'
 
-type UnlistenFn = () => void
 type VirtualSkinSectionListExpose = {
 	getAddSkinButtonElement: () => HTMLElement | null | undefined
 }
@@ -865,19 +863,6 @@ function isSkinFileDrag(event: DragEvent) {
 	)
 }
 
-function isPositionOverAddSkinButton(position: { x: number; y: number }) {
-	const element = skinSectionList.value?.getAddSkinButtonElement()
-
-	if (!element) {
-		return false
-	}
-
-	const { x, y } = position
-	const rect = element.getBoundingClientRect()
-
-	return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
-}
-
 function onAddSkinDragOver(event: DragEvent) {
 	if (isSkinManagementReadOnly.value) return
 
@@ -1132,7 +1117,11 @@ await loadSkins()
 				:active-index="skinListTab === 'saved' ? 0 : 1"
 				:links="skinListTabLinks"
 				mode="local"
-				@tab-click="(index: number) => { skinListTab = index === 0 ? 'saved' : 'default' }"
+				@tab-click="
+					(index: number) => {
+						skinListTab = index === 0 ? 'saved' : 'default'
+					}
+				"
 			/>
 			<VirtualSkinSectionList
 				ref="skinSectionList"

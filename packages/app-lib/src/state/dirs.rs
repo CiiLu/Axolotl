@@ -466,24 +466,41 @@ impl DirectoryInfo {
                 }
 
                 let java_versions = JavaVersion::get_all(exec).await?;
-                for mut java_version in java_versions {
-                    java_version.path = java_version.path.replace(
+                for java_version in java_versions {
+                    let new_java_path = java_version.path.replace(
                         prev_custom_dir,
                         new_dir.trim_end_matches('/').trim_end_matches('\\'),
                     );
                     if crate::util::jre::is_java_install_staging_path(
-                        Path::new(&java_version.path),
+                        Path::new(&new_java_path),
                     ) {
                         tracing::warn!(
-                            java = %java_version.path,
+                            java = %new_java_path,
                             "Dropping incomplete Java installation during directory migration"
                         );
-                        JavaVersion::remove(java_version.parsed_version, exec)
-                            .await?;
+                        JavaVersion::delete(&java_version.path, exec).await?;
                         continue;
                     }
-                    java_version.upsert(exec).await?
+                    if new_java_path != java_version.path {
+                        JavaVersion::update_path(
+                            &java_version.path,
+                            &new_java_path,
+                            exec,
+                        )
+                        .await?;
+                    }
                 }
+                sqlx::query(
+                    "
+                    UPDATE discovered_javas
+                    SET path = replace(path, $1, $2)
+                    WHERE path LIKE $1 || '%'
+                    ",
+                )
+                .bind(prev_custom_dir)
+                .bind(new_dir.trim_end_matches('/').trim_end_matches('\\'))
+                .execute(exec)
+                .await?;
 
                 let new_dir = new_dir
                     .trim_end_matches('/')

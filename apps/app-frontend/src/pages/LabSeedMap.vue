@@ -2995,6 +2995,8 @@ function clampWorldCoordinate(value: number) {
 }
 
 .seed-map-toolbar {
+	position: relative;
+	z-index: 20;
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
@@ -3192,26 +3194,10 @@ function clampWorldCoordinate(value: number) {
 
 :global(html.dark-mode .v-popper__popper.seed-map-history-popout),
 :global(html.oled-mode .v-popper__popper.seed-map-history-popout) {
-	--seed-history-panel-bg: color-mix(
-		in srgb,
-		var(--surface-4) 88%,
-		var(--color-text-primary)
-	);
-	--seed-history-row-bg: color-mix(
-		in srgb,
-		var(--surface-5) 82%,
-		var(--color-text-primary)
-	);
-	--seed-history-row-hover-bg: color-mix(
-		in srgb,
-		var(--surface-5) 70%,
-		var(--color-text-primary)
-	);
-	--seed-history-border: color-mix(
-		in srgb,
-		var(--surface-5) 80%,
-		var(--color-text-primary)
-	);
+	--seed-history-panel-bg: color-mix(in srgb, var(--surface-4) 88%, var(--color-text-primary));
+	--seed-history-row-bg: color-mix(in srgb, var(--surface-5) 82%, var(--color-text-primary));
+	--seed-history-row-hover-bg: color-mix(in srgb, var(--surface-5) 70%, var(--color-text-primary));
+	--seed-history-border: color-mix(in srgb, var(--surface-5) 80%, var(--color-text-primary));
 	--seed-history-shadow: 0 18px 48px color-mix(in srgb, var(--surface-5) 38%, transparent);
 }
 

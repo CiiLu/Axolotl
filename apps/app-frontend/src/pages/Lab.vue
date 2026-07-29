@@ -14,7 +14,7 @@ import { RouterLink } from 'vue-router'
 
 import gradientTextToolCover from '@/assets/lab/gradient-text-tool-cover.png'
 import seedMapToolCover from '@/assets/lab/seed-map-tool-cover.png'
-import { type LabToolDefinition,labTools } from '@/lab/registry'
+import { type LabToolDefinition, labTools } from '@/lab/registry'
 
 type LabCategory = 'all' | LabToolDefinition['category']
 

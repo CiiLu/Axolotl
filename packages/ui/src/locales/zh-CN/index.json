@@ -680,20 +680,11 @@
   "console.delete-modal.title": {
     "defaultMessage": "删除日志文件"
   },
-  "console.filter.all": {
-    "defaultMessage": "全部"
-  },
-  "console.filter.debug": {
-    "defaultMessage": "调试"
-  },
   "console.filter.error": {
     "defaultMessage": "错误"
   },
   "console.filter.info": {
     "defaultMessage": "信息"
-  },
-  "console.filter.trace": {
-    "defaultMessage": "跟踪"
   },
   "console.filter.warn": {
     "defaultMessage": "警告"
@@ -1178,13 +1169,13 @@
   "creation-flow.modal.final-config.world-type.superflat": {
     "defaultMessage": "超平坦"
   },
-  "creation-flow.modal.import-instance.drop-zone.click": {
-    "defaultMessage": "点击选择文件，或拖拽任意文件/文件夹"
-  },
-  "creation-flow.modal.import-instance.import-prompt": {
-    "defaultMessage": "拖拽启动器文件夹、整合包文件或 .minecraft 文件夹即可一键导入实例"
-  },
-  "creation-flow.modal.setup-type.instance.description": {
+	"creation-flow.modal.import-instance.import-prompt": {
+		"defaultMessage": "拖拽启动器文件夹、整合包文件或 .minecraft 文件夹即可一键导入实例"
+	},
+	"creation-flow.modal.import-instance.select-file": {
+		"defaultMessage": "选择要导入的文件或文件夹"
+	},
+	"creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "实例是带有特定加载器、游戏版本和模组的一套 Minecraft 配置。"
   },
   "creation-flow.modal.setup-type.option.custom-setup.description": {

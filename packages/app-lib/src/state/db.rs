@@ -20,6 +20,8 @@ const PROVIDER_QUALIFIED_CONTENT_MIGRATION_VERSION: i64 = 20260728100000;
 #[cfg(test)]
 const RECONCILE_PROVIDER_QUALIFIED_CONTENT_MIGRATION_VERSION: i64 =
     20260728110000;
+#[cfg(test)]
+const JAVA_DEFAULT_VERSIONS_MIGRATION_VERSION: i64 = 20260729110000;
 
 // This migration was changed by the launcher rebrand after it had already
 // shipped. Keep the checksums of the original LF and CRLF variants so existing
@@ -599,6 +601,34 @@ mod tests {
             )
     }
 
+    fn java_default_versions_migration() -> &'static Migration {
+        MIGRATOR
+            .iter()
+            .find(|migration| {
+                migration.version == JAVA_DEFAULT_VERSIONS_MIGRATION_VERSION
+            })
+            .expect("Java default versions migration should be embedded")
+    }
+
+    async fn create_previous_java_versions_schema(pool: &Pool<Sqlite>) {
+        sqlx::raw_sql(
+            "
+            CREATE TABLE java_versions (
+                major_version INTEGER NOT NULL,
+                full_version TEXT NOT NULL,
+                architecture TEXT NOT NULL,
+                path TEXT NOT NULL PRIMARY KEY,
+                distribution TEXT
+            );
+            CREATE INDEX idx_java_versions_major_version
+                ON java_versions(major_version);
+            ",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
     fn checksum(contents: &[u8]) -> Vec<u8> {
         Sha384::digest(contents).to_vec()
     }
@@ -673,6 +703,118 @@ mod tests {
                 migration.version
             );
         }
+    }
+
+    #[tokio::test]
+    async fn creates_java_default_versions_for_a_fresh_database() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let defaults: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM java_default_versions")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(defaults, 0);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn upgrades_multiple_java_installations_with_stable_defaults() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        create_previous_java_versions_schema(&pool).await;
+        sqlx::raw_sql(
+            "
+            INSERT INTO java_versions (
+                major_version, full_version, architecture, path, distribution
+            ) VALUES
+                (21, '21.0.7', 'aarch64', '/java/zulu-21', 'Azul'),
+                (21, '21.0.8', 'aarch64', '/java/temurin-21', 'Eclipse'),
+                (17, '17.0.12', 'x86_64', '/java/custom-17', 'Unknown / Custom'),
+                (8, '1.8.0_402', 'x86_64', '/java/java-8', NULL);
+            ",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::raw_sql(java_default_versions_migration().sql.as_ref())
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let defaults: Vec<(i64, String)> = sqlx::query_as(
+            "SELECT major_version, path FROM java_default_versions
+             ORDER BY major_version DESC",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            defaults,
+            vec![
+                (21, "/java/temurin-21".to_string()),
+                (17, "/java/custom-17".to_string()),
+                (8, "/java/java-8".to_string()),
+            ]
+        );
+
+        let mismatched_default = sqlx::query(
+            "INSERT INTO java_default_versions (major_version, path)
+             VALUES (25, '/java/java-8')",
+        )
+        .execute(&pool)
+        .await;
+        assert!(mismatched_default.is_err());
+
+        sqlx::query(
+            "DELETE FROM java_versions WHERE path = '/java/temurin-21'",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let java_21_default: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM java_default_versions
+             WHERE major_version = 21",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(java_21_default, 0);
+
+        let remaining_java_versions: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM java_versions")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(remaining_java_versions, 3);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
     }
 
     #[tokio::test]

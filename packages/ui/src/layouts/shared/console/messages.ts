@@ -107,7 +107,8 @@ export const localFindingMessages = defineMessages({
 	},
 	javaTooNewAction: {
 		id: 'console.crash.finding.java-too-new.action',
-		defaultMessage: 'Select the Java major version expected by this Minecraft and mod-loader version.',
+		defaultMessage:
+			'Select the Java major version expected by this Minecraft and mod-loader version.',
 	},
 	javaIncompatibleTitle: {
 		id: 'console.crash.finding.java-incompatible.title',
@@ -140,7 +141,8 @@ export const localFindingMessages = defineMessages({
 	},
 	java11RequiredAction: {
 		id: 'console.crash.finding.java-11-required.action',
-		defaultMessage: 'Select Java 11 or install a Mod build compatible with the selected Java version.',
+		defaultMessage:
+			'Select Java 11 or install a Mod build compatible with the selected Java version.',
 	},
 	forgeIncompleteTitle: {
 		id: 'console.crash.finding.forge-incomplete.title',
@@ -182,7 +184,8 @@ export const localFindingMessages = defineMessages({
 	},
 	modIdLimitAction: {
 		id: 'console.crash.finding.mod-id-limit.action',
-		defaultMessage: 'Remove unused Mods or split the installation into smaller compatible profiles.',
+		defaultMessage:
+			'Remove unused Mods or split the installation into smaller compatible profiles.',
 	},
 	forgeErrorTitle: {
 		id: 'console.crash.finding.forge-error.title',
@@ -190,7 +193,8 @@ export const localFindingMessages = defineMessages({
 	},
 	forgeErrorAction: {
 		id: 'console.crash.finding.forge-error.action',
-		defaultMessage: 'Review the Forge failure evidence and test the named Mod without recent changes.',
+		defaultMessage:
+			'Review the Forge failure evidence and test the named Mod without recent changes.',
 	},
 	modLoaderErrorTitle: {
 		id: 'console.crash.finding.mod-loader-error.title',
@@ -207,7 +211,8 @@ export const localFindingMessages = defineMessages({
 	},
 	modLoaderFailureAction: {
 		id: 'console.crash.finding.mod-loader-failure.action',
-		defaultMessage: 'Repair the loader installation and follow the failure message shown in the evidence.',
+		defaultMessage:
+			'Repair the loader installation and follow the failure message shown in the evidence.',
 	},
 	stackAnalysisTitle: {
 		id: 'console.crash.finding.stack-analysis.title',
@@ -284,7 +289,8 @@ export const localFindingMessages = defineMessages({
 	},
 	resourcePackAction: {
 		id: 'console.crash.finding.resource-pack.action',
-		defaultMessage: 'Disable the active shader and resource packs, then re-enable them one at a time.',
+		defaultMessage:
+			'Disable the active shader and resource packs, then re-enable them one at a time.',
 	},
 	largeResourcePackTitle: {
 		id: 'console.crash.finding.large-resource-pack.title',
@@ -300,7 +306,8 @@ export const localFindingMessages = defineMessages({
 	},
 	shadersOptifineAction: {
 		id: 'console.crash.finding.shaders-optifine.action',
-		defaultMessage: 'Remove the separate Shaders Mod because OptiFine already provides shader support.',
+		defaultMessage:
+			'Remove the separate Shaders Mod because OptiFine already provides shader support.',
 	},
 	multipleForgeVersionsTitle: {
 		id: 'console.crash.finding.multiple-forge-versions.title',
@@ -308,7 +315,8 @@ export const localFindingMessages = defineMessages({
 	},
 	multipleForgeVersionsAction: {
 		id: 'console.crash.finding.multiple-forge-versions.action',
-		defaultMessage: 'Repair the instance so its version profile contains only one Forge installation.',
+		defaultMessage:
+			'Repair the instance so its version profile contains only one Forge installation.',
 	},
 	forgeJavaIncompatibleTitle: {
 		id: 'console.crash.finding.forge-java-incompatible.title',
@@ -332,7 +340,8 @@ export const localFindingMessages = defineMessages({
 	},
 	optifineWorldAction: {
 		id: 'console.crash.finding.optifine-world.action',
-		defaultMessage: 'Remove OptiFine or install a build compatible with this Minecraft and Forge version.',
+		defaultMessage:
+			'Remove OptiFine or install a build compatible with this Minecraft and Forge version.',
 	},
 	nightconfigBugTitle: {
 		id: 'console.crash.finding.nightconfig-bug.title',
@@ -366,7 +375,8 @@ export const localFindingMessages = defineMessages({
 	},
 	definiteModFabricAction: {
 		id: 'console.crash.finding.definite-mod-fabric.action',
-		defaultMessage: 'Update or temporarily remove the Mod identified by the Fabric loader evidence.',
+		defaultMessage:
+			'Update or temporarily remove the Mod identified by the Fabric loader evidence.',
 	},
 	intelDriverTitle: {
 		id: 'console.crash.finding.intel-driver.title',
@@ -374,7 +384,8 @@ export const localFindingMessages = defineMessages({
 	},
 	intelDriverAction: {
 		id: 'console.crash.finding.intel-driver.action',
-		defaultMessage: 'Install a current Intel graphics driver or run Minecraft on another available GPU.',
+		defaultMessage:
+			'Install a current Intel graphics driver or run Minecraft on another available GPU.',
 	},
 	amdDriverTitle: {
 		id: 'console.crash.finding.amd-driver.title',
@@ -382,7 +393,8 @@ export const localFindingMessages = defineMessages({
 	},
 	amdDriverAction: {
 		id: 'console.crash.finding.amd-driver.action',
-		defaultMessage: 'Clean-install a current AMD graphics driver and retry without graphics overlays.',
+		defaultMessage:
+			'Clean-install a current AMD graphics driver and retry without graphics overlays.',
 	},
 	nvidiaDriverTitle: {
 		id: 'console.crash.finding.nvidia-driver.title',
@@ -390,7 +402,8 @@ export const localFindingMessages = defineMessages({
 	},
 	nvidiaDriverAction: {
 		id: 'console.crash.finding.nvidia-driver.action',
-		defaultMessage: 'Clean-install a current NVIDIA graphics driver and retry without graphics overlays.',
+		defaultMessage:
+			'Clean-install a current NVIDIA graphics driver and retry without graphics overlays.',
 	},
 	manualDebugCrashTitle: {
 		id: 'console.crash.finding.manual-debug-crash.title',
@@ -406,7 +419,8 @@ export const localFindingMessages = defineMessages({
 	},
 	suspectedModAction: {
 		id: 'console.crash.finding.suspected-mod.action',
-		defaultMessage: 'Update or temporarily remove the suspected and locally matched Mods, then retry.',
+		defaultMessage:
+			'Update or temporarily remove the suspected and locally matched Mods, then retry.',
 	},
 	modInitializationTitle: {
 		id: 'console.crash.finding.mod-initialization.title',
@@ -414,7 +428,8 @@ export const localFindingMessages = defineMessages({
 	},
 	modInitializationAction: {
 		id: 'console.crash.finding.mod-initialization.action',
-		defaultMessage: 'Update the named Mod and verify that all of its required dependencies are installed.',
+		defaultMessage:
+			'Update the named Mod and verify that all of its required dependencies are installed.',
 	},
 	specificBlockTitle: {
 		id: 'console.crash.finding.specific-block.title',

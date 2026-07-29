@@ -1,13 +1,20 @@
 <template>
 	<NewModal ref="modal" max-width="560px" :closable="true" @hide="onHide">
 		<template #title>
-			<span class="text-contrast">{{ formatMessage(messages.title, { launcherName: primaryLauncherName }) }}</span>
+			<span class="text-contrast">{{
+				formatMessage(messages.title, { launcherName: primaryLauncherName })
+			}}</span>
 		</template>
 
 		<div class="flex flex-col gap-4">
 			<!-- Subtitle -->
 			<span class="text-secondary text-sm">
-				{{ formatMessage(messages.subtitle, { basePath: primaryBasePath, count: allInstances.length }) }}
+				{{
+					formatMessage(messages.subtitle, {
+						basePath: primaryBasePath,
+						count: allInstances.length,
+					})
+				}}
 			</span>
 
 			<!-- Select / Deselect all -->
@@ -24,7 +31,9 @@
 				>
 					{{ formatMessage(messages.deselectAll) }}
 				</button>
-				<span class="text-secondary ml-auto">{{ formatMessage(messages.selected, { n: selectedCount }) }}</span>
+				<span class="text-secondary ml-auto">{{
+					formatMessage(messages.selected, { n: selectedCount })
+				}}</span>
 			</div>
 
 			<!-- Instance list grouped by launcher -->
@@ -54,7 +63,10 @@
 				</div>
 			</div>
 
-			<div v-if="allInstances.length === 0" class="flex items-center justify-center py-8 text-secondary">
+			<div
+				v-if="allInstances.length === 0"
+				class="flex items-center justify-center py-8 text-secondary"
+			>
 				<span class="text-sm">{{ formatMessage(messages.noInstances) }}</span>
 			</div>
 		</div>
@@ -143,7 +155,7 @@ export interface SelectionEntry {
 	instances: Array<{ name: string; path: string }>
 }
 
-const props = defineProps<{
+defineProps<{
 	results?: LauncherInfo[]
 }>()
 
@@ -158,10 +170,16 @@ const selectedMap = ref<Map<string, Set<string>>>(new Map())
 const isConfirming = ref(false)
 
 const allInstances = computed(() => {
-	const items: Array<{ launcherType: string; launcherName: string; name: string; path: string }> = []
+	const items: Array<{ launcherType: string; launcherName: string; name: string; path: string }> =
+		[]
 	for (const group of internalResults.value) {
 		for (const inst of group.instances) {
-			items.push({ launcherType: group.launcherType, launcherName: group.launcherName, name: inst.name, path: inst.path })
+			items.push({
+				launcherType: group.launcherType,
+				launcherName: group.launcherName,
+				name: inst.name,
+				path: inst.path,
+			})
 		}
 	}
 	return items
@@ -224,7 +242,7 @@ function deselectAll() {
 }
 
 function handleConfirm() {
-	if (selectedCount === 0) return
+	if (selectedCount.value === 0) return
 	isConfirming.value = true
 	const selections: SelectionEntry[] = []
 	for (const [launcherType, names] of selectedMap.value) {

@@ -30,7 +30,6 @@ import {
 	defineMessages,
 	I18nDebugPanel,
 	LoadingBar,
-	NewModal,
 	NotificationPanel,
 	OverflowMenu,
 	PopupNotificationPanel,
@@ -77,6 +76,7 @@ import CommunityAnnouncementModal from '@/components/ui/modal/CommunityAnnouncem
 import CurseForgeManualDownloadsModal from '@/components/ui/modal/CurseForgeManualDownloadsModal.vue'
 import InstallToPlayModal from '@/components/ui/modal/InstallToPlayModal.vue'
 import InstanceIconPickerModal from '@/components/ui/modal/InstanceIconPickerModal.vue'
+import JavaDownloadConfirmationModal from '@/components/ui/modal/JavaDownloadConfirmationModal.vue'
 import ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
 import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
@@ -101,9 +101,13 @@ import {
 	lookupModHash,
 	type ModrinthLookupResult,
 	scanLauncherInstances,
-	type ScanResult,
 } from '@/helpers/drop'
-import { command_listener, install_job_listener, warning_listener } from '@/helpers/events.js'
+import {
+	command_listener,
+	install_job_listener,
+	java_download_confirmation_listener,
+	warning_listener,
+} from '@/helpers/events.js'
 import { import_instance } from '@/helpers/import.js'
 import {
 	install_create_modpack_instance,
@@ -134,7 +138,7 @@ import {
 	isNetworkMetered,
 	setRestartAfterPendingUpdate,
 } from '@/helpers/utils.js'
-import { areLoadersCompatible,isVersionInRange } from '@/helpers/version-compatibility'
+import { areLoadersCompatible, isVersionInRange } from '@/helpers/version-compatibility'
 import { start_join_server, start_join_singleplayer_world } from '@/helpers/worlds.ts'
 import i18n, { resolveInitialLocale } from '@/i18n.config'
 import {
@@ -319,6 +323,7 @@ const stateInitialized = ref(false)
 const communityAnnouncementModal = ref()
 const updateAnnouncementModal = ref()
 const minecraftCrashModal = ref()
+const javaDownloadConfirmationModal = ref()
 const pendingUpdateAnnouncementVersion = ref(null)
 const updateAnnouncementShowing = ref(false)
 
@@ -798,6 +803,9 @@ async function setupApp() {
 			text: e.message,
 			type: 'warn',
 		})
+	})
+	await java_download_confirmation_listener((request) => {
+		javaDownloadConfirmationModal.value?.show(request)
 	})
 
 	get_opening_command().then(handleCommand)
@@ -2611,7 +2619,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				</NavButton>
 			</NavRail>
 			<div class="h-px w-6 mx-auto my-2 bg-surface-5"></div>
-			<div class="flex-1 min-h-0 overflow-y-auto">
+			<div class="quick-instance-scroll flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
 				<suspense>
 					<QuickInstanceSwitcher />
 				</suspense>
@@ -2799,6 +2807,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		:error-action-label="formatMessage(messages.exportErrorLogs)"
 	/>
 	<MinecraftCrashModal ref="minecraftCrashModal" @error="handleError" />
+	<JavaDownloadConfirmationModal ref="javaDownloadConfirmationModal" />
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
 	<ErrorModal ref="errorModal" />
@@ -2940,6 +2949,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	//z-index: 0;
 	background-color: var(--color-raised-bg);
 	height: 100vh;
+}
+
+.quick-instance-scroll {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
 }
 
 .launcher-background {

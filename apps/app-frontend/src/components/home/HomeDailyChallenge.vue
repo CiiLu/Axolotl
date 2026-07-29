@@ -3,7 +3,7 @@ import { SparklesIcon, UpdatedIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 
-import { type ChallengeDifficulty,dailyChallenges } from '@/data/daily-challenges'
+import { type ChallengeDifficulty, dailyChallenges } from '@/data/daily-challenges'
 
 import { stableGreetingIndex, toDateKey } from './home-utils'
 

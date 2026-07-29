@@ -47,7 +47,12 @@ export abstract class AbstractWebNotificationManager {
 	handleError = (error: unknown): void => {
 		this.addNotification({
 			title: '发生错误',
-			text: error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error),
+			text:
+				error instanceof Error
+					? error.message
+					: typeof error === 'string'
+						? error
+						: JSON.stringify(error),
 			type: 'error',
 		})
 	}

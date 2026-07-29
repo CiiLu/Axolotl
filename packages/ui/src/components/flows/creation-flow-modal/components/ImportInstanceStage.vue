@@ -1,8 +1,5 @@
 <template>
-	<div
-		data-onboarding-id="creation-import"
-		class="flex flex-col items-center gap-6 py-4"
-	>
+	<div data-onboarding-id="creation-import" class="flex flex-col items-center gap-6 py-4">
 		<ButtonStyled color="brand" size="large" type="outlined">
 			<button type="button" @click="handleOpenFilePicker">
 				<FolderUpIcon />
@@ -17,8 +14,8 @@
 </template>
 
 <script setup lang="ts">
-import { ButtonStyled, defineMessages, useVIntl } from '@modrinth/ui'
 import { FolderUpIcon } from '@modrinth/assets'
+import { ButtonStyled, defineMessages, useVIntl } from '@modrinth/ui'
 
 import { injectCreationFlowContext } from '../creation-flow-context'
 

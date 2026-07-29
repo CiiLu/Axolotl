@@ -10,7 +10,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, ref } from 'vue'
 
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
-import { get_minecraft_news,type MinecraftNewsItem } from '@/helpers/mc_news'
+import { get_minecraft_news, type MinecraftNewsItem } from '@/helpers/mc_news'
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
@@ -81,11 +81,7 @@ async function openArticle(item: MinecraftNewsItem) {
 			</li>
 		</ul>
 		<ul v-else class="m-0 flex list-none flex-col p-0">
-			<li
-				v-for="item in newsItems"
-				:key="`${item.date ?? ''}:${item.title}`"
-				class="group min-w-0"
-			>
+			<li v-for="item in newsItems" :key="`${item.date ?? ''}:${item.title}`" class="group min-w-0">
 				<button
 					v-tooltip="formatMessage(messages.openArticle)"
 					type="button"

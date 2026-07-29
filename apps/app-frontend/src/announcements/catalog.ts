@@ -33,6 +33,42 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.1',
+		version: '1.6.1',
+		publishedAt: '2026-07-29',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.1',
+			'zh-CN': 'Axolotl Launcher 1.6.1',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US':
+						'Redesigned Java management with clearer default-version controls and a more streamlined download experience.',
+					'zh-CN': '优化 Java 管理界面与交互，更清晰地管理各版本默认 Java，并简化下载流程。',
+				},
+				{
+					'en-US': 'Improved the Downloads page layout and actions for easier task management.',
+					'zh-CN': '优化下载页面的布局与操作，下载任务管理更加便捷。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed the game version selector being obscured on the Seed Map page.',
+					'zh-CN': '修复种子地图中的游戏版本选择器被意外遮挡的问题。',
+				},
+				{
+					'en-US': 'Fixed Minecraft being incorrectly reported as crashed after a normal exit.',
+					'zh-CN': '修复正常退出游戏后被错误报告为崩溃的问题。',
+				},
+				{
+					'en-US': 'Fixed missing dependencies in macOS builds.',
+					'zh-CN': '修复 macOS 构建缺少依赖的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.0',
 		version: '1.6.0',
 		publishedAt: '2026-07-28',

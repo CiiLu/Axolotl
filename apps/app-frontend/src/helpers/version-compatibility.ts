@@ -121,7 +121,10 @@ export function parseVersionRange(rangeStr: string): VersionRange | null {
 	return null
 }
 
-function compareVersions(a: { major: number; minor: number; patch: number }, b: { major: number; minor: number; patch: number }): number {
+function compareVersions(
+	a: { major: number; minor: number; patch: number },
+	b: { major: number; minor: number; patch: number },
+): number {
 	if (a.major !== b.major) return a.major - b.major
 	if (a.minor !== b.minor) return a.minor - b.minor
 	return a.patch - b.patch

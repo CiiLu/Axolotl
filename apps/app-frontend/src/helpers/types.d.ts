@@ -101,11 +101,16 @@ export type Instance = GameInstance
 
 type ReleaseChannel = 'release' | 'beta' | 'alpha'
 
-export type InstanceLoader = 'vanilla' | 'forge' | 'fabric' | 'quilt' | 'neoforge'
-  | 'lite_loader'
-  | 'labymod'
-  | 'cleanroom'
-  | 'legacy_fabric'
+export type InstanceLoader =
+	| 'vanilla'
+	| 'forge'
+	| 'fabric'
+	| 'quilt'
+	| 'neoforge'
+	| 'lite_loader'
+	| 'labymod'
+	| 'cleanroom'
+	| 'legacy_fabric'
 
 type ContentFile = {
 	enabled: boolean

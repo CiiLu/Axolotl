@@ -11,7 +11,10 @@ export interface InstanceImportProvider {
 	/** Returns launchers with instances already populated (one round trip on mount) */
 	getDetectedLaunchers: () => Promise<ImportableLauncher[]>
 	/** Only needed for manually-added launcher paths */
-	getImportableInstances: (launcherName: string, path: string) => Promise<{ name: string; path: string }[]>
+	getImportableInstances: (
+		launcherName: string,
+		path: string,
+	) => Promise<{ name: string; path: string }[]>
 	/** Perform the actual import */
 	importInstances: (
 		selections: {

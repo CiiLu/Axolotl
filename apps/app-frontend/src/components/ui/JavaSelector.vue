@@ -1,5 +1,5 @@
 <template>
-	<JavaDetectionModal ref="detectJavaModal" @submit="(val) => emit('update:modelValue', val)" />
+	<JavaDetectionModal ref="detectJavaModal" @submit="commitSelection" />
 	<div :id="props.id" class="toggle-setting" :class="{ compact }">
 		<div class="input-with-status">
 			<StyledInput
@@ -16,6 +16,7 @@
 						})
 					}
 				"
+				@focusout="emit('commit', props.modelValue)"
 			/>
 			<ButtonStyled
 				:color="
@@ -29,7 +30,7 @@
 			>
 				<button
 					class="!shadow-none"
-					aria-label="Test Java installation"
+					:aria-label="formatMessage(messages.testInstallation)"
 					:disabled="testingJava || props.disabled"
 					@click="runTest(props.modelValue?.path)"
 					@mouseenter="!props.disabled && (hoveringTest = true)"
@@ -52,7 +53,7 @@
 						testingJavaSuccess === true ? formatMessage(messages.alreadyInstalled) : undefined
 					"
 					class="!shadow-none"
-					aria-label="Install recommended Java"
+					:aria-label="formatMessage(messages.installRecommended)"
 					:disabled="props.disabled || installingJava || testingJavaSuccess === true"
 					@click="reinstallJava"
 				>
@@ -65,7 +66,12 @@
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
-				<button class="!shadow-none" aria-label="Detect Java" :disabled="props.disabled" @click="autoDetect">
+				<button
+					class="!shadow-none"
+					:aria-label="formatMessage(messages.detect)"
+					:disabled="props.disabled"
+					@click="autoDetect"
+				>
 					<SearchIcon />
 					{{ formatMessage(messages.detect) }}
 				</button>
@@ -73,15 +79,10 @@
 			<ButtonStyled>
 				<button
 					class="!shadow-none"
-					:disabled="props.disabled || deepScanningJava"
-					@click="autoDeepScan"
+					:aria-label="formatMessage(messages.browseForExecutable)"
+					:disabled="props.disabled"
+					@click="handleJavaFileInput()"
 				>
-					<ScanEyeIcon />
-					{{ formatMessage(messages.deepScan) }}
-				</button>
-			</ButtonStyled>
-			<ButtonStyled>
-				<button class="!shadow-none" aria-label="Browse for Java executable" :disabled="props.disabled" @click="handleJavaFileInput()">
 					<FolderSearchIcon />
 					{{ formatMessage(messages.browse) }}
 				</button>
@@ -96,7 +97,6 @@ import {
 	DownloadIcon,
 	FolderSearchIcon,
 	RefreshCwIcon,
-	ScanEyeIcon,
 	SearchIcon,
 	SpinnerIcon,
 	XCircleIcon,
@@ -128,7 +128,14 @@ const messages = defineMessages({
 	},
 	detect: { id: 'app.java.detect', defaultMessage: 'Detect' },
 	browse: { id: 'app.java.browse', defaultMessage: 'Browse' },
-	deepScan: { id: 'app.java.deep-scan', defaultMessage: 'Deep Scan' },
+	browseForExecutable: {
+		id: 'app.java.browse-for-executable',
+		defaultMessage: 'Browse for Java executable',
+	},
+	testInstallation: {
+		id: 'app.java.test-installation',
+		defaultMessage: 'Test Java installation',
+	},
 })
 
 const props = defineProps({
@@ -165,7 +172,7 @@ const props = defineProps({
 	},
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'commit'])
 
 const {
 	testingJava,
@@ -175,12 +182,16 @@ const {
 } = useJavaTest()
 
 const installingJava = ref(false)
-const deepScanningJava = ref(false)
 const hoveringTest = ref(false)
 let hasInitialized = false
 
 async function runTest(path) {
 	await testJavaInstallation(path, props.version, true)
+}
+
+function commitSelection(javaVersion) {
+	emit('update:modelValue', javaVersion)
+	emit('commit', javaVersion)
 }
 
 watch(
@@ -206,8 +217,8 @@ async function handleJavaFileInput() {
 		if (!result) {
 			result = {
 				path: filePath.path ?? filePath,
-				version: props.version.toString(),
-				parsed_version: props.version,
+				version: props.version?.toString() ?? '',
+				parsed_version: props.version ?? 0,
 				architecture: 'x86',
 			}
 		}
@@ -216,7 +227,7 @@ async function handleJavaFileInput() {
 			version: props.version,
 		})
 
-		emit('update:modelValue', result)
+		commitSelection(result)
 	}
 }
 
@@ -227,24 +238,8 @@ async function autoDetect() {
 	} else {
 		const versions = await find_filtered_jres(props.version, false, false).catch(handleError)
 		if (versions?.length > 0) {
-			emit('update:modelValue', versions[0])
+			commitSelection(versions[0])
 		}
-	}
-}
-
-async function autoDeepScan() {
-	deepScanningJava.value = true
-	try {
-		if (!props.compact) {
-			detectJavaModal.value.show(props.version, props.modelValue, true)
-		} else {
-			const versions = await find_filtered_jres(props.version, true, false).catch(handleError)
-			if (versions?.length > 0) {
-				emit('update:modelValue', versions[0])
-			}
-		}
-	} finally {
-		deepScanningJava.value = false
 	}
 }
 
@@ -265,7 +260,7 @@ async function reinstallJava() {
 		}
 
 		trackEvent('JavaReInstall', { path: path, version: props.version })
-		emit('update:modelValue', result)
+		commitSelection(result)
 		runTest(result.path)
 	} finally {
 		installingJava.value = false

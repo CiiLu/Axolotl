@@ -704,20 +704,11 @@
   "console.delete-modal.title": {
     "defaultMessage": "Delete log file"
   },
-  "console.filter.all": {
-    "defaultMessage": "All"
-  },
-  "console.filter.debug": {
-    "defaultMessage": "Debug"
-  },
   "console.filter.error": {
     "defaultMessage": "Error"
   },
   "console.filter.info": {
     "defaultMessage": "Info"
-  },
-  "console.filter.trace": {
-    "defaultMessage": "Trace"
   },
   "console.filter.warn": {
     "defaultMessage": "Warn"
@@ -1202,11 +1193,11 @@
   "creation-flow.modal.final-config.world-type.superflat": {
     "defaultMessage": "Superflat"
   },
-  "creation-flow.modal.import-instance.drop-zone.click": {
-    "defaultMessage": "Click to select a file or drag & drop any file/folder"
-  },
   "creation-flow.modal.import-instance.import-prompt": {
     "defaultMessage": "Drag & drop launcher folders, modpack files, or .minecraft folders to import an instance in one click"
+  },
+  "creation-flow.modal.import-instance.select-file": {
+    "defaultMessage": "Select file or folder to import"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "An instance is a Minecraft setup with a specific loader, version, and mods."

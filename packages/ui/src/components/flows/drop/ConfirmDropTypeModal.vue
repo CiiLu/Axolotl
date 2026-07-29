@@ -63,12 +63,12 @@ import {
 import type { Component } from 'vue'
 import { computed, ref } from 'vue'
 
-import type { ClassificationResult } from '#ui/composables/use-global-drop'
 import BigOptionButton from '#ui/components/base/BigOptionButton.vue'
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import NewModal from '#ui/components/modal/NewModal.vue'
 import { useDebugLogger } from '#ui/composables/debug-logger'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
+import type { ClassificationResult } from '#ui/composables/use-global-drop'
 
 const { formatMessage } = useVIntl()
 const debug = useDebugLogger('ConfirmDropTypeModal')

@@ -7,7 +7,10 @@
 		<div
 			v-if="!noIconBox"
 			class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl"
-			:class="[noIconBorder ? '' : 'border border-solid', noIconBorder ? '' : selected ? 'border-brand' : 'border-surface-5']"
+			:class="[
+				noIconBorder ? '' : 'border border-solid',
+				noIconBorder ? '' : selected ? 'border-brand' : 'border-surface-5',
+			]"
 		>
 			<component
 				:is="icon"
@@ -16,10 +19,7 @@
 				stroke-width="1.5"
 			/>
 		</div>
-		<div
-			v-else
-			class="flex size-12 shrink-0 items-center justify-center"
-		>
+		<div v-else class="flex size-12 shrink-0 items-center justify-center">
 			<component
 				:is="icon"
 				class="size-7 text-secondary"

@@ -1,10 +1,9 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 
-import type { NativeFileDropEvent, FileDropProvider } from '#ui/providers/file-drop'
+import { useDebugLogger } from '#ui/composables/debug-logger'
+import type { FileDropProvider, NativeFileDropEvent } from '#ui/providers/file-drop'
 import { injectFileDrop } from '#ui/providers/file-drop'
 import { injectLoadingState } from '#ui/providers/loading-state'
-import { injectNotificationManager } from '#ui/providers/web-notifications'
-import { useDebugLogger } from '#ui/composables/debug-logger'
 
 /**
  * Classification result returned by the Rust backend.
@@ -55,10 +54,12 @@ export interface UseGlobalDropOptions {
 	onError?: (message: string) => void
 }
 
-export function useGlobalDrop(options: UseGlobalDropOptions, fileDropOverride?: FileDropProvider | null) {
+export function useGlobalDrop(
+	options: UseGlobalDropOptions,
+	fileDropOverride?: FileDropProvider | null,
+) {
 	const fileDrop = fileDropOverride ?? injectFileDrop(null)
 	const loadingState = injectLoadingState(null)
-	const notificationManager = injectNotificationManager(null)
 	const debug = useDebugLogger('useGlobalDrop')
 
 	const isDragging = ref(false)
@@ -75,10 +76,19 @@ export function useGlobalDrop(options: UseGlobalDropOptions, fileDropOverride?: 
 	 */
 	function resolveClassification(result: ClassificationResult, depth = 0): ClassificationResult {
 		if (result.item_type === 'shortcut_resolved' && result.resolved_to && depth < 3) {
-			debug('resolveClassification: shortcut chain', { depth, from: result.file_path, to: result.resolved_to.file_path })
+			debug('resolveClassification: shortcut chain', {
+				depth,
+				from: result.file_path,
+				to: result.resolved_to.file_path,
+			})
 			return resolveClassification(result.resolved_to, depth + 1)
 		}
-		if (depth > 0) debug('resolveClassification: resolved at depth', { depth, item_type: result.item_type, file_path: result.file_path })
+		if (depth > 0)
+			debug('resolveClassification: resolved at depth', {
+				depth,
+				item_type: result.item_type,
+				file_path: result.file_path,
+			})
 		return result
 	}
 
@@ -116,13 +126,24 @@ export function useGlobalDrop(options: UseGlobalDropOptions, fileDropOverride?: 
 
 		try {
 			const raw = await options.classifyFile(paths[0])
-			debug('classifyFile raw result', { item_type: raw.item_type, file_path: raw.file_path, launcher_type: raw.launcher_type, reason: raw.reason })
+			debug('classifyFile raw result', {
+				item_type: raw.item_type,
+				file_path: raw.file_path,
+				launcher_type: raw.launcher_type,
+				reason: raw.reason,
+			})
 
 			const resolved = resolveClassification(raw)
-			debug('resolveClassification final', { item_type: resolved.item_type, file_path: resolved.file_path, launcher_type: resolved.launcher_type })
+			debug('resolveClassification final', {
+				item_type: resolved.item_type,
+				file_path: resolved.file_path,
+				launcher_type: resolved.launcher_type,
+			})
 
 			if (resolved.item_type === 'unknown') {
-				debug('routing: unknown type — passing to onImportStart so the consumer can decide', { reason: resolved.reason })
+				debug('routing: unknown type — passing to onImportStart so the consumer can decide', {
+					reason: resolved.reason,
+				})
 				options.onImportStart?.('unknown', resolved)
 				return
 			}
@@ -135,7 +156,11 @@ export function useGlobalDrop(options: UseGlobalDropOptions, fileDropOverride?: 
 			}
 
 			if (resolved.item_type === 'launcher' || resolved.item_type === 'hmcl_launcher') {
-				debug('routing: launcher import', { launcher_type: resolved.launcher_type, base_path: resolved.base_path, data_dir: resolved.data_dir })
+				debug('routing: launcher import', {
+					launcher_type: resolved.launcher_type,
+					base_path: resolved.base_path,
+					data_dir: resolved.data_dir,
+				})
 				options.onImportStart?.('launcher', resolved)
 				return
 			}

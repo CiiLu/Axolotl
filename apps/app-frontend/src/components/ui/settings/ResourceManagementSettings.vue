@@ -9,8 +9,8 @@ import {
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
-import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import { computed, ref, watch } from 'vue'
 
 import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'

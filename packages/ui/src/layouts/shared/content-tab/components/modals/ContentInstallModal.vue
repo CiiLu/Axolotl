@@ -273,7 +273,6 @@ import {
 } from '@modrinth/assets'
 import { computed, ref, watch } from 'vue'
 
-import Admonition from '#ui/components/base/Admonition.vue'
 import AutoLink from '#ui/components/base/AutoLink.vue'
 import Avatar from '#ui/components/base/Avatar.vue'
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'

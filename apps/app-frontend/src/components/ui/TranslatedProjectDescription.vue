@@ -106,5 +106,4 @@ const translationOnlyClass = computed(() =>
 		transform: translateY(0);
 	}
 }
-
 </style>

@@ -32,8 +32,20 @@ export async function get_importable_instances(launcherType, basePath) {
 }
 
 /// Import an instance from a launcher type and base path
-export async function import_instance(launcherType, basePath, instanceFolder, symlink = false, instancePath = undefined) {
-	return await install_import_instance(launcherType, basePath, instanceFolder, symlink, instancePath)
+export async function import_instance(
+	launcherType,
+	basePath,
+	instanceFolder,
+	symlink = false,
+	instancePath = undefined,
+) {
+	return await install_import_instance(
+		launcherType,
+		basePath,
+		instanceFolder,
+		symlink,
+		instancePath,
+	)
 }
 
 /// Checks if this instance is valid for importing, given a certain launcher type

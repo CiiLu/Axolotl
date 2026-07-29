@@ -25,7 +25,16 @@ import {
 } from '@modrinth/ui'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
-import { type Component,computed, onMounted, onUnmounted, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import {
+	type Component,
+	computed,
+	onMounted,
+	onUnmounted,
+	ref,
+	shallowRef,
+	useTemplateRef,
+	watch,
+} from 'vue'
 
 import minecraftPreviewFont from '@/assets/lab/Minecraft_AE.ttf'
 import minecraftPreviewBackground from '@/assets/lab/minecraft-preview.png'
@@ -86,10 +95,16 @@ const messages = defineMessages({
 	colorsTitle: { id: 'app.lab.gradient-text.colors.title', defaultMessage: 'Colors' },
 	colorStops: { id: 'app.lab.gradient-text.colors.stops', defaultMessage: '{count} color stops' },
 	addColor: { id: 'app.lab.gradient-text.colors.add', defaultMessage: 'Add color' },
-	randomizeColors: { id: 'app.lab.gradient-text.colors.randomize', defaultMessage: 'Randomize colors' },
+	randomizeColors: {
+		id: 'app.lab.gradient-text.colors.randomize',
+		defaultMessage: 'Randomize colors',
+	},
 	removeColor: { id: 'app.lab.gradient-text.colors.remove', defaultMessage: 'Remove color' },
 	moveColorUp: { id: 'app.lab.gradient-text.colors.move-up', defaultMessage: 'Move color up' },
-	moveColorDown: { id: 'app.lab.gradient-text.colors.move-down', defaultMessage: 'Move color down' },
+	moveColorDown: {
+		id: 'app.lab.gradient-text.colors.move-down',
+		defaultMessage: 'Move color down',
+	},
 	importColors: { id: 'app.lab.gradient-text.colors.import', defaultMessage: 'Import colors' },
 	importColorsPlaceholder: {
 		id: 'app.lab.gradient-text.colors.import-placeholder',
@@ -104,7 +119,10 @@ const messages = defineMessages({
 		id: 'app.lab.gradient-text.format.vanilla-character',
 		defaultMessage: 'Color character',
 	},
-	simplify: { id: 'app.lab.gradient-text.format.simplify', defaultMessage: 'Simplify gradient tags' },
+	simplify: {
+		id: 'app.lab.gradient-text.format.simplify',
+		defaultMessage: 'Simplify gradient tags',
+	},
 	previewTitle: { id: 'app.lab.gradient-text.preview.title', defaultMessage: 'Preview' },
 	outputTitle: { id: 'app.lab.gradient-text.output.title', defaultMessage: 'Output' },
 	copy: { id: 'app.lab.gradient-text.output.copy', defaultMessage: 'Copy output' },
@@ -133,7 +151,10 @@ const messages = defineMessages({
 	bold: { id: 'app.lab.gradient-text.format.bold', defaultMessage: 'Bold' },
 	italic: { id: 'app.lab.gradient-text.format.italic', defaultMessage: 'Italic' },
 	underlined: { id: 'app.lab.gradient-text.format.underlined', defaultMessage: 'Underline' },
-	strikethrough: { id: 'app.lab.gradient-text.format.strikethrough', defaultMessage: 'Strikethrough' },
+	strikethrough: {
+		id: 'app.lab.gradient-text.format.strikethrough',
+		defaultMessage: 'Strikethrough',
+	},
 	obfuscated: { id: 'app.lab.gradient-text.format.obfuscated', defaultMessage: 'Obfuscated' },
 	adapterVanilla: { id: 'app.lab.gradient-text.adapter.vanilla', defaultMessage: 'Vanilla' },
 	adapterVanillaCompatible: {
@@ -142,7 +163,10 @@ const messages = defineMessages({
 	},
 	adapterStandard: { id: 'app.lab.gradient-text.adapter.standard', defaultMessage: 'Standard HEX' },
 	adapterCmi: { id: 'app.lab.gradient-text.adapter.cmi', defaultMessage: 'CMI' },
-	adapterMiniMessage: { id: 'app.lab.gradient-text.adapter.minimessage', defaultMessage: 'MiniMessage' },
+	adapterMiniMessage: {
+		id: 'app.lab.gradient-text.adapter.minimessage',
+		defaultMessage: 'MiniMessage',
+	},
 	adapterMiniMessageGradient: {
 		id: 'app.lab.gradient-text.adapter.minimessage-gradient',
 		defaultMessage: 'MiniMessage gradient',
@@ -159,7 +183,10 @@ const messages = defineMessages({
 		id: 'app.lab.gradient-text.adapter.rosegarden-gradient',
 		defaultMessage: 'RoseGarden gradient',
 	},
-	adapterChatColors: { id: 'app.lab.gradient-text.adapter.chat-colors', defaultMessage: 'Chat Colors' },
+	adapterChatColors: {
+		id: 'app.lab.gradient-text.adapter.chat-colors',
+		defaultMessage: 'Chat Colors',
+	},
 	adapterMotd: { id: 'app.lab.gradient-text.adapter.motd', defaultMessage: 'MOTD' },
 	adapterBbcode: { id: 'app.lab.gradient-text.adapter.bbcode', defaultMessage: 'BBCode' },
 	adapterJson: { id: 'app.lab.gradient-text.adapter.json', defaultMessage: 'JSON text component' },
@@ -198,7 +225,9 @@ const textFormatIcons: Record<TextFormat, Component> = {
 	obfuscated: AsteriskIcon,
 }
 const currentAdapter = computed(
-	() => gradientFormatAdapters.find((adapter) => adapter.id === adapterId.value) ?? gradientFormatAdapters[0],
+	() =>
+		gradientFormatAdapters.find((adapter) => adapter.id === adapterId.value) ??
+		gradientFormatAdapters[0],
 )
 const output = computed(() =>
 	generateGradientOutput(textDocument.value, colors.value, adapterId.value, {
@@ -480,7 +509,9 @@ async function importPresets() {
 async function exportPresets(template = false) {
 	try {
 		const path = await save({
-			defaultPath: template ? 'axolotl-gradient-presets-template.json' : 'axolotl-gradient-presets.json',
+			defaultPath: template
+				? 'axolotl-gradient-presets-template.json'
+				: 'axolotl-gradient-presets.json',
 			filters: [{ name: 'JSON', extensions: ['json'] }],
 		})
 		if (!path) return
@@ -530,10 +561,16 @@ function readDocumentFromEditor(): GradientTextDocument {
 		if ((tag === 'B' || tag === 'STRONG') && !nextFormats.includes('bold')) nextFormats.push('bold')
 		if ((tag === 'I' || tag === 'EM') && !nextFormats.includes('italic')) nextFormats.push('italic')
 		if (tag === 'U' && !nextFormats.includes('underlined')) nextFormats.push('underlined')
-		if ((tag === 'S' || tag === 'STRIKE' || tag === 'DEL') && !nextFormats.includes('strikethrough')) {
+		if (
+			(tag === 'S' || tag === 'STRIKE' || tag === 'DEL') &&
+			!nextFormats.includes('strikethrough')
+		) {
 			nextFormats.push('strikethrough')
 		}
-		if ((tag === 'CODE' || node.dataset.gradientFormat === 'obfuscated') && !nextFormats.includes('obfuscated')) {
+		if (
+			(tag === 'CODE' || node.dataset.gradientFormat === 'obfuscated') &&
+			!nextFormats.includes('obfuscated')
+		) {
 			nextFormats.push('obfuscated')
 		}
 		const isBlock = tag === 'DIV' || tag === 'P'
@@ -550,7 +587,8 @@ function writeDocumentToEditor(value: GradientTextDocument) {
 	editor.value.replaceChildren()
 	for (const sourceLine of normalizeGradientDocument(value).lines) {
 		const line = document.createElement('div')
-		if (!sourceLine.length || !sourceLine.some((run) => run.text)) line.append(document.createElement('br'))
+		if (!sourceLine.length || !sourceLine.some((run) => run.text))
+			line.append(document.createElement('br'))
 		for (const run of sourceLine) {
 			const span = document.createElement('span')
 			span.textContent = run.text
@@ -573,7 +611,9 @@ function formatLabel(format: TextFormat): string {
 }
 
 function formatAdapter(adapterId: GradientFormatId): string {
-	const adapter = gradientFormatAdapters.find((item) => item.id === adapterId) as GradientFormatAdapter
+	const adapter = gradientFormatAdapters.find(
+		(item) => item.id === adapterId,
+	) as GradientFormatAdapter
 	return `${formatAdapterName(adapterId)} · ${adapter.sample}`
 }
 
@@ -585,8 +625,12 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 <template>
 	<main class="mx-auto flex w-full max-w-[90rem] flex-col gap-5 p-6">
 		<header class="flex min-w-0 flex-wrap items-center justify-between gap-4">
-			<h1 class="m-0 min-w-0 truncate text-2xl font-bold text-contrast">{{ formatMessage(messages.title) }}</h1>
-			<div class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 max-[680px]:w-full max-[680px]:justify-start">
+			<h1 class="m-0 min-w-0 truncate text-2xl font-bold text-contrast">
+				{{ formatMessage(messages.title) }}
+			</h1>
+			<div
+				class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 max-[680px]:w-full max-[680px]:justify-start"
+			>
 				<div class="lab-format-control">
 					<span>{{ formatMessage(messages.formatTitle) }}</span>
 					<DropdownSelect
@@ -598,23 +642,30 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 					/>
 				</div>
 				<ButtonStyled size="small" type="outlined">
-					<button @click="copyOutput"><ClipboardCopyIcon />{{ formatMessage(messages.copy) }}</button>
+					<button @click="copyOutput">
+						<ClipboardCopyIcon />{{ formatMessage(messages.copy) }}
+					</button>
 				</ButtonStyled>
 				<ButtonStyled size="small" color="brand">
-					<button @click="exportOutput"><DownloadIcon />{{ formatMessage(messages.export) }}</button>
+					<button @click="exportOutput">
+						<DownloadIcon />{{ formatMessage(messages.export) }}
+					</button>
 				</ButtonStyled>
 			</div>
 		</header>
 
-		<div
-			class="lab-workbench"
-			data-onboarding-id="lab-gradient-text-editor"
-		>
+		<div class="lab-workbench" data-onboarding-id="lab-gradient-text-editor">
 			<section class="lab-panel min-w-0">
 				<section class="lab-panel-section">
 					<div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-						<h2 class="m-0 text-base font-bold text-contrast">{{ formatMessage(messages.inputTitle) }}</h2>
-						<div class="flex items-center gap-1" role="toolbar" :aria-label="formatMessage(messages.inputTitle)">
+						<h2 class="m-0 text-base font-bold text-contrast">
+							{{ formatMessage(messages.inputTitle) }}
+						</h2>
+						<div
+							class="flex items-center gap-1"
+							role="toolbar"
+							:aria-label="formatMessage(messages.inputTitle)"
+						>
 							<ButtonStyled
 								v-for="format in TEXT_FORMATS"
 								:key="format"
@@ -653,14 +704,20 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 				<section class="lab-panel-section lab-colors-section">
 					<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
 						<div>
-							<h2 class="m-0 text-base font-bold text-contrast">{{ formatMessage(messages.colorsTitle) }}</h2>
+							<h2 class="m-0 text-base font-bold text-contrast">
+								{{ formatMessage(messages.colorsTitle) }}
+							</h2>
 							<p class="m-0 mt-0.5 text-xs font-medium text-secondary">
 								{{ formatMessage(messages.colorStops, { count: colors.length }) }}
 							</p>
 						</div>
 						<div class="flex items-center gap-1">
 							<ButtonStyled circular size="small" type="transparent">
-								<button :title="formatMessage(messages.randomizeColors)" :aria-label="formatMessage(messages.randomizeColors)" @click="randomizeColors">
+								<button
+									:title="formatMessage(messages.randomizeColors)"
+									:aria-label="formatMessage(messages.randomizeColors)"
+									@click="randomizeColors"
+								>
 									<RefreshCwIcon />
 								</button>
 							</ButtonStyled>
@@ -673,11 +730,16 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 								@input="addPickedColor(($event.target as HTMLInputElement).value)"
 							/>
 							<ButtonStyled color="brand" size="small">
-								<button @click="openNewColorPicker"><PlusIcon />{{ formatMessage(messages.addColor) }}</button>
+								<button @click="openNewColorPicker">
+									<PlusIcon />{{ formatMessage(messages.addColor) }}
+								</button>
 							</ButtonStyled>
 						</div>
 					</div>
-					<div class="lab-color-rail" :style="{ background: `linear-gradient(90deg, ${colors.join(', ')})` }"></div>
+					<div
+						class="lab-color-rail"
+						:style="{ background: `linear-gradient(90deg, ${colors.join(', ')})` }"
+					></div>
 					<div class="lab-color-list">
 						<div v-for="(color, index) in colors" :key="index" class="lab-color-row">
 							<label class="lab-color-swatch" :style="{ backgroundColor: color }">
@@ -697,13 +759,34 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 							/>
 							<div class="flex items-center gap-1">
 								<ButtonStyled circular size="small" type="transparent">
-									<button :title="formatMessage(messages.moveColorUp)" :aria-label="formatMessage(messages.moveColorUp)" :disabled="index === 0" @click="moveColor(index, -1)"><ArrowUpIcon /></button>
+									<button
+										:title="formatMessage(messages.moveColorUp)"
+										:aria-label="formatMessage(messages.moveColorUp)"
+										:disabled="index === 0"
+										@click="moveColor(index, -1)"
+									>
+										<ArrowUpIcon />
+									</button>
 								</ButtonStyled>
 								<ButtonStyled circular size="small" type="transparent">
-									<button :title="formatMessage(messages.moveColorDown)" :aria-label="formatMessage(messages.moveColorDown)" :disabled="index === colors.length - 1" @click="moveColor(index, 1)"><ArrowDownIcon /></button>
+									<button
+										:title="formatMessage(messages.moveColorDown)"
+										:aria-label="formatMessage(messages.moveColorDown)"
+										:disabled="index === colors.length - 1"
+										@click="moveColor(index, 1)"
+									>
+										<ArrowDownIcon />
+									</button>
 								</ButtonStyled>
 								<ButtonStyled circular size="small" type="transparent" color="red">
-									<button :title="formatMessage(messages.removeColor)" :aria-label="formatMessage(messages.removeColor)" :disabled="colors.length <= 1" @click="removeColor(index)"><TrashIcon /></button>
+									<button
+										:title="formatMessage(messages.removeColor)"
+										:aria-label="formatMessage(messages.removeColor)"
+										:disabled="colors.length <= 1"
+										@click="removeColor(index)"
+									>
+										<TrashIcon />
+									</button>
 								</ButtonStyled>
 							</div>
 						</div>
@@ -716,7 +799,9 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 							@keydown.enter.prevent="applyImportedColors"
 						/>
 						<ButtonStyled size="small" type="outlined">
-							<button @click="applyImportedColors">{{ formatMessage(messages.importColors) }}</button>
+							<button @click="applyImportedColors">
+								{{ formatMessage(messages.importColors) }}
+							</button>
 						</ButtonStyled>
 					</div>
 					<p v-if="importError" class="m-0 mt-2 text-sm text-red">{{ importError }}</p>
@@ -728,8 +813,12 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 					button-class="group flex w-full items-center gap-2 border-0 bg-transparent p-0 text-left"
 				>
 					<template #title>
-						<span class="text-base font-bold text-contrast">{{ formatMessage(messages.presetsTitle) }}</span>
-						<span v-if="presets.length" class="text-sm font-medium text-secondary">{{ formatMessage(messages.presetCount, { count: presets.length }) }}</span>
+						<span class="text-base font-bold text-contrast">{{
+							formatMessage(messages.presetsTitle)
+						}}</span>
+						<span v-if="presets.length" class="text-sm font-medium text-secondary">{{
+							formatMessage(messages.presetCount, { count: presets.length })
+						}}</span>
 					</template>
 					<div class="flex flex-col gap-3">
 						<div class="flex gap-2">
@@ -740,52 +829,119 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 								@keydown.enter.prevent="savePreset"
 							/>
 							<ButtonStyled size="small" color="brand">
-								<button :disabled="!presetName.trim()" @click="savePreset"><PlusIcon />{{ formatMessage(messages.savePreset) }}</button>
+								<button :disabled="!presetName.trim()" @click="savePreset">
+									<PlusIcon />{{ formatMessage(messages.savePreset) }}
+								</button>
 							</ButtonStyled>
 						</div>
 						<div v-if="presets.length" class="flex flex-col gap-1.5">
-							<div v-for="preset in presets" :key="preset.id" class="flex items-center gap-2 rounded-lg bg-surface-4 p-2">
-								<button class="min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left" @click="applyPreset(preset)">
-									<span class="block truncate text-sm font-semibold text-contrast">{{ preset.name }}</span>
+							<div
+								v-for="preset in presets"
+								:key="preset.id"
+								class="flex items-center gap-2 rounded-lg bg-surface-4 p-2"
+							>
+								<button
+									class="min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left"
+									@click="applyPreset(preset)"
+								>
+									<span class="block truncate text-sm font-semibold text-contrast">{{
+										preset.name
+									}}</span>
 									<span class="mt-1.5 flex h-1.5 overflow-hidden rounded-full">
-										<span v-for="(presetColor, colorIndex) in preset.colors" :key="`${preset.id}-${colorIndex}`" class="flex-1" :style="{ backgroundColor: presetColor }"></span>
+										<span
+											v-for="(presetColor, colorIndex) in preset.colors"
+											:key="`${preset.id}-${colorIndex}`"
+											class="flex-1"
+											:style="{ backgroundColor: presetColor }"
+										></span>
 									</span>
 								</button>
 								<ButtonStyled circular size="small" type="transparent" color="red">
-									<button :title="formatMessage(messages.deletePreset)" :aria-label="formatMessage(messages.deletePreset)" @click="deletePreset(preset.id)"><TrashIcon /></button>
+									<button
+										:title="formatMessage(messages.deletePreset)"
+										:aria-label="formatMessage(messages.deletePreset)"
+										@click="deletePreset(preset.id)"
+									>
+										<TrashIcon />
+									</button>
 								</ButtonStyled>
 							</div>
 						</div>
 						<div class="flex flex-wrap gap-2">
-							<ButtonStyled size="small" type="outlined"><button @click="importPresets"><UploadIcon />{{ formatMessage(messages.importPresets) }}</button></ButtonStyled>
-							<ButtonStyled size="small" type="outlined"><button @click="exportPresets()"><DownloadIcon />{{ formatMessage(messages.exportPresets) }}</button></ButtonStyled>
-							<ButtonStyled size="small" type="outlined"><button @click="exportPresets(true)"><DownloadIcon />{{ formatMessage(messages.downloadTemplate) }}</button></ButtonStyled>
+							<ButtonStyled size="small" type="outlined"
+								><button @click="importPresets">
+									<UploadIcon />{{ formatMessage(messages.importPresets) }}
+								</button></ButtonStyled
+							>
+							<ButtonStyled size="small" type="outlined"
+								><button @click="exportPresets()">
+									<DownloadIcon />{{ formatMessage(messages.exportPresets) }}
+								</button></ButtonStyled
+							>
+							<ButtonStyled size="small" type="outlined"
+								><button @click="exportPresets(true)">
+									<DownloadIcon />{{ formatMessage(messages.downloadTemplate) }}
+								</button></ButtonStyled
+							>
 						</div>
 					</div>
 				</Accordion>
 			</section>
 
 			<section class="lab-panel min-w-0">
-				<div v-if="currentAdapter.supportsVanillaCharacter || currentAdapter.supportsSimplify" class="lab-panel-section flex flex-wrap items-center gap-x-5 gap-y-3">
+				<div
+					v-if="currentAdapter.supportsVanillaCharacter || currentAdapter.supportsSimplify"
+					class="lab-panel-section flex flex-wrap items-center gap-x-5 gap-y-3"
+				>
 					<div v-if="currentAdapter.supportsVanillaCharacter" class="flex items-center gap-2">
-						<span class="text-sm font-semibold text-primary">{{ formatMessage(messages.vanillaCharacter) }}</span>
-						<div class="lab-segmented" role="group" :aria-label="formatMessage(messages.vanillaCharacter)">
-							<button class="lab-segment" :class="{ active: vanillaCharacter === '&' }" @click="vanillaCharacter = '&'">&amp;</button>
-							<button class="lab-segment" :class="{ active: vanillaCharacter === '§' }" @click="vanillaCharacter = '§'">§</button>
+						<span class="text-sm font-semibold text-primary">{{
+							formatMessage(messages.vanillaCharacter)
+						}}</span>
+						<div
+							class="lab-segmented"
+							role="group"
+							:aria-label="formatMessage(messages.vanillaCharacter)"
+						>
+							<button
+								class="lab-segment"
+								:class="{ active: vanillaCharacter === '&' }"
+								@click="vanillaCharacter = '&'"
+							>
+								&amp;
+							</button>
+							<button
+								class="lab-segment"
+								:class="{ active: vanillaCharacter === '§' }"
+								@click="vanillaCharacter = '§'"
+							>
+								§
+							</button>
 						</div>
 					</div>
-					<label v-if="currentAdapter.supportsSimplify" class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-primary">
-						<input v-model="simplifyGradients" type="checkbox" class="size-4 accent-[--color-brand]" />
+					<label
+						v-if="currentAdapter.supportsSimplify"
+						class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-primary"
+					>
+						<input
+							v-model="simplifyGradients"
+							type="checkbox"
+							class="size-4 accent-[--color-brand]"
+						/>
 						{{ formatMessage(messages.simplify) }}
 					</label>
 				</div>
 
 				<section class="lab-panel-section lab-preview-section">
 					<div class="mb-3 flex items-center justify-between gap-3">
-						<h2 class="m-0 text-base font-bold text-contrast">{{ formatMessage(messages.previewTitle) }}</h2>
+						<h2 class="m-0 text-base font-bold text-contrast">
+							{{ formatMessage(messages.previewTitle) }}
+						</h2>
 						<span class="font-mono text-xs text-secondary">{{ currentAdapter.sample }}</span>
 					</div>
-					<div class="minecraft-preview-box" :style="{ backgroundImage: `url(${minecraftPreviewBackground})` }">
+					<div
+						class="minecraft-preview-box"
+						:style="{ backgroundImage: `url(${minecraftPreviewBackground})` }"
+					>
 						<div class="minecraft-preview-content">
 							<p v-for="(line, lineIndex) in previewLines" :key="lineIndex">
 								<span
@@ -803,7 +959,12 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 										'--minecraft-text-color': character.color ?? 'inherit',
 										'--minecraft-text-shadow-color': getMinecraftTextShadow(character.color),
 									}"
-								>{{ character.character.trim() === '' ? '\u00A0' : previewCharacter(character.character, character.formats, characterIndex) }}</span>
+									>{{
+										character.character.trim() === ''
+											? '\u00A0'
+											: previewCharacter(character.character, character.formats, characterIndex)
+									}}</span
+								>
 							</p>
 						</div>
 					</div>
@@ -811,10 +972,19 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 
 				<section class="lab-panel-section">
 					<div class="mb-3 flex items-center justify-between gap-3">
-						<h2 class="m-0 text-base font-bold text-contrast">{{ formatMessage(messages.outputTitle) }}</h2>
-						<span class="text-sm font-medium text-secondary">{{ formatAdapterName(currentAdapter.id) }}</span>
+						<h2 class="m-0 text-base font-bold text-contrast">
+							{{ formatMessage(messages.outputTitle) }}
+						</h2>
+						<span class="text-sm font-medium text-secondary">{{
+							formatAdapterName(currentAdapter.id)
+						}}</span>
 					</div>
-					<textarea readonly :value="output" class="min-h-52 w-full resize-y rounded-lg bg-surface-4 p-3 font-mono text-sm leading-6 text-contrast outline-none transition-shadow focus:ring-4 focus:ring-brand-shadow" :aria-label="formatMessage(messages.outputTitle)"></textarea>
+					<textarea
+						readonly
+						:value="output"
+						class="min-h-52 w-full resize-y rounded-lg bg-surface-4 p-3 font-mono text-sm leading-6 text-contrast outline-none transition-shadow focus:ring-4 focus:ring-brand-shadow"
+						:aria-label="formatMessage(messages.outputTitle)"
+					></textarea>
 				</section>
 			</section>
 		</div>
