@@ -537,24 +537,24 @@ const isRecoverable = computed(() => {
 			</div>
 		</Card>
 
-			<Card v-else-if="isSessionReady" class="!m-0">
-				<div class="flex flex-col gap-5">
-					<div class="flex flex-wrap items-start justify-between gap-3">
-						<div class="flex items-center gap-3">
-							<CheckCircleIcon class="size-7 shrink-0 text-green" />
-							<div>
-								<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
-								<p class="mb-0 mt-1 text-sm text-secondary">
-									{{ formatMessage(messages.playersInRoom, { count: playerCount }) }}
-								</p>
-							</div>
+		<Card v-else-if="isSessionReady" class="!m-0">
+			<div class="flex flex-col gap-5">
+				<div class="flex flex-wrap items-start justify-between gap-3">
+					<div class="flex items-center gap-3">
+						<CheckCircleIcon class="size-7 shrink-0 text-green" />
+						<div>
+							<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
+							<p class="mb-0 mt-1 text-sm text-secondary">
+								{{ formatMessage(messages.playersInRoom, { count: playerCount }) }}
+							</p>
 						</div>
-						<TagItem>
-							<UsersIcon v-if="isHostSession" />
-							<LogInIcon v-else />
-							{{ formatMessage(isHostSession ? messages.hostLabel : messages.guestLabel) }}
-						</TagItem>
 					</div>
+					<TagItem>
+						<UsersIcon v-if="isHostSession" />
+						<LogInIcon v-else />
+						{{ formatMessage(isHostSession ? messages.hostLabel : messages.guestLabel) }}
+					</TagItem>
+				</div>
 
 				<div
 					v-if="isHostSession && state.room_code"
@@ -668,15 +668,15 @@ const isRecoverable = computed(() => {
 			</Admonition>
 		</Card>
 
-			<Card v-else-if="!isRunning" class="!m-0">
-				<div class="flex flex-col gap-5">
-					<div class="flex items-start gap-3">
-						<div
-							class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-highlight text-brand"
-						>
-							<UsersIcon class="size-5" />
-						</div>
-						<div class="min-w-0">
+		<Card v-else-if="!isRunning" class="!m-0">
+			<div class="flex flex-col gap-5">
+				<div class="flex items-start gap-3">
+					<div
+						class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-highlight text-brand"
+					>
+						<UsersIcon class="size-5" />
+					</div>
+					<div class="min-w-0">
 						<h2 class="m-0 text-lg font-semibold text-contrast">
 							{{ formatMessage(messages.notRunningTitle) }}
 						</h2>

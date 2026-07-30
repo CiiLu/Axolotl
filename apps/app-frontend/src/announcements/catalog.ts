@@ -33,6 +33,35 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.3',
+		version: '1.6.3',
+		publishedAt: '2026-07-30',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.3',
+			'zh-CN': 'Axolotl Launcher 1.6.3',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US':
+						'Streamlined the Java installation flow and clarified the setup state when Java configuration is postponed.',
+					'zh-CN': '优化 Java 安装流程，并明确推迟 Java 配置后的安装状态。',
+				},
+				{
+					'en-US':
+						'Changed the gradient color generator default format to use the section sign (§).',
+					'zh-CN': '修改渐变颜色生成器的默认格式，改为使用章节符号（§）。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed Terracotta multiplayer being unavailable on Linux and Windows.',
+					'zh-CN': '修复 Linux 和 Windows 端陶瓦联机无法使用的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.2',
 		version: '1.6.2',
 		publishedAt: '2026-07-30',

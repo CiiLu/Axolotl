@@ -156,6 +156,23 @@ pub(super) fn find_terracotta_executable(
 }
 
 pub(super) fn terracotta_binary_path() -> PathBuf {
+    let base_dir = crate::state::DirectoryInfo::global_handle_if_ready()
+        .map(|directories| directories.config_dir.clone())
+        .or_else(|| {
+            crate::state::DirectoryInfo::initial_settings_dir_path(
+                crate::brand::BUNDLE_IDENTIFIER,
+            )
+        })
+        .unwrap_or_else(|| PathBuf::from("."));
+
+    terracotta_binary_path_in(&base_dir)
+}
+
+pub(super) fn terracotta_binary_path_in(base_dir: &Path) -> PathBuf {
+    base_dir.join("terracotta").join(terracotta_binary_name())
+}
+
+fn legacy_terracotta_binary_path() -> PathBuf {
     std::env::current_exe()
         .ok()
         .and_then(|path| path.parent().map(Path::to_path_buf))
@@ -201,6 +218,30 @@ pub(super) fn resolve_terracotta_binary_path(bin_path: &Path) -> PathBuf {
         .parent()
         .and_then(|parent| find_terracotta_executable(parent, None))
         .unwrap_or(preferred_path)
+}
+
+pub(super) fn resolve_installed_terracotta_binary_path() -> PathBuf {
+    resolve_installed_terracotta_binary_path_from(
+        &terracotta_binary_path(),
+        &legacy_terracotta_binary_path(),
+    )
+}
+
+pub(super) fn resolve_installed_terracotta_binary_path_from(
+    installed_path: &Path,
+    legacy_path: &Path,
+) -> PathBuf {
+    let installed_path = resolve_terracotta_binary_path(installed_path);
+    if is_terracotta_executable(&installed_path) {
+        return installed_path;
+    }
+
+    let legacy_path = resolve_terracotta_binary_path(legacy_path);
+    if is_terracotta_executable(&legacy_path) {
+        legacy_path
+    } else {
+        installed_path
+    }
 }
 
 pub(super) async fn install_terracotta_binary(

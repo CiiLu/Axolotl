@@ -38,8 +38,15 @@
 
 <script setup lang="ts">
 import { ClockIcon, DownloadIcon, SpinnerIcon } from '@modrinth/assets'
-import { ButtonStyled, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
+import {
+	ButtonStyled,
+	defineMessages,
+	injectNotificationManager,
+	NewModal,
+	useVIntl,
+} from '@modrinth/ui'
 import { onUnmounted, ref, useTemplateRef } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { respond_to_java_download_confirmation } from '@/helpers/jre'
 
@@ -49,6 +56,8 @@ interface JavaDownloadConfirmationRequest {
 }
 
 const { formatMessage } = useVIntl()
+const { addNotification } = injectNotificationManager()
+const router = useRouter()
 
 const messages = defineMessages({
 	title: {
@@ -63,7 +72,7 @@ const messages = defineMessages({
 	laterDescription: {
 		id: 'app.java-download-confirmation.later-description',
 		defaultMessage:
-			'After configuring Java {version} later, repair the instance to finish its setup.',
+			'The instance will finish installing, but Java {version} must be configured before you can play.',
 	},
 	setUpLater: {
 		id: 'app.java-download-confirmation.set-up-later',
@@ -72,6 +81,15 @@ const messages = defineMessages({
 	download: {
 		id: 'app.java-download-confirmation.download',
 		defaultMessage: 'Download Java',
+	},
+	postponedTitle: {
+		id: 'app.java-download-confirmation.postponed-title',
+		defaultMessage: 'Java setup postponed',
+	},
+	postponedBody: {
+		id: 'app.java-download-confirmation.postponed-body',
+		defaultMessage:
+			'The instance will finish installing. Configure Java {version} before launching it.',
 	},
 })
 
@@ -98,6 +116,11 @@ function handleHide() {
 
 	decisionSent = true
 	void respond_to_java_download_confirmation(pendingRequest.requestId, false)
+	addNotification({
+		title: formatMessage(messages.postponedTitle),
+		text: formatMessage(messages.postponedBody, { version: pendingRequest.version }),
+		type: 'warning',
+	})
 }
 
 async function confirmDownload() {
@@ -106,11 +129,10 @@ async function confirmDownload() {
 
 	responding.value = true
 	decisionSent = true
-	try {
-		await respond_to_java_download_confirmation(pendingRequest.requestId, true)
-	} finally {
-		modal.value?.hide()
-	}
+	const response = respond_to_java_download_confirmation(pendingRequest.requestId, true)
+	modal.value?.hide()
+	await router.push('/downloads')
+	await response
 }
 
 onUnmounted(() => {

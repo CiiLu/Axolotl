@@ -16,9 +16,9 @@ use tracing::{info, warn};
 use self::binary::{
     cleanup_legacy_versions, find_terracotta_executable,
     install_terracotta_binary, is_terracotta_executable,
-    resolve_terracotta_binary_path, terracotta_binary_name,
-    terracotta_binary_path, validate_terracotta_version,
-    versioned_terracotta_binary_name,
+    resolve_installed_terracotta_binary_path, resolve_terracotta_binary_path,
+    terracotta_binary_name, terracotta_binary_path,
+    validate_terracotta_version, versioned_terracotta_binary_name,
 };
 pub use self::binary::{terracotta_download_urls, terracotta_platform_key};
 use self::lan::MinecraftLanAnnouncer;
@@ -319,6 +319,14 @@ fn reported_terracotta_port(output: &str) -> Option<u16> {
         let (_, port) = line.rsplit_once("port = ")?;
         port.trim().parse().ok()
     })
+}
+
+fn terracotta_startup_arguments(target_os: &str) -> &'static [&'static str] {
+    if target_os == "macos" {
+        &["--daemon"]
+    } else {
+        &[]
+    }
 }
 
 async fn get_latest_terracotta_version() -> eyre::Result<String> {
@@ -774,8 +782,7 @@ async fn poll_terracotta_state(port: u16) {
 }
 
 fn is_binary_installed() -> bool {
-    let bin_path = terracotta_binary_path();
-    is_terracotta_executable(&resolve_terracotta_binary_path(&bin_path))
+    is_terracotta_executable(&resolve_installed_terracotta_binary_path())
 }
 
 pub async fn get_state() -> TerracottaState {
@@ -809,16 +816,19 @@ pub async fn start_terracotta(
     auto_download: bool,
 ) -> eyre::Result<()> {
     let _operation = TERRACOTTA_OPERATION.lock().await;
-    let bin_path = binary_path
-        .map(PathBuf::from)
-        .unwrap_or_else(terracotta_binary_path);
-
-    let mut final_path = resolve_terracotta_binary_path(&bin_path);
+    let custom_bin_path = binary_path.map(PathBuf::from);
+    let mut final_path = custom_bin_path.as_deref().map_or_else(
+        resolve_installed_terracotta_binary_path,
+        resolve_terracotta_binary_path,
+    );
 
     if !is_terracotta_executable(&final_path) && auto_download {
         info!("terracotta binary not found, attempting auto-download");
         run_terracotta_download(None).await?;
-        final_path = resolve_terracotta_binary_path(&bin_path);
+        final_path = custom_bin_path.as_deref().map_or_else(
+            resolve_installed_terracotta_binary_path,
+            resolve_terracotta_binary_path,
+        );
     }
 
     if !is_terracotta_executable(&final_path) {
@@ -850,7 +860,7 @@ pub async fn start_terracotta(
     let _ = std::fs::remove_file(&port_file);
 
     let mut child = Command::new(&final_path)
-        .arg("--daemon")
+        .args(terracotta_startup_arguments(std::env::consts::OS))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1326,6 +1336,66 @@ mod tests {
         let output =
             "stdout: [Lock]: Successfully join the global mutex, port = 57924";
         assert_eq!(reported_terracotta_port(output), Some(57924));
+    }
+
+    #[test]
+    fn only_macos_uses_the_daemon_startup_argument() {
+        assert_eq!(terracotta_startup_arguments("macos"), &["--daemon"]);
+        assert!(terracotta_startup_arguments("windows").is_empty());
+        assert!(terracotta_startup_arguments("linux").is_empty());
+        assert!(terracotta_startup_arguments("freebsd").is_empty());
+    }
+
+    #[test]
+    fn builds_the_binary_path_below_the_launcher_data_directory() {
+        let root = Path::new("launcher-data");
+        assert_eq!(
+            binary::terracotta_binary_path_in(root),
+            root.join("terracotta").join(terracotta_binary_name())
+        );
+    }
+
+    #[test]
+    fn installed_binary_resolution_falls_back_to_the_legacy_location() {
+        let temp = tempfile::tempdir().unwrap();
+        let installed = temp
+            .path()
+            .join("launcher-data")
+            .join(terracotta_binary_name());
+        let legacy = temp
+            .path()
+            .join("application")
+            .join(terracotta_binary_name());
+        std::fs::create_dir_all(installed.parent().unwrap()).unwrap();
+        std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        std::fs::write(&legacy, executable_magic()).unwrap();
+
+        assert_eq!(
+            binary::resolve_installed_terracotta_binary_path_from(
+                &installed, &legacy
+            ),
+            legacy
+        );
+    }
+
+    #[test]
+    fn installed_binary_resolution_keeps_the_writable_path_when_missing() {
+        let temp = tempfile::tempdir().unwrap();
+        let installed = temp
+            .path()
+            .join("launcher-data")
+            .join(terracotta_binary_name());
+        let legacy = temp
+            .path()
+            .join("application")
+            .join(terracotta_binary_name());
+
+        assert_eq!(
+            binary::resolve_installed_terracotta_binary_path_from(
+                &installed, &legacy
+            ),
+            installed
+        );
     }
 
     #[test]

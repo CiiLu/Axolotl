@@ -26,6 +26,19 @@ test('recovers from corrupt local storage', () => {
 	const state = loadGradientTextState(createStorage({ [GRADIENT_TEXT_STORAGE_KEY]: '{bad json' }))
 	assert.deepEqual(state.colors, ['#A855F7', '#22C55E'])
 	assert.equal(state.adapterId, 'vanilla')
+	assert.equal(state.vanillaCharacter, '§')
+})
+
+test('defaults vanilla output to the section sign without overwriting a saved ampersand', () => {
+	assert.equal(createDefaultGradientTextState().vanillaCharacter, '§')
+
+	const storage = createStorage({
+		[GRADIENT_TEXT_STORAGE_KEY]: JSON.stringify({
+			...createDefaultGradientTextState(),
+			vanillaCharacter: '&',
+		}),
+	})
+	assert.equal(loadGradientTextState(storage).vanillaCharacter, '&')
 })
 
 test('persists only valid normalized local state', () => {

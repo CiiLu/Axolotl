@@ -1260,7 +1260,13 @@
     "message": "下载 Java"
   },
   "app.java-download-confirmation.later-description": {
-    "message": "稍后配置 Java {version} 后，请修复实例以完成安装。"
+    "message": "实例将继续完成安装，但需要先配置 Java {version} 才能启动。"
+  },
+  "app.java-download-confirmation.postponed-body": {
+    "message": "实例将继续完成安装，请在启动前配置 Java {version}。"
+  },
+  "app.java-download-confirmation.postponed-title": {
+    "message": "已推迟 Java 设置"
   },
   "app.java-download-confirmation.set-up-later": {
     "message": "稍后设置"

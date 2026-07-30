@@ -1641,7 +1641,13 @@
     "message": "Download Java"
   },
   "app.java-download-confirmation.later-description": {
-    "message": "After configuring Java {version} later, repair the instance to finish its setup."
+    "message": "The instance will finish installing, but Java {version} must be configured before you can play."
+  },
+  "app.java-download-confirmation.postponed-body": {
+    "message": "The instance will finish installing. Configure Java {version} before launching it."
+  },
+  "app.java-download-confirmation.postponed-title": {
+    "message": "Java setup postponed"
   },
   "app.java-download-confirmation.set-up-later": {
     "message": "Set up later"
