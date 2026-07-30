@@ -1,5 +1,6 @@
 import { renderHighlightedString } from '@modrinth/utils'
 import { configuredXss } from '@modrinth/utils/parse'
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { invoke } from '@tauri-apps/api/core'
 
 export interface TranslatableHit {
@@ -319,7 +320,7 @@ async function fetchMirrorDescription(hit: TranslatableHit): Promise<string | nu
 	const url = `${MIRROR_API_BASE}/${hit.provider}/${encodeURIComponent(id)}`
 
 	try {
-		const response = await fetch(url)
+		const response = await tauriFetch(url)
 		if (!response.ok) return null
 		const data = (await response.json()) as MirrorTranslationResponse
 		const translated = data.translated?.trim() || null
@@ -343,13 +344,18 @@ async function fetchMirrorDescription(hit: TranslatableHit): Promise<string | nu
  * @param force Ignored (kept for API compatibility with the old translateSearchHits).
  */
 export async function translateSearchDescriptions<T extends TranslatableHit>(
-	hits: T[],
-	locale: string,
-	_force = false,
+  hits: T[],
+  locale: string,
+  _force = false,
 ): Promise<T[]> {
-	if (locale !== 'zh-CN' || hits.length === 0) return hits
+  if (hits.length === 0) return hits
+  if (!_force) {
+    const settings = await getTranslationSettings()
+    if (!settings.auto_translate) return hits
+  }
+  if (locale !== 'zh-CN') return hits
 
-	const entries = hits.map((hit) => ({ hit, index: hits.indexOf(hit) }))
+  const entries = hits.map((hit) => ({ hit, index: hits.indexOf(hit) }))
 
 	const results = await Promise.allSettled(
 		entries.map(async ({ hit, index }) => {

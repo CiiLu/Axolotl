@@ -87,7 +87,7 @@ import { isBuiltInInstanceIcon } from '@/helpers/instance-icon-frame'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
-import { translateSearchHits } from '@/helpers/translation'
+import { translateSearchDescriptions } from '@/helpers/translation'
 import { get_instance_worlds } from '@/helpers/worlds'
 import i18n from '@/i18n.config'
 import { injectContentInstall } from '@/providers/content-install'
@@ -1688,16 +1688,16 @@ const {
 
 // Keep a pristine copy when genuine search results arrive (project hits).
 watch(
-	() => searchState.projectHits.value,
-	(hits) => {
-		if (isUpdatingProjectHitsFromTranslation) return
-		if (hits && hits.length > 0) {
-			originalProjectHits.value = hits
-			const version = cancelTranslation()
-			void autoTranslateNewSearchResults(version, false)
-		}
-	},
-	{ flush: 'sync' },
+  () => searchState.projectHits.value,
+  (hits) => {
+    if (isUpdatingProjectHitsFromTranslation) return
+    if (hits && hits.length > 0) {
+      originalProjectHits.value = hits
+      const version = cancelTranslation()
+      void autoTranslateNewSearchResults(version, false)
+    }
+  },
+  { flush: 'sync' },
 )
 // Keep a pristine copy when genuine search results arrive (server hits).
 watch(
@@ -1721,7 +1721,7 @@ async function autoTranslateNewSearchResults(version: number, useServer: boolean
 		const hits = useServer ? originalServerHits.value : originalProjectHits.value
 		if (!hits?.length) return
 
-		const translated = await translateSearchHits(hits, false)
+		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, false)
 		if (isStale(version)) return
 
 		if (translated !== hits) {
@@ -1745,7 +1745,7 @@ async function translateCurrentHits() {
 		const hits = useServer ? serverHits : projectHits
 		if (!hits || hits.length === 0) return
 
-		const translated = await translateSearchHits(hits, true)
+		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, true)
 		if (isStale(version)) return // superseded
 
 		if (translated !== hits) {
