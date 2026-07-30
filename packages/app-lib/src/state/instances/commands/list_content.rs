@@ -40,10 +40,6 @@ enum ContentFilter<'a> {
         exclude_untracked: bool,
     },
     OnlyModpack(&'a ModpackIdentifiers),
-    OnlySourceKind {
-        source_kind: ContentSourceKind,
-        include_untracked: bool,
-    },
 }
 
 pub(crate) async fn list_content_sets(
@@ -1119,17 +1115,7 @@ async fn content_projects_for_scope(
                     continue;
                 }
             }
-            ContentFilter::OnlySourceKind {
-                source_kind,
-                include_untracked,
-            } => {
-                if !(entry
-                    .is_some_and(|entry| entry.source_kind == source_kind)
-                    || include_untracked && entry.is_none())
-                {
-                    continue;
-                }
-            }
+
         }
 
         let update = (origin_provider == Some(ContentProvider::Modrinth))

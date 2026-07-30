@@ -4,7 +4,7 @@ use crate::state::instances::{
 };
 use crate::state::{
     CacheBehaviour, CachedEntry, ContentProvider, ContentProviderRef,
-    CurseForgeFileId, CurseForgeProjectId, ModrinthProjectId,
+    CurseForgeFileId, ModrinthProjectId,
     ModrinthVersionId, ProjectType, ReleaseChannel, State,
 };
 use std::collections::HashMap;
@@ -23,9 +23,6 @@ pub(crate) enum ContentUpdate {
     },
     CurseForge {
         relative_path: String,
-        project_id: CurseForgeProjectId,
-        current_file_id: CurseForgeFileId,
-        target_file_id: CurseForgeFileId,
     },
 }
 
@@ -310,9 +307,6 @@ pub(crate) async fn check_content_updates(
         }
         output.push(ContentUpdate::CurseForge {
             relative_path: instance_file.relative_path.clone(),
-            project_id: *project_id,
-            current_file_id: *current_file_id,
-            target_file_id,
         });
     }
 

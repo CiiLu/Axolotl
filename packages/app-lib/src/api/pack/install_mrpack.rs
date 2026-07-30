@@ -50,7 +50,6 @@ type ExtractProgressFn<'a> = dyn FnMut(u64) -> Pin<Box<dyn Future<Output = crate
 #[derive(Clone)]
 struct ModpackContentInstallContext {
     instance_id: String,
-    instance_path: String,
     instance_full_path: PathBuf,
     download_meta: DownloadMeta,
     pack_version_id: Option<String>,
@@ -641,7 +640,6 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                     "Unknown instance {instance_id}"
                 ))
             })?;
-    let instance_path = metadata.instance.path.clone();
     let download_meta = DownloadMeta {
         reason,
         game_version: metadata.applied_content_set.game_version.clone(),
@@ -719,7 +717,6 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
     );
     let content_context = ModpackContentInstallContext {
         instance_id: instance_id.clone(),
-        instance_path: instance_path.clone(),
         instance_full_path: instance_full_path.clone(),
         download_meta,
         pack_version_id: version_id.clone(),

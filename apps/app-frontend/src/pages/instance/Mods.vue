@@ -303,6 +303,8 @@ watch(
 	(items) => {
 		if (items && items.length > 0) {
 			installingBuffer.value = [...items]
+		} else {
+			installingBuffer.value = []
 		}
 	},
 	{ immediate: true, deep: true },
@@ -323,7 +325,7 @@ const manualDownloadCandidates = computed<CurseForgeManualDownloadItem[]>(() => 
 			job.provider === 'curse_forge' &&
 			installJobInstanceId(job) === props.instance.id,
 	)
-	const source = latestJob
+	const jobItems = latestJob
 		? latestJob.items
 				.filter((item) => item.status === 'skipped' && item.project_id && item.version_id)
 				.map((item) => ({
@@ -332,8 +334,12 @@ const manualDownloadCandidates = computed<CurseForgeManualDownloadItem[]>(() => 
 					fileName: item.name,
 					websiteUrl: item.manual_url ?? undefined,
 				}))
-		: (pendingManualDownloadsByInstance.value.get(props.instance.id) ??
-			getCurseForgeManualDownloads(props.instance.id))
+		: []
+	const source =
+		jobItems.length > 0
+			? jobItems
+			: (pendingManualDownloadsByInstance.value.get(props.instance.id) ??
+				getCurseForgeManualDownloads(props.instance.id))
 	const unique = new Map<string, CurseForgeManualDownloadItem>()
 	for (const item of source) {
 		unique.set(`${item.projectId}:${item.fileId}`, item)
