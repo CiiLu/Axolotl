@@ -405,7 +405,6 @@ fn main() {
         .plugin(api::drop::init())
         .plugin(api::files::init())
         .plugin(api::worlds::init())
-        .plugin(api::terracotta::init())
         .manage(PendingUpdateData::default())
         .invoke_handler(tauri::generate_handler![
             initialize_state,

@@ -20,7 +20,6 @@ pub mod server_address;
 pub mod settings;
 pub mod symlink;
 pub mod tags;
-pub mod terracotta;
 pub mod translation;
 pub mod worlds;
 

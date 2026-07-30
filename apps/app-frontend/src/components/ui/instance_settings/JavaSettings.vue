@@ -174,7 +174,6 @@ watch(
 			:disabled="!overrideJavaInstall"
 			:placeholder="formatMessage(messages.javaPathPlaceholder)"
 			:version="requiredJavaVersion"
-			select-all-versions
 		/>
 
 		<h2 class="mb-1 mt-4 block text-base font-extrabold text-contrast">

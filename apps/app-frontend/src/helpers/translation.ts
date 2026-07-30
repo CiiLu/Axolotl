@@ -2,18 +2,15 @@ import { renderHighlightedString } from '@modrinth/utils'
 import { configuredXss } from '@modrinth/utils/parse'
 import { invoke } from '@tauri-apps/api/core'
 
-import i18n from '@/i18n.config'
-
-/** Minimal shape of a search hit object that has a translatable title and description. */
 export interface TranslatableHit {
-	/** Unique identifier — `project_id` on search hits, `id` on SearchResult. */
 	project_id?: string
 	id?: string
 	title?: string
 	description?: string
-	/** Server search hits use `name` / `summary` instead of `title` / `description`. */
 	name?: string
 	summary?: string
+	provider?: 'modrinth' | 'curseforge'
+	provider_project_id?: string
 }
 
 export type TranslationProvider = 'microsoft' | 'google' | 'openai-compatible'
@@ -280,89 +277,104 @@ export function renderTranslatedDescription(
 		.join('')
 }
 
-const translationCache = new Map<string, { title: string; description: string } | undefined>()
+const MIRROR_API_BASE = 'https://mod.mcimirror.top/translate'
 
-export async function translateSearchHits<T extends TranslatableHit>(
+/** Cache: key → translated description string. Key format: `cf:{provider_project_id}` or `mr:{project_id}`. */
+const descriptionCache = new Map<string, string>()
+
+function mirrorCacheKey(hit: TranslatableHit): string | null {
+	if (hit.provider === 'curseforge') {
+		const id = hit.provider_project_id
+		if (!id) return null
+		return `cf:${id}`
+	}
+	if (hit.provider === 'modrinth') {
+		const id = hit.project_id
+		if (!id) return null
+		return `mr:${id}`
+	}
+	return null
+}
+
+interface MirrorTranslationResponse {
+	modid?: number
+	project_id?: string
+	translated: string
+	original: string
+	translated_at: string
+}
+
+/** Fetch translated description for a single project from the mcimirror API. */
+async function fetchMirrorDescription(hit: TranslatableHit): Promise<string | null> {
+	const cacheKey = mirrorCacheKey(hit)
+	if (!cacheKey) return null
+
+	const cached = descriptionCache.get(cacheKey)
+	if (cached !== undefined) return cached || null
+
+	const id = hit.provider === 'curseforge' ? hit.provider_project_id : hit.project_id
+
+	if (!id || !hit.provider) return null
+
+	const url = `${MIRROR_API_BASE}/${hit.provider}/${encodeURIComponent(id)}`
+
+	try {
+		const response = await fetch(url)
+		if (!response.ok) return null
+		const data = (await response.json()) as MirrorTranslationResponse
+		const translated = data.translated?.trim() || null
+		descriptionCache.set(cacheKey, translated ?? '')
+		return translated
+	} catch {
+		descriptionCache.set(cacheKey, '')
+		return null
+	}
+}
+
+/**
+ * Rewrites search hit descriptions to Chinese using the mcimirror translation
+ * API. Each hit is fetched in parallel; only the description field is replaced.
+ * Hits without a translatable description are left unchanged. Results are
+ * cached in memory across searches.
+ *
+ * @param hits  Search result hits that carry at least provider + ID and
+ *              description fields.
+ * @param locale Target locale — only `zh-CN` triggers translation.
+ * @param force Ignored (kept for API compatibility with the old translateSearchHits).
+ */
+export async function translateSearchDescriptions<T extends TranslatableHit>(
 	hits: T[],
-	force = false,
+	locale: string,
+	_force = false,
 ): Promise<T[]> {
-	if (hits.length === 0) return hits
+	if (locale !== 'zh-CN' || hits.length === 0) return hits
 
-	const settings = await getTranslationSettings()
-	if (!force && !settings.auto_translate) return hits
+	const entries = hits.map((hit) => ({ hit, index: hits.indexOf(hit) }))
 
-	const targetLanguage = settings.target_language || i18n.global.locale.value || 'en-US'
-	if (!targetLanguage) return hits
+	const results = await Promise.allSettled(
+		entries.map(async ({ hit, index }) => {
+			const originalDesc = hit.description ?? hit.summary ?? ''
+			if (!originalDesc) return { index, hit }
 
-	const hitsToTranslate: T[] = []
-	const segments: TranslationSegment[] = []
+			const translation = await fetchMirrorDescription(hit)
+			if (!translation) return { index, hit }
 
-	for (const hit of hits) {
-		const key = hit.project_id ?? hit.id
-		if (!key) continue
-		const cached = translationCache.get(key)
-		if (cached) {
-			// Already cached — patch below.
-			hitsToTranslate.push(hit)
-			continue
-		}
-		const title = hit.title ?? hit.name ?? ''
-		const description = hit.description ?? hit.summary ?? ''
-		if (!title && !description) continue
+			return {
+				index,
+				hit: {
+					...hit,
+					description: translation,
+					summary: translation,
+				} as T,
+			}
+		}),
+	)
 
-		hitsToTranslate.push(hit)
-		segments.push(
-			{ id: `title:${key}`, text: title, format: 'plain' },
-			{ id: `description:${key}`, text: description, format: 'plain' },
-		)
+	const translatedHits = [...hits]
+	for (const result of results) {
+		if (result.status === 'rejected') continue
+		translatedHits[result.value.index] = result.value.hit
 	}
 
-	if (segments.length === 0 && hitsToTranslate.length > 0) {
-		// All hits are already in cache — still return a new array so callers
-		// can detect that translation is active (translated !== hits).
-		return hits.map(applyCachedTranslation)
-	}
-	if (segments.length === 0) return hits
-
-	const response = await translate({
-		source_language: 'auto',
-		target_language: targetLanguage,
-		context: { title: '', description: '' },
-		segments,
-	}).catch(() => null)
-
-	if (!response) return hits
-
-	const translatedMap = new Map<string, { title: string; description: string }>()
-	for (const seg of response.segments) {
-		const [, projectId] = seg.id.split(':', 2) as [string, string]
-		const field = seg.id.startsWith('title:') ? 'title' : 'description'
-		if (!translatedMap.has(projectId)) {
-			translatedMap.set(projectId, { title: '', description: '' })
-		}
-		const entry = translatedMap.get(projectId)!
-		entry[field] = seg.text
-	}
-
-	// Write cache
-	for (const [projectId, translated] of translatedMap) {
-		translationCache.set(projectId, translated)
-	}
-
-	return hits.map(applyCachedTranslation)
-
-	/** Apply cached translation to a single hit, falling back to original fields. */
-	function applyCachedTranslation<T extends TranslatableHit>(hit: T): T {
-		const key = hit.project_id ?? hit.id
-		if (!key) return hit
-		const translated = translationCache.get(key)
-		if (!translated) return hit
-		return {
-			...hit,
-			title: translated.title || hit.title,
-			description: translated.description || hit.description,
-			name: translated.title || hit.name || hit.title,
-			summary: translated.description || hit.summary || hit.description,
-		}
-	}
+	return translatedHits
 }

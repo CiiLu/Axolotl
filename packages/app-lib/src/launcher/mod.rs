@@ -559,7 +559,7 @@ pub async fn install_minecraft_with_reporter(
         .await?;
         crate::state::instances::commands::set_instance_install_stage(
             &instance.id,
-            InstanceInstallStage::Installed,
+            InstanceInstallStage::NotInstalled,
             &state.pool,
         )
         .await?;

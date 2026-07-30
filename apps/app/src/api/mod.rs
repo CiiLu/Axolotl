@@ -16,7 +16,6 @@ pub mod seed_map;
 pub mod settings;
 pub mod shortcuts;
 pub mod tags;
-pub mod terracotta;
 pub mod translation;
 pub mod utils;
 

@@ -542,13 +542,13 @@
   "app.downloads.item-status.writing": {
     "message": "写入中"
   },
-  "app.downloads.local": {
-    "message": "本地"
-  },
-  "app.downloads.more-active-requests": {
-    "message": "另有 {count} 个进行中的请求"
-  },
-  "app.downloads.new-download": {
+	"app.downloads.local": {
+		"message": "本地"
+	},
+	"app.downloads.more-active-requests": {
+		"message": "另有 {count} 个进行中的请求"
+	},
+	"app.downloads.new-download": {
     "message": "新建下载"
   },
   "app.downloads.no-file-details": {
@@ -1260,13 +1260,7 @@
     "message": "下载 Java"
   },
   "app.java-download-confirmation.later-description": {
-    "message": "实例将继续完成安装，但需要先配置 Java {version} 才能启动。"
-  },
-  "app.java-download-confirmation.postponed-body": {
-    "message": "实例将继续完成安装，请在启动前配置 Java {version}。"
-  },
-  "app.java-download-confirmation.postponed-title": {
-    "message": "已推迟 Java 设置"
+    "message": "稍后配置 Java {version} 后，请修复实例以完成安装。"
   },
   "app.java-download-confirmation.set-up-later": {
     "message": "稍后设置"
@@ -4456,173 +4450,5 @@
   },
   "app.instance-item.view-instance": {
     "message": "查看实例"
-  },
-  "app.navigation.multiplayer": {
-    "message": "联机"
-  },
-  "app.multiplayer.title": {
-    "message": "联机"
-  },
-  "app.multiplayer.host": {
-    "message": "创建房间"
-  },
-  "app.multiplayer.join": {
-    "message": "加入房间"
-  },
-  "app.multiplayer.host-description": {
-    "message": "创建虚拟局域网房间，让好友直接连接到你的游戏。"
-  },
-  "app.multiplayer.join-description": {
-    "message": "输入房间码加入好友的虚拟局域网房间。"
-  },
-  "app.multiplayer.player-name": {
-    "message": "玩家名"
-  },
-  "app.multiplayer.room-code": {
-    "message": "房间码"
-  },
-  "app.multiplayer.room-code-placeholder": {
-    "message": "例如 U/ABCD-EFGH-IJKL-MNOP"
-  },
-  "app.multiplayer.start-hosting": {
-    "message": "创建房间"
-  },
-  "app.multiplayer.join-room": {
-    "message": "加入房间"
-  },
-  "app.multiplayer.copy-room-code": {
-    "message": "复制房间码"
-  },
-  "app.multiplayer.status.idle": {
-    "message": "未连接"
-  },
-  "app.multiplayer.status.starting": {
-    "message": "启动中..."
-  },
-  "app.multiplayer.status.host-scanning": {
-    "message": "正在扫描..."
-  },
-  "app.multiplayer.status.host-ready": {
-    "message": "房间已就绪"
-  },
-  "app.multiplayer.status.guest-connecting": {
-    "message": "正在加入..."
-  },
-  "app.multiplayer.status.guest-ready": {
-    "message": "已连接到房间"
-  },
-  "app.multiplayer.status.error": {
-    "message": "错误"
-  },
-  "app.multiplayer.players": {
-    "message": "玩家"
-  },
-  "app.multiplayer.players-in-room": {
-    "message": "{count} 位玩家在房间中"
-  },
-  "app.multiplayer.not-running": {
-    "message": "联机服务未运行。请创建房间或加入房间以开始联机。"
-  },
-  "app.multiplayer.not-running-title": {
-    "message": "开始联机会话"
-  },
-  "app.multiplayer.share-code": {
-    "message": "将此代码分享给好友："
-  },
-  "app.multiplayer.server-address": {
-    "message": "备用连接地址"
-  },
-  "app.multiplayer.host-label": {
-    "message": "房主"
-  },
-  "app.multiplayer.guest-label": {
-    "message": "访客"
-  },
-  "app.multiplayer.unknown-player-role": {
-    "message": "未知身份"
-  },
-  "app.multiplayer.platform-info": {
-    "message": "当前平台：{platform}"
-  },
-  "app.multiplayer.binary-not-found": {
-    "message": "未找到陶瓦联机程序，请放置于："
-  },
-  "app.multiplayer.download-terracotta": {
-    "message": "下载陶瓦联机"
-  },
-  "app.multiplayer.status.downloading": {
-    "message": "下载中..."
-  },
-  "app.multiplayer.status.fatal": {
-    "message": "严重错误"
-  },
-  "app.multiplayer.status.guest-starting": {
-    "message": "正在连接..."
-  },
-  "app.multiplayer.status.host-starting": {
-    "message": "正在启动主机..."
-  },
-  "app.multiplayer.status.waiting": {
-    "message": "等待中..."
-  },
-  "app.multiplayer.check-network": {
-    "message": "检查网络连接"
-  },
-  "app.multiplayer.connecting": {
-    "message": "连接中..."
-  },
-  "app.multiplayer.disconnect": {
-    "message": "断开连接"
-  },
-  "app.multiplayer.download-progress": {
-    "message": "下载进度"
-  },
-  "app.multiplayer.error.install": {
-    "message": "安装错误"
-  },
-  "app.multiplayer.error.network": {
-    "message": "网络错误"
-  },
-  "app.multiplayer.error.os": {
-    "message": "系统错误"
-  },
-  "app.multiplayer.error.terracotta": {
-    "message": "陶瓦联机错误"
-  },
-  "app.multiplayer.error.unknown": {
-    "message": "未知错误"
-  },
-  "app.multiplayer.retry": {
-    "message": "重试"
-  },
-  "app.multiplayer.verifying": {
-    "message": "验证中..."
-  },
-  "app.multiplayer.extracting": {
-    "message": "正在解压..."
-  },
-  "app.multiplayer.installing": {
-    "message": "正在安装..."
-  },
-  "app.multiplayer.powered-by-terracotta": {
-    "message": "由 Terracotta | 陶瓦联机 强力驱动"
-  },
-  "app.multiplayer.back": {
-    "message": "返回"
-  },
-  "app.multiplayer.start-terracotta": {
-    "message": "启动陶瓦联机"
-  },
-  "app.multiplayer.start-description": {
-    "message": "启动联机服务以创建房间或加入好友的房间。"
-  },
-  "app.multiplayer.lan-hint": {
-    "message": "请打开 Minecraft 进入世界，按 ESC → 对局域网开放 → 选择一个端口，陶瓦联机会自动检测。"
-  },
-  "app.multiplayer.loading": {
-    "message": "初始化中..."
-  },
-  "app.multiplayer.no-players": {
-    "message": "暂无玩家"
   }
 }
