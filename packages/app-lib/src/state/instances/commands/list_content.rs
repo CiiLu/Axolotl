@@ -40,6 +40,10 @@ enum ContentFilter<'a> {
         exclude_untracked: bool,
     },
     OnlyModpack(&'a ModpackIdentifiers),
+    OnlySourceKind {
+        source_kind: ContentSourceKind,
+        include_untracked: bool,
+    },
 }
 
 pub(crate) async fn list_content_sets(
@@ -568,7 +572,10 @@ async fn get_curseforge_linked_modpack_info(
     let cf_data = if cf_capable {
         tokio::try_join!(
             crate::api::curseforge::get_project(numeric_project_id),
-            crate::api::curseforge::get_file(numeric_project_id, numeric_file_id),
+            crate::api::curseforge::get_file(
+                numeric_project_id,
+                numeric_file_id
+            ),
         )
         .ok()
     } else {
@@ -576,9 +583,7 @@ async fn get_curseforge_linked_modpack_info(
     };
 
     // Step 2: Try Modrinth by slug (from CF project) for richer metadata
-    let mr_slug = cf_data
-        .as_ref()
-        .map(|(proj, _)| proj.slug.clone());
+    let mr_slug = cf_data.as_ref().map(|(proj, _)| proj.slug.clone());
     let mr_data: Option<(Option<Project>, Option<Vec<Version>>)> =
         if let Some(ref slug) = mr_slug {
             if let Ok(mr_id) = ModrinthProjectId::new(slug.clone()) {
@@ -612,15 +617,14 @@ async fn get_curseforge_linked_modpack_info(
     match (mr_data, cf_data) {
         // Best case: Modrinth found — use richer Modrinth metadata
         (Some((Some(mr_project), mr_versions)), cf_tuple) => {
-            let mr_version_opt =
-                cf_tuple.as_ref().and_then(|(_, cf_file)| {
-                    mr_versions.as_ref().and_then(|versions| {
-                        versions.iter().find(|v| {
-                            v.version_number == cf_file.display_name
-                                || v.id == cf_file.id.to_string()
-                        })
+            let mr_version_opt = cf_tuple.as_ref().and_then(|(_, cf_file)| {
+                mr_versions.as_ref().and_then(|versions| {
+                    versions.iter().find(|v| {
+                        v.version_number == cf_file.display_name
+                            || v.id == cf_file.id.to_string()
                     })
-                });
+                })
+            });
             let version = if let Some(mr_v) = mr_version_opt {
                 mr_v.clone()
             } else if let Some((_, cf_file)) = cf_tuple.as_ref() {
@@ -656,44 +660,38 @@ async fn get_curseforge_linked_modpack_info(
                 )
                 .await?
                 .and_then(|team| {
-                    team.into_iter()
-                        .find(|member| member.is_owner)
-                        .map(|member| ContentItemOwner {
+                    team.into_iter().find(|member| member.is_owner).map(
+                        |member| ContentItemOwner {
                             id: member.user.id,
                             name: member.user.username,
                             avatar_url: member.user.avatar_url,
                             owner_type: OwnerType::User,
-                        })
+                        },
+                    )
                 })
             };
 
             // Check modpack update: prefer Modrinth versions
             let version_id =
                 mr_version_opt.map_or(version.id.clone(), |v| v.id.clone());
-            let (_, update_version_id, update_version) =
-                check_modpack_update(
-                    &version_id,
-                    &version,
-                    mr_versions,
-                    preferred_update_channel,
-                );
-            let update = update_version_id
-                .and_then(|target| {
-                    let target_id =
-                        ModrinthVersionId::new(target).ok()?;
-                    let project_id = ModrinthProjectId::new(
-                        mr_project.id.clone(),
-                    )
-                    .ok()?;
-                    let current_id =
-                        ModrinthVersionId::new(version.id.clone())
-                            .ok()?;
-                    Some(ContentItemUpdate::Modrinth {
-                        project_id,
-                        current_version_id: current_id,
-                        target_version_id: target_id,
-                    })
-                });
+            let (_, update_version_id, update_version) = check_modpack_update(
+                &version_id,
+                &version,
+                mr_versions,
+                preferred_update_channel,
+            );
+            let update = update_version_id.and_then(|target| {
+                let target_id = ModrinthVersionId::new(target).ok()?;
+                let project_id =
+                    ModrinthProjectId::new(mr_project.id.clone()).ok()?;
+                let current_id =
+                    ModrinthVersionId::new(version.id.clone()).ok()?;
+                Some(ContentItemUpdate::Modrinth {
+                    project_id,
+                    current_version_id: current_id,
+                    target_version_id: target_id,
+                })
+            });
 
             Ok(Some(LinkedModpackInfo {
                 project: mr_project,
@@ -732,13 +730,12 @@ async fn get_curseforge_linked_modpack_info(
                 .filter(|file| file.is_available)
                 .map(|file| curseforge_file_to_version(&file))
                 .collect::<Vec<_>>();
-            let (_, update_version_id, update_version) =
-                check_modpack_update(
-                    &version.id,
-                    &version,
-                    Some(all_versions),
-                    preferred_update_channel,
-                );
+            let (_, update_version_id, update_version) = check_modpack_update(
+                &version.id,
+                &version,
+                Some(all_versions),
+                preferred_update_channel,
+            );
 
             Ok(Some(LinkedModpackInfo {
                 project: project_model,
@@ -750,16 +747,14 @@ async fn get_curseforge_linked_modpack_info(
                             numeric_project_id,
                         )
                         .ok()?,
-                        current_file_id:
-                            crate::state::CurseForgeFileId::new(
-                                numeric_file_id,
-                            )
-                            .ok()?,
-                        target_file_id:
-                            crate::state::CurseForgeFileId::new(
-                                target.parse().ok()?,
-                            )
-                            .ok()?,
+                        current_file_id: crate::state::CurseForgeFileId::new(
+                            numeric_file_id,
+                        )
+                        .ok()?,
+                        target_file_id: crate::state::CurseForgeFileId::new(
+                            target.parse().ok()?,
+                        )
+                        .ok()?,
                     })
                 }),
                 update_version,
@@ -1244,6 +1239,17 @@ async fn content_projects_for_scope(
                     continue;
                 }
             }
+            ContentFilter::OnlySourceKind {
+                source_kind,
+                include_untracked,
+            } => {
+                if !include_untracked && entry.is_none() {
+                    continue;
+                }
+                if entry.is_some_and(|entry| entry.source_kind != source_kind) {
+                    continue;
+                }
+            }
             ContentFilter::OnlyModpack(ids) => {
                 if !ids.is_modpack_file(
                     &file.sha1,
@@ -1260,7 +1266,6 @@ async fn content_projects_for_scope(
                     continue;
                 }
             }
-
         }
 
         let update = (origin_provider == Some(ContentProvider::Modrinth))
@@ -1556,10 +1561,8 @@ async fn content_files_to_content_items(
                         .then(|| index.file_id.to_string());
                 }
 
-                let fallback = curseforge_project?
-                    .latest_files
-                    .iter()
-                    .find(|candidate| {
+                let fallback = curseforge_project?.latest_files.iter().find(
+                    |candidate| {
                         if !candidate.is_available {
                             return false;
                         }
@@ -1582,7 +1585,8 @@ async fn content_files_to_content_items(
                                 _ => false,
                             }
                         })
-                    })?;
+                    },
+                )?;
                 (fallback.id != current_file_id)
                     .then(|| fallback.id.to_string())
             });
