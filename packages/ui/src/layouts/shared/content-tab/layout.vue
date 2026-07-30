@@ -2,6 +2,7 @@
 import {
 	ArrowDownAZIcon,
 	ArrowUpZAIcon,
+	ChevronUpIcon,
 	ClockArrowDownIcon,
 	ClockArrowUpIcon,
 	CodeIcon,
@@ -17,7 +18,7 @@ import {
 	TextCursorInputIcon,
 	TrashIcon,
 } from '@modrinth/assets'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import EmptyState from '#ui/components/base/EmptyState.vue'
@@ -37,8 +38,7 @@ import {
 	isClientOnlyEnvironment,
 	useBulkOperation,
 	useChangingItems,
-	useContentFilters,
-	useContentGrouping,
+	useContentPipeline,
 	useContentSelection,
 } from './composables'
 import { injectContentManager } from './providers/content-manager'
@@ -137,6 +137,13 @@ const messages = defineMessages({
 const ctx = injectContentManager()
 const skipNonEssentialWarnings = computed(() => ctx.skipNonEssentialWarnings?.value ?? false)
 
+// window 级内存（导航切换保留，关软件丢弃）
+const memory: Record<string, Map<string, any>> = ((window as any).__ctMemory ??= {})
+function getMap<K, V>(namespace: string): Map<K, V> {
+	if (!memory[namespace]) memory[namespace] = new Map()
+	return memory[namespace]
+}
+
 function getItemId(item: ContentItem) {
 	return ctx.getItemId?.(item) ?? item.file_path ?? item.file_name ?? item.id
 }
@@ -147,8 +154,17 @@ function findContentItem(id: string): ContentItem | undefined {
 	return ctx.modpackItems?.value?.find((i) => getItemId(i) === id)
 }
 
+// 排序方式（导航切换保留，关软件丢弃）
 type SortMode = 'alphabetical-asc' | 'alphabetical-desc' | 'date-added-newest' | 'date-added-oldest'
-const sortMode = ref<SortMode>('alphabetical-asc')
+
+const sortMemory = getMap<string, SortMode>('sort')
+const sortMode = ref<SortMode>(
+	ctx.instanceId ? (sortMemory.get(ctx.instanceId) ?? 'alphabetical-asc') : 'alphabetical-asc',
+)
+
+watch(sortMode, (val) => {
+	if (ctx.instanceId) sortMemory.set(ctx.instanceId, val)
+})
 
 const sortLabels: Record<SortMode, () => string> = {
 	'alphabetical-asc': () => formatMessage(messages.sortAlphabetical),
@@ -211,34 +227,29 @@ function sortItems(items: ContentItem[]): ContentItem[] {
 
 const {
 	searchQuery,
+	searchableItemCount,
 	sortedItems,
 	modpackItemsNoUpdate,
 	modpackChildIdSet,
-	searchedAllItems,
-	searchableItemCount,
-	search,
-} = useContentGrouping({
-	items: ctx.items,
-	modpackItems: ctx.modpackItems,
-	sortItems,
-	getItemId,
-})
-
-const {
 	selectedTypeFilter,
 	selectedStatusFilters,
 	row1FilterOptions,
 	row2FilterOptions,
 	totalCount,
 	filterCounts,
+	filteredItems,
+	filteredModpackItems,
 	toggleTypeFilter,
-	applyFilters,
-} = useContentFilters(searchedAllItems, {
+} = useContentPipeline({
+	items: ctx.items,
+	modpackItems: ctx.modpackItems,
+	sortItems,
+	getItemId,
 	showTypeFilters: true,
 	showUpdateFilter: ctx.hasUpdateSupport,
 	showWarningsFilter: true,
 	isPackLocked: ctx.isPackLocked,
-	persistKey: ctx.filterPersistKey,
+	memoryKey: ctx.instanceId,
 })
 
 const { selectedIds, selectedItems, clearSelection, removeFromSelection } = useContentSelection(
@@ -270,8 +281,14 @@ const { isChanging, markChanging, unmarkChanging } = useChangingItems()
 const bulkStatusMessage = ref<string | null>(null)
 const bulkItemCount = ref(0)
 
+// 整合包分组展开状态（导航切换保留，关软件丢弃）
+const expandedGroupsMemory = getMap<string, Set<string>>('expandedGroups')
+
 const refreshing = ref(false)
-const expandedGroups = ref(new Set<string>())
+
+const expandedGroups = ref<Set<string>>(
+	ctx.instanceId ? (expandedGroupsMemory.get(ctx.instanceId) ?? new Set()) : new Set(),
+)
 
 function toggleGroupExpand(groupId: string) {
 	const newSet = new Set(expandedGroups.value)
@@ -281,11 +298,64 @@ function toggleGroupExpand(groupId: string) {
 		newSet.add(groupId)
 	}
 	expandedGroups.value = newSet
+	if (ctx.instanceId) expandedGroupsMemory.set(ctx.instanceId, newSet)
 }
 
 watch(searchQuery, (query) => {
 	if (query.trim()) {
 		expandedGroups.value = new Set([...expandedGroups.value, 'modpack'])
+		if (ctx.instanceId) expandedGroupsMemory.set(ctx.instanceId, expandedGroups.value)
+	}
+})
+
+const showScrollToTop = ref(false)
+const sidebarVisible = ref(false)
+const SCROLL_THRESHOLD = 300
+const APP_SIDEBAR_WIDTH = 300
+
+function getScrollContainer(): Element | null {
+	return document.querySelector('.app-viewport')
+}
+
+function checkSidebarVisibility() {
+	const appContents = document.querySelector('.app-contents')
+	sidebarVisible.value = appContents?.classList.contains('sidebar-enabled') ?? false
+}
+
+function handleScroll() {
+	const container = getScrollContainer()
+	if (container) {
+		showScrollToTop.value = container.scrollTop > SCROLL_THRESHOLD
+	}
+}
+
+function scrollToTop() {
+	const container = getScrollContainer()
+	if (container) {
+		container.scrollTo({ top: 0, behavior: 'smooth' })
+	}
+}
+
+onMounted(() => {
+	const container = getScrollContainer()
+	if (container) {
+		container.addEventListener('scroll', handleScroll, { passive: true })
+		handleScroll()
+		checkSidebarVisibility()
+	}
+	const observer = new MutationObserver(() => {
+		checkSidebarVisibility()
+	})
+	const appContents = document.querySelector('.app-contents')
+	if (appContents) {
+		observer.observe(appContents, { attributes: true, attributeFilter: ['class'] })
+	}
+})
+
+onBeforeUnmount(() => {
+	const container = getScrollContainer()
+	if (container) {
+		container.removeEventListener('scroll', handleScroll)
 	}
 })
 
@@ -298,21 +368,6 @@ async function handleRefresh() {
 		refreshing.value = false
 	}
 }
-
-const filteredModpackItems = computed(() => {
-	if (modpackItemsNoUpdate.value.length === 0) return []
-	const modpackIds = new Set(modpackItemsNoUpdate.value.map((item) => getItemId(item)))
-	const searched = search(modpackItemsNoUpdate.value).filter((item) =>
-		modpackIds.has(getItemId(item)),
-	)
-	return applyFilters(searched)
-})
-
-const filteredItems = computed(() => {
-	const sorted = sortedItems.value
-	const searched = search(sorted)
-	return applyFilters(searched)
-})
 
 function mapToTableItem(item: ContentItem, group?: string): ContentCardTableItem {
 	const base = ctx.mapToTableItem(item)
@@ -394,7 +449,7 @@ const tableItems = computed<ContentCardTableItem[]>(() => {
 	}
 
 	for (const item of filteredItems.value) {
-		if (modpackChildIdSet.value.has(getItemId(item))) continue
+		if (modpackChildIdSet.value.has(getItemId(item).replace(/\.disabled$/, ''))) continue
 		items.push(mapToTableItem(item))
 	}
 
@@ -1137,5 +1192,41 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 		/>
 
 		<slot name="modals" />
+
+		<Transition name="scroll-to-top">
+			<button
+				v-if="showScrollToTop"
+				class="scroll-to-top-btn"
+				:class="{ 'sidebar-visible': sidebarVisible }"
+				@click="scrollToTop"
+				aria-label="Scroll to top"
+			>
+				<ChevronUpIcon class="size-5" />
+			</button>
+		</Transition>
 	</div>
 </template>
+
+<style scoped>
+.scroll-to-top-btn {
+	@apply fixed bottom-6 z-50 flex items-center justify-center rounded-full bg-brand p-3 text-brand-inverted shadow-lg transition-all duration-200 hover:brightness-110 hover:shadow-xl active:scale-95;
+	right: 24px;
+}
+
+.scroll-to-top-btn.sidebar-visible {
+	right: calc(300px + 24px);
+}
+
+.scroll-to-top-enter-active,
+.scroll-to-top-leave-active {
+	transition:
+		opacity 0.2s ease,
+		transform 0.2s ease;
+}
+
+.scroll-to-top-enter-from,
+.scroll-to-top-leave-to {
+	opacity: 0;
+	transform: translateY(10px);
+}
+</style>
