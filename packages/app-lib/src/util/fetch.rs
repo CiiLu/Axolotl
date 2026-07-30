@@ -937,7 +937,8 @@ fn record_route_success(
         DOWNLOAD_DNS_RESOLVER.record_host_result(&host, 0.5);
     }
     if route.source == DownloadRouteSource::Official
-        && is_official_version_manifest_url(&route.url)
+        && (is_official_version_manifest_url(&route.url)
+            || !AUTO_SOURCE_PROBED.load(Ordering::Relaxed))
     {
         AUTO_PREFERS_OFFICIAL.store(
             ttfb.saturating_add(transfer_elapsed)
@@ -953,7 +954,8 @@ fn record_route_failure(route: &DownloadRoute) {
         DOWNLOAD_DNS_RESOLVER.record_host_result(&host, -0.7);
     }
     if route.source == DownloadRouteSource::Official
-        && is_official_version_manifest_url(&route.url)
+        && (is_official_version_manifest_url(&route.url)
+            || !AUTO_SOURCE_PROBED.load(Ordering::Relaxed))
     {
         AUTO_PREFERS_OFFICIAL.store(false, Ordering::Relaxed);
         AUTO_SOURCE_PROBED.store(true, Ordering::Relaxed);
