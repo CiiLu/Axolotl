@@ -1,6 +1,6 @@
 import type { Labrinth } from '@modrinth/api-client'
 import type { ContentInstallInstance, ContentInstallProjectInfo, ContentItem } from '@modrinth/ui'
-import { createContext, defineMessage, useVIntl } from '@modrinth/ui'
+import { createContext, defineMessage, useDebugLogger, useVIntl } from '@modrinth/ui'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import dayjs from 'dayjs'
@@ -380,6 +380,7 @@ export function createContentInstall(opts: {
 }): ContentInstallContext {
 	const { formatMessage } = useVIntl()
 	const themeStore = useTheming()
+	const debugState = useDebugLogger('content-install')
 	const instances = ref<ContentInstallInstance[]>([])
 	const compatibleLoaders = ref<string[]>([])
 	const gameVersions = ref<string[]>([])
@@ -448,6 +449,7 @@ export function createContentInstall(opts: {
 		if (items.some((i) => i.file_name === placeholder.file_name)) return
 		next.set(instanceId, [...items, placeholder])
 		installingItems.value = next
+		debugState('addInstallingItem', { instanceId, projectId: project.id, fileName: placeholder.file_name })
 
 		if (project.organization) {
 			get_organization(project.organization)
@@ -507,6 +509,7 @@ export function createContentInstall(opts: {
 	function removeInstallingItems(instanceId: string, projectIds: string[]) {
 		const next = new Map(installingItems.value)
 		const items = next.get(instanceId)
+		debugState('removeInstallingItems call', { instanceId, projectIds, hadItems: !!items, count: items?.length })
 		if (items) {
 			const idsToRemove = new Set(projectIds.map((id) => `__installing_${id}`))
 			const filtered = items.filter((i) => !idsToRemove.has(i.file_name))
@@ -575,17 +578,22 @@ export function createContentInstall(opts: {
 
 	function markInstanceContentChanged(instanceId: string) {
 		const next = new Map(installRevisionByInstance.value)
-		next.set(instanceId, (next.get(instanceId) ?? 0) + 1)
+		const newRev = (next.get(instanceId) ?? 0) + 1
+		next.set(instanceId, newRev)
 		installRevisionByInstance.value = next
+		debugState('markInstanceContentChanged', { instanceId, revision: newRev })
 	}
 
 	function markInstanceContentInstallFailed(instanceId: string) {
 		const next = new Map(installFailureRevisionByInstance.value)
-		next.set(instanceId, (next.get(instanceId) ?? 0) + 1)
+		const newRev = (next.get(instanceId) ?? 0) + 1
+		next.set(instanceId, newRev)
 		installFailureRevisionByInstance.value = next
+		debugState('markInstanceContentInstallFailed', { instanceId, revision: newRev })
 	}
 
 	void instance_listener((event: ContentInstallInstanceEvent) => {
+		debugState('instance_listener event', event)
 		if (event.event === 'content_install_finished') {
 			markInstanceContentChanged(event.instance_id)
 			removeInstallingItems(event.instance_id, event.project_ids ?? [])
@@ -648,11 +656,16 @@ export function createContentInstall(opts: {
 			link: curseForgeLink,
 		})
 		const createdInstanceId = installJobInstanceId(job)
+		debugState('createAndInstallCurseForgeModpack', {
+			jobId: job.job_id,
+			createdInstanceId,
+		})
 		if (!createdInstanceId) return
 		createInstanceCallback(createdInstanceId)
 		addInstallingItem(createdInstanceId, project, version)
 		try {
 			await wait_for_install_job(job.job_id)
+			debugState('wait_for_install_job done', { jobId: job.job_id, createdInstanceId })
 			await edit(createdInstanceId, {
 				link: curseForgeLink,
 			})
@@ -666,6 +679,7 @@ export function createContentInstall(opts: {
 			})
 			callback(version.id, [project.id])
 		} catch (err) {
+			debugState('createAndInstallCurseForgeModpack ERR', { err: String(err), createdInstanceId })
 			// Best-effort: still keep the managed association for settings/update UI.
 			await edit(createdInstanceId, {
 				link: curseForgeLink,
@@ -885,6 +899,7 @@ export function createContentInstall(opts: {
 			next.delete(instanceId)
 		}
 		pendingManualDownloadsByInstance.value = next
+		debugState('rememberManualDownloads', { instanceId, count: manualItems.length, items: manualItems.map(m => m.fileName) })
 		return manualItems
 	}
 
@@ -970,6 +985,7 @@ export function createContentInstall(opts: {
 
 		let result: CurseForgeInstallResult
 		if (project.project_type === 'modpack') {
+			debugState('installCurrentCFVersion: modpack install', { instanceId: instance.id, projectId: curseForgeProject.id, fileId: file.id })
 			result = (
 				await installCurseForgeModpack({
 					instanceId: instance.id,
@@ -978,6 +994,7 @@ export function createContentInstall(opts: {
 				})
 			).content
 		} else {
+			debugState('installCurrentCFVersion: file install', { instanceId: instance.id, projectId: curseForgeProject.id, fileId: file.id })
 			await removeInstalledCurseForgeProject(instance.id, curseForgeProject.id)
 			result = await installCurseForgeFile({
 				instanceId: instance.id,
@@ -989,6 +1006,13 @@ export function createContentInstall(opts: {
 				installDependencies,
 			})
 		}
+
+		debugState('installCurrentCFVersion: result', {
+			instanceId: instance.id,
+			installedCount: result.installed.length,
+			manualCount: (result.manualDownloads ?? []).length,
+			failedCount: (result.failed ?? []).length,
+		})
 
 		showManualCurseForgeDownloads(instance.id, result)
 		showFailedCurseForgeDownloads(result)
@@ -1211,6 +1235,12 @@ export function createContentInstall(opts: {
 			) ?? currentVersions[0]
 
 		let createdInstanceId: string | null = null
+		debugState('handleCreateAndInstall', {
+			provider: currentProvider,
+			projectType: currentProject?.project_type,
+			projectTitle: currentProject?.title,
+			isCurseforgeModpack: currentProvider === 'curseforge' && currentProject?.project_type === 'modpack',
+		})
 		try {
 			const job = await install_create_instance({
 				name: data.name,
@@ -1226,6 +1256,7 @@ export function createContentInstall(opts: {
 
 			let installedProjectIds: string[]
 			if (currentProvider === 'curseforge') {
+				debugState('handleCreateAndInstall: CF path start', { instanceId: id, projectId: currentProject?.id })
 				const result = await installCurrentCurseForgeVersion(
 					{
 						id,

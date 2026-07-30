@@ -268,6 +268,7 @@ const messages = defineMessages({
 let savedModalState: ModpackContentModalState | null = null
 
 const { formatMessage } = useVIntl()
+const debugState = useDebugLogger('Mods:state')
 const { handleError, addNotification } = injectNotificationManager()
 const {
 	installingItems,
@@ -362,8 +363,10 @@ watch(
 	() => installingItems.value.get(props.instance.id),
 	(items) => {
 		if (items && items.length > 0) {
+			debugState('installingItems → buffer', { instanceId: props.instance.id, count: items.length })
 			installingBuffer.value = [...items]
-		} else {
+		} else if (installingBuffer.value.length > 0) {
+			debugState('installingItems cleared → reset buffer', { instanceId: props.instance.id })
 			installingBuffer.value = []
 		}
 	},
@@ -379,6 +382,9 @@ watch(projects, (newProjects) => {
 })
 
 const manualDownloadCandidates = computed<CurseForgeManualDownloadItem[]>(() => {
+	const stored =
+		pendingManualDownloadsByInstance.value.get(props.instance.id) ??
+		getCurseForgeManualDownloads(props.instance.id)
 	const latestJob = downloadManager.jobs.value.find(
 		(job) =>
 			job.status === 'succeeded' &&
@@ -395,16 +401,29 @@ const manualDownloadCandidates = computed<CurseForgeManualDownloadItem[]>(() => 
 					websiteUrl: item.manual_url ?? undefined,
 				}))
 		: []
-	const source =
-		jobItems.length > 0
-			? jobItems
-			: (pendingManualDownloadsByInstance.value.get(props.instance.id) ??
-				getCurseForgeManualDownloads(props.instance.id))
+
+	// Always start from the stored list (localStorage / pending map).
+	// If the latest job has skipped items we trust those – otherwise keep
+	// what is already stored.
 	const unique = new Map<string, CurseForgeManualDownloadItem>()
-	for (const item of source) {
+	for (const item of stored) {
 		unique.set(`${item.projectId}:${item.fileId}`, item)
 	}
-	return [...unique.values()]
+	if (jobItems.length > 0) {
+		unique.clear()
+		for (const item of jobItems) {
+			unique.set(`${item.projectId}:${item.fileId}`, item)
+		}
+	}
+	const result = [...unique.values()]
+	debugState('manualDownloadCandidates', {
+		instanceId: props.instance.id,
+		storedCount: stored.length,
+		jobItemsCount: jobItems.length,
+		jobId: latestJob?.job_id,
+		resultCount: result.length,
+	})
+	return result
 })
 
 const installedManualDownloadItems = computed(() => [
@@ -496,6 +515,13 @@ watch(
 	([candidates, items]) => {
 		const remaining = removeInstalledCurseForgeManualDownloads(props.instance.id, candidates, items)
 		const current = pendingManualDownloadsByInstance.value.get(props.instance.id)
+		debugState('manualDownloads watch', {
+			instanceId: props.instance.id,
+			candidatesCount: candidates.length,
+			installedCount: items.length,
+			remainingCount: remaining.length,
+			currentCount: current?.length,
+		})
 		if (manualDownloadsEqual(current, remaining) || (!current && remaining.length === 0)) return
 
 		const next = new Map(pendingManualDownloadsByInstance.value)
@@ -525,6 +551,7 @@ watch(
 	() => installFailureRevisionByInstance.value.get(props.instance.id) ?? 0,
 	(revision, previousRevision) => {
 		if (revision === previousRevision) return
+		debugState('installFailureRevision changed → clear buffer', { instanceId: props.instance.id, revision })
 		installingBuffer.value = []
 	},
 )
@@ -1384,6 +1411,11 @@ watch(
 	() => installRevisionByInstance.value.get(props.instance.id) ?? 0,
 	async (revision) => {
 		if (revision <= handledInstallRevision.value) return
+		debugState('installRevision changed → refreshContentState', {
+			instanceId: props.instance.id,
+			revision,
+			handledRevision: handledInstallRevision.value,
+		})
 		handledInstallRevision.value = revision
 		await refreshContentState('bypass')
 	},
@@ -1657,6 +1689,7 @@ function getOverflowOptions(item: ContentItem): OverflowMenuOption[] {
 async function initProjects(cacheBehaviour?: CacheBehaviour) {
 	if (!props.instance) return
 
+	debugState('initProjects start', { instanceId: props.instance.id, cacheBehaviour })
 	const contentData = await loadInstanceContentData(props.instance.id, cacheBehaviour, handleError)
 	if (contentData.contentItems) {
 		contentData.contentItems = await translateContentItemTitles(
@@ -1669,14 +1702,17 @@ async function initProjects(cacheBehaviour?: CacheBehaviour) {
 
 function applyContentData(contentData: InstanceContentData) {
 	if (contentData.path !== props.instance.id) {
+		debugState('applyContentData path mismatch', { expected: props.instance.id, got: contentData.path })
 		return false
 	}
 
 	if (!contentData.contentItems) {
+		debugState('applyContentData no contentItems → loading=false', { instanceId: props.instance.id })
 		loading.value = false
 		return true
 	}
 
+	debugState('applyContentData set projects', { instanceId: props.instance.id, count: contentData.contentItems.length, paths: contentData.contentItems.map((c) => c.file_name).slice(0, 20) })
 	projects.value = contentData.contentItems
 	writeContentCache(props.instance.id, contentData)
 
