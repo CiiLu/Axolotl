@@ -11,9 +11,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 			terracotta_host,
 			terracotta_join,
 			terracotta_reset,
-			terracotta_parse_room_code,
 			terracotta_get_platform_key,
-			terracotta_get_download_urls,
 			terracotta_download,
 			terracotta_get_player_name,
 		])
@@ -91,24 +89,8 @@ pub async fn terracotta_reset() -> Result<()> {
 }
 
 #[tauri::command]
-pub async fn terracotta_parse_room_code(room_code: String) -> Result<String> {
-	let code = theseus::terracotta::parse_room_code(&room_code)
-		.await
-		.map_err(theseus::Error::from)?;
-	Ok(code)
-}
-
-#[tauri::command]
 pub async fn terracotta_get_platform_key() -> Result<String> {
 	Ok(theseus::terracotta::terracotta_platform_key().to_string())
-}
-
-#[tauri::command]
-pub async fn terracotta_get_download_urls(version: Option<String>) -> Result<Vec<String>> {
-	let key = theseus::terracotta::terracotta_platform_key();
-	let ver = version.unwrap_or_else(|| "0.4.2".to_string());
-	let urls = theseus::terracotta::terracotta_download_urls(&ver, key);
-	Ok(urls)
 }
 
 #[tauri::command]

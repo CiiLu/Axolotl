@@ -461,9 +461,7 @@ fn main() {
 						"terracotta_host",
 						"terracotta_join",
 						"terracotta_reset",
-						"terracotta_parse_room_code",
 						"terracotta_get_platform_key",
-						"terracotta_get_download_urls",
 						"terracotta_download",
 						"terracotta_get_player_name",
 					])

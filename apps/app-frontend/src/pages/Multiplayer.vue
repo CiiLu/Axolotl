@@ -1,7 +1,33 @@
 <script setup lang="ts">
-import { Button, CopyCode, NavTabs, StyledInput, defineMessages, useVIntl } from '@modrinth/ui'
-import { invoke } from '@tauri-apps/api/core'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import {
+	ArrowLeftIcon,
+	BinaryIcon,
+	CheckCircleIcon,
+	DownloadIcon,
+	LogInIcon,
+	LogOutIcon,
+	PlayIcon,
+	RefreshCwIcon,
+	SpinnerIcon,
+	UserIcon,
+	UsersIcon,
+} from '@modrinth/assets'
+import {
+	Admonition,
+	ButtonStyled,
+	Card,
+	CopyCode,
+	defineMessages,
+	NavTabs,
+	ProgressBar,
+	StyledInput,
+	TagItem,
+	useVIntl,
+} from '@modrinth/ui'
+import { computed, ref } from 'vue'
+
+import { useTerracottaSession } from '@/composables/useTerracottaSession'
+import type { TerracottaPlayer, TerracottaStatus } from '@/helpers/terracotta'
 
 const { formatMessage } = useVIntl()
 const messages = defineMessages({
@@ -14,11 +40,12 @@ const messages = defineMessages({
 	},
 	lanHint: {
 		id: 'app.multiplayer.lan-hint',
-		defaultMessage: 'Open your Minecraft world, then press Esc → Open to LAN → choose a port. Terracotta will detect it automatically.',
+		defaultMessage:
+			'Open your Minecraft world, then press Esc → Open to LAN → choose a port. Terracotta will detect it automatically.',
 	},
 	joinDescription: {
 		id: 'app.multiplayer.join-description',
-		defaultMessage: 'Enter a room code to join a friend\'s virtual LAN room.',
+		defaultMessage: "Enter a room code to join a friend's virtual LAN room.",
 	},
 	playerName: {
 		id: 'app.multiplayer.player-name',
@@ -47,6 +74,10 @@ const messages = defineMessages({
 	back: {
 		id: 'app.multiplayer.back',
 		defaultMessage: 'Back',
+	},
+	disconnect: {
+		id: 'app.multiplayer.disconnect',
+		defaultMessage: 'Disconnect',
 	},
 	statusIdle: {
 		id: 'app.multiplayer.status.idle',
@@ -116,6 +147,10 @@ const messages = defineMessages({
 		id: 'app.multiplayer.share-code',
 		defaultMessage: 'Share this code with friends to let them join:',
 	},
+	serverAddress: {
+		id: 'app.multiplayer.server-address',
+		defaultMessage: 'Backup connection address',
+	},
 	hostLabel: {
 		id: 'app.multiplayer.host-label',
 		defaultMessage: 'Host',
@@ -123,6 +158,10 @@ const messages = defineMessages({
 	guestLabel: {
 		id: 'app.multiplayer.guest-label',
 		defaultMessage: 'Guest',
+	},
+	unknownPlayerRole: {
+		id: 'app.multiplayer.unknown-player-role',
+		defaultMessage: 'Unknown role',
 	},
 	platformInfo: {
 		id: 'app.multiplayer.platform-info',
@@ -151,6 +190,14 @@ const messages = defineMessages({
 	verifying: {
 		id: 'app.multiplayer.verifying',
 		defaultMessage: 'Verifying...',
+	},
+	extracting: {
+		id: 'app.multiplayer.extracting',
+		defaultMessage: 'Extracting...',
+	},
+	installing: {
+		id: 'app.multiplayer.installing',
+		defaultMessage: 'Installing...',
 	},
 	connecting: {
 		id: 'app.multiplayer.connecting',
@@ -186,7 +233,7 @@ const messages = defineMessages({
 	},
 	startDescription: {
 		id: 'app.multiplayer.start-description',
-		defaultMessage: 'Start the multiplayer service to host games or join friends\' rooms.',
+		defaultMessage: "Start the multiplayer service to host games or join friends' rooms.",
 	},
 	loading: {
 		id: 'app.multiplayer.loading',
@@ -198,47 +245,42 @@ const messages = defineMessages({
 	},
 })
 
-interface PlayerInfo {
-	machine_id: string
-	name: string
-	vendor: string
-	kind: string
-}
-
-interface TerracottaState {
-	status: string
-	http_port: number | null
-	room_code: string | null
-	server_port: number | null
-	players: PlayerInfo[]
-	download_progress: number | null
-	download_stage: string | null
-	binary_installed: boolean
-	error_type: string | null
-	error_message: string | null
-	profile_index: number | null
-}
-
 const tabIndex = ref(0)
-const playerName = ref('')
-const roomCodeInput = ref('')
-const state = ref<TerracottaState | null>(null)
-const binaryInstalled = ref(false)
-const platformKey = ref('')
-const isMounted = ref(false)
-
-let pollInterval: ReturnType<typeof setInterval> | null = null
+const {
+	download: downloadTerracotta,
+	host: hostGame,
+	isActionPending,
+	join: joinGame,
+	platformKey,
+	playerName,
+	reset: resetState,
+	roomCodeInput,
+	start: startTerracotta,
+	state,
+} = useTerracottaSession()
 
 const tabLinks = computed(() => [
-	{ label: formatMessage(messages.host), href: 'host' },
-	{ label: formatMessage(messages.join), href: 'join' },
+	{ label: formatMessage(messages.host), href: 'host', icon: UsersIcon },
+	{ label: formatMessage(messages.join), href: 'join', icon: LogInIcon },
 ])
 
 const isRunning = computed(() => !!state.value?.http_port)
+const isSessionReady = computed(
+	() => state.value?.status === 'host_ready' || state.value?.status === 'guest_ready',
+)
+const isHostSession = computed(() => state.value?.status === 'host_ready')
+const canSubmitSession = computed(
+	() =>
+		playerName.value.trim().length > 0 &&
+		(tabIndex.value === 0 || roomCodeInput.value.trim().length > 0),
+)
+const guestServerAddress = computed(() =>
+	state.value?.server_port ? `127.0.0.1:${state.value.server_port}` : '',
+)
 
 const statusText = computed(() => {
 	if (!state.value) return ''
-	const statusMap: Record<string, any> = {
+	const statusMap = {
 		idle: messages.statusIdle,
 		starting: messages.statusStarting,
 		waiting: messages.statusWaiting,
@@ -251,20 +293,17 @@ const statusText = computed(() => {
 		error: messages.statusError,
 		fatal: messages.statusFatal,
 		downloading: messages.statusDownloading,
-	}
-	return formatMessage(statusMap[state.value.status] ?? messages.statusIdle)
-})
-
-const statusIndicatorClass = computed(() => {
-	const s = state.value?.status
-	if (s === 'host_ready' || s === 'guest_ready') return 'bg-green-500'
-	if (s === 'error' || s === 'fatal') return 'bg-red-500'
-	if (s === 'downloading') return 'bg-yellow-500 animate-pulse'
-	if (s === 'starting' || s === 'host_scanning' || s === 'host_starting' || s === 'guest_connecting' || s === 'guest_starting') return 'bg-yellow-500 animate-pulse'
-	return 'bg-yellow-500 animate-pulse'
+	} satisfies Record<TerracottaStatus, (typeof messages)[keyof typeof messages]>
+	return formatMessage(statusMap[state.value.status])
 })
 
 const playerCount = computed(() => state.value?.players?.length ?? 0)
+
+function playerRoleMessage(kind: TerracottaPlayer['kind']) {
+	if (kind === 'HOST') return messages.hostLabel
+	if (kind === 'GUEST') return messages.guestLabel
+	return messages.unknownPlayerRole
+}
 
 const binaryPathHint = computed(() => {
 	const name = platformKey.value?.includes('windows') ? 'terracotta.exe' : 'terracotta'
@@ -273,13 +312,17 @@ const binaryPathHint = computed(() => {
 
 const downloadStageText = computed(() => {
 	if (state.value?.download_stage) {
+		if (state.value.download_stage === 'downloading')
+			return formatMessage(messages.downloadProgress)
 		if (state.value.download_stage === 'verifying') return formatMessage(messages.verifying)
+		if (state.value.download_stage === 'extracting') return formatMessage(messages.extracting)
+		if (state.value.download_stage === 'installing') return formatMessage(messages.installing)
 		if (state.value.download_stage === 'complete') return ''
 		if (state.value.download_stage === 'preparing') return formatMessage(messages.connecting)
-		return state.value.download_stage
 	}
 	if (state.value?.status === 'downloading') {
-		if (state.value.download_progress === null || state.value.download_progress === 0) return formatMessage(messages.connecting)
+		if (state.value.download_progress === null || state.value.download_progress === 0)
+			return formatMessage(messages.connecting)
 		if (state.value.download_progress! < 100) return formatMessage(messages.downloadProgress)
 		return formatMessage(messages.verifying)
 	}
@@ -289,449 +332,372 @@ const downloadStageText = computed(() => {
 const errorTypeLabel = computed(() => {
 	const et = state.value?.error_type
 	switch (et) {
-		case 'network': return formatMessage(messages.errorNetwork)
-		case 'install': return formatMessage(messages.errorInstall)
-		case 'terracotta': return formatMessage(messages.errorTerracotta)
-		case 'os': return formatMessage(messages.errorOs)
-		default: return formatMessage(messages.errorUnknown)
+		case 'network':
+			return formatMessage(messages.errorNetwork)
+		case 'install':
+			return formatMessage(messages.errorInstall)
+		case 'terracotta':
+			return formatMessage(messages.errorTerracotta)
+		case 'os':
+			return formatMessage(messages.errorOs)
+		default:
+			return formatMessage(messages.errorUnknown)
 	}
 })
 
 const isRecoverable = computed(() => {
 	const et = state.value?.error_type
 	if (!et) return state.value?.status === 'error'
-	return et !== 'fatal' && et !== 'os'
-})
-
-async function pollState() {
-	try {
-		const result = await invoke<any>('plugin:terracotta|terracotta_get_state')
-		if (!isMounted.value) return
-		state.value = result as TerracottaState
-		binaryInstalled.value = result.binary_installed ?? false
-	} catch (e: any) {
-		if (!isMounted.value) return
-		console.error(e)
-	}
-}
-
-function startPolling(intervalMs = 1000) {
-	if (pollInterval) clearInterval(pollInterval)
-	pollInterval = setInterval(() => {
-		if (isMounted.value) pollState()
-	}, intervalMs)
-}
-
-function stopPolling() {
-	if (pollInterval) {
-		clearInterval(pollInterval)
-		pollInterval = null
-	}
-}
-
-async function startTerracotta() {
-	try {
-		await invoke('plugin:terracotta|terracotta_start', { autoDownload: true })
-		startPolling()
-	} catch (e: any) {
-		console.error(e)
-	}
-}
-
-async function hostGame() {
-	if (!playerName.value.trim()) {
-		console.warn('Please enter a player name')
-		return
-	}
-	try {
-		await invoke('plugin:terracotta|terracotta_host', {
-			playerName: playerName.value.trim(),
-		})
-	} catch (e: any) {
-		console.error(e)
-	}
-}
-
-async function joinGame() {
-	if (!playerName.value.trim()) {
-		console.warn('Please enter a player name')
-		return
-	}
-	if (!roomCodeInput.value.trim()) {
-		console.warn('Please enter a room code')
-		return
-	}
-	try {
-		const parsed = await invoke<string>('plugin:terracotta|terracotta_parse_room_code', {
-			roomCode: roomCodeInput.value.trim(),
-		})
-		await invoke('plugin:terracotta|terracotta_join', {
-			playerName: playerName.value.trim(),
-			roomCode: parsed,
-		})
-	} catch (e: any) {
-		console.error(e)
-	}
-}
-
-async function resetState() {
-	try {
-		await invoke('plugin:terracotta|terracotta_reset')
-		await pollState()
-	} catch (e: any) {
-		console.error(e)
-	}
-}
-
-async function downloadTerracotta() {
-	try {
-		startPolling(500)
-		await invoke('plugin:terracotta|terracotta_download')
-	} catch (e: any) {
-		stopPolling()
-		if (isMounted.value) {
-			console.error(e)
-		}
-	}
-}
-
-onMounted(async () => {
-	isMounted.value = true
-	await pollState()
-	try {
-		platformKey.value = await invoke<string>('plugin:terracotta|terracotta_get_platform_key')
-	} catch {
-		platformKey.value = 'unknown'
-	}
-	try {
-		const name = await invoke<string>('plugin:terracotta|terracotta_get_player_name')
-		if (name && isMounted.value) playerName.value = name
-	} catch {
-	}
-})
-
-onUnmounted(() => {
-	isMounted.value = false
-	stopPolling()
+	return et !== 'os'
 })
 </script>
 
 <template>
-	<div class="p-6 flex flex-col gap-6 max-w-2xl mx-auto w-full">
-		<h1 class="text-2xl font-bold">
+	<div class="box-border flex min-h-full w-full flex-col gap-3 p-6">
+		<h1 class="m-0 text-2xl font-semibold text-contrast">
 			{{ formatMessage(messages.title) }}
 		</h1>
 
-		<template v-if="!state">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5 text-center">
-				<div class="flex items-center justify-center gap-3 mb-4">
-					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
-					<div class="text-lg font-semibold">
-						{{ binaryInstalled ? formatMessage(messages.notRunningTitle) : formatMessage(messages.loading) }}
-					</div>
-				</div>
-				<template v-if="binaryInstalled">
-					<div class="text-sm text-secondary mb-4">
-						{{ formatMessage(messages.notRunning) }}
-					</div>
-					<Button @click="startTerracotta">
-						{{ formatMessage(messages.startTerracotta) }}
-					</Button>
-				</template>
+		<Card v-if="!state" class="!m-0">
+			<div class="flex items-center gap-3">
+				<SpinnerIcon class="size-8 animate-spin text-brand" />
+				<h2 class="m-0 text-lg font-semibold text-contrast">
+					{{ formatMessage(messages.loading) }}
+				</h2>
 			</div>
-		</template>
+		</Card>
 
-		<template v-else-if="!state.binary_installed">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5 text-center">
-				<div class="text-lg font-semibold mb-2">
-					{{ formatMessage(messages.notRunningTitle) }}
-				</div>
-				<div class="text-sm text-secondary">
-					{{ formatMessage(messages.notRunning) }}
-				</div>
-				<div class="mt-4 text-xs text-secondary space-y-1">
-					<div>{{ formatMessage(messages.platformInfo, { platform: platformKey }) }}</div>
-					<div>{{ formatMessage(messages.binaryNotFound) }}</div>
-					<code class="text-xs bg-surface-5 px-2 py-1 rounded inline-block mt-1 select-all">
-						{{ binaryPathHint }}
-					</code>
-				</div>
-
-				<div v-if="state.status === 'downloading'" class="mt-3">
-					<div class="flex items-center gap-2 mb-2 justify-center">
-						<div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse flex-shrink-0" />
-						<span class="text-sm text-secondary">{{ downloadStageText || statusText }}</span>
+		<Card v-else-if="!state.binary_installed" class="!m-0">
+			<div class="flex flex-col gap-5">
+				<div class="flex items-start gap-3">
+					<div
+						class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-highlight-orange text-orange"
+					>
+						<BinaryIcon class="size-5" />
 					</div>
-					<div class="h-2 bg-surface-5 rounded-full overflow-hidden max-w-xs mx-auto">
-						<div
-							class="h-full bg-brand rounded-full transition-all duration-300"
-							:style="{ width: (state.download_progress || 0) + '%' }"
-						/>
+					<div class="min-w-0">
+						<h2 class="m-0 text-lg font-semibold text-contrast">
+							{{ formatMessage(messages.downloadTerracotta) }}
+						</h2>
+						<p class="mb-0 mt-1 text-secondary">
+							{{ formatMessage(messages.notRunning) }}
+						</p>
 					</div>
-					<div class="text-xs text-secondary mt-1">{{ state.download_progress || 0 }}%</div>
 				</div>
 
-				<Button
-					v-if="state.status !== 'downloading'"
-					class="mt-3"
-					@click="downloadTerracotta"
-				>
-					{{ formatMessage(messages.downloadTerracotta) }}
-				</Button>
+				<Admonition type="warning" :header="formatMessage(messages.binaryNotFound)">
+					<div class="flex flex-col gap-2">
+						<span>{{ formatMessage(messages.platformInfo, { platform: platformKey }) }}</span>
+						<code class="w-fit max-w-full select-all break-all rounded-lg bg-surface-3 px-2 py-1">
+							{{ binaryPathHint }}
+						</code>
+					</div>
+				</Admonition>
+
+				<ProgressBar
+					v-if="state.status === 'downloading'"
+					full-width
+					:progress="state.download_progress ?? 0"
+					:max="100"
+					:waiting="state.download_progress === null || state.download_progress === 0"
+					:label="downloadStageText || statusText"
+					show-progress
+				/>
+
+				<div v-else class="flex flex-wrap gap-2">
+					<ButtonStyled color="brand">
+						<button type="button" :disabled="isActionPending" @click="downloadTerracotta">
+							<DownloadIcon />
+							{{ formatMessage(messages.downloadTerracotta) }}
+						</button>
+					</ButtonStyled>
+				</div>
 			</div>
-		</template>
+		</Card>
 
-		<template v-else-if="state.status === 'starting'">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
+		<Card v-else-if="state.status === 'starting' || state.status === 'downloading'" class="!m-0">
+			<div class="flex flex-col gap-5">
 				<div class="flex items-center gap-3">
-					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
-					<div class="font-semibold text-lg">
-						{{ statusText }}
-					</div>
+					<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
+					<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
 				</div>
+				<ProgressBar
+					v-if="state.status === 'downloading'"
+					full-width
+					:progress="state.download_progress ?? 0"
+					:max="100"
+					:waiting="state.download_progress === null"
+					:label="downloadStageText"
+					show-progress
+				/>
 			</div>
-		</template>
+		</Card>
 
-		<template v-else-if="state.status === 'downloading'">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
-					<div class="font-semibold text-lg">
-						{{ statusText }}
-					</div>
-				</div>
-				<div v-if="state.download_progress !== null" class="mb-2">
-					<div class="flex items-center justify-between text-sm text-secondary mb-1">
-						<span>{{ downloadStageText }}</span>
-						<span>{{ state.download_progress }}%</span>
-					</div>
-					<div class="h-2 bg-surface-5 rounded-full overflow-hidden">
-						<div
-							class="h-full bg-brand rounded-full transition-all duration-300"
-							:style="{ width: (state.download_progress || 0) + '%' }"
-						/>
-					</div>
-				</div>
-			</div>
-		</template>
-
-		<template v-else-if="isRunning && (state.status === 'idle' || state.status === 'waiting')">
-			<div class="bg-bg-raised rounded-xl border border-surface-5 overflow-hidden">
+		<Card
+			v-else-if="isRunning && (state.status === 'idle' || state.status === 'waiting')"
+			class="!m-0"
+		>
+			<div class="flex flex-col gap-5">
 				<NavTabs
 					mode="local"
 					:active-index="tabIndex"
 					:links="tabLinks"
 					@tab-click="tabIndex = $event"
 				/>
-				<div class="p-6 flex flex-col gap-4">
-					<StyledInput
-						v-model="playerName"
-						:placeholder="formatMessage(messages.playerName)"
-					/>
 
-					<StyledInput
-						v-if="tabIndex === 1"
-						v-model="roomCodeInput"
-						:placeholder="formatMessage(messages.roomCodePlaceholder)"
-					/>
-
-					<div class="text-sm text-secondary">
+				<div>
+					<h2 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(tabIndex === 0 ? messages.host : messages.join) }}
+					</h2>
+					<p class="mb-0 mt-1 text-secondary">
 						{{
-							tabIndex === 0
-								? formatMessage(messages.hostDescription)
-								: formatMessage(messages.joinDescription)
+							formatMessage(tabIndex === 0 ? messages.hostDescription : messages.joinDescription)
 						}}
-					</div>
+					</p>
+				</div>
 
-					<div class="flex gap-2">
-						<Button
+				<div class="grid gap-4 md:grid-cols-2">
+					<label class="flex min-w-0 flex-col gap-2" for="multiplayer-player-name">
+						<span class="font-semibold text-contrast">
+							{{ formatMessage(messages.playerName) }}
+						</span>
+						<StyledInput
+							id="multiplayer-player-name"
+							v-model="playerName"
+							:icon="UserIcon"
+							:placeholder="formatMessage(messages.playerName)"
+							autocomplete="off"
+						/>
+					</label>
+
+					<label
+						v-if="tabIndex === 1"
+						class="flex min-w-0 flex-col gap-2"
+						for="multiplayer-room-code"
+					>
+						<span class="font-semibold text-contrast">
+							{{ formatMessage(messages.roomCode) }}
+						</span>
+						<StyledInput
+							id="multiplayer-room-code"
+							v-model="roomCodeInput"
+							:icon="UsersIcon"
+							:placeholder="formatMessage(messages.roomCodePlaceholder)"
+							autocomplete="off"
+							:spellcheck="false"
+						/>
+					</label>
+				</div>
+
+				<div class="flex flex-wrap gap-2">
+					<ButtonStyled color="brand">
+						<button
 							v-if="tabIndex === 0"
+							type="button"
+							:disabled="!canSubmitSession || isActionPending"
 							@click="hostGame"
 						>
+							<PlayIcon />
 							{{ formatMessage(messages.startHosting) }}
-						</Button>
-						<Button
+						</button>
+						<button
 							v-else
+							type="button"
+							:disabled="!canSubmitSession || isActionPending"
 							@click="joinGame"
 						>
+							<LogInIcon />
 							{{ formatMessage(messages.joinRoom) }}
-						</Button>
-					</div>
+						</button>
+					</ButtonStyled>
 				</div>
 			</div>
-		</template>
+		</Card>
 
-		<template v-else-if="state.status === 'host_scanning' || state.status === 'host_starting'">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
-					<div class="font-semibold text-lg">
-						{{ statusText }}
-					</div>
+		<Card
+			v-else-if="state.status === 'host_scanning' || state.status === 'host_starting'"
+			class="!m-0"
+		>
+			<div class="flex flex-col gap-5">
+				<div class="flex items-center gap-3">
+					<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
+					<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
 				</div>
-				<div class="text-sm text-secondary mb-4 bg-surface-5 rounded-lg p-3">
+				<Admonition type="info" :header="formatMessage(messages.host)">
 					{{ formatMessage(messages.lanHint) }}
-				</div>
-				<div class="flex gap-2">
-					<Button @click="resetState">
-						{{ formatMessage(messages.back) }}
-					</Button>
+				</Admonition>
+				<div class="flex flex-wrap gap-2">
+					<ButtonStyled type="outlined">
+						<button type="button" :disabled="isActionPending" @click="resetState">
+							<ArrowLeftIcon />
+							{{ formatMessage(messages.back) }}
+						</button>
+					</ButtonStyled>
 				</div>
 			</div>
-		</template>
+		</Card>
 
-		<template v-else-if="state.status === 'host_ready'">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-4 h-4 rounded-full bg-green-500" />
-					<div>
-						<div class="font-semibold text-lg">
-							{{ statusText }}
+			<Card v-else-if="isSessionReady" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex flex-wrap items-start justify-between gap-3">
+						<div class="flex items-center gap-3">
+							<CheckCircleIcon class="size-7 shrink-0 text-green" />
+							<div>
+								<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
+								<p class="mb-0 mt-1 text-sm text-secondary">
+									{{ formatMessage(messages.playersInRoom, { count: playerCount }) }}
+								</p>
+							</div>
 						</div>
-						<div v-if="state.room_code" class="text-sm text-secondary mt-1">
+						<TagItem>
+							<UsersIcon v-if="isHostSession" />
+							<LogInIcon v-else />
+							{{ formatMessage(isHostSession ? messages.hostLabel : messages.guestLabel) }}
+						</TagItem>
+					</div>
+
+				<div
+					v-if="isHostSession && state.room_code"
+					class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 p-4"
+				>
+					<div class="min-w-0">
+						<div class="font-semibold text-contrast">{{ formatMessage(messages.roomCode) }}</div>
+						<div class="mt-1 text-sm text-secondary">
 							{{ formatMessage(messages.shareCode) }}
 						</div>
 					</div>
+					<CopyCode :text="state.room_code" />
 				</div>
 
-				<div v-if="state.room_code" class="mb-4">
-					<div class="flex items-center gap-2 bg-surface-5 rounded-lg p-3">
-						<code class="text-lg font-mono select-all flex-1">{{ state.room_code }}</code>
-						<CopyCode :text="state.room_code" />
-					</div>
-				</div>
-
-				<div class="mb-4">
-					<div class="text-sm font-semibold text-secondary mb-2">
-						{{ formatMessage(messages.players) }}
-					</div>
-					<div v-if="state.players.length > 0" class="flex flex-col gap-1">
-						<div
-							v-for="(player, idx) in state.players"
-							:key="idx"
-							class="flex items-center gap-2 text-sm bg-surface-5 rounded-lg px-3 py-1.5"
-						>
-							<div class="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-							<span>{{ player.name }}</span>
-							<span
-								class="text-secondary text-xs px-1.5 py-0.5 bg-surface-10 rounded ml-auto"
-							>
-								{{ player.kind === 'HOST' ? formatMessage(messages.hostLabel) : formatMessage(messages.guestLabel) }}
-							</span>
+				<div
+					v-if="!isHostSession && guestServerAddress"
+					class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 p-4"
+				>
+					<div class="min-w-0">
+						<div class="font-semibold text-contrast">
+							{{ formatMessage(messages.serverAddress) }}
 						</div>
 					</div>
-					<div v-else class="text-sm text-secondary">
+					<CopyCode :text="guestServerAddress" />
+				</div>
+
+				<section class="flex flex-col gap-3">
+					<div class="flex items-center justify-between gap-3">
+						<h3 class="m-0 text-base font-semibold text-contrast">
+							{{ formatMessage(messages.players) }}
+						</h3>
+						<TagItem>
+							<UsersIcon />
+							{{ playerCount }}
+						</TagItem>
+					</div>
+
+					<div
+						v-if="state.players.length > 0"
+						class="overflow-hidden rounded-xl border border-solid border-surface-5"
+					>
+						<div
+							v-for="(player, index) in state.players"
+							:key="player.machine_id || index"
+							class="flex min-w-0 items-center gap-3 border-0 border-b border-solid border-divider bg-surface-2 px-4 py-3 last:border-b-0"
+						>
+							<div
+								class="flex size-9 shrink-0 items-center justify-center rounded-full bg-highlight-green text-green"
+							>
+								<UserIcon class="size-4" />
+							</div>
+							<span class="min-w-0 flex-1 truncate font-medium text-contrast">
+								{{ player.name }}
+							</span>
+							<TagItem>
+								{{ formatMessage(playerRoleMessage(player.kind)) }}
+							</TagItem>
+						</div>
+					</div>
+					<div
+						v-else
+						class="flex items-center gap-2 rounded-xl bg-surface-2 px-4 py-5 text-secondary"
+					>
+						<UsersIcon class="size-5" />
 						{{ formatMessage(messages.noPlayers) }}
 					</div>
-				</div>
+				</section>
 
-				<div class="flex gap-2">
-					<Button @click="resetState">
-						{{ formatMessage(messages.back) }}
-					</Button>
+				<div class="flex flex-wrap gap-2">
+					<ButtonStyled color="red" type="outlined">
+						<button type="button" :disabled="isActionPending" @click="resetState">
+							<LogOutIcon />
+							{{ formatMessage(messages.disconnect) }}
+						</button>
+					</ButtonStyled>
 				</div>
 			</div>
-		</template>
+		</Card>
 
-		<template v-else-if="state.status === 'guest_connecting' || state.status === 'guest_starting'">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
-					<div class="font-semibold text-lg">
-						{{ statusText }}
-					</div>
+		<Card
+			v-else-if="state.status === 'guest_connecting' || state.status === 'guest_starting'"
+			class="!m-0"
+		>
+			<div class="flex flex-col gap-5">
+				<div class="flex items-center gap-3">
+					<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
+					<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
 				</div>
-				<div class="flex gap-2">
-					<Button @click="resetState">
-						{{ formatMessage(messages.back) }}
-					</Button>
+				<div class="flex flex-wrap gap-2">
+					<ButtonStyled type="outlined">
+						<button type="button" :disabled="isActionPending" @click="resetState">
+							<ArrowLeftIcon />
+							{{ formatMessage(messages.back) }}
+						</button>
+					</ButtonStyled>
 				</div>
 			</div>
-		</template>
+		</Card>
 
-		<template v-else-if="state.status === 'guest_ready'">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-4 h-4 rounded-full bg-green-500" />
-					<div>
-						<div class="font-semibold text-lg">
-							{{ statusText }}
-						</div>
-					</div>
-				</div>
-
-				<div class="mb-4">
-					<div class="text-sm font-semibold text-secondary mb-2">
-						{{ formatMessage(messages.players) }}
-					</div>
-					<div v-if="state.players.length > 0" class="flex flex-col gap-1">
-						<div
-							v-for="(player, idx) in state.players"
-							:key="idx"
-							class="flex items-center gap-2 text-sm bg-surface-5 rounded-lg px-3 py-1.5"
-						>
-							<div class="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-							<span>{{ player.name }}</span>
-							<span
-								class="text-secondary text-xs px-1.5 py-0.5 bg-surface-10 rounded ml-auto"
-							>
-								{{ player.kind === 'HOST' ? formatMessage(messages.hostLabel) : formatMessage(messages.guestLabel) }}
-							</span>
-						</div>
-					</div>
-					<div v-else class="text-sm text-secondary">
-						{{ formatMessage(messages.noPlayers) }}
-					</div>
-				</div>
-
-				<div class="flex gap-2">
-					<Button @click="resetState">
-						{{ formatMessage(messages.back) }}
-					</Button>
-				</div>
-			</div>
-		</template>
-
-		<template v-else-if="state.status === 'error' || state.status === 'fatal'">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-4 h-4 rounded-full bg-red-500" />
-					<div class="font-semibold text-lg">
-						{{ statusText }}
-					</div>
-				</div>
-				<div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
-					<div class="text-sm text-red-400 font-semibold mb-1">
-						{{ errorTypeLabel }}
-					</div>
-					<div v-if="state.error_message" class="text-sm text-red-300">
-						{{ state.error_message }}
-					</div>
-					<div v-if="isRecoverable" class="mt-3">
-						<Button size="small" @click="resetState">
+		<Card v-else-if="state.status === 'error' || state.status === 'fatal'" class="!m-0">
+			<Admonition type="critical" :header="errorTypeLabel">
+				{{ state.error_message || formatMessage(messages.checkNetwork) }}
+				<template v-if="isRecoverable" #actions>
+					<ButtonStyled color="red" type="outlined">
+						<button type="button" :disabled="isActionPending" @click="resetState">
+							<RefreshCwIcon />
 							{{ formatMessage(messages.retry) }}
-						</Button>
+						</button>
+					</ButtonStyled>
+				</template>
+			</Admonition>
+		</Card>
+
+			<Card v-else-if="!isRunning" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex items-start gap-3">
+						<div
+							class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-highlight text-brand"
+						>
+							<UsersIcon class="size-5" />
+						</div>
+						<div class="min-w-0">
+						<h2 class="m-0 text-lg font-semibold text-contrast">
+							{{ formatMessage(messages.notRunningTitle) }}
+						</h2>
+						<p class="mb-0 mt-1 text-secondary">
+							{{ formatMessage(messages.notRunning) }}
+						</p>
 					</div>
 				</div>
-			</div>
-		</template>
-
-		<template v-else-if="!isRunning">
-			<div class="bg-bg-raised rounded-xl p-6 border border-surface-5 text-center">
-				<div class="text-lg font-semibold mb-4">
-					{{ formatMessage(messages.notRunningTitle) }}
+				<div class="flex flex-wrap gap-2">
+					<ButtonStyled color="brand">
+						<button type="button" :disabled="isActionPending" @click="startTerracotta">
+							<PlayIcon />
+							{{ formatMessage(messages.startTerracotta) }}
+						</button>
+					</ButtonStyled>
 				</div>
-				<div class="text-sm text-secondary mb-4">
-					{{ formatMessage(messages.startDescription) }}
-				</div>
-				<Button @click="startTerracotta">
-					{{ formatMessage(messages.startTerracotta) }}
-				</Button>
 			</div>
-		</template>
+		</Card>
 
-		<div class="text-center mt-6">
-			<span class="text-xs text-tertiary">{{ formatMessage(messages.poweredByTerracotta) }}</span>
+		<div class="mt-auto pt-6 text-center text-xs text-secondary">
+			{{ formatMessage(messages.poweredByTerracotta) }}
 		</div>
 	</div>
 </template>

@@ -17,6 +17,7 @@ import {
 	SettingsIcon,
 	SpinnerIcon,
 	UserIcon,
+	UsersIcon,
 	WorldIcon,
 } from '@modrinth/assets'
 import {
@@ -2574,11 +2575,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				</NavButton>
 				<NavButton
 					v-tooltip.right="formatMessage(messages.multiplayer)"
-					data-onboarding-id="nav-multiplayer"
 					to="/multiplayer"
 					:is-primary="(r) => r.path === '/multiplayer'"
 				>
-					<WorldIcon />
+					<UsersIcon />
 				</NavButton>
 				<NavButton
 					v-tooltip.right="formatMessage(messages.library)"

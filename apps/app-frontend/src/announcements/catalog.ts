@@ -33,6 +33,24 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.2',
+		version: '1.6.2',
+		publishedAt: '2026-07-30',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.2',
+			'zh-CN': 'Axolotl Launcher 1.6.2',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Added beta multiplayer features for hosting and joining LAN game sessions with a room code.',
+					'zh-CN': '新增联机功能（测试版），可创建或通过房间码加入局域网游戏会话。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.1',
 		version: '1.6.1',
 		publishedAt: '2026-07-29',

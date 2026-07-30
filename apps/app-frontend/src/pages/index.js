@@ -9,4 +9,15 @@ import Servers from './Servers.vue'
 import Skins from './Skins.vue'
 import Worlds from './Worlds.vue'
 
-export { Browse, Downloads, Index, Lab, LabGradientText, LabSeedMap, Multiplayer, Servers, Skins, Worlds }
+export {
+	Browse,
+	Downloads,
+	Index,
+	Lab,
+	LabGradientText,
+	LabSeedMap,
+	Multiplayer,
+	Servers,
+	Skins,
+	Worlds,
+}

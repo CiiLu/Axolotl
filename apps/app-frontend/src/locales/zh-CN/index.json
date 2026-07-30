@@ -4484,9 +4484,6 @@
   "app.multiplayer.join-room": {
     "message": "加入房间"
   },
-  "app.multiplayer.stop": {
-    "message": "停止"
-  },
   "app.multiplayer.copy-room-code": {
     "message": "复制房间码"
   },
@@ -4526,11 +4523,17 @@
   "app.multiplayer.share-code": {
     "message": "将此代码分享给好友："
   },
+  "app.multiplayer.server-address": {
+    "message": "备用连接地址"
+  },
   "app.multiplayer.host-label": {
     "message": "房主"
   },
   "app.multiplayer.guest-label": {
     "message": "访客"
+  },
+  "app.multiplayer.unknown-player-role": {
+    "message": "未知身份"
   },
   "app.multiplayer.platform-info": {
     "message": "当前平台：{platform}"
@@ -4588,6 +4591,12 @@
   },
   "app.multiplayer.verifying": {
     "message": "验证中..."
+  },
+  "app.multiplayer.extracting": {
+    "message": "正在解压..."
+  },
+  "app.multiplayer.installing": {
+    "message": "正在安装..."
   },
   "app.multiplayer.powered-by-terracotta": {
     "message": "由 Terracotta | 陶瓦联机 强力驱动"
