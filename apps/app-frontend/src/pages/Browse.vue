@@ -1721,7 +1721,8 @@ async function autoTranslateNewSearchResults(version: number, useServer: boolean
 		const hits = useServer ? originalServerHits.value : originalProjectHits.value
 		if (!hits?.length) return
 
-		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, false)
+		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, false, useServer)
+
 		if (isStale(version)) return
 
 		if (translated !== hits) {
@@ -1745,7 +1746,7 @@ async function translateCurrentHits() {
 		const hits = useServer ? serverHits : projectHits
 		if (!hits || hits.length === 0) return
 
-		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, true)
+		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, true, useServer)
 		if (isStale(version)) return // superseded
 
 		if (translated !== hits) {

@@ -333,20 +333,22 @@ async function fetchMirrorDescription(hit: TranslatableHit): Promise<string | nu
 }
 
 /**
- * Rewrites search hit descriptions to Chinese using the mcimirror translation
- * API. Each hit is fetched in parallel; only the description field is replaced.
- * Hits without a translatable description are left unchanged. Results are
- * cached in memory across searches.
+ * Rewrites search hit descriptions to Chinese. Currently uses the mcimirror
+ * translation API.
  *
- * @param hits  Search result hits that carry at least provider + ID and
- *              description fields.
- * @param locale Target locale — only `zh-CN` triggers translation.
- * @param force Ignored (kept for API compatibility with the old translateSearchHits).
+ * @param hits      Search result hits that carry at least provider + ID and
+ *                  description fields.
+ * @param locale    Target locale — only `zh-CN` triggers translation.
+ * @param force     - When true, skip the `auto_translate` setting check;
+ *                  always translate.
+ * @param useServer - If true, sends the description via the Rust backend;
+ *                  otherwise, uses mcimirror API.
  */
 export async function translateSearchDescriptions<T extends TranslatableHit>(
   hits: T[],
-  locale: string,
+	locale: string,
   _force = false,
+	useServer = false,
 ): Promise<T[]> {
   if (hits.length === 0) return hits
   if (!_force) {
@@ -354,6 +356,33 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
     if (!settings.auto_translate) return hits
   }
   if (locale !== 'zh-CN') return hits
+
+	if (useServer) {
+		const response = await translate({
+			target_language: 'zh-CN',
+			source_language: 'en',
+			segments: hits.map((hit) => ({
+				text: hit.description ?? hit.summary ?? '',
+				id: hit.project_id ?? hit.provider_project_id ?? '',
+				format: 'html',
+			})),
+			context: {
+				title: hits[0]?.title ?? '',
+				description: hits[0]?.description ?? hits[0]?.summary ?? '',
+			},
+		})
+
+		const translatedHits = hits.map((hit) => {
+			const segment = response.segments.find(s => s.id === (hit.project_id ?? hit.provider_project_id ?? ''))
+			if (!segment) return hit
+			return {
+				...hit,
+				description: segment.text,
+				summary: segment.text,
+			}
+		})
+		return translatedHits as T[]
+	}
 
   const entries = hits.map((hit) => ({ hit, index: hits.indexOf(hit) }))
 
