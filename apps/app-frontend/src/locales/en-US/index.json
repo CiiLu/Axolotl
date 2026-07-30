@@ -578,6 +578,9 @@
   "app.downloads.manual-download-required": {
     "message": "CurseForge requires this file to be downloaded manually."
   },
+  "app.downloads.completed-summary": {
+    "message": "{count, number} items completed"
+  },
   "app.downloads.more-active-requests": {
     "message": "+{count} active requests"
   },

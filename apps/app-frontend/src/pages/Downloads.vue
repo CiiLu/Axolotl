@@ -233,7 +233,7 @@
 					<Table
 						v-if="job.items.length"
 						:columns="itemColumns"
-						:data="job.items"
+						:data="reorderJobItems(job)"
 						row-key="id"
 						table-min-width="42rem"
 						virtualized
@@ -358,6 +358,8 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { trackEvent } from '@/helpers/analytics'
+
 import {
 	download_job_support_details,
 	type InstallJobSnapshot,
@@ -476,6 +478,10 @@ const messages = defineMessages({
 	downloadFallbacks: {
 		id: 'app.downloads.download-fallbacks',
 		defaultMessage: '{count} fallbacks',
+	},
+	completedSummary: {
+		id: 'app.downloads.completed-summary',
+		defaultMessage: '{count, number} items completed',
 	},
 	moreActiveRequests: {
 		id: 'app.downloads.more-active-requests',
@@ -735,6 +741,44 @@ function downloadSourceLabel(source: string) {
 		default:
 			return formatMessage(messages.downloadSourceAlternate)
 	}
+}
+
+const STATUS_ORDER: Record<string, number> = {
+	skipped: 0,
+	waiting_for_user: 1,
+	failed: 2,
+	canceled: 2,
+	queued: 3,
+	downloading: 4,
+	verifying: 5,
+	writing: 6,
+	completed: 7,
+}
+function compareItemStatus(a: DownloadItem, b: DownloadItem) {
+	return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)
+}
+const itemsCache = new Map<string, { items: InstallJobSnapshot['items']; result: DownloadItem[] }>()
+function reorderJobItems(job: InstallJobSnapshot): DownloadItem[] {
+	const seen = itemsCache.get(job.job_id)
+	if (seen && seen.items === job.items) return seen.result
+	const sorted = [...job.items].sort(compareItemStatus)
+	const cutoff = sorted.findIndex((item) => item.status === 'completed')
+	const result: DownloadItem[] =
+		cutoff <= 0
+			? sorted
+			: [
+					...sorted.slice(0, cutoff),
+					{
+						id: `${job.job_id}__completed-summary`,
+						name: formatMessage(messages.completedSummary, { count: sorted.length - cutoff }),
+						project_id: null,
+						version_id: null,
+						status: 'completed',
+						bytes_downloaded: 0,
+					} as DownloadItem,
+				]
+	itemsCache.set(job.job_id, { items: job.items, result })
+	return result
 }
 
 function activeRequestItems(job: InstallJobSnapshot) {

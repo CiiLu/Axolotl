@@ -545,6 +545,9 @@
 	"app.downloads.local": {
 		"message": "本地"
 	},
+	"app.downloads.completed-summary": {
+		"message": "{count, number} 项已完成"
+	},
 	"app.downloads.more-active-requests": {
 		"message": "另有 {count} 个进行中的请求"
 	},

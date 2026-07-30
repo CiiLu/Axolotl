@@ -494,6 +494,9 @@
 	"app.downloads.item-status.writing": {
 		"message": "寫入中"
 	},
+	"app.downloads.completed-summary": {
+		"message": "{count, number} 個項目已完成"
+	},
 	"app.downloads.local": {
 		"message": "本機"
 	},
