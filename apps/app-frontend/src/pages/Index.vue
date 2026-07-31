@@ -120,12 +120,6 @@ function createInstance() {
 	void router.push('/create')
 }
 
-async function redirectToCreateIfEmpty() {
-	if (instances.value.length > 0 || route.path !== '/') return false
-	await router.replace('/create')
-	return true
-}
-
 async function toggleHomeLayout() {
 	if (switchingLayout.value) return
 
@@ -150,14 +144,12 @@ const instancesLoaded = await fetchInstances()
 if (!instancesLoaded || instances.value.length > 0) await fetchPlayerName()
 
 const unlistenInstance = await instance_listener(async () => {
-	if (await fetchInstances()) await redirectToCreateIfEmpty()
+	await fetchInstances()
 })
 
 onUnmounted(() => {
 	unlistenInstance()
 })
-
-if (instancesLoaded) await redirectToCreateIfEmpty()
 </script>
 
 <template>
