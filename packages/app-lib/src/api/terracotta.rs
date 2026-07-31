@@ -4,7 +4,7 @@ use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha512};
 use std::collections::VecDeque;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::{Arc, LazyLock};
 use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
@@ -30,16 +30,16 @@ mod lan;
 const MAX_TERRACOTTA_ARCHIVE_SIZE: u64 = 256 * 1024 * 1024;
 const MAX_CONSECUTIVE_POLL_FAILURES: u8 = 3;
 const TERRACOTTA_REQUEST_TIMEOUT: std::time::Duration =
-std::time::Duration::from_secs(10);
+    std::time::Duration::from_secs(10);
 
 static TERRACOTTA_STATE: LazyLock<Mutex<TerracottaState>> =
-LazyLock::new(|| Mutex::new(TerracottaState::default()));
+    LazyLock::new(|| Mutex::new(TerracottaState::default()));
 
 static TERRACOTTA_RUNTIME: LazyLock<Mutex<TerracottaRuntime>> =
-LazyLock::new(|| Mutex::new(TerracottaRuntime::default()));
+    LazyLock::new(|| Mutex::new(TerracottaRuntime::default()));
 
 static TERRACOTTA_OPERATION: LazyLock<Mutex<()>> =
-LazyLock::new(|| Mutex::new(()));
+    LazyLock::new(|| Mutex::new(()));
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TerracottaState {
@@ -218,7 +218,7 @@ fn capture_terracotta_output<R>(
     pid: u32,
     output: Arc<Mutex<VecDeque<String>>>,
 ) where
-R: AsyncRead + Unpin + Send + 'static,
+    R: AsyncRead + Unpin + Send + 'static,
 {
     tokio::spawn(async move {
         let mut lines = BufReader::new(reader).lines();
@@ -233,63 +233,17 @@ R: AsyncRead + Unpin + Send + 'static,
     });
 }
 
-async fn request_terracotta_port(
-    binary_path: &Path,
-    port_file: &Path,
-    output: Arc<Mutex<VecDeque<String>>>,
-) -> eyre::Result<()> {
-    let result = tokio::time::timeout(
-        TERRACOTTA_REQUEST_TIMEOUT,
-        Command::new(binary_path)
-        .arg("--hmcl")
-        .arg(port_file)
-        .stdin(Stdio::null())
-        .kill_on_drop(true)
-        .output(),
-    )
-    .await
-    .wrap_err("timed out requesting terracotta HTTP port")?
-    .wrap_err("failed to request terracotta HTTP port")?;
-    let status = result.status;
-    let mut command_output = Vec::new();
-
-    for (stream, bytes) in
-        [("stdout", result.stdout), ("stderr", result.stderr)]
-        {
-            let text = String::from_utf8_lossy(&bytes);
-            for line in text.lines() {
-                let line = format!("{stream}: {line}");
-                tracing::debug!(target: "terracotta", stream, "{line}");
-                let mut captured = output.lock().await;
-                captured.push_back(line.clone());
-                if captured.len() > 50 {
-                    captured.pop_front();
-                }
-                command_output.push(line);
-            }
-        }
-
-        if !status.success() {
-            let details = command_output.join("\n");
-            if details.is_empty() {
-                bail!("terracotta port request exited with {status}");
-            }
-            bail!("terracotta port request exited with {status}:\n{details}");
-        }
-        Ok(())
-}
-
 async fn take_terminated_terracotta_process() -> eyre::Result<
-Option<(std::process::ExitStatus, Arc<Mutex<VecDeque<String>>>)>,
+    Option<(std::process::ExitStatus, Arc<Mutex<VecDeque<String>>>)>,
 > {
     let mut runtime = TERRACOTTA_RUNTIME.lock().await;
     let Some(process) = runtime.process.as_mut() else {
         return Ok(None);
     };
     let Some(status) = process
-    .child
-    .try_wait()
-    .wrap_err("failed to inspect terracotta process")?
+        .child
+        .try_wait()
+        .wrap_err("failed to inspect terracotta process")?
     else {
         return Ok(None);
     };
@@ -314,6 +268,7 @@ async fn format_terracotta_exit(
     }
 }
 
+#[cfg(test)]
 fn reported_terracotta_port(output: &str) -> Option<u16> {
     output.lines().find_map(|line| {
         let (_, port) = line.rsplit_once("port = ")?;
@@ -321,6 +276,7 @@ fn reported_terracotta_port(output: &str) -> Option<u16> {
     })
 }
 
+#[cfg(test)]
 fn terracotta_startup_arguments(target_os: &str) -> &'static [&'static str] {
     if target_os == "macos" {
         &["--daemon"]
@@ -343,19 +299,19 @@ async fn get_latest_terracotta_version() -> eyre::Result<String> {
 
     for endpoint in endpoints {
         let response = crate::util::fetch::INSECURE_REQWEST_CLIENT
-        .get(endpoint)
-        .header("Accept", "application/json")
-        .header("User-Agent", crate::launcher_user_agent())
-        .send()
-        .await;
+            .get(endpoint)
+            .header("Accept", "application/json")
+            .header("User-Agent", crate::launcher_user_agent())
+            .send()
+            .await;
         match response {
             Ok(response) if response.status().is_success() => {
                 match response.json::<ReleaseInfo>().await {
                     Ok(info) => {
                         return Ok(info
-                        .tag_name
-                        .trim_start_matches('v')
-                        .to_string());
+                            .tag_name
+                            .trim_start_matches('v')
+                            .to_string());
                     }
                     Err(error) => failures.push(format!("{endpoint}: {error}")),
                 }
@@ -412,9 +368,9 @@ async fn download_terracotta_inner(
         }
 
         match crate::util::fetch::INSECURE_REQWEST_CLIENT
-        .get(url)
-        .send()
-        .await
+            .get(url)
+            .send()
+            .await
         {
             Ok(response) if response.status().is_success() => {
                 let total_size = response.content_length().unwrap_or(0);
@@ -451,9 +407,9 @@ async fn download_terracotta_inner(
 
                     if total_size > 0 {
                         let pct = ((downloaded as f64 / total_size as f64)
-                        * 100.0)
-                        .clamp(0.0, 100.0)
-                        as u8;
+                            * 100.0)
+                            .clamp(0.0, 100.0)
+                            as u8;
                         let mut state = TERRACOTTA_STATE.lock().await;
                         state.download_progress = Some(pct);
                     }
@@ -468,29 +424,29 @@ async fn download_terracotta_inner(
                 {
                     let mut state = TERRACOTTA_STATE.lock().await;
                     state.download_stage =
-                    Some(TerracottaDownloadStage::Verifying);
+                        Some(TerracottaDownloadStage::Verifying);
                 }
 
                 let hash_url = format!("{url}.sha512");
                 match crate::util::fetch::INSECURE_REQWEST_CLIENT
-                .get(&hash_url)
-                .send()
-                .await
+                    .get(&hash_url)
+                    .send()
+                    .await
                 {
                     Ok(hash_resp) if hash_resp.status().is_success() => {
                         let checksum = hash_resp
-                        .text()
-                        .await
-                        .unwrap_or_default()
-                        .trim()
-                        .to_string();
+                            .text()
+                            .await
+                            .unwrap_or_default()
+                            .trim()
+                            .to_string();
                         let expected_hash = checksum.split_whitespace().next();
                         if expected_hash.is_none_or(|hash| {
                             hash.len() != 128
-                            || !hash.chars().all(|character| {
-                                character.is_ascii_hexdigit()
-                            })
-                            || !computed_hash.eq_ignore_ascii_case(hash)
+                                || !hash.chars().all(|character| {
+                                    character.is_ascii_hexdigit()
+                                })
+                                || !computed_hash.eq_ignore_ascii_case(hash)
                         }) {
                             warn!(
                                 "SHA-512 mismatch for terracotta archive from {url}: \
@@ -536,20 +492,20 @@ skipping verification"
     }
 
     let target_dir = terracotta_binary_path()
-    .parent()
-    .map(|p| p.to_path_buf())
-    .unwrap_or_else(|| PathBuf::from("terracotta"));
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("terracotta"));
 
     tokio::fs::create_dir_all(&target_dir)
-    .await
-    .wrap_err("failed to create terracotta directory")?;
+        .await
+        .wrap_err("failed to create terracotta directory")?;
 
     let staging_dir = tempfile::Builder::new()
-    .prefix("terracotta-install-")
-    .tempdir_in(&target_dir)
-    .wrap_err(
-        "failed to create terracotta installation staging directory",
-    )?;
+        .prefix("terracotta-install-")
+        .tempdir_in(&target_dir)
+        .wrap_err(
+            "failed to create terracotta installation staging directory",
+        )?;
     let staging_path = staging_dir.path().to_path_buf();
     let archive_data_clone = archive_data;
 
@@ -557,8 +513,8 @@ skipping verification"
         let decoder = GzDecoder::new(&archive_data_clone[..]);
         let mut archive = tar::Archive::new(decoder);
         archive
-        .unpack(&staging_path)
-        .wrap_err("failed to extract terracotta archive")?;
+            .unpack(&staging_path)
+            .wrap_err("failed to extract terracotta archive")?;
         Ok(())
     })
     .await??;
@@ -571,12 +527,12 @@ skipping verification"
     let expected_path = target_dir.join(terracotta_binary_name());
     let versioned_name = versioned_terracotta_binary_name(&version, platform);
     let candidate =
-    find_terracotta_executable(staging_dir.path(), Some(&versioned_name))
-    .ok_or_else(|| {
-        eyre::eyre!(
-            "no valid terracotta executable found in downloaded archive"
-        )
-    })?;
+        find_terracotta_executable(staging_dir.path(), Some(&versioned_name))
+            .ok_or_else(|| {
+            eyre::eyre!(
+                "no valid terracotta executable found in downloaded archive"
+            )
+        })?;
 
     #[cfg(unix)]
     {
@@ -594,7 +550,7 @@ skipping verification"
     info!(
         "installed {} as {}",
         candidate.display(),
-          expected_path.display()
+        expected_path.display()
     );
 
     cleanup_legacy_versions(&version).await?;
@@ -642,11 +598,11 @@ pub async fn download_terracotta(version: Option<String>) -> eyre::Result<()> {
 fn terracotta_client() -> &'static reqwest::Client {
     static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         reqwest::Client::builder()
-        .no_proxy()
-        .connect_timeout(std::time::Duration::from_secs(2))
-        .timeout(TERRACOTTA_REQUEST_TIMEOUT)
-        .build()
-        .expect("terracotta client should build")
+            .no_proxy()
+            .connect_timeout(std::time::Duration::from_secs(2))
+            .timeout(TERRACOTTA_REQUEST_TIMEOUT)
+            .build()
+            .expect("terracotta client should build")
     });
     &CLIENT
 }
@@ -662,15 +618,15 @@ async fn terracotta_get<T: serde::de::DeserializeOwned>(
     })?;
     let status = resp.status();
     let body = resp
-    .text()
-    .await
-    .wrap_err("failed to read terracotta response")?;
+        .text()
+        .await
+        .wrap_err("failed to read terracotta response")?;
     if !status.is_success() {
         bail!(
             "terracotta returned {} for {}: {}",
             status.as_u16(),
-              path,
-              body
+            path,
+            body
         );
     }
     let parsed: T = serde_json::from_str(&body).wrap_err_with(|| {
@@ -681,8 +637,8 @@ async fn terracotta_get<T: serde::de::DeserializeOwned>(
 
 fn terracotta_server_port(url: Option<&str>) -> Option<u16> {
     url?.parse::<std::net::SocketAddr>()
-    .ok()
-    .map(|url| url.port())
+        .ok()
+        .map(|url| url.port())
 }
 
 async fn sync_minecraft_lan_announcer(port: Option<u16>) {
@@ -723,10 +679,10 @@ async fn poll_terracotta_state(port: u16) {
                 state.profile_index = api_state.profile_index;
 
                 state.status = TerracottaStatus::from_api(&api_state.state)
-                .unwrap_or_else(|| {
-                    warn!("unknown terracotta state: {}", api_state.state);
-                    TerracottaStatus::Error
-                });
+                    .unwrap_or_else(|| {
+                        warn!("unknown terracotta state: {}", api_state.state);
+                        TerracottaStatus::Error
+                    });
 
                 if TerracottaStatus::from_api(&api_state.state).is_none() {
                     state.error_type = Some(TerracottaErrorType::Terracotta);
@@ -736,7 +692,7 @@ async fn poll_terracotta_state(port: u16) {
                     ));
                 } else if state.status == TerracottaStatus::Fatal {
                     state.error_type =
-                    api_state.r#type.map(TerracottaErrorType::from);
+                        api_state.r#type.map(TerracottaErrorType::from);
                     state.error_message = api_state.url.clone();
                 } else if state.status != TerracottaStatus::Error {
                     state.error_type = None;
@@ -745,14 +701,14 @@ async fn poll_terracotta_state(port: u16) {
 
                 if let Some(profiles) = api_state.profiles {
                     state.players = profiles
-                    .into_iter()
-                    .map(|p| PlayerInfo {
-                        machine_id: p.machine_id,
-                        name: p.name,
-                        vendor: p.vendor,
-                        kind: TerracottaPlayerKind::from(p.kind.as_str()),
-                    })
-                    .collect();
+                        .into_iter()
+                        .map(|p| PlayerInfo {
+                            machine_id: p.machine_id,
+                            name: p.name,
+                            vendor: p.vendor,
+                            kind: TerracottaPlayerKind::from(p.kind.as_str()),
+                        })
+                        .collect();
                 }
                 drop(state);
                 sync_minecraft_lan_announcer(server_port).await;
@@ -794,8 +750,8 @@ pub async fn get_state() -> TerracottaState {
 pub async fn get_meta() -> eyre::Result<TerracottaMeta> {
     let state = TERRACOTTA_STATE.lock().await;
     let port = state
-    .http_port
-    .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
+        .http_port
+        .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
     drop(state);
     terracotta_get::<TerracottaMeta>(port, "/meta").await
 }
@@ -811,6 +767,16 @@ pub async fn get_player_name() -> String {
     }
 }
 
+#[derive(Deserialize)]
+struct TerracottaPortInfo {
+    port: u16,
+}
+
+fn terracotta_port_file() -> PathBuf {
+    std::env::temp_dir()
+        .join(format!("terracotta_port_{}.json", std::process::id()))
+}
+
 pub async fn start_terracotta(
     binary_path: Option<String>,
     auto_download: bool,
@@ -821,7 +787,7 @@ pub async fn start_terracotta(
         resolve_installed_terracotta_binary_path,
         resolve_terracotta_binary_path,
     );
-    
+
     if !is_terracotta_executable(&final_path) && auto_download {
         info!("terracotta binary not found, attempting auto-download");
         run_terracotta_download(None).await?;
@@ -830,16 +796,16 @@ pub async fn start_terracotta(
             resolve_terracotta_binary_path,
         );
     }
-    
+
     if !is_terracotta_executable(&final_path) {
         bail!(
             "valid terracotta executable not found at {} (platform: {}, expected name: {})",
-              final_path.display(),
-              terracotta_platform_key(),
-              terracotta_binary_name()
+            final_path.display(),
+            terracotta_platform_key(),
+            terracotta_binary_name()
         );
     }
-    
+
     let mut runtime = TERRACOTTA_RUNTIME.lock().await;
     if let Some(process) = runtime.process.as_mut() {
         if process
@@ -847,51 +813,52 @@ pub async fn start_terracotta(
             .try_wait()
             .wrap_err("failed to inspect existing terracotta process")?
             .is_none()
-            {
-                bail!("terracotta is already running");
-            }
-            warn!("discarding exited terracotta process before restart");
+        {
+            bail!("terracotta is already running");
+        }
+        warn!("discarding exited terracotta process before restart");
         runtime.process.take();
     }
-    
-    let temp_dir = std::env::temp_dir();
-    let port_file =
-    temp_dir.join(format!("terracotta_port_{}.json", std::process::id()));
+
+    let port_file = terracotta_port_file();
     let _ = std::fs::remove_file(&port_file);
-    
+
     let mut child = Command::new(&final_path)
-    .arg("--hmcl")
-    .arg(&port_file)
-    .stdin(Stdio::null())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .kill_on_drop(true)
-    .spawn()
-    .wrap_err_with(|| {
-        format!("failed to start terracotta with --hmcl at {}", final_path.display())
-    })?;
-    
+        .arg("--hmcl")
+        .arg(&port_file)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true)
+        .spawn()
+        .wrap_err_with(|| {
+            format!(
+                "failed to start terracotta with --hmcl at {}",
+                final_path.display()
+            )
+        })?;
+
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
     let pid = child.id().unwrap_or(0);
     let output = Arc::new(Mutex::new(VecDeque::new()));
-    
+
     if let Some(stdout) = stdout {
         capture_terracotta_output(stdout, "stdout", pid, output.clone());
     }
     if let Some(stderr) = stderr {
         capture_terracotta_output(stderr, "stderr", pid, output.clone());
     }
-    
+
     let pid = child.id().unwrap_or(0);
     info!("started terracotta (pid {pid})");
-    
+
     runtime.process = Some(TerracottaProcess {
         child,
         output: output.clone(),
     });
     drop(runtime);
-    
+
     {
         let mut state = TERRACOTTA_STATE.lock().await;
         state.status = TerracottaStatus::Starting;
@@ -903,9 +870,9 @@ pub async fn start_terracotta(
         state.error_message = None;
         state.profile_index = None;
     }
-    
+
     let mut attempts = 0;
-    const MAX_ATTEMPTS: u32 = 30; 
+    const MAX_ATTEMPTS: u32 = 30;
     let port = loop {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         attempts += 1;
@@ -919,8 +886,14 @@ pub async fn start_terracotta(
             };
             let details = match output {
                 Some(out) => {
-                    tokio::time::sleep(std::time::Duration::from_millis(25)).await;
-                    out.lock().await.iter().cloned().collect::<Vec<_>>().join("\n")
+                    tokio::time::sleep(std::time::Duration::from_millis(25))
+                        .await;
+                    out.lock()
+                        .await
+                        .iter()
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join("\n")
                 }
                 None => String::new(),
             };
@@ -935,37 +908,52 @@ pub async fn start_terracotta(
             state.error_message = Some(msg.clone());
             bail!(msg);
         }
-        
-        if let Some((status, output)) = take_terminated_terracotta_process().await? {
-            let message = format_terracotta_exit(status, output).await;
-            bail!("terracotta exited before writing port file: {}", message);
-        }
-        
+
         match std::fs::read_to_string(&port_file) {
             Ok(contents) => {
-                #[derive(serde::Deserialize)]
-                struct PortInfo {
-                    port: u16,
-                }
-                match serde_json::from_str::<PortInfo>(&contents) {
+                match serde_json::from_str::<TerracottaPortInfo>(&contents) {
                     Ok(info) => {
                         let _ = std::fs::remove_file(&port_file);
                         break info.port;
                     }
                     Err(e) => {
                         warn!("failed to parse terracotta port file: {}", e);
-                        continue;
                     }
                 }
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                if let Some((status, output)) =
+                    take_terminated_terracotta_process().await?
+                {
+                    let message = format_terracotta_exit(status, output).await;
+                    // On Windows the `--hmcl` wrapper exits right after the
+                    // delegate writes the port file, so give the file one
+                    // final check before treating the exit as a failure.
+                    if let Ok(contents) = std::fs::read_to_string(&port_file) {
+                        if let Ok(info) = serde_json::from_str::<
+                            TerracottaPortInfo,
+                        >(&contents)
+                        {
+                            let _ = std::fs::remove_file(&port_file);
+                            break info.port;
+                        }
+                    }
+                    let msg = format!(
+                        "terracotta exited before writing port file: {message}"
+                    );
+                    let mut state = TERRACOTTA_STATE.lock().await;
+                    state.status = TerracottaStatus::Error;
+                    state.error_type = Some(TerracottaErrorType::Terracotta);
+                    state.error_message = Some(msg.clone());
+                    bail!(msg);
+                }
+            }
             Err(e) => {
                 warn!("failed to read terracotta port file: {}", e);
-                continue;
             }
         }
     };
-    
+
     info!("terracotta started on port {}", port);
     spawn_terracotta_state_poller(port).await;
     let mut state = TERRACOTTA_STATE.lock().await;
@@ -986,6 +974,31 @@ pub async fn stop_terracotta() -> eyre::Result<()> {
     }
     runtime.lan_announcer.sync(None);
     drop(runtime);
+
+    // On Windows, `--hmcl` spawns a detached delegate and the tracked child
+    // exits as soon as the port file appears, so killing the child may not
+    // stop the actual server. Ask it to shut down over HTTP as a fallback.
+    let port = {
+        let state = TERRACOTTA_STATE.lock().await;
+        state.http_port.or_else(|| {
+            std::fs::read_to_string(terracotta_port_file())
+                .ok()
+                .and_then(|contents| {
+                    serde_json::from_str::<TerracottaPortInfo>(&contents).ok()
+                })
+                .map(|info| info.port)
+        })
+    };
+    if let Some(port) = port {
+        let _ = tokio::time::timeout(
+            std::time::Duration::from_secs(3),
+            terracotta_client()
+                .get(format!("http://127.0.0.1:{port}/panic?peaceful=true"))
+                .send(),
+        )
+        .await;
+    }
+
     let mut state = TERRACOTTA_STATE.lock().await;
     *state = TerracottaState::default();
     state.binary_installed = is_binary_installed();
@@ -1002,7 +1015,7 @@ fn build_room_url(
     let mut url = format!(
         "http://127.0.0.1:{port}{path}?room={}&player={}",
         urlencoding::encode(room),
-                          urlencoding::encode(player),
+        urlencoding::encode(player),
     );
     for node in nodes {
         url.push_str("&public_nodes=");
@@ -1022,8 +1035,8 @@ pub async fn start_hosting(
     }
     let state = TERRACOTTA_STATE.lock().await;
     let port = state
-    .http_port
-    .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
+        .http_port
+        .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
     drop(state);
 
     let room_param = room_code.as_deref().unwrap_or("");
@@ -1038,10 +1051,10 @@ pub async fn start_hosting(
         &nodes,
     );
     let resp = client
-    .get(&url)
-    .send()
-    .await
-    .wrap_err("failed to send hosting request to terracotta")?;
+        .get(&url)
+        .send()
+        .await
+        .wrap_err("failed to send hosting request to terracotta")?;
     let status = resp.status();
     if !status.is_success() {
         let body = resp.text().await.unwrap_or_default();
@@ -1065,8 +1078,8 @@ pub async fn start_joining(
     let room_code = parse_room_code(&room_code)?;
     let state = TERRACOTTA_STATE.lock().await;
     let port = state
-    .http_port
-    .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
+        .http_port
+        .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
     drop(state);
 
     let nodes: Vec<String> = Vec::new();
@@ -1080,10 +1093,10 @@ pub async fn start_joining(
         &nodes,
     );
     let resp = client
-    .get(&url)
-    .send()
-    .await
-    .wrap_err("failed to send joining request to terracotta")?;
+        .get(&url)
+        .send()
+        .await
+        .wrap_err("failed to send joining request to terracotta")?;
     let status = resp.status();
     if !status.is_success() {
         let body = resp.text().await.unwrap_or_default();
@@ -1139,11 +1152,11 @@ pub fn parse_room_code(code: &str) -> eyre::Result<String> {
             if segments.len() == 4
                 && segments.iter().all(|s| s.len() == 4)
                 && segments
-                .iter()
-                .all(|s| s.chars().all(|c| c.is_ascii_alphanumeric()))
-                {
-                    return Ok(format!("U/{inner}"));
-                }
+                    .iter()
+                    .all(|s| s.chars().all(|c| c.is_ascii_alphanumeric()))
+            {
+                return Ok(format!("U/{inner}"));
+            }
         }
     }
     bail!(
@@ -1154,32 +1167,32 @@ pub fn parse_room_code(code: &str) -> eyre::Result<String> {
 pub async fn get_logs() -> eyre::Result<String> {
     let state = TERRACOTTA_STATE.lock().await;
     let port = state
-    .http_port
-    .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
+        .http_port
+        .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
     drop(state);
 
     let client = terracotta_client();
     let url = format!("http://127.0.0.1:{port}/log?fetch=");
     let resp = client
-    .get(&url)
-    .send()
-    .await
-    .wrap_err("failed to fetch terracotta logs")?;
+        .get(&url)
+        .send()
+        .await
+        .wrap_err("failed to fetch terracotta logs")?;
     let body = resp
-    .text()
-    .await
-    .wrap_err("failed to read terracotta logs")?;
+        .text()
+        .await
+        .wrap_err("failed to read terracotta logs")?;
     Ok(body)
 }
 
 #[cfg(all(
-test,
-any(
-    target_os = "macos",
-    target_os = "linux",
-    target_os = "freebsd",
-    target_os = "windows"
-)
+    test,
+    any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "freebsd",
+        target_os = "windows"
+    )
 ))]
 mod tests {
     use super::*;
@@ -1241,7 +1254,7 @@ mod tests {
         assert_eq!(
             find_terracotta_executable(
                 temp.path(),
-                                       Some("terracotta-0.4.2-test")
+                Some("terracotta-0.4.2-test")
             ),
             Some(preferred)
         );
@@ -1256,14 +1269,14 @@ mod tests {
         std::fs::write(&destination, b"old").unwrap();
 
         install_terracotta_binary(&candidate, &destination)
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         assert_eq!(std::fs::read(&destination).unwrap(), b"new");
         assert!(
             !destination
-            .with_file_name(format!("{}.old", terracotta_binary_name()))
-            .exists()
+                .with_file_name(format!("{}.old", terracotta_binary_name()))
+                .exists()
         );
     }
 
@@ -1276,8 +1289,8 @@ mod tests {
 
         assert!(
             install_terracotta_binary(&candidate, &destination)
-            .await
-            .is_err()
+                .await
+                .is_err()
         );
         assert_eq!(std::fs::read(&destination).unwrap(), b"old");
     }
@@ -1285,7 +1298,7 @@ mod tests {
     #[test]
     fn parses_port_reported_by_an_existing_daemon() {
         let output =
-        "stdout: [Lock]: Successfully join the global mutex, port = 57924";
+            "stdout: [Lock]: Successfully join the global mutex, port = 57924";
         assert_eq!(reported_terracotta_port(output), Some(57924));
     }
 
@@ -1302,7 +1315,7 @@ mod tests {
         let root = Path::new("launcher-data");
         assert_eq!(
             binary::terracotta_binary_path_in(root),
-                   root.join("terracotta").join(terracotta_binary_name())
+            root.join("terracotta").join(terracotta_binary_name())
         );
     }
 
@@ -1310,13 +1323,13 @@ mod tests {
     fn installed_binary_resolution_falls_back_to_the_legacy_location() {
         let temp = tempfile::tempdir().unwrap();
         let installed = temp
-        .path()
-        .join("launcher-data")
-        .join(terracotta_binary_name());
+            .path()
+            .join("launcher-data")
+            .join(terracotta_binary_name());
         let legacy = temp
-        .path()
-        .join("application")
-        .join(terracotta_binary_name());
+            .path()
+            .join("application")
+            .join(terracotta_binary_name());
         std::fs::create_dir_all(installed.parent().unwrap()).unwrap();
         std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
         std::fs::write(&legacy, executable_magic()).unwrap();
@@ -1333,13 +1346,13 @@ mod tests {
     fn installed_binary_resolution_keeps_the_writable_path_when_missing() {
         let temp = tempfile::tempdir().unwrap();
         let installed = temp
-        .path()
-        .join("launcher-data")
-        .join(terracotta_binary_name());
+            .path()
+            .join("launcher-data")
+            .join(terracotta_binary_name());
         let legacy = temp
-        .path()
-        .join("application")
-        .join(terracotta_binary_name());
+            .path()
+            .join("application")
+            .join(terracotta_binary_name());
 
         assert_eq!(
             binary::resolve_installed_terracotta_binary_path_from(
@@ -1353,7 +1366,7 @@ mod tests {
     fn parses_guest_server_port() {
         assert_eq!(
             terracotta_server_port(Some("127.0.0.1:38449")),
-                   Some(38449)
+            Some(38449)
         );
         assert_eq!(terracotta_server_port(Some("invalid")), None);
         assert_eq!(terracotta_server_port(None), None);
@@ -1380,7 +1393,7 @@ mod tests {
     fn maps_protocol_states_without_silently_accepting_unknown_values() {
         assert_eq!(
             TerracottaStatus::from_api("guest-ok"),
-                   Some(TerracottaStatus::GuestReady)
+            Some(TerracottaStatus::GuestReady)
         );
         assert_eq!(TerracottaStatus::from_api("future-state"), None);
     }
@@ -1389,7 +1402,7 @@ mod tests {
     fn validates_room_codes_at_the_backend_boundary() {
         assert_eq!(
             parse_room_code("u/ABCD-EFGH-IJKL-MNOP").unwrap(),
-                   "U/ABCD-EFGH-IJKL-MNOP"
+            "U/ABCD-EFGH-IJKL-MNOP"
         );
         assert!(parse_room_code("ABCD-EFGH-IJKL-MNOP").is_err());
         assert!(parse_room_code("U/ABCD-EFGH-IJKL-MNO!").is_err());
@@ -1399,11 +1412,11 @@ mod tests {
     fn serializes_error_types_for_the_frontend_contract() {
         assert_eq!(
             serde_json::to_string(&TerracottaErrorType::Terracotta).unwrap(),
-                   "\"terracotta\""
+            "\"terracotta\""
         );
         assert_eq!(
             serde_json::to_string(&TerracottaPlayerKind::Host).unwrap(),
-                   "\"HOST\""
+            "\"HOST\""
         );
     }
 }
