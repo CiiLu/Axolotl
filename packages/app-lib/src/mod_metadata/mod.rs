@@ -143,7 +143,14 @@ fn try_toml_path(
     std::io::Read::read_to_string(&mut file, &mut content).ok()?;
     let parsed: toml_mod::ModsToml = toml::from_str(&content).ok()?;
 
-    let entry = parsed.mods?.into_iter().next()?;
+    // A mod jar may declare several [[mods]] entries (bundled mods); report
+    // the first entry that carries an ID. An id-less entry (e.g. the
+    // "minecraft" marker used by some packs) must not discard the metadata
+    // of the real mod that follows.
+    let entry = parsed
+        .mods?
+        .into_iter()
+        .find(|entry| entry.mod_id.is_some())?;
     let mod_id = entry.mod_id.clone()?;
 
     let authors: Vec<String> = entry
