@@ -128,6 +128,7 @@ fn is_dev() -> bool {
 fn are_updates_enabled() -> bool {
     cfg!(feature = "updater")
         && env::var("MODRINTH_EXTERNAL_UPDATE_PROVIDER").is_err()
+        && !portable::is_portable_mode()
 }
 
 #[cfg(feature = "updater")]

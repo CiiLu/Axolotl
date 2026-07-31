@@ -8,6 +8,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
+import { invoke } from '@tauri-apps/api/core'
 import { inject, ref, watch } from 'vue'
 
 import UpdateAnnouncementHistory from '@/components/ui/announcement/UpdateAnnouncementHistory.vue'
@@ -19,10 +20,15 @@ const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 const selectedSource = ref<UpdateSource>(getUpdateSource())
 const checking = ref(false)
-const checkResult = ref<AppUpdateCheckResult | 'failed' | null>(null)
+const checkResult = ref<AppUpdateCheckResult | 'failed' | 'portable' | null>(null)
 const currentVersion = await getVersion()
 const isDevEnvironment = await isDev()
 const previewUpdateAnnouncement = inject<(version: string) => void>('previewUpdateAnnouncement')
+const isPortable = ref(false)
+
+try {
+	isPortable.value = await invoke('is_portable_mode')
+} catch {}
 
 const messages = defineMessages({
 	title: {
@@ -69,6 +75,11 @@ const messages = defineMessages({
 		id: 'app.settings.updates.failed',
 		defaultMessage: 'Could not check for updates.',
 	},
+	portable: {
+		id: 'app.settings.updates.portable',
+		defaultMessage:
+			'Portable mode cannot update automatically. Please update manually from GitHub.',
+	},
 	security: {
 		id: 'app.settings.updates.security',
 		defaultMessage: 'Updates are installed only when their cryptographic signature is valid.',
@@ -84,13 +95,15 @@ const options: Array<{ value: UpdateSource; label: string }> = [
 	{ value: 'github', label: formatMessage(messages.github) },
 ]
 
-const resultMessages: Record<AppUpdateCheckResult | 'failed', keyof typeof messages> = {
-	available: 'available',
-	'up-to-date': 'upToDate',
-	disabled: 'disabled',
-	offline: 'offline',
-	failed: 'failed',
-}
+const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof typeof messages> =
+	{
+		available: 'available',
+		'up-to-date': 'upToDate',
+		disabled: 'disabled',
+		offline: 'offline',
+		failed: 'failed',
+		portable: 'portable',
+	}
 
 watch(selectedSource, (source) => {
 	setUpdateSource(source)
@@ -100,6 +113,12 @@ watch(selectedSource, (source) => {
 async function checkForUpdates() {
 	checking.value = true
 	checkResult.value = null
+
+	if (isPortable.value) {
+		checkResult.value = 'portable'
+		checking.value = false
+		return
+	}
 
 	try {
 		checkResult.value = await checkForAppUpdate()
