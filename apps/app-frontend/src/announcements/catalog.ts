@@ -50,6 +50,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed the issue of some code being rolled back',
 					'zh-CN': '修复了部分代码被回滚的情况',
 				},
+				{
+					'en-US': 'Fixed some known issues',
+					'zh-CN': '解决了一些已知问题',
+				},
 			],
 		},
 	},
