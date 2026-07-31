@@ -104,8 +104,8 @@ export function createLoaderParsers(
 				let newGameVersions: string[] = []
 				const mcDependencies = metadata.dependencies
 					? Object.values(metadata.dependencies)
-						.flat()
-						.filter((dependency: any) => dependency.modId === 'minecraft')
+							.flat()
+							.filter((dependency: any) => dependency.modId === 'minecraft')
 					: []
 
 				if (mcDependencies.length > 0) {
@@ -383,9 +383,7 @@ export function detectLoadersFromInstanceJson(jsonText: string): {
 	if (lower.includes('minecraftforge') && !lower.includes('net.neoforge')) {
 		const version =
 			jsonText.match(/(?<=forge:[\d.]+(?:_pre\d*)?-)[\d.]+/)?.[0] ??
-			jsonText.match(
-				/(?<=net\.minecraftforge:(?:forge|fmlloader):[\d.]+-)[\d\w._+-]+/,
-			)?.[0]
+			jsonText.match(/(?<=net\.minecraftforge:(?:forge|fmlloader):[\d.]+-)[\d\w._+-]+/)?.[0]
 		const result = { loaders: ['forge'] as string[], version }
 		if (optifineVersion) result.loaders.push('optifine')
 		if (liteLoader) result.loaders.push('lite_loader')

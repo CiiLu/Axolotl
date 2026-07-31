@@ -416,9 +416,7 @@ export function setupCreationModal(
 							if (result.item_type === 'unknown') {
 								notificationManager.addNotification({
 									title: formatMessage(modpackMessages.couldNotIdentify),
-									text:
-										result.reason ??
-										formatMessage(modpackMessages.couldNotIdentifyText),
+									text: result.reason ?? formatMessage(modpackMessages.couldNotIdentifyText),
 									type: 'error',
 								})
 								return
