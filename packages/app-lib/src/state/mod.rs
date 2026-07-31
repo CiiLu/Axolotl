@@ -1,8 +1,10 @@
 //! Theseus state management system
 use crate::util::fetch::{FetchSemaphore, IoSemaphore};
 use dashmap::DashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::{OnceCell, Semaphore};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -107,9 +109,116 @@ pub struct State {
 
     pub restart_after_pending_update: AtomicBool,
 
+    /// Per-instance locks serializing content writes against instance
+    /// deletion, so a delete can never commit between a command loading an
+    /// instance and writing rows that reference it.
+    pub(crate) instance_locks: InstanceLockManager,
+
     pub(crate) pool: SqlitePool,
 
     pub(crate) file_watcher: FileWatcher,
+}
+
+/// Per-instance lock registry with task-local reentrancy.
+///
+/// Instance deletion removes the `instances` row (and cascades through content
+/// files, entries, provider refs and update checks), while content commands
+/// load the instance first and write those rows later. Without serialization a
+/// concurrent delete can commit between the load and the write, surfacing as a
+/// raw `SQLITE_CONSTRAINT_FOREIGNKEY` (code 787) error. The lock is reentrant
+/// for the task that already holds it, since commands compose (update →
+/// check → sync → record), while concurrent tasks are serialized per instance.
+#[derive(Default)]
+pub(crate) struct InstanceLockManager {
+    locks: DashMap<String, Arc<AsyncMutex<()>>>,
+    held_by_owner: std::sync::Mutex<HashMap<LockOwner, HashSet<String>>>,
+}
+
+impl InstanceLockManager {
+    pub(crate) async fn lock(&self, instance_id: &str) -> InstanceLockGuard<'_> {
+        let lock = self
+            .locks
+            .entry(instance_id.to_string())
+            .or_insert_with(|| Arc::new(AsyncMutex::new(())))
+            .clone();
+        let owner = current_lock_owner();
+
+        if self
+            .held_by_owner
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+            .get(&owner)
+            .is_some_and(|held| held.contains(instance_id))
+        {
+            return InstanceLockGuard {
+                manager: self,
+                inner: None,
+                owner,
+                instance_id: instance_id.to_string(),
+            };
+        }
+
+        let inner = lock.lock_owned().await;
+        self.held_by_owner
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+            .entry(owner)
+            .or_default()
+            .insert(instance_id.to_string());
+
+        InstanceLockGuard {
+            manager: self,
+            inner: Some(inner),
+            owner,
+            instance_id: instance_id.to_string(),
+        }
+    }
+}
+
+/// Identity of the async execution context holding an instance lock.
+///
+/// Task IDs distinguish concurrent tasks on a multi-threaded runtime; when no
+/// task context exists (for example the main test future) the thread ID is used
+/// so re-entrant calls within the same context are still recognized.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum LockOwner {
+    Task(tokio::task::Id),
+    Thread(std::thread::ThreadId),
+}
+
+fn current_lock_owner() -> LockOwner {
+    tokio::task::try_id()
+        .map(LockOwner::Task)
+        .unwrap_or_else(|| LockOwner::Thread(std::thread::current().id()))
+}
+
+/// RAII guard for an instance lock. Only the outermost holder releases the
+/// underlying mutex and removes the owner from the reentrancy registry.
+pub(crate) struct InstanceLockGuard<'a> {
+    manager: &'a InstanceLockManager,
+    inner: Option<tokio::sync::OwnedMutexGuard<()>>,
+    owner: LockOwner,
+    instance_id: String,
+}
+
+impl Drop for InstanceLockGuard<'_> {
+    fn drop(&mut self) {
+        if self.inner.is_some() {
+            let mut held = self
+                .manager
+                .held_by_owner
+                .lock()
+                .unwrap_or_else(|poison| poison.into_inner());
+            let mut remove_owner = false;
+            if let Some(held_instances) = held.get_mut(&self.owner) {
+                held_instances.remove(&self.instance_id);
+                remove_owner = held_instances.is_empty();
+            }
+            if remove_owner {
+                held.remove(&self.owner);
+            }
+        }
+    }
 }
 
 fn grow_semaphore(
@@ -411,9 +520,92 @@ impl State {
             process_manager,
             friends_socket,
             restart_after_pending_update: AtomicBool::new(false),
+            instance_locks: InstanceLockManager::default(),
             pool,
             file_watcher,
             // app_identifier,
         }))
+    }
+
+    /// Acquire the lock serializing content writes and instance deletion for
+    /// the given instance. Reentrant within the task that already holds it.
+    pub(crate) async fn lock_instance_content(
+        &self,
+        instance_id: &str,
+    ) -> InstanceLockGuard<'_> {
+        self.instance_locks.lock(instance_id).await
+    }
+}
+
+#[cfg(test)]
+mod instance_lock_tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn serializes_concurrent_tasks_for_the_same_instance() {
+        let manager = Arc::new(InstanceLockManager::default());
+        let first = manager.lock("instance-1").await;
+
+        let manager_for_task = Arc::clone(&manager);
+        let mut contender = tokio::spawn(async move {
+            let _guard = manager_for_task.lock("instance-1").await;
+        });
+
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), &mut contender)
+                .await
+                .is_err(),
+            "a second task must wait for the instance lock"
+        );
+
+        drop(first);
+        tokio::time::timeout(Duration::from_millis(500), contender)
+            .await
+            .expect("contender acquires the lock after the holder drops")
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn does_not_serialize_different_instances() {
+        let manager = InstanceLockManager::default();
+        let first = manager.lock("instance-1").await;
+        let second = tokio::time::timeout(
+            Duration::from_millis(200),
+            manager.lock("instance-2"),
+        )
+        .await
+        .expect("a different instance lock must be acquirable immediately");
+        drop(first);
+        drop(second);
+    }
+
+    #[tokio::test]
+    async fn is_reentrant_within_the_same_task() {
+        let manager = InstanceLockManager::default();
+        let outer = manager.lock("instance-1").await;
+        let inner = tokio::time::timeout(
+            Duration::from_millis(200),
+            manager.lock("instance-1"),
+        )
+        .await
+        .expect("re-entering the same task must not deadlock");
+        drop(inner);
+        drop(outer);
+    }
+
+    #[tokio::test]
+    async fn releases_the_lock_for_other_tasks_after_drop() {
+        let manager = InstanceLockManager::default();
+        let outer = manager.lock("instance-1").await;
+        drop(outer);
+
+        let acquired = tokio::time::timeout(
+            Duration::from_millis(200),
+            manager.lock("instance-1"),
+        )
+        .await
+        .expect("the lock must be free after the guard drops");
+        drop(acquired);
     }
 }

@@ -6,6 +6,8 @@ pub(crate) async fn remove_instance(
     instance_id: &str,
     state: &State,
 ) -> crate::Result<()> {
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+
     let instance = instance_rows::get_instance_by_id(instance_id, &state.pool)
         .await?
         .ok_or_else(|| {

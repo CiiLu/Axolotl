@@ -548,6 +548,8 @@ pub(crate) async fn add_downloaded_project_version(
     source_kind: ContentSourceKind,
     state: &State,
 ) -> crate::Result<String> {
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+
     let DownloadedProjectVersion {
         file_name,
         path,
@@ -713,6 +715,8 @@ pub(crate) async fn add_project_bytes(
     source_kind: ContentSourceKind,
     state: &State,
 ) -> crate::Result<String> {
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+
     let scope = resolve_content_scope(instance_id, None, state).await?;
     let project_type = match project_type {
         Some(project_type) => project_type,
@@ -785,6 +789,8 @@ pub(crate) async fn record_project_file_atomic(
     known_modrinth_file: Option<KnownModrinthFile<'_>>,
     state: &State,
 ) -> crate::Result<()> {
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+
     let scope = resolve_content_scope(instance_id, None, state).await?;
     let file_name = Path::new(relative_path)
         .file_name()
@@ -855,6 +861,8 @@ pub(crate) async fn toggle_disable_project(
     desired_enabled: Option<bool>,
     state: &State,
 ) -> crate::Result<String> {
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+
     let scope = resolve_content_scope(instance_id, None, state).await?;
     let base = instance_full_path(state, &scope.instance);
     let trimmed = project_path.trim_end_matches(".disabled");
@@ -950,6 +958,8 @@ pub(crate) async fn remove_project(
     project_path: &str,
     state: &State,
 ) -> crate::Result<()> {
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+
     let scope = resolve_content_scope(instance_id, None, state).await?;
     let base = instance_full_path(state, &scope.instance);
     let file = content_rows::get_instance_file_by_relative_path(
