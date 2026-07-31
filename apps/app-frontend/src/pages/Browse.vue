@@ -651,6 +651,11 @@ const sourceOptions = computed(() => [
 	{ id: 'curseforge' as const, label: messages.curseForgeSource, icon: CurseForgeIcon },
 ])
 
+const currentSourceLabel = computed(() => {
+	const current = sourceOptions.value.find((opt) => opt.id === contentSource.value)
+	return current?.label ?? messages.allSources
+})
+
 const breadcrumbs = useBreadcrumbs()
 const browseTitle = computed(() =>
 	formatMessage(isFromWorlds.value ? messages.discoverServers : messages.discoverContent),
@@ -1688,16 +1693,16 @@ const {
 
 // Keep a pristine copy when genuine search results arrive (project hits).
 watch(
-  () => searchState.projectHits.value,
-  (hits) => {
-    if (isUpdatingProjectHitsFromTranslation) return
-    if (hits && hits.length > 0) {
-      originalProjectHits.value = hits
-      const version = cancelTranslation()
-      void autoTranslateNewSearchResults(version, false)
-    }
-  },
-  { flush: 'sync' },
+	() => searchState.projectHits.value,
+	(hits) => {
+		if (isUpdatingProjectHitsFromTranslation) return
+		if (hits && hits.length > 0) {
+			originalProjectHits.value = hits
+			const version = cancelTranslation()
+			void autoTranslateNewSearchResults(version, false)
+		}
+	},
+	{ flush: 'sync' },
 )
 // Keep a pristine copy when genuine search results arrive (server hits).
 watch(
@@ -1721,7 +1726,12 @@ async function autoTranslateNewSearchResults(version: number, useServer: boolean
 		const hits = useServer ? originalServerHits.value : originalProjectHits.value
 		if (!hits?.length) return
 
-		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, false, useServer)
+		const translated = await translateSearchDescriptions(
+			hits,
+			i18n.global.locale.value,
+			false,
+			useServer,
+		)
 
 		if (isStale(version)) return
 
@@ -1746,7 +1756,12 @@ async function translateCurrentHits() {
 		const hits = useServer ? serverHits : projectHits
 		if (!hits || hits.length === 0) return
 
-		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, true, useServer)
+		const translated = await translateSearchDescriptions(
+			hits,
+			i18n.global.locale.value,
+			true,
+			useServer,
+		)
 		if (isStale(version)) return // superseded
 
 		if (translated !== hits) {
@@ -1956,50 +1971,51 @@ provideBrowseManager({
 	<div data-onboarding-id="browse-content" class="flex flex-col gap-3 p-6">
 		<BrowsePageLayout>
 			<template #nav-tabs-actions>
-				<div class="flex items-center gap-2">
-					<PopoutMenu
-						v-if="curseForgeCapability.configured && projectType !== 'server'"
-						placement="bottom-end"
-					>
-						<ButtonStyled size="large" type="transparent">
-							<button>
-								<component :is="sourceIcon" class="h-5 w-5" />
-							</button>
-						</ButtonStyled>
-						<template #menu>
-							<div class="flex w-min flex-col gap-1 p-1">
-								<ButtonStyled
-									v-for="option in sourceOptions"
-									:key="option.id"
-									:type="contentSource === option.id ? 'filled' : 'transparent'"
-								>
-									<button
-										class="flex w-full items-center gap-2 !justify-start text-left"
-										@click="selectContentSource(option.id)"
-									>
-										<component :is="option.icon" class="h-4 w-4" />
-										{{ formatMessage(option.label) }}
-									</button>
-								</ButtonStyled>
-							</div>
-						</template>
-					</PopoutMenu>
-					<ButtonStyled size="large" type="transparent">
-						<button :disabled="translationLoading" @click="toggleTranslation">
-							<SpinnerIcon v-if="translationLoading" class="animate-spin" />
-							<LanguagesIcon v-else />
-							{{
-								formatMessage(
-									translationLoading
-										? messages.translating
-										: translationActive
-											? messages.showOriginal
-											: messages.translateProject,
-								)
-							}}
+				<ButtonStyled size="large" type="transparent">
+					<button :disabled="translationLoading" @click="toggleTranslation">
+						<SpinnerIcon v-if="translationLoading" class="animate-spin" />
+						<LanguagesIcon v-else />
+						{{
+							formatMessage(
+								translationLoading
+									? messages.translating
+									: translationActive
+										? messages.showOriginal
+										: messages.translateProject,
+							)
+						}}
+					</button>
+				</ButtonStyled>
+			</template>
+			<template #search-bar-actions>
+				<PopoutMenu
+					v-if="curseForgeCapability.configured && projectType !== 'server'"
+					placement="bottom-end"
+				>
+					<ButtonStyled size="standard" type="standard">
+						<button class="flex items-center gap-2">
+							<component :is="sourceIcon" class="h-5 w-5" />
+							<span>{{ formatMessage(currentSourceLabel) }}</span>
 						</button>
 					</ButtonStyled>
-				</div>
+					<template #menu>
+						<div class="flex w-min flex-col gap-1 p-1">
+							<ButtonStyled
+								v-for="option in sourceOptions"
+								:key="option.id"
+								:type="contentSource === option.id ? 'filled' : 'transparent'"
+							>
+								<button
+									class="flex w-full items-center gap-2 !justify-start text-left"
+									@click="selectContentSource(option.id)"
+								>
+									<component :is="option.icon" class="h-4 w-4" />
+									{{ formatMessage(option.label) }}
+								</button>
+							</ButtonStyled>
+						</div>
+					</template>
+				</PopoutMenu>
 			</template>
 			<template #after>
 				<ContextMenu ref="contextMenuRef" @option-clicked="handleOptionsClick">
