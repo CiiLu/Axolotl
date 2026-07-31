@@ -95,7 +95,6 @@ import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
 import {
 	type ClassificationResult,
-	type ScanResult,
 	classifyDroppedItem,
 	classifyDroppedItemWithExtraction,
 	detectFileLock,
@@ -103,6 +102,7 @@ import {
 	lookupModHash,
 	type ModrinthLookupResult,
 	scanLauncherInstances,
+	type ScanResult,
 } from '@/helpers/drop'
 import {
 	command_listener,

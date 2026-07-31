@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 import { FolderUpIcon } from '@modrinth/assets'
+
 import { useDebugLogger } from '#ui/composables/debug-logger'
 
 const debug = useDebugLogger('DropzoneFileInput')
