@@ -535,7 +535,10 @@ fn classify_jar(path: &Path) -> DroppedItemType {
         // HMCL launcher JAR.
         if mf.main_class.as_deref() == Some("org.jackhuang.hmcl.Main") {
             if let Some(parent) = path.parent()
-                && let Some(data_dir) = find_hmcl_data_dir(parent)
+                && let Some(data_dir) =
+                    crate::api::pack::import::hmcl_config::find_hmcl_data_dir(
+                        parent,
+                    )
             {
                 return DroppedItemType::HmclLauncher {
                     launcher_dir: parent.to_path_buf(),
@@ -598,7 +601,8 @@ fn classify_folder(path: &Path) -> DroppedItemType {
         .join("config")
         .join("launcher-settings.json");
     if hmcl_config.exists()
-        && let Some(data_dir) = find_hmcl_data_dir(path)
+        && let Some(data_dir) =
+            crate::api::pack::import::hmcl_config::find_hmcl_data_dir(path)
     {
         return DroppedItemType::HmclLauncher {
             launcher_dir: path.to_path_buf(),
@@ -851,65 +855,6 @@ pub async fn lookup_mod_hash(
             .map(|v| v.loaders.clone())
             .unwrap_or_default(),
     }))
-}
-
-/// Find the HMCL data / config directory.
-///
-/// Priority:
-/// 1. `{launcher_dir}/.hmcl/config/launcher-settings.json` (portable mode)
-/// 2. Platform-specific system data dir:
-///    - Windows: `%APPDATA%\.hmcl`
-///    - macOS: `~/Library/Application Support/hmcl`
-///    - Linux: `~/.local/share/hmcl`
-/// 3. `$HMCL_DATA_DIR` environment variable
-fn find_hmcl_data_dir(launcher_dir: &Path) -> Option<PathBuf> {
-    // Priority 1: Portable mode — .hmcl in launcher directory.
-    let portable_config =
-        launcher_dir.join(".hmcl/config/launcher-settings.json");
-    if portable_config.exists() {
-        return Some(launcher_dir.join(".hmcl"));
-    }
-
-    // Priority 2: Platform-specific system data dir.
-    let system_dir = find_hmcl_system_data_dir();
-    if let Some(ref dir) = system_dir
-        && dir.join("config/launcher-settings.json").exists()
-    {
-        return Some(dir.clone());
-    }
-
-    // Priority 3: Environment variable override.
-    if let Ok(env_dir) = std::env::var("HMCL_DATA_DIR") {
-        let path = PathBuf::from(env_dir);
-        if path.exists() {
-            return Some(path);
-        }
-    }
-
-    system_dir
-}
-
-fn find_hmcl_system_data_dir() -> Option<PathBuf> {
-    #[cfg(windows)]
-    {
-        std::env::var("APPDATA")
-            .ok()
-            .map(|p| PathBuf::from(p).join(".hmcl"))
-    }
-    #[cfg(target_os = "macos")]
-    {
-        std::env::var("HOME")
-            .ok()
-            .map(|h| PathBuf::from(h).join("Library/Application Support/hmcl"))
-    }
-    #[cfg(target_os = "linux")]
-    {
-        dirs::data_dir().map(|d| d.join("hmcl"))
-    }
-    #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
-    {
-        None
-    }
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
