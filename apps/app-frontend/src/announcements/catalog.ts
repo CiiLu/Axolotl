@@ -182,6 +182,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Saved skins can now be organized into custom favorite folders, with filtering, quick creation, and drag-and-drop assignment.',
+					'zh-CN': '已保存皮肤现在可整理到自定义收藏夹中，并支持筛选、快速创建和拖拽归类。',
+				},
+
+				{
+					'en-US':
 						'The offline mode notice now has a refresh button to re-check the session server connection without restarting the launcher.',
 					'zh-CN': '离线模式提示中新增刷新按钮，无需重启启动器即可重新检测会话服务器连接状态。',
 				},
@@ -199,6 +205,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			changed: [
+				{
+					'en-US':
+						'Saved skin favorite folders now use the launcher dropdown style, create folders from a confirmation dialog, and support deleting folders or moving skins into them by drag and drop.',
+					'zh-CN':
+						'已保存皮肤收藏夹现在使用启动器下拉菜单样式，通过确认弹窗创建，并支持删除收藏夹或拖放皮肤移动到收藏夹。',
+				},
 				{
 					'en-US':
 						"Checking a modpack's contents no longer loads the entire pack file into memory; it now streams to the download cache and is reused by a later install of the same version.",

@@ -109,6 +109,23 @@
 			</div>
 		</div>
 
+		<div class="flex flex-col gap-4 mt-4">
+			<section v-if="(props.favoriteFolders?.length ?? 0) > 0" class="flex flex-col gap-2">
+				<h2 class="text-base font-semibold">{{ formatMessage(messages.favoriteFolderSection) }}</h2>
+				<select
+					v-model="selectedFolder"
+					class="h-10 rounded-xl border border-solid border-button-border bg-bg-raised px-3 text-sm text-primary"
+				>
+					<option :value="null">
+						{{ formatMessage(messages.defaultFavorites) }}
+					</option>
+					<option v-for="folder in props.favoriteFolders" :key="folder" :value="folder">
+						{{ folder }}
+					</option>
+				</select>
+			</section>
+		</div>
+
 		<template #actions>
 			<div class="flex gap-2 justify-end">
 				<ButtonStyled type="outlined">
@@ -225,6 +242,14 @@ const messages = defineMessages({
 		id: 'app.skins.modal.save-skin-button',
 		defaultMessage: 'Save skin',
 	},
+	favoriteFolderSection: {
+		id: 'app.skins.modal.favorite-folder-section',
+		defaultMessage: 'Favorite folder',
+	},
+	defaultFavorites: {
+		id: 'app.skins.favorites.default',
+		defaultMessage: 'Default favorites',
+	},
 })
 
 const { formatMessage } = useVIntl()
@@ -237,13 +262,23 @@ const capeListMaxHeight = ref(`${CAPE_LIST_MAX_HEIGHT}px`)
 const mode = ref<'new' | 'edit'>('new')
 const currentSkin = ref<Skin | null>(null)
 const isSaving = ref(false)
+const selectedFolder = ref<string | null>(null)
+const initialFolder = ref<string | null>(null)
+
+function getSavedSkinFavoriteKey(skin: Skin) {
+	return `saved-skin-${skin.source}-${skin.texture_key}-${skin.variant}-${skin.cape_id ?? 'no-cape'}`
+}
 
 const uploadedTextureUrl = ref<SkinTextureUrl | null>(null)
 const previewSkin = ref<string>('')
 
 const variant = ref<SkinModel>('CLASSIC')
 const selectedCape = ref<Cape | undefined>(undefined)
-const props = defineProps<{ capes?: Cape[] }>()
+const props = defineProps<{
+	capes?: Cape[]
+	favoriteFolders?: string[]
+	favoriteAssignments?: Record<string, string>
+}>()
 
 const selectedCapeTexture = computed(() => selectedCape.value?.texture)
 const canEditTextureAndModel = computed(() => currentSkin.value?.source !== 'default')
@@ -316,6 +351,7 @@ const hasEdits = computed(() => {
 	if (!currentSkin.value) return false
 	if (variant.value !== currentSkin.value.variant) return true
 	if ((selectedCape.value?.id || null) !== (currentSkin.value.cape_id || null)) return true
+	if (selectedFolder.value !== initialFolder.value) return true
 	return false
 })
 
@@ -343,6 +379,8 @@ function resetState() {
 	previewSkin.value = ''
 	variant.value = 'CLASSIC'
 	selectedCape.value = undefined
+	selectedFolder.value = null
+	initialFolder.value = null
 	isSaving.value = false
 }
 
@@ -356,10 +394,13 @@ async function show(e: MouseEvent, skin?: Skin) {
 	if (skin) {
 		variant.value = skin.variant
 		selectedCape.value = props.capes?.find((c) => c.id === skin.cape_id)
+		selectedFolder.value = props.favoriteAssignments?.[getSavedSkinFavoriteKey(skin)] ?? null
 	} else {
 		variant.value = 'CLASSIC'
 		selectedCape.value = undefined
+		selectedFolder.value = null
 	}
+	initialFolder.value = selectedFolder.value
 
 	await loadPreviewSkin()
 
@@ -367,12 +408,14 @@ async function show(e: MouseEvent, skin?: Skin) {
 	nextTick(() => refreshCapeListLayout())
 }
 
-async function showNew(e: MouseEvent, skinTextureUrl: SkinTextureUrl) {
+async function showNew(e: MouseEvent, skinTextureUrl: SkinTextureUrl, defaultFolder?: string) {
 	mode.value = 'new'
 	currentSkin.value = null
 	uploadedTextureUrl.value = skinTextureUrl
 	variant.value = await determineModelType(skinTextureUrl.original)
 	selectedCape.value = undefined
+	selectedFolder.value = defaultFolder ?? null
+	initialFolder.value = selectedFolder.value
 
 	await loadPreviewSkin()
 
@@ -453,6 +496,11 @@ async function save() {
 				selectedCape.value,
 				true,
 			)
+
+			if (selectedFolder.value !== initialFolder.value) {
+				emit('assign-folder', addedSkin, selectedFolder.value)
+			}
+
 			emit('saved', {
 				applied: false,
 				skin: addedSkin,
@@ -465,6 +513,10 @@ async function save() {
 				selectedCape.value,
 				!!uploadedTextureUrl.value && textureUrl !== currentSkin.value?.texture,
 			)
+
+			if (selectedFolder.value !== initialFolder.value) {
+				emit('assign-folder', updatedSkin, selectedFolder.value)
+			}
 
 			if (currentSkin.value?.is_equipped) {
 				await equip_skin(updatedSkin)
@@ -529,6 +581,7 @@ watch(
 const emit = defineEmits<{
 	(event: 'saved', options: { applied: boolean; skin?: Skin; previousSkin?: Skin }): void
 	(event: 'deleted', skin: Skin): void
+	(event: 'assign-folder', skin: Skin, folderName: string | null): void
 }>()
 
 defineExpose({
