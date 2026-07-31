@@ -151,14 +151,12 @@ pub async fn curseforge_switch_installed_file_version(
     relative_path: String,
     file_id: u32,
 ) -> Result<CurseForgeInstallResult> {
-    Ok(
-        theseus::curseforge::switch_installed_file_version(
-            &instance_id,
-            &relative_path,
-            file_id,
-        )
-        .await?,
+    Ok(theseus::curseforge::switch_installed_file_version(
+        &instance_id,
+        &relative_path,
+        file_id,
     )
+    .await?)
 }
 
 #[tauri::command]

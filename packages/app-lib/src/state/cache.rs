@@ -1224,7 +1224,9 @@ impl CachedEntry {
                         expired_keys.insert(row.id.clone());
                     }
                 } else if parsed_data.is_some()
-                    && row.expires - PERMANENT_CACHE_SECONDS + BACKGROUND_REFRESH_THRESHOLD <= now
+                    && row.expires - PERMANENT_CACHE_SECONDS
+                        + BACKGROUND_REFRESH_THRESHOLD
+                        <= now
                 {
                     background_refresh_keys.insert(row.id.clone());
                 }
@@ -1307,10 +1309,10 @@ impl CachedEntry {
             }
         }
 
-        let should_background_refresh =
-            cache_behaviour == CacheBehaviour::StaleWhileRevalidate
-                || cache_behaviour
-                    == CacheBehaviour::StaleWhileRevalidateSkipOffline;
+        let should_background_refresh = cache_behaviour
+            == CacheBehaviour::StaleWhileRevalidate
+            || cache_behaviour
+                == CacheBehaviour::StaleWhileRevalidateSkipOffline;
 
         if should_background_refresh {
             for key in background_refresh_keys {

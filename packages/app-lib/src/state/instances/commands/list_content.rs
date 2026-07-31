@@ -1266,7 +1266,6 @@ async fn content_projects_for_scope(
                     continue;
                 }
             }
-
         }
 
         let update = (origin_provider == Some(ContentProvider::Modrinth))

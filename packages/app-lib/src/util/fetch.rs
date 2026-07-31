@@ -42,7 +42,8 @@ const MAX_SEGMENT_CONCURRENCY: usize = 12;
 const MIN_SEGMENT_SIZE: u64 = 256 * 1024;
 const SEGMENT_RETRY_ATTEMPTS: usize = 3;
 const SEGMENT_EXPANSION_SAMPLE_COUNT: usize = 3;
-const SEGMENT_EXPANSION_INTERVAL: time::Duration = time::Duration::from_millis(1500);
+const SEGMENT_EXPANSION_INTERVAL: time::Duration =
+    time::Duration::from_millis(1500);
 const MAX_REDIRECT_LOCATION_BYTES: usize = 8 * 1024;
 const FILE_TRANSFER_CONNECT_TIMEOUT: time::Duration =
     time::Duration::from_secs(15);

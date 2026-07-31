@@ -4,8 +4,8 @@ use crate::state::instances::{
 };
 use crate::state::{
     CacheBehaviour, CachedEntry, ContentProvider, ContentProviderRef,
-    CurseForgeFileId, ModrinthProjectId,
-    ModrinthVersionId, ProjectType, ReleaseChannel, State,
+    CurseForgeFileId, ModrinthProjectId, ModrinthVersionId, ProjectType,
+    ReleaseChannel, State,
 };
 use std::collections::HashMap;
 
