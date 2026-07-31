@@ -4,7 +4,7 @@
 			<span class="font-extrabold text-contrast text-lg">{{ formatMessage(messages.title) }}</span>
 		</template>
 		<div class="flex flex-col gap-4">
-			<Admonition type="warning" :header="formatMessage(messages.confirm)">
+			<Admonition type="warning" :header="formatMessage(messages.title)">
 				<p class="text-sm text-tertiary">
 					{{
 						formatMessage(messages.warning, {
@@ -68,8 +68,6 @@ defineProps<{
 	modLoader?: string
 	instVersion?: string
 	instLoader?: string
-	modName?: string
-	hasModrinthMatch?: boolean
 }>()
 
 defineEmits<{

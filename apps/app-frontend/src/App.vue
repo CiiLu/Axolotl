@@ -1590,7 +1590,6 @@ async function handleDropConfirm(type: string) {
 		}
 		genericInstallModal.value?.show({
 			contentType: type,
-			filePath,
 			fileName,
 			instances,
 		})

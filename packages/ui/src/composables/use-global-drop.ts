@@ -118,6 +118,11 @@ export function useGlobalDrop(
 			return
 		}
 
+		if (isProcessing.value) {
+			debug('handleNativeDrop: drop while another file is still processing — skipping')
+			return
+		}
+
 		isProcessing.value = true
 		droppedFileName.value = paths[0].split(/[/\\]/).pop() ?? 'file'
 		options.onClassifyStart?.(droppedFileName.value)

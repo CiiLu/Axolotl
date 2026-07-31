@@ -19,12 +19,8 @@
 			/>
 
 			<!-- Instance list -->
-			<div v-if="loading" class="flex items-center justify-center py-8">
-				<SpinnerIcon class="size-6 animate-spin text-secondary" />
-			</div>
-
 			<div
-				v-else-if="filteredInstances.length === 0"
+				v-if="filteredInstances.length === 0"
 				class="flex flex-col items-center gap-2 py-8 text-secondary"
 			>
 				<PackageOpenIcon class="size-8" />
@@ -86,7 +82,6 @@ import {
 	PackageOpenIcon,
 	PlusIcon,
 	SearchIcon,
-	SpinnerIcon,
 } from '@modrinth/assets'
 import { computed, ref } from 'vue'
 
@@ -144,7 +139,6 @@ const emit = defineEmits<{
 
 const modal = ref<InstanceType<typeof NewModal> | null>(null)
 const searchQuery = ref('')
-const loading = ref(false)
 const internalInstances = ref<InstanceInfo[]>([])
 const internalFileName = ref('')
 const contentTypeLabel = ref('')
@@ -166,7 +160,6 @@ const filteredInstances = computed(() => {
 
 async function show(options: {
 	contentType: string
-	filePath: string
 	fileName: string
 	instances?: InstanceInfo[]
 }) {
@@ -176,12 +169,10 @@ async function show(options: {
 
 	if (options.instances) {
 		internalInstances.value = options.instances
-		loading.value = false
 	} else {
 		// Default: try to load instances from the injected list provider
 		// When instances are not provided via props, the parent should populate them
 		internalInstances.value = []
-		loading.value = false
 	}
 
 	modal.value?.show()

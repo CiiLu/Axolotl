@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 	<button
 		type="button"
 		class="w-full cursor-pointer border-none bg-transparent p-0 text-left"
@@ -46,6 +46,9 @@
 
 <script setup lang="ts">
 import { FolderUpIcon } from '@modrinth/assets'
+import { useDebugLogger } from '#ui/composables/debug-logger'
+
+const debug = useDebugLogger('DropzoneFileInput')
 
 const emit = defineEmits<{
 	(e: 'change', paths: string[]): void
@@ -72,28 +75,28 @@ const props = withDefaults(
 )
 
 async function handleClick() {
-	console.log('[DropzoneFileInput] handleClick called, disabled:', props.disabled)
+	debug('handleClick called, disabled:', props.disabled)
 	if (props.disabled) {
-		console.log('[DropzoneFileInput] disabled, returning')
+		debug('disabled, returning')
 		return
 	}
 
 	try {
-		console.log('[DropzoneFileInput] importing @tauri-apps/plugin-dialog')
+		debug('importing @tauri-apps/plugin-dialog')
 		const { open } = await import('@tauri-apps/plugin-dialog')
-		console.log('[DropzoneFileInput] open function imported')
+		debug('open function imported')
 
 		if (props.directory) {
-			console.log('[DropzoneFileInput] directory mode')
+			debug('directory mode')
 			const result = await open({ directory: true, multiple: false })
-			console.log('[DropzoneFileInput] open result:', result)
+			debug('open result:', result)
 			const path = typeof result === 'string' ? result : (result?.path ?? null)
-			console.log('[DropzoneFileInput] extracted path:', path)
+			debug('extracted path:', path)
 			if (path) {
-				console.log('[DropzoneFileInput] emitting change with path:', [path])
+				debug('emitting change with path:', [path])
 				emit('change', [path])
 			} else {
-				console.log('[DropzoneFileInput] no path selected')
+				debug('no path selected')
 			}
 			return
 		}
@@ -106,24 +109,24 @@ async function handleClick() {
 					},
 				]
 			: undefined
-		console.log('[DropzoneFileInput] filters:', filters)
+		debug('filters:', filters)
 
 		const result = await open({ multiple: props.multiple ?? false, filters })
-		console.log('[DropzoneFileInput] open result:', result)
+		debug('open result:', result)
 		const paths = Array.isArray(result) ? result : [result]
 		const pickedPaths = paths
 			.map((entry) => (typeof entry === 'string' ? entry : entry?.path))
 			.filter((p): p is string => !!p)
-		console.log('[DropzoneFileInput] pickedPaths:', pickedPaths)
+		debug('pickedPaths:', pickedPaths)
 
 		if (pickedPaths.length > 0) {
-			console.log('[DropzoneFileInput] emitting change with pickedPaths:', pickedPaths)
+			debug('emitting change with pickedPaths:', pickedPaths)
 			emit('change', pickedPaths)
 		} else {
-			console.log('[DropzoneFileInput] no valid paths selected')
+			debug('no valid paths selected')
 		}
 	} catch (err) {
-		console.error('[DropzoneFileInput] error in handleClick:', err)
+		debug('error in handleClick:', err)
 		// do nothing
 	}
 }

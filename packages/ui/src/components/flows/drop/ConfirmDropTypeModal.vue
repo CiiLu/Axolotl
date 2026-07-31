@@ -292,10 +292,6 @@ const visibleOptions = computed((): DropOption[] => {
 	const classification = props.classification
 	if (!classification) {
 		const all = Object.values(optionByType).filter((o) => o.type !== 'instance')
-		// Add .minecraft folder option only in the fallback (manual selection) view
-		if (optionByType.dot_minecraft) {
-			all.push(optionByType.dot_minecraft)
-		}
 		debug('visibleOptions: no classification, showing all options except instance', {
 			count: all.length,
 			types: all.map((o) => o.type),
