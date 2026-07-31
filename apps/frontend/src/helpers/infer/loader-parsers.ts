@@ -102,9 +102,11 @@ export function createLoaderParsers(
 				}
 
 				let newGameVersions: string[] = []
-				const mcDependencies = Object.values(metadata.dependencies)
-					.flat()
-					.filter((dependency: any) => dependency.modId === 'minecraft')
+				const mcDependencies = metadata.dependencies
+					? Object.values(metadata.dependencies)
+						.flat()
+						.filter((dependency: any) => dependency.modId === 'minecraft')
+					: []
 
 				if (mcDependencies.length > 0) {
 					newGameVersions = getGameVersionsMatchingMavenRange(

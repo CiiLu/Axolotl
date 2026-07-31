@@ -301,8 +301,9 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
 	useServer = false,
 ): Promise<T[]> {
 	if (hits.length === 0) return hits
+	let settings: TranslationSettings | null = null
 	if (!_force) {
-		const settings = await getTranslationSettings()
+		settings = await getTranslationSettings()
 		if (!settings.auto_translate) return hits
 	}
 	if (locale !== 'zh-CN') return hits
@@ -336,7 +337,7 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
 		return translatedHits as T[]
 	}
 
-	const targetLanguage = settings.target_language || i18n.global.locale.value || 'en-US'
+	const targetLanguage = settings?.target_language || i18n.global.locale.value || 'en-US'
 	if (!targetLanguage) return hits
 
 	const hitsToTranslate: T[] = []

@@ -91,7 +91,6 @@ export function parseVersionRange(rangeStr: string): VersionRange | null {
 				type: 'wildcard',
 				major: parseInt(minorWildcard[1], 10),
 				minor: 0,
-				patch: 0,
 			}
 		}
 	}
@@ -183,8 +182,8 @@ export function isVersionInRange(instanceVersion: string, modRange: string): boo
 export const LOADER_COMPATIBILITY: Record<string, string[]> = {
 	fabric: ['fabric', 'quilt'],
 	quilt: ['fabric', 'quilt'],
-	forge: ['forge', 'neoforge'],
-	neoforge: ['forge', 'neoforge'],
+	forge: ['forge'],
+	neoforge: ['neoforge'],
 }
 
 export function areLoadersCompatible(modLoader: string, instanceLoader: string): boolean {
