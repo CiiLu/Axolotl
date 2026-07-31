@@ -87,7 +87,10 @@ macro_rules! impl_serialize {
 
                         let mut state = serializer.serialize_struct("Theseus", 2)?;
                         state.serialize_field("field_name", "Theseus")?;
-                        state.serialize_field("message", &theseus_error.to_string())?;
+                        state.serialize_field(
+                            "message",
+                            &theseus_error.user_facing_message(),
+                        )?;
                         state.end()
                     }
                     $(

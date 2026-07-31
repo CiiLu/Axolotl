@@ -213,6 +213,26 @@ impl std::fmt::Display for Error {
     }
 }
 
+impl Error {
+    /// Returns a user-facing message for this error, replacing raw database
+    /// errors that are meaningless to end users with an actionable hint.
+    ///
+    /// SQLite foreign-key violation (code 787) surfaces when an instance is
+    /// deleted while a content write is still in flight; the write-path
+    /// validation already reports most of these cleanly, this is the final
+    /// fallback at the Tauri boundary.
+    pub fn user_facing_message(&self) -> String {
+        if let ErrorKind::Sqlx(sqlx::Error::Database(db_error)) =
+            self.raw.as_ref()
+            && db_error.code().as_deref() == Some("787")
+        {
+            return "This instance was deleted or is being modified; refresh the instance list and try again."
+                .to_string();
+        }
+        self.to_string()
+    }
+}
+
 impl<E: Into<ErrorKind>> From<E> for Error {
     fn from(source: E) -> Self {
         let error = Into::<ErrorKind>::into(source);
