@@ -7,6 +7,14 @@ use theseus::pack::import::{ImportLauncherType, get_importable_instances};
 use theseus::{LockingProcess, get_locking_processes};
 use tracing::{debug, info, warn};
 
+/// A scanned importable instance: name plus the resolved filesystem path.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScannedInstance {
+    pub name: String,
+    pub path: String,
+}
+
 /// Serializable classification result mapped from `DroppedItemType`.
 ///
 /// All `PathBuf` fields are converted to `String` via `to_string_lossy()`.
@@ -163,7 +171,7 @@ pub async fn drop_classify_extract(
 pub async fn drop_scan_launcher_instances(
     launcher_type: String,
     base_path: String,
-) -> Result<Vec<String>, String> {
+) -> Result<Vec<ScannedInstance>, String> {
     info!(
         "Scanning launcher instances — type: {launcher_type}, path: {base_path}"
     );
@@ -176,7 +184,13 @@ pub async fn drop_scan_launcher_instances(
         .await
         .map_err(|e| e.to_string())?;
     info!("Scan complete — found {} instance(s)", instances.len());
-    Ok(instances.into_iter().map(|i| i.name).collect())
+    Ok(instances
+        .into_iter()
+        .map(|i| ScannedInstance {
+            name: i.name,
+            path: i.path,
+        })
+        .collect())
 }
 
 /// Detect processes holding a file lock on the given path.
