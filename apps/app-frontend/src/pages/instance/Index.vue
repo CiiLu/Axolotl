@@ -641,19 +641,30 @@ const tabs = computed(() => [
 	},
 ])
 
-if (instance.value) {
-	breadcrumbs.setName(
-		'Instance',
-		instance.value.name.length > 40
-			? instance.value.name.substring(0, 40) + '...'
-			: instance.value.name,
-	)
-	breadcrumbs.setContext({
-		name: instance.value.name,
-		link: displayedInstanceRoute.value.path,
-		query: displayedInstanceRoute.value.query,
-	})
+function updateBreadcrumbs() {
+	if (instance.value) {
+		breadcrumbs.setName(
+			'Instance',
+			instance.value.name.length > 40
+				? instance.value.name.substring(0, 40) + '...'
+				: instance.value.name,
+		)
+		breadcrumbs.setContext({
+			name: instance.value.name,
+			link: displayedInstanceRoute.value.path,
+			query: displayedInstanceRoute.value.query,
+		})
+	}
 }
+
+updateBreadcrumbs()
+
+watch(
+	() => instance.value?.id,
+	() => {
+		updateBreadcrumbs()
+	},
+)
 
 const options = ref<InstanceType<typeof ContextMenu> | null>(null)
 
