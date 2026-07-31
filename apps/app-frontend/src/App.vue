@@ -1098,14 +1098,7 @@ async function handleIncompatibilityWarningUpdate(
 	const pending = pendingDropIncompatibility.value
 	if (pending) {
 		pendingDropIncompatibility.value = null
-		const projectTypeMap: Record<string, ContentFileProjectType | undefined> = {
-			mod: 'mod',
-			resource_pack: 'resourcepack',
-			shader_pack: 'shaderpack',
-			litematic: 'schematic',
-			schematic: 'schematic',
-		}
-		const projectType = projectTypeMap[pending.type]
+		const projectType = contentFileProjectTypeMap[pending.type]
 		try {
 			await add_project_from_path(pending.instId, pending.filePath, projectType)
 			addNotification({
@@ -1178,6 +1171,14 @@ const { isInInstance, instanceId } = useInstanceContext()
 const genericInstallModal = ref<InstanceType<typeof GenericContentInstallModal> | null>(null)
 const launcherImportModal = ref<InstanceType<typeof LauncherImportModal> | null>(null)
 const symlinkCardsModal = ref<InstanceType<typeof SymlinkMethodCards> | null>(null)
+const contentFileProjectTypeMap: Record<string, ContentFileProjectType | undefined> = {
+	mod: 'mod',
+	resource_pack: 'resourcepack',
+	shader_pack: 'shaderpack',
+	litematic: 'schematic',
+	schematic: 'schematic',
+}
+
 const scanningInstances = ref(false)
 const pendingInstall = ref<{ type: string; filePath: string } | null>(null)
 const pendingDropIncompatibility = ref<{
@@ -1703,14 +1704,7 @@ async function installContentDirectly(type: string, filePath: string, instId: st
 			}
 		}
 
-		const projectTypeMap: Record<string, ContentFileProjectType | undefined> = {
-			mod: 'mod',
-			resource_pack: 'resourcepack',
-			shader_pack: 'shaderpack',
-			litematic: 'schematic',
-			schematic: 'schematic',
-		}
-		const projectType = projectTypeMap[type]
+		const projectType = contentFileProjectTypeMap[type]
 		await add_project_from_path(instId, filePath, projectType)
 		addNotification({
 			title: formatMessage(messages.dropContentInstalledTitle),
