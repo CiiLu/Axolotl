@@ -1241,6 +1241,7 @@ pub async fn get_logs() -> eyre::Result<String> {
 ))]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     fn executable_magic() -> [u8; 4] {
         #[cfg(target_os = "macos")]

@@ -4313,9 +4313,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn mirror_request_start_slots_allow_two_immediate_requests() {
+    async fn mirror_request_start_slots_pace_requests() {
         let _guard = MIRROR_REQUEST_SLOT_TEST_LOCK.lock().await;
-        *MIRROR_REQUEST_SLOTS.lock().await = [Instant::now(); 2];
+        *MIRROR_REQUEST_SLOTS.lock().await = [
+            Instant::now() + MIRROR_REQUEST_START_INTERVAL;
+            4
+        ];
         let route = DownloadRoute {
             url: "https://bmclapi2.bangbang93.com/maven/file.jar".to_string(),
             source: DownloadRouteSource::Bmclapi,
@@ -4325,13 +4328,11 @@ mod tests {
             proxy: ProxyPolicy::System,
         };
 
-        wait_for_mirror_request_slot(&route).await;
-        wait_for_mirror_request_slot(&route).await;
         let started = Instant::now();
         wait_for_mirror_request_slot(&route).await;
         assert!(
-            started.elapsed() >= time::Duration::from_millis(80),
-            "the third request should wait for a mirror request slot"
+            started.elapsed() >= time::Duration::from_millis(40),
+            "a request should wait for the paced mirror request slot"
         );
     }
 
@@ -4584,7 +4585,7 @@ mod tests {
 
     #[test]
     fn segmented_concurrency_respects_effective_and_global_limits() {
-        assert_eq!(segmented_concurrency_cap(64), 8);
+        assert_eq!(segmented_concurrency_cap(64), MAX_SEGMENT_CONCURRENCY);
         assert_eq!(segmented_concurrency_cap(8), 7);
         assert_eq!(segmented_concurrency_cap(4), 3);
         assert_eq!(segmented_concurrency_cap(1), 1);
@@ -5177,20 +5178,15 @@ mod tests {
     }
 
     #[test]
-    fn test_fence_block_after_4_fails() {
+    fn test_fence_blocks_after_threshold_failures() {
         // Update tests if the FenceInner constants change
 
         let mut fence = FenceInner::new();
 
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
+        for _ in 0..FenceInner::FAILURE_THRESHOLD - 1 {
+            fence.record_fail();
+            assert!(!fence.is_blocked());
+        }
         fence.record_fail();
         assert!(fence.is_blocked());
     }
@@ -5232,51 +5228,39 @@ mod tests {
     }
 
     #[test]
-    fn test_fence_block_after_4_fails_with_oks() {
+    fn test_fence_blocks_after_threshold_failures_with_oks() {
         // Update tests if the FenceInner constants change
 
         let mut fence = FenceInner::new();
 
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
+        for _ in 0..FenceInner::FAILURE_THRESHOLD - 1 {
+            fence.record_fail();
+            assert!(!fence.is_blocked());
+        }
         fence.record_ok();
         assert!(!fence.is_blocked());
-
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
         fence.record_fail();
         assert!(fence.is_blocked());
     }
 
     #[test]
-    fn test_fence_not_blocked_after_fails_expire() {
+    fn test_fence_not_blocked_after_failures_expire() {
         // Update tests if the FenceInner constants change
 
         let mut fence = FenceInner::new();
 
+        for _ in 0..FenceInner::FAILURE_THRESHOLD - 1 {
+            fence.record_fail();
+        }
+        assert!(!fence.is_blocked());
+
+        fence.prune(Utc::now() + TimeDelta::seconds(31)); // Should prune all failures
         fence.record_fail();
         assert!(!fence.is_blocked());
 
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
-        fence.prune(Utc::now() + TimeDelta::seconds(60 * 3 + 55)); // Should prune all failures
-
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
-        fence.record_fail();
-        assert!(!fence.is_blocked());
-
-        fence.record_fail();
+        for _ in 1..FenceInner::FAILURE_THRESHOLD {
+            fence.record_fail();
+        }
         assert!(fence.is_blocked());
     }
 
@@ -5291,39 +5275,39 @@ mod tests {
 
             let block_until = fence.block_until.unwrap();
             assert!(
-                block_until > Utc::now() + TimeDelta::seconds(60 + 55),
-                "Should be more than 2 minutes (with some leeway) (attempt {i})"
-            ); // more than 2 minutes (with some leeway)
+                block_until > Utc::now() + TimeDelta::seconds(4),
+                "Should be more than 5 seconds (with some leeway) (attempt {i})"
+            );
             assert!(
-                block_until < Utc::now() + TimeDelta::seconds(60 * 5),
-                "Should be less than 5 minutes (attempt {i})"
-            ); // less than 5 minutes
+                block_until < Utc::now() + TimeDelta::seconds(16),
+                "Should be less than 15 seconds (attempt {i})"
+            );
 
             fence.block_until = None;
 
             fence.trigger_block();
             let block_until = fence.block_until.unwrap();
             assert!(
-                block_until > Utc::now() + TimeDelta::seconds(60 * 3 + 55),
-                "Should be more than 4 minutes (with some leeway) (attempt {i})"
-            ); // more than 4 minutes (with some leeway)
+                block_until > Utc::now() + TimeDelta::seconds(9),
+                "Should be more than 10 seconds (with some leeway) (attempt {i})"
+            );
             assert!(
-                block_until < Utc::now() + TimeDelta::seconds(60 * 10),
-                "Should be less than 10 minutes (attempt {i})"
-            ); // less than 10 minutes
+                block_until < Utc::now() + TimeDelta::seconds(31),
+                "Should be less than 30 seconds (attempt {i})"
+            );
 
             fence.block_until = None;
 
             fence.trigger_block();
             let block_until = fence.block_until.unwrap();
             assert!(
-                block_until > Utc::now() + TimeDelta::seconds(60 * 5 + 55),
-                "Should be more than 6 minutes (with some leeway) (attempt {i})"
-            ); // more than 6 minutes (with some leeway)
+                block_until > Utc::now() + TimeDelta::seconds(14),
+                "Should be more than 15 seconds (with some leeway) (attempt {i})"
+            );
             assert!(
-                block_until < Utc::now() + TimeDelta::seconds(60 * 15),
-                "Should be less than 15 minutes (attempt {i})"
-            ); // less than 15 minutes
+                block_until < Utc::now() + TimeDelta::seconds(46),
+                "Should be less than 45 seconds (attempt {i})"
+            );
         }
     }
 }
