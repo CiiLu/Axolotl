@@ -1,6 +1,7 @@
 import { createContext } from '@modrinth/ui'
 import { computed, type ComputedRef, type Ref, ref } from 'vue'
 
+import { setCurseForgeManualDownloads } from '@/helpers/curseforge-manual'
 import { download_request_listener, install_job_listener, loading_listener } from '@/helpers/events'
 import {
 	download_history_clear,
@@ -8,6 +9,7 @@ import {
 	download_job_delete,
 	download_job_list,
 	download_job_retry,
+	installJobInstanceId,
 	type DownloadRequestUpdate,
 	type InstallJobSnapshot,
 } from '@/helpers/install'
@@ -54,6 +56,25 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 	> = []
 	const pendingRequestUpdates = new Map<string, DownloadRequestUpdate[]>()
 
+	function persistManualDownloadsFromJob(job: InstallJobSnapshot) {
+		if (job.status !== 'succeeded') return
+		const instanceId = installJobInstanceId(job)
+		const manualItems = job.items
+			.filter(
+				(item) =>
+					item.status === 'skipped' && item.manual_url && item.project_id && item.version_id,
+			)
+			.map((item) => ({
+				projectId: Number(item.project_id),
+				fileId: Number(item.version_id),
+				fileName: item.name,
+				websiteUrl: item.manual_url ?? undefined,
+			}))
+		if (instanceId && manualItems.length > 0) {
+			setCurseForgeManualDownloads(instanceId, manualItems)
+		}
+	}
+
 	function setJob(job: InstallJobSnapshot) {
 		if (initializing) {
 			pendingInitialUpdates.push({ kind: 'job', job })
@@ -69,6 +90,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 			pendingRequestUpdates.delete(job.job_id)
 			for (const update of pending) updateRequest(update)
 		}
+		persistManualDownloadsFromJob(job)
 	}
 
 	function updateRequest(update: DownloadRequestUpdate) {
@@ -134,7 +156,17 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 			handleError(error)
 			return null
 		})
-		if (page && !disposed) jobs.value = page.jobs
+		if (page && !disposed) {
+			jobs.value = page.jobs
+			const seenInstances = new Set<string>()
+			for (const job of page.jobs) {
+				if (job.status !== 'succeeded') continue
+				const instanceId = installJobInstanceId(job)
+				if (!instanceId || seenInstances.has(instanceId)) continue
+				seenInstances.add(instanceId)
+				persistManualDownloadsFromJob(job)
+			}
+		}
 	}
 
 	async function refreshLegacyDownloads() {

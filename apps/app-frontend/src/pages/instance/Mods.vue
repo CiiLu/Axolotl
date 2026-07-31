@@ -384,14 +384,14 @@ const manualDownloadCandidates = computed<CurseForgeManualDownloadItem[]>(() => 
 		pendingManualDownloadsByInstance.value.get(props.instance.id) ??
 		getCurseForgeManualDownloads(props.instance.id)
 	const latestJob = downloadManager.jobs.value.find(
-		(job) =>
-			job.status === 'succeeded' &&
-			job.provider === 'curse_forge' &&
-			installJobInstanceId(job) === props.instance.id,
+		(job) => job.status === 'succeeded' && installJobInstanceId(job) === props.instance.id,
 	)
 	const jobItems = latestJob
 		? latestJob.items
-				.filter((item) => item.status === 'skipped' && item.project_id && item.version_id)
+				.filter(
+					(item) =>
+						item.status === 'skipped' && item.manual_url && item.project_id && item.version_id,
+				)
 				.map((item) => ({
 					projectId: Number(item.project_id),
 					fileId: Number(item.version_id),
