@@ -4456,39 +4456,6 @@
 	},
 	"app.instance-item.view-instance": {
 		"message": "查看实例"
-	},
-	"app.skins.favorites.all": {
-		"message": "全部皮肤"
-	},
-	"app.skins.favorites.uncategorized": {
-		"message": "未分类皮肤"
-	},
-	"app.skins.favorites.default": {
-		"message": "默认收藏夹"
-	},
-	"app.skins.favorites.create-button": {
-		"message": "创建收藏夹"
-	},
-	"app.skins.favorites.create-placeholder": {
-		"message": "收藏夹名称"
-	},
-	"app.skins.favorites.empty": {
-		"message": "这个收藏夹中还没有已保存皮肤。"
-	},
-	"app.skins.favorites.error-name-required": {
-		"message": "请输入收藏夹名称。"
-	},
-	"app.skins.favorites.error-duplicate-name": {
-		"message": "已存在同名收藏夹。"
-	},
-	"app.skins.favorites.create-title": {
-		"message": "创建收藏夹"
-	},
-	"app.skins.favorites.create-confirm": {
-		"message": "创建收藏夹"
-	},
-	"app.skins.modal.favorite-folder-section": {
-		"message": "收藏夹"
 	}
 ,
 	"app.navigation.multiplayer": {

@@ -488,9 +488,6 @@
   "app.downloads.clear-history-title": {
     "message": "Clear download history?"
   },
-  "app.downloads.completed-summary": {
-    "message": "{count, number} items completed"
-  },
   "app.downloads.confirm-clear": {
     "message": "Completed, failed, interrupted, and canceled records will be permanently deleted."
   },
@@ -580,6 +577,9 @@
   },
   "app.downloads.manual-download-required": {
     "message": "CurseForge requires this file to be downloaded manually."
+  },
+  "app.downloads.completed-summary": {
+    "message": "{count, number} items completed"
   },
   "app.downloads.more-active-requests": {
     "message": "+{count} active requests"
@@ -3548,9 +3548,6 @@
   "app.settings.updates.offline": {
     "message": "Connect to the internet to check for updates."
   },
-  "app.settings.updates.portable": {
-    "message": "Portable mode cannot update automatically. Please update manually from GitHub."
-  },
   "app.settings.updates.preview-announcement": {
     "message": "Preview update announcement"
   },
@@ -3590,36 +3587,6 @@
   "app.skins.edit-button": {
     "message": "Edit skin"
   },
-  "app.skins.favorites.all": {
-    "message": "All skins"
-  },
-  "app.skins.favorites.create-button": {
-    "message": "Create favorite folder"
-  },
-  "app.skins.favorites.create-confirm": {
-    "message": "Create folder"
-  },
-  "app.skins.favorites.create-placeholder": {
-    "message": "Folder name"
-  },
-  "app.skins.favorites.create-title": {
-    "message": "Create favorite folder"
-  },
-  "app.skins.favorites.default": {
-    "message": "Default favorites"
-  },
-  "app.skins.favorites.empty": {
-    "message": "No saved skins are in this favorite folder yet."
-  },
-  "app.skins.favorites.error-duplicate-name": {
-    "message": "A favorite folder with this name already exists."
-  },
-  "app.skins.favorites.error-name-required": {
-    "message": "Enter a folder name."
-  },
-  "app.skins.favorites.uncategorized": {
-    "message": "Uncategorized"
-  },
   "app.skins.modal.add-skin-button": {
     "message": "Add skin"
   },
@@ -3643,9 +3610,6 @@
   },
   "app.skins.modal.edit-title": {
     "message": "Editing skin"
-  },
-  "app.skins.modal.favorite-folder-section": {
-    "message": "Favorite folder"
   },
   "app.skins.modal.make-edit-first-tooltip": {
     "message": "Make an edit to the skin first!"

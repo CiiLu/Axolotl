@@ -49,7 +49,6 @@ import GenericContentInstallModal from '@modrinth/ui/src/components/flows/drop/G
 import LauncherImportModal from '@modrinth/ui/src/components/flows/drop/LauncherImportModal.vue'
 import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMethodCards.vue'
 import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-context'
-import { arrayBufferToBase64 } from '@modrinth/utils'
 import { useQuery } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
@@ -1176,25 +1175,6 @@ const currentImportContext = ref<{ launcherType: string; basePath: string } | nu
 const dropDebug = useDebugLogger('DropFlow')
 
 const dropProcessingNotificationId = ref<number | null>(null)
-const pendingSkinDropData = ref<string | null>(null)
-provide('pending-skin-drop', pendingSkinDropData)
-
-function extractPathFromReason(reason: string | undefined): string | undefined {
-	if (!reason) return undefined
-	const match = reason.match(/Unrecognised file type:\s*(.+\.png)\s*$/i)
-	return match?.[1]
-}
-
-async function handleSkinDrop(filePath: string) {
-	try {
-		const bytes: number[] = await invoke('plugin:files|file_read_dragged_file', { path: filePath })
-		const uint8 = new Uint8Array(bytes)
-		const base64 = arrayBufferToBase64(uint8.buffer)
-		pendingSkinDropData.value = `data:image/png;base64,${base64}`
-	} catch (error) {
-		handleError(error as Error)
-	}
-}
 
 const { isDragging, isProcessing } = useGlobalDrop(
 	{
@@ -1231,15 +1211,10 @@ const { isDragging, isProcessing } = useGlobalDrop(
 
 			if (type === 'unknown') {
 				clearDropProcessingNotification()
-
-				const filePath = classification?.file_path ?? extractPathFromReason(classification?.reason)
-				if (filePath?.toLowerCase().endsWith('.png')) {
-					handleSkinDrop(filePath).catch(handleError)
-					return
-				}
-
 				const unknownFile =
-					filePath?.split(/[/\\]/).pop() ?? classification?.base_path?.split(/[/\\]/).pop() ?? ''
+					classification?.file_path?.split(/[/\\]/).pop() ??
+					classification?.base_path?.split(/[/\\]/).pop() ??
+					''
 
 				// .tmp files are OS-level temp copies from drag-and-drop (browser, archive, etc.)
 				const isTempFile = unknownFile.startsWith('.tmp') || unknownFile.startsWith('tmp')

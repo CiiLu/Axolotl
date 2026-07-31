@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { DropdownIcon, EditIcon, PlusIcon, TrashIcon, UnknownIcon, XIcon } from '@modrinth/assets'
+import { DropdownIcon, EditIcon, PlusIcon, TrashIcon, UnknownIcon } from '@modrinth/assets'
 import {
 	Accordion,
 	ButtonStyled,
 	commonMessages,
 	defineMessages,
-	NewModal,
 	SkinButton,
 	SkinLikeTextButton,
 	useScrollViewport,
@@ -52,10 +51,8 @@ const SKIN_SECTION_FIRST_SPACING = 4
 const SKIN_SECTION_SPACING = 24
 const SKIN_SECTION_HEADER_HEIGHT = 28
 const SKIN_SECTION_CONTENT_SPACING = 8
-const SAVED_FAVORITES_CONTROL_HEIGHT = 48
 const SKIN_SECTION_OVERSCAN = 900
 const FALLBACK_CARD_WIDTH = 220
-const UNCATEGORIZED_FOLDER_KEY = '__uncategorized__'
 const messages = defineMessages({
 	savedSkinsSection: {
 		id: 'app.skins.section.saved-skins',
@@ -77,36 +74,6 @@ const messages = defineMessages({
 		id: 'app.skins.delete-button',
 		defaultMessage: 'Delete skin',
 	},
-	allFavorites: { id: 'app.skins.favorites.all', defaultMessage: 'All skins' },
-	uncategorized: { id: 'app.skins.favorites.uncategorized', defaultMessage: 'Uncategorized' },
-	createFavoriteButton: {
-		id: 'app.skins.favorites.create-button',
-		defaultMessage: 'Create favorite folder',
-	},
-	createFavoritePlaceholder: {
-		id: 'app.skins.favorites.create-placeholder',
-		defaultMessage: 'Folder name',
-	},
-	createFavoriteTitle: {
-		id: 'app.skins.favorites.create-title',
-		defaultMessage: 'Create favorite folder',
-	},
-	createFavoriteConfirm: {
-		id: 'app.skins.favorites.create-confirm',
-		defaultMessage: 'Create folder',
-	},
-	emptyFavorite: {
-		id: 'app.skins.favorites.empty',
-		defaultMessage: 'No saved skins are in this favorite folder yet.',
-	},
-	nameRequired: {
-		id: 'app.skins.favorites.error-name-required',
-		defaultMessage: 'Enter a folder name.',
-	},
-	duplicateName: {
-		id: 'app.skins.favorites.error-duplicate-name',
-		defaultMessage: 'A favorite folder with this name already exists.',
-	},
 })
 
 const props = defineProps<{
@@ -118,9 +85,6 @@ const props = defineProps<{
 	isAddSkinButtonDragActive: boolean
 	readOnly?: boolean
 	activeTab?: 'saved' | 'default'
-	favoriteFolders: string[]
-	selectedFavoriteFolder: string | null
-	favoriteAssignments: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -128,9 +92,6 @@ const emit = defineEmits<{
 	edit: [skin: Skin, event: MouseEvent]
 	delete: [skin: Skin]
 	'reorder-saved-skins': [skins: Skin[]]
-	'create-favorite-folder': [name: string]
-	'select-favorite-folder': [name: string | null]
-	'delete-favorite-folder': [name: string]
 	'add-skin': []
 	'add-skin-dragenter': [event: DragEvent]
 	'add-skin-dragover': [event: DragEvent]
@@ -187,7 +148,7 @@ const sections = computed<SkinSection[]>(() => {
 				key: 'saved-skins',
 				title: formatMessage(messages.savedSkinsSection),
 				kind: 'saved',
-				skins: filteredSavedSkins.value,
+				skins: props.savedSkins,
 			},
 		]
 	}
@@ -207,7 +168,7 @@ const sections = computed<SkinSection[]>(() => {
 			key: 'saved-skins',
 			title: formatMessage(messages.savedSkinsSection),
 			kind: 'saved',
-			skins: filteredSavedSkins.value,
+			skins: props.savedSkins,
 		},
 		...props.defaultSkinSections.map((section) => ({
 			key: defaultSkinSectionKey(section.title),
@@ -218,33 +179,11 @@ const sections = computed<SkinSection[]>(() => {
 		})),
 	]
 })
+
 const draggableSavedSkins = ref<Skin[]>([])
 const isDraggingSavedSkin = ref(false)
-const draggedSavedSkin = ref<Skin | null>(null)
-const isFavoriteMenuOpen = ref(false)
-const createFavoriteModal = ref<InstanceType<typeof NewModal>>()
-const newFavoriteName = ref('')
-const favoriteError = ref('')
-const filteredSavedSkins = computed(() => {
-	if (!props.selectedFavoriteFolder) return props.savedSkins
-
-	if (props.selectedFavoriteFolder === UNCATEGORIZED_FOLDER_KEY) {
-		return props.savedSkins.filter((skin) => !props.favoriteAssignments[savedSkinKey(skin)])
-	}
-
-	return props.savedSkins.filter(
-		(skin) => props.favoriteAssignments[savedSkinKey(skin)] === props.selectedFavoriteFolder,
-	)
-})
-const selectedFavoriteLabel = computed(() => {
-	if (props.selectedFavoriteFolder === null) return formatMessage(messages.allFavorites)
-	if (props.selectedFavoriteFolder === UNCATEGORIZED_FOLDER_KEY)
-		return formatMessage(messages.uncategorized)
-	return props.selectedFavoriteFolder
-})
-const fixedSavedSkins = computed(() =>
-	filteredSavedSkins.value.filter((skin) => !canDragSavedSkin(skin)),
-)
+const canReorderSavedSkins = computed(() => draggableSavedSkins.value.length > 1)
+const fixedSavedSkins = computed(() => props.savedSkins.filter((skin) => !canDragSavedSkin(skin)))
 
 const sectionLayouts = computed(() => {
 	const layouts: Array<{ section: SkinSection; top: number; height: number; index: number }> = []
@@ -303,7 +242,7 @@ watch(
 )
 
 watch(
-	() => filteredSavedSkins.value,
+	() => props.savedSkins,
 	(nextSkins) => {
 		if (isDraggingSavedSkin.value) {
 			return
@@ -381,65 +320,19 @@ function doSkinOrdersMatch(firstSkins: Skin[], secondSkins: Skin[]) {
 	)
 }
 
-function onSavedSkinDragStart(event: { oldIndex?: number }) {
+function onSavedSkinDragStart() {
 	isDraggingSavedSkin.value = true
-	draggedSavedSkin.value = draggableSavedSkins.value[event.oldIndex ?? -1] ?? null
 }
 
 function onSavedSkinDragEnd() {
 	isDraggingSavedSkin.value = false
-	draggedSavedSkin.value = null
 
-	if (doSkinOrdersMatch(draggableSavedSkins.value, filteredSavedSkins.value)) {
-		draggableSavedSkins.value = filteredSavedSkins.value.filter(canDragSavedSkin)
+	if (doSkinOrdersMatch(draggableSavedSkins.value, props.savedSkins)) {
+		draggableSavedSkins.value = props.savedSkins.filter(canDragSavedSkin)
 		return
 	}
 
 	emit('reorder-saved-skins', [...draggableSavedSkins.value])
-}
-
-function toggleFavoriteMenu() {
-	isFavoriteMenuOpen.value = !isFavoriteMenuOpen.value
-}
-
-function selectFavoriteFolder(name: string | null) {
-	emit('select-favorite-folder', name)
-	isFavoriteMenuOpen.value = false
-}
-
-function openCreateFavoriteModal() {
-	newFavoriteName.value = ''
-	favoriteError.value = ''
-	createFavoriteModal.value?.show()
-}
-
-function closeCreateFavoriteModal() {
-	createFavoriteModal.value?.hide()
-}
-
-function createFavoriteFolder() {
-	const name = newFavoriteName.value.trim()
-	if (!name) {
-		favoriteError.value = formatMessage(messages.nameRequired)
-		return
-	}
-	if (
-		props.favoriteFolders.some(
-			(folder) => folder.localeCompare(name, undefined, { sensitivity: 'accent' }) === 0,
-		)
-	) {
-		favoriteError.value = formatMessage(messages.duplicateName)
-		return
-	}
-	favoriteError.value = ''
-	newFavoriteName.value = ''
-	emit('create-favorite-folder', name)
-	createFavoriteModal.value?.hide()
-}
-
-function deleteFavoriteFolder(name: string) {
-	emit('delete-favorite-folder', name)
-	isFavoriteMenuOpen.value = false
 }
 
 function isSectionOpen(key: string) {
@@ -469,15 +362,7 @@ function getSectionHeightEstimate(section: SkinSection, index: number) {
 	const rowCount = Math.ceil(cardCount / columnCount.value)
 	const gridHeight = rowCount * cardHeight.value + Math.max(0, rowCount - 1) * SKIN_GRID_GAP
 
-	const controlsHeight = section.kind === 'saved' ? SAVED_FAVORITES_CONTROL_HEIGHT : 0
-
-	return (
-		spacing +
-		SKIN_SECTION_HEADER_HEIGHT +
-		SKIN_SECTION_CONTENT_SPACING +
-		controlsHeight +
-		gridHeight
-	)
+	return spacing + SKIN_SECTION_HEADER_HEIGHT + SKIN_SECTION_CONTENT_SPACING + gridHeight
 }
 
 function getAddSkinButtonElement() {
@@ -492,40 +377,6 @@ defineExpose({ getAddSkinButtonElement })
 </script>
 
 <template>
-	<NewModal
-		ref="createFavoriteModal"
-		:header="formatMessage(messages.createFavoriteTitle)"
-		max-width="420px"
-	>
-		<form class="flex flex-col gap-4" @submit.prevent="createFavoriteFolder">
-			<input
-				v-model="newFavoriteName"
-				type="text"
-				class="h-10 rounded-xl border border-solid border-button-border bg-bg-raised px-3 text-sm text-primary"
-				:placeholder="formatMessage(messages.createFavoritePlaceholder)"
-				autofocus
-				@input="favoriteError = ''"
-			/>
-			<p v-if="favoriteError" class="m-0 text-xs font-semibold text-red">
-				{{ favoriteError }}
-			</p>
-		</form>
-		<template #actions>
-			<div class="flex justify-end gap-2">
-				<ButtonStyled>
-					<button type="button" @click="closeCreateFavoriteModal">
-						<XIcon /> {{ formatMessage(commonMessages.cancelButton) }}
-					</button>
-				</ButtonStyled>
-				<ButtonStyled color="brand">
-					<button type="button" @click="createFavoriteFolder">
-						<PlusIcon /> {{ formatMessage(messages.createFavoriteConfirm) }}
-					</button>
-				</ButtonStyled>
-			</div>
-		</template>
-	</NewModal>
-
 	<div
 		ref="listContainer"
 		class="relative w-full"
@@ -581,93 +432,12 @@ defineExpose({ getAddSkinButtonElement })
 					</Tooltip>
 				</template>
 
-				<div v-if="section.kind === 'saved'" class="mb-3 flex flex-wrap items-start gap-2">
-					<div class="relative min-w-64">
-						<button
-							type="button"
-							class="flex h-10 w-full items-center justify-between gap-2 rounded-xl bg-button-bg px-4 text-left text-sm font-semibold text-primary shadow-[var(--shadow-inset-sm)] transition-colors hover:brightness-95"
-							:class="{ 'rounded-b-none': isFavoriteMenuOpen }"
-							:aria-expanded="isFavoriteMenuOpen"
-							@click="toggleFavoriteMenu"
-						>
-							<span class="min-w-0 truncate">{{ selectedFavoriteLabel }}</span>
-							<DropdownIcon
-								class="size-5 shrink-0 transition-transform duration-200"
-								:class="{ 'rotate-180': isFavoriteMenuOpen }"
-							/>
-						</button>
-						<div
-							v-show="isFavoriteMenuOpen"
-							class="absolute z-20 max-h-80 w-full overflow-y-auto rounded-b-xl bg-button-bg shadow-[var(--shadow-inset-sm)]"
-						>
-							<button
-								type="button"
-								class="flex w-full items-center px-4 py-3 text-left text-sm font-semibold text-primary transition-colors hover:brightness-90"
-								:class="{ 'bg-brand text-accent-contrast': selectedFavoriteFolder === null }"
-								@click="selectFavoriteFolder(null)"
-							>
-								{{ formatMessage(messages.allFavorites) }}
-							</button>
-							<button
-								type="button"
-								class="flex w-full items-center px-4 py-3 text-left text-sm font-semibold text-primary transition-colors hover:brightness-90"
-								:class="{
-									'bg-brand text-accent-contrast':
-										selectedFavoriteFolder === UNCATEGORIZED_FOLDER_KEY,
-								}"
-								@click="selectFavoriteFolder(UNCATEGORIZED_FOLDER_KEY)"
-							>
-								{{ formatMessage(messages.uncategorized) }}
-							</button>
-							<div
-								v-for="folder in favoriteFolders"
-								:key="folder"
-								:data-skin-favorite-drop-target="folder"
-								class="group flex items-center transition-colors hover:brightness-90"
-								:class="{ 'bg-brand text-accent-contrast': selectedFavoriteFolder === folder }"
-							>
-								<button
-									type="button"
-									class="min-w-0 flex-1 bg-transparent px-4 py-3 text-left text-sm font-semibold text-inherit"
-									@click="selectFavoriteFolder(folder)"
-								>
-									<span class="block truncate">{{ folder }}</span>
-								</button>
-								<button
-									v-if="!readOnly"
-									type="button"
-									class="mr-2 flex size-8 items-center justify-center rounded-lg bg-transparent text-inherit opacity-70 transition-opacity hover:opacity-100"
-									:aria-label="formatMessage(messages.deleteSkinButton)"
-									@click.stop="deleteFavoriteFolder(folder)"
-								>
-									<TrashIcon class="size-4" />
-								</button>
-							</div>
-						</div>
-					</div>
-					<ButtonStyled v-if="!readOnly" circular>
-						<button
-							type="button"
-							:aria-label="formatMessage(messages.createFavoriteButton)"
-							@click="openCreateFavoriteModal"
-						>
-							<PlusIcon />
-						</button>
-					</ButtonStyled>
-				</div>
-				<p
-					v-if="section.kind === 'saved' && section.skins.length === 0"
-					class="m-0 rounded-xl bg-bg-raised p-4 text-sm font-semibold text-secondary"
-				>
-					{{ formatMessage(messages.emptyFavorite) }}
-				</p>
-
 				<Draggable
 					v-if="section.kind === 'saved'"
 					:list="draggableSavedSkins"
 					class="grid w-full grid-cols-3 gap-3 min-[1300px]:grid-cols-4 min-[1750px]:grid-cols-5 min-[2050px]:grid-cols-6"
 					:item-key="savedSkinKey"
-					:disabled="readOnly"
+					:disabled="readOnly || !canReorderSavedSkins"
 					:animation="250"
 					:swap-threshold="1"
 					:invert-swap="false"
