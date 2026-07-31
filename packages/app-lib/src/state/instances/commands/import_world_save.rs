@@ -161,7 +161,7 @@ fn extract_world_zip_sync(zip_path: &Path, target_dir: &Path) -> Result<()> {
     // extraction directory are skipped instead of written.
     let mut entries: Vec<(usize, PathBuf, bool)> = Vec::new();
     for i in 0..archive.len() {
-        let mut entry = archive.by_index(i).map_err(|e| {
+        let entry = archive.by_index(i).map_err(|e| {
             ErrorKind::InputError(format!("Failed to read ZIP entry: {e}"))
         })?;
 
