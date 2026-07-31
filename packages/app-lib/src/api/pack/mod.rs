@@ -1,5 +1,6 @@
 pub(crate) mod archive_util;
 pub mod detect;
+pub mod icons;
 pub mod import;
 pub mod install_from;
 pub(crate) mod install_hmcl;

@@ -74,7 +74,7 @@ export default defineConfig({
 	clearScreen: false,
 	// tauri expects a fixed port, fail if that port is not available
 	server: {
-		port: 1420,
+		port: 5201,
 		strictPort: true,
 		headers: {
 			'content-security-policy': Object.entries(tauriConf.app.security.csp)
@@ -82,7 +82,7 @@ export default defineConfig({
 					// An additional websocket connect-src is required for Vite dev tools to work
 					if (directive === 'connect-src') {
 						sources = Array.isArray(sources) ? sources : [sources]
-						sources.push('ws://localhost:1420')
+						sources.push('ws://localhost:5201')
 					}
 
 					return Array.isArray(sources)
