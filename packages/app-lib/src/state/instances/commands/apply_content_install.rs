@@ -770,7 +770,7 @@ pub(crate) async fn add_project_bytes(
         source_kind,
         None,
         false,
-        &state.pool,
+        state,
     )
     .await?;
 
@@ -861,8 +861,6 @@ pub(crate) async fn toggle_disable_project(
     desired_enabled: Option<bool>,
     state: &State,
 ) -> crate::Result<String> {
-    let _instance_lock = state.lock_instance_content(instance_id).await;
-
     let scope = resolve_content_scope(instance_id, None, state).await?;
     let base = instance_full_path(state, &scope.instance);
     let trimmed = project_path.trim_end_matches(".disabled");
@@ -945,7 +943,7 @@ pub(crate) async fn toggle_disable_project(
             ContentSourceKind::Local,
             None,
             false,
-            &state.pool,
+            state,
         )
         .await?;
     }
@@ -1067,6 +1065,13 @@ async fn index_existing_file(
         None
     };
 
+    // The upserts below insert foreign-keyed rows. Take the instance lock and
+    // re-resolve the scope so a concurrent instance deletion fails with a
+    // clean error instead of a raw foreign-key violation; hashing above stays
+    // unlocked so parallel batch operations are not serialized by it.
+    let _instance_lock = state.lock_instance_content(&scope.instance.id).await;
+    let scope = resolve_content_scope(&scope.instance.id, None, state).await?;
+
     let file = content_rows::upsert_instance_file_from_parts(
         content_rows::UpsertInstanceFile {
             instance_id: &scope.instance.id,
@@ -1082,13 +1087,13 @@ async fn index_existing_file(
     )
     .await?;
     upsert_entry_for_file(
-        scope,
+        &scope,
         &file,
         project_type,
         ContentSourceKind::Local,
         None,
         false,
-        &state.pool,
+        state,
     )
     .await?;
 
@@ -1102,8 +1107,14 @@ async fn upsert_entry_for_file(
     source_kind: ContentSourceKind,
     provider_ref: Option<&ContentProviderRef>,
     origin: bool,
-    pool: &sqlx::SqlitePool,
+    state: &State,
 ) -> crate::Result<()> {
+    // Serialize the foreign-keyed entry insert with instance deletion and
+    // re-validate the parent rows under the lock.
+    let _instance_lock = state.lock_instance_content(&scope.instance.id).await;
+    let scope = resolve_content_scope(&scope.instance.id, None, state).await?;
+    let pool = &state.pool;
+
     let entry = content_rows::upsert_content_entry_from_parts(
         content_rows::UpsertContentEntry {
             instance_id: &scope.instance.id,

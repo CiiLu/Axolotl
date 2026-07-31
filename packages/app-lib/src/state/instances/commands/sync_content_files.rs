@@ -24,8 +24,6 @@ pub(crate) async fn sync_instance_content_files(
     instance: &Instance,
     state: &State,
 ) -> crate::Result<Vec<InstanceFile>> {
-    let _instance_lock = state.lock_instance_content(&instance.id).await;
-
     cleanup_install_temporary_files(instance, state)?;
     let scanned = filesystem::scan_content_files(
         &state.directories.instances_dir(),
@@ -120,6 +118,20 @@ pub(crate) async fn sync_instance_content_files(
             }
         }
     }
+
+    // The write below inserts foreign-keyed `instance_files` rows. Serialize it
+    // with instance deletion and re-load the instance under the lock so a
+    // concurrent delete fails with a clean error instead of FK 787. Scanning
+    // and hashing above stay unlocked to keep concurrent operations parallel.
+    let _instance_lock = state.lock_instance_content(&instance.id).await;
+    let instance = sqlite::instance_rows::get_instance_by_id(
+        &instance.id,
+        &state.pool,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError("Unknown instance".to_string())
+    })?;
 
     let mut tx = state.pool.begin().await?;
     sqlite::content_rows::mark_instance_files_missing(&instance.id, &mut tx)
