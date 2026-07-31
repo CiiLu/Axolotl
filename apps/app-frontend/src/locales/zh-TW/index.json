@@ -462,7 +462,7 @@
 		"message": "目標實例：{instance}"
 	},
 	"app.downloads.item-attempt-progress": {
-		"message": "{attempt}/{maxAttempts}"
+		"message": "{attempt}/{maxAttempts} 次"
 	},
 	"app.downloads.item-attempts": {
 		"message": "嘗試次數"
@@ -1050,7 +1050,7 @@
 		"message": "分享實例"
 	},
 	"app.instance.starting": {
-		"message": "正在啟動..."
+		"message": "正在啟動… {seconds, number} 秒"
 	},
 	"app.instance.stopping": {
 		"message": "正在停止..."
@@ -2562,64 +2562,64 @@
 		"message": "未知檔案警告"
 	},
 	"app.notification.export-error-logs": {
-		"message": "Export error logs"
+		"message": "导出错误日志"
 	},
 	"app.drop.overlay-title": {
-		"message": "Drop to import"
+		"message": "拖放以导入"
 	},
 	"app.drop.overlay-subtitle": {
 		"message": "Release to classify and import"
 	},
 	"app.drop.error.multiple-files-title": {
-		"message": "Cannot import multiple files"
+		"message": "无法导入多个文件"
 	},
 	"app.drop.error.multiple-files-text": {
-		"message": "Please drop one file at a time."
+		"message": "一次只能拖放一个文件或文件夹。"
 	},
 	"app.drop.error.shortcut-title": {
-		"message": "Shortcut resolution failed"
+		"message": "快捷方式解析失败"
 	},
 	"app.drop.error.shortcut-text": {
-		"message": "Could not resolve the shortcut target."
+		"message": "无法解析到快捷方式的目标。"
 	},
 	"app.drop.error.unknown-title": {
-		"message": "Unknown file type"
+		"message": "未知文件类型"
 	},
 	"app.drop.error.unknown-text": {
-		"message": "Could not determine what kind of file this is."
+		"message": "类型暂不支持"
 	},
 	"app.drop.error.title": {
-		"message": "Drop error"
+		"message": "拖放错误"
 	},
 	"app.drop.world-imported-title": {
-		"message": "World imported"
+		"message": "存档已导入"
 	},
 	"app.drop.world-imported-text": {
-		"message": "World save has been imported successfully."
+		"message": "存档已成功导入。"
 	},
 	"app.drop.content-installed-title": {
-		"message": "Content installed"
+		"message": "内容已安装"
 	},
 	"app.drop.content-installed-text": {
-		"message": "File has been installed to the instance."
+		"message": "文件已安装到实例。"
 	},
 	"app.drop.install-failed-title": {
-		"message": "Installation failed"
+		"message": "安装失败"
 	},
 	"app.drop.instance-imported-title": {
-		"message": "Instance imported"
+		"message": "实例已导入"
 	},
 	"app.drop.instance-imported-text": {
-		"message": "{name} imported successfully."
+		"message": "{name} 导入成功。"
 	},
 	"app.drop.import-failed-title": {
-		"message": "Import failed"
+		"message": "导入失败"
 	},
 	"app.drop.import-failed-text": {
-		"message": "Failed to import {name}: {error}"
+		"message": "导入 {name} 失败：{error}"
 	},
 	"app.drop.no-instances": {
-		"message": "No instances found"
+		"message": "未找到实例"
 	},
 	"app.drop.scan-failed": {
 		"message": "實例掃描失敗"
@@ -2679,454 +2679,454 @@
 		"message": "此模組目標版本為 {modVersion}（{modLoader}），但實例的版本是 {instVersion}（{instLoader}）。"
 	},
 	"app.update-announcement.unknown-title": {
-		"message": "Axolotl Launcher was updated"
+		"message": "Axolotl Launcher 已更新"
 	},
 	"app.update-announcement.unknown-body": {
-		"message": "This version does not have a bundled announcement yet. Visit the website for the full changelog."
+		"message": "此版本暂未内置更新公告，请前往官网查看完整更新日志。"
 	},
 	"app.update-announcement.version": {
-		"message": "Version {version}"
+		"message": "版本 {version}"
 	},
 	"app.update-announcement.open-changelog": {
-		"message": "Open full changelog"
+		"message": "查看完整更新日志"
 	},
 	"app.update-announcement.notes": {
-		"message": "Notes"
+		"message": "说明"
 	},
 	"app.update-announcement.category.added": {
-		"message": "Added"
+		"message": "新增"
 	},
 	"app.update-announcement.category.changed": {
-		"message": "Changed"
+		"message": "变更"
 	},
 	"app.update-announcement.category.deprecated": {
-		"message": "Deprecated"
+		"message": "弃用"
 	},
 	"app.update-announcement.category.removed": {
-		"message": "Removed"
+		"message": "移除"
 	},
 	"app.update-announcement.category.fixed": {
-		"message": "Fixed"
+		"message": "Bug 修复"
 	},
 	"app.update-announcement.category.security": {
-		"message": "Security"
+		"message": "安全修复"
 	},
 	"app.settings.updates.announcements.title": {
-		"message": "Update announcements"
+		"message": "更新公告"
 	},
 	"app.settings.updates.announcements.description": {
-		"message": "See what changed in this version and browse previous releases."
+		"message": "查看当前版本的更新内容和历史版本公告。"
 	},
 	"app.settings.updates.announcements.history": {
-		"message": "Version history"
+		"message": "历史版本"
 	},
 	"app.settings.updates.announcements.empty": {
-		"message": "No bundled update announcements are available."
+		"message": "当前没有内置的更新公告。"
 	},
 	"app.update-announcement.modal.header": {
 		"message": "What"
 	},
 	"app.error.export-logs": {
-		"message": "Export error logs"
+		"message": "导出错误日志"
 	},
 	"app.symlink-warning.write.header": {
-		"message": "Shared instance"
+		"message": "共享实例"
 	},
 	"app.symlink-warning.write.body": {
-		"message": "This instance is linked to "
+		"message": "此實例連結到「{path}」。此處的變更也會影響原始檔案。"
 	},
 	"instance.settings.tabs.java.automatic-memory": {
-		"message": "Automatically allocate memory at launch"
+		"message": "启动时自动分配内存"
 	},
 	"app.memory-display.used": {
-		"message": "Memory in use"
+		"message": "已使用内存"
 	},
 	"app.memory-display.game": {
-		"message": "Game allocation"
+		"message": "游戏分配"
 	},
 	"app.memory-display.remaining": {
-		"message": "Remaining after allocation"
+		"message": "分配后剩余"
 	},
 	"app.memory-display.available": {
-		"message": "{memory} available"
+		"message": "可用 {memory}"
 	},
 	"app.memory-display.optimize": {
-		"message": "Optimize memory"
+		"message": "内存优化"
 	},
 	"app.memory-display.optimizing": {
-		"message": "Optimizing..."
+		"message": "正在优化……"
 	},
 	"app.memory-display.optimized": {
-		"message": "Memory optimization complete"
+		"message": "内存优化完成"
 	},
 	"app.memory-display.optimization-description": {
-		"message": "Free unused Windows working sets and standby memory."
+		"message": "释放 Windows 中未使用的工作集和待机内存。"
 	},
 	"app.memory-display.unsupported": {
-		"message": "Memory optimization is only available on Windows."
+		"message": "内存优化仅支持 Windows。"
 	},
 	"app.memory-display.reclaimed": {
-		"message": "Freed {memory} of memory."
+		"message": "已释放 {memory} 内存。"
 	},
 	"app.minecraft-crash.title": {
-		"message": "{instanceName} crashed"
+		"message": "{instanceName} 已崩溃"
 	},
 	"app.minecraft-crash.body": {
-		"message": "Do not send a screenshot of this window when asking for help. Export the error report instead so the crash report, game logs, debug log, and JVM details can be checked together."
+		"message": "寻求帮助时不要发送此窗口截图。请导出错误报告，这样对方才能同时检查崩溃报告、游戏日志、调试日志和 JVM 信息。"
 	},
 	"app.minecraft-crash.summary": {
-		"message": "Minecraft stopped unexpectedly."
+		"message": "Minecraft 意外停止运行。"
 	},
 	"app.minecraft-crash.support-hint": {
-		"message": "When asking for help, send the exported ZIP. Do not send only a screenshot of this window because it does not contain the diagnostic evidence."
+		"message": "这里显示的是可能原因，不一定准确。寻求帮助时请发送导出的 ZIP，不要只发送此窗口截图，因为截图中没有完整证据。"
 	},
 	"app.minecraft-crash.export-context": {
-		"message": "Export Minecraft error report"
+		"message": "导出 Minecraft 错误报告"
 	},
 	"app.minecraft-crash.view-logs": {
-		"message": "View logs and analysis"
+		"message": "查看日志与分析"
 	},
 	"app.minecraft-crash.preview-instance": {
-		"message": "Minecraft test instance"
+		"message": "Minecraft 测试实例"
 	},
 	"app.minecraft-crash.launch-failed-title": {
-		"message": "{instanceName} could not start"
+		"message": "{instanceName} 无法启动"
 	},
 	"app.minecraft-crash.launch-failed-summary": {
-		"message": "Minecraft failed during launch preparation."
+		"message": "Minecraft 在启动准备阶段失败。"
 	},
 	"app.minecraft-crash.exited-before-initialization": {
-		"message": "The Java process exited before it could connect to the launcher. The selected Java version is probably incompatible with this Minecraft or Mod loader version. Select the Java version required by the instance, then try again."
+		"message": "Java 进程尚未连接到启动器便已退出。最可能的原因是所选 Java 版本与当前 Minecraft 或模组加载器不兼容。请选择该实例所需的 Java 版本，然后重试。"
 	},
 	"app.minecraft-crash.initialization-timed-out": {
-		"message": "The Java process started but did not connect to the launcher within 15 seconds. Check the selected Java version and any wrapper command, then try again."
+		"message": "Java 进程已经启动，但在 15 秒内未能连接到启动器。请检查所选 Java 版本和包装器命令，然后重试。"
 	},
 	"app.minecraft-crash.preparation-timed-out": {
-		"message": "Launch preparation did not finish within 60 seconds and was cancelled. Check the Java path, launch hooks, wrapper command, and network connection, then try again."
+		"message": "启动准备在 60 秒内未能完成，现已取消。请检查 Java 路径、启动前命令、包装器命令和网络连接，然后重试。"
 	},
 	"app.minecraft-crash.launch-failure-hint": {
-		"message": "Open the Minecraft logs to view the captured Java output. When asking for help, export and send the complete Minecraft diagnostic package."
+		"message": "打开 Minecraft 日志可以查看已捕获的 Java 输出。寻求帮助时，请导出并发送完整的 Minecraft 诊断包。"
 	},
 	"app.minecraft-crash.analyzing": {
-		"message": "Analyzing the logs from this launch..."
+		"message": "正在分析本次启动留下的日志……"
 	},
 	"app.minecraft-crash.evidence": {
-		"message": "Reference evidence: {evidence}"
+		"message": "参考证据：{evidence}"
 	},
 	"app.minecraft-crash.diagnosis.jvm-arguments.title": {
-		"message": "Possible issue: the JVM arguments are invalid"
+		"message": "可能的问题：JVM 参数有误"
 	},
 	"app.minecraft-crash.diagnosis.jvm-arguments.action": {
-		"message": "You can try removing the JVM argument shown below from the instance settings, then launch again."
+		"message": "可以尝试从实例设置中删除下方显示的 JVM 参数，然后重新启动。"
 	},
 	"app.minecraft-crash.diagnosis.java-too-new.title": {
-		"message": "Possible issue: the selected Java version is too new"
+		"message": "可能的问题：所选 Java 版本过高"
 	},
 	"app.minecraft-crash.diagnosis.java-too-new.action": {
-		"message": "You can try selecting the Java major version required by this Minecraft and Mod loader version, then launch again."
+		"message": "可以尝试选择此 Minecraft 与模组加载器版本所需的 Java 大版本，然后重新启动。"
 	},
 	"app.minecraft-crash.diagnosis.java-incompatible.title": {
-		"message": "Possible issue: the Java version is incompatible"
+		"message": "可能的问题：Java 版本不兼容"
 	},
 	"app.minecraft-crash.diagnosis.java-incompatible.action": {
-		"message": "You can try selecting the Java version requested in the error below, or using a compatible build of the affected Mod."
+		"message": "可以尝试选择下方错误所要求的 Java 版本，或改用与当前 Java 兼容的模组版本。"
 	},
 	"app.minecraft-crash.diagnosis.java-32bit.title": {
-		"message": "Possible issue: 32-bit Java cannot allocate enough memory"
+		"message": "可能的问题：32 位 Java 无法分配足够内存"
 	},
 	"app.minecraft-crash.diagnosis.java-32bit.action": {
-		"message": "You can try installing and selecting a 64-bit Java runtime, then launch again."
+		"message": "可以尝试安装并选择 64 位 Java，然后重新启动。"
 	},
 	"app.minecraft-crash.diagnosis.java-11-required.title": {
-		"message": "Possible issue: a Mod requires Java 11"
+		"message": "可能的问题：有模组需要 Java 11"
 	},
 	"app.minecraft-crash.diagnosis.java-11-required.action": {
-		"message": "You can try selecting Java 11, or installing a build of the affected Mod that supports the current Java version."
+		"message": "可以尝试选择 Java 11，或安装支持当前 Java 版本的对应模组版本。"
 	},
 	"app.minecraft-crash.diagnosis.openj9.title": {
-		"message": "Possible issue: OpenJ9 is not compatible with this instance"
+		"message": "可能的问题：OpenJ9 与此实例不兼容"
 	},
 	"app.minecraft-crash.diagnosis.openj9.action": {
-		"message": "You can try selecting a HotSpot-based Java runtime, such as the bundled Minecraft runtime or Eclipse Temurin."
+		"message": "可以尝试选择基于 HotSpot 的 Java 运行时，例如 Minecraft 自带运行时或 Eclipse Temurin。"
 	},
 	"app.minecraft-crash.diagnosis.jdk-runtime.title": {
-		"message": "Possible issue: the selected JDK is not compatible"
+		"message": "可能的问题：所选 JDK 与实例不兼容"
 	},
 	"app.minecraft-crash.diagnosis.jdk-runtime.action": {
-		"message": "You can try selecting a standard HotSpot Java runtime for this Minecraft version."
+		"message": "可以尝试为此 Minecraft 版本选择标准的 HotSpot Java 运行时。"
 	},
 	"app.minecraft-crash.diagnosis.forge-java.title": {
-		"message": "Possible issue: Forge is not compatible with the selected Java version"
+		"message": "可能的问题：Forge 与所选 Java 版本不兼容"
 	},
 	"app.minecraft-crash.diagnosis.forge-java.action": {
-		"message": "You can try using the Java version expected by this Forge release, or updating Forge."
+		"message": "可以尝试使用此 Forge 版本所需的 Java，或更新 Forge。"
 	},
 	"app.minecraft-crash.diagnosis.out-of-memory.title": {
-		"message": "Possible issue: Minecraft ran out of memory"
+		"message": "可能的问题：Minecraft 内存不足"
 	},
 	"app.minecraft-crash.diagnosis.out-of-memory.action": {
-		"message": "You can try increasing the instance memory allocation, or removing memory-heavy Mods and resource packs."
+		"message": "可以尝试增加实例内存分配，或移除占用内存较多的模组与资源包。"
 	},
 	"app.minecraft-crash.diagnosis.known-failure.title": {
-		"message": "Possible issue: a specific launch problem was detected"
+		"message": "可能的问题：检测到特定启动异常"
 	},
 	"app.minecraft-crash.diagnosis.known-failure.action": {
-		"message": "This is an automatic guess, not a guaranteed diagnosis. Open the log analysis for the full context before applying the suggested fix."
+		"message": "这是自动推测，不代表一定准确。处理前请打开日志分析查看完整上下文，再参考建议修复。"
 	},
 	"app.instance.confirm-delete.symlink-warning": {
-		"message": "This is a shared instance linked to "
+		"message": "這是一個連結到「{path}」的共用實例。只會刪除連結，原始檔案不會被刪除。"
 	},
 	"app.onboarding.welcome.title": {
-		"message": "Everything is ready"
+		"message": "一切就绪"
 	},
 	"app.onboarding.welcome.description": {
-		"message": "Your instances, content, worlds, and downloads now have one home. Let us take a quick lap before you settle in."
+		"message": "实例、内容、世界和下载，现在都有了同一个家。正式开玩之前，先快速逛一圈。"
 	},
 	"app.onboarding.welcome.footer": {
-		"message": "Your last next launcher."
+		"message": "你的最后一款启动器"
 	},
 	"app.onboarding.action.start": {
-		"message": "Take the tour"
+		"message": "带我逛逛"
 	},
 	"app.onboarding.action.continue-area": {
-		"message": "Click anywhere for the next bit"
+		"message": "点击任意位置，接着说"
 	},
 	"app.onboarding.discover.title": {
-		"message": "Find something new"
+		"message": "找点新鲜的"
 	},
 	"app.onboarding.discover.description": {
-		"message": "Modpacks, mods, plugins, resource packs, shaders: the good kind of rabbit hole."
+		"message": "整合包、模组、插件、资源包、光影：这才是值得掉进去的坑。"
 	},
 	"app.onboarding.action.click-discover": {
-		"message": "Click Discover content to continue"
+		"message": "点击发现内容，继续"
 	},
 	"app.onboarding.browse.title": {
-		"message": "Search with receipts"
+		"message": "搜索，不靠玄学"
 	},
 	"app.onboarding.browse.description": {
-		"message": "Use types, search, and filters to narrow things down. Project pages keep versions, changelogs, galleries, and install options in one place."
+		"message": "用类型、搜索和筛选快速收敛范围，项目页把版本、更新日志、图库和安装选择都放在一个地方。"
 	},
 	"app.onboarding.skins.title": {
-		"message": "A new look, maybe"
+		"message": "换个造型吧"
 	},
 	"app.onboarding.skins.description": {
-		"message": "Keep your Minecraft skins together. Signing in can wait until you feel like it."
+		"message": "把 Minecraft 皮肤放在一起管理。想登录的时候再登录。"
 	},
 	"app.onboarding.action.click-skins": {
-		"message": "Click Skin selector to continue"
+		"message": "点击皮肤选择器，继续"
 	},
 	"app.onboarding.skins-page.title": {
-		"message": "Your skin drawer"
+		"message": "你的皮肤抽屉"
 	},
 	"app.onboarding.skins-page.description": {
-		"message": "Add, preview, sort, and apply skins here. No pressure to sign in just yet."
+		"message": "在这里添加、预览、排序和应用皮肤。现在不登录也完全没关系。"
 	},
 	"app.onboarding.account.title": {
-		"message": "Accounts, on your schedule"
+		"message": "账号，随你安排"
 	},
 	"app.onboarding.account.description": {
-		"message": "When you are ready, sign in, switch accounts, or open your profile here. No deadline."
+		"message": "想登录、切换账号或看看个人资料，随时来这里。没人打卡。"
 	},
 	"app.onboarding.downloads.title": {
-		"message": "Download control room"
+		"message": "下载指挥室"
 	},
 	"app.onboarding.downloads.description": {
-		"message": "Installations and content downloads report in here, so nothing has to disappear mysteriously."
+		"message": "安装和内容下载都会在这里报到，不会神秘消失。"
 	},
 	"app.onboarding.action.click-downloads": {
-		"message": "Click Downloads to continue"
+		"message": "点击下载，继续"
 	},
 	"app.onboarding.downloads-page.title": {
-		"message": "Nothing gets lost"
+		"message": "没有东西会失踪"
 	},
 	"app.onboarding.downloads-page.description": {
-		"message": "Active work, history, errors, retries, cancellations, and diagnostics all leave a paper trail here."
+		"message": "进行中的任务、历史、报错、重试、取消和诊断信息都会在这留下记录。"
 	},
 	"app.onboarding.settings.title": {
-		"message": "Make it yours"
+		"message": "按你的方式使用"
 	},
 	"app.onboarding.settings.description": {
-		"message": "The useful knobs live here: appearance, language, translation, Java, storage, and updates."
+		"message": "外观、语言、翻译、Java、储存和更新这些有用开关，都在这里。"
 	},
 	"app.onboarding.action.click-settings": {
-		"message": "Click Settings to continue"
+		"message": "点击设置，继续"
 	},
 	"app.onboarding.appearance.title": {
-		"message": "Set the vibe"
+		"message": "调成你的顺眼样子"
 	},
 	"app.onboarding.appearance.description": {
 		"message": "Theme, accent, background, and window behavior. Make this launcher look familiar."
 	},
 	"app.onboarding.language.title": {
-		"message": "Speak your language"
+		"message": "说你的语言"
 	},
 	"app.onboarding.language.description": {
-		"message": "Pick the launcher language and manage translations. No decoder ring required."
+		"message": "在这里选择启动器语言和管理翻译。不需要翻译腔。"
 	},
 	"app.onboarding.translation.title": {
-		"message": "Translation, the Axolotl way"
+		"message": "翻译，是 Axolotl 的拿手活"
 	},
 	"app.onboarding.translation.description": {
-		"message": "Translate Modrinth project titles, summaries, and descriptions while you browse. Keep the original, show both, or make the translation the main character."
+		"message": "浏览时直接翻译 Modrinth 项目的标题、摘要和介绍。保留原文、双语同屏，或者让译文站 C 位，都由你决定。"
 	},
 	"app.onboarding.java.title": {
-		"message": "Java, under the hood"
+		"message": "Java，在后台"
 	},
 	"app.onboarding.java.description": {
-		"message": "The Java runtimes that start Minecraft live here. Technical, but well-behaved."
+		"message": "启动 Minecraft 的 Java 运行环境在这。技术活，但它很听话。"
 	},
 	"app.onboarding.defaults.title": {
-		"message": "Start ahead"
+		"message": "少做点重复劳动"
 	},
 	"app.onboarding.defaults.description": {
-		"message": "New instances inherit these choices, so you do not have to repeat the homework."
+		"message": "新实例会继承这些选择，省得你每次重做作业。"
 	},
 	"app.onboarding.resources.title": {
-		"message": "Do not cook the computer"
+		"message": "别把电脑烤熟"
 	},
 	"app.onboarding.resources.description": {
-		"message": "Tune downloads, storage, and app resources. Give the fan a little dignity."
+		"message": "调节下载、储存和启动器资源。给风扇一点尊严。"
 	},
 	"app.onboarding.updates.title": {
-		"message": "Stay in the loop"
+		"message": "保持在线"
 	},
 	"app.onboarding.updates.description": {
-		"message": "Choose when Axolotl checks for updates and whether it installs them for you."
+		"message": "决定 Axolotl 何时检查更新，以及是否替你安装。"
 	},
 	"app.onboarding.action.click-tab": {
-		"message": "Click this tab to continue"
+		"message": "点击这个标签，继续"
 	},
 	"app.onboarding.library.title": {
-		"message": "Your launch shelf"
+		"message": "你的启动书架"
 	},
 	"app.onboarding.library.description": {
-		"message": "Instances keep versions, loaders, content, and saves separate. No accidental mod soup."
+		"message": "实例会把版本、加载器、内容和存档分开。不会意外炖成一锅模组汤。"
 	},
 	"app.onboarding.action.click-library": {
-		"message": "Click Library to continue"
+		"message": "点击实例库，继续"
 	},
 	"app.onboarding.library-page.title": {
-		"message": "Everything, in its place"
+		"message": "各就各位"
 	},
 	"app.onboarding.library-page.description": {
-		"message": "Filter by modpack, server, or custom setup, then open any instance to manage it."
+		"message": "按整合包、服务器或自定义配置筛选，再打开任意实例管理。"
 	},
 	"app.onboarding.create.title": {
-		"message": "Make a fresh start"
+		"message": "开个新档"
 	},
 	"app.onboarding.create.description": {
 		"message": "Start from scratch, grab a modpack, or bring in an existing instance. Your call."
 	},
 	"app.onboarding.action.click-create": {
-		"message": "Click Create new instance to continue"
+		"message": "点击创建新实例，继续"
 	},
 	"app.onboarding.creation.title": {
-		"message": "Pick your route"
+		"message": "选条路"
 	},
 	"app.onboarding.creation.description": {
 		"message": "Custom setup, modpack, or import. The choices are yours; I am just here for the subtitles."
 	},
 	"app.onboarding.action.click-creation-method": {
-		"message": "Choose a route to continue"
+		"message": "选一条路，继续"
 	},
 	"app.onboarding.creation-name.title": {
-		"message": "Give it a memorable name"
+		"message": "取个好记的名字"
 	},
 	"app.onboarding.creation-name.description": {
-		"message": "Pick a name your future self will recognize at a glance."
+		"message": "给它取个让未来的你一眼认出的名字。"
 	},
 	"app.onboarding.creation-loader.title": {
-		"message": "Choose the engine"
+		"message": "选个引擎"
 	},
 	"app.onboarding.creation-loader.description": {
-		"message": "Vanilla, Fabric, Forge, NeoForge, and friends. Pick what your content needs."
+		"message": "Vanilla、Fabric、Forge、NeoForge 和它们的朋友们，按内容需要来选。"
 	},
 	"app.onboarding.creation-version.title": {
-		"message": "Set the game version"
+		"message": "定下游戏版本"
 	},
 	"app.onboarding.creation-version.description": {
-		"message": "Choose the Minecraft version for this instance. Compatibility likes specifics."
+		"message": "选定这个实例的 Minecraft 版本。兼容性喜欢具体答案。"
 	},
 	"app.onboarding.creation-confirm.title": {
-		"message": "One last look"
+		"message": "最后看一眼"
 	},
 	"app.onboarding.creation-confirm.description": {
-		"message": "This creates the instance with your choices. I keep a strict hands-off policy."
+		"message": "这里会按你的选择创建实例。我坚持不替你按确认。"
 	},
 	"app.onboarding.action.finish-area": {
-		"message": "Click anywhere and you are all set"
+		"message": "点击任意位置，收工"
 	},
 	"app.onboarding.instance-actions.title": {
-		"message": "The main controls"
+		"message": "主操作台"
 	},
 	"app.onboarding.instance-actions.description": {
-		"message": "Launch, stop, repair, configure, export, or open the instance from its header."
+		"message": "从实例页头部启动、停止、修复、配置、导出或打开这个实例。"
 	},
 	"app.onboarding.instance-tabs.title": {
-		"message": "The rest of the workshop"
+		"message": "剩下的工作台"
 	},
 	"app.onboarding.instance-tabs.description": {
-		"message": "Use these tabs for content, files, screenshots, worlds, and logs. Tidy chaos."
+		"message": "内容、文件、截图、世界和日志都在这些标签里。乱中有序。"
 	},
 	"app.onboarding.action.skip": {
-		"message": "Leave the tour"
+		"message": "先不逛了"
 	},
 	"app.onboarding.mascot-alt": {
-		"message": "Axolotl guide"
+		"message": "引导吉祥物"
 	},
 	"app.settings.about.replay-onboarding": {
-		"message": "Replay tour"
+		"message": "重放导览"
 	},
 	"app.settings.about.test-error": {
-		"message": "Trigger test error"
+		"message": "触发测试错误"
 	},
 	"app.settings.about.test-error-message": {
-		"message": "Test error triggered from the development settings."
+		"message": "已从开发设置触发测试错误。"
 	},
 	"app.settings.about.test-notification-error": {
-		"message": "Trigger notification test error"
+		"message": "触发通知测试错误"
 	},
 	"app.settings.about.test-notification-error-title": {
-		"message": "Test notification error"
+		"message": "测试通知错误"
 	},
 	"app.settings.about.preview-minecraft-crash-modal": {
-		"message": "Preview Minecraft crash window"
+		"message": "预览 Minecraft 崩溃窗口"
 	},
 	"app.appearance-settings.sidebar-instance-count.title": {
-		"message": "Sidebar instance limit"
+		"message": "侧边栏实例数量限制"
 	},
 	"app.appearance-settings.sidebar-instance-count.description": {
-		"message": "Maximum number of instances to show in the sidebar. Set to 0 to show all."
+		"message": "侧边栏中显示的最大实例数量。设为 0 则显示全部。"
 	},
 	"app.settings.defaults.automatic-memory": {
-		"message": "Automatically allocate memory at launch"
+		"message": "启动时自动分配内存"
 	},
 	"app.settings.defaults.automatic-memory-description": {
-		"message": "Adjusts memory for each launch based on available RAM and installed mods."
+		"message": "根据可用内存和已安装的模组，在每次启动时动态调整内存。"
 	},
 	"app.settings.java.auto-high-performance-mode": {
-		"message": "Automatically use high-performance GPU for Java"
+		"message": "自动为 Java 使用高性能显卡"
 	},
 	"app.settings.java.auto-high-performance-mode-description": {
-		"message": "Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only."
+		"message": "启动 Minecraft 时，自动在 Windows 图形设置中将启动器和 Java 设为使用高性能显卡。仅支持 Windows。"
 	},
 	"app.settings.resources.source.automatic": {
-		"message": "Automatic (recommended)"
+		"message": "自动（推荐）"
 	},
 	"app.settings.resources.minecraft-metadata-source": {
-		"message": "Minecraft metadata"
+		"message": "Minecraft 元数据"
 	},
 	"app.settings.resources.minecraft-metadata-source-description": {
-		"message": "Version manifests and metadata for Minecraft and supported mod loaders."
+		"message": "Minecraft 与受支持模组加载器的版本清单和元数据。"
 	},
 	"app.settings.resources.minecraft-file-source": {
-		"message": "Minecraft files, loaders, and Java"
+		"message": "Minecraft 文件、加载器与 Java"
 	},
 	"app.settings.resources.minecraft-file-source-description": {
-		"message": "Game files, assets, libraries, mod loaders, and Java runtimes."
+		"message": "游戏文件、资源、依赖库、模组加载器和 Java 运行时。"
 	},
 	"app.settings.resources.concurrency.manual": {
-		"message": "Manual"
+		"message": "手动"
 	},
 	"app.translation-settings.system-prompt": {
 		"message": "系統提示詞"
@@ -3135,25 +3135,25 @@
 		"message": "輸入你的自訂系統提示詞，留空則使用預設提示詞。"
 	},
 	"app.settings.updates.preview-announcement": {
-		"message": "Preview update announcement"
+		"message": "预览更新公告弹窗"
 	},
 	"app.symlink-warning.delete.header": {
-		"message": "Delete shared instance"
+		"message": "共享实例"
 	},
 	"app.symlink-warning.delete.body": {
-		"message": "Deleting this instance removes only the launcher entry. The original files at "
+		"message": "刪除此實例只會移除啟動器條目。「{path}」中的原始檔案將保留。"
 	},
 	"app.symlink-warning.dismiss-permanently": {
 		"message": "Don"
 	},
 	"app.symlink-warning.shared-badge": {
-		"message": "Shared"
+		"message": "共享"
 	},
 	"app.action-bar.install.summary.unrecognized-format": {
-		"message": "This does not appear to be a modpack archive"
+		"message": "这似乎不是一个整合包文件，无法识别其格式"
 	},
 	"app.instance.icon-picker.icon.anvil": {
-		"message": "Anvil"
+		"message": "铁砧"
 	},
 	"app.instance.icon-picker.icon.fabric": {
 		"message": "Fabric"
@@ -3165,121 +3165,121 @@
 		"message": "Quilt"
 	},
 	"create.title": {
-		"message": "Create Instance"
+		"message": "创建实例"
 	},
 	"create.subtitle": {
-		"message": "Start a new adventure or bring your existing worlds"
+		"message": "实例是带有特定加载器、游戏版本和模组的一套 Minecraft 配置。"
 	},
 	"create.new.title": {
-		"message": "Start Fresh"
+		"message": "全新创建"
 	},
 	"create.new.description": {
-		"message": "Create a new Minecraft instance from scratch."
+		"message": "创建一个新的 Minecraft 实例，自选模组加载器。"
 	},
 	"create.import.title": {
-		"message": "Import Existing"
+		"message": "导入已有"
 	},
 	"create.import.description": {
-		"message": "Import instances from other launchers or install a modpack."
+		"message": "从其他启动器导入实例，或安装整合包。"
 	},
 	"create.back": {
-		"message": "Back to Library"
+		"message": "返回库"
 	},
 	"app.downloads.download-source": {
-		"message": "Source: {source}"
+		"message": "来源：{source}"
 	},
 	"app.downloads.source.official": {
-		"message": "Official"
+		"message": "官方"
 	},
 	"app.downloads.source.bmclapi": {
-		"message": "OpenBMCLAPI"
+		"message": "OpenBMCLAPI 镜像"
 	},
 	"app.downloads.source.mcim": {
-		"message": "MCIM"
+		"message": "MCIM 镜像"
 	},
 	"app.downloads.source.alternate": {
-		"message": "Alternate source"
+		"message": "备用来源"
 	},
 	"app.downloads.download-speed": {
-		"message": "Speed: {speed}/s"
+		"message": "速度：{speed}/秒"
 	},
 	"app.downloads.download-eta-seconds": {
-		"message": "{seconds}s remaining"
+		"message": "预计剩余 {seconds} 秒"
 	},
 	"app.downloads.download-eta-minutes": {
-		"message": "{minutes}m remaining"
+		"message": "预计剩余 {minutes} 分钟"
 	},
 	"app.downloads.download-eta-hours": {
-		"message": "{hours}h {minutes}m remaining"
+		"message": "预计剩余 {hours} 小时 {minutes} 分钟"
 	},
 	"app.downloads.download-fallbacks": {
-		"message": "{count} fallbacks"
+		"message": "已回退 {count} 次"
 	},
 	"drop.help.title": {
-		"message": "What can I drop into Axolotl?"
+		"message": "我可以拖入什么到 Axolotl？"
 	},
 	"drop.help.instances-title": {
-		"message": "Launcher Instances"
+		"message": "启动器实例"
 	},
 	"drop.help.instances-desc": {
-		"message": "Drag folders from other launchers (MultiMC, Prism Launcher, HMCL, etc.) to import Minecraft instances."
+		"message": "从其他启动器（MultiMC、Prism Launcher等）拖放文件夹来导入 Minecraft 实例。或者拖入 HMCL、PCL、PCL-CE 的启动器"
 	},
 	"drop.help.instances-formats": {
-		"message": "MultiMC / Prism Launcher / PolyMC / HMCL instance folders"
+		"message": "（MultiMC / Prism Launcher / PolyMC） 实例文件夹或直接放入 （HMCL / PCL / PCL-CE ）启动器。"
 	},
 	"drop.help.mods-title": {
-		"message": "Mods"
+		"message": "模组"
 	},
 	"drop.help.mods-desc": {
-		"message": "Drag mod JAR files to install them into a Minecraft instance."
+		"message": "拖放模组 JAR 文件来安装到 Minecraft 实例。"
 	},
 	"drop.help.mods-formats": {
-		"message": ".jar"
+		"message": "格式：.jar"
 	},
 	"drop.help.modpacks-title": {
-		"message": "Modpacks"
+		"message": "整合包"
 	},
 	"drop.help.modpacks-desc": {
-		"message": "Drag modpack ZIP/MRPACK files to create a new instance."
+		"message": "拖放整合包 ZIP/MRPACK 文件来导入整合包。"
 	},
 	"drop.help.modpacks-formats": {
-		"message": ".mrpack / .zip"
+		"message": "格式：.mrpack / .zip"
 	},
 	"drop.help.resource-packs-title": {
-		"message": "Resource Packs"
+		"message": "资源包"
 	},
 	"drop.help.resource-packs-desc": {
-		"message": "Drag resource pack ZIP files to install them into an instance."
+		"message": "拖放资源包 ZIP 文件来安装到实例。"
 	},
 	"drop.help.resource-packs-formats": {
-		"message": ".zip"
+		"message": "格式：.zip"
 	},
 	"drop.help.shader-packs-title": {
-		"message": "Shader Packs"
+		"message": "光影包"
 	},
 	"drop.help.shader-packs-desc": {
-		"message": "Drag shader pack ZIP files to install them into an instance."
+		"message": "拖放光影包 ZIP 文件来安装到实例。"
 	},
 	"drop.help.shader-packs-formats": {
-		"message": ".zip"
+		"message": "格式：.zip"
 	},
 	"drop.help.worlds-title": {
-		"message": "World Saves"
+		"message": "存档"
 	},
 	"drop.help.worlds-desc": {
-		"message": "Drag world save folders to import them into an instance."
+		"message": "拖放存档文件夹来导入到实例。"
 	},
 	"drop.help.worlds-formats": {
-		"message": "Minecraft world save folder (level.dat)"
+		"message": "Minecraft 存档文件夹。"
 	},
 	"drop.help.schematics-title": {
-		"message": "Schematics"
+		"message": "投影"
 	},
 	"drop.help.schematics-desc": {
-		"message": "Drag .litematic files to import them as schematics."
+		"message": "拖放 .litematic 文件来导入投影。"
 	},
 	"drop.help.schematics-formats": {
-		"message": ".litematic"
+		"message": "格式：.litematic"
 	},
 	"app.instance.mods.parsing-files": {
 		"message": "正在解析，较大的文件可能会耗费一些时间"
@@ -3297,21 +3297,1359 @@
 		"message": "知道了"
 	},
 	"app.symlink-capability.unsupported.title": {
-		"message": "Shared instances are unavailable"
+		"message": "软链接不支持"
 	},
 	"app.symlink-capability.unsupported": {
-		"message": "This system does not support creating symbolic links."
+		"message": "系统不支持软链接。"
 	},
 	"app.symlink-capability.requires-admin.title": {
-		"message": "Administrator permission required"
+		"message": "需要管理员权限"
 	},
 	"app.symlink-capability.requires-admin.description": {
-		"message": "Windows Developer Mode is disabled, so the launcher must restart as administrator to create a shared instance."
+		"message": "创建软链接需要管理员权限。以管理员身份重新启动启动器？"
 	},
 	"app.symlink-capability.requires-admin.restart-button": {
-		"message": "Restart as administrator"
+		"message": "以管理员身份重启"
 	},
 	"app.symlink-capability.cancel": {
-		"message": "Cancel"
+		"message": "取消"
+	},
+	"app.appearance-settings.auto-hide-downloads-button.description": {
+		"message": "没有进行中的下载任务时隐藏侧边栏中的下载按钮，有任务时自动显示。"
+	},
+	"app.appearance-settings.auto-hide-downloads-button.title": {
+		"message": "自动隐藏下载按钮"
+	},
+	"app.appearance-settings.home-layout.description": {
+		"message": "在信息主页和专注的实例启动页之间选择。"
+	},
+	"app.appearance-settings.home-layout.minimal": {
+		"message": "极简"
+	},
+	"app.appearance-settings.home-layout.standard": {
+		"message": "信息"
+	},
+	"app.appearance-settings.home-layout.title": {
+		"message": "主页布局"
+	},
+	"app.appearance-settings.home-recent.description": {
+		"message": "在信息主页显示最多四条最近打开的实例和世界。"
+	},
+	"app.appearance-settings.home-recent.title": {
+		"message": "最近项目"
+	},
+	"app.appearance-settings.transparent-background.blur-description": {
+		"message": "将背景画面模糊处理。占用性能较高"
+	},
+	"app.appearance-settings.transparent-background.blur-title": {
+		"message": "背景模糊"
+	},
+	"app.appearance-settings.transparent-background.conflict": {
+		"message": "启用此项时，你设置的自定义背景图片将被隐藏。"
+	},
+	"app.appearance-settings.transparent-background.description": {
+		"message": "让桌面透过启动器窗口显示出来。"
+	},
+	"app.appearance-settings.transparent-background.opacity": {
+		"message": "界面不透明度"
+	},
+	"app.appearance-settings.transparent-background.opacity-description": {
+		"message": "数值越低，透出的桌面越多。面板会比背景更实一些，以保证文字清晰可读。"
+	},
+	"app.appearance-settings.transparent-background.title": {
+		"message": "透明背景"
+	},
+	"app.curseforge.automatic-downloads-failed.notification-body": {
+		"message": "重试后仍有 {failed, number} 个文件下载失败（{list}）。可在“下载”中查看已记录的错误。"
+	},
+	"app.curseforge.automatic-downloads-failed.notification-title": {
+		"message": "部分 CurseForge 文件下载失败"
+	},
+	"app.downloads.more-active-requests": {
+		"message": "另有 {count} 个进行中的请求"
+	},
+	"app.downloads.new-download": {
+		"message": "新建下载"
+	},
+	"app.drop.import-completed-partial-text": {
+		"message": "已导入 {completed} / {total} 个实例（{failed} 个失败）"
+	},
+	"app.drop.import-completed-text": {
+		"message": "成功导入 {count} 个实例"
+	},
+	"app.drop.import-completed-title": {
+		"message": "导入完成"
+	},
+	"app.drop.import-progress-text": {
+		"message": "已导入 {current} / {total} 个实例"
+	},
+	"app.drop.import-progress-title": {
+		"message": "正在导入实例…"
+	},
+	"app.home.calendar.next": {
+		"message": "下个月"
+	},
+	"app.home.calendar.no-activity": {
+		"message": "这一天没有游玩记录。"
+	},
+	"app.home.calendar.play": {
+		"message": "启动"
+	},
+	"app.home.calendar.played-on": {
+		"message": "{date}你游玩了："
+	},
+	"app.home.calendar.previous": {
+		"message": "上个月"
+	},
+	"app.home.calendar.stop": {
+		"message": "停止"
+	},
+	"app.home.calendar.this-month": {
+		"message": "回到本月"
+	},
+	"app.home.calendar.title": {
+		"message": "日历"
+	},
+	"app.home.challenge.easy": {
+		"message": "简单"
+	},
+	"app.home.challenge.hard": {
+		"message": "困难"
+	},
+	"app.home.challenge.medium": {
+		"message": "中等"
+	},
+	"app.home.challenge.shuffle": {
+		"message": "换一个"
+	},
+	"app.home.challenge.title": {
+		"message": "每日小挑战"
+	},
+	"app.home.greeting.afternoon": {
+		"message": "午后休息，时机正好。\n短短一局也可能很精彩。\n世界已准备好接住你的下一步。\n该去看看那座半成品建筑了。\n一点探索就能走很远。\n下一个生物群系正在呼唤。\n你的背包耐心等候很久了。\n村庄市场还没关门。\n这一小时适合专心做个项目。\n红石今天大概会听话。\n你的镐子准备开工。\n出生点外还有新路线。\n午后天生适合支线任务。\n要不要快速回世界看看？\n下一章从这里开始。\n花一点时间，做点东西。"
+	},
+	"app.home.greeting.dawn": {
+		"message": "天刚亮，区块正新。\n新的一天正在加载。\n日出增益已生效。\n清晨的世界总像全新的。\n先喝咖啡，再挖钻石。\n你的基地想你一整晚了。\n从容开局，也能成就好冒险。\n主世界正在苏醒。\n新鲜空气，新鲜资源包。\n今天很适合去探索。\n村庄已经开门交易了。\n安静的早晨适合大工程。\n新的一天，新的坐标。\n苦力怕也不太像早起的人。\n先从小事开始，看看会去向何处。\n下一局已经准备好，等你出发。"
+	},
+	"app.home.greeting.evening": {
+		"message": "傍晚正是建造的黄金时间。\n白天将尽，世界刚刚展开。\n熟悉的世界是个好去处。\n该回到你最爱的项目了。\n从新塔上看日落更美。\n基地的灯正等着你。\n轻松玩一局正合适。\n村民很快要收摊了。\n你的下一座建筑值得一层暮色。\n适合没有计划地四处走走。\n营火已经点好了。\n基地要不要再加一间房？\n地平线看起来格外诱人。\n安静的夜晚从好世界开始。\n下一块方块该你放下。\n让今晚的进度算数。"
+	},
+	"app.home.greeting.late-night": {
+		"message": "月亮还在加班。\n安静的世界正等着你。\n夜班总能写出好故事。\n黎明前再放一块方块？\n星光会照看好你的服务器。\n深夜时段，也能留下传奇存档。\n现在的火把光格外好看。\n下一场冒险还没睡。\n午夜后的矿洞更安静。\n和平的出生点在等你。\n耐心的建造者属于夜晚。\n把音乐调低，把灵感调高。\n每一座好基地都从一块方块开始。\n末地可以等等，除非它等不了。\n短短一局也算数。\n这个世界已经为你保存好了。"
+	},
+	"app.home.greeting.minimal.afternoon": {
+		"message": "下午好"
+	},
+	"app.home.greeting.minimal.dawn": {
+		"message": "清晨好"
+	},
+	"app.home.greeting.minimal.evening": {
+		"message": "傍晚好"
+	},
+	"app.home.greeting.minimal.late-night": {
+		"message": "夜深了"
+	},
+	"app.home.greeting.minimal.morning": {
+		"message": "早上好"
+	},
+	"app.home.greeting.minimal.night": {
+		"message": "晚上好"
+	},
+	"app.home.greeting.minimal.with-player": {
+		"message": "{greeting}，{name}"
+	},
+	"app.home.greeting.morning": {
+		"message": "早上好，冒险家。\n今天还有许多未探索的区块。\n正适合重新开始。\n你的工具已为今天就绪。\n主世界有不少好计划。\n造点未来的你会喜欢的东西。\n新的一局像一张干净画布。\n太阳升起了，村民也是。\n让今天多一点方块感。\n矿井安静得有点可疑。\n下一个项目只差一次启动。\n好早晨，配好世界。\n总能再装下一个新点子。\n工作台正在待命。\n地图在等新的标记。\n坐稳，做点进度。"
+	},
+	"app.home.greeting.night": {
+		"message": "夜班准备好了。\n熟悉的世界适合这个夜晚。\n你最爱的实例就在附近。\n星星出来了，计划也定好了。\n平静的一局能好好结束今天。\n天黑后世界更安静。\n该再放几块方块了。\n远处的基地正在发光。\n下一场冒险从日落开始。\n一个好存档配得上一个好夜晚。\n不知何处，营火正噼啪作响。\n月光让每座建筑都更有戏剧感。\n明天之前来一点 Minecraft。\n你的世界随时欢迎你回去。\n按区块算，夜还很长。\n开始一段值得的游戏时光吧。"
+	},
+	"app.home.greeting.with-player": {
+		"message": "{name}，{greeting}"
+	},
+	"app.home.insights.empty": {
+		"message": "开始游玩后，这里会显示你的统计。"
+	},
+	"app.home.insights.streak": {
+		"message": "已连续游玩 {days} 天"
+	},
+	"app.home.insights.this-week": {
+		"message": "本周游玩 {duration}"
+	},
+	"app.home.insights.this-week-less": {
+		"message": "本周游玩 {duration}（比上周少 {percent}%）"
+	},
+	"app.home.insights.this-week-more": {
+		"message": "本周游玩 {duration}（比上周多 {percent}%）"
+	},
+	"app.home.insights.this-week-same": {
+		"message": "本周游玩 {duration}（与上周持平）"
+	},
+	"app.home.insights.title": {
+		"message": "游玩洞察"
+	},
+	"app.home.insights.week-top": {
+		"message": "本周常玩：{name}"
+	},
+	"app.home.instances.create": {
+		"message": "创建实例"
+	},
+	"app.home.instances.empty": {
+		"message": "还没有实例"
+	},
+	"app.home.instances.pin": {
+		"message": "固定到主页"
+	},
+	"app.home.instances.pinned": {
+		"message": "固定的实例"
+	},
+	"app.home.instances.pinned-empty": {
+		"message": "在实例卡片菜单或实例库中选择「固定到主页」，实例就会显示在这里。"
+	},
+	"app.home.instances.unpin": {
+		"message": "取消固定"
+	},
+	"app.home.instances.view-all": {
+		"message": "查看全部实例"
+	},
+	"app.home.layout.switch-to-information": {
+		"message": "切换到信息主页"
+	},
+	"app.home.layout.switch-to-minimal": {
+		"message": "切换到极简主页"
+	},
+	"app.home.layout.toggle": {
+		"message": "极简主页"
+	},
+	"app.home.minimal.change-instance": {
+		"message": "更换主页实例"
+	},
+	"app.home.minimal.choose-instance": {
+		"message": "选择实例"
+	},
+	"app.home.minimal.picker.no-results": {
+		"message": "没有匹配的实例"
+	},
+	"app.home.minimal.picker.search": {
+		"message": "搜索实例"
+	},
+	"app.home.minimal.picker.select": {
+		"message": "选择 {name}"
+	},
+	"app.home.minimal.picker.title": {
+		"message": "选择主页实例"
+	},
+	"app.home.news.open-article": {
+		"message": "在 minecraft.net 上阅读"
+	},
+	"app.home.news.title": {
+		"message": "Minecraft 新闻"
+	},
+	"app.home.playtime.hours-minutes": {
+		"message": "{hours} 小时 {minutes} 分钟"
+	},
+	"app.home.playtime.minutes": {
+		"message": "{minutes} 分钟"
+	},
+	"app.home.playtime.most-played": {
+		"message": "当天常玩：{name}"
+	},
+	"app.home.playtime.seconds": {
+		"message": "{seconds} 秒"
+	},
+	"app.home.playtime.sessions": {
+		"message": "成功启动 {count} 次"
+	},
+	"app.home.recent.title": {
+		"message": "从最近的项目开始"
+	},
+	"app.home.servers.empty": {
+		"message": "将服务器标记为收藏后，就会固定在这里。"
+	},
+	"app.home.servers.join": {
+		"message": "加入服务器"
+	},
+	"app.home.servers.more-options": {
+		"message": "更多选项"
+	},
+	"app.home.servers.offline": {
+		"message": "离线"
+	},
+	"app.home.servers.pinned": {
+		"message": "固定的服务器"
+	},
+	"app.home.servers.players-online": {
+		"message": "{online}/{max} 人在线"
+	},
+	"app.home.servers.stop": {
+		"message": "停止"
+	},
+	"app.home.servers.unpin": {
+		"message": "取消固定"
+	},
+	"app.home.worlds.empty": {
+		"message": "将世界标记为收藏后，就会固定在这里。"
+	},
+	"app.home.worlds.pinned": {
+		"message": "固定的世界"
+	},
+	"app.instance-item.already-open": {
+		"message": "实例已经在运行"
+	},
+	"app.instance-item.loading-modpack": {
+		"message": "正在加载整合包……"
+	},
+	"app.instance-item.not-played-yet": {
+		"message": "还没有游玩过"
+	},
+	"app.instance-item.view-instance": {
+		"message": "查看实例"
+	},
+	"app.instances.pin-to-home": {
+		"message": "固定到主页"
+	},
+	"app.instances.unpin-from-home": {
+		"message": "取消固定"
+	},
+	"app.java-download-confirmation.body": {
+		"message": "未找到兼容的 Java {version} 安装。你可以立即下载，也可以稍后设置 Java；其他游戏资源仍会继续下载。"
+	},
+	"app.java-download-confirmation.download": {
+		"message": "下载 Java"
+	},
+	"app.java-download-confirmation.later-description": {
+		"message": "稍后配置 Java {version} 后，请修复实例以完成安装。"
+	},
+	"app.java-download-confirmation.postponed-body": {
+		"message": "实例将继续完成安装。启动前请先配置 Java {version}。"
+	},
+	"app.java-download-confirmation.postponed-title": {
+		"message": "Java 设置已推迟"
+	},
+	"app.java-download-confirmation.set-up-later": {
+		"message": "稍后设置"
+	},
+	"app.java-download-confirmation.title": {
+		"message": "下载 Java {version}？"
+	},
+	"app.java.browse-for-executable": {
+		"message": "浏览 Java 可执行文件"
+	},
+	"app.java.test-installation": {
+		"message": "测试 Java 安装"
+	},
+	"app.lab.category.all": {
+		"message": "全部工具"
+	},
+	"app.lab.category.creation": {
+		"message": "创作"
+	},
+	"app.lab.category.maintenance": {
+		"message": "维护"
+	},
+	"app.lab.category.world": {
+		"message": "世界"
+	},
+	"app.lab.gradient-text.adapter.bbcode": {
+		"message": "BBCode"
+	},
+	"app.lab.gradient-text.adapter.chat-colors": {
+		"message": "聊天颜色"
+	},
+	"app.lab.gradient-text.adapter.cmi": {
+		"message": "CMI"
+	},
+	"app.lab.gradient-text.adapter.csv": {
+		"message": "CSV"
+	},
+	"app.lab.gradient-text.adapter.html": {
+		"message": "HTML"
+	},
+	"app.lab.gradient-text.adapter.json": {
+		"message": "JSON 文本组件"
+	},
+	"app.lab.gradient-text.adapter.minedown": {
+		"message": "MineDown"
+	},
+	"app.lab.gradient-text.adapter.minimessage": {
+		"message": "MiniMessage"
+	},
+	"app.lab.gradient-text.adapter.minimessage-gradient": {
+		"message": "MiniMessage 渐变"
+	},
+	"app.lab.gradient-text.adapter.motd": {
+		"message": "服务器 MOTD"
+	},
+	"app.lab.gradient-text.adapter.rosegarden-gradient": {
+		"message": "RoseGarden 渐变"
+	},
+	"app.lab.gradient-text.adapter.snbt": {
+		"message": "字符串化 NBT"
+	},
+	"app.lab.gradient-text.adapter.standard": {
+		"message": "标准 HEX"
+	},
+	"app.lab.gradient-text.adapter.taboolib": {
+		"message": "TabooLib"
+	},
+	"app.lab.gradient-text.adapter.taboolib-gradient": {
+		"message": "TabooLib 渐变"
+	},
+	"app.lab.gradient-text.adapter.terraria": {
+		"message": "泰拉瑞亚"
+	},
+	"app.lab.gradient-text.adapter.trchat": {
+		"message": "TrChat"
+	},
+	"app.lab.gradient-text.adapter.vanilla": {
+		"message": "原版"
+	},
+	"app.lab.gradient-text.adapter.vanilla-compatible": {
+		"message": "原版兼容"
+	},
+	"app.lab.gradient-text.colors.add": {
+		"message": "添加颜色"
+	},
+	"app.lab.gradient-text.colors.import": {
+		"message": "导入颜色"
+	},
+	"app.lab.gradient-text.colors.import-placeholder": {
+		"message": "粘贴 HEX、RGB 或 CSS 渐变"
+	},
+	"app.lab.gradient-text.colors.invalid": {
+		"message": "请至少输入一个有效颜色。"
+	},
+	"app.lab.gradient-text.colors.move-down": {
+		"message": "下移颜色"
+	},
+	"app.lab.gradient-text.colors.move-up": {
+		"message": "上移颜色"
+	},
+	"app.lab.gradient-text.colors.randomize": {
+		"message": "随机生成颜色"
+	},
+	"app.lab.gradient-text.colors.remove": {
+		"message": "删除颜色"
+	},
+	"app.lab.gradient-text.colors.stops": {
+		"message": "{count} 个颜色停靠点"
+	},
+	"app.lab.gradient-text.colors.title": {
+		"message": "颜色"
+	},
+	"app.lab.gradient-text.description": {
+		"message": "无需浏览器即可创建适用于 Minecraft 的渐变文字。"
+	},
+	"app.lab.gradient-text.format.bold": {
+		"message": "粗体"
+	},
+	"app.lab.gradient-text.format.italic": {
+		"message": "斜体"
+	},
+	"app.lab.gradient-text.format.obfuscated": {
+		"message": "混淆"
+	},
+	"app.lab.gradient-text.format.simplify": {
+		"message": "简化渐变标签"
+	},
+	"app.lab.gradient-text.format.strikethrough": {
+		"message": "删除线"
+	},
+	"app.lab.gradient-text.format.title": {
+		"message": "输出格式"
+	},
+	"app.lab.gradient-text.format.underlined": {
+		"message": "下划线"
+	},
+	"app.lab.gradient-text.format.vanilla-character": {
+		"message": "颜色控制符"
+	},
+	"app.lab.gradient-text.input.placeholder": {
+		"message": "在此输入 Minecraft 文本"
+	},
+	"app.lab.gradient-text.input.title": {
+		"message": "文本"
+	},
+	"app.lab.gradient-text.output.copied": {
+		"message": "已复制输出"
+	},
+	"app.lab.gradient-text.output.copy": {
+		"message": "复制输出"
+	},
+	"app.lab.gradient-text.output.export": {
+		"message": "导出输出"
+	},
+	"app.lab.gradient-text.output.title": {
+		"message": "输出"
+	},
+	"app.lab.gradient-text.presets.apply": {
+		"message": "应用预设"
+	},
+	"app.lab.gradient-text.presets.count": {
+		"message": "已保存 {count} 个"
+	},
+	"app.lab.gradient-text.presets.delete": {
+		"message": "删除预设"
+	},
+	"app.lab.gradient-text.presets.export": {
+		"message": "导出预设"
+	},
+	"app.lab.gradient-text.presets.import": {
+		"message": "导入预设"
+	},
+	"app.lab.gradient-text.presets.imported": {
+		"message": "已导入 {count} 个预设"
+	},
+	"app.lab.gradient-text.presets.invalid-file": {
+		"message": "该文件不包含有效预设。"
+	},
+	"app.lab.gradient-text.presets.name": {
+		"message": "预设名称"
+	},
+	"app.lab.gradient-text.presets.save": {
+		"message": "保存预设"
+	},
+	"app.lab.gradient-text.presets.template": {
+		"message": "下载模板"
+	},
+	"app.lab.gradient-text.presets.title": {
+		"message": "预设"
+	},
+	"app.lab.gradient-text.preview.title": {
+		"message": "预览"
+	},
+	"app.lab.gradient-text.title": {
+		"message": "渐变文字生成器"
+	},
+	"app.lab.no-results": {
+		"message": "没有匹配的工具。"
+	},
+	"app.lab.search": {
+		"message": "搜索工具"
+	},
+	"app.lab.seed-map.add-marker": {
+		"message": "添加标记"
+	},
+	"app.lab.seed-map.approximate": {
+		"message": "估算"
+	},
+	"app.lab.seed-map.biome-group.beach": {
+		"message": "沙滩"
+	},
+	"app.lab.seed-map.biome-group.cave": {
+		"message": "洞穴"
+	},
+	"app.lab.seed-map.biome-group.desert": {
+		"message": "沙漠"
+	},
+	"app.lab.seed-map.biome-group.end": {
+		"message": "末地"
+	},
+	"app.lab.seed-map.biome-group.forest": {
+		"message": "森林"
+	},
+	"app.lab.seed-map.biome-group.ice": {
+		"message": "冰雪群系"
+	},
+	"app.lab.seed-map.biome-group.jungle": {
+		"message": "丛林"
+	},
+	"app.lab.seed-map.biome-group.mesa": {
+		"message": "恶地"
+	},
+	"app.lab.seed-map.biome-group.mountains": {
+		"message": "山地"
+	},
+	"app.lab.seed-map.biome-group.mushroom": {
+		"message": "蘑菇岛"
+	},
+	"app.lab.seed-map.biome-group.nether": {
+		"message": "下界"
+	},
+	"app.lab.seed-map.biome-group.ocean": {
+		"message": "海洋"
+	},
+	"app.lab.seed-map.biome-group.plains": {
+		"message": "平原"
+	},
+	"app.lab.seed-map.biome-group.river": {
+		"message": "河流"
+	},
+	"app.lab.seed-map.biome-group.savanna": {
+		"message": "热带草原"
+	},
+	"app.lab.seed-map.biome-group.swamp": {
+		"message": "沼泽"
+	},
+	"app.lab.seed-map.biome-group.taiga": {
+		"message": "针叶林"
+	},
+	"app.lab.seed-map.biome-highlight": {
+		"message": "群系高亮"
+	},
+	"app.lab.seed-map.biome-selection-count": {
+		"message": "已选 {selected} / {total}"
+	},
+	"app.lab.seed-map.biome-tag": {
+		"message": "生物群系"
+	},
+	"app.lab.seed-map.center-spawn": {
+		"message": "居中显示出生点"
+	},
+	"app.lab.seed-map.choose-biome": {
+		"message": "选择群系"
+	},
+	"app.lab.seed-map.chunk-coordinates": {
+		"message": "区块坐标"
+	},
+	"app.lab.seed-map.clear": {
+		"message": "清除"
+	},
+	"app.lab.seed-map.clear-history": {
+		"message": "清空历史"
+	},
+	"app.lab.seed-map.clear-ruler": {
+		"message": "清除测距"
+	},
+	"app.lab.seed-map.close-panel": {
+		"message": "关闭面板"
+	},
+	"app.lab.seed-map.collapse-layers": {
+		"message": "收起图层"
+	},
+	"app.lab.seed-map.completed": {
+		"message": "已完成"
+	},
+	"app.lab.seed-map.contours": {
+		"message": "等高线"
+	},
+	"app.lab.seed-map.coordinates": {
+		"message": "坐标"
+	},
+	"app.lab.seed-map.copy-teleport": {
+		"message": "复制 /tp"
+	},
+	"app.lab.seed-map.copyright.disclaimer-body": {
+		"message": "Minecraft 是 Mojang Synergies AB 的商标。Axolotl Launcher 与 Mojang 或 MinecraftSearch 均无隶属关系，也未获得其认可。"
+	},
+	"app.lab.seed-map.copyright.disclaimer-heading": {
+		"message": "非官方工具"
+	},
+	"app.lab.seed-map.copyright.engine-body": {
+		"message": "群系、地形、出生点与结构数据由 cubiomes 和 Axolotl 原生集成在本地生成。cubiomes 版权所有 (c) 2020 Cubitect，并依据 MIT 许可证提供。"
+	},
+	"app.lab.seed-map.copyright.engine-heading": {
+		"message": "本地地图引擎"
+	},
+	"app.lab.seed-map.copyright.icons-body": {
+		"message": "本工具使用的部分结构与群系图标取自 MinecraftSearch。相关图稿的权利仍归 MinecraftSearch 及相应创作者所有。"
+	},
+	"app.lab.seed-map.copyright.icons-heading": {
+		"message": "地图图稿"
+	},
+	"app.lab.seed-map.copyright.open": {
+		"message": "版权与来源说明"
+	},
+	"app.lab.seed-map.copyright.title": {
+		"message": "版权与来源说明"
+	},
+	"app.lab.seed-map.copyright.view-cubiomes": {
+		"message": "查看 cubiomes"
+	},
+	"app.lab.seed-map.copyright.visit-minecraft-search": {
+		"message": "访问 MinecraftSearch"
+	},
+	"app.lab.seed-map.description": {
+		"message": "在本地查看 Minecraft 种子的群系、结构和保存的标记。"
+	},
+	"app.lab.seed-map.dimension": {
+		"message": "维度"
+	},
+	"app.lab.seed-map.dimension.end": {
+		"message": "末地"
+	},
+	"app.lab.seed-map.dimension.nether": {
+		"message": "下界"
+	},
+	"app.lab.seed-map.dimension.overworld": {
+		"message": "主世界"
+	},
+	"app.lab.seed-map.distance": {
+		"message": "{distance} 格"
+	},
+	"app.lab.seed-map.edition": {
+		"message": "版本类型"
+	},
+	"app.lab.seed-map.edition.java": {
+		"message": "Java 版"
+	},
+	"app.lab.seed-map.edition.java-large-biomes": {
+		"message": "Java 版：大型生物群系"
+	},
+	"app.lab.seed-map.elevation": {
+		"message": "群系高度"
+	},
+	"app.lab.seed-map.elevation-locked": {
+		"message": "开启地形估算时自动采用估算的地表高度"
+	},
+	"app.lab.seed-map.exit-fullscreen": {
+		"message": "退出全屏"
+	},
+	"app.lab.seed-map.expand-layers": {
+		"message": "展开图层"
+	},
+	"app.lab.seed-map.feature.ancient-city": {
+		"message": "远古城市"
+	},
+	"app.lab.seed-map.feature.bastion": {
+		"message": "堡垒遗迹"
+	},
+	"app.lab.seed-map.feature.buried-treasure": {
+		"message": "埋藏的宝藏"
+	},
+	"app.lab.seed-map.feature.desert-pyramid": {
+		"message": "沙漠神殿"
+	},
+	"app.lab.seed-map.feature.desert-well": {
+		"message": "沙漠水井"
+	},
+	"app.lab.seed-map.feature.end-city": {
+		"message": "末地城"
+	},
+	"app.lab.seed-map.feature.end-city-with-ship": {
+		"message": "末地城（有末地船）"
+	},
+	"app.lab.seed-map.feature.end-city-without-ship": {
+		"message": "末地城（无末地船）"
+	},
+	"app.lab.seed-map.feature.end-gateway": {
+		"message": "末地折跃门"
+	},
+	"app.lab.seed-map.feature.fortress": {
+		"message": "下界要塞"
+	},
+	"app.lab.seed-map.feature.geode": {
+		"message": "紫晶洞"
+	},
+	"app.lab.seed-map.feature.igloo": {
+		"message": "雪屋"
+	},
+	"app.lab.seed-map.feature.jungle-temple": {
+		"message": "丛林神庙"
+	},
+	"app.lab.seed-map.feature.mansion": {
+		"message": "林地府邸"
+	},
+	"app.lab.seed-map.feature.mineshaft": {
+		"message": "废弃矿井"
+	},
+	"app.lab.seed-map.feature.monument": {
+		"message": "海底神殿"
+	},
+	"app.lab.seed-map.feature.ocean-ruin": {
+		"message": "海底废墟"
+	},
+	"app.lab.seed-map.feature.outpost": {
+		"message": "掠夺者前哨站"
+	},
+	"app.lab.seed-map.feature.ruined-portal": {
+		"message": "废弃传送门"
+	},
+	"app.lab.seed-map.feature.shipwreck": {
+		"message": "沉船"
+	},
+	"app.lab.seed-map.feature.slime-chunk": {
+		"message": "史莱姆区块"
+	},
+	"app.lab.seed-map.feature.stronghold": {
+		"message": "要塞"
+	},
+	"app.lab.seed-map.feature.swamp-hut": {
+		"message": "沼泽小屋"
+	},
+	"app.lab.seed-map.feature.trail-ruins": {
+		"message": "古迹废墟"
+	},
+	"app.lab.seed-map.feature.trial-chambers": {
+		"message": "试炼密室"
+	},
+	"app.lab.seed-map.feature.village": {
+		"message": "村庄"
+	},
+	"app.lab.seed-map.fullscreen": {
+		"message": "全屏"
+	},
+	"app.lab.seed-map.go": {
+		"message": "前往"
+	},
+	"app.lab.seed-map.hide-layer-names": {
+		"message": "隐藏图层名称"
+	},
+	"app.lab.seed-map.history": {
+		"message": "种子历史记录"
+	},
+	"app.lab.seed-map.history-empty": {
+		"message": "查看过的种子会出现在这里"
+	},
+	"app.lab.seed-map.history-source.manual": {
+		"message": "手动输入"
+	},
+	"app.lab.seed-map.history-source.random": {
+		"message": "随机种子"
+	},
+	"app.lab.seed-map.history-source.share": {
+		"message": "分享链接"
+	},
+	"app.lab.seed-map.import-from-instance": {
+		"message": "从实例导入"
+	},
+	"app.lab.seed-map.import-world.back": {
+		"message": "返回实例列表"
+	},
+	"app.lab.seed-map.import-world.choose-instance": {
+		"message": "选择包含该世界的实例"
+	},
+	"app.lab.seed-map.import-world.choose-world": {
+		"message": "选择一个单人世界"
+	},
+	"app.lab.seed-map.import-world.last-played": {
+		"message": "{ago}游玩过"
+	},
+	"app.lab.seed-map.import-world.never-played": {
+		"message": "尚未游玩"
+	},
+	"app.lab.seed-map.import-world.no-instances": {
+		"message": "未找到实例，请先安装一个实例。"
+	},
+	"app.lab.seed-map.import-world.no-worlds": {
+		"message": "该实例还没有单人世界。"
+	},
+	"app.lab.seed-map.import-world.title": {
+		"message": "从实例世界载入种子"
+	},
+	"app.lab.seed-map.invert-selection": {
+		"message": "反选"
+	},
+	"app.lab.seed-map.layers": {
+		"message": "地图图层"
+	},
+	"app.lab.seed-map.loading": {
+		"message": "加载中"
+	},
+	"app.lab.seed-map.location": {
+		"message": "位置"
+	},
+	"app.lab.seed-map.map-failed": {
+		"message": "地图生成失败"
+	},
+	"app.lab.seed-map.map-scale": {
+		"message": "1 像素 = {scale} 格"
+	},
+	"app.lab.seed-map.marker-color": {
+		"message": "标记颜色"
+	},
+	"app.lab.seed-map.marker-name": {
+		"message": "标记名称"
+	},
+	"app.lab.seed-map.marker-saved": {
+		"message": "标记已保存"
+	},
+	"app.lab.seed-map.markers": {
+		"message": "标记"
+	},
+	"app.lab.seed-map.mined": {
+		"message": "已挖掘"
+	},
+	"app.lab.seed-map.mode.ores": {
+		"message": "矿物"
+	},
+	"app.lab.seed-map.mode.structures": {
+		"message": "结构"
+	},
+	"app.lab.seed-map.no-markers": {
+		"message": "暂无保存的标记"
+	},
+	"app.lab.seed-map.no-matching-biomes": {
+		"message": "没有匹配的群系"
+	},
+	"app.lab.seed-map.no-ores-in-end": {
+		"message": "末地不支持矿物扫描"
+	},
+	"app.lab.seed-map.ore-coverage": {
+		"message": "Y {min} 到 {max}"
+	},
+	"app.lab.seed-map.ore-layers": {
+		"message": "矿物图层"
+	},
+	"app.lab.seed-map.ore-likely": {
+		"message": "可能存在"
+	},
+	"app.lab.seed-map.ore-max-y": {
+		"message": "最高 Y"
+	},
+	"app.lab.seed-map.ore-min-y": {
+		"message": "最低 Y"
+	},
+	"app.lab.seed-map.ore-precision": {
+		"message": "精度 {precision}%"
+	},
+	"app.lab.seed-map.ore-scan-failed": {
+		"message": "矿物扫描失败，请刷新地图后重试。"
+	},
+	"app.lab.seed-map.ore-verified": {
+		"message": "已验证"
+	},
+	"app.lab.seed-map.ore-y-range": {
+		"message": "Y 范围"
+	},
+	"app.lab.seed-map.ore.coal": {
+		"message": "煤矿石"
+	},
+	"app.lab.seed-map.ore.copper": {
+		"message": "铜矿石"
+	},
+	"app.lab.seed-map.ore.copper-vein": {
+		"message": "铜矿脉"
+	},
+	"app.lab.seed-map.ore.diamond": {
+		"message": "钻石矿石"
+	},
+	"app.lab.seed-map.ore.gold": {
+		"message": "金矿石"
+	},
+	"app.lab.seed-map.ore.iron": {
+		"message": "铁矿石"
+	},
+	"app.lab.seed-map.ore.iron-vein": {
+		"message": "铁矿脉"
+	},
+	"app.lab.seed-map.ore.lapis": {
+		"message": "青金石矿石"
+	},
+	"app.lab.seed-map.ore.netherite": {
+		"message": "远古残骸"
+	},
+	"app.lab.seed-map.ore.redstone": {
+		"message": "红石矿石"
+	},
+	"app.lab.seed-map.ores-require-modern": {
+		"message": "矿物预测需要 Java 版 1.18 或更新版本"
+	},
+	"app.lab.seed-map.random-seed": {
+		"message": "随机种子"
+	},
+	"app.lab.seed-map.remove-history-entry": {
+		"message": "从历史中移除"
+	},
+	"app.lab.seed-map.remove-marker": {
+		"message": "删除标记"
+	},
+	"app.lab.seed-map.reset": {
+		"message": "重置"
+	},
+	"app.lab.seed-map.reset-y-range": {
+		"message": "重置 Y 范围"
+	},
+	"app.lab.seed-map.ruler": {
+		"message": "测量距离"
+	},
+	"app.lab.seed-map.scanning-ores": {
+		"message": "正在扫描矿物 {processed}/{total}"
+	},
+	"app.lab.seed-map.search-biomes": {
+		"message": "搜索群系"
+	},
+	"app.lab.seed-map.search-nearby": {
+		"message": "搜索附近"
+	},
+	"app.lab.seed-map.seed": {
+		"message": "种子"
+	},
+	"app.lab.seed-map.seed-placeholder": {
+		"message": "输入数字或文本种子"
+	},
+	"app.lab.seed-map.select-all": {
+		"message": "全选"
+	},
+	"app.lab.seed-map.selected-biomes": {
+		"message": "已选择 {count} 个群系"
+	},
+	"app.lab.seed-map.settings": {
+		"message": "地图设置"
+	},
+	"app.lab.seed-map.share": {
+		"message": "复制地图链接"
+	},
+	"app.lab.seed-map.share-copied": {
+		"message": "已复制地图链接"
+	},
+	"app.lab.seed-map.show-grid": {
+		"message": "显示网格"
+	},
+	"app.lab.seed-map.show-layer-names": {
+		"message": "显示图层名称"
+	},
+	"app.lab.seed-map.spawn-point": {
+		"message": "出生点"
+	},
+	"app.lab.seed-map.teleport-copied": {
+		"message": "已复制传送命令"
+	},
+	"app.lab.seed-map.terrain": {
+		"message": "地形估算"
+	},
+	"app.lab.seed-map.title": {
+		"message": "种子地图"
+	},
+	"app.lab.seed-map.version": {
+		"message": "游戏版本"
+	},
+	"app.lab.seed-map.world-seed-loaded": {
+		"message": "已载入世界 {world} 的种子"
+	},
+	"app.lab.seed-map.zoom-in": {
+		"message": "放大"
+	},
+	"app.lab.seed-map.zoom-out": {
+		"message": "缩小"
+	},
+	"app.lab.seed-map.zoom-to-scan-ores": {
+		"message": "放大地图以扫描矿物"
+	},
+	"app.lab.seed-map.zoom-to-show": {
+		"message": "放大以显示{layer}"
+	},
+	"app.lab.title": {
+		"message": "实验室"
+	},
+	"app.lab.tool-count": {
+		"message": "{count} 个工具"
+	},
+	"app.lab.tool-count-plural": {
+		"message": "{count} 个工具"
+	},
+	"app.multiplayer.back": {
+		"message": "返回"
+	},
+	"app.multiplayer.binary-not-found": {
+		"message": "未找到陶瓦联机程序，请放置于："
+	},
+	"app.multiplayer.check-network": {
+		"message": "检查网络连接"
+	},
+	"app.multiplayer.connecting": {
+		"message": "连接中..."
+	},
+	"app.multiplayer.copy-room-code": {
+		"message": "复制房间码"
+	},
+	"app.multiplayer.disconnect": {
+		"message": "断开连接"
+	},
+	"app.multiplayer.download-progress": {
+		"message": "下载进度"
+	},
+	"app.multiplayer.download-terracotta": {
+		"message": "下载陶瓦联机"
+	},
+	"app.multiplayer.error.install": {
+		"message": "安装错误"
+	},
+	"app.multiplayer.error.network": {
+		"message": "网络错误"
+	},
+	"app.multiplayer.error.os": {
+		"message": "系统错误"
+	},
+	"app.multiplayer.error.terracotta": {
+		"message": "陶瓦联机错误"
+	},
+	"app.multiplayer.error.unknown": {
+		"message": "未知错误"
+	},
+	"app.multiplayer.extracting": {
+		"message": "正在解压..."
+	},
+	"app.multiplayer.guest-label": {
+		"message": "访客"
+	},
+	"app.multiplayer.host": {
+		"message": "创建房间"
+	},
+	"app.multiplayer.host-description": {
+		"message": "创建虚拟局域网房间，让好友直接连接到你的游戏。"
+	},
+	"app.multiplayer.host-label": {
+		"message": "房主"
+	},
+	"app.multiplayer.installing": {
+		"message": "正在安装..."
+	},
+	"app.multiplayer.join": {
+		"message": "加入房间"
+	},
+	"app.multiplayer.join-description": {
+		"message": "输入房间码加入好友的虚拟局域网房间。"
+	},
+	"app.multiplayer.join-room": {
+		"message": "加入房间"
+	},
+	"app.multiplayer.lan-hint": {
+		"message": "请打开 Minecraft 进入世界，按 ESC → 对局域网开放 → 选择一个端口，陶瓦联机会自动检测。"
+	},
+	"app.multiplayer.loading": {
+		"message": "初始化中..."
+	},
+	"app.multiplayer.no-players": {
+		"message": "暂无玩家"
+	},
+	"app.multiplayer.not-running": {
+		"message": "联机服务未运行。请创建房间或加入房间以开始联机。"
+	},
+	"app.multiplayer.not-running-title": {
+		"message": "开始联机会话"
+	},
+	"app.multiplayer.platform-info": {
+		"message": "当前平台：{platform}"
+	},
+	"app.multiplayer.player-name": {
+		"message": "玩家名"
+	},
+	"app.multiplayer.players": {
+		"message": "玩家"
+	},
+	"app.multiplayer.players-in-room": {
+		"message": "{count} 位玩家在房间中"
+	},
+	"app.multiplayer.powered-by-terracotta": {
+		"message": "由 Terracotta | 陶瓦联机 强力驱动"
+	},
+	"app.multiplayer.retry": {
+		"message": "重试"
+	},
+	"app.multiplayer.room-code": {
+		"message": "房间码"
+	},
+	"app.multiplayer.room-code-placeholder": {
+		"message": "例如 U/ABCD-EFGH-IJKL-MNOP"
+	},
+	"app.multiplayer.server-address": {
+		"message": "备用连接地址"
+	},
+	"app.multiplayer.share-code": {
+		"message": "将此代码分享给好友："
+	},
+	"app.multiplayer.start-description": {
+		"message": "启动联机服务以创建房间或加入好友的房间。"
+	},
+	"app.multiplayer.start-hosting": {
+		"message": "创建房间"
+	},
+	"app.multiplayer.start-terracotta": {
+		"message": "启动陶瓦联机"
+	},
+	"app.multiplayer.status.downloading": {
+		"message": "下载中..."
+	},
+	"app.multiplayer.status.error": {
+		"message": "错误"
+	},
+	"app.multiplayer.status.fatal": {
+		"message": "严重错误"
+	},
+	"app.multiplayer.status.guest-connecting": {
+		"message": "正在加入..."
+	},
+	"app.multiplayer.status.guest-ready": {
+		"message": "已连接到房间"
+	},
+	"app.multiplayer.status.guest-starting": {
+		"message": "正在连接..."
+	},
+	"app.multiplayer.status.host-ready": {
+		"message": "房间已就绪"
+	},
+	"app.multiplayer.status.host-scanning": {
+		"message": "正在扫描..."
+	},
+	"app.multiplayer.status.host-starting": {
+		"message": "正在启动主机..."
+	},
+	"app.multiplayer.status.idle": {
+		"message": "未连接"
+	},
+	"app.multiplayer.status.starting": {
+		"message": "启动中..."
+	},
+	"app.multiplayer.status.waiting": {
+		"message": "等待中..."
+	},
+	"app.multiplayer.title": {
+		"message": "联机"
+	},
+	"app.multiplayer.unknown-player-role": {
+		"message": "未知身份"
+	},
+	"app.multiplayer.verifying": {
+		"message": "验证中..."
+	},
+	"app.navigation.lab": {
+		"message": "实验室"
+	},
+	"app.navigation.multiplayer": {
+		"message": "联机"
+	},
+	"app.onboarding.action.click-lab": {
+		"message": "点击实验室，继续"
+	},
+	"app.onboarding.action.open-gradient-text": {
+		"message": "打开渐变文字生成器，继续"
+	},
+	"app.onboarding.action.open-seed-map": {
+		"message": "打开种子地图，继续"
+	},
+	"app.onboarding.action.return-lab": {
+		"message": "点击实验室，查看另一个项目"
+	},
+	"app.onboarding.home-instances.description": {
+		"message": "这是你的启动区域。信息主页集中展示最近和固定的项目；极简主页则专注于你选择的实例。"
+	},
+	"app.onboarding.home-instances.title": {
+		"message": "从你想去的地方开始"
+	},
+	"app.onboarding.home-layout.description": {
+		"message": "随时使用这个悬浮按钮，在信息主页和极简主页之间切换。"
+	},
+	"app.onboarding.home-layout.title": {
+		"message": "切换信息密度"
+	},
+	"app.onboarding.lab-editor.description": {
+		"message": "编辑文本、选择颜色、实时预览，并复制适用于 Minecraft 配置的格式。"
+	},
+	"app.onboarding.lab-editor.title": {
+		"message": "在同一处编辑和复制"
+	},
+	"app.onboarding.lab-seed-map.description": {
+		"message": "输入种子或从实例载入，然后在本地地图中查看群系、结构与矿物图层。"
+	},
+	"app.onboarding.lab-seed-map.title": {
+		"message": "加载世界前先找到它"
+	},
+	"app.onboarding.lab-tools.description": {
+		"message": "生成带格式的渐变文字，或用本地种子地图探索 Java 世界。"
+	},
+	"app.onboarding.lab-tools.title": {
+		"message": "首批两个项目"
+	},
+	"app.onboarding.lab.description": {
+		"message": "实验室将本地 Minecraft 工具放进启动器，无需打开其他网站或注册额外账号。"
+	},
+	"app.onboarding.lab.title": {
+		"message": "内置的实用工具"
+	},
+	"app.onboarding.playtime.description": {
+		"message": "日历会高亮你游玩过的每一天，点选即可继续游玩，固定的服务器就在下方。右侧账号侧边栏里还有游玩洞察、每日小挑战和 Minecraft 官方新闻。"
+	},
+	"app.onboarding.playtime.title": {
+		"message": "一眼看清游玩时间"
+	},
+	"app.project.open-in-mcmod": {
+		"message": "在 MC 百科中打开"
+	},
+	"app.settings.java.cancel": {
+		"message": "取消"
+	},
+	"app.settings.java.deep-scan": {
+		"message": "强力查找"
+	},
+	"app.settings.java.deep-scan-confirm": {
+		"message": "将扫描全部磁盘的全部目录，可能需要数分钟。"
+	},
+	"app.settings.java.download-java": {
+		"message": "下载 Java"
+	},
+	"app.settings.java.download.back": {
+		"message": "返回发行版列表"
+	},
+	"app.settings.java.download.loading": {
+		"message": "加载中……"
+	},
+	"app.settings.java.download.no-vendors": {
+		"message": "没有可用的发行版。"
+	},
+	"app.settings.java.download.no-versions": {
+		"message": "没有可用的版本。"
+	},
+	"app.settings.java.download.select-vendor": {
+		"message": "选择发行版："
+	},
+	"app.settings.java.download.select-version-feed": {
+		"message": "选择 {vendor} 的版本："
+	},
+	"app.settings.java.download.title": {
+		"message": "下载 Java"
+	},
+	"app.settings.java.download.version-label": {
+		"message": "Java {version}"
+	},
+	"app.settings.java.find-java": {
+		"message": "寻找 Java"
+	},
+	"app.settings.java.installed.empty": {
+		"message": "未找到 Java 安装。"
+	},
+	"app.settings.java.installed.loading": {
+		"message": "正在加载已安装的 Java……"
+	},
+	"app.settings.java.installed.remove": {
+		"message": "移除 Java 安装"
+	},
+	"app.settings.java.installed.title": {
+		"message": "已安装的 Java"
+	},
+	"app.settings.java.location": {
+		"message": "Java {version} 位置"
+	},
+	"app.settings.java.manual-add": {
+		"message": "手动添加"
+	},
+	"app.settings.java.scan-anyway": {
+		"message": "仍然扫描"
+	},
+	"app.settings.java.scanning": {
+		"message": "扫描中……"
+	},
+	"app.settings.java.table.actions": {
+		"message": ""
+	},
+	"app.settings.java.table.distribution": {
+		"message": "发行版"
+	},
+	"app.settings.java.table.path": {
+		"message": "路径"
+	},
+	"app.settings.java.table.version": {
+		"message": "版本"
+	},
+	"app.settings.java.view-installed": {
+		"message": "查看已安装 Java"
+	},
+	"app.settings.resources.app-directory-description-portable": {
+		"message": "正在以便携模式运行，所有数据已固定在程序目录下，无法修改。"
+	},
+	"app.settings.updates.portable": {
+		"message": "便携模式暂时无法更新，请去GitHub手动更新。"
+	},
+	"app.skins.tabs.default": {
+		"message": "官方皮肤"
+	},
+	"app.skins.tabs.saved": {
+		"message": "已保存皮肤"
+	},
+	"instance.settings.tabs.java.custom-java-installation": {
+		"message": "为此实例使用自定义 Java"
+	},
+	"minecraft-account.offline-mode.refresh": {
+		"message": "刷新连接状态"
 	}
 }
