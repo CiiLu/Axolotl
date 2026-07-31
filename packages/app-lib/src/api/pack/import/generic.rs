@@ -1,4 +1,7 @@
-use std::{collections::HashMap, path::{Path, PathBuf}};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use super::instance_json;
 use crate::{
@@ -27,7 +30,8 @@ pub async fn import_generic(
     let (name, dotminecraft) = resolve_dotminecraft(&instance_folder);
     let info = detect_instance_info(&dotminecraft).await?;
     register_instance(instance_id, &name, &info).await?;
-    copy_instance_files(instance_id, &dotminecraft, reporter, details, symlink).await
+    copy_instance_files(instance_id, &dotminecraft, reporter, details, symlink)
+        .await
 }
 
 /// Stage 1 — resolve the name and the `.minecraft` directory of an imported
@@ -127,13 +131,7 @@ async fn build_dependencies(
         return dependencies;
     };
 
-    let dep = match loader.as_str() {
-        "forge" => Some(PackDependency::Forge),
-        "neoforge" => Some(PackDependency::NeoForge),
-        "fabric" => Some(PackDependency::FabricLoader),
-        "quilt" => Some(PackDependency::QuiltLoader),
-        _ => None,
-    };
+    let dep = loader_dependency(loader);
     let loader_version = resolve_loader_version(info).await;
 
     tracing::debug!(
@@ -142,15 +140,39 @@ async fn build_dependencies(
         dep,
         loader_version
     );
-    if let (Some(dep), Some(version)) = (dep, loader_version) {
-        dependencies.insert(dep, version);
-    } else {
-        tracing::warn!(
-            "import_generic: loader={} could not be mapped to PackDependency",
-            loader
-        );
+    match (dep, loader_version) {
+        (Some(dep), Some(version)) => {
+            dependencies.insert(dep, version);
+        }
+        (Some(dep), None) => {
+            tracing::warn!(
+                "import_generic: loader={} ({dep:?}) detected but no loader version could be resolved",
+                loader
+            );
+        }
+        (None, _) => {
+            tracing::warn!(
+                "import_generic: loader={} is not supported by this launcher; importing the instance without a loader (files are still copied)",
+                loader
+            );
+        }
     }
     dependencies
+}
+
+/// Maps a detected loader name to a dependency the launcher can install.
+/// Returns `None` for loaders the launcher does not support (LabyMod,
+/// Legacy Fabric, Cleanroom, LiteLoader, ...); such instances are still
+/// imported with their files intact, just without a registered loader.
+fn loader_dependency(loader: &str) -> Option<PackDependency> {
+    match loader {
+        "forge" => Some(PackDependency::Forge),
+        "neoforge" => Some(PackDependency::NeoForge),
+        "fabric" => Some(PackDependency::FabricLoader),
+        "quilt" => Some(PackDependency::QuiltLoader),
+        "optifine" => Some(PackDependency::OptiFine),
+        _ => None,
+    }
 }
 
 /// Resolves a missing loader version by asking the metadata API for the
@@ -167,6 +189,7 @@ async fn resolve_loader_version(
         "neoforge" => Some(ModLoader::NeoForge),
         "fabric" => Some(ModLoader::Fabric),
         "quilt" => Some(ModLoader::Quilt),
+        "optifine" => Some(ModLoader::OptiFine),
         _ => None,
     }?;
     tracing::debug!(
@@ -174,12 +197,8 @@ async fn resolve_loader_version(
         loader,
         info.vanilla_name
     );
-    match get_loader_version_from_profile(
-        &info.vanilla_name,
-        mod_loader,
-        None,
-    )
-    .await
+    match get_loader_version_from_profile(&info.vanilla_name, mod_loader, None)
+        .await
     {
         Ok(Some(lv)) => {
             tracing::debug!(
@@ -227,4 +246,43 @@ async fn copy_instance_files(
         symlink,
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loader_dependency_maps_supported_loaders() {
+        assert_eq!(loader_dependency("forge"), Some(PackDependency::Forge));
+        assert_eq!(
+            loader_dependency("neoforge"),
+            Some(PackDependency::NeoForge)
+        );
+        assert_eq!(
+            loader_dependency("fabric"),
+            Some(PackDependency::FabricLoader)
+        );
+        assert_eq!(
+            loader_dependency("quilt"),
+            Some(PackDependency::QuiltLoader)
+        );
+        assert_eq!(
+            loader_dependency("optifine"),
+            Some(PackDependency::OptiFine)
+        );
+    }
+
+    #[test]
+    fn loader_dependency_rejects_unsupported_loaders() {
+        for loader in [
+            "labymod",
+            "legacy_fabric",
+            "cleanroom",
+            "lite_loader",
+            "vanilla",
+        ] {
+            assert_eq!(loader_dependency(loader), None, "{loader}");
+        }
+    }
 }

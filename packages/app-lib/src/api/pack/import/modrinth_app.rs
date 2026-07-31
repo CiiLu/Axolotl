@@ -101,6 +101,7 @@ fn dependencies(
             "forge" => Some(PackDependency::Forge),
             "neoforge" | "neo_forge" => Some(PackDependency::NeoForge),
             "quilt" => Some(PackDependency::QuiltLoader),
+            "optifine" => Some(PackDependency::OptiFine),
             _ => None,
         };
         if let Some(dependency) = dependency {

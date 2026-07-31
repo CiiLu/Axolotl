@@ -87,6 +87,9 @@ pub enum PackDependency {
     #[serde(rename = "quilt-loader")]
     QuiltLoader,
 
+    #[serde(rename = "optifine")]
+    OptiFine,
+
     #[serde(rename = "minecraft")]
     Minecraft,
 }
@@ -565,6 +568,10 @@ pub async fn set_instance_information(
             }
             PackDependency::QuiltLoader => {
                 mod_loader = Some(ModLoader::Quilt);
+                loader_version = Some(value);
+            }
+            PackDependency::OptiFine => {
+                mod_loader = Some(ModLoader::OptiFine);
                 loader_version = Some(value);
             }
             PackDependency::Minecraft => game_version = Some(value),
