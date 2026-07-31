@@ -987,10 +987,34 @@ pub(crate) async fn finish_import(
             crate::api::instance::get_full_path(instance_id).await?;
 
         if instance_path.exists() {
-            io::remove_dir_all(&instance_path).await?;
-        }
+            // Never delete the existing instance directory before the new
+            // symlink is in place: a failure between the two would lose the
+            // original data. Move it aside, create the link, then clean up
+            // the backup; on failure the backup is moved back.
+            let name = instance_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("instance");
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or_default();
+            let backup_path = instance_path
+                .parent()
+                .unwrap_or_else(|| std::path::Path::new(""))
+                .join(format!("{name}.bak-{timestamp}"));
 
-        io::create_symlink(&dotminecraft, &instance_path).await?;
+            io::rename_or_move(&instance_path, &backup_path).await?;
+            if let Err(error) =
+                io::create_symlink(&dotminecraft, &instance_path).await
+            {
+                let _ = io::rename_or_move(&backup_path, &instance_path).await;
+                return Err(error.into());
+            }
+            let _ = io::remove_dir_all(&backup_path).await;
+        } else {
+            io::create_symlink(&dotminecraft, &instance_path).await?;
+        }
 
         crate::state::edit_instance(
             instance_id,
