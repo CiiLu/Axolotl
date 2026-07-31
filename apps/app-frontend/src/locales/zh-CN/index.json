@@ -873,7 +873,7 @@
 		"message": "回滚"
 	},
 	"app.install.phase.running_loader_processors": {
-		"message": "正在运行加载处理器"
+		"message": "正在安装加载器"
 	},
 	"app.instance.back": {
 		"message": "返回实例"
@@ -4462,8 +4462,7 @@
 	},
 	"app.instance-item.view-instance": {
 		"message": "查看实例"
-	}
-,
+	},
 	"app.navigation.multiplayer": {
 		"message": "联机"
 	},

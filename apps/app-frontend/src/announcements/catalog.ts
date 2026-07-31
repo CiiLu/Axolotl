@@ -33,6 +33,32 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.6',
+		version: '1.6.6',
+		publishedAt: '2026-07-32',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.6',
+			'zh-CN': 'Axolotl Launcher 1.6.6',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed the issue of external import of modpacks not being able to update mods with one click',
+					'zh-CN': '修复了外部导入整合包无法一键更新mod的问题。',
+				},
+				{
+					'en-US': 'Fixed the issue of CF limiting resource downloads in some cases',
+					'zh-CN': '修复了部分情况下CF限制资源下载提示消失问题。',
+				},
+				{
+					'en-US': 'Fixed some Chinese copywriting issues.',
+					'zh-CN': '修复了部分中文文案。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.5',
 		version: '1.6.5',
 		publishedAt: '2026-07-31',
