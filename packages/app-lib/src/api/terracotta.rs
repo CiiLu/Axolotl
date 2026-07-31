@@ -823,7 +823,6 @@ pub async fn start_terracotta(
     let port_file = terracotta_port_file();
     let _ = std::fs::remove_file(&port_file);
 
-
     let is_macos = cfg!(target_os = "macos");
     let mut command = Command::new(&final_path);
     if is_macos {
