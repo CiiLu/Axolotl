@@ -786,6 +786,22 @@ async fn run_request(
                 symlink,
             )
             .await?;
+            let context =
+                crate::state::instances::commands::get_instance_launch_context(
+                    &instance_id,
+                    &state.pool,
+                )
+                .await?
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError("Unknown instance".to_string())
+                })?;
+            crate::launcher::install_minecraft_with_reporter(
+                &context,
+                false,
+                Some(InstallProgressReporter::new(job_id, job_state.clone())),
+            )
+            .await?;
+            emit_instance(&instance_id, InstancePayloadType::Edited).await?;
             Ok(Some(instance_id))
         }
         InstallRequest::DuplicateInstance { source_instance_id } => {
