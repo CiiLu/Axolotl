@@ -1,13 +1,14 @@
 use crate::state::State;
 use crate::util::io;
 use crate::{ErrorKind, Result};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Import a world save from a source path into an instance's saves directory.
 ///
 /// The `source_path` can be either:
 /// - A directory containing a `level.dat` file (an existing world folder)
-/// - A ZIP archive containing a world save (with `level.dat` at the root)
+/// - A ZIP archive containing a world save (`level.dat` at the archive root,
+///   or inside a single shared root folder such as `My World/level.dat`)
 ///
 /// Returns the name of the imported world.
 pub async fn import_world_save(
@@ -133,62 +134,223 @@ async fn is_zip_file(path: &Path) -> Result<bool> {
 }
 
 /// Extract a ZIP archive containing a world save to the target directory.
+///
+/// Supports flat archives (`level.dat` at the root) and archives whose
+/// entries all share a single root folder (`My World/level.dat`); the shared
+/// root is stripped only when every entry lives inside it. Entry names are
+/// normalized (backslashes become `/`) and validated so `..`, absolute paths
+/// and drive letters can never write outside `target_dir`.
 async fn extract_world_zip(zip_path: &Path, target_dir: &Path) -> Result<()> {
     let zip_path = zip_path.to_path_buf();
     let target_dir = target_dir.to_path_buf();
 
     tokio::task::spawn_blocking(move || {
-        let file = std::fs::File::open(&zip_path)
-            .map_err(|e| io::IOError::with_path(e, &zip_path))?;
-        let mut archive = zip::ZipArchive::new(file).map_err(|e| {
-            ErrorKind::InputError(format!("Invalid ZIP archive: {e}"))
-        })?;
-
-        for i in 0..archive.len() {
-            let mut entry = archive.by_index(i).map_err(|e| {
-                ErrorKind::InputError(format!("Failed to read ZIP entry: {e}"))
-            })?;
-
-            let entry_name = entry.name().to_string();
-
-            // Skip directory entries and macOS resource forks.
-            if entry.is_dir() || entry_name.starts_with("__MACOSX/") {
-                continue;
-            }
-
-            // Determine the output path.
-            // If all entries are inside a single root folder, strip it.
-            let relative_path = strip_single_root_folder(&entry_name);
-            let output_path = target_dir.join(&relative_path);
-
-            // Create parent directories.
-            if let Some(parent) = output_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .map_err(|e| io::IOError::with_path(e, parent))?;
-            }
-
-            // Extract the file.
-            let mut output = std::fs::File::create(&output_path)
-                .map_err(|e| io::IOError::with_path(e, &output_path))?;
-            std::io::copy(&mut entry, &mut output)
-                .map_err(|e| io::IOError::with_path(e, &output_path))?;
-        }
-
-        Ok(())
+        extract_world_zip_sync(&zip_path, &target_dir)
     })
     .await?
 }
 
-/// If all entries in a ZIP share a single root folder, strip that prefix.
-/// For example, "My World/level.dat" becomes "level.dat".
-fn strip_single_root_folder(entry_name: &str) -> String {
-    let parts: Vec<&str> = entry_name.split('/').collect();
-    if parts.len() > 1 && !parts[0].is_empty() {
-        // Check if all entries share the same first segment.
-        // Since we process one entry at a time, we assume the caller
-        // verified this. Just strip the first segment.
-        parts[1..].join("/")
-    } else {
-        entry_name.to_string()
+fn extract_world_zip_sync(zip_path: &Path, target_dir: &Path) -> Result<()> {
+    let file = std::fs::File::open(zip_path)
+        .map_err(|e| io::IOError::with_path(e, zip_path))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| {
+        ErrorKind::InputError(format!("Invalid ZIP archive: {e}"))
+    })?;
+
+    // First pass: sanitize every entry name. Entries that try to escape the
+    // extraction directory are skipped instead of written.
+    let mut entries: Vec<(usize, PathBuf, bool)> = Vec::new();
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| {
+            ErrorKind::InputError(format!("Failed to read ZIP entry: {e}"))
+        })?;
+
+        let raw_name = entry.name().to_string();
+        if raw_name.starts_with("__MACOSX") {
+            continue;
+        }
+        let is_dir =
+            entry.is_dir() || raw_name.replace('\\', "/").ends_with('/');
+        let Some(safe_name) = sanitize_entry_name(&raw_name) else {
+            tracing::warn!(
+                "import_world_save: skipping unsafe ZIP entry '{raw_name}' (path traversal)"
+            );
+            continue;
+        };
+        if safe_name.as_os_str().is_empty() {
+            continue;
+        }
+        entries.push((i, safe_name, is_dir));
+    }
+
+    // Strip a shared root folder only when every file entry is nested below
+    // it. Root-level directory entries don't block stripping, and a flat
+    // archive (level.dat at the root) keeps its paths untouched.
+    let all_nested = entries
+        .iter()
+        .filter(|(_, _, is_dir)| !is_dir)
+        .all(|(_, path, _)| path.components().count() > 1);
+    let root = common_root(&entries);
+    let strip_root = all_nested && root.is_some();
+
+    for (index, safe_name, is_dir) in &entries {
+        let relative = if strip_root {
+            let mut components = safe_name.components();
+            components.next();
+            components.as_path().to_path_buf()
+        } else {
+            safe_name.clone()
+        };
+        let output_path = target_dir.join(relative);
+
+        if *is_dir {
+            std::fs::create_dir_all(&output_path)
+                .map_err(|e| io::IOError::with_path(e, &output_path))?;
+            continue;
+        }
+        if let Some(parent) = output_path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| io::IOError::with_path(e, parent))?;
+        }
+
+        let mut entry = archive.by_index(*index).map_err(|e| {
+            ErrorKind::InputError(format!("Failed to read ZIP entry: {e}"))
+        })?;
+        let mut output = std::fs::File::create(&output_path)
+            .map_err(|e| io::IOError::with_path(e, &output_path))?;
+        std::io::copy(&mut entry, &mut output)
+            .map_err(|e| io::IOError::with_path(e, &output_path))?;
+    }
+
+    Ok(())
+}
+
+/// Returns the first path component shared by every entry, if any.
+fn common_root(entries: &[(usize, PathBuf, bool)]) -> Option<&std::ffi::OsStr> {
+    let mut root: Option<&std::ffi::OsStr> = None;
+    for (_, path, _) in entries {
+        let first = path.components().next()?.as_os_str();
+        match root {
+            None => root = Some(first),
+            Some(existing) if existing != first => return None,
+            _ => {}
+        }
+    }
+    root
+}
+
+/// Normalize a ZIP entry name into a safe relative path that stays inside the
+/// extraction directory. Returns `None` for absolute paths, drive letters or
+/// entries containing `..` (zip-slip protection).
+fn sanitize_entry_name(name: &str) -> Option<PathBuf> {
+    // The ZIP spec mandates `/` separators, but tolerate backslashes from
+    // Windows-authored archives.
+    let normalized = name.replace('\\', "/");
+    let path = Path::new(&normalized);
+    if path.is_absolute() {
+        return None;
+    }
+    let mut safe = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::Normal(part) => safe.push(part),
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir
+            | std::path::Component::RootDir
+            | std::path::Component::Prefix(_) => return None,
+        }
+    }
+    Some(safe)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write as _;
+    use tempfile::tempdir;
+
+    fn write_zip(entries: &[(&str, &[u8])], zip_path: &Path) {
+        let file = std::fs::File::create(zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for (name, bytes) in entries {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(bytes).expect("write entry");
+        }
+        zip.finish().expect("finish zip");
+    }
+
+    fn extract_to_temp(
+        entries: &[(&str, &[u8])],
+    ) -> (tempfile::TempDir, tempfile::TempDir) {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("world.zip");
+        write_zip(entries, &zip_path);
+
+        let out_dir = tempdir().expect("temp out dir");
+        extract_world_zip_sync(&zip_path, out_dir.path()).expect("extract");
+        (dir, out_dir)
+    }
+
+    #[test]
+    fn flat_zip_keeps_root_files() {
+        let (_, out_dir) = extract_to_temp(&[
+            ("level.dat", b"flat"),
+            ("region/r.0.0.mca", b"mca"),
+        ]);
+
+        assert!(out_dir.path().join("level.dat").exists());
+        assert!(out_dir.path().join("region/r.0.0.mca").exists());
+    }
+
+    #[test]
+    fn single_root_zip_is_stripped() {
+        let (_, out_dir) = extract_to_temp(&[
+            ("My World/level.dat", b"rooted"),
+            ("My World/region/r.0.0.mca", b"mca"),
+        ]);
+
+        assert!(out_dir.path().join("level.dat").exists());
+        assert!(!out_dir.path().join("My World").exists());
+    }
+
+    #[test]
+    fn backslash_entries_are_normalized() {
+        let (_, out_dir) = extract_to_temp(&[
+            ("My World\\level.dat", b"rooted"),
+            ("My World\\region\\r.0.0.mca", b"mca"),
+        ]);
+
+        assert!(out_dir.path().join("level.dat").exists());
+        assert!(!out_dir.path().join("My World").exists());
+    }
+
+    #[test]
+    fn traversal_entries_are_rejected() {
+        let (dir, out_dir) = extract_to_temp(&[
+            ("../../evil.txt", b"escape"),
+            ("C:/evil.txt", b"drive"),
+            ("/evil.txt", b"absolute"),
+        ]);
+
+        assert!(!dir.path().join("evil.txt").exists());
+        assert!(!out_dir.path().join("evil.txt").exists());
+        assert_eq!(
+            std::fs::read_dir(out_dir.path())
+                .expect("read out dir")
+                .count(),
+            0
+        );
+    }
+
+    #[test]
+    fn directory_entries_are_created() {
+        let (_, out_dir) = extract_to_temp(&[
+            ("My World/", b""),
+            ("My World/level.dat", b"rooted"),
+        ]);
+
+        assert!(out_dir.path().join("level.dat").exists());
+        assert!(!out_dir.path().join("My World").exists());
     }
 }
