@@ -5,7 +5,7 @@ use eyre::{Context, ContextCompat, Result, eyre};
 use std::{
     future::Future,
     io::{ErrorKind, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
 use tokio::task::spawn_blocking;
@@ -534,21 +534,45 @@ pub async fn copy(
 /// Recursively copy a directory from `from` to `to`.
 ///
 /// Creates the target directory and recursively copies all files and
-/// subdirectories.
+/// subdirectories. Directory symlinks / junctions are followed and their
+/// target subtree is materialized as a real directory; file links are copied
+/// as their target's content. Broken links and link cycles fail with a
+/// descriptive error instead of a generic read failure.
 pub async fn copy_dir(
     from: impl AsRef<std::path::Path>,
     to: impl AsRef<std::path::Path>,
 ) -> Result<(), IOError> {
+    let from = from.as_ref().to_path_buf();
+    let to = to.as_ref().to_path_buf();
+    copy_dir_inner(&from, &to, &mut Vec::new()).await
+}
+
+#[async_recursion::async_recursion]
+async fn copy_dir_inner(
+    from: &Path,
+    to: &Path,
+    dir_stack: &mut Vec<PathBuf>,
+) -> Result<(), IOError> {
     use async_walkdir::WalkDir;
     use futures::StreamExt as _;
 
-    let from = from.as_ref().to_path_buf();
-    let to = to.as_ref().to_path_buf();
+    create_dir_all(to).await?;
 
-    // Create the target directory.
-    create_dir_all(&to).await?;
+    // Track canonicalized directories on the current recursion path so a
+    // symlink pointing back to an ancestor fails cleanly instead of
+    // recursing forever.
+    let canonical = canonicalize(from)?;
+    if dir_stack.contains(&canonical) {
+        return Err(IOError::with_path(
+            std::io::Error::other(format!(
+                "symlink cycle detected while copying {from:?}"
+            )),
+            from,
+        ));
+    }
+    dir_stack.push(canonical);
 
-    let mut entries = WalkDir::new(&from);
+    let mut entries = WalkDir::new(from);
     while let Some(entry) = entries.next().await {
         let entry = entry.map_err(|e| {
             IOError::with_path(std::io::Error::other(e.to_string()), &from)
@@ -573,14 +597,45 @@ pub async fn copy_dir(
         })?;
         let target = to.join(relative);
 
-        let file_type = entry.file_type().await.map_err(|e| {
-            IOError::with_path(
-                std::io::Error::other(e.to_string()),
-                &entry_path,
-            )
-        })?;
+        let meta = tokio::fs::symlink_metadata(&entry_path)
+            .await
+            .map_err(|e| IOError::with_path(e, &entry_path))?;
 
-        if file_type.is_dir() {
+        if is_symlink_or_reparse(&meta) {
+            let raw_target = tokio::fs::read_link(&entry_path)
+                .await
+                .map_err(|e| IOError::with_path(e, &entry_path))?;
+            // Relative link targets resolve against the link's parent
+            // directory, not the process working directory.
+            let resolved = if raw_target.is_absolute() {
+                raw_target
+            } else {
+                entry_path
+                    .parent()
+                    .unwrap_or_else(|| Path::new(""))
+                    .join(raw_target)
+            };
+            let target_meta = match tokio::fs::metadata(&resolved).await {
+                Ok(meta) => meta,
+                Err(_) => {
+                    return Err(IOError::with_path(
+                        std::io::Error::other(format!(
+                            "broken symlink {entry_path:?} points to missing target {resolved:?}"
+                        )),
+                        &entry_path,
+                    ));
+                }
+            };
+            if target_meta.is_dir() {
+                // Materialize the directory link: copy the target subtree as
+                // a real directory instead of recreating the link.
+                copy_dir_inner(&resolved, &target, dir_stack).await?;
+            } else {
+                // Materialize file links as their target's content.
+                let bytes = read(&entry_path).await?;
+                write(&target, bytes).await?;
+            }
+        } else if meta.is_dir() {
             create_dir_all(&target).await?;
         } else {
             let bytes = read(&entry_path).await?;
@@ -588,6 +643,7 @@ pub async fn copy_dir(
         }
     }
 
+    dir_stack.pop();
     Ok(())
 }
 
@@ -813,5 +869,108 @@ mod windows_sharing_violation_tests {
 
         assert_eq!(error.raw_os_error(), Some(32));
         assert_eq!(attempts.load(Ordering::SeqCst), 3);
+    }
+}
+
+#[cfg(test)]
+mod copy_dir_tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn copy_dir_copies_plain_tree() {
+        let src = tempdir().expect("temp src");
+        std::fs::create_dir(src.path().join("sub")).expect("sub dir");
+        std::fs::write(src.path().join("root.txt"), b"root")
+            .expect("write root");
+        std::fs::write(src.path().join("sub/nested.txt"), b"nested")
+            .expect("write nested");
+
+        let dst = tempdir().expect("temp dst");
+        copy_dir(src.path(), dst.path().join("out"))
+            .await
+            .expect("copy");
+
+        assert_eq!(
+            std::fs::read(dst.path().join("out/root.txt")).expect("read root"),
+            b"root"
+        );
+        assert_eq!(
+            std::fs::read(dst.path().join("out/sub/nested.txt"))
+                .expect("read nested"),
+            b"nested"
+        );
+    }
+
+    #[cfg(unix)]
+    mod unix_symlinks {
+        use super::*;
+        use std::os::unix::fs::symlink;
+
+        #[tokio::test]
+        async fn copy_dir_materializes_directory_symlink() {
+            let src = tempdir().expect("temp src");
+            let real = src.path().join("real");
+            std::fs::create_dir(&real).expect("real dir");
+            std::fs::write(real.join("file.txt"), b"content")
+                .expect("write file");
+            symlink(&real, src.path().join("link")).expect("create link");
+
+            let dst = tempdir().expect("temp dst");
+            copy_dir(src.path(), dst.path().join("out"))
+                .await
+                .expect("copy");
+
+            let copied = dst.path().join("out/link/file.txt");
+            assert!(
+                copied.is_file(),
+                "directory symlink should be materialized"
+            );
+            assert_eq!(
+                std::fs::read(&copied).expect("read copied file"),
+                b"content"
+            );
+            assert!(
+                std::fs::symlink_metadata(dst.path().join("out/link"))
+                    .expect("meta")
+                    .file_type()
+                    .is_dir()
+            );
+        }
+
+        #[tokio::test]
+        async fn copy_dir_reports_broken_symlink() {
+            let src = tempdir().expect("temp src");
+            symlink(src.path().join("missing"), src.path().join("broken"))
+                .expect("create broken link");
+
+            let dst = tempdir().expect("temp dst");
+            let err = copy_dir(src.path(), dst.path().join("out"))
+                .await
+                .expect_err("broken link should fail");
+            let text = format!("{err}");
+            assert!(
+                text.contains("broken symlink"),
+                "error should mention the broken link: {text}"
+            );
+        }
+
+        #[tokio::test]
+        async fn copy_dir_rejects_symlink_cycle() {
+            let src = tempdir().expect("temp src");
+            std::fs::create_dir(src.path().join("a")).expect("a dir");
+            symlink(src.path().join("a"), src.path().join("a/back"))
+                .expect("create cycle link");
+
+            let dst = tempdir().expect("temp dst");
+            let err = copy_dir(src.path(), dst.path().join("out"))
+                .await
+                .expect_err("cycle should fail");
+            let text = format!("{err}");
+            assert!(
+                text.contains("symlink cycle"),
+                "error should mention the cycle: {text}"
+            );
+        }
     }
 }
