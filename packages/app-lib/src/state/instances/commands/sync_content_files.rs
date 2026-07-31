@@ -132,13 +132,34 @@ pub(crate) async fn sync_instance_content_files(
     sqlite::content_rows::mark_instance_files_missing(&instance.id, &mut tx)
         .await?;
 
+    // Upsert with a fresh id lookup inside the transaction. The ids assigned
+    // during the scan may be stale if a concurrent operation (e.g. batch
+    // disable renaming files to `.disabled`) moved a row after the snapshot;
+    // reusing a stale id against the moved row would trip the UNIQUE
+    // constraint on `instance_files.id` (code 1555).
+    let mut synced_files: Vec<InstanceFile> = Vec::with_capacity(files.len());
     for file in &files {
-        sqlite::content_rows::upsert_instance_file(file, &mut tx).await?;
+        let synced =
+            sqlite::content_rows::upsert_instance_file_from_parts_in_transaction(
+                sqlite::content_rows::UpsertInstanceFile {
+                    instance_id: &instance.id,
+                    relative_path: &file.relative_path,
+                    file_name: &file.file_name,
+                    enabled: file.enabled,
+                    sha1: &file.sha1,
+                    size: file.size,
+                    missing: false,
+                    local_mod_data: file.local_mod_data.as_deref(),
+                },
+                &mut tx,
+            )
+            .await?;
+        synced_files.push(synced);
     }
 
     tx.commit().await?;
 
-    Ok(files)
+    Ok(synced_files)
 }
 
 fn cleanup_install_temporary_files(

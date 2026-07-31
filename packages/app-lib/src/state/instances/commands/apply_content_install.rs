@@ -375,6 +375,72 @@ pub(crate) async fn download_project_version(
     dependent_on_version_id: Option<String>,
     state: &State,
 ) -> crate::Result<DownloadedProjectVersion> {
+    let prepared = prepare_version_download(
+        instance_id,
+        version_id,
+        reason,
+        dependent_on_version_id,
+        state,
+    )
+    .await?;
+
+    let download = download_to_path(
+        DownloadRequest::new(&prepared.url, ResourceClass::Modrinth)
+            .with_integrity(prepared.integrity)
+            .with_download_meta(prepared.download_meta),
+        &prepared.path,
+        &state.download_semaphore,
+        &state.pool,
+        None,
+    )
+    .await?;
+
+    let sha1 = if let Some(hash) = &prepared.sha1 {
+        hash.clone()
+    } else {
+        fetch::sha1_file_async(&prepared.path).await?.1
+    };
+    let project_type =
+        ProjectType::get_from_loaders(prepared.loaders.clone()).ok_or_else(|| {
+            crate::ErrorKind::InputError(format!(
+                "Unable to infer project type for version {version_id}"
+            ))
+        })?;
+
+    Ok(DownloadedProjectVersion {
+        file_name: prepared.file_name,
+        path: prepared.path,
+        sha1,
+        size: download.size,
+        project_type,
+        project_id: prepared.project_id,
+        version_id: prepared.version_id,
+    })
+}
+
+/// Everything needed to download a version file, resolved before the actual
+/// network transfer.
+struct PreparedVersionDownload {
+    url: String,
+    path: PathBuf,
+    download_meta: DownloadMeta,
+    integrity: Integrity,
+    file_name: String,
+    sha1: Option<String>,
+    loaders: Vec<String>,
+    project_id: String,
+    version_id: String,
+}
+
+/// Resolves the content scope and version metadata for a download and
+/// validates the target path, without touching the network.
+async fn prepare_version_download(
+    instance_id: &str,
+    version_id: &str,
+    reason: DownloadReason,
+    dependent_on_version_id: Option<String>,
+    state: &State,
+) -> crate::Result<PreparedVersionDownload> {
     let scope = resolve_content_scope(instance_id, None, state).await?;
     let content_set =
         content_rows::get_content_set(&scope.content_set_id, &state.pool)
@@ -449,38 +515,17 @@ pub(crate) async fn download_project_version(
         content,
         ..Integrity::default()
     };
-    let download = download_to_path(
-        DownloadRequest::new(&file.url, ResourceClass::Modrinth)
-            .with_integrity(integrity)
-            .with_download_meta(download_meta),
-        &path,
-        &state.download_semaphore,
-        &state.pool,
-        None,
-    )
-    .await?;
-    let sha1 = if let Some(hash) = file.hashes.get("sha1") {
-        hash.clone()
-    } else {
-        fetch::sha1_file_async(&path).await?.1
-    };
-    let project_type = ProjectType::get_from_loaders(version.loaders.clone())
-        .ok_or_else(|| {
-        crate::ErrorKind::InputError(format!(
-            "Unable to infer project type for version {version_id}"
-        ))
-    })?;
-    let project_id = version.project_id.clone();
-    let version_id = version.id.clone();
 
-    Ok(DownloadedProjectVersion {
-        file_name: file.filename.clone(),
+    Ok(PreparedVersionDownload {
+        url: file.url.clone(),
         path,
-        sha1,
-        size: download.size,
-        project_type,
-        project_id,
-        version_id,
+        download_meta,
+        integrity,
+        file_name: file.filename.clone(),
+        sha1: file.hashes.get("sha1").cloned(),
+        loaders: version.loaders.clone(),
+        project_id: version.project_id.clone(),
+        version_id: version.id.clone(),
     })
 }
 
@@ -869,6 +914,53 @@ pub(crate) async fn toggle_disable_project(
 ) -> crate::Result<String> {
     let scope = resolve_content_scope(instance_id, None, state).await?;
     let base = instance_full_path(state, &scope.instance);
+    let (current_path, enabled, new_path) =
+        resolve_toggle_paths(&base, project_path, desired_enabled)?;
+
+    if current_path != new_path {
+        io::rename_or_move(&base.join(&current_path), &base.join(&new_path))
+            .await?;
+    }
+
+    let file =
+        rename_indexed_file(&scope, project_path, &current_path, &new_path, enabled, state)
+            .await?;
+    let updated_entry = content_rows::set_content_entry_enabled_for_file(
+        &scope.content_set_id,
+        &file.id,
+        enabled,
+        &state.pool,
+    )
+    .await?;
+    if !updated_entry {
+        let project_type = ProjectType::get_from_parent_folder(&new_path)
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(format!(
+                    "Unable to infer project type from {new_path}"
+                ))
+            })?;
+        upsert_entry_for_file(
+            &scope,
+            &file,
+            project_type,
+            ContentSourceKind::Local,
+            None,
+            false,
+            state,
+        )
+        .await?;
+    }
+
+    Ok(new_path)
+}
+
+/// Resolves which of `project_path` / `{trimmed}.disabled` currently exists
+/// and which path the toggle should end up at.
+fn resolve_toggle_paths(
+    base: &Path,
+    project_path: &str,
+    desired_enabled: Option<bool>,
+) -> crate::Result<(String, bool, String)> {
     let trimmed = project_path.trim_end_matches(".disabled");
     let current_path = if base.join(project_path).exists() {
         project_path.to_string()
@@ -889,12 +981,19 @@ pub(crate) async fn toggle_disable_project(
     } else {
         format!("{trimmed}.disabled")
     };
+    Ok((current_path, enabled, new_path))
+}
 
-    if current_path != new_path {
-        io::rename_or_move(&base.join(&current_path), &base.join(&new_path))
-            .await?;
-    }
-
+/// Renames the instance-file DB row to match the new on-disk path, falling
+/// back to indexing the file when no row matches either name.
+async fn rename_indexed_file(
+    scope: &ContentScope,
+    project_path: &str,
+    current_path: &str,
+    new_path: &str,
+    enabled: bool,
+    state: &State,
+) -> crate::Result<InstanceFile> {
     let file_name = Path::new(&new_path)
         .file_name()
         .unwrap_or_default()
@@ -928,33 +1027,7 @@ pub(crate) async fn toggle_disable_project(
         }
         None => index_existing_file(&scope, &new_path, state).await?,
     };
-    let updated_entry = content_rows::set_content_entry_enabled_for_file(
-        &scope.content_set_id,
-        &file.id,
-        enabled,
-        &state.pool,
-    )
-    .await?;
-    if !updated_entry {
-        let project_type = ProjectType::get_from_parent_folder(&new_path)
-            .ok_or_else(|| {
-                crate::ErrorKind::InputError(format!(
-                    "Unable to infer project type from {new_path}"
-                ))
-            })?;
-        upsert_entry_for_file(
-            &scope,
-            &file,
-            project_type,
-            ContentSourceKind::Local,
-            None,
-            false,
-            state,
-        )
-        .await?;
-    }
-
-    Ok(new_path)
+    Ok(file)
 }
 
 pub(crate) async fn remove_project(
@@ -1044,7 +1117,28 @@ async fn index_existing_file(
 ) -> crate::Result<InstanceFile> {
     let full_path =
         instance_full_path(state, &scope.instance).join(relative_path);
-    let (size, sha1) = fetch::sha1_file_async(&full_path).await?;
+    // Reuse the size-keyed hash cache (same key format the content scanner
+    // uses) before hashing from disk: batch enable/disable of many untracked
+    // files otherwise re-reads every file, which is both slow and CPU-heavy.
+    let size = tokio::fs::metadata(&full_path)
+        .await
+        .map_err(|e| io::IOError::with_path(e, &full_path))?
+        .len();
+    let cache_key =
+        format!("{size}-{}/{}", scope.instance.path, relative_path);
+    let (size, sha1) = match CachedEntry::get_file_hash_many(
+        &[&cache_key],
+        None,
+        &state.pool,
+        &state.api_semaphore,
+    )
+    .await?
+    .into_iter()
+    .next()
+    {
+        Some(cached) => (cached.size, cached.hash),
+        None => fetch::sha1_file_async(&full_path).await?,
+    };
     let file_name = Path::new(relative_path)
         .file_name()
         .unwrap_or_default()
@@ -1157,33 +1251,52 @@ fn infer_project_type(bytes: &Bytes) -> crate::Result<ProjectType> {
         )
     })?;
 
-    if archive.by_name("fabric.mod.json").is_ok()
-        || archive.by_name("quilt.mod.json").is_ok()
-        || archive.by_name("META-INF/neoforge.mods.toml").is_ok()
-        || archive.by_name("META-INF/mods.toml").is_ok()
-        || archive.by_name("mcmod.info").is_ok()
-    {
-        Ok(ProjectType::Mod)
-    } else if archive.by_name("pack.mcmeta").is_ok() {
-        if archive.file_names().any(|name| name.starts_with("data/")) {
-            Ok(ProjectType::DataPack)
-        } else {
-            Ok(ProjectType::ResourcePack)
-        }
-    } else if archive
-        .file_names()
-        .any(|name| name.starts_with("shaders/"))
-    {
-        Ok(ProjectType::ShaderPack)
-    } else if archive.file_names().any(|name| name == "Metadata") {
+    if has_any_entry(
+        &mut archive,
+        &[
+            "fabric.mod.json",
+            "quilt.mod.json",
+            "META-INF/neoforge.mods.toml",
+            "META-INF/mods.toml",
+            "mcmod.info",
+        ],
+    ) {
+        return Ok(ProjectType::Mod);
+    }
+    if archive.by_name("pack.mcmeta").is_ok() {
+        return classify_pack_archive(&mut archive);
+    }
+    if archive.file_names().any(|name| name.starts_with("shaders/")) {
+        return Ok(ProjectType::ShaderPack);
+    }
+    if archive.file_names().any(|name| name == "Metadata") {
         // .litematic files (Litematica schematic format) contain a root-level
         // "Metadata" NBT entry, which is unique among Minecraft content types.
-        Ok(ProjectType::Schematic)
+        return Ok(ProjectType::Schematic);
+    }
+    Err(crate::ErrorKind::InputError(
+        "Unable to infer project type for input file".to_string(),
+    )
+    .into())
+}
+
+/// Whether the archive contains any of the given marker files.
+fn has_any_entry(
+    archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
+    names: &[&str],
+) -> bool {
+    names.iter().any(|name| archive.by_name(name).is_ok())
+}
+
+/// Distinguishes a data pack from a resource pack by the presence of a
+/// top-level `data/` directory.
+fn classify_pack_archive(
+    archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
+) -> crate::Result<ProjectType> {
+    if archive.file_names().any(|name| name.starts_with("data/")) {
+        Ok(ProjectType::DataPack)
     } else {
-        Err(crate::ErrorKind::InputError(
-            "Unable to infer project type for input file".to_string(),
-        )
-        .into())
+        Ok(ProjectType::ResourcePack)
     }
 }
 

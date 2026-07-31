@@ -668,6 +668,7 @@ pub async fn create_symlink(
 ) -> Result<(), IOError> {
     let target = target.as_ref().to_path_buf();
     let link = link.as_ref().to_path_buf();
+    let link_for_error = link.clone();
 
     if let Some(parent) = link.parent() {
         tokio::fs::create_dir_all(parent)
@@ -712,7 +713,12 @@ pub async fn create_symlink(
             }
         })
         .await
-        .unwrap()
+        .map_err(|e| {
+            IOError::with_path(
+                std::io::Error::other(format!("symlink task panicked: {e}")),
+                &link_for_error,
+            )
+        })?
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -721,7 +727,12 @@ pub async fn create_symlink(
                 .map_err(|e| IOError::with_path(e, &link))
         })
         .await
-        .unwrap()
+        .map_err(|e| {
+            IOError::with_path(
+                std::io::Error::other(format!("symlink task panicked: {e}")),
+                &link_for_error,
+            )
+        })?
     }
 }
 

@@ -75,9 +75,17 @@ fn find_json(path: &Path) -> Option<(String, String)> {
             .unwrap_or(name);
         return Some((name, content));
     }
-    // Multiple JSONs: try each one, return the first with a valid version
+    // Multiple JSONs: try each one, return the first with a valid version.
+    // A single unreadable or malformed candidate must not abort the loop.
     for jf in &json_files {
-        let content = std::fs::read_to_string(jf).ok()?;
+        let Ok(content) = std::fs::read_to_string(jf) else {
+            debug!(
+                "instance_json: path={} json={} unreadable, trying next",
+                path.display(),
+                jf.display()
+            );
+            continue;
+        };
         debug!(
             "instance_json: path={} trying json={} (len={}, first_200={:?})",
             path.display(),
@@ -85,8 +93,16 @@ fn find_json(path: &Path) -> Option<(String, String)> {
             content.len(),
             &content[..content.len().min(200)]
         );
-        let json: serde_json::Value = serde_json::from_str(&content).ok()?;
-        let version = extract_version(&json, &content);
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(&content)
+        else {
+            debug!(
+                "instance_json: path={} json={} invalid JSON, trying next",
+                path.display(),
+                jf.display()
+            );
+            continue;
+        };
+        let version = extract_version(&json, &content, None);
         if !version.is_empty() {
             let fname = jf
                 .file_stem()
@@ -110,7 +126,7 @@ fn find_json(path: &Path) -> Option<(String, String)> {
 }
 
 pub fn detect(path: &Path) -> Option<InstanceInfo> {
-    let (_name, content) = find_json(path)?;
+    let (name, content) = find_json(path)?;
     let json: Value = match serde_json::from_str(&content) {
         Ok(v) => v,
         Err(e) => {
@@ -118,7 +134,7 @@ pub fn detect(path: &Path) -> Option<InstanceInfo> {
             return None;
         }
     };
-    let mut vanilla_name = extract_version(&json, &content);
+    let mut vanilla_name = extract_version(&json, &content, Some(&name));
     debug!(
         "instance_json: path={} extract_version returned {:?}",
         path.display(),
@@ -156,7 +172,7 @@ fn normalize_version(raw: &str) -> String {
     v.trim().to_string()
 }
 
-fn extract_version(json: &Value, json_str: &str) -> String {
+fn extract_version(json: &Value, json_str: &str, folder_name: Option<&str>) -> String {
     // ① PCL download record clientVersion
     if let Some(v) = json.get("clientVersion").and_then(|v| v.as_str())
         && !v.is_empty()
@@ -199,35 +215,44 @@ fn extract_version(json: &Value, json_str: &str) -> String {
         }
     }
 
-    // ④ jar field (used with inheritsFrom in version inheritance chains)
-    if let Some(v) = json.get("jar").and_then(|v| v.as_str())
-        && !v.is_empty()
-    {
-        debug!("extract_version: method=④ jar value={}", v);
-        return v.to_string();
-    }
-
-    // ⑤ inheritsFrom (version inheritance)
+    // ④ inheritsFrom (version inheritance) — must come before the `jar`
+    // field, which is not always a version name.
     if let Some(v) = json.get("inheritsFrom").and_then(|v| v.as_str())
         && !v.is_empty()
     {
-        debug!("extract_version: method=⑤ inheritsFrom value={}", v);
+        debug!("extract_version: method=④ inheritsFrom value={}", v);
         return v.to_string();
     }
 
-    // ⑥ libraries string regex fallback (Forge/OptiFine/FabricLike lib versions)
+    // ⑤ libraries string regex fallback (Forge/OptiFine/FabricLike lib versions)
     // Use the original JSON string (from find_json) instead of re-serializing
     // the parsed Value, which would allocate a fresh string unnecessarily.
     if let Some(v) = extract_version_from_libraries(json_str) {
-        debug!("extract_version: method=⑥ libraries value={}", v);
+        debug!("extract_version: method=⑤ libraries value={}", v);
         return v;
     }
 
-    // ⑦ JSON id field → extract leading version
+    // ⑥ JSON id field → extract leading version
     if let Some(id) = json.get("id").and_then(|v| v.as_str())
         && let Some(v) = extract_version_from_id(id)
     {
-        debug!("extract_version: method=⑦ id id={} value={}", id, v);
+        debug!("extract_version: method=⑥ id id={} value={}", id, v);
+        return v;
+    }
+
+    // ⑦ jar field (legacy versions store the base game in `jar`)
+    if let Some(v) = json.get("jar").and_then(|v| v.as_str())
+        && !v.is_empty()
+    {
+        debug!("extract_version: method=⑦ jar value={}", v);
+        return v.to_string();
+    }
+
+    // ⑧ folder name fallback (renamed / non-standard instances)
+    if let Some(name) = folder_name
+        && let Some(v) = extract_version_from_id(name)
+    {
+        debug!("extract_version: method=⑧ folder_name value={}", v);
         return v;
     }
 
@@ -258,14 +283,17 @@ fn extract_version_from_libraries(content: &str) -> Option<String> {
         }
     }
     // Forge: minecraftforge:forge:1.8.9-11.15.1.1722 → "1.8.9"
-    if let Some(pos) = content.find("minecraftforge:forge:") {
-        let after = &content[pos + "minecraftforge:forge:".len()..];
-        if let Some(end) = after.find(&['"', ',', '\n', '}'] as &[char]) {
-            let ver = &after[..end];
-            if let Some(dash) = ver.find('-') {
-                return Some(ver[..dash].to_string());
+    //        net.minecraftforge:forge:1.21.1-52.0.0 (modern Forge, 1.13+)
+    for needle in ["minecraftforge:forge:", "net.minecraftforge:forge:"] {
+        if let Some(pos) = content.find(needle) {
+            let after = &content[pos + needle.len()..];
+            if let Some(end) = after.find(&['"', ',', '\n', '}'] as &[char]) {
+                let ver = &after[..end];
+                if let Some(dash) = ver.find('-') {
+                    return Some(ver[..dash].to_string());
+                }
+                return Some(ver.to_string());
             }
-            return Some(ver.to_string());
         }
     }
     // OptiFine: optifine:OptiFine:1.8.9_HD_U_H5 → "1.8.9"
@@ -383,6 +411,13 @@ fn detect_loader(
             "minecraftforge:forge:",
             Some('-'),
         )
+        .or_else(|| {
+            try_extract_version_from_needle(
+                content,
+                "net.minecraftforge:forge:",
+                Some('-'),
+            )
+        })
         .or_else(|| {
             try_extract_version_from_needle(
                 content,

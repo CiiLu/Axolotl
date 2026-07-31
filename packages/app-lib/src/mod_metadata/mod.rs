@@ -85,9 +85,12 @@ fn try_fabric(
         serde_json::from_reader(&mut file).ok()?;
 
     let authors = merge_authors(&parsed.authors, &parsed.contributors);
+    // A mod without an id cannot be identified; skip it rather than
+    // fabricating a shared placeholder that would make mods collide.
+    let mod_id = parsed.id.clone()?;
 
     Some(LocalModMetadata {
-        mod_id: parsed.id.clone().unwrap_or_else(|| "unknown".into()),
+        mod_id,
         name: parsed.name,
         version: parsed.version,
         authors,
@@ -115,9 +118,10 @@ fn try_quilt(
 
     let inner = parsed.quilt_loader;
     let authors = merge_authors(&inner.authors, &inner.contributors);
+    let mod_id = inner.id.clone()?;
 
     Some(LocalModMetadata {
-        mod_id: inner.id.unwrap_or_else(|| "unknown".into()),
+        mod_id,
         name: inner.name,
         version: inner.version,
         authors,
@@ -140,7 +144,7 @@ fn try_toml_path(
     let parsed: toml_mod::ModsToml = toml::from_str(&content).ok()?;
 
     let entry = parsed.mods?.into_iter().next()?;
-    let mod_id = entry.mod_id.clone().unwrap_or_else(|| "unknown".into());
+    let mod_id = entry.mod_id.clone()?;
 
     let authors: Vec<String> = entry
         .authors
@@ -197,9 +201,10 @@ fn try_mcmod_info(
         serde_json::from_reader(&mut file).ok()?;
 
     let entry = entries.into_iter().next()?;
+    let mod_id = entry.modid.clone()?;
 
     Some(LocalModMetadata {
-        mod_id: entry.modid.unwrap_or_else(|| "unknown".into()),
+        mod_id,
         name: entry.name,
         version: entry.version,
         authors: entry.authors.unwrap_or_default(),

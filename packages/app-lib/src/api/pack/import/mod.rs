@@ -75,255 +75,59 @@ impl fmt::Display for ImportLauncherType {
     }
 }
 
-// Return a list of importable instances from a launcher type and base path, by iterating through the folder and checking
+/// Return a list of importable instances from a launcher type and base path,
+/// by iterating through the folder and checking each candidate.
 pub async fn get_importable_instances(
     launcher_type: ImportLauncherType,
     base_path: PathBuf,
 ) -> crate::Result<Vec<ImportableInstance>> {
-    if launcher_type == ImportLauncherType::ModrinthApp {
-        let names = modrinth_app::get_importable_instances(base_path).await?;
-        return Ok(names
-            .into_iter()
-            .map(|n| ImportableInstance {
-                name: n.clone(),
-                path: n,
-            })
-            .collect());
-    }
-    // Some launchers have a different folder structure for instances
-    let instances_subfolder = match launcher_type {
+    match launcher_type {
+        ImportLauncherType::ModrinthApp => {
+            get_modrinth_app_instances(&base_path).await
+        }
         ImportLauncherType::GDLauncher | ImportLauncherType::ATLauncher => {
-            "instances".to_string()
+            get_instances_subfolder_scan(&base_path, "instances", launcher_type)
+                .await
         }
-        ImportLauncherType::Curseforge => "Instances".to_string(),
+        ImportLauncherType::Curseforge => {
+            get_instances_subfolder_scan(&base_path, "Instances", launcher_type)
+                .await
+        }
         ImportLauncherType::MultiMC => {
-            mmc::get_instances_subpath(base_path.clone().join("multimc.cfg"))
+            let subpath = mmc::get_instances_subpath(base_path.join("multimc.cfg"))
                 .await
-                .unwrap_or_else(|| "instances".to_string())
+                .unwrap_or_else(|| "instances".to_string());
+            get_instances_subfolder_scan(&base_path, &subpath, launcher_type)
+                .await
         }
-        ImportLauncherType::PrismLauncher => mmc::get_instances_subpath(
-            base_path.clone().join("prismlauncher.cfg"),
-        )
-        .await
-        .unwrap_or_else(|| "instances".to_string()),
-        ImportLauncherType::ModrinthApp => unreachable!("handled above"),
+        ImportLauncherType::PrismLauncher => {
+            let subpath = mmc::get_instances_subpath(
+                base_path.join("prismlauncher.cfg"),
+            )
+            .await
+            .unwrap_or_else(|| "instances".to_string());
+            get_instances_subfolder_scan(&base_path, &subpath, launcher_type)
+                .await
+        }
         ImportLauncherType::PCL2 | ImportLauncherType::PCL2CE => {
-            if !pe_info::folder_has_product(&base_path, "Plain Craft Launcher")
-            {
-                return Ok(Vec::new());
-            }
-            let mut instances = Vec::new();
-            let mut seen = std::collections::HashSet::new();
-            // Try both PCL2 registry and PCLCE config — the user may have
-            // instances registered in either or both sources.
-            if pcl::read_pcl_registry().is_some() {
-                for (name, dir) in pcl::get_pcl_instances() {
-                    for (iname, ipath) in
-                        scan_instances_at(&PathBuf::from(dir), Some(&name))
-                            .await
-                    {
-                        if seen.insert(ipath.clone()) {
-                            instances.push(ImportableInstance {
-                                name: iname,
-                                path: ipath.to_string_lossy().to_string(),
-                            });
-                        }
-                    }
-                }
-            }
-            if pcl::config_exists() {
-                for (name, dir) in pcl::get_pclce_instances() {
-                    for (iname, ipath) in
-                        scan_instances_at(&PathBuf::from(dir), Some(&name))
-                            .await
-                    {
-                        if seen.insert(ipath.clone()) {
-                            instances.push(ImportableInstance {
-                                name: iname,
-                                path: ipath.to_string_lossy().to_string(),
-                            });
-                        }
-                    }
-                }
-            }
-            return Ok(instances);
+            get_pcl_instances(&base_path).await
         }
-        ImportLauncherType::HMCL => {
-            if !hmcl::config_exists(&base_path) {
-                return Ok(Vec::new());
-            }
-            let mut instances = Vec::new();
-            for (name, path) in hmcl::get_instances(&base_path) {
-                for (iname, ipath) in
-                    scan_instances_at(&PathBuf::from(path), Some(&name)).await
-                {
-                    instances.push(ImportableInstance {
-                        name: iname,
-                        path: ipath.to_string_lossy().to_string(),
-                    });
-                }
-            }
-            return Ok(instances);
-        }
-        ImportLauncherType::Generic => {
-            return Ok(scan_instances_at(&base_path, None)
-                .await
-                .into_iter()
-                .map(|(n, p)| ImportableInstance {
-                    name: n,
-                    path: p.to_string_lossy().to_string(),
-                })
-                .collect());
-        }
+        ImportLauncherType::HMCL => get_hmcl_instances(&base_path).await,
+        ImportLauncherType::Generic => get_generic_instances(&base_path).await,
         ImportLauncherType::Unknown => {
-            let mut instances: Vec<ImportableInstance> = Vec::new();
-            let mut seen: std::collections::HashSet<PathBuf> =
-                std::collections::HashSet::new();
-
-            // PCL2
-            if pe_info::folder_has_product(&base_path, "Plain Craft Launcher")
-                && pcl::read_pcl_registry().is_some()
-            {
-                for (name, dir) in pcl::get_pcl_instances() {
-                    for (iname, ipath) in
-                        scan_instances_at(&PathBuf::from(dir), Some(&name))
-                            .await
-                    {
-                        if seen.insert(ipath.clone()) {
-                            instances.push(ImportableInstance {
-                                name: iname,
-                                path: ipath.to_string_lossy().to_string(),
-                            });
-                        }
-                    }
-                }
-            }
-
-            // PCL2CE
-            if pe_info::folder_has_product(&base_path, "Plain Craft Launcher")
-                && pcl::config_exists()
-            {
-                for (name, dir) in pcl::get_pclce_instances() {
-                    for (iname, ipath) in
-                        scan_instances_at(&PathBuf::from(dir), Some(&name))
-                            .await
-                    {
-                        if seen.insert(ipath.clone()) {
-                            instances.push(ImportableInstance {
-                                name: iname,
-                                path: ipath.to_string_lossy().to_string(),
-                            });
-                        }
-                    }
-                }
-            }
-
-            // HMCL
-            if hmcl::config_exists(&base_path) {
-                for (name, dir) in hmcl::get_instances(&base_path) {
-                    for (iname, ipath) in
-                        scan_instances_at(&PathBuf::from(dir), Some(&name))
-                            .await
-                    {
-                        if seen.insert(ipath.clone()) {
-                            instances.push(ImportableInstance {
-                                name: iname,
-                                path: ipath.to_string_lossy().to_string(),
-                            });
-                        }
-                    }
-                }
-            }
-
-            // ModrinthApp: uses its internal SQLite database; query real
-            // physical profile paths for accurate dedup.
-            {
-                let pairs = modrinth_app::get_importable_instances_with_paths(
-                    base_path.clone(),
-                )
-                .await
-                .unwrap_or_default();
-                for (iname, ipath) in pairs {
-                    if seen.insert(ipath.clone()) {
-                        instances.push(ImportableInstance {
-                            name: iname,
-                            path: ipath.to_string_lossy().to_string(),
-                        });
-                    }
-                }
-            }
-
-            // Remaining launcher types: call get_importable_instances and
-            // reconstruct physical paths for dedup.
-            let other_types = [
-                ImportLauncherType::MultiMC,
-                ImportLauncherType::PrismLauncher,
-                ImportLauncherType::ATLauncher,
-                ImportLauncherType::GDLauncher,
-                ImportLauncherType::Curseforge,
-            ];
-            for lt in other_types {
-                if let Ok(found) =
-                    Box::pin(get_importable_instances(lt, base_path.clone()))
-                        .await
-                {
-                    let instances_folder = match lt {
-                        ImportLauncherType::MultiMC => {
-                            let subpath = mmc::get_instances_subpath(
-                                base_path.clone().join("multimc.cfg"),
-                            )
-                            .await
-                            .unwrap_or_else(|| "instances".to_string());
-                            base_path.join(&subpath)
-                        }
-                        ImportLauncherType::PrismLauncher => {
-                            let subpath = mmc::get_instances_subpath(
-                                base_path.clone().join("prismlauncher.cfg"),
-                            )
-                            .await
-                            .unwrap_or_else(|| "instances".to_string());
-                            base_path.join(&subpath)
-                        }
-                        ImportLauncherType::ATLauncher
-                        | ImportLauncherType::GDLauncher => {
-                            base_path.join("instances")
-                        }
-                        ImportLauncherType::Curseforge => {
-                            base_path.join("Instances")
-                        }
-                        _ => unreachable!(),
-                    };
-                    for inst in found {
-                        let ipath = instances_folder.join(&inst.name);
-                        if seen.insert(ipath.clone()) {
-                            instances.push(ImportableInstance {
-                                name: inst.name,
-                                path: ipath.to_string_lossy().to_string(),
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Generic fallback: scan versions/ subdirectory and base path
-            // for instance.json files (handles .minecraft and other unrecognized launchers)
-            if instances.is_empty() {
-                instances.extend(
-                    scan_instances_at(&base_path, None).await.into_iter().map(
-                        |(n, p)| ImportableInstance {
-                            name: n,
-                            path: p.to_string_lossy().to_string(),
-                        },
-                    ),
-                );
-            }
-
-            instances.sort_by(|a, b| a.name.cmp(&b.name));
-            return Ok(instances);
+            get_unknown_launcher_instances(&base_path).await
         }
-    };
+    }
+}
 
-    let instances_folder = base_path.join(&instances_subfolder);
+/// Scans a launcher's instances subfolder, validating each candidate with the
+/// launcher-specific check.
+async fn get_instances_subfolder_scan(
+    base_path: &Path,
+    instances_subfolder: &str,
+    launcher_type: ImportLauncherType,
+) -> crate::Result<Vec<ImportableInstance>> {
+    let instances_folder = base_path.join(instances_subfolder);
     let mut result = Vec::new();
     let mut dir = io::read_dir(&instances_folder).await.map_err(|_| {
         crate::ErrorKind::InputError(format!(
@@ -350,6 +154,202 @@ pub async fn get_importable_instances(
         }
     }
     Ok(result)
+}
+
+/// Collects Modrinth App profiles from its internal database.
+async fn get_modrinth_app_instances(
+    base_path: &Path,
+) -> crate::Result<Vec<ImportableInstance>> {
+    let names = modrinth_app::get_importable_instances(base_path.to_path_buf())
+        .await?;
+    Ok(names
+        .into_iter()
+        .map(|n| ImportableInstance {
+            name: n.clone(),
+            path: n,
+        })
+        .collect())
+}
+
+/// Collects PCL2 / PCL2CE instances from the registry and CE config,
+/// de-duplicating paths that appear in both sources.
+async fn get_pcl_instances(base_path: &Path) -> crate::Result<Vec<ImportableInstance>> {
+    if !pe_info::folder_has_product(base_path, "Plain Craft Launcher") {
+        return Ok(Vec::new());
+    }
+    let mut collector = InstanceCollector::new();
+    // Try both PCL2 registry and PCLCE config — the user may have instances
+    // registered in either or both sources.
+    if pcl::read_pcl_registry().is_some() {
+        collect_launcher_instances(&mut collector, pcl::get_pcl_instances())
+            .await;
+    }
+    if pcl::config_exists() {
+        collect_launcher_instances(&mut collector, pcl::get_pclce_instances())
+            .await;
+    }
+    Ok(collector.instances)
+}
+
+/// Collects HMCL instances from its launcher config.
+async fn get_hmcl_instances(base_path: &Path) -> crate::Result<Vec<ImportableInstance>> {
+    if !hmcl::config_exists(base_path) {
+        return Ok(Vec::new());
+    }
+    let mut collector = InstanceCollector::new();
+    collect_launcher_instances(&mut collector, hmcl::get_instances(base_path))
+        .await;
+    Ok(collector.instances)
+}
+
+/// Scans a generic launcher folder for instance JSONs.
+async fn get_generic_instances(base_path: &Path) -> crate::Result<Vec<ImportableInstance>> {
+    Ok(scan_instances_at(base_path, None)
+        .await
+        .into_iter()
+        .map(|(n, p)| ImportableInstance {
+            name: n,
+            path: p.to_string_lossy().to_string(),
+        })
+        .collect())
+}
+
+/// Probes every known launcher type in a folder and merges all found
+/// instances, de-duplicating by resolved path.
+async fn get_unknown_launcher_instances(
+    base_path: &Path,
+) -> crate::Result<Vec<ImportableInstance>> {
+    let mut collector = InstanceCollector::new();
+
+    // PCL2
+    if pe_info::folder_has_product(base_path, "Plain Craft Launcher")
+        && pcl::read_pcl_registry().is_some()
+    {
+        collect_launcher_instances(&mut collector, pcl::get_pcl_instances())
+            .await;
+    }
+
+    // PCL2CE
+    if pe_info::folder_has_product(base_path, "Plain Craft Launcher")
+        && pcl::config_exists()
+    {
+        collect_launcher_instances(&mut collector, pcl::get_pclce_instances())
+            .await;
+    }
+
+    // HMCL
+    if hmcl::config_exists(base_path) {
+        collect_launcher_instances(
+            &mut collector,
+            hmcl::get_instances(base_path),
+        )
+        .await;
+    }
+
+    // ModrinthApp: uses its internal SQLite database; query real physical
+    // profile paths for accurate dedup.
+    for (iname, ipath) in
+        modrinth_app::get_importable_instances_with_paths(
+            base_path.to_path_buf(),
+        )
+        .await
+        .unwrap_or_default()
+    {
+        collector.push(iname, ipath);
+    }
+
+    collect_subfolder_launcher_instances(&mut collector, base_path).await;
+
+    // Generic fallback: scan versions/ subdirectory and base path for
+    // instance.json files (handles .minecraft and other unrecognized launchers).
+    if collector.instances.is_empty() {
+        for (name, path) in scan_instances_at(base_path, None).await {
+            collector.instances.push(ImportableInstance {
+                name,
+                path: path.to_string_lossy().to_string(),
+            });
+        }
+    }
+
+    collector.instances.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(collector.instances)
+}
+
+/// Collects instances from launchers with a dedicated instances subfolder
+/// (MultiMC, PrismLauncher, ATLauncher, GDLauncher, CurseForge).
+async fn collect_subfolder_launcher_instances(
+    collector: &mut InstanceCollector,
+    base_path: &Path,
+) {
+    let other_types = [
+        (ImportLauncherType::MultiMC, "multimc.cfg"),
+        (ImportLauncherType::PrismLauncher, "prismlauncher.cfg"),
+        (ImportLauncherType::ATLauncher, "instances"),
+        (ImportLauncherType::GDLauncher, "instances"),
+        (ImportLauncherType::Curseforge, "Instances"),
+    ];
+    for (lt, marker) in other_types {
+        let subpath = match lt {
+            ImportLauncherType::MultiMC | ImportLauncherType::PrismLauncher => {
+                mmc::get_instances_subpath(base_path.join(marker))
+                    .await
+                    .unwrap_or_else(|| "instances".to_string())
+            }
+            ImportLauncherType::ATLauncher | ImportLauncherType::GDLauncher => {
+                "instances".to_string()
+            }
+            ImportLauncherType::Curseforge => "Instances".to_string(),
+            _ => unreachable!(),
+        };
+        if let Ok(found) =
+            get_instances_subfolder_scan(base_path, &subpath, lt).await
+        {
+            for inst in found {
+                collector.push(inst.name, PathBuf::from(inst.path));
+            }
+        }
+    }
+}
+
+/// Runs `scan_instances_at` over every source folder and pushes de-duplicated
+/// results into the collector.
+async fn collect_launcher_instances(
+    collector: &mut InstanceCollector,
+    sources: Vec<(String, String)>,
+) {
+    for (name, dir) in sources {
+        for (iname, ipath) in
+            scan_instances_at(&PathBuf::from(dir), Some(&name)).await
+        {
+            collector.push(iname, ipath);
+        }
+    }
+}
+
+/// Collects importable instances while de-duplicating by resolved path.
+struct InstanceCollector {
+    instances: Vec<ImportableInstance>,
+    seen: std::collections::HashSet<PathBuf>,
+}
+
+impl InstanceCollector {
+    fn new() -> Self {
+        Self {
+            instances: Vec::new(),
+            seen: std::collections::HashSet::new(),
+        }
+    }
+
+    /// Pushes an instance unless a path with the same resolved path was
+    /// already collected.
+    fn push(&mut self, name: String, path: PathBuf) {
+        if self.seen.insert(path.clone()) {
+            self.instances.push(ImportableInstance {
+                name,
+                path: path.to_string_lossy().to_string(),
+            });
+        }
+    }
 }
 
 async fn scan_instances_at(
@@ -425,23 +425,38 @@ fn split_config_name(name: &str) -> (&str, &str) {
     name.split_once(':').unwrap_or((name, ""))
 }
 
-// Helper to import an instance from a generic folder with config name resolution
-async fn import_configured_instance(
-    instance_id: &str,
+/// Everything needed to import one instance, grouped so launcher-specific
+/// importers don't need to thread a dozen parameters through every call.
+struct ImportJob {
+    instance_id: String,
     base_path: PathBuf,
     instance_folder: String,
-    get_game_dir: impl FnOnce(&str) -> Option<String>,
+    /// Pre-resolved path from frontend scanning (PCL2/PCL2CE only).
+    instance_path: Option<String>,
     reporter: InstallProgressReporter,
-    details: InstallPhaseDetails,
     symlink: bool,
+}
+
+/// Imports an instance from a generic folder with config name resolution.
+async fn import_configured_instance(
+    job: &ImportJob,
+    details: InstallPhaseDetails,
+    get_game_dir: impl FnOnce(&str) -> Option<String>,
 ) -> crate::Result<()> {
-    let (config_name, rest) = split_config_name(&instance_folder);
+    let (config_name, rest) = split_config_name(&job.instance_folder);
     let game_dir = get_game_dir(config_name)
         .map(PathBuf::from)
-        .unwrap_or_else(|| base_path.clone());
+        .unwrap_or_else(|| job.base_path.clone());
     let target = if rest.is_empty() { config_name } else { rest };
     let path = resolve_instance_path(&game_dir, target);
-    generic::import_generic(path, instance_id, reporter, details, symlink).await
+    generic::import_generic(
+        path,
+        &job.instance_id,
+        job.reporter.clone(),
+        details,
+        job.symlink,
+    )
+    .await
 }
 
 pub(crate) async fn import_instance_with_reporter(
@@ -454,53 +469,88 @@ pub(crate) async fn import_instance_with_reporter(
     symlink: bool,
 ) -> crate::Result<()> {
     import_instance_inner(
-        instance_id,
+        ImportJob {
+            instance_id: instance_id.to_string(),
+            base_path,
+            instance_folder,
+            instance_path,
+            reporter,
+            symlink,
+        },
         launcher_type,
-        base_path,
-        instance_folder,
-        instance_path,
-        reporter,
-        symlink,
     )
     .await
 }
 
 async fn import_instance_inner(
-    instance_id: &str,
+    job: ImportJob,
     launcher_type: ImportLauncherType,
-    base_path: PathBuf,
-    instance_folder: String,
-    instance_path: Option<String>,
-    reporter: InstallProgressReporter,
-    symlink: bool,
 ) -> crate::Result<()> {
+    let instance_id = job.instance_id.clone();
     tracing::debug!(
-        "Importing instance from {instance_folder} (symlink={symlink}, launcher_type={launcher_type})"
+        "Importing instance from {} (symlink={}, launcher_type={launcher_type})",
+        job.instance_folder,
+        job.symlink
     );
     let details = InstallPhaseDetails::Import {
         launcher_type,
-        instance_folder: instance_folder.clone(),
+        instance_folder: job.instance_folder.clone(),
     };
-    let res = match launcher_type {
+    let res = if launcher_type == ImportLauncherType::Unknown {
+        import_unknown_launcher(job).await
+    } else {
+        import_via_launcher(launcher_type, &job, details).await
+    };
+
+    // If import failed, delete the profile
+    match res {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::warn!("Import failed: {:?}", e);
+            let _ = crate::api::instance::remove(&instance_id).await;
+            return Err(e);
+        }
+    }
+
+    tracing::debug!("Completed import.");
+    Ok(())
+}
+
+/// Runs the launcher-specific import step for a known launcher type.
+async fn import_via_launcher(
+    launcher_type: ImportLauncherType,
+    job: &ImportJob,
+    details: InstallPhaseDetails,
+) -> crate::Result<()> {
+    let ImportJob {
+        instance_id,
+        base_path,
+        instance_folder,
+        instance_path,
+        reporter,
+        symlink,
+    } = job;
+
+    match launcher_type {
         ImportLauncherType::MultiMC | ImportLauncherType::PrismLauncher => {
             mmc::import_mmc(
-                base_path,       // path to base mmc folder
-                instance_folder, // instance folder in mmc_base_path
+                base_path.clone(),       // path to base mmc folder
+                instance_folder.clone(), // instance folder in mmc_base_path
                 instance_id,
                 reporter.clone(),
-                details.clone(),
-                symlink,
+                details,
+                *symlink,
             )
             .await
         }
         ImportLauncherType::ATLauncher => {
             atlauncher::import_atlauncher(
-                base_path,       // path to atlauncher folder
-                instance_folder, // instance folder in atlauncher
+                base_path.clone(),       // path to atlauncher folder
+                instance_folder.clone(), // instance folder in atlauncher
                 instance_id,
                 reporter.clone(),
-                details.clone(),
-                symlink,
+                details,
+                *symlink,
             )
             .await
         }
@@ -509,8 +559,8 @@ async fn import_instance_inner(
                 base_path.join("instances").join(instance_folder), // path to gdlauncher folder
                 instance_id,
                 reporter.clone(),
-                details.clone(),
-                symlink,
+                details,
+                *symlink,
             )
             .await
         }
@@ -519,19 +569,19 @@ async fn import_instance_inner(
                 base_path.join("Instances").join(instance_folder), // path to curseforge folder
                 instance_id,
                 reporter.clone(),
-                details.clone(),
-                symlink,
+                details,
+                *symlink,
             )
             .await
         }
         ImportLauncherType::ModrinthApp => {
             modrinth_app::import_instance(
-                base_path,
-                instance_folder,
+                base_path.clone(),
+                instance_folder.clone(),
                 instance_id,
                 reporter.clone(),
-                details.clone(),
-                symlink,
+                details,
+                *symlink,
             )
             .await
         }
@@ -542,106 +592,82 @@ async fn import_instance_inner(
                     PathBuf::from(path),
                     instance_id,
                     reporter.clone(),
-                    details.clone(),
-                    symlink,
+                    details,
+                    *symlink,
                 )
                 .await
             } else {
                 // Legacy fallback: resolve from config/registry
                 import_configured_instance(
-                    instance_id,
-                    base_path,
-                    instance_folder,
+                    job,
+                    details,
                     |name| {
                         pcl::get_pcl_instance_path(name)
                             .or_else(|| pcl::get_pclce_instance_path(name))
                     },
-                    reporter.clone(),
-                    details.clone(),
-                    symlink,
                 )
                 .await
             }
         }
         ImportLauncherType::HMCL => {
             import_configured_instance(
-                instance_id,
-                base_path.clone(),
-                instance_folder,
+                job,
+                details,
                 |name| hmcl::get_instance_path(&base_path, name),
-                reporter.clone(),
-                details.clone(),
-                symlink,
             )
             .await
         }
         ImportLauncherType::Generic => {
-            let path = resolve_instance_path(&base_path, &instance_folder);
+            let path = resolve_instance_path(base_path, instance_folder);
             generic::import_generic(
                 path,
                 instance_id,
                 reporter.clone(),
-                details.clone(),
-                symlink,
+                details,
+                *symlink,
             )
             .await
         }
-        ImportLauncherType::Unknown => {
-            let types = [
-                ImportLauncherType::PCL2,
-                ImportLauncherType::PCL2CE,
-                ImportLauncherType::HMCL,
-                ImportLauncherType::MultiMC,
-                ImportLauncherType::PrismLauncher,
-                ImportLauncherType::ATLauncher,
-                ImportLauncherType::GDLauncher,
-                ImportLauncherType::Curseforge,
-                ImportLauncherType::ModrinthApp,
-            ];
-            let mut matched = false;
-            for lt in types {
-                if let Ok(instances) =
-                    Box::pin(get_importable_instances(lt, base_path.clone()))
-                        .await
-                    && instances.iter().any(|i| i.name == instance_folder)
-                {
-                    matched = true;
-                    Box::pin(import_instance_inner(
-                        instance_id,
-                        lt,
-                        base_path.clone(),
-                        instance_folder.clone(),
-                        None, // unknown type — let the specific branch resolve the path
-                        reporter.clone(),
-                        symlink,
-                    ))
-                    .await?;
-                    break;
-                }
-            }
-            if !matched {
-                return Err(crate::ErrorKind::InputError(
-                    "Could not determine launcher type for the given path"
-                        .to_string(),
-                )
-                .into());
-            }
-            return Ok(());
-        }
-    };
+        ImportLauncherType::Unknown => unreachable!("handled by import_instance_inner"),
+    }
+}
 
-    // If import failed, delete the profile
-    match res {
-        Ok(_) => {}
-        Err(e) => {
-            tracing::warn!("Import failed: {:?}", e);
-            let _ = crate::api::instance::remove(instance_id).await;
-            return Err(e);
+/// Tries to identify an unknown launcher folder by probing each known
+/// launcher type, then dispatches the matching import.
+async fn import_unknown_launcher(job: ImportJob) -> crate::Result<()> {
+    let types = [
+        ImportLauncherType::PCL2,
+        ImportLauncherType::PCL2CE,
+        ImportLauncherType::HMCL,
+        ImportLauncherType::MultiMC,
+        ImportLauncherType::PrismLauncher,
+        ImportLauncherType::ATLauncher,
+        ImportLauncherType::GDLauncher,
+        ImportLauncherType::Curseforge,
+        ImportLauncherType::ModrinthApp,
+    ];
+    for lt in types {
+        if let Ok(instances) = Box::pin(get_importable_instances(
+            lt,
+            job.base_path.clone(),
+        ))
+        .await
+            && instances.iter().any(|i| i.name == job.instance_folder)
+        {
+            let details = InstallPhaseDetails::Import {
+                launcher_type: lt,
+                instance_folder: job.instance_folder.clone(),
+            };
+            let mut job = job;
+            // Unknown type — let the specific branch resolve the path.
+            job.instance_path = None;
+            return import_via_launcher(lt, &job, details).await;
         }
     }
-
-    tracing::debug!("Completed import.");
-    Ok(())
+    Err(crate::ErrorKind::InputError(
+        "Could not determine launcher type for the given path".to_string(),
+    )
+    .into())
 }
 
 /// Returns the default path for the given launcher type
@@ -810,32 +836,7 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
     let instance_path =
         crate::api::instance::get_full_path(instance_id).await?;
 
-    // Collect all files recursively
-    let files = get_all_subfiles(&dotminecraft, false).await?;
-
-    // Filter out launcher metadata files at the source root:
-    // <dirname>.json (instance config), <dirname>.jar (custom jar override)
-    let dirname = dotminecraft
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let skip_json = format!("{dirname}.json");
-    let skip_jar = format!("{dirname}.jar");
-
-    let files: Vec<PathBuf> = files
-        .into_iter()
-        .filter(|abs_path| {
-            let Ok(rel) = abs_path.strip_prefix(&dotminecraft) else {
-                return true;
-            };
-            // Only filter at root level
-            if rel.parent().is_some_and(|p| !p.as_os_str().is_empty()) {
-                return true;
-            }
-            let name = rel.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            name != skip_json && name != skip_jar
-        })
-        .collect();
+    let files = collect_dotminecraft_files(&dotminecraft).await?;
 
     let total = files.len() as u64;
     if total == 0 {
@@ -853,15 +854,68 @@ pub(crate) async fn copy_dotminecraft_with_reporter(
         return Ok(());
     }
 
+    copy_files_with_progress(
+        &instance_path,
+        files,
+        io_semaphore,
+        reporter,
+        details,
+    )
+    .await
+}
+
+/// Collects all files under `.minecraft`, excluding launcher metadata files
+/// at the source root (`<dirname>.json` and `<dirname>.jar`).
+async fn collect_dotminecraft_files(
+    dotminecraft: &Path,
+) -> crate::Result<Vec<(PathBuf, PathBuf)>> {
+    // Collect all files recursively
+    let files = get_all_subfiles(dotminecraft, false).await?;
+
+    // Filter out launcher metadata files at the source root:
+    // <dirname>.json (instance config), <dirname>.jar (custom jar override)
+    let dirname = dotminecraft
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let skip_json = format!("{dirname}.json");
+    let skip_jar = format!("{dirname}.jar");
+
+    Ok(files
+        .into_iter()
+        .filter_map(|abs_path| {
+            let rel = abs_path.strip_prefix(dotminecraft).ok()?.to_path_buf();
+            // Only filter at root level
+            if rel.parent().is_some_and(|p| !p.as_os_str().is_empty()) {
+                return Some((abs_path, rel));
+            }
+            let name = rel.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if name != skip_json && name != skip_jar {
+                Some((abs_path, rel))
+            } else {
+                None
+            }
+        })
+        .collect())
+}
+
+/// Copies the collected files into the instance profile concurrently, bounded
+/// by the I/O semaphore, reporting progress after every completed file.
+async fn copy_files_with_progress(
+    instance_path: &Path,
+    files: Vec<(PathBuf, PathBuf)>,
+    io_semaphore: &IoSemaphore,
+    reporter: InstallProgressReporter,
+    details: InstallPhaseDetails,
+) -> crate::Result<()> {
+    let total = files.len() as u64;
+
     // Build (src, dst) pairs, then copy concurrently bounded by IoSemaphore
     let mut copy_tasks: FuturesUnordered<_> = files
-        .iter()
-        .map(|src| {
-            let dst = instance_path.join(
-                src.strip_prefix(&dotminecraft)
-                    .expect("prefix invariant from filter above"),
-            );
-            (src.clone(), dst)
+        .into_iter()
+        .map(|(src, rel)| {
+            let dst = instance_path.join(&rel);
+            (src, dst)
         })
         .map(|(src, dst)| {
             async move {
