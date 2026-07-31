@@ -728,7 +728,7 @@ pub(crate) async fn add_project_bytes(
 
     cache_file_hash(
         bytes.clone(),
-        &scope.instance.id,
+        &scope.instance.path,
         &relative_path,
         Some(&sha1),
         Some(project_type),
@@ -830,7 +830,7 @@ pub(crate) async fn record_project_file_atomic(
         .await?;
     }
     cache_file_hash_metadata(
-        &scope.instance.id,
+        &scope.instance.path,
         relative_path,
         size,
         sha1.to_string(),

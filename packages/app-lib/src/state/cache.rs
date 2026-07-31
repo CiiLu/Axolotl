@@ -2479,7 +2479,7 @@ impl CachedEntry {
 
 pub async fn cache_file_hash(
     bytes: bytes::Bytes,
-    instance_id: &str,
+    instance_path: &str,
     path: &str,
     known_hash: Option<&str>,
     project_type: Option<ProjectType>,
@@ -2495,7 +2495,7 @@ pub async fn cache_file_hash(
     };
 
     cache_file_hash_metadata(
-        instance_id,
+        instance_path,
         path,
         size as u64,
         hash,
@@ -2507,7 +2507,7 @@ pub async fn cache_file_hash(
 }
 
 pub async fn cache_file_hash_metadata(
-    instance_id: &str,
+    instance_path: &str,
     path: &str,
     size: u64,
     hash: String,
@@ -2526,7 +2526,7 @@ pub async fn cache_file_hash_metadata(
     // Streamed extraction already computed these values, so avoid buffering the file just to cache them.
     CachedEntry::upsert_many(
         &[CacheValue::FileHash(CachedFileHash {
-            path: format!("{instance_id}/{path}"),
+            path: format!("{instance_path}/{path}"),
             size,
             hash,
             project_type,

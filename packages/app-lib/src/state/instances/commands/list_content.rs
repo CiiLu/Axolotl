@@ -1,5 +1,6 @@
 use super::sync_content_files::{
-    project_type_for_file, sync_instance_content_files,
+    modrinth_update_enabled, project_type_for_file,
+    sync_instance_content_files,
 };
 use crate::State;
 use crate::pack::install_from::{PackFileHash, PackFormat};
@@ -1268,7 +1269,7 @@ async fn content_projects_for_scope(
             }
         }
 
-        let update = (origin_provider == Some(ContentProvider::Modrinth))
+        let update = modrinth_update_enabled(origin_provider, &provider_refs)
             .then(|| {
                 modrinth_metadata.as_ref().and_then(|metadata| {
                     let update_ids =
@@ -1699,9 +1700,9 @@ async fn content_files_to_content_items(
                             })
                         })
                     }),
-                update: (origin_provider == Some(ContentProvider::Modrinth))
-                    .then(|| file.update.clone())
-                    .flatten()
+                update: file
+                    .update
+                    .clone()
                     .or_else(|| {
                         curseforge_update_id.and_then(|target| {
                             let reference =

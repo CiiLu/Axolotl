@@ -10,7 +10,8 @@ use crate::state::{
 use std::collections::HashMap;
 
 use super::sync_content_files::{
-    project_type_for_file, sync_instance_content_files,
+    modrinth_update_enabled, project_type_for_file,
+    sync_instance_content_files,
 };
 
 #[derive(Clone, Debug)]
@@ -111,16 +112,15 @@ pub(crate) async fn check_content_updates(
     let hashes = files
         .iter()
         .filter(|file| {
-            let refs = provider_refs_by_file_id.get(&file.id);
-            let origin = origin_provider_by_file_id
-                .get(&file.id)
-                .and_then(|provider| *provider);
-            refs.is_none_or(|refs| {
-                refs.is_empty()
-                    || (refs.iter().all(|reference| {
-                        matches!(reference, ContentProviderRef::Modrinth { .. })
-                    }) && origin != Some(ContentProvider::CurseForge))
-            })
+            modrinth_update_enabled(
+                origin_provider_by_file_id
+                    .get(&file.id)
+                    .and_then(|provider| *provider),
+                provider_refs_by_file_id
+                    .get(&file.id)
+                    .map(Vec::as_slice)
+                    .unwrap_or_default(),
+            )
         })
         .map(|file| file.sha1.as_str())
         .collect::<Vec<_>>();
@@ -137,25 +137,20 @@ pub(crate) async fn check_content_updates(
         .collect::<HashMap<_, _>>();
     let mut candidates = Vec::new();
     for file in files {
-        let refs = provider_refs_by_file_id.get(&file.id);
-        if refs.is_some_and(|refs| {
-            !refs.is_empty()
-                && !refs.iter().any(|reference| {
-                    matches!(reference, ContentProviderRef::Modrinth { .. })
-                })
-        }) {
+        if !modrinth_update_enabled(
+            origin_provider_by_file_id
+                .get(&file.id)
+                .and_then(|provider| *provider),
+            provider_refs_by_file_id
+                .get(&file.id)
+                .map(Vec::as_slice)
+                .unwrap_or_default(),
+        ) {
             continue;
         }
         let Some(metadata) = file_info_by_hash.get(&file.sha1) else {
             continue;
         };
-        if origin_provider_by_file_id
-            .get(&file.id)
-            .and_then(|provider| *provider)
-            != Some(ContentProvider::Modrinth)
-        {
-            continue;
-        }
         let Some(project_type) = project_type_for_file(&file) else {
             continue;
         };

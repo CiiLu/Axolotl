@@ -1,7 +1,7 @@
 use crate::State;
 use crate::state::instances::adapters::{filesystem, sqlite};
 use crate::state::instances::{Instance, InstanceFile};
-use crate::state::{CachedEntry, ProjectType};
+use crate::state::{CachedEntry, ContentProvider, ContentProviderRef, ProjectType};
 use chrono::Utc;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -170,6 +170,71 @@ pub(crate) fn project_type_for_file(
     filesystem::project_type_from_relative_path(&file.relative_path)
 }
 
+/// Whether a file may receive Modrinth update suggestions.
+///
+/// Files installed from Modrinth (origin `Modrinth`) always qualify. Untracked
+/// or locally recorded files (no origin) qualify as long as no CurseForge
+/// reference ties them to a different provider; CurseForge-origin files are
+/// handled by the CurseForge update path instead.
+pub(crate) fn modrinth_update_enabled(
+    origin_provider: Option<ContentProvider>,
+    provider_refs: &[ContentProviderRef],
+) -> bool {
+    match origin_provider {
+        Some(ContentProvider::Modrinth) => true,
+        Some(ContentProvider::CurseForge) => false,
+        None => provider_refs
+            .iter()
+            .all(|reference| matches!(reference, ContentProviderRef::Modrinth { .. })),
+    }
+}
+
 fn instance_file_id() -> String {
     format!("instance-file:{}", Uuid::new_v4())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::{
+        CurseForgeFileId, CurseForgeProjectId, ModrinthProjectId,
+        ModrinthVersionId,
+    };
+
+    fn modrinth_ref() -> ContentProviderRef {
+        ContentProviderRef::Modrinth {
+            project_id: ModrinthProjectId::new("project").unwrap(),
+            version_id: Some(ModrinthVersionId::new("version").unwrap()),
+        }
+    }
+
+    fn curseforge_ref() -> ContentProviderRef {
+        ContentProviderRef::CurseForge {
+            project_id: CurseForgeProjectId::new(42).unwrap(),
+            file_id: Some(CurseForgeFileId::new(7).unwrap()),
+        }
+    }
+
+    #[test]
+    fn untracked_files_qualify_for_modrinth_updates() {
+        assert!(modrinth_update_enabled(None, &[]));
+        assert!(modrinth_update_enabled(None, &[modrinth_ref()]));
+    }
+
+    #[test]
+    fn curseforge_tracked_files_do_not_qualify_for_modrinth_updates() {
+        assert!(!modrinth_update_enabled(
+            Some(ContentProvider::CurseForge),
+            &[curseforge_ref()],
+        ));
+        assert!(!modrinth_update_enabled(None, &[curseforge_ref()]));
+    }
+
+    #[test]
+    fn modrinth_origin_always_qualifies() {
+        assert!(modrinth_update_enabled(
+            Some(ContentProvider::Modrinth),
+            &[curseforge_ref(), modrinth_ref()],
+        ));
+    }
 }
