@@ -33,6 +33,48 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.4',
+		version: '1.6.4',
+		publishedAt: '2026-07-31',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.4',
+			'zh-CN': 'Axolotl Launcher 1.6.4',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US': 'Improved download speed for more efficient content installation.',
+					'zh-CN': '优化下载速度，内容安装更加高效。',
+				},
+				{
+					'en-US':
+						'Disabled automatic updates in portable mode. Portable users should update manually from GitHub.',
+					'zh-CN': '便携模式下禁用自动更新，便携版用户请前往 GitHub 手动更新。',
+				},
+				{
+					'en-US':
+						'Removed automatic redirect to the Create page when no instances exist. Users can now view the empty home page.',
+					'zh-CN': '移除了无实例时自动跳转到创建页面的行为，现在可以正常浏览空白首页。',
+				},
+				{
+					'en-US': 'Optimized instance page caching to avoid reloading data on every visit.',
+					'zh-CN': '优化实例页面缓存机制，避免每次访问时重新加载数据。',
+				},
+				{
+					'en-US':
+						'Enhanced the instance content page refresh button to re-fetch mod online information.',
+					'zh-CN': '实例内容页面的刷新按钮现在可以重新获取模组的在线信息。',
+				},
+			],
+			added: [
+				{
+					'en-US': 'Added a back-to-top button on the instance content page for easier navigation.',
+					'zh-CN': '实例内容页面新增回到顶部按钮，长页面浏览更加便捷。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.1',
 		version: '1.6.1',
 		publishedAt: '2026-07-29',
