@@ -329,12 +329,25 @@ fn parse_fuser_output(stderr: &str) -> Vec<u32> {
     let mut pids = Vec::new();
     for line in stderr.lines() {
         let trimmed = line.trim();
-        if let Some(pid_str) = trimmed.split_whitespace().nth(1) {
-            if let Ok(pid) = pid_str.parse::<u32>() {
-                if pid > 0 {
-                    pids.push(pid);
-                }
-            }
+        if trimmed.is_empty() || trimmed.starts_with("USER") {
+            // Skip the "USER PID ACCESS COMMAND" header line.
+            continue;
+        }
+        let tokens: Vec<&str> = trimmed.split_whitespace().collect();
+        // `fuser -v` data lines look like "path: USER PID ACCESS COMMAND",
+        // so the PID is the third token; tolerate layouts without the
+        // path prefix by falling back to the second token.
+        let pid_candidate = if tokens.first().is_some_and(|t| t.ends_with(':'))
+        {
+            tokens.get(2)
+        } else {
+            tokens.get(1)
+        };
+        if let Some(pid_str) = pid_candidate
+            && let Ok(pid) = pid_str.parse::<u32>()
+            && pid > 0
+        {
+            pids.push(pid);
         }
     }
     pids
@@ -500,5 +513,23 @@ mod tests {
         let dir = tempdir().expect("temp dir");
         let processes = get_locking_processes(dir.path());
         let _ = processes;
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn fuser_output_parses_pids_after_username() {
+        let output = "\
+USER PID ACCESS COMMAND
+/tmp/foo.jar:      user 1234 f....  minecraft
+/tmp/foo.jar:      root 4321 F....  java
+";
+        assert_eq!(parse_fuser_output(output), vec![1234, 4321]);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn fuser_output_without_locks_is_empty() {
+        assert!(parse_fuser_output("").is_empty());
+        assert!(parse_fuser_output("USER PID ACCESS COMMAND").is_empty());
     }
 }
