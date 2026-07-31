@@ -36,7 +36,7 @@ export function createDefaultGradientTextState(): GradientTextLabState {
 		document: cloneGradientDocument(DEFAULT_GRADIENT_DOCUMENT),
 		colors: [...DEFAULT_GRADIENT_COLORS],
 		adapterId: 'vanilla',
-		vanillaCharacter: '&',
+		vanillaCharacter: '§',
 		simplifyGradients: false,
 		presets: [],
 	}
@@ -115,7 +115,10 @@ function sanitizeGradientTextState(
 		document: record.document ? normalizeGradientDocument(record.document) : fallback.document,
 		colors: colors.length ? colors : fallback.colors,
 		adapterId,
-		vanillaCharacter: record.vanillaCharacter === '§' ? '§' : '&',
+		vanillaCharacter:
+			record.vanillaCharacter === '&' || record.vanillaCharacter === '§'
+				? record.vanillaCharacter
+				: fallback.vanillaCharacter,
 		simplifyGradients: record.simplifyGradients === true,
 		presets: parseGradientPresets(record.presets),
 	}

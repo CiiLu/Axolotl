@@ -17,6 +17,7 @@ import {
 	SettingsIcon,
 	SpinnerIcon,
 	UserIcon,
+	UsersIcon,
 	WorldIcon,
 } from '@modrinth/assets'
 import {
@@ -486,6 +487,10 @@ const messages = defineMessages({
 	library: {
 		id: 'app.navigation.library',
 		defaultMessage: 'Library',
+	},
+	multiplayer: {
+		id: 'app.navigation.multiplayer',
+		defaultMessage: 'Multiplayer',
 	},
 	downloads: {
 		id: 'app.navigation.downloads',
@@ -2567,6 +2572,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 					to="/skins"
 				>
 					<ChangeSkinIcon />
+				</NavButton>
+				<NavButton
+					v-tooltip.right="formatMessage(messages.multiplayer)"
+					to="/multiplayer"
+					:is-primary="(r) => r.path === '/multiplayer'"
+				>
+					<UsersIcon />
 				</NavButton>
 				<NavButton
 					v-tooltip.right="formatMessage(messages.library)"

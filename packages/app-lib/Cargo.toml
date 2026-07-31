@@ -47,6 +47,7 @@ heck = { workspace = true }
 hickory-resolver = { workspace = true }
 indicatif = { workspace = true, optional = true }
 itertools = { workspace = true }
+local-ip-address = { workspace = true }
 md5 = { workspace = true }
 modrinth-content-management = { workspace = true }
 notify = { workspace = true }
@@ -71,6 +72,7 @@ reqwest = { workspace = true, features = [
   "macos-system-configuration",
   "multipart",
   "rustls-tls-webpki-roots",
+  "socks",
   "stream",
 ] }
 rgb = { workspace = true }
@@ -89,6 +91,7 @@ sqlx = { workspace = true, features = [
   "sqlite",
   "uuid",
 ] }
+socket2 = { workspace = true }
 symlink-rs = { workspace = true }
 sysinfo = { workspace = true, features = ["disk", "system"] }
 tar = { workspace = true }

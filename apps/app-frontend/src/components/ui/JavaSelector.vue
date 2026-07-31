@@ -68,12 +68,12 @@
 			<ButtonStyled>
 				<button
 					class="!shadow-none"
-					:aria-label="formatMessage(messages.detect)"
+					:aria-label="formatMessage(props.selectAllVersions ? messages.select : messages.detect)"
 					:disabled="props.disabled"
 					@click="autoDetect"
 				>
 					<SearchIcon />
-					{{ formatMessage(messages.detect) }}
+					{{ formatMessage(props.selectAllVersions ? messages.select : messages.detect) }}
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
@@ -127,6 +127,7 @@ const messages = defineMessages({
 		defaultMessage: 'Install recommended',
 	},
 	detect: { id: 'app.java.detect', defaultMessage: 'Detect' },
+	select: { id: 'app.java.select', defaultMessage: 'Select' },
 	browse: { id: 'app.java.browse', defaultMessage: 'Browse' },
 	browseForExecutable: {
 		id: 'app.java.browse-for-executable',
@@ -167,6 +168,10 @@ const props = defineProps({
 		default: null,
 	},
 	compact: {
+		type: Boolean,
+		default: false,
+	},
+	selectAllVersions: {
 		type: Boolean,
 		default: false,
 	},
@@ -233,10 +238,11 @@ async function handleJavaFileInput() {
 
 const detectJavaModal = ref(null)
 async function autoDetect() {
+	const filterVersion = props.selectAllVersions ? null : props.version
 	if (!props.compact) {
-		detectJavaModal.value.show(props.version, props.modelValue)
+		detectJavaModal.value.show(filterVersion, props.modelValue)
 	} else {
-		const versions = await find_filtered_jres(props.version, false, false).catch(handleError)
+		const versions = await find_filtered_jres(filterVersion, false, false).catch(handleError)
 		if (versions?.length > 0) {
 			commitSelection(versions[0])
 		}
