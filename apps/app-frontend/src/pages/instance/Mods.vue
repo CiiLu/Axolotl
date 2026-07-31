@@ -551,7 +551,10 @@ watch(
 	() => installFailureRevisionByInstance.value.get(props.instance.id) ?? 0,
 	(revision, previousRevision) => {
 		if (revision === previousRevision) return
-		debugState('installFailureRevision changed → clear buffer', { instanceId: props.instance.id, revision })
+		debugState('installFailureRevision changed → clear buffer', {
+			instanceId: props.instance.id,
+			revision,
+		})
 		installingBuffer.value = []
 	},
 )
@@ -1702,17 +1705,26 @@ async function initProjects(cacheBehaviour?: CacheBehaviour) {
 
 function applyContentData(contentData: InstanceContentData) {
 	if (contentData.path !== props.instance.id) {
-		debugState('applyContentData path mismatch', { expected: props.instance.id, got: contentData.path })
+		debugState('applyContentData path mismatch', {
+			expected: props.instance.id,
+			got: contentData.path,
+		})
 		return false
 	}
 
 	if (!contentData.contentItems) {
-		debugState('applyContentData no contentItems → loading=false', { instanceId: props.instance.id })
+		debugState('applyContentData no contentItems → loading=false', {
+			instanceId: props.instance.id,
+		})
 		loading.value = false
 		return true
 	}
 
-	debugState('applyContentData set projects', { instanceId: props.instance.id, count: contentData.contentItems.length, paths: contentData.contentItems.map((c) => c.file_name).slice(0, 20) })
+	debugState('applyContentData set projects', {
+		instanceId: props.instance.id,
+		count: contentData.contentItems.length,
+		paths: contentData.contentItems.map((c) => c.file_name).slice(0, 20),
+	})
 	projects.value = contentData.contentItems
 	writeContentCache(props.instance.id, contentData)
 
@@ -1859,13 +1871,25 @@ provideContentManager({
 	mapToTableItem: (item: ContentItem) => {
 		const effectiveProvider = item.origin_provider ?? item.provider_refs?.[0]?.provider ?? null
 
+		const curseForgeProjectId =
+			effectiveProvider === 'curseforge'
+				? item.provider_refs
+						?.find(
+							(ref): ref is { provider: 'curseforge'; project_id: number } =>
+								ref.provider === 'curseforge' && typeof ref.project_id === 'number',
+						)
+						?.project_id.toString()
+				: undefined
+
 		const projectLink =
 			effectiveProvider && item.project?.id && !item.project.id.startsWith('local:')
 				? {
 						path:
-							effectiveProvider === 'curseforge'
-								? `/project/curseforge/${item.project.id}`
-								: `/project/${item.project.id}`,
+							effectiveProvider === 'curseforge' && curseForgeProjectId
+								? `/project/curseforge/${curseForgeProjectId}`
+								: effectiveProvider === 'curseforge'
+									? `/project/curseforge/${item.project.id}`
+									: `/project/${item.project.id}`,
 						query: { i: props.instance.id },
 					}
 				: undefined
