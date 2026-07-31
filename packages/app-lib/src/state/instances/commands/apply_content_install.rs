@@ -798,6 +798,12 @@ pub(crate) async fn record_project_file_atomic(
         .to_string_lossy()
         .to_string();
     let mut tx = begin_content_write(&state.pool).await?;
+    content_rows::ensure_content_write_parents(
+        &scope.instance.id,
+        &scope.content_set_id,
+        &mut tx,
+    )
+    .await?;
     let file = content_rows::upsert_instance_file_from_parts_in_transaction(
         content_rows::UpsertInstanceFile {
             instance_id: &scope.instance.id,
