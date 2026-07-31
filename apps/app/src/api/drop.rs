@@ -142,7 +142,11 @@ pub async fn drop_classify_extract(
 ) -> Result<ClassificationResult, String> {
     debug!("Drop classify with extraction: {}", path);
     let path = std::path::PathBuf::from(&path);
-    let result = classify_zip_with_extraction(&path);
+    let result = tokio::task::spawn_blocking(move || {
+        classify_zip_with_extraction(&path)
+    })
+    .await
+    .map_err(|e| format!("Extraction task panicked: {e}"))?;
     let classification = ClassificationResult::from(result);
     info!(
         "Classification result (with extraction): {:?}",
@@ -201,12 +205,15 @@ pub async fn drop_detect_file_lock(
 pub async fn drop_extract_mod_metadata(path: String) -> Result<String, String> {
     let path = std::path::PathBuf::from(&path);
 
-    let file_bytes = tokio::fs::read(&path)
-        .await
-        .map_err(|e| format!("Failed to read file: {e}"))?;
-    let bytes = bytes::Bytes::from(file_bytes);
-    let meta = theseus::mod_metadata::extract_mod_metadata(&bytes)
-        .ok_or_else(|| "No mod metadata found in file".to_string())?;
+    let meta = tokio::task::spawn_blocking(move || {
+        let file_bytes = std::fs::read(&path)
+            .map_err(|e| format!("Failed to read file: {e}"))?;
+        let bytes = bytes::Bytes::from(file_bytes);
+        theseus::mod_metadata::extract_mod_metadata(&bytes)
+            .ok_or_else(|| "No mod metadata found in file".to_string())
+    })
+    .await
+    .map_err(|e| format!("Metadata extraction task panicked: {e}"))??;
     serde_json::to_string(&meta)
         .map_err(|e| format!("Failed to serialize metadata: {e}"))
 }
