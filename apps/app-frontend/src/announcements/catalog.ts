@@ -33,6 +33,27 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.5',
+		version: '1.6.5',
+		publishedAt: '2026-07-31',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.5',
+			'zh-CN': 'Axolotl Launcher 1.6.5',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US': 'Fixed the issue of disappearing online content',
+					'zh-CN': '修复了联机消失问题',
+				},
+				{
+					'en-US': 'Fixed the issue of some code being rolled back',
+					'zh-CN': '修复了部分代码被回滚的情况',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.4',
 		version: '1.6.4',
 		publishedAt: '2026-07-31',

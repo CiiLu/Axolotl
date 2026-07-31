@@ -823,17 +823,24 @@ pub async fn start_terracotta(
     let port_file = terracotta_port_file();
     let _ = std::fs::remove_file(&port_file);
 
-    let mut child = Command::new(&final_path)
-        .arg("--hmcl")
-        .arg(&port_file)
+
+    let is_macos = cfg!(target_os = "macos");
+    let mut command = Command::new(&final_path);
+    if is_macos {
+        command.arg("--daemon");
+    } else {
+        command.arg("--hmcl").arg(&port_file);
+    }
+    let mut child = command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true)
         .spawn()
         .wrap_err_with(|| {
+            let mode = if is_macos { "daemon" } else { "--hmcl" };
             format!(
-                "failed to start terracotta with --hmcl at {}",
+                "failed to start terracotta {mode} at {}",
                 final_path.display()
             )
         })?;
@@ -873,6 +880,7 @@ pub async fn start_terracotta(
 
     let mut attempts = 0;
     const MAX_ATTEMPTS: u32 = 30;
+    let mut hmcl_helper: Option<Child> = None;
     let port = loop {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         attempts += 1;
@@ -922,30 +930,68 @@ pub async fn start_terracotta(
                 }
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                if let Some((status, output)) =
-                    take_terminated_terracotta_process().await?
-                {
-                    let message = format_terracotta_exit(status, output).await;
-                    // On Windows the `--hmcl` wrapper exits right after the
-                    // delegate writes the port file, so give the file one
-                    // final check before treating the exit as a failure.
-                    if let Ok(contents) = std::fs::read_to_string(&port_file) {
-                        if let Ok(info) = serde_json::from_str::<
-                            TerracottaPortInfo,
-                        >(&contents)
-                        {
-                            let _ = std::fs::remove_file(&port_file);
-                            break info.port;
-                        }
+                if is_macos {
+                    let helper_exited = match hmcl_helper.as_mut() {
+                        Some(helper) => helper
+                            .try_wait()
+                            .wrap_err(
+                                "failed to inspect terracotta helper process",
+                            )?
+                            .is_some(),
+                        None => true,
+                    };
+                    if helper_exited {
+                        hmcl_helper = Some(
+                            Command::new(&final_path)
+                                .arg("--hmcl")
+                                .arg(&port_file)
+                                .stdin(Stdio::null())
+                                .stdout(Stdio::null())
+                                .stderr(Stdio::null())
+                                .kill_on_drop(true)
+                                .spawn()
+                                .wrap_err_with(|| {
+                                    format!(
+                                        "failed to start terracotta --hmcl helper at {}",
+                                        final_path.display()
+                                    )
+                                })?,
+                        );
                     }
-                    let msg = format!(
-                        "terracotta exited before writing port file: {message}"
-                    );
-                    let mut state = TERRACOTTA_STATE.lock().await;
-                    state.status = TerracottaStatus::Error;
-                    state.error_type = Some(TerracottaErrorType::Terracotta);
-                    state.error_message = Some(msg.clone());
-                    bail!(msg);
+                }
+
+                if !is_macos {
+                    if let Some((status, output)) =
+                        take_terminated_terracotta_process().await?
+                    {
+                        let message =
+                            format_terracotta_exit(status, output).await;
+                        // On Windows the `--hmcl` wrapper exits right after
+                        // the delegate writes the port file, so give the file
+                        // one final check before treating the exit as a
+                        // failure.
+                        if let Ok(contents) =
+                            std::fs::read_to_string(&port_file)
+                        {
+                            if let Ok(info) =
+                                serde_json::from_str::<TerracottaPortInfo>(
+                                    &contents,
+                                )
+                            {
+                                let _ = std::fs::remove_file(&port_file);
+                                break info.port;
+                            }
+                        }
+                        let msg = format!(
+                            "terracotta exited before writing port file: {message}"
+                        );
+                        let mut state = TERRACOTTA_STATE.lock().await;
+                        state.status = TerracottaStatus::Error;
+                        state.error_type =
+                            Some(TerracottaErrorType::Terracotta);
+                        state.error_message = Some(msg.clone());
+                        bail!(msg);
+                    }
                 }
             }
             Err(e) => {
