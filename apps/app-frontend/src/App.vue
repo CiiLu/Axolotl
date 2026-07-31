@@ -95,6 +95,7 @@ import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
 import {
 	type ClassificationResult,
+	type ScanResult,
 	classifyDroppedItem,
 	classifyDroppedItemWithExtraction,
 	detectFileLock,
@@ -439,7 +440,7 @@ async function onImportFileReceived({
 	} catch (e) {
 		notificationManager.removeNotification(processingNotify?.id)
 		addNotification({
-			title: 'Failed to process file',
+			title: formatMessage(messages.dropProcessFailedTitle),
 			text: e instanceof Error ? e.message : String(e),
 			type: 'error',
 		})
@@ -601,6 +602,27 @@ const messages = defineMessages({
 	dropNoInstances: {
 		id: 'app.drop.no-instances',
 		defaultMessage: 'No instances found',
+	},
+	dropScanning: {
+		id: 'app.drop.scanning',
+		defaultMessage: 'Scanning for instances',
+	},
+	dropScanFailed: {
+		id: 'app.drop.scan-failed',
+		defaultMessage: 'Failed to scan for instances',
+	},
+	dropProcessFailedTitle: {
+		id: 'app.drop.process-failed-title',
+		defaultMessage: 'Failed to process file',
+	},
+	dropTemporaryFileTitle: {
+		id: 'app.drop.temporary-file-title',
+		defaultMessage: 'Temporary file detected',
+	},
+	dropTemporaryFileText: {
+		id: 'app.drop.temporary-file-text',
+		defaultMessage:
+			'The file "{file}" appears to be a temporary copy. Try dragging the file from its original folder instead of from a browser, archive, or cloud storage.',
 	},
 	dropImportProgressTitle: {
 		id: 'app.drop.import-progress-title',
@@ -1199,7 +1221,7 @@ const { isDragging, isProcessing } = useGlobalDrop(
 			dropClassification.value = classification
 			dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
 			dropFileName.value =
-				classification.file_path?.split('/').pop() ??
+				classification.file_path?.split(/[/\\]/).pop() ??
 				classification.base_path?.split(/[/\\]/).pop() ??
 				'file'
 
@@ -1220,11 +1242,10 @@ const { isDragging, isProcessing } = useGlobalDrop(
 				const isTempFile = unknownFile.startsWith('.tmp') || unknownFile.startsWith('tmp')
 				if (isTempFile) {
 					addNotification({
-						title: 'Temporary file detected',
-						text:
-							`The file "${unknownFile}" appears to be a temporary copy. ` +
-							`Try dragging the file from its original folder instead of from a browser, ` +
-							`archive, or cloud storage.`,
+						title: formatMessage(messages.dropTemporaryFileTitle),
+						text: formatMessage(messages.dropTemporaryFileText, {
+							file: unknownFile,
+						}),
 						type: 'warning',
 					})
 				} else {
@@ -1310,7 +1331,7 @@ async function handleDropConfirm(type: string) {
 
 	const filePath = classification?.file_path ?? dropFilePath.value
 	const fileName =
-		filePath?.split('/').pop() ?? classification.base_path?.split(/[/\\]/).pop() ?? 'file'
+		filePath?.split(/[/\\]/).pop() ?? classification.base_path?.split(/[/\\]/).pop() ?? 'file'
 	dropDebug('handleDropConfirm: routing decision', {
 		type,
 		isLauncherImport,
@@ -1329,14 +1350,22 @@ async function handleDropConfirm(type: string) {
 		// and scan it for importable instances
 		currentImportContext.value = { launcherType: 'Generic', basePath: dropFilePath.value }
 		scanningInstances.value = true
-		const results = await scanLauncherInstances('Generic', dropFilePath.value)
-		scanningInstances.value = false
+		let results: ScanResult[]
+		try {
+			results = await scanLauncherInstances('Generic', dropFilePath.value)
+		} catch (error) {
+			currentImportContext.value = null
+			dropDebug('handleDropConfirm: .minecraft scan failed', error)
+			addNotification({ title: formatMessage(messages.dropScanFailed), type: 'error' })
+			return
+		} finally {
+			scanningInstances.value = false
+		}
 		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
 		dropDebug('handleDropConfirm: .minecraft scan result', { totalInstances, results })
 
 		if (totalInstances === 0) {
 			currentImportContext.value = null
-			scanningInstances.value = false
 			dropDebug('handleDropConfirm: no instances found in .minecraft folder')
 			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
 			return
@@ -1383,14 +1412,22 @@ async function handleDropConfirm(type: string) {
 
 		currentImportContext.value = { launcherType, basePath }
 		scanningInstances.value = true
-		const results = await scanLauncherInstances(launcherType, basePath)
-		scanningInstances.value = false
+		let results: ScanResult[]
+		try {
+			results = await scanLauncherInstances(launcherType, basePath)
+		} catch (error) {
+			currentImportContext.value = null
+			dropDebug('handleDropConfirm: launcher scan failed', error)
+			addNotification({ title: formatMessage(messages.dropScanFailed), type: 'error' })
+			return
+		} finally {
+			scanningInstances.value = false
+		}
 		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
 		dropDebug('handleDropConfirm: launcher scan result', { totalInstances, results })
 
 		if (totalInstances === 0) {
 			currentImportContext.value = null
-			scanningInstances.value = false
 			dropDebug('handleDropConfirm: no instances found')
 			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
 			return
@@ -2886,7 +2923,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		<div class="flex flex-col items-center gap-3">
 			<SpinnerIcon class="h-10 w-10 animate-spin text-contrast" />
 			<span v-if="scanningInstances" class="text-sm text-secondary"
-				>{{ formatMessage(messages.dropNoInstances) }}…</span
+				>{{ formatMessage(messages.dropScanning) }}…</span
 			>
 		</div>
 	</div>

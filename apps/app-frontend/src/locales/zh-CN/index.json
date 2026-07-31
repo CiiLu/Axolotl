@@ -3389,6 +3389,27 @@
 	"app.drop.no-instances": {
 		"message": "未找到实例"
 	},
+	"app.drop.scan-failed": {
+		"message": "实例扫描失败"
+	},
+	"app.drop.scanning": {
+		"message": "正在扫描实例…"
+	},
+	"app.drop.installing-file": {
+		"message": "正在安装 {name}…"
+	},
+	"app.drop.process-failed-title": {
+		"message": "处理文件失败"
+	},
+	"app.drop.temporary-file-text": {
+		"message": "文件“{file}”似乎是临时副本。请尝试从文件的原始位置拖入，而不是从浏览器、压缩包或云存储。"
+	},
+	"app.drop.temporary-file-title": {
+		"message": "检测到临时文件"
+	},
+	"app.drop.unexpected-type": {
+		"message": "意外的类型：{type}"
+	},
 	"app.drop.import-progress-title": {
 		"message": "正在导入实例…"
 	},

@@ -2621,6 +2621,27 @@
 	"app.drop.no-instances": {
 		"message": "No instances found"
 	},
+	"app.drop.scan-failed": {
+		"message": "實例掃描失敗"
+	},
+	"app.drop.scanning": {
+		"message": "正在掃描實例…"
+	},
+	"app.drop.installing-file": {
+		"message": "正在安裝 {name}…"
+	},
+	"app.drop.process-failed-title": {
+		"message": "處理檔案失敗"
+	},
+	"app.drop.temporary-file-text": {
+		"message": "檔案「{file}」似乎是暫存副本。請嘗試從檔案的原始位置拖入，而不是從瀏覽器、壓縮檔或雲端儲存。"
+	},
+	"app.drop.temporary-file-title": {
+		"message": "偵測到暫存檔案"
+	},
+	"app.drop.unexpected-type": {
+		"message": "意外的類型：{type}"
+	},
 	"app.drop.unknown-force-analysis-title": {
 		"message": "無法識別檔案類型"
 	},

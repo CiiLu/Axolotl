@@ -58,6 +58,50 @@ const symlinkMessages = defineMessages({
 	},
 })
 
+const modpackMessages = defineMessages({
+	installing: {
+		id: 'app.drop.modpack-installing',
+		defaultMessage: 'Installing modpack...',
+	},
+	installed: {
+		id: 'app.drop.modpack-installed-success',
+		defaultMessage: 'Modpack installed successfully',
+	},
+	installingFile: {
+		id: 'app.drop.installing-file',
+		defaultMessage: 'Installing {name}...',
+	},
+	unknownFileType: {
+		id: 'app.drop.unknown-force-analysis-title',
+		defaultMessage: 'Unable to identify file type',
+	},
+	unknownFileTypeText: {
+		id: 'app.drop.unknown-force-analysis-text',
+		defaultMessage:
+			'This archive needs to be extracted and deeply analyzed to determine its content type. This may take a while. Force analysis?',
+	},
+	forceAnalysis: {
+		id: 'app.drop.unknown-force-analysis-button',
+		defaultMessage: 'Force analysis',
+	},
+	analyzing: {
+		id: 'app.drop.unknown-force-analyzing',
+		defaultMessage: 'Force analyzing archive...',
+	},
+	couldNotIdentify: {
+		id: 'app.drop.unknown-force-analysis-failed-title',
+		defaultMessage: 'Analysis failed',
+	},
+	couldNotIdentifyText: {
+		id: 'app.drop.unknown-force-analysis-failed-text',
+		defaultMessage: 'Could not identify the file type even after deep analysis.',
+	},
+	unexpectedType: {
+		id: 'app.drop.unexpected-type',
+		defaultMessage: 'Unexpected type: {type}',
+	},
+})
+
 export function setupCreationModal(
 	notificationManager: AbstractWebNotificationManager,
 	popupNotificationManager: AbstractPopupNotificationManager,
@@ -280,7 +324,7 @@ export function setupCreationModal(
 
 	async function doInstallModpackFile(location: CreatePackLocation) {
 		const installingNotify = notificationManager.addNotification({
-			title: `Installing modpack...`,
+			title: formatMessage(modpackMessages.installing),
 			type: 'info',
 			autoCloseMs: 1000 * 10,
 		})
@@ -299,7 +343,7 @@ export function setupCreationModal(
 			if (updatedJob.status === 'succeeded') {
 				notificationManager.removeNotification(installingNotify.id)
 				notificationManager.addNotification({
-					title: 'Modpack installed successfully',
+					title: formatMessage(modpackMessages.installed),
 					type: 'success',
 				})
 				unlisten()
@@ -347,20 +391,20 @@ export function setupCreationModal(
 	/** Show a popup notification prompting the user to force-analyse an unclassified file. */
 	function _showForceAnalysisPopup(classification: ClassificationResult) {
 		addPopupNotification({
-			title: `Unknown file type`,
-			text: `This file couldn't be identified from its contents. Perform a deep analysis?`,
+			title: formatMessage(modpackMessages.unknownFileType),
+			text: formatMessage(modpackMessages.unknownFileTypeText),
 			type: 'info',
 			autoCloseMs: null,
 			buttons: [
 				{
-					label: 'Force Analysis',
+					label: formatMessage(modpackMessages.forceAnalysis),
 					action: async () => {
 						const filePath = classification.file_path ?? classification.base_path
 						if (!filePath) return
 
 						// ── Processing notification during extraction ──
 						const extractingNotify = notificationManager.addNotification({
-							title: 'Analyzing file...',
+							title: formatMessage(modpackMessages.analyzing),
 							type: 'info',
 							autoCloseMs: null,
 						})
@@ -371,8 +415,10 @@ export function setupCreationModal(
 
 							if (result.item_type === 'unknown') {
 								notificationManager.addNotification({
-									title: 'Could not identify file',
-									text: result.reason ?? 'Deep analysis was unable to determine the file type.',
+									title: formatMessage(modpackMessages.couldNotIdentify),
+									text:
+										result.reason ??
+										formatMessage(modpackMessages.couldNotIdentifyText),
 									type: 'error',
 								})
 								return
@@ -386,7 +432,9 @@ export function setupCreationModal(
 
 							// Unexpected type from force analysis
 							notificationManager.addNotification({
-								title: `Unexpected type: ${result.item_type}`,
+								title: formatMessage(modpackMessages.unexpectedType, {
+									type: result.item_type,
+								}),
 								type: 'error',
 							})
 						} catch (e) {
@@ -403,7 +451,7 @@ export function setupCreationModal(
 	/** Install a modpack file with continuous feedback notifications. */
 	async function installModpackFromPath(filePath: string, fileName: string) {
 		const currentNotify = notificationManager.addNotification({
-			title: `Installing ${fileName}...`,
+			title: formatMessage(modpackMessages.installingFile, { name: fileName }),
 			type: 'info',
 			autoCloseMs: null,
 		})

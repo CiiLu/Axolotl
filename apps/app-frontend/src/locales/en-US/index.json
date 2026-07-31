@@ -752,6 +752,9 @@
   "app.drop.mod-compatibility-warning": {
     "message": "This mod targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader})."
   },
+  "app.drop.installing-file": {
+    "message": "Installing {name}..."
+  },
   "app.drop.modpack-install-failed": {
     "message": "Failed to install modpack"
   },
@@ -764,6 +767,12 @@
   "app.drop.no-instances": {
     "message": "No instances found"
   },
+  "app.drop.scan-failed": {
+    "message": "Failed to scan for instances"
+  },
+  "app.drop.scanning": {
+    "message": "Scanning for instances"
+  },
   "app.drop.overlay-subtitle": {
     "message": "Release to analyze"
   },
@@ -772,6 +781,18 @@
   },
   "app.drop.processing": {
     "message": "Processing {name}..."
+  },
+  "app.drop.process-failed-title": {
+    "message": "Failed to process file"
+  },
+  "app.drop.temporary-file-text": {
+    "message": "The file \"{file}\" appears to be a temporary copy. Try dragging the file from its original folder instead of from a browser, archive, or cloud storage."
+  },
+  "app.drop.temporary-file-title": {
+    "message": "Temporary file detected"
+  },
+  "app.drop.unexpected-type": {
+    "message": "Unexpected type: {type}"
   },
   "app.drop.unknown-force-analysis-button": {
     "message": "Force analysis"
