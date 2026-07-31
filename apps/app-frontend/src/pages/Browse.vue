@@ -1688,16 +1688,16 @@ const {
 
 // Keep a pristine copy when genuine search results arrive (project hits).
 watch(
-  () => searchState.projectHits.value,
-  (hits) => {
-    if (isUpdatingProjectHitsFromTranslation) return
-    if (hits && hits.length > 0) {
-      originalProjectHits.value = hits
-      const version = cancelTranslation()
-      void autoTranslateNewSearchResults(version, false)
-    }
-  },
-  { flush: 'sync' },
+	() => searchState.projectHits.value,
+	(hits) => {
+		if (isUpdatingProjectHitsFromTranslation) return
+		if (hits && hits.length > 0) {
+			originalProjectHits.value = hits
+			const version = cancelTranslation()
+			void autoTranslateNewSearchResults(version, false)
+		}
+	},
+	{ flush: 'sync' },
 )
 // Keep a pristine copy when genuine search results arrive (server hits).
 watch(
@@ -1721,7 +1721,12 @@ async function autoTranslateNewSearchResults(version: number, useServer: boolean
 		const hits = useServer ? originalServerHits.value : originalProjectHits.value
 		if (!hits?.length) return
 
-		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, false, useServer)
+		const translated = await translateSearchDescriptions(
+			hits,
+			i18n.global.locale.value,
+			false,
+			useServer,
+		)
 
 		if (isStale(version)) return
 
@@ -1746,7 +1751,12 @@ async function translateCurrentHits() {
 		const hits = useServer ? serverHits : projectHits
 		if (!hits || hits.length === 0) return
 
-		const translated = await translateSearchDescriptions(hits, i18n.global.locale.value, true, useServer)
+		const translated = await translateSearchDescriptions(
+			hits,
+			i18n.global.locale.value,
+			true,
+			useServer,
+		)
 		if (isStale(version)) return // superseded
 
 		if (translated !== hits) {

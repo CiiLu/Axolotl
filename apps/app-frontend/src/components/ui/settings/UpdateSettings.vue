@@ -28,7 +28,9 @@ const isPortable = ref(false)
 
 try {
 	isPortable.value = await invoke('is_portable_mode')
-} catch {}
+} catch {
+	// Best-effort check: fall back to non-portable when the command is unavailable.
+}
 
 const messages = defineMessages({
 	title: {

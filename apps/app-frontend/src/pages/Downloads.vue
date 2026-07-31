@@ -358,8 +358,6 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { trackEvent } from '@/helpers/analytics'
-
 import {
 	download_job_support_details,
 	type InstallJobSnapshot,

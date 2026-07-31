@@ -138,10 +138,12 @@ const ctx = injectContentManager()
 const skipNonEssentialWarnings = computed(() => ctx.skipNonEssentialWarnings?.value ?? false)
 
 // window 级内存（导航切换保留，关软件丢弃）
-const memory: Record<string, Map<string, any>> = ((window as any).__ctMemory ??= {})
+const memory: Record<string, Map<string, unknown>> = ((
+	window as unknown as { __ctMemory?: Record<string, Map<string, unknown>> }
+).__ctMemory ??= {})
 function getMap<K, V>(namespace: string): Map<K, V> {
-	if (!memory[namespace]) memory[namespace] = new Map()
-	return memory[namespace]
+	if (!memory[namespace]) memory[namespace] = new Map<string, unknown>()
+	return memory[namespace] as Map<K, V>
 }
 
 function getItemId(item: ContentItem) {
@@ -228,7 +230,6 @@ function sortItems(items: ContentItem[]): ContentItem[] {
 const {
 	searchQuery,
 	searchableItemCount,
-	sortedItems,
 	modpackItemsNoUpdate,
 	modpackChildIdSet,
 	selectedTypeFilter,
@@ -311,7 +312,6 @@ watch(searchQuery, (query) => {
 const showScrollToTop = ref(false)
 const sidebarVisible = ref(false)
 const SCROLL_THRESHOLD = 300
-const APP_SIDEBAR_WIDTH = 300
 
 function getScrollContainer(): Element | null {
 	return document.querySelector('.app-viewport')
@@ -1198,8 +1198,8 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 				v-if="showScrollToTop"
 				class="scroll-to-top-btn"
 				:class="{ 'sidebar-visible': sidebarVisible }"
-				@click="scrollToTop"
 				aria-label="Scroll to top"
+				@click="scrollToTop"
 			>
 				<ChevronUpIcon class="size-5" />
 			</button>

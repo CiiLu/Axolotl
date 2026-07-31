@@ -145,11 +145,11 @@ import {
 	useVIntl,
 	versionChangesGameVersion,
 } from '@modrinth/ui'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import ExportModal from '@/components/ui/ExportModal.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
@@ -157,11 +157,10 @@ import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
 import { translateContentItemTitles } from '@/helpers/content-search'
 import {
+	switchCurseForgeFileVersion,
 	updateCurseForgeFile,
 	updateManagedCurseForgeModpack,
-	switchCurseForgeFileVersion,
 } from '@/helpers/curseforge'
-import { readInstanceCache, writeInstanceCache } from '@/helpers/instance-cache'
 import {
 	type CurseForgeManualDownloadItem,
 	filterInstalledCurseForgeManualDownloads,
@@ -185,6 +184,7 @@ import {
 	update_all,
 	update_managed_modrinth_version,
 } from '@/helpers/instance'
+import { readInstanceCache, writeInstanceCache } from '@/helpers/instance-cache'
 import { type InstanceContentData, loadInstanceContentData } from '@/helpers/instance-content'
 import type { CacheBehaviour, GameInstance } from '@/helpers/types'
 import { highlightModInInstance } from '@/helpers/utils.js'
@@ -294,8 +294,6 @@ const props = defineProps<{
 function hasPreloadedContent(contentData: InstanceContentData | null | undefined) {
 	return contentData?.path === props.instance.id
 }
-
-const CONTENT_CACHE_KEY = 'instance-content-cache'
 
 function readContentCache(instanceId: string): InstanceContentData | null {
 	const cache = readInstanceCache(instanceId)
@@ -1765,7 +1763,6 @@ provideAppBackup({
 	},
 })
 
-const CONTENT_HINT_KEY = 'content-tab-modpack-hint-dismissed'
 const cachedHint = readInstanceCache(props.instance.id)
 const showContentHint = ref(cachedHint?.modpackHintDismissed !== true)
 function dismissContentHint() {

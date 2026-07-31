@@ -1,4 +1,10 @@
-import type { ContentItem, ContentModpackCardCategory, ContentModpackCardVersion, ContentModpackCardProject, ContentOwner } from '@modrinth/ui'
+import type {
+	ContentItem,
+	ContentModpackCardCategory,
+	ContentModpackCardProject,
+	ContentModpackCardVersion,
+	ContentOwner,
+} from '@modrinth/ui'
 
 export interface InstanceContentModpackCache {
 	project: ContentModpackCardProject
@@ -56,7 +62,10 @@ function safeSetItem(key: string, value: string): boolean {
 		localStorage.setItem(key, value)
 		return true
 	} catch (err) {
-		console.error(`[InstanceCache] Failed to write localStorage key "${key}" (size: ${value.length} bytes)`, err)
+		console.error(
+			`[InstanceCache] Failed to write localStorage key "${key}" (size: ${value.length} bytes)`,
+			err,
+		)
 		return false
 	}
 }

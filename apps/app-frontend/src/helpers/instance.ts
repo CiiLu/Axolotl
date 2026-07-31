@@ -9,8 +9,8 @@ import { invoke } from '@tauri-apps/api/core'
 
 import { isOfflineMode } from '@/composables/useNetworkStatus'
 
-import { removeInstanceCache } from './instance-cache'
 import type { InstallJobSnapshot } from './install'
+import { removeInstanceCache } from './instance-cache'
 import type {
 	CacheBehaviour,
 	ContentFile,

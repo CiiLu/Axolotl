@@ -1,6 +1,5 @@
 import { renderHighlightedString } from '@modrinth/utils'
 import { configuredXss } from '@modrinth/utils/parse'
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { invoke } from '@tauri-apps/api/core'
 
 import i18n from '@/i18n.config'
@@ -283,58 +282,6 @@ export function renderTranslatedDescription(
 
 const translationCache = new Map<string, { title: string; description: string } | undefined>()
 
-/** Cache: key → translated description string. Key format: `cf:{provider_project_id}` or `mr:{project_id}`. */
-const descriptionCache = new Map<string, string>()
-
-function mirrorCacheKey(hit: TranslatableHit): string | null {
-	if (hit.provider === 'curseforge') {
-		const id = hit.provider_project_id
-		if (!id) return null
-		return `cf:${id}`
-	}
-	if (hit.provider === 'modrinth') {
-		const id = hit.project_id
-		if (!id) return null
-		return `mr:${id}`
-	}
-	return null
-}
-
-interface MirrorTranslationResponse {
-	modid?: number
-	project_id?: string
-	translated: string
-	original: string
-	translated_at: string
-}
-
-/** Fetch translated description for a single project from the mcimirror API. */
-async function fetchMirrorDescription(hit: TranslatableHit): Promise<string | null> {
-	const cacheKey = mirrorCacheKey(hit)
-	if (!cacheKey) return null
-
-	const cached = descriptionCache.get(cacheKey)
-	if (cached !== undefined) return cached || null
-
-	const id = hit.provider === 'curseforge' ? hit.provider_project_id : hit.project_id
-
-	if (!id || !hit.provider) return null
-
-	const url = `${MIRROR_API_BASE}/${hit.provider}/${encodeURIComponent(id)}`
-
-	try {
-		const response = await tauriFetch(url)
-		if (!response.ok) return null
-		const data = (await response.json()) as MirrorTranslationResponse
-		const translated = data.translated?.trim() || null
-		descriptionCache.set(cacheKey, translated ?? '')
-		return translated
-	} catch {
-		descriptionCache.set(cacheKey, '')
-		return null
-	}
-}
-
 /**
  * Rewrites search hit descriptions to Chinese. Currently uses the mcimirror
  * translation API.
@@ -388,8 +335,6 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
 		})
 		return translatedHits as T[]
 	}
-
-	const entries = hits.map((hit) => ({ hit, index: hits.indexOf(hit) }))
 
 	const targetLanguage = settings.target_language || i18n.global.locale.value || 'en-US'
 	if (!targetLanguage) return hits

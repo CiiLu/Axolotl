@@ -449,7 +449,11 @@ export function createContentInstall(opts: {
 		if (items.some((i) => i.file_name === placeholder.file_name)) return
 		next.set(instanceId, [...items, placeholder])
 		installingItems.value = next
-		debugState('addInstallingItem', { instanceId, projectId: project.id, fileName: placeholder.file_name })
+		debugState('addInstallingItem', {
+			instanceId,
+			projectId: project.id,
+			fileName: placeholder.file_name,
+		})
 
 		if (project.organization) {
 			get_organization(project.organization)
@@ -509,7 +513,12 @@ export function createContentInstall(opts: {
 	function removeInstallingItems(instanceId: string, projectIds: string[]) {
 		const next = new Map(installingItems.value)
 		const items = next.get(instanceId)
-		debugState('removeInstallingItems call', { instanceId, projectIds, hadItems: !!items, count: items?.length })
+		debugState('removeInstallingItems call', {
+			instanceId,
+			projectIds,
+			hadItems: !!items,
+			count: items?.length,
+		})
 		if (items) {
 			const idsToRemove = new Set(projectIds.map((id) => `__installing_${id}`))
 			const filtered = items.filter((i) => !idsToRemove.has(i.file_name))
@@ -899,7 +908,11 @@ export function createContentInstall(opts: {
 			next.delete(instanceId)
 		}
 		pendingManualDownloadsByInstance.value = next
-		debugState('rememberManualDownloads', { instanceId, count: manualItems.length, items: manualItems.map(m => m.fileName) })
+		debugState('rememberManualDownloads', {
+			instanceId,
+			count: manualItems.length,
+			items: manualItems.map((m) => m.fileName),
+		})
 		return manualItems
 	}
 
@@ -985,7 +998,11 @@ export function createContentInstall(opts: {
 
 		let result: CurseForgeInstallResult
 		if (project.project_type === 'modpack') {
-			debugState('installCurrentCFVersion: modpack install', { instanceId: instance.id, projectId: curseForgeProject.id, fileId: file.id })
+			debugState('installCurrentCFVersion: modpack install', {
+				instanceId: instance.id,
+				projectId: curseForgeProject.id,
+				fileId: file.id,
+			})
 			result = (
 				await installCurseForgeModpack({
 					instanceId: instance.id,
@@ -994,7 +1011,11 @@ export function createContentInstall(opts: {
 				})
 			).content
 		} else {
-			debugState('installCurrentCFVersion: file install', { instanceId: instance.id, projectId: curseForgeProject.id, fileId: file.id })
+			debugState('installCurrentCFVersion: file install', {
+				instanceId: instance.id,
+				projectId: curseForgeProject.id,
+				fileId: file.id,
+			})
 			await removeInstalledCurseForgeProject(instance.id, curseForgeProject.id)
 			result = await installCurseForgeFile({
 				instanceId: instance.id,
@@ -1239,7 +1260,8 @@ export function createContentInstall(opts: {
 			provider: currentProvider,
 			projectType: currentProject?.project_type,
 			projectTitle: currentProject?.title,
-			isCurseforgeModpack: currentProvider === 'curseforge' && currentProject?.project_type === 'modpack',
+			isCurseforgeModpack:
+				currentProvider === 'curseforge' && currentProject?.project_type === 'modpack',
 		})
 		try {
 			const job = await install_create_instance({
@@ -1256,7 +1278,10 @@ export function createContentInstall(opts: {
 
 			let installedProjectIds: string[]
 			if (currentProvider === 'curseforge') {
-				debugState('handleCreateAndInstall: CF path start', { instanceId: id, projectId: currentProject?.id })
+				debugState('handleCreateAndInstall: CF path start', {
+					instanceId: id,
+					projectId: currentProject?.id,
+				})
 				const result = await installCurrentCurseForgeVersion(
 					{
 						id,

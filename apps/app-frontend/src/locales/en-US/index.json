@@ -488,6 +488,9 @@
   "app.downloads.clear-history-title": {
     "message": "Clear download history?"
   },
+  "app.downloads.completed-summary": {
+    "message": "{count, number} items completed"
+  },
   "app.downloads.confirm-clear": {
     "message": "Completed, failed, interrupted, and canceled records will be permanently deleted."
   },
@@ -577,9 +580,6 @@
   },
   "app.downloads.manual-download-required": {
     "message": "CurseForge requires this file to be downloaded manually."
-  },
-  "app.downloads.completed-summary": {
-    "message": "{count, number} items completed"
   },
   "app.downloads.more-active-requests": {
     "message": "+{count} active requests"
@@ -3547,6 +3547,9 @@
   },
   "app.settings.updates.offline": {
     "message": "Connect to the internet to check for updates."
+  },
+  "app.settings.updates.portable": {
+    "message": "Portable mode cannot update automatically. Please update manually from GitHub."
   },
   "app.settings.updates.preview-announcement": {
     "message": "Preview update announcement"

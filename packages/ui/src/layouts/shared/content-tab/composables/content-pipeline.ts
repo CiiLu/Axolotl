@@ -7,7 +7,7 @@ import { commonProjectTypeCategoryMessages, normalizeProjectType } from '#ui/uti
 
 import type { ContentItem } from '../types'
 import type { ContentFilterOption } from './content-filtering'
-import { getClientWarningType, isClientOnlyEnvironment } from './content-filtering'
+import { getClientWarningType } from './content-filtering'
 
 // Re-export utility functions and types for convenience
 export type { ContentFilterOption } from './content-filtering'
@@ -15,10 +15,12 @@ export { getClientWarningType, isClientOnlyEnvironment } from './content-filteri
 
 // ---- window 级内存持久化（导航切换保留，关软件丢弃） ----
 
-const memory: Record<string, Map<string, any>> = ((window as any).__ctMemory ??= {})
+const memory: Record<string, Map<string, unknown>> = ((
+	window as unknown as { __ctMemory?: Record<string, Map<string, unknown>> }
+).__ctMemory ??= {})
 function getMap<K, V>(namespace: string): Map<K, V> {
-	if (!memory[namespace]) memory[namespace] = new Map()
-	return memory[namespace]
+	if (!memory[namespace]) memory[namespace] = new Map<string, unknown>()
+	return memory[namespace] as Map<K, V>
 }
 
 // ---- types ----
@@ -79,7 +81,6 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 		showTypeFilters = false,
 		showUpdateFilter = false,
 		showWarningsFilter = false,
-		isPackLocked,
 		memoryKey = '',
 		searchKeys = ['project.title', 'owner.name', 'file_name'],
 	} = config
