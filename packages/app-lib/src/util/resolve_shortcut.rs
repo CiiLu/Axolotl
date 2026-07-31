@@ -118,14 +118,7 @@ fn resolve_windows_lnk(path: &Path, _max_depth: u32) -> Option<PathBuf> {
         // Find the null terminator.
         let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
         let target = String::from_utf16(&buf[..len]).ok()?;
-        let target_path = PathBuf::from(&target);
-
-        if target_path.exists() {
-            Some(target_path)
-        } else {
-            // Return the path anyway per spec — let the caller decide.
-            Some(target_path)
-        }
+        Some(PathBuf::from(&target))
     }
 }
 
@@ -216,7 +209,6 @@ fn resolve_linux_desktop(path: &Path, _max_depth: u32) -> Option<PathBuf> {
 fn parse_desktop_entry(content: &str) -> Option<PathBuf> {
     let mut in_desktop_entry = false;
     let mut exec_line: Option<&str> = None;
-    let mut path_line: Option<&str> = None;
 
     for line in content.lines() {
         let trimmed = line.trim();
@@ -233,8 +225,6 @@ fn parse_desktop_entry(content: &str) -> Option<PathBuf> {
         }
         if let Some(value) = trimmed.strip_prefix("Exec=") {
             exec_line = Some(value);
-        } else if let Some(value) = trimmed.strip_prefix("Path=") {
-            path_line = Some(value);
         }
     }
 
@@ -263,14 +253,6 @@ fn parse_desktop_entry(content: &str) -> Option<PathBuf> {
             .map(|dir| dir.join(binary))
             .find(|p| p.exists())?
     };
-
-    if let Some(p) = path_line {
-        let work_dir = PathBuf::from(p);
-        if work_dir.exists() {
-            // Return the binary path resolved from the working directory context.
-            return Some(binary_path);
-        }
-    }
 
     Some(binary_path)
 }
