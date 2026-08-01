@@ -1,11 +1,10 @@
-import type {
+import {
 	ACESFilmicToneMapping,
 	AmbientLight,
 	Box3,
 	Box3Helper,
 	BufferAttribute,
 	BufferGeometry,
-	Camera,
 	CanvasTexture,
 	Color,
 	DirectionalLight,
@@ -22,7 +21,6 @@ import type {
 	MeshBasicMaterial,
 	MeshLambertMaterial,
 	NearestFilter,
-	Object3D,
 	OrthographicCamera,
 	PerspectiveCamera,
 	Plane,
@@ -32,6 +30,8 @@ import type {
 	Vector2,
 	Vector3,
 	WebGLRenderer,
+	type Camera,
+	type Object3D,
 } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js'

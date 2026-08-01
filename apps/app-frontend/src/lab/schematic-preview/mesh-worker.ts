@@ -1,4 +1,4 @@
-import type { BlockDefinition, BlockModel, Cull, Identifier, TextureAtlasProvider } from 'deepslate'
+import { BlockDefinition, BlockModel, Cull, Identifier, type TextureAtlasProvider } from 'deepslate'
 
 import type { SchematicBlockState } from './backend'
 import { isSchematicAir } from './editing'
