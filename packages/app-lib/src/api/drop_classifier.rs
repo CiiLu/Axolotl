@@ -393,10 +393,10 @@ impl ZipEntrySet {
     }
 }
 
-impl<R: std::io::Read + std::io::Seek> ZipEntrySet {
+impl ZipEntrySet {
     /// `pack.mcmeta` exists under `base` and parses as JSON carrying a
     /// `pack_format` value (either wrapped in `pack` or at the root).
-    fn has_valid_pack_mcmeta(
+    fn has_valid_pack_mcmeta<R: std::io::Read + std::io::Seek>(
         &self,
         archive: &mut zip::ZipArchive<R>,
         base: &str,
@@ -411,7 +411,7 @@ impl<R: std::io::Read + std::io::Seek> ZipEntrySet {
 
     /// `level.dat` exists under `base` and carries the NBT root header
     /// (`0x0A` tag + `Data` root name), raw or gzip/zlib-compressed.
-    fn has_valid_level_dat(
+    fn has_valid_level_dat<R: std::io::Read + std::io::Seek>(
         &self,
         archive: &mut zip::ZipArchive<R>,
         base: &str,
@@ -454,7 +454,7 @@ fn read_entry_prefix<R: std::io::Read + std::io::Seek>(
         crate::api::pack::detect::find_entry_index(archive, name)
             .ok()
             .flatten()?;
-    let mut entry = archive.by_index(index).ok()?;
+    let entry = archive.by_index(index).ok()?;
     let mut buf = Vec::new();
     entry
         .take(MAX_MARKER_READ_BYTES)
@@ -465,7 +465,7 @@ fn read_entry_prefix<R: std::io::Read + std::io::Seek>(
 
 /// Reads at most [`MAX_MARKER_READ_BYTES`] bytes of a file on disk.
 fn read_file_prefix(path: &Path) -> Option<Vec<u8>> {
-    let mut file = std::fs::File::open(path).ok()?;
+    let file = std::fs::File::open(path).ok()?;
     let mut buf = Vec::new();
     file.take(MAX_MARKER_READ_BYTES).read_to_end(&mut buf).ok()?;
     Some(buf)
@@ -508,7 +508,7 @@ fn valid_level_dat_content(bytes: &[u8]) -> bool {
 fn level_dat_headers(bytes: &[u8]) -> Vec<Vec<u8>> {
     let mut candidates = vec![bytes.to_vec()];
     if bytes.len() >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B {
-        let mut decoder = GzDecoder::new(bytes);
+        let decoder = GzDecoder::new(bytes);
         let mut out = Vec::new();
         if decoder
             .take(MAX_MARKER_READ_BYTES)
@@ -519,7 +519,7 @@ fn level_dat_headers(bytes: &[u8]) -> Vec<Vec<u8>> {
         }
     }
     if bytes.len() >= 2 && bytes[0] == 0x78 {
-        let mut decoder = ZlibDecoder::new(bytes);
+        let decoder = ZlibDecoder::new(bytes);
         let mut out = Vec::new();
         if decoder
             .take(MAX_MARKER_READ_BYTES)
