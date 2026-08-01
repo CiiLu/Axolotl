@@ -82,6 +82,24 @@ pub async fn import_world_save(
     if source_is_zip {
         // Extract ZIP archive to the target directory.
         extract_world_zip(source_path, &target_dir).await?;
+        // Deep-nesting fallback: the archive may wrap the world in backup
+        // folders or even inside another ZIP. Hoist the first `level.dat`'s
+        // folder to the target root, extracting nested archives as needed.
+        let target_for_locator = target_dir.clone();
+        tokio::task::spawn_blocking(move || {
+            locate_world_root_sync(&target_for_locator, 0)
+        })
+        .await
+        .map_err(|e| {
+            ErrorKind::InputError(format!(
+                "World location task panicked: {e}"
+            ))
+        })?
+        .map_err(|e| {
+            ErrorKind::InputError(format!(
+                "Failed to locate world inside archive: {e}"
+            ))
+        })?;
     } else {
         // Copy the folder recursively.
         io::copy_dir(source_path, &target_dir).await?;
@@ -263,6 +281,111 @@ fn sanitize_entry_name(name: &str) -> Option<PathBuf> {
     Some(safe)
 }
 
+/// Maximum number of nested archives unwrapped while locating a world.
+const MAX_WORLD_ZIP_NESTING_DEPTH: u32 = 5;
+
+/// After extracting a world ZIP, restructure `target_dir` so `level.dat`
+/// ends up directly under it: search the extracted tree for the first
+/// `level.dat` and hoist its folder to the root; if only nested archives
+/// are present, extract the first one and repeat. Flat and single-root
+/// archives are already correct and return immediately.
+fn locate_world_root_sync(target_dir: &Path, depth: u32) -> std::io::Result<()> {
+    if target_dir.join("level.dat").is_file() {
+        return Ok(());
+    }
+    if depth >= MAX_WORLD_ZIP_NESTING_DEPTH {
+        return Ok(());
+    }
+    if let Some(world_folder) = find_level_dat_folder(target_dir) {
+        hoist_contents_sync(&world_folder, target_dir)?;
+        return Ok(());
+    }
+    if let Some(nested_zip) = find_nested_archive(target_dir) {
+        extract_world_zip_sync(&nested_zip, target_dir).map_err(|e| {
+            std::io::Error::other(format!(
+                "Failed to extract nested archive '{}': {e}",
+                nested_zip.display()
+            ))
+        })?;
+        // The extracted archive itself is not part of the world.
+        let _ = std::fs::remove_file(&nested_zip);
+        return locate_world_root_sync(target_dir, depth + 1);
+    }
+    Ok(())
+}
+
+/// Depth-first search for a directory containing `level.dat`, sorted by
+/// entry name for deterministic results.
+fn find_level_dat_folder(dir: &Path) -> Option<PathBuf> {
+    let mut entries = std::fs::read_dir(dir)
+        .ok()?
+        .collect::<std::io::Result<Vec<_>>>()
+        .ok()?;
+    entries.sort_by_key(std::fs::DirEntry::file_name);
+    for entry in entries {
+        let path = entry.path();
+        if path.is_dir() {
+            if path.join("level.dat").is_file() {
+                return Some(path);
+            }
+            if let Some(found) = find_level_dat_folder(&path) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+/// Depth-first search for the first `.zip` / `.mrpack` file, sorted by entry
+/// name for deterministic results.
+fn find_nested_archive(dir: &Path) -> Option<PathBuf> {
+    let mut entries = std::fs::read_dir(dir)
+        .ok()?
+        .collect::<std::io::Result<Vec<_>>>()
+        .ok()?;
+    entries.sort_by_key(std::fs::DirEntry::file_name);
+    for entry in entries {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = find_nested_archive(&path) {
+                return Some(found);
+            }
+        } else if path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| {
+                e.eq_ignore_ascii_case("zip") || e.eq_ignore_ascii_case("mrpack")
+            })
+        {
+            return Some(path);
+        }
+    }
+    None
+}
+
+/// Move every child of `world_folder` into `target_dir`, then remove the
+/// now-empty wrapper folder.
+fn hoist_contents_sync(
+    world_folder: &Path,
+    target_dir: &Path,
+) -> std::io::Result<()> {
+    let mut entries = std::fs::read_dir(world_folder)?;
+    while let Some(entry) = entries.next() {
+        let entry = entry?;
+        let dest = target_dir.join(entry.file_name());
+        if dest.exists() {
+            return Err(std::io::Error::other(format!(
+                "Cannot hoist '{}': '{}' already exists",
+                entry.path().display(),
+                dest.display()
+            )));
+        }
+        std::fs::rename(entry.path(), &dest)?;
+    }
+    let _ = std::fs::remove_dir(world_folder);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -352,5 +475,122 @@ mod tests {
 
         assert!(out_dir.path().join("level.dat").exists());
         assert!(!out_dir.path().join("My World").exists());
+    }
+
+    fn extract_and_locate(entries: &[(&str, &[u8])]) -> tempfile::TempDir {
+        let (_, out_dir) = extract_to_temp(entries);
+        locate_world_root_sync(out_dir.path(), 0).expect("locate world");
+        out_dir
+    }
+
+    #[test]
+    fn nested_backup_folders_are_hoisted() {
+        let out_dir = extract_and_locate(&[
+            ("Backup/Worlds/My World/level.dat", b"rooted"),
+            ("Backup/Worlds/My World/region/r.0.0.mca", b"mca"),
+        ]);
+
+        assert!(
+            out_dir.path().join("level.dat").exists(),
+            "world nested under backup folders should be hoisted to the root"
+        );
+        assert!(out_dir.path().join("region/r.0.0.mca").exists());
+        assert!(!out_dir.path().join("Backup").exists());
+    }
+
+    #[test]
+    fn nested_world_zip_is_extracted() {
+        let mut inner = Vec::new();
+        {
+            let mut writer =
+                zip::ZipWriter::new(std::io::Cursor::new(&mut inner));
+            writer
+                .start_file(
+                    "My World/level.dat",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start inner entry");
+            writer.write_all(b"rooted").expect("write inner");
+            writer
+                .start_file(
+                    "My World/region/r.0.0.mca",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start inner region");
+            writer.write_all(b"mca").expect("write inner region");
+            writer.finish().expect("finish inner");
+        }
+
+        let (_, out_dir) = extract_to_temp(&[
+            ("Backup/worlds/world1.zip", &inner),
+            ("Backup/worlds/world2.zip", &inner),
+        ]);
+        locate_world_root_sync(out_dir.path(), 0).expect("locate world");
+
+        assert!(
+            out_dir.path().join("level.dat").exists(),
+            "nested world zip should be extracted and hoisted"
+        );
+        assert!(out_dir.path().join("region/r.0.0.mca").exists());
+        assert!(
+            !out_dir.path().join("Backup/worlds/world1.zip").exists(),
+            "extracted nested archive should be removed"
+        );
+    }
+
+    #[test]
+    fn nested_zip_chain_within_limit() {
+        let mut world = Vec::new();
+        {
+            let mut writer =
+                zip::ZipWriter::new(std::io::Cursor::new(&mut world));
+            writer
+                .start_file(
+                    "My World/level.dat",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start world entry");
+            writer.write_all(b"rooted").expect("write world");
+            writer.finish().expect("finish world");
+        }
+        let mut c = Vec::new();
+        {
+            let mut writer = zip::ZipWriter::new(std::io::Cursor::new(&mut c));
+            writer
+                .start_file(
+                    "world.zip",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start c entry");
+            writer.write_all(&world).expect("write c");
+            writer.finish().expect("finish c");
+        }
+        let mut b = Vec::new();
+        {
+            let mut writer = zip::ZipWriter::new(std::io::Cursor::new(&mut b));
+            writer
+                .start_file("c.zip", zip::write::FileOptions::<()>::default())
+                .expect("start b entry");
+            writer.write_all(&c).expect("write b");
+            writer.finish().expect("finish b");
+        }
+        let mut a = Vec::new();
+        {
+            let mut writer = zip::ZipWriter::new(std::io::Cursor::new(&mut a));
+            writer
+                .start_file("b.zip", zip::write::FileOptions::<()>::default())
+                .expect("start a entry");
+            writer.write_all(&b).expect("write a");
+            writer.finish().expect("finish a");
+        }
+
+        let (_, out_dir) =
+            extract_to_temp(&[("Backup/a.zip", &a)]);
+        locate_world_root_sync(out_dir.path(), 0).expect("locate world");
+
+        assert!(
+            out_dir.path().join("level.dat").exists(),
+            "nested zip chain should unwrap to the world"
+        );
     }
 }
