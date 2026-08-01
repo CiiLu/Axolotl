@@ -3233,17 +3233,8 @@
   "app.symlink-capability.unsupported.title": {
     "message": "软链接不支持"
   },
-  "app.symlink-capability.requires-admin.title": {
-    "message": "需要管理员权限"
-  },
-  "app.symlink-capability.requires-admin.restart-button": {
-    "message": "以管理员身份重启"
-  },
-  "app.symlink-capability.requires-admin.description": {
-    "message": "创建软链接需要管理员权限。以管理员身份重新启动启动器？"
-  },
-  "app.symlink-capability.cancel": {
-    "message": "取消"
+  "app.warning.running-as-admin": {
+    "message": "Axolotl 正在以管理员身份运行。此模式下无法拖拽导入文件，请以普通权限重新启动启动器。"
   },
   "drop.help.title": {
     "message": "我可以拖入什么到 Axolotl？"

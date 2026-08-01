@@ -165,28 +165,8 @@ async fn check_symlink_capability() -> api::Result<String> {
 }
 
 #[tauri::command]
-fn restart_as_admin(app: tauri::AppHandle) {
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        let exe = std::env::current_exe().unwrap();
-        let spawned = Command::new("powershell")
-            .args([
-                "-Command",
-                &format!(
-                    "Start-Process -FilePath '{}' -Verb RunAs",
-                    exe.to_string_lossy()
-                ),
-            ])
-            .spawn();
-        if spawned.is_ok() {
-            app.exit(0);
-        }
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = app;
-    }
+fn is_elevated() -> bool {
+    theseus::is_process_elevated()
 }
 
 #[tauri::command]
@@ -216,6 +196,26 @@ fn main() {
     #[cfg(target_os = "windows")]
     if std::env::args_os().any(|argument| argument == "--memory-optimize") {
         std::process::exit(theseus::memory::optimize_current_process_context());
+    }
+
+    // Short-lived elevated helper entry: create a directory/file link with
+    // administrator privileges, report the outcome through a result file, and
+    // exit immediately. The main launcher process is never elevated.
+    #[cfg(target_os = "windows")]
+    {
+        let args: Vec<std::ffi::OsString> = std::env::args_os().collect();
+        if let Some(index) = args
+            .iter()
+            .position(|argument| argument == "--elevated-create-link")
+        {
+            let payload = args
+                .get(index + 1)
+                .cloned()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
+            std::process::exit(theseus::symlink::create_link_elevated_helper(&payload));
+        }
     }
 
     // Workaround: NVIDIA's proprietary EGL driver crashes WebKitGTK's DMA-BUF renderer
@@ -424,7 +424,7 @@ fn main() {
             show_window,
             restart_app,
             check_symlink_capability,
-            restart_as_admin,
+            is_elevated,
             allow_symlink_target,
         ]);
 

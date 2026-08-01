@@ -5634,7 +5634,7 @@
     "message": "實例檔案保留在原始位置，Axolotl 透過符號連結引用。節省磁碟空間。"
   },
   "drop.symlink_method.requires_admin": {
-    "message": "需要管理員權限"
+    "message": "建立連結時將要求一次系統管理員授權（UAC）"
   },
   "drop.symlink_method.unsupported_warning": {
     "message": "此系統不支援符號連結"

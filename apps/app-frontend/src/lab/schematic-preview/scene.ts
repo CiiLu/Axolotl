@@ -1,38 +1,4 @@
-import type {
-	ACESFilmicToneMapping,
-	AmbientLight,
-	Box3,
-	Box3Helper,
-	BufferAttribute,
-	BufferGeometry,
-	type Camera,
-	CanvasTexture,
-	Color,
-	DirectionalLight,
-	DoubleSide,
-	EdgesGeometry,
-	Euler,
-	GridHelper,
-	Group,
-	HemisphereLight,
-	Line,
-	LineBasicMaterial,
-	LineSegments,
-	Mesh,
-	MeshBasicMaterial,
-	MeshLambertMaterial,
-	NearestFilter,
-	type Object3D,
-	OrthographicCamera,
-	PerspectiveCamera,
-	Plane,
-	Raycaster,
-	Scene,
-	SRGBColorSpace,
-	Vector2,
-	Vector3,
-	WebGLRenderer,
-} from 'three'
+import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js'
 
@@ -77,36 +43,43 @@ const WALK_SPEED_MULTIPLIER = 0.85
 
 export class SchematicPreviewScene {
 	private readonly canvas: HTMLCanvasElement
-	private readonly renderer: WebGLRenderer
-	private readonly scene = new Scene()
-	private readonly perspectiveCamera = new PerspectiveCamera(50, 1, 0.05, 10000)
-	private readonly orthographicCamera = new OrthographicCamera(-32, 32, 32, -32, -10000, 10000)
+	private readonly renderer: THREE.WebGLRenderer
+	private readonly scene = new THREE.Scene()
+	private readonly perspectiveCamera = new THREE.PerspectiveCamera(50, 1, 0.05, 10000)
+	private readonly orthographicCamera = new THREE.OrthographicCamera(
+		-32,
+		32,
+		32,
+		-32,
+		-10000,
+		10000,
+	)
 	private readonly controls: OrbitControls
 	private readonly walkControls: PointerLockControls
-	private readonly raycaster = new Raycaster()
-	private readonly pointer = new Vector2()
-	private readonly regions = new Map<string, Group>()
-	private readonly regionBounds = new Group()
-	private readonly measurement = new Group()
-	private readonly chunks = new Map<string, Group>()
+	private readonly raycaster = new THREE.Raycaster()
+	private readonly pointer = new THREE.Vector2()
+	private readonly regions = new Map<string, THREE.Group>()
+	private readonly regionBounds = new THREE.Group()
+	private readonly measurement = new THREE.Group()
+	private readonly chunks = new Map<string, THREE.Group>()
 	private readonly resizeObserver: ResizeObserver
 	private readonly onSelect: SceneOptions['onSelect']
 	private readonly onFocus: SceneOptions['onFocus']
-	private activeCamera: Camera = this.perspectiveCamera
+	private activeCamera: THREE.Camera = this.perspectiveCamera
 	private projection: Projection = 'perspective'
 	private opaqueMaterial = this.createMaterial(false)
 	private translucentMaterial = this.createMaterial(true)
-	private grid?: Group
-	private selection = new Group()
+	private grid?: THREE.Group
+	private selection = new THREE.Group()
 	private selectionBounds?: SchematicSelectionBounds
 	private selectionEntries: SchematicSceneSelection[] = []
 	private measurementStart?: SchematicSceneSelection
 	private measurementEnd?: SchematicSceneSelection
 	private renderFrame?: number
 	private walkFrame?: number
-	private bounds?: Box3
+	private bounds?: THREE.Box3
 	private layerRange?: [number, number]
-	private pointerStart?: Vector2
+	private pointerStart?: THREE.Vector2
 	private disposed = false
 	private gridVisible = true
 	private boundsVisible = true
@@ -115,17 +88,17 @@ export class SchematicPreviewScene {
 	private viewMode: ViewMode = 'orbit'
 	private walkPreviousTime = 0
 	private walkSpeed = 8
-	private walkOrbitTarget?: Vector3
+	private walkOrbitTarget?: THREE.Vector3
 	private readonly pressedKeys = new Set<string>()
 	private readonly onViewModeChange: SceneOptions['onViewModeChange']
 	private readonly onWalkLockChange: SceneOptions['onWalkLockChange']
 	private readonly onWalkSpeedChange: SceneOptions['onWalkSpeedChange']
 	private readonly onNativeWalkLock?: SceneOptions['onNativeWalkLock']
 	private readonly onNativeWalkUnlock?: SceneOptions['onNativeWalkUnlock']
-	private readonly walkDirection = new Vector3()
-	private readonly walkForward = new Vector3()
-	private readonly walkRight = new Vector3()
-	private readonly walkEuler = new Euler(0, 0, 0, 'YXZ')
+	private readonly walkDirection = new THREE.Vector3()
+	private readonly walkForward = new THREE.Vector3()
+	private readonly walkRight = new THREE.Vector3()
+	private readonly walkEuler = new THREE.Euler(0, 0, 0, 'YXZ')
 	private nativeWalkLockPending = false
 	private nativeWalkLocked = false
 
@@ -138,27 +111,27 @@ export class SchematicPreviewScene {
 		this.onWalkSpeedChange = options.onWalkSpeedChange
 		this.onNativeWalkLock = options.onNativeWalkLock
 		this.onNativeWalkUnlock = options.onNativeWalkUnlock
-		this.renderer = new WebGLRenderer({
+		this.renderer = new THREE.WebGLRenderer({
 			canvas: options.canvas,
 			antialias: true,
 			alpha: false,
 			preserveDrawingBuffer: true,
 		})
-		this.renderer.setClearColor(new Color('#0a0a0a'), 1)
-		this.renderer.outputColorSpace = SRGBColorSpace
-		this.renderer.toneMapping = ACESFilmicToneMapping
+		this.renderer.setClearColor(new THREE.Color('#0a0a0a'), 1)
+		this.renderer.outputColorSpace = THREE.SRGBColorSpace
+		this.renderer.toneMapping = THREE.ACESFilmicToneMapping
 		this.renderer.toneMappingExposure = 1.5
 		this.renderer.localClippingEnabled = true
 		this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
 		this.scene.add(this.regionBounds)
 		this.scene.add(this.measurement)
 		this.scene.add(this.selection)
-		this.scene.add(new AmbientLight('#ffffff', 0.8))
-		this.scene.add(new HemisphereLight('#87ceeb', '#444444', 0.6))
-		const keyLight = new DirectionalLight('#fffbf0', 4)
+		this.scene.add(new THREE.AmbientLight('#ffffff', 0.8))
+		this.scene.add(new THREE.HemisphereLight('#87ceeb', '#444444', 0.6))
+		const keyLight = new THREE.DirectionalLight('#fffbf0', 4)
 		keyLight.position.set(-100, 151, 50)
 		this.scene.add(keyLight)
-		const fillLight = new DirectionalLight('#ffffff', 0.3)
+		const fillLight = new THREE.DirectionalLight('#ffffff', 0.3)
 		fillLight.position.set(-30, 40, -30)
 		this.scene.add(fillLight)
 
@@ -208,19 +181,19 @@ export class SchematicPreviewScene {
 		this.chunks.clear()
 		for (const helper of this.regionBounds.children) this.disposeHelper(helper)
 		this.regionBounds.clear()
-		const bounds = new Box3()
+		const bounds = new THREE.Box3()
 		for (const region of regions) {
-			const group = new Group()
+			const group = new THREE.Group()
 			group.name = region.id
 			this.regions.set(region.id, group)
 			this.scene.add(group)
-			const box = new Box3(
-				new Vector3(...region.min),
-				new Vector3(region.max[0] + 1, region.max[1] + 1, region.max[2] + 1),
+			const box = new THREE.Box3(
+				new THREE.Vector3(...region.min),
+				new THREE.Vector3(region.max[0] + 1, region.max[1] + 1, region.max[2] + 1),
 			)
 			bounds.union(box)
-			const helper = new Box3Helper(box, new Color('#58736a'))
-			const material = helper.material as LineBasicMaterial
+			const helper = new THREE.Box3Helper(box, new THREE.Color('#58736a'))
+			const material = helper.material as THREE.LineBasicMaterial
 			material.transparent = true
 			material.opacity = 0.52
 			material.depthWrite = false
@@ -232,14 +205,14 @@ export class SchematicPreviewScene {
 		this.requestRender()
 	}
 
-	setTexture(texture?: CanvasTexture) {
+	setTexture(texture?: THREE.CanvasTexture) {
 		const oldOpaque = this.opaqueMaterial
 		const oldTranslucent = this.translucentMaterial
 		this.opaqueMaterial = this.createMaterial(false, texture)
 		this.translucentMaterial = this.createMaterial(true, texture)
 		for (const chunk of this.chunks.values()) {
 			for (const child of chunk.children) {
-				if (!(child instanceof Mesh)) continue
+				if (!(child instanceof THREE.Mesh)) continue
 				child.material = child.userData.translucent ? this.translucentMaterial : this.opaqueMaterial
 			}
 		}
@@ -271,7 +244,7 @@ export class SchematicPreviewScene {
 			previous.parent?.remove(previous)
 			this.disposeObject(previous)
 		}
-		const group = new Group()
+		const group = new THREE.Group()
 		group.userData.chunkPosition = chunkPosition
 		const opaqueMesh = this.createMesh(opaque, false, regionId)
 		if (opaqueMesh) group.add(opaqueMesh)
@@ -335,7 +308,7 @@ export class SchematicPreviewScene {
 		this.regionBounds.visible = this.boundsVisible && this.explosion === 0
 		for (const chunk of this.chunks.values()) {
 			for (const child of chunk.children) {
-				if (child instanceof Mesh) this.applyExplosion(child)
+				if (child instanceof THREE.Mesh) this.applyExplosion(child)
 			}
 		}
 		this.setSelectionBounds(this.selectionBounds)
@@ -387,12 +360,12 @@ export class SchematicPreviewScene {
 
 	fitView(targetBounds = this.explodedBounds(this.bounds)) {
 		if (!targetBounds || targetBounds.isEmpty()) return
-		const center = targetBounds.getCenter(new Vector3())
-		const size = targetBounds.getSize(new Vector3())
+		const center = targetBounds.getCenter(new THREE.Vector3())
+		const size = targetBounds.getSize(new THREE.Vector3())
 		const maximum = Math.max(size.x, size.y, size.z, 4)
 		this.controls.target.copy(center)
-		this.activeCamera.position.copy(center).add(new Vector3(maximum, maximum * 0.8, maximum))
-		if (this.activeCamera instanceof PerspectiveCamera) {
+		this.activeCamera.position.copy(center).add(new THREE.Vector3(maximum, maximum * 0.8, maximum))
+		if (this.activeCamera instanceof THREE.PerspectiveCamera) {
 			this.activeCamera.near = Math.max(0.05, maximum / 1000)
 			this.activeCamera.far = Math.max(1000, maximum * 20)
 			this.activeCamera.updateProjectionMatrix()
@@ -407,9 +380,9 @@ export class SchematicPreviewScene {
 	focusRegion(region: SchematicSceneRegion) {
 		this.fitView(
 			this.explodedBounds(
-				new Box3(
-					new Vector3(...region.min),
-					new Vector3(region.max[0] + 1, region.max[1] + 1, region.max[2] + 1),
+				new THREE.Box3(
+					new THREE.Vector3(...region.min),
+					new THREE.Vector3(region.max[0] + 1, region.max[1] + 1, region.max[2] + 1),
 				),
 			),
 		)
@@ -448,9 +421,9 @@ export class SchematicPreviewScene {
 		const color = this.accentColor()
 		if (this.selectionEntries.length > 0) {
 			const surfaceGeometry = this.selectionSurfaceGeometry(this.selectionEntries)
-			const surface = new Mesh(
+			const surface = new THREE.Mesh(
 				surfaceGeometry,
-				new MeshBasicMaterial({
+				new THREE.MeshBasicMaterial({
 					color,
 					transparent: true,
 					opacity: 0.24,
@@ -459,7 +432,7 @@ export class SchematicPreviewScene {
 					polygonOffset: true,
 					polygonOffsetFactor: -8,
 					polygonOffsetUnits: -8,
-					side: DoubleSide,
+					side: THREE.DoubleSide,
 					toneMapped: false,
 				}),
 			)
@@ -467,9 +440,9 @@ export class SchematicPreviewScene {
 			surface.raycast = () => {}
 			this.selection.add(surface)
 
-			const outline = new LineSegments(
-				new EdgesGeometry(surfaceGeometry, 1),
-				new LineBasicMaterial({
+			const outline = new THREE.LineSegments(
+				new THREE.EdgesGeometry(surfaceGeometry, 1),
+				new THREE.LineBasicMaterial({
 					color,
 					transparent: true,
 					opacity: 1,
@@ -486,14 +459,14 @@ export class SchematicPreviewScene {
 			const floor = this.bounds?.min.y ?? bounds.min[1]
 			const minY = bounds.min[1] + (bounds.min[1] - floor) * this.explosion
 			const maxY = bounds.max[1] + 1 + (bounds.max[1] - floor) * this.explosion
-			const helper = new Box3Helper(
-				new Box3(
-					new Vector3(bounds.min[0] - 0.025, minY - 0.025, bounds.min[2] - 0.025),
-					new Vector3(bounds.max[0] + 1.025, maxY + 0.025, bounds.max[2] + 1.025),
+			const helper = new THREE.Box3Helper(
+				new THREE.Box3(
+					new THREE.Vector3(bounds.min[0] - 0.025, minY - 0.025, bounds.min[2] - 0.025),
+					new THREE.Vector3(bounds.max[0] + 1.025, maxY + 0.025, bounds.max[2] + 1.025),
 				),
 				color,
 			)
-			const material = helper.material as LineBasicMaterial
+			const material = helper.material as THREE.LineBasicMaterial
 			material.transparent = true
 			material.opacity = 0.65
 			material.depthTest = false
@@ -511,9 +484,9 @@ export class SchematicPreviewScene {
 				this.appendCubeSurface(vertices, selection.position)
 			}
 		}
-		return new BufferGeometry().setAttribute(
+		return new THREE.BufferGeometry().setAttribute(
 			'position',
-			new BufferAttribute(new Float32Array(vertices), 3),
+			new THREE.BufferAttribute(new Float32Array(vertices), 3),
 		)
 	}
 
@@ -523,7 +496,7 @@ export class SchematicPreviewScene {
 		const chunk = this.chunks.get(`${selection.regionId}:${chunkPosition.join(':')}`)
 		if (!chunk) return false
 		for (const child of chunk.children) {
-			if (!(child instanceof Mesh)) continue
+			if (!(child instanceof THREE.Mesh)) continue
 			const positions = child.geometry.getAttribute('position')
 			const blocks = child.geometry.getAttribute('blockPosition')
 			for (let quad = 0; quad + 5 < positions.count; quad += 6) {
@@ -583,15 +556,15 @@ export class SchematicPreviewScene {
 		}
 
 		const color = this.accentColor()
-		this.measurement.add(new Box3Helper(this.explodedBlockBounds(start.position), color))
+		this.measurement.add(new THREE.Box3Helper(this.explodedBlockBounds(start.position), color))
 		if (end) {
-			this.measurement.add(new Box3Helper(this.explodedBlockBounds(end.position), color))
-			const line = new Line(
-				new BufferGeometry().setFromPoints([
+			this.measurement.add(new THREE.Box3Helper(this.explodedBlockBounds(end.position), color))
+			const line = new THREE.Line(
+				new THREE.BufferGeometry().setFromPoints([
 					this.explodedBlockCenter(start.position),
 					this.explodedBlockCenter(end.position),
 				]),
-				new LineBasicMaterial({ color, depthTest: false }),
+				new THREE.LineBasicMaterial({ color, depthTest: false }),
 			)
 			line.renderOrder = 20
 			this.measurement.add(line)
@@ -601,7 +574,7 @@ export class SchematicPreviewScene {
 
 	focusSelection(selection: SchematicSceneSelection) {
 		const floor = this.bounds?.min.y ?? selection.position[1]
-		const center = new Vector3(
+		const center = new THREE.Vector3(
 			selection.position[0] + 0.5,
 			selection.position[1] + 0.5 + (selection.position[1] - floor) * this.explosion,
 			selection.position[2] + 0.5,
@@ -659,15 +632,15 @@ export class SchematicPreviewScene {
 		this.renderer.dispose()
 	}
 
-	private createMaterial(translucent: boolean, texture?: CanvasTexture) {
+	private createMaterial(translucent: boolean, texture?: THREE.CanvasTexture) {
 		if (texture) {
 			texture.flipY = false
-			texture.magFilter = NearestFilter
-			texture.minFilter = NearestFilter
+			texture.magFilter = THREE.NearestFilter
+			texture.minFilter = THREE.NearestFilter
 			texture.generateMipmaps = false
 			texture.needsUpdate = true
 		}
-		return new MeshLambertMaterial({
+		return new THREE.MeshLambertMaterial({
 			map: texture,
 			vertexColors: true,
 			alphaTest: translucent ? 0 : 0.08,
@@ -681,20 +654,23 @@ export class SchematicPreviewScene {
 		const value = getComputedStyle(document.documentElement)
 			.getPropertyValue('--color-brand')
 			.trim()
-		return new Color(value || '#86d562')
+		return new THREE.Color(value || '#86d562')
 	}
 
 	private createMesh(data: SchematicMeshData, translucent: boolean, regionId: string) {
 		if (data.positions.length === 0) return undefined
-		const geometry = new BufferGeometry()
-		geometry.setAttribute('position', new BufferAttribute(data.positions, 3))
-		geometry.setAttribute('normal', new BufferAttribute(data.normals, 3))
-		geometry.setAttribute('uv', new BufferAttribute(data.uvs, 2))
-		geometry.setAttribute('color', new BufferAttribute(data.colors, 3))
-		geometry.setAttribute('blockPosition', new BufferAttribute(data.blockPositions, 3))
+		const geometry = new THREE.BufferGeometry()
+		geometry.setAttribute('position', new THREE.BufferAttribute(data.positions, 3))
+		geometry.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3))
+		geometry.setAttribute('uv', new THREE.BufferAttribute(data.uvs, 2))
+		geometry.setAttribute('color', new THREE.BufferAttribute(data.colors, 3))
+		geometry.setAttribute('blockPosition', new THREE.BufferAttribute(data.blockPositions, 3))
 		geometry.computeBoundingBox()
 		geometry.computeBoundingSphere()
-		const mesh = new Mesh(geometry, translucent ? this.translucentMaterial : this.opaqueMaterial)
+		const mesh = new THREE.Mesh(
+			geometry,
+			translucent ? this.translucentMaterial : this.opaqueMaterial,
+		)
 		mesh.userData.regionId = regionId
 		mesh.userData.translucent = translucent
 		mesh.userData.basePositions = data.positions.slice()
@@ -702,9 +678,9 @@ export class SchematicPreviewScene {
 		return mesh
 	}
 
-	private applyExplosion(mesh: Mesh) {
-		const position = mesh.geometry.getAttribute('position') as BufferAttribute
-		const blockPosition = mesh.geometry.getAttribute('blockPosition') as BufferAttribute
+	private applyExplosion(mesh: THREE.Mesh) {
+		const position = mesh.geometry.getAttribute('position') as THREE.BufferAttribute
+		const blockPosition = mesh.geometry.getAttribute('blockPosition') as THREE.BufferAttribute
 		const basePositions = mesh.userData.basePositions as Float32Array | undefined
 		if (!basePositions) return
 		const floor = this.bounds?.min.y ?? 0
@@ -719,7 +695,7 @@ export class SchematicPreviewScene {
 		mesh.geometry.computeBoundingSphere()
 	}
 
-	private explodedBounds(bounds?: Box3) {
+	private explodedBounds(bounds?: THREE.Box3) {
 		if (!bounds || this.explosion === 0) return bounds
 		const exploded = bounds.clone()
 		const floor = this.bounds?.min.y ?? bounds.min.y
@@ -730,7 +706,7 @@ export class SchematicPreviewScene {
 
 	private explodedBlockCenter(position: [number, number, number]) {
 		const floor = this.bounds?.min.y ?? position[1]
-		return new Vector3(
+		return new THREE.Vector3(
 			position[0] + 0.5,
 			position[1] + 0.5 + (position[1] - floor) * this.explosion,
 			position[2] + 0.5,
@@ -739,14 +715,14 @@ export class SchematicPreviewScene {
 
 	private explodedBlockBounds(position: [number, number, number]) {
 		const center = this.explodedBlockCenter(position)
-		return new Box3(center.clone().addScalar(-0.5), center.clone().addScalar(0.5))
+		return new THREE.Box3(center.clone().addScalar(-0.5), center.clone().addScalar(0.5))
 	}
 
 	private applyClippingPlanes() {
 		const clippingPlanes = this.layerRange
 			? [
-					new Plane(new Vector3(0, 1, 0), -this.layerRange[0]),
-					new Plane(new Vector3(0, -1, 0), this.layerRange[1] + 1),
+					new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.layerRange[0]),
+					new THREE.Plane(new THREE.Vector3(0, -1, 0), this.layerRange[1] + 1),
 				]
 			: []
 		this.opaqueMaterial.clippingPlanes = clippingPlanes
@@ -762,14 +738,14 @@ export class SchematicPreviewScene {
 			this.grid.clear()
 		}
 		if (!this.bounds) return
-		const size = this.bounds.getSize(new Vector3())
-		const center = this.bounds.getCenter(new Vector3())
+		const size = this.bounds.getSize(new THREE.Vector3())
+		const center = this.bounds.getCenter(new THREE.Vector3())
 		const gridSize = Math.max(200, Math.ceil((Math.max(size.x, size.z) * 1.5) / 24) * 24)
 		const gridCenterX = Math.round(center.x / 12) * 12
 		const gridCenterZ = Math.round(center.z / 12) * 12
-		this.grid = new Group()
-		const cells = new GridHelper(gridSize, Math.min(gridSize, 400), '#404040', '#404040')
-		const sections = new GridHelper(
+		this.grid = new THREE.Group()
+		const cells = new THREE.GridHelper(gridSize, Math.min(gridSize, 400), '#404040', '#404040')
+		const sections = new THREE.GridHelper(
 			gridSize,
 			Math.max(1, Math.round(gridSize / 12)),
 			'#6b6b6b',
@@ -811,13 +787,13 @@ export class SchematicPreviewScene {
 
 	private readonly handlePointerDown = (event: PointerEvent) => {
 		if (this.viewMode === 'walk') return
-		this.pointerStart = new Vector2(event.clientX, event.clientY)
+		this.pointerStart = new THREE.Vector2(event.clientX, event.clientY)
 	}
 
 	private readonly handlePointerUp = (event: PointerEvent) => {
 		if (this.viewMode === 'walk') return
 		if (event.button !== 0 || !this.pointerStart) return
-		const distance = this.pointerStart.distanceTo(new Vector2(event.clientX, event.clientY))
+		const distance = this.pointerStart.distanceTo(new THREE.Vector2(event.clientX, event.clientY))
 		this.pointerStart = undefined
 		if (distance > 4) return
 		const rect = this.canvas.getBoundingClientRect()
@@ -826,20 +802,24 @@ export class SchematicPreviewScene {
 			-((event.clientY - rect.top) / rect.height) * 2 + 1,
 		)
 		this.raycaster.setFromCamera(this.pointer, this.activeCamera)
-		const candidates: Object3D[] = []
+		const candidates: THREE.Object3D[] = []
 		for (const region of this.regions.values()) {
 			if (region.visible) candidates.push(...region.children)
 		}
 		const intersections = this.raycaster.intersectObjects(candidates, true)
 		const intersection = intersections.find((item) => {
-			if (!(item.object instanceof Mesh) || !item.object.visible || item.faceIndex === undefined) {
+			if (
+				!(item.object instanceof THREE.Mesh) ||
+				!item.object.visible ||
+				item.faceIndex === undefined
+			) {
 				return false
 			}
 			const attribute = item.object.geometry.getAttribute('blockPosition')
 			const blockY = attribute.getY(item.faceIndex * 3)
 			return !this.layerRange || (blockY >= this.layerRange[0] && blockY <= this.layerRange[1])
 		})
-		if (!intersection || !(intersection.object instanceof Mesh)) {
+		if (!intersection || !(intersection.object instanceof THREE.Mesh)) {
 			this.onSelect()
 			return
 		}
@@ -1051,15 +1031,15 @@ export class SchematicPreviewScene {
 		if (!this.disposed) this.renderer.render(this.scene, this.activeCamera)
 	}
 
-	private disposeObject(object: Object3D) {
+	private disposeObject(object: THREE.Object3D) {
 		object.traverse((child) => {
-			if (child instanceof Mesh) child.geometry.dispose()
+			if (child instanceof THREE.Mesh) child.geometry.dispose()
 		})
 	}
 
-	private disposeHelper(object: Object3D) {
-		const helper = object as Object3D & {
-			geometry?: BufferGeometry
+	private disposeHelper(object: THREE.Object3D) {
+		const helper = object as THREE.Object3D & {
+			geometry?: THREE.BufferGeometry
 			material?: { dispose: () => void } | Array<{ dispose: () => void }>
 		}
 		helper.geometry?.dispose()

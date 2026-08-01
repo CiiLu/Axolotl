@@ -4109,18 +4109,6 @@
   "app.splash.updating-app-directory": {
     "message": "Updating app directory..."
   },
-  "app.symlink-capability.cancel": {
-    "message": "Cancel"
-  },
-  "app.symlink-capability.requires-admin.description": {
-    "message": "Windows Developer Mode is disabled, so the launcher must restart as administrator to create a shared instance."
-  },
-  "app.symlink-capability.requires-admin.restart-button": {
-    "message": "Restart as administrator"
-  },
-  "app.symlink-capability.requires-admin.title": {
-    "message": "Administrator permission required"
-  },
   "app.symlink-capability.unsupported": {
     "message": "This system does not support creating symbolic links."
   },
@@ -4144,6 +4132,9 @@
   },
   "app.symlink-warning.write.header": {
     "message": "Shared instance"
+  },
+  "app.warning.running-as-admin": {
+    "message": "Axolotl is running as administrator. Drag-and-drop file import is disabled in this mode; please restart the launcher without administrator privileges."
   },
   "app.translation-settings.api-key": {
     "message": "API key"

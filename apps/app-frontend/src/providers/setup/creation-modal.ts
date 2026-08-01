@@ -5,7 +5,6 @@ import type {
 	CreationFlowModal,
 } from '@modrinth/ui'
 import { defineMessages, useVIntl } from '@modrinth/ui'
-import { confirm } from '@tauri-apps/plugin-dialog'
 import { inject, provide, ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 import { useRouter } from 'vue-router'
@@ -24,7 +23,7 @@ import {
 	type InstallJobSnapshot,
 	wait_for_install_job,
 } from '@/helpers/install'
-import { check_symlink_capability, list, restart_as_admin } from '@/helpers/instance'
+import { check_symlink_capability, list } from '@/helpers/instance'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata.js'
 import type { InstanceLoader } from '@/helpers/types'
 import { useTheming } from '@/store/state'
@@ -37,23 +36,6 @@ const symlinkMessages = defineMessages({
 	unsupportedBody: {
 		id: 'app.symlink-capability.unsupported',
 		defaultMessage: 'This system does not support creating symbolic links.',
-	},
-	requiresAdminTitle: {
-		id: 'app.symlink-capability.requires-admin.title',
-		defaultMessage: 'Administrator permission required',
-	},
-	requiresAdminDescription: {
-		id: 'app.symlink-capability.requires-admin.description',
-		defaultMessage:
-			'Windows Developer Mode is disabled, so the launcher must restart as administrator to create a shared instance.',
-	},
-	requiresAdminRestartButton: {
-		id: 'app.symlink-capability.requires-admin.restart-button',
-		defaultMessage: 'Restart as administrator',
-	},
-	cancel: {
-		id: 'app.symlink-capability.cancel',
-		defaultMessage: 'Cancel',
 	},
 })
 
@@ -206,28 +188,17 @@ export function setupCreationModal(
 
 				// Show SymlinkMethodCards for user to choose copy vs symlink
 				const capability = await check_symlink_capability()
-				if (capability === 'unsupported') {
-					notificationManager.addNotification({
-						type: 'error',
-						title: formatMessage(symlinkMessages.unsupportedTitle),
-						text: formatMessage(symlinkMessages.unsupportedBody),
-					})
-					return
-				}
-				if (capability === 'requires_admin') {
-					const confirmed = await confirm(formatMessage(symlinkMessages.requiresAdminDescription), {
-						title: formatMessage(symlinkMessages.requiresAdminTitle),
-						okLabel: formatMessage(symlinkMessages.requiresAdminRestartButton),
-						cancelLabel: formatMessage(symlinkMessages.cancel),
-					})
-					if (confirmed) {
-						restart_as_admin()
-					}
-					return
-				}
+		if (capability === 'unsupported') {
+			notificationManager.addNotification({
+				type: 'error',
+				title: formatMessage(symlinkMessages.unsupportedTitle),
+				text: formatMessage(symlinkMessages.unsupportedBody),
+			})
+			return
+		}
 
-				const chooseImportMethod: (options: {
-					instanceNames: string[]
+		const chooseImportMethod: (options: {
+			instanceNames: string[]
 					symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
 				}) => Promise<boolean> = inject('chooseImportMethod')!
 

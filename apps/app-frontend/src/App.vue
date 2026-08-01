@@ -137,6 +137,7 @@ import {
 	getOS,
 	getUpdateSize,
 	isDev,
+	isElevated,
 	isNetworkMetered,
 	setRestartAfterPendingUpdate,
 } from '@/helpers/utils.js'
@@ -367,6 +368,7 @@ onMounted(async () => {
 	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
 
 	checkUpdates()
+	void warnIfRunningElevated()
 })
 
 onUnmounted(async () => {
@@ -380,6 +382,16 @@ onUnmounted(async () => {
 
 const { formatMessage } = useVIntl()
 const formatBytes = useFormatBytes()
+
+async function warnIfRunningElevated() {
+	if (await isElevated().catch(() => false)) {
+		addNotification({
+			title: formatMessage(messages.runningAsAdmin),
+			type: 'warning',
+			autoCloseMs: null,
+		})
+	}
+}
 
 async function onImportFileReceived({
 	file: _file,
@@ -472,6 +484,11 @@ const messages = defineMessages({
 		id: 'app.auth-servers.unreachable.body',
 		defaultMessage:
 			'Minecraft authentication servers may be down right now. Check your internet connection and try again later.',
+	},
+	runningAsAdmin: {
+		id: 'app.warning.running-as-admin',
+		defaultMessage:
+			'Axolotl is running as administrator. Drag-and-drop file import is disabled in this mode; please restart the launcher without administrator privileges.',
 	},
 	restarting: {
 		id: 'app.restarting',

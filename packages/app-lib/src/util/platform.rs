@@ -1,6 +1,68 @@
 //! Platform-related code
 use daedalus::minecraft::{Os, OsRule};
 
+/// Whether the current process is running with elevated privileges
+/// (e.g. "Run as administrator" on Windows).
+#[cfg(target_os = "windows")]
+pub fn is_process_elevated() -> bool {
+    use std::ffi::c_void;
+    use std::ptr::null_mut;
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetCurrentProcess() -> *mut c_void;
+        fn CloseHandle(handle: *mut c_void) -> i32;
+    }
+
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn OpenProcessToken(
+            process_handle: *mut c_void,
+            desired_access: u32,
+            token_handle: *mut *mut c_void,
+        ) -> i32;
+        fn GetTokenInformation(
+            token_handle: *mut c_void,
+            token_information_class: u32,
+            token_information: *mut c_void,
+            token_information_length: u32,
+            return_length: *mut u32,
+        ) -> i32;
+    }
+
+    const TOKEN_QUERY: u32 = 0x8;
+    const TOKEN_ELEVATION: u32 = 20;
+
+    // SAFETY: GetCurrentProcess returns a pseudo-handle that must not be
+    // closed. The token handle is queried and closed on every path.
+    unsafe {
+        let process = GetCurrentProcess();
+        let mut token = null_mut();
+        if OpenProcessToken(process, TOKEN_QUERY, &raw mut token) == 0
+            || token.is_null()
+        {
+            return false;
+        }
+
+        let mut elevation: u32 = 0;
+        let mut size = 0u32;
+        let success = GetTokenInformation(
+            token,
+            TOKEN_ELEVATION,
+            &raw mut elevation as *mut c_void,
+            std::mem::size_of::<u32>() as u32,
+            &raw mut size,
+        ) != 0;
+        let _ = CloseHandle(token);
+        success && elevation != 0
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn is_process_elevated() -> bool {
+    false
+}
+
 // Bit width
 #[cfg(target_pointer_width = "64")]
 pub const ARCH_WIDTH: &str = "64";

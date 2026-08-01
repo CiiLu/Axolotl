@@ -406,10 +406,6 @@ export async function check_symlink_capability(): Promise<SymlinkCapability> {
 	return await invoke('check_symlink_capability')
 }
 
-export async function restart_as_admin(): Promise<void> {
-	return await invoke('restart_as_admin')
-}
-
 export async function allow_symlink_target(path: string): Promise<void> {
 	return await invoke('allow_symlink_target', { path })
 }

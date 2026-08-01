@@ -3281,17 +3281,8 @@
   "app.symlink-capability.unsupported": {
     "message": "系统不支持软链接。"
   },
-  "app.symlink-capability.requires-admin.title": {
-    "message": "需要管理员权限"
-  },
-  "app.symlink-capability.requires-admin.description": {
-    "message": "创建软链接需要管理员权限。以管理员身份重新启动启动器？"
-  },
-  "app.symlink-capability.requires-admin.restart-button": {
-    "message": "以管理员身份重启"
-  },
-  "app.symlink-capability.cancel": {
-    "message": "取消"
+  "app.warning.running-as-admin": {
+    "message": "Axolotl 正在以系統管理員身分執行。此模式無法拖曳匯入檔案，請以一般權限重新啟動啟動器。"
   },
   "app.appearance-settings.auto-hide-downloads-button.description": {
     "message": "没有进行中的下载任务时隐藏侧边栏中的下载按钮，有任务时自动显示。"

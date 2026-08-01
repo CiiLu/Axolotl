@@ -1,10 +1,4 @@
-import type {
-	BlockDefinition,
-	BlockModel,
-	Cull,
-	Identifier,
-	type TextureAtlasProvider,
-} from 'deepslate'
+import * as deepslate from 'deepslate'
 
 import type { SchematicBlockState } from './backend'
 import { isSchematicAir } from './editing'
@@ -72,8 +66,8 @@ type MeshBuffers = {
 
 let activeEpoch = 0
 let palette: SchematicBlockState[] = []
-let blockDefinitions: Record<string, BlockDefinition> = {}
-let blockModels: Record<string, BlockModel> = {}
+let blockDefinitions: Record<string, deepslate.BlockDefinition> = {}
+let blockModels: Record<string, deepslate.BlockModel> = {}
 let defaultBlockProperties: Record<string, Record<string, string>> = {}
 let textureUvs: Record<string, [number, number, number, number]> = {}
 let missingTextureUv: [number, number, number, number] = [0, 0, 1, 1]
@@ -144,7 +138,7 @@ function appendQuad(
 function appendFallbackCube(
 	buffers: MeshBuffers,
 	position: [number, number, number],
-	cull: ReturnType<typeof Cull.none>,
+	cull: ReturnType<typeof deepslate.Cull.none>,
 	blockName: string,
 ) {
 	const [x, y, z] = position
@@ -233,7 +227,7 @@ function initialize(message: WorkerInitMessage) {
 	blockDefinitions = {}
 	for (const [id, value] of Object.entries(message.resources.blockDefinitions)) {
 		try {
-			blockDefinitions[id] = BlockDefinition.fromJson(value)
+			blockDefinitions[id] = deepslate.BlockDefinition.fromJson(value)
 		} catch {
 			warnings.push(`Skipped invalid blockstate ${id}`)
 		}
@@ -241,13 +235,13 @@ function initialize(message: WorkerInitMessage) {
 	blockModels = {}
 	for (const [id, value] of Object.entries(message.resources.blockModels)) {
 		try {
-			blockModels[id] = BlockModel.fromJson(value)
+			blockModels[id] = deepslate.BlockModel.fromJson(value)
 		} catch {
 			warnings.push(`Skipped invalid block model ${id}`)
 		}
 	}
 	const provider = {
-		getBlockModel(id: Identifier) {
+		getBlockModel(id: deepslate.Identifier) {
 			return blockModels[id.toString()] ?? null
 		},
 	}
@@ -277,12 +271,12 @@ function buildChunk(message: WorkerMeshMessage) {
 	const opaque = emptyBuffers()
 	const translucent = emptyBuffers()
 	const missing = new Set<string>()
-	const atlas: TextureAtlasProvider = {
+	const atlas: deepslate.TextureAtlasProvider = {
 		getTextureAtlas: () => ({}) as ImageData,
 		getTextureUV: (id) => textureUvs[id.toString()] ?? missingTextureUv,
 	}
 	const modelProvider = {
-		getBlockModel(id: Identifier) {
+		getBlockModel(id: deepslate.Identifier) {
 			return blockModels[id.toString()] ?? null
 		},
 	}
@@ -349,7 +343,7 @@ function buildChunk(message: WorkerMeshMessage) {
 					if (definition) {
 						mesh.merge(
 							definition.getMesh(
-								Identifier.parse(state.name),
+								deepslate.Identifier.parse(state.name),
 								properties,
 								atlas,
 								modelProvider,

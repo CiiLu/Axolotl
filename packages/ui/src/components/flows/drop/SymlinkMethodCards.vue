@@ -114,7 +114,8 @@ const messages = defineMessages({
 	},
 	requiresAdmin: {
 		id: 'drop.symlink_method.requires_admin',
-		defaultMessage: 'Administrator permission required',
+		defaultMessage:
+			'Administrator authorization (UAC) will be requested once when creating the link',
 	},
 	unsupportedWarning: {
 		id: 'drop.symlink_method.unsupported_warning',

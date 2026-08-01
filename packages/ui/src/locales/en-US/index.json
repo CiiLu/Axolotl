@@ -1290,7 +1290,7 @@
     "defaultMessage": "Copy files"
   },
   "drop.symlink_method.requires_admin": {
-    "defaultMessage": "Administrator permission required"
+    "defaultMessage": "Administrator authorization (UAC) will be requested once when creating the link"
   },
   "drop.symlink_method.subtitle": {
     "defaultMessage": "Importing {n} instance(s)"

@@ -7,6 +7,10 @@ export async function isDev() {
 	return await invoke('is_dev')
 }
 
+export async function isElevated() {
+	return await invoke('is_elevated')
+}
+
 export async function areUpdatesEnabled() {
 	return await invoke('are_updates_enabled')
 }

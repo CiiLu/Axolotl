@@ -30,6 +30,7 @@ pub use logger::start_logger;
 pub use state::State;
 pub use util::fetch::DownloadReason;
 pub use util::file_lock::{LockingProcess, get_locking_processes};
+pub use util::platform::is_process_elevated;
 pub use util::symlink::SymlinkCapability;
 
 pub fn launcher_user_agent() -> String {
