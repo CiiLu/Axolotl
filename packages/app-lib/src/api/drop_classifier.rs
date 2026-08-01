@@ -973,21 +973,31 @@ pub fn classify_zip_with_extraction(path: &Path) -> DroppedItemType {
 
 fn extract_all(archive: &mut zip::ZipArchive<std::fs::File>, base_dir: &Path) {
     // First pass: collect entry metadata while the archive is mutable-borrowed.
-    let entries: Vec<(String, bool)> = (0..archive.len())
+    let entries: Vec<(usize, String, bool)> = (0..archive.len())
         .filter_map(|i| {
             let entry = archive.by_index_raw(i).ok()?;
             let name = entry.name().to_string();
             if name.is_empty() {
                 None
             } else {
-                Some((name.clone(), name.ends_with('/')))
+                Some((i, name.clone(), name.ends_with('/')))
             }
         })
         .collect();
 
     // Second pass: extract. The collect() above has released the mutable
-    // borrow, so we can call by_name() here.
-    for (name, is_dir) in &entries {
+    // borrow, so we can call by_index() here.
+    for (index, name, is_dir) in &entries {
+        if archive
+            .by_index_raw(*index)
+            .ok()
+            .is_some_and(|e| e.encrypted())
+        {
+            tracing::warn!(
+                "extract_all: skipping encrypted ZIP entry '{name}'"
+            );
+            continue;
+        }
         // Reject entries that would escape the extraction directory.
         let Some(safe_name) = sanitize_zip_entry_name(name) else {
             tracing::warn!(
@@ -1001,7 +1011,7 @@ fn extract_all(archive: &mut zip::ZipArchive<std::fs::File>, base_dir: &Path) {
             let _ = std::fs::create_dir_all(&out_path);
         } else if let Some(parent) = out_path.parent() {
             let _ = std::fs::create_dir_all(parent);
-            if let Ok(mut reader) = archive.by_name(name)
+            if let Ok(mut reader) = archive.by_index(*index)
                 && let Ok(mut writer) = std::fs::File::create(&out_path)
             {
                 let _ = std::io::copy(&mut reader, &mut writer);
@@ -1027,7 +1037,7 @@ pub fn extract_zip_to_dir(
         format!("Invalid ZIP archive '{}': {e}", zip_path.display())
     })?;
 
-    let entries: Vec<(String, bool)> = (0..archive.len())
+    let entries: Vec<(usize, String, bool)> = (0..archive.len())
         .filter_map(|i| {
             let entry = archive.by_index_raw(i).ok()?;
             let name = crate::api::pack::detect::decode_zip_entry_name(
@@ -1037,11 +1047,21 @@ pub fn extract_zip_to_dir(
             if name.is_empty() || name.starts_with("__MACOSX") {
                 return None;
             }
-            Some((name.clone(), name.ends_with('/')))
+            Some((i, name.clone(), name.ends_with('/')))
         })
         .collect();
 
-    for (name, is_dir) in entries {
+    for (index, name, is_dir) in entries {
+        if archive
+            .by_index_raw(index)
+            .ok()
+            .is_some_and(|e| e.encrypted())
+        {
+            tracing::warn!(
+                "extract_zip_to_dir: skipping encrypted ZIP entry '{name}'"
+            );
+            continue;
+        }
         let Some(safe_name) = sanitize_zip_entry_name(&name) else {
             tracing::warn!(
                 "extract_zip_to_dir: skipping unsafe ZIP entry '{name}' (path traversal)"
@@ -1069,7 +1089,7 @@ pub fn extract_zip_to_dir(
                 )
             })?;
         }
-        let mut reader = archive.by_name(&name).map_err(|e| {
+        let mut reader = archive.by_index(index).map_err(|e| {
             format!("Failed to read ZIP entry '{name}': {e}")
         })?;
         let mut writer = std::fs::File::create(&out_path).map_err(|e| {
@@ -2841,4 +2861,145 @@ mod tests {
             "flat archives need no nested-unpack confirmation: {result:?}"
         );
     }
+
+    /// Writes a minimal ZIP with raw (possibly non-UTF-8) entry names and no
+    /// UTF-8 flag, as produced by some Chinese packaging tools.
+    fn write_raw_name_zip(path: &Path, entries: &[(&[u8], &[u8])]) {
+        fn u16(out: &mut Vec<u8>, v: u16) {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
+        fn u32(out: &mut Vec<u8>, v: u32) {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
+
+        let mut out = Vec::new();
+        let mut offsets = Vec::new();
+        for (name, data) in entries {
+            offsets.push(out.len() as u32);
+            out.extend_from_slice(b"PK\x03\x04");
+            u16(&mut out, 20);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u32(&mut out, crc32(data));
+            u32(&mut out, data.len() as u32);
+            u32(&mut out, data.len() as u32);
+            u16(&mut out, name.len() as u16);
+            u16(&mut out, 0);
+            out.extend_from_slice(name);
+            out.extend_from_slice(data);
+        }
+
+        let cd_start = out.len() as u32;
+        for (i, (name, data)) in entries.iter().enumerate() {
+            out.extend_from_slice(b"PK\x01\x02");
+            u16(&mut out, 20);
+            u16(&mut out, 20);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u32(&mut out, crc32(data));
+            u32(&mut out, data.len() as u32);
+            u32(&mut out, data.len() as u32);
+            u16(&mut out, name.len() as u16);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u32(&mut out, 0);
+            u32(&mut out, offsets[i]);
+            out.extend_from_slice(name);
+        }
+        let cd_size = out.len() as u32 - cd_start;
+
+        out.extend_from_slice(b"PK\x05\x06");
+        u16(&mut out, 0);
+        u16(&mut out, 0);
+        u16(&mut out, entries.len() as u16);
+        u16(&mut out, entries.len() as u16);
+        u32(&mut out, cd_size);
+        u32(&mut out, cd_start);
+        u16(&mut out, 0);
+
+        std::fs::write(path, out).expect("write raw-name zip");
+    }
+
+    #[test]
+    fn extract_zip_to_dir_handles_non_utf8_names() {
+        // Chinese tools store names as GB18030 without the UTF-8 flag; the
+        // zip crate's by_name lookup cannot match them, so extraction must
+        // read entries by index.
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("gbk.zip");
+        let (gbk_name, _, _) =
+            encoding_rs::GB18030.encode("我的世界/level.dat");
+        write_raw_name_zip(&zip_path, &[(gbk_name.as_ref(), VALID_LEVEL_DAT)]);
+
+        let out_dir = tempdir().expect("temp out dir");
+        extract_zip_to_dir(&zip_path, out_dir.path())
+            .expect("extract GB18030 zip");
+        assert!(out_dir.path().join("我的世界/level.dat").exists());
+    }
+
+    #[test]
+    fn extract_zip_to_dir_normalizes_backslash_names() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("bs.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "My World\\level.dat",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
+        zip.finish().expect("finish");
+
+        let out_dir = tempdir().expect("temp out dir");
+        extract_zip_to_dir(&zip_path, out_dir.path())
+            .expect("extract backslash zip");
+        assert!(out_dir.path().join("My World/level.dat").exists());
+    }
+
+    #[test]
+    fn extract_zip_to_dir_skips_unsafe_and_encrypted_entries() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("mixed.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "../../evil.txt",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"e").expect("write");
+        zip.start_file("level.dat", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
+        zip.finish().expect("finish");
+
+        let out_dir = tempdir().expect("temp out dir");
+        extract_zip_to_dir(&zip_path, out_dir.path())
+            .expect("extract mixed zip");
+        assert!(out_dir.path().join("level.dat").exists());
+        assert!(!out_dir.path().join("evil.txt").exists());
+
+        let enc_dir = tempdir().expect("temp dir");
+        let enc_path = enc_dir.path().join("enc.zip");
+        write_encrypted_entry_zip(&enc_path);
+        let enc_out = tempdir().expect("temp out dir");
+        extract_zip_to_dir(&enc_path, enc_out.path())
+            .expect("extract encrypted zip");
+        assert!(
+            enc_out.path().join("level.dat").exists(),
+            "plain entries survive"
+        );
+        assert!(
+            !enc_out.path().join("secret.bin").exists(),
+            "encrypted entries are skipped"
+        );
+    }
+
 }
