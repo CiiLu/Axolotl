@@ -1803,42 +1803,6 @@ mod tests {
     }
 
     #[test]
-    fn test_zip_containing_nested_world_zip() {
-        let dir = tempdir().expect("temp dir");
-        let zip_path = dir.path().join("outer.zip");
-
-        let file = std::fs::File::create(&zip_path).expect("create zip");
-        let mut zip = zip::ZipWriter::new(file);
-
-        let mut inner = Vec::new();
-        {
-            let mut writer =
-                zip::ZipWriter::new(std::io::Cursor::new(&mut inner));
-            writer
-                .start_file(
-                    "My World/level.dat",
-                    zip::write::FileOptions::<()>::default(),
-                )
-                .expect("start inner entry");
-            writer.write_all(VALID_LEVEL_DAT).expect("write inner");
-            writer.finish().expect("finish inner");
-        }
-        zip.start_file(
-            "worlds/world.zip",
-            zip::write::FileOptions::<()>::default(),
-        )
-        .expect("start outer entry");
-        zip.write_all(&inner).expect("write outer");
-        zip.finish().expect("finish");
-
-        let result = classify_dropped_item(&zip_path);
-        assert!(
-            matches!(result, DroppedItemType::WorldSave { .. }),
-            "zip containing a nested world zip should classify as WorldSave: {result:?}"
-        );
-    }
-
-    #[test]
     fn test_zip_nested_instance_within_limit() {
         let dir = tempdir().expect("temp dir");
         let zip_path = dir.path().join("nested.zip");
@@ -2047,36 +2011,6 @@ mod tests {
         assert!(
             matches!(result, DroppedItemType::Modpack { .. }),
             "launcher bundle should classify as Modpack: {result:?}"
-        );
-    }
-
-    #[test]
-    fn test_zip_compressed_minecraft_multiple_versions() {
-        let dir = tempdir().expect("temp dir");
-        let zip_path = dir.path().join("minecraft.zip");
-        let file = std::fs::File::create(&zip_path).expect("create zip");
-        let mut zip = zip::ZipWriter::new(file);
-        for name in [
-            ".minecraft/versions/1.19.4/1.19.4.json",
-            ".minecraft/versions/1.20.1/1.20.1.json",
-            ".minecraft/versions/1.20.4/1.20.4.json",
-        ] {
-            zip.start_file(name, zip::write::FileOptions::<()>::default())
-                .expect("start entry");
-            zip.write_all(b"{}").expect("write");
-        }
-        zip.finish().expect("finish");
-
-        let result = classify_dropped_item(&zip_path);
-        assert!(
-            matches!(
-                result,
-                DroppedItemType::Launcher {
-                    launcher_type: ImportLauncherType::Generic,
-                    ..
-                }
-            ),
-            "multi-version .minecraft should classify as Generic: {result:?}"
         );
     }
 

@@ -45,35 +45,41 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Mods and resource packs that are not linked to an online project now show the icon packed inside the file.',
-					'zh-CN': '未关联到线上项目的模组与资源包，现在会显示包内自带的图标。',
+					'zh-CN': '未关联到线上项目的模组与资源包,现在会显示包内自带的图标。',
+				},
+				{
+					'en-US':
+						'Added a rollback button for content updates, allowing users to revert to the previous version after updating mods, resource packs, and other content.',
+					'zh-CN':
+						'新增内容更新后悔药,现在更新Mod、资源包等内容后,提供一个按钮可以回退到上一个版本。',
 				},
 				{
 					'en-US':
 						'Fixed schematics stored in nested folders not being recognized, now they are folded into a hierarchical view.',
-					'zh-CN': '实例内容页面的投影项右边添加了编辑按钮，可直接导入投影工坊。',
+					'zh-CN': '实例内容页面的投影项右边添加了编辑按钮,可直接导入投影工坊。',
 				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Text in the launcher interface can no longer be selected by mouse by accident; editable fields are still selectable.',
-					'zh-CN': '界面文本不再能被鼠标直接选中，避免误选；输入框等可编辑区域不受影响。',
+					'zh-CN': '界面文本不再能被鼠标直接选中,避免误选；输入框等可编辑区域不受影响。',
 				},
 				{
 					'en-US':
 						'Optimized the caching of empty responses from online sources, which previously would be cached for 30 minutes and caused a poor experience; now empty responses are treated as unavailable, automatically falling back to available sources and updating immediately on next launch.',
 					'zh-CN':
-						'优化空返回也会被写入缓存，必须等待30min的不好体验，现在遇到空返回时判断为不可用，自动回退到可用源且下次启动立即更新。',
+						'优化空返回也会被写入缓存,必须等待30min的不好体验,现在遇到空返回时判断为不可用,自动回退到可用源且下次启动立即更新。',
 				},
 				{
 					'en-US':
 						'Refactored and cleaned up legacy code paths for better reliability and easier maintenance.',
-					'zh-CN': '重构并清理了部分历史遗留代码，提升稳定性与可维护性。',
+					'zh-CN': '重构并清理了部分历史遗留代码,提升稳定性与可维护性。',
 				},
 				{
 					'en-US':
 						'Improved nested-folder detection for modpacks and other resources, so files in deeper directories are recognized correctly.',
-					'zh-CN': '增强了整合包等资源的嵌套识别，深层目录甚至是压缩包中的文件现在能被正确识别。',
+					'zh-CN': '增强了整合包等资源的嵌套识别,深层目录甚至是压缩包中的文件现在能被正确识别。',
 				},
 				{
 					'en-US': 'Improved performance when enabling or disabling resources in bulk.',
@@ -84,13 +90,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed the issue of the toggle switch bouncing back when disabling content, now the switch follows correctly.',
-					'zh-CN': '修复了禁用内容时开关回弹的现象，现在开关正常跟手。',
+					'zh-CN': '修复了禁用内容时开关回弹的现象,现在开关正常跟手。',
 				},
 				{
 					'en-US':
 						'The custom system prompt for OpenAI-compatible translation services is now saved correctly and used for translations.',
 					'zh-CN':
-						'修复了 OpenAI 兼容翻译服务的自定义系统提示词无法保存的问题，现在会正确保存并在翻译时生效。',
+						'修复了 OpenAI 兼容翻译服务的自定义系统提示词无法保存的问题,现在会正确保存并在翻译时生效。',
 				},
 				{
 					'en-US':
@@ -102,7 +108,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed the conflict between global drag-and-drop import and the Schematic workshop; dragging and dropping schematic files in the Schematic workshop now imports them directly into the workshop instead of globally.',
 					'zh-CN':
-						'修复全局拖拽导入和投影工坊的打架问题，在投影工坊界面拖拽导入的投影文件现在会直接导入到投影工坊而不是全局导入。',
+						'修复全局拖拽导入和投影工坊的打架问题,在投影工坊界面拖拽导入的投影文件现在会直接导入到投影工坊而不是全局导入。',
 				},
 				{
 					'en-US': 'Forge and NeoForge mods now show their name and icon correctly.',
@@ -112,7 +118,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed CurseForge projects with more than 50 files showing an incomplete version list; all published versions now appear.',
 					'zh-CN':
-						'修复了 CurseForge 项目文件数超过 50 时版本列表不翻页的问题，现在会显示全部已发布版本。',
+						'修复了 CurseForge 项目文件数超过 50 时版本列表不翻页的问题,现在会显示全部已发布版本。',
 				},
 				{
 					'en-US': 'Fixed a crash that could occur when uploading files.',
@@ -121,7 +127,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed schematics stored in nested folders not being recognized, now they are folded into a hierarchical view.',
-					'zh-CN': '修复了嵌套在子文件夹中的投影文件无法被识别的问题，现在会折叠分级显示文件层级。',
+					'zh-CN': '修复了嵌套在子文件夹中的投影文件无法被识别的问题,现在会折叠分级显示文件层级。',
 				},
 				{
 					'en-US': 'Fixed an issue where mods could not be disabled properly.',
@@ -130,13 +136,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed an OOM issue caused by a low-performance upload interface, which has now been removed.',
-					'zh-CN': '修复了低性能的上传接口导致的OOM问题，现在直接移除了这个接口。',
+					'zh-CN': '修复了低性能的上传接口导致的OOM问题,现在直接移除了这个接口。',
 				},
 				{
 					'en-US':
 						'Fixed an issue where resources were not displayed correctly after adding them without an immediate refresh; a refresh button is now provided to manually refresh the resource list.',
 					'zh-CN':
-						'修复了添加资源后没有立即刷新导致的资源显示不正确的问题，现在提供一个刷新按钮来手动刷新资源列表。',
+						'修复了添加资源后没有立即刷新导致的资源显示不正确的问题,现在提供一个刷新按钮来手动刷新资源列表。',
 				},
 				{
 					'en-US': 'Resolved several known issues.',
@@ -146,7 +152,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			security: [
 				{
 					'en-US': 'Added extra safeguards for unusual edge cases.',
-					'zh-CN': '针对部分极端情况增加了安全处理，提升健壮性。',
+					'zh-CN': '针对部分极端情况增加了安全处理,提升健壮性。',
 				},
 			],
 		},

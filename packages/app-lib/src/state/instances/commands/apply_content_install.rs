@@ -1317,8 +1317,6 @@ pub(crate) fn backup_relative_path_for_update(
     let directory = Path::new(old_path).parent()?.to_str()?;
     Some(format!("{directory}/{backup_name}"))
 }
-
-.
 pub(crate) async fn archive_project_file(
     instance_id: &str,
     old_path: &str,
