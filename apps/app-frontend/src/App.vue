@@ -1524,6 +1524,13 @@ async function handleDropConfirm(type: string) {
 			selectedInstances.value = [
 				{ launcherType, basePath: scanBasePath, name: single.name, path: single.path },
 			]
+			if (launcherZipTempDir.value) {
+				// Compressed sources live in a temporary extraction that is
+				// deleted after the import, so symlink is never an option.
+				dropDebug('handleDropConfirm: zip source, importing as copy')
+				await onSymlinkMethodConfirmed(false)
+				return
+			}
 			const cap = await check_symlink_capability()
 			symlinkCardsModal.value?.show({
 				instanceNames: [single.name],
@@ -2043,6 +2050,15 @@ async function onImportSelected(
 	}
 	if (allSelected.length === 0) return
 	selectedInstances.value = allSelected
+
+	if (launcherZipTempDir.value) {
+		// Compressed sources are temporary extractions; import as copy.
+		dropDebug('onImportSelected: zip source, importing as copy', {
+			count: allSelected.length,
+		})
+		await onSymlinkMethodConfirmed(false)
+		return
+	}
 
 	const cap = await check_symlink_capability()
 	symlinkCardsModal.value?.show({

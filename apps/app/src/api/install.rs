@@ -122,6 +122,20 @@ pub async fn install_import_instance(
         instance_folder,
         instance_path,
     );
+    // Extracted launcher archives live in a temporary folder that is removed
+    // after the import; a symlink into it would dangle immediately.
+    if symlink
+        && base_path
+            .starts_with(std::env::temp_dir().join("axolotl-launcher-import"))
+    {
+        return Err(theseus::Error::from(theseus::ErrorKind::InputError(
+            "Symbolic-link import is unavailable for extracted archives: \
+             the temporary folder is deleted after the import completes. \
+             Choose copy instead."
+                .to_string(),
+        ))
+        .into());
+    }
     Ok(theseus::install::import_instance_with_path(
         launcher_type,
         base_path,
