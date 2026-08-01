@@ -1381,7 +1381,6 @@ pub(crate) async fn archive_project_file(
     Ok(Some(backup_relative_path))
 }
 
-
 pub(crate) async fn rollback_project(
     instance_id: &str,
     project_path: &str,
@@ -1416,9 +1415,7 @@ pub(crate) async fn rollback_project(
     let folder = base.join(&active_dir);
     let backups = scan_folder_backups(&folder, &prefix)?;
     let Some((backup_name, _)) = backups.into_iter().min_by(|left, right| {
-        left.1
-            .cmp(&right.1)
-            .then_with(|| left.0.cmp(&right.0))
+        left.1.cmp(&right.1).then_with(|| left.0.cmp(&right.0))
     }) else {
         return Err(crate::ErrorKind::InputError(format!(
             "No backup found for '{project_path}'"
@@ -1516,7 +1513,6 @@ pub(crate) async fn rollback_project(
 
     Ok(final_relative_path)
 }
-
 
 async fn remove_stale_backups(folder: &Path, base: &str, keep: Option<&str>) {
     let prefix = format!("{base}_");

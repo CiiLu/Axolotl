@@ -111,6 +111,15 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'修复全局拖拽导入和投影工坊的打架问题,在投影工坊界面拖拽导入的投影文件现在会直接导入到投影工坊而不是全局导入。',
 				},
 				{
+					'en-US':
+						'Fixed the issue of download tasks not being cancellable, now they can be cancelled normally.',
+					'zh-CN': '修复了下载任务无法取消的问题,现在可以正常取消下载任务。',
+				},
+				{
+					'en-US': 'Fixed the issue of some files being locked in certain cases.',
+					'zh-CN': '修复了部分情况下的文件自锁问题。',
+				},
+				{
 					'en-US': 'Forge and NeoForge mods now show their name and icon correctly.',
 					'zh-CN': '修复了 Forge/NeoForge 模组无法正常显示名称与图标的问题。',
 				},
