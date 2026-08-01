@@ -8,7 +8,7 @@ use crate::worlds::WorldType;
 use notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::{DebounceEventResult, Debouncer, new_debouncer};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
@@ -282,21 +282,26 @@ pub(crate) async fn unwatch_instance_folder(
         let _ = debouncer.watcher().unwatch(&full_path);
     }
 
-    watcher
-        .instance_ids
-        .write()
-        .await
-        .remove(instance_path);
+    watcher.instance_ids.write().await.remove(instance_path);
 }
 
 /// All paths `watch_instance_folder` registers for a single instance,
 /// including the root, so `unwatch_instance_folder` can release them again.
 fn instance_watch_paths(full_instance_path: &Path) -> Vec<PathBuf> {
-    let mut paths = ProjectType::iterator()
+    // `saves` is both a ProjectType folder and part of the crash-report
+    // extras; deduplicate so watch/unwatch stay symmetric (a leftover watch
+    // handle on a subfolder keeps Windows from renaming the instance root).
+    let mut seen = HashSet::new();
+    let mut paths = Vec::new();
+    for sub in ProjectType::iterator()
         .map(|x| x.get_folder())
         .chain(["crash-reports", "saves"])
-        .map(|sub| full_instance_path.join(sub))
-        .collect::<Vec<_>>();
+    {
+        let full_path = full_instance_path.join(sub);
+        if seen.insert(full_path.clone()) {
+            paths.push(full_path);
+        }
+    }
     paths.push(full_instance_path.to_path_buf());
     paths
 }
@@ -328,4 +333,71 @@ fn crash_task(instance_id: String) {
             }
         };
     });
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn watched_instance_folder_cannot_be_renamed_on_windows() {
+        let temp = tempfile::tempdir().unwrap();
+        let dirs = DirectoryInfo {
+            settings_dir: temp.path().to_path_buf(),
+            config_dir: temp.path().to_path_buf(),
+            app_identifier: "test".to_string(),
+        };
+        let watcher = init_watcher().await.unwrap();
+        let instance_path = "watched-instance";
+        let full_path = dirs.instances_dir().join(instance_path);
+        std::fs::create_dir_all(&full_path).unwrap();
+
+        watch_instance_folder(
+            "instance-1",
+            instance_path,
+            &watcher,
+            &dirs,
+        )
+        .await;
+
+        // On Windows, an active watch keeps a directory handle open and blocks
+        // renaming the instance folder (ERROR_ACCESS_DENIED). This is the
+        // failure the symlink import used to hit.
+        let rename_result =
+            std::fs::rename(&full_path, temp.path().join("watched-instance.bak"));
+        assert!(
+            rename_result.is_err(),
+            "a watched folder must not be renameable on Windows"
+        );
+
+        // The import flow unwatches the folder first; after that the rename
+        // must succeed (the watcher closes its handles asynchronously, so a
+        // short retry window is needed).
+        unwatch_instance_folder(instance_path, &watcher, &dirs).await;
+
+        let mut renamed = false;
+        for _ in 0..20 {
+            match std::fs::rename(
+                &full_path,
+                temp.path().join("watched-instance.bak"),
+            ) {
+                Ok(()) => {
+                    renamed = true;
+                    break;
+                }
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::PermissionDenied =>
+                {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+                Err(error) => panic!("unexpected rename error: {error:?}"),
+            }
+        }
+        assert!(
+            renamed,
+            "rename should succeed after the folder is unwatched"
+        );
+
+        drop(watcher);
+    }
 }
