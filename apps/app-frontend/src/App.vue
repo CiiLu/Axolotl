@@ -1465,12 +1465,12 @@ async function handleDropConfirm(type: string) {
 			try {
 				const tempDir = await extractZipToTemp(basePath)
 				launcherZipTempDir.value = tempDir
-				scanBasePath = classification!.inner_base
-					? `${tempDir}/${classification!.inner_base}`
+				scanBasePath = classification!.innerBase
+					? `${tempDir}/${classification!.innerBase}`
 					: tempDir
 				dropDebug('handleDropConfirm: extracted launcher zip', {
 					tempDir,
-					innerBase: classification!.inner_base,
+					innerBase: classification!.innerBase,
 					scanBasePath,
 				})
 			} catch (error) {

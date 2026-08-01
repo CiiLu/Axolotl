@@ -26,7 +26,7 @@ export interface ClassificationResult {
 	/** For ZIP sources, the virtual folder inside the archive where launcher
 	 * markers matched (e.g. `.minecraft`). Scan/import against
 	 * `<extracted-temp>/<inner_base>`. */
-	inner_base?: string
+	innerBase?: string
 	launcher_dir?: string
 	data_dir?: string
 	original?: string
