@@ -1475,8 +1475,14 @@ async function handleDropConfirm(type: string) {
 				})
 			} catch (error) {
 				launcherZipTempDir.value = null
+				const errorDetail = error instanceof Error ? error.message : String(error)
+				console.error('[DropFlow] launcher zip extraction failed:', errorDetail, basePath)
 				dropDebug('handleDropConfirm: launcher zip extraction failed', error)
-				addNotification({ title: formatMessage(messages.dropExtractFailed), type: 'error' })
+				addNotification({
+					title: formatMessage(messages.dropExtractFailed),
+					text: errorDetail,
+					type: 'error',
+				})
 				return
 			} finally {
 				scanningInstances.value = false

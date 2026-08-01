@@ -253,12 +253,19 @@ pub async fn drop_extract_zip_to_temp(
         theseus::drop_classifier::extract_zip_to_dir(&zip_path, &dir)
             .map_err(|e| {
                 let _ = std::fs::remove_dir_all(&dir);
+                tracing::warn!(
+                    "Launcher ZIP extraction failed for '{}': {e}",
+                    zip_path.display()
+                );
                 e
             })?;
         Ok(dir.to_string_lossy().to_string())
     })
     .await
-    .map_err(|e| format!("Extraction task panicked: {e}"))??;
+    .map_err(|e| {
+        tracing::warn!("Launcher ZIP extraction task panicked: {e}");
+        format!("Extraction task panicked: {e}")
+    })??;
 
     info!("Extracted launcher ZIP to: {extracted}");
     Ok(extracted)

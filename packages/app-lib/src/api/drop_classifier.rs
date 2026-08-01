@@ -1075,6 +1075,7 @@ pub fn extract_zip_to_dir(
         })
         .collect();
 
+    let mut skipped = 0usize;
     for (index, name, is_dir) in entries {
         if archive
             .by_index_raw(index)
@@ -1084,44 +1085,56 @@ pub fn extract_zip_to_dir(
             tracing::warn!(
                 "extract_zip_to_dir: skipping encrypted ZIP entry '{name}'"
             );
+            skipped += 1;
             continue;
         }
         let Some(safe_name) = sanitize_zip_entry_name(&name) else {
             tracing::warn!(
                 "extract_zip_to_dir: skipping unsafe ZIP entry '{name}' (path traversal)"
             );
+            skipped += 1;
             continue;
         };
         if safe_name.as_os_str().is_empty() {
+            skipped += 1;
             continue;
         }
         let out_path = dest_dir.join(&safe_name);
-        if is_dir {
-            std::fs::create_dir_all(&out_path).map_err(|e| {
-                format!(
-                    "Failed to create directory '{}': {e}",
-                    out_path.display()
-                )
-            })?;
-            continue;
+        // A single unreadable, locked or oddly-named entry must not abort the
+        // whole import; skip it and keep going so the rest of the launcher
+        // folder still lands on disk.
+        let result = if is_dir {
+            std::fs::create_dir_all(&out_path).map(|_| ())
+        } else if let Some(parent) = out_path.parent() {
+            std::fs::create_dir_all(parent)
+                .and_then(|_| {
+                    let mut reader = archive
+                        .by_index(index)
+                        .map_err(std::io::Error::other)?;
+                    let mut writer =
+                        std::fs::File::create(&out_path)?;
+                    std::io::copy(&mut reader, &mut writer).map(|_| ())
+                })
+        } else {
+            Ok(())
+        };
+        if let Err(error) = result {
+            tracing::warn!(
+                "extract_zip_to_dir: skipping unextractable entry '{name}': {error}"
+            );
+            skipped += 1;
         }
-        if let Some(parent) = out_path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| {
-                format!(
-                    "Failed to create directory '{}': {e}",
-                    parent.display()
-                )
-            })?;
-        }
-        let mut reader = archive.by_index(index).map_err(|e| {
-            format!("Failed to read ZIP entry '{name}': {e}")
-        })?;
-        let mut writer = std::fs::File::create(&out_path).map_err(|e| {
-            format!("Failed to create '{}': {e}", out_path.display())
-        })?;
-        std::io::copy(&mut reader, &mut writer).map_err(|e| {
-            format!("Failed to extract '{}': {e}", out_path.display())
-        })?;
+    }
+    if skipped > 0 {
+        tracing::warn!(
+            "extract_zip_to_dir: skipped {skipped} of {} entries",
+            archive.len()
+        );
+    }
+    if skipped == archive.len() && archive.len() > 0 {
+        return Err(format!(
+            "No ZIP entries could be extracted ({skipped} failed)"
+        ));
     }
     Ok(())
 }
