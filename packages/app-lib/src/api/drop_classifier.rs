@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::pack::detect::{LocalPackFormat, detect_local_pack_sync};
+use crate::api::pack::detect::LocalPackFormat;
 use crate::api::pack::import::ImportLauncherType;
 use crate::mod_metadata::manifest::read_jar_manifest;
 use crate::state::{ModrinthProjectId, ModrinthVersionId};
@@ -138,30 +138,6 @@ fn is_zip_path(path: &Path) -> bool {
         })
 }
 
-/// Classify a ZIP archive, checking known modpack formats before falling back
-/// to entry-name probing.
-fn classify_zip_path(path: &Path) -> DroppedItemType {
-    // NOTE: .jar is deliberately excluded here — JAR files are handled by
-    // manifest-based classification to properly distinguish mod JARs from
-    // launcher JARs without going through extraction.
-    if let Ok(detected) = detect_local_pack_sync(path) {
-        match detected.format {
-            LocalPackFormat::Mrpack
-            | LocalPackFormat::CurseForge
-            | LocalPackFormat::Mcbbs
-            | LocalPackFormat::Hmcl
-            | LocalPackFormat::MmcExport
-            | LocalPackFormat::LauncherBundled => {
-                return DroppedItemType::Modpack {
-                    file_path: path.to_path_buf(),
-                };
-            }
-            _ => {} // PlainArchive / InstanceFolder → entry-name probing
-        }
-    }
-    classify_zip(path)
-}
-
 /// Classify a `.disabled` file by treating it as the underlying file type
 /// (e.g. `mod.jar.disabled` → Mod, `pack.zip.disabled` → ZIP). The original
 /// path is kept in the result — no path rewrite happens.
@@ -194,186 +170,198 @@ fn classify_disabled(path: &Path) -> DroppedItemType {
 
 // ─── ZIP archive classification ─────────────────────────────────────────────
 
-/// Snapshot of a ZIP archive's top-level layout, gathered without extraction.
-struct ZipListing {
-    /// Distinct top-level entry names.
-    top_level: Vec<ZipEntryKind>,
-    /// Whether a `level.dat` entry exists anywhere in the archive.
-    probe_has_level_dat: bool,
-    /// Whether a `pack.mcmeta` entry exists anywhere in the archive.
-    probe_has_pack_mcmeta: bool,
-    /// Whether a `shaders/` entry exists anywhere in the archive.
-    probe_has_shaders_dir: bool,
-    /// True when the archive exceeds `ZIP_TOP_LEVEL_LIMIT` top-level entries.
-    too_many: bool,
-}
+/// Maximum depth for recursively classifying ZIP contents. Folder nesting
+/// inside the archive and nested ZIP files both count towards the limit.
+const MAX_ZIP_NESTING_DEPTH: u32 = 5;
 
-enum ZipEntryKind {
-    RootFile(String),
-    SubFile(String),
-}
-
-impl ZipEntryKind {
-    fn name(&self) -> &str {
-        match self {
-            ZipEntryKind::RootFile(n) | ZipEntryKind::SubFile(n) => n,
-        }
-    }
-}
-
-/// Open a ZIP archive and collect its top-level layout and content markers
-/// from entry names alone (no extraction).
-fn read_zip_listing(path: &Path) -> Result<ZipListing, String> {
-    let file = std::fs::File::open(path)
-        .map_err(|_| "Cannot open ZIP file".to_string())?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|_| "File is not a valid ZIP archive".to_string())?;
-
-    let mut listing = ZipListing {
-        top_level: Vec::new(),
-        probe_has_level_dat: false,
-        probe_has_pack_mcmeta: false,
-        probe_has_shaders_dir: false,
-        too_many: false,
-    };
-
-    for i in 0..archive.len() {
-        let Ok(entry) = archive.by_index_raw(i) else {
-            continue;
-        };
-
-        let name = entry.name().to_string();
-        if name.is_empty() || name.ends_with('/') {
-            continue; // skip directory entries
-        }
-
-        // Probe known content markers (entry name only, no file content).
-        // Markers can live at any depth: zipping a world or resource pack
-        // folder itself nests `level.dat` / `pack.mcmeta` under the folder
-        // name (e.g. "My World/level.dat").
-        let file_name = name.rsplit('/').next().unwrap_or(&name);
-        if file_name == "level.dat" {
-            listing.probe_has_level_dat = true;
-        }
-        if file_name == "pack.mcmeta" {
-            listing.probe_has_pack_mcmeta = true;
-        }
-        if name.split('/').any(|segment| segment == "shaders") {
-            listing.probe_has_shaders_dir = true;
-        }
-
-        // Record the top-level component of the path.
-        let top = match name.split_once('/') {
-            Some((first, _)) => first,
-            None => &name,
-        };
-        if listing.top_level.iter().any(|k| k.name() == top) {
-            continue;
-        }
-        if listing.top_level.len() >= ZIP_TOP_LEVEL_LIMIT {
-            listing.too_many = true;
-            continue;
-        }
-        listing.top_level.push(if name.contains('/') {
-            ZipEntryKind::SubFile(top.to_string())
-        } else {
-            ZipEntryKind::RootFile(top.to_string())
-        });
-    }
-
-    Ok(listing)
-}
-
-/// Classify a ZIP archive from entry names alone.
+/// Entry names of a ZIP archive, enumerated once without extracting anything.
 ///
-/// Known content markers are checked before the top-level entry limit, so a
-/// large archive with an obvious marker (e.g. `level.dat` at the root) is
-/// still classified correctly.
-fn classify_zip(path: &Path) -> DroppedItemType {
-    let listing = match read_zip_listing(path) {
-        Ok(listing) => listing,
-        Err(reason) => return DroppedItemType::Unknown { reason },
-    };
-    classify_zip_listing(&listing, path)
+/// Folder nesting is handled virtually: each recursion level reuses this set
+/// and only narrows the path prefix, so no directory tree is written to disk
+/// just to classify it.
+struct ZipEntrySet {
+    /// Decoded entry names exactly as stored (directories keep the trailing
+    /// `/`), used for pack-manifest detection.
+    names: Vec<String>,
+    /// File paths without a trailing slash.
+    files: std::collections::HashSet<String>,
+    /// Directory paths without a trailing slash.
+    dirs: std::collections::HashSet<String>,
 }
 
-/// Decide the content type of a ZIP from its `ZipListing`.
-fn classify_zip_listing(listing: &ZipListing, path: &Path) -> DroppedItemType {
-    // Probe pass: return early when entry names alone are sufficient.
-    // Priority order mirrors classify_folder_content.
-    if listing.probe_has_level_dat {
-        tracing::debug!(
-            "ZIP probe hit: level.dat → WorldSave — {}",
-            path.display()
-        );
-        return DroppedItemType::WorldSave {
-            file_path: path.to_path_buf(),
+impl ZipEntrySet {
+    fn from_archive<R: std::io::Read + std::io::Seek>(
+        archive: &mut zip::ZipArchive<R>,
+    ) -> Result<ZipEntrySet, String> {
+        let mut set = ZipEntrySet {
+            names: Vec::new(),
+            files: std::collections::HashSet::new(),
+            dirs: std::collections::HashSet::new(),
         };
-    }
-    if listing.probe_has_pack_mcmeta {
-        tracing::debug!(
-            "ZIP probe hit: pack.mcmeta → ResourcePack — {}",
-            path.display()
-        );
-        return DroppedItemType::ResourcePack {
-            file_path: path.to_path_buf(),
-        };
-    }
-    if listing.probe_has_shaders_dir {
-        tracing::debug!(
-            "ZIP probe hit: shaders/ → ShaderPack — {}",
-            path.display()
-        );
-        return DroppedItemType::ShaderPack {
-            file_path: path.to_path_buf(),
-        };
-    }
-    // NOTE: versions/<id>/<id>.json is NOT an early-return here — extraction
-    // lets classify_folder_content run the root .jar + .json scan for modded
-    // instance detection.
-
-    // Guard against huge archives only after the probe pass.
-    if listing.too_many {
-        return DroppedItemType::Unknown {
-            reason: "ZIP archive has too many top-level entries".to_string(),
-        };
-    }
-    if listing.top_level.is_empty() {
-        return DroppedItemType::Unknown {
-            reason: "Empty zip file".to_string(),
-        };
+        for i in 0..archive.len() {
+            let Ok(entry) = archive.by_index_raw(i) else {
+                continue;
+            };
+            let name =
+                crate::api::pack::detect::decode_zip_entry_name(entry.name_raw());
+            if name.is_empty() {
+                continue;
+            }
+            set.names.push(name.clone());
+            if name.ends_with('/') {
+                let normalized = name.trim_end_matches('/').to_string();
+                if !normalized.is_empty() {
+                    set.dirs.insert(normalized);
+                }
+            } else {
+                set.files.insert(name);
+            }
+        }
+        Ok(set)
     }
 
-    // Force-analysis fallback: extraction + re-classification is a potentially
-    // long operation and should not happen silently during classification.
-    // Files that can't be identified from entry names alone should be handled
-    // by the frontend (user prompt) via classify_zip_with_extraction().
-    tracing::debug!(
-        "ZIP probe inconclusive — extraction required for: {}",
-        path.display()
-    );
-    DroppedItemType::Unknown {
-        reason: "ZIP archive requires extraction to determine content type"
-            .to_string(),
+    /// Whether a file exists at `{base}{relative}`.
+    fn has_file(&self, base: &str, relative: &str) -> bool {
+        self.files.contains(&format!("{base}{relative}"))
+    }
+
+    /// Whether a directory exists at `{base}{relative}`.
+    fn has_dir(&self, base: &str, relative: &str) -> bool {
+        self.dirs.contains(&format!("{base}{relative}"))
+    }
+
+    /// Whether `versions/<id>/<id>.json` exists under `base` (vanilla
+    /// launcher instance marker).
+    fn has_version_json(&self, base: &str) -> bool {
+        self.files.iter().any(|path| {
+            let Some(rest) = path.strip_prefix(base) else {
+                return false;
+            };
+            let parts: Vec<&str> = rest.split('/').collect();
+            parts.len() == 3
+                && parts[0] == "versions"
+                && !parts[1].is_empty()
+                && parts[1]
+                    == parts[2].strip_suffix(".json").unwrap_or_default()
+        })
+    }
+
+    /// Whether `instances/<id>/instance.cfg` exists under `base`
+    /// (MultiMC / Prism launcher instance marker).
+    fn has_mmc_instance(&self, base: &str) -> bool {
+        self.files.iter().any(|path| {
+            let Some(rest) = path.strip_prefix(base) else {
+                return false;
+            };
+            let parts: Vec<&str> = rest.split('/').collect();
+            parts.len() == 3
+                && parts[0] == "instances"
+                && parts[2] == "instance.cfg"
+                && !parts[1].is_empty()
+        })
+    }
+
+    /// Whether `mods/` contains at least one `.jar` under `base`.
+    fn has_mods_jar(&self, base: &str) -> bool {
+        self.files.iter().any(|path| {
+            let Some(rest) = path.strip_prefix(base) else {
+                return false;
+            };
+            let parts: Vec<&str> = rest.split('/').collect();
+            parts.len() == 2
+                && parts[0] == "mods"
+                && parts[1].to_lowercase().ends_with(".jar")
+        })
+    }
+
+    /// Whether `base` holds both a `.jar` and a `.json` file (modded
+    /// instance root marker).
+    fn has_root_jar_and_json(&self, base: &str) -> bool {
+        let mut has_jar = false;
+        let mut has_json = false;
+        for path in &self.files {
+            let Some(rest) = path.strip_prefix(base) else {
+                continue;
+            };
+            if rest.contains('/') {
+                continue;
+            }
+            if rest.to_lowercase().ends_with(".jar") {
+                has_jar = true;
+            }
+            if rest.to_lowercase().ends_with(".json") {
+                has_json = true;
+            }
+        }
+        has_jar && has_json
+    }
+
+    /// Direct child directories under `base`, without the trailing slash.
+    fn child_folders(&self, base: &str) -> Vec<String> {
+        let mut children: Vec<String> = Vec::new();
+        let mut seen: std::collections::HashSet<&str> =
+            std::collections::HashSet::new();
+        for dir in &self.dirs {
+            if let Some(rest) = dir.strip_prefix(base)
+                && let Some((first, _)) = rest.split_once('/')
+                && !first.is_empty()
+                && seen.insert(first)
+            {
+                children.push(first.to_string());
+            }
+        }
+        for path in &self.files {
+            if let Some(rest) = path.strip_prefix(base)
+                && let Some((first, _)) = rest.split_once('/')
+                && !first.is_empty()
+                && seen.insert(first)
+            {
+                children.push(first.to_string());
+            }
+        }
+        children.sort();
+        children
+    }
+
+    /// Direct child files under `base` that are themselves ZIP-family
+    /// archives (.zip / .mrpack).
+    fn nested_zip_files(&self, base: &str) -> Vec<String> {
+        let mut zips: Vec<String> = Vec::new();
+        for path in &self.files {
+            let Some(rest) = path.strip_prefix(base) else {
+                continue;
+            };
+            if rest.contains('/') {
+                continue;
+            }
+            if rest.to_lowercase().ends_with(".zip")
+                || rest.to_lowercase().ends_with(".mrpack")
+            {
+                zips.push(rest.to_string());
+            }
+        }
+        zips.sort();
+        zips
     }
 }
 
-/// Extracts a ZIP archive to a temporary directory and classifies its contents
-/// by examining the extracted files and folders.
+/// Classify a ZIP file with the layered, recursive flow:
 ///
-/// This is a potentially **long-running** operation — the caller MUST first
-/// confirm with the user before calling this function.
-pub fn classify_zip_with_extraction(path: &Path) -> DroppedItemType {
-    let listing = match read_zip_listing(path) {
-        Ok(listing) => listing,
-        Err(reason) => return DroppedItemType::Unknown { reason },
-    };
-    if listing.too_many {
-        return DroppedItemType::Unknown {
-            reason: "ZIP archive has too many top-level entries".to_string(),
-        };
-    }
+/// 1. Modpack manifests (modrinth.index.json, manifest.json, ...)
+/// 2. Compressed instances / `.minecraft` (versions, mods, launcher cfg)
+/// 3. Resource packs (`pack.mcmeta`)
+/// 4. Shader packs (`shaders/`)
+/// 5. World saves (`level.dat`)
+/// 6. When none match, descend into nested folders and nested ZIP files,
+///    treating each as the new root, up to [`MAX_ZIP_NESTING_DEPTH`] levels.
+///
+/// Everything runs on entry names; nothing is extracted during
+/// classification.
+fn classify_zip_path(path: &Path) -> DroppedItemType {
+    classify_zip_file_at_depth(path, 0)
+}
 
+fn classify_zip_file_at_depth(path: &Path, depth: u32) -> DroppedItemType {
     let Ok(file) = std::fs::File::open(path) else {
         return DroppedItemType::Unknown {
             reason: "Cannot open ZIP file".to_string(),
@@ -384,6 +372,280 @@ pub fn classify_zip_with_extraction(path: &Path) -> DroppedItemType {
             reason: "File is not a valid ZIP archive".to_string(),
         };
     };
+    let entry_set = match ZipEntrySet::from_archive(&mut archive) {
+        Ok(set) => set,
+        Err(reason) => return DroppedItemType::Unknown { reason },
+    };
+    classify_zip_entries(path, &mut archive, &entry_set, depth, "")
+}
+
+/// Recursive core of ZIP classification for one virtual root (`base`).
+fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
+    result_path: &Path,
+    archive: &mut zip::ZipArchive<R>,
+    entries: &ZipEntrySet,
+    depth: u32,
+    base: &str,
+) -> DroppedItemType {
+    // 1. Modpack manifests. Checked first because a modpack can carry
+    //    overrides that look like resource packs, shader packs or worlds.
+    match crate::api::pack::detect::detect_at_base(
+        archive,
+        &entries.names,
+        base,
+    ) {
+        Ok(Some(detected)) => {
+            let is_pack = matches!(
+                detected.format,
+                LocalPackFormat::Mrpack
+                    | LocalPackFormat::CurseForge
+                    | LocalPackFormat::Mcbbs
+                    | LocalPackFormat::Hmcl
+                    | LocalPackFormat::MmcExport
+                    | LocalPackFormat::LauncherBundled
+            );
+            if is_pack {
+                tracing::debug!(
+                    "ZIP classify: modpack {:?} at base {:?} — {}",
+                    detected.format,
+                    base,
+                    result_path.display()
+                );
+                return DroppedItemType::Modpack {
+                    file_path: result_path.to_path_buf(),
+                };
+            }
+        }
+        Ok(None) => {}
+        Err(error) => {
+            tracing::warn!(
+                "ZIP classify: pack detection failed at base {:?}: {error}",
+                base
+            );
+        }
+    }
+
+    // 2. Compressed instances / `.minecraft`. Checked before the content
+    //    markers because instances embed resource packs, shader packs and
+    //    worlds.
+    let launcher_type = if entries.has_file(base, "multimc.cfg") {
+        Some(ImportLauncherType::MultiMC)
+    } else if entries.has_file(base, "prismlauncher.cfg") {
+        Some(ImportLauncherType::PrismLauncher)
+    } else if entries.has_mmc_instance(base)
+        || entries.has_file(base, "instance.cfg")
+    {
+        Some(ImportLauncherType::MultiMC)
+    } else if entries.has_version_json(base)
+        || entries.has_mods_jar(base)
+        || entries.has_root_jar_and_json(base)
+    {
+        Some(ImportLauncherType::Generic)
+    } else if entries.has_file(base, ".hmcl/config/launcher-settings.json") {
+        Some(ImportLauncherType::HMCL)
+    } else {
+        None
+    };
+    if let Some(launcher_type) = launcher_type {
+        tracing::debug!(
+            "ZIP classify: instance {:?} at base {:?} — {}",
+            launcher_type,
+            base,
+            result_path.display()
+        );
+        return DroppedItemType::Launcher {
+            launcher_type,
+            base_path: result_path.to_path_buf(),
+        };
+    }
+
+    // 3-5. Content markers, matched at the current root. Nested folders are
+    //    handled by the recursion below, which re-runs this whole flow with
+    //    the folder as the new root.
+    if entries.has_file(base, "pack.mcmeta") {
+        tracing::debug!(
+            "ZIP classify: pack.mcmeta → ResourcePack at base {:?} — {}",
+            base,
+            result_path.display()
+        );
+        return DroppedItemType::ResourcePack {
+            file_path: result_path.to_path_buf(),
+        };
+    }
+    if entries.has_dir(base, "shaders") {
+        tracing::debug!(
+            "ZIP classify: shaders/ → ShaderPack at base {:?} — {}",
+            base,
+            result_path.display()
+        );
+        return DroppedItemType::ShaderPack {
+            file_path: result_path.to_path_buf(),
+        };
+    }
+    if entries.has_file(base, "level.dat") {
+        tracing::debug!(
+            "ZIP classify: level.dat → WorldSave at base {:?} — {}",
+            base,
+            result_path.display()
+        );
+        return DroppedItemType::WorldSave {
+            file_path: result_path.to_path_buf(),
+        };
+    }
+
+    // 6. Recurse into nested folders and nested ZIP files.
+    if depth < MAX_ZIP_NESTING_DEPTH {
+        for child in entries.child_folders(base) {
+            if child == "__MACOSX" {
+                continue;
+            }
+            let child_base = format!("{base}{child}/");
+            let result = classify_zip_entries(
+                result_path,
+                archive,
+                entries,
+                depth + 1,
+                &child_base,
+            );
+            if !matches!(result, DroppedItemType::Unknown { .. }) {
+                return result;
+            }
+        }
+        for nested in entries.nested_zip_files(base) {
+            let result = classify_nested_zip(
+                result_path,
+                archive,
+                depth + 1,
+                &format!("{base}{nested}"),
+            );
+            if !matches!(result, DroppedItemType::Unknown { .. }) {
+                return result;
+            }
+        }
+    }
+
+    tracing::debug!(
+        "ZIP classify: inconclusive at depth={depth} base={base:?} — {}",
+        result_path.display()
+    );
+    DroppedItemType::Unknown {
+        reason: "ZIP archive requires extraction to determine content type"
+            .to_string(),
+    }
+}
+
+/// Reads a nested ZIP entry once into a temporary file and classifies it
+/// with the same layered flow, remapping the result path back to the outer
+/// archive so no temp path leaks into the classification result.
+fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
+    result_path: &Path,
+    archive: &mut zip::ZipArchive<R>,
+    depth: u32,
+    entry_path: &str,
+) -> DroppedItemType {
+    let Some(index) = crate::api::pack::detect::find_entry_index(
+        archive,
+        entry_path,
+    )
+    .ok()
+    .flatten()
+    else {
+        return DroppedItemType::Unknown {
+            reason: format!("Cannot find nested archive entry {entry_path}"),
+        };
+    };
+    let Ok(mut entry) = archive.by_index(index) else {
+        return DroppedItemType::Unknown {
+            reason: format!("Cannot read nested archive entry {entry_path}"),
+        };
+    };
+    let temp_dir = match tempfile::tempdir() {
+        Ok(dir) => dir,
+        Err(error) => {
+            return DroppedItemType::Unknown {
+                reason: format!("Failed to create temporary directory: {error}"),
+            };
+        }
+    };
+    let nested_path = temp_dir.path().join("nested.zip");
+    if let Err(error) = std::fs::File::create(&nested_path)
+        .and_then(|mut output| std::io::copy(&mut entry, &mut output))
+    {
+        return DroppedItemType::Unknown {
+            reason: format!(
+                "Failed to stage nested archive {entry_path}: {error}"
+            ),
+        };
+    }
+
+    let result = classify_zip_file_at_depth(&nested_path, depth);
+    match result {
+        DroppedItemType::Unknown { reason } => DroppedItemType::Unknown {
+            reason: format!("nested archive {entry_path}: {reason}"),
+        },
+        DroppedItemType::WorldSave { .. } => DroppedItemType::WorldSave {
+            file_path: result_path.to_path_buf(),
+        },
+        DroppedItemType::ResourcePack { .. } => {
+            DroppedItemType::ResourcePack {
+                file_path: result_path.to_path_buf(),
+            }
+        }
+        DroppedItemType::ShaderPack { .. } => DroppedItemType::ShaderPack {
+            file_path: result_path.to_path_buf(),
+        },
+        DroppedItemType::Modpack { .. } => DroppedItemType::Modpack {
+            file_path: result_path.to_path_buf(),
+        },
+        DroppedItemType::Launcher { launcher_type, .. } => {
+            DroppedItemType::Launcher {
+                launcher_type,
+                base_path: result_path.to_path_buf(),
+            }
+        }
+        other => other,
+    }
+}
+
+/// Extracts a ZIP archive to a temporary directory and classifies its contents
+/// by examining the extracted files and folders.
+///
+/// This is a potentially **long-running** operation — the caller MUST first
+/// confirm with the user before calling this function.
+pub fn classify_zip_with_extraction(path: &Path) -> DroppedItemType {
+    let Ok(file) = std::fs::File::open(path) else {
+        return DroppedItemType::Unknown {
+            reason: "Cannot open ZIP file".to_string(),
+        };
+    };
+    let Ok(mut archive) = zip::ZipArchive::new(file) else {
+        return DroppedItemType::Unknown {
+            reason: "File is not a valid ZIP archive".to_string(),
+        };
+    };
+    let entry_set = match ZipEntrySet::from_archive(&mut archive) {
+        Ok(set) => set,
+        Err(reason) => return DroppedItemType::Unknown { reason },
+    };
+
+    let child_folders = entry_set.child_folders("");
+    let root_files: Vec<&str> = entry_set
+        .files
+        .iter()
+        .filter(|path| !path.contains('/'))
+        .map(|path| path.as_str())
+        .collect();
+    let top_level_count = child_folders.len() + root_files.len();
+    if top_level_count == 0 {
+        return DroppedItemType::Unknown {
+            reason: "Empty zip file".to_string(),
+        };
+    }
+    if top_level_count > ZIP_TOP_LEVEL_LIMIT {
+        return DroppedItemType::Unknown {
+            reason: "ZIP archive has too many top-level entries".to_string(),
+        };
+    }
 
     // Create temporary directory for extraction.
     let temp_dir = match tempfile::tempdir() {
@@ -400,18 +662,17 @@ pub fn classify_zip_with_extraction(path: &Path) -> DroppedItemType {
 
     tracing::debug!(
         "classify_zip_with_extraction: extracted {} top-level items for {}",
-        listing.top_level.len(),
+        top_level_count,
         path.display()
     );
 
-    // Classify the extracted contents.
-    if listing.top_level.len() == 1 {
-        // Single top-level item — classify it directly.
-        let item_name = listing.top_level[0].name().to_string();
-        let item_path = temp_dir.path().join(&item_name);
-        classify_dropped_item(&item_path)
+    // Classify the extracted contents: a single top-level item is classified
+    // directly, otherwise the extraction root is treated as a folder.
+    if child_folders.len() == 1 && root_files.is_empty() {
+        classify_dropped_item(&temp_dir.path().join(&child_folders[0]))
+    } else if root_files.len() == 1 && child_folders.is_empty() {
+        classify_dropped_item(&temp_dir.path().join(root_files[0]))
     } else {
-        // Multiple items — classify as a folder.
         classify_folder_content(temp_dir.path())
     }
     // temp_dir is dropped here, cleaning up the extracted files automatically.
@@ -1109,6 +1370,211 @@ mod tests {
         assert!(
             matches!(result, DroppedItemType::Modpack { .. }),
             "mrpack with nested level.dat should still be Modpack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_compressed_minecraft_is_instance_not_resource_pack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("minecraft.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        // A .minecraft folder embeds resource packs, shader packs and worlds;
+        // the instance signature must win over those markers.
+        for name in [
+            ".minecraft/versions/1.20.1/1.20.1.json",
+            ".minecraft/resourcepacks/My Pack/pack.mcmeta",
+            ".minecraft/saves/New World/level.dat",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"x").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::Generic,
+                    ..
+                }
+            ),
+            "compressed .minecraft should classify as a Generic instance: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_launcher_folder_with_multiple_instances() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("launcher.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in [
+            "multimc.cfg",
+            "instances/Alpha/instance.cfg",
+            "instances/Beta/instance.cfg",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"x").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::MultiMC,
+                    ..
+                }
+            ),
+            "launcher folder zip should classify as MultiMC: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_wrapping_folder_modpack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("pack.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "My Pack/modrinth.index.json",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(
+            b"{\"formatVersion\":1,\"game\":\"minecraft\",\"versionId\":\"1\",\"name\":\"p\",\"files\":[],\"dependencies\":{\"minecraft\":\"1.20.1\"}}",
+        )
+        .expect("write");
+        zip.start_file(
+            "My Pack/overrides/config/x.txt",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"x").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Modpack { .. }),
+            "modpack inside a wrapping folder should classify as Modpack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_deeply_nested_world_save() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("backup.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in [
+            "backup/worlds/My World/level.dat",
+            "backup/worlds/My World/region/r.0.0.mca",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"x").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "world nested under folders should classify as WorldSave: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_containing_nested_world_zip() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("outer.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+
+        let mut inner = Vec::new();
+        {
+            let mut writer =
+                zip::ZipWriter::new(std::io::Cursor::new(&mut inner));
+            writer
+                .start_file(
+                    "My World/level.dat",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start inner entry");
+            writer.write_all(b"x").expect("write inner");
+            writer.finish().expect("finish inner");
+        }
+        zip.start_file(
+            "worlds/world.zip",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start outer entry");
+        zip.write_all(&inner).expect("write outer");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "zip containing a nested world zip should classify as WorldSave: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_nested_instance_within_limit() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("nested.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "d0/d1/d2/d3/d4/instance.cfg",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"x").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::MultiMC,
+                    ..
+                }
+            ),
+            "instance at 5 folder levels should classify as MultiMC: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_nesting_depth_limit() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("deep.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "d0/d1/d2/d3/d4/d5/instance.cfg",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"x").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Unknown { .. }),
+            "nesting beyond MAX_ZIP_NESTING_DEPTH should stay Unknown: {result:?}"
         );
     }
 

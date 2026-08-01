@@ -208,7 +208,7 @@ fn candidate_bases(names: &[String]) -> Vec<String> {
     bases
 }
 
-fn detect_at_base<R: std::io::Read + std::io::Seek>(
+pub(crate) fn detect_at_base<R: std::io::Read + std::io::Seek>(
     archive: &mut zip::ZipArchive<R>,
     names: &[String],
     base: &str,
