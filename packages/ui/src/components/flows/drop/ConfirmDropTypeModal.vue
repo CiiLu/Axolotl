@@ -92,7 +92,7 @@ const messages = defineMessages({
 	},
 	dotMinecraftTitle: {
 		id: 'drop.confirm.as-dot-minecraft',
-		defaultMessage: 'Minecraft Folder',
+		defaultMessage: '.minecraft',
 	},
 	dotMinecraftDesc: {
 		id: 'drop.confirm.as-dot-minecraft-desc',

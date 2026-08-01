@@ -6063,7 +6063,7 @@
 		"message": "：這不是{type}"
 	},
 	"drop.confirm.as-dot-minecraft": {
-		"message": ".minecraft資料夾"
+		"message": ".minecraft"
 	},
 	"drop.confirm.as-dot-minecraft-desc": {
 		"message": "掃描 .minecraft 資料夾以建立實例"
