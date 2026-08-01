@@ -71,12 +71,9 @@
 				/>
 
 				<div v-if="!isEditing">
-					<FileUploadDragAndDrop
-						ref="fileUploadRef"
+					<div
+						ref="fileUploadEl"
 						class="@container relative flex flex-col overflow-clip rounded-[20px] border border-solid border-surface-4 shadow-sm"
-						:disabled="isBusy"
-						@drop-error="handleDropError"
-						@files-dropped="handleDroppedFiles"
 					>
 						<FileTableHeader
 							:sort-field="sortField"
@@ -145,7 +142,7 @@
 							@refetch="ctx.refresh"
 							@home="navigateToSegment(-1)"
 						/>
-					</FileUploadDragAndDrop>
+					</div>
 				</div>
 				<FileEditor
 					v-else
@@ -245,7 +242,6 @@ import FileRenameItemModal from './components/modals/FileRenameItemModal.vue'
 import FileUnsavedChangesModal from './components/modals/FileUnsavedChangesModal.vue'
 import FileUploadConflictModal from './components/modals/FileUploadConflictModal.vue'
 import FileUploadZipUrlModal from './components/modals/FileUploadZipUrlModal.vue'
-import FileUploadDragAndDrop from './components/upload/FileUploadDragAndDrop.vue'
 import { useFileSearch } from './composables/file-search'
 import { useFileSelection } from './composables/file-selection'
 import { useFileSorting } from './composables/file-sorting'
@@ -363,8 +359,7 @@ const {
 })
 
 // Sticky observer for the table header
-const fileUploadRef = ref<InstanceType<typeof FileUploadDragAndDrop>>()
-const fileUploadEl = computed(() => fileUploadRef.value?.$el as HTMLElement | null)
+const fileUploadEl = ref<HTMLElement | null>(null)
 const { isStuck: isLabelBarStuck } = useStickyObserver(fileUploadEl)
 
 // Refs
@@ -601,20 +596,6 @@ function showBulkDeleteModal() {
 
 	pendingBulkDeletePaths.value = Array.from(selectedItems.value)
 	deleteItemModal.value?.showBulk(pendingBulkDeletePaths.value.length)
-}
-
-// Upload
-function handleDroppedFiles(files: File[]) {
-	if (isEditing.value || isBusy.value) return
-	ctx.uploadFiles(files)
-}
-
-function handleDropError(error: unknown) {
-	addNotification({
-		title: formatMessage(commonMessages.uploadFailedLabel),
-		text: error instanceof Error ? error.message : undefined,
-		type: 'error',
-	})
 }
 
 async function initiateFileUpload() {

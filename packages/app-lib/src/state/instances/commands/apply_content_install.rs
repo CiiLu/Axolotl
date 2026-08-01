@@ -754,7 +754,7 @@ pub(crate) async fn add_project_from_path(
 pub(crate) async fn add_project_bytes(
     instance_id: &str,
     file_name: &str,
-    mut bytes: Bytes,
+    bytes: Bytes,
     hash: Option<&str>,
     project_type: Option<ProjectType>,
     source_kind: ContentSourceKind,
@@ -768,13 +768,19 @@ pub(crate) async fn add_project_bytes(
         None => infer_project_type(&bytes)?,
     };
     // Minecraft only loads resource/shader pack ZIPs whose markers sit at
-    // the archive root. Archives produced by zipping a pack folder have a
-    // single wrapper folder; re-pack them flat so the game can load them.
-    if let Some(flat) = normalize_wrapped_pack_zip(&bytes, project_type) {
-        tracing::info!(
-            "Re-packed wrapped {project_type:?} ZIP '{file_name}' flat for loading"
-        );
-        bytes = Bytes::from(flat);
+    // the archive root. Archives produced by zipping a pack folder wrap it
+    // in one folder; extract the pack folder(s) directly so the result is
+    // usable as-is — no re-packing, no recompression.
+    if let Some(plan) = wrapped_pack_plan(&bytes, project_type) {
+        let install_path =
+            install_wrapped_pack(&bytes, &plan, project_type, &scope.instance, state).await?;
+        // Let the instance content scanner index the extracted files.
+        crate::event::emit::emit_instance(
+            &scope.instance.id,
+            crate::event::InstancePayloadType::Synced,
+        )
+        .await?;
+        return Ok(install_path);
     }
     let relative_path = format!("{}/{}", project_type.get_folder(), file_name);
     let full_path =
@@ -831,16 +837,22 @@ pub(crate) async fn add_project_bytes(
     Ok(relative_path)
 }
 
-/// If `bytes` is a ZIP whose every file entry lives under one top-level
-/// folder that carries this pack type's marker (`pack.mcmeta` for resource
-/// packs, `shaders/` for shader packs), return a re-packed flat ZIP with the
-/// wrapper stripped. Returns `None` for flat archives, other content types
-/// and mixed layouts.
-fn normalize_wrapped_pack_zip(
-    bytes: &[u8],
-    project_type: ProjectType,
-) -> Option<Vec<u8>> {
-    use std::io::{Cursor, Read as _, Seek as _, Write as _};
+/// Install plan for a resource/shader pack ZIP wrapped in a single root
+/// folder: either the wrapper folder itself is the pack, or its direct
+/// children are one or more packs (a collection).
+#[derive(Debug, PartialEq)]
+enum WrappedPackPlan {
+    /// The wrapper folder is the pack; install it as a whole folder.
+    Whole { wrapper: String },
+    /// Direct children of the wrapper are packs; install each one.
+    Children { children: Vec<String> },
+}
+
+/// Detect whether `bytes` is a resource/shader pack ZIP wrapped in a single
+/// top-level folder. Returns the install plan, or `None` for flat archives,
+/// other content types and mixed layouts (which are installed as-is).
+fn wrapped_pack_plan(bytes: &[u8], project_type: ProjectType) -> Option<WrappedPackPlan> {
+    use std::io::Cursor;
 
     if !matches!(
         project_type,
@@ -848,11 +860,6 @@ fn normalize_wrapped_pack_zip(
     ) {
         return None;
     }
-    let marker = match project_type {
-        ProjectType::ResourcePack => "pack.mcmeta",
-        ProjectType::ShaderPack => "shaders/",
-        _ => return None,
-    };
 
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).ok()?;
     let mut names: Vec<String> = Vec::with_capacity(archive.len());
@@ -864,62 +871,166 @@ fn normalize_wrapped_pack_zip(
         );
     }
 
+    let has_marker_at = |prefix: &str| -> bool {
+        let pack_mcmeta = format!("{prefix}pack.mcmeta");
+        let shaders = format!("{prefix}shaders/");
+        match project_type {
+            ProjectType::ResourcePack => {
+                names.iter().any(|name| name == &pack_mcmeta)
+            }
+            ProjectType::ShaderPack => names.iter().any(|name| {
+                let Some(rest) = name.strip_prefix(&shaders) else {
+                    return false;
+                };
+                if rest.is_empty() {
+                    return false;
+                }
+                let lower = rest.to_ascii_lowercase();
+                lower.ends_with(".fsh")
+                    || lower.ends_with(".vsh")
+                    || lower.ends_with(".glsl")
+            }),
+            _ => false,
+        }
+    };
+
     // Every non-directory entry must share a single top-level folder.
-    let mut root: Option<&str> = None;
+    let mut wrapper: Option<&str> = None;
     for name in &names {
         if name.is_empty() || name.ends_with('/') {
             continue;
         }
         let Some((first, _)) = name.split_once('/') else {
-            return None;
+            return None; // flat archive
         };
-        match root {
-            None => root = Some(first),
+        match wrapper {
+            None => wrapper = Some(first),
             Some(existing) if existing != first => return None,
             _ => {}
         }
     }
-    let root = root?;
-    let root_prefix = format!("{root}/");
-    let marker_target = format!("{root_prefix}{marker}");
-    let has_marker = names.iter().any(|name| {
-        if marker.ends_with('/') {
-            name.strip_prefix(&marker_target)
-                .is_some_and(|rest| !rest.is_empty())
-        } else {
-            name == &marker_target
-        }
-    });
-    if !has_marker {
-        return None;
+    let wrapper = wrapper?;
+    let wrapper_prefix = format!("{wrapper}/");
+
+    // The wrapper itself is the pack when its marker sits at its root.
+    if has_marker_at(&wrapper_prefix) {
+        return Some(WrappedPackPlan::Whole {
+            wrapper: wrapper.to_string(),
+        });
     }
 
-    let mut out = Vec::new();
-    {
-        let mut writer = zip::ZipWriter::new(Cursor::new(&mut out));
-        for (i, name) in names.iter().enumerate() {
-            if !name.starts_with(&root_prefix) {
-                continue;
-            }
-            let stripped = &name[root_prefix.len()..];
-            if stripped.is_empty() {
-                continue;
-            }
-            if name.ends_with('/') {
-                writer
-                    .add_directory(stripped, zip::write::FileOptions::<()>::default())
-                    .ok()?;
-                continue;
-            }
-            writer
-                .start_file(stripped, zip::write::FileOptions::<()>::default())
-                .ok()?;
-            let mut entry = archive.by_index(i).ok()?;
-            std::io::copy(&mut entry, &mut writer).ok()?;
+    // Otherwise its direct children are packs (single pack or a collection).
+    let mut children: Vec<String> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for name in &names {
+        let Some(rest) = name.strip_prefix(&wrapper_prefix) else {
+            continue;
+        };
+        if rest.is_empty() {
+            continue;
         }
-        writer.finish().ok()?;
+        let Some((child, _)) = rest.split_once('/') else {
+            // Direct file under the wrapper: a zipped pack.
+            if rest.to_lowercase().ends_with(".zip")
+                && seen.insert(rest.to_string())
+            {
+                children.push(rest.to_string());
+            }
+            continue;
+        };
+        if seen.insert(child.to_string()) {
+            let child_base = format!("{wrapper_prefix}{child}/");
+            if has_marker_at(&child_base) {
+                children.push(child.to_string());
+            }
+        }
     }
-    Some(out)
+    if children.is_empty() {
+        return None;
+    }
+    Some(WrappedPackPlan::Children { children })
+}
+
+/// Materialize a wrapped resource/shader pack into the instance's
+/// `resourcepacks/` / `shaderpacks/` folder by extracting it (no
+/// recompression). Returns the relative path of the installed pack.
+async fn install_wrapped_pack(
+    bytes: &Bytes,
+    plan: &WrappedPackPlan,
+    project_type: ProjectType,
+    instance: &Instance,
+    state: &State,
+) -> crate::Result<String> {
+    let folder = project_type.get_folder();
+    let dest = instance_full_path(state, instance).join(folder);
+    tokio::fs::create_dir_all(&dest).await?;
+
+    let temp_dir = tempfile::tempdir().map_err(|e| {
+        crate::ErrorKind::InputError(format!(
+            "Failed to create temporary directory: {e}"
+        ))
+    })?;
+    let zip_path = temp_dir.path().join("pack.zip");
+    tokio::fs::write(&zip_path, &bytes[..]).await?;
+
+    match plan {
+        WrappedPackPlan::Whole { wrapper } => {
+            // Extract straight into the pack folder: dest/<wrapper>/.
+            extract_zip_to_dir_async(&zip_path, &dest).await?;
+            Ok(format!("{folder}/{wrapper}"))
+        }
+        WrappedPackPlan::Children { children } => {
+            let extracted = temp_dir.path().join("extracted");
+            extract_zip_to_dir_async(&zip_path, &extracted).await?;
+            let mut installed = String::new();
+            for child in children {
+                let src = extracted.join(child);
+                let dst = dest.join(child);
+                if dst.exists() {
+                    continue;
+                }
+                move_or_copy(&src, &dst).await?;
+                if installed.is_empty() {
+                    installed = format!("{folder}/{child}");
+                }
+            }
+            Ok(installed)
+        }
+    }
+}
+
+/// Zip-slip-safe extraction of a ZIP into a directory, run off the async
+/// runtime.
+async fn extract_zip_to_dir_async(
+    zip_path: &Path,
+    out: &Path,
+) -> crate::Result<()> {
+    let zip_path = zip_path.to_path_buf();
+    let out = out.to_path_buf();
+    tokio::task::spawn_blocking(move || {
+        crate::api::drop_classifier::extract_zip_to_dir(&zip_path, &out)
+    })
+    .await
+    .map_err(|e| {
+        crate::ErrorKind::InputError(format!("Extraction task panicked: {e}"))
+    })?
+    .map_err(|e| crate::Error::from(crate::ErrorKind::InputError(e)))
+}
+
+/// Move a file or folder into place, falling back to a copy when the source
+/// and destination live on different volumes.
+async fn move_or_copy(src: &Path, dst: &Path) -> crate::Result<()> {
+    match tokio::fs::rename(src, dst).await {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            if src.is_dir() {
+                io::copy_dir(src, dst).await?;
+            } else {
+                tokio::fs::copy(src, dst).await?;
+            }
+            Ok(())
+        }
+    }
 }
 
 pub(crate) async fn record_project_file_atomic(
@@ -1421,80 +1532,87 @@ mod tests {
         buf.into_inner()
     }
 
-    fn read_zip_names(bytes: &[u8]) -> Vec<String> {
-        let mut archive =
-            zip::ZipArchive::new(std::io::Cursor::new(bytes)).expect("open zip");
-        (0..archive.len())
-            .map(|i| archive.by_index(i).expect("entry").name().to_string())
-            .collect()
-    }
-
     #[test]
-    fn wrapped_resource_pack_zip_is_repacked_flat() {
+    fn wrapped_resource_pack_zip_plans_whole() {
         let bytes = zip_bytes(&[
             ("My Pack/pack.mcmeta", br#"{"pack":{"pack_format":15}}"#),
             ("My Pack/assets/minecraft/lang/en_us.json", b"{}"),
             ("My Pack/", b""),
         ]);
-        let flat = normalize_wrapped_pack_zip(&bytes, ProjectType::ResourcePack)
-            .expect("wrapped pack should be repacked");
-        let names = read_zip_names(&flat);
         assert!(
-            names.iter().any(|n| n == "pack.mcmeta"),
-            "marker must sit at the zip root: {names:?}"
-        );
-        assert!(names.iter().any(|n| n == "assets/minecraft/lang/en_us.json"));
-        assert!(
-            !names.iter().any(|n| n.starts_with("My Pack")),
-            "wrapper folder must be stripped: {names:?}"
+            wrapped_pack_plan(&bytes, ProjectType::ResourcePack)
+                == Some(WrappedPackPlan::Whole {
+                    wrapper: "My Pack".to_string()
+                })
         );
     }
 
     #[test]
-    fn wrapped_shader_pack_zip_is_repacked_flat() {
+    fn wrapped_shader_pack_zip_plans_whole() {
         let bytes = zip_bytes(&[
             ("My Shader/shaders/a.fsh", b"v"),
             ("My Shader/shaders/b.vsh", b"v"),
         ]);
-        let flat = normalize_wrapped_pack_zip(&bytes, ProjectType::ShaderPack)
-            .expect("wrapped shader pack should be repacked");
-        let names = read_zip_names(&flat);
         assert!(
-            names.iter().any(|n| n.starts_with("shaders/")),
-            "shaders/ must sit at the zip root: {names:?}"
+            wrapped_pack_plan(&bytes, ProjectType::ShaderPack)
+                == Some(WrappedPackPlan::Whole {
+                    wrapper: "My Shader".to_string()
+                })
         );
     }
 
     #[test]
-    fn flat_or_other_archives_are_left_alone() {
+    fn flat_or_other_archives_have_no_plan() {
         let flat_rp = zip_bytes(&[
             ("pack.mcmeta", br#"{"pack":{"pack_format":15}}"#),
             ("assets/x.txt", b"x"),
         ]);
-        assert!(
-            normalize_wrapped_pack_zip(&flat_rp, ProjectType::ResourcePack)
-                .is_none(),
-            "flat resource pack must not be re-packed"
-        );
+        assert_eq!(wrapped_pack_plan(&flat_rp, ProjectType::ResourcePack), None);
         let mod_zip = zip_bytes(&[("fabric.mod.json", b"{}")]);
-        assert!(
-            normalize_wrapped_pack_zip(&mod_zip, ProjectType::Mod).is_none(),
-            "non-pack content must not be re-packed"
-        );
+        assert_eq!(wrapped_pack_plan(&mod_zip, ProjectType::Mod), None);
         let mixed = zip_bytes(&[
             ("My Pack/pack.mcmeta", br#"{"pack":{"pack_format":15}}"#),
             ("loose.txt", b"x"),
         ]);
-        assert!(
-            normalize_wrapped_pack_zip(&mixed, ProjectType::ResourcePack)
-                .is_none(),
-            "mixed-layout archives must not be re-packed"
-        );
+        assert_eq!(wrapped_pack_plan(&mixed, ProjectType::ResourcePack), None);
         let no_marker = zip_bytes(&[("My Pack/assets/x.txt", b"x")]);
+        assert_eq!(
+            wrapped_pack_plan(&no_marker, ProjectType::ResourcePack),
+            None
+        );
+    }
+
+    #[test]
+    fn wrapper_with_pack_children_plans_each_child() {
+        let bytes = zip_bytes(&[
+            ("packs/A/pack.mcmeta", br#"{"pack":{"pack_format":15}}"#),
+            ("packs/A/assets/a.txt", b"x"),
+            ("packs/B/pack.mcmeta", br#"{"pack":{"pack_format":15}}"#),
+            ("packs/B/assets/b.txt", b"x"),
+        ]);
         assert!(
-            normalize_wrapped_pack_zip(&no_marker, ProjectType::ResourcePack)
-                .is_none(),
-            "wrapper without the pack marker must not be re-packed"
+            wrapped_pack_plan(&bytes, ProjectType::ResourcePack)
+                == Some(WrappedPackPlan::Children {
+                    children: vec!["A".to_string(), "B".to_string()]
+                })
+        );
+    }
+
+    #[test]
+    fn shaderpack_collection_with_direct_shaders_plans_whole() {
+        // A zipped shaderpacks folder that itself contains a pack folder
+        // named "shaders" plus other packs: the wrapper is treated as one
+        // pack (its marker sits at the wrapper root).
+        let bytes = zip_bytes(&[
+            ("shaderpacks/shaders/a.fsh", b"v"),
+            ("shaderpacks/Other Pack/shaders/b.vsh", b"v"),
+            ("shaderpacks/Another.zip", b"zip"),
+        ]);
+        assert!(
+            wrapped_pack_plan(&bytes, ProjectType::ShaderPack)
+                == Some(WrappedPackPlan::Whole {
+                    wrapper: "shaderpacks".to_string()
+                })
         );
     }
 
