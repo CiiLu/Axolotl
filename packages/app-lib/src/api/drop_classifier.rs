@@ -248,13 +248,17 @@ fn read_zip_listing(path: &Path) -> Result<ZipListing, String> {
         }
 
         // Probe known content markers (entry name only, no file content).
-        if name == "level.dat" {
+        // Markers can live at any depth: zipping a world or resource pack
+        // folder itself nests `level.dat` / `pack.mcmeta` under the folder
+        // name (e.g. "My World/level.dat").
+        let file_name = name.rsplit('/').next().unwrap_or(&name);
+        if file_name == "level.dat" {
             listing.probe_has_level_dat = true;
         }
-        if name == "pack.mcmeta" {
+        if file_name == "pack.mcmeta" {
             listing.probe_has_pack_mcmeta = true;
         }
-        if name.starts_with("shaders/") {
+        if name.split('/').any(|segment| segment == "shaders") {
             listing.probe_has_shaders_dir = true;
         }
 
@@ -1022,6 +1026,58 @@ mod tests {
         assert!(
             matches!(result, DroppedItemType::Mod { .. }),
             "zip with a single testmod.jar should be classified as Mod: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_nested_world_save() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("world.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        // Entries under a single shared root folder, as produced by zipping
+        // the world folder itself.
+        zip.start_file(
+            "My World/level.dat",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"fake").expect("write");
+        zip.start_file(
+            "My World/region/r.0.0.mca",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"mca").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "zip with a nested level.dat should be classified as WorldSave: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_nested_resource_pack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("pack.zip");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "My Pack/pack.mcmeta",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"{}").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::ResourcePack { .. }),
+            "zip with a nested pack.mcmeta should be classified as ResourcePack: {result:?}"
         );
     }
 
