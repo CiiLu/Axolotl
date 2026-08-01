@@ -687,7 +687,11 @@ function matchesContentItem(
 	originalFileName: string,
 	originalFilePath?: string,
 ) {
-	if (item.file_name === originalFileName || item.file_path === originalFilePath) return true
+	if (
+		item.file_name === originalFileName ||
+		item.file_path === originalFilePath ||
+		item.file_path === target.file_path
+	) return true
 
 	const projectId = target.project?.id
 	if (!projectId || item.project?.id !== projectId) return false
@@ -772,6 +776,9 @@ function finishContentOperation(
 ) {
 	const nextKeys = new Set(activeContentOperationKeys.value)
 	for (const key of operation.keys) {
+		nextKeys.delete(key)
+	}
+	for (const key of getContentOperationKeys(item)) {
 		nextKeys.delete(key)
 	}
 	activeContentOperationKeys.value = nextKeys
@@ -983,37 +990,35 @@ async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
 	const operation = beginContentOperation(mod)
 	if (!operation) return
 	const originalFilePath = mod.file_path
+	const originalFileName = mod.file_name
+	const originalEnabled = mod.enabled
+	const enabled = desiredEnabled ?? !mod.enabled
+	let trimmedPath = originalFilePath
+	while (trimmedPath.endsWith('.disabled')) {
+		trimmedPath = trimmedPath.slice(0, -'.disabled'.length)
+	}
+	const optimisticPath = enabled ? trimmedPath : `${trimmedPath}.disabled`
+	applyContentItemToggleState(mod, operation.originalFileName, originalFilePath, {
+		file_path: optimisticPath,
+		file_name: fileNameFromPath(optimisticPath),
+		enabled,
+	})
+	const optimisticKeys = getContentOperationKeys(mod)
+	activeContentOperationKeys.value = new Set([
+		...activeContentOperationKeys.value,
+		...optimisticKeys,
+	])
+	operation.keys = [...operation.keys, ...optimisticKeys]
 
 	try {
-		const newPath = await toggle_disable_project(props.instance.id, mod.file_path, desiredEnabled)
+		const newPath = await toggle_disable_project(props.instance.id, originalFilePath, desiredEnabled)
 		const newFileName = fileNameFromPath(newPath)
-		const enabled = !newPath.endsWith('.disabled')
-		mod.file_path = newPath
-		mod.file_name = newFileName
-		mod.enabled = enabled
-		modpackContentModal.value?.updateItem(operation.originalFileName, {
+		const actualEnabled = !newPath.endsWith('.disabled')
+		applyContentItemToggleState(mod, operation.originalFileName, originalFilePath, {
 			file_path: newPath,
 			file_name: newFileName,
-			enabled,
+			enabled: actualEnabled,
 		})
-		updateLinkedModpackContentCache(mod, operation.originalFileName, originalFilePath, {
-			file_path: newPath,
-			file_name: newFileName,
-			enabled,
-		})
-
-		// 同步更新 localStorage 中的 projects 缓存
-		const cached = readContentCache(props.instance.id)
-		if (cached?.contentItems) {
-			writeContentCache(props.instance.id, {
-				...cached,
-				contentItems: cached.contentItems.map((item) =>
-					item.file_path === originalFilePath
-						? { ...item, file_path: newPath, file_name: newFileName, enabled, installing: false }
-						: item,
-				),
-			})
-		}
 
 		trackEvent('InstanceProjectDisable', {
 			loader: props.instance.loader,
@@ -1021,12 +1026,42 @@ async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
 			id: mod.project?.id,
 			name: mod.project?.title ?? mod.file_name,
 			project_type: mod.project_type,
-			disabled: !enabled,
+			disabled: !actualEnabled,
 		})
 	} catch (err) {
+		applyContentItemToggleState(mod, operation.originalFileName, originalFilePath, {
+			file_path: originalFilePath,
+			file_name: originalFileName,
+			enabled: originalEnabled,
+		})
 		handleError(err as Error)
 	} finally {
 		finishContentOperation(mod, operation)
+	}
+}
+
+function applyContentItemToggleState(
+	target: ContentItem,
+	originalFileName: string,
+	originalFilePath: string,
+	updates: Partial<ContentItem>,
+) {
+	const previousFileName = target.file_name
+	Object.assign(target, updates)
+	modpackContentModal.value?.updateItem(previousFileName, updates)
+	modpackContentModal.value?.updateItem(originalFileName, updates)
+	updateLinkedModpackContentCache(target, originalFileName, originalFilePath, updates)
+
+	const cached = readContentCache(props.instance.id)
+	if (cached?.contentItems) {
+		writeContentCache(props.instance.id, {
+			...cached,
+			contentItems: cached.contentItems.map((item) =>
+				item.file_path === originalFilePath || item.file_path === target.file_path
+					? { ...item, ...updates, installing: false }
+					: item,
+			),
+		})
 	}
 }
 

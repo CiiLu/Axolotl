@@ -83,6 +83,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed the issue of the toggle switch bouncing back when disabling content, now the switch follows correctly.',
+					'zh-CN': '修复了禁用内容时开关回弹的现象，现在开关正常跟手。',
+				},
+				{
+					'en-US':
 						'The custom system prompt for OpenAI-compatible translation services is now saved correctly and used for translations.',
 					'zh-CN':
 						'修复了 OpenAI 兼容翻译服务的自定义系统提示词无法保存的问题，现在会正确保存并在翻译时生效。',
