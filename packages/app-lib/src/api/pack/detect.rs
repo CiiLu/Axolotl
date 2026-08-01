@@ -317,7 +317,9 @@ pub(crate) fn find_entry_index<R: std::io::Read + std::io::Seek>(
                 "Failed to read modpack archive entry: {error}"
             ))
         })?;
-        if decode_zip_entry_name(entry.name_raw()) == entry_name {
+        if decode_zip_entry_name(entry.name_raw()).replace('\\', "/")
+            == entry_name
+        {
             return Ok(Some(index));
         }
     }

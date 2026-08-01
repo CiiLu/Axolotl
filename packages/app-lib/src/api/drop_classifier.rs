@@ -4,8 +4,10 @@
 //! supporting launcher directories, mod JARs, resource packs, world saves,
 //! litematic files, shader packs, and more.
 
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 
+use flate2::read::{GzDecoder, ZlibDecoder};
 use serde::{Deserialize, Serialize};
 
 use crate::api::pack::detect::LocalPackFormat;
@@ -16,6 +18,24 @@ use crate::state::{ModrinthProjectId, ModrinthVersionId};
 /// Maximum number of items allowed in a ZIP before we classify it as "ZIP
 /// with many items" rather than "single file/folder wrapped in ZIP".
 const ZIP_TOP_LEVEL_LIMIT: usize = 200;
+
+/// Maximum total entries in a dropped ZIP before classification gives up.
+/// Large modpack or backup archives stay far below this; anything larger is
+/// almost certainly a nested backup tree that should be handled elsewhere.
+const MAX_ZIP_ENTRIES: usize = 100_000;
+
+/// Maximum uncompressed size of a nested ZIP staged to a temporary file
+/// during classification. Guards against decompression bombs.
+const MAX_NESTED_ZIP_BYTES: u64 = 512 * 1024 * 1024;
+
+/// Maximum bytes read from a marker file (`pack.mcmeta` / `level.dat`) while
+/// confirming content. `level.dat` only needs its compressed NBT header.
+const MAX_MARKER_READ_BYTES: u64 = 256 * 1024;
+
+/// Entry-name segments that are never descended into during classification.
+/// They are operating-system noise, not Minecraft content.
+const NOISE_ENTRY_NAMES: [&str; 4] =
+    ["__MACOSX", ".git", "Thumbs.db", ".DS_Store"];
 
 /// Result of classifying a file path dropped / imported by the user.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -199,11 +219,18 @@ impl ZipEntrySet {
             dirs: std::collections::HashSet::new(),
         };
         for i in 0..archive.len() {
+            if entry_limit_exceeded(set.names.len()) {
+                return Err(entry_limit_reason());
+            }
             let Ok(entry) = archive.by_index_raw(i) else {
                 continue;
             };
-            let name =
-                crate::api::pack::detect::decode_zip_entry_name(entry.name_raw());
+            // Normalize Windows-authored separators so every lookup and the
+            // virtual folder tree agree on one representation.
+            let name = crate::api::pack::detect::decode_zip_entry_name(
+                entry.name_raw(),
+            )
+            .replace('\\', "/");
             if name.is_empty() {
                 continue;
             }
@@ -274,6 +301,25 @@ impl ZipEntrySet {
         })
     }
 
+    /// Whether at least one `.fsh`, `.vsh` or `.glsl` file exists anywhere
+    /// under `shaders/` below `base`. An empty `shaders/` directory is not a
+    /// shader pack.
+    fn has_shader_files(&self, base: &str) -> bool {
+        let prefix = format!("{base}shaders/");
+        self.files.iter().any(|path| {
+            let Some(rest) = path.strip_prefix(&prefix) else {
+                return false;
+            };
+            if rest.is_empty() {
+                return false;
+            }
+            let lower = rest.to_ascii_lowercase();
+            lower.ends_with(".fsh")
+                || lower.ends_with(".vsh")
+                || lower.ends_with(".glsl")
+        })
+    }
+
     /// Whether `base` holds both a `.jar` and a `.json` file (modded
     /// instance root marker).
     fn has_root_jar_and_json(&self, base: &str) -> bool {
@@ -305,6 +351,7 @@ impl ZipEntrySet {
             if let Some(rest) = dir.strip_prefix(base)
                 && let Some((first, _)) = rest.split_once('/')
                 && !first.is_empty()
+                && !is_noise_entry(first)
                 && seen.insert(first)
             {
                 children.push(first.to_string());
@@ -314,6 +361,7 @@ impl ZipEntrySet {
             if let Some(rest) = path.strip_prefix(base)
                 && let Some((first, _)) = rest.split_once('/')
                 && !first.is_empty()
+                && !is_noise_entry(first)
                 && seen.insert(first)
             {
                 children.push(first.to_string());
@@ -342,6 +390,165 @@ impl ZipEntrySet {
         }
         zips.sort();
         zips
+    }
+}
+
+impl<R: std::io::Read + std::io::Seek> ZipEntrySet {
+    /// `pack.mcmeta` exists under `base` and parses as JSON carrying a
+    /// `pack_format` value (either wrapped in `pack` or at the root).
+    fn has_valid_pack_mcmeta(
+        &self,
+        archive: &mut zip::ZipArchive<R>,
+        base: &str,
+    ) -> bool {
+        let Some(bytes) =
+            read_entry_prefix(archive, &format!("{base}pack.mcmeta"))
+        else {
+            return false;
+        };
+        valid_pack_mcmeta_content(&bytes)
+    }
+
+    /// `level.dat` exists under `base` and carries the NBT root header
+    /// (`0x0A` tag + `Data` root name), raw or gzip/zlib-compressed.
+    fn has_valid_level_dat(
+        &self,
+        archive: &mut zip::ZipArchive<R>,
+        base: &str,
+    ) -> bool {
+        let Some(bytes) =
+            read_entry_prefix(archive, &format!("{base}level.dat"))
+        else {
+            return false;
+        };
+        valid_level_dat_content(&bytes)
+    }
+}
+
+/// Whether an entry-name segment is operating-system noise that must not be
+/// recursed into (macOS resource forks, VCS metadata, thumbnails).
+fn is_noise_entry(name: &str) -> bool {
+    NOISE_ENTRY_NAMES
+        .iter()
+        .any(|noise| name.eq_ignore_ascii_case(noise))
+}
+
+fn entry_limit_reason() -> String {
+    format!(
+        "ZIP archive exceeds the entry limit of {MAX_ZIP_ENTRIES} entries"
+    )
+}
+
+/// Whether an archive with `count` collected entries must be rejected.
+fn entry_limit_exceeded(count: usize) -> bool {
+    count >= MAX_ZIP_ENTRIES
+}
+
+/// Reads at most [`MAX_MARKER_READ_BYTES`] bytes of a ZIP entry, returning
+/// `None` when the entry is missing, unreadable (e.g. encrypted) or oversized.
+fn read_entry_prefix<R: std::io::Read + std::io::Seek>(
+    archive: &mut zip::ZipArchive<R>,
+    name: &str,
+) -> Option<Vec<u8>> {
+    let index =
+        crate::api::pack::detect::find_entry_index(archive, name)
+            .ok()
+            .flatten()?;
+    let mut entry = archive.by_index(index).ok()?;
+    let mut buf = Vec::new();
+    entry
+        .take(MAX_MARKER_READ_BYTES)
+        .read_to_end(&mut buf)
+        .ok()?;
+    Some(buf)
+}
+
+/// Reads at most [`MAX_MARKER_READ_BYTES`] bytes of a file on disk.
+fn read_file_prefix(path: &Path) -> Option<Vec<u8>> {
+    let mut file = std::fs::File::open(path).ok()?;
+    let mut buf = Vec::new();
+    file.take(MAX_MARKER_READ_BYTES).read_to_end(&mut buf).ok()?;
+    Some(buf)
+}
+
+/// `pack.mcmeta` must be JSON with a `pack_format` value. Mirrors what
+/// Minecraft itself requires before a resource pack loads.
+fn valid_pack_mcmeta_content(bytes: &[u8]) -> bool {
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        return false;
+    };
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(text) else {
+        return false;
+    };
+    json.get("pack")
+        .and_then(|pack| pack.get("pack_format"))
+        .is_some()
+        || json.get("pack_format").is_some()
+}
+
+/// A real world `level.dat` is NBT whose root tag is a compound named
+/// `Data`. The payload may be stored raw, gzip- or zlib-compressed, so the
+/// first candidate is tried raw and each compressed variant is decoded first.
+fn valid_level_dat_content(bytes: &[u8]) -> bool {
+    level_dat_headers(bytes).iter().any(|candidate| {
+        candidate.len() >= 7
+            && candidate[0] == 0x0A
+            && {
+                let name_len = u16::from_be_bytes([
+                    candidate[1],
+                    candidate[2],
+                ]) as usize;
+                candidate.len() >= 3 + name_len
+                    && &candidate[3..3 + name_len] == b"Data"
+            }
+    })
+}
+
+/// The raw bytes plus gzip/zlib-decompressed prefixes of a `level.dat` peek.
+fn level_dat_headers(bytes: &[u8]) -> Vec<Vec<u8>> {
+    let mut candidates = vec![bytes.to_vec()];
+    if bytes.len() >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B {
+        let mut decoder = GzDecoder::new(bytes);
+        let mut out = Vec::new();
+        if decoder
+            .take(MAX_MARKER_READ_BYTES)
+            .read_to_end(&mut out)
+            .is_ok()
+        {
+            candidates.push(out);
+        }
+    }
+    if bytes.len() >= 2 && bytes[0] == 0x78 {
+        let mut decoder = ZlibDecoder::new(bytes);
+        let mut out = Vec::new();
+        if decoder
+            .take(MAX_MARKER_READ_BYTES)
+            .read_to_end(&mut out)
+            .is_ok()
+        {
+            candidates.push(out);
+        }
+    }
+    candidates
+}
+
+/// Whether the filesystem holding `dir` has at least `required` bytes free.
+/// Returns `true` when the free space cannot be determined so the hard size
+/// cap still applies as a fallback.
+fn temp_dir_has_space(dir: &Path, required: u64) -> bool {
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+    let mut best: Option<(usize, u64)> = None;
+    for disk in disks.list() {
+        let mount = disk.mount_point();
+        if dir.starts_with(mount)
+            && best.is_none_or(|(len, _)| mount.as_os_str().len() > len)
+        {
+            best = Some((mount.as_os_str().len(), disk.available_space()));
+        }
+    }
+    match best {
+        Some((_, available)) => available >= required,
+        None => true,
     }
 }
 
@@ -459,10 +666,12 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         };
     }
 
-    // 3-5. Content markers, matched at the current root. Nested folders are
-    //    handled by the recursion below, which re-runs this whole flow with
-    //    the folder as the new root.
-    if entries.has_file(base, "pack.mcmeta") {
+    // 3-5. Content markers, matched at the current root. Each marker is
+    //    confirmed by reading a small prefix of the file instead of trusting
+    //    the entry name alone. Nested folders are handled by the recursion
+    //    below, which re-runs this whole flow with the folder as the new
+    //    root.
+    if entries.has_valid_pack_mcmeta(archive, base) {
         tracing::debug!(
             "ZIP classify: pack.mcmeta → ResourcePack at base {:?} — {}",
             base,
@@ -472,7 +681,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
             file_path: result_path.to_path_buf(),
         };
     }
-    if entries.has_dir(base, "shaders") {
+    if entries.has_shader_files(base) {
         tracing::debug!(
             "ZIP classify: shaders/ → ShaderPack at base {:?} — {}",
             base,
@@ -482,7 +691,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
             file_path: result_path.to_path_buf(),
         };
     }
-    if entries.has_file(base, "level.dat") {
+    if entries.has_valid_level_dat(archive, base) {
         tracing::debug!(
             "ZIP classify: level.dat → WorldSave at base {:?} — {}",
             base,
@@ -559,6 +768,14 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
             reason: format!("Cannot read nested archive entry {entry_path}"),
         };
     };
+    if entry.size() > MAX_NESTED_ZIP_BYTES {
+        return DroppedItemType::Unknown {
+            reason: format!(
+                "Nested archive {entry_path} exceeds the {} byte staging limit",
+                MAX_NESTED_ZIP_BYTES
+            ),
+        };
+    }
     let temp_dir = match tempfile::tempdir() {
         Ok(dir) => dir,
         Err(error) => {
@@ -567,6 +784,13 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
             };
         }
     };
+    if !temp_dir_has_space(temp_dir.path(), entry.size()) {
+        return DroppedItemType::Unknown {
+            reason: format!(
+                "Not enough free disk space to stage nested archive {entry_path}"
+            ),
+        };
+    }
     let nested_path = temp_dir.path().join("nested.zip");
     if let Err(error) = std::fs::File::create(&nested_path)
         .and_then(|mut output| std::io::copy(&mut entry, &mut output))
@@ -929,27 +1153,51 @@ pub(crate) fn classify_folder_content(path: &Path) -> DroppedItemType {
 
 /// Classify a folder as a world save when it contains a `level.dat` file.
 fn classify_world_save_folder(path: &Path) -> Option<DroppedItemType> {
-    path.join("level.dat")
-        .exists()
-        .then(|| DroppedItemType::WorldSave {
-            file_path: path.to_path_buf(),
-        })
+    let level_dat = path.join("level.dat");
+    if !level_dat.is_file() {
+        return None;
+    }
+    let bytes = read_file_prefix(&level_dat)?;
+    valid_level_dat_content(&bytes).then(|| DroppedItemType::WorldSave {
+        file_path: path.to_path_buf(),
+    })
 }
 
-/// Classify a folder as a resource pack when it contains a `pack.mcmeta`.
+/// Classify a folder as a resource pack when it contains a `pack.mcmeta`
+/// that parses as JSON with a `pack_format` value.
 fn classify_resource_pack_folder(path: &Path) -> Option<DroppedItemType> {
-    path.join("pack.mcmeta")
-        .exists()
-        .then(|| DroppedItemType::ResourcePack {
-            file_path: path.to_path_buf(),
-        })
+    let mcmeta = path.join("pack.mcmeta");
+    if !mcmeta.is_file() {
+        return None;
+    }
+    let bytes = read_file_prefix(&mcmeta)?;
+    valid_pack_mcmeta_content(&bytes).then(|| DroppedItemType::ResourcePack {
+        file_path: path.to_path_buf(),
+    })
 }
 
-/// Classify a folder as a shader pack when it contains a `shaders/` directory.
+/// Classify a folder as a shader pack when `shaders/` contains at least one
+/// `.fsh`, `.vsh` or `.glsl` file.
 fn classify_shader_pack_folder(path: &Path) -> Option<DroppedItemType> {
-    path.join("shaders")
-        .is_dir()
-        .then(|| DroppedItemType::ShaderPack {
+    let shaders = path.join("shaders");
+    if !shaders.is_dir() {
+        return None;
+    }
+    let has_shader_file = std::fs::read_dir(&shaders).ok()?.flatten().any(
+        |entry| {
+            let p = entry.path();
+            if !p.is_file() {
+                return false;
+            }
+            let ext = p
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            matches!(ext.as_str(), "fsh" | "vsh" | "glsl")
+        },
+    );
+    has_shader_file.then(|| DroppedItemType::ShaderPack {
             file_path: path.to_path_buf(),
         })
 }
@@ -1130,6 +1378,14 @@ mod tests {
     use std::io::Write;
     use tempfile::tempdir;
 
+    /// Minimal valid world `level.dat` payload: NBT root tag `0x0A` with
+    /// root name `Data` followed by an empty compound.
+    const VALID_LEVEL_DAT: &[u8] = b"\x0A\x00\x04Data\x00";
+
+    /// Minimal valid `pack.mcmeta` with a `pack_format` value.
+    const VALID_PACK_MCMETA: &[u8] =
+        br#"{"pack":{"pack_format":15,"description":"test"}}"#;
+
     #[test]
     fn test_nonexistent_path() {
         let result = classify_dropped_item(Path::new("/nonexistent/path"));
@@ -1180,7 +1436,7 @@ mod tests {
         let dir = tempdir().expect("temp dir");
         let rp = dir.path().join("my_resource_pack");
         std::fs::create_dir(&rp).expect("create dir");
-        std::fs::write(rp.join("pack.mcmeta"), "{}")
+        std::fs::write(rp.join("pack.mcmeta"), VALID_PACK_MCMETA)
             .expect("write pack.mcmeta");
 
         let result = classify_dropped_item(&rp);
@@ -1195,7 +1451,7 @@ mod tests {
         let dir = tempdir().expect("temp dir");
         let world = dir.path().join("New World");
         std::fs::create_dir(&world).expect("create dir");
-        std::fs::write(world.join("level.dat"), "fake")
+        std::fs::write(world.join("level.dat"), VALID_LEVEL_DAT)
             .expect("write level.dat");
 
         let result = classify_dropped_item(&world);
@@ -1222,6 +1478,8 @@ mod tests {
         let dir = tempdir().expect("temp dir");
         let shaders = dir.path().join("shaders");
         std::fs::create_dir(&shaders).expect("create shaders dir");
+        std::fs::write(shaders.join("composite.fsh"), "shader")
+            .expect("write shader file");
 
         let result = classify_dropped_item(dir.path());
         assert!(
@@ -1304,7 +1562,7 @@ mod tests {
             zip::write::FileOptions::<()>::default(),
         )
         .expect("start entry");
-        zip.write_all(b"fake").expect("write");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
         zip.start_file(
             "My World/region/r.0.0.mca",
             zip::write::FileOptions::<()>::default(),
@@ -1332,7 +1590,7 @@ mod tests {
             zip::write::FileOptions::<()>::default(),
         )
         .expect("start entry");
-        zip.write_all(b"{}").expect("write");
+        zip.write_all(VALID_PACK_MCMETA).expect("write");
         zip.finish().expect("finish");
 
         let result = classify_dropped_item(&zip_path);
@@ -1475,14 +1733,18 @@ mod tests {
 
         let file = std::fs::File::create(&zip_path).expect("create zip");
         let mut zip = zip::ZipWriter::new(file);
-        for name in [
+        zip.start_file(
             "backup/worlds/My World/level.dat",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
+        zip.start_file(
             "backup/worlds/My World/region/r.0.0.mca",
-        ] {
-            zip.start_file(name, zip::write::FileOptions::<()>::default())
-                .expect("start entry");
-            zip.write_all(b"x").expect("write");
-        }
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"x").expect("write");
         zip.finish().expect("finish");
 
         let result = classify_dropped_item(&zip_path);
@@ -1510,7 +1772,7 @@ mod tests {
                     zip::write::FileOptions::<()>::default(),
                 )
                 .expect("start inner entry");
-            writer.write_all(b"x").expect("write inner");
+            writer.write_all(VALID_LEVEL_DAT).expect("write inner");
             writer.finish().expect("finish inner");
         }
         zip.start_file(
@@ -1607,5 +1869,767 @@ mod tests {
                 && !out_dir.path().join("..").join("evil.txt").exists(),
             "path traversal entry must not be extracted outside the target dir"
         );
+    }
+
+    // ── Golden tests: real launcher / pack packaging habits ──────────────
+
+    #[test]
+    fn test_zip_curseforge_pack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("cf.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "manifest.json",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(
+            br#"{"minecraft":{"version":"1.20.1"},"manifestType":"minecraftModpack","manifestVersion":1,"files":[],"overrides":"overrides"}"#,
+        )
+        .expect("write");
+        zip.start_file("mods/a.jar", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
+        zip.write_all(b"jar").expect("write");
+        zip.start_file(
+            "overrides/config/x.toml",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"x").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Modpack { .. }),
+            "CurseForge pack should classify as Modpack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_mcbbs_pack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("mcbbs.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "manifest.json",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(br#"{"addons":[{"id":291}]}"#).expect("write");
+        zip.start_file(
+            "mcbbs.packmeta",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"{}").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Modpack { .. }),
+            "MCBBS pack should classify as Modpack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_mmc_export_pack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("mmc.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "mmc-pack.json",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"{}").expect("write");
+        // instance.cfg would mark a launcher instance; the MMC export
+        // manifest must win because a pack can carry instance metadata.
+        zip.start_file(
+            "instance.cfg",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Modpack { .. }),
+            "MMC export should classify as Modpack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_hmcl_pack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("hmcl.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "modpack.json",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"{}").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Modpack { .. }),
+            "HMCL pack should classify as Modpack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_launcher_bundle() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("bundle.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        // A launcher bundle wraps another pack inside modpack.zip.
+        zip.start_file(
+            "modpack.zip",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"inner pack bytes").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Modpack { .. }),
+            "launcher bundle should classify as Modpack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_compressed_minecraft_multiple_versions() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("minecraft.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in [
+            ".minecraft/versions/1.19.4/1.19.4.json",
+            ".minecraft/versions/1.20.1/1.20.1.json",
+            ".minecraft/versions/1.20.4/1.20.4.json",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"{}").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::Generic,
+                    ..
+                }
+            ),
+            "multi-version .minecraft should classify as Generic: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_pcl_single_instance_folder() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("pcl.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in [
+            "我的整合包/.minecraft/versions/1.20.1/1.20.1.json",
+            "我的整合包/.minecraft/mods/a.jar",
+            "我的整合包/launcher_profiles.json",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"x").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::Generic,
+                    ..
+                }
+            ),
+            "PCL-style single instance folder should classify as Generic: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_hmcl_portable_instance() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("hmcl.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in [
+            "HMCL/.hmcl/config/launcher-settings.json",
+            "HMCL/.minecraft/versions/1.20.1/1.20.1.json",
+            "HMCL/hmcl.json",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"{}").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::HMCL,
+                    ..
+                }
+            ),
+            "HMCL portable instance should classify as HMCL: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_nested_world_zips() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("backup.zip");
+
+        let mut inner = Vec::new();
+        {
+            let mut writer =
+                zip::ZipWriter::new(std::io::Cursor::new(&mut inner));
+            writer
+                .start_file(
+                    "My World/level.dat",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start inner entry");
+            writer.write_all(VALID_LEVEL_DAT).expect("write inner");
+            writer.finish().expect("finish inner");
+        }
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in ["Backup/worlds/world1.zip", "Backup/worlds/world2.zip"] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(&inner).expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "backup of world zips should classify as WorldSave: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_nested_mrpack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("downloads.zip");
+
+        let mut inner = Vec::new();
+        {
+            let mut writer =
+                zip::ZipWriter::new(std::io::Cursor::new(&mut inner));
+            writer
+                .start_file(
+                    "modrinth.index.json",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start inner entry");
+            writer
+                .write_all(
+                    br#"{"formatVersion":1,"files":[],"dependencies":{"minecraft":"1.20.1"}}"#,
+                )
+                .expect("write inner");
+            writer.finish().expect("finish inner");
+        }
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "Downloads/packs/mypack.mrpack",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(&inner).expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Modpack { .. }),
+            "nested mrpack should classify as Modpack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_nested_zip_chain_within_limit() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("chain.zip");
+
+        let mut world = Vec::new();
+        {
+            let mut writer =
+                zip::ZipWriter::new(std::io::Cursor::new(&mut world));
+            writer
+                .start_file(
+                    "My World/level.dat",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start world entry");
+            writer.write_all(VALID_LEVEL_DAT).expect("write world");
+            writer.finish().expect("finish world");
+        }
+        let mut c = Vec::new();
+        {
+            let mut writer = zip::ZipWriter::new(std::io::Cursor::new(&mut c));
+            writer
+                .start_file(
+                    "world.zip",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start c entry");
+            writer.write_all(&world).expect("write c");
+            writer.finish().expect("finish c");
+        }
+        let mut b = Vec::new();
+        {
+            let mut writer = zip::ZipWriter::new(std::io::Cursor::new(&mut b));
+            writer
+                .start_file("c.zip", zip::write::FileOptions::<()>::default())
+                .expect("start b entry");
+            writer.write_all(&c).expect("write b");
+            writer.finish().expect("finish b");
+        }
+        let mut a = Vec::new();
+        {
+            let mut writer = zip::ZipWriter::new(std::io::Cursor::new(&mut a));
+            writer
+                .start_file("b.zip", zip::write::FileOptions::<()>::default())
+                .expect("start a entry");
+            writer.write_all(&b).expect("write a");
+            writer.finish().expect("finish a");
+        }
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file("a.zip", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
+        zip.write_all(&a).expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "4-level nested zip chain should classify as WorldSave: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_mixed_backup_prefers_first_hit() {
+        // A backup containing an instance, a world and a resource pack is
+        // classified by the first (alphabetical) hit — instances/ wins.
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("mixed.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in [
+            "Backup/instances/Alpha/.minecraft/versions/1.20.1/1.20.1.json",
+            "Backup/worlds/My World/level.dat",
+            "Backup/resourcepacks/My Pack/pack.mcmeta",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"x").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::Generic,
+                    ..
+                }
+            ),
+            "mixed backup should classify as the first hit (Generic instance): {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_instance_wins_over_embedded_content() {
+        // The instance layer must beat every content marker embedded inside
+        // the game folder.
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("backup.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in [
+            "我的存档备份/.minecraft/versions/1.20.1/1.20.1.json",
+            "我的存档备份/.minecraft/resourcepacks/Vanilla Tweaks/pack.mcmeta",
+            "我的存档备份/.minecraft/saves/New World/level.dat",
+            "我的存档备份/.minecraft/shaderpacks/My Shader/shaders/a.fsh",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"x").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::Generic,
+                    ..
+                }
+            ),
+            "instance must win over embedded content markers: {result:?}"
+        );
+    }
+
+    // ── Hardening: content confirmation, noise pruning, safety ───────────
+
+    #[test]
+    fn test_zip_backslash_world_is_normalized() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("bs.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "My World\\level.dat",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
+        zip.start_file(
+            "My World\\region\\r.0.0.mca",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"m").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "backslash world zip should classify as WorldSave: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_invalid_pack_mcmeta_is_not_resource_pack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("fake.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "Fake Pack/pack.mcmeta",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"not json").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Unknown { .. }),
+            "invalid pack.mcmeta must not classify as ResourcePack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_empty_shaders_is_not_shader_pack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("fake.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "Fake Shader/shaders/",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Unknown { .. }),
+            "empty shaders/ must not classify as ShaderPack: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_noise_entries_are_skipped() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("noise.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "My World/level.dat",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
+        for name in [
+            "__MACOSX/My World/._level.dat",
+            ".git/config",
+            "Thumbs.db",
+            ".DS_Store",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"x").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "noise entries must be skipped during recursion: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_slip_and_absolute_entries_are_ignored() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("evil.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in ["../../evil.txt", "C:/evil.txt", "/evil.txt"] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"e").expect("write");
+        }
+        zip.start_file(
+            "My World/level.dat",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "unsafe entries must not derail classification: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_empty_archive_is_unknown() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("empty.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        zip::ZipWriter::new(file).finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Unknown { .. }),
+            "empty zip should be Unknown: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_zip_dirs_only_archive_is_unknown() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("dirs.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file("dir/", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
+        zip.write_all(b"").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Unknown { .. }),
+            "directories-only zip should be Unknown: {result:?}"
+        );
+    }
+
+    fn crc32(data: &[u8]) -> u32 {
+        let mut table = [0u32; 256];
+        for (i, entry) in table.iter_mut().enumerate() {
+            let mut c = i as u32;
+            for _ in 0..8 {
+                c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
+            }
+            *entry = c;
+        }
+        let mut crc = 0xFFFF_FFFFu32;
+        for &byte in data {
+            crc = table[((crc ^ byte as u32) & 0xFF) as usize] ^ (crc >> 8);
+        }
+        crc ^ 0xFFFF_FFFF
+    }
+
+    /// Writes a minimal ZIP with one legacy-encrypted (general-purpose bit 0)
+    /// stored entry plus a plain `level.dat`. The zip crate does not need the
+    /// `aes-crypto` feature to read names of encrypted entries, which is all
+    /// classification touches.
+    fn write_encrypted_entry_zip(path: &Path) {
+        fn u16(out: &mut Vec<u8>, v: u16) {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
+        fn u32(out: &mut Vec<u8>, v: u32) {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
+
+        let entries: [(&[u8], &[u8], bool); 2] = [
+            (b"secret.bin", b"encrypted payload", true),
+            (b"level.dat", VALID_LEVEL_DAT, false),
+        ];
+        let mut out = Vec::new();
+        let mut offsets = Vec::new();
+        for (name, data, encrypted) in entries {
+            offsets.push(out.len() as u32);
+            let flags: u16 = if encrypted { 0x0001 } else { 0 };
+            let data_size =
+                data.len() as u32 + if encrypted { 12 } else { 0 };
+            out.extend_from_slice(b"PK\x03\x04");
+            u16(&mut out, 20);
+            u16(&mut out, flags);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u32(&mut out, crc32(data));
+            u32(&mut out, data_size);
+            u32(&mut out, data.len() as u32);
+            u16(&mut out, name.len() as u16);
+            u16(&mut out, 0);
+            out.extend_from_slice(name);
+            if encrypted {
+                out.extend_from_slice(&[0u8; 12]);
+            }
+            out.extend_from_slice(data);
+        }
+
+        let cd_start = out.len() as u32;
+        for (i, (name, data, encrypted)) in entries.into_iter().enumerate() {
+            let flags: u16 = if encrypted { 0x0001 } else { 0 };
+            let data_size =
+                data.len() as u32 + if encrypted { 12 } else { 0 };
+            out.extend_from_slice(b"PK\x01\x02");
+            u16(&mut out, 20);
+            u16(&mut out, 20);
+            u16(&mut out, flags);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u32(&mut out, crc32(data));
+            u32(&mut out, data_size);
+            u32(&mut out, data.len() as u32);
+            u16(&mut out, name.len() as u16);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u16(&mut out, 0);
+            u32(&mut out, 0);
+            u32(&mut out, offsets[i]);
+            out.extend_from_slice(name);
+        }
+        let cd_size = out.len() as u32 - cd_start;
+
+        out.extend_from_slice(b"PK\x05\x06");
+        u16(&mut out, 0);
+        u16(&mut out, 0);
+        u16(&mut out, entries.len() as u16);
+        u16(&mut out, entries.len() as u16);
+        u32(&mut out, cd_size);
+        u32(&mut out, cd_start);
+        u16(&mut out, 0);
+
+        std::fs::write(path, out).expect("write encrypted zip");
+    }
+
+    #[test]
+    fn test_zip_encrypted_entry_does_not_break_classification() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("enc.zip");
+        write_encrypted_entry_zip(&zip_path);
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "encrypted sibling entry must not break world classification: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_disabled_jar_and_zip_files() {
+        let dir = tempdir().expect("temp dir");
+        let jar = dir.path().join("mod.jar.disabled");
+        std::fs::write(&jar, b"not a real jar").expect("write");
+
+        let zip_path = dir.path().join("pack.zip.disabled");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file("level.dat", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
+        zip.finish().expect("finish");
+
+        let jar_result = classify_dropped_item(&jar);
+        assert!(
+            matches!(jar_result, DroppedItemType::Mod { .. }),
+            "mod.jar.disabled should classify as Mod: {jar_result:?}"
+        );
+        let zip_result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(zip_result, DroppedItemType::WorldSave { .. }),
+            "pack.zip.disabled should classify as WorldSave: {zip_result:?}"
+        );
+    }
+
+    #[test]
+    fn test_entry_limit_boundary() {
+        assert!(!entry_limit_exceeded(MAX_ZIP_ENTRIES - 1));
+        assert!(entry_limit_exceeded(MAX_ZIP_ENTRIES));
+        assert!(entry_limit_reason().contains("entry limit"));
+    }
+
+    #[test]
+    fn test_nested_zip_staging_guards() {
+        let dir = tempdir().expect("temp dir");
+        // Zero bytes are always available; no filesystem has u64::MAX free.
+        assert!(temp_dir_has_space(dir.path(), 0));
+        assert!(!temp_dir_has_space(dir.path(), u64::MAX));
+    }
+
+    #[test]
+    fn test_level_dat_header_variants() {
+        use flate2::write::{GzEncoder, ZlibEncoder};
+        use flate2::Compression;
+
+        let mut gz = GzEncoder::new(Vec::new(), Compression::default());
+        gz.write_all(VALID_LEVEL_DAT).expect("gz write");
+        let gz_bytes = gz.finish().expect("gz finish");
+
+        let mut zl = ZlibEncoder::new(Vec::new(), Compression::default());
+        zl.write_all(VALID_LEVEL_DAT).expect("zlib write");
+        let zl_bytes = zl.finish().expect("zlib finish");
+
+        assert!(valid_level_dat_content(VALID_LEVEL_DAT));
+        assert!(
+            valid_level_dat_content(&gz_bytes),
+            "gzip-compressed level.dat should validate"
+        );
+        assert!(
+            valid_level_dat_content(&zl_bytes),
+            "zlib-compressed level.dat should validate"
+        );
+        assert!(!valid_level_dat_content(b"not nbt at all"));
+        assert!(!valid_level_dat_content(b"\x0A\x00\x02No"));
     }
 }
