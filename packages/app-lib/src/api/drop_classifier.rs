@@ -268,11 +268,6 @@ impl ZipEntrySet {
         self.files.contains(&format!("{base}{relative}"))
     }
 
-    /// Whether a directory exists at `{base}{relative}`.
-    fn has_dir(&self, base: &str, relative: &str) -> bool {
-        self.dirs.contains(&format!("{base}{relative}"))
-    }
-
     /// Whether `versions/<id>/<id>.json` exists under `base` (vanilla
     /// launcher instance marker).
     fn has_version_json(&self, base: &str) -> bool {
