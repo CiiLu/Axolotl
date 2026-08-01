@@ -77,6 +77,20 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复 Modrinth 更新检查：由 CurseForge 跟踪的文件不再被当作 Modrinth 更新推荐，同时符合条件的手动添加内容仍可匹配更新。',
 				},
+				{
+					'en-US':
+						'Fixed the issue of external import of modpacks not being able to update mods with one click',
+					'zh-CN': '修复了外部导入整合包无法一键更新mod的问题。',
+				},
+				{
+					'en-US': 'Fixed the issue of CF limiting resource downloads in some cases',
+					'zh-CN': '修复了部分情况下CF限制资源下载提示消失问题。',
+				},
+				{
+					'en-US': 'Fixed some Chinese copywriting issues.',
+					'zh-CN': '修复了部分中文文案。',
+				},
+				
 			],
 		},
 	},
