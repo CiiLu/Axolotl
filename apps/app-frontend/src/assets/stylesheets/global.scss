@@ -180,6 +180,24 @@ a {
 	scrollbar-color: var(--color-scrollbar) var(--color-bg);
 }
 
+// Desktop app surfaces behave like an application, not a document: prevent
+// accidental text selection while dragging. Editable controls stay selectable.
+* {
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+input,
+textarea,
+[contenteditable] {
+	-webkit-user-select: text;
+	-moz-user-select: text;
+	-ms-user-select: text;
+	user-select: text;
+}
+
 /* Chrome, Edge, and Safari */
 *::-webkit-scrollbar {
 	width: 16px;

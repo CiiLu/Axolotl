@@ -825,6 +825,7 @@ pub(crate) async fn add_project_bytes(
             size: bytes.len() as u64,
             missing: false,
             local_mod_data: local_mod_data.as_deref(),
+            icon_path: None,
         },
         &state.pool,
     )
@@ -1079,6 +1080,7 @@ pub(crate) async fn record_project_file_atomic(
             size,
             missing: false,
             local_mod_data: None,
+            icon_path: None,
         },
         &mut tx,
     )
@@ -1407,6 +1409,7 @@ async fn index_existing_file(
             size,
             missing: false,
             local_mod_data: local_mod_data.as_deref(),
+            icon_path: None,
         },
         &state.pool,
     )

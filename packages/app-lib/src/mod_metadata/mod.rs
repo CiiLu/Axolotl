@@ -10,6 +10,7 @@
 //! - Legacy Forge: `mcmod.info` (JSON array)
 
 mod fabric;
+pub mod icon;
 pub mod manifest;
 mod mcmod_info;
 mod toml_mod;
@@ -96,7 +97,7 @@ fn try_fabric(
         authors,
         description: parsed.description,
         url: extract_contact_url(&parsed._contact),
-        icon_path: parsed.icon,
+        icon_path: parsed.icon.as_ref().and_then(|icon| icon.resolve()),
         minecraft_version: fabric::fabric_dep_value(
             &parsed.depends,
             "minecraft",
@@ -127,7 +128,7 @@ fn try_quilt(
         authors,
         description: inner.description,
         url: extract_contact_url(&inner._contact),
-        icon_path: inner.icon,
+        icon_path: inner.icon.as_ref().and_then(|icon| icon.resolve()),
         minecraft_version: fabric::quilt_dep_value(&inner.depends, "minecraft"),
         loader_version: fabric::quilt_dep_value(&inner.depends, "quilt_loader"),
         loader: Some("quilt".into()),

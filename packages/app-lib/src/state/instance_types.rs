@@ -134,6 +134,9 @@ pub struct ContentFile {
     /// mod metadata file. Populated when Modrinth hash lookup provides
     /// no match for the SHA1. Used as fallback display data.
     pub local_mod_data: Option<String>,
+    /// Absolute path of the cached extracted icon; empty string marks a file
+    /// that was checked but has no icon.
+    pub icon_path: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

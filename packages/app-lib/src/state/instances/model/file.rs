@@ -17,4 +17,7 @@ pub struct InstanceFile {
     /// mod metadata file (fabric.mod.json, quilt.mod.json, mods.toml, etc.).
     /// Populated when Modrinth hash lookup provides no match.
     pub local_mod_data: Option<String>,
+    /// Absolute path of the cached extracted icon for unmatched content
+    /// files. An empty string marks a file that was checked but has no icon.
+    pub icon_path: Option<String>,
 }

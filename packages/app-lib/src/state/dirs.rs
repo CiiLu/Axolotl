@@ -520,6 +520,17 @@ impl DirectoryInfo {
                 .await?;
                 sqlx::query!(
                     "
+                    UPDATE instance_files
+                    SET icon_path = replace(icon_path, ?, ?)
+                    WHERE icon_path IS NOT NULL AND icon_path != ''
+                    ",
+                    prev_custom_dir,
+                    new_dir,
+                )
+                .execute(exec)
+                .await?;
+                sqlx::query!(
+                    "
                     UPDATE instance_launch_overrides
                     SET overrides = jsonb(json_set(
                         overrides,

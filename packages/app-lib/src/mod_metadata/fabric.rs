@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 
 /// Fabric mod.json (and Quilt's similar quilt.mod.json wrapped under quilt_loader).
 #[derive(Debug, Deserialize)]
@@ -11,7 +12,7 @@ pub(crate) struct FabricModJson {
     pub authors: Vec<FabricAuthorOrArray>,
     #[serde(default)]
     pub contributors: Vec<FabricAuthorOrArray>,
-    pub icon: Option<String>,
+    pub icon: Option<ModIcon>,
     #[serde(rename = "contact")]
     pub _contact: Option<serde_json::Value>,
     /// Dependency resolution (Fabric: map of id→version, Quilt: array of objects).
@@ -23,6 +24,28 @@ pub(crate) struct FabricModJson {
     pub conflicts: Option<serde_json::Value>,
     #[allow(dead_code)]
     pub breaks: Option<serde_json::Value>,
+}
+
+/// Fabric's `icon` field accepts either a plain path or a dictionary mapping
+/// icon size to path.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub(crate) enum ModIcon {
+    Path(String),
+    Sized(HashMap<String, String>),
+}
+
+impl ModIcon {
+    /// Resolve a single icon path, preferring the largest declared size.
+    pub(crate) fn resolve(&self) -> Option<String> {
+        match self {
+            Self::Path(path) => Some(path.clone()),
+            Self::Sized(sizes) => sizes
+                .iter()
+                .max_by_key(|(size, _)| size.parse::<u64>().unwrap_or(0))
+                .map(|(_, path)| path.clone()),
+        }
+    }
 }
 
 /// An author/contributor entry: either a plain string or `{"name": "...", "contact": {...}}`.

@@ -1306,6 +1306,7 @@ async fn content_projects_for_scope(
                 origin_provider,
                 project_type,
                 local_mod_data: file.local_mod_data,
+                icon_path: file.icon_path,
             },
         );
     }
@@ -1612,6 +1613,11 @@ async fn content_files_to_content_items(
                 )
                 .ok()
             });
+            let cached_icon = file
+                .icon_path
+                .as_ref()
+                .filter(|path| !path.is_empty())
+                .cloned();
 
             ContentItem {
                 file_name: file.file_name.clone(),
@@ -1646,7 +1652,25 @@ async fn content_files_to_content_items(
                                 .name
                                 .clone()
                                 .unwrap_or_else(|| meta.mod_id.clone()),
-                            icon_url: None,
+                            icon_url: cached_icon.clone(),
+                        })
+                    })
+                    .or_else(|| {
+                        // Unmatched packs without embedded mod metadata still
+                        // get a project so rows can render their name and the
+                        // cached icon extracted from the archive.
+                        (!file.file_name.is_empty()).then(|| {
+                            ContentItemProject {
+                                id: format!("local:file:{}", file.hash),
+                                slug: None,
+                                title: Path::new(&file.file_name)
+                                    .file_stem()
+                                    .map(|stem| {
+                                        stem.to_string_lossy().into_owned()
+                                    })
+                                    .unwrap_or_else(|| file.file_name.clone()),
+                                icon_url: cached_icon.clone(),
+                            }
                         })
                     }),
                 version: version

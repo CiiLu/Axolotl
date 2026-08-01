@@ -4,8 +4,10 @@ use crate::state::instances::{Instance, InstanceFile};
 use crate::state::{
     CachedEntry, ContentProvider, ContentProviderRef, ProjectType,
 };
+use crate::util::fetch;
 use chrono::Utc;
 use std::collections::HashMap;
+use std::path::Path;
 use uuid::Uuid;
 
 pub(crate) async fn sync_content_files(
@@ -88,36 +90,77 @@ pub(crate) async fn sync_instance_content_files(
             modified_at: now,
             local_mod_data: existing_file
                 .and_then(|f| f.local_mod_data.clone()),
+            icon_path: existing_file.and_then(|f| f.icon_path.clone()),
         });
     }
 
-    // Extract local mod metadata for Mod files that don't already have it
-    // (pre-existing files created before this feature was added).
+    // Extract local mod metadata (Mod JARs) and cached icons (Mod JARs and
+    // resource packs) for files that don't have them yet. This also backfills
+    // rows created before these features existed; `icon_path` distinguishes
+    // not-attempted (NULL), no-icon (empty string), and cached (path).
     let instance_dir = state.directories.instances_dir().join(&instance.path);
+    let icon_cache_dir = state.directories.caches_dir().join("icons");
     for file in &mut files {
-        if file.local_mod_data.is_some() {
-            continue;
-        }
         let Some(project_type) = project_type_for_file(file) else {
             continue;
         };
-        if project_type != ProjectType::Mod {
+        let extract_metadata =
+            project_type == ProjectType::Mod && file.local_mod_data.is_none();
+        let extract_icon = file.icon_path.is_none()
+            && matches!(
+                project_type,
+                ProjectType::Mod | ProjectType::ResourcePack
+            );
+        if !extract_metadata && !extract_icon {
             continue;
         }
 
-        match tokio::fs::read(instance_dir.join(&file.relative_path)).await {
-            Ok(data) => {
-                let bytes = bytes::Bytes::from(data);
-                if let Some(meta) =
-                    crate::mod_metadata::extract_mod_metadata(&bytes)
-                    && let Ok(json) = serde_json::to_string(&meta)
-                {
-                    file.local_mod_data = Some(json);
-                }
-            }
+        let path = instance_dir.join(&file.relative_path);
+
+        // Resource packs are read entry-wise so large archives are not
+        // materialized in memory just to fetch `pack.png`.
+        if extract_icon && project_type == ProjectType::ResourcePack {
+            let icon =
+                crate::mod_metadata::icon::extract_resource_pack_icon(&path);
+            file.icon_path = Some(
+                cache_extracted_icon(icon, &file.sha1, &icon_cache_dir, state)
+                    .await,
+            );
+            continue;
+        }
+
+        // Mods: one in-memory read serves both metadata and icon extraction.
+        let bytes = match tokio::fs::read(&path).await {
+            Ok(data) => bytes::Bytes::from(data),
             Err(_) => {
                 // File temporarily inaccessible; skip silently.
+                continue;
             }
+        };
+
+        if extract_metadata
+            && let Some(meta) =
+                crate::mod_metadata::extract_mod_metadata(&bytes)
+            && let Ok(json) = serde_json::to_string(&meta)
+        {
+            file.local_mod_data = Some(json);
+        }
+
+        if extract_icon {
+            let meta = file.local_mod_data.as_ref().and_then(|json| {
+                serde_json::from_str::<crate::mod_metadata::LocalModMetadata>(
+                    json,
+                )
+                .ok()
+            });
+            let icon = crate::mod_metadata::icon::extract_mod_icon(
+                &bytes,
+                meta.as_ref(),
+            );
+            file.icon_path = Some(
+                cache_extracted_icon(icon, &file.sha1, &icon_cache_dir, state)
+                    .await,
+            );
         }
     }
 
@@ -151,6 +194,7 @@ pub(crate) async fn sync_instance_content_files(
                     size: file.size,
                     missing: false,
                     local_mod_data: file.local_mod_data.as_deref(),
+                    icon_path: file.icon_path.as_deref(),
                 },
                 &mut tx,
             )
@@ -161,6 +205,41 @@ pub(crate) async fn sync_instance_content_files(
     tx.commit().await?;
 
     Ok(synced_files)
+}
+
+async fn cache_extracted_icon(
+    icon: Option<(String, Vec<u8>)>,
+    sha1: &str,
+    icon_cache_dir: &Path,
+    state: &State,
+) -> String {
+    let Some((entry_name, icon_bytes)) = icon else {
+        return String::new();
+    };
+
+    let extension = icon_extension(&entry_name);
+    let cache_path = icon_cache_dir.join(format!("{sha1}.{extension}"));
+    match fetch::write(&cache_path, &icon_bytes, &state.io_semaphore).await {
+        Ok(()) => crate::util::io::canonicalize(&cache_path)
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_else(|_| cache_path.to_string_lossy().into_owned()),
+        Err(_) => String::new(),
+    }
+}
+
+fn icon_extension(entry_name: &str) -> &str {
+    let extension = Path::new(entry_name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or_default();
+    if matches!(
+        extension.to_ascii_lowercase().as_str(),
+        "png" | "jpg" | "jpeg"
+    ) {
+        extension
+    } else {
+        "png"
+    }
 }
 
 fn cleanup_install_temporary_files(

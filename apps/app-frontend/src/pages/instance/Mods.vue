@@ -492,16 +492,30 @@ const hiddenSkippedManualDownloadCount = computed(() =>
 	Math.max(0, skippedManualDownloads.value.length - visibleSkippedManualDownloads.value.length),
 )
 
+function localIconUrl(iconUrl?: string | null): string {
+	if (!iconUrl) return ''
+	return /^(https?:|data:|blob:|asset:|tauri:)/.test(iconUrl) ? iconUrl : convertFileSrc(iconUrl)
+}
+
 const mergedProjects = computed<ContentItem[]>(() => {
 	const active = installingItems.value.get(props.instance.id)
 	const pending = active ?? installingBuffer.value
 	const manualPending = manualPendingItems.value
 	const pendingProjectIds = new Set(pending.map((p) => p.project?.id).filter(Boolean))
-	const displayProjects = projects.value.map((project) =>
-		project.project?.id && pendingProjectIds.has(project.project.id)
-			? { ...project, installing: true }
-			: project,
-	)
+	const displayProjects = projects.value.map((project) => {
+		const resolved = project.project?.icon_url
+			? {
+					...project,
+					project: {
+						...project.project,
+						icon_url: localIconUrl(project.project.icon_url),
+					},
+				}
+			: project
+		return resolved.project?.id && pendingProjectIds.has(resolved.project.id)
+			? { ...resolved, installing: true }
+			: resolved
+	})
 	const realProjectIds = new Set(displayProjects.map((p) => p.project?.id).filter(Boolean))
 	const placeholders = pending.filter((item) => !realProjectIds.has(item.project?.id))
 	const manualPlaceholders = manualPending.filter((item) => !realProjectIds.has(item.project?.id))

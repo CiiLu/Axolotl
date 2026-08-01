@@ -155,6 +155,7 @@ pub(crate) struct InstanceFileRow {
     pub added_at: i64,
     pub modified_at: i64,
     pub local_mod_data: Option<String>,
+    pub icon_path: Option<String>,
 }
 
 impl TryFrom<InstanceFileRow> for InstanceFile {
@@ -173,6 +174,7 @@ impl TryFrom<InstanceFileRow> for InstanceFile {
             added_at: timestamp(row.added_at),
             modified_at: timestamp(row.modified_at),
             local_mod_data: row.local_mod_data,
+            icon_path: row.icon_path,
         })
     }
 }
@@ -514,6 +516,7 @@ pub(crate) async fn upsert_instance_file(
     let added_at = file.added_at.timestamp();
     let modified_at = file.modified_at.timestamp();
     let local_mod_data = file.local_mod_data.as_deref();
+    let icon_path = file.icon_path.as_deref();
 
     sqlx::query!(
         "
@@ -528,9 +531,10 @@ pub(crate) async fn upsert_instance_file(
 			missing,
 			added_at,
 			modified_at,
-			local_mod_data
+			local_mod_data,
+			icon_path
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (instance_id, relative_path) DO UPDATE SET
 			file_name = excluded.file_name,
 			enabled = excluded.enabled,
@@ -538,7 +542,8 @@ pub(crate) async fn upsert_instance_file(
 			size = excluded.size,
 			missing = excluded.missing,
 			modified_at = excluded.modified_at,
-			local_mod_data = COALESCE(excluded.local_mod_data, instance_files.local_mod_data)
+			local_mod_data = COALESCE(excluded.local_mod_data, instance_files.local_mod_data),
+			icon_path = COALESCE(excluded.icon_path, instance_files.icon_path)
 		",
         id,
         instance_id,
@@ -551,6 +556,7 @@ pub(crate) async fn upsert_instance_file(
         added_at,
         modified_at,
         local_mod_data,
+        icon_path,
     )
     .execute(&mut **tx)
     .await?;
@@ -613,6 +619,7 @@ pub(crate) struct UpsertInstanceFile<'a> {
     pub size: u64,
     pub missing: bool,
     pub local_mod_data: Option<&'a str>,
+    pub icon_path: Option<&'a str>,
 }
 
 pub(crate) async fn get_instance_file_by_relative_path(
@@ -665,6 +672,10 @@ pub(crate) async fn upsert_instance_file_from_parts_in_transaction(
         .local_mod_data
         .map(ToString::to_string)
         .or_else(|| existing.as_ref().and_then(|f| f.local_mod_data.clone()));
+    let icon_path = input
+        .icon_path
+        .map(ToString::to_string)
+        .or_else(|| existing.as_ref().and_then(|f| f.icon_path.clone()));
 
     let file = InstanceFile {
         id: existing
@@ -684,6 +695,7 @@ pub(crate) async fn upsert_instance_file_from_parts_in_transaction(
             .unwrap_or_else(Utc::now),
         modified_at: Utc::now(),
         local_mod_data,
+        icon_path,
     };
 
     upsert_instance_file(&file, &mut *tx).await?;

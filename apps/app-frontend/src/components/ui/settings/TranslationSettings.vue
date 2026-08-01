@@ -244,7 +244,12 @@ watch(
 	{ deep: true },
 )
 
-onUnmounted(() => clearTimeout(saveTimer))
+onUnmounted(() => {
+	if (saveTimer) {
+		clearTimeout(saveTimer)
+		void updateTranslationSettings(settings.value).catch(reportOperationError)
+	}
+})
 
 async function saveSecret() {
 	try {
