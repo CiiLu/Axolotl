@@ -23,7 +23,7 @@ async function createFileFromPath(path: string, fallbackName: string, type?: str
 }
 
 async function createNativeFileFromPath(path: string, fallbackName: string, type?: string) {
-	const bytes = await invoke<number[]>('plugin:files|file_read_dragged_file', { path })
+	const bytes = await invoke<ArrayBuffer>('plugin:files|file_read_dragged_file', { path })
 	const name = getFileName(path, fallbackName)
 	return new File([new Uint8Array(bytes)], name, type ? { type } : undefined)
 }

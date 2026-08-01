@@ -939,7 +939,7 @@ async function setupNativeDropHandler() {
 
 async function readDroppedSkinFile(path: string) {
 	try {
-		const data = await invoke<number[]>('plugin:files|file_read_dragged_file', { path })
+		const data = await invoke<ArrayBuffer>('plugin:files|file_read_dragged_file', { path })
 		await processSkinFileBuffer(new Uint8Array(data))
 	} catch (error) {
 		handleError(error as Error)

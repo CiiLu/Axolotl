@@ -1,11 +1,6 @@
 import { provideFileDrop } from '@modrinth/ui'
-import { invoke } from '@tauri-apps/api/core'
 import type { DragDropEvent } from '@tauri-apps/api/webview'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
-
-function getFileName(path: string) {
-	return path.split(/[\\/]/).pop() || 'file'
-}
 
 function toLogicalPosition(position: { x: number; y: number }) {
 	const scale = window.devicePixelRatio || 1
@@ -13,11 +8,6 @@ function toLogicalPosition(position: { x: number; y: number }) {
 		x: position.x / scale,
 		y: position.y / scale,
 	}
-}
-
-async function readDraggedFile(path: string) {
-	const data = await invoke<number[]>('plugin:files|file_read_dragged_file', { path })
-	return new Uint8Array(data)
 }
 
 export function setupFileDropProvider() {
@@ -54,11 +44,6 @@ export function setupFileDropProvider() {
 					nativeFileDropPaths = []
 				}
 			})
-		},
-		async createFilesFromNativePaths(paths) {
-			return await Promise.all(
-				paths.map(async (path) => new File([await readDraggedFile(path)], getFileName(path))),
-			)
 		},
 	}
 

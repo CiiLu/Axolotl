@@ -23,7 +23,7 @@ pub struct ExtractDryRunResult {
 }
 
 #[tauri::command]
-pub async fn file_read_dragged_file(path: String) -> Result<Vec<u8>> {
+pub async fn file_read_dragged_file(path: String) -> Result<tauri::ipc::Response> {
     let metadata = tokio::fs::metadata(&path).await?;
     if !metadata.is_file() {
         return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
@@ -32,7 +32,10 @@ pub async fn file_read_dragged_file(path: String) -> Result<Vec<u8>> {
         .into());
     }
 
-    Ok(tokio::fs::read(path).await?)
+    // Raw binary payload: the frontend receives an ArrayBuffer instead of a
+    // JSON number array, which would balloon multi-hundred-MB files to
+    // gigabytes of transient memory on both sides of the IPC boundary.
+    Ok(tauri::ipc::Response::new(tokio::fs::read(path).await?))
 }
 
 #[tauri::command]

@@ -13,7 +13,6 @@ export interface FileDropProvider {
 	listenNativeFileDrop: (
 		handler: (event: NativeFileDropEvent) => void | Promise<void>,
 	) => Promise<() => void>
-	createFilesFromNativePaths: (paths: string[]) => Promise<File[]>
 }
 
 export const [injectFileDrop, provideFileDrop] = createContext<FileDropProvider>('FileDrop')
