@@ -63,7 +63,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Manual CurseForge downloads skipped during an installation now remain listed after the task finishes, making them easier to complete later.',
-					'zh-CN': '安装过程中跳过的 CurseForge 手动下载现在会在任务完成后保留在列表中，便于稍后完成。',
+					'zh-CN':
+						'安装过程中跳过的 CurseForge 手动下载现在会在任务完成后保留在列表中，便于稍后完成。',
 				},
 			],
 			fixed: [
@@ -90,7 +91,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed some Chinese copywriting issues.',
 					'zh-CN': '修复了部分中文文案。',
 				},
-				
+				{
+					'en-US':
+						'Fixed schematics saved with reversed selection axes appearing upside down or mirrored in Schematic workshop.',
+					'zh-CN': '修复了使用反向选区轴保存的投影在投影工坊中上下颠倒或镜像的问题。',
+				},
 			],
 		},
 	},

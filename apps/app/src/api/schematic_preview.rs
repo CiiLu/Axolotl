@@ -714,6 +714,7 @@ fn parse_litematic(
             size,
             min,
         )?;
+        // BlockStates always starts at the minimum corner, even when Size is negative.
         for block_index in 0..volume {
             if block_index % CHUNK_VOLUME == 0 {
                 ensure_not_cancelled(cancellation)?;
@@ -728,7 +729,7 @@ fn parse_litematic(
                 let z = (block_index / size[0] as usize) % size[2] as usize;
                 let y = block_index / (size[0] as usize * size[2] as usize);
                 session_region.put_block(
-                    litematic_block_position(position, signed_size, [x, y, z]),
+                    litematic_block_position(min, [x, y, z]),
                     global_index,
                 );
                 builder.record_material(global_index);
@@ -1773,15 +1774,11 @@ fn unpack_litematic_value(values: &[i64], index: usize, bits: usize) -> u64 {
     }
 }
 
-fn litematic_block_position(
-    origin: [i32; 3],
-    signed_size: [i32; 3],
-    local: [usize; 3],
-) -> [i32; 3] {
+fn litematic_block_position(min: [i32; 3], local: [usize; 3]) -> [i32; 3] {
     [
-        origin[0] + local[0] as i32 * signed_size[0].signum(),
-        origin[1] + local[1] as i32 * signed_size[1].signum(),
-        origin[2] + local[2] as i32 * signed_size[2].signum(),
+        min[0] + local[0] as i32,
+        min[1] + local[1] as i32,
+        min[2] + local[2] as i32,
     ]
 }
 
@@ -2015,10 +2012,10 @@ mod tests {
     }
 
     #[test]
-    fn litematic_negative_dimensions_preserve_axis_direction() {
+    fn litematic_block_positions_start_at_the_region_minimum() {
         assert_eq!(
-            litematic_block_position([8, 20, -3], [-3, 2, -2], [2, 1, 1]),
-            [6, 21, -4]
+            litematic_block_position([6, 20, -4], [2, 1, 1]),
+            [8, 21, -3]
         );
     }
 
@@ -2096,17 +2093,23 @@ mod tests {
     }
 
     #[test]
-    fn litematic_fixture_parses_multiple_regions_and_negative_axes() {
+    fn litematic_fixture_normalizes_negative_axes_from_the_minimum_corner() {
         let mut palette = NbtList::new();
         palette.push(palette_entry("minecraft:air"));
         palette.push(palette_entry("minecraft:stone"));
         palette.push(palette_entry("minecraft:dirt"));
 
         let mut negative = NbtCompound::new();
-        negative.insert("Position", vec3(10, 4, 2));
-        negative.insert("Size", vec3(-3, 1, 1));
+        negative.insert("Position", vec3(10, 5, 3));
+        negative.insert("Size", vec3(-3, -2, -2));
         negative.insert("BlockStatePalette", palette.clone());
-        negative.insert("BlockStates", NbtTag::LongArray(vec![9]));
+        negative.insert(
+            "BlockStates",
+            NbtTag::LongArray(pack_litematic_values(
+                &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+                2,
+            )),
+        );
 
         let mut positive = NbtCompound::new();
         positive.insert("Position", vec3(-2, 4, 2));
@@ -2136,11 +2139,11 @@ mod tests {
             .position(|region| region.manifest.name == "Negative")
             .unwrap();
         assert_eq!(
-            palette_at(&session, negative_index, [10, 4, 2]).name,
+            palette_at(&session, negative_index, [8, 4, 2]).name,
             "minecraft:stone"
         );
         assert_eq!(
-            palette_at(&session, negative_index, [9, 4, 2]).name,
+            palette_at(&session, negative_index, [10, 5, 3]).name,
             "minecraft:dirt"
         );
         assert_eq!(session.manifest.regions.len(), 2);
