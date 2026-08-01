@@ -19,15 +19,6 @@ use crate::state::{ModrinthProjectId, ModrinthVersionId};
 /// with many items" rather than "single file/folder wrapped in ZIP".
 const ZIP_TOP_LEVEL_LIMIT: usize = 200;
 
-/// Maximum total entries in a dropped ZIP before classification gives up.
-/// Large modpack or backup archives stay far below this; anything larger is
-/// almost certainly a nested backup tree that should be handled elsewhere.
-const MAX_ZIP_ENTRIES: usize = 100_000;
-
-/// Maximum uncompressed size of a nested ZIP staged to a temporary file
-/// during classification. Guards against decompression bombs.
-const MAX_NESTED_ZIP_BYTES: u64 = 512 * 1024 * 1024;
-
 /// Maximum bytes read from a marker file (`pack.mcmeta` / `level.dat`) while
 /// confirming content. `level.dat` only needs its compressed NBT header.
 const MAX_MARKER_READ_BYTES: u64 = 256 * 1024;
@@ -219,9 +210,6 @@ impl ZipEntrySet {
             dirs: std::collections::HashSet::new(),
         };
         for i in 0..archive.len() {
-            if entry_limit_exceeded(set.names.len()) {
-                return Err(entry_limit_reason());
-            }
             let Ok(entry) = archive.by_index_raw(i) else {
                 continue;
             };
@@ -431,17 +419,6 @@ fn is_noise_entry(name: &str) -> bool {
     NOISE_ENTRY_NAMES
         .iter()
         .any(|noise| name.eq_ignore_ascii_case(noise))
-}
-
-fn entry_limit_reason() -> String {
-    format!(
-        "ZIP archive exceeds the entry limit of {MAX_ZIP_ENTRIES} entries"
-    )
-}
-
-/// Whether an archive with `count` collected entries must be rejected.
-fn entry_limit_exceeded(count: usize) -> bool {
-    count >= MAX_ZIP_ENTRIES
 }
 
 /// Reads at most [`MAX_MARKER_READ_BYTES`] bytes of a ZIP entry, returning
@@ -768,14 +745,6 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
             reason: format!("Cannot read nested archive entry {entry_path}"),
         };
     };
-    if entry.size() > MAX_NESTED_ZIP_BYTES {
-        return DroppedItemType::Unknown {
-            reason: format!(
-                "Nested archive {entry_path} exceeds the {} byte staging limit",
-                MAX_NESTED_ZIP_BYTES
-            ),
-        };
-    }
     let temp_dir = match tempfile::tempdir() {
         Ok(dir) => dir,
         Err(error) => {
@@ -2593,14 +2562,7 @@ mod tests {
     }
 
     #[test]
-    fn test_entry_limit_boundary() {
-        assert!(!entry_limit_exceeded(MAX_ZIP_ENTRIES - 1));
-        assert!(entry_limit_exceeded(MAX_ZIP_ENTRIES));
-        assert!(entry_limit_reason().contains("entry limit"));
-    }
-
-    #[test]
-    fn test_nested_zip_staging_guards() {
+    fn test_nested_zip_staging_disk_space_guard() {
         let dir = tempdir().expect("temp dir");
         // Zero bytes are always available; no filesystem has u64::MAX free.
         assert!(temp_dir_has_space(dir.path(), 0));
