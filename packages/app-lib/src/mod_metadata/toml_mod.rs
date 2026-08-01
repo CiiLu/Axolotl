@@ -74,7 +74,7 @@ versionRange = "1.21.1"
         assert_eq!(entry.display_url.as_deref(), Some("https://example.com"));
 
         let dependencies = parsed.dependencies.unwrap();
-        let minecraft = dependencies.get("sodium").unwrap().first().unwrap();
+        let minecraft = dependencies["sodium"].first().unwrap();
         assert_eq!(minecraft.mod_id.as_deref(), Some("minecraft"));
         assert_eq!(minecraft.version_range.as_deref(), Some("1.21.1"));
     }

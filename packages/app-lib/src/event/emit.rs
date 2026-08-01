@@ -266,7 +266,7 @@ pub async fn request_java_download_confirmation(
             )
             .map_err(EventError::from)?;
 
-        return Ok(receiver.await.unwrap_or(false));
+        Ok(receiver.await.unwrap_or(false))
     }
 
     #[cfg(not(feature = "tauri"))]
