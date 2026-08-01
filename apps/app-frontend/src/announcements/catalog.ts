@@ -61,6 +61,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
+						'Optimized the caching of empty responses from online sources, which previously would be cached for 30 minutes and caused a poor experience; now empty responses are treated as unavailable, automatically falling back to available sources and updating immediately on next launch.',
+					'zh-CN':
+						'优化空返回也会被写入缓存，必须等待30min的不好体验，现在遇到空返回时判断为不可用，自动回退到可用源且下次启动立即更新。',
+				},
+				{
+					'en-US':
 						'Refactored and cleaned up legacy code paths for better reliability and easier maintenance.',
 					'zh-CN': '重构并清理了部分历史遗留代码，提升稳定性与可维护性。',
 				},
