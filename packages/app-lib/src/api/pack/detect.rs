@@ -342,7 +342,11 @@ fn read_entry_json<R: std::io::Read + std::io::Seek>(
     })?;
     let mut contents = Vec::new();
     entry.read_to_end(&mut contents)?;
-    Ok(serde_json::from_slice(&contents)?)
+    // Windows tools often prepend a UTF-8 BOM; serde_json rejects it.
+    let contents = contents
+        .strip_prefix(&[0xEF, 0xBB, 0xBF])
+        .unwrap_or(&contents);
+    Ok(serde_json::from_slice(contents)?)
 }
 
 /// Looks for a `versions/<id>/<id>.json` structure marking a zipped-up game

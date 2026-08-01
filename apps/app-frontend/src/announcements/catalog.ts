@@ -41,7 +41,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.6.8',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Mods and resource packs that are not linked to an online project now show the icon packed inside the file.',
+					'zh-CN': '未关联到线上项目的模组与资源包，现在会显示包内自带的图标。',
+				},
+			],
 			changed: [
+				{
+					'en-US':
+						'Text in the launcher interface can no longer be selected by mouse by accident; editable fields are still selectable.',
+					'zh-CN': '界面文本不再能被鼠标直接选中，避免误选；输入框等可编辑区域不受影响。',
+				},
 				{
 					'en-US':
 						'Refactored and cleaned up legacy code paths for better reliability and easier maintenance.',
@@ -59,12 +71,29 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			fixed: [
 				{
+					'en-US':
+						'The custom system prompt for OpenAI-compatible translation services is now saved correctly and used for translations.',
+					'zh-CN':
+						'修复了 OpenAI 兼容翻译服务的自定义系统提示词无法保存的问题，现在会正确保存并在翻译时生效。',
+				},
+				{
+					'en-US': 'Forge and NeoForge mods now show their name and icon correctly.',
+					'zh-CN': '修复了 Forge/NeoForge 模组无法正常显示名称与图标的问题。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge projects with more than 50 files showing an incomplete version list; all published versions now appear.',
+					'zh-CN':
+						'修复了 CurseForge 项目文件数超过 50 时版本列表不翻页的问题，现在会显示全部已发布版本。',
+				},
+				{
 					'en-US': 'Fixed a crash that could occur when uploading files.',
 					'zh-CN': '修复了上传文件时可能崩溃的问题。',
 				},
 				{
-					'en-US': 'Fixed schematics stored in nested folders not being recognized.',
-					'zh-CN': '修复了嵌套在子文件夹中的投影文件无法被识别的问题。',
+					'en-US':
+						'Fixed schematics stored in nested folders not being recognized, now they are folded into a hierarchical view.',
+					'zh-CN': '修复了嵌套在子文件夹中的投影文件无法被识别的问题，现在会折叠分级显示文件层级。',
 				},
 				{
 					'en-US': 'Fixed an issue where mods could not be disabled properly.',

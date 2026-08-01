@@ -558,7 +558,6 @@ struct JdkFeedPackage {
     url: String,
     sha256: String,
     archive_size: u64,
-    package_type: String,
     install_folder_name: String,
 }
 

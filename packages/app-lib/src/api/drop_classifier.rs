@@ -4,10 +4,8 @@
 //! supporting launcher directories, mod JARs, resource packs, world saves,
 //! litematic files, shader packs, and more.
 
-use std::io::Read as _;
 use std::path::{Path, PathBuf};
 
-use flate2::read::{GzDecoder, ZlibDecoder};
 use serde::{Deserialize, Serialize};
 
 use crate::api::pack::detect::LocalPackFormat;
@@ -18,10 +16,6 @@ use crate::state::{ModrinthProjectId, ModrinthVersionId};
 /// Maximum number of items allowed in a ZIP before we classify it as "ZIP
 /// with many items" rather than "single file/folder wrapped in ZIP".
 const ZIP_TOP_LEVEL_LIMIT: usize = 200;
-
-/// Maximum bytes read from a marker file (`pack.mcmeta` / `level.dat`) while
-/// confirming content. `level.dat` only needs its compressed NBT header.
-const MAX_MARKER_READ_BYTES: u64 = 256 * 1024;
 
 /// Entry-name segments that are never descended into during classification.
 /// They are operating-system noise, not Minecraft content.
@@ -340,23 +334,13 @@ impl ZipEntrySet {
         false
     }
 
-    /// Whether at least one `.fsh`, `.vsh` or `.glsl` file exists anywhere
-    /// under `shaders/` below `base`. An empty `shaders/` directory is not a
-    /// shader pack.
-    fn has_shader_files(&self, base: &str) -> bool {
+    /// Whether `shaders/` below `base` contains at least one entry (file or
+    /// folder, of any kind). An empty `shaders/` directory is not a shader
+    /// pack.
+    fn has_populated_shaders_dir(&self, base: &str) -> bool {
         let prefix = format!("{base}shaders/");
-        self.files.iter().any(|path| {
-            let Some(rest) = path.strip_prefix(&prefix) else {
-                return false;
-            };
-            if rest.is_empty() {
-                return false;
-            }
-            let lower = rest.to_ascii_lowercase();
-            lower.ends_with(".fsh")
-                || lower.ends_with(".vsh")
-                || lower.ends_with(".glsl")
-        })
+        self.files.iter().any(|path| path.starts_with(&prefix))
+            || self.dirs.iter().any(|dir| dir.starts_with(&prefix))
     }
 
     /// Whether `base` holds both a `.jar` and a `.json` file (modded
@@ -432,155 +416,12 @@ impl ZipEntrySet {
     }
 }
 
-impl ZipEntrySet {
-    /// `pack.mcmeta` exists under `base` and parses as JSON carrying a
-    /// `pack_format` value (either wrapped in `pack` or at the root).
-    fn has_valid_pack_mcmeta<R: std::io::Read + std::io::Seek>(
-        &self,
-        archive: &mut zip::ZipArchive<R>,
-        base: &str,
-    ) -> bool {
-        let Some(bytes) =
-            read_entry_prefix(archive, &format!("{base}pack.mcmeta"))
-        else {
-            return false;
-        };
-        valid_pack_mcmeta_content(&bytes)
-    }
-
-    /// `level.dat` exists under `base` and carries the NBT root header
-    /// (`0x0A` tag + `Data` root name), raw or gzip/zlib-compressed.
-    fn has_valid_level_dat<R: std::io::Read + std::io::Seek>(
-        &self,
-        archive: &mut zip::ZipArchive<R>,
-        base: &str,
-    ) -> bool {
-        let Some(bytes) =
-            read_entry_prefix(archive, &format!("{base}level.dat"))
-        else {
-            return false;
-        };
-        valid_level_dat_content(&bytes)
-    }
-}
-
 /// Whether an entry-name segment is operating-system noise that must not be
 /// recursed into (macOS resource forks, VCS metadata, thumbnails).
 fn is_noise_entry(name: &str) -> bool {
     NOISE_ENTRY_NAMES
         .iter()
         .any(|noise| name.eq_ignore_ascii_case(noise))
-}
-
-/// Reads at most [`MAX_MARKER_READ_BYTES`] bytes of a ZIP entry, returning
-/// `None` when the entry is missing, unreadable (e.g. encrypted) or oversized.
-fn read_entry_prefix<R: std::io::Read + std::io::Seek>(
-    archive: &mut zip::ZipArchive<R>,
-    name: &str,
-) -> Option<Vec<u8>> {
-    let index = crate::api::pack::detect::find_entry_index(archive, name)
-        .ok()
-        .flatten()?;
-    let entry = archive.by_index(index).ok()?;
-    let mut buf = Vec::new();
-    entry
-        .take(MAX_MARKER_READ_BYTES)
-        .read_to_end(&mut buf)
-        .ok()?;
-    Some(buf)
-}
-
-/// Reads at most [`MAX_MARKER_READ_BYTES`] bytes of a file on disk.
-fn read_file_prefix(path: &Path) -> Option<Vec<u8>> {
-    let file = std::fs::File::open(path).ok()?;
-    let mut buf = Vec::new();
-    file.take(MAX_MARKER_READ_BYTES)
-        .read_to_end(&mut buf)
-        .ok()?;
-    Some(buf)
-}
-
-/// `pack.mcmeta` must be JSON with a `pack_format` value. Mirrors what
-/// Minecraft itself requires before a resource pack loads.
-fn valid_pack_mcmeta_content(bytes: &[u8]) -> bool {
-    let Ok(text) = std::str::from_utf8(bytes) else {
-        return false;
-    };
-    let Ok(json) = serde_json::from_str::<serde_json::Value>(text) else {
-        return false;
-    };
-    json.get("pack")
-        .and_then(|pack| pack.get("pack_format"))
-        .is_some()
-        || json.get("pack_format").is_some()
-}
-
-/// A real world `level.dat` is NBT whose root tag is a compound named
-/// `Data`. The payload may be stored raw, gzip- or zlib-compressed, so the
-/// first candidate is tried raw and each compressed variant is decoded first.
-fn valid_level_dat_content(bytes: &[u8]) -> bool {
-    level_dat_headers(bytes)
-        .iter()
-        .any(|candidate| nbt_root_is_data(candidate))
-}
-
-/// Whether the NBT stream's root is a compound named `Data`, either directly
-/// (classic layout) or wrapped in a single unnamed root compound (modern
-/// Minecraft layout: `0A 00 00 0A 00 04 Data ...`).
-fn nbt_root_is_data(candidate: &[u8]) -> bool {
-    let Some(rest) = candidate.strip_prefix(&[0x0A]) else {
-        return false;
-    };
-    match compound_name(rest) {
-        Some((name, _)) if name == "Data" => true,
-        Some(("", after_name)) => after_name
-            .strip_prefix(&[0x0A])
-            .and_then(compound_name)
-            .is_some_and(|(name, _)| name == "Data"),
-        _ => false,
-    }
-}
-
-/// Read a T ag name (u16 big-endian length + UTF-8 bytes), returning the
-/// name and the remainder of the buffer.
-fn compound_name(bytes: &[u8]) -> Option<(&str, &[u8])> {
-    if bytes.len() < 2 {
-        return None;
-    }
-    let len = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
-    if bytes.len() < 2 + len {
-        return None;
-    }
-    let name = std::str::from_utf8(&bytes[2..2 + len]).ok()?;
-    Some((name, &bytes[2 + len..]))
-}
-
-/// The raw bytes plus gzip/zlib-decompressed prefixes of a `level.dat` peek.
-fn level_dat_headers(bytes: &[u8]) -> Vec<Vec<u8>> {
-    let mut candidates = vec![bytes.to_vec()];
-    if bytes.len() >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B {
-        let decoder = GzDecoder::new(bytes);
-        let mut out = Vec::new();
-        if decoder
-            .take(MAX_MARKER_READ_BYTES)
-            .read_to_end(&mut out)
-            .is_ok()
-        {
-            candidates.push(out);
-        }
-    }
-    if bytes.len() >= 2 && bytes[0] == 0x78 {
-        let decoder = ZlibDecoder::new(bytes);
-        let mut out = Vec::new();
-        if decoder
-            .take(MAX_MARKER_READ_BYTES)
-            .read_to_end(&mut out)
-            .is_ok()
-        {
-            candidates.push(out);
-        }
-    }
-    candidates
 }
 
 /// Whether the filesystem holding `dir` has at least `required` bytes free.
@@ -739,12 +580,11 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         };
     }
 
-    // 3-5. Content markers, matched at the current root. Each marker is
-    //    confirmed by reading a small prefix of the file instead of trusting
-    //    the entry name alone. Nested folders are handled by the recursion
-    //    below, which re-runs this whole flow with the folder as the new
-    //    root.
-    if entries.has_valid_pack_mcmeta(archive, base) {
+    // 3-5. Content markers, matched by name and structure at the current
+    //    root: `pack.mcmeta`, a populated `shaders/` folder, or `level.dat`.
+    //    Nested folders are handled by the recursion below, which re-runs
+    //    this whole flow with the folder as the new root.
+    if entries.has_file(base, "pack.mcmeta") {
         tracing::debug!(
             "ZIP classify: pack.mcmeta → ResourcePack at base {:?} — {}",
             base,
@@ -754,7 +594,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
             file_path: result_path.to_path_buf(),
         };
     }
-    if entries.has_shader_files(base) {
+    if entries.has_populated_shaders_dir(base) {
         tracing::debug!(
             "ZIP classify: shaders/ → ShaderPack at base {:?} — {}",
             base,
@@ -764,7 +604,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
             file_path: result_path.to_path_buf(),
         };
     }
-    if entries.has_valid_level_dat(archive, base) {
+    if entries.has_file(base, "level.dat") {
         tracing::debug!(
             "ZIP classify: level.dat → WorldSave at base {:?} — {}",
             base,
@@ -1384,50 +1224,31 @@ pub(crate) fn classify_folder_content(path: &Path) -> DroppedItemType {
 
 /// Classify a folder as a world save when it contains a `level.dat` file.
 fn classify_world_save_folder(path: &Path) -> Option<DroppedItemType> {
-    let level_dat = path.join("level.dat");
-    if !level_dat.is_file() {
-        return None;
-    }
-    let bytes = read_file_prefix(&level_dat)?;
-    valid_level_dat_content(&bytes).then(|| DroppedItemType::WorldSave {
-        file_path: path.to_path_buf(),
-    })
+    path.join("level.dat")
+        .is_file()
+        .then(|| DroppedItemType::WorldSave {
+            file_path: path.to_path_buf(),
+        })
 }
 
-/// Classify a folder as a resource pack when it contains a `pack.mcmeta`
-/// that parses as JSON with a `pack_format` value.
+/// Classify a folder as a resource pack when it contains a `pack.mcmeta`.
 fn classify_resource_pack_folder(path: &Path) -> Option<DroppedItemType> {
-    let mcmeta = path.join("pack.mcmeta");
-    if !mcmeta.is_file() {
-        return None;
-    }
-    let bytes = read_file_prefix(&mcmeta)?;
-    valid_pack_mcmeta_content(&bytes).then(|| DroppedItemType::ResourcePack {
-        file_path: path.to_path_buf(),
-    })
+    path.join("pack.mcmeta")
+        .is_file()
+        .then(|| DroppedItemType::ResourcePack {
+            file_path: path.to_path_buf(),
+        })
 }
 
-/// Classify a folder as a shader pack when `shaders/` contains at least one
-/// `.fsh`, `.vsh` or `.glsl` file.
+/// Classify a folder as a shader pack when `shaders/` exists and contains at
+/// least one entry (of any kind).
 fn classify_shader_pack_folder(path: &Path) -> Option<DroppedItemType> {
     let shaders = path.join("shaders");
     if !shaders.is_dir() {
         return None;
     }
-    let has_shader_file =
-        std::fs::read_dir(&shaders).ok()?.flatten().any(|entry| {
-            let p = entry.path();
-            if !p.is_file() {
-                return false;
-            }
-            let ext = p
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("")
-                .to_ascii_lowercase();
-            matches!(ext.as_str(), "fsh" | "vsh" | "glsl")
-        });
-    has_shader_file.then(|| DroppedItemType::ShaderPack {
+    let has_any_entry = std::fs::read_dir(&shaders).ok()?.next().is_some();
+    has_any_entry.then(|| DroppedItemType::ShaderPack {
         file_path: path.to_path_buf(),
     })
 }
@@ -2552,7 +2373,7 @@ mod tests {
     }
 
     #[test]
-    fn test_zip_invalid_pack_mcmeta_is_not_resource_pack() {
+    fn test_zip_invalid_pack_mcmeta_is_still_resource_pack() {
         let dir = tempdir().expect("temp dir");
         let zip_path = dir.path().join("fake.zip");
         let file = std::fs::File::create(&zip_path).expect("create zip");
@@ -2567,8 +2388,8 @@ mod tests {
 
         let result = classify_dropped_item(&zip_path);
         assert!(
-            matches!(result, DroppedItemType::Unknown { .. }),
-            "invalid pack.mcmeta must not classify as ResourcePack: {result:?}"
+            matches!(result, DroppedItemType::ResourcePack { .. }),
+            "classification is name-based, so any pack.mcmeta counts: {result:?}"
         );
     }
 
@@ -2827,40 +2648,6 @@ mod tests {
     }
 
     #[test]
-    fn test_level_dat_header_variants() {
-        use flate2::Compression;
-        use flate2::write::{GzEncoder, ZlibEncoder};
-
-        let mut gz = GzEncoder::new(Vec::new(), Compression::default());
-        gz.write_all(VALID_LEVEL_DAT).expect("gz write");
-        let gz_bytes = gz.finish().expect("gz finish");
-
-        let mut zl = ZlibEncoder::new(Vec::new(), Compression::default());
-        zl.write_all(VALID_LEVEL_DAT).expect("zlib write");
-        let zl_bytes = zl.finish().expect("zlib finish");
-
-        assert!(valid_level_dat_content(VALID_LEVEL_DAT));
-        assert!(
-            valid_level_dat_content(b"\x0A\x00\x00\x0A\x00\x04Data\x00"),
-            "modern unnamed-root wrapper around Data should validate"
-        );
-        assert!(
-            !valid_level_dat_content(b"\x0A\x00\x00\x0A\x00\x02No"),
-            "wrapped root with a different name must not validate"
-        );
-        assert!(
-            valid_level_dat_content(&gz_bytes),
-            "gzip-compressed level.dat should validate"
-        );
-        assert!(
-            valid_level_dat_content(&zl_bytes),
-            "zlib-compressed level.dat should validate"
-        );
-        assert!(!valid_level_dat_content(b"not nbt at all"));
-        assert!(!valid_level_dat_content(b"\x0A\x00\x02No"));
-    }
-
-    #[test]
     fn nested_zip_requires_unpack_confirmation_first() {
         let dir = tempdir().expect("temp dir");
         let zip_path = dir.path().join("backup.zip");
@@ -2922,6 +2709,25 @@ mod tests {
         assert!(
             matches!(result, DroppedItemType::WorldSave { .. }),
             "flat archives need no nested-unpack confirmation: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_pack_mcmeta_with_bom_is_valid() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("bom.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file("pack.mcmeta", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
+        zip.write_all(b"\xEF\xBB\xBF{\"pack\":{\"pack_format\":16}}")
+            .expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::ResourcePack { .. }),
+            "pack.mcmeta with a UTF-8 BOM should classify as ResourcePack: {result:?}"
         );
     }
 

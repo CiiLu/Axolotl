@@ -713,41 +713,62 @@ pub async fn get_description(project_id: u32) -> crate::Result<String> {
     Ok(response.data)
 }
 
+/// Fetches every page of a CurseForge project's files and returns the complete
+/// file list, since the API caps each page at `MAX_PAGE_SIZE` entries.
 pub async fn get_files(
     project_id: u32,
     request: CurseForgeFilesRequest,
 ) -> crate::Result<CurseForgeFilesResponse> {
     let page_size = request.page_size.clamp(1, MAX_PAGE_SIZE);
-    let mut query = vec![
-        ("index".to_string(), request.index.to_string()),
-        ("pageSize".to_string(), page_size.to_string()),
-    ];
-    push_query(&mut query, "gameVersion", request.game_version);
-    push_query(&mut query, "modLoaderType", request.mod_loader_type);
-    push_query(
-        &mut query,
-        "gameVersionTypeId",
-        request.game_version_type_id,
-    );
+    let mut files = Vec::new();
+    let mut index = 0u32;
+    let mut total_count;
 
-    let response: CurseForgeResponse<Vec<CurseForgeFile>> = request_json(
-        Method::GET,
-        &format!("/v1/mods/{project_id}/files"),
-        query,
-        None,
-        MirrorPolicy::MirrorFirst,
-    )
-    .await?;
-    let pagination = response.pagination.unwrap_or(CurseForgePagination {
-        index: request.index,
-        page_size,
-        result_count: response.data.len() as u32,
-        total_count: response.data.len() as u32,
-    });
+    loop {
+        let mut query = vec![
+            ("index".to_string(), index.to_string()),
+            ("pageSize".to_string(), page_size.to_string()),
+        ];
+        push_query(&mut query, "gameVersion", request.game_version.clone());
+        push_query(&mut query, "modLoaderType", request.mod_loader_type);
+        push_query(
+            &mut query,
+            "gameVersionTypeId",
+            request.game_version_type_id,
+        );
 
+        let response: CurseForgeResponse<Vec<CurseForgeFile>> = request_json(
+            Method::GET,
+            &format!("/v1/mods/{project_id}/files"),
+            query,
+            None,
+            MirrorPolicy::MirrorFirst,
+        )
+        .await?;
+        let pagination = response.pagination.unwrap_or(CurseForgePagination {
+            index,
+            page_size,
+            result_count: response.data.len() as u32,
+            total_count: response.data.len() as u32,
+        });
+        total_count = pagination.total_count;
+        files.extend(response.data);
+
+        if files.len() as u32 >= total_count || pagination.result_count == 0 {
+            break;
+        }
+        index += pagination.result_count;
+    }
+
+    let result_count = files.len() as u32;
     Ok(CurseForgeFilesResponse {
-        files: response.data,
-        pagination,
+        files,
+        pagination: CurseForgePagination {
+            index: request.index,
+            page_size,
+            result_count,
+            total_count,
+        },
     })
 }
 
