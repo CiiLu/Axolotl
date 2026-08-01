@@ -413,7 +413,7 @@ async function onImportFileReceived({
 
 		// ── Set drop state so handleDropConfirm can read it ──
 		dropClassification.value = classification
-		dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
+		dropFilePath.value = classification.file_path ?? classification.base_path ?? filePath
 		dropFileName.value = fileName
 
 		// ── Unknown + nested archives → confirm unpacking first ──
@@ -1201,6 +1201,7 @@ const confirmDropModal = ref<InstanceType<typeof ConfirmDropTypeModal> | null>(n
 const dropClassification = ref<ClassificationResult | null>(null)
 const dropFileName = ref('')
 const dropFilePath = ref('')
+const lastDroppedPath = ref('')
 
 const { isInInstance, instanceId } = useInstanceContext()
 const genericInstallModal = ref<InstanceType<typeof GenericContentInstallModal> | null>(null)
@@ -1238,6 +1239,7 @@ const dropProcessingNotificationId = ref<number | null>(null)
 const { isDragging, isProcessing } = useGlobalDrop(
 	{
 		classifyFile: async (path) => {
+			lastDroppedPath.value = path
 			if (onSkinsPage.value) {
 				return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
 			}
@@ -1256,11 +1258,14 @@ const { isDragging, isProcessing } = useGlobalDrop(
 		onImportStart: (type, classification) => {
 			if (type === 'unknown' && classification?.reason === 'skipped') return
 			dropClassification.value = classification
-			dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
+			// Unknown results carry no file_path; fall back to the raw dropped
+			// path so force-analysis / nested-unpack prompts can still act.
+			dropFilePath.value =
+				classification.file_path ?? classification.base_path ?? lastDroppedPath.value
 			dropFileName.value =
 				classification.file_path?.split(/[/\\]/).pop() ??
 				classification.base_path?.split(/[/\\]/).pop() ??
-				'file'
+				(lastDroppedPath.value.split(/[/\\]/).pop() || 'file')
 
 			if (
 				type === 'unknown' &&
