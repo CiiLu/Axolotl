@@ -33,6 +33,37 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.6',
+		version: '1.6.6',
+		publishedAt: '2026-08-01',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.6',
+			'zh-CN': 'Axolotl Launcher 1.6.6',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Imported instances now automatically recognize and set icons based on their mod loader.',
+					'zh-CN': '导入的实例现在会根据加载器自动识别并设置图标。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Adjusted the position of source filter buttons on the Discover page for better usability.',
+					'zh-CN': '调整了发现页的来源筛选按钮位置，提升使用体验。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed breadcrumbs not matching the actual page navigation.',
+					'zh-CN': '修复了面包屑与实际页面不一致的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.5',
 		version: '1.6.5',
 		publishedAt: '2026-07-31',
