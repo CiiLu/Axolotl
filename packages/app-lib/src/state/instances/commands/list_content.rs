@@ -11,10 +11,10 @@ use crate::state::instances::{
 use crate::state::{
     CacheBehaviour, CachedEntry, ContentFile, ContentItem, ContentItemOwner,
     ContentItemProject, ContentItemRollback, ContentItemUpdate,
-    ContentItemVersion, ContentProvider,
-    ContentProviderRef, Dependency, LinkedModpackInfo, ModLoader,
-    ModrinthFileMatch, ModrinthProjectId, ModrinthVersionId, Organization,
-    OwnerType, Project, ProjectType, ReleaseChannel, TeamMember, Version,
+    ContentItemVersion, ContentProvider, ContentProviderRef, Dependency,
+    LinkedModpackInfo, ModLoader, ModrinthFileMatch, ModrinthProjectId,
+    ModrinthVersionId, Organization, OwnerType, Project, ProjectType,
+    ReleaseChannel, TeamMember, Version,
 };
 use crate::util::fetch::{
     ContentValidation, DownloadMeta, DownloadReason, DownloadRequest,
@@ -1798,9 +1798,7 @@ fn rollback_for_content_file(
                 .then_with(|| left.file_name.cmp(&right.file_name))
         })
         .map(|backup| backup.file_name.as_str())?;
-    let old_base = backup_name
-        .strip_prefix(&prefix)?
-        .strip_suffix(".old")?;
+    let old_base = backup_name.strip_prefix(&prefix)?.strip_suffix(".old")?;
     if old_base.is_empty() {
         return None;
     }

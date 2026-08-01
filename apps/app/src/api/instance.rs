@@ -748,11 +748,7 @@ pub async fn instance_rollback_project(
     instance_id: &str,
     project_path: &str,
 ) -> Result<String> {
-    Ok(theseus::instance::rollback_project(
-        instance_id,
-        project_path,
-    )
-    .await?)
+    Ok(theseus::instance::rollback_project(instance_id, project_path).await?)
 }
 
 #[tauri::command]

@@ -395,32 +395,30 @@ function mapToTableItem(item: ContentItem, group?: string): ContentCardTableItem
 	}
 }
 
-const {
-	folderRows: schematicFolderRows,
-	regularItems: schematicGroupRegularItems,
-} = useContentFolderGroups({
-	filteredItems,
-	modpackChildIdSet,
-	searchQuery,
-	expandedGroups,
-	persistExpandedGroups: (groups) => {
-		if (ctx.instanceId) expandedGroupsMemory.set(ctx.instanceId, groups)
-	},
-	getItemId,
-	mapToTableItem,
-	isGroupedItem: (item) => normalizeProjectType(item.project_type) === 'schematic',
-	treePath: (item) => {
-		const path = item.file_path ?? item.file_name
-		const segments = path.split(/[\\/]/).filter(Boolean)
-		if (segments[0]?.toLocaleLowerCase() === 'schematics') {
-			return segments.slice(1).join('/')
-		}
-		return path
-	},
-	folderGroupId: (path) => `schematic-folder:${path}`,
-	folderGroupIdPrefix: 'schematic-folder:',
-	locale,
-})
+const { folderRows: schematicFolderRows, regularItems: schematicGroupRegularItems } =
+	useContentFolderGroups({
+		filteredItems,
+		modpackChildIdSet,
+		searchQuery,
+		expandedGroups,
+		persistExpandedGroups: (groups) => {
+			if (ctx.instanceId) expandedGroupsMemory.set(ctx.instanceId, groups)
+		},
+		getItemId,
+		mapToTableItem,
+		isGroupedItem: (item) => normalizeProjectType(item.project_type) === 'schematic',
+		treePath: (item) => {
+			const path = item.file_path ?? item.file_name
+			const segments = path.split(/[\\/]/).filter(Boolean)
+			if (segments[0]?.toLocaleLowerCase() === 'schematics') {
+				return segments.slice(1).join('/')
+			}
+			return path
+		},
+		folderGroupId: (path) => `schematic-folder:${path}`,
+		folderGroupIdPrefix: 'schematic-folder:',
+		locale,
+	})
 
 const tableItems = computed<ContentCardTableItem[]>(() => {
 	const items: ContentCardTableItem[] = []

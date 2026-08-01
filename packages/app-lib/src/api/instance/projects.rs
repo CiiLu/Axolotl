@@ -258,13 +258,12 @@ pub async fn rollback_project(
     project_path: &str,
 ) -> crate::Result<String> {
     let state = State::get().await?;
-    let res =
-        crate::state::instances::commands::rollback_project(
-            instance_id,
-            project_path,
-            &state,
-        )
-        .await?;
+    let res = crate::state::instances::commands::rollback_project(
+        instance_id,
+        project_path,
+        &state,
+    )
+    .await?;
     emit_instance(instance_id, InstancePayloadType::Edited).await?;
 
     Ok(res)

@@ -92,10 +92,7 @@ export function useContentFolderGroups(options: UseContentFolderGroupsOptions) {
 			for (const path of newPaths) {
 				seenFolderPaths.value.add(path)
 			}
-			expandedGroups.value = new Set([
-				...expandedGroups.value,
-				...newPaths.map(folderGroupId),
-			])
+			expandedGroups.value = new Set([...expandedGroups.value, ...newPaths.map(folderGroupId)])
 			persistExpandedGroups(expandedGroups.value)
 		},
 		{ immediate: true },

@@ -28,9 +28,18 @@ pub(crate) fn scan_content_files(
     let instance_dir = io::canonicalize(instances_dir.join(instance_path))?;
     let mut files = Vec::new();
 
-    for_each_content_folder(&instance_dir, |folder_path, relative_dir, project_type| {
-        scan_content_folder(folder_path, relative_dir, project_type, instance_path, &mut files)
-    })?;
+    for_each_content_folder(
+        &instance_dir,
+        |folder_path, relative_dir, project_type| {
+            scan_content_folder(
+                folder_path,
+                relative_dir,
+                project_type,
+                instance_path,
+                &mut files,
+            )
+        },
+    )?;
 
     Ok(files)
 }
@@ -53,7 +62,8 @@ pub(crate) fn scan_content_backups(
             if !path.is_file() {
                 continue;
             }
-            let Some(file_name) = path.file_name().and_then(|value| value.to_str())
+            let Some(file_name) =
+                path.file_name().and_then(|value| value.to_str())
             else {
                 continue;
             };
@@ -284,13 +294,11 @@ mod tests {
         fs::create_dir_all(instance_dir.join("schematics/redstone")).unwrap();
         fs::create_dir_all(instance_dir.join("mods")).unwrap();
         fs::write(instance_dir.join("mods/Mod-2.jar"), "new").unwrap();
+        fs::write(instance_dir.join("mods/Mod-2.jar_Mod-1.jar.old"), "old")
+            .unwrap();
         fs::write(
-            instance_dir.join("mods/Mod-2.jar_Mod-1.jar.old"),
-            "old",
-        )
-        .unwrap();
-        fs::write(
-            instance_dir.join("schematics/redstone/New.litematic_Old.litematic.old"),
+            instance_dir
+                .join("schematics/redstone/New.litematic_Old.litematic.old"),
             "x",
         )
         .unwrap();

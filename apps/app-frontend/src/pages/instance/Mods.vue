@@ -679,7 +679,8 @@ function matchesContentItem(
 		item.file_name === originalFileName ||
 		item.file_path === originalFilePath ||
 		item.file_path === target.file_path
-	) return true
+	)
+		return true
 
 	const projectId = target.project?.id
 	if (!projectId || item.project?.id !== projectId) return false
@@ -999,7 +1000,11 @@ async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
 	operation.keys = [...operation.keys, ...optimisticKeys]
 
 	try {
-		const newPath = await toggle_disable_project(props.instance.id, originalFilePath, desiredEnabled)
+		const newPath = await toggle_disable_project(
+			props.instance.id,
+			originalFilePath,
+			desiredEnabled,
+		)
 		const newFileName = fileNameFromPath(newPath)
 		const actualEnabled = !newPath.endsWith('.disabled')
 		applyContentItemToggleState(mod, operation.originalFileName, originalFilePath, {
