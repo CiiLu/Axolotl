@@ -35,6 +35,11 @@ pub enum DroppedItemType {
     Launcher {
         launcher_type: ImportLauncherType,
         base_path: PathBuf,
+        /// For ZIP sources, the virtual folder inside the archive where the
+        /// launcher markers matched (e.g. `.minecraft`). The frontend
+        /// extracts the archive and scans this subfolder. `None` for real
+        /// folders and files.
+        inner_base: Option<String>,
     },
     /// HMCL launcher with separate launcher and data directories.
     HmclLauncher {
@@ -640,6 +645,8 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         return DroppedItemType::Launcher {
             launcher_type,
             base_path: result_path.to_path_buf(),
+            inner_base: (!base.is_empty())
+                .then(|| base.trim_end_matches('/').to_string()),
         };
     }
 
@@ -794,6 +801,10 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
             DroppedItemType::Launcher {
                 launcher_type,
                 base_path: result_path.to_path_buf(),
+                // The launcher lives inside a nested archive; the frontend
+                // cannot scan it until that archive is extracted too, so no
+                // inner base is advertised.
+                inner_base: None,
             }
         }
         other => other,
@@ -910,6 +921,78 @@ fn extract_all(archive: &mut zip::ZipArchive<std::fs::File>, base_dir: &Path) {
     }
 }
 
+/// Extract a ZIP archive into `dest_dir`, skipping unsafe entries (path
+/// traversal, absolute paths, drive letters) and macOS resource forks.
+///
+/// Used by the app to materialize a compressed launcher folder before
+/// scanning and importing instances. The caller owns the temporary
+/// directory lifecycle.
+pub fn extract_zip_to_dir(
+    zip_path: &Path,
+    dest_dir: &Path,
+) -> Result<(), String> {
+    let file = std::fs::File::open(zip_path).map_err(|e| {
+        format!("Cannot open ZIP file '{}': {e}", zip_path.display())
+    })?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| {
+        format!("Invalid ZIP archive '{}': {e}", zip_path.display())
+    })?;
+
+    let entries: Vec<(String, bool)> = (0..archive.len())
+        .filter_map(|i| {
+            let entry = archive.by_index_raw(i).ok()?;
+            let name = crate::api::pack::detect::decode_zip_entry_name(
+                entry.name_raw(),
+            )
+            .replace('\\', "/");
+            if name.is_empty() || name.starts_with("__MACOSX") {
+                return None;
+            }
+            Some((name.clone(), name.ends_with('/')))
+        })
+        .collect();
+
+    for (name, is_dir) in entries {
+        let Some(safe_name) = sanitize_zip_entry_name(&name) else {
+            tracing::warn!(
+                "extract_zip_to_dir: skipping unsafe ZIP entry '{name}' (path traversal)"
+            );
+            continue;
+        };
+        if safe_name.as_os_str().is_empty() {
+            continue;
+        }
+        let out_path = dest_dir.join(&safe_name);
+        if is_dir {
+            std::fs::create_dir_all(&out_path).map_err(|e| {
+                format!(
+                    "Failed to create directory '{}': {e}",
+                    out_path.display()
+                )
+            })?;
+            continue;
+        }
+        if let Some(parent) = out_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                format!(
+                    "Failed to create directory '{}': {e}",
+                    parent.display()
+                )
+            })?;
+        }
+        let mut reader = archive.by_name(&name).map_err(|e| {
+            format!("Failed to read ZIP entry '{name}': {e}")
+        })?;
+        let mut writer = std::fs::File::create(&out_path).map_err(|e| {
+            format!("Failed to create '{}': {e}", out_path.display())
+        })?;
+        std::io::copy(&mut reader, &mut writer).map_err(|e| {
+            format!("Failed to extract '{}': {e}", out_path.display())
+        })?;
+    }
+    Ok(())
+}
+
 /// Normalize a ZIP entry name into a safe relative path that stays inside the
 /// extraction directory. Returns `None` for absolute paths or entries
 /// containing `..` (zip-slip protection).
@@ -947,17 +1030,20 @@ fn classify_launcher_exe(path: &Path) -> DroppedItemType {
                     return DroppedItemType::Launcher {
                         launcher_type: ImportLauncherType::PCL2CE,
                         base_path: parent.to_path_buf(),
+                        inner_base: None,
                     };
                 }
                 if crate::api::pack::import::read_pcl_registry().is_some() {
                     return DroppedItemType::Launcher {
                         launcher_type: ImportLauncherType::PCL2,
                         base_path: parent.to_path_buf(),
+                        inner_base: None,
                     };
                 }
                 return DroppedItemType::Launcher {
                     launcher_type: ImportLauncherType::PCL2,
                     base_path: parent.to_path_buf(),
+                    inner_base: None,
                 };
             }
             Ok(false) => {}
@@ -972,6 +1058,7 @@ fn classify_launcher_exe(path: &Path) -> DroppedItemType {
                 return DroppedItemType::Launcher {
                     launcher_type: ImportLauncherType::HMCL,
                     base_path: parent.to_path_buf(),
+                    inner_base: None,
                 };
             }
             Ok(false) => {}
@@ -1010,6 +1097,7 @@ fn classify_jar(path: &Path) -> DroppedItemType {
                     .parent()
                     .map(|p| p.to_path_buf())
                     .unwrap_or_default(),
+                inner_base: None,
             };
         }
     }
@@ -1028,6 +1116,7 @@ fn classify_folder(path: &Path) -> DroppedItemType {
         return DroppedItemType::Launcher {
             launcher_type: ImportLauncherType::MultiMC,
             base_path: path.to_path_buf(),
+            inner_base: None,
         };
     }
 
@@ -1035,6 +1124,7 @@ fn classify_folder(path: &Path) -> DroppedItemType {
         return DroppedItemType::Launcher {
             launcher_type: ImportLauncherType::PrismLauncher,
             base_path: path.to_path_buf(),
+            inner_base: None,
         };
     }
 
@@ -1050,6 +1140,7 @@ fn classify_folder(path: &Path) -> DroppedItemType {
         return DroppedItemType::Launcher {
             launcher_type: ImportLauncherType::MultiMC,
             base_path: path.to_path_buf(),
+            inner_base: None,
         };
     }
 
@@ -1107,6 +1198,7 @@ pub(crate) fn classify_folder_content(path: &Path) -> DroppedItemType {
         return DroppedItemType::Launcher {
             launcher_type: ImportLauncherType::Generic,
             base_path: path.to_path_buf(),
+            inner_base: None,
         };
     }
 

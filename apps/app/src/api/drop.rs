@@ -27,6 +27,12 @@ pub enum ClassificationResult {
     Launcher {
         launcher_type: String,
         base_path: String,
+        #[serde(
+            rename = "innerBase",
+            default,
+            skip_serializing_if = "Option::is_none"
+        )]
+        inner_base: Option<String>,
     },
     #[serde(rename = "hmcl_launcher")]
     HmclLauncher {
@@ -60,9 +66,11 @@ impl From<DroppedItemType> for ClassificationResult {
             DroppedItemType::Launcher {
                 launcher_type,
                 base_path,
+                inner_base,
             } => ClassificationResult::Launcher {
                 launcher_type: launcher_type.to_string(),
                 base_path: base_path.to_string_lossy().to_string(),
+                inner_base,
             },
             DroppedItemType::HmclLauncher {
                 launcher_dir,
@@ -118,7 +126,9 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             drop_classify,
             drop_classify_extract,
+            drop_extract_zip_to_temp,
             drop_scan_launcher_instances,
+            drop_remove_temp_dir,
             drop_detect_file_lock,
             drop_extract_mod_metadata,
             drop_lookup_mod_hash,
@@ -161,6 +171,86 @@ pub async fn drop_classify_extract(
         classification
     );
     Ok(classification)
+}
+
+/// Root directory under the system temp where compressed launcher folders
+/// are extracted for scanning and importing. Entries are removed with
+/// `drop_remove_temp_dir` once the frontend flow ends.
+fn launcher_import_temp_base() -> std::path::PathBuf {
+    std::env::temp_dir().join("axolotl-launcher-import")
+}
+
+/// Extract a ZIP archive into a fresh temporary directory and return its
+/// path. The frontend scans and imports instances from the extraction, then
+/// calls [`drop_remove_temp_dir`] to clean it up — the archive is unpacked
+/// exactly once.
+#[tauri::command]
+pub async fn drop_extract_zip_to_temp(
+    zip_path: String,
+) -> Result<String, String> {
+    let zip_path = std::path::PathBuf::from(&zip_path);
+    info!("Extracting launcher ZIP to temp: {}", zip_path.display());
+
+    let base = launcher_import_temp_base();
+    let extracted = tokio::task::spawn_blocking(move || -> Result<String, String> {
+        std::fs::create_dir_all(&base).map_err(|e| {
+            format!(
+                "Failed to create temp base '{}': {e}",
+                base.display()
+            )
+        })?;
+        let dir = base.join(format!(
+            "drop-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&dir)
+            .map_err(|e| format!("Failed to create temp directory: {e}"))?;
+        theseus::drop_classifier::extract_zip_to_dir(&zip_path, &dir)
+            .map_err(|e| {
+                let _ = std::fs::remove_dir_all(&dir);
+                e
+            })?;
+        Ok(dir.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| format!("Extraction task panicked: {e}"))??;
+
+    info!("Extracted launcher ZIP to: {extracted}");
+    Ok(extracted)
+}
+
+/// Remove a temporary directory created by [`drop_extract_zip_to_temp`].
+/// Only paths inside the launcher import temp root are accepted.
+#[tauri::command]
+pub async fn drop_remove_temp_dir(path: String) -> Result<(), String> {
+    let base = launcher_import_temp_base();
+    let base = std::fs::canonicalize(&base)
+        .map_err(|e| format!("Launcher import temp base missing: {e}"))?;
+    let target = std::fs::canonicalize(&path)
+        .map_err(|e| format!("Temp path missing: {e}"))?;
+    if !target.starts_with(&base) {
+        return Err(format!(
+            "Refusing to remove '{}': not inside the launcher import temp root",
+            target.display()
+        ));
+    }
+    if !target.is_dir() {
+        return Err(format!(
+            "Refusing to remove '{}': not a directory",
+            target.display()
+        ));
+    }
+    tokio::task::spawn_blocking(move || {
+        std::fs::remove_dir_all(&target).map_err(|e| {
+            format!("Failed to remove temp dir '{}': {e}", target.display())
+        })
+    })
+    .await
+    .map_err(|e| format!("Cleanup task panicked: {e}"))?
 }
 
 /// Scan for importable instances in a launcher's data directory.

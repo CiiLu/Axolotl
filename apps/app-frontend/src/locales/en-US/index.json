@@ -770,6 +770,9 @@
   "app.drop.scan-failed": {
     "message": "Failed to scan for instances"
   },
+  "app.drop.extract-failed": {
+    "message": "Failed to extract archive"
+  },
   "app.drop.scanning": {
     "message": "Scanning for instances"
   },

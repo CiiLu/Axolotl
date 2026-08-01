@@ -3392,6 +3392,9 @@
 	"app.drop.scan-failed": {
 		"message": "实例扫描失败"
 	},
+	"app.drop.extract-failed": {
+		"message": "压缩包解压失败"
+	},
 	"app.drop.scanning": {
 		"message": "正在扫描实例…"
 	},

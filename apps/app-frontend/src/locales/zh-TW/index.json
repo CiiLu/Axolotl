@@ -2624,6 +2624,9 @@
 	"app.drop.scan-failed": {
 		"message": "實例掃描失敗"
 	},
+	"app.drop.extract-failed": {
+		"message": "壓縮檔解壓失敗"
+	},
 	"app.drop.scanning": {
 		"message": "正在掃描實例…"
 	},

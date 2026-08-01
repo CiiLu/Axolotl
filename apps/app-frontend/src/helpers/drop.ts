@@ -45,6 +45,29 @@ export function classifyDroppedItemWithExtraction(path: string): Promise<Classif
 }
 
 /**
+ * Extract a ZIP archive into a fresh temporary directory and return its path.
+ *
+ * Used for compressed launcher folders (e.g. a zipped `.minecraft`): the
+ * instance scan and import then operate on the extraction, so the archive is
+ * unpacked exactly once. Call [`removeTempDir`] when the flow finishes.
+ *
+ * @param zipPath Absolute path to the ZIP archive
+ * @returns Absolute path of the extraction directory
+ */
+export function extractZipToTemp(zipPath: string): Promise<string> {
+	return invoke('plugin:drop|drop_extract_zip_to_temp', { zipPath })
+}
+
+/**
+ * Remove a temporary directory created by [`extractZipToTemp`].
+ *
+ * @param path Absolute path of the extraction directory
+ */
+export function removeTempDir(path: string): Promise<void> {
+	return invoke('plugin:drop|drop_remove_temp_dir', { path })
+}
+
+/**
  * Metadata about a single importable instance within a launcher.
  */
 export interface ScanInstance {

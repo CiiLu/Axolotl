@@ -98,8 +98,10 @@ import {
 	classifyDroppedItem,
 	classifyDroppedItemWithExtraction,
 	detectFileLock,
+	extractZipToTemp,
 	extractModMetadata,
 	lookupModHash,
+	removeTempDir,
 	type ModrinthLookupResult,
 	scanLauncherInstances,
 	type ScanResult,
@@ -610,6 +612,10 @@ const messages = defineMessages({
 	dropScanFailed: {
 		id: 'app.drop.scan-failed',
 		defaultMessage: 'Failed to scan for instances',
+	},
+	dropExtractFailed: {
+		id: 'app.drop.extract-failed',
+		defaultMessage: 'Failed to extract archive',
 	},
 	dropProcessFailedTitle: {
 		id: 'app.drop.process-failed-title',
@@ -1194,6 +1200,7 @@ const selectedInstances = ref<
 	Array<{ launcherType: string; basePath: string; name: string; path: string }>
 >([])
 const currentImportContext = ref<{ launcherType: string; basePath: string } | null>(null)
+const launcherZipTempDir = ref<string | null>(null)
 
 const dropDebug = useDebugLogger('DropFlow')
 
@@ -1402,6 +1409,11 @@ async function handleDropConfirm(type: string) {
 		return
 	}
 
+	// Compressed launcher folders (a zipped `.minecraft`, single instance
+	// folder or launcher directory) are extracted once to a temp dir; the
+	// scan and the import both operate on that extraction so the archive is
+	// unpacked a single time. The temp dir is removed on every terminal path
+	// (success, failure, or cancel).
 	if (isLauncherImport && type === 'instance') {
 		const launcherType =
 			classification!.item_type === 'hmcl_launcher' ? 'HMCL' : classification!.launcher_type!
@@ -1411,15 +1423,40 @@ async function handleDropConfirm(type: string) {
 				: classification!.base_path!
 		dropDebug('handleDropConfirm: launcher import branch', { launcherType, basePath })
 
-		currentImportContext.value = { launcherType, basePath }
+		let scanBasePath = basePath
+		if (isZipPath(basePath)) {
+			scanningInstances.value = true
+			try {
+				const tempDir = await extractZipToTemp(basePath)
+				launcherZipTempDir.value = tempDir
+				scanBasePath = classification!.inner_base
+					? `${tempDir}/${classification!.inner_base}`
+					: tempDir
+				dropDebug('handleDropConfirm: extracted launcher zip', {
+					tempDir,
+					innerBase: classification!.inner_base,
+					scanBasePath,
+				})
+			} catch (error) {
+				launcherZipTempDir.value = null
+				dropDebug('handleDropConfirm: launcher zip extraction failed', error)
+				addNotification({ title: formatMessage(messages.dropExtractFailed), type: 'error' })
+				return
+			} finally {
+				scanningInstances.value = false
+			}
+		}
+
+		currentImportContext.value = { launcherType, basePath: scanBasePath }
 		scanningInstances.value = true
 		let results: ScanResult[]
 		try {
-			results = await scanLauncherInstances(launcherType, basePath)
+			results = await scanLauncherInstances(launcherType, scanBasePath)
 		} catch (error) {
 			currentImportContext.value = null
 			dropDebug('handleDropConfirm: launcher scan failed', error)
 			addNotification({ title: formatMessage(messages.dropScanFailed), type: 'error' })
+			cleanupLauncherZipTemp()
 			return
 		} finally {
 			scanningInstances.value = false
@@ -1431,6 +1468,7 @@ async function handleDropConfirm(type: string) {
 			currentImportContext.value = null
 			dropDebug('handleDropConfirm: no instances found')
 			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
+			cleanupLauncherZipTemp()
 			return
 		}
 
@@ -1441,7 +1479,9 @@ async function handleDropConfirm(type: string) {
 				name: single.name,
 				path: single.path,
 			})
-			selectedInstances.value = [{ launcherType, basePath, name: single.name, path: single.path }]
+			selectedInstances.value = [
+				{ launcherType, basePath: scanBasePath, name: single.name, path: single.path },
+			]
 			const cap = await check_symlink_capability()
 			symlinkCardsModal.value?.show({
 				instanceNames: [single.name],
@@ -1822,6 +1862,27 @@ async function handleGenericInstallNavigateCreate() {
 
 let symlinkChoiceResolve: ((symlink: boolean) => void) | null = null
 
+function isZipPath(path: string): boolean {
+	return /\.zip$/i.test(path)
+}
+
+async function cleanupLauncherZipTemp() {
+	const tempDir = launcherZipTempDir.value
+	if (!tempDir) return
+	launcherZipTempDir.value = null
+	try {
+		await removeTempDir(tempDir)
+		dropDebug('handleDropConfirm: launcher zip temp cleaned', { tempDir })
+	} catch (error) {
+		dropDebug('handleDropConfirm: launcher zip temp cleanup failed', error)
+	}
+}
+
+function onLauncherImportCancelled() {
+	launcherImportModal.value?.hide()
+	cleanupLauncherZipTemp()
+}
+
 function chooseImportMethod(options: {
 	instanceNames: string[]
 	symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
@@ -1867,6 +1928,7 @@ function onSymlinkMethodCancelled() {
 		symlinkChoiceResolve = null
 	}
 	symlinkCardsModal.value?.hide()
+	cleanupLauncherZipTemp()
 }
 
 async function onSymlinkMethodConfirmed(symlink: boolean) {
@@ -1882,7 +1944,10 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 	selectedInstances.value = []
 	const ctx = currentImportContext.value
 	currentImportContext.value = null
-	if (instances.length === 0) return
+	if (instances.length === 0) {
+		cleanupLauncherZipTemp()
+		return
+	}
 
 	// Single instance: simple notification (no progress overlay needed)
 	if (instances.length === 1) {
@@ -1906,6 +1971,8 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 				text: formatMessage(messages.dropImportFailedText, { name: inst.name, error: String(e) }),
 				type: 'error',
 			})
+		} finally {
+			cleanupLauncherZipTemp()
 		}
 		return
 	}
@@ -1955,6 +2022,8 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 			})
 		}
 	}
+
+	cleanupLauncherZipTemp()
 
 	// Final summary — replace progress notification
 	notificationManager.removeNotification(progressNotif.id)
@@ -2943,7 +3012,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<LauncherImportModal
 		ref="launcherImportModal"
 		@confirm="onImportSelected"
-		@cancel="launcherImportModal?.hide()"
+		@cancel="onLauncherImportCancelled"
 	/>
 
 	<!-- Symlink method selection modal -->
