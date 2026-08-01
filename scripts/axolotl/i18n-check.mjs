@@ -14,6 +14,7 @@ const allowedUntranslatedMessages = new Set([
 	'Chaos Cubed',
 	'MINECON Earth 2017',
 	'Modrinth',
+	'.minecraft',
 	'Striding Hero',
 	'Axolotl Launcher',
 	'Explore high-quality Minecraft content on Modrinth.',
