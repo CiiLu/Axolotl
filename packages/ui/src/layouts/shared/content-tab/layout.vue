@@ -303,6 +303,7 @@ function toggleGroupExpand(groupId: string) {
 }
 
 const SCHEMATIC_FOLDER_GROUP_PREFIX = 'schematic-folder:'
+const SCHEMATIC_FOLDER_ROOT = 'schematics'
 
 function schematicFolderGroupId(path: string) {
 	return `${SCHEMATIC_FOLDER_GROUP_PREFIX}${path}`
@@ -310,6 +311,15 @@ function schematicFolderGroupId(path: string) {
 
 function isSchematicContentItem(item: ContentItem) {
 	return normalizeProjectType(item.project_type) === 'schematic'
+}
+
+function schematicTreePath(item: ContentItem): string {
+	const path = item.file_path ?? item.file_name
+	const segments = path.split(/[\\/]/).filter(Boolean)
+	if (segments[0]?.toLocaleLowerCase() === SCHEMATIC_FOLDER_ROOT) {
+		return segments.slice(1).join('/')
+	}
+	return path
 }
 
 const expandedSchematicPaths = computed(() => {
@@ -334,7 +344,7 @@ watch(
 						!modpackChildIdSet.value.has(getItemId(item).replace(/\.disabled$/, '')),
 				)
 				.map((item) => ({
-					relativePath: item.file_path ?? item.file_name,
+					relativePath: schematicTreePath(item),
 					fileName: item.file_name,
 				})),
 		)
@@ -458,7 +468,7 @@ function buildSchematicFolderGroups(schematicItems: ContentItem[]): ContentCardT
 
 	const entries: SchematicContentEntry[] = schematicItems.map((item) => ({
 		item,
-		relativePath: item.file_path ?? item.file_name,
+		relativePath: schematicTreePath(item),
 		fileName: item.file_name,
 	}))
 

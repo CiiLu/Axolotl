@@ -2,7 +2,9 @@ use crate::api::curseforge::CurseForgeProject;
 use crate::state::{
     CurseForgeProjectId, ModrinthProjectId, ModrinthVersionId, ProjectType,
 };
-use crate::util::fetch::{FetchSemaphore, fetch_json, sha1_async};
+use crate::util::fetch::{
+    FetchSemaphore, fetch_json, fetch_json_nonempty, sha1_async,
+};
 use chrono::{DateTime, Utc};
 use dashmap::DashSet;
 use reqwest::Method;
@@ -640,6 +642,22 @@ pub struct GameVersion {
 }
 
 impl CacheValue {
+    /// Whether this cached value is a collection that should never be empty.
+    ///
+    /// Mirrors can return an empty array for collection endpoints they have
+    /// not synced (e.g. `tag/game_version`); an empty collection is treated as
+    /// a poisoned cache entry and refetched instead of being served forever.
+    fn is_empty_collection(&self) -> bool {
+        match self {
+            CacheValue::Categories(values) => values.is_empty(),
+            CacheValue::ReportTypes(values) => values.is_empty(),
+            CacheValue::Loaders(values) => values.is_empty(),
+            CacheValue::GameVersions(values) => values.is_empty(),
+            CacheValue::DonationPlatforms(values) => values.is_empty(),
+            _ => false,
+        }
+    }
+
     pub fn get_entry(self) -> CachedEntry {
         CachedEntry {
             id: self.get_key(),
@@ -1255,6 +1273,13 @@ impl CachedEntry {
                         .as_error());
                     }
 
+                    if data.is_empty_collection() {
+                        // An empty tag collection is not trustworthy: keep the
+                        // key in `remaining_keys` so it is refetched (with
+                        // mirror fallback) instead of serving an empty result.
+                        continue;
+                    }
+
                     remaining_keys.retain(remove_matching_key);
 
                     return_vals.push(Self {
@@ -1455,7 +1480,7 @@ impl CachedEntry {
             ($type:ident, $api_url:expr, $url_suffix:expr, $uri_path:expr, $cache_variant:path) => {{
                 vec![(
                     $cache_variant(
-                        fetch_json(
+                        fetch_json_nonempty(
                             Method::GET,
                             &*format!("{}{}", $api_url, $url_suffix),
                             None,
@@ -2539,4 +2564,120 @@ pub async fn cache_file_hash_metadata(
     .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod game_version_cache_tests {
+    use super::{
+        CacheBehaviour, CacheValue, CachedEntry, CachedProjectVersions,
+        GameVersion,
+    };
+    use crate::util::fetch::FetchSemaphore;
+    use sqlx::sqlite::SqlitePoolOptions;
+    use tokio::sync::Semaphore;
+
+    fn sample_game_versions() -> Vec<GameVersion> {
+        vec![
+            GameVersion {
+                version: "26.2".to_string(),
+                version_type: "release".to_string(),
+                date: "2026-06-16T12:03:33Z".to_string(),
+                major: false,
+            },
+            GameVersion {
+                version: "26.3-snapshot-6".to_string(),
+                version_type: "snapshot".to_string(),
+                date: "2026-07-28T12:25:51Z".to_string(),
+                major: false,
+            },
+        ]
+    }
+
+    #[test]
+    fn empty_collection_values_are_detected() {
+        assert!(CacheValue::GameVersions(vec![]).is_empty_collection());
+        assert!(CacheValue::Loaders(vec![]).is_empty_collection());
+        assert!(CacheValue::Categories(vec![]).is_empty_collection());
+        assert!(CacheValue::DonationPlatforms(vec![]).is_empty_collection());
+        assert!(
+            !CacheValue::GameVersions(sample_game_versions())
+                .is_empty_collection()
+        );
+        assert!(
+            !CacheValue::ProjectVersions(CachedProjectVersions {
+                project_id: "project".to_string(),
+                versions: vec![],
+            })
+            .is_empty_collection(),
+            "project version lists may legitimately be empty"
+        );
+    }
+
+    async fn create_cache_table(
+        pool: &sqlx::SqlitePool,
+    ) {
+        sqlx::query(
+            "CREATE TABLE cache (
+                id TEXT NOT NULL,
+                data_type TEXT NOT NULL,
+                alias TEXT NULL,
+                data JSONB NULL,
+                expires INTEGER NOT NULL,
+                UNIQUE (data_type, alias),
+                PRIMARY KEY (id, data_type)
+            )",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn empty_cached_game_versions_are_refetched_instead_of_served() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        create_cache_table(&pool).await;
+        let semaphore = FetchSemaphore(Semaphore::new(1));
+
+        CachedEntry::upsert_many(
+            &[CacheValue::GameVersions(vec![]).get_entry()],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        let cached = CachedEntry::get_game_versions(
+            Some(CacheBehaviour::CacheOnly),
+            &pool,
+            &semaphore,
+        )
+        .await
+        .unwrap();
+        assert!(
+            cached.is_none(),
+            "an empty cached game version collection must not be served"
+        );
+
+        CachedEntry::upsert_many(
+            &[CacheValue::GameVersions(sample_game_versions()).get_entry()],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        let cached = CachedEntry::get_game_versions(
+            Some(CacheBehaviour::CacheOnly),
+            &pool,
+            &semaphore,
+        )
+        .await
+        .unwrap();
+        let versions = cached.expect("populated game versions should be served");
+        assert_eq!(versions.len(), 2);
+        assert_eq!(versions[0].version, "26.2");
+        assert_eq!(versions[1].version_type, "snapshot");
+    }
 }

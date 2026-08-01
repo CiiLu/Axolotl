@@ -1091,6 +1091,57 @@ where
     Ok(serde_json::from_slice(&result)?)
 }
 
+/// Like [`fetch_json`], but rejects responses that are empty JSON arrays.
+///
+/// Mirrors can serve an empty array for collection endpoints they have not
+/// synced (e.g. `tag/game_version`). Treating that as a valid response would
+/// poison the cache with an empty collection, so collection fetches validate
+/// that the response actually contains data and fall back to the next source.
+#[tracing::instrument(skip_all)]
+pub async fn fetch_json_nonempty<T>(
+    method: Method,
+    url: &str,
+    sha1: Option<&str>,
+    json_body: Option<serde_json::Value>,
+    uri_path: Option<&'static str>,
+    semaphore: &FetchSemaphore,
+    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
+) -> crate::Result<T>
+where
+    T: DeserializeOwned,
+{
+    let validate_json = |bytes: &Bytes| -> crate::Result<()> {
+        let parsed: serde_json::Value = serde_json::from_slice(bytes)?;
+        if parsed.as_array().is_some_and(|array| array.is_empty()) {
+            return Err(ErrorKind::OtherError(format!(
+                "Expected a non-empty JSON collection from {url}, got an empty array"
+            ))
+            .into());
+        }
+        serde_json::from_slice::<T>(bytes)
+            .map(|_| ())
+            .map_err(Into::into)
+    };
+    let result = fetch_advanced_with_client_and_progress(
+        method,
+        url,
+        sha1,
+        json_body,
+        None,
+        None,
+        None,
+        uri_path,
+        semaphore,
+        exec,
+        &INSECURE_REQWEST_CLIENT,
+        None,
+        Some(&validate_json),
+        METADATA_ATTEMPT_BUDGET,
+    )
+    .await?;
+    Ok(serde_json::from_slice(&result)?)
+}
+
 /// Downloads a file with retry and checksum functionality, and a specific
 /// [`reqwest::Client`].
 #[tracing::instrument(skip_all)]
@@ -4132,6 +4183,37 @@ mod tests {
         (format!("http://{address}/file"), handle)
     }
 
+    async fn spawn_json_server(
+        body: String,
+    ) -> (String, Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
+        let listener =
+            tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let requests = Arc::new(AtomicUsize::new(0));
+        let request_count = Arc::clone(&requests);
+        let handle = tokio::spawn(async move {
+            loop {
+                let Ok((mut stream, _)) = listener.accept().await else {
+                    break;
+                };
+                let requests = Arc::clone(&request_count);
+                let body = body.clone();
+                tokio::spawn(async move {
+                    requests.fetch_add(1, Ordering::Relaxed);
+                    let mut buffer = [0_u8; 1024];
+                    let _ = stream.read(&mut buffer).await;
+                    let headers = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    );
+                    let _ = stream.write_all(headers.as_bytes()).await;
+                    let _ = stream.write_all(body.as_bytes()).await;
+                });
+            }
+        });
+        (format!("http://{address}/tag/game_version"), requests, handle)
+    }
+
     async fn spawn_redirect_server(
         location: String,
         response_delay: Duration,
@@ -5306,5 +5388,74 @@ mod tests {
                 "Should be less than 45 seconds (attempt {i})"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn nonempty_json_fetch_rejects_empty_collections() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+        let semaphore = FetchSemaphore(Semaphore::new(4));
+
+        let (url, requests, server) =
+            spawn_json_server("[]".to_string()).await;
+        let result = fetch_json_nonempty::<Vec<serde_json::Value>>(
+            Method::GET,
+            &url,
+            None,
+            None,
+            None,
+            &semaphore,
+            &pool,
+        )
+        .await;
+        assert!(
+            result.is_err(),
+            "an empty JSON array must be rejected as invalid data"
+        );
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+        server.abort();
+
+        let (url, requests, server) =
+            spawn_json_server("[1,2,3]".to_string()).await;
+        let result = fetch_json_nonempty::<Vec<serde_json::Value>>(
+            Method::GET,
+            &url,
+            None,
+            None,
+            None,
+            &semaphore,
+            &pool,
+        )
+        .await;
+        let values = result.expect("a non-empty JSON array should be accepted");
+        assert_eq!(values.len(), 3);
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn regular_json_fetch_still_accepts_empty_collections() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+        let semaphore = FetchSemaphore(Semaphore::new(4));
+
+        let (url, requests, server) =
+            spawn_json_server("[]".to_string()).await;
+        let result = fetch_json::<Vec<serde_json::Value>>(
+            Method::GET,
+            &url,
+            None,
+            None,
+            None,
+            &semaphore,
+            &pool,
+        )
+        .await;
+        let values = result.expect("regular JSON fetches keep accepting empty arrays");
+        assert!(values.is_empty());
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+        server.abort();
     }
 }
