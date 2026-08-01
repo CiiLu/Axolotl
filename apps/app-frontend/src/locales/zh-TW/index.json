@@ -2588,6 +2588,12 @@
 	"app.drop.error.unknown-text": {
 		"message": "类型暂不支持"
 	},
+	"app.drop.error.unknown-depth-text": {
+		"message": "壓縮檔嵌套層級過深，無法分析。請先解壓到資料夾後重試。"
+	},
+	"app.drop.error.unknown-encrypted-text": {
+		"message": "壓縮檔包含加密檔案，無法分析。"
+	},
 	"app.drop.error.title": {
 		"message": "拖放错误"
 	},

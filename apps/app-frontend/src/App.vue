@@ -429,9 +429,7 @@ async function onImportFileReceived({
 		if (classification.item_type === 'unknown') {
 			addNotification({
 				title: formatMessage(messages.dropUnknownTitle),
-				text: classification.reason
-					? classification.reason
-					: formatMessage(messages.dropUnknownText),
+				text: unknownReasonMessage(classification.reason),
 				type: 'error',
 			})
 			return
@@ -560,6 +558,15 @@ const messages = defineMessages({
 	dropUnknownText: {
 		id: 'app.drop.error.unknown-text',
 		defaultMessage: 'Could not determine what kind of file this is.',
+	},
+	dropUnknownDepthText: {
+		id: 'app.drop.error.unknown-depth-text',
+		defaultMessage:
+			'The archive is nested too deeply to analyze. Unpack it to a folder and try again.',
+	},
+	dropUnknownEncryptedText: {
+		id: 'app.drop.error.unknown-encrypted-text',
+		defaultMessage: 'The archive contains encrypted files and cannot be analyzed.',
 	},
 	dropErrorTitle: {
 		id: 'app.drop.error.title',
@@ -1259,9 +1266,7 @@ const { isDragging, isProcessing } = useGlobalDrop(
 				} else {
 					addNotification({
 						title: formatMessage(messages.dropUnknownTitle),
-						text: classification?.reason
-							? classification.reason
-							: formatMessage(messages.dropUnknownText),
+						text: unknownReasonMessage(classification?.reason),
 						type: 'error',
 					})
 				}
@@ -1844,6 +1849,22 @@ function showForceAnalysisPrompt(classification: ClassificationResult) {
 			},
 		],
 	})
+}
+
+/**
+ * Map a backend Unknown reason to a user-facing message. Depth-limit and
+ * encryption failures have dedicated copy; anything else falls back to the
+ * raw reason so technical details stay visible.
+ */
+function unknownReasonMessage(reason: string | undefined): string {
+	const normalized = reason?.toLowerCase() ?? ''
+	if (normalized.includes('too deep') || normalized.includes('nesting')) {
+		return formatMessage(messages.dropUnknownDepthText)
+	}
+	if (normalized.includes('encrypted')) {
+		return formatMessage(messages.dropUnknownEncryptedText)
+	}
+	return reason ? reason : formatMessage(messages.dropUnknownText)
 }
 
 async function handleGenericInstall(instanceId: string) {

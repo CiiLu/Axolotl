@@ -713,6 +713,12 @@
   "app.drop.error.unknown-text": {
     "message": "Could not determine what kind of file this is."
   },
+  "app.drop.error.unknown-depth-text": {
+    "message": "The archive is nested too deeply to analyze. Unpack it to a folder and try again."
+  },
+  "app.drop.error.unknown-encrypted-text": {
+    "message": "The archive contains encrypted files and cannot be analyzed."
+  },
   "app.drop.error.unknown-title": {
     "message": "Unknown file type"
   },

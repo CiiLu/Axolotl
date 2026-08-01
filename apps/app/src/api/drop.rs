@@ -180,6 +180,37 @@ fn launcher_import_temp_base() -> std::path::PathBuf {
     std::env::temp_dir().join("axolotl-launcher-import")
 }
 
+/// Remove `drop-*` directories under `base` whose contents are older than
+/// one day. The frontend cleans up after every flow, but a crashed process
+/// would otherwise leave stale extractions behind forever.
+fn sweep_stale_launcher_import_dirs(base: &std::path::Path) {
+    let Ok(entries) = std::fs::read_dir(base) else {
+        return;
+    };
+    let cutoff = std::time::SystemTime::now()
+        .checked_sub(std::time::Duration::from_secs(24 * 60 * 60));
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if !name.starts_with("drop-") {
+            continue;
+        }
+        let stale = match path.metadata().and_then(|m| m.modified()) {
+            Ok(modified) => cutoff.is_none_or(|cutoff| modified < cutoff),
+            Err(_) => false,
+        };
+        if stale {
+            tracing::debug!(
+                "Removing stale launcher import temp dir: {}",
+                path.display()
+            );
+            let _ = std::fs::remove_dir_all(&path);
+        }
+    }
+}
+
 /// Extract a ZIP archive into a fresh temporary directory and return its
 /// path. The frontend scans and imports instances from the extraction, then
 /// calls [`drop_remove_temp_dir`] to clean it up — the archive is unpacked
@@ -199,6 +230,7 @@ pub async fn drop_extract_zip_to_temp(
                 base.display()
             )
         })?;
+        sweep_stale_launcher_import_dirs(&base);
         let dir = base.join(format!(
             "drop-{}-{}",
             std::process::id(),

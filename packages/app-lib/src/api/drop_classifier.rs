@@ -203,6 +203,9 @@ struct ZipEntrySet {
     files: std::collections::HashSet<String>,
     /// Directory paths without a trailing slash.
     dirs: std::collections::HashSet<String>,
+    /// Whether any entry is encrypted (password-protected) and therefore
+    /// unreadable during content confirmation.
+    has_encrypted: bool,
 }
 
 impl ZipEntrySet {
@@ -213,11 +216,15 @@ impl ZipEntrySet {
             names: Vec::new(),
             files: std::collections::HashSet::new(),
             dirs: std::collections::HashSet::new(),
+            has_encrypted: false,
         };
         for i in 0..archive.len() {
             let Ok(entry) = archive.by_index_raw(i) else {
                 continue;
             };
+            if entry.encrypted() {
+                set.has_encrypted = true;
+            }
             // Normalize Windows-authored separators so every lookup and the
             // virtual folder tree agree on one representation.
             let name = crate::api::pack::detect::decode_zip_entry_name(
@@ -715,15 +722,33 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
                 return result;
             }
         }
+    } else {
+        tracing::debug!(
+            "ZIP classify: nesting depth limit reached at base={base:?} — {}",
+            result_path.display()
+        );
+        return DroppedItemType::Unknown {
+            reason: format!(
+                "Archive nesting is too deep to analyze (limit {MAX_ZIP_NESTING_DEPTH} levels)"
+            ),
+        };
     }
 
     tracing::debug!(
         "ZIP classify: inconclusive at depth={depth} base={base:?} — {}",
         result_path.display()
     );
-    DroppedItemType::Unknown {
-        reason: "ZIP archive requires extraction to determine content type"
-            .to_string(),
+    if entries.has_encrypted {
+        DroppedItemType::Unknown {
+            reason: "Archive contains encrypted files and cannot be fully analyzed"
+                .to_string(),
+        }
+    } else {
+        DroppedItemType::Unknown {
+            reason:
+                "ZIP archive requires extraction to determine content type (large archives may take a while)"
+                    .to_string(),
+        }
     }
 }
 

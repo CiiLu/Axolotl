@@ -3356,6 +3356,12 @@
 	"app.drop.error.unknown-text": {
 		"message": "类型暂不支持"
 	},
+	"app.drop.error.unknown-depth-text": {
+		"message": "压缩包嵌套层级过深，无法分析。请先解压到文件夹后重试。"
+	},
+	"app.drop.error.unknown-encrypted-text": {
+		"message": "压缩包包含加密文件，无法分析。"
+	},
 	"app.drop.error.title": {
 		"message": "拖放错误"
 	},
