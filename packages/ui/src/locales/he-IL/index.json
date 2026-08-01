@@ -1,37 +1,4 @@
 {
-  "affiliate.create.button": {
-    "defaultMessage": "צור קישור שותפות"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "יוצר קישור שותפות חדש"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "תביא לקישור השותפות שלך שם כדי שתדע מאיפה אנשים באים!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "כותרת של הקישור שותפות"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "למשל יוטיוב"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "השם משתמש של המשתמש ליצירת קוד השותפות בשבילו"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "הכנס שם משתמש..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "נוצר על ידי {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "יוצר קישור שותפות..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "לבטל קישור שותפות"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "צפה ניתוחים"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "טעינת הגרסה נכשלה"
   },
@@ -205,18 +172,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "העלה תמונה"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "רק לעכשיו"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "אפליקציה"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "ארח"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "פלטפורמה"
   },
   "collections.label.private": {
     "defaultMessage": "פרטי"
@@ -800,68 +755,11 @@
   "project.about.links.wiki": {
     "defaultMessage": "בקרו בויקי"
   },
-  "project.environment.client-only.title": {
-    "defaultMessage": "צד לקוח בלבד"
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "צד שרת בלבד"
-  },
   "project.settings.analytics.title": {
     "defaultMessage": "אנליטיקה"
   },
   "project.settings.description.title": {
     "defaultMessage": "תיאור"
-  },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "כולל חלק מהפונקציונליות גם בצד הלקוח וגם בצד השרת, אפילו אם רק באופן חלקי."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "אופציונלי בשניהם, פועל אותו דבר אם מותקן בצד כלשהו"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "אופציונלי בשניהם, עובד הכי טוב כאשר מותקן על שני הצדדים"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "אופציונלי בצד הלקוח"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "אופציונלי בשרת"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "נדרש בשניהם"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "לקוח ושרת"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "כל הפונקציונליות מתבצעת בצד הלקוח ותואמת לשרתי ונילה."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "צד לקוח בלבד"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "שרת ייעודי בלבד"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "כל הפעולות מתבצעות בצד השרת, ותואמות לשחקנים עם לקוח ונילה."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "תומך גם במשחק יחיד"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "צד שרת בלבד"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "פועל רק במצב משחק יחיד או כאשר אין חיבור לשרת מרובה משתתפים."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "משחק יחיד בלבד"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "תתי-אפשרויות של {option}"
   },
   "project.settings.environment.title": {
     "defaultMessage": "סביבה"

@@ -2,21 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Nemaš dozvolu."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Kreiraj partnersku/sponzorisanu vezu"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "na primer Youtube"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Unesi korisničko ime..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Kreirano od {user}"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Pregled analitike"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Neuspeh sa učitavanjem podešavanja servera"
   },
@@ -157,12 +142,6 @@
   },
   "content.confirm-deletion.header": {
     "defaultMessage": "Izbriši {itemType}"
-  },
-  "external-files.permissions-card.reason.globally-allowed.description": {
-    "defaultMessage": "Već smo videli ovu datoteku i pripremili smo vam navođenje izvora. Ako ti se čini da nešto nije u redu, kontaktiraj podršku Modrintha putem centra za pomoć"
-  },
-  "external-files.permissions-card.reason.my-project.proof-images-description": {
-    "defaultMessage": "Postavi datoteke koje pomažu da se potvrdi da si ti kreirao ovaj rad."
   },
   "hosting.content.failed-to-load-versions": {
     "defaultMessage": "Greška sa učitavanjem verzija"
@@ -384,4 +363,3 @@
     "defaultMessage": "Tip"
   }
 }
-

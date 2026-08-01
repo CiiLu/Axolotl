@@ -1,16 +1,4 @@
 {
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "esim. YouTube"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Anna käyttäjänimi..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Luonut {user}"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Näytä analytiikat"
-  },
   "badge.beta": {
     "defaultMessage": "Beta"
   },
@@ -133,12 +121,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Lataa kuva"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Juuri nyt"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "Sovellus"
   },
   "collections.label.private": {
     "defaultMessage": "Yksityinen"
@@ -570,4 +552,3 @@
     "defaultMessage": "Sinulla on tallentamattomia muutoksia."
   }
 }
-

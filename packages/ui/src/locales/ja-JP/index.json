@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "権限がありません"
   },
-  "affiliate.create.button": {
-    "defaultMessage": "アフィリエイトリンクを作成"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "新しいアフィリエイトコードを作成中"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "流入元が分かる名前を付けてください！"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "アフィリエイトリンクのタイトル"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "例：YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "アフィリエイトコードを作成するユーザー名"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "ユーザー名を入力…"
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "{user}によって作成"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "アフィリエイトリンクを作成中…"
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "アフィリエイトリンクを無効化"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "アナリティクスを表示"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "サーバー設定の読み込みに失敗しました"
   },
@@ -298,18 +265,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "画像をアップロード"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "今"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "アプリ"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "ホスティング"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "プラットフォーム"
   },
   "collections.label.private": {
     "defaultMessage": "非公開"
@@ -2459,72 +2414,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number}件のダウンロード"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "クライアントとサーバーの両方で必要です。"
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "クライアント側とサーバー側の両方で必要"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "ほとんどの機能はクライアント側で動作しますが、サーバーにインストールすると機能が拡張します。"
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "クライアントとサーバー、サーバー側ではオプション"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "全ての機能はクライアント側で実行され、バニラサーバーと互換性があります。"
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "クライアント側のみ"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "クライアントとサーバーで部分的ではあるものの機能を備えています。両方にインストールするとパフォーマンスが最高になります。"
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "クライアントとサーバー、両方にインストールするのが最適"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "部分的ではありますが、クライアント側とサーバー側の両方にいくつかの機能があります。"
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "クライアントとサーバー、双方でオプション"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "全ての機能はサーバー側で実行され、バニラクライアントと互換性があります。特定のサーバーのみで動作します。"
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "サーバー側のみ"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "ほとんどの機能はサーバー側で動作しますが、クライアントにインストールすると機能が拡張します。"
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "クライアントとサーバー、クライアント側ではオプション"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "全ての機能はサーバー側で実行され、バニラクライアントと互換性があります。シングルプレイの内部サーバーでも動作します。"
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "サーバー側のみ、シングルプレイヤーでも動作します"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "シングルプレイヤーまたはマルチプレイヤーサーバーに接続されていないときに機能します。"
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "シングルプレイのみ"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "該当なし"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "不明"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "このバージョンの環境を特定できませんでした。"
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "不明な環境"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number}人のフォロワー"
   },
@@ -2810,89 +2699,8 @@
   "project.settings.description.title": {
     "defaultMessage": "概要"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "部分的ではありますが、クライアント側とサーバー側の両方にいくつかの機能があります。"
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "両方オプション、どちらにインストールしても同じように機能します"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "どちらか一方だけでも使えますが、両側にいれると効果的です"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "クライアント側オプション"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "サーバー側オプション"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "どちらにも必要"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "クライアントとサーバー"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "全ての機能はクライアント側で実行され、バニラサーバーと互換性があります。"
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "クライアント側のみ"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "プロジェクトに環境メタデータがありません。以下の適切なものを選択してください。"
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "プロジェクトの環境を選択して下さい。"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "プロジェクトの異なるバージョンでは異なる環境が選択されているので、現時点では共通に編集することはできません。"
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "プロジェクトに複数の環境があります。"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Modrinthの環境システムを刷新し、新しいオプションがご利用いただけるようになりました。以下のオプションが正しく選択されていることを確認し「確認」ボタンを押してください！"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "以下のオプションを確認してください"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "環境メタデータを持つことはできるのはmodまたはmodpackのみです。"
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "このプロジェクトの種類は環境メタデータをサポートしていません"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "専用サーバー側のみ"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "全ての機能はサーバー側で実行され、バニラクライアントと互換性があります。"
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "シングルプレイヤーでも動作"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "サーバー側のみ"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "シングルプレイヤーまたはマルチプレイヤーサーバーに接続されていないときに機能します。"
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "シングルプレイのみ"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}：{description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "サブオプション {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "動作環境"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "確認"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "このプロジェクトの環境が正しくセットされていることを確認してください。"
   },
   "project.settings.gallery.title": {
     "defaultMessage": "ギャラリー"
@@ -2968,9 +2776,6 @@
   },
   "project.visibility.unlisted-by-staff": {
     "defaultMessage": "スタッフにより限定公開"
-  },
-  "s.bg": {
-    "defaultMessage": "バックグラウンドタスクが実行中です"
   },
   "search.filter.locked.default": {
     "defaultMessage": "フィルターロック済み"

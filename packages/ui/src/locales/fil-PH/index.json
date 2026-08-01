@@ -1,37 +1,4 @@
 {
-  "affiliate.create.button": {
-    "defaultMessage": "Lumikha ng affiliate link"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Naglilikha ng affiliate code"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Bigyan mo ng pangalan ang iyong affiliate link upang malaman mo lung saan nanggagaling ang mga tao!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Pamagat ng affilite link"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "hal. YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Ang username ng tagagamit na lilikhaan ng affiliate code"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Ilagay ang username..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Linikha ni/ng {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Lumilikha ng affiliate link..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Bawiin ang affiliate link"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Tingnan ang analitika"
-  },
   "badge.alpha": {
     "defaultMessage": "Alpha"
   },
@@ -190,18 +157,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "I-upload ang imahe"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Ngayon lang"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "App"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosting"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Plataporma"
   },
   "collections.label.private": {
     "defaultMessage": "Pribado"
@@ -1385,72 +1340,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {download} other {na download}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Kinakailangan sa client at sa server."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Client at server, kailangan sa dalawa"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "Karamihan sa mga tungkulin ay nasa panig ng client, ngunit kapag na-install sa server ay makapagbubukas ng pinahusay na tungkulin."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Client at server, di-sapilitan sa server"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Lahat ng mga tungkulin ay nasa panig ng client at makatutugma sa mga vanilla server."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Panig ng client lamang"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "May mga tungkulin sa client at server, kahit bahagya lamang. Sa pag-install nito sa dalawa ay magreresulta sa pinakamahusay na karanasan."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Client at server, pinakamainam kapag na-install sa dalawa"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "May mga tungkulin sa client at server, o kaya bahagya lamang."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Client at server, di-sapilitan sa dalawa"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Lahat ng mga tungkulin ay nasa panig ng server at makatutugma sa mga vanilla client. Gagana lamang sa mga dedikadong server."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Panig ng server lamang"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "Karamihan sa mga tungkulin ay nasa panig ng server, ngunit kapag na-install sa client ay makapagbubukas ng pinahusay na tungkulin."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Client at server, di-sapilitan sa client"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Lahat ng mga tungkulin ay nasa panig ng server at makatutugma sa mga vanilla client. Gagana rin sa internal server ng pang-isahang laro."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Sa panig ng server lamang, gagana rin sa pang-isahang laro"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Gagana lamang sa Pang-isahang laro o kung hindi nakakonekta sa isang Pangmaramihang laro na server."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Pang-isahang laro lamang"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "Wala"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Hindi kilala"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Ang environment ng bersiyon na ito ay hindi matukoy."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Hindi kilalang environment"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {follower} other {na follower}}"
   },
@@ -1730,89 +1619,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Paglalarawan"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "May mga tungkulin sa client at server, o kaya bahagya lamang."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Di-sapilitan sa magkalawa, magkatulad na tatakbo sa kahit anog panig man na-install"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Di-sapilitan sa magkalawa, mas mahusay kapag na-install sa dalawang panig"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Di-sapilitan sa client"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Di-sapilitan sa server"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Kinakailangan ng dalawa"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Client at server"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Lahat ng mga tungkulin ay nasa panig ng client at makatutugma sa mga vanilla server."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Panig ng client lamang"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Wala pang metadata sa environment ang iyong proyekto, pakipili ng wasto sa ibaba."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Pakipili sa environment ng inyong proyekto"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "May ilang sa iyong mga bersiyon ng iyong proyekto na may di-magkatulad na environment na napili, kaya hindi mo mababago ito para sa lahat sa kasalukuyan."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Nasa magkakaibang environment ang proyekto mo"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Kakaunlad lang ng aming sistema sa Mga Environment sa Modrinth at magagamit na ngayon ang mga bagong pagpipilian. Mangyaring suriin na tama ang napili sa ibaba at pindutin ang 'Patunayan' kapag tapos ka na!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Mangyaring suriin ang iyong mga opsiyon sa ibaba"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Ang mga proyekto ng mod at modpack lamang ang maaaring magka-metadata sa environment."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Ang uri ng proyekto ng ito ay hindi sumusporta sa metadata sa environment"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Dedicated server lamang"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Lahat ng mga tungkulin ay nasa panig ng server at makatutugma sa mga vanilla client."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Gagana rin sa pang-isahang laro"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Panig ng server lamang"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Gagana lamang sa Pang-isahang laro o kung hindi nakakonekta sa isang Pangmaramihang laro na server."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Pang-isahang laro lamang"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Mga suboption ng {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Environment"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Patunayan"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Patinayang wasto ang nakatakdang environment ng proyekto."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galeriya"

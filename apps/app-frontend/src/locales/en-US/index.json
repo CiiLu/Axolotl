@@ -1880,6 +1880,324 @@
   "app.lab.no-results": {
     "message": "No tools match your search."
   },
+  "app.lab.schematic-preview.author": {
+    "message": "Author"
+  },
+  "app.lab.schematic-preview.block-entities": {
+    "message": "Block entities"
+  },
+  "app.lab.schematic-preview.block-picker.cancel": {
+    "message": "Cancel"
+  },
+  "app.lab.schematic-preview.block-picker.confirm": {
+    "message": "Replace {count} blocks"
+  },
+  "app.lab.schematic-preview.block-picker.description": {
+    "message": "Choose the block that will replace the {count} selected blocks."
+  },
+  "app.lab.schematic-preview.block-picker.empty": {
+    "message": "No matching blocks"
+  },
+  "app.lab.schematic-preview.block-picker.results": {
+    "message": "{count} blocks"
+  },
+  "app.lab.schematic-preview.block-picker.search": {
+    "message": "Search blocks by name or ID"
+  },
+  "app.lab.schematic-preview.block-picker.title": {
+    "message": "Replace blocks"
+  },
+  "app.lab.schematic-preview.blocks": {
+    "message": "Blocks"
+  },
+  "app.lab.schematic-preview.bounds": {
+    "message": "Show region boundaries"
+  },
+  "app.lab.schematic-preview.clear-recent": {
+    "message": "Clear recent"
+  },
+  "app.lab.schematic-preview.coordinates": {
+    "message": "Coordinates"
+  },
+  "app.lab.schematic-preview.data-version": {
+    "message": "Data version"
+  },
+  "app.lab.schematic-preview.description": {
+    "message": "Quickly preview and edit your schematics."
+  },
+  "app.lab.schematic-preview.drop": {
+    "message": "Drop schematic to open"
+  },
+  "app.lab.schematic-preview.edit.delete": {
+    "message": "Delete selected"
+  },
+  "app.lab.schematic-preview.edit.redo": {
+    "message": "Redo"
+  },
+  "app.lab.schematic-preview.edit.replace": {
+    "message": "Replace selected"
+  },
+  "app.lab.schematic-preview.edit.undo": {
+    "message": "Undo"
+  },
+  "app.lab.schematic-preview.empty.description": {
+    "message": "Open a Litematica or Sponge schematic to inspect and edit it locally in 3D."
+  },
+  "app.lab.schematic-preview.empty.title": {
+    "message": "Edit a Minecraft schematic"
+  },
+  "app.lab.schematic-preview.entities": {
+    "message": "Entities"
+  },
+  "app.lab.schematic-preview.export-complete": {
+    "message": "Export complete"
+  },
+  "app.lab.schematic-preview.export-litematic": {
+    "message": "Litematica schematic (.litematic)"
+  },
+  "app.lab.schematic-preview.export-schematic": {
+    "message": "Export schematic"
+  },
+  "app.lab.schematic-preview.export-sponge": {
+    "message": "Sponge schematic (.schem)"
+  },
+  "app.lab.schematic-preview.focus-region": {
+    "message": "Focus region"
+  },
+  "app.lab.schematic-preview.format": {
+    "message": "Format"
+  },
+  "app.lab.schematic-preview.from-instance": {
+    "message": "From instance"
+  },
+  "app.lab.schematic-preview.fullscreen": {
+    "message": "Toggle fullscreen"
+  },
+  "app.lab.schematic-preview.grid": {
+    "message": "Show grid"
+  },
+  "app.lab.schematic-preview.info.title": {
+    "message": "Schematic info"
+  },
+  "app.lab.schematic-preview.inspector": {
+    "message": "Inspector"
+  },
+  "app.lab.schematic-preview.instance-picker.back": {
+    "message": "Back to instances"
+  },
+  "app.lab.schematic-preview.instance-picker.choose-instance": {
+    "message": "Choose the instance that contains the schematic"
+  },
+  "app.lab.schematic-preview.instance-picker.empty": {
+    "message": "No .litematic or .schem files were found in this instance."
+  },
+  "app.lab.schematic-preview.instance-picker.no-instances": {
+    "message": "No installed instances are available."
+  },
+  "app.lab.schematic-preview.instance-picker.no-matching-instances": {
+    "message": "No instances match your search."
+  },
+  "app.lab.schematic-preview.instance-picker.no-matching-schematics": {
+    "message": "No schematics match your search."
+  },
+  "app.lab.schematic-preview.instance-picker.open": {
+    "message": "Open {name}"
+  },
+  "app.lab.schematic-preview.instance-picker.search": {
+    "message": "Search schematics"
+  },
+  "app.lab.schematic-preview.instance-picker.search-instances": {
+    "message": "Search instances"
+  },
+  "app.lab.schematic-preview.instance-picker.select-instance": {
+    "message": "Browse schematics in {name}"
+  },
+  "app.lab.schematic-preview.instance-picker.title": {
+    "message": "Open from an instance"
+  },
+  "app.lab.schematic-preview.layers.all": {
+    "message": "All"
+  },
+  "app.lab.schematic-preview.layers.spacing": {
+    "message": "Layer spacing"
+  },
+  "app.lab.schematic-preview.layers.visible": {
+    "message": "Y {current} · {visible}/{total} layers"
+  },
+  "app.lab.schematic-preview.loading.mesh": {
+    "message": "Generating models"
+  },
+  "app.lab.schematic-preview.loading.parse": {
+    "message": "Parsing schematic"
+  },
+  "app.lab.schematic-preview.loading.resources": {
+    "message": "Reading resources"
+  },
+  "app.lab.schematic-preview.materials-csv": {
+    "message": "Export material CSV"
+  },
+  "app.lab.schematic-preview.materials-json": {
+    "message": "Export material JSON"
+  },
+  "app.lab.schematic-preview.materials.empty": {
+    "message": "No matching materials"
+  },
+  "app.lab.schematic-preview.materials.search": {
+    "message": "Search materials"
+  },
+  "app.lab.schematic-preview.materials.select-all": {
+    "message": "Select all"
+  },
+  "app.lab.schematic-preview.materials.use-replace": {
+    "message": "Use for replace"
+  },
+  "app.lab.schematic-preview.measure": {
+    "message": "Measure"
+  },
+  "app.lab.schematic-preview.measure.clear": {
+    "message": "Clear measurement"
+  },
+  "app.lab.schematic-preview.measure.distance": {
+    "message": "Distance"
+  },
+  "app.lab.schematic-preview.measure.end": {
+    "message": "End"
+  },
+  "app.lab.schematic-preview.measure.size": {
+    "message": "Block span"
+  },
+  "app.lab.schematic-preview.measure.start": {
+    "message": "Start"
+  },
+  "app.lab.schematic-preview.metadata": {
+    "message": "Metadata"
+  },
+  "app.lab.schematic-preview.missing-file": {
+    "message": "File does not exist"
+  },
+  "app.lab.schematic-preview.missing-models": {
+    "message": "{count} block models use the missing-texture fallback."
+  },
+  "app.lab.schematic-preview.more-actions": {
+    "message": "More actions"
+  },
+  "app.lab.schematic-preview.open": {
+    "message": "Open"
+  },
+  "app.lab.schematic-preview.open-file": {
+    "message": "Open file"
+  },
+  "app.lab.schematic-preview.orbit-view": {
+    "message": "Orbit view"
+  },
+  "app.lab.schematic-preview.projection": {
+    "message": "Switch camera projection"
+  },
+  "app.lab.schematic-preview.recent": {
+    "message": "Recent schematics"
+  },
+  "app.lab.schematic-preview.regions": {
+    "message": "Regions"
+  },
+  "app.lab.schematic-preview.reload": {
+    "message": "Reload"
+  },
+  "app.lab.schematic-preview.remove-recent": {
+    "message": "Remove from recent"
+  },
+  "app.lab.schematic-preview.reset-view": {
+    "message": "Reset view"
+  },
+  "app.lab.schematic-preview.screenshot": {
+    "message": "Export PNG"
+  },
+  "app.lab.schematic-preview.seamless-glass": {
+    "message": "Seamless glass"
+  },
+  "app.lab.schematic-preview.selected-block": {
+    "message": "Selected block"
+  },
+  "app.lab.schematic-preview.selection.box": {
+    "message": "Area select"
+  },
+  "app.lab.schematic-preview.selection.box-pending": {
+    "message": "Choose the opposite corner"
+  },
+  "app.lab.schematic-preview.selection.clear": {
+    "message": "Clear selection"
+  },
+  "app.lab.schematic-preview.selection.connected": {
+    "message": "Connected"
+  },
+  "app.lab.schematic-preview.selection.count": {
+    "message": "{count} selected"
+  },
+  "app.lab.schematic-preview.selection.layer": {
+    "message": "Same layer"
+  },
+  "app.lab.schematic-preview.selection.material": {
+    "message": "Same material"
+  },
+  "app.lab.schematic-preview.selection.single": {
+    "message": "Select"
+  },
+  "app.lab.schematic-preview.tab.edit": {
+    "message": "Edit"
+  },
+  "app.lab.schematic-preview.tab.materials": {
+    "message": "Materials"
+  },
+  "app.lab.schematic-preview.title": {
+    "message": "Schematic workshop"
+  },
+  "app.lab.schematic-preview.tools": {
+    "message": "Workspace tools"
+  },
+  "app.lab.schematic-preview.transform": {
+    "message": "Transform"
+  },
+  "app.lab.schematic-preview.transform.mirror-x": {
+    "message": "Mirror X"
+  },
+  "app.lab.schematic-preview.transform.mirror-z": {
+    "message": "Mirror Z"
+  },
+  "app.lab.schematic-preview.transform.rotate-clockwise": {
+    "message": "Rotate clockwise"
+  },
+  "app.lab.schematic-preview.transform.rotate-counter-clockwise": {
+    "message": "Rotate counterclockwise"
+  },
+  "app.lab.schematic-preview.translucent": {
+    "message": "Show transparent blocks"
+  },
+  "app.lab.schematic-preview.visibility": {
+    "message": "Visibility"
+  },
+  "app.lab.schematic-preview.visibility.hide": {
+    "message": "Hide selected"
+  },
+  "app.lab.schematic-preview.visibility.isolate": {
+    "message": "Only selected"
+  },
+  "app.lab.schematic-preview.visibility.show-all": {
+    "message": "Show all"
+  },
+  "app.lab.schematic-preview.walk-preview": {
+    "message": "Read-only walk preview"
+  },
+  "app.lab.schematic-preview.walk-speed": {
+    "message": "Speed {speed} · Scroll to adjust"
+  },
+  "app.lab.schematic-preview.walk-view": {
+    "message": "Walk view"
+  },
+  "app.lab.schematic-preview.warnings": {
+    "message": "Warnings"
+  },
+  "app.lab.schematic-preview.webgl-lost": {
+    "message": "The WebGL context was lost. Rendering will resume when it is restored."
+  },
   "app.lab.search": {
     "message": "Search tools"
   },
@@ -2876,6 +3194,9 @@
   "app.onboarding.action.open-gradient-text": {
     "message": "Open Gradient text generator to continue"
   },
+  "app.onboarding.action.open-schematic-workshop": {
+    "message": "Open Schematic workshop to continue"
+  },
   "app.onboarding.action.open-seed-map": {
     "message": "Open Seed map to continue"
   },
@@ -2995,6 +3316,12 @@
   },
   "app.onboarding.lab-editor.title": {
     "message": "Build and copy in one place"
+  },
+  "app.onboarding.lab-schematic.description": {
+    "message": "Open a local .litematic or .schem file, or choose one from an installed instance. The 3D workspace keeps viewing, measurement, layer controls, materials, and local edits together."
+  },
+  "app.onboarding.lab-schematic.title": {
+    "message": "Inspect a build before placing it"
   },
   "app.onboarding.lab-seed-map.description": {
     "message": "Enter a seed or load one from an instance, then inspect biomes, structures, and ore layers on the local map."
@@ -3704,14 +4031,14 @@
   "app.skins.section.tiny-takeover": {
     "message": "Tiny Takeover"
   },
+  "app.skins.sign-in.axolotl-alt": {
+    "message": "Axolotl Launcher"
+  },
   "app.skins.sign-in.button": {
     "message": "Sign In"
   },
   "app.skins.sign-in.description": {
     "message": "Please sign into your Minecraft account to use the skin management features of Axolotl Launcher."
-  },
-  "app.skins.sign-in.rinthbot-alt": {
-    "message": "Axolotl Launcher"
   },
   "app.skins.sign-in.title": {
     "message": "Please sign in"
@@ -4205,6 +4532,9 @@
   "instance.files.adding-files": {
     "message": "Adding files ({completed}/{total})"
   },
+  "instance.files.open-in-schematic-workshop": {
+    "message": "Open in schematic workshop"
+  },
   "instance.files.save-as": {
     "message": "Save as..."
   },
@@ -4630,365 +4960,5 @@
   },
   "unknown-pack-warning-modal.warning.title": {
     "message": "Unknown file warning"
-  },
-  "app.lab.schematic-preview.author": {
-    "message": "Author"
-  },
-  "app.lab.schematic-preview.block-entities": {
-    "message": "Block entities"
-  },
-  "app.lab.schematic-preview.block-picker.cancel": {
-    "message": "Cancel"
-  },
-  "app.lab.schematic-preview.block-picker.confirm": {
-    "message": "Replace {count} blocks"
-  },
-  "app.lab.schematic-preview.block-picker.description": {
-    "message": "Choose the block that will replace the {count} selected blocks."
-  },
-  "app.lab.schematic-preview.block-picker.empty": {
-    "message": "No matching blocks"
-  },
-  "app.lab.schematic-preview.block-picker.results": {
-    "message": "{count} blocks"
-  },
-  "app.lab.schematic-preview.block-picker.search": {
-    "message": "Search blocks by name or ID"
-  },
-  "app.lab.schematic-preview.block-picker.title": {
-    "message": "Replace blocks"
-  },
-  "app.lab.schematic-preview.blocks": {
-    "message": "Blocks"
-  },
-  "app.lab.schematic-preview.bounds": {
-    "message": "Show region boundaries"
-  },
-  "app.lab.schematic-preview.clear-recent": {
-    "message": "Clear recent"
-  },
-  "app.lab.schematic-preview.coordinates": {
-    "message": "Coordinates"
-  },
-  "app.lab.schematic-preview.data-version": {
-    "message": "Data version"
-  },
-  "app.lab.schematic-preview.description": {
-    "message": "Quickly preview and edit your schematics."
-  },
-  "app.lab.schematic-preview.drop": {
-    "message": "Drop schematic to open"
-  },
-  "app.lab.schematic-preview.edit.delete": {
-    "message": "Delete selected"
-  },
-  "app.lab.schematic-preview.edit.redo": {
-    "message": "Redo"
-  },
-  "app.lab.schematic-preview.edit.replace": {
-    "message": "Replace selected"
-  },
-  "app.lab.schematic-preview.edit.replace-with": {
-    "message": "Replace with"
-  },
-  "app.lab.schematic-preview.edit.undo": {
-    "message": "Undo"
-  },
-  "app.lab.schematic-preview.empty.description": {
-    "message": "Open a Litematica or Sponge schematic to inspect and edit it locally in 3D."
-  },
-  "app.lab.schematic-preview.empty.title": {
-    "message": "Edit a Minecraft schematic"
-  },
-  "app.lab.schematic-preview.entities": {
-    "message": "Entities"
-  },
-  "app.lab.schematic-preview.export-complete": {
-    "message": "Export complete"
-  },
-  "app.lab.schematic-preview.export-litematic": {
-    "message": "Litematica schematic (.litematic)"
-  },
-  "app.lab.schematic-preview.export-schematic": {
-    "message": "Export schematic"
-  },
-  "app.lab.schematic-preview.export-sponge": {
-    "message": "Sponge schematic (.schem)"
-  },
-  "app.lab.schematic-preview.focus-region": {
-    "message": "Focus region"
-  },
-  "app.lab.schematic-preview.format": {
-    "message": "Format"
-  },
-  "app.lab.schematic-preview.from-instance": {
-    "message": "From instance"
-  },
-  "app.lab.schematic-preview.fullscreen": {
-    "message": "Toggle fullscreen"
-  },
-  "app.lab.schematic-preview.grid": {
-    "message": "Show grid"
-  },
-  "app.lab.schematic-preview.info.title": {
-    "message": "Schematic info"
-  },
-  "app.lab.schematic-preview.inspector": {
-    "message": "Inspector"
-  },
-  "app.lab.schematic-preview.instance-picker.back": {
-    "message": "Back to instances"
-  },
-  "app.lab.schematic-preview.instance-picker.choose-instance": {
-    "message": "Choose the instance that contains the schematic"
-  },
-  "app.lab.schematic-preview.instance-picker.empty": {
-    "message": "No .litematic or .schem files were found in this instance."
-  },
-  "app.lab.schematic-preview.instance-picker.no-instances": {
-    "message": "No installed instances are available."
-  },
-  "app.lab.schematic-preview.instance-picker.no-matching-instances": {
-    "message": "No instances match your search."
-  },
-  "app.lab.schematic-preview.instance-picker.no-matching-schematics": {
-    "message": "No schematics match your search."
-  },
-  "app.lab.schematic-preview.instance-picker.open": {
-    "message": "Open {name}"
-  },
-  "app.lab.schematic-preview.instance-picker.search": {
-    "message": "Search schematics"
-  },
-  "app.lab.schematic-preview.instance-picker.search-instances": {
-    "message": "Search instances"
-  },
-  "app.lab.schematic-preview.instance-picker.select-instance": {
-    "message": "Browse schematics in {name}"
-  },
-  "app.lab.schematic-preview.instance-picker.title": {
-    "message": "Open from an instance"
-  },
-  "app.lab.schematic-preview.layers.all": {
-    "message": "All"
-  },
-  "app.lab.schematic-preview.layers.maximum": {
-    "message": "Maximum layer"
-  },
-  "app.lab.schematic-preview.layers.minimum": {
-    "message": "Minimum layer"
-  },
-  "app.lab.schematic-preview.layers.next": {
-    "message": "Next layer"
-  },
-  "app.lab.schematic-preview.layers.previous": {
-    "message": "Previous layer"
-  },
-  "app.lab.schematic-preview.layers.range": {
-    "message": "Range"
-  },
-  "app.lab.schematic-preview.layers.single": {
-    "message": "Single"
-  },
-  "app.lab.schematic-preview.layers.spacing": {
-    "message": "Layer spacing"
-  },
-  "app.lab.schematic-preview.layers.visible": {
-    "message": "Y {current} · {visible}/{total} layers"
-  },
-  "app.lab.schematic-preview.loading.mesh": {
-    "message": "Generating models"
-  },
-  "app.lab.schematic-preview.loading.parse": {
-    "message": "Parsing schematic"
-  },
-  "app.lab.schematic-preview.loading.resources": {
-    "message": "Reading resources"
-  },
-  "app.lab.schematic-preview.materials-csv": {
-    "message": "Export material CSV"
-  },
-  "app.lab.schematic-preview.materials-json": {
-    "message": "Export material JSON"
-  },
-  "app.lab.schematic-preview.materials.empty": {
-    "message": "No matching materials"
-  },
-  "app.lab.schematic-preview.materials.search": {
-    "message": "Search materials"
-  },
-  "app.lab.schematic-preview.materials.select-all": {
-    "message": "Select all"
-  },
-  "app.lab.schematic-preview.materials.use-replace": {
-    "message": "Use for replace"
-  },
-  "app.lab.schematic-preview.measure": {
-    "message": "Measure"
-  },
-  "app.lab.schematic-preview.measure.clear": {
-    "message": "Clear measurement"
-  },
-  "app.lab.schematic-preview.measure.distance": {
-    "message": "Distance"
-  },
-  "app.lab.schematic-preview.measure.end": {
-    "message": "End"
-  },
-  "app.lab.schematic-preview.measure.size": {
-    "message": "Block span"
-  },
-  "app.lab.schematic-preview.measure.start": {
-    "message": "Start"
-  },
-  "app.lab.schematic-preview.metadata": {
-    "message": "Metadata"
-  },
-  "app.lab.schematic-preview.missing-file": {
-    "message": "File does not exist"
-  },
-  "app.lab.schematic-preview.missing-models": {
-    "message": "{count} block models use the missing-texture fallback."
-  },
-  "app.lab.schematic-preview.more-actions": {
-    "message": "More actions"
-  },
-  "app.lab.schematic-preview.open": {
-    "message": "Open"
-  },
-  "app.lab.schematic-preview.open-file": {
-    "message": "Open file"
-  },
-  "app.lab.schematic-preview.orbit-view": {
-    "message": "Orbit view"
-  },
-  "app.lab.schematic-preview.projection": {
-    "message": "Switch camera projection"
-  },
-  "app.lab.schematic-preview.recent": {
-    "message": "Recent schematics"
-  },
-  "app.lab.schematic-preview.regions": {
-    "message": "Regions"
-  },
-  "app.lab.schematic-preview.reload": {
-    "message": "Reload"
-  },
-  "app.lab.schematic-preview.remove-recent": {
-    "message": "Remove from recent"
-  },
-  "app.lab.schematic-preview.reset-view": {
-    "message": "Reset view"
-  },
-  "app.lab.schematic-preview.screenshot": {
-    "message": "Export PNG"
-  },
-  "app.lab.schematic-preview.seamless-glass": {
-    "message": "Seamless glass"
-  },
-  "app.lab.schematic-preview.selected-block": {
-    "message": "Selected block"
-  },
-  "app.lab.schematic-preview.selection.box": {
-    "message": "Area select"
-  },
-  "app.lab.schematic-preview.selection.box-pending": {
-    "message": "Choose the opposite corner"
-  },
-  "app.lab.schematic-preview.selection.clear": {
-    "message": "Clear selection"
-  },
-  "app.lab.schematic-preview.selection.connected": {
-    "message": "Connected"
-  },
-  "app.lab.schematic-preview.selection.count": {
-    "message": "{count} selected"
-  },
-  "app.lab.schematic-preview.selection.layer": {
-    "message": "Same layer"
-  },
-  "app.lab.schematic-preview.selection.material": {
-    "message": "Same material"
-  },
-  "app.lab.schematic-preview.selection.single": {
-    "message": "Select"
-  },
-  "app.lab.schematic-preview.tab.edit": {
-    "message": "Edit"
-  },
-  "app.lab.schematic-preview.tab.layers": {
-    "message": "Layers"
-  },
-  "app.lab.schematic-preview.tab.materials": {
-    "message": "Materials"
-  },
-  "app.lab.schematic-preview.tab.structure": {
-    "message": "Structure"
-  },
-  "app.lab.schematic-preview.title": {
-    "message": "Schematic workshop"
-  },
-  "app.lab.schematic-preview.tools": {
-    "message": "Workspace tools"
-  },
-  "app.lab.schematic-preview.transform": {
-    "message": "Transform"
-  },
-  "app.lab.schematic-preview.transform.mirror-x": {
-    "message": "Mirror X"
-  },
-  "app.lab.schematic-preview.transform.mirror-z": {
-    "message": "Mirror Z"
-  },
-  "app.lab.schematic-preview.transform.rotate-clockwise": {
-    "message": "Rotate clockwise"
-  },
-  "app.lab.schematic-preview.transform.rotate-counter-clockwise": {
-    "message": "Rotate counterclockwise"
-  },
-  "app.lab.schematic-preview.translucent": {
-    "message": "Show transparent blocks"
-  },
-  "app.lab.schematic-preview.version-mismatch": {
-    "message": "The selected resource instance may not match this schematic version."
-  },
-  "app.lab.schematic-preview.visibility": {
-    "message": "Visibility"
-  },
-  "app.lab.schematic-preview.visibility.hide": {
-    "message": "Hide selected"
-  },
-  "app.lab.schematic-preview.visibility.isolate": {
-    "message": "Only selected"
-  },
-  "app.lab.schematic-preview.visibility.show-all": {
-    "message": "Show all"
-  },
-  "app.lab.schematic-preview.walk-view": {
-    "message": "Walk view"
-  },
-  "app.lab.schematic-preview.walk-preview": {
-    "message": "Read-only walk preview"
-  },
-  "app.lab.schematic-preview.walk-speed": {
-    "message": "Speed {speed} · Scroll to adjust"
-  },
-  "app.lab.schematic-preview.warnings": {
-    "message": "Warnings"
-  },
-  "app.lab.schematic-preview.webgl-lost": {
-    "message": "The WebGL context was lost. Rendering will resume when it is restored."
-  },
-  "app.onboarding.action.open-schematic-workshop": {
-    "message": "Open Schematic workshop to continue"
-  },
-  "app.onboarding.lab-schematic.description": {
-    "message": "Open a local .litematic or .schem file, or choose one from an installed instance. The 3D workspace keeps viewing, measurement, layer controls, materials, and local edits together."
-  },
-  "app.onboarding.lab-schematic.title": {
-    "message": "Inspect a build before placing it"
-  },
-  "instance.files.open-in-schematic-workshop": {
-    "message": "Open in schematic workshop"
   }
 }

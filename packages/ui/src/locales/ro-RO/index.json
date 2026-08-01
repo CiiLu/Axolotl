@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Nu ai permisiune."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Creează un link de afiliere"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Se creează un nou cod de afiliat"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Dă-i un nume linkului tău de afiliere, ca să știi de unde vin oamenii!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Titlul linkului de afiliere"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "de exemplu, YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Numele de utilizator al utilizatorului pentru care se creează codul de afiliere"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Introdu numele de utilizator..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Creat de {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Se creează link-ul de afiliere..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Revocare link de afiliere"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Vizualizați analizele"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "A eșuat încărcarea setărilor de server"
   },
@@ -292,18 +259,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Încarcă o imagine"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Acum"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "Aplicație"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Găzduire"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Platformă"
   },
   "collections.label.private": {
     "defaultMessage": "Privat"
@@ -1985,72 +1940,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {descărcare} other {descărcări}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Necesar atât pe client, cât și pe server."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Client și server, necesare pe ambele"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "Majoritatea funcționalităților sunt pe partea clientului, dar instalarea pe server permite funcționalități îmbunătățite."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Client și server, opțional pe server"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Toate funcționalitățile sunt realizate pe partea clientului și sunt compatibile cu serverele vanilla."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Doar pe client"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Are unele funcționalități atât pe client, cât și pe server, chiar dacă doar parțial. Instalarea pe ambele dispozitive asigură cea mai bună experiență."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Client si server, cel mai bine când este instalat pe ambele"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Are unele funcționalități atât pe client, cât și pe server, chiar dacă doar parțial."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Client și server, opțional pe ambele"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Toate funcționalitățile sunt realizate pe partea de server și sunt compatibile cu clienții vanilla. Funcționează numai pe servere dedicate."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Doar pe server"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "Majoritatea funcționalităților sunt pe partea de server, dar instalarea pe client permite funcționalități îmbunătățite."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Client si server, opțional pe client"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Toate funcționalitățile sunt realizate pe server și sunt compatibile cu clienții vanilla. Funcționează și pe serverul intern în modul singleplayer."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Doar pe partea de server, funcționează și în modul singleplayer"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Funcționează doar în modul Single player sau când nu este conectat la un server Multiplayer."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Doar single player"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "N/A"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Necunoscut"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Mediul pentru această versiune nu a putut fi determinat."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Mediu necunoscut"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {urmăritor} other {urmăritori}}"
   },
@@ -2189,89 +2078,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Descriere"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Are o anumită funcționalitate atât pe client, cât și pe server, chiar dacă doar parțial."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Opțional pentru ambele părți, funcționează la fel dacă este instalat pe oricare dintre ele"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Opțional pentru ambele părți, funcționează cel mai bine atunci când este instalat pe ambele"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Opțional pe client"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Opțional pe server"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Necesar în ambele"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Client și server"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Toată funcționalitatea este realizată pe partea de client și este compatibilă cu serverele vanilla."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Doar pe partea de client"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Proiectul dvs. nu conține metadate de mediu. Vă rugăm să selectați opțiunea corespunzătoare de mai jos."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Selectați un mediu pentru proiectul dvs"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Diferitele versiuni ale proiectului dvs. au medii selectate diferite, astfel încât nu le puteți edita global în acest moment."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Proiectul tău are mai multe environment-uri"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Tocmai am revizuit sistemul Environments pe Modrinth și acum sunt disponibile noi opțiuni. Asigurați-vă că ați selectat opțiunea corectă mai jos și apoi faceți clic pe „Verificați” când ați terminat!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Vă rugăm să examinați opțiunile de mai jos"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Numai proiectele mod sau modpack pot avea metadate de mediu."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Acest tip de proiect nu acceptă metadatele de mediu"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Doar servere dedicate"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Toată funcționalitatea este realizată pe partea de server și este compatibilă cu clienții vanilla."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Funcționează și pe singleplayer"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Doar pe partea de server"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Funcționează doar pe singleplayer când nu ești conectat pe un server multiplayer."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Doar singleplayer"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Sub-opțiuni ale {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Mediu"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Verifică"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Verificați dacă mediul acestui proiect este setat corect."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galerie"

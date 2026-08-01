@@ -1,37 +1,4 @@
 {
-  "affiliate.create.button": {
-    "defaultMessage": "Opret affiliate link"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Opretter et nyt affiliate kode"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Giv dit affiliate link et navn så du ved hvor folk kommer fra!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Title af affiliate link"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "f.eks. YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Brugernavnet af brugeren for at lave en affiliate kode til"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Indtast brugernavn..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Lavet af {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Opretter affiliate link..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Fjern affiliate link"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Se analyser"
-  },
   "badge.beta": {
     "defaultMessage": "Beta"
   },
@@ -148,15 +115,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Upload billede"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Lige nu"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "App"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosting"
   },
   "collections.label.private": {
     "defaultMessage": "Privat"
@@ -812,143 +770,14 @@
   "project.about.links.wiki": {
     "defaultMessage": "Besøg wiki"
   },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Klient og server, krav på begge"
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Klient og server, valgfri på server"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Al' funktionalitet er lavet på klienten og er kompatibel med vanilla servere."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Klient-sided kun"
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Klient og server, bedst når installeret på begge"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Har noget funktionalitet på både klienten og serveren, også selvom det kun er lidt."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Klient og server, valgfri på begge"
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Server-sided kun"
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Klient og server, valgfri på klient"
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Server-sided kun, virker i singleplayer også"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Fungere kun i Singleplayer eller når du ikke er tilstluttet til en Mulitplayer server."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Singleplayer kun"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "N/A"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Ukendt"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Miljøet for denne version kunne ikke bestemmes."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Ukendt miljø"
-  },
   "project.settings.analytics.title": {
     "defaultMessage": "Analytics"
   },
   "project.settings.description.title": {
     "defaultMessage": "Beskrivelse"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Har noget funktionalitet på både klienten og serveren, også selvom det kun er lidt."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Valgfrit på begge, virker på samme måde hvis installeret på enten den ene eller den anden side"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Valgfrit på begge, virker bedst hvis den er installeret på begge sider"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Valgfrit på klient"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Valgfrit på server"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Kræves på begge"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Klient og server"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Al' funktionalitet er lavet på klienten og er kompatibel med vanilla servere."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Klient-sided kun"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Dit projekt mangler miljø metadata, venligst vælg de relevante muligheder nedenfor."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Venligst vælg et miljø til dit projekt"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Forskellige versioner af dit projekt har forskellige miljøer valgt, du kan ikke redigere dem globalt lige nu."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Dit projekt har flere miløjer"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Vi har ændret miljø systemet på Modrinth og nye muligheder er nu tilgængelige. Venligst sikre den korrekte mulighed er valgt nedenunder og så klik \"Bekræft\" og så du færdig!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Venligst gennemse mulighederne nedenunder"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Kun mod eller modpack projekter kan have miljø metadata."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Denne projekt type understøtter ikke miljø metadata"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Dedikeret server kun"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Al' funktionalitet er lavet på serveren og er kompatibel med vanilla klienter."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Virker i singleplayer også"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Server-sided kun"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Fungere kun i Singleplayer eller når du ikke er tilstluttet til en Mulitplayer server."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Singleplayer kun"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Undermuligheder af {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Miljø"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Bekræft"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Bekræft at dette projekts miljøer er sat korrekt."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galleri"
@@ -1308,4 +1137,3 @@
     "defaultMessage": "Vanilla Shader"
   }
 }
-

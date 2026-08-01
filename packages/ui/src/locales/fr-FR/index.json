@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Vous n'avez pas la permission."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Créer un lien affilié"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Création d'un nouveau code d'affiliation"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Donnez un nom au lien d'affiliation pour s'avoir d'où les gens viennent !"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Titre du lien affilié"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "par exemple, YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Pseudo de l'utilisateur à qui est destiné le code d'affiliation"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Entrez un pseudo..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Créé par {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Création du lien en cours..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Révoquer un lien d'affiliation"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Voir les statistiques"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Impossible de charger les paramètres du serveur"
   },
@@ -304,18 +271,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Importer une image"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "À l'instant"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "App"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hébergement "
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Plateforme"
   },
   "collections.label.private": {
     "defaultMessage": "Privé"
@@ -817,147 +772,6 @@
   },
   "creation-flow.title.set-up-server": {
     "defaultMessage": "Mettre le serveur en place"
-  },
-  "external-files.permissions-card.add-files-modal.confirm": {
-    "defaultMessage": "{count, plural,one {Ajouter un fichier}other {Ajouter des fichiers}}"
-  },
-  "external-files.permissions-card.add-files-modal.description": {
-    "defaultMessage": "Sélectionnez tous les fichiers qui peuvent être déplacées vers ce groupe."
-  },
-  "external-files.permissions-card.add-files-modal.empty": {
-    "defaultMessage": "Il n'y a pas de fichiers dans les autres groupes qui peuvent être déplacées ici."
-  },
-  "external-files.permissions-card.add-files-modal.load-error.title": {
-    "defaultMessage": "Impossible de charger les fichiers"
-  },
-  "external-files.permissions-card.add-files-modal.no-search-results": {
-    "defaultMessage": "Aucun fichier ne correspond à votre recherche."
-  },
-  "external-files.permissions-card.add-files-modal.search-placeholder": {
-    "defaultMessage": "Recherche des fichiers…"
-  },
-  "external-files.permissions-card.add-files-modal.selected-count": {
-    "defaultMessage": "{count, plural,one {# fichier séléctionné}other {# fichiers séléctionnés}}"
-  },
-  "external-files.permissions-card.add-files-modal.title": {
-    "defaultMessage": "Ajouter des fichiers à ce groupe"
-  },
-  "external-files.permissions-card.add-files-to-group": {
-    "defaultMessage": "Ajouter des fichiers..."
-  },
-  "external-files.permissions-card.assign-files-error.title": {
-    "defaultMessage": "Impossible d'ajouter des fichiers"
-  },
-  "external-files.permissions-card.attribution.moderation-status.content-not-allowed": {
-    "defaultMessage": "Contenu non autorisé"
-  },
-  "external-files.permissions-card.attribution.moderation-status.passed": {
-    "defaultMessage": "Passé"
-  },
-  "external-files.permissions-card.attribution.moderation-status.rejected-proof": {
-    "defaultMessage": "Preuve rejetée"
-  },
-  "external-files.permissions-card.badge.attributed": {
-    "defaultMessage": "Complété"
-  },
-  "external-files.permissions-card.badge.no-permission": {
-    "defaultMessage": "Aucune Permission"
-  },
-  "external-files.permissions-card.badge.not-allowed": {
-    "defaultMessage": "Non autorisée"
-  },
-  "external-files.permissions-card.badge.pending": {
-    "defaultMessage": "En attente"
-  },
-  "external-files.permissions-card.badge.proof-rejected": {
-    "defaultMessage": "Information rejetée"
-  },
-  "external-files.permissions-card.custom-license-option": {
-    "defaultMessage": "Autre"
-  },
-  "external-files.permissions-card.editor.add": {
-    "defaultMessage": "Ajouter une attribution"
-  },
-  "external-files.permissions-card.editor.all-rights-reserved": {
-    "defaultMessage": "Tout Droits Réservées/Pas de licence"
-  },
-  "external-files.permissions-card.editor.custom-license-label": {
-    "defaultMessage": "Lien vers la licence"
-  },
-  "external-files.permissions-card.editor.custom-license-my-project-label": {
-    "defaultMessage": "Nom de la licence, de préférence un identificateur SPDX"
-  },
-  "external-files.permissions-card.editor.error.license-required": {
-    "defaultMessage": "Merci de sélectionner une licence."
-  },
-  "external-files.permissions-card.editor.error.link-invalid-url": {
-    "defaultMessage": "Le lien doit être un URL valide."
-  },
-  "external-files.permissions-card.editor.example-spdx-license": {
-    "defaultMessage": "e.g. MPL-1.1"
-  },
-  "external-files.permissions-card.editor.input-optional": {
-    "defaultMessage": "(optionnel)"
-  },
-  "external-files.permissions-card.editor.license-label": {
-    "defaultMessage": "Licence"
-  },
-  "external-files.permissions-card.editor.link-label": {
-    "defaultMessage": "Lien vers le travail"
-  },
-  "external-files.permissions-card.editor.link-to-license-url-placeholder": {
-    "defaultMessage": "lien-vers-la-licence"
-  },
-  "external-files.permissions-card.editor.link-to-work-url-placeholder": {
-    "defaultMessage": "lien-vers-le-travail"
-  },
-  "external-files.permissions-card.editor.modrinth-link-to-work": {
-    "defaultMessage": "Cela semble être un lien Modrinth. Si ce contenu est disponible sur Modrinth, votre pack n'a pas été exporté correctement. Si vous avez téléchargée ceci d'un autre site, essayez d'installer la version de Modrinth à la place, dès-fois ce ne sont pas des fichiers identiques."
-  },
-  "external-files.permissions-card.editor.notes-label": {
-    "defaultMessage": "Notes"
-  },
-  "external-files.permissions-card.editor.notes-placeholder": {
-    "defaultMessage": "Écrivez quelque chose ici..."
-  },
-  "external-files.permissions-card.editor.proof-image-alt": {
-    "defaultMessage": "Capture d'écran de preuve {n}"
-  },
-  "external-files.permissions-card.editor.proof-image-remove": {
-    "defaultMessage": "Retirer l'image"
-  },
-  "external-files.permissions-card.editor.proof-images-label": {
-    "defaultMessage": "Preuve d'images"
-  },
-  "external-files.permissions-card.editor.proof-images-upload-prompt": {
-    "defaultMessage": "Glissez et déposez pour importer ou cliquez pour sélectionner une image"
-  },
-  "external-files.permissions-card.editor.proof-warning.body": {
-    "defaultMessage": "Si vous avez menti ou manipulé les images téléchargées, votre projet et votre compte peuvent être résiliés."
-  },
-  "external-files.permissions-card.error.proof-image-invalid-type": {
-    "defaultMessage": "Veuillez importer une image au format PNG, JPEG, GIF, WebP, ou BMP."
-  },
-  "external-files.permissions-card.file-count": {
-    "defaultMessage": "{count, plural, one {# fichier} other {# fichiers}}"
-  },
-  "external-files.permissions-card.included-in-versions": {
-    "defaultMessage": "Inclus dans {count, plural, one {# version} other {# versions}} :"
-  },
-  "external-files.permissions-card.last-updated": {
-    "defaultMessage": "Dernière modification le {date} par {user}"
-  },
-  "external-files.permissions-card.license.unknown": {
-    "defaultMessage": "Inconnu"
-  },
-  "external-files.permissions-card.reason.special-permission": {
-    "defaultMessage": "Autorisation spéciale"
-  },
-  "external-files.permissions-card.unnamed-multi-group-title": {
-    "defaultMessage": "{filename} + {count} de plus"
-  },
-  "external-files.permissions-card.updated-by-moderator": {
-    "defaultMessage": "Modérateur"
   },
   "external-project-license-status.no": {
     "defaultMessage": "Non"
@@ -2792,72 +2606,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {téléchargement} other {téléchargements}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Requis sur le client et le serveur."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Client et serveur, requis sur les deux"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "La plupart des fonctionnalités sont côté client, mais son installation sur le serveur permet une fonctionnalité améliorée."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Client et serveur, facultatif sur le serveur"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Toutes les fonctionnalités sont côté client et sont compatibles avec les serveurs vanilla."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Client uniquement"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Possède certaines fonctionnalités côté client et serveur, même si ce n'est que partiellement. L'installer sur les deux conduit à la meilleure expérience."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Client et serveur, préférablement installé sur les deux"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Possède certaines fonctionnalités côté client et serveur, même si ce n'est que partiellement."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Client et serveur, facultatif sur les deux"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Toutes les fonctionnalités sont effectuées côté serveur et sont compatibles avec les clients vanille. Ne fonctionne que sur des serveurs dédiés."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Serveur uniquement"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "La plupart des fonctionnalités sont côté serveur, mais son installation sur le client permet des fonctionnalités améliorées."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Client et serveur, facultatif sur le client"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Toutes les fonctionnalités sont effectuées côté serveur et sont compatibles avec les clients vanille. Fonctionne également sur le serveur interne en solo."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Uniquement côté serveur, fonctionne également en mode solo"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Fonctionne uniquement en mode solo ou lorsque l'on est pas connecté à un serveur multijoueur."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Solo uniquement "
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "S. O."
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Inconnu"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "L'environnement de cette version ne peut pas être déterminé."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Environnement inconnu"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {adore} other {adorent}}"
   },
@@ -3143,89 +2891,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Description"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Dispose de certaines fonctionnalités à la fois côté client et côté serveur, même si ce n'est que partiellement."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Optionnel sur les deux, fonctionne pareil si installé d'un côté ou de l'autre"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Optionnel sur les deux, fonctionne mieux lorsqu'il est installé des deux côtés"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Optionnel côté client"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Optionnel côté serveur"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Requis partout"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Client et serveur"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Toutes les fonctionnalités sont côté client et sont compatibles avec les serveurs vanilla."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Côté client uniquement"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Votre projet manque de métadonnées d’environnement, veuillez sélectionner l’option appropriée ci-dessous."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Merci de sélectionner un environnement pour votre projet"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Les différentes versions de votre projet ont des environnements différents sélectionnés, vous ne pouvez donc pas les modifier globalement pour le moment."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Votre projet a plusieurs environnements"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Nous venons de mettre à jour le système d'environnements de Modrinth et de nouvelles options sont disponibles. Veuillez sélectionner l'option appropriée ci-dessous, puis cliquez sur « Vérifier » une fois terminé !"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Merci de revérifier l'option ci-dessous"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Seulement les projets mod ou modpack peuvent avoir des métadonnées d'environnement."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Ce type de projet ne supporte pas les métadonnées d'environnement"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Serveur dédié uniquement"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Tout est fait côté serveur et est compatible avec un client vanilla."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Fonctionne en solo aussi"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Côté serveur uniquement"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Fonctionne seulement en solo ou quand non connecté à un serveur multijoueur."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Solo uniquement"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Sous-options de {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Environnement"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Vérifier"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Vérifiez que l'environnement de ce projet est correctement configuré."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galerie"
@@ -3325,9 +2992,6 @@
   },
   "report.item-type.version": {
     "defaultMessage": "version"
-  },
-  "s.bg": {
-    "defaultMessage": "Tâche d'arrière-plan en exécution"
   },
   "search.filter.locked.default": {
     "defaultMessage": "Filtre bloqué"

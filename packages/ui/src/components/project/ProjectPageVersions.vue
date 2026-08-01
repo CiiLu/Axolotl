@@ -465,7 +465,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRelativeTime } from '../../composables'
 import { defineMessages, useVIntl } from '../../composables/i18n'
 import { formatTag } from '../../utils/tag-messages'
-import { getEnvironmentTags } from './settings/environment/environments'
+import { getEnvironmentTags } from './environments'
 
 const { formatMessage } = useVIntl()
 const formatRelativeTime = useRelativeTime({ style: 'narrow' })

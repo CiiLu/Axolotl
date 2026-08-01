@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Du har inte behörighet."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Skapa affiliatelänk"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Skapar ny affiliatelänk"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Ge din affiliatelänk ett namn så du vet var personerna kommer ifrån!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Affiliatelänkens titel"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "t.ex. YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Användarnamnet av användaren som affiliatelänken skapas för"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Ange användarnamn..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Skapad av {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Skapar affiliatelänk..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Upphäv affiliatelänk"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Visa statistik"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Kunde inte ladda in server inställningar"
   },
@@ -301,18 +268,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Ladda upp bild"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Just nu"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "App"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosting"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Plattform"
   },
   "collections.label.private": {
     "defaultMessage": "Privat"
@@ -2243,72 +2198,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {nedladdning} other {nedladdningar}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Behövs både på klienten och servern."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Klient och server, krävs på båda"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "Mest av funktionaliteten är på klientens sida, men om man installerar den på servern kan det förbättra funktionaliteten."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Klient och server, frivilligt på servern"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "All funktionalitet görs på klienten och är kompatibel med vanilla servrar."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Klient endast"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Har lite funktionalitet på både klienten och servern, även om det bara är delvis. Man kan ha en bättre upplevelse om man installerar det på båda."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Klient och server, bäst när installerat på båda"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Har någon funktionalitet på både klienten och servern, även om bara delvis."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Klient och server, frivilligt på båda"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "All funktionalitet är på serverns sida och är kompatibel med vanilla-klienter. Fungerar bara på hängivna servrar."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Server endast"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "Mest av funktionaliteten är på serverns sida, men om man installerar den på klienten kan det förbättra funktionaliteten."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Klient och server, frivilligt på klienten"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "All funktionalitet är på serverns sida och är kompatibel med vanilla-klienter. Fungerar också på den inre servern som finns i enspelarläget."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Endast server-sida, fungerar även i singleplayer"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Fungerar bara i Enspelarläge eller när du inte är ansluten till en Flerspelarserver."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Enspelarläge endast"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "Finns ej"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Okänt"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Miljön för denna version kunde inte bestämmas."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Okänd miljö"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} följare"
   },
@@ -2594,89 +2483,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Beskrivning"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Har någon funktionalitet på både klienten och servern, även om bara delvis."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Frivillig på båda sidor, fungerar lika om den installeras på vardera sida"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Frivillig på båda sidor, fungerar bäst om den installeras på båda sidor"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Frivillig på klient"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Frivillig på server"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Obligatorisk på båda"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Klient och server"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "All funktionalitet görs på klienten och är kompatibel med vanilla servrar."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Klient endast"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Ditt projekt saknar miljömetadata, vänligen välj den passande inställningen nedan."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Vänligen välj en miljö för ditt projekt"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Olika versioner av ditt projekt har olika miljöer valda, så du kan inte redigera dem globalt just nu."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Ditt projekt har flera miljöer"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Vi har just förbättrat Miljösystemet på Modrinth och nya val finns nu. Vänligen kontrollera att rätt val är vald nedanför och sen klicka på 'Verifiera' när du är klar!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Granska valen nedan"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Endast mod- eller modpaketprojekt kan ha miljödata."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Denna projekttyp stöder inte miljömetadata"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Dedikerad server endast"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "All funktionalitet görs på servern och är kompatibel med vanilla klienter."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Fungerar även i enspelarläge"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Server endast"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Fungerar bara i Enspelarläge eller när du inte är ansluten till en Flerspelarserver."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Enspelarläge endast"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Underalternativ av {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Miljö"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Verifiera"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Verifiera att detta projektets miljö är korrekt."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galleri"

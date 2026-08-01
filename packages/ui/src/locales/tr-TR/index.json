@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Bu işlemi yapma izniniz yok."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Ortaklık bağlantısı oluştur"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Yeni ortaklık kodu oluşturuluyor"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Ortaklık bağlantına bir isim ver, böylece insanların nereden geldiğini bilirsin!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Ortaklık bağlantısının başlığı"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "ör. Youtube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Ortaklık kodunu oluşturacak kullanıcının kullanıcı adı"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Kullanıcı adı giriniz..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "{user} tarafından oluşturuldu"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Ortaklık bağlantısı oluşturuluyor..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Ortaklık bağlantısını iptal et"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Verileri görüntüle"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Sunucu ayarları yüklenemedi"
   },
@@ -301,18 +268,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Görsel yükle"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Şimdi"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "Uygulama"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosting"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Platform"
   },
   "collections.label.private": {
     "defaultMessage": "Gizli"
@@ -772,162 +727,6 @@
   },
   "creation-flow.title.set-up-server": {
     "defaultMessage": "Sunucu kurun"
-  },
-  "external-files.permissions-card.add-files-modal.load-error.title": {
-    "defaultMessage": "Dosyalar yüklenemedi"
-  },
-  "external-files.permissions-card.add-files-modal.no-search-results": {
-    "defaultMessage": "Aradığın sonuçla ilgili bir dosya yok."
-  },
-  "external-files.permissions-card.add-files-modal.search-placeholder": {
-    "defaultMessage": "Dosya ara…"
-  },
-  "external-files.permissions-card.add-files-to-group": {
-    "defaultMessage": "Dosya ekle..."
-  },
-  "external-files.permissions-card.assign-files-error.title": {
-    "defaultMessage": "Dosyalar eklenemedi"
-  },
-  "external-files.permissions-card.attribution.moderation-status.content-not-allowed": {
-    "defaultMessage": "İçerik izin verilmedi"
-  },
-  "external-files.permissions-card.attribution.moderation-status.rejected-proof": {
-    "defaultMessage": "Kanıt reddedildi"
-  },
-  "external-files.permissions-card.badge.attributed": {
-    "defaultMessage": "Tamamlananlar"
-  },
-  "external-files.permissions-card.badge.no-permission": {
-    "defaultMessage": "İzin yok"
-  },
-  "external-files.permissions-card.badge.pending": {
-    "defaultMessage": "Beklenenler"
-  },
-  "external-files.permissions-card.custom-license-option": {
-    "defaultMessage": "Diğer"
-  },
-  "external-files.permissions-card.editor.all-rights-reserved": {
-    "defaultMessage": "Tüm hakları saklıdır/Lisans verilmemiştir"
-  },
-  "external-files.permissions-card.editor.license-label": {
-    "defaultMessage": "Lisans"
-  },
-  "external-files.permissions-card.editor.notes-label": {
-    "defaultMessage": "Notlar"
-  },
-  "external-files.permissions-card.editor.proof-warning.body": {
-    "defaultMessage": "Eğer ki yüklediğin fotoğraflarla yalan söylediğin veya manipüle edildiğin tespit edilirse, projen veya hesabın devre dışı bırakılabilir."
-  },
-  "external-files.permissions-card.editor.proof-warning.title": {
-    "defaultMessage": "Modrinth çalışanları senin kanıtını doğrulayabilir"
-  },
-  "external-files.permissions-card.editor.save": {
-    "defaultMessage": "Kaynak gösterme bilgisini sakla"
-  },
-  "external-files.permissions-card.editor.select-license-label": {
-    "defaultMessage": "Lisans Seçiniz..."
-  },
-  "external-files.permissions-card.editor.type-label": {
-    "defaultMessage": "İzin sebebi"
-  },
-  "external-files.permissions-card.error.custom-license-required": {
-    "defaultMessage": "Lütfen lisansınızda bir linke yer verin. Eğer yoksa, Tüm haklar saklıdır/Lisans yoktur seçeneğini seçmelisiniz"
-  },
-  "external-files.permissions-card.error.explanation-or-images-required": {
-    "defaultMessage": "Lütfen bir açıklama sağlayın veya bir kanıt fotoğrafı yükleyin."
-  },
-  "external-files.permissions-card.error.link-required": {
-    "defaultMessage": "Lütfen bir bağlantı sağlayın."
-  },
-  "external-files.permissions-card.error.notes-or-images-required": {
-    "defaultMessage": "Lütfen bir not sağlayın veya bir kanıt fotoğrafı yükleyin."
-  },
-  "external-files.permissions-card.error.proof-image-invalid-type": {
-    "defaultMessage": "Lütfen bir PNG, JPEG, GIF, WebP, or BMP fotoğrafı yükleyin."
-  },
-  "external-files.permissions-card.error.proof-images-required": {
-    "defaultMessage": "Lütfen en az bir kanıt fotoğrafı yükleyin."
-  },
-  "external-files.permissions-card.explanation-description": {
-    "defaultMessage": "Kısa bir açıklama veya kanıt fotoğrafları gerekli."
-  },
-  "external-files.permissions-card.explanation-label": {
-    "defaultMessage": "Açıklama"
-  },
-  "external-files.permissions-card.fallback-group-title": {
-    "defaultMessage": "Kaynak gösterme grubu {id}"
-  },
-  "external-files.permissions-card.included-files": {
-    "defaultMessage": "Dahil edilen dosyalar:"
-  },
-  "external-files.permissions-card.last-updated": {
-    "defaultMessage": "En son {date} {user} tarafından güncellendi"
-  },
-  "external-files.permissions-card.license.unknown": {
-    "defaultMessage": "Bilinmeyen"
-  },
-  "external-files.permissions-card.licensed-as": {
-    "defaultMessage": "Lisanslı:"
-  },
-  "external-files.permissions-card.link-label": {
-    "defaultMessage": "Çalışması için bağlantı:"
-  },
-  "external-files.permissions-card.moderation-reason": {
-    "defaultMessage": "Sebep"
-  },
-  "external-files.permissions-card.moderation.error.title": {
-    "defaultMessage": "Moderasyon incelemesi kaydedilemedi"
-  },
-  "external-files.permissions-card.not-used-in-versions": {
-    "defaultMessage": "Bu dosyalar şuanda hiçbir versiyon tarafından kullanılmıyor."
-  },
-  "external-files.permissions-card.notes-label": {
-    "defaultMessage": "Notlar:"
-  },
-  "external-files.permissions-card.notes-none": {
-    "defaultMessage": "Hiçbiri"
-  },
-  "external-files.permissions-card.original-project-page": {
-    "defaultMessage": "Orijinal proje"
-  },
-  "external-files.permissions-card.proof-image-alt": {
-    "defaultMessage": "Kanıt ekran görüntüsü {n}"
-  },
-  "external-files.permissions-card.proof-images-label": {
-    "defaultMessage": "Kanıt fotoğrafları:"
-  },
-  "external-files.permissions-card.reason.globally-allowed": {
-    "defaultMessage": "Otomatik olarak kaynak gösterildi"
-  },
-  "external-files.permissions-card.reason.globally-allowed.description": {
-    "defaultMessage": "Bu dosyayı daha önce gördük ve sizin için bir kaynak gösterdik. Bir şey yanlış görünürse, lütfen Modrinth Desteğinden üzerinden Yardım Merkezine ulaşın"
-  },
-  "external-files.permissions-card.reason.license": {
-    "defaultMessage": "Lisans"
-  },
-  "external-files.permissions-card.reason.license.proof-images-description": {
-    "defaultMessage": "Lisansla alakalı destekleyici döküman yükleyin."
-  },
-  "external-files.permissions-card.reason.my-project": {
-    "defaultMessage": "Projem"
-  },
-  "external-files.permissions-card.reason.my-project.description": {
-    "defaultMessage": "Orijinal iş senin tarafından yapıldı."
-  },
-  "external-files.permissions-card.reason.no-permission": {
-    "defaultMessage": "Yetki yok"
-  },
-  "external-files.permissions-card.reason.no-permission.automatic.description": {
-    "defaultMessage": "Bu dosyayı daha önce gördük ve lisansı normal olarak yeniden dağıtıma izin vermez."
-  },
-  "external-files.permissions-card.reason.no-permission.description": {
-    "defaultMessage": "Senin bu işi kullanmaya yetkin yok."
-  },
-  "external-files.permissions-card.reason.special-permission": {
-    "defaultMessage": "Özel yetki"
-  },
-  "external-files.permissions-card.updated-by-moderator": {
-    "defaultMessage": "Moderatör"
   },
   "external-project-license-status.no": {
     "defaultMessage": "Hayır"
@@ -2765,72 +2564,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} indirme"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Hem istemci hem de sunucu tarafında gereklidir."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "İstemci ve sunucu, ikisinde de gerekli"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "İşlevlerin çoğu istemci tarafındadır, ancak sunucuya yüklemek gelişmiş özellikleri etkinleştirir."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "İstemci ve sunucu, sunucuda tercihe bağlı"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Tüm işlevler istemci tarafında gerçekleştirilir ve vanilla sunucularla uyumludur."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Sadece istemci taraflı"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Hem istemci hem de sunucuda kısmi de olsa bazı işlevlere sahiptir. Her iki tarafa da yüklemek en iyi deneyimi sağlar."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "İstemci ve sunucu, ikisinde olması önerilir"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "İstemci ve sunucunun her ikisinde de, kısmen bile olsa, bazı işlevlere sahiptir."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "İstemci ve sunucu, ikisinde de tercihe bağlı"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Tüm işlevler sunucu tarafında gerçekleştirilir ve vanilla istemcilerle uyumludur. Sadece özel sunucularda çalışır."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Sadece sunucu taraflı"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "İşlevlerin çoğu sunucu tarafındadır, ancak istemciye yüklemek gelişmiş özellikleri etkinleştirir."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "İstemci ve sunucu, istemcide tercihe bağlı"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Tüm işlevler sunucu tarafında gerçekleşir ve vanilla istemcilerle uyumludur. Tek oyuncuda dahili sunucuda da çalışır."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Yalnız Sunucu-taraflı, tek oyunculuda da çalışır"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Sadece Tek Oyunculuda veya bir Çok Oyunculu sunucuya bağlı değilken çalışır."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Sadece Tek Oyunculu"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "N/A"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Bilinmiyor"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Bu sürüm için ortam belirlenemedi."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Bilinmeyen ortam"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} takipçi"
   },
@@ -3116,89 +2849,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Açıklama"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Hem istemci hem sunucu tarafında bazı özellikleri var."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "İkisinde de tercihe bağlı, herhangi tarafa yüklendiğinde aynı çalışır"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "İkisinde de tercihe bağlı, ikisinde de yüklü olduğunda en iyi çalışır"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "İstemcide tercihe bağlı"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Sunucuda tercihe bağlı"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "İkisinde de gerekli"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "İstemci ve sunucu"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Tüm işlevler istemci tarafında gerçekleştirilir ve vanilla sunucularla uyumludur."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Sadece İstemci taraflı"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Projeniz ortam meta verisi bulundurmuyor, lütfen aşağıdan uygun ayarı şeçin."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Lütfen projeniz için bir ortam şeçin"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Projenizin farklı sürümlerinde farklı ortamlar şeçili, yani şu an hepsini düzenleyemezsiniz."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Projenizin birden fazla ortamı var"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Daha yeni Modrinth'in Ortam sistemini tamamen yeniledik ve yeni ayarlar var. Lütfen aşağıda doğru ayarın şeçili olduğundan emin olun ve 'Doğrula' tuşuna basın!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Lütfen aşağıdaki ayarları inceleyin"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Sadece mod ve mod paketi projelerinin ortam meta verisi olabilir."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Bu proje ortam meta verisi desteklemiyor"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Sadece sunucu için"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Tüm işlevler sunucu tarafında gerçekleştirilir ve vanilla istemcilerle uyumludur."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Tek oyunculuda da çalışır"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Sadece Sunucu-Tarafı"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Sadece Tek Oyunculuda veya Çok Oyunculuya bağlı değilken çalışır."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Sadece Tek Oyunculu"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "{option} Alt Ayarları"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Ortam"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Doğrula"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Projenin ortamının doğru ayarlandığını doğrulayın."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galeri"
@@ -3289,9 +2941,6 @@
   },
   "report.item-type.version": {
     "defaultMessage": "sürüm"
-  },
-  "s.bg": {
-    "defaultMessage": "Arka plan görevi çalışıyor"
   },
   "search.filter.locked.default": {
     "defaultMessage": "Filtre kilitli"

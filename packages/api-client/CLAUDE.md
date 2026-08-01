@@ -68,7 +68,7 @@ this.client.request<MyType>('/endpoint', {
 The client is provided to the component tree via DI (see the `dependency-injection` skill). Each app creates a platform-specific client and provides it at the root:
 
 ```ts
-// apps/frontend/src/app.vue (Nuxt)
+// apps/website/src/app.vue (Nuxt)
 const client = new NuxtModrinthClient({ ... })
 provideModrinthClient(client)
 
@@ -159,7 +159,7 @@ handle.onProgress((progress) => {
 await handle.promise
 ```
 
-See `packages/ui/src/components/servers/files/upload/FileUploadDropdown.vue` and `apps/frontend/src/providers/version/manage-version-modal.ts` for real usage.
+See `packages/ui/src/components/servers/files/upload/FileUploadDropdown.vue` for real usage.
 
 ## WebSocket
 
@@ -201,7 +201,7 @@ Event types: `log`, `stats`, `power-state`, `uptime`, `backup-progress`, `instal
 client.archon.sockets.send(serverId, { event: 'command', cmd: '/say hello' })
 ```
 
-See `apps/frontend/src/pages/hosting/manage/[id].vue` for the full server panel WebSocket usage.
+See `apps/app-frontend/src/pages/hosting/manage/Index.vue` for the desktop server panel WebSocket usage.
 
 ## Adding a New API Module
 

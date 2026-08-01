@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Недостатньо прав."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Створити партнерське посилання"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Створити новий код партнера"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Дайте своєму партнерському посиланню назву, щоб ви знали, звідки люди приходять!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Заголовок партнерського посилання"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "як-от YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Ім’я користувача особи, для якої створити код партнера"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Уведіть ім’я користувача…"
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Створено {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Створення партнерського посилання…"
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Відкликати партнерське посилання"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Переглянути аналітику"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Не вдалося завантажити налаштування сервера"
   },
@@ -298,18 +265,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Завантажити зображення"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Щойно"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "App"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosting"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Платформа"
   },
   "collections.label.private": {
     "defaultMessage": "Приватно"
@@ -2564,72 +2519,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {завантаження} few {завантаження} other {завантажень}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Необхідно й на клієнті й на сервері."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Сервер та клієнт, потрібно обидва"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "Більшість функцій працює на стороні клієнта, але встановлення на сервер покращує функціональність."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Сервер та клієнт, необов’язково на сервері"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Уся функціональність виконана на клієнтському боці, та сумісна зі стандартними серверами."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Лише клієнтська сторона"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Має деякі функції як на клієнті, так і на сервері, навіть якщо вони неповні. Установлення його на обох сторонах забезпечує найкращий досвід використання."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Сервер та клієнт, краще коли встановлено на обидва"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Має трохи функціоналу на клієнті та сервері, навіть якщо лише частково."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Сервер та клієнт, обидва необов’язкові"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Уся функціональність знаходиться на стороні сервера та сумісна із ванільними клієнтами. Працює лише на виділених серверах."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Лише серверна сторона"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "Більшість функцій працює на стороні сервера, але встановлення на сторону клієнта покращує функціональність."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Сервер та клієнт, необов’язково на клієнті"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Уся функціональність знаходиться на стороні сервера та сумісна із ванільними клієнтами. Також працює лише на внутрішніх серверах у грі наодинці."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Лише серверний, також для гри наодинці"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Працює лише у грі наодинці або коли не приєднано до сервера."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Лише гра наодинці"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "Н/Д"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Невідомо"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Середовище для цієї версії не було вказано."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Невідоме середовище"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {відстежує} few {відстежують} other {відстежують}}"
   },
@@ -2915,89 +2804,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Опис"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Має деяку функціональність як на стороні клієнта, так і на стороні сервера."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Опціонально для обох, працює однаково, якщо встановлено на будь-якій стороні"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Опціонально для обох, краще працює коли встановлено на обох сторонах"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Необов’язково на клієнті"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Опціонально для сервера"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Необхідно для обох"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Клієнт та сервер"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Уся функціональність знаходиться на стороні клієнта та сумісна із не модифікованими серверами."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Лише на стороні клієнта"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "У вашого проєкту відсутні метадані середовища, будь ласка, виберіть необхідний варіант нижче."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Будь ласка, виберіть середовище для вашого проєкту"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Різні версії вашого проєкту мають різні середовища, тож тепер ви не можете редагувати їх глобально."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Ваш проєкт має кілька середовищ"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Нещодавно ми оновили систему середовищ у Modrinth і вам тепер доступні нові налаштування. Будь ласка, переконайтесь, що обрано правильні налаштування та натисніть «Підтвердити» коли закінчите!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Будь ласка, перегляньте налаштування нижче"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Лише моди чи збірки можуть мати метадані середовища."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Цей тип проєкту не підтримує метадані середовища"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Лише виділені сервери"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Уся функціональність знаходиться на стороні сервера та сумісна із ванільними серверами."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Також працює у грі наодинці"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Лише на стороні сервера"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Працює лише у грі наодинці або коли не підключено до сервера."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Лише гра наодинці"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Додаткові налаштування {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Середовище"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Підтвердити"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Підтвердіть, що середовище проєкту вибрано вірно."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Галерея"
@@ -3088,9 +2896,6 @@
   },
   "report.item-type.version": {
     "defaultMessage": "версія"
-  },
-  "s.bg": {
-    "defaultMessage": "Запуск завдання в тлі"
   },
   "search.filter.locked.default": {
     "defaultMessage": "Фільтр заблоковано"

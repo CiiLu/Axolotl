@@ -1,37 +1,4 @@
 {
-  "affiliate.create.button": {
-    "defaultMessage": "Maak een affiliatelink"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Nieuwe affiliate aanmaken"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Geef je affiliate-link een naam, zodat je weet waar mensen vandaan komen!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Titel van affiliate-link"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "bijvoorbeeld YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "De gebruikersnaam van de gebruiker voor wie de affiliatecode moet worden aangemaakt"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Voer gebruikersnaam in..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Gemaakt door {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Affiliate-link maken..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Affiliatie-link intrekken"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Bekijk analyses"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "De serverinstellingen konden niet worden geladen"
   },
@@ -274,18 +241,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Afbeelding uploaden"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Zojuist"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "App"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosten"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Platform"
   },
   "collections.label.private": {
     "defaultMessage": "Privé"
@@ -2003,72 +1958,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {download} other {downloads}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Vereist op zowel de client als de server."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Client en server op beide verreist"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "De meeste functies werken aan de gebruikerszijde, maar door het op de server te installeren, krijgt u toegang tot uitgebreidere mogelijkheden."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Client en server optioneel op server"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Alle functionaliteit ligt op clientzijde, en is volledig bruikbaar op vanilla servers."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Slechts clientzijde"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Het biedt bepaalde functionaliteiten op zowel de client als de server, zij het slechts gedeeltelijk. Als je het op beide installeert, krijg je de beste ervaring."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Client en server beste wanneer op beide is geinstalleerd"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Heeft functionaliteit op zowel client en server, eventueel deels."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Client en server optioneel voor beide"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Alle functionaliteit wordt aan de serverzijde uitgevoerd en is compatibel met standaard clients. Werkt alleen op toegewijde servers."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Enkel serverzijde"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "De meeste functies werken aan de serverzijde, maar door de software op de client te installeren, krijgt u toegang tot uitgebreidere mogelijkheden."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Client en server optioneel voor client"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Alle functionaliteit wordt aan de serverzijde uitgevoerd en is compatibel met standaard clients. Werkt ook op de interne server in de singleplayer modus."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Alleen server kant, werkt op singleplayer"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Werkt alleen in één speler sessies, of wanneer er geen verbinding is met een online server met meerdere spelers."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Alleen singleplayer"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "N. V. T"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Onbekend"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "De omgeving voor deze versie kon niet bepaald worden."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Onbekende omgeving"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {follower} other {followers}}"
   },
@@ -2354,89 +2243,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Omschrijving"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Heeft enig functionaliteit op client en server, al is het minder compleet."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Optioneel op beide kanten, werkt hoe dan ook gelijk"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Optioneel op beide kanten, werkt het beste wanneer geïnstalleerd is op beide kanten"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Optioneel op clientzijde"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Optioneel op serverzijde"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Vereist op beide kanten"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Client- en serverzijde"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Alle functionaliteit ligt op clientzijde, en is volledig bruikbaar op vanilla-servers."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Slechts clientzijde"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Je project ontbreekt metadata van de omgeving, selecteer de gepaste onderstaande optie."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Selecteer een omgeving voor je project"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Verschillende versies van je project hebben verschillende omgevingen geselecteerd, dus je kan ze niet op hetzelfde moment globaal aanpassen."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Uw project heeft meerdere omgevingen"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "We hebben zojuist het omgevingssysteem van Modrinth herzien en nieuwe opties zijn nu beschikbaar. Zorg dat de juiste onderstaande optie geselecteerd is en klik \"Verifieer\" wanneer je klaar bent!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Beoordeel onderstaande opties"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Enkel mod of modpack projecten kunnen metadata van de omgeving hebben."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Dit soort project ondersteund geen metadata van de omgeving"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Slechts toegewijde server"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Alle functionaliteit ligt op serverzijde, en is volledig bruikbaar met vanilla-clienten."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Werkt ook met één speler sessies"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Slechts serverzijde"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Werkt alleen in één speler sessies, of wanneer er niet verbonden is met een online server met meerdere spelers."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Slechts één speler"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Subopties van {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Functionele omgeving"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Verifieer"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Verifieer dat de omgeving van dit project juist ingesteld is."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Foto's"

@@ -22,6 +22,7 @@ export interface UseBrowseSearchOptions {
 	providedFilters?: ComputedRef<FilterValue[]>
 	environmentOverride?: ComputedRef<EnvironmentSearchOverride | undefined>
 	search: (params: string) => Promise<BrowseSearchResponse>
+	syncQueryParams?: boolean
 	persistentQueryParams: string[]
 	getExtraQueryParams?: () => Record<string, string | undefined>
 	maxResultsOptions?: ComputedRef<number[]>
@@ -247,7 +248,7 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 				serverHits: response.serverHits.length,
 			})
 
-			updateUrlParams()
+			if (options.syncQueryParams !== false) updateUrlParams()
 			loading.value = false
 		} catch (err) {
 			debug('refreshSearch error', err)

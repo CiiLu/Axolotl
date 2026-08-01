@@ -1,64 +1,50 @@
-# Modrinth Monorepo
+# Axolotl Launcher Monorepo
 
-This is the Modrinth monorepo — it contains all Modrinth projects, both frontend and backend. When entering a project, either to edit or analyse, you should read it's CLAUDE.md.
+This repository contains the Axolotl Launcher desktop application and its official website. Read the applicable project instructions before editing either surface.
 
 ## Architecture
 
 - **Monorepo tooling:** [Turborepo](https://turbo.build/) (`turbo.jsonc`) + [pnpm workspaces](https://pnpm.io/workspaces) (`pnpm-workspace.yaml`)
 - **Frontend:** Vue 3 / Nuxt 3, Tailwind CSS v3
-- **Backend:** Rust (Labrinth API), Postgres, Clickhouse
+- **Desktop:** Rust / Tauri
 - **Indentation:** Use TAB everywhere, never spaces
 
 ### Apps (`apps/`)
 
-| App               | Description                    |
-| ----------------- | ------------------------------ |
-| `frontend`        | Main Modrinth website (Nuxt 3) |
-| `app-frontend`    | Desktop/app frontend (Vue 3)   |
-| `app`             | Desktop/app shell (Tauri)      |
-| `app-playground`  | Testing playground for app     |
-| `labrinth`        | Backend API service            |
-| `daedalus_client` | Daedalus client implementation |
-| `docs`            | Documentation site (Astro)     |
+| App            | Description                         |
+| -------------- | ----------------------------------- |
+| `app-frontend` | Desktop application frontend (Vue 3) |
+| `app`          | Desktop application shell (Tauri)   |
+| `website`      | Official Axolotl website (Nuxt 3)   |
 
 ### Packages (`packages/`)
 
-| Package            | Description                                           |
-| ------------------ | ----------------------------------------------------- |
-| `ui`               | Shared Vue component library (`@modrinth/ui`)         |
-| `assets`           | Styling and auto-generated icons (`@modrinth/assets`) |
-| `api-client`       | API client for Nuxt, Tauri, and Node/browser          |
-| `app-lib`          | Shared app library                                    |
-| `blog`             | Blog system and changelog data                        |
-| `utils`            | Shared utility functions (mostly deprecated)          |
-| `moderation`       | Moderation utilities                                  |
-| `daedalus`         | Daedalus protocol                                     |
-| `tooling-config`   | ESLint, Prettier, TypeScript configs                  |
-| `ariadne`          | Analytics library                                     |
-| `modrinth-log`     | Logging utilities                                     |
-| `modrinth-maxmind` | MaxMind GeoIP                                         |
-| `modrinth-util`    | General utilities                                     |
-| `muralpay`         | Payment processing                                    |
-| `path-util`        | Path utilities                                        |
-| `sqlx-tracing`     | SQLx query tracing                                    |
+| Package                      | Description                              |
+| ---------------------------- | ---------------------------------------- |
+| `ui`, `assets`, `utils`      | Shared Vue components, assets, utilities |
+| `api-client`                 | Public content-service API client        |
+| `app-lib`                    | Shared desktop application library       |
+| `daedalus`                   | Minecraft metadata protocol              |
+| `ariadne`                    | Social and tunnel protocol types         |
+| `async-minecraft-ping`       | Minecraft server ping client             |
+| `modrinth-content-management`| Content installation model               |
+| `path-util`, `tooling-config`| Shared path and tooling configuration    |
 
 ## Pre-PR Commands
 
 Run these from the **root** folder before opening a pull request - do not run these after each prompt the user gives you, only run when asked, ask the user a question if they want to run it if the user indicates that they are about to create a pull request.
 
-- **Website:** `pnpm prepr:frontend:web`
+- **Website:** `pnpm prepr:website`
 - **App frontend:** `pnpm prepr:frontend:app`
 - **Frontend libs:** `pnpm prepr:frontend:lib`
-- **All frontend (app+web):** `pnpm prepr`
-- **Labrinth (backend):** See `apps/labrinth/AGENTS.md`
+- **All frontend:** `pnpm prepr`
 
 The website and app `prepr` commands
 
 ## Dev Commands
 
-- **Website:** `pnpm web:dev` (copy `.env` template in `apps/frontend/` first)
+- **Website:** `pnpm website:dev`
 - **App:** `pnpm app:dev` (copy `.env` template in `packages/app-lib/` first)
-- **Storybook (packages/ui):** `pnpm storybook`
 
 ## Codex Development Workflow
 
@@ -105,13 +91,6 @@ Launcher release announcements are bundled with `apps/app-frontend` and shown af
 - Keep launcher release notes exclusively in the catalog. Do not create or maintain a separate `UPDATE_LOG.md` file.
 - The GitHub release workflow generates its release body from the matching catalog entry with `scripts/axolotl/create-release-notes.mjs`; a release tag without a catalog entry must fail preflight.
 - Local development builds expose a preview button in Settings > Updates. Use it to test the real announcement modal without changing onboarding or pending-update state; do not add per-version preview branches.
-
-## Project-Specific Instructions
-
-Each project may have its own file with detailed instructions:
-
-- [`apps/labrinth/AGENTS.md`](apps/labrinth/AGENTS.md) — Backend API
-- [`apps/frontend/CLAUDE.md`](apps/frontend/CLAUDE.md) - Frontend Website
 
 ## Update Logging Instructions
 

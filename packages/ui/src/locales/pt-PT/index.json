@@ -1,37 +1,4 @@
 {
-  "affiliate.create.button": {
-    "defaultMessage": "Criar link de afiliado"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Criando novo código de afiliado"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Dá um nome ao teu link de afiliado para saberes de onde vêm as pessoas!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Título do link de afiliado"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "ex: Youtube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "O nome do utilizador para quem será criado o código de afiliado"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Inserir nome de utilizador..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Criado por {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Criar link de afiliado..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Cancelar link de afiliado"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Ver estatísticas"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Falha ao carregar configurações do servidor"
   },
@@ -247,18 +214,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Carregar imagem"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Agora mesmo"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "App"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hospedagem"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Plataforma"
   },
   "collections.label.private": {
     "defaultMessage": "Privada"
@@ -1400,54 +1355,6 @@
   "project.about.tags.title": {
     "defaultMessage": "Etiquetas"
   },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Cliente e servidor, necessário em ambos"
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Cliente e servidor, opcional no servidor"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Toda a funcionalidade é feita no cliente e é compatível com servidores vanilla."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Apenas no cliente"
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Cliente e servidor, melhor quando instalado em ambos"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Tem alguma funcionalidade tanto no cliente como no servidor, mesmo que apenas parcialmente."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Cliente e servidor, opcional em ambos"
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Apenas no servidor"
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Cliente e servidor, opcional no cliente"
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Lado do servidor apenas, também funciona em um jogador"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Apenas funciona em Um jogador ou quando não conectado a um servidor Multijogador."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Um jogador apenas"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "N/A"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Desconhecido"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "O ambiente para esta versão não pôde ser determinado."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Ambiente desconhecido"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {seguidor} other {seguidores}}"
   },
@@ -1706,89 +1613,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Descrição"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Tem alguma funcionalidade tanto no cliente como no servidor, mesmo que apenas parcialmente."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Opcional em ambos, funciona da mesma forma se instalado num deles"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Opcional em ambos, funciona melhor quando instalado em ambos"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Opcional no cliente"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Opcional no servidor"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Necessário em ambos"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Cliente e servidor"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Toda a funcionalidade é feita no cliente e é compatível com servidores vanilla."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Apenas no cliente"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Faltam metadados de ambiente ao teu projeto, por favor, seleciona a opção apropriada abaixo."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Por favor, seleciona um ambiente para o teu projeto"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Diferentes versões do teu projeto têm diferentes ambientes selecionados, portanto, não é possível editá-los globalmente no momento."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "O teu projeto tem múltiplos ambientes"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Reformulámos o sistema de Ambientes no Modrinth e estão agora disponíveis novas opções. Certifica-te de que a opção correta está selecionada abaixo e clica em \"Verificar\" quando terminares!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Por favor, revê as opções abaixo"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Apenas projetos de mods ou de modpacks podem ter metadados de ambiente."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Este tipo de projeto não suporta metadados de ambiente"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Apenas servidores dedicados"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Toda a funcionalidade é feita no servidor e é compatível com clientes vanilla."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Também funciona em mundos de um jogador"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Apenas no servidor"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Apenas funciona em Um jogador ou quando não conectado a um servidor Multijogador."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Um jogador apenas"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Subopções de {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Ambiente"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Verificar"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Verifica se o ambiente deste projeto está definido corretamente."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galeria"

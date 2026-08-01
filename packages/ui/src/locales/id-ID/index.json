@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Anda tidak memiliki izin."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Buat tautan afiliasi"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Membuat kode afiliasi baru"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Beri nama pada tautan afiliasi Anda supaya Anda tahu dari mana orang-orang datang!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Judul tautan afiliasi"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "cth. YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Nama pengguna yang akan menggunakan kode afiliasi"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Masukkan nama pengguna..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Dibuat oleh {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Membuat tautan afiliasi..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Cabut tautan afiliasi"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Lihat analisis"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Gagal memuat pengaturan server"
   },
@@ -298,18 +265,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Unggah gambar"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Baru saja"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "Aplikasi"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Pengehosan"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Platform"
   },
   "collections.label.private": {
     "defaultMessage": "Pribadi"
@@ -1781,63 +1736,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, other {pengunduhan}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Diperlukan pada klien dan server."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Klien dan server, wajib di keduanya"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "Kebanyakan fungsionalitas berada di sisi klien, tetapi memasangnya pada server akan memberikan fungsionalitas yang ditingkatkan."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Klien dan server, opsional di server"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Semua fungsionalitas dilakukan oleh sisi klien dan kompatibel dengan server vanila."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Sisi klien saja"
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Klien dan server, paling baik bila diunduh di keduanya"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Memiliki fungsionalitas pada klien dan server, walaupun hanya sebagian saja."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Klien dan server, opsional di keduanya"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Semua fungsionalitas dilakukan oleh sisi server dan kompatibel dengan klien vanila. Hanya berfungsi pada server khusus."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Sisi server saja"
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Klien dan server, opsional di klien"
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Sisi server saja, dapat bekerja di bermain sendiri"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Hanya berfungsi di Bermain Sendiri atau pada saat tidak terhubung ke server Bermain Bersama."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Bermain sendiri saja"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "Tidak tersedia"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Tidak dikenal"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Lingkungan untuk versi ini tidak dapat ditentukan."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Lingkungan tidak dikenal"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, other {pengikut}}"
   },
@@ -2102,89 +2000,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Keterangan"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Memiliki fungsionalitas pada klien dan server, walaupun hanya sebagian saja."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Opsional pada kedua-duanya, bekerja dengan sama bila dipasang pada kedua-dua sisi"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Opsional pada kedua-duanya, bekerja paling baik bila dipasang pada kedua-dua sisi"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Opsional pada klien"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Opsional pada server"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Diperlukan pada kedua-duanya"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Klien dan server"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Semua fungsionalitas dilakukan oleh sisi klien dan kompatibel dengan server vanila."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Sisi klien saja"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Proyek Anda tidak memiliki metadata lingkungan, mohon pilih pilihan yang sesuai di bawah."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Mohon pilih lingkungan untuk proyek Anda"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Versi yang berbeda untuk proyek Anda memiliki lingkungan yang berbeda, sehingga Anda tidak dapat mengubahnya secara menyeluruh untuk saat ini."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Proyek Anda memiliki beberapa lingkungan"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Kamu baru saja memperbaiki sistem Lingkungan di Modrinth dan pilihan baru kini tersedia. Mohon pastikan untuk memilih pilihan yang benar dan klik 'Verifikasi' bila Anda selesai!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Mohon tinjau pilihan di bawah"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Hanya proyek mod atau paket mod yang dapat memiliki metadata lingkungan."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Jenis proyek ini tidak mendukung metadata lingkungan"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Server khusus saja"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Semua fungsionalitas dilakukan oleh sisi server dan kompatibel dengan klien vanila."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Dapat bekerja pada bermain sendiri"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Sisi server saja"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Hanya berfungsi di Bermain Sendiri atau pada saat tidak terhubung ke server Bermain Bersama."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Bermain sendiri saja"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Subpilihan dari {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Lingkungan"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Verifikasi"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Verifikasi bahwa lingkungan proyek ini diatur dengan benar."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galeri"

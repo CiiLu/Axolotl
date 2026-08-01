@@ -106,7 +106,7 @@ git push origin v1.2.3
 
 预发布版本使用带后缀的标签，例如 `v1.2.3-beta.1`。自动更新公钥已固化在客户端中，私钥只保存在 GitHub Actions Secrets 中，不应提交到仓库。
 
-## 仓库范围与上游同步
+## 仓库范围
 
 Axolotl 的产品改动主要位于：
 
@@ -115,7 +115,7 @@ Axolotl 的产品改动主要位于：
 - `packages/app-lib`
 - 上述包所需的共享 UI 与资源包
 
-Modrinth 网站和后端并不是 Axolotl 产品。`upstream` 远程指向 Modrinth 原仓库；上游更新应先审查影响再合并，不应使用强制推送覆盖 Axolotl 的提交历史。
+仓库不包含 Modrinth 网站、Labrinth API 或其运营服务源码。桌面端保留对 Modrinth 公共 API 的客户端兼容；需要参考上游实现时，应只手动挑选与 Axolotl 产品相关的改动。
 
 ## 隐私与第三方服务
 

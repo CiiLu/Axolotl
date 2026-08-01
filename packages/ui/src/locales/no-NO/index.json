@@ -1,37 +1,4 @@
 {
-  "affiliate.create.button": {
-    "defaultMessage": "Oppretter ny affiliatkode"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Oppretter ny affiliatkode"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Gi affiliatelenken et navn, slik at du vet hvor trafikken kommer fra!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Tittel på affiliatelenken"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "f.eks. YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Brukernavnet til brukeren affiliatkoden skal knyttes til"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Skriv inn brukernavn..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Opprettet av {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Oppretter affiliatelenke…"
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Deaktiver affiliatelenke"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Vis statistikk"
-  },
   "badge.beta": {
     "defaultMessage": "Beta"
   },
@@ -175,18 +142,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Last opp bilde"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Akkurat nå"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "App"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosting"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Plattform"
   },
   "collections.label.private": {
     "defaultMessage": "Privat"
@@ -1151,60 +1106,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {nedlasting} other {nedlastinger}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Påkrevd på både klienten og serveren."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Både klient og server er påkrevd"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "Mesteparten av funksjonaliteten er klient-sidig, men funksjonaliteten blir forbedra viss du installerer den på serveren."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Klient og server, valgfritt på server"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "All funksjonalitet kjøres på klienten og er kompatibel med vanlige servere."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Kun klient"
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Klient og server, best når det er installert på begge"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Har noe funksjonalitet både på klienten og serveren, selv om det bare er delvis."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Klient og server, valgfritt på begge"
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Kun server"
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Klient og server, valgfritt på klient"
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Bare serversidig, fungerer også på enkeltspiller"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Fungerer berre i einspelar eller når du ikkje er kopla til ein fleirspelartenar."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Kun enkeltspiller"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "N/A"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Ukjent"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Miljøet for denne versjonen kunne ikke bestemmes."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Ukjent miljø"
-  },
   "project.server.language.mk": {
     "defaultMessage": "Makedonsk"
   },
@@ -1352,89 +1253,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Beskrivelse"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Har noe funksjonalitet både på klienten og serveren, selv om den bare er delvis."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Valgfritt på begge – fungerer likt enten det er installert på klient eller server."
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Valgfritt på begge – fungerer best når det er installert på både klient og server."
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Valgfritt på klient"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Valgfritt på server"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Påkrevd på begge"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Klient og server"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "All funksjonalitet er gjort klient-side og kompatibel med vanilla servere."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Klient-side bare"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Prosjektet ditt mangler miljømetadata. Velg riktig alternativ nedenfor."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Velg et miljø for prosjektet ditt"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Ulike versjoner av prosjektet har forskjellige valgte miljøer, så du kan ikke redigere dem samlet akkurat nå."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Prosjektet ditt har flere miljøer"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Vi har nettopp oppdatert miljøsystemet på Modrinth, og nye valg er nå tilgjengelige. Pass på at riktig alternativ er valgt nedenfor, og klikk deretter «Verifiser» når du er ferdig."
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Gå gjennom valgene nedenfor"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Bare mod- og modpakke-prosjekter kan ha miljømetadata."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Denne prosjekttypen støtter ikke miljømetadata"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Dedikert server bare"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "All funksjonalitet er gjort klient-side og kompatibel med vanilla servere."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Fungerer i enspiller og"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Server-side bare"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Funger bare i enspiller eller når en ikke er koblet til en flerspiller server."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Enspiller bare"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}:{description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Underalternativer av {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Miljø"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Verifiser"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Verifiser at miljøet for dette prosjektet er satt opp riktig."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galleri"

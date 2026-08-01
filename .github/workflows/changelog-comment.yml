@@ -42,8 +42,6 @@ jobs:
               productBlock('App'),
               '',
               productBlock('Website'),
-              '',
-              productBlock('Hosting'),
             ].join('\n');
 
             // Resolve PR number from event or workflow_dispatch input
