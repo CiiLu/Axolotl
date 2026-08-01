@@ -188,17 +188,17 @@ export function setupCreationModal(
 
 				// Show SymlinkMethodCards for user to choose copy vs symlink
 				const capability = await check_symlink_capability()
-		if (capability === 'unsupported') {
-			notificationManager.addNotification({
-				type: 'error',
-				title: formatMessage(symlinkMessages.unsupportedTitle),
-				text: formatMessage(symlinkMessages.unsupportedBody),
-			})
-			return
-		}
+				if (capability === 'unsupported') {
+					notificationManager.addNotification({
+						type: 'error',
+						title: formatMessage(symlinkMessages.unsupportedTitle),
+						text: formatMessage(symlinkMessages.unsupportedBody),
+					})
+					return
+				}
 
-		const chooseImportMethod: (options: {
-			instanceNames: string[]
+				const chooseImportMethod: (options: {
+					instanceNames: string[]
 					symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
 				}) => Promise<boolean> = inject('chooseImportMethod')!
 

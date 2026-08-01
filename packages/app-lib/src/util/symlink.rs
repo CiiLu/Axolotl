@@ -179,11 +179,13 @@ pub(crate) async fn create_link_elevated(
 ) -> std::io::Result<()> {
     let target = target.to_path_buf();
     let link = link.to_path_buf();
-    tokio::task::spawn_blocking(move || create_link_elevated_blocking(&target, &link, is_dir))
-        .await
-        .map_err(|error| {
-            std::io::Error::other(format!("elevated link task panicked: {error}"))
-        })?
+    tokio::task::spawn_blocking(move || {
+        create_link_elevated_blocking(&target, &link, is_dir)
+    })
+    .await
+    .map_err(|error| {
+        std::io::Error::other(format!("elevated link task panicked: {error}"))
+    })?
 }
 
 #[cfg(target_os = "windows")]
@@ -194,23 +196,27 @@ fn create_link_elevated_blocking(
 ) -> std::io::Result<()> {
     use std::process::Command;
 
-    let result_file = std::env::temp_dir().join(format!(
-        "axolotl-link-result-{}.json",
-        uuid::Uuid::new_v4()
-    ));
+    let result_file = std::env::temp_dir()
+        .join(format!("axolotl-link-result-{}.json", uuid::Uuid::new_v4()));
     let request = ElevatedLinkRequest {
         target: target.to_path_buf(),
         link: link.to_path_buf(),
         is_dir,
         result_file: result_file.clone(),
     };
-    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .encode(serde_json::to_vec(&request).map_err(|error| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, error.to_string())
-        })?);
+    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(
+        serde_json::to_vec(&request).map_err(|error| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                error.to_string(),
+            )
+        })?,
+    );
 
     let executable = std::env::current_exe().map_err(|error| {
-        std::io::Error::other(format!("Could not locate launcher executable: {error}"))
+        std::io::Error::other(format!(
+            "Could not locate launcher executable: {error}"
+        ))
     })?;
     let escaped = executable.to_string_lossy().replace('\'', "''");
     let command = format!(
@@ -240,9 +246,13 @@ fn create_link_elevated_blocking(
     })?;
     let _ = std::fs::remove_file(&result_file);
 
-    let result: ElevatedLinkResult = serde_json::from_str(&raw_result).map_err(|error| {
-        std::io::Error::new(std::io::ErrorKind::InvalidData, error.to_string())
-    })?;
+    let result: ElevatedLinkResult = serde_json::from_str(&raw_result)
+        .map_err(|error| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                error.to_string(),
+            )
+        })?;
     if result.ok {
         Ok(())
     } else {
@@ -264,14 +274,20 @@ pub fn create_link_elevated_helper(payload: &str) -> i32 {
         let request = base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(payload.trim())
             .ok()
-            .and_then(|bytes| serde_json::from_slice::<ElevatedLinkRequest>(&bytes).ok());
+            .and_then(|bytes| {
+                serde_json::from_slice::<ElevatedLinkRequest>(&bytes).ok()
+            });
 
         let Some(request) = request else {
             tracing::error!("Elevated link creation: invalid request payload");
             return 1;
         };
 
-        let result = match create_link_blocking(&request.target, &request.link, request.is_dir) {
+        let result = match create_link_blocking(
+            &request.target,
+            &request.link,
+            request.is_dir,
+        ) {
             Ok(()) => ElevatedLinkResult {
                 ok: true,
                 error: None,
@@ -292,7 +308,9 @@ pub fn create_link_elevated_helper(payload: &str) -> i32 {
             }
         };
 
-        if let Err(write_error) = std::fs::write(&request.result_file, serialized) {
+        if let Err(write_error) =
+            std::fs::write(&request.result_file, serialized)
+        {
             tracing::error!(
                 "Elevated link creation: failed to write result file: {write_error}"
             );

@@ -214,7 +214,9 @@ fn main() {
                 .unwrap_or_default()
                 .to_string_lossy()
                 .into_owned();
-            std::process::exit(theseus::symlink::create_link_elevated_helper(&payload));
+            std::process::exit(theseus::symlink::create_link_elevated_helper(
+                &payload,
+            ));
         }
     }
 

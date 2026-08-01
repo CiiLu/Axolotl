@@ -210,7 +210,9 @@ pub async fn retry_job_as_new(
     let new_job = start(job.state.request).await?;
     // The spawned job may already have progressed (or finished) by the time
     // the command returns; hand the caller the freshest stored state.
-    Ok(store::get_required(new_job.job_id, &state).await?.snapshot())
+    Ok(store::get_required(new_job.job_id, &state)
+        .await?
+        .snapshot())
 }
 
 pub async fn cancel_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {

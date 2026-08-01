@@ -1026,9 +1026,7 @@ pub(crate) async fn finish_import(
             )
             .await?
             .ok_or_else(|| {
-                crate::ErrorKind::InputError(
-                    "Unknown instance".to_string(),
-                )
+                crate::ErrorKind::InputError("Unknown instance".to_string())
             })?;
             unwatch_instance_folder(
                 &relative_path,
@@ -1067,7 +1065,9 @@ pub(crate) async fn finish_import(
                 .await;
                 return Err(error.into());
             }
-            if let Err(error) = io::create_symlink(&dotminecraft, &instance_path).await {
+            if let Err(error) =
+                io::create_symlink(&dotminecraft, &instance_path).await
+            {
                 let _ = io::rename_or_move(&backup_path, &instance_path).await;
                 watch_instance_folder(
                     instance_id,
@@ -1141,15 +1141,13 @@ async fn rename_instance_dir_for_symlink(
                     "Instance directory {from:?} still busy, retrying rename ({attempt}/8)"
                 );
                 last_error = Some(error);
-                tokio::time::sleep(std::time::Duration::from_millis(150))
-                    .await;
+                tokio::time::sleep(std::time::Duration::from_millis(150)).await;
             }
             Err(error) => return Err(error),
         }
     }
-    Err(last_error.unwrap_or_else(|| {
-        eyre::eyre!("Instance directory rename failed")
-    }))
+    Err(last_error
+        .unwrap_or_else(|| eyre::eyre!("Instance directory rename failed")))
 }
 
 /// Whether a rename error means the destination directory is still busy and
