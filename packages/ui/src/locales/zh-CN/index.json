@@ -653,6 +653,9 @@
   "content.card.pending-manual-download": {
     "defaultMessage": "需要手动下载"
   },
+  "content.card.rollback-tooltip": {
+    "defaultMessage": "回滚到 {fileName}"
+  },
   "content.card.select-project": {
     "defaultMessage": "选择 {project}"
   },

@@ -315,6 +315,17 @@ export async function toggle_disable_project(
 	})
 }
 
+// Roll back an updated project to its previous file (kept as a .old backup)
+export async function rollback_project(
+	instanceId: string,
+	projectPath: string,
+): Promise<string> {
+	return await invoke('plugin:instance|instance_rollback_project', {
+		instanceId,
+		projectPath,
+	})
+}
+
 // Remove a project
 export async function remove_project(instanceId: string, projectPath: string): Promise<void> {
 	return await invoke('plugin:instance|instance_remove_project', { instanceId, projectPath })

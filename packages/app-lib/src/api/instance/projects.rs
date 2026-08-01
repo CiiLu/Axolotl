@@ -253,6 +253,24 @@ pub async fn toggle_disable_project(
 }
 
 #[tracing::instrument]
+pub async fn rollback_project(
+    instance_id: &str,
+    project_path: &str,
+) -> crate::Result<String> {
+    let state = State::get().await?;
+    let res =
+        crate::state::instances::commands::rollback_project(
+            instance_id,
+            project_path,
+            &state,
+        )
+        .await?;
+    emit_instance(instance_id, InstancePayloadType::Edited).await?;
+
+    Ok(res)
+}
+
+#[tracing::instrument]
 pub async fn remove_project(
     instance_id: &str,
     project: &str,

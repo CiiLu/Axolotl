@@ -13,8 +13,8 @@ use std::collections::{HashMap, HashSet};
 
 use super::apply_content_install::{
     DownloadedProjectVersion, add_downloaded_project_version,
-    add_project_from_version, download_project_version, remove_project,
-    toggle_disable_project,
+    add_project_from_version, archive_project_file, download_project_version,
+    remove_project, toggle_disable_project,
 };
 use super::check_content_updates::{ContentUpdate, check_content_updates};
 
@@ -136,7 +136,12 @@ async fn apply_content_update(
     }
 
     if new_path != project_path {
-        remove_project(instance_id, project_path, state).await?;
+        if archive_project_file(instance_id, project_path, &new_path, state)
+            .await?
+            .is_none()
+        {
+            remove_project(instance_id, project_path, state).await?;
+        }
     }
 
     Ok(new_path)
@@ -190,8 +195,22 @@ pub(crate) async fn update_all_projects(
                 }
 
                 if new_path != update.relative_path {
-                    remove_project(instance_id, &update.relative_path, state)
+                    if archive_project_file(
+                        instance_id,
+                        &update.relative_path,
+                        &new_path,
+                        state,
+                    )
+                    .await?
+                    .is_none()
+                    {
+                        remove_project(
+                            instance_id,
+                            &update.relative_path,
+                            state,
+                        )
                         .await?;
+                    }
                 }
 
                 changed.insert(update.relative_path, new_path);

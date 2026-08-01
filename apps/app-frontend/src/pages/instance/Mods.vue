@@ -1280,6 +1280,28 @@ async function switchProjectVersion(mod: ContentItem, version: Labrinth.Versions
 	}
 }
 
+async function handleRollbackContent(mod: ContentItem) {
+	if (!mod.file_path || !mod.rollback) return
+	const operation = beginContentOperation(mod)
+	if (!operation) return
+
+	try {
+		await rollback_project(props.instance.id, mod.file_path)
+		trackEvent('InstanceProjectRollback', {
+			loader: props.instance.loader,
+			game_version: props.instance.game_version,
+			id: mod.project?.id,
+			name: mod.project?.title ?? mod.file_name,
+			project_type: mod.project_type,
+		})
+	} catch (err) {
+		handleError(err as Error)
+	} finally {
+		await refreshContentState('bypass')
+		finishContentOperation(mod, operation)
+	}
+}
+
 async function handleUpdate(id: string) {
 	const item =
 		projects.value.find((p) => getContentItemId(p) === id) ??
@@ -1912,6 +1934,7 @@ provideContentManager({
 	uploadFiles: handleUploadFiles,
 	hasUpdateSupport: true,
 	updateItem: handleUpdate,
+	rollbackItem: handleRollbackContent,
 	bulkUpdateAll: bulkUpdateAllProjects,
 	bulkUpdateItem: updateProject,
 	updateModpack: props.isServerInstance ? undefined : handleModpackUpdate,

@@ -1,6 +1,7 @@
 use crate::state::ProjectType;
 use crate::util::io::{self, IOError};
 use std::path::Path;
+use std::time::UNIX_EPOCH;
 
 #[derive(Clone, Debug)]
 pub(crate) struct ScannedContentFile {
@@ -11,6 +12,15 @@ pub(crate) struct ScannedContentFile {
     pub hash_cache_key: String,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct ScannedBackupFile {
+    pub relative_path: String,
+    pub file_name: String,
+    /// Seconds since the UNIX epoch; used to pick the oldest backup when
+    /// several updates of the same file have accumulated.
+    pub modified: i64,
+}
+
 pub(crate) fn scan_content_files(
     instances_dir: &Path,
     instance_path: &str,
@@ -18,6 +28,63 @@ pub(crate) fn scan_content_files(
     let instance_dir = io::canonicalize(instances_dir.join(instance_path))?;
     let mut files = Vec::new();
 
+    for_each_content_folder(&instance_dir, |folder_path, relative_dir, project_type| {
+        scan_content_folder(folder_path, relative_dir, project_type, instance_path, &mut files)
+    })?;
+
+    Ok(files)
+}
+
+/// Collects update backup files (`*.old`) across every content folder. Backups
+/// are never hashed or listed as content; they are matched back to their
+/// active file by the `{active}_{previous}.old` naming convention.
+pub(crate) fn scan_content_backups(
+    instances_dir: &Path,
+    instance_path: &str,
+) -> crate::Result<Vec<ScannedBackupFile>> {
+    let instance_dir = io::canonicalize(instances_dir.join(instance_path))?;
+    let mut backups = Vec::new();
+
+    for_each_content_folder(&instance_dir, |folder_path, relative_dir, _| {
+        for entry in std::fs::read_dir(folder_path)
+            .map_err(|err| IOError::with_path(err, folder_path))?
+        {
+            let path = entry.map_err(IOError::from)?.path();
+            if !path.is_file() {
+                continue;
+            }
+            let Some(file_name) = path.file_name().and_then(|value| value.to_str())
+            else {
+                continue;
+            };
+            if !file_name.ends_with(".old") {
+                continue;
+            }
+            let modified = path
+                .metadata()
+                .and_then(|metadata| metadata.modified())
+                .ok()
+                .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+                .map(|duration| duration.as_secs() as i64)
+                .unwrap_or_default();
+            backups.push(ScannedBackupFile {
+                relative_path: format!("{relative_dir}/{file_name}"),
+                file_name: file_name.to_string(),
+                modified,
+            });
+        }
+        Ok(())
+    })?;
+
+    Ok(backups)
+}
+
+/// Walks every content folder (and, for schematics, nested subfolders) and
+/// invokes `visit` for each folder that may hold project files.
+fn for_each_content_folder(
+    instance_dir: &Path,
+    mut visit: impl FnMut(&Path, &str, ProjectType) -> crate::Result<()>,
+) -> crate::Result<()> {
     for project_type in ProjectType::iterator() {
         let folder = project_type.get_folder();
         let folder_path = instance_dir.join(folder);
@@ -26,25 +93,20 @@ pub(crate) fn scan_content_files(
             continue;
         }
 
-        scan_content_folder(
-            &folder_path,
-            folder,
-            project_type,
-            instance_path,
-            &mut files,
-        )?;
+        walk_content_folder(&folder_path, folder, project_type, &mut visit)?;
     }
 
-    Ok(files)
+    Ok(())
 }
 
-fn scan_content_folder(
+fn walk_content_folder(
     folder_path: &Path,
     relative_dir: &str,
     project_type: ProjectType,
-    instance_path: &str,
-    files: &mut Vec<ScannedContentFile>,
+    visit: &mut impl FnMut(&Path, &str, ProjectType) -> crate::Result<()>,
 ) -> crate::Result<()> {
+    visit(folder_path, relative_dir, project_type)?;
+
     for entry in std::fs::read_dir(folder_path)
         .map_err(|err| IOError::with_path(err, folder_path))?
     {
@@ -58,18 +120,31 @@ fn scan_content_folder(
                 else {
                     continue;
                 };
-                scan_content_folder(
+                walk_content_folder(
                     &path,
                     &format!("{relative_dir}/{dir_name}"),
                     project_type,
-                    instance_path,
-                    files,
+                    visit,
                 )?;
             }
-            continue;
         }
+    }
 
-        if !path.is_file() {
+    Ok(())
+}
+
+fn scan_content_folder(
+    folder_path: &Path,
+    relative_dir: &str,
+    project_type: ProjectType,
+    instance_path: &str,
+    files: &mut Vec<ScannedContentFile>,
+) -> crate::Result<()> {
+    for entry in std::fs::read_dir(folder_path)
+        .map_err(|err| IOError::with_path(err, folder_path))?
+    {
+        let path = entry.map_err(IOError::from)?.path();
+        if path.is_dir() || !path.is_file() {
             continue;
         }
 
@@ -199,6 +274,45 @@ mod tests {
         assert_eq!(
             project_type_from_relative_path("config/example.json"),
             None
+        );
+    }
+
+    #[test]
+    fn scan_content_backups_finds_only_backup_files() {
+        let root = tempdir().unwrap();
+        let instance_dir = root.path().join("inst");
+        fs::create_dir_all(instance_dir.join("schematics/redstone")).unwrap();
+        fs::create_dir_all(instance_dir.join("mods")).unwrap();
+        fs::write(instance_dir.join("mods/Mod-2.jar"), "new").unwrap();
+        fs::write(
+            instance_dir.join("mods/Mod-2.jar_Mod-1.jar.old"),
+            "old",
+        )
+        .unwrap();
+        fs::write(
+            instance_dir.join("schematics/redstone/New.litematic_Old.litematic.old"),
+            "x",
+        )
+        .unwrap();
+        fs::write(
+            instance_dir.join("schematics/redstone/house.litematic"),
+            "y",
+        )
+        .unwrap();
+
+        let backups = scan_content_backups(root.path(), "inst").unwrap();
+        let mut paths = backups
+            .iter()
+            .map(|backup| backup.relative_path.as_str())
+            .collect::<Vec<_>>();
+        paths.sort_unstable();
+
+        assert_eq!(
+            paths,
+            vec![
+                "mods/Mod-2.jar_Mod-1.jar.old",
+                "schematics/redstone/New.litematic_Old.litematic.old",
+            ]
         );
     }
 }

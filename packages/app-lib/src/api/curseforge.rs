@@ -2599,13 +2599,29 @@ async fn install_selected_file(
         install_dependencies: true,
     })
     .await?;
-    if result.installed.iter().any(|file| {
-        !file.dependency
-            && file.project_id == project_id
-            && file.relative_path != relative_path
-    }) {
-        crate::api::instance::remove_project(instance_id, relative_path)
-            .await?;
+    if let Some(new_path) = result
+        .installed
+        .iter()
+        .find(|file| {
+            !file.dependency
+                && file.project_id == project_id
+                && file.relative_path != relative_path
+        })
+        .map(|file| file.relative_path.clone())
+    {
+        let state = State::get().await?;
+        if crate::state::instances::commands::archive_project_file(
+            instance_id,
+            relative_path,
+            &new_path,
+            &state,
+        )
+        .await?
+        .is_none()
+        {
+            crate::api::instance::remove_project(instance_id, relative_path)
+                .await?;
+        }
     }
     Ok(result)
 }

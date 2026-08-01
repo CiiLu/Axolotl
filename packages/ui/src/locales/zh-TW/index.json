@@ -5678,6 +5678,9 @@
   "content.card.pending-manual-download": {
     "message": "Manual download required"
   },
+  "content.card.rollback-tooltip": {
+    "defaultMessage": "回滾到 {fileName}"
+  },
   "app.symlink-warning.write.header": {
     "message": "Shared instance"
   },

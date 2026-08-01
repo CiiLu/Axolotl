@@ -19,6 +19,14 @@ pub struct ContentItem {
     pub date_added: Option<String>,
     pub provider_refs: Vec<ContentProviderRef>,
     pub origin_provider: Option<ContentProvider>,
+    /// Present when an update backup (`{active}_{previous}.old`) exists and
+    /// can be rolled back; `file_name` is the file that would be restored.
+    pub rollback: Option<ContentItemRollback>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ContentItemRollback {
+    pub file_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

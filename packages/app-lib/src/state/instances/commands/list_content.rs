@@ -10,7 +10,8 @@ use crate::state::instances::{
 };
 use crate::state::{
     CacheBehaviour, CachedEntry, ContentFile, ContentItem, ContentItemOwner,
-    ContentItemProject, ContentItemUpdate, ContentItemVersion, ContentProvider,
+    ContentItemProject, ContentItemRollback, ContentItemUpdate,
+    ContentItemVersion, ContentProvider,
     ContentProviderRef, Dependency, LinkedModpackInfo, ModLoader,
     ModrinthFileMatch, ModrinthProjectId, ModrinthVersionId, Organization,
     OwnerType, Project, ProjectType, ReleaseChannel, TeamMember, Version,
@@ -1035,6 +1036,7 @@ pub(crate) async fn dependencies_to_content_items(
                         .ok()?,
                 }],
                 origin_provider: Some(ContentProvider::Modrinth),
+                rollback: None,
             })
         })
         .collect::<Vec<_>>();
@@ -1492,6 +1494,11 @@ async fn content_files_to_content_items(
                 .collect()
         })
         .await?;
+    let content_backups =
+        crate::state::instances::adapters::filesystem::scan_content_backups(
+            &state.directories.instances_dir(),
+            &instance.path,
+        )?;
     let mut items = files
         .iter()
         .enumerate()
@@ -1749,12 +1756,57 @@ async fn content_files_to_content_items(
                 date_added: modification_times[index].clone(),
                 provider_refs,
                 origin_provider,
+                rollback: rollback_for_content_file(
+                    path,
+                    &file.file_name,
+                    &content_backups,
+                ),
             }
         })
         .collect::<Vec<_>>();
     sort_content_items(&mut items);
 
     Ok(items)
+}
+
+fn rollback_for_content_file(
+    relative_path: &str,
+    file_name: &str,
+    backups: &[crate::state::instances::adapters::filesystem::ScannedBackupFile],
+) -> Option<ContentItemRollback> {
+    let base = file_name.trim_end_matches(".disabled");
+    let prefix = format!("{base}_");
+    let dir = relative_path
+        .rsplit_once('/')
+        .map(|(dir, _)| dir)
+        .unwrap_or("");
+    let backup_name = backups
+        .iter()
+        .filter(|backup| {
+            backup.file_name.starts_with(&prefix)
+                && backup.file_name.ends_with(".old")
+                && backup
+                    .relative_path
+                    .rsplit_once('/')
+                    .map(|(backup_dir, _)| backup_dir)
+                    .unwrap_or("")
+                    == dir
+        })
+        .min_by(|left, right| {
+            left.modified
+                .cmp(&right.modified)
+                .then_with(|| left.file_name.cmp(&right.file_name))
+        })
+        .map(|backup| backup.file_name.as_str())?;
+    let old_base = backup_name
+        .strip_prefix(&prefix)?
+        .strip_suffix(".old")?;
+    if old_base.is_empty() {
+        return None;
+    }
+    Some(ContentItemRollback {
+        file_name: old_base.to_string(),
+    })
 }
 
 struct ResolvedMetadata {

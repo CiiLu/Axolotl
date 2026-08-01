@@ -301,7 +301,12 @@ pub(crate) async fn switch_project_version_with_dependencies(
     }
 
     if new_path != project_path {
-        remove_project(instance_id, project_path, state).await?;
+        if archive_project_file(instance_id, project_path, &new_path, state)
+            .await?
+            .is_none()
+        {
+            remove_project(instance_id, project_path, state).await?;
+        }
     }
 
     Ok(new_path)
@@ -1297,6 +1302,291 @@ pub(crate) async fn remove_project(
     Ok(())
 }
 
+pub(crate) fn backup_relative_path_for_update(
+    old_path: &str,
+    new_path: &str,
+) -> Option<String> {
+    let old_name = Path::new(old_path).file_name()?.to_str()?;
+    let new_name = Path::new(new_path).file_name()?.to_str()?;
+    let old_base = old_name.trim_end_matches(".disabled");
+    let new_base = new_name.trim_end_matches(".disabled");
+    if old_base.is_empty() || new_base.is_empty() || old_base == new_base {
+        return None;
+    }
+    let backup_name = format!("{new_base}_{old_base}.old");
+    let directory = Path::new(old_path).parent()?.to_str()?;
+    Some(format!("{directory}/{backup_name}"))
+}
+
+.
+pub(crate) async fn archive_project_file(
+    instance_id: &str,
+    old_path: &str,
+    new_path: &str,
+    state: &State,
+) -> crate::Result<Option<String>> {
+    let Some(backup_relative_path) =
+        backup_relative_path_for_update(old_path, new_path)
+    else {
+        return Ok(None);
+    };
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+
+    let scope = resolve_content_scope(instance_id, None, state).await?;
+    let base = instance_full_path(state, &scope.instance);
+    let full_old = base.join(old_path);
+    if !full_old.exists() {
+        return Ok(None);
+    }
+    let directory = Path::new(old_path)
+        .parent()
+        .map(|parent| base.join(parent))
+        .unwrap_or_else(|| base.clone());
+    let old_base = Path::new(old_path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .trim_end_matches(".disabled");
+    let full_backup = base.join(&backup_relative_path);
+    if full_backup.exists() {
+        io::remove_file(&full_backup).await?;
+    }
+    io::rename_or_move(&full_old, &full_backup).await?;
+    touch_file_modified_time(&full_backup);
+    let backup_name = Path::new(&backup_relative_path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default();
+    remove_stale_backups(&directory, old_base, Some(backup_name)).await;
+
+    if let Some(file) = content_rows::get_instance_file_by_relative_path(
+        &scope.instance.id,
+        old_path,
+        &state.pool,
+    )
+    .await?
+    {
+        content_rows::remove_content_entries_for_file(
+            &scope.content_set_id,
+            &file.id,
+            &state.pool,
+        )
+        .await?;
+        content_rows::remove_instance_file_by_relative_path(
+            &scope.instance.id,
+            old_path,
+            &state.pool,
+        )
+        .await?;
+    }
+
+    Ok(Some(backup_relative_path))
+}
+
+
+pub(crate) async fn rollback_project(
+    instance_id: &str,
+    project_path: &str,
+    state: &State,
+) -> crate::Result<String> {
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+
+    let scope = resolve_content_scope(instance_id, None, state).await?;
+    let base = instance_full_path(state, &scope.instance);
+    content_rows::get_instance_file_by_relative_path(
+        &scope.instance.id,
+        project_path,
+        &state.pool,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError(format!(
+            "Project file '{project_path}' not found"
+        ))
+    })?;
+
+    let active_name = Path::new(project_path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default();
+    let active_base = active_name.trim_end_matches(".disabled");
+    let active_dir = Path::new(project_path)
+        .parent()
+        .map(|parent| parent.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let prefix = format!("{active_base}_");
+    let folder = base.join(&active_dir);
+    let backups = scan_folder_backups(&folder, &prefix)?;
+    let Some((backup_name, _)) = backups.into_iter().min_by(|left, right| {
+        left.1
+            .cmp(&right.1)
+            .then_with(|| left.0.cmp(&right.0))
+    }) else {
+        return Err(crate::ErrorKind::InputError(format!(
+            "No backup found for '{project_path}'"
+        ))
+        .into());
+    };
+    let old_base = backup_name
+        .strip_prefix(&prefix)
+        .and_then(|rest| rest.strip_suffix(".old"))
+        .ok_or_else(|| {
+            crate::ErrorKind::InputError(format!(
+                "Invalid backup name '{backup_name}'"
+            ))
+        })?;
+    if old_base.is_empty() || old_base == active_base {
+        return Err(crate::ErrorKind::InputError(format!(
+            "Invalid backup name '{backup_name}'"
+        ))
+        .into());
+    }
+
+    let disabled = active_name.ends_with(".disabled");
+    let full_active = base.join(project_path);
+    let full_backup = folder.join(&backup_name);
+    let restored_name = old_base.to_string();
+    let restored_relative_path = format!("{active_dir}/{restored_name}");
+    let full_restored = base.join(&restored_relative_path);
+    let archive_name = format!("{old_base}_{active_base}.old");
+    let full_archive = folder.join(&archive_name);
+
+    let (restored_size, restored_sha1) =
+        fetch::sha1_file_async(&full_backup).await?;
+
+    if full_archive.exists() {
+        io::remove_file(&full_archive).await?;
+    }
+    io::rename_or_move(&full_active, &full_archive).await?;
+    touch_file_modified_time(&full_archive);
+    io::rename_or_move(&full_backup, &full_restored).await?;
+
+    let final_relative_path = if disabled {
+        let disabled_path = format!("{restored_relative_path}.disabled");
+        io::rename_or_move(&full_restored, &base.join(&disabled_path)).await?;
+        disabled_path
+    } else {
+        restored_relative_path
+    };
+    let final_name = Path::new(&final_relative_path)
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    remove_stale_backups(&folder, active_base, None).await;
+
+    let local_mod_data = if project_type_for_file_path(&final_relative_path)
+        == Some(ProjectType::Mod)
+    {
+        tokio::fs::read(&base.join(&final_relative_path))
+            .await
+            .ok()
+            .and_then(|data| {
+                crate::mod_metadata::extract_mod_metadata(&bytes::Bytes::from(
+                    data,
+                ))
+                .and_then(|meta| serde_json::to_string(&meta).ok())
+            })
+    } else {
+        None
+    };
+
+    content_rows::rename_instance_file(
+        &scope.instance.id,
+        project_path,
+        &final_relative_path,
+        &final_name,
+        !disabled,
+        &state.pool,
+    )
+    .await?;
+    content_rows::upsert_instance_file_from_parts(
+        content_rows::UpsertInstanceFile {
+            instance_id: &scope.instance.id,
+            relative_path: &final_relative_path,
+            file_name: &final_name,
+            enabled: !disabled,
+            sha1: &restored_sha1,
+            size: restored_size,
+            missing: false,
+            local_mod_data: local_mod_data.as_deref(),
+            icon_path: None,
+        },
+        &state.pool,
+    )
+    .await?;
+
+    Ok(final_relative_path)
+}
+
+
+async fn remove_stale_backups(folder: &Path, base: &str, keep: Option<&str>) {
+    let prefix = format!("{base}_");
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|value| value.to_str())
+        else {
+            continue;
+        };
+        if name.starts_with(&prefix)
+            && name.ends_with(".old")
+            && keep.is_none_or(|keep| name != keep)
+        {
+            let _ = io::remove_file(&path).await;
+        }
+    }
+}
+
+fn scan_folder_backups(
+    folder: &Path,
+    prefix: &str,
+) -> crate::Result<Vec<(String, i64)>> {
+    let mut backups = Vec::new();
+    for entry in std::fs::read_dir(folder)
+        .map_err(|err| io::IOError::with_path(err, folder))?
+    {
+        let path = entry.map_err(io::IOError::from)?.path();
+        if !path.is_file() {
+            continue;
+        }
+        let Some(file_name) = path.file_name().and_then(|value| value.to_str())
+        else {
+            continue;
+        };
+        if !file_name.starts_with(prefix) || !file_name.ends_with(".old") {
+            continue;
+        }
+        let modified = path
+            .metadata()
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_secs() as i64)
+            .unwrap_or_default();
+        backups.push((file_name.to_string(), modified));
+    }
+    Ok(backups)
+}
+
+fn touch_file_modified_time(path: &Path) {
+    let Ok(file) = std::fs::File::options().write(true).open(path) else {
+        return;
+    };
+    let _ = file.set_modified(std::time::SystemTime::now());
+}
+
+fn project_type_for_file_path(relative_path: &str) -> Option<ProjectType> {
+    crate::state::instances::adapters::filesystem::project_type_from_relative_path(
+        relative_path,
+    )
+}
+
 pub(crate) async fn list_project_files(
     instance_id: &str,
     state: &State,
@@ -1539,6 +1829,38 @@ mod tests {
     use super::*;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::time::Duration;
+
+    #[test]
+    fn backup_relative_path_for_update_naming() {
+        assert_eq!(
+            backup_relative_path_for_update(
+                "mods/Mod-1.0.jar",
+                "mods/Mod-1.1.jar"
+            )
+            .as_deref(),
+            Some("mods/Mod-1.1.jar_Mod-1.0.jar.old")
+        );
+        assert_eq!(
+            backup_relative_path_for_update(
+                "mods/Mod-1.0.jar.disabled",
+                "mods/Mod-1.1.jar.disabled"
+            )
+            .as_deref(),
+            Some("mods/Mod-1.1.jar_Mod-1.0.jar.old")
+        );
+        assert_eq!(
+            backup_relative_path_for_update(
+                "schematics/del/Old.litematic",
+                "schematics/del/New.litematic"
+            )
+            .as_deref(),
+            Some("schematics/del/New.litematic_Old.litematic.old")
+        );
+        assert_eq!(
+            backup_relative_path_for_update("mods/Mod.jar", "mods/Mod.jar"),
+            None
+        );
+    }
 
     fn zip_bytes(entries: &[(&str, &[u8])]) -> Vec<u8> {
         use std::io::Write as _;

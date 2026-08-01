@@ -47,6 +47,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_add_project_from_path,
             instance_import_world_save,
             instance_toggle_disable_project,
+            instance_rollback_project,
             instance_remove_project,
             instance_update_managed_modrinth_version,
             instance_repair_managed_modrinth,
@@ -738,6 +739,18 @@ pub async fn instance_toggle_disable_project(
         instance_id,
         project_path,
         desired_enabled,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_rollback_project(
+    instance_id: &str,
+    project_path: &str,
+) -> Result<String> {
+    Ok(theseus::instance::rollback_project(
+        instance_id,
+        project_path,
     )
     .await?)
 }

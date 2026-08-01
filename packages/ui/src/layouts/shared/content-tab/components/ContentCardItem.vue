@@ -562,8 +562,10 @@ const deleteHovered = ref(false)
 
 			<!-- Fixed width container to reserve space for update/switch version button -->
 			<div
-				v-if="hasUpdateListener || hasSwitchVersionListener"
-				class="flex w-8 items-center justify-center"
+				v-if="
+					hasUpdateListener || hasSwitchVersionListener || hasRollbackListener
+				"
+				class="flex min-w-8 items-center justify-center gap-1"
 			>
 				<ButtonStyled
 					v-if="hasUpdate"
