@@ -16,6 +16,7 @@ const messages = defineMessages({
 		id: 'axolotl-site.footer.description',
 		defaultMessage: 'A free and open-source Minecraft launcher for Windows, macOS, and Linux.',
 	},
+	developer: { id: 'axolotl-site.footer.developer', defaultMessage: 'Axolotl Launcher Team' },
 	qqGroup: {
 		id: 'axolotl-site.footer.qq-group',
 		defaultMessage: 'Official QQ group',
@@ -63,7 +64,7 @@ const messages = defineMessages({
 			</div>
 
 			<div class="footer-bottom">
-				<p>© {{ new Date().getFullYear() }} Garbage Human Studio</p>
+				<p>© {{ new Date().getFullYear() }} {{ formatMessage(messages.developer) }}</p>
 				<p class="open-source">
 					{{ formatMessage(messages.openSourcePrefix) }}
 					<a href="https://github.com/Mystic-Stars/Axolotl" target="_blank" rel="noopener">
