@@ -1082,6 +1082,37 @@ mod tests {
     }
 
     #[test]
+    fn test_zip_modpack_with_nested_level_dat_stays_modpack() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("pack.mrpack");
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "modrinth.index.json",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"{\"formatVersion\":1,\"game\":\"minecraft\",\"versionId\":\"1\",\"name\":\"p\",\"files\":[],\"dependencies\":{\"minecraft\":\"1.20.1\"}}")
+            .expect("write");
+        // A modpack may ship a world in overrides; the pack signature must
+        // win over the level.dat marker.
+        zip.start_file(
+            "overrides/world/level.dat",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(b"fake").expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::Modpack { .. }),
+            "mrpack with nested level.dat should still be Modpack: {result:?}"
+        );
+    }
+
+    #[test]
     fn test_extract_all_rejects_path_traversal() {
         let dir = tempdir().expect("temp dir");
         let zip_path = dir.path().join("evil.zip");
