@@ -7,6 +7,7 @@ import {
 	download_history_clear,
 	download_job_cancel,
 	download_job_delete,
+	download_job_get,
 	download_job_list,
 	download_job_retry,
 	type DownloadRequestUpdate,
@@ -200,11 +201,28 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 	}
 
 	async function cancel(jobId: string) {
-		setJob(await download_job_cancel(jobId))
+		const job = await download_job_cancel(jobId)
+		await reconcileJob(job)
 	}
 
 	async function retry(jobId: string) {
-		setJob(await download_job_retry(jobId))
+		const job = await download_job_retry(jobId)
+		await reconcileJob(job)
+	}
+
+	/**
+	 * The job may already have reached a terminal state (or been removed) by
+	 * the time the retry/cancel command returns. Fetch the freshest snapshot so
+	 * the UI never shows a stale queued/running spinner, and drop the row
+	 * entirely when the job no longer exists.
+	 */
+	async function reconcileJob(job: InstallJobSnapshot) {
+		const freshest = await download_job_get(job.job_id).catch(() => null)
+		if (freshest) {
+			setJob(freshest)
+		} else {
+			jobs.value = jobs.value.filter((candidate) => candidate.job_id !== job.job_id)
+		}
 	}
 
 	async function remove(jobId: string) {

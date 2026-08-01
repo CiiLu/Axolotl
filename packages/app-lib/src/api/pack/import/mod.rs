@@ -12,6 +12,13 @@ use crate::{
         InstallPhaseDetails, InstallPhaseId, InstallProgress,
         InstallProgressReporter,
     },
+    state::{
+        State,
+        instances::{
+            adapters::sqlite::instance_rows,
+            watcher::{unwatch_instance_folder, watch_instance_folder},
+        },
+    },
     util::{
         fetch::{self, IoSemaphore},
         io,
@@ -156,7 +163,7 @@ async fn get_instances_subfolder_scan(
     Ok(result)
 }
 
-/// Collects Modrinth App profiles from its internal database.
+/// Collects Modrinth launcher profiles from its internal database.
 async fn get_modrinth_app_instances(
     base_path: &Path,
 ) -> crate::Result<Vec<ImportableInstance>> {
@@ -1007,6 +1014,29 @@ pub(crate) async fn finish_import(
             crate::api::instance::get_full_path(instance_id).await?;
 
         if instance_path.exists() {
+            // The instance folder is registered with the file watcher as soon
+            // as the instance row is created. On Windows an active watch keeps
+            // an open directory handle, so renaming the folder fails with
+            // ERROR_ACCESS_DENIED. Unwatch it first, then re-register once the
+            // symlink is in place (or the backup has been restored).
+            let state = State::get().await?;
+            let relative_path = instance_rows::get_instance_path_by_id(
+                instance_id,
+                &state.pool,
+            )
+            .await?
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(
+                    "Unknown instance".to_string(),
+                )
+            })?;
+            unwatch_instance_folder(
+                &relative_path,
+                &state.file_watcher,
+                &state.directories,
+            )
+            .await;
+
             // Never delete the existing instance directory before the new
             // symlink is in place: a failure between the two would lose the
             // original data. Move it aside, create the link, then clean up
@@ -1024,14 +1054,38 @@ pub(crate) async fn finish_import(
                 .unwrap_or_else(|| std::path::Path::new(""))
                 .join(format!("{name}.bak-{timestamp}"));
 
-            io::rename_or_move(&instance_path, &backup_path).await?;
             if let Err(error) =
-                io::create_symlink(&dotminecraft, &instance_path).await
+                rename_instance_dir_for_symlink(&instance_path, &backup_path)
+                    .await
             {
+                watch_instance_folder(
+                    instance_id,
+                    &relative_path,
+                    &state.file_watcher,
+                    &state.directories,
+                )
+                .await;
+                return Err(error.into());
+            }
+            if let Err(error) = io::create_symlink(&dotminecraft, &instance_path).await {
                 let _ = io::rename_or_move(&backup_path, &instance_path).await;
+                watch_instance_folder(
+                    instance_id,
+                    &relative_path,
+                    &state.file_watcher,
+                    &state.directories,
+                )
+                .await;
                 return Err(error.into());
             }
             let _ = io::remove_dir_all(&backup_path).await;
+            watch_instance_folder(
+                instance_id,
+                &relative_path,
+                &state.file_watcher,
+                &state.directories,
+            )
+            .await;
         } else {
             io::create_symlink(&dotminecraft, &instance_path).await?;
         }
@@ -1066,6 +1120,57 @@ pub(crate) async fn finish_import(
     .await?;
 
     Ok(())
+}
+
+/// Moves a pre-existing instance directory aside so a symlink can take its
+/// place.
+///
+/// The folder is unwatched just before this runs, but the watcher closes its
+/// directory handles asynchronously; on Windows a rename attempted in that
+/// window fails with `ERROR_ACCESS_DENIED`. Retry briefly before failing.
+async fn rename_instance_dir_for_symlink(
+    from: &Path,
+    to: &Path,
+) -> eyre::Result<()> {
+    let mut last_error = None;
+    for attempt in 1..=8 {
+        match io::rename_or_move(from, to).await {
+            Ok(()) => return Ok(()),
+            Err(error) if is_busy_dir_error(&error) => {
+                tracing::debug!(
+                    "Instance directory {from:?} still busy, retrying rename ({attempt}/8)"
+                );
+                last_error = Some(error);
+                tokio::time::sleep(std::time::Duration::from_millis(150))
+                    .await;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+    Err(last_error.unwrap_or_else(|| {
+        eyre::eyre!("Instance directory rename failed")
+    }))
+}
+
+/// Whether a rename error means the destination directory is still busy and
+/// the operation may succeed shortly (Windows `ERROR_ACCESS_DENIED` and
+/// `ERROR_SHARING_VIOLATION`).
+fn is_busy_dir_error(error: &eyre::Report) -> bool {
+    #[cfg(windows)]
+    {
+        error.chain().any(|cause| {
+            cause
+                .downcast_ref::<std::io::Error>()
+                .is_some_and(|io_error| {
+                    matches!(io_error.raw_os_error(), Some(5) | Some(32))
+                })
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = error;
+        false
+    }
 }
 
 #[async_recursion::async_recursion]

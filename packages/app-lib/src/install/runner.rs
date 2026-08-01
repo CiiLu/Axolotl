@@ -185,7 +185,9 @@ pub async fn retry_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     emit_install_job(&record.snapshot()).await?;
     spawn_job(job_id);
 
-    Ok(record.snapshot())
+    // The spawned job may already have progressed (or finished) by the time
+    // the command returns; hand the caller the freshest stored state.
+    Ok(store::get_required(job_id, &state).await?.snapshot())
 }
 
 pub async fn retry_job_as_new(
@@ -205,7 +207,10 @@ pub async fn retry_job_as_new(
         )
         .into());
     }
-    start(job.state.request).await
+    let new_job = start(job.state.request).await?;
+    // The spawned job may already have progressed (or finished) by the time
+    // the command returns; hand the caller the freshest stored state.
+    Ok(store::get_required(new_job.job_id, &state).await?.snapshot())
 }
 
 pub async fn cancel_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {

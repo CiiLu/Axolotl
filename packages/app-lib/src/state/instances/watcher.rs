@@ -7,7 +7,12 @@ use crate::state::{
 use crate::worlds::WorldType;
 use notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::{DebounceEventResult, Debouncer, new_debouncer};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 use tokio::sync::{RwLock, mpsc::channel};
 
 use super::adapters::sqlite::instance_rows;
@@ -203,19 +208,22 @@ pub(crate) async fn watch_instance_folder(
     }
 
     let mut to_watch = Vec::new();
-    for sub_path in ProjectType::iterator()
-        .map(|x| x.get_folder())
-        .chain(["crash-reports", "saves"])
-    {
-        let full_path = full_instance_path.join(sub_path);
-
+    for full_path in instance_watch_paths(&full_instance_path) {
+        if full_path == full_instance_path {
+            // The root is watched non-recursively after the subfolders.
+            continue;
+        }
         let meta = tokio::fs::symlink_metadata(&full_path).await;
         let exists = meta.is_ok();
         let is_symlink = meta.ok().is_some_and(|m| m.file_type().is_symlink());
+        let sub_path = full_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
 
         if !exists
             && !is_symlink
-            && !sub_path.contains(".")
+            && !sub_path.contains('.')
             && let Err(e) = crate::util::io::create_dir_all(&full_path).await
         {
             tracing::error!(
@@ -254,6 +262,43 @@ pub(crate) async fn watch_instance_folder(
         .write()
         .await
         .insert(instance_path.to_string(), instance_id.to_string());
+}
+
+/// Stops watching an instance folder and forgets its instance-id mapping.
+///
+/// Used when the instance folder is about to be renamed or replaced. On
+/// Windows an active watch keeps an open directory handle, which blocks
+/// renaming the folder with `ERROR_ACCESS_DENIED`; the folder must be
+/// unwatched first and re-registered afterwards.
+pub(crate) async fn unwatch_instance_folder(
+    instance_path: &str,
+    watcher: &FileWatcher,
+    dirs: &DirectoryInfo,
+) {
+    let full_instance_path = dirs.instances_dir().join(instance_path);
+
+    let mut debouncer = watcher.watcher.write().await;
+    for full_path in instance_watch_paths(&full_instance_path) {
+        let _ = debouncer.watcher().unwatch(&full_path);
+    }
+
+    watcher
+        .instance_ids
+        .write()
+        .await
+        .remove(instance_path);
+}
+
+/// All paths `watch_instance_folder` registers for a single instance,
+/// including the root, so `unwatch_instance_folder` can release them again.
+fn instance_watch_paths(full_instance_path: &Path) -> Vec<PathBuf> {
+    let mut paths = ProjectType::iterator()
+        .map(|x| x.get_folder())
+        .chain(["crash-reports", "saves"])
+        .map(|sub| full_instance_path.join(sub))
+        .collect::<Vec<_>>();
+    paths.push(full_instance_path.to_path_buf());
+    paths
 }
 
 fn crash_task(instance_id: String) {

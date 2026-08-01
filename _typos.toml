@@ -4,6 +4,8 @@ extend-exclude = [
 	"patches/",
 	"packages/utils/",
 	"packages/ui/",
+	# Vendored upstream submodule, not checked out by CI.
+	"apps/app/vendor/",
 	# Generated mod search index contains project slugs, names, and compressed data.
 	"packages/app-lib/src/api/content_search/WikiEntries.txt",
 ]
@@ -17,3 +19,5 @@ gam = "gam"
 consts = "consts"
 # short for "Copy"
 Cpy = "Cpy"
+# Minecraft schematic file extension (Sponge schem format)
+schem = "schem"
