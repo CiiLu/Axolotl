@@ -33,6 +33,24 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.7',
+		version: '1.6.7',
+		publishedAt: '2026-08-01',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.7',
+			'zh-CN': 'Axolotl Launcher 1.6.7',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed schematics saved with reversed selection axes appearing upside down or mirrored in Schematic workshop.',
+					'zh-CN': '修复了使用反向选区轴保存的投影在投影工坊中上下颠倒或镜像的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.6',
 		version: '1.6.6',
 		publishedAt: '2026-08-01',
@@ -90,11 +108,6 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Fixed some Chinese copywriting issues.',
 					'zh-CN': '修复了部分中文文案。',
-				},
-				{
-					'en-US':
-						'Fixed schematics saved with reversed selection axes appearing upside down or mirrored in Schematic workshop.',
-					'zh-CN': '修复了使用反向选区轴保存的投影在投影工坊中上下颠倒或镜像的问题。',
 				},
 			],
 		},
