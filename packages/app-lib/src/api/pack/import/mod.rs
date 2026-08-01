@@ -204,14 +204,35 @@ async fn get_hmcl_instances(base_path: &Path) -> crate::Result<Vec<ImportableIns
 
 /// Scans a generic launcher folder for instance JSONs.
 async fn get_generic_instances(base_path: &Path) -> crate::Result<Vec<ImportableInstance>> {
-    Ok(scan_instances_at(base_path, None)
+    let mut instances: Vec<ImportableInstance> = scan_instances_at(base_path, None)
         .await
         .into_iter()
         .map(|(n, p)| ImportableInstance {
             name: n,
             path: p.to_string_lossy().to_string(),
         })
-        .collect())
+        .collect();
+
+    // PCL-style folders bundle sibling version folders, each its own
+    // instance root (root jar+json / version json / mods). When the base
+    // itself carries no instance markers, enumerate direct child folders.
+    if instances.is_empty() && base_path.is_dir() {
+        let mut dir = io::read_dir(base_path).await?;
+        while let Some(entry) = dir.next_entry().await? {
+            let path = entry.path();
+            if path.is_dir()
+                && instance_json::detect(&path).is_some()
+                && let Some(name) = path.file_name()
+            {
+                instances.push(ImportableInstance {
+                    name: name.to_string_lossy().to_string(),
+                    path: path.to_string_lossy().to_string(),
+                });
+            }
+        }
+    }
+
+    Ok(instances)
 }
 
 /// Probes every known launcher type in a folder and merges all found

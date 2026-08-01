@@ -317,6 +317,28 @@ impl ZipEntrySet {
         })
     }
 
+    /// Whether at least two direct child folders under `base` each look like
+    /// an instance folder (root jar+json, `versions/<id>` or `mods/*.jar`).
+    /// PCL-style launcher folders bundle several version folders this way;
+    /// classification reports the common parent and the instance scan
+    /// enumerates the children.
+    fn has_multiple_instance_children(&self, base: &str) -> bool {
+        let mut count = 0;
+        for child in self.child_folders(base) {
+            let child_base = format!("{base}{child}/");
+            if self.has_version_json(&child_base)
+                || self.has_mods_jar(&child_base)
+                || self.has_root_jar_and_json(&child_base)
+            {
+                count += 1;
+                if count >= 2 {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     /// Whether at least one `.fsh`, `.vsh` or `.glsl` file exists anywhere
     /// under `shaders/` below `base`. An empty `shaders/` directory is not a
     /// shader pack.
@@ -667,6 +689,8 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         || entries.has_mods_jar(base)
         || entries.has_root_jar_and_json(base)
     {
+        Some(ImportLauncherType::Generic)
+    } else if entries.has_multiple_instance_children(base) {
         Some(ImportLauncherType::Generic)
     } else if entries.has_file(base, ".hmcl/config/launcher-settings.json") {
         Some(ImportLauncherType::HMCL)
@@ -3000,6 +3024,64 @@ mod tests {
             !enc_out.path().join("secret.bin").exists(),
             "encrypted entries are skipped"
         );
+    }
+
+    #[test]
+    fn test_zip_pcl_multiple_version_folders_report_common_parent() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("pcl.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        for name in [
+            "test/1.7.10/1.7.10.jar",
+            "test/1.7.10/1.7.10.json",
+            "test/1.8.9/1.8.9.jar",
+            "test/1.8.9/1.8.9.json",
+            "test/qqwe.txt",
+        ] {
+            zip.start_file(name, zip::write::FileOptions::<()>::default())
+                .expect("start entry");
+            zip.write_all(b"x").expect("write");
+        }
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(
+                result,
+                DroppedItemType::Launcher {
+                    launcher_type: ImportLauncherType::Generic,
+                    inner_base: Some(ref base),
+                    ..
+                } if base.as_str() == "test"
+            ),
+            "multiple sibling instance folders should report the common parent: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn generic_scan_enumerates_sibling_instance_folders() {
+        let dir = tempdir().expect("temp dir");
+        let base = dir.path().join("test");
+        std::fs::create_dir_all(base.join("1.7.10")).expect("create");
+        std::fs::create_dir_all(base.join("1.8.9")).expect("create");
+        std::fs::write(base.join("1.7.10/1.7.10.jar"), b"j").expect("write");
+        std::fs::write(base.join("1.7.10/1.7.10.json"), b"{}").expect("write");
+        std::fs::write(base.join("1.8.9/1.8.9.jar"), b"j").expect("write");
+        std::fs::write(base.join("1.8.9/1.8.9.json"), b"{}").expect("write");
+        std::fs::write(base.join("qqwe.txt"), b"x").expect("write");
+
+        let instances = crate::api::pack::import::get_importable_instances(
+            ImportLauncherType::Generic,
+            base,
+        )
+        .await
+        .expect("scan");
+        let names: Vec<String> =
+            instances.iter().map(|i| i.name.clone()).collect();
+        assert_eq!(instances.len(), 2, "{instances:?}");
+        assert!(names.contains(&"1.7.10".to_string()), "{names:?}");
+        assert!(names.contains(&"1.8.9".to_string()), "{names:?}");
     }
 
 }
