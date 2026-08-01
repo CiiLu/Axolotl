@@ -57,6 +57,11 @@
         "name": "local_mod_data",
         "ordinal": 10,
         "type_info": "Text"
+      },
+      {
+        "name": "icon_path",
+        "ordinal": 11,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -73,6 +78,7 @@
       false,
       false,
       false,
+      true,
       true
     ]
   },
