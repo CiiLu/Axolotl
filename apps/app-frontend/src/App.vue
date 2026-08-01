@@ -177,6 +177,8 @@ const themeStore = useTheming()
 const router = useRouter()
 const route = useRoute()
 const onSkinsPage = computed(() => route.path === '/skins')
+const onSchematicWorkshopPage = computed(() => route.path === '/lab/schematic-preview')
+const isSchematicFile = (path: string) => /\.(litematic|schematic|schem)$/i.test(path)
 const APP_LEFT_NAV_WIDTH = '4rem'
 const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
@@ -1251,10 +1253,14 @@ const { isDragging, isProcessing } = useGlobalDrop(
 			if (onSkinsPage.value) {
 				return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
 			}
+			if (onSchematicWorkshopPage.value && isSchematicFile(path)) {
+				return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
+			}
 			return classifyDroppedItem(path)
 		},
 		onClassifyStart: (fileName) => {
 			if (onSkinsPage.value) return
+			if (onSchematicWorkshopPage.value && isSchematicFile(fileName)) return
 			// Immediate feedback when a file is dropped — show a notification
 			// with the file name before classification even begins.
 			dropProcessingNotificationId.value = addNotification({

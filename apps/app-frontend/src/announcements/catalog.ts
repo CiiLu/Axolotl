@@ -99,6 +99,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'修复曾经modrinth遗留代码, 右键图标的编辑按钮现在通向正确的实例编辑界面而非空白页。',
 				},
 				{
+					'en-US':
+						'Fixed the conflict between global drag-and-drop import and the Schematic workshop; dragging and dropping schematic files in the Schematic workshop now imports them directly into the workshop instead of globally.',
+					'zh-CN':
+						'修复全局拖拽导入和投影工坊的打架问题，在投影工坊界面拖拽导入的投影文件现在会直接导入到投影工坊而不是全局导入。',
+				},
+				{
 					'en-US': 'Forge and NeoForge mods now show their name and icon correctly.',
 					'zh-CN': '修复了 Forge/NeoForge 模组无法正常显示名称与图标的问题。',
 				},
