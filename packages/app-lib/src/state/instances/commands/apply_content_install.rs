@@ -3,7 +3,10 @@ use crate::api::content_search::{
 };
 use crate::state::instances::{
     ContentRequirement, ContentSourceKind, Instance, InstanceFile,
-    adapters::sqlite::{content_rows, instance_rows},
+    adapters::{
+        filesystem::project_type_from_relative_path,
+        sqlite::{content_rows, instance_rows},
+    },
 };
 use crate::state::{
     CacheBehaviour, CachedEntry, ContentProviderRef, Dependency,
@@ -1161,7 +1164,7 @@ pub(crate) async fn toggle_disable_project(
     )
     .await?;
     if !updated_entry {
-        let project_type = ProjectType::get_from_parent_folder(&new_path)
+        let project_type = project_type_from_relative_path(&new_path)
             .ok_or_else(|| {
                 crate::ErrorKind::InputError(format!(
                     "Unable to infer project type from {new_path}"
@@ -1371,7 +1374,7 @@ async fn index_existing_file(
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
-    let project_type = ProjectType::get_from_parent_folder(relative_path)
+    let project_type = project_type_from_relative_path(relative_path)
         .ok_or_else(|| {
             crate::ErrorKind::InputError(format!(
                 "Unable to infer project type from {relative_path}"

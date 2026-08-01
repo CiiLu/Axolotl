@@ -352,19 +352,16 @@ mod tests {
         let full_path = dirs.instances_dir().join(instance_path);
         std::fs::create_dir_all(&full_path).unwrap();
 
-        watch_instance_folder(
-            "instance-1",
-            instance_path,
-            &watcher,
-            &dirs,
-        )
-        .await;
+        watch_instance_folder("instance-1", instance_path, &watcher, &dirs)
+            .await;
 
         // On Windows, an active watch keeps a directory handle open and blocks
         // renaming the instance folder (ERROR_ACCESS_DENIED). This is the
         // failure the symlink import used to hit.
-        let rename_result =
-            std::fs::rename(&full_path, temp.path().join("watched-instance.bak"));
+        let rename_result = std::fs::rename(
+            &full_path,
+            temp.path().join("watched-instance.bak"),
+        );
         assert!(
             rename_result.is_err(),
             "a watched folder must not be renameable on Windows"
