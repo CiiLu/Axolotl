@@ -14,7 +14,6 @@ import type UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPa
 import type ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_search_results } from '@/helpers/cache.js'
-import { type ClassificationResult, classifyDroppedItemWithExtraction } from '@/helpers/drop'
 import { install_job_listener } from '@/helpers/events.js'
 import { import_instance } from '@/helpers/import.js'
 import {
@@ -104,11 +103,10 @@ const modpackMessages = defineMessages({
 
 export function setupCreationModal(
 	notificationManager: AbstractWebNotificationManager,
-	popupNotificationManager: AbstractPopupNotificationManager,
+	_popupNotificationManager: AbstractPopupNotificationManager,
 ) {
 	const { formatMessage } = useVIntl()
 	const { handleError } = notificationManager
-	const { addPopupNotification } = popupNotificationManager
 	const router = useRouter()
 	const themeStore = useTheming()
 
@@ -265,26 +263,9 @@ export function setupCreationModal(
 			if (config.modpackFilePath.value) {
 				// Fallback: called when modpack is imported via the creation flow
 				// (not via onImportFileReceived, which has its own install path).
-				const location: CreatePackLocation = {
-					type: 'fromFile',
-					path: config.modpackFilePath.value,
-				}
-				const preview = await install_get_modpack_preview(location).catch(handleError)
-				if (!preview) return
-
-				if (preview.unknownFile) {
-					const splitPath = config.modpackFilePath.value.split(/[\\/]/)
-					const fileName = splitPath
-						? splitPath[splitPath.length - 1]
-						: config.modpackFilePath.value
-					if (unknownPackWarningModal.value) {
-						unknownPackWarningModal.value?.show(() => doInstallModpackFile(location), fileName)
-					} else {
-						await doInstallModpackFile(location)
-					}
-				} else {
-					await doInstallModpackFile(location)
-				}
+				const splitPath = config.modpackFilePath.value.split(/[\\/]/)
+				const fileName = splitPath ? splitPath[splitPath.length - 1] : config.modpackFilePath.value
+				await installModpackFromPath(config.modpackFilePath.value, fileName)
 				trackEvent('InstanceCreate', { source: 'CreationModalModpackFile' })
 				return
 			}
@@ -322,12 +303,18 @@ export function setupCreationModal(
 		iconUrl?: string
 	} | null>(null)
 
-	async function doInstallModpackFile(location: CreatePackLocation) {
-		const installingNotify = notificationManager.addNotification({
-			title: formatMessage(modpackMessages.installing),
-			type: 'info',
-			autoCloseMs: 1000 * 10,
-		})
+	async function doInstallModpackFile(
+		location: CreatePackLocation,
+		options: { autoCloseMs?: number | null; existingNotify?: { id: number } } = {},
+	) {
+		const existingNotify = options.existingNotify
+		const installingNotify =
+			existingNotify ??
+			notificationManager.addNotification({
+				title: formatMessage(modpackMessages.installing),
+				type: 'info',
+				autoCloseMs: options.autoCloseMs ?? 1000 * 10,
+			})
 
 		const job = await install_create_modpack_instance(location).catch((e) => {
 			notificationManager.removeNotification(installingNotify.id)
@@ -388,70 +375,17 @@ export function setupCreationModal(
 
 	let _currentFlowCtx: CreationFlowContextValue | null = null
 
-	/** Show a popup notification prompting the user to force-analyse an unclassified file. */
-	function _showForceAnalysisPopup(classification: ClassificationResult) {
-		addPopupNotification({
-			title: formatMessage(modpackMessages.unknownFileType),
-			text: formatMessage(modpackMessages.unknownFileTypeText),
-			type: 'info',
-			autoCloseMs: null,
-			buttons: [
-				{
-					label: formatMessage(modpackMessages.forceAnalysis),
-					action: async () => {
-						const filePath = classification.file_path ?? classification.base_path
-						if (!filePath) return
-
-						// ── Processing notification during extraction ──
-						const extractingNotify = notificationManager.addNotification({
-							title: formatMessage(modpackMessages.analyzing),
-							type: 'info',
-							autoCloseMs: null,
-						})
-
-						try {
-							const result = await classifyDroppedItemWithExtraction(filePath)
-							notificationManager.removeNotification(extractingNotify.id)
-
-							if (result.item_type === 'unknown') {
-								notificationManager.addNotification({
-									title: formatMessage(modpackMessages.couldNotIdentify),
-									text: result.reason ?? formatMessage(modpackMessages.couldNotIdentifyText),
-									type: 'error',
-								})
-								return
-							}
-
-							if (result.item_type === 'modpack') {
-								const fileName = filePath.split(/[/\\]/).pop() || 'file'
-								await installModpackFromPath(filePath, fileName)
-								return
-							}
-
-							// Unexpected type from force analysis
-							notificationManager.addNotification({
-								title: formatMessage(modpackMessages.unexpectedType, {
-									type: result.item_type,
-								}),
-								type: 'error',
-							})
-						} catch (e) {
-							notificationManager.removeNotification(extractingNotify.id)
-							handleError(e as Error)
-						}
-					},
-					color: 'brand',
-				},
-			],
-		})
-	}
-
 	/** Install a modpack file with continuous feedback notifications. */
-	async function installModpackFromPath(filePath: string, fileName: string) {
+	async function installModpackFromPath(
+		filePath: string,
+		fileName: string,
+		options: { persistUntilDone?: boolean } = {},
+	) {
+		const persistUntilDone = options.persistUntilDone === true
 		const currentNotify = notificationManager.addNotification({
 			title: formatMessage(modpackMessages.installingFile, { name: fileName }),
 			type: 'info',
-			autoCloseMs: null,
+			autoCloseMs: persistUntilDone ? null : 1000 * 10,
 		})
 
 		const location: CreatePackLocation = { type: 'fromFile', path: filePath }
@@ -471,13 +405,26 @@ export function setupCreationModal(
 				if (preview.unknownFile) {
 					notificationManager.removeNotification(currentNotify.id)
 					unknownPackWarningModal.value?.show(async () => {
-						await doInstallModpackFile(location)
+						if (persistUntilDone) {
+							const installingNotify = notificationManager.addNotification({
+								title: formatMessage(modpackMessages.installing),
+								type: 'info',
+								autoCloseMs: null,
+							})
+							await doInstallModpackFile(location, { existingNotify: installingNotify })
+						} else {
+							await doInstallModpackFile(location)
+						}
 					}, fileName)
 					return
 				}
 			}
 
-			await doInstallModpackFile(location)
+			if (persistUntilDone) {
+				await doInstallModpackFile(location, { existingNotify: currentNotify })
+			} else {
+				await doInstallModpackFile(location)
+			}
 		} catch (e) {
 			notificationManager.removeNotification(currentNotify?.id)
 			handleError(e as Error)
@@ -497,6 +444,7 @@ export function setupCreationModal(
 		searchModpacks,
 		getProjectVersions,
 		getLoaderManifest,
+		installModpackFromPath,
 		setModpackAlreadyInstalledModal,
 		handleModpackDuplicateCreateAnyway,
 		handleModpackDuplicateGoToInstance,

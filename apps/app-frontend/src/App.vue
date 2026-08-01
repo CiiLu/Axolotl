@@ -98,17 +98,16 @@ import {
 	classifyDroppedItem,
 	classifyDroppedItemWithExtraction,
 	detectFileLock,
-	extractZipToTemp,
 	extractModMetadata,
+	extractZipToTemp,
 	lookupModHash,
-	removeTempDir,
 	type ModrinthLookupResult,
+	removeTempDir,
 	scanLauncherInstances,
 	type ScanResult,
 } from '@/helpers/drop'
 import {
 	command_listener,
-	install_job_listener,
 	java_download_confirmation_listener,
 	warning_listener,
 } from '@/helpers/events.js'
@@ -116,7 +115,6 @@ import { import_instance } from '@/helpers/import.js'
 import {
 	install_create_modpack_instance,
 	install_get_modpack_preview,
-	type InstallJobSnapshot,
 	wait_for_install_job,
 } from '@/helpers/install'
 import {
@@ -256,6 +254,7 @@ const {
 	searchModpacks,
 	getProjectVersions,
 	getLoaderManifest,
+	installModpackFromPath,
 	setModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance,
@@ -680,14 +679,6 @@ const messages = defineMessages({
 		defaultMessage: 'Imported {completed} of {total} instances ({failed} failed)',
 	},
 
-	dropModpackInstalling: {
-		id: 'app.drop.modpack-installing',
-		defaultMessage: 'Installing modpack...',
-	},
-	dropModpackInstalledSuccess: {
-		id: 'app.drop.modpack-installed-success',
-		defaultMessage: 'Modpack installed successfully',
-	},
 	dropModpackInstallFailed: {
 		id: 'app.drop.modpack-install-failed',
 		defaultMessage: 'Failed to install modpack',
@@ -1267,10 +1258,7 @@ const { isDragging, isProcessing } = useGlobalDrop(
 				classification.base_path?.split(/[/\\]/).pop() ??
 				(lastDroppedPath.value.split(/[/\\]/).pop() || 'file')
 
-			if (
-				type === 'unknown' &&
-				classification?.reason?.toLowerCase().includes('nested')
-			) {
+			if (type === 'unknown' && classification?.reason?.toLowerCase().includes('nested')) {
 				clearDropProcessingNotification()
 				showNestedUnpackPrompt(classification)
 				return
@@ -1561,70 +1549,7 @@ async function handleDropConfirm(type: string) {
 
 		// ── Replace "Processing..." with "Installing..." immediately (pure frontend) ──
 		clearDropProcessingNotification()
-		let installingNotify = addNotification({
-			title: formatMessage(messages.dropModpackInstalling),
-			type: 'info',
-			autoCloseMs: null,
-		})
-
-		const isMrpack = !!fileName?.toLowerCase().endsWith('.mrpack')
-		const location = { type: 'fromFile' as const, path: filePath }
-
-		const doInstall = async () => {
-			const job = await install_create_modpack_instance(location).catch(handleError)
-			if (!job) {
-				notificationManager.removeNotification(installingNotify.id)
-				return
-			}
-
-			// Single-use listener that auto-cleans up when the job reaches a terminal state
-			const unlisten = await install_job_listener((updatedJob: InstallJobSnapshot) => {
-				if (updatedJob.job_id !== job.job_id) return
-
-				if (updatedJob.status === 'succeeded') {
-					notificationManager.removeNotification(installingNotify.id)
-					addNotification({
-						title: formatMessage(messages.dropModpackInstalledSuccess),
-						type: 'success',
-					})
-
-					unlisten()
-				} else if (['failed', 'canceled', 'interrupted'].includes(updatedJob.status)) {
-					notificationManager.removeNotification(installingNotify.id)
-					unlisten()
-				}
-			})
-		}
-
-		// .mrpack is a well-defined standard — skip preview, install directly.
-		// .zip needs a preview pass to scan entry names and determine what we're dealing with.
-		if (!isMrpack) {
-			const preview = await install_get_modpack_preview(location).catch((e) => {
-				dropDebug('handleDropConfirm: modpack preview failed', { error: e })
-				notificationManager.removeNotification(installingNotify.id)
-				handleError(e)
-				return null
-			})
-			if (!preview) return
-
-			if (preview.unknownFile) {
-				// Clear "Installing..." — warning modal will handle re-showing on confirm
-				notificationManager.removeNotification(installingNotify.id)
-				unknownPackWarningModal.value?.show(async () => {
-					installingNotify = addNotification({
-						title: formatMessage(messages.dropModpackInstalling),
-						type: 'info',
-						autoCloseMs: null,
-					})
-					await doInstall()
-				}, fileName)
-				trackEvent('InstanceCreate', { source: 'DropConfirmModpack' })
-				await router.push('/library')
-				return
-			}
-		}
-
-		await doInstall()
+		await installModpackFromPath(filePath, fileName, { persistUntilDone: true })
 		trackEvent('InstanceCreate', { source: 'DropConfirmModpack' })
 		await router.push('/library')
 		return
@@ -1887,10 +1812,7 @@ function showForceAnalysisPrompt(classification: ClassificationResult) {
  * Route an already-confirmed classification result through the same confirm
  * flow used by a normal drop. Unknown results surface an error notification.
  */
-async function continueWithClassification(
-	result: ClassificationResult,
-	fallbackFileName: string,
-) {
+async function continueWithClassification(result: ClassificationResult, fallbackFileName: string) {
 	if (result.item_type === 'unknown') {
 		addNotification({
 			title: formatMessage(messages.dropUnknownTitle),
