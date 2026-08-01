@@ -172,7 +172,11 @@ fn normalize_version(raw: &str) -> String {
     v.trim().to_string()
 }
 
-fn extract_version(json: &Value, json_str: &str, folder_name: Option<&str>) -> String {
+fn extract_version(
+    json: &Value,
+    json_str: &str,
+    folder_name: Option<&str>,
+) -> String {
     // ① PCL download record clientVersion
     if let Some(v) = json.get("clientVersion").and_then(|v| v.as_str())
         && !v.is_empty()
@@ -487,5 +491,200 @@ fn try_extract_version_from_needle(
         Some(ver[pos + 1..].to_string())
     } else {
         Some(ver.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn detect_from_json(content: &str) -> Option<(String, Option<String>)> {
+        let json: Value = serde_json::from_str(content).expect("test JSON");
+        detect_loader(content, &json)
+    }
+
+    fn assert_loader(
+        content: &str,
+        expected: &str,
+        expected_version: Option<&str>,
+    ) {
+        let (loader, version) = detect_from_json(content)
+            .unwrap_or_else(|| panic!("expected loader {expected}, got None"));
+        assert_eq!(loader, expected);
+        assert_eq!(version.as_deref(), expected_version);
+    }
+
+    #[test]
+    fn test_forge() {
+        assert_loader(
+            r#"{
+                "id": "1.21.1-forge-52.0.0",
+                "libraries": [
+                    {
+                        "name": "net.minecraftforge:forge:1.21.1-52.0.0"
+                    }
+                ]
+            }"#,
+            "forge",
+            Some("52.0.0"),
+        );
+    }
+
+    #[test]
+    fn test_neoforge() {
+        assert_loader(
+            r#"{
+                "id": "1.20.1-neoforge-44.0.3",
+                "libraries": [
+                    {
+                        "name": "net.neoforged:neoforge:1.20.1-44.0.3"
+                    }
+                ]
+            }"#,
+            "neoforge",
+            Some("1.20.1-44.0.3"),
+        );
+    }
+
+    #[test]
+    fn test_fabric() {
+        assert_loader(
+            r#"{
+                "id": "1.20.1-fabric-0.15.11",
+                "libraries": [
+                    {
+                        "name": "net.fabricmc:fabric-loader:0.15.11-1.20.1"
+                    }
+                ]
+            }"#,
+            "fabric",
+            Some("0.15.11-1.20.1"),
+        );
+    }
+
+    #[test]
+    fn test_quilt() {
+        assert_loader(
+            r#"{
+                "id": "1.20.1-quilt-0.26.4",
+                "libraries": [
+                    {
+                        "name": "org.quiltmc:quilt-loader:0.26.4-1.20.1"
+                    }
+                ]
+            }"#,
+            "quilt",
+            Some("0.26.4-1.20.1"),
+        );
+    }
+
+    #[test]
+    fn test_optifine() {
+        assert_loader(
+            r#"{
+                "id": "1.8.9-OptiFine",
+                "libraries": [
+                    {
+                        "name": "optifine:OptiFine:1.8.9_HD_U_H5"
+                    }
+                ]
+            }"#,
+            "optifine",
+            Some("1.8.9"),
+        );
+    }
+
+    #[test]
+    fn test_legacy_fabric() {
+        assert_loader(
+            r#"{
+                "id": "1.8.9-legacy-fabric-0.13.1.4",
+                "libraries": [
+                    {
+                        "name": "net.legacyfabric:intermediary:1.8.9"
+                    },
+                    {
+                        "name": "net.fabricmc:fabric-loader:0.13.1.4-1.8.9"
+                    }
+                ]
+            }"#,
+            "legacy_fabric",
+            Some("0.13.1.4-1.8.9"),
+        );
+    }
+
+    #[test]
+    fn test_cleanroom() {
+        assert_loader(
+            r#"{
+                "id": "1.12.2-cleanroom-7.1.0",
+                "libraries": [
+                    {
+                        "name": "com.cleanroommc:cleanroom:1.12.2-7.1.0"
+                    }
+                ]
+            }"#,
+            "cleanroom",
+            Some("1.12.2-7.1.0"),
+        );
+    }
+
+    #[test]
+    fn test_labymod() {
+        assert_loader(
+            r#"{
+                "id": "1.20.1-labymod",
+                "labymod_data": {
+                    "version": "4.4.20"
+                }
+            }"#,
+            "labymod",
+            Some("4.4.20"),
+        );
+    }
+
+    #[test]
+    fn test_lite_loader() {
+        assert_loader(
+            r#"{
+                "id": "1.12.2-LiteLoader-1.12.2-SNAPSHOT",
+                "libraries": [
+                    {
+                        "name": "com.mumfrey:liteloader:1.12.2"
+                    }
+                ]
+            }"#,
+            "lite_loader",
+            None,
+        );
+    }
+
+    #[test]
+    fn test_no_loader() {
+        assert!(detect_from_json(r#"{"id": "1.20.4"}"#).is_none());
+    }
+
+    #[test]
+    fn test_detect_end_to_end() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let instance = dir.path().join(".minecraft");
+        std::fs::create_dir(&instance).expect("create .minecraft dir");
+        std::fs::write(
+            instance.join(".minecraft.json"),
+            r#"{
+                "id": "1.20.1-fabric-0.15.11",
+                "libraries": [
+                    {
+                        "name": "net.fabricmc:fabric-loader:0.15.11-1.20.1"
+                    }
+                ]
+            }"#,
+        )
+        .expect("write instance json");
+
+        let info = detect(&instance).expect("detect should succeed");
+        assert_eq!(info.vanilla_name, "1.20.1");
+        assert_eq!(info.loader.as_deref(), Some("fabric"));
+        assert_eq!(info.loader_version.as_deref(), Some("0.15.11-1.20.1"));
     }
 }
