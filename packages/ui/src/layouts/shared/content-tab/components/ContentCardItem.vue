@@ -11,6 +11,7 @@ import {
 	TrashExclamationIcon,
 	TrashIcon,
 	TriangleAlertIcon,
+	UndoIcon,
 } from '@modrinth/assets'
 import { useMagicKeys } from '@vueuse/core'
 import { Tooltip } from 'floating-vue'
@@ -35,6 +36,7 @@ import type {
 	ContentCardProject,
 	ContentCardVersion,
 	ContentOwner,
+	ContentRowInlineAction,
 } from '../types'
 
 const { formatMessage } = useVIntl()
@@ -48,6 +50,10 @@ const messages = defineMessages({
 		id: 'content.card.pending-manual-download',
 		defaultMessage: 'Manual download required',
 	},
+	rollbackTooltip: {
+		id: 'content.card.rollback-tooltip',
+		defaultMessage: 'Roll back to {fileName}',
+	},
 })
 
 interface Props {
@@ -60,10 +66,12 @@ interface Props {
 	installing?: boolean
 	pendingManualDownload?: boolean
 	hasUpdate?: boolean
+	rollbackFileName?: string
 	isClientOnly?: boolean
 	clientWarning?: ClientWarningType | null
 	hideSwitchVersion?: boolean
 	overflowOptions?: OverflowMenuOption[]
+	inlineActions?: ContentRowInlineAction[]
 	disabled?: boolean
 	disabledTooltip?: string | null
 	toggleDisabled?: boolean
@@ -97,10 +105,12 @@ const props = withDefaults(defineProps<Props>(), {
 	installing: false,
 	pendingManualDownload: false,
 	hasUpdate: false,
+	rollbackFileName: undefined,
 	isClientOnly: false,
 	clientWarning: null,
 	hideSwitchVersion: false,
 	overflowOptions: undefined,
+	inlineActions: undefined,
 	disabled: false,
 	disabledTooltip: undefined,
 	toggleDisabled: false,
@@ -129,12 +139,14 @@ const emit = defineEmits<{
 	delete: [event: MouseEvent]
 	update: []
 	switchVersion: []
+	rollback: []
 	toggleExpand: []
 }>()
 
 const instance = getCurrentInstance()
 const hasDeleteListener = computed(() => typeof instance?.vnode.props?.onDelete === 'function')
 const hasUpdateListener = computed(() => typeof instance?.vnode.props?.onUpdate === 'function')
+const hasRollbackListener = computed(() => typeof instance?.vnode.props?.onRollback === 'function')
 const hasSwitchVersionListener = computed(
 	() => typeof instance?.vnode.props?.onSwitchVersion === 'function',
 )
@@ -590,6 +602,20 @@ const deleteHovered = ref(false)
 						<ArrowLeftRightIcon class="size-5" />
 					</button>
 				</ButtonStyled>
+				<ButtonStyled
+					v-if="hasRollbackListener && rollbackFileName"
+					circular
+					type="transparent"
+				>
+					<button
+						v-tooltip="formatMessage(messages.rollbackTooltip, { fileName: rollbackFileName })"
+						:aria-label="formatMessage(messages.rollbackTooltip, { fileName: rollbackFileName })"
+						:disabled="isDisabled"
+						@click="emit('rollback')"
+					>
+						<UndoIcon class="size-5" />
+					</button>
+				</ButtonStyled>
 			</div>
 
 			<Toggle
@@ -638,6 +664,19 @@ const deleteHovered = ref(false)
 					</span>
 				</button>
 			</ButtonStyled>
+
+			<template v-for="action in inlineActions" :key="action.id">
+				<ButtonStyled circular type="transparent">
+					<button
+						v-tooltip="action.label"
+						:aria-label="action.label"
+						:disabled="isDisabled"
+						@click="action.action"
+					>
+						<component :is="action.icon" class="size-5" />
+					</button>
+				</ButtonStyled>
+			</template>
 
 			<slot name="additionalButtonsRight" />
 

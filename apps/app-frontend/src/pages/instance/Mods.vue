@@ -113,18 +113,6 @@
 					@version-hover="handleVersionHover"
 				/>
 			</template>
-			<template #itemButtonsRight="{ contentItem }">
-				<ButtonStyled v-if="contentItem?.project_type === 'schematic'" circular type="transparent">
-					<button
-						v-tooltip="formatMessage(messages.openInSchematicWorkshop)"
-						:aria-label="formatMessage(messages.openInSchematicWorkshop)"
-						class="flex items-center text-secondary transition-colors hover:text-primary"
-						@click.stop="openSchematicInWorkshop(contentItem)"
-					>
-						<PencilIcon class="size-5" />
-					</button>
-				</ButtonStyled>
-			</template>
 		</ContentPageLayout>
 	</ReadyTransition>
 </template>
@@ -134,7 +122,6 @@ import type { Labrinth } from '@modrinth/api-client'
 import { ClipboardCopyIcon, ExternalIcon, FolderOpenIcon, PencilIcon } from '@modrinth/assets'
 import {
 	type BulkOperationStatus,
-	ButtonStyled,
 	CollapsibleAdmonition,
 	commonMessages,
 	ConfirmModpackUpdateModal,
@@ -192,6 +179,7 @@ import {
 	get_linked_modpack_content,
 	list,
 	remove_project,
+	rollback_project,
 	switch_project_version_with_dependencies,
 	toggle_disable_project,
 	update_all,
@@ -1753,8 +1741,7 @@ function getOverflowOptions(item: ContentItem): OverflowMenuOption[] {
 	return options
 }
 
-function openSchematicInWorkshop(item: ContentItem | undefined) {
-	if (!item) return
+function openSchematicInWorkshop(item: ContentItem) {
 	void router.push({
 		name: 'Schematic workshop',
 		query: { instance: props.instance.id, path: item.file_path ?? item.file_name },
@@ -2004,6 +1991,17 @@ provideContentManager({
 			owner: ownerLink,
 			enabled: item.enabled,
 			installing: item.installing,
+			inlineActions:
+				item.project_type === 'schematic'
+					? [
+							{
+								id: 'open-in-schematic-workshop',
+								label: formatMessage(messages.openInSchematicWorkshop),
+								icon: PencilIcon,
+								action: () => openSchematicInWorkshop(item),
+							},
+						]
+					: undefined,
 		}
 	},
 })

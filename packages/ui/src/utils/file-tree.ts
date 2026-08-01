@@ -1,6 +1,7 @@
 export type FileTreeEntry = {
 	relativePath: string
 	fileName: string
+	id?: string
 }
 
 export type FileTreeFolderRow = {
@@ -10,6 +11,7 @@ export type FileTreeFolderRow = {
 	depth: number
 	fileCount: number
 	expanded: boolean
+	childIds: string[]
 }
 
 export type FileTreeFileRow<TFile extends FileTreeEntry> = {
@@ -28,6 +30,7 @@ type FileTreeNode<TFile extends FileTreeEntry> = {
 	children: Map<string, FileTreeNode<TFile>>
 	parent?: FileTreeNode<TFile>
 	fileCount: number
+	fileIds: string[]
 }
 
 function createFileTreeNode<TFile extends FileTreeEntry>(
@@ -40,6 +43,7 @@ function createFileTreeNode<TFile extends FileTreeEntry>(
 		directFiles: [],
 		children: new Map(),
 		fileCount: 0,
+		fileIds: [],
 	}
 }
 
@@ -74,6 +78,7 @@ function buildFileTree<TFile extends FileTreeEntry>(files: readonly TFile[]): Fi
 			countNode = countNode.parent
 		) {
 			countNode.fileCount += 1
+			if (file.id) countNode.fileIds.push(file.id)
 		}
 	}
 	return root
@@ -117,6 +122,7 @@ function appendFolderRows<TFile extends FileTreeEntry>(
 			depth,
 			fileCount: folder.fileCount,
 			expanded: expandedFolders.has(folder.path),
+			childIds: folder.fileIds,
 		})
 		if (expandedFolders.has(folder.path)) {
 			appendFolderRows(folder, depth + 1, expandedFolders, rows, locale)

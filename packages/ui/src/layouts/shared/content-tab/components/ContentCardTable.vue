@@ -53,6 +53,7 @@ const emit = defineEmits<{
 	delete: [id: string, event: MouseEvent]
 	update: [id: string]
 	switchVersion: [id: string]
+	rollback: [id: string]
 	sort: [column: ContentCardTableSortColumn, direction: ContentCardTableSortDirection]
 	toggleExpand: [groupId: string]
 }>()
@@ -80,6 +81,7 @@ const hasAnyActions = computed(() => {
 	const hasItemActions = props.items.some(
 		(item) =>
 			(item.overflowOptions && item.overflowOptions.length > 0) ||
+			(item.inlineActions && item.inlineActions.length > 0) ||
 			item.hasUpdate ||
 			item.enabled !== undefined,
 	)
@@ -240,6 +242,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 					:installing="item.installing"
 					:pending-manual-download="item.pendingManualDownload"
 					:has-update="item.hasUpdate"
+					:rollback-file-name="item.rollbackFileName"
 					:is-client-only="item.isClientOnly"
 					:client-warning="item.clientWarning"
 					:hide-switch-version="item.hideSwitchVersion"
@@ -258,6 +261,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 					:downloads="item.downloads"
 					:followers="item.followers"
 					:categories="item.categories"
+					:inline-actions="item.inlineActions"
 					:group-checkbox-indeterminate="
 						item.isGroupHeader ? getGroupCheckboxState(item).indeterminate : false
 					"
@@ -292,6 +296,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 					@delete="(e: MouseEvent) => emit('delete', item.id, e)"
 					@update="emit('update', item.id)"
 					@switch-version="emit('switchVersion', item.id)"
+					@rollback="emit('rollback', item.id)"
 					@toggle-expand="item.group ? emit('toggleExpand', item.group) : undefined"
 				>
 					<template #additionalButtonsLeft>
@@ -323,6 +328,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 				:installing="item.installing"
 				:pending-manual-download="item.pendingManualDownload"
 				:has-update="item.hasUpdate"
+				:rollback-file-name="item.rollbackFileName"
 				:is-client-only="item.isClientOnly"
 				:client-warning="item.clientWarning"
 				:overflow-options="item.overflowOptions"
@@ -340,6 +346,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 				:downloads="item.downloads"
 				:followers="item.followers"
 				:categories="item.categories"
+				:inline-actions="item.inlineActions"
 				:group-checkbox-indeterminate="
 					item.isGroupHeader ? getGroupCheckboxState(item).indeterminate : false
 				"
@@ -367,6 +374,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 				@delete="(e: MouseEvent) => emit('delete', item.id, e)"
 				@update="emit('update', item.id)"
 				@switch-version="emit('switchVersion', item.id)"
+				@rollback="emit('rollback', item.id)"
 				@toggle-expand="item.group ? emit('toggleExpand', item.group) : undefined"
 			>
 				<template #additionalButtonsLeft>

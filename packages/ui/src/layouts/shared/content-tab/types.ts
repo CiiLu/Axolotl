@@ -1,4 +1,5 @@
 import type { Labrinth } from '@modrinth/api-client'
+import type { Component } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
 import type { Option as OverflowMenuOption } from '#ui/components/base/OverflowMenu.vue'
@@ -23,6 +24,13 @@ export interface ContentOwner {
 
 export type ClientWarningType = 'retained' | 'depends' | 'environment'
 
+export interface ContentRowInlineAction {
+	id: string
+	label: string
+	icon: Component
+	action: () => void
+}
+
 export interface ContentCardTableItem {
 	id: string
 	project: ContentCardProject
@@ -37,11 +45,15 @@ export interface ContentCardTableItem {
 	toggleDisabledTooltip?: string | null
 	installing?: boolean
 	hasUpdate?: boolean
+	/** File name that would be restored by the rollback action, when the item
+	 * has an update backup (`{active}_{previous}.old`) available. */
+	rollbackFileName?: string
 	isClientOnly?: boolean
 	clientWarning?: ClientWarningType | null
 	hideSwitchVersion?: boolean
 	pendingManualDownload?: boolean
 	overflowOptions?: OverflowMenuOption[]
+	inlineActions?: ContentRowInlineAction[]
 	isGroupHeader?: boolean
 	group?: string
 	groupDepth?: number
@@ -96,6 +108,7 @@ export interface ContentItem extends Omit<
 	pack_client_depends?: boolean
 	installing?: boolean
 	pendingManualDownload?: boolean
+	rollback?: { file_name: string } | null
 	provider_refs: Array<
 		| {
 				provider: 'modrinth'
