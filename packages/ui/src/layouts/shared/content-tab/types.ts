@@ -44,6 +44,7 @@ export interface ContentCardTableItem {
 	overflowOptions?: OverflowMenuOption[]
 	isGroupHeader?: boolean
 	group?: string
+	groupDepth?: number
 	groupItemCount?: number
 	groupSwitchVersion?: () => void
 	groupChildIds?: string[]

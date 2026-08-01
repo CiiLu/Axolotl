@@ -181,13 +181,17 @@ impl ProjectType {
     }
 
     pub fn get_from_parent_folder(path: impl AsRef<Path>) -> Option<Self> {
-        match path
-            .as_ref()
-            .parent()?
-            .file_name()?
-            .to_str()
-            .unwrap_or_default()
-        {
+        Self::from_folder_name(
+            path.as_ref()
+                .parent()?
+                .file_name()?
+                .to_str()
+                .unwrap_or_default(),
+        )
+    }
+
+    pub(crate) fn from_folder_name(folder_name: &str) -> Option<Self> {
+        match folder_name {
             "mods" => Some(ProjectType::Mod),
             "datapacks" => Some(ProjectType::DataPack),
             "resourcepacks" => Some(ProjectType::ResourcePack),

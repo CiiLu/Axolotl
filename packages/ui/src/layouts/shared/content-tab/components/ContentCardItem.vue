@@ -73,6 +73,7 @@ interface Props {
 	hideActions?: boolean
 	inline?: boolean
 	isGroupHeader?: boolean
+	groupDepth?: number
 	groupItemCount?: number
 	groupExpanded?: boolean
 	groupSwitchVersion?: () => void
@@ -109,6 +110,7 @@ const props = withDefaults(defineProps<Props>(), {
 	hideActions: false,
 	inline: false,
 	isGroupHeader: false,
+	groupDepth: 0,
 	groupItemCount: 0,
 	groupExpanded: false,
 	groupSwitchVersion: undefined,
@@ -179,6 +181,7 @@ const deleteHovered = ref(false)
 		role="row"
 		class="flex h-[74px] cursor-pointer items-center justify-between gap-4 px-3 hover:bg-[hsla(0,0%,50%,0.1)]"
 		:class="{ 'opacity-50': disabled }"
+		:style="groupDepth ? { paddingLeft: `${groupDepth * 2.5}rem` } : undefined"
 		@click="handleRowClick"
 	>
 		<div
@@ -369,6 +372,11 @@ const deleteHovered = ref(false)
 			'opacity-50': installing,
 			'pl-10': isGroupChild && !inline,
 		}"
+		:style="
+			isGroupChild && !inline && groupDepth > 1
+				? { paddingLeft: `${groupDepth * 2.5}rem` }
+				: undefined
+		"
 	>
 		<div
 			class="flex min-w-0 items-center gap-4"

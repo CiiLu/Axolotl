@@ -47,6 +47,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Mods and resource packs that are not linked to an online project now show the icon packed inside the file.',
 					'zh-CN': '未关联到线上项目的模组与资源包，现在会显示包内自带的图标。',
 				},
+				{
+					'en-US':
+						'Fixed schematics stored in nested folders not being recognized, now they are folded into a hierarchical view.',
+					'zh-CN': '实例内容页面的投影项右边添加了编辑按钮，可直接导入投影工坊。',
+				},
 			],
 			changed: [
 				{
@@ -77,6 +82,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'修复了 OpenAI 兼容翻译服务的自定义系统提示词无法保存的问题，现在会正确保存并在翻译时生效。',
 				},
 				{
+					'en-US':
+						'Fixed legacy Modrinth code so the right-click icon edit button now leads to the correct instance edit page instead of a blank page.',
+					'zh-CN':
+						'修复曾经modrinth遗留代码, 右键图标的编辑按钮现在通向正确的实例编辑界面而非空白页。',
+				},
+				{
 					'en-US': 'Forge and NeoForge mods now show their name and icon correctly.',
 					'zh-CN': '修复了 Forge/NeoForge 模组无法正常显示名称与图标的问题。',
 				},
@@ -98,6 +109,17 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Fixed an issue where mods could not be disabled properly.',
 					'zh-CN': '修复了模组无法被正常关闭的问题。',
+				},
+				{
+					'en-US':
+						'Fixed an OOM issue caused by a low-performance upload interface, which has now been removed.',
+					'zh-CN': '修复了低性能的上传接口导致的OOM问题，现在直接移除了这个接口。',
+				},
+				{
+					'en-US':
+						'Fixed an issue where resources were not displayed correctly after adding them without an immediate refresh; a refresh button is now provided to manually refresh the resource list.',
+					'zh-CN':
+						'修复了添加资源后没有立即刷新导致的资源显示不正确的问题，现在提供一个刷新按钮来手动刷新资源列表。',
 				},
 				{
 					'en-US': 'Resolved several known issues.',

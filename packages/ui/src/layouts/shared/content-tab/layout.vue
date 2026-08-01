@@ -24,7 +24,12 @@ import EmptyState from '#ui/components/base/EmptyState.vue'
 import OverflowMenu from '#ui/components/base/OverflowMenu.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
-import { commonMessages, formatContentTypeSentence } from '#ui/utils/common-messages'
+import {
+	commonMessages,
+	formatContentTypeSentence,
+	normalizeProjectType,
+} from '#ui/utils/common-messages'
+import { buildFileTreeRows, collectFileTreeFolders } from '#ui/utils/file-tree'
 
 import ContentCardTable from './components/ContentCardTable.vue'
 import ContentSelectionBar from './components/ContentSelectionBar.vue'
@@ -43,7 +48,7 @@ import {
 import { injectContentManager } from './providers/content-manager'
 import type { BulkOperationStatus, ContentCardTableItem, ContentItem } from './types'
 
-const { formatMessage } = useVIntl()
+const { formatMessage, locale } = useVIntl()
 
 const props = withDefaults(
 	defineProps<{
@@ -297,6 +302,58 @@ function toggleGroupExpand(groupId: string) {
 	if (ctx.instanceId) expandedGroupsMemory.set(ctx.instanceId, newSet)
 }
 
+const SCHEMATIC_FOLDER_GROUP_PREFIX = 'schematic-folder:'
+
+function schematicFolderGroupId(path: string) {
+	return `${SCHEMATIC_FOLDER_GROUP_PREFIX}${path}`
+}
+
+function isSchematicContentItem(item: ContentItem) {
+	return normalizeProjectType(item.project_type) === 'schematic'
+}
+
+const expandedSchematicPaths = computed(() => {
+	const paths = new Set<string>()
+	for (const id of expandedGroups.value) {
+		if (id.startsWith(SCHEMATIC_FOLDER_GROUP_PREFIX)) {
+			paths.add(id.slice(SCHEMATIC_FOLDER_GROUP_PREFIX.length))
+		}
+	}
+	return paths
+})
+
+const knownSchematicFolderPaths = ref(new Set<string>())
+watch(
+	filteredItems,
+	(items) => {
+		const folderPaths = collectFileTreeFolders(
+			items
+				.filter(
+					(item) =>
+						isSchematicContentItem(item) &&
+						!modpackChildIdSet.value.has(getItemId(item).replace(/\.disabled$/, '')),
+				)
+				.map((item) => ({
+					relativePath: item.file_path ?? item.file_name,
+					fileName: item.file_name,
+				})),
+		)
+		const newPaths = folderPaths.filter((path) => !knownSchematicFolderPaths.value.has(path))
+		if (newPaths.length === 0) return
+		for (const path of newPaths) {
+			knownSchematicFolderPaths.value.add(path)
+		}
+		expandedGroups.value = new Set([
+			...expandedGroups.value,
+			...newPaths.map(schematicFolderGroupId),
+		])
+		if (ctx.instanceId) {
+			expandedGroupsMemory.set(ctx.instanceId, expandedGroups.value)
+		}
+	},
+	{ immediate: true },
+)
+
 watch(searchQuery, (query) => {
 	if (query.trim()) {
 		expandedGroups.value = new Set([...expandedGroups.value, 'modpack'])
@@ -389,6 +446,64 @@ function mapToTableItem(item: ContentItem, group?: string): ContentCardTableItem
 	}
 }
 
+type SchematicContentEntry = {
+	item: ContentItem
+	relativePath: string
+	fileName: string
+}
+
+function buildSchematicFolderGroups(schematicItems: ContentItem[]): ContentCardTableItem[] {
+	const tableItems: ContentCardTableItem[] = []
+	if (schematicItems.length === 0) return tableItems
+
+	const entries: SchematicContentEntry[] = schematicItems.map((item) => ({
+		item,
+		relativePath: item.file_path ?? item.file_name,
+		fileName: item.file_name,
+	}))
+
+	const childIdsByFolder = new Map<string, string[]>()
+	for (const entry of entries) {
+		const id = getItemId(entry.item)
+		const segments = entry.relativePath.split(/[\\/]/).filter(Boolean)
+		for (let index = 1; index < segments.length; index += 1) {
+			const folderPath = segments.slice(0, index).join('/')
+			const ids = childIdsByFolder.get(folderPath) ?? []
+			ids.push(id)
+			childIdsByFolder.set(folderPath, ids)
+		}
+	}
+
+	for (const row of buildFileTreeRows(entries, expandedSchematicPaths.value, '', locale.value)) {
+		if (row.kind === 'folder') {
+			const groupId = schematicFolderGroupId(row.path)
+			tableItems.push({
+				id: groupId,
+				isGroupHeader: true,
+				group: groupId,
+				groupDepth: row.depth,
+				groupItemCount: row.fileCount,
+				groupChildIds: childIdsByFolder.get(row.path) ?? [],
+				project: {
+					id: groupId,
+					slug: null,
+					title: row.name,
+					icon_url: null,
+				},
+				enabled: true,
+			})
+		} else {
+			const parentGroup = row.parentPath ? schematicFolderGroupId(row.parentPath) : undefined
+			tableItems.push({
+				...mapToTableItem(row.file.item, parentGroup),
+				...(row.depth > 1 ? { groupDepth: row.depth } : {}),
+			})
+		}
+	}
+
+	return tableItems
+}
+
 const tableItems = computed<ContentCardTableItem[]>(() => {
 	const items: ContentCardTableItem[] = []
 
@@ -443,8 +558,28 @@ const tableItems = computed<ContentCardTableItem[]>(() => {
 		items.push(...groupItems)
 	}
 
+	const schematicItems: ContentItem[] = []
+	const regularItems: ContentItem[] = []
 	for (const item of filteredItems.value) {
-		if (modpackChildIdSet.value.has(getItemId(item).replace(/\.disabled$/, ''))) continue
+		if (modpackChildIdSet.value.has(getItemId(item).replace(/\.disabled$/, ''))) {
+			continue
+		}
+		if (isSchematicContentItem(item)) {
+			schematicItems.push(item)
+		} else {
+			regularItems.push(item)
+		}
+	}
+
+	if (searchQuery.value.trim()) {
+		for (const item of schematicItems) {
+			items.push(mapToTableItem(item))
+		}
+	} else {
+		items.push(...buildSchematicFolderGroups(schematicItems))
+	}
+
+	for (const item of regularItems) {
 		items.push(mapToTableItem(item))
 	}
 
@@ -897,6 +1032,14 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 						@switch-version="handleSwitchVersionById"
 						@toggle-expand="toggleGroupExpand"
 					>
+						<template #itemButtonsRight="{ item, index }">
+							<slot
+								name="itemButtonsRight"
+								:item="item"
+								:index="index"
+								:content-item="findContentItem(item.id)"
+							/>
+						</template>
 						<template #header-project>
 							<div class="flex items-center gap-4">
 								<button
