@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { EditingFile, FileItem, UploadState } from '@modrinth/ui'
+import { FileArchiveIcon } from '@modrinth/assets'
+import type { EditingFile, FileContextMenuOption, FileItem, UploadState } from '@modrinth/ui'
 import {
 	commonMessages,
 	defineMessages,
@@ -23,6 +24,7 @@ import {
 	writeTextFile,
 } from '@tauri-apps/plugin-fs'
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { instance_listener } from '@/helpers/events'
 import { get_full_path } from '@/helpers/instance'
@@ -41,6 +43,7 @@ const props = defineProps<{
 const { formatMessage } = useVIntl()
 const { addNotification } = injectNotificationManager()
 const debug = useDebugLogger('Files')
+const router = useRouter()
 
 const messages = defineMessages({
 	saveAs: {
@@ -50,6 +53,10 @@ const messages = defineMessages({
 	addingFiles: {
 		id: 'instance.files.adding-files',
 		defaultMessage: 'Adding files ({completed}/{total})',
+	},
+	openInSchematicWorkshop: {
+		id: 'instance.files.open-in-schematic-workshop',
+		defaultMessage: 'Open in schematic workshop',
 	},
 })
 
@@ -289,6 +296,26 @@ async function handleExtractFile(path: string, override: boolean, dry: boolean) 
 	}
 }
 
+function getAdditionalMenuOptions(
+	item: Pick<FileItem, 'name' | 'type' | 'path'>,
+): FileContextMenuOption[] {
+	if (item.type !== 'file' || !/\.(litematic|schem)$/i.test(item.name)) return []
+
+	return [
+		{
+			id: 'open-in-schematic-workshop',
+			label: formatMessage(messages.openInSchematicWorkshop),
+			icon: FileArchiveIcon,
+			action: () => {
+				void router.push({
+					name: 'Schematic workshop',
+					query: { instance: props.instance.id, path: item.path },
+				})
+			},
+		},
+	]
+}
+
 debug('setup: registering instance_listener')
 const unlistenInstances = await instance_listener(
 	async (event: { event: string; instance_id: string }) => {
@@ -339,6 +366,7 @@ provideFileManager({
 	refresh,
 	basePath: instanceRoot,
 	openInFolder: (path: string) => highlightInFolder(path),
+	getAdditionalMenuOptions,
 	downloadButtonLabel: formatMessage(messages.saveAs),
 	uploadingLabel: (completed: number, total: number) =>
 		formatMessage(messages.addingFiles, { completed, total }),

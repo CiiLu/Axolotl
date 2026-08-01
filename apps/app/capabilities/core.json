@@ -24,6 +24,8 @@
 		"core:window:allow-set-decorations",
 		"core:window:allow-set-shadow",
 		"core:window:allow-set-effects",
+		"core:window:allow-set-cursor-grab",
+		"core:window:allow-set-cursor-visible",
 		"core:window:allow-start-dragging",
 		"core:webview:allow-set-webview-zoom"
 	]

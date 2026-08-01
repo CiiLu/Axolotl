@@ -667,8 +667,12 @@ function handleContextMenu(item: FileItem, x: number, y: number) {
 	const wd = isBusy.value
 	const wdTooltip = busyTooltip.value
 	const isZip = getFileExtension(item.name) === 'zip'
+	const additionalOptions = ctx.getAdditionalMenuOptions?.(item) ?? []
+	const hasAdditionalOptions = additionalOptions.some((option) => option.shown !== false)
 
 	const options: FileContextMenuOption[] = [
+		...additionalOptions,
+		{ divider: true, shown: hasAdditionalOptions },
 		{
 			id: 'extract',
 			shown: isZip && !!ctx.extractFile,

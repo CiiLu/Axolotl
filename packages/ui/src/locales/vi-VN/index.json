@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Bạn không có quyền."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Tạo liên kết affiliate"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Tạo mã affiliate mới"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Đặt tên cho liên kết affiliate để bạn biết người dùng đến từ đâu!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Tiêu đề liên kết affiliate"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "vd: YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Tên người dùng mà bạn muốn tạo mã affiliate cho"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Nhập tên người dùng..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Được tạo bởi {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Đang tạo liên kết affiliate..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Thu hồi liên kết affiliate"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Xem phân tích"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Không thể tải cài đặt máy chủ"
   },
@@ -298,18 +265,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Tải ảnh lên"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Vừa xong"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "Ứng dụng"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosting"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Nền tảng"
   },
   "collections.label.private": {
     "defaultMessage": "Riêng tư"
@@ -2636,72 +2591,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, other {lượt tải xuống}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Yêu cầu cài đặt trên cả máy khách và máy chủ."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Máy khách và máy chủ, yêu cầu ở cả hai bên"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "Phần lớn các tính năng đều nằm ở phía máy khách, nhưng việc cài đặt trên máy chủ sẽ mở khóa thêm các chức năng nâng cao."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Máy khách và máy chủ, tùy chọn trên máy chủ"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Mọi chức năng đều chạy phía client và tương thích với server vanilla."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Chỉ phía client"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Có một số tính năng hoạt động trên cả máy khách và máy chủ, dù có thể chỉ là một phần. Việc cài đặt trên cả hai phía sẽ mang lại trải nghiệm tốt nhất."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Máy khách và máy chủ, hoạt động tốt nhất khi được cài trên cả hai bên"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Có một số chức năng hoạt động trên cả client và server, dù chỉ ở mức độ một phần."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Máy khách và máy chủ, không bắt buộc trên cả hai"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Mọi tính năng đều được xử lý ở phía máy chủ và tương thích với các máy khách vanilla (bản gốc). Chỉ hoạt động trên các máy chủ chuyên dụng."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Chỉ phía máy chủ"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "Phần lớn chức năng hoạt động trên máy chủ, nhưng cài đặt trên máy khách sẽ giúp tăng cường trải nghiệm và tính năng."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Máy khách và máy chủ, không bắt buộc trên máy khách"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Mọi tính năng đều được xử lý ở phía máy chủ và tương thích hoàn toàn với các máy khách vanilla (bản gốc). Ngoài ra, mod cũng hoạt động trên máy chủ nội bộ ở chế độ chơi đơn."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Chỉ máy chủ, cũng hoạt động trong chế độ chơi đơn"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Chức năng này chỉ hoạt động trong chế độ chơi đơn hoặc khi không kết nối với máy chủ nhiều người chơi."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Chỉ chơi đơn"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "N/A"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Không rõ"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Môi trường cho phiên bản này chưa được xác định."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Môi trường không xác định"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, other {lượt theo dõi}}"
   },
@@ -2987,89 +2876,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Mô tả"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Có một số chức năng hoạt động trên cả client và server, dù chỉ ở mức độ một phần."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Không bắt buộc cài trên cả hai, hoạt động như nhau nếu được cài đặt ở bất kỳ bên nào"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Không bắt buộc cho cả hai bên, nhưng hoạt động tốt nhất khi được cài đặt ở cả hai phía"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Tùy chọn trên máy khách"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Tùy chọn trên máy chủ"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Yêu cầu trên cả hai"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Client và server"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Mọi chức năng đều chạy phía client và tương thích với server vanilla."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Chỉ phía client"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Dự án của bạn đang thiếu thông tin về môi trường, vui lòng chọn tùy chọn phù hợp dưới đây."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Vui lòng chọn một môi trường cho dự án của bạn"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Các phiên bản khác nhau trong dự án của bạn đang được thiết lập các môi trường khác nhau, vì vậy bạn không thể chỉnh sửa chúng một cách đồng loạt vào lúc này."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Project của bạn có nhiều biến môi trường"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Chúng tôi vừa nâng cấp hệ thống Môi trường trên Modrinth và hiện đã có thêm các tùy chọn mới. Vui lòng đảm bảo bạn đã chọn đúng tùy chọn bên dưới và sau đó nhấp vào 'Xác nhận' khi hoàn tất!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Xin hãy xem lại các lựa chọn bên dưới"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Chỉ các dự án mod hoặc modpack mới có thể có siêu dữ liệu về môi trường."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Loại dự án này không hỗ trợ siêu dữ liệu về môi trường"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Chỉ máy chủ chuyên dụng"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Tất cả chức năng đều được thực hiện ở phía máy chủ và tương thích với các máy khách vanilla."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Cũng hoạt động được trong chế độ chơi đơn"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Chỉ dành cho phía máy chủ"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Chức năng này chỉ hoạt động trong chế độ chơi đơn hoặc khi không kết nối với máy chủ nhiều người chơi."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Chỉ dành cho chơi đơn"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Tuỳ chọn con của {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Môi trường"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Xác nhận"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Xác minh thiết lập môi trường cho dự án này."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Thư viện"
@@ -3160,9 +2968,6 @@
   },
   "report.item-type.version": {
     "defaultMessage": "phiên bản"
-  },
-  "s.bg": {
-    "defaultMessage": "Đang chạy tác vụ nền"
   },
   "search.filter.locked.default": {
     "defaultMessage": "Içime cin girdi"

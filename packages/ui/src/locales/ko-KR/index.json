@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "권한이 없습니다."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "제휴 링크 생성하기"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "새 제휴 코드 생성하기"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "사람들이 어디에서 유입되는지 알 수 있도록 제휴 링크에 이름을 지정하세요!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "제휴 링크 제목"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "예시: YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "제휴 코드를 생성할 사용자 이름"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "사용자명 입력..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "{user}에 의해 생성됨"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "제휴 링크 생성 중..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "제휴 링크 취소"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "통계 보기"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "서버 설정 불러오기 실패"
   },
@@ -298,18 +265,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "이미지 업로드"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "최근"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "앱"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "호스팅"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "플랫폼"
   },
   "collections.label.private": {
     "defaultMessage": "비공개"
@@ -2594,72 +2549,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {다운로드} other {다운로드}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "클라이언트와 서버 양측에 필요함."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "클라이언트와 서버, 양쪽 모두에 필요함"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "주요 기능은 클라이언트 기반이지만, 서버에 설치하면 추가적인 기능을 사용할 수 있습니다."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "클라이언트와 서버, 서버에서는 선택 사항"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "모든 기능은 클라이언트 측에서만 처리되며 바닐라 서버와 호환됩니다."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "클라이언트 측 전용"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "클라이언트와 서버측에 각각 기능이 존재하지만, 부분적입니다. 양측에 설치하는것이 가장 좋습니다."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "클라이언트와 서버, 양쪽에 설치할 때 최적"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "일부 기능은 부분적으로만이라도 클라이언트와 서버 양쪽에서 작동합니다."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "클라이언트와 서버, 양쪽 모두 선택 사항"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "모든 기능은 서버 측에서만 처리되며 바닐라 클라이언트와 호환됩니다. 전용 서버에서만 작동합니다."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "서버 측 전용"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "주요 기능은 클라이언트 기반이지만, 서버에 설치하면 추가적인 기능을 사용할 수 있습니다."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "클라이언트와 서버, 클라이언트에서는 선택 사항"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "모든 기능은 서버 측에서만 처리되며 바닐라 클라이언트와 호환됩니다. 싱글플레이어 서버에서도 작동합니다."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "서버 측 전용, 싱글플레이에서도 작동"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "싱글 플레이거나 멀티 플레이 서버에 접속하지 않았을 때만 작동합니다."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "싱글 플레이 전용"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "해당 없음"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "알 수 없음"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "이 버전의 실행 환경을 확인할 수 없습니다."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "알 수 없는 실행 환경"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, one {팔로워} other {팔로워}}"
   },
@@ -2945,89 +2834,8 @@
   "project.settings.description.title": {
     "defaultMessage": "설명"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "일부 기능은 부분적으로만이라도 클라이언트와 서버 양쪽에서 작동합니다."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "양쪽 모두에서 선택사항이며, 어느 한쪽에 설치해도 동일하게 작동합니다"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "양쪽 모두에서 선택사항이며, 양쪽에 모두 설치했을 때 가장 잘 작동합니다"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "클라이언트에서 선택사항"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "서버에서 선택사항"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "양쪽 모두 필요"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "클라이언트 및 서버"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "모든 기능은 클라이언트 측에서만 처리되며 바닐라 서버와 호환됩니다."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "클라이언트 측 전용"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "프로젝트에 실행 환경 메타데이터가 누락되었습니다. 아래에서 적절한 옵션을 선택해 주세요."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "프로젝트에 사용할 실행 환경을 선택해 주세요"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "프로젝트의 각 버전마다 선택된 실행 환경이 서로 달라 전체적으로 편집할 수 없습니다."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "프로젝트가 여러 실행 환경에 있습니다"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Modrinth의 실행 환경 시스템이 개편되어 새로운 옵션을 사용할 수 있습니다. 아래에서 올바른 옵션이 선택되어 있는지 확인한 후, 완료되면 ‘확인’을 클릭해 주세요!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "아래 옵션을 검토해주세요"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "환경 메타데이터는 mod 또는 modpack 프로젝트에만 설정할 수 있습니다."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "이 프로젝트 유형은 환경 메타데이터를 지원하지 않습니다"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "지원되는 서버 전용"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "모든 기능은 서버 측에서만 처리되며 바닐라 클라이언트와 호환됩니다."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "싱글 플레이에서도 작동"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "서버 측 전용"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "싱글 플레이거나 멀티 플레이 서버에 접속하지 않았을 때만 작동합니다."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "싱글 플레이 전용"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "{option}의 하위 옵션"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "실행 환경"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "확인"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "이 프로젝트의 실행 환경이 올바르게 설정되어 있는지 확인하세요."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "갤러리"
@@ -3118,9 +2926,6 @@
   },
   "report.item-type.version": {
     "defaultMessage": "버전"
-  },
-  "s.bg": {
-    "defaultMessage": "백그라운드 작업 실행 중"
   },
   "search.filter.locked.default": {
     "defaultMessage": "필터 잠김"

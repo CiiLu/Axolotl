@@ -15,6 +15,7 @@ daedalus = { workspace = true }
 dashmap = { workspace = true }
 either = { workspace = true }
 enumset = { workspace = true, features = ["serde"] }
+flate2 = { workspace = true }
 hyper = { workspace = true, features = ["server"] }
 hyper-util = { workspace = true }
 keyring = { workspace = true }

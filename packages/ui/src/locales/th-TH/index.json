@@ -1,13 +1,4 @@
 {
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "เช่น YouTube"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "ใส่ชื่อผู้ใช้"
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "สร้างโดย {user}"
-  },
   "badge.beta": {
     "defaultMessage": "เบต้า"
   },
@@ -106,9 +97,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "อัพโหลดภาพ"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "ตอนนี้"
   },
   "content.page-layout.update-all": {
     "defaultMessage": "อัปเดตทั้งหมด"
@@ -551,24 +539,6 @@
   "project.settings.description.title": {
     "defaultMessage": "คำอธิบาย"
   },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "ไม่จำเป็นบนทั้งคู่แต่ทำงานได้ดีที่สุดเพื่อติดตั้งบนทั้งคู่"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "ไม่จำเป็นสำหรับไคลเอนต์"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "ไม่จำเป็นบนเซิร์ฟเวอร์"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "จำเป็นบนทั้งคู่"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "ไคลเอ็นต์และเซิร์ฟเวอร์"
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "ฝั่งไคลเอนต์เท่านั้น"
-  },
   "project.versions.channel.alpha.symbol": {
     "defaultMessage": "A"
   },
@@ -648,4 +618,3 @@
     "defaultMessage": "โปรไฟล์สาธารณะ"
   }
 }
-

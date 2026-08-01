@@ -2,14 +2,12 @@
 import AxolotlFooter from '~/components/ui/AxolotlFooter.vue'
 import AxolotlHeader from '~/components/ui/AxolotlHeader.vue'
 import SiteSettingsModal from '~/components/ui/SiteSettingsModal.vue'
-import UpdateRescueBanner from '~/components/ui/UpdateRescueBanner.vue'
 
 const settingsOpen = ref(false)
 </script>
 
 <template>
 	<div class="site-layout">
-		<UpdateRescueBanner />
 		<AxolotlHeader @open-settings="settingsOpen = true" />
 		<main id="main">
 			<slot />

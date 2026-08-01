@@ -1,5 +1,4 @@
 export * from './server'
-export * from './settings'
 
 // Other
 export { default as ProjectCard } from './card/ProjectCard.vue'

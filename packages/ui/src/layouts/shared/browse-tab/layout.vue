@@ -109,21 +109,24 @@ const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 		<slot name="nav-tabs-actions" />
 	</div>
 
-	<StyledInput
-		v-model="ctx.query.value"
-		:icon="SearchIcon"
-		type="text"
-		autocomplete="off"
-		:placeholder="
-			formatMessage(messages.searchPlaceholder, {
-				projectType: formatProjectTypeSentence(formatMessage, ctx.projectType.value, 2),
-			})
-		"
-		clearable
-		wrapper-class="w-full"
-		:input-class="ctx.variant === 'web' ? '!h-12' : 'h-12'"
-		@clear="ctx.clearSearch()"
-	/>
+	<div class="flex items-center gap-2">
+		<StyledInput
+			v-model="ctx.query.value"
+			:icon="SearchIcon"
+			type="text"
+			autocomplete="off"
+			:placeholder="
+				formatMessage(messages.searchPlaceholder, {
+					projectType: formatProjectTypeSentence(formatMessage, ctx.projectType.value, 2),
+				})
+			"
+			clearable
+			wrapper-class="flex-1"
+			:input-class="ctx.variant === 'web' ? '!h-12' : 'h-12'"
+			@clear="ctx.clearSearch()"
+		/>
+		<slot name="search-bar-actions" />
+	</div>
 
 	<div class="flex flex-wrap items-center gap-2">
 		<Combobox

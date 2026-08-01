@@ -396,6 +396,7 @@ fn main() {
         .plugin(api::process::init())
         .plugin(api::settings::init())
         .plugin(api::seed_map::init())
+        .plugin(api::schematic_preview::init())
         .plugin(api::shortcuts::init())
         .plugin(api::tags::init())
         .plugin(api::translation::init())

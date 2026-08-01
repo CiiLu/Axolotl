@@ -1,21 +1,36 @@
 <template>
 	<RouterLink
-		v-if="typeof to === 'string'"
+		v-if="typeof to === 'string' && !disabled"
 		:to="to"
 		v-bind="$attrs"
-		:aria-disabled="disabled"
-		:tabindex="disabled ? -1 : undefined"
 		:active-class="isSubpage ? '' : undefined"
 		:class="{
 			'router-link-active': isPrimary && isPrimary(route),
 			'subpage-active': isSubpage && isSubpage(route),
-			disabled: disabled,
 		}"
 		class="w-12 h-12 text-primary rounded-full flex items-center justify-center text-2xl transition-all bg-transparent hover:bg-button-bg hover:text-contrast"
-		@click="disabled && $event.preventDefault()"
 	>
 		<slot />
 	</RouterLink>
+	<button
+		v-else-if="typeof to === 'string'"
+		v-bind="$attrs"
+		type="button"
+		aria-disabled="true"
+		tabindex="-1"
+		:class="{
+			'router-link-active': isPrimary && isPrimary(route),
+			'subpage-active': isSubpage && isSubpage(route),
+		}"
+		class="w-12 h-12 text-primary rounded-full flex items-center justify-center text-2xl transition-all bg-transparent hover:bg-button-bg hover:text-contrast"
+		@click.prevent
+		@keydown.enter.prevent
+		@keyup.enter.prevent
+		@keydown.space.prevent
+		@keyup.space.prevent
+	>
+		<slot />
+	</button>
 	<button
 		v-else
 		v-bind="$attrs"

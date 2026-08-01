@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Nincsen hozzá jogosultságod."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Társulati link létrehozása"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Új társulati kód létrehozása"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Add meg a nevet a társulati linkednek, hogy tudd, honnan érkeznek az emberek!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Társult link címe"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "pl. YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "A felhasználónak a felhasználóneve a partner kód létrehozásához"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Írj be a felhasználónevet..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Létrehozta: {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Társulati link létrehozása..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Társulati link visszavonása"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Statisztika megtekintése"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Nem sikerült betölteni a szerverbeállításokat"
   },
@@ -292,18 +259,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Kép feltöltése"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Éppen most"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "Alkalmazás"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosztolás"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Platform"
   },
   "collections.label.private": {
     "defaultMessage": "Privát"
@@ -2432,60 +2387,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} letöltés"
   },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Kliens és szerver, mindkettőn kötelező"
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Kliens és szerver, szerveren opcionális"
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Csak kliensoldali"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Részben ugyan, de mind a kliens-, mind a szerveroldalon rendelkezik bizonyos funkciókkal. A legjobb felhasználói élményt mindkét oldalra történő telepítés biztosítja."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Kliens és szerver, a legjobb, ha mindkettőre telepítve van"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Részben ugyan, de mind a kliens-, mind a szerveroldalon rendelkezik bizonyos funkciókkal."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Kliens és szerver, mindkettőn opcionális"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Minden funkció szerveroldalon fut, és kompatibilis a standard kliensekkel. Csak dedikált szervereken működik."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Csak szerveroldali"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "A funkciók többsége szerveroldalon működik, de a kliensre való telepítéssel további funkciók válnak elérhetővé."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Kliens és szerver, kliensen opcionális"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Minden funkció szerveroldalon fut, és kompatibilis a vanilla kliensekkel. Egyjátékos módban a belső szerveren is működik."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Csak szerveroldali, egyjátékos módban is működik"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Csak egyjátékos módban vagy ha nincs csatlakozva többjátékos módhoz."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Csak egyjátékos"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "N/A"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Ismeretlen"
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Ismeretlen környezet"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} követő"
   },
@@ -2771,77 +2672,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Leírás"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Van néhány funkciója mind a kliensen, mind a szerveren, még ha csak részlegesen is."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Mindkettőn opcionális; mindkét oldalon történő letöltés esetén működik a legjobban"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Mindkettőn opcionális; legjobb ha mindkét oldalon telepítve van"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Opcionális kliensen"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Opcionális szerveren"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Mindkettőn kötelező"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Kliens és szerver"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Minden funkció kliensoldalon történik, és kompatibilis a vanilla szerverekkel."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Csak kliensoldali"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "A projektből hiányoznak a környezeti metaadatok; kérlek válaszd ki az alábbiak közül a megfelelő lehetőséget."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "A projektednek több környezete van"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Nemrégiben átalakítottuk a Modrinth környezetrendszerét, és mostantól új beállítási lehetőségek állnak rendelkezésre. Kérjük, győződj meg arról, hogy az alábbiak közül a megfelelő opciót választottad ki, majd ha kész vagy, kattints az „Ellenőrzés” gombra!"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Csak a mod- vagy modcsomag-projektek rendelkezhetnek környezeti metaadatokkal."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Ez a projekttípus nem támogatja a környezeti metaadatokat"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Szerverkhez dedikálva"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Minden funkció szerveroldalon történik, és kompatibilis a vanilla klinesekkel."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Működik egyjátékos módban is"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Csak szerveroldali"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Csak egyjátékos módban vagy többjátékos szerverhez való csatlakozás nélkül működik."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Csak egyjátékos mód"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "{option} alopciói"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Környezett"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Ellenőrzés"
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Képek"

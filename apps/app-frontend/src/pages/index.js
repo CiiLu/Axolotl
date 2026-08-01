@@ -3,6 +3,7 @@ import Downloads from './Downloads.vue'
 import Index from './Index.vue'
 import Lab from './Lab.vue'
 import LabGradientText from './LabGradientText.vue'
+import LabSchematicPreview from './LabSchematicPreview.vue'
 import LabSeedMap from './LabSeedMap.vue'
 import Multiplayer from './Multiplayer.vue'
 import Servers from './Servers.vue'
@@ -15,6 +16,7 @@ export {
 	Index,
 	Lab,
 	LabGradientText,
+	LabSchematicPreview,
 	LabSeedMap,
 	Multiplayer,
 	Servers,

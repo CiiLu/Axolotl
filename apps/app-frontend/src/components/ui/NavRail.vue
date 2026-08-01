@@ -88,13 +88,16 @@ watch(() => [route.path, route.query], updateSlider)
 </script>
 
 <style scoped>
-.nav-rail :deep(a) {
+.nav-rail :deep(a),
+.nav-rail :deep(button) {
 	position: relative;
 	z-index: 1;
 }
 
 .nav-rail :deep(a.router-link-active),
-.nav-rail :deep(a.subpage-active) {
+.nav-rail :deep(a.subpage-active),
+.nav-rail :deep(button.router-link-active),
+.nav-rail :deep(button.subpage-active) {
 	background-color: transparent;
 }
 

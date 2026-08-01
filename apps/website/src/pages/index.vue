@@ -100,18 +100,6 @@ const os = computed<OSType>(() => {
 	}
 })
 
-const osName = computed(() => {
-	switch (os.value) {
-		case 'Mac':
-			return formatMessage(messages.mac)
-		case 'Windows':
-			return formatMessage(messages.windows)
-		case 'Linux':
-			return formatMessage(messages.linux)
-	}
-	return 'unknown'
-})
-
 const modManagementData = [
 	{
 		id: 'P7dR8mSH', // Todo: fetch name + author + icon from api
@@ -252,7 +240,7 @@ const { formatMessage, locale } = useVIntl()
 const messages = defineMessages({
 	openSourceBadge: {
 		id: 'axolotl-marketing.hero.open-source',
-		defaultMessage: 'Open source',
+		defaultMessage: 'Tauri v2 - Rust - Vue 3',
 	},
 	oneLauncher: {
 		id: 'axolotl-marketing.demo.one-launcher',
@@ -268,7 +256,7 @@ const messages = defineMessages({
 	},
 	downloadAxolotl: {
 		id: 'axolotl-marketing.hero.download',
-		defaultMessage: 'Meet Axolotl Launcher',
+		defaultMessage: 'Axolotl Launcher',
 	},
 	downloadAxolotlForOs: {
 		id: 'axolotl-marketing.hero.download-for-os',
@@ -277,7 +265,7 @@ const messages = defineMessages({
 	description: {
 		id: 'app-marketing.hero.description',
 		defaultMessage:
-			'Built on the Modrinth ecosystem, Axolotl gives you a cleaner, ad-free way to discover, translate, and play Minecraft your way.',
+			'A free, open-source, cross-platform Minecraft launcher for Windows, macOS, and Linux. Axolotl connects Modrinth and CurseForge in one place.',
 	},
 	heroScreenshotAlt: {
 		id: 'axolotl-marketing.hero.screenshot-alt',
@@ -285,54 +273,58 @@ const messages = defineMessages({
 	},
 	builtOnModrinth: {
 		id: 'axolotl-marketing.highlights.eyebrow',
-		defaultMessage: 'Built on the Modrinth ecosystem',
+		defaultMessage: 'One launcher, two sources',
 	},
 	highlightsTitle: {
 		id: 'axolotl-marketing.highlights.title',
-		defaultMessage: 'A different kind of launcher, built on Modrinth.',
+		defaultMessage: 'Manage Minecraft content',
+	},
+	highlightsTitleSecond: {
+		id: 'axolotl-marketing.highlights.title-second',
+		defaultMessage: 'without detours',
 	},
 	highlightsDescription: {
 		id: 'axolotl-marketing.highlights.description',
 		defaultMessage:
-			'Explore trusted Minecraft content through Modrinth, then make the launcher truly yours with thoughtful features built around players.',
+			'Search Modrinth and CurseForge, then inspect projects, choose versions, install content, resolve dependencies, and keep it updated from the launcher.',
 	},
 	modrinthNative: {
 		id: 'axolotl-marketing.highlights.modrinth.title',
-		defaultMessage: 'Modrinth, at the center',
+		defaultMessage: 'Modrinth and CurseForge',
 	},
 	modrinthNativeDescription: {
 		id: 'axolotl-marketing.highlights.modrinth.description',
 		defaultMessage:
-			'Discover mods, modpacks, resource packs, shaders, and more from the Modrinth ecosystem without leaving your launcher.',
+			'Discover mods, modpacks, resource packs, shaders, and more from both sources without leaving your launcher.',
 	},
 	adFree: {
 		id: 'axolotl-marketing.highlights.ad-free.title',
-		defaultMessage: 'No ads. No distractions.',
+		defaultMessage: 'Free, open, and independent',
 	},
 	adFreeDescription: {
 		id: 'axolotl-marketing.highlights.ad-free.description',
 		defaultMessage:
-			'A focused launcher experience with every screen reserved for your worlds, not advertising.',
+			'GPL-3.0, free to use, and ad-free. Axolotl is not Electron and is not an official Modrinth client.',
 	},
 	localized: {
 		id: 'axolotl-marketing.highlights.localized.title',
-		defaultMessage: 'Localized for real players',
+		defaultMessage: 'Content management that stays organized',
 	},
 	localizedDescription: {
 		id: 'axolotl-marketing.highlights.localized.description',
 		defaultMessage:
-			'Nearly every part of Axolotl is localized, with a complete Chinese experience and English ready whenever you need it.',
+			'Install and manage modpacks alongside individual projects. Some CurseForge files have distribution limits and may require a manual download.',
 	},
 	offlineAccounts: {
 		id: 'axolotl-marketing.showcase.offline.title',
-		defaultMessage: 'Start with an offline account',
+		defaultMessage: 'Accounts on your terms',
 	},
 	offlineAccountsDescription: {
 		id: 'axolotl-marketing.showcase.offline.description',
 		defaultMessage:
-			'Create a local Minecraft identity in seconds. No premium account is needed to get started.',
+			'Sign in with Microsoft, create a local offline identity, or use Yggdrasil authentication with LittleSkin presets and custom servers.',
 	},
-	offlineLabel: { id: 'axolotl-marketing.showcase.offline.label', defaultMessage: 'Offline' },
+	offlineLabel: { id: 'axolotl-marketing.showcase.offline.label', defaultMessage: 'Accounts' },
 	themes: {
 		id: 'axolotl-marketing.showcase.themes.title',
 		defaultMessage: 'A color theme for every setup',
@@ -340,7 +332,7 @@ const messages = defineMessages({
 	themesDescription: {
 		id: 'axolotl-marketing.showcase.themes.description',
 		defaultMessage:
-			'Switch between light, dark, OLED, and system modes—then choose an accent color that feels like yours.',
+			'Switch between light, dark, OLED, and system modes, then set your accent color, background, and transparency to match your setup.',
 	},
 	personalizeLabel: {
 		id: 'axolotl-marketing.showcase.themes.label',
@@ -348,17 +340,14 @@ const messages = defineMessages({
 	},
 	translation: {
 		id: 'axolotl-marketing.showcase.translation.title',
-		defaultMessage: 'Translate Modrinth as you explore',
+		defaultMessage: 'Axolotl Lab, inside the launcher',
 	},
 	translationDescription: {
 		id: 'axolotl-marketing.showcase.translation.description',
 		defaultMessage:
-			'Translate project titles, summaries, and descriptions into the language you use, while keeping the original within reach.',
+			'Use the gradient text generator, Java Edition seed map, and 3D schematic workshop directly in Axolotl, not through external web pages.',
 	},
-	translateLabel: {
-		id: 'axolotl-marketing.showcase.translation.label',
-		defaultMessage: 'Translate',
-	},
+	translateLabel: { id: 'axolotl-marketing.showcase.translation.label', defaultMessage: 'Lab' },
 	offlineScreenshotAlt: {
 		id: 'axolotl-marketing.showcase.offline.alt',
 		defaultMessage: 'Axolotl Launcher offline account dialog.',
@@ -369,7 +358,7 @@ const messages = defineMessages({
 	},
 	translationScreenshotAlt: {
 		id: 'axolotl-marketing.showcase.translation.alt',
-		defaultMessage: 'Axolotl Launcher Modrinth translation settings.',
+		defaultMessage: 'Axolotl Launcher Lab.',
 	},
 	downloadAxolotlButton: {
 		id: 'axolotl-marketing.hero.download-button',
@@ -413,12 +402,12 @@ const messages = defineMessages({
 	},
 	modManagement: {
 		id: 'app-marketing.features.mod-management.title',
-		defaultMessage: 'Mod management',
+		defaultMessage: 'Efficient instance management',
 	},
 	modManagementDescription: {
 		id: 'app-marketing.features.mod-management.description',
 		defaultMessage:
-			'Axolotl keeps every mod, version, and instance organized. Install, remove, and update content without losing your place.',
+			'Create, import, and manage instances in bulk. Keep mods, resource packs, shaders, files, worlds, screenshots, and logs together with updates, launch settings, and modpack export.',
 	},
 	playWithFavoriteMods: {
 		id: 'app-marketing.features.play.title',
@@ -509,12 +498,12 @@ const messages = defineMessages({
 	},
 	websiteIntegration: {
 		id: 'app-marketing.features.website.title',
-		defaultMessage: 'Website integration',
+		defaultMessage: 'Search both sources in one launcher',
 	},
 	websiteIntegrationDescription: {
 		id: 'app-marketing.features.website.description',
 		defaultMessage:
-			'Browse community content from inside the launcher and move from discovery to a playable instance without detours.',
+			'Use project details and version selection to move from Modrinth or CurseForge discovery to an installed instance, with dependencies and updates handled in place.',
 	},
 	profileImporting: {
 		id: 'app-marketing.features.importing.title',
@@ -527,28 +516,29 @@ const messages = defineMessages({
 	},
 	openSource: {
 		id: 'app-marketing.features.open-source.title',
-		defaultMessage: 'Open source',
+		defaultMessage: 'Tauri v2, built in the open',
 	},
 	openSourceDescription: {
 		id: 'app-marketing.features.open-source.description',
 		defaultMessage:
-			'Axolotl is fully open source. Inspect the code, follow development, or contribute on <github-link>GitHub</github-link>.',
+			'Axolotl uses a Tauri v2 desktop foundation instead of Electron. It is an independent, unofficial downstream client based on the Modrinth monorepo. Follow development on <github-link>GitHub</github-link>.',
 	},
 	offlineMode: {
 		id: 'app-marketing.features.offline.title',
-		defaultMessage: 'Offline mode',
+		defaultMessage: 'Useful around every world',
 	},
 	offlineModeDescription: {
 		id: 'app-marketing.features.offline.description',
-		defaultMessage: 'Play your mods, whether you are connected to the internet, or not.',
+		defaultMessage:
+			'Chinese search and project translation, drag-and-drop import, Java management, offline mode, and skin management are ready when you need them.',
 	},
 	followProjects: {
 		id: 'app-marketing.features.follow.title',
-		defaultMessage: 'Follow projects',
+		defaultMessage: 'Beta multiplayer support',
 	},
 	followProjectsDescription: {
 		id: 'app-marketing.features.follow.description',
-		defaultMessage: 'Save content you love and receive updates with one click.',
+		defaultMessage: 'Try the launcher multiplayer features while they continue to develop.',
 	},
 	downloadOptions: {
 		id: 'app-marketing.download.options-title',
@@ -620,7 +610,7 @@ const messages = defineMessages({
 	seoDescription: {
 		id: 'axolotl-site.seo.description',
 		defaultMessage:
-			'Download Axolotl Launcher, a free, open-source and ad-free Minecraft launcher for Windows, macOS, and Linux with Modrinth integration, content translation, and offline accounts.',
+			'Download Axolotl Launcher, a free, open-source Tauri v2 Minecraft launcher for Windows, macOS, and Linux with Modrinth and CurseForge content management, themes, accounts, and more.',
 	},
 	socialImageAlt: {
 		id: 'axolotl-site.seo.social-image-alt',
@@ -663,7 +653,7 @@ const messages = defineMessages({
 	faqAccountsAnswer: {
 		id: 'axolotl-site.faq.accounts.answer',
 		defaultMessage:
-			'Yes. Axolotl supports Microsoft Minecraft accounts and local offline accounts, so you can choose the account type that fits how you play.',
+			'Yes. Axolotl supports Microsoft Minecraft accounts, local offline accounts, and third-party Yggdrasil authentication, including LittleSkin presets and custom servers.',
 	},
 	faqContentQuestion: {
 		id: 'axolotl-site.faq.content.question',
@@ -672,7 +662,7 @@ const messages = defineMessages({
 	faqContentAnswer: {
 		id: 'axolotl-site.faq.content.answer',
 		defaultMessage:
-			'Axolotl uses the public Modrinth API to help you discover and manage mods, modpacks, resource packs, shaders, and other community content inside the launcher.',
+			'Axolotl helps you search, inspect, choose versions for, install, update, and manage content from Modrinth and CurseForge. Files with CurseForge distribution restrictions may require a manual download.',
 	},
 	faqDownloadQuestion: {
 		id: 'axolotl-site.faq.download.question',
@@ -700,7 +690,7 @@ const messages = defineMessages({
 const config = useRuntimeConfig()
 const siteUrl = config.public.siteUrl
 const canonicalUrl = `${siteUrl}/`
-const socialImageUrl = `${siteUrl}/showcase/app-home-dark.webp`
+const socialImageUrl = `${siteUrl}/showcase/launcher-home.png`
 const githubUrl = 'https://github.com/Mystic-Stars/Axolotl'
 const licenseUrl = `${githubUrl}/blob/main/LICENSE`
 
@@ -745,7 +735,7 @@ const structuredData = computed(() => ({
 		{
 			'@type': 'Organization',
 			'@id': `${canonicalUrl}#organization`,
-			name: 'Mystic Stars',
+			name: 'Axolotl Launcher Team',
 			url: canonicalUrl,
 			logo: {
 				'@type': 'ImageObject',
@@ -792,7 +782,7 @@ useSeoMeta({
 	title: () => title.value,
 	description: () => description.value,
 	robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
-	author: 'Mystic Stars',
+	author: 'Axolotl Launcher Team',
 	applicationName: 'Axolotl Launcher',
 	themeColor: '#ff82b2',
 	colorScheme: 'dark light',
@@ -805,8 +795,8 @@ useSeoMeta({
 	ogLocaleAlternate: () => (locale.value === 'zh-CN' ? 'en_US' : 'zh_CN'),
 	ogImage: socialImageUrl,
 	ogImageAlt: () => socialImageAlt.value,
-	ogImageWidth: 1600,
-	ogImageHeight: 871,
+	ogImageWidth: 3104,
+	ogImageHeight: 1806,
 	twitterCard: 'summary_large_image',
 	twitterTitle: () => title.value,
 	twitterDescription: () => description.value,
@@ -834,13 +824,7 @@ useHead(() => ({
 			>
 				{{ formatMessage(messages.openSourceBadge) }}
 			</div>
-			<h1 class="main-header max-w-[60rem]">
-				{{
-					os
-						? formatMessage(messages.downloadAxolotlForOs, { os: osName })
-						: formatMessage(messages.downloadAxolotl)
-				}}
-			</h1>
+			<h1 class="main-header max-w-[60rem]">{{ formatMessage(messages.downloadAxolotl) }}</h1>
 			<p class="main-subheader">
 				{{ formatMessage(messages.description) }}
 			</p>
@@ -862,10 +846,10 @@ useHead(() => ({
 			</div>
 			<img
 				class="hero-screenshot"
-				src="/showcase/app-home-dark.webp"
+				src="/showcase/launcher-home.png"
 				:alt="formatMessage(messages.heroScreenshotAlt)"
-				width="1600"
-				height="871"
+				width="3104"
+				height="1806"
 				decoding="async"
 				fetchpriority="high"
 			/>
@@ -874,7 +858,10 @@ useHead(() => ({
 		<section class="axolotl-highlights" aria-labelledby="axolotl-highlights-title">
 			<div class="highlights-intro">
 				<span class="section-eyebrow">{{ formatMessage(messages.builtOnModrinth) }}</span>
-				<h2 id="axolotl-highlights-title">{{ formatMessage(messages.highlightsTitle) }}</h2>
+				<h2 id="axolotl-highlights-title">
+					{{ formatMessage(messages.highlightsTitle) }}<br />
+					{{ formatMessage(messages.highlightsTitleSecond) }}
+				</h2>
 				<p>{{ formatMessage(messages.highlightsDescription) }}</p>
 			</div>
 
@@ -900,26 +887,15 @@ useHead(() => ({
 						<h3>{{ formatMessage(messages.offlineAccounts) }}</h3>
 						<p>{{ formatMessage(messages.offlineAccountsDescription) }}</p>
 					</div>
-					<div class="showcase-image-frame">
-						<img
-							class="showcase-image light-shot"
-							src="/showcase/offline-account-light.webp"
-							:alt="formatMessage(messages.offlineScreenshotAlt)"
-							width="1600"
-							height="871"
-							decoding="async"
-							loading="lazy"
-						/>
-						<img
-							class="showcase-image dark-shot"
-							src="/showcase/offline-account-dark.webp"
-							:alt="formatMessage(messages.offlineScreenshotAlt)"
-							width="1600"
-							height="871"
-							decoding="async"
-							loading="lazy"
-						/>
-					</div>
+					<img
+						class="showcase-image"
+						src="/showcase/account-login.png"
+						:alt="formatMessage(messages.offlineScreenshotAlt)"
+						width="3104"
+						height="1814"
+						decoding="async"
+						loading="lazy"
+					/>
 				</article>
 
 				<article class="feature gradient-border showcase-card">
@@ -928,26 +904,15 @@ useHead(() => ({
 						<h3>{{ formatMessage(messages.themes) }}</h3>
 						<p>{{ formatMessage(messages.themesDescription) }}</p>
 					</div>
-					<div class="showcase-image-frame">
-						<img
-							class="showcase-image light-shot"
-							src="/showcase/theme-customization-light.webp"
-							:alt="formatMessage(messages.themesScreenshotAlt)"
-							width="1600"
-							height="871"
-							decoding="async"
-							loading="lazy"
-						/>
-						<img
-							class="showcase-image dark-shot"
-							src="/showcase/theme-customization-dark.webp"
-							:alt="formatMessage(messages.themesScreenshotAlt)"
-							width="1600"
-							height="871"
-							decoding="async"
-							loading="lazy"
-						/>
-					</div>
+					<img
+						class="showcase-image"
+						src="/showcase/theme-accent.png"
+						:alt="formatMessage(messages.themesScreenshotAlt)"
+						width="3104"
+						height="1814"
+						decoding="async"
+						loading="lazy"
+					/>
 				</article>
 
 				<article class="feature gradient-border showcase-card">
@@ -956,26 +921,15 @@ useHead(() => ({
 						<h3>{{ formatMessage(messages.translation) }}</h3>
 						<p>{{ formatMessage(messages.translationDescription) }}</p>
 					</div>
-					<div class="showcase-image-frame">
-						<img
-							class="showcase-image light-shot"
-							src="/showcase/content-translation-light.webp"
-							:alt="formatMessage(messages.translationScreenshotAlt)"
-							width="1600"
-							height="871"
-							decoding="async"
-							loading="lazy"
-						/>
-						<img
-							class="showcase-image dark-shot"
-							src="/showcase/content-translation-dark.webp"
-							:alt="formatMessage(messages.translationScreenshotAlt)"
-							width="1600"
-							height="871"
-							decoding="async"
-							loading="lazy"
-						/>
-					</div>
+					<img
+						class="showcase-image"
+						src="/showcase/axolotl-lab.png"
+						:alt="formatMessage(messages.translationScreenshotAlt)"
+						width="3104"
+						height="1814"
+						decoding="async"
+						loading="lazy"
+					/>
 				</article>
 			</div>
 		</section>
@@ -1720,37 +1674,10 @@ useHead(() => ({
 	}
 }
 
-.showcase-image-frame {
-	position: relative;
-	min-width: 0;
-	padding: 0 1rem 1rem;
-}
-
-.showcase-card-wide .showcase-image-frame {
-	padding: 1rem 1rem 1rem 0;
-}
-
 .showcase-image {
 	display: block;
 	width: 100%;
 	height: auto;
-	border: 1px solid color-mix(in srgb, var(--color-contrast) 12%, transparent);
-	border-radius: 0.85rem;
-	box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 15%);
-}
-
-.dark-shot {
-	display: none;
-}
-
-:global(html.dark-mode) .light-shot,
-:global(html.oled-mode) .light-shot {
-	display: none;
-}
-
-:global(html.dark-mode) .dark-shot,
-:global(html.oled-mode) .dark-shot {
-	display: block;
 }
 
 :global(html.light-mode) .axolotl-highlights {
@@ -2744,11 +2671,6 @@ useHead(() => ({
 
 	.showcase-copy {
 		padding: 1.35rem 1.25rem 1.15rem;
-	}
-
-	.showcase-image-frame,
-	.showcase-card-wide .showcase-image-frame {
-		padding: 0 0.75rem 0.75rem;
 	}
 
 	.main-header {

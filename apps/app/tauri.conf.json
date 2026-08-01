@@ -4,7 +4,7 @@
 		"beforeDevCommand": "pnpm turbo run dev --filter=@modrinth/app-frontend",
 		"beforeBuildCommand": "pnpm turbo run build --filter=@modrinth/app-frontend",
 		"frontendDist": "../app-frontend/dist",
-		"devUrl": "http://localhost:1420"
+		"devUrl": "http://localhost:5201"
 	},
 	"bundle": {
 		"active": true,
@@ -50,11 +50,7 @@
 		"shortDescription": "",
 		"linux": {
 			"deb": {
-				"depends": [
-					"libwebkit2gtk-4.1-0",
-					"libgtk-3-0",
-					"libayatana-appindicator3-1"
-				]
+				"depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libayatana-appindicator3-1"]
 			}
 		},
 		"fileAssociations": [

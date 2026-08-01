@@ -80,7 +80,7 @@ Please follow these rules precisely:
 
 Use existing patterns from our codebase:
 
-- Variables/plurals: see `apps/frontend/src/pages/frog.vue`
-- Rich-text link tags: see `apps/frontend/src/error.vue`
+- Variables/plurals: see `apps/app-frontend/src/components/home/HomeDailyChallenge.vue`
+- Rich-text link tags: see `apps/website/src/pages/index.vue`
 
 When you finish, there should be no hard-coded English strings left in the template—everything comes from `formatMessage` or `<IntlFormatted>`.

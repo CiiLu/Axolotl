@@ -292,12 +292,12 @@ export const onboardingMessages = defineMessages({
 	},
 	labToolsTitle: {
 		id: 'app.onboarding.lab-tools.title',
-		defaultMessage: 'Two projects to start with',
+		defaultMessage: 'Local tools for Minecraft',
 	},
 	labToolsDescription: {
 		id: 'app.onboarding.lab-tools.description',
 		defaultMessage:
-			'Create formatted gradient text, or explore Java worlds with the local Seed map.',
+			'Create formatted text, explore Java worlds, and inspect schematic builds without leaving the launcher.',
 	},
 	openGradientText: {
 		id: 'app.onboarding.action.open-gradient-text',
@@ -323,11 +323,24 @@ export const onboardingMessages = defineMessages({
 	},
 	returnToLab: {
 		id: 'app.onboarding.action.return-lab',
-		defaultMessage: 'Click Lab to see the other project',
+		defaultMessage: 'Click Lab to continue',
 	},
 	openSeedMap: {
 		id: 'app.onboarding.action.open-seed-map',
 		defaultMessage: 'Open Seed map to continue',
+	},
+	openSchematicWorkshop: {
+		id: 'app.onboarding.action.open-schematic-workshop',
+		defaultMessage: 'Open Schematic workshop to continue',
+	},
+	labSchematicTitle: {
+		id: 'app.onboarding.lab-schematic.title',
+		defaultMessage: 'Inspect a build before placing it',
+	},
+	labSchematicDescription: {
+		id: 'app.onboarding.lab-schematic.description',
+		defaultMessage:
+			'Open a local .litematic or .schem file, or choose one from an installed instance. The 3D workspace keeps viewing, measurement, layer controls, materials, and local edits together.',
 	},
 	skip: { id: 'app.onboarding.action.skip', defaultMessage: 'Leave the tour' },
 	mascotAlt: { id: 'app.onboarding.mascot-alt', defaultMessage: 'Axolotl guide' },
@@ -536,6 +549,32 @@ export const onboardingTours: Record<OnboardingMode, OnboardingStep[]> = {
 			'seed-map-workspace',
 			onboardingMessages.labSeedMapTitle,
 			onboardingMessages.labSeedMapDescription,
+		),
+		step(
+			'lab-return-schematic-navigation',
+			'navigate',
+			copy(
+				onboardingMessages.labSchematicTitle,
+				onboardingMessages.labSchematicDescription,
+				onboardingMessages.returnToLab,
+			),
+			control('nav-lab', '/lab'),
+		),
+		step(
+			'lab-schematic-navigation',
+			'navigate',
+			copy(
+				onboardingMessages.labSchematicTitle,
+				onboardingMessages.labSchematicDescription,
+				onboardingMessages.openSchematicWorkshop,
+			),
+			control('lab-schematic-preview-card', '/lab/schematic-preview'),
+		),
+		inspect(
+			'lab-schematic-workspace',
+			'schematic-preview-workspace',
+			onboardingMessages.labSchematicTitle,
+			onboardingMessages.labSchematicDescription,
 		),
 		step(
 			'downloads-navigation',

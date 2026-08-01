@@ -130,7 +130,7 @@ Register it in `apps/app-frontend/src/providers/setup.ts`, which is called from 
 
 ### Website Frontend (Nuxt)
 
-Provide directly in `apps/frontend/src/app.vue`, using Nuxt's `useState()` where SSR hydration is needed:
+Provide directly in `apps/website/src/app.vue` when the website needs a shared context:
 
 ```ts
 provideMyFeature({
@@ -146,7 +146,7 @@ provideMyFeature({
 
 ## Consuming Providers
 
-In any component across `packages/ui`, `apps/frontend`, or `apps/app-frontend`:
+In any component across `packages/ui`, `apps/website`, or `apps/app-frontend`:
 
 ```vue
 <script setup lang="ts">
@@ -177,14 +177,12 @@ Default to props and emits. DI adds indirection — only use it with a concrete 
 | `provideModrinthClient`      | `providers/api-client.ts`        | API client instance            |
 | `provideNotificationManager` | `providers/web-notifications.ts` | Notification management        |
 | `providePageContext`         | `providers/page-context.ts`      | Page config (sidebar, ads)     |
-| `provideProjectPageContext`  | `providers/project-page.ts`      | Project page state + mutations |
 | `provideServerContext`       | `providers/server-context.ts`    | Server hosting state           |
-| `provideUserPageContext`     | `providers/user-page.ts`         | User page state                |
 
 ## Key Files
 
 - `packages/ui/src/providers/index.ts` — `createContext` factory + barrel exports
 - `packages/ui/src/providers/*.ts` — Provider definitions
-- `apps/frontend/src/app.vue` — Nuxt root provider setup
+- `apps/website/src/app.vue` — Nuxt root provider setup
 - `apps/app-frontend/src/App.vue` — Tauri root provider setup
 - `apps/app-frontend/src/providers/setup/` — App provider setup functions

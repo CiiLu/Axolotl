@@ -10,8 +10,7 @@ use crate::state::{
 use std::collections::HashMap;
 
 use super::sync_content_files::{
-    modrinth_update_enabled, project_type_for_file,
-    sync_instance_content_files,
+    modrinth_update_enabled, project_type_for_file, sync_instance_content_files,
 };
 
 #[derive(Clone, Debug)]

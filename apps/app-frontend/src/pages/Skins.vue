@@ -164,8 +164,8 @@ const messages = defineMessages({
 		id: 'app.skins.preview.edit-button',
 		defaultMessage: 'Edit skin',
 	},
-	excitedRinthbotAlt: {
-		id: 'app.skins.sign-in.rinthbot-alt',
+	axolotlAlt: {
+		id: 'app.skins.sign-in.axolotl-alt',
 		defaultMessage: 'Axolotl Launcher',
 	},
 	signInTitle: {
@@ -1156,7 +1156,7 @@ await loadSkins()
 		>
 			<img
 				src="@/assets/axolotl.png"
-				:alt="formatMessage(messages.excitedRinthbotAlt)"
+				:alt="formatMessage(messages.axolotlAlt)"
 				class="absolute -top-32 right-8 h-36 w-36 object-contain md:right-20"
 			/>
 			<div

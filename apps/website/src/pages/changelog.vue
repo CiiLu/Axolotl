@@ -5,22 +5,21 @@ import ButtonStyled from '@modrinth/ui/src/components/base/ButtonStyled.vue'
 import TagItem from '@modrinth/ui/src/components/base/TagItem.vue'
 import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
 
-import {
-	ANNOUNCEMENT_CHANGE_TYPES,
-	type AnnouncementChangeType,
-	getLocalizedAnnouncementText,
-	launcherAnnouncements,
-} from '../../../app-frontend/src/announcements/catalog'
-
 type GitHubRelease = {
+	id: number
 	draft: boolean
 	prerelease: boolean
 	tag_name: string
+	name: string | null
+	body: string | null
+	published_at: string | null
 }
 
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/Mystic-Stars/Axolotl/releases'
+const RELEASES_PER_PAGE = 100
+const FIRST_RELEASE_VERSION = [1, 4, 0] as const
 
-const { formatMessage, locale } = useVIntl()
+const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
 	seoTitle: {
@@ -47,22 +46,18 @@ const messages = defineMessages({
 	},
 	errorDescription: {
 		id: 'axolotl-site.changelog.error.description',
-		defaultMessage: 'Try again shortly, or visit GitHub to browse releases.',
+		defaultMessage:
+			'We could not fetch the release history. Your network may be unavailable, or the GitHub API request limit for this network may have been reached.',
 	},
 	retry: { id: 'axolotl-site.changelog.retry', defaultMessage: 'Retry' },
 	empty: {
 		id: 'axolotl-site.changelog.empty',
 		defaultMessage: 'No public release notes are available yet.',
 	},
-	added: { id: 'axolotl-site.changelog.category.added', defaultMessage: 'Added' },
-	changed: { id: 'axolotl-site.changelog.category.changed', defaultMessage: 'Changed' },
-	deprecated: {
-		id: 'axolotl-site.changelog.category.deprecated',
-		defaultMessage: 'Deprecated',
+	noReleaseNotes: {
+		id: 'axolotl-site.changelog.no-release-notes',
+		defaultMessage: 'No release notes were provided for this version.',
 	},
-	removed: { id: 'axolotl-site.changelog.category.removed', defaultMessage: 'Removed' },
-	fixed: { id: 'axolotl-site.changelog.category.fixed', defaultMessage: 'Fixed' },
-	security: { id: 'axolotl-site.changelog.category.security', defaultMessage: 'Security' },
 })
 
 const {
@@ -70,39 +65,53 @@ const {
 	error,
 	status,
 	refresh,
-} = await useFetch<GitHubRelease[]>(GITHUB_RELEASES_URL, {
-	server: false,
-	query: { per_page: 100 },
-	transform: (data) => data.filter((release) => !release.draft && !release.prerelease),
-})
+} = await useAsyncData(
+	'axolotl-github-releases',
+	async () => {
+		const allReleases: GitHubRelease[] = []
 
-const categoryClasses: Record<AnnouncementChangeType, string> = {
-	added: 'bg-brand-green',
-	changed: 'bg-brand-blue',
-	deprecated: 'bg-brand-orange',
-	removed: 'bg-brand-red',
-	fixed: 'bg-brand-purple',
-	security: 'bg-brand-orange',
+		for (let page = 1; ; page++) {
+			const releasePage = await $fetch<GitHubRelease[]>(GITHUB_RELEASES_URL, {
+				query: { per_page: RELEASES_PER_PAGE, page },
+			})
+
+			allReleases.push(...releasePage)
+
+			if (releasePage.length < RELEASES_PER_PAGE) break
+		}
+
+		return allReleases.filter(
+			(release) =>
+				!release.draft &&
+				!release.prerelease &&
+				isReleaseAtLeast(release.tag_name, FIRST_RELEASE_VERSION),
+		)
+	},
+	{ server: false },
+)
+
+function isReleaseAtLeast(tagName: string, minimumVersion: readonly number[]) {
+	const match = tagName.match(/^v?(\d+)\.(\d+)\.(\d+)/)
+	if (!match) return false
+
+	const version = match.slice(1).map(Number)
+
+	for (const [index, part] of version.entries()) {
+		if (part > minimumVersion[index]) return true
+		if (part < minimumVersion[index]) return false
+	}
+
+	return true
 }
 
-const publishedTags = computed(
-	() => new Set(releases.value?.map((release) => release.tag_name) ?? []),
-)
-const releaseOrder = computed(
-	() =>
-		new Map<string, number>(
-			(releases.value ?? []).map((release, index) => [release.tag_name, index] as const),
-		),
-)
-const announcements = computed(() => {
-	return [...launcherAnnouncements]
-		.filter((announcement) => publishedTags.value.has(`v${announcement.version}`))
-		.sort(
-			(left, right) =>
-				(releaseOrder.value.get(`v${left.version}`) ?? Infinity) -
-				(releaseOrder.value.get(`v${right.version}`) ?? Infinity),
-		)
-})
+function getReleaseTitle(release: GitHubRelease) {
+	return release.name?.trim() || release.tag_name
+}
+
+function getReleaseDate(publishedAt: string | null) {
+	return publishedAt?.slice(0, 10) ?? ''
+}
+
 const isLoading = computed(() => status.value === 'idle' || status.value === 'pending')
 const seoTitle = computed(() => formatMessage(messages.seoTitle))
 const seoDescription = computed(() => formatMessage(messages.seoDescription))
@@ -145,14 +154,14 @@ useHead({
 			</ButtonStyled>
 		</div>
 
-		<p v-else-if="announcements.length === 0" class="status-panel">
+		<p v-else-if="!releases?.length" class="status-panel">
 			{{ formatMessage(messages.empty) }}
 		</p>
 
 		<div v-else class="announcement-list">
 			<Accordion
-				v-for="(announcement, index) in announcements"
-				:key="announcement.id"
+				v-for="(release, index) in releases"
+				:key="release.id"
 				:open-by-default="index === 0"
 				class="announcement"
 				button-class="group flex w-full cursor-pointer items-center gap-4 border-0 bg-transparent px-5 py-4 text-left"
@@ -160,33 +169,22 @@ useHead({
 				<template #title>
 					<div class="announcement-heading">
 						<div class="announcement-title-row">
-							<h2>{{ getLocalizedAnnouncementText(announcement.title, locale) }}</h2>
-							<TagItem>v{{ announcement.version }}</TagItem>
+							<h2>{{ getReleaseTitle(release) }}</h2>
+							<TagItem>{{ release.tag_name }}</TagItem>
 						</div>
 						<div class="announcement-date">
 							<CalendarIcon aria-hidden="true" />
-							<time :datetime="announcement.publishedAt">{{ announcement.publishedAt }}</time>
+							<time :datetime="release.published_at ?? undefined">
+								{{ getReleaseDate(release.published_at) }}
+							</time>
 						</div>
 					</div>
 				</template>
 
 				<div class="announcement-content">
-					<section
-						v-for="type in ANNOUNCEMENT_CHANGE_TYPES"
-						v-show="announcement.changes[type]?.length"
-						:key="type"
-						class="change-group"
-					>
-						<h3>
-							<span :class="categoryClasses[type]" aria-hidden="true" />
-							{{ formatMessage(messages[type]) }}
-						</h3>
-						<ul>
-							<li v-for="change in announcement.changes[type]" :key="change['en-US']">
-								{{ getLocalizedAnnouncementText(change, locale) }}
-							</li>
-						</ul>
-					</section>
+					<div class="release-notes">
+						{{ release.body?.trim() || formatMessage(messages.noReleaseNotes) }}
+					</div>
 				</div>
 			</Accordion>
 		</div>
@@ -287,42 +285,11 @@ useHead({
 	background: var(--surface-3);
 }
 
-.change-group {
-	display: grid;
-	grid-template-columns: 7rem minmax(0, 1fr);
-	gap: 1.25rem;
-	padding: 1rem 0;
-	border-top: 1px solid var(--surface-5);
-
-	&:first-child {
-		border-top: 0;
-	}
-
-	h3 {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 0;
-		color: var(--color-secondary);
-		font-size: 0.875rem;
-		font-weight: 600;
-
-		span {
-			width: 0.5rem;
-			height: 0.5rem;
-			border-radius: 50%;
-		}
-	}
-
-	ul {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin: 0;
-		padding-left: 1.25rem;
-		color: var(--color-base);
-		line-height: 1.6;
-	}
+.release-notes {
+	color: var(--color-base);
+	line-height: 1.7;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
 }
 
 .status-panel {
@@ -403,11 +370,6 @@ useHead({
 	.error-panel {
 		align-items: flex-start;
 		flex-direction: column;
-	}
-
-	.change-group {
-		grid-template-columns: 1fr;
-		gap: 0.5rem;
 	}
 }
 </style>

@@ -359,12 +359,12 @@ Navigate to it with `modal.value?.setStage('edit-loaders')` — it won't affect 
 
 ## Reference Implementation
 
-The version creation/edit modal is the most complete example:
+The desktop onboarding flow is the current reference implementation:
 
 | File                                                          | Purpose                           |
 | ------------------------------------------------------------- | --------------------------------- |
-| `apps/frontend/src/providers/version/manage-version-modal.ts` | Context creation + business logic |
-| `apps/frontend/src/providers/version/stages/index.ts`         | Stage config barrel export        |
-| `apps/frontend/src/providers/version/stages/*-stage.ts`       | Individual stage configs          |
+| `apps/app-frontend/src/components/ui/onboarding/onboardingConfig.ts` | Flow configuration + business logic |
+| `apps/app-frontend/src/components/ui/onboarding/OnboardingOverlay.vue` | Presentation layer |
+| `apps/app-frontend/src/components/ui/onboarding/useOnboardingTour.ts` | Runtime control |
 
 The context includes computed properties for conditional UI, watchers for auto-fetching dependencies, loading states for granular button disabling, and both "create" and "edit" flows sharing the same stages with different button configs.

@@ -2,39 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Anda tidak mempunyai keizinan."
   },
-  "affiliate.create.button": {
-    "defaultMessage": "Cipta pautan afiliasi"
-  },
-  "affiliate.create.header": {
-    "defaultMessage": "Mencipta kod afiliasi baharu"
-  },
-  "affiliate.create.title.description": {
-    "defaultMessage": "Berikan nama kepada pautan afiliasi anda supaya anda tahu dari mana orang datang!"
-  },
-  "affiliate.create.title.label": {
-    "defaultMessage": "Tajuk pautan afiliasi"
-  },
-  "affiliate.create.title.placeholder": {
-    "defaultMessage": "cth. YouTube"
-  },
-  "affiliate.create.user.description": {
-    "defaultMessage": "Nama pengguna pengguna yang akan menggunakan kod afiliasi"
-  },
-  "affiliate.create.user.placeholder": {
-    "defaultMessage": "Masukkan nama pengguna..."
-  },
-  "affiliate.createdBy": {
-    "defaultMessage": "Dicipta oleh {user}"
-  },
-  "affiliate.creating.button": {
-    "defaultMessage": "Mencipta pautan afiliasi..."
-  },
-  "affiliate.revoke": {
-    "defaultMessage": "Batalkan pautan afiliasi"
-  },
-  "affiliate.viewAnalytics": {
-    "defaultMessage": "Lihat analitik"
-  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Gagal memuat tetapan pelayan"
   },
@@ -295,18 +262,6 @@
   },
   "button.upload-image": {
     "defaultMessage": "Muat naik gambar"
-  },
-  "changelog.justNow": {
-    "defaultMessage": "Tadi"
-  },
-  "changelog.product.app": {
-    "defaultMessage": "Aplikasi"
-  },
-  "changelog.product.hosting": {
-    "defaultMessage": "Hosting"
-  },
-  "changelog.product.web": {
-    "defaultMessage": "Platform"
   },
   "collections.label.private": {
     "defaultMessage": "Peribadi"
@@ -2513,72 +2468,6 @@
   "project.download-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, other {muat turun}}"
   },
-  "project.environment.client-and-server.description": {
-    "defaultMessage": "Diperlukan pada kedua-dua pelanggan dan pelayan."
-  },
-  "project.environment.client-and-server.title": {
-    "defaultMessage": "Pelanggan dan pelayan, diperlukan pada kedua-duanya"
-  },
-  "project.environment.client-only-server-optional.description": {
-    "defaultMessage": "Kebanyakan fungsi adalah pada bahagian pelanggan, tetapi memasangnya pada pelayan akan mendayakan fungsi yang dipertingkatkan."
-  },
-  "project.environment.client-only-server-optional.title": {
-    "defaultMessage": "Pelanggan dan pelayan, tidak wajib pada pelayan"
-  },
-  "project.environment.client-only.description": {
-    "defaultMessage": "Semua fungsi dilakukan pada bahagian pelanggan dan serasi dengan pelayan vanila."
-  },
-  "project.environment.client-only.title": {
-    "defaultMessage": "Bahagian pelanggan sahaja"
-  },
-  "project.environment.client-or-server-prefers-both.description": {
-    "defaultMessage": "Mempunyai beberapa fungsi pada kedua-dua pelanggan dan pelayan, walaupun hanya sebahagiannya. Memasangnya pada kedua-duanya akan membawa kepada pengalaman terbaik."
-  },
-  "project.environment.client-or-server-prefers-both.title": {
-    "defaultMessage": "Pelanggan dan pelayan, terbaik apabila dipasang pada kedua-duanya"
-  },
-  "project.environment.client-or-server.description": {
-    "defaultMessage": "Mempunyai beberapa fungsi pada kedua-dua pelanggan dan pelayan, walaupun hanya sebahagiannya."
-  },
-  "project.environment.client-or-server.title": {
-    "defaultMessage": "Pelanggan dan pelayan, tidak wajib pada kedua-duanya"
-  },
-  "project.environment.dedicated-server-only.description": {
-    "defaultMessage": "Semua fungsi dilakukan pada bahagian pelayan dan serasi dengan pelanggan vanila. Hanya berfungsi pada pelayan khusus."
-  },
-  "project.environment.dedicated-server-only.title": {
-    "defaultMessage": "Bahagian pelayan sahaja"
-  },
-  "project.environment.server-only-client-optional.description": {
-    "defaultMessage": "Kebanyakan fungsi adalah pada bahagian pelayan, tetapi memasangnya pada pelanggan akan mendayakan fungsi yang dipertingkatkan."
-  },
-  "project.environment.server-only-client-optional.title": {
-    "defaultMessage": "Pelanggan dan pelayan, tidak wajib pada bahagian pelanggan"
-  },
-  "project.environment.server-only.description": {
-    "defaultMessage": "Semua fungsi dilakukan pada bahagian pelayan dan serasi dengan pelanggan vanila. Juga berfungsi pada pelayan dalaman dalam ekapemain."
-  },
-  "project.environment.server-only.title": {
-    "defaultMessage": "Bahagian pelayan sahaja, berfungsi dalam ekapemain juga"
-  },
-  "project.environment.singleplayer-only.description": {
-    "defaultMessage": "Hanya berfungsi dalam Ekapemain atau apabila tidak bersambung ke pelayan Multipemain."
-  },
-  "project.environment.singleplayer-only.title": {
-    "defaultMessage": "Ekapemain sahaja"
-  },
-  "project.environment.tag.not-applicable": {
-    "defaultMessage": "Tidak tersedia"
-  },
-  "project.environment.tag.unknown": {
-    "defaultMessage": "Tidak diketahui"
-  },
-  "project.environment.unknown.description": {
-    "defaultMessage": "Persekitaran untuk versi ini tidak boleh ditentukan."
-  },
-  "project.environment.unknown.title": {
-    "defaultMessage": "Persekitaran yang tidak diketahui"
-  },
   "project.follower-count-tooltip": {
     "defaultMessage": "{count, number} {count, plural, other {pengikut}}"
   },
@@ -2864,89 +2753,8 @@
   "project.settings.description.title": {
     "defaultMessage": "Keterangan"
   },
-  "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Mempunyai beberapa fungsi pada kedua-dua pelanggan dan pelayan, walaupun hanya sebahagiannya."
-  },
-  "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Tidak wajib pada kedua-duanya, berfungsi sama jika dipasang pada kedua-dua bahagian"
-  },
-  "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Tidak wajib pada kedua-duanya, berfungsi paling baik apabila dipasang pada kedua-dua bahagian"
-  },
-  "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Tidak wajib pada pelanggan"
-  },
-  "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Tidak wajib pada pelayan"
-  },
-  "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Diperlukan pada kedua-duanya"
-  },
-  "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Pelanggan dan pelayan"
-  },
-  "project.settings.environment.client_only.description": {
-    "defaultMessage": "Semua fungsi dilakukan pada bahagian pelanggan dan serasi dengan pelayan vanila."
-  },
-  "project.settings.environment.client_only.title": {
-    "defaultMessage": "Bahagian pelanggan sahaja"
-  },
-  "project.settings.environment.notice.missing-env.description": {
-    "defaultMessage": "Projek anda tidak mempunyai metadata persekitaran, sila pilih pilihan yang sesuai di bawah."
-  },
-  "project.settings.environment.notice.missing-env.title": {
-    "defaultMessage": "Sila pilih persekitaran untuk projek anda"
-  },
-  "project.settings.environment.notice.multiple-environments.description": {
-    "defaultMessage": "Versi-versi yang berbeza untuk projek anda mempunyai persekitaran berbeza yang dipilih, jadi anda tidak boleh menyuntingnya secara global pada masa ini."
-  },
-  "project.settings.environment.notice.multiple-environments.title": {
-    "defaultMessage": "Projek anda mempunyai berbilang persekitaran"
-  },
-  "project.settings.environment.notice.review-options.description": {
-    "defaultMessage": "Kami baru sahaja merombak sistem Persekitaran pada Modrinth dan pilihan baharu kini tersedia. Sila pastikan pilihan yang betul dipilih di bawah dan kemudian klik 'Sahkan' apabila anda selesai!"
-  },
-  "project.settings.environment.notice.review-options.title": {
-    "defaultMessage": "Sila semak pilihan di bawah"
-  },
-  "project.settings.environment.notice.wrong-project-type.description": {
-    "defaultMessage": "Hanya projek mod atau pek mod boleh mempunyai metadata persekitaran."
-  },
-  "project.settings.environment.notice.wrong-project-type.title": {
-    "defaultMessage": "Jenis projek ini tidak menyokong metadata persekitaran"
-  },
-  "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Pelayan khusus sahaja"
-  },
-  "project.settings.environment.server_only.description": {
-    "defaultMessage": "Semua fungsi dilakukan pada bahagian pelayan dan serasi dengan pelanggan vanila."
-  },
-  "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Berfungsi dalam ekapemain juga"
-  },
-  "project.settings.environment.server_only.title": {
-    "defaultMessage": "Bahagian pelayan sahaja"
-  },
-  "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Hanya berfungsi dalam Ekapemain atau apabila tidak bersambung ke pelayan Multipemain."
-  },
-  "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Ekapemain sahaja"
-  },
-  "project.settings.environment.suboption.accessibility-option-label": {
-    "defaultMessage": "{title}: {description}"
-  },
-  "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Subpilihan {option}"
-  },
   "project.settings.environment.title": {
     "defaultMessage": "Persekitaran"
-  },
-  "project.settings.environment.verification.verify-button": {
-    "defaultMessage": "Sahkan"
-  },
-  "project.settings.environment.verification.verify-text": {
-    "defaultMessage": "Sahkan bahawa persekitaran projek ini ditetapkan dengan betul."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Galeri"
@@ -3037,9 +2845,6 @@
   },
   "report.item-type.version": {
     "defaultMessage": "versi"
-  },
-  "s.bg": {
-    "defaultMessage": "Tugas latar belakang berjalan"
   },
   "search.filter.locked.default": {
     "defaultMessage": "Penapis dikunci"

@@ -1,7 +1,8 @@
-import { PaletteIcon, WorldIcon } from '@modrinth/assets'
+import { BoxIcon, PaletteIcon, WorldIcon } from '@modrinth/assets'
 import type { Component } from 'vue'
 
 import GradientTextLab from '@/pages/LabGradientText.vue'
+import SchematicPreviewLab from '@/pages/LabSchematicPreview.vue'
 import SeedMapLab from '@/pages/LabSeedMap.vue'
 
 export type LabToolDefinition = {
@@ -32,6 +33,15 @@ export const labTools: readonly LabToolDefinition[] = [
 		component: SeedMapLab,
 		title: 'Seed map',
 		description: 'Explore a Minecraft seed locally with biomes, structures, and saved markers.',
+	},
+	{
+		id: 'schematic-preview',
+		category: 'creation',
+		route: '/lab/schematic-preview',
+		icon: BoxIcon,
+		component: SchematicPreviewLab,
+		title: 'Schematic workshop',
+		description: 'Quickly preview and edit your schematics.',
 	},
 ]
 

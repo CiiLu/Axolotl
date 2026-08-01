@@ -5,6 +5,7 @@ import { createContext } from '#ui/providers/create-context'
 import type {
 	EditingFile,
 	ExtractDryRunResult,
+	FileContextMenuOption,
 	FileItem,
 	FileOperation,
 	UploadState,
@@ -56,6 +57,9 @@ export interface FileManagerContext {
 	showInstallFromUrl?: boolean
 	basePath?: Ref<string> | ComputedRef<string>
 	openInFolder?: (path: string) => void
+	getAdditionalMenuOptions?: (
+		item: Pick<FileItem, 'name' | 'type' | 'path'>,
+	) => FileContextMenuOption[]
 
 	downloadButtonLabel?: string
 	uploadingLabel?: (completed: number, total: number) => string
