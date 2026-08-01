@@ -560,12 +560,25 @@ const deleteHovered = ref(false)
 		>
 			<slot name="additionalButtonsLeft" />
 
+			<ButtonStyled
+				v-if="hasRollbackListener && rollbackFileName"
+				circular
+				type="transparent"
+			>
+				<button
+					v-tooltip="formatMessage(messages.rollbackTooltip, { fileName: rollbackFileName })"
+					:aria-label="formatMessage(messages.rollbackTooltip, { fileName: rollbackFileName })"
+					:disabled="isDisabled"
+					@click="emit('rollback')"
+				>
+					<UndoIcon class="size-5" />
+				</button>
+			</ButtonStyled>
+
 			<!-- Fixed width container to reserve space for update/switch version button -->
 			<div
-				v-if="
-					hasUpdateListener || hasSwitchVersionListener || hasRollbackListener
-				"
-				class="flex min-w-8 items-center justify-center gap-1"
+				v-if="hasUpdateListener || hasSwitchVersionListener"
+				class="flex w-8 items-center justify-center"
 			>
 				<ButtonStyled
 					v-if="hasUpdate"
@@ -602,20 +615,6 @@ const deleteHovered = ref(false)
 						@click="emit('switchVersion')"
 					>
 						<ArrowLeftRightIcon class="size-5" />
-					</button>
-				</ButtonStyled>
-				<ButtonStyled
-					v-if="hasRollbackListener && rollbackFileName"
-					circular
-					type="transparent"
-				>
-					<button
-						v-tooltip="formatMessage(messages.rollbackTooltip, { fileName: rollbackFileName })"
-						:aria-label="formatMessage(messages.rollbackTooltip, { fileName: rollbackFileName })"
-						:disabled="isDisabled"
-						@click="emit('rollback')"
-					>
-						<UndoIcon class="size-5" />
 					</button>
 				</ButtonStyled>
 			</div>

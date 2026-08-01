@@ -300,6 +300,7 @@ fn main() {
                         "instance_add_project_from_path",
                         "instance_import_world_save",
                         "instance_toggle_disable_project",
+                        "instance_rollback_project",
                         "instance_remove_project",
                         "instance_update_managed_modrinth_version",
                         "instance_repair_managed_modrinth",
