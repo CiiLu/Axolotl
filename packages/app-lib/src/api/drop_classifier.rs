@@ -517,18 +517,42 @@ fn valid_pack_mcmeta_content(bytes: &[u8]) -> bool {
 /// `Data`. The payload may be stored raw, gzip- or zlib-compressed, so the
 /// first candidate is tried raw and each compressed variant is decoded first.
 fn valid_level_dat_content(bytes: &[u8]) -> bool {
-    level_dat_headers(bytes).iter().any(|candidate| {
-        candidate.len() >= 7
-            && candidate[0] == 0x0A
-            && {
-                let name_len = u16::from_be_bytes([
-                    candidate[1],
-                    candidate[2],
-                ]) as usize;
-                candidate.len() >= 3 + name_len
-                    && &candidate[3..3 + name_len] == b"Data"
-            }
-    })
+    level_dat_headers(bytes)
+        .iter()
+        .any(|candidate| nbt_root_is_data(candidate))
+}
+
+/// Whether the NBT stream's root is a compound named `Data`, either directly
+/// (classic layout) or wrapped in a single unnamed root compound (modern
+/// Minecraft layout: `0A 00 00 0A 00 04 Data ...`).
+fn nbt_root_is_data(candidate: &[u8]) -> bool {
+    let Some(rest) = candidate.strip_prefix(&[0x0A]) else {
+        return false;
+    };
+    match compound_name(rest) {
+        Some((name, _)) if name == "Data" => true,
+        Some(("", after_name)) => {
+            after_name
+                .strip_prefix(&[0x0A])
+                .and_then(compound_name)
+                .is_some_and(|(name, _)| name == "Data")
+        }
+        _ => false,
+    }
+}
+
+/// Read a T ag name (u16 big-endian length + UTF-8 bytes), returning the
+/// name and the remainder of the buffer.
+fn compound_name(bytes: &[u8]) -> Option<(&str, &[u8])> {
+    if bytes.len() < 2 {
+        return None;
+    }
+    let len = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
+    if bytes.len() < 2 + len {
+        return None;
+    }
+    let name = std::str::from_utf8(&bytes[2..2 + len]).ok()?;
+    Some((name, &bytes[2 + len..]))
 }
 
 /// The raw bytes plus gzip/zlib-decompressed prefixes of a `level.dat` peek.
@@ -2821,6 +2845,14 @@ mod tests {
         let zl_bytes = zl.finish().expect("zlib finish");
 
         assert!(valid_level_dat_content(VALID_LEVEL_DAT));
+        assert!(
+            valid_level_dat_content(b"\x0A\x00\x00\x0A\x00\x04Data\x00"),
+            "modern unnamed-root wrapper around Data should validate"
+        );
+        assert!(
+            !valid_level_dat_content(b"\x0A\x00\x00\x0A\x00\x02No"),
+            "wrapped root with a different name must not validate"
+        );
         assert!(
             valid_level_dat_content(&gz_bytes),
             "gzip-compressed level.dat should validate"
