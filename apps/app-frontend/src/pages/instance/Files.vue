@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FileArchiveIcon } from '@modrinth/assets'
-import type { EditingFile, FileContextMenuOption, FileItem, UploadState } from '@modrinth/ui'
+import type { EditingFile, FileContextMenuOption, FileItem } from '@modrinth/ui'
 import {
 	commonMessages,
 	defineMessages,
@@ -20,7 +20,6 @@ import {
 	remove,
 	rename,
 	stat,
-	writeFile as writeFileBytes,
 	writeTextFile,
 } from '@tauri-apps/plugin-fs'
 import { computed, onUnmounted, ref, watch } from 'vue'
@@ -233,52 +232,6 @@ async function handleDownloadFile(path: string, _fileName: string) {
 	})
 }
 
-const uploadState = ref<UploadState>({
-	isUploading: false,
-	currentFileName: null,
-	currentFileProgress: 0,
-	uploadedBytes: 0,
-	totalBytes: 0,
-	completedFiles: 0,
-	totalFiles: 0,
-})
-
-async function handleUploadFiles(files: File[]) {
-	if (files.length === 0) return
-
-	uploadState.value = {
-		isUploading: true,
-		currentFileName: '',
-		currentFileProgress: 0,
-		uploadedBytes: 0,
-		totalBytes: files.reduce((sum, f) => sum + f.size, 0),
-		completedFiles: 0,
-		totalFiles: files.length,
-	}
-	try {
-		for (const file of files) {
-			uploadState.value.currentFileName = file.name
-			const buffer = await file.arrayBuffer()
-			const targetPath = resolvePath(
-				currentPath.value ? `${currentPath.value}/${file.name}` : file.name,
-			)
-			await writeFileBytes(targetPath, new Uint8Array(buffer))
-			uploadState.value.completedFiles++
-			uploadState.value.uploadedBytes += file.size
-			uploadState.value.currentFileProgress = 1
-		}
-	} catch (e) {
-		addNotification({
-			title: formatMessage(commonMessages.uploadFailedLabel),
-			text: e instanceof Error ? e.message : '',
-			type: 'error',
-		})
-	} finally {
-		uploadState.value.isUploading = false
-		await refresh()
-	}
-}
-
 async function handleExtractFile(path: string, override: boolean, dry: boolean) {
 	try {
 		return await invoke('plugin:files|file_extract_zip', {
@@ -360,8 +313,6 @@ provideFileManager({
 	readFileAsBlob: handleReadFileAsBlob,
 	writeFile: handleWriteFile,
 	downloadFile: handleDownloadFile,
-	uploadFiles: handleUploadFiles,
-	uploadState,
 	extractFile: handleExtractFile,
 	refresh,
 	basePath: instanceRoot,

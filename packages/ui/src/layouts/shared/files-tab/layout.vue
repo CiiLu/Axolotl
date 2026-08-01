@@ -62,8 +62,6 @@
 					@prefetch-home="handlePrefetchHome"
 					@update:search-query="searchQuery = $event"
 					@create="showCreateModal"
-					@upload="initiateFileUpload"
-					@upload-zip="() => {}"
 					@unzip-from-url="showUnzipFromUrlModal"
 					@refresh="ctx.refresh"
 					@share="() => fileEditorRef?.shareToMclogs()"
@@ -224,7 +222,6 @@ import FloatingActionBar from '#ui/components/base/FloatingActionBar.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { useStickyObserver } from '#ui/composables/sticky-observer'
 import { useVirtualScroll } from '#ui/composables/virtual-scroll'
-import { injectFilePicker } from '#ui/providers/file-picker'
 import { injectNotificationManager } from '#ui/providers/web-notifications'
 import { commonMessages } from '#ui/utils/common-messages'
 import { canOpenInFileEditor, getFileExtension } from '#ui/utils/file-extensions'
@@ -297,7 +294,6 @@ defineProps<{
 
 const { addNotification } = injectNotificationManager()
 const ctx = injectFileManager()
-const filePicker = injectFilePicker(null)
 
 const editorComponent = shallowRef<Component | null>(null)
 import('vue3-ace-editor').then(async (mod) => {
@@ -596,35 +592,6 @@ function showBulkDeleteModal() {
 
 	pendingBulkDeletePaths.value = Array.from(selectedItems.value)
 	deleteItemModal.value?.showBulk(pendingBulkDeletePaths.value.length)
-}
-
-async function initiateFileUpload() {
-	if (isBusy.value) return
-	if (filePicker?.pickFiles) {
-		try {
-			const picked = await filePicker.pickFiles({ multiple: true })
-			if (picked.length > 0) {
-				ctx.uploadFiles(picked.map((item) => item.file))
-			}
-		} catch (error) {
-			addNotification({
-				title: formatMessage(commonMessages.uploadFailedLabel),
-				text: error instanceof Error ? error.message : undefined,
-				type: 'error',
-			})
-		}
-		return
-	}
-
-	const input = document.createElement('input')
-	input.type = 'file'
-	input.multiple = true
-	input.onchange = () => {
-		if (input.files) {
-			ctx.uploadFiles(Array.from(input.files))
-		}
-	}
-	input.click()
 }
 
 // Prefetch

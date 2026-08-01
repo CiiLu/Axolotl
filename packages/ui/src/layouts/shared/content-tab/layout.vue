@@ -10,7 +10,6 @@ import {
 	DownloadIcon,
 	DropdownIcon,
 	FileIcon,
-	FolderOpenIcon,
 	LinkIcon,
 	RefreshCwIcon,
 	SearchIcon,
@@ -71,10 +70,6 @@ const messages = defineMessages({
 	browseContent: {
 		id: 'content.page-layout.browse-content',
 		defaultMessage: 'Browse content',
-	},
-	uploadFiles: {
-		id: 'content.page-layout.upload-files',
-		defaultMessage: 'Upload files',
 	},
 	sortAlphabetical: {
 		id: 'content.page-layout.sort.alphabetical',
@@ -844,16 +839,13 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 							</ButtonStyled>
 							<ButtonStyled type="outlined">
 								<button
-									v-tooltip="
-										ctx.busyMessage?.value ??
-										(ctx.disableAddContent?.value ? ctx.disableAddContentTooltip : undefined)
-									"
-									:disabled="ctx.isBusy.value || ctx.disableAddContent?.value"
+									v-tooltip="ctx.busyMessage?.value"
+									:disabled="ctx.isBusy.value"
 									class="!h-10"
-									@click="ctx.uploadFiles"
+									@click="ctx.refresh"
 								>
-									<FolderOpenIcon class="size-5" />
-									{{ formatMessage(messages.uploadFiles) }}
+									<RefreshCwIcon class="size-5" />
+									{{ formatMessage(commonMessages.refreshButton) }}
 								</button>
 							</ButtonStyled>
 						</div>
@@ -1015,16 +1007,13 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 					<template #actions>
 						<ButtonStyled type="outlined">
 							<button
-								v-tooltip="
-									ctx.busyMessage?.value ??
-									(ctx.disableAddContent?.value ? ctx.disableAddContentTooltip : undefined)
-								"
-								:disabled="ctx.isBusy.value || ctx.disableAddContent?.value"
+								v-tooltip="ctx.busyMessage?.value"
+								:disabled="ctx.isBusy.value"
 								class="!h-10"
-								@click="ctx.uploadFiles"
+								@click="ctx.refresh"
 							>
-								<FolderOpenIcon class="size-5" />
-								{{ formatMessage(messages.uploadFiles) }}
+								<RefreshCwIcon class="size-5" />
+								{{ formatMessage(commonMessages.refreshButton) }}
 							</button>
 						</ButtonStyled>
 						<ButtonStyled color="brand">

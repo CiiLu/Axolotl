@@ -139,7 +139,6 @@
 						:options="[
 							{ id: 'file', action: () => $emit('create', 'file') },
 							{ id: 'directory', action: () => $emit('create', 'directory') },
-							{ id: 'upload', action: () => $emit('upload') },
 							{ divider: true, shown: showInstallFromUrl ?? false },
 							{ id: 'upload-zip', shown: false, action: () => $emit('uploadZip') },
 							{
@@ -161,9 +160,6 @@
 						</template>
 						<template #directory>
 							<FolderOpenIcon aria-hidden="true" /> {{ formatMessage(messages.newFolder) }}
-						</template>
-						<template #upload>
-							<UploadIcon aria-hidden="true" /> {{ formatMessage(messages.uploadFile) }}
 						</template>
 						<template #upload-zip>
 							<FileArchiveIcon aria-hidden="true" /> {{ formatMessage(messages.uploadFromZip) }}
@@ -222,7 +218,6 @@ import {
 	RefreshCwIcon,
 	SearchIcon,
 	ShareIcon,
-	UploadIcon,
 } from '@modrinth/assets'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
@@ -266,10 +261,6 @@ const messages = defineMessages({
 	newFolder: {
 		id: 'files.navbar.new-folder',
 		defaultMessage: 'New folder',
-	},
-	uploadFile: {
-		id: 'files.navbar.upload-file',
-		defaultMessage: 'Upload file',
 	},
 	uploadFromZip: {
 		id: 'files.navbar.upload-from-zip',

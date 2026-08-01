@@ -8,7 +8,6 @@ import type {
 	FileContextMenuOption,
 	FileItem,
 	FileOperation,
-	UploadState,
 } from '../types'
 
 export interface FileManagerContext {
@@ -32,10 +31,6 @@ export interface FileManagerContext {
 	readFileAsBlob: (path: string) => Promise<Blob>
 	writeFile: (path: string, content: string) => Promise<void>
 	downloadFile: (path: string, fileName: string) => Promise<void>
-
-	uploadFiles: (files: File[]) => void
-	cancelUpload?: () => void
-	uploadState?: Ref<UploadState> | ComputedRef<UploadState>
 
 	refresh: () => void
 
