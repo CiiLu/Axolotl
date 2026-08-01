@@ -65,7 +65,10 @@
 							role="menuitem"
 							@click="handleOptionClick(option)"
 						>
-							<slot :name="option.id" />
+							<slot :name="option.id">
+								<component :is="option.icon" v-if="option.icon" class="size-5" />
+								{{ option.label ?? option.id }}
+							</slot>
 						</button>
 					</ButtonStyled>
 				</template>

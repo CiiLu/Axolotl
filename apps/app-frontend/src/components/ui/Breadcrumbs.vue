@@ -75,6 +75,10 @@ const messages = defineMessages({
 		defaultMessage: 'Gradient text generator',
 	},
 	seedMap: { id: 'app.lab.seed-map.title', defaultMessage: 'Seed map' },
+	schematicWorkshop: {
+		id: 'app.lab.schematic-preview.title',
+		defaultMessage: 'Schematic workshop',
+	},
 	content: { id: 'app.instance.tabs.content', defaultMessage: 'Content' },
 	files: { id: 'app.instance.tabs.files', defaultMessage: 'Files' },
 	logs: { id: 'app.instance.tabs.logs', defaultMessage: 'Logs' },
@@ -91,6 +95,7 @@ const staticLabels = {
 	Lab: messages.lab,
 	'Gradient text generator': messages.gradientText,
 	'Seed map': messages.seedMap,
+	'Schematic workshop': messages.schematicWorkshop,
 	Content: messages.content,
 	Files: messages.files,
 	Logs: messages.logs,

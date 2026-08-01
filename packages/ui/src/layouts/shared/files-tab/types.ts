@@ -1,3 +1,5 @@
+import type { Component } from 'vue'
+
 export interface FileItem {
 	name: string
 	type: 'file' | 'directory' | 'symlink'
@@ -21,6 +23,8 @@ export type FileViewFilter = 'all' | 'filesOnly' | 'foldersOnly'
 export type FileContextMenuOption =
 	| {
 			id: string
+			label?: string
+			icon?: Component
 			action?: () => void
 			disabled?: boolean
 			tooltip?: string

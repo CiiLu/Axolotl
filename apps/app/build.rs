@@ -344,6 +344,27 @@ fn main() {
                     ),
             )
             .plugin(
+                "schematic-preview",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "schematic_preview_open",
+                        "schematic_preview_list_instance_files",
+                        "schematic_preview_list_instance_resource_packs",
+                        "schematic_preview_read_chunk",
+                        "schematic_preview_prepare_resources",
+                        "schematic_preview_block_info",
+                        "schematic_preview_apply_edits",
+                        "schematic_preview_transform",
+                        "schematic_preview_export_sponge",
+                        "schematic_preview_export_litematic",
+                        "schematic_preview_cancel",
+                        "schematic_preview_close",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "tags",
                 InlinedPlugin::new()
                     .commands(&[

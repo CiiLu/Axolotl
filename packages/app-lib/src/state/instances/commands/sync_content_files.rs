@@ -1,7 +1,9 @@
 use crate::State;
 use crate::state::instances::adapters::{filesystem, sqlite};
 use crate::state::instances::{Instance, InstanceFile};
-use crate::state::{CachedEntry, ContentProvider, ContentProviderRef, ProjectType};
+use crate::state::{
+    CachedEntry, ContentProvider, ContentProviderRef, ProjectType,
+};
 use chrono::Utc;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -183,9 +185,9 @@ pub(crate) fn modrinth_update_enabled(
     match origin_provider {
         Some(ContentProvider::Modrinth) => true,
         Some(ContentProvider::CurseForge) => false,
-        None => provider_refs
-            .iter()
-            .all(|reference| matches!(reference, ContentProviderRef::Modrinth { .. })),
+        None => provider_refs.iter().all(|reference| {
+            matches!(reference, ContentProviderRef::Modrinth { .. })
+        }),
     }
 }
 

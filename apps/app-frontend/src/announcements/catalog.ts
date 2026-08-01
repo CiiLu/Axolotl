@@ -47,6 +47,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Imported instances now automatically recognize and set icons based on their mod loader.',
 					'zh-CN': '导入的实例现在会根据加载器自动识别并设置图标。',
 				},
+				{
+					'en-US':
+						'Added Schematic workshop in Lab. Open local or instance .litematic and .schem files to inspect builds in 3D, measure and manage layers and materials, edit blocks, and export your work.',
+					'zh-CN':
+						'实验室新增投影工坊：可打开本地或实例内的 .litematic 和 .schem 文件，在 3D 工作区查看建筑、测量并管理层级和材料、编辑方块，以及导出修改后的投影。',
+				},
 			],
 			changed: [
 				{
@@ -54,11 +60,22 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Adjusted the position of source filter buttons on the Discover page for better usability.',
 					'zh-CN': '调整了发现页的来源筛选按钮位置，提升使用体验。',
 				},
+				{
+					'en-US':
+						'Manual CurseForge downloads skipped during an installation now remain listed after the task finishes, making them easier to complete later.',
+					'zh-CN': '安装过程中跳过的 CurseForge 手动下载现在会在任务完成后保留在列表中，便于稍后完成。',
+				},
 			],
 			fixed: [
 				{
 					'en-US': 'Fixed breadcrumbs not matching the actual page navigation.',
 					'zh-CN': '修复了面包屑与实际页面不一致的问题。',
+				},
+				{
+					'en-US':
+						'Fixed Modrinth update checks so CurseForge-tracked files are not suggested as Modrinth updates, while eligible manually added content can still be matched.',
+					'zh-CN':
+						'修复 Modrinth 更新检查：由 CurseForge 跟踪的文件不再被当作 Modrinth 更新推荐，同时符合条件的手动添加内容仍可匹配更新。',
 				},
 			],
 		},

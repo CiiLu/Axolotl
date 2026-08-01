@@ -11153,6 +11153,7 @@ dependencies = [
  "dashmap",
  "either",
  "enumset",
+ "flate2",
  "hyper 1.11.0",
  "hyper-util",
  "keyring",

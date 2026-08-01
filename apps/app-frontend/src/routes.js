@@ -100,6 +100,14 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/lab/schematic-preview',
+			name: 'Schematic workshop',
+			component: Pages.LabSchematicPreview,
+			meta: {
+				breadcrumb: [{ name: 'Lab', link: '/lab' }, { name: 'Schematic workshop' }],
+			},
+		},
+		{
 			path: '/library',
 			name: 'Library',
 			component: Library.Index,

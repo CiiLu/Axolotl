@@ -13,6 +13,7 @@ import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import gradientTextToolCover from '@/assets/lab/gradient-text-tool-cover.png'
+import schematicPreviewToolCover from '@/assets/lab/minecraft-preview.png'
 import seedMapToolCover from '@/assets/lab/seed-map-tool-cover.png'
 import { type LabToolDefinition, labTools } from '@/lab/registry'
 
@@ -23,6 +24,7 @@ const search = ref('')
 const category = ref<LabCategory>('all')
 const toolCoverImages: Record<string, string> = {
 	'gradient-text': gradientTextToolCover,
+	'schematic-preview': schematicPreviewToolCover,
 	'seed-map': seedMapToolCover,
 }
 
@@ -49,6 +51,14 @@ const messages = defineMessages({
 		id: 'app.lab.seed-map.description',
 		defaultMessage: 'Explore a Minecraft seed locally with biomes, structures, and saved markers.',
 	},
+	schematicPreviewTitle: {
+		id: 'app.lab.schematic-preview.title',
+		defaultMessage: 'Schematic workshop',
+	},
+	schematicPreviewDescription: {
+		id: 'app.lab.schematic-preview.description',
+		defaultMessage: 'Quickly preview and edit your schematics.',
+	},
 })
 
 const categoryOptions: LabCategory[] = ['all', 'creation', 'maintenance', 'world']
@@ -71,17 +81,21 @@ const visibleTools = computed(() => {
 function toolTitle(toolId: string, fallback: string) {
 	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextTitle)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapTitle)
+	if (toolId === 'schematic-preview') return formatMessage(messages.schematicPreviewTitle)
 	return fallback
 }
 
 function toolDescription(toolId: string, fallback: string) {
 	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextDescription)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapDescription)
+	if (toolId === 'schematic-preview') return formatMessage(messages.schematicPreviewDescription)
 	return fallback
 }
 
 function toolOnboardingId(toolId: string) {
-	return toolId === 'gradient-text' || toolId === 'seed-map' ? `lab-${toolId}-card` : undefined
+	return ['gradient-text', 'seed-map', 'schematic-preview'].includes(toolId)
+		? `lab-${toolId}-card`
+		: undefined
 }
 
 function toolIconClasses(toolId: string) {

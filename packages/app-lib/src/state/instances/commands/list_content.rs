@@ -1,6 +1,5 @@
 use super::sync_content_files::{
-    modrinth_update_enabled, project_type_for_file,
-    sync_instance_content_files,
+    modrinth_update_enabled, project_type_for_file, sync_instance_content_files,
 };
 use crate::State;
 use crate::pack::install_from::{PackFileHash, PackFormat};
@@ -1700,35 +1699,29 @@ async fn content_files_to_content_items(
                             })
                         })
                     }),
-                update: file
-                    .update
-                    .clone()
-                    .or_else(|| {
-                        curseforge_update_id.and_then(|target| {
-                            let reference =
-                                provider_refs.iter().find_map(|reference| {
-                                    match reference {
-                                        ContentProviderRef::CurseForge {
-                                            project_id,
-                                            file_id: Some(current_file_id),
-                                        } => Some((
-                                            *project_id,
-                                            *current_file_id,
-                                        )),
-                                        _ => None,
-                                    }
-                                })?;
-                            Some(ContentItemUpdate::CurseForge {
-                                project_id: reference.0,
-                                current_file_id: reference.1,
-                                target_file_id:
-                                    crate::state::CurseForgeFileId::new(
-                                        target.parse().ok()?,
-                                    )
-                                    .ok()?,
-                            })
+                update: file.update.clone().or_else(|| {
+                    curseforge_update_id.and_then(|target| {
+                        let reference =
+                            provider_refs.iter().find_map(|reference| {
+                                match reference {
+                                    ContentProviderRef::CurseForge {
+                                        project_id,
+                                        file_id: Some(current_file_id),
+                                    } => Some((*project_id, *current_file_id)),
+                                    _ => None,
+                                }
+                            })?;
+                        Some(ContentItemUpdate::CurseForge {
+                            project_id: reference.0,
+                            current_file_id: reference.1,
+                            target_file_id:
+                                crate::state::CurseForgeFileId::new(
+                                    target.parse().ok()?,
+                                )
+                                .ok()?,
                         })
-                    }),
+                    })
+                }),
                 date_added: modification_times[index].clone(),
                 provider_refs,
                 origin_provider,

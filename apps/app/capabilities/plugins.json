@@ -114,6 +114,7 @@
 		"files:default",
 		"settings:default",
 		"seed-map:default",
+		"schematic-preview:default",
 		"shortcuts:default",
 		"tags:default",
 		"translation:default",

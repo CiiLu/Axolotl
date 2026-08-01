@@ -57,7 +57,7 @@
 							>
 								<slot :name="option.id">
 									<component :is="option.icon" v-if="option.icon" class="size-5" />
-									{{ option.id }}
+									{{ option.label ?? option.id }}
 								</slot>
 							</button>
 							<AutoLink
@@ -77,13 +77,13 @@
 							>
 								<slot :name="option.id">
 									<component :is="option.icon" v-if="option.icon" class="size-5" />
-									{{ option.id }}
+									{{ option.label ?? option.id }}
 								</slot>
 							</AutoLink>
 							<span v-else>
 								<slot :name="option.id">
 									<component :is="option.icon" v-if="option.icon" class="size-5" />
-									{{ option.id }}
+									{{ option.label ?? option.id }}
 								</slot>
 							</span>
 						</ButtonStyled>
@@ -101,10 +101,11 @@ import { type Component, computed, nextTick, onMounted, onUnmounted, ref, watch 
 
 interface Option {
 	id: string
+	label?: string
 	icon?: Component
 	action?: (() => void) | string
 	shown?: boolean
-	color?: 'standard' | 'brand' | 'red' | 'orange' | 'green' | 'blue' | 'purple'
+	color?: 'standard' | 'brand' | 'red' | 'orange' | 'green' | 'blue' | 'purple' | 'medal-promo'
 	disabled?: boolean
 	tooltip?: string
 }

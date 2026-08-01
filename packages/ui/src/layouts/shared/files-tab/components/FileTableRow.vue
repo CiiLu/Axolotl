@@ -208,6 +208,8 @@ const menuOptions = computed(() => {
 	const item = { name: props.name, type: props.type, path: props.path }
 	const wd = props.writeDisabled
 	const wdTooltip = props.writeDisabledTooltip
+	const additionalOptions = ctx.getAdditionalMenuOptions?.(item) ?? []
+	const hasAdditionalOptions = additionalOptions.some((option) => option.shown !== false)
 	return [
 		{
 			id: 'copy-filename',
@@ -235,6 +237,8 @@ const menuOptions = computed(() => {
 			action: () => ctx.openInFolder?.(getFullPath()),
 		},
 		{ divider: true },
+		...additionalOptions,
+		{ divider: true, shown: hasAdditionalOptions },
 		{
 			id: 'extract',
 			shown: isZip.value,

@@ -4164,7 +4164,7 @@
 		"message": "打开种子地图，继续"
 	},
 	"app.onboarding.action.return-lab": {
-		"message": "点击实验室，查看另一个项目"
+		"message": "点击实验室，继续"
 	},
 	"app.onboarding.lab-editor.description": {
 		"message": "编辑文本、选择颜色、实时预览，并复制适用于 Minecraft 配置的格式。"
@@ -4179,10 +4179,10 @@
 		"message": "加载世界前先找到它"
 	},
 	"app.onboarding.lab-tools.description": {
-		"message": "生成带格式的渐变文字，或用本地种子地图探索 Java 世界。"
+		"message": "生成带格式的文字、探索 Java 世界，并直接在启动器中检查投影建筑。"
 	},
 	"app.onboarding.lab-tools.title": {
-		"message": "首批两个项目"
+		"message": "Minecraft 本地工具"
 	},
 	"app.onboarding.lab.description": {
 		"message": "实验室将本地 Minecraft 工具放进启动器，无需打开其他网站或注册额外账号。"
@@ -4462,8 +4462,7 @@
 	},
 	"app.instance-item.view-instance": {
 		"message": "查看实例"
-	}
-,
+	},
 	"app.navigation.multiplayer": {
 		"message": "联机"
 	},
@@ -4631,5 +4630,365 @@
 	},
 	"app.multiplayer.no-players": {
 		"message": "暂无玩家"
+	},
+	"instance.files.open-in-schematic-workshop": {
+		"message": "在投影工坊中打开"
+	},
+	"app.lab.schematic-preview.author": {
+		"message": "作者"
+	},
+	"app.lab.schematic-preview.block-entities": {
+		"message": "方块实体"
+	},
+	"app.lab.schematic-preview.block-picker.cancel": {
+		"message": "取消"
+	},
+	"app.lab.schematic-preview.block-picker.confirm": {
+		"message": "替换 {count} 个方块"
+	},
+	"app.lab.schematic-preview.block-picker.description": {
+		"message": "选择用于替换当前 {count} 个已选方块的目标方块。"
+	},
+	"app.lab.schematic-preview.block-picker.empty": {
+		"message": "没有匹配的方块"
+	},
+	"app.lab.schematic-preview.block-picker.results": {
+		"message": "{count} 个方块"
+	},
+	"app.lab.schematic-preview.block-picker.search": {
+		"message": "按名称或 ID 搜索方块"
+	},
+	"app.lab.schematic-preview.block-picker.title": {
+		"message": "替换方块"
+	},
+	"app.lab.schematic-preview.blocks": {
+		"message": "方块"
+	},
+	"app.lab.schematic-preview.bounds": {
+		"message": "显示区域边界"
+	},
+	"app.lab.schematic-preview.clear-recent": {
+		"message": "清空最近记录"
+	},
+	"app.lab.schematic-preview.coordinates": {
+		"message": "坐标"
+	},
+	"app.lab.schematic-preview.data-version": {
+		"message": "数据版本"
+	},
+	"app.lab.schematic-preview.description": {
+		"message": "快速预览、编辑你的投影"
+	},
+	"app.lab.schematic-preview.drop": {
+		"message": "松开以打开投影"
+	},
+	"app.lab.schematic-preview.empty.description": {
+		"message": "打开 Litematica 或 Sponge 投影，在本地进行 3D 查看和编辑。"
+	},
+	"app.lab.schematic-preview.empty.title": {
+		"message": "编辑 Minecraft 投影"
+	},
+	"app.lab.schematic-preview.entities": {
+		"message": "实体"
+	},
+	"app.lab.schematic-preview.export-complete": {
+		"message": "导出完成"
+	},
+	"app.lab.schematic-preview.export-litematic": {
+		"message": "Litematica 投影（.litematic）"
+	},
+	"app.lab.schematic-preview.focus-region": {
+		"message": "聚焦区域"
+	},
+	"app.lab.schematic-preview.format": {
+		"message": "格式"
+	},
+	"app.lab.schematic-preview.from-instance": {
+		"message": "从实例选择"
+	},
+	"app.lab.schematic-preview.grid": {
+		"message": "显示网格"
+	},
+	"app.lab.schematic-preview.info.title": {
+		"message": "投影信息"
+	},
+	"app.lab.schematic-preview.inspector": {
+		"message": "检查器"
+	},
+	"app.lab.schematic-preview.instance-picker.back": {
+		"message": "返回实例列表"
+	},
+	"app.lab.schematic-preview.instance-picker.choose-instance": {
+		"message": "选择包含投影的实例"
+	},
+	"app.lab.schematic-preview.instance-picker.empty": {
+		"message": "该实例中没有找到 .litematic 或 .schem 文件。"
+	},
+	"app.lab.schematic-preview.instance-picker.no-instances": {
+		"message": "没有可用的已安装实例。"
+	},
+	"app.lab.schematic-preview.instance-picker.no-matching-instances": {
+		"message": "没有匹配搜索条件的实例。"
+	},
+	"app.lab.schematic-preview.instance-picker.no-matching-schematics": {
+		"message": "没有匹配搜索条件的投影。"
+	},
+	"app.lab.schematic-preview.instance-picker.open": {
+		"message": "打开 {name}"
+	},
+	"app.lab.schematic-preview.instance-picker.search": {
+		"message": "搜索投影"
+	},
+	"app.lab.schematic-preview.instance-picker.search-instances": {
+		"message": "搜索实例"
+	},
+	"app.lab.schematic-preview.instance-picker.select-instance": {
+		"message": "浏览 {name} 中的投影"
+	},
+	"app.lab.schematic-preview.instance-picker.title": {
+		"message": "从实例打开"
+	},
+	"app.lab.schematic-preview.layers.all": {
+		"message": "全部"
+	},
+	"app.lab.schematic-preview.layers.spacing": {
+		"message": "层间距"
+	},
+	"app.lab.schematic-preview.layers.maximum": {
+		"message": "最高层"
+	},
+	"app.lab.schematic-preview.layers.minimum": {
+		"message": "最低层"
+	},
+	"app.lab.schematic-preview.layers.next": {
+		"message": "下一层"
+	},
+	"app.lab.schematic-preview.layers.previous": {
+		"message": "上一层"
+	},
+	"app.lab.schematic-preview.layers.range": {
+		"message": "范围"
+	},
+	"app.lab.schematic-preview.layers.single": {
+		"message": "单层"
+	},
+	"app.lab.schematic-preview.layers.visible": {
+		"message": "Y {current} · 显示 {visible}/{total} 层"
+	},
+	"app.lab.schematic-preview.loading.mesh": {
+		"message": "正在生成模型"
+	},
+	"app.lab.schematic-preview.loading.parse": {
+		"message": "正在解析投影"
+	},
+	"app.lab.schematic-preview.loading.resources": {
+		"message": "正在读取资源"
+	},
+	"app.lab.schematic-preview.materials-csv": {
+		"message": "导出材料表 CSV"
+	},
+	"app.lab.schematic-preview.materials.empty": {
+		"message": "没有匹配的材料"
+	},
+	"app.lab.schematic-preview.materials.search": {
+		"message": "搜索材料"
+	},
+	"app.lab.schematic-preview.metadata": {
+		"message": "元数据"
+	},
+	"app.lab.schematic-preview.missing-file": {
+		"message": "文件不存在"
+	},
+	"app.lab.schematic-preview.missing-models": {
+		"message": "有 {count} 个方块模型使用缺失纹理占位。"
+	},
+	"app.lab.schematic-preview.more-actions": {
+		"message": "更多操作"
+	},
+	"app.lab.schematic-preview.open": {
+		"message": "打开"
+	},
+	"app.lab.schematic-preview.open-file": {
+		"message": "打开文件"
+	},
+	"app.lab.schematic-preview.projection": {
+		"message": "切换相机投影"
+	},
+	"app.lab.schematic-preview.recent": {
+		"message": "最近的投影"
+	},
+	"app.lab.schematic-preview.regions": {
+		"message": "区域"
+	},
+	"app.lab.schematic-preview.reload": {
+		"message": "重新加载"
+	},
+	"app.lab.schematic-preview.remove-recent": {
+		"message": "从最近记录移除"
+	},
+	"app.lab.schematic-preview.reset-view": {
+		"message": "复位视角"
+	},
+	"app.lab.schematic-preview.screenshot": {
+		"message": "导出 PNG"
+	},
+	"app.lab.schematic-preview.seamless-glass": {
+		"message": "无缝玻璃"
+	},
+	"app.lab.schematic-preview.selected-block": {
+		"message": "已选方块"
+	},
+	"app.lab.schematic-preview.tab.layers": {
+		"message": "层级"
+	},
+	"app.lab.schematic-preview.tab.materials": {
+		"message": "材料"
+	},
+	"app.lab.schematic-preview.tab.structure": {
+		"message": "结构"
+	},
+	"app.lab.schematic-preview.title": {
+		"message": "投影工坊"
+	},
+	"app.lab.schematic-preview.translucent": {
+		"message": "显示透明方块"
+	},
+	"app.lab.schematic-preview.version-mismatch": {
+		"message": "所选资源实例可能与该投影的版本不匹配。"
+	},
+	"app.lab.schematic-preview.warnings": {
+		"message": "警告"
+	},
+	"app.lab.schematic-preview.webgl-lost": {
+		"message": "WebGL 上下文已丢失，恢复后将继续渲染。"
+	},
+	"app.lab.schematic-preview.edit.delete": {
+		"message": "删除所选"
+	},
+	"app.lab.schematic-preview.edit.redo": {
+		"message": "重做"
+	},
+	"app.lab.schematic-preview.edit.replace": {
+		"message": "替换所选"
+	},
+	"app.lab.schematic-preview.edit.replace-with": {
+		"message": "替换为"
+	},
+	"app.lab.schematic-preview.edit.undo": {
+		"message": "撤销"
+	},
+	"app.lab.schematic-preview.export-schematic": {
+		"message": "导出投影"
+	},
+	"app.lab.schematic-preview.export-sponge": {
+		"message": "Sponge 投影（.schem）"
+	},
+	"app.lab.schematic-preview.fullscreen": {
+		"message": "切换全屏"
+	},
+	"app.lab.schematic-preview.materials-json": {
+		"message": "导出材料表 JSON"
+	},
+	"app.lab.schematic-preview.materials.select-all": {
+		"message": "全选此材料"
+	},
+	"app.lab.schematic-preview.materials.use-replace": {
+		"message": "设为替换材料"
+	},
+	"app.lab.schematic-preview.measure": {
+		"message": "测量"
+	},
+	"app.lab.schematic-preview.measure.clear": {
+		"message": "清除测量"
+	},
+	"app.lab.schematic-preview.measure.distance": {
+		"message": "距离"
+	},
+	"app.lab.schematic-preview.measure.end": {
+		"message": "终点"
+	},
+	"app.lab.schematic-preview.measure.size": {
+		"message": "方块跨度"
+	},
+	"app.lab.schematic-preview.measure.start": {
+		"message": "起点"
+	},
+	"app.lab.schematic-preview.orbit-view": {
+		"message": "轨道视角"
+	},
+	"app.lab.schematic-preview.selection.box": {
+		"message": "框选"
+	},
+	"app.lab.schematic-preview.selection.box-pending": {
+		"message": "请选择另一对角"
+	},
+	"app.lab.schematic-preview.selection.clear": {
+		"message": "清除选择"
+	},
+	"app.lab.schematic-preview.selection.connected": {
+		"message": "连通方块"
+	},
+	"app.lab.schematic-preview.selection.count": {
+		"message": "已选 {count} 个"
+	},
+	"app.lab.schematic-preview.selection.layer": {
+		"message": "同一层"
+	},
+	"app.lab.schematic-preview.selection.material": {
+		"message": "相同材料"
+	},
+	"app.lab.schematic-preview.selection.single": {
+		"message": "单选"
+	},
+	"app.lab.schematic-preview.tab.edit": {
+		"message": "编辑"
+	},
+	"app.lab.schematic-preview.transform": {
+		"message": "整体变换"
+	},
+	"app.lab.schematic-preview.transform.mirror-x": {
+		"message": "沿 X 轴镜像"
+	},
+	"app.lab.schematic-preview.transform.mirror-z": {
+		"message": "沿 Z 轴镜像"
+	},
+	"app.lab.schematic-preview.transform.rotate-clockwise": {
+		"message": "顺时针旋转"
+	},
+	"app.lab.schematic-preview.transform.rotate-counter-clockwise": {
+		"message": "逆时针旋转"
+	},
+	"app.lab.schematic-preview.tools": {
+		"message": "工作区工具"
+	},
+	"app.lab.schematic-preview.visibility": {
+		"message": "可见性"
+	},
+	"app.lab.schematic-preview.visibility.hide": {
+		"message": "隐藏所选"
+	},
+	"app.lab.schematic-preview.visibility.isolate": {
+		"message": "仅显示所选"
+	},
+	"app.lab.schematic-preview.visibility.show-all": {
+		"message": "全部显示"
+	},
+	"app.lab.schematic-preview.walk-view": {
+		"message": "漫游视角"
+	},
+	"app.lab.schematic-preview.walk-preview": {
+		"message": "只读漫游预览"
+	},
+	"app.lab.schematic-preview.walk-speed": {
+		"message": "速度 {speed} · 滚轮调速"
+	},
+	"app.onboarding.action.open-schematic-workshop": {
+		"message": "打开投影工坊，继续"
+	},
+	"app.onboarding.lab-schematic.description": {
+		"message": "打开本地 .litematic 或 .schem 文件，也可以从已安装实例中选择。3D 工作区集中提供查看、测量、图层控制、材料统计和本地编辑。"
+	},
+	"app.onboarding.lab-schematic.title": {
+		"message": "放置前先检查建筑"
 	}
 }

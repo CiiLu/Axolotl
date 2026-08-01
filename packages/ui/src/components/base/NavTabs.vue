@@ -26,12 +26,13 @@
 		</template>
 
 		<template v-else>
-			<div
+			<button
 				v-for="(link, index) in filteredLinks"
 				v-show="link.shown ?? true"
 				:key="link.href"
 				ref="tabLinkElements"
-				class="button-animation z-[1] flex flex-row items-center gap-2 px-4 py-2 hover:cursor-pointer focus:rounded-full"
+				type="button"
+				class="button-animation z-[1] flex flex-row items-center gap-2 border-0 bg-transparent px-4 py-2 text-inherit hover:cursor-pointer focus:rounded-full"
 				:class="getSSRFallbackClasses(index)"
 				@click="emit('tabClick', index, link)"
 			>
@@ -39,7 +40,7 @@
 				<span class="text-nowrap" :class="getLabelClasses(index)">
 					{{ link.label }}
 				</span>
-			</div>
+			</button>
 		</template>
 
 		<!-- Animated slider background -->
