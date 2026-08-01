@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import {
+	ChevronDownIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
 	FileArchiveIcon,
+	FolderIcon,
 	SearchIcon,
 	SpinnerIcon,
 } from '@modrinth/assets'
@@ -12,8 +14,8 @@ import {
 	NewModal,
 	StyledInput,
 	useFormatBytes,
-	useVirtualScroll,
 	useVIntl,
+	useVirtualScroll,
 } from '@modrinth/ui'
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
 
@@ -21,10 +23,15 @@ import InstanceIcon from '@/components/ui/InstanceIcon.vue'
 import { list } from '@/helpers/instance'
 import type { GameInstance } from '@/helpers/types.d.ts'
 import {
-	listInstanceSchematics,
 	type InstanceSchematicFile,
+	listInstanceSchematics,
 	type SchematicPreviewSource,
 } from '@/lab/schematic-preview/backend'
+import {
+	buildInstanceSchematicRows,
+	collectSchematicFolders,
+	type InstanceSchematicRow,
+} from '@/lab/schematic-preview/instance-files'
 
 const emit = defineEmits<{
 	open: [source: SchematicPreviewSource, instance: GameInstance]
@@ -38,6 +45,7 @@ const instances = ref<GameInstance[]>([])
 const selectedInstanceId = ref('')
 const files = ref<InstanceSchematicFile[]>([])
 const search = ref('')
+const expandedFolders = ref<Set<string>>(new Set())
 const loadingInstances = ref(false)
 const loadingFiles = ref(false)
 const error = ref('')
@@ -88,6 +96,14 @@ const messages = defineMessages({
 		id: 'app.lab.schematic-preview.instance-picker.open',
 		defaultMessage: 'Open {name}',
 	},
+	expandFolder: {
+		id: 'app.lab.schematic-preview.instance-picker.expand-folder',
+		defaultMessage: 'Expand folder {name}',
+	},
+	collapseFolder: {
+		id: 'app.lab.schematic-preview.instance-picker.collapse-folder',
+		defaultMessage: 'Collapse folder {name}',
+	},
 })
 
 const selectedInstance = computed(() =>
@@ -102,13 +118,10 @@ const visibleInstances = computed(() => {
 		)
 	})
 })
-const visibleFiles = computed(() => {
-	const query = search.value.trim().toLocaleLowerCase(locale.value)
-	return files.value.filter(
-		(file) => !query || file.relativePath.toLocaleLowerCase(locale.value).includes(query),
-	)
-})
-const { listContainer, totalHeight, visibleTop, visibleItems } = useVirtualScroll(visibleFiles, {
+const visibleRows = computed<InstanceSchematicRow[]>(() =>
+	buildInstanceSchematicRows(files.value, expandedFolders.value, search.value, locale.value),
+)
+const { listContainer, totalHeight, visibleTop, visibleItems } = useVirtualScroll(visibleRows, {
 	itemHeight: 64,
 	bufferSize: 6,
 })
@@ -119,6 +132,24 @@ function formatModified(value?: number) {
 		dateStyle: 'medium',
 		timeStyle: 'short',
 	}).format(new Date(value * 1000))
+}
+
+function toggleFolder(path: string) {
+	const next = new Set(expandedFolders.value)
+	if (next.has(path)) {
+		next.delete(path)
+	} else {
+		next.add(path)
+	}
+	expandedFolders.value = next
+}
+
+function rowPadding(depth: number) {
+	return { paddingLeft: `${0.75 + depth * 1.25}rem` }
+}
+
+function rowKey(row: InstanceSchematicRow) {
+	return row.kind === 'folder' ? row.path : row.file.relativePath
 }
 
 async function loadFiles(instanceId = selectedInstanceId.value) {
@@ -134,6 +165,7 @@ async function loadFiles(instanceId = selectedInstanceId.value) {
 		const result = await listInstanceSchematics(instanceId)
 		if (request !== fileRequest || instanceId !== selectedInstanceId.value) return
 		files.value = result
+		expandedFolders.value = new Set(collectSchematicFolders(result))
 	} catch (caught) {
 		if (request !== fileRequest || instanceId !== selectedInstanceId.value) return
 		files.value = []
@@ -148,6 +180,7 @@ async function show(preferredInstanceId?: string) {
 	selectedInstanceId.value = ''
 	files.value = []
 	search.value = ''
+	expandedFolders.value = new Set()
 	error.value = ''
 	loadingFiles.value = false
 	loadingInstances.value = true
@@ -184,6 +217,7 @@ async function selectInstance(instance: GameInstance) {
 	selectedInstanceId.value = instance.id
 	files.value = []
 	search.value = ''
+	expandedFolders.value = new Set()
 	await loadFiles(instance.id)
 	await nextTick()
 	searchInput.value?.focus()
@@ -194,6 +228,7 @@ async function backToInstances() {
 	selectedInstanceId.value = ''
 	files.value = []
 	search.value = ''
+	expandedFolders.value = new Set()
 	error.value = ''
 	loadingFiles.value = false
 	await nextTick()
@@ -335,7 +370,7 @@ defineExpose({ show })
 					{{ formatMessage(messages.noSchematics) }}
 				</p>
 				<p
-					v-else-if="visibleFiles.length === 0"
+					v-else-if="visibleRows.length === 0"
 					class="m-0 flex flex-1 items-center justify-center text-center text-secondary"
 				>
 					{{ formatMessage(messages.noMatchingSchematics) }}
@@ -348,26 +383,66 @@ defineExpose({ show })
 						:style="{ height: `${totalHeight}px`, overflowAnchor: 'none' }"
 					>
 						<div class="absolute inset-x-0" :style="{ top: `${visibleTop}px` }">
-							<button
-								v-for="file in visibleItems"
-								:key="file.relativePath"
-								type="button"
-								role="listitem"
-								class="flex h-16 w-full cursor-pointer items-center gap-3 border-0 border-b border-solid border-surface-5 bg-transparent px-3 py-2 text-left text-primary transition-colors last:border-b-0 hover:bg-button-bg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-shadow"
-								:title="file.relativePath"
-								:aria-label="formatMessage(messages.openSchematic, { name: file.relativePath })"
-								@click="openFile(file)"
-							>
-								<FileArchiveIcon class="size-5 shrink-0 text-secondary" />
-								<span class="flex min-w-0 flex-1 flex-col gap-0.5">
-									<strong class="truncate text-contrast">{{ file.relativePath }}</strong>
-									<span class="truncate text-xs uppercase text-secondary">
-										{{ file.format }} · {{ formatBytes(file.size) }}
-										<span v-if="file.modifiedAt"> · {{ formatModified(file.modifiedAt) }}</span>
+							<template v-for="row in visibleItems" :key="rowKey(row)">
+								<button
+									v-if="row.kind === 'folder'"
+									type="button"
+									role="listitem"
+									class="flex h-16 w-full cursor-pointer items-center gap-3 border-0 border-b border-solid border-surface-5 bg-transparent py-2 pr-3 text-left text-primary transition-colors last:border-b-0 hover:bg-button-bg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-shadow"
+									:style="rowPadding(row.depth)"
+									:title="row.path"
+									:aria-expanded="row.expanded"
+									:aria-label="
+										formatMessage(row.expanded ? messages.collapseFolder : messages.expandFolder, {
+											name: row.name,
+										})
+									"
+									@click="toggleFolder(row.path)"
+								>
+									<ChevronDownIcon
+										v-if="row.expanded"
+										class="size-5 shrink-0 text-secondary"
+										aria-hidden="true"
+									/>
+									<ChevronRightIcon
+										v-else
+										class="size-5 shrink-0 text-secondary"
+										aria-hidden="true"
+									/>
+									<FolderIcon class="size-5 shrink-0 text-secondary" aria-hidden="true" />
+									<span class="flex min-w-0 flex-1 items-baseline gap-1.5">
+										<strong class="truncate text-contrast">{{ row.name }}</strong>
+										<span class="shrink-0 text-sm font-medium text-secondary">
+											({{ row.fileCount }})
+										</span>
 									</span>
-								</span>
-								<ChevronRightIcon class="size-5 shrink-0 text-secondary" aria-hidden="true" />
-							</button>
+								</button>
+								<button
+									v-else
+									type="button"
+									role="listitem"
+									class="flex h-16 w-full cursor-pointer items-center gap-3 border-0 border-b border-solid border-surface-5 bg-transparent py-2 pr-3 text-left text-primary transition-colors last:border-b-0 hover:bg-button-bg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-shadow"
+									:style="rowPadding(row.depth)"
+									:title="row.file.relativePath"
+									:aria-label="
+										formatMessage(messages.openSchematic, { name: row.file.relativePath })
+									"
+									@click="openFile(row.file)"
+								>
+									<FileArchiveIcon class="size-5 shrink-0 text-secondary" />
+									<span class="flex min-w-0 flex-1 flex-col gap-0.5">
+										<strong class="truncate text-contrast">{{ row.file.fileName }}</strong>
+										<span class="truncate text-xs uppercase text-secondary">
+											<span v-if="row.parentPath">{{ row.parentPath }} · </span
+											>{{ row.file.format }} · {{ formatBytes(row.file.size) }}
+											<span v-if="row.file.modifiedAt">
+												· {{ formatModified(row.file.modifiedAt) }}</span
+											>
+										</span>
+									</span>
+									<ChevronRightIcon class="size-5 shrink-0 text-secondary" aria-hidden="true" />
+								</button>
+							</template>
 						</div>
 					</div>
 				</div>

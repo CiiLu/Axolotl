@@ -33,6 +33,57 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.8',
+		version: '1.6.8',
+		publishedAt: '2026-08-02',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.8',
+			'zh-CN': 'Axolotl Launcher 1.6.8',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US':
+						'Refactored and cleaned up legacy code paths for better reliability and easier maintenance.',
+					'zh-CN': '重构并清理了部分历史遗留代码，提升稳定性与可维护性。',
+				},
+				{
+					'en-US':
+						'Improved nested-folder detection for modpacks and other resources, so files in deeper directories are recognized correctly.',
+					'zh-CN': '增强了整合包等资源的嵌套识别，深层目录甚至是压缩包中的文件现在能被正确识别。',
+				},
+				{
+					'en-US': 'Improved performance when enabling or disabling resources in bulk.',
+					'zh-CN': '提升了批量修改资源启用状态时的性能。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed a crash that could occur when uploading files.',
+					'zh-CN': '修复了上传文件时可能崩溃的问题。',
+				},
+				{
+					'en-US': 'Fixed schematics stored in nested folders not being recognized.',
+					'zh-CN': '修复了嵌套在子文件夹中的投影文件无法被识别的问题。',
+				},
+				{
+					'en-US': 'Fixed an issue where mods could not be disabled properly.',
+					'zh-CN': '修复了模组无法被正常关闭的问题。',
+				},
+				{
+					'en-US': 'Resolved several known issues.',
+					'zh-CN': '解决了一些已知问题。',
+				},
+			],
+			security: [
+				{
+					'en-US': 'Added extra safeguards for unusual edge cases.',
+					'zh-CN': '针对部分极端情况增加了安全处理，提升健壮性。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.7',
 		version: '1.6.7',
 		publishedAt: '2026-08-01',

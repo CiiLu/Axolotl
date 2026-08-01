@@ -710,26 +710,20 @@
   "app.drop.error.title": {
     "message": "Drop error"
   },
-  "app.drop.error.unknown-text": {
-    "message": "Could not determine what kind of file this is."
-  },
   "app.drop.error.unknown-depth-text": {
     "message": "The archive is nested too deeply to analyze. Unpack it to a folder and try again."
   },
   "app.drop.error.unknown-encrypted-text": {
     "message": "The archive contains encrypted files and cannot be analyzed."
   },
-  "app.drop.nested-unpack-title": {
-    "message": "Nested archives detected"
-  },
-  "app.drop.nested-unpack-text": {
-    "message": "This archive contains nested archives ({size}) that must be unpacked to analyze. This may take some time. Continue?"
-  },
-  "app.drop.nested-unpack-button": {
-    "message": "Continue analysis"
+  "app.drop.error.unknown-text": {
+    "message": "Could not determine what kind of file this is."
   },
   "app.drop.error.unknown-title": {
     "message": "Unknown file type"
+  },
+  "app.drop.extract-failed": {
+    "message": "Failed to extract archive"
   },
   "app.drop.import-completed-partial-text": {
     "message": "Imported {completed} of {total} instances ({failed} failed)"
@@ -755,6 +749,9 @@
   "app.drop.install-failed-title": {
     "message": "Installation failed"
   },
+  "app.drop.installing-file": {
+    "message": "Installing {name}..."
+  },
   "app.drop.instance-imported-text": {
     "message": "{name} imported successfully."
   },
@@ -767,9 +764,6 @@
   "app.drop.mod-compatibility-warning": {
     "message": "This mod targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader})."
   },
-  "app.drop.installing-file": {
-    "message": "Installing {name}..."
-  },
   "app.drop.modpack-install-failed": {
     "message": "Failed to install modpack"
   },
@@ -779,17 +773,17 @@
   "app.drop.modpack-installing": {
     "message": "Installing modpack..."
   },
+  "app.drop.nested-unpack-button": {
+    "message": "Continue analysis"
+  },
+  "app.drop.nested-unpack-text": {
+    "message": "This archive contains nested archives ({size}) that must be unpacked to analyze. This may take some time. Continue?"
+  },
+  "app.drop.nested-unpack-title": {
+    "message": "Nested archives detected"
+  },
   "app.drop.no-instances": {
     "message": "No instances found"
-  },
-  "app.drop.scan-failed": {
-    "message": "Failed to scan for instances"
-  },
-  "app.drop.extract-failed": {
-    "message": "Failed to extract archive"
-  },
-  "app.drop.scanning": {
-    "message": "Scanning for instances"
   },
   "app.drop.overlay-subtitle": {
     "message": "Release to analyze"
@@ -797,11 +791,17 @@
   "app.drop.overlay-title": {
     "message": "Drop to import"
   },
+  "app.drop.process-failed-title": {
+    "message": "Failed to process file"
+  },
   "app.drop.processing": {
     "message": "Processing {name}..."
   },
-  "app.drop.process-failed-title": {
-    "message": "Failed to process file"
+  "app.drop.scan-failed": {
+    "message": "Failed to scan for instances"
+  },
+  "app.drop.scanning": {
+    "message": "Scanning for instances"
   },
   "app.drop.temporary-file-text": {
     "message": "The file \"{file}\" appears to be a temporary copy. Try dragging the file from its original folder instead of from a browser, archive, or cloud storage."
@@ -2027,8 +2027,14 @@
   "app.lab.schematic-preview.instance-picker.choose-instance": {
     "message": "Choose the instance that contains the schematic"
   },
+  "app.lab.schematic-preview.instance-picker.collapse-folder": {
+    "message": "Collapse folder {name}"
+  },
   "app.lab.schematic-preview.instance-picker.empty": {
     "message": "No .litematic or .schem files were found in this instance."
+  },
+  "app.lab.schematic-preview.instance-picker.expand-folder": {
+    "message": "Expand folder {name}"
   },
   "app.lab.schematic-preview.instance-picker.no-instances": {
     "message": "No installed instances are available."

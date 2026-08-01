@@ -4721,8 +4721,14 @@
   "app.lab.schematic-preview.instance-picker.choose-instance": {
     "message": "选择包含投影的实例"
   },
+  "app.lab.schematic-preview.instance-picker.collapse-folder": {
+    "message": "折叠文件夹 {name}"
+  },
   "app.lab.schematic-preview.instance-picker.empty": {
     "message": "该实例中没有找到 .litematic 或 .schem 文件。"
+  },
+  "app.lab.schematic-preview.instance-picker.expand-folder": {
+    "message": "展开文件夹 {name}"
   },
   "app.lab.schematic-preview.instance-picker.no-instances": {
     "message": "没有可用的已安装实例。"
@@ -4999,8 +5005,5 @@
   },
   "app.drop.unexpected-type": {
     "message": "意外的类型：{type}"
-  },
-  "app.skins.sign-in.rinthbot-alt": {
-    "message": "Axolotl Launcher"
   }
 }
