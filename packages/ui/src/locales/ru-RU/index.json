@@ -464,9 +464,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Обновить всё"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Добавить файлы"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Все выбранные проекты уже отключены"
   },
@@ -932,9 +929,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Поделиться на mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Добавить файл"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Загрузить из .zip файла"
   },
@@ -988,36 +982,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Несохранённые изменения"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Отменено"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Не удалось - Файл уже существует"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Не удалось - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Не удалось - Неправильный тип файла"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Не удалось загрузить {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Файл"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} загружается"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Некорректный тип загружаемого файла"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Произошла непредвиденная ошибка."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} осталось"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Имя должно содержать только буквенные символы, дефисы, подчеркивания или пробелы."

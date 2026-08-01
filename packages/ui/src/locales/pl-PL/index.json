@@ -497,9 +497,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Zaktualizuj wszystko"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Prześlij pliki"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Wszystkie zaznaczone zasoby są już wyłączone"
   },
@@ -1004,9 +1001,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Prześlij do mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Prześlij plik"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Prześlij z pliku .zip"
   },
@@ -1060,33 +1054,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Niezapisane zmiany"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Anulowano"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Błąd - Plik już istnieje"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Błąd - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Błąd - Nieprawidłowy typ pliku"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Nie udało się przesłać {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Plik"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "Przesyłanie plików {fileType}"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Próbowano przesłać plik o nieprawidłowym typie"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Wystąpił nieoczekiwany błąd."
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Nazwa powinna zawierać tylko znaki alfanumeryczne, myślniki, znaki podkreślenia lub spacje."

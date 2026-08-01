@@ -491,9 +491,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Aktualizovat vše"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Nahrát soubory"
-  },
   "content.selection-bar.bulk.disabling": {
     "defaultMessage": "Vypínání {progress}/{total} {contentType}..."
   },
@@ -962,9 +959,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Sdílet na mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Nahrát soubor"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Nahrát ze souboru .zip"
   },
@@ -1018,36 +1012,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Neuložené změny"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Zrušeno"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Selhalo - Soubor již existuje"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Selhalo - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Selhalo - Nesprávný typ souboru"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "{fileName} se nepodařilo nahrát"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Soubor"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "Nahrané soubory typu {fileType}"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Nahraný soubor má nesprávný typ"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Došlo k neočekávané chybě."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - zbývá {count}"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Název smí obsahovat pouze písmena, číslice, pomlčky, podtržítka nebo mezery."

@@ -497,9 +497,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Atualizar tudo"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Adicionar arquivos"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Todo o conteúdo selecionado já está desativado"
   },
@@ -1010,9 +1007,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Compartilhar em mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Adicionar arquivo"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Adicionar a partir de arquivo .zip"
   },
@@ -1066,36 +1060,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Alterações não salvas"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Cancelado"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Falha - O arquivo já existe"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Falha - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Falha - Tipo de arquivo incorreto"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Falha ao adicionar {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Arquivo"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} envios"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "O arquivo enviado continha um tipo de arquivo incorreto"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Um erro inesperado aconteceu."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} restantes"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "O nome deve conter apenas caracteres alfanuméricos, hífens, sublinhados ou espaços."

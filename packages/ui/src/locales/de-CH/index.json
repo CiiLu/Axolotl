@@ -497,9 +497,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Alle aktualisieren"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Dateien hochladen"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Alle ausgewählten Inhalte sind bereits deaktiviert"
   },
@@ -1010,9 +1007,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Auf mclo.gs teilen"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Datei hochladen"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Aus .zip-Datei hochladen"
   },
@@ -1066,36 +1060,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Ungespeicherte Änderungen"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Abgebrochen"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Fehlgeschlagen - Datei existiert bereits"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Fehlgeschlagen - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Fehlgeschlagen - Falscher Dateityp"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Hochladen von {fileName} ist fehlgeschlagen"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Datei"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} Uploads"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Der hochgeladene Dateityp war falsch"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Ein unerwarteter Fehler ist aufgetreten."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} übrig"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Name darf nur alphanumerische Zeichen, Bindestriche, Unterstriche oder Leerzeichen enthalten."

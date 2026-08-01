@@ -395,9 +395,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Actualizează tot"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Postează fișiere"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Tot conținutul selectat este deja dezactivat"
   },

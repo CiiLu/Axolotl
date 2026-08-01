@@ -443,9 +443,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Оновити все"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Вивантажити файли"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Увесь вибраний уміст уже вимкнено"
   },
@@ -920,9 +917,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Поширити в mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Вивантажити файл"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Вивантажити з файлу .zip"
   },
@@ -976,36 +970,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Незбережені зміни"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Скасовано"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Помилка — такий файл вже існує"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Помилка — {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Помилка — неправильний тип файлу"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Не вдалося вивантажити «{fileName}»"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Файл"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "Вивантаження {fileType}"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Вивантаження мало неправильний тип файлу"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Виникла непередбачувана помилка."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " — залишилося {count}"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Назва може містити лише літери, цифри, тире, нижні підкреслення або пробіли."

@@ -869,9 +869,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "更新所有"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "上传文件"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "已禁用选择的所有内容"
   },
@@ -1421,9 +1418,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "分享到 mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "上传文件"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "从 .zip 文件导入"
   },
@@ -1480,36 +1474,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "未保存的更改"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "已取消"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "失败：文件已存在"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "失败：{error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "失败：文件类型错误"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "上传 {fileName} 失败"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "文件"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} 上传"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "上传的文件类型错误"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "发生了意外错误。"
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " ：剩余 {count}"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "名称只能包含字母、数字、连字符、下划线或空格。"

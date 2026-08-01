@@ -389,9 +389,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Werk alles bij"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Upload bestanden"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Alle geselecteerde content is al uitgeschakeld"
   },
@@ -647,9 +644,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Delen op mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Bestand uploaden"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Uploaden vanuit een .zip-bestand"
   },
@@ -688,36 +682,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Nog niet opgeslagen wijzigingen"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Geannuleerd"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Mislukt - Bestand bestaat al"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Mislukt - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Mislukt - Verkeerd bestandstype"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Het uploaden van {fileName} is mislukt"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Bestand"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} Uploads"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Het geüploade bestand had een onjuist bestandstype"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Er is een onverwachte fout opgetreden."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} over"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "De naam mag alleen bestaan uit letters, cijfers, streepjes, onderstrepingstekens of spaties."

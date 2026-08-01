@@ -434,9 +434,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Kemas kini semua"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Muat naik fail"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Semua kandungan yang dipilih sudah pun dinyahdayakan"
   },
@@ -911,9 +908,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Kongsi ke mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Muat naik fail"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Muat naik daripada fail .zip"
   },
@@ -967,36 +961,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Perubahan yang belum disimpan"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Dibatalkan"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Gagal - Fail sudah wujud"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Gagal - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Gagal - Jenis fail salah"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Gagal memuat naik {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Fail"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "Muat naik {fileType}"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Muat naik mempunyai jenis fail yang salah"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Sebuah ralat yang tidak dijangka telah berlaku."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} yang tinggal"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Nama mesti mengandungi hanya aksara alfanumerik, tanda sengkang (-), garis bawah (_), atau ruang."

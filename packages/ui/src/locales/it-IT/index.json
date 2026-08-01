@@ -476,9 +476,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Aggiorna tutto"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Carica file"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Tutti i contenuti selezionati sono già disattivati"
   },
@@ -980,9 +977,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Condividi su mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Carica file"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Carica da file .zip"
   },
@@ -1036,33 +1030,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Modifiche non salvate"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Annullato"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Errore - Il file esiste già"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Errore - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Errore - Tipo di file errato"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Errore nel caricamento di \"{fileName}\""
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "file"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "Caricamenti {fileType}"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Il tipo di file caricato è errato"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Si è verificato un errore imprevisto."
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Il nome può contenere solo lettere, numeri, spazi o trattini alti o bassi."

@@ -114,11 +114,7 @@
 				/>
 			</template>
 			<template #itemButtonsRight="{ contentItem }">
-				<ButtonStyled
-					v-if="contentItem?.project_type === 'schematic'"
-					circular
-					type="transparent"
-				>
+				<ButtonStyled v-if="contentItem?.project_type === 'schematic'" circular type="transparent">
 					<button
 						v-tooltip="formatMessage(messages.openInSchematicWorkshop)"
 						:aria-label="formatMessage(messages.openInSchematicWorkshop)"

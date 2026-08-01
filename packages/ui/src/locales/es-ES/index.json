@@ -494,9 +494,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Actualizar todo"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Subir archivos"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Todo el contenido seleccionado ya está desactivado"
   },
@@ -995,9 +992,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Compartir en mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Subir archivo"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Subir desde un archivo .zip"
   },
@@ -1051,36 +1045,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Cambios sin guardar"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Cancelado"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Error - El archivo ya existe"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Error - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Error - Tipo de archivo incorrecto"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Error al subir {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Archivo"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "Subidas {fileType}"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "El archivo subido es de un tipo incorrecto"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Ha ocurrido un error inesperado."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} restantes"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "El nombre solo debe contener caracteres alfanuméricos, guiones (-), guiones bajos (_) o espacios."

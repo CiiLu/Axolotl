@@ -449,9 +449,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "모두 업데이트"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "파일 업로드"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "선택한 모든 콘텐츠가 이미 비활성화 됨"
   },
@@ -950,9 +947,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "mclo.gs에 공유"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "파일 업로드"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": ".zip 파일에서 업로드"
   },
@@ -1006,36 +1000,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "저장되지 않은 변경 사항"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "취소됨"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "실패 - 파일이 이미 존재함"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "실패 - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "실패 - 올바르지 않은 파일 형식"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "{fileName} 업로드 실패"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "파일"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} 업로드"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "올바르지 않은 파일 형식 업로드"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "예기치 않은 오류가 발생했습니다."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count}개 남음"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "이름에는 영문, 숫자, 하이픈, 밑줄, 공백만 포함되어야 합니다."

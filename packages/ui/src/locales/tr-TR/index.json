@@ -464,9 +464,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Tümünü güncelle"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Dosya yükle"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Tüm seçili içerik zaten devre dışı"
   },
@@ -965,9 +962,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "mclo.gs'de paylaş"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Dosya yükle"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Upload from .zip file"
   },
@@ -1021,36 +1015,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Kaydedilmemiş değişiklikler"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "İptal edildi"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Başarısız - Dosya zaten mevcut"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Failed - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Başarısız - Geçersiz dosya türü"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "{fileName} yüklenemedi"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Dosya"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} uploads"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Yükleme geçersiz dosya türüne sahipti"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Beklenmedik bir hata oluştu."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": "- {count} kaldı"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Ad yalnızca alfanümerik karakterler, tireler, alt çizgiler veya boşluklar içerebilir."

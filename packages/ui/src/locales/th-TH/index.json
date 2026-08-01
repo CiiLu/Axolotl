@@ -101,9 +101,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "อัปเดตทั้งหมด"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "อัปโหลดไฟล์"
-  },
   "content.selection-bar.bulk.deleting": {
     "defaultMessage": "กำลังลบ {progress}/{total}{contentType}..."
   },

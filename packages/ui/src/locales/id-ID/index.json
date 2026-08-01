@@ -464,9 +464,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Perbarui semua"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Unggah berkas"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Semua konten terpilih telah dimatikan"
   },
@@ -848,9 +845,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Bagikan ke mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Unggah berkas"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Unggah dari berkas .zip"
   },
@@ -895,30 +889,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Perubahan belum tersimpan"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Dibatalkan"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Gagal - Berkas sudah ada"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Gagal - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Gagal - Jenis berkas tidak benar"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Gagal mengunggah {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Berkas"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Terjadi kesalahan tidak terduga."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} tersisa"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Nama hanya dapat berisi karakter alfanumerik, tanda hubung, garis bawah, atau spasi."

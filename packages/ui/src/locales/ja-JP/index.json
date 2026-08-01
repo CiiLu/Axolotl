@@ -446,9 +446,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "すべて更新"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "ファイルをアップロード"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "選択されたすべてのコンテンツは、既に無効化されています"
   },
@@ -929,9 +926,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "mclo.gsに公開"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "ファイルをアップロード"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": ".zipファイルからアップロード"
   },
@@ -985,36 +979,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "未保存の変更"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "キャンセル"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "エラー - ファイルが既に存在しています"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "エラー - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "失敗しました - ファイルの種類が正しくありません"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "{fileName} のアップロードに失敗しました"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "ファイル"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} をアップロード"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "アップロードされたファイルのタイプが正しくありません"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "予期せぬエラーが発生しました。"
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": "- 残り{count}"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "名前には、英数字、ハイフン、アンダースコア、またはスペースのみを含める必要があります。"

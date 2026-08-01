@@ -479,9 +479,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Uppdatera alla"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Ladda upp filer"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Det valda innehållet är redan inaktiverat"
   },
@@ -854,9 +851,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Dela till mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Ladda upp fil"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Ladda upp .zip-fil"
   },
@@ -892,30 +886,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Osparade ändringar"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Avbrutet"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Misslyckades - Fil finns redan"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Misslyckades - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Misslyckades - Inkorrekt filtyp"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Kunde inte ladda upp {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Fil"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Ett oväntat fel inträffade."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} kvar"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Namn kan bara innehålla alfanumeriska tecken, tankstreck, understreck eller mellanslag."

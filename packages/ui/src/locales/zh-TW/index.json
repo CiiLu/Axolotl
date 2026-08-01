@@ -833,9 +833,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "更新全部"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "上傳檔案"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "所有已選擇的內容已經停用"
   },
@@ -1364,9 +1361,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "分享至 mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "上傳檔案"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "從 .zip 檔案上傳"
   },
@@ -1420,36 +1414,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "未儲存的變更"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "已取消"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "失敗 - 檔案已存在"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "失敗 - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "失敗 - 檔案類型不正確"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "上傳 {fileName} 失敗"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "檔案"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} 上傳"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "上傳的檔案類型不正確"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "發生非預期的錯誤"
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - 剩餘 {count} 個"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "名稱只能包含英數字、破折號、底線或空格"

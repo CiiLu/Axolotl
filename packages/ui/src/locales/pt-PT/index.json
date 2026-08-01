@@ -359,9 +359,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Atualizar tudo"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Enviar arquivos"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Todo conteúdo selecionado já está desabilitado"
   },
@@ -485,9 +482,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Partilhar no mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Carregar ficheiro"
-  },
   "files.operations.modpack-from-url": {
     "defaultMessage": "modpack a partir de URL"
   },
@@ -520,24 +514,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Alterações não guardadas"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Cancelado"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Falhou - Ficheiro já existe"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Falhou - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Falhou - Tipo incorreto de ficheiro"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Falha ao enviar {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Ficheiro"
   },
   "form.label.address-line": {
     "defaultMessage": "Endereço"

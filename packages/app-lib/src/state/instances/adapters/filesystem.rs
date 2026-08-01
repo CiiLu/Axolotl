@@ -84,8 +84,7 @@ fn scan_content_folder(
 
         let size = path.metadata().map_err(IOError::from)?.len();
         let relative_path = format!("{relative_dir}/{file_name}");
-        let hash_cache_key =
-            format!("{size}-{instance_path}/{relative_path}");
+        let hash_cache_key = format!("{size}-{instance_path}/{relative_path}");
 
         files.push(ScannedContentFile {
             relative_path,

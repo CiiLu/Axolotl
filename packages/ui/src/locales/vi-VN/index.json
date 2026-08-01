@@ -491,9 +491,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Cập nhật tất cả"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Tải tệp lên"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Tất cả nội dung đã chọn đều đã được tắt"
   },
@@ -992,9 +989,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Chia sẻ lên mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Tải tệp lên"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Tải lên từ tệp .zip"
   },
@@ -1048,36 +1042,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Thay đổi chưa lưu"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Đã huỷ"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Thất bại - Tệp đã tồn tại"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Thất bại - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Thất bại - Không đúng loại tệp"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Quá trình tải lên tệp {fileName} đã thất bại"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Tệp"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "Tải lên"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Sai định dạng khi tải lên"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Đã có lỗi xảy ra."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": "Còn {count}"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Tên chỉ được bao gồm chữ số, gạch ngang, gạch dưới và dấu cách."

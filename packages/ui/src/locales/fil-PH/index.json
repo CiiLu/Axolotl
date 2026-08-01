@@ -347,21 +347,6 @@
   "files.unsaved-changes-modal.discard": {
     "defaultMessage": "Iwaksi"
   },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Kinansela"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Nabigo - {error}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Talaksan"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Isang di-inaasahang error na naganap."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} natitira"
-  },
   "files.validation.name-label": {
     "defaultMessage": "Pangalan"
   },

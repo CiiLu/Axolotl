@@ -869,9 +869,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Update all"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Upload files"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "All selected content is already disabled"
   },
@@ -1565,9 +1562,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Share to mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Upload file"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Upload from .zip file"
   },
@@ -1624,36 +1618,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Unsaved changes"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Cancelled"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Failed - File already exists"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Failed - {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Failed - Incorrect file type"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Failed to upload {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "File"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} uploads"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "Upload had incorrect file type"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "An unexpected error occurred."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} left"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Name must contain only alphanumeric characters, dashes, underscores, or spaces."

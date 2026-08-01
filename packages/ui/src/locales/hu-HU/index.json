@@ -437,9 +437,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Összes frissítése"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Fájlok feltöltése"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Az összes kijelölt tartalom már letiltásra került"
   },
@@ -863,9 +860,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Megosztás az mclo.gs-en"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Fájl feltöltése"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Feltöltés .zip fájlból"
   },
@@ -916,33 +910,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Nem mentett módosítások"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Visszavonva"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Hiba - A fájl már létezik"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Hiba – {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Hiba – Helytelen fájltípus"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "A feltöltés nem sikerült ({fileName})"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Fájl"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "{fileType} feltöltések"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "A feltöltött fájl típusa nem megfelelő"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Váratlan hiba történt."
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "A név kizárólag betűket, számokat, kötőjeleket, aláhúzásokat vagy szóközöket tartalmazhat."

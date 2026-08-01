@@ -497,9 +497,6 @@
   "content.page-layout.update-all": {
     "defaultMessage": "Tout mettre à jour"
   },
-  "content.page-layout.upload-files": {
-    "defaultMessage": "Importer des fichiers"
-  },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "Tout le contenu sélectionné est déjà désactivé"
   },
@@ -1004,9 +1001,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Partager vers mclo.gs"
   },
-  "files.navbar.upload-file": {
-    "defaultMessage": "Importer un fichier"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Importer depuis un fichier .zip"
   },
@@ -1060,36 +1054,6 @@
   },
   "files.unsaved-changes-modal.header": {
     "defaultMessage": "Modifications non sauvegardées"
-  },
-  "files.upload-dropdown.cancelled": {
-    "defaultMessage": "Annulé"
-  },
-  "files.upload-dropdown.failed-file-exists": {
-    "defaultMessage": "Échec — Fichier existe déjà"
-  },
-  "files.upload-dropdown.failed-generic": {
-    "defaultMessage": "Échec — {error}"
-  },
-  "files.upload-dropdown.failed-incorrect-type": {
-    "defaultMessage": "Échec — Type de fichier incorrect"
-  },
-  "files.upload-dropdown.failed-to-upload": {
-    "defaultMessage": "Impossible d'importer {fileName}"
-  },
-  "files.upload-dropdown.file": {
-    "defaultMessage": "Fichier"
-  },
-  "files.upload-dropdown.file-uploads": {
-    "defaultMessage": "Téléchargements de {fileType}"
-  },
-  "files.upload-dropdown.incorrect-file-type": {
-    "defaultMessage": "L'importation avait un type de fichier incorret"
-  },
-  "files.upload-dropdown.unexpected-error": {
-    "defaultMessage": "Une erreur inattendue est survenue."
-  },
-  "files.upload-dropdown.uploads-left": {
-    "defaultMessage": " - {count} restants"
   },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Le nom ne doit contenir que des caractères alphanumériques, des tirets, des tirets bas, ou des espaces."
