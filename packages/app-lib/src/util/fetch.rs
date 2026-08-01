@@ -4211,7 +4211,11 @@ mod tests {
                 });
             }
         });
-        (format!("http://{address}/tag/game_version"), requests, handle)
+        (
+            format!("http://{address}/tag/game_version"),
+            requests,
+            handle,
+        )
     }
 
     async fn spawn_redirect_server(
@@ -5397,8 +5401,7 @@ mod tests {
             .unwrap();
         let semaphore = FetchSemaphore(Semaphore::new(4));
 
-        let (url, requests, server) =
-            spawn_json_server("[]".to_string()).await;
+        let (url, requests, server) = spawn_json_server("[]".to_string()).await;
         let result = fetch_json_nonempty::<Vec<serde_json::Value>>(
             Method::GET,
             &url,
@@ -5441,8 +5444,7 @@ mod tests {
             .unwrap();
         let semaphore = FetchSemaphore(Semaphore::new(4));
 
-        let (url, requests, server) =
-            spawn_json_server("[]".to_string()).await;
+        let (url, requests, server) = spawn_json_server("[]".to_string()).await;
         let result = fetch_json::<Vec<serde_json::Value>>(
             Method::GET,
             &url,
@@ -5453,7 +5455,8 @@ mod tests {
             &pool,
         )
         .await;
-        let values = result.expect("regular JSON fetches keep accepting empty arrays");
+        let values =
+            result.expect("regular JSON fetches keep accepting empty arrays");
         assert!(values.is_empty());
         assert_eq!(requests.load(Ordering::Relaxed), 1);
         server.abort();

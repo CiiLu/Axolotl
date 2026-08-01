@@ -2613,9 +2613,7 @@ mod game_version_cache_tests {
         );
     }
 
-    async fn create_cache_table(
-        pool: &sqlx::SqlitePool,
-    ) {
+    async fn create_cache_table(pool: &sqlx::SqlitePool) {
         sqlx::query(
             "CREATE TABLE cache (
                 id TEXT NOT NULL,
@@ -2675,7 +2673,8 @@ mod game_version_cache_tests {
         )
         .await
         .unwrap();
-        let versions = cached.expect("populated game versions should be served");
+        let versions =
+            cached.expect("populated game versions should be served");
         assert_eq!(versions.len(), 2);
         assert_eq!(versions[0].version, "26.2");
         assert_eq!(versions[1].version_type, "snapshot");
