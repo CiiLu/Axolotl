@@ -1,12 +1,12 @@
 import {
 	BlockState,
+	type Cull,
 	Identifier,
 	Mesh,
 	Quad,
 	SpecialRenderers,
-	Vector,
-	type Cull,
 	type TextureAtlasProvider,
+	Vector,
 } from 'deepslate'
 
 import type { SchematicBlockState } from './backend.ts'
@@ -192,13 +192,7 @@ function addChestCube(
 
 function chestTransform(facing: string) {
 	const [cosine, sine] =
-		facing === 'east'
-			? [0, 1]
-			: facing === 'north'
-				? [-1, 0]
-				: facing === 'west'
-					? [0, -1]
-					: [1, 0]
+		facing === 'east' ? [0, 1] : facing === 'north' ? [-1, 0] : facing === 'west' ? [0, -1] : [1, 0]
 	const scale = 1 / 16
 	const translateX = 8 - 8 * cosine - 8 * sine
 	const translateZ = 8 + 8 * sine - 8 * cosine
@@ -228,9 +222,7 @@ function getDoubleChestMesh(
 	half: ChestHalf,
 	atlas: TextureAtlasProvider,
 ) {
-	const atlasUv = atlas.getTextureUV(
-		Identifier.parse(`minecraft:entity/chest/${texture}_${half}`),
-	)
+	const atlasUv = atlas.getTextureUV(Identifier.parse(`minecraft:entity/chest/${texture}_${half}`))
 	const bodyFromX = half === 'left' ? 0 : 1
 	const lockFromX = half === 'left' ? 0 : 15
 	const mesh = new Mesh()

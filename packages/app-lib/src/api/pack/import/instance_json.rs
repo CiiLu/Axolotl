@@ -351,7 +351,7 @@ fn extract_version_from_id(id: &str) -> Option<String> {
     None
 }
 
-////参考自PCL启动器
+///参考自PCL启动器
 fn detect_loader(
     content: &str,
     json: &Value,

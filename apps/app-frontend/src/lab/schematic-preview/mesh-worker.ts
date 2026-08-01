@@ -1,16 +1,22 @@
-import { BlockDefinition, BlockModel, Cull, Identifier, type TextureAtlasProvider } from 'deepslate'
+import type {
+	BlockDefinition,
+	BlockModel,
+	Cull,
+	Identifier,
+	TextureAtlasProvider,
+} from 'deepslate'
 
 import type { SchematicBlockState } from './backend'
 import { isSchematicAir } from './editing'
 import {
-	SCHEMATIC_DIRECTIONS,
 	applySeamlessSchematicGlassUvs,
 	getSchematicSpecialBlockMesh,
 	isSchematicTranslucent,
+	SCHEMATIC_DIRECTIONS,
 	schematicBlockAt,
-	shouldCullSchematicFace,
 	type SchematicDirection,
 	type SchematicNeighborFaces,
+	shouldCullSchematicFace,
 } from './meshing'
 import type { SchematicWorkerResources } from './resources'
 
@@ -249,7 +255,7 @@ function initialize(message: WorkerInitMessage) {
 		try {
 			model.flatten(provider)
 		} catch {
-			delete blockModels[id]
+			Reflect.deleteProperty(blockModels, id)
 			warnings.push(`Skipped unresolved block model ${id}`)
 		}
 	}

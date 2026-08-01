@@ -60,6 +60,8 @@ withDefaults(
 	}>(),
 	{
 		disabled: false,
+		isPrimary: undefined,
+		isSubpage: undefined,
 	},
 )
 

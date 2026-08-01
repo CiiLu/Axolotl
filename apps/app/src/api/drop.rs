@@ -232,40 +232,38 @@ pub async fn drop_extract_zip_to_temp(
     info!("Extracting launcher ZIP to temp: {}", zip_path.display());
 
     let base = launcher_import_temp_base();
-    let extracted = tokio::task::spawn_blocking(move || -> Result<String, String> {
-        std::fs::create_dir_all(&base).map_err(|e| {
-            format!(
-                "Failed to create temp base '{}': {e}",
-                base.display()
-            )
-        })?;
-        sweep_stale_launcher_import_dirs(&base);
-        let dir = base.join(format!(
-            "drop-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos()
-        ));
-        std::fs::create_dir(&dir)
-            .map_err(|e| format!("Failed to create temp directory: {e}"))?;
-        theseus::drop_classifier::extract_zip_to_dir(&zip_path, &dir)
-            .map_err(|e| {
-                let _ = std::fs::remove_dir_all(&dir);
-                tracing::warn!(
-                    "Launcher ZIP extraction failed for '{}': {e}",
-                    zip_path.display()
-                );
-                e
+    let extracted =
+        tokio::task::spawn_blocking(move || -> Result<String, String> {
+            std::fs::create_dir_all(&base).map_err(|e| {
+                format!("Failed to create temp base '{}': {e}", base.display())
             })?;
-        Ok(dir.to_string_lossy().to_string())
-    })
-    .await
-    .map_err(|e| {
-        tracing::warn!("Launcher ZIP extraction task panicked: {e}");
-        format!("Extraction task panicked: {e}")
-    })??;
+            sweep_stale_launcher_import_dirs(&base);
+            let dir = base.join(format!(
+                "drop-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos()
+            ));
+            std::fs::create_dir(&dir)
+                .map_err(|e| format!("Failed to create temp directory: {e}"))?;
+            theseus::drop_classifier::extract_zip_to_dir(&zip_path, &dir)
+                .map_err(|e| {
+                    let _ = std::fs::remove_dir_all(&dir);
+                    tracing::warn!(
+                        "Launcher ZIP extraction failed for '{}': {e}",
+                        zip_path.display()
+                    );
+                    e
+                })?;
+            Ok(dir.to_string_lossy().to_string())
+        })
+        .await
+        .map_err(|e| {
+            tracing::warn!("Launcher ZIP extraction task panicked: {e}");
+            format!("Extraction task panicked: {e}")
+        })??;
 
     info!("Extracted launcher ZIP to: {extracted}");
     Ok(extracted)

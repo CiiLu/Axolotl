@@ -9,12 +9,6 @@ type PreviewVertex = {
 	color: [number, number, number]
 }
 
-type PreviewTriangle = {
-	vertices: [PreviewVertex, PreviewVertex, PreviewVertex]
-	depth: number
-	shade: number
-}
-
 type PreparedResources = {
 	definitions: Map<string, BlockDefinition | null>
 	models: Map<string, BlockModel | null>

@@ -131,7 +131,7 @@ async fn collect_candidate_paths(
     if full_scan || exhaustive {
         let found: Vec<HashSet<PathBuf>> = stream::iter(bfs_search_roots())
             .map(|root| {
-                let root = root.clone();
+                let root = root;
                 tokio::task::spawn_blocking(move || {
                     if exhaustive {
                         bfs_exhaustive_scan(&root)
@@ -217,26 +217,26 @@ fn get_common_install_paths() -> HashSet<PathBuf> {
     // LocalAppData programs (e.g. Eclipse Adoptium installs here)
     if let Some(local_app_data) = dirs::data_local_dir() {
         let programs = local_app_data.join("Programs");
-        if programs.is_dir() {
-            if let Ok(dir) = std::fs::read_dir(programs) {
-                for entry in dir.flatten() {
-                    jre_paths.insert(entry.path().join("bin"));
-                }
+        if programs.is_dir()
+            && let Ok(dir) = std::fs::read_dir(programs)
+        {
+            for entry in dir.flatten() {
+                jre_paths.insert(entry.path().join("bin"));
             }
         }
     }
 
     // Roaming AppData — check for jdk/jre directories
-    if let Some(app_data) = dirs::data_dir() {
-        if let Ok(dir) = std::fs::read_dir(app_data) {
-            for entry in dir.flatten() {
-                let name = entry.file_name().to_string_lossy().to_lowercase();
-                if name.contains("java")
-                    || name.contains("jdk")
-                    || name.contains("jre")
-                {
-                    jre_paths.insert(entry.path().join("bin"));
-                }
+    if let Some(app_data) = dirs::data_dir()
+        && let Ok(dir) = std::fs::read_dir(app_data)
+    {
+        for entry in dir.flatten() {
+            let name = entry.file_name().to_string_lossy().to_lowercase();
+            if name.contains("java")
+                || name.contains("jdk")
+                || name.contains("jre")
+            {
+                jre_paths.insert(entry.path().join("bin"));
             }
         }
     }

@@ -20,6 +20,7 @@ const props = withDefaults(
 		showHeader?: boolean
 	}>(),
 	{
+		announcement: undefined,
 		version: null,
 		externalUrl: undefined,
 		showHeader: true,

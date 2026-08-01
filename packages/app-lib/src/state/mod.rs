@@ -135,7 +135,10 @@ pub(crate) struct InstanceLockManager {
 }
 
 impl InstanceLockManager {
-    pub(crate) async fn lock(&self, instance_id: &str) -> InstanceLockGuard<'_> {
+    pub(crate) async fn lock(
+        &self,
+        instance_id: &str,
+    ) -> InstanceLockGuard<'_> {
         let lock = self
             .locks
             .entry(instance_id.to_string())

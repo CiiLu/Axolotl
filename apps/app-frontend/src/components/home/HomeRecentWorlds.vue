@@ -259,7 +259,7 @@ onUnmounted(() => {
 					"
 					@update="populateRecentItems"
 				/>
-				<InstanceItem v-else :instance="item.instance" :last_played="item.last_played" />
+				<InstanceItem v-else :instance="item.instance" :last-played="item.last_played" />
 			</template>
 		</div>
 	</section>

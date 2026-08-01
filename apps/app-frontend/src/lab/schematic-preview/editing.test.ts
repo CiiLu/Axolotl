@@ -7,12 +7,12 @@ import {
 	measureSchematicPoints,
 	normalizeSchematicAirBlocks,
 	schematicBlockPaletteIndex,
+	type SchematicCachedChunk,
 	schematicChunkKey,
 	selectConnectedSchematicBlocks,
 	selectSchematicCuboid,
 	selectSchematicLayer,
 	selectSchematicMaterial,
-	type SchematicCachedChunk,
 } from './editing.ts'
 
 test('air block detection tolerates noncanonical casing and whitespace', () => {

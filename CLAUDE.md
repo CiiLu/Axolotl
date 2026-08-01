@@ -11,24 +11,24 @@ This repository contains the Axolotl Launcher desktop application and its offici
 
 ### Apps (`apps/`)
 
-| App            | Description                         |
-| -------------- | ----------------------------------- |
+| App            | Description                          |
+| -------------- | ------------------------------------ |
 | `app-frontend` | Desktop application frontend (Vue 3) |
-| `app`          | Desktop application shell (Tauri)   |
-| `website`      | Official Axolotl website (Nuxt 3)   |
+| `app`          | Desktop application shell (Tauri)    |
+| `website`      | Official Axolotl website (Nuxt 3)    |
 
 ### Packages (`packages/`)
 
-| Package                      | Description                              |
-| ---------------------------- | ---------------------------------------- |
-| `ui`, `assets`, `utils`      | Shared Vue components, assets, utilities |
-| `api-client`                 | Public content-service API client        |
-| `app-lib`                    | Shared desktop application library       |
-| `daedalus`                   | Minecraft metadata protocol              |
-| `ariadne`                    | Social and tunnel protocol types         |
-| `async-minecraft-ping`       | Minecraft server ping client             |
-| `modrinth-content-management`| Content installation model               |
-| `path-util`, `tooling-config`| Shared path and tooling configuration    |
+| Package                       | Description                              |
+| ----------------------------- | ---------------------------------------- |
+| `ui`, `assets`, `utils`       | Shared Vue components, assets, utilities |
+| `api-client`                  | Public content-service API client        |
+| `app-lib`                     | Shared desktop application library       |
+| `daedalus`                    | Minecraft metadata protocol              |
+| `ariadne`                     | Social and tunnel protocol types         |
+| `async-minecraft-ping`        | Minecraft server ping client             |
+| `modrinth-content-management` | Content installation model               |
+| `path-util`, `tooling-config` | Shared path and tooling configuration    |
 
 ## Pre-PR Commands
 

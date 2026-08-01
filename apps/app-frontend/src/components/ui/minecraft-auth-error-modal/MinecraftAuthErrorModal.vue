@@ -167,7 +167,6 @@ async function copyToClipboard(text: string) {
 								>
 									{{ index + 1 }}
 								</span>
-								<!-- eslint-disable-next-line vue/no-v-html -->
 								<span
 									class="text-sm [&_a]:text-info [&_a]:font-medium [&_a]:underline"
 									v-html="step"

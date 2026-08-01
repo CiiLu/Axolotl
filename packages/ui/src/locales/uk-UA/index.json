@@ -1007,9 +1007,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": " — залишилося {count}"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Перемістіть {type} сюди, щоб завантажити"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Назва може містити лише літери, цифри, тире, нижні підкреслення або пробіли."
   },

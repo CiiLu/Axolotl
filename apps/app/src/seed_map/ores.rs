@@ -339,7 +339,7 @@ fn scan_vein_hits(
     cz: i32,
     surface: Option<&SurfaceGrid>,
 ) -> Vec<OreHit> {
-    let vein_code = if kind == OreKind::CopperVein { 0 } else { 1 };
+    let vein_code = i32::from(kind != OreKind::CopperVein);
     let mut buffer = [0_i32; 24];
     let count = unsafe {
         super::axolotl_seed_map_scan_vein(
@@ -418,7 +418,7 @@ pub fn scan_ores(request: OreScanRequest) -> io::Result<Vec<OreChunkResult>> {
             "Ore prediction supports Java 1.18+ Overworld and Nether maps.",
         ));
     }
-    if request.chunks.len() % 2 != 0 || request.chunks.len() > 4_096 {
+    if !request.chunks.len().is_multiple_of(2) || request.chunks.len() > 4_096 {
         return Err(io::Error::other("The ore scan chunk list is invalid."));
     }
     let world_seed = parse_seed(&request.seed) as i64;
@@ -488,11 +488,7 @@ pub fn scan_ores(request: OreScanRequest) -> io::Result<Vec<OreChunkResult>> {
                     min + rng.next_int(max - min + 1)
                 }
                 CountModifier::Rarity(chance) => {
-                    if rng.next_f32() < 1.0 / chance as f32 {
-                        1
-                    } else {
-                        0
-                    }
+                    u32::from(rng.next_f32() < 1.0 / chance as f32)
                 }
             };
             for _ in 0..attempts {
@@ -587,10 +583,10 @@ fn simulate_blob(
     let box_min_y = y - 2 - margin;
     let box_min_z = z - (spread.ceil() as i32) - margin;
 
-    if let Some(surface_y) = surface_height {
-        if box_min_y as f32 > surface_y {
-            return None;
-        }
+    if let Some(surface_y) = surface_height
+        && box_min_y as f32 > surface_y
+    {
+        return None;
     }
 
     let segment_count = size as usize;

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import {
-	BoxIcon,
-	BoxesIcon,
 	ArrowLeftRightIcon,
 	ArrowUpDownIcon,
+	BoxesIcon,
+	BoxIcon,
 	CheckIcon,
 	ChevronDownIcon,
 	CopyIcon,
@@ -24,16 +24,16 @@ import {
 	MoveIcon,
 	RedoIcon,
 	RefreshCwIcon,
-	RotateCounterClockwiseIcon,
 	RotateClockwiseIcon,
+	RotateCounterClockwiseIcon,
+	SaveIcon,
 	ScanEyeIcon,
 	SearchIcon,
-	SaveIcon,
 	SpinnerIcon,
 	TrashIcon,
 	TriangleAlertIcon,
-	UnfoldVerticalIcon,
 	UndoIcon,
+	UnfoldVerticalIcon,
 	XIcon,
 } from '@modrinth/assets'
 import {
@@ -47,11 +47,10 @@ import {
 	StyledInput,
 	Tabs,
 	TagItem,
-	useFormatBytes,
 	useVIntl,
 } from '@modrinth/ui'
-import type { DragDropEvent } from '@tauri-apps/api/webview'
 import { isTauri } from '@tauri-apps/api/core'
+import type { DragDropEvent } from '@tauri-apps/api/webview'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { open, save } from '@tauri-apps/plugin-dialog'
@@ -70,59 +69,59 @@ import {
 } from 'vue'
 import { useRoute } from 'vue-router'
 
-import SchematicInstancePickerModal from '@/components/lab/schematic-preview/SchematicInstancePickerModal.vue'
 import SchematicBlockPickerModal from '@/components/lab/schematic-preview/SchematicBlockPickerModal.vue'
 import SchematicInfoModal from '@/components/lab/schematic-preview/SchematicInfoModal.vue'
+import SchematicInstancePickerModal from '@/components/lab/schematic-preview/SchematicInstancePickerModal.vue'
 import SchematicMaterialSwatch from '@/components/lab/schematic-preview/SchematicMaterialSwatch.vue'
 import { list } from '@/helpers/instance'
 import type { GameInstance } from '@/helpers/types.d.ts'
 import {
+	applySchematicEdits,
 	cancelSchematicPreview,
 	closeSchematicPreview,
-	applySchematicEdits,
 	exportSchematicLitematic,
 	exportSchematicSponge,
 	openSchematicPreview,
 	readSchematicChunk,
-	transformSchematic,
-	type SchematicBlockState,
 	type SchematicBlockEdit,
+	type SchematicBlockState,
 	type SchematicPreviewManifest,
 	type SchematicPreviewSource,
 	type SchematicTransform,
+	transformSchematic,
 } from '@/lab/schematic-preview/backend'
 import {
 	filterSchematicAirGeometry,
 	isSchematicAir,
+	measureSchematicPoints,
 	normalizeSchematicAirBlocks,
 	schematicBlockKey,
+	type SchematicBlockLocation,
 	schematicBlockPaletteIndex,
+	type SchematicCachedChunk,
 	schematicChunkKey,
 	schematicSelectionBounds,
-	measureSchematicPoints,
 	selectConnectedSchematicBlocks,
 	selectSchematicCuboid,
 	selectSchematicLayer,
 	selectSchematicMaterial,
-	type SchematicBlockLocation,
-	type SchematicCachedChunk,
 } from '@/lab/schematic-preview/editing'
 import type {
 	SchematicMeshWorkerRequest,
 	SchematicMeshWorkerResponse,
 } from '@/lab/schematic-preview/mesh-worker'
 import {
-	SCHEMATIC_DIRECTIONS,
 	extractSchematicNeighborFace,
-	schematicNeighborChunkPosition,
+	SCHEMATIC_DIRECTIONS,
 	type SchematicDirection,
+	schematicNeighborChunkPosition,
 } from '@/lab/schematic-preview/meshing'
 import {
 	createSchematicResources,
+	type LoadedSchematicResources,
 	minecraftVersionFromDataVersion,
 	resolveSchematicBlockName,
 	resolveSchematicMaterialTexture,
-	type LoadedSchematicResources,
 } from '@/lab/schematic-preview/resources'
 import {
 	SchematicPreviewScene,
@@ -132,9 +131,9 @@ import {
 import {
 	clearRecentSchematics,
 	loadRecentSchematics,
+	type RecentSchematic,
 	recordRecentSchematic,
 	removeRecentSchematic,
-	type RecentSchematic,
 } from '@/lab/schematic-preview/storage'
 import { escapeSchematicCsvCell } from '@/lab/schematic-preview/utils'
 
@@ -166,7 +165,6 @@ type EditHistoryEntry = BlockEditHistoryEntry | TransformHistoryEntry
 
 const { addNotification, handleError } = injectNotificationManager()
 const { formatMessage, locale } = useVIntl()
-const formatBytes = useFormatBytes()
 const route = useRoute()
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
 const workspace = useTemplateRef<HTMLElement>('workspace')
@@ -223,7 +221,7 @@ let scene: SchematicPreviewScene | undefined
 let workers: WorkerSlot[] = []
 let meshQueue: MeshJob[] = []
 let meshJobs = new Map<string, MeshJob>()
-let chunkReadPromises = new Map<string, Promise<Uint32Array>>()
+const chunkReadPromises = new Map<string, Promise<Uint32Array>>()
 let requestEpoch = 0
 let resourceEpoch = 0
 let activeOpenRequestId: string | undefined
@@ -603,7 +601,7 @@ async function openSource(source: SchematicPreviewSource) {
 		lastReplacementName.value = ''
 		currentSource.value = source
 		if (previousSession) void closeSchematicPreview(previousSession)
-		for (const key of Object.keys(regionVisibility)) delete regionVisibility[key]
+		Object.keys(regionVisibility).forEach((key) => Reflect.deleteProperty(regionVisibility, key))
 		for (const region of opened.regions) regionVisibility[region.id] = true
 		layerMaximum.value = opened.max[1]
 		layerExplosion.value = 0
@@ -1494,11 +1492,7 @@ onBeforeUnmount(() => {
 					</ButtonStyled>
 				</header>
 				<ul class="schematic-recent-list">
-					<li
-						v-for="record in recent"
-						:key="record.id"
-						class="schematic-recent-row"
-					>
+					<li v-for="record in recent" :key="record.id" class="schematic-recent-row">
 						<FileArchiveIcon class="size-5 shrink-0 text-secondary" />
 						<button
 							class="min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left"
@@ -1830,8 +1824,8 @@ onBeforeUnmount(() => {
 					<div v-if="viewMode === 'orbit'" class="schematic-canvas-controls">
 						<ButtonStyled circular size="small" type="standard"
 							><button
-								type="button"
 								v-tooltip.top="formatMessage(messages.resetView)"
+								type="button"
 								:aria-label="formatMessage(messages.resetView)"
 								@click="scene?.fitView()"
 							>
@@ -1842,8 +1836,8 @@ onBeforeUnmount(() => {
 							size="small"
 							:type="projection === 'orthographic' ? 'standard' : 'outlined'"
 							><button
-								type="button"
 								v-tooltip.top="formatMessage(messages.projection)"
+								type="button"
 								:aria-label="formatMessage(messages.projection)"
 								@click="toggleProjection"
 							>
@@ -1851,8 +1845,8 @@ onBeforeUnmount(() => {
 						></ButtonStyled>
 						<ButtonStyled circular size="small" :type="showGrid ? 'standard' : 'outlined'"
 							><button
-								type="button"
 								v-tooltip.top="formatMessage(messages.grid)"
+								type="button"
 								:aria-label="formatMessage(messages.grid)"
 								@click="showGrid = !showGrid"
 							>
@@ -1860,8 +1854,8 @@ onBeforeUnmount(() => {
 						></ButtonStyled>
 						<ButtonStyled circular size="small" :type="showBounds ? 'standard' : 'outlined'"
 							><button
-								type="button"
 								v-tooltip.top="formatMessage(messages.bounds)"
+								type="button"
 								:aria-label="formatMessage(messages.bounds)"
 								@click="showBounds = !showBounds"
 							>
@@ -1869,8 +1863,8 @@ onBeforeUnmount(() => {
 						></ButtonStyled>
 						<ButtonStyled circular size="small" :type="showTranslucent ? 'standard' : 'outlined'"
 							><button
-								type="button"
 								v-tooltip.top="formatMessage(messages.translucent)"
+								type="button"
 								:aria-label="formatMessage(messages.translucent)"
 								@click="showTranslucent = !showTranslucent"
 							>
@@ -1878,8 +1872,8 @@ onBeforeUnmount(() => {
 						></ButtonStyled>
 						<ButtonStyled circular size="small" type="outlined"
 							><button
-								type="button"
 								v-tooltip.top="`${formatMessage(messages.fullscreen)} (F11)`"
+								type="button"
 								:aria-label="formatMessage(messages.fullscreen)"
 								@click="toggleFullscreen"
 							>

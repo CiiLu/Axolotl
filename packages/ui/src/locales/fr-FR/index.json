@@ -1091,9 +1091,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": " - {count} restants"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Déposez {type} ici pour téléverser"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Le nom ne doit contenir que des caractères alphanumériques, des tirets, des tirets bas, ou des espaces."
   },

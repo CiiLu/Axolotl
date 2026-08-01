@@ -94,18 +94,18 @@ pub async fn get_importable_instances(
                 .await
         }
         ImportLauncherType::MultiMC => {
-            let subpath = mmc::get_instances_subpath(base_path.join("multimc.cfg"))
-                .await
-                .unwrap_or_else(|| "instances".to_string());
+            let subpath =
+                mmc::get_instances_subpath(base_path.join("multimc.cfg"))
+                    .await
+                    .unwrap_or_else(|| "instances".to_string());
             get_instances_subfolder_scan(&base_path, &subpath, launcher_type)
                 .await
         }
         ImportLauncherType::PrismLauncher => {
-            let subpath = mmc::get_instances_subpath(
-                base_path.join("prismlauncher.cfg"),
-            )
-            .await
-            .unwrap_or_else(|| "instances".to_string());
+            let subpath =
+                mmc::get_instances_subpath(base_path.join("prismlauncher.cfg"))
+                    .await
+                    .unwrap_or_else(|| "instances".to_string());
             get_instances_subfolder_scan(&base_path, &subpath, launcher_type)
                 .await
         }
@@ -160,8 +160,8 @@ async fn get_instances_subfolder_scan(
 async fn get_modrinth_app_instances(
     base_path: &Path,
 ) -> crate::Result<Vec<ImportableInstance>> {
-    let names = modrinth_app::get_importable_instances(base_path.to_path_buf())
-        .await?;
+    let names =
+        modrinth_app::get_importable_instances(base_path.to_path_buf()).await?;
     Ok(names
         .into_iter()
         .map(|n| ImportableInstance {
@@ -173,7 +173,9 @@ async fn get_modrinth_app_instances(
 
 /// Collects PCL2 / PCL2CE instances from the registry and CE config,
 /// de-duplicating paths that appear in both sources.
-async fn get_pcl_instances(base_path: &Path) -> crate::Result<Vec<ImportableInstance>> {
+async fn get_pcl_instances(
+    base_path: &Path,
+) -> crate::Result<Vec<ImportableInstance>> {
     if !pe_info::folder_has_product(base_path, "Plain Craft Launcher") {
         return Ok(Vec::new());
     }
@@ -192,7 +194,9 @@ async fn get_pcl_instances(base_path: &Path) -> crate::Result<Vec<ImportableInst
 }
 
 /// Collects HMCL instances from its launcher config.
-async fn get_hmcl_instances(base_path: &Path) -> crate::Result<Vec<ImportableInstance>> {
+async fn get_hmcl_instances(
+    base_path: &Path,
+) -> crate::Result<Vec<ImportableInstance>> {
     if !hmcl::config_exists(base_path) {
         return Ok(Vec::new());
     }
@@ -203,15 +207,18 @@ async fn get_hmcl_instances(base_path: &Path) -> crate::Result<Vec<ImportableIns
 }
 
 /// Scans a generic launcher folder for instance JSONs.
-async fn get_generic_instances(base_path: &Path) -> crate::Result<Vec<ImportableInstance>> {
-    let mut instances: Vec<ImportableInstance> = scan_instances_at(base_path, None)
-        .await
-        .into_iter()
-        .map(|(n, p)| ImportableInstance {
-            name: n,
-            path: p.to_string_lossy().to_string(),
-        })
-        .collect();
+async fn get_generic_instances(
+    base_path: &Path,
+) -> crate::Result<Vec<ImportableInstance>> {
+    let mut instances: Vec<ImportableInstance> =
+        scan_instances_at(base_path, None)
+            .await
+            .into_iter()
+            .map(|(n, p)| ImportableInstance {
+                name: n,
+                path: p.to_string_lossy().to_string(),
+            })
+            .collect();
 
     // PCL-style folders bundle sibling version folders, each its own
     // instance root (root jar+json / version json / mods). When the base
@@ -269,12 +276,11 @@ async fn get_unknown_launcher_instances(
 
     // ModrinthApp: uses its internal SQLite database; query real physical
     // profile paths for accurate dedup.
-    for (iname, ipath) in
-        modrinth_app::get_importable_instances_with_paths(
-            base_path.to_path_buf(),
-        )
-        .await
-        .unwrap_or_default()
+    for (iname, ipath) in modrinth_app::get_importable_instances_with_paths(
+        base_path.to_path_buf(),
+    )
+    .await
+    .unwrap_or_default()
     {
         collector.push(iname, ipath);
     }
@@ -619,23 +625,17 @@ async fn import_via_launcher(
                 .await
             } else {
                 // Legacy fallback: resolve from config/registry
-                import_configured_instance(
-                    job,
-                    details,
-                    |name| {
-                        pcl::get_pcl_instance_path(name)
-                            .or_else(|| pcl::get_pclce_instance_path(name))
-                    },
-                )
+                import_configured_instance(job, details, |name| {
+                    pcl::get_pcl_instance_path(name)
+                        .or_else(|| pcl::get_pclce_instance_path(name))
+                })
                 .await
             }
         }
         ImportLauncherType::HMCL => {
-            import_configured_instance(
-                job,
-                details,
-                |name| hmcl::get_instance_path(&base_path, name),
-            )
+            import_configured_instance(job, details, |name| {
+                hmcl::get_instance_path(base_path, name)
+            })
             .await
         }
         ImportLauncherType::Generic => {
@@ -649,7 +649,9 @@ async fn import_via_launcher(
             )
             .await
         }
-        ImportLauncherType::Unknown => unreachable!("handled by import_instance_inner"),
+        ImportLauncherType::Unknown => {
+            unreachable!("handled by import_instance_inner")
+        }
     }
 }
 
@@ -668,11 +670,8 @@ async fn import_unknown_launcher(job: ImportJob) -> crate::Result<()> {
         ImportLauncherType::ModrinthApp,
     ];
     for lt in types {
-        if let Ok(instances) = Box::pin(get_importable_instances(
-            lt,
-            job.base_path.clone(),
-        ))
-        .await
+        if let Ok(instances) =
+            Box::pin(get_importable_instances(lt, job.base_path.clone())).await
             && instances.iter().any(|i| i.name == job.instance_folder)
         {
             let details = InstallPhaseDetails::Import {

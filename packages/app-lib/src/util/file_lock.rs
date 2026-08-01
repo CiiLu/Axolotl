@@ -133,7 +133,7 @@ fn get_locking_processes_windows_restart_manager(
     let mut session_key = [0u16; CCH_RM_SESSION_KEY as usize + 1];
     let status = unsafe {
         RmStartSession(
-            &mut session_handle,
+            &raw mut session_handle,
             None,
             PWSTR(session_key.as_mut_ptr()),
         )
@@ -169,10 +169,10 @@ fn get_locking_processes_windows_restart_manager(
     let status = unsafe {
         RmGetList(
             session.0,
-            &mut needed,
-            &mut count,
+            &raw mut needed,
+            &raw mut count,
             None,
-            &mut reboot_reasons,
+            &raw mut reboot_reasons,
         )
     };
     if status == ERROR_SUCCESS && needed == 0 {
@@ -193,10 +193,10 @@ fn get_locking_processes_windows_restart_manager(
         let status = unsafe {
             RmGetList(
                 session.0,
-                &mut needed,
-                &mut count,
+                &raw mut needed,
+                &raw mut count,
                 Some(process_info.as_mut_ptr()),
-                &mut reboot_reasons,
+                &raw mut reboot_reasons,
             )
         };
         if status == ERROR_MORE_DATA {

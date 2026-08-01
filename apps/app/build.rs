@@ -435,17 +435,17 @@ fn main() {
             )
             .plugin(
                 "drop",
-                  InlinedPlugin::new()
-                      .commands(&[
-                          "drop_classify",
-                          "drop_classify_extract",
-                          "drop_extract_zip_to_temp",
-                          "drop_scan_launcher_instances",
-                          "drop_remove_temp_dir",
-                          "drop_detect_file_lock",
-                          "drop_extract_mod_metadata",
-                          "drop_lookup_mod_hash",
-                      ])
+                InlinedPlugin::new()
+                    .commands(&[
+                        "drop_classify",
+                        "drop_classify_extract",
+                        "drop_extract_zip_to_temp",
+                        "drop_scan_launcher_instances",
+                        "drop_remove_temp_dir",
+                        "drop_detect_file_lock",
+                        "drop_extract_mod_metadata",
+                        "drop_lookup_mod_hash",
+                    ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),

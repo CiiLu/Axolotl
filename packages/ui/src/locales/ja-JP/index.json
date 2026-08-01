@@ -1016,9 +1016,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": "- 残り{count}"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "ここに{type}をドロップ"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "名前には、英数字、ハイフン、アンダースコア、またはスペースのみを含める必要があります。"
   },

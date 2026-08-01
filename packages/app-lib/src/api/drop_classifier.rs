@@ -80,7 +80,9 @@ pub fn classify_dropped_item(path: &Path) -> DroppedItemType {
 /// nested archive would have to be unpacked to decide the type, the result
 /// is `Unknown` with a reason reporting the total nested size, so the caller
 /// can confirm the (potentially slow) unpack with the user first.
-pub fn classify_dropped_item_without_nested_unpack(path: &Path) -> DroppedItemType {
+pub fn classify_dropped_item_without_nested_unpack(
+    path: &Path,
+) -> DroppedItemType {
     classify_dropped_item_inner(path, 0, false)
 }
 
@@ -166,14 +168,18 @@ fn is_zip_path(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
         .is_some_and(|ext| {
-            ext.eq_ignore_ascii_case("zip") || ext.eq_ignore_ascii_case("mrpack")
+            ext.eq_ignore_ascii_case("zip")
+                || ext.eq_ignore_ascii_case("mrpack")
         })
 }
 
 /// Classify a `.disabled` file by treating it as the underlying file type
 /// (e.g. `mod.jar.disabled` → Mod, `pack.zip.disabled` → ZIP). The original
 /// path is kept in the result — no path rewrite happens.
-fn classify_disabled(path: &Path, allow_nested_unpack: bool) -> DroppedItemType {
+fn classify_disabled(
+    path: &Path,
+    allow_nested_unpack: bool,
+) -> DroppedItemType {
     let Some(stem) = path.file_stem() else {
         return classify_file(path);
     };
@@ -472,10 +478,9 @@ fn read_entry_prefix<R: std::io::Read + std::io::Seek>(
     archive: &mut zip::ZipArchive<R>,
     name: &str,
 ) -> Option<Vec<u8>> {
-    let index =
-        crate::api::pack::detect::find_entry_index(archive, name)
-            .ok()
-            .flatten()?;
+    let index = crate::api::pack::detect::find_entry_index(archive, name)
+        .ok()
+        .flatten()?;
     let entry = archive.by_index(index).ok()?;
     let mut buf = Vec::new();
     entry
@@ -489,7 +494,9 @@ fn read_entry_prefix<R: std::io::Read + std::io::Seek>(
 fn read_file_prefix(path: &Path) -> Option<Vec<u8>> {
     let file = std::fs::File::open(path).ok()?;
     let mut buf = Vec::new();
-    file.take(MAX_MARKER_READ_BYTES).read_to_end(&mut buf).ok()?;
+    file.take(MAX_MARKER_READ_BYTES)
+        .read_to_end(&mut buf)
+        .ok()?;
     Some(buf)
 }
 
@@ -526,12 +533,10 @@ fn nbt_root_is_data(candidate: &[u8]) -> bool {
     };
     match compound_name(rest) {
         Some((name, _)) if name == "Data" => true,
-        Some(("", after_name)) => {
-            after_name
-                .strip_prefix(&[0x0A])
-                .and_then(compound_name)
-                .is_some_and(|(name, _)| name == "Data")
-        }
+        Some(("", after_name)) => after_name
+            .strip_prefix(&[0x0A])
+            .and_then(compound_name)
+            .is_some_and(|(name, _)| name == "Data"),
         _ => false,
     }
 }
@@ -610,7 +615,10 @@ fn temp_dir_has_space(dir: &Path, required: u64) -> bool {
 ///
 /// Everything runs on entry names; nothing is extracted during
 /// classification.
-fn classify_zip_path(path: &Path, allow_nested_unpack: bool) -> DroppedItemType {
+fn classify_zip_path(
+    path: &Path,
+    allow_nested_unpack: bool,
+) -> DroppedItemType {
     classify_zip_file_at_depth(path, 0, allow_nested_unpack)
 }
 
@@ -791,9 +799,10 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
             if !allow_nested_unpack {
                 // First pass: report the nested archive instead of unpacking
                 // it; the caller confirms with the user before staging.
-                if let Some(size) =
-                    nested_zip_uncompressed_size(archive, &format!("{base}{nested}"))
-                {
+                if let Some(size) = nested_zip_uncompressed_size(
+                    archive,
+                    &format!("{base}{nested}"),
+                ) {
                     *nested_unpack_bytes += size;
                 }
                 continue;
@@ -833,8 +842,9 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         }
     } else if entries.has_encrypted {
         DroppedItemType::Unknown {
-            reason: "Archive contains encrypted files and cannot be fully analyzed"
-                .to_string(),
+            reason:
+                "Archive contains encrypted files and cannot be fully analyzed"
+                    .to_string(),
         }
     } else {
         DroppedItemType::Unknown {
@@ -855,12 +865,10 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
     entry_path: &str,
     allow_nested_unpack: bool,
 ) -> DroppedItemType {
-    let Some(index) = crate::api::pack::detect::find_entry_index(
-        archive,
-        entry_path,
-    )
-    .ok()
-    .flatten()
+    let Some(index) =
+        crate::api::pack::detect::find_entry_index(archive, entry_path)
+            .ok()
+            .flatten()
     else {
         return DroppedItemType::Unknown {
             reason: format!("Cannot find nested archive entry {entry_path}"),
@@ -875,7 +883,9 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
         Ok(dir) => dir,
         Err(error) => {
             return DroppedItemType::Unknown {
-                reason: format!("Failed to create temporary directory: {error}"),
+                reason: format!(
+                    "Failed to create temporary directory: {error}"
+                ),
             };
         }
     };
@@ -906,11 +916,9 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
         DroppedItemType::WorldSave { .. } => DroppedItemType::WorldSave {
             file_path: result_path.to_path_buf(),
         },
-        DroppedItemType::ResourcePack { .. } => {
-            DroppedItemType::ResourcePack {
-                file_path: result_path.to_path_buf(),
-            }
-        }
+        DroppedItemType::ResourcePack { .. } => DroppedItemType::ResourcePack {
+            file_path: result_path.to_path_buf(),
+        },
         DroppedItemType::ShaderPack { .. } => DroppedItemType::ShaderPack {
             file_path: result_path.to_path_buf(),
         },
@@ -1125,15 +1133,12 @@ pub fn extract_zip_to_dir(
         let result = if is_dir {
             std::fs::create_dir_all(&out_path).map(|_| ())
         } else if let Some(parent) = out_path.parent() {
-            std::fs::create_dir_all(parent)
-                .and_then(|_| {
-                    let mut reader = archive
-                        .by_index(index)
-                        .map_err(std::io::Error::other)?;
-                    let mut writer =
-                        std::fs::File::create(&out_path)?;
-                    std::io::copy(&mut reader, &mut writer).map(|_| ())
-                })
+            std::fs::create_dir_all(parent).and_then(|_| {
+                let mut reader =
+                    archive.by_index(index).map_err(std::io::Error::other)?;
+                let mut writer = std::fs::File::create(&out_path)?;
+                std::io::copy(&mut reader, &mut writer).map(|_| ())
+            })
         } else {
             Ok(())
         };
@@ -1150,7 +1155,7 @@ pub fn extract_zip_to_dir(
             archive.len()
         );
     }
-    if skipped == archive.len() && archive.len() > 0 {
+    if skipped == archive.len() && !archive.is_empty() {
         return Err(format!(
             "No ZIP entries could be extracted ({skipped} failed)"
         ));
@@ -1409,8 +1414,8 @@ fn classify_shader_pack_folder(path: &Path) -> Option<DroppedItemType> {
     if !shaders.is_dir() {
         return None;
     }
-    let has_shader_file = std::fs::read_dir(&shaders).ok()?.flatten().any(
-        |entry| {
+    let has_shader_file =
+        std::fs::read_dir(&shaders).ok()?.flatten().any(|entry| {
             let p = entry.path();
             if !p.is_file() {
                 return false;
@@ -1421,11 +1426,10 @@ fn classify_shader_pack_folder(path: &Path) -> Option<DroppedItemType> {
                 .unwrap_or("")
                 .to_ascii_lowercase();
             matches!(ext.as_str(), "fsh" | "vsh" | "glsl")
-        },
-    );
+        });
     has_shader_file.then(|| DroppedItemType::ShaderPack {
-            file_path: path.to_path_buf(),
-        })
+        file_path: path.to_path_buf(),
+    })
 }
 
 /// Detect launcher instance markers:
@@ -1756,11 +1760,8 @@ mod tests {
         let mut zip = zip::ZipWriter::new(file);
 
         // Create a JAR at the archive root.
-        zip.start_file(
-            "testmod.jar",
-            zip::write::FileOptions::<()>::default(),
-        )
-        .expect("start entry");
+        zip.start_file("testmod.jar", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
         // The extracted .jar has no readable manifest, so classify_jar falls
         // back to Mod (the default for JAR files).
         zip.write_all(b"fake jar content").expect("write");
@@ -2216,11 +2217,8 @@ mod tests {
         let file = std::fs::File::create(&zip_path).expect("create zip");
         let mut zip = zip::ZipWriter::new(file);
         // A launcher bundle wraps another pack inside modpack.zip.
-        zip.start_file(
-            "modpack.zip",
-            zip::write::FileOptions::<()>::default(),
-        )
-        .expect("start entry");
+        zip.start_file("modpack.zip", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
         zip.write_all(b"inner pack bytes").expect("write");
         zip.finish().expect("finish");
 
@@ -2689,7 +2687,11 @@ mod tests {
         for (i, entry) in table.iter_mut().enumerate() {
             let mut c = i as u32;
             for _ in 0..8 {
-                c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
+                c = if c & 1 != 0 {
+                    0xEDB8_8320 ^ (c >> 1)
+                } else {
+                    c >> 1
+                };
             }
             *entry = c;
         }
@@ -2720,9 +2722,8 @@ mod tests {
         let mut offsets = Vec::new();
         for (name, data, encrypted) in entries {
             offsets.push(out.len() as u32);
-            let flags: u16 = if encrypted { 0x0001 } else { 0 };
-            let data_size =
-                data.len() as u32 + if encrypted { 12 } else { 0 };
+            let flags: u16 = u16::from(encrypted);
+            let data_size = data.len() as u32 + if encrypted { 12 } else { 0 };
             out.extend_from_slice(b"PK\x03\x04");
             u16(&mut out, 20);
             u16(&mut out, flags);
@@ -2743,9 +2744,8 @@ mod tests {
 
         let cd_start = out.len() as u32;
         for (i, (name, data, encrypted)) in entries.into_iter().enumerate() {
-            let flags: u16 = if encrypted { 0x0001 } else { 0 };
-            let data_size =
-                data.len() as u32 + if encrypted { 12 } else { 0 };
+            let flags: u16 = u16::from(encrypted);
+            let data_size = data.len() as u32 + if encrypted { 12 } else { 0 };
             out.extend_from_slice(b"PK\x01\x02");
             u16(&mut out, 20);
             u16(&mut out, 20);
@@ -2828,8 +2828,8 @@ mod tests {
 
     #[test]
     fn test_level_dat_header_variants() {
-        use flate2::write::{GzEncoder, ZlibEncoder};
         use flate2::Compression;
+        use flate2::write::{GzEncoder, ZlibEncoder};
 
         let mut gz = GzEncoder::new(Vec::new(), Compression::default());
         gz.write_all(VALID_LEVEL_DAT).expect("gz write");
@@ -2889,8 +2889,7 @@ mod tests {
         zip.write_all(&inner).expect("write");
         zip.finish().expect("finish");
 
-        let pending =
-            classify_dropped_item_without_nested_unpack(&zip_path);
+        let pending = classify_dropped_item_without_nested_unpack(&zip_path);
         assert!(
             matches!(
                 &pending,
@@ -3123,5 +3122,4 @@ mod tests {
         assert!(names.contains(&"1.7.10".to_string()), "{names:?}");
         assert!(names.contains(&"1.8.9".to_string()), "{names:?}");
     }
-
 }

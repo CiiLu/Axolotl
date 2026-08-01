@@ -1088,9 +1088,6 @@
   "files.upload-dropdown.unexpected-error": {
     "defaultMessage": "Wystąpił nieoczekiwany błąd."
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Upuść tutaj {type} do przesłania"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Nazwa powinna zawierać tylko znaki alfanumeryczne, myślniki, znaki podkreślenia lub spacje."
   },

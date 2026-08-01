@@ -400,8 +400,8 @@ pub(crate) async fn download_project_version(
     } else {
         fetch::sha1_file_async(&prepared.path).await?.1
     };
-    let project_type =
-        ProjectType::get_from_loaders(prepared.loaders.clone()).ok_or_else(|| {
+    let project_type = ProjectType::get_from_loaders(prepared.loaders.clone())
+        .ok_or_else(|| {
             crate::ErrorKind::InputError(format!(
                 "Unable to infer project type for version {version_id}"
             ))
@@ -772,8 +772,14 @@ pub(crate) async fn add_project_bytes(
     // in one folder; extract the pack folder(s) directly so the result is
     // usable as-is — no re-packing, no recompression.
     if let Some(plan) = wrapped_pack_plan(&bytes, project_type) {
-        let install_path =
-            install_wrapped_pack(&bytes, &plan, project_type, &scope.instance, state).await?;
+        let install_path = install_wrapped_pack(
+            &bytes,
+            &plan,
+            project_type,
+            &scope.instance,
+            state,
+        )
+        .await?;
         // Let the instance content scanner index the extracted files.
         crate::event::emit::emit_instance(
             &scope.instance.id,
@@ -851,7 +857,10 @@ enum WrappedPackPlan {
 /// Detect whether `bytes` is a resource/shader pack ZIP wrapped in a single
 /// top-level folder. Returns the install plan, or `None` for flat archives,
 /// other content types and mixed layouts (which are installed as-is).
-fn wrapped_pack_plan(bytes: &[u8], project_type: ProjectType) -> Option<WrappedPackPlan> {
+fn wrapped_pack_plan(
+    bytes: &[u8],
+    project_type: ProjectType,
+) -> Option<WrappedPackPlan> {
     use std::io::Cursor;
 
     if !matches!(
@@ -1133,9 +1142,15 @@ pub(crate) async fn toggle_disable_project(
             .await?;
     }
 
-    let file =
-        rename_indexed_file(&scope, project_path, &current_path, &new_path, enabled, state)
-            .await?;
+    let file = rename_indexed_file(
+        &scope,
+        project_path,
+        &current_path,
+        &new_path,
+        enabled,
+        state,
+    )
+    .await?;
     let updated_entry = content_rows::set_content_entry_enabled_for_file(
         &scope.content_set_id,
         &file.id,
@@ -1212,8 +1227,8 @@ async fn rename_indexed_file(
         .to_string();
     let file = match content_rows::rename_instance_file(
         &scope.instance.id,
-        &current_path,
-        &new_path,
+        current_path,
+        new_path,
         &file_name,
         enabled,
         &state.pool,
@@ -1225,7 +1240,7 @@ async fn rename_indexed_file(
             match content_rows::rename_instance_file(
                 &scope.instance.id,
                 project_path,
-                &new_path,
+                new_path,
                 &file_name,
                 enabled,
                 &state.pool,
@@ -1233,10 +1248,10 @@ async fn rename_indexed_file(
             .await?
             {
                 Some(file) => file,
-                None => index_existing_file(&scope, &new_path, state).await?,
+                None => index_existing_file(scope, new_path, state).await?,
             }
         }
-        None => index_existing_file(&scope, &new_path, state).await?,
+        None => index_existing_file(scope, new_path, state).await?,
     };
     Ok(file)
 }
@@ -1335,8 +1350,7 @@ async fn index_existing_file(
         .await
         .map_err(|e| io::IOError::with_path(e, &full_path))?
         .len();
-    let cache_key =
-        format!("{size}-{}/{}", scope.instance.path, relative_path);
+    let cache_key = format!("{size}-{}/{}", scope.instance.path, relative_path);
     let (size, sha1) = match CachedEntry::get_file_hash_many(
         &[&cache_key],
         None,
@@ -1477,7 +1491,10 @@ fn infer_project_type(bytes: &Bytes) -> crate::Result<ProjectType> {
     if archive.by_name("pack.mcmeta").is_ok() {
         return classify_pack_archive(&mut archive);
     }
-    if archive.file_names().any(|name| name.starts_with("shaders/")) {
+    if archive
+        .file_names()
+        .any(|name| name.starts_with("shaders/"))
+    {
         return Ok(ProjectType::ShaderPack);
     }
     if archive.file_names().any(|name| name == "Metadata") {
@@ -1567,7 +1584,10 @@ mod tests {
             ("pack.mcmeta", br#"{"pack":{"pack_format":15}}"#),
             ("assets/x.txt", b"x"),
         ]);
-        assert_eq!(wrapped_pack_plan(&flat_rp, ProjectType::ResourcePack), None);
+        assert_eq!(
+            wrapped_pack_plan(&flat_rp, ProjectType::ResourcePack),
+            None
+        );
         let mod_zip = zip_bytes(&[("fabric.mod.json", b"{}")]);
         assert_eq!(wrapped_pack_plan(&mod_zip, ProjectType::Mod), None);
         let mixed = zip_bytes(&[

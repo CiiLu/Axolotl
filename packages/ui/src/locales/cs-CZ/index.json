@@ -1049,9 +1049,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": " - zbývá {count}"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Přetáhněte sem {type} pro nahrání"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Název smí obsahovat pouze písmena, číslice, pomlčky, podtržítka nebo mezery."
   },

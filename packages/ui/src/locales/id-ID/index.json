@@ -920,9 +920,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": " - {count} tersisa"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Lepas {type} di sini untuk mengunggah"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Nama hanya dapat berisi karakter alfanumerik, tanda hubung, garis bawah, atau spasi."
   },

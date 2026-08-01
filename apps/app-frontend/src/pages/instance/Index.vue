@@ -810,9 +810,7 @@ const handleOptionsClick = async (args: { option: string; item: unknown }) => {
 			})
 			break
 		case 'edit':
-			await router.push({
-				path: `/instance/${encodeURIComponent(route.params.id as string)}/options`,
-			})
+			settingsModal.value?.show()
 			break
 		case 'open_folder':
 			if (instance.value) await showInstanceInFolder(instance.value.id)

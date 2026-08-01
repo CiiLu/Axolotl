@@ -70,37 +70,36 @@ pub(crate) fn io_error_with_lock_info_for_paths(
         || (cfg!(windows) && raw_os_error == Some(32))
         || (cfg!(target_os = "linux") && raw_os_error == Some(26));
 
-    if is_lock_error {
-        if let Some((locked_path, processes)) =
+    if is_lock_error
+        && let Some((locked_path, processes)) =
             lock_paths.iter().find_map(|path| {
                 let processes = get_locking_processes(path);
                 (!processes.is_empty()).then_some((*path, processes))
             })
-        {
-            warn!(
-                "File lock detected on {} — {} holding process(es)",
-                locked_path.display(),
-                processes.len()
-            );
-            let detail = processes
-                .iter()
-                .map(|p| {
-                    format!(
-                        "  PID {} - {} (locked path: {})",
-                        p.pid, p.name, p.path
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            let enhanced = std::io::Error::new(
-                source.kind(),
-                format!("{source}\n\nFile locked by:\n{detail}"),
-            );
-            return IOError::IOPathError {
-                source: enhanced,
-                path: error_path.to_string_lossy().to_string(),
-            };
-        }
+    {
+        warn!(
+            "File lock detected on {} — {} holding process(es)",
+            locked_path.display(),
+            processes.len()
+        );
+        let detail = processes
+            .iter()
+            .map(|p| {
+                format!(
+                    "  PID {} - {} (locked path: {})",
+                    p.pid, p.name, p.path
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let enhanced = std::io::Error::new(
+            source.kind(),
+            format!("{source}\n\nFile locked by:\n{detail}"),
+        );
+        return IOError::IOPathError {
+            source: enhanced,
+            path: error_path.to_string_lossy().to_string(),
+        };
     }
 
     IOError::IOPathError {
@@ -284,10 +283,9 @@ pub async fn remove_dir_all(
     })
     .await
     .map_err(|e| {
-        IOError::IOError(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("background task failed: {e}"),
-        ))
+        IOError::IOError(std::io::Error::other(format!(
+            "background task failed: {e}"
+        )))
     })?
 }
 
@@ -575,7 +573,7 @@ async fn copy_dir_inner(
     let mut entries = WalkDir::new(from);
     while let Some(entry) = entries.next().await {
         let entry = entry.map_err(|e| {
-            IOError::with_path(std::io::Error::other(e.to_string()), &from)
+            IOError::with_path(std::io::Error::other(e.to_string()), from)
         })?;
 
         // Skip macOS resource forks.
@@ -589,7 +587,7 @@ async fn copy_dir_inner(
         }
 
         let entry_path = entry.path().to_path_buf();
-        let relative = entry_path.strip_prefix(&from).map_err(|_| {
+        let relative = entry_path.strip_prefix(from).map_err(|_| {
             IOError::with_path(
                 std::io::Error::other("path prefix mismatch"),
                 &entry_path,

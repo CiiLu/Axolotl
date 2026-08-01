@@ -1052,9 +1052,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": "- {count} kaldı"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "{type} dosyasını buraya yüklemek için ekleyin"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Ad yalnızca alfanümerik karakterler, tireler, alt çizgiler veya boşluklar içerebilir."
   },

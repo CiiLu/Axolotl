@@ -65,7 +65,7 @@ const emit = defineEmits<{
 
 const props = defineProps<{
 	instance: GameInstance
-	last_played: Dayjs
+	lastPlayed: Dayjs
 }>()
 
 const loadingModpack = ref(!!props.instance.link)
@@ -165,14 +165,14 @@ onUnmounted(() => {
 				</div>
 				<div class="flex items-center gap-2 text-sm text-secondary">
 					<div
-						v-tooltip="instance.last_played ? formatDateTime(instance.last_played) : null"
+						v-tooltip="instance.lastPlayed ? formatDateTime(instance.lastPlayed) : null"
 						class="w-fit shrink-0"
-						:class="{ 'cursor-help smart-clickable:allow-pointer-events': last_played }"
+						:class="{ 'cursor-help smart-clickable:allow-pointer-events': lastPlayed }"
 					>
-						<template v-if="last_played">
+						<template v-if="lastPlayed">
 							{{
 								formatMessage(commonMessages.playedLabel, {
-									ago: formatRelativeTime(last_played.toISOString?.()),
+									ago: formatRelativeTime(lastPlayed.toISOString?.()),
 								})
 							}}
 						</template>

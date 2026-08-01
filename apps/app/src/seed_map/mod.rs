@@ -456,8 +456,8 @@ pub fn spawn(
             parse_seed(&seed),
             minecraft_version,
             edition.generator_flags(),
-            &mut x,
-            &mut z,
+            &raw mut x,
+            &raw mut z,
         )
     };
     if result != 0 {
@@ -964,7 +964,7 @@ mod tests {
             render_tile(request.clone()).expect("nether tile should render");
         let terrain_requested = render_tile(TileRequest {
             terrain: true,
-            ..request.clone()
+            ..request
         })
         .expect("nether tile should render");
         assert_eq!(flat, terrain_requested);

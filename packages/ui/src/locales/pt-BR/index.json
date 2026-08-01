@@ -1097,9 +1097,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": " - {count} restantes"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Arraste {type} aqui para adicionar"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "O nome deve conter apenas caracteres alfanuméricos, hífens, sublinhados ou espaços."
   },

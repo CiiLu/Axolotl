@@ -1079,9 +1079,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": "Còn {count}"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Thả {type} vào đây để tải lên"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Tên chỉ được bao gồm chữ số, gạch ngang, gạch dưới và dấu cách."
   },

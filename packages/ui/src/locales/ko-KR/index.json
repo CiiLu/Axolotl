@@ -1037,9 +1037,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": " - {count}개 남음"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "{type}을(를) 드롭하여 업로드"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "이름에는 영문, 숫자, 하이픈, 밑줄, 공백만 포함되어야 합니다."
   },

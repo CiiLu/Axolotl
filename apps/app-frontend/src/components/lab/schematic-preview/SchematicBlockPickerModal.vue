@@ -5,8 +5,8 @@ import { computed, nextTick, ref, useTemplateRef } from 'vue'
 
 import type { SchematicBlockState } from '@/lab/schematic-preview/backend'
 import {
-	resolveSchematicMaterialTexture,
 	type LoadedSchematicResources,
+	resolveSchematicMaterialTexture,
 } from '@/lab/schematic-preview/resources'
 
 import SchematicMaterialSwatch from './SchematicMaterialSwatch.vue'

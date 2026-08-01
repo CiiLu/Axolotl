@@ -1,10 +1,9 @@
-import atlasUvData from './assets/vanilla/texture-layout.json'
-import blocksAtlasUrl from './assets/vanilla/texture-atlas.png?url'
+import blockModelsData from './assets/vanilla/block-model-index.json'
 import blockNameData from './assets/vanilla/block-name-index.json'
 import blockDefaultPropertiesData from './assets/vanilla/block-property-defaults.json'
 import blockDefinitionsData from './assets/vanilla/block-state-index.json'
-import blockModelsData from './assets/vanilla/block-model-index.json'
-
+import blocksAtlasUrl from './assets/vanilla/texture-atlas.png?url'
+import atlasUvData from './assets/vanilla/texture-layout.json'
 import type { SchematicBlockState } from './backend.ts'
 
 type JsonObject = Record<string, unknown>

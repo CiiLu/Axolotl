@@ -129,8 +129,7 @@ pub(crate) async fn sync_instance_content_files(
     let _instance_lock = state.lock_instance_content(&instance.id).await;
 
     let mut tx = state.pool.begin().await?;
-    sqlite::content_rows::ensure_instance_exists(&instance.id, &mut tx)
-        .await?;
+    sqlite::content_rows::ensure_instance_exists(&instance.id, &mut tx).await?;
     sqlite::content_rows::mark_instance_files_missing(&instance.id, &mut tx)
         .await?;
 
@@ -182,14 +181,13 @@ fn cleanup_install_temporary_files(
                 .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or_default();
-            if name.ends_with(".installing")
+            if (name.ends_with(".installing")
                 || name.ends_with(".installing.previous")
-                || name.ends_with(".installing.download")
+                || name.ends_with(".installing.download"))
+                && path.is_file()
             {
-                if path.is_file() {
-                    std::fs::remove_file(path)
-                        .map_err(crate::util::io::IOError::from)?;
-                }
+                std::fs::remove_file(path)
+                    .map_err(crate::util::io::IOError::from)?;
             }
         }
     }

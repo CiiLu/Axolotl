@@ -58,7 +58,9 @@ pub struct TerracottaState {
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum TerracottaStatus {
+    #[default]
     Idle,
     Starting,
     Downloading,
@@ -71,12 +73,6 @@ pub enum TerracottaStatus {
     GuestReady,
     Error,
     Fatal,
-}
-
-impl Default for TerracottaStatus {
-    fn default() -> Self {
-        Self::Idle
-    }
 }
 
 impl TerracottaStatus {
@@ -399,8 +395,7 @@ async fn download_terracotta_inner(
                     downloaded += chunk.len() as u64;
                     if downloaded > MAX_TERRACOTTA_ARCHIVE_SIZE {
                         stream_error = Some(format!(
-                            "archive exceeds {} bytes",
-                            MAX_TERRACOTTA_ARCHIVE_SIZE
+                            "archive exceeds {MAX_TERRACOTTA_ARCHIVE_SIZE} bytes"
                         ));
                         break;
                     }
@@ -959,38 +954,31 @@ pub async fn start_terracotta(
                     }
                 }
 
-                if !is_macos {
-                    if let Some((status, output)) =
+                if !is_macos
+                    && let Some((status, output)) =
                         take_terminated_terracotta_process().await?
+                {
+                    let message = format_terracotta_exit(status, output).await;
+                    // On Windows the `--hmcl` wrapper exits right after
+                    // the delegate writes the port file, so give the file
+                    // one final check before treating the exit as a
+                    // failure.
+                    if let Ok(contents) = std::fs::read_to_string(&port_file)
+                        && let Ok(info) = serde_json::from_str::<
+                            TerracottaPortInfo,
+                        >(&contents)
                     {
-                        let message =
-                            format_terracotta_exit(status, output).await;
-                        // On Windows the `--hmcl` wrapper exits right after
-                        // the delegate writes the port file, so give the file
-                        // one final check before treating the exit as a
-                        // failure.
-                        if let Ok(contents) =
-                            std::fs::read_to_string(&port_file)
-                        {
-                            if let Ok(info) =
-                                serde_json::from_str::<TerracottaPortInfo>(
-                                    &contents,
-                                )
-                            {
-                                let _ = std::fs::remove_file(&port_file);
-                                break info.port;
-                            }
-                        }
-                        let msg = format!(
-                            "terracotta exited before writing port file: {message}"
-                        );
-                        let mut state = TERRACOTTA_STATE.lock().await;
-                        state.status = TerracottaStatus::Error;
-                        state.error_type =
-                            Some(TerracottaErrorType::Terracotta);
-                        state.error_message = Some(msg.clone());
-                        bail!(msg);
+                        let _ = std::fs::remove_file(&port_file);
+                        break info.port;
                     }
+                    let msg = format!(
+                        "terracotta exited before writing port file: {message}"
+                    );
+                    let mut state = TERRACOTTA_STATE.lock().await;
+                    state.status = TerracottaStatus::Error;
+                    state.error_type = Some(TerracottaErrorType::Terracotta);
+                    state.error_message = Some(msg.clone());
+                    bail!(msg);
                 }
             }
             Err(e) => {

@@ -23,7 +23,9 @@ pub struct ExtractDryRunResult {
 }
 
 #[tauri::command]
-pub async fn file_read_dragged_file(path: String) -> Result<tauri::ipc::Response> {
+pub async fn file_read_dragged_file(
+    path: String,
+) -> Result<tauri::ipc::Response> {
     let metadata = tokio::fs::metadata(&path).await?;
     if !metadata.is_file() {
         return Err(theseus::Error::from(theseus::ErrorKind::OtherError(

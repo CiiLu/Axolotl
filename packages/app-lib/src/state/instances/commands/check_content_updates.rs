@@ -207,7 +207,7 @@ async fn modrinth_update_candidates(
         let Some(metadata) = file_info_by_hash.get(&file.sha1) else {
             continue;
         };
-        let Some(project_type) = project_type_for_file(&file) else {
+        let Some(project_type) = project_type_for_file(file) else {
             continue;
         };
         let project_id = ModrinthProjectId::new(metadata.project_id.clone())?;
@@ -282,7 +282,7 @@ async fn resolve_modrinth_updates(
             .find(|update_version_id| {
                 update_version_id != candidate.current_version_id.as_str()
             })
-            .map(|update_version_id| ModrinthVersionId::new(update_version_id))
+            .map(ModrinthVersionId::new)
             .transpose()?;
 
         if let Some(entry) = &candidate.entry {

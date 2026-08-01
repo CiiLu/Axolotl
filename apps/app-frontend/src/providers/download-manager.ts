@@ -9,8 +9,8 @@ import {
 	download_job_delete,
 	download_job_list,
 	download_job_retry,
-	installJobInstanceId,
 	type DownloadRequestUpdate,
+	installJobInstanceId,
 	type InstallJobSnapshot,
 } from '@/helpers/install'
 import type { LoadingBar } from '@/helpers/state'

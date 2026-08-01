@@ -91,9 +91,7 @@ pub async fn import_world_save(
         })
         .await
         .map_err(|e| {
-            ErrorKind::InputError(format!(
-                "World location task panicked: {e}"
-            ))
+            ErrorKind::InputError(format!("World location task panicked: {e}"))
         })?
         .map_err(|e| {
             ErrorKind::InputError(format!(
@@ -289,7 +287,10 @@ const MAX_WORLD_ZIP_NESTING_DEPTH: u32 = 5;
 /// `level.dat` and hoist its folder to the root; if only nested archives
 /// are present, extract the first one and repeat. Flat and single-root
 /// archives are already correct and return immediately.
-fn locate_world_root_sync(target_dir: &Path, depth: u32) -> std::io::Result<()> {
+fn locate_world_root_sync(
+    target_dir: &Path,
+    depth: u32,
+) -> std::io::Result<()> {
     if target_dir.join("level.dat").is_file() {
         return Ok(());
     }
@@ -350,13 +351,9 @@ fn find_nested_archive(dir: &Path) -> Option<PathBuf> {
             if let Some(found) = find_nested_archive(&path) {
                 return Some(found);
             }
-        } else if path
-            .extension()
-            .and_then(|e| e.to_str())
-            .is_some_and(|e| {
-                e.eq_ignore_ascii_case("zip") || e.eq_ignore_ascii_case("mrpack")
-            })
-        {
+        } else if path.extension().and_then(|e| e.to_str()).is_some_and(|e| {
+            e.eq_ignore_ascii_case("zip") || e.eq_ignore_ascii_case("mrpack")
+        }) {
             return Some(path);
         }
     }
@@ -369,8 +366,8 @@ fn hoist_contents_sync(
     world_folder: &Path,
     target_dir: &Path,
 ) -> std::io::Result<()> {
-    let mut entries = std::fs::read_dir(world_folder)?;
-    while let Some(entry) = entries.next() {
+    let entries = std::fs::read_dir(world_folder)?;
+    for entry in entries {
         let entry = entry?;
         let dest = target_dir.join(entry.file_name());
         if dest.exists() {
@@ -584,8 +581,7 @@ mod tests {
             writer.finish().expect("finish a");
         }
 
-        let (_, out_dir) =
-            extract_to_temp(&[("Backup/a.zip", &a)]);
+        let (_, out_dir) = extract_to_temp(&[("Backup/a.zip", &a)]);
         locate_world_root_sync(out_dir.path(), 0).expect("locate world");
 
         assert!(

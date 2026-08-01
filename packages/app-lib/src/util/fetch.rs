@@ -3285,8 +3285,8 @@ async fn download_to_path_inner(
             partial_route_index = Some(route_index);
             while attempts < file_attempt_budget {
                 attempts += 1;
-                if let Some(tracking) = &request.install_tracking {
-                    if let Err(error) = tracking
+                if let Some(tracking) = &request.install_tracking
+                    && let Err(error) = tracking
                         .reporter
                         .record_download_request(
                             &tracking.item_id,
@@ -3298,12 +3298,11 @@ async fn download_to_path_inner(
                             file_attempt_budget as u32,
                         )
                         .await
-                    {
-                        tracing::warn!(
-                            error = %error,
-                            "Failed to record active download request"
-                        );
-                    }
+                {
+                    tracing::warn!(
+                        error = %error,
+                        "Failed to record active download request"
+                    );
                 }
                 tracing::debug!(
                     path = %destination.display(),
@@ -4315,10 +4314,8 @@ mod tests {
     #[tokio::test]
     async fn mirror_request_start_slots_pace_requests() {
         let _guard = MIRROR_REQUEST_SLOT_TEST_LOCK.lock().await;
-        *MIRROR_REQUEST_SLOTS.lock().await = [
-            Instant::now() + MIRROR_REQUEST_START_INTERVAL;
-            4
-        ];
+        *MIRROR_REQUEST_SLOTS.lock().await =
+            [Instant::now() + MIRROR_REQUEST_START_INTERVAL; 4];
         let route = DownloadRoute {
             url: "https://bmclapi2.bangbang93.com/maven/file.jar".to_string(),
             source: DownloadRouteSource::Bmclapi,

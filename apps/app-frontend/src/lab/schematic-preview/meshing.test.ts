@@ -7,8 +7,8 @@ import {
 	applySeamlessSchematicGlassUvs,
 	extractSchematicNeighborFace,
 	getSchematicSpecialBlockMesh,
-	isSeamlessSchematicGlassPair,
 	isSchematicOccluding,
+	isSeamlessSchematicGlassPair,
 	schematicBlockAt,
 	shouldCullSchematicFace,
 } from './meshing.ts'

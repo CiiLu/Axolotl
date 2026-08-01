@@ -54,9 +54,9 @@ pub(crate) async fn ensure_content_write_parents(
     .fetch_one(&mut **tx)
     .await?;
     if !content_set_exists {
-        return Err(crate::ErrorKind::InputError(format!(
-            "The content set for this instance has been deleted"
-        ))
+        return Err(crate::ErrorKind::InputError(
+            "The content set for this instance has been deleted".to_string(),
+        )
         .into());
     }
 
@@ -932,8 +932,7 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
     .bind(&entry.id)
     .fetch_optional(&mut **tx)
     .await?
-    .map(|timestamp| Utc.timestamp_opt(timestamp, 0).single())
-    .flatten()
+    .and_then(|timestamp| Utc.timestamp_opt(timestamp, 0).single())
     .unwrap_or(entry.added_at);
     let id = entry.id.as_str();
     let entry_instance_id = entry.instance_id.as_str();
@@ -1294,9 +1293,7 @@ mod tests {
             .await
             .expect_err("missing instance must fail");
         assert!(
-            error
-                .to_string()
-                .contains("This instance has been deleted"),
+            error.to_string().contains("This instance has been deleted"),
             "unexpected error: {error}"
         );
     }

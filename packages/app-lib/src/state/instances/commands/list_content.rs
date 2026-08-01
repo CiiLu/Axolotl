@@ -522,7 +522,7 @@ pub(crate) async fn get_linked_modpack_info(
         })
     };
     let (_, update_version_id, update_version) = check_modpack_update(
-        &version_id,
+        version_id,
         &version,
         all_versions,
         resolved.instance.update_channel,

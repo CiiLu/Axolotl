@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn test_broken_symlink() {
         let dir = tempdir().expect("temp dir");
-        let link = dir.path().join("broken_link");
+        let _link = dir.path().join("broken_link");
 
         #[cfg(unix)]
         {
@@ -329,7 +329,7 @@ mod tests {
     fn test_relative_symlink() {
         let dir = tempdir().expect("temp dir");
         let target = dir.path().join("target.txt");
-        let link = dir.path().join("link.txt");
+        let _link = dir.path().join("link.txt");
 
         fs::write(&target, "hello").expect("write target");
         #[cfg(unix)]

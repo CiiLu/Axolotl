@@ -174,7 +174,6 @@ fn rotating_log_path(
 fn open_log_file(path: &std::path::Path) -> std::io::Result<std::fs::File> {
     std::fs::OpenOptions::new()
         .create(true)
-        .write(true)
         .append(true)
         .open(path)
 }

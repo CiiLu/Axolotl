@@ -5,7 +5,7 @@ import { useTemplateRef } from 'vue'
 
 import type { SchematicPreviewManifest, SchematicRegion } from '@/lab/schematic-preview/backend'
 
-const props = defineProps<{
+defineProps<{
 	manifest: SchematicPreviewManifest
 	format: string
 	warnings: string[]

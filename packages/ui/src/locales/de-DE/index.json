@@ -1097,9 +1097,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": " - {count} übrig"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Ziehe {type} zum Hochladen hierhin"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Name darf nur alphanumerische Zeichen, Bindestriche, Unterstriche oder Leerzeichen enthalten."
   },

@@ -294,7 +294,7 @@ pub async fn schematic_preview_read_chunk(
     output.extend_from_slice(b"SPC1");
     output.extend_from_slice(&(CHUNK_VOLUME as u32).to_le_bytes());
     if let Some(chunk) = region.chunks.get(&position) {
-        for value in chunk.blocks.iter() {
+        for value in &chunk.blocks {
             output.extend_from_slice(&value.to_le_bytes());
         }
     } else {
@@ -376,8 +376,7 @@ pub fn schematic_preview_apply_edits(
             .get(requested_palette_index as usize)
             .ok_or_else(|| {
                 format!(
-                    "Unknown schematic palette entry {}",
-                    requested_palette_index
+                    "Unknown schematic palette entry {requested_palette_index}"
                 )
             })
             .map(|state| {
@@ -1704,7 +1703,7 @@ fn parse_litematic_palette(
     palette: &NbtList,
 ) -> Result<Vec<PreviewBlockState>, String> {
     let mut states = Vec::new();
-    for tag in palette.iter() {
+    for tag in palette {
         let NbtTag::Compound(compound) = tag else {
             return Err(
                 "Litematic palette contains a non-compound entry".to_string()

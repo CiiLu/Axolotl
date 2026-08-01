@@ -917,9 +917,6 @@
   "files.upload-dropdown.uploads-left": {
     "defaultMessage": " - {count} kvar"
   },
-  "files.upload.drag-and-drop.drop-to-upload": {
-    "defaultMessage": "Släpp {type} här för att ladda upp"
-  },
   "files.validation.name-invalid-directory": {
     "defaultMessage": "Namn kan bara innehålla alfanumeriska tecken, tankstreck, understreck eller mellanslag."
   },
