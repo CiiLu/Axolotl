@@ -2594,6 +2594,15 @@
 	"app.drop.error.unknown-encrypted-text": {
 		"message": "壓縮檔包含加密檔案，無法分析。"
 	},
+	"app.drop.nested-unpack-title": {
+		"message": "偵測到嵌套壓縮檔"
+	},
+	"app.drop.nested-unpack-text": {
+		"message": "此壓縮檔內含嵌套壓縮檔（{size}），需要解壓後才能分析，可能需要一些時間。是否繼續？"
+	},
+	"app.drop.nested-unpack-button": {
+		"message": "繼續分析"
+	},
 	"app.drop.error.title": {
 		"message": "拖放错误"
 	},

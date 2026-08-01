@@ -73,7 +73,15 @@ pub enum DroppedItemType {
 /// ZIP / EXE / JAR detection, then directory and file fallbacks.
 /// Returns `Unknown` instead of panicking on any error.
 pub fn classify_dropped_item(path: &Path) -> DroppedItemType {
-    classify_dropped_item_inner(path, 0)
+    classify_dropped_item_inner(path, 0, true)
+}
+
+/// Like [`classify_dropped_item`] but never unpacks nested archives: when a
+/// nested archive would have to be unpacked to decide the type, the result
+/// is `Unknown` with a reason reporting the total nested size, so the caller
+/// can confirm the (potentially slow) unpack with the user first.
+pub fn classify_dropped_item_without_nested_unpack(path: &Path) -> DroppedItemType {
+    classify_dropped_item_inner(path, 0, false)
 }
 
 /// Maximum number of shortcut hops followed before giving up. Guards against
@@ -81,7 +89,11 @@ pub fn classify_dropped_item(path: &Path) -> DroppedItemType {
 /// otherwise recurse until the stack overflows.
 const MAX_SHORTCUT_HOPS: u32 = 8;
 
-fn classify_dropped_item_inner(path: &Path, shortcut_depth: u32) -> DroppedItemType {
+fn classify_dropped_item_inner(
+    path: &Path,
+    shortcut_depth: u32,
+    allow_nested_unpack: bool,
+) -> DroppedItemType {
     if !path.exists() {
         let reason = "Path does not exist".to_string();
         tracing::warn!(
@@ -96,7 +108,11 @@ fn classify_dropped_item_inner(path: &Path, shortcut_depth: u32) -> DroppedItemT
         && resolved != path
         && shortcut_depth < MAX_SHORTCUT_HOPS
     {
-        let inner = classify_dropped_item_inner(&resolved, shortcut_depth + 1);
+        let inner = classify_dropped_item_inner(
+            &resolved,
+            shortcut_depth + 1,
+            allow_nested_unpack,
+        );
         return DroppedItemType::ShortcutResolved {
             original: path.to_path_buf(),
             resolved_to: Box::new(inner),
@@ -104,7 +120,7 @@ fn classify_dropped_item_inner(path: &Path, shortcut_depth: u32) -> DroppedItemT
     }
 
     if is_zip_path(path) {
-        return classify_zip_path(path);
+        return classify_zip_path(path, allow_nested_unpack);
     }
 
     if let Some(ext) = path.extension()
@@ -116,7 +132,7 @@ fn classify_dropped_item_inner(path: &Path, shortcut_depth: u32) -> DroppedItemT
     if let Some(ext) = path.extension()
         && ext.eq_ignore_ascii_case("disabled")
     {
-        return classify_disabled(path);
+        return classify_disabled(path, allow_nested_unpack);
     }
 
     if let Some(ext) = path.extension()
@@ -157,7 +173,7 @@ fn is_zip_path(path: &Path) -> bool {
 /// Classify a `.disabled` file by treating it as the underlying file type
 /// (e.g. `mod.jar.disabled` → Mod, `pack.zip.disabled` → ZIP). The original
 /// path is kept in the result — no path rewrite happens.
-fn classify_disabled(path: &Path) -> DroppedItemType {
+fn classify_disabled(path: &Path, allow_nested_unpack: bool) -> DroppedItemType {
     let Some(stem) = path.file_stem() else {
         return classify_file(path);
     };
@@ -177,7 +193,7 @@ fn classify_disabled(path: &Path) -> DroppedItemType {
     {
         // The file content is still a valid archive, so the ZIP pipeline runs
         // on the original path.
-        return classify_zip_path(path);
+        return classify_zip_path(path, allow_nested_unpack);
     }
 
     // Other .disabled extensions fall through to file classification.
@@ -553,11 +569,15 @@ fn temp_dir_has_space(dir: &Path, required: u64) -> bool {
 ///
 /// Everything runs on entry names; nothing is extracted during
 /// classification.
-fn classify_zip_path(path: &Path) -> DroppedItemType {
-    classify_zip_file_at_depth(path, 0)
+fn classify_zip_path(path: &Path, allow_nested_unpack: bool) -> DroppedItemType {
+    classify_zip_file_at_depth(path, 0, allow_nested_unpack)
 }
 
-fn classify_zip_file_at_depth(path: &Path, depth: u32) -> DroppedItemType {
+fn classify_zip_file_at_depth(
+    path: &Path,
+    depth: u32,
+    allow_nested_unpack: bool,
+) -> DroppedItemType {
     let Ok(file) = std::fs::File::open(path) else {
         return DroppedItemType::Unknown {
             reason: "Cannot open ZIP file".to_string(),
@@ -572,7 +592,16 @@ fn classify_zip_file_at_depth(path: &Path, depth: u32) -> DroppedItemType {
         Ok(set) => set,
         Err(reason) => return DroppedItemType::Unknown { reason },
     };
-    classify_zip_entries(path, &mut archive, &entry_set, depth, "")
+    let mut nested_unpack_bytes: u64 = 0;
+    classify_zip_entries(
+        path,
+        &mut archive,
+        &entry_set,
+        depth,
+        "",
+        allow_nested_unpack,
+        &mut nested_unpack_bytes,
+    )
 }
 
 /// Recursive core of ZIP classification for one virtual root (`base`).
@@ -582,6 +611,8 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
     entries: &ZipEntrySet,
     depth: u32,
     base: &str,
+    allow_nested_unpack: bool,
+    nested_unpack_bytes: &mut u64,
 ) -> DroppedItemType {
     // 1. Modpack manifests. Checked first because a modpack can carry
     //    overrides that look like resource packs, shader packs or worlds.
@@ -706,17 +737,30 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
                 entries,
                 depth + 1,
                 &child_base,
+                allow_nested_unpack,
+                nested_unpack_bytes,
             );
             if !matches!(result, DroppedItemType::Unknown { .. }) {
                 return result;
             }
         }
         for nested in entries.nested_zip_files(base) {
+            if !allow_nested_unpack {
+                // First pass: report the nested archive instead of unpacking
+                // it; the caller confirms with the user before staging.
+                if let Some(size) =
+                    nested_zip_uncompressed_size(archive, &format!("{base}{nested}"))
+                {
+                    *nested_unpack_bytes += size;
+                }
+                continue;
+            }
             let result = classify_nested_zip(
                 result_path,
                 archive,
                 depth + 1,
                 &format!("{base}{nested}"),
+                allow_nested_unpack,
             );
             if !matches!(result, DroppedItemType::Unknown { .. }) {
                 return result;
@@ -738,7 +782,13 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         "ZIP classify: inconclusive at depth={depth} base={base:?} — {}",
         result_path.display()
     );
-    if entries.has_encrypted {
+    if *nested_unpack_bytes > 0 {
+        DroppedItemType::Unknown {
+            reason: format!(
+                "Archive contains nested archives that must be unpacked to analyze (total {nested_unpack_bytes} bytes)"
+            ),
+        }
+    } else if entries.has_encrypted {
         DroppedItemType::Unknown {
             reason: "Archive contains encrypted files and cannot be fully analyzed"
                 .to_string(),
@@ -760,6 +810,7 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
     archive: &mut zip::ZipArchive<R>,
     depth: u32,
     entry_path: &str,
+    allow_nested_unpack: bool,
 ) -> DroppedItemType {
     let Some(index) = crate::api::pack::detect::find_entry_index(
         archive,
@@ -803,7 +854,8 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
         };
     }
 
-    let result = classify_zip_file_at_depth(&nested_path, depth);
+    let result =
+        classify_zip_file_at_depth(&nested_path, depth, allow_nested_unpack);
     match result {
         DroppedItemType::Unknown { reason } => DroppedItemType::Unknown {
             reason: format!("nested archive {entry_path}: {reason}"),
@@ -834,6 +886,18 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
         }
         other => other,
     }
+}
+
+/// Uncompressed size of a nested archive entry, read from its metadata
+/// without unpacking anything.
+fn nested_zip_uncompressed_size<R: std::io::Read + std::io::Seek>(
+    archive: &mut zip::ZipArchive<R>,
+    entry_path: &str,
+) -> Option<u64> {
+    let index = crate::api::pack::detect::find_entry_index(archive, entry_path)
+        .ok()
+        .flatten()?;
+    archive.by_index_raw(index).ok().map(|entry| entry.size())
 }
 
 /// Extracts a ZIP archive to a temporary directory and classifies its contents
@@ -2710,5 +2774,71 @@ mod tests {
         );
         assert!(!valid_level_dat_content(b"not nbt at all"));
         assert!(!valid_level_dat_content(b"\x0A\x00\x02No"));
+    }
+
+    #[test]
+    fn nested_zip_requires_unpack_confirmation_first() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("backup.zip");
+
+        let mut inner = Vec::new();
+        {
+            let mut writer =
+                zip::ZipWriter::new(std::io::Cursor::new(&mut inner));
+            writer
+                .start_file(
+                    "My World/level.dat",
+                    zip::write::FileOptions::<()>::default(),
+                )
+                .expect("start inner entry");
+            writer.write_all(VALID_LEVEL_DAT).expect("write inner");
+            writer.finish().expect("finish inner");
+        }
+
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file(
+            "Backup/worlds/world1.zip",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
+        zip.write_all(&inner).expect("write");
+        zip.finish().expect("finish");
+
+        let pending =
+            classify_dropped_item_without_nested_unpack(&zip_path);
+        assert!(
+            matches!(
+                &pending,
+                DroppedItemType::Unknown { reason }
+                    if reason.contains("nested archives")
+                        && reason.contains("bytes")
+            ),
+            "first pass must report the nested archive without unpacking: {pending:?}"
+        );
+
+        let full = classify_dropped_item(&zip_path);
+        assert!(
+            matches!(full, DroppedItemType::WorldSave { .. }),
+            "confirmed pass may unpack nested archives: {full:?}"
+        );
+    }
+
+    #[test]
+    fn flat_content_does_not_need_nested_unpack_confirmation() {
+        let dir = tempdir().expect("temp dir");
+        let zip_path = dir.path().join("world.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file("level.dat", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
+        zip.write_all(VALID_LEVEL_DAT).expect("write");
+        zip.finish().expect("finish");
+
+        let result = classify_dropped_item_without_nested_unpack(&zip_path);
+        assert!(
+            matches!(result, DroppedItemType::WorldSave { .. }),
+            "flat archives need no nested-unpack confirmation: {result:?}"
+        );
     }
 }

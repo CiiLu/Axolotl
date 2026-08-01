@@ -23,8 +23,11 @@ export interface LockingProcess {
  * @param path Absolute filesystem path to the dropped item
  * @returns Classification result indicating what kind of content it is
  */
-export function classifyDroppedItem(path: string): Promise<ClassificationResult> {
-	return invoke('plugin:drop|drop_classify', { path })
+export function classifyDroppedItem(
+	path: string,
+	allowNestedExtraction = false,
+): Promise<ClassificationResult> {
+	return invoke('plugin:drop|drop_classify', { path, allowNestedExtraction })
 }
 
 /**

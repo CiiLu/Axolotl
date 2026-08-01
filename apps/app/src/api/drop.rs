@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use theseus::drop_classifier::{
     DroppedItemType, ModrinthLookupResult, classify_dropped_item,
-    classify_zip_with_extraction, lookup_mod_hash,
+    classify_dropped_item_without_nested_unpack, classify_zip_with_extraction,
+    lookup_mod_hash,
 };
 use theseus::pack::import::{ImportLauncherType, get_importable_instances};
 use theseus::{LockingProcess, get_locking_processes};
@@ -143,10 +144,18 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 #[tauri::command]
 pub async fn drop_classify(
     path: String,
+    allow_nested_extraction: Option<bool>,
 ) -> Result<ClassificationResult, String> {
     debug!("Drop event received: {}", path);
     let path = std::path::PathBuf::from(&path);
-    let result = classify_dropped_item(&path);
+    // The first pass never unpacks nested archives; when one would be needed
+    // the classification reports the total nested size so the frontend can
+    // confirm the potentially slow unpack with the user before retrying.
+    let result = if allow_nested_extraction.unwrap_or(false) {
+        classify_dropped_item(&path)
+    } else {
+        classify_dropped_item_without_nested_unpack(&path)
+    };
     let classification = ClassificationResult::from(result);
     info!("Classification result: {:?}", classification);
     Ok(classification)

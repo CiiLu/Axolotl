@@ -416,6 +416,15 @@ async function onImportFileReceived({
 		dropFilePath.value = classification.file_path ?? classification.base_path ?? ''
 		dropFileName.value = fileName
 
+		// ── Unknown + nested archives → confirm unpacking first ──
+		if (
+			classification.item_type === 'unknown' &&
+			classification.reason?.toLowerCase().includes('nested')
+		) {
+			showNestedUnpackPrompt(classification)
+			return
+		}
+
 		// ── Unknown + extraction → force analysis prompt ──
 		if (
 			classification.item_type === 'unknown' &&
@@ -567,6 +576,19 @@ const messages = defineMessages({
 	dropUnknownEncryptedText: {
 		id: 'app.drop.error.unknown-encrypted-text',
 		defaultMessage: 'The archive contains encrypted files and cannot be analyzed.',
+	},
+	dropNestedUnpackTitle: {
+		id: 'app.drop.nested-unpack-title',
+		defaultMessage: 'Nested archives detected',
+	},
+	dropNestedUnpackText: {
+		id: 'app.drop.nested-unpack-text',
+		defaultMessage:
+			'This archive contains nested archives ({size}) that must be unpacked to analyze. This may take some time. Continue?',
+	},
+	dropNestedUnpackButton: {
+		id: 'app.drop.nested-unpack-button',
+		defaultMessage: 'Continue analysis',
 	},
 	dropErrorTitle: {
 		id: 'app.drop.error.title',
@@ -1240,6 +1262,15 @@ const { isDragging, isProcessing } = useGlobalDrop(
 				classification.base_path?.split(/[/\\]/).pop() ??
 				'file'
 
+			if (
+				type === 'unknown' &&
+				classification?.reason?.toLowerCase().includes('nested')
+			) {
+				clearDropProcessingNotification()
+				showNestedUnpackPrompt(classification)
+				return
+			}
+
 			if (type === 'unknown' && classification?.reason?.toLowerCase().includes('extraction')) {
 				clearDropProcessingNotification()
 				showForceAnalysisPrompt(classification)
@@ -1817,25 +1848,8 @@ function showForceAnalysisPrompt(classification: ClassificationResult) {
 							return
 						}
 
-						// Success
-						// user already confirmed
-						dropClassification.value = result
-						switch (result.item_type) {
-							case 'modpack':
-								await handleDropConfirm('modpack')
-								break
-							case 'world_save':
-								await handleDropConfirm('world_save')
-								break
-							case 'launcher':
-							case 'hmcl_launcher':
-								await handleDropConfirm('instance')
-								break
-							default:
-								// mod, resource_pack, shader_pack, litematic to content install
-								await handleDropConfirm(result.item_type)
-								break
-						}
+						// Success — the user already confirmed the unpack.
+						await continueWithClassification(result, filePath)
 					} catch (e) {
 						notificationManager.removeNotification(analyzingNotification.id)
 						addNotification({
@@ -1846,6 +1860,94 @@ function showForceAnalysisPrompt(classification: ClassificationResult) {
 					}
 				},
 				color: 'brand',
+			},
+		],
+	})
+}
+
+/**
+ * Route an already-confirmed classification result through the same confirm
+ * flow used by a normal drop. Unknown results surface an error notification.
+ */
+async function continueWithClassification(
+	result: ClassificationResult,
+	fallbackFileName: string,
+) {
+	if (result.item_type === 'unknown') {
+		addNotification({
+			title: formatMessage(messages.dropUnknownTitle),
+			text: unknownReasonMessage(result.reason),
+			type: 'error',
+		})
+		return
+	}
+	dropClassification.value = result
+	dropFilePath.value = result.file_path ?? result.base_path ?? ''
+	dropFileName.value =
+		result.file_path?.split(/[/\\]/).pop() ??
+		result.base_path?.split(/[/\\]/).pop() ??
+		fallbackFileName
+
+	switch (result.item_type) {
+		case 'modpack':
+			await handleDropConfirm('modpack')
+			break
+		case 'world_save':
+			await handleDropConfirm('world_save')
+			break
+		case 'launcher':
+		case 'hmcl_launcher':
+			await handleDropConfirm('instance')
+			break
+		default:
+			// mod, resource_pack, shader_pack, litematic to content install
+			await handleDropConfirm(result.item_type)
+			break
+	}
+}
+
+/**
+ * Show a popup asking the user to confirm unpacking nested archives before
+ * the classifier stages them, reporting their total size. On confirmation
+ * the archive is re-classified with nested unpacking allowed.
+ */
+function showNestedUnpackPrompt(classification: ClassificationResult) {
+	const filePath = dropFilePath.value
+	if (!filePath) return
+
+	dropDebug('showNestedUnpackPrompt: nested archives need unpacking', {
+		reason: classification.reason,
+		filePath,
+	})
+
+	const sizeBytes = Number(classification.reason?.match(/total (\d+) bytes/i)?.[1] ?? 0)
+	const sizeLabel =
+		sizeBytes > 0
+			? sizeBytes >= 1024 * 1024
+				? `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+				: `${Math.max(1, Math.round(sizeBytes / 1024))} KB`
+			: '?'
+
+	addPopupNotification({
+		title: formatMessage(messages.dropNestedUnpackTitle),
+		text: formatMessage(messages.dropNestedUnpackText, { size: sizeLabel }),
+		type: 'info',
+		autoCloseMs: null,
+		buttons: [
+			{
+				label: formatMessage(messages.dropNestedUnpackButton),
+				action: async () => {
+					try {
+						const result = await classifyDroppedItem(filePath, true)
+						await continueWithClassification(result, dropFileName.value || 'file')
+					} catch (e) {
+						addNotification({
+							title: formatMessage(messages.dropProcessFailedTitle),
+							text: e instanceof Error ? e.message : String(e),
+							type: 'error',
+						})
+					}
+				},
 			},
 		],
 	})

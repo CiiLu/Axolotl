@@ -719,6 +719,15 @@
   "app.drop.error.unknown-encrypted-text": {
     "message": "The archive contains encrypted files and cannot be analyzed."
   },
+  "app.drop.nested-unpack-title": {
+    "message": "Nested archives detected"
+  },
+  "app.drop.nested-unpack-text": {
+    "message": "This archive contains nested archives ({size}) that must be unpacked to analyze. This may take some time. Continue?"
+  },
+  "app.drop.nested-unpack-button": {
+    "message": "Continue analysis"
+  },
   "app.drop.error.unknown-title": {
     "message": "Unknown file type"
   },
