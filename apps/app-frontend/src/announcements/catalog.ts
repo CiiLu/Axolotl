@@ -58,6 +58,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed schematics stored in nested folders not being recognized, now they are folded into a hierarchical view.',
 					'zh-CN': '实例内容页面的投影项右边添加了编辑按钮,可直接导入投影工坊。',
 				},
+				{
+					'en-US': 'Launcher will now show a discord rich presence binded to Axolotl Launcher.',
+					'zh-CN': '启动器现在会显示 Axolotl Launcher 的 Discord Rich Presence。',
+				},
 			],
 			changed: [
 				{
