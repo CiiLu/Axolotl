@@ -292,20 +292,17 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_broken_symlink() {
         let dir = tempdir().expect("temp dir");
-        let _link = dir.path().join("broken_link");
-
-        #[cfg(unix)]
-        {
-            std::os::unix::fs::symlink("/nonexistent/path", &link)
-                .expect("symlink");
-            let resolved = resolve_shortcut(&link, MAX_DEPTH);
-            // `read_link` succeeds but the target doesn't exist — resolve_shortcut
-            // still returns the target path from read_link.
-            assert!(resolved.is_some());
-        }
+        let link = dir.path().join("broken_link");
+        std::os::unix::fs::symlink("/nonexistent/path", &link)
+            .expect("symlink");
+        let resolved = resolve_shortcut(&link, MAX_DEPTH);
+        // `read_link` succeeds but the target doesn't exist — resolve_shortcut
+        // still returns the target path from read_link.
+        assert!(resolved.is_some());
     }
 
     #[test]
@@ -325,22 +322,20 @@ mod tests {
         assert!(resolved.is_none());
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_relative_symlink() {
         let dir = tempdir().expect("temp dir");
         let target = dir.path().join("target.txt");
-        let _link = dir.path().join("link.txt");
 
         fs::write(&target, "hello").expect("write target");
-        #[cfg(unix)]
-        {
-            // Create a relative symlink.
-            std::os::unix::fs::symlink("target.txt", &link).expect("symlink");
-            let resolved = resolve_shortcut(&link, MAX_DEPTH);
-            assert!(resolved.is_some());
-            let resolved = resolved.unwrap();
-            assert!(resolved.exists());
-        }
+        let link = dir.path().join("link.txt");
+        // Create a relative symlink.
+        std::os::unix::fs::symlink("target.txt", &link).expect("symlink");
+        let resolved = resolve_shortcut(&link, MAX_DEPTH);
+        assert!(resolved.is_some());
+        let resolved = resolved.unwrap();
+        assert!(resolved.exists());
     }
 
     #[test]
