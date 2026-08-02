@@ -58,6 +58,18 @@ impl DiscordGuard {
         }
     }
 
+    pub async fn set_launcher_activity(
+        &self,
+        msg: &str,
+        reconnect_if_fail: bool,
+    ) -> crate::Result<()> {
+        let state = State::get().await?;
+        if state.process_manager.get_all().is_empty() {
+            self.set_activity(msg, reconnect_if_fail).await?;
+        }
+        Ok(())
+    }
+
     /// Sets the activity to the given message, regardless of if discord is disabled or offline
     /// Should not be used except for in the above method, or if it is already known that discord is enabled (specifically for state initialization) and we are connected to the internet
     pub async fn force_set_activity(

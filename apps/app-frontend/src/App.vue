@@ -58,7 +58,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { type as getOsType } from '@tauri-apps/plugin-os'
 import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
-import { RouterView, useRoute, useRouter } from 'vue-router'
+import { RouterView, type RouteLocationNormalizedLoaded, useRoute, useRouter } from 'vue-router'
 
 import { getAnnouncementByVersion } from '@/announcements/catalog'
 import AccountsCard from '@/components/ui/AccountsCard.vue'
@@ -128,7 +128,7 @@ import {
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { get as getSettings, getUpdateSource, set as setSettings } from '@/helpers/settings.ts'
-import { get_opening_command, initialize_state } from '@/helpers/state'
+import { get_opening_command, initialize_state, set_discord_activity } from '@/helpers/state'
 import {
 	areUpdatesEnabled,
 	checkAppUpdate,
@@ -994,6 +994,8 @@ loading.setEnabled(false)
 let initialLoadToken = loading.begin()
 let routerToken = null
 let suspenseToken = null
+let lastDiscordActivity = null
+let discordActivityUpdate = Promise.resolve()
 
 let suspensePending = false
 
@@ -1009,12 +1011,28 @@ router.beforeEach(() => {
 	if (routerToken) loading.end(routerToken)
 	routerToken = loading.begin()
 })
+
+function syncDiscordActivity(to: RouteLocationNormalizedLoaded) {
+	const activity =
+		typeof to.meta.discordActivity === 'string' ? to.meta.discordActivity : 'Idling...'
+	if (activity === lastDiscordActivity) return
+
+	lastDiscordActivity = activity
+	discordActivityUpdate = discordActivityUpdate
+		.then(() => set_discord_activity(activity))
+		.catch((error) => {
+			if (lastDiscordActivity === activity) lastDiscordActivity = null
+			console.error('Failed to update Discord activity', error)
+		})
+}
+
 router.afterEach((to, from, failure) => {
 	trackEvent('PageView', {
 		path: to.path,
 		fromPath: from.path,
 		failed: failure,
 	})
+	if (!failure && stateInitialized.value) syncDiscordActivity(to)
 	setTimeout(() => {
 		if (!suspensePending && stateInitialized.value) {
 			if (initialLoadToken) {
@@ -1050,6 +1068,7 @@ watch(
 	stateInitialized,
 	(ready) => {
 		if (ready) {
+			syncDiscordActivity(router.currentRoute.value)
 			if (initialLoadToken) {
 				loading.end(initialLoadToken)
 				initialLoadToken = null

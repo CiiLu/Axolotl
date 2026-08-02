@@ -46,6 +46,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Launcher will now show a discord rich presence binded to Axolotl Launcher.',
 					'zh-CN': '启动器现在会显示 Axolotl Launcher 的 Discord Rich Presence。',
 				},
+				{
+					'en-US': 'Launcher will now show a discord rich presence with a more detailed status.',
+					'zh-CN': '启动器现在会显示带有更详细状态的 Discord Rich Presence。',
+				},
 			],
 		},
 	},

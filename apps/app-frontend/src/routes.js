@@ -18,6 +18,7 @@ export default new createRouter({
 			component: Pages.Index,
 			meta: {
 				breadcrumb: [{ name: 'Home' }],
+				discordActivity: 'Idling...',
 			},
 		},
 		{
@@ -40,6 +41,7 @@ export default new createRouter({
 			component: Pages.Downloads,
 			meta: {
 				breadcrumb: [{ name: 'Downloads' }],
+				discordActivity: 'Idling...',
 			},
 		},
 		{
@@ -49,6 +51,7 @@ export default new createRouter({
 			meta: {
 				useContext: true,
 				breadcrumb: [{ name: '?BrowseTitle' }],
+				discordActivity: 'Browsing mods...',
 			},
 		},
 		{
@@ -65,6 +68,7 @@ export default new createRouter({
 			component: Pages.Skins,
 			meta: {
 				breadcrumb: [{ name: 'Skin selector' }],
+				discordActivity: 'Changing skins...',
 			},
 		},
 		{
@@ -73,6 +77,7 @@ export default new createRouter({
 			component: Pages.Multiplayer,
 			meta: {
 				breadcrumb: [{ name: 'Multiplayer' }],
+				discordActivity: 'Idling...',
 			},
 		},
 		{
@@ -81,6 +86,7 @@ export default new createRouter({
 			component: Pages.Lab,
 			meta: {
 				breadcrumb: [{ name: 'Lab' }],
+				discordActivity: 'Messing with labs...',
 			},
 		},
 		{
@@ -89,6 +95,7 @@ export default new createRouter({
 			component: Pages.LabGradientText,
 			meta: {
 				breadcrumb: [{ name: 'Lab', link: '/lab' }, { name: 'Gradient text generator' }],
+				discordActivity: 'Messing with labs...',
 			},
 		},
 		{
@@ -97,6 +104,7 @@ export default new createRouter({
 			component: Pages.LabSeedMap,
 			meta: {
 				breadcrumb: [{ name: 'Lab', link: '/lab' }, { name: 'Seed map' }],
+				discordActivity: 'Messing with labs...',
 			},
 		},
 		{
@@ -105,6 +113,7 @@ export default new createRouter({
 			component: Pages.LabSchematicPreview,
 			meta: {
 				breadcrumb: [{ name: 'Lab', link: '/lab' }, { name: 'Schematic workshop' }],
+				discordActivity: 'Messing with labs...',
 			},
 		},
 		{
@@ -113,6 +122,7 @@ export default new createRouter({
 			component: Library.Index,
 			meta: {
 				breadcrumb: [{ name: 'Library' }],
+				discordActivity: 'Browsing instances...',
 			},
 			children: [
 				{
@@ -157,6 +167,7 @@ export default new createRouter({
 			meta: {
 				useContext: true,
 				breadcrumb: [{ name: '?Project' }],
+				discordActivity: 'Browsing mods...',
 			},
 		},
 		{
@@ -167,6 +178,7 @@ export default new createRouter({
 			meta: {
 				useContext: true,
 				breadcrumb: [{ name: '?Project', link: '/project/curseforge/{id}' }, { name: 'Versions' }],
+				discordActivity: 'Browsing mods...',
 			},
 		},
 		{
@@ -177,6 +189,7 @@ export default new createRouter({
 			meta: {
 				useContext: true,
 				breadcrumb: [{ name: '?Project', link: '/project/curseforge/{id}' }, { name: 'Gallery' }],
+				discordActivity: 'Browsing mods...',
 			},
 		},
 		{
@@ -184,6 +197,9 @@ export default new createRouter({
 			name: 'Project',
 			component: Project.Index,
 			props: true,
+			meta: {
+				discordActivity: 'Browsing mods...',
+			},
 			children: [
 				{
 					path: '',
@@ -233,6 +249,9 @@ export default new createRouter({
 			name: 'Instance',
 			component: Instance.Index,
 			props: true,
+			meta: {
+				discordActivity: 'Browsing instances...',
+			},
 			children: [
 				// {
 				//   path: '',

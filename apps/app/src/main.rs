@@ -47,6 +47,16 @@ async fn initialize_state(app: tauri::AppHandle) -> api::Result<()> {
     Ok(())
 }
 
+#[tauri::command]
+async fn set_discord_activity(activity: String) -> api::Result<()> {
+    let state = State::get().await?;
+    state
+        .discord_rpc
+        .set_launcher_activity(&activity, true)
+        .await?;
+    Ok(())
+}
+
 // Should be call once Vue has mounted the app
 #[tracing::instrument(skip_all)]
 #[tauri::command]
@@ -413,6 +423,7 @@ fn main() {
         .manage(PendingUpdateData::default())
         .invoke_handler(tauri::generate_handler![
             initialize_state,
+            set_discord_activity,
             is_dev,
             portable::is_portable_mode,
             are_updates_enabled,

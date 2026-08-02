@@ -44,6 +44,10 @@ export async function initialize_state() {
 	return await invoke<void>('initialize_state')
 }
 
+export async function set_discord_activity(activity: string) {
+	return await invoke<void>('set_discord_activity', { activity })
+}
+
 // Gets active progress bars
 export async function progress_bars_list() {
 	return await invoke<Record<string, LoadingBar>>('plugin:utils|progress_bars_list')
