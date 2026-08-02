@@ -575,18 +575,6 @@
   "instance.edit-server.title": {
     "message": "서버 편집"
   },
-  "instance.edit-world.name": {
-    "message": "이름"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft 세계"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "아이콘 재설정"
-  },
-  "instance.edit-world.title": {
-    "message": "세계 편집"
-  },
   "instance.files.adding-files": {
     "message": "파일 추가 중 ({completed}/{total})"
   },

@@ -590,18 +590,6 @@
   "instance.edit-server.title": {
     "message": "Редагувати сервер"
   },
-  "instance.edit-world.name": {
-    "message": "Назва"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Світ Minecraft"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Скинути значок"
-  },
-  "instance.edit-world.title": {
-    "message": "Редагувати світ"
-  },
   "instance.files.adding-files": {
     "message": "Додавання файлів ({completed}/{total})"
   },

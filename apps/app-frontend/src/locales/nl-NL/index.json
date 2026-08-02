@@ -590,18 +590,6 @@
   "instance.edit-server.title": {
     "message": "Server bewerken"
   },
-  "instance.edit-world.name": {
-    "message": "Naam"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft Wereld"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Herstel icoon"
-  },
-  "instance.edit-world.title": {
-    "message": "Wereld bewerken"
-  },
   "instance.files.adding-files": {
     "message": "Bestanden toevoegen ({completed}/{total})"
   },

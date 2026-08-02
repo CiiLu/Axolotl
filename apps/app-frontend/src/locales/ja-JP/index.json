@@ -470,18 +470,6 @@
   "instance.edit-server.title": {
     "message": "サーバーを編集する"
   },
-  "instance.edit-world.name": {
-    "message": "名前"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Mincraftワールド"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "アイコンをリセット"
-  },
-  "instance.edit-world.title": {
-    "message": "ワールドを編集"
-  },
   "instance.files.adding-files": {
     "message": "ファイルを追加中 ({completed}/{total})"
   },

@@ -698,18 +698,6 @@
   "instance.edit-server.title": {
     "message": "Editar servidor"
   },
-  "instance.edit-world.name": {
-    "message": "Nome"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Mundo de Minecraft"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Redefinir ícone"
-  },
-  "instance.edit-world.title": {
-    "message": "Editar mundo"
-  },
   "instance.files.adding-files": {
     "message": "Adicionando arquivos ({completed}/{total})"
   },

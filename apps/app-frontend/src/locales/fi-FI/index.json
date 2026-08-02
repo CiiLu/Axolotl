@@ -698,18 +698,6 @@
   "instance.edit-server.title": {
     "message": "Muokkaa palvelinta"
   },
-  "instance.edit-world.name": {
-    "message": "Nimi"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft maailma"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Nollaa kuvake"
-  },
-  "instance.edit-world.title": {
-    "message": "Muokkaa maailmaa"
-  },
   "instance.files.adding-files": {
     "message": "Lisätään tiedostoja ({completed}/{total})"
   },

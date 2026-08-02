@@ -566,18 +566,6 @@
   "instance.edit-server.title": {
     "message": "Rediger server"
   },
-  "instance.edit-world.name": {
-    "message": "Navn"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft verden"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Nulstil ikon"
-  },
-  "instance.edit-world.title": {
-    "message": "Rediger verden"
-  },
   "instance.files.adding-files": {
     "message": "Tilføjer filer ({completed}/{total})"
   },

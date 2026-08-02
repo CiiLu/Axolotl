@@ -2207,18 +2207,6 @@
   "instance.edit-server.title": {
     "message": "編輯伺服器"
   },
-  "instance.edit-world.name": {
-    "message": "名稱"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft 世界"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "重設圖示"
-  },
-  "instance.edit-world.title": {
-    "message": "編輯世界"
-  },
   "instance.files.adding-files": {
     "message": "正在新增檔案 ({completed}/{total})"
   },
