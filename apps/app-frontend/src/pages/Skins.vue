@@ -16,9 +16,9 @@ import {
 	injectModrinthClient,
 	injectNotificationManager,
 	NavTabs,
-	SkinPreviewRenderer,
 	useVIntl,
 } from '@modrinth/ui'
+import SkinPreviewRenderer from '@modrinth/ui/src/components/skin/SkinPreviewRenderer.vue'
 import { arrayBufferToBase64 } from '@modrinth/utils'
 import { useQuery } from '@tanstack/vue-query'
 import { invoke } from '@tauri-apps/api/core'
@@ -35,7 +35,7 @@ import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { trackEvent } from '@/helpers/analytics'
 import { check_reachable, get_default_user, login as login_flow, users } from '@/helpers/auth'
 import type { RenderResult } from '@/helpers/rendering/batch-skin-renderer.ts'
-import { generateSkinPreviews, skinBlobUrlMap } from '@/helpers/rendering/batch-skin-renderer.ts'
+import { skinBlobUrlMap } from '@/helpers/rendering/batch-skin-renderer.ts'
 import type { Cape, Skin, SkinTextureUrl } from '@/helpers/skins.ts'
 import {
 	equip_skin,
@@ -54,6 +54,12 @@ import {
 import { hasPride26Badge } from '@/helpers/user-campaigns.ts'
 import { handleSevereError } from '@/store/error'
 import { useTheming } from '@/store/state'
+
+async function generateSkinPreviews(skins: Skin[], capes: Cape[]) {
+	const { generateSkinPreviews: generate } =
+		await import('@/helpers/rendering/skin-preview-renderer')
+	await generate(skins, capes)
+}
 
 type VirtualSkinSectionListExpose = {
 	getAddSkinButtonElement: () => HTMLElement | null | undefined

@@ -58,7 +58,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { type as getOsType } from '@tauri-apps/plugin-os'
 import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
-import { RouterView, type RouteLocationNormalizedLoaded, useRoute, useRouter } from 'vue-router'
+import { type RouteLocationNormalizedLoaded, RouterView, useRoute, useRouter } from 'vue-router'
 
 import { getAnnouncementByVersion } from '@/announcements/catalog'
 import AccountsCard from '@/components/ui/AccountsCard.vue'
@@ -167,7 +167,6 @@ import { setupLoadingStateProvider } from '@/providers/setup/loading-state'
 import { useError } from '@/store/error.js'
 import { useTheming } from '@/store/state'
 
-import { generateSkinPreviews } from './helpers/rendering/batch-skin-renderer'
 import { get_available_capes, get_available_skins } from './helpers/skins'
 import { AppNotificationManager } from './providers/app-notifications'
 import { AppPopupNotificationManager } from './providers/app-popup-notifications'
@@ -882,6 +881,7 @@ async function setupApp() {
 	try {
 		const skins = (await get_available_skins()) ?? []
 		const capes = (await get_available_capes()) ?? []
+		const { generateSkinPreviews } = await import('./helpers/rendering/skin-preview-renderer')
 		generateSkinPreviews(skins, capes)
 	} catch (error) {
 		console.warn('Failed to generate skin previews in app setup.', error)

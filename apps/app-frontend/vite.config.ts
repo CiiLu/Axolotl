@@ -101,6 +101,11 @@ export default defineConfig({
 				if (warning.code === 'INEFFECTIVE_DYNAMIC_IMPORT') return
 				defaultHandler(warning)
 			},
+			output: {
+				manualChunks(id) {
+					if (id.includes('node_modules/three')) return 'vendor-three'
+				},
+			},
 		},
 		// Tauri supports es2021
 		target: process.env.TAURI_ENV_PLATFORM == 'windows' ? 'chrome105' : 'safari13', // eslint-disable-line turbo/no-undeclared-env-vars
