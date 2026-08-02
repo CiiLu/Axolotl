@@ -862,6 +862,13 @@ async fn openai_translate_batch(
             { "role": "user", "content": prompt.to_string() }
         ]
     });
+    tracing::debug!(
+        endpoint = %endpoint,
+        model = %settings.settings.openai_model,
+        system_prompt = %system_prompt(settings),
+        request_body = %body,
+        "Sending OpenAI-compatible translation request"
+    );
     let api_key = settings
         .openai_api_key
         .as_deref()
@@ -879,6 +886,10 @@ async fn openai_translate_batch(
     )
     .await?;
     let value = checked_json(response, "OpenAI-compatible").await?;
+    tracing::debug!(
+        response = %value,
+        "OpenAI-compatible translation response"
+    );
     let content = value
         .get("choices")
         .and_then(Value::as_array)
@@ -1138,29 +1149,123 @@ pub async fn test_provider(
     } else {
         settings.settings.target_language.clone()
     };
-    let request = TranslationRequest {
-        source_language: "auto".to_string(),
-        target_language: target,
-        context: TranslationContext::default(),
-        segments: vec![TranslationSegment {
-            id: "connection-test".to_string(),
-            text: "Hello from Axolotl Launcher".to_string(),
-            format: TranslationTextFormat::Plain,
-        }],
+    tracing::debug!(
+        provider = ?provider,
+        base_url = %settings.settings.openai_base_url,
+        model = %settings.settings.openai_model,
+        target_language = %target,
+        custom_system_prompt_set =
+            !settings.settings.openai_system_prompt.trim().is_empty(),
+        system_prompt = %system_prompt(&settings),
+        "Testing translation provider"
+    );
+    let result = if provider == TranslationProvider::OpenaiCompatible {
+        test_openai_connection(&TRANSLATION_CLIENT, &settings, &target).await?
+    } else {
+        let request = TranslationRequest {
+            source_language: "auto".to_string(),
+            target_language: target,
+            context: TranslationContext::default(),
+            segments: vec![TranslationSegment {
+                id: "connection-test".to_string(),
+                text: "Hello from Axolotl Launcher".to_string(),
+                format: TranslationTextFormat::Plain,
+            }],
+        };
+        let mut result = translate_uncached(
+            &TRANSLATION_CLIENT,
+            &request.segments,
+            &settings,
+            &request,
+        )
+        .await?;
+        result.pop().map(|result| result.text).ok_or_else(|| {
+            ErrorKind::OtherError(
+                "Translation provider returned no test result".to_string(),
+            )
+            .as_error()
+        })?
     };
-    let mut result = translate_uncached(
-        &TRANSLATION_CLIENT,
-        &request.segments,
-        &settings,
-        &request,
+    tracing::debug!(
+        test_result = %result,
+        "Translation provider test succeeded"
+    );
+    Ok(result)
+}
+
+/// Connectivity check for OpenAI-compatible providers. Unlike real
+/// translation requests, the test accepts any non-empty text response so a
+/// custom system prompt cannot turn a healthy connection into a failure.
+async fn test_openai_connection(
+    http: &reqwest::Client,
+    settings: &StoredTranslationSettings,
+    target_language: &str,
+) -> crate::Result<String> {
+    let endpoint = openai_endpoint(&settings.settings.openai_base_url);
+    let prompt = json!({
+        "target_language": target_language,
+        "source_language": "auto",
+        "context": {},
+        "segments": [{
+            "id": "connection-test",
+            "text": "Hello from Axolotl Launcher",
+            "format": "plain"
+        }],
+    });
+    let body = json!({
+        "model": settings.settings.openai_model,
+        "temperature": 0,
+        "messages": [
+            {
+                "role": "system",
+                "content": system_prompt(settings)
+            },
+            { "role": "user", "content": prompt.to_string() }
+        ]
+    });
+    tracing::debug!(
+        endpoint = %endpoint,
+        request_body = %body,
+        "Sending OpenAI-compatible connection test"
+    );
+    let api_key = settings
+        .openai_api_key
+        .as_deref()
+        .filter(|key| !key.trim().is_empty());
+    let response = send_with_retry(
+        || {
+            let builder = http.post(&endpoint).json(&body);
+            if let Some(api_key) = api_key {
+                builder.bearer_auth(api_key)
+            } else {
+                builder
+            }
+        },
+        false,
     )
     .await?;
-    result.pop().map(|result| result.text).ok_or_else(|| {
-        ErrorKind::OtherError(
-            "Translation provider returned no test result".to_string(),
-        )
-        .into()
-    })
+    let value = checked_json(response, "OpenAI-compatible").await?;
+    tracing::debug!(
+        response = %value,
+        "OpenAI-compatible connection test response"
+    );
+
+    let content = value
+        .get("choices")
+        .and_then(Value::as_array)
+        .and_then(|choices| choices.first())
+        .and_then(|choice| choice.get("message"))
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|content| !content.is_empty())
+        .ok_or_else(|| {
+            ErrorKind::OtherError(
+                "OpenAI-compatible service returned no test result".to_string(),
+            )
+            .as_error()
+        })?;
+    Ok(content.to_string())
 }
 
 #[tracing::instrument]

@@ -114,7 +114,8 @@ const messages = defineMessages({
 	systemPrompt: { id: 'app.translation-settings.system-prompt', defaultMessage: '系统提示词' },
 	systemPromptDescription: {
 		id: 'app.translation-settings.system-prompt-description',
-		defaultMessage: '输入你的自定义系统提示词，留空则使用默认提示词',
+		defaultMessage:
+			'输入你的自定义系统提示词，留空则使用默认提示词。提示词应引导模型按内置要求以 JSON 格式输出，避免填写与格式要求冲突的指令。',
 	},
 	apiKeyOptional: {
 		id: 'app.translation-settings.api-key-optional',
