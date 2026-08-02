@@ -1074,7 +1074,7 @@ await loadSkins()
 				>
 					<template v-if="hasPendingSkinChange" #nametag-badge>
 						<div
-							class="flex items-center justify-center gap-1.5 rounded-full border border-solid border-brand-blue bg-bg-blue px-3 py-1 text-base font-semibold leading-6 text-brand-blue"
+							class="flex w-max shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-bg-blue px-3 py-1 text-sm font-semibold leading-5 text-brand-blue"
 						>
 							<EyeIcon class="size-5 shrink-0" />
 							{{ formatMessage(messages.previewingBadge) }}
