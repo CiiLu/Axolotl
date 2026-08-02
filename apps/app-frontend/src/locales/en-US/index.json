@@ -4239,10 +4239,10 @@
     "message": "Muted"
   },
   "app.translation-settings.system-prompt": {
-    "message": "系统提示词"
+    "message": "System prompt"
   },
   "app.translation-settings.system-prompt-description": {
-    "message": "输入你的自定义系统提示词，留空则使用默认提示词。提示词应引导模型按内置要求以 JSON 格式输出，避免填写与格式要求冲突的指令。"
+    "message": "Enter your custom system prompt; leave it blank to use the default prompt. The prompt should guide the model to output in JSON format as required, and should avoid instructions that conflict with the format requirements."
   },
   "app.translation-settings.target-language": {
     "message": "Target language"
