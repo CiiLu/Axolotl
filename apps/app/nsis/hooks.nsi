@@ -1,4 +1,6 @@
 ; https://nsis.sourceforge.io/ShellExecWait
+!define AXL_INSTALLER_UI_PATH "${__FILEDIR__}\..\..\..\target\release\axolotl-installer-ui.exe"
+
 !macro ShellExecWait verb app param workdir show exitoutvar ;only app and show must be != "", every thing else is optional
     #define SEE_MASK_NOCLOSEPROCESS 0x40
     System::Store S
