@@ -124,7 +124,7 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'app-marketing.download.download-deb': '下载 DEB',
 		'app-marketing.download.download-rpm': '下载 RPM',
 		'app-marketing.download.terms':
-			'Axolotl 是基于 <terms-link>GPL-3.0</terms-link> 发布的自由软件。安装前请阅读<privacy-link>项目文档</privacy-link>。',
+			'Axolotl 是基于 <terms-link>GPL-3.0</terms-link> 发布的自由软件。安装前请阅读<privacy-link>隐私政策</privacy-link>。',
 		'app-marketing.download.linux-disclaimer':
 			'每个版本都会发布 Linux 软件包。请在<issues-link>发布页面</issues-link>查看架构详情；如果你的发行版需要额外配置，也可以<prism-link>报告问题</prism-link>。',
 		'app-marketing.hero.app-screenshot-alt': 'Axolotl Launcher 实例内容预览。',
