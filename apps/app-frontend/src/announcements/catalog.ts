@@ -51,8 +51,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '启动器现在会显示带有更详细状态的 Discord Rich Presence。',
 				},
 				{
-					'en-US':
-						'Added download source priority controls and an optional system proxy setting.',
+					'en-US': 'Added download source priority controls and an optional system proxy setting.',
 					'zh-CN': '新增下载源优先级选项与可选的系统代理设置。',
 				},
 			],
