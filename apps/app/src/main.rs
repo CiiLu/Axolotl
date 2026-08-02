@@ -339,7 +339,7 @@ fn main() {
         .setup(|app| {
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                tokio::time::sleep(std::time::Duration::from_secs(4)).await;
                 if let Some(window) = app_handle.get_window("main")
                     && !window.is_visible().unwrap_or(true)
                 {
