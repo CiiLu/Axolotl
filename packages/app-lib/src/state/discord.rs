@@ -11,6 +11,7 @@ use crate::State;
 pub struct DiscordGuard {
     client: Arc<RwLock<DiscordIpcClient>>,
     connected: Arc<AtomicBool>,
+    launcher_activity: Arc<RwLock<String>>,
 }
 
 impl DiscordGuard {
@@ -22,6 +23,7 @@ impl DiscordGuard {
         Ok(DiscordGuard {
             client: Arc::new(RwLock::new(dipc)),
             connected: Arc::new(AtomicBool::new(false)),
+            launcher_activity: Arc::new(RwLock::new("Idling...".to_string())),
         })
     }
 
@@ -63,6 +65,8 @@ impl DiscordGuard {
         msg: &str,
         reconnect_if_fail: bool,
     ) -> crate::Result<()> {
+        *self.launcher_activity.write().await = msg.to_string();
+
         let state = State::get().await?;
         if state.process_manager.get_all().is_empty() {
             self.set_activity(msg, reconnect_if_fail).await?;
@@ -153,7 +157,9 @@ impl DiscordGuard {
             )
             .await?;
         } else {
-            self.set_activity("Idling...", reconnect_if_fail).await?;
+            let launcher_activity = self.launcher_activity.read().await.clone();
+            self.set_activity(&launcher_activity, reconnect_if_fail)
+                .await?;
         }
         Ok(())
     }
