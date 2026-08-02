@@ -50,6 +50,25 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Launcher will now show a discord rich presence with a more detailed status.',
 					'zh-CN': '启动器现在会显示带有更详细状态的 Discord Rich Presence。',
 				},
+				{
+					'en-US':
+						'Added download source priority controls and an optional system proxy setting.',
+					'zh-CN': '新增下载源优先级选项与可选的系统代理设置。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Improved download routing, concurrency, segmented transfers, and stalled-tail recovery for faster installs.',
+					'zh-CN': '优化下载路由、并发、分段传输与慢尾恢复，提升整体安装速度。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed inaccurate speed and ETA reporting and downloads appearing stuck at 99% or 100%.',
+					'zh-CN': '修复下载速度与剩余时间显示不准，以及进度卡在 99% 或 100% 的问题。',
+				},
 			],
 			fixed: [
 				{
