@@ -82,6 +82,7 @@ const messages = defineMessages({
 	content: { id: 'app.instance.tabs.content', defaultMessage: 'Content' },
 	files: { id: 'app.instance.tabs.files', defaultMessage: 'Files' },
 	logs: { id: 'app.instance.tabs.logs', defaultMessage: 'Logs' },
+	editWorld: { id: 'app.navigation.edit-world', defaultMessage: 'Edit world' },
 })
 
 const staticLabels = {
@@ -99,6 +100,7 @@ const staticLabels = {
 	Content: messages.content,
 	Files: messages.files,
 	Logs: messages.logs,
+	'Edit world': messages.editWorld,
 }
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {
