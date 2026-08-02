@@ -1577,8 +1577,17 @@
   "app.settings.resources.curseforge-mirror-description": {
     "message": "使用 MCIM 加速 CurseForge API 請求與檔案下載。"
   },
-  "app.settings.resources.source.official": {
-    "message": "官方來源"
+  "app.settings.resources.use-system-proxy": {
+    "message": "使用系統代理"
+  },
+  "app.settings.resources.use-system-proxy-description": {
+    "message": "讓啟動器 API 請求和檔案下載使用作業系統中設定的代理。預設關閉。"
+  },
+  "app.settings.resources.source.official-preferred": {
+    "message": "優先官方來源"
+  },
+  "app.settings.resources.source.official-only": {
+    "message": "僅原始來源（不使用鏡像）"
   },
   "app.settings.resources.source.open-bmcl-api": {
     "message": "OpenBMCLAPI 鏡像"

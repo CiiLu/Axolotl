@@ -71,6 +71,7 @@ reqwest = { workspace = true, features = [
   "json",
   "macos-system-configuration",
   "multipart",
+  "rustls-tls-native-roots",
   "rustls-tls-webpki-roots",
   "socks",
   "stream",

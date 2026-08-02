@@ -249,23 +249,54 @@ pub async fn update_state(
     let id_value = id.to_string();
     let modified = now.timestamp();
 
-    sqlx::query!(
+    sqlx::query(
         "
 		UPDATE install_jobs
-		SET instance_id = ?, state = ?, modified = ?
+		SET instance_id = (SELECT id FROM instances WHERE id = ?),
+			state = ?, modified = ?
 		WHERE id = ?
 		",
-        instance_id,
-        json,
-        modified,
-        id_value,
     )
+    .bind(instance_id)
+    .bind(json)
+    .bind(modified)
+    .bind(id_value)
     .execute(&app_state.pool)
     .await?;
 
     sync_download_details(id, state, app_state).await?;
 
     get_required(id, app_state).await
+}
+
+pub async fn update_progress_state(
+    id: Uuid,
+    state: &InstallJobState,
+    app_state: &State,
+) -> crate::Result<()> {
+    let json = serde_json::to_string(state)?;
+    let summary = state.download_summary();
+    let modified = Utc::now().timestamp();
+    let id_value = id.to_string();
+
+    sqlx::query(
+        "UPDATE install_jobs
+         SET state = ?, modified = ?, provider = ?, files_total = ?,
+             files_completed = ?, bytes_total = ?, bytes_downloaded = ?
+         WHERE id = ?",
+    )
+    .bind(json)
+    .bind(modified)
+    .bind(state.provider().as_str())
+    .bind(summary.files_total.map(|value| value as i64))
+    .bind(summary.files_completed as i64)
+    .bind(summary.bytes_total.map(|value| value as i64))
+    .bind(summary.bytes_downloaded as i64)
+    .bind(id_value)
+    .execute(&app_state.pool)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn update_status(
@@ -282,19 +313,20 @@ pub async fn update_status(
     let id_value = id.to_string();
     let modified = now.timestamp();
 
-    sqlx::query!(
+    sqlx::query(
         "
 		UPDATE install_jobs
-		SET instance_id = ?, status = ?, state = ?, modified = ?, finished = ?
+		SET instance_id = (SELECT id FROM instances WHERE id = ?),
+			status = ?, state = ?, modified = ?, finished = ?
 		WHERE id = ?
 		",
-        instance_id,
-        status_value,
-        json,
-        modified,
-        finished,
-        id_value,
     )
+    .bind(instance_id)
+    .bind(status_value)
+    .bind(json)
+    .bind(modified)
+    .bind(finished)
+    .bind(id_value)
     .execute(&app_state.pool)
     .await?;
 
@@ -444,6 +476,7 @@ async fn sync_download_details(
 ) -> crate::Result<()> {
     let id_value = id.to_string();
     let summary = state.download_summary();
+    let mut transaction = app_state.pool.begin().await?;
     sqlx::query(
         "UPDATE install_jobs
          SET provider = ?, files_total = ?, files_completed = ?,
@@ -456,7 +489,7 @@ async fn sync_download_details(
     .bind(summary.bytes_total.map(|value| value as i64))
     .bind(summary.bytes_downloaded as i64)
     .bind(&id_value)
-    .execute(&app_state.pool)
+    .execute(&mut *transaction)
     .await?;
 
     let now = Utc::now().timestamp();
@@ -506,8 +539,9 @@ async fn sync_download_details(
         .bind(now)
         .bind(now)
         .bind(finished)
-        .execute(&app_state.pool)
+        .execute(&mut *transaction)
         .await?;
     }
+    transaction.commit().await?;
     Ok(())
 }

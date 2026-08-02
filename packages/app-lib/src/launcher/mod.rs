@@ -30,7 +30,8 @@ use daedalus::modded::{LoaderVersion, Manifest};
 use regex::Regex;
 use serde::Deserialize;
 use std::fmt::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::time::Instant;
 use tokio::process::Command;
 
 #[cfg(target_os = "windows")]
@@ -162,6 +163,118 @@ macro_rules! processor_rules {
             },
         );)+
     }
+}
+
+fn processor_output_sha1(value: &str) -> Option<&str> {
+    let value = value.trim().trim_matches(['\'', '"']);
+    let value = value
+        .strip_prefix("sha1:")
+        .or_else(|| value.strip_prefix("SHA1:"))
+        .unwrap_or(value);
+    (value.len() == 40 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .then_some(value)
+}
+
+async fn processor_outputs_are_current(
+    processor: &d::modded::Processor,
+    libraries_dir: &Path,
+    data: &std::collections::HashMap<String, d::modded::SidedDataEntry>,
+    allowed_roots: &[&Path],
+) -> bool {
+    let inferred_outputs: std::collections::HashMap<String, String>;
+    let outputs = if let Some(outputs) = processor
+        .outputs
+        .as_ref()
+        .filter(|outputs| !outputs.is_empty())
+    {
+        outputs
+    } else {
+        let is_binary_patcher =
+            processor.jar.split(':').nth(1).is_some_and(|artifact| {
+                artifact.eq_ignore_ascii_case("binarypatcher")
+            });
+        if !is_binary_patcher {
+            return false;
+        }
+        let mut inferred = std::collections::HashMap::new();
+        for (index, argument) in processor.args.iter().enumerate() {
+            if argument != "--output" {
+                continue;
+            }
+            let Some(path_template) = processor.args.get(index + 1) else {
+                return false;
+            };
+            let Some(key) = path_template
+                .strip_prefix('{')
+                .and_then(|key| key.strip_suffix('}'))
+            else {
+                return false;
+            };
+            let hash_key = format!("{key}_SHA");
+            if !data.contains_key(&hash_key) {
+                return false;
+            }
+            inferred.insert(path_template.clone(), format!("{{{hash_key}}}"));
+        }
+        if inferred.is_empty() {
+            return false;
+        }
+        inferred_outputs = inferred;
+        &inferred_outputs
+    };
+    let mut canonical_roots = Vec::with_capacity(allowed_roots.len());
+    for root in allowed_roots {
+        if let Ok(root) = tokio::fs::canonicalize(root).await {
+            canonical_roots.push(root);
+        }
+    }
+    if canonical_roots.is_empty() {
+        return false;
+    }
+
+    for (path_template, hash_template) in outputs {
+        let resolved = match args::get_processor_arguments(
+            libraries_dir,
+            &[path_template, hash_template],
+            data,
+        ) {
+            Ok(resolved) => resolved,
+            Err(error) => {
+                tracing::debug!(
+                    processor = %processor.jar,
+                    %error,
+                    "Could not resolve processor output"
+                );
+                return false;
+            }
+        };
+        let [resolved_path, resolved_hash] = resolved.as_slice() else {
+            return false;
+        };
+        let Some(expected_sha1) = processor_output_sha1(resolved_hash) else {
+            return false;
+        };
+        let path = PathBuf::from(resolved_path);
+        if !path.is_absolute() {
+            return false;
+        }
+        let Ok(path) = tokio::fs::canonicalize(path).await else {
+            return false;
+        };
+        if !canonical_roots.iter().any(|root| path.starts_with(root)) {
+            return false;
+        }
+        let Ok((_, actual_sha1)) =
+            crate::util::fetch::sha1_file_async(&path).await
+        else {
+            return false;
+        };
+        if !actual_sha1.eq_ignore_ascii_case(expected_sha1) {
+            return false;
+        }
+    }
+
+    true
 }
 
 pub async fn get_java_version_from_launch_context(
@@ -648,9 +761,48 @@ pub async fn install_minecraft_with_reporter(
 
             // Forge processors (90-100)
             for (index, processor) in processors.iter().enumerate() {
+                let processor_started = Instant::now();
                 if let Some(sides) = &processor.sides
                     && !sides.contains(&String::from("client"))
                 {
+                    if let Some(reporter) = &reporter {
+                        reporter
+                            .update(
+                                InstallPhaseId::RunningLoaderProcessors,
+                                Some(InstallProgress {
+                                    current: (index + 1) as u64,
+                                    total: total_length as u64,
+                                    secondary: None,
+                                }),
+                                phase_details.clone(),
+                            )
+                            .await?;
+                    }
+                    continue;
+                }
+                if processor_outputs_are_current(
+                    processor,
+                    &libraries_dir,
+                    data,
+                    &[&instance_path, &libraries_dir],
+                )
+                .await
+                {
+                    tracing::info!(
+                        processor = %processor.jar,
+                        index,
+                        duration_ms = processor_started.elapsed().as_millis(),
+                        "Skipped Forge processor because all declared outputs are valid"
+                    );
+                    if let Some(loading_bar) = &loading_bar {
+                        emit_loading(
+                            loading_bar,
+                            30.0 / total_length as f64,
+                            Some(&format!(
+                                "Running forge processor {index}/{total_length}"
+                            )),
+                        )?;
+                    }
                     if let Some(reporter) = &reporter {
                         reporter
                             .update(
@@ -715,6 +867,12 @@ pub async fn install_minecraft_with_reporter(
                     ))
                     .as_error());
                 }
+                tracing::info!(
+                    processor = %processor.jar,
+                    index,
+                    duration_ms = processor_started.elapsed().as_millis(),
+                    "Completed Forge processor"
+                );
 
                 if let Some(loading_bar) = &loading_bar {
                     emit_loading(
@@ -1406,6 +1564,191 @@ fn update_offline_skin_resource_pack_option(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod processor_output_tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn processor(
+        path: impl Into<String>,
+        hash: impl Into<String>,
+    ) -> d::modded::Processor {
+        d::modded::Processor {
+            jar: "example:processor:1.0".to_string(),
+            classpath: Vec::new(),
+            args: Vec::new(),
+            outputs: Some(HashMap::from([(path.into(), hash.into())])),
+            sides: None,
+        }
+    }
+
+    fn data(
+        path: impl Into<String>,
+        hash: impl Into<String>,
+    ) -> HashMap<String, d::modded::SidedDataEntry> {
+        HashMap::from([
+            (
+                "OUTPUT".to_string(),
+                d::modded::SidedDataEntry {
+                    client: path.into(),
+                    server: String::new(),
+                },
+            ),
+            (
+                "HASH".to_string(),
+                d::modded::SidedDataEntry {
+                    client: hash.into(),
+                    server: String::new(),
+                },
+            ),
+        ])
+    }
+
+    #[tokio::test]
+    async fn valid_processor_output_skips_execution() {
+        let directory = tempfile::tempdir().unwrap();
+        let libraries = directory.path().join("libraries");
+        tokio::fs::create_dir_all(&libraries).await.unwrap();
+        let output = libraries.join("output.jar");
+        tokio::fs::write(&output, b"valid processor output")
+            .await
+            .unwrap();
+        let hash = sha1_smol::Sha1::from(b"valid processor output").hexdigest();
+        let data = data(output.to_string_lossy(), format!("'{hash}'"));
+
+        assert!(
+            processor_outputs_are_current(
+                &processor("{OUTPUT}", "{HASH}"),
+                &libraries,
+                &data,
+                &[&libraries],
+            )
+            .await
+        );
+    }
+
+    #[tokio::test]
+    async fn binary_patcher_uses_the_matching_output_sha() {
+        let directory = tempfile::tempdir().unwrap();
+        let libraries = directory.path().join("libraries");
+        tokio::fs::create_dir_all(&libraries).await.unwrap();
+        let output = libraries.join("patched.jar");
+        tokio::fs::write(&output, b"patched minecraft")
+            .await
+            .unwrap();
+        let hash = sha1_smol::Sha1::from(b"patched minecraft").hexdigest();
+        let data = HashMap::from([
+            (
+                "PATCHED".to_string(),
+                d::modded::SidedDataEntry {
+                    client: output.to_string_lossy().into_owned(),
+                    server: String::new(),
+                },
+            ),
+            (
+                "PATCHED_SHA".to_string(),
+                d::modded::SidedDataEntry {
+                    client: format!("'{hash}'"),
+                    server: String::new(),
+                },
+            ),
+        ]);
+        let processor = d::modded::Processor {
+            jar: "net.minecraftforge:binarypatcher:1.1.1".to_string(),
+            classpath: Vec::new(),
+            args: vec!["--output".to_string(), "{PATCHED}".to_string()],
+            outputs: None,
+            sides: None,
+        };
+
+        assert!(
+            processor_outputs_are_current(
+                &processor,
+                &libraries,
+                &data,
+                &[&libraries],
+            )
+            .await
+        );
+    }
+
+    #[tokio::test]
+    async fn missing_processor_output_runs_execution() {
+        let directory = tempfile::tempdir().unwrap();
+        let libraries = directory.path().join("libraries");
+        tokio::fs::create_dir_all(&libraries).await.unwrap();
+        let output = libraries.join("missing.jar");
+        let data = data(
+            output.to_string_lossy(),
+            "0000000000000000000000000000000000000000",
+        );
+
+        assert!(
+            !processor_outputs_are_current(
+                &processor("{OUTPUT}", "{HASH}"),
+                &libraries,
+                &data,
+                &[&libraries],
+            )
+            .await
+        );
+    }
+
+    #[tokio::test]
+    async fn wrong_processor_output_hash_runs_execution() {
+        let directory = tempfile::tempdir().unwrap();
+        let libraries = directory.path().join("libraries");
+        tokio::fs::create_dir_all(&libraries).await.unwrap();
+        let output = libraries.join("output.jar");
+        tokio::fs::write(&output, b"wrong hash").await.unwrap();
+        let data = data(
+            output.to_string_lossy(),
+            "0000000000000000000000000000000000000000",
+        );
+
+        assert!(
+            !processor_outputs_are_current(
+                &processor("{OUTPUT}", "{HASH}"),
+                &libraries,
+                &data,
+                &[&libraries],
+            )
+            .await
+        );
+    }
+
+    #[tokio::test]
+    async fn malformed_or_escaped_processor_outputs_run_execution() {
+        let directory = tempfile::tempdir().unwrap();
+        let libraries = directory.path().join("libraries");
+        tokio::fs::create_dir_all(&libraries).await.unwrap();
+        let outside = directory.path().join("outside.jar");
+        tokio::fs::write(&outside, b"outside").await.unwrap();
+        let hash = sha1_smol::Sha1::from(b"outside").hexdigest();
+        let escaped_data = data(outside.to_string_lossy(), &hash);
+
+        assert!(
+            !processor_outputs_are_current(
+                &processor("{OUTPUT}", "{HASH}"),
+                &libraries,
+                &escaped_data,
+                &[&libraries],
+            )
+            .await
+        );
+        let malformed_data = data(outside.to_string_lossy(), "not-a-sha1");
+        assert!(
+            !processor_outputs_are_current(
+                &processor("{OUTPUT}", "{HASH}"),
+                &libraries,
+                &malformed_data,
+                &[directory.path()],
+            )
+            .await
+        );
+    }
 }
 
 #[cfg(test)]

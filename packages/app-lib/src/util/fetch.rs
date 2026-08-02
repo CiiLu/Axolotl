@@ -4,7 +4,7 @@ use super::download_manager::{DownloadSpeedTracker, SpeedSnapshot};
 use super::io::{self, IOError};
 use crate::event::LoadingBarId;
 use crate::event::emit::emit_loading;
-use crate::install::InstallProgressReporter;
+use crate::install::{DownloadItemStatus, InstallProgressReporter};
 use crate::{ErrorKind, LabrinthError};
 use bytes::Bytes;
 use chrono::{DateTime, TimeDelta, Utc};
@@ -16,13 +16,16 @@ use reqwest::{Method, StatusCode, header};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::ffi::OsStr;
 use std::future::Future;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, LazyLock, Weak};
+use std::sync::{
+    Arc, LazyLock, Weak,
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+};
 use std::time::{self, Instant};
 use tokio::sync::{Mutex as AsyncMutex, Semaphore, SemaphorePermit};
 use tokio::{
@@ -36,6 +39,10 @@ pub const DOWNLOAD_META_HEADER: &str = "modrinth-download-meta";
 const BMCLAPI_BASE_URL: &str = "https://bmclapi2.bangbang93.com";
 const MCIM_BASE_URL: &str = "https://mod.mcimirror.top";
 const METADATA_ATTEMPT_BUDGET: usize = 4;
+#[cfg(not(test))]
+const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_secs(2);
+#[cfg(test)]
+const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_millis(100);
 const SEGMENTED_DOWNLOAD_THRESHOLD: u64 = 1024 * 1024;
 const INITIAL_SEGMENT_CONCURRENCY: usize = 4;
 const MAX_SEGMENT_CONCURRENCY: usize = 12;
@@ -44,21 +51,48 @@ const SEGMENT_RETRY_ATTEMPTS: usize = 3;
 const SEGMENT_EXPANSION_SAMPLE_COUNT: usize = 3;
 const SEGMENT_EXPANSION_INTERVAL: time::Duration =
     time::Duration::from_millis(1500);
-const MAX_REDIRECT_LOCATION_BYTES: usize = 8 * 1024;
-const FILE_TRANSFER_CONNECT_TIMEOUT: time::Duration =
-    time::Duration::from_secs(15);
-const FILE_TRANSFER_READ_TIMEOUT: time::Duration =
-    time::Duration::from_secs(15);
-const FILE_TRANSFER_SLOW_INTERVAL: time::Duration =
+const SUSTAINED_LOW_THROUGHPUT_WINDOW: time::Duration =
     time::Duration::from_secs(5);
+const SUSTAINED_LOW_THROUGHPUT_FLOOR: u64 = 256 * 1024;
+const SUSTAINED_LOW_THROUGHPUT_MIN_REMAINING: u64 = 1024 * 1024;
 #[cfg(not(test))]
-const FILE_TRANSFER_FIRST_BYTE_TIMEOUT: time::Duration =
+const RANGE_IDLE_RECONNECT_TIMEOUT: time::Duration =
     time::Duration::from_secs(8);
 #[cfg(test)]
-const FILE_TRANSFER_FIRST_BYTE_TIMEOUT: time::Duration =
+const RANGE_IDLE_RECONNECT_TIMEOUT: time::Duration =
     time::Duration::from_millis(250);
-const MIRROR_REQUEST_START_INTERVAL: time::Duration =
-    time::Duration::from_millis(50);
+#[cfg(not(test))]
+const TAIL_HEDGE_IDLE_TIMEOUT: time::Duration = time::Duration::from_secs(5);
+#[cfg(test)]
+const TAIL_HEDGE_IDLE_TIMEOUT: time::Duration =
+    time::Duration::from_millis(150);
+const TAIL_HEDGE_MIN_REMAINING: u64 = 16 * 1024 * 1024;
+const MAX_TAIL_HEDGES_PER_FILE: usize = 2;
+const MAX_GLOBAL_TAIL_HEDGES: usize = 8;
+const MAX_REDIRECT_LOCATION_BYTES: usize = 8 * 1024;
+const FILE_TRANSFER_CONNECT_TIMEOUT: time::Duration =
+    time::Duration::from_secs(20);
+#[cfg(not(test))]
+const FILE_TRANSFER_READ_TIMEOUT: time::Duration =
+    time::Duration::from_secs(60);
+#[cfg(test)]
+const FILE_TRANSFER_READ_TIMEOUT: time::Duration = time::Duration::from_secs(2);
+#[cfg(not(test))]
+const FILE_TRANSFER_FIRST_BYTE_TIMEOUT: time::Duration =
+    time::Duration::from_secs(20);
+#[cfg(test)]
+const FILE_TRANSFER_FIRST_BYTE_TIMEOUT: time::Duration =
+    time::Duration::from_secs(2);
+const BMCL_REQUEST_BURST: f64 = 32.0;
+const BMCL_REQUEST_RATE_MAX: f64 = 200.0;
+#[cfg(not(test))]
+const BMCL_RATE_RECOVERY_INTERVAL: time::Duration =
+    time::Duration::from_secs(30);
+#[cfg(test)]
+const BMCL_RATE_RECOVERY_INTERVAL: time::Duration =
+    time::Duration::from_millis(100);
+const MAX_DOWNLOAD_ATTEMPT_HISTORY: usize = 12;
+const MAX_DOWNLOAD_DIAGNOSTIC_BYTES: usize = 8 * 1024;
 
 #[derive(
     Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize,
@@ -263,11 +297,77 @@ pub struct DownloadResult {
     pub fallback_count: usize,
 }
 
-static AUTO_PREFERS_OFFICIAL: AtomicBool = AtomicBool::new(false);
-static AUTO_SOURCE_PROBED: AtomicBool = AtomicBool::new(false);
 static IN_FLIGHT_DOWNLOADS: LazyLock<
     dashmap::DashMap<String, Weak<AsyncMutex<()>>>,
 > = LazyLock::new(dashmap::DashMap::new);
+
+const ROUTE_HEALTH_ALPHA: f64 = 0.25;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum ResourceFamily {
+    Minecraft,
+    Loader,
+    Modrinth,
+    CurseForge,
+    Other,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct RouteHealthKey {
+    family: ResourceFamily,
+    authority: String,
+}
+
+#[derive(Clone, Debug, Default)]
+struct RouteHealth {
+    success_samples: u32,
+    ttfb_ms: Option<f64>,
+    throughput_bps: Option<f64>,
+    consecutive_failures: u32,
+    cooldown_until: Option<Instant>,
+}
+
+static ROUTE_HEALTH: LazyLock<Mutex<HashMap<RouteHealthKey, RouteHealth>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn resource_family(
+    route: &DownloadRoute,
+    resource: ResourceClass,
+) -> ResourceFamily {
+    match resource {
+        ResourceClass::MinecraftLibrary
+            if uses_mirror_first_loader_routes(&route.url, resource) =>
+        {
+            ResourceFamily::Loader
+        }
+        ResourceClass::Metadata
+        | ResourceClass::MinecraftAsset
+        | ResourceClass::MinecraftLibrary
+        | ResourceClass::Java => ResourceFamily::Minecraft,
+        ResourceClass::Loader => ResourceFamily::Loader,
+        ResourceClass::Modrinth | ResourceClass::Modpack => {
+            ResourceFamily::Modrinth
+        }
+        ResourceClass::CurseForge => ResourceFamily::CurseForge,
+        ResourceClass::Other => ResourceFamily::Other,
+    }
+}
+
+fn route_health_key(
+    route: &DownloadRoute,
+    resource: ResourceClass,
+) -> Option<RouteHealthKey> {
+    Some(RouteHealthKey {
+        family: resource_family(route, resource),
+        authority: range_splitting_authority(route)?,
+    })
+}
+
+fn update_ewma(current: &mut Option<f64>, sample: f64) {
+    *current = Some(current.map_or(sample, |current| {
+        current * (1.0 - ROUTE_HEALTH_ALPHA) + sample * ROUTE_HEALTH_ALPHA
+    }));
+}
 
 fn modrinth_request_kind(url: &str) -> Option<&'static str> {
     if url.starts_with(env!("MODRINTH_API_URL"))
@@ -291,6 +391,199 @@ fn sanitize_url_for_log(url: &str) -> String {
     }
 
     url.split(['?', '#']).next().unwrap_or(url).to_string()
+}
+
+#[derive(Debug)]
+struct DownloadAttemptDiagnostic {
+    attempt: usize,
+    source: DownloadRouteSource,
+    url: String,
+    proxy: ProxyPolicy,
+    dns_candidates: Vec<std::net::IpAddr>,
+    remote_addr: Option<std::net::SocketAddr>,
+    http_version: Option<reqwest::Version>,
+    status: Option<u16>,
+    category: &'static str,
+    decision: &'static str,
+    detail: String,
+}
+
+fn bounded_diagnostic_text(value: impl AsRef<str>, max_chars: usize) -> String {
+    value.as_ref().chars().take(max_chars).collect()
+}
+
+fn download_error_category(error: &crate::Error) -> &'static str {
+    match error.raw.as_ref() {
+        ErrorKind::FetchError(source) => {
+            let detail = format!("{source:?}").to_ascii_lowercase();
+            if source.status().is_some() {
+                "http"
+            } else if source.is_timeout() && source.is_body() {
+                "stall"
+            } else if source.is_timeout() {
+                "timeout"
+            } else if source.is_connect()
+                && ["certificate", "tls", "ssl"]
+                    .iter()
+                    .any(|needle| detail.contains(needle))
+            {
+                "tls"
+            } else if source.is_connect()
+                && ["dns", "lookup", "resolve"]
+                    .iter()
+                    .any(|needle| detail.contains(needle))
+            {
+                "dns"
+            } else if source.is_connect() {
+                "connect"
+            } else {
+                "network"
+            }
+        }
+        ErrorKind::NetworkError(message) => {
+            if message.contains("no response received") {
+                "timeout"
+            } else {
+                "network"
+            }
+        }
+        ErrorKind::LabrinthError(_) | ErrorKind::HttpError { .. } => "http",
+        ErrorKind::HashError(_, _) => "integrity",
+        ErrorKind::JSONError(_) => "integrity",
+        ErrorKind::IOError(_) | ErrorKind::StdIOError(_) => "io",
+        ErrorKind::OtherError(message) => {
+            let message = message.to_ascii_lowercase();
+            if message.contains("content-range") || message.contains("range") {
+                "range"
+            } else if message.contains("integrity")
+                || message.contains("checksum")
+                || message.contains("validation")
+            {
+                "integrity"
+            } else if message.contains("truncated") {
+                "stall"
+            } else {
+                "other"
+            }
+        }
+        _ => "other",
+    }
+}
+
+fn download_error_detail(error: &crate::Error) -> String {
+    match error.raw.as_ref() {
+        ErrorKind::FetchError(source) => source.status().map_or_else(
+            || format!("{} failure", download_error_category(error)),
+            |status| format!("HTTP {}", status.as_u16()),
+        ),
+        ErrorKind::LabrinthError(error) => error.status.map_or_else(
+            || "API response failure".to_string(),
+            |status| format!("HTTP {status}"),
+        ),
+        ErrorKind::HttpError { status, .. } => format!("HTTP {status}"),
+        ErrorKind::HashError(_, _) => "hash mismatch".to_string(),
+        ErrorKind::JSONError(_) => "JSON validation failed".to_string(),
+        ErrorKind::IOError(_) | ErrorKind::StdIOError(_) => {
+            "I/O failure".to_string()
+        }
+        ErrorKind::OtherError(_) | ErrorKind::NetworkError(_) => {
+            format!("{} failure", download_error_category(error))
+        }
+        _ => bounded_diagnostic_text(error.to_string(), 256),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn push_download_attempt_diagnostic(
+    history: &mut VecDeque<DownloadAttemptDiagnostic>,
+    route: &DownloadRoute,
+    attempt: usize,
+    category: &'static str,
+    decision: &'static str,
+    detail: impl AsRef<str>,
+    status: Option<StatusCode>,
+    remote_addr: Option<std::net::SocketAddr>,
+    http_version: Option<reqwest::Version>,
+) {
+    if history.len() == MAX_DOWNLOAD_ATTEMPT_HISTORY {
+        history.pop_front();
+    }
+    let dns_candidates = route_host(route)
+        .map(|host| DOWNLOAD_DNS_RESOLVER.resolved_addresses(&host))
+        .unwrap_or_default()
+        .into_iter()
+        .take(8)
+        .collect();
+    history.push_back(DownloadAttemptDiagnostic {
+        attempt,
+        source: route.source,
+        url: bounded_diagnostic_text(sanitize_url_for_log(&route.url), 512),
+        proxy: route.proxy,
+        dns_candidates,
+        remote_addr,
+        http_version,
+        status: status.map(|status| status.as_u16()),
+        category,
+        decision,
+        detail: bounded_diagnostic_text(detail, 256),
+    });
+}
+
+#[allow(clippy::too_many_arguments)]
+fn record_download_attempt_failure(
+    history: &mut VecDeque<DownloadAttemptDiagnostic>,
+    route: &DownloadRoute,
+    attempt: usize,
+    error: &crate::Error,
+    decision: &'static str,
+    status: Option<StatusCode>,
+    remote_addr: Option<std::net::SocketAddr>,
+    http_version: Option<reqwest::Version>,
+) {
+    push_download_attempt_diagnostic(
+        history,
+        route,
+        attempt,
+        download_error_category(error),
+        decision,
+        download_error_detail(error),
+        status,
+        remote_addr,
+        http_version,
+    );
+}
+
+fn attach_download_attempt_history(
+    error: crate::Error,
+    history: &VecDeque<DownloadAttemptDiagnostic>,
+    attempts: usize,
+    attempt_budget: usize,
+) -> crate::Error {
+    let mut context = format!(
+        "Download failed after {attempts}/{attempt_budget} attempts. Recent attempt history:"
+    );
+    for item in history {
+        let line = format!(
+            "\n- attempt={}; source={}; url={}; proxy={:?}; dns={:?}; remote={:?}; http={:?}; status={:?}; category={}; decision={}; detail={}",
+            item.attempt,
+            item.source.as_str(),
+            item.url,
+            item.proxy,
+            item.dns_candidates,
+            item.remote_addr,
+            item.http_version,
+            item.status,
+            item.category,
+            item.decision,
+            item.detail,
+        );
+        if context.len() + line.len() > MAX_DOWNLOAD_DIAGNOSTIC_BYTES {
+            context.push_str("\n- older diagnostic details omitted");
+            break;
+        }
+        context.push_str(&line);
+    }
+    error.with_context(context)
 }
 
 fn is_safe_redirect_location(location: &str) -> bool {
@@ -332,8 +625,21 @@ fn route(
         is_mirror,
         allow_sensitive_headers: !is_mirror,
         supports_range,
-        proxy: ProxyPolicy::System,
+        proxy: proxy_policy_for_setting(system_proxy_enabled()),
     }
+}
+
+fn proxy_policy_for_setting(use_system_proxy: bool) -> ProxyPolicy {
+    if use_system_proxy {
+        ProxyPolicy::System
+    } else {
+        ProxyPolicy::Direct
+    }
+}
+
+fn system_proxy_enabled() -> bool {
+    crate::State::get_if_initialized()
+        .is_some_and(|state| state.system_proxy_enabled())
 }
 
 fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
@@ -349,12 +655,25 @@ fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
         source,
         DownloadRouteSource::Bmclapi | DownloadRouteSource::Mcim
     );
-    route(
+    let route = route(
         url.to_string(),
         source,
         is_mirror,
         !matches!(resource, ResourceClass::Metadata),
-    )
+    );
+    #[cfg(test)]
+    let route = {
+        let mut route = route;
+        if Url::parse(url)
+            .ok()
+            .and_then(|url| url.host_str().and_then(|host| host.parse().ok()))
+            .is_some_and(|address: std::net::IpAddr| address.is_loopback())
+        {
+            route.proxy = ProxyPolicy::Direct;
+        }
+        route
+    };
+    route
 }
 
 fn url_with_base(original: &Url, base: &str, path: &str) -> Option<String> {
@@ -509,9 +828,54 @@ fn is_official_version_manifest_url(url: &str) -> bool {
     })
 }
 
-fn order_auto_routes(routes: &mut [DownloadRoute]) {
-    let prefer_official = AUTO_PREFERS_OFFICIAL.load(Ordering::Relaxed);
-    routes.sort_by_key(|route| route.is_mirror == prefer_official);
+fn order_auto_routes(
+    routes: &mut [DownloadRoute],
+    resource: ResourceClass,
+    mirror_first_loader: bool,
+) {
+    let cold_prefers_mirror = mirror_first_loader
+        || crate::State::get_if_initialized()
+            .is_some_and(|state| state.auto_prefers_mirror());
+    let health = ROUTE_HEALTH.lock().clone();
+    routes.sort_by(|left, right| {
+        let left_health = route_health_key(left, resource)
+            .and_then(|key| health.get(&key).cloned())
+            .unwrap_or_default();
+        let right_health = route_health_key(right, resource)
+            .and_then(|key| health.get(&key).cloned())
+            .unwrap_or_default();
+        let now = Instant::now();
+        let left_cooling =
+            left_health.cooldown_until.is_some_and(|until| until > now);
+        let right_cooling =
+            right_health.cooldown_until.is_some_and(|until| until > now);
+        left_cooling
+            .cmp(&right_cooling)
+            .then_with(|| {
+                left_health
+                    .consecutive_failures
+                    .cmp(&right_health.consecutive_failures)
+            })
+            .then_with(|| {
+                (right_health.success_samples > 0)
+                    .cmp(&(left_health.success_samples > 0))
+            })
+            .then_with(|| {
+                let ordering = if matches!(resource, ResourceClass::Metadata) {
+                    left_health.ttfb_ms.partial_cmp(&right_health.ttfb_ms)
+                } else {
+                    right_health
+                        .throughput_bps
+                        .partial_cmp(&left_health.throughput_bps)
+                };
+                ordering.unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                let left_cold_rank = left.is_mirror != cold_prefers_mirror;
+                let right_cold_rank = right.is_mirror != cold_prefers_mirror;
+                left_cold_rank.cmp(&right_cold_rank)
+            })
+    });
 }
 
 /// Loader Maven repositories that are served mirror-first: their mirrors are
@@ -540,14 +904,7 @@ fn uses_mirror_first_loader_routes(url: &str, resource: ResourceClass) -> bool {
     }
 
     let path = url.path().to_ascii_lowercase();
-    matches!(
-        url.host_str(),
-        Some(
-            "libraries.minecraft.net"
-                | "piston-data.mojang.com"
-                | "piston-meta.mojang.com"
-        )
-    ) && ["minecraftforge", "fabricmc", "neoforged"]
+    ["minecraftforge", "fabricmc", "neoforged"]
         .iter()
         .any(|loader| path.contains(loader))
 }
@@ -560,28 +917,25 @@ pub fn resolve_download_routes_for(
     let official = official_route(url, resource);
     let mirror_first_loader = uses_mirror_first_loader_routes(url, resource);
     let mut routes = explicit_mirror_routes(url, resource);
-    if !mirror_first_loader {
-        routes.push(official.clone());
-    }
+    routes.push(official);
     match mode {
         crate::state::DownloadSourceMode::Auto
-            if is_official_version_manifest_url(url)
-                && !AUTO_SOURCE_PROBED.load(Ordering::Relaxed) =>
+            if is_official_version_manifest_url(url) =>
         {
             routes.sort_by_key(|route| route.is_mirror)
         }
         crate::state::DownloadSourceMode::Auto => {
-            order_auto_routes(&mut routes)
+            order_auto_routes(&mut routes, resource, mirror_first_loader)
         }
         crate::state::DownloadSourceMode::OfficialOnly => {
             routes.retain(|route| !route.is_mirror);
         }
+        crate::state::DownloadSourceMode::OfficialPreferred => {
+            routes.sort_by_key(|route| route.is_mirror);
+        }
         crate::state::DownloadSourceMode::MirrorPreferred => {
             routes.sort_by_key(|route| !route.is_mirror);
         }
-    }
-    if mirror_first_loader && !routes.contains(&official) {
-        routes.push(official);
     }
     routes
 }
@@ -811,8 +1165,11 @@ static GLOBAL_FETCH_FENCE: LazyLock<FetchFence> =
 
 static DOWNLOAD_DNS_RESOLVER: LazyLock<Arc<DownloadDnsResolver>> =
     LazyLock::new(|| Arc::new(DownloadDnsResolver::default()));
-static MIRROR_REQUEST_SLOTS: LazyLock<AsyncMutex<[Instant; 4]>> =
-    LazyLock::new(|| AsyncMutex::new([Instant::now(); 4]));
+static MIRROR_REQUEST_LIMITERS: LazyLock<
+    Mutex<HashMap<String, MirrorRequestLimiter>>,
+> = LazyLock::new(|| Mutex::new(HashMap::new()));
+static TAIL_HEDGE_SEMAPHORE: LazyLock<Semaphore> =
+    LazyLock::new(|| Semaphore::new(MAX_GLOBAL_TAIL_HEDGES));
 
 fn reqwest_client_builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
@@ -821,17 +1178,36 @@ fn reqwest_client_builder() -> reqwest::ClientBuilder {
         .tcp_keepalive(Some(time::Duration::from_secs(10)))
         .tcp_nodelay(true)
         .pool_max_idle_per_host(64)
-        .http1_only()
         .dns_resolver(Arc::clone(&DOWNLOAD_DNS_RESOLVER))
         .user_agent(crate::launcher_user_agent())
 }
 
-pub static INSECURE_REQWEST_CLIENT: LazyLock<reqwest::Client> =
-    LazyLock::new(|| {
-        reqwest_client_builder()
-            .build()
-            .expect("client configuration should be valid")
-    });
+fn file_reqwest_client_builder() -> reqwest::ClientBuilder {
+    reqwest_client_builder().http1_only()
+}
+
+static SYSTEM_FETCH_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest_client_builder()
+        .build()
+        .expect("client configuration should be valid")
+});
+
+pub struct ConfiguredReqwestClient;
+
+impl Deref for ConfiguredReqwestClient {
+    type Target = reqwest::Client;
+
+    fn deref(&self) -> &Self::Target {
+        if system_proxy_enabled() {
+            &SYSTEM_FETCH_CLIENT
+        } else {
+            &DIRECT_FETCH_CLIENT
+        }
+    }
+}
+
+pub static INSECURE_REQWEST_CLIENT: ConfiguredReqwestClient =
+    ConfiguredReqwestClient;
 
 const DOWNLOAD_PROGRESS_LOG_INTERVAL: u64 = 8 * 1024 * 1024;
 const MODRINTH_CDN_ATTEMPTS: usize = 3;
@@ -840,7 +1216,7 @@ const MODRINTH_CDN_ATTEMPT_TIMEOUT: time::Duration =
 
 static NO_REDIRECT_REQWEST_CLIENT: LazyLock<reqwest::Client> =
     LazyLock::new(|| {
-        let builder = reqwest_client_builder()
+        let builder = file_reqwest_client_builder()
             .redirect(reqwest::redirect::Policy::none());
         #[cfg(not(test))]
         let builder = builder.https_only(true);
@@ -850,7 +1226,7 @@ static NO_REDIRECT_REQWEST_CLIENT: LazyLock<reqwest::Client> =
     });
 
 static DIRECT_REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    let builder = reqwest_client_builder()
+    let builder = file_reqwest_client_builder()
         .no_proxy()
         .redirect(reqwest::redirect::Policy::none());
     #[cfg(not(test))]
@@ -861,9 +1237,10 @@ static DIRECT_REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 });
 
 static DIRECT_FETCH_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest_client_builder()
-        .https_only(true)
-        .no_proxy()
+    let builder = reqwest_client_builder().no_proxy();
+    #[cfg(not(test))]
+    let builder = builder.https_only(true);
+    builder
         .build()
         .expect("client configuration should be valid")
 });
@@ -930,36 +1307,47 @@ fn requires_modrinth_auth(
 
 fn record_route_success(
     route: &DownloadRoute,
+    resource: ResourceClass,
     ttfb: time::Duration,
-    _bytes: u64,
+    bytes: u64,
     transfer_elapsed: time::Duration,
+    remote_addr: Option<std::net::SocketAddr>,
 ) {
-    if let Some(host) = route_host(route) {
-        DOWNLOAD_DNS_RESOLVER.record_host_result(&host, 0.5);
+    if let (Some(host), Some(remote_addr)) = (route_host(route), remote_addr) {
+        DOWNLOAD_DNS_RESOLVER.record_host_success(&host, remote_addr.ip());
     }
-    if route.source == DownloadRouteSource::Official
-        && (is_official_version_manifest_url(&route.url)
-            || !AUTO_SOURCE_PROBED.load(Ordering::Relaxed))
-    {
-        AUTO_PREFERS_OFFICIAL.store(
-            ttfb.saturating_add(transfer_elapsed)
-                <= time::Duration::from_secs(4),
-            Ordering::Relaxed,
-        );
-        AUTO_SOURCE_PROBED.store(true, Ordering::Relaxed);
+    if let Some(key) = route_health_key(route, resource) {
+        let mut health = ROUTE_HEALTH.lock();
+        let entry = health.entry(key).or_default();
+        entry.success_samples = entry.success_samples.saturating_add(1);
+        entry.consecutive_failures = 0;
+        entry.cooldown_until = None;
+        update_ewma(&mut entry.ttfb_ms, ttfb.as_secs_f64() * 1000.0);
+        if !transfer_elapsed.is_zero() {
+            update_ewma(
+                &mut entry.throughput_bps,
+                bytes as f64 / transfer_elapsed.as_secs_f64(),
+            );
+        }
     }
 }
 
-fn record_route_failure(route: &DownloadRoute) {
-    if let Some(host) = route_host(route) {
-        DOWNLOAD_DNS_RESOLVER.record_host_result(&host, -0.7);
+fn record_route_failure(
+    route: &DownloadRoute,
+    resource: ResourceClass,
+    cooldown: Option<time::Duration>,
+) {
+    if let Some(state) = crate::State::get_if_initialized() {
+        state.record_download_error();
     }
-    if route.source == DownloadRouteSource::Official
-        && (is_official_version_manifest_url(&route.url)
-            || !AUTO_SOURCE_PROBED.load(Ordering::Relaxed))
-    {
-        AUTO_PREFERS_OFFICIAL.store(false, Ordering::Relaxed);
-        AUTO_SOURCE_PROBED.store(true, Ordering::Relaxed);
+    if let Some(key) = route_health_key(route, resource) {
+        let mut health = ROUTE_HEALTH.lock();
+        let entry = health.entry(key).or_default();
+        entry.consecutive_failures =
+            entry.consecutive_failures.saturating_add(1);
+        if let Some(cooldown) = cooldown {
+            entry.cooldown_until = Some(Instant::now() + cooldown);
+        }
     }
 }
 
@@ -968,6 +1356,8 @@ const RANGE_SPLITTING_DISABLE_THRESHOLD: u32 = 2;
 static RANGE_SPLITTING_PROTOCOL_FAILURES: LazyLock<
     Mutex<HashMap<String, u32>>,
 > = LazyLock::new(|| Mutex::new(HashMap::new()));
+static RANGE_SPLITTING_SUPPORTED: LazyLock<Mutex<HashSet<String>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
 
 fn range_splitting_authority(route: &DownloadRoute) -> Option<String> {
     let url = Url::parse(&route.url).ok()?;
@@ -980,15 +1370,9 @@ fn range_splitting_authority(route: &DownloadRoute) -> Option<String> {
 
 fn range_splitting_allowed(route: &DownloadRoute) -> bool {
     let host = route_host(route).unwrap_or_default();
-    if [
-        "bmclapi",
-        "github.com",
-        "optifine.net",
-        "momot.rs",
-        "meloong.com",
-    ]
-    .iter()
-    .any(|blocked| host.contains(blocked))
+    if ["github.com", "optifine.net", "momot.rs", "meloong.com"]
+        .iter()
+        .any(|blocked| host.contains(blocked))
     {
         return false;
     }
@@ -1015,10 +1399,17 @@ fn disable_range_splitting(route: &DownloadRoute) {
     let count = failures.entry(authority.clone()).or_insert(0);
     *count += 1;
     if *count == RANGE_SPLITTING_DISABLE_THRESHOLD {
+        RANGE_SPLITTING_SUPPORTED.lock().remove(&authority);
         tracing::info!(
             authority,
             "Disabling range splitting for a server after repeated range protocol failures"
         );
+    }
+}
+
+fn record_range_splitting_success(route: &DownloadRoute) {
+    if let Some(authority) = range_splitting_authority(route) {
+        RANGE_SPLITTING_SUPPORTED.lock().insert(authority);
     }
 }
 
@@ -1028,6 +1419,157 @@ pub type FetchProgressFn<'a> = dyn FnMut(
     ) -> Pin<Box<dyn Future<Output = crate::Result<()>> + Send + 'a>>
     + Send
     + 'a;
+
+async fn fetch_validated_metadata_route(
+    route: &DownloadRoute,
+    resource: ResourceClass,
+    sha1: Option<&str>,
+    header: Option<(&str, &str)>,
+    semaphore: &FetchSemaphore,
+    client: &reqwest::Client,
+    response_validator: &(dyn Fn(&Bytes) -> crate::Result<()> + Send + Sync),
+) -> crate::Result<Bytes> {
+    let route_client = match route.proxy {
+        ProxyPolicy::System => client,
+        ProxyPolicy::Direct => &DIRECT_FETCH_CLIENT,
+    };
+    let mut request = route_client.get(&route.url);
+    if let Some((name, value)) = header {
+        request = request.header(name, value);
+    }
+    let _permit = semaphore.0.acquire().await?;
+    let request_started = Instant::now();
+    let response = request.send().await?;
+    let ttfb = request_started.elapsed();
+    let status = response.status();
+    let remote_addr = response.remote_addr();
+    let http_version = response.version();
+    let response_retry_after = retry_after(&response);
+    if !status.is_success() {
+        record_route_failure(
+            route,
+            resource,
+            (status == StatusCode::TOO_MANY_REQUESTS).then_some(
+                response_retry_after.unwrap_or_else(|| fetch_retry_delay(1)),
+            ),
+        );
+        return Err(
+            response_status_error(response, &Method::GET, &route.url).await
+        );
+    }
+
+    let transfer_started = Instant::now();
+    let bytes = response.bytes().await?;
+    if let Some(expected) = sha1 {
+        let actual = sha1_async(bytes.clone()).await?;
+        if actual.as_str() != expected {
+            record_route_failure(route, resource, None);
+            return Err(
+                ErrorKind::HashError(expected.to_string(), actual).into()
+            );
+        }
+    }
+    if let Err(error) = response_validator(&bytes) {
+        record_route_failure(route, resource, None);
+        return Err(error);
+    }
+
+    record_route_success(
+        route,
+        resource,
+        ttfb,
+        bytes.len() as u64,
+        transfer_started.elapsed(),
+        remote_addr,
+    );
+    tracing::debug!(
+        source = route.source.as_str(),
+        url = %sanitize_url_for_log(&route.url),
+        remote_addr = ?remote_addr,
+        http_version = ?http_version,
+        ttfb_ms = ttfb.as_millis(),
+        "Completed hedged metadata route"
+    );
+    Ok(bytes)
+}
+
+async fn fetch_hedged_metadata(
+    routes: &[DownloadRoute],
+    resource: ResourceClass,
+    sha1: Option<&str>,
+    header: Option<(&str, &str)>,
+    semaphore: &FetchSemaphore,
+    client: &reqwest::Client,
+    response_validator: &(dyn Fn(&Bytes) -> crate::Result<()> + Send + Sync),
+) -> Result<Bytes, Vec<(usize, crate::Error)>> {
+    let primary = async {
+        fetch_validated_metadata_route(
+            &routes[0],
+            resource,
+            sha1,
+            header,
+            semaphore,
+            client,
+            response_validator,
+        )
+        .await
+        .map_err(|error| (0, error))
+    };
+    tokio::pin!(primary);
+    let delay = tokio::time::sleep(METADATA_HEDGE_DELAY);
+    tokio::pin!(delay);
+
+    let first_error = tokio::select! {
+        result = &mut primary => match result {
+            Ok(bytes) => return Ok(bytes),
+            Err(error) => error,
+        },
+        _ = &mut delay => {
+            let secondary = async {
+                fetch_validated_metadata_route(
+                    &routes[1],
+                    resource,
+                    sha1,
+                    header,
+                    semaphore,
+                    client,
+                    response_validator,
+                )
+                .await
+                .map_err(|error| (1, error))
+            };
+            tokio::pin!(secondary);
+            return tokio::select! {
+                result = &mut primary => match result {
+                    Ok(bytes) => Ok(bytes),
+                    Err(primary_error) => secondary.await
+                        .map_err(|secondary_error| {
+                            vec![primary_error, secondary_error]
+                        }),
+                },
+                result = &mut secondary => match result {
+                    Ok(bytes) => Ok(bytes),
+                    Err(secondary_error) => primary.await
+                        .map_err(|primary_error| {
+                            vec![secondary_error, primary_error]
+                        }),
+                },
+            };
+        },
+    };
+
+    fetch_validated_metadata_route(
+        &routes[1],
+        resource,
+        sha1,
+        header,
+        semaphore,
+        client,
+        response_validator,
+    )
+    .await
+    .map_err(|secondary_error| vec![first_error, (1, secondary_error)])
+}
 
 #[tracing::instrument(skip_all)]
 pub async fn fetch(
@@ -1260,6 +1802,50 @@ async fn fetch_advanced_with_client_and_progress(
 
     let mut total_attempts = 0;
     let mut last_error = None;
+    let mut attempt_history = VecDeque::new();
+    let hedge_is_safe = method == Method::GET
+        && json_body.is_none()
+        && download_meta.is_none()
+        && progress.is_none()
+        && creds.is_none()
+        && header.is_none_or(|(name, _)| !is_sensitive_header(name))
+        && response_validator.is_some();
+    if hedge_is_safe
+        && request_routes.len() > 1
+        && attempt_budget >= 2
+        && let Some(validate_response) = response_validator
+    {
+        match fetch_hedged_metadata(
+            &request_routes,
+            resource,
+            sha1,
+            header,
+            semaphore,
+            client,
+            validate_response,
+        )
+        .await
+        {
+            Ok(bytes) => return Ok(bytes),
+            Err(errors) => {
+                total_attempts = errors.len();
+                for (route_index, error) in errors {
+                    let route = &request_routes[route_index];
+                    record_download_attempt_failure(
+                        &mut attempt_history,
+                        route,
+                        route_index + 1,
+                        &error,
+                        "hedge_failed",
+                        None,
+                        None,
+                        None,
+                    );
+                    last_error = Some(error);
+                }
+            }
+        }
+    }
 
     for (route_index, route) in request_routes.iter().enumerate() {
         let request_url = &route.url;
@@ -1298,14 +1884,39 @@ async fn fetch_advanced_with_client_and_progress(
             if let Some(fence_key) = fence_key
                 && GLOBAL_FETCH_FENCE.is_blocked(fence_key)
             {
-                return Err(ErrorKind::ApiIsDownError(
+                let error: crate::Error = ErrorKind::ApiIsDownError(
                     GLOBAL_FETCH_FENCE.latest_block_minutes(),
                 )
-                .into());
+                .into();
+                record_download_attempt_failure(
+                    &mut attempt_history,
+                    route,
+                    total_attempts + 1,
+                    &error,
+                    "blocked_by_fetch_fence",
+                    None,
+                    None,
+                    None,
+                );
+                return Err(attach_download_attempt_history(
+                    error,
+                    &attempt_history,
+                    total_attempts,
+                    attempt_budget,
+                ));
             }
             total_attempts += 1;
 
             let started = time::Instant::now();
+            tracing::debug!(
+                method = %method,
+                url = %log_request_url,
+                source = route_source.as_str(),
+                proxy = ?route.proxy,
+                attempt = total_attempts,
+                max_attempts = attempt_budget,
+                "Starting metadata or API request attempt"
+            );
             if let Some(request_kind) = modrinth_request_kind {
                 tracing::info!(
                     request_target,
@@ -1368,6 +1979,8 @@ async fn fetch_advanced_with_client_and_progress(
             match result {
                 Ok(resp) => {
                     let status = resp.status();
+                    let remote_addr = resp.remote_addr();
+                    let http_version = resp.version();
                     let retry_after = retry_after(&resp);
                     if status.is_redirection() {
                         if is_mirror
@@ -1424,13 +2037,24 @@ async fn fetch_advanced_with_client_and_progress(
                             }
                         }
                         drop(permit);
-                        record_route_failure(route);
-                        last_error = Some(
-							ErrorKind::OtherError(format!(
-								"Refusing to automatically forward protected headers while redirecting {log_request_url}"
-							))
-							.into(),
-						);
+                        record_route_failure(route, resource, None);
+                        let error: crate::Error = ErrorKind::OtherError(
+                            format!(
+                                "Refusing to automatically forward protected headers while redirecting {log_request_url}"
+                            ),
+                        )
+                        .into();
+                        record_download_attempt_failure(
+                            &mut attempt_history,
+                            route,
+                            total_attempts,
+                            &error,
+                            "switch_route",
+                            Some(status),
+                            remote_addr,
+                            Some(http_version),
+                        );
+                        last_error = Some(error);
                         break;
                     }
                     if status.is_client_error() || status.is_server_error() {
@@ -1439,9 +2063,14 @@ async fn fetch_advanced_with_client_and_progress(
                         {
                             GLOBAL_FETCH_FENCE.record_fail(fence_key);
                         }
-                        record_route_failure(route);
-                        let backup_error =
-                            resp.error_for_status_ref().unwrap_err();
+                        record_route_failure(
+                            route,
+                            resource,
+                            (status == StatusCode::TOO_MANY_REQUESTS)
+                                .then_some(retry_after.unwrap_or_else(|| {
+                                    fetch_retry_delay(total_attempts)
+                                })),
+                        );
                         let route_error: crate::Error = if let Ok(mut error) =
                             resp.json::<LabrinthError>().await
                         {
@@ -1451,16 +2080,46 @@ async fn fetch_advanced_with_client_and_progress(
                             error.route = uri_path.map(str::to_string);
                             ErrorKind::LabrinthError(error).into()
                         } else {
-                            backup_error.into()
+                            ErrorKind::HttpError {
+                                status: status.as_u16(),
+                                method: method.as_str().to_string(),
+                                url: log_request_url.clone(),
+                            }
+                            .into()
                         };
                         let route_error_message = route_error.to_string();
                         drop(permit);
+                        let retry_rate_limited = status
+                            == StatusCode::TOO_MANY_REQUESTS
+                            && !has_next_route
+                            && has_more_attempts;
+                        let retry_server_error = status.is_server_error()
+                            && !retried_server_error
+                            && has_more_attempts
+                            && total_attempts + remaining_routes
+                                < attempt_budget;
+                        let decision = if retry_rate_limited {
+                            "cooldown_then_retry"
+                        } else if retry_server_error {
+                            "retry_same_route"
+                        } else if has_next_route {
+                            "switch_route"
+                        } else {
+                            "stop"
+                        };
+                        record_download_attempt_failure(
+                            &mut attempt_history,
+                            route,
+                            total_attempts,
+                            &route_error,
+                            decision,
+                            Some(status),
+                            remote_addr,
+                            Some(http_version),
+                        );
                         last_error = Some(route_error);
 
-                        if status == StatusCode::TOO_MANY_REQUESTS
-                            && !has_next_route
-                            && has_more_attempts
-                        {
+                        if retry_rate_limited {
                             tokio::time::sleep(retry_after.unwrap_or_else(
                                 || fetch_retry_delay(total_attempts),
                             ))
@@ -1468,12 +2127,7 @@ async fn fetch_advanced_with_client_and_progress(
                             continue;
                         }
 
-                        if status.is_server_error()
-                            && !retried_server_error
-                            && has_more_attempts
-                            && total_attempts + remaining_routes
-                                < attempt_budget
-                        {
+                        if retry_server_error {
                             retried_server_error = true;
                             tokio::time::sleep(fetch_retry_delay(
                                 total_attempts,
@@ -1601,7 +2255,11 @@ async fn fetch_advanced_with_client_and_progress(
                                 }
 
                                 if let Some(progress) = progress.as_mut() {
-                                    progress(downloaded, total_size).await?;
+                                    if let Err(error) =
+                                        progress(downloaded, total_size).await
+                                    {
+                                        tracing::warn!(%error, "Download progress callback failed");
+                                    }
                                 }
                             }
 
@@ -1621,13 +2279,31 @@ async fn fetch_advanced_with_client_and_progress(
                         if let Some(sha1) = sha1 {
                             let hash = sha1_async(bytes.clone()).await?;
                             if &*hash != sha1 {
-                                record_route_failure(route);
+                                record_route_failure(route, resource, None);
                                 let route_error: crate::Error =
                                     ErrorKind::HashError(
                                         sha1.to_string(),
                                         hash,
                                     )
                                     .into();
+                                let decision =
+                                    if !has_next_route && has_more_attempts {
+                                        "clean_retry"
+                                    } else if has_next_route {
+                                        "switch_route"
+                                    } else {
+                                        "stop"
+                                    };
+                                record_download_attempt_failure(
+                                    &mut attempt_history,
+                                    route,
+                                    total_attempts,
+                                    &route_error,
+                                    decision,
+                                    Some(status),
+                                    remote_addr,
+                                    Some(http_version),
+                                );
                                 last_error = Some(route_error);
                                 if !has_next_route && has_more_attempts {
                                     if modrinth_request_kind.is_some() {
@@ -1654,7 +2330,22 @@ async fn fetch_advanced_with_client_and_progress(
                         if let Some(validate_response) = response_validator
                             && let Err(error) = validate_response(&bytes)
                         {
-                            record_route_failure(route);
+                            record_route_failure(route, resource, None);
+                            let decision = if has_next_route {
+                                "switch_route"
+                            } else {
+                                "stop"
+                            };
+                            record_download_attempt_failure(
+                                &mut attempt_history,
+                                route,
+                                total_attempts,
+                                &error,
+                                decision,
+                                Some(status),
+                                remote_addr,
+                                Some(http_version),
+                            );
                             if has_next_route {
                                 tracing::warn!(
                                     url = %log_request_url,
@@ -1664,7 +2355,12 @@ async fn fetch_advanced_with_client_and_progress(
                                 last_error = Some(error);
                                 break;
                             }
-                            return Err(error);
+                            return Err(attach_download_attempt_history(
+                                error,
+                                &attempt_history,
+                                total_attempts,
+                                attempt_budget,
+                            ));
                         }
 
                         tracing::trace!(
@@ -1690,16 +2386,46 @@ async fn fetch_advanced_with_client_and_progress(
                         }
                         record_route_success(
                             route,
+                            resource,
                             ttfb,
                             bytes.len() as u64,
                             transfer_started.elapsed(),
+                            remote_addr,
+                        );
+                        tracing::debug!(
+                            source = route.source.as_str(),
+                            remote_addr = ?remote_addr,
+                            http_version = ?http_version,
+                            dns_candidates = ?route_host(route).map(|host| {
+                                DOWNLOAD_DNS_RESOLVER.resolved_addresses(&host)
+                            }),
+                            ttfb_ms = ttfb.as_millis(),
+                            "Recorded download route connection details"
                         );
 
                         return Ok(bytes);
                     } else if let Err(err) = bytes {
-                        record_route_failure(route);
+                        record_route_failure(route, resource, None);
                         let error_message = err.to_string();
-                        last_error = Some(err.into());
+                        let error: crate::Error = err.into();
+                        let decision = if has_next_route {
+                            "switch_route"
+                        } else if has_more_attempts {
+                            "retry_same_route"
+                        } else {
+                            "stop"
+                        };
+                        record_download_attempt_failure(
+                            &mut attempt_history,
+                            route,
+                            total_attempts,
+                            &error,
+                            decision,
+                            Some(status),
+                            remote_addr,
+                            Some(http_version),
+                        );
+                        last_error = Some(error);
                         if has_next_route {
                             if modrinth_request_kind.is_some() {
                                 tracing::warn!(
@@ -1745,9 +2471,27 @@ async fn fetch_advanced_with_client_and_progress(
                 }
                 Err(err) => {
                     drop(permit);
-                    record_route_failure(route);
+                    record_route_failure(route, resource, None);
                     let error_message = err.to_string();
-                    last_error = Some(err.into());
+                    let error: crate::Error = err.into();
+                    let decision = if has_next_route {
+                        "switch_route"
+                    } else if has_more_attempts {
+                        "retry_same_route"
+                    } else {
+                        "stop"
+                    };
+                    record_download_attempt_failure(
+                        &mut attempt_history,
+                        route,
+                        total_attempts,
+                        &error,
+                        decision,
+                        None,
+                        None,
+                        None,
+                    );
+                    last_error = Some(error);
                     if has_next_route {
                         if modrinth_request_kind.is_some() {
                             tracing::warn!(
@@ -1799,12 +2543,18 @@ async fn fetch_advanced_with_client_and_progress(
         }
     }
 
-    Err(last_error.unwrap_or_else(|| {
+    let error = last_error.unwrap_or_else(|| {
         ErrorKind::OtherError(format!(
             "Unable to download {url} from any source"
         ))
         .into()
-    }))
+    });
+    Err(attach_download_attempt_history(
+        error,
+        &attempt_history,
+        total_attempts,
+        attempt_budget,
+    ))
 }
 
 #[derive(Default)]
@@ -2185,14 +2935,18 @@ async fn response_status_error(
     request_url: &str,
 ) -> crate::Error {
     let status = response.status();
-    let backup_error = response.error_for_status_ref().unwrap_err();
     if let Ok(mut error) = response.json::<LabrinthError>().await {
         error.status = Some(status.as_u16());
         error.method = Some(method.as_str().to_string());
         error.url = Some(sanitize_url_for_log(request_url));
         ErrorKind::LabrinthError(error).into()
     } else {
-        backup_error.into()
+        ErrorKind::HttpError {
+            status: status.as_u16(),
+            method: method.as_str().to_string(),
+            url: sanitize_url_for_log(request_url),
+        }
+        .into()
     }
 }
 
@@ -2257,22 +3011,108 @@ fn byte_range_header_value(
     })
 }
 
+#[derive(Clone, Debug)]
+struct MirrorRequestLimiter {
+    tokens: f64,
+    rate_per_second: f64,
+    last_refill: Instant,
+    cooldown_until: Option<Instant>,
+    last_throttle: Option<Instant>,
+}
+
+impl MirrorRequestLimiter {
+    fn new(now: Instant) -> Self {
+        Self {
+            tokens: BMCL_REQUEST_BURST,
+            rate_per_second: BMCL_REQUEST_RATE_MAX,
+            last_refill: now,
+            cooldown_until: None,
+            last_throttle: None,
+        }
+    }
+
+    fn refill(&mut self, now: Instant) {
+        let elapsed = now.saturating_duration_since(self.last_refill);
+        self.tokens = (self.tokens
+            + elapsed.as_secs_f64() * self.rate_per_second)
+            .min(BMCL_REQUEST_BURST);
+        self.last_refill = now;
+        if self.last_throttle.is_some_and(|last| {
+            now.saturating_duration_since(last) >= BMCL_RATE_RECOVERY_INTERVAL
+        }) {
+            self.rate_per_second =
+                (self.rate_per_second * 1.25).min(BMCL_REQUEST_RATE_MAX);
+            self.last_throttle =
+                (self.rate_per_second < BMCL_REQUEST_RATE_MAX).then_some(now);
+        }
+    }
+
+    fn throttle(&mut self, now: Instant, retry_after: time::Duration) {
+        self.rate_per_second = (self.rate_per_second / 2.0).max(1.0);
+        self.tokens = 0.0;
+        self.cooldown_until = Some(now + retry_after);
+        self.last_throttle = Some(now);
+    }
+}
+
+fn mirror_limiter_key(route: &DownloadRoute) -> Option<String> {
+    (route.source == DownloadRouteSource::Bmclapi)
+        .then(|| range_splitting_authority(route))
+        .flatten()
+}
+
 async fn wait_for_mirror_request_slot(route: &DownloadRoute) {
     if route.source != DownloadRouteSource::Bmclapi {
         return;
     }
-
-    let mut slots = MIRROR_REQUEST_SLOTS.lock().await;
-    let index = slots
-        .iter()
-        .enumerate()
-        .min_by_key(|(_, available_at)| **available_at)
-        .map(|(index, _)| index)
-        .expect("mirror request slots are never empty");
-    if let Some(delay) = slots[index].checked_duration_since(Instant::now()) {
+    let Some(key) = mirror_limiter_key(route) else {
+        return;
+    };
+    loop {
+        let delay = {
+            let now = Instant::now();
+            let mut limiters = MIRROR_REQUEST_LIMITERS.lock();
+            let limiter = limiters
+                .entry(key.clone())
+                .or_insert_with(|| MirrorRequestLimiter::new(now));
+            limiter.refill(now);
+            if let Some(until) = limiter.cooldown_until
+                && until > now
+            {
+                until.saturating_duration_since(now)
+            } else if limiter.tokens >= 1.0 {
+                limiter.cooldown_until = None;
+                limiter.tokens -= 1.0;
+                return;
+            } else {
+                time::Duration::from_secs_f64(
+                    (1.0 - limiter.tokens) / limiter.rate_per_second,
+                )
+            }
+        };
         tokio::time::sleep(delay).await;
     }
-    slots[index] = Instant::now() + MIRROR_REQUEST_START_INTERVAL;
+}
+
+fn throttle_mirror_request_slot(
+    route: &DownloadRoute,
+    retry_after: Option<time::Duration>,
+) {
+    if let Some(state) = crate::State::get_if_initialized() {
+        state.record_download_throttle();
+    }
+    let Some(key) = mirror_limiter_key(route) else {
+        return;
+    };
+    let now = Instant::now();
+    MIRROR_REQUEST_LIMITERS
+        .lock()
+        .entry(key)
+        .or_insert_with(|| MirrorRequestLimiter::new(now))
+        .throttle(
+            now,
+            retry_after.unwrap_or_else(|| time::Duration::from_secs(1)),
+        );
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2288,10 +3128,6 @@ async fn send_path_request_with_clients(
     redirect_target: Option<&AsyncMutex<Option<Url>>>,
 ) -> crate::Result<(reqwest::Response, String)> {
     wait_for_mirror_request_slot(route).await;
-    let client = match route.proxy {
-        ProxyPolicy::System => system_client,
-        ProxyPolicy::Direct => direct_client,
-    };
     let original = Url::parse(&route.url)?;
     let mut current = match redirect_target {
         Some(target) => target
@@ -2304,6 +3140,11 @@ async fn send_path_request_with_clients(
     };
     let mut reused_redirect_target = current != original;
     for redirect_count in 0..=5 {
+        let client = if route.proxy == ProxyPolicy::Direct {
+            direct_client
+        } else {
+            system_client
+        };
         let same_as_original = same_origin(&original, &current);
         let allow_sensitive = route.allow_sensitive_headers && same_as_original;
         let mut request = client.get(current.clone());
@@ -2332,6 +3173,12 @@ async fn send_path_request_with_clients(
         }
 
         let response = request.send().await?;
+        if matches!(
+            response.status(),
+            StatusCode::TOO_MANY_REQUESTS | StatusCode::SERVICE_UNAVAILABLE
+        ) {
+            throttle_mirror_request_slot(route, retry_after(&response));
+        }
         if !response.status().is_redirection() {
             if reused_redirect_target
                 && (response.status().is_client_error()
@@ -2517,6 +3364,8 @@ struct SegmentedDownloadSuccess {
     final_url: String,
     ttfb: time::Duration,
     transfer_elapsed: time::Duration,
+    remote_addr: Option<std::net::SocketAddr>,
+    http_version: Option<reqwest::Version>,
 }
 
 enum SegmentedDownloadOutcome {
@@ -2545,6 +3394,8 @@ struct SegmentDownloadCompletion {
     final_url: String,
     is_first_range: bool,
     ttfb: time::Duration,
+    remote_addr: Option<std::net::SocketAddr>,
+    http_version: Option<reqwest::Version>,
 }
 
 struct SegmentCleanupGuard {
@@ -2585,6 +3436,13 @@ impl Drop for SegmentCleanupGuard {
         }
         for index in 0..MAX_SEGMENT_CONCURRENCY {
             let _ = std::fs::remove_file(segment_path(&self.part_path, index));
+            for candidate in 0..2 {
+                let _ = std::fs::remove_file(tail_candidate_path(
+                    &self.part_path,
+                    index,
+                    candidate,
+                ));
+            }
         }
     }
 }
@@ -2624,12 +3482,54 @@ fn validate_resource_version(
 }
 
 fn segmented_concurrency_cap(available_permits: usize) -> usize {
-    let fair_share = if available_permits > 1 {
-        available_permits - 1
+    available_permits.min(MAX_SEGMENT_CONCURRENCY)
+}
+
+fn route_segmented_concurrency_cap(
+    route: &DownloadRoute,
+    available_permits: usize,
+) -> usize {
+    let cap = segmented_concurrency_cap(available_permits);
+    if route.source == DownloadRouteSource::Bmclapi {
+        cap.min(4)
     } else {
-        available_permits
-    };
-    fair_share.min(MAX_SEGMENT_CONCURRENCY)
+        cap
+    }
+}
+
+fn configured_semaphore_limit(semaphore: &FetchSemaphore) -> usize {
+    if let Some(state) = crate::State::get_if_initialized() {
+        if std::ptr::eq(&state.fetch_semaphore.0, &semaphore.0)
+            || std::ptr::eq(&state.download_semaphore.0, &semaphore.0)
+            || std::ptr::eq(&state.api_semaphore.0, &semaphore.0)
+        {
+            return state.download_concurrency();
+        }
+    }
+    semaphore.0.available_permits().max(1)
+}
+
+async fn acquire_initial_segment_permits(
+    semaphore: &FetchSemaphore,
+    count: usize,
+) -> crate::Result<Vec<SemaphorePermit<'_>>> {
+    let queue_started = Instant::now();
+    let mut batch = semaphore.0.acquire_many(count as u32).await?;
+    let mut permits = Vec::with_capacity(count);
+    while batch.num_permits() > 1 {
+        permits.push(
+            batch
+                .split(1)
+                .expect("a multi-permit semaphore guard can be split"),
+        );
+    }
+    permits.push(batch);
+    tracing::debug!(
+        queue_wait_ms = queue_started.elapsed().as_millis(),
+        actual_segments = permits.len(),
+        "Acquired initial segmented download permits"
+    );
+    Ok(permits)
 }
 
 fn initial_segment_count(size: u64, available_permits: usize) -> usize {
@@ -2676,11 +3576,6 @@ fn expansion_block_reason(
     if snapshot.sample_count < SEGMENT_EXPANSION_SAMPLE_COUNT {
         return Some("insufficient aggregate speed samples");
     }
-    if snapshot.aggregate_speed < snapshot.speed_floor
-        || snapshot.recent_average < snapshot.speed_floor
-    {
-        return Some("aggregate throughput below speed floor");
-    }
     if remaining_bytes
         < MIN_SEGMENT_SIZE.saturating_mul(active_ranges as u64 + 1)
     {
@@ -2689,8 +3584,74 @@ fn expansion_block_reason(
     None
 }
 
+fn sustained_low_throughput(
+    downloaded: u64,
+    window_start_bytes: u64,
+    elapsed: time::Duration,
+    remaining_bytes: u64,
+) -> Option<u64> {
+    if elapsed < SUSTAINED_LOW_THROUGHPUT_WINDOW
+        || remaining_bytes < SUSTAINED_LOW_THROUGHPUT_MIN_REMAINING
+    {
+        return None;
+    }
+    let bytes_per_second = downloaded
+        .saturating_sub(window_start_bytes)
+        .checked_div(elapsed.as_secs().max(1))
+        .unwrap_or(0);
+    (bytes_per_second < SUSTAINED_LOW_THROUGHPUT_FLOOR)
+        .then_some(bytes_per_second)
+}
+
 fn segment_path(part_path: &Path, index: usize) -> PathBuf {
     suffixed_path(part_path, &format!(".segment-{index}"))
+}
+
+fn tail_candidate_path(
+    part_path: &Path,
+    range_index: usize,
+    candidate_index: usize,
+) -> PathBuf {
+    suffixed_path(
+        part_path,
+        &format!(".segment-{range_index}.tail-{candidate_index}"),
+    )
+}
+
+struct TailCandidateCleanupGuard {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl TailCandidateCleanupGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for TailCandidateCleanupGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+}
+
+struct TailCandidateCompletion {
+    path: PathBuf,
+    final_url: String,
+    remote_addr: Option<std::net::SocketAddr>,
+    http_version: reqwest::Version,
+}
+
+impl Drop for TailCandidateCompletion {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
 }
 
 async fn cleanup_segment_files(
@@ -2699,8 +3660,178 @@ async fn cleanup_segment_files(
 ) -> crate::Result<()> {
     for index in 0..segment_count {
         remove_if_exists(&segment_path(part_path, index)).await?;
+        for candidate in 0..2 {
+            remove_if_exists(&tail_candidate_path(part_path, index, candidate))
+                .await?;
+        }
     }
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn download_tail_candidate(
+    route: &DownloadRoute,
+    range: &DownloadRange,
+    total_size: u64,
+    requested_start: u64,
+    requested_end: u64,
+    custom_header: Option<&(String, String)>,
+    credentials: Option<&crate::state::ModrinthCredentials>,
+    download_meta: Option<&DownloadMeta>,
+    part_path: &Path,
+    candidate_index: usize,
+    system_client: &reqwest::Client,
+    direct_client: &reqwest::Client,
+    validator: &Mutex<Option<ResourceValidator>>,
+    redirect_target: Option<&AsyncMutex<Option<Url>>>,
+) -> Result<TailCandidateCompletion, SegmentDownloadError> {
+    let _activity = (candidate_index > 0)
+        .then(crate::State::get_if_initialized)
+        .flatten()
+        .map(|state| state.begin_download_connection());
+    let path = tail_candidate_path(part_path, range.index, candidate_index);
+    let mut cleanup = TailCandidateCleanupGuard::new(path.clone());
+    let response = tokio::time::timeout(
+        FILE_TRANSFER_FIRST_BYTE_TIMEOUT,
+        send_path_request_with_clients(
+            route,
+            custom_header,
+            credentials,
+            download_meta,
+            Some(requested_start),
+            Some(requested_end),
+            system_client,
+            direct_client,
+            redirect_target,
+        ),
+    )
+    .await
+    .map_err(|_| SegmentDownloadError::Transport)?
+    .map_err(|_| SegmentDownloadError::Transport)?;
+    let (response, final_url) = response;
+    let parsed_content_range = parse_content_range(&response);
+    if response.status() != StatusCode::PARTIAL_CONTENT
+        || !parsed_content_range.is_some_and(|range| {
+            range.start == requested_start
+                && range.end == requested_end
+                && range.total.is_none_or(|total| total == total_size)
+        })
+    {
+        return Err(SegmentDownloadError::Protocol(
+            "invalid hedged Content-Range",
+        ));
+    }
+    if !validate_resource_version(validator, &response) {
+        return Err(SegmentDownloadError::Protocol(
+            "resource validator changed during tail hedge",
+        ));
+    }
+    let remote_addr = response.remote_addr();
+    let http_version = response.version();
+    let expected = requested_end.saturating_sub(requested_start) + 1;
+    let mut received = 0_u64;
+    let mut file = create_download_file(&path)
+        .await
+        .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
+    let mut stream = response.bytes_stream();
+    loop {
+        let chunk =
+            tokio::time::timeout(RANGE_IDLE_RECONNECT_TIMEOUT, stream.next())
+                .await
+                .map_err(|_| SegmentDownloadError::Transport)?;
+        let Some(chunk) = chunk else {
+            break;
+        };
+        let chunk = chunk.map_err(|_| SegmentDownloadError::Transport)?;
+        let accepted = usize::try_from(expected.saturating_sub(received))
+            .unwrap_or(usize::MAX)
+            .min(chunk.len());
+        file.write_all(&chunk[..accepted]).await.map_err(|error| {
+            SegmentDownloadError::Fatal(IOError::with_path(error, &path).into())
+        })?;
+        received += accepted as u64;
+        if let Some(state) = crate::State::get_if_initialized() {
+            state.record_download_bytes(accepted as u64);
+        }
+        if received == expected {
+            break;
+        }
+    }
+    if received != expected {
+        return Err(SegmentDownloadError::Transport);
+    }
+    file.flush().await.map_err(|error| {
+        SegmentDownloadError::Fatal(IOError::with_path(error, &path).into())
+    })?;
+    drop(file);
+    cleanup.disarm();
+    Ok(TailCandidateCompletion {
+        path,
+        final_url,
+        remote_addr,
+        http_version,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn race_tail_candidates(
+    route: &DownloadRoute,
+    range: &DownloadRange,
+    total_size: u64,
+    requested_start: u64,
+    requested_end: u64,
+    custom_header: Option<&(String, String)>,
+    credentials: Option<&crate::state::ModrinthCredentials>,
+    download_meta: Option<&DownloadMeta>,
+    part_path: &Path,
+    system_client: &reqwest::Client,
+    direct_client: &reqwest::Client,
+    validator: &Mutex<Option<ResourceValidator>>,
+    redirect_target: Option<&AsyncMutex<Option<Url>>>,
+) -> Result<(TailCandidateCompletion, usize), SegmentDownloadError> {
+    let first = download_tail_candidate(
+        route,
+        range,
+        total_size,
+        requested_start,
+        requested_end,
+        custom_header,
+        credentials,
+        download_meta,
+        part_path,
+        0,
+        system_client,
+        direct_client,
+        validator,
+        redirect_target,
+    );
+    let second = download_tail_candidate(
+        route,
+        range,
+        total_size,
+        requested_start,
+        requested_end,
+        custom_header,
+        credentials,
+        download_meta,
+        part_path,
+        1,
+        system_client,
+        direct_client,
+        validator,
+        redirect_target,
+    );
+    tokio::pin!(first, second);
+    tokio::select! {
+        result = &mut first => match result {
+            Ok(result) => Ok((result, 0)),
+            Err(first_error) => second.await.map(|result| (result, 1)).map_err(|_| first_error),
+        },
+        result = &mut second => match result {
+            Ok(result) => Ok((result, 1)),
+            Err(second_error) => first.await.map(|result| (result, 0)).map_err(|_| second_error),
+        },
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2719,7 +3850,12 @@ async fn download_segment(
     speed: &DownloadSpeedTracker,
     validator: &Mutex<Option<ResourceValidator>>,
     redirect_target: Option<&AsyncMutex<Option<Url>>>,
+    semaphore: &FetchSemaphore,
+    hedge_count: &AtomicUsize,
+    hedge_active: &AtomicBool,
 ) -> Result<SegmentDownloadCompletion, SegmentDownloadError> {
+    let _activity = crate::State::get_if_initialized()
+        .map(|state| state.begin_download_connection());
     let _range_guard = DownloadRangeGuard(Arc::clone(&range.state));
     let request_started = Instant::now();
     let path = segment_path(part_path, range.index);
@@ -2728,6 +3864,8 @@ async fn download_segment(
         .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
     let mut pending_progress = 0_u64;
     let mut final_url = route.url.clone();
+    let mut remote_addr = None;
+    let mut http_version = None;
     for attempt in 1..=SEGMENT_RETRY_ATTEMPTS {
         let requested_start = range.start + {
             let state = range.state.lock();
@@ -2808,6 +3946,8 @@ async fn download_segment(
                 "resource validator changed between ranges",
             ));
         }
+        remote_addr = response.remote_addr();
+        http_version = Some(response.version());
         if range.index == 0 && requested_start == range.start {
             tracing::debug!(
                 original_url = %sanitize_url_for_log(&route.url),
@@ -2821,9 +3961,166 @@ async fn download_segment(
             );
         }
         let mut stream = response.bytes_stream();
-        let mut last_chunk_at = Instant::now();
         let mut stream_end_reason = None;
-        while let Some(chunk) = stream.next().await {
+        loop {
+            let tail_threshold = TAIL_HEDGE_MIN_REMAINING.max(total_size / 10);
+            let tail_eligible = range.remaining() <= tail_threshold;
+            let chunk = match tokio::time::timeout(
+                if tail_eligible {
+                    TAIL_HEDGE_IDLE_TIMEOUT
+                } else {
+                    RANGE_IDLE_RECONNECT_TIMEOUT
+                },
+                stream.next(),
+            )
+            .await
+            {
+                Ok(Some(chunk)) => chunk,
+                Ok(None) => break,
+                Err(_) if tail_eligible => {
+                    let hedge_start =
+                        range.start + range.state.lock().downloaded;
+                    let hedge_end = range.end();
+                    let hedge_reserved = !hedge_active
+                        .swap(true, Ordering::AcqRel)
+                        && hedge_count.load(Ordering::Acquire)
+                            < MAX_TAIL_HEDGES_PER_FILE;
+                    if hedge_reserved {
+                        let global_permit = TAIL_HEDGE_SEMAPHORE.try_acquire();
+                        let connection_permit = semaphore.0.try_acquire();
+                        if let (Ok(_global_permit), Ok(_connection_permit)) =
+                            (global_permit, connection_permit)
+                        {
+                            hedge_count.fetch_add(1, Ordering::AcqRel);
+                            drop(stream);
+                            file.flush().await.map_err(|error| {
+                                SegmentDownloadError::Fatal(
+                                    IOError::with_path(error, &path).into(),
+                                )
+                            })?;
+                            let raced = race_tail_candidates(
+                                route,
+                                &range,
+                                total_size,
+                                hedge_start,
+                                hedge_end,
+                                custom_header,
+                                credentials,
+                                download_meta,
+                                part_path,
+                                system_client,
+                                direct_client,
+                                validator,
+                                redirect_target,
+                            )
+                            .await;
+                            hedge_active.store(false, Ordering::Release);
+                            match raced {
+                                Ok((winner, winner_index)) => {
+                                    let mut winner_file =
+                                        File::open(&winner.path)
+                                            .await
+                                            .map_err(|error| {
+                                                SegmentDownloadError::Fatal(
+                                                    IOError::with_path(
+                                                        error,
+                                                        &winner.path,
+                                                    )
+                                                    .into(),
+                                                )
+                                            })?;
+                                    let mut buffer = vec![0_u8; 256 * 1024];
+                                    loop {
+                                        let read = winner_file
+                                            .read(&mut buffer)
+                                            .await
+                                            .map_err(|error| {
+                                                SegmentDownloadError::Fatal(
+                                                    IOError::with_path(
+                                                        error,
+                                                        &winner.path,
+                                                    )
+                                                    .into(),
+                                                )
+                                            })?;
+                                        if read == 0 {
+                                            break;
+                                        }
+                                        let (accepted, _) =
+                                            range.accept_chunk(read);
+                                        file.write_all(&buffer[..accepted])
+                                            .await
+                                            .map_err(|error| {
+                                                SegmentDownloadError::Fatal(
+                                                    IOError::with_path(
+                                                        error, &path,
+                                                    )
+                                                    .into(),
+                                                )
+                                            })?;
+                                        pending_progress += accepted as u64;
+                                        speed.record_bytes(accepted as u64);
+                                        if let Some(state) =
+                                            crate::State::get_if_initialized()
+                                        {
+                                            state.record_download_bytes(
+                                                accepted as u64,
+                                            );
+                                        }
+                                    }
+                                    remove_if_exists(&winner.path)
+                                        .await
+                                        .map_err(SegmentDownloadError::Fatal)?;
+                                    final_url = winner.final_url.clone();
+                                    remote_addr = winner.remote_addr;
+                                    http_version = Some(winner.http_version);
+                                    tracing::info!(
+                                        url = %sanitize_url_for_log(&route.url),
+                                        range_start = hedge_start,
+                                        range_end = hedge_end,
+                                        winner = winner_index,
+                                        "Tail Range hedge won"
+                                    );
+                                    break;
+                                }
+                                Err(SegmentDownloadError::Fatal(error)) => {
+                                    return Err(SegmentDownloadError::Fatal(
+                                        error,
+                                    ));
+                                }
+                                Err(SegmentDownloadError::Protocol(reason)) => {
+                                    return Err(
+                                        SegmentDownloadError::Protocol(reason),
+                                    );
+                                }
+                                Err(SegmentDownloadError::Transport) => {}
+                            }
+                        } else {
+                            hedge_active.store(false, Ordering::Release);
+                        }
+                    }
+                    stream_end_reason = Some(format!(
+                        "tail range made no progress for {:.0} seconds",
+                        TAIL_HEDGE_IDLE_TIMEOUT.as_secs_f64()
+                    ));
+                    break;
+                }
+                Err(_) => {
+                    stream_end_reason = Some(format!(
+                        "no range data for {:.0} seconds",
+                        RANGE_IDLE_RECONNECT_TIMEOUT.as_secs_f64()
+                    ));
+                    tracing::warn!(
+                        url = %sanitize_url_for_log(&route.url),
+                        range_start = requested_start,
+                        range_end = requested_end,
+                        remaining_bytes = range.remaining(),
+                        idle_seconds = RANGE_IDLE_RECONNECT_TIMEOUT.as_secs_f64(),
+                        "Range stream stalled; reconnecting from confirmed offset"
+                    );
+                    break;
+                }
+            };
             let chunk = match chunk {
                 Ok(chunk) => chunk,
                 Err(error) => {
@@ -2837,18 +4134,8 @@ async fn download_segment(
                     IOError::with_path(error, &path).into(),
                 )
             })?;
-            let elapsed = last_chunk_at.elapsed();
             pending_progress += accepted as u64;
             speed.record_bytes(accepted as u64);
-            if range.remaining() > 0
-                && elapsed > FILE_TRANSFER_SLOW_INTERVAL
-                && (accepted as u128) < elapsed.as_millis()
-            {
-                stream_end_reason =
-                    Some("range stopped making progress".to_string());
-                break;
-            }
-            last_chunk_at = Instant::now();
             if pending_progress >= MIN_SEGMENT_SIZE {
                 let _ = progress.send(pending_progress);
                 pending_progress = 0;
@@ -2899,6 +4186,8 @@ async fn download_segment(
         final_url,
         is_first_range: range.index == 0,
         ttfb: request_started.elapsed(),
+        remote_addr,
+        http_version,
     })
 }
 
@@ -2913,40 +4202,49 @@ async fn try_segmented_download(
     mut progress: Option<&mut FetchProgressFn<'_>>,
     system_client: &reqwest::Client,
     direct_client: &reqwest::Client,
+    attempt: usize,
+    max_attempts: usize,
+    allow_low_throughput_abort: bool,
 ) -> SegmentedDownloadOutcome {
     if let Err(error) = cleanup_segment_files(part_path, 256).await {
         return SegmentedDownloadOutcome::Fatal(error);
     }
     let mut cleanup_guard = SegmentCleanupGuard::new(part_path);
-    let available_at_start = semaphore.0.available_permits();
-    let concurrency_cap = segmented_concurrency_cap(available_at_start);
-    let requested_initial_count =
-        initial_segment_count(size, available_at_start);
-    let mut permits = Vec::with_capacity(requested_initial_count);
-    for _ in 0..requested_initial_count {
-        match semaphore.0.try_acquire() {
-            Ok(permit) => permits.push(permit),
-            Err(_) => break,
-        }
-    }
-    if permits.len() < 2 {
+    let configured_limit = configured_semaphore_limit(semaphore);
+    let concurrency_cap =
+        route_segmented_concurrency_cap(route, configured_limit);
+    let requested_initial_count = initial_segment_count(size, configured_limit);
+    if requested_initial_count < 2 {
         tracing::debug!(
             original_url = %sanitize_url_for_log(&route.url),
             file_size = size,
             supports_range = true,
-            available_permits = semaphore.0.available_permits(),
-            "Falling back to a single connection because initial segmented permits are unavailable"
+            configured_limit,
+            "Using a single connection because the configured limit is one"
         );
         return SegmentedDownloadOutcome::FallbackSingle {
             disable_range: false,
-            reason: "fewer than two fair global permits available",
+            reason: "configured connection limit is one",
         };
     }
+    let permits = match acquire_initial_segment_permits(
+        semaphore,
+        requested_initial_count,
+    )
+    .await
+    {
+        Ok(permits) => permits,
+        Err(error) => return SegmentedDownloadOutcome::Fatal(error),
+    };
+    record_install_download_started(request, route, attempt, max_attempts)
+        .await;
     let transfer_started = Instant::now();
     let (progress_tx, mut progress_rx) = tokio::sync::mpsc::unbounded_channel();
     let speed = DownloadSpeedTracker::default();
     let validator = Mutex::new(None);
     let redirect_target = AsyncMutex::new(None);
+    let hedge_count = AtomicUsize::new(0);
+    let hedge_active = AtomicBool::new(false);
     let mut downloads = futures::stream::FuturesUnordered::new();
     let mut ranges = create_initial_ranges(size, permits.len());
     for (range, permit) in ranges.iter().cloned().zip(permits) {
@@ -2966,6 +4264,9 @@ async fn try_segmented_download(
             &validator,
             (route.source == DownloadRouteSource::Mcim)
                 .then_some(&redirect_target),
+            semaphore,
+            &hedge_count,
+            &hedge_active,
         ));
     }
     tracing::debug!(
@@ -2984,18 +4285,22 @@ async fn try_segmented_download(
     let mut last_expansion = Instant::now();
     let mut last_block_reason = None;
     let mut downloaded = 0_u64;
+    let mut throughput_window_started = Instant::now();
+    let mut throughput_window_bytes = 0_u64;
     let mut segment_error = None;
     let mut final_url = None;
     let mut initial_ttfb = None;
+    let mut remote_addr = None;
+    let mut http_version = None;
     while !downloads.is_empty() {
         tokio::select! {
             Some(delta) = progress_rx.recv() => {
                 downloaded = downloaded.saturating_add(delta);
+                record_install_download_progress(request, downloaded, size).await;
                 if let Some(progress) = progress.as_mut()
                     && let Err(error) = progress(downloaded, size).await
                 {
-                    segment_error = Some(SegmentDownloadError::Fatal(error));
-                    break;
+                    tracing::warn!(%error, "Download progress callback failed");
                 }
             }
             result = downloads.next() => {
@@ -3004,6 +4309,8 @@ async fn try_segmented_download(
                         Ok(completion) if completion.is_first_range => {
                             final_url = Some(completion.final_url);
                             initial_ttfb = Some(completion.ttfb);
+                            remote_addr = completion.remote_addr;
+                            http_version = completion.http_version;
                         }
                         Ok(_) => {}
                         Err(error) => {
@@ -3014,6 +4321,32 @@ async fn try_segmented_download(
                 }
             }
             _ = scheduler.tick() => {
+                let throughput_elapsed = throughput_window_started.elapsed();
+                if allow_low_throughput_abort
+                    && let Some(bytes_per_second) = sustained_low_throughput(
+                        downloaded,
+                        throughput_window_bytes,
+                        throughput_elapsed,
+                        size.saturating_sub(downloaded),
+                    )
+                {
+                    tracing::warn!(
+                        original_url = %sanitize_url_for_log(&route.url),
+                        source = route.source.as_str(),
+                        bytes_per_second,
+                        remaining_bytes = size.saturating_sub(downloaded),
+                        "Segmented download stayed slow; switching route"
+                    );
+                    segment_error = Some(SegmentDownloadError::Transport);
+                    break;
+                }
+                if throughput_elapsed >= SUSTAINED_LOW_THROUGHPUT_WINDOW {
+                    throughput_window_started = Instant::now();
+                    throughput_window_bytes = downloaded;
+                }
+                if hedge_active.load(Ordering::Acquire) {
+                    continue;
+                }
                 let snapshot = speed.speed_snapshot();
                 let active_ranges = downloads.len();
                 let remaining_bytes = ranges
@@ -3084,6 +4417,9 @@ async fn try_segmented_download(
                             &validator,
                             (route.source == DownloadRouteSource::Mcim)
                                 .then_some(&redirect_target),
+                            semaphore,
+                            &hedge_count,
+                            &hedge_active,
                         ));
                         ranges.push(new_range);
                         last_expansion = Instant::now();
@@ -3097,6 +4433,7 @@ async fn try_segmented_download(
     while let Ok(delta) = progress_rx.try_recv() {
         downloaded = downloaded.saturating_add(delta);
     }
+    record_install_download_progress(request, downloaded, size).await;
     if let Some(error) = segment_error {
         let _ = cleanup_segment_files(part_path, 256).await;
         return match error {
@@ -3116,6 +4453,7 @@ async fn try_segmented_download(
     }
 
     ranges.sort_unstable_by_key(|range| range.start);
+    record_install_download_stage(request, DownloadItemStatus::Writing).await;
     cleanup_guard.mark_part_dirty();
     let mut output = match create_download_file(part_path).await {
         Ok(file) => file,
@@ -3174,6 +4512,7 @@ async fn try_segmented_download(
         };
     }
     let computed = hashers.finish(merged_size);
+    record_install_download_stage(request, DownloadItemStatus::Verifying).await;
     if verify_computed_integrity(&request.integrity, &computed).is_err() {
         let _ = remove_if_exists(part_path).await;
         return SegmentedDownloadOutcome::FallbackSingle {
@@ -3195,15 +4534,77 @@ async fn try_segmented_download(
         && let Some(progress) = progress.as_mut()
         && let Err(error) = progress(size, size).await
     {
-        return SegmentedDownloadOutcome::Fatal(error);
+        tracing::warn!(%error, "Download progress callback failed");
     }
+    record_range_splitting_success(route);
     cleanup_guard.disarm();
     SegmentedDownloadOutcome::Success(SegmentedDownloadSuccess {
         size: merged_size,
         final_url: final_url.unwrap_or_else(|| route.url.clone()),
         ttfb: initial_ttfb.unwrap_or_default(),
         transfer_elapsed: transfer_started.elapsed(),
+        remote_addr,
+        http_version,
     })
+}
+
+async fn record_install_download_started(
+    request: &DownloadRequest,
+    route: &DownloadRoute,
+    attempt: usize,
+    max_attempts: usize,
+) {
+    let Some(tracking) = &request.install_tracking else {
+        return;
+    };
+    if let Err(error) = tracking
+        .reporter
+        .record_download_request(
+            &tracking.item_id,
+            &tracking.item_name,
+            &sanitize_url_for_log(&route.url),
+            route.source.as_str(),
+            request.integrity.size,
+            attempt as u32,
+            max_attempts as u32,
+        )
+        .await
+    {
+        tracing::warn!(%error, "Failed to record active download request");
+    }
+}
+
+async fn record_install_download_progress(
+    request: &DownloadRequest,
+    bytes: u64,
+    total: u64,
+) {
+    let Some(tracking) = &request.install_tracking else {
+        return;
+    };
+    if let Err(error) = tracking
+        .reporter
+        .record_download_progress(&tracking.item_id, bytes, total)
+        .await
+    {
+        tracing::warn!(%error, "Failed to record download progress");
+    }
+}
+
+async fn record_install_download_stage(
+    request: &DownloadRequest,
+    status: DownloadItemStatus,
+) {
+    let Some(tracking) = &request.install_tracking else {
+        return;
+    };
+    if let Err(error) = tracking
+        .reporter
+        .record_download_stage(&tracking.item_id, status)
+        .await
+    {
+        tracing::warn!(%error, "Failed to record download stage");
+    }
 }
 
 /// Streams a download to a sibling `.part` file, verifies it, then atomically
@@ -3321,11 +4722,18 @@ async fn download_to_path_inner(
 
     let mut attempts = 0;
     let mut last_error = None;
+    let mut attempt_history = VecDeque::new();
     let mut fallback_count = 0;
     let mut partial_route_index = None;
-    let file_attempt_budget = routes.len().saturating_mul(2).max(1);
-    for retry_with_single_thread in [false, true] {
+    let mut terminal_routes = HashSet::new();
+    let file_attempt_budget = routes.len().saturating_mul(3).max(1);
+    for (round, retry_with_single_thread) in
+        [false, true, true].into_iter().enumerate()
+    {
         for (route_index, route) in routes.iter().enumerate() {
+            if terminal_routes.contains(&route.url) {
+                continue;
+            }
             let log_url = sanitize_url_for_log(&route.url);
             if route_index > 0 {
                 fallback_count += 1;
@@ -3334,33 +4742,21 @@ async fn download_to_path_inner(
                 remove_if_exists(&part_path).await?;
             }
             partial_route_index = Some(route_index);
+            let can_switch_route = routes.iter().enumerate().any(
+                |(candidate_index, candidate)| {
+                    candidate_index != route_index
+                        && !terminal_routes.contains(&candidate.url)
+                },
+            );
             while attempts < file_attempt_budget {
                 attempts += 1;
-                if let Some(tracking) = &request.install_tracking
-                    && let Err(error) = tracking
-                        .reporter
-                        .record_download_request(
-                            &tracking.item_id,
-                            &tracking.item_name,
-                            &log_url,
-                            route.source.as_str(),
-                            request.integrity.size,
-                            attempts as u32,
-                            file_attempt_budget as u32,
-                        )
-                        .await
-                {
-                    tracing::warn!(
-                        error = %error,
-                        "Failed to record active download request"
-                    );
-                }
                 tracing::debug!(
                     path = %destination.display(),
                     temporary_path = %part_path.display(),
                     url = %log_url,
                     source = route.source.as_str(),
                     expected_bytes = request.integrity.size,
+                    proxy = ?route.proxy,
                     attempt = attempts,
                     max_attempts = file_attempt_budget,
                     "Starting file download attempt"
@@ -3399,6 +4795,9 @@ async fn download_to_path_inner(
                         progress.as_deref_mut(),
                         &NO_REDIRECT_REQWEST_CLIENT,
                         &DIRECT_REQWEST_CLIENT,
+                        attempts,
+                        file_attempt_budget,
+                        can_switch_route,
                     )
                     .await
                     {
@@ -3406,9 +4805,11 @@ async fn download_to_path_inner(
                             finalize_download(&part_path, destination).await?;
                             record_route_success(
                                 route,
+                                request.resource,
                                 result.ttfb,
                                 result.size,
                                 result.transfer_elapsed,
+                                result.remote_addr,
                             );
                             tracing::debug!(
                                 path = %destination.display(),
@@ -3416,6 +4817,11 @@ async fn download_to_path_inner(
                                 source = route.source.as_str(),
                                 bytes = result.size,
                                 elapsed_ms = result.transfer_elapsed.as_millis(),
+                                remote_addr = ?result.remote_addr,
+                                http_version = ?result.http_version,
+                                dns_candidates = ?route_host(route).map(|host| {
+                                    DOWNLOAD_DNS_RESOLVER.resolved_addresses(&host)
+                                }),
                                 attempt = attempts,
                                 max_attempts = file_attempt_budget,
                                 "Completed file download"
@@ -3447,6 +4853,17 @@ async fn download_to_path_inner(
                             disable_range,
                             reason,
                         } => {
+                            push_download_attempt_diagnostic(
+                                &mut attempt_history,
+                                route,
+                                attempts,
+                                "range",
+                                "fallback_single",
+                                reason,
+                                None,
+                                None,
+                                None,
+                            );
                             tracing::debug!(
                                 original_url = %log_url,
                                 file_size = size,
@@ -3459,13 +4876,23 @@ async fn download_to_path_inner(
                             }
                         }
                         SegmentedDownloadOutcome::SourceFailed => {
-                            record_route_failure(route);
-                            last_error = Some(
-                                ErrorKind::OtherError(format!(
-                                    "File transfer failed from {log_url}"
-                                ))
-                                .into(),
+                            record_route_failure(route, request.resource, None);
+                            let error: crate::Error = ErrorKind::OtherError(
+                                format!("File transfer failed from {log_url}"),
+                            )
+                            .into();
+                            push_download_attempt_diagnostic(
+                                &mut attempt_history,
+                                route,
+                                attempts,
+                                "network",
+                                "switch_route_or_retry_round",
+                                error.to_string(),
+                                None,
+                                None,
+                                None,
                             );
+                            last_error = Some(error);
                             tracing::warn!(
                                 path = %destination.display(),
                                 url = %log_url,
@@ -3477,7 +4904,22 @@ async fn download_to_path_inner(
                             break;
                         }
                         SegmentedDownloadOutcome::Fatal(error) => {
-                            return Err(error);
+                            record_download_attempt_failure(
+                                &mut attempt_history,
+                                route,
+                                attempts,
+                                &error,
+                                "abort",
+                                None,
+                                None,
+                                None,
+                            );
+                            return Err(attach_download_attempt_history(
+                                error,
+                                &attempt_history,
+                                attempts,
+                                file_attempt_budget,
+                            ));
                         }
                     }
                 }
@@ -3502,6 +4944,15 @@ async fn download_to_path_inner(
                     0
                 };
                 let permit = semaphore.0.acquire().await?;
+                let mut activity = crate::State::get_if_initialized()
+                    .map(|state| state.begin_download_connection());
+                record_install_download_started(
+                    &request,
+                    route,
+                    attempts,
+                    file_attempt_budget,
+                )
+                .await;
                 let request_started = Instant::now();
                 let (response, final_url) = match tokio::time::timeout(
                     FILE_TRANSFER_FIRST_BYTE_TIMEOUT,
@@ -3519,7 +4970,18 @@ async fn download_to_path_inner(
                     Ok(Ok(response)) => response,
                     Ok(Err(error)) => {
                         drop(permit);
-                        record_route_failure(route);
+                        drop(activity.take());
+                        record_route_failure(route, request.resource, None);
+                        record_download_attempt_failure(
+                            &mut attempt_history,
+                            route,
+                            attempts,
+                            &error,
+                            "switch_route_or_retry_round",
+                            None,
+                            None,
+                            None,
+                        );
                         tracing::warn!(
                             path = %destination.display(),
                             url = %log_url,
@@ -3534,13 +4996,24 @@ async fn download_to_path_inner(
                     }
                     Err(_) => {
                         drop(permit);
-                        record_route_failure(route);
+                        drop(activity.take());
+                        record_route_failure(route, request.resource, None);
                         let error = ErrorKind::NetworkError(format!(
                             "no response received for {:.0} seconds while downloading {log_url} to {}",
                             FILE_TRANSFER_FIRST_BYTE_TIMEOUT.as_secs_f64(),
                             destination.display(),
                         ))
                         .into();
+                        record_download_attempt_failure(
+                            &mut attempt_history,
+                            route,
+                            attempts,
+                            &error,
+                            "switch_route_or_retry_round",
+                            None,
+                            None,
+                            None,
+                        );
                         tracing::warn!(
                             path = %destination.display(),
                             url = %log_url,
@@ -3557,6 +5030,9 @@ async fn download_to_path_inner(
                 };
                 let ttfb = request_started.elapsed();
                 let status = response.status();
+                let remote_addr = response.remote_addr();
+                let http_version = response.version();
+                let response_retry_after = retry_after(&response);
                 tracing::debug!(
                     path = %destination.display(),
                     url = %log_url,
@@ -3564,10 +5040,22 @@ async fn download_to_path_inner(
                     status = status.as_u16(),
                     content_length = response.content_length(),
                     ttfb_ms = ttfb.as_millis(),
+                    remote_addr = ?remote_addr,
+                    http_version = ?http_version,
+                    dns_candidates = ?route_host(route).map(|host| {
+                        DOWNLOAD_DNS_RESOLVER.resolved_addresses(&host)
+                    }),
                     "Received file download response"
                 );
                 if status.is_client_error() || status.is_server_error() {
-                    record_route_failure(route);
+                    record_route_failure(
+                        route,
+                        request.resource,
+                        (status == StatusCode::TOO_MANY_REQUESTS)
+                            .then_some(response_retry_after.unwrap_or_else(
+                                || fetch_retry_delay(attempts),
+                            )),
+                    );
                     let error = response_status_error(
                         response,
                         &Method::GET,
@@ -3575,11 +5063,53 @@ async fn download_to_path_inner(
                     )
                     .await;
                     drop(permit);
+                    drop(activity.take());
                     if resume_offset > 0
                         && status == StatusCode::RANGE_NOT_SATISFIABLE
                     {
                         remove_if_exists(&part_path).await?;
                     }
+                    let terminal_status = matches!(
+                        status,
+                        StatusCode::UNAUTHORIZED
+                            | StatusCode::FORBIDDEN
+                            | StatusCode::NOT_FOUND
+                            | StatusCode::GONE
+                    );
+                    let cooldown_and_switch = status
+                        == StatusCode::TOO_MANY_REQUESTS
+                        && routes.len() > 1;
+                    if terminal_status || cooldown_and_switch {
+                        terminal_routes.insert(route.url.clone());
+                    } else if status == StatusCode::TOO_MANY_REQUESTS
+                        && routes.len() == 1
+                        && attempts < file_attempt_budget
+                    {
+                        tokio::time::sleep(
+                            response_retry_after
+                                .unwrap_or_else(|| fetch_retry_delay(attempts)),
+                        )
+                        .await;
+                    }
+                    let decision = if terminal_status {
+                        "drop_route"
+                    } else if cooldown_and_switch {
+                        "cooldown_and_switch"
+                    } else if status == StatusCode::TOO_MANY_REQUESTS {
+                        "cooldown_then_retry"
+                    } else {
+                        "retry_next_round"
+                    };
+                    record_download_attempt_failure(
+                        &mut attempt_history,
+                        route,
+                        attempts,
+                        &error,
+                        decision,
+                        Some(status),
+                        remote_addr,
+                        Some(http_version),
+                    );
                     last_error = Some(error);
                     break;
                 }
@@ -3598,7 +5128,8 @@ async fn download_to_path_inner(
                             });
                         if !content_range_valid {
                             drop(permit);
-                            record_route_failure(route);
+                            drop(activity.take());
+                            record_route_failure(route, request.resource, None);
                             disable_range_splitting(route);
                             preserve_or_remove_partial(
                                 &part_path,
@@ -3606,12 +5137,22 @@ async fn download_to_path_inner(
                                 any_route_can_resume(&routes),
                             )
                             .await?;
-                            last_error = Some(
+                            let error: crate::Error =
                                 ErrorKind::OtherError(format!(
                                     "Invalid Content-Range while resuming download from {log_url}"
                                 ))
-                                .into(),
+                                .into();
+                            record_download_attempt_failure(
+                                &mut attempt_history,
+                                route,
+                                attempts,
+                                &error,
+                                "disable_range_and_switch",
+                                Some(status),
+                                remote_addr,
+                                Some(http_version),
                             );
+                            last_error = Some(error);
                             break;
                         }
                         // Hashing the existing prefix is deferred until the
@@ -3636,13 +5177,24 @@ async fn download_to_path_inner(
                             }
                             None => {
                                 drop(permit);
+                                drop(activity.take());
                                 remove_if_exists(&part_path).await?;
-                                last_error = Some(
+                                let error: crate::Error =
                                     ErrorKind::OtherError(format!(
                                         "Partial download changed on disk while resuming {log_url}"
                                     ))
-                                    .into(),
+                                    .into();
+                                record_download_attempt_failure(
+                                    &mut attempt_history,
+                                    route,
+                                    attempts,
+                                    &error,
+                                    "clear_partial_and_retry",
+                                    Some(status),
+                                    remote_addr,
+                                    Some(http_version),
                                 );
+                                last_error = Some(error);
                                 break;
                             }
                         }
@@ -3660,8 +5212,20 @@ async fn download_to_path_inner(
                         Ok(file) => file,
                         Err(error) => {
                             drop(permit);
+                            drop(activity.take());
                             remove_if_exists(&part_path).await?;
-                            last_error = Some(error.into());
+                            let error: crate::Error = error.into();
+                            record_download_attempt_failure(
+                                &mut attempt_history,
+                                route,
+                                attempts,
+                                &error,
+                                "clear_partial_and_retry",
+                                Some(status),
+                                remote_addr,
+                                Some(http_version),
+                            );
+                            last_error = Some(error);
                             break;
                         }
                     }
@@ -3675,9 +5239,11 @@ async fn download_to_path_inner(
                     .unwrap_or(starting_size.saturating_add(response_length));
                 let transfer_started = Instant::now();
                 let mut downloaded = starting_size;
+                let mut last_tracking_bytes = starting_size;
+                let mut throughput_window_started = Instant::now();
+                let mut throughput_window_bytes = starting_size;
                 let mut stream = response.bytes_stream();
                 let mut transfer_error: Option<crate::Error> = None;
-                let mut last_chunk_at = Instant::now();
                 while let Some(item) = stream.next().await {
                     let chunk = match item {
                         Ok(chunk) => chunk,
@@ -3690,33 +5256,64 @@ async fn download_to_path_inner(
                         IOError::with_path(error, &part_path)
                     })?;
                     hashers.update(&chunk);
-                    let elapsed = last_chunk_at.elapsed();
                     downloaded += chunk.len() as u64;
-                    if !retry_with_single_thread
-                        && downloaded > starting_size + chunk.len() as u64
-                        && elapsed > FILE_TRANSFER_SLOW_INTERVAL
-                        && (chunk.len() as u128) < elapsed.as_millis()
+                    if let Some(state) = crate::State::get_if_initialized() {
+                        state.record_download_bytes(chunk.len() as u64);
+                    }
+                    let throughput_elapsed =
+                        throughput_window_started.elapsed();
+                    if can_switch_route
+                        && let Some(bytes_per_second) = sustained_low_throughput(
+                            downloaded,
+                            throughput_window_bytes,
+                            throughput_elapsed,
+                            total_size.saturating_sub(downloaded),
+                        )
                     {
                         tracing::warn!(
                             path = %destination.display(),
                             url = %log_url,
-                            bytes = chunk.len(),
-                            elapsed_ms = elapsed.as_millis(),
-                            "Ending a stalled file download"
+                            source = route.source.as_str(),
+                            bytes_per_second,
+                            elapsed_ms = throughput_elapsed.as_millis(),
+                            remaining_bytes = total_size.saturating_sub(downloaded),
+                            "Sustained low throughput; switching route"
                         );
                         transfer_error = Some(
-                            ErrorKind::OtherError(
-                                "file transfer stalled".to_string(),
-                            )
+                            ErrorKind::NetworkError(format!(
+                                "Sustained download throughput fell to {bytes_per_second} bytes/s"
+                            ))
                             .into(),
-                        );
+						);
                         break;
                     }
-                    last_chunk_at = Instant::now();
+                    if throughput_elapsed >= SUSTAINED_LOW_THROUGHPUT_WINDOW {
+                        throughput_window_started = Instant::now();
+                        throughput_window_bytes = downloaded;
+                    }
+                    let tracking_threshold =
+                        MIN_SEGMENT_SIZE.max(total_size / 200);
+                    if downloaded.saturating_sub(last_tracking_bytes)
+                        >= tracking_threshold
+                    {
+                        record_install_download_progress(
+                            &request, downloaded, total_size,
+                        )
+                        .await;
+                        last_tracking_bytes = downloaded;
+                    }
                     if let Some(progress) = progress.as_mut() {
-                        progress(downloaded, total_size).await?;
+                        if let Err(error) =
+                            progress(downloaded, total_size).await
+                        {
+                            tracing::warn!(%error, "Download progress callback failed");
+                        }
                     }
                 }
+                record_install_download_progress(
+                    &request, downloaded, total_size,
+                )
+                .await;
                 file.flush()
                     .await
                     .map_err(|error| IOError::with_path(error, &part_path))?;
@@ -3728,15 +5325,26 @@ async fn download_to_path_inner(
                 }
                 drop(file);
                 drop(permit);
+                drop(activity.take());
 
                 if let Some(error) = transfer_error {
-                    record_route_failure(route);
+                    record_route_failure(route, request.resource, None);
                     preserve_or_remove_partial(
                         &part_path,
                         &request.integrity,
                         any_route_can_resume(&routes),
                     )
                     .await?;
+                    record_download_attempt_failure(
+                        &mut attempt_history,
+                        route,
+                        attempts,
+                        &error,
+                        "resume_or_switch",
+                        Some(status),
+                        remote_addr,
+                        Some(http_version),
+                    );
                     tracing::warn!(
                         path = %destination.display(),
                         url = %log_url,
@@ -3750,33 +5358,67 @@ async fn download_to_path_inner(
                     break;
                 }
 
-                let computed = hashers.finish(downloaded);
                 if let Some(expected) = expected_size
                     && downloaded < expected
                 {
                     // A close-delimited body can end short without a stream
                     // error; treat it as a transfer failure so the valid data
                     // received so far stays available for a resume.
-                    record_route_failure(route);
+                    record_route_failure(route, request.resource, None);
                     preserve_or_remove_partial(
                         &part_path,
                         &request.integrity,
                         any_route_can_resume(&routes),
                     )
                     .await?;
-                    last_error = Some(
-                        ErrorKind::OtherError(format!(
-                            "Truncated response from {log_url}: received {downloaded} of {expected} bytes"
-                        ))
-                        .into(),
+                    let error: crate::Error = ErrorKind::OtherError(format!(
+                        "Truncated response from {log_url}: received {downloaded} of {expected} bytes"
+                    ))
+                    .into();
+                    record_download_attempt_failure(
+                        &mut attempt_history,
+                        route,
+                        attempts,
+                        &error,
+                        "resume_or_switch",
+                        Some(status),
+                        remote_addr,
+                        Some(http_version),
                     );
+                    last_error = Some(error);
                     break;
                 }
+                record_install_download_stage(
+                    &request,
+                    DownloadItemStatus::Verifying,
+                )
+                .await;
+                let computed = hashers.finish(downloaded);
                 if let Err(error) =
                     verify_computed_integrity(&request.integrity, &computed)
                 {
-                    record_route_failure(route);
+                    record_route_failure(route, request.resource, None);
                     remove_if_exists(&part_path).await?;
+                    let decision = if routes.len() > 1 {
+                        "clear_partial_and_switch"
+                    } else if attempts >= 2 {
+                        "drop_route_after_clean_retry"
+                    } else {
+                        "clear_partial_and_retry"
+                    };
+                    record_download_attempt_failure(
+                        &mut attempt_history,
+                        route,
+                        attempts,
+                        &error,
+                        decision,
+                        Some(status),
+                        remote_addr,
+                        Some(http_version),
+                    );
+                    if routes.len() > 1 || attempts >= 2 {
+                        terminal_routes.insert(route.url.clone());
+                    }
                     last_error = Some(error);
                     break;
                 }
@@ -3784,8 +5426,28 @@ async fn download_to_path_inner(
                     validate_file_content(&part_path, request.integrity.content)
                         .await
                 {
-                    record_route_failure(route);
+                    record_route_failure(route, request.resource, None);
                     remove_if_exists(&part_path).await?;
+                    let decision = if routes.len() > 1 {
+                        "clear_partial_and_switch"
+                    } else if attempts >= 2 {
+                        "drop_route_after_clean_retry"
+                    } else {
+                        "clear_partial_and_retry"
+                    };
+                    record_download_attempt_failure(
+                        &mut attempt_history,
+                        route,
+                        attempts,
+                        &error,
+                        decision,
+                        Some(status),
+                        remote_addr,
+                        Some(http_version),
+                    );
+                    if routes.len() > 1 || attempts >= 2 {
+                        terminal_routes.insert(route.url.clone());
+                    }
                     last_error = Some(error);
                     break;
                 }
@@ -3793,9 +5455,11 @@ async fn download_to_path_inner(
                 finalize_download(&part_path, destination).await?;
                 record_route_success(
                     route,
+                    request.resource,
                     ttfb,
                     downloaded.saturating_sub(starting_size),
                     transfer_started.elapsed(),
+                    remote_addr,
                 );
                 let log_final_url = sanitize_url_for_log(&final_url);
                 tracing::debug!(
@@ -3804,6 +5468,11 @@ async fn download_to_path_inner(
                     source = route.source.as_str(),
                     bytes = downloaded.saturating_sub(starting_size),
                     elapsed_ms = transfer_started.elapsed().as_millis(),
+                    remote_addr = ?remote_addr,
+                    http_version = ?http_version,
+                    dns_candidates = ?route_host(route).map(|host| {
+                        DOWNLOAD_DNS_RESOLVER.resolved_addresses(&host)
+                    }),
                     "Completed file download"
                 );
                 if let Some(tracking) = &request.install_tracking
@@ -3830,6 +5499,13 @@ async fn download_to_path_inner(
                 });
             }
         }
+        if round < 2
+            && routes
+                .iter()
+                .any(|route| !terminal_routes.contains(&route.url))
+        {
+            tokio::time::sleep(fetch_retry_delay(round + 1)).await;
+        }
     }
 
     preserve_or_remove_partial(
@@ -3838,13 +5514,19 @@ async fn download_to_path_inner(
         any_route_can_resume(&routes),
     )
     .await?;
-    Err(last_error.unwrap_or_else(|| {
+    let error = last_error.unwrap_or_else(|| {
         ErrorKind::OtherError(format!(
             "Unable to download {} from any source",
             sanitize_url_for_log(&request.url)
         ))
         .into()
-    }))
+    });
+    Err(attach_download_attempt_history(
+        error,
+        &attempt_history,
+        attempts,
+        file_attempt_budget,
+    ))
 }
 
 /// Posts a JSON to a URL
@@ -3990,7 +5672,7 @@ pub async fn sha1_file_async(
 mod tests {
     use super::*;
     use chrono::{TimeDelta, Utc};
-    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use std::time::Duration;
 
     static RANGE_SPLITTING_TEST_LOCK: LazyLock<AsyncMutex<()>> =
@@ -4006,6 +5688,7 @@ mod tests {
         ignore_range: bool,
         slow_body: bool,
         fail_first_range: bool,
+        stall_first_range: bool,
     ) -> (
         String,
         Arc<AtomicUsize>,
@@ -4020,6 +5703,7 @@ mod tests {
         let normal_requests = Arc::new(AtomicUsize::new(0));
         let normal_request_count = normal_requests.clone();
         let failed_range = Arc::new(AtomicBool::new(false));
+        let stalled_range = Arc::new(AtomicBool::new(false));
         let handle = tokio::spawn(async move {
             loop {
                 let Ok((mut stream, _)) = listener.accept().await else {
@@ -4029,6 +5713,7 @@ mod tests {
                 let requests = request_count.clone();
                 let normal_requests = normal_request_count.clone();
                 let failed_range = Arc::clone(&failed_range);
+                let stalled_range = Arc::clone(&stalled_range);
                 tokio::spawn(async move {
                     requests.fetch_add(1, Ordering::Relaxed);
                     let mut request = Vec::new();
@@ -4097,6 +5782,13 @@ mod tests {
                         )
                     };
                     if stream.write_all(headers.as_bytes()).await.is_err() {
+                        return;
+                    }
+                    if requested_range.is_some()
+                        && stall_first_range
+                        && !stalled_range.swap(true, Ordering::Relaxed)
+                    {
+                        tokio::time::sleep(time::Duration::from_secs(1)).await;
                         return;
                     }
                     if requested_range.is_some()
@@ -4216,6 +5908,76 @@ mod tests {
             requests,
             handle,
         )
+    }
+
+    async fn spawn_http_fixture(
+        status_line: &str,
+        extra_headers: &str,
+        body: impl Into<Vec<u8>>,
+        response_delay: Duration,
+    ) -> (String, Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
+        let listener =
+            tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let requests = Arc::new(AtomicUsize::new(0));
+        let request_count = Arc::clone(&requests);
+        let status_line = status_line.to_string();
+        let extra_headers = extra_headers.to_string();
+        let body = Arc::new(body.into());
+        let handle = tokio::spawn(async move {
+            loop {
+                let Ok((mut stream, _)) = listener.accept().await else {
+                    break;
+                };
+                let requests = Arc::clone(&request_count);
+                let status_line = status_line.clone();
+                let extra_headers = extra_headers.clone();
+                let body = Arc::clone(&body);
+                tokio::spawn(async move {
+                    requests.fetch_add(1, Ordering::Relaxed);
+                    let mut request = Vec::new();
+                    let mut buffer = [0_u8; 1024];
+                    loop {
+                        let Ok(read) = stream.read(&mut buffer).await else {
+                            return;
+                        };
+                        if read == 0 {
+                            return;
+                        }
+                        request.extend_from_slice(&buffer[..read]);
+                        if request
+                            .windows(4)
+                            .any(|window| window == b"\r\n\r\n")
+                        {
+                            break;
+                        }
+                    }
+                    tokio::time::sleep(response_delay).await;
+                    let response = format!(
+                        "HTTP/1.1 {status_line}\r\nContent-Length: {}\r\n{extra_headers}Connection: close\r\n\r\n",
+                        body.len(),
+                    );
+                    if stream.write_all(response.as_bytes()).await.is_ok() {
+                        let _ = stream.write_all(&body).await;
+                    }
+                });
+            }
+        });
+        (format!("http://{address}/file"), requests, handle)
+    }
+
+    fn direct_test_route(
+        url: String,
+        source: DownloadRouteSource,
+    ) -> DownloadRoute {
+        DownloadRoute {
+            url,
+            source,
+            is_mirror: source != DownloadRouteSource::Official,
+            allow_sensitive_headers: source == DownloadRouteSource::Official,
+            supports_range: false,
+            proxy: ProxyPolicy::Direct,
+        }
     }
 
     async fn spawn_redirect_server(
@@ -4355,6 +6117,246 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn file_download_drops_a_missing_route_before_later_rounds() {
+        let (missing_url, missing_requests, missing_server) =
+            spawn_http_fixture("404 Not Found", "", Vec::new(), Duration::ZERO)
+                .await;
+        let (fallback_url, fallback_requests, fallback_server) =
+            spawn_http_fixture("200 OK", "", b"done", Duration::ZERO).await;
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("fallback.bin");
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let result = download_to_path(
+            DownloadRequest::new(&missing_url, ResourceClass::Other)
+                .with_candidate_urls([fallback_url])
+                .with_integrity(Integrity::default().with_size(4)),
+            &destination,
+            &FetchSemaphore(Semaphore::new(2)),
+            &pool,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.size, 4);
+        assert_eq!(missing_requests.load(Ordering::Relaxed), 1);
+        assert_eq!(fallback_requests.load(Ordering::Relaxed), 1);
+        missing_server.abort();
+        fallback_server.abort();
+    }
+
+    #[tokio::test]
+    async fn file_download_bounds_server_error_retries_to_three_rounds() {
+        let (url, requests, server) = spawn_http_fixture(
+            "503 Service Unavailable",
+            "",
+            Vec::new(),
+            Duration::ZERO,
+        )
+        .await;
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("unavailable.bin");
+        let request_url = format!("{url}?token=secret#fragment");
+
+        let error = test_download(&request_url, &destination, 4)
+            .await
+            .unwrap_err();
+        let diagnostic = error.to_string();
+
+        assert_eq!(requests.load(Ordering::Relaxed), 3);
+        assert!(diagnostic.contains("after 3/3 attempts"));
+        assert!(diagnostic.contains("category=http"));
+        assert!(diagnostic.contains("status=Some(503)"));
+        assert!(!diagnostic.contains("secret"));
+        assert!(!diagnostic.contains("fragment"));
+        assert!(!destination.exists());
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn rate_limited_route_cools_down_and_switches_without_waiting() {
+        let (limited_url, limited_requests, limited_server) =
+            spawn_http_fixture(
+                "429 Too Many Requests",
+                "Retry-After: 60\r\n",
+                Vec::new(),
+                Duration::ZERO,
+            )
+            .await;
+        let (fallback_url, fallback_requests, fallback_server) =
+            spawn_http_fixture("200 OK", "", b"done", Duration::ZERO).await;
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("rate-limit-fallback.bin");
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+        let started = Instant::now();
+
+        let result = download_to_path(
+            DownloadRequest::new(&limited_url, ResourceClass::Other)
+                .with_candidate_urls([fallback_url])
+                .with_integrity(Integrity::default().with_size(4)),
+            &destination,
+            &FetchSemaphore(Semaphore::new(2)),
+            &pool,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.size, 4);
+        assert!(started.elapsed() < Duration::from_secs(1));
+        assert_eq!(limited_requests.load(Ordering::Relaxed), 1);
+        assert_eq!(fallback_requests.load(Ordering::Relaxed), 1);
+        limited_server.abort();
+        fallback_server.abort();
+    }
+
+    #[tokio::test]
+    async fn metadata_hedging_returns_the_first_valid_response() {
+        let (primary_url, primary_requests, primary_server) =
+            spawn_http_fixture(
+                "200 OK",
+                "Content-Type: application/json\r\n",
+                br#"{"source":"primary"}"#,
+                Duration::from_millis(300),
+            )
+            .await;
+        let (secondary_url, secondary_requests, secondary_server) =
+            spawn_http_fixture(
+                "200 OK",
+                "Content-Type: application/json\r\n",
+                br#"{"source":"secondary"}"#,
+                Duration::ZERO,
+            )
+            .await;
+        let routes = [
+            direct_test_route(primary_url, DownloadRouteSource::Official),
+            direct_test_route(secondary_url, DownloadRouteSource::Mcim),
+        ];
+        let validate = |bytes: &Bytes| -> crate::Result<()> {
+            serde_json::from_slice::<serde_json::Value>(bytes)?;
+            Ok(())
+        };
+
+        let bytes = fetch_hedged_metadata(
+            &routes,
+            ResourceClass::Metadata,
+            None,
+            None,
+            &FetchSemaphore(Semaphore::new(2)),
+            &INSECURE_REQWEST_CLIENT,
+            &validate,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&bytes).unwrap(),
+            serde_json::json!({ "source": "secondary" })
+        );
+        assert_eq!(primary_requests.load(Ordering::Relaxed), 1);
+        assert_eq!(secondary_requests.load(Ordering::Relaxed), 1);
+        primary_server.abort();
+        secondary_server.abort();
+    }
+
+    #[tokio::test]
+    async fn metadata_hedging_rejects_a_fast_invalid_primary() {
+        let (primary_url, primary_requests, primary_server) =
+            spawn_http_fixture(
+                "200 OK",
+                "Content-Type: application/json\r\n",
+                b"not-json",
+                Duration::ZERO,
+            )
+            .await;
+        let (secondary_url, secondary_requests, secondary_server) =
+            spawn_http_fixture(
+                "200 OK",
+                "Content-Type: application/json\r\n",
+                br#"{"valid":true}"#,
+                Duration::ZERO,
+            )
+            .await;
+        let routes = [
+            direct_test_route(primary_url, DownloadRouteSource::Official),
+            direct_test_route(secondary_url, DownloadRouteSource::Mcim),
+        ];
+        let validate = |bytes: &Bytes| -> crate::Result<()> {
+            serde_json::from_slice::<serde_json::Value>(bytes)?;
+            Ok(())
+        };
+
+        let bytes = fetch_hedged_metadata(
+            &routes,
+            ResourceClass::Metadata,
+            None,
+            None,
+            &FetchSemaphore(Semaphore::new(2)),
+            &INSECURE_REQWEST_CLIENT,
+            &validate,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(bytes, Bytes::from_static(br#"{"valid":true}"#));
+        assert_eq!(primary_requests.load(Ordering::Relaxed), 1);
+        assert_eq!(secondary_requests.load(Ordering::Relaxed), 1);
+        primary_server.abort();
+        secondary_server.abort();
+    }
+
+    #[tokio::test]
+    async fn metadata_hedging_does_not_start_a_loser_for_a_fast_primary() {
+        let (primary_url, primary_requests, primary_server) =
+            spawn_http_fixture(
+                "200 OK",
+                "Content-Type: application/json\r\n",
+                br#"{"valid":true}"#,
+                Duration::ZERO,
+            )
+            .await;
+        let (secondary_url, secondary_requests, secondary_server) =
+            spawn_http_fixture(
+                "200 OK",
+                "Content-Type: application/json\r\n",
+                br#"{"valid":false}"#,
+                Duration::ZERO,
+            )
+            .await;
+        let routes = [
+            direct_test_route(primary_url, DownloadRouteSource::Official),
+            direct_test_route(secondary_url, DownloadRouteSource::Mcim),
+        ];
+        let validate = |bytes: &Bytes| -> crate::Result<()> {
+            serde_json::from_slice::<serde_json::Value>(bytes)?;
+            Ok(())
+        };
+
+        let _ = fetch_hedged_metadata(
+            &routes,
+            ResourceClass::Metadata,
+            None,
+            None,
+            &FetchSemaphore(Semaphore::new(2)),
+            &INSECURE_REQWEST_CLIENT,
+            &validate,
+        )
+        .await
+        .unwrap();
+        tokio::time::sleep(METADATA_HEDGE_DELAY * 2).await;
+
+        assert_eq!(primary_requests.load(Ordering::Relaxed), 1);
+        assert_eq!(secondary_requests.load(Ordering::Relaxed), 0);
+        primary_server.abort();
+        secondary_server.abort();
+    }
+
+    #[tokio::test]
     async fn canceling_a_file_download_drops_the_response_read_promptly() {
         let _guard = RANGE_SPLITTING_TEST_LOCK.lock().await;
         RANGE_SPLITTING_PROTOCOL_FAILURES.lock().clear();
@@ -4398,10 +6400,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn mirror_request_start_slots_pace_requests() {
+    async fn mirror_request_token_bucket_honors_cooldown() {
         let _guard = MIRROR_REQUEST_SLOT_TEST_LOCK.lock().await;
-        *MIRROR_REQUEST_SLOTS.lock().await =
-            [Instant::now() + MIRROR_REQUEST_START_INTERVAL; 4];
         let route = DownloadRoute {
             url: "https://bmclapi2.bangbang93.com/maven/file.jar".to_string(),
             source: DownloadRouteSource::Bmclapi,
@@ -4410,6 +6410,11 @@ mod tests {
             supports_range: true,
             proxy: ProxyPolicy::System,
         };
+        let key = mirror_limiter_key(&route).unwrap();
+        let now = Instant::now();
+        let mut limiter = MirrorRequestLimiter::new(now);
+        limiter.throttle(now, time::Duration::from_millis(50));
+        MIRROR_REQUEST_LIMITERS.lock().insert(key, limiter);
 
         let started = Instant::now();
         wait_for_mirror_request_slot(&route).await;
@@ -4419,12 +6424,34 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn mirror_request_token_bucket_allows_burst_then_paces() {
+        let _guard = MIRROR_REQUEST_SLOT_TEST_LOCK.lock().await;
+        MIRROR_REQUEST_LIMITERS.lock().clear();
+        let route = DownloadRoute {
+            url: "https://bmclapi2.bangbang93.com/maven/file.jar".to_string(),
+            source: DownloadRouteSource::Bmclapi,
+            is_mirror: true,
+            allow_sensitive_headers: false,
+            supports_range: true,
+            proxy: ProxyPolicy::System,
+        };
+
+        for _ in 0..BMCL_REQUEST_BURST as usize {
+            wait_for_mirror_request_slot(&route).await;
+        }
+        let started = Instant::now();
+        wait_for_mirror_request_slot(&route).await;
+        assert!(
+            started.elapsed() >= time::Duration::from_millis(2),
+            "a request after the burst should wait for a token"
+        );
+    }
+
     #[test]
-    fn auto_source_uses_the_first_official_manifest_probe() {
+    fn auto_source_health_is_scoped_by_resource_family() {
         let _guard = AUTO_SOURCE_TEST_LOCK.lock().unwrap();
-        let was_probed = AUTO_SOURCE_PROBED.swap(false, Ordering::Relaxed);
-        let preferred_official =
-            AUTO_PREFERS_OFFICIAL.swap(false, Ordering::Relaxed);
+        let previous_health = std::mem::take(&mut *ROUTE_HEALTH.lock());
         let manifest_url =
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
         let manifest_routes = resolve_download_routes_for(
@@ -4434,34 +6461,19 @@ mod tests {
         );
         assert_eq!(manifest_routes[0].source, DownloadRouteSource::Official);
 
-        record_route_success(
+        record_route_failure(
             &manifest_routes[0],
-            time::Duration::from_secs(1),
-            1,
-            time::Duration::from_secs(2),
+            ResourceClass::Metadata,
+            None,
         );
-        let asset_routes = resolve_download_routes_for(
-            "https://resources.download.minecraft.net/ab/abcdef",
-            ResourceClass::MinecraftAsset,
+        let modrinth_routes = resolve_download_routes_for(
+            "https://api.modrinth.com/v2/tag/game_version",
+            ResourceClass::Modrinth,
             crate::state::DownloadSourceMode::Auto,
         );
-        assert_eq!(asset_routes[0].source, DownloadRouteSource::Official);
+        assert_eq!(modrinth_routes[0].source, DownloadRouteSource::Official);
 
-        record_route_success(
-            &manifest_routes[0],
-            time::Duration::from_secs(1),
-            1,
-            time::Duration::from_secs(4),
-        );
-        let asset_routes = resolve_download_routes_for(
-            "https://resources.download.minecraft.net/ab/abcdef",
-            ResourceClass::MinecraftAsset,
-            crate::state::DownloadSourceMode::Auto,
-        );
-        assert!(asset_routes[0].is_mirror);
-
-        AUTO_SOURCE_PROBED.store(was_probed, Ordering::Relaxed);
-        AUTO_PREFERS_OFFICIAL.store(preferred_official, Ordering::Relaxed);
+        *ROUTE_HEALTH.lock() = previous_health;
     }
 
     #[test]
@@ -4568,6 +6580,19 @@ mod tests {
         );
         assert_eq!(official_only.len(), 1);
         assert_eq!(official_only[0].url, source);
+
+        let official_preferred = resolve_download_routes_for(
+            source,
+            ResourceClass::MinecraftLibrary,
+            crate::state::DownloadSourceMode::OfficialPreferred,
+        );
+        assert_eq!(official_preferred.len(), 3);
+        assert_eq!(official_preferred[0].url, source);
+        assert!(official_preferred[1..].iter().all(|route| route.is_mirror));
+        assert!(official_preferred.iter().all(|route| {
+            resource_family(route, ResourceClass::MinecraftLibrary)
+                == ResourceFamily::Loader
+        }));
     }
 
     #[test]
@@ -4619,8 +6644,14 @@ mod tests {
         assert_eq!(routes.len(), 2);
         assert!(routes[0].is_mirror);
         assert!(!routes[0].allow_sensitive_headers);
-        assert_eq!(routes[1].proxy, ProxyPolicy::System);
+        assert_eq!(routes[1].proxy, ProxyPolicy::Direct);
         assert!(routes[1].allow_sensitive_headers);
+    }
+
+    #[test]
+    fn system_proxy_setting_controls_route_policy() {
+        assert_eq!(proxy_policy_for_setting(false), ProxyPolicy::Direct);
+        assert_eq!(proxy_policy_for_setting(true), ProxyPolicy::System);
     }
 
     #[test]
@@ -4669,10 +6700,49 @@ mod tests {
     #[test]
     fn segmented_concurrency_respects_effective_and_global_limits() {
         assert_eq!(segmented_concurrency_cap(64), MAX_SEGMENT_CONCURRENCY);
-        assert_eq!(segmented_concurrency_cap(8), 7);
-        assert_eq!(segmented_concurrency_cap(4), 3);
+        assert_eq!(segmented_concurrency_cap(8), 8);
+        assert_eq!(segmented_concurrency_cap(4), 4);
         assert_eq!(segmented_concurrency_cap(1), 1);
-        assert_eq!(initial_segment_count(16 * 1024 * 1024, 3), 2);
+        assert_eq!(initial_segment_count(16 * 1024 * 1024, 3), 3);
+    }
+
+    #[tokio::test]
+    async fn segmented_permits_wait_fairly_instead_of_falling_back() {
+        let semaphore = FetchSemaphore(Semaphore::new(4));
+        let held = semaphore.0.acquire_many(4).await.unwrap();
+        let started = Instant::now();
+        let (_, permits) = tokio::join!(
+            async move {
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                drop(held);
+            },
+            acquire_initial_segment_permits(&semaphore, 4),
+        );
+        let permits = permits.unwrap();
+        assert_eq!(permits.len(), 4);
+        assert!(started.elapsed() >= Duration::from_millis(40));
+    }
+
+    #[test]
+    fn bmclapi_segmented_downloads_are_capped_at_four_connections() {
+        let bmclapi = route(
+            "https://bmclapi2.bangbang93.com/assets/file".to_string(),
+            DownloadRouteSource::Bmclapi,
+            true,
+            true,
+        );
+        let official = route(
+            "https://resources.download.minecraft.net/file".to_string(),
+            DownloadRouteSource::Official,
+            false,
+            true,
+        );
+
+        assert_eq!(route_segmented_concurrency_cap(&bmclapi, 64), 4);
+        assert_eq!(
+            route_segmented_concurrency_cap(&official, 64),
+            MAX_SEGMENT_CONCURRENCY
+        );
     }
 
     #[test]
@@ -4708,6 +6778,58 @@ mod tests {
     }
 
     #[test]
+    fn low_aggregate_throughput_still_allows_more_ranges() {
+        let snapshot = SpeedSnapshot {
+            aggregate_speed: 64 * 1024,
+            recent_average: 80 * 1024,
+            speed_floor: 1024 * 1024,
+            sample_count: SEGMENT_EXPANSION_SAMPLE_COUNT,
+        };
+        assert_eq!(
+            expansion_block_reason(
+                snapshot,
+                1,
+                8,
+                7,
+                16 * 1024 * 1024,
+                SEGMENT_EXPANSION_INTERVAL,
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn sustained_low_throughput_requires_time_and_remaining_data() {
+        assert_eq!(
+            sustained_low_throughput(
+                128 * 1024,
+                0,
+                SUSTAINED_LOW_THROUGHPUT_WINDOW,
+                2 * 1024 * 1024,
+            ),
+            Some(26_214)
+        );
+        assert_eq!(
+            sustained_low_throughput(
+                2 * 1024 * 1024,
+                0,
+                SUSTAINED_LOW_THROUGHPUT_WINDOW,
+                2 * 1024 * 1024,
+            ),
+            None
+        );
+        assert_eq!(
+            sustained_low_throughput(
+                128 * 1024,
+                0,
+                time::Duration::from_secs(1),
+                2 * 1024 * 1024,
+            ),
+            None
+        );
+    }
+
+    #[test]
     fn redirect_hops_rebuild_the_same_range_header() {
         let original = byte_range_header_value(Some(1024), Some(2047));
         let redirected = byte_range_header_value(Some(1024), Some(2047));
@@ -4734,6 +6856,7 @@ mod tests {
     async fn segmented_download_uses_parallel_validated_ranges() {
         let _guard = RANGE_SPLITTING_TEST_LOCK.lock().await;
         RANGE_SPLITTING_PROTOCOL_FAILURES.lock().clear();
+        RANGE_SPLITTING_SUPPORTED.lock().clear();
         let size = (SEGMENTED_DOWNLOAD_THRESHOLD + 1024 * 1024) as usize;
         let data = Arc::new(
             (0..size)
@@ -4742,20 +6865,22 @@ mod tests {
         );
         let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
         let (url, requests, normal_requests, server) =
-            spawn_range_server(data.clone(), false, false, true, false).await;
+            spawn_range_server(data.clone(), false, false, true, false, false)
+                .await;
         let route = DownloadRoute {
             url: url.clone(),
             source: DownloadRouteSource::Alternate,
             is_mirror: false,
             allow_sensitive_headers: false,
             supports_range: true,
-            proxy: ProxyPolicy::System,
+            proxy: ProxyPolicy::Direct,
         };
         let request = DownloadRequest::new(&url, ResourceClass::Other)
             .with_integrity(Integrity::sha1(hash).with_size(size as u64));
         let directory = tempfile::tempdir().unwrap();
         let part_path = directory.path().join("fixture.part");
         let client = reqwest::Client::builder()
+            .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap();
@@ -4770,6 +6895,9 @@ mod tests {
             None,
             &client,
             &client,
+            1,
+            1,
+            false,
         )
         .await;
         match outcome {
@@ -4780,10 +6908,84 @@ mod tests {
         }
         assert!(requests.load(Ordering::Relaxed) >= 4);
         assert_eq!(normal_requests.load(Ordering::Relaxed), 0);
+        assert!(
+            RANGE_SPLITTING_SUPPORTED
+                .lock()
+                .contains(&range_splitting_authority(&route).unwrap())
+        );
         assert_eq!(
             verify_file(&part_path, &request.integrity).await.unwrap(),
             size as u64
         );
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn stalled_tail_range_is_hedged_and_temp_files_are_cleaned() {
+        let _guard = RANGE_SPLITTING_TEST_LOCK.lock().await;
+        RANGE_SPLITTING_PROTOCOL_FAILURES.lock().clear();
+        let size = (SEGMENTED_DOWNLOAD_THRESHOLD * 2) as usize;
+        let data = Arc::new(
+            (0..size)
+                .map(|index| (index % 251) as u8)
+                .collect::<Vec<_>>(),
+        );
+        let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
+        let (url, requests, _, server) =
+            spawn_range_server(data, false, false, false, false, true).await;
+        let route = DownloadRoute {
+            url: url.clone(),
+            source: DownloadRouteSource::Alternate,
+            is_mirror: false,
+            allow_sensitive_headers: false,
+            supports_range: true,
+            proxy: ProxyPolicy::Direct,
+        };
+        let request = DownloadRequest::new(&url, ResourceClass::Other)
+            .with_integrity(Integrity::sha1(hash).with_size(size as u64));
+        let directory = tempfile::tempdir().unwrap();
+        let part_path = directory.path().join("hedged.part");
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .unwrap();
+        let semaphore = FetchSemaphore(Semaphore::new(8));
+        let started = Instant::now();
+        let outcome = try_segmented_download(
+            &request,
+            &route,
+            size as u64,
+            &part_path,
+            &semaphore,
+            None,
+            None,
+            &client,
+            &client,
+            1,
+            1,
+            false,
+        )
+        .await;
+        assert!(matches!(outcome, SegmentedDownloadOutcome::Success(_)));
+        assert!(started.elapsed() < Duration::from_secs(1));
+        assert!(requests.load(Ordering::Relaxed) >= 6);
+        assert_eq!(
+            verify_file(&part_path, &request.integrity).await.unwrap(),
+            size as u64
+        );
+        for range_index in 0..MAX_SEGMENT_CONCURRENCY {
+            for candidate_index in 0..2 {
+                assert!(
+                    !tail_candidate_path(
+                        &part_path,
+                        range_index,
+                        candidate_index,
+                    )
+                    .exists()
+                );
+            }
+        }
         server.abort();
     }
 
@@ -4799,7 +7001,7 @@ mod tests {
         );
         let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
         let (target_url, range_requests, normal_requests, range_server) =
-            spawn_range_server(data, false, false, false, true).await;
+            spawn_range_server(data, false, false, false, true, false).await;
         let (redirect_url, redirect_requests, redirect_server) =
             spawn_redirect_server(target_url, Duration::from_millis(50)).await;
         let route = DownloadRoute {
@@ -4808,7 +7010,7 @@ mod tests {
             is_mirror: true,
             allow_sensitive_headers: false,
             supports_range: true,
-            proxy: ProxyPolicy::System,
+            proxy: ProxyPolicy::Direct,
         };
         let request =
             DownloadRequest::new(&redirect_url, ResourceClass::Modrinth)
@@ -4816,6 +7018,7 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let part_path = directory.path().join("redirect.part");
         let client = reqwest::Client::builder()
+            .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap();
@@ -4829,6 +7032,9 @@ mod tests {
             None,
             &client,
             &client,
+            1,
+            1,
+            false,
         )
         .await;
 
@@ -4852,20 +7058,21 @@ mod tests {
         );
         let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
         let (url, requests, _, server) =
-            spawn_range_server(data, false, false, false, true).await;
+            spawn_range_server(data, false, false, false, true, false).await;
         let route = DownloadRoute {
             url: url.clone(),
             source: DownloadRouteSource::Alternate,
             is_mirror: false,
             allow_sensitive_headers: false,
             supports_range: true,
-            proxy: ProxyPolicy::System,
+            proxy: ProxyPolicy::Direct,
         };
         let request = DownloadRequest::new(&url, ResourceClass::Other)
             .with_integrity(Integrity::sha1(hash).with_size(size as u64));
         let directory = tempfile::tempdir().unwrap();
         let part_path = directory.path().join("retry.part");
         let client = reqwest::Client::builder()
+            .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap();
@@ -4879,6 +7086,9 @@ mod tests {
             None,
             &client,
             &client,
+            1,
+            1,
+            false,
         )
         .await;
 
@@ -4897,18 +7107,20 @@ mod tests {
         RANGE_SPLITTING_PROTOCOL_FAILURES.lock().clear();
         let data = Arc::new(vec![7_u8; 1024 * 1024]);
         let (url, _, _, server) =
-            spawn_range_server(data.clone(), true, false, false, false).await;
+            spawn_range_server(data.clone(), true, false, false, false, false)
+                .await;
         let route = DownloadRoute {
             url: url.clone(),
             source: DownloadRouteSource::Alternate,
             is_mirror: false,
             allow_sensitive_headers: false,
             supports_range: true,
-            proxy: ProxyPolicy::System,
+            proxy: ProxyPolicy::Direct,
         };
         let directory = tempfile::tempdir().unwrap();
         let part_path = directory.path().join("fixture.part");
         let client = reqwest::Client::builder()
+            .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap();
@@ -4932,6 +7144,9 @@ mod tests {
             &speed,
             &validator,
             None,
+            &semaphore,
+            &AtomicUsize::new(0),
+            &AtomicBool::new(false),
         )
         .await;
         assert!(matches!(
@@ -4962,7 +7177,8 @@ mod tests {
                 .collect::<Vec<_>>(),
         );
         let (url, requests, normal_requests, server) =
-            spawn_range_server(data.clone(), false, true, false, false).await;
+            spawn_range_server(data.clone(), false, true, false, false, false)
+                .await;
         let directory = tempfile::tempdir().unwrap();
         let destination = directory.path().join("ignored-range.bin");
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -4999,7 +7215,7 @@ mod tests {
         let size = (SEGMENTED_DOWNLOAD_THRESHOLD * 4) as usize;
         let data = Arc::new(vec![13_u8; size]);
         let (url, _, _, server) =
-            spawn_range_server(data, false, false, true, false).await;
+            spawn_range_server(data, false, false, true, false, false).await;
         let directory = tempfile::tempdir().unwrap();
         let destination = directory.path().join("canceled-segments.bin");
         let destination_for_task = destination.clone();
@@ -5044,9 +7260,15 @@ mod tests {
             (Some(1024_u64), Integrity::default().with_size(1024)),
         ] {
             let data = Arc::new(vec![11_u8; 1024]);
-            let (url, requests, normal_requests, server) =
-                spawn_range_server(data.clone(), false, false, false, false)
-                    .await;
+            let (url, requests, normal_requests, server) = spawn_range_server(
+                data.clone(),
+                false,
+                false,
+                false,
+                false,
+                false,
+            )
+            .await;
             let directory = tempfile::tempdir().unwrap();
             let destination = directory.path().join("single.bin");
             let pool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -5081,7 +7303,8 @@ mod tests {
         );
         let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
         let (url, requests, normal_requests, server) =
-            spawn_range_server(data.clone(), false, false, false, false).await;
+            spawn_range_server(data.clone(), false, false, false, false, false)
+                .await;
         let directory = tempfile::tempdir().unwrap();
         let destination = directory.path().join("resumed.bin");
         let part_path = suffixed_path(&destination, ".part");
@@ -5130,7 +7353,8 @@ mod tests {
         );
         let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
         let (url, _, _, server) =
-            spawn_range_server(data.clone(), false, false, false, false).await;
+            spawn_range_server(data.clone(), false, false, false, false, false)
+                .await;
         let directory = tempfile::tempdir().unwrap();
         let destination = directory.path().join("stale.bin");
         let part_path = suffixed_path(&destination, ".part");
@@ -5169,14 +7393,21 @@ mod tests {
         let stale = Arc::new(vec![0xAB_u8; size - 4096]);
         let hash = sha1_smol::Sha1::from(&expected[..]).hexdigest();
         let (stale_url, stale_requests, stale_normal_requests, stale_server) =
-            spawn_range_server(stale, false, false, false, false).await;
+            spawn_range_server(stale, false, false, false, false, false).await;
         let (
             official_url,
             official_requests,
             official_normal_requests,
             official_server,
-        ) = spawn_range_server(expected.clone(), false, false, false, false)
-            .await;
+        ) = spawn_range_server(
+            expected.clone(),
+            false,
+            false,
+            false,
+            false,
+            false,
+        )
+        .await;
         let directory = tempfile::tempdir().unwrap();
         let destination = directory.path().join("source-isolated.bin");
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -5221,7 +7452,8 @@ mod tests {
         );
         let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
         let (url, requests, normal_requests, server) =
-            spawn_range_server(data.clone(), false, false, false, false).await;
+            spawn_range_server(data.clone(), false, false, false, false, false)
+                .await;
         let directory = tempfile::tempdir().unwrap();
         let destination = directory.path().join("fallback-resume.bin");
         let part_path = suffixed_path(&destination, ".part");

@@ -1,16 +1,21 @@
 use super::model::{
-    InstallErrorContext, InstallJobEventKind, InstallJobSnapshot,
-    InstallJobState, InstallPhaseDetails, InstallPhaseId, InstallProgress,
+    ActiveDownloadState, DownloadItemStatus, InstallErrorContext,
+    InstallJobEventKind, InstallJobSnapshot, InstallJobState,
+    InstallPhaseDetails, InstallPhaseId, InstallProgress,
 };
 use super::store;
+use chrono::Utc;
 use std::collections::HashSet;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-const PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_millis(750);
+const PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(3);
 const CONTENT_PROGRESS_PERSIST_STEPS: u64 = 25;
+const LIVE_PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(250);
+const LIVE_PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(3);
+const LIVE_PROGRESS_MIN_BYTES: u64 = 256 * 1024;
 
 static REPORTER_STATES: LazyLock<
     dashmap::DashMap<Uuid, Weak<Mutex<InstallProgressReporterState>>>,
@@ -29,6 +34,8 @@ struct InstallProgressReporterState {
     last_persisted_progress: Option<(InstallPhaseId, u64)>,
     initialized_from_store: bool,
     postponed_java_versions: HashSet<u32>,
+    last_live_emit_at: Instant,
+    last_live_persist_at: Instant,
 }
 
 #[derive(serde::Serialize)]
@@ -44,6 +51,14 @@ enum DownloadRequestUpdate {
         attempt: u32,
         max_attempts: u32,
     },
+    Progress {
+        job_id: Uuid,
+        id: String,
+        bytes: u64,
+        status: DownloadItemStatus,
+        speed_bytes_per_second: Option<u64>,
+        eta_seconds: Option<u64>,
+    },
     Finished {
         job_id: Uuid,
         id: String,
@@ -56,7 +71,8 @@ enum DownloadRequestUpdate {
 }
 
 impl InstallProgressReporter {
-    pub fn new(job_id: Uuid, state: InstallJobState) -> Self {
+    pub fn new(job_id: Uuid, mut state: InstallJobState) -> Self {
+        state.compact_transient_download_events();
         let shared_state = match REPORTER_STATES.entry(job_id) {
             dashmap::mapref::entry::Entry::Occupied(mut entry) => {
                 if let Some(state) = entry.get().upgrade() {
@@ -69,6 +85,8 @@ impl InstallProgressReporter {
                             last_persisted_progress: None,
                             initialized_from_store: false,
                             postponed_java_versions: HashSet::new(),
+                            last_live_emit_at: Instant::now(),
+                            last_live_persist_at: Instant::now(),
                         }));
                     entry.insert(Arc::downgrade(&state));
                     state
@@ -82,6 +100,8 @@ impl InstallProgressReporter {
                         last_persisted_progress: None,
                         initialized_from_store: false,
                         postponed_java_versions: HashSet::new(),
+                        last_live_emit_at: Instant::now(),
+                        last_live_persist_at: Instant::now(),
                     }));
                 entry.insert(Arc::downgrade(&state));
                 state
@@ -145,6 +165,7 @@ impl InstallProgressReporter {
         if !state.initialized_from_store {
             state.job =
                 store::get_required(self.job_id, app_state).await?.state;
+            state.job.compact_transient_download_events();
             state.initialized_from_store = true;
         }
         Ok(())
@@ -170,10 +191,24 @@ impl InstallProgressReporter {
             return Ok(());
         };
 
-        let record =
-            store::update_state(self.job_id, &state.job, &app_state).await?;
+        let record = match store::update_state(
+            self.job_id,
+            &state.job,
+            &app_state,
+        )
+        .await
+        {
+            Ok(record) => record,
+            Err(error) => {
+                tracing::warn!(%error, "Failed to persist install context");
+                return Ok(());
+            }
+        };
         state.mark_persisted();
-        emit_install_job(&record.snapshot()).await
+        if let Err(error) = emit_install_job(&record.snapshot()).await {
+            tracing::warn!(%error, "Failed to emit install context");
+        }
+        Ok(())
     }
 
     pub async fn persist(&self) -> crate::Result<InstallJobSnapshot> {
@@ -218,10 +253,24 @@ impl InstallProgressReporter {
                 source: source.into(),
                 fallback_count,
             });
-        let record =
-            store::update_state(self.job_id, &state.job, &app_state).await?;
+        let record = match store::update_state(
+            self.job_id,
+            &state.job,
+            &app_state,
+        )
+        .await
+        {
+            Ok(record) => record,
+            Err(error) => {
+                tracing::warn!(%error, "Failed to persist download metrics");
+                return Ok(());
+            }
+        };
         state.mark_persisted();
-        emit_install_job(&record.snapshot()).await
+        if let Err(error) = emit_install_job(&record.snapshot()).await {
+            tracing::warn!(%error, "Failed to emit download metrics");
+        }
+        Ok(())
     }
 
     pub async fn record_download_request(
@@ -262,6 +311,133 @@ impl InstallProgressReporter {
         .await
     }
 
+    pub async fn record_download_progress(
+        &self,
+        path: impl Into<String>,
+        bytes: u64,
+        bytes_total: u64,
+    ) -> crate::Result<()> {
+        let path = path.into();
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        let now = Utc::now();
+        let emit_too_soon =
+            state.last_live_emit_at.elapsed() < LIVE_PROGRESS_EMIT_INTERVAL;
+        let Some(active) = state.job.active_downloads.get_mut(&path) else {
+            return Ok(());
+        };
+        let previous_bytes = active.bytes_downloaded;
+        if bytes < previous_bytes {
+            active.speed_bytes_per_second = None;
+            active.speed_sample_started_at = now;
+            active.speed_sample_started_bytes = bytes;
+        } else if bytes > previous_bytes {
+            active.last_progress_at = now;
+            let sample_elapsed_ms = now
+                .signed_duration_since(active.speed_sample_started_at)
+                .num_milliseconds()
+                .max(1) as u64;
+            if sample_elapsed_ms >= 250 {
+                let sample = bytes
+                    .saturating_sub(active.speed_sample_started_bytes)
+                    .saturating_mul(1_000)
+                    .checked_div(sample_elapsed_ms)
+                    .unwrap_or(0);
+                let alpha =
+                    1.0 - (-(sample_elapsed_ms as f64) / 5_000.0_f64).exp();
+                active.speed_bytes_per_second = Some(
+                    active.speed_bytes_per_second.map_or(sample, |speed| {
+                        ((speed as f64) * (1.0 - alpha)
+                            + (sample as f64) * alpha)
+                            as u64
+                    }),
+                );
+                active.speed_sample_started_at = now;
+                active.speed_sample_started_bytes = bytes;
+            }
+        }
+        active.bytes_downloaded = bytes;
+        active.bytes_total = Some(bytes_total);
+        active.status = DownloadItemStatus::Downloading;
+
+        let threshold = LIVE_PROGRESS_MIN_BYTES.max(bytes_total / 200);
+        if bytes.saturating_sub(active.last_reported_bytes) < threshold
+            || emit_too_soon
+        {
+            return Ok(());
+        }
+        active.last_reported_bytes = bytes;
+        state.last_live_emit_at = Instant::now();
+        let (speed_bytes_per_second, eta_seconds) =
+            live_download_metrics(&state.job);
+        let should_persist = state.last_live_persist_at.elapsed()
+            >= LIVE_PROGRESS_PERSIST_INTERVAL;
+        if should_persist {
+            if let Err(error) = store::update_progress_state(
+                self.job_id,
+                &state.job,
+                &app_state,
+            )
+            .await
+            {
+                tracing::warn!(%error, "Failed to persist live download progress");
+            }
+            state.last_live_persist_at = Instant::now();
+        }
+        drop(state);
+        emit_download_request_update(&DownloadRequestUpdate::Progress {
+            job_id: self.job_id,
+            id: path.clone(),
+            bytes,
+            status: DownloadItemStatus::Downloading,
+            speed_bytes_per_second,
+            eta_seconds,
+        })
+        .await?;
+
+        let reporter = self.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(3)).await;
+            if let Err(error) = reporter
+                .record_download_stalled_if_unchanged(path, bytes)
+                .await
+            {
+                tracing::warn!(%error, "Failed to record stalled download");
+            }
+        });
+        Ok(())
+    }
+
+    pub async fn record_download_stage(
+        &self,
+        path: impl Into<String>,
+        status: DownloadItemStatus,
+    ) -> crate::Result<()> {
+        let path = path.into();
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        let Some(active) = state.job.active_downloads.get_mut(&path) else {
+            return Ok(());
+        };
+        active.status = status;
+        let bytes = active.bytes_downloaded;
+        let (speed_bytes_per_second, eta_seconds) =
+            live_download_metrics(&state.job);
+        state.last_live_emit_at = Instant::now();
+        drop(state);
+        emit_download_request_update(&DownloadRequestUpdate::Progress {
+            job_id: self.job_id,
+            id: path,
+            bytes,
+            status,
+            speed_bytes_per_second,
+            eta_seconds,
+        })
+        .await
+    }
+
     pub async fn record_download_request_finished(
         &self,
         path: impl Into<String>,
@@ -297,6 +473,37 @@ impl InstallProgressReporter {
         .await
     }
 
+    async fn record_download_stalled_if_unchanged(
+        &self,
+        path: String,
+        bytes: u64,
+    ) -> crate::Result<()> {
+        let mut state = self.state.lock().await;
+        let Some(active) = state.job.active_downloads.get_mut(&path) else {
+            return Ok(());
+        };
+        if active.bytes_downloaded != bytes
+            || Utc::now()
+                .signed_duration_since(active.last_progress_at)
+                .num_milliseconds()
+                < 3_000
+        {
+            return Ok(());
+        }
+        active.speed_bytes_per_second = None;
+        let status = active.status;
+        drop(state);
+        emit_download_request_update(&DownloadRequestUpdate::Progress {
+            job_id: self.job_id,
+            id: path,
+            bytes,
+            status,
+            speed_bytes_per_second: None,
+            eta_seconds: None,
+        })
+        .await
+    }
+
     async fn record_live_event(
         &self,
         event: InstallJobEventKind,
@@ -305,7 +512,42 @@ impl InstallProgressReporter {
         let app_state = crate::State::get().await?;
         let mut state = self.state.lock().await;
         self.sync_latest(&mut state, &app_state).await?;
-        state.job.record_event(event);
+        match &event {
+            InstallJobEventKind::DownloadRequestStarted {
+                path,
+                name,
+                url,
+                source,
+                bytes_total,
+                attempt,
+                max_attempts,
+            } => {
+                state.job.active_downloads.insert(
+                    path.clone(),
+                    ActiveDownloadState {
+                        name: name.clone(),
+                        url: url.clone(),
+                        source: source.clone(),
+                        bytes_downloaded: 0,
+                        bytes_total: *bytes_total,
+                        attempt: *attempt,
+                        max_attempts: *max_attempts,
+                        status: DownloadItemStatus::Downloading,
+                        last_reported_bytes: 0,
+                        last_progress_at: Utc::now(),
+                        speed_bytes_per_second: None,
+                        speed_sample_started_at: Utc::now(),
+                        speed_sample_started_bytes: 0,
+                    },
+                );
+            }
+            InstallJobEventKind::DownloadRequestFinished { path, .. }
+            | InstallJobEventKind::DownloadRequestFailed { path } => {
+                state.job.active_downloads.remove(path);
+            }
+            _ => {}
+        }
+        drop(state);
         emit_download_request_update(&update).await
     }
 
@@ -330,9 +572,18 @@ impl InstallProgressReporter {
         details: InstallPhaseDetails,
         events: Vec<InstallJobEventKind>,
     ) -> crate::Result<()> {
-        let app_state = crate::State::get().await?;
+        let app_state = match crate::State::get().await {
+            Ok(app_state) => app_state,
+            Err(error) => {
+                tracing::warn!(%error, "Failed to access install progress store");
+                return Ok(());
+            }
+        };
         let mut state = self.state.lock().await;
-        self.sync_latest(&mut state, &app_state).await?;
+        if let Err(error) = self.sync_latest(&mut state, &app_state).await {
+            tracing::warn!(%error, "Failed to load install progress state");
+            return Ok(());
+        }
         let phase_started = state.job.progress.phase != phase
             || matches!(
                 &state.job.progress.details,
@@ -347,10 +598,28 @@ impl InstallProgressReporter {
             return Ok(());
         }
 
-        let record =
-            store::update_state(self.job_id, &state.job, &app_state).await?;
+        let record = match store::update_progress_state(
+            self.job_id,
+            &state.job,
+            &app_state,
+        )
+        .await
+        {
+            Ok(()) => store::get_required(self.job_id, &app_state).await,
+            Err(error) => Err(error),
+        };
+        let record = match record {
+            Ok(record) => record,
+            Err(error) => {
+                tracing::warn!(%error, "Failed to persist install progress");
+                return Ok(());
+            }
+        };
         state.mark_persisted();
-        emit_install_job(&record.snapshot()).await
+        if let Err(error) = emit_install_job(&record.snapshot()).await {
+            tracing::warn!(%error, "Failed to emit install progress");
+        }
+        Ok(())
     }
 }
 
@@ -394,6 +663,11 @@ impl InstallProgressReporterState {
             .as_ref()
             .map(|progress| (self.job.progress.phase, progress.current));
     }
+}
+
+fn live_download_metrics(job: &InstallJobState) -> (Option<u64>, Option<u64>) {
+    let summary = job.download_summary();
+    (summary.speed_bytes_per_second, summary.eta_seconds)
 }
 
 #[allow(unused_variables)]
@@ -503,6 +777,27 @@ mod tests {
                 "bytes_total": 4096,
                 "attempt": 2,
                 "max_attempts": 4,
+            })
+        );
+
+        let progress = DownloadRequestUpdate::Progress {
+            job_id,
+            id: "mods/example.jar".to_string(),
+            bytes: 2048,
+            status: DownloadItemStatus::Verifying,
+            speed_bytes_per_second: None,
+            eta_seconds: None,
+        };
+        assert_eq!(
+            serde_json::to_value(progress).unwrap(),
+            serde_json::json!({
+                "type": "progress",
+                "job_id": "e7df84c8-b960-4ddb-a75b-bc9012405f1e",
+                "id": "mods/example.jar",
+                "bytes": 2048,
+                "status": "verifying",
+                "speed_bytes_per_second": null,
+                "eta_seconds": null,
             })
         );
     }

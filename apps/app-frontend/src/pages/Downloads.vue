@@ -58,7 +58,14 @@
 				class="!p-4"
 			>
 				<div class="flex items-center gap-3">
+					<img
+						v-if="bar.bar_type?.icon"
+						:src="displayIcon(bar.bar_type.icon)"
+						alt=""
+						class="size-12 rounded-xl object-cover"
+					/>
 					<div
+						v-else
 						class="flex size-12 items-center justify-center rounded-xl bg-brand-highlight text-brand"
 					>
 						<DownloadIcon />
@@ -634,7 +641,8 @@ function providerIcon(value: InstallJobSnapshot['provider']) {
 }
 
 function legacyProvider(bar: LoadingBar): InstallJobSnapshot['provider'] {
-	if (bar.bar_type?.type === 'pack_download') return 'curse_forge'
+	if (bar.bar_type?.type === 'pack_download' || bar.bar_type?.type === 'pack_file_download')
+		return 'curse_forge'
 	if (bar.bar_type?.type === 'minecraft_download') return 'minecraft'
 	if (bar.bar_type?.type === 'java_download') return 'java'
 	if (bar.bar_type?.type === 'launcher_update') return 'application'
@@ -686,9 +694,10 @@ function showProgress(job: InstallJobSnapshot) {
 }
 
 function jobPercent(job: InstallJobSnapshot) {
+	if (job.status === 'succeeded') return 100
 	const progress = effectiveInstallProgress(job)
-	if (!hasDeterminateInstallProgress(progress)) return job.status === 'succeeded' ? 100 : 0
-	return Math.min(100, Math.max(0, Math.round((progress.current / progress.total) * 100)))
+	if (!hasDeterminateInstallProgress(progress)) return 0
+	return Math.min(99, Math.max(0, Math.floor((progress.current / progress.total) * 100)))
 }
 
 function hasDeterminateProgress(job: InstallJobSnapshot) {
@@ -696,6 +705,18 @@ function hasDeterminateProgress(job: InstallJobSnapshot) {
 }
 
 function progressText(job: InstallJobSnapshot) {
+	const finalStage = job.items.find(
+		(item) => item.status === 'writing' || item.status === 'verifying',
+	)
+	if (finalStage) return statusLabel(finalStage.status)
+	const progress = effectiveInstallProgress(job)
+	if (
+		job.status === 'running' &&
+		hasDeterminateInstallProgress(progress) &&
+		progress.current >= progress.total &&
+		activeRequestItems(job).length === 0
+	)
+		return statusLabel('verifying')
 	if (job.summary.bytes_total)
 		return `${formatBytes(job.summary.bytes_downloaded)} / ${formatBytes(job.summary.bytes_total)}`
 	if (job.summary.files_total) return `${job.summary.files_completed} / ${job.summary.files_total}`

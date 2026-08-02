@@ -22,6 +22,8 @@ const RECONCILE_PROVIDER_QUALIFIED_CONTENT_MIGRATION_VERSION: i64 =
     20260728110000;
 #[cfg(test)]
 const JAVA_DEFAULT_VERSIONS_MIGRATION_VERSION: i64 = 20260729110000;
+#[cfg(test)]
+const SYSTEM_PROXY_SETTING_MIGRATION_VERSION: i64 = 20260802122000;
 
 // This migration was changed by the launcher rebrand after it had already
 // shipped. Keep the checksums of the original LF and CRLF variants so existing
@@ -572,6 +574,27 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
 
+    async fn settings_snapshot(pool: &Pool<Sqlite>) -> Vec<(String, String)> {
+        let columns: Vec<String> = sqlx::query_scalar(
+            "SELECT name FROM pragma_table_info('settings') ORDER BY cid",
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap();
+        let mut snapshot = Vec::with_capacity(columns.len());
+        for column in columns {
+            let escaped = column.replace('"', "\"\"");
+            let value: String = sqlx::query_scalar(&format!(
+                "SELECT quote(\"{escaped}\") FROM settings WHERE id = 0"
+            ))
+            .fetch_one(pool)
+            .await
+            .unwrap();
+            snapshot.push((column, value));
+        }
+        snapshot
+    }
+
     fn initial_migration() -> &'static Migration {
         MIGRATOR
             .iter()
@@ -703,6 +726,130 @@ mod tests {
                 migration.version
             );
         }
+    }
+
+    #[tokio::test]
+    async fn upgrades_the_exact_previous_settings_schema_without_data_loss() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < SYSTEM_PROXY_SETTING_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        sqlx::query(
+            "
+            UPDATE settings
+            SET
+                max_concurrent_downloads = 17,
+                theme = 'light',
+                locale = 'zh-CN',
+                minecraft_metadata_source = 'official_only',
+                minecraft_file_source = 'mirror_preferred',
+                modrinth_source = 'auto',
+                curseforge_source = 'official_only'
+            WHERE id = 0
+            ",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let before = settings_snapshot(&pool).await;
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let mut after = settings_snapshot(&pool).await;
+        assert_eq!(
+            after.pop(),
+            Some(("use_system_proxy".to_string(), "0".to_string()))
+        );
+        assert_eq!(after, before);
+        let use_system_proxy: i64 = sqlx::query_scalar(
+            "SELECT use_system_proxy FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(use_system_proxy, 0);
+        let legacy_table_exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+                SELECT 1 FROM sqlite_master
+                WHERE type = 'table'
+                    AND name = 'settings_with_official_preferred'
+            )",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(!legacy_table_exists);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+
+        sqlx::query(
+            "
+            UPDATE settings
+            SET
+                minecraft_metadata_source = 'official_preferred',
+                minecraft_file_source = 'official_preferred',
+                modrinth_source = 'official_preferred',
+                curseforge_source = 'official_preferred'
+            WHERE id = 0
+            ",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let modes: (String, String, String, String) = sqlx::query_as(
+            "
+            SELECT
+                minecraft_metadata_source,
+                minecraft_file_source,
+                modrinth_source,
+                curseforge_source
+            FROM settings
+            WHERE id = 0
+            ",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            modes,
+            (
+                "official_preferred".to_string(),
+                "official_preferred".to_string(),
+                "official_preferred".to_string(),
+                "official_preferred".to_string(),
+            )
+        );
+        assert!(
+            sqlx::query(
+                "UPDATE settings SET minecraft_file_source = 'invalid' WHERE id = 0"
+            )
+            .execute(&pool)
+            .await
+            .is_err()
+        );
     }
 
     #[tokio::test]

@@ -5,7 +5,7 @@ use crate::state::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 use uuid::Uuid;
 
 pub type InstallModpackPreview = CreatePackInstance;
@@ -22,6 +22,8 @@ pub struct InstallJobState {
     pub context: Option<InstallErrorContext>,
     #[serde(default)]
     pub events: Vec<InstallJobEvent>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub active_downloads: HashMap<String, ActiveDownloadState>,
     #[serde(default)]
     pub display: Option<InstallJobDisplay>,
     pub rollback: Option<InstallRollbackState>,
@@ -53,6 +55,7 @@ impl InstallJobState {
                 at: Utc::now(),
                 kind: InstallJobEventKind::JobQueued { kind },
             }],
+            active_downloads: HashMap::new(),
             display: None,
             rollback: None,
             error: None,
@@ -61,9 +64,28 @@ impl InstallJobState {
     }
 
     pub fn record_event(&mut self, kind: InstallJobEventKind) {
+        if matches!(
+            &kind,
+            InstallJobEventKind::JobStarted
+                | InstallJobEventKind::JobSucceeded { .. }
+                | InstallJobEventKind::JobCanceled { .. }
+        ) {
+            self.active_downloads.clear();
+        }
         self.events.push(InstallJobEvent {
             at: Utc::now(),
             kind,
+        });
+    }
+
+    pub fn compact_transient_download_events(&mut self) {
+        self.events.retain(|event| {
+            !matches!(
+                event.kind,
+                InstallJobEventKind::DownloadRequestStarted { .. }
+                    | InstallJobEventKind::DownloadRequestFinished { .. }
+                    | InstallJobEventKind::DownloadRequestFailed { .. }
+            )
         });
     }
 
@@ -221,6 +243,65 @@ mod tests {
         assert_eq!(items[0].bytes_downloaded, 1024);
         assert_eq!(items[0].bytes_total, Some(1024));
         assert_eq!(items[0].source.as_deref(), Some("official"));
+
+        job.compact_transient_download_events();
+        assert!(job.events.iter().all(|event| !matches!(
+            event.kind,
+            InstallJobEventKind::DownloadRequestStarted { .. }
+                | InstallJobEventKind::DownloadRequestFinished { .. }
+                | InstallJobEventKind::DownloadRequestFailed { .. }
+        )));
+    }
+
+    #[test]
+    fn active_downloads_expose_live_bytes_and_hide_stale_eta() {
+        let mut job = job_state();
+        job.set_progress(
+            InstallPhaseId::DownloadingMinecraft,
+            Some(InstallProgress {
+                current: 400,
+                total: 1_000,
+                secondary: None,
+            }),
+            InstallPhaseDetails::Empty,
+        );
+        job.active_downloads.insert(
+            "client.jar".to_string(),
+            ActiveDownloadState {
+                name: "client.jar".to_string(),
+                url: "https://piston-data.mojang.com/client.jar".to_string(),
+                source: "official".to_string(),
+                bytes_downloaded: 400,
+                bytes_total: Some(1_000),
+                attempt: 1,
+                max_attempts: 3,
+                status: DownloadItemStatus::Downloading,
+                last_reported_bytes: 400,
+                last_progress_at: Utc::now(),
+                speed_bytes_per_second: Some(200),
+                speed_sample_started_at: Utc::now(),
+                speed_sample_started_bytes: 400,
+            },
+        );
+
+        let items = job.download_items();
+        assert_eq!(items[0].bytes_downloaded, 400);
+        assert_eq!(items[0].status, DownloadItemStatus::Downloading);
+        let summary = job.download_summary();
+        assert_eq!(summary.speed_bytes_per_second, Some(200));
+        assert_eq!(summary.eta_seconds, Some(3));
+
+        job.active_downloads
+            .get_mut("client.jar")
+            .unwrap()
+            .last_progress_at = Utc::now() - TimeDelta::seconds(4);
+        let stalled = job.download_summary();
+        assert_eq!(stalled.speed_bytes_per_second, None);
+        assert_eq!(stalled.eta_seconds, None);
+        job.record_event(InstallJobEventKind::JobCanceled {
+            phase: InstallPhaseId::DownloadingMinecraft,
+        });
+        assert!(job.active_downloads.is_empty());
     }
 
     #[test]
@@ -292,8 +373,8 @@ mod tests {
         assert_eq!(summary.bytes_total, Some(2_048));
         assert_eq!(summary.source.as_deref(), Some("official"));
         assert_eq!(summary.fallback_count, u64::MAX);
-        assert!(summary.speed_bytes_per_second.is_some());
-        assert!(summary.eta_seconds.is_some());
+        assert_eq!(summary.speed_bytes_per_second, None);
+        assert_eq!(summary.eta_seconds, None);
     }
 
     #[test]
@@ -589,6 +670,27 @@ pub enum DownloadItemStatus {
     Skipped,
     Failed,
     Canceled,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ActiveDownloadState {
+    pub name: String,
+    pub url: String,
+    pub source: String,
+    pub bytes_downloaded: u64,
+    pub bytes_total: Option<u64>,
+    pub attempt: u32,
+    pub max_attempts: u32,
+    pub status: DownloadItemStatus,
+    #[serde(default)]
+    pub last_reported_bytes: u64,
+    pub last_progress_at: DateTime<Utc>,
+    #[serde(default)]
+    pub speed_bytes_per_second: Option<u64>,
+    #[serde(default = "Utc::now")]
+    pub speed_sample_started_at: DateTime<Utc>,
+    #[serde(default)]
+    pub speed_sample_started_bytes: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -900,6 +1002,17 @@ impl InstallErrorView {
                         route: error.route.clone(),
                     })
                 }
+                crate::ErrorKind::HttpError {
+                    status,
+                    method,
+                    url,
+                } => Some(InstallApiErrorDetails {
+                    error: "http_error".to_string(),
+                    status: Some(*status),
+                    method: Some(method.clone()),
+                    url: Some(url.clone()),
+                    route: None,
+                }),
                 _ => None,
             },
             context,
@@ -996,7 +1109,7 @@ impl InstallJobState {
                     if let Some(item) =
                         items.iter_mut().find(|item| item.id == *path)
                     {
-                        item.status = DownloadItemStatus::Downloading;
+                        item.status = DownloadItemStatus::Queued;
                         item.bytes_downloaded = 0;
                         item.bytes_total = *bytes_total;
                         item.attempt = Some(*attempt);
@@ -1010,7 +1123,7 @@ impl InstallJobState {
                             name: path.clone(),
                             project_id: None,
                             version_id: None,
-                            status: DownloadItemStatus::Downloading,
+                            status: DownloadItemStatus::Queued,
                             bytes_downloaded: 0,
                             bytes_total: *bytes_total,
                             attempt: Some(*attempt),
@@ -1187,6 +1300,45 @@ impl InstallJobState {
                 _ => {}
             }
         }
+        let terminal = self.events.iter().rev().any(|event| {
+            matches!(
+                event.kind,
+                InstallJobEventKind::JobSucceeded { .. }
+                    | InstallJobEventKind::JobCanceled { .. }
+            )
+        });
+        if !terminal {
+            for (id, active) in &self.active_downloads {
+                if let Some(item) = items.iter_mut().find(|item| item.id == *id)
+                {
+                    item.name = active.name.clone();
+                    item.status = active.status;
+                    item.bytes_downloaded = active.bytes_downloaded;
+                    item.bytes_total = active.bytes_total;
+                    item.attempt = Some(active.attempt);
+                    item.max_attempts = Some(active.max_attempts);
+                    item.error = None;
+                    item.request_url = Some(active.url.clone());
+                    item.source = Some(active.source.clone());
+                } else {
+                    items.push(DownloadItemSnapshot {
+                        id: id.clone(),
+                        name: active.name.clone(),
+                        project_id: None,
+                        version_id: None,
+                        status: active.status,
+                        bytes_downloaded: active.bytes_downloaded,
+                        bytes_total: active.bytes_total,
+                        attempt: Some(active.attempt),
+                        max_attempts: Some(active.max_attempts),
+                        error: None,
+                        manual_url: None,
+                        request_url: Some(active.url.clone()),
+                        source: Some(active.source.clone()),
+                    });
+                }
+            }
+        }
         items
     }
 
@@ -1256,38 +1408,25 @@ impl InstallJobState {
                 ..
             }
         );
-        if actively_downloading && summary.bytes_downloaded > 0 {
-            let phase_started = self.events.iter().rev().find_map(|event| {
-                matches!(
-                    &event.kind,
-                    InstallJobEventKind::PhaseStarted { phase, .. }
-                        if *phase == self.progress.phase
-                )
-                .then_some(event.at)
-            });
-            if let Some(started) = phase_started {
-                let elapsed_ms = Utc::now()
-                    .signed_duration_since(started)
+        let active_speed = self
+            .active_downloads
+            .values()
+            .filter(|download| {
+                Utc::now()
+                    .signed_duration_since(download.last_progress_at)
                     .num_milliseconds()
-                    .max(1) as u64;
-                let speed = summary
-                    .bytes_downloaded
-                    .saturating_mul(1_000)
-                    .checked_div(elapsed_ms)
-                    .unwrap_or(0);
-                if speed > 0 {
-                    summary.speed_bytes_per_second = Some(speed);
-                    summary.eta_seconds =
-                        summary.bytes_total.and_then(|total| {
-                            total
-                                .saturating_sub(summary.bytes_downloaded)
-                                .checked_add(speed - 1)
-                                .and_then(|remaining| {
-                                    remaining.checked_div(speed)
-                                })
-                        });
-                }
-            }
+                    < 3_000
+            })
+            .filter_map(|download| download.speed_bytes_per_second)
+            .fold(0_u64, u64::saturating_add);
+        if actively_downloading && active_speed > 0 {
+            summary.speed_bytes_per_second = Some(active_speed);
+            summary.eta_seconds = summary.bytes_total.and_then(|total| {
+                total
+                    .saturating_sub(summary.bytes_downloaded)
+                    .checked_add(active_speed - 1)
+                    .and_then(|remaining| remaining.checked_div(active_speed))
+            });
         }
         summary
     }

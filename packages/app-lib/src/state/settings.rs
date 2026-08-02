@@ -15,6 +15,7 @@ pub enum DownloadSourceMode {
     Auto = 0,
     OfficialOnly = 1,
     MirrorPreferred = 2,
+    OfficialPreferred = 3,
 }
 
 impl DownloadSourceMode {
@@ -23,6 +24,7 @@ impl DownloadSourceMode {
             Self::Auto => "auto",
             Self::OfficialOnly => "official_only",
             Self::MirrorPreferred => "mirror_preferred",
+            Self::OfficialPreferred => "official_preferred",
         }
     }
 
@@ -30,6 +32,7 @@ impl DownloadSourceMode {
         match value {
             "official_only" => Self::OfficialOnly,
             "mirror_preferred" => Self::MirrorPreferred,
+            "official_preferred" => Self::OfficialPreferred,
             _ => Self::Auto,
         }
     }
@@ -38,6 +41,7 @@ impl DownloadSourceMode {
         match value {
             1 => Self::OfficialOnly,
             2 => Self::MirrorPreferred,
+            3 => Self::OfficialPreferred,
             _ => Self::Auto,
         }
     }
@@ -45,7 +49,7 @@ impl DownloadSourceMode {
     pub(crate) fn prefers_mirror(self, auto_prefers_mirror: bool) -> bool {
         match self {
             Self::Auto => auto_prefers_mirror,
-            Self::OfficialOnly => false,
+            Self::OfficialOnly | Self::OfficialPreferred => false,
             Self::MirrorPreferred => true,
         }
     }
@@ -99,6 +103,8 @@ pub struct Settings {
     pub max_concurrent_writes: usize,
     #[serde(default)]
     pub auto_concurrent_downloads: bool,
+    #[serde(default)]
+    pub use_system_proxy: bool,
     #[serde(default)]
     pub minecraft_metadata_source: DownloadSourceMode,
     #[serde(default)]
@@ -198,7 +204,7 @@ impl Settings {
             "
             SELECT
                 max_concurrent_writes, max_concurrent_downloads,
-                auto_concurrent_downloads, minecraft_metadata_source,
+				auto_concurrent_downloads, use_system_proxy, minecraft_metadata_source,
                 minecraft_file_source, modrinth_source, curseforge_source,
                 theme, locale, default_page, collapsed_navigation, hide_nametag_skins_page, advanced_rendering, native_decorations,
                 discord_rpc, developer_mode, telemetry, personalized_ads,
@@ -224,6 +230,7 @@ impl Settings {
             max_concurrent_downloads: res.max_concurrent_downloads as usize,
             max_concurrent_writes: res.max_concurrent_writes as usize,
             auto_concurrent_downloads: res.auto_concurrent_downloads == 1,
+            use_system_proxy: res.use_system_proxy == 1,
             minecraft_metadata_source: DownloadSourceMode::from_string(
                 &res.minecraft_metadata_source,
             ),
@@ -415,7 +422,8 @@ impl Settings {
                 transparent_background_blur = $53,
                 home_layout = $54,
                 minimal_home_instance_id = $55,
-                auto_hide_downloads_button = $56
+				auto_hide_downloads_button = $56,
+				use_system_proxy = $57
             ",
             max_concurrent_writes,
             max_concurrent_downloads,
@@ -473,6 +481,7 @@ impl Settings {
             home_layout,
             self.minimal_home_instance_id,
             self.auto_hide_downloads_button,
+            self.use_system_proxy,
         )
         .execute(exec)
         .await?;
@@ -894,6 +903,70 @@ mod tests {
                 .unwrap(),
             "\"mirror_preferred\""
         );
+        assert_eq!(
+            serde_json::to_string(&DownloadSourceMode::OfficialPreferred)
+                .unwrap(),
+            "\"official_preferred\""
+        );
+    }
+
+    #[tokio::test]
+    async fn official_preferred_sources_round_trip_in_a_fresh_database() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        sqlx::query(
+            "
+            UPDATE settings
+            SET
+                minecraft_metadata_source = 'official_preferred',
+                minecraft_file_source = 'official_preferred',
+                modrinth_source = 'official_preferred',
+                curseforge_source = 'official_preferred'
+            WHERE id = 0
+            ",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let settings = Settings::get(&pool).await.unwrap();
+        assert_eq!(
+            settings.minecraft_metadata_source,
+            DownloadSourceMode::OfficialPreferred
+        );
+        assert_eq!(
+            settings.minecraft_file_source,
+            DownloadSourceMode::OfficialPreferred
+        );
+        assert_eq!(
+            settings.modrinth_source,
+            DownloadSourceMode::OfficialPreferred
+        );
+        assert_eq!(
+            settings.curseforge_source,
+            DownloadSourceMode::OfficialPreferred
+        );
+    }
+
+    #[tokio::test]
+    async fn system_proxy_defaults_disabled_and_round_trips() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+
+        let mut settings = Settings::get(&pool).await.unwrap();
+        assert!(!settings.use_system_proxy);
+        settings.use_system_proxy = true;
+        settings.update(&pool).await.unwrap();
+
+        assert!(Settings::get(&pool).await.unwrap().use_system_proxy);
     }
 
     #[test]

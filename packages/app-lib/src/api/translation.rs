@@ -42,13 +42,33 @@ struct CachedMicrosoftToken {
     expires_at: Instant,
 }
 
-static TRANSLATION_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(20))
-        .user_agent(crate::launcher_user_agent())
-        .build()
-        .expect("translation client configuration should be valid")
-});
+static SYSTEM_TRANSLATION_CLIENT: LazyLock<reqwest::Client> =
+    LazyLock::new(|| {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(20))
+            .user_agent(crate::launcher_user_agent())
+            .build()
+            .expect("translation client configuration should be valid")
+    });
+static DIRECT_TRANSLATION_CLIENT: LazyLock<reqwest::Client> =
+    LazyLock::new(|| {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(20))
+            .user_agent(crate::launcher_user_agent())
+            .no_proxy()
+            .build()
+            .expect("direct translation client configuration should be valid")
+    });
+
+fn translation_client() -> &'static reqwest::Client {
+    if State::get_if_initialized()
+        .is_some_and(|state| state.system_proxy_enabled())
+    {
+        &SYSTEM_TRANSLATION_CLIENT
+    } else {
+        &DIRECT_TRANSLATION_CLIENT
+    }
+}
 static MICROSOFT_TOKEN: LazyLock<Mutex<Option<CachedMicrosoftToken>>> =
     LazyLock::new(|| Mutex::new(None));
 static MICROSOFT_COOLDOWN: LazyLock<Mutex<Option<Instant>>> =
@@ -1093,7 +1113,7 @@ pub async fn translate(
 
     if !missing.is_empty() {
         let translated = translate_uncached(
-            &TRANSLATION_CLIENT,
+            translation_client(),
             &missing,
             &settings,
             &request,
@@ -1160,7 +1180,7 @@ pub async fn test_provider(
         "Testing translation provider"
     );
     let result = if provider == TranslationProvider::OpenaiCompatible {
-        test_openai_connection(&TRANSLATION_CLIENT, &settings, &target).await?
+        test_openai_connection(translation_client(), &settings, &target).await?
     } else {
         let request = TranslationRequest {
             source_language: "auto".to_string(),
@@ -1173,7 +1193,7 @@ pub async fn test_provider(
             }],
         };
         let mut result = translate_uncached(
-            &TRANSLATION_CLIENT,
+            translation_client(),
             &request.segments,
             &settings,
             &request,

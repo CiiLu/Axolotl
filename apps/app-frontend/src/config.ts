@@ -26,7 +26,7 @@ const officialLabrinthBaseUrl = trimTrailingSlash(
 	import.meta.env.MODRINTH_API_BASE_URL || 'https://api.modrinth.com',
 )
 export const MODRINTH_MIRROR_BASE_URL = 'https://mod.mcimirror.top/modrinth'
-type DownloadSourceMode = 'auto' | 'official_only' | 'mirror_preferred'
+type DownloadSourceMode = 'auto' | 'official_only' | 'mirror_preferred' | 'official_preferred'
 
 let modrinthSourceMode: DownloadSourceMode = 'auto'
 

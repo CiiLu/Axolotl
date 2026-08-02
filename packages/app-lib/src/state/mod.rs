@@ -3,7 +3,10 @@ use crate::util::fetch::{FetchSemaphore, IoSemaphore};
 use dashmap::DashMap;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use std::sync::atomic::{
+    AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering,
+};
+use std::time::{Duration, Instant};
 use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::{OnceCell, Semaphore};
 use tokio_util::sync::CancellationToken;
@@ -68,6 +71,12 @@ pub mod server_join_log;
 // RwLock on state only has concurrent reads, except for config dir change which takes control of the State
 static LAUNCHER_STATE: OnceCell<Arc<State>> = OnceCell::const_new();
 const MAX_CONCURRENT_INSTALL_JOBS: usize = 1;
+const AUTO_DOWNLOAD_CONCURRENCY_INITIAL: usize = 64;
+const AUTO_DOWNLOAD_CONCURRENCY_MIN: usize = 16;
+const AUTO_DOWNLOAD_CONCURRENCY_MAX: usize = 128;
+const AUTO_DOWNLOAD_CONCURRENCY_STEP: usize = 8;
+const AUTO_DOWNLOAD_SAMPLE_INTERVAL: Duration = Duration::from_secs(3);
+const AUTO_DOWNLOAD_PROBE_COOLDOWN: Duration = Duration::from_secs(30);
 pub struct State {
     /// Information on the location of files used in the launcher
     pub directories: DirectoryInfo,
@@ -86,10 +95,19 @@ pub struct State {
     minecraft_file_source: AtomicU8,
     modrinth_source: AtomicU8,
     curseforge_source: AtomicU8,
+    use_system_proxy: AtomicBool,
+    auto_prefers_mirror: AtomicBool,
     download_concurrency_target: AtomicUsize,
     download_concurrency_limit: AtomicUsize,
     fetch_concurrency_limit: AtomicUsize,
     api_concurrency_limit: AtomicUsize,
+    auto_concurrent_downloads: AtomicBool,
+    auto_concurrency_ceiling: AtomicUsize,
+    download_active_connections: AtomicUsize,
+    download_sample_bytes: AtomicU64,
+    download_sample_requests: AtomicU64,
+    download_sample_errors: AtomicU64,
+    download_sample_throttles: AtomicU64,
     pub(crate) install_job_semaphore: Semaphore,
     pub(crate) install_db_semaphore: Semaphore,
     pub(crate) install_job_cancellations: DashMap<Uuid, CancellationToken>,
@@ -119,6 +137,42 @@ pub struct State {
     pub(crate) pool: SqlitePool,
 
     pub(crate) file_watcher: FileWatcher,
+}
+
+pub(crate) struct DownloadConnectionActivity {
+    state: Arc<State>,
+}
+
+impl Drop for DownloadConnectionActivity {
+    fn drop(&mut self) {
+        self.state
+            .download_active_connections
+            .fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
+#[derive(Debug)]
+struct AutoConcurrencyProbe {
+    previous_target: usize,
+    baseline_throughput: u64,
+    windows: usize,
+    throughput: u64,
+}
+
+#[derive(Debug, Default)]
+struct AutoConcurrencyController {
+    high_utilization_windows: usize,
+    probe: Option<AutoConcurrencyProbe>,
+    cooldown_until: Option<Instant>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct AutoConcurrencySample {
+    active: usize,
+    bytes: u64,
+    requests: u64,
+    errors: u64,
+    throttles: u64,
 }
 
 /// Per-instance lock registry with task-local reentrancy.
@@ -288,6 +342,76 @@ async fn shrink_semaphore(
     }
 }
 
+impl AutoConcurrencyController {
+    fn next_target(
+        &mut self,
+        now: Instant,
+        current: usize,
+        ceiling: usize,
+        sample: AutoConcurrencySample,
+    ) -> usize {
+        let error_rate = if sample.requests == 0 {
+            0.0
+        } else {
+            sample.errors as f64 / sample.requests as f64
+        };
+        if sample.throttles > 0 || error_rate >= 0.05 {
+            self.high_utilization_windows = 0;
+            self.probe = None;
+            self.cooldown_until = Some(now + AUTO_DOWNLOAD_PROBE_COOLDOWN);
+            return (current * 3 / 4).max(AUTO_DOWNLOAD_CONCURRENCY_MIN);
+        }
+
+        if let Some(probe) = &mut self.probe {
+            probe.windows += 1;
+            probe.throughput = probe.throughput.saturating_add(sample.bytes);
+            if probe.windows >= 2 {
+                let average = probe.throughput / probe.windows as u64;
+                let productive = probe.baseline_throughput > 0
+                    && average.saturating_mul(100)
+                        >= probe.baseline_throughput.saturating_mul(105);
+                let previous = probe.previous_target;
+                self.probe = None;
+                if !productive {
+                    self.cooldown_until =
+                        Some(now + AUTO_DOWNLOAD_PROBE_COOLDOWN);
+                    return previous;
+                }
+            }
+            return current;
+        }
+
+        if self.cooldown_until.is_some_and(|until| until > now)
+            || error_rate >= 0.02
+            || sample.throttles > 0
+        {
+            self.high_utilization_windows = 0;
+            return current;
+        }
+
+        if sample.bytes > 0
+            && sample.active.saturating_mul(10) >= current.saturating_mul(9)
+        {
+            self.high_utilization_windows += 1;
+        } else {
+            self.high_utilization_windows = 0;
+        }
+        if self.high_utilization_windows < 2 || current >= ceiling {
+            return current;
+        }
+
+        self.high_utilization_windows = 0;
+        let target = (current + AUTO_DOWNLOAD_CONCURRENCY_STEP).min(ceiling);
+        self.probe = Some(AutoConcurrencyProbe {
+            previous_target: current,
+            baseline_throughput: sample.bytes,
+            windows: 0,
+            throughput: 0,
+        });
+        target
+    }
+}
+
 impl State {
     pub async fn init(app_identifier: String) -> crate::Result<()> {
         let state = LAUNCHER_STATE
@@ -299,6 +423,11 @@ impl State {
         {
             tracing::error!("Error recovering interrupted install jobs: {e}");
         }
+
+        let concurrency_state = Arc::clone(state);
+        tokio::spawn(async move {
+            concurrency_state.run_auto_concurrency_controller().await;
+        });
 
         tokio::task::spawn(async move {
             crate::util::fetch::cleanup_stale_partial_downloads(vec![
@@ -374,8 +503,41 @@ impl State {
         )
     }
 
+    pub(crate) fn auto_prefers_mirror(&self) -> bool {
+        self.auto_prefers_mirror.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn system_proxy_enabled(&self) -> bool {
+        self.use_system_proxy.load(Ordering::Relaxed)
+    }
+
     pub(crate) fn download_concurrency(&self) -> usize {
         self.download_concurrency_target.load(Ordering::Acquire)
+    }
+
+    pub(crate) fn begin_download_connection(
+        self: &Arc<Self>,
+    ) -> DownloadConnectionActivity {
+        self.download_active_connections
+            .fetch_add(1, Ordering::AcqRel);
+        self.download_sample_requests.fetch_add(1, Ordering::AcqRel);
+        DownloadConnectionActivity {
+            state: Arc::clone(self),
+        }
+    }
+
+    pub(crate) fn record_download_bytes(&self, bytes: u64) {
+        self.download_sample_bytes
+            .fetch_add(bytes, Ordering::AcqRel);
+    }
+
+    pub(crate) fn record_download_error(&self) {
+        self.download_sample_errors.fetch_add(1, Ordering::AcqRel);
+    }
+
+    pub(crate) fn record_download_throttle(&self) {
+        self.download_sample_throttles
+            .fetch_add(1, Ordering::AcqRel);
     }
 
     pub(crate) fn update_download_settings(
@@ -390,9 +552,81 @@ impl State {
             .store(settings.modrinth_source as u8, Ordering::Relaxed);
         self.curseforge_source
             .store(settings.curseforge_source as u8, Ordering::Relaxed);
-        self.resize_download_concurrency(
-            settings.effective_max_concurrent_downloads(),
-        );
+        self.use_system_proxy
+            .store(settings.use_system_proxy, Ordering::Relaxed);
+        self.auto_prefers_mirror
+            .store(settings.auto_prefers_mirror(), Ordering::Relaxed);
+        let was_auto = self
+            .auto_concurrent_downloads
+            .swap(settings.auto_concurrent_downloads, Ordering::AcqRel);
+        self.auto_concurrency_ceiling
+            .store(AUTO_DOWNLOAD_CONCURRENCY_MAX, Ordering::Release);
+        if settings.auto_concurrent_downloads {
+            if !was_auto {
+                self.resize_download_concurrency(
+                    AUTO_DOWNLOAD_CONCURRENCY_INITIAL,
+                );
+            }
+        } else {
+            self.resize_download_concurrency(
+                settings.effective_max_concurrent_downloads(),
+            );
+        }
+    }
+
+    async fn run_auto_concurrency_controller(self: Arc<Self>) {
+        let mut interval = tokio::time::interval(AUTO_DOWNLOAD_SAMPLE_INTERVAL);
+        interval.tick().await;
+        let mut controller = AutoConcurrencyController::default();
+        loop {
+            interval.tick().await;
+            if !self.auto_concurrent_downloads.load(Ordering::Acquire) {
+                controller = AutoConcurrencyController::default();
+                self.download_sample_bytes.swap(0, Ordering::AcqRel);
+                self.download_sample_requests.swap(0, Ordering::AcqRel);
+                self.download_sample_errors.swap(0, Ordering::AcqRel);
+                self.download_sample_throttles.swap(0, Ordering::AcqRel);
+                continue;
+            }
+            let sample = AutoConcurrencySample {
+                active: self
+                    .download_active_connections
+                    .load(Ordering::Acquire),
+                bytes: self.download_sample_bytes.swap(0, Ordering::AcqRel),
+                requests: self
+                    .download_sample_requests
+                    .swap(0, Ordering::AcqRel),
+                errors: self.download_sample_errors.swap(0, Ordering::AcqRel),
+                throttles: self
+                    .download_sample_throttles
+                    .swap(0, Ordering::AcqRel),
+            };
+            let current = self.download_concurrency();
+            let ceiling =
+                self.auto_concurrency_ceiling.load(Ordering::Acquire).clamp(
+                    AUTO_DOWNLOAD_CONCURRENCY_MIN,
+                    AUTO_DOWNLOAD_CONCURRENCY_MAX,
+                );
+            let target = controller.next_target(
+                Instant::now(),
+                current,
+                ceiling,
+                sample,
+            );
+            if target != current {
+                tracing::info!(
+                    current,
+                    target,
+                    active = sample.active,
+                    bytes = sample.bytes,
+                    requests = sample.requests,
+                    errors = sample.errors,
+                    throttles = sample.throttles,
+                    "Adjusted automatic download concurrency"
+                );
+                self.resize_download_concurrency(target);
+            }
+        }
     }
 
     fn resize_download_concurrency(self: &Arc<Self>, target: usize) {
@@ -484,6 +718,7 @@ impl State {
             IoSemaphore(Semaphore::new(settings.max_concurrent_writes));
         let api_semaphore =
             FetchSemaphore(Semaphore::new(download_concurrency));
+        let auto_prefers_mirror = settings.auto_prefers_mirror();
 
         tracing::info!("Initializing directories");
         DirectoryInfo::move_launcher_directory(
@@ -520,10 +755,23 @@ impl State {
             ),
             modrinth_source: AtomicU8::new(settings.modrinth_source as u8),
             curseforge_source: AtomicU8::new(settings.curseforge_source as u8),
+            use_system_proxy: AtomicBool::new(settings.use_system_proxy),
+            auto_prefers_mirror: AtomicBool::new(auto_prefers_mirror),
             download_concurrency_target: AtomicUsize::new(download_concurrency),
             download_concurrency_limit: AtomicUsize::new(download_concurrency),
             fetch_concurrency_limit: AtomicUsize::new(download_concurrency),
             api_concurrency_limit: AtomicUsize::new(download_concurrency),
+            auto_concurrent_downloads: AtomicBool::new(
+                settings.auto_concurrent_downloads,
+            ),
+            auto_concurrency_ceiling: AtomicUsize::new(
+                AUTO_DOWNLOAD_CONCURRENCY_MAX,
+            ),
+            download_active_connections: AtomicUsize::new(0),
+            download_sample_bytes: AtomicU64::new(0),
+            download_sample_requests: AtomicU64::new(0),
+            download_sample_errors: AtomicU64::new(0),
+            download_sample_throttles: AtomicU64::new(0),
             install_job_semaphore: Semaphore::new(MAX_CONCURRENT_INSTALL_JOBS),
             install_db_semaphore: Semaphore::new(1),
             install_job_cancellations: DashMap::new(),
@@ -545,6 +793,62 @@ impl State {
         instance_id: &str,
     ) -> InstanceLockGuard<'_> {
         self.instance_locks.lock(instance_id).await
+    }
+}
+
+#[cfg(test)]
+mod auto_concurrency_tests {
+    use super::*;
+
+    fn healthy(active: usize, bytes: u64) -> AutoConcurrencySample {
+        AutoConcurrencySample {
+            active,
+            bytes,
+            requests: 100,
+            errors: 0,
+            throttles: 0,
+        }
+    }
+
+    #[test]
+    fn probes_up_after_two_saturated_windows_and_respects_ceiling() {
+        let mut controller = AutoConcurrencyController::default();
+        let now = Instant::now();
+        assert_eq!(controller.next_target(now, 64, 128, healthy(64, 100)), 64);
+        assert_eq!(controller.next_target(now, 64, 128, healthy(64, 100)), 72);
+
+        let mut capped = AutoConcurrencyController::default();
+        assert_eq!(capped.next_target(now, 128, 128, healthy(128, 100)), 128);
+        assert_eq!(capped.next_target(now, 128, 128, healthy(128, 100)), 128);
+    }
+
+    #[test]
+    fn unproductive_probe_reverts_and_throttle_drops_quarter() {
+        let mut controller = AutoConcurrencyController::default();
+        let now = Instant::now();
+        controller.next_target(now, 64, 128, healthy(64, 100));
+        assert_eq!(controller.next_target(now, 64, 128, healthy(64, 100)), 72);
+        assert_eq!(controller.next_target(now, 72, 128, healthy(72, 100)), 72);
+        assert_eq!(controller.next_target(now, 72, 128, healthy(72, 100)), 64);
+
+        let throttled = AutoConcurrencySample {
+            throttles: 1,
+            ..healthy(96, 100)
+        };
+        assert_eq!(controller.next_target(now, 96, 128, throttled), 72);
+    }
+
+    #[test]
+    fn high_error_rate_drops_but_never_below_minimum() {
+        let mut controller = AutoConcurrencyController::default();
+        let sample = AutoConcurrencySample {
+            active: 16,
+            bytes: 0,
+            requests: 100,
+            errors: 5,
+            throttles: 0,
+        };
+        assert_eq!(controller.next_target(Instant::now(), 16, 128, sample), 16);
     }
 }
 

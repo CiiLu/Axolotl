@@ -129,6 +129,14 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 					source: update.source,
 				}
 				break
+			case 'progress':
+				if (!current) return
+				item = {
+					...current,
+					status: update.status,
+					bytes_downloaded: update.bytes,
+				}
+				break
 			case 'finished':
 				if (!current) return
 				item = {
@@ -148,7 +156,18 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 		if (itemIndex === -1) items.push(item)
 		else items[itemIndex] = item
 		const nextJobs = [...jobs.value]
-		nextJobs[jobIndex] = { ...job, items }
+		nextJobs[jobIndex] = {
+			...job,
+			items,
+			summary:
+				update.type === 'progress'
+					? {
+							...job.summary,
+							speed_bytes_per_second: update.speed_bytes_per_second,
+							eta_seconds: update.eta_seconds,
+						}
+					: job.summary,
+		}
 		jobs.value = nextJobs
 	}
 

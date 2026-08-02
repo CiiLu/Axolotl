@@ -35,6 +35,7 @@ use std::{
         atomic::{AtomicU64, Ordering},
     },
 };
+use url::Url;
 
 const MINECRAFT_DOWNLOAD_PROGRESS_MIN_BYTES: u64 = 256 * 1024;
 
@@ -354,25 +355,41 @@ fn legacy_library_download_urls(
     repository: Option<&str>,
     artifact_path: &str,
 ) -> Option<Vec<String>> {
-    let repository =
-        repository.unwrap_or(LIBRARIES_MAVEN).trim_end_matches('/');
-    match repository {
-        LAUNCHER_META_MAVEN | LIBRARIES_MAVEN | FABRIC_MAVEN | FORGE_MAVEN
-        | NEOFORGE_MAVEN | QUILT_MAVEN | SPONGE_MAVEN | MAVEN_CENTRAL => {}
-        _ => return None,
+    if artifact_path.starts_with('/')
+        || artifact_path.contains('\\')
+        || artifact_path
+            .split('/')
+            .any(|segment| segment.is_empty() || matches!(segment, "." | ".."))
+    {
+        return None;
     }
 
-    let declared_url = format!("{repository}/{artifact_path}");
+    let repository = repository.unwrap_or(LIBRARIES_MAVEN);
+    let mut repository_url = Url::parse(repository).ok()?;
+    if repository_url.scheme() != "https"
+        || repository_url.host_str().is_none()
+        || !repository_url.username().is_empty()
+        || repository_url.password().is_some()
+        || repository_url.query().is_some()
+        || repository_url.fragment().is_some()
+    {
+        return None;
+    }
+    let normalized_path =
+        format!("{}/", repository_url.path().trim_end_matches('/'));
+    repository_url.set_path(&normalized_path);
+    let declared_url = repository_url.join(artifact_path).ok()?.to_string();
     let canonical_urls = legacy_library_canonical_urls(artifact_path);
     let mut candidates = Vec::new();
 
-    if repository == LAUNCHER_META_MAVEN {
+    if repository.trim_end_matches('/') == LAUNCHER_META_MAVEN {
         candidates.extend(canonical_urls);
         candidates.push(declared_url);
     } else {
         candidates.push(declared_url);
         candidates.extend(canonical_urls);
     }
+    candidates.push(format!("{LIBRARIES_MAVEN}/{artifact_path}"));
 
     let mut urls = Vec::new();
     for candidate in candidates {
@@ -649,26 +666,6 @@ pub async fn download_minecraft(
         None
     };
 
-    // 5
-    let assets_index = download_assets_index(
-        st,
-        version,
-        loading_bar,
-        force,
-        progress.clone(),
-    )
-    .await?;
-    if let Some(progress) = &progress {
-        progress
-            .add_total(missing_asset_bytes(
-                st,
-                version.assets == "legacy",
-                &assets_index,
-                force,
-            ))
-            .await?;
-    }
-
     let amount = if version.processors.as_ref().is_some_and(|x| !x.is_empty()) {
         25.0
     } else {
@@ -676,11 +673,44 @@ pub async fn download_minecraft(
     };
 
     tokio::try_join! {
-        // Total loading sums to 90/60
-        download_client(st, version, loading_bar, force, progress.clone()), // 9
-        download_log_config(st, version, loading_bar, force, progress.clone()),
-        download_assets(st, version.assets == "legacy", &assets_index, loading_bar, amount, force, progress.clone()), // 40
-        download_libraries(st, version.libraries.as_slice(), &version.id, loading_bar, amount, java_arch, force, minecraft_updated, progress.clone()) // 40
+        async {
+            let assets_index = download_assets_index(
+                st,
+                version,
+                loading_bar,
+                force,
+                progress.clone(),
+            )
+            .await?;
+            if let Some(progress) = &progress {
+                progress
+                    .add_total(missing_asset_bytes(
+                        st,
+                        version.assets == "legacy",
+                        &assets_index,
+                        force,
+                    ))
+                    .await?;
+            }
+            download_assets(
+                st,
+                version.assets == "legacy",
+                &assets_index,
+                loading_bar,
+                amount,
+                force,
+                progress.clone(),
+            )
+            .await
+        },
+        async {
+            tokio::try_join! {
+                download_client(st, version, loading_bar, force, progress.clone()),
+                download_log_config(st, version, loading_bar, force, progress.clone()),
+                download_libraries(st, version.libraries.as_slice(), &version.id, loading_bar, amount, java_arch, force, minecraft_updated, progress.clone())
+            }?;
+            Ok::<_, crate::Error>(())
+        }
     }?;
     if let Some(progress) = &progress {
         progress.finish().await?;
@@ -1092,11 +1122,11 @@ pub async fn download_assets(
         .map(Ok::<(&String, &Asset), crate::Error>);
 
     loading_try_for_each_concurrent(assets,
-            None,
+			Some(st.download_concurrency().saturating_mul(2)),
             loading_bar,
             loading_amount,
             num_futs,
-            None,
+			None,
             |(name, asset)| {
                 let progress = progress.clone();
                 async move {
@@ -1201,7 +1231,7 @@ pub async fn download_libraries(
     let num_files = libraries.len();
     loading_try_for_each_concurrent(
         stream::iter(libraries.iter()).map(Ok::<&Library, crate::Error>),
-        None,
+		Some(st.download_concurrency().saturating_mul(2)),
         loading_bar,
         loading_amount,
         num_files,
@@ -1461,6 +1491,7 @@ mod tests {
             urls(&[
                 "https://maven.fabricmc.net/net/fabricmc/intermediary/1.21.1/intermediary-1.21.1.jar",
                 "https://launcher-meta.modrinth.com/maven/net/fabricmc/intermediary/1.21.1/intermediary-1.21.1.jar",
+                "https://libraries.minecraft.net/net/fabricmc/intermediary/1.21.1/intermediary-1.21.1.jar",
             ]),
         );
         assert_eq!(
@@ -1471,6 +1502,7 @@ mod tests {
             urls(&[
                 "https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar",
                 "https://launcher-meta.modrinth.com/maven/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar",
+                "https://libraries.minecraft.net/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar",
             ]),
         );
         assert_eq!(
@@ -1480,6 +1512,7 @@ mod tests {
             ),
             urls(&[
                 "https://launcher-meta.modrinth.com/maven/com/modrinth/daedalus/forge-installer-extracts/1.20.1-47.4.20/forge-installer-extracts-1.20.1-47.4.20-client.lzma",
+                "https://libraries.minecraft.net/com/modrinth/daedalus/forge-installer-extracts/1.20.1-47.4.20/forge-installer-extracts-1.20.1-47.4.20-client.lzma",
             ]),
         );
         assert_eq!(
@@ -1498,6 +1531,7 @@ mod tests {
         let expected = urls(&[
             "https://repo.maven.apache.org/maven2/org/scala-lang/plugins/scala-continuations-library_2.11/1.0.2/scala-continuations-library_2.11-1.0.2.jar",
             "https://launcher-meta.modrinth.com/maven/org/scala-lang/plugins/scala-continuations-library_2.11/1.0.2/scala-continuations-library_2.11-1.0.2.jar",
+            "https://libraries.minecraft.net/org/scala-lang/plugins/scala-continuations-library_2.11/1.0.2/scala-continuations-library_2.11-1.0.2.jar",
         ]);
 
         assert_eq!(
@@ -1551,6 +1585,7 @@ mod tests {
                 Some(vec![
                     format!("{FORGE_MAVEN}/{artifact_path}"),
                     format!("{LAUNCHER_META_MAVEN}/{artifact_path}"),
+                    format!("{LIBRARIES_MAVEN}/{artifact_path}"),
                 ]),
             );
         }
@@ -1573,6 +1608,7 @@ mod tests {
                 Some(vec![
                     format!("{MAVEN_CENTRAL}/{artifact_path}"),
                     format!("{LAUNCHER_META_MAVEN}/{artifact_path}"),
+                    format!("{LIBRARIES_MAVEN}/{artifact_path}"),
                 ]),
             );
         }
@@ -1587,6 +1623,7 @@ mod tests {
             ),
             urls(&[
                 "https://launcher-meta.modrinth.com/maven/example/unknown/1/unknown-1.jar",
+                "https://libraries.minecraft.net/example/unknown/1/unknown-1.jar",
             ]),
         );
         assert_eq!(
@@ -1596,6 +1633,7 @@ mod tests {
             ),
             urls(&[
                 "https://maven.minecraftforge.net/example/unknown/1/unknown-1.jar",
+                "https://libraries.minecraft.net/example/unknown/1/unknown-1.jar",
             ]),
         );
         assert_eq!(
@@ -1603,7 +1641,37 @@ mod tests {
                 Some("https://example.invalid/maven"),
                 "net/fabricmc/intermediary/1.21.1/intermediary-1.21.1.jar",
             ),
-            None,
+            urls(&[
+                "https://example.invalid/maven/net/fabricmc/intermediary/1.21.1/intermediary-1.21.1.jar",
+                "https://maven.fabricmc.net/net/fabricmc/intermediary/1.21.1/intermediary-1.21.1.jar",
+                "https://libraries.minecraft.net/net/fabricmc/intermediary/1.21.1/intermediary-1.21.1.jar",
+            ]),
         );
+        for repository in [
+            "http://example.invalid/maven",
+            "https://user@example.invalid/maven",
+            "https://example.invalid/maven?token=secret",
+        ] {
+            assert_eq!(
+                legacy_library_download_urls(
+                    Some(repository),
+                    "example/unknown/1/unknown-1.jar",
+                ),
+                None,
+            );
+        }
+        for artifact_path in [
+            "/example/unknown.jar",
+            "../example/unknown.jar",
+            "example\\unknown.jar",
+        ] {
+            assert_eq!(
+                legacy_library_download_urls(
+                    Some("https://example.invalid/maven"),
+                    artifact_path,
+                ),
+                None,
+            );
+        }
     }
 }

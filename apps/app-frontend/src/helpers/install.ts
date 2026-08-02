@@ -215,6 +215,15 @@ export type DownloadRequestUpdate =
 			attempt: number
 			max_attempts: number
 	  }
+	| {
+			type: 'progress'
+			job_id: string
+			id: string
+			bytes: number
+			status: 'downloading' | 'writing' | 'verifying'
+			speed_bytes_per_second?: number | null
+			eta_seconds?: number | null
+	  }
 	| { type: 'finished'; job_id: string; id: string; bytes: number }
 	| { type: 'failed'; job_id: string; id: string }
 

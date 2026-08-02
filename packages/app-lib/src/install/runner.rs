@@ -1684,6 +1684,7 @@ fn install_error_code(
         },
         ErrorKind::FetchError(_)
         | ErrorKind::NetworkError(_)
+        | ErrorKind::HttpError { .. }
         | ErrorKind::ApiIsDownError(_) => "network_error",
         ErrorKind::Any(_)
             if matches!(

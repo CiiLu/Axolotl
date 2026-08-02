@@ -79,6 +79,13 @@ pub enum ErrorKind {
     #[error("Network download error: {0}")]
     NetworkError(String),
 
+    #[error("HTTP {status} for {method} {url}")]
+    HttpError {
+        status: u16,
+        method: String,
+        url: String,
+    },
+
     #[error("Too many API errors, try again in {0} minutes")]
     ApiIsDownError(u32),
 
@@ -199,6 +206,7 @@ pub enum ErrorKind {
 pub struct Error {
     pub raw: Arc<ErrorKind>,
     pub source: tracing_error::TracedError<Arc<ErrorKind>>,
+    context: Option<String>,
 }
 
 impl std::error::Error for Error {
@@ -209,11 +217,20 @@ impl std::error::Error for Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(fmt, "{}", self.source)
+        write!(fmt, "{}", self.source)?;
+        if let Some(context) = &self.context {
+            write!(fmt, "\n{context}")?;
+        }
+        Ok(())
     }
 }
 
 impl Error {
+    pub(crate) fn with_context(mut self, context: impl Into<String>) -> Self {
+        self.context = Some(context.into());
+        self
+    }
+
     /// Returns a user-facing message for this error, replacing raw database
     /// errors that are meaningless to end users with an actionable hint.
     ///
@@ -241,6 +258,7 @@ impl<E: Into<ErrorKind>> From<E> for Error {
         Self {
             raw: boxed_error.clone(),
             source: boxed_error.in_current_span(),
+            context: None,
         }
     }
 }
@@ -252,6 +270,7 @@ impl From<eyre::Report> for Error {
         Self {
             raw: error.clone(),
             source: error.in_current_span(),
+            context: None,
         }
     }
 }
