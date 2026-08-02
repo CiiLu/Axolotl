@@ -394,7 +394,7 @@ fn start_install(
             .arg(format!("/RESOURCE_DIR={}", request.resource_dir))
             .arg(format!("/STATUS_FILE={}", status_path.display()));
         if !request.desktop_shortcut {
-            command.arg("/ND");
+            command.arg("/NO_DESKTOP_SHORTCUT");
         }
         let result = match command.spawn() {
             Ok(mut child) => {

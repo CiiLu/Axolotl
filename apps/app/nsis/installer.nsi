@@ -306,7 +306,7 @@ Function PageReinstall
 
   ; Skip showing the page if passive
   ;
-  ; Note that we don't call this earlier at the begining
+  ; Note that we don't call this earlier at the beginning
   ; of this function because we need to populate some variables
   ; related to current installed version if detected and whether
   ; we are downgrading or not.
@@ -428,7 +428,7 @@ Function PageLeaveReinstall
         Abort
       ${EndIf}
 
-      ; Other erros? show generic error message and return to select un/reinstall page
+      ; Other errors? show generic error message and return to select un/reinstall page
       MessageBox MB_ICONEXCLAMATION "$(unableToUninstall)"
       Abort
     ${EndIf}
@@ -898,7 +898,7 @@ Function .onInit
     StrCpy $NoShortcutMode 1
   ${EndIf}
 
-  ${GetOptions} $CMDLINE "/ND" $NoDesktopShortcutMode
+  ${GetOptions} $CMDLINE "/NO_DESKTOP_SHORTCUT" $NoDesktopShortcutMode
   ${IfNot} ${Errors}
     StrCpy $NoDesktopShortcutMode 1
   ${EndIf}
