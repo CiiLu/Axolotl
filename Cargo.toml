@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "apps/app",
+  "apps/installer-ui",
   "packages/app-lib",
   "packages/ariadne",
   "packages/daedalus",

@@ -11,17 +11,19 @@ use crate::State;
 pub struct DiscordGuard {
     client: Arc<RwLock<DiscordIpcClient>>,
     connected: Arc<AtomicBool>,
+    launcher_activity: Arc<RwLock<String>>,
 }
 
 impl DiscordGuard {
     /// Initialize discord IPC client, and attempt to connect to it
     /// If it fails, it will still return a DiscordGuard, but the client will be unconnected
     pub fn init() -> crate::Result<DiscordGuard> {
-        let dipc = DiscordIpcClient::new("1123683254248148992");
+        let dipc = DiscordIpcClient::new("1533353147349864458");
 
         Ok(DiscordGuard {
             client: Arc::new(RwLock::new(dipc)),
             connected: Arc::new(AtomicBool::new(false)),
+            launcher_activity: Arc::new(RwLock::new("Idling...".to_string())),
         })
     }
 
@@ -56,6 +58,20 @@ impl DiscordGuard {
         } else {
             Ok(self.force_set_activity(msg, reconnect_if_fail).await?)
         }
+    }
+
+    pub async fn set_launcher_activity(
+        &self,
+        msg: &str,
+        reconnect_if_fail: bool,
+    ) -> crate::Result<()> {
+        *self.launcher_activity.write().await = msg.to_string();
+
+        let state = State::get().await?;
+        if state.process_manager.get_all().is_empty() {
+            self.set_activity(msg, reconnect_if_fail).await?;
+        }
+        Ok(())
     }
 
     /// Sets the activity to the given message, regardless of if discord is disabled or offline
@@ -141,7 +157,9 @@ impl DiscordGuard {
             )
             .await?;
         } else {
-            self.set_activity("Idling...", reconnect_if_fail).await?;
+            let launcher_activity = self.launcher_activity.read().await.clone();
+            self.set_activity(&launcher_activity, reconnect_if_fail)
+                .await?;
         }
         Ok(())
     }

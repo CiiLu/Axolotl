@@ -596,7 +596,7 @@ const messages = defineMessages({
 	downloadTerms: {
 		id: 'app-marketing.download.terms',
 		defaultMessage:
-			'Axolotl is free software released under <terms-link>GPL-3.0</terms-link>. Read the <privacy-link>project documentation</privacy-link> before installing.',
+			'Axolotl is free software released under <terms-link>GPL-3.0</terms-link>. Read the <privacy-link>Privacy Policy</privacy-link> before installing.',
 	},
 	linuxDisclaimer: {
 		id: 'app-marketing.download.linux-disclaimer',
@@ -1379,9 +1379,9 @@ useHead(() => ({
 						</a>
 					</template>
 					<template #privacy-link="{ children }">
-						<a href="https://github.com/Mystic-Stars/Axolotl#readme" target="_blank" rel="noopener">
+						<NuxtLink to="/privacy">
 							<component :is="() => children" />
-						</a>
+						</NuxtLink>
 					</template>
 				</IntlFormatted>
 			</p>

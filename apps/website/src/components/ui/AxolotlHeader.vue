@@ -61,6 +61,12 @@ function openSettings() {
 					<NuxtLink to="/changelog">{{ formatMessage(messages.changelog) }}</NuxtLink>
 				</ButtonStyled>
 				<ButtonStyled type="transparent">
+					<NuxtLink to="/terms">服务条款</NuxtLink>
+				</ButtonStyled>
+				<ButtonStyled type="transparent">
+					<NuxtLink to="/privacy">隐私政策</NuxtLink>
+				</ButtonStyled>
+				<ButtonStyled type="transparent">
 					<a href="https://github.com/Mystic-Stars/Axolotl" target="_blank" rel="noopener">
 						<GithubIcon aria-hidden="true" />
 						{{ formatMessage(messages.openSource) }}
@@ -108,6 +114,8 @@ function openSettings() {
 				<NuxtLink to="/changelog" @click="mobileMenuOpen = false">
 					{{ formatMessage(messages.changelog) }}
 				</NuxtLink>
+				<NuxtLink to="/terms" @click="mobileMenuOpen = false">服务条款</NuxtLink>
+				<NuxtLink to="/privacy" @click="mobileMenuOpen = false">隐私政策</NuxtLink>
 				<a
 					href="https://github.com/Mystic-Stars/Axolotl"
 					target="_blank"

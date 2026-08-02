@@ -61,12 +61,14 @@ export default defineNuxtConfig({
 	nitro: {
 		prerender: {
 			crawlLinks: false,
-			routes: ['/', '/changelog'],
+			routes: ['/', '/changelog', '/terms', '/privacy'],
 		},
 	},
 	routeRules: {
 		'/': { static: true },
 		'/changelog': { static: true },
+		'/terms': { static: true },
+		'/privacy': { static: true },
 	},
 	typescript: {
 		shim: false,

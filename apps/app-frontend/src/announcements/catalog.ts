@@ -33,6 +33,27 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.9',
+		version: '1.6.9',
+		publishedAt: '2026-08-02',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.9',
+			'zh-CN': 'Axolotl Launcher 1.6.9',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Launcher will now show a discord rich presence binded to Axolotl Launcher.',
+					'zh-CN': '启动器现在会显示 Axolotl Launcher 的 Discord Rich Presence。',
+				},
+				{
+					'en-US': 'Launcher will now show a discord rich presence with a more detailed status.',
+					'zh-CN': '启动器现在会显示带有更详细状态的 Discord Rich Presence。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.8',
 		version: '1.6.8',
 		publishedAt: '2026-08-02',
