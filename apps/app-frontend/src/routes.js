@@ -268,7 +268,7 @@ export default new createRouter({
 				{
 					path: 'worlds/:world/edit',
 					name: 'InstanceWorldEditor',
-					component: Instance.WorldEditor,
+					component: () => import('@/pages/instance/WorldEditor.vue'),
 					meta: {
 						useRootContext: true,
 						breadcrumb: [
