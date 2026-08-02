@@ -560,11 +560,7 @@ const deleteHovered = ref(false)
 		>
 			<slot name="additionalButtonsLeft" />
 
-			<ButtonStyled
-				v-if="hasRollbackListener && rollbackFileName"
-				circular
-				type="transparent"
-			>
+			<ButtonStyled v-if="hasRollbackListener && rollbackFileName" circular type="transparent">
 				<button
 					v-tooltip="formatMessage(messages.rollbackTooltip, { fileName: rollbackFileName })"
 					:aria-label="formatMessage(messages.rollbackTooltip, { fileName: rollbackFileName })"
