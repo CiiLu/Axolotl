@@ -88,7 +88,7 @@ jobs:
             args: --config tauri-release.conf.json
           - name: Windows x64
             runner: windows-2025
-            args: --config tauri-release.conf.json
+            args: --config tauri-release.conf.json --config tauri-modern.conf.json
           - name: macOS universal
             runner: macos-15
             args: --target universal-apple-darwin --config tauri-release.conf.json
@@ -151,16 +151,60 @@ jobs:
           updaterJsonPreferNsis: true
           retryAttempts: 2
 
-      - name: Build portable zip (Windows only)
+      - name: Publish Windows distribution variants
         if: runner.os == 'Windows'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}" -replace '^v', ''
           $appName = "Axolotl Launcher"
           $outDir = "target/release/bundle/nsis"
           $buildDir = "target/portable-build"
+          $publishDir = Join-Path $env:RUNNER_TEMP "windows-assets"
+
+          New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
+
+          $modernInstallers = @(Get-ChildItem $outDir -Filter '*-setup.exe' -File)
+          if ($modernInstallers.Count -ne 1) {
+            throw "Expected one modern installer, found $($modernInstallers.Count)"
+          }
+
+          $modernName = "Axolotl_Launcher_${version}_x64_modern-setup.exe"
+          $modernPath = Join-Path $publishDir $modernName
+          Copy-Item -Force $modernInstallers[0].FullName $modernPath
+          gh release upload "${{ github.ref_name }}" $modernPath --clobber
+
+          $modernSignature = "$($modernInstallers[0].FullName).sig"
+          if (Test-Path $modernSignature) {
+            $modernSignaturePath = "$modernPath.sig"
+            Copy-Item -Force $modernSignature $modernSignaturePath
+            gh release upload "${{ github.ref_name }}" $modernSignaturePath --clobber
+            gh release delete-asset "${{ github.ref_name }}" "$($modernInstallers[0].Name).sig" --yes
+          }
+          gh release delete-asset "${{ github.ref_name }}" $modernInstallers[0].Name --yes
+
+          pnpm --filter @modrinth/app tauri build --config tauri-release.conf.json
+
+          $nativeInstallers = @(Get-ChildItem $outDir -Filter '*-setup.exe' -File)
+          if ($nativeInstallers.Count -ne 1) {
+            throw "Expected one native NSIS installer, found $($nativeInstallers.Count)"
+          }
+
+          $nativeName = "Axolotl_Launcher_${version}_x64_nsis-setup.exe"
+          $nativePath = Join-Path $publishDir $nativeName
+          Copy-Item -Force $nativeInstallers[0].FullName $nativePath
+          gh release upload "${{ github.ref_name }}" $nativePath --clobber
+
+          $nativeSignature = "$($nativeInstallers[0].FullName).sig"
+          if (Test-Path $nativeSignature) {
+            $nativeSignaturePath = "$nativePath.sig"
+            Copy-Item -Force $nativeSignature $nativeSignaturePath
+            gh release upload "${{ github.ref_name }}" $nativeSignaturePath --clobber
+          }
 
           # Reuse the binary already built by tauri-action
           $appExe = "target/release/${appName}.exe"
@@ -173,14 +217,14 @@ jobs:
 
             # Create portable zip (for manual download)
             $zipName = "Axolotl_Launcher_${version}_x64_portable.zip"
-            Compress-Archive -Path "$buildDir\Axolotl" -DestinationPath "$outDir\$zipName" -Force
-            Write-Output "Created portable zip: $outDir\$zipName"
+            $zipPath = Join-Path $publishDir $zipName
+            Compress-Archive -Path "$buildDir\Axolotl" -DestinationPath $zipPath -Force
+            Write-Output "Created portable zip: $zipPath"
 
             # Upload portable zip (for manual download only)
-            $zipPath = Resolve-Path "$outDir\$zipName"
             gh release upload "${{ github.ref_name }}" "$zipPath" --clobber
           } else {
-            Write-Warning "Binary not found at $appExe"
+            throw "Binary not found at $appExe"
           }
 
   verify-and-publish:

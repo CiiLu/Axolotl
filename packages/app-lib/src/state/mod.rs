@@ -25,6 +25,8 @@ pub use self::instances::*;
 mod settings;
 pub use self::settings::*;
 
+mod installer_settings;
+
 mod process;
 pub use self::process::*;
 
@@ -466,6 +468,12 @@ impl State {
 
         tracing::info!("Fetching app settings");
         let mut settings = Settings::get(&pool).await?;
+        installer_settings::apply_pending_installer_directory(
+            &mut settings,
+            &pool,
+            &app_identifier,
+        )
+        .await?;
         let download_concurrency =
             settings.effective_max_concurrent_downloads();
         let fetch_semaphore =

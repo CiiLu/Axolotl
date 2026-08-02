@@ -49,6 +49,30 @@ jobs:
       - name: Test version metadata writes
         run: cargo test --package theseus writing_version_info_creates_missing_parent_directory
       - run: cargo check --package theseus_gui --features updater
+      - name: Build modern Windows installer
+        if: runner.os == 'Windows'
+        run: pnpm --filter @modrinth/app tauri build --config tauri-modern.conf.json
+      - name: Verify modern Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem target/release/bundle/nsis -Filter '*-setup.exe' -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected one modern NSIS installer, found $($installers.Count)"
+          }
+          Write-Output "Built modern installer: $($installers[0].Name)"
+      - name: Build native NSIS Windows installer
+        if: runner.os == 'Windows'
+        run: pnpm --filter @modrinth/app tauri build
+      - name: Verify native NSIS Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem target/release/bundle/nsis -Filter '*-setup.exe' -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected one native NSIS installer, found $($installers.Count)"
+          }
+          Write-Output "Built native NSIS installer: $($installers[0].Name)"
 
   website:
     needs: guardrails
