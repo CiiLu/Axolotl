@@ -1,7 +1,6 @@
 //! Platform-related code
 use daedalus::minecraft::{Os, OsRule};
 
-/// Whether the current process is running with elevated privileges
 /// (e.g. "Run as administrator" on Windows).
 #[cfg(target_os = "windows")]
 pub fn is_process_elevated() -> bool {
@@ -31,7 +30,8 @@ pub fn is_process_elevated() -> bool {
     }
 
     const TOKEN_QUERY: u32 = 0x8;
-    const TOKEN_ELEVATION: u32 = 20;
+    const TOKEN_ELEVATION_TYPE: u32 = 18;
+    const TOKEN_ELEVATION_TYPE_FULL: u32 = 2;
 
     // SAFETY: GetCurrentProcess returns a pseudo-handle that must not be
     // closed. The token handle is queried and closed on every path.
@@ -44,17 +44,17 @@ pub fn is_process_elevated() -> bool {
             return false;
         }
 
-        let mut elevation: u32 = 0;
+        let mut elevation_type: u32 = 0;
         let mut size = 0u32;
         let success = GetTokenInformation(
             token,
-            TOKEN_ELEVATION,
-            &raw mut elevation as *mut c_void,
+            TOKEN_ELEVATION_TYPE,
+            &raw mut elevation_type as *mut c_void,
             std::mem::size_of::<u32>() as u32,
             &raw mut size,
         ) != 0;
         let _ = CloseHandle(token);
-        success && elevation != 0
+        success && elevation_type == TOKEN_ELEVATION_TYPE_FULL
     }
 }
 
