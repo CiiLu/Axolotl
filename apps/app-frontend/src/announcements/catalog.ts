@@ -51,6 +51,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '启动器现在会显示带有更详细状态的 Discord Rich Presence。',
 				},
 			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the issue of administrator judgment on Windows not matching actual needs.',
+					'zh-CN': '修复了Windows下管理员判断与实际需求不符的问题。',
+				},
+			],
 		},
 	},
 	{
