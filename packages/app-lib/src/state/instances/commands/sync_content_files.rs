@@ -171,7 +171,7 @@ pub(crate) async fn sync_instance_content_files(
     // operations parallel.
     let _instance_lock = state.lock_instance_content(&instance.id).await;
 
-    let mut tx = state.pool.begin().await?;
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
     sqlite::content_rows::ensure_instance_exists(&instance.id, &mut tx).await?;
     sqlite::content_rows::mark_instance_files_missing(&instance.id, &mut tx)
         .await?;

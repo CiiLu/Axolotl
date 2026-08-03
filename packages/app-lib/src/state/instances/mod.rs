@@ -6,6 +6,7 @@ pub use self::model::*;
 
 pub(crate) mod adapters;
 pub(crate) mod commands;
+pub(crate) use self::commands::get_content_snapshot;
 pub use self::commands::{
     AppliedContentSetPatch, CreateInstance, EditInstance,
     InstanceLaunchOverridesPatch, InstanceMetadata,

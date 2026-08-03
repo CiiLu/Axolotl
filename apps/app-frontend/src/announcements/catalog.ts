@@ -48,6 +48,25 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': 'Minecraft 账号头像现支持渲染皮肤外层，并以分层 2D 效果和轮廓阴影显示。',
 				},
 			],
+			changed: [
+				{
+					'en-US':
+						'Reworked instance content management so local files and modpack groups remain visible and manageable when an online provider is unavailable.',
+					'zh-CN':
+						'重构实例内容管理，在线内容提供方不可用时，本地文件和整合包分组仍会完整显示并可正常管理。',
+				},
+				{
+					'en-US':
+						'One-click content updates now update only content added after installation; modpack updates remain separate and preserve added content and local overrides.',
+					'zh-CN':
+						'一键更新现在仅更新安装整合包后添加的内容；整合包更新保持独立，并会保留后装内容和本地覆盖。',
+				},
+				{
+					'en-US':
+						'Launcher networking now follows the operating system proxy automatically without a separate proxy toggle.',
+					'zh-CN': '启动器网络现在会自动跟随操作系统代理，无需单独配置代理开关。',
+				},
+			],
 			fixed: [
 				{
 					'en-US':
@@ -57,6 +76,22 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Fixed an oversized border around the expanded account selector.',
 					'zh-CN': '修复账号选择框展开时出现粗重边框的问题。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge author-restricted files opening invalid download pages, failing to import after browser download, or reporting completion before all files were present.',
+					'zh-CN':
+						'修复 CurseForge 作者限制文件打开错误下载页、浏览器下载后无法导入，以及文件未齐时提前提示完成的问题。',
+				},
+				{
+					'en-US':
+						'Fixed incorrect content counts and missing-file warnings caused by shader configuration sidecar files being treated as shader packs.',
+					'zh-CN': '修复光影配置附属文件被误识别为光影包，导致内容数量和文件缺失提示错误的问题。',
+				},
+				{
+					'en-US':
+						'Fixed content refresh and manual import operations intermittently failing because the local database was locked.',
+					'zh-CN': '修复内容刷新和手动导入偶发因本地数据库锁定而失败的问题。',
 				},
 				{
 					'en-US':

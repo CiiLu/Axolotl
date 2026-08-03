@@ -44,6 +44,7 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
                 Ok(events) => {
                     let instance_ids = event_instance_ids.read().await;
                     let mut visited_instances = Vec::new();
+                    let mut scan_manual_downloads = false;
 
                     for e in &events {
                         let mut instance_path = None;
@@ -162,7 +163,20 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
                                     visited_instances.push(instance_id);
                                 }
                             }
+                        } else {
+                            scan_manual_downloads = true;
                         }
+                    }
+                    if scan_manual_downloads {
+                        tokio::spawn(async {
+                            if let Err(error) =
+                                crate::api::curseforge::scan_pending_manual_downloads().await
+                            {
+                                tracing::warn!(
+                                    "Unable to scan pending manual downloads: {error}"
+                                );
+                            }
+                        });
                     }
                 }
                 Err(error) => tracing::warn!("Unable to watch file: {error}"),
@@ -189,6 +203,28 @@ pub(crate) async fn watch_instances_init(
         watch_instance_folder(&instance.id, &instance.path, watcher, dirs)
             .await;
     }
+
+    if let Some(download_dir) = dirs::download_dir() {
+        let mut debouncer = watcher.watcher.write().await;
+        if let Err(error) = debouncer
+            .watcher()
+            .watch(&download_dir, RecursiveMode::NonRecursive)
+        {
+            tracing::warn!(
+                "Unable to watch downloads directory {}: {error}",
+                download_dir.display()
+            );
+        }
+    }
+    tokio::spawn(async {
+        if let Err(error) =
+            crate::api::curseforge::scan_pending_manual_downloads().await
+        {
+            tracing::warn!(
+                "Unable to scan pending manual downloads at startup: {error}"
+            );
+        }
+    });
 }
 
 pub(crate) async fn watch_instance_folder(

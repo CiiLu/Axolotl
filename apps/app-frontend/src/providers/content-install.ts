@@ -18,6 +18,7 @@ import {
 import {
 	type CurseForgeFile,
 	type CurseForgeInstallResult,
+	type CurseForgeManualDownloadImport,
 	type CurseForgeProject,
 	getCurseForgeFiles,
 	getCurseForgeProject,
@@ -64,7 +65,7 @@ interface ModpackAlreadyInstalledModalRef {
 interface CurseForgeManualDownloadsModalRef {
 	show: (payload: {
 		items: CurseForgeManualDownloadItem[]
-		installed: number
+		installed?: number
 		instanceId?: string | null
 	}) => void
 }
@@ -118,6 +119,14 @@ const manualDownloadsListAndMoreMessage = defineMessage({
 const manualDownloadsFilesCountMessage = defineMessage({
 	id: 'app.curseforge.manual-downloads.files-count',
 	defaultMessage: '{count, number} files',
+})
+const manualDownloadsImportedTitleMessage = defineMessage({
+	id: 'app.curseforge.manual-downloads.imported-title',
+	defaultMessage: 'CurseForge files imported',
+})
+const manualDownloadsImportedMessage = defineMessage({
+	id: 'app.curseforge.manual-downloads.imported',
+	defaultMessage: 'Imported {count, number} downloaded files into the instance.',
 })
 const automaticDownloadsFailedTitleMessage = defineMessage({
 	id: 'app.curseforge.automatic-downloads-failed.notification-title',
@@ -329,6 +338,11 @@ export interface ContentInstallContext {
 	handleModpackDuplicateCreateAnyway: () => Promise<void>
 	handleModpackDuplicateGoToInstance: (instanceId: string) => void
 	setCurseForgeManualDownloadsModal: (ref: CurseForgeManualDownloadsModalRef) => void
+	showCurseForgeManualDownloads: (instanceId: string, items: CurseForgeManualDownloadItem[]) => void
+	handleCurseForgeManualDownloadsImported: (
+		instanceId: string,
+		imported: CurseForgeManualDownloadImport[],
+	) => void
 	setIncompatibilityWarningModal: (ref: ModalRef) => void
 	incompatibilityWarningVersions: Ref<Labrinth.Versions.v2.Version[]>
 	incompatibilityWarningCurrentGameVersion: Ref<string>
@@ -894,10 +908,15 @@ export function createContentInstall(opts: {
 				projectId: item.projectId,
 				fileId: item.fileId,
 				fileName: item.fileName,
-				websiteUrl:
-					item.websiteUrl ??
-					currentCurseForgeProject?.links.websiteUrl ??
-					`https://www.curseforge.com/minecraft/mc-mods/${item.projectId}/files/${item.fileId}`,
+				websiteUrl: item.websiteUrl,
+				projectType: item.projectType,
+				projectSlug: item.projectSlug,
+				targetFolder: item.targetFolder,
+				hashes: item.hashes,
+				fileLength: item.fileLength,
+				fileFingerprint: item.fileFingerprint,
+				ownershipKind: item.ownershipKind,
+				operationKind: item.operationKind,
 			}),
 		)
 		setCurseForgeManualDownloads(instanceId, manualItems)
@@ -914,6 +933,28 @@ export function createContentInstall(opts: {
 			items: manualItems.map((m) => m.fileName),
 		})
 		return manualItems
+	}
+
+	function handleCurseForgeManualDownloadsImported(
+		instanceId: string,
+		imported: CurseForgeManualDownloadImport[],
+	) {
+		if (imported.length === 0) return
+		const importedKeys = new Set(imported.map((item) => `${item.projectId}:${item.fileId}`))
+		const remaining = (pendingManualDownloadsByInstance.value.get(instanceId) ?? []).filter(
+			(item) => !importedKeys.has(`${item.projectId}:${item.fileId}`),
+		)
+		setCurseForgeManualDownloads(instanceId, remaining)
+		const next = new Map(pendingManualDownloadsByInstance.value)
+		if (remaining.length > 0) next.set(instanceId, remaining)
+		else next.delete(instanceId)
+		pendingManualDownloadsByInstance.value = next
+		markInstanceContentChanged(instanceId)
+		opts.addNotification({
+			title: formatMessage(manualDownloadsImportedTitleMessage),
+			text: formatMessage(manualDownloadsImportedMessage, { count: imported.length }),
+			type: 'success',
+		})
 	}
 
 	function showManualCurseForgeDownloads(instanceId: string, result: CurseForgeInstallResult) {
@@ -1605,6 +1646,14 @@ export function createContentInstall(opts: {
 		setCurseForgeManualDownloadsModal(ref: CurseForgeManualDownloadsModalRef) {
 			curseForgeManualDownloadsModalRef = ref
 		},
+		showCurseForgeManualDownloads(instanceId: string, items: CurseForgeManualDownloadItem[]) {
+			setCurseForgeManualDownloads(instanceId, items)
+			const next = new Map(pendingManualDownloadsByInstance.value)
+			next.set(instanceId, items)
+			pendingManualDownloadsByInstance.value = next
+			curseForgeManualDownloadsModalRef?.show({ items, instanceId })
+		},
+		handleCurseForgeManualDownloadsImported,
 		async handleModpackDuplicateCreateAnyway() {
 			if (!pendingModpackInstall) return
 			const { project, version, source, callback, createInstanceCallback, provider } =

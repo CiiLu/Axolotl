@@ -75,6 +75,9 @@ export interface ContentManagerContext {
 	updateItem?: (id: string) => void
 	rollbackItem?: (item: ContentItem) => Promise<void>
 	bulkUpdateAll?: (onProgress?: (status: BulkOperationStatus) => void) => Promise<void>
+	bulkUpdateAllLabel?: string
+	bulkUpdateAllDescription?: string
+	bulkUpdateIncludesModpack?: boolean
 	bulkUpdateItem?: (item: ContentItem) => Promise<void>
 	bulkUpdateItems?: (items: ContentItem[]) => Promise<void>
 

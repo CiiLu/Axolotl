@@ -25,7 +25,13 @@ import {
 	normalizeProjectType,
 } from '#ui/utils/common-messages'
 
-import { getClientWarningType, isClientOnlyEnvironment } from '../../composables/content-filtering'
+import {
+	canToggleContentItem,
+	getClientWarningType,
+	isClientOnlyEnvironment,
+	isDisabledContentItem,
+	isEnabledContentItem,
+} from '../../composables/content-filtering'
 import type { ContentCardTableItem, ContentItem } from '../../types'
 import ContentCardTable from '../ContentCardTable.vue'
 import ContentSelectionBar from '../ContentSelectionBar.vue'
@@ -160,7 +166,7 @@ const filterOptions = computed(() => {
 		options.push({ id: 'warnings', label: 'Warnings' })
 	}
 
-	if (items.value.some((item) => !item.enabled)) {
+	if (items.value.some(isDisabledContentItem)) {
 		options.push({ id: 'disabled', label: 'Disabled' })
 	}
 
@@ -195,7 +201,7 @@ const typeFilteredCount = computed(() => {
 	return items.value.filter((item) => {
 		if (typeFilters.length > 0 && !typeFilters.includes(normalizeProjectType(item.project_type)))
 			return false
-		if (hasDisabledFilter && item.enabled) return false
+		if (hasDisabledFilter && !isDisabledContentItem(item)) return false
 		if (hasWarningsFilter && getClientWarningType(item) === null) return false
 		return true
 	}).length
@@ -222,7 +228,7 @@ const filteredItems = computed(() => {
 		result = result.filter((item) => {
 			if (typeFilters.length > 0 && !typeFilters.includes(normalizeProjectType(item.project_type)))
 				return false
-			if (hasDisabledFilter && item.enabled) return false
+			if (hasDisabledFilter && !isDisabledContentItem(item)) return false
 			if (hasWarningsFilter && getClientWarningType(item) === null) return false
 			return true
 		})
@@ -257,7 +263,7 @@ const tableItems = computed<ContentCardTableItem[]>(() =>
 			: undefined,
 		...(props.enableToggle ? { enabled: item.enabled } : {}),
 		installing: item.installing === true,
-		toggleDisabled: props.actionDisabled,
+		toggleDisabled: props.actionDisabled || !canToggleContentItem(item),
 		toggleDisabledTooltip: props.actionDisabled ? props.actionDisabledTooltip : undefined,
 		isClientOnly:
 			isClientOnlyEnvironment(item.environment) ||
@@ -305,13 +311,19 @@ function handleEnabledChange(fileName: string, value: boolean) {
 
 function bulkEnable() {
 	if (props.actionDisabled) return
-	emit('bulk:enable', [...selectedItems.value])
+	emit(
+		'bulk:enable',
+		selectedItems.value.filter((item) => canToggleContentItem(item) && isDisabledContentItem(item)),
+	)
 	selectedIds.value = []
 }
 
 function bulkDisable() {
 	if (props.actionDisabled) return
-	emit('bulk:disable', [...selectedItems.value])
+	emit(
+		'bulk:disable',
+		selectedItems.value.filter((item) => canToggleContentItem(item) && isEnabledContentItem(item)),
+	)
 	selectedIds.value = []
 }
 

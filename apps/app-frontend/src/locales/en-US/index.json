@@ -431,14 +431,38 @@
   "app.curseforge.automatic-downloads-failed.notification-title": {
     "message": "Some CurseForge downloads failed"
   },
+  "app.curseforge.manual-downloads.all-imported": {
+    "message": "All files imported"
+  },
+  "app.curseforge.manual-downloads.automatic-import": {
+    "message": "Automatic import"
+  },
   "app.curseforge.manual-downloads.body": {
-    "message": "Installed {installed, number} files automatically, but {manual, number} could not be downloaded by the launcher. Open each page on CurseForge, download the file, then put it into this instance."
+    "message": "Installed {installed, number} files automatically. {manual, number} files require browser download."
+  },
+  "app.curseforge.manual-downloads.checking-downloads": {
+    "message": "Checking the Downloads folder..."
+  },
+  "app.curseforge.manual-downloads.downloads-unavailable": {
+    "message": "The system Downloads folder is unavailable."
+  },
+  "app.curseforge.manual-downloads.existing-body": {
+    "message": "{manual, number} files still require browser download. Downloaded files will be verified and imported automatically."
   },
   "app.curseforge.manual-downloads.files-count": {
     "message": "{count, number} files"
   },
   "app.curseforge.manual-downloads.header": {
-    "message": "Manual CurseForge downloads needed"
+    "message": "Complete CurseForge downloads"
+  },
+  "app.curseforge.manual-downloads.import-complete": {
+    "message": "Imported into the instance"
+  },
+  "app.curseforge.manual-downloads.imported": {
+    "message": "Imported {count, number} downloaded files into the instance."
+  },
+  "app.curseforge.manual-downloads.imported-title": {
+    "message": "CurseForge files imported"
   },
   "app.curseforge.manual-downloads.list-and-more": {
     "message": "{list}, and {count, number} more"
@@ -453,16 +477,28 @@
     "message": "Some CurseForge files need manual download"
   },
   "app.curseforge.manual-downloads.open": {
-    "message": "Open"
+    "message": "Download"
   },
   "app.curseforge.manual-downloads.open-all": {
-    "message": "Open all"
+    "message": "Open missing"
   },
   "app.curseforge.manual-downloads.project-file": {
-    "message": "Project {projectId} · File {fileId}"
+    "message": "Project {projectId} / File {fileId}"
+  },
+  "app.curseforge.manual-downloads.retrying": {
+    "message": "Import failed; retrying"
+  },
+  "app.curseforge.manual-downloads.scanner-failed": {
+    "message": "Automatic import check failed; retrying."
   },
   "app.curseforge.manual-downloads.view-instance": {
     "message": "View instance"
+  },
+  "app.curseforge.manual-downloads.waiting": {
+    "message": "Waiting for download"
+  },
+  "app.curseforge.manual-downloads.watching-downloads": {
+    "message": "Watching {path}. Files are verified before import."
   },
   "app.curseforge.modpack-installed.body": {
     "message": "Installed {count, number} content files from CurseForge."
@@ -1433,6 +1469,12 @@
   "app.instance.mods.bulk-update.resolving-versions": {
     "message": "Resolving versions..."
   },
+  "app.instance.mods.content-refresh-warning.body": {
+    "message": "Local content is still complete and can be managed. Names, icons, or update information may be temporarily unavailable."
+  },
+  "app.instance.mods.content-refresh-warning.title": {
+    "message": "Some online details are unavailable"
+  },
   "app.instance.mods.content-type-project": {
     "message": "project"
   },
@@ -1444,6 +1486,18 @@
   },
   "app.instance.mods.file-already-exists": {
     "message": "添加失败，该文件可能已存在"
+  },
+  "app.instance.mods.missing-files-warning.body": {
+    "message": "{count, plural, one {# required file is} other {# required files are}} missing locally. Refresh while online to identify author-restricted downloads, or restore an item from its menu."
+  },
+  "app.instance.mods.missing-files-warning.title": {
+    "message": "Some modpack files are missing"
+  },
+  "app.instance.mods.pack-member-missing": {
+    "message": "This modpack file is missing locally"
+  },
+  "app.instance.mods.pack-member-removed": {
+    "message": "This modpack file was removed locally"
   },
   "app.instance.mods.parse-failed": {
     "message": "解析失败，这可能不是一个整合包"
@@ -1457,6 +1511,9 @@
   "app.instance.mods.projects-were-added": {
     "message": "{count} projects were added"
   },
+  "app.instance.mods.restore-pack-default": {
+    "message": "Restore modpack default"
+  },
   "app.instance.mods.share-text": {
     "message": "Check out the projects I'm using in my modpack!"
   },
@@ -1464,7 +1521,7 @@
     "message": "Sharing modpack content"
   },
   "app.instance.mods.skipped-files-warning.body": {
-    "message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Download and install them manually."
+    "message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Select a file to download it; the launcher will verify and import downloaded files automatically."
   },
   "app.instance.mods.skipped-files-warning.more": {
     "message": "And {count, number} more."
@@ -1474,6 +1531,12 @@
   },
   "app.instance.mods.successfully-uploaded": {
     "message": "Successfully uploaded"
+  },
+  "app.instance.mods.update-added-content": {
+    "message": "Update added content"
+  },
+  "app.instance.mods.update-added-content.description": {
+    "message": "Updates only content added after the modpack was installed. Modpack files are not changed."
   },
   "app.instance.never-played": {
     "message": "Never played"
@@ -3787,12 +3850,6 @@
   },
   "app.settings.resources.curseforge-mirror-description": {
     "message": "CurseForge public API requests and file downloads."
-  },
-  "app.settings.resources.use-system-proxy": {
-    "message": "Use system proxy"
-  },
-  "app.settings.resources.use-system-proxy-description": {
-    "message": "Route launcher API requests and downloads through the proxy configured by the operating system. Disabled by default."
   },
   "app.settings.resources.database-backups": {
     "message": "App database backups"

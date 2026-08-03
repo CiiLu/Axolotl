@@ -1,0 +1,913 @@
+use std::collections::{HashMap, HashSet};
+
+use sqlx::Row;
+
+use super::list_content::list_all_content;
+use super::sync_content_files::{
+    project_type_for_file, sync_instance_content_files,
+};
+use crate::State;
+use crate::state::instances::adapters::{
+    filesystem,
+    sqlite::{content_rows, instance_rows},
+};
+use crate::state::instances::{
+    ContentItemCapabilities, ContentOwnershipKind, InstanceContentPack,
+    InstanceContentSnapshot, InstanceContentSnapshotItem,
+    InstanceContentWarning, InstanceLink, ManualDownloadOperationKind,
+    ManualDownloadState, PackMemberMaterializationState,
+    PackMemberOverrideKind, PendingManualDownload,
+};
+use crate::state::{
+    CacheBehaviour, ContentItem, ContentItemProject, ContentItemVersion,
+    ContentProvider, ContentProviderRef,
+};
+
+pub(crate) async fn get_content_snapshot(
+    instance_id: &str,
+    refresh_remote: bool,
+    state: &State,
+) -> crate::Result<InstanceContentSnapshot> {
+    let instance = instance_rows::get_instance_by_id(instance_id, &state.pool)
+        .await?
+        .ok_or_else(|| {
+            crate::ErrorKind::InputError("Unknown instance".to_string())
+        })?;
+    let content_set =
+        content_rows::get_applied_content_set(instance_id, &state.pool)
+            .await?
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(
+                    "Instance has no applied content set".to_string(),
+                )
+            })?;
+    let link =
+        instance_rows::get_instance_link(instance_id, &state.pool).await?;
+    let mut warnings = Vec::new();
+    if refresh_remote
+        && let InstanceLink::CurseForgeModpack {
+            project_id,
+            version_id,
+        } = &link
+    {
+        let needs_reconciliation = sqlx::query_scalar::<_, i64>(
+            "SELECT EXISTS(
+				SELECT 1 FROM instance_pack_members
+				WHERE content_set_id = ? AND reconciled = 0
+			)",
+        )
+        .bind(&content_set.id)
+        .fetch_one(&state.pool)
+        .await?
+            != 0;
+        let needs_manual_recovery = sqlx::query_scalar::<_, i64>(
+            "SELECT EXISTS(
+				SELECT 1 FROM instance_pack_members member
+				WHERE member.content_set_id = ?
+					AND member.provider = 'curseforge'
+					AND member.required = 1
+					AND member.materialization_state = 'missing'
+			)",
+        )
+        .bind(&content_set.id)
+        .fetch_one(&state.pool)
+        .await?
+            != 0;
+        if needs_reconciliation || needs_manual_recovery {
+            let parsed_ids = project_id
+                .parse::<u32>()
+                .ok()
+                .zip(version_id.parse::<u32>().ok());
+            let result = match parsed_ids {
+                Some((project_id, version_id)) => {
+                    match crate::api::curseforge::get_modpack_expected_members(
+                        project_id, version_id,
+                    )
+                    .await
+                    {
+                        Ok(expected) => {
+                            if needs_reconciliation {
+                                if let Err(error) =
+                                    reconcile_curseforge_members(
+                                        instance_id,
+                                        &content_set.id,
+                                        &expected,
+                                        state,
+                                    )
+                                    .await
+                                {
+                                    Err(error)
+                                } else {
+                                    reconcile_curseforge_manual_downloads(
+                                        instance_id,
+                                        &content_set.id,
+                                        &expected,
+                                        state,
+                                    )
+                                    .await
+                                }
+                            } else {
+                                reconcile_curseforge_manual_downloads(
+                                    instance_id,
+                                    &content_set.id,
+                                    &expected,
+                                    state,
+                                )
+                                .await
+                            }
+                        }
+                        Err(error) => Err(error),
+                    }
+                }
+                None => Err(crate::ErrorKind::InputError(
+                    "Linked CurseForge pack IDs are invalid".to_string(),
+                )
+                .into()),
+            };
+            if let Err(error) = result {
+                warnings.push(InstanceContentWarning {
+                    code: "pack_membership_reconciliation_failed".to_string(),
+                    message: error.to_string(),
+                    provider: Some(ContentProvider::CurseForge),
+                });
+            }
+        }
+    }
+
+    let files = sync_instance_content_files(&instance, state).await?;
+    let entries =
+        content_rows::get_content_entries(&content_set.id, &state.pool).await?;
+    let members =
+        content_rows::get_pack_members(&content_set.id, &state.pool).await?;
+    let pending_manual_downloads =
+        content_rows::get_pending_manual_downloads(instance_id, &state.pool)
+            .await?;
+
+    let mut refs_by_entry = HashMap::new();
+    let mut origin_by_entry = HashMap::new();
+    let provider_rows = sqlx::query(
+        "SELECT ref.content_entry_id, ref.provider,
+                ref.provider_project_id, ref.provider_release_id,
+                ref.is_origin
+         FROM instance_content_provider_refs ref
+         INNER JOIN instance_content_entries entry
+            ON entry.id = ref.content_entry_id
+         WHERE entry.content_set_id = ?
+         ORDER BY ref.content_entry_id, ref.provider",
+    )
+    .bind(&content_set.id)
+    .fetch_all(&state.pool)
+    .await?;
+    for row in provider_rows {
+        let entry_id = row.try_get::<String, _>("content_entry_id")?;
+        let provider = row.try_get::<String, _>("provider")?;
+        let provider_project_id =
+            row.try_get::<String, _>("provider_project_id")?;
+        let provider_release_id =
+            row.try_get::<Option<String>, _>("provider_release_id")?;
+        let reference = ContentProviderRef::from_database(
+            &provider,
+            &provider_project_id,
+            provider_release_id.as_deref(),
+        )?;
+        refs_by_entry
+            .entry(entry_id.clone())
+            .or_insert_with(Vec::new)
+            .push(reference);
+        if row.try_get::<i64, _>("is_origin")? != 0 {
+            origin_by_entry
+                .insert(entry_id, ContentProvider::from_str(&provider)?);
+        }
+    }
+
+    let entries_by_file_id = entries
+        .iter()
+        .filter_map(|entry| {
+            entry.file_id.as_ref().map(|file_id| (file_id, entry))
+        })
+        .collect::<HashMap<_, _>>();
+    let members_by_entry_id = members
+        .iter()
+        .filter_map(|member| {
+            member
+                .content_entry_id
+                .as_ref()
+                .map(|entry_id| (entry_id, member))
+        })
+        .collect::<HashMap<_, _>>();
+    let mut represented_members = HashSet::new();
+    let mut items = Vec::new();
+
+    for file in files.into_iter().filter(|file| !file.missing) {
+        let Some(project_type) = project_type_for_file(&file) else {
+            continue;
+        };
+        let entry = entries_by_file_id.get(&file.id).copied();
+        let member =
+            entry.and_then(|entry| members_by_entry_id.get(&entry.id).copied());
+        if let Some(member) = member {
+            represented_members.insert(member.id.as_str());
+        }
+        let ownership_kind = entry
+            .map_or(ContentOwnershipKind::LocalDiscovered, |entry| {
+                entry.ownership_kind
+            });
+        let provider_refs = entry
+            .and_then(|entry| refs_by_entry.get(&entry.id))
+            .cloned()
+            .unwrap_or_default();
+        let origin_provider = entry
+            .and_then(|entry| origin_by_entry.get(&entry.id))
+            .copied();
+        let local_mod = file.local_mod_data.as_ref().and_then(|json| {
+            serde_json::from_str::<crate::mod_metadata::LocalModMetadata>(json)
+                .ok()
+        });
+        let title = local_mod
+            .as_ref()
+            .and_then(|metadata| metadata.name.clone())
+            .or_else(|| {
+                std::path::Path::new(&file.file_name)
+                    .file_stem()
+                    .map(|stem| stem.to_string_lossy().into_owned())
+            })
+            .unwrap_or_else(|| file.file_name.clone());
+        let content = ContentItem {
+            file_name: file.file_name.clone(),
+            file_path: file.relative_path.clone(),
+            id: file.sha1.clone(),
+            size: file.size,
+            enabled: entry
+                .map_or(file.enabled, |entry| entry.enabled && file.enabled),
+            project_type,
+            project: Some(ContentItemProject {
+                id: local_mod
+                    .as_ref()
+                    .map(|metadata| format!("local:{}", metadata.mod_id))
+                    .unwrap_or_else(|| format!("local:file:{}", file.sha1)),
+                slug: local_mod
+                    .as_ref()
+                    .map(|metadata| metadata.mod_id.clone()),
+                title,
+                icon_url: file.icon_path.clone(),
+            }),
+            version: local_mod.as_ref().and_then(|metadata| {
+                metadata.version.clone().map(|version| ContentItemVersion {
+                    id: format!("local:{}", metadata.mod_id),
+                    version_number: version,
+                    file_name: file.file_name.clone(),
+                    date_published: None,
+                })
+            }),
+            owner: None,
+            update: None,
+            date_added: Some(file.modified_at.to_rfc3339()),
+            provider_refs,
+            origin_provider,
+            rollback: None,
+        };
+        items.push(snapshot_item(
+            Some(file.id.clone()),
+            entry.map(|entry| entry.id.clone()),
+            member,
+            ownership_kind,
+            project_type,
+            file.relative_path,
+            Some(content),
+        ));
+    }
+
+    for member in &members {
+        if represented_members.contains(member.id.as_str()) {
+            continue;
+        }
+        if !filesystem::is_scannable_project_path(
+            member.project_type,
+            &member.expected_relative_path,
+        ) {
+            continue;
+        }
+        items.push(snapshot_item(
+            None,
+            member.content_entry_id.clone(),
+            Some(member),
+            ContentOwnershipKind::PackManaged,
+            member.project_type,
+            member.expected_relative_path.clone(),
+            None,
+        ));
+    }
+
+    let cache_behaviour = if refresh_remote {
+        CacheBehaviour::MustRevalidate
+    } else {
+        CacheBehaviour::CacheOnly
+    };
+    match list_all_content(instance_id, Some(cache_behaviour), state).await {
+        Ok(enriched) => {
+            let enriched = enriched
+                .into_iter()
+                .map(|item| (item.file_path.clone(), item))
+                .collect::<HashMap<_, _>>();
+            for item in &mut items {
+                if let Some(content) =
+                    enriched.get(&item.expected_relative_path)
+                {
+                    item.content = Some(content.clone());
+                    item.capabilities.can_update = content.update.is_some()
+                        && item.materialization_state
+                            == PackMemberMaterializationState::Present;
+                }
+            }
+        }
+        Err(error) => warnings.push(InstanceContentWarning {
+            code: "provider_metadata_unavailable".to_string(),
+            message: error.to_string(),
+            provider: None,
+        }),
+    }
+
+    let remote_pack = match super::list_content::get_linked_modpack_info(
+        instance_id,
+        None,
+        Some(cache_behaviour),
+        state,
+    )
+    .await
+    {
+        Ok(pack) => pack,
+        Err(error) => {
+            warnings.push(InstanceContentWarning {
+                code: "pack_metadata_unavailable".to_string(),
+                message: error.to_string(),
+                provider: pack_provider(&link),
+            });
+            None
+        }
+    };
+    let pack = pack_snapshot(
+        &instance.name,
+        instance.icon_path.clone(),
+        &link,
+        &members,
+        remote_pack,
+    );
+
+    items.sort_by(|left, right| {
+        left.expected_relative_path
+            .to_lowercase()
+            .cmp(&right.expected_relative_path.to_lowercase())
+    });
+
+    Ok(InstanceContentSnapshot {
+        instance_id: instance_id.to_string(),
+        revision: content_rows::get_applied_content_set(
+            instance_id,
+            &state.pool,
+        )
+        .await?
+        .map_or(content_set.revision, |set| set.revision),
+        pack,
+        items,
+        pending_manual_downloads,
+        warnings,
+    })
+}
+
+#[derive(Clone)]
+struct CurseForgeReconciliationCandidate {
+    entry_id: String,
+    relative_path: String,
+    enabled: bool,
+    missing: bool,
+    provider_project_id: Option<String>,
+    provider_release_id: Option<String>,
+}
+
+pub(crate) async fn reconcile_curseforge_members(
+    instance_id: &str,
+    content_set_id: &str,
+    expected: &[crate::api::curseforge::CurseForgePackExpectedMember],
+    state: &State,
+) -> crate::Result<()> {
+    use chrono::Utc;
+
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+    let rows = sqlx::query(
+        "SELECT entry.id AS entry_id, file.relative_path, entry.enabled,
+			file.missing, ref.provider_project_id, ref.provider_release_id
+		 FROM instance_content_entries entry
+		 INNER JOIN instance_files file ON file.id = entry.file_id
+		 LEFT JOIN instance_content_provider_refs ref
+			ON ref.content_entry_id = entry.id AND ref.provider = 'curseforge'
+		 WHERE entry.content_set_id = ?
+		 ORDER BY entry.modified_at DESC",
+    )
+    .bind(content_set_id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let candidates = rows
+        .into_iter()
+        .map(|row| {
+            Ok(CurseForgeReconciliationCandidate {
+                entry_id: row.try_get("entry_id")?,
+                relative_path: row.try_get("relative_path")?,
+                enabled: row.try_get::<i64, _>("enabled")? != 0,
+                missing: row.try_get::<i64, _>("missing")? != 0,
+                provider_project_id: row.try_get("provider_project_id")?,
+                provider_release_id: row.try_get("provider_release_id")?,
+            })
+        })
+        .collect::<crate::Result<Vec<_>>>()?;
+    let member_rows = sqlx::query(
+        "SELECT id, member_key, override_kind, materialization_state
+		 FROM instance_pack_members WHERE content_set_id = ?",
+    )
+    .bind(content_set_id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let mut existing_members = member_rows
+        .into_iter()
+        .map(|row| {
+            let key = row.try_get::<String, _>("member_key")?;
+            Ok((
+                key,
+                (
+                    row.try_get::<String, _>("id")?,
+                    PackMemberOverrideKind::from_str(
+                        &row.try_get::<String, _>("override_kind")?,
+                    )?,
+                    PackMemberMaterializationState::from_str(
+                        &row.try_get::<String, _>("materialization_state")?,
+                    )?,
+                ),
+            ))
+        })
+        .collect::<crate::Result<HashMap<_, _>>>()?;
+    let pending_rows = sqlx::query(
+        "SELECT provider_project_id, provider_release_id
+		 FROM instance_pending_manual_downloads
+		 WHERE instance_id = ? AND provider = 'curseforge'
+			AND state IN ('waiting', 'matched', 'error')",
+    )
+    .bind(instance_id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let pending = pending_rows
+        .into_iter()
+        .map(|row| {
+            Ok((
+                row.try_get::<String, _>("provider_project_id")?,
+                row.try_get::<String, _>("provider_release_id")?,
+            ))
+        })
+        .collect::<crate::Result<HashSet<_>>>()?;
+
+    sqlx::query(
+        "UPDATE instance_content_entries
+		 SET ownership_kind = 'user_added', modified_at = ?
+		 WHERE content_set_id = ? AND ownership_kind = 'pack_managed'",
+    )
+    .bind(Utc::now().timestamp())
+    .bind(content_set_id)
+    .execute(&mut *tx)
+    .await?;
+
+    let mut claimed_entries = HashSet::new();
+    for expected_member in expected {
+        let project_id = expected_member.project_id.to_string();
+        let file_id = expected_member.file_id.to_string();
+        let expected_path =
+            normalized_content_path(&expected_member.expected_relative_path);
+        let candidate = candidates
+            .iter()
+            .find(|candidate| {
+                !claimed_entries.contains(&candidate.entry_id)
+                    && candidate.provider_project_id.as_deref()
+                        == Some(project_id.as_str())
+                    && candidate.provider_release_id.as_deref()
+                        == Some(file_id.as_str())
+            })
+            .or_else(|| {
+                candidates.iter().find(|candidate| {
+                    !claimed_entries.contains(&candidate.entry_id)
+                        && candidate.provider_project_id.as_deref()
+                            == Some(project_id.as_str())
+                })
+            })
+            .or_else(|| {
+                candidates.iter().find(|candidate| {
+                    !claimed_entries.contains(&candidate.entry_id)
+                        && normalized_content_path(&candidate.relative_path)
+                            == expected_path
+                })
+            });
+        if let Some(candidate) = candidate {
+            claimed_entries.insert(candidate.entry_id.clone());
+            sqlx::query(
+                "UPDATE instance_content_entries
+				 SET ownership_kind = 'pack_managed', modified_at = ?
+				 WHERE id = ?",
+            )
+            .bind(Utc::now().timestamp())
+            .bind(&candidate.entry_id)
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        let member_key = format!(
+            "curseforge:{}:{}",
+            expected_member.project_id,
+            expected_member.project_type.get_name()
+        );
+        let existing = existing_members.remove(&member_key);
+        let inherited_override = existing
+            .as_ref()
+            .map_or(PackMemberOverrideKind::None, |(_, kind, _)| *kind);
+        let override_kind =
+            if inherited_override != PackMemberOverrideKind::None {
+                inherited_override
+            } else if candidate.is_some_and(|candidate| {
+                candidate.provider_project_id.as_deref()
+                    == Some(project_id.as_str())
+                    && candidate.provider_release_id.as_deref()
+                        != Some(file_id.as_str())
+            }) {
+                PackMemberOverrideKind::Version
+            } else if candidate.is_some_and(|candidate| !candidate.enabled) {
+                PackMemberOverrideKind::Disabled
+            } else {
+                PackMemberOverrideKind::None
+            };
+        let materialization_state = if override_kind
+            == PackMemberOverrideKind::Removed
+            && candidate.is_none()
+        {
+            PackMemberMaterializationState::Removed
+        } else if pending.contains(&(project_id.clone(), file_id.clone())) {
+            PackMemberMaterializationState::PendingManual
+        } else if candidate.is_some_and(|candidate| !candidate.missing) {
+            PackMemberMaterializationState::Present
+        } else {
+            PackMemberMaterializationState::Missing
+        };
+        let now = Utc::now();
+        let member_id = existing
+            .map(|(id, _, _)| id)
+            .unwrap_or_else(|| format!("pack-member:{}", uuid::Uuid::new_v4()));
+        content_rows::upsert_pack_member_in_transaction(
+            &crate::state::instances::PackMember {
+                id: member_id.clone(),
+                content_set_id: content_set_id.to_string(),
+                content_entry_id: candidate
+                    .map(|candidate| candidate.entry_id.clone()),
+                member_key,
+                project_type: expected_member.project_type,
+                expected_relative_path: expected_member
+                    .expected_relative_path
+                    .clone(),
+                provider: Some(ContentProvider::CurseForge),
+                provider_project_id: Some(project_id),
+                provider_release_id: Some(file_id),
+                required: expected_member.required,
+                expected_sha1: expected_member.expected_sha1.clone(),
+                expected_size: expected_member.expected_size,
+                expected_fingerprint: expected_member.expected_fingerprint,
+                materialization_state,
+                override_kind,
+                reconciled: true,
+                created_at: now,
+                modified_at: now,
+            },
+            &mut tx,
+        )
+        .await?;
+        sqlx::query(
+            "UPDATE instance_pack_members
+			 SET required = ?, reconciled = 1 WHERE id = ?",
+        )
+        .bind(i64::from(expected_member.required))
+        .bind(member_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    for (_, (member_id, _, _)) in existing_members {
+        sqlx::query("DELETE FROM instance_pack_members WHERE id = ?")
+            .bind(member_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    content_rows::bump_content_set_revision_in_transaction(
+        content_set_id,
+        &mut tx,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn reconcile_curseforge_manual_downloads(
+    instance_id: &str,
+    content_set_id: &str,
+    expected: &[crate::api::curseforge::CurseForgePackExpectedMember],
+    state: &State,
+) -> crate::Result<()> {
+    let restricted = expected
+        .iter()
+        .filter(|member| member.required && member.manual_download.is_some())
+        .collect::<Vec<_>>();
+    if restricted.is_empty() {
+        return Ok(());
+    }
+
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+    let member_rows = sqlx::query(
+        "SELECT id, content_entry_id, provider_project_id,
+                provider_release_id, materialization_state, override_kind
+         FROM instance_pack_members
+         WHERE content_set_id = ? AND provider = 'curseforge'",
+    )
+    .bind(content_set_id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let members = member_rows
+        .into_iter()
+        .map(|row| {
+            Ok((
+                (
+                    row.try_get::<Option<String>, _>("provider_project_id")?,
+                    row.try_get::<Option<String>, _>("provider_release_id")?,
+                ),
+                (
+                    row.try_get::<String, _>("id")?,
+                    row.try_get::<Option<String>, _>("content_entry_id")?,
+                    PackMemberMaterializationState::from_str(
+                        &row.try_get::<String, _>("materialization_state")?,
+                    )?,
+                    PackMemberOverrideKind::from_str(
+                        &row.try_get::<String, _>("override_kind")?,
+                    )?,
+                ),
+            ))
+        })
+        .collect::<crate::Result<HashMap<_, _>>>()?;
+    let pending_rows = sqlx::query(
+        "SELECT provider_project_id, provider_release_id
+         FROM instance_pending_manual_downloads
+         WHERE instance_id = ? AND provider = 'curseforge'
+            AND state IN ('waiting', 'matched', 'error')",
+    )
+    .bind(instance_id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let mut pending = pending_rows
+        .into_iter()
+        .map(|row| {
+            Ok((
+                row.try_get::<String, _>("provider_project_id")?,
+                row.try_get::<String, _>("provider_release_id")?,
+            ))
+        })
+        .collect::<crate::Result<HashSet<_>>>()?;
+    let mut changed = false;
+
+    for expected_member in restricted {
+        let key = (
+            Some(expected_member.project_id.to_string()),
+            Some(expected_member.file_id.to_string()),
+        );
+        let Some((
+            member_id,
+            content_entry_id,
+            materialization_state,
+            override_kind,
+        )) = members.get(&key)
+        else {
+            continue;
+        };
+        if matches!(
+            *materialization_state,
+            PackMemberMaterializationState::Present
+                | PackMemberMaterializationState::Removed
+        ) {
+            continue;
+        }
+
+        let project_id = expected_member.project_id.to_string();
+        let file_id = expected_member.file_id.to_string();
+        if !pending.contains(&(project_id.clone(), file_id.clone())) {
+            let Some(mut manual_download) =
+                expected_member.manual_download.clone()
+            else {
+                continue;
+            };
+            manual_download.operation_kind =
+                ManualDownloadOperationKind::PackInstall;
+            let now = chrono::Utc::now();
+            content_rows::upsert_pending_manual_download_in_transaction(
+                &PendingManualDownload {
+                    id: format!("manual-download:{}", uuid::Uuid::new_v4()),
+                    instance_id: instance_id.to_string(),
+                    pack_member_id: Some(member_id.clone()),
+                    content_entry_id: content_entry_id.clone(),
+                    operation_kind: ManualDownloadOperationKind::PackInstall,
+                    operation_target_id: None,
+                    project_type: expected_member.project_type,
+                    provider: ContentProvider::CurseForge,
+                    provider_project_id: project_id.clone(),
+                    provider_release_id: file_id.clone(),
+                    file_name: manual_download.file_name.clone(),
+                    website_url: manual_download.website_url.clone(),
+                    target_relative_path: expected_member
+                        .expected_relative_path
+                        .clone(),
+                    expected_sha1: expected_member.expected_sha1.clone(),
+                    expected_size: expected_member.expected_size,
+                    expected_fingerprint: expected_member.expected_fingerprint,
+                    state: ManualDownloadState::Waiting,
+                    context: serde_json::to_value(&manual_download)?,
+                    created_at: now,
+                    modified_at: now,
+                },
+                &mut tx,
+            )
+            .await?;
+            pending.insert((project_id, file_id));
+            changed = true;
+        }
+
+        if *materialization_state
+            != PackMemberMaterializationState::PendingManual
+        {
+            content_rows::set_pack_member_override_in_transaction(
+                member_id,
+                PackMemberMaterializationState::PendingManual,
+                *override_kind,
+                &mut tx,
+            )
+            .await?;
+            changed = true;
+        }
+    }
+
+    if changed {
+        content_rows::bump_content_set_revision_in_transaction(
+            content_set_id,
+            &mut tx,
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+fn normalized_content_path(path: &str) -> String {
+    path.replace('\\', "/")
+        .trim_end_matches(".disabled")
+        .to_ascii_lowercase()
+}
+
+fn snapshot_item(
+    file_id: Option<String>,
+    entry_id: Option<String>,
+    member: Option<&crate::state::instances::PackMember>,
+    ownership_kind: ContentOwnershipKind,
+    project_type: crate::state::ProjectType,
+    expected_relative_path: String,
+    content: Option<ContentItem>,
+) -> InstanceContentSnapshotItem {
+    let provider = member.and_then(|member| member.provider).or_else(|| {
+        content.as_ref().and_then(|content| content.origin_provider)
+    });
+    let provider_project_id = member
+        .and_then(|member| member.provider_project_id.clone())
+        .or_else(|| {
+            content.as_ref().and_then(|content| {
+                content
+                    .provider_refs
+                    .first()
+                    .map(ContentProviderRef::database_project_id)
+            })
+        });
+    let provider_release_id = member
+        .and_then(|member| member.provider_release_id.clone())
+        .or_else(|| {
+            content.as_ref().and_then(|content| {
+                content
+                    .provider_refs
+                    .first()
+                    .and_then(ContentProviderRef::database_release_id)
+            })
+        });
+    let materialization_state = member
+        .map_or(PackMemberMaterializationState::Present, |member| {
+            member.materialization_state
+        });
+    let override_kind = member
+        .map_or(PackMemberOverrideKind::None, |member| member.override_kind);
+    let present = content.is_some()
+        && materialization_state == PackMemberMaterializationState::Present;
+    let has_provider = content
+        .as_ref()
+        .is_some_and(|content| !content.provider_refs.is_empty());
+
+    InstanceContentSnapshotItem {
+        file_id,
+        entry_id,
+        member_id: member.map(|member| member.id.clone()),
+        ownership_kind,
+        materialization_state,
+        override_kind,
+        expected_relative_path,
+        required: member.is_none_or(|member| member.required),
+        project_type,
+        provider,
+        provider_project_id,
+        provider_release_id,
+        capabilities: ContentItemCapabilities {
+            can_toggle: present,
+            can_delete: present,
+            can_update: present && has_provider,
+            can_change_version: present && has_provider,
+            can_restore_pack_default: member.is_some()
+                && (override_kind != PackMemberOverrideKind::None
+                    || materialization_state
+                        == PackMemberMaterializationState::Missing),
+        },
+        content,
+    }
+}
+
+fn pack_snapshot(
+    instance_name: &str,
+    icon_path: Option<String>,
+    link: &InstanceLink,
+    members: &[crate::state::instances::PackMember],
+    metadata: Option<crate::state::LinkedModpackInfo>,
+) -> Option<InstanceContentPack> {
+    let (provider, project_id, version_id, fallback_name) = match link {
+        InstanceLink::ModrinthModpack {
+            project_id,
+            version_id,
+        }
+        | InstanceLink::ServerProjectModpack {
+            content_project_id: project_id,
+            content_version_id: version_id,
+            ..
+        } => (
+            Some(ContentProvider::Modrinth),
+            Some(project_id.clone()),
+            Some(version_id.clone()),
+            instance_name.to_string(),
+        ),
+        InstanceLink::CurseForgeModpack {
+            project_id,
+            version_id,
+        } => (
+            Some(ContentProvider::CurseForge),
+            Some(project_id.clone()),
+            Some(version_id.clone()),
+            instance_name.to_string(),
+        ),
+        InstanceLink::ImportedModpack { name, .. } => (
+            None,
+            None,
+            None,
+            name.clone().unwrap_or_else(|| instance_name.to_string()),
+        ),
+        _ if members.is_empty() => return None,
+        _ => (None, None, None, instance_name.to_string()),
+    };
+    let reconciled = members.iter().all(|member| member.reconciled);
+    let name = metadata
+        .as_ref()
+        .map(|metadata| metadata.project.title.clone())
+        .unwrap_or(fallback_name);
+
+    Some(InstanceContentPack {
+        name,
+        icon_path,
+        provider,
+        project_id,
+        version_id,
+        reconciled,
+        can_update: provider.is_some() && reconciled,
+        metadata,
+    })
+}
+
+fn pack_provider(link: &InstanceLink) -> Option<ContentProvider> {
+    match link {
+        InstanceLink::CurseForgeModpack { .. } => {
+            Some(ContentProvider::CurseForge)
+        }
+        InstanceLink::ModrinthModpack { .. }
+        | InstanceLink::ServerProjectModpack { .. } => {
+            Some(ContentProvider::Modrinth)
+        }
+        _ => None,
+    }
+}

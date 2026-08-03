@@ -2,7 +2,7 @@ use crate::state::ProjectType;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{ContentSourceKind, unknown_value};
+use super::{ContentOwnershipKind, ContentSourceKind, unknown_value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -42,6 +42,7 @@ pub struct ContentEntry {
     pub file_id: Option<String>,
     pub project_type: ProjectType,
     pub source_kind: ContentSourceKind,
+    pub ownership_kind: ContentOwnershipKind,
     pub server_requirement: ContentRequirement,
     pub client_requirement: ContentRequirement,
     pub enabled: bool,

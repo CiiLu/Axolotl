@@ -305,6 +305,33 @@ pub(crate) async fn list_content(
     .await
 }
 
+pub(crate) async fn list_all_content(
+    instance_id: &str,
+    cache_behaviour: Option<CacheBehaviour>,
+    state: &State,
+) -> crate::Result<Vec<ContentItem>> {
+    let resolved =
+        resolve_content_scope_with_instance(instance_id, None, &state.pool)
+            .await?;
+    let files = content_projects_for_scope(
+        &resolved,
+        cache_behaviour,
+        state,
+        ContentFilter::All,
+    )
+    .await?
+    .into_iter()
+    .collect::<Vec<_>>();
+
+    content_files_to_content_items(
+        &resolved.instance,
+        &files,
+        cache_behaviour,
+        state,
+    )
+    .await
+}
+
 pub(crate) async fn list_linked_modpack_content(
     instance_id: &str,
     content_set_id: Option<&str>,
@@ -567,24 +594,14 @@ async fn get_curseforge_linked_modpack_info(
         ))
     })?;
 
-    // Step 1: Try CurseForge API if available
-    let cf_capable = crate::api::curseforge::capability().status
-        == crate::api::curseforge::CurseForgeCapabilityStatus::Ready;
-    let cf_data = if cf_capable {
-        tokio::try_join!(
-            crate::api::curseforge::get_project(numeric_project_id),
-            crate::api::curseforge::get_file(
-                numeric_project_id,
-                numeric_file_id
-            ),
-        )
-        .ok()
-    } else {
-        None
-    };
+    let (cf_project, cf_file) = tokio::join!(
+        crate::api::curseforge::get_project(numeric_project_id),
+        crate::api::curseforge::get_file(numeric_project_id, numeric_file_id),
+    );
+    let cf_project = cf_project.ok();
+    let cf_file = cf_file.ok();
 
-    // Step 2: Try Modrinth by slug (from CF project) for richer metadata
-    let mr_slug = cf_data.as_ref().map(|(proj, _)| proj.slug.clone());
+    let mr_slug = cf_project.as_ref().map(|project| project.slug.clone());
     let mr_data: Option<(Option<Project>, Option<Vec<Version>>)> =
         if let Some(ref slug) = mr_slug {
             if let Ok(mr_id) = ModrinthProjectId::new(slug.clone()) {
@@ -614,9 +631,8 @@ async fn get_curseforge_linked_modpack_info(
             None
         };
 
-    // Step 3: Build unified result
+    let cf_data = cf_project.zip(cf_file);
     match (mr_data, cf_data) {
-        // Best case: Modrinth found — use richer Modrinth metadata
         (Some((Some(mr_project), mr_versions)), cf_tuple) => {
             let mr_version_opt = cf_tuple.as_ref().and_then(|(_, cf_file)| {
                 mr_versions.as_ref().and_then(|versions| {
@@ -631,10 +647,7 @@ async fn get_curseforge_linked_modpack_info(
             } else if let Some((_, cf_file)) = cf_tuple.as_ref() {
                 curseforge_file_to_version(cf_file)
             } else {
-                return Err(crate::ErrorKind::InputError(format!(
-                    "Linked CurseForge modpack version {version_id} not found"
-                ))
-                .into());
+                return Ok(None);
             };
 
             // Owner from Modrinth (with avatar)
@@ -703,26 +716,21 @@ async fn get_curseforge_linked_modpack_info(
             }))
         }
 
-        // Fallback: only CurseForge available — no owner (avoid broken modrinth.com links)
         (None, Some((cf_proj, cf_file))) => {
-            let files = if cf_capable {
-                crate::api::curseforge::get_files(
-                    numeric_project_id,
-                    crate::api::curseforge::CurseForgeFilesRequest {
-                        game_version: None,
-                        mod_loader_type: None,
-                        game_version_type_id: None,
-                        index: 0,
-                        page_size: 50,
-                    },
-                )
-                .await
-                .ok()
-                .map(|r| r.files)
-                .unwrap_or_default()
-            } else {
-                Vec::new()
-            };
+            let files = crate::api::curseforge::get_files(
+                numeric_project_id,
+                crate::api::curseforge::CurseForgeFilesRequest {
+                    game_version: None,
+                    mod_loader_type: None,
+                    game_version_type_id: None,
+                    index: 0,
+                    page_size: 50,
+                },
+            )
+            .await
+            .ok()
+            .map(|response| response.files)
+            .unwrap_or_default();
 
             let project_model = curseforge_project_to_project(&cf_proj);
             let version = curseforge_file_to_version(&cf_file);
@@ -762,11 +770,7 @@ async fn get_curseforge_linked_modpack_info(
             }))
         }
 
-        // Neither Modrinth nor CurseForge available
-        _ => Err(crate::ErrorKind::InputError(format!(
-            "Linked CurseForge modpack {project_id} not found on any provider"
-        ))
-        .into()),
+        _ => Ok(None),
     }
 }
 

@@ -52,6 +52,19 @@ export interface ContentCardTableItem {
 	clientWarning?: ClientWarningType | null
 	hideSwitchVersion?: boolean
 	pendingManualDownload?: boolean
+	instanceFileId?: string
+	instanceEntryId?: string
+	instanceMemberId?: string
+	instanceOwnershipKind?: 'pack_managed' | 'user_added' | 'local_discovered'
+	instanceMaterializationState?: 'present' | 'pending_manual' | 'missing' | 'removed'
+	instanceOverrideKind?: 'none' | 'disabled' | 'removed' | 'version'
+	instanceCapabilities?: {
+		canToggle: boolean
+		canDelete: boolean
+		canUpdate: boolean
+		canChangeVersion: boolean
+		canRestorePackDefault: boolean
+	}
 	overflowOptions?: OverflowMenuOption[]
 	inlineActions?: ContentRowInlineAction[]
 	isGroupHeader?: boolean

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                max_concurrent_writes, max_concurrent_downloads,\n\t\t\t\tauto_concurrent_downloads, use_system_proxy, minecraft_metadata_source,\n                minecraft_file_source, modrinth_source, curseforge_source,\n                theme, locale, default_page, collapsed_navigation, hide_nametag_skins_page, advanced_rendering, native_decorations,\n                discord_rpc, developer_mode, telemetry, personalized_ads,\n                onboarded, onboarding_version, onboarding_instance_tour_completed,\n                json(extra_launch_args) extra_launch_args, json(custom_env_vars) custom_env_vars,\n                mc_memory_max, mc_memory_auto, mc_force_fullscreen, mc_game_resolution_x, mc_game_resolution_y, hide_on_process_start,\n                auto_set_java_high_performance_mode,\n                hook_pre_launch, hook_wrapper, hook_post_exit,\n                custom_dir, prev_custom_dir, migrated, json(feature_flags) feature_flags, toggle_sidebar,\n                skipped_update, pending_update_toast_for_version, auto_download_updates, accent_color,\n                custom_background_path, custom_background_blur, custom_background_opacity,\n                transparent_background, transparent_background_opacity, transparent_background_blur,\n                sidebar_instance_count, home_layout, minimal_home_instance_id,\n                auto_hide_downloads_button,\n                version\n            FROM settings\n            ",
+  "query": "\n            SELECT\n                max_concurrent_writes, max_concurrent_downloads,\n                auto_concurrent_downloads, minecraft_metadata_source,\n                minecraft_file_source, modrinth_source, curseforge_source,\n                theme, locale, default_page, collapsed_navigation, hide_nametag_skins_page, advanced_rendering, native_decorations,\n                discord_rpc, developer_mode, telemetry, personalized_ads,\n                onboarded, onboarding_version, onboarding_instance_tour_completed,\n                json(extra_launch_args) extra_launch_args, json(custom_env_vars) custom_env_vars,\n                mc_memory_max, mc_memory_auto, mc_force_fullscreen, mc_game_resolution_x, mc_game_resolution_y, hide_on_process_start,\n                auto_set_java_high_performance_mode,\n                hook_pre_launch, hook_wrapper, hook_post_exit,\n                custom_dir, prev_custom_dir, migrated, json(feature_flags) feature_flags, toggle_sidebar,\n                skipped_update, pending_update_toast_for_version, auto_download_updates, accent_color,\n                custom_background_path, custom_background_blur, custom_background_opacity,\n                transparent_background, transparent_background_opacity, transparent_background_blur,\n                sidebar_instance_count, home_layout, minimal_home_instance_id,\n                auto_hide_downloads_button,\n                version\n            FROM settings\n            ",
   "describe": {
     "columns": [
       {
@@ -19,258 +19,253 @@
         "type_info": "Integer"
       },
       {
-        "name": "use_system_proxy",
-        "ordinal": 3,
-        "type_info": "Integer"
-      },
-      {
         "name": "minecraft_metadata_source",
-        "ordinal": 4,
+        "ordinal": 3,
         "type_info": "Text"
       },
       {
         "name": "minecraft_file_source",
-        "ordinal": 5,
+        "ordinal": 4,
         "type_info": "Text"
       },
       {
         "name": "modrinth_source",
-        "ordinal": 6,
+        "ordinal": 5,
         "type_info": "Text"
       },
       {
         "name": "curseforge_source",
-        "ordinal": 7,
+        "ordinal": 6,
         "type_info": "Text"
       },
       {
         "name": "theme",
-        "ordinal": 8,
+        "ordinal": 7,
         "type_info": "Text"
       },
       {
         "name": "locale",
-        "ordinal": 9,
+        "ordinal": 8,
         "type_info": "Text"
       },
       {
         "name": "default_page",
-        "ordinal": 10,
+        "ordinal": 9,
         "type_info": "Text"
       },
       {
         "name": "collapsed_navigation",
-        "ordinal": 11,
+        "ordinal": 10,
         "type_info": "Integer"
       },
       {
         "name": "hide_nametag_skins_page",
-        "ordinal": 12,
+        "ordinal": 11,
         "type_info": "Integer"
       },
       {
         "name": "advanced_rendering",
-        "ordinal": 13,
+        "ordinal": 12,
         "type_info": "Integer"
       },
       {
         "name": "native_decorations",
-        "ordinal": 14,
+        "ordinal": 13,
         "type_info": "Integer"
       },
       {
         "name": "discord_rpc",
-        "ordinal": 15,
+        "ordinal": 14,
         "type_info": "Integer"
       },
       {
         "name": "developer_mode",
-        "ordinal": 16,
+        "ordinal": 15,
         "type_info": "Integer"
       },
       {
         "name": "telemetry",
-        "ordinal": 17,
+        "ordinal": 16,
         "type_info": "Integer"
       },
       {
         "name": "personalized_ads",
-        "ordinal": 18,
+        "ordinal": 17,
         "type_info": "Integer"
       },
       {
         "name": "onboarded",
-        "ordinal": 19,
+        "ordinal": 18,
         "type_info": "Integer"
       },
       {
         "name": "onboarding_version",
-        "ordinal": 20,
+        "ordinal": 19,
         "type_info": "Integer"
       },
       {
         "name": "onboarding_instance_tour_completed",
-        "ordinal": 21,
+        "ordinal": 20,
         "type_info": "Integer"
       },
       {
         "name": "extra_launch_args",
-        "ordinal": 22,
+        "ordinal": 21,
         "type_info": "Text"
       },
       {
         "name": "custom_env_vars",
-        "ordinal": 23,
+        "ordinal": 22,
         "type_info": "Text"
       },
       {
         "name": "mc_memory_max",
-        "ordinal": 24,
+        "ordinal": 23,
         "type_info": "Integer"
       },
       {
         "name": "mc_memory_auto",
-        "ordinal": 25,
+        "ordinal": 24,
         "type_info": "Integer"
       },
       {
         "name": "mc_force_fullscreen",
-        "ordinal": 26,
+        "ordinal": 25,
         "type_info": "Integer"
       },
       {
         "name": "mc_game_resolution_x",
-        "ordinal": 27,
+        "ordinal": 26,
         "type_info": "Integer"
       },
       {
         "name": "mc_game_resolution_y",
-        "ordinal": 28,
+        "ordinal": 27,
         "type_info": "Integer"
       },
       {
         "name": "hide_on_process_start",
-        "ordinal": 29,
+        "ordinal": 28,
         "type_info": "Integer"
       },
       {
         "name": "auto_set_java_high_performance_mode",
-        "ordinal": 30,
+        "ordinal": 29,
         "type_info": "Integer"
       },
       {
         "name": "hook_pre_launch",
-        "ordinal": 31,
+        "ordinal": 30,
         "type_info": "Text"
       },
       {
         "name": "hook_wrapper",
-        "ordinal": 32,
+        "ordinal": 31,
         "type_info": "Text"
       },
       {
         "name": "hook_post_exit",
-        "ordinal": 33,
+        "ordinal": 32,
         "type_info": "Text"
       },
       {
         "name": "custom_dir",
-        "ordinal": 34,
+        "ordinal": 33,
         "type_info": "Text"
       },
       {
         "name": "prev_custom_dir",
-        "ordinal": 35,
+        "ordinal": 34,
         "type_info": "Text"
       },
       {
         "name": "migrated",
-        "ordinal": 36,
+        "ordinal": 35,
         "type_info": "Integer"
       },
       {
         "name": "feature_flags",
-        "ordinal": 37,
+        "ordinal": 36,
         "type_info": "Text"
       },
       {
         "name": "toggle_sidebar",
-        "ordinal": 38,
+        "ordinal": 37,
         "type_info": "Integer"
       },
       {
         "name": "skipped_update",
-        "ordinal": 39,
+        "ordinal": 38,
         "type_info": "Text"
       },
       {
         "name": "pending_update_toast_for_version",
-        "ordinal": 40,
+        "ordinal": 39,
         "type_info": "Text"
       },
       {
         "name": "auto_download_updates",
-        "ordinal": 41,
+        "ordinal": 40,
         "type_info": "Integer"
       },
       {
         "name": "accent_color",
-        "ordinal": 42,
+        "ordinal": 41,
         "type_info": "Text"
       },
       {
         "name": "custom_background_path",
-        "ordinal": 43,
+        "ordinal": 42,
         "type_info": "Text"
       },
       {
         "name": "custom_background_blur",
-        "ordinal": 44,
+        "ordinal": 43,
         "type_info": "Integer"
       },
       {
         "name": "custom_background_opacity",
-        "ordinal": 45,
+        "ordinal": 44,
         "type_info": "Integer"
       },
       {
         "name": "transparent_background",
-        "ordinal": 46,
+        "ordinal": 45,
         "type_info": "Integer"
       },
       {
         "name": "transparent_background_opacity",
-        "ordinal": 47,
+        "ordinal": 46,
         "type_info": "Integer"
       },
       {
         "name": "transparent_background_blur",
-        "ordinal": 48,
+        "ordinal": 47,
         "type_info": "Integer"
       },
       {
         "name": "sidebar_instance_count",
-        "ordinal": 49,
+        "ordinal": 48,
         "type_info": "Integer"
       },
       {
         "name": "home_layout",
-        "ordinal": 50,
+        "ordinal": 49,
         "type_info": "Text"
       },
       {
         "name": "minimal_home_instance_id",
-        "ordinal": 51,
+        "ordinal": 50,
         "type_info": "Text"
       },
       {
         "name": "auto_hide_downloads_button",
-        "ordinal": 52,
+        "ordinal": 51,
         "type_info": "Integer"
       },
       {
         "name": "version",
-        "ordinal": 53,
+        "ordinal": 52,
         "type_info": "Integer"
       }
     ],
@@ -278,7 +273,6 @@
       "Right": 0
     },
     "nullable": [
-      false,
       false,
       false,
       false,
@@ -334,5 +328,5 @@
       false
     ]
   },
-  "hash": "64c5d4f7def3ed25efa9f6c0643d45ffc86d7a7bb5a1e07d04048ac4904a3069"
+  "hash": "71510de89092a0578c2ac1ac542f12e8feb4ab1aed3cd2de2ad0e48410c1dd6a"
 }

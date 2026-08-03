@@ -2,7 +2,9 @@ use crate::api::content_search::{
     chinese_file_title_for_modrinth_slug, localized_content_file_name,
 };
 use crate::state::instances::{
-    ContentRequirement, ContentSourceKind, Instance, InstanceFile,
+    ContentOwnershipKind, ContentRequirement, ContentSourceKind, Instance,
+    InstanceFile, PackMember, PackMemberMaterializationState,
+    PackMemberOverrideKind,
     adapters::{
         filesystem::project_type_from_relative_path,
         sqlite::{content_rows, instance_rows},
@@ -274,12 +276,15 @@ pub(crate) async fn switch_project_version_with_dependencies(
     .await?;
 
     let was_disabled = project_path.ends_with(".disabled");
+    let ownership_kind =
+        content_ownership_for_path(instance_id, project_path, state).await?;
     let mut new_path = add_project_from_version(
         instance_id,
         &plan.primary.version_id,
         DownloadReason::Update,
         None,
         ContentSourceKind::Local,
+        ownership_kind,
         state,
     )
     .await?;
@@ -324,6 +329,7 @@ async fn add_resolved_content(
         reason,
         content.dependent_on_version_id.clone(),
         ContentSourceKind::Local,
+        ContentOwnershipKind::UserAdded,
         state,
     )
     .await
@@ -361,6 +367,7 @@ pub(crate) async fn add_project_from_version(
     reason: DownloadReason,
     dependent_on_version_id: Option<String>,
     source_kind: ContentSourceKind,
+    ownership_kind: ContentOwnershipKind,
     state: &State,
 ) -> crate::Result<String> {
     let downloaded = download_project_version(
@@ -372,8 +379,14 @@ pub(crate) async fn add_project_from_version(
     )
     .await?;
 
-    add_downloaded_project_version(instance_id, downloaded, source_kind, state)
-        .await
+    add_downloaded_project_version(
+        instance_id,
+        downloaded,
+        source_kind,
+        ownership_kind,
+        state,
+    )
+    .await
 }
 
 pub(crate) async fn download_project_version(
@@ -599,6 +612,7 @@ pub(crate) async fn add_downloaded_project_version(
     instance_id: &str,
     downloaded: DownloadedProjectVersion,
     source_kind: ContentSourceKind,
+    ownership_kind: ContentOwnershipKind,
     state: &State,
 ) -> crate::Result<String> {
     let _instance_lock = state.lock_instance_content(instance_id).await;
@@ -640,6 +654,7 @@ pub(crate) async fn add_downloaded_project_version(
         size,
         project_type,
         source_kind,
+        ownership_kind,
         Some(&provider_ref),
         true,
         Some(KnownModrinthFile {
@@ -663,6 +678,33 @@ pub(crate) async fn add_downloaded_project_version(
         }
     }
     Ok(relative_path)
+}
+
+pub(crate) async fn content_ownership_for_path(
+    instance_id: &str,
+    project_path: &str,
+    state: &State,
+) -> crate::Result<ContentOwnershipKind> {
+    let ownership = sqlx::query_scalar::<_, String>(
+        "SELECT entry.ownership_kind
+         FROM instance_files file
+         INNER JOIN instance_content_entries entry ON entry.file_id = file.id
+         INNER JOIN instances instance ON instance.id = entry.instance_id
+         WHERE file.instance_id = ? AND file.relative_path = ?
+            AND entry.content_set_id = instance.applied_content_set_id
+         ORDER BY entry.modified_at DESC
+         LIMIT 1",
+    )
+    .bind(instance_id)
+    .bind(project_path)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    ownership
+        .as_deref()
+        .map(ContentOwnershipKind::from_str)
+        .transpose()
+        .map(|ownership| ownership.unwrap_or_default())
 }
 
 pub(crate) async fn materialize_project_download(
@@ -843,6 +885,7 @@ pub(crate) async fn add_project_bytes(
         &file,
         project_type,
         source_kind,
+        ContentOwnershipKind::UserAdded,
         None,
         false,
         state,
@@ -1058,6 +1101,7 @@ pub(crate) async fn record_project_file_atomic(
     size: u64,
     project_type: ProjectType,
     source_kind: ContentSourceKind,
+    ownership_kind: ContentOwnershipKind,
     provider_ref: Option<&ContentProviderRef>,
     origin: bool,
     known_modrinth_file: Option<KnownModrinthFile<'_>>,
@@ -1100,6 +1144,7 @@ pub(crate) async fn record_project_file_atomic(
             file_id: Some(&file.id),
             project_type,
             source_kind,
+            ownership_kind,
             server_requirement: ContentRequirement::Required,
             client_requirement: ContentRequirement::Required,
             enabled: file.enabled,
@@ -1116,6 +1161,66 @@ pub(crate) async fn record_project_file_atomic(
         )
         .await?;
     }
+    if ownership_kind == ContentOwnershipKind::PackManaged {
+        let now = chrono::Utc::now();
+        let member_key = provider_ref.map_or_else(
+            || format!("path:{}", relative_path.to_lowercase()),
+            |provider_ref| {
+                format!(
+                    "{}:{}:{}",
+                    provider_ref.provider().as_str(),
+                    provider_ref.database_project_id(),
+                    project_type.get_name(),
+                )
+            },
+        );
+        content_rows::upsert_pack_member_in_transaction(
+            &PackMember {
+                id: format!("pack-member:{}", entry.id),
+                content_set_id: scope.content_set_id.clone(),
+                content_entry_id: Some(entry.id.clone()),
+                member_key,
+                project_type,
+                expected_relative_path: relative_path.to_string(),
+                provider: provider_ref.map(ContentProviderRef::provider),
+                provider_project_id: provider_ref
+                    .map(ContentProviderRef::database_project_id),
+                provider_release_id: provider_ref
+                    .and_then(ContentProviderRef::database_release_id),
+                required: true,
+                expected_sha1: Some(sha1.to_string()),
+                expected_size: Some(size),
+                expected_fingerprint: None,
+                materialization_state: PackMemberMaterializationState::Present,
+                override_kind: if !file.enabled {
+                    PackMemberOverrideKind::Disabled
+                } else if source_kind == ContentSourceKind::Local {
+                    PackMemberOverrideKind::Version
+                } else {
+                    PackMemberOverrideKind::None
+                },
+                reconciled: true,
+                created_at: now,
+                modified_at: now,
+            },
+            &mut tx,
+        )
+        .await?;
+    }
+    if let Some(ContentProviderRef::CurseForge {
+        project_id,
+        file_id: Some(file_id),
+    }) = provider_ref
+    {
+        content_rows::complete_pending_manual_download(
+            instance_id,
+            &project_id.get().to_string(),
+            &file_id.get().to_string(),
+            Some(&entry.id),
+            &mut tx,
+        )
+        .await?;
+    }
     cache_file_hash_metadata(
         &scope.instance.path,
         relative_path,
@@ -1124,6 +1229,11 @@ pub(crate) async fn record_project_file_atomic(
         Some(project_type),
         known_modrinth_file,
         &mut *tx,
+    )
+    .await?;
+    content_rows::bump_content_set_revision_in_transaction(
+        &scope.content_set_id,
+        &mut tx,
     )
     .await?;
     tx.commit().await?;
@@ -1142,6 +1252,7 @@ pub(crate) async fn toggle_disable_project(
     desired_enabled: Option<bool>,
     state: &State,
 ) -> crate::Result<String> {
+    let _instance_lock = state.lock_instance_content(instance_id).await;
     let scope = resolve_content_scope(instance_id, None, state).await?;
     let base = instance_full_path(state, &scope.instance);
     let (current_path, enabled, new_path) =
@@ -1161,31 +1272,63 @@ pub(crate) async fn toggle_disable_project(
         state,
     )
     .await?;
-    let updated_entry = content_rows::set_content_entry_enabled_for_file(
-        &scope.content_set_id,
-        &file.id,
-        enabled,
-        &state.pool,
+    let mut tx = begin_content_write(&state.pool).await?;
+    let modified_at = chrono::Utc::now().timestamp();
+    let updated_entry = sqlx::query(
+        "UPDATE instance_content_entries
+         SET enabled = ?, modified_at = ?
+         WHERE content_set_id = ? AND file_id = ?",
     )
+    .bind(i64::from(enabled))
+    .bind(modified_at)
+    .bind(&scope.content_set_id)
+    .bind(&file.id)
+    .execute(&mut *tx)
     .await?;
-    if !updated_entry {
+    if updated_entry.rows_affected() == 0 {
         let project_type = project_type_from_relative_path(&new_path)
             .ok_or_else(|| {
                 crate::ErrorKind::InputError(format!(
                     "Unable to infer project type from {new_path}"
                 ))
             })?;
-        upsert_entry_for_file(
-            &scope,
-            &file,
-            project_type,
-            ContentSourceKind::Local,
-            None,
-            false,
-            state,
+        content_rows::upsert_content_entry_from_parts_in_transaction(
+            content_rows::UpsertContentEntry {
+                instance_id: &scope.instance.id,
+                content_set_id: &scope.content_set_id,
+                file_id: Some(&file.id),
+                project_type,
+                source_kind: ContentSourceKind::Local,
+                ownership_kind: ContentOwnershipKind::UserAdded,
+                server_requirement: ContentRequirement::Required,
+                client_requirement: ContentRequirement::Required,
+                enabled,
+            },
+            &mut tx,
         )
         .await?;
     }
+    sqlx::query(
+        "UPDATE instance_pack_members
+         SET override_kind = ?, materialization_state = 'present',
+             modified_at = ?
+         WHERE content_entry_id IN (
+            SELECT id FROM instance_content_entries
+            WHERE content_set_id = ? AND file_id = ?
+         )",
+    )
+    .bind(if enabled { "none" } else { "disabled" })
+    .bind(modified_at)
+    .bind(&scope.content_set_id)
+    .bind(&file.id)
+    .execute(&mut *tx)
+    .await?;
+    content_rows::bump_content_set_revision_in_transaction(
+        &scope.content_set_id,
+        &mut tx,
+    )
+    .await?;
+    tx.commit().await?;
 
     Ok(new_path)
 }
@@ -1282,21 +1425,67 @@ pub(crate) async fn remove_project(
     )
     .await?;
 
-    io::remove_file(base.join(project_path)).await?;
+    let full_path = base.join(project_path);
+    let staged_path =
+        full_path.with_extension(format!("{}.removing", uuid::Uuid::new_v4()));
+    if full_path.exists() {
+        io::rename_or_move(&full_path, &staged_path).await?;
+    }
 
-    if let Some(file) = file {
-        content_rows::remove_content_entries_for_file(
+    let db_result = async {
+        let mut tx = begin_content_write(&state.pool).await?;
+        if let Some(file) = file {
+            let modified_at = chrono::Utc::now().timestamp();
+            sqlx::query(
+                "UPDATE instance_pack_members
+                 SET content_entry_id = NULL,
+                     materialization_state = 'removed',
+                     override_kind = 'removed',
+                     modified_at = ?
+                 WHERE content_entry_id IN (
+                    SELECT id FROM instance_content_entries
+                    WHERE content_set_id = ? AND file_id = ?
+                 )",
+            )
+            .bind(modified_at)
+            .bind(&scope.content_set_id)
+            .bind(&file.id)
+            .execute(&mut *tx)
+            .await?;
+            sqlx::query(
+                "DELETE FROM instance_content_entries
+                 WHERE content_set_id = ? AND file_id = ?",
+            )
+            .bind(&scope.content_set_id)
+            .bind(&file.id)
+            .execute(&mut *tx)
+            .await?;
+            sqlx::query(
+                "DELETE FROM instance_files
+                 WHERE instance_id = ? AND id = ?",
+            )
+            .bind(&scope.instance.id)
+            .bind(&file.id)
+            .execute(&mut *tx)
+            .await?;
+        }
+        content_rows::bump_content_set_revision_in_transaction(
             &scope.content_set_id,
-            &file.id,
-            &state.pool,
+            &mut tx,
         )
         .await?;
-        content_rows::remove_instance_file_by_relative_path(
-            &scope.instance.id,
-            project_path,
-            &state.pool,
-        )
-        .await?;
+        tx.commit().await?;
+        Ok::<(), crate::Error>(())
+    }
+    .await;
+    if let Err(error) = db_result {
+        if staged_path.exists() {
+            io::rename_or_move(&staged_path, &full_path).await?;
+        }
+        return Err(error);
+    }
+    if staged_path.exists() {
+        io::remove_file(staged_path).await?;
     }
 
     Ok(())
@@ -1706,6 +1895,7 @@ async fn index_existing_file(
         &file,
         project_type,
         ContentSourceKind::Local,
+        ContentOwnershipKind::UserAdded,
         None,
         false,
         state,
@@ -1720,6 +1910,7 @@ async fn upsert_entry_for_file(
     file: &InstanceFile,
     project_type: ProjectType,
     source_kind: ContentSourceKind,
+    ownership_kind: ContentOwnershipKind,
     provider_ref: Option<&ContentProviderRef>,
     origin: bool,
     state: &State,
@@ -1737,6 +1928,7 @@ async fn upsert_entry_for_file(
             file_id: Some(&file.id),
             project_type,
             source_kind,
+            ownership_kind,
             server_requirement: ContentRequirement::Required,
             client_requirement: ContentRequirement::Required,
             enabled: file.enabled,

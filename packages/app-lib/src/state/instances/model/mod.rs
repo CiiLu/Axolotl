@@ -3,6 +3,15 @@
 mod content_entry;
 pub use self::content_entry::*;
 
+mod content_ownership;
+pub use self::content_ownership::*;
+
+mod content_snapshot;
+pub use self::content_snapshot::*;
+
+mod content_update_plan;
+pub use self::content_update_plan::*;
+
 mod content_provider;
 pub use self::content_provider::*;
 

@@ -114,6 +114,8 @@ export interface CurseForgeFile {
 	releaseType: number
 	fileDate: string
 	fileLength: number
+	hashes: Array<{ value: string; algo: number }>
+	fileFingerprint: number
 	downloadCount: number
 	downloadUrl?: string
 	gameVersions: string[]
@@ -153,6 +155,8 @@ export interface CurseForgeInstallRequest {
 	projectId: number
 	fileId: number
 	projectType: string
+	ownershipKind?: 'pack_managed' | 'user_added'
+	manualOperationKind?: 'pack_install' | 'pack_update' | 'content_install' | 'content_update'
 	gameVersion?: string
 	modLoaderType?: number
 	worldName?: string
@@ -170,7 +174,15 @@ export interface CurseForgeInstallResult {
 		projectId: number
 		fileId: number
 		fileName: string
+		ownershipKind: 'pack_managed' | 'user_added'
+		operationKind: 'pack_install' | 'pack_update' | 'content_install' | 'content_update'
 		websiteUrl?: string
+		projectType: string
+		projectSlug: string
+		targetFolder: string
+		hashes: Array<{ value: string; algo: number }>
+		fileLength: number
+		fileFingerprint: number
 	}>
 	failedDownloads: Array<{
 		projectId: number
@@ -180,6 +192,22 @@ export interface CurseForgeInstallResult {
 	}>
 	optionalDependencies: number[]
 	incompatibleDependencies: number[]
+}
+
+export interface CurseForgeManualDownloadImport {
+	projectId: number
+	fileId: number
+	relativePath: string
+}
+
+export interface CurseForgeManualDownloadScanResult {
+	downloadDirectory?: string | null
+	imported: CurseForgeManualDownloadImport[]
+	errors: Array<{
+		projectId: number
+		fileId: number
+		message: string
+	}>
 }
 
 export interface CurseForgeModpackInstallResult {
@@ -278,6 +306,16 @@ export function recognizeCurseForgeFiles(instanceId: string) {
 		linked: CurseForgeInstallResult['installed']
 		unmatchedPaths: string[]
 	}>('plugin:curseforge|curseforge_recognize_instance_files', { instanceId })
+}
+
+export function importCurseForgeManualDownloads(
+	instanceId: string,
+	downloads: CurseForgeInstallResult['manualDownloads'],
+) {
+	return invoke<CurseForgeManualDownloadScanResult>(
+		'plugin:curseforge|curseforge_import_manual_downloads',
+		{ instanceId, downloads },
+	)
 }
 
 export function installCurseForgeModpack(request: {

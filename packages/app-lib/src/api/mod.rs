@@ -27,15 +27,23 @@ pub mod worlds;
 pub mod data {
     pub use crate::state::{
         AppliedContentSetPatch, CacheBehaviour, CacheValueType, CachedEntry,
-        ContentFile, ContentItem, ContentItemOwner, ContentItemProject,
-        ContentItemVersion, ContentProvider, ContentProviderRef,
-        CreateInstance, Credentials, Dependency, DirectoryInfo, EditInstance,
-        Hooks, InstanceInstallCandidate, InstanceInstallTarget,
+        ContentFile, ContentItem, ContentItemCapabilities, ContentItemOwner,
+        ContentItemProject, ContentItemVersion, ContentOwnershipKind,
+        ContentProvider, ContentProviderRef, ContentUpdatePlan,
+        ContentUpdatePlanAction, ContentUpdateResolution,
+        ContentUpdateResolutionChoice, ContentUpdateScope, CreateInstance,
+        Credentials, Dependency, DirectoryInfo, EditInstance, Hooks,
+        InstanceContentPack, InstanceContentSnapshot,
+        InstanceContentSnapshotItem, InstanceContentWarning,
+        InstanceInstallCandidate, InstanceInstallTarget,
         InstanceLaunchOverridesPatch, InstanceLink, InstanceMetadata,
-        JavaVersion, LinkedModpackInfo, MemorySettings, ModLoader,
-        ModrinthCredentials, Organization, OwnerType, ProcessMetadata, Project,
-        ProjectType, ProjectV3, SearchResult, SearchResults, SearchResultsV3,
-        Settings, TeamMember, Theme, User, UserFriend, Version, WindowSize,
+        JavaVersion, LinkedModpackInfo, ManualDownloadOperationKind,
+        ManualDownloadState, MemorySettings, ModLoader, ModrinthCredentials,
+        Organization, OwnerType, PackMemberMaterializationState,
+        PackMemberOverrideKind, PendingManualDownload, ProcessMetadata,
+        Project, ProjectType, ProjectV3, SearchResult, SearchResults,
+        SearchResultsV3, Settings, TeamMember, Theme, User, UserFriend,
+        Version, WindowSize,
     };
     pub use ariadne::users::UserStatus;
     pub use modrinth_content_management::{

@@ -104,8 +104,6 @@ pub struct Settings {
     #[serde(default)]
     pub auto_concurrent_downloads: bool,
     #[serde(default)]
-    pub use_system_proxy: bool,
-    #[serde(default)]
     pub minecraft_metadata_source: DownloadSourceMode,
     #[serde(default)]
     pub minecraft_file_source: DownloadSourceMode,
@@ -204,7 +202,7 @@ impl Settings {
             "
             SELECT
                 max_concurrent_writes, max_concurrent_downloads,
-				auto_concurrent_downloads, use_system_proxy, minecraft_metadata_source,
+                auto_concurrent_downloads, minecraft_metadata_source,
                 minecraft_file_source, modrinth_source, curseforge_source,
                 theme, locale, default_page, collapsed_navigation, hide_nametag_skins_page, advanced_rendering, native_decorations,
                 discord_rpc, developer_mode, telemetry, personalized_ads,
@@ -230,7 +228,6 @@ impl Settings {
             max_concurrent_downloads: res.max_concurrent_downloads as usize,
             max_concurrent_writes: res.max_concurrent_writes as usize,
             auto_concurrent_downloads: res.auto_concurrent_downloads == 1,
-            use_system_proxy: res.use_system_proxy == 1,
             minecraft_metadata_source: DownloadSourceMode::from_string(
                 &res.minecraft_metadata_source,
             ),
@@ -422,8 +419,7 @@ impl Settings {
                 transparent_background_blur = $53,
                 home_layout = $54,
                 minimal_home_instance_id = $55,
-				auto_hide_downloads_button = $56,
-				use_system_proxy = $57
+                auto_hide_downloads_button = $56
             ",
             max_concurrent_writes,
             max_concurrent_downloads,
@@ -481,7 +477,6 @@ impl Settings {
             home_layout,
             self.minimal_home_instance_id,
             self.auto_hide_downloads_button,
-            self.use_system_proxy,
         )
         .execute(exec)
         .await?;
@@ -950,23 +945,6 @@ mod tests {
             settings.curseforge_source,
             DownloadSourceMode::OfficialPreferred
         );
-    }
-
-    #[tokio::test]
-    async fn system_proxy_defaults_disabled_and_round_trips() {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect("sqlite::memory:")
-            .await
-            .unwrap();
-        sqlx::migrate!().run(&pool).await.unwrap();
-
-        let mut settings = Settings::get(&pool).await.unwrap();
-        assert!(!settings.use_system_proxy);
-        settings.use_system_proxy = true;
-        settings.update(&pool).await.unwrap();
-
-        assert!(Settings::get(&pool).await.unwrap().use_system_proxy);
     }
 
     #[test]

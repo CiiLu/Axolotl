@@ -50,7 +50,6 @@ The website and app `prepr` commands
 
 ### Local App Verification
 
-- After completing a development task, start the local development app with `pnpm app:dev` and leave functional verification to the user.
 - Do not take screenshots or perform automated, visual, or manual self-testing of the local app.
 
 ### Remote Commits
@@ -112,6 +111,10 @@ Launcher release announcements are bundled with `apps/app-frontend` and shown af
 - Do not start a migration-watching development process while migration files are still being edited. Finish the migration and its upgrade tests first, then start the app once to apply it.
 
 ## Code Guidelines
+
+### Temporary Test Files
+
+- Delete test files created only for task-local verification after the tests complete. Do not leave temporary test files in the worktree unless the user explicitly asks to keep them.
 
 ### Comments
 

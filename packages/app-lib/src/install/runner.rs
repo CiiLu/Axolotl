@@ -719,6 +719,7 @@ async fn run_request(
                         project_id,
                         file_id,
                         install_optional: false,
+                        allow_target_change: false,
                     },
                     Some(reporter),
                 )

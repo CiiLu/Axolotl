@@ -7,7 +7,11 @@ import { commonProjectTypeCategoryMessages, normalizeProjectType } from '#ui/uti
 
 import type { ContentItem } from '../types'
 import type { ContentFilterOption } from './content-filtering'
-import { getClientWarningType } from './content-filtering'
+import {
+	getClientWarningType,
+	isDisabledContentItem,
+	isEnabledContentItem,
+} from './content-filtering'
 
 // Re-export utility functions and types for convenience
 export type { ContentFilterOption } from './content-filtering'
@@ -203,14 +207,33 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 		const typeFiltered: ContentItem[] = typeFilter
 			? searchedAllItems.filter((item) => normalizeProjectType(item.project_type) === typeFilter)
 			: searchedAllItems
+		const hasEnabled = typeFiltered.some(isEnabledContentItem)
+		const hasDisabled = typeFiltered.some(isDisabledContentItem)
+		const availableStatusFilters = new Set<string>()
+		if (showUpdateFilter && typeFiltered.some((item) => item.update != null)) {
+			availableStatusFilters.add('updates')
+		}
+		if (showWarningsFilter && typeFiltered.some((item) => getClientWarningType(item) !== null)) {
+			availableStatusFilters.add('warnings')
+		}
+		if (hasEnabled && hasDisabled) {
+			availableStatusFilters.add('enabled')
+			availableStatusFilters.add('disabled')
+		}
+		const effectiveStatusFilters = statusFilters.filter((filter) =>
+			availableStatusFilters.has(filter),
+		)
+		if (effectiveStatusFilters.length !== statusFilters.length) {
+			selectedStatusFilters.value = effectiveStatusFilters
+		}
 
 		let statusFiltered = searchedAllItems
-		if (statusFilters.length > 0) {
+		if (effectiveStatusFilters.length > 0) {
 			statusFiltered = searchedAllItems.filter((item) => {
-				for (const f of statusFilters) {
+				for (const f of effectiveStatusFilters) {
 					if (f === 'updates' && item.update == null) return false
-					if (f === 'enabled' && !item.enabled) return false
-					if (f === 'disabled' && item.enabled) return false
+					if (f === 'enabled' && !isEnabledContentItem(item)) return false
+					if (f === 'disabled' && !isDisabledContentItem(item)) return false
 					if (f === 'warnings' && getClientWarningType(item) === null) return false
 				}
 				return true
@@ -228,8 +251,8 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 
 		// status counts: from typeFiltered (type-filtered items, NOT status-filtered)
 		counts['updates'] = typeFiltered.filter((m) => m.update != null).length
-		counts['enabled'] = typeFiltered.filter((m) => m.enabled).length
-		counts['disabled'] = typeFiltered.filter((m) => !m.enabled).length
+		counts['enabled'] = typeFiltered.filter(isEnabledContentItem).length
+		counts['disabled'] = typeFiltered.filter(isDisabledContentItem).length
 		counts['warnings'] = typeFiltered.filter((m) => getClientWarningType(m) !== null).length
 
 		// totalCount: from statusFiltered (same as old code)
@@ -261,8 +284,6 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 			row2.push({ id: 'warnings', label: formatMessage(filterMessages.warnings) })
 		}
 
-		const hasEnabled = typeFiltered.some((m) => m.enabled)
-		const hasDisabled = typeFiltered.some((m) => !m.enabled)
 		if (hasEnabled && hasDisabled) {
 			row2.push({ id: 'enabled', label: formatMessage(filterMessages.enabled) })
 			row2.push({ id: 'disabled', label: formatMessage(filterMessages.disabled) })
@@ -276,12 +297,12 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 			if (typeFilter) {
 				result = result.filter((item) => normalizeProjectType(item.project_type) === typeFilter)
 			}
-			if (statusFilters.length > 0) {
+			if (effectiveStatusFilters.length > 0) {
 				result = result.filter((item) => {
-					for (const f of statusFilters) {
+					for (const f of effectiveStatusFilters) {
 						if (f === 'updates' && item.update == null) return false
-						if (f === 'enabled' && !item.enabled) return false
-						if (f === 'disabled' && item.enabled) return false
+						if (f === 'enabled' && !isEnabledContentItem(item)) return false
+						if (f === 'disabled' && !isDisabledContentItem(item)) return false
 						if (f === 'warnings' && getClientWarningType(item) === null) return false
 					}
 					return true

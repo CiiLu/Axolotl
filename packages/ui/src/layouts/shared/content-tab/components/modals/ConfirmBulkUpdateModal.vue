@@ -9,7 +9,9 @@
 		<div class="flex flex-col gap-6">
 			<SymlinkWarningAdmonition :symlink-target="symlinkTarget" />
 			<Admonition type="warning" :header="formatMessage(messages.admonitionHeader)">
-				{{ formatMessage(messages.admonitionBody, { count: visibleCount }) }}
+				{{
+					props.scopeDescription ?? formatMessage(messages.admonitionBody, { count: visibleCount })
+				}}
 			</Admonition>
 			<InlineBackupCreator
 				ref="backupCreator"
@@ -36,7 +38,7 @@
 						@click="confirm"
 					>
 						<DownloadIcon />
-						{{ formatMessage(messages.updateButton, { count: visibleCount }) }}
+						{{ props.actionLabel ?? formatMessage(messages.updateButton, { count: visibleCount }) }}
 					</button>
 				</ButtonStyled>
 			</div>
@@ -91,6 +93,8 @@ const props = defineProps<{
 	actionDisabled?: boolean
 	actionDisabledTooltip?: string
 	symlinkTarget?: string
+	actionLabel?: string
+	scopeDescription?: string
 }>()
 
 const emit = defineEmits<{

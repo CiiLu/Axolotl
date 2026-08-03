@@ -401,14 +401,38 @@
   "app.content.install-content": {
     "message": "安装内容"
   },
+  "app.curseforge.manual-downloads.all-imported": {
+    "message": "所有文件均已导入"
+  },
+  "app.curseforge.manual-downloads.automatic-import": {
+    "message": "自动导入"
+  },
   "app.curseforge.manual-downloads.body": {
-    "message": "已自动安装 {installed, number} 个文件，但仍有 {manual, number} 个文件无法由启动器下载。请打开 CurseForge 页面下载这些文件，然后放入当前实例。"
+    "message": "已自动安装 {installed, number} 个文件，另有 {manual, number} 个文件需要通过浏览器下载。"
+  },
+  "app.curseforge.manual-downloads.checking-downloads": {
+    "message": "正在检查下载文件夹..."
+  },
+  "app.curseforge.manual-downloads.downloads-unavailable": {
+    "message": "无法访问系统下载文件夹。"
+  },
+  "app.curseforge.manual-downloads.existing-body": {
+    "message": "仍有 {manual, number} 个文件需要通过浏览器下载。下载完成并通过校验后，启动器会自动导入。"
   },
   "app.curseforge.manual-downloads.files-count": {
     "message": "{count, number} 个文件"
   },
   "app.curseforge.manual-downloads.header": {
-    "message": "需要手动下载 CurseForge 文件"
+    "message": "完成 CurseForge 文件下载"
+  },
+  "app.curseforge.manual-downloads.import-complete": {
+    "message": "已导入当前实例"
+  },
+  "app.curseforge.manual-downloads.imported": {
+    "message": "已将下载的 {count, number} 个文件导入当前实例。"
+  },
+  "app.curseforge.manual-downloads.imported-title": {
+    "message": "CurseForge 文件已导入"
   },
   "app.curseforge.manual-downloads.list-and-more": {
     "message": "{list}，以及其他 {count, number} 个"
@@ -423,16 +447,28 @@
     "message": "部分 CurseForge 文件需要手动下载"
   },
   "app.curseforge.manual-downloads.open": {
-    "message": "打开"
+    "message": "下载"
   },
   "app.curseforge.manual-downloads.open-all": {
-    "message": "全部打开"
+    "message": "打开缺失项"
   },
   "app.curseforge.manual-downloads.project-file": {
-    "message": "项目 {projectId} · 文件 {fileId}"
+    "message": "项目 {projectId} / 文件 {fileId}"
+  },
+  "app.curseforge.manual-downloads.retrying": {
+    "message": "导入失败，正在重试"
+  },
+  "app.curseforge.manual-downloads.scanner-failed": {
+    "message": "自动导入检查失败，正在重试。"
   },
   "app.curseforge.manual-downloads.view-instance": {
     "message": "查看实例"
+  },
+  "app.curseforge.manual-downloads.waiting": {
+    "message": "等待下载"
+  },
+  "app.curseforge.manual-downloads.watching-downloads": {
+    "message": "正在监控 {path}，文件通过校验后将自动导入。"
   },
   "app.curseforge.modpack-installed.body": {
     "message": "已从 CurseForge 安装 {count, number} 个内容文件。"
@@ -1034,6 +1070,21 @@
   "app.instance.mods.bulk-update.resolving-versions": {
     "message": "正在解析版本……"
   },
+  "app.instance.mods.content-refresh-warning.body": {
+    "message": "本地内容仍然完整且可正常管理，名称、图标或更新信息可能暂时不可用。"
+  },
+  "app.instance.mods.content-refresh-warning.title": {
+    "message": "部分在线信息暂不可用"
+  },
+  "app.instance.mods.pack-member-missing": {
+    "message": "此整合包文件在本地缺失"
+  },
+  "app.instance.mods.pack-member-removed": {
+    "message": "此整合包文件已在本地移除"
+  },
+  "app.instance.mods.restore-pack-default": {
+    "message": "恢复整合包默认文件"
+  },
   "app.instance.mods.content-type-project": {
     "message": "项目"
   },
@@ -1049,14 +1100,26 @@
   "app.instance.mods.share-title": {
     "message": "分享整合包内容"
   },
+  "app.instance.mods.missing-files-warning.body": {
+    "message": "本地缺少 {count, number} 个整合包必需文件。联网刷新可识别受作者限制、需要手动下载的文件；普通缺失项可从其菜单恢复整合包默认版本。"
+  },
+  "app.instance.mods.missing-files-warning.title": {
+    "message": "整合包文件缺失"
+  },
   "app.instance.mods.skipped-files-warning.body": {
-    "message": "因为网络原因或根据模组开发者要求，安装过程中跳过了 {count, number} 个文件。请手动下载并安装这些文件。详细信息请前往 下载-历史记录 查看。"
+    "message": "因为网络原因或根据模组开发者要求，安装过程中跳过了 {count, number} 个文件。点击文件名下载；启动器会监控系统下载目录，并在校验通过后自动导入。"
   },
   "app.instance.mods.skipped-files-warning.more": {
     "message": "另有 {count, number} 个文件。"
   },
   "app.instance.mods.skipped-files-warning.title": {
     "message": "部分整合包文件需要手动安装"
+  },
+  "app.instance.mods.update-added-content": {
+    "message": "更新后装内容"
+  },
+  "app.instance.mods.update-added-content.description": {
+    "message": "仅更新整合包安装后添加的内容，不会更改整合包自带文件。"
   },
   "app.instance.mods.successfully-uploaded": {
     "message": "上传成功"
@@ -2146,12 +2209,6 @@
   },
   "app.settings.resources.curseforge-mirror-description": {
     "message": "CurseForge 公共 API 请求和文件下载。"
-  },
-  "app.settings.resources.use-system-proxy": {
-    "message": "使用系统代理"
-  },
-  "app.settings.resources.use-system-proxy-description": {
-    "message": "让启动器 API 请求和文件下载使用操作系统中配置的代理。默认关闭。"
   },
   "app.settings.resources.concurrency.manual": {
     "message": "手动"

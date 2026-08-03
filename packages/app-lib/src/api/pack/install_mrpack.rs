@@ -946,10 +946,11 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                                 &sha1,
                                 downloaded_bytes,
                                 project_type,
-                                modpack_source_kind(
-                                    content_context.pack_version_id.as_deref(),
-                                ),
-                                provider_ref.as_ref(),
+								modpack_source_kind(
+									content_context.pack_version_id.as_deref(),
+								),
+								crate::state::instances::ContentOwnershipKind::PackManaged,
+								provider_ref.as_ref(),
                                 false,
                                 file_info.map(|file| KnownModrinthFile {
                                     project_id: &file.project_id,
@@ -1115,8 +1116,9 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                             &hash,
                             size,
                             project_type,
-                            modpack_source_kind(version_id.as_deref()),
-                            None,
+							modpack_source_kind(version_id.as_deref()),
+							crate::state::instances::ContentOwnershipKind::PackManaged,
+							None,
                             false,
                             None,
                             state,

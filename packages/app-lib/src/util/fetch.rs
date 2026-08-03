@@ -19,7 +19,6 @@ use sha2::{Digest, Sha256, Sha512};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::ffi::OsStr;
 use std::future::Future;
-use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{
@@ -625,21 +624,8 @@ fn route(
         is_mirror,
         allow_sensitive_headers: !is_mirror,
         supports_range,
-        proxy: proxy_policy_for_setting(system_proxy_enabled()),
+        proxy: ProxyPolicy::System,
     }
-}
-
-fn proxy_policy_for_setting(use_system_proxy: bool) -> ProxyPolicy {
-    if use_system_proxy {
-        ProxyPolicy::System
-    } else {
-        ProxyPolicy::Direct
-    }
-}
-
-fn system_proxy_enabled() -> bool {
-    crate::State::get_if_initialized()
-        .is_some_and(|state| state.system_proxy_enabled())
 }
 
 fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
@@ -1186,28 +1172,12 @@ fn file_reqwest_client_builder() -> reqwest::ClientBuilder {
     reqwest_client_builder().http1_only()
 }
 
-static SYSTEM_FETCH_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest_client_builder()
-        .build()
-        .expect("client configuration should be valid")
-});
-
-pub struct ConfiguredReqwestClient;
-
-impl Deref for ConfiguredReqwestClient {
-    type Target = reqwest::Client;
-
-    fn deref(&self) -> &Self::Target {
-        if system_proxy_enabled() {
-            &SYSTEM_FETCH_CLIENT
-        } else {
-            &DIRECT_FETCH_CLIENT
-        }
-    }
-}
-
-pub static INSECURE_REQWEST_CLIENT: ConfiguredReqwestClient =
-    ConfiguredReqwestClient;
+pub static INSECURE_REQWEST_CLIENT: LazyLock<reqwest::Client> =
+    LazyLock::new(|| {
+        reqwest_client_builder()
+            .build()
+            .expect("client configuration should be valid")
+    });
 
 const DOWNLOAD_PROGRESS_LOG_INTERVAL: u64 = 8 * 1024 * 1024;
 const MODRINTH_CDN_ATTEMPTS: usize = 3;
@@ -6644,14 +6614,8 @@ mod tests {
         assert_eq!(routes.len(), 2);
         assert!(routes[0].is_mirror);
         assert!(!routes[0].allow_sensitive_headers);
-        assert_eq!(routes[1].proxy, ProxyPolicy::Direct);
+        assert_eq!(routes[1].proxy, ProxyPolicy::System);
         assert!(routes[1].allow_sensitive_headers);
-    }
-
-    #[test]
-    fn system_proxy_setting_controls_route_policy() {
-        assert_eq!(proxy_policy_for_setting(false), ProxyPolicy::Direct);
-        assert_eq!(proxy_policy_for_setting(true), ProxyPolicy::System);
     }
 
     #[test]

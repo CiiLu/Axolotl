@@ -371,14 +371,38 @@
   "app.content.install-content": {
     "message": "安裝內容"
   },
+  "app.curseforge.manual-downloads.all-imported": {
+    "message": "所有檔案均已匯入"
+  },
+  "app.curseforge.manual-downloads.automatic-import": {
+    "message": "自動匯入"
+  },
   "app.curseforge.manual-downloads.body": {
-    "message": "已自動安裝 {installed, number} 個檔案，但仍有 {manual, number} 個檔案無法由啟動器下載。請開啟 CurseForge 頁面下載這些檔案，然後放入目前實例。"
+    "message": "已自動安裝 {installed, number} 個檔案，另有 {manual, number} 個檔案需要透過瀏覽器下載。"
+  },
+  "app.curseforge.manual-downloads.checking-downloads": {
+    "message": "正在檢查下載資料夾..."
+  },
+  "app.curseforge.manual-downloads.downloads-unavailable": {
+    "message": "無法存取系統下載資料夾。"
+  },
+  "app.curseforge.manual-downloads.existing-body": {
+    "message": "仍有 {manual, number} 個檔案需要透過瀏覽器下載。下載完成並通過驗證後，啟動器會自動匯入。"
   },
   "app.curseforge.manual-downloads.files-count": {
     "message": "{count, number} 個檔案"
   },
   "app.curseforge.manual-downloads.header": {
-    "message": "需要手動下載 CurseForge 檔案"
+    "message": "完成 CurseForge 檔案下載"
+  },
+  "app.curseforge.manual-downloads.import-complete": {
+    "message": "已匯入目前實例"
+  },
+  "app.curseforge.manual-downloads.imported": {
+    "message": "已將下載的 {count, number} 個檔案匯入目前實例。"
+  },
+  "app.curseforge.manual-downloads.imported-title": {
+    "message": "CurseForge 檔案已匯入"
   },
   "app.curseforge.manual-downloads.list-and-more": {
     "message": "{list}，以及其他 {count, number} 個"
@@ -393,16 +417,28 @@
     "message": "部分 CurseForge 檔案需要手動下載"
   },
   "app.curseforge.manual-downloads.open": {
-    "message": "開啟"
+    "message": "下載"
   },
   "app.curseforge.manual-downloads.open-all": {
-    "message": "全部開啟"
+    "message": "開啟缺少項目"
   },
   "app.curseforge.manual-downloads.project-file": {
-    "message": "專案 {projectId} · 檔案 {fileId}"
+    "message": "專案 {projectId} / 檔案 {fileId}"
+  },
+  "app.curseforge.manual-downloads.retrying": {
+    "message": "匯入失敗，正在重試"
+  },
+  "app.curseforge.manual-downloads.scanner-failed": {
+    "message": "自動匯入檢查失敗，正在重試。"
   },
   "app.curseforge.manual-downloads.view-instance": {
     "message": "查看實例"
+  },
+  "app.curseforge.manual-downloads.waiting": {
+    "message": "等待下載"
+  },
+  "app.curseforge.manual-downloads.watching-downloads": {
+    "message": "正在監控 {path}，檔案通過驗證後將自動匯入。"
   },
   "app.curseforge.modpack-installed.body": {
     "message": "已從 CurseForge 安裝 {count, number} 個內容檔案。"
@@ -953,6 +989,21 @@
   "app.instance.mods.bulk-update.resolving-versions": {
     "message": "正在解析版本..."
   },
+  "app.instance.mods.content-refresh-warning.body": {
+    "message": "本機內容仍然完整且可正常管理，名稱、圖示或更新資訊可能暫時無法使用。"
+  },
+  "app.instance.mods.content-refresh-warning.title": {
+    "message": "部分線上資訊暫時無法使用"
+  },
+  "app.instance.mods.pack-member-missing": {
+    "message": "此模組包檔案在本機缺失"
+  },
+  "app.instance.mods.pack-member-removed": {
+    "message": "此模組包檔案已在本機移除"
+  },
+  "app.instance.mods.restore-pack-default": {
+    "message": "還原模組包預設檔案"
+  },
   "app.instance.mods.content-type-project": {
     "message": "專案"
   },
@@ -968,14 +1019,26 @@
   "app.instance.mods.share-title": {
     "message": "分享模組包內容"
   },
+  "app.instance.mods.missing-files-warning.body": {
+    "message": "本機缺少 {count, number} 個模組包必要檔案。連線重新整理可識別受作者限制、需要手動下載的檔案；一般缺失項可從其選單還原模組包預設版本。"
+  },
+  "app.instance.mods.missing-files-warning.title": {
+    "message": "模組包檔案缺失"
+  },
   "app.instance.mods.skipped-files-warning.body": {
-    "message": "由於網路原因或依模組開發者要求，安裝過程中已略過 {count, number} 個檔案。請手動下載並安裝這些檔案。詳細資訊請前往「下載 - 歷史紀錄」中查看。"
+    "message": "由於網路原因或依模組開發者要求，安裝過程中已略過 {count, number} 個檔案。點擊檔案名稱下載；啟動器會監控系統下載資料夾，並在驗證通過後自動匯入。"
   },
   "app.instance.mods.skipped-files-warning.more": {
     "message": "另有 {count, number} 個檔案。"
   },
   "app.instance.mods.skipped-files-warning.title": {
     "message": "部分模組包檔案需要手動安裝"
+  },
+  "app.instance.mods.update-added-content": {
+    "message": "更新後裝內容"
+  },
+  "app.instance.mods.update-added-content.description": {
+    "message": "僅更新模組包安裝後新增的內容，不會變更模組包內建檔案。"
   },
   "app.instance.mods.successfully-uploaded": {
     "message": "已成功上傳"
@@ -1576,12 +1639,6 @@
   },
   "app.settings.resources.curseforge-mirror-description": {
     "message": "使用 MCIM 加速 CurseForge API 請求與檔案下載。"
-  },
-  "app.settings.resources.use-system-proxy": {
-    "message": "使用系統代理"
-  },
-  "app.settings.resources.use-system-proxy-description": {
-    "message": "讓啟動器 API 請求和檔案下載使用作業系統中設定的代理。預設關閉。"
   },
   "app.settings.resources.source.official-preferred": {
     "message": "優先官方來源"

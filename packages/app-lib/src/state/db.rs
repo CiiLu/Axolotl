@@ -17,6 +17,8 @@ const TEMPORARY_JAVA_DISCOVERY_MIGRATION_VERSION: i64 = 20260723121000;
 const COLLIDING_HOME_DASHBOARD_MIGRATION_VERSION: i64 = 20260725170000;
 const HOME_DASHBOARD_MIGRATION_VERSION: i64 = 20260727110000;
 const PROVIDER_QUALIFIED_CONTENT_MIGRATION_VERSION: i64 = 20260728100000;
+const OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_VERSION: i64 =
+    20260802121000;
 #[cfg(test)]
 const RECONCILE_PROVIDER_QUALIFIED_CONTENT_MIGRATION_VERSION: i64 =
     20260728110000;
@@ -24,6 +26,8 @@ const RECONCILE_PROVIDER_QUALIFIED_CONTENT_MIGRATION_VERSION: i64 =
 const JAVA_DEFAULT_VERSIONS_MIGRATION_VERSION: i64 = 20260729110000;
 #[cfg(test)]
 const SYSTEM_PROXY_SETTING_MIGRATION_VERSION: i64 = 20260802122000;
+#[cfg(test)]
+const INSTANCE_CONTENT_OWNERSHIP_MIGRATION_VERSION: i64 = 20260803120000;
 
 // This migration was changed by the launcher rebrand after it had already
 // shipped. Keep the checksums of the original LF and CRLF variants so existing
@@ -48,6 +52,10 @@ const COLLIDING_HOME_DASHBOARD_MIGRATION_CHECKSUMS: &[&str] = &[
 const LEGACY_PROVIDER_QUALIFIED_CONTENT_MIGRATION_CHECKSUMS: &[&str] = &[
     "58ca9f7fe905f3d51ce68e03422f0f60035f4d4278738d2432869528d8a5951b4c053090a7e605e32797206b5e744010",
 ];
+const LEGACY_OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_CHECKSUMS: &[&str] =
+    &[
+        "2fe6c8d9276c35e9400ab2e56ee1f30209db192c4edffc1dc6987bd79cbc04a101d0b2988dac1ba34d77df2acf869a5e",
+    ];
 
 pub(crate) async fn connect(
     app_identifier: &str,
@@ -80,6 +88,8 @@ async fn open_migrated_app_db(db_path: &Path) -> crate::Result<Pool<Sqlite>> {
 
     reconcile_existing_home_dashboard_migration(&pool).await?;
     reconcile_legacy_provider_qualified_content_migration(&pool).await?;
+    reconcile_legacy_official_preferred_download_source_migration(&pool)
+        .await?;
     reconcile_compatible_migration_checksums(&pool).await?;
     reconcile_existing_java_discovery_migration(&pool).await?;
     MIGRATOR.run(&pool).await?;
@@ -173,6 +183,127 @@ async fn update_migration_checksum(
         .bind(version)
         .execute(pool)
         .await?;
+    Ok(())
+}
+
+async fn reconcile_legacy_official_preferred_download_source_migration(
+    pool: &Pool<Sqlite>,
+) -> crate::Result<()> {
+    let has_migrations_table: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '_sqlx_migrations')",
+    )
+    .fetch_one(pool)
+    .await?;
+    if !has_migrations_table {
+        return Ok(());
+    }
+
+    let applied_checksum: Option<Vec<u8>> = sqlx::query_scalar(
+        "SELECT checksum FROM _sqlx_migrations WHERE version = ? AND success = TRUE",
+    )
+    .bind(OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_VERSION)
+    .fetch_optional(pool)
+    .await?;
+    let Some(applied_checksum) = applied_checksum else {
+        return Ok(());
+    };
+    if !LEGACY_OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_CHECKSUMS
+        .contains(&checksum_as_hex(&applied_checksum).as_str())
+    {
+        return Ok(());
+    }
+
+    let source_columns: Vec<(String, String, i64, Option<String>, i64)> =
+        sqlx::query_as(
+            "SELECT name, type, \"notnull\", dflt_value, pk
+             FROM pragma_table_info('settings')
+             WHERE name IN (
+                'minecraft_metadata_source',
+                'minecraft_file_source',
+                'modrinth_source',
+                'curseforge_source'
+             )",
+        )
+        .fetch_all(pool)
+        .await?;
+    let source_column_names = [
+        "minecraft_metadata_source",
+        "minecraft_file_source",
+        "modrinth_source",
+        "curseforge_source",
+    ];
+    let source_columns_match = source_columns.len()
+        == source_column_names.len()
+        && source_columns.iter().all(
+            |(name, data_type, not_null, default_value, primary_key)| {
+                source_column_names.contains(&name.as_str())
+                    && data_type.eq_ignore_ascii_case("TEXT")
+                    && *not_null == 1
+                    && default_value.as_deref() == Some("'auto'")
+                    && *primary_key == 0
+            },
+        );
+
+    let settings_sql: Option<String> = sqlx::query_scalar(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'settings'",
+    )
+    .fetch_optional(pool)
+    .await?;
+    let source_checks_match = settings_sql.as_ref().is_some_and(|sql| {
+        source_column_names.iter().all(|column| {
+            sql.contains(&format!(
+                "{column} IN ('auto', 'official_only', 'mirror_preferred', 'official_preferred')"
+            ))
+        })
+    });
+    let minimal_home_foreign_key_exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(
+            SELECT 1 FROM pragma_foreign_key_list('settings')
+            WHERE \"from\" = 'minimal_home_instance_id'
+                AND \"table\" = 'instances'
+                AND \"to\" = 'id'
+                AND on_delete = 'SET NULL'
+        )",
+    )
+    .fetch_one(pool)
+    .await?;
+    let legacy_table_exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(
+            SELECT 1 FROM sqlite_master
+            WHERE type = 'table'
+                AND name = 'settings_with_official_preferred'
+        )",
+    )
+    .fetch_one(pool)
+    .await?;
+    if !source_columns_match
+        || !source_checks_match
+        || !minimal_home_foreign_key_exists
+        || legacy_table_exists
+    {
+        return Ok(());
+    }
+
+    let migration = MIGRATOR
+        .iter()
+        .find(|migration| {
+            migration.version
+                == OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_VERSION
+        })
+        .expect(
+            "official-preferred download source migration should be embedded",
+        );
+    update_migration_checksum(
+        pool,
+        OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_VERSION,
+        migration.checksum.as_ref(),
+    )
+    .await?;
+
+    tracing::warn!(
+        version = OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_VERSION,
+        "Reconciled the validated official-preferred download source schema"
+    );
     Ok(())
 }
 
@@ -612,6 +743,18 @@ mod tests {
             .expect("provider-qualified content migration should be embedded")
     }
 
+    fn official_preferred_download_source_migration() -> &'static Migration {
+        MIGRATOR
+            .iter()
+            .find(|migration| {
+                migration.version
+                    == OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_VERSION
+            })
+            .expect(
+                "official-preferred download source migration should be embedded",
+            )
+    }
+
     fn reconcile_provider_qualified_content_migration() -> &'static Migration {
         MIGRATOR
             .iter()
@@ -631,6 +774,16 @@ mod tests {
                 migration.version == JAVA_DEFAULT_VERSIONS_MIGRATION_VERSION
             })
             .expect("Java default versions migration should be embedded")
+    }
+
+    fn instance_content_ownership_migration() -> &'static Migration {
+        MIGRATOR
+            .iter()
+            .find(|migration| {
+                migration.version
+                    == INSTANCE_CONTENT_OWNERSHIP_MIGRATION_VERSION
+            })
+            .expect("instance content ownership migration should be embedded")
     }
 
     async fn create_previous_java_versions_schema(pool: &Pool<Sqlite>) {
@@ -716,6 +869,137 @@ mod tests {
         ));
     }
 
+    #[tokio::test]
+    async fn reconciles_official_preferred_migration_with_trailing_blank_line()
+    {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        sqlx::query(
+            "UPDATE settings
+             SET theme = 'light', locale = 'zh-CN'
+             WHERE id = 0",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let before = settings_snapshot(&pool).await;
+
+        let migration = official_preferred_download_source_migration();
+        let legacy_sql = format!("{}\n", migration.sql);
+        let legacy_checksum = checksum(legacy_sql.as_bytes());
+        assert_eq!(
+            checksum_as_hex(&legacy_checksum),
+            LEGACY_OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_CHECKSUMS[0]
+        );
+        sqlx::raw_sql(&legacy_sql).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO _sqlx_migrations (
+                version, description, success, checksum, execution_time
+             ) VALUES (?, ?, TRUE, ?, 0)",
+        )
+        .bind(migration.version)
+        .bind(migration.description.as_ref())
+        .bind(&legacy_checksum)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        reconcile_legacy_official_preferred_download_source_migration(&pool)
+            .await
+            .unwrap();
+        let reconciled_checksum: Vec<u8> = sqlx::query_scalar(
+            "SELECT checksum FROM _sqlx_migrations WHERE version = ?",
+        )
+        .bind(migration.version)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(reconciled_checksum, migration.checksum.as_ref());
+
+        MIGRATOR.run(&pool).await.unwrap();
+        let after = settings_snapshot(&pool).await;
+        assert_eq!(after, before);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn rejects_legacy_official_preferred_checksum_for_old_schema() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+
+        let migration = official_preferred_download_source_migration();
+        let legacy_checksum = decode_hex(
+            LEGACY_OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_CHECKSUMS[0],
+        );
+        sqlx::query(
+            "INSERT INTO _sqlx_migrations (
+                version, description, success, checksum, execution_time
+             ) VALUES (?, ?, TRUE, ?, 0)",
+        )
+        .bind(migration.version)
+        .bind(migration.description.as_ref())
+        .bind(&legacy_checksum)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        reconcile_legacy_official_preferred_download_source_migration(&pool)
+            .await
+            .unwrap();
+        let stored_checksum: Vec<u8> = sqlx::query_scalar(
+            "SELECT checksum FROM _sqlx_migrations WHERE version = ?",
+        )
+        .bind(migration.version)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(stored_checksum, legacy_checksum);
+        assert!(MIGRATOR.run(&pool).await.is_err());
+    }
+
     #[test]
     fn embedded_migration_versions_are_unique() {
         let mut versions = HashSet::new();
@@ -729,7 +1013,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn upgrades_the_exact_previous_settings_schema_without_data_loss() {
+    async fn removes_system_proxy_setting_without_data_loss() {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
@@ -774,19 +1058,16 @@ mod tests {
 
         MIGRATOR.run(&pool).await.unwrap();
 
-        let mut after = settings_snapshot(&pool).await;
-        assert_eq!(
-            after.pop(),
-            Some(("use_system_proxy".to_string(), "0".to_string()))
-        );
+        let after = settings_snapshot(&pool).await;
         assert_eq!(after, before);
-        let use_system_proxy: i64 = sqlx::query_scalar(
-            "SELECT use_system_proxy FROM settings WHERE id = 0",
+        let proxy_column_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('settings')
+             WHERE name = 'use_system_proxy'",
         )
         .fetch_one(&pool)
         .await
         .unwrap();
-        assert_eq!(use_system_proxy, 0);
+        assert_eq!(proxy_column_count, 0);
         let legacy_table_exists: bool = sqlx::query_scalar(
             "SELECT EXISTS(
                 SELECT 1 FROM sqlite_master
@@ -850,6 +1131,212 @@ mod tests {
             .await
             .is_err()
         );
+    }
+
+    #[tokio::test]
+    async fn upgrades_instance_content_ownership_without_losing_files() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < INSTANCE_CONTENT_OWNERSHIP_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        sqlx::raw_sql(
+            r#"
+            INSERT INTO instances (
+                id, path, applied_content_set_id, install_stage,
+                launcher_feature_version, name, created, modified
+            ) VALUES
+                ('cf', 'cf', NULL, 'installed', '1', 'CF Pack', 1, 1),
+                ('mr', 'mr', NULL, 'installed', '1', 'MR Pack', 1, 1),
+                ('imported', 'imported', NULL, 'installed', '1',
+                    'Imported Pack', 1, 1);
+
+            INSERT INTO instance_content_sets (
+                id, instance_id, name, source_kind, status, game_version,
+                loader, created, modified
+            ) VALUES
+                ('cf-set', 'cf', 'Default', 'curseforge', 'applied',
+                    '1.12.2', 'forge', 1, 1),
+                ('mr-set', 'mr', 'Default', 'modrinth_modpack', 'applied',
+                    '1.20.1', 'fabric', 1, 1),
+                ('imported-set', 'imported', 'Default', 'imported_modpack',
+                    'applied', '1.20.1', 'fabric', 1, 1);
+
+            UPDATE instances SET applied_content_set_id = id || '-set';
+
+            INSERT INTO instance_links (
+                instance_id, link_kind, modrinth_project_id,
+                modrinth_version_id, curseforge_project_id,
+                curseforge_file_id, imported_name, imported_filename
+            ) VALUES
+                ('cf', 'curseforge_modpack', NULL, NULL, 285109, 4612979,
+                    NULL, NULL),
+                ('mr', 'modrinth_modpack', 'mr-pack', 'mr-pack-version',
+                    NULL, NULL, NULL, NULL),
+                ('imported', 'imported_modpack', NULL, NULL, NULL, NULL,
+                    'Imported Pack', 'pack.zip');
+
+            INSERT INTO instance_files (
+                id, instance_id, relative_path, file_name, enabled, sha1,
+                size, missing, added_at, modified_at
+            ) VALUES
+                ('cf-pack-file', 'cf', 'mods/cf-pack.jar', 'cf-pack.jar',
+                    1, 'cf-pack-sha1', 10, 0, 1, 1),
+                ('cf-added-file', 'cf', 'mods/cf-added.jar', 'cf-added.jar',
+                    1, 'cf-added-sha1', 11, 0, 1, 1),
+                ('mr-pack-file', 'mr', 'mods/mr-pack.jar', 'mr-pack.jar',
+                    1, 'mr-pack-sha1', 12, 0, 1, 1),
+                ('mr-added-file', 'mr', 'mods/mr-added.jar', 'mr-added.jar',
+                    1, 'mr-added-sha1', 13, 0, 1, 1),
+                ('imported-file', 'imported', 'mods/imported.jar',
+                    'imported.jar', 0, 'imported-sha1', 14, 0, 1, 1);
+
+            INSERT INTO instance_content_entries (
+                id, instance_id, content_set_id, file_id, project_type,
+                source_kind, server_requirement, client_requirement,
+                enabled, added_at, modified_at
+            ) VALUES
+                ('cf-pack-entry', 'cf', 'cf-set', 'cf-pack-file', 'mod',
+                    'curseforge', 'required', 'required', 1, 1, 1),
+                ('cf-added-entry', 'cf', 'cf-set', 'cf-added-file', 'mod',
+                    'curseforge', 'required', 'required', 1, 1, 1),
+                ('mr-pack-entry', 'mr', 'mr-set', 'mr-pack-file', 'mod',
+                    'modrinth_modpack', 'required', 'required', 1, 1, 1),
+                ('mr-added-entry', 'mr', 'mr-set', 'mr-added-file', 'mod',
+                    'local', 'required', 'required', 1, 1, 1),
+                ('imported-entry', 'imported', 'imported-set',
+                    'imported-file', 'mod', 'imported_modpack', 'optional',
+                    'optional', 0, 1, 1);
+
+            INSERT INTO instance_content_provider_refs (
+                content_entry_id, provider, provider_project_id,
+                provider_release_id, is_origin
+            ) VALUES
+                ('cf-pack-entry', 'curseforge', '123', '456', 1),
+                ('cf-added-entry', 'curseforge', '789', '987', 1),
+                ('mr-pack-entry', 'modrinth', 'mr-project', 'mr-version', 1);
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let file_count_before: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM instance_files")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        sqlx::raw_sql(instance_content_ownership_migration().sql.as_ref())
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let ownership: Vec<(String, String)> = sqlx::query_as(
+            "SELECT id, ownership_kind FROM instance_content_entries
+             ORDER BY id",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            ownership,
+            vec![
+                ("cf-added-entry".to_string(), "pack_managed".to_string()),
+                ("cf-pack-entry".to_string(), "pack_managed".to_string()),
+                ("imported-entry".to_string(), "pack_managed".to_string()),
+                ("mr-added-entry".to_string(), "user_added".to_string()),
+                ("mr-pack-entry".to_string(), "pack_managed".to_string()),
+            ]
+        );
+        let members: Vec<(String, Option<String>, i64, String)> =
+            sqlx::query_as(
+                "SELECT content_entry_id, provider_project_id, reconciled,
+                        override_kind
+                 FROM instance_pack_members
+                 ORDER BY content_entry_id",
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+        assert_eq!(members.len(), 4);
+        assert!(members.iter().any(|member| {
+            member.0 == "cf-pack-entry"
+                && member.1.as_deref() == Some("123")
+                && member.2 == 0
+        }));
+        assert!(members.iter().any(|member| {
+            member.0 == "cf-added-entry"
+                && member.1.as_deref() == Some("789")
+                && member.2 == 0
+        }));
+        assert!(members.iter().any(|member| {
+            member.0 == "imported-entry"
+                && member.1.is_none()
+                && member.3 == "disabled"
+        }));
+        let provider_refs: Vec<(String, String, String, Option<String>)> =
+            sqlx::query_as(
+                "SELECT content_entry_id, provider, provider_project_id,
+                        provider_release_id
+                 FROM instance_content_provider_refs
+                 ORDER BY content_entry_id",
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            provider_refs,
+            vec![
+                (
+                    "cf-added-entry".to_string(),
+                    "curseforge".to_string(),
+                    "789".to_string(),
+                    Some("987".to_string()),
+                ),
+                (
+                    "cf-pack-entry".to_string(),
+                    "curseforge".to_string(),
+                    "123".to_string(),
+                    Some("456".to_string()),
+                ),
+                (
+                    "mr-pack-entry".to_string(),
+                    "modrinth".to_string(),
+                    "mr-project".to_string(),
+                    Some("mr-version".to_string()),
+                ),
+            ]
+        );
+        let file_count_after: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM instance_files")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(file_count_after, file_count_before);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
     }
 
     #[tokio::test]

@@ -32,6 +32,10 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_get_install_candidates,
             instance_content,
             instance_get_content_items,
+            instance_get_content_snapshot,
+            instance_refresh_content,
+            instance_plan_content_updates,
+            instance_apply_content_update_plan,
             instance_get_dependencies_as_content_items,
             instance_get_linked_modpack_info,
             instance_get_linked_modpack_content,
@@ -47,8 +51,13 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_add_project_from_path,
             instance_import_world_save,
             instance_toggle_disable_project,
+            instance_toggle_content_entry,
             instance_rollback_project,
             instance_remove_project,
+            instance_remove_content_entry,
+            instance_update_content_entry,
+            instance_switch_content_entry_version,
+            instance_restore_pack_member_default,
             instance_update_managed_modrinth_version,
             instance_repair_managed_modrinth,
             instance_run,
@@ -558,6 +567,43 @@ pub async fn instance_get_content_items(
 }
 
 #[tauri::command]
+pub async fn instance_get_content_snapshot(
+    instance_id: &str,
+) -> Result<theseus::data::InstanceContentSnapshot> {
+    Ok(theseus::instance::get_content_snapshot(instance_id).await?)
+}
+
+#[tauri::command]
+pub async fn instance_refresh_content(
+    instance_id: &str,
+) -> Result<theseus::data::InstanceContentSnapshot> {
+    Ok(theseus::instance::refresh_content(instance_id).await?)
+}
+
+#[tauri::command]
+pub async fn instance_plan_content_updates(
+    instance_id: &str,
+    scope: theseus::data::ContentUpdateScope,
+    target: Option<&str>,
+) -> Result<theseus::data::ContentUpdatePlan> {
+    Ok(
+        theseus::instance::plan_content_updates(instance_id, scope, target)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_apply_content_update_plan(
+    plan_id: &str,
+    resolutions: Vec<theseus::data::ContentUpdateResolution>,
+) -> Result<theseus::data::InstanceContentSnapshot> {
+    Ok(
+        theseus::instance::apply_content_update_plan(plan_id, resolutions)
+            .await?,
+    )
+}
+
+#[tauri::command]
 pub async fn instance_get_dependencies_as_content_items(
     dependencies: Vec<Dependency>,
     cache_behaviour: Option<CacheBehaviour>,
@@ -744,6 +790,20 @@ pub async fn instance_toggle_disable_project(
 }
 
 #[tauri::command]
+pub async fn instance_toggle_content_entry(
+    instance_id: &str,
+    content_id: &str,
+    desired_enabled: Option<bool>,
+) -> Result<String> {
+    Ok(theseus::instance::toggle_content_entry(
+        instance_id,
+        content_id,
+        desired_enabled,
+    )
+    .await?)
+}
+
+#[tauri::command]
 pub async fn instance_rollback_project(
     instance_id: &str,
     project_path: &str,
@@ -758,6 +818,51 @@ pub async fn instance_remove_project(
 ) -> Result<()> {
     theseus::instance::remove_project(instance_id, project_path).await?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_remove_content_entry(
+    instance_id: &str,
+    content_id: &str,
+) -> Result<()> {
+    theseus::instance::remove_content_entry(instance_id, content_id).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_update_content_entry(
+    instance_id: &str,
+    content_id: &str,
+) -> Result<String> {
+    Ok(
+        theseus::instance::update_content_entry(instance_id, content_id)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_switch_content_entry_version(
+    instance_id: &str,
+    content_id: &str,
+    version_id: &str,
+) -> Result<String> {
+    Ok(theseus::instance::switch_content_entry_version(
+        instance_id,
+        content_id,
+        version_id,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_restore_pack_member_default(
+    instance_id: &str,
+    member_id: &str,
+) -> Result<Option<String>> {
+    Ok(
+        theseus::instance::restore_pack_member_default(instance_id, member_id)
+            .await?,
+    )
 }
 
 #[tauri::command]

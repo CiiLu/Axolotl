@@ -95,7 +95,6 @@ pub struct State {
     minecraft_file_source: AtomicU8,
     modrinth_source: AtomicU8,
     curseforge_source: AtomicU8,
-    use_system_proxy: AtomicBool,
     auto_prefers_mirror: AtomicBool,
     download_concurrency_target: AtomicUsize,
     download_concurrency_limit: AtomicUsize,
@@ -507,10 +506,6 @@ impl State {
         self.auto_prefers_mirror.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn system_proxy_enabled(&self) -> bool {
-        self.use_system_proxy.load(Ordering::Relaxed)
-    }
-
     pub(crate) fn download_concurrency(&self) -> usize {
         self.download_concurrency_target.load(Ordering::Acquire)
     }
@@ -552,8 +547,6 @@ impl State {
             .store(settings.modrinth_source as u8, Ordering::Relaxed);
         self.curseforge_source
             .store(settings.curseforge_source as u8, Ordering::Relaxed);
-        self.use_system_proxy
-            .store(settings.use_system_proxy, Ordering::Relaxed);
         self.auto_prefers_mirror
             .store(settings.auto_prefers_mirror(), Ordering::Relaxed);
         let was_auto = self
@@ -755,7 +748,6 @@ impl State {
             ),
             modrinth_source: AtomicU8::new(settings.modrinth_source as u8),
             curseforge_source: AtomicU8::new(settings.curseforge_source as u8),
-            use_system_proxy: AtomicBool::new(settings.use_system_proxy),
             auto_prefers_mirror: AtomicBool::new(auto_prefers_mirror),
             download_concurrency_target: AtomicUsize::new(download_concurrency),
             download_concurrency_limit: AtomicUsize::new(download_concurrency),

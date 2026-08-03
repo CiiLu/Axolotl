@@ -13,8 +13,8 @@ use std::collections::{HashMap, HashSet};
 
 use super::apply_content_install::{
     DownloadedProjectVersion, add_downloaded_project_version,
-    add_project_from_version, archive_project_file, download_project_version,
-    remove_project, toggle_disable_project,
+    add_project_from_version, archive_project_file, content_ownership_for_path,
+    download_project_version, remove_project, toggle_disable_project,
 };
 use super::check_content_updates::{ContentUpdate, check_content_updates};
 
@@ -99,12 +99,16 @@ async fn apply_content_update(
             update_version_id,
             ..
         } => {
+            let ownership_kind =
+                content_ownership_for_path(instance_id, project_path, state)
+                    .await?;
             add_project_from_version(
                 instance_id,
                 update_version_id.as_str(),
                 DownloadReason::Update,
                 Some(current_version_id.to_string()),
                 ContentSourceKind::Local,
+                ownership_kind,
                 state,
             )
             .await?
@@ -180,6 +184,7 @@ pub(crate) async fn update_all_projects(
                     instance_id,
                     downloaded,
                     ContentSourceKind::Local,
+                    crate::state::instances::ContentOwnershipKind::UserAdded,
                     state,
                 )
                 .await?;
@@ -220,6 +225,7 @@ pub(crate) async fn update_all_projects(
                     instance_id,
                     downloaded,
                     ContentSourceKind::Local,
+                    crate::state::instances::ContentOwnershipKind::UserAdded,
                     state,
                 )
                 .await?;
@@ -471,15 +477,21 @@ async fn bulk_updateable_project_paths(
     instance_id: &str,
     state: &State,
 ) -> crate::Result<HashSet<String>> {
-    let items = super::list_content::list_content(
-        instance_id,
-        None,
-        Some(CacheBehaviour::MustRevalidate),
-        state,
+    let paths = sqlx::query_scalar::<_, String>(
+        "SELECT file.relative_path
+         FROM instance_content_entries entry
+         INNER JOIN instance_files file ON file.id = entry.file_id
+         INNER JOIN instances instance ON instance.id = entry.instance_id
+         WHERE instance.id = ?
+            AND entry.content_set_id = instance.applied_content_set_id
+            AND entry.ownership_kind = 'user_added'
+            AND file.missing = 0",
     )
+    .bind(instance_id)
+    .fetch_all(&state.pool)
     .await?;
 
-    Ok(items.into_iter().map(|item| item.file_path).collect())
+    Ok(paths.into_iter().collect())
 }
 
 async fn installed_projects(

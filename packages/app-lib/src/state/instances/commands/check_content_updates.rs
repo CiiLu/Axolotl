@@ -64,8 +64,6 @@ pub(crate) async fn check_content_updates(
     cache_behaviour: Option<CacheBehaviour>,
     state: &State,
 ) -> crate::Result<Vec<ContentUpdate>> {
-    let _instance_lock = state.lock_instance_content(instance_id).await;
-
     let context = load_installed_content(instance_id, state).await?;
     let candidates =
         modrinth_update_candidates(&context, cache_behaviour, state).await?;
@@ -99,6 +97,8 @@ async fn load_installed_content(
         .ok_or_else(|| {
             crate::ErrorKind::InputError("Unknown instance".to_string())
         })?;
+    let files = sync_instance_content_files(&instance, state).await?;
+    let _instance_lock = state.lock_instance_content(instance_id).await;
     let content_set =
         content_rows::get_applied_content_set(&instance.id, &state.pool)
             .await?
@@ -119,7 +119,6 @@ async fn load_installed_content(
                 .map(|file_id| (file_id.to_string(), entry.clone()))
         })
         .collect();
-    let files = sync_instance_content_files(&instance, state).await?;
     let files_by_id = files
         .iter()
         .map(|file| (file.id.clone(), file.clone()))
@@ -274,6 +273,9 @@ async fn resolve_modrinth_updates(
             .push(update.update_version_id);
     }
 
+    let _instance_lock =
+        state.lock_instance_content(&context.instance.id).await;
+
     for candidate in candidates {
         let update_version_id = updates_by_hash
             .remove(&candidate.file.sha1)
@@ -319,6 +321,8 @@ async fn resolve_curseforge_updates(
         curseforge_projects_for_updates(&context.provider_refs_by_file_id)
             .await?;
     let mut output = Vec::new();
+    let _instance_lock =
+        state.lock_instance_content(&context.instance.id).await;
     for (file_id, refs) in &context.provider_refs_by_file_id {
         if context
             .origin_provider_by_file_id

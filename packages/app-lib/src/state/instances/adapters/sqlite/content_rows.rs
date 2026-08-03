@@ -1,10 +1,13 @@
 #![allow(dead_code)]
 
 use crate::state::instances::{
-    ContentEntry, ContentRequirement, ContentSet, ContentSetRemoteRef,
-    ContentSetRemoteRefType, ContentSetStatus, ContentSetSyncProvider,
-    ContentSetSyncState, ContentSetSyncStatus, ContentSourceKind,
-    ContentUpdateCheck, InstanceFile,
+    ContentEntry, ContentOwnershipKind, ContentRequirement, ContentSet,
+    ContentSetRemoteRef, ContentSetRemoteRefType, ContentSetStatus,
+    ContentSetSyncProvider, ContentSetSyncState, ContentSetSyncStatus,
+    ContentSourceKind, ContentUpdateCheck, InstanceFile,
+    ManualDownloadOperationKind, ManualDownloadState, PackMember,
+    PackMemberMaterializationState, PackMemberOverrideKind,
+    PendingManualDownload,
 };
 use crate::state::{
     ContentProvider, ContentProviderRef, ModLoader, ProjectType, ReleaseChannel,
@@ -74,6 +77,7 @@ pub(crate) struct ContentSetRow {
     pub protocol_version: Option<i64>,
     pub loader: String,
     pub loader_version: Option<String>,
+    pub revision: i64,
     pub created: i64,
     pub modified: i64,
 }
@@ -92,6 +96,7 @@ impl TryFrom<ContentSetRow> for ContentSet {
             protocol_version: row.protocol_version.map(|value| value as u32),
             loader: ModLoader::from_string(&row.loader),
             loader_version: row.loader_version,
+            revision: unsigned(row.revision, "instance_content_sets.revision")?,
             created: timestamp(row.created),
             modified: timestamp(row.modified),
         })
@@ -187,6 +192,7 @@ pub(crate) struct ContentEntryRow {
     pub file_id: Option<String>,
     pub project_type: String,
     pub source_kind: String,
+    pub ownership_kind: String,
     pub server_requirement: String,
     pub client_requirement: String,
     pub enabled: i64,
@@ -205,6 +211,9 @@ impl TryFrom<ContentEntryRow> for ContentEntry {
             file_id: row.file_id,
             project_type: project_type_from_str(&row.project_type)?,
             source_kind: ContentSourceKind::from_str(&row.source_kind)?,
+            ownership_kind: ContentOwnershipKind::from_str(
+                &row.ownership_kind,
+            )?,
             server_requirement: ContentRequirement::from_str(
                 &row.server_requirement,
             )?,
@@ -251,8 +260,7 @@ pub(crate) async fn get_applied_content_set<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>,
 {
-    let row = sqlx::query_as!(
-        ContentSetRow,
+    let row = sqlx::query_as::<_, ContentSetRow>(
         "
 		SELECT cs.*
 		FROM instances i
@@ -260,8 +268,8 @@ where
 			ON cs.id = i.applied_content_set_id
 		WHERE i.id = ?
 		",
-        instance_id,
     )
+    .bind(instance_id)
     .fetch_optional(exec)
     .await?;
 
@@ -275,15 +283,14 @@ pub(crate) async fn get_content_set<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>,
 {
-    let row = sqlx::query_as!(
-        ContentSetRow,
+    let row = sqlx::query_as::<_, ContentSetRow>(
         "
 		SELECT *
 		FROM instance_content_sets
 		WHERE id = ?
 		",
-        content_set_id,
     )
+    .bind(content_set_id)
     .fetch_optional(exec)
     .await?;
 
@@ -297,16 +304,15 @@ pub(crate) async fn get_content_sets_for_instance<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>,
 {
-    let rows = sqlx::query_as!(
-        ContentSetRow,
+    let rows = sqlx::query_as::<_, ContentSetRow>(
         "
 		SELECT *
 		FROM instance_content_sets
 		WHERE instance_id = ?
 		ORDER BY created ASC, id ASC
 		",
-        instance_id,
     )
+    .bind(instance_id)
     .fetch_all(exec)
     .await?;
 
@@ -327,10 +333,11 @@ pub(crate) async fn insert_content_set(
         content_set.protocol_version.map(|value| value as i64);
     let loader = content_set.loader.as_str();
     let loader_version = content_set.loader_version.as_deref();
+    let revision = content_set.revision as i64;
     let created = content_set.created.timestamp();
     let modified = content_set.modified.timestamp();
 
-    sqlx::query!(
+    sqlx::query(
         "
 		INSERT INTO instance_content_sets (
 			id,
@@ -342,23 +349,25 @@ pub(crate) async fn insert_content_set(
 			protocol_version,
 			loader,
 			loader_version,
+			revision,
 			created,
 			modified
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		",
-        id,
-        instance_id,
-        name,
-        source_kind,
-        status,
-        game_version,
-        protocol_version,
-        loader,
-        loader_version,
-        created,
-        modified,
     )
+    .bind(id)
+    .bind(instance_id)
+    .bind(name)
+    .bind(source_kind)
+    .bind(status)
+    .bind(game_version)
+    .bind(protocol_version)
+    .bind(loader)
+    .bind(loader_version)
+    .bind(revision)
+    .bind(created)
+    .bind(modified)
     .execute(&mut **tx)
     .await?;
 
@@ -378,9 +387,10 @@ pub(crate) async fn update_content_set(
         content_set.protocol_version.map(|value| value as i64);
     let loader = content_set.loader.as_str();
     let loader_version = content_set.loader_version.as_deref();
+    let revision = content_set.revision as i64;
     let modified = content_set.modified.timestamp();
 
-    sqlx::query!(
+    sqlx::query(
         "
 		UPDATE instance_content_sets
 		SET
@@ -391,19 +401,21 @@ pub(crate) async fn update_content_set(
 			protocol_version = ?,
 			loader = ?,
 			loader_version = ?,
+			revision = ?,
 			modified = ?
 		WHERE id = ?
 		",
-        name,
-        source_kind,
-        status,
-        game_version,
-        protocol_version,
-        loader,
-        loader_version,
-        modified,
-        id,
     )
+    .bind(name)
+    .bind(source_kind)
+    .bind(status)
+    .bind(game_version)
+    .bind(protocol_version)
+    .bind(loader)
+    .bind(loader_version)
+    .bind(revision)
+    .bind(modified)
+    .bind(id)
     .execute(&mut **tx)
     .await?;
 
@@ -574,7 +586,8 @@ where
     let rows = sqlx::query_as::<_, ContentEntryRow>(
         "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
-			source_kind, server_requirement, client_requirement, enabled,
+			source_kind, ownership_kind, server_requirement,
+			client_requirement, enabled,
 			added_at, modified_at
 		FROM instance_content_entries
 		WHERE content_set_id = ?
@@ -843,6 +856,7 @@ pub(crate) struct UpsertContentEntry<'a> {
     pub file_id: Option<&'a str>,
     pub project_type: ProjectType,
     pub source_kind: ContentSourceKind,
+    pub ownership_kind: ContentOwnershipKind,
     pub server_requirement: ContentRequirement,
     pub client_requirement: ContentRequirement,
     pub enabled: bool,
@@ -855,7 +869,8 @@ pub(crate) async fn get_content_entry_by_id(
     let row = sqlx::query_as::<_, ContentEntryRow>(
         "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
-			source_kind, server_requirement, client_requirement, enabled,
+			source_kind, ownership_kind, server_requirement,
+			client_requirement, enabled,
 			added_at, modified_at
 		FROM instance_content_entries
 		WHERE id = ?
@@ -876,7 +891,8 @@ pub(crate) async fn get_content_entry_by_file(
     let row = sqlx::query_as::<_, ContentEntryRow>(
         "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
-			source_kind, server_requirement, client_requirement, enabled,
+			source_kind, ownership_kind, server_requirement,
+			client_requirement, enabled,
 			added_at, modified_at
 		FROM instance_content_entries
 		WHERE content_set_id = ? AND file_id = ?
@@ -931,6 +947,7 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
         file_id: input.file_id.map(ToString::to_string),
         project_type: input.project_type,
         source_kind: input.source_kind,
+        ownership_kind: input.ownership_kind,
         server_requirement: input.server_requirement,
         client_requirement: input.client_requirement,
         enabled: input.enabled,
@@ -952,6 +969,7 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
     let file_id = entry.file_id.as_deref();
     let project_type = entry.project_type.get_name();
     let source_kind = entry.source_kind.as_str();
+    let ownership_kind = entry.ownership_kind.as_str();
     let server_requirement = entry.server_requirement.as_str();
     let client_requirement = entry.client_requirement.as_str();
     let enabled = i64::from(entry.enabled);
@@ -967,17 +985,19 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
 			file_id,
 			project_type,
 			source_kind,
+			ownership_kind,
 			server_requirement,
 			client_requirement,
 			enabled,
 			added_at,
 			modified_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			file_id = excluded.file_id,
 			project_type = excluded.project_type,
 			source_kind = excluded.source_kind,
+			ownership_kind = excluded.ownership_kind,
 			server_requirement = excluded.server_requirement,
 			client_requirement = excluded.client_requirement,
 			enabled = excluded.enabled,
@@ -990,6 +1010,7 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
     .bind(file_id)
     .bind(project_type)
     .bind(source_kind)
+    .bind(ownership_kind)
     .bind(server_requirement)
     .bind(client_requirement)
     .bind(enabled)
@@ -1203,7 +1224,10 @@ pub(crate) async fn upsert_content_update_check(
 			provider_release_id,
 			checked_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?)
+		SELECT ?, ?, ?, ?, ?, ?
+		WHERE EXISTS (
+			SELECT 1 FROM instance_content_entries WHERE id = ?
+		)
 		ON CONFLICT(content_entry_id) DO UPDATE SET
 			update_channel = excluded.update_channel,
 			provider = excluded.provider,
@@ -1218,10 +1242,421 @@ pub(crate) async fn upsert_content_update_check(
     .bind(provider_project_id)
     .bind(provider_release_id)
     .bind(checked_at)
+    .bind(content_entry_id)
     .execute(pool)
     .await?;
 
     Ok(())
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct PackMemberRow {
+    id: String,
+    content_set_id: String,
+    content_entry_id: Option<String>,
+    member_key: String,
+    project_type: String,
+    expected_relative_path: String,
+    provider: Option<String>,
+    provider_project_id: Option<String>,
+    provider_release_id: Option<String>,
+    required: i64,
+    expected_sha1: Option<String>,
+    expected_size: Option<i64>,
+    expected_fingerprint: Option<i64>,
+    materialization_state: String,
+    override_kind: String,
+    reconciled: i64,
+    created_at: i64,
+    modified_at: i64,
+}
+
+impl TryFrom<PackMemberRow> for PackMember {
+    type Error = crate::Error;
+
+    fn try_from(row: PackMemberRow) -> crate::Result<Self> {
+        Ok(Self {
+            id: row.id,
+            content_set_id: row.content_set_id,
+            content_entry_id: row.content_entry_id,
+            member_key: row.member_key,
+            project_type: project_type_from_str(&row.project_type)?,
+            expected_relative_path: row.expected_relative_path,
+            provider: row
+                .provider
+                .as_deref()
+                .map(ContentProvider::from_str)
+                .transpose()?,
+            provider_project_id: row.provider_project_id,
+            provider_release_id: row.provider_release_id,
+            required: row.required != 0,
+            expected_sha1: row.expected_sha1,
+            expected_size: row
+                .expected_size
+                .map(|value| unsigned(value, "expected_size"))
+                .transpose()?,
+            expected_fingerprint: row
+                .expected_fingerprint
+                .map(|value| unsigned(value, "expected_fingerprint"))
+                .transpose()?,
+            materialization_state: PackMemberMaterializationState::from_str(
+                &row.materialization_state,
+            )?,
+            override_kind: PackMemberOverrideKind::from_str(
+                &row.override_kind,
+            )?,
+            reconciled: row.reconciled != 0,
+            created_at: timestamp(row.created_at),
+            modified_at: timestamp(row.modified_at),
+        })
+    }
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct PendingManualDownloadRow {
+    id: String,
+    instance_id: String,
+    pack_member_id: Option<String>,
+    content_entry_id: Option<String>,
+    operation_kind: String,
+    operation_target_id: Option<String>,
+    project_type: String,
+    provider: String,
+    provider_project_id: String,
+    provider_release_id: String,
+    file_name: String,
+    website_url: Option<String>,
+    target_relative_path: String,
+    expected_sha1: Option<String>,
+    expected_size: Option<i64>,
+    expected_fingerprint: Option<i64>,
+    state: String,
+    context: String,
+    created_at: i64,
+    modified_at: i64,
+}
+
+impl TryFrom<PendingManualDownloadRow> for PendingManualDownload {
+    type Error = crate::Error;
+
+    fn try_from(row: PendingManualDownloadRow) -> crate::Result<Self> {
+        Ok(Self {
+            id: row.id,
+            instance_id: row.instance_id,
+            pack_member_id: row.pack_member_id,
+            content_entry_id: row.content_entry_id,
+            operation_kind: ManualDownloadOperationKind::from_str(
+                &row.operation_kind,
+            )?,
+            operation_target_id: row.operation_target_id,
+            project_type: project_type_from_str(&row.project_type)?,
+            provider: ContentProvider::from_str(&row.provider)?,
+            provider_project_id: row.provider_project_id,
+            provider_release_id: row.provider_release_id,
+            file_name: row.file_name,
+            website_url: row.website_url,
+            target_relative_path: row.target_relative_path,
+            expected_sha1: row.expected_sha1,
+            expected_size: row
+                .expected_size
+                .map(|value| unsigned(value, "expected_size"))
+                .transpose()?,
+            expected_fingerprint: row
+                .expected_fingerprint
+                .map(|value| unsigned(value, "expected_fingerprint"))
+                .transpose()?,
+            state: ManualDownloadState::from_str(&row.state)?,
+            context: serde_json::from_str(&row.context).map_err(|error| {
+                crate::ErrorKind::InputError(format!(
+                    "Invalid pending manual download context: {error}"
+                ))
+            })?,
+            created_at: timestamp(row.created_at),
+            modified_at: timestamp(row.modified_at),
+        })
+    }
+}
+
+pub(crate) async fn get_pack_members(
+    content_set_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Vec<PackMember>> {
+    let rows = sqlx::query_as::<_, PackMemberRow>(
+        "SELECT * FROM instance_pack_members
+         WHERE content_set_id = ?
+         ORDER BY created_at ASC, id ASC",
+    )
+    .bind(content_set_id)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter().map(TryInto::try_into).collect()
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct ContentMutationTarget {
+    pub entry_id: Option<String>,
+    pub member_id: Option<String>,
+    pub relative_path: Option<String>,
+    pub ownership_kind: ContentOwnershipKind,
+    pub project_type: ProjectType,
+    pub provider: Option<ContentProvider>,
+    pub provider_project_id: Option<String>,
+    pub provider_release_id: Option<String>,
+}
+
+pub(crate) async fn get_content_mutation_target(
+    instance_id: &str,
+    target_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Option<ContentMutationTarget>> {
+    let row = sqlx::query(
+        "SELECT entry.id AS entry_id,
+			member.id AS member_id,
+			file.relative_path,
+			COALESCE(entry.ownership_kind, 'pack_managed') AS ownership_kind,
+			COALESCE(entry.project_type, member.project_type) AS project_type,
+			COALESCE(origin.provider, member.provider) AS provider,
+			COALESCE(origin.provider_project_id, member.provider_project_id)
+				AS provider_project_id,
+			COALESCE(origin.provider_release_id, member.provider_release_id)
+				AS provider_release_id
+		 FROM instance_content_sets content_set
+		 INNER JOIN instances instance
+			ON instance.applied_content_set_id = content_set.id
+		 LEFT JOIN instance_pack_members member
+			ON member.content_set_id = content_set.id AND member.id = ?
+		 LEFT JOIN instance_content_entries entry
+			ON entry.content_set_id = content_set.id
+			AND (entry.id = ? OR entry.id = member.content_entry_id)
+		 LEFT JOIN instance_files file
+			ON file.instance_id = instance.id
+			AND (file.id = ? OR file.id = entry.file_id)
+		 LEFT JOIN instance_content_provider_refs origin
+			ON origin.content_entry_id = entry.id AND origin.is_origin = 1
+		 WHERE instance.id = ?
+			AND (entry.id = ? OR member.id = ? OR file.id = ?)
+		 LIMIT 1",
+    )
+    .bind(target_id)
+    .bind(target_id)
+    .bind(target_id)
+    .bind(instance_id)
+    .bind(target_id)
+    .bind(target_id)
+    .bind(target_id)
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(|row| {
+        Ok(ContentMutationTarget {
+            entry_id: row.try_get("entry_id")?,
+            member_id: row.try_get("member_id")?,
+            relative_path: row.try_get("relative_path")?,
+            ownership_kind: ContentOwnershipKind::from_str(
+                &row.try_get::<String, _>("ownership_kind")?,
+            )?,
+            project_type: project_type_from_str(
+                &row.try_get::<String, _>("project_type")?,
+            )?,
+            provider: row
+                .try_get::<Option<String>, _>("provider")?
+                .as_deref()
+                .map(ContentProvider::from_str)
+                .transpose()?,
+            provider_project_id: row.try_get("provider_project_id")?,
+            provider_release_id: row.try_get("provider_release_id")?,
+        })
+    })
+    .transpose()
+}
+
+pub(crate) async fn set_pack_member_override_in_transaction(
+    member_id: &str,
+    materialization_state: PackMemberMaterializationState,
+    override_kind: PackMemberOverrideKind,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<bool> {
+    let result = sqlx::query(
+        "UPDATE instance_pack_members
+		 SET materialization_state = ?, override_kind = ?, modified_at = ?
+		 WHERE id = ?",
+    )
+    .bind(materialization_state.as_str())
+    .bind(override_kind.as_str())
+    .bind(Utc::now().timestamp())
+    .bind(member_id)
+    .execute(&mut **tx)
+    .await?;
+    Ok(result.rows_affected() > 0)
+}
+
+pub(crate) async fn get_pending_manual_downloads(
+    instance_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Vec<PendingManualDownload>> {
+    let rows = sqlx::query_as::<_, PendingManualDownloadRow>(
+        "SELECT * FROM instance_pending_manual_downloads
+         WHERE instance_id = ? AND state IN ('waiting', 'matched', 'error')
+         ORDER BY created_at ASC, id ASC",
+    )
+    .bind(instance_id)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter().map(TryInto::try_into).collect()
+}
+
+pub(crate) async fn upsert_pack_member_in_transaction(
+    member: &PackMember,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<()> {
+    sqlx::query(
+        "INSERT INTO instance_pack_members (
+            id, content_set_id, content_entry_id, member_key, project_type,
+            expected_relative_path, provider, provider_project_id,
+            provider_release_id, required, expected_sha1, expected_size,
+            expected_fingerprint, materialization_state, override_kind,
+            reconciled, created_at, modified_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(content_set_id, member_key) DO UPDATE SET
+			content_entry_id = excluded.content_entry_id,
+			project_type = excluded.project_type,
+			expected_relative_path = excluded.expected_relative_path,
+            provider = excluded.provider,
+            provider_project_id = excluded.provider_project_id,
+            provider_release_id = excluded.provider_release_id,
+			required = CASE
+				WHEN instance_pack_members.reconciled = 0 THEN excluded.required
+				ELSE instance_pack_members.required
+			END,
+            expected_sha1 = excluded.expected_sha1,
+            expected_size = excluded.expected_size,
+            expected_fingerprint = excluded.expected_fingerprint,
+            materialization_state = excluded.materialization_state,
+			override_kind = CASE
+                WHEN excluded.override_kind = 'none' THEN override_kind
+                ELSE excluded.override_kind
+			END,
+			reconciled = excluded.reconciled,
+            modified_at = excluded.modified_at",
+    )
+    .bind(&member.id)
+    .bind(&member.content_set_id)
+    .bind(&member.content_entry_id)
+    .bind(&member.member_key)
+    .bind(member.project_type.get_name())
+    .bind(&member.expected_relative_path)
+    .bind(member.provider.map(ContentProvider::as_str))
+    .bind(&member.provider_project_id)
+    .bind(&member.provider_release_id)
+    .bind(i64::from(member.required))
+    .bind(&member.expected_sha1)
+    .bind(member.expected_size.map(|value| value as i64))
+    .bind(member.expected_fingerprint.map(|value| value as i64))
+    .bind(member.materialization_state.as_str())
+    .bind(member.override_kind.as_str())
+    .bind(i64::from(member.reconciled))
+    .bind(member.created_at.timestamp())
+    .bind(member.modified_at.timestamp())
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
+pub(crate) async fn upsert_pending_manual_download_in_transaction(
+    download: &PendingManualDownload,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<()> {
+    sqlx::query(
+        "INSERT INTO instance_pending_manual_downloads (
+            id, instance_id, pack_member_id, content_entry_id,
+            operation_kind, operation_target_id, project_type, provider,
+            provider_project_id, provider_release_id, file_name, website_url,
+            target_relative_path, expected_sha1, expected_size,
+            expected_fingerprint, state, context, created_at, modified_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(instance_id, operation_kind, provider,
+            provider_project_id, provider_release_id) WHERE state IN ('waiting', 'matched')
+         DO UPDATE SET
+            pack_member_id = excluded.pack_member_id,
+            content_entry_id = excluded.content_entry_id,
+            file_name = excluded.file_name,
+            website_url = excluded.website_url,
+            target_relative_path = excluded.target_relative_path,
+            expected_sha1 = excluded.expected_sha1,
+            expected_size = excluded.expected_size,
+            expected_fingerprint = excluded.expected_fingerprint,
+            context = excluded.context,
+            modified_at = excluded.modified_at",
+    )
+    .bind(&download.id)
+    .bind(&download.instance_id)
+    .bind(&download.pack_member_id)
+    .bind(&download.content_entry_id)
+    .bind(download.operation_kind.as_str())
+    .bind(&download.operation_target_id)
+    .bind(download.project_type.get_name())
+    .bind(download.provider.as_str())
+    .bind(&download.provider_project_id)
+    .bind(&download.provider_release_id)
+    .bind(&download.file_name)
+    .bind(&download.website_url)
+    .bind(&download.target_relative_path)
+    .bind(&download.expected_sha1)
+    .bind(download.expected_size.map(|value| value as i64))
+    .bind(download.expected_fingerprint.map(|value| value as i64))
+    .bind(download.state.as_str())
+    .bind(download.context.to_string())
+    .bind(download.created_at.timestamp())
+    .bind(download.modified_at.timestamp())
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
+pub(crate) async fn complete_pending_manual_download(
+    instance_id: &str,
+    provider_project_id: &str,
+    provider_release_id: &str,
+    content_entry_id: Option<&str>,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<()> {
+    sqlx::query(
+        "UPDATE instance_pending_manual_downloads
+         SET state = 'imported', content_entry_id = ?, modified_at = ?
+         WHERE instance_id = ? AND provider = 'curseforge'
+            AND provider_project_id = ? AND provider_release_id = ?
+            AND state IN ('waiting', 'matched', 'error')",
+    )
+    .bind(content_entry_id)
+    .bind(Utc::now().timestamp())
+    .bind(instance_id)
+    .bind(provider_project_id)
+    .bind(provider_release_id)
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
+pub(crate) async fn bump_content_set_revision_in_transaction(
+    content_set_id: &str,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<u64> {
+    let revision = sqlx::query_scalar::<_, i64>(
+        "UPDATE instance_content_sets
+         SET revision = revision + 1, modified = ?
+         WHERE id = ?
+         RETURNING revision",
+    )
+    .bind(Utc::now().timestamp())
+    .bind(content_set_id)
+    .fetch_one(&mut **tx)
+    .await?;
+    unsigned(revision, "instance_content_sets.revision")
 }
 
 fn project_type_from_str(value: &str) -> crate::Result<ProjectType> {
@@ -1368,5 +1803,57 @@ mod tests {
         ensure_instance_exists("instance", &mut tx)
             .await
             .expect("existing instance passes inside a transaction");
+    }
+
+    #[tokio::test]
+    async fn update_check_upsert_ignores_deleted_content_entries() {
+        let pool = test_pool().await;
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .expect("enable foreign keys");
+        sqlx::query(
+            "CREATE TABLE instance_content_entries (id TEXT PRIMARY KEY)",
+        )
+        .execute(&pool)
+        .await
+        .expect("instance_content_entries table");
+        sqlx::query(
+            "
+            CREATE TABLE instance_content_update_checks (
+                content_entry_id TEXT PRIMARY KEY NOT NULL,
+                update_channel TEXT NOT NULL,
+                provider TEXT NULL,
+                provider_project_id TEXT NULL,
+                provider_release_id TEXT NULL,
+                checked_at INTEGER NOT NULL,
+                FOREIGN KEY (content_entry_id)
+                    REFERENCES instance_content_entries(id)
+                    ON DELETE CASCADE
+            )
+            ",
+        )
+        .execute(&pool)
+        .await
+        .expect("instance_content_update_checks table");
+
+        upsert_content_update_check(
+            "deleted-entry",
+            ReleaseChannel::Release,
+            Some(ContentProvider::CurseForge),
+            Some("285109"),
+            Some("4612979"),
+            &pool,
+        )
+        .await
+        .expect("deleted entry is ignored");
+
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM instance_content_update_checks",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("count update checks");
+        assert_eq!(count, 0);
     }
 }

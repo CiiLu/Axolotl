@@ -294,6 +294,9 @@ pub struct InstancePayload {
 pub enum InstancePayloadType {
     Created,
     Synced,
+    ContentChanged {
+        revision: u64,
+    },
     ServersUpdated,
     WorldUpdated {
         world: String,

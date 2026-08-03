@@ -1,30 +1,30 @@
 import type {
 	ContentItem,
-	ContentModpackCardCategory,
 	ContentModpackCardProject,
 	ContentModpackCardVersion,
 	ContentOwner,
 } from '@modrinth/ui'
 
 import {
-	get_content_items,
-	get_linked_modpack_info,
+	get_content_snapshot,
+	type InstanceContentSnapshot,
 	type LinkedModpackInfo,
+	refresh_content,
 } from '@/helpers/instance'
-import { get_categories } from '@/helpers/tags.js'
 import type { CacheBehaviour } from '@/helpers/types'
 
 export type InstanceContentData = {
 	path: string
-	contentItems: ContentItem[] | null
+	snapshot: InstanceContentSnapshot
+	contentItems: ContentItem[]
+	linkedContentItems: ContentItem[]
 	modpack: InstanceContentModpackData | null
 }
 
 export type InstanceContentModpackData = {
 	project: ContentModpackCardProject
-	version: ContentModpackCardVersion
+	version: ContentModpackCardVersion | null
 	owner: ContentOwner | null
-	categories: ContentModpackCardCategory[]
 	hasUpdate: boolean
 	updateVersionId: string | null
 }
@@ -33,73 +33,147 @@ export async function loadInstanceContentData(
 	path: string,
 	cacheBehaviour?: CacheBehaviour,
 	onError?: (error: Error) => unknown,
-): Promise<InstanceContentData> {
-	const [contentItems, modpackInfo, allCategories] = await Promise.all([
-		get_content_items(path, cacheBehaviour).catch((error) => handleLoadError(error, onError)),
-		get_linked_modpack_info(path, cacheBehaviour).catch((error) => handleLoadError(error, onError)),
-		get_categories().catch((error) => handleLoadError(error, onError)),
-	])
+): Promise<InstanceContentData | null> {
+	try {
+		const snapshot =
+			cacheBehaviour === 'bypass' || cacheBehaviour === 'must_revalidate'
+				? await refresh_content(path)
+				: await get_content_snapshot(path)
+		const normalizedItems = snapshot.items.map((item) => {
+			const fileName = item.expectedRelativePath.split('/').pop() ?? item.expectedRelativePath
+			const requiresManualDownload =
+				item.ownershipKind === 'pack_managed' &&
+				item.required &&
+				item.provider === 'curseforge' &&
+				item.materializationState === 'pending_manual'
+			const curseForgeProjectId =
+				item.provider === 'curseforge' && /^\d+$/.test(item.providerProjectId ?? '')
+					? Number(item.providerProjectId)
+					: null
+			const projectId =
+				item.provider === 'curseforge' && curseForgeProjectId != null
+					? `curseforge:${curseForgeProjectId}`
+					: item.providerProjectId
+			const fallbackContent: ContentItem = {
+				id: item.memberId ?? item.entryId ?? item.fileId ?? item.expectedRelativePath,
+				file_name: fileName,
+				file_path: item.expectedRelativePath,
+				size: 0,
+				enabled: false,
+				project_type: item.projectType,
+				project: {
+					id: projectId ?? `local:${item.expectedRelativePath}`,
+					slug: projectId ?? item.expectedRelativePath,
+					title: fileName,
+					icon_url: undefined,
+				},
+				version: item.providerReleaseId
+					? {
+							id: item.providerReleaseId,
+							version_number: item.providerReleaseId,
+							file_name: fileName,
+						}
+					: undefined,
+				update: null,
+				origin_provider: item.provider,
+				provider_refs:
+					curseForgeProjectId != null
+						? [
+								{
+									provider: 'curseforge' as const,
+									project_id: curseForgeProjectId,
+									file_id:
+										item.providerReleaseId && /^\d+$/.test(item.providerReleaseId)
+											? Number(item.providerReleaseId)
+											: null,
+								},
+							]
+						: item.provider === 'modrinth' && item.providerProjectId
+							? [
+									{
+										provider: 'modrinth' as const,
+										project_id: item.providerProjectId,
+										version_id: item.providerReleaseId,
+									},
+								]
+							: [],
+				pendingManualDownload: requiresManualDownload,
+			}
+			return {
+				...(item.content ?? fallbackContent),
+				instanceFileId: item.fileId ?? undefined,
+				instanceEntryId: item.entryId ?? undefined,
+				instanceMemberId: item.memberId ?? undefined,
+				instanceOwnershipKind: item.ownershipKind,
+				instanceCapabilities: item.capabilities,
+				instanceMaterializationState: item.materializationState,
+				instanceOverrideKind: item.overrideKind,
+				pendingManualDownload: requiresManualDownload,
+			}
+		}) satisfies ContentItem[]
+		const contentItems = normalizedItems.filter(
+			(item) => item.instanceOwnershipKind !== 'pack_managed',
+		)
+		const linkedContentItems = normalizedItems.filter(
+			(item) => item.instanceOwnershipKind === 'pack_managed',
+		)
 
-	return {
-		path,
-		contentItems: (contentItems as ContentItem[] | null | undefined) ?? null,
-		modpack: normalizeLinkedModpackInfo(
-			modpackInfo as LinkedModpackInfo | null | undefined,
-			allCategories as ContentModpackCardCategory[] | null | undefined,
-		),
+		return {
+			path,
+			snapshot,
+			contentItems,
+			linkedContentItems,
+			modpack: normalizePack(snapshot),
+		}
+	} catch (error) {
+		onError?.(error as Error)
+		return null
 	}
 }
 
-function handleLoadError(error: unknown, onError?: (error: Error) => unknown) {
-	onError?.(error as Error)
-	return null
-}
-
-function normalizeLinkedModpackInfo(
-	modpackInfo: LinkedModpackInfo | null | undefined,
-	allCategories: ContentModpackCardCategory[] | null | undefined,
-): InstanceContentModpackData | null {
-	if (!modpackInfo) return null
+function normalizePack(snapshot: InstanceContentSnapshot): InstanceContentModpackData | null {
+	const pack = snapshot.pack
+	if (!pack) return null
+	const metadata = pack.metadata
+	const project = metadata
+		? normalizeProject(metadata)
+		: {
+				id: pack.projectId ?? snapshot.instanceId,
+				slug: pack.projectId ?? snapshot.instanceId,
+				title: pack.name,
+				icon_url: pack.iconPath ?? undefined,
+				description: '',
+			}
+	const version = metadata
+		? ({
+				...metadata.version,
+				date_published: metadata.version.date_published.toString(),
+			} as ContentModpackCardVersion)
+		: null
 
 	return {
-		project: {
-			...modpackInfo.project,
-			slug: modpackInfo.project.slug ?? modpackInfo.project.id,
-			icon_url: modpackInfo.project.icon_url ?? undefined,
-		},
-		version: {
-			...modpackInfo.version,
-			date_published: modpackInfo.version.date_published.toString(),
-		},
-		owner: modpackInfo.owner
+		project,
+		version,
+		owner: metadata?.owner
 			? {
-					...modpackInfo.owner,
-					avatar_url: modpackInfo.owner.avatar_url ?? undefined,
+					...metadata.owner,
+					avatar_url: metadata.owner.avatar_url ?? undefined,
 				}
 			: null,
-		categories: resolveLinkedModpackCategories(modpackInfo, allCategories),
-		hasUpdate: modpackInfo.update != null,
+		hasUpdate: pack.canUpdate && metadata?.update != null,
 		updateVersionId:
-			modpackInfo.update?.provider === 'modrinth'
-				? modpackInfo.update.target_version_id
-				: modpackInfo.update?.provider === 'curseforge'
-					? String(modpackInfo.update.target_file_id)
+			metadata?.update?.provider === 'modrinth'
+				? metadata.update.target_version_id
+				: metadata?.update?.provider === 'curseforge'
+					? String(metadata.update.target_file_id)
 					: null,
 	}
 }
 
-function resolveLinkedModpackCategories(
-	modpackInfo: LinkedModpackInfo,
-	allCategories: ContentModpackCardCategory[] | null | undefined,
-) {
-	if (!allCategories || !modpackInfo.project.categories) return []
-
-	const seen = new Set<string>()
-	return allCategories.filter((category) => {
-		if (modpackInfo.project.categories.includes(category.name) && !seen.has(category.name)) {
-			seen.add(category.name)
-			return true
-		}
-		return false
-	})
+function normalizeProject(metadata: LinkedModpackInfo): ContentModpackCardProject {
+	return {
+		...metadata.project,
+		slug: metadata.project.slug ?? metadata.project.id,
+		icon_url: metadata.project.icon_url ?? undefined,
+	}
 }

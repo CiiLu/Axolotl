@@ -32,14 +32,12 @@
 						class="min-w-0"
 					>
 						<button
-							v-if="item.websiteUrl"
 							class="inline-flex max-w-full cursor-pointer items-center gap-1 text-left font-semibold text-brand hover:underline"
-							@click="openUrl(item.websiteUrl)"
+							@click="openManualCurseForgeDownload(item)"
 						>
 							<span class="truncate">{{ item.fileName }}</span>
 							<ExternalIcon class="size-4 shrink-0" />
 						</button>
-						<span v-else>{{ item.fileName }}</span>
 					</li>
 				</ul>
 				<p v-if="hiddenSkippedManualDownloadCount > 0" class="mb-0 mt-2 text-secondary">
@@ -49,6 +47,41 @@
 						})
 					}}
 				</p>
+			</div>
+		</CollapsibleAdmonition>
+		<CollapsibleAdmonition
+			v-if="missingPackMembers.length > 0"
+			v-model="missingWarningExpanded"
+			type="warning"
+			class="mb-4"
+		>
+			<template #header>
+				<span class="inline-flex items-center gap-2">
+					{{ formatMessage(messages.missingFilesWarningTitle) }}
+					<span class="rounded-full bg-brand-orange/20 px-2 py-0.5 text-sm tabular-nums">
+						{{ missingPackMembers.length }}
+					</span>
+				</span>
+			</template>
+			<div class="border-0 border-t border-solid border-brand-orange/60 bg-bg-orange p-4">
+				<p class="m-0">
+					{{
+						formatMessage(messages.missingFilesWarningBody, {
+							count: missingPackMembers.length,
+						})
+					}}
+				</p>
+			</div>
+		</CollapsibleAdmonition>
+		<CollapsibleAdmonition
+			v-if="contentWarnings.length > 0"
+			v-model="contentWarningExpanded"
+			type="warning"
+			class="mb-4"
+		>
+			<template #header>{{ formatMessage(messages.contentRefreshWarningTitle) }}</template>
+			<div class="border-0 border-t border-solid border-brand-orange/60 bg-bg-orange p-4">
+				<p class="m-0">{{ formatMessage(messages.contentRefreshWarningBody) }}</p>
 			</div>
 		</CollapsibleAdmonition>
 		<ContentPageLayout>
@@ -119,7 +152,13 @@
 
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
-import { ClipboardCopyIcon, ExternalIcon, FolderOpenIcon, PencilIcon } from '@modrinth/assets'
+import {
+	ClipboardCopyIcon,
+	ExternalIcon,
+	FolderOpenIcon,
+	PencilIcon,
+	UndoIcon,
+} from '@modrinth/assets'
 import {
 	type BulkOperationStatus,
 	CollapsibleAdmonition,
@@ -157,33 +196,23 @@ import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
 import { translateContentItemTitles } from '@/helpers/content-search'
 import {
-	switchCurseForgeFileVersion,
-	updateCurseForgeFile,
-	updateManagedCurseForgeModpack,
-} from '@/helpers/curseforge'
-import {
 	type CurseForgeManualDownloadItem,
-	filterInstalledCurseForgeManualDownloads,
-	getCurseForgeManualDownloads,
-	removeInstalledCurseForgeManualDownloads,
+	getCurseForgeManualDownloadUrl,
 } from '@/helpers/curseforge-manual'
-import {
-	instance_bulk_update_progress_listener,
-	instance_listener,
-	type InstanceBulkUpdateProgress,
-} from '@/helpers/events.js'
+import { instance_listener } from '@/helpers/events.js'
 import { install_duplicate_instance, installJobInstanceId } from '@/helpers/install'
 import {
 	add_project_from_path,
+	apply_content_update_plan,
 	edit,
-	get_linked_modpack_content,
 	list,
-	remove_project,
+	plan_content_updates,
+	remove_content_entry,
+	restore_pack_member_default,
 	rollback_project,
-	switch_project_version_with_dependencies,
-	toggle_disable_project,
-	update_all,
-	update_managed_modrinth_version,
+	switch_content_entry_version,
+	toggle_content_entry,
+	update_content_entry,
 } from '@/helpers/instance'
 import { readInstanceCache, writeInstanceCache } from '@/helpers/instance-cache'
 import { type InstanceContentData, loadInstanceContentData } from '@/helpers/instance-content'
@@ -191,7 +220,6 @@ import type { CacheBehaviour, GameInstance } from '@/helpers/types'
 import { highlightModInInstance } from '@/helpers/utils.js'
 import i18n from '@/i18n.config'
 import { injectContentInstall } from '@/providers/content-install'
-import { injectDownloadManager } from '@/providers/download-manager'
 import { useTheming } from '@/store/state'
 
 const messages = defineMessages({
@@ -235,6 +263,24 @@ const messages = defineMessages({
 		id: 'app.instance.mods.bulk-update.finishing',
 		defaultMessage: 'Finishing update...',
 	},
+	updateAddedContent: {
+		id: 'app.instance.mods.update-added-content',
+		defaultMessage: 'Update added content',
+	},
+	updateAddedContentDescription: {
+		id: 'app.instance.mods.update-added-content.description',
+		defaultMessage:
+			'Updates only content added after the modpack was installed. Modpack files are not changed.',
+	},
+	contentRefreshWarningTitle: {
+		id: 'app.instance.mods.content-refresh-warning.title',
+		defaultMessage: 'Some online details are unavailable',
+	},
+	contentRefreshWarningBody: {
+		id: 'app.instance.mods.content-refresh-warning.body',
+		defaultMessage:
+			'Local content is still complete and can be managed. Names, icons, or update information may be temporarily unavailable.',
+	},
 	skippedFilesWarningTitle: {
 		id: 'app.instance.mods.skipped-files-warning.title',
 		defaultMessage: 'Some modpack files require manual installation',
@@ -242,11 +288,20 @@ const messages = defineMessages({
 	skippedFilesWarningBody: {
 		id: 'app.instance.mods.skipped-files-warning.body',
 		defaultMessage:
-			'{count, plural, one {# file was} other {# files were}} skipped during installation. Download and install them manually.',
+			'{count, plural, one {# file was} other {# files were}} skipped during installation. Select a file to download it; the launcher will verify and import downloaded files automatically.',
 	},
 	skippedFilesWarningMore: {
 		id: 'app.instance.mods.skipped-files-warning.more',
 		defaultMessage: 'And {count, number} more.',
+	},
+	missingFilesWarningTitle: {
+		id: 'app.instance.mods.missing-files-warning.title',
+		defaultMessage: 'Some modpack files are missing',
+	},
+	missingFilesWarningBody: {
+		id: 'app.instance.mods.missing-files-warning.body',
+		defaultMessage:
+			'{count, plural, one {# required file is} other {# required files are}} missing locally. Refresh while online to identify author-restricted downloads, or restore an item from its menu.',
 	},
 	parsingFiles: {
 		id: 'app.instance.mods.parsing-files',
@@ -268,6 +323,18 @@ const messages = defineMessages({
 		id: 'app.instance.mods.dismiss',
 		defaultMessage: '知道了',
 	},
+	restorePackDefault: {
+		id: 'app.instance.mods.restore-pack-default',
+		defaultMessage: 'Restore modpack default',
+	},
+	packMemberMissing: {
+		id: 'app.instance.mods.pack-member-missing',
+		defaultMessage: 'This modpack file is missing locally',
+	},
+	packMemberRemoved: {
+		id: 'app.instance.mods.pack-member-removed',
+		defaultMessage: 'This modpack file was removed locally',
+	},
 })
 
 let savedModalState: ModpackContentModalState | null = null
@@ -277,12 +344,11 @@ const debugState = useDebugLogger('Mods:state')
 const { handleError, addNotification } = injectNotificationManager()
 const {
 	installingItems,
-	pendingManualDownloadsByInstance,
 	installRevisionByInstance,
 	installFailureRevisionByInstance,
+	showCurseForgeManualDownloads,
 } = injectContentInstall()
 const router = useRouter()
-const downloadManager = injectDownloadManager()
 const debug = useDebugLogger('Mods:ContentUpdate')
 const themeStore = useTheming()
 const skipNonEssentialWarnings = computed(() =>
@@ -300,63 +366,20 @@ function hasPreloadedContent(contentData: InstanceContentData | null | undefined
 	return contentData?.path === props.instance.id
 }
 
-function readContentCache(instanceId: string): InstanceContentData | null {
-	const cache = readInstanceCache(instanceId)
-	if (!cache?.contentItems) return null
-	return {
-		path: instanceId,
-		contentItems: cache.contentItems,
-		modpack: cache.modpack,
-	}
-}
-
-function writeContentCache(instanceId: string, data: InstanceContentData): void {
-	writeInstanceCache(instanceId, {
-		contentItems: data.contentItems,
-		modpack: data.modpack,
-	})
-}
-
-function readLinkedContentCache(instanceId: string): ContentItem[] | null {
-	const cache = readInstanceCache(instanceId)
-	if (!cache) return null
-	return cache.linkedContentItems.length > 0 ? cache.linkedContentItems : null
-}
-
-function writeLinkedContentCache(instanceId: string, items: ContentItem[]): void {
-	writeInstanceCache(instanceId, { linkedContentItems: items })
-}
-
-// 检查 localStorage 持久化缓存
-const persistedCache = readContentCache(props.instance.id)
-const hasPersistedCache =
-	!!persistedCache?.contentItems && persistedCache.path === props.instance.id
-
-const linkedPersistedCache = readLinkedContentCache(props.instance.id)
-const hasLinkedPersistedCache = !!linkedPersistedCache
-
-const loading = ref(
-	!hasPreloadedContent(props.preloadedContent) &&
-		(!hasPersistedCache || (!!props.instance?.link && !hasLinkedPersistedCache)),
-)
-const projects = ref<ContentItem[]>(hasPersistedCache ? persistedCache!.contentItems! : [])
-const linkedModpackContentItems = ref<ContentItem[]>(linkedPersistedCache ?? [])
+const loading = ref(!hasPreloadedContent(props.preloadedContent))
+const contentSnapshot = ref<InstanceContentData['snapshot'] | null>(null)
+const projects = ref<ContentItem[]>([])
+const linkedModpackContentItems = ref<ContentItem[]>([])
+const contentWarnings = computed(() => contentSnapshot.value?.warnings ?? [])
+const contentWarningExpanded = ref(true)
 
 // 从持久化缓存恢复整合包元数据
-const linkedModpackProject = ref<ContentModpackCardProject | null>(
-	persistedCache?.modpack?.project ?? null,
-)
-const linkedModpackVersion = ref<ContentModpackCardVersion | null>(
-	persistedCache?.modpack?.version ?? null,
-)
-const linkedModpackOwner = ref<ContentOwner | null>(persistedCache?.modpack?.owner ?? null)
-const linkedModpackCategories = ref<ContentModpackCardCategory[]>(
-	persistedCache?.modpack?.categories ?? [],
-)
-const linkedModpackHasUpdate = ref(persistedCache?.modpack?.hasUpdate ?? false)
-const linkedModpackUpdateVersionId = ref<string | null>(
-	persistedCache?.modpack?.updateVersionId ?? null,
-)
+const linkedModpackProject = ref<ContentModpackCardProject | null>(null)
+const linkedModpackVersion = ref<ContentModpackCardVersion | null>(null)
+const linkedModpackOwner = ref<ContentOwner | null>(null)
+const linkedModpackCategories = ref<ContentModpackCardCategory[]>([])
+const linkedModpackHasUpdate = ref(false)
+const linkedModpackUpdateVersionId = ref<string | null>(null)
 const localImportedModpackUnlinked = ref(false)
 
 const installingBuffer = ref<ContentItem[]>([])
@@ -385,117 +408,137 @@ watch(projects, (newProjects) => {
 })
 
 const manualDownloadCandidates = computed<CurseForgeManualDownloadItem[]>(() => {
-	const stored =
-		pendingManualDownloadsByInstance.value.get(props.instance.id) ??
-		getCurseForgeManualDownloads(props.instance.id)
-	const latestJob = downloadManager.jobs.value.find(
-		(job) => job.status === 'succeeded' && installJobInstanceId(job) === props.instance.id,
-	)
-	const jobItems = latestJob
-		? latestJob.items
-				.filter(
-					(item) =>
-						item.status === 'skipped' && item.manual_url && item.project_id && item.version_id,
-				)
-				.map((item) => ({
-					projectId: Number(item.project_id),
-					fileId: Number(item.version_id),
-					fileName: item.name,
-					websiteUrl: item.manual_url ?? undefined,
-				}))
-		: []
+	const stored = (contentSnapshot.value?.pendingManualDownloads ?? [])
+		.filter((item) => item.provider === 'curseforge')
+		.map((item) => {
+			const context = item.context ?? {}
+			const contextString = (key: string) =>
+				typeof context[key] === 'string' ? context[key] : undefined
+			const contextNumber = (key: string) =>
+				typeof context[key] === 'number' ? context[key] : undefined
+			const contextHashes = Array.isArray(context.hashes)
+				? context.hashes.filter(
+						(hash): hash is { algo: number; value: string } =>
+							typeof hash === 'object' &&
+							hash !== null &&
+							'algo' in hash &&
+							'value' in hash &&
+							typeof hash.algo === 'number' &&
+							typeof hash.value === 'string',
+					)
+				: []
+			const targetFolder =
+				typeof item.targetRelativePath === 'string'
+					? item.targetRelativePath.replace(/\\/g, '/').split('/').slice(0, -1).join('/')
+					: contextString('targetFolder')
+			const snapshotOwnsItem = contentSnapshot.value?.items.some(
+				(snapshotItem) => snapshotItem.memberId === item.packMemberId,
+			)
 
-	// Always start from the stored list (localStorage / pending map).
-	// If the latest job has skipped items we trust those – otherwise keep
-	// what is already stored.
-	const unique = new Map<string, CurseForgeManualDownloadItem>()
-	for (const item of stored) {
-		unique.set(`${item.projectId}:${item.fileId}`, item)
-	}
-	if (jobItems.length > 0) {
-		unique.clear()
-		for (const item of jobItems) {
-			unique.set(`${item.projectId}:${item.fileId}`, item)
-		}
-	}
-	const result = [...unique.values()]
+			return {
+				projectId: Number(item.providerProjectId ?? context.projectId),
+				fileId: Number(item.providerReleaseId ?? context.fileId),
+				fileName: item.fileName ?? contextString('fileName') ?? '',
+				websiteUrl: item.websiteUrl ?? contextString('websiteUrl'),
+				projectSlug: contextString('projectSlug'),
+				hashes: item.expectedSha1 ? [{ algo: 1, value: item.expectedSha1 }] : contextHashes,
+				fileLength: item.expectedSize ?? contextNumber('fileLength') ?? 0,
+				fileFingerprint: item.expectedFingerprint ?? contextNumber('fileFingerprint') ?? 0,
+				projectType: item.projectType ?? contextString('projectType'),
+				targetFolder,
+				ownershipKind:
+					snapshotOwnsItem || contextString('ownershipKind') === 'pack_managed'
+						? ('pack_managed' as const)
+						: ('user_added' as const),
+				operationKind:
+					item.operationKind ??
+					(contextString('operationKind') as CurseForgeManualDownloadItem['operationKind']),
+			}
+		})
+
+	const result = [
+		...new Map(stored.map((item) => [`${item.projectId}:${item.fileId}`, item])).values(),
+	]
 	debugState('manualDownloadCandidates', {
 		instanceId: props.instance.id,
 		storedCount: stored.length,
-		jobItemsCount: jobItems.length,
-		jobId: latestJob?.job_id,
 		resultCount: result.length,
 	})
 	return result
 })
 
-const installedManualDownloadItems = computed(() => [
-	...projects.value,
-	...linkedModpackContentItems.value,
-])
-
-function manualDownloadsEqual(
-	left: CurseForgeManualDownloadItem[] | undefined,
-	right: CurseForgeManualDownloadItem[],
-) {
-	return (
-		left?.length === right.length &&
-		left.every((item, index) => {
-			const other = right[index]
-			return (
-				other !== undefined &&
-				item.projectId === other.projectId &&
-				item.fileId === other.fileId &&
-				item.fileName === other.fileName &&
-				item.websiteUrl === other.websiteUrl
-			)
-		})
-	)
-}
-
-const skippedManualDownloads = computed(() =>
-	filterInstalledCurseForgeManualDownloads(
-		manualDownloadCandidates.value,
-		installedManualDownloadItems.value,
-	),
+const skippedManualDownloads = computed(() => manualDownloadCandidates.value)
+const missingPackMembers = computed(
+	() =>
+		contentSnapshot.value?.items.filter(
+			(item) =>
+				item.ownershipKind === 'pack_managed' &&
+				item.required &&
+				item.materializationState === 'missing',
+		) ?? [],
 )
 
 const manualPendingItems = computed<ContentItem[]>(() => {
-	return skippedManualDownloads.value.map((item) => ({
-		id: `__manual_${item.projectId}_${item.fileId}`,
-		file_name: item.fileName,
-		file_path: undefined,
-		project_type: 'mod',
-		update: null,
-		origin_provider: null,
-		enabled: false,
-		pendingManualDownload: true,
-		project: {
-			id: `curseforge:${item.projectId}`,
-			slug: String(item.projectId),
-			title: item.fileName,
-			icon_url: undefined,
-		},
-		version: {
-			id: String(item.fileId),
-			version_number: String(item.fileId),
+	return skippedManualDownloads.value
+		.filter(
+			(item) =>
+				!contentSnapshot.value?.items.some(
+					(snapshotItem) =>
+						snapshotItem.provider === 'curseforge' &&
+						snapshotItem.providerProjectId === String(item.projectId) &&
+						snapshotItem.providerReleaseId === String(item.fileId),
+				),
+		)
+		.map((item) => ({
+			id: `__manual_${item.projectId}_${item.fileId}`,
 			file_name: item.fileName,
-		},
-		provider_refs: [
-			{
-				provider: 'curseforge',
-				project_id: item.projectId,
-				file_id: item.fileId,
+			file_path: undefined,
+			project_type: 'mod',
+			update: null,
+			origin_provider: null,
+			enabled: false,
+			pendingManualDownload: true,
+			instanceOwnershipKind: item.ownershipKind,
+			instanceMaterializationState: 'pending_manual',
+			instanceCapabilities: {
+				canToggle: false,
+				canDelete: false,
+				canUpdate: false,
+				canChangeVersion: false,
+				canRestorePackDefault: false,
 			},
-		],
-	}))
+			project: {
+				id: `curseforge:${item.projectId}`,
+				slug: String(item.projectId),
+				title: item.fileName,
+				icon_url: undefined,
+			},
+			version: {
+				id: String(item.fileId),
+				version_number: String(item.fileId),
+				file_name: item.fileName,
+			},
+			provider_refs: [
+				{
+					provider: 'curseforge',
+					project_id: item.projectId,
+					file_id: item.fileId,
+				},
+			],
+		}))
 })
 
 const manualWarningExpanded = ref(true)
+const missingWarningExpanded = ref(true)
 const visibleSkippedManualDownloads = computed(() => skippedManualDownloads.value.slice(0, 5))
 const hiddenSkippedManualDownloadCount = computed(() =>
 	Math.max(0, skippedManualDownloads.value.length - visibleSkippedManualDownloads.value.length),
 )
+
+async function openManualCurseForgeDownload(item: CurseForgeManualDownloadItem) {
+	showCurseForgeManualDownloads(props.instance.id, skippedManualDownloads.value)
+	await openUrl(getCurseForgeManualDownloadUrl(item))
+}
 
 function localIconUrl(iconUrl?: string | null): string {
 	if (!iconUrl) return ''
@@ -505,7 +548,6 @@ function localIconUrl(iconUrl?: string | null): string {
 const mergedProjects = computed<ContentItem[]>(() => {
 	const active = installingItems.value.get(props.instance.id)
 	const pending = active ?? installingBuffer.value
-	const manualPending = manualPendingItems.value
 	const pendingProjectIds = new Set(pending.map((p) => p.project?.id).filter(Boolean))
 	const displayProjects = projects.value.map((project) => {
 		const resolved = project.project?.icon_url
@@ -523,31 +565,13 @@ const mergedProjects = computed<ContentItem[]>(() => {
 	})
 	const realProjectIds = new Set(displayProjects.map((p) => p.project?.id).filter(Boolean))
 	const placeholders = pending.filter((item) => !realProjectIds.has(item.project?.id))
-	const manualPlaceholders = manualPending.filter((item) => !realProjectIds.has(item.project?.id))
-	return [...displayProjects, ...placeholders, ...manualPlaceholders]
+	return [...displayProjects, ...placeholders]
 })
 
-watch(
-	[manualDownloadCandidates, installedManualDownloadItems],
-	([candidates, items]) => {
-		const remaining = removeInstalledCurseForgeManualDownloads(props.instance.id, candidates, items)
-		const current = pendingManualDownloadsByInstance.value.get(props.instance.id)
-		debugState('manualDownloads watch', {
-			instanceId: props.instance.id,
-			candidatesCount: candidates.length,
-			installedCount: items.length,
-			remainingCount: remaining.length,
-			currentCount: current?.length,
-		})
-		if (manualDownloadsEqual(current, remaining) || (!current && remaining.length === 0)) return
-
-		const next = new Map(pendingManualDownloadsByInstance.value)
-		if (remaining.length > 0) next.set(props.instance.id, remaining)
-		else next.delete(props.instance.id)
-		pendingManualDownloadsByInstance.value = next
-	},
-	{ deep: true },
-)
+const displayedLinkedModpackContentItems = computed(() => [
+	...linkedModpackContentItems.value,
+	...manualPendingItems.value,
+])
 
 let previousManualDownloadKeys = new Set<string>()
 watch(
@@ -590,8 +614,24 @@ const localImportedModpackProject = computed<ContentModpackCardProject | null>((
 	}
 })
 
+const curseForgeModpackFallbackProject = computed<ContentModpackCardProject | null>(() => {
+	const link = props.instance.link
+	if (link?.type !== 'curseforge_modpack') return null
+
+	return {
+		id: `curseforge:${link.project_id}`,
+		slug: link.project_id,
+		title: props.instance.name,
+		icon_url: props.instance.icon_path ? convertFileSrc(props.instance.icon_path) : undefined,
+		description: '',
+	}
+})
+
 const displayedModpackProject = computed(
-	() => linkedModpackProject.value ?? localImportedModpackProject.value,
+	() =>
+		linkedModpackProject.value ??
+		curseForgeModpackFallbackProject.value ??
+		localImportedModpackProject.value,
 )
 
 watch(
@@ -600,7 +640,6 @@ watch(
 		localImportedModpackUnlinked.value = false
 		if (!newLink) {
 			linkedModpackContentItems.value = []
-			writeLinkedContentCache(props.instance.id, [])
 		}
 	},
 )
@@ -627,28 +666,9 @@ const modpackUpdateConfirmModal = ref<InstanceType<typeof ConfirmModpackUpdateMo
 async function loadLinkedModpackContentItems(
 	cacheBehaviour?: CacheBehaviour,
 ): Promise<ContentItem[]> {
-	if (!props.instance?.id) return []
-
-	if (!props.instance?.link || props.instance.install_stage !== 'installed') {
-		linkedModpackContentItems.value = []
-		return []
-	}
-
-	const items = await get_linked_modpack_content(props.instance.id, cacheBehaviour)
-		.then((items) => translateContentItemTitles(items, i18n.global.locale.value))
-		.catch((err) => {
-			handleError(err as Error)
-			return null
-		})
-
-	if (items) {
-		linkedModpackContentItems.value = items
-		writeLinkedContentCache(props.instance.id, items)
-		modpackContentModal.value?.setItems(items)
-		return items
-	}
-
-	return linkedModpackContentItems.value
+	await initProjects(cacheBehaviour)
+	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
+	return displayedLinkedModpackContentItems.value
 }
 
 // TODO: Extract content operation and updater modal state into composables; this page currently owns file mutations, dependency installs, busy flags, and version selection flow.
@@ -704,11 +724,22 @@ function updateLinkedModpackContentCache(
 			: item,
 	)
 	linkedModpackContentItems.value = updated
-	writeLinkedContentCache(props.instance.id, updated)
 }
 
 function getContentItemId(item: ContentItem | null | undefined) {
-	return item?.file_path ?? item?.file_name ?? item?.id ?? ''
+	return (
+		item?.instanceEntryId ??
+		item?.instanceMemberId ??
+		item?.instanceFileId ??
+		item?.file_path ??
+		item?.file_name ??
+		item?.id ??
+		''
+	)
+}
+
+function getStableContentId(item: ContentItem) {
+	return item.instanceEntryId ?? item.instanceMemberId ?? item.instanceFileId ?? null
 }
 
 function getContentOperationKeys(item: ContentItem) {
@@ -723,7 +754,7 @@ function hasContentOperation(item: ContentItem) {
 }
 
 function canUpdateProject(item: ContentItem) {
-	return !!item.file_path && item.update != null
+	return !!item.file_path && item.update != null && (item.instanceCapabilities?.canUpdate ?? true)
 }
 
 function contentUpdateId(item: ContentItem): string | null {
@@ -975,7 +1006,8 @@ async function handleUploadFiles() {
 }
 
 async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
-	if (!mod.file_path) return
+	const contentId = getStableContentId(mod)
+	if (!mod.file_path || !contentId || mod.instanceCapabilities?.canToggle === false) return
 	const operation = beginContentOperation(mod)
 	if (!operation) return
 	const originalFilePath = mod.file_path
@@ -1000,11 +1032,7 @@ async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
 	operation.keys = [...operation.keys, ...optimisticKeys]
 
 	try {
-		const newPath = await toggle_disable_project(
-			props.instance.id,
-			originalFilePath,
-			desiredEnabled,
-		)
+		const newPath = await toggle_content_entry(props.instance.id, contentId, desiredEnabled)
 		const newFileName = fileNameFromPath(newPath)
 		const actualEnabled = !newPath.endsWith('.disabled')
 		applyContentItemToggleState(mod, operation.originalFileName, originalFilePath, {
@@ -1044,39 +1072,20 @@ function applyContentItemToggleState(
 	modpackContentModal.value?.updateItem(previousFileName, updates)
 	modpackContentModal.value?.updateItem(originalFileName, updates)
 	updateLinkedModpackContentCache(target, originalFileName, originalFilePath, updates)
-
-	const cached = readContentCache(props.instance.id)
-	if (cached?.contentItems) {
-		writeContentCache(props.instance.id, {
-			...cached,
-			contentItems: cached.contentItems.map((item) =>
-				item.file_path === originalFilePath || item.file_path === target.file_path
-					? { ...item, ...updates, installing: false }
-					: item,
-			),
-		})
-	}
 }
 
 const toggleDisableDebounced = toggleDisableMod
 
 async function removeMod(mod: ContentItem) {
-	if (!mod.file_path) return
+	const contentId = getStableContentId(mod)
+	if (!mod.file_path || !contentId || mod.instanceCapabilities?.canDelete === false) return
 	const operation = beginContentOperation(mod)
 	if (!operation) return
 
 	try {
 		const removedPath = mod.file_path
-		await remove_project(props.instance.id, removedPath)
+		await remove_content_entry(props.instance.id, contentId)
 		projects.value = projects.value.filter((x) => removedPath !== x.file_path)
-		// 更新持久化缓存
-		const cached = readContentCache(props.instance.id)
-		if (cached?.contentItems) {
-			writeContentCache(props.instance.id, {
-				...cached,
-				contentItems: cached.contentItems.filter((x) => removedPath !== x.file_path),
-			})
-		}
 
 		trackEvent('InstanceProjectRemove', {
 			loader: props.instance.loader,
@@ -1089,6 +1098,21 @@ async function removeMod(mod: ContentItem) {
 		handleError(err as Error)
 	} finally {
 		finishContentOperation(mod, operation)
+	}
+}
+
+async function restorePackDefault(item: ContentItem) {
+	const memberId = item.instanceMemberId
+	if (!memberId || !item.instanceCapabilities?.canRestorePackDefault) return
+	const operation = beginContentOperation(item)
+	if (!operation) return
+	try {
+		await restore_pack_member_default(props.instance.id, memberId)
+		await refreshContentState('bypass')
+	} catch (error) {
+		handleError(error as Error)
+	} finally {
+		finishContentOperation(item, operation)
 	}
 }
 
@@ -1149,92 +1173,35 @@ async function getDeleteDependencyWarning(items: ContentItem[]) {
 	return dependents.length > 0 ? { items, dependents } : null
 }
 
-function formatBulkUpdateProgress(progress: InstanceBulkUpdateProgress): BulkOperationStatus {
-	if (progress.stage === 'resolving_versions') {
-		return {
-			message: formatMessage(messages.bulkUpdateResolvingVersions),
-			waiting: true,
-		}
-	}
-
-	if (progress.stage === 'finishing') {
-		return {
-			message: formatMessage(messages.bulkUpdateFinishing),
-			progress: progress.current,
-			total: progress.total,
-		}
-	}
-
-	return {
-		message: formatMessage(messages.bulkUpdateDownloadingProjects, {
-			current: progress.current,
-			total: progress.total,
-		}),
-		progress: progress.current,
-		total: progress.total,
-	}
-}
-
 async function bulkUpdateAllProjects(onProgress?: (status: BulkOperationStatus) => void) {
-	let unlisten: (() => void) | null = null
 	try {
 		if (onProgress) {
 			onProgress({
 				message: formatMessage(messages.bulkUpdateResolvingVersions),
 				waiting: true,
 			})
-			unlisten = await instance_bulk_update_progress_listener((progress) => {
-				if (progress.instanceId !== props.instance.id) return
-				onProgress(formatBulkUpdateProgress(progress))
-			})
 		}
-
-		await update_all(props.instance.id)
-
-		if (linkedModpackHasUpdate.value && linkedModpackUpdateVersionId.value && props.instance.link) {
-			isModpackUpdating.value = true
-			try {
-				if (props.instance.link.type === 'curseforge_modpack') {
-					const fileId = Number(linkedModpackUpdateVersionId.value)
-					if (Number.isFinite(fileId)) {
-						await updateManagedCurseForgeModpack(props.instance.id, fileId)
-					}
-				} else {
-					await update_managed_modrinth_version(
-						props.instance.id,
-						linkedModpackUpdateVersionId.value,
-					)
-				}
-			} finally {
-				isModpackUpdating.value = false
-			}
-		}
+		const plan = await plan_content_updates(props.instance.id, 'user_added')
+		await apply_content_update_plan(plan.id)
 
 		await refreshContentState('bypass')
 	} catch (err) {
 		handleError(err as Error)
 		throw err
 	} finally {
-		unlisten?.()
+		onProgress?.({ message: formatMessage(messages.bulkUpdateFinishing) })
 	}
 }
 
 async function updateProject(mod: ContentItem) {
 	if (!canUpdateProject(mod)) return
+	const contentId = getStableContentId(mod)
+	if (!contentId) return
 	const operation = beginContentOperation(mod)
 	if (!operation) return
 
 	try {
-		if (mod.update?.provider === 'curseforge') {
-			await updateCurseForgeFile(props.instance.id, mod.file_path ?? '')
-		} else {
-			const updateVersionId = contentUpdateId(mod)!
-			await switch_project_version_with_dependencies(
-				props.instance.id,
-				mod.file_path,
-				updateVersionId,
-			)
-		}
+		await update_content_entry(props.instance.id, contentId)
 
 		trackEvent('InstanceProjectUpdate', {
 			loader: props.instance.loader,
@@ -1253,22 +1220,13 @@ async function updateProject(mod: ContentItem) {
 }
 
 async function switchProjectVersion(mod: ContentItem, version: Labrinth.Versions.v2.Version) {
-	if (!mod.file_path) return
+	const contentId = getStableContentId(mod)
+	if (!mod.file_path || !contentId || mod.instanceCapabilities?.canChangeVersion === false) return
 	const operation = beginContentOperation(mod)
 	if (!operation) return
 
-	const oldPath = mod.file_path
-
 	try {
-		if (mod.origin_provider === 'curseforge' || mod.project?.id?.startsWith('curseforge:')) {
-			const fileId = Number(version.id)
-			if (!Number.isFinite(fileId)) {
-				throw new Error('Invalid CurseForge file ID')
-			}
-			await switchCurseForgeFileVersion(props.instance.id, oldPath, fileId)
-		} else {
-			await switch_project_version_with_dependencies(props.instance.id, oldPath, version.id)
-		}
+		await switch_content_entry_version(props.instance.id, contentId, version.id)
 
 		trackEvent('InstanceProjectUpdate', {
 			loader: props.instance.loader,
@@ -1456,14 +1414,24 @@ async function handleModpackContentToggle(item: ContentItem, enabled: boolean) {
 }
 
 async function handleModpackContentBulkToggle(items: ContentItem[], enabled: boolean) {
-	await Promise.all(items.map((item) => toggleDisableMod(item, enabled)))
+	await Promise.all(
+		items
+			.filter(
+				(item) =>
+					item.instanceMaterializationState !== 'missing' &&
+					item.instanceMaterializationState !== 'pending_manual' &&
+					item.instanceMaterializationState !== 'removed' &&
+					item.instanceCapabilities?.canToggle !== false,
+			)
+			.map((item) => toggleDisableMod(item, enabled)),
+	)
 }
 
 async function handleModpackContent() {
 	if (!props.instance?.id) return
 
-	if (linkedModpackContentItems.value.length) {
-		modpackContentModal.value?.show(linkedModpackContentItems.value)
+	if (displayedLinkedModpackContentItems.value.length) {
+		modpackContentModal.value?.show(displayedLinkedModpackContentItems.value)
 		return
 	}
 
@@ -1478,15 +1446,8 @@ async function handleModpackContent() {
 	}
 }
 
-async function refreshModpackContentItems(cacheBehaviour?: CacheBehaviour) {
-	if (!props.instance?.id) return
-
-	await loadLinkedModpackContentItems(cacheBehaviour)
-}
-
 async function refreshContentState(cacheBehaviour?: CacheBehaviour) {
 	await initProjects(cacheBehaviour)
-	await refreshModpackContentItems(cacheBehaviour)
 }
 
 watch(
@@ -1649,15 +1610,8 @@ async function handleModpackUpdateConfirm() {
 	contentUpdaterModal.value?.hide()
 	isModpackUpdating.value = true
 	try {
-		if (props.instance.link?.type === 'curseforge_modpack') {
-			const fileId = Number(version.id)
-			if (!Number.isFinite(fileId)) {
-				throw new Error('Invalid CurseForge file ID')
-			}
-			await updateManagedCurseForgeModpack(props.instance.id, fileId)
-		} else {
-			await update_managed_modrinth_version(props.instance.id, version.id)
-		}
+		const plan = await plan_content_updates(props.instance.id, 'pack', version.id)
+		await apply_content_update_plan(plan.id)
 		await initProjects()
 	} finally {
 		isModpackUpdating.value = false
@@ -1706,7 +1660,6 @@ async function unpairInstance() {
 	linkedModpackUpdateVersionId.value = null
 	localImportedModpackUnlinked.value = true
 	linkedModpackContentItems.value = []
-	writeLinkedContentCache(props.instance.id, [])
 	await initProjects()
 }
 
@@ -1747,11 +1700,41 @@ async function handleShareItems(
 function getOverflowOptions(item: ContentItem): OverflowMenuOption[] {
 	const options: OverflowMenuOption[] = []
 
-	options.push({
-		id: formatMessage(commonMessages.showFileButton),
-		icon: FolderOpenIcon,
-		action: () => highlightModInInstance(props.instance.id, item.file_path),
-	})
+	if (item.instanceMaterializationState === 'present' && item.file_path) {
+		options.push({
+			id: formatMessage(commonMessages.showFileButton),
+			icon: FolderOpenIcon,
+			action: () => highlightModInInstance(props.instance.id, item.file_path),
+		})
+	}
+
+	if (item.instanceCapabilities?.canRestorePackDefault && item.instanceMemberId) {
+		options.push({
+			id: formatMessage(messages.restorePackDefault),
+			icon: UndoIcon,
+			action: () => restorePackDefault(item),
+		})
+	}
+
+	if (item.pendingManualDownload) {
+		const reference = item.provider_refs.find(
+			(ref): ref is { provider: 'curseforge'; project_id: number; file_id: number | null } =>
+				ref.provider === 'curseforge',
+		)
+		const manual = reference
+			? skippedManualDownloads.value.find(
+					(candidate) =>
+						candidate.projectId === reference.project_id && candidate.fileId === reference.file_id,
+				)
+			: undefined
+		if (manual) {
+			options.push({
+				id: formatMessage(commonMessages.downloadButton),
+				icon: ExternalIcon,
+				action: () => openManualCurseForgeDownload(manual),
+			})
+		}
+	}
 
 	if (item.project?.slug && !item.project.id.startsWith('local:')) {
 		options.push({
@@ -1780,12 +1763,20 @@ async function initProjects(cacheBehaviour?: CacheBehaviour) {
 
 	debugState('initProjects start', { instanceId: props.instance.id, cacheBehaviour })
 	const contentData = await loadInstanceContentData(props.instance.id, cacheBehaviour, handleError)
+	if (!contentData) {
+		loading.value = false
+		return
+	}
 	if (contentData.contentItems) {
 		contentData.contentItems = await translateContentItemTitles(
 			contentData.contentItems,
 			i18n.global.locale.value,
 		)
 	}
+	contentData.linkedContentItems = await translateContentItemTitles(
+		contentData.linkedContentItems,
+		i18n.global.locale.value,
+	)
 	applyContentData(contentData)
 }
 
@@ -1797,13 +1788,12 @@ function applyContentData(contentData: InstanceContentData) {
 		})
 		return false
 	}
-
-	if (!contentData.contentItems) {
-		debugState('applyContentData no contentItems → loading=false', {
-			instanceId: props.instance.id,
+	if (contentSnapshot.value && contentData.snapshot.revision < contentSnapshot.value.revision) {
+		debugState('applyContentData stale revision', {
+			current: contentSnapshot.value.revision,
+			incoming: contentData.snapshot.revision,
 		})
-		loading.value = false
-		return true
+		return false
 	}
 
 	debugState('applyContentData set projects', {
@@ -1811,14 +1801,16 @@ function applyContentData(contentData: InstanceContentData) {
 		count: contentData.contentItems.length,
 		paths: contentData.contentItems.map((c) => c.file_name).slice(0, 20),
 	})
+	contentSnapshot.value = contentData.snapshot
 	projects.value = contentData.contentItems
-	writeContentCache(props.instance.id, contentData)
+	linkedModpackContentItems.value = contentData.linkedContentItems
+	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
 
 	if (contentData.modpack) {
 		linkedModpackProject.value = contentData.modpack.project
 		linkedModpackVersion.value = contentData.modpack.version
 		linkedModpackOwner.value = contentData.modpack.owner
-		linkedModpackCategories.value = contentData.modpack.categories
+		linkedModpackCategories.value = []
 		linkedModpackHasUpdate.value = contentData.modpack.hasUpdate
 		linkedModpackUpdateVersionId.value = contentData.modpack.updateVersionId
 	} else {
@@ -1862,7 +1854,7 @@ provideContentManager({
 	items: mergedProjects,
 	loading,
 	error: ref(null),
-	modpackItems: linkedModpackContentItems,
+	modpackItems: displayedLinkedModpackContentItems,
 	modpack: computed(() => {
 		if (linkedModpackProject.value) {
 			return {
@@ -1897,6 +1889,22 @@ provideContentManager({
 			}
 		}
 
+		if (curseForgeModpackFallbackProject.value) {
+			return {
+				project: curseForgeModpackFallbackProject.value,
+				projectLink: {
+					path: `/project/curseforge/${props.instance.link?.project_id}`,
+					query: { i: props.instance.id },
+				},
+				categories: [],
+				hasUpdate: false,
+				disabled: isModpackUpdating.value,
+				disabledText: isModpackUpdating.value
+					? formatMessage(commonMessages.updatingLabel)
+					: formatMessage(commonMessages.installingLabel),
+			}
+		}
+
 		if (localImportedModpackProject.value) {
 			return {
 				project: localImportedModpackProject.value,
@@ -1918,12 +1926,16 @@ provideContentManager({
 	contentTypeLabel: ref(formatMessage(messages.contentTypeProject)),
 	toggleEnabled: toggleDisableDebounced,
 	bulkEnableItems: async (items: ContentItem[]) => {
-		for (const item of items.filter((item) => !item.enabled)) {
+		for (const item of items.filter(
+			(item) => item.enabled === false && item.instanceCapabilities?.canToggle !== false,
+		)) {
 			await toggleDisableMod(item, true)
 		}
 	},
 	bulkDisableItems: async (items: ContentItem[]) => {
-		for (const item of items.filter((item) => item.enabled)) {
+		for (const item of items.filter(
+			(item) => item.enabled === true && item.instanceCapabilities?.canToggle !== false,
+		)) {
 			await toggleDisableMod(item, false)
 		}
 	},
@@ -1941,6 +1953,9 @@ provideContentManager({
 	updateItem: handleUpdate,
 	rollbackItem: handleRollbackContent,
 	bulkUpdateAll: bulkUpdateAllProjects,
+	bulkUpdateAllLabel: formatMessage(messages.updateAddedContent),
+	bulkUpdateAllDescription: formatMessage(messages.updateAddedContentDescription),
+	bulkUpdateIncludesModpack: false,
 	bulkUpdateItem: updateProject,
 	updateModpack: props.isServerInstance ? undefined : handleModpackUpdate,
 	viewModpackContent: handleModpackContent,
@@ -2018,6 +2033,15 @@ provideContentManager({
 			versionLink,
 			owner: ownerLink,
 			enabled: item.enabled,
+			disabledTooltip:
+				item.instanceMaterializationState === 'missing'
+					? formatMessage(messages.packMemberMissing)
+					: item.instanceMaterializationState === 'removed'
+						? formatMessage(messages.packMemberRemoved)
+						: null,
+			toggleDisabled: item.instanceCapabilities?.canToggle === false,
+			hideSwitchVersion: item.instanceCapabilities?.canChangeVersion === false,
+			pendingManualDownload: item.pendingManualDownload,
 			installing: item.installing,
 			inlineActions:
 				item.project_type === 'schematic'
@@ -2048,28 +2072,14 @@ async function loadInitialContent(): Promise<void> {
 	if (installRevision > handledInstallRevision.value) {
 		handledInstallRevision.value = installRevision
 		await initProjects('bypass')
-		await loadLinkedModpackContentItems('bypass')
 		return
 	}
 
 	if (props.preloadedContent && applyContentData(props.preloadedContent)) {
-		if (props.instance?.link && !hasLinkedPersistedCache) {
-			await loadLinkedModpackContentItems()
-		}
-		return
-	}
-
-	// 如果有持久化缓存，直接使用缓存数据，不重新请求
-	if (hasPersistedCache) {
-		loading.value = false
-		if (props.instance?.link && !hasLinkedPersistedCache) {
-			await loadLinkedModpackContentItems()
-		}
 		return
 	}
 
 	await initProjects()
-	await loadLinkedModpackContentItems()
 }
 
 async function restoreModpackContentModalState() {
@@ -2091,20 +2101,27 @@ let isUnmounted = false
 let unlistenInstances: UnlistenFn | null = null
 
 onMounted(() => {
-	void instance_listener(async (event: { event: string; instance_id: string }) => {
-		if (
-			props.instance &&
-			event.instance_id === props.instance.id &&
-			event.event === 'synced' &&
-			props.instance.install_stage === 'installed' &&
-			!isBulkOperating.value
-		) {
-			await initProjects()
-			if (skippedManualDownloads.value.length > 0) {
-				await refreshModpackContentItems()
+	void instance_listener(
+		async (event: { event: string; instance_id: string; revision?: number }) => {
+			if (
+				props.instance &&
+				event.instance_id === props.instance.id &&
+				(event.event === 'synced' || event.event === 'content_changed') &&
+				props.instance.install_stage === 'installed' &&
+				!isBulkOperating.value
+			) {
+				if (
+					event.event === 'content_changed' &&
+					event.revision != null &&
+					contentSnapshot.value &&
+					event.revision <= contentSnapshot.value.revision
+				) {
+					return
+				}
+				await initProjects()
 			}
-		}
-	})
+		},
+	)
 		.then((unlisten) => {
 			if (isUnmounted) {
 				unlisten()

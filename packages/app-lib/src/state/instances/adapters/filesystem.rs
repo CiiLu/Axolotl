@@ -163,7 +163,7 @@ fn scan_content_folder(
             continue;
         };
 
-        if !is_scannable_project_file(project_type, file_name) {
+        if !is_scannable_project_path(project_type, file_name) {
             continue;
         }
 
@@ -200,13 +200,14 @@ pub(crate) fn project_type_from_relative_path(
     None
 }
 
-fn is_scannable_project_file(
+pub(crate) fn is_scannable_project_path(
     project_type: ProjectType,
-    file_name: &str,
+    relative_path: &str,
 ) -> bool {
-    let Some(extension) = Path::new(file_name.trim_end_matches(".disabled"))
-        .extension()
-        .and_then(|ext| ext.to_str())
+    let Some(extension) =
+        Path::new(relative_path.trim_end_matches(".disabled"))
+            .extension()
+            .and_then(|ext| ext.to_str())
     else {
         return false;
     };
@@ -285,6 +286,22 @@ mod tests {
             project_type_from_relative_path("config/example.json"),
             None
         );
+    }
+
+    #[test]
+    fn scannable_project_paths_exclude_shader_configuration_sidecars() {
+        assert!(is_scannable_project_path(
+            ProjectType::ShaderPack,
+            "shaderpacks/BSL_v10.1.3.zip"
+        ));
+        assert!(!is_scannable_project_path(
+            ProjectType::ShaderPack,
+            "shaderpacks/BSL_v10.1.3.zip.txt"
+        ));
+        assert!(!is_scannable_project_path(
+            ProjectType::ShaderPack,
+            "shaderpacks/ComplementaryReimagined_r5.3.txt"
+        ));
     }
 
     #[test]

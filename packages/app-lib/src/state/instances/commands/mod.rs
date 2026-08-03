@@ -22,6 +22,11 @@ pub(crate) use self::list_content::{
     list_linked_modpack_content,
 };
 
+mod content_snapshot;
+pub(crate) use self::content_snapshot::{
+    get_content_snapshot, reconcile_curseforge_members,
+};
+
 mod remove_instance;
 pub(crate) use self::remove_instance::*;
 

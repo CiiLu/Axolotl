@@ -9,6 +9,11 @@ import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages, formatContentTypeSentence } from '#ui/utils/common-messages'
 
 import type { BulkOperationType } from '../composables/bulk-operations'
+import {
+	canToggleContentItem,
+	isDisabledContentItem,
+	isEnabledContentItem,
+} from '../composables/content-filtering'
 import type { ContentItem } from '../types'
 
 const { formatMessage } = useVIntl()
@@ -130,8 +135,14 @@ function resolveItemId(item: ContentItem) {
 	return props.getItemId?.(item) ?? item.file_path ?? item.file_name ?? item.id
 }
 
-const allDisabled = computed(() => props.selectedItems.every((m) => !m.enabled))
-const allEnabled = computed(() => props.selectedItems.every((m) => m.enabled))
+const allDisabled = computed(
+	() =>
+		!props.selectedItems.some((item) => canToggleContentItem(item) && isEnabledContentItem(item)),
+)
+const allEnabled = computed(
+	() =>
+		!props.selectedItems.some((item) => canToggleContentItem(item) && isDisabledContentItem(item)),
+)
 
 const selectedCountText = computed(() => {
 	const count = props.isBulkOperating

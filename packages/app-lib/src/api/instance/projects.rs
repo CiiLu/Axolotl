@@ -1,7 +1,11 @@
 use crate::event::emit::{emit_instance, emit_loading, init_loading};
 use crate::event::{InstancePayloadType, LoadingBarType};
-use crate::state::instances::adapters::sqlite::instance_rows;
-use crate::state::{ProjectType, State};
+use crate::state::instances::adapters::sqlite::{content_rows, instance_rows};
+use crate::state::instances::{
+    ContentOwnershipKind, PackMemberMaterializationState,
+    PackMemberOverrideKind,
+};
+use crate::state::{ContentProvider, ContentSourceKind, ProjectType, State};
 use crate::util::fetch;
 use modrinth_content_management::{
     ContentType, ResolutionPreferences, ResolveContentPlan,
@@ -39,7 +43,7 @@ pub async fn update_all_projects(
     )
     .await?;
     emit_loading(&loading_bar, 100.0, Some("Updated instance"))?;
-    emit_instance(&instance.id, InstancePayloadType::Edited).await?;
+    emit_content_changed(&instance.id).await?;
 
     Ok(map)
 }
@@ -59,7 +63,7 @@ pub async fn update_project(
     .await?;
 
     if !skip_send_event.unwrap_or(false) {
-        emit_instance(instance_id, InstancePayloadType::Edited).await?;
+        emit_content_changed(instance_id).await?;
     }
 
     Ok(path)
@@ -80,10 +84,11 @@ pub async fn add_project_from_version(
             reason,
             dependent_on_version_id,
             crate::state::ContentSourceKind::Local,
+            crate::state::instances::ContentOwnershipKind::UserAdded,
             &state,
         )
         .await?;
-    emit_instance(instance_id, InstancePayloadType::Edited).await?;
+    emit_content_changed(instance_id).await?;
 
     Ok(project_path)
 }
@@ -133,10 +138,7 @@ pub async fn install_project_with_dependencies(
                         "Failed to emit content install finished event: {error}"
                     );
                 }
-                if let Err(error) =
-                    emit_instance(&instance_id, InstancePayloadType::Edited)
-                        .await
-                {
+                if let Err(error) = emit_content_changed(&instance_id).await {
                     tracing::error!(
                         "Failed to emit instance edited event after content install: {error}"
                     );
@@ -192,7 +194,7 @@ pub async fn switch_project_version_with_dependencies(
             &state,
         )
         .await?;
-    emit_instance(&metadata.instance.id, InstancePayloadType::Edited).await?;
+    emit_content_changed(&metadata.instance.id).await?;
 
     Ok(path)
 }
@@ -247,7 +249,7 @@ pub async fn toggle_disable_project(
         &state,
     )
     .await?;
-    emit_instance(instance_id, InstancePayloadType::Edited).await?;
+    emit_content_changed(instance_id).await?;
 
     Ok(res)
 }
@@ -264,7 +266,7 @@ pub async fn rollback_project(
         &state,
     )
     .await?;
-    emit_instance(instance_id, InstancePayloadType::Edited).await?;
+    emit_content_changed(instance_id).await?;
 
     Ok(res)
 }
@@ -281,9 +283,349 @@ pub async fn remove_project(
         &state,
     )
     .await?;
-    emit_instance(instance_id, InstancePayloadType::Edited).await?;
+    emit_content_changed(instance_id).await?;
 
     Ok(())
+}
+
+#[tracing::instrument]
+pub async fn toggle_content_entry(
+    instance_id: &str,
+    content_id: &str,
+    desired_enabled: Option<bool>,
+) -> crate::Result<String> {
+    let target = content_mutation_target(instance_id, content_id).await?;
+    let path = target.relative_path.ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "The selected content is not present on disk".to_string(),
+        )
+    })?;
+    toggle_disable_project(instance_id, &path, desired_enabled).await
+}
+
+#[tracing::instrument]
+pub async fn remove_content_entry(
+    instance_id: &str,
+    content_id: &str,
+) -> crate::Result<()> {
+    let target = content_mutation_target(instance_id, content_id).await?;
+    let path = target.relative_path.ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "The selected content is not present on disk".to_string(),
+        )
+    })?;
+    remove_project(instance_id, &path).await
+}
+
+#[tracing::instrument]
+pub async fn update_content_entry(
+    instance_id: &str,
+    content_id: &str,
+) -> crate::Result<String> {
+    let target = content_mutation_target(instance_id, content_id).await?;
+    let path = target.relative_path.ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "The selected content is not present on disk".to_string(),
+        )
+    })?;
+    match target.provider {
+        Some(ContentProvider::CurseForge) => {
+            let result = crate::api::curseforge::update_installed_file(
+                instance_id,
+                &path,
+            )
+            .await?;
+            let updated_path = result
+                .installed
+                .iter()
+                .find(|file| !file.dependency)
+                .map_or(path, |file| file.relative_path.clone());
+            emit_content_changed(instance_id).await?;
+            Ok(updated_path)
+        }
+        _ => update_project(instance_id, &path, None).await,
+    }
+}
+
+#[tracing::instrument]
+pub async fn switch_content_entry_version(
+    instance_id: &str,
+    content_id: &str,
+    version_id: &str,
+) -> crate::Result<String> {
+    let target = content_mutation_target(instance_id, content_id).await?;
+    let path = target.relative_path.ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "The selected content is not present on disk".to_string(),
+        )
+    })?;
+    match target.provider {
+        Some(ContentProvider::CurseForge) => {
+            let file_id = version_id.parse::<u32>().map_err(|_| {
+                crate::ErrorKind::InputError(
+                    "The selected CurseForge file ID is invalid".to_string(),
+                )
+            })?;
+            let result = crate::api::curseforge::switch_installed_file_version(
+                instance_id,
+                &path,
+                file_id,
+            )
+            .await?;
+            let updated_path = result
+                .installed
+                .iter()
+                .find(|file| !file.dependency)
+                .map_or(path, |file| file.relative_path.clone());
+            emit_content_changed(instance_id).await?;
+            Ok(updated_path)
+        }
+        _ => {
+            switch_project_version_with_dependencies(
+                instance_id,
+                &path,
+                version_id,
+            )
+            .await
+        }
+    }
+}
+
+#[tracing::instrument]
+pub async fn restore_pack_member_default(
+    instance_id: &str,
+    member_id: &str,
+) -> crate::Result<Option<String>> {
+    let state = State::get().await?;
+    let target = content_rows::get_content_mutation_target(
+        instance_id,
+        member_id,
+        &state.pool,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "The selected pack member no longer exists".to_string(),
+        )
+    })?;
+    if target.member_id.as_deref() != Some(member_id) {
+        return Err(crate::ErrorKind::InputError(
+            "Restore requires a pack member ID".to_string(),
+        )
+        .into());
+    }
+
+    let member = content_rows::get_pack_members(
+        &content_rows::get_applied_content_set(instance_id, &state.pool)
+            .await?
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(
+                    "Instance has no applied content set".to_string(),
+                )
+            })?
+            .id,
+        &state.pool,
+    )
+    .await?
+    .into_iter()
+    .find(|member| member.id == member_id)
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "The selected pack member no longer exists".to_string(),
+        )
+    })?;
+
+    if member.override_kind == PackMemberOverrideKind::None
+        && member.materialization_state
+            == PackMemberMaterializationState::Present
+    {
+        return Ok(target.relative_path);
+    }
+    if member.override_kind == PackMemberOverrideKind::Disabled
+        && let Some(path) = target.relative_path
+    {
+        return toggle_disable_project(instance_id, &path, Some(true))
+            .await
+            .map(Some);
+    }
+
+    let project_id =
+        member.provider_project_id.as_deref().ok_or_else(|| {
+            crate::ErrorKind::InputError(
+                "This pack member has no provider project to restore from"
+                    .to_string(),
+            )
+        })?;
+    let release_id =
+        member.provider_release_id.as_deref().ok_or_else(|| {
+            crate::ErrorKind::InputError(
+                "This pack member has no original version to restore"
+                    .to_string(),
+            )
+        })?;
+    let old_path = target.relative_path;
+    let (restored_path, pending_manual) = match member.provider {
+        Some(ContentProvider::Modrinth) => (
+            Some(
+                crate::state::instances::commands::add_project_from_version(
+                    instance_id,
+                    release_id,
+                    fetch::DownloadReason::Update,
+                    None,
+                    ContentSourceKind::ModrinthModpack,
+                    ContentOwnershipKind::PackManaged,
+                    &state,
+                )
+                .await?,
+            ),
+            false,
+        ),
+        Some(ContentProvider::CurseForge) => {
+            let content_set =
+                content_rows::get_applied_content_set(instance_id, &state.pool)
+                    .await?
+                    .ok_or_else(|| {
+                        crate::ErrorKind::InputError(
+                            "Instance has no applied content set".to_string(),
+                        )
+                    })?;
+            let result = crate::api::curseforge::install_file(
+				crate::api::curseforge::CurseForgeInstallRequest {
+					instance_id: instance_id.to_string(),
+					project_id: project_id.parse().map_err(|_| {
+						crate::ErrorKind::InputError(
+							"Stored CurseForge project ID is invalid".to_string(),
+						)
+					})?,
+					file_id: release_id.parse().map_err(|_| {
+						crate::ErrorKind::InputError(
+							"Stored CurseForge file ID is invalid".to_string(),
+						)
+					})?,
+					project_type: member.project_type.get_name().to_string(),
+					ownership_kind: ContentOwnershipKind::PackManaged,
+					manual_operation_kind: crate::state::instances::ManualDownloadOperationKind::ContentUpdate,
+					game_version: Some(content_set.game_version),
+					mod_loader_type: curseforge_loader_type(content_set.loader),
+					world_name: None,
+					install_dependencies: false,
+				},
+			)
+			.await?;
+            let restored_path = result
+                .installed
+                .into_iter()
+                .find(|file| !file.dependency)
+                .map(|file| file.relative_path);
+            (restored_path, !result.manual_downloads.is_empty())
+        }
+        None => {
+            return Err(crate::ErrorKind::InputError(
+                "This pack member has no managed provider".to_string(),
+            )
+            .into());
+        }
+    };
+
+    if let (Some(old_path), Some(new_path)) =
+        (old_path.as_deref(), restored_path.as_deref())
+        && old_path != new_path
+        && crate::state::instances::commands::archive_project_file(
+            instance_id,
+            old_path,
+            new_path,
+            &state,
+        )
+        .await?
+        .is_none()
+    {
+        crate::state::instances::commands::remove_project(
+            instance_id,
+            old_path,
+            &state,
+        )
+        .await?;
+    }
+
+    let content_set =
+        content_rows::get_applied_content_set(instance_id, &state.pool)
+            .await?
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(
+                    "Instance has no applied content set".to_string(),
+                )
+            })?;
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+    content_rows::set_pack_member_override_in_transaction(
+        member_id,
+        if pending_manual {
+            PackMemberMaterializationState::PendingManual
+        } else {
+            PackMemberMaterializationState::Present
+        },
+        PackMemberOverrideKind::None,
+        &mut tx,
+    )
+    .await?;
+    content_rows::bump_content_set_revision_in_transaction(
+        &content_set.id,
+        &mut tx,
+    )
+    .await?;
+    tx.commit().await?;
+    emit_content_changed(instance_id).await?;
+    Ok(restored_path)
+}
+
+pub(crate) async fn emit_content_changed(
+    instance_id: &str,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    let content_set =
+        content_rows::get_applied_content_set(instance_id, &state.pool)
+            .await?
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(
+                    "Instance has no applied content set".to_string(),
+                )
+            })?;
+    emit_instance(
+        instance_id,
+        InstancePayloadType::ContentChanged {
+            revision: content_set.revision,
+        },
+    )
+    .await
+}
+
+async fn content_mutation_target(
+    instance_id: &str,
+    content_id: &str,
+) -> crate::Result<content_rows::ContentMutationTarget> {
+    let state = State::get().await?;
+    content_rows::get_content_mutation_target(
+        instance_id,
+        content_id,
+        &state.pool,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "The selected content no longer exists".to_string(),
+        )
+        .into()
+    })
+}
+
+fn curseforge_loader_type(loader: crate::state::ModLoader) -> Option<u32> {
+    match loader {
+        crate::state::ModLoader::Forge => Some(1),
+        crate::state::ModLoader::Fabric => Some(4),
+        crate::state::ModLoader::Quilt => Some(5),
+        crate::state::ModLoader::NeoForge => Some(6),
+        _ => None,
+    }
 }
 
 #[tracing::instrument]

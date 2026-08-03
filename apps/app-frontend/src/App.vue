@@ -1137,6 +1137,7 @@ const {
 	handleModpackDuplicateCreateAnyway: handleContentInstallModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance: handleContentInstallModpackDuplicateGoToInstance,
 	setCurseForgeManualDownloadsModal: setContentInstallCurseForgeManualDownloadsModal,
+	handleCurseForgeManualDownloadsImported: handleContentInstallCurseForgeManualDownloadsImported,
 	setIncompatibilityWarningModal: setContentIncompatibilityWarningModal,
 	incompatibilityWarningVersions: contentInstallIncompatibilityWarningVersions,
 	incompatibilityWarningCurrentGameVersion: contentInstallIncompatibilityWarningCurrentGameVersion,
@@ -3076,6 +3077,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<CurseForgeManualDownloadsModal
 		ref="contentInstallCurseForgeManualDownloadsModal"
 		@view-instance="handleContentInstallModpackDuplicateGoToInstance"
+		@imported="handleContentInstallCurseForgeManualDownloadsImported"
 	/>
 	<InstallToPlayModal ref="installToPlayModal" />
 	<UpdateToPlayModal ref="updateToPlayModal" />

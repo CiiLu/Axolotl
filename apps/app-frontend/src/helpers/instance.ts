@@ -84,6 +84,131 @@ export async function get_content_items(
 	return items
 }
 
+export type ContentOwnershipKind = 'pack_managed' | 'user_added' | 'local_discovered'
+export type PackMemberMaterializationState = 'present' | 'pending_manual' | 'missing' | 'removed'
+export type PackMemberOverrideKind = 'none' | 'disabled' | 'removed' | 'version'
+
+export interface InstanceContentSnapshotItem {
+	fileId: string | null
+	entryId: string | null
+	memberId: string | null
+	ownershipKind: ContentOwnershipKind
+	materializationState: PackMemberMaterializationState
+	overrideKind: PackMemberOverrideKind
+	expectedRelativePath: string
+	required: boolean
+	projectType: string
+	provider: 'modrinth' | 'curseforge' | null
+	providerProjectId: string | null
+	providerReleaseId: string | null
+	content: ContentItem | null
+	capabilities: {
+		canToggle: boolean
+		canDelete: boolean
+		canUpdate: boolean
+		canChangeVersion: boolean
+		canRestorePackDefault: boolean
+	}
+}
+
+export interface PendingManualDownload {
+	id: string
+	instanceId: string
+	packMemberId: string | null
+	contentEntryId: string | null
+	operationKind: 'pack_install' | 'pack_update' | 'content_install' | 'content_update'
+	operationTargetId: string | null
+	projectType: string
+	provider: 'modrinth' | 'curseforge'
+	providerProjectId: string
+	providerReleaseId: string
+	fileName: string
+	websiteUrl: string | null
+	targetRelativePath: string
+	expectedSha1: string | null
+	expectedSize: number | null
+	expectedFingerprint: number | null
+	state: 'waiting' | 'matched' | 'imported' | 'error' | 'cancelled'
+	context: Record<string, unknown>
+	createdAt: string
+	modifiedAt: string
+}
+
+export interface InstanceContentSnapshot {
+	instanceId: string
+	revision: number
+	pack: {
+		name: string
+		iconPath: string | null
+		provider: 'modrinth' | 'curseforge' | null
+		projectId: string | null
+		versionId: string | null
+		reconciled: boolean
+		canUpdate: boolean
+		metadata: LinkedModpackInfo | null
+	} | null
+	items: InstanceContentSnapshotItem[]
+	pendingManualDownloads: PendingManualDownload[]
+	warnings: Array<{
+		code: string
+		message: string
+		provider: 'modrinth' | 'curseforge' | null
+	}>
+}
+
+export async function get_content_snapshot(instanceId: string): Promise<InstanceContentSnapshot> {
+	return await invoke('plugin:instance|instance_get_content_snapshot', { instanceId })
+}
+
+export async function refresh_content(instanceId: string): Promise<InstanceContentSnapshot> {
+	return await invoke('plugin:instance|instance_refresh_content', { instanceId })
+}
+
+export type ContentUpdateScope = 'user_added' | 'pack' | 'item'
+
+export interface ContentUpdatePlan {
+	id: string
+	instanceId: string
+	revision: number
+	scope: ContentUpdateScope
+	actions: Array<{
+		contentId: string
+		relativePath: string | null
+		ownershipKind: ContentOwnershipKind
+		provider: 'modrinth' | 'curseforge'
+		currentReleaseId: string | null
+		targetReleaseId: string
+	}>
+	warnings: string[]
+}
+
+export interface ContentUpdateResolution {
+	contentId: string
+	choice: 'keep_override' | 'restore_pack_default'
+}
+
+export async function plan_content_updates(
+	instanceId: string,
+	scope: ContentUpdateScope,
+	target?: string,
+): Promise<ContentUpdatePlan> {
+	return await invoke('plugin:instance|instance_plan_content_updates', {
+		instanceId,
+		scope,
+		target,
+	})
+}
+
+export async function apply_content_update_plan(
+	planId: string,
+	resolutions: ContentUpdateResolution[] = [],
+): Promise<InstanceContentSnapshot> {
+	return await invoke('plugin:instance|instance_apply_content_update_plan', {
+		planId,
+		resolutions,
+	})
+}
+
 // Linked modpack info returned from backend
 export interface LinkedModpackInfo {
 	project: Labrinth.Projects.v2.Project
@@ -315,6 +440,18 @@ export async function toggle_disable_project(
 	})
 }
 
+export async function toggle_content_entry(
+	instanceId: string,
+	contentId: string,
+	desiredEnabled?: boolean,
+): Promise<string> {
+	return await invoke('plugin:instance|instance_toggle_content_entry', {
+		instanceId,
+		contentId,
+		desiredEnabled,
+	})
+}
+
 // Roll back an updated project to its previous file (kept as a .old backup)
 export async function rollback_project(instanceId: string, projectPath: string): Promise<string> {
 	return await invoke('plugin:instance|instance_rollback_project', {
@@ -326,6 +463,36 @@ export async function rollback_project(instanceId: string, projectPath: string):
 // Remove a project
 export async function remove_project(instanceId: string, projectPath: string): Promise<void> {
 	return await invoke('plugin:instance|instance_remove_project', { instanceId, projectPath })
+}
+
+export async function remove_content_entry(instanceId: string, contentId: string): Promise<void> {
+	return await invoke('plugin:instance|instance_remove_content_entry', { instanceId, contentId })
+}
+
+export async function update_content_entry(instanceId: string, contentId: string): Promise<string> {
+	return await invoke('plugin:instance|instance_update_content_entry', { instanceId, contentId })
+}
+
+export async function switch_content_entry_version(
+	instanceId: string,
+	contentId: string,
+	versionId: string,
+): Promise<string> {
+	return await invoke('plugin:instance|instance_switch_content_entry_version', {
+		instanceId,
+		contentId,
+		versionId,
+	})
+}
+
+export async function restore_pack_member_default(
+	instanceId: string,
+	memberId: string,
+): Promise<string | null> {
+	return await invoke('plugin:instance|instance_restore_pack_member_default', {
+		instanceId,
+		memberId,
+	})
 }
 
 // Update a managed Modrinth instance to a specific version

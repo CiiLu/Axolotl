@@ -94,6 +94,7 @@ pub(crate) async fn create_instance(
             protocol_version: None,
             loader: input.loader,
             loader_version,
+            revision: 0,
             created: now,
             modified: now,
         };

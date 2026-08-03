@@ -7,7 +7,6 @@ import {
 	injectNotificationManager,
 	Slider,
 	StyledInput,
-	Toggle,
 	useVIntl,
 } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
@@ -74,15 +73,6 @@ const messages = defineMessages({
 		id: 'app.settings.resources.download-mirrors-description',
 		defaultMessage:
 			'Automatic mode chooses between official and mirror sources based on your local environment and recent connection quality.',
-	},
-	useSystemProxy: {
-		id: 'app.settings.resources.use-system-proxy',
-		defaultMessage: 'Use system proxy',
-	},
-	useSystemProxyDescription: {
-		id: 'app.settings.resources.use-system-proxy-description',
-		defaultMessage:
-			'Route launcher API requests and downloads through the proxy configured by the operating system. Disabled by default.',
 	},
 	automaticSource: {
 		id: 'app.settings.resources.source.automatic',
@@ -354,18 +344,6 @@ async function findLauncherDir() {
 				<p class="m-0 leading-tight text-secondary">
 					{{ formatMessage(messages.downloadMirrorsDescription) }}
 				</p>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.useSystemProxy) }}
-					</h3>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.useSystemProxyDescription) }}
-					</p>
-				</div>
-				<Toggle id="use-system-proxy" v-model="settings.use_system_proxy" />
 			</div>
 
 			<div class="flex items-center justify-between gap-4">

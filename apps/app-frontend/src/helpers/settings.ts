@@ -58,7 +58,6 @@ export type AppSettings = {
 	max_concurrent_downloads: number
 	max_concurrent_writes: number
 	auto_concurrent_downloads: boolean
-	use_system_proxy: boolean
 	minecraft_metadata_source: DownloadSourceMode
 	minecraft_file_source: DownloadSourceMode
 	modrinth_source: DownloadSourceMode
@@ -133,7 +132,6 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 		enabled ? 'mirror_preferred' : 'official_only'
 
 	settings.auto_concurrent_downloads ??= true
-	settings.use_system_proxy ??= false
 	settings.auto_set_java_high_performance_mode ??= true
 	settings.minecraft_metadata_source ??=
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_minecraft_mirror)

@@ -298,6 +298,7 @@ impl InstanceMetadataRow {
                 "instance_content_sets.loader",
             )?),
             loader_version: self.content_set_loader_version,
+            revision: 0,
             created: timestamp(required_i64(
                 self.content_set_created,
                 "instance_content_sets.created",

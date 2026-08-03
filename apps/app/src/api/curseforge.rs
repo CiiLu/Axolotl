@@ -3,7 +3,8 @@ use theseus::curseforge::{
     CurseForgeCapability, CurseForgeCategory, CurseForgeFile,
     CurseForgeFilesRequest, CurseForgeFilesResponse,
     CurseForgeFingerprintResult, CurseForgeInstallRequest,
-    CurseForgeInstallResult, CurseForgeModpackInstallRequest,
+    CurseForgeInstallResult, CurseForgeManualDownload,
+    CurseForgeManualDownloadScanResult, CurseForgeModpackInstallRequest,
     CurseForgeModpackInstallResult, CurseForgeProject,
     CurseForgeRecognitionResult, CurseForgeSearchRequest,
     UnifiedSearchResponse,
@@ -29,6 +30,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             curseforge_update_installed_file,
             curseforge_switch_installed_file_version,
             curseforge_recognize_instance_files,
+            curseforge_import_manual_downloads,
             curseforge_install_modpack,
             curseforge_update_managed_modpack,
         ])
@@ -164,6 +166,17 @@ pub async fn curseforge_recognize_instance_files(
     instance_id: String,
 ) -> Result<CurseForgeRecognitionResult> {
     Ok(theseus::curseforge::recognize_instance_files(&instance_id).await?)
+}
+
+#[tauri::command]
+pub async fn curseforge_import_manual_downloads(
+    instance_id: String,
+    downloads: Vec<CurseForgeManualDownload>,
+) -> Result<CurseForgeManualDownloadScanResult> {
+    Ok(
+        theseus::curseforge::import_manual_downloads(&instance_id, downloads)
+            .await?,
+    )
 }
 
 #[tauri::command]
