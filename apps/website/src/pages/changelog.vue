@@ -5,6 +5,13 @@ import ButtonStyled from '@modrinth/ui/src/components/base/ButtonStyled.vue'
 import TagItem from '@modrinth/ui/src/components/base/TagItem.vue'
 import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
 
+import {
+	RELEASE_CHANGE_TYPES,
+	type ReleaseChangeType,
+	type ReleaseNotesLocale,
+	parseReleaseNotes,
+} from '~/utils/release-notes'
+
 type GitHubRelease = {
 	id: number
 	draft: boolean
@@ -19,7 +26,7 @@ const GITHUB_RELEASES_URL = 'https://api.github.com/repos/Mystic-Stars/Axolotl/r
 const RELEASES_PER_PAGE = 100
 const FIRST_RELEASE_VERSION = [1, 4, 0] as const
 
-const { formatMessage } = useVIntl()
+const { formatMessage, locale } = useVIntl()
 
 const messages = defineMessages({
 	seoTitle: {
@@ -58,6 +65,15 @@ const messages = defineMessages({
 		id: 'axolotl-site.changelog.no-release-notes',
 		defaultMessage: 'No release notes were provided for this version.',
 	},
+	added: { id: 'axolotl-site.changelog.category.added', defaultMessage: 'Added' },
+	changed: { id: 'axolotl-site.changelog.category.changed', defaultMessage: 'Changed' },
+	deprecated: {
+		id: 'axolotl-site.changelog.category.deprecated',
+		defaultMessage: 'Deprecated',
+	},
+	removed: { id: 'axolotl-site.changelog.category.removed', defaultMessage: 'Removed' },
+	fixed: { id: 'axolotl-site.changelog.category.fixed', defaultMessage: 'Fixed' },
+	security: { id: 'axolotl-site.changelog.category.security', defaultMessage: 'Security' },
 })
 
 const {
@@ -110,6 +126,45 @@ function getReleaseTitle(release: GitHubRelease) {
 
 function getReleaseDate(publishedAt: string | null) {
 	return publishedAt?.slice(0, 10) ?? ''
+}
+
+const categoryClasses: Record<ReleaseChangeType, string> = {
+	added: 'bg-brand-green',
+	changed: 'bg-brand-blue',
+	deprecated: 'bg-brand-orange',
+	removed: 'bg-brand-red',
+	fixed: 'bg-brand-purple',
+	security: 'bg-brand-orange',
+}
+
+const releaseNotesLocale = computed<ReleaseNotesLocale>(() =>
+	locale.value === 'zh-CN' ? 'zh-CN' : 'en-US',
+)
+const releaseCategories = computed(() =>
+	(releases.value ?? []).map((release) => {
+		const notes = parseReleaseNotes(release.body)[releaseNotesLocale.value]
+
+		return {
+			id: release.id,
+			categories: RELEASE_CHANGE_TYPES.flatMap((type) => {
+				const changes = notes[type]
+				if (!changes?.length) return []
+
+				return [
+					{
+						type,
+						label: formatMessage(messages[type]),
+						className: categoryClasses[type],
+						changes,
+					},
+				]
+			}),
+		}
+	}),
+)
+
+function getReleaseCategories(releaseId: number) {
+	return releaseCategories.value.find((release) => release.id === releaseId)?.categories ?? []
 }
 
 const isLoading = computed(() => status.value === 'idle' || status.value === 'pending')
@@ -182,9 +237,23 @@ useHead({
 				</template>
 
 				<div class="announcement-content">
-					<div class="release-notes">
-						{{ release.body?.trim() || formatMessage(messages.noReleaseNotes) }}
-					</div>
+					<p v-if="getReleaseCategories(release.id).length === 0" class="no-release-notes">
+						{{ formatMessage(messages.noReleaseNotes) }}
+					</p>
+					<section
+						v-for="(category, categoryIndex) in getReleaseCategories(release.id)"
+						:key="category.type"
+						class="change-group"
+						:class="{ 'first-change-group': categoryIndex === 0 }"
+					>
+						<h3>
+							<span :class="category.className" aria-hidden="true" />
+							{{ category.label }}
+						</h3>
+						<ul>
+							<li v-for="change in category.changes" :key="change">{{ change }}</li>
+						</ul>
+					</section>
 				</div>
 			</Accordion>
 		</div>
@@ -285,11 +354,50 @@ useHead({
 	background: var(--surface-3);
 }
 
-.release-notes {
-	color: var(--color-base);
-	line-height: 1.7;
-	overflow-wrap: anywhere;
-	white-space: pre-wrap;
+.no-release-notes {
+	margin: 0;
+	padding: 1rem 0 0.5rem;
+	color: var(--color-secondary);
+	line-height: 1.6;
+}
+
+.change-group {
+	display: grid;
+	grid-template-columns: 7rem minmax(0, 1fr);
+	gap: 1.25rem;
+	padding: 1rem 0;
+	border-top: 1px solid var(--surface-5);
+
+	&.first-change-group {
+		border-top: 0;
+	}
+
+	h3 {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0;
+		color: var(--color-secondary);
+		font-size: 0.875rem;
+		font-weight: 600;
+
+		span {
+			width: 0.5rem;
+			height: 0.5rem;
+			border-radius: 50%;
+		}
+	}
+
+	ul {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin: 0;
+		padding-left: 1.25rem;
+		color: var(--color-base);
+		line-height: 1.6;
+		overflow-wrap: anywhere;
+	}
 }
 
 .status-panel {
@@ -367,9 +475,15 @@ useHead({
 	}
 
 	.announcement-heading,
-	.error-panel {
+	.error-panel,
+	.change-group {
 		align-items: flex-start;
 		flex-direction: column;
+	}
+
+	.change-group {
+		grid-template-columns: 1fr;
+		gap: 0.5rem;
 	}
 }
 </style>
