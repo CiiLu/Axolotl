@@ -14,6 +14,7 @@ import { skinPreviewStorage } from '../storage/skin-preview-storage'
 import {
 	cleanupUnusedPreviews,
 	generateHeadRender,
+	getHeadRenderKey,
 	headBlobUrlMap,
 	type RawRenderResult,
 	type RenderResult,
@@ -234,7 +235,7 @@ async function generateSkinPreviewsForGeneration(
 		const skinKeys = skins.map(
 			(skin) => `${skin.texture_key}+${skin.variant}+${skin.cape_id ?? 'no-cape'}`,
 		)
-		const headKeys = skins.map((skin) => `${skin.texture_key}-head`)
+		const headKeys = skins.map((skin) => getHeadRenderKey(skin.texture_key))
 
 		const [cachedSkinPreviews, cachedHeadPreviews] = await Promise.all([
 			skinPreviewStorage.batchRetrieve(skinKeys),
@@ -308,7 +309,7 @@ async function generateSkinPreviewsForGeneration(
 				console.warn('Failed to store skin preview in persistent storage:', error)
 			}
 
-			const headKey = `${skin.texture_key}-head`
+			const headKey = getHeadRenderKey(skin.texture_key)
 			if (!headBlobUrlMap.has(headKey)) {
 				await generateHeadRender(skin)
 			}

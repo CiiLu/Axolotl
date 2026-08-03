@@ -8,7 +8,8 @@
 			circle: circle,
 			'no-shadow': noShadow,
 			raised: raised,
-			pixelated: pixelated,
+			pixelated: pixelated || autoPixelated,
+			unframed: unframed || autoUnframed,
 		}"
 		:src="src"
 		:alt="alt"
@@ -25,6 +26,7 @@
 			circle: circle,
 			'no-shadow': noShadow,
 			raised: raised,
+			unframed: unframed || autoUnframed,
 		}"
 		xml:space="preserve"
 		fill-rule="evenodd"
@@ -48,7 +50,8 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch } from 'vue'
 
-const pixelated = ref(false)
+const autoPixelated = ref(false)
+const autoUnframed = ref(false)
 const img = useTemplateRef<HTMLImageElement>('img')
 const failed = ref(false)
 
@@ -62,6 +65,9 @@ const props = withDefaults(
 		loading?: 'eager' | 'lazy'
 		raised?: boolean
 		tintBy?: string | null
+		pixelated?: boolean
+		unframed?: boolean
+		unframedNaturalWidth?: number
 	}>(),
 	{
 		src: null,
@@ -72,6 +78,9 @@ const props = withDefaults(
 		loading: 'eager',
 		raised: false,
 		tintBy: null,
+		pixelated: false,
+		unframed: false,
+		unframedNaturalWidth: undefined,
 	},
 )
 
@@ -89,6 +98,7 @@ watch(
 	() => props.src,
 	() => {
 		failed.value = false
+		autoUnframed.value = false
 	},
 )
 
@@ -98,10 +108,16 @@ function onError(e) {
 }
 
 function updatePixelated() {
+	autoUnframed.value = Boolean(
+		img.value &&
+			props.unframedNaturalWidth !== undefined &&
+			img.value.naturalWidth === props.unframedNaturalWidth,
+	)
+
 	if (img.value && img.value.naturalWidth && img.value.naturalWidth < 32) {
-		pixelated.value = true
+		autoPixelated.value = true
 	} else {
-		pixelated.value = false
+		autoPixelated.value = false
 	}
 }
 
@@ -152,6 +168,19 @@ function hash(str: string): number {
 
 	&.pixelated {
 		image-rendering: pixelated;
+		backface-visibility: hidden;
+		transform: translateZ(0);
+	}
+
+	&.unframed {
+		border-color: transparent;
+		background-color: transparent;
+		border-radius: 0;
+		box-shadow: none;
+
+		&:not(.no-shadow) {
+			filter: drop-shadow(var(--shadow-card-filter));
+		}
 	}
 
 	&.raised {

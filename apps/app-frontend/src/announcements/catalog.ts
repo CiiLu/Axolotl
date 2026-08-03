@@ -33,6 +33,35 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.10',
+		version: '1.6.10',
+		publishedAt: '2026-08-03',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.10',
+			'zh-CN': 'Axolotl Launcher 1.6.10',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Minecraft account avatars now render supported skin outer layers with a layered 2D effect and silhouette shadow.',
+					'zh-CN': 'Minecraft 账号头像现支持渲染皮肤外层，并以分层 2D 效果和轮廓阴影显示。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed Minecraft account avatars sometimes failing to display or shifting when hovering account options.',
+					'zh-CN': '修复 Minecraft 账号头像偶尔无法显示，以及悬停账号选项时发生抖动的问题。',
+				},
+				{
+					'en-US': 'Fixed an oversized border around the expanded account selector.',
+					'zh-CN': '修复账号选择框展开时出现粗重边框的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.9',
 		version: '1.6.9',
 		publishedAt: '2026-08-02',

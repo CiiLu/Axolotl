@@ -16,13 +16,19 @@ export interface RawRenderResult {
 export const skinBlobUrlMap = reactive(new Map<string, RenderResult>())
 export const headBlobUrlMap = reactive(new Map<string, string>())
 
+const HEAD_RENDER_VERSION = 8
+
+export function getHeadRenderKey(textureKey: string): string {
+	return `${textureKey}-head-v${HEAD_RENDER_VERSION}`
+}
+
 export async function cleanupUnusedPreviews(skins: Skin[]): Promise<void> {
 	const validKeys = new Set<string>()
 	const validHeadKeys = new Set<string>()
 
 	for (const skin of skins) {
 		const key = `${skin.texture_key}+${skin.variant}+${skin.cape_id ?? 'no-cape'}`
-		const headKey = `${skin.texture_key}-head`
+		const headKey = getHeadRenderKey(skin.texture_key)
 		validKeys.add(key)
 		validHeadKeys.add(headKey)
 	}
@@ -35,77 +41,57 @@ export async function cleanupUnusedPreviews(skins: Skin[]): Promise<void> {
 	}
 }
 
-export async function generatePlayerHeadBlob(skinUrl: string, size: number = 64): Promise<Blob> {
+export async function generatePlayerHeadBlob(skinUrl: string): Promise<Blob> {
 	return new Promise((resolve, reject) => {
 		const img = new Image()
 		img.crossOrigin = 'anonymous'
 
 		img.onload = () => {
 			try {
-				const sourceCanvas = document.createElement('canvas')
-				const sourceCtx = sourceCanvas.getContext('2d')
-
-				if (!sourceCtx) {
-					throw new Error('Could not get 2D context from source canvas')
+				if (img.width !== 64 || img.height !== 64) {
+					throw new Error(`Expected normalized 64x64 skin texture, got ${img.width}x${img.height}`)
 				}
 
-				sourceCanvas.width = img.width
-				sourceCanvas.height = img.height
+				const outerLayerCanvas = document.createElement('canvas')
+				outerLayerCanvas.width = 8
+				outerLayerCanvas.height = 8
+				const outerLayerCtx = outerLayerCanvas.getContext('2d')
 
-				sourceCtx.drawImage(img, 0, 0)
+				if (!outerLayerCtx) {
+					throw new Error('Could not get 2D context for outer skin layer')
+				}
 
+				outerLayerCtx.drawImage(img, 40, 8, 8, 8, 0, 0, 8, 8)
+				const hasOuterLayer = outerLayerCtx
+					.getImageData(0, 0, 8, 8)
+					.data.some((channel, index) => index % 4 === 3 && channel > 0)
+				const outputSize = hasOuterLayer ? 72 : 64
+				const baseOffset = hasOuterLayer ? 4 : 0
 				const outputCanvas = document.createElement('canvas')
+				outputCanvas.width = outputSize
+				outputCanvas.height = outputSize
 				const outputCtx = outputCanvas.getContext('2d')
 
 				if (!outputCtx) {
 					throw new Error('Could not get 2D context from output canvas')
 				}
 
-				outputCanvas.width = size
-				outputCanvas.height = size
-
 				outputCtx.imageSmoothingEnabled = false
 
-				const headImageData = sourceCtx.getImageData(8, 8, 8, 8)
+				outputCtx.drawImage(
+					img,
+					8,
+					8,
+					8,
+					8,
+					baseOffset,
+					baseOffset,
+					64,
+					64,
+				)
 
-				const headCanvas = document.createElement('canvas')
-				const headCtx = headCanvas.getContext('2d')
-
-				if (!headCtx) {
-					throw new Error('Could not get 2D context from head canvas')
-				}
-
-				headCanvas.width = 8
-				headCanvas.height = 8
-				headCtx.putImageData(headImageData, 0, 0)
-
-				outputCtx.drawImage(headCanvas, 0, 0, 8, 8, 0, 0, size, size)
-
-				const hatImageData = sourceCtx.getImageData(40, 8, 8, 8)
-
-				const hatCanvas = document.createElement('canvas')
-				const hatCtx = hatCanvas.getContext('2d')
-
-				if (!hatCtx) {
-					throw new Error('Could not get 2D context from hat canvas')
-				}
-
-				hatCanvas.width = 8
-				hatCanvas.height = 8
-				hatCtx.putImageData(hatImageData, 0, 0)
-
-				const hatPixels = hatImageData.data
-				let hasHat = false
-
-				for (let i = 3; i < hatPixels.length; i += 4) {
-					if (hatPixels[i] > 0) {
-						hasHat = true
-						break
-					}
-				}
-
-				if (hasHat) {
-					outputCtx.drawImage(hatCanvas, 0, 0, 8, 8, 0, 0, size, size)
+				if (hasOuterLayer) {
+					outputCtx.drawImage(outerLayerCanvas, 0, 0, 8, 8, 0, 0, outputSize, outputSize)
 				}
 
 				outputCanvas.toBlob(
@@ -116,8 +102,7 @@ export async function generatePlayerHeadBlob(skinUrl: string, size: number = 64)
 							reject(new Error('Failed to create blob from canvas'))
 						}
 					},
-					'image/webp',
-					0.9,
+					'image/png',
 				)
 			} catch (error) {
 				reject(error)
@@ -133,7 +118,7 @@ export async function generatePlayerHeadBlob(skinUrl: string, size: number = 64)
 }
 
 export async function generateHeadRender(skin: Skin): Promise<string> {
-	const headKey = `${skin.texture_key}-head`
+	const headKey = getHeadRenderKey(skin.texture_key)
 
 	if (headBlobUrlMap.has(headKey)) {
 		if (DEBUG_MODE) {
@@ -146,7 +131,7 @@ export async function generateHeadRender(skin: Skin): Promise<string> {
 	}
 
 	const skinUrl = await get_normalized_skin_texture(skin)
-	const headBlob = await generatePlayerHeadBlob(skinUrl, 64)
+	const headBlob = await generatePlayerHeadBlob(skinUrl)
 	const headUrl = URL.createObjectURL(headBlob)
 
 	headBlobUrlMap.set(headKey, headUrl)

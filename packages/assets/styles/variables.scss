@@ -153,6 +153,7 @@
 		hsla(0, 0%, 0%, 0.1) 0px 4px 6px -1px, hsla(0, 0%, 0%, 0.1) 0px 2px 4px -1px;
 
 	--shadow-card: rgba(50, 50, 100, 0.1) 0px 2px 4px 0px;
+	--shadow-card-filter: rgba(50, 50, 100, 0.1) 0px 2px 4px;
 
 	--brand-gradient-bg: linear-gradient(
 		0deg,
@@ -389,6 +390,7 @@ html {
 		hsla(0, 0%, 0%, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px;
 
 	--shadow-card: rgba(0, 0, 0, 0.25) 0px 2px 4px 0px;
+	--shadow-card-filter: rgba(0, 0, 0, 0.25) 0px 2px 4px;
 
 	--brand-gradient-bg: linear-gradient(0deg, rgba(14, 35, 19, 0.2) 0%, rgba(55, 137, 73, 0.1) 100%);
 	--brand-gradient-strong-bg: linear-gradient(270deg, #09110d 10%, #131f17 100%);
