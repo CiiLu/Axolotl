@@ -492,14 +492,16 @@ impl InstallProgressReporter {
         }
         active.speed_bytes_per_second = None;
         let status = active.status;
+        let (speed_bytes_per_second, eta_seconds) =
+            live_download_metrics(&state.job);
         drop(state);
         emit_download_request_update(&DownloadRequestUpdate::Progress {
             job_id: self.job_id,
             id: path,
             bytes,
             status,
-            speed_bytes_per_second: None,
-            eta_seconds: None,
+            speed_bytes_per_second,
+            eta_seconds,
         })
         .await
     }
