@@ -883,11 +883,11 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 							<ButtonStyled type="outlined">
 								<button
 									v-tooltip="ctx.busyMessage?.value"
-									:disabled="ctx.isBusy.value"
+									:disabled="refreshing"
 									class="!h-10"
-									@click="ctx.refresh"
+									@click="handleRefresh"
 								>
-									<RefreshCwIcon class="size-5" />
+									<RefreshCwIcon :class="['size-5', { 'animate-spin': refreshing }]" />
 									{{ formatMessage(commonMessages.refreshButton) }}
 								</button>
 							</ButtonStyled>
@@ -1014,16 +1014,6 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 										<DownloadIcon />
 									</button>
 								</ButtonStyled>
-
-								<ButtonStyled circular type="transparent">
-									<button
-										v-tooltip="formatMessage(commonMessages.refreshButton)"
-										:disabled="refreshing"
-										@click="handleRefresh"
-									>
-										<RefreshCwIcon :class="refreshing ? 'animate-spin' : ''" />
-									</button>
-								</ButtonStyled>
 							</div>
 						</template>
 						<template #empty>
@@ -1052,11 +1042,11 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 						<ButtonStyled type="outlined">
 							<button
 								v-tooltip="ctx.busyMessage?.value"
-								:disabled="ctx.isBusy.value"
+								:disabled="refreshing"
 								class="!h-10"
-								@click="ctx.refresh"
+								@click="handleRefresh"
 							>
-								<RefreshCwIcon class="size-5" />
+								<RefreshCwIcon :class="['size-5', { 'animate-spin': refreshing }]" />
 								{{ formatMessage(commonMessages.refreshButton) }}
 							</button>
 						</ButtonStyled>
