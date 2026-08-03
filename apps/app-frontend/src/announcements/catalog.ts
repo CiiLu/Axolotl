@@ -64,6 +64,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Editing a singleplayer world now opens a full editor page instead of a small dialog.',
 					'zh-CN': '单人存档的“编辑”入口从小弹窗升级为完整的编辑页面。',
 				},
+				{
+					'en-US':
+						'Improved the Traditional Chinese (Taiwan) interface translation with hundreds of revised entries. Thanks to @DonkeyBear for the contribution.',
+					'zh-CN': '改进繁体中文（台湾）界面翻译：修订数百条文案。感谢 @DonkeyBear 的贡献。',
+				},
 			],
 		},
 	},
