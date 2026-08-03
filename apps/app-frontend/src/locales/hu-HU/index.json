@@ -593,18 +593,6 @@
   "instance.edit-server.title": {
     "message": "Szerver módosítása"
   },
-  "instance.edit-world.name": {
-    "message": "Név"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft világ"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Ikon alaphelyzetbe állítása"
-  },
-  "instance.edit-world.title": {
-    "message": "Világ szerkesztése"
-  },
   "instance.files.adding-files": {
     "message": "Fájlok hozzáadása ({completed}/{total})"
   },

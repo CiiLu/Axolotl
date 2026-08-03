@@ -3236,6 +3236,9 @@
   "app.navigation.downloads": {
     "message": "Downloads"
   },
+  "app.navigation.edit-world": {
+    "message": "Edit world"
+  },
   "app.navigation.home": {
     "message": "Home"
   },
@@ -4299,7 +4302,7 @@
     "message": "System prompt"
   },
   "app.translation-settings.system-prompt-description": {
-    "message": "Enter your custom system prompt; leave it blank to use the default prompt. The prompt should guide the model to output in JSON format as required, and should avoid instructions that conflict with the format requirements."
+    "message": "Enter a custom system prompt, or leave blank to use the default. The prompt should guide the model to produce JSON output as required by the built-in contract; avoid instructions that conflict with the format requirements."
   },
   "app.translation-settings.target-language": {
     "message": "Target language"
@@ -4405,6 +4408,336 @@
   },
   "app.warning.running-as-admin": {
     "message": "Axolotl is running as administrator. Drag-and-drop file import is disabled in this mode; please restart the launcher without administrator privileges."
+  },
+  "app.world-editor.allow-commands.label": {
+    "message": "Allow cheats"
+  },
+  "app.world-editor.badge.hardcore": {
+    "message": "Hardcore"
+  },
+  "app.world-editor.badge.modded": {
+    "message": "Modded"
+  },
+  "app.world-editor.difficulty.easy": {
+    "message": "Easy"
+  },
+  "app.world-editor.difficulty.hard": {
+    "message": "Hard"
+  },
+  "app.world-editor.difficulty.label": {
+    "message": "Difficulty"
+  },
+  "app.world-editor.difficulty.locked-hint": {
+    "message": "(locked in game)"
+  },
+  "app.world-editor.difficulty.normal": {
+    "message": "Normal"
+  },
+  "app.world-editor.difficulty.peaceful": {
+    "message": "Peaceful"
+  },
+  "app.world-editor.discard": {
+    "message": "Discard changes"
+  },
+  "app.world-editor.game-mode.label": {
+    "message": "Game mode"
+  },
+  "app.world-editor.game-rules.disabled": {
+    "message": "Disabled"
+  },
+  "app.world-editor.game-rules.enabled": {
+    "message": "Enabled"
+  },
+  "app.world-editor.game-rules.invalid-integer": {
+    "message": "This rule requires a whole number"
+  },
+  "app.world-editor.game-rules.modified": {
+    "message": "Differs from the vanilla default"
+  },
+  "app.world-editor.game-rules.no-results": {
+    "message": "No game rules match your search"
+  },
+  "app.world-editor.game-rules.reset-to-default": {
+    "message": "Reset to default"
+  },
+  "app.world-editor.game-rules.search-placeholder": {
+    "message": "Search {count} game rules..."
+  },
+  "app.world-editor.gamerule-category.chat": {
+    "message": "Chat"
+  },
+  "app.world-editor.gamerule-category.commands": {
+    "message": "Commands"
+  },
+  "app.world-editor.gamerule-category.drops": {
+    "message": "Drops"
+  },
+  "app.world-editor.gamerule-category.mobs": {
+    "message": "Mobs"
+  },
+  "app.world-editor.gamerule-category.other": {
+    "message": "Other"
+  },
+  "app.world-editor.gamerule-category.player": {
+    "message": "Player"
+  },
+  "app.world-editor.gamerule-category.world": {
+    "message": "World updates"
+  },
+  "app.world-editor.gamerule.allowFireTicksAwayFromPlayer": {
+    "message": "Update fire and lava away from players"
+  },
+  "app.world-editor.gamerule.allow_entering_nether_using_portals": {
+    "message": "Allow entering the Nether using portals"
+  },
+  "app.world-editor.gamerule.announceAdvancements": {
+    "message": "Announce advancements"
+  },
+  "app.world-editor.gamerule.blockExplosionDropDecay": {
+    "message": "Bed and respawn anchor explosions destroy some drops"
+  },
+  "app.world-editor.gamerule.commandBlockOutput": {
+    "message": "Broadcast command block output"
+  },
+  "app.world-editor.gamerule.commandModificationBlockLimit": {
+    "message": "Command modification block limit"
+  },
+  "app.world-editor.gamerule.command_blocks_work": {
+    "message": "Command blocks work"
+  },
+  "app.world-editor.gamerule.disableElytraMovementCheck": {
+    "message": "Disable elytra movement check"
+  },
+  "app.world-editor.gamerule.disablePlayerMovementCheck": {
+    "message": "Disable player movement check"
+  },
+  "app.world-editor.gamerule.disableRaids": {
+    "message": "Disable raids"
+  },
+  "app.world-editor.gamerule.doDaylightCycle": {
+    "message": "Advance time of day"
+  },
+  "app.world-editor.gamerule.doEntityDrops": {
+    "message": "Drops from non-mob entities"
+  },
+  "app.world-editor.gamerule.doFireTick": {
+    "message": "Update fire"
+  },
+  "app.world-editor.gamerule.doImmediateRespawn": {
+    "message": "Respawn immediately"
+  },
+  "app.world-editor.gamerule.doInsomnia": {
+    "message": "Spawn phantoms"
+  },
+  "app.world-editor.gamerule.doLimitedCrafting": {
+    "message": "Require recipe for crafting"
+  },
+  "app.world-editor.gamerule.doMobLoot": {
+    "message": "Drop mob loot"
+  },
+  "app.world-editor.gamerule.doMobSpawning": {
+    "message": "Spawn mobs"
+  },
+  "app.world-editor.gamerule.doPatrolSpawning": {
+    "message": "Spawn pillager patrols"
+  },
+  "app.world-editor.gamerule.doTileDrops": {
+    "message": "Drop blocks"
+  },
+  "app.world-editor.gamerule.doTraderSpawning": {
+    "message": "Spawn wandering traders"
+  },
+  "app.world-editor.gamerule.doVinesSpread": {
+    "message": "Vines spread"
+  },
+  "app.world-editor.gamerule.doWardenSpawning": {
+    "message": "Spawn wardens"
+  },
+  "app.world-editor.gamerule.doWeatherCycle": {
+    "message": "Update weather"
+  },
+  "app.world-editor.gamerule.drowningDamage": {
+    "message": "Deal drowning damage"
+  },
+  "app.world-editor.gamerule.elytra_movement_check": {
+    "message": "Elytra movement check"
+  },
+  "app.world-editor.gamerule.enderPearlsVanishOnDeath": {
+    "message": "Thrown ender pearls vanish on death"
+  },
+  "app.world-editor.gamerule.fallDamage": {
+    "message": "Deal fall damage"
+  },
+  "app.world-editor.gamerule.fireDamage": {
+    "message": "Deal fire damage"
+  },
+  "app.world-editor.gamerule.fire_spread_radius_around_player": {
+    "message": "Fire spread radius around players"
+  },
+  "app.world-editor.gamerule.forgiveDeadPlayers": {
+    "message": "Forgive dead players"
+  },
+  "app.world-editor.gamerule.freezeDamage": {
+    "message": "Deal freeze damage"
+  },
+  "app.world-editor.gamerule.globalSoundEvents": {
+    "message": "Global sound events"
+  },
+  "app.world-editor.gamerule.keepInventory": {
+    "message": "Keep inventory after death"
+  },
+  "app.world-editor.gamerule.lavaSourceConversion": {
+    "message": "Allow lava to form new sources"
+  },
+  "app.world-editor.gamerule.locatorBar": {
+    "message": "Show locator bar"
+  },
+  "app.world-editor.gamerule.logAdminCommands": {
+    "message": "Broadcast admin commands"
+  },
+  "app.world-editor.gamerule.maxCommandChainLength": {
+    "message": "Command chain size limit"
+  },
+  "app.world-editor.gamerule.maxCommandForkCount": {
+    "message": "Command context limit"
+  },
+  "app.world-editor.gamerule.maxEntityCramming": {
+    "message": "Entity cramming threshold"
+  },
+  "app.world-editor.gamerule.minecartMaxSpeed": {
+    "message": "Minecart max speed"
+  },
+  "app.world-editor.gamerule.mobExplosionDropDecay": {
+    "message": "Mob explosions destroy some drops"
+  },
+  "app.world-editor.gamerule.mobGriefing": {
+    "message": "Allow destructive mob actions"
+  },
+  "app.world-editor.gamerule.naturalRegeneration": {
+    "message": "Regenerate health naturally"
+  },
+  "app.world-editor.gamerule.player_movement_check": {
+    "message": "Player movement check"
+  },
+  "app.world-editor.gamerule.playersNetherPortalCreativeDelay": {
+    "message": "Nether portal delay in creative mode"
+  },
+  "app.world-editor.gamerule.playersNetherPortalDefaultDelay": {
+    "message": "Nether portal delay in non-creative mode"
+  },
+  "app.world-editor.gamerule.playersSleepingPercentage": {
+    "message": "Sleep percentage"
+  },
+  "app.world-editor.gamerule.projectilesCanBreakBlocks": {
+    "message": "Projectiles can break blocks"
+  },
+  "app.world-editor.gamerule.pvp": {
+    "message": "Player vs. player damage (PvP)"
+  },
+  "app.world-editor.gamerule.raids": {
+    "message": "Enable raids"
+  },
+  "app.world-editor.gamerule.randomTickSpeed": {
+    "message": "Random tick speed rate"
+  },
+  "app.world-editor.gamerule.reducedDebugInfo": {
+    "message": "Reduce debug info"
+  },
+  "app.world-editor.gamerule.sendCommandFeedback": {
+    "message": "Send command feedback"
+  },
+  "app.world-editor.gamerule.showDeathMessages": {
+    "message": "Show death messages"
+  },
+  "app.world-editor.gamerule.snowAccumulationHeight": {
+    "message": "Snow accumulation height"
+  },
+  "app.world-editor.gamerule.spawnChunkRadius": {
+    "message": "Spawn chunk radius"
+  },
+  "app.world-editor.gamerule.spawnRadius": {
+    "message": "Respawn location radius"
+  },
+  "app.world-editor.gamerule.spawn_monsters": {
+    "message": "Spawn monsters"
+  },
+  "app.world-editor.gamerule.spawner_blocks_work": {
+    "message": "Spawner blocks work"
+  },
+  "app.world-editor.gamerule.spectatorsGenerateChunks": {
+    "message": "Allow spectators to generate terrain"
+  },
+  "app.world-editor.gamerule.tntExplodes": {
+    "message": "Allow TNT to explode"
+  },
+  "app.world-editor.gamerule.tntExplosionDropDecay": {
+    "message": "TNT explosions destroy some drops"
+  },
+  "app.world-editor.gamerule.universalAnger": {
+    "message": "Universal anger"
+  },
+  "app.world-editor.gamerule.waterSourceConversion": {
+    "message": "Allow water to form new sources"
+  },
+  "app.world-editor.last-played": {
+    "message": "Last played {ago}"
+  },
+  "app.world-editor.load-error": {
+    "message": "Failed to load world"
+  },
+  "app.world-editor.locked.body": {
+    "message": "This world is currently open in Minecraft. Close the world before editing it — the editor is read-only until then."
+  },
+  "app.world-editor.locked.heading": {
+    "message": "World is in use"
+  },
+  "app.world-editor.name.label": {
+    "message": "Name"
+  },
+  "app.world-editor.name.placeholder": {
+    "message": "Minecraft World"
+  },
+  "app.world-editor.name.required": {
+    "message": "The world name cannot be empty"
+  },
+  "app.world-editor.reset-icon": {
+    "message": "Reset icon"
+  },
+  "app.world-editor.saved": {
+    "message": "World settings saved"
+  },
+  "app.world-editor.section.basic": {
+    "message": "Basic settings"
+  },
+  "app.world-editor.section.game-rules": {
+    "message": "Game rules"
+  },
+  "app.world-editor.section.seed": {
+    "message": "World seed"
+  },
+  "app.world-editor.seed.invalid": {
+    "message": "The seed must be a whole number in the 64-bit integer range"
+  },
+  "app.world-editor.seed.warning-body": {
+    "message": "Chunks that have already been generated will not be regenerated, which can create visible borders between old and new terrain."
+  },
+  "app.world-editor.seed.warning-heading": {
+    "message": "Changing the seed only affects new terrain"
+  },
+  "app.world-editor.unsaved-changes": {
+    "message": "You have unsaved changes"
+  },
+  "app.world-editor.unsaved-modal.body": {
+    "message": "Your changes to this world have not been saved and will be lost if you leave."
+  },
+  "app.world-editor.unsaved-modal.leave": {
+    "message": "Discard and leave"
+  },
+  "app.world-editor.unsaved-modal.stay": {
+    "message": "Keep editing"
+  },
+  "app.world-editor.unsaved-modal.title": {
+    "message": "Discard unsaved changes?"
   },
   "app.world.server-modal.placeholder-address": {
     "message": "example.modrinth.gg"
@@ -4618,18 +4951,6 @@
   },
   "instance.edit-server.title": {
     "message": "Edit server"
-  },
-  "instance.edit-world.name": {
-    "message": "Name"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft World"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Reset icon"
-  },
-  "instance.edit-world.title": {
-    "message": "Edit world"
   },
   "instance.files.adding-files": {
     "message": "Adding files ({completed}/{total})"

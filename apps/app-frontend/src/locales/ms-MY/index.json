@@ -530,18 +530,6 @@
   "instance.edit-server.title": {
     "message": "Sunting pelayan"
   },
-  "instance.edit-world.name": {
-    "message": "Nama"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Dunia Minecraft"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Tetap semula ikon"
-  },
-  "instance.edit-world.title": {
-    "message": "Sunting dunia"
-  },
   "instance.files.adding-files": {
     "message": "Sedang menambah fail ({completed}/{total})"
   },

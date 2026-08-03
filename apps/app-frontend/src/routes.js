@@ -266,6 +266,19 @@ export default new createRouter({
 					},
 				},
 				{
+					path: 'worlds/:world/edit',
+					name: 'InstanceWorldEditor',
+					component: () => import('@/pages/instance/WorldEditor.vue'),
+					meta: {
+						useRootContext: true,
+						breadcrumb: [
+							{ name: '?Instance', link: '/instance/{id}/' },
+							{ name: 'Worlds', link: '/instance/{id}/worlds' },
+							{ name: 'Edit world' },
+						],
+					},
+				},
+				{
 					path: 'screenshots',
 					name: 'InstanceScreenshots',
 					component: () => import('@/pages/instance/Screenshots.vue'),

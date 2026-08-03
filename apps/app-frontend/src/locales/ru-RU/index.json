@@ -689,18 +689,6 @@
   "instance.edit-server.title": {
     "message": "Настройка сервера"
   },
-  "instance.edit-world.name": {
-    "message": "Название"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Мир Minecraft"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Сбросить иконку"
-  },
-  "instance.edit-world.title": {
-    "message": "Настройка мира"
-  },
   "instance.files.save-as": {
     "message": "Сохранить как..."
   },

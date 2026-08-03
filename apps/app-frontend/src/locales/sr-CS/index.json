@@ -143,15 +143,6 @@
   "instance.edit-server.title": {
     "message": "Izmeni server"
   },
-  "instance.edit-world.name": {
-    "message": "Ime"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft svet"
-  },
-  "instance.edit-world.title": {
-    "message": "Promeni svet"
-  },
   "instance.server-modal.placeholder-name": {
     "message": "Minecraft Server"
   },

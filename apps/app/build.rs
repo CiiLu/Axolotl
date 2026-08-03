@@ -470,6 +470,8 @@ fn main() {
                         "get_instance_worlds",
                         "get_singleplayer_world",
                         "set_world_display_status",
+                        "get_world_level_data",
+                        "update_world_settings",
                         "rename_world",
                         "reset_world_icon",
                         "backup_world",

@@ -12,7 +12,6 @@
 		"
 	/>
 	<EditServerModal ref="editServerModal" :instance="instance" @submit="editServer" />
-	<EditWorldModal ref="editWorldModal" :instance="instance" @submit="editWorld" />
 	<ConfirmRemoveWorldModal
 		ref="removeWorldModal"
 		:world="worldToRemove"
@@ -107,7 +106,9 @@
 					@edit="
 						() =>
 							world.type === 'singleplayer'
-								? editWorldModal?.show(world)
+								? router.push(
+										`/instance/${encodeURIComponent(instance.id)}/worlds/${encodeURIComponent(world.path)}/edit`,
+									)
 								: isManagedServerWorld(world)
 									? undefined
 									: editServerModal?.show(world)
@@ -169,7 +170,6 @@ import type ContextMenu from '@/components/ui/ContextMenu.vue'
 import AddServerModal from '@/components/ui/world/modal/AddServerModal.vue'
 import ConfirmRemoveWorldModal from '@/components/ui/world/modal/ConfirmRemoveWorldModal.vue'
 import EditServerModal from '@/components/ui/world/modal/EditServerModal.vue'
-import EditWorldModal from '@/components/ui/world/modal/EditSingleplayerWorldModal.vue'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
@@ -255,7 +255,6 @@ const router = useRouter()
 
 const addServerModal = ref<InstanceType<typeof AddServerModal>>()
 const editServerModal = ref<InstanceType<typeof EditServerModal>>()
-const editWorldModal = ref<InstanceType<typeof EditWorldModal>>()
 const removeWorldModal = ref<InstanceType<typeof ConfirmRemoveWorldModal>>()
 
 const worldToRemove = ref<World | null>(null)
@@ -498,20 +497,6 @@ async function removeServer(server: ServerWorld) {
 		if (w.type === 'server') {
 			w.index = serverIdx++
 		}
-	}
-}
-
-async function editWorld(path: string, name: string, removeIcon: boolean) {
-	const world = worlds.value.find((world) => world.type === 'singleplayer' && world.path === path)
-	if (world) {
-		world.name = name
-		if (removeIcon) {
-			world.icon = undefined
-		}
-		sortWorlds(worlds.value)
-	} else {
-		handleError(new Error(`Error finding world in list, refreshing all worlds`))
-		await refreshAllWorlds()
 	}
 }
 

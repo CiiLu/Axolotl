@@ -584,18 +584,6 @@
   "instance.edit-server.title": {
     "message": "แก้ไขเซิร์ฟเวอร์"
   },
-  "instance.edit-world.name": {
-    "message": "ชื่อ"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "โลก Minecraft"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "รีเซ็ตรูปสัญลักษณ์"
-  },
-  "instance.edit-world.title": {
-    "message": "แก้ไขโลก"
-  },
   "instance.files.adding-files": {
     "message": "กำลังเพิ่มไฟล์ ({completed}/{total})"
   },
