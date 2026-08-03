@@ -13,7 +13,7 @@ import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import gradientTextToolCover from '@/assets/lab/gradient-text-tool-cover.png'
-import schematicPreviewToolCover from '@/assets/lab/minecraft-preview.png'
+import schematicPreviewToolCover from '@/assets/lab/schematic-preview-cover.png'
 import seedMapToolCover from '@/assets/lab/seed-map-tool-cover.png'
 import { type LabToolDefinition, labTools } from '@/lab/registry'
 

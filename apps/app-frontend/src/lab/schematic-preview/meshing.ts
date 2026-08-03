@@ -15,9 +15,19 @@ import { isSchematicAir } from './editing.ts'
 export const SCHEMATIC_DIRECTIONS = ['west', 'east', 'down', 'up', 'north', 'south'] as const
 export type SchematicDirection = (typeof SCHEMATIC_DIRECTIONS)[number]
 export type SchematicNeighborFaces = Partial<Record<SchematicDirection, Uint32Array>>
+export type SchematicOcclusionFaces = Partial<Record<SchematicDirection, true>>
 export type SchematicTexturedVertex = {
 	pos: { x: number; y: number; z: number }
 	texture?: [number, number]
+}
+
+export const SCHEMATIC_OPPOSITE_DIRECTIONS: Record<SchematicDirection, SchematicDirection> = {
+	west: 'east',
+	east: 'west',
+	down: 'up',
+	up: 'down',
+	north: 'south',
+	south: 'north',
 }
 
 export const SCHEMATIC_DIRECTION_OFFSETS: Record<
@@ -44,6 +54,7 @@ const TRANSLUCENT_BLOCK_PARTS = [
 ]
 
 const NON_OCCLUDING_BLOCK_PARTS = [
+	'observer',
 	'leaves',
 	'pane',
 	'fence',
@@ -93,6 +104,94 @@ const NON_OCCLUDING_BLOCK_PARTS = [
 	'grindstone',
 	'chest',
 ]
+
+const SCHEMATIC_OCCLUSION_PLANES: Record<
+	SchematicDirection,
+	{
+		axis: 'x' | 'y' | 'z'
+		boundary: number
+		projection: readonly ['x' | 'y' | 'z', 'x' | 'y' | 'z']
+	}
+> = {
+	west: { axis: 'x', boundary: 0, projection: ['y', 'z'] },
+	east: { axis: 'x', boundary: 1, projection: ['y', 'z'] },
+	down: { axis: 'y', boundary: 0, projection: ['x', 'z'] },
+	up: { axis: 'y', boundary: 1, projection: ['x', 'z'] },
+	north: { axis: 'z', boundary: 0, projection: ['x', 'y'] },
+	south: { axis: 'z', boundary: 1, projection: ['x', 'y'] },
+}
+
+const OCCLUSION_GRID_SIZE = 16
+const OCCLUSION_EPSILON = 1e-5
+
+type SchematicPoint2d = readonly [number, number]
+
+function pointInTriangle(
+	point: SchematicPoint2d,
+	first: SchematicPoint2d,
+	second: SchematicPoint2d,
+	third: SchematicPoint2d,
+) {
+	const area =
+		(second[0] - first[0]) * (third[1] - first[1]) - (second[1] - first[1]) * (third[0] - first[0])
+	if (Math.abs(area) <= OCCLUSION_EPSILON) return false
+	const edge = (start: SchematicPoint2d, end: SchematicPoint2d) =>
+		(point[0] - end[0]) * (start[1] - end[1]) - (start[0] - end[0]) * (point[1] - end[1])
+	const firstEdge = edge(first, second)
+	const secondEdge = edge(second, third)
+	const thirdEdge = edge(third, first)
+	const hasNegative =
+		firstEdge < -OCCLUSION_EPSILON ||
+		secondEdge < -OCCLUSION_EPSILON ||
+		thirdEdge < -OCCLUSION_EPSILON
+	const hasPositive =
+		firstEdge > OCCLUSION_EPSILON || secondEdge > OCCLUSION_EPSILON || thirdEdge > OCCLUSION_EPSILON
+	return !(hasNegative && hasPositive)
+}
+
+export function getSchematicMeshOcclusionFaces(mesh: Mesh): SchematicOcclusionFaces {
+	const coverage = Object.fromEntries(
+		SCHEMATIC_DIRECTIONS.map((direction) => [direction, new Uint8Array(256)]),
+	) as Record<SchematicDirection, Uint8Array>
+
+	for (const quad of mesh.quads) {
+		const vertices = quad.vertices()
+		for (const direction of SCHEMATIC_DIRECTIONS) {
+			const plane = SCHEMATIC_OCCLUSION_PLANES[direction]
+			if (
+				!vertices.every(
+					(vertex) => Math.abs(vertex.pos[plane.axis] - plane.boundary) <= OCCLUSION_EPSILON,
+				)
+			) {
+				continue
+			}
+			const points = vertices.map(
+				(vertex) =>
+					[vertex.pos[plane.projection[0]], vertex.pos[plane.projection[1]]] as SchematicPoint2d,
+			)
+			for (let row = 0; row < OCCLUSION_GRID_SIZE; row += 1) {
+				for (let column = 0; column < OCCLUSION_GRID_SIZE; column += 1) {
+					const point: SchematicPoint2d = [
+						(column + 0.5) / OCCLUSION_GRID_SIZE,
+						(row + 0.5) / OCCLUSION_GRID_SIZE,
+					]
+					if (
+						pointInTriangle(point, points[0], points[1], points[2]) ||
+						pointInTriangle(point, points[0], points[2], points[3])
+					) {
+						coverage[direction][row * OCCLUSION_GRID_SIZE + column] = 1
+					}
+				}
+			}
+		}
+	}
+
+	return Object.fromEntries(
+		SCHEMATIC_DIRECTIONS.filter((direction) => coverage[direction].every(Boolean)).map(
+			(direction) => [direction, true],
+		),
+	) as SchematicOcclusionFaces
+}
 
 const CHEST_TEXTURES: Record<string, string> = {
 	'minecraft:chest': 'normal',
@@ -295,8 +394,9 @@ export function shouldCullSchematicFace(
 	neighborPaletteIndex: number,
 	palette: readonly SchematicBlockState[],
 	seamlessGlass = true,
+	neighborOccludes = isSchematicOccluding(neighborPaletteIndex, palette),
 ) {
-	if (isSchematicOccluding(neighborPaletteIndex, palette)) return true
+	if (neighborOccludes) return true
 	if (!seamlessGlass) return false
 	const current = palette[currentPaletteIndex]
 	const neighbor = palette[neighborPaletteIndex]

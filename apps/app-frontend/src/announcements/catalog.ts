@@ -58,6 +58,22 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed an oversized border around the expanded account selector.',
 					'zh-CN': '修复账号选择框展开时出现粗重边框的问题。',
 				},
+				{
+					'en-US':
+						'Fixed incomplete faces on blocks next to observers, redstone dust, lanterns, hoppers, repeaters, extended pistons, and other non-full blocks in Schematic workshop.',
+					'zh-CN':
+						'修复了投影工坊中侦测器、红石粉、灯笼、漏斗、中继器、伸出的活塞及其他非完整方块导致相邻方块渲染不全的问题。',
+				},
+				{
+					'en-US':
+						'Fixed the camera occasionally changing direction abruptly during smooth mouse movement in read-only walk preview.',
+					'zh-CN': '修复了只读漫游预览中平滑移动鼠标时视角方向偶尔突变的问题。',
+				},
+				{
+					'en-US':
+						'Fixed walk speed adjustment by scroll wheel conflicting with scrolling the materials list.',
+					'zh-CN': '修复了只读漫游预览中滚轮调速与材料列表滚动冲突的问题。',
+				},
 			],
 		},
 	},
@@ -97,8 +113,6 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed inaccurate speed and ETA reporting and downloads appearing stuck at 99% or 100%.',
 					'zh-CN': '修复下载速度与剩余时间显示不准，以及进度卡在 99% 或 100% 的问题。',
 				},
-			],
-			fixed: [
 				{
 					'en-US':
 						'Fixed the issue of administrator judgment on Windows not matching actual needs.',

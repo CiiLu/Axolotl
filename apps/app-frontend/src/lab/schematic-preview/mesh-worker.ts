@@ -4,12 +4,16 @@ import type { SchematicBlockState } from './backend'
 import { isSchematicAir } from './editing'
 import {
 	applySeamlessSchematicGlassUvs,
+	getSchematicMeshOcclusionFaces,
 	getSchematicSpecialBlockMesh,
+	isSchematicOccluding,
 	isSchematicTranslucent,
 	SCHEMATIC_DIRECTIONS,
+	SCHEMATIC_OPPOSITE_DIRECTIONS,
 	schematicBlockAt,
 	type SchematicDirection,
 	type SchematicNeighborFaces,
+	type SchematicOcclusionFaces,
 	shouldCullSchematicFace,
 } from './meshing'
 import type { SchematicWorkerResources } from './resources'
@@ -72,8 +76,45 @@ let defaultBlockProperties: Record<string, Record<string, string>> = {}
 let textureUvs: Record<string, [number, number, number, number]> = {}
 let missingTextureUv: [number, number, number, number] = [0, 0, 1, 1]
 let seamlessGlass = true
+let paletteOcclusionFaces: SchematicOcclusionFaces[] = []
 
 const workerScope = self as DedicatedWorkerGlobalScope
+
+const atlasProvider: deepslate.TextureAtlasProvider = {
+	getTextureAtlas: () => ({}) as ImageData,
+	getTextureUV: (id) => textureUvs[id.toString()] ?? missingTextureUv,
+}
+
+const modelProvider = {
+	getBlockModel(id: deepslate.Identifier) {
+		return blockModels[id.toString()] ?? null
+	},
+}
+
+function resolvedBlockProperties(state: SchematicBlockState) {
+	return {
+		...(defaultBlockProperties[state.name] ?? {}),
+		...state.properties,
+	}
+}
+
+function createSchematicBlockMesh(state: SchematicBlockState, cull: deepslate.Cull) {
+	const properties = resolvedBlockProperties(state)
+	const mesh = getSchematicSpecialBlockMesh({ ...state, properties }, atlasProvider, cull)
+	const definition = blockDefinitions[state.name]
+	if (definition) {
+		mesh.merge(
+			definition.getMesh(
+				deepslate.Identifier.parse(state.name),
+				properties,
+				atlasProvider,
+				modelProvider,
+				cull,
+			),
+		)
+	}
+	return mesh
+}
 
 function emptyBuffers(): MeshBuffers {
 	return { positions: [], normals: [], uvs: [], colors: [], blockPositions: [] }
@@ -240,19 +281,22 @@ function initialize(message: WorkerInitMessage) {
 			warnings.push(`Skipped invalid block model ${id}`)
 		}
 	}
-	const provider = {
-		getBlockModel(id: deepslate.Identifier) {
-			return blockModels[id.toString()] ?? null
-		},
-	}
 	for (const [id, model] of Object.entries(blockModels)) {
 		try {
-			model.flatten(provider)
+			model.flatten(modelProvider)
 		} catch {
 			Reflect.deleteProperty(blockModels, id)
 			warnings.push(`Skipped unresolved block model ${id}`)
 		}
 	}
+	paletteOcclusionFaces = palette.map((state, paletteIndex) => {
+		if (!isSchematicOccluding(paletteIndex, palette)) return {}
+		try {
+			return getSchematicMeshOcclusionFaces(createSchematicBlockMesh(state, deepslate.Cull.none()))
+		} catch {
+			return {}
+		}
+	})
 	workerScope.postMessage({
 		type: 'ready',
 		epoch: activeEpoch,
@@ -271,16 +315,20 @@ function buildChunk(message: WorkerMeshMessage) {
 	const opaque = emptyBuffers()
 	const translucent = emptyBuffers()
 	const missing = new Set<string>()
-	const atlas: deepslate.TextureAtlasProvider = {
-		getTextureAtlas: () => ({}) as ImageData,
-		getTextureUV: (id) => textureUvs[id.toString()] ?? missingTextureUv,
-	}
-	const modelProvider = {
-		getBlockModel(id: deepslate.Identifier) {
-			return blockModels[id.toString()] ?? null
-		},
-	}
 	const chunkOrigin = message.chunkPosition.map((value) => value * 16) as [number, number, number]
+	const shouldCull = (
+		currentPaletteIndex: number,
+		neighborPaletteIndex: number,
+		direction: SchematicDirection,
+	) =>
+		shouldCullSchematicFace(
+			currentPaletteIndex,
+			neighborPaletteIndex,
+			palette,
+			seamlessGlass,
+			paletteOcclusionFaces[neighborPaletteIndex]?.[SCHEMATIC_OPPOSITE_DIRECTIONS[direction]] ??
+				false,
+		)
 
 	for (let y = 0; y < 16; y += 1) {
 		for (let z = 0; z < 16; z += 1) {
@@ -294,63 +342,36 @@ function buildChunk(message: WorkerMeshMessage) {
 					chunkOrigin[2] + z,
 				]
 				const cull = {
-					west: shouldCullSchematicFace(
+					west: shouldCull(
 						paletteIndex,
 						schematicBlockAt(blocks, neighborFaces, x - 1, y, z),
-						palette,
-						seamlessGlass,
+						'west',
 					),
-					east: shouldCullSchematicFace(
+					east: shouldCull(
 						paletteIndex,
 						schematicBlockAt(blocks, neighborFaces, x + 1, y, z),
-						palette,
-						seamlessGlass,
+						'east',
 					),
-					down: shouldCullSchematicFace(
+					down: shouldCull(
 						paletteIndex,
 						schematicBlockAt(blocks, neighborFaces, x, y - 1, z),
-						palette,
-						seamlessGlass,
+						'down',
 					),
-					up: shouldCullSchematicFace(
-						paletteIndex,
-						schematicBlockAt(blocks, neighborFaces, x, y + 1, z),
-						palette,
-						seamlessGlass,
-					),
-					north: shouldCullSchematicFace(
+					up: shouldCull(paletteIndex, schematicBlockAt(blocks, neighborFaces, x, y + 1, z), 'up'),
+					north: shouldCull(
 						paletteIndex,
 						schematicBlockAt(blocks, neighborFaces, x, y, z - 1),
-						palette,
-						seamlessGlass,
+						'north',
 					),
-					south: shouldCullSchematicFace(
+					south: shouldCull(
 						paletteIndex,
 						schematicBlockAt(blocks, neighborFaces, x, y, z + 1),
-						palette,
-						seamlessGlass,
+						'south',
 					),
 				}
 				const target = isSchematicTranslucent(state.name) ? translucent : opaque
 				try {
-					const properties = {
-						...(defaultBlockProperties[state.name] ?? {}),
-						...state.properties,
-					}
-					const resolvedState = { ...state, properties }
-					const mesh = getSchematicSpecialBlockMesh(resolvedState, atlas, cull)
-					const definition = blockDefinitions[state.name]
-					if (definition) {
-						mesh.merge(
-							definition.getMesh(
-								deepslate.Identifier.parse(state.name),
-								properties,
-								atlas,
-								modelProvider,
-								cull,
-							),
-						)
-					}
+					const mesh = createSchematicBlockMesh(state, cull)
 					if (mesh.quads.length === 0) {
 						missing.add(state.name)
 						appendFallbackCube(target, position, cull, state.name)

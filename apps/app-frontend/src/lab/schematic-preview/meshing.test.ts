@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { Cull, type Identifier } from 'deepslate'
+import { Cull, type Identifier, Mesh, Quad, Vector } from 'deepslate'
 
 import {
 	applySeamlessSchematicGlassUvs,
 	extractSchematicNeighborFace,
+	getSchematicMeshOcclusionFaces,
 	getSchematicSpecialBlockMesh,
 	isSchematicOccluding,
 	isSeamlessSchematicGlassPair,
@@ -20,6 +21,7 @@ const palette = [
 	{ name: 'minecraft:stone', properties: {} },
 	{ name: 'minecraft:sugar_cane', properties: {} },
 	{ name: 'minecraft:chest', properties: { facing: 'north', type: 'single' } },
+	{ name: 'minecraft:observer', properties: { facing: 'north', powered: 'false' } },
 ]
 
 test('seamless glass only removes faces shared by the same full glass block', () => {
@@ -33,6 +35,29 @@ test('seamless glass only removes faces shared by the same full glass block', ()
 	assert.equal(shouldCullSchematicFace(1, 3, palette, false), true)
 	assert.equal(isSchematicOccluding(4, palette), false)
 	assert.equal(isSchematicOccluding(5, palette), false)
+	assert.equal(isSchematicOccluding(6, palette), false)
+})
+
+function addNorthFace(mesh: Mesh, x0: number, y0: number, x1: number, y1: number) {
+	mesh.quads.push(
+		Quad.fromPoints(
+			new Vector(x1, y0, 0),
+			new Vector(x0, y0, 0),
+			new Vector(x0, y1, 0),
+			new Vector(x1, y1, 0),
+		),
+	)
+}
+
+test('mesh occlusion requires complete coverage of each individual boundary face', () => {
+	const partial = new Mesh()
+	addNorthFace(partial, 0, 0, 1, 0.5)
+	assert.deepEqual(getSchematicMeshOcclusionFaces(partial), {})
+
+	const tiled = new Mesh()
+	addNorthFace(tiled, 0, 0, 1, 0.5)
+	addNorthFace(tiled, 0, 0.5, 1, 1)
+	assert.deepEqual(getSchematicMeshOcclusionFaces(tiled), { north: true })
 })
 
 test('neighbor faces preserve seamless glass culling across chunk boundaries', () => {

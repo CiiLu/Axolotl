@@ -6,6 +6,7 @@ import { BlockDefinition, BlockModel, Cull, Identifier } from 'deepslate'
 import { createServer, type ViteDevServer } from 'vite'
 
 import type { SchematicBlockState } from './backend.ts'
+import { getSchematicMeshOcclusionFaces, isSchematicOccluding } from './meshing.ts'
 
 type BuiltinResourcesModule = typeof import('./builtin-resources.ts')
 
@@ -114,6 +115,70 @@ test('all built-in block resources remain compatible with Deepslate', () => {
 		} catch (error) {
 			throw new Error(`Unable to render built-in block ${state.name}`, { cause: error })
 		}
+	}
+})
+
+test('partial redstone models do not hide every face of adjacent blocks', () => {
+	const reportedNames = [
+		'minecraft:observer',
+		'minecraft:redstone_wire',
+		'minecraft:lantern',
+		'minecraft:hopper',
+		'minecraft:repeater',
+		'minecraft:piston',
+	]
+	const availableStates = builtin.listBuiltinBlockStates()
+	const palette = [
+		{ name: 'minecraft:air', properties: {} },
+		...['minecraft:stone', ...reportedNames].map((name) => {
+			const state = availableStates.find((entry) => entry.name === name)
+			assert.ok(state)
+			return name === 'minecraft:piston'
+				? { ...state, properties: { ...state.properties, extended: 'true' } }
+				: state
+		}),
+	]
+	const resources = builtin.loadBuiltinBlockResources('26.3-snapshot-6', palette)
+	const definitions = Object.fromEntries(
+		Object.entries(resources.blockDefinitions).map(([id, definition]) => [
+			id,
+			BlockDefinition.fromJson(definition),
+		]),
+	)
+	const models = Object.fromEntries(
+		Object.entries(resources.blockModels).map(([id, model]) => [id, BlockModel.fromJson(model)]),
+	)
+	const modelProvider = {
+		getBlockModel: (id: Identifier) => models[id.toString()] ?? null,
+	}
+	for (const model of Object.values(models)) model.flatten(modelProvider)
+	const atlasProvider = {
+		getTextureAtlas: () => ({}) as ImageData,
+		getTextureUV: () => [0, 0, 1, 1] as [number, number, number, number],
+	}
+	const occlusionFaces = (state: SchematicBlockState) => {
+		const paletteIndex = palette.indexOf(state)
+		if (!isSchematicOccluding(paletteIndex, palette)) return {}
+		const properties = {
+			...(resources.defaultBlockProperties[state.name] ?? {}),
+			...state.properties,
+		}
+		const mesh = definitions[state.name].getMesh(
+			Identifier.parse(state.name),
+			properties,
+			atlasProvider,
+			modelProvider,
+			Cull.none(),
+		)
+		return getSchematicMeshOcclusionFaces(mesh)
+	}
+
+	assert.equal(Object.keys(occlusionFaces(palette[1])).length, 6)
+	for (const state of palette.slice(2)) {
+		assert.ok(
+			Object.keys(occlusionFaces(state)).length < 6,
+			`${state.name} was treated as a full occluding cube`,
+		)
 	}
 })
 

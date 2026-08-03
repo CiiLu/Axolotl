@@ -40,6 +40,11 @@ const WALK_FOV = 90
 const WALK_SPEED_MINIMUM = 4
 const WALK_SPEED_MAXIMUM = 60
 const WALK_SPEED_MULTIPLIER = 0.85
+const NATIVE_WALK_MOUSE_DELTA_MAXIMUM = 128
+
+export function filterNativeWalkMouseDelta(delta: number) {
+	return Number.isFinite(delta) && Math.abs(delta) <= NATIVE_WALK_MOUSE_DELTA_MAXIMUM ? delta : 0
+}
 
 export class SchematicPreviewScene {
 	private readonly canvas: HTMLCanvasElement
@@ -152,8 +157,11 @@ export class SchematicPreviewScene {
 		this.resizeObserver.observe(this.canvas.parentElement ?? this.canvas)
 		this.canvas.addEventListener('pointerdown', this.handlePointerDown)
 		this.canvas.addEventListener('pointerup', this.handlePointerUp)
-		this.canvas.addEventListener('wheel', this.handleWalkWheel, { passive: false })
 		this.canvas.ownerDocument.addEventListener('mousemove', this.handleWalkMouseMove)
+		this.canvas.ownerDocument.addEventListener('wheel', this.handleWalkWheel, {
+			passive: false,
+			capture: true,
+		})
 		this.canvas.ownerDocument.addEventListener('pointerlockerror', this.handleWalkPointerLockError)
 		window.addEventListener('keydown', this.handleWalkKeyDown)
 		window.addEventListener('keyup', this.handleWalkKeyUp)
@@ -603,7 +611,7 @@ export class SchematicPreviewScene {
 			'pointerlockerror',
 			this.handleWalkPointerLockError,
 		)
-		this.canvas.removeEventListener('wheel', this.handleWalkWheel)
+		this.canvas.ownerDocument.removeEventListener('wheel', this.handleWalkWheel, true)
 		window.removeEventListener('keydown', this.handleWalkKeyDown)
 		window.removeEventListener('keyup', this.handleWalkKeyUp)
 		window.removeEventListener('blur', this.handleWalkBlur)
@@ -865,9 +873,12 @@ export class SchematicPreviewScene {
 
 	private readonly handleWalkMouseMove = (event: MouseEvent) => {
 		if (this.viewMode !== 'walk' || !this.nativeWalkLocked) return
+		const movementX = filterNativeWalkMouseDelta(event.movementX)
+		const movementY = filterNativeWalkMouseDelta(event.movementY)
+		if (movementX === 0 && movementY === 0) return
 		this.walkEuler.setFromQuaternion(this.perspectiveCamera.quaternion)
-		this.walkEuler.y -= event.movementX * 0.002
-		this.walkEuler.x -= event.movementY * 0.002
+		this.walkEuler.y -= movementX * 0.002
+		this.walkEuler.x -= movementY * 0.002
 		this.walkEuler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.walkEuler.x))
 		this.perspectiveCamera.quaternion.setFromEuler(this.walkEuler)
 		this.requestRender()
@@ -883,6 +894,8 @@ export class SchematicPreviewScene {
 			return
 		}
 		event.preventDefault()
+		event.stopPropagation()
+		if (event.deltaY === 0) return
 		const multiplier = event.deltaY > 0 ? WALK_SPEED_MULTIPLIER : 1 / WALK_SPEED_MULTIPLIER
 		this.walkSpeed = Math.round(
 			Math.max(WALK_SPEED_MINIMUM, Math.min(WALK_SPEED_MAXIMUM, this.walkSpeed * multiplier)),
