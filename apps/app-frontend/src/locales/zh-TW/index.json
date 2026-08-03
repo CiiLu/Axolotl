@@ -3153,7 +3153,7 @@
     "message": "自动为 Java 使用高性能显卡"
   },
   "app.settings.java.auto-high-performance-mode-description": {
-    "message": "启动 Minecraft 时，自动在 Windows 图形设置中将启动器和 Java 设为使用高性能显卡。仅支持 Windows。"
+    "message": "啟動 Minecraft 時自動使用高效能顯示卡。支援 Windows 和 Linux。"
   },
   "app.settings.resources.source.automatic": {
     "message": "自动（推荐）"

@@ -3747,7 +3747,7 @@
     "message": "Automatically use high-performance GPU for Java"
   },
   "app.settings.java.auto-high-performance-mode-description": {
-    "message": "Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only."
+    "message": "Uses the high-performance GPU for Minecraft when it launches. Supported on Windows and Linux."
   },
   "app.settings.java.cancel": {
     "message": "Cancel"
