@@ -33,6 +33,24 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.11',
+		version: '1.6.11',
+		publishedAt: '2026-08-04',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.11',
+			'zh-CN': 'Axolotl Launcher 1.6.11',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Added automatic high-performance GPU selection for Minecraft on Linux, supporting AMD and NVIDIA systems.',
+					'zh-CN': '新增 Linux 高性能显卡自动选择，支持 AMD 和 NVIDIA 显卡运行 Minecraft。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.10',
 		version: '1.6.10',
 		publishedAt: '2026-08-03',
