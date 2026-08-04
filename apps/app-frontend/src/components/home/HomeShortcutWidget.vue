@@ -141,7 +141,7 @@ watch(
 <template>
 	<div class="home-shortcut-widget" :data-size="dashboardSize" :data-kind="placement.kind">
 		<div v-if="missing" class="home-shortcut-missing">
-			<span class="home-shortcut-missing-icon"><IssuesIcon aria-hidden="true" /></span>
+			<IssuesIcon class="size-6 text-secondary" aria-hidden="true" />
 			<strong class="max-w-full truncate text-contrast">{{
 				placement.target?.fallbackLabel
 			}}</strong>
@@ -214,21 +214,5 @@ watch(
 	justify-content: center;
 	gap: 0.5rem;
 	text-align: center;
-}
-
-.home-shortcut-missing-icon {
-	display: inline-flex;
-	width: 2.5rem;
-	height: 2.5rem;
-	align-items: center;
-	justify-content: center;
-	border-radius: 6px;
-	background: color-mix(in srgb, var(--color-orange) 14%, transparent);
-	color: var(--color-orange);
-}
-
-.home-shortcut-missing-icon svg {
-	width: 1.25rem;
-	height: 1.25rem;
 }
 </style>

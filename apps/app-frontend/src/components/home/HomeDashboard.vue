@@ -255,13 +255,18 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 				:style="{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }"
 				handle=".home-widget-drag-handle"
 				:disabled="!editing"
-				:animation="220"
-				:swap-threshold="0.65"
-				:invert-swap="false"
-				:empty-insert-threshold="24"
+				:animation="80"
+				:swap-threshold="0.2"
+				:invert-swap="true"
+				:inverted-swap-threshold="0.65"
+				:empty-insert-threshold="12"
 				:force-fallback="true"
-				:fallback-on-body="true"
-				:fallback-tolerance="3"
+				:fallback-on-body="false"
+				:fallback-tolerance="0"
+				:scroll="true"
+				:scroll-sensitivity="96"
+				:scroll-speed="24"
+				:bubble-scroll="true"
 				ghost-class="home-widget-ghost"
 				chosen-class="home-widget-chosen"
 				drag-class="home-widget-drag"
@@ -381,10 +386,10 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	margin-bottom: 1rem;
 	gap: 0.25rem;
 	padding: 0.25rem;
-	border: 1px solid var(--surface-5);
-	border-radius: 8px;
-	background: var(--surface-2);
-	box-shadow: var(--shadow-card);
+	border: 1px solid var(--color-divider);
+	border-radius: var(--radius-lg);
+	background: var(--color-raised-bg);
+	box-shadow: var(--shadow-button);
 }
 
 .home-dashboard-grid {
@@ -394,13 +399,7 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	gap: 1rem;
 }
 
-.home-dashboard-grid.is-editing {
-	grid-auto-flow: dense;
-}
-
 .home-widget {
-	--widget-accent: var(--color-brand);
-
 	position: relative;
 	display: flex;
 	min-width: 0;
@@ -408,71 +407,34 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	flex-direction: column;
 	overflow: hidden;
 	box-sizing: border-box;
-	border: 1px solid var(--surface-5);
-	border-radius: 8px;
-	background: var(--surface-3);
+	border: 1px solid transparent;
+	border-radius: var(--radius-lg);
+	background: var(--color-raised-bg);
 	box-shadow: var(--shadow-card);
 	transition:
-		border-color 140ms ease,
-		box-shadow 140ms ease,
-		transform 140ms ease;
-}
-
-.home-widget::before {
-	position: absolute;
-	top: 0;
-	left: 0;
-	z-index: 2;
-	width: 100%;
-	height: 3px;
-	background: var(--widget-accent);
-	content: '';
-	pointer-events: none;
-}
-
-.home-widget[data-widget-kind='recent'],
-.home-widget[data-widget-kind='server'],
-.home-widget[data-widget-kind='pinned-servers'] {
-	--widget-accent: var(--color-blue);
-}
-
-.home-widget[data-widget-kind='calendar'] {
-	--widget-accent: var(--color-orange);
-}
-
-.home-widget[data-widget-kind='instance'],
-.home-widget[data-widget-kind='pinned-instances'] {
-	--widget-accent: var(--color-green);
-}
-
-.home-widget[data-widget-kind='world'],
-.home-widget[data-widget-kind='pinned-worlds'] {
-	--widget-accent: var(--color-brand);
+		border-color 120ms ease,
+		box-shadow 120ms ease,
+		filter 120ms ease;
 }
 
 .home-dashboard-grid:not(.is-editing) .home-widget:hover {
-	border-color: color-mix(in srgb, var(--widget-accent) 38%, var(--surface-5));
-	box-shadow:
-		var(--shadow-card),
-		0 6px 18px color-mix(in srgb, var(--surface-5) 28%, transparent);
-	transform: translateY(-1px);
+	filter: brightness(var(--hover-brightness));
 }
 
 .home-widget-edit-bar {
 	position: absolute;
 	top: 0.5rem;
-	left: 0.5rem;
+	right: 0.5rem;
 	z-index: 12;
 	display: flex;
 	height: 2.5rem;
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0 0.375rem;
-	border: 1px solid var(--surface-5);
-	border-radius: 7px;
-	background: color-mix(in srgb, var(--surface-2) 94%, transparent);
+	border: 1px solid var(--color-divider);
+	border-radius: var(--radius-lg);
+	background: var(--color-raised-bg);
 	box-shadow: var(--shadow-button);
-	backdrop-filter: blur(8px);
 }
 
 .home-widget-drag-handle {
@@ -518,10 +480,10 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 }
 
 .home-widget-ghost {
-	border: 2px dashed var(--widget-accent);
-	background: color-mix(in srgb, var(--widget-accent) 8%, var(--surface-3));
+	border: 2px dashed var(--color-brand);
+	background: var(--color-brand-highlight);
 	box-shadow: none;
-	opacity: 0.55;
+	opacity: 0.45;
 }
 
 .home-widget-ghost > * {
@@ -529,24 +491,23 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 }
 
 .home-widget-chosen {
-	border-color: var(--widget-accent);
-	box-shadow: 0 0 0 3px color-mix(in srgb, var(--widget-accent) 22%, transparent);
+	border-color: var(--color-brand);
+	box-shadow: 0 0 0 4px var(--color-brand-shadow);
 }
 
 .home-widget-drag,
 .home-widget-fallback {
 	z-index: 1000 !important;
-	border-color: var(--widget-accent);
-	box-shadow:
-		var(--shadow-card),
-		0 16px 36px color-mix(in srgb, var(--surface-5) 48%, transparent);
+	border-color: var(--color-brand);
+	box-shadow: var(--shadow-card);
 	cursor: grabbing;
-	opacity: 0.96;
-	transform: rotate(0.5deg);
+	opacity: 0.98;
+	will-change: transform;
 }
 
 .home-dashboard-grid.is-editing .home-widget {
-	border-style: dashed;
+	border-color: var(--color-divider);
+	border-style: solid;
 	box-shadow: none;
 }
 

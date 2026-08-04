@@ -230,7 +230,7 @@ watch(instanceRevision, async () => {
 	<section class="home-calendar-dashboard">
 		<header class="home-calendar-header">
 			<div class="home-calendar-title">
-				<span class="home-calendar-title-icon"><CalendarIcon aria-hidden="true" /></span>
+				<CalendarIcon class="size-5 shrink-0 text-brand" aria-hidden="true" />
 				<h2>{{ formatMessage(messages.calendar) }}</h2>
 			</div>
 			<div class="home-calendar-navigation">
@@ -393,29 +393,12 @@ watch(instanceRevision, async () => {
 	gap: 0.5rem;
 }
 
-.home-calendar-title-icon {
-	display: inline-flex;
-	width: 1.75rem;
-	height: 1.75rem;
-	flex: 0 0 auto;
-	align-items: center;
-	justify-content: center;
-	border-radius: 6px;
-	background: color-mix(in srgb, var(--color-orange) 14%, transparent);
-	color: var(--color-orange);
-}
-
-.home-calendar-title-icon svg {
-	width: 1rem;
-	height: 1rem;
-}
-
 .home-calendar-title h2 {
 	overflow: hidden;
 	margin: 0;
 	color: var(--color-contrast);
 	font-size: 1rem;
-	font-weight: 750;
+	font-weight: 700;
 	letter-spacing: 0;
 	text-overflow: ellipsis;
 	white-space: nowrap;
