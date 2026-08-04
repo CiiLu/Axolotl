@@ -122,8 +122,8 @@ export function createDefaultHomeDashboard(includeRecent = true): HomeDashboardC
 			createPlacement('calendar'),
 			...(includeRecent ? [createPlacement('recent')] : []),
 			createPlacement('pinned-worlds'),
-			createPlacement('pinned-servers', '2x1'),
-			createPlacement('pinned-instances'),
+			createPlacement('pinned-servers', '2x2'),
+			createPlacement('pinned-instances', '2x1'),
 		],
 	}
 }

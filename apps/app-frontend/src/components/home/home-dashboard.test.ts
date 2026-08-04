@@ -65,8 +65,8 @@ test('accepts draggable order and restores the complete default layout', () => {
 			{ kind: 'calendar', size: '1x2' },
 			{ kind: 'recent', size: '2x2' },
 			{ kind: 'pinned-worlds', size: '1x2' },
-			{ kind: 'pinned-servers', size: '2x1' },
-			{ kind: 'pinned-instances', size: '2x2' },
+			{ kind: 'pinned-servers', size: '2x2' },
+			{ kind: 'pinned-instances', size: '2x1' },
 		],
 	)
 })
@@ -113,8 +113,8 @@ test('packs widgets into the earliest available cells', () => {
 			{ column: 3, row: 1, effectiveColumns: 1, effectiveRows: 2 },
 			{ column: 1, row: 2, effectiveColumns: 2, effectiveRows: 2 },
 			{ column: 4, row: 1, effectiveColumns: 1, effectiveRows: 2 },
-			{ column: 3, row: 3, effectiveColumns: 2, effectiveRows: 1 },
-			{ column: 1, row: 4, effectiveColumns: 2, effectiveRows: 2 },
+			{ column: 3, row: 3, effectiveColumns: 2, effectiveRows: 2 },
+			{ column: 1, row: 4, effectiveColumns: 2, effectiveRows: 1 },
 		],
 	)
 })
