@@ -1,28 +1,20 @@
 <script setup lang="ts">
-import type { GameVersion } from '@modrinth/ui'
 import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
+import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import InstanceItem from '@/components/ui/world/InstanceItem.vue'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
-import { instance_listener, process_listener } from '@/helpers/events'
 import { kill, run } from '@/helpers/instance'
-import { get_all } from '@/helpers/process'
-import { get_game_versions } from '@/helpers/tags'
 import type { GameInstance } from '@/helpers/types'
 import {
-	get_instance_protocol_version,
-	get_recent_worlds,
 	getWorldIdentifier,
 	hasServerQuickPlaySupport,
 	hasWorldQuickPlaySupport,
-	type ProtocolVersion,
-	refreshServerData,
-	type ServerData,
 	type ServerWorld,
 	start_join_server,
 	start_join_singleplayer_world,
@@ -32,16 +24,23 @@ import { handleSevereError } from '@/store/error'
 
 const props = defineProps<{
 	instances: GameInstance[]
+	dashboard?: boolean
 }>()
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 const handleMinecraftLaunchError = useMinecraftLaunchError()
+const runtime = useHomeDashboardRuntime()
+const { gameVersions, recentWorlds, runningInstanceIds } = runtime
 
 const messages = defineMessages({
 	recentTitle: {
 		id: 'app.home.recent.title',
 		defaultMessage: 'Start from your recent projects',
+	},
+	emptyRecent: {
+		id: 'app.home.recent.empty',
+		defaultMessage: 'No recent activity yet.',
 	},
 })
 
@@ -51,85 +50,48 @@ type RecentItem =
 	| { type: 'world'; last_played: Dayjs; instance: GameInstance; world: WorldWithInstance }
 	| { type: 'instance'; last_played: Dayjs; instance: GameInstance }
 
-const recentItems = ref<RecentItem[]>([])
-const serverData = ref<Record<string, ServerData>>({})
-const protocolVersions = ref<Record<string, ProtocolVersion | null>>({})
-const runningInstanceIds = ref<string[]>([])
 const startingWorldKey = ref<string | null>(null)
 const playingWorldKey = ref<string | null>(null)
-const gameVersions = ref<GameVersion[]>(await get_game_versions().catch(() => []))
 
 const instanceById = computed(
 	() => new Map(props.instances.map((instance) => [instance.id, instance])),
 )
 
-function worldKey(world: WorldWithInstance): string {
-	return `${world.instance_id}:${world.type}:${getWorldIdentifier(world)}`
-}
-
-async function populateRecentItems() {
-	const worlds = await get_recent_worlds(MAX_RECENT_ITEMS, ['normal', 'favorite']).catch(
-		(error): WorldWithInstance[] => {
-			handleError(error)
-			return []
-		},
-	)
-
-	const worldItems: RecentItem[] = worlds.flatMap((world) => {
+const recentItems = computed<RecentItem[]>(() => {
+	const worldItems: RecentItem[] = recentWorlds.value.flatMap((world) => {
 		const instance = instanceById.value.get(world.instance_id)
 		if (!instance || !world.last_played) return []
-		return [{ type: 'world' as const, last_played: dayjs(world.last_played), instance, world }]
+		return [{ type: 'world', last_played: dayjs(world.last_played), instance, world }]
 	})
-
 	const coveredInstanceIds = new Set(worldItems.map((item) => item.instance.id))
 	const instanceItems: RecentItem[] = props.instances
 		.filter((instance) => instance.last_played && !coveredInstanceIds.has(instance.id))
 		.map((instance) => ({
-			type: 'instance' as const,
+			type: 'instance',
 			last_played: dayjs(instance.last_played),
 			instance,
 		}))
 
-	recentItems.value = [...worldItems, ...instanceItems]
+	return [...worldItems, ...instanceItems]
 		.sort((a, b) => b.last_played.diff(a.last_played))
 		.slice(0, MAX_RECENT_ITEMS)
+})
 
-	const servers = recentItems.value.flatMap((item) =>
-		item.type === 'world' && item.world.type === 'server'
-			? [{ instanceId: item.instance.id, address: (item.world as ServerWorld).address }]
-			: [],
-	)
-	await Promise.all(
-		[...new Set(servers.map((server) => server.instanceId))].map(async (instanceId) => {
-			protocolVersions.value[instanceId] = await get_instance_protocol_version(instanceId).catch(
-				() => null,
-			)
-		}),
-	)
-	for (const { instanceId, address } of servers) {
-		void refreshServer(address, instanceId)
-	}
+function worldKey(world: WorldWithInstance): string {
+	return `${world.instance_id}:${world.type}:${getWorldIdentifier(world)}`
 }
 
-async function refreshServer(address: string, instanceId: string) {
-	serverData.value[address] ??= { refreshing: true }
-	await refreshServerData(
-		serverData.value[address],
-		protocolVersions.value[instanceId] ?? null,
-		address,
-	)
+function serverDataFor(world: WorldWithInstance) {
+	return world.type === 'server'
+		? runtime.getServerData(world.instance_id, world.address)
+		: undefined
 }
 
-async function checkProcesses() {
-	const processes = await get_all().catch(() => [])
-	runningInstanceIds.value = processes.map((process) => process.instance_id)
-	if (
-		playingWorldKey.value &&
-		!runningInstanceIds.value.includes(playingWorldKey.value.split(':', 1)[0])
-	) {
+watch(runningInstanceIds, (instanceIds) => {
+	if (playingWorldKey.value && !instanceIds.includes(playingWorldKey.value.split(':', 1)[0])) {
 		playingWorldKey.value = null
 	}
-}
+})
 
 async function joinWorld(world: WorldWithInstance, instance: GameInstance) {
 	const key = worldKey(world)
@@ -184,30 +146,17 @@ async function stopInstance(instance: GameInstance) {
 		source: 'HomeRecentWorld',
 	})
 }
-
-watch(() => props.instances, populateRecentItems)
-
-await populateRecentItems()
-
-const unlistenProcesses = await process_listener(checkProcesses)
-const unlistenInstances = await instance_listener(populateRecentItems)
-
-onMounted(() => {
-	void checkProcesses()
-})
-
-onUnmounted(() => {
-	unlistenProcesses()
-	unlistenInstances()
-})
 </script>
 
 <template>
-	<section v-if="recentItems.length > 0" class="flex flex-col gap-3">
+	<section class="flex min-h-0 flex-col gap-3">
 		<h2 class="m-0 text-lg font-bold text-contrast">
 			{{ formatMessage(messages.recentTitle) }}
 		</h2>
-		<div class="flex flex-col gap-2">
+		<div
+			v-if="recentItems.length > 0"
+			class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1"
+		>
 			<template
 				v-for="item in recentItems"
 				:key="item.type === 'world' ? worldKey(item.world) : `${item.instance.id}:instance`"
@@ -226,21 +175,15 @@ onUnmounted(() => {
 						item.world.type === 'singleplayer' &&
 						hasWorldQuickPlaySupport(gameVersions, item.instance.game_version)
 					"
-					:current-protocol="protocolVersions[item.instance.id]"
+					:current-protocol="runtime.getProtocolVersion(item.instance.id)"
 					:refreshing="
-						item.world.type === 'server'
-							? serverData[(item.world as ServerWorld).address]?.refreshing
-							: undefined
+						item.world.type === 'server' ? serverDataFor(item.world)?.refreshing : undefined
 					"
 					:server-status="
-						item.world.type === 'server'
-							? serverData[(item.world as ServerWorld).address]?.status
-							: undefined
+						item.world.type === 'server' ? serverDataFor(item.world)?.status : undefined
 					"
 					:rendered-motd="
-						item.world.type === 'server'
-							? serverData[(item.world as ServerWorld).address]?.renderedMotd
-							: undefined
+						item.world.type === 'server' ? serverDataFor(item.world)?.renderedMotd : undefined
 					"
 					:game-mode="
 						item.world.type === 'singleplayer' ? GAME_MODES[item.world.game_mode] : undefined
@@ -249,18 +192,26 @@ onUnmounted(() => {
 					:instance-name="item.instance.name"
 					:instance-icon="item.instance.icon_path"
 					:shortcut-instance-id="item.instance.id"
+					:flat="dashboard"
 					@play="joinWorld(item.world, item.instance)"
 					@play-instance="playInstance(item.instance)"
 					@stop="stopInstance(item.instance)"
 					@refresh="
 						item.world.type === 'server'
-							? refreshServer((item.world as ServerWorld).address, item.instance.id)
+							? runtime.refreshServer(item.instance.id, (item.world as ServerWorld).address, true)
 							: undefined
 					"
-					@update="populateRecentItems"
+					@update="runtime.refreshRecentWorlds"
 				/>
-				<InstanceItem v-else :instance="item.instance" :last-played="item.last_played" />
+				<InstanceItem
+					v-else
+					:instance="item.instance"
+					:last-played="item.last_played"
+					:flat="dashboard"
+					:playing="runningInstanceIds.includes(item.instance.id)"
+				/>
 			</template>
 		</div>
+		<p v-else class="m-0 text-sm text-secondary">{{ formatMessage(messages.emptyRecent) }}</p>
 	</section>
 </template>

@@ -2,16 +2,19 @@
 import { defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onUnmounted, ref } from 'vue'
 
+import type { HomeWidgetSize } from './home-dashboard'
 import { getTimeBucket, stableGreetingIndex } from './home-utils'
 
 const props = withDefaults(
 	defineProps<{
 		playerName?: string | null
 		variant?: 'standard' | 'minimal'
+		dashboardSize?: HomeWidgetSize | null
 	}>(),
 	{
 		playerName: null,
 		variant: 'standard',
+		dashboardSize: null,
 	},
 )
 
@@ -128,9 +131,20 @@ onUnmounted(() => window.clearInterval(timer))
 <template>
 	<header
 		class="flex min-w-0 flex-col"
-		:class="variant === 'minimal' ? 'items-center gap-3 text-center' : 'gap-1 py-2'"
+		:class="
+			variant === 'minimal'
+				? 'items-center gap-3 text-center'
+				: dashboardSize
+					? 'h-full justify-center gap-2'
+					: 'gap-1 py-2'
+		"
 	>
-		<h1 class="m-0 max-w-full break-words text-2xl font-extrabold text-contrast">{{ heading }}</h1>
+		<h1
+			class="m-0 max-w-full break-words font-extrabold text-contrast"
+			:class="dashboardSize === '1x1' ? 'text-lg' : 'text-2xl'"
+		>
+			{{ heading }}
+		</h1>
 		<div v-if="variant === 'minimal'" class="h-0.5 w-8 rounded-full bg-brand" aria-hidden="true" />
 	</header>
 </template>

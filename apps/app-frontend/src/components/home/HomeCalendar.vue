@@ -13,12 +13,12 @@ import {
 	useFormatDateTime,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
+import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import InstanceIcon from '@/components/ui/InstanceIcon.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
-import { instance_listener, process_listener } from '@/helpers/events'
 import {
 	type DailyPlaytime,
 	type DailyPlaytimeEntry,
@@ -27,10 +27,10 @@ import {
 	kill,
 	run,
 } from '@/helpers/instance'
-import { get_all } from '@/helpers/process'
 import type { GameInstance } from '@/helpers/types'
 import { handleSevereError } from '@/store/error'
 
+import type { HomeWidgetSize } from './home-dashboard'
 import {
 	buildHeatmapDays,
 	dateFromKey,
@@ -43,11 +43,13 @@ import {
 
 const props = defineProps<{
 	instances: GameInstance[]
+	dashboardSize?: HomeWidgetSize | null
 }>()
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 const handleMinecraftLaunchError = useMinecraftLaunchError()
+const { instanceRevision, runningInstanceIds } = useHomeDashboardRuntime()
 const formatPeriod = useFormatDateTime({ month: 'long', year: 'numeric' })
 const formatWeekday = useFormatDateTime({ weekday: 'narrow' })
 const formatDetailDate = useFormatDateTime({ month: 'long', day: 'numeric' })
@@ -80,7 +82,6 @@ const anchor = ref(new Date())
 const selectedKey = ref(todayKey)
 const dailyPlaytime = ref<DailyPlaytime[]>([])
 const dayDetails = ref<DailyPlaytimeEntry[]>([])
-const runningInstanceIds = ref<string[]>([])
 const activeTooltip = ref<{
 	dateKey: string
 	lines: string[]
@@ -191,11 +192,6 @@ function selectDay(dateKey: string) {
 	selectedKey.value = dateKey
 }
 
-async function checkProcesses() {
-	const processes = await get_all().catch(() => [])
-	runningInstanceIds.value = processes.map((process) => process.instance_id)
-}
-
 async function playInstance(instance: GameInstance) {
 	try {
 		await run(instance.id)
@@ -224,27 +220,20 @@ async function stopInstance(instance: GameInstance) {
 
 watch(() => anchor.value.getTime(), refreshPlaytime, { immediate: true })
 watch(selectedKey, refreshDayDetails, { immediate: true })
-
-const unlistenInstances = await instance_listener(async () => {
+watch(instanceRevision, async () => {
 	await refreshPlaytime()
 	await refreshDayDetails()
-})
-const unlistenProcesses = await process_listener(checkProcesses)
-
-onMounted(() => {
-	void checkProcesses()
-})
-
-onUnmounted(() => {
-	unlistenInstances()
-	unlistenProcesses()
 })
 </script>
 
 <template>
 	<section
-		data-onboarding-id="home-playtime"
-		class="card-shadow flex min-w-0 flex-col gap-4 rounded-2xl bg-bg-raised p-4"
+		class="flex min-h-0 min-w-0 flex-col gap-3"
+		:class="[
+			dashboardSize
+				? `home-calendar-dashboard home-calendar-dashboard-${dashboardSize}`
+				: 'card-shadow rounded-2xl bg-bg-raised p-4',
+		]"
 	>
 		<div class="flex min-w-0 items-center gap-2">
 			<CalendarIcon class="size-5 shrink-0 text-brand" aria-hidden="true" />
@@ -252,7 +241,7 @@ onUnmounted(() => {
 				{{ formatMessage(messages.calendar) }}
 			</h2>
 			<div class="ml-auto flex shrink-0 items-center gap-1">
-				<ButtonStyled circular size="small" type="transparent">
+				<ButtonStyled v-if="dashboardSize !== '1x1'" circular size="small" type="transparent">
 					<button v-tooltip="formatMessage(messages.previousMonth)" @click="movePeriod(-1)">
 						<ChevronLeftIcon />
 					</button>
@@ -262,7 +251,7 @@ onUnmounted(() => {
 						{{ periodLabel }}
 					</button>
 				</ButtonStyled>
-				<ButtonStyled circular size="small" type="transparent">
+				<ButtonStyled v-if="dashboardSize !== '1x1'" circular size="small" type="transparent">
 					<button
 						v-tooltip="formatMessage(messages.nextMonth)"
 						:disabled="!canGoForward"
@@ -274,6 +263,7 @@ onUnmounted(() => {
 			</div>
 		</div>
 		<div
+			class="home-calendar-month"
 			@pointerover="showTooltip"
 			@pointerleave="activeTooltip = null"
 			@focusin="showTooltip"
@@ -311,14 +301,17 @@ onUnmounted(() => {
 				</button>
 			</div>
 		</div>
-		<div class="flex min-w-0 flex-col gap-2 border-0 border-t border-solid border-divider pt-3">
+		<div
+			v-if="dashboardSize !== '1x1'"
+			class="home-calendar-details flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto border-0 border-t border-solid border-divider pt-3"
+		>
 			<h3 class="m-0 text-sm font-bold text-contrast">
 				{{ formatMessage(messages.playedOn, { date: selectedDateLabel }) }}
 			</h3>
 			<p v-if="dayDetails.length === 0" class="m-0 text-sm text-secondary">
 				{{ formatMessage(messages.noActivity) }}
 			</p>
-			<ul v-else class="m-0 flex list-none flex-col p-0">
+			<ul v-else class="home-calendar-detail-list m-0 flex list-none flex-col p-0">
 				<li
 					v-for="row in detailRows"
 					:key="row.entry.instance_id"
@@ -437,6 +430,58 @@ onUnmounted(() => {
 
 .home-calendar-cell-selected {
 	box-shadow: 0 0 0 2px var(--color-brand);
+}
+
+.home-calendar-dashboard {
+	overflow: hidden;
+}
+
+.home-calendar-dashboard-2x1 {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	grid-template-rows: auto minmax(0, 1fr);
+	column-gap: 1rem;
+}
+
+.home-calendar-dashboard-2x1 > :first-child {
+	grid-column: 1 / -1;
+}
+
+.home-calendar-dashboard-2x1 .home-calendar-details {
+	border-top: 0;
+	border-left: 1px solid var(--color-divider);
+	padding-top: 0;
+	padding-left: 1rem;
+}
+
+.home-calendar-dashboard-1x1 .home-calendar-weekdays {
+	margin-bottom: 0.125rem;
+	font-size: 0.625rem;
+}
+
+.home-calendar-dashboard-1x1 h2 {
+	font-size: 0.875rem;
+}
+
+.home-calendar-dashboard-1x1 .home-calendar-grid {
+	gap: 0.125rem;
+}
+
+.home-calendar-dashboard-1x1 .home-calendar-cell {
+	height: 0.75rem;
+	aspect-ratio: auto;
+	font-size: 0;
+}
+
+.home-calendar-dashboard-1x2 .home-calendar-details,
+.home-calendar-dashboard-2x2 .home-calendar-details {
+	flex: 1;
+}
+
+.home-calendar-dashboard-2x2 .home-calendar-detail-list {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	column-gap: 0.75rem;
 }
 
 .home-calendar-level-0 {

@@ -4598,12 +4598,6 @@
   "app.appearance-settings.home-layout.title": {
     "message": "主页布局"
   },
-  "app.appearance-settings.home-recent.description": {
-    "message": "在信息主页显示最多四条最近打开的实例和世界。"
-  },
-  "app.appearance-settings.home-recent.title": {
-    "message": "最近项目"
-  },
   "app.curseforge.automatic-downloads-failed.notification-body": {
     "message": "重试后仍有 {failed, number} 个文件下载失败（{list}）。可在“下载”中查看已记录的错误。"
   },
@@ -4703,6 +4697,9 @@
   "app.home.recent.title": {
     "message": "从最近的项目开始"
   },
+  "app.home.recent.empty": {
+    "message": "还没有最近活动。"
+  },
   "app.home.worlds.pinned": {
     "message": "固定的世界"
   },
@@ -4732,6 +4729,99 @@
   },
   "app.home.servers.more-options": {
     "message": "更多选项"
+  },
+  "app.home.widgets.add": {
+    "message": "添加小组件"
+  },
+  "app.home.widgets.add-title": {
+    "message": "添加小组件"
+  },
+  "app.home.widgets.back": {
+    "message": "返回"
+  },
+  "app.home.widgets.calendar": {
+    "message": "日历"
+  },
+  "app.home.widgets.choose-instance": {
+    "message": "选择实例"
+  },
+  "app.home.widgets.choose-server": {
+    "message": "选择服务器"
+  },
+  "app.home.widgets.choose-world": {
+    "message": "选择世界"
+  },
+  "app.home.widgets.customize": {
+    "message": "自定义小组件"
+  },
+  "app.home.widgets.done": {
+    "message": "完成编辑"
+  },
+  "app.home.widgets.drag": {
+    "message": "拖动小组件"
+  },
+  "app.home.widgets.empty": {
+    "message": "添加小组件来布置你的主页。"
+  },
+  "app.home.widgets.greeting": {
+    "message": "问候"
+  },
+  "app.home.widgets.instance": {
+    "message": "实例快捷方式"
+  },
+  "app.home.widgets.loading": {
+    "message": "正在加载……"
+  },
+  "app.home.widgets.move-earlier": {
+    "message": "向前移动"
+  },
+  "app.home.widgets.move-later": {
+    "message": "向后移动"
+  },
+  "app.home.widgets.no-results": {
+    "message": "没有匹配项"
+  },
+  "app.home.widgets.options": {
+    "message": "小组件选项"
+  },
+  "app.home.widgets.pinned-instances": {
+    "message": "固定的实例"
+  },
+  "app.home.widgets.pinned-servers": {
+    "message": "固定的服务器"
+  },
+  "app.home.widgets.pinned-worlds": {
+    "message": "固定的世界"
+  },
+  "app.home.widgets.recent": {
+    "message": "最近游玩"
+  },
+  "app.home.widgets.remove": {
+    "message": "删除小组件"
+  },
+  "app.home.widgets.replace": {
+    "message": "替换目标"
+  },
+  "app.home.widgets.reset": {
+    "message": "恢复默认小组件"
+  },
+  "app.home.widgets.reset-confirm": {
+    "message": "要恢复默认小组件布局吗？"
+  },
+  "app.home.widgets.search": {
+    "message": "搜索"
+  },
+  "app.home.widgets.server": {
+    "message": "服务器快捷方式"
+  },
+  "app.home.widgets.size": {
+    "message": "尺寸 {size}"
+  },
+  "app.home.widgets.unavailable": {
+    "message": "内容已不可用"
+  },
+  "app.home.widgets.world": {
+    "message": "世界快捷方式"
   },
   "app.home.calendar.title": {
     "message": "日历"
@@ -4823,23 +4913,23 @@
   "app.instances.unpin-from-home": {
     "message": "取消固定"
   },
-  "app.onboarding.playtime.title": {
-    "message": "一眼看清游玩时间"
+  "app.onboarding.home-customize.title": {
+    "message": "按你的方式排列"
   },
-  "app.onboarding.playtime.description": {
-    "message": "日历会高亮你游玩过的每一天，点选即可继续游玩，固定的服务器就在下方。右侧账号侧边栏里还有游玩洞察、每日小挑战和 Minecraft 官方新闻。"
-  },
-  "app.onboarding.home-instances.title": {
-    "message": "从你想去的地方开始"
-  },
-  "app.onboarding.home-instances.description": {
-    "message": "这是你的启动区域。信息主页集中展示最近和固定的项目；极简主页则专注于你选择的实例。"
+  "app.onboarding.home-customize.description": {
+    "message": "打开编辑器即可添加快捷方式、调整小组件顺序，并为每个小组件选择合适的尺寸。"
   },
   "app.onboarding.home-layout.description": {
     "message": "随时使用这个悬浮按钮，在信息主页和极简主页之间切换。"
   },
   "app.onboarding.home-layout.title": {
     "message": "切换信息密度"
+  },
+  "app.onboarding.home-widgets.title": {
+    "message": "你的主页，你的布局"
+  },
+  "app.onboarding.home-widgets.description": {
+    "message": "信息主页由最近活动、游玩时间、实例、世界和服务器小组件组成。窗口或账号侧边栏变化时，网格会自动重排。"
   },
   "app.instance-item.already-open": {
     "message": "实例已经在运行"

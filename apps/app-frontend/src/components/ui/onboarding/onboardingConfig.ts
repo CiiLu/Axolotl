@@ -41,11 +41,23 @@ export const onboardingMessages = defineMessages({
 		defaultMessage: 'Your last next launcher.',
 	},
 	start: { id: 'app.onboarding.action.start', defaultMessage: 'Take the tour' },
-	playtimeTitle: { id: 'app.onboarding.playtime.title', defaultMessage: 'Your time, at a glance' },
-	playtimeDescription: {
-		id: 'app.onboarding.playtime.description',
+	homeWidgetsTitle: {
+		id: 'app.onboarding.home-widgets.title',
+		defaultMessage: 'Your Home, your layout',
+	},
+	homeWidgetsDescription: {
+		id: 'app.onboarding.home-widgets.description',
 		defaultMessage:
-			'The calendar highlights every day you played — pick a day to jump back in, with pinned servers below. Weekly insights, a daily challenge, and Minecraft news live in the account sidebar.',
+			'Information Home is built from widgets for recent activity, playtime, instances, worlds, and servers. The grid reflows as the window or account sidebar changes.',
+	},
+	homeCustomizeTitle: {
+		id: 'app.onboarding.home-customize.title',
+		defaultMessage: 'Arrange it your way',
+	},
+	homeCustomizeDescription: {
+		id: 'app.onboarding.home-customize.description',
+		defaultMessage:
+			'Open the editor to add shortcuts, reorder widgets, and choose the useful size for each one.',
 	},
 	discoverTitle: { id: 'app.onboarding.discover.title', defaultMessage: 'Find something new' },
 	discoverDescription: {
@@ -62,15 +74,6 @@ export const onboardingMessages = defineMessages({
 		id: 'app.onboarding.browse.description',
 		defaultMessage:
 			'Use types, search, and filters to narrow things down. Project pages keep versions, changelogs, galleries, and install options in one place.',
-	},
-	homeInstancesTitle: {
-		id: 'app.onboarding.home-instances.title',
-		defaultMessage: 'Start where you want',
-	},
-	homeInstancesDescription: {
-		id: 'app.onboarding.home-instances.description',
-		defaultMessage:
-			'This is your launch area. Information Home keeps recent and pinned projects close; Minimal Home focuses on the instance you choose.',
 	},
 	homeLayoutTitle: {
 		id: 'app.onboarding.home-layout.title',
@@ -433,16 +436,16 @@ export const onboardingTours: Record<OnboardingMode, OnboardingStep[]> = {
 			),
 		),
 		inspect(
-			'home-playtime',
-			'home-playtime',
-			onboardingMessages.playtimeTitle,
-			onboardingMessages.playtimeDescription,
+			'home-widget-grid',
+			'home-widget-grid',
+			onboardingMessages.homeWidgetsTitle,
+			onboardingMessages.homeWidgetsDescription,
 		),
 		inspect(
-			'home-instances',
-			'home-instances',
-			onboardingMessages.homeInstancesTitle,
-			onboardingMessages.homeInstancesDescription,
+			'home-widget-customize',
+			'home-widget-customize',
+			onboardingMessages.homeCustomizeTitle,
+			onboardingMessages.homeCustomizeDescription,
 		),
 		inspect(
 			'home-layout-switch',

@@ -2106,4 +2106,57 @@ mod tests {
         .unwrap();
         assert!(!canonical_exists);
     }
+
+    #[tokio::test]
+    async fn upgrades_previous_database_with_nullable_home_widgets() {
+        const HOME_WIDGETS_MIGRATION_VERSION: i64 = 20260804120000;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version < HOME_WIDGETS_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        sqlx::query(
+            "UPDATE settings
+             SET locale = 'zh-CN', home_layout = 'minimal'
+             WHERE id = 0",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let upgraded: (String, String, Option<String>) = sqlx::query_as(
+            "SELECT locale, home_layout, json(home_widgets)
+             FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(upgraded, ("zh-CN".into(), "minimal".into(), None));
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
 }

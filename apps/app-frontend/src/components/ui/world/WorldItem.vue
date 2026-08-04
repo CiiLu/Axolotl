@@ -98,6 +98,7 @@ const props = withDefaults(
 		instanceName?: string
 		instanceIcon?: string
 		shortcutInstanceId?: string
+		flat?: boolean
 	}>(),
 	{
 		playingInstance: false,
@@ -118,6 +119,7 @@ const props = withDefaults(
 		instanceName: undefined,
 		instanceIcon: undefined,
 		shortcutInstanceId: undefined,
+		flat: false,
 	},
 )
 
@@ -268,10 +270,13 @@ const messages = defineMessages({
 			/>
 		</template>
 		<div
-			class="grid grid-cols-[auto_minmax(0,3fr)_minmax(0,4fr)_auto] items-center gap-2 p-3 bg-bg-raised card-shadow smart-clickable:highlight-on-hover rounded-xl"
-			:class="{
-				'world-item-highlighted': highlighted,
-			}"
+			class="grid grid-cols-[auto_minmax(0,3fr)_minmax(0,4fr)_auto] items-center gap-2 rounded-lg smart-clickable:highlight-on-hover"
+			:class="[
+				{
+					'world-item-highlighted': highlighted,
+				},
+				flat ? 'px-2 py-2 hover:bg-button-bg' : 'card-shadow bg-bg-raised p-3',
+			]"
 		>
 			<Avatar
 				:src="

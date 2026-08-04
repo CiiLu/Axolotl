@@ -10,17 +10,18 @@ import { computed, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { getActivePlayerName } from '@/components/home/home-utils'
-import HomeCalendar from '@/components/home/HomeCalendar.vue'
+import {
+	createDefaultHomeDashboard,
+	createHomeDashboardSaveQueue,
+	normalizeHomeDashboard,
+	type HomeDashboardConfig,
+} from '@/components/home/home-dashboard'
 import HomeDailyChallenge from '@/components/home/HomeDailyChallenge.vue'
-import HomeGreeting from '@/components/home/HomeGreeting.vue'
+import HomeDashboard from '@/components/home/HomeDashboard.vue'
 import HomeInstancePickerModal from '@/components/home/HomeInstancePickerModal.vue'
 import HomeMinecraftNews from '@/components/home/HomeMinecraftNews.vue'
 import HomeMinimal from '@/components/home/HomeMinimal.vue'
-import HomePinnedInstances from '@/components/home/HomePinnedInstances.vue'
-import HomePinnedServers from '@/components/home/HomePinnedServers.vue'
-import HomePinnedWorlds from '@/components/home/HomePinnedWorlds.vue'
 import HomePlayInsights from '@/components/home/HomePlayInsights.vue'
-import HomeRecentWorlds from '@/components/home/HomeRecentWorlds.vue'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { get_default_user, users } from '@/helpers/auth'
 import { instance_listener } from '@/helpers/events'
@@ -54,6 +55,10 @@ const messages = defineMessages({
 		id: 'app.home.layout.toggle',
 		defaultMessage: 'Minimal Home',
 	},
+	resetWidgets: {
+		id: 'app.home.widgets.reset-confirm',
+		defaultMessage: 'Restore the default widget layout?',
+	},
 })
 
 const recentProjectsInHomeFlag: FeatureFlag = 'worlds_in_home'
@@ -62,10 +67,21 @@ breadcrumbs.setRootContext({ name: formatMessage(messages.home), link: route.pat
 
 const instances = ref<GameInstance[]>([])
 const playerName = ref<string | null>(null)
+const dashboardConfig = ref<HomeDashboardConfig | null>(null)
 const instancePicker = ref<InstanceType<typeof HomeInstancePickerModal>>()
 const isMinimal = computed(() => themeStore.homeLayout === 'minimal')
-const showRecentProjects = computed(() => themeStore.getFeatureFlag(recentProjectsInHomeFlag))
 const switchingLayout = ref(false)
+const dashboardSaveQueue = createHomeDashboardSaveQueue(
+	async (config) => {
+		const settings = await getSettings()
+		settings.home_widgets = config
+		await setSettings(settings)
+	},
+	(config) => {
+		dashboardConfig.value = config
+	},
+	handleError,
+)
 const layoutSwitchStyle = computed(() => ({
 	bottom: themeStore.getFeatureFlag('page_path') ? '3.5rem' : '1rem',
 	right: `calc(${pageContext.floatingActionBarOffsets?.right.value ?? '0px'} + 1rem)`,
@@ -105,6 +121,38 @@ async function fetchPlayerName() {
 	playerName.value = getActivePlayerName(selectedUser, accounts)
 }
 
+async function loadDashboardConfig() {
+	try {
+		const settings = await getSettings()
+		const normalized = normalizeHomeDashboard(settings.home_widgets)
+		if (normalized) {
+			dashboardConfig.value = normalized
+			return
+		}
+
+		const config = createDefaultHomeDashboard(themeStore.getFeatureFlag(recentProjectsInHomeFlag))
+		dashboardConfig.value = config
+		settings.home_widgets = config
+		await setSettings(settings)
+	} catch (error) {
+		dashboardConfig.value = createDefaultHomeDashboard(
+			themeStore.getFeatureFlag(recentProjectsInHomeFlag),
+		)
+		handleError(error)
+	}
+}
+
+function updateDashboardConfig(config: HomeDashboardConfig) {
+	const previous = dashboardConfig.value ?? config
+	dashboardConfig.value = config
+	void dashboardSaveQueue.enqueue(config, previous)
+}
+
+function resetDashboardConfig() {
+	if (!window.confirm(formatMessage(messages.resetWidgets))) return
+	updateDashboardConfig(createDefaultHomeDashboard())
+}
+
 async function selectMinimalInstance(instance: GameInstance) {
 	try {
 		const settings = await getSettings()
@@ -142,6 +190,7 @@ async function toggleHomeLayout() {
 
 const instancesLoaded = await fetchInstances()
 if (!instancesLoaded || instances.value.length > 0) await fetchPlayerName()
+await loadDashboardConfig()
 
 const unlistenInstance = await instance_listener(async () => {
 	await fetchInstances()
@@ -160,20 +209,14 @@ onUnmounted(() => {
 		@select="selectMinimalInstance"
 	/>
 	<div class="min-h-full">
-		<div v-if="!isMinimal" class="home-layout p-6 pb-20">
-			<div class="flex min-w-0 flex-col gap-6">
-				<HomeGreeting :player-name="playerName" />
-				<section data-onboarding-id="home-instances" class="flex flex-col gap-6">
-					<HomeRecentWorlds v-if="showRecentProjects" :instances="instances" />
-					<HomePinnedInstances :instances="instances" />
-					<HomePinnedWorlds :instances="instances" />
-				</section>
-			</div>
-			<aside class="flex min-w-0 flex-col gap-4">
-				<HomeCalendar :instances="instances" />
-				<HomePinnedServers :instances="instances" />
-			</aside>
-		</div>
+		<HomeDashboard
+			v-if="!isMinimal && dashboardConfig"
+			:config="dashboardConfig"
+			:instances="instances"
+			:player-name="playerName"
+			@change="updateDashboardConfig"
+			@reset="resetDashboardConfig"
+		/>
 
 		<HomeMinimal
 			v-else
@@ -215,13 +258,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.home-layout {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr);
-	gap: 1.5rem;
-	align-items: start;
-}
-
 .home-layout-switch {
 	position: fixed;
 	z-index: 40;
@@ -304,11 +340,5 @@ onUnmounted(() => {
 .home-layout-switch:not(.is-minimal) .home-layout-switch-information,
 .home-layout-switch.is-minimal .home-layout-switch-minimal {
 	color: var(--color-accent-contrast);
-}
-
-@media (min-width: 64rem) {
-	.home-layout {
-		grid-template-columns: minmax(0, 1fr) 20rem;
-	}
 }
 </style>

@@ -57,19 +57,28 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	flat: {
+		type: Boolean,
+		default: false,
+	},
+	playing: {
+		type: Boolean,
+		default: undefined,
+	},
 	first: {
 		type: Boolean,
 		default: false,
 	},
 })
 
-const playing = ref(false)
+const internalPlaying = ref(false)
+const isPlaying = computed(() => props.playing ?? internalPlaying.value)
 const loading = ref(false)
 const modLoading = computed(
 	() =>
 		loading.value ||
 		currentEvent.value === 'installing' ||
-		(currentEvent.value === 'launched' && !playing.value),
+		(currentEvent.value === 'launched' && !isPlaying.value),
 )
 const installing = computed(() => props.instance.install_stage.includes('installing'))
 const installed = computed(() => props.instance.install_stage === 'installed')
@@ -81,9 +90,10 @@ const seeInstance = async () => {
 }
 
 const checkProcess = async () => {
+	if (props.playing !== undefined) return
 	const runningProcesses = await get_by_instance_id(props.instance.id).catch(handleError)
 
-	playing.value = runningProcesses.length > 0
+	internalPlaying.value = runningProcesses.length > 0
 }
 
 const play = async (e, context) => {
@@ -109,7 +119,7 @@ const play = async (e, context) => {
 
 const stop = async (e, context) => {
 	e?.stopPropagation()
-	playing.value = false
+	internalPlaying.value = false
 
 	await kill(props.instance.id).catch(handleError)
 
@@ -161,14 +171,17 @@ defineExpose({
 
 const currentEvent = ref(null)
 
-const unlisten = await process_listener((e) => {
-	if (e.instance_id === props.instance.id) {
-		currentEvent.value = e.event
-		if (e.event === 'finished') {
-			playing.value = false
-		}
-	}
-})
+const unlisten =
+	props.playing === undefined
+		? await process_listener((e) => {
+				if (e.instance_id === props.instance.id) {
+					currentEvent.value = e.event
+					if (e.event === 'finished') {
+						internalPlaying.value = false
+					}
+				}
+			})
+		: () => undefined
 
 onMounted(() => checkProcess())
 onUnmounted(() => unlisten())
@@ -177,7 +190,12 @@ onUnmounted(() => unlisten())
 <template>
 	<template v-if="compact">
 		<div
-			class="card-shadow grid grid-cols-[auto_1fr_auto] bg-bg-raised rounded-xl p-3 pl-4 gap-2 cursor-pointer hover:brightness-90 transition-all"
+			class="grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg transition-colors"
+			:class="
+				flat
+					? 'px-2 py-2 hover:bg-button-bg'
+					: 'card-shadow bg-bg-raised p-3 pl-4 hover:brightness-90'
+			"
 			@click="seeInstance"
 			@mouseenter="checkProcess"
 		>
@@ -191,7 +209,7 @@ onUnmounted(() => unlisten())
 				<span class="line-clamp-2">{{ instance.name }}</span>
 			</div>
 			<div class="flex items-center">
-				<ButtonStyled v-if="playing" color="red" circular @mousehover="checkProcess">
+				<ButtonStyled v-if="isPlaying" color="red" circular @mousehover="checkProcess">
 					<button
 						v-tooltip="formatMessage(commonMessages.stopButton)"
 						@click="(e) => stop(e, 'InstanceCard')"
@@ -250,10 +268,10 @@ onUnmounted(() => unlisten())
 					:class="`transition-all ${modLoading || installing ? `brightness-[0.25] scale-[0.85]` : `group-hover:brightness-75`}`"
 				/>
 				<div class="absolute inset-0 flex items-center justify-center">
-					<ButtonStyled v-if="playing" size="large" color="red" circular>
+					<ButtonStyled v-if="isPlaying" size="large" color="red" circular>
 						<button
 							v-tooltip="formatMessage(commonMessages.stopButton)"
-							:class="{ 'scale-100 opacity-100': playing }"
+							:class="{ 'scale-100 opacity-100': isPlaying }"
 							class="transition-all scale-75 origin-bottom opacity-0 card-shadow"
 							@click="(e) => stop(e, 'InstanceCard')"
 							@mousehover="checkProcess"

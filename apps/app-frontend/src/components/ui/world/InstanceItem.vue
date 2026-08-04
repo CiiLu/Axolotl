@@ -66,6 +66,8 @@ const emit = defineEmits<{
 const props = defineProps<{
 	instance: GameInstance
 	lastPlayed: Dayjs
+	flat?: boolean
+	playing?: boolean
 }>()
 
 const loadingModpack = ref(!!props.instance.link)
@@ -90,7 +92,8 @@ const loader = computed(() => {
 })
 
 const loading = ref(false)
-const playing = ref(false)
+const internalPlaying = ref(false)
+const isPlaying = computed(() => props.playing ?? internalPlaying.value)
 
 const play = async (event: MouseEvent) => {
 	event?.stopPropagation()
@@ -127,14 +130,18 @@ const stop = async (event: MouseEvent) => {
 	loading.value = false
 }
 
-const unlistenProcesses = await process_listener(async () => {
-	await checkProcess()
-})
+const unlistenProcesses =
+	props.playing === undefined
+		? await process_listener(async () => {
+				await checkProcess()
+			})
+		: () => undefined
 
 const checkProcess = async () => {
+	if (props.playing !== undefined) return
 	const runningProcesses = await get_by_instance_id(props.instance.id).catch(handleError)
 
-	playing.value = runningProcesses.length > 0
+	internalPlaying.value = runningProcesses.length > 0
 }
 
 onMounted(() => {
@@ -154,7 +161,8 @@ onUnmounted(() => {
 			/>
 		</template>
 		<div
-			class="grid grid-cols-[auto_minmax(0,3fr)_minmax(0,4fr)_auto] items-center gap-2 p-3 bg-bg-raised card-shadow rounded-xl smart-clickable:highlight-on-hover"
+			class="grid grid-cols-[auto_minmax(0,3fr)_minmax(0,4fr)_auto] items-center gap-2 rounded-lg smart-clickable:highlight-on-hover"
+			:class="flat ? 'px-2 py-2 hover:bg-button-bg' : 'card-shadow bg-bg-raised p-3'"
 		>
 			<InstanceIcon :icon-path="instance.icon_path" :instance-id="instance.id" size="48px" />
 			<div class="flex flex-col col-span-2 justify-between h-full">
@@ -200,7 +208,7 @@ onUnmounted(() => {
 				</div>
 			</div>
 			<div class="flex gap-1 justify-end smart-clickable:allow-pointer-events">
-				<ButtonStyled v-if="playing && !loading" color="red">
+				<ButtonStyled v-if="isPlaying && !loading" color="red">
 					<button @click="stop">
 						<StopCircleIcon aria-hidden="true" />
 						{{ formatMessage(commonMessages.stopButton) }}
@@ -208,8 +216,8 @@ onUnmounted(() => {
 				</ButtonStyled>
 				<ButtonStyled v-else>
 					<button
-						v-tooltip="playing ? formatMessage(messages.alreadyOpen) : null"
-						:disabled="playing || loading"
+						v-tooltip="isPlaying ? formatMessage(messages.alreadyOpen) : null"
+						:disabled="isPlaying || loading"
 						@click="play"
 					>
 						<SpinnerIcon v-if="loading" class="animate-spin" />

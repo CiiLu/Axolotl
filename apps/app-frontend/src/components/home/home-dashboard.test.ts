@@ -1,0 +1,136 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+
+import {
+	addHomeWidget,
+	createDefaultHomeDashboard,
+	createHomeDashboardSaveQueue,
+	getHomeGridColumnCount,
+	getHomeWidgetSpan,
+	moveHomeWidget,
+	normalizeHomeDashboard,
+	packHomeWidgets,
+	removeHomeWidget,
+	replaceHomeDashboardWidgets,
+	resizeHomeWidget,
+} from './home-dashboard.ts'
+
+test('derives one to four columns from the dashboard container width', () => {
+	assert.equal(getHomeGridColumnCount(0), 1)
+	assert.equal(getHomeGridColumnCount(495), 1)
+	assert.equal(getHomeGridColumnCount(496), 2)
+	assert.equal(getHomeGridColumnCount(752), 3)
+	assert.equal(getHomeGridColumnCount(2000), 4)
+})
+
+test('temporarily clamps wide widgets without changing their preferred size', () => {
+	const config = createDefaultHomeDashboard()
+	const preferredSize = config.widgets[0].size
+	assert.deepEqual(getHomeWidgetSpan('2x2', 1), { columns: 1, rows: 2 })
+	assert.deepEqual(getHomeWidgetSpan('2x2', 2), { columns: 2, rows: 2 })
+	packHomeWidgets(config.widgets, 1)
+	packHomeWidgets(config.widgets, 4)
+	assert.equal(config.widgets[0].size, preferredSize)
+})
+
+test('adds, reorders, resizes, and removes independent placements', () => {
+	const original = createDefaultHomeDashboard()
+	const duplicate = { ...original.widgets[0], id: 'duplicate-greeting' }
+	const added = addHomeWidget(original, duplicate)
+	assert.equal(added.widgets.length, original.widgets.length + 1)
+	assert.equal(added.widgets.filter((widget) => widget.kind === 'greeting').length, 2)
+
+	const moved = moveHomeWidget(added, added.widgets.length - 1, -1)
+	assert.equal(moved.widgets.at(-2)?.id, duplicate.id)
+	const resized = resizeHomeWidget(moved, duplicate.id, '1x1')
+	assert.equal(resized.widgets.find((widget) => widget.id === duplicate.id)?.size, '1x1')
+	const removed = removeHomeWidget(resized, duplicate.id)
+	assert.deepEqual(removed.widgets, original.widgets)
+})
+
+test('accepts draggable order and restores the complete default layout', () => {
+	const original = createDefaultHomeDashboard()
+	const reversed = replaceHomeDashboardWidgets(original, [...original.widgets].reverse())
+	assert.deepEqual(
+		reversed.widgets.map((widget) => widget.id),
+		original.widgets.map((widget) => widget.id).reverse(),
+	)
+	assert.deepEqual(
+		createDefaultHomeDashboard().widgets.map(({ kind, size }) => ({ kind, size })),
+		[
+			{ kind: 'greeting', size: '2x1' },
+			{ kind: 'recent', size: '2x2' },
+			{ kind: 'calendar', size: '2x2' },
+			{ kind: 'pinned-instances', size: '2x2' },
+			{ kind: 'pinned-worlds', size: '1x2' },
+			{ kind: 'pinned-servers', size: '1x2' },
+		],
+	)
+})
+
+test('rolls back the latest failed save and reports the error', async () => {
+	const original = createDefaultHomeDashboard()
+	const changed = removeHomeWidget(original, original.widgets[0].id)
+	let current = changed
+	const errors: unknown[] = []
+	const queue = createHomeDashboardSaveQueue(
+		async () => {
+			throw new Error('save failed')
+		},
+		(config) => {
+			current = config
+		},
+		(error) => errors.push(error),
+	)
+
+	await queue.enqueue(changed, original)
+	await queue.flush()
+	assert.deepEqual(current, original)
+	assert.equal(errors.length, 1)
+})
+
+test('normalizes a saved layout when entering Home again', () => {
+	const saved = createDefaultHomeDashboard()
+	const restored = normalizeHomeDashboard(JSON.parse(JSON.stringify(saved)))
+	assert.deepEqual(restored, saved)
+})
+
+test('packs widgets into the earliest available cells', () => {
+	const config = createDefaultHomeDashboard()
+	const packed = packHomeWidgets(config.widgets, 4)
+	assert.deepEqual(
+		packed.map(({ column, row, effectiveColumns, effectiveRows }) => ({
+			column,
+			row,
+			effectiveColumns,
+			effectiveRows,
+		})),
+		[
+			{ column: 1, row: 1, effectiveColumns: 2, effectiveRows: 1 },
+			{ column: 3, row: 1, effectiveColumns: 2, effectiveRows: 2 },
+			{ column: 1, row: 2, effectiveColumns: 2, effectiveRows: 2 },
+			{ column: 3, row: 3, effectiveColumns: 2, effectiveRows: 2 },
+			{ column: 1, row: 4, effectiveColumns: 1, effectiveRows: 2 },
+			{ column: 2, row: 4, effectiveColumns: 1, effectiveRows: 2 },
+		],
+	)
+})
+
+test('normalizes malformed sizes while retaining duplicate widgets', () => {
+	const normalized = normalizeHomeDashboard({
+		version: 1,
+		widgets: [
+			{ id: 'one', kind: 'calendar', size: '9x9' },
+			{ id: 'two', kind: 'calendar', size: '1x1' },
+			{ id: 'three', kind: 'world', size: '1x1', target: { instanceId: 'a' } },
+		],
+	})
+
+	assert.deepEqual(
+		normalized?.widgets.map(({ kind, size }) => ({ kind, size })),
+		[
+			{ kind: 'calendar', size: '2x2' },
+			{ kind: 'calendar', size: '1x1' },
+		],
+	)
+})

@@ -140,6 +140,8 @@ pub struct Settings {
     pub home_layout: HomeLayout,
     #[serde(default)]
     pub minimal_home_instance_id: Option<String>,
+    #[serde(default)]
+    pub home_widgets: Option<serde_json::Value>,
 
     pub telemetry: bool,
     pub discord_rpc: bool,
@@ -216,7 +218,7 @@ impl Settings {
                 custom_background_path, custom_background_blur, custom_background_opacity,
                 transparent_background, transparent_background_opacity, transparent_background_blur,
                 sidebar_instance_count, home_layout, minimal_home_instance_id,
-                auto_hide_downloads_button,
+                json(home_widgets) as \"home_widgets?: String\", auto_hide_downloads_button,
                 version
             FROM settings
             "
@@ -263,6 +265,10 @@ impl Settings {
             auto_hide_downloads_button: res.auto_hide_downloads_button == 1,
             home_layout: HomeLayout::from_string(&res.home_layout),
             minimal_home_instance_id: res.minimal_home_instance_id,
+            home_widgets: res
+                .home_widgets
+                .as_ref()
+                .and_then(|value| serde_json::from_str(value).ok()),
             telemetry: res.telemetry == 1,
             discord_rpc: res.discord_rpc == 1,
             developer_mode: res.developer_mode == 1,
@@ -336,6 +342,11 @@ impl Settings {
             self.transparent_background_opacity.min(100) as i32;
         let sidebar_instance_count = self.sidebar_instance_count.min(50) as i32;
         let home_layout = self.home_layout.as_str();
+        let home_widgets = self
+            .home_widgets
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()?;
         let version = self.version as i64;
         let onboarding_version = self.onboarding_version as i64;
         let minecraft_metadata_source = self.minecraft_metadata_source.as_str();
@@ -419,7 +430,8 @@ impl Settings {
                 transparent_background_blur = $53,
                 home_layout = $54,
                 minimal_home_instance_id = $55,
-                auto_hide_downloads_button = $56
+                auto_hide_downloads_button = $56,
+                home_widgets = jsonb($57)
             ",
             max_concurrent_writes,
             max_concurrent_downloads,
@@ -477,6 +489,7 @@ impl Settings {
             home_layout,
             self.minimal_home_instance_id,
             self.auto_hide_downloads_button,
+            home_widgets,
         )
         .execute(exec)
         .await?;
@@ -947,6 +960,33 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn home_widgets_round_trip_in_a_fresh_database() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+
+        let expected = serde_json::json!({
+            "version": 1,
+            "widgets": [
+                {
+                    "id": "calendar-one",
+                    "kind": "calendar",
+                    "size": "2x2"
+                }
+            ]
+        });
+        let mut settings = Settings::get(&pool).await.unwrap();
+        settings.home_widgets = Some(expected.clone());
+        settings.update(&pool).await.unwrap();
+
+        let reloaded = Settings::get(&pool).await.unwrap();
+        assert_eq!(reloaded.home_widgets, Some(expected));
+    }
+
     #[test]
     fn auto_source_detection_distinguishes_mainland_locales() {
         assert!(locale_prefers_mirror("zh-CN"));
@@ -970,6 +1010,7 @@ mod tests {
         assert!(!settings.auto_hide_downloads_button);
         assert_eq!(settings.home_layout, HomeLayout::Standard);
         assert_eq!(settings.minimal_home_instance_id, None);
+        assert_eq!(settings.home_widgets, None);
         assert_eq!(
             settings.minecraft_metadata_source,
             DownloadSourceMode::Auto

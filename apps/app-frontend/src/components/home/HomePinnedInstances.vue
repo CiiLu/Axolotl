@@ -3,16 +3,19 @@ import { RightArrowIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
 
+import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import HomeInstanceCard from '@/components/home/HomeInstanceCard.vue'
 import { set_pinned } from '@/helpers/instance'
 import type { GameInstance } from '@/helpers/types'
 
 const props = defineProps<{
 	instances: GameInstance[]
+	dashboard?: boolean
 }>()
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
+const { runningInstanceIds } = useHomeDashboardRuntime()
 const messages = defineMessages({
 	pinnedInstances: {
 		id: 'app.home.instances.pinned',
@@ -41,7 +44,7 @@ async function updatePinned(instance: GameInstance, pinned: boolean) {
 </script>
 
 <template>
-	<section class="flex flex-col gap-3">
+	<section class="flex min-h-0 flex-col gap-3">
 		<div class="flex items-center gap-3">
 			<h2 class="m-0 text-lg font-bold text-contrast">
 				{{ formatMessage(messages.pinnedInstances) }}
@@ -55,13 +58,15 @@ async function updatePinned(instance: GameInstance, pinned: boolean) {
 		</div>
 		<div
 			v-if="pinnedInstances.length > 0"
-			class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3"
+			class="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-2 overflow-y-auto pr-1"
 		>
 			<HomeInstanceCard
 				v-for="instance in pinnedInstances"
 				:key="instance.id"
 				:instance="instance"
 				:pinned="true"
+				:flat="dashboard"
+				:playing="runningInstanceIds.includes(instance.id)"
 				@pinned-change="updatePinned"
 			/>
 		</div>

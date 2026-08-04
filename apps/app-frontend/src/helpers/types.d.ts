@@ -199,6 +199,7 @@ type AppSettings = {
 	worlds_in_home: boolean
 	home_layout: 'standard' | 'minimal'
 	minimal_home_instance_id: string | null
+	home_widgets: import('@/components/home/home-dashboard').HomeDashboardConfig | null
 
 	telemetry: boolean
 	discord_rpc: boolean
