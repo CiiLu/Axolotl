@@ -289,31 +289,35 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 								<GripVerticalIcon />
 							</button>
 							<span class="home-widget-size-label">{{ widget.size }}</span>
-							<ButtonStyled circular size="small" type="transparent" class="home-widget-options">
-								<OverflowMenu
-									:options="widgetOptions(widget, index)"
-									:tooltip="formatMessage(messages.options)"
-								>
-									<MoreVerticalIcon />
-									<template
-										v-for="size in HOME_WIDGET_SIZE_OPTIONS[widget.kind]"
-										#[`size-${size}`]
-										:key="size"
+							<div class="home-widget-options">
+								<ButtonStyled circular size="small" type="transparent">
+									<OverflowMenu
+										:options="widgetOptions(widget, index)"
+										:tooltip="formatMessage(messages.options)"
 									>
-										<ExpandIcon /> {{ formatMessage(messages.size, { size }) }}
-									</template>
-									<template #move-earlier>
-										<ChevronUpIcon /> {{ formatMessage(messages.moveEarlier) }}
-									</template>
-									<template #move-later>
-										<ChevronDownIcon /> {{ formatMessage(messages.moveLater) }}
-									</template>
-									<template #replace>
-										<RefreshCwIcon /> {{ formatMessage(messages.replace) }}
-									</template>
-									<template #remove> <TrashIcon /> {{ formatMessage(messages.remove) }} </template>
-								</OverflowMenu>
-							</ButtonStyled>
+										<MoreVerticalIcon />
+										<template
+											v-for="size in HOME_WIDGET_SIZE_OPTIONS[widget.kind]"
+											#[`size-${size}`]
+											:key="size"
+										>
+											<ExpandIcon /> {{ formatMessage(messages.size, { size }) }}
+										</template>
+										<template #move-earlier>
+											<ChevronUpIcon /> {{ formatMessage(messages.moveEarlier) }}
+										</template>
+										<template #move-later>
+											<ChevronDownIcon /> {{ formatMessage(messages.moveLater) }}
+										</template>
+										<template #replace>
+											<RefreshCwIcon /> {{ formatMessage(messages.replace) }}
+										</template>
+										<template #remove>
+											<TrashIcon /> {{ formatMessage(messages.remove) }}
+										</template>
+									</OverflowMenu>
+								</ButtonStyled>
+							</div>
 						</div>
 						<div class="home-widget-content">
 							<HomeGreeting
@@ -434,6 +438,7 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	right: 0.5rem;
 	z-index: 12;
 	display: flex;
+	max-width: calc(100% - 1rem);
 	height: 2.25rem;
 	align-items: center;
 	gap: 0;
@@ -442,6 +447,7 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	border-radius: var(--radius-lg);
 	background: var(--color-raised-bg);
 	box-shadow: var(--shadow-button);
+	overflow: hidden;
 	opacity: 0.9;
 	transition:
 		box-shadow 120ms ease,
@@ -482,7 +488,10 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 }
 
 .home-widget-options {
+	display: flex;
+	min-width: 0;
 	width: 0;
+	flex: 0 0 auto;
 	overflow: hidden;
 	opacity: 0;
 	pointer-events: none;
@@ -572,9 +581,7 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 .home-dashboard-grid.is-editing .home-widget:hover,
 .home-dashboard-grid.is-editing .home-widget:focus-within {
 	border-color: var(--color-divider);
-	box-shadow:
-		var(--shadow-card),
-		0 0 0 2px var(--color-divider);
+	box-shadow: var(--shadow-card);
 }
 
 .home-dashboard.is-dragging,

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { HistoryIcon } from '@modrinth/assets'
 import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
@@ -216,7 +217,10 @@ async function stopInstance(instance: GameInstance) {
 				/>
 			</template>
 		</div>
-		<p v-else class="home-widget-empty">{{ formatMessage(messages.emptyRecent) }}</p>
+		<div v-else class="home-widget-empty">
+			<HistoryIcon aria-hidden="true" />
+			<span>{{ formatMessage(messages.emptyRecent) }}</span>
+		</div>
 	</section>
 </template>
 
@@ -268,9 +272,21 @@ async function stopInstance(instance: GameInstance) {
 }
 
 .home-widget-empty {
-	margin: auto 0;
+	display: flex;
+	max-width: 20rem;
+	margin: auto;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
 	color: var(--color-secondary);
 	font-size: 0.8125rem;
 	line-height: 1.4;
+	text-align: center;
+}
+
+.home-widget-empty svg {
+	width: 1.5rem;
+	height: 1.5rem;
+	opacity: 0.7;
 }
 </style>

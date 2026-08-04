@@ -146,9 +146,10 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 			<ServerIcon class="size-5 shrink-0 text-brand" aria-hidden="true" />
 			<h2>{{ formatMessage(messages.pinnedServers) }}</h2>
 		</div>
-		<p v-if="servers.length === 0" class="home-widget-empty">
-			{{ formatMessage(messages.emptyServers) }}
-		</p>
+		<div v-if="servers.length === 0" class="home-widget-empty">
+			<ServerIcon aria-hidden="true" />
+			<span>{{ formatMessage(messages.emptyServers) }}</span>
+		</div>
 		<ul v-else class="home-server-list">
 			<li v-for="server in servers" :key="serverKey(server.world)" class="home-server-row group">
 				<div class="relative shrink-0">
@@ -334,9 +335,21 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 }
 
 .home-widget-empty {
-	margin: auto 0;
+	display: flex;
+	max-width: 20rem;
+	margin: auto;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
 	color: var(--color-secondary);
 	font-size: 0.8125rem;
 	line-height: 1.4;
+	text-align: center;
+}
+
+.home-widget-empty svg {
+	width: 1.5rem;
+	height: 1.5rem;
+	opacity: 0.7;
 }
 </style>
