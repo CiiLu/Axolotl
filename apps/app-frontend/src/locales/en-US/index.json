@@ -1244,6 +1244,9 @@
   "app.home.widgets.calendar": {
     "message": "Calendar"
   },
+  "app.home.widgets.calendar-description": {
+    "message": "See the month and your play activity at a glance."
+  },
   "app.home.widgets.choose-instance": {
     "message": "Choose an instance"
   },
@@ -1268,8 +1271,23 @@
   "app.home.widgets.greeting": {
     "message": "Greeting"
   },
+  "app.home.widgets.greeting-description": {
+    "message": "A personal welcome that changes throughout the day."
+  },
+  "app.home.widgets.group.collections": {
+    "message": "Pinned collections"
+  },
+  "app.home.widgets.group.overview": {
+    "message": "Overview"
+  },
+  "app.home.widgets.group.shortcuts": {
+    "message": "Single-item shortcuts"
+  },
   "app.home.widgets.instance": {
-    "message": "Instance shortcut"
+    "message": "Single instance"
+  },
+  "app.home.widgets.instance-description": {
+    "message": "Choose one instance for a dedicated launch shortcut."
   },
   "app.home.widgets.loading": {
     "message": "Loading..."
@@ -1287,16 +1305,31 @@
     "message": "Widget options"
   },
   "app.home.widgets.pinned-instances": {
-    "message": "Pinned instances"
+    "message": "All pinned instances"
+  },
+  "app.home.widgets.pinned-instances-description": {
+    "message": "Automatically collects every instance pinned to Home."
   },
   "app.home.widgets.pinned-servers": {
-    "message": "Pinned servers"
+    "message": "All favorite servers"
+  },
+  "app.home.widgets.pinned-servers-description": {
+    "message": "Automatically collects favorite multiplayer servers."
   },
   "app.home.widgets.pinned-worlds": {
-    "message": "Pinned worlds"
+    "message": "All favorite worlds"
+  },
+  "app.home.widgets.pinned-worlds-description": {
+    "message": "Automatically collects favorite singleplayer worlds."
   },
   "app.home.widgets.recent": {
     "message": "Recently played"
+  },
+  "app.home.widgets.recent-description": {
+    "message": "Resume the worlds and instances you played most recently."
+  },
+  "app.home.widgets.recent-items": {
+    "message": "Show {count} recent items"
   },
   "app.home.widgets.remove": {
     "message": "Remove widget"
@@ -1314,7 +1347,10 @@
     "message": "Search"
   },
   "app.home.widgets.server": {
-    "message": "Server shortcut"
+    "message": "Single server"
+  },
+  "app.home.widgets.server-description": {
+    "message": "Choose one server for a dedicated join shortcut."
   },
   "app.home.widgets.size": {
     "message": "Size {size}"
@@ -1323,7 +1359,10 @@
     "message": "Content unavailable"
   },
   "app.home.widgets.world": {
-    "message": "World shortcut"
+    "message": "Single world"
+  },
+  "app.home.widgets.world-description": {
+    "message": "Choose one world for a dedicated play shortcut."
   },
   "app.home.worlds.empty": {
     "message": "Favorite a world and it will be pinned here."

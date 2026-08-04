@@ -118,7 +118,7 @@ export function provideHomeDashboardRuntime(handleError: ErrorHandler): HomeDash
 
 	async function refreshRecentWorlds() {
 		try {
-			recentWorlds.value = await get_recent_worlds(4, ['normal', 'favorite'])
+			recentWorlds.value = await get_recent_worlds(8, ['normal', 'favorite'])
 			warmServerData(recentWorlds.value)
 		} catch (error) {
 			handleError(error)

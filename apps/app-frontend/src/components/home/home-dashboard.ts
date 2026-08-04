@@ -1,7 +1,10 @@
 export const HOME_DASHBOARD_VERSION = 1 as const
 export const HOME_WIDGET_SIZES = ['1x1', '2x1', '1x2', '2x2'] as const
+export const HOME_RECENT_LIMIT_OPTIONS = [2, 4, 6, 8] as const
+export const HOME_RECENT_DEFAULT_LIMIT = 4
 
 export type HomeWidgetSize = (typeof HOME_WIDGET_SIZES)[number]
+export type HomeRecentLimit = (typeof HOME_RECENT_LIMIT_OPTIONS)[number]
 export type HomeWidgetKind =
 	| 'greeting'
 	| 'recent'
@@ -20,11 +23,16 @@ export type HomeWidgetTarget = {
 	fallbackLabel: string
 }
 
+export type HomeWidgetOptions = {
+	recentLimit?: HomeRecentLimit
+}
+
 export type HomeWidgetPlacement = {
 	id: string
 	kind: HomeWidgetKind
 	size: HomeWidgetSize
 	target?: HomeWidgetTarget
+	options?: HomeWidgetOptions
 }
 
 export type HomeDashboardConfig = {
@@ -45,7 +53,7 @@ export type HomeDashboardSaveQueue = {
 }
 
 export const HOME_WIDGET_SIZE_OPTIONS: Record<HomeWidgetKind, readonly HomeWidgetSize[]> = {
-	greeting: ['1x1', '2x1'],
+	greeting: ['2x1'],
 	recent: ['2x1', '1x2', '2x2'],
 	calendar: ['1x2'],
 	'pinned-instances': HOME_WIDGET_SIZES,
@@ -76,7 +84,12 @@ function createPlacement(
 	kind: HomeWidgetKind,
 	size = HOME_WIDGET_DEFAULT_SIZE[kind],
 ): HomeWidgetPlacement {
-	return { id: crypto.randomUUID(), kind, size }
+	return {
+		id: crypto.randomUUID(),
+		kind,
+		size,
+		...(kind === 'recent' ? { options: { recentLimit: HOME_RECENT_DEFAULT_LIMIT } } : {}),
+	}
 }
 
 export function createDefaultHomeDashboard(includeRecent = true): HomeDashboardConfig {
@@ -110,6 +123,15 @@ function normalizeTarget(value: unknown): HomeWidgetTarget | undefined {
 	}
 }
 
+function normalizeOptions(kind: HomeWidgetKind, value: unknown): HomeWidgetOptions | undefined {
+	if (kind !== 'recent') return undefined
+	const recentLimit =
+		isRecord(value) && HOME_RECENT_LIMIT_OPTIONS.includes(value.recentLimit as HomeRecentLimit)
+			? (value.recentLimit as HomeRecentLimit)
+			: HOME_RECENT_DEFAULT_LIMIT
+	return { recentLimit }
+}
+
 export function normalizeHomeDashboard(value: unknown): HomeDashboardConfig | null {
 	if (
 		!isRecord(value) ||
@@ -126,6 +148,7 @@ export function normalizeHomeDashboard(value: unknown): HomeDashboardConfig | nu
 
 		const kind = candidate.kind as HomeWidgetKind
 		const target = normalizeTarget(candidate.target)
+		const options = normalizeOptions(kind, candidate.options)
 		if ((kind === 'instance' || kind === 'world' || kind === 'server') && !target) return []
 		if (kind === 'world' && !target?.path) return []
 		if (kind === 'server' && !target?.address) return []
@@ -139,7 +162,15 @@ export function normalizeHomeDashboard(value: unknown): HomeDashboardConfig | nu
 			? (requestedSize as HomeWidgetSize)
 			: HOME_WIDGET_DEFAULT_SIZE[kind]
 
-		return [{ id, kind, size, ...(target ? { target } : {}) }]
+		return [
+			{
+				id,
+				kind,
+				size,
+				...(target ? { target } : {}),
+				...(options ? { options } : {}),
+			},
+		]
 	})
 
 	return { version: HOME_DASHBOARD_VERSION, widgets }
@@ -173,7 +204,26 @@ export function resizeHomeWidget(
 ): HomeDashboardConfig {
 	return replaceHomeDashboardWidgets(
 		config,
-		config.widgets.map((widget) => (widget.id === id ? { ...widget, size } : widget)),
+		config.widgets.map((widget) =>
+			widget.id === id && HOME_WIDGET_SIZE_OPTIONS[widget.kind].includes(size)
+				? { ...widget, size }
+				: widget,
+		),
+	)
+}
+
+export function setHomeRecentLimit(
+	config: HomeDashboardConfig,
+	id: string,
+	recentLimit: HomeRecentLimit,
+): HomeDashboardConfig {
+	return replaceHomeDashboardWidgets(
+		config,
+		config.widgets.map((widget) =>
+			widget.id === id && widget.kind === 'recent'
+				? { ...widget, options: { ...widget.options, recentLimit } }
+				: widget,
+		),
 	)
 }
 

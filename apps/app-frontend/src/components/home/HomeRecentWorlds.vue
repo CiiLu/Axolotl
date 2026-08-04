@@ -5,8 +5,12 @@ import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import { computed, ref, watch } from 'vue'
 
+import {
+	HOME_RECENT_DEFAULT_LIMIT,
+	type HomeRecentLimit,
+	type HomeWidgetSize,
+} from '@/components/home/home-dashboard'
 import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
-import type { HomeWidgetSize } from '@/components/home/home-dashboard'
 import InstanceItem from '@/components/ui/world/InstanceItem.vue'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
@@ -24,11 +28,17 @@ import {
 } from '@/helpers/worlds'
 import { handleSevereError } from '@/store/error'
 
-const props = defineProps<{
-	instances: GameInstance[]
-	dashboard?: boolean
-	dashboardSize?: HomeWidgetSize | null
-}>()
+const props = withDefaults(
+	defineProps<{
+		instances: GameInstance[]
+		dashboard?: boolean
+		dashboardSize?: HomeWidgetSize | null
+		limit?: HomeRecentLimit
+	}>(),
+	{
+		limit: HOME_RECENT_DEFAULT_LIMIT,
+	},
+)
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
@@ -46,8 +56,6 @@ const messages = defineMessages({
 		defaultMessage: 'No recent activity yet.',
 	},
 })
-
-const MAX_RECENT_ITEMS = 4
 
 type RecentItem =
 	| { type: 'world'; last_played: Dayjs; instance: GameInstance; world: WorldWithInstance }
@@ -77,7 +85,7 @@ const recentItems = computed<RecentItem[]>(() => {
 
 	return [...worldItems, ...instanceItems]
 		.sort((a, b) => b.last_played.diff(a.last_played))
-		.slice(0, MAX_RECENT_ITEMS)
+		.slice(0, props.limit)
 })
 const itemDensity = computed(() =>
 	props.dashboardSize?.startsWith('1') ? ('compact' as const) : ('comfortable' as const),

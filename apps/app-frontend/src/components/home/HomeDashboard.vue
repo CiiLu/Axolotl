@@ -5,6 +5,7 @@ import {
 	ChevronUpIcon,
 	ExpandIcon,
 	GripVerticalIcon,
+	ListIcon,
 	MoreVerticalIcon,
 	PencilIcon,
 	PlusIcon,
@@ -26,12 +27,15 @@ import Draggable from 'vuedraggable'
 import {
 	addHomeWidget,
 	getHomeGridColumnCount,
+	HOME_RECENT_DEFAULT_LIMIT,
+	HOME_RECENT_LIMIT_OPTIONS,
 	HOME_WIDGET_SIZE_OPTIONS,
 	moveHomeWidget,
 	packHomeWidgets,
 	removeHomeWidget,
 	replaceHomeDashboardWidgets,
 	resizeHomeWidget,
+	setHomeRecentLimit,
 	type HomeDashboardConfig,
 	type HomeWidgetPlacement,
 	type HomeWidgetSize,
@@ -88,6 +92,10 @@ const messages = defineMessages({
 	replace: { id: 'app.home.widgets.replace', defaultMessage: 'Replace target' },
 	empty: { id: 'app.home.widgets.empty', defaultMessage: 'Add a widget to build your Home.' },
 	size: { id: 'app.home.widgets.size', defaultMessage: 'Size {size}' },
+	recentItems: {
+		id: 'app.home.widgets.recent-items',
+		defaultMessage: 'Show {count} recent items',
+	},
 })
 
 watch(
@@ -170,6 +178,10 @@ function resizeWidget(id: string, size: HomeWidgetSize) {
 	emit('change', resizeHomeWidget(props.config, id, size))
 }
 
+function setRecentLimit(id: string, limit: (typeof HOME_RECENT_LIMIT_OPTIONS)[number]) {
+	emit('change', setHomeRecentLimit(props.config, id, limit))
+}
+
 function moveWidget(index: number, direction: -1 | 1) {
 	emit('change', moveHomeWidget(props.config, index, direction))
 }
@@ -177,6 +189,17 @@ function moveWidget(index: number, direction: -1 | 1) {
 function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	const sizeOptions = HOME_WIDGET_SIZE_OPTIONS[widget.kind]
 	return [
+		...(widget.kind === 'recent'
+			? [
+					...HOME_RECENT_LIMIT_OPTIONS.map((limit) => ({
+						id: `recent-limit-${limit}`,
+						icon: ListIcon,
+						disabled: (widget.options?.recentLimit ?? HOME_RECENT_DEFAULT_LIMIT) === limit,
+						action: () => setRecentLimit(widget.id, limit),
+					})),
+					{ divider: true },
+				]
+			: []),
 		...(sizeOptions.length > 1
 			? [
 					...sizeOptions.map((size) => ({
@@ -297,6 +320,14 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 									>
 										<MoreVerticalIcon />
 										<template
+											v-for="limit in HOME_RECENT_LIMIT_OPTIONS"
+											#[`recent-limit-${limit}`]
+											:key="`recent-limit-${limit}`"
+										>
+											<ListIcon />
+											{{ formatMessage(messages.recentItems, { count: limit }) }}
+										</template>
+										<template
 											v-for="size in HOME_WIDGET_SIZE_OPTIONS[widget.kind]"
 											#[`size-${size}`]
 											:key="size"
@@ -329,6 +360,7 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 								v-else-if="widget.kind === 'recent'"
 								:instances="instances"
 								:dashboard-size="effectiveSize(widget)"
+								:limit="widget.options?.recentLimit"
 								dashboard
 							/>
 							<HomeCalendar
@@ -428,8 +460,18 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 		filter 120ms ease;
 }
 
+.home-widget[data-widget-kind='greeting'] {
+	border-color: transparent;
+	background: transparent;
+	box-shadow: none;
+}
+
 .home-dashboard-grid:not(.is-editing) .home-widget:hover {
 	filter: brightness(var(--hover-brightness));
+}
+
+.home-dashboard-grid:not(.is-editing) .home-widget[data-widget-kind='greeting']:hover {
+	filter: none;
 }
 
 .home-widget-edit-bar {
@@ -574,6 +616,11 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	border-color: transparent;
 }
 
+.home-dashboard-grid.is-editing .home-widget[data-widget-kind='greeting'] {
+	border-color: var(--color-divider);
+	border-style: dashed;
+}
+
 .home-dashboard-grid.is-editing .home-widget-content {
 	pointer-events: none;
 }
@@ -582,6 +629,11 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 .home-dashboard-grid.is-editing .home-widget:focus-within {
 	border-color: var(--color-divider);
 	box-shadow: var(--shadow-card);
+}
+
+.home-dashboard-grid.is-editing .home-widget[data-widget-kind='greeting']:hover,
+.home-dashboard-grid.is-editing .home-widget[data-widget-kind='greeting']:focus-within {
+	box-shadow: none;
 }
 
 .home-dashboard.is-dragging,

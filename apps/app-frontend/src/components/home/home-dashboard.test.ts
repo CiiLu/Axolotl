@@ -13,6 +13,7 @@ import {
 	removeHomeWidget,
 	replaceHomeDashboardWidgets,
 	resizeHomeWidget,
+	setHomeRecentLimit,
 } from './home-dashboard.ts'
 
 test('derives one to four columns from the dashboard container width', () => {
@@ -35,10 +36,11 @@ test('temporarily clamps wide widgets without changing their preferred size', ()
 
 test('adds, reorders, resizes, and removes independent placements', () => {
 	const original = createDefaultHomeDashboard()
-	const duplicate = { ...original.widgets[0], id: 'duplicate-greeting' }
+	const pinnedInstances = original.widgets.find((widget) => widget.kind === 'pinned-instances')!
+	const duplicate = { ...pinnedInstances, id: 'duplicate-pinned-instances' }
 	const added = addHomeWidget(original, duplicate)
 	assert.equal(added.widgets.length, original.widgets.length + 1)
-	assert.equal(added.widgets.filter((widget) => widget.kind === 'greeting').length, 2)
+	assert.equal(added.widgets.filter((widget) => widget.kind === 'pinned-instances').length, 2)
 
 	const moved = moveHomeWidget(added, added.widgets.length - 1, -1)
 	assert.equal(moved.widgets.at(-2)?.id, duplicate.id)
@@ -148,4 +150,40 @@ test('normalizes every persisted calendar placement to the fixed 1x2 size', () =
 		normalized?.widgets.map((widget) => widget.size),
 		['1x2', '1x2'],
 	)
+})
+
+test('normalizes every persisted greeting placement to the fixed 2x1 size', () => {
+	const normalized = normalizeHomeDashboard({
+		version: 1,
+		widgets: [
+			{ id: 'small', kind: 'greeting', size: '1x1' },
+			{ id: 'tall', kind: 'greeting', size: '1x2' },
+		],
+	})
+
+	assert.deepEqual(
+		normalized?.widgets.map((widget) => widget.size),
+		['2x1', '2x1'],
+	)
+	assert.deepEqual(
+		resizeHomeWidget(normalized!, 'small', '1x1').widgets.map((widget) => widget.size),
+		['2x1', '2x1'],
+	)
+})
+
+test('normalizes and updates recently played item limits', () => {
+	const normalized = normalizeHomeDashboard({
+		version: 1,
+		widgets: [
+			{ id: 'legacy', kind: 'recent', size: '2x2' },
+			{ id: 'valid', kind: 'recent', size: '2x1', options: { recentLimit: 8 } },
+			{ id: 'invalid', kind: 'recent', size: '1x2', options: { recentLimit: 99 } },
+		],
+	})!
+
+	assert.deepEqual(
+		normalized.widgets.map((widget) => widget.options?.recentLimit),
+		[4, 8, 4],
+	)
+	assert.equal(setHomeRecentLimit(normalized, 'legacy', 6).widgets[0].options?.recentLimit, 6)
 })

@@ -4742,6 +4742,9 @@
   "app.home.widgets.calendar": {
     "message": "日历"
   },
+  "app.home.widgets.calendar-description": {
+    "message": "快速查看本月日期与游玩记录。"
+  },
   "app.home.widgets.choose-instance": {
     "message": "选择实例"
   },
@@ -4766,8 +4769,23 @@
   "app.home.widgets.greeting": {
     "message": "问候"
   },
+  "app.home.widgets.greeting-description": {
+    "message": "随一天中的时间变化的个性化欢迎语。"
+  },
+  "app.home.widgets.group.collections": {
+    "message": "收藏内容集合"
+  },
+  "app.home.widgets.group.overview": {
+    "message": "概览"
+  },
+  "app.home.widgets.group.shortcuts": {
+    "message": "单项快捷入口"
+  },
   "app.home.widgets.instance": {
-    "message": "实例快捷方式"
+    "message": "单个实例入口"
+  },
+  "app.home.widgets.instance-description": {
+    "message": "选择一个实例，创建独立的快速启动入口。"
   },
   "app.home.widgets.loading": {
     "message": "正在加载……"
@@ -4785,16 +4803,31 @@
     "message": "小组件选项"
   },
   "app.home.widgets.pinned-instances": {
-    "message": "固定的实例"
+    "message": "全部固定实例"
+  },
+  "app.home.widgets.pinned-instances-description": {
+    "message": "自动汇总所有固定到主页的实例。"
   },
   "app.home.widgets.pinned-servers": {
-    "message": "固定的服务器"
+    "message": "全部收藏服务器"
+  },
+  "app.home.widgets.pinned-servers-description": {
+    "message": "自动汇总所有收藏的多人服务器。"
   },
   "app.home.widgets.pinned-worlds": {
-    "message": "固定的世界"
+    "message": "全部收藏世界"
+  },
+  "app.home.widgets.pinned-worlds-description": {
+    "message": "自动汇总所有收藏的单人世界。"
   },
   "app.home.widgets.recent": {
     "message": "最近游玩"
+  },
+  "app.home.widgets.recent-description": {
+    "message": "继续游玩最近打开过的世界或实例。"
+  },
+  "app.home.widgets.recent-items": {
+    "message": "显示最近 {count} 项"
   },
   "app.home.widgets.remove": {
     "message": "删除小组件"
@@ -4812,7 +4845,10 @@
     "message": "搜索"
   },
   "app.home.widgets.server": {
-    "message": "服务器快捷方式"
+    "message": "单个服务器入口"
+  },
+  "app.home.widgets.server-description": {
+    "message": "选择一个服务器，创建独立的快速加入入口。"
   },
   "app.home.widgets.size": {
     "message": "尺寸 {size}"
@@ -4821,7 +4857,10 @@
     "message": "内容已不可用"
   },
   "app.home.widgets.world": {
-    "message": "世界快捷方式"
+    "message": "单个世界入口"
+  },
+  "app.home.widgets.world-description": {
+    "message": "选择一个世界，创建独立的快速游玩入口。"
   },
   "app.home.calendar.title": {
     "message": "日历"
