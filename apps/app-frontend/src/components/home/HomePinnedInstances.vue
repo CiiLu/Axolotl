@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RightArrowIcon } from '@modrinth/assets'
+import { GridIcon, RightArrowIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
 
@@ -74,9 +74,10 @@ async function updatePinned(instance: GameInstance, pinned: boolean) {
 				@pinned-change="updatePinned"
 			/>
 		</div>
-		<p v-else class="home-widget-empty">
-			{{ formatMessage(messages.emptyPinned) }}
-		</p>
+		<div v-else class="home-widget-empty">
+			<GridIcon aria-hidden="true" />
+			<span>{{ formatMessage(messages.emptyPinned) }}</span>
+		</div>
 	</section>
 </template>
 
@@ -138,9 +139,21 @@ async function updatePinned(instance: GameInstance, pinned: boolean) {
 }
 
 .home-widget-empty {
-	margin: auto 0;
+	display: flex;
+	max-width: 22rem;
+	margin: auto;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
 	color: var(--color-secondary);
 	font-size: 0.8125rem;
 	line-height: 1.4;
+	text-align: center;
+}
+
+.home-widget-empty svg {
+	width: 1.5rem;
+	height: 1.5rem;
+	opacity: 0.7;
 }
 </style>
