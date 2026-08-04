@@ -285,8 +285,8 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 							>
 								<GripVerticalIcon />
 							</button>
-							<span class="text-xs font-semibold text-secondary">{{ widget.size }}</span>
-							<ButtonStyled circular size="small" type="transparent" class="ml-auto">
+							<span class="home-widget-size-label">{{ widget.size }}</span>
+							<ButtonStyled circular size="small" type="transparent" class="home-widget-options">
 								<OverflowMenu
 									:options="widgetOptions(widget, index)"
 									:tooltip="formatMessage(messages.options)"
@@ -399,6 +399,10 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	gap: 1rem;
 }
 
+.home-dashboard-grid.is-editing {
+	grid-auto-flow: dense;
+}
+
 .home-widget {
 	position: relative;
 	display: flex;
@@ -427,20 +431,24 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	right: 0.5rem;
 	z-index: 12;
 	display: flex;
-	height: 2.5rem;
+	height: 2.25rem;
 	align-items: center;
-	gap: 0.5rem;
-	padding: 0 0.375rem;
+	gap: 0;
+	padding: 0.125rem;
 	border: 1px solid var(--color-divider);
 	border-radius: var(--radius-lg);
 	background: var(--color-raised-bg);
 	box-shadow: var(--shadow-button);
+	opacity: 0.9;
+	transition:
+		box-shadow 120ms ease,
+		opacity 120ms ease;
 }
 
 .home-widget-drag-handle {
 	display: inline-flex;
-	width: 2.25rem;
-	height: 2.25rem;
+	width: 2rem;
+	height: 2rem;
 	align-items: center;
 	justify-content: center;
 	padding: 0;
@@ -453,6 +461,51 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	transition:
 		background-color 100ms ease,
 		color 100ms ease;
+}
+
+.home-widget-size-label {
+	width: 0;
+	overflow: hidden;
+	color: var(--color-secondary);
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1;
+	opacity: 0;
+	white-space: nowrap;
+	transition:
+		width 120ms ease,
+		margin 120ms ease,
+		opacity 120ms ease;
+}
+
+.home-widget-options {
+	width: 0;
+	overflow: hidden;
+	opacity: 0;
+	pointer-events: none;
+	transition:
+		width 120ms ease,
+		opacity 120ms ease;
+}
+
+.home-widget:hover .home-widget-edit-bar,
+.home-widget:focus-within .home-widget-edit-bar {
+	box-shadow: var(--shadow-card);
+	opacity: 1;
+}
+
+.home-widget:hover .home-widget-size-label,
+.home-widget:focus-within .home-widget-size-label {
+	width: 2.25rem;
+	margin-left: 0.25rem;
+	opacity: 1;
+}
+
+.home-widget:hover .home-widget-options,
+.home-widget:focus-within .home-widget-options {
+	width: 2rem;
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .home-widget-drag-handle:hover,
@@ -506,14 +559,19 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 }
 
 .home-dashboard-grid.is-editing .home-widget {
-	border-color: var(--color-divider);
-	border-style: solid;
-	box-shadow: none;
+	border-color: transparent;
 }
 
 .home-dashboard-grid.is-editing .home-widget-content {
 	pointer-events: none;
-	opacity: 0.72;
+}
+
+.home-dashboard-grid.is-editing .home-widget:hover,
+.home-dashboard-grid.is-editing .home-widget:focus-within {
+	border-color: var(--color-divider);
+	box-shadow:
+		var(--shadow-card),
+		0 0 0 2px var(--color-divider);
 }
 
 .home-dashboard.is-dragging,
