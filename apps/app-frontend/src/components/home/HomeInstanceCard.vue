@@ -9,6 +9,8 @@ import type { GameInstance } from '@/helpers/types'
 const props = defineProps<{
 	instance: GameInstance
 	pinned: boolean
+	flat?: boolean
+	playing?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -31,7 +33,7 @@ const menuOptions = computed(() => [
 
 <template>
 	<div class="relative min-w-0">
-		<Instance :instance="props.instance" />
+		<Instance :instance="props.instance" :compact="flat" :flat="flat" :playing="playing" />
 		<div class="absolute right-2 top-2 z-10" @click.stop>
 			<ButtonStyled circular size="small" type="transparent">
 				<OverflowMenu

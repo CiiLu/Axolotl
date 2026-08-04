@@ -17,20 +17,14 @@ import {
 	OverflowMenu,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
+import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
-import { instance_listener, process_listener } from '@/helpers/events'
 import { kill } from '@/helpers/instance'
-import { get_all } from '@/helpers/process'
 import type { GameInstance } from '@/helpers/types'
 import {
-	get_favorite_worlds,
-	get_instance_protocol_version,
-	type ProtocolVersion,
-	refreshServerData,
-	type ServerData,
 	type ServerWorld,
 	set_world_display_status,
 	start_join_server,
@@ -40,11 +34,14 @@ import { handleSevereError } from '@/store/error'
 
 const props = defineProps<{
 	instances: GameInstance[]
+	dashboard?: boolean
 }>()
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 const handleMinecraftLaunchError = useMinecraftLaunchError()
+const runtime = useHomeDashboardRuntime()
+const { favoriteWorlds, runningInstanceIds } = runtime
 
 const messages = defineMessages({
 	pinnedServers: {
@@ -81,10 +78,6 @@ const messages = defineMessages({
 	},
 })
 
-const favoriteWorlds = ref<WorldWithInstance[]>([])
-const serverData = ref<Record<string, ServerData>>({})
-const protocolVersions = ref<Record<string, ProtocolVersion | null>>({})
-const runningInstanceIds = ref<string[]>([])
 const startingServerKey = ref<string | null>(null)
 
 const instanceById = computed(
@@ -102,44 +95,8 @@ function serverKey(world: ServerWorld & WorldWithInstance): string {
 	return `${world.instance_id}:${world.address}`
 }
 
-async function refreshServer(address: string, instanceId: string) {
-	serverData.value[address] ??= { refreshing: true }
-	await refreshServerData(
-		serverData.value[address],
-		protocolVersions.value[instanceId] ?? null,
-		address,
-	)
-}
-
-async function refreshFavorites() {
-	favoriteWorlds.value = await get_favorite_worlds().catch((error): WorldWithInstance[] => {
-		handleError(error)
-		return []
-	})
-
-	const serverInstanceIds = new Set(
-		favoriteWorlds.value
-			.filter((world) => world.type === 'server')
-			.map((world) => world.instance_id),
-	)
-	await Promise.all(
-		[...serverInstanceIds].map(async (instanceId) => {
-			protocolVersions.value[instanceId] = await get_instance_protocol_version(instanceId).catch(
-				() => null,
-			)
-		}),
-	)
-
-	for (const world of favoriteWorlds.value) {
-		if (world.type === 'server') {
-			void refreshServer(world.address, world.instance_id)
-		}
-	}
-}
-
-async function checkProcesses() {
-	const processes = await get_all().catch(() => [])
-	runningInstanceIds.value = processes.map((process) => process.instance_id)
+function dataFor(world: ServerWorld & WorldWithInstance) {
+	return runtime.getServerData(world.instance_id, world.address)
 }
 
 async function joinServer(world: ServerWorld & WorldWithInstance, instance: GameInstance) {
@@ -177,26 +134,15 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 	await set_world_display_status(world.instance_id, 'server', world.address, 'normal').catch(
 		handleError,
 	)
-	await refreshFavorites()
+	await runtime.refreshFavorites()
 }
-
-const unlistenProcesses = await process_listener(checkProcesses)
-const unlistenInstances = await instance_listener(refreshFavorites)
-
-await refreshFavorites()
-
-onMounted(() => {
-	void checkProcesses()
-})
-
-onUnmounted(() => {
-	unlistenProcesses()
-	unlistenInstances()
-})
 </script>
 
 <template>
-	<section class="card-shadow flex min-w-0 flex-col gap-3 rounded-2xl bg-bg-raised p-4">
+	<section
+		class="flex min-h-0 min-w-0 flex-col gap-3"
+		:class="dashboard ? '' : 'card-shadow rounded-2xl bg-bg-raised p-4'"
+	>
 		<div class="flex items-center gap-2">
 			<ServerIcon class="size-5 shrink-0 text-brand" aria-hidden="true" />
 			<h2 class="m-0 truncate text-lg font-bold text-contrast">
@@ -206,7 +152,7 @@ onUnmounted(() => {
 		<p v-if="servers.length === 0" class="m-0 text-sm text-secondary">
 			{{ formatMessage(messages.emptyServers) }}
 		</p>
-		<ul v-else class="m-0 flex list-none flex-col p-0">
+		<ul v-else class="m-0 flex min-h-0 flex-1 list-none flex-col overflow-y-auto p-0 pr-1">
 			<li
 				v-for="server in servers"
 				:key="serverKey(server.world)"
@@ -214,18 +160,16 @@ onUnmounted(() => {
 			>
 				<div class="relative shrink-0">
 					<Avatar
-						:src="
-							serverData[server.world.address]?.status?.favicon ?? (server.world.icon || undefined)
-						"
+						:src="dataFor(server.world).status?.favicon ?? (server.world.icon || undefined)"
 						:tint-by="server.world.address"
 						size="36px"
 					/>
 					<span
 						class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-solid border-bg-raised"
 						:class="
-							serverData[server.world.address]?.refreshing
+							dataFor(server.world).refreshing
 								? 'animate-pulse bg-secondary'
-								: serverData[server.world.address]?.status
+								: dataFor(server.world).status
 									? 'bg-brand-green'
 									: 'bg-red'
 						"
@@ -237,21 +181,21 @@ onUnmounted(() => {
 						{{ server.world.name }}
 					</span>
 					<span
-						v-if="serverData[server.world.address]?.status"
+						v-if="dataFor(server.world).status"
 						class="flex min-w-0 items-center gap-1 text-xs text-secondary"
 					>
 						<SignalIcon class="size-3 shrink-0" aria-hidden="true" />
 						<span class="truncate">
 							{{
 								formatMessage(messages.playersOnline, {
-									online: serverData[server.world.address]?.status?.players?.online ?? 0,
-									max: serverData[server.world.address]?.status?.players?.max ?? 0,
+									online: dataFor(server.world).status?.players?.online ?? 0,
+									max: dataFor(server.world).status?.players?.max ?? 0,
 								})
 							}}
 						</span>
 					</span>
 					<span
-						v-else-if="serverData[server.world.address]?.refreshing"
+						v-else-if="dataFor(server.world).refreshing"
 						class="truncate text-xs text-secondary"
 					>
 						{{ server.world.address }}

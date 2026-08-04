@@ -42,7 +42,6 @@ const themeStore = useTheming()
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 
-const recentProjectsInHomeFlag: FeatureFlag = 'worlds_in_home'
 const skipNonEssentialWarningsFlag: FeatureFlag = 'skip_non_essential_warnings'
 const skipUnknownPackWarningFlag: FeatureFlag = 'skip_unknown_pack_warning'
 const showPlayTimeFlag: FeatureFlag = 'show_instance_play_time'
@@ -247,14 +246,6 @@ const messages = defineMessages({
 	homeLayoutMinimal: {
 		id: 'app.appearance-settings.home-layout.minimal',
 		defaultMessage: 'Minimal',
-	},
-	homeRecentTitle: {
-		id: 'app.appearance-settings.home-recent.title',
-		defaultMessage: 'Recent projects',
-	},
-	homeRecentDescription: {
-		id: 'app.appearance-settings.home-recent.description',
-		defaultMessage: 'Show up to four recently opened instances and worlds on Information Home.',
 	},
 	selectOption: {
 		id: 'app.appearance-settings.select-option',
@@ -868,25 +859,6 @@ watch(
 				</button>
 			</ButtonStyled>
 		</div>
-	</div>
-
-	<div class="mt-6 flex items-center justify-between gap-4">
-		<div>
-			<h2 class="m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.homeRecentTitle) }}
-			</h2>
-			<p class="m-0 mt-1">{{ formatMessage(messages.homeRecentDescription) }}</p>
-		</div>
-		<Toggle
-			:model-value="themeStore.getFeatureFlag(recentProjectsInHomeFlag)"
-			@update:model-value="
-				(value) => {
-					const enabled = !!value
-					themeStore.featureFlags[recentProjectsInHomeFlag] = enabled
-					settings.feature_flags[recentProjectsInHomeFlag] = enabled
-				}
-			"
-		/>
 	</div>
 
 	<div class="mt-6 flex flex-col gap-2">

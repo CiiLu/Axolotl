@@ -7,6 +7,7 @@ import { invoke } from '@tauri-apps/api/core'
 
 import { setModrinthSourceMode } from '@/config'
 import type { Hooks, MemorySettings, WindowSize } from '@/helpers/types'
+import type { HomeDashboardConfig } from '@/components/home/home-dashboard'
 import type { AccentColorSetting, ColorTheme, FeatureFlag, HomeLayout } from '@/store/theme.ts'
 
 // Settings object
@@ -82,6 +83,7 @@ export type AppSettings = {
 	auto_hide_downloads_button: boolean
 	home_layout: HomeLayout
 	minimal_home_instance_id: string | null
+	home_widgets: HomeDashboardConfig | null
 
 	telemetry: boolean
 	discord_rpc: boolean

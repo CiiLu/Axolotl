@@ -254,12 +254,6 @@
   "app.appearance-settings.home-layout.title": {
     "message": "Home layout"
   },
-  "app.appearance-settings.home-recent.description": {
-    "message": "Show up to four recently opened instances and worlds on Information Home."
-  },
-  "app.appearance-settings.home-recent.title": {
-    "message": "Recent projects"
-  },
   "app.appearance-settings.minimize-launcher.description": {
     "message": "Minimize the launcher when a Minecraft process starts."
   },
@@ -1208,6 +1202,9 @@
   "app.home.playtime.sessions": {
     "message": "{count, plural, one {# successful launch} other {# successful launches}}"
   },
+  "app.home.recent.empty": {
+    "message": "No recent activity yet."
+  },
   "app.home.recent.title": {
     "message": "Start from your recent projects"
   },
@@ -1234,6 +1231,99 @@
   },
   "app.home.servers.unpin": {
     "message": "Unpin from Home"
+  },
+  "app.home.widgets.add": {
+    "message": "Add widget"
+  },
+  "app.home.widgets.add-title": {
+    "message": "Add widget"
+  },
+  "app.home.widgets.back": {
+    "message": "Back"
+  },
+  "app.home.widgets.calendar": {
+    "message": "Calendar"
+  },
+  "app.home.widgets.choose-instance": {
+    "message": "Choose an instance"
+  },
+  "app.home.widgets.choose-server": {
+    "message": "Choose a server"
+  },
+  "app.home.widgets.choose-world": {
+    "message": "Choose a world"
+  },
+  "app.home.widgets.customize": {
+    "message": "Customize widgets"
+  },
+  "app.home.widgets.done": {
+    "message": "Finish editing"
+  },
+  "app.home.widgets.drag": {
+    "message": "Drag to move widget"
+  },
+  "app.home.widgets.empty": {
+    "message": "Add a widget to build your Home."
+  },
+  "app.home.widgets.greeting": {
+    "message": "Greeting"
+  },
+  "app.home.widgets.instance": {
+    "message": "Instance shortcut"
+  },
+  "app.home.widgets.loading": {
+    "message": "Loading..."
+  },
+  "app.home.widgets.move-earlier": {
+    "message": "Move earlier"
+  },
+  "app.home.widgets.move-later": {
+    "message": "Move later"
+  },
+  "app.home.widgets.no-results": {
+    "message": "No matching items"
+  },
+  "app.home.widgets.options": {
+    "message": "Widget options"
+  },
+  "app.home.widgets.pinned-instances": {
+    "message": "Pinned instances"
+  },
+  "app.home.widgets.pinned-servers": {
+    "message": "Pinned servers"
+  },
+  "app.home.widgets.pinned-worlds": {
+    "message": "Pinned worlds"
+  },
+  "app.home.widgets.recent": {
+    "message": "Recently played"
+  },
+  "app.home.widgets.remove": {
+    "message": "Remove widget"
+  },
+  "app.home.widgets.replace": {
+    "message": "Replace target"
+  },
+  "app.home.widgets.reset": {
+    "message": "Restore default widgets"
+  },
+  "app.home.widgets.reset-confirm": {
+    "message": "Restore the default widget layout?"
+  },
+  "app.home.widgets.search": {
+    "message": "Search"
+  },
+  "app.home.widgets.server": {
+    "message": "Server shortcut"
+  },
+  "app.home.widgets.size": {
+    "message": "Size {size}"
+  },
+  "app.home.widgets.unavailable": {
+    "message": "Content unavailable"
+  },
+  "app.home.widgets.world": {
+    "message": "World shortcut"
   },
   "app.home.worlds.empty": {
     "message": "Favorite a world and it will be pinned here."
@@ -3392,17 +3482,23 @@
   "app.onboarding.downloads.title": {
     "message": "Download control room"
   },
-  "app.onboarding.home-instances.description": {
-    "message": "This is your launch area. Information Home keeps recent and pinned projects close; Minimal Home focuses on the instance you choose."
+  "app.onboarding.home-customize.description": {
+    "message": "Open the editor to add shortcuts, reorder widgets, and choose the useful size for each one."
   },
-  "app.onboarding.home-instances.title": {
-    "message": "Start where you want"
+  "app.onboarding.home-customize.title": {
+    "message": "Arrange it your way"
   },
   "app.onboarding.home-layout.description": {
     "message": "Use this floating button whenever you want to switch between Information Home and Minimal Home."
   },
   "app.onboarding.home-layout.title": {
     "message": "Change the amount of detail"
+  },
+  "app.onboarding.home-widgets.description": {
+    "message": "Information Home is built from widgets for recent activity, playtime, instances, worlds, and servers. The grid reflows as the window or account sidebar changes."
+  },
+  "app.onboarding.home-widgets.title": {
+    "message": "Your Home, your layout"
   },
   "app.onboarding.instance-actions.description": {
     "message": "Launch, stop, repair, configure, export, or open the instance from its header."
@@ -3472,12 +3568,6 @@
   },
   "app.onboarding.mascot-alt": {
     "message": "Axolotl guide"
-  },
-  "app.onboarding.playtime.description": {
-    "message": "The calendar highlights every day you played — pick a day to jump back in, with pinned servers below. Weekly insights, a daily challenge, and Minecraft news live in the account sidebar."
-  },
-  "app.onboarding.playtime.title": {
-    "message": "Your time, at a glance"
   },
   "app.onboarding.resources.description": {
     "message": "Tune downloads, storage, and app resources. Give the fan a little dignity."

@@ -1,23 +1,14 @@
 <script setup lang="ts">
-import {
-	defineMessages,
-	GAME_MODES,
-	type GameVersion,
-	injectNotificationManager,
-	useVIntl,
-} from '@modrinth/ui'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
+import { computed, ref, watch } from 'vue'
 
+import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
-import { instance_listener, process_listener } from '@/helpers/events'
 import { kill, run } from '@/helpers/instance'
-import { get_all } from '@/helpers/process'
-import { get_game_versions } from '@/helpers/tags'
 import type { GameInstance } from '@/helpers/types'
 import {
-	get_favorite_worlds,
 	getWorldIdentifier,
 	hasWorldQuickPlaySupport,
 	start_join_singleplayer_world,
@@ -27,11 +18,14 @@ import { handleSevereError } from '@/store/error'
 
 const props = defineProps<{
 	instances: GameInstance[]
+	dashboard?: boolean
 }>()
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 const handleMinecraftLaunchError = useMinecraftLaunchError()
+const runtime = useHomeDashboardRuntime()
+const { favoriteWorlds, gameVersions, runningInstanceIds } = runtime
 const messages = defineMessages({
 	pinnedWorlds: {
 		id: 'app.home.worlds.pinned',
@@ -43,11 +37,8 @@ const messages = defineMessages({
 	},
 })
 
-const favoriteWorlds = ref<WorldWithInstance[]>([])
-const runningInstanceIds = ref<string[]>([])
 const startingWorldKey = ref<string | null>(null)
 const playingWorldKey = ref<string | null>(null)
-const gameVersions = ref<GameVersion[]>(await get_game_versions().catch(() => []))
 
 const instanceById = computed(
 	() => new Map(props.instances.map((instance) => [instance.id, instance])),
@@ -64,26 +55,11 @@ function favoriteKey(world: WorldWithInstance): string {
 	return `${world.instance_id}:${world.type}:${getWorldIdentifier(world)}`
 }
 
-async function refreshFavorites() {
-	favoriteWorlds.value = await get_favorite_worlds().catch((error): WorldWithInstance[] => {
-		handleError(error)
-		return []
-	})
-}
-
-async function checkProcesses() {
-	const processes = await get_all().catch((error) => {
-		handleError(error)
-		return []
-	})
-	runningInstanceIds.value = processes.map((process) => process.instance_id)
-	if (
-		playingWorldKey.value &&
-		!runningInstanceIds.value.includes(playingWorldKey.value.split(':', 1)[0])
-	) {
+watch(runningInstanceIds, (instanceIds) => {
+	if (playingWorldKey.value && !instanceIds.includes(playingWorldKey.value.split(':', 1)[0])) {
 		playingWorldKey.value = null
 	}
-}
+})
 
 async function joinWorld(world: WorldWithInstance, instance: GameInstance) {
 	if (world.type !== 'singleplayer') return
@@ -135,28 +111,17 @@ async function stopInstance(instance: GameInstance) {
 		source: 'HomePinnedWorld',
 	})
 }
-
-const unlistenProcesses = await process_listener(checkProcesses)
-const unlistenInstances = await instance_listener(refreshFavorites)
-
-await refreshFavorites()
-
-onMounted(() => {
-	void checkProcesses()
-})
-
-onUnmounted(() => {
-	unlistenProcesses()
-	unlistenInstances()
-})
 </script>
 
 <template>
-	<section class="flex flex-col gap-3">
+	<section class="flex min-h-0 flex-col gap-3">
 		<h2 class="m-0 text-lg font-bold text-contrast">
 			{{ formatMessage(messages.pinnedWorlds) }}
 		</h2>
-		<div v-if="favorites.length > 0" class="flex flex-col gap-2">
+		<div
+			v-if="favorites.length > 0"
+			class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1"
+		>
 			<WorldItem
 				v-for="favorite in favorites"
 				:key="favoriteKey(favorite.world)"
@@ -174,10 +139,11 @@ onUnmounted(() => {
 				:instance-name="favorite.instance.name"
 				:instance-icon="favorite.instance.icon_path"
 				:shortcut-instance-id="favorite.instance.id"
+				:flat="dashboard"
 				@play="joinWorld(favorite.world, favorite.instance)"
 				@play-instance="playInstance(favorite.instance)"
 				@stop="stopInstance(favorite.instance)"
-				@update="refreshFavorites"
+				@update="runtime.refreshFavorites"
 			/>
 		</div>
 		<p v-else class="m-0 text-sm text-secondary">
