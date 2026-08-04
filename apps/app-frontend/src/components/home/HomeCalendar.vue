@@ -227,31 +227,24 @@ watch(instanceRevision, async () => {
 </script>
 
 <template>
-	<section
-		class="flex min-h-0 min-w-0 flex-col gap-3"
-		:class="[
-			dashboardSize
-				? `home-calendar-dashboard home-calendar-dashboard-${dashboardSize}`
-				: 'card-shadow rounded-2xl bg-bg-raised p-4',
-		]"
-	>
-		<div class="flex min-w-0 items-center gap-2">
-			<CalendarIcon class="size-5 shrink-0 text-brand" aria-hidden="true" />
-			<h2 class="m-0 truncate text-lg font-bold text-contrast">
-				{{ formatMessage(messages.calendar) }}
-			</h2>
-			<div class="ml-auto flex shrink-0 items-center gap-1">
-				<ButtonStyled v-if="dashboardSize !== '1x1'" circular size="small" type="transparent">
+	<section class="home-calendar-dashboard">
+		<header class="home-calendar-header">
+			<div class="home-calendar-title">
+				<span class="home-calendar-title-icon"><CalendarIcon aria-hidden="true" /></span>
+				<h2>{{ formatMessage(messages.calendar) }}</h2>
+			</div>
+			<div class="home-calendar-navigation">
+				<ButtonStyled circular size="small" type="transparent">
 					<button v-tooltip="formatMessage(messages.previousMonth)" @click="movePeriod(-1)">
 						<ChevronLeftIcon />
 					</button>
 				</ButtonStyled>
-				<ButtonStyled type="chip" size="small">
+				<ButtonStyled type="transparent" size="small" class="home-calendar-period">
 					<button v-tooltip="formatMessage(messages.thisMonth)" @click="goToThisMonth">
 						{{ periodLabel }}
 					</button>
 				</ButtonStyled>
-				<ButtonStyled v-if="dashboardSize !== '1x1'" circular size="small" type="transparent">
+				<ButtonStyled circular size="small" type="transparent">
 					<button
 						v-tooltip="formatMessage(messages.nextMonth)"
 						:disabled="!canGoForward"
@@ -261,7 +254,7 @@ watch(instanceRevision, async () => {
 					</button>
 				</ButtonStyled>
 			</div>
-		</div>
+		</header>
 		<div
 			class="home-calendar-month"
 			@pointerover="showTooltip"
@@ -301,10 +294,7 @@ watch(instanceRevision, async () => {
 				</button>
 			</div>
 		</div>
-		<div
-			v-if="dashboardSize !== '1x1'"
-			class="home-calendar-details flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto border-0 border-t border-solid border-divider pt-3"
-		>
+		<div class="home-calendar-details">
 			<h3 class="m-0 text-sm font-bold text-contrast">
 				{{ formatMessage(messages.playedOn, { date: selectedDateLabel }) }}
 			</h3>
@@ -377,11 +367,88 @@ watch(instanceRevision, async () => {
 </template>
 
 <style scoped>
+.home-calendar-dashboard {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	flex-direction: column;
+	gap: 0.625rem;
+	overflow: hidden;
+}
+
+.home-calendar-header {
+	display: flex;
+	min-width: 0;
+	height: 2rem;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.home-calendar-title {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.home-calendar-title-icon {
+	display: inline-flex;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--color-orange) 14%, transparent);
+	color: var(--color-orange);
+}
+
+.home-calendar-title-icon svg {
+	width: 1rem;
+	height: 1rem;
+}
+
+.home-calendar-title h2 {
+	overflow: hidden;
+	margin: 0;
+	color: var(--color-contrast);
+	font-size: 1rem;
+	font-weight: 750;
+	letter-spacing: 0;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.home-calendar-navigation {
+	display: flex;
+	min-width: 0;
+	margin-left: auto;
+	align-items: center;
+	gap: 0.125rem;
+}
+
+.home-calendar-period {
+	min-width: 0;
+}
+
+.home-calendar-period :deep(button) {
+	max-width: 7.5rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.home-calendar-month {
+	flex: 0 0 auto;
+}
+
 .home-calendar-weekdays {
 	display: grid;
 	grid-template-columns: repeat(7, minmax(0, 1fr));
-	gap: 0.25rem;
-	margin-bottom: 0.375rem;
+	gap: 0.1875rem;
+	margin-bottom: 0.25rem;
 	color: var(--color-secondary);
 	font-size: 0.75rem;
 	font-weight: 600;
@@ -391,16 +458,16 @@ watch(instanceRevision, async () => {
 .home-calendar-grid {
 	display: grid;
 	grid-template-columns: repeat(7, minmax(0, 1fr));
-	gap: 0.25rem;
+	gap: 0.1875rem;
 }
 
 .home-calendar-cell {
-	aspect-ratio: 1 / 1;
+	height: 1.4rem;
 	border: 1px solid transparent;
 	border-radius: var(--radius-sm);
 	background: transparent;
 	color: var(--color-contrast);
-	font-size: 0.75rem;
+	font-size: 0.6875rem;
 	font-weight: 600;
 	outline: none;
 	padding: 0;
@@ -432,56 +499,16 @@ watch(instanceRevision, async () => {
 	box-shadow: 0 0 0 2px var(--color-brand);
 }
 
-.home-calendar-dashboard {
-	overflow: hidden;
-}
-
-.home-calendar-dashboard-2x1 {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-	grid-template-rows: auto minmax(0, 1fr);
-	column-gap: 1rem;
-}
-
-.home-calendar-dashboard-2x1 > :first-child {
-	grid-column: 1 / -1;
-}
-
-.home-calendar-dashboard-2x1 .home-calendar-details {
-	border-top: 0;
-	border-left: 1px solid var(--color-divider);
-	padding-top: 0;
-	padding-left: 1rem;
-}
-
-.home-calendar-dashboard-1x1 .home-calendar-weekdays {
-	margin-bottom: 0.125rem;
-	font-size: 0.625rem;
-}
-
-.home-calendar-dashboard-1x1 h2 {
-	font-size: 0.875rem;
-}
-
-.home-calendar-dashboard-1x1 .home-calendar-grid {
-	gap: 0.125rem;
-}
-
-.home-calendar-dashboard-1x1 .home-calendar-cell {
-	height: 0.75rem;
-	aspect-ratio: auto;
-	font-size: 0;
-}
-
-.home-calendar-dashboard-1x2 .home-calendar-details,
-.home-calendar-dashboard-2x2 .home-calendar-details {
+.home-calendar-details {
+	display: flex;
+	min-width: 0;
+	min-height: 3.75rem;
 	flex: 1;
-}
-
-.home-calendar-dashboard-2x2 .home-calendar-detail-list {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	column-gap: 0.75rem;
+	flex-direction: column;
+	gap: 0.375rem;
+	overflow-y: auto;
+	padding-top: 0.625rem;
+	border-top: 1px solid var(--color-divider);
 }
 
 .home-calendar-level-0 {

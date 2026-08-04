@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { HistoryIcon } from '@modrinth/assets'
 import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import { computed, ref, watch } from 'vue'
 
 import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
+import type { HomeWidgetSize } from '@/components/home/home-dashboard'
 import InstanceItem from '@/components/ui/world/InstanceItem.vue'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
@@ -25,6 +27,7 @@ import { handleSevereError } from '@/store/error'
 const props = defineProps<{
 	instances: GameInstance[]
 	dashboard?: boolean
+	dashboardSize?: HomeWidgetSize | null
 }>()
 
 const { handleError } = injectNotificationManager()
@@ -76,6 +79,9 @@ const recentItems = computed<RecentItem[]>(() => {
 		.sort((a, b) => b.last_played.diff(a.last_played))
 		.slice(0, MAX_RECENT_ITEMS)
 })
+const itemDensity = computed(() =>
+	props.dashboardSize?.startsWith('1') ? ('compact' as const) : ('comfortable' as const),
+)
 
 function worldKey(world: WorldWithInstance): string {
 	return `${world.instance_id}:${world.type}:${getWorldIdentifier(world)}`
@@ -149,14 +155,13 @@ async function stopInstance(instance: GameInstance) {
 </script>
 
 <template>
-	<section class="flex min-h-0 flex-col gap-3">
-		<h2 class="m-0 text-lg font-bold text-contrast">
-			{{ formatMessage(messages.recentTitle) }}
-		</h2>
-		<div
-			v-if="recentItems.length > 0"
-			class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1"
-		>
+	<section class="home-recent-worlds" :data-size="dashboardSize">
+		<div class="home-widget-heading">
+			<span class="home-widget-heading-icon"><HistoryIcon aria-hidden="true" /></span>
+			<h2>{{ formatMessage(messages.recentTitle) }}</h2>
+			<span v-if="recentItems.length" class="home-widget-count">{{ recentItems.length }}</span>
+		</div>
+		<div v-if="recentItems.length > 0" class="home-recent-list">
 			<template
 				v-for="item in recentItems"
 				:key="item.type === 'world' ? worldKey(item.world) : `${item.instance.id}:instance`"
@@ -193,6 +198,7 @@ async function stopInstance(instance: GameInstance) {
 					:instance-icon="item.instance.icon_path"
 					:shortcut-instance-id="item.instance.id"
 					:flat="dashboard"
+					:dashboard-density="itemDensity"
 					@play="joinWorld(item.world, item.instance)"
 					@play-instance="playInstance(item.instance)"
 					@stop="stopInstance(item.instance)"
@@ -209,9 +215,96 @@ async function stopInstance(instance: GameInstance) {
 					:last-played="item.last_played"
 					:flat="dashboard"
 					:playing="runningInstanceIds.includes(item.instance.id)"
+					:dashboard-density="itemDensity"
 				/>
 			</template>
 		</div>
-		<p v-else class="m-0 text-sm text-secondary">{{ formatMessage(messages.emptyRecent) }}</p>
+		<p v-else class="home-widget-empty">{{ formatMessage(messages.emptyRecent) }}</p>
 	</section>
 </template>
+
+<style scoped>
+.home-recent-worlds {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.home-widget-heading {
+	display: flex;
+	min-width: 0;
+	height: 2rem;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.home-widget-heading-icon {
+	display: inline-flex;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--color-blue) 14%, transparent);
+	color: var(--color-blue);
+}
+
+.home-widget-heading-icon svg {
+	width: 1rem;
+	height: 1rem;
+}
+
+.home-widget-heading h2 {
+	min-width: 0;
+	overflow: hidden;
+	margin: 0;
+	color: var(--color-contrast);
+	font-size: 1rem;
+	font-weight: 750;
+	letter-spacing: 0;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.home-widget-count {
+	display: inline-flex;
+	min-width: 1.25rem;
+	height: 1.25rem;
+	align-items: center;
+	justify-content: center;
+	padding: 0 0.3rem;
+	border-radius: 999px;
+	background: var(--color-button-bg);
+	color: var(--color-secondary);
+	font-size: 0.7rem;
+	font-weight: 700;
+}
+
+.home-recent-list {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	flex: 1;
+	flex-direction: column;
+	gap: 0.25rem;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding-right: 0.25rem;
+}
+
+.home-recent-worlds[data-size='2x1'] {
+	gap: 0.5rem;
+}
+
+.home-widget-empty {
+	margin: auto 0;
+	color: var(--color-secondary);
+	font-size: 0.8125rem;
+	line-height: 1.4;
+}
+</style>

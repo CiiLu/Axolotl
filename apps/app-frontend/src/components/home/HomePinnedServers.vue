@@ -19,6 +19,7 @@ import {
 } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 
+import type { HomeWidgetSize } from '@/components/home/home-dashboard'
 import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
@@ -35,6 +36,7 @@ import { handleSevereError } from '@/store/error'
 const props = defineProps<{
 	instances: GameInstance[]
 	dashboard?: boolean
+	dashboardSize?: HomeWidgetSize | null
 }>()
 
 const { handleError } = injectNotificationManager()
@@ -139,25 +141,17 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 </script>
 
 <template>
-	<section
-		class="flex min-h-0 min-w-0 flex-col gap-3"
-		:class="dashboard ? '' : 'card-shadow rounded-2xl bg-bg-raised p-4'"
-	>
-		<div class="flex items-center gap-2">
-			<ServerIcon class="size-5 shrink-0 text-brand" aria-hidden="true" />
-			<h2 class="m-0 truncate text-lg font-bold text-contrast">
-				{{ formatMessage(messages.pinnedServers) }}
-			</h2>
+	<section class="home-pinned-servers" :data-size="dashboardSize">
+		<div class="home-widget-heading">
+			<span class="home-widget-heading-icon"><ServerIcon aria-hidden="true" /></span>
+			<h2>{{ formatMessage(messages.pinnedServers) }}</h2>
+			<span v-if="servers.length" class="home-widget-count">{{ servers.length }}</span>
 		</div>
-		<p v-if="servers.length === 0" class="m-0 text-sm text-secondary">
+		<p v-if="servers.length === 0" class="home-widget-empty">
 			{{ formatMessage(messages.emptyServers) }}
 		</p>
-		<ul v-else class="m-0 flex min-h-0 flex-1 list-none flex-col overflow-y-auto p-0 pr-1">
-			<li
-				v-for="server in servers"
-				:key="serverKey(server.world)"
-				class="group flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-button-bg"
-			>
+		<ul v-else class="home-server-list">
+			<li v-for="server in servers" :key="serverKey(server.world)" class="home-server-row group">
 				<div class="relative shrink-0">
 					<Avatar
 						:src="dataFor(server.world).status?.favicon ?? (server.world.icon || undefined)"
@@ -234,7 +228,7 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 							<PlayIcon v-else />
 						</button>
 					</ButtonStyled>
-					<ButtonStyled circular size="small" type="transparent">
+					<ButtonStyled circular size="small" type="transparent" class="home-server-menu">
 						<OverflowMenu
 							:options="[
 								{
@@ -256,3 +250,130 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 		</ul>
 	</section>
 </template>
+
+<style scoped>
+.home-pinned-servers {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.home-widget-heading {
+	display: flex;
+	min-width: 0;
+	height: 2rem;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.home-widget-heading-icon {
+	display: inline-flex;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--color-blue) 14%, transparent);
+	color: var(--color-blue);
+}
+
+.home-widget-heading-icon svg {
+	width: 1rem;
+	height: 1rem;
+}
+
+.home-widget-heading h2 {
+	min-width: 0;
+	overflow: hidden;
+	margin: 0;
+	color: var(--color-contrast);
+	font-size: 1rem;
+	font-weight: 750;
+	letter-spacing: 0;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.home-widget-count {
+	display: inline-flex;
+	min-width: 1.25rem;
+	height: 1.25rem;
+	align-items: center;
+	justify-content: center;
+	padding: 0 0.3rem;
+	border-radius: 999px;
+	background: var(--color-button-bg);
+	color: var(--color-secondary);
+	font-size: 0.7rem;
+	font-weight: 700;
+}
+
+.home-server-list {
+	display: grid;
+	min-width: 0;
+	min-height: 0;
+	flex: 1;
+	grid-auto-rows: max-content;
+	gap: 0.25rem;
+	margin: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding: 0 0.25rem 0 0;
+	list-style: none;
+}
+
+.home-server-row {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 0.625rem;
+	padding: 0.5rem;
+	border-radius: 6px;
+	transition: background-color 120ms ease;
+}
+
+.home-server-row:hover,
+.home-server-row:focus-within {
+	background: color-mix(in srgb, var(--color-blue) 8%, var(--color-button-bg));
+}
+
+.home-pinned-servers[data-size='2x1'] .home-server-list,
+.home-pinned-servers[data-size='2x2'] .home-server-list {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	column-gap: 0.5rem;
+}
+
+.home-pinned-servers[data-size='1x1'] {
+	gap: 0.375rem;
+}
+
+.home-pinned-servers[data-size='1x1'] .home-widget-heading {
+	height: 1.5rem;
+}
+
+.home-pinned-servers[data-size='1x1'] .home-widget-heading-icon {
+	width: 1.5rem;
+	height: 1.5rem;
+}
+
+.home-pinned-servers[data-size='1x1'] .home-server-row {
+	gap: 0.5rem;
+	padding: 0.375rem;
+}
+
+.home-pinned-servers[data-size='1x1'] .home-server-menu {
+	display: none;
+}
+
+.home-widget-empty {
+	margin: auto 0;
+	color: var(--color-secondary);
+	font-size: 0.8125rem;
+	line-height: 1.4;
+}
+</style>
