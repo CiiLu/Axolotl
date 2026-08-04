@@ -577,10 +577,22 @@ pub(crate) struct CurseForgePackExpectedMember {
     pub manual_download: Option<CurseForgeManualDownload>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct CurseForgePackExpectedOverride {
+    pub project_type: ProjectType,
+    pub expected_relative_path: String,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct CurseForgePackExpectedContent {
+    pub members: Vec<CurseForgePackExpectedMember>,
+    pub overrides: Vec<CurseForgePackExpectedOverride>,
+}
+
 pub(crate) async fn get_modpack_expected_members(
     project_id: u32,
     file_id: u32,
-) -> crate::Result<Vec<CurseForgePackExpectedMember>> {
+) -> crate::Result<CurseForgePackExpectedContent> {
     let pack_file = get_file(project_id, file_id).await?;
     let project = get_project(project_id).await?;
     let download_url = if project.allow_mod_distribution == Some(false) {
@@ -607,11 +619,13 @@ pub(crate) async fn get_modpack_expected_members(
     )
     .await?;
     let archive_path = pack_download.path;
-    let manifest = tokio::task::spawn_blocking(move || {
+    let (manifest, overrides) = tokio::task::spawn_blocking(move || {
         let file = std::fs::File::open(archive_path)?;
         let mut archive =
             zip::ZipArchive::new(file).map_err(modpack_zip_error)?;
-        read_modpack_manifest(&mut archive)
+        let manifest = read_modpack_manifest(&mut archive)?;
+        let overrides = read_modpack_override_content(&mut archive, &manifest)?;
+        Ok::<_, crate::Error>((manifest, overrides))
     })
     .await??;
 
@@ -697,7 +711,10 @@ pub(crate) async fn get_modpack_expected_members(
             manual_download,
         });
     }
-    Ok(expected)
+    Ok(CurseForgePackExpectedContent {
+        members: expected,
+        overrides,
+    })
 }
 
 fn default_true() -> bool {
@@ -1974,6 +1991,7 @@ pub async fn install_modpack_with_reporter(
 				"Instance has no applied content set".to_string(),
 			)
 		})?;
+        crate::state::sync_content_files(&request.instance_id, &state).await?;
         match get_modpack_expected_members(request.project_id, request.file_id)
             .await
         {
@@ -2539,6 +2557,7 @@ pub async fn update_managed_modpack(
         })
         .collect::<HashSet<_>>();
     let manual_downloads = expected
+        .members
         .iter()
         .filter(|member| member.required)
         .filter(|member| {
@@ -2623,6 +2642,7 @@ pub async fn update_managed_modpack(
     }
 
     let expected_keys = expected
+        .members
         .iter()
         .map(|member| {
             format!(
@@ -2655,6 +2675,7 @@ pub async fn update_managed_modpack(
         )
         .await?;
     }
+    crate::state::sync_content_files(instance_id, &state).await?;
     crate::state::instances::commands::reconcile_curseforge_members(
         instance_id,
         &metadata.applied_content_set.id,
@@ -2951,6 +2972,57 @@ fn read_modpack_manifest<R: Read + Seek>(
     let mut json = String::new();
     entry.read_to_string(&mut json)?;
     Ok(serde_json::from_str::<CurseForgeModpackManifest>(&json)?)
+}
+
+fn read_modpack_override_content<R: Read + Seek>(
+    archive: &mut zip::ZipArchive<R>,
+    manifest: &CurseForgeModpackManifest,
+) -> crate::Result<Vec<CurseForgePackExpectedOverride>> {
+    let prefix = format!("{}/", manifest.overrides.trim_matches('/'));
+    let mut overrides = Vec::new();
+    for index in 0..archive.len() {
+        let entry = archive.by_index(index).map_err(modpack_zip_error)?;
+        let entry_name =
+            crate::pack::detect::decode_zip_entry_name(entry.name_raw());
+        if entry.is_dir() || !entry_name.starts_with(&prefix) {
+            continue;
+        }
+        let Some(override_content) =
+            curseforge_override_content(&entry_name[prefix.len()..])?
+        else {
+            continue;
+        };
+        overrides.push(override_content);
+    }
+    overrides.sort_by(|left, right| {
+        left.expected_relative_path
+            .cmp(&right.expected_relative_path)
+    });
+    overrides.dedup_by(|left, right| {
+        left.expected_relative_path == right.expected_relative_path
+    });
+    Ok(overrides)
+}
+
+fn curseforge_override_content(
+    relative_path: &str,
+) -> crate::Result<Option<CurseForgePackExpectedOverride>> {
+    let relative_path = safe_archive_relative_path(relative_path)?;
+    let Some(project_type) = crate::state::instances::adapters::filesystem::project_type_from_relative_path(
+        &relative_path,
+    ) else {
+        return Ok(None);
+    };
+    if !crate::state::instances::adapters::filesystem::is_scannable_project_path(
+        project_type,
+        &relative_path,
+    ) {
+        return Ok(None);
+    }
+    Ok(Some(CurseForgePackExpectedOverride {
+        project_type,
+        expected_relative_path: relative_path,
+    }))
 }
 
 fn modpack_target(
@@ -5061,6 +5133,28 @@ mod tests {
         );
         assert!(safe_archive_relative_path("../options.txt").is_err());
         assert!(safe_archive_relative_path("/options.txt").is_err());
+    }
+
+    #[test]
+    fn curseforge_override_content_joins_the_pack_group() {
+        assert_eq!(
+            curseforge_override_content("mods/cc-tweaked.jar").unwrap(),
+            Some(CurseForgePackExpectedOverride {
+                project_type: ProjectType::Mod,
+                expected_relative_path: "mods/cc-tweaked.jar".to_string(),
+            })
+        );
+        assert_eq!(
+            curseforge_override_content("datapacks/sawmill.zip").unwrap(),
+            Some(CurseForgePackExpectedOverride {
+                project_type: ProjectType::DataPack,
+                expected_relative_path: "datapacks/sawmill.zip".to_string(),
+            })
+        );
+        assert_eq!(
+            curseforge_override_content("config/example.toml").unwrap(),
+            None
+        );
     }
 
     #[test]

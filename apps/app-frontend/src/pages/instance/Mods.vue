@@ -425,6 +425,7 @@ const localImportedModpackUnlinked = ref(false)
 
 const installingBuffer = ref<ContentItem[]>([])
 const handledInstallRevision = ref(0)
+const curseForgeReconciliationAttempts = new Set<string>()
 
 watch(
 	() => installingItems.value.get(props.instance.id),
@@ -690,12 +691,17 @@ const curseForgeModpackFallbackProject = computed<ContentModpackCardProject | nu
 	}
 })
 
-const displayedModpackProject = computed(
-	() =>
-		linkedModpackProject.value ??
-		curseForgeModpackFallbackProject.value ??
-		localImportedModpackProject.value,
-)
+const displayedModpackProject = computed(() => {
+	const fallbackProject =
+		curseForgeModpackFallbackProject.value ?? localImportedModpackProject.value
+	const project =
+		linkedModpackProject.value ?? fallbackProject
+	if (!project) return undefined
+	return {
+		...project,
+		icon_url: localIconUrl(project.icon_url || fallbackProject?.icon_url),
+	}
+})
 
 watch(
 	() => props.instance.link,
@@ -1821,6 +1827,21 @@ async function initProjects(cacheBehaviour?: CacheBehaviour) {
 		i18n.global.locale.value,
 	)
 	applyContentData(contentData)
+	if (cacheBehaviour !== 'bypass' && beginLegacyCurseForgeReconciliation(contentData)) {
+		await initProjects('bypass')
+	}
+}
+
+function beginLegacyCurseForgeReconciliation(contentData: InstanceContentData) {
+	if (
+		props.instance.link?.type !== 'curseforge_modpack' ||
+		curseForgeReconciliationAttempts.has(props.instance.id) ||
+		!contentData.snapshot.items.some((item) => item.ownershipKind === 'local_discovered')
+	) {
+		return false
+	}
+	curseForgeReconciliationAttempts.add(props.instance.id)
+	return true
 }
 
 function applyContentData(contentData: InstanceContentData) {
@@ -1901,7 +1922,7 @@ provideContentManager({
 	modpack: computed(() => {
 		if (linkedModpackProject.value) {
 			return {
-				project: linkedModpackProject.value,
+				project: displayedModpackProject.value ?? linkedModpackProject.value,
 				projectLink: {
 					path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}`,
 					query: { i: props.instance.id },
@@ -2119,6 +2140,9 @@ async function loadInitialContent(): Promise<void> {
 	}
 
 	if (props.preloadedContent && applyContentData(props.preloadedContent)) {
+		if (beginLegacyCurseForgeReconciliation(props.preloadedContent)) {
+			await initProjects('bypass')
+		}
 		return
 	}
 

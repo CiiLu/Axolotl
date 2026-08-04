@@ -41,7 +41,30 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.6.12',
 		},
 		changes: {
+			added: [
+				{
+					'en-US': 'Completely redesigned homepage with widgetized components',
+					'zh-CN': '完全重新设计主页，使其小组件化',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'Enhanced Windows icon rendering',
+					'zh-CN': '优化软件在Winodws下图标表现',
+				},
+			],
 			fixed: [
+				{
+					'en-US':
+						'CurseForge files bundled inside a modpack now remain in the modpack group, and existing instances are reconciled automatically without reclassifying user-added content.',
+					'zh-CN':
+						'CurseForge 整合包内置的文件现在会正确归入整合包分组；已有实例会自动校准，且不会误归类用户后来添加的内容。',
+				},
+				{
+					'en-US':
+						'Modpack group rows now fall back to the instance icon when provider artwork is missing.',
+					'zh-CN': '整合包平台图标缺失时，内容分组现在会正确回落显示实例图标。',
+				},
 				{
 					'en-US': 'Fixed local mods without a content record failing to enable or disable.',
 					'zh-CN': '修复未建立内容记录的本地 Mod 无法正常启用或禁用的问题。',
@@ -88,7 +111,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
-					'The world editor backs up level.dat before saving and stays read-only while the world is open in game.',
+						'The world editor backs up level.dat before saving and stays read-only while the world is open in game.',
 					'zh-CN': '世界编辑器保存前会自动备份 level.dat，存档正在游戏中打开时会自动进入只读状态。',
 				},
 				{

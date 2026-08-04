@@ -136,7 +136,7 @@ function normalizePack(snapshot: InstanceContentSnapshot): InstanceContentModpac
 	if (!pack) return null
 	const metadata = pack.metadata
 	const project = metadata
-		? normalizeProject(metadata)
+		? normalizeProject(metadata, pack.iconPath)
 		: {
 				id: pack.projectId ?? snapshot.instanceId,
 				slug: pack.projectId ?? snapshot.instanceId,
@@ -170,10 +170,13 @@ function normalizePack(snapshot: InstanceContentSnapshot): InstanceContentModpac
 	}
 }
 
-function normalizeProject(metadata: LinkedModpackInfo): ContentModpackCardProject {
+function normalizeProject(
+	metadata: LinkedModpackInfo,
+	fallbackIconPath?: string | null,
+): ContentModpackCardProject {
 	return {
 		...metadata.project,
 		slug: metadata.project.slug ?? metadata.project.id,
-		icon_url: metadata.project.icon_url ?? undefined,
+		icon_url: metadata.project.icon_url || fallbackIconPath || undefined,
 	}
 }

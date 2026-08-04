@@ -20,7 +20,7 @@ use crate::state::instances::{
 };
 use crate::state::{
     CacheBehaviour, ContentItem, ContentItemProject, ContentItemVersion,
-    ContentProvider, ContentProviderRef,
+    ContentProvider, ContentProviderRef, ContentRequirement, ContentSourceKind,
 };
 
 pub(crate) async fn get_content_snapshot(
@@ -74,64 +74,72 @@ pub(crate) async fn get_content_snapshot(
         .fetch_one(&state.pool)
         .await?
             != 0;
-        if needs_reconciliation || needs_manual_recovery {
-            let parsed_ids = project_id
-                .parse::<u32>()
-                .ok()
-                .zip(version_id.parse::<u32>().ok());
-            let result = match parsed_ids {
-                Some((project_id, version_id)) => {
-                    match crate::api::curseforge::get_modpack_expected_members(
-                        project_id, version_id,
-                    )
-                    .await
-                    {
-                        Ok(expected) => {
-                            if needs_reconciliation {
-                                if let Err(error) =
-                                    reconcile_curseforge_members(
-                                        instance_id,
-                                        &content_set.id,
-                                        &expected,
-                                        state,
-                                    )
-                                    .await
-                                {
-                                    Err(error)
-                                } else {
-                                    reconcile_curseforge_manual_downloads(
-                                        instance_id,
-                                        &content_set.id,
-                                        &expected,
-                                        state,
-                                    )
-                                    .await
-                                }
-                            } else {
-                                reconcile_curseforge_manual_downloads(
-                                    instance_id,
-                                    &content_set.id,
-                                    &expected,
-                                    state,
-                                )
-                                .await
-                            }
-                        }
-                        Err(error) => Err(error),
-                    }
-                }
-                None => Err(crate::ErrorKind::InputError(
-                    "Linked CurseForge pack IDs are invalid".to_string(),
+        let needs_local_classification = sqlx::query_scalar::<_, i64>(
+            "SELECT EXISTS(
+                SELECT 1
+                FROM instance_files file
+                LEFT JOIN instance_content_entries entry
+                    ON entry.content_set_id = ? AND entry.file_id = file.id
+                WHERE file.instance_id = ? AND file.missing = 0
+                    AND entry.id IS NULL
+            )",
+        )
+        .bind(&content_set.id)
+        .bind(instance_id)
+        .fetch_one(&state.pool)
+        .await?
+            != 0;
+        let parsed_ids = project_id
+            .parse::<u32>()
+            .ok()
+            .zip(version_id.parse::<u32>().ok());
+        let result = match parsed_ids {
+            Some((project_id, version_id)) => {
+                match crate::api::curseforge::get_modpack_expected_members(
+                    project_id, version_id,
                 )
-                .into()),
-            };
-            if let Err(error) = result {
-                warnings.push(InstanceContentWarning {
-                    code: "pack_membership_reconciliation_failed".to_string(),
-                    message: error.to_string(),
-                    provider: Some(ContentProvider::CurseForge),
-                });
+                .await
+                {
+                    Ok(expected) => {
+                        let should_reconcile = needs_reconciliation
+                            || needs_local_classification
+                            || !expected.overrides.is_empty();
+                        if should_reconcile
+                            && let Err(error) = reconcile_curseforge_members(
+                                instance_id,
+                                &content_set.id,
+                                &expected,
+                                state,
+                            )
+                            .await
+                        {
+                            Err(error)
+                        } else if should_reconcile || needs_manual_recovery {
+                            reconcile_curseforge_manual_downloads(
+                                instance_id,
+                                &content_set.id,
+                                &expected.members,
+                                state,
+                            )
+                            .await
+                        } else {
+                            Ok(())
+                        }
+                    }
+                    Err(error) => Err(error),
+                }
             }
+            None => Err(crate::ErrorKind::InputError(
+                "Linked CurseForge pack IDs are invalid".to_string(),
+            )
+            .into()),
+        };
+        if let Err(error) = result {
+            warnings.push(InstanceContentWarning {
+                code: "pack_membership_reconciliation_failed".to_string(),
+                message: error.to_string(),
+                provider: Some(ContentProvider::CurseForge),
+            });
         }
     }
 
@@ -387,7 +395,7 @@ struct CurseForgeReconciliationCandidate {
 pub(crate) async fn reconcile_curseforge_members(
     instance_id: &str,
     content_set_id: &str,
-    expected: &[crate::api::curseforge::CurseForgePackExpectedMember],
+    expected: &crate::api::curseforge::CurseForgePackExpectedContent,
     state: &State,
 ) -> crate::Result<()> {
     use chrono::Utc;
@@ -475,7 +483,7 @@ pub(crate) async fn reconcile_curseforge_members(
     .await?;
 
     let mut claimed_entries = HashSet::new();
-    for expected_member in expected {
+    for expected_member in &expected.members {
         let project_id = expected_member.project_id.to_string();
         let file_id = expected_member.file_id.to_string();
         let expected_path =
@@ -599,12 +607,102 @@ pub(crate) async fn reconcile_curseforge_members(
             .execute(&mut *tx)
             .await?;
     }
+    reconcile_curseforge_override_entries_in_transaction(
+        instance_id,
+        content_set_id,
+        &expected.overrides,
+        &mut tx,
+    )
+    .await?;
     content_rows::bump_content_set_revision_in_transaction(
         content_set_id,
         &mut tx,
     )
     .await?;
     tx.commit().await?;
+    Ok(())
+}
+
+async fn reconcile_curseforge_override_entries_in_transaction(
+    instance_id: &str,
+    content_set_id: &str,
+    expected: &[crate::api::curseforge::CurseForgePackExpectedOverride],
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+) -> crate::Result<()> {
+    let rows = sqlx::query(
+        "SELECT file.id AS file_id, file.relative_path, file.enabled,
+            (
+                SELECT entry.id
+                FROM instance_content_entries entry
+                WHERE entry.content_set_id = ? AND entry.file_id = file.id
+                ORDER BY entry.modified_at DESC
+                LIMIT 1
+            ) AS entry_id
+         FROM instance_files file
+         WHERE file.instance_id = ? AND file.missing = 0",
+    )
+    .bind(content_set_id)
+    .bind(instance_id)
+    .fetch_all(&mut **tx)
+    .await?;
+    let files = rows
+        .into_iter()
+        .map(|row| {
+            let relative_path = row.try_get::<String, _>("relative_path")?;
+            Ok((
+                normalized_content_path(&relative_path),
+                (
+                    row.try_get::<String, _>("file_id")?,
+                    row.try_get::<i64, _>("enabled")? != 0,
+                    row.try_get::<Option<String>, _>("entry_id")?,
+                ),
+            ))
+        })
+        .collect::<crate::Result<HashMap<_, _>>>()?;
+    let expected = expected
+        .iter()
+        .map(|item| {
+            (normalized_content_path(&item.expected_relative_path), item)
+        })
+        .collect::<HashMap<_, _>>();
+
+    for (relative_path, (file_id, enabled, entry_id)) in files {
+        let override_content = expected.get(&relative_path).copied();
+        if entry_id.is_some() && override_content.is_none() {
+            continue;
+        }
+        let Some(project_type) =
+            override_content.map(|item| item.project_type).or_else(|| {
+                filesystem::project_type_from_relative_path(&relative_path)
+            })
+        else {
+            continue;
+        };
+        let is_pack_override = override_content.is_some();
+        content_rows::upsert_content_entry_from_parts_in_transaction(
+            content_rows::UpsertContentEntry {
+                instance_id,
+                content_set_id,
+                file_id: Some(&file_id),
+                project_type,
+                source_kind: if is_pack_override {
+                    ContentSourceKind::CurseForge
+                } else {
+                    ContentSourceKind::Local
+                },
+                ownership_kind: if is_pack_override {
+                    ContentOwnershipKind::PackManaged
+                } else {
+                    ContentOwnershipKind::UserAdded
+                },
+                server_requirement: ContentRequirement::Required,
+                client_requirement: ContentRequirement::Required,
+                enabled,
+            },
+            tx,
+        )
+        .await?;
+    }
     Ok(())
 }
 
