@@ -26,7 +26,6 @@ const RECONCILE_PROVIDER_QUALIFIED_CONTENT_MIGRATION_VERSION: i64 =
 const JAVA_DEFAULT_VERSIONS_MIGRATION_VERSION: i64 = 20260729110000;
 #[cfg(test)]
 const SYSTEM_PROXY_SETTING_MIGRATION_VERSION: i64 = 20260802122000;
-#[cfg(test)]
 const INSTANCE_CONTENT_OWNERSHIP_MIGRATION_VERSION: i64 = 20260803120000;
 
 // This migration was changed by the launcher rebrand after it had already
@@ -92,6 +91,7 @@ async fn open_migrated_app_db(db_path: &Path) -> crate::Result<Pool<Sqlite>> {
         .await?;
     reconcile_compatible_migration_checksums(&pool).await?;
     reconcile_existing_java_discovery_migration(&pool).await?;
+    reconcile_pending_instance_content_ownership_duplicates(&pool).await?;
     MIGRATOR.run(&pool).await?;
     record_current_app_version(&pool).await?;
 
@@ -102,6 +102,125 @@ async fn open_migrated_app_db(db_path: &Path) -> crate::Result<Pool<Sqlite>> {
     }
 
     Ok(pool)
+}
+
+async fn reconcile_pending_instance_content_ownership_duplicates(
+    pool: &Pool<Sqlite>,
+) -> crate::Result<()> {
+    let has_migrations_table: bool = sqlx::query_scalar(
+        "SELECT EXISTS(
+            SELECT 1 FROM sqlite_master
+            WHERE type = 'table' AND name = '_sqlx_migrations'
+        )",
+    )
+    .fetch_one(pool)
+    .await?;
+    if !has_migrations_table {
+        return Ok(());
+    }
+
+    let migration_applied: bool = sqlx::query_scalar(
+        "SELECT EXISTS(
+            SELECT 1 FROM _sqlx_migrations
+            WHERE version = ? AND success = TRUE
+        )",
+    )
+    .bind(INSTANCE_CONTENT_OWNERSHIP_MIGRATION_VERSION)
+    .fetch_one(pool)
+    .await?;
+    if migration_applied {
+        return Ok(());
+    }
+
+    let legacy_schema_matches: bool = sqlx::query_scalar(
+        "SELECT
+            EXISTS(SELECT 1 FROM pragma_table_info('instance_content_entries') WHERE name = 'source_kind')
+            AND NOT EXISTS(SELECT 1 FROM pragma_table_info('instance_content_entries') WHERE name = 'ownership_kind')
+            AND EXISTS(SELECT 1 FROM pragma_table_info('instance_files') WHERE name = 'relative_path')
+            AND EXISTS(SELECT 1 FROM pragma_table_info('instance_links') WHERE name = 'link_kind')
+            AND EXISTS(SELECT 1 FROM pragma_table_info('instance_content_provider_refs') WHERE name = 'is_origin')
+            AND NOT EXISTS(
+                SELECT 1 FROM sqlite_master
+                WHERE type = 'table' AND name = 'instance_pack_members'
+            )",
+    )
+    .fetch_one(pool)
+    .await?;
+    if !legacy_schema_matches {
+        return Ok(());
+    }
+
+    let result = sqlx::query(
+        r#"
+        WITH migration_candidates AS (
+            SELECT
+                entry.id,
+                entry.content_set_id,
+                CASE
+                    WHEN origin.provider IS NOT NULL THEN
+                        origin.provider || ':' || origin.provider_project_id || ':' || entry.project_type
+                    ELSE 'path:' || lower(replace(file.relative_path, '\', '/'))
+                END AS member_key,
+                file.missing,
+                entry.enabled AS entry_enabled,
+                file.enabled AS file_enabled,
+                entry.modified_at AS entry_modified_at,
+                file.modified_at AS file_modified_at
+            FROM instance_content_entries entry
+            INNER JOIN instance_files file ON file.id = entry.file_id
+            INNER JOIN instance_links link ON link.instance_id = entry.instance_id
+            LEFT JOIN instance_content_provider_refs origin
+                ON origin.content_entry_id = entry.id
+                AND origin.is_origin = 1
+            WHERE
+                (link.link_kind IN ('modrinth_modpack', 'server_project_modpack')
+                    AND entry.source_kind = 'modrinth_modpack')
+                OR (link.link_kind = 'curseforge_modpack'
+                    AND entry.source_kind = 'curseforge')
+                OR (link.link_kind = 'imported_modpack'
+                    AND entry.source_kind IN (
+                        'imported_modpack',
+                        'modrinth_modpack',
+                        'curseforge'
+                    ))
+        ),
+        ranked_candidates AS (
+            SELECT
+                id,
+                row_number() OVER (
+                    PARTITION BY content_set_id, member_key
+                    ORDER BY
+                        CASE WHEN missing = 0 THEN 0 ELSE 1 END,
+                        CASE
+                            WHEN entry_enabled = 1 AND file_enabled = 1
+                                THEN 0
+                            ELSE 1
+                        END,
+                        entry_modified_at DESC,
+                        file_modified_at DESC,
+                        id
+                ) AS member_rank
+            FROM migration_candidates
+        )
+        UPDATE instance_content_entries
+        SET source_kind = 'local'
+        WHERE id IN (
+            SELECT id FROM ranked_candidates WHERE member_rank > 1
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    if result.rows_affected() > 0 {
+        tracing::warn!(
+            version = INSTANCE_CONTENT_OWNERSHIP_MIGRATION_VERSION,
+            reclassified_entries = result.rows_affected(),
+            "Reclassified duplicate legacy pack members before migration"
+        );
+    }
+
+    Ok(())
 }
 
 /// Reconciles historical migration checksums that differ only because of line
@@ -1202,12 +1321,17 @@ mod tests {
                     1, 'cf-pack-sha1', 10, 0, 1, 1),
                 ('cf-added-file', 'cf', 'mods/cf-added.jar', 'cf-added.jar',
                     1, 'cf-added-sha1', 11, 0, 1, 1),
+                ('cf-duplicate-file', 'cf', 'mods/cf-pack-old.jar',
+                    'cf-pack-old.jar', 1, 'cf-pack-old-sha1', 10, 1, 1, 2),
                 ('mr-pack-file', 'mr', 'mods/mr-pack.jar', 'mr-pack.jar',
                     1, 'mr-pack-sha1', 12, 0, 1, 1),
                 ('mr-added-file', 'mr', 'mods/mr-added.jar', 'mr-added.jar',
                     1, 'mr-added-sha1', 13, 0, 1, 1),
                 ('imported-file', 'imported', 'mods/imported.jar',
-                    'imported.jar', 0, 'imported-sha1', 14, 0, 1, 1);
+                    'imported.jar', 0, 'imported-sha1', 14, 0, 1, 1),
+                ('imported-duplicate-file', 'imported',
+                    'MODS\IMPORTED.JAR', 'IMPORTED.JAR', 1,
+                    'imported-duplicate-sha1', 14, 1, 1, 2);
 
             INSERT INTO instance_content_entries (
                 id, instance_id, content_set_id, file_id, project_type,
@@ -1218,19 +1342,26 @@ mod tests {
                     'curseforge', 'required', 'required', 1, 1, 1),
                 ('cf-added-entry', 'cf', 'cf-set', 'cf-added-file', 'mod',
                     'curseforge', 'required', 'required', 1, 1, 1),
+                ('cf-duplicate-entry', 'cf', 'cf-set',
+                    'cf-duplicate-file', 'mod', 'curseforge', 'required',
+                    'required', 1, 1, 2),
                 ('mr-pack-entry', 'mr', 'mr-set', 'mr-pack-file', 'mod',
                     'modrinth_modpack', 'required', 'required', 1, 1, 1),
                 ('mr-added-entry', 'mr', 'mr-set', 'mr-added-file', 'mod',
                     'local', 'required', 'required', 1, 1, 1),
                 ('imported-entry', 'imported', 'imported-set',
                     'imported-file', 'mod', 'imported_modpack', 'optional',
-                    'optional', 0, 1, 1);
+                    'optional', 0, 1, 1),
+                ('imported-duplicate-entry', 'imported', 'imported-set',
+                    'imported-duplicate-file', 'mod', 'imported_modpack',
+                    'optional', 'optional', 1, 1, 2);
 
             INSERT INTO instance_content_provider_refs (
                 content_entry_id, provider, provider_project_id,
                 provider_release_id, is_origin
             ) VALUES
                 ('cf-pack-entry', 'curseforge', '123', '456', 1),
+                ('cf-duplicate-entry', 'curseforge', '123', '455', 1),
                 ('cf-added-entry', 'curseforge', '789', '987', 1),
                 ('mr-pack-entry', 'modrinth', 'mr-project', 'mr-version', 1);
             "#,
@@ -1244,6 +1375,24 @@ mod tests {
                 .fetch_one(&pool)
                 .await
                 .unwrap();
+        reconcile_pending_instance_content_ownership_duplicates(&pool)
+            .await
+            .unwrap();
+        let reclassified_entries: Vec<(String, String)> = sqlx::query_as(
+            "SELECT id, source_kind FROM instance_content_entries
+             WHERE id IN ('cf-duplicate-entry', 'imported-duplicate-entry')
+             ORDER BY id",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            reclassified_entries,
+            vec![
+                ("cf-duplicate-entry".to_string(), "local".to_string()),
+                ("imported-duplicate-entry".to_string(), "local".to_string(),),
+            ]
+        );
         sqlx::raw_sql(instance_content_ownership_migration().sql.as_ref())
             .execute(&pool)
             .await
@@ -1260,7 +1409,12 @@ mod tests {
             ownership,
             vec![
                 ("cf-added-entry".to_string(), "pack_managed".to_string()),
+                ("cf-duplicate-entry".to_string(), "user_added".to_string(),),
                 ("cf-pack-entry".to_string(), "pack_managed".to_string()),
+                (
+                    "imported-duplicate-entry".to_string(),
+                    "user_added".to_string(),
+                ),
                 ("imported-entry".to_string(), "pack_managed".to_string()),
                 ("mr-added-entry".to_string(), "user_added".to_string()),
                 ("mr-pack-entry".to_string(), "pack_managed".to_string()),
@@ -1312,6 +1466,12 @@ mod tests {
                     Some("987".to_string()),
                 ),
                 (
+                    "cf-duplicate-entry".to_string(),
+                    "curseforge".to_string(),
+                    "123".to_string(),
+                    Some("455".to_string()),
+                ),
+                (
                     "cf-pack-entry".to_string(),
                     "curseforge".to_string(),
                     "123".to_string(),
@@ -1348,6 +1508,9 @@ mod tests {
             .unwrap();
         sqlx::query("PRAGMA foreign_keys = ON")
             .execute(&pool)
+            .await
+            .unwrap();
+        reconcile_pending_instance_content_ownership_duplicates(&pool)
             .await
             .unwrap();
         MIGRATOR.run(&pool).await.unwrap();

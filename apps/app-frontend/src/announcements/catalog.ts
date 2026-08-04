@@ -35,7 +35,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
 		id: 'launcher-1.6.11',
 		version: '1.6.11',
-		publishedAt: '2026-08-03',
+		publishedAt: '2026-08-04',
 		title: {
 			'en-US': 'Axolotl Launcher 1.6.11',
 			'zh-CN': 'Axolotl Launcher 1.6.11',
@@ -73,6 +73,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Improved the Traditional Chinese (Taiwan) interface translation with hundreds of revised entries. Thanks to @DonkeyBear for the contribution.',
 					'zh-CN': '改进繁体中文（台湾）界面翻译：修订数百条文案。感谢 @DonkeyBear 的贡献。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed an upgrade failure that could prevent the launcher from opening when existing modpack content contained duplicate records.',
+					'zh-CN': '修复旧版整合包内容存在重复记录时升级失败，导致启动器无法启动的问题。',
 				},
 			],
 		},
