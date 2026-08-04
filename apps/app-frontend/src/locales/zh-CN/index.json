@@ -4616,6 +4616,24 @@
   "app.home.greeting.welcome-with-player": {
     "message": "欢迎回来，{name}。"
   },
+  "app.home.greeting.settings.font": {
+    "message": "字体"
+  },
+  "app.home.greeting.settings.font-size": {
+    "message": "字号"
+  },
+  "app.home.greeting.settings.font.minecraft": {
+    "message": "Minecraft 像素字体"
+  },
+  "app.home.greeting.settings.font.mono": {
+    "message": "等宽字体"
+  },
+  "app.home.greeting.settings.font.sans": {
+    "message": "启动器字体"
+  },
+  "app.home.greeting.settings.font.serif": {
+    "message": "衬线字体"
+  },
   "app.home.greeting.settings.mode": {
     "message": "显示方式"
   },
@@ -4882,6 +4900,15 @@
   },
   "app.home.widgets.pinned-worlds-description": {
     "message": "自动汇总所有收藏的单人世界。"
+  },
+  "app.home.widgets.preset.apply-confirm": {
+    "message": "要应用“{preset}”预设吗？当前的小组件布局将被替换。"
+  },
+  "app.home.widgets.preset.balanced": {
+    "message": "均衡布局"
+  },
+  "app.home.widgets.presets": {
+    "message": "布局预设"
   },
   "app.home.widgets.recent": {
     "message": "最近游玩"

@@ -3,7 +3,10 @@ import { defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onUnmounted, ref } from 'vue'
 
 import {
+	HOME_GREETING_DEFAULT_FONT,
+	HOME_GREETING_DEFAULT_FONT_SIZE,
 	HOME_GREETING_DEFAULT_MODE,
+	type HomeGreetingFont,
 	type HomeGreetingMode,
 	type HomeWidgetSize,
 } from './home-dashboard'
@@ -16,6 +19,8 @@ const props = withDefaults(
 		dashboardSize?: HomeWidgetSize | null
 		greetingMode?: HomeGreetingMode
 		greetingText?: string
+		greetingFont?: HomeGreetingFont
+		greetingFontSize?: number
 	}>(),
 	{
 		playerName: null,
@@ -23,6 +28,8 @@ const props = withDefaults(
 		dashboardSize: null,
 		greetingMode: HOME_GREETING_DEFAULT_MODE,
 		greetingText: '',
+		greetingFont: HOME_GREETING_DEFAULT_FONT,
+		greetingFontSize: HOME_GREETING_DEFAULT_FONT_SIZE,
 	},
 )
 
@@ -153,6 +160,22 @@ const heading = computed(() => {
 	return greeting.value
 })
 
+const greetingFontFamilies: Record<HomeGreetingFont, string> = {
+	sans: 'var(--font-standard)',
+	minecraft: "'bundled-minecraft-font-mrapp', monospace",
+	mono: 'var(--mono-font)',
+	serif: "Georgia, 'Times New Roman', serif",
+}
+
+const headingStyle = computed(() =>
+	props.dashboardSize
+		? {
+				'--home-greeting-font-family': greetingFontFamilies[props.greetingFont],
+				'--home-greeting-font-size': `${props.greetingFontSize}px`,
+			}
+		: undefined,
+)
+
 const updateClock = () => {
 	now.value = new Date()
 }
@@ -178,6 +201,7 @@ onUnmounted(() => window.clearInterval(timer))
 		<h1
 			class="m-0 max-w-full break-words font-extrabold text-contrast"
 			:class="dashboardSize ? 'home-greeting-heading' : 'text-2xl'"
+			:style="headingStyle"
 		>
 			{{ heading }}
 		</h1>
@@ -196,7 +220,8 @@ onUnmounted(() => window.clearInterval(timer))
 
 .home-greeting-heading {
 	max-width: 44rem;
-	font-size: 1.375rem;
+	font-family: var(--home-greeting-font-family, var(--font-standard));
+	font-size: var(--home-greeting-font-size, 1.375rem);
 	line-height: 1.35;
 }
 </style>

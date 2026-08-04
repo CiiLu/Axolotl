@@ -1115,6 +1115,24 @@
   "app.home.greeting.welcome-with-player": {
     "message": "Welcome back, {name}."
   },
+  "app.home.greeting.settings.font": {
+    "message": "Font"
+  },
+  "app.home.greeting.settings.font-size": {
+    "message": "Font size"
+  },
+  "app.home.greeting.settings.font.minecraft": {
+    "message": "Minecraft"
+  },
+  "app.home.greeting.settings.font.mono": {
+    "message": "Monospace"
+  },
+  "app.home.greeting.settings.font.sans": {
+    "message": "Launcher"
+  },
+  "app.home.greeting.settings.font.serif": {
+    "message": "Serif"
+  },
   "app.home.greeting.settings.mode": {
     "message": "Display style"
   },
@@ -1381,6 +1399,15 @@
   },
   "app.home.widgets.pinned-worlds-description": {
     "message": "Automatically collects favorite singleplayer worlds."
+  },
+  "app.home.widgets.preset.apply-confirm": {
+    "message": "Apply the {preset} preset? This replaces the current widget layout."
+  },
+  "app.home.widgets.preset.balanced": {
+    "message": "Balanced layout"
+  },
+  "app.home.widgets.presets": {
+    "message": "Layout presets"
   },
   "app.home.widgets.recent": {
     "message": "Recently played"

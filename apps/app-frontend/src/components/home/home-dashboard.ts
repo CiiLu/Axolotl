@@ -4,10 +4,18 @@ export const HOME_RECENT_LIMIT_OPTIONS = [2, 4, 6, 8] as const
 export const HOME_RECENT_DEFAULT_LIMIT = 4
 export const HOME_GREETING_MODES = ['greeting', 'text-and-greeting', 'text'] as const
 export const HOME_GREETING_DEFAULT_MODE = 'greeting'
+export const HOME_GREETING_FONTS = ['sans', 'minecraft', 'mono', 'serif'] as const
+export const HOME_GREETING_DEFAULT_FONT = 'sans'
+export const HOME_GREETING_FONT_SIZE_MIN = 16
+export const HOME_GREETING_FONT_SIZE_MAX = 32
+export const HOME_GREETING_DEFAULT_FONT_SIZE = 22
+export const HOME_DASHBOARD_PRESET_IDS = ['balanced'] as const
 
 export type HomeWidgetSize = (typeof HOME_WIDGET_SIZES)[number]
 export type HomeRecentLimit = (typeof HOME_RECENT_LIMIT_OPTIONS)[number]
 export type HomeGreetingMode = (typeof HOME_GREETING_MODES)[number]
+export type HomeGreetingFont = (typeof HOME_GREETING_FONTS)[number]
+export type HomeDashboardPresetId = (typeof HOME_DASHBOARD_PRESET_IDS)[number]
 export type HomeWidgetKind =
 	| 'greeting'
 	| 'recent'
@@ -30,6 +38,8 @@ export type HomeWidgetOptions = {
 	recentLimit?: HomeRecentLimit
 	greetingMode?: HomeGreetingMode
 	greetingText?: string
+	greetingFont?: HomeGreetingFont
+	greetingFontSize?: number
 }
 
 export type HomeWidgetPlacement = {
@@ -94,7 +104,15 @@ function createPlacement(
 		kind,
 		size,
 		...(kind === 'recent' ? { options: { recentLimit: HOME_RECENT_DEFAULT_LIMIT } } : {}),
-		...(kind === 'greeting' ? { options: { greetingMode: HOME_GREETING_DEFAULT_MODE } } : {}),
+		...(kind === 'greeting'
+			? {
+					options: {
+						greetingMode: HOME_GREETING_DEFAULT_MODE,
+						greetingFont: HOME_GREETING_DEFAULT_FONT,
+						greetingFontSize: HOME_GREETING_DEFAULT_FONT_SIZE,
+					},
+				}
+			: {}),
 	}
 }
 
@@ -109,6 +127,23 @@ export function createDefaultHomeDashboard(includeRecent = true): HomeDashboardC
 			createPlacement('pinned-worlds'),
 			createPlacement('pinned-servers'),
 		],
+	}
+}
+
+export function createHomeDashboardPreset(id: HomeDashboardPresetId): HomeDashboardConfig {
+	switch (id) {
+		case 'balanced':
+			return {
+				version: HOME_DASHBOARD_VERSION,
+				widgets: [
+					createPlacement('greeting', '2x1'),
+					createPlacement('calendar', '1x2'),
+					createPlacement('recent', '2x2'),
+					createPlacement('pinned-worlds', '1x2'),
+					createPlacement('pinned-servers', '2x1'),
+					createPlacement('pinned-instances', '2x2'),
+				],
+			}
 	}
 }
 
@@ -147,13 +182,33 @@ function normalizeOptions(kind: HomeWidgetKind, value: unknown): HomeWidgetOptio
 			isRecord(value) && typeof value.greetingText === 'string'
 				? value.greetingText.trim().slice(0, 120)
 				: ''
+		const greetingFont =
+			isRecord(value) && HOME_GREETING_FONTS.includes(value.greetingFont as HomeGreetingFont)
+				? (value.greetingFont as HomeGreetingFont)
+				: HOME_GREETING_DEFAULT_FONT
+		const greetingFontSize = normalizeGreetingFontSize(
+			isRecord(value) ? value.greetingFontSize : undefined,
+		)
 		return {
 			greetingMode,
 			...(greetingText ? { greetingText } : {}),
+			greetingFont,
+			greetingFontSize,
 		}
 	}
 
 	return undefined
+}
+
+function normalizeGreetingFontSize(value: unknown): number {
+	if (typeof value !== 'number' || !Number.isFinite(value)) {
+		return HOME_GREETING_DEFAULT_FONT_SIZE
+	}
+
+	return Math.min(
+		HOME_GREETING_FONT_SIZE_MAX,
+		Math.max(HOME_GREETING_FONT_SIZE_MIN, Math.round(value)),
+	)
 }
 
 export function normalizeHomeDashboard(value: unknown): HomeDashboardConfig | null {
@@ -256,8 +311,13 @@ export function setHomeGreetingOptions(
 	id: string,
 	greetingMode: HomeGreetingMode,
 	greetingText: string,
+	greetingFont: HomeGreetingFont,
+	greetingFontSize: number,
 ): HomeDashboardConfig {
 	const normalizedText = greetingText.trim().slice(0, 120)
+	const normalizedFont = HOME_GREETING_FONTS.includes(greetingFont)
+		? greetingFont
+		: HOME_GREETING_DEFAULT_FONT
 	return replaceHomeDashboardWidgets(
 		config,
 		config.widgets.map((widget) =>
@@ -267,6 +327,8 @@ export function setHomeGreetingOptions(
 						options: {
 							greetingMode,
 							...(normalizedText ? { greetingText: normalizedText } : {}),
+							greetingFont: normalizedFont,
+							greetingFontSize: normalizeGreetingFontSize(greetingFontSize),
 						},
 					}
 				: widget,

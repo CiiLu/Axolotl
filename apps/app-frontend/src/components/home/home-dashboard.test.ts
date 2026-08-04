@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
 	addHomeWidget,
 	createDefaultHomeDashboard,
+	createHomeDashboardPreset,
 	createHomeDashboardSaveQueue,
 	getHomeGridColumnCount,
 	getHomeWidgetSpan,
@@ -68,6 +69,31 @@ test('accepts draggable order and restores the complete default layout', () => {
 			{ kind: 'pinned-worlds', size: '1x2' },
 			{ kind: 'pinned-servers', size: '1x2' },
 		],
+	)
+})
+
+test('creates the saved balanced preset with fresh placement ids', () => {
+	const first = createHomeDashboardPreset('balanced')
+	const second = createHomeDashboardPreset('balanced')
+
+	assert.deepEqual(
+		first.widgets.map(({ kind, size, options }) => ({
+			kind,
+			size,
+			recentLimit: options?.recentLimit,
+		})),
+		[
+			{ kind: 'greeting', size: '2x1', recentLimit: undefined },
+			{ kind: 'calendar', size: '1x2', recentLimit: undefined },
+			{ kind: 'recent', size: '2x2', recentLimit: 4 },
+			{ kind: 'pinned-worlds', size: '1x2', recentLimit: undefined },
+			{ kind: 'pinned-servers', size: '2x1', recentLimit: undefined },
+			{ kind: 'pinned-instances', size: '2x2', recentLimit: undefined },
+		],
+	)
+	assert.notDeepEqual(
+		first.widgets.map((widget) => widget.id),
+		second.widgets.map((widget) => widget.id),
 	)
 })
 
@@ -173,18 +199,60 @@ test('normalizes every persisted greeting placement to the fixed 2x1 size', () =
 	)
 	assert.deepEqual(
 		normalized?.widgets.map((widget) => widget.options),
-		[{ greetingMode: 'greeting' }, { greetingMode: 'text', greetingText: 'Ready to play' }],
+		[
+			{ greetingMode: 'greeting', greetingFont: 'sans', greetingFontSize: 22 },
+			{
+				greetingMode: 'text',
+				greetingText: 'Ready to play',
+				greetingFont: 'sans',
+				greetingFontSize: 22,
+			},
+		],
 	)
 	assert.deepEqual(
 		resizeHomeWidget(normalized!, 'small', '1x1').widgets.map((widget) => widget.size),
 		['2x1', '2x1'],
 	)
 	assert.deepEqual(
-		setHomeGreetingOptions(normalized!, 'small', 'text-and-greeting', '  Hi  ').widgets[0].options,
+		setHomeGreetingOptions(normalized!, 'small', 'text-and-greeting', '  Hi  ', 'minecraft', 29)
+			.widgets[0].options,
 		{
 			greetingMode: 'text-and-greeting',
 			greetingText: 'Hi',
+			greetingFont: 'minecraft',
+			greetingFontSize: 29,
 		},
+	)
+})
+
+test('normalizes greeting font settings and clamps font size', () => {
+	const normalized = normalizeHomeDashboard({
+		version: 1,
+		widgets: [
+			{
+				id: 'large',
+				kind: 'greeting',
+				size: '2x1',
+				options: { greetingFont: 'serif', greetingFontSize: 80 },
+			},
+			{
+				id: 'invalid',
+				kind: 'greeting',
+				size: '2x1',
+				options: { greetingFont: 'comic-sans', greetingFontSize: 'large' },
+			},
+		],
+	})!
+
+	assert.deepEqual(
+		normalized.widgets.map((widget) => ({
+			font: widget.options?.greetingFont,
+			fontSize: widget.options?.greetingFontSize,
+		})),
+		[
+			{ font: 'serif', fontSize: 32 },
+			{ font: 'sans', fontSize: 22 },
+		],
 	)
 })
 

@@ -2,16 +2,23 @@
 import { MessageIcon, SaveIcon, SparklesIcon, TextCursorInputIcon, XIcon } from '@modrinth/assets'
 import {
 	ButtonStyled,
+	Combobox,
 	commonMessages,
 	defineMessages,
 	NewModal,
+	Slider,
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, nextTick, ref } from 'vue'
 
 import {
+	HOME_GREETING_DEFAULT_FONT,
+	HOME_GREETING_DEFAULT_FONT_SIZE,
 	HOME_GREETING_DEFAULT_MODE,
+	HOME_GREETING_FONT_SIZE_MAX,
+	HOME_GREETING_FONT_SIZE_MIN,
+	type HomeGreetingFont,
 	type HomeGreetingMode,
 	type HomeWidgetPlacement,
 } from '@/components/home/home-dashboard'
@@ -22,7 +29,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-	save: [id: string, mode: HomeGreetingMode, text: string]
+	save: [id: string, mode: HomeGreetingMode, text: string, font: HomeGreetingFont, fontSize: number]
 }>()
 
 const { formatMessage } = useVIntl()
@@ -31,6 +38,8 @@ const textInput = ref<InstanceType<typeof StyledInput>>()
 const widgetId = ref('')
 const mode = ref<HomeGreetingMode>(HOME_GREETING_DEFAULT_MODE)
 const text = ref('')
+const font = ref<HomeGreetingFont>(HOME_GREETING_DEFAULT_FONT)
+const fontSize = ref(HOME_GREETING_DEFAULT_FONT_SIZE)
 
 const messages = defineMessages({
 	title: { id: 'app.home.greeting.settings.title', defaultMessage: 'Customize greeting' },
@@ -73,6 +82,12 @@ const messages = defineMessages({
 		defaultMessage: 'Leave this empty to use the current automatic greeting.',
 	},
 	preview: { id: 'app.home.greeting.settings.preview', defaultMessage: 'Preview' },
+	fontLabel: { id: 'app.home.greeting.settings.font', defaultMessage: 'Font' },
+	fontSizeLabel: { id: 'app.home.greeting.settings.font-size', defaultMessage: 'Font size' },
+	fontSans: { id: 'app.home.greeting.settings.font.sans', defaultMessage: 'Launcher' },
+	fontMinecraft: { id: 'app.home.greeting.settings.font.minecraft', defaultMessage: 'Minecraft' },
+	fontMono: { id: 'app.home.greeting.settings.font.mono', defaultMessage: 'Monospace' },
+	fontSerif: { id: 'app.home.greeting.settings.font.serif', defaultMessage: 'Serif' },
 })
 
 const modeOptions = computed(() => [
@@ -102,6 +117,13 @@ const placeholder = computed(() =>
 		: formatMessage(messages.textPlaceholder),
 )
 
+const fontOptions = computed(() => [
+	{ value: 'sans' as const, label: formatMessage(messages.fontSans) },
+	{ value: 'minecraft' as const, label: formatMessage(messages.fontMinecraft) },
+	{ value: 'mono' as const, label: formatMessage(messages.fontMono) },
+	{ value: 'serif' as const, label: formatMessage(messages.fontSerif) },
+])
+
 function selectMode(nextMode: HomeGreetingMode) {
 	mode.value = nextMode
 	if (nextMode !== 'greeting') void nextTick(() => textInput.value?.focus())
@@ -111,11 +133,13 @@ function show(widget: HomeWidgetPlacement) {
 	widgetId.value = widget.id
 	mode.value = widget.options?.greetingMode ?? HOME_GREETING_DEFAULT_MODE
 	text.value = widget.options?.greetingText ?? ''
+	font.value = widget.options?.greetingFont ?? HOME_GREETING_DEFAULT_FONT
+	fontSize.value = widget.options?.greetingFontSize ?? HOME_GREETING_DEFAULT_FONT_SIZE
 	modal.value?.show()
 }
 
 function save() {
-	emit('save', widgetId.value, mode.value, text.value)
+	emit('save', widgetId.value, mode.value, text.value, font.value, fontSize.value)
 	modal.value?.hide()
 }
 
@@ -167,6 +191,27 @@ defineExpose({ show })
 				<span class="text-xs text-secondary">{{ formatMessage(messages.textFallback) }}</span>
 			</label>
 
+			<section class="grid min-w-0 grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-5">
+				<label class="flex min-w-0 flex-col gap-2">
+					<span class="text-sm font-semibold text-contrast">{{
+						formatMessage(messages.fontLabel)
+					}}</span>
+					<Combobox v-model="font" :options="fontOptions" />
+				</label>
+				<label class="flex min-w-0 flex-col gap-2">
+					<span class="text-sm font-semibold text-contrast">{{
+						formatMessage(messages.fontSizeLabel)
+					}}</span>
+					<Slider
+						v-model="fontSize"
+						:min="HOME_GREETING_FONT_SIZE_MIN"
+						:max="HOME_GREETING_FONT_SIZE_MAX"
+						:step="1"
+						unit="px"
+					/>
+				</label>
+			</section>
+
 			<section class="flex min-w-0 flex-col gap-2">
 				<h3 class="m-0 text-sm font-semibold text-contrast">
 					{{ formatMessage(messages.preview) }}
@@ -176,6 +221,8 @@ defineExpose({ show })
 						:player-name="playerName"
 						:greeting-mode="mode"
 						:greeting-text="text"
+						:greeting-font="font"
+						:greeting-font-size="fontSize"
 						dashboard-size="2x1"
 					/>
 				</div>

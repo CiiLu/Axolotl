@@ -36,6 +36,7 @@ import {
 	setHomeGreetingOptions,
 	setHomeRecentLimit,
 	type HomeDashboardConfig,
+	type HomeGreetingFont,
 	type HomeGreetingMode,
 	type HomeWidgetPlacement,
 	type HomeWidgetSize,
@@ -190,8 +191,14 @@ function openGreetingSettings(widget: HomeWidgetPlacement) {
 	greetingSettings.value?.show(widget)
 }
 
-function saveGreetingSettings(id: string, mode: HomeGreetingMode, text: string) {
-	emit('change', setHomeGreetingOptions(props.config, id, mode, text))
+function saveGreetingSettings(
+	id: string,
+	mode: HomeGreetingMode,
+	text: string,
+	font: HomeGreetingFont,
+	fontSize: number,
+) {
+	emit('change', setHomeGreetingOptions(props.config, id, mode, text, font, fontSize))
 }
 
 function moveWidget(index: number, direction: -1 | 1) {
@@ -360,6 +367,8 @@ defineExpose({ openWidgetPicker })
 								:dashboard-size="effectiveSize(widget)"
 								:greeting-mode="widget.options?.greetingMode"
 								:greeting-text="widget.options?.greetingText"
+								:greeting-font="widget.options?.greetingFont"
+								:greeting-font-size="widget.options?.greetingFontSize"
 							/>
 							<HomeRecentWorlds
 								v-else-if="widget.kind === 'recent'"
@@ -455,12 +464,13 @@ defineExpose({ openWidgetPicker })
 	box-shadow: none;
 }
 
-.home-dashboard-grid:not(.is-editing) .home-widget:hover {
+.home-dashboard-grid:not(.is-editing)
+	.home-widget:is(
+		[data-widget-kind='instance'],
+		[data-widget-kind='world'],
+		[data-widget-kind='server']
+	):hover {
 	filter: brightness(var(--hover-brightness));
-}
-
-.home-dashboard-grid:not(.is-editing) .home-widget[data-widget-kind='greeting']:hover {
-	filter: none;
 }
 
 .home-widget-edit-bar {
@@ -620,15 +630,20 @@ defineExpose({ openWidgetPicker })
 	pointer-events: none;
 }
 
-.home-dashboard-grid.is-editing .home-widget:hover,
-.home-dashboard-grid.is-editing .home-widget:focus-within {
+.home-dashboard-grid.is-editing
+	.home-widget:is(
+		[data-widget-kind='instance'],
+		[data-widget-kind='world'],
+		[data-widget-kind='server']
+	):hover,
+.home-dashboard-grid.is-editing
+	.home-widget:is(
+		[data-widget-kind='instance'],
+		[data-widget-kind='world'],
+		[data-widget-kind='server']
+	):focus-within {
 	border-color: var(--color-divider);
 	box-shadow: var(--shadow-card);
-}
-
-.home-dashboard-grid.is-editing .home-widget[data-widget-kind='greeting']:hover,
-.home-dashboard-grid.is-editing .home-widget[data-widget-kind='greeting']:focus-within {
-	box-shadow: none;
 }
 
 .home-dashboard.is-dragging,
