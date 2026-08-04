@@ -57,7 +57,7 @@ export const onboardingMessages = defineMessages({
 	homeCustomizeDescription: {
 		id: 'app.onboarding.home-customize.description',
 		defaultMessage:
-			'Open the editor to add shortcuts, reorder widgets, and choose the useful size for each one.',
+			'Use the bottom-right edit control to add shortcuts, reorder widgets, resize them, and configure their content.',
 	},
 	discoverTitle: { id: 'app.onboarding.discover.title', defaultMessage: 'Find something new' },
 	discoverDescription: {
@@ -82,7 +82,7 @@ export const onboardingMessages = defineMessages({
 	homeLayoutDescription: {
 		id: 'app.onboarding.home-layout.description',
 		defaultMessage:
-			'Use this floating button whenever you want to switch between Information Home and Minimal Home.',
+			'Use the bottom-right control to switch between Information Home and Minimal Home. Widget editing stays with Information Home.',
 	},
 	continueArea: {
 		id: 'app.onboarding.action.continue-area',

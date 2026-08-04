@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-	CheckIcon,
 	ChevronDownIcon,
 	ChevronUpIcon,
 	ExpandIcon,
@@ -10,7 +9,6 @@ import {
 	PencilIcon,
 	PlusIcon,
 	RefreshCwIcon,
-	RotateCounterClockwiseIcon,
 	TrashIcon,
 } from '@modrinth/assets'
 import {
@@ -35,14 +33,17 @@ import {
 	removeHomeWidget,
 	replaceHomeDashboardWidgets,
 	resizeHomeWidget,
+	setHomeGreetingOptions,
 	setHomeRecentLimit,
 	type HomeDashboardConfig,
+	type HomeGreetingMode,
 	type HomeWidgetPlacement,
 	type HomeWidgetSize,
 } from '@/components/home/home-dashboard'
 import { provideHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import HomeCalendar from '@/components/home/HomeCalendar.vue'
 import HomeGreeting from '@/components/home/HomeGreeting.vue'
+import HomeGreetingSettingsModal from '@/components/home/HomeGreetingSettingsModal.vue'
 import HomePinnedInstances from '@/components/home/HomePinnedInstances.vue'
 import HomePinnedServers from '@/components/home/HomePinnedServers.vue'
 import HomePinnedWorlds from '@/components/home/HomePinnedWorlds.vue'
@@ -55,6 +56,7 @@ const props = defineProps<{
 	config: HomeDashboardConfig
 	instances: GameInstance[]
 	playerName: string | null
+	editing: boolean
 }>()
 
 const emit = defineEmits<{
@@ -65,9 +67,10 @@ const emit = defineEmits<{
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 provideHomeDashboardRuntime(handleError)
-const editing = ref(false)
+const editing = computed(() => props.editing)
 const gridContainer = ref<HTMLElement>()
 const widgetPicker = ref<InstanceType<typeof HomeWidgetPickerModal>>()
+const greetingSettings = ref<InstanceType<typeof HomeGreetingSettingsModal>>()
 const replacingWidgetId = ref<string | null>(null)
 const dragging = ref(false)
 const draggableWidgets = ref<HomeWidgetPlacement[]>([])
@@ -80,10 +83,7 @@ const packedWidgets = computed(() => packHomeWidgets(widgetsForPacking.value, co
 const packedById = computed(() => new Map(packedWidgets.value.map((widget) => [widget.id, widget])))
 
 const messages = defineMessages({
-	customize: { id: 'app.home.widgets.customize', defaultMessage: 'Customize widgets' },
-	done: { id: 'app.home.widgets.done', defaultMessage: 'Finish editing' },
 	add: { id: 'app.home.widgets.add', defaultMessage: 'Add widget' },
-	reset: { id: 'app.home.widgets.reset', defaultMessage: 'Restore default widgets' },
 	options: { id: 'app.home.widgets.options', defaultMessage: 'Widget options' },
 	moveEarlier: { id: 'app.home.widgets.move-earlier', defaultMessage: 'Move earlier' },
 	moveLater: { id: 'app.home.widgets.move-later', defaultMessage: 'Move later' },
@@ -95,6 +95,10 @@ const messages = defineMessages({
 	recentItems: {
 		id: 'app.home.widgets.recent-items',
 		defaultMessage: 'Show {count} recent items',
+	},
+	greetingSettings: {
+		id: 'app.home.greeting.settings.title',
+		defaultMessage: 'Customize greeting',
 	},
 })
 
@@ -182,6 +186,14 @@ function setRecentLimit(id: string, limit: (typeof HOME_RECENT_LIMIT_OPTIONS)[nu
 	emit('change', setHomeRecentLimit(props.config, id, limit))
 }
 
+function openGreetingSettings(widget: HomeWidgetPlacement) {
+	greetingSettings.value?.show(widget)
+}
+
+function saveGreetingSettings(id: string, mode: HomeGreetingMode, text: string) {
+	emit('change', setHomeGreetingOptions(props.config, id, mode, text))
+}
+
 function moveWidget(index: number, direction: -1 | 1) {
 	emit('change', moveHomeWidget(props.config, index, direction))
 }
@@ -189,6 +201,16 @@ function moveWidget(index: number, direction: -1 | 1) {
 function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	const sizeOptions = HOME_WIDGET_SIZE_OPTIONS[widget.kind]
 	return [
+		...(widget.kind === 'greeting'
+			? [
+					{
+						id: 'greeting-settings',
+						icon: PencilIcon,
+						action: () => openGreetingSettings(widget),
+					},
+					{ divider: true },
+				]
+			: []),
 		...(widget.kind === 'recent'
 			? [
 					...HOME_RECENT_LIMIT_OPTIONS.map((limit) => ({
@@ -237,40 +259,18 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 		{ id: 'remove', icon: TrashIcon, color: 'red' as const, action: () => removeWidget(widget.id) },
 	]
 }
+
+defineExpose({ openWidgetPicker })
 </script>
 
 <template>
 	<HomeWidgetPickerModal ref="widgetPicker" :instances="instances" @add="addWidget" />
+	<HomeGreetingSettingsModal
+		ref="greetingSettings"
+		:player-name="playerName"
+		@save="saveGreetingSettings"
+	/>
 	<section class="home-dashboard p-6 pb-20" :class="{ 'is-dragging': dragging }">
-		<div class="home-dashboard-toolbar">
-			<template v-if="editing">
-				<ButtonStyled circular type="transparent">
-					<button v-tooltip="formatMessage(messages.add)" @click="openWidgetPicker">
-						<PlusIcon />
-					</button>
-				</ButtonStyled>
-				<ButtonStyled circular type="transparent">
-					<button v-tooltip="formatMessage(messages.reset)" @click="emit('reset')">
-						<RotateCounterClockwiseIcon />
-					</button>
-				</ButtonStyled>
-				<ButtonStyled circular>
-					<button v-tooltip="formatMessage(messages.done)" @click="editing = false">
-						<CheckIcon />
-					</button>
-				</ButtonStyled>
-			</template>
-			<ButtonStyled v-else circular type="transparent">
-				<button
-					v-tooltip="formatMessage(messages.customize)"
-					data-onboarding-id="home-widget-customize"
-					@click="editing = true"
-				>
-					<PencilIcon />
-				</button>
-			</ButtonStyled>
-		</div>
-
 		<div ref="gridContainer" class="mx-auto w-full max-w-[96rem]">
 			<Draggable
 				:list="draggableWidgets"
@@ -319,6 +319,9 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 										:tooltip="formatMessage(messages.options)"
 									>
 										<MoreVerticalIcon />
+										<template #greeting-settings>
+											<PencilIcon /> {{ formatMessage(messages.greetingSettings) }}
+										</template>
 										<template
 											v-for="limit in HOME_RECENT_LIMIT_OPTIONS"
 											#[`recent-limit-${limit}`]
@@ -355,6 +358,8 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 								v-if="widget.kind === 'greeting'"
 								:player-name="playerName"
 								:dashboard-size="effectiveSize(widget)"
+								:greeting-mode="widget.options?.greetingMode"
+								:greeting-text="widget.options?.greetingText"
 							/>
 							<HomeRecentWorlds
 								v-else-if="widget.kind === 'recent'"
@@ -413,22 +418,6 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 .home-dashboard {
 	min-width: 0;
 	container-type: inline-size;
-}
-
-.home-dashboard-toolbar {
-	position: sticky;
-	top: 1rem;
-	z-index: 30;
-	display: flex;
-	width: fit-content;
-	margin-left: auto;
-	margin-bottom: 1rem;
-	gap: 0.25rem;
-	padding: 0.25rem;
-	border: 1px solid var(--color-divider);
-	border-radius: var(--radius-lg);
-	background: var(--color-raised-bg);
-	box-shadow: var(--shadow-button);
 }
 
 .home-dashboard-grid {
@@ -579,6 +568,12 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	flex: 1;
 	overflow: hidden;
 	padding: 1rem;
+}
+
+.home-widget[data-widget-kind='instance'] .home-widget-content,
+.home-widget[data-widget-kind='world'] .home-widget-content,
+.home-widget[data-widget-kind='server'] .home-widget-content {
+	padding: 0;
 }
 
 .home-widget-content > :deep(*) {

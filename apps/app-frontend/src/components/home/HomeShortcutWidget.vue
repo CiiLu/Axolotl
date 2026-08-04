@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import {
+	BoxIcon,
 	GameIcon,
 	IssuesIcon,
+	NoSignalIcon,
 	PlayIcon,
+	ServerIcon,
+	SignalIcon,
 	SpinnerIcon,
 	StopCircleIcon,
 	TimerIcon,
 } from '@modrinth/assets'
 import {
+	Avatar,
 	ButtonStyled,
 	commonMessages,
 	defineMessages,
@@ -22,12 +27,12 @@ import { computed, ref, watch } from 'vue'
 import type { HomeWidgetPlacement, HomeWidgetSize } from '@/components/home/home-dashboard'
 import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import InstanceIcon from '@/components/ui/InstanceIcon.vue'
-import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
 import { kill, run } from '@/helpers/instance'
 import type { GameInstance } from '@/helpers/types'
 import {
+	getWorldIdentifier,
 	hasServerQuickPlaySupport,
 	hasWorldQuickPlaySupport,
 	start_join_server,
@@ -50,6 +55,7 @@ const runtime = useHomeDashboardRuntime()
 const { gameVersions, runningInstanceIds } = runtime
 const world = ref<World | null>(null)
 const starting = ref(false)
+const loadingTarget = ref(false)
 
 const messages = defineMessages({
 	unavailable: {
@@ -58,6 +64,23 @@ const messages = defineMessages({
 	},
 	played: { id: 'app.instance.played', defaultMessage: 'Played {time}' },
 	neverPlayed: { id: 'app.instance.never-played', defaultMessage: 'Never played' },
+	instance: { id: 'app.home.shortcut.kind.instance', defaultMessage: 'Instance' },
+	world: { id: 'app.home.shortcut.kind.world', defaultMessage: 'World' },
+	server: { id: 'app.home.shortcut.kind.server', defaultMessage: 'Server' },
+	offline: { id: 'app.home.shortcut.server.offline', defaultMessage: 'Server offline' },
+	playersOnline: {
+		id: 'app.home.shortcut.server.players-online',
+		defaultMessage: '{count} online',
+	},
+	hardcore: { id: 'instance.worlds.hardcore', defaultMessage: 'Hardcore mode' },
+	noServerQuickPlay: {
+		id: 'instance.worlds.no_server_quick_play',
+		defaultMessage: 'Direct server join is unavailable for this Minecraft version.',
+	},
+	noWorldQuickPlay: {
+		id: 'instance.worlds.no_singleplayer_quick_play',
+		defaultMessage: 'Direct world launch is unavailable for this Minecraft version.',
+	},
 })
 
 const instance = computed(() =>
@@ -71,37 +94,110 @@ const serverData = computed(() =>
 		? runtime.getServerData(instance.value.id, world.value.address)
 		: undefined,
 )
-const protocolVersion = computed(() =>
-	instance.value ? (runtime.getProtocolVersion(instance.value.id) ?? null) : null,
+const isRunning = computed(() =>
+	instance.value ? runningInstanceIds.value.includes(instance.value.id) : false,
 )
 const versionLabel = computed(() => {
 	if (!instance.value) return ''
 	const loader = instance.value.loader === 'vanilla' ? 'Minecraft' : instance.value.loader
 	return `${loader} ${instance.value.game_version}`
 })
-const lastPlayedLabel = computed(() =>
-	instance.value?.last_played
+const lastPlayedLabel = computed(() => {
+	const lastPlayed = world.value?.last_played ?? instance.value?.last_played
+	return lastPlayed
 		? formatMessage(messages.played, {
-				time: formatRelativeTime(dayjs(instance.value.last_played).toISOString()),
+				time: formatRelativeTime(dayjs(lastPlayed).toISOString()),
 			})
-		: formatMessage(messages.neverPlayed),
+		: formatMessage(messages.neverPlayed)
+})
+const shortcutTitle = computed(
+	() =>
+		(props.placement.kind === 'instance' ? instance.value?.name : world.value?.name) ??
+		props.placement.target?.fallbackLabel ??
+		'',
 )
+const shortcutRoute = computed(() => {
+	if (!instance.value) return '/'
+	if (!world.value) return `/instance/${encodeURIComponent(instance.value.id)}`
+	return `/instance/${encodeURIComponent(instance.value.id)}/worlds?highlight=${encodeURIComponent(getWorldIdentifier(world.value))}`
+})
+const shortcutIcon = computed(() => {
+	if (!world.value) return undefined
+	return world.value.type === 'server'
+		? (serverData.value?.status?.favicon ?? world.value.icon)
+		: world.value.icon
+})
+const kindLabel = computed(() =>
+	formatMessage(
+		props.placement.kind === 'instance'
+			? messages.instance
+			: props.placement.kind === 'world'
+				? messages.world
+				: messages.server,
+	),
+)
+const kindIcon = computed(() =>
+	props.placement.kind === 'instance'
+		? BoxIcon
+		: props.placement.kind === 'world'
+			? GameIcon
+			: ServerIcon,
+)
+const primaryLabel = computed(() => {
+	if (!world.value) return versionLabel.value
+	if (world.value.type === 'singleplayer') {
+		return world.value.hardcore
+			? formatMessage(messages.hardcore)
+			: formatMessage(GAME_MODES[world.value.game_mode].message)
+	}
+	if (serverData.value?.refreshing) return formatMessage(commonMessages.loadingLabel)
+	if (!serverData.value?.status) return formatMessage(messages.offline)
+	return formatMessage(messages.playersOnline, {
+		count: serverData.value.status.players?.online ?? 0,
+	})
+})
+const secondaryLabel = computed(() => {
+	if (world.value?.type === 'server') return world.value.address
+	if (world.value) return `${instance.value?.name ?? ''} · ${lastPlayedLabel.value}`
+	return lastPlayedLabel.value
+})
+const statusIcon = computed(() => {
+	if (world.value?.type !== 'server') return world.value ? GameIcon : TimerIcon
+	return serverData.value?.status ? SignalIcon : NoSignalIcon
+})
+const supportsQuickPlay = computed(() => {
+	if (!world.value || !instance.value) return true
+	return world.value.type === 'server'
+		? hasServerQuickPlaySupport(gameVersions.value, instance.value.game_version)
+		: hasWorldQuickPlaySupport(gameVersions.value, instance.value.game_version)
+})
+const playTooltip = computed(() => {
+	if (supportsQuickPlay.value) return formatMessage(commonMessages.playButton)
+	return formatMessage(
+		world.value?.type === 'server' ? messages.noServerQuickPlay : messages.noWorldQuickPlay,
+	)
+})
 
 async function refreshTarget(force = false) {
 	world.value = null
 	const target = props.placement.target
 	if (!target || props.placement.kind === 'instance' || !instance.value) return
 
-	const available = await runtime.getInstanceWorlds(target.instanceId, force)
-	world.value =
-		available.find((candidate) =>
-			candidate.type === 'server'
-				? props.placement.kind === 'server' && candidate.address === target.address
-				: props.placement.kind === 'world' && candidate.path === target.path,
-		) ?? null
+	loadingTarget.value = true
+	try {
+		const available = await runtime.getInstanceWorlds(target.instanceId, force)
+		world.value =
+			available.find((candidate) =>
+				candidate.type === 'server'
+					? props.placement.kind === 'server' && candidate.address === target.address
+					: props.placement.kind === 'world' && candidate.path === target.path,
+			) ?? null
 
-	if (world.value?.type === 'server') {
-		await runtime.refreshServer(target.instanceId, world.value.address, force)
+		if (world.value?.type === 'server') {
+			await runtime.refreshServer(target.instanceId, world.value.address, force)
+		}
+	} finally {
+		loadingTarget.value = false
 	}
 }
 
@@ -150,6 +246,12 @@ async function playWorld() {
 	}
 }
 
+async function playShortcut() {
+	if (!instance.value) return
+	if (world.value) await playWorld()
+	else await playInstance(instance.value)
+}
+
 async function stopInstance() {
 	if (!instance.value) return
 	await kill(instance.value.id).catch(handleError)
@@ -167,138 +269,181 @@ watch(
 
 <template>
 	<div class="home-shortcut-widget" :data-size="dashboardSize" :data-kind="placement.kind">
-		<div v-if="missing" class="home-shortcut-missing">
+		<div v-if="loadingTarget" class="home-shortcut-missing">
+			<SpinnerIcon class="size-6 animate-spin text-secondary" aria-hidden="true" />
+			<span class="text-sm text-secondary">{{ formatMessage(commonMessages.loadingLabel) }}</span>
+		</div>
+		<div v-else-if="missing" class="home-shortcut-missing">
 			<IssuesIcon class="size-6 text-secondary" aria-hidden="true" />
 			<strong class="max-w-full truncate text-contrast">{{
 				placement.target?.fallbackLabel
 			}}</strong>
 			<span class="text-sm text-secondary">{{ formatMessage(messages.unavailable) }}</span>
 		</div>
-		<div v-else-if="placement.kind === 'instance' && instance" class="home-instance-shortcut">
-			<router-link
-				class="home-instance-shortcut-main"
-				:to="`/instance/${encodeURIComponent(instance.id)}`"
-			>
+		<div v-else class="home-shortcut-card">
+			<router-link class="home-shortcut-visual" :to="shortcutRoute" tabindex="-1">
+				<component :is="kindIcon" class="home-shortcut-watermark" aria-hidden="true" />
+				<Avatar
+					v-if="shortcutIcon"
+					class="home-shortcut-icon"
+					:src="shortcutIcon"
+					:size="dashboardSize === '2x1' ? '72px' : '44px'"
+				/>
 				<InstanceIcon
+					v-else-if="instance"
+					class="home-shortcut-icon"
 					:icon-path="instance.icon_path"
 					:instance-id="instance.id"
-					:alt="instance.name"
-					:size="dashboardSize === '2x1' ? '64px' : '52px'"
+					:size="dashboardSize === '2x1' ? '72px' : '44px'"
 				/>
-				<span class="home-instance-shortcut-copy">
-					<strong>{{ instance.name }}</strong>
-					<span><GameIcon aria-hidden="true" /> {{ versionLabel }}</span>
-					<span><TimerIcon aria-hidden="true" /> {{ lastPlayedLabel }}</span>
-				</span>
 			</router-link>
-			<ButtonStyled v-if="runningInstanceIds.includes(instance.id)" circular color="red">
-				<button v-tooltip="formatMessage(commonMessages.stopButton)" @click="stopInstance">
-					<StopCircleIcon />
-				</button>
-			</ButtonStyled>
-			<ButtonStyled v-else circular color="brand">
-				<button
-					v-tooltip="formatMessage(commonMessages.playButton)"
-					:disabled="starting"
-					@click="playInstance(instance)"
-				>
-					<SpinnerIcon v-if="starting" class="animate-spin" />
-					<PlayIcon v-else class="translate-x-px" />
-				</button>
-			</ButtonStyled>
+
+			<div class="home-shortcut-body">
+				<router-link class="home-shortcut-copy" :to="shortcutRoute">
+					<span class="home-shortcut-kind">
+						<component :is="kindIcon" aria-hidden="true" />
+						{{ kindLabel }}
+					</span>
+					<strong class="home-shortcut-title">{{ shortcutTitle }}</strong>
+					<span class="home-shortcut-meta home-shortcut-primary">
+						<SpinnerIcon
+							v-if="world?.type === 'server' && serverData?.refreshing"
+							class="animate-spin"
+							aria-hidden="true"
+						/>
+						<component :is="statusIcon" v-else aria-hidden="true" />
+						{{ primaryLabel }}
+					</span>
+					<span class="home-shortcut-meta home-shortcut-secondary">
+						<TimerIcon v-if="world?.type !== 'server'" aria-hidden="true" />
+						<ServerIcon v-else aria-hidden="true" />
+						{{ secondaryLabel }}
+					</span>
+				</router-link>
+
+				<div class="home-shortcut-action">
+					<ButtonStyled v-if="isRunning" circular size="small" color="red">
+						<button v-tooltip="formatMessage(commonMessages.stopButton)" @click="stopInstance">
+							<StopCircleIcon />
+						</button>
+					</ButtonStyled>
+					<ButtonStyled v-else circular size="small" color="brand">
+						<button
+							v-tooltip="playTooltip"
+							:disabled="starting || !supportsQuickPlay"
+							@click="playShortcut"
+						>
+							<SpinnerIcon v-if="starting" class="animate-spin" />
+							<PlayIcon v-else class="translate-x-px" />
+						</button>
+					</ButtonStyled>
+				</div>
+			</div>
 		</div>
-		<WorldItem
-			v-else-if="world && instance"
-			:world="world"
-			flat
-			:dashboard-density="dashboardSize === '1x1' ? 'compact' : 'comfortable'"
-			:playing-instance="runningInstanceIds.includes(instance.id)"
-			:starting-instance="starting"
-			:supports-server-quick-play="
-				world.type === 'server' && hasServerQuickPlaySupport(gameVersions, instance.game_version)
-			"
-			:supports-world-quick-play="
-				world.type === 'singleplayer' &&
-				hasWorldQuickPlaySupport(gameVersions, instance.game_version)
-			"
-			:current-protocol="protocolVersion"
-			:refreshing="world.type === 'server' ? serverData?.refreshing : undefined"
-			:server-status="world.type === 'server' ? serverData?.status : undefined"
-			:rendered-motd="world.type === 'server' ? serverData?.renderedMotd : undefined"
-			:game-mode="world.type === 'singleplayer' ? GAME_MODES[world.game_mode] : undefined"
-			:instance-id="instance.id"
-			:instance-name="instance.name"
-			:instance-icon="instance.icon_path"
-			:shortcut-instance-id="instance.id"
-			@play="playWorld"
-			@play-instance="playInstance(instance)"
-			@stop="stopInstance"
-			@refresh="refreshTarget(true)"
-		/>
 	</div>
 </template>
 
 <style scoped>
-.home-shortcut-widget {
-	display: flex;
+.home-shortcut-widget,
+.home-shortcut-card {
 	min-width: 0;
 	min-height: 0;
 	height: 100%;
-	flex-direction: column;
+}
+
+.home-shortcut-card {
+	display: grid;
+	overflow: hidden;
+}
+
+.home-shortcut-visual {
+	position: relative;
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	align-items: center;
 	justify-content: center;
+	overflow: hidden;
+	background: var(--color-button-bg);
+	color: var(--color-secondary);
+	text-decoration: none;
 }
 
-.home-shortcut-widget[data-size='2x1'] > :deep(*) {
-	width: 100%;
+.home-shortcut-watermark {
+	position: absolute;
+	right: 0.75rem;
+	bottom: -0.75rem;
+	width: 4.5rem;
+	height: 4.5rem;
+	opacity: 0.08;
 }
 
-.home-instance-shortcut {
-	display: grid;
+.home-shortcut-icon {
+	position: relative;
+	z-index: 1;
+	flex: 0 0 auto;
+	box-shadow: var(--shadow-card);
+}
+
+.home-shortcut-body {
+	position: relative;
+	display: flex;
 	min-width: 0;
-	height: 100%;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: center;
-	gap: 1rem;
+	min-height: 0;
+	align-items: stretch;
 }
 
-.home-instance-shortcut-main {
-	display: grid;
+.home-shortcut-copy {
+	display: flex;
 	min-width: 0;
-	grid-template-columns: auto minmax(0, 1fr);
-	align-items: center;
-	gap: 0.875rem;
+	flex: 1;
+	flex-direction: column;
 	color: inherit;
 	text-decoration: none;
 }
 
-.home-instance-shortcut-main:focus-visible {
-	border-radius: var(--radius-lg);
+.home-shortcut-copy:focus-visible {
+	border-radius: 6px;
 	outline: 4px solid var(--color-brand-shadow);
-	outline-offset: 3px;
+	outline-offset: 2px;
 }
 
-.home-instance-shortcut-copy {
-	display: flex;
-	min-width: 0;
-	flex-direction: column;
-	gap: 0.25rem;
-}
-
-.home-instance-shortcut-copy strong {
-	overflow: hidden;
-	color: var(--color-contrast);
-	font-size: 1rem;
-	font-weight: 700;
-	line-height: 1.25;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.home-instance-shortcut-copy span {
+.home-shortcut-kind {
 	display: flex;
 	min-width: 0;
 	align-items: center;
 	gap: 0.3rem;
+	color: var(--color-secondary);
+	font-size: 0.6875rem;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.home-shortcut-kind svg,
+.home-shortcut-meta svg {
+	width: 0.8rem;
+	height: 0.8rem;
+	flex: 0 0 auto;
+}
+
+.home-shortcut-title {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--color-contrast);
+	font-weight: 750;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.home-shortcut-copy:hover .home-shortcut-title {
+	text-decoration: underline;
+}
+
+.home-shortcut-meta {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 0.35rem;
 	overflow: hidden;
 	color: var(--color-secondary);
 	font-size: 0.75rem;
@@ -308,19 +453,79 @@ watch(
 	white-space: nowrap;
 }
 
-.home-instance-shortcut-copy svg {
-	width: 0.875rem;
-	height: 0.875rem;
-	flex: 0 0 auto;
+.home-shortcut-action {
+	position: absolute;
+	right: 0.75rem;
+	bottom: 0.75rem;
+	z-index: 2;
 }
 
-.home-shortcut-widget[data-size='2x1'] .home-instance-shortcut {
-	gap: 1.5rem;
-	padding: 0 0.75rem;
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-card {
+	grid-template-rows: 3.75rem minmax(0, 1fr);
 }
 
-.home-shortcut-widget[data-size='2x1'] .home-instance-shortcut-copy strong {
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-visual {
+	justify-content: flex-start;
+	padding: 0 0.875rem;
+}
+
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-watermark {
+	right: 0.5rem;
+	bottom: -1.25rem;
+	width: 4rem;
+	height: 4rem;
+}
+
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-body {
+	padding: 0.625rem 0.75rem 0.75rem;
+}
+
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-copy {
+	padding-right: 2.5rem;
+}
+
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-kind {
+	display: none;
+}
+
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-title {
+	font-size: 0.9375rem;
+	line-height: 1.2;
+}
+
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-primary {
+	margin-top: 0.3rem;
+}
+
+.home-shortcut-widget[data-size='1x1'] .home-shortcut-secondary {
+	display: none;
+}
+
+.home-shortcut-widget[data-size='2x1'] .home-shortcut-card {
+	grid-template-columns: minmax(8.5rem, 0.8fr) minmax(0, 1.65fr);
+}
+
+.home-shortcut-widget[data-size='2x1'] .home-shortcut-body {
+	padding: 1rem;
+}
+
+.home-shortcut-widget[data-size='2x1'] .home-shortcut-copy {
+	justify-content: center;
+	padding-right: 3rem;
+}
+
+.home-shortcut-widget[data-size='2x1'] .home-shortcut-title {
+	margin-top: 0.4rem;
 	font-size: 1.125rem;
+	line-height: 1.25;
+}
+
+.home-shortcut-widget[data-size='2x1'] .home-shortcut-primary {
+	margin-top: 0.65rem;
+}
+
+.home-shortcut-widget[data-size='2x1'] .home-shortcut-secondary {
+	margin-top: 0.3rem;
 }
 
 .home-shortcut-missing {
@@ -332,6 +537,8 @@ watch(
 	align-items: center;
 	justify-content: center;
 	gap: 0.5rem;
+	padding: 1rem;
+	box-sizing: border-box;
 	text-align: center;
 }
 </style>

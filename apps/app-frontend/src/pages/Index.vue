@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { LayoutTemplateIcon, MinimizeIcon } from '@modrinth/assets'
+import {
+	CheckIcon,
+	LayoutTemplateIcon,
+	MinimizeIcon,
+	PencilIcon,
+	PlusIcon,
+	RotateCounterClockwiseIcon,
+} from '@modrinth/assets'
 import {
 	defineMessages,
 	injectNotificationManager,
@@ -59,6 +66,16 @@ const messages = defineMessages({
 		id: 'app.home.widgets.reset-confirm',
 		defaultMessage: 'Restore the default widget layout?',
 	},
+	customizeWidgets: {
+		id: 'app.home.widgets.customize',
+		defaultMessage: 'Customize widgets',
+	},
+	doneEditing: { id: 'app.home.widgets.done', defaultMessage: 'Finish editing' },
+	addWidget: { id: 'app.home.widgets.add', defaultMessage: 'Add widget' },
+	resetWidgetLayout: {
+		id: 'app.home.widgets.reset',
+		defaultMessage: 'Restore default widgets',
+	},
 })
 
 const recentProjectsInHomeFlag: FeatureFlag = 'worlds_in_home'
@@ -68,6 +85,8 @@ breadcrumbs.setRootContext({ name: formatMessage(messages.home), link: route.pat
 const instances = ref<GameInstance[]>([])
 const playerName = ref<string | null>(null)
 const dashboardConfig = ref<HomeDashboardConfig | null>(null)
+const dashboard = ref<InstanceType<typeof HomeDashboard>>()
+const dashboardEditing = ref(false)
 const instancePicker = ref<InstanceType<typeof HomeInstancePickerModal>>()
 const isMinimal = computed(() => themeStore.homeLayout === 'minimal')
 const switchingLayout = ref(false)
@@ -82,7 +101,7 @@ const dashboardSaveQueue = createHomeDashboardSaveQueue(
 	},
 	handleError,
 )
-const layoutSwitchStyle = computed(() => ({
+const floatingControlsStyle = computed(() => ({
 	bottom: themeStore.getFeatureFlag('page_path') ? '3.5rem' : '1rem',
 	right: `calc(${pageContext.floatingActionBarOffsets?.right.value ?? '0px'} + 1rem)`,
 }))
@@ -173,8 +192,10 @@ async function toggleHomeLayout() {
 
 	const previousLayout = themeStore.homeLayout
 	const nextLayout: HomeLayout = previousLayout === 'minimal' ? 'standard' : 'minimal'
+	const previousEditing = dashboardEditing.value
 	switchingLayout.value = true
 	themeStore.homeLayout = nextLayout
+	if (nextLayout === 'minimal') dashboardEditing.value = false
 
 	try {
 		const settings = await getSettings()
@@ -182,10 +203,19 @@ async function toggleHomeLayout() {
 		await setSettings(settings)
 	} catch (error) {
 		themeStore.homeLayout = previousLayout
+		dashboardEditing.value = previousEditing
 		handleError(error)
 	} finally {
 		switchingLayout.value = false
 	}
+}
+
+function toggleDashboardEditing() {
+	dashboardEditing.value = !dashboardEditing.value
+}
+
+function openWidgetPicker() {
+	dashboard.value?.openWidgetPicker()
 }
 
 const instancesLoaded = await fetchInstances()
@@ -211,11 +241,12 @@ onUnmounted(() => {
 	<div class="min-h-full">
 		<HomeDashboard
 			v-if="!isMinimal && dashboardConfig"
+			ref="dashboard"
 			:config="dashboardConfig"
 			:instances="instances"
 			:player-name="playerName"
+			:editing="dashboardEditing"
 			@change="updateDashboardConfig"
-			@reset="resetDashboardConfig"
 		/>
 
 		<HomeMinimal
@@ -227,27 +258,68 @@ onUnmounted(() => {
 			@create="createInstance"
 		/>
 	</div>
-	<button
-		v-tooltip="formatMessage(isMinimal ? messages.switchToInformation : messages.switchToMinimal)"
-		data-onboarding-id="home-layout-switch"
-		type="button"
-		role="switch"
-		class="home-layout-switch"
-		:class="{ 'is-minimal': isMinimal }"
-		:style="layoutSwitchStyle"
-		:disabled="switchingLayout"
-		:aria-checked="isMinimal"
-		:aria-label="formatMessage(messages.homeLayoutToggle)"
-		@click="toggleHomeLayout"
-	>
-		<span class="home-layout-switch-option home-layout-switch-information" aria-hidden="true">
-			<LayoutTemplateIcon />
-		</span>
-		<span class="home-layout-switch-thumb" aria-hidden="true" />
-		<span class="home-layout-switch-option home-layout-switch-minimal" aria-hidden="true">
-			<MinimizeIcon />
-		</span>
-	</button>
+	<div class="home-floating-controls" :style="floatingControlsStyle">
+		<template v-if="!isMinimal">
+			<button
+				v-if="dashboardEditing"
+				v-tooltip="formatMessage(messages.addWidget)"
+				type="button"
+				class="home-floating-action"
+				:aria-label="formatMessage(messages.addWidget)"
+				@click="openWidgetPicker"
+			>
+				<PlusIcon />
+			</button>
+			<button
+				v-if="dashboardEditing"
+				v-tooltip="formatMessage(messages.resetWidgetLayout)"
+				type="button"
+				class="home-floating-action"
+				:aria-label="formatMessage(messages.resetWidgetLayout)"
+				@click="resetDashboardConfig"
+			>
+				<RotateCounterClockwiseIcon />
+			</button>
+			<button
+				v-tooltip="
+					formatMessage(dashboardEditing ? messages.doneEditing : messages.customizeWidgets)
+				"
+				data-onboarding-id="home-widget-customize"
+				type="button"
+				class="home-floating-action"
+				:class="{ 'is-active': dashboardEditing }"
+				:aria-label="
+					formatMessage(dashboardEditing ? messages.doneEditing : messages.customizeWidgets)
+				"
+				:aria-pressed="dashboardEditing"
+				@click="toggleDashboardEditing"
+			>
+				<CheckIcon v-if="dashboardEditing" />
+				<PencilIcon v-else />
+			</button>
+			<span class="home-floating-divider" aria-hidden="true" />
+		</template>
+		<button
+			v-tooltip="formatMessage(isMinimal ? messages.switchToInformation : messages.switchToMinimal)"
+			data-onboarding-id="home-layout-switch"
+			type="button"
+			role="switch"
+			class="home-layout-switch"
+			:class="{ 'is-minimal': isMinimal }"
+			:disabled="switchingLayout"
+			:aria-checked="isMinimal"
+			:aria-label="formatMessage(messages.homeLayoutToggle)"
+			@click="toggleHomeLayout"
+		>
+			<span class="home-layout-switch-option home-layout-switch-information" aria-hidden="true">
+				<LayoutTemplateIcon />
+			</span>
+			<span class="home-layout-switch-thumb" aria-hidden="true" />
+			<span class="home-layout-switch-option home-layout-switch-minimal" aria-hidden="true">
+				<MinimizeIcon />
+			</span>
+		</button>
+	</div>
 	<Teleport v-if="!isMinimal" to="#sidebar-default-teleport-target">
 		<div class="flex min-w-0 flex-col">
 			<HomePlayInsights />
@@ -258,23 +330,87 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.home-layout-switch {
+.home-floating-controls {
 	position: fixed;
 	z-index: 40;
+	display: flex;
+	height: 2.5rem;
+	align-items: center;
+	gap: 0.125rem;
+	padding: 0.25rem;
+	box-sizing: border-box;
+	border: 1px solid var(--color-divider);
+	border-radius: 9999px;
+	background: var(--color-raised-bg);
+	box-shadow:
+		var(--shadow-button),
+		0 0.25rem 0.75rem rgb(0 0 0 / 20%);
+	isolation: isolate;
+}
+
+.home-floating-action {
+	display: flex;
+	width: 2rem;
+	height: 2rem;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: 0;
+	border-radius: 9999px;
+	background: transparent;
+	color: var(--color-secondary);
+	cursor: pointer;
+	transition:
+		background-color 120ms ease,
+		color 120ms ease,
+		filter 150ms ease,
+		transform 150ms ease;
+}
+
+.home-floating-action:hover {
+	background: var(--color-button-bg);
+	color: var(--color-contrast);
+}
+
+.home-floating-action:active {
+	transform: scale(0.96);
+}
+
+.home-floating-action:focus-visible,
+.home-layout-switch:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 4px var(--color-brand-shadow);
+}
+
+.home-floating-action.is-active {
+	background: var(--color-brand);
+	color: var(--color-accent-contrast);
+}
+
+.home-floating-action :deep(svg) {
+	width: 1rem;
+	height: 1rem;
+}
+
+.home-floating-divider {
+	width: 1px;
+	height: 1.25rem;
+	margin: 0 0.125rem;
+	background: var(--color-divider);
+}
+
+.home-layout-switch {
+	position: relative;
 	display: grid;
 	grid-template-columns: repeat(2, 2rem);
 	align-items: center;
-	width: 4.5rem;
-	height: 2.5rem;
+	width: 4.25rem;
+	height: 2rem;
 	margin: 0;
-	padding: 0.25rem;
+	padding: 0;
 	border: 0;
 	border-radius: 9999px;
 	background: var(--color-button-bg);
-	box-shadow:
-		inset 0 0 0 1px var(--color-divider),
-		var(--shadow-button),
-		0 0.25rem 0.75rem rgb(0 0 0 / 20%);
 	cursor: pointer;
 	isolation: isolate;
 	transition:
@@ -287,16 +423,7 @@ onUnmounted(() => {
 }
 
 .home-layout-switch:active:not(:disabled) {
-	transform: scale(0.96);
-}
-
-.home-layout-switch:focus-visible {
-	outline: none;
-	box-shadow:
-		0 0 0 4px var(--color-brand-shadow),
-		inset 0 0 0 1px var(--color-divider),
-		var(--shadow-button),
-		0 0.25rem 0.75rem rgb(0 0 0 / 20%);
+	transform: scale(0.97);
 }
 
 .home-layout-switch:disabled {
@@ -306,11 +433,11 @@ onUnmounted(() => {
 
 .home-layout-switch-thumb {
 	position: absolute;
-	top: 0.25rem;
-	left: 0.25rem;
+	top: 0.125rem;
+	left: 0.125rem;
 	z-index: 0;
-	width: 2rem;
-	height: 2rem;
+	width: 1.75rem;
+	height: 1.75rem;
 	border-radius: 9999px;
 	background: var(--color-brand);
 	transition: transform 180ms ease;
@@ -325,7 +452,7 @@ onUnmounted(() => {
 	z-index: 1;
 	display: flex;
 	width: 2rem;
-	height: 2rem;
+	height: 1.75rem;
 	align-items: center;
 	justify-content: center;
 	color: var(--color-secondary);

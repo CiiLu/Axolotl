@@ -13,6 +13,7 @@ import {
 	removeHomeWidget,
 	replaceHomeDashboardWidgets,
 	resizeHomeWidget,
+	setHomeGreetingOptions,
 	setHomeRecentLimit,
 } from './home-dashboard.ts'
 
@@ -157,7 +158,12 @@ test('normalizes every persisted greeting placement to the fixed 2x1 size', () =
 		version: 1,
 		widgets: [
 			{ id: 'small', kind: 'greeting', size: '1x1' },
-			{ id: 'tall', kind: 'greeting', size: '1x2' },
+			{
+				id: 'tall',
+				kind: 'greeting',
+				size: '1x2',
+				options: { greetingMode: 'text', greetingText: '  Ready to play  ' },
+			},
 		],
 	})
 
@@ -166,8 +172,19 @@ test('normalizes every persisted greeting placement to the fixed 2x1 size', () =
 		['2x1', '2x1'],
 	)
 	assert.deepEqual(
+		normalized?.widgets.map((widget) => widget.options),
+		[{ greetingMode: 'greeting' }, { greetingMode: 'text', greetingText: 'Ready to play' }],
+	)
+	assert.deepEqual(
 		resizeHomeWidget(normalized!, 'small', '1x1').widgets.map((widget) => widget.size),
 		['2x1', '2x1'],
+	)
+	assert.deepEqual(
+		setHomeGreetingOptions(normalized!, 'small', 'text-and-greeting', '  Hi  ').widgets[0].options,
+		{
+			greetingMode: 'text-and-greeting',
+			greetingText: 'Hi',
+		},
 	)
 })
 

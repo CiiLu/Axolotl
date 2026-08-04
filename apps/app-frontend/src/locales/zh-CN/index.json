@@ -1101,7 +1101,10 @@
     "message": "分享整合包内容"
   },
   "app.instance.mods.missing-files-warning.body": {
-    "message": "本地缺少 {count, number} 个整合包必需文件。联网刷新可识别受作者限制、需要手动下载的文件；普通缺失项可从其菜单恢复整合包默认版本。"
+    "message": "有 {count, number} 个整合包必需文件未能下载或已不在本地。可逐项重试恢复；刷新会重新扫描实例目录。"
+  },
+  "app.instance.mods.missing-files-warning.restore": {
+    "message": "恢复"
   },
   "app.instance.mods.missing-files-warning.title": {
     "message": "整合包文件缺失"
@@ -4607,6 +4610,51 @@
   "app.home.greeting.with-player": {
     "message": "{name}，{greeting}"
   },
+  "app.home.greeting.welcome": {
+    "message": "欢迎回来。"
+  },
+  "app.home.greeting.welcome-with-player": {
+    "message": "欢迎回来，{name}。"
+  },
+  "app.home.greeting.settings.mode": {
+    "message": "显示方式"
+  },
+  "app.home.greeting.settings.mode.greeting": {
+    "message": "仅自动问候"
+  },
+  "app.home.greeting.settings.mode.greeting-description": {
+    "message": "根据一天中的时间显示轮换问候语。"
+  },
+  "app.home.greeting.settings.mode.text": {
+    "message": "仅自定义文字"
+  },
+  "app.home.greeting.settings.mode.text-description": {
+    "message": "使用你自己的文字替换自动问候语。"
+  },
+  "app.home.greeting.settings.mode.text-and-greeting": {
+    "message": "文字 + 自动问候"
+  },
+  "app.home.greeting.settings.mode.text-and-greeting-description": {
+    "message": "在轮换问候语前显示你的自定义文字。"
+  },
+  "app.home.greeting.settings.prefix-placeholder": {
+    "message": "欢迎回来，{name}。"
+  },
+  "app.home.greeting.settings.preview": {
+    "message": "预览"
+  },
+  "app.home.greeting.settings.text": {
+    "message": "自定义文字"
+  },
+  "app.home.greeting.settings.text-fallback": {
+    "message": "留空时使用当前的自动问候语。"
+  },
+  "app.home.greeting.settings.text-placeholder": {
+    "message": "下一场冒险从这里开始。"
+  },
+  "app.home.greeting.settings.title": {
+    "message": "自定义问候语"
+  },
   "app.home.greeting.minimal.afternoon": {
     "message": "下午好"
   },
@@ -4729,6 +4777,21 @@
   },
   "app.home.servers.more-options": {
     "message": "更多选项"
+  },
+  "app.home.shortcut.kind.instance": {
+    "message": "实例"
+  },
+  "app.home.shortcut.kind.server": {
+    "message": "服务器"
+  },
+  "app.home.shortcut.kind.world": {
+    "message": "世界"
+  },
+  "app.home.shortcut.server.offline": {
+    "message": "服务器离线"
+  },
+  "app.home.shortcut.server.players-online": {
+    "message": "{count} 人在线"
   },
   "app.home.widgets.add": {
     "message": "添加小组件"
@@ -4956,10 +5019,10 @@
     "message": "按你的方式排列"
   },
   "app.onboarding.home-customize.description": {
-    "message": "打开编辑器即可添加快捷方式、调整小组件顺序，并为每个小组件选择合适的尺寸。"
+    "message": "使用右下角的编辑控件添加快捷入口、重新排列和调整小组件尺寸，并配置组件内容。"
   },
   "app.onboarding.home-layout.description": {
-    "message": "随时使用这个悬浮按钮，在信息主页和极简主页之间切换。"
+    "message": "使用右下角控件切换信息主页和极简主页；小组件编辑仅在信息主页中提供。"
   },
   "app.onboarding.home-layout.title": {
     "message": "切换信息密度"

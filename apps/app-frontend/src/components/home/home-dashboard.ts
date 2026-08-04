@@ -2,9 +2,12 @@ export const HOME_DASHBOARD_VERSION = 1 as const
 export const HOME_WIDGET_SIZES = ['1x1', '2x1', '1x2', '2x2'] as const
 export const HOME_RECENT_LIMIT_OPTIONS = [2, 4, 6, 8] as const
 export const HOME_RECENT_DEFAULT_LIMIT = 4
+export const HOME_GREETING_MODES = ['greeting', 'text-and-greeting', 'text'] as const
+export const HOME_GREETING_DEFAULT_MODE = 'greeting'
 
 export type HomeWidgetSize = (typeof HOME_WIDGET_SIZES)[number]
 export type HomeRecentLimit = (typeof HOME_RECENT_LIMIT_OPTIONS)[number]
+export type HomeGreetingMode = (typeof HOME_GREETING_MODES)[number]
 export type HomeWidgetKind =
 	| 'greeting'
 	| 'recent'
@@ -25,6 +28,8 @@ export type HomeWidgetTarget = {
 
 export type HomeWidgetOptions = {
 	recentLimit?: HomeRecentLimit
+	greetingMode?: HomeGreetingMode
+	greetingText?: string
 }
 
 export type HomeWidgetPlacement = {
@@ -89,6 +94,7 @@ function createPlacement(
 		kind,
 		size,
 		...(kind === 'recent' ? { options: { recentLimit: HOME_RECENT_DEFAULT_LIMIT } } : {}),
+		...(kind === 'greeting' ? { options: { greetingMode: HOME_GREETING_DEFAULT_MODE } } : {}),
 	}
 }
 
@@ -124,12 +130,30 @@ function normalizeTarget(value: unknown): HomeWidgetTarget | undefined {
 }
 
 function normalizeOptions(kind: HomeWidgetKind, value: unknown): HomeWidgetOptions | undefined {
-	if (kind !== 'recent') return undefined
-	const recentLimit =
-		isRecord(value) && HOME_RECENT_LIMIT_OPTIONS.includes(value.recentLimit as HomeRecentLimit)
-			? (value.recentLimit as HomeRecentLimit)
-			: HOME_RECENT_DEFAULT_LIMIT
-	return { recentLimit }
+	if (kind === 'recent') {
+		const recentLimit =
+			isRecord(value) && HOME_RECENT_LIMIT_OPTIONS.includes(value.recentLimit as HomeRecentLimit)
+				? (value.recentLimit as HomeRecentLimit)
+				: HOME_RECENT_DEFAULT_LIMIT
+		return { recentLimit }
+	}
+
+	if (kind === 'greeting') {
+		const greetingMode =
+			isRecord(value) && HOME_GREETING_MODES.includes(value.greetingMode as HomeGreetingMode)
+				? (value.greetingMode as HomeGreetingMode)
+				: HOME_GREETING_DEFAULT_MODE
+		const greetingText =
+			isRecord(value) && typeof value.greetingText === 'string'
+				? value.greetingText.trim().slice(0, 120)
+				: ''
+		return {
+			greetingMode,
+			...(greetingText ? { greetingText } : {}),
+		}
+	}
+
+	return undefined
 }
 
 export function normalizeHomeDashboard(value: unknown): HomeDashboardConfig | null {
@@ -222,6 +246,29 @@ export function setHomeRecentLimit(
 		config.widgets.map((widget) =>
 			widget.id === id && widget.kind === 'recent'
 				? { ...widget, options: { ...widget.options, recentLimit } }
+				: widget,
+		),
+	)
+}
+
+export function setHomeGreetingOptions(
+	config: HomeDashboardConfig,
+	id: string,
+	greetingMode: HomeGreetingMode,
+	greetingText: string,
+): HomeDashboardConfig {
+	const normalizedText = greetingText.trim().slice(0, 120)
+	return replaceHomeDashboardWidgets(
+		config,
+		config.widgets.map((widget) =>
+			widget.id === id && widget.kind === 'greeting'
+				? {
+						...widget,
+						options: {
+							greetingMode,
+							...(normalizedText ? { greetingText: normalizedText } : {}),
+						},
+					}
 				: widget,
 		),
 	)

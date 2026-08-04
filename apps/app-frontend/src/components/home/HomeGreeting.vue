@@ -2,7 +2,11 @@
 import { defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onUnmounted, ref } from 'vue'
 
-import type { HomeWidgetSize } from './home-dashboard'
+import {
+	HOME_GREETING_DEFAULT_MODE,
+	type HomeGreetingMode,
+	type HomeWidgetSize,
+} from './home-dashboard'
 import { getTimeBucket, stableGreetingIndex } from './home-utils'
 
 const props = withDefaults(
@@ -10,11 +14,15 @@ const props = withDefaults(
 		playerName?: string | null
 		variant?: 'standard' | 'minimal'
 		dashboardSize?: HomeWidgetSize | null
+		greetingMode?: HomeGreetingMode
+		greetingText?: string
 	}>(),
 	{
 		playerName: null,
 		variant: 'standard',
 		dashboardSize: null,
+		greetingMode: HOME_GREETING_DEFAULT_MODE,
+		greetingText: '',
 	},
 )
 
@@ -24,6 +32,14 @@ const messages = defineMessages({
 	withPlayer: {
 		id: 'app.home.greeting.with-player',
 		defaultMessage: 'Welcome back, {name}. {greeting}',
+	},
+	welcomeWithPlayer: {
+		id: 'app.home.greeting.welcome-with-player',
+		defaultMessage: 'Welcome back, {name}.',
+	},
+	welcome: {
+		id: 'app.home.greeting.welcome',
+		defaultMessage: 'Welcome back.',
 	},
 	minimalWithPlayer: {
 		id: 'app.home.greeting.minimal.with-player',
@@ -105,6 +121,20 @@ const minimalGreeting = computed(() =>
 	formatMessage(minimalGreetingMessages[getTimeBucket(now.value)]),
 )
 
+const automaticWelcome = computed(() =>
+	props.playerName
+		? formatMessage(messages.welcomeWithPlayer, { name: props.playerName })
+		: formatMessage(messages.welcome),
+)
+
+const dateLabel = computed(() =>
+	new Intl.DateTimeFormat(locale.value, {
+		weekday: 'long',
+		month: 'long',
+		day: 'numeric',
+	}).format(now.value),
+)
+
 const heading = computed(() => {
 	if (props.variant === 'minimal') {
 		return props.playerName
@@ -115,9 +145,12 @@ const heading = computed(() => {
 			: minimalGreeting.value
 	}
 
-	return props.playerName
-		? formatMessage(messages.withPlayer, { name: props.playerName, greeting: greeting.value })
-		: greeting.value
+	const customText = props.greetingText.trim()
+	if (props.greetingMode === 'text') return customText || greeting.value
+	if (props.greetingMode === 'text-and-greeting') {
+		return `${customText || automaticWelcome.value} ${greeting.value}`
+	}
+	return greeting.value
 })
 
 const updateClock = () => {
@@ -130,7 +163,7 @@ onUnmounted(() => window.clearInterval(timer))
 
 <template>
 	<header
-		class="flex min-w-0 flex-col"
+		class="home-greeting flex min-w-0 flex-col"
 		:class="
 			variant === 'minimal'
 				? 'items-center gap-3 text-center'
@@ -139,12 +172,31 @@ onUnmounted(() => window.clearInterval(timer))
 					: 'gap-1 py-2'
 		"
 	>
+		<span v-if="variant !== 'minimal' && dashboardSize" class="home-greeting-date">
+			{{ dateLabel }}
+		</span>
 		<h1
 			class="m-0 max-w-full break-words font-extrabold text-contrast"
-			:class="dashboardSize === '1x1' ? 'text-lg' : 'text-2xl'"
+			:class="dashboardSize ? 'home-greeting-heading' : 'text-2xl'"
 		>
 			{{ heading }}
 		</h1>
 		<div v-if="variant === 'minimal'" class="h-0.5 w-8 rounded-full bg-brand" aria-hidden="true" />
 	</header>
 </template>
+
+<style scoped>
+.home-greeting-date {
+	color: var(--color-secondary);
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0;
+	line-height: 1;
+}
+
+.home-greeting-heading {
+	max-width: 44rem;
+	font-size: 1.375rem;
+	line-height: 1.35;
+}
+</style>

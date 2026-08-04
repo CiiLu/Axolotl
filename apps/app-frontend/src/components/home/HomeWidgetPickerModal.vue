@@ -18,6 +18,7 @@ import { computed, nextTick, ref } from 'vue'
 
 import type { HomeWidgetKind, HomeWidgetPlacement } from '@/components/home/home-dashboard'
 import {
+	HOME_GREETING_DEFAULT_MODE,
 	HOME_RECENT_DEFAULT_LIMIT,
 	HOME_WIDGET_DEFAULT_SIZE,
 } from '@/components/home/home-dashboard'
@@ -244,6 +245,7 @@ function chooseKind(kind: HomeWidgetKind) {
 			kind,
 			size: HOME_WIDGET_DEFAULT_SIZE[kind],
 			...(kind === 'recent' ? { options: { recentLimit: HOME_RECENT_DEFAULT_LIMIT } } : {}),
+			...(kind === 'greeting' ? { options: { greetingMode: HOME_GREETING_DEFAULT_MODE } } : {}),
 		})
 		return
 	}

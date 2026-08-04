@@ -1109,6 +1109,51 @@
   "app.home.greeting.with-player": {
     "message": "Welcome back, {name}. {greeting}"
   },
+  "app.home.greeting.welcome": {
+    "message": "Welcome back."
+  },
+  "app.home.greeting.welcome-with-player": {
+    "message": "Welcome back, {name}."
+  },
+  "app.home.greeting.settings.mode": {
+    "message": "Display style"
+  },
+  "app.home.greeting.settings.mode.greeting": {
+    "message": "Greeting only"
+  },
+  "app.home.greeting.settings.mode.greeting-description": {
+    "message": "Show a rotating greeting based on the time of day."
+  },
+  "app.home.greeting.settings.mode.text": {
+    "message": "Custom text only"
+  },
+  "app.home.greeting.settings.mode.text-description": {
+    "message": "Replace the automatic greeting with your own message."
+  },
+  "app.home.greeting.settings.mode.text-and-greeting": {
+    "message": "Text + greeting"
+  },
+  "app.home.greeting.settings.mode.text-and-greeting-description": {
+    "message": "Put your own message before the rotating greeting."
+  },
+  "app.home.greeting.settings.prefix-placeholder": {
+    "message": "Welcome back, {name}."
+  },
+  "app.home.greeting.settings.preview": {
+    "message": "Preview"
+  },
+  "app.home.greeting.settings.text": {
+    "message": "Custom text"
+  },
+  "app.home.greeting.settings.text-fallback": {
+    "message": "Leave this empty to use the current automatic greeting."
+  },
+  "app.home.greeting.settings.text-placeholder": {
+    "message": "The next adventure starts here."
+  },
+  "app.home.greeting.settings.title": {
+    "message": "Customize greeting"
+  },
   "app.home.insights.empty": {
     "message": "Play something and your stats will show up here."
   },
@@ -1231,6 +1276,21 @@
   },
   "app.home.servers.unpin": {
     "message": "Unpin from Home"
+  },
+  "app.home.shortcut.kind.instance": {
+    "message": "Instance"
+  },
+  "app.home.shortcut.kind.server": {
+    "message": "Server"
+  },
+  "app.home.shortcut.kind.world": {
+    "message": "World"
+  },
+  "app.home.shortcut.server.offline": {
+    "message": "Server offline"
+  },
+  "app.home.shortcut.server.players-online": {
+    "message": "{count} online"
   },
   "app.home.widgets.add": {
     "message": "Add widget"
@@ -1617,7 +1677,10 @@
     "message": "添加失败，该文件可能已存在"
   },
   "app.instance.mods.missing-files-warning.body": {
-    "message": "{count, plural, one {# required file is} other {# required files are}} missing locally. Refresh while online to identify author-restricted downloads, or restore an item from its menu."
+    "message": "{count, plural, one {# required file was} other {# required files were}} not downloaded or are no longer present. Retry each file below; refreshing scans the instance folder again."
+  },
+  "app.instance.mods.missing-files-warning.restore": {
+    "message": "Restore"
   },
   "app.instance.mods.missing-files-warning.title": {
     "message": "Some modpack files are missing"
@@ -3522,13 +3585,13 @@
     "message": "Download control room"
   },
   "app.onboarding.home-customize.description": {
-    "message": "Open the editor to add shortcuts, reorder widgets, and choose the useful size for each one."
+    "message": "Use the bottom-right edit control to add shortcuts, reorder widgets, resize them, and configure their content."
   },
   "app.onboarding.home-customize.title": {
     "message": "Arrange it your way"
   },
   "app.onboarding.home-layout.description": {
-    "message": "Use this floating button whenever you want to switch between Information Home and Minimal Home."
+    "message": "Use the bottom-right control to switch between Information Home and Minimal Home. Widget editing stays with Information Home."
   },
   "app.onboarding.home-layout.title": {
     "message": "Change the amount of detail"
