@@ -12,7 +12,6 @@ use crate::util::protocol_version::OLD_PROTOCOL_VERSIONS;
 pub use crate::util::protocol_version::ProtocolVersion;
 
 mod level_data;
-pub use level_data::*;
 pub use crate::util::server_ping::{
     ServerGameProfile, ServerPlayers, ServerStatus, ServerVersion,
 };
@@ -26,6 +25,7 @@ use either::Either;
 use enumset::{EnumSet, EnumSetType};
 use fs4::tokio::AsyncFileExt;
 use futures::StreamExt;
+pub use level_data::*;
 use quartz_nbt::{NbtCompound, NbtTag};
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};

@@ -465,7 +465,8 @@ pub async fn get_world_level_data(
     world: &str,
 ) -> Result<WorldLevelData> {
     let state = State::get().await?;
-    let (_, instance_path) = resolve_instance_identity(instance, &state).await?;
+    let (_, instance_path) =
+        resolve_instance_identity(instance, &state).await?;
     let instance_dir = state.directories.instances_dir().join(instance_path);
     let world_dir = get_world_dir(&instance_dir, world);
 
@@ -503,7 +504,8 @@ pub async fn get_world_level_data(
 
     let seed = match &sources.seed {
         Some(
-            SeedSource::LevelDatWorldGenSettings | SeedSource::LevelDatRandomSeed,
+            SeedSource::LevelDatWorldGenSettings
+            | SeedSource::LevelDatRandomSeed,
         ) => extract_level_seed(data),
         Some(SeedSource::Savedata(path)) => {
             match read_savedata_data_compound(path).await {
@@ -635,7 +637,8 @@ pub async fn update_world_settings(
         level_dirty = true;
         match &sources.player_game_type {
             Some(PlayerGameTypeTarget::LevelDatPlayer) => {
-                if let Ok(player) = data.get_mut::<_, &mut NbtCompound>("Player")
+                if let Ok(player) =
+                    data.get_mut::<_, &mut NbtCompound>("Player")
                 {
                     player.insert("playerGameType", NbtTag::Int(game_type));
                 }
