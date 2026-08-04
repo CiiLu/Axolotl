@@ -1,14 +1,15 @@
 <script setup lang="ts">
+import { IssuesIcon } from '@modrinth/assets'
 import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed, ref, watch } from 'vue'
 
-import type { HomeWidgetPlacement } from '@/components/home/home-dashboard'
+import type { HomeWidgetPlacement, HomeWidgetSize } from '@/components/home/home-dashboard'
 import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
-import Instance from '@/components/ui/Instance.vue'
+import HomeInstanceCard from '@/components/home/HomeInstanceCard.vue'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
-import { kill, run } from '@/helpers/instance'
+import { kill, run, set_pinned } from '@/helpers/instance'
 import type { GameInstance } from '@/helpers/types'
 import {
 	hasServerQuickPlaySupport,
@@ -22,6 +23,7 @@ import { handleSevereError } from '@/store/error'
 const props = defineProps<{
 	placement: HomeWidgetPlacement
 	instances: GameInstance[]
+	dashboardSize: HomeWidgetSize
 }>()
 
 const { handleError } = injectNotificationManager()
@@ -122,6 +124,10 @@ async function stopInstance() {
 	await kill(instance.value.id).catch(handleError)
 }
 
+async function updatePinned(targetInstance: GameInstance, pinned: boolean) {
+	await set_pinned(targetInstance.id, pinned).catch(handleError)
+}
+
 watch(
 	() => [props.placement, props.instances] as const,
 	() => refreshTarget(),
@@ -133,27 +139,27 @@ watch(
 </script>
 
 <template>
-	<div class="flex h-full min-h-0 flex-col justify-center">
-		<div
-			v-if="missing"
-			class="flex h-full min-h-0 flex-col items-center justify-center gap-2 text-center"
-		>
+	<div class="home-shortcut-widget" :data-size="dashboardSize" :data-kind="placement.kind">
+		<div v-if="missing" class="home-shortcut-missing">
+			<span class="home-shortcut-missing-icon"><IssuesIcon aria-hidden="true" /></span>
 			<strong class="max-w-full truncate text-contrast">{{
 				placement.target?.fallbackLabel
 			}}</strong>
 			<span class="text-sm text-secondary">{{ formatMessage(messages.unavailable) }}</span>
 		</div>
-		<Instance
+		<HomeInstanceCard
 			v-else-if="placement.kind === 'instance' && instance"
 			:instance="instance"
-			compact
-			flat
+			:pinned="!!instance.pinned_at"
 			:playing="runningInstanceIds.includes(instance.id)"
+			:layout="dashboardSize === '1x1' ? 'spotlight' : 'row'"
+			@pinned-change="updatePinned"
 		/>
 		<WorldItem
 			v-else-if="world && instance"
 			:world="world"
 			flat
+			:dashboard-density="dashboardSize === '1x1' ? 'compact' : 'comfortable'"
 			:playing-instance="runningInstanceIds.includes(instance.id)"
 			:starting-instance="starting"
 			:supports-server-quick-play="
@@ -179,3 +185,50 @@ watch(
 		/>
 	</div>
 </template>
+
+<style scoped>
+.home-shortcut-widget {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.home-shortcut-widget[data-size='2x1'] {
+	justify-content: stretch;
+}
+
+.home-shortcut-widget[data-size='2x1'] > :deep(*) {
+	width: 100%;
+}
+
+.home-shortcut-missing {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	text-align: center;
+}
+
+.home-shortcut-missing-icon {
+	display: inline-flex;
+	width: 2.5rem;
+	height: 2.5rem;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--color-orange) 14%, transparent);
+	color: var(--color-orange);
+}
+
+.home-shortcut-missing-icon svg {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+</style>

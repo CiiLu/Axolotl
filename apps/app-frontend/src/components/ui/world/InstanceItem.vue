@@ -68,6 +68,7 @@ const props = defineProps<{
 	lastPlayed: Dayjs
 	flat?: boolean
 	playing?: boolean
+	dashboardDensity?: 'compact' | 'comfortable'
 }>()
 
 const loadingModpack = ref(!!props.instance.link)
@@ -162,9 +163,19 @@ onUnmounted(() => {
 		</template>
 		<div
 			class="grid grid-cols-[auto_minmax(0,3fr)_minmax(0,4fr)_auto] items-center gap-2 rounded-lg smart-clickable:highlight-on-hover"
-			:class="flat ? 'px-2 py-2 hover:bg-button-bg' : 'card-shadow bg-bg-raised p-3'"
+			:class="[
+				flat ? 'px-2 py-2 hover:bg-button-bg' : 'card-shadow bg-bg-raised p-3',
+				{
+					'instance-item-dashboard-compact': dashboardDensity === 'compact',
+					'instance-item-dashboard-comfortable': dashboardDensity === 'comfortable',
+				},
+			]"
 		>
-			<InstanceIcon :icon-path="instance.icon_path" :instance-id="instance.id" size="48px" />
+			<InstanceIcon
+				:icon-path="instance.icon_path"
+				:instance-id="instance.id"
+				:size="dashboardDensity === 'compact' ? '40px' : '48px'"
+			/>
 			<div class="flex flex-col col-span-2 justify-between h-full">
 				<div class="flex items-center gap-2">
 					<div class="text-lg text-contrast font-bold truncate smart-clickable:underline-on-hover">
@@ -208,13 +219,19 @@ onUnmounted(() => {
 				</div>
 			</div>
 			<div class="flex gap-1 justify-end smart-clickable:allow-pointer-events">
-				<ButtonStyled v-if="isPlaying && !loading" color="red">
+				<ButtonStyled
+					v-if="isPlaying && !loading"
+					color="red"
+					:circular="dashboardDensity === 'compact'"
+				>
 					<button @click="stop">
 						<StopCircleIcon aria-hidden="true" />
-						{{ formatMessage(commonMessages.stopButton) }}
+						<span v-if="dashboardDensity !== 'compact'">
+							{{ formatMessage(commonMessages.stopButton) }}
+						</span>
 					</button>
 				</ButtonStyled>
-				<ButtonStyled v-else>
+				<ButtonStyled v-else :circular="dashboardDensity === 'compact'">
 					<button
 						v-tooltip="isPlaying ? formatMessage(messages.alreadyOpen) : null"
 						:disabled="isPlaying || loading"
@@ -222,7 +239,9 @@ onUnmounted(() => {
 					>
 						<SpinnerIcon v-if="loading" class="animate-spin" />
 						<PlayIcon v-else aria-hidden="true" />
-						{{ formatMessage(commonMessages.playButton) }}
+						<span v-if="dashboardDensity !== 'compact'">
+							{{ formatMessage(commonMessages.playButton) }}
+						</span>
 					</button>
 				</ButtonStyled>
 				<ButtonStyled circular type="transparent">
@@ -254,3 +273,31 @@ onUnmounted(() => {
 		</div>
 	</SmartClickable>
 </template>
+
+<style scoped>
+.instance-item-dashboard-compact {
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	gap: 0.5rem;
+	padding: 0.375rem;
+}
+
+.instance-item-dashboard-compact > :nth-child(2) {
+	grid-column: auto;
+}
+
+.instance-item-dashboard-compact > :nth-child(2) > :first-child > :first-child {
+	font-size: 0.875rem;
+}
+
+.instance-item-dashboard-compact > :nth-child(2) > :last-child {
+	font-size: 0.7rem;
+}
+
+.instance-item-dashboard-compact > :last-child {
+	gap: 0.125rem;
+}
+
+.instance-item-dashboard-comfortable {
+	padding: 0.5rem;
+}
+</style>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { GameIcon } from '@modrinth/assets'
 import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed, ref, watch } from 'vue'
 
 import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
+import type { HomeWidgetSize } from '@/components/home/home-dashboard'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { trackEvent } from '@/helpers/analytics'
@@ -19,6 +21,7 @@ import { handleSevereError } from '@/store/error'
 const props = defineProps<{
 	instances: GameInstance[]
 	dashboard?: boolean
+	dashboardSize?: HomeWidgetSize | null
 }>()
 
 const { handleError } = injectNotificationManager()
@@ -49,6 +52,9 @@ const favorites = computed(() =>
 		const instance = instanceById.value.get(world.instance_id)
 		return instance ? [{ instance, world }] : []
 	}),
+)
+const worldDensity = computed(() =>
+	props.dashboardSize?.startsWith('1') ? ('compact' as const) : ('comfortable' as const),
 )
 
 function favoriteKey(world: WorldWithInstance): string {
@@ -114,14 +120,13 @@ async function stopInstance(instance: GameInstance) {
 </script>
 
 <template>
-	<section class="flex min-h-0 flex-col gap-3">
-		<h2 class="m-0 text-lg font-bold text-contrast">
-			{{ formatMessage(messages.pinnedWorlds) }}
-		</h2>
-		<div
-			v-if="favorites.length > 0"
-			class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1"
-		>
+	<section class="home-pinned-worlds" :data-size="dashboardSize">
+		<div class="home-widget-heading">
+			<span class="home-widget-heading-icon"><GameIcon aria-hidden="true" /></span>
+			<h2>{{ formatMessage(messages.pinnedWorlds) }}</h2>
+			<span v-if="favorites.length" class="home-widget-count">{{ favorites.length }}</span>
+		</div>
+		<div v-if="favorites.length > 0" class="home-world-list">
 			<WorldItem
 				v-for="favorite in favorites"
 				:key="favoriteKey(favorite.world)"
@@ -140,14 +145,110 @@ async function stopInstance(instance: GameInstance) {
 				:instance-icon="favorite.instance.icon_path"
 				:shortcut-instance-id="favorite.instance.id"
 				:flat="dashboard"
+				:dashboard-density="worldDensity"
 				@play="joinWorld(favorite.world, favorite.instance)"
 				@play-instance="playInstance(favorite.instance)"
 				@stop="stopInstance(favorite.instance)"
 				@update="runtime.refreshFavorites"
 			/>
 		</div>
-		<p v-else class="m-0 text-sm text-secondary">
+		<p v-else class="home-widget-empty">
 			{{ formatMessage(messages.emptyWorlds) }}
 		</p>
 	</section>
 </template>
+
+<style scoped>
+.home-pinned-worlds {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.home-widget-heading {
+	display: flex;
+	min-width: 0;
+	height: 2rem;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.home-widget-heading-icon {
+	display: inline-flex;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+	color: var(--color-brand);
+}
+
+.home-widget-heading-icon svg {
+	width: 1rem;
+	height: 1rem;
+}
+
+.home-widget-heading h2 {
+	min-width: 0;
+	overflow: hidden;
+	margin: 0;
+	color: var(--color-contrast);
+	font-size: 1rem;
+	font-weight: 750;
+	letter-spacing: 0;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.home-widget-count {
+	display: inline-flex;
+	min-width: 1.25rem;
+	height: 1.25rem;
+	align-items: center;
+	justify-content: center;
+	padding: 0 0.3rem;
+	border-radius: 999px;
+	background: var(--color-button-bg);
+	color: var(--color-secondary);
+	font-size: 0.7rem;
+	font-weight: 700;
+}
+
+.home-world-list {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	flex: 1;
+	flex-direction: column;
+	gap: 0.25rem;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding-right: 0.25rem;
+}
+
+.home-pinned-worlds[data-size='1x1'] {
+	gap: 0.375rem;
+}
+
+.home-pinned-worlds[data-size='1x1'] .home-widget-heading {
+	height: 1.5rem;
+}
+
+.home-pinned-worlds[data-size='1x1'] .home-widget-heading-icon {
+	width: 1.5rem;
+	height: 1.5rem;
+}
+
+.home-widget-empty {
+	margin: auto 0;
+	color: var(--color-secondary);
+	font-size: 0.8125rem;
+	line-height: 1.4;
+}
+</style>

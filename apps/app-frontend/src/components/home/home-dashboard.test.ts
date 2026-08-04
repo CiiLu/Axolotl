@@ -60,7 +60,7 @@ test('accepts draggable order and restores the complete default layout', () => {
 		[
 			{ kind: 'greeting', size: '2x1' },
 			{ kind: 'recent', size: '2x2' },
-			{ kind: 'calendar', size: '2x2' },
+			{ kind: 'calendar', size: '1x2' },
 			{ kind: 'pinned-instances', size: '2x2' },
 			{ kind: 'pinned-worlds', size: '1x2' },
 			{ kind: 'pinned-servers', size: '1x2' },
@@ -108,10 +108,10 @@ test('packs widgets into the earliest available cells', () => {
 		[
 			{ column: 1, row: 1, effectiveColumns: 2, effectiveRows: 1 },
 			{ column: 3, row: 1, effectiveColumns: 2, effectiveRows: 2 },
-			{ column: 1, row: 2, effectiveColumns: 2, effectiveRows: 2 },
-			{ column: 3, row: 3, effectiveColumns: 2, effectiveRows: 2 },
+			{ column: 1, row: 2, effectiveColumns: 1, effectiveRows: 2 },
+			{ column: 2, row: 3, effectiveColumns: 2, effectiveRows: 2 },
+			{ column: 4, row: 3, effectiveColumns: 1, effectiveRows: 2 },
 			{ column: 1, row: 4, effectiveColumns: 1, effectiveRows: 2 },
-			{ column: 2, row: 4, effectiveColumns: 1, effectiveRows: 2 },
 		],
 	)
 })
@@ -129,8 +129,23 @@ test('normalizes malformed sizes while retaining duplicate widgets', () => {
 	assert.deepEqual(
 		normalized?.widgets.map(({ kind, size }) => ({ kind, size })),
 		[
-			{ kind: 'calendar', size: '2x2' },
-			{ kind: 'calendar', size: '1x1' },
+			{ kind: 'calendar', size: '1x2' },
+			{ kind: 'calendar', size: '1x2' },
 		],
+	)
+})
+
+test('normalizes every persisted calendar placement to the fixed 1x2 size', () => {
+	const normalized = normalizeHomeDashboard({
+		version: 1,
+		widgets: [
+			{ id: 'small', kind: 'calendar', size: '1x1' },
+			{ id: 'wide', kind: 'calendar', size: '2x2' },
+		],
+	})
+
+	assert.deepEqual(
+		normalized?.widgets.map((widget) => widget.size),
+		['1x2', '1x2'],
 	)
 })

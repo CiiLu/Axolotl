@@ -99,6 +99,7 @@ const props = withDefaults(
 		instanceIcon?: string
 		shortcutInstanceId?: string
 		flat?: boolean
+		dashboardDensity?: 'compact' | 'comfortable'
 	}>(),
 	{
 		playingInstance: false,
@@ -120,6 +121,7 @@ const props = withDefaults(
 		instanceIcon: undefined,
 		shortcutInstanceId: undefined,
 		flat: false,
+		dashboardDensity: undefined,
 	},
 )
 
@@ -274,6 +276,8 @@ const messages = defineMessages({
 			:class="[
 				{
 					'world-item-highlighted': highlighted,
+					'world-item-dashboard-compact': dashboardDensity === 'compact',
+					'world-item-dashboard-comfortable': dashboardDensity === 'comfortable',
 				},
 				flat ? 'px-2 py-2 hover:bg-button-bg' : 'card-shadow bg-bg-raised p-3',
 			]"
@@ -284,7 +288,7 @@ const messages = defineMessages({
 						? (serverStatus.favicon ?? world.icon)
 						: world.icon
 				"
-				size="48px"
+				:size="dashboardDensity === 'compact' ? '40px' : '48px'"
 			/>
 			<div class="flex flex-col justify-between h-full">
 				<div class="flex items-center gap-2">
@@ -434,13 +438,16 @@ const messages = defineMessages({
 				<ButtonStyled
 					v-if="(playingWorld || (locked && playingInstance)) && !startingInstance"
 					color="red"
+					:circular="dashboardDensity === 'compact'"
 				>
 					<button @click="emit('stop')">
 						<StopCircleIcon aria-hidden="true" />
-						{{ formatMessage(commonMessages.stopButton) }}
+						<span v-if="dashboardDensity !== 'compact'">
+							{{ formatMessage(commonMessages.stopButton) }}
+						</span>
 					</button>
 				</ButtonStyled>
-				<ButtonStyled v-else>
+				<ButtonStyled v-else :circular="dashboardDensity === 'compact'">
 					<button
 						v-tooltip="
 							world.type === 'server'
@@ -469,7 +476,9 @@ const messages = defineMessages({
 					>
 						<SpinnerIcon v-if="startingInstance && playingWorld" class="animate-spin" />
 						<PlayIcon v-else aria-hidden="true" />
-						{{ formatMessage(commonMessages.playButton) }}
+						<span v-if="dashboardDensity !== 'compact'">
+							{{ formatMessage(commonMessages.playButton) }}
+						</span>
 					</button>
 				</ButtonStyled>
 				<ButtonStyled circular type="transparent">
@@ -599,6 +608,33 @@ const messages = defineMessages({
 	</SmartClickable>
 </template>
 <style scoped lang="scss">
+.world-item-dashboard-compact {
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	gap: 0.5rem;
+	padding: 0.375rem;
+
+	> :nth-child(2) > :first-child > :not(:first-child),
+	> :nth-child(3) {
+		display: none;
+	}
+
+	> :nth-child(2) > :first-child > :first-child {
+		font-size: 0.875rem;
+	}
+
+	> :nth-child(2) > :last-child {
+		font-size: 0.7rem;
+	}
+
+	> :last-child {
+		gap: 0.125rem;
+	}
+}
+
+.world-item-dashboard-comfortable {
+	padding: 0.5rem;
+}
+
 .world-item-highlighted {
 	position: relative;
 	animation: fade-highlight 4s ease-out;
