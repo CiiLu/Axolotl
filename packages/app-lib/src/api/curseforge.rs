@@ -1003,15 +1003,38 @@ pub async fn get_download_url(
     project_id: u32,
     file_id: u32,
 ) -> crate::Result<Option<String>> {
+    let path = format!("/v1/mods/{project_id}/files/{file_id}/download-url");
     let response: CurseForgeResponse<Option<String>> = request_json(
         Method::GET,
-        &format!("/v1/mods/{project_id}/files/{file_id}/download-url"),
+        &path,
         Vec::new(),
         None,
         MirrorPolicy::MirrorFirst,
     )
     .await?;
-    Ok(response.data)
+    if let Some(url) = normalized_download_url(response.data) {
+        return Ok(Some(url));
+    }
+    if api_key().is_none() {
+        return Ok(None);
+    }
+
+    let response: CurseForgeResponse<Option<String>> = request_json(
+        Method::GET,
+        &path,
+        Vec::new(),
+        None,
+        MirrorPolicy::OfficialOnly,
+    )
+    .await?;
+    Ok(normalized_download_url(response.data))
+}
+
+fn normalized_download_url(url: Option<String>) -> Option<String> {
+    url.and_then(|url| {
+        let url = url.trim();
+        (!url.is_empty()).then(|| url.to_string())
+    })
 }
 
 pub async fn get_categories(
@@ -5057,6 +5080,19 @@ mod tests {
                     .unwrap()
             )
             .is_err()
+        );
+    }
+
+    #[test]
+    fn blank_download_urls_are_treated_as_unavailable() {
+        assert_eq!(normalized_download_url(None), None);
+        assert_eq!(normalized_download_url(Some(String::new())), None);
+        assert_eq!(normalized_download_url(Some("  \t".to_string())), None);
+        assert_eq!(
+            normalized_download_url(Some(
+                " https://edge.forgecdn.net/files/1/2/a.jar ".to_string(),
+            )),
+            Some("https://edge.forgecdn.net/files/1/2/a.jar".to_string()),
         );
     }
 

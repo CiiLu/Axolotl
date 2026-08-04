@@ -1414,8 +1414,17 @@ pub(crate) async fn get_content_mutation_target(
         "SELECT entry.id AS entry_id,
 			member.id AS member_id,
 			file.relative_path,
-			COALESCE(entry.ownership_kind, 'pack_managed') AS ownership_kind,
-			COALESCE(entry.project_type, member.project_type) AS project_type,
+			COALESCE(
+				NULLIF(entry.ownership_kind, ''),
+				CASE
+					WHEN member.id IS NULL THEN 'user_added'
+					ELSE 'pack_managed'
+				END
+			) AS ownership_kind,
+			COALESCE(
+				NULLIF(entry.project_type, ''),
+				NULLIF(member.project_type, '')
+			) AS project_type,
 			COALESCE(origin.provider, member.provider) AS provider,
 			COALESCE(origin.provider_project_id, member.provider_project_id)
 				AS provider_project_id,
@@ -1449,16 +1458,32 @@ pub(crate) async fn get_content_mutation_target(
     .await?;
 
     row.map(|row| {
-        Ok(ContentMutationTarget {
-            entry_id: row.try_get("entry_id")?,
-            member_id: row.try_get("member_id")?,
-            relative_path: row.try_get("relative_path")?,
-            ownership_kind: ContentOwnershipKind::from_str(
-                &row.try_get::<String, _>("ownership_kind")?,
-            )?,
-            project_type: project_type_from_str(
-                &row.try_get::<String, _>("project_type")?,
-            )?,
+		let relative_path = row.try_get::<Option<String>, _>("relative_path")?;
+		let project_type = row
+			.try_get::<Option<String>, _>("project_type")?
+			.as_deref()
+			.map(project_type_from_str)
+			.transpose()?
+			.or_else(|| {
+				relative_path.as_deref().and_then(
+					crate::state::instances::adapters::filesystem::project_type_from_relative_path,
+				)
+			})
+			.ok_or_else(|| {
+				crate::ErrorKind::InputError(
+					"Unable to determine the selected content project type"
+						.to_string(),
+				)
+			})?;
+
+		Ok(ContentMutationTarget {
+			entry_id: row.try_get("entry_id")?,
+			member_id: row.try_get("member_id")?,
+			relative_path,
+			ownership_kind: ContentOwnershipKind::from_str(
+				&row.try_get::<String, _>("ownership_kind")?,
+			)?,
+			project_type,
             provider: row
                 .try_get::<Option<String>, _>("provider")?
                 .as_deref()
@@ -1803,6 +1828,80 @@ mod tests {
         ensure_instance_exists("instance", &mut tx)
             .await
             .expect("existing instance passes inside a transaction");
+    }
+
+    #[tokio::test]
+    async fn mutation_target_supports_untracked_instance_files() {
+        let pool = test_pool().await;
+        sqlx::query(
+            "ALTER TABLE instances ADD COLUMN applied_content_set_id TEXT NULL",
+        )
+        .execute(&pool)
+        .await
+        .expect("applied content set column");
+        sqlx::raw_sql(
+            "
+			CREATE TABLE instance_files (
+				id TEXT PRIMARY KEY,
+				instance_id TEXT NOT NULL,
+				relative_path TEXT NOT NULL
+			);
+			CREATE TABLE instance_content_entries (
+				id TEXT PRIMARY KEY,
+				content_set_id TEXT NOT NULL,
+				file_id TEXT NULL,
+				ownership_kind TEXT NOT NULL,
+				project_type TEXT NOT NULL
+			);
+			CREATE TABLE instance_pack_members (
+				id TEXT PRIMARY KEY,
+				content_set_id TEXT NOT NULL,
+				content_entry_id TEXT NULL,
+				project_type TEXT NOT NULL,
+				provider TEXT NULL,
+				provider_project_id TEXT NULL,
+				provider_release_id TEXT NULL
+			);
+			CREATE TABLE instance_content_provider_refs (
+				content_entry_id TEXT NOT NULL,
+				provider TEXT NOT NULL,
+				provider_project_id TEXT NOT NULL,
+				provider_release_id TEXT NULL,
+				is_origin INTEGER NOT NULL
+			);
+			",
+        )
+        .execute(&pool)
+        .await
+        .expect("content tables");
+        sqlx::query("INSERT INTO instance_content_sets (id) VALUES ('set')")
+            .execute(&pool)
+            .await
+            .expect("insert content set");
+        sqlx::query(
+			"INSERT INTO instances (id, applied_content_set_id) VALUES ('instance', 'set')",
+		)
+		.execute(&pool)
+		.await
+		.expect("insert instance");
+        sqlx::query(
+            "INSERT INTO instance_files (id, instance_id, relative_path)
+			 VALUES ('file', 'instance', 'mods/example.jar')",
+        )
+        .execute(&pool)
+        .await
+        .expect("insert untracked file");
+
+        let target = get_content_mutation_target("instance", "file", &pool)
+            .await
+            .expect("resolve mutation target")
+            .expect("mutation target exists");
+
+        assert_eq!(target.entry_id, None);
+        assert_eq!(target.member_id, None);
+        assert_eq!(target.relative_path.as_deref(), Some("mods/example.jar"));
+        assert_eq!(target.ownership_kind, ContentOwnershipKind::UserAdded);
+        assert_eq!(target.project_type, ProjectType::Mod);
     }
 
     #[tokio::test]

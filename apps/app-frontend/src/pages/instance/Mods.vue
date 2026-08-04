@@ -63,14 +63,46 @@
 					</span>
 				</span>
 			</template>
-			<div class="border-0 border-t border-solid border-brand-orange/60 bg-bg-orange p-4">
-				<p class="m-0">
+			<div class="bg-bg-orange px-4 pb-4 pt-3">
+				<p class="m-0 text-sm leading-6 text-secondary">
 					{{
-						formatMessage(messages.missingFilesWarningBody, {
-							count: missingPackMembers.length,
-						})
+						formatMessage(messages.missingFilesWarningBody)
 					}}
 				</p>
+				<ul
+					class="m-0 mt-2 flex max-h-64 list-none flex-col gap-1 overflow-y-auto p-0"
+				>
+					<li
+						v-for="item in missingPackMembers"
+						:key="item.memberId ?? item.expectedRelativePath"
+						class="flex min-h-14 min-w-0 items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-surface-5/40"
+					>
+						<FileIcon class="size-5 shrink-0 text-brand-orange" aria-hidden="true" />
+						<span class="flex min-w-0 flex-1 flex-col gap-0.5">
+							<span class="truncate font-medium text-contrast" :title="item.expectedRelativePath">
+								{{ fileNameFromPath(item.expectedRelativePath) }}
+							</span>
+							<code class="truncate text-xs text-secondary" :title="item.expectedRelativePath">
+								{{ item.expectedRelativePath }}
+							</code>
+						</span>
+						<ButtonStyled size="small" type="highlight-colored-text" color="orange">
+							<button
+								type="button"
+								:disabled="!item.memberId || isInstanceBusy || isRestoringMissingPackMember(item)"
+								@click="restoreMissingPackMember(item)"
+							>
+								<SpinnerIcon
+									v-if="isRestoringMissingPackMember(item)"
+									class="animate-spin"
+									aria-hidden="true"
+								/>
+								<UndoIcon v-else aria-hidden="true" />
+								{{ formatMessage(messages.restoreMissingFile) }}
+							</button>
+						</ButtonStyled>
+					</li>
+				</ul>
 			</div>
 		</CollapsibleAdmonition>
 		<CollapsibleAdmonition
@@ -155,12 +187,15 @@ import type { Labrinth } from '@modrinth/api-client'
 import {
 	ClipboardCopyIcon,
 	ExternalIcon,
+	FileIcon,
 	FolderOpenIcon,
 	PencilIcon,
+	SpinnerIcon,
 	UndoIcon,
 } from '@modrinth/assets'
 import {
 	type BulkOperationStatus,
+	ButtonStyled,
 	CollapsibleAdmonition,
 	commonMessages,
 	ConfirmModpackUpdateModal,
@@ -194,6 +229,7 @@ import ExportModal from '@/components/ui/ExportModal.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
+import { applyContentItemUpdates, matchesContentItem } from '@/helpers/content-item-state'
 import { translateContentItemTitles } from '@/helpers/content-search'
 import {
 	type CurseForgeManualDownloadItem,
@@ -205,6 +241,7 @@ import {
 	add_project_from_path,
 	apply_content_update_plan,
 	edit,
+	type InstanceContentSnapshotItem,
 	list,
 	plan_content_updates,
 	remove_content_entry,
@@ -301,7 +338,11 @@ const messages = defineMessages({
 	missingFilesWarningBody: {
 		id: 'app.instance.mods.missing-files-warning.body',
 		defaultMessage:
-			'{count, plural, one {# required file is} other {# required files are}} missing locally. Refresh while online to identify author-restricted downloads, or restore an item from its menu.',
+			'The required files below were not downloaded or are no longer present. Restore them individually; refreshing scans the instance folder again.',
+	},
+	restoreMissingFile: {
+		id: 'app.instance.mods.missing-files-warning.restore',
+		defaultMessage: 'Restore',
 	},
 	parsingFiles: {
 		id: 'app.instance.mods.parsing-files',
@@ -530,6 +571,7 @@ const manualPendingItems = computed<ContentItem[]>(() => {
 
 const manualWarningExpanded = ref(true)
 const missingWarningExpanded = ref(true)
+const restoringMissingPackMemberIds = ref(new Set<string>())
 const visibleSkippedManualDownloads = computed(() => skippedManualDownloads.value.slice(0, 5))
 const hiddenSkippedManualDownloadCount = computed(() =>
 	Math.max(0, skippedManualDownloads.value.length - visibleSkippedManualDownloads.value.length),
@@ -538,6 +580,27 @@ const hiddenSkippedManualDownloadCount = computed(() =>
 async function openManualCurseForgeDownload(item: CurseForgeManualDownloadItem) {
 	showCurseForgeManualDownloads(props.instance.id, skippedManualDownloads.value)
 	await openUrl(getCurseForgeManualDownloadUrl(item))
+}
+
+function isRestoringMissingPackMember(item: InstanceContentSnapshotItem) {
+	return item.memberId != null && restoringMissingPackMemberIds.value.has(item.memberId)
+}
+
+async function restoreMissingPackMember(item: InstanceContentSnapshotItem) {
+	const memberId = item.memberId
+	if (!memberId || restoringMissingPackMemberIds.value.has(memberId)) return
+
+	restoringMissingPackMemberIds.value = new Set([...restoringMissingPackMemberIds.value, memberId])
+	try {
+		await restore_pack_member_default(props.instance.id, memberId)
+		await refreshContentState('bypass')
+	} catch (error) {
+		handleError(error as Error)
+	} finally {
+		const next = new Set(restoringMissingPackMemberIds.value)
+		next.delete(memberId)
+		restoringMissingPackMemberIds.value = next
+	}
 }
 
 function localIconUrl(iconUrl?: string | null): string {
@@ -687,26 +750,6 @@ const activeUpdateRequestId = ref(0)
 
 function fileNameFromPath(path: string) {
 	return path.split('/').pop() ?? path
-}
-
-function matchesContentItem(
-	item: ContentItem,
-	target: ContentItem,
-	originalFileName: string,
-	originalFilePath?: string,
-) {
-	if (
-		item.file_name === originalFileName ||
-		item.file_path === originalFilePath ||
-		item.file_path === target.file_path
-	)
-		return true
-
-	const projectId = target.project?.id
-	if (!projectId || item.project?.id !== projectId) return false
-
-	const versionId = target.version?.id
-	return !versionId || item.version?.id === versionId
 }
 
 function updateLinkedModpackContentCache(
@@ -1068,7 +1111,7 @@ function applyContentItemToggleState(
 	updates: Partial<ContentItem>,
 ) {
 	const previousFileName = target.file_name
-	Object.assign(target, updates)
+	applyContentItemUpdates(projects.value, target, originalFileName, originalFilePath, updates)
 	modpackContentModal.value?.updateItem(previousFileName, updates)
 	modpackContentModal.value?.updateItem(originalFileName, updates)
 	updateLinkedModpackContentCache(target, originalFileName, originalFilePath, updates)

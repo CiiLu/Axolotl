@@ -512,12 +512,26 @@ pub async fn restore_pack_member_default(
 				},
 			)
 			.await?;
+            let pending_manual = !result.manual_downloads.is_empty();
+            let failure_reason = result
+                .failed_downloads
+                .first()
+                .map(|failure| failure.reason.clone());
             let restored_path = result
                 .installed
                 .into_iter()
                 .find(|file| !file.dependency)
                 .map(|file| file.relative_path);
-            (restored_path, !result.manual_downloads.is_empty())
+            if restored_path.is_none() && !pending_manual {
+                return Err(crate::ErrorKind::OtherError(
+                    failure_reason.unwrap_or_else(|| {
+                        "CurseForge did not return the restored file"
+                            .to_string()
+                    }),
+                )
+                .into());
+            }
+            (restored_path, pending_manual)
         }
         None => {
             return Err(crate::ErrorKind::InputError(

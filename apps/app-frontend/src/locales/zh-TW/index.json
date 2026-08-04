@@ -1020,7 +1020,10 @@
     "message": "分享模組包內容"
   },
   "app.instance.mods.missing-files-warning.body": {
-    "message": "本機缺少 {count, number} 個模組包必要檔案。連線重新整理可識別受作者限制、需要手動下載的檔案；一般缺失項可從其選單還原模組包預設版本。"
+    "message": "以下模組包必要檔案未能下載或已不在本機。可逐項還原；重新整理會再次掃描實例資料夾。"
+  },
+  "app.instance.mods.missing-files-warning.restore": {
+    "message": "還原"
   },
   "app.instance.mods.missing-files-warning.title": {
     "message": "模組包檔案缺失"

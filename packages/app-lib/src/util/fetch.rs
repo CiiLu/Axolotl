@@ -3573,6 +3573,13 @@ fn sustained_low_throughput(
         .then_some(bytes_per_second)
 }
 
+fn allow_low_throughput_route_switch(
+    has_alternate_route: bool,
+    retry_with_single_thread: bool,
+) -> bool {
+    has_alternate_route && !retry_with_single_thread
+}
+
 fn segment_path(part_path: &Path, index: usize) -> PathBuf {
     suffixed_path(part_path, &format!(".segment-{index}"))
 }
@@ -4718,6 +4725,10 @@ async fn download_to_path_inner(
                         && !terminal_routes.contains(&candidate.url)
                 },
             );
+            let allow_low_throughput_abort = allow_low_throughput_route_switch(
+                can_switch_route,
+                retry_with_single_thread,
+            );
             while attempts < file_attempt_budget {
                 attempts += 1;
                 tracing::debug!(
@@ -4767,7 +4778,7 @@ async fn download_to_path_inner(
                         &DIRECT_REQWEST_CLIENT,
                         attempts,
                         file_attempt_budget,
-                        can_switch_route,
+                        allow_low_throughput_abort,
                     )
                     .await
                     {
@@ -5232,7 +5243,7 @@ async fn download_to_path_inner(
                     }
                     let throughput_elapsed =
                         throughput_window_started.elapsed();
-                    if can_switch_route
+                    if allow_low_throughput_abort
                         && let Some(bytes_per_second) = sustained_low_throughput(
                             downloaded,
                             throughput_window_bytes,
@@ -6791,6 +6802,13 @@ mod tests {
             ),
             None
         );
+    }
+
+    #[test]
+    fn low_throughput_only_switches_routes_before_fallback_rounds() {
+        assert!(allow_low_throughput_route_switch(true, false));
+        assert!(!allow_low_throughput_route_switch(true, true));
+        assert!(!allow_low_throughput_route_switch(false, false));
     }
 
     #[test]

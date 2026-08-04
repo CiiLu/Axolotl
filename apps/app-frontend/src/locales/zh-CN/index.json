@@ -1101,7 +1101,7 @@
     "message": "分享整合包内容"
   },
   "app.instance.mods.missing-files-warning.body": {
-    "message": "有 {count, number} 个整合包必需文件未能下载或已不在本地。可逐项重试恢复；刷新会重新扫描实例目录。"
+    "message": "以下整合包必需文件未能下载或已不在本地。可逐项恢复；刷新会重新扫描实例目录。"
   },
   "app.instance.mods.missing-files-warning.restore": {
     "message": "恢复"

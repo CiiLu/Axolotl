@@ -33,6 +33,40 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.12',
+		version: '1.6.12',
+		publishedAt: '2026-08-04',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.12',
+			'zh-CN': 'Axolotl Launcher 1.6.12',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US': 'Fixed local mods without a content record failing to enable or disable.',
+					'zh-CN': '修复未建立内容记录的本地 Mod 无法正常启用或禁用的问题。',
+				},
+				{
+					'en-US':
+						'Fixed content toggles reverting visually after a mod was successfully enabled or disabled.',
+					'zh-CN': '修复 Mod 成功启用或禁用后，内容开关在界面上回弹的问题。',
+				},
+				{
+					'en-US':
+						'Fixed slow but active downloads being repeatedly canceled when they fell below the route-switching speed threshold; fallback attempts now continue until completion.',
+					'zh-CN':
+						'修复弱网下仍在传输的下载因低于线路切换速度阈值而被反复中止的问题；保底下载现在会持续到完成。',
+				},
+				{
+					'en-US':
+						'Fixed modpack missing-file warnings so affected files are named and can be restored directly; blank CurseForge mirror responses and stale states no longer leave files stuck as missing.',
+					'zh-CN':
+						'修复整合包文件缺失提示：现在会列出具体文件并可直接恢复；CurseForge 镜像空响应和陈旧状态不再导致文件持续显示为缺失。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.11',
 		version: '1.6.11',
 		publishedAt: '2026-08-04',

@@ -43,6 +43,7 @@ pub(crate) async fn get_content_snapshot(
             })?;
     let link =
         instance_rows::get_instance_link(instance_id, &state.pool).await?;
+    let files = sync_instance_content_files(&instance, state).await?;
     let mut warnings = Vec::new();
     if refresh_remote
         && let InstanceLink::CurseForgeModpack {
@@ -134,7 +135,6 @@ pub(crate) async fn get_content_snapshot(
         }
     }
 
-    let files = sync_instance_content_files(&instance, state).await?;
     let entries =
         content_rows::get_content_entries(&content_set.id, &state.pool).await?;
     let members =
@@ -802,10 +802,14 @@ fn snapshot_item(
                     .and_then(ContentProviderRef::database_release_id)
             })
         });
-    let materialization_state = member
+    let stored_materialization_state = member
         .map_or(PackMemberMaterializationState::Present, |member| {
             member.materialization_state
         });
+    let materialization_state = snapshot_materialization_state(
+        stored_materialization_state,
+        content.is_some(),
+    );
     let override_kind = member
         .map_or(PackMemberOverrideKind::None, |member| member.override_kind);
     let present = content.is_some()
@@ -838,6 +842,17 @@ fn snapshot_item(
                         == PackMemberMaterializationState::Missing),
         },
         content,
+    }
+}
+
+fn snapshot_materialization_state(
+    stored: PackMemberMaterializationState,
+    content_is_present: bool,
+) -> PackMemberMaterializationState {
+    if content_is_present && stored == PackMemberMaterializationState::Missing {
+        PackMemberMaterializationState::Present
+    } else {
+        stored
     }
 }
 
@@ -909,5 +924,28 @@ fn pack_provider(link: &InstanceLink) -> Option<ContentProvider> {
             Some(ContentProvider::Modrinth)
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn present_content_does_not_keep_a_stale_missing_state() {
+        assert_eq!(
+            snapshot_materialization_state(
+                PackMemberMaterializationState::Missing,
+                true,
+            ),
+            PackMemberMaterializationState::Present,
+        );
+        assert_eq!(
+            snapshot_materialization_state(
+                PackMemberMaterializationState::Missing,
+                false,
+            ),
+            PackMemberMaterializationState::Missing,
+        );
     }
 }

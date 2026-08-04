@@ -1695,7 +1695,7 @@
     "message": "添加失败，该文件可能已存在"
   },
   "app.instance.mods.missing-files-warning.body": {
-    "message": "{count, plural, one {# required file was} other {# required files were}} not downloaded or are no longer present. Retry each file below; refreshing scans the instance folder again."
+    "message": "The required files below were not downloaded or are no longer present. Restore them individually; refreshing scans the instance folder again."
   },
   "app.instance.mods.missing-files-warning.restore": {
     "message": "Restore"
