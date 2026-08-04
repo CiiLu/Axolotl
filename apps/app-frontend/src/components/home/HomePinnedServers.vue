@@ -143,9 +143,8 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 <template>
 	<section class="home-pinned-servers" :data-size="dashboardSize">
 		<div class="home-widget-heading">
-			<span class="home-widget-heading-icon"><ServerIcon aria-hidden="true" /></span>
+			<ServerIcon class="size-5 shrink-0 text-brand" aria-hidden="true" />
 			<h2>{{ formatMessage(messages.pinnedServers) }}</h2>
-			<span v-if="servers.length" class="home-widget-count">{{ servers.length }}</span>
 		</div>
 		<p v-if="servers.length === 0" class="home-widget-empty">
 			{{ formatMessage(messages.emptyServers) }}
@@ -270,47 +269,16 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 	gap: 0.5rem;
 }
 
-.home-widget-heading-icon {
-	display: inline-flex;
-	width: 1.75rem;
-	height: 1.75rem;
-	flex: 0 0 auto;
-	align-items: center;
-	justify-content: center;
-	border-radius: 6px;
-	background: color-mix(in srgb, var(--color-blue) 14%, transparent);
-	color: var(--color-blue);
-}
-
-.home-widget-heading-icon svg {
-	width: 1rem;
-	height: 1rem;
-}
-
 .home-widget-heading h2 {
 	min-width: 0;
 	overflow: hidden;
 	margin: 0;
 	color: var(--color-contrast);
 	font-size: 1rem;
-	font-weight: 750;
+	font-weight: 700;
 	letter-spacing: 0;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.home-widget-count {
-	display: inline-flex;
-	min-width: 1.25rem;
-	height: 1.25rem;
-	align-items: center;
-	justify-content: center;
-	padding: 0 0.3rem;
-	border-radius: 999px;
-	background: var(--color-button-bg);
-	color: var(--color-secondary);
-	font-size: 0.7rem;
-	font-weight: 700;
 }
 
 .home-server-list {
@@ -339,7 +307,7 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 
 .home-server-row:hover,
 .home-server-row:focus-within {
-	background: color-mix(in srgb, var(--color-blue) 8%, var(--color-button-bg));
+	background: var(--color-button-bg);
 }
 
 .home-pinned-servers[data-size='2x1'] .home-server-list,
@@ -353,11 +321,6 @@ async function unpinServer(world: ServerWorld & WorldWithInstance) {
 }
 
 .home-pinned-servers[data-size='1x1'] .home-widget-heading {
-	height: 1.5rem;
-}
-
-.home-pinned-servers[data-size='1x1'] .home-widget-heading-icon {
-	width: 1.5rem;
 	height: 1.5rem;
 }
 

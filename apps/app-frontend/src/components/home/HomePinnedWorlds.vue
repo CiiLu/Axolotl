@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { GameIcon } from '@modrinth/assets'
 import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed, ref, watch } from 'vue'
 
@@ -122,9 +121,7 @@ async function stopInstance(instance: GameInstance) {
 <template>
 	<section class="home-pinned-worlds" :data-size="dashboardSize">
 		<div class="home-widget-heading">
-			<span class="home-widget-heading-icon"><GameIcon aria-hidden="true" /></span>
 			<h2>{{ formatMessage(messages.pinnedWorlds) }}</h2>
-			<span v-if="favorites.length" class="home-widget-count">{{ favorites.length }}</span>
 		</div>
 		<div v-if="favorites.length > 0" class="home-world-list">
 			<WorldItem
@@ -177,47 +174,16 @@ async function stopInstance(instance: GameInstance) {
 	gap: 0.5rem;
 }
 
-.home-widget-heading-icon {
-	display: inline-flex;
-	width: 1.75rem;
-	height: 1.75rem;
-	flex: 0 0 auto;
-	align-items: center;
-	justify-content: center;
-	border-radius: 6px;
-	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
-	color: var(--color-brand);
-}
-
-.home-widget-heading-icon svg {
-	width: 1rem;
-	height: 1rem;
-}
-
 .home-widget-heading h2 {
 	min-width: 0;
 	overflow: hidden;
 	margin: 0;
 	color: var(--color-contrast);
 	font-size: 1rem;
-	font-weight: 750;
+	font-weight: 700;
 	letter-spacing: 0;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.home-widget-count {
-	display: inline-flex;
-	min-width: 1.25rem;
-	height: 1.25rem;
-	align-items: center;
-	justify-content: center;
-	padding: 0 0.3rem;
-	border-radius: 999px;
-	background: var(--color-button-bg);
-	color: var(--color-secondary);
-	font-size: 0.7rem;
-	font-weight: 700;
 }
 
 .home-world-list {
@@ -237,11 +203,6 @@ async function stopInstance(instance: GameInstance) {
 }
 
 .home-pinned-worlds[data-size='1x1'] .home-widget-heading {
-	height: 1.5rem;
-}
-
-.home-pinned-worlds[data-size='1x1'] .home-widget-heading-icon {
-	width: 1.5rem;
 	height: 1.5rem;
 }
 

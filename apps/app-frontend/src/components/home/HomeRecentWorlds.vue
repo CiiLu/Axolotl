@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { HistoryIcon } from '@modrinth/assets'
 import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
@@ -157,9 +156,7 @@ async function stopInstance(instance: GameInstance) {
 <template>
 	<section class="home-recent-worlds" :data-size="dashboardSize">
 		<div class="home-widget-heading">
-			<span class="home-widget-heading-icon"><HistoryIcon aria-hidden="true" /></span>
 			<h2>{{ formatMessage(messages.recentTitle) }}</h2>
-			<span v-if="recentItems.length" class="home-widget-count">{{ recentItems.length }}</span>
 		</div>
 		<div v-if="recentItems.length > 0" class="home-recent-list">
 			<template
@@ -242,47 +239,16 @@ async function stopInstance(instance: GameInstance) {
 	gap: 0.5rem;
 }
 
-.home-widget-heading-icon {
-	display: inline-flex;
-	width: 1.75rem;
-	height: 1.75rem;
-	flex: 0 0 auto;
-	align-items: center;
-	justify-content: center;
-	border-radius: 6px;
-	background: color-mix(in srgb, var(--color-blue) 14%, transparent);
-	color: var(--color-blue);
-}
-
-.home-widget-heading-icon svg {
-	width: 1rem;
-	height: 1rem;
-}
-
 .home-widget-heading h2 {
 	min-width: 0;
 	overflow: hidden;
 	margin: 0;
 	color: var(--color-contrast);
 	font-size: 1rem;
-	font-weight: 750;
+	font-weight: 700;
 	letter-spacing: 0;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.home-widget-count {
-	display: inline-flex;
-	min-width: 1.25rem;
-	height: 1.25rem;
-	align-items: center;
-	justify-content: center;
-	padding: 0 0.3rem;
-	border-radius: 999px;
-	background: var(--color-button-bg);
-	color: var(--color-secondary);
-	font-size: 0.7rem;
-	font-weight: 700;
 }
 
 .home-recent-list {

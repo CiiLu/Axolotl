@@ -255,7 +255,12 @@ onUnmounted(() => unlisten())
 	</template>
 	<div v-else>
 		<div
-			class="button-base bg-bg-raised p-4 rounded-xl flex gap-3 group"
+			class="button-base flex gap-3 group"
+			:class="
+				flat
+					? 'rounded-lg bg-transparent px-2 py-2 hover:bg-button-bg'
+					: 'rounded-xl bg-bg-raised p-4'
+			"
 			@click="seeInstance"
 			@mouseenter="checkProcess"
 		>

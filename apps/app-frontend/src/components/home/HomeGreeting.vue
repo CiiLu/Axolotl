@@ -130,8 +130,7 @@ onUnmounted(() => window.clearInterval(timer))
 
 <template>
 	<header
-		class="home-greeting flex min-w-0 flex-col"
-		:data-size="dashboardSize"
+		class="flex min-w-0 flex-col"
 		:class="
 			variant === 'minimal'
 				? 'items-center gap-3 text-center'
@@ -140,53 +139,12 @@ onUnmounted(() => window.clearInterval(timer))
 					: 'gap-1 py-2'
 		"
 	>
-		<span v-if="dashboardSize" class="home-greeting-mark" aria-hidden="true" />
-		<h1 class="m-0 max-w-full break-words font-extrabold text-contrast">
+		<h1
+			class="m-0 max-w-full break-words font-extrabold text-contrast"
+			:class="dashboardSize === '1x1' ? 'text-lg' : 'text-2xl'"
+		>
 			{{ heading }}
 		</h1>
 		<div v-if="variant === 'minimal'" class="h-0.5 w-8 rounded-full bg-brand" aria-hidden="true" />
 	</header>
 </template>
-
-<style scoped>
-.home-greeting[data-size] {
-	position: relative;
-	padding-left: 0.875rem;
-}
-
-.home-greeting[data-size='1x1'] {
-	align-items: center;
-	padding: 0;
-	text-align: center;
-}
-
-.home-greeting-mark {
-	position: absolute;
-	top: 50%;
-	left: 0;
-	width: 3px;
-	height: 2.75rem;
-	transform: translateY(-50%);
-	border-radius: 2px;
-	background: var(--color-brand);
-}
-
-.home-greeting[data-size='1x1'] .home-greeting-mark {
-	top: 0;
-	left: 50%;
-	width: 2.5rem;
-	height: 3px;
-	transform: translateX(-50%);
-}
-
-.home-greeting h1 {
-	font-size: 1.5rem;
-	line-height: 1.18;
-	letter-spacing: 0;
-}
-
-.home-greeting[data-size='1x1'] h1 {
-	font-size: 1.05rem;
-	line-height: 1.25;
-}
-</style>

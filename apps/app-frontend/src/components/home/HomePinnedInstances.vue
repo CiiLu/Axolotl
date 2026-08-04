@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GridIcon, RightArrowIcon } from '@modrinth/assets'
+import { RightArrowIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
 
@@ -53,13 +53,9 @@ async function updatePinned(instance: GameInstance, pinned: boolean) {
 <template>
 	<section class="home-pinned-instances" :data-size="dashboardSize">
 		<div class="home-widget-heading">
-			<span class="home-widget-heading-icon"><GridIcon aria-hidden="true" /></span>
 			<h2>
 				{{ formatMessage(messages.pinnedInstances) }}
 			</h2>
-			<span v-if="pinnedInstances.length" class="home-widget-count">{{
-				pinnedInstances.length
-			}}</span>
 			<ButtonStyled v-if="dashboardSize !== '1x1'" type="transparent" size="small" class="ml-auto">
 				<router-link to="/library">
 					<span v-if="dashboardSize === '2x2'">{{ formatMessage(messages.viewAllInstances) }}</span>
@@ -103,47 +99,16 @@ async function updatePinned(instance: GameInstance, pinned: boolean) {
 	gap: 0.5rem;
 }
 
-.home-widget-heading-icon {
-	display: inline-flex;
-	width: 1.75rem;
-	height: 1.75rem;
-	flex: 0 0 auto;
-	align-items: center;
-	justify-content: center;
-	border-radius: 6px;
-	background: color-mix(in srgb, var(--color-green) 14%, transparent);
-	color: var(--color-green);
-}
-
-.home-widget-heading-icon svg {
-	width: 1rem;
-	height: 1rem;
-}
-
 .home-widget-heading h2 {
 	min-width: 0;
 	overflow: hidden;
 	margin: 0;
 	color: var(--color-contrast);
 	font-size: 1rem;
-	font-weight: 750;
+	font-weight: 700;
 	letter-spacing: 0;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.home-widget-count {
-	display: inline-flex;
-	min-width: 1.25rem;
-	height: 1.25rem;
-	align-items: center;
-	justify-content: center;
-	padding: 0 0.3rem;
-	border-radius: 999px;
-	background: var(--color-button-bg);
-	color: var(--color-secondary);
-	font-size: 0.7rem;
-	font-weight: 700;
 }
 
 .home-instance-list {
@@ -169,11 +134,6 @@ async function updatePinned(instance: GameInstance, pinned: boolean) {
 }
 
 .home-pinned-instances[data-size='1x1'] .home-widget-heading {
-	height: 1.5rem;
-}
-
-.home-pinned-instances[data-size='1x1'] .home-widget-heading-icon {
-	width: 1.5rem;
 	height: 1.5rem;
 }
 
