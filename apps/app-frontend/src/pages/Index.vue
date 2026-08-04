@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-	BookOpenIcon,
 	CheckIcon,
 	LayoutTemplateIcon,
 	MinimizeIcon,
@@ -12,7 +11,6 @@ import {
 	defineMessages,
 	injectNotificationManager,
 	injectPageContext,
-	OverflowMenu,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, onUnmounted, ref } from 'vue'
@@ -21,7 +19,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { getActivePlayerName } from '@/components/home/home-utils'
 import {
 	createDefaultHomeDashboard,
-	createHomeDashboardPreset,
 	createHomeDashboardSaveQueue,
 	normalizeHomeDashboard,
 	type HomeDashboardConfig,
@@ -79,15 +76,6 @@ const messages = defineMessages({
 		id: 'app.home.widgets.reset',
 		defaultMessage: 'Restore default widgets',
 	},
-	presets: { id: 'app.home.widgets.presets', defaultMessage: 'Layout presets' },
-	balancedPreset: {
-		id: 'app.home.widgets.preset.balanced',
-		defaultMessage: 'Balanced layout',
-	},
-	applyPresetConfirm: {
-		id: 'app.home.widgets.preset.apply-confirm',
-		defaultMessage: 'Apply the {preset} preset? This replaces the current widget layout.',
-	},
 })
 
 const recentProjectsInHomeFlag: FeatureFlag = 'worlds_in_home'
@@ -117,13 +105,6 @@ const floatingControlsStyle = computed(() => ({
 	bottom: themeStore.getFeatureFlag('page_path') ? '3.5rem' : '1rem',
 	right: `calc(${pageContext.floatingActionBarOffsets?.right.value ?? '0px'} + 1rem)`,
 }))
-const dashboardPresetOptions = computed(() => [
-	{
-		id: 'preset-balanced',
-		icon: LayoutTemplateIcon,
-		action: () => applyDashboardPreset(),
-	},
-])
 
 async function clearMissingMinimalInstance() {
 	const selectedId = themeStore.minimalHomeInstanceId
@@ -189,12 +170,6 @@ function updateDashboardConfig(config: HomeDashboardConfig) {
 function resetDashboardConfig() {
 	if (!window.confirm(formatMessage(messages.resetWidgets))) return
 	updateDashboardConfig(createDefaultHomeDashboard())
-}
-
-function applyDashboardPreset() {
-	const presetName = formatMessage(messages.balancedPreset)
-	if (!window.confirm(formatMessage(messages.applyPresetConfirm, { preset: presetName }))) return
-	updateDashboardConfig(createHomeDashboardPreset('balanced'))
 }
 
 async function selectMinimalInstance(instance: GameInstance) {
@@ -295,19 +270,6 @@ onUnmounted(() => {
 			>
 				<PlusIcon />
 			</button>
-			<OverflowMenu
-				v-if="dashboardEditing"
-				class="home-floating-action"
-				:options="dashboardPresetOptions"
-				:tooltip="formatMessage(messages.presets)"
-				placement="top-end"
-				:aria-label="formatMessage(messages.presets)"
-			>
-				<BookOpenIcon />
-				<template #preset-balanced>
-					<LayoutTemplateIcon /> {{ formatMessage(messages.balancedPreset) }}
-				</template>
-			</OverflowMenu>
 			<button
 				v-if="dashboardEditing"
 				v-tooltip="formatMessage(messages.resetWidgetLayout)"

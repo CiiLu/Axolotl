@@ -4901,15 +4901,6 @@
   "app.home.widgets.pinned-worlds-description": {
     "message": "自动汇总所有收藏的单人世界。"
   },
-  "app.home.widgets.preset.apply-confirm": {
-    "message": "要应用“{preset}”预设吗？当前的小组件布局将被替换。"
-  },
-  "app.home.widgets.preset.balanced": {
-    "message": "均衡布局"
-  },
-  "app.home.widgets.presets": {
-    "message": "布局预设"
-  },
   "app.home.widgets.recent": {
     "message": "最近游玩"
   },

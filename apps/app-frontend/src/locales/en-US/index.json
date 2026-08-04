@@ -1400,15 +1400,6 @@
   "app.home.widgets.pinned-worlds-description": {
     "message": "Automatically collects favorite singleplayer worlds."
   },
-  "app.home.widgets.preset.apply-confirm": {
-    "message": "Apply the {preset} preset? This replaces the current widget layout."
-  },
-  "app.home.widgets.preset.balanced": {
-    "message": "Balanced layout"
-  },
-  "app.home.widgets.presets": {
-    "message": "Layout presets"
-  },
   "app.home.widgets.recent": {
     "message": "Recently played"
   },

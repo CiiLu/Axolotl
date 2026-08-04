@@ -4,7 +4,6 @@ import test from 'node:test'
 import {
 	addHomeWidget,
 	createDefaultHomeDashboard,
-	createHomeDashboardPreset,
 	createHomeDashboardSaveQueue,
 	getHomeGridColumnCount,
 	getHomeWidgetSpan,
@@ -63,37 +62,12 @@ test('accepts draggable order and restores the complete default layout', () => {
 		createDefaultHomeDashboard().widgets.map(({ kind, size }) => ({ kind, size })),
 		[
 			{ kind: 'greeting', size: '2x1' },
-			{ kind: 'recent', size: '2x2' },
 			{ kind: 'calendar', size: '1x2' },
-			{ kind: 'pinned-instances', size: '2x2' },
+			{ kind: 'recent', size: '2x2' },
 			{ kind: 'pinned-worlds', size: '1x2' },
-			{ kind: 'pinned-servers', size: '1x2' },
+			{ kind: 'pinned-servers', size: '2x1' },
+			{ kind: 'pinned-instances', size: '2x2' },
 		],
-	)
-})
-
-test('creates the saved balanced preset with fresh placement ids', () => {
-	const first = createHomeDashboardPreset('balanced')
-	const second = createHomeDashboardPreset('balanced')
-
-	assert.deepEqual(
-		first.widgets.map(({ kind, size, options }) => ({
-			kind,
-			size,
-			recentLimit: options?.recentLimit,
-		})),
-		[
-			{ kind: 'greeting', size: '2x1', recentLimit: undefined },
-			{ kind: 'calendar', size: '1x2', recentLimit: undefined },
-			{ kind: 'recent', size: '2x2', recentLimit: 4 },
-			{ kind: 'pinned-worlds', size: '1x2', recentLimit: undefined },
-			{ kind: 'pinned-servers', size: '2x1', recentLimit: undefined },
-			{ kind: 'pinned-instances', size: '2x2', recentLimit: undefined },
-		],
-	)
-	assert.notDeepEqual(
-		first.widgets.map((widget) => widget.id),
-		second.widgets.map((widget) => widget.id),
 	)
 })
 
@@ -136,11 +110,11 @@ test('packs widgets into the earliest available cells', () => {
 		})),
 		[
 			{ column: 1, row: 1, effectiveColumns: 2, effectiveRows: 1 },
-			{ column: 3, row: 1, effectiveColumns: 2, effectiveRows: 2 },
-			{ column: 1, row: 2, effectiveColumns: 1, effectiveRows: 2 },
-			{ column: 2, row: 3, effectiveColumns: 2, effectiveRows: 2 },
-			{ column: 4, row: 3, effectiveColumns: 1, effectiveRows: 2 },
-			{ column: 1, row: 4, effectiveColumns: 1, effectiveRows: 2 },
+			{ column: 3, row: 1, effectiveColumns: 1, effectiveRows: 2 },
+			{ column: 1, row: 2, effectiveColumns: 2, effectiveRows: 2 },
+			{ column: 4, row: 1, effectiveColumns: 1, effectiveRows: 2 },
+			{ column: 3, row: 3, effectiveColumns: 2, effectiveRows: 1 },
+			{ column: 1, row: 4, effectiveColumns: 2, effectiveRows: 2 },
 		],
 	)
 })

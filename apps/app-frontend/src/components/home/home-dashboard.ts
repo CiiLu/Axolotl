@@ -9,13 +9,11 @@ export const HOME_GREETING_DEFAULT_FONT = 'sans'
 export const HOME_GREETING_FONT_SIZE_MIN = 16
 export const HOME_GREETING_FONT_SIZE_MAX = 32
 export const HOME_GREETING_DEFAULT_FONT_SIZE = 22
-export const HOME_DASHBOARD_PRESET_IDS = ['balanced'] as const
 
 export type HomeWidgetSize = (typeof HOME_WIDGET_SIZES)[number]
 export type HomeRecentLimit = (typeof HOME_RECENT_LIMIT_OPTIONS)[number]
 export type HomeGreetingMode = (typeof HOME_GREETING_MODES)[number]
 export type HomeGreetingFont = (typeof HOME_GREETING_FONTS)[number]
-export type HomeDashboardPresetId = (typeof HOME_DASHBOARD_PRESET_IDS)[number]
 export type HomeWidgetKind =
 	| 'greeting'
 	| 'recent'
@@ -121,29 +119,12 @@ export function createDefaultHomeDashboard(includeRecent = true): HomeDashboardC
 		version: HOME_DASHBOARD_VERSION,
 		widgets: [
 			createPlacement('greeting'),
-			...(includeRecent ? [createPlacement('recent')] : []),
 			createPlacement('calendar'),
-			createPlacement('pinned-instances'),
+			...(includeRecent ? [createPlacement('recent')] : []),
 			createPlacement('pinned-worlds'),
-			createPlacement('pinned-servers'),
+			createPlacement('pinned-servers', '2x1'),
+			createPlacement('pinned-instances'),
 		],
-	}
-}
-
-export function createHomeDashboardPreset(id: HomeDashboardPresetId): HomeDashboardConfig {
-	switch (id) {
-		case 'balanced':
-			return {
-				version: HOME_DASHBOARD_VERSION,
-				widgets: [
-					createPlacement('greeting', '2x1'),
-					createPlacement('calendar', '1x2'),
-					createPlacement('recent', '2x2'),
-					createPlacement('pinned-worlds', '1x2'),
-					createPlacement('pinned-servers', '2x1'),
-					createPlacement('pinned-instances', '2x2'),
-				],
-			}
 	}
 }
 
