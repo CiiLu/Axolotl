@@ -54,8 +54,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
-						'The world editor backs up level.dat before saving and stays read-only while the world is open in game.',
+					'The world editor backs up level.dat before saving and stays read-only while the world is open in game.',
 					'zh-CN': '世界编辑器保存前会自动备份 level.dat，存档正在游戏中打开时会自动进入只读状态。',
+				},
+				{
+					'en-US':
+						'Added automatic high-performance GPU selection for Minecraft on Linux, supporting AMD and NVIDIA systems.',
+					'zh-CN': '新增 Linux 高性能显卡自动选择，支持 AMD 和 NVIDIA 显卡运行 Minecraft。',
 				},
 			],
 			changed: [

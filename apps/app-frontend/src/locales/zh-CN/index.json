@@ -2082,7 +2082,7 @@
     "message": "自动为 Java 使用高性能显卡"
   },
   "app.settings.java.auto-high-performance-mode-description": {
-    "message": "启动 Minecraft 时，自动在 Windows 图形设置中将启动器和 Java 设为使用高性能显卡。仅支持 Windows。"
+    "message": "启动 Minecraft 时自动使用高性能显卡。支持 Windows 和 Linux。"
   },
   "app.settings.java.cancel": {
     "message": "取消"

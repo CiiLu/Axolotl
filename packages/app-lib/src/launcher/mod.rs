@@ -71,6 +71,85 @@ fn set_high_performance_gpu_preference(
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+async fn high_performance_gpu_environment() -> Vec<(String, String)> {
+    match switcheroo_gpu_environment().await {
+        Ok(Some(environment)) => {
+            tracing::info!(
+                "Using switcheroo-control environment for high-performance GPU"
+            );
+            environment
+        }
+        Ok(None) => fallback_high_performance_gpu_environment(),
+        Err(error) => {
+            tracing::debug!(
+                %error,
+                "Failed to query switcheroo-control; using PRIME fallback"
+            );
+            fallback_high_performance_gpu_environment()
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+async fn switcheroo_gpu_environment()
+-> crate::Result<Option<Vec<(String, String)>>> {
+    use std::collections::HashMap;
+    use zbus::zvariant::OwnedValue;
+    use zbus::{Connection, Proxy};
+
+    let connection = Connection::system().await?;
+    let proxy = Proxy::new(
+        &connection,
+        "net.hadess.SwitcherooControl",
+        "/net/hadess/SwitcherooControl",
+        "net.hadess.SwitcherooControl",
+    )
+    .await?;
+    let gpus: Vec<HashMap<String, OwnedValue>> =
+        proxy.get_property("GPUs").await?;
+
+    for mut gpu in gpus {
+        let is_default = gpu
+            .get("Default")
+            .and_then(|value| bool::try_from(value).ok());
+        if is_default != Some(false) {
+            continue;
+        }
+
+        let Some(environment) = gpu
+            .remove("Environment")
+            .and_then(|value| Vec::<String>::try_from(value).ok())
+        else {
+            continue;
+        };
+        let mut entries = environment.chunks_exact(2);
+        let parsed = entries
+            .by_ref()
+            .filter(|entry| !entry[0].is_empty())
+            .map(|entry| (entry[0].clone(), entry[1].clone()))
+            .collect::<Vec<_>>();
+        if entries.remainder().is_empty() && !parsed.is_empty() {
+            return Ok(Some(parsed));
+        }
+    }
+
+    Ok(None)
+}
+
+#[cfg(target_os = "linux")]
+fn fallback_high_performance_gpu_environment() -> Vec<(String, String)> {
+    [
+        ("DRI_PRIME", "1"),
+        ("__NV_PRIME_RENDER_OFFLOAD", "1"),
+        ("__VK_LAYER_NV_optimus", "NVIDIA_only"),
+        ("__GLX_VENDOR_LIBRARY_NAME", "nvidia"),
+    ]
+    .into_iter()
+    .map(|(key, value)| (key.to_string(), value.to_string()))
+    .collect()
+}
+
 // All nones -> disallowed
 // 1+ true -> allowed
 // 1+ false -> disallowed
@@ -1142,11 +1221,10 @@ pub async fn launch_minecraft(
     let java_version =
         crate::api::jre::check_jre(java_version.path.clone().into()).await?;
 
+    let settings = crate::state::Settings::get(&state.pool).await?;
+
     #[cfg(target_os = "windows")]
-    if crate::state::Settings::get(&state.pool)
-        .await?
-        .auto_set_java_high_performance_mode
-    {
+    if settings.auto_set_java_high_performance_mode {
         if let Err(error) =
             set_high_performance_gpu_preference(&java_version.path)
         {
@@ -1166,6 +1244,14 @@ pub async fn launch_minecraft(
             }
         }
     }
+
+    #[cfg(target_os = "linux")]
+    let high_performance_gpu_environment =
+        if settings.auto_set_java_high_performance_mode {
+            high_performance_gpu_environment().await
+        } else {
+            Vec::new()
+        };
 
     let client_path = state
         .directories
@@ -1368,9 +1454,11 @@ pub async fn launch_minecraft(
 
     command.envs(env_args);
 
+    #[cfg(target_os = "linux")]
+    command.envs(high_performance_gpu_environment);
+
     // Overwrites the minecraft options.txt file with the settings from the profile
     // Uses 'a:b' syntax which is not quite yaml
-    let settings = crate::state::Settings::get(&state.pool).await?;
     let options_path = instance_path.join("options.txt");
     let options_existed = options_path.exists();
 

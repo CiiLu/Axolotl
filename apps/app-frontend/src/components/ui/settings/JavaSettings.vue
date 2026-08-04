@@ -61,7 +61,7 @@ const messages = defineMessages({
 	autoHighPerformanceModeDescription: {
 		id: 'app.settings.java.auto-high-performance-mode-description',
 		defaultMessage:
-			'Sets the launcher and Java to use the high-performance GPU in Windows graphics settings when Minecraft launches. Windows only.',
+			'Uses the high-performance GPU for Minecraft when it launches. Supported on Windows and Linux.',
 	},
 	scanning: {
 		id: 'app.settings.java.scanning',
@@ -90,7 +90,7 @@ const downloadJavaModal = ref(null)
 const installedJavaModal = ref(null)
 const defaultSaveQueues = new Map()
 
-const isWindows = (await platform()) === 'windows'
+const supportsHighPerformanceMode = ['windows', 'linux'].includes(await platform())
 const settings = ref(await get().catch(handleError))
 const autoHighPerformanceMode = ref(settings.value?.auto_set_java_high_performance_mode ?? false)
 
@@ -287,7 +287,10 @@ async function onJavaDownloaded(job) {
 			</div>
 		</div>
 
-		<div v-if="isWindows" class="border-0 border-t border-solid border-button-border pt-5">
+		<div
+			v-if="supportsHighPerformanceMode"
+			class="border-0 border-t border-solid border-button-border pt-5"
+		>
 			<div class="flex items-center justify-between gap-4">
 				<div class="flex min-w-0 flex-col gap-1">
 					<span class="text-sm font-semibold text-contrast">
