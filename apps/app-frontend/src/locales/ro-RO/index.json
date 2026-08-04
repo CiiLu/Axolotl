@@ -176,18 +176,6 @@
   "instance.edit-server.title": {
     "message": "Editează server"
   },
-  "instance.edit-world.name": {
-    "message": "Nume"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Lume Minecraft"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Resetează pictograma"
-  },
-  "instance.edit-world.title": {
-    "message": "Editează lumea"
-  },
   "instance.server-modal.address": {
     "message": "Adresă"
   },

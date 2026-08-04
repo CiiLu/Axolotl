@@ -698,18 +698,6 @@
   "instance.edit-server.title": {
     "message": "Sunucuyu düzenle"
   },
-  "instance.edit-world.name": {
-    "message": "Dünya Adı"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft Dünyası"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Simgeyi sıfırla"
-  },
-  "instance.edit-world.title": {
-    "message": "Dünyayı düzenle"
-  },
   "instance.files.adding-files": {
     "message": "Dosyalar ekleniyor ({completed}/{total})"
   },

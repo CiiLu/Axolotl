@@ -43,6 +43,38 @@ export type WorldWithInstance = {
 
 export type SingleplayerGameMode = 'survival' | 'creative' | 'adventure' | 'spectator'
 export type ServerPackStatus = 'enabled' | 'disabled' | 'prompt'
+export type WorldDifficulty = 'peaceful' | 'easy' | 'normal' | 'hard'
+
+export type GameRuleEntry = {
+	key: string
+	value: string
+}
+
+export type WorldLevelData = {
+	name: string
+	icon?: string
+	game_mode: SingleplayerGameMode
+	difficulty?: WorldDifficulty
+	difficulty_locked: boolean
+	hardcore: boolean
+	allow_commands?: boolean
+	/** The world seed as a base-10 string, preserving the full i64 range. */
+	seed?: string
+	game_rules: GameRuleEntry[]
+	version_name?: string
+	last_played?: string
+	modded: boolean
+	locked: boolean
+}
+
+export type WorldSettingsPatch = {
+	name?: string
+	game_mode?: SingleplayerGameMode
+	difficulty?: WorldDifficulty
+	allow_commands?: boolean
+	seed?: string
+	game_rules?: GameRuleEntry[]
+}
 
 export type ServerStatus = {
 	// https://minecraft.wiki/w/Text_component_format
@@ -120,6 +152,21 @@ export async function set_world_display_status(
 		worldId,
 		displayStatus,
 	})
+}
+
+export async function get_world_level_data(
+	instance: string,
+	world: string,
+): Promise<WorldLevelData> {
+	return await invoke('plugin:worlds|get_world_level_data', { instance, world })
+}
+
+export async function update_world_settings(
+	instance: string,
+	world: string,
+	patch: WorldSettingsPatch,
+): Promise<void> {
+	return await invoke('plugin:worlds|update_world_settings', { instance, world, patch })
 }
 
 export async function rename_world(

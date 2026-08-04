@@ -458,18 +458,6 @@
   "instance.edit-server.title": {
     "message": "تعديل خادم"
   },
-  "instance.edit-world.name": {
-    "message": "الاسم"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "عالم ماينكرافت"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "إعادة تعيين الأيقونة"
-  },
-  "instance.edit-world.title": {
-    "message": "تعديل العالم"
-  },
   "instance.files.adding-files": {
     "message": "إضافة ملفات ({completed}\\{total})"
   },

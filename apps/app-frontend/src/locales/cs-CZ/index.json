@@ -698,18 +698,6 @@
   "instance.edit-server.title": {
     "message": "Upravit server"
   },
-  "instance.edit-world.name": {
-    "message": "Název"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft svět"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Obnovit ikonu"
-  },
-  "instance.edit-world.title": {
-    "message": "Upravit svět"
-  },
   "instance.files.adding-files": {
     "message": "Přidávání souborů ({completed}/{total})"
   },

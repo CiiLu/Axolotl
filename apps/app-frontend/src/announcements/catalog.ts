@@ -35,7 +35,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
 		id: 'launcher-1.6.11',
 		version: '1.6.11',
-		publishedAt: '2026-08-04',
+		publishedAt: '2026-08-03',
 		title: {
 			'en-US': 'Axolotl Launcher 1.6.11',
 			'zh-CN': 'Axolotl Launcher 1.6.11',
@@ -44,8 +44,30 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
-						'Added automatic high-performance GPU selection for Minecraft on Linux, supporting AMD and NVIDIA systems.',
-					'zh-CN': '新增 Linux 高性能显卡自动选择，支持 AMD 和 NVIDIA 显卡运行 Minecraft。',
+						"The world editor can change a world's game mode, difficulty, cheats toggle and seed.",
+					'zh-CN': '世界编辑器支持修改存档的游戏模式、难度、作弊开关与世界种子。',
+				},
+				{
+					'en-US':
+						'Game rules can now be edited with localized names, category grouping, search, and one-click reset to the vanilla default.',
+					'zh-CN': '支持编辑游戏规则：规则名称已本地化，按分类分组，可搜索并一键恢复默认值。',
+				},
+				{
+					'en-US':
+						'The world editor backs up level.dat before saving and stays read-only while the world is open in game.',
+					'zh-CN': '世界编辑器保存前会自动备份 level.dat，存档正在游戏中打开时会自动进入只读状态。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Editing a singleplayer world now opens a full editor page instead of a small dialog.',
+					'zh-CN': '单人存档的“编辑”入口从小弹窗升级为完整的编辑页面。',
+				},
+				{
+					'en-US':
+						'Improved the Traditional Chinese (Taiwan) interface translation with hundreds of revised entries. Thanks to @DonkeyBear for the contribution.',
+					'zh-CN': '改进繁体中文（台湾）界面翻译：修订数百条文案。感谢 @DonkeyBear 的贡献。',
 				},
 			],
 		},

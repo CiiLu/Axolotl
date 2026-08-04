@@ -1607,6 +1607,9 @@
   "app.navigation.downloads": {
     "message": "下载"
   },
+  "app.navigation.edit-world": {
+    "message": "编辑存档"
+  },
   "app.navigation.home": {
     "message": "主页"
   },
@@ -2704,6 +2707,336 @@
   },
   "app.url-install.version": {
     "message": "正在安装版本 {version}"
+  },
+  "app.world-editor.allow-commands.label": {
+    "message": "允许作弊"
+  },
+  "app.world-editor.badge.hardcore": {
+    "message": "极限模式"
+  },
+  "app.world-editor.badge.modded": {
+    "message": "模组存档"
+  },
+  "app.world-editor.difficulty.easy": {
+    "message": "简单"
+  },
+  "app.world-editor.difficulty.hard": {
+    "message": "困难"
+  },
+  "app.world-editor.difficulty.label": {
+    "message": "难度"
+  },
+  "app.world-editor.difficulty.locked-hint": {
+    "message": "（已在游戏内锁定）"
+  },
+  "app.world-editor.difficulty.normal": {
+    "message": "普通"
+  },
+  "app.world-editor.difficulty.peaceful": {
+    "message": "和平"
+  },
+  "app.world-editor.discard": {
+    "message": "放弃更改"
+  },
+  "app.world-editor.game-mode.label": {
+    "message": "游戏模式"
+  },
+  "app.world-editor.game-rules.disabled": {
+    "message": "关闭"
+  },
+  "app.world-editor.game-rules.enabled": {
+    "message": "开启"
+  },
+  "app.world-editor.game-rules.invalid-integer": {
+    "message": "该规则需要填写整数"
+  },
+  "app.world-editor.game-rules.modified": {
+    "message": "已修改（非默认值）"
+  },
+  "app.world-editor.game-rules.no-results": {
+    "message": "没有匹配的游戏规则"
+  },
+  "app.world-editor.game-rules.reset-to-default": {
+    "message": "恢复默认值"
+  },
+  "app.world-editor.game-rules.search-placeholder": {
+    "message": "搜索 {count} 条游戏规则…"
+  },
+  "app.world-editor.gamerule-category.chat": {
+    "message": "聊天"
+  },
+  "app.world-editor.gamerule-category.commands": {
+    "message": "命令"
+  },
+  "app.world-editor.gamerule-category.drops": {
+    "message": "掉落物"
+  },
+  "app.world-editor.gamerule-category.mobs": {
+    "message": "生物"
+  },
+  "app.world-editor.gamerule-category.other": {
+    "message": "其他"
+  },
+  "app.world-editor.gamerule-category.player": {
+    "message": "玩家"
+  },
+  "app.world-editor.gamerule-category.world": {
+    "message": "世界更新"
+  },
+  "app.world-editor.gamerule.allowFireTicksAwayFromPlayer": {
+    "message": "远离玩家的火焰蔓延"
+  },
+  "app.world-editor.gamerule.allow_entering_nether_using_portals": {
+    "message": "允许通过传送门进入下界"
+  },
+  "app.world-editor.gamerule.announceAdvancements": {
+    "message": "进度通知"
+  },
+  "app.world-editor.gamerule.blockExplosionDropDecay": {
+    "message": "床/重生锚爆炸销毁部分掉落物"
+  },
+  "app.world-editor.gamerule.commandBlockOutput": {
+    "message": "广播命令方块输出"
+  },
+  "app.world-editor.gamerule.commandModificationBlockLimit": {
+    "message": "命令修改方块数量上限"
+  },
+  "app.world-editor.gamerule.command_blocks_work": {
+    "message": "命令方块生效"
+  },
+  "app.world-editor.gamerule.disableElytraMovementCheck": {
+    "message": "禁用鞘翅移动检测"
+  },
+  "app.world-editor.gamerule.disablePlayerMovementCheck": {
+    "message": "禁用玩家移动检测"
+  },
+  "app.world-editor.gamerule.disableRaids": {
+    "message": "禁用袭击"
+  },
+  "app.world-editor.gamerule.doDaylightCycle": {
+    "message": "昼夜更替"
+  },
+  "app.world-editor.gamerule.doEntityDrops": {
+    "message": "非生物实体掉落"
+  },
+  "app.world-editor.gamerule.doFireTick": {
+    "message": "火焰蔓延"
+  },
+  "app.world-editor.gamerule.doImmediateRespawn": {
+    "message": "立即重生"
+  },
+  "app.world-editor.gamerule.doInsomnia": {
+    "message": "生成幻翼"
+  },
+  "app.world-editor.gamerule.doLimitedCrafting": {
+    "message": "合成需要配方"
+  },
+  "app.world-editor.gamerule.doMobLoot": {
+    "message": "生物战利品掉落"
+  },
+  "app.world-editor.gamerule.doMobSpawning": {
+    "message": "生成生物"
+  },
+  "app.world-editor.gamerule.doPatrolSpawning": {
+    "message": "生成灾厄巡逻队"
+  },
+  "app.world-editor.gamerule.doTileDrops": {
+    "message": "方块掉落"
+  },
+  "app.world-editor.gamerule.doTraderSpawning": {
+    "message": "生成流浪商人"
+  },
+  "app.world-editor.gamerule.doVinesSpread": {
+    "message": "藤蔓蔓延"
+  },
+  "app.world-editor.gamerule.doWardenSpawning": {
+    "message": "生成监守者"
+  },
+  "app.world-editor.gamerule.doWeatherCycle": {
+    "message": "天气更替"
+  },
+  "app.world-editor.gamerule.drowningDamage": {
+    "message": "溺水伤害"
+  },
+  "app.world-editor.gamerule.elytra_movement_check": {
+    "message": "启用鞘翅移动检测"
+  },
+  "app.world-editor.gamerule.enderPearlsVanishOnDeath": {
+    "message": "死亡时掷出的末影珍珠消失"
+  },
+  "app.world-editor.gamerule.fallDamage": {
+    "message": "摔落伤害"
+  },
+  "app.world-editor.gamerule.fireDamage": {
+    "message": "火焰伤害"
+  },
+  "app.world-editor.gamerule.fire_spread_radius_around_player": {
+    "message": "玩家周围火焰蔓延半径"
+  },
+  "app.world-editor.gamerule.forgiveDeadPlayers": {
+    "message": "宽恕死亡玩家"
+  },
+  "app.world-editor.gamerule.freezeDamage": {
+    "message": "冰冻伤害"
+  },
+  "app.world-editor.gamerule.globalSoundEvents": {
+    "message": "全局声音事件"
+  },
+  "app.world-editor.gamerule.keepInventory": {
+    "message": "死亡不掉落"
+  },
+  "app.world-editor.gamerule.lavaSourceConversion": {
+    "message": "流动熔岩可转化为熔岩源"
+  },
+  "app.world-editor.gamerule.locatorBar": {
+    "message": "玩家定位栏"
+  },
+  "app.world-editor.gamerule.logAdminCommands": {
+    "message": "通告管理员命令"
+  },
+  "app.world-editor.gamerule.maxCommandChainLength": {
+    "message": "命令连锁执行数量上限"
+  },
+  "app.world-editor.gamerule.maxCommandForkCount": {
+    "message": "命令上下文数量上限"
+  },
+  "app.world-editor.gamerule.maxEntityCramming": {
+    "message": "实体挤压上限"
+  },
+  "app.world-editor.gamerule.minecartMaxSpeed": {
+    "message": "矿车最大速度"
+  },
+  "app.world-editor.gamerule.mobExplosionDropDecay": {
+    "message": "生物爆炸销毁部分掉落物"
+  },
+  "app.world-editor.gamerule.mobGriefing": {
+    "message": "生物破坏"
+  },
+  "app.world-editor.gamerule.naturalRegeneration": {
+    "message": "生命值自然恢复"
+  },
+  "app.world-editor.gamerule.player_movement_check": {
+    "message": "启用玩家移动检测"
+  },
+  "app.world-editor.gamerule.playersNetherPortalCreativeDelay": {
+    "message": "创造模式下界传送门等待时间"
+  },
+  "app.world-editor.gamerule.playersNetherPortalDefaultDelay": {
+    "message": "非创造模式下界传送门等待时间"
+  },
+  "app.world-editor.gamerule.playersSleepingPercentage": {
+    "message": "入睡占比"
+  },
+  "app.world-editor.gamerule.projectilesCanBreakBlocks": {
+    "message": "弹射物可破坏方块"
+  },
+  "app.world-editor.gamerule.pvp": {
+    "message": "玩家间伤害（PvP）"
+  },
+  "app.world-editor.gamerule.raids": {
+    "message": "启用袭击"
+  },
+  "app.world-editor.gamerule.randomTickSpeed": {
+    "message": "随机刻速率"
+  },
+  "app.world-editor.gamerule.reducedDebugInfo": {
+    "message": "简化调试信息"
+  },
+  "app.world-editor.gamerule.sendCommandFeedback": {
+    "message": "发送命令反馈"
+  },
+  "app.world-editor.gamerule.showDeathMessages": {
+    "message": "显示死亡消息"
+  },
+  "app.world-editor.gamerule.snowAccumulationHeight": {
+    "message": "积雪厚度"
+  },
+  "app.world-editor.gamerule.spawnChunkRadius": {
+    "message": "出生点区块半径"
+  },
+  "app.world-editor.gamerule.spawnRadius": {
+    "message": "重生点半径"
+  },
+  "app.world-editor.gamerule.spawn_monsters": {
+    "message": "生成怪物"
+  },
+  "app.world-editor.gamerule.spawner_blocks_work": {
+    "message": "刷怪笼生效"
+  },
+  "app.world-editor.gamerule.spectatorsGenerateChunks": {
+    "message": "允许旁观者生成地形"
+  },
+  "app.world-editor.gamerule.tntExplodes": {
+    "message": "允许 TNT 爆炸"
+  },
+  "app.world-editor.gamerule.tntExplosionDropDecay": {
+    "message": "TNT 爆炸销毁部分掉落物"
+  },
+  "app.world-editor.gamerule.universalAnger": {
+    "message": "无差别愤怒"
+  },
+  "app.world-editor.gamerule.waterSourceConversion": {
+    "message": "流动水可转化为水源"
+  },
+  "app.world-editor.last-played": {
+    "message": "最后游玩于 {ago}"
+  },
+  "app.world-editor.load-error": {
+    "message": "无法加载存档"
+  },
+  "app.world-editor.locked.body": {
+    "message": "该存档正在 Minecraft 中打开。请先关闭该存档，在此之前编辑器为只读状态。"
+  },
+  "app.world-editor.locked.heading": {
+    "message": "存档正在使用中"
+  },
+  "app.world-editor.name.label": {
+    "message": "名称"
+  },
+  "app.world-editor.name.placeholder": {
+    "message": "Minecraft 存档"
+  },
+  "app.world-editor.name.required": {
+    "message": "存档名称不能为空"
+  },
+  "app.world-editor.reset-icon": {
+    "message": "重设图标"
+  },
+  "app.world-editor.saved": {
+    "message": "存档设置已保存"
+  },
+  "app.world-editor.section.basic": {
+    "message": "基本设置"
+  },
+  "app.world-editor.section.game-rules": {
+    "message": "游戏规则"
+  },
+  "app.world-editor.section.seed": {
+    "message": "世界种子"
+  },
+  "app.world-editor.seed.invalid": {
+    "message": "种子必须是 64 位整数范围内的整数"
+  },
+  "app.world-editor.seed.warning-body": {
+    "message": "已生成的区块不会重新生成，可能产生明显的新旧地形边界。"
+  },
+  "app.world-editor.seed.warning-heading": {
+    "message": "修改种子只影响新地形"
+  },
+  "app.world-editor.unsaved-changes": {
+    "message": "你有未保存的更改"
+  },
+  "app.world-editor.unsaved-modal.body": {
+    "message": "对该存档的更改尚未保存，离开后将会丢失。"
+  },
+  "app.world-editor.unsaved-modal.leave": {
+    "message": "放弃并离开"
+  },
+  "app.world-editor.unsaved-modal.stay": {
+    "message": "继续编辑"
+  },
+  "app.world-editor.unsaved-modal.title": {
+    "message": "放弃未保存的更改？"
   },
   "app.world.server-modal.placeholder-address": {
     "message": "example.modrinth.gg"

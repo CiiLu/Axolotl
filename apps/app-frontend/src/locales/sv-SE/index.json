@@ -683,18 +683,6 @@
   "instance.edit-server.title": {
     "message": "Redigera server"
   },
-  "instance.edit-world.name": {
-    "message": "Namn"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft värld"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Återställ ikon"
-  },
-  "instance.edit-world.title": {
-    "message": "Redigera värld"
-  },
   "instance.files.adding-files": {
     "message": "Lägger till filer ({completed}/{total})"
   },

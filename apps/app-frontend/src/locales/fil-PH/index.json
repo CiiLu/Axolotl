@@ -461,18 +461,6 @@
   "instance.edit-server.title": {
     "message": "Baguhin ang server"
   },
-  "instance.edit-world.name": {
-    "message": "Pangalan"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft na Mundo"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "I-reset ang ikono"
-  },
-  "instance.edit-world.title": {
-    "message": "Baguhin ang mundo"
-  },
   "instance.files.adding-files": {
     "message": "Idinadagdag ang mga file ({completed}/{total})"
   },

@@ -590,18 +590,6 @@
   "instance.edit-server.title": {
     "message": "Sửa máy chủ"
   },
-  "instance.edit-world.name": {
-    "message": "Tên"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Thế giới Minecraft"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "Đặt lại biểu tượng"
-  },
-  "instance.edit-world.title": {
-    "message": "Chỉnh sửa thế giới"
-  },
   "instance.files.adding-files": {
     "message": "Đang thêm dữ liệu ({completed}/{total})"
   },

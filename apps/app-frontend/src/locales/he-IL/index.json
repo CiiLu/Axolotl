@@ -323,18 +323,6 @@
   "instance.edit-server.title": {
     "message": "ערוך שרת"
   },
-  "instance.edit-world.name": {
-    "message": "שם"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "עולם Minecraft"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "אפס סמל"
-  },
-  "instance.edit-world.title": {
-    "message": "ערוך עולם"
-  },
   "instance.files.adding-files": {
     "message": "הוספת קבצים ({completed}/{total})"
   },

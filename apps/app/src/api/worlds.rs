@@ -8,7 +8,7 @@ use theseus::server_address::ServerAddress;
 use theseus::worlds;
 use theseus::worlds::{
     DisplayStatus, ProtocolVersion, ServerPackStatus, ServerStatus, World,
-    WorldType, WorldWithInstance,
+    WorldLevelData, WorldSettingsPatch, WorldType, WorldWithInstance,
 };
 
 pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
@@ -19,6 +19,8 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             get_instance_worlds,
             get_singleplayer_world,
             set_world_display_status,
+            get_world_level_data,
+            update_world_settings,
             rename_world,
             reset_world_icon,
             backup_world,
@@ -86,10 +88,18 @@ pub async fn get_singleplayer_world<R: Runtime>(
 }
 
 fn adapt_world_icon<R: Runtime>(app_handle: &AppHandle<R>, world: &mut World) {
-    if let Some(Either::Left(icon_path)) = &world.icon {
+    adapt_icon_field(app_handle, &mut world.icon, &world.name);
+}
+
+fn adapt_icon_field<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    icon: &mut Option<Either<std::path::PathBuf, url::Url>>,
+    world_name: &str,
+) {
+    if let Some(Either::Left(icon_path)) = icon {
         let icon_path = icon_path.clone();
         if let Ok(new_url) = super::utils::tauri_convert_file_src(&icon_path) {
-            world.icon = Some(Either::Right(new_url));
+            *icon = Some(Either::Right(new_url));
             if let Err(e) =
                 app_handle.asset_protocol_scope().allow_file(&icon_path)
             {
@@ -102,12 +112,35 @@ fn adapt_world_icon<R: Runtime>(app_handle: &AppHandle<R>, world: &mut World) {
         } else {
             tracing::warn!(
                 "Encountered invalid icon path for world {}: {}",
-                world.name,
+                world_name,
                 icon_path.display()
             );
-            world.icon = None;
+            *icon = None;
         }
     }
+}
+
+#[tauri::command]
+pub async fn get_world_level_data<R: Runtime>(
+    app_handle: AppHandle<R>,
+    instance: &str,
+    world: &str,
+) -> Result<WorldLevelData> {
+    let mut data = worlds::get_world_level_data(instance, world).await?;
+    let name = data.name.clone();
+    adapt_icon_field(&app_handle, &mut data.icon, &name);
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn update_world_settings(
+    instance: &str,
+    world: &str,
+    patch: WorldSettingsPatch,
+) -> Result<()> {
+    let instance = get_full_path(instance).await?;
+    worlds::update_world_settings(&instance, world, patch).await?;
+    Ok(())
 }
 
 #[tauri::command]
