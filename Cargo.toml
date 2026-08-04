@@ -178,6 +178,9 @@ wildcard_dependencies = "warn"
 [patch.crates-io]
 tauri-plugin-window-state = { git = "https://github.com/Lintern/plugins-workspace", branch = "v2" }
 
+[profile.dev]
+incremental = false
+
 [profile.dev.package.sqlx-macros]
 opt-level = 3
 

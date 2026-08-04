@@ -670,34 +670,8 @@ async fn run_request(
                 InstallPhaseDetails::Instance { name: name.clone() },
             )
             .await?;
-            update_progress(
-                job_id,
-                job_state,
-                state,
-                InstallPhaseId::DownloadingMinecraft,
-                InstallPhaseDetails::Minecraft {
-                    game_version,
-                    loader,
-                },
-            )
-            .await?;
-            let context =
-                crate::state::instances::commands::get_instance_launch_context(
-                    &instance_id,
-                    &state.pool,
-                )
-                .await?
-                .ok_or_else(|| {
-                    crate::ErrorKind::InputError("Unknown instance".to_string())
-                })?;
             let reporter =
                 InstallProgressReporter::new(job_id, job_state.clone());
-            crate::launcher::install_minecraft_with_reporter(
-                &context,
-                false,
-                Some(reporter.clone()),
-            )
-            .await?;
             if let InstanceLink::CurseForgeModpack {
                 project_id,
                 version_id,
@@ -713,6 +687,14 @@ async fn run_request(
                         "CurseForge file ID is invalid".to_string(),
                     )
                 })?;
+                crate::state::instances::commands::set_instance_install_stage(
+                    &instance_id,
+                    InstanceInstallStage::PackInstalling,
+                    &state.pool,
+                )
+                .await?;
+                emit_instance(&instance_id, InstancePayloadType::Edited)
+                    .await?;
                 crate::api::curseforge::install_modpack_with_reporter(
                     crate::api::curseforge::CurseForgeModpackInstallRequest {
                         instance_id: instance_id.clone(),
@@ -721,10 +703,35 @@ async fn run_request(
                         install_optional: false,
                         allow_target_change: false,
                     },
-                    Some(reporter),
+                    Some(reporter.clone()),
                 )
                 .await?;
             }
+            reporter
+                .update(
+                    InstallPhaseId::DownloadingMinecraft,
+                    None,
+                    InstallPhaseDetails::Minecraft {
+                        game_version,
+                        loader,
+                    },
+                )
+                .await?;
+            let context =
+                crate::state::instances::commands::get_instance_launch_context(
+                    &instance_id,
+                    &state.pool,
+                )
+                .await?
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError("Unknown instance".to_string())
+                })?;
+            crate::launcher::install_minecraft_with_reporter(
+                &context,
+                false,
+                Some(reporter),
+            )
+            .await?;
             Ok(Some(instance_id))
         }
         InstallRequest::CreateModpackInstance {
