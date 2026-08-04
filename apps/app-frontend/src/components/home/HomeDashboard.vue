@@ -69,7 +69,10 @@ const dragging = ref(false)
 const draggableWidgets = ref<HomeWidgetPlacement[]>([])
 const { width } = useElementSize(gridContainer)
 const columnCount = computed(() => getHomeGridColumnCount(width.value))
-const packedWidgets = computed(() => packHomeWidgets(props.config.widgets, columnCount.value))
+const widgetsForPacking = computed(() =>
+	editing.value ? draggableWidgets.value : props.config.widgets,
+)
+const packedWidgets = computed(() => packHomeWidgets(widgetsForPacking.value, columnCount.value))
 const packedById = computed(() => new Map(packedWidgets.value.map((widget) => [widget.id, widget])))
 
 const messages = defineMessages({
@@ -98,7 +101,7 @@ watch(
 function widgetStyle(widget: HomeWidgetPlacement) {
 	const packed = packedById.value.get(widget.id)
 	if (!packed) return undefined
-	if (editing.value) {
+	if (editing.value && dragging.value) {
 		return {
 			gridColumn: `span ${packed.effectiveColumns}`,
 			gridRow: `span ${packed.effectiveRows}`,
@@ -251,7 +254,7 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 				item-key="id"
 				tag="div"
 				class="home-dashboard-grid"
-				:class="{ 'is-editing': editing }"
+				:class="{ 'is-editing': editing, 'is-dragging': dragging }"
 				:style="{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }"
 				handle=".home-widget-drag-handle"
 				:disabled="!editing"
@@ -399,7 +402,7 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 	gap: 1rem;
 }
 
-.home-dashboard-grid.is-editing {
+.home-dashboard-grid.is-editing.is-dragging {
 	grid-auto-flow: dense;
 }
 
