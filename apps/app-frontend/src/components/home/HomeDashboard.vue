@@ -19,27 +19,37 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useElementSize } from '@vueuse/core'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import Draggable from 'vuedraggable'
 
 import {
 	addHomeWidget,
+	enableFreeHomeDashboard,
+	findNearestFreeHomeWidgetPosition,
 	getHomeGridColumnCount,
+	getHomeWidgetDimensions,
+	getHomeWidgetSpan,
 	HOME_RECENT_DEFAULT_LIMIT,
 	HOME_RECENT_LIMIT_OPTIONS,
+	HOME_WIDGET_GRID_GAP,
+	HOME_WIDGET_GRID_ROW_HEIGHT,
 	HOME_WIDGET_SIZE_OPTIONS,
+	type HomeDashboardConfig,
+	type HomeGreetingFont,
+	type HomeGreetingMode,
+	type HomeWidgetLayout,
+	type HomeWidgetPlacement,
+	type HomeWidgetPosition,
+	type HomeWidgetSize,
 	moveHomeWidget,
 	packHomeWidgets,
 	removeHomeWidget,
 	replaceHomeDashboardWidgets,
 	resizeHomeWidget,
+	setHomeDashboardLayout,
 	setHomeGreetingOptions,
 	setHomeRecentLimit,
-	type HomeDashboardConfig,
-	type HomeGreetingFont,
-	type HomeGreetingMode,
-	type HomeWidgetPlacement,
-	type HomeWidgetSize,
+	setHomeWidgetPosition,
 } from '@/components/home/home-dashboard'
 import { provideHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import HomeCalendar from '@/components/home/HomeCalendar.vue'
@@ -69,12 +79,14 @@ const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 provideHomeDashboardRuntime(handleError)
 const editing = computed(() => props.editing)
+const isFreeLayout = computed(() => props.config.layout === 'free')
 const gridContainer = ref<HTMLElement>()
 const widgetPicker = ref<InstanceType<typeof HomeWidgetPickerModal>>()
 const greetingSettings = ref<InstanceType<typeof HomeGreetingSettingsModal>>()
 const replacingWidgetId = ref<string | null>(null)
 const dragging = ref(false)
 const draggableWidgets = ref<HomeWidgetPlacement[]>([])
+const previewPositions = ref<Record<string, HomeWidgetPosition>>({})
 const { width } = useElementSize(gridContainer)
 const columnCount = computed(() => getHomeGridColumnCount(width.value))
 const widgetsForPacking = computed(() =>
@@ -82,6 +94,65 @@ const widgetsForPacking = computed(() =>
 )
 const packedWidgets = computed(() => packHomeWidgets(widgetsForPacking.value, columnCount.value))
 const packedById = computed(() => new Map(packedWidgets.value.map((widget) => [widget.id, widget])))
+const freeDrag = shallowRef<{
+	id: string
+	pointerId: number
+	startClientX: number
+	startClientY: number
+	startPosition: HomeWidgetPosition
+	target: HTMLElement
+	article: HTMLElement
+	deltaX: number
+	deltaY: number
+	frame: number | null
+} | null>(null)
+
+const freeGridColumnPitch = computed(
+	() => getHomeWidgetDimensions('1x1', columnCount.value, width.value).width + HOME_WIDGET_GRID_GAP,
+)
+const freeGridRowPitch = HOME_WIDGET_GRID_ROW_HEIGHT + HOME_WIDGET_GRID_GAP
+const resolvedFreePositions = computed(() => {
+	const positions: Record<string, HomeWidgetPosition> = {}
+	const positioned: HomeWidgetPlacement[] = []
+	const activeId = freeDrag.value?.id
+	const orderedWidgets = activeId
+		? [
+				...props.config.widgets.filter((widget) => widget.id !== activeId),
+				...props.config.widgets.filter((widget) => widget.id === activeId),
+			]
+		: props.config.widgets
+
+	for (const widget of orderedWidgets) {
+		const position = findNearestFreeHomeWidgetPosition(
+			positioned,
+			widget,
+			rawFreeWidgetPosition(widget),
+			columnCount.value,
+		)
+		positions[widget.id] = position
+		positioned.push({ ...widget, position })
+	}
+	return positions
+})
+const freeContentRows = computed(() =>
+	props.config.widgets.reduce((lastRow, widget) => {
+		const position = freeWidgetPosition(widget)
+		return Math.max(lastRow, position.row + getHomeWidgetSpan(widget.size, columnCount.value).rows)
+	}, 0),
+)
+const freeCanvasHeight = computed(() => {
+	if (!props.config.widgets.length) return 0
+	return Math.max(480, freeContentRows.value * freeGridRowPitch)
+})
+const dashboardGridStyle = computed(() =>
+	isFreeLayout.value
+		? {
+				height: `${freeCanvasHeight.value}px`,
+				'--home-free-grid-column-pitch': `${freeGridColumnPitch.value}px`,
+				'--home-free-grid-row-pitch': `${freeGridRowPitch}px`,
+			}
+		: { gridTemplateColumns: `repeat(${columnCount.value}, minmax(0, 1fr))` },
+)
 
 const messages = defineMessages({
 	add: { id: 'app.home.widgets.add', defaultMessage: 'Add widget' },
@@ -106,12 +177,30 @@ const messages = defineMessages({
 watch(
 	() => props.config.widgets,
 	(widgets) => {
-		if (!dragging.value) draggableWidgets.value = [...widgets]
+		if (!dragging.value) {
+			draggableWidgets.value = [...widgets]
+			previewPositions.value = Object.fromEntries(
+				widgets.flatMap((widget) =>
+					widget.position ? [[widget.id, widget.position] as const] : [],
+				),
+			)
+		}
 	},
 	{ immediate: true, deep: true },
 )
 
 function widgetStyle(widget: HomeWidgetPlacement) {
+	if (isFreeLayout.value) {
+		const position = freeWidgetPosition(widget)
+		const dimensions = getWidgetDimensions(widget)
+		return {
+			left: `${position.column * freeGridColumnPitch.value}px`,
+			top: `${position.row * freeGridRowPitch}px`,
+			width: `${dimensions.width}px`,
+			height: `${dimensions.height}px`,
+		}
+	}
+
 	const packed = packedById.value.get(widget.id)
 	if (!packed) return undefined
 	if (editing.value && dragging.value) {
@@ -124,6 +213,133 @@ function widgetStyle(widget: HomeWidgetPlacement) {
 		gridColumn: `${packed.column} / span ${packed.effectiveColumns}`,
 		gridRow: `${packed.row} / span ${packed.effectiveRows}`,
 	}
+}
+
+function getWidgetDimensions(widget: HomeWidgetPlacement) {
+	return getHomeWidgetDimensions(widget.size, columnCount.value, width.value)
+}
+
+function defaultFreeWidgetPosition(widget: HomeWidgetPlacement): HomeWidgetPosition {
+	const packed = packedById.value.get(widget.id)
+	if (!packed) return { column: 0, row: 0 }
+	return {
+		column: packed.column - 1,
+		row: packed.row - 1,
+	}
+}
+
+function rawFreeWidgetPosition(widget: HomeWidgetPlacement): HomeWidgetPosition {
+	const position =
+		previewPositions.value[widget.id] ?? widget.position ?? defaultFreeWidgetPosition(widget)
+	const span = getHomeWidgetSpan(widget.size, columnCount.value)
+	return {
+		column: Math.min(
+			Math.max(0, Math.round(position.column)),
+			Math.max(0, columnCount.value - span.columns),
+		),
+		row: Math.max(0, Math.round(position.row)),
+	}
+}
+
+function freeWidgetPosition(widget: HomeWidgetPlacement): HomeWidgetPosition {
+	return resolvedFreePositions.value[widget.id] ?? rawFreeWidgetPosition(widget)
+}
+
+function startFreeWidgetDrag(event: PointerEvent, widget: HomeWidgetPlacement) {
+	if (!editing.value || !isFreeLayout.value || event.button !== 0) return
+	event.preventDefault()
+	const target = event.currentTarget as HTMLElement
+	const article = target.closest<HTMLElement>('.home-widget')
+	if (!article) return
+	const position = freeWidgetPosition(widget)
+	target.setPointerCapture(event.pointerId)
+	freeDrag.value = {
+		id: widget.id,
+		pointerId: event.pointerId,
+		startClientX: event.clientX,
+		startClientY: event.clientY,
+		startPosition: position,
+		target,
+		article,
+		deltaX: 0,
+		deltaY: 0,
+		frame: null,
+	}
+	dragging.value = true
+}
+
+function updateFreeWidgetDrag(event: PointerEvent, widget: HomeWidgetPlacement) {
+	const current = freeDrag.value
+	if (!current || current.id !== widget.id || current.pointerId !== event.pointerId) return
+	const dimensions = getWidgetDimensions(widget)
+	const startLeft = current.startPosition.column * freeGridColumnPitch.value
+	const startTop = current.startPosition.row * freeGridRowPitch
+	current.deltaX = Math.min(
+		Math.max(event.clientX - current.startClientX, -startLeft),
+		Math.max(-startLeft, width.value - dimensions.width - startLeft),
+	)
+	current.deltaY = Math.max(event.clientY - current.startClientY, -startTop)
+	if (current.frame !== null) return
+
+	current.frame = window.requestAnimationFrame(() => {
+		current.frame = null
+		if (freeDrag.value !== current) return
+		current.article.style.transform = `translate3d(${current.deltaX}px, ${current.deltaY}px, 0)`
+	})
+}
+
+function finishFreeWidgetDrag(event: PointerEvent, widget: HomeWidgetPlacement) {
+	const current = freeDrag.value
+	if (!current || current.id !== widget.id || current.pointerId !== event.pointerId) return
+	if (current.target.hasPointerCapture(event.pointerId)) {
+		current.target.releasePointerCapture(event.pointerId)
+	}
+	if (current.frame !== null) window.cancelAnimationFrame(current.frame)
+	current.article.style.transform = ''
+	const position = findNearestFreeHomeWidgetPosition(
+		props.config.widgets.map((candidate) => ({
+			...candidate,
+			position: freeWidgetPosition(candidate),
+		})),
+		widget,
+		{
+			column: current.startPosition.column + Math.round(current.deltaX / freeGridColumnPitch.value),
+			row: current.startPosition.row + Math.round(current.deltaY / freeGridRowPitch),
+		},
+		columnCount.value,
+	)
+	previewPositions.value = { ...previewPositions.value, [widget.id]: position }
+	freeDrag.value = null
+	dragging.value = false
+	emit('change', setHomeWidgetPosition(props.config, widget.id, position))
+}
+
+function moveFreeWidgetWithKeyboard(event: KeyboardEvent, widget: HomeWidgetPlacement) {
+	if (!editing.value || !isFreeLayout.value) return
+	const movement = {
+		ArrowLeft: [-1, 0],
+		ArrowRight: [1, 0],
+		ArrowUp: [0, -1],
+		ArrowDown: [0, 1],
+	}[event.key]
+	if (!movement) return
+
+	event.preventDefault()
+	const current = freeWidgetPosition(widget)
+	const position = findNearestFreeHomeWidgetPosition(
+		props.config.widgets.map((candidate) => ({
+			...candidate,
+			position: freeWidgetPosition(candidate),
+		})),
+		widget,
+		{
+			column: current.column + movement[0],
+			row: current.row + movement[1],
+		},
+		columnCount.value,
+	)
+	previewPositions.value = { ...previewPositions.value, [widget.id]: position }
+	emit('change', setHomeWidgetPosition(props.config, widget.id, position))
 }
 
 function startWidgetDrag() {
@@ -155,7 +371,10 @@ function addWidget(widget: HomeWidgetPlacement) {
 	const replacingId = replacingWidgetId.value
 	replacingWidgetId.value = null
 	if (!replacingId) {
-		emit('change', addHomeWidget(props.config, widget))
+		const placement = isFreeLayout.value
+			? { ...widget, position: { column: 0, row: freeContentRows.value } }
+			: widget
+		emit('change', addHomeWidget(props.config, placement))
 		return
 	}
 
@@ -164,7 +383,14 @@ function addWidget(widget: HomeWidgetPlacement) {
 		replaceHomeDashboardWidgets(
 			props.config,
 			props.config.widgets.map((current) =>
-				current.id === replacingId ? { ...widget, id: current.id, size: current.size } : current,
+				current.id === replacingId
+					? {
+							...widget,
+							id: current.id,
+							size: current.size,
+							...(current.position ? { position: current.position } : {}),
+						}
+					: current,
 			),
 		),
 	)
@@ -180,7 +406,23 @@ function removeWidget(id: string) {
 }
 
 function resizeWidget(id: string, size: HomeWidgetSize) {
-	emit('change', resizeHomeWidget(props.config, id, size))
+	let config = resizeHomeWidget(props.config, id, size)
+	if (isFreeLayout.value) {
+		const widget = config.widgets.find((candidate) => candidate.id === id)
+		if (widget) {
+			const position = findNearestFreeHomeWidgetPosition(
+				config.widgets.map((candidate) => ({
+					...candidate,
+					position: freeWidgetPosition(candidate),
+				})),
+				widget,
+				freeWidgetPosition(widget),
+				columnCount.value,
+			)
+			config = setHomeWidgetPosition(config, id, position)
+		}
+	}
+	emit('change', config)
 }
 
 function setRecentLimit(id: string, limit: (typeof HOME_RECENT_LIMIT_OPTIONS)[number]) {
@@ -250,24 +492,38 @@ function widgetOptions(widget: HomeWidgetPlacement, index: number) {
 					{ divider: true },
 				]
 			: []),
-		{
-			id: 'move-earlier',
-			icon: ChevronUpIcon,
-			disabled: index === 0,
-			action: () => moveWidget(index, -1),
-		},
-		{
-			id: 'move-later',
-			icon: ChevronDownIcon,
-			disabled: index === props.config.widgets.length - 1,
-			action: () => moveWidget(index, 1),
-		},
-		{ divider: true },
+		...(!isFreeLayout.value
+			? [
+					{
+						id: 'move-earlier',
+						icon: ChevronUpIcon,
+						disabled: index === 0,
+						action: () => moveWidget(index, -1),
+					},
+					{
+						id: 'move-later',
+						icon: ChevronDownIcon,
+						disabled: index === props.config.widgets.length - 1,
+						action: () => moveWidget(index, 1),
+					},
+					{ divider: true },
+				]
+			: []),
 		{ id: 'remove', icon: TrashIcon, color: 'red' as const, action: () => removeWidget(widget.id) },
 	]
 }
 
-defineExpose({ openWidgetPicker })
+function setLayout(layout: HomeWidgetLayout) {
+	if (layout === props.config.layout) return
+	emit(
+		'change',
+		layout === 'free'
+			? enableFreeHomeDashboard(props.config, columnCount.value)
+			: setHomeDashboardLayout(props.config, 'grid'),
+	)
+}
+
+defineExpose({ openWidgetPicker, setLayout })
 </script>
 
 <template>
@@ -284,10 +540,15 @@ defineExpose({ openWidgetPicker })
 				item-key="id"
 				tag="div"
 				class="home-dashboard-grid"
-				:class="{ 'is-editing': editing, 'is-dragging': dragging }"
-				:style="{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }"
+				:class="{
+					'is-editing': editing,
+					'is-dragging': dragging,
+					'is-free': isFreeLayout,
+					'has-widgets': config.widgets.length > 0,
+				}"
+				:style="dashboardGridStyle"
 				handle=".home-widget-drag-handle"
-				:disabled="!editing"
+				:disabled="!editing || isFreeLayout"
 				:animation="80"
 				:swap-threshold="0.2"
 				:invert-swap="true"
@@ -309,12 +570,22 @@ defineExpose({ openWidgetPicker })
 				@end="finishWidgetDrag"
 			>
 				<template #item="{ element: widget, index }">
-					<article class="home-widget" :data-widget-kind="widget.kind" :style="widgetStyle(widget)">
+					<article
+						class="home-widget"
+						:class="{ 'is-free-dragging': freeDrag?.id === widget.id }"
+						:data-widget-kind="widget.kind"
+						:style="widgetStyle(widget)"
+					>
 						<div v-if="editing" class="home-widget-edit-bar">
 							<button
 								v-tooltip="formatMessage(messages.drag)"
 								type="button"
 								class="home-widget-drag-handle"
+								@pointerdown="startFreeWidgetDrag($event, widget)"
+								@pointermove="updateFreeWidgetDrag($event, widget)"
+								@pointerup="finishFreeWidgetDrag($event, widget)"
+								@pointercancel="finishFreeWidgetDrag($event, widget)"
+								@keydown="moveFreeWidgetWithKeyboard($event, widget)"
 							>
 								<GripVerticalIcon />
 							</button>
@@ -438,6 +709,42 @@ defineExpose({ openWidgetPicker })
 
 .home-dashboard-grid.is-editing.is-dragging {
 	grid-auto-flow: dense;
+}
+
+.home-dashboard-grid.is-free {
+	position: relative;
+	display: block;
+}
+
+.home-dashboard-grid.is-free.is-editing::before {
+	position: absolute;
+	inset: 0;
+	content: '';
+	border: 1px solid color-mix(in srgb, var(--color-divider) 55%, transparent);
+	border-radius: var(--radius-lg);
+	background-image:
+		linear-gradient(
+			to right,
+			color-mix(in srgb, var(--color-divider) 45%, transparent) 1px,
+			transparent 1px
+		),
+		linear-gradient(
+			to bottom,
+			color-mix(in srgb, var(--color-divider) 45%, transparent) 1px,
+			transparent 1px
+		);
+	background-size:
+		var(--home-free-grid-column-pitch) var(--home-free-grid-row-pitch),
+		var(--home-free-grid-column-pitch) var(--home-free-grid-row-pitch);
+	pointer-events: none;
+}
+
+.home-dashboard-grid.is-free.has-widgets {
+	min-height: 30rem;
+}
+
+.home-dashboard-grid.is-free .home-widget {
+	position: absolute;
 }
 
 .home-widget {
@@ -608,7 +915,8 @@ defineExpose({ openWidgetPicker })
 }
 
 .home-widget-drag,
-.home-widget-fallback {
+.home-widget-fallback,
+.home-widget.is-free-dragging {
 	z-index: 1000 !important;
 	border-color: var(--color-brand);
 	box-shadow: var(--shadow-card);

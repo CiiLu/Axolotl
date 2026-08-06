@@ -4,6 +4,26 @@ import { invoke } from '@tauri-apps/api/core'
 
 import i18n from '@/i18n.config'
 
+import {
+	prepareTranslationText,
+	translateInBatches as executeTranslationBatches,
+	type TranslationRequest,
+	type TranslationResponse,
+	type TranslationSegment,
+} from './translation-batching'
+
+export {
+	createTranslationBatches,
+	DEFAULT_TRANSLATION_BATCH_CHARACTERS,
+	DEFAULT_TRANSLATION_BATCH_ITEMS,
+	DEFAULT_TRANSLATION_CONCURRENCY,
+	prepareTranslationText,
+	type TranslationRequest,
+	type TranslationResponse,
+	type TranslationSegment,
+	type TranslationTextFormat,
+} from './translation-batching'
+
 /** Minimal shape of a search hit object that has a translatable title and description. */
 export interface TranslatableHit {
 	/** Unique identifier — `project_id` on search hits, `id` on SearchResult. */
@@ -16,10 +36,17 @@ export interface TranslatableHit {
 	summary?: string
 }
 
-export type TranslationProvider = 'microsoft' | 'google' | 'openai-compatible'
+export type TranslationProvider = 'microsoft' | 'google' | 'ai'
 export type TranslationMode = 'bilingual' | 'translation-only'
-export type TranslationStyle = 'default' | 'weakened' | 'brand' | 'border' | 'background'
-export type TranslationTextFormat = 'plain' | 'html'
+export type TranslationStyle =
+	| 'default'
+	| 'blur'
+	| 'blockquote'
+	| 'weakened'
+	| 'dashed-line'
+	| 'border'
+	| 'text-color'
+	| 'background'
 export type DescriptionSourceFormat = 'markdown' | 'html'
 
 export interface TranslationSettings {
@@ -28,36 +55,24 @@ export interface TranslationSettings {
 	mode: TranslationMode
 	auto_translate: boolean
 	style: TranslationStyle
-	openai_base_url: string
-	openai_model: string
-	openai_has_api_key: boolean
-	openai_system_prompt: string
+	ai_provider_id: string
+	ai_model_id: string
+	ai_system_prompt: string
 }
 
-export interface TranslationSegment {
-	id: string
-	text: string
-	format: TranslationTextFormat
-}
-
-export interface TranslationRequest {
-	source_language: string
-	target_language: string
-	context: {
-		title: string
-		description: string
-	}
-	segments: TranslationSegment[]
-}
-
-export interface TranslationResponse {
-	segments: Array<{ id: string; text: string }>
+export async function translateInBatches(
+	request: TranslationRequest,
+	onBatch?: (response: TranslationResponse) => void,
+	execute: (request: TranslationRequest) => Promise<TranslationResponse> = translate,
+): Promise<TranslationResponse> {
+	return executeTranslationBatches(request, onBatch, execute)
 }
 
 interface ProtectedElement {
 	tagName: string
 	attributes: Array<[string, string]>
 	innerHtml?: string
+	outerHtml?: string
 }
 
 export interface PreparedDescriptionBlock {
@@ -78,13 +93,6 @@ export async function getTranslationSettings(): Promise<TranslationSettings> {
 
 export async function updateTranslationSettings(settings: TranslationSettings): Promise<void> {
 	await invoke('plugin:translation|translation_update_settings', { settings })
-}
-
-export async function setTranslationSecret(
-	provider: TranslationProvider,
-	secret: string | null,
-): Promise<void> {
-	await invoke('plugin:translation|translation_set_secret', { provider, secret })
 }
 
 export async function testTranslationProvider(provider: TranslationProvider): Promise<string> {
@@ -122,15 +130,30 @@ function translationErrorMessage(error: unknown): string {
 
 export function getTranslationErrorKind(error: unknown): TranslationErrorKind {
 	const message = translationErrorMessage(error)
-	if (message.includes('TRANSLATION_RATE_LIMITED')) return 'rate-limited'
-	if (message.includes('TRANSLATION_AUTHENTICATION_FAILED')) return 'authentication'
+	if (message.includes('TRANSLATION_RATE_LIMITED') || message.includes('AI_RATE_LIMITED')) {
+		return 'rate-limited'
+	}
+	if (
+		message.includes('TRANSLATION_AUTHENTICATION_FAILED') ||
+		message.includes('AI_AUTHENTICATION_FAILED')
+	) {
+		return 'authentication'
+	}
 	if (message.includes('TRANSLATION_CONTENT_TOO_LONG')) return 'content-too-long'
-	if (message.includes('TRANSLATION_NETWORK_FAILED')) return 'network'
+	if (message.includes('TRANSLATION_NETWORK_FAILED') || message.includes('AI_NETWORK_FAILED')) {
+		return 'network'
+	}
 	return 'provider'
 }
 
 function containsReadableText(element: Element): boolean {
-	if (element.matches('pre, script, style, video, audio, iframe')) return false
+	if (
+		element.matches(
+			'pre, script, style, img, picture, source, video, audio, iframe, canvas, svg',
+		)
+	) {
+		return false
+	}
 	const clone = element.cloneNode(true) as Element
 	clone.querySelectorAll('pre, code, script, style').forEach((node) => node.remove())
 	clone.querySelectorAll('a').forEach((node) => {
@@ -143,6 +166,9 @@ function isUrlOnlyText(value: string): boolean {
 	return /^(?:https?:\/\/|www\.|mailto:)[^\s]+$/i.test(value.trim())
 }
 
+const NON_TRANSLATABLE_MEDIA_SELECTOR =
+	'img, picture, source, video, audio, iframe, canvas, svg'
+
 function protectElementAttributes(
 	element: Element,
 	blockIndex: number,
@@ -151,7 +177,20 @@ function protectElementAttributes(
 	const elements = [element, ...Array.from(element.querySelectorAll('*'))]
 
 	elements.forEach((current, elementIndex) => {
+		if (current !== element && !element.contains(current)) return
 		const marker = `${blockIndex}-${elementIndex}`
+		if (current.matches(NON_TRANSLATABLE_MEDIA_SELECTOR)) {
+			protectedElements[marker] = {
+				tagName: 'SPAN',
+				attributes: [],
+				outerHtml: current.outerHTML,
+			}
+			const placeholder = current.ownerDocument.createElement('span')
+			placeholder.setAttribute('data-ax-translation-attr', marker)
+			placeholder.setAttribute('translate', 'no')
+			current.replaceWith(placeholder)
+			return
+		}
 		const attributes = Array.from(current.attributes).map(
 			(attribute) => [attribute.name, attribute.value] as [string, string],
 		)
@@ -166,7 +205,10 @@ function protectElementAttributes(
 
 		Array.from(current.attributes).forEach((attribute) => current.removeAttribute(attribute.name))
 		current.setAttribute('data-ax-translation-attr', marker)
-		if (protectedElements[marker].innerHtml !== undefined) current.setAttribute('translate', 'no')
+		if (protectedElements[marker].innerHtml !== undefined) {
+			current.setAttribute('translate', 'no')
+			current.innerHTML = ''
+		}
 	})
 
 	return protectedElements
@@ -224,6 +266,16 @@ function restoreTranslatedBlock(block: PreparedDescriptionBlock, translatedHtml:
 			throw new Error(`Translation markup changed for block ${block.id}`)
 		}
 		const element = matches[0]
+		if (protectedElement.outerHtml !== undefined) {
+			const mediaDocument = new DOMParser().parseFromString(
+				`<body>${protectedElement.outerHtml}</body>`,
+				'text/html',
+			)
+			const media = mediaDocument.body.firstElementChild
+			if (!media) throw new Error(`Translation media changed for block ${block.id}`)
+			element.replaceWith(media)
+			continue
+		}
 		Array.from(element.attributes).forEach((attribute) => element.removeAttribute(attribute.name))
 		protectedElement.attributes.forEach(([name, value]) => element.setAttribute(name, value))
 		if (protectedElement.innerHtml !== undefined) element.innerHTML = protectedElement.innerHtml

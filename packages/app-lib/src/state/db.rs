@@ -27,6 +27,7 @@ const JAVA_DEFAULT_VERSIONS_MIGRATION_VERSION: i64 = 20260729110000;
 #[cfg(test)]
 const SYSTEM_PROXY_SETTING_MIGRATION_VERSION: i64 = 20260802122000;
 const INSTANCE_CONTENT_OWNERSHIP_MIGRATION_VERSION: i64 = 20260803120000;
+const AI_PROVIDER_MIGRATION_VERSION: i64 = 20260805120000;
 
 // This migration was changed by the launcher rebrand after it had already
 // shipped. Keep the checksums of the original LF and CRLF variants so existing
@@ -55,6 +56,9 @@ const LEGACY_OFFICIAL_PREFERRED_DOWNLOAD_SOURCE_MIGRATION_CHECKSUMS: &[&str] =
     &[
         "2fe6c8d9276c35e9400ab2e56ee1f30209db192c4edffc1dc6987bd79cbc04a101d0b2988dac1ba34d77df2acf869a5e",
     ];
+const LEGACY_AI_PROVIDER_MIGRATION_CHECKSUMS: &[&str] = &[
+    "eb25e9694a8a2e1787a399635a17c90b9785cc5599d79e31a72c15017422efaeb36cd0b6ec349368128097da7ecaafc1",
+];
 
 pub(crate) async fn connect(
     app_identifier: &str,
@@ -89,6 +93,7 @@ async fn open_migrated_app_db(db_path: &Path) -> crate::Result<Pool<Sqlite>> {
     reconcile_legacy_provider_qualified_content_migration(&pool).await?;
     reconcile_legacy_official_preferred_download_source_migration(&pool)
         .await?;
+    reconcile_legacy_ai_provider_migration(&pool).await?;
     reconcile_compatible_migration_checksums(&pool).await?;
     reconcile_existing_java_discovery_migration(&pool).await?;
     reconcile_pending_instance_content_ownership_duplicates(&pool).await?;
@@ -302,6 +307,165 @@ async fn update_migration_checksum(
         .bind(version)
         .execute(pool)
         .await?;
+    Ok(())
+}
+
+async fn reconcile_legacy_ai_provider_migration(
+    pool: &Pool<Sqlite>,
+) -> crate::Result<()> {
+    let has_migrations_table: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '_sqlx_migrations')",
+    )
+    .fetch_one(pool)
+    .await?;
+    if !has_migrations_table {
+        return Ok(());
+    }
+
+    let applied_checksum: Option<Vec<u8>> = sqlx::query_scalar(
+        "SELECT checksum FROM _sqlx_migrations WHERE version = ? AND success = TRUE",
+    )
+    .bind(AI_PROVIDER_MIGRATION_VERSION)
+    .fetch_optional(pool)
+    .await?;
+    let Some(applied_checksum) = applied_checksum else {
+        return Ok(());
+    };
+    if !LEGACY_AI_PROVIDER_MIGRATION_CHECKSUMS
+        .contains(&checksum_as_hex(&applied_checksum).as_str())
+    {
+        return Ok(());
+    }
+
+    let ai_settings_columns: Vec<(String, String, i64, Option<String>, i64)> =
+        sqlx::query_as(
+            "SELECT name, type, \"notnull\", dflt_value, pk
+             FROM pragma_table_info('ai_settings') ORDER BY cid",
+        )
+        .fetch_all(pool)
+        .await?;
+    let provider_config_columns: Vec<(
+        String,
+        String,
+        i64,
+        Option<String>,
+        i64,
+    )> = sqlx::query_as(
+        "SELECT name, type, \"notnull\", dflt_value, pk
+             FROM pragma_table_info('ai_provider_configs') ORDER BY cid",
+    )
+    .fetch_all(pool)
+    .await?;
+    let provider_model_columns: Vec<(
+        String,
+        String,
+        i64,
+        Option<String>,
+        i64,
+    )> = sqlx::query_as(
+        "SELECT name, type, \"notnull\", dflt_value, pk
+             FROM pragma_table_info('ai_provider_models') ORDER BY cid",
+    )
+    .fetch_all(pool)
+    .await?;
+    let translation_columns: Vec<String> = sqlx::query_scalar(
+        "SELECT name FROM pragma_table_info('translation_settings')
+         WHERE name IN ('ai_provider_id', 'ai_model_id') ORDER BY name",
+    )
+    .fetch_all(pool)
+    .await?;
+    let ai_settings_match = ai_settings_columns
+        == vec![
+            ("id".to_string(), "INTEGER".to_string(), 1, None, 1),
+            (
+                "enabled".to_string(),
+                "INTEGER".to_string(),
+                1,
+                Some("TRUE".to_string()),
+                0,
+            ),
+        ];
+    let provider_config_match = provider_config_columns
+        == vec![
+            ("provider_id".to_string(), "TEXT".to_string(), 1, None, 1),
+            ("custom_name".to_string(), "TEXT".to_string(), 0, None, 0),
+            (
+                "protocol".to_string(),
+                "TEXT".to_string(),
+                1,
+                Some("'openai'".to_string()),
+                0,
+            ),
+            (
+                "enabled".to_string(),
+                "INTEGER".to_string(),
+                1,
+                Some("FALSE".to_string()),
+                0,
+            ),
+            (
+                "endpoint".to_string(),
+                "TEXT".to_string(),
+                1,
+                Some("''".to_string()),
+                0,
+            ),
+            (
+                "settings".to_string(),
+                "TEXT".to_string(),
+                1,
+                Some("'{}'".to_string()),
+                0,
+            ),
+        ];
+    let provider_model_match = provider_model_columns
+        == vec![
+            ("provider_id".to_string(), "TEXT".to_string(), 1, None, 1),
+            ("model_id".to_string(), "TEXT".to_string(), 1, None, 2),
+            (
+                "display_name".to_string(),
+                "TEXT".to_string(),
+                1,
+                Some("''".to_string()),
+                0,
+            ),
+            (
+                "enabled".to_string(),
+                "INTEGER".to_string(),
+                1,
+                Some("TRUE".to_string()),
+                0,
+            ),
+            (
+                "source".to_string(),
+                "TEXT".to_string(),
+                1,
+                Some("'custom'".to_string()),
+                0,
+            ),
+        ];
+    if !ai_settings_match
+        || !provider_config_match
+        || !provider_model_match
+        || translation_columns != ["ai_model_id", "ai_provider_id"]
+    {
+        return Ok(());
+    }
+
+    let migration = MIGRATOR
+        .iter()
+        .find(|migration| migration.version == AI_PROVIDER_MIGRATION_VERSION)
+        .expect("AI provider migration should be embedded");
+    update_migration_checksum(
+        pool,
+        AI_PROVIDER_MIGRATION_VERSION,
+        migration.checksum.as_ref(),
+    )
+    .await?;
+    tracing::warn!(
+        version = AI_PROVIDER_MIGRATION_VERSION,
+        "Reconciled the validated legacy AI provider schema"
+    );
     Ok(())
 }
 
@@ -874,6 +1038,15 @@ mod tests {
             )
     }
 
+    fn ai_provider_migration() -> &'static Migration {
+        MIGRATOR
+            .iter()
+            .find(|migration| {
+                migration.version == AI_PROVIDER_MIGRATION_VERSION
+            })
+            .expect("AI provider migration should be embedded")
+    }
+
     fn reconcile_provider_qualified_content_migration() -> &'static Migration {
         MIGRATOR
             .iter()
@@ -1059,6 +1232,69 @@ mod tests {
         MIGRATOR.run(&pool).await.unwrap();
         let after = settings_snapshot(&pool).await;
         assert_eq!(after, before);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn reconciles_known_ai_provider_checksum_for_matching_schema() {
+        const DISCARD_LEGACY_OPENAI_MIGRATION_VERSION: i64 = 20260805130000;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let provider_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < DISCARD_LEGACY_OPENAI_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        provider_migrator.run(&pool).await.unwrap();
+
+        let migration = ai_provider_migration();
+        let legacy_checksum =
+            decode_hex(LEGACY_AI_PROVIDER_MIGRATION_CHECKSUMS[0]);
+        sqlx::query(
+            "UPDATE _sqlx_migrations SET checksum = ? WHERE version = ?",
+        )
+        .bind(&legacy_checksum)
+        .bind(migration.version)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        reconcile_legacy_ai_provider_migration(&pool).await.unwrap();
+        let reconciled_checksum: Vec<u8> = sqlx::query_scalar(
+            "SELECT checksum FROM _sqlx_migrations WHERE version = ?",
+        )
+        .bind(migration.version)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(reconciled_checksum, migration.checksum.as_ref());
+
+        MIGRATOR.run(&pool).await.unwrap();
+        let cleanup_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('ai_settings')
+             WHERE name = 'legacy_openai_credential_cleanup'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(cleanup_column, 1);
         let foreign_key_errors: Vec<(String, i64, String, i64)> =
             sqlx::query_as("PRAGMA foreign_key_check")
                 .fetch_all(&pool)
@@ -2315,6 +2551,385 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(upgraded, ("zh-CN".into(), "minimal".into(), None));
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn creates_ai_provider_schema_for_a_fresh_database() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let enabled: i64 =
+            sqlx::query_scalar("SELECT enabled FROM ai_settings WHERE id = 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(enabled, 1);
+        let legacy_credential_cleanup: i64 = sqlx::query_scalar(
+            "SELECT legacy_openai_credential_cleanup FROM ai_settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(legacy_credential_cleanup, 0);
+        let ai_tables: Vec<String> = sqlx::query_scalar(
+            "SELECT name FROM sqlite_master
+             WHERE type = 'table' AND name LIKE 'ai_%'
+             ORDER BY name",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            ai_tables,
+            vec![
+                "ai_provider_configs".to_string(),
+                "ai_provider_models".to_string(),
+                "ai_settings".to_string(),
+            ]
+        );
+        let translation_ai_columns: Vec<String> = sqlx::query_scalar(
+            "SELECT name FROM pragma_table_info('translation_settings')
+             WHERE name IN ('ai_provider_id', 'ai_model_id') ORDER BY name",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            translation_ai_columns,
+            vec!["ai_model_id".to_string(), "ai_provider_id".to_string()]
+        );
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn discards_legacy_openai_translation_configuration() {
+        const AI_PROVIDER_MIGRATION_VERSION: i64 = 20260805120000;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version < AI_PROVIDER_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        sqlx::query(
+            "UPDATE translation_settings
+             SET provider = 'openai-compatible',
+                 target_language = 'zh-CN',
+                 openai_base_url = 'https://gateway.example.test/v1',
+                 openai_model = 'example-chat-model',
+                 openai_api_key = 'legacy-secret',
+                 openai_system_prompt = 'Preserve terminology.'
+             WHERE id = 0",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO translation_cache (key, translation, created_at)
+             VALUES ('legacy-cache', 'cached translation', 123)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let translation: (String, String, String, String, Option<String>) =
+            sqlx::query_as(
+                "SELECT provider, ai_provider_id, ai_model_id,
+                        openai_system_prompt, openai_api_key
+                 FROM translation_settings WHERE id = 0",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            translation,
+            (
+                "microsoft".to_string(),
+                String::new(),
+                String::new(),
+                String::new(),
+                None,
+            )
+        );
+        let provider_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM ai_provider_configs")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        let model_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM ai_provider_models")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!((provider_count, model_count), (0, 0));
+        let legacy_credential_cleanup: i64 = sqlx::query_scalar(
+            "SELECT legacy_openai_credential_cleanup FROM ai_settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(legacy_credential_cleanup, 1);
+        let cached: (String, i64) = sqlx::query_as(
+            "SELECT translation, created_at FROM translation_cache
+             WHERE key = 'legacy-cache'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(cached, ("cached translation".to_string(), 123));
+        let legacy_objects: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master
+             WHERE (type = 'table' OR type = 'index')
+               AND name = 'legacy_openai_ai_config'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(legacy_objects, 0);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn ignores_malformed_legacy_ai_provider_configuration() {
+        const AI_PROVIDER_MIGRATION_VERSION: i64 = 20260805120000;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version < AI_PROVIDER_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        sqlx::query(
+            "UPDATE translation_settings
+             SET provider = 'openai-compatible',
+                 openai_base_url = 'not a URL',
+                 openai_model = '',
+                 openai_api_key = NULL
+             WHERE id = 0",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let translation: (
+            String,
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            String,
+        ) = sqlx::query_as(
+            "SELECT provider, ai_provider_id, ai_model_id, openai_base_url,
+                    openai_model, openai_api_key, openai_system_prompt
+             FROM translation_settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            translation,
+            (
+                "microsoft".to_string(),
+                String::new(),
+                String::new(),
+                "https://api.openai.com/v1".to_string(),
+                "gpt-4o-mini".to_string(),
+                None,
+                String::new(),
+            )
+        );
+        let provider_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM ai_provider_configs")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        let model_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM ai_provider_models")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!((provider_count, model_count), (0, 0));
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn preserves_ai_configuration_created_after_provider_migration() {
+        const DISCARD_LEGACY_OPENAI_MIGRATION_VERSION: i64 = 20260805130000;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let provider_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < DISCARD_LEGACY_OPENAI_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        provider_migrator.run(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ai_provider_configs
+             (provider_id, custom_name, protocol, enabled, endpoint, settings)
+             VALUES ('openai', NULL, 'openai', TRUE,
+                     'https://api.openai.com/v1', '{}')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO ai_provider_models
+             (provider_id, model_id, display_name, enabled, source)
+             VALUES ('openai', 'gpt-5-mini', 'GPT-5 mini', TRUE, 'builtin')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "UPDATE translation_settings
+             SET provider = 'ai', ai_provider_id = 'openai',
+                 ai_model_id = 'gpt-5-mini',
+                 openai_system_prompt = 'Current AI prompt.'
+             WHERE id = 0",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let provider: (String, String, i64) = sqlx::query_as(
+            "SELECT provider_id, endpoint, enabled
+             FROM ai_provider_configs WHERE provider_id = 'openai'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            provider,
+            (
+                "openai".to_string(),
+                "https://api.openai.com/v1".to_string(),
+                1,
+            )
+        );
+        let model: (String, String, String) = sqlx::query_as(
+            "SELECT provider_id, model_id, source
+             FROM ai_provider_models WHERE provider_id = 'openai'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            model,
+            (
+                "openai".to_string(),
+                "gpt-5-mini".to_string(),
+                "builtin".to_string(),
+            )
+        );
+        let translation: (String, String, String, String) = sqlx::query_as(
+            "SELECT provider, ai_provider_id, ai_model_id,
+                    openai_system_prompt
+             FROM translation_settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            translation,
+            (
+                "ai".to_string(),
+                "openai".to_string(),
+                "gpt-5-mini".to_string(),
+                "Current AI prompt.".to_string(),
+            )
+        );
+        let legacy_credential_cleanup: i64 = sqlx::query_scalar(
+            "SELECT legacy_openai_credential_cleanup FROM ai_settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(legacy_credential_cleanup, 0);
         let foreign_key_errors: Vec<(String, i64, String, i64)> =
             sqlx::query_as("PRAGMA foreign_key_check")
                 .fetch_all(&pool)

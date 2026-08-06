@@ -11,6 +11,7 @@ export interface Tab {
 	name: MessageDescriptor
 	icon: Component
 	content?: Component
+	flushContent?: boolean
 	href?: string
 	badge?: MessageDescriptor
 	shown?: boolean
@@ -78,7 +79,9 @@ defineExpose({ show, hide, selectedTab, setTab })
 		<template v-if="$slots.title" #title>
 			<slot name="title" />
 		</template>
-		<div class="grid grid-cols-[auto_1fr] p-6 pb-3 pr-0">
+		<div
+			class="grid min-h-0 grid-cols-[auto_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] p-6 pb-3 pr-0"
+		>
 			<div
 				class="flex flex-col gap-1 border-solid pr-4 border-0 border-r-[1px] border-divider min-w-[200px]"
 			>
@@ -106,7 +109,7 @@ defineExpose({ show, hide, selectedTab, setTab })
 
 				<slot name="footer" />
 			</div>
-			<div class="relative">
+			<div class="relative min-h-0 min-w-0 overflow-hidden">
 				<Transition
 					enter-active-class="transition-all duration-200 ease-out"
 					enter-from-class="opacity-0 max-h-0"
@@ -123,7 +126,10 @@ defineExpose({ show, hide, selectedTab, setTab })
 
 				<div
 					ref="scrollContainer"
-					class="overflow-y-auto px-6 pb-6 h-screen max-h-[min(65vh,600px)]"
+					class="h-screen min-h-0 max-h-[min(65vh,600px)]"
+					:class="
+						visibleTabs[selectedTab]?.flushContent ? 'overflow-hidden' : 'overflow-y-auto px-6 pb-6'
+					"
 					@scroll="checkScrollState"
 				>
 					<Suspense>

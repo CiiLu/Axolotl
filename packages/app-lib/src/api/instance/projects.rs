@@ -165,6 +165,39 @@ pub async fn install_project_with_dependencies(
     Ok(plan)
 }
 
+#[tracing::instrument]
+pub async fn queue_project_with_dependencies(
+    instance_id: &str,
+    request: InstallProjectWithDependenciesRequest,
+    display_title: String,
+    display_icon: Option<String>,
+) -> crate::Result<crate::install::InstallJobSnapshot> {
+    crate::install::install_content(
+        instance_id.to_string(),
+        request.project_id,
+        request.version_id,
+        request.content_type,
+        request.selected,
+        display_title,
+        display_icon,
+    )
+    .await
+}
+
+#[tracing::instrument]
+pub async fn queue_curseforge_content(
+    request: crate::api::curseforge::CurseForgeInstallRequest,
+    display_title: String,
+    display_icon: Option<String>,
+) -> crate::Result<crate::install::InstallJobSnapshot> {
+    crate::install::install_curseforge_content(
+        request,
+        display_title,
+        display_icon,
+    )
+    .await
+}
+
 fn plan_project_ids(plan: &ResolveContentPlan) -> Vec<String> {
     let mut project_ids = Vec::with_capacity(plan.dependencies.len() + 1);
     project_ids.push(plan.primary.project_id.clone());

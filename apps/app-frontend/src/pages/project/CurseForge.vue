@@ -214,7 +214,8 @@ import {
 	getTranslationErrorKind,
 	getTranslationSettings,
 	prepareDescription,
-	translate as translateContent,
+	translateInBatches as translateContent,
+	type TranslationStyle,
 	validateTranslatedDescription,
 } from '@/helpers/translation'
 import i18n from '@/i18n.config'
@@ -311,7 +312,7 @@ const translationActive = ref(false)
 const translationLoading = ref(false)
 const translations = ref<Record<string, string>>({})
 const translationMode = ref<'bilingual' | 'translation-only'>('bilingual')
-const translationStyle = ref<'default' | 'weakened' | 'brand' | 'border' | 'background'>('weakened')
+const translationStyle = ref<TranslationStyle>('weakened')
 let projectRequestVersion = 0
 let translationRequestVersion = 0
 
@@ -610,6 +611,8 @@ function translationFailureMessage(error: unknown) {
 async function translateProject() {
 	if (!data.value || translationLoading.value) return
 	const requestVersion = ++translationRequestVersion
+	const previousTranslationActive = translationActive.value
+	const previousTranslations = translations.value
 	translationLoading.value = true
 
 	try {
@@ -634,38 +637,18 @@ async function translateProject() {
 
 		translationActive.value = true
 		const accumulated = { ...translations.value }
-		const batchSize = 5
-		let hasError = false
-
-		for (let i = 0; i < allSegments.length; i += batchSize) {
+		await translateContent({ ...baseRequest, segments: allSegments }, (response) => {
 			if (requestVersion !== translationRequestVersion) return
-			const batch = allSegments.slice(i, i + batchSize)
-
-			try {
-				const res = await translateContent({ ...baseRequest, segments: batch })
-				for (const seg of res.segments) {
-					accumulated[seg.id] = seg.text
-				}
-			} catch {
-				hasError = true
-			}
-
-			if (requestVersion !== translationRequestVersion) return
+			for (const segment of response.segments) accumulated[segment.id] = segment.text
 			translations.value = { ...accumulated }
-			await new Promise((resolve) => setTimeout(resolve, 300))
-		}
+		})
+		if (requestVersion !== translationRequestVersion) return
 
-		if (hasError) {
-			console.warn('Some translation batches failed, showing partial results')
-		}
-
-		try {
-			validateTranslatedDescription(prepared, accumulated)
-		} catch (validationError) {
-			console.warn('Translation validation failed, using partial results', validationError)
-		}
+		validateTranslatedDescription(prepared, accumulated)
 	} catch (error) {
 		if (requestVersion === translationRequestVersion) {
+			translationActive.value = previousTranslationActive
+			translations.value = previousTranslations
 			addNotification({
 				title: formatMessage(messages.translationFailedTitle),
 				text: translationFailureMessage(error),

@@ -411,7 +411,7 @@ import {
 	getTranslationErrorKind,
 	getTranslationSettings,
 	prepareDescription,
-	translate as translateContent,
+	translateInBatches as translateContent,
 	validateTranslatedDescription,
 } from '@/helpers/translation'
 import { getServerAddress } from '@/helpers/worlds'
@@ -792,6 +792,8 @@ function translationFailureMessage(error) {
 async function translateProject() {
 	if (!data.value || translationLoading.value) return
 	const requestVersion = ++translationRequestVersion
+	const previousTranslationActive = translationActive.value
+	const previousTranslations = translations.value
 	translationLoading.value = true
 
 	try {
@@ -816,41 +818,18 @@ async function translateProject() {
 
 		translationActive.value = true
 		const accumulated = { ...translations.value }
-		const batchSize = 5 // 每批翻译5个 segment
-		let hasError = false
-
-		for (let i = 0; i < allSegments.length; i += batchSize) {
+		await translateContent({ ...baseRequest, segments: allSegments }, (response) => {
 			if (requestVersion !== translationRequestVersion) return
-			const batch = allSegments.slice(i, i + batchSize)
-
-			try {
-				const res = await translateContent({ ...baseRequest, segments: batch })
-				for (const seg of res.segments) {
-					accumulated[seg.id] = seg.text
-				}
-			} catch {
-				hasError = true
-				// 某批失败，继续尝试下一批（或可选择停止）
-			}
-
-			if (requestVersion !== translationRequestVersion) return
+			for (const segment of response.segments) accumulated[segment.id] = segment.text
 			translations.value = { ...accumulated }
+		})
+		if (requestVersion !== translationRequestVersion) return
 
-			// 批次间延迟，让动画有播放时间
-			await new Promise((resolve) => setTimeout(resolve, 300))
-		}
-
-		if (hasError) {
-			console.warn('Some translation batches failed, showing partial results')
-		}
-
-		try {
-			validateTranslatedDescription(prepared, accumulated)
-		} catch (validationError) {
-			console.warn('Translation validation failed, using partial results', validationError)
-		}
+		validateTranslatedDescription(prepared, accumulated)
 	} catch (error) {
 		if (requestVersion === translationRequestVersion) {
+			translationActive.value = previousTranslationActive
+			translations.value = previousTranslations
 			addNotification({
 				title: formatMessage(messages.translationFailedTitle),
 				text: translationFailureMessage(error),

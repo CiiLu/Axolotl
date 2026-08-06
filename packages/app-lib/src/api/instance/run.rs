@@ -300,6 +300,10 @@ fn modrinth_pack_version_id(link: &InstanceLink) -> Option<&str> {
     }
 }
 
+fn playtime_api_url(base_url: &str) -> String {
+    format!("{}/analytics/playtime", base_url.trim_end_matches('/'))
+}
+
 pub async fn kill(instance_id: &str) -> crate::Result<()> {
     let state = State::get().await?;
     let processes =
@@ -348,8 +352,9 @@ pub async fn try_update_playtime_by_instance_id(
             }
         }
 
+        let playtime_url = playtime_api_url(env!("MODRINTH_API_BASE_URL"));
         fetch::post_json(
-            concat!(env!("MODRINTH_API_BASE_URL"), "analytics/playtime"),
+            &playtime_url,
             serde_json::to_value(hashmap)?,
             &state.api_semaphore,
             &state.pool,
@@ -373,7 +378,7 @@ pub async fn try_update_playtime_by_instance_id(
 
 #[cfg(test)]
 mod tests {
-    use super::modrinth_pack_version_id;
+    use super::{modrinth_pack_version_id, playtime_api_url};
     use crate::state::InstanceLink;
 
     #[test]
@@ -397,5 +402,17 @@ mod tests {
         assert_eq!(modrinth_pack_version_id(&modrinth), Some("version"));
         assert_eq!(modrinth_pack_version_id(&curseforge), None);
         assert_eq!(modrinth_pack_version_id(&imported), None);
+    }
+
+    #[test]
+    fn playtime_url_has_a_single_path_separator() {
+        assert_eq!(
+            playtime_api_url("https://api.modrinth.com"),
+            "https://api.modrinth.com/analytics/playtime"
+        );
+        assert_eq!(
+            playtime_api_url("https://api.modrinth.com/"),
+            "https://api.modrinth.com/analytics/playtime"
+        );
     }
 }

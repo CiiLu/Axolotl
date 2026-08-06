@@ -1791,7 +1791,7 @@
     "message": "别把电脑烤熟"
   },
   "app.onboarding.settings.description": {
-    "message": "外观、语言、翻译、Java、储存和更新这些有用开关，都在这里。"
+    "message": "外观、语言、翻译、AI 供应商、Java、存储和更新等常用设置都在这里。"
   },
   "app.onboarding.settings.title": {
     "message": "按你的方式使用"
@@ -2513,23 +2513,11 @@
   "app.splash.updating-app-directory": {
     "message": "正在更新应用目录……"
   },
-  "app.translation-settings.api-key": {
-    "message": "API 密钥"
-  },
-  "app.translation-settings.api-key-configured": {
-    "message": "已配置 API 密钥。输入新值可替换现有密钥。"
-  },
-  "app.translation-settings.api-key-optional": {
-    "message": "本地或无需认证的端点可不填写。"
-  },
   "app.translation-settings.auto-translate": {
     "message": "自动翻译项目页面"
   },
   "app.translation-settings.auto-translate-description": {
     "message": "打开 Modrinth 项目页面后立即开始翻译。"
-  },
-  "app.translation-settings.base-url": {
-    "message": "基础 URL"
   },
   "app.translation-settings.cache": {
     "message": "翻译缓存"
@@ -2543,9 +2531,6 @@
   "app.translation-settings.clear-cache": {
     "message": "清除翻译缓存"
   },
-  "app.translation-settings.clear-key": {
-    "message": "清除 API 密钥"
-  },
   "app.translation-settings.description": {
     "message": "浏览内容时翻译 Modrinth 项目的标题、简介和详细描述。"
   },
@@ -2558,12 +2543,6 @@
   "app.translation-settings.display-mode.translation-only": {
     "message": "仅译文"
   },
-  "app.translation-settings.model": {
-    "message": "模型"
-  },
-  "app.translation-settings.openai.configuration": {
-    "message": "OpenAI 兼容接口配置"
-  },
   "app.translation-settings.operation-failed": {
     "message": "翻译操作失败，请检查配置后重试。"
   },
@@ -2574,13 +2553,7 @@
     "message": "Google 翻译（免费）"
   },
   "app.translation-settings.provider.microsoft": {
-    "message": "Microsoft 翻译（免费）"
-  },
-  "app.translation-settings.provider.openai-compatible": {
-    "message": "OpenAI 兼容接口"
-  },
-  "app.translation-settings.save-key": {
-    "message": "保存 API 密钥"
+    "message": "Microsoft 翻译（不可用）"
   },
   "app.translation-settings.style": {
     "message": "译文样式"
@@ -2588,11 +2561,17 @@
   "app.translation-settings.style.background": {
     "message": "背景色"
   },
-  "app.translation-settings.style.border": {
-    "message": "左边框"
+  "app.translation-settings.style.blockquote": {
+    "message": "引用块"
   },
-  "app.translation-settings.style.brand": {
-    "message": "强调色"
+  "app.translation-settings.style.blur": {
+    "message": "模糊"
+  },
+  "app.translation-settings.style.border": {
+    "message": "边框"
+  },
+  "app.translation-settings.style.dashed-line": {
+    "message": "虚线下划线"
   },
   "app.translation-settings.style.default": {
     "message": "默认"
@@ -2605,6 +2584,9 @@
   },
   "app.translation-settings.style.preview-text": {
     "message": "在 Modrinth 上探索高质量的 Minecraft 内容。"
+  },
+  "app.translation-settings.style.text-color": {
+    "message": "文字颜色"
   },
   "app.translation-settings.style.weakened": {
     "message": "弱化"
@@ -3178,18 +3160,6 @@
   },
   "instance.edit-server.title": {
     "message": "编辑服务器"
-  },
-  "instance.edit-world.name": {
-    "message": "名称"
-  },
-  "instance.edit-world.placeholder-name": {
-    "message": "Minecraft 存档"
-  },
-  "instance.edit-world.reset-icon": {
-    "message": "重设图标"
-  },
-  "instance.edit-world.title": {
-    "message": "编辑存档"
   },
   "instance.files.adding-files": {
     "message": "正在添加文件（{completed}/{total}）"
@@ -3834,10 +3804,10 @@
     "message": "整合包安装失败"
   },
   "app.translation-settings.system-prompt": {
-    "message": "系统提示词"
+    "message": "翻译指令"
   },
   "app.translation-settings.system-prompt-description": {
-    "message": "输入你的自定义系统提示词，留空则使用默认提示词。提示词应引导模型按内置要求以 JSON 格式输出，避免填写与格式要求冲突的指令。"
+    "message": "可选的翻译专用指令。启动器始终会附加内置的结构化翻译约束。"
   },
   "app.instance.mods.parsing-files": {
     "message": "正在解析，较大的文件可能会耗费一些时间"
@@ -4607,6 +4577,12 @@
   "app.curseforge.automatic-downloads-failed.notification-title": {
     "message": "部分 CurseForge 文件下载失败"
   },
+  "app.curseforge.network-download-failed.notification-body": {
+    "message": "无法连接 CurseForge 下载该文件。当前网络或代理可能阻止了 CurseForge。请关闭或更换 VPN/代理，改用其他网络后重试。"
+  },
+  "app.curseforge.network-download-failed.notification-title": {
+    "message": "CurseForge 下载失败"
+  },
   "app.home.greeting.with-player": {
     "message": "{name}，{greeting}"
   },
@@ -4868,6 +4844,15 @@
   "app.home.widgets.instance-description": {
     "message": "选择一个实例，创建独立的快速启动入口。"
   },
+  "app.home.widgets.layout.switch-to-free": {
+    "message": "切换到自由小组件布局"
+  },
+  "app.home.widgets.layout.switch-to-grid": {
+    "message": "切换到网格小组件布局"
+  },
+  "app.home.widgets.layout.toggle": {
+    "message": "小组件布局模式"
+  },
   "app.home.widgets.loading": {
     "message": "正在加载……"
   },
@@ -5037,7 +5022,7 @@
     "message": "按你的方式排列"
   },
   "app.onboarding.home-customize.description": {
-    "message": "使用右下角的编辑控件添加快捷入口、重新排列和调整小组件尺寸，并配置组件内容。"
+    "message": "使用右下角的编辑控件添加、调整和配置小组件。编辑时可在自动排满的网格与保留空格的自由网格之间切换。"
   },
   "app.onboarding.home-layout.description": {
     "message": "使用右下角控件切换信息主页和极简主页；小组件编辑仅在信息主页中提供。"
@@ -5605,5 +5590,209 @@
   },
   "app.drop.unexpected-type": {
     "message": "意外的类型：{type}"
+  },
+  "app.ai-settings.add-model": {
+    "message": "添加模型"
+  },
+  "app.ai-settings.all-providers": {
+    "message": "全部"
+  },
+  "app.ai-settings.api-key": {
+    "message": "API 密钥"
+  },
+  "app.ai-settings.api-key-configured": {
+    "message": "密钥已安全存储在操作系统凭据库中。"
+  },
+  "app.ai-settings.api-key-optional": {
+    "message": "尚未存储密钥；本地服务可无需密钥运行。"
+  },
+  "app.ai-settings.bedrock.access-key-id": {
+    "message": "AWS 访问密钥 ID"
+  },
+  "app.ai-settings.bedrock.api-key": {
+    "message": "API 密钥"
+  },
+  "app.ai-settings.bedrock.authentication": {
+    "message": "身份验证"
+  },
+  "app.ai-settings.bedrock.aws-credentials": {
+    "message": "AWS 凭据"
+  },
+  "app.ai-settings.bedrock.secret-access-key": {
+    "message": "AWS 秘密访问密钥"
+  },
+  "app.ai-settings.bedrock.session-token": {
+    "message": "AWS 会话令牌（可选）"
+  },
+  "app.ai-settings.clear-credential": {
+    "message": "清除凭据"
+  },
+  "app.ai-settings.clear-key": {
+    "message": "清除密钥"
+  },
+  "app.ai-settings.credential-configured": {
+    "message": "已安全存储在操作系统凭据库中。"
+  },
+  "app.ai-settings.configured-models": {
+    "message": "{count} 个文本模型"
+  },
+  "app.ai-settings.description": {
+    "message": "统一配置文本模型，然后在启动器的各项功能中使用。"
+  },
+  "app.ai-settings.disabled": {
+    "message": "已禁用"
+  },
+  "app.ai-settings.disabled-providers": {
+    "message": "未启用的供应商"
+  },
+  "app.ai-settings.enabled": {
+    "message": "已启用"
+  },
+  "app.ai-settings.enabled-providers": {
+    "message": "已启用的供应商"
+  },
+  "app.ai-settings.endpoint": {
+    "message": "API 端点"
+  },
+  "app.ai-settings.field.account-id": {
+    "message": "账户 ID"
+  },
+  "app.ai-settings.field.api-version": {
+    "message": "API 版本"
+  },
+  "app.ai-settings.field.deployment": {
+    "message": "部署名称"
+  },
+  "app.ai-settings.field.location": {
+    "message": "位置"
+  },
+  "app.ai-settings.field.project": {
+    "message": "项目 ID"
+  },
+  "app.ai-settings.field.region": {
+    "message": "区域"
+  },
+  "app.ai-settings.master-switch": {
+    "message": "启用 AI 功能"
+  },
+  "app.ai-settings.master-switch-description": {
+    "message": "关闭后，启动器中的 AI 操作和供应商选项将全部隐藏。"
+  },
+  "app.ai-settings.model-id": {
+    "message": "模型 ID"
+  },
+  "app.ai-settings.model-name": {
+    "message": "显示名称（可选）"
+  },
+  "app.ai-settings.models": {
+    "message": "文本模型"
+  },
+  "app.ai-settings.no-matching-models": {
+    "message": "没有符合搜索条件的模型。"
+  },
+  "app.ai-settings.no-models": {
+    "message": "没有可用模型，请先添加模型 ID。"
+  },
+  "app.ai-settings.no-providers": {
+    "message": "未找到供应商。"
+  },
+  "app.ai-settings.oauth.code": {
+    "message": "授权码"
+  },
+  "app.ai-settings.oauth.check": {
+    "message": "立即检查授权状态"
+  },
+  "app.ai-settings.oauth.checking": {
+    "message": "正在检查授权状态"
+  },
+  "app.ai-settings.oauth.connect": {
+    "message": "连接账户"
+  },
+  "app.ai-settings.oauth.connected": {
+    "message": "账户已连接"
+  },
+  "app.ai-settings.oauth.copy-code": {
+    "message": "复制授权码"
+  },
+  "app.ai-settings.oauth.denied": {
+    "message": "授权已被拒绝。"
+  },
+  "app.ai-settings.oauth.disconnect": {
+    "message": "断开连接"
+  },
+  "app.ai-settings.oauth.expired": {
+    "message": "授权码已过期，请重新开始。"
+  },
+  "app.ai-settings.oauth.open": {
+    "message": "打开授权页面"
+  },
+  "app.ai-settings.oauth.pending": {
+    "message": "请在浏览器中完成授权，本页面会自动更新。"
+  },
+  "app.ai-settings.oauth.reconnect": {
+    "message": "重新连接账户"
+  },
+  "app.ai-settings.refresh-models": {
+    "message": "获取模型"
+  },
+  "app.ai-settings.refreshing-models": {
+    "message": "正在获取……"
+  },
+  "app.ai-settings.save-credential": {
+    "message": "保存凭据"
+  },
+  "app.ai-settings.save-key": {
+    "message": "保存密钥"
+  },
+  "app.ai-settings.save-provider": {
+    "message": "保存供应商"
+  },
+  "app.ai-settings.saved": {
+    "message": "供应商设置已保存。"
+  },
+  "app.ai-settings.search": {
+    "message": "搜索供应商"
+  },
+  "app.ai-settings.search-models": {
+    "message": "搜索模型"
+  },
+  "app.ai-settings.test": {
+    "message": "测试供应商"
+  },
+  "app.ai-settings.test-model": {
+    "message": "测试模型"
+  },
+  "app.ai-settings.test-success": {
+    "message": "连接成功：{response}"
+  },
+  "app.ai-settings.testing": {
+    "message": "正在测试……"
+  },
+  "app.ai-settings.title": {
+    "message": "AI 供应商"
+  },
+  "app.ai-settings.vertex.service-account": {
+    "message": "服务账号 JSON"
+  },
+  "app.ai-settings.vertex.service-account-description": {
+    "message": "粘贴完整的 Google Cloud 服务账号 JSON 文档。"
+  },
+  "app.onboarding.ai.description": {
+    "message": "统一连接文本模型供应商、选择要使用的模型，也可在这里一键关闭所有 AI 功能。"
+  },
+  "app.onboarding.ai.title": {
+    "message": "连接你的 AI 供应商"
+  },
+  "app.settings.tabs.ai": {
+    "message": "AI"
+  },
+  "app.translation-settings.ai-model": {
+    "message": "文本模型"
+  },
+  "app.translation-settings.ai-provider": {
+    "message": "AI 供应商"
+  },
+  "app.translation-settings.provider.ai": {
+    "message": "AI 模型"
   }
 }

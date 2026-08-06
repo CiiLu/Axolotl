@@ -3,7 +3,9 @@ use crate::api::pack::install_from::{CreatePackInstance, CreatePackLocation};
 use crate::state::{
     InstanceInstallStage, InstanceLink, InstanceMetadata, ModLoader,
 };
+use crate::api::curseforge::CurseForgeInstallRequest;
 use chrono::{DateTime, Utc};
+use modrinth_content_management::{ContentType, ResolutionPreferences};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 use uuid::Uuid;
@@ -118,6 +120,10 @@ impl InstallJobState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::{
+        ContentSet, ContentSetStatus, ContentSourceKind, Instance,
+        InstanceLaunchOverrides, LauncherFeatureVersion, ReleaseChannel,
+    };
     use chrono::TimeDelta;
 
     fn job_state() -> InstallJobState {
@@ -129,6 +135,76 @@ mod tests {
             icon_path: None,
             link: InstanceLink::Unmanaged,
         })
+    }
+
+    #[test]
+    fn legacy_rollback_state_defaults_missing_content_revision() {
+        let now = Utc::now();
+        let instance_id = "instance".to_string();
+        let content_set_id = "content-set".to_string();
+        let mut job =
+            InstallJobState::new(InstallRequest::InstallExistingInstance {
+                instance_id: instance_id.clone(),
+                force: false,
+            });
+        job.rollback = Some(InstallRollbackState {
+            instance: InstanceMetadata {
+                instance: Instance {
+                    id: instance_id.clone(),
+                    path: "instance".to_string(),
+                    applied_content_set_id: Some(content_set_id.clone()),
+                    install_stage: InstanceInstallStage::Installed,
+                    launcher_feature_version:
+                        LauncherFeatureVersion::MOST_RECENT,
+                    update_channel: ReleaseChannel::Release,
+                    name: "Test".to_string(),
+                    icon_path: None,
+                    symlink_target: None,
+                    created: now,
+                    modified: now,
+                    last_played: None,
+                    pinned_at: None,
+                    submitted_time_played: 0,
+                    recent_time_played: 0,
+                },
+                applied_content_set: ContentSet {
+                    id: content_set_id,
+                    instance_id: instance_id.clone(),
+                    name: "Test".to_string(),
+                    source_kind: ContentSourceKind::Local,
+                    status: ContentSetStatus::Available,
+                    game_version: "1.21.1".to_string(),
+                    protocol_version: None,
+                    loader: ModLoader::Vanilla,
+                    loader_version: None,
+                    revision: 7,
+                    created: now,
+                    modified: now,
+                },
+                link: InstanceLink::Unmanaged,
+                groups: Vec::new(),
+                launch_overrides: InstanceLaunchOverrides::empty(instance_id),
+            },
+            install_stage: InstanceInstallStage::Installed,
+        });
+
+        let mut legacy = serde_json::to_value(job).unwrap();
+        legacy["rollback"]["instance"]["applied_content_set"]
+            .as_object_mut()
+            .unwrap()
+            .remove("revision");
+
+        let restored: InstallJobState = serde_json::from_value(legacy).unwrap();
+
+        assert_eq!(
+            restored
+                .rollback
+                .unwrap()
+                .instance
+                .applied_content_set
+                .revision,
+            0
+        );
     }
 
     #[test]
@@ -560,6 +636,23 @@ pub enum InstallRequest {
         #[serde(default)]
         post_install_edit: Option<InstallPostInstallEdit>,
     },
+    InstallContent {
+        instance_id: String,
+        project_id: String,
+        version_id: Option<String>,
+        content_type: ContentType,
+        #[serde(default)]
+        selected: ResolutionPreferences,
+        display_title: String,
+        #[serde(default)]
+        display_icon: Option<String>,
+    },
+    InstallCurseForgeContent {
+        request: CurseForgeInstallRequest,
+        display_title: String,
+        #[serde(default)]
+        display_icon: Option<String>,
+    },
     DownloadJava {
         vendor: String,
         version: u32,
@@ -593,6 +686,8 @@ impl InstallRequest {
             Self::InstallPackToExistingInstance { .. } => {
                 InstallJobKind::InstallPackToExistingInstance
             }
+            Self::InstallContent { .. } => InstallJobKind::InstallContent,
+            Self::InstallCurseForgeContent { .. } => InstallJobKind::InstallContent,
             Self::DownloadJava { .. } => InstallJobKind::DownloadJava,
         }
     }
@@ -600,11 +695,15 @@ impl InstallRequest {
     pub fn target(&self) -> InstallTarget {
         match self {
             Self::InstallExistingInstance { instance_id, .. }
-            | Self::InstallPackToExistingInstance { instance_id, .. } => {
+            | Self::InstallPackToExistingInstance { instance_id, .. }
+            | Self::InstallContent { instance_id, .. } => {
                 InstallTarget::ExistingInstance {
                     instance_id: instance_id.clone(),
                 }
             }
+            Self::InstallCurseForgeContent { request, .. } => InstallTarget::ExistingInstance {
+                instance_id: request.instance_id.clone(),
+            },
             _ => InstallTarget::NewInstance { instance_id: None },
         }
     }
@@ -617,6 +716,8 @@ impl InstallRequest {
                     instance_id: instance_id.clone(),
                 }
             }
+            Self::InstallContent { .. } => InstallCleanup::None,
+            Self::InstallCurseForgeContent { .. } => InstallCleanup::None,
             _ => InstallCleanup::DeleteNewInstance { instance_id: None },
         }
     }
@@ -631,6 +732,7 @@ pub enum InstallJobKind {
     DuplicateInstance,
     InstallExistingInstance,
     InstallPackToExistingInstance,
+    InstallContent,
     DownloadJava,
 }
 
@@ -737,6 +839,7 @@ impl InstallJobKind {
             Self::InstallPackToExistingInstance => {
                 "install_pack_to_existing_instance"
             }
+            Self::InstallContent => "install_content",
             Self::DownloadJava => "download_java",
         }
     }
@@ -750,6 +853,7 @@ impl InstallJobKind {
             "install_pack_to_existing_instance" => {
                 Self::InstallPackToExistingInstance
             }
+            "install_content" => Self::InstallContent,
             "download_java" => Self::DownloadJava,
             _ => Self::CreateInstance,
         }
@@ -816,6 +920,7 @@ pub enum InstallTarget {
 pub enum InstallCleanup {
     DeleteNewInstance { instance_id: Option<String> },
     RestoreExistingInstance { instance_id: String },
+    None,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -1087,6 +1192,12 @@ impl InstallJobState {
             },
             InstallRequest::InstallExistingInstance { .. } => {
                 InstallJobProvider::Minecraft
+            }
+            InstallRequest::InstallContent { .. } => {
+                InstallJobProvider::Modrinth
+            }
+            InstallRequest::InstallCurseForgeContent { .. } => {
+                InstallJobProvider::CurseForge
             }
             InstallRequest::DownloadJava { .. } => InstallJobProvider::Java,
             InstallRequest::ImportInstance { .. }

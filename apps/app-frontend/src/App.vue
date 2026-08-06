@@ -246,6 +246,7 @@ provideModalBehavior({
 	noblur: computed(() => !themeStore.advancedRendering),
 })
 
+const stateInitialization = initialize_state()
 const {
 	instanceIconPickerModal,
 	installationModal,
@@ -261,7 +262,7 @@ const {
 	handleModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance,
 	fileDrop,
-} = setupProviders(notificationManager, popupNotificationManager)
+} = setupProviders(notificationManager, popupNotificationManager, stateInitialization)
 
 const { browserOffline, offline, setNetworkReachable } = useNetworkStatus()
 
@@ -970,7 +971,7 @@ provide('previewUpdateAnnouncement', (version = null) => {
 })
 
 const stateFailed = ref(false)
-initialize_state()
+stateInitialization
 	.then(() => {
 		setupApp().catch((err) => {
 			stateFailed.value = true

@@ -1101,6 +1101,16 @@ pub async fn install_file(
     install_file_with_metrics(request, None).await
 }
 
+pub async fn install_file_with_reporter(
+    request: CurseForgeInstallRequest,
+    reporter: InstallProgressReporter,
+) -> crate::Result<CurseForgeInstallResult> {
+    let metrics = CurseForgeDownloadMetrics::with_reporter(reporter.clone());
+    let result = install_file_with_metrics(request, Some(&metrics)).await?;
+    metrics.finish(&reporter).await?;
+    Ok(result)
+}
+
 async fn install_file_with_metrics(
     request: CurseForgeInstallRequest,
     download_metrics: Option<&CurseForgeDownloadMetrics>,

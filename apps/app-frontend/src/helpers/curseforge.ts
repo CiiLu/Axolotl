@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 
+import type { InstallJobSnapshot } from './install'
+
 export type ContentProvider = 'modrinth' | 'curseforge'
 
 export interface CurseForgeCapability {
@@ -226,6 +228,27 @@ export function summarizeCurseForgeInstall(result: CurseForgeInstallResult) {
 	return { installed, manual, failed, optional, incompatible }
 }
 
+export function getCurseForgeDownloadFailureDetails(error: unknown): string | null {
+	const message =
+		error instanceof Error
+			? error.message
+			: typeof error === 'string'
+				? error
+				: typeof error === 'object' && error !== null && 'message' in error
+					? String(error.message)
+					: null
+	if (!message) return null
+
+	const normalized = message.toLowerCase()
+	const isDownloadFailure = normalized.includes('download failed after')
+	const isCurseForge =
+		normalized.includes('curseforge') ||
+		normalized.includes('forgecdn.net') ||
+		normalized.includes('forgecdn')
+
+	return isDownloadFailure && isCurseForge ? message : null
+}
+
 export function getCurseForgeCapability() {
 	return invoke<CurseForgeCapability>('plugin:curseforge|curseforge_capability')
 }
@@ -234,8 +257,11 @@ export function validateCurseForgeCredentials() {
 	return invoke<CurseForgeCapability>('plugin:curseforge|curseforge_validate_credentials')
 }
 
-export function searchCurseForgeProjects(request: CurseForgeSearchRequest) {
-	return invoke<UnifiedSearchResponse>('plugin:curseforge|curseforge_search_projects', { request })
+export function searchCurseForgeProjects(request: CurseForgeSearchRequest, requestId?: string) {
+	return invoke<UnifiedSearchResponse>('plugin:curseforge|curseforge_search_projects', {
+		request,
+		requestId,
+	})
 }
 
 export function getCurseForgeProject(projectId: number) {
@@ -275,6 +301,20 @@ export function getCurseForgeCategories(classId?: number) {
 
 export function installCurseForgeFile(request: CurseForgeInstallRequest) {
 	return invoke<CurseForgeInstallResult>('plugin:curseforge|curseforge_install_file', { request })
+}
+
+export function queueCurseForgeFile(
+	request: CurseForgeInstallRequest,
+	display: { title: string; iconUrl?: string | null },
+) {
+	return invoke<InstallJobSnapshot>(
+		'plugin:instance|instance_queue_curseforge_content',
+		{
+			request,
+			displayTitle: display.title,
+			displayIcon: display.iconUrl ?? null,
+		},
+	)
 }
 
 export function updateCurseForgeFile(instanceId: string, relativePath: string) {

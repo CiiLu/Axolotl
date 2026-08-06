@@ -5,7 +5,10 @@ import {
 	addHomeWidget,
 	createDefaultHomeDashboard,
 	createHomeDashboardSaveQueue,
+	enableFreeHomeDashboard,
+	findNearestFreeHomeWidgetPosition,
 	getHomeGridColumnCount,
+	getHomeWidgetDimensions,
 	getHomeWidgetSpan,
 	moveHomeWidget,
 	normalizeHomeDashboard,
@@ -13,8 +16,10 @@ import {
 	removeHomeWidget,
 	replaceHomeDashboardWidgets,
 	resizeHomeWidget,
+	setHomeDashboardLayout,
 	setHomeGreetingOptions,
 	setHomeRecentLimit,
+	setHomeWidgetPosition,
 } from './home-dashboard.ts'
 
 test('derives one to four columns from the dashboard container width', () => {
@@ -23,6 +28,17 @@ test('derives one to four columns from the dashboard container width', () => {
 	assert.equal(getHomeGridColumnCount(496), 2)
 	assert.equal(getHomeGridColumnCount(752), 3)
 	assert.equal(getHomeGridColumnCount(2000), 4)
+})
+
+test('derives responsive widget dimensions from the current grid', () => {
+	assert.deepEqual(getHomeWidgetDimensions('2x2', 4, 1008), {
+		width: 496,
+		height: 336,
+	})
+	assert.deepEqual(getHomeWidgetDimensions('2x1', 1, 320), {
+		width: 320,
+		height: 160,
+	})
 })
 
 test('temporarily clamps wide widgets without changing their preferred size', () => {
@@ -71,6 +87,31 @@ test('accepts draggable order and restores the complete default layout', () => {
 	)
 })
 
+test('enables free layout from packed positions and preserves manual coordinates', () => {
+	const original = createDefaultHomeDashboard()
+	const positioned = setHomeWidgetPosition(original, original.widgets[0].id, { column: 1, row: 3 })
+	const free = enableFreeHomeDashboard(positioned, 4)
+
+	assert.equal(free.layout, 'free')
+	assert.deepEqual(free.widgets[0].position, { column: 1, row: 3 })
+	assert.deepEqual(free.widgets[1].position, { column: 2, row: 0 })
+	assert.equal(setHomeDashboardLayout(free, 'grid').layout, 'grid')
+})
+
+test('snaps manual placement to the nearest open cell without moving other widgets', () => {
+	const free = enableFreeHomeDashboard(createDefaultHomeDashboard(), 4)
+	const before = free.widgets.map((widget) => widget.position)
+	const moving = free.widgets.at(-1)!
+	const occupied = free.widgets[0].position!
+	const resolved = findNearestFreeHomeWidgetPosition(free.widgets, moving, occupied, 4)
+
+	assert.notDeepEqual(resolved, occupied)
+	assert.deepEqual(
+		free.widgets.map((widget) => widget.position),
+		before,
+	)
+})
+
 test('rolls back the latest failed save and reports the error', async () => {
 	const original = createDefaultHomeDashboard()
 	const changed = removeHomeWidget(original, original.widgets[0].id)
@@ -96,6 +137,26 @@ test('normalizes a saved layout when entering Home again', () => {
 	const saved = createDefaultHomeDashboard()
 	const restored = normalizeHomeDashboard(JSON.parse(JSON.stringify(saved)))
 	assert.deepEqual(restored, saved)
+})
+
+test('normalizes legacy layouts and persisted free positions', () => {
+	const legacy = normalizeHomeDashboard({
+		version: 1,
+		widgets: [{ id: 'legacy', kind: 'calendar', size: '1x2' }],
+	})
+	const free = normalizeHomeDashboard({
+		version: 1,
+		layout: 'free',
+		widgets: [
+			{ id: 'valid', kind: 'calendar', size: '1x2', position: { column: 2, row: 4 } },
+			{ id: 'invalid', kind: 'calendar', size: '1x2', position: { column: -10, row: 'top' } },
+		],
+	})
+
+	assert.equal(legacy?.layout, 'grid')
+	assert.equal(free?.layout, 'free')
+	assert.deepEqual(free?.widgets[0].position, { column: 2, row: 4 })
+	assert.equal(free?.widgets[1].position, undefined)
 })
 
 test('packs widgets into the earliest available cells', () => {

@@ -69,7 +69,8 @@ html {
 
 .site-layout {
 	min-height: 100vh;
-	background: var(--color-bg);
+	background: linear-gradient(rgb(255 255 255 / 1%) 1px, transparent 1px), var(--color-bg);
+	background-size: 100% 8rem;
 }
 
 .site-layout > main {
@@ -86,5 +87,16 @@ html {
 	animation-duration: 0.001ms !important;
 	animation-iteration-count: 1 !important;
 	transition-duration: 0.001ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+	}
 }
 </style>

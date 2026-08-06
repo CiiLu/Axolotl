@@ -1,4 +1,5 @@
-use crate::api::Result;
+use crate::api::search_cancellation::{self, SearchCancellation};
+use crate::api::{Result, TheseusSerializableError};
 use theseus::prelude::*;
 
 macro_rules! impl_cache_methods {
@@ -35,9 +36,51 @@ impl_cache_methods!(
     (User, User),
     (Team, Vec<TeamMember>),
     (Organization, Organization),
-    (SearchResults, SearchResults),
-    (SearchResultsV3, SearchResultsV3)
+    (SearchResults, SearchResults)
 );
+
+#[tauri::command]
+pub async fn get_search_results_v3(
+    id: &str,
+    cache_behaviour: Option<CacheBehaviour>,
+    request_id: Option<String>,
+) -> Result<Option<SearchResultsV3>> {
+    let Some(request_id) = request_id else {
+        return Ok(
+            theseus::cache::get_search_results_v3(id, cache_behaviour).await?
+        );
+    };
+    let cancellation = SearchCancellation::register(request_id);
+
+    tokio::select! {
+        result = theseus::cache::get_search_results_v3(id, cache_behaviour) => Ok(result?),
+        _ = cancellation.cancelled() => Err(TheseusSerializableError::SearchCancelled(
+            "Modrinth browse search".to_string(),
+        )),
+    }
+}
+
+#[tauri::command]
+pub async fn get_search_results_v3_many(
+    ids: Vec<String>,
+    cache_behaviour: Option<CacheBehaviour>,
+) -> Result<Vec<SearchResultsV3>> {
+    let ids = ids.iter().map(|x| &**x).collect::<Vec<&str>>();
+    Ok(
+        theseus::cache::get_search_results_v3_many(&ids, cache_behaviour)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub fn cancel_search_request(request_id: String) {
+    if let Some(pending) = search_cancellation::cancel(&request_id) {
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            pending.expire();
+        });
+    }
+}
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("cache")
@@ -58,6 +101,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             get_search_results_many,
             get_search_results_v3,
             get_search_results_v3_many,
+            cancel_search_request,
             purge_cache_types,
             get_project_versions,
         ])

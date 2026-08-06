@@ -13,3 +13,11 @@ The local schematic preview uses [Deepslate](https://github.com/misode/deepslate
 The bundled blockstate data, block models, default block properties, and texture atlas are sourced from the public [Misode mcmeta](https://github.com/misode/mcmeta) dataset, which is generated from Minecraft: Java Edition client resources and Mojang's data generator. The current bundle is pinned to `summary@b8170fbc07725bf4930d189ad5dc16f70e09b9cd` and `atlas@a73f0316d9cea52a53381664328bda00e5fe79e4` (Minecraft `26.3-snapshot-6`) and can be reproduced with `scripts/axolotl/sync-schematic-resources.mjs`.
 
 Minecraft and its original resources are Copyright Mojang AB. Their namespaced identifiers are retained only where required to identify compatible game content. Axolotl Launcher is not affiliated with or endorsed by Mojang or Microsoft.
+
+## AI integration attribution
+
+The AI provider settings information architecture, provider catalog, and provider descriptions are adapted from [LobeChat](https://github.com/lobehub/lobe-chat) at commit `a27dfaeda1ab499ac024a6eb0448917b216ba8a1`. The localized provider descriptions under `src/data/lobehub-provider-descriptions` are reproduced from that release. Bundled text-model metadata is synchronized separately from [LobeHub's model bank](https://github.com/lobehub/lobehub/tree/main/packages/model-bank/src/aiModels), with its exact source revision recorded in the backend catalog. LobeChat is distributed under the LobeHub Community License; a verbatim copy of that license is provided in [third-party/licenses/LobeHub-Community-License.txt](../../third-party/licenses/LobeHub-Community-License.txt).
+
+Provider and model marks are loaded from [Lobe Icons](https://github.com/lobehub/lobe-icons) through `@lobehub/icons-static-svg`. Lobe Icons is distributed under the MIT License; its license is included with the installed package.
+
+The translation provider and model selection workflow is adapted from [Read Frog](https://github.com/mengxi-ream/read-frog) at commit `951e20fa82cd96d606a44156362f402c79d11473`. Read Frog is distributed under the GNU General Public License, Version 3; a copy is provided in [third-party/licenses/Read-Frog-GPL-3.0.txt](../../third-party/licenses/Read-Frog-GPL-3.0.txt).

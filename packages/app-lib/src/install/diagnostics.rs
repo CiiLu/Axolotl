@@ -535,6 +535,7 @@ fn cleanup_summary(cleanup: &InstallCleanup) -> String {
         InstallCleanup::RestoreExistingInstance { instance_id } => {
             format!("restore existing instance {instance_id}")
         }
+        InstallCleanup::None => "no cleanup required".to_string(),
     }
 }
 

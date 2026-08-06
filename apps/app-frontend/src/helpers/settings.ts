@@ -5,9 +5,9 @@
  */
 import { invoke } from '@tauri-apps/api/core'
 
+import type { HomeDashboardConfig } from '@/components/home/home-dashboard'
 import { setModrinthSourceMode } from '@/config'
 import type { Hooks, MemorySettings, WindowSize } from '@/helpers/types'
-import type { HomeDashboardConfig } from '@/components/home/home-dashboard'
 import type { AccentColorSetting, ColorTheme, FeatureFlag, HomeLayout } from '@/store/theme.ts'
 
 // Settings object

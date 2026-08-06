@@ -76,6 +76,7 @@ fn main() {
                         "get_search_results_many",
                         "get_search_results_v3",
                         "get_search_results_v3_many",
+                        "cancel_search_request",
                         "purge_cache_types",
                         "get_project_versions",
                     ])
@@ -301,6 +302,8 @@ fn main() {
                         "instance_update_project",
                         "instance_add_project_from_version",
                         "instance_install_project_with_dependencies",
+                        "instance_queue_project_with_dependencies",
+                        "instance_queue_curseforge_content",
                         "instance_switch_project_version_with_dependencies",
                         "instance_add_project_from_path",
                         "instance_import_world_save",
@@ -390,12 +393,33 @@ fn main() {
                     ),
             )
             .plugin(
+                "ai",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "ai_get_catalog",
+                        "ai_get_state",
+                        "ai_update_settings",
+                        "ai_update_provider",
+                        "ai_set_api_key",
+                        "ai_set_credential",
+                        "ai_update_model",
+                        "ai_remove_model",
+                        "ai_fetch_models",
+                        "ai_test_provider",
+                        "ai_begin_oauth",
+                        "ai_poll_oauth",
+                        "ai_disconnect_oauth",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "translation",
                 InlinedPlugin::new()
                     .commands(&[
                         "translation_get_settings",
                         "translation_update_settings",
-                        "translation_set_secret",
                         "translation_test_provider",
                         "translation_translate",
                         "translation_clear_cache",

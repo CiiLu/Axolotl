@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import {
 	CheckIcon,
+	GridIcon,
 	LayoutTemplateIcon,
 	MinimizeIcon,
+	MoveIcon,
 	PencilIcon,
 	PlusIcon,
 	RotateCounterClockwiseIcon,
@@ -16,13 +18,13 @@ import {
 import { computed, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { getActivePlayerName } from '@/components/home/home-utils'
 import {
 	createDefaultHomeDashboard,
 	createHomeDashboardSaveQueue,
-	normalizeHomeDashboard,
 	type HomeDashboardConfig,
+	normalizeHomeDashboard,
 } from '@/components/home/home-dashboard'
+import { getActivePlayerName } from '@/components/home/home-utils'
 import HomeDailyChallenge from '@/components/home/HomeDailyChallenge.vue'
 import HomeDashboard from '@/components/home/HomeDashboard.vue'
 import HomeInstancePickerModal from '@/components/home/HomeInstancePickerModal.vue'
@@ -62,6 +64,18 @@ const messages = defineMessages({
 		id: 'app.home.layout.toggle',
 		defaultMessage: 'Minimal Home',
 	},
+	switchToGridWidgetLayout: {
+		id: 'app.home.widgets.layout.switch-to-grid',
+		defaultMessage: 'Switch to grid widget layout',
+	},
+	switchToFreeWidgetLayout: {
+		id: 'app.home.widgets.layout.switch-to-free',
+		defaultMessage: 'Switch to free widget layout',
+	},
+	widgetLayoutToggle: {
+		id: 'app.home.widgets.layout.toggle',
+		defaultMessage: 'Widget layout mode',
+	},
 	resetWidgets: {
 		id: 'app.home.widgets.reset-confirm',
 		defaultMessage: 'Restore the default widget layout?',
@@ -89,6 +103,7 @@ const dashboard = ref<InstanceType<typeof HomeDashboard>>()
 const dashboardEditing = ref(false)
 const instancePicker = ref<InstanceType<typeof HomeInstancePickerModal>>()
 const isMinimal = computed(() => themeStore.homeLayout === 'minimal')
+const isFreeWidgetLayout = computed(() => dashboardConfig.value?.layout === 'free')
 const switchingLayout = ref(false)
 const dashboardSaveQueue = createHomeDashboardSaveQueue(
 	async (config) => {
@@ -214,6 +229,10 @@ function toggleDashboardEditing() {
 	dashboardEditing.value = !dashboardEditing.value
 }
 
+function toggleWidgetLayout() {
+	dashboard.value?.setLayout(isFreeWidgetLayout.value ? 'grid' : 'free')
+}
+
 function openWidgetPicker() {
 	dashboard.value?.openWidgetPicker()
 }
@@ -296,6 +315,31 @@ onUnmounted(() => {
 			>
 				<CheckIcon v-if="dashboardEditing" />
 				<PencilIcon v-else />
+			</button>
+			<button
+				v-if="dashboardEditing"
+				v-tooltip="
+					formatMessage(
+						isFreeWidgetLayout
+							? messages.switchToGridWidgetLayout
+							: messages.switchToFreeWidgetLayout,
+					)
+				"
+				type="button"
+				role="switch"
+				class="home-layout-switch home-widget-layout-switch"
+				:class="{ 'is-free': isFreeWidgetLayout }"
+				:aria-checked="isFreeWidgetLayout"
+				:aria-label="formatMessage(messages.widgetLayoutToggle)"
+				@click="toggleWidgetLayout"
+			>
+				<span class="home-layout-switch-option home-widget-layout-grid" aria-hidden="true">
+					<GridIcon />
+				</span>
+				<span class="home-layout-switch-thumb" aria-hidden="true" />
+				<span class="home-layout-switch-option home-widget-layout-free" aria-hidden="true">
+					<MoveIcon />
+				</span>
 			</button>
 			<span class="home-floating-divider" aria-hidden="true" />
 		</template>
@@ -447,6 +491,10 @@ onUnmounted(() => {
 	transform: translateX(2rem);
 }
 
+.home-widget-layout-switch.is-free .home-layout-switch-thumb {
+	transform: translateX(2rem);
+}
+
 .home-layout-switch-option {
 	position: relative;
 	z-index: 1;
@@ -465,7 +513,9 @@ onUnmounted(() => {
 }
 
 .home-layout-switch:not(.is-minimal) .home-layout-switch-information,
-.home-layout-switch.is-minimal .home-layout-switch-minimal {
+.home-layout-switch.is-minimal .home-layout-switch-minimal,
+.home-widget-layout-switch:not(.is-free) .home-widget-layout-grid,
+.home-widget-layout-switch.is-free .home-widget-layout-free {
 	color: var(--color-accent-contrast);
 }
 </style>

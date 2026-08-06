@@ -1,4 +1,5 @@
-use crate::api::Result;
+use crate::api::search_cancellation::SearchCancellation;
+use crate::api::{Result, TheseusSerializableError};
 use theseus::curseforge::{
     CurseForgeCapability, CurseForgeCategory, CurseForgeFile,
     CurseForgeFilesRequest, CurseForgeFilesResponse,
@@ -50,8 +51,19 @@ pub async fn curseforge_validate_credentials() -> Result<CurseForgeCapability> {
 #[tauri::command]
 pub async fn curseforge_search_projects(
     request: CurseForgeSearchRequest,
+    request_id: Option<String>,
 ) -> Result<UnifiedSearchResponse> {
-    Ok(theseus::curseforge::search_projects(request).await?)
+    let Some(request_id) = request_id else {
+        return Ok(theseus::curseforge::search_projects(request).await?);
+    };
+    let cancellation = SearchCancellation::register(request_id);
+
+    tokio::select! {
+        result = theseus::curseforge::search_projects(request) => Ok(result?),
+        _ = cancellation.cancelled() => Err(TheseusSerializableError::SearchCancelled(
+            "CurseForge browse search".to_string(),
+        )),
+    }
 }
 
 #[tauri::command]

@@ -47,6 +47,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_update_project,
             instance_add_project_from_version,
             instance_install_project_with_dependencies,
+            instance_queue_project_with_dependencies,
+            instance_queue_curseforge_content,
             instance_switch_project_version_with_dependencies,
             instance_add_project_from_path,
             instance_import_world_save,
@@ -731,6 +733,36 @@ pub async fn instance_install_project_with_dependencies(
     Ok(theseus::instance::install_project_with_dependencies(
         instance_id,
         request,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_queue_project_with_dependencies(
+    instance_id: &str,
+    request: InstallProjectWithDependenciesRequest,
+    display_title: String,
+    display_icon: Option<String>,
+) -> Result<theseus::install::InstallJobSnapshot> {
+    Ok(theseus::instance::queue_project_with_dependencies(
+        instance_id,
+        request,
+        display_title,
+        display_icon,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_queue_curseforge_content(
+    request: theseus::curseforge::CurseForgeInstallRequest,
+    display_title: String,
+    display_icon: Option<String>,
+) -> Result<theseus::install::InstallJobSnapshot> {
+    Ok(theseus::instance::queue_curseforge_content(
+        request,
+        display_title,
+        display_icon,
     )
     .await?)
 }

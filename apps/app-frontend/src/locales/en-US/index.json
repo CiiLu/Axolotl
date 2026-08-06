@@ -134,6 +134,192 @@
   "app.action-bar.view-logs": {
     "message": "View logs"
   },
+  "app.ai-settings.add-model": {
+    "message": "Add model"
+  },
+  "app.ai-settings.all-providers": {
+    "message": "All"
+  },
+  "app.ai-settings.api-key": {
+    "message": "API key"
+  },
+  "app.ai-settings.api-key-configured": {
+    "message": "A key is stored securely in the operating system credential store."
+  },
+  "app.ai-settings.api-key-optional": {
+    "message": "No key is stored. Local providers can work without one."
+  },
+  "app.ai-settings.bedrock.access-key-id": {
+    "message": "AWS access key ID"
+  },
+  "app.ai-settings.bedrock.api-key": {
+    "message": "API key"
+  },
+  "app.ai-settings.bedrock.authentication": {
+    "message": "Authentication"
+  },
+  "app.ai-settings.bedrock.aws-credentials": {
+    "message": "AWS credentials"
+  },
+  "app.ai-settings.bedrock.secret-access-key": {
+    "message": "AWS secret access key"
+  },
+  "app.ai-settings.bedrock.session-token": {
+    "message": "AWS session token (optional)"
+  },
+  "app.ai-settings.clear-credential": {
+    "message": "Clear credential"
+  },
+  "app.ai-settings.clear-key": {
+    "message": "Clear key"
+  },
+  "app.ai-settings.configured-models": {
+    "message": "{count, plural, one {# text model} other {# text models}}"
+  },
+  "app.ai-settings.credential-configured": {
+    "message": "Stored securely in the operating system credential store."
+  },
+  "app.ai-settings.description": {
+    "message": "Configure text models once, then use them across launcher features."
+  },
+  "app.ai-settings.disabled": {
+    "message": "Disabled"
+  },
+  "app.ai-settings.disabled-providers": {
+    "message": "Disabled providers"
+  },
+  "app.ai-settings.enabled": {
+    "message": "Enabled"
+  },
+  "app.ai-settings.enabled-providers": {
+    "message": "Enabled providers"
+  },
+  "app.ai-settings.endpoint": {
+    "message": "API endpoint"
+  },
+  "app.ai-settings.field.account-id": {
+    "message": "Account ID"
+  },
+  "app.ai-settings.field.api-version": {
+    "message": "API version"
+  },
+  "app.ai-settings.field.deployment": {
+    "message": "Deployment"
+  },
+  "app.ai-settings.field.location": {
+    "message": "Location"
+  },
+  "app.ai-settings.field.project": {
+    "message": "Project ID"
+  },
+  "app.ai-settings.field.region": {
+    "message": "Region"
+  },
+  "app.ai-settings.master-switch": {
+    "message": "Enable AI features"
+  },
+  "app.ai-settings.master-switch-description": {
+    "message": "When disabled, AI actions and provider choices are hidden across the launcher."
+  },
+  "app.ai-settings.model-id": {
+    "message": "Model ID"
+  },
+  "app.ai-settings.model-name": {
+    "message": "Display name (optional)"
+  },
+  "app.ai-settings.models": {
+    "message": "Text models"
+  },
+  "app.ai-settings.no-matching-models": {
+    "message": "No models match your search."
+  },
+  "app.ai-settings.no-models": {
+    "message": "No models are available. Add a model ID to continue."
+  },
+  "app.ai-settings.no-providers": {
+    "message": "No providers found."
+  },
+  "app.ai-settings.oauth.check": {
+    "message": "Check authorization status"
+  },
+  "app.ai-settings.oauth.checking": {
+    "message": "Checking authorization status"
+  },
+  "app.ai-settings.oauth.code": {
+    "message": "Authorization code"
+  },
+  "app.ai-settings.oauth.connect": {
+    "message": "Connect account"
+  },
+  "app.ai-settings.oauth.connected": {
+    "message": "Account connected"
+  },
+  "app.ai-settings.oauth.copy-code": {
+    "message": "Copy authorization code"
+  },
+  "app.ai-settings.oauth.denied": {
+    "message": "Authorization was denied."
+  },
+  "app.ai-settings.oauth.disconnect": {
+    "message": "Disconnect"
+  },
+  "app.ai-settings.oauth.expired": {
+    "message": "The authorization code expired. Start again."
+  },
+  "app.ai-settings.oauth.open": {
+    "message": "Open authorization page"
+  },
+  "app.ai-settings.oauth.pending": {
+    "message": "Complete authorization in your browser. This page will update automatically."
+  },
+  "app.ai-settings.oauth.reconnect": {
+    "message": "Reconnect account"
+  },
+  "app.ai-settings.refresh-models": {
+    "message": "Fetch models"
+  },
+  "app.ai-settings.refreshing-models": {
+    "message": "Fetching…"
+  },
+  "app.ai-settings.save-credential": {
+    "message": "Save credential"
+  },
+  "app.ai-settings.save-key": {
+    "message": "Save key"
+  },
+  "app.ai-settings.save-provider": {
+    "message": "Save provider"
+  },
+  "app.ai-settings.saved": {
+    "message": "Provider settings saved."
+  },
+  "app.ai-settings.search": {
+    "message": "Search providers"
+  },
+  "app.ai-settings.search-models": {
+    "message": "Search models"
+  },
+  "app.ai-settings.test": {
+    "message": "Test provider"
+  },
+  "app.ai-settings.test-model": {
+    "message": "Test model"
+  },
+  "app.ai-settings.test-success": {
+    "message": "Connection succeeded: {response}"
+  },
+  "app.ai-settings.testing": {
+    "message": "Testing…"
+  },
+  "app.ai-settings.title": {
+    "message": "AI providers"
+  },
+  "app.ai-settings.vertex.service-account": {
+    "message": "Service-account JSON"
+  },
+  "app.ai-settings.vertex.service-account-description": {
+    "message": "Paste the complete Google Cloud service-account JSON document."
+  },
   "app.appearance-settings.accent-color.blue": {
     "message": "Blue"
   },
@@ -499,6 +685,12 @@
   },
   "app.curseforge.modpack-installed.title": {
     "message": "CurseForge modpack installed"
+  },
+  "app.curseforge.network-download-failed.notification-body": {
+    "message": "Could not connect to CurseForge to download this file. Your network or proxy may be blocking CurseForge. Turn off or change your VPN/proxy, try another network, then retry the download."
+  },
+  "app.curseforge.network-download-failed.notification-title": {
+    "message": "Could not download from CurseForge"
   },
   "app.downloads.all-sources": {
     "message": "All sources"
@@ -1106,15 +1298,6 @@
   "app.home.greeting.night": {
     "message": "The night shift is ready.\nA good evening for familiar worlds.\nYour favorite instance is waiting nearby.\nThe stars are out; the plans are in.\nA calm session can end the day well.\nThe world is quieter after dark.\nTime to put a few more blocks in place.\nYour base is glowing in the distance.\nThe next adventure starts at sunset.\nA night well spent has a good save file.\nThe campfire crackles, somewhere.\nThe moon makes every build look dramatic.\nA little Minecraft before tomorrow.\nYour worlds are ready for a visit.\nThe night is still young, in chunks.\nSettle in for a well-earned session."
   },
-  "app.home.greeting.with-player": {
-    "message": "Welcome back, {name}. {greeting}"
-  },
-  "app.home.greeting.welcome": {
-    "message": "Welcome back."
-  },
-  "app.home.greeting.welcome-with-player": {
-    "message": "Welcome back, {name}."
-  },
   "app.home.greeting.settings.font": {
     "message": "Font"
   },
@@ -1145,14 +1328,14 @@
   "app.home.greeting.settings.mode.text": {
     "message": "Custom text only"
   },
-  "app.home.greeting.settings.mode.text-description": {
-    "message": "Replace the automatic greeting with your own message."
-  },
   "app.home.greeting.settings.mode.text-and-greeting": {
     "message": "Text + greeting"
   },
   "app.home.greeting.settings.mode.text-and-greeting-description": {
     "message": "Put your own message before the rotating greeting."
+  },
+  "app.home.greeting.settings.mode.text-description": {
+    "message": "Replace the automatic greeting with your own message."
   },
   "app.home.greeting.settings.prefix-placeholder": {
     "message": "Welcome back, {name}."
@@ -1171,6 +1354,15 @@
   },
   "app.home.greeting.settings.title": {
     "message": "Customize greeting"
+  },
+  "app.home.greeting.welcome": {
+    "message": "Welcome back."
+  },
+  "app.home.greeting.welcome-with-player": {
+    "message": "Welcome back, {name}."
+  },
+  "app.home.greeting.with-player": {
+    "message": "Welcome back, {name}. {greeting}"
   },
   "app.home.insights.empty": {
     "message": "Play something and your stats will show up here."
@@ -1366,6 +1558,15 @@
   },
   "app.home.widgets.instance-description": {
     "message": "Choose one instance for a dedicated launch shortcut."
+  },
+  "app.home.widgets.layout.switch-to-free": {
+    "message": "Switch to free widget layout"
+  },
+  "app.home.widgets.layout.switch-to-grid": {
+    "message": "Switch to grid widget layout"
+  },
+  "app.home.widgets.layout.toggle": {
+    "message": "Widget layout mode"
   },
   "app.home.widgets.loading": {
     "message": "Loading..."
@@ -3530,6 +3731,12 @@
   "app.onboarding.action.start": {
     "message": "Take the tour"
   },
+  "app.onboarding.ai.description": {
+    "message": "Connect text-model providers once, choose the models you want available, or switch every AI feature off in one place."
+  },
+  "app.onboarding.ai.title": {
+    "message": "Bring your own AI provider"
+  },
   "app.onboarding.appearance.description": {
     "message": "Theme, accent, background, Home layout, and window behavior. Make this launcher look familiar."
   },
@@ -3603,7 +3810,7 @@
     "message": "Download control room"
   },
   "app.onboarding.home-customize.description": {
-    "message": "Use the bottom-right edit control to add shortcuts, reorder widgets, resize them, and configure their content."
+    "message": "Use the bottom-right edit control to add, resize, and configure widgets. While editing, switch between an automatically packed grid and a free grid that preserves empty cells."
   },
   "app.onboarding.home-customize.title": {
     "message": "Arrange it your way"
@@ -3696,7 +3903,7 @@
     "message": "Do not cook the computer"
   },
   "app.onboarding.settings.description": {
-    "message": "The useful knobs live here: appearance, language, translation, Java, storage, and updates."
+    "message": "The useful knobs live here: appearance, language, translation, AI providers, Java, storage, and updates."
   },
   "app.onboarding.settings.title": {
     "message": "Make it yours"
@@ -4139,6 +4346,9 @@
   "app.settings.tabs.about": {
     "message": "About"
   },
+  "app.settings.tabs.ai": {
+    "message": "AI"
+  },
   "app.settings.tabs.appearance": {
     "message": "Appearance"
   },
@@ -4412,23 +4622,17 @@
   "app.symlink-warning.write.header": {
     "message": "Shared instance"
   },
-  "app.translation-settings.api-key": {
-    "message": "API key"
+  "app.translation-settings.ai-model": {
+    "message": "Text model"
   },
-  "app.translation-settings.api-key-configured": {
-    "message": "An API key is already configured. Enter a new value to replace it."
-  },
-  "app.translation-settings.api-key-optional": {
-    "message": "Optional for local or unauthenticated endpoints."
+  "app.translation-settings.ai-provider": {
+    "message": "AI provider"
   },
   "app.translation-settings.auto-translate": {
     "message": "Translate project pages automatically"
   },
   "app.translation-settings.auto-translate-description": {
     "message": "Start translating as soon as a Modrinth project page is opened."
-  },
-  "app.translation-settings.base-url": {
-    "message": "Base URL"
   },
   "app.translation-settings.cache": {
     "message": "Translation cache"
@@ -4442,9 +4646,6 @@
   "app.translation-settings.clear-cache": {
     "message": "Clear translation cache"
   },
-  "app.translation-settings.clear-key": {
-    "message": "Clear API key"
-  },
   "app.translation-settings.description": {
     "message": "Translate Modrinth project titles, summaries, and descriptions while browsing content."
   },
@@ -4457,29 +4658,20 @@
   "app.translation-settings.display-mode.translation-only": {
     "message": "Translation only"
   },
-  "app.translation-settings.model": {
-    "message": "Model"
-  },
-  "app.translation-settings.openai.configuration": {
-    "message": "OpenAI-compatible configuration"
-  },
   "app.translation-settings.operation-failed": {
     "message": "The translation operation failed. Check the configuration and try again."
   },
   "app.translation-settings.provider": {
     "message": "Translation service"
   },
+  "app.translation-settings.provider.ai": {
+    "message": "AI model"
+  },
   "app.translation-settings.provider.google": {
     "message": "Google Translate (free)"
   },
   "app.translation-settings.provider.microsoft": {
-    "message": "Microsoft Translate (free)"
-  },
-  "app.translation-settings.provider.openai-compatible": {
-    "message": "OpenAI compatible"
-  },
-  "app.translation-settings.save-key": {
-    "message": "Save API key"
+    "message": "Microsoft Translate (unavailable)"
   },
   "app.translation-settings.style": {
     "message": "Translation style"
@@ -4487,11 +4679,17 @@
   "app.translation-settings.style.background": {
     "message": "Background"
   },
-  "app.translation-settings.style.border": {
-    "message": "Left border"
+  "app.translation-settings.style.blockquote": {
+    "message": "Block quote"
   },
-  "app.translation-settings.style.brand": {
-    "message": "Accent color"
+  "app.translation-settings.style.blur": {
+    "message": "Blur"
+  },
+  "app.translation-settings.style.border": {
+    "message": "Border"
+  },
+  "app.translation-settings.style.dashed-line": {
+    "message": "Dashed underline"
   },
   "app.translation-settings.style.default": {
     "message": "Default"
@@ -4505,14 +4703,17 @@
   "app.translation-settings.style.preview-text": {
     "message": "Discover high-quality Minecraft content on Modrinth."
   },
+  "app.translation-settings.style.text-color": {
+    "message": "Text color"
+  },
   "app.translation-settings.style.weakened": {
     "message": "Muted"
   },
   "app.translation-settings.system-prompt": {
-    "message": "System prompt"
+    "message": "Translation instructions"
   },
   "app.translation-settings.system-prompt-description": {
-    "message": "Enter a custom system prompt, or leave blank to use the default. The prompt should guide the model to produce JSON output as required by the built-in contract; avoid instructions that conflict with the format requirements."
+    "message": "Optional feature-specific instructions. The launcher always appends its structured translation contract."
   },
   "app.translation-settings.target-language": {
     "message": "Target language"

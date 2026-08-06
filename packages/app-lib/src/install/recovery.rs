@@ -110,6 +110,24 @@ fn display_from_request(state: &InstallJobState) -> Option<InstallJobDisplay> {
                 icon: rollback.instance.instance.icon_path.clone(),
             })
         }
+        InstallRequest::InstallContent {
+            display_title,
+            display_icon,
+            ..
+        } => {
+            Some(InstallJobDisplay {
+                title: display_title.clone(),
+                icon: display_icon.clone(),
+            })
+        }
+        InstallRequest::InstallCurseForgeContent {
+            display_title,
+            display_icon,
+            ..
+        } => Some(InstallJobDisplay {
+            title: display_title.clone(),
+            icon: display_icon.clone(),
+        }),
         InstallRequest::DownloadJava { vendor, version } => Some(InstallJobDisplay {
             title: format!("Java {version} ({vendor})"),
             icon: None,
@@ -141,6 +159,7 @@ pub async fn apply_cleanup(
                 emit_instance(instance_id, InstancePayloadType::Edited).await?;
             }
         }
+        InstallCleanup::None => {}
     }
 
     Ok(())

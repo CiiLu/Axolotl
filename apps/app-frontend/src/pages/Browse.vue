@@ -46,6 +46,7 @@ import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { useTranslationToggle } from '@/composables/useTranslationToggle'
 import { mergeProviderResults } from '@/helpers/browse-merge'
 import {
+	cancel_search_request,
 	get_project,
 	get_project_v3,
 	get_project_v3_many,
@@ -1411,7 +1412,7 @@ function rankChineseProviderHits(hits: ChineseSearchHit[], sort: string | null) 
 		.map(({ hit }) => hit)
 }
 
-async function search(requestParams: string) {
+async function search(requestParams: string, signal: AbortSignal) {
 	debugLog('searching v3', requestParams)
 	const isServer = projectType.value === 'server'
 	const params = new URLSearchParams(requestParams)
@@ -1468,6 +1469,7 @@ async function search(requestParams: string) {
 			categoryValues: nonLoaderCategoryValues,
 		})
 	}
+	signal.throwIfAborted()
 
 	let modrinthRequestParams =
 		includeModrinth && (includeCurseForge || hasOnlyCurseForgeExclusiveCategories)
@@ -1479,15 +1481,46 @@ async function search(requestParams: string) {
 			chineseResolution.modrinthQuery,
 		)
 	}
+	const providerRequestGroupId = crypto.randomUUID()
+	const modrinthRequestId = `${providerRequestGroupId}:modrinth`
+	const curseForgeRequestId = `${providerRequestGroupId}:curseforge`
+	const activeProviderRequestIds = new Set<string>()
+	function trackProviderRequest<T>(requestId: string, request: Promise<T>) {
+		activeProviderRequestIds.add(requestId)
+		return request.finally(() => activeProviderRequestIds.delete(requestId))
+	}
+	let rejectProviderSearch: (reason?: unknown) => void = () => {}
+	const providerSearchCancelled = new Promise<never>((_, reject) => {
+		rejectProviderSearch = reject
+	})
+	const cancelProviderRequests = () => {
+		for (const requestId of activeProviderRequestIds) {
+			cancel_search_request(requestId).catch((error) => {
+				debugLog('failed to cancel provider search', { requestId, error })
+			})
+		}
+		rejectProviderSearch(signal.reason)
+	}
+	signal.addEventListener('abort', cancelProviderRequests, { once: true })
+
 	const modrinthRequest = includeModrinth
 		? queryClient.fetchQuery({
 				queryKey: ['search', 'v3', modrinthRequestParams],
 				queryFn: () =>
-					get_search_results_v3(modrinthRequestParams, 'must_revalidate') as Promise<{
-						result: Labrinth.Search.v3.SearchResults & {
-							hits: (Labrinth.Search.v3.ResultSearchProject & { installed?: boolean })[]
-						}
-					} | null>,
+					trackProviderRequest(
+						modrinthRequestId,
+						get_search_results_v3(
+							modrinthRequestParams,
+							'must_revalidate',
+							modrinthRequestId,
+						) as Promise<{
+							result: Labrinth.Search.v3.SearchResults & {
+								hits: (Labrinth.Search.v3.ResultSearchProject & {
+									installed?: boolean
+								})[]
+							}
+						} | null>,
+					),
 				staleTime: 30_000,
 			})
 		: Promise.resolve(null)
@@ -1501,17 +1534,23 @@ async function search(requestParams: string) {
 		})
 	}
 	const curseForgeRequest = includeCurseForge
-		? searchCurseForgeProjects({
-				classId: curseForgeClassIds[projectType.value]!,
-				categoryIds: curseForgeCategoryIds,
-				searchFilter: (chineseResolution?.curseforgeQuery ?? rawQuery) || undefined,
-				gameVersion: gameVersion || undefined,
-				modLoaderType: loader ? curseForgeLoaderTypes[loader] : undefined,
-				sortField: getCurseForgeSortField(params.get('index')),
-				sortOrder: 'desc',
-				index: offset,
-				pageSize: limit,
-			})
+		? trackProviderRequest(
+				curseForgeRequestId,
+				searchCurseForgeProjects(
+					{
+						classId: curseForgeClassIds[projectType.value]!,
+						categoryIds: curseForgeCategoryIds,
+						searchFilter: (chineseResolution?.curseforgeQuery ?? rawQuery) || undefined,
+						gameVersion: gameVersion || undefined,
+						modLoaderType: loader ? curseForgeLoaderTypes[loader] : undefined,
+						sortField: getCurseForgeSortField(params.get('index')),
+						sortOrder: 'desc',
+						index: offset,
+						pageSize: limit,
+					},
+					curseForgeRequestId,
+				),
+			)
 		: Promise.resolve(null)
 	const directModrinthRequest =
 		includeModrinth &&
@@ -1520,11 +1559,10 @@ async function search(requestParams: string) {
 		(chineseResolution?.modrinthSlugs.length ?? 0) > 0
 			? get_project_v3_many(chineseResolution!.modrinthSlugs, 'must_revalidate')
 			: Promise.resolve([])
-	const [modrinthResult, curseForgeResult, directModrinthResult] = await Promise.allSettled([
-		modrinthRequest,
-		curseForgeRequest,
-		directModrinthRequest,
-	])
+	const [modrinthResult, curseForgeResult, directModrinthResult] = await Promise.race([
+		Promise.allSettled([modrinthRequest, curseForgeRequest, directModrinthRequest]),
+		providerSearchCancelled,
+	]).finally(() => signal.removeEventListener('abort', cancelProviderRequests))
 	const rawResults = modrinthResult.status === 'fulfilled' ? modrinthResult.value : null
 	const rawCurseForge = curseForgeResult.status === 'fulfilled' ? curseForgeResult.value : null
 	const rawDirectModrinth =

@@ -135,8 +135,12 @@ function openSettings() {
 
 <style scoped lang="scss">
 .site-header {
-	position: relative;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
 	z-index: 40;
+	pointer-events: none;
 }
 
 .header-inner {
@@ -144,9 +148,10 @@ function openSettings() {
 	grid-template-columns: 1fr auto;
 	align-items: center;
 	gap: 0.5rem;
-	max-width: 1280px;
+	max-width: 1360px;
 	margin: 0 auto;
-	padding: 1rem 1.5rem;
+	padding: 1.15rem 1.5rem;
+	pointer-events: auto;
 }
 
 .brand-link {
@@ -159,12 +164,27 @@ function openSettings() {
 	display: flex;
 	align-items: center;
 	gap: 0.25rem;
+	pointer-events: auto;
 }
 
 .desktop-navigation {
 	grid-column: 1 / -1;
 	grid-row: 2;
 	justify-content: center;
+
+	:deep(.button) {
+		min-height: 2.25rem;
+		border-radius: 0;
+		color: var(--color-secondary);
+		font-size: 0.78rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+
+		&:hover {
+			color: var(--color-contrast);
+		}
+	}
 }
 
 .header-actions {
@@ -229,6 +249,7 @@ function openSettings() {
 @media (min-width: 1024px) {
 	.header-inner {
 		grid-template-columns: auto 1fr auto;
+		padding-top: 1.25rem;
 	}
 
 	.desktop-navigation {

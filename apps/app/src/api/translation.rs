@@ -9,7 +9,6 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             translation_get_settings,
             translation_update_settings,
-            translation_set_secret,
             translation_test_provider,
             translation_translate,
             translation_clear_cache,
@@ -27,14 +26,6 @@ pub async fn translation_update_settings(
     settings: TranslationSettings,
 ) -> Result<()> {
     Ok(translation::update_settings(settings).await?)
-}
-
-#[tauri::command]
-pub async fn translation_set_secret(
-    provider: TranslationProvider,
-    secret: Option<String>,
-) -> Result<()> {
-    Ok(translation::set_secret(provider, secret).await?)
 }
 
 #[tauri::command]

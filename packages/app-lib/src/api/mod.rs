@@ -1,4 +1,5 @@
 //! API for interacting with Theseus
+pub mod ai;
 pub mod cache;
 pub mod content_search;
 pub mod curseforge;
@@ -54,7 +55,7 @@ pub mod data {
 
 pub mod prelude {
     pub use crate::{
-        State,
+        State, ai,
         data::*,
         event::CommandPayload,
         install, instance,

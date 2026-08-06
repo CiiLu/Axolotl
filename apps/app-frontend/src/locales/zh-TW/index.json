@@ -1910,23 +1910,11 @@
   "app.splash.updating-app-directory": {
     "message": "正在更新應用程式目錄……"
   },
-  "app.translation-settings.api-key": {
-    "message": "API 金鑰"
-  },
-  "app.translation-settings.api-key-configured": {
-    "message": "已設定 API 金鑰。輸入新值可取代現有金鑰。"
-  },
-  "app.translation-settings.api-key-optional": {
-    "message": "本機或不需驗證的端點可不填寫。"
-  },
   "app.translation-settings.auto-translate": {
     "message": "自動翻譯專案頁面"
   },
   "app.translation-settings.auto-translate-description": {
     "message": "開啟 Modrinth 專案頁面後立即開始翻譯。"
-  },
-  "app.translation-settings.base-url": {
-    "message": "基礎 URL"
   },
   "app.translation-settings.cache": {
     "message": "翻譯快取"
@@ -1940,9 +1928,6 @@
   "app.translation-settings.clear-cache": {
     "message": "清除翻譯快取"
   },
-  "app.translation-settings.clear-key": {
-    "message": "清除 API 金鑰"
-  },
   "app.translation-settings.description": {
     "message": "瀏覽內容時翻譯 Modrinth 專案的標題、簡介和詳細描述。"
   },
@@ -1955,12 +1940,6 @@
   "app.translation-settings.display-mode.translation-only": {
     "message": "僅譯文"
   },
-  "app.translation-settings.model": {
-    "message": "模型"
-  },
-  "app.translation-settings.openai.configuration": {
-    "message": "OpenAI 相容介面設定"
-  },
   "app.translation-settings.operation-failed": {
     "message": "翻譯操作失敗，請檢查設定後重試。"
   },
@@ -1971,13 +1950,7 @@
     "message": "Google 翻譯（免費）"
   },
   "app.translation-settings.provider.microsoft": {
-    "message": "Microsoft 翻譯（免費）"
-  },
-  "app.translation-settings.provider.openai-compatible": {
-    "message": "OpenAI 相容介面"
-  },
-  "app.translation-settings.save-key": {
-    "message": "儲存 API 金鑰"
+    "message": "Microsoft 翻譯（無法使用）"
   },
   "app.translation-settings.style": {
     "message": "譯文樣式"
@@ -1987,9 +1960,6 @@
   },
   "app.translation-settings.style.border": {
     "message": "左邊框"
-  },
-  "app.translation-settings.style.brand": {
-    "message": "強調色"
   },
   "app.translation-settings.style.default": {
     "message": "預設"
@@ -3359,12 +3329,6 @@
   "app.appearance-settings.home-layout.title": {
     "message": "首頁布局"
   },
-  "app.appearance-settings.home-recent.description": {
-    "message": "在資訊首頁顯示最多四條最近打開的實例和世界。"
-  },
-  "app.appearance-settings.home-recent.title": {
-    "message": "最近項目"
-  },
   "app.appearance-settings.transparent-background.blur-description": {
     "message": "將背景畫面模糊處理。占用性能較高"
   },
@@ -4577,12 +4541,6 @@
   "app.onboarding.action.return-lab": {
     "message": "點擊實驗室，查看另一個項目"
   },
-  "app.onboarding.home-instances.description": {
-    "message": "這是你的啟動區域。資訊首頁集中展示最近和固定的項目；極簡首頁則專注於你選擇的實例。"
-  },
-  "app.onboarding.home-instances.title": {
-    "message": "從你想去的地方開始"
-  },
   "app.onboarding.home-layout.description": {
     "message": "隨時使用這個懸浮按鈕，在資訊首頁和極簡首頁之間切換。"
   },
@@ -4612,12 +4570,6 @@
   },
   "app.onboarding.lab.title": {
     "message": "內建的實用工具"
-  },
-  "app.onboarding.playtime.description": {
-    "message": "日曆會高亮你遊玩過的每一天，點選即可繼續遊玩，固定的伺服器就在下方。右側帳號側邊欄裡還有遊玩洞察、每日小挑戰和 Minecraft 官方新聞。"
-  },
-  "app.onboarding.playtime.title": {
-    "message": "一眼看清遊玩時間"
   },
   "app.project.open-in-mcmod": {
     "message": "在 MC 百科中打開"

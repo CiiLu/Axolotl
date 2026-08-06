@@ -33,6 +33,43 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.0',
+		version: '1.7.0',
+		publishedAt: '2026-08-06',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.0',
+			'zh-CN': 'Axolotl Launcher 1.7.0',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added AI integrations for translation and launcher assistance.',
+					'zh-CN': '新增 AI 集成功能，支持翻译和启动器辅助功能。',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'Improved translation logic and AI integration for more consistent results.',
+					'zh-CN': '优化翻译逻辑和 AI 集成，提升翻译结果的一致性。',
+				},
+				{
+					'en-US': 'Simplified download error dialogs to make failures easier to understand and recover from.',
+					'zh-CN': '简化下载错误提示框，让失败原因和恢复操作更清晰。',
+				},
+				{
+					'en-US': 'Improved mod-related downloads for more reliable content installation.',
+					'zh-CN': '优化模组相关下载，提升内容安装的可靠性。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed downloads failing when the connection was slow but still active.',
+					'zh-CN': '修复网络速度较低但仍在传输时下载失败的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.13',
 		version: '1.6.13',
 		publishedAt: '2026-08-06',

@@ -42,10 +42,13 @@ const METADATA_ATTEMPT_BUDGET: usize = 4;
 const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_secs(2);
 #[cfg(test)]
 const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_millis(100);
-const SEGMENTED_DOWNLOAD_THRESHOLD: u64 = 1024 * 1024;
+const SEGMENTED_DOWNLOAD_THRESHOLD: u64 = 4 * 1024 * 1024;
 const INITIAL_SEGMENT_CONCURRENCY: usize = 4;
 const MAX_SEGMENT_CONCURRENCY: usize = 12;
 const MIN_SEGMENT_SIZE: u64 = 256 * 1024;
+const ROUTE_PROBE_BYTES: u64 = 256 * 1024;
+const ROUTE_PROBE_MIN_IMPROVEMENT_PERCENT: u64 = 25;
+const ROUTE_PROBE_TIMEOUT: time::Duration = time::Duration::from_secs(5);
 const SEGMENT_RETRY_ATTEMPTS: usize = 3;
 const SEGMENT_EXPANSION_SAMPLE_COUNT: usize = 3;
 const SEGMENT_EXPANSION_INTERVAL: time::Duration =
@@ -131,7 +134,7 @@ impl DownloadRouteSource {
 }
 
 #[derive(
-    Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize,
+    Clone, Copy, Debug, Default, Eq, Hash, PartialEq, Serialize, Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum ProxyPolicy {
@@ -328,6 +331,97 @@ struct RouteHealth {
 
 static ROUTE_HEALTH: LazyLock<Mutex<HashMap<RouteHealthKey, RouteHealth>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
+static ROUTE_EFFECTIVE_AUTHORITIES: LazyLock<Mutex<HashMap<String, String>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn url_authority(url: &str) -> Option<String> {
+    let url = Url::parse(url).ok()?;
+    let host = url.host_str()?.to_ascii_lowercase();
+    Some(format!(
+        "{host}:{}",
+        url.port_or_known_default().unwrap_or(0)
+    ))
+}
+
+fn original_route_authority(route: &DownloadRoute) -> Option<String> {
+    url_authority(&route.url)
+}
+
+fn effective_route_authority(route: &DownloadRoute) -> Option<String> {
+    let authority = original_route_authority(route)?;
+    ROUTE_EFFECTIVE_AUTHORITIES
+        .lock()
+        .get(&authority)
+        .cloned()
+        .or(Some(authority))
+}
+
+fn remember_effective_route_authority(route: &DownloadRoute, final_url: &str) {
+    let (Some(original), Some(effective)) =
+        (original_route_authority(route), url_authority(final_url))
+    else {
+        return;
+    };
+    let mut authorities = ROUTE_EFFECTIVE_AUTHORITIES.lock();
+    if original == effective {
+        let removed = authorities.remove(&original).is_some();
+        drop(authorities);
+        if removed {
+            tracing::debug!(
+                original,
+                "Cleared stale effective download authority"
+            );
+        }
+        return;
+    }
+    for authority in authorities.values_mut() {
+        if *authority == original {
+            *authority = effective.clone();
+        }
+    }
+    let changed = authorities.get(&original) != Some(&effective);
+    authorities.insert(original.clone(), effective.clone());
+    drop(authorities);
+    if changed {
+        tracing::debug!(
+            original,
+            effective,
+            "Recorded effective download authority"
+        );
+    }
+}
+
+fn forget_effective_route_authority(route: &DownloadRoute, failed_url: &Url) {
+    let (Some(original), Some(failed)) = (
+        original_route_authority(route),
+        url_authority(failed_url.as_str()),
+    ) else {
+        return;
+    };
+    let mut authorities = ROUTE_EFFECTIVE_AUTHORITIES.lock();
+    if authorities.get(&original) == Some(&failed) {
+        authorities.remove(&original);
+    }
+}
+
+fn deduplicate_download_routes(routes: &mut Vec<DownloadRoute>) {
+    let mut seen = HashSet::new();
+    routes.retain(|route| {
+        effective_route_authority(route)
+            .map(|authority| seen.insert((authority, route.proxy)))
+            .unwrap_or(true)
+    });
+}
+
+fn routes_share_effective_authority(
+    left: &DownloadRoute,
+    right: &DownloadRoute,
+) -> bool {
+    left.proxy == right.proxy
+        && effective_route_authority(left).is_some_and(|authority| {
+            effective_route_authority(right).as_ref() == Some(&authority)
+        })
+}
 
 fn resource_family(
     route: &DownloadRoute,
@@ -1310,6 +1404,14 @@ fn record_route_failure(
     if let Some(state) = crate::State::get_if_initialized() {
         state.record_download_error();
     }
+    record_route_health_failure(route, resource, cooldown);
+}
+
+fn record_route_health_failure(
+    route: &DownloadRoute,
+    resource: ResourceClass,
+    cooldown: Option<time::Duration>,
+) {
     if let Some(key) = route_health_key(route, resource) {
         let mut health = ROUTE_HEALTH.lock();
         let entry = health.entry(key).or_default();
@@ -1330,12 +1432,7 @@ static RANGE_SPLITTING_SUPPORTED: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
 
 fn range_splitting_authority(route: &DownloadRoute) -> Option<String> {
-    let url = Url::parse(&route.url).ok()?;
-    let host = url.host_str()?.to_ascii_lowercase();
-    Some(format!(
-        "{host}:{}",
-        url.port_or_known_default().unwrap_or(0)
-    ))
+    effective_route_authority(route)
 }
 
 fn range_splitting_allowed(route: &DownloadRoute) -> bool {
@@ -3154,6 +3251,7 @@ async fn send_path_request_with_clients(
                 && (response.status().is_client_error()
                     || response.status().is_server_error())
             {
+                forget_effective_route_authority(route, &current);
                 if let Some(target) = redirect_target {
                     let mut cached = target.lock().await;
                     if cached.as_ref() == Some(&current) {
@@ -3164,6 +3262,7 @@ async fn send_path_request_with_clients(
                 reused_redirect_target = false;
                 continue;
             }
+            remember_effective_route_authority(route, current.as_str());
             if response.status().is_success()
                 && current != original
                 && let Some(target) = redirect_target
@@ -3344,6 +3443,7 @@ enum SegmentedDownloadOutcome {
         disable_range: bool,
         reason: &'static str,
     },
+    SwitchRoute(RouteProbeResult),
     SourceFailed,
     Fatal(crate::Error),
 }
@@ -3353,6 +3453,16 @@ enum SegmentDownloadError {
     Transport,
     Fatal(crate::Error),
 }
+
+#[derive(Clone, Debug)]
+struct RouteProbeResult {
+    route: DownloadRoute,
+    bytes_per_second: u64,
+    effective_authority: String,
+}
+
+type RouteProbeFuture<'a> =
+    Pin<Box<dyn Future<Output = Option<RouteProbeResult>> + Send + 'a>>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct ResourceValidator {
@@ -3578,6 +3688,178 @@ fn allow_low_throughput_route_switch(
     retry_with_single_thread: bool,
 ) -> bool {
     has_alternate_route && !retry_with_single_thread
+}
+
+fn should_use_segmented_download(size: u64, resumable_part_bytes: u64) -> bool {
+    size >= SEGMENTED_DOWNLOAD_THRESHOLD && resumable_part_bytes < size / 2
+}
+
+fn probe_is_meaningfully_faster(
+    candidate_bytes_per_second: u64,
+    current_bytes_per_second: u64,
+) -> bool {
+    u128::from(candidate_bytes_per_second) * 100
+        >= u128::from(current_bytes_per_second)
+            * u128::from(100 + ROUTE_PROBE_MIN_IMPROVEMENT_PERCENT)
+}
+
+fn measured_bytes_per_second(bytes: u64, elapsed: time::Duration) -> u64 {
+    let bytes_per_second = u128::from(bytes).saturating_mul(1_000_000_000)
+        / elapsed.as_nanos().max(1);
+    bytes_per_second.min(u128::from(u64::MAX)) as u64
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn probe_route_throughput(
+    route: &DownloadRoute,
+    current_effective_authority: Option<&str>,
+    total_size: u64,
+    custom_header: Option<&(String, String)>,
+    credentials: Option<&crate::state::ModrinthCredentials>,
+    download_meta: Option<&DownloadMeta>,
+    semaphore: &FetchSemaphore,
+    system_client: &reqwest::Client,
+    direct_client: &reqwest::Client,
+    resource: ResourceClass,
+) -> Option<RouteProbeResult> {
+    let known_authority = effective_route_authority(route)?;
+    if current_effective_authority == Some(known_authority.as_str()) {
+        return None;
+    }
+    let probe_bytes = ROUTE_PROBE_BYTES.min(total_size);
+    let probe_end = probe_bytes.checked_sub(1)?;
+    let _permit = semaphore.0.acquire().await.ok()?;
+    let started = Instant::now();
+    let response = tokio::time::timeout(
+        ROUTE_PROBE_TIMEOUT,
+        send_path_request_with_clients(
+            route,
+            custom_header,
+            credentials,
+            download_meta,
+            Some(0),
+            Some(probe_end),
+            system_client,
+            direct_client,
+            None,
+        ),
+    )
+    .await;
+    let (mut response, final_url) = match response {
+        Ok(Ok(response)) => response,
+        Ok(Err(_)) | Err(_) => {
+            record_route_health_failure(route, resource, None);
+            return None;
+        }
+    };
+    let ttfb = started.elapsed();
+    let final_authority = url_authority(&final_url)?;
+    if current_effective_authority == Some(final_authority.as_str()) {
+        return None;
+    }
+    let content_range_matches =
+        parse_content_range(&response).is_some_and(|range| {
+            range.start == 0
+                && range.end == probe_end
+                && range.total.is_none_or(|total| total == total_size)
+        });
+    if response.status() != StatusCode::PARTIAL_CONTENT
+        || !content_range_matches
+    {
+        record_route_health_failure(route, resource, None);
+        return None;
+    }
+    let remote_addr = response.remote_addr();
+    let transfer_started = Instant::now();
+    let mut received = 0_u64;
+    while received < probe_bytes {
+        let remaining_time =
+            ROUTE_PROBE_TIMEOUT.saturating_sub(started.elapsed());
+        if remaining_time.is_zero() {
+            record_route_health_failure(route, resource, None);
+            return None;
+        }
+        let chunk = match tokio::time::timeout(remaining_time, response.chunk())
+            .await
+        {
+            Ok(Ok(Some(chunk))) => chunk,
+            _ => {
+                record_route_health_failure(route, resource, None);
+                return None;
+            }
+        };
+        received = received.saturating_add(chunk.len() as u64);
+    }
+    let transfer_elapsed = transfer_started.elapsed();
+    let bytes_per_second =
+        measured_bytes_per_second(received, started.elapsed());
+    record_route_success(
+        route,
+        resource,
+        ttfb,
+        received,
+        transfer_elapsed,
+        remote_addr,
+    );
+    Some(RouteProbeResult {
+        route: route.clone(),
+        bytes_per_second,
+        effective_authority: final_authority,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn probe_faster_route(
+    current_route: &DownloadRoute,
+    candidate_routes: &[DownloadRoute],
+    current_bytes_per_second: u64,
+    total_size: u64,
+    custom_header: Option<&(String, String)>,
+    credentials: Option<&crate::state::ModrinthCredentials>,
+    download_meta: Option<&DownloadMeta>,
+    semaphore: &FetchSemaphore,
+    system_client: &reqwest::Client,
+    direct_client: &reqwest::Client,
+    resource: ResourceClass,
+) -> Option<RouteProbeResult> {
+    let current_authority = effective_route_authority(current_route);
+    let mut seen = HashSet::new();
+    let mut probes = futures::stream::FuturesUnordered::new();
+    for route in candidate_routes {
+        if !route.supports_range || !range_splitting_allowed(route) {
+            continue;
+        }
+        let Some(authority) = effective_route_authority(route) else {
+            continue;
+        };
+        if current_authority.as_ref() == Some(&authority)
+            || !seen.insert((authority, route.proxy))
+        {
+            continue;
+        }
+        probes.push(probe_route_throughput(
+            route,
+            current_authority.as_deref(),
+            total_size,
+            custom_header,
+            credentials,
+            download_meta,
+            semaphore,
+            system_client,
+            direct_client,
+            resource,
+        ));
+    }
+
+    while let Some(probe) = probes.next().await.flatten() {
+        if probe_is_meaningfully_faster(
+            probe.bytes_per_second,
+            current_bytes_per_second,
+        ) {
+            return Some(probe);
+        }
+    }
+    None
 }
 
 fn segment_path(part_path: &Path, index: usize) -> PathBuf {
@@ -4172,6 +4454,7 @@ async fn download_segment(
 async fn try_segmented_download(
     request: &DownloadRequest,
     route: &DownloadRoute,
+    candidate_routes: &[DownloadRoute],
     size: u64,
     part_path: &Path,
     semaphore: &FetchSemaphore,
@@ -4264,6 +4547,9 @@ async fn try_segmented_download(
     let mut downloaded = 0_u64;
     let mut throughput_window_started = Instant::now();
     let mut throughput_window_bytes = 0_u64;
+    let mut alternate_probe: Option<RouteProbeFuture<'_>> = None;
+    let mut alternate_probe_finished = false;
+    let mut confirmed_switch = None;
     let mut segment_error = None;
     let mut final_url = None;
     let mut initial_ttfb = None;
@@ -4297,9 +4583,33 @@ async fn try_segmented_download(
                     }
                 }
             }
+            probe = async {
+                alternate_probe
+                    .as_mut()
+                    .expect("route probe is guarded by the select condition")
+                    .await
+            }, if alternate_probe.is_some() => {
+                alternate_probe = None;
+                alternate_probe_finished = true;
+                if let Some(probe) = probe {
+                    tracing::warn!(
+                        original_url = %sanitize_url_for_log(&route.url),
+                        source = route.source.as_str(),
+                        alternate_url = %sanitize_url_for_log(&probe.route.url),
+                        alternate_source = probe.route.source.as_str(),
+                        alternate_authority = probe.effective_authority,
+                        alternate_bytes_per_second = probe.bytes_per_second,
+                        "Confirmed a faster download route; switching source"
+                    );
+                    confirmed_switch = Some(probe);
+                    break;
+                }
+            }
             _ = scheduler.tick() => {
                 let throughput_elapsed = throughput_window_started.elapsed();
                 if allow_low_throughput_abort
+                    && !alternate_probe_finished
+                    && alternate_probe.is_none()
                     && let Some(bytes_per_second) = sustained_low_throughput(
                         downloaded,
                         throughput_window_bytes,
@@ -4312,10 +4622,21 @@ async fn try_segmented_download(
                         source = route.source.as_str(),
                         bytes_per_second,
                         remaining_bytes = size.saturating_sub(downloaded),
-                        "Segmented download stayed slow; switching route"
+                        "Segmented download stayed slow; probing alternate routes"
                     );
-                    segment_error = Some(SegmentDownloadError::Transport);
-                    break;
+                    alternate_probe = Some(Box::pin(probe_faster_route(
+                        route,
+                        candidate_routes,
+                        bytes_per_second,
+                        size,
+                        request.header.as_ref(),
+                        credentials,
+                        request.download_meta.as_ref(),
+                        semaphore,
+                        system_client,
+                        direct_client,
+                        request.resource,
+                    )));
                 }
                 if throughput_elapsed >= SUSTAINED_LOW_THROUGHPUT_WINDOW {
                     throughput_window_started = Instant::now();
@@ -4411,6 +4732,10 @@ async fn try_segmented_download(
         downloaded = downloaded.saturating_add(delta);
     }
     record_install_download_progress(request, downloaded, size).await;
+    if let Some(probe) = confirmed_switch {
+        let _ = cleanup_segment_files(part_path, 256).await;
+        return SegmentedDownloadOutcome::SwitchRoute(probe);
+    }
     if let Some(error) = segment_error {
         let _ = cleanup_segment_files(part_path, 256).await;
         return match error {
@@ -4665,6 +4990,7 @@ async fn download_to_path_inner(
     {
         routes.retain(|route| !route.is_mirror);
     }
+    deduplicate_download_routes(&mut routes);
     if routes.is_empty() {
         routes.push(official_route(&request.url, request.resource));
     }
@@ -4703,14 +5029,31 @@ async fn download_to_path_inner(
     let mut fallback_count = 0;
     let mut partial_route_index = None;
     let mut terminal_routes = HashSet::new();
+    let mut preferred_route = None;
     let file_attempt_budget = routes.len().saturating_mul(3).max(1);
     for (round, retry_with_single_thread) in
         [false, true, true].into_iter().enumerate()
     {
+        let mut attempted_routes = Vec::new();
         for (route_index, route) in routes.iter().enumerate() {
             if terminal_routes.contains(&route.url) {
                 continue;
             }
+            if preferred_route
+                .as_ref()
+                .is_some_and(|preferred| preferred != route)
+            {
+                continue;
+            }
+            if preferred_route.as_ref() == Some(route) {
+                preferred_route = None;
+            }
+            if attempted_routes.iter().any(|attempted: &&DownloadRoute| {
+                routes_share_effective_authority(attempted, route)
+            }) {
+                continue;
+            }
+            attempted_routes.push(route);
             let log_url = sanitize_url_for_log(&route.url);
             if route_index > 0 {
                 fallback_count += 1;
@@ -4761,14 +5104,17 @@ async fn download_to_path_inner(
                     && route.supports_range
                     && range_splitting_allowed(route)
                     && request.integrity.size.is_some_and(|size| {
-                        size >= SEGMENTED_DOWNLOAD_THRESHOLD
-                            && resumable_part_bytes < size / 2
+                        should_use_segmented_download(
+                            size,
+                            resumable_part_bytes,
+                        )
                     })
                 {
                     let size = request.integrity.size.unwrap();
                     match try_segmented_download(
                         &request,
                         route,
+                        &routes[route_index + 1..],
                         size,
                         &part_path,
                         semaphore,
@@ -4882,6 +5228,10 @@ async fn download_to_path_inner(
                                 max_attempts = file_attempt_budget,
                                 "Segmented file download failed; retrying or switching source"
                             );
+                            break;
+                        }
+                        SegmentedDownloadOutcome::SwitchRoute(probe) => {
+                            preferred_route = Some(probe.route);
                             break;
                         }
                         SegmentedDownloadOutcome::Fatal(error) => {
@@ -5223,74 +5573,119 @@ async fn download_to_path_inner(
                 let mut last_tracking_bytes = starting_size;
                 let mut throughput_window_started = Instant::now();
                 let mut throughput_window_bytes = starting_size;
+                let mut throughput_timer =
+                    tokio::time::interval(time::Duration::from_millis(250));
+                throughput_timer.tick().await;
                 let mut stream = response.bytes_stream();
+                let mut alternate_probe: Option<RouteProbeFuture<'_>> = None;
+                let mut alternate_probe_finished = false;
+                let mut confirmed_switch = None;
                 let mut transfer_error: Option<crate::Error> = None;
-                while let Some(item) = stream.next().await {
-                    let chunk = match item {
-                        Ok(chunk) => chunk,
-                        Err(error) => {
-                            transfer_error = Some(error.into());
-                            break;
+                loop {
+                    tokio::select! {
+                        item = stream.next() => {
+                            let Some(item) = item else {
+                                break;
+                            };
+                            let chunk = match item {
+                                Ok(chunk) => chunk,
+                                Err(error) => {
+                                    transfer_error = Some(error.into());
+                                    break;
+                                }
+                            };
+                            file.write_all(&chunk).await.map_err(|error| {
+                                IOError::with_path(error, &part_path)
+                            })?;
+                            hashers.update(&chunk);
+                            downloaded += chunk.len() as u64;
+                            if let Some(state) = crate::State::get_if_initialized() {
+                                state.record_download_bytes(chunk.len() as u64);
+                            }
+                            let tracking_threshold =
+                                MIN_SEGMENT_SIZE.max(total_size / 200);
+                            if downloaded.saturating_sub(last_tracking_bytes)
+                                >= tracking_threshold
+                            {
+                                record_install_download_progress(
+                                    &request, downloaded, total_size,
+                                )
+                                .await;
+                                last_tracking_bytes = downloaded;
+                            }
+                            if let Some(progress) = progress.as_mut()
+                                && let Err(error) = progress(downloaded, total_size).await
+                            {
+                                tracing::warn!(%error, "Download progress callback failed");
+                            }
                         }
-                    };
-                    file.write_all(&chunk).await.map_err(|error| {
-                        IOError::with_path(error, &part_path)
-                    })?;
-                    hashers.update(&chunk);
-                    downloaded += chunk.len() as u64;
-                    if let Some(state) = crate::State::get_if_initialized() {
-                        state.record_download_bytes(chunk.len() as u64);
-                    }
-                    let throughput_elapsed =
-                        throughput_window_started.elapsed();
-                    if allow_low_throughput_abort
-                        && let Some(bytes_per_second) = sustained_low_throughput(
-                            downloaded,
-                            throughput_window_bytes,
-                            throughput_elapsed,
-                            total_size.saturating_sub(downloaded),
-                        )
-                    {
-                        tracing::warn!(
-                            path = %destination.display(),
-                            url = %log_url,
-                            source = route.source.as_str(),
-                            bytes_per_second,
-                            elapsed_ms = throughput_elapsed.as_millis(),
-                            remaining_bytes = total_size.saturating_sub(downloaded),
-                            "Sustained low throughput; switching route"
-                        );
-                        transfer_error = Some(
-                            ErrorKind::NetworkError(format!(
-                                "Sustained download throughput fell to {bytes_per_second} bytes/s"
-                            ))
-                            .into(),
-						);
-                        break;
-                    }
-                    if throughput_elapsed >= SUSTAINED_LOW_THROUGHPUT_WINDOW {
-                        throughput_window_started = Instant::now();
-                        throughput_window_bytes = downloaded;
-                    }
-                    let tracking_threshold =
-                        MIN_SEGMENT_SIZE.max(total_size / 200);
-                    if downloaded.saturating_sub(last_tracking_bytes)
-                        >= tracking_threshold
-                    {
-                        record_install_download_progress(
-                            &request, downloaded, total_size,
-                        )
-                        .await;
-                        last_tracking_bytes = downloaded;
-                    }
-                    if let Some(progress) = progress.as_mut() {
-                        if let Err(error) =
-                            progress(downloaded, total_size).await
-                        {
-                            tracing::warn!(%error, "Download progress callback failed");
+                        _ = throughput_timer.tick() => {
+                            let throughput_elapsed =
+                                throughput_window_started.elapsed();
+                            if allow_low_throughput_abort
+                                && total_size >= SEGMENTED_DOWNLOAD_THRESHOLD
+                                && !alternate_probe_finished
+                                && alternate_probe.is_none()
+                                && let Some(bytes_per_second) = sustained_low_throughput(
+                                    downloaded,
+                                    throughput_window_bytes,
+                                    throughput_elapsed,
+                                    total_size.saturating_sub(downloaded),
+                                )
+                            {
+                                tracing::warn!(
+                                    path = %destination.display(),
+                                    url = %log_url,
+                                    source = route.source.as_str(),
+                                    bytes_per_second,
+                                    elapsed_ms = throughput_elapsed.as_millis(),
+                                    remaining_bytes = total_size.saturating_sub(downloaded),
+                                    "Sustained low throughput; probing alternate routes"
+                                );
+                                alternate_probe = Some(Box::pin(probe_faster_route(
+                                    route,
+                                    &routes[route_index + 1..],
+                                    bytes_per_second,
+                                    total_size,
+                                    request.header.as_ref(),
+                                    credentials.as_ref(),
+                                    request.download_meta.as_ref(),
+                                    semaphore,
+                                    &NO_REDIRECT_REQWEST_CLIENT,
+                                    &DIRECT_REQWEST_CLIENT,
+                                    request.resource,
+                                )));
+                            }
+                            if throughput_elapsed >= SUSTAINED_LOW_THROUGHPUT_WINDOW {
+                                throughput_window_started = Instant::now();
+                                throughput_window_bytes = downloaded;
+                            }
+                        }
+                        probe = async {
+                            alternate_probe
+                                .as_mut()
+                                .expect("route probe is guarded by the select condition")
+                                .await
+                        }, if alternate_probe.is_some() => {
+                            alternate_probe = None;
+                            alternate_probe_finished = true;
+                            if let Some(probe) = probe {
+                                tracing::warn!(
+                                    original_url = %log_url,
+                                    source = route.source.as_str(),
+                                    alternate_url = %sanitize_url_for_log(&probe.route.url),
+                                    alternate_source = probe.route.source.as_str(),
+                                    alternate_authority = probe.effective_authority,
+                                    alternate_bytes_per_second = probe.bytes_per_second,
+                                    "Confirmed a faster download route; switching source"
+                                );
+                                confirmed_switch = Some(probe);
+                                break;
+                            }
                         }
                     }
                 }
+                drop(alternate_probe);
                 record_install_download_progress(
                     &request, downloaded, total_size,
                 )
@@ -5307,6 +5702,11 @@ async fn download_to_path_inner(
                 drop(file);
                 drop(permit);
                 drop(activity.take());
+
+                if let Some(probe) = confirmed_switch {
+                    preferred_route = Some(probe.route);
+                    break;
+                }
 
                 if let Some(error) = transfer_error {
                     record_route_failure(route, request.resource, None);
@@ -6812,6 +7212,134 @@ mod tests {
     }
 
     #[test]
+    fn segmented_download_starts_at_four_mebibytes() {
+        assert!(!should_use_segmented_download(
+            SEGMENTED_DOWNLOAD_THRESHOLD - 1,
+            0,
+        ));
+        assert!(should_use_segmented_download(
+            SEGMENTED_DOWNLOAD_THRESHOLD,
+            0,
+        ));
+    }
+
+    #[test]
+    fn route_probe_requires_a_twenty_five_percent_improvement() {
+        assert!(!probe_is_meaningfully_faster(1_249_999, 1_000_000));
+        assert!(probe_is_meaningfully_faster(1_250_000, 1_000_000));
+        assert!(!probe_is_meaningfully_faster(u64::MAX, u64::MAX));
+        assert_eq!(
+            measured_bytes_per_second(
+                ROUTE_PROBE_BYTES,
+                Duration::from_millis(250),
+            ),
+            1024 * 1024,
+        );
+    }
+
+    #[test]
+    fn effective_authority_drives_health_and_route_deduplication() {
+        let alias = route(
+            "https://effective-authority-alias.invalid/file.jar".to_string(),
+            DownloadRouteSource::Mcim,
+            true,
+            true,
+        );
+        let direct = route(
+            "https://effective-authority-target.invalid/file.jar".to_string(),
+            DownloadRouteSource::Official,
+            false,
+            true,
+        );
+        remember_effective_route_authority(&alias, &direct.url);
+
+        assert_eq!(
+            route_health_key(&alias, ResourceClass::Other),
+            route_health_key(&direct, ResourceClass::Other),
+        );
+        assert!(routes_share_effective_authority(&alias, &direct));
+
+        let mut direct_without_proxy = direct.clone();
+        direct_without_proxy.proxy = ProxyPolicy::Direct;
+        let mut routes = vec![alias, direct, direct_without_proxy.clone()];
+        deduplicate_download_routes(&mut routes);
+
+        assert_eq!(routes.len(), 2);
+        assert_eq!(routes[1], direct_without_proxy);
+    }
+
+    #[tokio::test]
+    async fn route_probe_selects_a_faster_distinct_authority() {
+        let data = Arc::new(vec![7_u8; ROUTE_PROBE_BYTES as usize * 2]);
+        let (url, requests, _, server) =
+            spawn_range_server(data.clone(), false, false, false, false, false)
+                .await;
+        let current = route(
+            "https://route-probe-current.invalid/file.jar".to_string(),
+            DownloadRouteSource::Official,
+            false,
+            true,
+        );
+        let mut candidate =
+            route(url, DownloadRouteSource::Alternate, false, true);
+        candidate.proxy = ProxyPolicy::Direct;
+        let candidates = vec![candidate.clone()];
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .unwrap();
+        let semaphore = FetchSemaphore(Semaphore::new(2));
+
+        let probe = probe_faster_route(
+            &current,
+            &candidates,
+            64 * 1024,
+            data.len() as u64,
+            None,
+            None,
+            None,
+            &semaphore,
+            &client,
+            &client,
+            ResourceClass::Other,
+        )
+        .await
+        .expect("the local range route should be measurably faster");
+
+        assert_eq!(probe.route, candidate);
+        assert!(probe.bytes_per_second >= 80 * 1024);
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+
+        let alias = route(
+            "https://route-probe-alias.invalid/file.jar".to_string(),
+            DownloadRouteSource::Mcim,
+            true,
+            true,
+        );
+        remember_effective_route_authority(&alias, &candidate.url);
+        assert!(
+            probe_faster_route(
+                &alias,
+                &candidates,
+                1,
+                data.len() as u64,
+                None,
+                None,
+                None,
+                &semaphore,
+                &client,
+                &client,
+                ResourceClass::Other,
+            )
+            .await
+            .is_none()
+        );
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+        server.abort();
+    }
+
+    #[test]
     fn redirect_hops_rebuild_the_same_range_header() {
         let original = byte_range_header_value(Some(1024), Some(2047));
         let redirected = byte_range_header_value(Some(1024), Some(2047));
@@ -6870,6 +7398,7 @@ mod tests {
         let outcome = try_segmented_download(
             &request,
             &route,
+            &[],
             size as u64,
             &part_path,
             &semaphore,
@@ -6937,6 +7466,7 @@ mod tests {
         let outcome = try_segmented_download(
             &request,
             &route,
+            &[],
             size as u64,
             &part_path,
             &semaphore,
@@ -7007,6 +7537,7 @@ mod tests {
         let outcome = try_segmented_download(
             &request,
             &route,
+            &[],
             size as u64,
             &part_path,
             &FetchSemaphore(Semaphore::new(8)),
@@ -7061,6 +7592,7 @@ mod tests {
         let outcome = try_segmented_download(
             &request,
             &route,
+            &[],
             size as u64,
             &part_path,
             &FetchSemaphore(Semaphore::new(8)),

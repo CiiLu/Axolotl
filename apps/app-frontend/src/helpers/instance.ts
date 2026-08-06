@@ -395,6 +395,19 @@ export async function install_project_with_dependencies(
 	})
 }
 
+export async function queue_project_with_dependencies(
+	instanceId: string,
+	request: ResolveContentRequest,
+	display: { title: string; iconUrl?: string | null },
+): Promise<InstallJobSnapshot> {
+	return await invoke('plugin:instance|instance_queue_project_with_dependencies', {
+		instanceId,
+		request,
+		displayTitle: display.title,
+		displayIcon: display.iconUrl ?? null,
+	})
+}
+
 export async function switch_project_version_with_dependencies(
 	instanceId: string,
 	projectPath: string,

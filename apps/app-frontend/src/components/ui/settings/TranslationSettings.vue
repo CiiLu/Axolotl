@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckIcon, KeyIcon, PlugIcon, TrashIcon } from '@modrinth/assets'
+import { PlugIcon, SpinnerIcon, TrashIcon } from '@modrinth/assets'
 import {
 	ButtonStyled,
 	Combobox,
@@ -10,23 +10,36 @@ import {
 	Toggle,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
+import { type AIProviderDefinition,getAICatalog, getAIState, sharedAIState } from '@/helpers/ai'
 import {
 	clearTranslationCache,
 	getTranslationErrorKind,
 	getTranslationSettings,
-	setTranslationSecret,
 	testTranslationProvider,
 	type TranslationProvider,
+	type TranslationSettings as TranslationSettingsState,
 	type TranslationStyle,
 	updateTranslationSettings,
 } from '@/helpers/translation'
 
+import AIIcon from './AIIcon.vue'
+
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
-const settings = ref(await getTranslationSettings())
-const openaiSecret = ref('')
+const settings = ref<TranslationSettingsState>({
+	provider: 'microsoft',
+	target_language: '',
+	mode: 'bilingual',
+	auto_translate: false,
+	style: 'weakened',
+	ai_provider_id: '',
+	ai_model_id: '',
+	ai_system_prompt: '',
+})
+const aiCatalog = ref<AIProviderDefinition[]>([])
+const loading = ref(true)
 const status = ref('')
 const testing = ref(false)
 let saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -41,16 +54,15 @@ const messages = defineMessages({
 	provider: { id: 'app.translation-settings.provider', defaultMessage: 'Translation service' },
 	microsoft: {
 		id: 'app.translation-settings.provider.microsoft',
-		defaultMessage: 'Microsoft Translate (free)',
+		defaultMessage: 'Microsoft Translate (unavailable)',
 	},
 	google: {
 		id: 'app.translation-settings.provider.google',
 		defaultMessage: 'Google Translate (free)',
 	},
-	openai: {
-		id: 'app.translation-settings.provider.openai-compatible',
-		defaultMessage: 'OpenAI compatible',
-	},
+	ai: { id: 'app.translation-settings.provider.ai', defaultMessage: 'AI model' },
+	aiProvider: { id: 'app.translation-settings.ai-provider', defaultMessage: 'AI provider' },
+	aiModel: { id: 'app.translation-settings.ai-model', defaultMessage: 'Text model' },
 	targetLanguage: {
 		id: 'app.translation-settings.target-language',
 		defaultMessage: 'Target language',
@@ -81,17 +93,26 @@ const messages = defineMessages({
 	},
 	style: { id: 'app.translation-settings.style', defaultMessage: 'Translation style' },
 	styleDefault: { id: 'app.translation-settings.style.default', defaultMessage: 'Default' },
+	styleBlur: { id: 'app.translation-settings.style.blur', defaultMessage: 'Blur' },
+	styleBlockquote: {
+		id: 'app.translation-settings.style.blockquote',
+		defaultMessage: 'Block quote',
+	},
 	styleWeakened: { id: 'app.translation-settings.style.weakened', defaultMessage: 'Muted' },
-	styleBrand: { id: 'app.translation-settings.style.brand', defaultMessage: 'Accent color' },
-	styleBorder: { id: 'app.translation-settings.style.border', defaultMessage: 'Left border' },
+	styleDashedLine: {
+		id: 'app.translation-settings.style.dashed-line',
+		defaultMessage: 'Dashed underline',
+	},
+	styleBorder: { id: 'app.translation-settings.style.border', defaultMessage: 'Border' },
+	styleTextColor: {
+		id: 'app.translation-settings.style.text-color',
+		defaultMessage: 'Text color',
+	},
 	styleBackground: {
 		id: 'app.translation-settings.style.background',
 		defaultMessage: 'Background',
 	},
-	stylePreview: {
-		id: 'app.translation-settings.style.preview',
-		defaultMessage: 'Preview',
-	},
+	stylePreview: { id: 'app.translation-settings.style.preview', defaultMessage: 'Preview' },
 	stylePreviewOriginalText: {
 		id: 'app.translation-settings.style.preview-original-text',
 		defaultMessage: 'Explore high-quality Minecraft content on Modrinth.',
@@ -100,32 +121,15 @@ const messages = defineMessages({
 		id: 'app.translation-settings.style.preview-text',
 		defaultMessage: 'Discover high-quality Minecraft content on Modrinth.',
 	},
-	openaiConfiguration: {
-		id: 'app.translation-settings.openai.configuration',
-		defaultMessage: 'OpenAI-compatible configuration',
-	},
-	baseUrl: { id: 'app.translation-settings.base-url', defaultMessage: 'Base URL' },
-	model: { id: 'app.translation-settings.model', defaultMessage: 'Model' },
-	apiKey: { id: 'app.translation-settings.api-key', defaultMessage: 'API key' },
-	apiKeyConfigured: {
-		id: 'app.translation-settings.api-key-configured',
-		defaultMessage: 'An API key is already configured. Enter a new value to replace it.',
-	},
 	systemPrompt: {
 		id: 'app.translation-settings.system-prompt',
-		defaultMessage: 'System prompt',
+		defaultMessage: 'Translation instructions',
 	},
 	systemPromptDescription: {
 		id: 'app.translation-settings.system-prompt-description',
 		defaultMessage:
-			'Enter a custom system prompt, or leave blank to use the default. The prompt should guide the model to produce JSON output as required by the built-in contract; avoid instructions that conflict with the format requirements.',
+			'Optional feature-specific instructions. The launcher always appends its structured translation contract.',
 	},
-	apiKeyOptional: {
-		id: 'app.translation-settings.api-key-optional',
-		defaultMessage: 'Optional for local or unauthenticated endpoints.',
-	},
-	saveKey: { id: 'app.translation-settings.save-key', defaultMessage: 'Save API key' },
-	clearKey: { id: 'app.translation-settings.clear-key', defaultMessage: 'Clear API key' },
 	test: { id: 'app.translation-settings.test', defaultMessage: 'Test service' },
 	testing: { id: 'app.translation-settings.testing', defaultMessage: 'Testing…' },
 	testSuccess: {
@@ -167,9 +171,26 @@ const messages = defineMessages({
 	},
 })
 
-const providers: TranslationProvider[] = ['microsoft', 'google', 'openai-compatible']
+const configuredAIProviders = computed(() =>
+	(sharedAIState.value?.providers ?? []).filter(
+		(provider) => provider.enabled && provider.models.some((model) => model.enabled),
+	),
+)
+const aiAvailable = computed(
+	() => !!sharedAIState.value?.settings.enabled && configuredAIProviders.value.length > 0,
+)
+
 const modes = ['bilingual', 'translation-only'] as const
-const styles: TranslationStyle[] = ['default', 'weakened', 'brand', 'border', 'background']
+const styles: TranslationStyle[] = [
+	'default',
+	'blur',
+	'blockquote',
+	'weakened',
+	'dashed-line',
+	'border',
+	'text-color',
+	'background',
+]
 const languages = ['follow-app', ...LOCALES.map((locale) => locale.code)]
 
 const targetLanguage = computed({
@@ -181,47 +202,104 @@ const targetLanguage = computed({
 
 function providerName(provider: TranslationProvider) {
 	return formatMessage(
-		{
-			microsoft: messages.microsoft,
-			google: messages.google,
-			'openai-compatible': messages.openai,
-		}[provider],
+		{ microsoft: messages.microsoft, google: messages.google, ai: messages.ai }[provider],
 	)
 }
 
 function languageName(code: string) {
 	if (code === 'follow-app') return formatMessage(messages.followApp)
-	const locale = LOCALES.find((locale) => locale.code === code)
+	const locale = LOCALES.find((item) => item.code === code)
 	return locale ? `${locale.name} — ${formatMessage(locale.translatedName)}` : code
-}
-
-function modeName(mode: string) {
-	return formatMessage(mode === 'bilingual' ? messages.bilingual : messages.translationOnly)
 }
 
 function styleName(style: TranslationStyle) {
 	return formatMessage(
 		{
 			default: messages.styleDefault,
+			blur: messages.styleBlur,
+			blockquote: messages.styleBlockquote,
 			weakened: messages.styleWeakened,
-			brand: messages.styleBrand,
+			'dashed-line': messages.styleDashedLine,
 			border: messages.styleBorder,
+			'text-color': messages.styleTextColor,
 			background: messages.styleBackground,
 		}[style],
 	)
 }
 
+const translationProviders = computed<TranslationProvider[]>(() => [
+	'google',
+	...(aiAvailable.value ? (['ai'] as const) : []),
+	'microsoft',
+])
 const providerOptions = computed(() =>
-	providers.map((provider) => ({ value: provider, label: providerName(provider) })),
+	translationProviders.value.map((provider) => ({
+		value: provider,
+		label: providerName(provider),
+	})),
 )
 const languageOptions = computed(() =>
 	languages.map((language) => ({ value: language, label: languageName(language) })),
 )
-const modeOptions = computed(() => modes.map((mode) => ({ value: mode, label: modeName(mode) })))
+const modeOptions = computed(() =>
+	modes.map((mode) => ({
+		value: mode,
+		label: formatMessage(mode === 'bilingual' ? messages.bilingual : messages.translationOnly),
+	})),
+)
 const styleOptions = computed(() =>
 	styles.map((style) => ({ value: style, label: styleName(style) })),
 )
+const aiProviderOptions = computed(() =>
+	configuredAIProviders.value.map((provider) => ({
+		value: provider.provider_id,
+		label:
+			provider.custom_name ||
+			aiCatalog.value.find((definition) => definition.id === provider.provider_id)?.name ||
+			provider.provider_id,
+	})),
+)
+const selectedAIProvider = computed({
+	get: () => settings.value.ai_provider_id,
+	set: (providerId: string) => {
+		settings.value.ai_provider_id = providerId
+		settings.value.ai_model_id =
+			configuredAIProviders.value
+				.find((provider) => provider.provider_id === providerId)
+				?.models.find((model) => model.enabled)?.id ?? ''
+	},
+})
+const aiModelOptions = computed(() =>
+	(
+		configuredAIProviders.value.find(
+			(provider) => provider.provider_id === settings.value.ai_provider_id,
+		)?.models ?? []
+	)
+		.filter((model) => model.enabled)
+		.map((model) => ({ value: model.id, label: model.name || model.id })),
+)
 const stylePreviewClass = computed(() => `translation-style-preview-${settings.value.style}`)
+
+watch(
+	[aiAvailable, configuredAIProviders],
+	() => {
+		if (!aiAvailable.value) {
+			if (settings.value.provider === 'ai') settings.value.provider = 'microsoft'
+			return
+		}
+		if (
+			!configuredAIProviders.value.some(
+				(provider) => provider.provider_id === settings.value.ai_provider_id,
+			)
+		) {
+			selectedAIProvider.value = configuredAIProviders.value[0]?.provider_id ?? ''
+		}
+		if (!aiModelOptions.value.some((model) => model.value === settings.value.ai_model_id)) {
+			settings.value.ai_model_id = aiModelOptions.value[0]?.value ?? ''
+		}
+	},
+	{ immediate: true, deep: true },
+)
 
 function reportOperationError(error?: unknown) {
 	const message = error
@@ -239,6 +317,7 @@ function reportOperationError(error?: unknown) {
 watch(
 	settings,
 	() => {
+		if (loading.value) return
 		clearTimeout(saveTimer)
 		saveTimer = setTimeout(
 			() => void updateTranslationSettings(settings.value).catch(reportOperationError),
@@ -249,41 +328,32 @@ watch(
 )
 
 onUnmounted(() => {
-	if (saveTimer) {
-		clearTimeout(saveTimer)
-		void updateTranslationSettings(settings.value).catch(reportOperationError)
-	}
+	if (loading.value || !saveTimer) return
+	clearTimeout(saveTimer)
+	void updateTranslationSettings(settings.value).catch(reportOperationError)
 })
 
-async function saveSecret() {
+onMounted(async () => {
 	try {
-		await setTranslationSecret('openai-compatible', openaiSecret.value)
-		settings.value.openai_has_api_key = !!openaiSecret.value.trim()
-		openaiSecret.value = ''
-		return true
+		const [loadedSettings, , loadedCatalog] = await Promise.all([
+			getTranslationSettings(),
+			getAIState(),
+			getAICatalog(),
+		])
+		settings.value = loadedSettings
+		aiCatalog.value = loadedCatalog
 	} catch (error) {
 		reportOperationError(error)
-		return false
+	} finally {
+		loading.value = false
 	}
-}
-
-async function clearSecret() {
-	try {
-		await setTranslationSecret('openai-compatible', null)
-		settings.value.openai_has_api_key = false
-	} catch (error) {
-		reportOperationError(error)
-	}
-}
+})
 
 async function testProvider() {
 	testing.value = true
 	status.value = ''
 	try {
 		await updateTranslationSettings(settings.value)
-		if (settings.value.provider === 'openai-compatible' && openaiSecret.value) {
-			if (!(await saveSecret())) return
-		}
 		const result = await testTranslationProvider(settings.value.provider)
 		status.value = formatMessage(messages.testSuccess, { translation: result })
 	} catch (error) {
@@ -304,29 +374,98 @@ async function clearCache() {
 </script>
 
 <template>
-	<div class="flex flex-col gap-6">
+	<div v-if="loading" class="flex min-h-48 items-center justify-center">
+		<SpinnerIcon class="size-6 animate-spin text-secondary" />
+	</div>
+	<div v-else class="flex flex-col gap-6">
 		<div>
 			<h2 class="m-0 text-lg font-semibold text-contrast">{{ formatMessage(messages.title) }}</h2>
 			<p class="m-0 mt-2 text-secondary">{{ formatMessage(messages.description) }}</p>
 		</div>
 
 		<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-			<div class="flex flex-col gap-2 font-semibold text-contrast">
-				<span>{{ formatMessage(messages.provider) }}</span>
+			<label class="flex flex-col gap-2 font-semibold text-contrast">
+				{{ formatMessage(messages.provider) }}
 				<Combobox v-model="settings.provider" :options="providerOptions" />
-			</div>
-			<div class="flex flex-col gap-2 font-semibold text-contrast">
-				<span>{{ formatMessage(messages.targetLanguage) }}</span>
+			</label>
+			<label class="flex flex-col gap-2 font-semibold text-contrast">
+				{{ formatMessage(messages.targetLanguage) }}
 				<Combobox v-model="targetLanguage" :options="languageOptions" searchable />
-			</div>
-			<div class="flex flex-col gap-2 font-semibold text-contrast">
-				<span>{{ formatMessage(messages.displayMode) }}</span>
+			</label>
+			<label class="flex flex-col gap-2 font-semibold text-contrast">
+				{{ formatMessage(messages.displayMode) }}
 				<Combobox v-model="settings.mode" :options="modeOptions" />
-			</div>
-			<div class="flex flex-col gap-2 font-semibold text-contrast">
-				<span>{{ formatMessage(messages.style) }}</span>
+			</label>
+			<label class="flex flex-col gap-2 font-semibold text-contrast">
+				{{ formatMessage(messages.style) }}
 				<Combobox v-model="settings.style" :options="styleOptions" />
-			</div>
+			</label>
+		</div>
+
+		<div
+			v-if="settings.provider === 'ai' && aiAvailable"
+			class="grid grid-cols-1 gap-4 md:grid-cols-2"
+		>
+			<label class="flex flex-col gap-2 font-semibold text-contrast">
+				{{ formatMessage(messages.aiProvider) }}
+				<Combobox v-model="selectedAIProvider" :options="aiProviderOptions">
+					<template #selected="{ label }">
+						<span class="inline-flex min-w-0 items-center gap-2">
+							<AIIcon kind="provider-avatar" :value="selectedAIProvider" :size="20" />
+							<span class="truncate">{{ label }}</span>
+						</span>
+					</template>
+					<template #option="{ item, isSelected }">
+						<div class="flex min-w-0 items-center gap-2.5">
+							<AIIcon kind="provider-avatar" :value="String(item.value)" :size="22" />
+							<span
+								class="truncate font-semibold leading-tight"
+								:class="isSelected ? 'text-brand' : 'text-primary'"
+							>
+								{{ item.label }}
+							</span>
+						</div>
+					</template>
+				</Combobox>
+			</label>
+			<label class="flex flex-col gap-2 font-semibold text-contrast">
+				{{ formatMessage(messages.aiModel) }}
+				<div class="translation-model-combobox" :class="{ 'has-model-icon': settings.ai_model_id }">
+					<AIIcon
+						v-if="settings.ai_model_id"
+						class="pointer-events-none absolute left-3 top-1/2 z-[2] -translate-y-1/2"
+						kind="model"
+						:value="settings.ai_model_id"
+						:size="20"
+					/>
+					<Combobox v-model="settings.ai_model_id" :options="aiModelOptions" searchable>
+						<template #option="{ item, isSelected }">
+							<div class="flex min-w-0 items-center gap-2.5">
+								<AIIcon kind="model" :value="String(item.value)" :size="22" />
+								<span
+									class="truncate font-semibold leading-tight"
+									:class="isSelected ? 'text-brand' : 'text-primary'"
+								>
+									{{ item.label }}
+								</span>
+							</div>
+						</template>
+					</Combobox>
+				</div>
+			</label>
+			<label class="flex flex-col gap-1.5 text-sm font-semibold text-contrast md:col-span-2">
+				{{ formatMessage(messages.systemPrompt) }}
+				<StyledInput
+					v-model="settings.ai_system_prompt"
+					multiline
+					:rows="3"
+					resize="vertical"
+					wrapper-class="w-full"
+				/>
+				<span class="font-normal text-secondary">
+					{{ formatMessage(messages.systemPromptDescription) }}
+				</span>
+			</label>
 		</div>
 
 		<div class="flex w-full flex-col gap-2 font-semibold text-contrast">
@@ -353,58 +492,6 @@ async function clearCache() {
 			<Toggle id="translation-auto" v-model="settings.auto_translate" />
 		</div>
 
-		<div v-if="settings.provider === 'openai-compatible'" class="flex flex-col gap-3">
-			<h3 class="m-0 text-base font-semibold text-contrast">
-				{{ formatMessage(messages.openaiConfiguration) }}
-			</h3>
-			<label class="flex flex-col gap-1.5 text-sm font-semibold">
-				{{ formatMessage(messages.baseUrl) }}
-				<StyledInput v-model="settings.openai_base_url" type="url" wrapper-class="w-full" />
-			</label>
-			<label class="flex flex-col gap-1.5 text-sm font-semibold">
-				{{ formatMessage(messages.model) }}
-				<StyledInput v-model="settings.openai_model" wrapper-class="w-full" />
-			</label>
-			<label class="flex flex-col gap-1.5 text-sm font-semibold">
-				{{ formatMessage(messages.apiKey) }}
-				<StyledInput
-					v-model="openaiSecret"
-					:icon="KeyIcon"
-					type="password"
-					autocomplete="off"
-					wrapper-class="w-full"
-				/>
-			</label>
-			<p class="m-0 text-sm text-secondary">
-				{{
-					formatMessage(
-						settings.openai_has_api_key ? messages.apiKeyConfigured : messages.apiKeyOptional,
-					)
-				}}
-			</p>
-			<div class="flex flex-wrap gap-2">
-				<ButtonStyled>
-					<button @click="saveSecret"><CheckIcon />{{ formatMessage(messages.saveKey) }}</button>
-				</ButtonStyled>
-				<ButtonStyled v-if="settings.openai_has_api_key" color="red">
-					<button @click="clearSecret"><TrashIcon />{{ formatMessage(messages.clearKey) }}</button>
-				</ButtonStyled>
-			</div>
-
-			<!-- 系统提示词：独立成行、固定高度、自动适配主题 -->
-			<label class="flex flex-col gap-1.5 text-sm font-semibold">
-				{{ formatMessage(messages.systemPrompt) }}
-				<textarea
-					v-model="settings.openai_system_prompt"
-					class="w-full h-24 resize-none rounded-[--radius-md] border border-[--color-surface-5] bg-[--color-bg] p-2 text-sm text-[--color-contrast] placeholder:text-[--color-secondary] focus:border-[--color-brand] focus:outline-none"
-					rows="3"
-				/>
-			</label>
-			<p class="m-0 text-sm text-secondary">
-				{{ formatMessage(messages.systemPromptDescription) }}
-			</p>
-		</div>
-
 		<div class="flex flex-wrap items-center gap-2">
 			<ButtonStyled color="brand">
 				<button :disabled="testing" @click="testProvider">
@@ -425,15 +512,23 @@ async function clearCache() {
 </template>
 
 <style scoped>
+.translation-model-combobox {
+	position: relative;
+}
+
+.translation-model-combobox.has-model-icon :deep(input) {
+	padding-left: 2.75rem !important;
+}
+
 .translation-style-preview-container {
 	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
 	width: 100%;
 	min-height: 6.5rem;
+	flex-direction: column;
 	box-sizing: border-box;
+	gap: 0.75rem;
 	padding: 1rem;
-	border: 1px solid var(--color-surface-5);
+	border: 1px solid var(--color-divider);
 	border-radius: var(--radius-lg);
 }
 
@@ -442,30 +537,51 @@ async function clearCache() {
 	font-weight: 400;
 }
 
-.translation-style-preview-original {
-	color: var(--color-text-primary);
-}
-
+.translation-style-preview-original,
 .translation-style-preview-default {
 	color: var(--color-text-primary);
 }
 
 .translation-style-preview-weakened {
-	color: var(--color-secondary);
+	color: var(--color-secondary) !important;
 }
 
-.translation-style-preview-brand {
-	color: var(--color-brand);
+.translation-style-preview-blur {
+	filter: blur(4px);
+	opacity: 0.75;
+	transition:
+		filter 0.1s ease-in-out,
+		opacity 0.1s ease-in-out;
+}
+
+.translation-style-preview-blur:hover {
+	filter: blur(0);
+	opacity: 1;
+}
+
+.translation-style-preview-blockquote {
+	padding: 4px 0 4px 8px;
+	border-left: 4px solid var(--color-brand);
+}
+
+.translation-style-preview-dashed-line {
+	text-decoration: underline dashed var(--color-brand) !important;
+	text-underline-offset: 5px;
 }
 
 .translation-style-preview-border {
-	padding-left: 0.875rem;
-	border-left: 3px solid var(--color-brand);
+	padding: 2px 4px;
+	border: 1px solid var(--color-brand);
+	border-radius: 4px;
+}
+
+.translation-style-preview-text-color {
+	color: oklch(0.693 0.17 162.48) !important;
 }
 
 .translation-style-preview-background {
-	padding: 0.75rem 1rem;
-	border-radius: var(--radius-lg);
-	background: var(--color-button-bg);
+	padding: 2px 4px;
+	border-radius: 4px;
+	background-color: color-mix(in srgb, var(--color-brand) 15%, transparent);
 }
 </style>

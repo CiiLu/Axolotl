@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+	BotIcon,
 	CoffeeIcon,
 	GameIcon,
 	GaugeIcon,
@@ -25,6 +26,7 @@ import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/
 import { ref, watch } from 'vue'
 
 import AboutSettings from '@/components/ui/settings/AboutSettings.vue'
+import AISettings from '@/components/ui/settings/AISettings.vue'
 import AppearanceSettings from '@/components/ui/settings/AppearanceSettings.vue'
 import DefaultInstanceSettings from '@/components/ui/settings/DefaultInstanceSettings.vue'
 import FeatureFlagSettings from '@/components/ui/settings/FeatureFlagSettings.vue'
@@ -78,6 +80,17 @@ const tabs = [
 		content: TranslationSettings,
 		badge: commonMessages.beta,
 		onboardingId: 'settings-tab-translation',
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.ai',
+			defaultMessage: 'AI',
+		}),
+		icon: BotIcon,
+		content: AISettings,
+		flushContent: true,
+		badge: commonMessages.beta,
+		onboardingId: 'settings-tab-ai',
 	},
 	{
 		name: defineMessage({
@@ -181,7 +194,7 @@ const messages = defineMessages({
 <template>
 	<TabbedModal
 		ref="modal"
-		width="60rem"
+		width="72rem"
 		:tabs="tabs.filter((t) => !t.developerOnly || themeStore.devMode)"
 	>
 		<template #title>

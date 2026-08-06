@@ -30,6 +30,7 @@ const allowedUntranslatedMessages = new Set([
 	'BBCode',
 	'CMI',
 	'CSV',
+	'AI',
 	'HTML',
 	'MineDown',
 	'MiniMessage',

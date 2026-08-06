@@ -85,6 +85,7 @@ pub struct ContentSet {
     pub protocol_version: Option<u32>,
     pub loader: ModLoader,
     pub loader_version: Option<String>,
+    #[serde(default)]
     pub revision: u64,
     pub created: DateTime<Utc>,
     pub modified: DateTime<Utc>,

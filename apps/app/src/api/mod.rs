@@ -2,6 +2,7 @@ use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
+pub mod ai;
 pub mod auth;
 pub mod import;
 pub mod install;
@@ -29,6 +30,7 @@ pub mod files;
 pub mod worlds;
 
 mod oauth_utils;
+mod search_cancellation;
 
 pub type Result<T> = std::result::Result<T, TheseusSerializableError>;
 
@@ -59,6 +61,9 @@ pub enum TheseusSerializableError {
     #[cfg(feature = "updater")]
     #[error("HTTP error: {0}")]
     Http(#[from] tauri_plugin_http::reqwest::Error),
+
+    #[error("Search request cancelled: {0}")]
+    SearchCancelled(String),
 }
 
 // Generic implementation of From<T> for ErrorTypeA
@@ -113,6 +118,7 @@ macro_rules! impl_serialize {
 impl_serialize! {
     IO,
     Tauri,
+    SearchCancelled,
 }
 
 #[cfg(feature = "updater")]
@@ -121,4 +127,5 @@ impl_serialize! {
     Tauri,
     Updater,
     Http,
+    SearchCancelled,
 }

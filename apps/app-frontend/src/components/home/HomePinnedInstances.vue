@@ -3,9 +3,9 @@ import { GridIcon, RightArrowIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
 
+import type { HomeWidgetSize } from '@/components/home/home-dashboard'
 import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import HomeInstanceCard from '@/components/home/HomeInstanceCard.vue'
-import type { HomeWidgetSize } from '@/components/home/home-dashboard'
 import { set_pinned } from '@/helpers/instance'
 import type { GameInstance } from '@/helpers/types'
 

@@ -396,6 +396,7 @@ fn main() {
         });
 
     builder = builder
+        .plugin(api::ai::init())
         .plugin(api::auth::init())
         .plugin(api::mr_auth::init())
         .plugin(api::import::init())

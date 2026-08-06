@@ -45,8 +45,11 @@ futures = { workspace = true, features = ["alloc", "async-await"] }
 futures-lite = { workspace = true }
 heck = { workspace = true }
 hickory-resolver = { workspace = true }
+hmac = { workspace = true }
 indicatif = { workspace = true, optional = true }
 itertools = { workspace = true }
+jsonwebtoken = { workspace = true }
+keyring = { workspace = true }
 local-ip-address = { workspace = true }
 md5 = { workspace = true }
 modrinth-content-management = { workspace = true }

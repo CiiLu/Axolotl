@@ -57,7 +57,7 @@ export const onboardingMessages = defineMessages({
 	homeCustomizeDescription: {
 		id: 'app.onboarding.home-customize.description',
 		defaultMessage:
-			'Use the bottom-right edit control to add shortcuts, reorder widgets, resize them, and configure their content.',
+			'Use the bottom-right edit control to add, resize, and configure widgets. While editing, switch between an automatically packed grid and a free grid that preserves empty cells.',
 	},
 	discoverTitle: { id: 'app.onboarding.discover.title', defaultMessage: 'Find something new' },
 	discoverDescription: {
@@ -135,7 +135,7 @@ export const onboardingMessages = defineMessages({
 	settingsDescription: {
 		id: 'app.onboarding.settings.description',
 		defaultMessage:
-			'The useful knobs live here: appearance, language, translation, Java, storage, and updates.',
+			'The useful knobs live here: appearance, language, translation, AI providers, Java, storage, and updates.',
 	},
 	clickSettings: {
 		id: 'app.onboarding.action.click-settings',
@@ -160,6 +160,15 @@ export const onboardingMessages = defineMessages({
 		id: 'app.onboarding.translation.description',
 		defaultMessage:
 			'Translate Modrinth project titles, summaries, and descriptions while you browse. Keep the original, show both, or make the translation the main character.',
+	},
+	aiTitle: {
+		id: 'app.onboarding.ai.title',
+		defaultMessage: 'Bring your own AI provider',
+	},
+	aiDescription: {
+		id: 'app.onboarding.ai.description',
+		defaultMessage:
+			'Connect text-model providers once, choose the models you want available, or switch every AI feature off in one place.',
 	},
 	javaTitle: { id: 'app.onboarding.java.title', defaultMessage: 'Java, under the hood' },
 	javaDescription: {
@@ -397,6 +406,12 @@ const settingsTourSteps: Array<[string, string, MessageDescriptor, MessageDescri
 		'settings-tab-translation',
 		onboardingMessages.translationTitle,
 		onboardingMessages.translationDescription,
+	],
+	[
+		'settings-ai',
+		'settings-tab-ai',
+		onboardingMessages.aiTitle,
+		onboardingMessages.aiDescription,
 	],
 	[
 		'settings-java',

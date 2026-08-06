@@ -32,6 +32,29 @@ type OSType = 'Mac' | 'Windows' | 'Linux' | null
 const downloadWindows = ref<HTMLAnchorElement | null>(null)
 const downloadMac = ref<HTMLAnchorElement | null>(null)
 const downloadSection = ref<HTMLElement | null>(null)
+const hero = ref<HTMLElement | null>(null)
+
+const updateHeroTilt = (event: PointerEvent) => {
+	if (!hero.value) return
+
+	const bounds = hero.value.getBoundingClientRect()
+	const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width))
+	const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
+
+	hero.value.style.setProperty('--pointer-x', `${x * 100}%`)
+	hero.value.style.setProperty('--pointer-y', `${y * 100}%`)
+	hero.value.style.setProperty('--tilt-x', `${(0.5 - y) * 4}deg`)
+	hero.value.style.setProperty('--tilt-y', `${(x - 0.5) * 5}deg`)
+}
+
+const resetHeroTilt = () => {
+	if (!hero.value) return
+
+	hero.value.style.removeProperty('--pointer-x')
+	hero.value.style.removeProperty('--pointer-y')
+	hero.value.style.removeProperty('--tilt-x')
+	hero.value.style.removeProperty('--tilt-y')
+}
 
 const { resolvedSource } = useDownloadSource()
 const CNB_RELEASE_BASE_URL = 'https://cnb.cool/axlmc/Axolotl/-/releases/download'
@@ -813,41 +836,60 @@ useHead(() => ({
 
 <template>
 	<div>
-		<div class="landing-hero">
-			<div
-				class="hero-kicker relative mt-4 h-fit w-fit rounded-full px-3 py-1 text-sm font-bold text-brand backdrop-blur-lg"
-			>
-				{{ formatMessage(messages.openSourceBadge) }}
+		<div
+			ref="hero"
+			class="landing-hero"
+			@pointerleave="resetHeroTilt"
+			@pointermove="updateHeroTilt"
+		>
+			<div class="hero-grid" aria-hidden="true" />
+			<div class="hero-sun" aria-hidden="true" />
+			<div class="hero-wordmark" aria-hidden="true">AXOLOTL</div>
+			<div class="hero-content">
+				<div class="hero-meta">
+					<span class="hero-index">AXL / 01</span>
+					<div class="hero-kicker">
+						{{ formatMessage(messages.openSourceBadge) }}
+					</div>
+				</div>
+				<h1 class="main-header">{{ formatMessage(messages.downloadAxolotl) }}</h1>
+				<p class="main-subheader">
+					{{ formatMessage(messages.description) }}
+				</p>
+				<div class="button-group">
+					<ButtonStyled v-if="os" color="brand" size="large">
+						<button rel="noopener nofollow" @click="handleDownload">
+							<LinuxIcon v-if="os === 'Linux'" />
+							<WindowsIcon v-else-if="os === 'Windows'" />
+							<AppleIcon v-else-if="os === 'Mac'" />
+							{{ formatMessage(messages.downloadAxolotlButton) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled type="outlined" size="large">
+						<button @click="scrollToSection">
+							<ArrowDownIcon />
+							{{ formatMessage(messages.moreDownloadOptions) }}
+						</button>
+					</ButtonStyled>
+				</div>
 			</div>
-			<h1 class="main-header max-w-[60rem]">{{ formatMessage(messages.downloadAxolotl) }}</h1>
-			<p class="main-subheader">
-				{{ formatMessage(messages.description) }}
-			</p>
-			<div class="button-group">
-				<ButtonStyled v-if="os" color="brand" size="large">
-					<button rel="noopener nofollow" @click="handleDownload">
-						<LinuxIcon v-if="os === 'Linux'" />
-						<WindowsIcon v-else-if="os === 'Windows'" />
-						<AppleIcon v-else-if="os === 'Mac'" />
-						{{ formatMessage(messages.downloadAxolotlButton) }}
-					</button>
-				</ButtonStyled>
-				<ButtonStyled type="outlined" size="large">
-					<button @click="scrollToSection">
-						<ArrowDownIcon />
-						{{ formatMessage(messages.moreDownloadOptions) }}
-					</button>
-				</ButtonStyled>
+			<div class="hero-product">
+				<div class="hero-product-bar" aria-hidden="true">
+					<span />
+					<span />
+					<span />
+				</div>
+				<img
+					class="hero-screenshot"
+					src="/showcase/launcher-home.png"
+					:alt="formatMessage(messages.heroScreenshotAlt)"
+					width="3104"
+					height="1806"
+					decoding="async"
+					fetchpriority="high"
+				/>
 			</div>
-			<img
-				class="hero-screenshot"
-				src="/showcase/launcher-home.png"
-				:alt="formatMessage(messages.heroScreenshotAlt)"
-				width="3104"
-				height="1806"
-				decoding="async"
-				fetchpriority="high"
-			/>
+			<div class="hero-scroll-mark" aria-hidden="true"><span /></div>
 			<div class="bottom-transition" />
 		</div>
 		<section class="axolotl-highlights" aria-labelledby="axolotl-highlights-title">
@@ -1472,79 +1514,269 @@ useHead(() => ({
 }
 
 .landing-hero {
+	--pointer-x: 50%;
+	--pointer-y: 40%;
+	--tilt-x: 0deg;
+	--tilt-y: 0deg;
 	position: relative;
-	background:
-		radial-gradient(circle at 18% 20%, rgb(255 130 178 / 26%), transparent 28rem),
-		radial-gradient(circle at 82% 36%, rgb(155 133 255 / 16%), transparent 32rem),
-		linear-gradient(180deg, #17121d 0%, #11111d 58%, #101018 100%);
-	padding: 6rem 1rem 12rem;
-	margin-top: -5rem;
 	display: flex;
-	justify-content: center;
+	min-height: min(63rem, calc(100svh + 8rem));
 	align-items: center;
-	text-align: center;
 	flex-direction: column;
+	overflow: hidden;
+	padding: clamp(7rem, 12vw, 11.5rem) 1.5rem 0;
+	margin-top: -5.25rem;
+	background:
+		radial-gradient(
+			circle at var(--pointer-x) var(--pointer-y),
+			rgb(255 155 197 / 22%),
+			transparent 20rem
+		),
+		radial-gradient(circle at 12% 46%, rgb(70 190 176 / 11%), transparent 26rem),
+		linear-gradient(155deg, #161018 0%, #11121a 52%, #121520 100%);
 	isolation: isolate;
 
-	.hero-kicker {
-		border: 1px solid color-mix(in srgb, var(--color-brand) 28%, transparent);
-		background: color-mix(in srgb, var(--color-brand) 12%, transparent);
-		box-shadow: 0 0.75rem 2.5rem color-mix(in srgb, var(--color-brand) 12%, transparent);
-	}
-
-	.main-subheader {
-		font-size: 1.625rem;
-		line-height: 125%;
-		margin: 0 0 1.625rem;
-		font-weight: 400;
-		line-break: loose;
-		color: var(--landing-color-subheading);
-		max-width: 1096px;
-		mask-image: none;
-	}
-
-	.button-group {
-		width: fit-content;
-		margin: 0 auto;
-		justify-content: center;
-		mask-image: none;
-	}
-
-	img {
-		width: 100%;
-		max-width: 65rem;
-		height: auto;
-		mask-image: none;
-		z-index: 1;
-	}
-
-	.hero-screenshot {
-		margin: 3rem auto 0;
-		border-radius: 1rem;
-	}
-
-	.bottom-transition {
+	&::before,
+	&::after {
+		position: absolute;
 		z-index: -1;
+		content: '';
+		pointer-events: none;
+	}
+
+	&::before {
+		inset: 0;
+		background: linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px);
+		background-size: min(9vw, 9rem) 100%;
+		mask-image: linear-gradient(180deg, black, transparent 72%);
+	}
+
+	&::after {
+		inset: 8.5rem 7% auto;
+		height: 1px;
+		background: linear-gradient(90deg, transparent, rgb(255 170 206 / 38%), transparent);
+	}
+}
+
+.hero-grid {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background-image: linear-gradient(rgb(255 255 255 / 3%) 1px, transparent 1px);
+	background-size: 100% min(9vw, 9rem);
+	mask-image: linear-gradient(180deg, black, transparent 70%);
+	pointer-events: none;
+}
+
+.hero-sun {
+	position: absolute;
+	top: 4.5rem;
+	right: clamp(-8rem, 6vw, 5rem);
+	z-index: -1;
+	width: clamp(21rem, 38vw, 38rem);
+	aspect-ratio: 1;
+	border: 1px solid rgb(255 185 213 / 14%);
+	border-radius: 50%;
+	box-shadow:
+		0 0 0 5rem rgb(255 160 201 / 2%),
+		0 0 0 10rem rgb(255 160 201 / 1%);
+	pointer-events: none;
+}
+
+.hero-wordmark {
+	position: absolute;
+	top: clamp(11rem, 20vw, 15rem);
+	left: 50%;
+	z-index: -1;
+	color: rgb(255 255 255 / 3%);
+	font-size: clamp(7rem, 21vw, 22rem);
+	font-weight: 800;
+	letter-spacing: 0;
+	line-height: 0.8;
+	white-space: nowrap;
+	transform: translateX(-50%);
+	user-select: none;
+}
+
+.hero-content {
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+	width: min(100%, 59rem);
+	text-align: center;
+}
+
+.hero-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.hero-index,
+.hero-kicker {
+	display: inline-flex;
+	align-items: center;
+	min-height: 2rem;
+	padding: 0.35rem 0.65rem;
+	border: 1px solid rgb(255 255 255 / 12%);
+	font-size: 0.7rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	line-height: 1;
+	text-transform: uppercase;
+}
+
+.hero-index {
+	color: rgb(255 255 255 / 45%);
+	font-variant-numeric: tabular-nums;
+}
+
+.hero-kicker {
+	border-color: color-mix(in srgb, var(--color-brand) 35%, transparent);
+	background: color-mix(in srgb, var(--color-brand) 11%, transparent);
+	color: var(--color-brand);
+	box-shadow: 0 0.75rem 2.5rem color-mix(in srgb, var(--color-brand) 10%, transparent);
+}
+
+.main-header {
+	max-width: 52rem;
+	margin: 1.5rem 0 1.15rem;
+	color: var(--color-contrast);
+	font-size: clamp(3.25rem, 8vw, 7rem);
+	font-weight: 750;
+	letter-spacing: 0;
+	line-height: 0.95;
+	text-wrap: balance;
+}
+
+.landing-hero .main-subheader {
+	max-width: 46rem;
+	margin: 0;
+	color: var(--landing-color-subheading);
+	font-size: clamp(1rem, 1.6vw, 1.25rem);
+	font-weight: 450;
+	line-height: 1.65;
+	text-wrap: balance;
+}
+
+.landing-hero .button-group {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.75rem;
+	margin: 2rem 0 0;
+	mask-image: none;
+}
+
+.hero-product {
+	position: relative;
+	width: min(79rem, 112%);
+	margin-top: clamp(3.25rem, 7vw, 5.5rem);
+	padding: 0.5rem;
+	border: 1px solid rgb(255 255 255 / 16%);
+	border-radius: 0.75rem 0.75rem 0 0;
+	background: linear-gradient(145deg, rgb(255 255 255 / 15%), rgb(255 255 255 / 2%));
+	box-shadow:
+		0 2rem 6rem rgb(0 0 0 / 42%),
+		0 0 6rem rgb(255 112 172 / 14%);
+	transform: perspective(1500px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+	transform-origin: center bottom;
+	transition: transform 260ms ease-out;
+	will-change: transform;
+}
+
+.hero-product::after {
+	position: absolute;
+	inset: 0;
+	border: 1px solid rgb(255 255 255 / 6%);
+	border-radius: inherit;
+	content: '';
+	pointer-events: none;
+}
+
+.hero-product-bar {
+	display: flex;
+	gap: 0.33rem;
+	padding: 0.2rem 0.3rem 0.7rem;
+
+	span {
+		width: 0.45rem;
+		height: 0.45rem;
+		border-radius: 50%;
+		background: rgb(255 255 255 / 28%);
+	}
+
+	span:first-child {
+		background: var(--color-brand);
+	}
+}
+
+.hero-screenshot {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 0.25rem;
+	box-shadow: 0 1px 0 rgb(255 255 255 / 10%) inset;
+}
+
+.hero-scroll-mark {
+	position: absolute;
+	bottom: 2.25rem;
+	left: 50%;
+	display: flex;
+	width: 1px;
+	height: 3rem;
+	justify-content: flex-start;
+	overflow: hidden;
+	background: rgb(255 255 255 / 14%);
+	transform: translateX(-50%);
+
+	span {
+		width: 100%;
+		height: 45%;
+		background: var(--color-brand);
+		animation: scroll-mark 2.3s ease-in-out infinite;
+	}
+}
+
+@keyframes scroll-mark {
+	0%,
+	100% {
+		transform: translateY(-110%);
+	}
+	55% {
+		transform: translateY(220%);
 	}
 }
 
 .axolotl-highlights {
 	position: relative;
-	padding: 1rem 1.5rem;
+	padding: clamp(5rem, 10vw, 9rem) 1.5rem 3rem;
 	background: var(--landing-transition-gradient-end);
+
+	&::before {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		width: min(76rem, calc(100% - 3rem));
+		height: 1px;
+		background: linear-gradient(90deg, transparent, var(--landing-border-color), transparent);
+		content: '';
+		transform: translateX(-50%);
+	}
 }
 
 .highlights-intro {
-	max-width: 48rem;
-	margin: 0 auto 2.75rem;
+	max-width: 52rem;
+	margin: 0 auto clamp(2.75rem, 6vw, 5rem);
 	text-align: center;
 
 	h2 {
 		margin: 0.7rem 0 1rem;
 		color: var(--color-contrast);
-		font-size: clamp(2.25rem, 5vw, 4.25rem);
-		font-weight: 650;
-		letter-spacing: -0.045em;
+		font-size: clamp(2.5rem, 5.5vw, 4.75rem);
+		font-weight: 700;
+		letter-spacing: 0;
 		line-height: 1.04;
 	}
 
@@ -1581,8 +1813,8 @@ useHead(() => ({
 		rgba(32, 35, 50, 0.27) 100%
 	);
 	box-shadow:
-		2px 2px 12px 0 rgba(0, 0, 0, 0.16),
-		2px 2px 64px 0 rgba(57, 61, 94, 0.45) inset;
+		0 1.25rem 3rem rgb(0 0 0 / 12%),
+		0 0 4rem rgb(57 61 94 / 20%) inset;
 	backdrop-filter: blur(6px);
 	-webkit-backdrop-filter: blur(6px);
 	overflow: hidden;
@@ -1624,6 +1856,17 @@ useHead(() => ({
 		color: var(--color-secondary);
 		font-size: 0.9rem;
 		line-height: 1.6;
+	}
+
+	&::after {
+		position: absolute;
+		right: -1.75rem;
+		bottom: -2.25rem;
+		color: rgb(255 255 255 / 4%);
+		content: attr(data-number);
+		font-size: 8rem;
+		font-weight: 800;
+		line-height: 1;
 	}
 }
 
@@ -1702,6 +1945,7 @@ useHead(() => ({
 	justify-content: center;
 	display: flex;
 	flex-direction: column;
+	padding: 3rem 0 clamp(5rem, 9vw, 8rem);
 
 	h3 {
 		font-weight: 500;
@@ -2410,7 +2654,9 @@ useHead(() => ({
 }
 
 .footer {
-	padding: var(--gap-xl);
+	position: relative;
+	overflow: hidden;
+	padding: clamp(4rem, 8vw, 7rem) var(--gap-xl);
 	background: var(--color-accent-contrast);
 	color: var(--color-contrast);
 	text-align: center;
@@ -2420,10 +2666,22 @@ useHead(() => ({
 	justify-content: center;
 	align-items: center;
 
+	&::before {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		width: min(50rem, 90%);
+		height: 1px;
+		background: linear-gradient(90deg, transparent, var(--color-brand), transparent);
+		content: '';
+		transform: translateX(-50%);
+	}
+
 	.section-badge {
+		border: 1px solid color-mix(in srgb, var(--color-brand) 40%, transparent);
 		background-color: var(--color-brand-highlight);
 		color: var(--color-brand);
-		border-radius: var(--radius-sm);
+		border-radius: 0;
 		width: min-content;
 		padding: var(--gap-lg) var(--gap-xl);
 		white-space: nowrap;
@@ -2434,11 +2692,14 @@ useHead(() => ({
 		flex-direction: column;
 		align-items: center;
 		gap: var(--gap-sm);
-		font-size: var(--font-size-lg);
+		font-size: clamp(1.05rem, 1.5vw, 1.25rem);
 		margin: 2rem 0;
 
 		.section-subheader-title {
-			font-size: var(--font-size-xl);
+			font-size: clamp(2rem, 4vw, 3.75rem);
+			font-weight: 700;
+			letter-spacing: 0;
+			line-height: 1;
 			margin: 0;
 		}
 

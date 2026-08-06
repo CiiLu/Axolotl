@@ -1,5 +1,5 @@
 import type { ComputedRef, Ref, ShallowRef } from 'vue'
-import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onScopeDispose, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useDebugLogger } from '#ui/composables/debug-logger'
@@ -21,7 +21,7 @@ export interface UseBrowseSearchOptions {
 	tags: Ref<Tags>
 	providedFilters?: ComputedRef<FilterValue[]>
 	environmentOverride?: ComputedRef<EnvironmentSearchOverride | undefined>
-	search: (params: string) => Promise<BrowseSearchResponse>
+	search: (params: string, signal: AbortSignal) => Promise<BrowseSearchResponse>
 	syncQueryParams?: boolean
 	persistentQueryParams: string[]
 	getExtraQueryParams?: () => Record<string, string | undefined>
@@ -180,6 +180,7 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 
 	let searchVersion = 0
 	let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+	let searchAbortController: AbortController | null = null
 
 	const providedFiltersOrEmpty = computed(() => options.providedFilters?.value ?? [])
 
@@ -206,13 +207,20 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 			from: oldVal?.substring(0, 80),
 			to: newVal?.substring(0, 80),
 		})
+		searchVersion++
+		searchAbortController?.abort()
+		searchAbortController = null
 		if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
 		searchDebounceTimer = setTimeout(() => {
+			searchDebounceTimer = null
 			refreshSearch()
 		}, 200)
 	})
 
 	async function refreshSearch() {
+		searchAbortController?.abort()
+		const abortController = new AbortController()
+		searchAbortController = abortController
 		const version = ++searchVersion
 		debug('refreshSearch start', {
 			version,
@@ -228,7 +236,7 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 		}
 
 		try {
-			const response = await options.search(effectiveRequestParams.value)
+			const response = await options.search(effectiveRequestParams.value, abortController.signal)
 
 			if (version !== searchVersion) {
 				debug('refreshSearch stale, discarding', { version, current: searchVersion })
@@ -251,13 +259,27 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 			if (options.syncQueryParams !== false) updateUrlParams()
 			loading.value = false
 		} catch (err) {
+			if (abortController.signal.aborted) {
+				debug('refreshSearch cancelled', { version })
+				return
+			}
 			debug('refreshSearch error', err)
 			console.error('Browse search error:', err)
 			if (version === searchVersion) {
 				loading.value = false
 			}
+		} finally {
+			if (searchAbortController === abortController) {
+				searchAbortController = null
+			}
 		}
 	}
+
+	onScopeDispose(() => {
+		searchVersion++
+		if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+		searchAbortController?.abort()
+	})
 
 	function updateUrlParams() {
 		debug('updateUrlParams', { path: route.path })

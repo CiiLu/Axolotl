@@ -104,6 +104,40 @@ pub async fn install_existing_instance(
     start(InstallRequest::InstallExistingInstance { instance_id, force }).await
 }
 
+pub async fn install_content(
+    instance_id: String,
+    project_id: String,
+    version_id: Option<String>,
+    content_type: modrinth_content_management::ContentType,
+    selected: modrinth_content_management::ResolutionPreferences,
+    display_title: String,
+    display_icon: Option<String>,
+) -> crate::Result<InstallJobSnapshot> {
+    start(InstallRequest::InstallContent {
+        instance_id,
+        project_id,
+        version_id,
+        content_type,
+        selected,
+        display_title,
+        display_icon,
+    })
+    .await
+}
+
+pub async fn install_curseforge_content(
+    request: crate::api::curseforge::CurseForgeInstallRequest,
+    display_title: String,
+    display_icon: Option<String>,
+) -> crate::Result<InstallJobSnapshot> {
+    start(InstallRequest::InstallCurseForgeContent {
+        request,
+        display_title,
+        display_icon,
+    })
+    .await
+}
+
 pub async fn download_java(
     vendor: String,
     version: u32,
@@ -466,6 +500,36 @@ async fn prepare_initial_instance(
             instance_id, ..
         } => {
             prepare_existing_rollback(job_state, state, &instance_id).await?;
+        }
+        InstallRequest::InstallContent {
+            instance_id,
+            display_title,
+            display_icon,
+            ..
+        } => {
+            crate::state::get_instance(&instance_id, &state.pool)
+                .await?
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError(format!(
+                        "Unknown instance {instance_id}"
+                    ))
+                })?;
+            set_display(job_state, display_title, display_icon);
+        }
+        InstallRequest::InstallCurseForgeContent {
+            request,
+            display_title,
+            display_icon,
+        } => {
+            crate::state::get_instance(&request.instance_id, &state.pool)
+                .await?
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError(format!(
+                        "Unknown instance {}",
+                        request.instance_id
+                    ))
+                })?;
+            set_display(job_state, display_title, display_icon);
         }
         InstallRequest::DownloadJava { vendor, version } => {
             set_display(job_state, format!("Java {version} ({vendor})"), None);
@@ -917,6 +981,86 @@ async fn run_request(
             )
             .await?;
             apply_post_install_edit(&instance_id, post_install_edit).await?;
+            Ok(Some(instance_id))
+        }
+        InstallRequest::InstallContent {
+            instance_id,
+            project_id,
+            version_id,
+            content_type,
+            selected,
+            display_title: _,
+            display_icon: _,
+        } => {
+            update_progress(
+                job_id,
+                job_state,
+                state,
+                InstallPhaseId::DownloadingContent,
+                InstallPhaseDetails::Empty,
+            )
+            .await?;
+            let plan = crate::state::instances::commands::resolve_install_plan(
+                &instance_id,
+                crate::state::instances::commands::InstanceInstallProjectRequest {
+                    project_id,
+                    version_id,
+                    content_type,
+                    selected,
+                },
+                state,
+            )
+            .await?;
+            let total = (plan.dependencies.len() + 1) as u64;
+            let reporter = InstallProgressReporter::new(job_id, job_state.clone());
+            reporter
+                .update(
+                    InstallPhaseId::DownloadingContent,
+                    Some(InstallProgress {
+                        current: 0,
+                        total,
+                        secondary: None,
+                    }),
+                    InstallPhaseDetails::Empty,
+                )
+                .await?;
+            crate::state::instances::commands::install_resolved_content_plan(
+                &instance_id,
+                &plan,
+                state,
+            )
+            .await?;
+            reporter
+                .update(
+                    InstallPhaseId::DownloadingContent,
+                    Some(InstallProgress {
+                        current: total,
+                        total,
+                        secondary: None,
+                    }),
+                    InstallPhaseDetails::Empty,
+                )
+                .await?;
+            crate::api::instance::emit_content_changed(&instance_id).await?;
+            Ok(Some(instance_id))
+        }
+        InstallRequest::InstallCurseForgeContent {
+            request,
+            display_title: _,
+            display_icon: _,
+        } => {
+            let instance_id = request.instance_id.clone();
+            update_progress(
+                job_id,
+                job_state,
+                state,
+                InstallPhaseId::DownloadingContent,
+                InstallPhaseDetails::Empty,
+            )
+            .await?;
+            let reporter = InstallProgressReporter::new(job_id, job_state.clone());
+            crate::api::curseforge::install_file_with_reporter(request, reporter).await?;
+            crate::api::instance::emit_content_changed(&instance_id).await?;
             Ok(Some(instance_id))
         }
         InstallRequest::DownloadJava { vendor, version } => {
@@ -1619,6 +1763,7 @@ fn set_instance_id(job_state: &mut InstallJobState, instance_id: String) {
                 instance_id: Some(instance_id),
             }
         }
+        InstallCleanup::None => InstallCleanup::None,
     };
 }
 

@@ -1,5 +1,8 @@
 export const HOME_DASHBOARD_VERSION = 1 as const
+export const HOME_WIDGET_LAYOUTS = ['grid', 'free'] as const
 export const HOME_WIDGET_SIZES = ['1x1', '2x1', '1x2', '2x2'] as const
+export const HOME_WIDGET_GRID_GAP = 16
+export const HOME_WIDGET_GRID_ROW_HEIGHT = 160
 export const HOME_RECENT_LIMIT_OPTIONS = [2, 4, 6, 8] as const
 export const HOME_RECENT_DEFAULT_LIMIT = 4
 export const HOME_GREETING_MODES = ['greeting', 'text-and-greeting', 'text'] as const
@@ -11,6 +14,7 @@ export const HOME_GREETING_FONT_SIZE_MAX = 32
 export const HOME_GREETING_DEFAULT_FONT_SIZE = 22
 
 export type HomeWidgetSize = (typeof HOME_WIDGET_SIZES)[number]
+export type HomeWidgetLayout = (typeof HOME_WIDGET_LAYOUTS)[number]
 export type HomeRecentLimit = (typeof HOME_RECENT_LIMIT_OPTIONS)[number]
 export type HomeGreetingMode = (typeof HOME_GREETING_MODES)[number]
 export type HomeGreetingFont = (typeof HOME_GREETING_FONTS)[number]
@@ -40,16 +44,23 @@ export type HomeWidgetOptions = {
 	greetingFontSize?: number
 }
 
+export type HomeWidgetPosition = {
+	column: number
+	row: number
+}
+
 export type HomeWidgetPlacement = {
 	id: string
 	kind: HomeWidgetKind
 	size: HomeWidgetSize
 	target?: HomeWidgetTarget
 	options?: HomeWidgetOptions
+	position?: HomeWidgetPosition
 }
 
 export type HomeDashboardConfig = {
 	version: typeof HOME_DASHBOARD_VERSION
+	layout: HomeWidgetLayout
 	widgets: HomeWidgetPlacement[]
 }
 
@@ -117,6 +128,7 @@ function createPlacement(
 export function createDefaultHomeDashboard(includeRecent = true): HomeDashboardConfig {
 	return {
 		version: HOME_DASHBOARD_VERSION,
+		layout: 'grid',
 		widgets: [
 			createPlacement('greeting'),
 			createPlacement('calendar'),
@@ -142,6 +154,17 @@ function normalizeTarget(value: unknown): HomeWidgetTarget | undefined {
 		...(typeof value.path === 'string' ? { path: value.path } : {}),
 		...(typeof value.address === 'string' ? { address: value.address } : {}),
 		fallbackLabel: value.fallbackLabel,
+	}
+}
+
+function normalizePosition(value: unknown): HomeWidgetPosition | undefined {
+	if (!isRecord(value)) return undefined
+	if (typeof value.column !== 'number' || !Number.isFinite(value.column)) return undefined
+	if (typeof value.row !== 'number' || !Number.isFinite(value.row)) return undefined
+
+	return {
+		column: Math.min(100, Math.max(0, Math.round(value.column))),
+		row: Math.min(10_000, Math.max(0, Math.round(value.row))),
 	}
 }
 
@@ -202,6 +225,9 @@ export function normalizeHomeDashboard(value: unknown): HomeDashboardConfig | nu
 	}
 
 	const usedIds = new Set<string>()
+	const layout = HOME_WIDGET_LAYOUTS.includes(value.layout as HomeWidgetLayout)
+		? (value.layout as HomeWidgetLayout)
+		: 'grid'
 	const widgets = value.widgets.flatMap((candidate): HomeWidgetPlacement[] => {
 		if (!isRecord(candidate) || typeof candidate.kind !== 'string') return []
 		if (!HOME_WIDGET_KINDS.has(candidate.kind as HomeWidgetKind)) return []
@@ -209,6 +235,7 @@ export function normalizeHomeDashboard(value: unknown): HomeDashboardConfig | nu
 		const kind = candidate.kind as HomeWidgetKind
 		const target = normalizeTarget(candidate.target)
 		const options = normalizeOptions(kind, candidate.options)
+		const position = normalizePosition(candidate.position)
 		if ((kind === 'instance' || kind === 'world' || kind === 'server') && !target) return []
 		if (kind === 'world' && !target?.path) return []
 		if (kind === 'server' && !target?.address) return []
@@ -229,11 +256,12 @@ export function normalizeHomeDashboard(value: unknown): HomeDashboardConfig | nu
 				size,
 				...(target ? { target } : {}),
 				...(options ? { options } : {}),
+				...(position ? { position } : {}),
 			},
 		]
 	})
 
-	return { version: HOME_DASHBOARD_VERSION, widgets }
+	return { version: HOME_DASHBOARD_VERSION, layout, widgets }
 }
 
 export function replaceHomeDashboardWidgets(
@@ -248,6 +276,24 @@ export function addHomeWidget(
 	widget: HomeWidgetPlacement,
 ): HomeDashboardConfig {
 	return replaceHomeDashboardWidgets(config, [...config.widgets, widget])
+}
+
+export function setHomeDashboardLayout(
+	config: HomeDashboardConfig,
+	layout: HomeWidgetLayout,
+): HomeDashboardConfig {
+	return { ...config, layout }
+}
+
+export function setHomeWidgetPosition(
+	config: HomeDashboardConfig,
+	id: string,
+	position: HomeWidgetPosition,
+): HomeDashboardConfig {
+	return replaceHomeDashboardWidgets(
+		config,
+		config.widgets.map((widget) => (widget.id === id ? { ...widget, position } : widget)),
+	)
 }
 
 export function removeHomeWidget(config: HomeDashboardConfig, id: string): HomeDashboardConfig {
@@ -372,12 +418,101 @@ export function getHomeGridColumnCount(width: number): number {
 	)
 }
 
+export function getHomeWidgetDimensions(
+	size: HomeWidgetSize,
+	columnCount: number,
+	containerWidth: number,
+) {
+	const columns = Math.max(1, columnCount)
+	const span = getHomeWidgetSpan(size, columns)
+	const columnWidth = Math.max(0, (containerWidth - HOME_WIDGET_GRID_GAP * (columns - 1)) / columns)
+
+	return {
+		width: columnWidth * span.columns + HOME_WIDGET_GRID_GAP * (span.columns - 1),
+		height: HOME_WIDGET_GRID_ROW_HEIGHT * span.rows + HOME_WIDGET_GRID_GAP * (span.rows - 1),
+	}
+}
+
 export function getHomeWidgetSpan(size: HomeWidgetSize, columnCount: number) {
 	const [columns, rows] = size.split('x').map(Number)
 	return {
 		columns: Math.min(columns, Math.max(1, columnCount)),
 		rows,
 	}
+}
+
+function homeWidgetRect(
+	widget: HomeWidgetPlacement,
+	position: HomeWidgetPosition,
+	columnCount: number,
+) {
+	const span = getHomeWidgetSpan(widget.size, columnCount)
+	return {
+		left: position.column,
+		top: position.row,
+		right: position.column + span.columns,
+		bottom: position.row + span.rows,
+	}
+}
+
+function homeWidgetRectsOverlap(
+	left: ReturnType<typeof homeWidgetRect>,
+	right: ReturnType<typeof homeWidgetRect>,
+) {
+	return (
+		left.left < right.right &&
+		left.right > right.left &&
+		left.top < right.bottom &&
+		left.bottom > right.top
+	)
+}
+
+export function findNearestFreeHomeWidgetPosition(
+	widgets: readonly HomeWidgetPlacement[],
+	movingWidget: HomeWidgetPlacement,
+	desiredPosition: HomeWidgetPosition,
+	columnCount: number,
+): HomeWidgetPosition {
+	const columns = Math.max(1, columnCount)
+	const movingSpan = getHomeWidgetSpan(movingWidget.size, columns)
+	const desired = {
+		column: Math.min(
+			Math.max(0, Math.round(desiredPosition.column)),
+			Math.max(0, columns - movingSpan.columns),
+		),
+		row: Math.max(0, Math.round(desiredPosition.row)),
+	}
+	const occupied = widgets.flatMap((widget) =>
+		widget.id !== movingWidget.id && widget.position
+			? [homeWidgetRect(widget, widget.position, columns)]
+			: [],
+	)
+	const isAvailable = (position: HomeWidgetPosition) => {
+		const candidate = homeWidgetRect(movingWidget, position, columns)
+		return occupied.every((rect) => !homeWidgetRectsOverlap(candidate, rect))
+	}
+
+	if (isAvailable(desired)) return desired
+
+	const lastOccupiedRow = occupied.reduce((last, rect) => Math.max(last, rect.bottom), 0)
+	const lastSearchRow = Math.max(
+		desired.row + widgets.length * 2,
+		lastOccupiedRow + movingSpan.rows,
+	)
+	let closest: HomeWidgetPosition | null = null
+	let closestDistance = Number.POSITIVE_INFINITY
+	for (let row = 0; row <= lastSearchRow; row += 1) {
+		for (let column = 0; column <= columns - movingSpan.columns; column += 1) {
+			const candidate = { column, row }
+			if (!isAvailable(candidate)) continue
+			const distance = Math.abs(column - desired.column) + Math.abs(row - desired.row)
+			if (distance >= closestDistance) continue
+			closest = candidate
+			closestDistance = distance
+		}
+	}
+
+	return closest ?? desired
 }
 
 export function packHomeWidgets(
@@ -422,4 +557,32 @@ export function packHomeWidgets(
 			effectiveRows: span.rows,
 		}
 	})
+}
+
+export function enableFreeHomeDashboard(
+	config: HomeDashboardConfig,
+	columnCount: number,
+): HomeDashboardConfig {
+	const columns = Math.max(1, columnCount)
+	const packedById = new Map(
+		packHomeWidgets(config.widgets, columns).map((widget) => [widget.id, widget]),
+	)
+
+	return {
+		...config,
+		layout: 'free',
+		widgets: config.widgets.map((widget) => {
+			if (widget.position) return widget
+			const packed = packedById.get(widget.id)
+			if (!packed) return widget
+
+			return {
+				...widget,
+				position: {
+					column: packed.column - 1,
+					row: packed.row - 1,
+				},
+			}
+		}),
+	}
 }
