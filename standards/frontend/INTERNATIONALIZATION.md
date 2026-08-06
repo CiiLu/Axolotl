@@ -1,13 +1,13 @@
 - [Internationalization (i18n)](#internationalization-i18n)
-  - [Translatable Strings](#translatable-strings)
-  - [Message Definitions](#message-definitions)
-  - [Rendering Messages](#rendering-messages)
-  - [ICU Message Format](#icu-message-format)
-  - [Writing Translation-Friendly Strings](#writing-translation-friendly-strings)
-  - [Rich-Text Messages](#rich-text-messages)
-  - [Vue/ICU Delimiter Collisions](#vueicu-delimiter-collisions)
-  - [Imports](#imports)
-  - [Reference Examples](#reference-examples)
+	- [Translatable Strings](#translatable-strings)
+	- [Message Definitions](#message-definitions)
+	- [Rendering Messages](#rendering-messages)
+	- [ICU Message Format](#icu-message-format)
+	- [Writing Translation-Friendly Strings](#writing-translation-friendly-strings)
+	- [Rich-Text Messages](#rich-text-messages)
+	- [Vue/ICU Delimiter Collisions](#vueicu-delimiter-collisions)
+	- [Imports](#imports)
+	- [Reference Examples](#reference-examples)
 
 # Internationalization (i18n)
 
@@ -140,4 +140,4 @@ All i18n utilities come from `@modrinth/ui`:
 ## Reference Examples
 
 - Variables and plurals: `apps/app-frontend/src/components/home/HomeDailyChallenge.vue`
-- Rich-text with link tags: `apps/app-frontend/src/components/base/Markdown.vue`
+- Rich-text with link tags: `apps/website/src/pages/index.vue`
