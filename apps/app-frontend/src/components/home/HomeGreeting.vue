@@ -76,7 +76,7 @@ const messages = defineMessages({
 		id: 'app.home.greeting.minimal.night',
 		defaultMessage: 'Good evening',
 	},
-	lateNight: {
+	'late-night': {
 		id: 'app.home.greeting.late-night',
 		defaultMessage:
 			'The moon is still working overtime.\nA quiet world is waiting.\nNight shifts build great stories.\nOne more block before dawn?\nThe stars have your server covered.\nLate hours, legendary saves.\nThe torchlight looks especially good now.\nYour next adventure is still awake.\nThe caves are calmer after midnight.\nA peaceful spawn point awaits.\nThe night belongs to patient builders.\nKeep the soundtrack low and the ideas loud.\nEvery great base starts with one block.\nThe End can wait, unless it cannot.\nA small session still counts.\nThe world has been saved for you.',
