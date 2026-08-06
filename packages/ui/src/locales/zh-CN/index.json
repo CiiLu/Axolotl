@@ -5649,7 +5649,7 @@
 		"message": "导入 Litematic 投影文件"
 	},
 	"drop.confirm.not-this": {
-		"message": "更换导入类型"
+		"message": "这不是 {type}"
 	},
 	"drop.confirm.as-dot-minecraft": {
 		"message": ".minecraft"
