@@ -9,6 +9,10 @@ import { computed, onBeforeUnmount, ref, toRef, watch } from 'vue'
 
 import { injectLoadingState } from '#ui/providers/loading-state'
 
+defineOptions({
+	inheritAttrs: false,
+})
+
 const props = withDefaults(
 	defineProps<{
 		/** True while wrapped content loads. The optional pending slot renders and loading bar runs. */

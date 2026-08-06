@@ -41,6 +41,10 @@ import { update_managed_modrinth_version } from '@/helpers/instance'
 import type { GameInstance } from '@/helpers/types'
 import { injectServerInstall } from '@/providers/server-install'
 
+defineOptions({
+	inheritAttrs: false,
+})
+
 type Dependency = Labrinth.Versions.v3.Dependency
 type Version = Labrinth.Versions.v2.Version
 

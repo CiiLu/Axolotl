@@ -12,7 +12,7 @@
 				:offline="offline"
 				@unlinked="fetchInstance"
 			/>
-			<UpdateToPlayModal ref="updateToPlayModal" :instance="instance" />
+			<UpdateToPlayModal ref="updateToPlayModal" />
 			<ContentPageHeader>
 				<template #icon>
 					<InstanceIcon

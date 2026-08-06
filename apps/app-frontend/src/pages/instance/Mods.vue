@@ -392,11 +392,20 @@ const skipNonEssentialWarnings = computed(() =>
 	themeStore.getFeatureFlag('skip_non_essential_warnings'),
 )
 
+defineOptions({
+	inheritAttrs: false,
+})
+
 const props = defineProps<{
 	instance: GameInstance
 	isServerInstance?: boolean
 	openSettings?: () => void
 	preloadedContent?: InstanceContentData | null
+}>()
+
+defineEmits<{
+	play: []
+	stop: []
 }>()
 
 function hasPreloadedContent(contentData: InstanceContentData | null | undefined) {
