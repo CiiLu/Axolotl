@@ -3,8 +3,6 @@
 
 import type { FunctionalComponent, SVGAttributes } from 'vue'
 
-export type IconComponent = FunctionalComponent<SVGAttributes>
-
 import _AffiliateIcon from './icons/affiliate.svg?component'
 import _AlignLeftIcon from './icons/align-left.svg?component'
 import _ArchiveIcon from './icons/archive.svg?component'
@@ -35,7 +33,6 @@ import _Downloads100mBadge from './icons/badges/downloads-100m.svg?component'
 import _Downloads250mBadge from './icons/badges/downloads-250m.svg?component'
 import _Downloads500mBadge from './icons/badges/downloads-500m.svg?component'
 import _EarlyDatapackBadge from './icons/badges/early-datapack.svg?component'
-import _EarlyHostingBadge from './icons/badges/early-hosting.svg?component'
 import _EarlyModpackBadge from './icons/badges/early-modpack.svg?component'
 import _EarlyPluginBadge from './icons/badges/early-plugin.svg?component'
 import _EarlyResourcepackBadge from './icons/badges/early-resourcepack.svg?component'
@@ -444,6 +441,8 @@ import _XCircleIcon from './icons/x-circle.svg?component'
 import _ZoomInIcon from './icons/zoom-in.svg?component'
 import _ZoomOutIcon from './icons/zoom-out.svg?component'
 
+export type IconComponent = FunctionalComponent<SVGAttributes>
+
 export const AffiliateIcon = _AffiliateIcon
 export const AlignLeftIcon = _AlignLeftIcon
 export const ArchiveIcon = _ArchiveIcon
@@ -474,7 +473,6 @@ export const Downloads100mBadge = _Downloads100mBadge
 export const Downloads250mBadge = _Downloads250mBadge
 export const Downloads500mBadge = _Downloads500mBadge
 export const EarlyDatapackBadge = _EarlyDatapackBadge
-export const EarlyHostingBadge = _EarlyHostingBadge
 export const EarlyModpackBadge = _EarlyModpackBadge
 export const EarlyPluginBadge = _EarlyPluginBadge
 export const EarlyResourcepackBadge = _EarlyResourcepackBadge

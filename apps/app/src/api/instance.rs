@@ -135,11 +135,6 @@ pub enum InstanceLink {
         version_number: Option<String>,
         filename: Option<String>,
     },
-    ModrinthHosting {
-        server_id: String,
-        instance_ids: Vec<String>,
-        active_instance_id: Option<String>,
-    },
     SharedInstance {
         shared_instance_id: String,
     },
@@ -291,18 +286,6 @@ impl InstanceLink {
                 version_number,
                 filename,
             }),
-            CoreInstanceLink::ModrinthHosting {
-                server_id,
-                instance_ids,
-                active_instance_id,
-            } => Some(Self::ModrinthHosting {
-                server_id: server_id.to_string(),
-                instance_ids: instance_ids
-                    .into_iter()
-                    .map(|id| id.to_string())
-                    .collect(),
-                active_instance_id: active_instance_id.map(|id| id.to_string()),
-            }),
             CoreInstanceLink::SharedInstance { shared_instance_id } => {
                 Some(Self::SharedInstance {
                     shared_instance_id: shared_instance_id.to_string(),
@@ -352,40 +335,6 @@ impl InstanceLink {
                 name,
                 version_number,
                 filename,
-            }),
-            Self::ModrinthHosting {
-                server_id,
-                instance_ids,
-                active_instance_id,
-            } => Ok(CoreInstanceLink::ModrinthHosting {
-                server_id: server_id.parse().map_err(|err| {
-                    theseus::Error::from(theseus::ErrorKind::InputError(
-                        format!("Invalid server id: {err}"),
-                    ))
-                })?,
-                instance_ids: instance_ids
-                    .into_iter()
-                    .map(|id| {
-                        id.parse().map_err(|err| {
-                            theseus::Error::from(
-                                theseus::ErrorKind::InputError(format!(
-                                    "Invalid hosted instance id: {err}"
-                                )),
-                            )
-                        })
-                    })
-                    .collect::<std::result::Result<Vec<_>, _>>()?,
-                active_instance_id: active_instance_id
-                    .map(|id| {
-                        id.parse().map_err(|err| {
-                            theseus::Error::from(
-                                theseus::ErrorKind::InputError(format!(
-                                    "Invalid active instance id: {err}"
-                                )),
-                            )
-                        })
-                    })
-                    .transpose()?,
             }),
             Self::SharedInstance { shared_instance_id } => {
                 Ok(CoreInstanceLink::SharedInstance {

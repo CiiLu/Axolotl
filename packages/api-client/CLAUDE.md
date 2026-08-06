@@ -68,10 +68,6 @@ this.client.request<MyType>('/endpoint', {
 The client is provided to the component tree via DI (see the `dependency-injection` skill). Each app creates a platform-specific client and provides it at the root:
 
 ```ts
-// apps/website/src/app.vue (Nuxt)
-const client = new NuxtModrinthClient({ ... })
-provideModrinthClient(client)
-
 // apps/app-frontend/src/App.vue (Tauri)
 const client = new TauriModrinthClient({ ... })
 provideModrinthClient(client)

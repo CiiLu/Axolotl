@@ -27,15 +27,6 @@
 					</div>
 				</div>
 			</Admonition>
-
-			<InlineBackupCreator
-				ref="backupCreator"
-				:backup-name="
-					variant === 'loader-change' ? 'Before loader change' : 'Before version change'
-				"
-				hide-shift-click-hint
-				@update:buttons-disabled="buttonsDisabled = $event"
-			/>
 		</div>
 
 		<template #actions>
@@ -48,7 +39,7 @@
 				</ButtonStyled>
 				<template v-if="variant === 'game-version-change'">
 					<ButtonStyled>
-						<button :disabled="buttonsDisabled || loading" @click="handleDisableConflicts">
+						<button :disabled="loading" @click="handleDisableConflicts">
 							<SpinnerIcon
 								v-if="loading && loadingAction === 'disable-conflicts'"
 								class="size-5 animate-spin"
@@ -58,7 +49,7 @@
 						</button>
 					</ButtonStyled>
 					<ButtonStyled color="orange">
-						<button :disabled="buttonsDisabled || loading" @click="handleAutoFix">
+						<button :disabled="loading" @click="handleAutoFix">
 							<SpinnerIcon
 								v-if="loading && loadingAction === 'auto-fix'"
 								class="size-5 animate-spin"
@@ -70,7 +61,7 @@
 				</template>
 				<template v-else>
 					<ButtonStyled color="red">
-						<button :disabled="buttonsDisabled || loading" @click="handleConfirmLoaderChange">
+						<button :disabled="loading" @click="handleConfirmLoaderChange">
 							<SpinnerIcon v-if="loading" class="size-5 animate-spin" />
 							<CircleAlertIcon v-else class="size-5" />
 							{{ formatMessage(messages.changeLoaderButton) }}
@@ -99,7 +90,8 @@ import NewModal from '#ui/components/modal/NewModal.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages } from '#ui/utils/common-messages'
 
-import InlineBackupCreator from '../../content-tab/components/modals/InlineBackupCreator.vue'
+const modal = ref<InstanceType<typeof NewModal>>()
+const loadingAction = ref<'auto-fix' | 'disable-conflicts' | null>(null)
 
 defineProps<{
 	variant: 'loader-change' | 'game-version-change'
@@ -113,12 +105,6 @@ const emit = defineEmits<{
 	'reset-server': []
 	cancel: []
 }>()
-
-const { formatMessage } = useVIntl()
-
-const modal = ref<InstanceType<typeof NewModal>>()
-const buttonsDisabled = ref(false)
-const loadingAction = ref<'auto-fix' | 'disable-conflicts' | null>(null)
 
 function show(e?: MouseEvent) {
 	loadingAction.value = null

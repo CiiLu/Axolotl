@@ -17,45 +17,6 @@
   "badge.new": {
     "defaultMessage": "New"
   },
-  "billing.resubscribe-modal.cancel": {
-    "defaultMessage": "キャンセル"
-  },
-  "billing.resubscribe-modal.cpus": {
-    "defaultMessage": "CPU {sharedCpus}コア (共有)"
-  },
-  "billing.resubscribe-modal.description": {
-    "defaultMessage": "<server-name>{serverName}</server-name> への再登録を行おうとしています。登録が再開され、サーバーは中断なく稼働し続けます。"
-  },
-  "billing.resubscribe-modal.error.text": {
-    "defaultMessage": "再登録できません。購読の詳細を読み込めませんでした。"
-  },
-  "billing.resubscribe-modal.error.title": {
-    "defaultMessage": "エラー"
-  },
-  "billing.resubscribe-modal.failed-load": {
-    "defaultMessage": "サブスクリプション情報の読み込みに失敗しました。"
-  },
-  "billing.resubscribe-modal.interval": {
-    "defaultMessage": "{intervalOption, select, fiveDays {/5日} monthly {/月} quarterly {/3ヵ月} yearly {/年} other {{interval}}}"
-  },
-  "billing.resubscribe-modal.next-charge": {
-    "defaultMessage": "次回の請求は<charge-date>{date}</charge-date>です。"
-  },
-  "billing.resubscribe-modal.plan-label": {
-    "defaultMessage": "プラン"
-  },
-  "billing.resubscribe-modal.ram": {
-    "defaultMessage": "メモリ {ramGb}GB"
-  },
-  "billing.resubscribe-modal.resubscribe": {
-    "defaultMessage": "もう一度購読する"
-  },
-  "billing.resubscribe-modal.storage": {
-    "defaultMessage": "ストレージ {storageGb}GB"
-  },
-  "billing.resubscribe-modal.title": {
-    "defaultMessage": "サーバーに再登録"
-  },
   "browse.filter-results": {
     "defaultMessage": "絞り込み"
   },
@@ -2825,105 +2786,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "バニラ(Mod非導入)"
   },
-  "servers.admonitions.background-task-running": {
-    "defaultMessage": "バックグラウンドタスクが実行中です"
-  },
-  "servers.backups.admonition.backup-cancelled.description": {
-    "defaultMessage": "バックアップ{backupName}はキャンセルされました。"
-  },
-  "servers.backups.admonition.backup-cancelled.title": {
-    "defaultMessage": "バックアップがキャンセルされました"
-  },
-  "servers.backups.admonition.backup-completed.description": {
-    "defaultMessage": "{backupName} は正常に完了しました。"
-  },
-  "servers.backups.admonition.backup-completed.title": {
-    "defaultMessage": "バックアップが完了しました"
-  },
-  "servers.backups.admonition.backup-failed.description": {
-    "defaultMessage": "{backupName}の作成中に問題が発生しました。問題が継続する場合は再試行するかサポートに連絡してください。"
-  },
-  "servers.backups.admonition.backup-failed.title": {
-    "defaultMessage": "バックアップに失敗"
-  },
-  "servers.backups.admonition.backup-queued.description": {
-    "defaultMessage": "{backupName}は待機中ですが、すぐに開始します。"
-  },
-  "servers.backups.admonition.backup-queued.title": {
-    "defaultMessage": "待機中のバックアップ"
-  },
-  "servers.backups.admonition.backup-timed-out.description": {
-    "defaultMessage": "{backupName} の作成がタイムアウトしました。もう一度お試しいただくか、問題が解決しない場合はサポートにお問い合わせください。"
-  },
-  "servers.backups.admonition.backup-timed-out.title": {
-    "defaultMessage": "バックアップがタイムアウトしました"
-  },
-  "servers.backups.admonition.creating-backup.description": {
-    "defaultMessage": "ワールドデータとサーバー構成を{backupName}に保存しています。これには数分かかることがあります。"
-  },
-  "servers.backups.admonition.creating-backup.title": {
-    "defaultMessage": "バックアップを作成中"
-  },
-  "servers.backups.admonition.fallback-name": {
-    "defaultMessage": "保存したバックアップ"
-  },
-  "servers.backups.admonition.restore-cancelled.description": {
-    "defaultMessage": "{backupName}からの復元はキャンセルされました。"
-  },
-  "servers.backups.admonition.restore-cancelled.title": {
-    "defaultMessage": "復元がキャンセルされました"
-  },
-  "servers.backups.admonition.restore-failed.description": {
-    "defaultMessage": "{backupName}からの復元中に問題が発生しました。問題が継続する場合は再試行するかサポートに連絡してください。"
-  },
-  "servers.backups.admonition.restore-failed.title": {
-    "defaultMessage": "復元に失敗しました"
-  },
-  "servers.backups.admonition.restore-queued.description": {
-    "defaultMessage": "{backupName}からの復元は待機中ですが、すぐに開始します。"
-  },
-  "servers.backups.admonition.restore-queued.title": {
-    "defaultMessage": "復元キュー"
-  },
-  "servers.backups.admonition.restore-successful.description": {
-    "defaultMessage": "あなたのサーバーは{backupName}から復元され、開始の準備ができています。"
-  },
-  "servers.backups.admonition.restore-successful.title": {
-    "defaultMessage": "修復完了"
-  },
-  "servers.backups.admonition.restore-timed-out.description": {
-    "defaultMessage": "{backupName}からの復元がタイムアウトしました。もう一度お試しいただくか、問題が解決しない場合はサポートにお問い合わせください。"
-  },
-  "servers.backups.admonition.restore-timed-out.title": {
-    "defaultMessage": "復元がタイムアウトしました"
-  },
-  "servers.backups.admonition.restoring-backup.description": {
-    "defaultMessage": "{backupName}からサーバーを復元しています。これには数分かかる可能性があります。"
-  },
-  "servers.backups.admonition.restoring-backup.title": {
-    "defaultMessage": "バックアップから復元しています"
-  },
-  "servers.backups.bulk-bar.aria-label": {
-    "defaultMessage": "{count, plural, one {選択したバックアップ1件に対する一括操作} other {選択したバックアップ#件に対する一括操作}}"
-  },
-  "servers.backups.bulk-bar.selected-count": {
-    "defaultMessage": "{count, plural,one {# バックアップが選択されました} other {# バックアップが選択されました}}"
-  },
-  "servers.backups.item.auto": {
-    "defaultMessage": "自動"
-  },
-  "servers.backups.item.backup-schedule": {
-    "defaultMessage": "バックアップスケジュール"
-  },
-  "servers.backups.item.manual-backup": {
-    "defaultMessage": "手動バックアップ"
-  },
-  "servers.backups.item.rename": {
-    "defaultMessage": "リネーム"
-  },
-  "servers.backups.item.restore": {
-    "defaultMessage": "修復"
-  },
   "servers.busy.backup-creating": {
     "defaultMessage": "バックアップ作成中"
   },
@@ -2984,9 +2846,6 @@
   "servers.listing.download-latest-backup-tooltip": {
     "defaultMessage": "最新のバックアップをダウンロード"
   },
-  "servers.listing.manage-billing-label": {
-    "defaultMessage": "請求設定"
-  },
   "servers.listing.new-label": {
     "defaultMessage": "新規"
   },
@@ -3016,54 +2875,6 @@
   },
   "servers.notice.undismissable": {
     "defaultMessage": "閉じられない"
-  },
-  "servers.purchase.step.payment.description": {
-    "defaultMessage": "まだお支払いは発生しません。"
-  },
-  "servers.purchase.step.payment.prompt": {
-    "defaultMessage": "支払い方法を選択"
-  },
-  "servers.purchase.step.payment.title": {
-    "defaultMessage": "支払い方法"
-  },
-  "servers.purchase.step.plan.custom.desc": {
-    "defaultMessage": "必要な仕様だけのカスタマイズされたプランを選択。"
-  },
-  "servers.purchase.step.plan.get-started": {
-    "defaultMessage": "始めましょう"
-  },
-  "servers.purchase.step.plan.large": {
-    "defaultMessage": "プレミアム"
-  },
-  "servers.purchase.step.plan.large.desc": {
-    "defaultMessage": "15〜25人、Modパックや重いModを導入するなら最適"
-  },
-  "servers.purchase.step.plan.medium": {
-    "defaultMessage": "レギュラー"
-  },
-  "servers.purchase.step.plan.medium.desc": {
-    "defaultMessage": "6〜15人、複数のModを導入するなら最適"
-  },
-  "servers.purchase.step.plan.most-popular": {
-    "defaultMessage": "最人気"
-  },
-  "servers.purchase.step.plan.select": {
-    "defaultMessage": "プランを選択"
-  },
-  "servers.purchase.step.plan.small": {
-    "defaultMessage": "ライト"
-  },
-  "servers.purchase.step.plan.small.desc": {
-    "defaultMessage": "1〜5人、軽量なModを少し導入するなら最適"
-  },
-  "servers.purchase.step.plan.title": {
-    "defaultMessage": "プラン"
-  },
-  "servers.purchase.step.region.title": {
-    "defaultMessage": "地域"
-  },
-  "servers.purchase.step.review.title": {
-    "defaultMessage": "レビュー"
   },
   "servers.region.australia": {
     "defaultMessage": "オーストラリア"
@@ -3115,9 +2926,6 @@
   },
   "settings.authorized-apps.title": {
     "defaultMessage": "連携済アプリケーション"
-  },
-  "settings.billing.title": {
-    "defaultMessage": "請求とサブスクリプション"
   },
   "settings.display.theme.dark": {
     "defaultMessage": "ダーク"

@@ -2161,7 +2161,6 @@ export namespace Labrinth {
 			homePageProjects?: Projects.v2.Project[]
 			homePageSearch?: Search.v2.SearchResults
 			homePageNotifs?: Search.v2.SearchResults
-			products?: Billing.Internal.Product[]
 
 			countries: ISO3166.Country[]
 			subdivisions: Record<string, ISO3166.Subdivision[]>

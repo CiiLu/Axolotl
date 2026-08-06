@@ -278,7 +278,6 @@ fn server_play_project_id(link: &InstanceLink) -> Option<&String> {
         InstanceLink::Unmanaged
         | InstanceLink::ModrinthModpack { .. }
         | InstanceLink::CurseForgeModpack { .. }
-        | InstanceLink::ModrinthHosting { .. }
         | InstanceLink::ImportedModpack { .. }
         | InstanceLink::SharedInstance { .. } => None,
     }
@@ -294,7 +293,6 @@ fn modrinth_pack_version_id(link: &InstanceLink) -> Option<&str> {
         InstanceLink::Unmanaged
         | InstanceLink::ServerProject { .. }
         | InstanceLink::CurseForgeModpack { .. }
-        | InstanceLink::ModrinthHosting { .. }
         | InstanceLink::ImportedModpack { .. }
         | InstanceLink::SharedInstance { .. } => None,
     }

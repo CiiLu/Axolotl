@@ -288,9 +288,6 @@ fn content_source_kind(link: &InstanceLink) -> ContentSourceKind {
         | InstanceLink::ServerProjectModpack { .. } => {
             ContentSourceKind::ServerProject
         }
-        InstanceLink::ModrinthHosting { .. } => {
-            ContentSourceKind::ModrinthHosting
-        }
         InstanceLink::ImportedModpack { .. } => {
             ContentSourceKind::ImportedModpack
         }

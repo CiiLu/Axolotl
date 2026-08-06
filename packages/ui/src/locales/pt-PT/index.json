@@ -14,42 +14,6 @@
   "badge.new": {
     "defaultMessage": "Novo"
   },
-  "billing.resubscribe-modal.cancel": {
-    "defaultMessage": "Cancelar"
-  },
-  "billing.resubscribe-modal.cpus": {
-    "defaultMessage": "{sharedCpus} CPUs Compartilhadas"
-  },
-  "billing.resubscribe-modal.description": {
-    "defaultMessage": "Você está prestes a renovar a assinatura do <server-name>{serverName}</server-name>. Sua assinatura será reativada e o seu servidor continuará rodando sem interrupção."
-  },
-  "billing.resubscribe-modal.error.text": {
-    "defaultMessage": "Não é possível renovar, falha ao carregar detalhes da assinatura."
-  },
-  "billing.resubscribe-modal.error.title": {
-    "defaultMessage": "Erro"
-  },
-  "billing.resubscribe-modal.failed-load": {
-    "defaultMessage": "Falha ao carregar detalhes da assinatura"
-  },
-  "billing.resubscribe-modal.next-charge": {
-    "defaultMessage": "A sua próxima cobrança será em <charge-date>{date}</charge-date>."
-  },
-  "billing.resubscribe-modal.plan-label": {
-    "defaultMessage": "Plano"
-  },
-  "billing.resubscribe-modal.ram": {
-    "defaultMessage": "{ramGb} GB de RAM"
-  },
-  "billing.resubscribe-modal.resubscribe": {
-    "defaultMessage": "Reativar"
-  },
-  "billing.resubscribe-modal.storage": {
-    "defaultMessage": "{storageGb} GB de Armazenamento"
-  },
-  "billing.resubscribe-modal.title": {
-    "defaultMessage": "Renovar Servidor"
-  },
   "button.accept": {
     "defaultMessage": "Aceitar"
   },
@@ -1745,21 +1709,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
-  "servers.backups.item.auto": {
-    "defaultMessage": "Automático"
-  },
-  "servers.backups.item.backup-schedule": {
-    "defaultMessage": "Horário de Backup"
-  },
-  "servers.backups.item.manual-backup": {
-    "defaultMessage": "Fazer backup manual"
-  },
-  "servers.backups.item.rename": {
-    "defaultMessage": "Renomear"
-  },
-  "servers.backups.item.restore": {
-    "defaultMessage": "Restaurar"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Ignorar"
   },
@@ -1786,45 +1735,6 @@
   },
   "servers.notice.undismissable": {
     "defaultMessage": "Não Ignorável"
-  },
-  "servers.purchase.step.payment.description": {
-    "defaultMessage": "Ainda não vais ser cobrado."
-  },
-  "servers.purchase.step.payment.prompt": {
-    "defaultMessage": "Seleciona um método de pagamento"
-  },
-  "servers.purchase.step.payment.title": {
-    "defaultMessage": "Método de pagamento"
-  },
-  "servers.purchase.step.plan.custom.desc": {
-    "defaultMessage": "Escolhe um plano personalizado apenas com as especificações de que precisas."
-  },
-  "servers.purchase.step.plan.get-started": {
-    "defaultMessage": "Começar"
-  },
-  "servers.purchase.step.plan.large.desc": {
-    "defaultMessage": "Ideal para 15 a 25 jogadores, modpacks ou muitos mods."
-  },
-  "servers.purchase.step.plan.medium.desc": {
-    "defaultMessage": "Ótimo para 6 a 15 jogadores e vários mods."
-  },
-  "servers.purchase.step.plan.most-popular": {
-    "defaultMessage": "Mais Popular"
-  },
-  "servers.purchase.step.plan.select": {
-    "defaultMessage": "Selecionar Plano"
-  },
-  "servers.purchase.step.plan.small.desc": {
-    "defaultMessage": "Perfeito para 1 a 5 amigos com alguns mods leves."
-  },
-  "servers.purchase.step.plan.title": {
-    "defaultMessage": "Plano"
-  },
-  "servers.purchase.step.region.title": {
-    "defaultMessage": "Região"
-  },
-  "servers.purchase.step.review.title": {
-    "defaultMessage": "Revisão"
   },
   "servers.region.central-europe": {
     "defaultMessage": "Europa Central"
@@ -1855,9 +1765,6 @@
   },
   "settings.authorized-apps.title": {
     "defaultMessage": "Aplicações autorizadas"
-  },
-  "settings.billing.title": {
-    "defaultMessage": "Faturação e subscrições"
   },
   "settings.display.theme.dark": {
     "defaultMessage": "Escuro"

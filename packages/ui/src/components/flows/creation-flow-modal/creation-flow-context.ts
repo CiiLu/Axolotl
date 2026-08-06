@@ -194,10 +194,6 @@ export interface CreationFlowContextValue {
 	// Skip setup type (used when creation flow is entered from /create page)
 	skipSetupType: Ref<boolean>
 
-	// Backup state (set by InlineBackupCreator in reset-server flow)
-	isBackingUp: Ref<boolean>
-	cancelBackup: Ref<(() => void) | null>
-
 	// Modal
 	modal: ShallowRef<ComponentExposed<typeof MultiStageModal> | null>
 	stageConfigs: StageConfigInput<CreationFlowContextValue>[]
@@ -357,8 +353,6 @@ export function createCreationFlowContext(
 	const hardReset = ref(isInitialSetup)
 	const skipSetupType = ref(false)
 	const loading = ref(false)
-	const isBackingUp = ref(false)
-	const cancelBackup = ref<(() => void) | null>(null)
 
 	// hideLoaderChips: hides the entire loader chips section (only for vanilla world type in world/server flows)
 	const hideLoaderChips = computed(() => setupType.value === 'vanilla')
@@ -489,8 +483,6 @@ export function createCreationFlowContext(
 
 		hardReset.value = isInitialSetup
 		loading.value = false
-		isBackingUp.value = false
-		cancelBackup.value = null
 	}
 
 	function setSetupType(type: SetupType) {
@@ -618,8 +610,6 @@ export function createCreationFlowContext(
 		loading,
 		finishDisabled,
 		finishDisabledTooltip,
-		isBackingUp,
-		cancelBackup,
 		modal,
 		stageConfigs: resolvedStageConfigs,
 		onBack,

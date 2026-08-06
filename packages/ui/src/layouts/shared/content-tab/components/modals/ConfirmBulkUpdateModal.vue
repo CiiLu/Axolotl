@@ -1,11 +1,5 @@
 <template>
-	<NewModal
-		ref="modal"
-		:header="formatMessage(messages.header)"
-		fade="warning"
-		max-width="500px"
-		:on-hide="() => backupCreator?.cancelBackup()"
-	>
+	<NewModal ref="modal" :header="formatMessage(messages.header)" fade="warning" max-width="500px">
 		<div class="flex flex-col gap-6">
 			<SymlinkWarningAdmonition :symlink-target="symlinkTarget" />
 			<Admonition type="warning" :header="formatMessage(messages.admonitionHeader)">
@@ -13,14 +7,6 @@
 					props.scopeDescription ?? formatMessage(messages.admonitionBody, { count: visibleCount })
 				}}
 			</Admonition>
-			<InlineBackupCreator
-				ref="backupCreator"
-				:backup-name="
-					visibleBackupTip ? `Before bulk update (${visibleBackupTip})` : 'Before bulk update'
-				"
-				:shift-click-hint-override="formatMessage(messages.shiftClickHint)"
-				@update:buttons-disabled="buttonsDisabled = $event"
-			/>
 		</div>
 
 		<template #actions>
@@ -34,7 +20,7 @@
 				<ButtonStyled color="orange">
 					<button
 						v-tooltip="props.actionDisabled ? props.actionDisabledTooltip : undefined"
-						:disabled="buttonsDisabled || props.actionDisabled"
+						:disabled="props.actionDisabled"
 						@click="confirm"
 					>
 						<DownloadIcon />
@@ -56,7 +42,6 @@ import NewModal from '#ui/components/modal/NewModal.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages } from '#ui/utils/common-messages'
 
-import InlineBackupCreator from './InlineBackupCreator.vue'
 import SymlinkWarningAdmonition from './SymlinkWarningAdmonition.vue'
 
 const { formatMessage } = useVIntl()
@@ -79,11 +64,6 @@ const messages = defineMessages({
 		id: 'content.confirm-bulk-update.update-button',
 		defaultMessage: 'Update {count, plural, one {# project} other {# projects}}',
 	},
-	shiftClickHint: {
-		id: 'content.confirm-bulk-update.shift-click-hint',
-		defaultMessage:
-			'Hold Shift while clicking "Update all" to skip this confirmation in the future.',
-	},
 })
 
 const props = defineProps<{
@@ -102,15 +82,11 @@ const emit = defineEmits<{
 }>()
 
 const modal = ref<InstanceType<typeof NewModal>>()
-const backupCreator = ref<InstanceType<typeof InlineBackupCreator>>()
-const buttonsDisabled = ref(false)
 const visibleCount = ref(props.count)
-const visibleBackupTip = ref(props.backupTip)
 
 async function show() {
 	await nextTick()
 	visibleCount.value = props.count
-	visibleBackupTip.value = props.backupTip
 	modal.value?.show()
 }
 

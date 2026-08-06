@@ -86,12 +86,6 @@ export type InstanceLink = InstanceLinkIdentity &
 				filename?: string | null
 		  }
 		| {
-				type: 'modrinth_hosting'
-				server_id: string
-				instance_ids: string[]
-				active_instance_id?: string | null
-		  }
-		| {
 				type: 'shared_instance'
 				shared_instance_id: string
 		  }
