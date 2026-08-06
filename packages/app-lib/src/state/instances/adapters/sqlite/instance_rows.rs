@@ -128,21 +128,6 @@ impl TryFrom<InstanceLinkRow> for InstanceLink {
                     "content_version_id",
                 )?,
             }),
-            "modrinth_hosting" => Ok(Self::ModrinthHosting {
-                server_id: parse_uuid(
-                    row.hosting_server_id,
-                    "hosting_server_id",
-                )?,
-                instance_ids: parse_optional_json(
-                    row.hosting_instance_ids,
-                    "hosting_instance_ids",
-                )?
-                .unwrap_or_default(),
-                active_instance_id: parse_optional_uuid(
-                    row.hosting_active_instance_id,
-                    "hosting_active_instance_id",
-                )?,
-            }),
             "imported_modpack" => Ok(Self::ImportedModpack {
                 project_id: row.modrinth_project_id,
                 version_id: row.modrinth_version_id,
@@ -1223,26 +1208,6 @@ fn instance_link_columns(
             hosting_server_id: None,
             hosting_instance_ids: None,
             hosting_active_instance_id: None,
-            shared_instance_id: None,
-            imported_name: None,
-            imported_version_number: None,
-            imported_filename: None,
-        }),
-        InstanceLink::ModrinthHosting {
-            server_id,
-            instance_ids,
-            active_instance_id,
-        } => Ok(InstanceLinkColumns {
-            link_kind: "modrinth_hosting",
-            modrinth_project_id: None,
-            modrinth_version_id: None,
-            server_project_id: None,
-            content_project_id: None,
-            content_version_id: None,
-            hosting_server_id: Some(server_id.to_string()),
-            hosting_instance_ids: Some(serde_json::to_string(instance_ids)?),
-            hosting_active_instance_id: active_instance_id
-                .map(|value| value.to_string()),
             shared_instance_id: None,
             imported_name: None,
             imported_version_number: None,

@@ -23,12 +23,6 @@ pub enum InstanceLink {
         content_project_id: String,
         content_version_id: String,
     },
-    /// Hosting sync still flows through the shared-instance service.
-    ModrinthHosting {
-        server_id: Uuid,
-        instance_ids: Vec<Uuid>,
-        active_instance_id: Option<Uuid>,
-    },
     /// A custom modpack source without a Modrinth project/version link.
     ImportedModpack {
         project_id: Option<String>,
