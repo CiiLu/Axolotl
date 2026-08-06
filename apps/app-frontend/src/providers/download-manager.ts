@@ -18,7 +18,7 @@ import type { LoadingBar } from '@/helpers/state'
 import { progress_bars_list } from '@/helpers/state'
 
 const activeStatuses = new Set(['queued', 'running', 'canceling', 'waiting_for_user'])
-const downloadBarTypes = new Set([
+export const downloadBarTypes = new Set([
 	'java_download',
 	'pack_file_download',
 	'pack_download',

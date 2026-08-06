@@ -11,6 +11,9 @@
   "app.action-bar.downloads": {
     "message": "下载"
   },
+  "app.action-bar.exporting-modpack": {
+    "message": "正在导出整合包"
+  },
   "app.action-bar.hide-more-running-instances": {
     "message": "隐藏更多运行中的实例"
   },

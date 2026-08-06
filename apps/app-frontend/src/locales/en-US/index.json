@@ -11,6 +11,9 @@
   "app.action-bar.downloads": {
     "message": "Downloads"
   },
+  "app.action-bar.exporting-modpack": {
+    "message": "Exporting modpack"
+  },
   "app.action-bar.hide-more-running-instances": {
     "message": "Hide more running instances"
   },

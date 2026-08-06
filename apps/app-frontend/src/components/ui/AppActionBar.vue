@@ -1,7 +1,7 @@
 <template>
 	<div class="flex gap-2 items-center">
 		<ButtonStyled
-			v-if="!isDownloadsPage && hasActiveLoadingBars && !hasVisibleActiveDownloadToasts"
+			v-if="!isDownloadsPage && hasDownloadsPageContent && !hasVisibleActiveDownloadToasts"
 			color="brand"
 			type="transparent"
 			circular
@@ -149,7 +149,7 @@ import { get_all as getRunningProcesses, kill as killProcess } from '@/helpers/p
 import type { LoadingBar } from '@/helpers/state'
 import { progress_bars_list } from '@/helpers/state'
 import type { GameInstance } from '@/helpers/types'
-import { injectDownloadManager } from '@/providers/download-manager'
+import { downloadBarTypes, injectDownloadManager } from '@/providers/download-manager'
 
 const { handleError } = injectNotificationManager()
 const popupNotificationManager = injectPopupNotificationManager()
@@ -229,6 +229,10 @@ const messages = defineMessages({
 	viewActiveDownloads: {
 		id: 'app.action-bar.view-active-downloads',
 		defaultMessage: 'View active downloads',
+	},
+	exportingModpack: {
+		id: 'app.action-bar.exporting-modpack',
+		defaultMessage: 'Exporting modpack',
 	},
 })
 
@@ -364,8 +368,10 @@ function buildDownloadItems(): PopupNotificationProgressItem[] {
 }
 
 const hasVisibleActiveDownloadToasts = computed(() => !!getNotification())
-const hasActiveLoadingBars = computed(
-	() => currentLoadingBars.value.length > 0 || installJobNotifications.active.value,
+const hasDownloadsPageContent = computed(
+	() =>
+		installJobNotifications.active.value ||
+		currentLoadingBars.value.some((bar) => downloadBarTypes.has(bar.bar_type?.type ?? '')),
 )
 
 function updateNotification(resummon = false): void {
@@ -403,7 +409,7 @@ function updateNotification(resummon = false): void {
 		notif.text = undefined
 		notif.progressItems = progressItems
 		notif.buttons = installJobNotifications.buttons.value
-		notif.onClick = goToDownloads
+		notif.onClick = hasDownloadsPageContent.value ? goToDownloads : undefined
 		notif.progress = undefined
 		notif.waiting = undefined
 	} else {
@@ -415,7 +421,7 @@ function updateNotification(resummon = false): void {
 			autoCloseMs: null,
 			progressItems,
 			buttons: installJobNotifications.buttons.value,
-			onClick: goToDownloads,
+			onClick: hasDownloadsPageContent.value ? goToDownloads : undefined,
 		})
 		notificationId.value = notif.id
 	}
@@ -434,6 +440,9 @@ function formatLoadingBars(loadingBar: LoadingBar): LoadingBar {
 	if (formatted.bar_type?.instance_id) {
 		formatted.title = formatted.bar_type.instance_name ?? formatted.bar_type.instance_id
 	}
+	if (formatted.bar_type?.type === 'zip_extract') {
+		formatted.title = formatMessage(messages.exportingModpack)
+	}
 	if (formatted.bar_type?.pack_name) {
 		formatted.title = formatted.bar_type.pack_name
 	}
@@ -449,6 +458,7 @@ function isVisibleLoadingBar(loadingBar: LoadingBar): boolean {
 			'pack_download',
 			'minecraft_download',
 			'copy_instance',
+			'zip_extract',
 		].includes(loadingBar.bar_type?.type ?? '')
 	)
 }
