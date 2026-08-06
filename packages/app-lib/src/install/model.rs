@@ -1,9 +1,9 @@
+use crate::api::curseforge::CurseForgeInstallRequest;
 use crate::api::pack::import::ImportLauncherType;
 use crate::api::pack::install_from::{CreatePackInstance, CreatePackLocation};
 use crate::state::{
     InstanceInstallStage, InstanceLink, InstanceMetadata, ModLoader,
 };
-use crate::api::curseforge::CurseForgeInstallRequest;
 use chrono::{DateTime, Utc};
 use modrinth_content_management::{ContentType, ResolutionPreferences};
 use serde::{Deserialize, Serialize};
@@ -687,7 +687,9 @@ impl InstallRequest {
                 InstallJobKind::InstallPackToExistingInstance
             }
             Self::InstallContent { .. } => InstallJobKind::InstallContent,
-            Self::InstallCurseForgeContent { .. } => InstallJobKind::InstallContent,
+            Self::InstallCurseForgeContent { .. } => {
+                InstallJobKind::InstallContent
+            }
             Self::DownloadJava { .. } => InstallJobKind::DownloadJava,
         }
     }
@@ -701,9 +703,11 @@ impl InstallRequest {
                     instance_id: instance_id.clone(),
                 }
             }
-            Self::InstallCurseForgeContent { request, .. } => InstallTarget::ExistingInstance {
-                instance_id: request.instance_id.clone(),
-            },
+            Self::InstallCurseForgeContent { request, .. } => {
+                InstallTarget::ExistingInstance {
+                    instance_id: request.instance_id.clone(),
+                }
+            }
             _ => InstallTarget::NewInstance { instance_id: None },
         }
     }

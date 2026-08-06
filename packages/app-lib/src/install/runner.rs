@@ -1012,7 +1012,8 @@ async fn run_request(
             )
             .await?;
             let total = (plan.dependencies.len() + 1) as u64;
-            let reporter = InstallProgressReporter::new(job_id, job_state.clone());
+            let reporter =
+                InstallProgressReporter::new(job_id, job_state.clone());
             reporter
                 .update(
                     InstallPhaseId::DownloadingContent,
@@ -1058,8 +1059,12 @@ async fn run_request(
                 InstallPhaseDetails::Empty,
             )
             .await?;
-            let reporter = InstallProgressReporter::new(job_id, job_state.clone());
-            crate::api::curseforge::install_file_with_reporter(request, reporter).await?;
+            let reporter =
+                InstallProgressReporter::new(job_id, job_state.clone());
+            crate::api::curseforge::install_file_with_reporter(
+                request, reporter,
+            )
+            .await?;
             crate::api::instance::emit_content_changed(&instance_id).await?;
             Ok(Some(instance_id))
         }

@@ -17,8 +17,7 @@ pub use model::{
 pub use runner::{
     cancel_job, clear_job_history, create_instance, create_modpack_instance,
     dismiss_job, download_java, duplicate_instance, get_job, import_instance,
-    import_instance_with_path, install_existing_instance,
-    install_content, install_curseforge_content, install_pack_to_existing_instance,
-    job_support_details, list_jobs,
-    retry_job, retry_job_as_new,
+    import_instance_with_path, install_content, install_curseforge_content,
+    install_existing_instance, install_pack_to_existing_instance,
+    job_support_details, list_jobs, retry_job, retry_job_as_new,
 };
