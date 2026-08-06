@@ -33,6 +33,23 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.1',
+		version: '1.7.1',
+		publishedAt: '2026-08-07',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.1',
+			'zh-CN': 'Axolotl Launcher 1.7.1',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added zh-cn locales for seed map biome picker',
+					'zh-CN': '为种子地图中的群系选择器添加了中文本地化',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.0',
 		version: '1.7.0',
 		publishedAt: '2026-08-06',
@@ -53,7 +70,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '优化翻译逻辑和 AI 集成，提升翻译结果的一致性。',
 				},
 				{
-					'en-US': 'Simplified download error dialogs to make failures easier to understand and recover from.',
+					'en-US':
+						'Simplified download error dialogs to make failures easier to understand and recover from.',
 					'zh-CN': '简化下载错误提示框，让失败原因和恢复操作更清晰。',
 				},
 				{
