@@ -1059,10 +1059,6 @@ export const commonSettingsMessages = defineMessages({
 		id: 'settings.authorized-apps.title',
 		defaultMessage: 'Authorized apps',
 	},
-	billing: {
-		id: 'settings.billing.title',
-		defaultMessage: 'Billing and subscriptions',
-	},
 	featureFlags: {
 		id: 'settings.feature-flags.title',
 		defaultMessage: 'Feature flags',

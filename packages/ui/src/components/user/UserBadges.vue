@@ -11,7 +11,6 @@ import {
 	Downloads250mBadge,
 	Downloads500mBadge,
 	EarlyDatapackBadge,
-	EarlyHostingBadge,
 	EarlyModpackBadge,
 	EarlyPluginBadge,
 	EarlyResourcepackBadge,
@@ -362,20 +361,6 @@ const BADGES = [
 				cutoff: new Date('2026-03-04T01:33:00.000Z'),
 			},
 		],
-	},
-	{
-		icon: EarlyHostingBadge,
-		name: defineMessage({
-			id: 'user.profile.badge.hosting-alpha.name',
-			defaultMessage: 'Modrinth Hosting Alpha Tester',
-		}),
-		about: [
-			defineMessage({
-				id: 'user.profile.badge.hosting-alpha.about.1',
-				defaultMessage: `This user participated in a closed alpha test of Modrinth Hosting before we launched Modrinth Hosting Beta in November 2024.`,
-			}),
-		],
-		criteria: [], // TODO: Add badge on backend for Hosting Alpha Tester
 	},
 ] satisfies Badge[]
 

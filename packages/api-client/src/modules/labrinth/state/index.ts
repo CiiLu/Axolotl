@@ -9,12 +9,12 @@ export class LabrinthStateModule extends AbstractModule {
 	/**
 	 * Build the complete generated state by fetching from multiple endpoints
 	 *
-	 * @returns Promise resolving to the generated state containing categories, loaders, products, etc.
+	 * @returns Promise resolving to the generated state containing categories, loaders, etc.
 	 *
 	 * @example
 	 * ```typescript
 	 * const state = await client.labrinth.state.build()
-	 * console.log(state.products) // Available billing products
+	 * console.log(state.categories) // Available categories
 	 * ```
 	 */
 	public async build(): Promise<Labrinth.State.GeneratedState> {
@@ -37,7 +37,6 @@ export class LabrinthStateModule extends AbstractModule {
 			homePageProjects,
 			homePageSearch,
 			homePageNotifs,
-			products,
 			muralBankDetails,
 			iso3166Data,
 			payoutMethods,
@@ -102,10 +101,7 @@ export class LabrinthStateModule extends AbstractModule {
 				})
 				.catch((err) => handleError(err, {} as Labrinth.Search.v2.SearchResults, '/v2/search')),
 
-			// Internal billing/mural endpoints
-			this.client.labrinth.billing_internal
-				.getProducts()
-				.catch((err) => handleError(err, [], '/_internal/billing/products')),
+			// Internal mural endpoints
 			this.client
 				.request<{ bankDetails: Record<string, { bankNames: string[] }> }>('/mural/bank-details', {
 					api: 'labrinth',
@@ -153,7 +149,6 @@ export class LabrinthStateModule extends AbstractModule {
 			homePageProjects,
 			homePageSearch,
 			homePageNotifs,
-			products,
 			muralBankDetails: muralBankDetails?.bankDetails,
 			tremendousIdMap,
 			countries: iso3166Data.countries,
