@@ -52,13 +52,6 @@
 				/>
 				<div v-if="touched && error" class="text-xs text-red">{{ error }}</div>
 			</div>
-
-			<!-- Inline backup creator -->
-			<InlineBackupCreator
-				:backup-name="formatMessage(messages.backupName)"
-				hide-shift-click-hint
-				@update:buttons-disabled="backupInProgress = $event"
-			/>
 		</form>
 
 		<template #actions>
@@ -112,8 +105,6 @@ import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { injectModrinthClient } from '#ui/providers/api-client'
 import { injectNotificationManager } from '#ui/providers/web-notifications'
 import { commonMessages } from '#ui/utils/common-messages'
-
-import InlineBackupCreator from '../../../content-tab/components/modals/InlineBackupCreator.vue'
 
 const { addNotification } = injectNotificationManager()
 const client = injectModrinthClient()
@@ -203,10 +194,6 @@ const messages = defineMessages({
 		id: 'files.zip-url-modal.unknown-error',
 		defaultMessage: 'An unknown error occurred',
 	},
-	backupName: {
-		id: 'files.zip-url-modal.backup-name',
-		defaultMessage: 'CurseForge modpack install',
-	},
 })
 
 const steps = [
@@ -233,7 +220,6 @@ const modal = ref<InstanceType<typeof NewModal>>()
 const url = ref('')
 const submitted = ref(false)
 const touched = ref(false)
-const backupInProgress = ref(false)
 
 const trimmedUrl = computed(() => url.value.trim())
 
@@ -251,9 +237,7 @@ const error = computed(() => {
 	return ''
 })
 
-const submitDisabled = computed(
-	() => submitted.value || props.disabled || !!error.value || backupInProgress.value,
-)
+const submitDisabled = computed(() => submitted.value || props.disabled || !!error.value)
 const submitTooltip = computed(() => {
 	if (props.disabled) return props.disabledTooltip
 	return error.value || undefined
@@ -296,7 +280,6 @@ const show = (isCf: boolean) => {
 	url.value = ''
 	submitted.value = false
 	touched.value = false
-	backupInProgress.value = false
 	modal.value?.show()
 	nextTick(() => {
 		setTimeout(() => {

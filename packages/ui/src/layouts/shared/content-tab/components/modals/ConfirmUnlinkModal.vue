@@ -1,20 +1,9 @@
 <template>
-	<NewModal
-		ref="modal"
-		:header="formatMessage(messages.header)"
-		fade="warning"
-		max-width="500px"
-		:on-hide="() => backupCreator?.cancelBackup()"
-	>
+	<NewModal ref="modal" :header="formatMessage(messages.header)" fade="warning" max-width="500px">
 		<div class="flex flex-col gap-6">
 			<Admonition type="warning" :header="formatMessage(messages.admonitionHeader)">
 				{{ formatMessage(messages.admonitionBody) }}
 			</Admonition>
-			<InlineBackupCreator
-				ref="backupCreator"
-				:backup-name="props.backupTip ? `Before unlink (${props.backupTip})` : 'Before unlink'"
-				@update:buttons-disabled="buttonsDisabled = $event"
-			/>
 		</div>
 
 		<template #actions>
@@ -28,7 +17,7 @@
 				<ButtonStyled color="orange">
 					<button
 						v-tooltip="props.actionDisabled ? props.actionDisabledTooltip : undefined"
-						:disabled="buttonsDisabled || props.actionDisabled"
+						:disabled="props.actionDisabled"
 						@click="confirm"
 					>
 						<UnlinkIcon />
@@ -47,11 +36,8 @@ import { ref } from 'vue'
 import Admonition from '#ui/components/base/Admonition.vue'
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import NewModal from '#ui/components/modal/NewModal.vue'
-import { useDebugLogger } from '#ui/composables/debug-logger'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages } from '#ui/utils/common-messages'
-
-import InlineBackupCreator from './InlineBackupCreator.vue'
 
 const props = defineProps<{
 	server?: boolean
@@ -61,7 +47,6 @@ const props = defineProps<{
 }>()
 
 const { formatMessage } = useVIntl()
-const debug = useDebugLogger('ConfirmUnlinkModal')
 
 const messages = defineMessages({
 	header: {
@@ -88,38 +73,15 @@ const emit = defineEmits<{
 }>()
 
 const modal = ref<InstanceType<typeof NewModal>>()
-const backupCreator = ref<InstanceType<typeof InlineBackupCreator>>()
-const buttonsDisabled = ref(false)
 
 function show() {
-	debug('show: called', {
-		hasModalRef: !!modal.value,
-		hasBackupCreatorRef: !!backupCreator.value,
-		buttonsDisabled: buttonsDisabled.value,
-		actionDisabled: props.actionDisabled,
-	})
 	modal.value?.show()
-	debug('show: returned from modal.show', {
-		hasModalRef: !!modal.value,
-		hasBackupCreatorRef: !!backupCreator.value,
-		buttonsDisabled: buttonsDisabled.value,
-		actionDisabled: props.actionDisabled,
-	})
 }
 
 function confirm() {
-	debug('confirm: called', {
-		hasModalRef: !!modal.value,
-		buttonsDisabled: buttonsDisabled.value,
-		actionDisabled: props.actionDisabled,
-	})
-	if (props.actionDisabled) {
-		debug('confirm: ignored actionDisabled')
-		return
-	}
+	if (props.actionDisabled) return
 	modal.value?.hide()
 	emit('unlink')
-	debug('confirm: emitted unlink')
 }
 
 defineExpose({
