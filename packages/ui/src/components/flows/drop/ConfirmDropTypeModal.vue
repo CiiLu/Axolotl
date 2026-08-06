@@ -221,7 +221,7 @@ const optionByType: Record<string, DropOption> = {
 }
 
 const props = defineProps<{
-	classification: ClassificationResult
+	classification: ClassificationResult | null
 	fileName: string
 }>()
 
