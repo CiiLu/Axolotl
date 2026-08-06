@@ -1113,7 +1113,7 @@
 		"defaultMessage": "拖拽启动器文件夹、整合包文件或 .minecraft 文件夹即可一键导入实例"
 	},
 	"creation-flow.modal.import-instance.select-file": {
-		"defaultMessage": "选择要导入的文件或文件夹"
+		"defaultMessage": "选择要导入的文件"
 	},
 	"creation-flow.modal.setup-type.instance.description": {
 		"defaultMessage": "实例是带有特定加载器、游戏版本和模组的一套 Minecraft 配置。"
@@ -5752,5 +5752,14 @@
 	},
 	"project-type.schematic.lowercase": {
 		"message": "{count, plural, one {投影} other {投影}}"
+	},
+	"creation-flow.modal.import-instance.select-folder": {
+		"defaultMessage": "选择要导入的文件夹"
+	},
+	"creation-flow.modal.import-instance.select-file.description": {
+		"defaultMessage": "导入整合包文件或启动器(HMCL、PCL)"
+	},
+	"creation-flow.modal.import-instance.select-folder.description": {
+		"defaultMessage": "导入启动器文件夹或 .minecraft 文件夹"
 	}
 }

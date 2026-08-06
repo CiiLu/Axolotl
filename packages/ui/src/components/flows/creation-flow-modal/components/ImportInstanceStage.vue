@@ -1,21 +1,31 @@
 <template>
-	<div data-onboarding-id="creation-import" class="flex flex-col items-center gap-6 py-4">
-		<ButtonStyled color="brand" size="large" type="outlined">
-			<button type="button" @click="handleOpenFilePicker">
-				<FolderUpIcon />
-				{{ formatMessage(messages.selectFile) }}
-			</button>
-		</ButtonStyled>
+	<div data-onboarding-id="creation-import" class="flex flex-col gap-4">
+		<div data-onboarding-id="creation-import-methods" class="flex flex-col gap-3">
+			<BigOptionButton
+				data-onboarding-id="creation-import-file"
+				:icon="FileIcon"
+				:title="formatMessage(messages.selectFile)"
+				:description="formatMessage(messages.selectFileDescription)"
+				@click="handleOpenFilePicker"
+			/>
+			<BigOptionButton
+				data-onboarding-id="creation-import-folder"
+				:icon="FolderIcon"
+				:title="formatMessage(messages.selectFolder)"
+				:description="formatMessage(messages.selectFolderDescription)"
+				@click="handleOpenFolderPicker"
+			/>
+		</div>
 
-		<span class="text-center text-sm text-secondary">
+		<span class="text-sm text-secondary">
 			{{ formatMessage(messages.importPrompt) }}
 		</span>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { FolderUpIcon } from '@modrinth/assets'
-import { ButtonStyled, defineMessages, useVIntl } from '@modrinth/ui'
+import { FileIcon, FolderIcon } from '@modrinth/assets'
+import { BigOptionButton, defineMessages, useVIntl } from '@modrinth/ui'
 
 import { injectCreationFlowContext } from '../creation-flow-context'
 
@@ -25,7 +35,19 @@ const { formatMessage } = useVIntl()
 const messages = defineMessages({
 	selectFile: {
 		id: 'creation-flow.modal.import-instance.select-file',
-		defaultMessage: 'Select file or folder to import',
+		defaultMessage: 'Select file to import',
+	},
+	selectFileDescription: {
+		id: 'creation-flow.modal.import-instance.select-file.description',
+		defaultMessage: 'Import a modpack file or launcher archive (.mrpack, .zip)',
+	},
+	selectFolder: {
+		id: 'creation-flow.modal.import-instance.select-folder',
+		defaultMessage: 'Select folder to import',
+	},
+	selectFolderDescription: {
+		id: 'creation-flow.modal.import-instance.select-folder.description',
+		defaultMessage: 'Import a launcher folder or .minecraft folder',
 	},
 	importPrompt: {
 		id: 'creation-flow.modal.import-instance.import-prompt',
@@ -35,11 +57,44 @@ const messages = defineMessages({
 })
 
 // ── Native file picker ──
-
 async function handleOpenFilePicker() {
 	try {
 		const { open } = await import('@tauri-apps/plugin-dialog')
-		const result = await open({ multiple: false })
+		const result = await open({
+			multiple: false,
+			filters: [{ name: 'Modpack', extensions: ['mrpack', 'zip'] }],
+		})
+		const filePath = typeof result === 'string' ? result : (result?.path ?? null)
+		if (!filePath) return
+
+		if (ctx.onImportFileReceived) {
+			ctx.onImportFileReceived({
+				file: null,
+				filePath,
+				source: 'file-picker',
+			})
+			return
+		}
+
+		// Fallback: set path directly on context
+		ctx.modpackFile.value = null
+		ctx.modpackFilePath.value = filePath
+		if (ctx.finishDisabled.value) return
+		if (ctx.flowType === 'instance') {
+			ctx.finish()
+		} else {
+			ctx.modal.value?.setStage('final-config')
+		}
+	} catch {
+		// do nothing
+	}
+}
+
+// ── Native folder picker ──
+async function handleOpenFolderPicker() {
+	try {
+		const { open } = await import('@tauri-apps/plugin-dialog')
+		const result = await open({ multiple: false, directory: true })
 		const filePath = typeof result === 'string' ? result : (result?.path ?? null)
 		if (!filePath) return
 
