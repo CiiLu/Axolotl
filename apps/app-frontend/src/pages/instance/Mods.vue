@@ -65,13 +65,9 @@
 			</template>
 			<div class="bg-bg-orange px-4 pb-4 pt-3">
 				<p class="m-0 text-sm leading-6 text-secondary">
-					{{
-						formatMessage(messages.missingFilesWarningBody)
-					}}
+					{{ formatMessage(messages.missingFilesWarningBody) }}
 				</p>
-				<ul
-					class="m-0 mt-2 flex max-h-64 list-none flex-col gap-1 overflow-y-auto p-0"
-				>
+				<ul class="m-0 mt-2 flex max-h-64 list-none flex-col gap-1 overflow-y-auto p-0">
 					<li
 						v-for="item in missingPackMembers"
 						:key="item.memberId ?? item.expectedRelativePath"
@@ -694,8 +690,7 @@ const curseForgeModpackFallbackProject = computed<ContentModpackCardProject | nu
 const displayedModpackProject = computed(() => {
 	const fallbackProject =
 		curseForgeModpackFallbackProject.value ?? localImportedModpackProject.value
-	const project =
-		linkedModpackProject.value ?? fallbackProject
+	const project = linkedModpackProject.value ?? fallbackProject
 	if (!project) return undefined
 	return {
 		...project,
@@ -1887,6 +1882,26 @@ function applyContentData(contentData: InstanceContentData) {
 	}
 
 	loading.value = false
+
+	const hasContent =
+		contentData.contentItems.length > 0 || contentData.linkedContentItems.length > 0
+	if (hasContent) {
+		writeInstanceCache(props.instance.id, {
+			contentItems: contentData.contentItems,
+			linkedContentItems: contentData.linkedContentItems,
+			modpack: contentData.modpack
+				? {
+						project: contentData.modpack.project,
+						version: contentData.modpack.version,
+						owner: contentData.modpack.owner,
+						categories: [],
+						hasUpdate: contentData.modpack.hasUpdate,
+						updateVersionId: contentData.modpack.updateVersionId,
+					}
+				: null,
+		})
+	}
+
 	return true
 }
 
@@ -2133,6 +2148,30 @@ function getInstallRevision() {
 
 async function loadInitialContent(): Promise<void> {
 	const installRevision = getInstallRevision()
+	const cached = readInstanceCache(props.instance.id)
+
+	// 优先使用缓存快速渲染，后台再刷新
+	const hasCachedContent =
+		(cached?.contentItems?.length ?? 0) > 0 || (cached?.linkedContentItems?.length ?? 0) > 0
+	if (hasCachedContent) {
+		debugState('loadInitialContent: restoring from localStorage cache', {
+			instanceId: props.instance.id,
+			contentItems: cached.contentItems.length,
+			linkedItems: cached.linkedContentItems.length,
+		})
+		projects.value = cached.contentItems
+		linkedModpackContentItems.value = cached.linkedContentItems
+		if (cached.modpack) {
+			linkedModpackProject.value = cached.modpack.project
+			linkedModpackVersion.value = cached.modpack.version
+			linkedModpackOwner.value = cached.modpack.owner
+			linkedModpackCategories.value = cached.modpack.categories
+			linkedModpackHasUpdate.value = cached.modpack.hasUpdate
+			linkedModpackUpdateVersionId.value = cached.modpack.updateVersionId
+		}
+		loading.value = false
+	}
+
 	if (installRevision > handledInstallRevision.value) {
 		handledInstallRevision.value = installRevision
 		await initProjects('bypass')
@@ -2143,6 +2182,11 @@ async function loadInitialContent(): Promise<void> {
 		if (beginLegacyCurseForgeReconciliation(props.preloadedContent)) {
 			await initProjects('bypass')
 		}
+		return
+	}
+
+	if (hasCachedContent) {
+		initProjects().catch(handleError)
 		return
 	}
 

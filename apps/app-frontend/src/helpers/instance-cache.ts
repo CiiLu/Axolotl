@@ -8,7 +8,7 @@ import type {
 
 export interface InstanceContentModpackCache {
 	project: ContentModpackCardProject
-	version: ContentModpackCardVersion
+	version: ContentModpackCardVersion | null
 	owner: ContentOwner | null
 	categories: ContentModpackCardCategory[]
 	hasUpdate: boolean
@@ -181,16 +181,22 @@ function migrateFromLegacyCache(): void {
  */
 export function readInstanceCache(instanceId: string): InstanceContentCache | null {
 	const data = readDataSlice(instanceId)
-	if (!data?.contentItems) return null
+	if (!data) return null
+	const hasContent =
+		(data.contentItems?.length ?? 0) > 0 || (data.linkedContentItems?.length ?? 0) > 0
+	if (!hasContent) {
+		removeInstanceCache(instanceId)
+		return null
+	}
 
 	const ui = readUiSlice(instanceId)
 
 	return {
 		instanceId,
 		updatedAt: 0,
-		contentItems: data.contentItems,
+		contentItems: data.contentItems ?? [],
 		modpack: data.modpack,
-		linkedContentItems: data.linkedContentItems,
+		linkedContentItems: data.linkedContentItems ?? [],
 		modpackHintDismissed: ui?.modpackHintDismissed ?? false,
 	}
 }
