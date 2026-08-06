@@ -15,7 +15,9 @@ export interface RawRenderResult {
 
 export const skinBlobUrlMap = reactive(new Map<string, RenderResult>())
 export const headBlobUrlMap = reactive(new Map<string, string>())
+const headRenderPromises = new Map<string, Promise<string>>()
 
+const DEBUG_MODE = false
 const HEAD_RENDER_VERSION = 8
 
 export function getHeadRenderKey(textureKey: string): string {
@@ -127,6 +129,34 @@ export async function generateHeadRender(skin: Skin): Promise<string> {
 			headBlobUrlMap.delete(headKey)
 		} else {
 			return headBlobUrlMap.get(headKey)!
+		}
+	}
+
+	const pendingRender = headRenderPromises.get(headKey)
+	if (pendingRender) return await pendingRender
+
+	const renderPromise = loadHeadRender(skin, headKey)
+	headRenderPromises.set(headKey, renderPromise)
+
+	try {
+		return await renderPromise
+	} finally {
+		if (headRenderPromises.get(headKey) === renderPromise) {
+			headRenderPromises.delete(headKey)
+		}
+	}
+}
+
+async function loadHeadRender(skin: Skin, headKey: string): Promise<string> {
+	if (!DEBUG_MODE) {
+		try {
+			const cachedHeadUrl = await headStorage.retrieve(headKey)
+			if (cachedHeadUrl) {
+				headBlobUrlMap.set(headKey, cachedHeadUrl)
+				return cachedHeadUrl
+			}
+		} catch (error) {
+			console.warn('Failed to retrieve cached head render:', error)
 		}
 	}
 

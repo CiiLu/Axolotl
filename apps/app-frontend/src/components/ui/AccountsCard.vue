@@ -302,6 +302,7 @@ import {
 import { useQueryClient } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 import axolotlLogo from '@/assets/axolotl.png'
 import steveSkinTexture from '@/assets/skins/steve.png?inline'
@@ -332,6 +333,7 @@ const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 const { offline, refreshBrowserOffline } = useNetworkStatus()
 const queryClient = useQueryClient()
+const route = useRoute()
 const refreshingNetwork = ref(false)
 
 /**
@@ -397,7 +399,9 @@ const defaultUser = ref<string | undefined>()
 const equippedSkin = ref<Skin | null>(null)
 const headUrlCache = ref(new Map<string, string>())
 const accountHeadUrlCache = ref(new Map<string, string>())
+const accountHeadTextureKeyCache = ref(new Map<string, string>())
 let refreshGeneration = 0
+let headRefreshTimer: ReturnType<typeof setTimeout> | undefined
 let defaultUserUpdateQueue = Promise.resolve()
 const offlineAccountModal = ref<InstanceType<typeof ModalWrapper> | null>(null)
 const offlineUsername = ref('')
@@ -442,7 +446,47 @@ const ACCOUNT_TYPE_ORDER = {
 	offline: 2,
 } as const
 
-async function refreshValues() {
+const HEAD_REFRESH_RETRY_DELAYS = [1500, 5000, 15000, 30000] as const
+const HEAD_REFRESH_CONTINUOUS_DELAY = 60_000
+
+function hasResolvedAccountHead(account: MinecraftCredential) {
+	const skin = getAccountSkin(account)
+	return Boolean(
+		skin &&
+			accountHeadUrlCache.value.has(account.profile.id) &&
+			accountHeadTextureKeyCache.value.get(account.profile.id) === skin.texture_key,
+	)
+}
+
+function hasMissingAccountHeads() {
+	return accounts.value.some(
+		(account) => account.account_type !== 'offline' && !hasResolvedAccountHead(account),
+	)
+}
+
+function clearHeadRefreshRetry() {
+	if (headRefreshTimer !== undefined) {
+		clearTimeout(headRefreshTimer)
+		headRefreshTimer = undefined
+	}
+}
+
+function scheduleHeadRefreshRetry(generation: number, attempt: number) {
+	if (offline.value || generation !== refreshGeneration) return
+	const delay = HEAD_REFRESH_RETRY_DELAYS[attempt] ?? HEAD_REFRESH_CONTINUOUS_DELAY
+
+	clearHeadRefreshRetry()
+	headRefreshTimer = setTimeout(() => {
+		headRefreshTimer = undefined
+		if (generation !== refreshGeneration) return
+		void refreshValues(Math.min(attempt + 1, HEAD_REFRESH_RETRY_DELAYS.length)).catch((error) => {
+			console.warn('Failed to refresh account heads:', error)
+		})
+	}, delay)
+}
+
+async function refreshValues(headRefreshAttempt = 0) {
+	clearHeadRefreshRetry()
 	const generation = ++refreshGeneration
 	const selectedUser = await get_default_user(offline.value).catch(handleError)
 	if (generation !== refreshGeneration) return
@@ -470,7 +514,7 @@ async function refreshValues() {
 			(ACCOUNT_TYPE_ORDER[b.account_type as keyof typeof ACCOUNT_TYPE_ORDER] ?? 3)
 		)
 	})
-	await renderAccountHeads(accounts.value)
+	await renderAccountHeads(accounts.value, generation)
 	if (generation !== refreshGeneration) return
 	try {
 		const skins = await get_available_skins()
@@ -486,7 +530,10 @@ async function refreshValues() {
 					headUrl,
 				)
 				if (selectedUser) {
-					accountHeadUrlCache.value = new Map(accountHeadUrlCache.value).set(selectedUser, headUrl)
+					const selectedAccountSkin = getAccountSkin(
+						accounts.value.find((account) => account.profile.id === selectedUser),
+					)
+					cacheAccountHead(selectedUser, selectedAccountSkin ?? equippedSkin.value, headUrl)
 				}
 			} catch (error) {
 				console.warn('Failed to get head render for equipped skin:', error)
@@ -494,6 +541,10 @@ async function refreshValues() {
 		}
 	} catch {
 		equippedSkin.value = null
+	}
+
+	if (hasMissingAccountHeads()) {
+		scheduleHeadRefreshRetry(generation, headRefreshAttempt)
 	}
 }
 
@@ -505,7 +556,7 @@ async function setEquippedSkin(skin: Skin) {
 		const headUrl = await getPlayerHeadUrl(skin)
 		headUrlCache.value = new Map(headUrlCache.value).set(skin.texture_key, headUrl)
 		if (selectedUser) {
-			accountHeadUrlCache.value = new Map(accountHeadUrlCache.value).set(selectedUser, headUrl)
+			cacheAccountHead(selectedUser, skin, headUrl)
 		}
 	} catch (error) {
 		console.warn('Failed to get head render for equipped skin:', error)
@@ -534,6 +585,16 @@ const selectedAccount = computed(() =>
 	accounts.value.find((account) => account.profile.id === defaultUser.value),
 )
 
+watch(
+	() => route.fullPath,
+	() => {
+		if (!hasMissingAccountHeads()) return
+		void refreshValues().catch((error) => {
+			console.warn('Failed to refresh account heads after navigation:', error)
+		})
+	},
+)
+
 function getAccountSkin(account: MinecraftCredential | undefined): Skin | undefined {
 	if (!account || account.account_type === 'offline') return undefined
 	const skin =
@@ -549,7 +610,15 @@ function getAccountSkin(account: MinecraftCredential | undefined): Skin | undefi
 	}
 }
 
-async function renderAccountHeads(accountList: MinecraftCredential[]) {
+function cacheAccountHead(accountId: string, skin: Skin, headUrl: string) {
+	accountHeadUrlCache.value = new Map(accountHeadUrlCache.value).set(accountId, headUrl)
+	accountHeadTextureKeyCache.value = new Map(accountHeadTextureKeyCache.value).set(
+		accountId,
+		skin.texture_key,
+	)
+}
+
+async function renderAccountHeads(accountList: MinecraftCredential[], generation: number) {
 	await Promise.all(
 		accountList.map(async (account) => {
 			const skin = getAccountSkin(account)
@@ -557,10 +626,8 @@ async function renderAccountHeads(accountList: MinecraftCredential[]) {
 
 			try {
 				const headUrl = await getPlayerHeadUrl(skin)
-				accountHeadUrlCache.value = new Map(accountHeadUrlCache.value).set(
-					account.profile.id,
-					headUrl,
-				)
+				if (generation !== refreshGeneration) return
+				cacheAccountHead(account.profile.id, skin, headUrl)
 			} catch (error) {
 				console.warn(`Failed to render head for account ${account.profile.id}:`, error)
 			}
@@ -848,6 +915,7 @@ const unlisten = await process_listener(async (e) => {
 })
 
 onUnmounted(() => {
+	clearHeadRefreshRetry()
 	unlisten()
 })
 

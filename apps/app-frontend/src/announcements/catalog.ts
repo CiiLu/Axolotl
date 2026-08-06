@@ -44,6 +44,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed Minecraft account avatars sometimes remaining on the default skin after startup; failed skin loads now retry automatically and refresh after navigation.',
+					'zh-CN':
+						'修复 Minecraft 账号头像在启动后偶尔持续显示默认皮肤的问题；皮肤加载失败后现在会自动重试，并在切换页面时重新获取。',
+				},
+				{
+					'en-US':
 						'Fixed an issue where the import instance window would flash all import options when closed or when clicking the "What can I drop?" button.',
 					'zh-CN': '修复了导入实例窗口关闭或点击 我可以拖入什么 按钮时，全部导入选项闪现的问题',
 				},
