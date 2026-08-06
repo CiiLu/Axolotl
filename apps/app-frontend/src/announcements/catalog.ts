@@ -33,6 +33,24 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.6.13',
+		version: '1.6.13',
+		publishedAt: '2026-08-06',
+		title: {
+			'en-US': 'Axolotl Launcher 1.6.13',
+			'zh-CN': 'Axolotl Launcher 1.6.13',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed an issue where the import instance window would flash all import options when closed or when clicking the "What can I drop?" button.',
+					'zh-CN': '修复了导入实例窗口关闭或点击 我可以拖入什么 按钮时，全部导入选项闪现的问题',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.6.12',
 		version: '1.6.12',
 		publishedAt: '2026-08-04',
