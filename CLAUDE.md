@@ -1,11 +1,11 @@
 # Axolotl Launcher Monorepo
 
-This repository contains the Axolotl Launcher desktop application and its official website. Read the applicable project instructions before editing either surface.
+This repository contains the Axolotl Launcher desktop application. Read the applicable project instructions before editing the application.
 
 ## Architecture
 
 - **Monorepo tooling:** [Turborepo](https://turbo.build/) (`turbo.jsonc`) + [pnpm workspaces](https://pnpm.io/workspaces) (`pnpm-workspace.yaml`)
-- **Frontend:** Vue 3 / Nuxt 3, Tailwind CSS v3
+- **Frontend:** Vue 3, Tailwind CSS v3
 - **Desktop:** Rust / Tauri
 - **Indentation:** Use TAB everywhere, never spaces
 
@@ -15,7 +15,6 @@ This repository contains the Axolotl Launcher desktop application and its offici
 | -------------- | ------------------------------------ |
 | `app-frontend` | Desktop application frontend (Vue 3) |
 | `app`          | Desktop application shell (Tauri)    |
-| `website`      | Official Axolotl website (Nuxt 3)    |
 
 ### Packages (`packages/`)
 
@@ -34,16 +33,14 @@ This repository contains the Axolotl Launcher desktop application and its offici
 
 Run these from the **root** folder before opening a pull request - do not run these after each prompt the user gives you, only run when asked, ask the user a question if they want to run it if the user indicates that they are about to create a pull request.
 
-- **Website:** `pnpm prepr:website`
 - **App frontend:** `pnpm prepr:frontend:app`
 - **Frontend libs:** `pnpm prepr:frontend:lib`
 - **All frontend:** `pnpm prepr`
 
-The website and app `prepr` commands
+The app `prepr` commands
 
 ## Dev Commands
 
-- **Website:** `pnpm website:dev`
 - **App:** `pnpm app:dev` (copy `.env` template in `packages/app-lib/` first)
 
 ## Codex Development Workflow

@@ -81,6 +81,6 @@ Please follow these rules precisely:
 Use existing patterns from our codebase:
 
 - Variables/plurals: see `apps/app-frontend/src/components/home/HomeDailyChallenge.vue`
-- Rich-text link tags: see `apps/website/src/pages/index.vue`
+- Rich-text link tags: see `apps/app-frontend/src/components/base/Markdown.vue`
 
 When you finish, there should be no hard-coded English strings left in the template—everything comes from `formatMessage` or `<IntlFormatted>`.

@@ -1,18 +1,17 @@
 - [Dependency Injection](#dependency-injection)
-	- [The `createContext` Factory](#the-createcontext-factory)
-	- [When to Use DI](#when-to-use-di)
-		- [Platform Abstraction (Primary Use Case)](#platform-abstraction-primary-use-case)
-		- [Page-Level Context](#page-level-context)
-	- [Creating a New Provider](#creating-a-new-provider)
-		- [1. Define the interface in `packages/ui/src/providers/`](#1-define-the-interface-in-packagesuisrcproviders)
-		- [2. For complex platform-specific logic, use an abstract class](#2-for-complex-platform-specific-logic-use-an-abstract-class)
-	- [Wiring Up Providers](#wiring-up-providers)
-		- [App Frontend (Tauri)](#app-frontend-tauri)
-		- [Website Frontend (Nuxt)](#website-frontend-nuxt)
-	- [Consuming Providers](#consuming-providers)
-	- [When NOT to Use DI](#when-not-to-use-di)
-	- [Existing Providers](#existing-providers)
-	- [Key Files](#key-files)
+  - [The `createContext` Factory](#the-createcontext-factory)
+  - [When to Use DI](#when-to-use-di)
+    - [Platform Abstraction (Primary Use Case)](#platform-abstraction-primary-use-case)
+    - [Page-Level Context](#page-level-context)
+  - [Creating a New Provider](#creating-a-new-provider)
+    - [1. Define the interface in `packages/ui/src/providers/`](#1-define-the-interface-in-packagesuisrcproviders)
+    - [2. For complex platform-specific logic, use an abstract class](#2-for-complex-platform-specific-logic-use-an-abstract-class)
+  - [Wiring Up Providers](#wiring-up-providers)
+    - [App Frontend (Tauri)](#app-frontend-tauri)
+  - [Consuming Providers](#consuming-providers)
+  - [When NOT to Use DI](#when-not-to-use-di)
+  - [Existing Providers](#existing-providers)
+  - [Key Files](#key-files)
 
 # Dependency Injection
 
@@ -40,6 +39,7 @@ export const [injectMyContext, provideMyContext] = createContext<MyContext>('MyC
 ## When to Use DI
 
 Use DI when:
+
 - **The same interface needs different implementations** depending on the platform (web vs desktop app).
 - **Deeply nested components** need access to shared page-level state without prop drilling through 3+ levels.
 
@@ -92,8 +92,7 @@ export abstract class AbstractMyFeatureManager {
 	}
 }
 
-export const [injectMyFeature, provideMyFeature] =
-	createContext<AbstractMyFeatureManager>('MyFeature')
+export const [injectMyFeature, provideMyFeature] = createContext<AbstractMyFeatureManager>('MyFeature')
 ```
 
 See `AbstractWebNotificationManager` in `packages/ui/src/providers/web-notifications.ts` for a real example.
@@ -120,7 +119,7 @@ export function setupMyFeatureProvider() {
 		},
 		removeItem: async (id) => {
 			await invoke('remove_item', { id })
-			items.value = items.value.filter(i => i.id !== id)
+			items.value = items.value.filter((i) => i.id !== id)
 		},
 	})
 }
@@ -128,25 +127,9 @@ export function setupMyFeatureProvider() {
 
 Register it in `apps/app-frontend/src/providers/setup.ts`, which is called from `App.vue`'s `setup()`.
 
-### Website Frontend (Nuxt)
-
-Provide directly in `apps/website/src/app.vue` when the website needs a shared context:
-
-```ts
-provideMyFeature({
-	items: useState<Item[]>('my-feature-items', () => []),
-	addItem: async (item) => {
-		await $fetch('/api/items', { method: 'POST', body: item })
-	},
-	removeItem: async (id) => {
-		await $fetch(`/api/items/${id}`, { method: 'DELETE' })
-	},
-})
-```
-
 ## Consuming Providers
 
-In any component across `packages/ui`, `apps/website`, or `apps/app-frontend`:
+In any component across `packages/ui` or `apps/app-frontend`:
 
 ```vue
 <script setup lang="ts">
@@ -172,17 +155,15 @@ Default to props and emits. DI adds indirection — only use it with a concrete 
 
 ## Existing Providers
 
-| Provider                     | File                             | Purpose                        |
-| ---------------------------- | -------------------------------- | ------------------------------ |
-| `provideModrinthClient`      | `providers/api-client.ts`        | API client instance            |
-| `provideNotificationManager` | `providers/web-notifications.ts` | Notification management        |
-| `providePageContext`         | `providers/page-context.ts`      | Page config (sidebar, ads)     |
-| `provideServerContext`       | `providers/server-context.ts`    | Server hosting state           |
+| Provider                     | File                             | Purpose                    |
+| ---------------------------- | -------------------------------- | -------------------------- |
+| `provideModrinthClient`      | `providers/api-client.ts`        | API client instance        |
+| `provideNotificationManager` | `providers/web-notifications.ts` | Notification management    |
+| `providePageContext`         | `providers/page-context.ts`      | Page config (sidebar, ads) |
 
 ## Key Files
 
 - `packages/ui/src/providers/index.ts` — `createContext` factory + barrel exports
 - `packages/ui/src/providers/*.ts` — Provider definitions
-- `apps/website/src/app.vue` — Nuxt root provider setup
 - `apps/app-frontend/src/App.vue` — Tauri root provider setup
 - `apps/app-frontend/src/providers/setup/` — App provider setup functions

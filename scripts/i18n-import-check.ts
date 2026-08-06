@@ -146,9 +146,10 @@ function extractImports(ast: TSESTree.Program): ImportInfo[] {
 			for (const specifier of node.specifiers) {
 				if (specifier.type === AST_NODE_TYPES.ImportSpecifier) {
 					imports.push({
-						symbol: specifier.imported.type === AST_NODE_TYPES.Identifier
-							? specifier.imported.name
-							: String(specifier.imported.value),
+						symbol:
+							specifier.imported.type === AST_NODE_TYPES.Identifier
+								? specifier.imported.name
+								: String(specifier.imported.value),
 						source,
 					})
 				} else if (specifier.type === AST_NODE_TYPES.ImportDefaultSpecifier) {
@@ -173,7 +174,10 @@ function findUsages(ast: TSESTree.Program): Usage[] {
 
 	// First pass: collect locally declared variables to avoid false positives
 	walkAst(ast, (node) => {
-		if (node.type === AST_NODE_TYPES.VariableDeclarator && node.id.type === AST_NODE_TYPES.Identifier) {
+		if (
+			node.type === AST_NODE_TYPES.VariableDeclarator &&
+			node.id.type === AST_NODE_TYPES.Identifier
+		) {
 			localVariables.add(node.id.name)
 		}
 		if (node.type === AST_NODE_TYPES.FunctionDeclaration && node.id) {
@@ -313,11 +317,7 @@ function main() {
 
 	const rootDir = path.resolve(__dirname, '..')
 
-	const dirsToScan = [
-		path.join(rootDir, 'apps/website/src'),
-		path.join(rootDir, 'apps/app-frontend/src'),
-		path.join(rootDir, 'packages'),
-	]
+	const dirsToScan = [path.join(rootDir, 'apps/app-frontend/src'), path.join(rootDir, 'packages')]
 
 	console.log()
 	process.stdout.write(theme.muted('  Scanning for i18n import issues... '))
@@ -354,7 +354,11 @@ function main() {
 		console.log(theme.warning(`  ${relativePath}`))
 
 		for (const issue of issues) {
-			console.log(theme.muted(`    Line ${issue.line}: `) + theme.highlight(issue.symbol) + theme.muted(' is used but not imported'))
+			console.log(
+				theme.muted(`    Line ${issue.line}: `) +
+					theme.highlight(issue.symbol) +
+					theme.muted(' is used but not imported'),
+			)
 		}
 		console.log()
 	}
@@ -362,13 +366,15 @@ function main() {
 	// Summary
 	console.log(theme.muted('  ─'.repeat(30)))
 	console.log(
-		theme.warning(`  Summary: ${issuesByFile.size} file(s) with ${allIssues.length} missing i18n import(s)`)
+		theme.warning(
+			`  Summary: ${issuesByFile.size} file(s) with ${allIssues.length} missing i18n import(s)`,
+		),
 	)
 	console.log()
 
 	if (verbose) {
 		console.log(theme.muted('  Tip: Import these symbols from @modrinth/ui'))
-		console.log(theme.muted('  Example: import { useVIntl, defineMessages } from \'@modrinth/ui\''))
+		console.log(theme.muted("  Example: import { useVIntl, defineMessages } from '@modrinth/ui'"))
 		console.log()
 	}
 
