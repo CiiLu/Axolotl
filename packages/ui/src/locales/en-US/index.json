@@ -1230,7 +1230,7 @@
 		"defaultMessage": "What can I drop?"
 	},
 	"drop.confirm.not-this": {
-		"defaultMessage": "This is not a {type}"
+		"defaultMessage": "Import this as something else"
 	},
 	"drop.confirm.title": {
 		"defaultMessage": "What would you like to import this as?"

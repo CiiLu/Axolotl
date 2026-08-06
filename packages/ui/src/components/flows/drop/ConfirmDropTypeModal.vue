@@ -1,5 +1,5 @@
 <template>
-	<NewModal ref="modal" max-width="560px" :closable="true" @hide="emit('cancel')">
+	<NewModal ref="modal" max-width="560px" :closable="true" @after-hide="emit('cancel')">
 		<template #title>
 			<span class="text-contrast">{{ formatMessage(messages.title) }}</span>
 		</template>
@@ -35,7 +35,6 @@
 				</button>
 				<ButtonStyled>
 					<button class="flex items-center gap-2" @click="handleCancel">
-						<XIcon class="size-4" />
 						{{
 							showNotThisType
 								? formatMessage(messages.notThisType, { type: detectedTypeName })
@@ -58,7 +57,6 @@ import {
 	PackageOpenIcon,
 	PaletteIcon,
 	SparklesIcon,
-	XIcon,
 } from '@modrinth/assets'
 import type { Component } from 'vue'
 import { computed, ref } from 'vue'
@@ -88,7 +86,7 @@ const messages = defineMessages({
 	},
 	notThisType: {
 		id: 'drop.confirm.not-this',
-		defaultMessage: 'This is not a {type}',
+		defaultMessage: 'Import this as something else',
 	},
 	dotMinecraftTitle: {
 		id: 'drop.confirm.as-dot-minecraft',
@@ -347,8 +345,8 @@ function show() {
 	modal.value?.show()
 }
 
-function hide() {
-	modal.value?.hide()
+async function hide() {
+	await modal.value?.hide()
 }
 
 defineExpose({ show, hide })

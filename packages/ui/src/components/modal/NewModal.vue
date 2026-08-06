@@ -183,6 +183,7 @@ const props = withDefaults(
 		/** Disables all close actions (close button, ESC key, click outside). */
 		disableClose?: boolean
 		actionsDivider?: boolean
+		onAfterHide?: () => void
 	}>(),
 	{
 		type: true,
@@ -269,7 +270,7 @@ function show(event?: MouseEvent) {
 	}, 50)
 }
 
-function hide() {
+async function hide() {
 	if (props.disableClose) {
 		return
 	}
@@ -287,9 +288,13 @@ function hide() {
 		previousFocusEl.focus()
 	}
 	previousFocusEl = null
-	setTimeout(() => {
-		open.value = false
-	}, 300)
+	//把原有300ms等待挪出来，避免闪烁
+	await new Promise<void>((resolve) => {
+		setTimeout(resolve, 300)
+	})
+	open.value = false
+	await nextTick()
+	props.onAfterHide?.()
 }
 
 async function scrollToBottom(behavior: ScrollBehavior = 'smooth') {

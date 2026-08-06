@@ -2161,10 +2161,9 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 	}
 }
 
-function handleDropHelp() {
-	dropClassification.value = null
-	confirmDropModal.value?.hide()
-	router.push('/help/drop')
+async function handleDropHelp() {
+	await router.push('/help/drop')
+	await confirmDropModal.value?.hide()
 }
 
 watch(incompatibilityWarningModal, (modal) => {
