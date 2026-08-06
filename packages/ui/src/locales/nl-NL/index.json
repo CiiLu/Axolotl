@@ -14,42 +14,6 @@
   "badge.new": {
     "defaultMessage": "Nieuw"
   },
-  "billing.resubscribe-modal.cancel": {
-    "defaultMessage": "Annuleren"
-  },
-  "billing.resubscribe-modal.cpus": {
-    "defaultMessage": "{sharedCpus} Gedeelde CPU's"
-  },
-  "billing.resubscribe-modal.description": {
-    "defaultMessage": "U staat op het punt uw abonnement op <server-name>{serverName}</server-name> te verlengen. Uw abonnement wordt opnieuw geactiveerd en uw server blijft zonder onderbreking draaien."
-  },
-  "billing.resubscribe-modal.error.text": {
-    "defaultMessage": "Ik kan me niet opnieuw abonneren; het laden van de abonnementsgegevens is mislukt."
-  },
-  "billing.resubscribe-modal.error.title": {
-    "defaultMessage": "Fout"
-  },
-  "billing.resubscribe-modal.failed-load": {
-    "defaultMessage": "Het laden van de abonnementsgegevens is mislukt."
-  },
-  "billing.resubscribe-modal.next-charge": {
-    "defaultMessage": "Uw volgende afschrijving vindt plaats op <charge-date>{date}</charge-date>."
-  },
-  "billing.resubscribe-modal.plan-label": {
-    "defaultMessage": "Plan"
-  },
-  "billing.resubscribe-modal.ram": {
-    "defaultMessage": "{ramGb} GB RAM"
-  },
-  "billing.resubscribe-modal.resubscribe": {
-    "defaultMessage": "Opnieuw abonneren"
-  },
-  "billing.resubscribe-modal.storage": {
-    "defaultMessage": "{storageGb} GB Opslag"
-  },
-  "billing.resubscribe-modal.title": {
-    "defaultMessage": "Opnieuw abonneren op de server"
-  },
   "browse.no-results": {
     "defaultMessage": "Er zijn geen resultaten gevonden voor uw zoekopdracht!"
   },
@@ -2372,57 +2336,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Standaard"
   },
-  "servers.backups.admonition.backup-failed.description": {
-    "defaultMessage": "Er is een fout opgetreden bij het maken van {backupName}. Probeer het nog eens of neem contact op met de helpdesk als het probleem zich blijft voordoen."
-  },
-  "servers.backups.admonition.backup-failed.title": {
-    "defaultMessage": "Back-up is mislukt"
-  },
-  "servers.backups.admonition.backup-queued.description": {
-    "defaultMessage": "{backupName} Staat in de wachtrij en wordt binnenkort gestart."
-  },
-  "servers.backups.admonition.backup-queued.title": {
-    "defaultMessage": "Back-up in de wachtrij"
-  },
-  "servers.backups.admonition.creating-backup.description": {
-    "defaultMessage": "De wereldgegevens en serverconfiguratie voor {backupName} worden opgeslagen. Dit kan enkele minuten duren."
-  },
-  "servers.backups.admonition.creating-backup.title": {
-    "defaultMessage": "Een back-up maken"
-  },
-  "servers.backups.admonition.fallback-name": {
-    "defaultMessage": "Uw back-up"
-  },
-  "servers.backups.admonition.restore-failed.description": {
-    "defaultMessage": "Er is een fout opgetreden tijdens het terugzetten vanuit {backupName}. Probeer het nog eens of neem contact op met de helpdesk als het probleem zich blijft voordoen."
-  },
-  "servers.backups.admonition.restore-queued.description": {
-    "defaultMessage": "Het terugzetten vanuit {backupName} staat in de wachtrij en begint binnenkort."
-  },
-  "servers.backups.admonition.restore-successful.description": {
-    "defaultMessage": "Uw server is teruggezet naar {backupName} en is klaar om te starten."
-  },
-  "servers.backups.admonition.restoring-backup.description": {
-    "defaultMessage": "Uw server wordt hersteld vanuit {backupName}. Dit kan enkele minuten duren."
-  },
-  "servers.backups.admonition.restoring-backup.title": {
-    "defaultMessage": "Terugzetten vanuit een back-up"
-  },
-  "servers.backups.item.auto": {
-    "defaultMessage": "Automatisch"
-  },
-  "servers.backups.item.backup-schedule": {
-    "defaultMessage": "Back-up planning"
-  },
-  "servers.backups.item.manual-backup": {
-    "defaultMessage": "Handmatige back-up"
-  },
-  "servers.backups.item.rename": {
-    "defaultMessage": "Hernoemen"
-  },
-  "servers.backups.item.restore": {
-    "defaultMessage": "Herstel"
-  },
   "servers.busy.backup-creating": {
     "defaultMessage": "Er wordt een back-up gemaakt"
   },
@@ -2483,9 +2396,6 @@
   "servers.listing.download-latest-backup-tooltip": {
     "defaultMessage": "Laatste back-up downloaden"
   },
-  "servers.listing.manage-billing-label": {
-    "defaultMessage": "Facturering beheren"
-  },
   "servers.listing.new-label": {
     "defaultMessage": "Nieuw"
   },
@@ -2528,114 +2438,6 @@
   "servers.listing.using-project-label": {
     "defaultMessage": "{projectTitle} Gebruiken"
   },
-  "servers.manage.checking-for-new-servers": {
-    "defaultMessage": "Op zoek naar nieuwe servers..."
-  },
-  "servers.manage.confirm-leave.body": {
-    "defaultMessage": "Er wordt momenteel een bestand geüpload. Als u deze pagina verlaat, wordt het uploaden geannuleerd."
-  },
-  "servers.manage.confirm-leave.upload-in-progress": {
-    "defaultMessage": "Bezig met uploaden"
-  },
-  "servers.manage.contact-support-button": {
-    "defaultMessage": "Neem contact op met de klantenservice van Modrinth"
-  },
-  "servers.manage.error.alert-notice": {
-    "defaultMessage": "Onze systemen waarschuwen ons team automatisch wanneer er een probleem is. We zijn al bezig om ze weer online te krijgen."
-  },
-  "servers.manage.error.description": {
-    "defaultMessage": "Het kan zijn dat we tijdelijk problemen hebben met onze servers."
-  },
-  "servers.manage.error.details": {
-    "defaultMessage": "Foutdetails:"
-  },
-  "servers.manage.error.queue-notice": {
-    "defaultMessage": "Als u onlangs een server bij Modrinth Hosting hebt aangeschaft, staat deze momenteel in de wachtrij en verschijnt hij hier zodra hij klaar is. <warning>Probeer geen nieuwe server aan te schaffen.</warning>"
-  },
-  "servers.manage.error.support-notice": {
-    "defaultMessage": "Als je persoonlijke ondersteuning nodig hebt met betrekking tot de status van uw server, neem dan contact op met Modrinth Support."
-  },
-  "servers.manage.error.title": {
-    "defaultMessage": "De servers konden niet worden geladen"
-  },
-  "servers.manage.handle-error.title": {
-    "defaultMessage": "Er is een fout opgetreden"
-  },
-  "servers.manage.new-server-button": {
-    "defaultMessage": "Nieuwe server"
-  },
-  "servers.manage.no-servers-found": {
-    "defaultMessage": "Er zijn geen servers gevonden."
-  },
-  "servers.manage.purchase-unavailable.text": {
-    "defaultMessage": "De betalingsgegevens worden nog geladen. De kassa wordt geopend zodra alles klaar is."
-  },
-  "servers.manage.purchase-unavailable.title": {
-    "defaultMessage": "Niet verkrijgbaar"
-  },
-  "servers.manage.reload-button": {
-    "defaultMessage": "Opnieuw laden"
-  },
-  "servers.manage.resubscribe-error.text": {
-    "defaultMessage": "Er is een fout opgetreden bij het opnieuw abonneren op jouw Modrinth server."
-  },
-  "servers.manage.resubscribe-error.title": {
-    "defaultMessage": "Fout bij het opnieuw abonneren"
-  },
-  "servers.manage.resubscribe-submitted.text": {
-    "defaultMessage": "Als de server momenteel is uitgeschakeld, kan het tot 10 minuten duren voordat er een nieuwe afschrijvingspoging wordt ondernomen."
-  },
-  "servers.manage.resubscribe-submitted.title": {
-    "defaultMessage": "Verzoek tot verlenging van het abonnement ingediend"
-  },
-  "servers.manage.resubscribe-success.text": {
-    "defaultMessage": "Het serverabonnement is opnieuw geactiveerd"
-  },
-  "servers.manage.resubscribe-success.title": {
-    "defaultMessage": "Succes"
-  },
-  "servers.manage.search-placeholder": {
-    "defaultMessage": "Zoek {count} {count, plural, one {server} other {servers}}..."
-  },
-  "servers.manage.servers-title": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.manage.settings-hint.description": {
-    "defaultMessage": "Je vindt ze nu hier!"
-  },
-  "servers.manage.settings-hint.dismiss": {
-    "defaultMessage": "Niet meer weergeven"
-  },
-  "servers.manage.settings-hint.title": {
-    "defaultMessage": "Uw serverinstellingen zijn verplaatst"
-  },
-  "servers.medal-listing.countdown.remaining": {
-    "defaultMessage": "<days-count>{days}</days-count> {days, plural, one {day} other {days}} <hours-count>{hours}</hours-count> {hours, plural, one {hour} other {hours}} <minutes-count>{minutes}</minutes-count> {minutes, plural, one {minute} other {minutes}} <seconds-count>{seconds}</seconds-count> {seconds, plural, one {second} other {seconds}} Resterend..."
-  },
-  "servers.medal-listing.new-server-label": {
-    "defaultMessage": "Nieuwe server"
-  },
-  "servers.medal-listing.notice.medal-trial-ended": {
-    "defaultMessage": "De proefperiode van uw Medal server is verstreken en uw server is opgeschort. Upgrade om uw server te kunnen blijven gebruiken."
-  },
-  "servers.medal-listing.notice.suspended": {
-    "defaultMessage": "Uw account is opgeschort. Werk uw factuurgegevens bij of neem contact op met de klantenservice van Modrinth voor meer informatie."
-  },
-  "servers.medal-listing.notice.suspended-with-reason": {
-    "defaultMessage": "Uw account is opgeschort: {reason}. Werk uw factuurgegevens bij of neem contact op met de klantenservice van Modrinth voor meer informatie."
-  },
-  "servers.medal-listing.notice.upgrading": {
-    "defaultMessage": "De hardware van uw server wordt momenteel geüpgraded en zal binnenkort weer online zijn."
-  },
-  "servers.medal-listing.server-icon-alt": {
-    "defaultMessage": "Serverpictogram"
-  },
-  "servers.medal-listing.upgrade-button": {
-    "defaultMessage": "Upgraden"
-  },
-  "servers.medal-listing.using-project-label": {
-    "defaultMessage": "{projectTitle} Gebruiken"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Negeer"
   },
@@ -2662,69 +2464,6 @@
   },
   "servers.notice.undismissable": {
     "defaultMessage": "Niet negeerbaar"
-  },
-  "servers.purchase.notification.success.text": {
-    "defaultMessage": "Uw aankoop bij Modrinth Hosting is succesvol afgerond."
-  },
-  "servers.purchase.notification.success.title": {
-    "defaultMessage": "Aankoop geslaagd"
-  },
-  "servers.purchase.step.payment.description": {
-    "defaultMessage": "Het wordt nog niet aan geslagen."
-  },
-  "servers.purchase.step.payment.prompt": {
-    "defaultMessage": "Selecteer een betaalmethode"
-  },
-  "servers.purchase.step.payment.title": {
-    "defaultMessage": "Betaalmethode"
-  },
-  "servers.purchase.step.plan.billing-subtitle": {
-    "defaultMessage": "Verkrijgbaar in Noord-Amerika, Europa en Zuidoost-Azië."
-  },
-  "servers.purchase.step.plan.custom.desc": {
-    "defaultMessage": "Configureer je eigen plan met de specs die je nodig hebt."
-  },
-  "servers.purchase.step.plan.custom.heading": {
-    "defaultMessage": "Weet je precies wat je nodig hebt?"
-  },
-  "servers.purchase.step.plan.get-started": {
-    "defaultMessage": "Aan de slag"
-  },
-  "servers.purchase.step.plan.large": {
-    "defaultMessage": "Groot"
-  },
-  "servers.purchase.step.plan.large.desc": {
-    "defaultMessage": "Ideaal voor 15 tot 25 spelers, of intensieve mod-gebruik."
-  },
-  "servers.purchase.step.plan.medium": {
-    "defaultMessage": "Medium"
-  },
-  "servers.purchase.step.plan.medium.desc": {
-    "defaultMessage": "Geschikt voor 6 tot 15 spelers met meerdere mods."
-  },
-  "servers.purchase.step.plan.most-popular": {
-    "defaultMessage": "Meest populair"
-  },
-  "servers.purchase.step.plan.select": {
-    "defaultMessage": "Selecteer deze plan"
-  },
-  "servers.purchase.step.plan.small": {
-    "defaultMessage": "Klein"
-  },
-  "servers.purchase.step.plan.small.desc": {
-    "defaultMessage": "Perfect voor 1 tot 5 vrienden, met enkele mods."
-  },
-  "servers.purchase.step.plan.title": {
-    "defaultMessage": "Plan"
-  },
-  "servers.purchase.step.plan.your-current-plan": {
-    "defaultMessage": "Uw huidige abonnement"
-  },
-  "servers.purchase.step.region.title": {
-    "defaultMessage": "Regio"
-  },
-  "servers.purchase.step.review.title": {
-    "defaultMessage": "Overzicht"
   },
   "servers.region.central-europe": {
     "defaultMessage": "Centraal Europa"
@@ -2773,9 +2512,6 @@
   },
   "settings.authorized-apps.title": {
     "defaultMessage": "Geautoriseerde applicaties"
-  },
-  "settings.billing.title": {
-    "defaultMessage": "Facturen en abonnementen"
   },
   "settings.display.theme.dark": {
     "defaultMessage": "Donker"

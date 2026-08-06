@@ -65,18 +65,6 @@
 					</span>
 				</div>
 			</div>
-
-			<div
-				v-if="showBackupCreator"
-				class="p-4 border-t border-solid border-surface-5 border-b-0 border-l-0 border-r-0"
-			>
-				<InlineBackupCreator
-					ref="backupCreator"
-					backup-name="Before version change"
-					hide-shift-click-hint
-					@update:buttons-disabled="buttonsDisabled = $event"
-				/>
-			</div>
 		</div>
 
 		<template #actions>
@@ -97,7 +85,7 @@
 						</button>
 					</ButtonStyled>
 					<ButtonStyled color="brand">
-						<button :disabled="buttonsDisabled" @click="handleConfirm">
+						<button @click="handleConfirm">
 							<component :is="confirmIcon" v-if="confirmIcon" />
 							{{ confirmLabel || formatMessage(commonMessages.confirmButton) }}
 						</button>
@@ -118,7 +106,6 @@ import NewModal from '#ui/components/modal/NewModal.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages } from '#ui/utils/common-messages'
 
-import InlineBackupCreator from '../../content-tab/components/modals/InlineBackupCreator.vue'
 import type { ContentDiffItem } from '../types'
 
 const props = defineProps<{
@@ -144,8 +131,6 @@ const emit = defineEmits<{
 const { formatMessage } = useVIntl()
 
 const modal = ref<InstanceType<typeof NewModal>>()
-const backupCreator = ref<InstanceType<typeof InlineBackupCreator>>()
-const buttonsDisabled = ref(false)
 
 const removedCount = computed(() => props.diffs.filter((d) => d.type === 'removed').length)
 const addedCount = computed(() => props.diffs.filter((d) => d.type === 'added').length)

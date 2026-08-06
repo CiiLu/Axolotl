@@ -1,11 +1,5 @@
 <template>
-	<NewModal
-		ref="modal"
-		:header="formatMessage(messages.header)"
-		fade="danger"
-		max-width="560px"
-		:on-hide="() => backupCreator?.cancelBackup()"
-	>
+	<NewModal ref="modal" :header="formatMessage(messages.header)" fade="danger" max-width="560px">
 		<div class="flex flex-col gap-6">
 			<SymlinkWarningAdmonition :symlink-target="symlinkTarget" />
 			<Admonition type="critical" :header="formatMessage(messages.admonitionHeader)">
@@ -158,12 +152,6 @@
 						class="mt-1"
 					/>
 				</div>
-				<InlineBackupCreator
-					ref="backupCreator"
-					:backup-name="backupName"
-					hide-shift-click-hint
-					@update:buttons-disabled="buttonsDisabled = $event"
-				/>
 			</div>
 		</div>
 
@@ -178,7 +166,7 @@
 				<ButtonStyled color="red">
 					<button
 						v-tooltip="props.actionDisabled ? props.actionDisabledTooltip : undefined"
-						:disabled="buttonsDisabled || props.actionDisabled"
+						:disabled="props.actionDisabled"
 						@click="confirm"
 					>
 						<TrashIcon aria-hidden="true" />
@@ -204,7 +192,6 @@ import { commonMessages, formatContentTypeSentence } from '#ui/utils/common-mess
 
 import type { ContentCardTableItem } from '../../types'
 import ContentCardItem from '../ContentCardItem.vue'
-import InlineBackupCreator from './InlineBackupCreator.vue'
 import SymlinkWarningAdmonition from './SymlinkWarningAdmonition.vue'
 
 export interface ContentDependencyWarningDependent {
@@ -302,14 +289,12 @@ const messages = defineMessages({
 })
 
 const modal = ref<InstanceType<typeof NewModal>>()
-const backupCreator = ref<InstanceType<typeof InlineBackupCreator>>()
 const deletingListRef = ref<HTMLElement | null>(null)
 const dependentListRef = ref<HTMLElement | null>(null)
 const visibleItems = ref<ContentCardTableItem[]>(props.items)
 const visibleDependents = ref<ContentDependencyWarningDependent[]>(props.dependents)
 const visibleItemType = ref(props.itemType)
 const disableDependentsAfterDeleting = ref(false)
-const buttonsDisabled = ref(false)
 const modalContentCardClasses = 'rounded-xl border border-solid border-surface-5 p-4 !bg-surface-2'
 const {
 	showTopFade: showDeletingTopFade,
@@ -326,10 +311,6 @@ const {
 
 const contextLabel = computed(() =>
 	formatMessage(props.variant === 'server' ? messages.serverContext : messages.instanceContext),
-)
-
-const backupName = computed(() =>
-	props.backupTip ? `Before deletion (${props.backupTip})` : 'Before deletion',
 )
 
 const deleteButtonLabel = computed(() => {
@@ -351,7 +332,6 @@ async function show() {
 	visibleDependents.value = props.dependents
 	visibleItemType.value = props.itemType
 	disableDependentsAfterDeleting.value = false
-	buttonsDisabled.value = false
 	modal.value?.show()
 	await nextTick()
 	forceCheckDeletingScroll()
@@ -363,7 +343,7 @@ function hide() {
 }
 
 function confirm() {
-	if (props.actionDisabled || buttonsDisabled.value) return
+	if (props.actionDisabled) return
 	modal.value?.hide()
 	emit('delete', disableDependentsAfterDeleting.value)
 }

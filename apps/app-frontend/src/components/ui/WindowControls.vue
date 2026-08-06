@@ -45,6 +45,7 @@ const themeStore = useTheming()
 const nativeDecorations = ref(true)
 const isMaximized = ref(false)
 const os = ref('')
+const unlistenResize = ref(null)
 
 const alwaysShowAppControls = computed(() => themeStore.getFeatureFlag('always_show_app_controls'))
 
@@ -66,13 +67,15 @@ onMounted(async () => {
 
 	isMaximized.value = await getCurrentWindow().isMaximized()
 
-	const unlisten = await getCurrentWindow().onResized(async () => {
+	unlistenResize.value = await getCurrentWindow().onResized(async () => {
 		isMaximized.value = await getCurrentWindow().isMaximized()
 	})
+})
 
-	onUnmounted(() => {
-		unlisten()
-	})
+onUnmounted(() => {
+	if (unlistenResize.value) {
+		unlistenResize.value()
+	}
 })
 
 const handleClose = async () => {

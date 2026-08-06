@@ -20,42 +20,6 @@
   "badge.release": {
     "defaultMessage": "Izdati"
   },
-  "billing.resubscribe-modal.cancel": {
-    "defaultMessage": "Otkaži"
-  },
-  "billing.resubscribe-modal.cpus": {
-    "defaultMessage": "{sharedCpus} zajedničkih procesora"
-  },
-  "billing.resubscribe-modal.error.text": {
-    "defaultMessage": "Greška sa ponovnom pretplatom, neuspeh sa učitavanjem detalja pretplate."
-  },
-  "billing.resubscribe-modal.error.title": {
-    "defaultMessage": "Greška"
-  },
-  "billing.resubscribe-modal.failed-load": {
-    "defaultMessage": "Greška sa učitavanjem detalja pretplate."
-  },
-  "billing.resubscribe-modal.interval": {
-    "defaultMessage": "{intervalOption, select, fiveDays {/5 dana} monthly {/mesec} quarterly {/tromesečno} yearly {/godinu} other {{interval}}}"
-  },
-  "billing.resubscribe-modal.next-charge": {
-    "defaultMessage": "Tvoja sledeća naplata će biti u <charge-date>{date}</charge-date>."
-  },
-  "billing.resubscribe-modal.plan-label": {
-    "defaultMessage": "Plan"
-  },
-  "billing.resubscribe-modal.ram": {
-    "defaultMessage": "{ramGb} GB radne memorije"
-  },
-  "billing.resubscribe-modal.resubscribe": {
-    "defaultMessage": "Ponovno se pretplati"
-  },
-  "billing.resubscribe-modal.storage": {
-    "defaultMessage": "{storageGb} GB memorije"
-  },
-  "billing.resubscribe-modal.title": {
-    "defaultMessage": "Ponovna pretplata"
-  },
   "browse.filter-results": {
     "defaultMessage": "Filtriranje resultata..."
   },
@@ -191,27 +155,6 @@
   "search.server_content_type.modpack": {
     "defaultMessage": "Modificiran"
   },
-  "servers.access-page.activity-log-filter.action-group.content": {
-    "defaultMessage": "Sadržaj i modpack"
-  },
-  "servers.access-page.activity-log-filter.action.modpack-changed": {
-    "defaultMessage": "Promenjen modpack"
-  },
-  "servers.access-page.activity-log-filter.action.modpack-unlinked": {
-    "defaultMessage": "Nepovezani modpack"
-  },
-  "servers.audit-log.event.modpack-changed": {
-    "defaultMessage": "Promenio/la modpack"
-  },
-  "servers.audit-log.event.modpack-unlinked": {
-    "defaultMessage": "Uklonio/la je vezu za modpak"
-  },
-  "servers.audit-log.event.modpack-unlinked-modpack": {
-    "defaultMessage": "Uklonio/la je vezu za modpak <modpack></modpack>"
-  },
-  "servers.audit-log.event.modpack-unlinked-version": {
-    "defaultMessage": "Uklonio/la je modpack verziju <version></version>"
-  },
   "servers.grant-access-modal.permissions-help": {
     "defaultMessage": "Vidi punu listu dozvola za svaku ulogo <link>ovde</link>."
   },
@@ -220,9 +163,6 @@
   },
   "servers.installing-banner.phase.installing-modpack": {
     "defaultMessage": "Instaliranje modpacka..."
-  },
-  "servers.purchase.step.plan.large.desc": {
-    "defaultMessage": "Idealno za 15-25 igrača, modpackove, ili velike modifikacije."
   },
   "settings.language.warning": {
     "defaultMessage": "Promena jezika {platform} može dovesti do toga da se neki sadržaj prikaže na engleskom jeziku ako prevod nije dostupan. {platform} još uvek nije u potpunosti prevedena, tako da neki sadržaj može ostati na engleskom jeziku za određene jezike."

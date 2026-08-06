@@ -20,45 +20,6 @@
   "badge.release": {
     "defaultMessage": "Utgåva"
   },
-  "billing.resubscribe-modal.cancel": {
-    "defaultMessage": "Avbryt"
-  },
-  "billing.resubscribe-modal.cpus": {
-    "defaultMessage": "{sharedCpus} Delade CPUs"
-  },
-  "billing.resubscribe-modal.description": {
-    "defaultMessage": "Du är på väg att återprenumerera till <server-name>{serverName}</server-name>. Din prenumeration kommer återaktiveras och din server kommer fortsätta köra utan avbrott."
-  },
-  "billing.resubscribe-modal.error.text": {
-    "defaultMessage": "Kunde inte prenumerera igen, misslyckades att ladda prenumerationsdetaljer."
-  },
-  "billing.resubscribe-modal.error.title": {
-    "defaultMessage": "Fel"
-  },
-  "billing.resubscribe-modal.failed-load": {
-    "defaultMessage": "Misslyckades att ladda prenumerationsdetaljer."
-  },
-  "billing.resubscribe-modal.interval": {
-    "defaultMessage": "{intervalOption, select, fiveDays {/5 dagar} monthly {/månad} quarterly {/kvartalsvis} yearly {/år} other {{interval}}}"
-  },
-  "billing.resubscribe-modal.next-charge": {
-    "defaultMessage": "Din nästa betalning är <charge-date>{date}</charge-date>."
-  },
-  "billing.resubscribe-modal.plan-label": {
-    "defaultMessage": "Plan"
-  },
-  "billing.resubscribe-modal.ram": {
-    "defaultMessage": "{ramGb} GB RAM"
-  },
-  "billing.resubscribe-modal.resubscribe": {
-    "defaultMessage": "Återprenumerera"
-  },
-  "billing.resubscribe-modal.storage": {
-    "defaultMessage": "{storageGb} GB lagring"
-  },
-  "billing.resubscribe-modal.title": {
-    "defaultMessage": "Återprenumerera till Server"
-  },
   "browse.filter-results": {
     "defaultMessage": "Filtrera resultat..."
   },
@@ -2621,78 +2582,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
-  "servers.access-page.activity-log-filter.action-group.backups": {
-    "defaultMessage": "Säkerhetskopior"
-  },
-  "servers.access-page.activity-log-filter.action-group.files": {
-    "defaultMessage": "Filer och SFTP"
-  },
-  "servers.access-page.activity-log-filter.action-group.server": {
-    "defaultMessage": "Server"
-  },
-  "servers.access-page.activity-log-filter.action.modpack-unlinked": {
-    "defaultMessage": "Avlänkat modpaket"
-  },
-  "servers.audit-log.event.modpack-unlinked": {
-    "defaultMessage": "Avlänkat modpaket"
-  },
-  "servers.audit-log.event.modpack-unlinked-modpack": {
-    "defaultMessage": "Avlänkat modpaket <modpack></modpack>"
-  },
-  "servers.audit-log.event.modpack-unlinked-version": {
-    "defaultMessage": "Avlänkat modpaket version <version></version>"
-  },
-  "servers.backups.admonition.backup-failed.description": {
-    "defaultMessage": "Något gick fel när säkerhetskopian {backupName} skapades. Vänligen försök igen eller kontakta support om felet återkommer."
-  },
-  "servers.backups.admonition.backup-failed.title": {
-    "defaultMessage": "Säkerhetskopiering misslyckades"
-  },
-  "servers.backups.admonition.backup-queued.description": {
-    "defaultMessage": "{backupName} är köad och kommer startas strax."
-  },
-  "servers.backups.admonition.backup-queued.title": {
-    "defaultMessage": "Säkerhetskopia köad"
-  },
-  "servers.backups.admonition.creating-backup.description": {
-    "defaultMessage": "Sparar världdata och serverkonfigurationen för {backupName}. Detta kan tå några minuter."
-  },
-  "servers.backups.admonition.creating-backup.title": {
-    "defaultMessage": "Skapar säkerhetskopia"
-  },
-  "servers.backups.admonition.fallback-name": {
-    "defaultMessage": "Din säkerhetskopia"
-  },
-  "servers.backups.admonition.restore-failed.description": {
-    "defaultMessage": "Något gick fel när vi försökte återställa från säkerhetskopian {backupName}. Vänligen försök igen eller kontakta support om felet återkommer."
-  },
-  "servers.backups.admonition.restore-queued.description": {
-    "defaultMessage": "Återställning från {backupName} är köad och kommer att börja strax."
-  },
-  "servers.backups.admonition.restore-successful.description": {
-    "defaultMessage": "Din server har återställts till {backupName} och är redo för att startas."
-  },
-  "servers.backups.admonition.restoring-backup.description": {
-    "defaultMessage": "Återställer din server från {backupName}. Detta kan ta några minuter."
-  },
-  "servers.backups.admonition.restoring-backup.title": {
-    "defaultMessage": "Återställer från säkerhetskopia"
-  },
-  "servers.backups.item.auto": {
-    "defaultMessage": "Auto"
-  },
-  "servers.backups.item.backup-schedule": {
-    "defaultMessage": "Säkerhetskopieringschema"
-  },
-  "servers.backups.item.manual-backup": {
-    "defaultMessage": "Manuel säkerhetskopiering"
-  },
-  "servers.backups.item.rename": {
-    "defaultMessage": "Döp om"
-  },
-  "servers.backups.item.restore": {
-    "defaultMessage": "Återställ"
-  },
   "servers.installing-banner.error.header": {
     "defaultMessage": "Installering misslyckades"
   },
@@ -2704,24 +2593,6 @@
   },
   "servers.installing-banner.error.unknown": {
     "defaultMessage": "Ett oväntat fel inträffade under installeringen."
-  },
-  "servers.manage.error.details": {
-    "defaultMessage": "Feldetaljer:"
-  },
-  "servers.manage.handle-error.title": {
-    "defaultMessage": "Ett fel inträffade"
-  },
-  "servers.manage.resubscribe-error.text": {
-    "defaultMessage": "Ett fel inträffade när du återprenumererade till din Modrinth server."
-  },
-  "servers.manage.resubscribe-error.title": {
-    "defaultMessage": "Fel vid återprenumerering"
-  },
-  "servers.medal-listing.new-server-label": {
-    "defaultMessage": "Ny server"
-  },
-  "servers.medal-listing.upgrade-button": {
-    "defaultMessage": "Uppgradera"
   },
   "servers.notice.dismiss": {
     "defaultMessage": "Avvisa"
@@ -2749,45 +2620,6 @@
   },
   "servers.notice.undismissable": {
     "defaultMessage": "Kan ej avvisas"
-  },
-  "servers.purchase.step.payment.description": {
-    "defaultMessage": "Du kommer inte att debiteras än."
-  },
-  "servers.purchase.step.payment.prompt": {
-    "defaultMessage": "Välj en betalningsmetod"
-  },
-  "servers.purchase.step.payment.title": {
-    "defaultMessage": "Betalningsmetod"
-  },
-  "servers.purchase.step.plan.custom.desc": {
-    "defaultMessage": "Välj en anpassad plan med just de specifikationer du behöver."
-  },
-  "servers.purchase.step.plan.get-started": {
-    "defaultMessage": "Kom igång"
-  },
-  "servers.purchase.step.plan.large.desc": {
-    "defaultMessage": "Ideal för 15–25 spelare, modpaket, eller tungt moddande."
-  },
-  "servers.purchase.step.plan.medium.desc": {
-    "defaultMessage": "Bra för 6–15 spelare och flera moddar."
-  },
-  "servers.purchase.step.plan.most-popular": {
-    "defaultMessage": "Populärast"
-  },
-  "servers.purchase.step.plan.select": {
-    "defaultMessage": "Välj plan"
-  },
-  "servers.purchase.step.plan.small.desc": {
-    "defaultMessage": "Perfekt för 1–5 vänner med några få lätta moddar."
-  },
-  "servers.purchase.step.plan.title": {
-    "defaultMessage": "Plan"
-  },
-  "servers.purchase.step.region.title": {
-    "defaultMessage": "Region"
-  },
-  "servers.purchase.step.review.title": {
-    "defaultMessage": "Granska"
   },
   "servers.region.central-europe": {
     "defaultMessage": "Centraleuropa"
@@ -2842,9 +2674,6 @@
   },
   "settings.authorized-apps.title": {
     "defaultMessage": "Auktoriserade appar"
-  },
-  "settings.billing.title": {
-    "defaultMessage": "Prenumerationer"
   },
   "settings.display.theme.dark": {
     "defaultMessage": "Mörkt"

@@ -8,18 +8,12 @@
 		"
 		fade="warning"
 		max-width="500px"
-		:on-hide="() => backupCreator?.cancelBackup()"
 	>
 		<div class="flex flex-col gap-6">
 			<SymlinkWarningAdmonition :symlink-target="symlinkTarget" />
 			<Admonition type="warning" :header="formatMessage(messages.admonitionHeader)">
 				{{ formatMessage(messages.admonitionBody) }}
 			</Admonition>
-			<InlineBackupCreator
-				ref="backupCreator"
-				:backup-name="props.backupTip ? `Before deletion (${props.backupTip})` : 'Before deletion'"
-				@update:buttons-disabled="buttonsDisabled = $event"
-			/>
 		</div>
 
 		<template #actions>
@@ -33,7 +27,7 @@
 				<ButtonStyled color="orange">
 					<button
 						v-tooltip="props.actionDisabled ? props.actionDisabledTooltip : undefined"
-						:disabled="buttonsDisabled || props.actionDisabled"
+						:disabled="props.actionDisabled"
 						@click="confirm"
 					>
 						<TrashIcon />
@@ -60,7 +54,6 @@ import NewModal from '#ui/components/modal/NewModal.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages, formatContentTypeSentence } from '#ui/utils/common-messages'
 
-import InlineBackupCreator from './InlineBackupCreator.vue'
 import SymlinkWarningAdmonition from './SymlinkWarningAdmonition.vue'
 
 const { formatMessage } = useVIntl()
@@ -109,8 +102,6 @@ const emit = defineEmits<{
 }>()
 
 const modal = ref<InstanceType<typeof NewModal>>()
-const backupCreator = ref<InstanceType<typeof InlineBackupCreator>>()
-const buttonsDisabled = ref(false)
 const visibleCount = ref(props.count)
 const visibleItemType = ref(props.itemType)
 

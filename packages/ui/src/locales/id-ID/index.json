@@ -17,45 +17,6 @@
   "badge.new": {
     "defaultMessage": "Baru"
   },
-  "billing.resubscribe-modal.cancel": {
-    "defaultMessage": "Batal"
-  },
-  "billing.resubscribe-modal.cpus": {
-    "defaultMessage": "{sharedCpus} CPU Bersama"
-  },
-  "billing.resubscribe-modal.description": {
-    "defaultMessage": "Anda akan segera berlangganan ulang ke <server-name>{serverName}</server-name>. Langganan Anda akan diaktifkan kembali dan server Anda akan terus berjalan tanpa gangguan."
-  },
-  "billing.resubscribe-modal.error.text": {
-    "defaultMessage": "Tidak dapat berlangganan kembali, gagal memuat perincian langganan."
-  },
-  "billing.resubscribe-modal.error.title": {
-    "defaultMessage": "Galat"
-  },
-  "billing.resubscribe-modal.failed-load": {
-    "defaultMessage": "Gagal memuat perincian langganan."
-  },
-  "billing.resubscribe-modal.interval": {
-    "defaultMessage": "{intervalOption, select, fiveDays {/5 hari} monthly {/bulan} quarterly {/kuartal} yearly {/tahun} other {{interval}}}"
-  },
-  "billing.resubscribe-modal.next-charge": {
-    "defaultMessage": "Tagihan Anda berikutnya akan jatuh tempo pada <charge-date>{date}</charge-date>."
-  },
-  "billing.resubscribe-modal.plan-label": {
-    "defaultMessage": "Langganan"
-  },
-  "billing.resubscribe-modal.ram": {
-    "defaultMessage": "RAM {ramGb} GB"
-  },
-  "billing.resubscribe-modal.resubscribe": {
-    "defaultMessage": "Berlangganan kembali"
-  },
-  "billing.resubscribe-modal.storage": {
-    "defaultMessage": "Penyimpanan {storageGb} GB"
-  },
-  "billing.resubscribe-modal.title": {
-    "defaultMessage": "Berlangganan ulang ke Server"
-  },
   "browse.filter-results": {
     "defaultMessage": "Saring hasil..."
   },
@@ -2120,21 +2081,6 @@
   "search.filter_type.shader_loader": {
     "defaultMessage": "Pemuat"
   },
-  "servers.backups.item.auto": {
-    "defaultMessage": "Otomatis"
-  },
-  "servers.backups.item.backup-schedule": {
-    "defaultMessage": "Jadwal pencadangan"
-  },
-  "servers.backups.item.manual-backup": {
-    "defaultMessage": "Pencadangan manual"
-  },
-  "servers.backups.item.rename": {
-    "defaultMessage": "Ganti nama"
-  },
-  "servers.backups.item.restore": {
-    "defaultMessage": "Pulihkan"
-  },
   "servers.listing.owner-tooltip": {
     "defaultMessage": "Dimiliki oleh {username}"
   },
@@ -2164,45 +2110,6 @@
   },
   "servers.notice.undismissable": {
     "defaultMessage": "Tidak dapat diabaikan"
-  },
-  "servers.purchase.step.payment.description": {
-    "defaultMessage": "Anda belum ditagih"
-  },
-  "servers.purchase.step.payment.prompt": {
-    "defaultMessage": "Pilih metode pembayaran"
-  },
-  "servers.purchase.step.payment.title": {
-    "defaultMessage": "Metode pembayaran"
-  },
-  "servers.purchase.step.plan.custom.desc": {
-    "defaultMessage": "Pilih langganan tersuai dengan spesifikasi yang Anda perlukan saja."
-  },
-  "servers.purchase.step.plan.get-started": {
-    "defaultMessage": "Mulai"
-  },
-  "servers.purchase.step.plan.large.desc": {
-    "defaultMessage": "Cocok untuk 15—25 pemain, paket mod, atau pemodifikasian berat."
-  },
-  "servers.purchase.step.plan.medium.desc": {
-    "defaultMessage": "Cocok untuk 6—15 pemain dan mod berganda."
-  },
-  "servers.purchase.step.plan.most-popular": {
-    "defaultMessage": "Paling Populer"
-  },
-  "servers.purchase.step.plan.select": {
-    "defaultMessage": "Pilih Berlangganan"
-  },
-  "servers.purchase.step.plan.small.desc": {
-    "defaultMessage": "Cocok untuk 1—5 orang teman dengan beberapa mod ringan."
-  },
-  "servers.purchase.step.plan.title": {
-    "defaultMessage": "Langganan"
-  },
-  "servers.purchase.step.region.title": {
-    "defaultMessage": "Wilayah"
-  },
-  "servers.purchase.step.review.title": {
-    "defaultMessage": "Ulas"
   },
   "servers.region.australia": {
     "defaultMessage": "Australia"
@@ -2248,9 +2155,6 @@
   },
   "settings.authorized-apps.title": {
     "defaultMessage": "Aplikasi yang diotorisasi"
-  },
-  "settings.billing.title": {
-    "defaultMessage": "Tagihan dan langganan"
   },
   "settings.display.theme.dark": {
     "defaultMessage": "Gelap"

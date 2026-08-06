@@ -4,7 +4,6 @@
 		:header="formatMessage(messages.header, { action: downgrade ? 'downgrade' : 'update' })"
 		fade="warning"
 		max-width="500px"
-		:on-hide="() => backupCreator?.cancelBackup()"
 	>
 		<div class="flex flex-col gap-6">
 			<SymlinkWarningAdmonition :symlink-target="symlinkTarget" />
@@ -20,11 +19,6 @@
 					})
 				}}
 			</Admonition>
-			<InlineBackupCreator
-				ref="backupCreator"
-				:backup-name="backupName"
-				@update:buttons-disabled="buttonsDisabled = $event"
-			/>
 		</div>
 
 		<template #actions>
@@ -38,7 +32,7 @@
 				<ButtonStyled color="orange">
 					<button
 						v-tooltip="props.actionDisabled ? props.actionDisabledTooltip : undefined"
-						:disabled="buttonsDisabled || props.actionDisabled"
+						:disabled="props.actionDisabled"
 						@click="handleConfirm"
 					>
 						<DownloadIcon />
@@ -54,7 +48,7 @@
 
 <script setup lang="ts">
 import { DownloadIcon, XIcon } from '@modrinth/assets'
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 
 import Admonition from '#ui/components/base/Admonition.vue'
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
@@ -62,7 +56,6 @@ import NewModal from '#ui/components/modal/NewModal.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonMessages } from '#ui/utils/common-messages'
 
-import InlineBackupCreator from './InlineBackupCreator.vue'
 import SymlinkWarningAdmonition from './SymlinkWarningAdmonition.vue'
 
 const props = defineProps<{
@@ -74,13 +67,6 @@ const props = defineProps<{
 }>()
 
 const { formatMessage } = useVIntl()
-
-const backupName = computed(() => {
-	const action = props.downgrade ? 'downgrade' : 'update'
-	return props.backupTip
-		? `Before modpack ${action} (${props.backupTip})`
-		: `Before modpack ${action}`
-})
 
 const messages = defineMessages({
 	header: {
@@ -107,8 +93,6 @@ const emit = defineEmits<{
 }>()
 
 const modal = ref<InstanceType<typeof NewModal>>()
-const backupCreator = ref<InstanceType<typeof InlineBackupCreator>>()
-const buttonsDisabled = ref(false)
 
 function show() {
 	modal.value?.show()

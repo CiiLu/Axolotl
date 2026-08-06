@@ -123,7 +123,6 @@ function hide() {
 }
 
 function handleHide() {
-	ctx.cancelBackup.value?.()
 	emit('hide')
 }
 
