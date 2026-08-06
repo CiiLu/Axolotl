@@ -920,21 +920,6 @@
   "search.filter_type.shader_loader": {
     "defaultMessage": "Loader"
   },
-  "servers.backups.item.auto": {
-    "defaultMessage": "Automatisk"
-  },
-  "servers.backups.item.backup-schedule": {
-    "defaultMessage": "Sikkerhedskopiering plan"
-  },
-  "servers.backups.item.manual-backup": {
-    "defaultMessage": "Manuel sikkerhedskopiering"
-  },
-  "servers.backups.item.rename": {
-    "defaultMessage": "Ændre navn"
-  },
-  "servers.backups.item.restore": {
-    "defaultMessage": "Genopret"
-  },
   "servers.notice.heading.info": {
     "defaultMessage": "Information"
   },
@@ -946,24 +931,6 @@
   },
   "servers.notice.level.warn.name": {
     "defaultMessage": "Advarsel"
-  },
-  "servers.purchase.step.payment.title": {
-    "defaultMessage": "Betalingsmetode"
-  },
-  "servers.purchase.step.plan.get-started": {
-    "defaultMessage": "Kom i gang"
-  },
-  "servers.purchase.step.plan.most-popular": {
-    "defaultMessage": "Mest Populær"
-  },
-  "servers.purchase.step.plan.select": {
-    "defaultMessage": "Vælg Plan"
-  },
-  "servers.purchase.step.plan.title": {
-    "defaultMessage": "Plan"
-  },
-  "servers.purchase.step.region.title": {
-    "defaultMessage": "Region"
   },
   "servers.region.central-europe": {
     "defaultMessage": "Centraleuropa"

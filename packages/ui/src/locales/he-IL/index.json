@@ -917,45 +917,6 @@
   "servers.notice.undismissable": {
     "defaultMessage": "חיוני – לא ניתן להתעלם"
   },
-  "servers.purchase.step.payment.description": {
-    "defaultMessage": "לא תחויב עדיין."
-  },
-  "servers.purchase.step.payment.prompt": {
-    "defaultMessage": "בחר שיטת תשלום"
-  },
-  "servers.purchase.step.payment.title": {
-    "defaultMessage": "שיטת תשלום"
-  },
-  "servers.purchase.step.plan.custom.desc": {
-    "defaultMessage": "בחר תוכנית מותאמת אישית עם המפרט שאתה צריך בלבד."
-  },
-  "servers.purchase.step.plan.get-started": {
-    "defaultMessage": "התחל עכשיו"
-  },
-  "servers.purchase.step.plan.large.desc": {
-    "defaultMessage": "מתאים ל־15–25 שחקנים, חבילות מודים או מודינג כבד."
-  },
-  "servers.purchase.step.plan.medium.desc": {
-    "defaultMessage": "מתאים ל‑6–15 שחקנים ולכמה מודים."
-  },
-  "servers.purchase.step.plan.most-popular": {
-    "defaultMessage": "הכי פופולרי"
-  },
-  "servers.purchase.step.plan.select": {
-    "defaultMessage": "בחר תוכנית"
-  },
-  "servers.purchase.step.plan.small.desc": {
-    "defaultMessage": "מושלם ל‑1–5 חברים עם מספר מועט של מודים קלים."
-  },
-  "servers.purchase.step.plan.title": {
-    "defaultMessage": "תוכנית"
-  },
-  "servers.purchase.step.region.title": {
-    "defaultMessage": "אזור"
-  },
-  "servers.purchase.step.review.title": {
-    "defaultMessage": "סקירה"
-  },
   "servers.region.central-europe": {
     "defaultMessage": "מרכז אירופה"
   },
@@ -982,9 +943,6 @@
   },
   "settings.authorized-apps.title": {
     "defaultMessage": "אפליקציות מורשות"
-  },
-  "settings.billing.title": {
-    "defaultMessage": "חיובים ומנויים"
   },
   "settings.display.theme.dark": {
     "defaultMessage": "כהה"
