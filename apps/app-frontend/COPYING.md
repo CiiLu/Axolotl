@@ -14,6 +14,14 @@ The bundled blockstate data, block models, default block properties, and texture
 
 Minecraft and its original resources are Copyright Mojang AB. Their namespaced identifiers are retained only where required to identify compatible game content. Axolotl Launcher is not affiliated with or endorsed by Mojang or Microsoft.
 
+## Recipe generator attribution
+
+The recipe generator's vanilla recipe catalogs and expanded item tags are sourced from [destruc7i0n/crafting](https://github.com/destruc7i0n/crafting) at commit `e6c71dd816216a73cda2787aa5253f641b57fbeb`, which is distributed under the MIT License. A verbatim copy is provided in [third-party/licenses/MIT.txt](../../third-party/licenses/MIT.txt).
+
+Item identifiers, readable names, and textures are sourced from the `minecraft-textures` npm package version `26.2.1` by destruc7i0n, which is distributed under the GNU General Public License, Version 3. The GPL-3.0 text is provided in the app frontend [LICENSE](./LICENSE).
+
+The recipe data and item artwork ultimately derive from Minecraft data generator output and Minecraft game resources. Minecraft and its original resources are Copyright Mojang Studios / Microsoft and are used only to identify compatible game content. Axolotl Launcher is not affiliated with or endorsed by Mojang Studios or Microsoft.
+
 ## AI integration attribution
 
 The AI provider settings information architecture, provider catalog, and provider descriptions are adapted from [LobeChat](https://github.com/lobehub/lobe-chat) at commit `a27dfaeda1ab499ac024a6eb0448917b216ba8a1`. The localized provider descriptions under `src/data/lobehub-provider-descriptions` are reproduced from that release. Bundled text-model metadata is synchronized separately from [LobeHub's model bank](https://github.com/lobehub/lobehub/tree/main/packages/model-bank/src/aiModels), with its exact source revision recorded in the backend catalog. LobeChat is distributed under the LobeHub Community License; a verbatim copy of that license is provided in [third-party/licenses/LobeHub-Community-License.txt](../../third-party/licenses/LobeHub-Community-License.txt).
