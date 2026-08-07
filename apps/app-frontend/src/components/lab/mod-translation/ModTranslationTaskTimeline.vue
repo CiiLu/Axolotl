@@ -29,7 +29,8 @@ watch(
 
 function toggleDebug(id: string) {
 	const next = new Set(debugOpen.value)
-	next.has(id) ? next.delete(id) : next.add(id)
+	if (next.has(id)) next.delete(id)
+	else next.add(id)
 	debugOpen.value = next
 }
 

@@ -3995,6 +3995,381 @@
 	"app.lab.gradient-text.description": {
 		"message": "无需浏览器即可创建适用于 Minecraft 的渐变文字。"
 	},
+	"app.lab.recipe-generator.cancel": {
+		"message": "取消"
+	},
+	"app.lab.recipe-generator.category.blocks": {
+		"message": "方块"
+	},
+	"app.lab.recipe-generator.category.building": {
+		"message": "建筑"
+	},
+	"app.lab.recipe-generator.category.equipment": {
+		"message": "装备"
+	},
+	"app.lab.recipe-generator.category.food": {
+		"message": "食物"
+	},
+	"app.lab.recipe-generator.category.misc": {
+		"message": "杂项"
+	},
+	"app.lab.recipe-generator.category.redstone": {
+		"message": "红石"
+	},
+	"app.lab.recipe-generator.copyright.disclaimer-body": {
+		"message": "Minecraft 素材版权归 Mojang Studios / Microsoft 所有，仅用于识别兼容的游戏内容。Axolotl Launcher 与 Mojang Studios 或 Microsoft 无关联，也未获得其认可。"
+	},
+	"app.lab.recipe-generator.copyright.disclaimer-heading": {
+		"message": "非官方工具"
+	},
+	"app.lab.recipe-generator.copyright.open": {
+		"message": "版权与来源"
+	},
+	"app.lab.recipe-generator.copyright.tags-body": {
+		"message": "扩展物品标签来自 destruc7i0n 的 crafting generator，采用 MIT 许可证。"
+	},
+	"app.lab.recipe-generator.copyright.tags-heading": {
+		"message": "原版标签"
+	},
+	"app.lab.recipe-generator.copyright.textures-body": {
+		"message": "物品标识符、可读名称和图标来自 destruc7i0n 的 minecraft-textures，采用 GNU General Public License v3。"
+	},
+	"app.lab.recipe-generator.copyright.textures-heading": {
+		"message": "物品纹理与元数据"
+	},
+	"app.lab.recipe-generator.copyright.title": {
+		"message": "版权与来源"
+	},
+	"app.lab.recipe-generator.copyright.view-tags": {
+		"message": "查看原版标签"
+	},
+	"app.lab.recipe-generator.copyright.view-textures": {
+		"message": "查看 minecraft-textures"
+	},
+	"app.lab.recipe-generator.description": {
+		"message": "使用本地物品和标签数据创建 Minecraft Java 数据包配方。"
+	},
+	"app.lab.recipe-generator.instance-export.back": {
+		"message": "返回实例列表"
+	},
+	"app.lab.recipe-generator.instance-export.choose-instance": {
+		"message": "选择包含世界的实例"
+	},
+	"app.lab.recipe-generator.instance-export.choose-world": {
+		"message": "选择单机世界"
+	},
+	"app.lab.recipe-generator.instance-export.install-world": {
+		"message": "将数据包安装到 {name}"
+	},
+	"app.lab.recipe-generator.instance-export.last-played": {
+		"message": "{ago}游玩过"
+	},
+	"app.lab.recipe-generator.instance-export.never-played": {
+		"message": "尚未游玩"
+	},
+	"app.lab.recipe-generator.instance-export.no-instances": {
+		"message": "没有可用的已安装实例。"
+	},
+	"app.lab.recipe-generator.instance-export.no-worlds": {
+		"message": "该实例还没有单机世界。"
+	},
+	"app.lab.recipe-generator.instance-export.save-as": {
+		"message": "另存为"
+	},
+	"app.lab.recipe-generator.instance-export.title": {
+		"message": "将数据包安装到世界"
+	},
+	"app.lab.recipe-generator.items.add": {
+		"message": "添加到配方"
+	},
+	"app.lab.recipe-generator.items.add-custom": {
+		"message": "添加自定义物品"
+	},
+	"app.lab.recipe-generator.items.custom-deleted": {
+		"message": "已删除自定义物品"
+	},
+	"app.lab.recipe-generator.items.custom-id": {
+		"message": "物品 ID"
+	},
+	"app.lab.recipe-generator.items.custom-id-placeholder": {
+		"message": "minecraft:item_id（示例）"
+	},
+	"app.lab.recipe-generator.items.custom-name": {
+		"message": "显示名称"
+	},
+	"app.lab.recipe-generator.items.custom-saved": {
+		"message": "已保存自定义物品"
+	},
+	"app.lab.recipe-generator.items.custom-texture": {
+		"message": "纹理 URL"
+	},
+	"app.lab.recipe-generator.items.custom-texture-placeholder": {
+		"message": "https://example.com/texture.png（示例）"
+	},
+	"app.lab.recipe-generator.items.custom-title": {
+		"message": "自定义物品"
+	},
+	"app.lab.recipe-generator.items.delete-custom": {
+		"message": "删除自定义物品"
+	},
+	"app.lab.recipe-generator.items.edit-custom": {
+		"message": "编辑自定义物品"
+	},
+	"app.lab.recipe-generator.items.edit-custom-action": {
+		"message": "编辑自定义物品"
+	},
+	"app.lab.recipe-generator.items.empty": {
+		"message": "没有匹配搜索的物品。"
+	},
+	"app.lab.recipe-generator.items.invalid-custom": {
+		"message": "请输入物品 ID。"
+	},
+	"app.lab.recipe-generator.items.loading": {
+		"message": "正在加载物品"
+	},
+	"app.lab.recipe-generator.items.search-placeholder": {
+		"message": "搜索物品"
+	},
+	"app.lab.recipe-generator.loading-resources": {
+		"message": "正在加载版本数据"
+	},
+	"app.lab.recipe-generator.options.auto-name": {
+		"message": "自动名称：{name}"
+	},
+	"app.lab.recipe-generator.options.category": {
+		"message": "分类"
+	},
+	"app.lab.recipe-generator.options.category-none": {
+		"message": "无"
+	},
+	"app.lab.recipe-generator.options.cooking-time": {
+		"message": "烹饪时间"
+	},
+	"app.lab.recipe-generator.options.default-time": {
+		"message": "默认时间"
+	},
+	"app.lab.recipe-generator.options.experience": {
+		"message": "经验值"
+	},
+	"app.lab.recipe-generator.options.file-name": {
+		"message": "文件名"
+	},
+	"app.lab.recipe-generator.options.group": {
+		"message": "分组"
+	},
+	"app.lab.recipe-generator.options.keep-whitespace": {
+		"message": "保留精确槽位位置"
+	},
+	"app.lab.recipe-generator.options.manual-name-placeholder": {
+		"message": "recipe_name（示例）"
+	},
+	"app.lab.recipe-generator.options.name-mode-auto": {
+		"message": "自动"
+	},
+	"app.lab.recipe-generator.options.name-mode-manual": {
+		"message": "手动"
+	},
+	"app.lab.recipe-generator.options.shapeless": {
+		"message": "无序合成"
+	},
+	"app.lab.recipe-generator.options.show-notification": {
+		"message": "显示配方通知"
+	},
+	"app.lab.recipe-generator.options.title": {
+		"message": "选项"
+	},
+	"app.lab.recipe-generator.options.trim-pattern": {
+		"message": "纹饰图案"
+	},
+	"app.lab.recipe-generator.options.two-by-two": {
+		"message": "2x2 合成格"
+	},
+	"app.lab.recipe-generator.output.placeholder": {
+		"message": "配方 JSON 会显示在这里"
+	},
+	"app.lab.recipe-generator.output.save-json": {
+		"message": "保存 JSON"
+	},
+	"app.lab.recipe-generator.output.saved": {
+		"message": "JSON 已保存"
+	},
+	"app.lab.recipe-generator.output.title": {
+		"message": "JSON 输出"
+	},
+	"app.lab.recipe-generator.panel.items": {
+		"message": "物品"
+	},
+	"app.lab.recipe-generator.panel.tags": {
+		"message": "标签"
+	},
+	"app.lab.recipe-generator.preview.copy-image": {
+		"message": "复制图片到剪贴板"
+	},
+	"app.lab.recipe-generator.preview.image-copied": {
+		"message": "预览图片已复制"
+	},
+	"app.lab.recipe-generator.preview.result-count": {
+		"message": "产物数量"
+	},
+	"app.lab.recipe-generator.preview.title": {
+		"message": "预览"
+	},
+	"app.lab.recipe-generator.recipe-type": {
+		"message": "配方类型"
+	},
+	"app.lab.recipe-generator.recipes.clone": {
+		"message": "复制配方"
+	},
+	"app.lab.recipe-generator.recipes.delete": {
+		"message": "删除配方"
+	},
+	"app.lab.recipe-generator.recipes.export-datapack": {
+		"message": "导出数据包"
+	},
+	"app.lab.recipe-generator.recipes.export-datapack-done": {
+		"message": "数据包已导出"
+	},
+	"app.lab.recipe-generator.recipes.export-datapack-invalid": {
+		"message": "导出前请先修复配方错误。"
+	},
+	"app.lab.recipe-generator.recipes.name": {
+		"message": "名称：{name}"
+	},
+	"app.lab.recipe-generator.recipes.new": {
+		"message": "新建配方"
+	},
+	"app.lab.recipe-generator.recipes.title": {
+		"message": "配方"
+	},
+	"app.lab.recipe-generator.resource-error": {
+		"message": "无法加载版本数据。"
+	},
+	"app.lab.recipe-generator.save": {
+		"message": "保存"
+	},
+	"app.lab.recipe-generator.save-as-done": {
+		"message": "数据包已保存"
+	},
+	"app.lab.recipe-generator.slots.clear": {
+		"message": "清空槽位"
+	},
+	"app.lab.recipe-generator.slots.empty": {
+		"message": "空槽位"
+	},
+	"app.lab.recipe-generator.slots.grid-full": {
+		"message": "合成格已满，请先清空一个槽位。"
+	},
+	"app.lab.recipe-generator.slots.result-count": {
+		"message": "产物数量"
+	},
+	"app.lab.recipe-generator.tags.add": {
+		"message": "添加标签"
+	},
+	"app.lab.recipe-generator.tags.custom": {
+		"message": "自定义标签"
+	},
+	"app.lab.recipe-generator.tags.delete": {
+		"message": "删除标签"
+	},
+	"app.lab.recipe-generator.tags.empty": {
+		"message": "没有匹配搜索的标签。"
+	},
+	"app.lab.recipe-generator.tags.id-placeholder": {
+		"message": "namespace:tag_id（示例）"
+	},
+	"app.lab.recipe-generator.tags.no-custom": {
+		"message": "还没有自定义标签。"
+	},
+	"app.lab.recipe-generator.tags.search-placeholder": {
+		"message": "搜索标签"
+	},
+	"app.lab.recipe-generator.tags.use": {
+		"message": "在配方中使用"
+	},
+	"app.lab.recipe-generator.tags.values-placeholder": {
+		"message": "每行一个物品或 #标签"
+	},
+	"app.lab.recipe-generator.tags.vanilla": {
+		"message": "原版标签"
+	},
+	"app.lab.recipe-generator.title": {
+		"message": "配方生成器"
+	},
+	"app.lab.recipe-generator.type.blasting": {
+		"message": "高炉烧炼"
+	},
+	"app.lab.recipe-generator.type.campfire-cooking": {
+		"message": "篝火烹饪"
+	},
+	"app.lab.recipe-generator.type.crafting": {
+		"message": "合成"
+	},
+	"app.lab.recipe-generator.type.smelting": {
+		"message": "熔炉烧炼"
+	},
+	"app.lab.recipe-generator.type.smithing": {
+		"message": "锻造台锻造"
+	},
+	"app.lab.recipe-generator.type.smithing-transform": {
+		"message": "锻造转换"
+	},
+	"app.lab.recipe-generator.type.smithing-trim": {
+		"message": "锻造纹饰"
+	},
+	"app.lab.recipe-generator.type.smoking": {
+		"message": "烟熏炉烧制"
+	},
+	"app.lab.recipe-generator.type.stonecutter": {
+		"message": "切石机"
+	},
+	"app.lab.recipe-generator.validation.invalid-identifier": {
+		"message": "物品标识符无效。"
+	},
+	"app.lab.recipe-generator.validation.missing-addition": {
+		"message": "请添加附加物品。"
+	},
+	"app.lab.recipe-generator.validation.missing-base": {
+		"message": "请添加基础物品。"
+	},
+	"app.lab.recipe-generator.validation.missing-custom-item": {
+		"message": "配方引用了已删除的自定义物品。"
+	},
+	"app.lab.recipe-generator.validation.missing-custom-tag": {
+		"message": "配方引用了已删除的自定义标签。"
+	},
+	"app.lab.recipe-generator.validation.missing-ingredient": {
+		"message": "请添加材料。"
+	},
+	"app.lab.recipe-generator.validation.missing-result": {
+		"message": "请添加产物物品。"
+	},
+	"app.lab.recipe-generator.validation.missing-template": {
+		"message": "请添加模板物品。"
+	},
+	"app.lab.recipe-generator.validation.missing-trim-pattern": {
+		"message": "请添加纹饰图案。"
+	},
+	"app.lab.recipe-generator.validation.summary": {
+		"message": "{count} 个问题"
+	},
+	"app.lab.recipe-generator.validation.summary-plural": {
+		"message": "{count} 个问题"
+	},
+	"app.lab.recipe-generator.validation.tag-in-result": {
+		"message": "产物槽位不能包含标签。"
+	},
+	"app.lab.recipe-generator.validation.tags-not-supported": {
+		"message": "此版本不支持物品标签。"
+	},
+	"app.lab.recipe-generator.validation.unsupported-type": {
+		"message": "所选版本中不可用此配方类型。"
+	},
+	"app.lab.recipe-generator.version": {
+		"message": "版本"
+	},
+	"app.lab.recipe-generator.version-label": {
+		"message": "Java {version}"
+	},
 	"app.lab.seed-map.import-from-instance": {
 		"message": "从实例导入"
 	},
@@ -4523,6 +4898,9 @@
 	"app.onboarding.action.open-gradient-text": {
 		"message": "打开渐变文字生成器，继续"
 	},
+	"app.onboarding.action.open-recipe-generator": {
+		"message": "打开配方生成器，继续"
+	},
 	"app.onboarding.action.open-seed-map": {
 		"message": "打开种子地图，继续"
 	},
@@ -4534,6 +4912,12 @@
 	},
 	"app.onboarding.lab-editor.title": {
 		"message": "在同一处编辑和复制"
+	},
+	"app.onboarding.lab-recipe-generator.description": {
+		"message": "选择 Java 版本、填充配方槽位，然后在本地复制或导出 JSON。"
+	},
+	"app.onboarding.lab-recipe-generator.title": {
+		"message": "制作数据包配方"
 	},
 	"app.onboarding.lab-seed-map.description": {
 		"message": "输入种子或从实例载入，然后在本地地图中查看群系、结构与矿物图层。"
@@ -6132,7 +6516,7 @@
 		"message": "准备中…"
 	},
 	"app.lab.mod-translation.estimated-tokens": {
-		"message": "{tokens} tokens"
+		"message": "{tokens} 个 token"
 	},
 	"app.lab.mod-translation.estimated-tokens-detail": {
 		"message": "约 {calls} 次调用 · 输入 {input} / 输出 {output}"

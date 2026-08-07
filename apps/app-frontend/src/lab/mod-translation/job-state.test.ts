@@ -5,8 +5,8 @@ import {
 	countModTranslationJobs,
 	jobFromSnapshot,
 	modTranslationPercent,
-	replayContiguousTaskEvents,
 	reduceModTranslationJob,
+	replayContiguousTaskEvents,
 } from './job-state.ts'
 import { mapTaskEventsToTimeline } from './timeline.ts'
 import type {
@@ -148,19 +148,13 @@ test('zero-weight phase events preserve the last measurable progress', () => {
 
 test('job counts distinguish failed tasks from successful completion', () => {
 	assert.deepEqual(
-		countModTranslationJobs([
-			{ status: 'completed' },
-			{ status: 'failed' },
-			{ status: 'running' },
-		]),
+		countModTranslationJobs([{ status: 'completed' }, { status: 'failed' }, { status: 'running' }]),
 		{ running: 1, completed: 1, failed: 1 },
 	)
 })
 
 test('failed packaging signal preserves the actual working phase and error', () => {
-	const initial = jobFromSnapshot(
-		snapshot([event(1, { progress: progress({ phase: 'repair' }) })]),
-	)
+	const initial = jobFromSnapshot(snapshot([event(1, { progress: progress({ phase: 'repair' }) })]))
 	const next = reduceModTranslationJob(
 		initial,
 		event(2, {

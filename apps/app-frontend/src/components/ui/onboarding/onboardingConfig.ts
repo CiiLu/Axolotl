@@ -309,7 +309,7 @@ export const onboardingMessages = defineMessages({
 	labToolsDescription: {
 		id: 'app.onboarding.lab-tools.description',
 		defaultMessage:
-			'Create formatted text, explore Java worlds, and inspect schematic builds without leaving the launcher.',
+			'Create formatted text and recipe data packs, explore Java worlds, and inspect schematic builds without leaving the launcher.',
 	},
 	openGradientText: {
 		id: 'app.onboarding.action.open-gradient-text',
@@ -344,6 +344,19 @@ export const onboardingMessages = defineMessages({
 	openSchematicWorkshop: {
 		id: 'app.onboarding.action.open-schematic-workshop',
 		defaultMessage: 'Open Schematic workshop to continue',
+	},
+	openRecipeGenerator: {
+		id: 'app.onboarding.action.open-recipe-generator',
+		defaultMessage: 'Open Recipe generator to continue',
+	},
+	labRecipeGeneratorTitle: {
+		id: 'app.onboarding.lab-recipe-generator.title',
+		defaultMessage: 'Craft data pack recipes',
+	},
+	labRecipeGeneratorDescription: {
+		id: 'app.onboarding.lab-recipe-generator.description',
+		defaultMessage:
+			'Pick a Java version, fill the recipe slots, and copy or export the JSON locally.',
 	},
 	labSchematicTitle: {
 		id: 'app.onboarding.lab-schematic.title',
@@ -407,12 +420,7 @@ const settingsTourSteps: Array<[string, string, MessageDescriptor, MessageDescri
 		onboardingMessages.translationTitle,
 		onboardingMessages.translationDescription,
 	],
-	[
-		'settings-ai',
-		'settings-tab-ai',
-		onboardingMessages.aiTitle,
-		onboardingMessages.aiDescription,
-	],
+	['settings-ai', 'settings-tab-ai', onboardingMessages.aiTitle, onboardingMessages.aiDescription],
 	[
 		'settings-java',
 		'settings-tab-java',
@@ -593,6 +601,22 @@ export const onboardingTours: Record<OnboardingMode, OnboardingStep[]> = {
 			'schematic-preview-workspace',
 			onboardingMessages.labSchematicTitle,
 			onboardingMessages.labSchematicDescription,
+		),
+		step(
+			'lab-recipe-generator-navigation',
+			'navigate',
+			copy(
+				onboardingMessages.labRecipeGeneratorTitle,
+				onboardingMessages.labRecipeGeneratorDescription,
+				onboardingMessages.openRecipeGenerator,
+			),
+			control('lab-recipe-generator-card', '/lab/recipe-generator'),
+		),
+		inspect(
+			'lab-recipe-generator-workspace',
+			'recipe-generator-workspace',
+			onboardingMessages.labRecipeGeneratorTitle,
+			onboardingMessages.labRecipeGeneratorDescription,
 		),
 		step(
 			'downloads-navigation',

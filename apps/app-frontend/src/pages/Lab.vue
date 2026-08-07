@@ -13,6 +13,7 @@ import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import gradientTextToolCover from '@/assets/lab/gradient-text-tool-cover.png'
+import recipeGeneratorToolCover from '@/assets/lab/recipe-generator-tool-cover.png'
 import schematicPreviewToolCover from '@/assets/lab/schematic-preview-cover.png'
 import seedMapToolCover from '@/assets/lab/seed-map-tool-cover.png'
 import { type LabToolDefinition, labTools } from '@/lab/registry'
@@ -24,6 +25,7 @@ const search = ref('')
 const category = ref<LabCategory>('all')
 const toolCoverImages: Record<string, string> = {
 	'gradient-text': gradientTextToolCover,
+	'recipe-generator': recipeGeneratorToolCover,
 	'schematic-preview': schematicPreviewToolCover,
 	'seed-map': seedMapToolCover,
 }
@@ -45,6 +47,14 @@ const messages = defineMessages({
 	gradientTextDescription: {
 		id: 'app.lab.gradient-text.description',
 		defaultMessage: 'Create Minecraft-ready gradient text without a browser.',
+	},
+	recipeGeneratorTitle: {
+		id: 'app.lab.recipe-generator.title',
+		defaultMessage: 'Recipe generator',
+	},
+	recipeGeneratorDescription: {
+		id: 'app.lab.recipe-generator.description',
+		defaultMessage: 'Create Minecraft Java data pack recipes from local item and tag data.',
 	},
 	seedMapTitle: { id: 'app.lab.seed-map.title', defaultMessage: 'Seed map' },
 	seedMapDescription: {
@@ -88,6 +98,7 @@ const visibleTools = computed(() => {
 
 function toolTitle(toolId: string, fallback: string) {
 	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextTitle)
+	if (toolId === 'recipe-generator') return formatMessage(messages.recipeGeneratorTitle)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapTitle)
 	if (toolId === 'schematic-preview') return formatMessage(messages.schematicPreviewTitle)
 	if (toolId === 'mod-translation') return formatMessage(messages.modTranslationTitle)
@@ -96,6 +107,7 @@ function toolTitle(toolId: string, fallback: string) {
 
 function toolDescription(toolId: string, fallback: string) {
 	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextDescription)
+	if (toolId === 'recipe-generator') return formatMessage(messages.recipeGeneratorDescription)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapDescription)
 	if (toolId === 'schematic-preview') return formatMessage(messages.schematicPreviewDescription)
 	if (toolId === 'mod-translation') return formatMessage(messages.modTranslationDescription)
@@ -103,7 +115,7 @@ function toolDescription(toolId: string, fallback: string) {
 }
 
 function toolOnboardingId(toolId: string) {
-	return ['gradient-text', 'seed-map', 'schematic-preview'].includes(toolId)
+	return ['gradient-text', 'recipe-generator', 'seed-map', 'schematic-preview'].includes(toolId)
 		? `lab-${toolId}-card`
 		: undefined
 }

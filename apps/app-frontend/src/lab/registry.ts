@@ -1,8 +1,9 @@
-import { BoxIcon, LanguagesIcon, PaletteIcon, WorldIcon } from '@modrinth/assets'
+import { BlocksIcon, BoxIcon, LanguagesIcon, PaletteIcon, WorldIcon } from '@modrinth/assets'
 import type { Component } from 'vue'
 
 import GradientTextLab from '@/pages/LabGradientText.vue'
 import ModTranslationLab from '@/pages/LabModTranslation.vue'
+import RecipeGeneratorLab from '@/pages/LabRecipeGenerator.vue'
 import SchematicPreviewLab from '@/pages/LabSchematicPreview.vue'
 import SeedMapLab from '@/pages/LabSeedMap.vue'
 
@@ -25,6 +26,15 @@ export const labTools: readonly LabToolDefinition[] = [
 		component: GradientTextLab,
 		title: 'Gradient text generator',
 		description: 'Create Minecraft-ready gradient text without a browser.',
+	},
+	{
+		id: 'recipe-generator',
+		category: 'creation',
+		route: '/lab/recipe-generator',
+		icon: BlocksIcon,
+		component: RecipeGeneratorLab,
+		title: 'Recipe generator',
+		description: 'Create Minecraft Java data pack recipes from local item and tag data.',
 	},
 	{
 		id: 'seed-map',

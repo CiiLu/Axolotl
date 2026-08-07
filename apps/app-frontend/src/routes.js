@@ -93,6 +93,15 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/lab/recipe-generator',
+			name: 'Recipe generator',
+			component: () => import('@/pages/LabRecipeGenerator.vue'),
+			meta: {
+				breadcrumb: [{ name: 'Lab', link: '/lab' }, { name: 'Recipe generator' }],
+				discordActivity: 'Messing with labs...',
+			},
+		},
+		{
 			path: '/lab/seed-map',
 			name: 'Seed map',
 			component: () => import('@/pages/LabSeedMap.vue'),

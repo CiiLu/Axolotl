@@ -4655,6 +4655,9 @@
   "drop.confirm.title": {
     "message": "你想以什么类型导入？"
   },
+  "drop.confirm.not-this": {
+    "message": "作为其他内容导入"
+  },
   "drop.confirm.cancel": {
     "message": "取消"
   },

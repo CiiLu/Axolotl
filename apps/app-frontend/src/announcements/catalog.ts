@@ -50,6 +50,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Added progress display for exporting modpacks.',
 					'zh-CN': '为导出整合包添加了进度显示。',
 				},
+				{
+					'en-US':
+						'Added a recipe generator in Lab for creating custom crafting tables and other datapacks.',
+					'zh-CN': '实验室新增配方生成器，可自制合成表等数据包。',
+				},
 			],
 			fixed: [
 				{
