@@ -46,6 +46,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Added zh-cn locales for seed map biome picker',
 					'zh-CN': '为种子地图中的群系选择器添加了中文本地化',
 				},
+				{
+					'en-US': 'Added progress display for exporting modpacks.',
+					'zh-CN': '为导出整合包添加了进度显示。',
+				},
 			],
 			fixed: [
 				{
@@ -58,6 +62,22 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the installer remaining open after installation when Launch when complete was selected; it now closes after the launcher starts successfully and stays open if launching fails.',
 					'zh-CN':
 						'修复勾选“完成后启动”时安装程序不会自动退出的问题；启动器成功启动后安装程序会退出，启动失败时则保留窗口。',
+				},
+				{
+					'en-US':
+						'Fixed the issue of the maximum page number being displayed incorrectly on the search page.',
+					'zh-CN': '修复搜索页面最大页码显示错误的问题',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'Improved performance when exporting modpacks.',
+					'zh-CN': '优化了导出整合包时的性能问题',
+				},
+				{
+					'en-US':
+						'Fixed the issue of search result translations being switched from the general translation API to mcim.',
+					'zh-CN': '将搜索结果的翻译由通用翻译API切换至mcim',
 				},
 			],
 		},
