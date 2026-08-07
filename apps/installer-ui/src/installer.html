@@ -1138,6 +1138,7 @@
 							<p class="lead" style="margin-top: 16px" data-i18n="completeCopy">
 								Installation completed successfully. Your new launcher is ready to use.
 							</p>
+							<div class="error-panel" id="launch-error" role="alert"></div>
 						</div>
 					</section>
 				</div>
@@ -1222,6 +1223,7 @@
 					footerConfigure: 'Both locations can be changed later.',
 					footerInstalling: 'Keep this window open while setup completes.',
 					footerComplete: 'You can now close this installer.',
+					footerLaunchFailed: 'Installation is complete. Retry launching or close this installer.',
 					continue: 'Continue',
 					back: 'Back',
 					install: 'Install',
@@ -1237,6 +1239,8 @@
 					installFailed: 'Installation failed',
 					installFailedDetail:
 						'The installation core returned an error. Check that Axolotl Launcher is closed, then retry.',
+					launchFailed:
+						'Installation completed, but Axolotl Launcher could not be started. Try again or close this installer.',
 				},
 				zhCn: {
 					installer: 'Windows 安装程序',
@@ -1281,6 +1285,7 @@
 					footerConfigure: '这两个位置之后仍可调整。',
 					footerInstalling: '安装完成前请保持此窗口打开。',
 					footerComplete: '现在可以关闭安装程序。',
+					footerLaunchFailed: '安装已完成。请重试启动，或关闭安装程序。',
 					continue: '继续',
 					back: '上一步',
 					install: '安装',
@@ -1295,12 +1300,13 @@
 					notWritable: 'Axolotl 无法写入此目录。',
 					installFailed: '安装失败',
 					installFailedDetail: '安装核心返回了错误。请确认 Axolotl Launcher 已关闭，然后重试。',
+					launchFailed: '安装已完成，但无法启动 Axolotl Launcher。请重试或关闭安装程序。',
 				},
 			}
 
 			const language = boot.language === 'zhCn' ? 'zhCn' : 'en'
 			const t = copy[language]
-			const state = { screen: 'welcome', progress: 4, failed: false }
+			const state = { screen: 'welcome', progress: 4, failed: false, launchFailed: false }
 			const screens = ['welcome', 'configure', 'installing', 'complete']
 			const $ = (selector) => document.querySelector(selector)
 			const post = (payload) => window.ipc.postMessage(JSON.stringify(payload))
@@ -1374,7 +1380,9 @@
 					$('#primary-label').textContent = state.failed ? t.retry : t.install
 					icon.classList.toggle('hidden', !state.failed)
 				} else {
-					$('#footer-note').textContent = t.footerComplete
+					$('#footer-note').textContent = state.launchFailed
+						? t.footerLaunchFailed
+						: t.footerComplete
 					$('#primary-label').textContent = $('#launch-after').checked ? t.launch : t.finish
 					icon.innerHTML = $('#launch-after').checked
 						? '<path d="M5 12h14m-6-6 6 6-6 6"/>'
@@ -1385,12 +1393,15 @@
 			function install() {
 				$('#field-error').textContent = ''
 				$('#install-error').classList.remove('visible')
+				$('#launch-error').classList.remove('visible')
 				state.failed = false
+				state.launchFailed = false
 				post({
 					command: 'install',
 					installDir: $('#install-dir').value.trim(),
 					resourceDir: $('#resource-dir').value.trim(),
 					desktopShortcut: $('#desktop-shortcut').checked,
+					launchAfter: $('#launch-after').checked,
 				})
 
 				// Developer Preview Mock
@@ -1437,7 +1448,8 @@
 
 			$('#primary-action').addEventListener('click', () => {
 				if (state.screen === 'welcome') setScreen('configure')
-				else if (state.screen === 'configure' || state.failed) install()
+				else if (state.screen === 'configure' || (state.screen === 'installing' && state.failed))
+					install()
 				else if (state.screen === 'complete')
 					post({ command: 'finish', launch: $('#launch-after').checked })
 			})
@@ -1462,6 +1474,12 @@
 						setProgress(message.value)
 					} else if (message.type === 'installFinished') {
 						setProgress(100)
+						setScreen('complete')
+					} else if (message.type === 'launchFailed') {
+						state.launchFailed = true
+						setProgress(100)
+						$('#launch-error').textContent = t.launchFailed
+						$('#launch-error').classList.add('visible')
 						setScreen('complete')
 					} else if (message.type === 'installFailed') {
 						state.failed = true
