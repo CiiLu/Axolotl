@@ -220,5 +220,7 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'axolotl-site.faq.lab.question': '什么是 Axolotl 实验室？',
 		'axolotl-site.faq.lab.answer':
 			'Axolotl 实验室是一个内置的网页工具集合，提供渐变文字生成器、Java 版种子地图和 3D 投影工坊等功能。内容持续更新中。',
+		'axolotl-site.seo.keywords':
+			'Axolotl Launcher, 美西螈启动器, Minecraft 启动器, Modrinth, CurseForge, Minecraft Java 版, 模组, 整合包, 资源包, 光影, Axolotl 实验室',
 	},
 }

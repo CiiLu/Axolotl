@@ -733,6 +733,11 @@ const messages = defineMessages({
 		defaultMessage:
 			'Axolotl Labs is a collection of built-in launcher tools, including a gradient text generator, Java Edition seed map, and 3D schematic workshop.',
 	},
+	seoKeywords: {
+		id: 'axolotl-site.seo.keywords',
+		defaultMessage:
+			'Axolotl Launcher, Minecraft Launcher, Modrinth, CurseForge, Minecraft Java Edition, Axolotl Labs',
+	},
 })
 
 const config = useRuntimeConfig()
@@ -771,6 +776,7 @@ const faqItems = computed(() => [
 		answer: formatMessage(messages.faqLabAnswer),
 	},
 ])
+const keywords = computed(() => formatMessage(messages.seoKeywords))
 
 const structuredData = computed(() => ({
 	'@context': 'https://schema.org',
@@ -864,6 +870,12 @@ useSeoMeta({
 
 useHead(() => ({
 	link: [{ rel: 'canonical', href: canonicalUrl }],
+	meta: [
+		{
+			name: 'keywords',
+			content: keywords.value,
+		},
+	],
 	script: [
 		{
 			key: 'axolotl-structured-data',
