@@ -189,8 +189,8 @@ pub fn run() -> Result<(), String> {
                 let mut dialog =
                     DialogBuilder::file().set_title(title).set_owner(&window);
                 let current_path = PathBuf::from(current);
-                if current_path.is_absolute() {
-                    dialog = dialog.set_location(&current_path);
+                if let Some(location) = dialog_initial_location(&current_path) {
+                    dialog = dialog.set_location(&location);
                 }
                 if let Ok(Some(path)) = dialog.open_single_dir().show() {
                     send_to_webview(
@@ -374,6 +374,12 @@ fn normalized_path_key(path: &Path) -> String {
         .to_lowercase()
 }
 
+fn dialog_initial_location(path: &Path) -> Option<PathBuf> {
+    path.ancestors()
+        .find(|candidate| candidate.is_dir())
+        .map(Path::to_path_buf)
+}
+
 fn start_install(
     installer: PathBuf,
     request: InstallRequest,
@@ -463,5 +469,41 @@ fn send_to_webview(webview: Option<&WebView>, payload: serde_json::Value) {
         let _ = webview.evaluate_script(&format!(
             "window.axolotlInstaller && window.axolotlInstaller.receive({payload});"
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::dialog_initial_location;
+    use std::{
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    #[test]
+    fn dialog_location_keeps_existing_directory() {
+        let existing = std::env::temp_dir();
+
+        assert_eq!(dialog_initial_location(&existing), Some(existing));
+    }
+
+    #[test]
+    fn dialog_location_falls_back_to_existing_parent() {
+        let existing = std::env::temp_dir();
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after Unix epoch")
+            .as_nanos();
+        let missing = existing
+            .join(format!("axolotl-installer-ui-{unique}"))
+            .join("nested");
+        assert!(!missing.exists());
+
+        assert_eq!(dialog_initial_location(&missing), Some(existing));
+    }
+
+    #[test]
+    fn dialog_location_rejects_relative_path_without_existing_ancestor() {
+        assert_eq!(dialog_initial_location(&PathBuf::from("")), None);
     }
 }

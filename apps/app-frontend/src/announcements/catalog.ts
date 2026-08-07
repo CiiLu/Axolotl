@@ -47,6 +47,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '为种子地图中的群系选择器添加了中文本地化',
 				},
 			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the installer Browse buttons not opening a folder picker when the default destination did not exist yet.',
+					'zh-CN': '修复默认目标目录尚未创建时，安装程序的“浏览”按钮无法打开文件夹选择器的问题。',
+				},
+			],
 		},
 	},
 	{
