@@ -249,6 +249,9 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 				projectHits.value = response.projectHits
 			}
 			totalHits.value = response.total_hits
+			if (currentPage.value > pageCount.value) {
+				currentPage.value = pageCount.value
+			}
 			debug('refreshSearch complete', {
 				version,
 				hits: response.total_hits,

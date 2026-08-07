@@ -1670,9 +1670,10 @@ async function search(requestParams: string, signal: AbortSignal) {
 		serverHits: [],
 		total_hits:
 			contentSource.value === 'all'
-				? (rawResults?.result.total_hits ?? 0) +
-					(rawCurseForge?.total_hits ?? 0) +
-					injectedModrinthCount
+				? Math.max(
+						(rawResults?.result.total_hits ?? 0) + injectedModrinthCount,
+						rawCurseForge?.total_hits ?? 0,
+					)
 				: contentSource.value === 'curseforge'
 					? (rawCurseForge?.total_hits ?? 0)
 					: (rawResults?.result.total_hits ?? 0) + injectedModrinthCount,
@@ -1829,6 +1830,7 @@ function toggleTranslation() {
 watch(contentSource, async (source) => {
 	searchState.projectHits.value = []
 	searchState.totalHits.value = 0
+	searchState.currentPage.value = 1
 	searchState.loading.value = true
 	searchState.currentFilters.value = searchState.currentFilters.value.filter(
 		(filter) => !filter.type.startsWith('category_'),
