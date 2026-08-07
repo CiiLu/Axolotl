@@ -52,6 +52,7 @@ struct InstallRequest {
     install_dir: String,
     resource_dir: String,
     desktop_shortcut: bool,
+    launch_after: bool,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -159,6 +160,7 @@ pub fn run() -> Result<(), String> {
     let fresh_install = arguments.bootstrap.fresh_install;
     let mut installing = false;
     let mut install_dir = PathBuf::from(&arguments.bootstrap.install_dir);
+    let mut launch_after_install = false;
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -189,8 +191,8 @@ pub fn run() -> Result<(), String> {
                 let mut dialog =
                     DialogBuilder::file().set_title(title).set_owner(&window);
                 let current_path = PathBuf::from(current);
-                if current_path.is_absolute() {
-                    dialog = dialog.set_location(&current_path);
+                if let Some(location) = dialog_initial_location(&current_path) {
+                    dialog = dialog.set_location(&location);
                 }
                 if let Ok(Some(path)) = dialog.open_single_dir().show() {
                     send_to_webview(
@@ -210,6 +212,7 @@ pub fn run() -> Result<(), String> {
                 match validate_request(&request, fresh_install) {
                     Ok(()) => {
                         install_dir = PathBuf::from(&request.install_dir);
+                        launch_after_install = request.launch_after;
                         installing = true;
                         send_to_webview(
                             webview.as_ref(),
@@ -240,6 +243,21 @@ pub fn run() -> Result<(), String> {
             Event::UserEvent(UserEvent::Finished(result)) => {
                 installing = false;
                 match result {
+                    Ok(()) if launch_after_install => {
+                        match launch_main_process(&install_dir) {
+                            Ok(()) => {
+                                webview.take();
+                                *control_flow = ControlFlow::Exit;
+                            }
+                            Err(error) => send_to_webview(
+                                webview.as_ref(),
+                                json!({
+                                    "type": "launchFailed",
+                                    "message": error,
+                                }),
+                            ),
+                        }
+                    }
                     Ok(()) => send_to_webview(
                         webview.as_ref(),
                         json!({ "type": "installFinished" }),
@@ -255,9 +273,16 @@ pub fn run() -> Result<(), String> {
                 }
             }
             Event::UserEvent(UserEvent::Finish { launch }) => {
-                if launch {
-                    let _ = Command::new(install_dir.join(MAIN_BINARY_NAME))
-                        .spawn();
+                if launch && let Err(error) = launch_main_process(&install_dir)
+                {
+                    send_to_webview(
+                        webview.as_ref(),
+                        json!({
+                            "type": "launchFailed",
+                            "message": error,
+                        }),
+                    );
+                    return;
                 }
                 webview.take();
                 *control_flow = ControlFlow::Exit;
@@ -374,6 +399,19 @@ fn normalized_path_key(path: &Path) -> String {
         .to_lowercase()
 }
 
+fn dialog_initial_location(path: &Path) -> Option<PathBuf> {
+    path.ancestors()
+        .find(|candidate| candidate.is_dir())
+        .map(Path::to_path_buf)
+}
+
+fn launch_main_process(install_dir: &Path) -> Result<(), String> {
+    Command::new(install_dir.join(MAIN_BINARY_NAME))
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
 fn start_install(
     installer: PathBuf,
     request: InstallRequest,
@@ -463,5 +501,65 @@ fn send_to_webview(webview: Option<&WebView>, payload: serde_json::Value) {
         let _ = webview.evaluate_script(&format!(
             "window.axolotlInstaller && window.axolotlInstaller.receive({payload});"
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{UiCommand, dialog_initial_location, launch_main_process};
+    use std::{
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    #[test]
+    fn dialog_location_keeps_existing_directory() {
+        let existing = std::env::temp_dir();
+
+        assert_eq!(dialog_initial_location(&existing), Some(existing));
+    }
+
+    #[test]
+    fn dialog_location_falls_back_to_existing_parent() {
+        let existing = std::env::temp_dir();
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after Unix epoch")
+            .as_nanos();
+        let missing = existing
+            .join(format!("axolotl-installer-ui-{unique}"))
+            .join("nested");
+        assert!(!missing.exists());
+
+        assert_eq!(dialog_initial_location(&missing), Some(existing));
+    }
+
+    #[test]
+    fn dialog_location_rejects_relative_path_without_existing_ancestor() {
+        assert_eq!(dialog_initial_location(&PathBuf::from("")), None);
+    }
+
+    #[test]
+    fn install_request_includes_launch_after_choice() {
+        let command = serde_json::from_str::<UiCommand>(
+            r#"{"command":"install","installDir":"C:\\Axolotl","resourceDir":"C:\\AxolotlData","desktopShortcut":true,"launchAfter":true}"#,
+        )
+        .expect("install request should deserialize");
+        let UiCommand::Install(request) = command else {
+            panic!("expected install command");
+        };
+
+        assert!(request.launch_after);
+    }
+
+    #[test]
+    fn launching_from_missing_install_directory_reports_error() {
+        let missing = std::env::temp_dir().join(format!(
+            "axolotl-installer-ui-missing-{}",
+            std::process::id()
+        ));
+        assert!(!missing.exists());
+
+        assert!(launch_main_process(&missing).is_err());
     }
 }

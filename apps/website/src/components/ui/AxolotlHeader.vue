@@ -262,7 +262,7 @@ function openSettings() {
 	}
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1023px) {
 	.header-inner {
 		grid-template-columns: 1fr auto;
 		padding: 0.875rem 1rem;

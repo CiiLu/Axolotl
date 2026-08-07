@@ -177,12 +177,12 @@ useSeoMeta({
 	ogTitle: () => seoTitle.value,
 	ogDescription: () => seoDescription.value,
 	ogType: 'website',
-	ogUrl: 'https://www.axlmc.org/changelog',
+	ogUrl: 'https://axlmc.org/changelog',
 	robots: 'index, follow',
 })
 
 useHead({
-	link: [{ rel: 'canonical', href: 'https://www.axlmc.org/changelog' }],
+	link: [{ rel: 'canonical', href: 'https://axlmc.org/changelog' }],
 })
 </script>
 
