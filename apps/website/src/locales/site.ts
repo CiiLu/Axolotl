@@ -2,7 +2,8 @@ export const SUPPORTED_SITE_LOCALES = ['en-US', 'zh-CN'] as const
 
 export const siteLocaleMessages: Record<string, Record<string, string>> = {
 	'zh-CN': {
-		'axolotl-site.seo.title': 'Axolotl Launcher - 免费开源的 Minecraft 启动器',
+		'axolotl-site.seo.title':
+			'Axolotl Launcher - 支持 Modrinth 与 CurseForge 的开源 Minecraft 启动器',
 		'axolotl-site.seo.description':
 			'下载 Axolotl Launcher：适用于 Windows、macOS 和 Linux 的免费开源 Tauri v2 Minecraft（我的世界）启动器，支持 Modrinth 与 CurseForge 内容管理、主题、账户及更多功能。',
 		'axolotl-site.seo.social-image-alt':
@@ -28,7 +29,7 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'axolotl-marketing.hero.download': 'Axolotl Launcher',
 		'axolotl-marketing.hero.download-for-os': '适用于 {os} 的 Axolotl Launcher',
 		'app-marketing.hero.description':
-			'适用于 Windows、macOS 和 Linux 的免费开源跨平台 Minecraft 启动器，在一个地方连接 Modrinth 与 CurseForge。',
+			'Axolotl Launcher 是一款免费、开源、无广告的跨平台 Minecraft Java 版启动器，可在同一个客户端中搜索、安装和更新来自 Modrinth 与 CurseForge 的模组、整合包、资源包和光影，并内置 Axolotl 实验室。',
 		'axolotl-marketing.hero.screenshot-alt': 'Axolotl Launcher 主界面。',
 		'axolotl-marketing.highlights.eyebrow': '一个启动器，两个来源',
 		'axolotl-marketing.highlights.title': '管理 Minecraft 内容',
@@ -40,7 +41,7 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 			'无需离开启动器，即可从两个来源探索模组、整合包、资源包、光影及更多内容。',
 		'axolotl-marketing.highlights.ad-free.title': '免费、开源且独立',
 		'axolotl-marketing.highlights.ad-free.description':
-			'基于 GPL-3.0 发布，免费使用且无广告。Axolotl 不是 Electron，也不是 Modrinth 官方客户端。',
+			'基于 GPL-3.0 发布，免费使用且无广告。Axolotl 不是 Modrinth 官方客户端。',
 		'axolotl-marketing.highlights.localized.title': '井然有序的内容管理',
 		'axolotl-marketing.highlights.localized.description':
 			'同时安装和管理整合包与单个项目。部分 CurseForge 文件受分发限制，可能需要手动下载。',
@@ -216,5 +217,8 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'axolotl-settings.external-links.description': '访问其他网站时保留当前下载页面。',
 		'axolotl-settings.storage-note': '偏好设置将保存在此浏览器中。',
 		'axolotl-settings.done': '完成',
+		'axolotl-site.faq.lab.question': '什么是 Axolotl 实验室？',
+		'axolotl-site.faq.lab.answer':
+			'Axolotl 实验室是一个内置的网页工具集合，提供渐变文字生成器、Java 版种子地图和 3D 投影工坊等功能。内容持续更新中。',
 	},
 }

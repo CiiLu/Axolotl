@@ -10,12 +10,12 @@ useSeoMeta({
 	ogTitle: title,
 	ogDescription: description,
 	ogType: 'website',
-	ogUrl: 'https://www.axlmc.org/terms',
+	ogUrl: 'https://axlmc.org/terms',
 	robots: 'index, follow',
 })
 
 useHead({
-	link: [{ rel: 'canonical', href: 'https://www.axlmc.org/terms' }],
+	link: [{ rel: 'canonical', href: 'https://axlmc.org/terms' }],
 })
 </script>
 

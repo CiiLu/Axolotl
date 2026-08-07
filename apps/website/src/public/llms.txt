@@ -1,0 +1,23 @@
+# Axolotl Launcher
+
+Axolotl Launcher is a free, open-source, ad-free, cross-platform Minecraft Java Edition launcher which supports Windows, macOS, and Linux.
+
+It supports searching, installing, and updating mods, modpacks, resource packs, and shaders from both Modrinth and CurseForge.
+
+Axolotl Launcher also provides instance management, Microsoft and offline/Yggdrasil accounts, Java management, skin customization, and Axolotl Labs.
+
+Axolotl Labs includes:
+- Gradient text generator
+- Minecraft Java Edition seed map
+- 3D schematic workshop
+
+Axolotl Launcher is a fork of Modrinth App.
+
+Official website:
+https://axlmc.org/
+
+Source code:
+https://github.com/Mystic-Stars/Axolotl
+
+Changelog:
+https://axlmc.org/changelog

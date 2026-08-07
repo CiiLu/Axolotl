@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.axlmc.org/sitemap.xml
+Sitemap: https://axlmc.org/sitemap.xml

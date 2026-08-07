@@ -10,12 +10,12 @@ useSeoMeta({
 	ogTitle: title,
 	ogDescription: description,
 	ogType: 'website',
-	ogUrl: 'https://www.axlmc.org/privacy',
+	ogUrl: 'https://axlmc.org/privacy',
 	robots: 'index, follow',
 })
 
 useHead({
-	link: [{ rel: 'canonical', href: 'https://www.axlmc.org/privacy' }],
+	link: [{ rel: 'canonical', href: 'https://axlmc.org/privacy' }],
 })
 </script>
 

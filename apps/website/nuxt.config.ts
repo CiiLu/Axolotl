@@ -1,6 +1,6 @@
 import svgLoader from 'vite-svg-loader'
 
-const SITE_URL = 'https://www.axlmc.org'
+const SITE_URL = 'https://axlmc.org'
 
 export default defineNuxtConfig({
 	srcDir: 'src/',

@@ -185,7 +185,10 @@ const newProjects = Array.from({ length: 40 }, (_, index) => {
 		id: `${project.id}-${index}`,
 		icon_url: project.iconUrl,
 		title: project.name,
-		description: `${project.name} is ready to explore on Modrinth.`,
+		description: `${project.name} is available through Axolotl's content browser.`,
+
+		// 第一轮是真实语义内容，后面的只是视觉重复
+		isVisualDuplicate: index >= modManagementData.length,
 	}
 })
 const val = Math.ceil(newProjects.length / 6)
@@ -283,7 +286,7 @@ const messages = defineMessages({
 	description: {
 		id: 'app-marketing.hero.description',
 		defaultMessage:
-			'A free, open-source, cross-platform Minecraft launcher for Windows, macOS, and Linux. Axolotl connects Modrinth and CurseForge in one place.',
+			'Axolotl Launcher is a free, open-source, ad-free, cross-platform Minecraft Java Edition launcher for searching, installing, and updating mods, modpacks, resource packs, and shaders from Modrinth and CurseForge, with Axolotl Labs built in.',
 	},
 	heroScreenshotAlt: {
 		id: 'axolotl-marketing.hero.screenshot-alt',
@@ -322,7 +325,7 @@ const messages = defineMessages({
 	adFreeDescription: {
 		id: 'axolotl-marketing.highlights.ad-free.description',
 		defaultMessage:
-			'GPL-3.0, free to use, and ad-free. Axolotl is not Electron and is not an official Modrinth client.',
+			'GPL-3.0, free to use, and ad-free. Axolotl is not an official Modrinth client.',
 	},
 	localized: {
 		id: 'axolotl-marketing.highlights.localized.title',
@@ -623,7 +626,7 @@ const messages = defineMessages({
 	},
 	seoTitle: {
 		id: 'axolotl-site.seo.title',
-		defaultMessage: 'Axolotl Launcher - Free Open-Source Minecraft Launcher',
+		defaultMessage: 'Axolotl Launcher - Free Open-Source Modrinth + Curseforge Minecraft Launcher',
 	},
 	seoDescription: {
 		id: 'axolotl-site.seo.description',
@@ -703,6 +706,33 @@ const messages = defineMessages({
 		id: 'app-marketing.features.importing.multimc-alt',
 		defaultMessage: 'MultiMC',
 	},
+	structuredFeatureContentSources: {
+		id: 'axolotl-site.structured-data.feature.content-sources',
+		defaultMessage:
+			'Search, install, and update mods, modpacks, resource packs, and shaders from Modrinth and CurseForge',
+	},
+	structuredFeatureLab: {
+		id: 'axolotl-site.structured-data.feature.lab',
+		defaultMessage:
+			'Axolotl Labs with gradient text generator, Java Edition seed map, and 3D schematic workshop',
+	},
+	structuredFeatureInstances: {
+		id: 'axolotl-site.structured-data.feature.instances',
+		defaultMessage: 'Instance, world, screenshot, log, Java, and modpack management',
+	},
+	structuredFeatureAccounts: {
+		id: 'axolotl-site.structured-data.feature.accounts',
+		defaultMessage: 'Microsoft, offline, LittleSkin, and custom Yggdrasil account support',
+	},
+	faqLabQuestion: {
+		id: 'axolotl-site.faq.lab.question',
+		defaultMessage: 'What is Axolotl Labs?',
+	},
+	faqLabAnswer: {
+		id: 'axolotl-site.faq.lab.answer',
+		defaultMessage:
+			'Axolotl Labs is a collection of built-in launcher tools, including a gradient text generator, Java Edition seed map, and 3D schematic workshop.',
+	},
 })
 
 const config = useRuntimeConfig()
@@ -735,6 +765,10 @@ const faqItems = computed(() => [
 	{
 		question: formatMessage(messages.faqDownloadQuestion),
 		answer: formatMessage(messages.faqDownloadAnswer),
+	},
+	{
+		question: formatMessage(messages.faqLabQuestion),
+		answer: formatMessage(messages.faqLabAnswer),
 	},
 ])
 
@@ -779,6 +813,12 @@ const structuredData = computed(() => ({
 			softwareHelp: `${githubUrl}#readme`,
 			author: { '@id': `${canonicalUrl}#organization` },
 			inLanguage: ['zh-CN', 'en-US'],
+			featureList: [
+				formatMessage(messages.structuredFeatureContentSources),
+				formatMessage(messages.structuredFeatureLab),
+				formatMessage(messages.structuredFeatureInstances),
+				formatMessage(messages.structuredFeatureAccounts),
+			],
 		},
 		{
 			'@type': 'FAQPage',
@@ -980,7 +1020,7 @@ useHead(() => ({
 							<div class="search">{{ formatMessage(messages.searchMods) }}</div>
 						</div>
 					</div>
-					<div class="header row">
+					<div class="7777777777777777777777777777777777777 row">
 						<div />
 						<div class="cell">{{ formatMessage(messages.name) }}</div>
 						<div class="cell">{{ formatMessage(messages.version) }}</div>
@@ -1026,6 +1066,7 @@ useHead(() => ({
 									v-for="project in row"
 									:key="project.id"
 									class="project button-animation gradient-border"
+									:aria-hidden="project.isVisualDuplicate ? 'true' : undefined"
 								>
 									<Avatar :src="project.icon_url!" alt="" size="sm" />
 									<div class="project-info">
@@ -1524,7 +1565,7 @@ useHead(() => ({
 	align-items: center;
 	flex-direction: column;
 	overflow: hidden;
-	padding: clamp(7rem, 12vw, 11.5rem) 1.5rem 0;
+	padding: clamp(10rem, 12vw, 11.5rem) 1.5rem 0;
 	margin-top: -5.25rem;
 	background:
 		radial-gradient(
@@ -1552,9 +1593,15 @@ useHead(() => ({
 	}
 
 	&::after {
-		inset: 8.5rem 7% auto;
+		inset: 9.25rem 7% auto;
 		height: 1px;
 		background: linear-gradient(90deg, transparent, rgb(255 170 206 / 38%), transparent);
+	}
+}
+
+@media (max-width: 1023px) {
+	.landing-hero::after {
+		inset: 8.5rem 7% auto;
 	}
 }
 
