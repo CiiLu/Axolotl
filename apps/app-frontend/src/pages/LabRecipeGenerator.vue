@@ -723,7 +723,7 @@ function setSlot(slot: RecipeSlot, value: SlotValue | undefined) {
 	) {
 		return
 	}
-	if (value) recipe.slots[slot] = value
+	if (value) recipe.slots[slot] = { ...value }
 	else Reflect.deleteProperty(recipe.slots, slot)
 }
 
@@ -894,7 +894,7 @@ function placeFromPalette(value: SlotValue) {
 	if (!recipe) return
 	const firstEmpty = autoPlaceSlots.value.find((slot) => !recipe.slots[slot])
 	if (firstEmpty) {
-		recipe.slots[firstEmpty] = value
+		recipe.slots[firstEmpty] = { ...value }
 	} else {
 		addNotification({ type: 'info', title: formatMessage(messages.gridFull) })
 	}
