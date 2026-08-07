@@ -4,7 +4,6 @@ import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { invoke } from '@tauri-apps/api/core'
 
 import {
-	prepareTranslationText,
 	translateInBatches as executeTranslationBatches,
 	type TranslationRequest,
 	type TranslationResponse,
@@ -149,9 +148,7 @@ export function getTranslationErrorKind(error: unknown): TranslationErrorKind {
 
 function containsReadableText(element: Element): boolean {
 	if (
-		element.matches(
-			'pre, script, style, img, picture, source, video, audio, iframe, canvas, svg',
-		)
+		element.matches('pre, script, style, img, picture, source, video, audio, iframe, canvas, svg')
 	) {
 		return false
 	}
@@ -167,8 +164,7 @@ function isUrlOnlyText(value: string): boolean {
 	return /^(?:https?:\/\/|www\.|mailto:)[^\s]+$/i.test(value.trim())
 }
 
-const NON_TRANSLATABLE_MEDIA_SELECTOR =
-	'img, picture, source, video, audio, iframe, canvas, svg'
+const NON_TRANSLATABLE_MEDIA_SELECTOR = 'img, picture, source, video, audio, iframe, canvas, svg'
 
 function protectElementAttributes(
 	element: Element,

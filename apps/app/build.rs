@@ -530,6 +530,21 @@ fn main() {
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),
+            )
+            .plugin(
+                "mod-translation",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "mod_translation_analyze",
+                        "mod_translation_translate",
+                        "mod_translation_cancel",
+                        "mod_translation_list_tasks",
+                        "mod_translation_get_task",
+                        "mod_translation_dismiss_task",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
             ),
     )
     .expect("Failed to run tauri-build");

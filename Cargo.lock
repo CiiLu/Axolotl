@@ -6766,13 +6766,16 @@ dependencies = [
  "hyper",
  "hyper-util",
  "keyring",
+ "libc",
  "native-dialog",
  "paste",
  "path-util",
  "quartz_nbt",
+ "regex",
  "serde",
  "serde_json",
  "serde_with",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-deep-link",
@@ -6795,6 +6798,7 @@ dependencies = [
  "urlencoding",
  "uuid 1.24.0",
  "windows",
+ "zip 6.0.0",
 ]
 
 [[package]]

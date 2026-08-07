@@ -111,6 +111,15 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/lab/mod-translation',
+			name: 'Mod translation',
+			component: () => import('@/pages/LabModTranslation.vue'),
+			meta: {
+				breadcrumb: [{ name: 'Lab', link: '/lab' }, { name: 'Mod translation' }],
+				discordActivity: 'Messing with labs...',
+			},
+		},
+		{
 			path: '/library',
 			name: 'Library',
 			component: () => import('@/pages/library/Index.vue'),

@@ -13,6 +13,7 @@ use theseus::prelude::*;
 
 mod api;
 mod error;
+mod mod_translation;
 mod portable;
 mod seed_map;
 
@@ -196,12 +197,60 @@ async fn set_restart_after_pending_update(
     Ok(())
 }
 
+// macOS caps each process at 256 open file descriptors by default
+// (RLIMIT_NOFILE soft limit). The launcher's high download concurrency
+// (up to 128 concurrent downloads, each split into multiple segments)
+// easily exhausts this, causing "Too many open files (os error 24)"
+// failures while installing modpacks. Raise the soft limit up to macOS's
+// per-process ceiling (kern.maxfilesperproc, ~10240) at startup.
+#[cfg(target_os = "macos")]
+fn raise_file_descriptor_limit() {
+    // SAFETY: Called at the start of main() before any threads or tokio
+    // runtime are spawned.
+    unsafe {
+        let mut limit = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
+        if libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) != 0 {
+            eprintln!(
+                "Failed to read RLIMIT_NOFILE: {}",
+                std::io::Error::last_os_error()
+            );
+            return;
+        }
+        // The hard limit is usually unlimited (-1); cap the target so
+        // setrlimit is accepted by the kernel.
+        const TARGET: libc::rlim_t = 10240;
+        let new_cur = if limit.rlim_max == libc::RLIM_INFINITY {
+            TARGET
+        } else {
+            limit.rlim_max.min(TARGET)
+        };
+        if new_cur <= limit.rlim_cur {
+            return;
+        }
+        limit.rlim_cur = new_cur;
+        if libc::setrlimit(libc::RLIMIT_NOFILE, &limit) != 0 {
+            eprintln!(
+                "Failed to raise RLIMIT_NOFILE to {new_cur}: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+}
+
 // if Tauri app is called with arguments, then those arguments will be treated as commands
 // ie: deep links or filepaths for .mrpacks
 fn main() {
     // Initialize portable mode first (checks .Axolotl folder and sets THESEUS_CONFIG_DIR)
     // SAFETY: Called at the start of main() before any threads or tokio runtime are spawned
     let _portable = unsafe { portable::init_portable_mode() };
+
+    // macOS limits the per-process file descriptor count to 256 by default,
+    // which the launcher's download concurrency exhausts during installs.
+    #[cfg(target_os = "macos")]
+    raise_file_descriptor_limit();
 
     #[cfg(target_os = "windows")]
     if std::env::args_os().any(|argument| argument == "--memory-optimize") {
@@ -406,6 +455,7 @@ fn main() {
         .plugin(api::jre::init())
         .plugin(api::metadata::init())
         .plugin(api::minecraft_skins::init())
+        .plugin(api::mod_translation::init())
         .plugin(api::process::init())
         .plugin(api::settings::init())
         .plugin(api::seed_map::init())

@@ -164,8 +164,8 @@ export function provideHomeDashboardRuntime(handleError: ErrorHandler): HomeDash
 	void instance_listener(async (event: { instance_id?: string }) => {
 		if (event.instance_id) {
 			loadedWorlds.delete(event.instance_id)
-			delete worldsByInstance[event.instance_id]
-			delete protocolVersions[event.instance_id]
+			Reflect.deleteProperty(worldsByInstance, event.instance_id)
+			Reflect.deleteProperty(protocolVersions, event.instance_id)
 			for (const key of loadedServers) {
 				if (key.startsWith(`${event.instance_id}:`)) loadedServers.delete(key)
 			}

@@ -105,6 +105,7 @@
 		"logs:default",
 		"metadata:default",
 		"minecraft-skins:default",
+		"mod-translation:default",
 		"instance:default",
 		"install:default",
 		"process:default",

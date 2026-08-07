@@ -4703,9 +4703,6 @@
   "drop.confirm.as-schematic-desc": {
     "message": "导入 Litematic 投影文件"
   },
-  "drop.confirm.not-this": {
-    "message": "这不是 {type}"
-  },
   "drop.confirm.as-dot-minecraft": {
     "message": ".minecraft"
   },
@@ -4816,5 +4813,35 @@
   },
   "creation-flow.modal.import-instance.select-file.description": {
     "defaultMessage": "导入整合包文件或启动器(HMCL、PCL)"
+  },
+  "app.lab.mod-translation.agent-round": {
+    "defaultMessage": "第 {round} 轮"
+  },
+  "app.lab.mod-translation.agent-session": {
+    "defaultMessage": "Agent 会话"
+  },
+  "app.lab.mod-translation.agent-session-empty": {
+    "defaultMessage": "暂无 Agent 活动"
+  },
+  "app.lab.mod-translation.agent-tool.get-language-work": {
+    "defaultMessage": "读取待译条目"
+  },
+  "app.lab.mod-translation.agent-tool.get-task-state": {
+    "defaultMessage": "查看任务状态"
+  },
+  "app.lab.mod-translation.agent-tool.resolve-class-text": {
+    "defaultMessage": "处置 class 文本"
+  },
+  "app.lab.mod-translation.agent-tool.submit-completion-evidence": {
+    "defaultMessage": "提交完成证据"
+  },
+  "app.lab.mod-translation.agent-tool.unknown": {
+    "defaultMessage": "未知工具"
+  },
+  "app.lab.mod-translation.agent-tool.update-task-memory": {
+    "defaultMessage": "更新任务记忆"
+  },
+  "app.lab.mod-translation.agent-tool.write-translation-batch": {
+    "defaultMessage": "写入译文"
   }
 }

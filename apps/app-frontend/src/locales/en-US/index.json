@@ -2393,6 +2393,204 @@
   "app.lab.gradient-text.title": {
     "message": "Gradient text generator"
   },
+  "app.lab.mod-translation.active-count": {
+    "message": "{count} running"
+  },
+  "app.lab.mod-translation.completed-count": {
+    "message": "{count} completed"
+  },
+  "app.lab.mod-translation.failed-count": {
+    "message": "{count} failed"
+  },
+  "app.lab.mod-translation.activity": {
+    "message": "Recent activity"
+  },
+  "app.lab.mod-translation.class-text-enabled": {
+    "message": "Rewrite advanced .class text candidates"
+  },
+  "app.lab.mod-translation.ai-load-error": {
+    "message": "AI settings could not be loaded. Check your connection and try again."
+  },
+  "app.lab.mod-translation.ai-not-configured": {
+    "message": "AI is not configured. Open the AI settings to enable a provider and model."
+  },
+  "app.lab.mod-translation.ai-section": {
+    "message": "AI and options"
+  },
+  "app.lab.mod-translation.all-finished": {
+    "message": "All tasks finished"
+  },
+  "app.lab.mod-translation.analysis": {
+    "message": "Analysis"
+  },
+  "app.lab.mod-translation.analyze": {
+    "message": "Analyze"
+  },
+  "app.lab.mod-translation.analyzing": {
+    "message": "Analyzing…"
+  },
+  "app.lab.mod-translation.analyzing-elapsed": {
+    "message": "Analyzing for {seconds}s"
+  },
+  "app.lab.mod-translation.analyzing-hint": {
+    "message": "Local inspection: unpacking and scanning the mod. No AI tokens are consumed."
+  },
+  "app.lab.mod-translation.background-running": {
+    "message": "Running in background"
+  },
+  "app.lab.mod-translation.batch-size": {
+    "message": "Batch size"
+  },
+  "app.lab.mod-translation.cancel": {
+    "message": "Cancel"
+  },
+  "app.lab.mod-translation.cancelling": {
+    "message": "Cancelling…"
+  },
+  "app.lab.mod-translation.class-candidates": {
+    "message": "Class text candidates"
+  },
+  "app.lab.mod-translation.description": {
+    "message": "Translate any Minecraft mod JAR into Simplified Chinese."
+  },
+  "app.lab.mod-translation.done": {
+    "message": "Done"
+  },
+  "app.lab.mod-translation.estimated-quote": {
+    "message": "Estimated usage"
+  },
+  "app.lab.mod-translation.estimated-tokens": {
+    "message": "{tokens} tokens"
+  },
+  "app.lab.mod-translation.estimated-tokens-detail": {
+    "message": "~{calls} calls · {input} in / {output} out"
+  },
+  "app.lab.mod-translation.eta": {
+    "message": "~{time} left"
+  },
+  "app.lab.mod-translation.failed": {
+    "message": "Failed"
+  },
+  "app.lab.mod-translation.input-section": {
+    "message": "Input"
+  },
+  "app.lab.mod-translation.jobs-section": {
+    "message": "Jobs"
+  },
+  "app.lab.mod-translation.language-characters": {
+    "message": "Characters"
+  },
+  "app.lab.mod-translation.language-entries": {
+    "message": "Language entries"
+  },
+  "app.lab.mod-translation.language-sources": {
+    "message": "Language sources"
+  },
+  "app.lab.mod-translation.live-sample": {
+    "message": "Translating now"
+  },
+  "app.lab.mod-translation.loader": {
+    "message": "Loader"
+  },
+  "app.lab.mod-translation.model": {
+    "message": "Text model"
+  },
+  "app.lab.mod-translation.no-jobs": {
+    "message": "Started jobs will appear here."
+  },
+  "app.lab.mod-translation.open-output": {
+    "message": "Open output folder"
+  },
+  "app.lab.mod-translation.operation-failed": {
+    "message": "The mod translation operation failed."
+  },
+  "app.lab.mod-translation.options": {
+    "message": "Options"
+  },
+  "app.lab.mod-translation.output-path": {
+    "message": "Output: {path}"
+  },
+  "app.lab.mod-translation.overall-progress": {
+    "message": "{percent}% overall"
+  },
+  "app.lab.mod-translation.phase.class": {
+    "message": "Class text"
+  },
+  "app.lab.mod-translation.phase.language": {
+    "message": "Language"
+  },
+  "app.lab.mod-translation.phase.packaging": {
+    "message": "Packaging"
+  },
+  "app.lab.mod-translation.phase.prepare": {
+    "message": "Preparing"
+  },
+  "app.lab.mod-translation.phase.repair": {
+    "message": "Quality check"
+  },
+  "app.lab.mod-translation.phase.research": {
+    "message": "Name generation"
+  },
+  "app.lab.mod-translation.phase.validation": {
+    "message": "Validation"
+  },
+  "app.lab.mod-translation.points": {
+    "message": "{points} points"
+  },
+  "app.lab.mod-translation.preparing": {
+    "message": "Preparing…"
+  },
+  "app.lab.mod-translation.processed": {
+    "message": "{completed}/{total}"
+  },
+  "app.lab.mod-translation.provider": {
+    "message": "AI provider"
+  },
+  "app.lab.mod-translation.rate": {
+    "message": "{rate}/min"
+  },
+  "app.lab.mod-translation.generate-mod-name": {
+    "message": "AI-generate a Chinese mod name"
+  },
+  "app.lab.mod-translation.repair-enabled": {
+    "message": "Repair difficult translations after verification"
+  },
+  "app.lab.mod-translation.select-file": {
+    "message": "Choose a mod JAR"
+  },
+  "app.lab.mod-translation.signed-mod": {
+    "message": "This mod is signed and cannot be modified."
+  },
+  "app.lab.mod-translation.start": {
+    "message": "Start translation"
+  },
+  "app.lab.mod-translation.start-hint": {
+    "message": "Choose a JAR and an AI model to start."
+  },
+  "app.lab.mod-translation.summary.class": {
+    "message": "Class text {resolved}/{total}"
+  },
+  "app.lab.mod-translation.summary.class-label": {
+    "message": "Class text"
+  },
+  "app.lab.mod-translation.summary.entries": {
+    "message": "Entries {accepted}/{attempted}"
+  },
+  "app.lab.mod-translation.summary.entries-label": {
+    "message": "Entries"
+  },
+  "app.lab.mod-translation.summary.mod-name": {
+    "message": "Mod"
+  },
+  "app.lab.mod-translation.summary.title": {
+    "message": "Translation complete"
+  },
+  "app.lab.mod-translation.summary.warnings": {
+    "message": "Warnings"
+  },
+  "app.lab.mod-translation.title": {
+    "message": "Mod translation"
+  },
   "app.lab.no-results": {
     "message": "No tools match your search."
   },

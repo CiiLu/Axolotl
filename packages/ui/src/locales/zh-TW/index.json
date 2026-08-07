@@ -4607,9 +4607,6 @@
   "drop.confirm.as-schematic-desc": {
     "message": "匯入 Litematic 投影檔案"
   },
-  "drop.confirm.not-this": {
-    "message": "：這不是{type}"
-  },
   "drop.confirm.as-dot-minecraft": {
     "message": ".minecraft"
   },

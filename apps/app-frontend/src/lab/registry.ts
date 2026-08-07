@@ -1,7 +1,8 @@
-import { BoxIcon, PaletteIcon, WorldIcon } from '@modrinth/assets'
+import { BoxIcon, LanguagesIcon, PaletteIcon, WorldIcon } from '@modrinth/assets'
 import type { Component } from 'vue'
 
 import GradientTextLab from '@/pages/LabGradientText.vue'
+import ModTranslationLab from '@/pages/LabModTranslation.vue'
 import SchematicPreviewLab from '@/pages/LabSchematicPreview.vue'
 import SeedMapLab from '@/pages/LabSeedMap.vue'
 
@@ -42,6 +43,15 @@ export const labTools: readonly LabToolDefinition[] = [
 		component: SchematicPreviewLab,
 		title: 'Schematic workshop',
 		description: 'Quickly preview and edit your schematics.',
+	},
+	{
+		id: 'mod-translation',
+		category: 'maintenance',
+		route: '/lab/mod-translation',
+		icon: LanguagesIcon,
+		component: ModTranslationLab,
+		title: 'Mod translation',
+		description: 'Translate any Minecraft mod JAR into Simplified Chinese.',
 	},
 ]
 

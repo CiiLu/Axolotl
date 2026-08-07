@@ -19,13 +19,16 @@ flate2 = { workspace = true }
 hyper = { workspace = true, features = ["server"] }
 hyper-util = { workspace = true }
 keyring = { workspace = true }
+libc = { workspace = true }
 native-dialog = { workspace = true }
 paste = { workspace = true }
 path-util = { workspace = true }
 quartz_nbt = { workspace = true, features = ["serde"] }
+regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 serde_with = { workspace = true }
+sha2 = { workspace = true }
 tauri-plugin-deep-link = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
 tauri-plugin-fs = { workspace = true }
@@ -35,6 +38,7 @@ tauri-plugin-os = { workspace = true }
 tauri-plugin-single-instance = { workspace = true }
 tauri-plugin-updater = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
+tempfile = { workspace = true }
 theseus = { workspace = true, features = ["tauri"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
@@ -44,13 +48,11 @@ tracing-error = { workspace = true }
 url = { workspace = true }
 urlencoding = { workspace = true }
 uuid = { workspace = true, features = ["serde", "v4"] }
+zip = { workspace = true }
 
 [dependencies.tauri]
 workspace = true
 features = ["devtools", "macos-private-api", "protocol-asset"]
-
-[dev-dependencies]
-tempfile = { workspace = true }
 
 [build-dependencies]
 cc = { workspace = true }

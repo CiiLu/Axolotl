@@ -11,6 +11,7 @@ pub mod jre;
 pub mod logs;
 pub mod metadata;
 pub mod minecraft_skins;
+pub mod mod_translation;
 pub mod mr_auth;
 pub mod process;
 pub mod schematic_preview;

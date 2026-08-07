@@ -876,6 +876,7 @@ pub struct AiTextRequest {
     pub system_prompt: String,
     pub user_prompt: String,
     pub mode: AiTextMode,
+    pub response_format: AiTextResponseFormat,
 }
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
@@ -883,6 +884,13 @@ pub enum AiTextMode {
     #[default]
     Default,
     Translation,
+}
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
+pub enum AiTextResponseFormat {
+    #[default]
+    Text,
+    JsonObject,
 }
 
 fn text_client(request: &AiTextRequest) -> &'static reqwest::Client {
@@ -972,10 +980,27 @@ fn apply_openai_translation_options(body: &mut Value, request: &AiTextRequest) {
     }
 }
 
+fn apply_openai_response_format(body: &mut Value, request: &AiTextRequest) {
+    if request.response_format == AiTextResponseFormat::JsonObject {
+        insert_json_option(
+            body,
+            "response_format",
+            json!({ "type": "json_object" }),
+        );
+    }
+}
+
 fn apply_responses_translation_options(
     body: &mut Value,
     request: &AiTextRequest,
 ) {
+    if request.response_format == AiTextResponseFormat::JsonObject {
+        insert_json_option(
+            body,
+            "text",
+            json!({ "format": { "type": "json_object" } }),
+        );
+    }
     if request.mode != AiTextMode::Translation {
         return;
     }
@@ -989,6 +1014,13 @@ fn apply_responses_translation_options(
 
 fn google_generation_config(request: &AiTextRequest) -> Value {
     let mut config = json!({ "temperature": 0 });
+    if request.response_format == AiTextResponseFormat::JsonObject {
+        insert_json_option(
+            &mut config,
+            "responseMimeType",
+            json!("application/json"),
+        );
+    }
     if request.mode != AiTextMode::Translation {
         return config;
     }
@@ -2201,6 +2233,7 @@ async fn complete_openai(
         ]
     });
     apply_openai_translation_options(&mut body, request);
+    apply_openai_response_format(&mut body, request);
     let mut builder = text_client(request).post(endpoint).json(&body);
     if !token.is_empty() {
         builder = if config.protocol == AiProtocol::Azure {
@@ -2706,6 +2739,9 @@ async fn complete_ollama(
     if request.mode == AiTextMode::Translation {
         insert_json_option(&mut body, "think", json!(false));
     }
+    if request.response_format == AiTextResponseFormat::JsonObject {
+        insert_json_option(&mut body, "format", json!("json"));
+    }
     let value = checked_json(
         text_client(request)
             .post(endpoint_with_path(&config.endpoint, "/api/chat"))
@@ -2846,6 +2882,7 @@ pub async fn test_provider(
         system_prompt: "Reply with a short plain-text greeting.".to_string(),
         user_prompt: "Hello from Axolotl Launcher".to_string(),
         mode: AiTextMode::Default,
+        response_format: AiTextResponseFormat::Text,
     })
     .await
 }
@@ -3604,6 +3641,7 @@ mod tests {
             system_prompt: "system".to_string(),
             user_prompt: "user".to_string(),
             mode: AiTextMode::Default,
+            response_format: AiTextResponseFormat::Text,
         };
         let meta = bedrock_body(&request);
         assert_eq!(meta["max_gen_len"], 4096);
@@ -3633,6 +3671,28 @@ mod tests {
             bedrock_content(&json!({ "generation": "llama" })),
             Some("llama".to_string())
         );
+    }
+
+    #[test]
+    fn json_response_mode_uses_native_provider_constraints() {
+        let request = AiTextRequest {
+            provider_id: "openai".to_string(),
+            model_id: "gpt-test".to_string(),
+            system_prompt: "system".to_string(),
+            user_prompt: "user".to_string(),
+            mode: AiTextMode::Translation,
+            response_format: AiTextResponseFormat::JsonObject,
+        };
+        let mut chat = json!({});
+        apply_openai_response_format(&mut chat, &request);
+        assert_eq!(chat["response_format"]["type"], "json_object");
+
+        let mut responses = json!({});
+        apply_responses_translation_options(&mut responses, &request);
+        assert_eq!(responses["text"]["format"]["type"], "json_object");
+
+        let google = google_generation_config(&request);
+        assert_eq!(google["responseMimeType"], "application/json");
     }
 
     #[test]

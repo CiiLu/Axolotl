@@ -815,6 +815,7 @@ async fn ai_translate_batch(
         system_prompt: system_prompt(settings),
         user_prompt: prompt.to_string(),
         mode: ai::AiTextMode::Translation,
+        response_format: ai::AiTextResponseFormat::JsonObject,
     })
     .await?;
     parse_ai_translation_content(&content, segments)

@@ -5992,5 +5992,203 @@
 	},
 	"app.action-bar.exporting-modpack": {
 		"message": "正在导出整合包"
+	},
+	"app.lab.mod-translation.title": {
+		"message": "模组翻译"
+	},
+	"app.lab.mod-translation.description": {
+		"message": "把任意 Minecraft 模组 JAR 翻译成简体中文。"
+	},
+	"app.lab.mod-translation.input-section": {
+		"message": "输入"
+	},
+	"app.lab.mod-translation.ai-section": {
+		"message": "AI 与选项"
+	},
+	"app.lab.mod-translation.jobs-section": {
+		"message": "任务"
+	},
+	"app.lab.mod-translation.start-hint": {
+		"message": "先选择 JAR 和 AI 模型再开始。"
+	},
+	"app.lab.mod-translation.output-path": {
+		"message": "输出：{path}"
+	},
+	"app.lab.mod-translation.select-file": {
+		"message": "选择模组 JAR"
+	},
+	"app.lab.mod-translation.analyze": {
+		"message": "分析"
+	},
+	"app.lab.mod-translation.analyzing": {
+		"message": "分析中…"
+	},
+	"app.lab.mod-translation.analyzing-elapsed": {
+		"message": "已分析 {seconds} 秒"
+	},
+	"app.lab.mod-translation.analyzing-hint": {
+		"message": "本地预检：正在解包并扫描模组文本，不消耗 AI token。"
+	},
+	"app.lab.mod-translation.ai-load-error": {
+		"message": "AI 设置加载失败，请检查网络后重试。"
+	},
+	"app.lab.mod-translation.analysis": {
+		"message": "分析结果"
+	},
+	"app.lab.mod-translation.loader": {
+		"message": "加载器"
+	},
+	"app.lab.mod-translation.language-entries": {
+		"message": "语言条目"
+	},
+	"app.lab.mod-translation.language-characters": {
+		"message": "字符数"
+	},
+	"app.lab.mod-translation.class-candidates": {
+		"message": "Class 文本候选"
+	},
+	"app.lab.mod-translation.estimated-quote": {
+		"message": "预计消耗"
+	},
+	"app.lab.mod-translation.points": {
+		"message": "{points} 点"
+	},
+	"app.lab.mod-translation.provider": {
+		"message": "AI 提供商"
+	},
+	"app.lab.mod-translation.model": {
+		"message": "文本模型"
+	},
+	"app.lab.mod-translation.ai-not-configured": {
+		"message": "AI 尚未配置。请先在 AI 设置中启用提供商和模型。"
+	},
+	"app.lab.mod-translation.options": {
+		"message": "选项"
+	},
+	"app.lab.mod-translation.batch-size": {
+		"message": "批次大小"
+	},
+	"app.lab.mod-translation.generate-mod-name": {
+		"message": "AI 生成中文模组名"
+	},
+	"app.lab.mod-translation.repair-enabled": {
+		"message": "复验后批量修复疑难翻译"
+	},
+	"app.lab.mod-translation.class-text-enabled": {
+		"message": "改写高级 .class 文本候选"
+	},
+	"app.lab.mod-translation.start": {
+		"message": "开始翻译"
+	},
+	"app.lab.mod-translation.cancel": {
+		"message": "取消"
+	},
+	"app.lab.mod-translation.cancelling": {
+		"message": "取消中…"
+	},
+	"app.lab.mod-translation.no-jobs": {
+		"message": "开始的任务会显示在这里。"
+	},
+	"app.lab.mod-translation.open-output": {
+		"message": "打开输出目录"
+	},
+	"app.lab.mod-translation.done": {
+		"message": "完成"
+	},
+	"app.lab.mod-translation.failed": {
+		"message": "失败"
+	},
+	"app.lab.mod-translation.signed-mod": {
+		"message": "该模组带有数字签名，无法修改。"
+	},
+	"app.lab.mod-translation.phase.prepare": {
+		"message": "准备"
+	},
+	"app.lab.mod-translation.phase.research": {
+		"message": "生成名称"
+	},
+	"app.lab.mod-translation.phase.language": {
+		"message": "语言"
+	},
+	"app.lab.mod-translation.phase.repair": {
+		"message": "质量检查"
+	},
+	"app.lab.mod-translation.phase.class": {
+		"message": "Class 文本"
+	},
+	"app.lab.mod-translation.phase.validation": {
+		"message": "验收"
+	},
+	"app.lab.mod-translation.phase.packaging": {
+		"message": "打包"
+	},
+	"app.lab.mod-translation.operation-failed": {
+		"message": "模组翻译操作失败。"
+	},
+	"app.lab.mod-translation.language-sources": {
+		"message": "语言源文件"
+	},
+	"app.lab.mod-translation.preparing": {
+		"message": "准备中…"
+	},
+	"app.lab.mod-translation.estimated-tokens": {
+		"message": "{tokens} tokens"
+	},
+	"app.lab.mod-translation.estimated-tokens-detail": {
+		"message": "约 {calls} 次调用 · 输入 {input} / 输出 {output}"
+	},
+	"app.lab.mod-translation.active-count": {
+		"message": "{count} 个任务进行中"
+	},
+	"app.lab.mod-translation.completed-count": {
+		"message": "{count} 个已完成"
+	},
+	"app.lab.mod-translation.failed-count": {
+		"message": "{count} 个失败"
+	},
+	"app.lab.mod-translation.activity": {
+		"message": "最近动态"
+	},
+	"app.lab.mod-translation.all-finished": {
+		"message": "所有任务已结束"
+	},
+	"app.lab.mod-translation.background-running": {
+		"message": "任务仍在后台运行"
+	},
+	"app.lab.mod-translation.eta": {
+		"message": "约剩 {time}"
+	},
+	"app.lab.mod-translation.live-sample": {
+		"message": "正在翻译"
+	},
+	"app.lab.mod-translation.overall-progress": {
+		"message": "总体进度 {percent}%"
+	},
+	"app.lab.mod-translation.processed": {
+		"message": "{completed} / {total}"
+	},
+	"app.lab.mod-translation.rate": {
+		"message": "约 {rate} 条/分"
+	},
+	"app.lab.mod-translation.summary.title": {
+		"message": "翻译完成"
+	},
+	"app.lab.mod-translation.summary.mod-name": {
+		"message": "模组名"
+	},
+	"app.lab.mod-translation.summary.entries": {
+		"message": "语言条目 {accepted} / {attempted}"
+	},
+	"app.lab.mod-translation.summary.entries-label": {
+		"message": "语言条目"
+	},
+	"app.lab.mod-translation.summary.class": {
+		"message": "Class 文本 {resolved} / {total}"
+	},
+	"app.lab.mod-translation.summary.class-label": {
+		"message": "Class 文本"
+	},
+	"app.lab.mod-translation.summary.warnings": {
+		"message": "警告"
 	}
 }

@@ -59,6 +59,14 @@ const messages = defineMessages({
 		id: 'app.lab.schematic-preview.description',
 		defaultMessage: 'Quickly preview and edit your schematics.',
 	},
+	modTranslationTitle: {
+		id: 'app.lab.mod-translation.title',
+		defaultMessage: 'Mod translation',
+	},
+	modTranslationDescription: {
+		id: 'app.lab.mod-translation.description',
+		defaultMessage: 'Translate any Minecraft mod JAR into Simplified Chinese.',
+	},
 })
 
 const categoryOptions: LabCategory[] = ['all', 'creation', 'maintenance', 'world']
@@ -82,6 +90,7 @@ function toolTitle(toolId: string, fallback: string) {
 	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextTitle)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapTitle)
 	if (toolId === 'schematic-preview') return formatMessage(messages.schematicPreviewTitle)
+	if (toolId === 'mod-translation') return formatMessage(messages.modTranslationTitle)
 	return fallback
 }
 
@@ -89,6 +98,7 @@ function toolDescription(toolId: string, fallback: string) {
 	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextDescription)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapDescription)
 	if (toolId === 'schematic-preview') return formatMessage(messages.schematicPreviewDescription)
+	if (toolId === 'mod-translation') return formatMessage(messages.modTranslationDescription)
 	return fallback
 }
 
