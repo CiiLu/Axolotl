@@ -2425,7 +2425,8 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 .recipe-palette {
 	display: flex;
 	min-width: 0;
-	max-height: min(46rem, calc(100dvh - 5rem));
+	height: 61rem;
+	max-height: min(70rem, calc(100dvh - 3rem));
 	flex-direction: column;
 	container-type: inline-size;
 	container-name: recipe-palette;
@@ -2445,6 +2446,7 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 	grid-template-columns: repeat(4, minmax(0, 1fr));
 	grid-auto-rows: 4.25rem;
 	gap: 0.5rem;
+	align-content: stretch;
 }
 
 :deep(.recipe-palette-item) {
