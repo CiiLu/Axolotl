@@ -140,6 +140,18 @@ function onCountUpdate(raw: string) {
 		@dragleave="onDragLeave"
 		@drop="onDrop"
 	>
+		<label
+			v-if="showCountField && slot === 'stonecutter.result'"
+			class="recipe-count-field recipe-count-field-above"
+		>
+			<span>{{ formatMessage(messages.resultCount) }}</span>
+			<StyledInput
+				:model-value="String(count)"
+				input-attrs="{ type: 'number', min: 1, max: 64 }"
+				size="small"
+				@update:model-value="onCountUpdate(String($event))"
+			/>
+		</label>
 		<button
 			type="button"
 			class="recipe-slot-button"
@@ -150,7 +162,7 @@ function onCountUpdate(raw: string) {
 		>
 			<RecipeItemIcon :display="display" :atlas="atlas" :size="48" />
 		</button>
-		<label v-if="showCountField" class="recipe-count-field">
+		<label v-if="showCountField && slot !== 'stonecutter.result'" class="recipe-count-field">
 			<span>{{ formatMessage(messages.resultCount) }}</span>
 			<StyledInput
 				:model-value="String(count)"
@@ -214,8 +226,12 @@ function onCountUpdate(raw: string) {
 	display: flex;
 	align-items: center;
 	gap: 0.3rem;
-	color: var(--color-secondary);
+	color: #000;
 	font-size: 0.65rem;
+}
+
+.recipe-count-field-above {
+	order: -1;
 }
 
 .recipe-count-field :deep(.relative) {

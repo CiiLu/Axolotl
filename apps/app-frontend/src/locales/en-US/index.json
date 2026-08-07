@@ -2763,7 +2763,7 @@
 		"message": "Tags"
 	},
 	"app.lab.recipe-generator.preview.copy-image": {
-		"message": "Copy image to clipboard"
+		"message": "Copy image"
 	},
 	"app.lab.recipe-generator.preview.image-copied": {
 		"message": "Preview image copied"

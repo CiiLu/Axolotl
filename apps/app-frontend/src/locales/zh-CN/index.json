@@ -4203,10 +4203,10 @@
 		"message": "标签"
 	},
 	"app.lab.recipe-generator.preview.copy-image": {
-		"message": "复制图片到剪贴板"
+		"message": "复制图片"
 	},
 	"app.lab.recipe-generator.preview.image-copied": {
-		"message": "预览图片已复制"
+		"message": "预览图已复制"
 	},
 	"app.lab.recipe-generator.preview.result-count": {
 		"message": "产物数量"
@@ -4317,10 +4317,10 @@
 		"message": "锻造纹饰"
 	},
 	"app.lab.recipe-generator.type.smoking": {
-		"message": "烟熏炉烧制"
+		"message": "烟熏烧炼"
 	},
 	"app.lab.recipe-generator.type.stonecutter": {
-		"message": "切石机"
+		"message": "切石机切制"
 	},
 	"app.lab.recipe-generator.validation.invalid-identifier": {
 		"message": "物品标识符无效。"

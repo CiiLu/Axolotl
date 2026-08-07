@@ -157,7 +157,7 @@ const messages = defineMessages({
 	},
 	copyPreviewImage: {
 		id: 'app.lab.recipe-generator.preview.copy-image',
-		defaultMessage: 'Copy image to clipboard',
+		defaultMessage: 'Copy image',
 	},
 	previewImageCopied: {
 		id: 'app.lab.recipe-generator.preview.image-copied',
@@ -544,11 +544,6 @@ const resultCountSlot = computed<RecipeSlot | null>(() => {
 			return 'crafting.result'
 		case 'stonecutter':
 			return 'stonecutter.result'
-		case 'smelting':
-		case 'blasting':
-		case 'smoking':
-		case 'campfire_cooking':
-			return isVersionAtLeast(store.selectedVersion, '1.20') ? 'cooking.result' : null
 		default:
 			return null
 	}
@@ -753,6 +748,18 @@ function resultCountStyle() {
 	if (!layout || !slot) return undefined
 	const box = layout.slots[slot]
 	if (!box) return undefined
+
+	// 切石机 上方
+	if (slot === 'stonecutter.result') {
+		const centerX = ((box.x1 + box.x2) / 2 / RECIPE_IMAGE_WIDTH) * 100
+		return {
+			left: `${centerX}%`,
+			bottom: `${((RECIPE_IMAGE_HEIGHT - box.y1) / RECIPE_IMAGE_HEIGHT) * 100}%`,
+			transform: 'translateX(-50%)',
+			marginBottom: '0.4rem',
+		}
+	}
+
 	const rightEdge = box.x2 / RECIPE_IMAGE_WIDTH
 	const hasRoomToTheRight =
 		!layoutStageWidth.value || layoutStageWidth.value * (1 - rightEdge) >= 76
@@ -2164,7 +2171,7 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 }
 
 .recipe-layout-count-label {
-	color: var(--color-secondary);
+	color: #000;
 	font-size: var(--recipe-label-size);
 	font-weight: 700;
 	line-height: 1.2;
