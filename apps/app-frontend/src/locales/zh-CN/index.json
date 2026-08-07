@@ -4047,7 +4047,7 @@
 		"message": "查看 minecraft-textures"
 	},
 	"app.lab.recipe-generator.description": {
-		"message": "使用本地物品和标签数据创建 Minecraft Java 数据包配方。"
+		"message": "轻易地修改合成表，自定义配方，生成数据包。"
 	},
 	"app.lab.recipe-generator.instance-export.back": {
 		"message": "返回实例列表"
