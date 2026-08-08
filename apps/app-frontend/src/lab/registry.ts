@@ -28,15 +28,6 @@ export const labTools: readonly LabToolDefinition[] = [
 		description: 'Create Minecraft-ready gradient text without a browser.',
 	},
 	{
-		id: 'recipe-generator',
-		category: 'creation',
-		route: '/lab/recipe-generator',
-		icon: BlocksIcon,
-		component: RecipeGeneratorLab,
-		title: 'Recipe generator',
-		description: 'Create Minecraft Java data pack recipes from local item and tag data.',
-	},
-	{
 		id: 'seed-map',
 		category: 'world',
 		route: '/lab/seed-map',
@@ -62,6 +53,15 @@ export const labTools: readonly LabToolDefinition[] = [
 		component: ModTranslationLab,
 		title: 'Mod translation',
 		description: 'Translate any Minecraft mod JAR into Simplified Chinese.',
+	},
+	{
+		id: 'recipe-generator',
+		category: 'creation',
+		route: '/lab/recipe-generator',
+		icon: BlocksIcon,
+		component: RecipeGeneratorLab,
+		title: 'Recipe generator',
+		description: 'Create Minecraft Java data pack recipes from local item and tag data.',
 	},
 ]
 
