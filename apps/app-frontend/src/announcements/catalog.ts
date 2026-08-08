@@ -33,6 +33,26 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.2',
+		version: '1.7.2',
+		publishedAt: '2026-08-09',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.2',
+			'zh-CN': 'Axolotl Launcher 1.7.2',
+		},
+		changes: {
+			added: [],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the issue of Chinese encoding parsing errors in the Location header returned by mirror sites.',
+					'zh-CN': '修复了镜像站返回Location 头中中文编码方式解析错误的问题。',
+				},
+			],
+			changed: [],
+		},
+	},
+	{
 		id: 'launcher-1.7.1',
 		version: '1.7.1',
 		publishedAt: '2026-08-08',
