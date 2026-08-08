@@ -2978,12 +2978,14 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			>
 				{{ formatMessage(messages.authUnreachableBody) }}
 			</Admonition>
-			<RouterView v-slot="{ Component }">
-				<template v-if="Component">
-					<Suspense @pending="onSuspensePending" @resolve="onSuspenseResolve">
-						<component :is="Component"></component>
-					</Suspense>
-				</template>
+			<RouterView v-slot="{ Component, route }">
+				<transition name="slide" mode="out-in">
+					<template v-if="Component">
+						<Suspense @pending="onSuspensePending" @resolve="onSuspenseResolve">
+							<component :is="Component" :key="route.fullPath"></component>
+						</Suspense>
+					</template>
+				</transition>
 			</RouterView>
 		</div>
 		<div
@@ -3476,5 +3478,22 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	.profile-card {
 		right: 8rem;
 	}
+}
+
+.slide-enter-active,
+.slide-leave-active {
+	transition:
+		transform 0.2s ease,
+		opacity 0.2s ease;
+}
+
+.slide-enter-from {
+	transform: translateY(30px);
+	opacity: 0.3;
+}
+
+.slide-leave-to {
+	transform: translateY(-30px);
+	opacity: 0.3;
 }
 </style>
