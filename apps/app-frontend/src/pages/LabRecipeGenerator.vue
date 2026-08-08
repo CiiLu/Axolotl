@@ -1635,7 +1635,11 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 
 			<aside
 				class="lab-panel recipe-palette"
-				:style="recipePaletteMaxHeight ? { '--recipe-palette-max-height': recipePaletteMaxHeight } : undefined"
+				:style="
+					recipePaletteMaxHeight
+						? { '--recipe-palette-max-height': recipePaletteMaxHeight }
+						: undefined
+				"
 			>
 				<div class="recipe-palette-heading">
 					<div class="recipe-tag-tabs" role="tablist">
