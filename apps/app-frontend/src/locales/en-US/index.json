@@ -2810,6 +2810,9 @@
 	"app.lab.recipe-generator.save-as-done": {
 		"message": "Datapack saved"
 	},
+	"app.lab.recipe-generator.scroll-to-adjust": {
+		"message": "Scroll to adjust quantity"
+	},
 	"app.lab.recipe-generator.slots.clear": {
 		"message": "Clear slots"
 	},

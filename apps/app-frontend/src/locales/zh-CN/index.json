@@ -4250,6 +4250,9 @@
 	"app.lab.recipe-generator.save-as-done": {
 		"message": "数据包已保存"
 	},
+	"app.lab.recipe-generator.scroll-to-adjust": {
+		"message": "使用滚轮调节数量"
+	},
 	"app.lab.recipe-generator.slots.clear": {
 		"message": "清空槽位"
 	},

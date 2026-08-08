@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
+import { countFontSize, countInset, countShadow } from '@/lab/recipe-generator/count-display'
 import type { SlotDisplay } from '@/lab/recipe-generator/display'
-import { TEXTURE_ATLAS_SIZE, type TextureAtlas } from '@/lab/recipe-generator/resources'
+import type { TextureAtlas } from '@/lab/recipe-generator/resources'
 
 const props = withDefaults(
 	defineProps<{
@@ -17,29 +18,90 @@ const props = withDefaults(
 	},
 )
 
+const canvasRef = ref<HTMLCanvasElement | null>(null)
 const region = computed(() => {
 	const texture = props.display?.texture
 	return texture ? props.atlas.layout[texture] : undefined
 })
 
-const contentSize = computed(() => Math.max(0, props.size - 2))
+const contentSize = computed(() => Math.max(1, props.size - 2))
 
-const atlasStyle = computed(() => {
-	const currentRegion = region.value
-	if (!currentRegion) return undefined
-	const [x, y, width, height] = currentRegion
-	const scaleX = width > 0 ? contentSize.value / width : 0
-	const scaleY = height > 0 ? contentSize.value / height : 0
-	const offsetX = Math.round(-x * scaleX)
-	const offsetY = Math.round(-y * scaleY)
+const countStyle = computed(() => {
+	if (!props.display?.count || props.display.count <= 1) return undefined
+	const inset = countInset(props.size)
 	return {
-		width: `${TEXTURE_ATLAS_SIZE.width * scaleX}px`,
-		height: `${TEXTURE_ATLAS_SIZE.height * scaleY}px`,
-		maxWidth: 'none',
-		maxHeight: 'none',
-		transform: `translate(${offsetX}px, ${offsetY}px)`,
+		fontSize: `${countFontSize(props.size)}px`,
+		right: `${inset}px`,
+		bottom: `${inset}px`,
+		textShadow: countShadow(props.size),
 	}
 })
+
+const imageCache = new Map<string, Promise<HTMLImageElement>>()
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+	const cached = imageCache.get(url)
+	if (cached) return cached
+	const promise = new Promise<HTMLImageElement>((resolve, reject) => {
+		const image = new Image()
+		image.onload = () => resolve(image)
+		image.onerror = () => reject(new Error(`Unable to load image: ${url}`))
+		image.src = url
+	})
+	imageCache.set(url, promise)
+	return promise
+}
+
+let drawToken = 0
+
+async function drawIcon() {
+	const canvas = canvasRef.value
+	const display = props.display
+	if (!canvas || !display?.texture) return
+	const context = canvas.getContext('2d')
+	if (!context) return
+	const token = ++drawToken
+	const size = contentSize.value
+	if (canvas.width !== size) canvas.width = size
+	if (canvas.height !== size) canvas.height = size
+	context.clearRect(0, 0, size, size)
+	context.imageSmoothingEnabled = false
+
+	try {
+		const currentRegion = region.value
+		const image = await loadImage(currentRegion ? props.atlas.url : display.texture)
+		if (token !== drawToken || canvas !== canvasRef.value) return
+		const sourceX = currentRegion?.[0] ?? 0
+		const sourceY = currentRegion?.[1] ?? 0
+		const sourceWidth = currentRegion?.[2] ?? image.naturalWidth
+		const sourceHeight = currentRegion?.[3] ?? image.naturalHeight
+		if (!sourceWidth || !sourceHeight) return
+		const scale = Math.min(size / sourceWidth, size / sourceHeight)
+		const drawWidth = Math.max(1, Math.round(sourceWidth * scale))
+		const drawHeight = Math.max(1, Math.round(sourceHeight * scale))
+		const drawX = Math.round((size - drawWidth) / 2)
+		const drawY = Math.round((size - drawHeight) / 2)
+		context.drawImage(
+			image,
+			sourceX,
+			sourceY,
+			sourceWidth,
+			sourceHeight,
+			drawX,
+			drawY,
+			drawWidth,
+			drawHeight,
+		)
+	} catch {
+		// Missing textures render as an empty slot.
+	}
+}
+
+watch(
+	[canvasRef, () => props.display?.texture, () => props.atlas.url, () => props.size],
+	drawIcon,
+	{ immediate: true },
+)
 </script>
 
 <template>
@@ -48,20 +110,20 @@ const atlasStyle = computed(() => {
 		:style="{ width: `${size}px`, height: `${size}px` }"
 		:title="display?.label"
 	>
-		<div v-if="region" class="recipe-item-atlas">
-			<img :src="atlas.url" alt="" :style="atlasStyle" />
-		</div>
-		<img
-			v-else-if="display?.texture"
-			:src="display.texture"
-			alt=""
-			class="recipe-item-custom"
-			:style="{ width: '100%', height: '100%' }"
-		/>
+		<canvas
+			v-if="display?.texture"
+			ref="canvasRef"
+			class="recipe-item-canvas"
+			:width="contentSize"
+			:height="contentSize"
+		></canvas>
 		<span v-else class="recipe-item-empty" aria-hidden="true"></span>
-		<span v-if="showCount && display?.count && display.count > 1" class="recipe-item-count">{{
-			display.count
-		}}</span>
+		<span
+			v-if="showCount && display?.count && display.count > 1"
+			class="recipe-item-count"
+			:style="countStyle"
+			>{{ display.count }}</span
+		>
 	</div>
 </template>
 
@@ -75,21 +137,10 @@ const atlasStyle = computed(() => {
 	box-sizing: border-box;
 }
 
-.recipe-item-atlas {
+.recipe-item-canvas {
+	display: block;
 	width: 100%;
 	height: 100%;
-	overflow: hidden;
-}
-
-.recipe-item-atlas img {
-	display: block;
-	image-rendering: pixelated;
-}
-
-.recipe-item-custom {
-	display: block;
-	image-rendering: pixelated;
-	object-fit: contain;
 }
 
 .recipe-item-empty {
@@ -102,13 +153,9 @@ const atlasStyle = computed(() => {
 
 .recipe-item-count {
 	position: absolute;
-	right: 1px;
-	bottom: 0;
 	color: #fff;
-	font-size: 10px;
 	font-weight: 700;
 	line-height: 1;
-	text-shadow: 1px 1px 0 #000;
 	pointer-events: none;
 }
 </style>

@@ -4846,5 +4846,8 @@
   },
   "app.lab.mod-translation.agent-tool.write-translation-batch": {
     "defaultMessage": "写入译文"
+  },
+  "app.lab.recipe-generator.scroll-to-adjust": {
+    "defaultMessage": "使用滚轮调节数量"
   }
 }

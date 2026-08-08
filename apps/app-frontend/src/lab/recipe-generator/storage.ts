@@ -1,3 +1,4 @@
+import { RESULT_COUNT_MAX } from './count-display'
 import type {
 	CustomItem,
 	CustomTag,
@@ -216,7 +217,7 @@ function sanitizeSlotValue(value: unknown): SlotValue | null {
 
 function sanitizeCount(value: unknown): { count?: number } {
 	return typeof value === 'number' && Number.isFinite(value) && value > 0
-		? { count: Math.min(999, Math.round(value)) }
+		? { count: Math.min(RESULT_COUNT_MAX, Math.round(value)) }
 		: {}
 }
 

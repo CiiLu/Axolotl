@@ -27,6 +27,7 @@ import RecipeItemIcon from '@/components/lab/recipe-generator/RecipeItemIcon.vue
 import RecipeSlotGrid from '@/components/lab/recipe-generator/RecipeSlotGrid.vue'
 import TagPalette from '@/components/lab/recipe-generator/TagPalette.vue'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
+import { useResultCountWheel } from '@/composables/lab/useResultCountWheel'
 import {
 	createDatapackFiles,
 	type DatapackRecipe,
@@ -34,6 +35,7 @@ import {
 	saveDatapackAs,
 	saveJsonFile,
 } from '@/lab/recipe-generator/datapack'
+import { drawCountOnCanvas } from '@/lab/recipe-generator/count-display'
 import { getSlotDisplay, type SlotDisplay } from '@/lab/recipe-generator/display'
 import { exportDatapackToWorld } from '@/lab/recipe-generator/instance-export'
 import { parseIdentifier } from '@/lab/recipe-generator/identifier'
@@ -216,10 +218,6 @@ const messages = defineMessages({
 		defaultMessage: 'Auto name: {name}',
 	},
 	clearSlots: { id: 'app.lab.recipe-generator.slots.clear', defaultMessage: 'Clear slots' },
-	resultCount: {
-		id: 'app.lab.recipe-generator.preview.result-count',
-		defaultMessage: 'Result count',
-	},
 	itemsTab: { id: 'app.lab.recipe-generator.panel.items', defaultMessage: 'Items' },
 	tagsTab: { id: 'app.lab.recipe-generator.panel.tags', defaultMessage: 'Tags' },
 	customItemsTitle: {
@@ -475,7 +473,7 @@ const TWO_BY_TWO_DISABLED_SLOTS = new Set<RecipeSlot>([
 	'crafting.8',
 	'crafting.9',
 ])
-const PREVIEW_ICON_SCALE = 1.3
+const PREVIEW_ICON_SCALE = 0.9
 const TRIM_PATTERNS = [
 	'coast',
 	'sentry',
@@ -551,14 +549,23 @@ const resultCountSlot = computed<RecipeSlot | null>(() => {
 			return null
 	}
 })
-
-const resultCountValue = computed(() => {
-	const slot = resultCountSlot.value
-	if (!slot) return 1
-	const value = currentRecipe.value?.slots[slot]
-	return value && (value.kind === 'item' || value.kind === 'custom_item') && value.count
-		? value.count
-		: 1
+const { hint: resultWheelHintRef, onWheel: onResultSlotWheel } = useResultCountWheel({
+	getSlot: () => resultCountSlot.value,
+	getValue: () => {
+		const slot = resultCountSlot.value
+		return slot ? currentRecipe.value?.slots[slot] : undefined
+	},
+	getCount: () => {
+		const slot = resultCountSlot.value
+		const value = slot ? currentRecipe.value?.slots[slot] : undefined
+		return value && (value.kind === 'item' || value.kind === 'custom_item') && value.count
+			? value.count
+			: 1
+	},
+	setCount: (count) => {
+		const slot = resultCountSlot.value
+		if (slot) setSlotCount(slot, count)
+	},
 })
 
 const trimPatternOptions = computed<TrimPatternOption[]>(() => {
@@ -767,44 +774,6 @@ function slotBoxStyle(box: RecipeLayoutSlotBox) {
 	}
 }
 
-function resultCountStyle() {
-	const layout = recipeLayout.value
-	const slot = resultCountSlot.value
-	if (!layout || !slot) return undefined
-	const box = layout.slots[slot]
-	if (!box) return undefined
-
-	// 切石机 上方
-	if (slot === 'stonecutter.result') {
-		const centerX = ((box.x1 + box.x2) / 2 / RECIPE_IMAGE_WIDTH) * 100
-		return {
-			left: `${centerX}%`,
-			bottom: `${((RECIPE_IMAGE_HEIGHT - box.y1) / RECIPE_IMAGE_HEIGHT) * 100}%`,
-			transform: 'translateX(-50%)',
-			marginBottom: '0.4rem',
-		}
-	}
-
-	const rightEdge = box.x2 / RECIPE_IMAGE_WIDTH
-	const hasRoomToTheRight =
-		!layoutStageWidth.value || layoutStageWidth.value * (1 - rightEdge) >= 76
-	const centerX = ((box.x1 + box.x2) / 2 / RECIPE_IMAGE_WIDTH) * 100
-	const centerY = ((box.y1 + box.y2) / 2 / RECIPE_IMAGE_HEIGHT) * 100
-	if (hasRoomToTheRight) {
-		return {
-			left: `${rightEdge * 100}%`,
-			top: `${centerY}%`,
-			transform: 'translate(0.5rem, -50%)',
-		}
-	}
-	return {
-		left: `${centerX}%`,
-		bottom: `${((RECIPE_IMAGE_HEIGHT - box.y1) / RECIPE_IMAGE_HEIGHT) * 100}%`,
-		transform: 'translateX(-50%)',
-		marginBottom: '0.4rem',
-	}
-}
-
 function slotIconSize(box: RecipeLayoutSlotBox) {
 	if (!layoutStageWidth.value) return 32
 	const backgroundSize = Math.min(box.x2 - box.x1, box.y2 - box.y1)
@@ -901,12 +870,8 @@ function setSlotCount(slot: RecipeSlot, count: number) {
 	}
 }
 
-function onResultCountUpdate(raw: string) {
-	const slot = resultCountSlot.value
-	if (!slot) return
-	const parsed = Math.round(Number(raw))
-	const count = Number.isFinite(parsed) ? Math.min(999, Math.max(1, parsed)) : 1
-	setSlotCount(slot, count)
+function resultWheelHint(slot: RecipeSlot) {
+	return slot === resultCountSlot.value ? resultWheelHintRef.value : undefined
 }
 
 function clearSlots() {
@@ -1040,7 +1005,7 @@ async function drawPreviewIcon(
 	display: SlotDisplay,
 	box: RecipeLayoutSlotBox,
 	scale: number,
-): Promise<void> {
+): Promise<{ x: number; y: number; size: number } | null> {
 	const size = Math.round(Math.min(box.x2 - box.x1, box.y2 - box.y1) * scale)
 	const x = Math.round(((box.x1 + box.x2) / 2) * scale - size / 2)
 	const y = Math.round(((box.y1 + box.y2) / 2) * scale - size / 2)
@@ -1048,7 +1013,7 @@ async function drawPreviewIcon(
 	iconCanvas.width = size
 	iconCanvas.height = size
 	const iconContext = iconCanvas.getContext('2d')
-	if (!iconContext) return
+	if (!iconContext) return null
 	iconContext.imageSmoothingEnabled = false
 	const region = display.texture ? TEXTURE_ATLAS.layout[display.texture] : undefined
 	if (region) {
@@ -1064,12 +1029,13 @@ async function drawPreviewIcon(
 			iconContext.drawImage(customImage, 0, 0, size, size)
 		} catch {
 			// Unreachable custom textures are skipped.
-			return
+			return null
 		}
 	} else {
-		return
+		return null
 	}
 	context.drawImage(iconCanvas, x, y)
+	return { x, y, size }
 }
 
 async function createLayoutPreviewPngBlob(): Promise<Blob> {
@@ -1111,26 +1077,11 @@ async function createLayoutPreviewPngBlob(): Promise<Blob> {
 			continue
 		}
 		const display = slotDisplayFor(targetSlot)
-		if (display?.texture) {
-			await drawPreviewIcon(context, atlasImage, customImages, display, box, PREVIEW_EXPORT_SCALE)
-		}
-		if (display?.count && display.count > 1) {
-			const size = Math.min(box.x2 - box.x1, box.y2 - box.y1) * PREVIEW_EXPORT_SCALE
-			const x = ((box.x1 + box.x2) / 2) * PREVIEW_EXPORT_SCALE - size / 2
-			const y = ((box.y1 + box.y2) / 2) * PREVIEW_EXPORT_SCALE - size / 2
-			context.fillStyle = '#fff'
-			context.font = `bold ${Math.max(8, Math.round(size * 0.32))}px sans-serif`
-			context.textAlign = 'right'
-			context.textBaseline = 'bottom'
-			context.shadowColor = '#000'
-			context.shadowOffsetX = PREVIEW_EXPORT_SCALE
-			context.shadowOffsetY = PREVIEW_EXPORT_SCALE
-			context.fillText(
-				String(display.count),
-				x + size - PREVIEW_EXPORT_SCALE * 2,
-				y + size - PREVIEW_EXPORT_SCALE * 2,
-			)
-			context.shadowColor = 'transparent'
+		const drawnIcon = display?.texture
+			? await drawPreviewIcon(context, atlasImage, customImages, display, box, PREVIEW_EXPORT_SCALE)
+			: null
+		if (display?.count && display.count > 1 && drawnIcon) {
+			drawCountOnCanvas(context, display.count, drawnIcon.size, drawnIcon.x, drawnIcon.y)
 		}
 	}
 
@@ -1498,7 +1449,7 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 
 					<div
 						v-if="recipeLayout"
-						ref="layoutStageRef"
+						ref="layoutStage"
 						class="recipe-layout-stage"
 						:style="{ backgroundImage: `url('${recipeLayout.image}')` }"
 					>
@@ -1527,6 +1478,8 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 								@axolotl-recipe-slot-drop="onSlotDropEvent($event, entry.targetSlot)"
 								@dragover="onHotspotDragOver"
 								@drop="onHotspotDrop($event, entry.targetSlot)"
+								@wheel="onResultSlotWheel(entry.targetSlot, $event)"
+								v-tooltip="resultWheelHint(entry.targetSlot)"
 							>
 								<span v-if="slotDisplayFor(entry.targetSlot)" class="recipe-layout-icon">
 									<RecipeItemIcon
@@ -1537,17 +1490,6 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 								</span>
 							</div>
 						</template>
-						<label v-if="resultCountSlot" class="recipe-layout-count" :style="resultCountStyle()">
-							<span class="recipe-layout-count-label">{{
-								formatMessage(messages.resultCount)
-							}}</span>
-							<StyledInput
-								:model-value="String(resultCountValue)"
-								input-attrs="{ type: 'number', min: 1, max: 999 }"
-								size="small"
-								@update:model-value="onResultCountUpdate(String($event))"
-							/>
-						</label>
 					</div>
 					<RecipeSlotGrid
 						v-if="!recipeLayout && currentRecipe.recipeType === 'crafting'"
@@ -2192,26 +2134,6 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 	background-size: 100% 100%;
 }
 
-.recipe-layout-count {
-	position: absolute;
-	z-index: 1;
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 0.25rem;
-}
-
-.recipe-layout-count-label {
-	color: #000;
-	font-size: var(--recipe-label-size);
-	font-weight: 700;
-	line-height: 1.2;
-}
-
-.recipe-layout-count :deep(.relative) {
-	width: 4.25rem;
-}
-
 .recipe-layout-hotspot {
 	position: absolute;
 	margin: 0;
@@ -2401,18 +2323,6 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 
 .recipe-result-button {
 	border-color: color-mix(in srgb, var(--color-brand) 55%, var(--color-surface-5));
-}
-
-.recipe-count-field {
-	display: flex;
-	align-items: center;
-	gap: 0.3rem;
-	color: var(--color-secondary);
-	font-size: var(--recipe-label-size);
-}
-
-.recipe-count-field :deep(.relative) {
-	width: 4.25rem;
 }
 
 .recipe-issues {

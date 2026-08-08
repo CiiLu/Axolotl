@@ -1,8 +1,9 @@
 <!-- 由 S4 集成到 LabRecipeGenerator.vue -->
 <script setup lang="ts">
-import { defineMessages, StyledInput, useVIntl } from '@modrinth/ui'
+import { defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 
+import { useResultCountWheel } from '@/composables/lab/useResultCountWheel'
 import type { SlotDisplay } from '@/lab/recipe-generator/display'
 import type { TextureAtlas } from '@/lab/recipe-generator/resources'
 import type { RecipeSlot, SlotValue } from '@/lab/recipe-generator/types'
@@ -39,15 +40,16 @@ const dragDepth = ref(0)
 
 const messages = defineMessages({
 	emptySlot: { id: 'app.lab.recipe-generator.slots.empty', defaultMessage: 'Empty slot' },
-	resultCount: {
-		id: 'app.lab.recipe-generator.slots.result-count',
-		defaultMessage: 'Result count',
-	},
 })
 
 const dragActive = computed(() => dragDepth.value > 0)
-const showCountField = computed(() => props.countEditable)
 const slotLabel = computed(() => `${formatMessage(messages.emptySlot)} ${props.slot}`)
+const { hint: wheelHint, onWheel: onResultWheel } = useResultCountWheel({
+	getSlot: () => (props.countEditable ? props.slot : null),
+	getValue: () => props.value,
+	getCount: () => props.count ?? 1,
+	setCount: (count) => emit('updateCount', count),
+})
 
 function hasRecipePayload(event: DragEvent) {
 	const types = event.dataTransfer?.types
@@ -121,12 +123,6 @@ function onDrop(event: DragEvent) {
 	event.preventDefault()
 	emit('dropValue', value)
 }
-
-function onCountUpdate(raw: string) {
-	const parsed = Math.round(Number(raw))
-	const count = Number.isFinite(parsed) ? Math.min(999, Math.max(1, parsed)) : 1
-	emit('updateCount', count)
-}
 </script>
 
 <template>
@@ -140,37 +136,18 @@ function onCountUpdate(raw: string) {
 		@dragleave="onDragLeave"
 		@drop="onDrop"
 	>
-		<label
-			v-if="showCountField && slot === 'stonecutter.result'"
-			class="recipe-count-field recipe-count-field-above"
-		>
-			<span>{{ formatMessage(messages.resultCount) }}</span>
-			<StyledInput
-				:model-value="String(count)"
-				input-attrs="{ type: 'number', min: 1, max: 64 }"
-				size="small"
-				@update:model-value="onCountUpdate(String($event))"
-			/>
-		</label>
 		<button
 			type="button"
 			class="recipe-slot-button"
 			:class="{ 'recipe-result-button': result }"
-			:title="slotLabel"
-			:aria-label="slotLabel"
+			:title="wheelHint ?? slotLabel"
+			:aria-label="wheelHint ?? slotLabel"
 			@click="emit('clear')"
+			@wheel="onResultWheel(slot, $event)"
+			v-tooltip="wheelHint"
 		>
 			<RecipeItemIcon :display="display" :atlas="atlas" :size="48" />
 		</button>
-		<label v-if="showCountField && slot !== 'stonecutter.result'" class="recipe-count-field">
-			<span>{{ formatMessage(messages.resultCount) }}</span>
-			<StyledInput
-				:model-value="String(count)"
-				input-attrs="{ type: 'number', min: 1, max: 999 }"
-				size="small"
-				@update:model-value="onCountUpdate(String($event))"
-			/>
-		</label>
 	</div>
 </template>
 
@@ -220,22 +197,6 @@ function onCountUpdate(raw: string) {
 
 .recipe-result-button {
 	border-color: color-mix(in srgb, var(--color-brand) 55%, var(--color-surface-5));
-}
-
-.recipe-count-field {
-	display: flex;
-	align-items: center;
-	gap: 0.3rem;
-	color: #000;
-	font-size: 0.65rem;
-}
-
-.recipe-count-field-above {
-	order: -1;
-}
-
-.recipe-count-field :deep(.relative) {
-	width: 4.25rem;
 }
 
 @media (max-width: 32rem) {

@@ -161,7 +161,7 @@ onUnmounted(cleanup)
 	<slot :start-drag="startDrag" />
 	<Teleport to="body">
 		<div v-if="drag" ref="ghostRef" class="recipe-slot-drag-ghost">
-			<RecipeItemIcon :display="drag.display" :atlas="drag.atlas" :size="32" :show-count="false" />
+			<RecipeItemIcon :display="drag.display" :atlas="drag.atlas" :size="48" :show-count="false" />
 		</div>
 	</Teleport>
 </template>
