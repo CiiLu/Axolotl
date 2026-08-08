@@ -162,7 +162,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			changed: [
 				{
 					'en-US': 'Enhanced Windows icon rendering',
-					'zh-CN': '优化软件在Winodws下图标表现',
+					'zh-CN': '优化软件在Windows下图标表现',
 				},
 			],
 			fixed: [

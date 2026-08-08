@@ -4,6 +4,8 @@ extend-exclude = [
   "patches/",
   "packages/utils/",
   "packages/ui/",
+  # Generated recipe data contains texture hashes that look like words.
+  "apps/app-frontend/src/lab/recipe-generator/assets/",
   # Vendored upstream submodule, not checked out by CI.
   "apps/app/vendor/",
   # Generated mod search index contains project slugs, names, and compressed data.
@@ -19,5 +21,7 @@ gam = "gam"
 consts = "consts"
 # short for "Copy"
 Cpy = "Cpy"
+# AI model provider name
+relace = "relace"
 # Minecraft schematic file extension (Sponge schem format)
 schem = "schem"
