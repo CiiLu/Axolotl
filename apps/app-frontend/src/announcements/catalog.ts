@@ -35,7 +35,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
 		id: 'launcher-1.7.1',
 		version: '1.7.1',
-		publishedAt: '2026-08-07',
+		publishedAt: '2026-08-08',
 		title: {
 			'en-US': 'Axolotl Launcher 1.7.1',
 			'zh-CN': 'Axolotl Launcher 1.7.1',
@@ -55,6 +55,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added a recipe generator in Lab for creating custom crafting tables and other datapacks.',
 					'zh-CN': '实验室新增配方生成器，可自制合成表等数据包。',
 				},
+				{
+					'en-US': 'Added a mod translation tool in Lab for translating mod content.',
+					'zh-CN': '实验室新增模组翻译工具，可翻译模组内容。',
+				},
 			],
 			fixed: [
 				{
@@ -72,6 +76,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed the issue of the maximum page number being displayed incorrectly on the search page.',
 					'zh-CN': '修复搜索页面最大页码显示错误的问题',
+				},
+				{
+					'en-US': 'Fixed some issues on Linux.',
+					'zh-CN': '修复了 Linux 下的一些问题。',
 				},
 			],
 			changed: [
