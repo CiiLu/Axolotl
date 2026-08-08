@@ -211,17 +211,13 @@ pub async fn export_mrpack(
         }
         entry.close().await?;
         let target = WRITE_PROGRESS_WEIGHT
-            * (bytes_written as f64 / write_total_bytes.max(1) as f64)
-                .min(1.0);
+            * (bytes_written as f64 / write_total_bytes.max(1) as f64).min(1.0);
         let delta = target - write_progress;
         if delta > 0.0 {
             write_progress = target;
             progress += delta;
-            let _ = emit_loading(
-                &loading_bar,
-                delta,
-                Some(relative_path.as_str()),
-            );
+            let _ =
+                emit_loading(&loading_bar, delta, Some(relative_path.as_str()));
         }
     }
 
@@ -233,11 +229,8 @@ pub async fn export_mrpack(
     writer.write_entry_whole(builder, &data).await?;
     writer.close().await?;
 
-    let _ = emit_loading(
-        &loading_bar,
-        100.0 - progress,
-        Some("Finalizing export"),
-    );
+    let _ =
+        emit_loading(&loading_bar, 100.0 - progress, Some("Finalizing export"));
 
     Ok(())
 }
@@ -250,11 +243,36 @@ fn is_already_compressed(path: &str) -> bool {
     };
     matches!(
         extension.to_ascii_lowercase().as_str(),
-        "7z" | "aac" | "apk" | "avif" | "bz2" | "flac" | "gif"
-            | "gz" | "heic" | "jar" | "jpeg" | "jpg" | "lz4"
-            | "lzma" | "m4a" | "mkv" | "mov" | "mp3" | "mp4"
-            | "ogg" | "oga" | "opus" | "png" | "rar" | "webm"
-            | "webp" | "woff" | "woff2" | "xz" | "zip" | "zst"
+        "7z" | "aac"
+            | "apk"
+            | "avif"
+            | "bz2"
+            | "flac"
+            | "gif"
+            | "gz"
+            | "heic"
+            | "jar"
+            | "jpeg"
+            | "jpg"
+            | "lz4"
+            | "lzma"
+            | "m4a"
+            | "mkv"
+            | "mov"
+            | "mp3"
+            | "mp4"
+            | "ogg"
+            | "oga"
+            | "opus"
+            | "png"
+            | "rar"
+            | "webm"
+            | "webp"
+            | "woff"
+            | "woff2"
+            | "xz"
+            | "zip"
+            | "zst"
     )
 }
 
