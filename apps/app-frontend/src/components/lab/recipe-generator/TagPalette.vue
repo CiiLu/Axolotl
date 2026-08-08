@@ -176,7 +176,7 @@ function draftText(tag: CustomTag) {
 
 <template>
 	<RecipeSlotDragLayer v-slot="{ startDrag }">
-		<div class="flex min-h-0 flex-1 flex-col gap-2">
+		<div class="flex min-h-0 min-w-0 flex-1 flex-col gap-2 p-3">
 			<div class="recipe-tag-tabs" role="tablist">
 				<button
 					type="button"
@@ -203,7 +203,7 @@ function draftText(tag: CustomTag) {
 					v-model="search"
 					:placeholder="formatMessage(messages.searchPlaceholder)"
 					clearable
-					class="shrink-0"
+					class="w-full shrink-0"
 				/>
 				<div
 					v-if="!visibleVanillaTags.length"

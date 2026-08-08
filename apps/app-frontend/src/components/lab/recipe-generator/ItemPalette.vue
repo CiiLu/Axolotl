@@ -128,12 +128,12 @@ function startPointerDrag(event: PointerEvent, entry: PaletteEntry, startDrag: S
 
 <template>
 	<RecipeSlotDragLayer v-slot="{ startDrag }">
-		<div class="flex min-h-0 flex-1 flex-col gap-2">
+		<div class="flex min-h-0 min-w-0 flex-1 flex-col gap-2 p-3">
 			<StyledInput
 				v-model="search"
 				:placeholder="formatMessage(messages.searchPlaceholder)"
 				clearable
-				class="shrink-0"
+				class="w-full shrink-0"
 			/>
 			<div v-if="loading" class="flex min-h-24 items-center justify-center text-sm text-secondary">
 				{{ formatMessage(messages.loading) }}

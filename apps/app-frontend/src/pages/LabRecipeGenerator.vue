@@ -516,6 +516,9 @@ const recipeLayout = computed(() =>
 const layoutStageRef = useTemplateRef<HTMLDivElement>('layoutStage')
 const layoutStageWidth = ref(0)
 let layoutStageObserver: ResizeObserver | null = null
+const recipeEditorRef = useTemplateRef<HTMLElement>('recipeEditor')
+const recipePaletteMaxHeight = ref('')
+let recipeEditorObserver: ResizeObserver | null = null
 
 const layoutSlots = computed<LayoutSlotRender[]>(() => {
 	const layout = recipeLayout.value
@@ -591,7 +594,29 @@ watch(
 	{ flush: 'post' },
 )
 
-onBeforeUnmount(() => layoutStageObserver?.disconnect())
+watch(
+	recipeEditorRef,
+	(element) => {
+		recipeEditorObserver?.disconnect()
+		recipeEditorObserver = null
+		recipePaletteMaxHeight.value = ''
+		if (!element) return
+		const updatePaletteMaxHeight = () => {
+			const height = element.getBoundingClientRect().height
+			recipePaletteMaxHeight.value = height ? `${height}px` : ''
+		}
+		updatePaletteMaxHeight()
+		if (typeof ResizeObserver === 'undefined') return
+		recipeEditorObserver = new ResizeObserver(updatePaletteMaxHeight)
+		recipeEditorObserver.observe(element)
+	},
+	{ flush: 'post' },
+)
+
+onBeforeUnmount(() => {
+	layoutStageObserver?.disconnect()
+	recipeEditorObserver?.disconnect()
+})
 
 watch(
 	() => store.selectedVersion,
@@ -1319,7 +1344,7 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 				</div>
 			</aside>
 
-			<section class="lab-panel recipe-editor">
+			<section ref="recipeEditor" class="lab-panel recipe-editor">
 				<div class="lab-panel-section recipe-options-section">
 					<div class="recipe-section-heading">
 						<h2>{{ formatMessage(messages.optionsTitle) }}</h2>
@@ -1608,7 +1633,10 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 				</div>
 			</section>
 
-			<aside class="lab-panel recipe-palette">
+			<aside
+				class="lab-panel recipe-palette"
+				:style="recipePaletteMaxHeight ? { '--recipe-palette-max-height': recipePaletteMaxHeight } : undefined"
+			>
 				<div class="recipe-palette-heading">
 					<div class="recipe-tag-tabs" role="tablist">
 						<button
@@ -1642,7 +1670,6 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 					:entries="paletteEntries"
 					:atlas="TEXTURE_ATLAS"
 					:loading="loadingResources"
-					class="recipe-palette-body"
 					@pick="placeFromPalette"
 				/>
 				<TagPalette
@@ -1651,7 +1678,6 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 					:custom-tags="showCustomTags ? store.customTags : []"
 					:ctx="slotContext"
 					:atlas="TEXTURE_ATLAS"
-					class="recipe-palette-body"
 					@pick="placeFromPalette"
 					@add-custom-tag="addCustomTag"
 					@update-custom-tag="updateCustomTag"
@@ -2155,6 +2181,7 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 .recipe-layout-stage {
 	position: relative;
 	width: 100%;
+	margin-top: 0.75rem;
 	aspect-ratio: 696 / 292;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -2425,8 +2452,9 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 .recipe-palette {
 	display: flex;
 	min-width: 0;
-	height: 61rem;
-	max-height: min(70rem, calc(100dvh - 3rem));
+	min-height: 0;
+	height: auto;
+	max-height: var(--recipe-palette-max-height, 61rem);
 	flex-direction: column;
 	container-type: inline-size;
 	container-name: recipe-palette;
