@@ -356,6 +356,59 @@ mod tests {
     }
 
     #[test]
+    fn recovery_validation_mode_is_derived_from_typed_resume_history() {
+        let mut job =
+            InstallJobState::new(InstallRequest::CreateModpackInstance {
+                location: CreatePackLocation::FromFile {
+                    path: PathBuf::from("test.mrpack"),
+                },
+                post_install_edit: None,
+            });
+        job.missing_content = Some(MissingModpackContentState::default());
+        job.set_progress(
+            InstallPhaseId::DownloadingContent,
+            None,
+            InstallPhaseDetails::Empty,
+        );
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::Normal
+        );
+
+        job.record_event(InstallJobEventKind::WaitingForUser {
+            reason: InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/missing.jar".to_string()],
+            },
+        });
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::WaitingForUser),
+            InstallJobExecutionMode::Normal
+        );
+        job.record_event(InstallJobEventKind::JobQueued {
+            kind: InstallJobKind::CreateModpackInstance,
+        });
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Queued),
+            InstallJobExecutionMode::RecoveryValidation
+        );
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::RecoveryValidation
+        );
+
+        job.set_progress(
+            InstallPhaseId::ExtractingOverrides,
+            None,
+            InstallPhaseDetails::Empty,
+        );
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::Normal
+        );
+    }
+
+    #[test]
     fn all_successful_required_content_items_are_completed() {
         let mut job = job_state();
         for (path, bytes) in [("mods/a.jar", 100), ("mods/b.jar", 200)] {
@@ -1085,6 +1138,13 @@ pub enum InstallJobStatus {
     Canceled,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallJobExecutionMode {
+    Normal,
+    RecoveryValidation,
+}
+
 impl InstallJobStatus {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -1420,6 +1480,7 @@ pub struct InstallJobSnapshot {
     pub instance_deleted: bool,
     pub kind: InstallJobKind,
     pub status: InstallJobStatus,
+    pub execution_mode: InstallJobExecutionMode,
     pub provider: InstallJobProvider,
     pub target: InstallTarget,
     pub phase: InstallPhaseId,
@@ -1437,6 +1498,45 @@ pub struct InstallJobSnapshot {
 }
 
 impl InstallJobState {
+    pub fn execution_mode(
+        &self,
+        status: InstallJobStatus,
+    ) -> InstallJobExecutionMode {
+        if !matches!(
+            status,
+            InstallJobStatus::Queued | InstallJobStatus::Running
+        ) || self.progress.phase != InstallPhaseId::DownloadingContent
+            || self.missing_content.is_none()
+            || !matches!(
+                &self.request,
+                InstallRequest::CreateModpackInstance { .. }
+                    | InstallRequest::InstallPackToExistingInstance { .. }
+            )
+        {
+            return InstallJobExecutionMode::Normal;
+        }
+
+        let last_missing_pause = self.events.iter().rposition(|event| {
+            matches!(
+                &event.kind,
+                InstallJobEventKind::WaitingForUser {
+                    reason: InstallPauseReason::MissingRequiredContent { .. }
+                }
+            )
+        });
+        let last_queued = self.events.iter().rposition(|event| {
+            matches!(&event.kind, InstallJobEventKind::JobQueued { .. })
+        });
+        if last_missing_pause
+            .zip(last_queued)
+            .is_some_and(|(paused, queued)| queued > paused)
+        {
+            InstallJobExecutionMode::RecoveryValidation
+        } else {
+            InstallJobExecutionMode::Normal
+        }
+    }
+
     pub fn instance_deleted(&self) -> bool {
         self.events.iter().any(|event| {
             matches!(

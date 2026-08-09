@@ -563,6 +563,9 @@
   "app.downloads.item-status.downloading": {
     "message": "下載中"
   },
+  "app.downloads.item-status.pending-verification": {
+    "message": "待檢查"
+  },
   "app.downloads.item-status.skipped": {
     "message": "已略過"
   },
@@ -601,6 +604,9 @@
   },
   "app.downloads.phase.downloading-content": {
     "message": "正在下載內容"
+  },
+  "app.downloads.phase.verifying-downloaded-files": {
+    "message": "正在檢查已下載檔案"
   },
   "app.downloads.phase.downloading-minecraft": {
     "message": "正在下載 Minecraft"

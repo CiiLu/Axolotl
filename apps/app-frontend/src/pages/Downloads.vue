@@ -121,7 +121,7 @@
 							/>
 						</div>
 						<div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-secondary">
-							<span>{{ phaseLabel(job.phase) }}</span>
+							<span>{{ jobPhaseLabel(job) }}</span>
 							<BulletDivider />
 							<span>{{ formatDate(job.finished ?? job.modified) }}</span>
 							<template v-if="job.instance_id">
@@ -303,7 +303,10 @@
 							</div>
 						</template>
 						<template #cell-status="{ row }">
-							<Badge :color="itemStatusColor(row.status)" :type="statusLabel(row.status)" />
+							<Badge
+								:color="itemStatusColor(row.status)"
+								:type="itemStatusLabel(job, row.status)"
+							/>
 						</template>
 						<template #cell-attempts="{ row }">
 							<span>{{ itemAttempts(row) }}</span>
@@ -493,6 +496,14 @@ const messages = defineMessages({
 		defaultMessage: 'Project {projectId} · File {fileId}',
 	},
 	downloadSource: { id: 'app.downloads.download-source', defaultMessage: 'Source: {source}' },
+	verifyingDownloadedFiles: {
+		id: 'app.downloads.phase.verifying-downloaded-files',
+		defaultMessage: 'Verifying downloaded files',
+	},
+	pendingVerification: {
+		id: 'app.downloads.item-status.pending-verification',
+		defaultMessage: 'Pending verification',
+	},
 	downloadSourceOfficial: { id: 'app.downloads.source.official', defaultMessage: 'Official' },
 	downloadSourceBmclapi: { id: 'app.downloads.source.bmclapi', defaultMessage: 'OpenBMCLAPI' },
 	downloadSourceMcim: { id: 'app.downloads.source.mcim', defaultMessage: 'MCIM' },
@@ -692,6 +703,27 @@ function phaseLabel(phase: InstallPhaseId) {
 	return formatMessage(phaseMessages[phase])
 }
 
+function isRecoveryValidation(job: InstallJobSnapshot) {
+	return job.execution_mode === 'recovery_validation'
+}
+
+function isLocalRecoveryValidation(job: InstallJobSnapshot) {
+	return isRecoveryValidation(job) && activeRequestItems(job).length === 0
+}
+
+function jobPhaseLabel(job: InstallJobSnapshot) {
+	return isLocalRecoveryValidation(job)
+		? formatMessage(messages.verifyingDownloadedFiles)
+		: phaseLabel(job.phase)
+}
+
+function itemStatusLabel(job: InstallJobSnapshot, status: DownloadItem['status']) {
+	if (isRecoveryValidation(job) && status === 'queued') {
+		return formatMessage(messages.pendingVerification)
+	}
+	return statusLabel(status)
+}
+
 function statusColor(status: InstallJobStatus): 'green' | 'red' | 'orange' | 'blue' | 'gray' {
 	if (status === 'succeeded') return 'green'
 	if (status === 'failed' || status === 'interrupted' || status === 'canceled') return 'red'
@@ -742,6 +774,16 @@ function progressText(job: InstallJobSnapshot) {
 	if (job.status === 'waiting_for_user') {
 		return `${completedRequiredFiles(job)} / ${job.summary.files_total ?? job.items.length}`
 	}
+	if (isLocalRecoveryValidation(job)) {
+		const progress = effectiveInstallProgress(job)
+		if (hasDeterminateInstallProgress(progress)) {
+			const checked = job.progress?.secondary
+				? `${formatBytes(progress.current)} / ${formatBytes(progress.total)}`
+				: `${progress.current} / ${progress.total}`
+			return `${formatMessage(messages.verifyingDownloadedFiles)}: ${checked}`
+		}
+		return formatMessage(messages.verifyingDownloadedFiles)
+	}
 	const finalStage = job.items.find(
 		(item) => item.status === 'writing' || item.status === 'verifying',
 	)
@@ -774,7 +816,7 @@ function missingRequiredFiles(job: InstallJobSnapshot) {
 function downloadTelemetry(job: InstallJobSnapshot) {
 	const summary = job.summary
 	const metrics: string[] = []
-	if (summary.source) {
+	if (summary.source && !isRecoveryValidation(job)) {
 		metrics.push(
 			formatMessage(messages.downloadSource, {
 				source: downloadSourceLabel(summary.source),
@@ -791,7 +833,7 @@ function downloadTelemetry(job: InstallJobSnapshot) {
 	if (summary.eta_seconds != null) {
 		metrics.push(formatDownloadEta(summary.eta_seconds))
 	}
-	if (summary.fallback_count > 0) {
+	if (summary.fallback_count > 0 && !isRecoveryValidation(job)) {
 		metrics.push(formatMessage(messages.downloadFallbacks, { count: summary.fallback_count }))
 	}
 	return metrics

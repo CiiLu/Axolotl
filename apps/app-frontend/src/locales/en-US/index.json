@@ -833,6 +833,9 @@
 	"app.downloads.item-status.downloading": {
 		"message": "Downloading"
 	},
+	"app.downloads.item-status.pending-verification": {
+		"message": "Pending verification"
+	},
 	"app.downloads.item-status.skipped": {
 		"message": "Skipped"
 	},
@@ -874,6 +877,9 @@
 	},
 	"app.downloads.phase.downloading-content": {
 		"message": "Downloading content"
+	},
+	"app.downloads.phase.verifying-downloaded-files": {
+		"message": "Verifying downloaded files"
 	},
 	"app.downloads.phase.downloading-minecraft": {
 		"message": "Downloading Minecraft"

@@ -137,6 +137,7 @@ export interface InstallJobSnapshot {
 		| 'install_content'
 		| 'download_java'
 	status: InstallJobStatus
+	execution_mode: 'normal' | 'recovery_validation'
 	provider: 'modrinth' | 'curse_forge' | 'minecraft' | 'java' | 'application' | 'local'
 	target:
 		| { type: 'new_instance'; instance_id?: string | null }

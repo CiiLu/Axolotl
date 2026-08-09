@@ -46,6 +46,7 @@ impl InstallJobRecord {
             instance_deleted,
             kind: self.kind,
             status: self.status,
+            execution_mode: self.state.execution_mode(self.status),
             provider: self.state.provider(),
             target: self.state.target.clone(),
             phase: self.state.progress.phase,
