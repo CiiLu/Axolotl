@@ -2126,6 +2126,9 @@
 	"app.instances.group.none": {
 		"message": "None"
 	},
+	"app.instances.group.ungrouped": {
+		"message": "No group"
+	},
 	"app.instances.pin-to-home": {
 		"message": "Pin to Home"
 	},

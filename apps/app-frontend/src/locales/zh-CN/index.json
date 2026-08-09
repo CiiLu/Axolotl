@@ -1301,6 +1301,9 @@
 	"app.instances.group.none": {
 		"message": "无"
 	},
+	"app.instances.group.ungrouped": {
+		"message": "无分组"
+	},
 	"app.instances.search": {
 		"message": "搜索"
 	},
