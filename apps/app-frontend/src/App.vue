@@ -3479,21 +3479,4 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		right: 8rem;
 	}
 }
-
-.slide-enter-active,
-.slide-leave-active {
-	transition:
-		transform 0.2s ease,
-		opacity 0.2s ease;
-}
-
-.slide-enter-from {
-	transform: translateY(30px);
-	opacity: 0.3;
-}
-
-.slide-leave-to {
-	transform: translateY(-30px);
-	opacity: 0.3;
-}
 </style>
