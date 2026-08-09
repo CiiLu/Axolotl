@@ -6194,11 +6194,17 @@
 	"minecraft-account.add-third-party-account": {
 		"message": "Add third-party account"
 	},
+	"minecraft-account.copy-uuid": {
+		"message": "Copy UUID"
+	},
 	"minecraft-account.label": {
 		"message": "Minecraft account"
 	},
 	"minecraft-account.not-signed-in": {
 		"message": "Not signed in"
+	},
+	"minecraft-account.official-badge": {
+		"message": "Official"
 	},
 	"minecraft-account.offline-account": {
 		"message": "Offline Minecraft account"
@@ -6211,6 +6217,21 @@
 	},
 	"minecraft-account.offline-modal.create": {
 		"message": "Create account"
+	},
+	"minecraft-account.offline-modal.custom-uuid": {
+		"message": "Custom UUID"
+	},
+	"minecraft-account.offline-modal.custom-uuid-input-label": {
+		"message": "UUID"
+	},
+	"minecraft-account.offline-modal.custom-uuid-placeholder": {
+		"message": "00000000-0000-0000-0000-000000000000"
+	},
+	"minecraft-account.offline-modal.custom-uuid-validation": {
+		"message": "Use 32 hexadecimal characters. Hyphens are optional."
+	},
+	"minecraft-account.offline-modal.custom-uuid-warning": {
+		"message": "If you don't understand what this is, do not enable this feature."
 	},
 	"minecraft-account.offline-modal.description": {
 		"message": "Choose the username used in offline games. This account can only join servers that allow offline players."

@@ -287,9 +287,37 @@ fn keyring_error(
     .into()
 }
 
+fn parse_custom_uuid(uuid: Option<String>) -> Result<Option<uuid::Uuid>> {
+    let Some(uuid) = uuid else {
+        return Ok(None);
+    };
+    let uuid = uuid.trim().replace('-', "");
+    if uuid.len() != 32
+        || !uuid.chars().all(|character| character.is_ascii_hexdigit())
+    {
+        return Err(theseus::ErrorKind::InputError(
+            "Custom UUID must be 32 hexadecimal characters; hyphens are optional"
+                .to_string(),
+        )
+        .as_error()
+        .into());
+    }
+
+    Ok(Some(uuid::Uuid::parse_str(&uuid).map_err(|_| {
+        theseus::ErrorKind::InputError("Invalid custom UUID".to_string())
+            .as_error()
+    })?))
+}
+
 #[tauri::command]
-pub async fn add_offline_user(username: String) -> Result<Credentials> {
-    Ok(minecraft_auth::add_offline_user(&username).await?)
+pub async fn add_offline_user(
+    username: String,
+    uuid: Option<String>,
+) -> Result<Credentials> {
+    Ok(
+        minecraft_auth::add_offline_user(&username, parse_custom_uuid(uuid)?)
+            .await?,
+    )
 }
 
 #[tauri::command]
@@ -357,5 +385,35 @@ mod tests {
         remove_saved_yggdrasil_login(&mut saved_logins, &removed);
 
         assert_eq!(saved_logins, vec![retained]);
+    }
+
+    #[test]
+    fn parses_custom_offline_uuid() {
+        let expected =
+            uuid::Uuid::parse_str("b50ad385-829d-3141-a216-7e7d7539ba7f")
+                .unwrap();
+
+        assert_eq!(
+            parse_custom_uuid(Some(
+                "b50ad385829d3141a2167e7d7539ba7f".to_string()
+            ))
+            .unwrap(),
+            Some(expected)
+        );
+        assert_eq!(
+            parse_custom_uuid(Some(
+                "B50AD385-829D-3141-A216-7E7D7539BA7F".to_string()
+            ))
+            .unwrap(),
+            Some(expected)
+        );
+        assert_eq!(parse_custom_uuid(None).unwrap(), None);
+        assert!(parse_custom_uuid(Some("not-a-uuid".to_string())).is_err());
+        assert!(
+            parse_custom_uuid(Some(
+                "b50ad385829d3141a2167e7d7539ba7".to_string()
+            ))
+            .is_err()
+        );
     }
 }
