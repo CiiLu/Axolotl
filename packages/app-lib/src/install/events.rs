@@ -1,7 +1,8 @@
 use super::model::{
-    ActiveDownloadState, DownloadItemStatus, InstallErrorContext,
-    InstallJobEventKind, InstallJobSnapshot, InstallJobState,
-    InstallPhaseDetails, InstallPhaseId, InstallProgress,
+    ActiveDownloadState, DownloadItemStatus, InstallContinuationState,
+    InstallErrorContext, InstallJobEventKind, InstallJobSnapshot,
+    InstallJobState, InstallPhaseDetails, InstallPhaseId, InstallProgress,
+    InstallRollbackState,
 };
 use super::store;
 use chrono::Utc;
@@ -229,6 +230,62 @@ impl InstallProgressReporter {
         let mut state = self.state.lock().await;
         self.sync_latest(&mut state, &app_state).await?;
         Ok(state.job.clone())
+    }
+
+    pub async fn set_continuation(
+        &self,
+        continuation: Option<InstallContinuationState>,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        state.job.continuation = continuation;
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
+    }
+
+    pub(crate) async fn set_rollback(
+        &self,
+        rollback: Option<InstallRollbackState>,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        state.job.rollback = rollback;
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
+    }
+
+    pub async fn track_rollback_paths(
+        &self,
+        paths: Vec<String>,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        let Some(snapshot) = state
+            .job
+            .rollback
+            .as_mut()
+            .and_then(|rollback| rollback.content.as_mut())
+        else {
+            return Ok(());
+        };
+        for path in paths {
+            path_util::SafeRelativeUtf8UnixPathBuf::try_from(path.clone())?;
+            if !snapshot.replacement_paths.contains(&path) {
+                snapshot.replacement_paths.push(path);
+            }
+        }
+        snapshot.replacement_paths.sort();
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
     }
 
     pub async fn persist_failure_context(&self, context: InstallErrorContext) {

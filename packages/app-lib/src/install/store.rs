@@ -54,6 +54,7 @@ impl InstallJobRecord {
             display: self.state.display.clone(),
             error: self.state.error.clone(),
             rollback_error: self.state.rollback_error.clone(),
+            pause_reason: self.state.pause_reason.clone(),
             created: self.created,
             modified: self.modified,
             finished: self.finished,
@@ -183,6 +184,35 @@ pub async fn list(
 		.fetch_all(&app_state.pool)
 		.await?
     };
+
+    let mut rows = rows;
+    if !include_finished {
+        use sqlx::Row;
+        let active_rows = sqlx::query(
+            "SELECT id, instance_id, kind, status, state, created, modified,
+                    finished, dismissed
+             FROM install_jobs
+             WHERE dismissed = 0
+               AND status IN ('canceling', 'waiting_for_user')
+             ORDER BY created ASC",
+        )
+        .fetch_all(&app_state.pool)
+        .await?;
+        for row in active_rows {
+            rows.push(InstallJobRow {
+                id: row.try_get("id")?,
+                instance_id: row.try_get("instance_id")?,
+                kind: row.try_get("kind")?,
+                status: row.try_get("status")?,
+                state: row.try_get("state")?,
+                created: row.try_get("created")?,
+                modified: row.try_get("modified")?,
+                finished: row.try_get("finished")?,
+                dismissed: row.try_get("dismissed")?,
+            });
+        }
+        rows.sort_unstable_by_key(|row| row.created);
+    }
 
     rows.into_iter().map(row_to_record).collect()
 }
@@ -333,6 +363,138 @@ pub async fn update_status(
     sync_download_details(id, state, app_state).await?;
 
     get_required(id, app_state).await
+}
+
+pub async fn update_status_if(
+    id: Uuid,
+    expected: InstallJobStatus,
+    status: InstallJobStatus,
+    state: &InstallJobState,
+    app_state: &State,
+) -> crate::Result<Option<InstallJobRecord>> {
+    let now = Utc::now();
+    let finished = status.is_finished().then_some(now.timestamp());
+    let json = serde_json::to_string(state)?;
+    let instance_id = instance_id(state);
+    let id_value = id.to_string();
+    let modified = now.timestamp();
+
+    let updated = compare_and_swap_status(
+        &app_state.pool,
+        &id_value,
+        expected,
+        status,
+        instance_id,
+        &json,
+        modified,
+        finished,
+    )
+    .await?;
+
+    if !updated {
+        return Ok(None);
+    }
+
+    sync_download_details(id, state, app_state).await?;
+    Ok(Some(get_required(id, app_state).await?))
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn compare_and_swap_status(
+    pool: &sqlx::SqlitePool,
+    id: &str,
+    expected: InstallJobStatus,
+    status: InstallJobStatus,
+    instance_id: Option<String>,
+    state_json: &str,
+    modified: i64,
+    finished: Option<i64>,
+) -> crate::Result<bool> {
+    let result = sqlx::query(
+        "UPDATE install_jobs
+         SET instance_id = (SELECT id FROM instances WHERE id = ?),
+             status = ?, state = ?, modified = ?, finished = ?
+         WHERE id = ? AND status = ?",
+    )
+    .bind(instance_id)
+    .bind(status.as_str())
+    .bind(state_json)
+    .bind(modified)
+    .bind(finished)
+    .bind(id)
+    .bind(expected.as_str())
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected() == 1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn only_one_waiting_job_resume_can_claim_the_status() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("CREATE TABLE instances (id TEXT PRIMARY KEY)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE install_jobs (
+                id TEXT PRIMARY KEY,
+                instance_id TEXT,
+                status TEXT NOT NULL,
+                state TEXT NOT NULL,
+                modified INTEGER NOT NULL,
+                finished INTEGER
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO install_jobs
+             (id, status, state, modified) VALUES ('job', 'waiting_for_user', '{}', 0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let first = compare_and_swap_status(
+            &pool,
+            "job",
+            InstallJobStatus::WaitingForUser,
+            InstallJobStatus::Queued,
+            None,
+            "{}",
+            1,
+            None,
+        );
+        let second = compare_and_swap_status(
+            &pool,
+            "job",
+            InstallJobStatus::WaitingForUser,
+            InstallJobStatus::Queued,
+            None,
+            "{}",
+            1,
+            None,
+        );
+        let (first, second) = tokio::join!(first, second);
+
+        assert_ne!(first.unwrap(), second.unwrap());
+        let status: String = sqlx::query_scalar(
+            "SELECT status FROM install_jobs WHERE id = 'job'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(status, "queued");
+    }
 }
 
 pub async fn dismiss(id: Uuid, app_state: &State) -> crate::Result<()> {

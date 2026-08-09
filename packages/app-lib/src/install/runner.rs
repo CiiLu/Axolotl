@@ -1,10 +1,10 @@
 use super::events::{InstallProgressReporter, emit_install_job};
 use super::model::{
-    InstallCleanup, InstallErrorContext, InstallErrorView, InstallJavaStep,
-    InstallJobDisplay, InstallJobEventKind, InstallJobSnapshot,
-    InstallJobState, InstallJobStatus, InstallPhaseDetails, InstallPhaseId,
-    InstallPostInstallEdit, InstallProgress, InstallRequest,
-    InstallRollbackState, InstallTarget,
+    InstallCleanup, InstallContinuationState, InstallErrorContext,
+    InstallErrorView, InstallJavaStep, InstallJobDisplay, InstallJobEventKind,
+    InstallJobSnapshot, InstallJobState, InstallJobStatus, InstallPauseReason,
+    InstallPhaseDetails, InstallPhaseId, InstallPostInstallEdit,
+    InstallProgress, InstallRequest, InstallRollbackState, InstallTarget,
 };
 use super::{diagnostics, recovery, store};
 use crate::ErrorKind;
@@ -12,18 +12,24 @@ use crate::api::pack::install_from::{
     CreatePackLocation, generate_pack_from_file,
     generate_pack_from_version_id_with_reporter, get_instance_from_pack,
 };
-use crate::api::pack::install_mrpack::install_zipped_mrpack_files_with_reporter;
+use crate::api::pack::install_mrpack::{
+    MrpackInstallOutcome, install_zipped_mrpack_files_with_reporter,
+    related_file_paths,
+};
 use crate::event::InstancePayloadType;
 use crate::event::emit::emit_instance;
-use crate::state::instances::adapters::sqlite::content_rows;
 use crate::state::{
-    ContentProviderRef, ContentSourceKind, InstanceInstallStage, InstanceLink,
-    ModLoader, State,
+    ContentProviderRef, InstanceInstallStage, InstanceLink, ModLoader, State,
 };
 use crate::util::fetch::DownloadReason;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use uuid::Uuid;
+
+enum InstallExecutionOutcome<T> {
+    Completed(T),
+    WaitingForUser(InstallPauseReason),
+}
 
 pub async fn create_instance(
     name: String,
@@ -200,6 +206,8 @@ pub async fn retry_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     job.state.rollback = None;
     job.state.error = None;
     job.state.rollback_error = None;
+    job.state.pause_reason = None;
+    job.state.continuation = None;
     job.state.context = None;
     job.state.progress.phase = InstallPhaseId::PreparingInstance;
     job.state.progress.progress = None;
@@ -222,6 +230,48 @@ pub async fn retry_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     // The spawned job may already have progressed (or finished) by the time
     // the command returns; hand the caller the freshest stored state.
     Ok(store::get_required(job_id, &state).await?.snapshot())
+}
+
+pub async fn resume_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
+    let state = State::get().await?;
+    let job = store::get_required(job_id, &state).await?;
+    if job.status != InstallJobStatus::WaitingForUser {
+        return Err(crate::ErrorKind::InputError(
+            "Only install jobs waiting for user action can be resumed"
+                .to_string(),
+        )
+        .into());
+    }
+
+    let mut job_state = job.state;
+    prepare_resumed_job(&mut job_state);
+    let Some(record) = store::update_status_if(
+        job_id,
+        InstallJobStatus::WaitingForUser,
+        InstallJobStatus::Queued,
+        &job_state,
+        &state,
+    )
+    .await?
+    else {
+        return Err(crate::ErrorKind::InputError(
+            "Install job is no longer waiting for user action".to_string(),
+        )
+        .into());
+    };
+    emit_install_job(&record.snapshot()).await?;
+    spawn_job(job_id);
+    Ok(store::get_required(job_id, &state).await?.snapshot())
+}
+
+fn prepare_resumed_job(job_state: &mut InstallJobState) {
+    job_state.pause_reason = None;
+    job_state.error = None;
+    job_state.rollback_error = None;
+    job_state.context = None;
+    job_state.record_event(InstallJobEventKind::JobQueued {
+        kind: job_state.request.kind(),
+    });
 }
 
 pub async fn retry_job_as_new(
@@ -251,48 +301,58 @@ pub async fn retry_job_as_new(
 
 pub async fn cancel_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     let state = State::get().await?;
-    let mut job = store::get_required(job_id, &state).await?;
-
-    if job.status == InstallJobStatus::Running {
-        let record = store::update_status(
-            job_id,
-            InstallJobStatus::Canceling,
-            &job.state,
-            &state,
-        )
-        .await?;
-        if let Some(token) = state.install_job_cancellations.get(&job_id) {
-            token.cancel();
+    let mut job = loop {
+        let mut job = store::get_required(job_id, &state).await?;
+        match job.status {
+            InstallJobStatus::Running => {
+                let Some(record) = store::update_status_if(
+                    job_id,
+                    InstallJobStatus::Running,
+                    InstallJobStatus::Canceling,
+                    &job.state,
+                    &state,
+                )
+                .await?
+                else {
+                    continue;
+                };
+                if let Some(token) =
+                    state.install_job_cancellations.get(&job_id)
+                {
+                    token.cancel();
+                }
+                emit_install_job(&record.snapshot()).await?;
+                return Ok(record.snapshot());
+            }
+            InstallJobStatus::Canceling => return Ok(job.snapshot()),
+            InstallJobStatus::Queued | InstallJobStatus::WaitingForUser => {
+                let expected = job.status;
+                begin_canceling_job(&mut job.state);
+                let Some(record) = store::update_status_if(
+                    job_id,
+                    expected,
+                    InstallJobStatus::Canceling,
+                    &job.state,
+                    &state,
+                )
+                .await?
+                else {
+                    continue;
+                };
+                emit_install_job(&record.snapshot()).await?;
+                break record;
+            }
+            _ => {
+                return Err(crate::ErrorKind::InputError(
+                    "Only queued, running, or waiting install jobs can be canceled"
+                        .to_string(),
+                )
+                .into());
+            }
         }
-        emit_install_job(&record.snapshot()).await?;
-        return Ok(record.snapshot());
-    }
+    };
 
-    if job.status == InstallJobStatus::Canceling {
-        return Ok(job.snapshot());
-    }
-
-    if job.status != InstallJobStatus::Queued {
-        return Err(crate::ErrorKind::InputError(
-            "Only queued or running install jobs can be canceled".to_string(),
-        )
-        .into());
-    }
-
-    let canceled_phase = job.state.progress.phase;
-    job.state.error = Some(InstallErrorView::from_message(
-        "canceled",
-        canceled_phase,
-        "Install was canceled",
-    ));
-    job.state.record_event(InstallJobEventKind::JobCanceled {
-        phase: canceled_phase,
-    });
-    job.state
-        .record_event(InstallJobEventKind::RollbackStarted {
-            cleanup: job.state.cleanup.clone(),
-        });
-    match recovery::apply_cleanup(&job.state, &state).await {
+    match recovery::apply_cleanup(&mut job.state, &state).await {
         Ok(()) => job
             .state
             .record_event(InstallJobEventKind::RollbackCompleted),
@@ -319,6 +379,25 @@ pub async fn cancel_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     emit_install_job(&record.snapshot()).await?;
 
     Ok(record.snapshot())
+}
+
+fn begin_canceling_job(job_state: &mut InstallJobState) {
+    let canceled_phase = job_state.progress.phase;
+    job_state.error = Some(InstallErrorView::from_message(
+        "canceled",
+        canceled_phase,
+        "Install was canceled",
+    ));
+    job_state.pause_reason = None;
+    job_state.record_event(InstallJobEventKind::JobCanceled {
+        phase: canceled_phase,
+    });
+    job_state.progress.phase = InstallPhaseId::RollingBack;
+    job_state.progress.progress = None;
+    job_state.progress.details = InstallPhaseDetails::Empty;
+    job_state.record_event(InstallJobEventKind::RollbackStarted {
+        cleanup: job_state.cleanup.clone(),
+    });
 }
 
 pub async fn dismiss_job(job_id: Uuid) -> crate::Result<()> {
@@ -547,6 +626,38 @@ fn spawn_job(job_id: Uuid) {
     });
 }
 
+fn begin_failed_job_rollback(
+    job_state: &mut InstallJobState,
+    error: &crate::Error,
+) {
+    let failed_phase = job_state.progress.phase;
+    let error_view =
+        install_error_view(failed_phase, error, job_state.context.clone());
+    job_state.record_event(InstallJobEventKind::Failed {
+        phase: failed_phase,
+        code: error_view.code.clone(),
+        message: error_view.message.clone(),
+    });
+    job_state.error = Some(error_view);
+    job_state.progress.phase = InstallPhaseId::RollingBack;
+    job_state.progress.progress = None;
+    job_state.progress.details = InstallPhaseDetails::Empty;
+    job_state.record_event(InstallJobEventKind::RollbackStarted {
+        cleanup: job_state.cleanup.clone(),
+    });
+}
+
+fn begin_waiting_for_user(
+    job_state: &mut InstallJobState,
+    reason: InstallPauseReason,
+) {
+    job_state.pause_reason = Some(reason.clone());
+    job_state.error = None;
+    job_state.rollback_error = None;
+    job_state.context = None;
+    job_state.record_event(InstallJobEventKind::WaitingForUser { reason });
+}
+
 async fn run_job(job_id: Uuid) -> crate::Result<()> {
     let state = State::get().await?;
     let mut job = store::get_required(job_id, &state).await?;
@@ -563,23 +674,32 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
     }
 
     let mut job_state = job.state.clone();
-    let cancellation = tokio_util::sync::CancellationToken::new();
-    state
-        .install_job_cancellations
-        .insert(job_id, cancellation.clone());
     job_state.record_event(InstallJobEventKind::JobStarted);
-    let record = store::update_status(
+    let Some(record) = store::update_status_if(
         job_id,
+        InstallJobStatus::Queued,
         InstallJobStatus::Running,
         &job_state,
         &state,
     )
-    .await?;
+    .await?
+    else {
+        return Ok(());
+    };
+    let cancellation = tokio_util::sync::CancellationToken::new();
+    state
+        .install_job_cancellations
+        .insert(job_id, cancellation.clone());
     emit_install_job(&record.snapshot()).await?;
+    if store::get_required(job_id, &state).await?.status
+        == InstallJobStatus::Canceling
+    {
+        cancellation.cancel();
+    }
     let live_reporter = InstallProgressReporter::new(job_id, job_state.clone());
 
     enum RunResult {
-        Completed(crate::Result<Option<String>>),
+        Completed(crate::Result<InstallExecutionOutcome<Option<String>>>),
         Canceled,
     }
 
@@ -592,7 +712,9 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
     job_state = live_reporter.current_state().await?;
 
     match result {
-        RunResult::Completed(Ok(instance_id)) => {
+        RunResult::Completed(Ok(InstallExecutionOutcome::Completed(
+            instance_id,
+        ))) => {
             if let Some(instance_id) = instance_id {
                 set_instance_id(&mut job_state, instance_id);
             }
@@ -604,6 +726,8 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
             job_state.progress.details = InstallPhaseDetails::Empty;
             job_state.error = None;
             job_state.rollback_error = None;
+            job_state.pause_reason = None;
+            job_state.continuation = None;
             job_state.context = None;
             let record = store::update_status(
                 job_id,
@@ -613,68 +737,41 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
             )
             .await?;
             emit_install_job(&record.snapshot()).await?;
-        }
-        RunResult::Canceled => {
-            let canceled_phase = job_state.progress.phase;
-            job_state.error = Some(InstallErrorView::from_message(
-                "canceled",
-                canceled_phase,
-                "Install was canceled",
-            ));
-            job_state.record_event(InstallJobEventKind::JobCanceled {
-                phase: canceled_phase,
-            });
-            job_state.progress.phase = InstallPhaseId::RollingBack;
-            job_state.progress.progress = None;
-            job_state.progress.details = InstallPhaseDetails::Empty;
-            job_state.record_event(InstallJobEventKind::RollbackStarted {
-                cleanup: job_state.cleanup.clone(),
-            });
-            if let Err(rollback_error) =
-                recovery::apply_cleanup(&job_state, &state).await
-            {
-                job_state.rollback_error = Some(install_error_view(
-                    InstallPhaseId::RollingBack,
-                    &rollback_error,
-                    None,
-                ));
-                job_state.record_event(InstallJobEventKind::RollbackFailed {
-                    message: rollback_error.to_string(),
-                });
-            } else {
-                job_state.record_event(InstallJobEventKind::RollbackCompleted);
+            recovery::discard_content_rollback(&mut job_state, &state).await?;
+            if job_state.rollback.is_some() {
+                store::update_state(job_id, &job_state, &state).await?;
             }
-            clear_deleted_new_instance_id(&mut job_state);
-            let record = store::update_status(
+        }
+        RunResult::Completed(Ok(InstallExecutionOutcome::WaitingForUser(
+            reason,
+        ))) => {
+            let mut waiting_state = job_state.clone();
+            begin_waiting_for_user(&mut waiting_state, reason);
+            let Some(record) = store::update_status_if(
                 job_id,
-                InstallJobStatus::Canceled,
-                &job_state,
+                InstallJobStatus::Running,
+                InstallJobStatus::WaitingForUser,
+                &waiting_state,
                 &state,
             )
-            .await?;
+            .await?
+            else {
+                if store::get_required(job_id, &state).await?.status
+                    == InstallJobStatus::Canceling
+                {
+                    finish_canceled_job(job_id, &mut job_state, &state).await?;
+                }
+                return Ok(());
+            };
             emit_install_job(&record.snapshot()).await?;
         }
+        RunResult::Canceled => {
+            finish_canceled_job(job_id, &mut job_state, &state).await?;
+        }
         RunResult::Completed(Err(error)) => {
-            let failed_phase = job_state.progress.phase;
-            let error_view = install_error_view(
-                failed_phase,
-                &error,
-                job_state.context.clone(),
-            );
-            job_state.record_event(InstallJobEventKind::Failed {
-                phase: failed_phase,
-                code: error_view.code.clone(),
-                message: error_view.message.clone(),
-            });
-            job_state.error = Some(error_view);
-            job_state.progress.phase = InstallPhaseId::RollingBack;
-            job_state.progress.progress = None;
-            job_state.progress.details = InstallPhaseDetails::Empty;
-            job_state.record_event(InstallJobEventKind::RollbackStarted {
-                cleanup: job_state.cleanup.clone(),
-            });
+            begin_failed_job_rollback(&mut job_state, &error);
             if let Err(rollback_error) =
-                recovery::apply_cleanup(&job_state, &state).await
+                recovery::apply_cleanup(&mut job_state, &state).await
             {
                 tracing::error!(
                     "Error rolling back failed install job {job_id}: {rollback_error}"
@@ -706,11 +803,56 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
     Ok(())
 }
 
+async fn finish_canceled_job(
+    job_id: Uuid,
+    job_state: &mut InstallJobState,
+    state: &State,
+) -> crate::Result<()> {
+    let canceled_phase = job_state.progress.phase;
+    job_state.error = Some(InstallErrorView::from_message(
+        "canceled",
+        canceled_phase,
+        "Install was canceled",
+    ));
+    job_state.pause_reason = None;
+    job_state.record_event(InstallJobEventKind::JobCanceled {
+        phase: canceled_phase,
+    });
+    job_state.progress.phase = InstallPhaseId::RollingBack;
+    job_state.progress.progress = None;
+    job_state.progress.details = InstallPhaseDetails::Empty;
+    job_state.record_event(InstallJobEventKind::RollbackStarted {
+        cleanup: job_state.cleanup.clone(),
+    });
+    if let Err(rollback_error) = recovery::apply_cleanup(job_state, state).await
+    {
+        job_state.rollback_error = Some(install_error_view(
+            InstallPhaseId::RollingBack,
+            &rollback_error,
+            None,
+        ));
+        job_state.record_event(InstallJobEventKind::RollbackFailed {
+            message: rollback_error.to_string(),
+        });
+    } else {
+        job_state.record_event(InstallJobEventKind::RollbackCompleted);
+    }
+    clear_deleted_new_instance_id(job_state);
+    let record = store::update_status(
+        job_id,
+        InstallJobStatus::Canceled,
+        job_state,
+        state,
+    )
+    .await?;
+    emit_install_job(&record.snapshot()).await
+}
+
 async fn run_request(
     job_id: Uuid,
     job_state: &mut InstallJobState,
     state: &State,
-) -> crate::Result<Option<String>> {
+) -> crate::Result<InstallExecutionOutcome<Option<String>>> {
     match job_state.request.clone() {
         InstallRequest::CreateInstance {
             name,
@@ -796,7 +938,7 @@ async fn run_request(
                 Some(reporter),
             )
             .await?;
-            Ok(Some(instance_id))
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::CreateModpackInstance {
             location,
@@ -816,16 +958,20 @@ async fn run_request(
                 modpack_details(&location),
             )
             .await?;
-            install_pack(
-                job_id,
-                job_state,
-                location,
-                instance_id.clone(),
-                DownloadReason::Modpack,
-            )
-            .await?;
+            if let InstallExecutionOutcome::WaitingForUser(reason) =
+                install_pack(
+                    job_id,
+                    job_state,
+                    location,
+                    instance_id.clone(),
+                    DownloadReason::Modpack,
+                )
+                .await?
+            {
+                return Ok(InstallExecutionOutcome::WaitingForUser(reason));
+            }
             apply_post_install_edit(&instance_id, post_install_edit).await?;
-            Ok(Some(instance_id))
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::ImportInstance {
             launcher_type,
@@ -881,7 +1027,7 @@ async fn run_request(
             )
             .await?;
             emit_instance(&instance_id, InstancePayloadType::Edited).await?;
-            Ok(Some(instance_id))
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::DuplicateInstance { source_instance_id } => {
             let Some(instance_id) = current_instance_id(job_state) else {
@@ -924,7 +1070,7 @@ async fn run_request(
             )
             .await?;
             emit_instance(&instance_id, InstancePayloadType::Edited).await?;
-            Ok(Some(instance_id))
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::InstallExistingInstance { instance_id, force } => {
             prepare_existing_rollback(job_state, state, &instance_id).await?;
@@ -951,7 +1097,7 @@ async fn run_request(
                 Some(InstallProgressReporter::new(job_id, job_state.clone())),
             )
             .await?;
-            Ok(Some(instance_id))
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::InstallPackToExistingInstance {
             instance_id,
@@ -959,29 +1105,57 @@ async fn run_request(
             post_install_edit,
         } => {
             prepare_existing_rollback(job_state, state, &instance_id).await?;
-            let disabled_project_ids = remove_existing_pack_content(
-                job_id,
-                job_state,
-                state,
-                &instance_id,
-            )
-            .await?;
-            install_pack(
-                job_id,
-                job_state,
-                location,
-                instance_id.clone(),
-                DownloadReason::Modpack,
-            )
-            .await?;
+            let disabled_project_ids = match job_state.continuation.clone() {
+                Some(InstallContinuationState::InstallingPackToExistingInstance {
+                    disabled_project_ids,
+                }) => disabled_project_ids.into_iter().collect(),
+                None => {
+                    let disabled_project_ids = remove_existing_pack_content(
+                        job_id,
+                        job_state,
+                        state,
+                        &instance_id,
+                    )
+                    .await?;
+                    let mut persisted_ids = disabled_project_ids
+                        .iter()
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    persisted_ids.sort_unstable();
+                    let continuation = InstallContinuationState::InstallingPackToExistingInstance {
+                        disabled_project_ids: persisted_ids,
+                    };
+                    job_state.continuation = Some(continuation.clone());
+                    InstallProgressReporter::new(job_id, job_state.clone())
+                        .set_continuation(Some(continuation))
+                        .await?;
+                    disabled_project_ids
+                }
+            };
+            if let InstallExecutionOutcome::WaitingForUser(reason) =
+                install_pack(
+                    job_id,
+                    job_state,
+                    location,
+                    instance_id.clone(),
+                    DownloadReason::Modpack,
+                )
+                .await?
+            {
+                return Ok(InstallExecutionOutcome::WaitingForUser(reason));
+            }
             restore_disabled_projects(
                 &instance_id,
                 disabled_project_ids,
                 state,
             )
             .await?;
+            job_state.continuation = None;
+            InstallProgressReporter::new(job_id, job_state.clone())
+                .set_continuation(None)
+                .await?;
             apply_post_install_edit(&instance_id, post_install_edit).await?;
-            Ok(Some(instance_id))
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::InstallContent {
             instance_id,
@@ -1043,7 +1217,7 @@ async fn run_request(
                 )
                 .await?;
             crate::api::instance::emit_content_changed(&instance_id).await?;
-            Ok(Some(instance_id))
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::InstallCurseForgeContent {
             request,
@@ -1066,7 +1240,7 @@ async fn run_request(
             )
             .await?;
             crate::api::instance::emit_content_changed(&instance_id).await?;
-            Ok(Some(instance_id))
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::DownloadJava { vendor, version } => {
             update_progress(
@@ -1087,7 +1261,7 @@ async fn run_request(
             )
             .await?;
             let _ = path;
-            Ok(None)
+            Ok(InstallExecutionOutcome::Completed(None))
         }
     }
 }
@@ -1121,7 +1295,7 @@ async fn apply_post_install_edit(
 
 async fn remove_existing_pack_content(
     job_id: Uuid,
-    job_state: &InstallJobState,
+    job_state: &mut InstallJobState,
     state: &State,
     instance_id: &str,
 ) -> crate::Result<HashSet<String>> {
@@ -1144,10 +1318,11 @@ async fn remove_existing_pack_content(
             ..
         } => (content_project_id.clone(), content_version_id.clone()),
         InstanceLink::ImportedModpack { .. } => {
-            remove_existing_imported_pack_content(
-                instance_id,
-                &metadata,
+            recovery::prepare_existing_content_rollback(
+                job_id,
+                job_state,
                 state,
+                Vec::new(),
             )
             .await?;
             return Ok(HashSet::new());
@@ -1187,72 +1362,16 @@ async fn remove_existing_pack_content(
     )
     .await?;
 
-    crate::api::pack::install_mrpack::remove_all_related_files(
-        instance_id.to_string(),
-        old_pack.file,
+    let related_paths = related_file_paths(&old_pack.file).await?;
+    recovery::prepare_existing_content_rollback(
+        job_id,
+        job_state,
+        state,
+        related_paths,
     )
     .await?;
 
     Ok(disabled_project_ids)
-}
-
-async fn remove_existing_imported_pack_content(
-    instance_id: &str,
-    metadata: &crate::state::InstanceMetadata,
-    state: &State,
-) -> crate::Result<()> {
-    let entries = content_rows::get_content_entries(
-        &metadata.applied_content_set.id,
-        &state.pool,
-    )
-    .await?;
-    let files = content_rows::get_instance_files(instance_id, &state.pool)
-        .await?
-        .into_iter()
-        .map(|file| (file.id.clone(), file))
-        .collect::<std::collections::HashMap<_, _>>();
-    let base = state
-        .directories
-        .instances_dir()
-        .join(&metadata.instance.path);
-
-    let mut removed_file_ids = HashSet::new();
-    for entry in entries {
-        if !matches!(
-            entry.source_kind,
-            ContentSourceKind::ImportedModpack
-                | ContentSourceKind::ModrinthModpack
-                | ContentSourceKind::CurseForge
-        ) {
-            continue;
-        }
-
-        let Some(file_id) = entry.file_id else {
-            continue;
-        };
-        if !removed_file_ids.insert(file_id.clone()) {
-            continue;
-        }
-
-        let Some(file) = files.get(&file_id) else {
-            continue;
-        };
-        crate::util::io::remove_file(base.join(&file.relative_path)).await?;
-        content_rows::remove_content_entries_for_file(
-            &metadata.applied_content_set.id,
-            &file.id,
-            &state.pool,
-        )
-        .await?;
-        content_rows::remove_instance_file_by_relative_path(
-            instance_id,
-            &file.relative_path,
-            &state.pool,
-        )
-        .await?;
-    }
-
-    Ok(())
 }
 
 async fn restore_disabled_projects(
@@ -1299,7 +1418,7 @@ async fn install_pack(
     location: CreatePackLocation,
     instance_id: String,
     reason: DownloadReason,
-) -> crate::Result<()> {
+) -> crate::Result<InstallExecutionOutcome<()>> {
     let reporter = InstallProgressReporter::new(job_id, job_state.clone());
     reporter
         .update(
@@ -1381,15 +1500,21 @@ async fn install_pack(
         }
     };
 
-    install_zipped_mrpack_files_with_reporter(
+    let outcome = install_zipped_mrpack_files_with_reporter(
         create_pack,
         false,
         reason,
         reporter,
     )
     .await?;
-
-    Ok(())
+    Ok(match outcome {
+        MrpackInstallOutcome::Completed(_) => {
+            InstallExecutionOutcome::Completed(())
+        }
+        MrpackInstallOutcome::WaitingForUser(reason) => {
+            InstallExecutionOutcome::WaitingForUser(reason)
+        }
+    })
 }
 
 /// Recursively tries to detect and install a modpack, up to max_depth levels.
@@ -1400,7 +1525,7 @@ async fn install_local_pack_file_recursive(
     reporter: InstallProgressReporter,
     current_depth: usize,
     max_depth: usize,
-) -> crate::Result<()> {
+) -> crate::Result<InstallExecutionOutcome<()>> {
     // First try standard detection - this will already include our InstanceFolder fallback
     if let Ok(detected) =
         crate::api::pack::detect::detect_local_pack(&path).await
@@ -1535,7 +1660,7 @@ async fn install_local_pack_file(
     path: PathBuf,
     instance_id: String,
     reporter: InstallProgressReporter,
-) -> crate::Result<()> {
+) -> crate::Result<InstallExecutionOutcome<()>> {
     use crate::api::pack::detect::LocalPackFormat;
 
     let source_filename = path
@@ -1545,13 +1670,23 @@ async fn install_local_pack_file(
         LocalPackFormat::Mrpack => {
             let create_pack =
                 generate_pack_from_file(path, instance_id.clone()).await?;
-            install_zipped_mrpack_files_with_reporter(
-                create_pack,
-                false,
-                DownloadReason::Modpack,
-                reporter,
-            )
-            .await?;
+            return Ok(
+                match install_zipped_mrpack_files_with_reporter(
+                    create_pack,
+                    false,
+                    DownloadReason::Modpack,
+                    reporter,
+                )
+                .await?
+                {
+                    MrpackInstallOutcome::Completed(_) => {
+                        InstallExecutionOutcome::Completed(())
+                    }
+                    MrpackInstallOutcome::WaitingForUser(reason) => {
+                        InstallExecutionOutcome::WaitingForUser(reason)
+                    }
+                },
+            );
         }
         LocalPackFormat::CurseForge => {
             crate::api::curseforge::install_modpack_from_local_archive_with_reporter(
@@ -1691,7 +1826,7 @@ async fn install_local_pack_file(
             .await?;
         }
     }
-    Ok(())
+    Ok(InstallExecutionOutcome::Completed(()))
 }
 
 async fn prepare_existing_rollback(
@@ -1719,6 +1854,7 @@ async fn prepare_existing_rollback(
     job_state.rollback = Some(InstallRollbackState {
         instance,
         install_stage,
+        content: None,
     });
     job_state.cleanup = InstallCleanup::RestoreExistingInstance {
         instance_id: instance_id.to_string(),
@@ -1922,5 +2058,186 @@ mod tests {
             install_error_code(InstallPhaseId::DownloadingMinecraft, &error),
             "network_error"
         );
+    }
+
+    #[test]
+    fn missing_required_content_pauses_without_starting_rollback() {
+        let mut job_state =
+            InstallJobState::new(InstallRequest::DownloadJava {
+                vendor: "test".to_string(),
+                version: 21,
+            });
+        job_state.progress.phase = InstallPhaseId::DownloadingContent;
+        job_state.cleanup = InstallCleanup::DeleteNewInstance {
+            instance_id: Some("same-instance".to_string()),
+        };
+        let cleanup = job_state.cleanup.clone();
+        let reason = InstallPauseReason::MissingRequiredContent {
+            failed_files: 2,
+            paths: vec!["mods/a.jar".to_string(), "mods/b.jar".to_string()],
+        };
+
+        begin_waiting_for_user(&mut job_state, reason.clone());
+
+        assert_eq!(
+            job_state.progress.phase,
+            InstallPhaseId::DownloadingContent
+        );
+        assert_eq!(job_state.pause_reason, Some(reason));
+        assert_eq!(job_state.cleanup, cleanup);
+        assert!(job_state.error.is_none());
+        assert!(job_state.rollback.is_none());
+        assert!(job_state.events.iter().any(|event| matches!(
+            &event.kind,
+            InstallJobEventKind::WaitingForUser { .. }
+        )));
+        assert!(!job_state.events.iter().any(|event| matches!(
+            &event.kind,
+            InstallJobEventKind::RollbackStarted { .. }
+        )));
+    }
+
+    #[test]
+    fn resume_preserves_instance_cleanup_and_existing_pack_checkpoint() {
+        let mut job_state =
+            InstallJobState::new(InstallRequest::DownloadJava {
+                vendor: "test".to_string(),
+                version: 21,
+            });
+        job_state.target = InstallTarget::NewInstance {
+            instance_id: Some("same-instance".to_string()),
+        };
+        job_state.cleanup = InstallCleanup::DeleteNewInstance {
+            instance_id: Some("same-instance".to_string()),
+        };
+        job_state.continuation =
+            Some(InstallContinuationState::InstallingPackToExistingInstance {
+                disabled_project_ids: vec!["project-a".to_string()],
+            });
+        job_state.pause_reason =
+            Some(InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/a.jar".to_string()],
+            });
+        let target = job_state.target.clone();
+        let cleanup = job_state.cleanup.clone();
+        let continuation = job_state.continuation.clone();
+
+        prepare_resumed_job(&mut job_state);
+
+        assert_eq!(job_state.target, target);
+        assert_eq!(job_state.cleanup, cleanup);
+        assert_eq!(job_state.continuation, continuation);
+        assert!(job_state.pause_reason.is_none());
+        assert!(job_state.events.iter().any(|event| matches!(
+            &event.kind,
+            InstallJobEventKind::JobQueued { .. }
+        )));
+    }
+
+    #[test]
+    fn resumed_job_can_pause_again_without_rollback() {
+        let mut job_state =
+            InstallJobState::new(InstallRequest::DownloadJava {
+                vendor: "test".to_string(),
+                version: 21,
+            });
+        job_state.pause_reason =
+            Some(InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/first.jar".to_string()],
+            });
+        prepare_resumed_job(&mut job_state);
+        begin_waiting_for_user(
+            &mut job_state,
+            InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/still-missing.jar".to_string()],
+            },
+        );
+
+        assert!(matches!(
+            job_state.pause_reason,
+            Some(InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                ..
+            })
+        ));
+        assert!(!job_state.events.iter().any(|event| matches!(
+            &event.kind,
+            InstallJobEventKind::RollbackStarted { .. }
+        )));
+    }
+
+    #[test]
+    fn canceling_waiting_jobs_keeps_the_original_cleanup_plan() {
+        for cleanup in [
+            InstallCleanup::DeleteNewInstance {
+                instance_id: Some("new-instance".to_string()),
+            },
+            InstallCleanup::RestoreExistingInstance {
+                instance_id: "existing-instance".to_string(),
+            },
+        ] {
+            let mut job_state =
+                InstallJobState::new(InstallRequest::DownloadJava {
+                    vendor: "test".to_string(),
+                    version: 21,
+                });
+            job_state.cleanup = cleanup.clone();
+            job_state.pause_reason =
+                Some(InstallPauseReason::MissingRequiredContent {
+                    failed_files: 1,
+                    paths: vec!["mods/missing.jar".to_string()],
+                });
+
+            begin_canceling_job(&mut job_state);
+
+            assert_eq!(job_state.cleanup, cleanup);
+            assert!(job_state.pause_reason.is_none());
+            assert_eq!(job_state.progress.phase, InstallPhaseId::RollingBack);
+            assert!(job_state.events.iter().any(|event| matches!(
+                &event.kind,
+                InstallJobEventKind::RollbackStarted {
+                    cleanup: event_cleanup,
+                } if event_cleanup == &cleanup
+            )));
+        }
+    }
+
+    #[test]
+    fn manifest_and_override_errors_remain_fatal() {
+        for (phase, message) in [
+            (
+                InstallPhaseId::ReadingPackManifest,
+                "No pack manifest found in mrpack",
+            ),
+            (InstallPhaseId::ExtractingOverrides, "Invalid override path"),
+        ] {
+            let mut job_state =
+                InstallJobState::new(InstallRequest::DownloadJava {
+                    vendor: "test".to_string(),
+                    version: 21,
+                });
+            job_state.progress.phase = phase;
+            let error: crate::Error =
+                crate::ErrorKind::InputError(message.to_string()).into();
+
+            begin_failed_job_rollback(&mut job_state, &error);
+
+            assert!(job_state.pause_reason.is_none());
+            assert_eq!(job_state.progress.phase, InstallPhaseId::RollingBack);
+            assert!(job_state.events.iter().any(|event| matches!(
+                &event.kind,
+                InstallJobEventKind::Failed {
+                    phase: failed_phase,
+                    ..
+                } if *failed_phase == phase
+            )));
+            assert!(job_state.events.iter().any(|event| matches!(
+                &event.kind,
+                InstallJobEventKind::RollbackStarted { .. }
+            )));
+        }
     }
 }

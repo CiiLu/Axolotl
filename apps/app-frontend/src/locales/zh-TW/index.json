@@ -602,6 +602,15 @@
   "app.downloads.retry": {
     "message": "重試"
   },
+  "app.downloads.retry-missing-files": {
+    "message": "重試缺失檔案"
+  },
+  "app.downloads.action-needed": {
+    "message": "需要操作"
+  },
+  "app.downloads.missing-required-content": {
+    "message": "已完成 {completed} / {total} 個必要檔案，還有 {missing} 個檔案需要補全。"
+  },
   "app.downloads.search": {
     "message": "搜尋下載任務"
   },

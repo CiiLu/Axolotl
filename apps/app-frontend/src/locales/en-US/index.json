@@ -875,6 +875,15 @@
 	"app.downloads.retry": {
 		"message": "Retry"
 	},
+	"app.downloads.retry-missing-files": {
+		"message": "Retry missing files"
+	},
+	"app.downloads.action-needed": {
+		"message": "Action needed"
+	},
+	"app.downloads.missing-required-content": {
+		"message": "{completed} / {total} required files are ready. {missing, plural, one {# file still needs to be downloaded.} other {# files still need to be downloaded.}}"
+	},
 	"app.downloads.search": {
 		"message": "Search downloads"
 	},

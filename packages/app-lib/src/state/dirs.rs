@@ -12,6 +12,7 @@ use tokio::fs;
 pub const CACHES_FOLDER_NAME: &str = "caches";
 pub const LAUNCHER_LOGS_FOLDER_NAME: &str = "launcher_logs";
 pub const INSTANCES_FOLDER_NAME: &str = "profiles";
+pub const INSTALL_ROLLBACKS_FOLDER_NAME: &str = "install-rollbacks";
 pub const METADATA_FOLDER_NAME: &str = "meta";
 
 #[derive(Debug)]
@@ -152,6 +153,11 @@ impl DirectoryInfo {
     #[inline]
     pub fn instances_dir(&self) -> PathBuf {
         self.config_dir.join(INSTANCES_FOLDER_NAME)
+    }
+
+    #[inline]
+    pub fn install_rollbacks_dir(&self) -> PathBuf {
+        self.config_dir.join(INSTALL_ROLLBACKS_FOLDER_NAME)
     }
 
     /// Gets the logs dir for a given instance path

@@ -117,6 +117,12 @@ export interface InstallErrorView {
 	} | null
 }
 
+export type InstallPauseReason = {
+	type: 'missing_required_content'
+	failed_files: number
+	paths: string[]
+}
+
 export interface InstallJobSnapshot {
 	job_id: string
 	instance_id?: string | null
@@ -152,6 +158,7 @@ export interface InstallJobSnapshot {
 	display?: { title: string; icon?: string | null } | null
 	error?: InstallErrorView | null
 	rollback_error?: InstallErrorView | null
+	pause_reason?: InstallPauseReason | null
 	created: string
 	modified: string
 	finished?: string | null
@@ -301,6 +308,10 @@ export async function install_job_retry(jobId: string) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_job_retry', { jobId })
 }
 
+export async function install_job_resume(jobId: string) {
+	return await invoke<InstallJobSnapshot>('plugin:install|install_job_resume', { jobId })
+}
+
 export async function install_job_cancel(jobId: string) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_job_cancel', { jobId })
 }
@@ -323,6 +334,10 @@ export async function download_job_get(jobId: string) {
 
 export async function download_job_retry(jobId: string) {
 	return await invoke<InstallJobSnapshot>('plugin:install|download_job_retry', { jobId })
+}
+
+export async function download_job_resume(jobId: string) {
+	return await invoke<InstallJobSnapshot>('plugin:install|download_job_resume', { jobId })
 }
 
 export async function download_job_cancel(jobId: string) {

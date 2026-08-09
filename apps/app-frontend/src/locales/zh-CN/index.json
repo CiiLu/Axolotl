@@ -656,6 +656,15 @@
 	"app.downloads.retry": {
 		"message": "重试"
 	},
+	"app.downloads.retry-missing-files": {
+		"message": "重试缺失文件"
+	},
+	"app.downloads.action-needed": {
+		"message": "需要操作"
+	},
+	"app.downloads.missing-required-content": {
+		"message": "已完成 {completed} / {total} 个必需文件，还有 {missing} 个文件需要补全。"
+	},
 	"app.downloads.search": {
 		"message": "搜索下载任务"
 	},

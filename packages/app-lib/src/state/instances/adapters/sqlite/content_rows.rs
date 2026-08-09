@@ -1138,6 +1138,104 @@ pub(crate) async fn get_content_provider_refs(
     Ok(refs)
 }
 
+pub(crate) async fn get_content_provider_refs_with_origin(
+    content_entry_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Vec<(ContentProviderRef, bool)>> {
+    let rows = sqlx::query(
+        "SELECT provider, provider_project_id, provider_release_id, is_origin
+         FROM instance_content_provider_refs
+         WHERE content_entry_id = ?
+         ORDER BY provider ASC, provider_project_id ASC",
+    )
+    .bind(content_entry_id)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|row| {
+            let provider = row.try_get::<String, _>("provider")?;
+            let project_id = row.try_get::<String, _>("provider_project_id")?;
+            let release_id =
+                row.try_get::<Option<String>, _>("provider_release_id")?;
+            let origin = row.try_get::<i64, _>("is_origin")? != 0;
+            let provider_ref = ContentProviderRef::from_database(
+                &provider,
+                &project_id,
+                release_id.as_deref(),
+            )?;
+            Ok((provider_ref, origin))
+        })
+        .collect()
+}
+
+pub(crate) async fn restore_content_entry_in_transaction(
+    entry: &ContentEntry,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<()> {
+    sqlx::query(
+        "INSERT INTO instance_content_entries (
+            id, instance_id, content_set_id, file_id, project_type,
+            source_kind, ownership_kind, server_requirement,
+            client_requirement, enabled, added_at, modified_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+            instance_id = excluded.instance_id,
+            content_set_id = excluded.content_set_id,
+            file_id = excluded.file_id,
+            project_type = excluded.project_type,
+            source_kind = excluded.source_kind,
+            ownership_kind = excluded.ownership_kind,
+            server_requirement = excluded.server_requirement,
+            client_requirement = excluded.client_requirement,
+            enabled = excluded.enabled,
+            added_at = excluded.added_at,
+            modified_at = excluded.modified_at",
+    )
+    .bind(&entry.id)
+    .bind(&entry.instance_id)
+    .bind(&entry.content_set_id)
+    .bind(&entry.file_id)
+    .bind(entry.project_type.get_name())
+    .bind(entry.source_kind.as_str())
+    .bind(entry.ownership_kind.as_str())
+    .bind(entry.server_requirement.as_str())
+    .bind(entry.client_requirement.as_str())
+    .bind(i64::from(entry.enabled))
+    .bind(entry.added_at.timestamp())
+    .bind(entry.modified_at.timestamp())
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+pub(crate) async fn restore_content_update_check_in_transaction(
+    check: &ContentUpdateCheck,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<()> {
+    sqlx::query(
+        "INSERT INTO instance_content_update_checks (
+            content_entry_id, update_channel, provider,
+            provider_project_id, provider_release_id, checked_at
+         ) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(content_entry_id) DO UPDATE SET
+            update_channel = excluded.update_channel,
+            provider = excluded.provider,
+            provider_project_id = excluded.provider_project_id,
+            provider_release_id = excluded.provider_release_id,
+            checked_at = excluded.checked_at",
+    )
+    .bind(&check.content_entry_id)
+    .bind(check.update_channel.key())
+    .bind(check.provider.map(ContentProvider::as_str))
+    .bind(&check.provider_project_id)
+    .bind(&check.provider_release_id)
+    .bind(check.checked_at.timestamp())
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
 pub(crate) async fn get_content_origin_provider(
     content_entry_id: &str,
     pool: &SqlitePool,
