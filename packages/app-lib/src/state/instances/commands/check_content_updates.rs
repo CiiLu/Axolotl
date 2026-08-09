@@ -10,7 +10,9 @@ use crate::state::{
 use std::collections::HashMap;
 
 use super::sync_content_files::{
-    modrinth_update_enabled, project_type_for_file, sync_instance_content_files,
+    fetch_content_file_updates, installed_modrinth_version_id,
+    modrinth_update_enabled, project_type_for_file,
+    sync_instance_content_files,
 };
 
 #[derive(Clone, Debug)]
@@ -209,9 +211,14 @@ async fn modrinth_update_candidates(
         let Some(project_type) = project_type_for_file(file) else {
             continue;
         };
+        let provider_refs = context
+            .provider_refs_by_file_id
+            .get(&file.id)
+            .map(Vec::as_slice)
+            .unwrap_or_default();
         let project_id = ModrinthProjectId::new(metadata.project_id.clone())?;
-        let current_version_id =
-            ModrinthVersionId::new(metadata.version_id.clone())?;
+        let current_version_id = installed_modrinth_version_id(provider_refs)
+            .unwrap_or(ModrinthVersionId::new(metadata.version_id.clone())?);
         candidates.push(UpdateCandidate {
             entry: context.entries_by_file_id.get(&file.id).cloned(),
             file: file.clone(),
@@ -258,9 +265,10 @@ async fn resolve_modrinth_updates(
         .iter()
         .map(|key| key.as_str())
         .collect::<Vec<_>>();
-    let updates = CachedEntry::get_file_update_many(
+    let updates = fetch_content_file_updates(
         &update_key_refs,
         cache_behaviour,
+        true,
         &state.pool,
         &state.api_semaphore,
     )

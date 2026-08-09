@@ -2069,24 +2069,19 @@ impl CachedEntry {
 
                             for version in versions {
                                 let version_id = version.id.clone();
-                                let target_hash = version
-                                    .files
-                                    .iter()
-                                    .find(|file| file.primary)
-                                    .or_else(|| version.files.first())
-                                    .and_then(|file| file.hashes.get("sha1"))
-                                    .map(String::as_str);
-
-                                // Some update responses point at a different version ID for the exact installed file.
-                                let same_file =
-                                    target_hash == Some(hash.as_str());
+                                let installed_file_present =
+                                    version.files.iter().any(|file| {
+                                        file.hashes.get("sha1").is_some_and(
+                                            |sha1| sha1 == hash.as_str(),
+                                        )
+                                    });
 
                                 vals.push((
                                     CacheValue::Version(version).get_entry(),
                                     false,
                                 ));
 
-                                if same_file {
+                                if installed_file_present {
                                     continue;
                                 }
 

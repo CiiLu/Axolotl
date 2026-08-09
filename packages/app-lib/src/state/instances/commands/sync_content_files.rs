@@ -2,9 +2,10 @@ use crate::State;
 use crate::state::instances::adapters::{filesystem, sqlite};
 use crate::state::instances::{Instance, InstanceFile};
 use crate::state::{
-    CachedEntry, ContentProvider, ContentProviderRef, ProjectType,
+    CacheBehaviour, CachedEntry, CachedFileUpdate, ContentProvider,
+    ContentProviderRef, ModrinthVersionId, ProjectType,
 };
-use crate::util::fetch;
+use crate::util::fetch::{self, FetchSemaphore};
 use chrono::Utc;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -360,6 +361,55 @@ pub(crate) fn project_type_for_file(
     file: &InstanceFile,
 ) -> Option<ProjectType> {
     filesystem::project_type_from_relative_path(&file.relative_path)
+}
+
+pub(crate) fn installed_modrinth_version_id(
+    provider_refs: &[ContentProviderRef],
+) -> Option<ModrinthVersionId> {
+    provider_refs.iter().find_map(|reference| match reference {
+        ContentProviderRef::Modrinth { version_id, .. } => {
+            version_id.as_ref().cloned()
+        }
+        ContentProviderRef::CurseForge { .. } => None,
+    })
+}
+
+pub(crate) async fn fetch_content_file_updates(
+    update_key_refs: &[&str],
+    cache_behaviour: Option<CacheBehaviour>,
+    refresh: bool,
+    pool: &sqlx::SqlitePool,
+    fetch_semaphore: &FetchSemaphore,
+) -> crate::Result<Vec<CachedFileUpdate>> {
+    let update_behaviour = if refresh {
+        Some(CacheBehaviour::Bypass)
+    } else {
+        cache_behaviour
+    };
+
+    match CachedEntry::get_file_update_many(
+        update_key_refs,
+        update_behaviour,
+        pool,
+        fetch_semaphore,
+    )
+    .await
+    {
+        Ok(updates) => Ok(updates),
+        Err(error) if refresh => {
+            tracing::warn!(
+                "Content update refresh failed, using cached update data: {error}"
+            );
+            CachedEntry::get_file_update_many(
+                update_key_refs,
+                Some(CacheBehaviour::CacheOnly),
+                pool,
+                fetch_semaphore,
+            )
+            .await
+        }
+        Err(error) => Err(error),
+    }
 }
 
 /// Whether a file may receive Modrinth update suggestions.

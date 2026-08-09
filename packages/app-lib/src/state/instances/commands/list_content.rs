@@ -1,5 +1,7 @@
 use super::sync_content_files::{
-    modrinth_update_enabled, project_type_for_file, sync_instance_content_files,
+    fetch_content_file_updates, installed_modrinth_version_id,
+    modrinth_update_enabled, project_type_for_file,
+    sync_instance_content_files,
 };
 use crate::State;
 use crate::pack::install_from::{PackFileHash, PackFormat};
@@ -127,6 +129,7 @@ pub(crate) async fn get_content_projects(
         cache_behaviour,
         state,
         ContentFilter::All,
+        false,
     )
     .await
 }
@@ -339,9 +342,14 @@ pub(crate) async fn list_content(
     } else {
         ContentFilter::All
     };
-    let files =
-        content_projects_for_scope(&resolved, cache_behaviour, state, filter)
-            .await?;
+    let files = content_projects_for_scope(
+        &resolved,
+        cache_behaviour,
+        state,
+        filter,
+        false,
+    )
+    .await?;
     let files = files.into_iter().collect::<Vec<_>>();
 
     content_files_to_content_items(
@@ -356,6 +364,7 @@ pub(crate) async fn list_content(
 pub(crate) async fn list_all_content(
     instance_id: &str,
     cache_behaviour: Option<CacheBehaviour>,
+    refresh_file_updates: bool,
     state: &State,
 ) -> crate::Result<Vec<ContentItem>> {
     let resolved =
@@ -366,6 +375,7 @@ pub(crate) async fn list_all_content(
         cache_behaviour,
         state,
         ContentFilter::All,
+        refresh_file_updates,
     )
     .await?
     .into_iter()
@@ -406,6 +416,7 @@ pub(crate) async fn list_linked_modpack_content(
                 source_kind: ContentSourceKind::ImportedModpack,
                 include_untracked: false,
             },
+            false,
         )
         .await?;
         let files = files.into_iter().collect::<Vec<_>>();
@@ -428,6 +439,7 @@ pub(crate) async fn list_linked_modpack_content(
                 source_kind: ContentSourceKind::CurseForge,
                 include_untracked: false,
             },
+            false,
         )
         .await?;
         let files = files.into_iter().collect::<Vec<_>>();
@@ -463,6 +475,7 @@ pub(crate) async fn list_linked_modpack_content(
         cache_behaviour,
         state,
         ContentFilter::OnlyModpack(&ids),
+        false,
     )
     .await?;
     let files = files.into_iter().collect::<Vec<_>>();
@@ -1151,6 +1164,7 @@ async fn content_projects_for_scope(
     cache_behaviour: Option<CacheBehaviour>,
     state: &State,
     filter: ContentFilter<'_>,
+    refresh_file_updates: bool,
 ) -> crate::Result<DashMap<String, ContentFile>> {
     let files = sync_instance_content_files(&resolved.instance, state).await?;
     let mut entry_maps =
@@ -1186,8 +1200,25 @@ async fn content_projects_for_scope(
         entry_maps =
             load_entry_maps(&resolved.content_set.id, &state.pool).await?;
     }
+    let installed_version_ids_by_hash = files
+        .iter()
+        .filter_map(|file| {
+            let provider_refs = entry_maps
+                .provider_refs_by_file_id
+                .get(&file.id)
+                .map(Vec::as_slice)
+                .unwrap_or_default();
+            installed_modrinth_version_id(provider_refs)
+                .or_else(|| {
+                    file_info_by_hash.get(&file.sha1).and_then(|metadata| {
+                        ModrinthVersionId::new(metadata.version_id.clone()).ok()
+                    })
+                })
+                .map(|version_id| (file.sha1.clone(), version_id))
+        })
+        .collect::<HashMap<_, _>>();
     let installed_channels = get_installed_update_channels(
-        &file_info_by_hash,
+        &installed_version_ids_by_hash,
         cache_behaviour,
         &state.pool,
         &state.api_semaphore,
@@ -1214,9 +1245,10 @@ async fn content_projects_for_scope(
         .collect::<Vec<_>>();
     let update_key_refs =
         update_keys.iter().map(String::as_str).collect::<Vec<_>>();
-    let file_updates = CachedEntry::get_file_update_many(
+    let file_updates = fetch_content_file_updates(
         &update_key_refs,
         cache_behaviour,
+        refresh_file_updates,
         &state.pool,
         &state.api_semaphore,
     )
@@ -1306,28 +1338,29 @@ async fn content_projects_for_scope(
             }
         }
 
-        let update = modrinth_update_enabled(origin_provider, &provider_refs)
-            .then(|| {
-                modrinth_metadata.as_ref().and_then(|metadata| {
-                    let update_ids =
-                        updates_by_hash.remove(&file.sha1).unwrap_or_default();
-                    update_ids
-                        .into_iter()
-                        .find(|update_id| {
-                            update_id != metadata.version_id.as_str()
+        let update = if modrinth_update_enabled(origin_provider, &provider_refs)
+        {
+            modrinth_metadata.as_ref().and_then(|metadata| {
+                let current_version_id =
+                    installed_modrinth_version_id(&provider_refs)
+                        .unwrap_or_else(|| metadata.version_id.clone());
+                let update_ids =
+                    updates_by_hash.remove(&file.sha1).unwrap_or_default();
+                update_ids
+                    .into_iter()
+                    .find(|update_id| update_id != current_version_id.as_str())
+                    .and_then(|target| {
+                        Some(ContentItemUpdate::Modrinth {
+                            project_id: metadata.project_id.clone(),
+                            current_version_id: current_version_id.clone(),
+                            target_version_id: ModrinthVersionId::new(target)
+                                .ok()?,
                         })
-                        .and_then(|target| {
-                            Some(ContentItemUpdate::Modrinth {
-                                project_id: metadata.project_id.clone(),
-                                current_version_id: metadata.version_id.clone(),
-                                target_version_id:
-                                    crate::state::ModrinthVersionId::new(target)
-                                        .ok()?,
-                            })
-                        })
-                })
+                    })
             })
-            .flatten();
+        } else {
+            None
+        };
 
         output.insert(
             file.relative_path.clone(),
@@ -1393,7 +1426,7 @@ async fn reconcile_hash_matched_entries(
                 file_id: Some(&file.id),
                 project_type: *project_type,
                 source_kind: ContentSourceKind::Local,
-                ownership_kind: ContentOwnershipKind::LocalDiscovered,
+                ownership_kind: ContentOwnershipKind::UserAdded,
                 server_requirement: ContentRequirement::Required,
                 client_requirement: ContentRequirement::Required,
                 enabled: file.enabled,
@@ -1426,14 +1459,14 @@ async fn reconcile_hash_matched_entries(
 }
 
 async fn get_installed_update_channels(
-    file_info_by_hash: &HashMap<String, crate::state::ModrinthHashMatch>,
+    installed_version_ids_by_hash: &HashMap<String, ModrinthVersionId>,
     cache_behaviour: Option<CacheBehaviour>,
     pool: &SqlitePool,
     fetch_semaphore: &FetchSemaphore,
 ) -> crate::Result<HashMap<String, ReleaseChannel>> {
-    let version_ids = file_info_by_hash
+    let version_ids = installed_version_ids_by_hash
         .values()
-        .map(|file| file.version_id.as_str())
+        .map(ModrinthVersionId::as_str)
         .collect::<HashSet<_>>();
     if version_ids.is_empty() {
         return Ok(HashMap::new());
@@ -1459,11 +1492,11 @@ async fn get_installed_update_channels(
         })
         .collect::<HashMap<_, _>>();
 
-    Ok(file_info_by_hash
+    Ok(installed_version_ids_by_hash
         .iter()
-        .filter_map(|(hash, file)| {
+        .filter_map(|(hash, version_id)| {
             channels_by_version_id
-                .get(&file.version_id)
+                .get(version_id.as_str())
                 .copied()
                 .map(|channel| (hash.clone(), channel))
         })
@@ -1566,14 +1599,17 @@ async fn content_files_to_content_items(
                 .map(|metadata| metadata.project_id.to_string())
         })
         .collect::<HashSet<_>>();
-    let version_ids = files
-        .iter()
-        .filter_map(|(_, file)| {
-            file.modrinth
-                .as_ref()
-                .map(|metadata| metadata.version_id.to_string())
-        })
-        .collect::<HashSet<_>>();
+    let mut version_ids = HashSet::new();
+    for (_, file) in files {
+        if let Some(metadata) = file.modrinth.as_ref() {
+            version_ids.insert(metadata.version_id.to_string());
+        }
+        if let Some(version_id) =
+            installed_modrinth_version_id(&file.provider_refs)
+        {
+            version_ids.insert(version_id.to_string());
+        }
+    }
     let meta = resolve_metadata(
         &project_ids,
         &version_ids,
@@ -1712,11 +1748,22 @@ async fn content_files_to_content_items(
                     .iter()
                     .find(|project| project.id == metadata.project_id.as_str())
             });
-            let version = file.modrinth.as_ref().and_then(|metadata| {
-                meta.versions
-                    .iter()
-                    .find(|version| version.id == metadata.version_id.as_str())
-            });
+            let installed_version_id =
+                installed_modrinth_version_id(&provider_refs);
+            let version = installed_version_id
+                .as_ref()
+                .and_then(|version_id| {
+                    meta.versions
+                        .iter()
+                        .find(|version| version.id == version_id.as_str())
+                })
+                .or_else(|| {
+                    file.modrinth.as_ref().and_then(|metadata| {
+                        meta.versions.iter().find(|version| {
+                            version.id == metadata.version_id.as_str()
+                        })
+                    })
+                });
             let owner = project.and_then(|project| {
                 resolve_owner(project, &meta.teams, &meta.organizations)
             });
