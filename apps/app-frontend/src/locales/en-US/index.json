@@ -2156,6 +2156,30 @@
 	"app.instances.view-instance": {
 		"message": "View instance"
 	},
+	"app.java-arguments.presets.applied": {
+		"message": "Applied"
+	},
+	"app.java-arguments.presets.arguments": {
+		"message": "Arguments"
+	},
+	"app.java-arguments.presets.auth-mirror.description": {
+		"message": "HTTP forwarding for the Mojang authentication servers hosted by Fallen-Breath."
+	},
+	"app.java-arguments.presets.auth-mirror.title": {
+		"message": "Authentication service mirror"
+	},
+	"app.java-arguments.presets.button": {
+		"message": "Argument presets"
+	},
+	"app.java-arguments.presets.modal-title": {
+		"message": "Java argument presets"
+	},
+	"app.java-arguments.presets.remove": {
+		"message": "Remove preset"
+	},
+	"app.java-arguments.presets.use": {
+		"message": "Use preset"
+	},
 	"app.java-download-confirmation.body": {
 		"message": "No compatible Java {version} installation was found. You can download it now or postpone Java setup while the remaining game resources continue downloading."
 	},
@@ -4865,6 +4889,12 @@
 	"app.settings.resources.modrinth-mirror-description": {
 		"message": "Modrinth public API requests and file downloads."
 	},
+	"app.settings.resources.mojang-auth-service": {
+		"message": "Mojang authentication service"
+	},
+	"app.settings.resources.mojang-auth-service-description": {
+		"message": "Mojang authentication service for logging in and verifying accounts."
+	},
 	"app.settings.resources.open-backups-folder": {
 		"message": "Open backups folder"
 	},
@@ -4885,6 +4915,15 @@
 	},
 	"app.settings.resources.source.mcim": {
 		"message": "Prefer MCIM"
+	},
+	"app.settings.resources.source.mojang-mirror-preferred": {
+		"message": "Prefer Fallen-Proxy"
+	},
+	"app.settings.resources.source.mojang-official-only": {
+		"message": "Official source only"
+	},
+	"app.settings.resources.source.mojang-official-preferred": {
+		"message": "Prefer official source"
 	},
 	"app.settings.resources.source.official-only": {
 		"message": "Original sources only (no mirrors)"

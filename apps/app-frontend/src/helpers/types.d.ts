@@ -211,6 +211,7 @@ type AppSettings = {
 	hide_on_process_start: boolean
 	auto_set_java_high_performance_mode: boolean
 	hooks: Hooks
+	mojang_auth_source: 'auto' | 'official_only' | 'mirror_preferred' | 'official_preferred'
 
 	custom_dir?: string
 	prev_custom_dir?: string

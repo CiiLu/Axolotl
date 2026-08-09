@@ -11,6 +11,7 @@ import {
 import { ref, watch } from 'vue'
 
 import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
+import JavaArgumentsInput from '@/components/ui/JavaArgumentsInput.vue'
 import useMemorySlider from '@/composables/useMemorySlider'
 import { get, set } from '@/helpers/settings.ts'
 
@@ -236,13 +237,10 @@ watch(
 				<h2 class="m-0 text-lg font-semibold text-contrast">
 					{{ formatMessage(messages.javaArguments) }}
 				</h2>
-				<StyledInput
+				<JavaArgumentsInput
 					id="java-args"
 					v-model="settings.launchArgs"
-					autocomplete="off"
-					type="text"
 					:placeholder="formatMessage(messages.javaArgumentsPlaceholder)"
-					wrapper-class="w-full"
 				/>
 			</div>
 

@@ -10,6 +10,7 @@ import {
 import { computed, readonly, ref, watch } from 'vue'
 
 import JavaSelector from '@/components/ui/JavaSelector.vue'
+import JavaArgumentsInput from '@/components/ui/JavaArgumentsInput.vue'
 import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
 import useMemorySlider from '@/composables/useMemorySlider'
 import { edit, get_optimal_jre_key } from '@/helpers/instance'
@@ -212,13 +213,11 @@ watch(
 			:label="formatMessage(messages.customJavaArguments)"
 			class="my-1"
 		/>
-		<StyledInput
+		<JavaArgumentsInput
 			id="java-args"
 			v-model="javaArgs"
-			autocomplete="off"
 			:disabled="!overrideJavaArgs"
 			:placeholder="formatMessage(messages.enterJavaArguments)"
-			wrapper-class="w-full"
 		/>
 
 		<h2 class="mb-1 mt-4 block text-base font-extrabold text-contrast">

@@ -1370,6 +1370,30 @@
 	"app.java.select-version": {
 		"message": "选择 Java 版本"
 	},
+	"app.java-arguments.presets.applied": {
+		"message": "已应用"
+	},
+	"app.java-arguments.presets.arguments": {
+		"message": "参数"
+	},
+	"app.java-arguments.presets.auth-mirror.description": {
+		"message": "来自 Fallen-Breath 搭建的 Mojang 认证服务器 HTTP 转发。"
+	},
+	"app.java-arguments.presets.auth-mirror.title": {
+		"message": "镜像认证服务"
+	},
+	"app.java-arguments.presets.button": {
+		"message": "参数预设"
+	},
+	"app.java-arguments.presets.modal-title": {
+		"message": "Java 参数预设"
+	},
+	"app.java-arguments.presets.remove": {
+		"message": "移除预设"
+	},
+	"app.java-arguments.presets.use": {
+		"message": "使用预设"
+	},
 	"app.java.test-installation": {
 		"message": "测试 Java 安装"
 	},
@@ -2219,6 +2243,12 @@
 	"app.settings.resources.curseforge-mirror-description": {
 		"message": "CurseForge 公共 API 请求和文件下载。"
 	},
+	"app.settings.resources.mojang-auth-service": {
+		"message": "Mojang 认证服务"
+	},
+	"app.settings.resources.mojang-auth-service-description": {
+		"message": "Mojang 的正版登录认证服务，应用于游戏JVM参数。"
+	},
 	"app.settings.resources.concurrency.manual": {
 		"message": "手动"
 	},
@@ -2236,6 +2266,15 @@
 	},
 	"app.settings.resources.source.mcim": {
 		"message": "优先 MCIM"
+	},
+	"app.settings.resources.source.mojang-mirror-preferred": {
+		"message": "优先 Fallen Proxy"
+	},
+	"app.settings.resources.source.mojang-official-only": {
+		"message": "仅官方源"
+	},
+	"app.settings.resources.source.mojang-official-preferred": {
+		"message": "优先官方源"
 	},
 	"app.settings.resources.maximum-downloads": {
 		"message": "最大并发下载数"

@@ -111,6 +111,8 @@ pub struct Settings {
     pub modrinth_source: DownloadSourceMode,
     #[serde(default)]
     pub curseforge_source: DownloadSourceMode,
+    #[serde(default)]
+    pub mojang_auth_source: DownloadSourceMode,
     #[serde(default, rename = "use_minecraft_mirror", skip_serializing)]
     legacy_use_minecraft_mirror: Option<bool>,
     #[serde(default, rename = "use_modrinth_mirror", skip_serializing)]
@@ -205,7 +207,7 @@ impl Settings {
             SELECT
                 max_concurrent_writes, max_concurrent_downloads,
                 auto_concurrent_downloads, minecraft_metadata_source,
-                minecraft_file_source, modrinth_source, curseforge_source,
+                minecraft_file_source, modrinth_source, curseforge_source, mojang_auth_source,
                 theme, locale, default_page, collapsed_navigation, hide_nametag_skins_page, advanced_rendering, native_decorations,
                 discord_rpc, developer_mode, telemetry, personalized_ads,
                 onboarded, onboarding_version, onboarding_instance_tour_completed,
@@ -241,6 +243,9 @@ impl Settings {
             ),
             curseforge_source: DownloadSourceMode::from_string(
                 &res.curseforge_source,
+            ),
+            mojang_auth_source: DownloadSourceMode::from_string(
+                &res.mojang_auth_source,
             ),
             legacy_use_minecraft_mirror: None,
             legacy_use_modrinth_mirror: None,
@@ -353,6 +358,7 @@ impl Settings {
         let minecraft_file_source = self.minecraft_file_source.as_str();
         let modrinth_source = self.modrinth_source.as_str();
         let curseforge_source = self.curseforge_source.as_str();
+        let mojang_auth_source = self.mojang_auth_source.as_str();
         let auto_prefers_mirror = self.auto_prefers_mirror();
         let use_minecraft_mirror = self
             .minecraft_file_source
@@ -431,7 +437,8 @@ impl Settings {
                 home_layout = $54,
                 minimal_home_instance_id = $55,
                 auto_hide_downloads_button = $56,
-                home_widgets = jsonb($57)
+                home_widgets = jsonb($57),
+                mojang_auth_source = $58
             ",
             max_concurrent_writes,
             max_concurrent_downloads,
@@ -490,6 +497,7 @@ impl Settings {
             self.minimal_home_instance_id,
             self.auto_hide_downloads_button,
             home_widgets,
+            mojang_auth_source,
         )
         .execute(exec)
         .await?;
@@ -985,6 +993,27 @@ mod tests {
 
         let reloaded = Settings::get(&pool).await.unwrap();
         assert_eq!(reloaded.home_widgets, Some(expected));
+    }
+
+    #[tokio::test]
+    async fn mojang_auth_source_round_trip_in_a_fresh_database() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+
+        let mut settings = Settings::get(&pool).await.unwrap();
+        assert_eq!(settings.mojang_auth_source, DownloadSourceMode::Auto);
+        settings.mojang_auth_source = DownloadSourceMode::MirrorPreferred;
+        settings.update(&pool).await.unwrap();
+
+        let reloaded = Settings::get(&pool).await.unwrap();
+        assert_eq!(
+            reloaded.mojang_auth_source,
+            DownloadSourceMode::MirrorPreferred
+        );
     }
 
     #[test]

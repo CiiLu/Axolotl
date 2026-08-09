@@ -63,6 +63,7 @@ export type AppSettings = {
 	minecraft_file_source: DownloadSourceMode
 	modrinth_source: DownloadSourceMode
 	curseforge_source: DownloadSourceMode
+	mojang_auth_source: DownloadSourceMode
 
 	theme: ColorTheme
 	accent_color: AccentColorSetting
@@ -143,6 +144,7 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_modrinth_mirror)
 	settings.curseforge_source ??=
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_curseforge_mirror)
+	settings.mojang_auth_source ??= 'auto'
 
 	return settings
 }
