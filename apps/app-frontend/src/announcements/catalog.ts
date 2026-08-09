@@ -41,7 +41,34 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.7.2',
 		},
 		changes: {
-			added: [],
+			added: [
+				{
+					'en-US':
+						'Added JVM argument presets, currently including Fallen’s Mojang authentication service HTTP forwarding.',
+					'zh-CN': '添加了JVM参数预设功能，目前内置Fallen的Mojang认证服务HTTP转发。',
+				},
+				{
+					'en-US':
+						'Added Mojang authentication as a resource mirror configuration to the settings interface, now set to automatic to automatically switch to Fallen’s authentication service when the Mojang authentication service is unavailable. Mitigations include but are not limited to errors such as "Authentication server down" when logging in with a valid account.',
+					'zh-CN':
+						'将Mojang认证作为资源镜像配置添加到设置界面，现在设置为自动即可在Mojang认证服务不可用时自动切换到Fallen的认证服务。缓解包括但不限于正版登录时出现“认证服务器宕机”之类的报错。',
+				},
+				{
+					'en-US':
+						'Added a custom UUID configuration for offline login, along with a UUID copy button to directly copy the UUID.',
+					'zh-CN': '离线登陆可以配置自定义UUID，并且添加了UUID复制按钮，可直接复制UUID。',
+				},
+				{
+					'en-US':
+						'Added a collapse button for ungrouped instances, allowing users to collapse and hide the list of ungrouped instances.',
+					'zh-CN': '为未分组的实例添加了折叠按钮，可以折叠隐藏未分组的实例列表。',
+				},
+				{
+					'en-US':
+						'Added automatic backup of instance settings to the instance folder, allowing users to restore the instance after a database loss.',
+					'zh-CN': '数据库将自动备份实例的设置到实例文件夹，以便在数据库丢失后恢复实例。',
+				},
+			],
 			fixed: [
 				{
 					'en-US':
@@ -67,7 +94,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'修复已安装文件已包含在目标版本中、或当前安装版本被识别错误时，没有新版本却仍显示“可更新”的问题。',
 				},
 			],
-			changed: [],
+			changed: [
+				{
+					'en-US': 'Removed the shadow around the recipe generator background edge',
+					'zh-CN': '移除了配方生成器背景边缘的阴影',
+				},
+			],
 		},
 	},
 	{
