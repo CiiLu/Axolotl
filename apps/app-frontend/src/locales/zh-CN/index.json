@@ -530,6 +530,42 @@
 	"app.downloads.missing-content.no-attempts": {
 		"message": "暂无尝试信息"
 	},
+	"app.downloads.missing-content.automatic-import": {
+		"message": "自动从 Downloads 导入"
+	},
+	"app.downloads.missing-content.checking-downloads": {
+		"message": "正在检查系统 Downloads 文件夹..."
+	},
+	"app.downloads.missing-content.verifying-candidate": {
+		"message": "正在校验下载文件"
+	},
+	"app.downloads.missing-content.verifying-candidate-body": {
+		"message": "正在确认候选文件是否与整合包要求的文件一致。"
+	},
+	"app.downloads.missing-content.watching-downloads": {
+		"message": "正在监控 {path}。匹配文件通过校验后才会导入。"
+	},
+	"app.downloads.missing-content.waiting-for-completion": {
+		"message": "正在等待浏览器完成文件写入..."
+	},
+	"app.downloads.missing-content.downloads-unavailable": {
+		"message": "系统 Downloads 文件夹不可用，仍可手动选择本地文件。"
+	},
+	"app.downloads.missing-content.scanner-failed": {
+		"message": "自动检查失败，仍可手动选择本地文件。"
+	},
+	"app.downloads.missing-content.file-mismatch": {
+		"message": "发现同名候选文件，但它不是整合包要求的文件。"
+	},
+	"app.downloads.missing-content.file-mismatch-title": {
+		"message": "发现同名文件，但文件校验未通过"
+	},
+	"app.downloads.missing-content.file-mismatch-body": {
+		"message": "启动器会继续等待正确文件，你也可以手动选择。"
+	},
+	"app.downloads.missing-content.imported-automatically": {
+		"message": "已自动导入 {count} 个文件，继续检查剩余文件。"
+	},
 	"app.downloads.clear-history": {
 		"message": "清空历史"
 	},
@@ -660,7 +696,7 @@
 		"message": "正在下载内容"
 	},
 	"app.downloads.phase.verifying-downloaded-files": {
-		"message": "正在检查已下载文件"
+		"message": "正在验证并继续安装"
 	},
 	"app.downloads.phase.downloading-minecraft": {
 		"message": "正在下载 Minecraft"

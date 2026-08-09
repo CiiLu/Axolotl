@@ -226,6 +226,17 @@ export interface MissingModpackContentView {
 	}>
 }
 
+export interface MissingModpackScanResult {
+	downloadDirectory?: string | null
+	content: MissingModpackContentView
+	importedItemIds: string[]
+	mismatchedItemIds: string[]
+	checkedCandidates: number
+	pendingCandidates: number
+	errors: Array<{ itemId: string; message: string }>
+	job: InstallJobSnapshot
+}
+
 export type DownloadRequestUpdate =
 	| {
 			type: 'started'
@@ -331,6 +342,13 @@ export async function install_job_missing_files(jobId: string) {
 	return await invoke<MissingModpackContentView>('plugin:install|install_job_missing_files', {
 		jobId,
 	})
+}
+
+export async function install_job_scan_missing_files(jobId: string) {
+	return await invoke<MissingModpackScanResult>(
+		'plugin:install|install_job_scan_missing_files',
+		{ jobId },
+	)
 }
 
 export async function install_job_retry_missing_file(jobId: string, itemId: string) {

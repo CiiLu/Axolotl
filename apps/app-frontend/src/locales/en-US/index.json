@@ -749,6 +749,42 @@
 	"app.downloads.missing-content.no-attempts": {
 		"message": "No attempt information"
 	},
+	"app.downloads.missing-content.automatic-import": {
+		"message": "Automatic import from Downloads"
+	},
+	"app.downloads.missing-content.checking-downloads": {
+		"message": "Checking the system Downloads folder..."
+	},
+	"app.downloads.missing-content.verifying-candidate": {
+		"message": "Verifying downloaded file"
+	},
+	"app.downloads.missing-content.verifying-candidate-body": {
+		"message": "Checking that the candidate matches the file required by the modpack."
+	},
+	"app.downloads.missing-content.watching-downloads": {
+		"message": "Watching {path}. Matching files are verified before import."
+	},
+	"app.downloads.missing-content.waiting-for-completion": {
+		"message": "Waiting for a browser download to finish writing..."
+	},
+	"app.downloads.missing-content.downloads-unavailable": {
+		"message": "The system Downloads folder is unavailable. Choose a local file instead."
+	},
+	"app.downloads.missing-content.scanner-failed": {
+		"message": "Automatic checking failed. Manual file selection is still available."
+	},
+	"app.downloads.missing-content.file-mismatch": {
+		"message": "A similarly named file was found, but it did not match this required file."
+	},
+	"app.downloads.missing-content.file-mismatch-title": {
+		"message": "A same-named file was found, but file verification failed"
+	},
+	"app.downloads.missing-content.file-mismatch-body": {
+		"message": "The launcher will keep waiting for the correct file. You can also choose a local file manually."
+	},
+	"app.downloads.missing-content.imported-automatically": {
+		"message": "{count, plural, one {# file imported automatically} other {# files imported automatically}}. Checking the remaining files."
+	},
 	"app.downloads.clear-history": {
 		"message": "Clear history"
 	},
@@ -879,7 +915,7 @@
 		"message": "Downloading content"
 	},
 	"app.downloads.phase.verifying-downloaded-files": {
-		"message": "Verifying downloaded files"
+		"message": "Verifying files and continuing installation"
 	},
 	"app.downloads.phase.downloading-minecraft": {
 		"message": "Downloading Minecraft"

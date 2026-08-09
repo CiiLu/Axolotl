@@ -10,10 +10,20 @@ use crate::util::fetch::{
     ContentValidation, DownloadRequest, Integrity, ResourceClass,
     download_to_path, verify_file,
 };
+use parking_lot::Mutex;
 use path_util::SafeRelativeUtf8UnixPathBuf;
 use serde::Serialize;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
+use std::time::{Duration, Instant, SystemTime};
 use uuid::Uuid;
+
+const DOWNLOAD_STABILITY_WINDOW: Duration = Duration::from_secs(2);
+const DOWNLOAD_SCAN_CACHE_TTL: Duration = Duration::from_secs(30 * 60);
+
+static DOWNLOAD_SCAN_CACHE: LazyLock<Mutex<DownloadsScanCache>> =
+    LazyLock::new(|| Mutex::new(DownloadsScanCache::default()));
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -35,12 +45,419 @@ pub struct MissingModpackFileView {
     pub max_attempts: Option<u32>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MissingModpackScanResult {
+    pub download_directory: Option<String>,
+    pub content: MissingModpackContentView,
+    pub imported_item_ids: Vec<String>,
+    pub mismatched_item_ids: Vec<String>,
+    pub checked_candidates: usize,
+    pub pending_candidates: usize,
+    pub errors: Vec<MissingModpackScanError>,
+    pub job: InstallJobSnapshot,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MissingModpackScanError {
+    pub item_id: String,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CandidateStamp {
+    size: u64,
+    modified: Option<SystemTime>,
+}
+
+struct CandidateObservation {
+    stamp: CandidateStamp,
+    first_seen: Instant,
+}
+
+#[derive(Default)]
+struct JobDownloadsScanCache {
+    observations: HashMap<PathBuf, CandidateObservation>,
+    rejected: HashMap<(String, PathBuf), CandidateStamp>,
+    last_used: Option<Instant>,
+}
+
+#[derive(Default)]
+struct DownloadsScanCache {
+    jobs: HashMap<Uuid, JobDownloadsScanCache>,
+}
+
+struct MissingFileCandidateSpec {
+    item_id: String,
+    file_name: String,
+    expected_size: u64,
+}
+
+struct StableDownloadCandidate {
+    item_id: String,
+    path: PathBuf,
+    stamp: CandidateStamp,
+}
+
+struct CandidateCollection {
+    stable: Vec<StableDownloadCandidate>,
+    pending: usize,
+}
+
 pub async fn list_missing_modpack_files(
     job_id: Uuid,
 ) -> crate::Result<MissingModpackContentView> {
     let state = State::get().await?;
     let job = waiting_job(job_id, &state).await?;
     Ok(missing_content_view(&job.state)?)
+}
+
+pub async fn scan_missing_modpack_files(
+    job_id: Uuid,
+) -> crate::Result<MissingModpackScanResult> {
+    let state = State::get().await?;
+    let job = waiting_job(job_id, &state).await?;
+    let Some(download_directory) = dirs::download_dir() else {
+        return unavailable_scan_result(job);
+    };
+    if !tokio::fs::metadata(&download_directory)
+        .await
+        .is_ok_and(|metadata| metadata.is_dir())
+    {
+        return unavailable_scan_result(job);
+    }
+    scan_missing_modpack_files_in(job_id, &download_directory).await
+}
+
+fn unavailable_scan_result(
+    job: store::InstallJobRecord,
+) -> crate::Result<MissingModpackScanResult> {
+    Ok(MissingModpackScanResult {
+        download_directory: None,
+        content: missing_content_view(&job.state)?,
+        imported_item_ids: Vec::new(),
+        mismatched_item_ids: Vec::new(),
+        checked_candidates: 0,
+        pending_candidates: 0,
+        errors: Vec::new(),
+        job: job.snapshot(),
+    })
+}
+
+async fn scan_missing_modpack_files_in(
+    job_id: Uuid,
+    download_directory: &Path,
+) -> crate::Result<MissingModpackScanResult> {
+    scan_missing_modpack_files_in_at(job_id, download_directory, Instant::now())
+        .await
+}
+
+async fn scan_missing_modpack_files_in_at(
+    job_id: Uuid,
+    download_directory: &Path,
+    now: Instant,
+) -> crate::Result<MissingModpackScanResult> {
+    let state = State::get().await?;
+    let job = waiting_job(job_id, &state).await?;
+    let specs = pending_candidate_specs(&job.state)?;
+    let candidates =
+        collect_download_candidates(job_id, download_directory, &specs, now)
+            .await?;
+    let pending_candidates = candidates.pending;
+    let mut imported_item_ids = Vec::new();
+    let mut mismatched_item_ids = Vec::new();
+    let mut checked_candidates = 0;
+    let mut errors = Vec::new();
+    let mut handled_items = HashSet::new();
+
+    for candidate in candidates.stable {
+        if handled_items.contains(&candidate.item_id)
+            || candidate_was_rejected(
+                job_id,
+                &candidate.item_id,
+                &candidate.path,
+                &candidate.stamp,
+            )
+        {
+            continue;
+        }
+        let current = store::get_required(job_id, &state).await?;
+        match item_resolution_state(&current, &candidate.item_id) {
+            ItemResolutionState::Resolved => {
+                handled_items.insert(candidate.item_id);
+                continue;
+            }
+            ItemResolutionState::JobResumed => break,
+            ItemResolutionState::Pending => {}
+        }
+        let file = pending_file(&current.state, &candidate.item_id)?.clone();
+        let integrity = required_integrity(&file)?;
+        checked_candidates += 1;
+        if verify_file(&candidate.path, &integrity).await.is_err() {
+            mark_candidate_rejected(
+                job_id,
+                &candidate.item_id,
+                &candidate.path,
+                candidate.stamp,
+            );
+            if !mismatched_item_ids.contains(&candidate.item_id) {
+                mismatched_item_ids.push(candidate.item_id);
+            }
+            continue;
+        }
+
+        match import_missing_modpack_file(
+            job_id,
+            candidate.item_id.clone(),
+            candidate.path.clone(),
+        )
+        .await
+        {
+            Ok(snapshot) => {
+                handled_items.insert(candidate.item_id.clone());
+                imported_item_ids.push(candidate.item_id);
+                if snapshot.status != InstallJobStatus::WaitingForUser {
+                    break;
+                }
+            }
+            Err(error) => {
+                let latest = store::get_required(job_id, &state).await?;
+                match item_resolution_state(&latest, &candidate.item_id) {
+                    ItemResolutionState::Resolved => {
+                        handled_items.insert(candidate.item_id);
+                    }
+                    ItemResolutionState::JobResumed => break,
+                    ItemResolutionState::Pending => {
+                        errors.push(MissingModpackScanError {
+                            item_id: candidate.item_id,
+                            message: user_import_error(&error),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    let latest = store::get_required(job_id, &state).await?;
+    Ok(MissingModpackScanResult {
+        download_directory: Some(
+            download_directory.to_string_lossy().into_owned(),
+        ),
+        content: if latest.state.missing_content.is_some() {
+            missing_content_view(&latest.state)?
+        } else {
+            MissingModpackContentView {
+                remaining: 0,
+                files: Vec::new(),
+            }
+        },
+        imported_item_ids,
+        mismatched_item_ids,
+        checked_candidates,
+        pending_candidates,
+        errors,
+        job: latest.snapshot(),
+    })
+}
+
+fn pending_candidate_specs(
+    job_state: &InstallJobState,
+) -> crate::Result<Vec<MissingFileCandidateSpec>> {
+    let view = missing_content_view(job_state)?;
+    view.files
+        .into_iter()
+        .map(|file| {
+            let file_name = Path::new(&file.path)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .filter(|name| !name.is_empty())
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError(
+                        "Required modpack file has no safe file name"
+                            .to_string(),
+                    )
+                })?;
+            Ok(MissingFileCandidateSpec {
+                item_id: file.item_id,
+                file_name: file_name.to_string(),
+                expected_size: file.expected_size,
+            })
+        })
+        .collect()
+}
+
+async fn collect_download_candidates(
+    job_id: Uuid,
+    download_directory: &Path,
+    specs: &[MissingFileCandidateSpec],
+    now: Instant,
+) -> crate::Result<CandidateCollection> {
+    let mut entries = match tokio::fs::read_dir(download_directory).await {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(CandidateCollection {
+                stable: Vec::new(),
+                pending: 0,
+            });
+        }
+        Err(error) => return Err(error.into()),
+    };
+    let mut discovered = Vec::new();
+    while let Some(entry) = entries.next_entry().await? {
+        let actual_name = entry.file_name().to_string_lossy().into_owned();
+        if crate::util::downloads::is_incomplete_browser_download(&actual_name)
+        {
+            continue;
+        }
+        let matched_specs = specs
+            .iter()
+            .filter(|spec| {
+                crate::util::downloads::browser_download_file_name_matches(
+                    &actual_name,
+                    &spec.file_name,
+                )
+            })
+            .collect::<Vec<_>>();
+        if matched_specs.is_empty() {
+            continue;
+        }
+        let path = entry.path();
+        let metadata = match tokio::fs::symlink_metadata(&path).await {
+            Ok(metadata)
+                if metadata.is_file()
+                    && !crate::util::io::is_symlink_or_reparse(&metadata) =>
+            {
+                metadata
+            }
+            _ => continue,
+        };
+        let stamp = CandidateStamp {
+            size: metadata.len(),
+            modified: metadata.modified().ok(),
+        };
+        for spec in matched_specs {
+            if spec.expected_size == stamp.size {
+                discovered.push(StableDownloadCandidate {
+                    item_id: spec.item_id.clone(),
+                    path: path.clone(),
+                    stamp: stamp.clone(),
+                });
+            }
+        }
+    }
+
+    let mut cache = DOWNLOAD_SCAN_CACHE.lock();
+    cache.jobs.retain(|_, job| {
+        job.last_used.is_some_and(|last_used| {
+            now.saturating_duration_since(last_used) < DOWNLOAD_SCAN_CACHE_TTL
+        })
+    });
+    let job_cache = cache.jobs.entry(job_id).or_default();
+    job_cache.last_used = Some(now);
+    let mut stable = Vec::new();
+    let mut pending_paths = HashSet::new();
+    for candidate in discovered {
+        if candidate_is_stable(
+            job_cache,
+            &candidate.path,
+            &candidate.stamp,
+            now,
+        ) {
+            stable.push(candidate);
+        } else {
+            pending_paths.insert(candidate.path);
+        }
+    }
+    Ok(CandidateCollection {
+        stable,
+        pending: pending_paths.len(),
+    })
+}
+
+fn candidate_is_stable(
+    cache: &mut JobDownloadsScanCache,
+    path: &Path,
+    stamp: &CandidateStamp,
+    now: Instant,
+) -> bool {
+    match cache.observations.get(path) {
+        Some(observation)
+            if observation.stamp == *stamp
+                && now.saturating_duration_since(observation.first_seen)
+                    >= DOWNLOAD_STABILITY_WINDOW =>
+        {
+            true
+        }
+        Some(observation) if observation.stamp == *stamp => false,
+        _ => {
+            cache.observations.insert(
+                path.to_path_buf(),
+                CandidateObservation {
+                    stamp: stamp.clone(),
+                    first_seen: now,
+                },
+            );
+            false
+        }
+    }
+}
+
+fn candidate_was_rejected(
+    job_id: Uuid,
+    item_id: &str,
+    path: &Path,
+    stamp: &CandidateStamp,
+) -> bool {
+    DOWNLOAD_SCAN_CACHE
+        .lock()
+        .jobs
+        .get(&job_id)
+        .and_then(|job| {
+            job.rejected.get(&(item_id.to_string(), path.to_path_buf()))
+        })
+        == Some(stamp)
+}
+
+fn mark_candidate_rejected(
+    job_id: Uuid,
+    item_id: &str,
+    path: &Path,
+    stamp: CandidateStamp,
+) {
+    DOWNLOAD_SCAN_CACHE
+        .lock()
+        .jobs
+        .entry(job_id)
+        .or_default()
+        .rejected
+        .insert((item_id.to_string(), path.to_path_buf()), stamp);
+}
+
+enum ItemResolutionState {
+    Pending,
+    Resolved,
+    JobResumed,
+}
+
+fn item_resolution_state(
+    job: &store::InstallJobRecord,
+    item_id: &str,
+) -> ItemResolutionState {
+    if job.status != InstallJobStatus::WaitingForUser {
+        return ItemResolutionState::JobResumed;
+    }
+    if job.state.download_items().into_iter().any(|item| {
+        item.id == item_id
+            && matches!(
+                item.status,
+                DownloadItemStatus::Completed | DownloadItemStatus::Skipped
+            )
+    }) {
+        ItemResolutionState::Resolved
+    } else {
+        ItemResolutionState::Pending
+    }
 }
 
 pub async fn retry_missing_modpack_file(
@@ -642,6 +1059,149 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn downloads_candidates_are_filtered_and_require_stability() {
+        let directory = tempfile::tempdir().unwrap();
+        let required = directory.path().join("required.bin");
+        let duplicate = directory.path().join("required (1).bin");
+        let incomplete = directory.path().join("required.bin.crdownload");
+        crate::util::io::write(&required, b"required")
+            .await
+            .unwrap();
+        crate::util::io::write(&duplicate, b"mismatch")
+            .await
+            .unwrap();
+        crate::util::io::write(&incomplete, b"required")
+            .await
+            .unwrap();
+        for index in 0..500 {
+            crate::util::io::write(
+                &directory.path().join(format!("unrelated-{index}.jar")),
+                b"required",
+            )
+            .await
+            .unwrap();
+        }
+        let specs = vec![MissingFileCandidateSpec {
+            item_id: "mods/required.bin".to_string(),
+            file_name: "required.bin".to_string(),
+            expected_size: 8,
+        }];
+        let job_id = Uuid::new_v4();
+        let first_seen = Instant::now();
+        let first = collect_download_candidates(
+            job_id,
+            directory.path(),
+            &specs,
+            first_seen,
+        )
+        .await
+        .unwrap();
+        assert!(first.stable.is_empty());
+        assert_eq!(first.pending, 2);
+
+        let stable = collect_download_candidates(
+            job_id,
+            directory.path(),
+            &specs,
+            first_seen + DOWNLOAD_STABILITY_WINDOW,
+        )
+        .await
+        .unwrap();
+        assert_eq!(stable.stable.len(), 2);
+        assert_eq!(stable.pending, 0);
+        assert!(
+            stable
+                .stable
+                .iter()
+                .all(|candidate| candidate.path != incomplete)
+        );
+    }
+
+    #[tokio::test]
+    async fn unavailable_downloads_directory_returns_no_candidates() {
+        let specs = vec![MissingFileCandidateSpec {
+            item_id: "mods/required.bin".to_string(),
+            file_name: "required.bin".to_string(),
+            expected_size: 8,
+        }];
+        let directory = tempfile::tempdir().unwrap();
+        let missing = directory.path().join("not-created");
+        let candidates = collect_download_candidates(
+            Uuid::new_v4(),
+            &missing,
+            &specs,
+            Instant::now(),
+        )
+        .await
+        .unwrap();
+        assert!(candidates.stable.is_empty());
+        assert_eq!(candidates.pending, 0);
+    }
+
+    #[test]
+    fn unchanged_hash_mismatches_are_not_checked_again() {
+        let job_id = Uuid::new_v4();
+        let item_id = "mods/required.bin";
+        let path = PathBuf::from("Downloads/required.bin");
+        let stamp = CandidateStamp {
+            size: 8,
+            modified: Some(SystemTime::UNIX_EPOCH),
+        };
+        mark_candidate_rejected(job_id, item_id, &path, stamp.clone());
+        assert!(candidate_was_rejected(job_id, item_id, &path, &stamp));
+        assert!(!candidate_was_rejected(
+            job_id,
+            item_id,
+            &path,
+            &CandidateStamp {
+                size: 9,
+                modified: stamp.modified,
+            }
+        ));
+    }
+
+    #[test]
+    fn scanner_race_uses_typed_job_and_item_state() {
+        let mut job_state =
+            InstallJobState::new(InstallRequest::CreateModpackInstance {
+                location: CreatePackLocation::FromFile {
+                    path: PathBuf::from("test.mrpack"),
+                },
+                post_install_edit: None,
+            });
+        job_state.record_event(InstallJobEventKind::ContentFileQueued {
+            path: "mods/resolved.bin".to_string(),
+            bytes_total: Some(8),
+            max_attempts: 2,
+        });
+        job_state.record_event(InstallJobEventKind::ContentFileRecovered {
+            path: "mods/resolved.bin".to_string(),
+            bytes: 8,
+        });
+        let now = chrono::Utc::now();
+        let mut record = store::InstallJobRecord {
+            id: Uuid::new_v4(),
+            instance_id: Some("instance".to_string()),
+            kind: job_state.request.kind(),
+            status: InstallJobStatus::WaitingForUser,
+            state: job_state,
+            created: now,
+            modified: now,
+            finished: None,
+            dismissed: false,
+        };
+        assert!(matches!(
+            item_resolution_state(&record, "mods/resolved.bin"),
+            ItemResolutionState::Resolved
+        ));
+        record.status = InstallJobStatus::Running;
+        assert!(matches!(
+            item_resolution_state(&record, "mods/resolved.bin"),
+            ItemResolutionState::JobResumed
+        ));
+    }
+
+    #[tokio::test]
     async fn import_api_trusts_persisted_job_context_and_keeps_other_missing_files_waiting()
      {
         crate::event::EventState::init().await.unwrap();
@@ -776,13 +1336,49 @@ mod tests {
         crate::util::io::write(&target, b"bad-target")
             .await
             .unwrap();
-        let snapshot = import_missing_modpack_file(
+        let race_downloads = root.join("RaceDownloads");
+        crate::util::io::create_dir_all(&race_downloads)
+            .await
+            .unwrap();
+        crate::util::io::write(&race_downloads.join("one.bin"), first_bytes)
+            .await
+            .unwrap();
+        let first_seen = Instant::now();
+        let race_specs = vec![MissingFileCandidateSpec {
+            item_id: first.item_id.clone(),
+            file_name: "one.bin".to_string(),
+            expected_size: first.expected_size,
+        }];
+        let observed = collect_download_candidates(
             job_id,
-            first.item_id.clone(),
-            selected,
+            &race_downloads,
+            &race_specs,
+            first_seen,
         )
         .await
         .unwrap();
+        assert_eq!(observed.pending, 1);
+        let (scan_result, manual_result) = tokio::join!(
+            scan_missing_modpack_files_in_at(
+                job_id,
+                &race_downloads,
+                first_seen + DOWNLOAD_STABILITY_WINDOW,
+            ),
+            import_missing_modpack_file(
+                job_id,
+                first.item_id.clone(),
+                selected,
+            )
+        );
+        let scan_result = scan_result.unwrap();
+        assert!(
+            manual_result.is_ok()
+                || scan_result.imported_item_ids == vec![first.item_id.clone()]
+        );
+        let snapshot = store::get_required(job_id, &state)
+            .await
+            .unwrap()
+            .snapshot();
         assert_eq!(snapshot.status, InstallJobStatus::WaitingForUser);
         assert_eq!(crate::util::io::read(&target).await.unwrap(), first_bytes);
         assert_eq!(
@@ -831,6 +1427,89 @@ mod tests {
         assert_eq!(
             crate::util::io::read(&second_target).await.unwrap(),
             b"keep-this-bad-target"
+        );
+
+        let downloads = root.join("Downloads");
+        crate::util::io::create_dir_all(&downloads).await.unwrap();
+        crate::util::io::write(&downloads.join("two.bin"), b"wrong--two!!")
+            .await
+            .unwrap();
+        crate::util::io::write(
+            &downloads.join("two.bin.crdownload"),
+            second_bytes,
+        )
+        .await
+        .unwrap();
+        let first_seen = Instant::now();
+        let first_scan =
+            scan_missing_modpack_files_in_at(job_id, &downloads, first_seen)
+                .await
+                .unwrap();
+        assert!(first_scan.imported_item_ids.is_empty());
+        assert_eq!(first_scan.pending_candidates, 1);
+
+        let wrong_scan = scan_missing_modpack_files_in_at(
+            job_id,
+            &downloads,
+            first_seen + DOWNLOAD_STABILITY_WINDOW,
+        )
+        .await
+        .unwrap();
+        assert!(wrong_scan.imported_item_ids.is_empty());
+        assert_eq!(
+            wrong_scan.mismatched_item_ids,
+            vec![second.item_id.clone()]
+        );
+        assert_eq!(wrong_scan.checked_candidates, 1);
+        assert_eq!(wrong_scan.job.status, InstallJobStatus::WaitingForUser);
+        assert_eq!(
+            crate::util::io::read(&second_target).await.unwrap(),
+            b"keep-this-bad-target"
+        );
+
+        crate::util::io::write(&downloads.join("two (1).bin"), second_bytes)
+            .await
+            .unwrap();
+        let new_candidate_scan = scan_missing_modpack_files_in_at(
+            job_id,
+            &downloads,
+            first_seen + DOWNLOAD_STABILITY_WINDOW,
+        )
+        .await
+        .unwrap();
+        assert!(new_candidate_scan.imported_item_ids.is_empty());
+        assert_eq!(new_candidate_scan.pending_candidates, 1);
+        assert_eq!(new_candidate_scan.checked_candidates, 0);
+
+        let completed_scan = scan_missing_modpack_files_in_at(
+            job_id,
+            &downloads,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 2,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            completed_scan.imported_item_ids,
+            vec![second.item_id.clone()]
+        );
+        assert!(completed_scan.checked_candidates <= 2);
+        assert_ne!(completed_scan.job.status, InstallJobStatus::WaitingForUser);
+        assert_eq!(
+            crate::util::io::read(&second_target).await.unwrap(),
+            second_bytes
+        );
+        let resumed = store::get_required(job_id, &state).await.unwrap();
+        assert_eq!(
+            resumed
+                .state
+                .events
+                .iter()
+                .filter(|event| matches!(
+                    event.kind,
+                    InstallJobEventKind::JobQueued { .. }
+                ))
+                .count(),
+            2
         );
     }
 }

@@ -8,9 +8,10 @@ pub mod store;
 
 pub use events::InstallProgressReporter;
 pub use missing_content::{
-    MissingModpackContentView, MissingModpackFileView,
-    import_missing_modpack_file, list_missing_modpack_files,
-    retry_missing_modpack_file,
+    MissingModpackContentView, MissingModpackFileView, MissingModpackScanError,
+    MissingModpackScanResult, import_missing_modpack_file,
+    list_missing_modpack_files, retry_missing_modpack_file,
+    scan_missing_modpack_files,
 };
 pub use model::{
     DownloadItemSnapshot, DownloadItemStatus, DownloadJobSummary,

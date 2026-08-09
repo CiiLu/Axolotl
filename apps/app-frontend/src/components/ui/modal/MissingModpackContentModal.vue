@@ -3,6 +3,7 @@
 		ref="modal"
 		:header="formatMessage(messages.header)"
 		:fade="remaining > 0 ? 'warning' : 'standard'"
+		:on-hide="stopScanning"
 		max-width="760px"
 		scrollable
 	>
@@ -20,14 +21,30 @@
 					<CheckIcon v-else-if="remaining === 0" class="size-5 text-green" />
 					<DownloadIcon v-else class="size-5" />
 				</template>
-				{{
-					continuing
-						? formatMessage(messages.continuingBody)
-						: formatMessage(messages.body)
-				}}
+				{{ continuing ? formatMessage(messages.continuingBody) : formatMessage(messages.body) }}
 			</Admonition>
 
-			<div v-if="files.length" class="flex flex-col overflow-hidden rounded-lg border border-surface-5">
+			<Admonition
+				v-if="!continuing && remaining > 0"
+				:type="scannerPresentation.phase === 'rejected' ? 'warning' : 'info'"
+				:header="scannerHeader"
+			>
+				<template #icon>
+					<SpinnerIcon
+						v-if="
+							scannerPresentation.phase === 'scanning' || scannerPresentation.phase === 'verifying'
+						"
+						class="size-5 animate-spin"
+					/>
+					<FolderSearchIcon v-else class="size-5" />
+				</template>
+				{{ scannerStatus }}
+			</Admonition>
+
+			<div
+				v-if="files.length"
+				class="flex flex-col overflow-hidden rounded-lg border border-surface-5"
+			>
 				<div
 					v-for="file in files"
 					:key="file.itemId"
@@ -37,7 +54,9 @@
 						<div class="min-w-0">
 							<div class="break-all font-medium text-contrast">{{ file.path }}</div>
 							<div class="mt-1 flex flex-wrap gap-2 text-sm text-secondary">
-								<span>{{ formatMessage(messages.expectedSize, { size: formatBytes(file.expectedSize) }) }}</span>
+								<span>{{
+									formatMessage(messages.expectedSize, { size: formatBytes(file.expectedSize) })
+								}}</span>
 								<span>·</span>
 								<span>{{ attemptText(file) }}</span>
 								<span v-if="file.browserUrls.length > 1">·</span>
@@ -50,6 +69,9 @@
 							</div>
 							<div v-if="file.lastError" class="mt-1 text-sm text-red">
 								{{ file.lastError }}
+							</div>
+							<div v-if="scannerItemStatus(file.itemId)" class="mt-1 text-sm text-orange">
+								{{ scannerItemStatus(file.itemId) }}
 							</div>
 						</div>
 						<Badge :color="statusColor(file.status)" :type="statusLabel(file.status)" />
@@ -97,6 +119,7 @@ import {
 	CheckIcon,
 	DownloadIcon,
 	ExternalIcon,
+	FolderSearchIcon,
 	RefreshCwIcon,
 	SpinnerIcon,
 	UploadIcon,
@@ -116,12 +139,18 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onUnmounted, ref } from 'vue'
 
+import {
+	createDownloadsScanLoop,
+	createDownloadsScannerPresentationState,
+	reduceDownloadsScannerPresentation,
+} from '@/helpers/downloads-scanner'
 import { install_job_listener } from '@/helpers/events'
 import {
 	install_job_import_missing_file,
 	install_job_missing_files,
 	install_job_resume,
 	install_job_retry_missing_file,
+	install_job_scan_missing_files,
 	type InstallJobSnapshot,
 	type MissingModpackContentView,
 } from '@/helpers/install'
@@ -137,10 +166,36 @@ const content = ref<MissingModpackContentView>({ remaining: 0, files: [] })
 const loading = ref(false)
 const continuing = ref(false)
 const busy = ref(new Set<string>())
+const scannerPresentation = ref(createDownloadsScannerPresentationState())
+const scannerErrors = ref(new Map<string, string>())
 let unlisten: (() => void) | null = null
 
 const files = computed(() => content.value.files)
 const remaining = computed(() => content.value.remaining)
+const scannerHeader = computed(() => {
+	if (scannerPresentation.value.phase === 'rejected') {
+		return formatMessage(messages.fileMismatchTitle)
+	}
+	if (scannerPresentation.value.phase === 'verifying') {
+		return formatMessage(messages.verifyingCandidate)
+	}
+	return formatMessage(messages.automaticImport)
+})
+const scannerStatus = computed(() => {
+	const state = scannerPresentation.value
+	if (state.phase === 'verifying') return formatMessage(messages.verifyingCandidateBody)
+	if (state.phase === 'waiting_for_stability') return formatMessage(messages.waitingForCompletion)
+	if (state.phase === 'rejected') return formatMessage(messages.fileMismatchBody)
+	if (state.phase === 'scanning') return formatMessage(messages.checkingDownloads)
+	if (state.phase === 'imported') {
+		return formatMessage(messages.importedAutomatically, { count: state.importedCount })
+	}
+	if (state.phase === 'error') return formatMessage(messages.scannerFailed)
+	if (state.phase === 'watching' && state.downloadDirectory) {
+		return formatMessage(messages.watchingDownloads, { path: state.downloadDirectory })
+	}
+	return formatMessage(messages.downloadsUnavailable)
+})
 
 const messages = defineMessages({
 	header: { id: 'app.downloads.missing-content.header', defaultMessage: 'Complete missing files' },
@@ -150,7 +205,8 @@ const messages = defineMessages({
 	},
 	remaining: {
 		id: 'app.downloads.missing-content.remaining',
-		defaultMessage: '{count, plural, one {# file still needs to be completed} other {# files still need to be completed}}',
+		defaultMessage:
+			'{count, plural, one {# file still needs to be completed} other {# files still need to be completed}}',
 	},
 	continuing: {
 		id: 'app.downloads.missing-content.continuing',
@@ -158,7 +214,8 @@ const messages = defineMessages({
 	},
 	continuingBody: {
 		id: 'app.downloads.missing-content.continuing-body',
-		defaultMessage: 'All required files are ready. The launcher is verifying them again and continuing installation.',
+		defaultMessage:
+			'All required files are ready. The launcher is verifying them again and continuing installation.',
 	},
 	expectedSize: {
 		id: 'app.downloads.missing-content.expected-size',
@@ -189,6 +246,56 @@ const messages = defineMessages({
 		id: 'app.downloads.missing-content.no-attempts',
 		defaultMessage: 'No attempt information',
 	},
+	automaticImport: {
+		id: 'app.downloads.missing-content.automatic-import',
+		defaultMessage: 'Automatic import from Downloads',
+	},
+	checkingDownloads: {
+		id: 'app.downloads.missing-content.checking-downloads',
+		defaultMessage: 'Checking the system Downloads folder...',
+	},
+	verifyingCandidate: {
+		id: 'app.downloads.missing-content.verifying-candidate',
+		defaultMessage: 'Verifying downloaded file',
+	},
+	verifyingCandidateBody: {
+		id: 'app.downloads.missing-content.verifying-candidate-body',
+		defaultMessage: 'Checking that the candidate matches the file required by the modpack.',
+	},
+	watchingDownloads: {
+		id: 'app.downloads.missing-content.watching-downloads',
+		defaultMessage: 'Watching {path}. Matching files are verified before import.',
+	},
+	waitingForCompletion: {
+		id: 'app.downloads.missing-content.waiting-for-completion',
+		defaultMessage: 'Waiting for a browser download to finish writing...',
+	},
+	downloadsUnavailable: {
+		id: 'app.downloads.missing-content.downloads-unavailable',
+		defaultMessage: 'The system Downloads folder is unavailable. Choose a local file instead.',
+	},
+	scannerFailed: {
+		id: 'app.downloads.missing-content.scanner-failed',
+		defaultMessage: 'Automatic checking failed. Manual file selection is still available.',
+	},
+	fileMismatch: {
+		id: 'app.downloads.missing-content.file-mismatch',
+		defaultMessage: 'A similarly named file was found, but it did not match this required file.',
+	},
+	fileMismatchTitle: {
+		id: 'app.downloads.missing-content.file-mismatch-title',
+		defaultMessage: 'A same-named file was found, but file verification failed',
+	},
+	fileMismatchBody: {
+		id: 'app.downloads.missing-content.file-mismatch-body',
+		defaultMessage:
+			'The launcher will keep waiting for the correct file. You can also choose a local file manually.',
+	},
+	importedAutomatically: {
+		id: 'app.downloads.missing-content.imported-automatically',
+		defaultMessage:
+			'{count, plural, one {# file imported automatically} other {# files imported automatically}}. Checking the remaining files.',
+	},
 })
 
 const statusMessages = defineMessages({
@@ -200,9 +307,52 @@ const statusMessages = defineMessages({
 	queued: { id: 'app.downloads.status.queued', defaultMessage: 'Queued' },
 })
 
+const scanner = createDownloadsScanLoop({
+	scan: async () => {
+		if (!jobId.value) throw new Error('Missing install job ID')
+		return await install_job_scan_missing_files(jobId.value)
+	},
+	onResult: (result) => {
+		content.value = result.content
+		scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+			type: 'scan_result',
+			downloadDirectory: result.downloadDirectory ?? null,
+			importedItemIds: result.importedItemIds,
+			mismatchedItemIds: result.mismatchedItemIds,
+			pendingCandidates: result.pendingCandidates,
+			hasErrors: result.errors.length > 0,
+			items: result.content.files.map((file) => ({ id: file.itemId, status: file.status })),
+		})
+		scannerErrors.value = new Map(result.errors.map((error) => [error.itemId, error.message]))
+		for (const itemId of result.importedItemIds) {
+			scannerErrors.value.delete(itemId)
+		}
+		if (result.job.status !== 'waiting_for_user') {
+			continuing.value = true
+			stopScanning()
+		}
+	},
+	onError: () => {
+		scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+			type: 'scan_failed',
+		})
+	},
+	onScanningChange: (value) => {
+		scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+			type: value ? 'scan_started' : 'scan_finished',
+		})
+	},
+	intervalMs: 3000,
+})
+
 async function show(job: InstallJobSnapshot) {
+	stopScanning()
 	jobId.value = job.job_id
 	continuing.value = false
+	scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+		type: 'reset',
+	})
+	scannerErrors.value = new Map()
 	content.value = {
 		remaining: job.items.filter((item) => item.status === 'failed').length,
 		files: [],
@@ -212,17 +362,38 @@ async function show(job: InstallJobSnapshot) {
 	if (!unlisten) {
 		unlisten = await install_job_listener((update: InstallJobSnapshot) => {
 			if (update.job_id !== jobId.value) return
-			if (update.status === 'waiting_for_user') void refresh()
-			else if (update.status === 'queued' || update.status === 'running') continuing.value = true
+			if (update.status === 'waiting_for_user') {
+				scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+					type: 'items_updated',
+					items: update.items,
+				})
+				void refresh()
+			} else if (update.status === 'queued' || update.status === 'running') {
+				continuing.value = true
+				stopScanning()
+			}
 		})
 	}
+	scanner.start()
+}
+
+function stopScanning() {
+	scanner.stop()
+	scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+		type: 'reset',
+	})
 }
 
 async function refresh() {
 	if (!jobId.value || continuing.value) return
 	loading.value = true
 	try {
-		content.value = await install_job_missing_files(jobId.value)
+		const nextContent = await install_job_missing_files(jobId.value)
+		content.value = nextContent
+		scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+			type: 'items_updated',
+			items: nextContent.files.map((file) => ({ id: file.itemId, status: file.status })),
+		})
 	} catch (error) {
 		handleError(error)
 	} finally {
@@ -234,8 +405,21 @@ async function runItem(itemId: string, action: () => Promise<InstallJobSnapshot>
 	busy.value = new Set([...busy.value, itemId])
 	try {
 		const job = await action()
+		if (
+			job.status !== 'waiting_for_user' ||
+			job.items.some((item) => item.id === itemId && item.status === 'completed')
+		) {
+			scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+				type: 'items_resolved',
+				itemIds: [itemId],
+			})
+			scannerErrors.value.delete(itemId)
+		}
 		if (job.status === 'waiting_for_user') await refresh()
-		else continuing.value = true
+		else {
+			continuing.value = true
+			stopScanning()
+		}
 	} catch (error) {
 		handleError(error)
 		await refresh()
@@ -278,6 +462,7 @@ async function retryAll() {
 	try {
 		await install_job_resume(jobId.value)
 		continuing.value = true
+		stopScanning()
 	} catch (error) {
 		handleError(error)
 	} finally {
@@ -295,6 +480,14 @@ async function openBrowser(url: string) {
 
 function isBusy(itemId: string) {
 	return busy.value.has(itemId)
+}
+
+function scannerItemStatus(itemId: string) {
+	if (scannerErrors.value.has(itemId)) return scannerErrors.value.get(itemId)
+	if (scannerPresentation.value.rejectedItemIds.includes(itemId)) {
+		return formatMessage(messages.fileMismatch)
+	}
+	return null
 }
 
 function attemptText(file: MissingFile) {
@@ -315,7 +508,10 @@ function statusColor(status: MissingFile['status']): 'green' | 'red' | 'orange' 
 	return 'blue'
 }
 
-onUnmounted(() => unlisten?.())
+onUnmounted(() => {
+	stopScanning()
+	unlisten?.()
+})
 
 defineExpose({ show })
 </script>

@@ -25,6 +25,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             install_job_retry,
             install_job_resume,
             install_job_missing_files,
+            install_job_scan_missing_files,
             install_job_retry_missing_file,
             install_job_import_missing_file,
             install_job_cancel,
@@ -207,6 +208,13 @@ pub async fn install_job_missing_files(
     job_id: Uuid,
 ) -> Result<theseus::install::MissingModpackContentView> {
     Ok(theseus::install::list_missing_modpack_files(job_id).await?)
+}
+
+#[tauri::command]
+pub async fn install_job_scan_missing_files(
+    job_id: Uuid,
+) -> Result<theseus::install::MissingModpackScanResult> {
+    Ok(theseus::install::scan_missing_modpack_files(job_id).await?)
 }
 
 #[tauri::command]

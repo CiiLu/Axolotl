@@ -498,7 +498,7 @@ const messages = defineMessages({
 	downloadSource: { id: 'app.downloads.download-source', defaultMessage: 'Source: {source}' },
 	verifyingDownloadedFiles: {
 		id: 'app.downloads.phase.verifying-downloaded-files',
-		defaultMessage: 'Verifying downloaded files',
+		defaultMessage: 'Verifying files and continuing installation',
 	},
 	pendingVerification: {
 		id: 'app.downloads.item-status.pending-verification',

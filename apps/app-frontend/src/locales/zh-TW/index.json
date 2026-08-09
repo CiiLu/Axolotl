@@ -500,6 +500,42 @@
   "app.downloads.missing-content.no-attempts": {
     "message": "暫無嘗試資訊"
   },
+  "app.downloads.missing-content.automatic-import": {
+    "message": "自動從 Downloads 匯入"
+  },
+  "app.downloads.missing-content.checking-downloads": {
+    "message": "正在檢查系統 Downloads 資料夾..."
+  },
+  "app.downloads.missing-content.verifying-candidate": {
+    "message": "正在驗證下載檔案"
+  },
+  "app.downloads.missing-content.verifying-candidate-body": {
+    "message": "正在確認候選檔案是否與整合包要求的檔案一致。"
+  },
+  "app.downloads.missing-content.watching-downloads": {
+    "message": "正在監控 {path}。匹配檔案通過驗證後才會匯入。"
+  },
+  "app.downloads.missing-content.waiting-for-completion": {
+    "message": "正在等待瀏覽器完成檔案寫入..."
+  },
+  "app.downloads.missing-content.downloads-unavailable": {
+    "message": "系統 Downloads 資料夾無法使用，仍可手動選擇本機檔案。"
+  },
+  "app.downloads.missing-content.scanner-failed": {
+    "message": "自動檢查失敗，仍可手動選擇本機檔案。"
+  },
+  "app.downloads.missing-content.file-mismatch": {
+    "message": "發現同名候選檔案，但它不是整合包要求的檔案。"
+  },
+  "app.downloads.missing-content.file-mismatch-title": {
+    "message": "發現同名檔案，但檔案驗證未通過"
+  },
+  "app.downloads.missing-content.file-mismatch-body": {
+    "message": "啟動器會繼續等待正確檔案，你也可以手動選擇。"
+  },
+  "app.downloads.missing-content.imported-automatically": {
+    "message": "已自動匯入 {count} 個檔案，繼續檢查剩餘檔案。"
+  },
   "app.downloads.clear-history": {
     "message": "清除歷史紀錄"
   },
@@ -606,7 +642,7 @@
     "message": "正在下載內容"
   },
   "app.downloads.phase.verifying-downloaded-files": {
-    "message": "正在檢查已下載檔案"
+    "message": "正在驗證並繼續安裝"
   },
   "app.downloads.phase.downloading-minecraft": {
     "message": "正在下載 Minecraft"
