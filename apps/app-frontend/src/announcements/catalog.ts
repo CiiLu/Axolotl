@@ -48,6 +48,24 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the issue of Chinese encoding parsing errors in the Location header returned by mirror sites.',
 					'zh-CN': '修复了镜像站返回Location 头中中文编码方式解析错误的问题。',
 				},
+				{
+					'en-US':
+						'Fixed the issue of database records for renamed files being lost during migration, now automatically merging and migrating records based on hash, and rebuilding ownership based on Modrinth hash when original ownership is lost.',
+					'zh-CN':
+						'现在会自动按照hash合并、迁移重命名文件的数据库记录，在原归属丢失时依据 Modrinth hash 重建归属。',
+				},
+				{
+					'en-US':
+						'Fixed update checks for mods and other instance content using a permanent cache, so newly published updates could stay hidden even after refreshing; refreshing now rechecks the latest versions.',
+					'zh-CN':
+						'修复实例中模组等内容的更新检查使用永久缓存，发布新版本后刷新仍不显示的问题；现在刷新会重新检查最新版本。',
+				},
+				{
+					'en-US':
+						'Fixed false "update available" badges when the installed file was already included in the target version or the installed version was identified incorrectly.',
+					'zh-CN':
+						'修复已安装文件已包含在目标版本中、或当前安装版本被识别错误时，没有新版本却仍显示“可更新”的问题。',
+				},
 			],
 			changed: [],
 		},
