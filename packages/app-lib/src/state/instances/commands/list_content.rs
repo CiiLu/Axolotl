@@ -5,7 +5,8 @@ use crate::State;
 use crate::pack::install_from::{PackFileHash, PackFormat};
 use crate::state::instances::adapters::sqlite;
 use crate::state::instances::{
-    ContentSet, ContentSourceKind, Instance, InstanceInstallCandidate,
+    ContentEntry, ContentOwnershipKind, ContentRequirement, ContentSet,
+    ContentSourceKind, Instance, InstanceFile, InstanceInstallCandidate,
     InstanceInstallTarget, InstanceLink,
 };
 use crate::state::{
@@ -30,6 +31,53 @@ use std::path::{Component, Path};
 struct ResolvedContentScope {
     instance: Instance,
     content_set: ContentSet,
+}
+
+struct EntryMaps {
+    entries_by_file_id: HashMap<String, ContentEntry>,
+    provider_refs_by_file_id: HashMap<String, Vec<ContentProviderRef>>,
+    origin_provider_by_file_id: HashMap<String, ContentProvider>,
+}
+
+async fn load_entry_maps(
+    content_set_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<EntryMaps> {
+    let entries =
+        sqlite::content_rows::get_content_entries(content_set_id, pool).await?;
+    let entries_by_file_id = entries
+        .iter()
+        .filter_map(|entry| {
+            entry
+                .file_id
+                .as_ref()
+                .map(|file_id| (file_id.clone(), entry.clone()))
+        })
+        .collect::<HashMap<_, _>>();
+    let mut provider_refs_by_file_id = HashMap::new();
+    let mut origin_provider_by_file_id = HashMap::new();
+    for entry in &entries {
+        let Some(file_id) = entry.file_id.as_deref() else {
+            continue;
+        };
+        provider_refs_by_file_id.insert(
+            file_id.to_string(),
+            sqlite::content_rows::get_content_provider_refs(&entry.id, pool)
+                .await?,
+        );
+        if let Some(origin) =
+            sqlite::content_rows::get_content_origin_provider(&entry.id, pool)
+                .await?
+        {
+            origin_provider_by_file_id.insert(file_id.to_string(), origin);
+        }
+    }
+
+    Ok(EntryMaps {
+        entries_by_file_id,
+        provider_refs_by_file_id,
+        origin_provider_by_file_id,
+    })
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1105,40 +1153,8 @@ async fn content_projects_for_scope(
     filter: ContentFilter<'_>,
 ) -> crate::Result<DashMap<String, ContentFile>> {
     let files = sync_instance_content_files(&resolved.instance, state).await?;
-    let entries = sqlite::content_rows::get_content_entries(
-        &resolved.content_set.id,
-        &state.pool,
-    )
-    .await?;
-    let entries_by_file_id = entries
-        .iter()
-        .filter_map(|entry| {
-            entry.file_id.as_deref().map(|file_id| (file_id, entry))
-        })
-        .collect::<HashMap<_, _>>();
-    let mut provider_refs_by_file_id = HashMap::new();
-    let mut origin_provider_by_file_id = HashMap::new();
-    for entry in &entries {
-        let Some(file_id) = entry.file_id.as_deref() else {
-            continue;
-        };
-        provider_refs_by_file_id.insert(
-            file_id.to_string(),
-            sqlite::content_rows::get_content_provider_refs(
-                &entry.id,
-                &state.pool,
-            )
-            .await?,
-        );
-        if let Some(origin) = sqlite::content_rows::get_content_origin_provider(
-            &entry.id,
-            &state.pool,
-        )
-        .await?
-        {
-            origin_provider_by_file_id.insert(file_id.to_string(), origin);
-        }
-    }
+    let mut entry_maps =
+        load_entry_maps(&resolved.content_set.id, &state.pool).await?;
     let hashes = files
         .iter()
         .map(|file| file.sha1.as_str())
@@ -1154,6 +1170,22 @@ async fn content_projects_for_scope(
         .into_iter()
         .map(|file| (file.hash.clone(), file))
         .collect::<HashMap<_, _>>();
+    let reconciled = if matches!(filter, ContentFilter::All) {
+        reconcile_hash_matched_entries(
+            resolved,
+            &files,
+            &file_info_by_hash,
+            &entry_maps,
+            state,
+        )
+        .await?
+    } else {
+        false
+    };
+    if reconciled {
+        entry_maps =
+            load_entry_maps(&resolved.content_set.id, &state.pool).await?;
+    }
     let installed_channels = get_installed_update_channels(
         &file_info_by_hash,
         cache_behaviour,
@@ -1207,14 +1239,14 @@ async fn content_projects_for_scope(
             continue;
         };
         let metadata = file_info_by_hash.get(&file.sha1).cloned();
-        let entry = entries_by_file_id.get(file.id.as_str()).copied();
-        let provider_refs = provider_refs_by_file_id
+        let entry = entry_maps.entries_by_file_id.get(&file.id);
+        let provider_refs = entry_maps
+            .provider_refs_by_file_id
             .get(&file.id)
             .cloned()
             .unwrap_or_default();
-        let origin_provider = entry
-            .and_then(|_| origin_provider_by_file_id.get(&file.id))
-            .copied();
+        let origin_provider =
+            entry_maps.origin_provider_by_file_id.get(&file.id).copied();
         let modrinth_metadata = metadata.as_ref().and_then(modrinth_file_match);
 
         match filter {
@@ -1318,6 +1350,79 @@ async fn content_projects_for_scope(
     }
 
     Ok(output)
+}
+
+async fn reconcile_hash_matched_entries(
+    resolved: &ResolvedContentScope,
+    files: &[InstanceFile],
+    file_info_by_hash: &HashMap<String, crate::state::ModrinthHashMatch>,
+    entry_maps: &EntryMaps,
+    state: &State,
+) -> crate::Result<bool> {
+    let candidates = files
+        .iter()
+        .filter_map(|file| {
+            if file.missing
+                || entry_maps.entries_by_file_id.contains_key(&file.id)
+            {
+                return None;
+            }
+            let metadata = file_info_by_hash.get(&file.sha1)?;
+            let project_type = project_type_for_file(file)?;
+            Some((file, metadata, project_type))
+        })
+        .collect::<Vec<_>>();
+    if candidates.is_empty() {
+        return Ok(false);
+    }
+
+    let _instance_lock =
+        state.lock_instance_content(&resolved.instance.id).await;
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+    sqlite::content_rows::ensure_content_write_parents(
+        &resolved.instance.id,
+        &resolved.content_set.id,
+        &mut tx,
+    )
+    .await?;
+    for (file, metadata, project_type) in &candidates {
+        let entry = sqlite::content_rows::upsert_content_entry_from_parts_in_transaction(
+            sqlite::content_rows::UpsertContentEntry {
+                instance_id: &resolved.instance.id,
+                content_set_id: &resolved.content_set.id,
+                file_id: Some(&file.id),
+                project_type: *project_type,
+                source_kind: ContentSourceKind::Local,
+                ownership_kind: ContentOwnershipKind::LocalDiscovered,
+                server_requirement: ContentRequirement::Required,
+                client_requirement: ContentRequirement::Required,
+                enabled: file.enabled,
+            },
+            &mut tx,
+        )
+        .await?;
+        let provider_ref = ContentProviderRef::Modrinth {
+            project_id: ModrinthProjectId::new(metadata.project_id.clone())?,
+            version_id: Some(ModrinthVersionId::new(
+                metadata.version_id.clone(),
+            )?),
+        };
+        sqlite::content_rows::upsert_content_provider_ref_in_transaction(
+            &entry.id,
+            &provider_ref,
+            true,
+            &mut tx,
+        )
+        .await?;
+    }
+    sqlite::content_rows::bump_content_set_revision_in_transaction(
+        &resolved.content_set.id,
+        &mut tx,
+    )
+    .await?;
+    tx.commit().await?;
+
+    Ok(true)
 }
 
 async fn get_installed_update_channels(
