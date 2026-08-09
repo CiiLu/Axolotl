@@ -284,6 +284,43 @@ impl ZipEntrySet {
         })
     }
 
+    /// Whether `axolotl_config.json` exists under `base`.
+    fn has_axolotl_config(&self, base: &str) -> bool {
+        self.has_file(base, "axolotl_config.json")
+    }
+
+    /// Whether direct child folders under `base` look like version folders
+    /// (`<id>/<id>.json`). A base folder named `versions`, at least two
+    /// matching children, or a matching child with the same-name `.jar`
+    /// makes the classification specific enough to avoid false positives.
+    fn has_direct_version_json(&self, base: &str) -> bool {
+        let mut matching: Vec<String> = Vec::new();
+        for child in self.child_folders(base) {
+            let child_base = format!("{base}{child}/");
+            if self.has_file(&child_base, &format!("{child}.json")) {
+                matching.push(child);
+            }
+        }
+        if matching.is_empty() {
+            return false;
+        }
+        let base_name = base
+            .trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or_default();
+        if base_name.eq_ignore_ascii_case("versions") {
+            return true;
+        }
+        if matching.len() >= 2 {
+            return true;
+        }
+        matching.iter().any(|child| {
+            let child_base = format!("{base}{child}/");
+            self.has_file(&child_base, &format!("{child}.jar"))
+        })
+    }
+
     /// Whether `instances/<id>/instance.cfg` exists under `base`
     /// (MultiMC / Prism launcher instance marker).
     fn has_mmc_instance(&self, base: &str) -> bool {
@@ -322,6 +359,7 @@ impl ZipEntrySet {
         for child in self.child_folders(base) {
             let child_base = format!("{base}{child}/");
             if self.has_version_json(&child_base)
+                || self.has_direct_version_json(&child_base)
                 || self.has_mods_jar(&child_base)
                 || self.has_root_jar_and_json(&child_base)
             {
@@ -545,7 +583,9 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
     // 2. Compressed instances / `.minecraft`. Checked before the content
     //    markers because instances embed resource packs, shader packs and
     //    worlds.
-    let launcher_type = if entries.has_file(base, "multimc.cfg") {
+    let launcher_type = if entries.has_axolotl_config(base) {
+        Some(ImportLauncherType::Axolotl)
+    } else if entries.has_file(base, "multimc.cfg") {
         Some(ImportLauncherType::MultiMC)
     } else if entries.has_file(base, "prismlauncher.cfg") {
         Some(ImportLauncherType::PrismLauncher)
@@ -554,6 +594,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
     {
         Some(ImportLauncherType::MultiMC)
     } else if entries.has_version_json(base)
+        || entries.has_direct_version_json(base)
         || entries.has_mods_jar(base)
         || entries.has_root_jar_and_json(base)
     {
@@ -1122,6 +1163,14 @@ fn classify_jar(path: &Path) -> DroppedItemType {
 
 fn classify_folder(path: &Path) -> DroppedItemType {
     // Check launcher signatures in priority order.
+    if path.join("axolotl_config.json").is_file() {
+        return DroppedItemType::Launcher {
+            launcher_type: ImportLauncherType::Axolotl,
+            base_path: path.to_path_buf(),
+            inner_base: None,
+        };
+    }
+
     if path.join("multimc.cfg").exists() {
         return DroppedItemType::Launcher {
             launcher_type: ImportLauncherType::MultiMC,
@@ -1195,6 +1244,14 @@ fn classify_file(path: &Path) -> DroppedItemType {
 // ─── Step 7: Content-type detection for folders/extracted ZIPs ─────────────
 
 pub(crate) fn classify_folder_content(path: &Path) -> DroppedItemType {
+    if path.join("axolotl_config.json").is_file() {
+        return DroppedItemType::Launcher {
+            launcher_type: ImportLauncherType::Axolotl,
+            base_path: path.to_path_buf(),
+            inner_base: None,
+        };
+    }
+
     if let Some(result) = classify_world_save_folder(path) {
         return result;
     }
@@ -1259,6 +1316,7 @@ fn classify_shader_pack_folder(path: &Path) -> Option<DroppedItemType> {
 /// - `.jar` files in `mods/` (bare instance folder)
 fn is_launcher_instance_folder(path: &Path) -> bool {
     has_version_json(path)
+        || has_direct_version_json(path)
         || (has_root_jar(path) && has_root_json(path))
         || has_mods_jar(path)
 }
@@ -1296,6 +1354,48 @@ fn has_version_json(path: &Path) -> bool {
             false
         }
     }
+}
+
+/// Whether direct child folders of `path` look like version folders
+/// (`<id>/<id>.json`). A folder named `versions`, at least two matching
+/// children, or a matching child with the same-name `.jar` makes the
+/// classification specific enough to avoid false positives.
+fn has_direct_version_json(path: &Path) -> bool {
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return false;
+    };
+    let mut matching: Vec<PathBuf> = Vec::new();
+    for entry in entries.flatten() {
+        let child = entry.path();
+        if !child.is_dir() {
+            continue;
+        }
+        let Some(id) = child.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if child.join(format!("{id}.json")).is_file() {
+            matching.push(child);
+        }
+    }
+    if matching.is_empty() {
+        return false;
+    }
+    if path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("versions"))
+    {
+        return true;
+    }
+    if matching.len() >= 2 {
+        return true;
+    }
+    matching.iter().any(|child| {
+        child
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|id| child.join(format!("{id}.jar")).is_file())
+    })
 }
 
 /// Whether the directory contains a file with the given extension.
