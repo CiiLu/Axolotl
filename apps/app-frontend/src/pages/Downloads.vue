@@ -178,8 +178,8 @@
 							</button>
 						</ButtonStyled>
 						<ButtonStyled v-if="job.status === 'waiting_for_user'" color="brand" size="small">
-							<button :disabled="busy.has(job.job_id)" @click="resume(job)">
-								<RefreshCwIcon />{{ formatMessage(messages.retryMissingFiles) }}
+							<button :disabled="busy.has(job.job_id)" @click="resolveMissing(job)">
+								<DownloadIcon />{{ formatMessage(messages.completeMissingFiles) }}
 							</button>
 						</ButtonStyled>
 						<ButtonStyled v-if="job.error" type="outlined" size="small">
@@ -342,6 +342,7 @@
 		:proceed-label="formatMessage(messages.clearHistory)"
 		@proceed="clearHistory"
 	/>
+	<MissingModpackContentModal ref="missingContentModal" />
 </template>
 
 <script setup lang="ts">
@@ -385,6 +386,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import MissingModpackContentModal from '@/components/ui/modal/MissingModpackContentModal.vue'
 import {
 	download_job_support_details,
 	type InstallJobSnapshot,
@@ -409,6 +411,7 @@ const historyStatus = ref('all')
 const expanded = ref(new Set<string>())
 const busy = ref(new Set<string>())
 const clearHistoryModal = ref<InstanceType<typeof ConfirmModal>>()
+const missingContentModal = ref<InstanceType<typeof MissingModpackContentModal>>()
 
 const messages = defineMessages({
 	newDownload: { id: 'app.downloads.new-download', defaultMessage: 'New download' },
@@ -426,9 +429,9 @@ const messages = defineMessages({
 	},
 	cancel: { id: 'app.downloads.cancel', defaultMessage: 'Cancel' },
 	retry: { id: 'app.downloads.retry', defaultMessage: 'Retry' },
-	retryMissingFiles: {
-		id: 'app.downloads.retry-missing-files',
-		defaultMessage: 'Retry missing files',
+	completeMissingFiles: {
+		id: 'app.downloads.complete-missing-files',
+		defaultMessage: 'Complete missing files',
 	},
 	actionNeeded: { id: 'app.downloads.action-needed', defaultMessage: 'Action needed' },
 	missingRequiredContent: {
@@ -919,8 +922,8 @@ async function retry(job: InstallJobSnapshot) {
 	await withBusy(job.job_id, () => manager.retry(job.job_id))
 }
 
-async function resume(job: InstallJobSnapshot) {
-	await withBusy(job.job_id, () => manager.resume(job.job_id))
+async function resolveMissing(job: InstallJobSnapshot) {
+	await missingContentModal.value?.show(job)
 }
 
 async function remove(job: InstallJobSnapshot) {

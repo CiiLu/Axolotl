@@ -53,6 +53,8 @@ pub struct InstallJobState {
     pub pause_reason: Option<InstallPauseReason>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub continuation: Option<InstallContinuationState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub missing_content: Option<MissingModpackContentState>,
 }
 
 impl InstallJobState {
@@ -85,6 +87,7 @@ impl InstallJobState {
             rollback_error: None,
             pause_reason: None,
             continuation: None,
+            missing_content: None,
         }
     }
 
@@ -720,6 +723,20 @@ pub enum InstallJobEventKind {
         bytes_total: Option<u64>,
         max_attempts: u32,
     },
+    ContentFileBrowserOptions {
+        path: String,
+        urls: Vec<String>,
+    },
+    ContentFileVerificationStarted {
+        path: String,
+    },
+    ContentFileWritingStarted {
+        path: String,
+    },
+    ContentFileRecovered {
+        path: String,
+        bytes: u64,
+    },
     ContentFileDownloadAttempt {
         path: String,
         bytes_total: Option<u64>,
@@ -1299,6 +1316,25 @@ pub struct InstallRollbackProviderRef {
     pub origin: bool,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct MissingModpackContentState {
+    pub files: Vec<MissingModpackFileState>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MissingModpackFileState {
+    pub item_id: String,
+    pub manifest_path: String,
+    pub target_path: String,
+    pub expected_size: u64,
+    pub sha1: Option<String>,
+    pub sha512: Option<String>,
+    pub download_urls: Vec<String>,
+    pub browser_urls: Vec<String>,
+    #[serde(default)]
+    pub validate_as_jar: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InstallErrorView {
     pub code: String,
@@ -1484,6 +1520,44 @@ impl InstallJobState {
                         });
                     }
                 }
+                InstallJobEventKind::ContentFileBrowserOptions {
+                    path,
+                    urls,
+                } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.manual_url = urls.first().cloned();
+                    }
+                }
+                InstallJobEventKind::ContentFileVerificationStarted {
+                    path,
+                } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.status = DownloadItemStatus::Verifying;
+                        item.error = None;
+                    }
+                }
+                InstallJobEventKind::ContentFileWritingStarted { path } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.status = DownloadItemStatus::Writing;
+                        item.error = None;
+                    }
+                }
+                InstallJobEventKind::ContentFileRecovered { path, bytes } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.status = DownloadItemStatus::Completed;
+                        item.bytes_downloaded = *bytes;
+                        item.bytes_total = item.bytes_total.or(Some(*bytes));
+                        item.error = None;
+                    }
+                }
                 InstallJobEventKind::ContentFileDownloadAttempt {
                     path,
                     bytes_total,
@@ -1649,7 +1723,6 @@ impl InstallJobState {
                         item.project_id = project_id.clone();
                         item.version_id = version_id.clone();
                         item.error = Some(reason.clone());
-                        item.manual_url = None;
                     } else {
                         items.push(DownloadItemSnapshot {
                             id: path.clone(),
@@ -1739,6 +1812,10 @@ impl InstallJobState {
                 }
                 InstallJobEventKind::ContentFileCompleted { bytes, .. } => {
                     summary.files_completed += 1;
+                    summary.bytes_downloaded =
+                        summary.bytes_downloaded.saturating_add(*bytes);
+                }
+                InstallJobEventKind::ContentFileRecovered { bytes, .. } => {
                     summary.bytes_downloaded =
                         summary.bytes_downloaded.saturating_add(*bytes);
                 }

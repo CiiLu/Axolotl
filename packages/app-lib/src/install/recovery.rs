@@ -426,7 +426,7 @@ async fn user_owned_paths(
         .collect())
 }
 
-fn checked_instance_path(
+pub(crate) fn checked_instance_path(
     instance_base: &Path,
     relative_path: &str,
 ) -> crate::Result<PathBuf> {
@@ -440,7 +440,7 @@ fn checked_instance_path(
                 if crate::util::io::is_symlink_or_reparse(&metadata) =>
             {
                 return Err(crate::ErrorKind::FSError(format!(
-                    "Rollback path crosses a symlink or reparse point: {relative_path}"
+                    "Instance path crosses a symlink or reparse point: {relative_path}"
                 ))
                 .into());
             }

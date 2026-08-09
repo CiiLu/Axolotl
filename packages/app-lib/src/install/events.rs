@@ -1,8 +1,8 @@
 use super::model::{
     ActiveDownloadState, DownloadItemStatus, InstallContinuationState,
     InstallErrorContext, InstallJobEventKind, InstallJobSnapshot,
-    InstallJobState, InstallPhaseDetails, InstallPhaseId, InstallProgress,
-    InstallRollbackState,
+    InstallJobState, InstallPauseReason, InstallPhaseDetails, InstallPhaseId,
+    InstallProgress, InstallRollbackState, MissingModpackContentState,
 };
 use super::store;
 use chrono::Utc;
@@ -244,6 +244,48 @@ impl InstallProgressReporter {
             store::update_state(self.job_id, &state.job, &app_state).await?;
         state.mark_persisted();
         emit_install_job(&record.snapshot()).await
+    }
+
+    pub async fn set_missing_content(
+        &self,
+        missing_content: Option<MissingModpackContentState>,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        state.job.missing_content = missing_content;
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
+    }
+
+    pub async fn record_events(
+        &self,
+        events: Vec<InstallJobEventKind>,
+    ) -> crate::Result<InstallJobSnapshot> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        let refresh_missing_reason = events.iter().any(|event| {
+            matches!(
+                event,
+                InstallJobEventKind::ContentFileRecovered { .. }
+                    | InstallJobEventKind::ContentFileFailed { .. }
+            )
+        });
+        for event in events {
+            state.job.record_event(event);
+        }
+        if refresh_missing_reason {
+            refresh_missing_pause_reason(&mut state.job);
+        }
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        let snapshot = record.snapshot();
+        emit_install_job(&snapshot).await?;
+        Ok(snapshot)
     }
 
     pub(crate) async fn set_rollback(
@@ -680,6 +722,34 @@ impl InstallProgressReporter {
         }
         Ok(())
     }
+}
+
+fn refresh_missing_pause_reason(job: &mut InstallJobState) {
+    if !matches!(
+        job.pause_reason,
+        Some(InstallPauseReason::MissingRequiredContent { .. })
+    ) {
+        return;
+    }
+    let Some(content) = &job.missing_content else {
+        return;
+    };
+    let items = job.download_items();
+    let paths = content
+        .files
+        .iter()
+        .filter(|file| {
+            items.iter().any(|item| {
+                item.id == file.item_id
+                    && item.status == DownloadItemStatus::Failed
+            })
+        })
+        .map(|file| file.item_id.clone())
+        .collect::<Vec<_>>();
+    job.pause_reason = Some(InstallPauseReason::MissingRequiredContent {
+        failed_files: paths.len() as u64,
+        paths,
+    });
 }
 
 impl InstallProgressReporterState {

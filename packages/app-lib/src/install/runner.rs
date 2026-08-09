@@ -728,6 +728,7 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
             job_state.rollback_error = None;
             job_state.pause_reason = None;
             job_state.continuation = None;
+            job_state.missing_content = None;
             job_state.context = None;
             let record = store::update_status(
                 job_id,

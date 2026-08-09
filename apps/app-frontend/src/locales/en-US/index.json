@@ -707,6 +707,48 @@
 	"app.downloads.cancel": {
 		"message": "Cancel"
 	},
+	"app.downloads.complete-missing-files": {
+		"message": "Complete missing files"
+	},
+	"app.downloads.missing-content.header": {
+		"message": "Complete missing files"
+	},
+	"app.downloads.missing-content.body": {
+		"message": "Each local file is verified before it can replace the required instance file."
+	},
+	"app.downloads.missing-content.remaining": {
+		"message": "{count, plural, one {# file still needs to be completed} other {# files still need to be completed}}"
+	},
+	"app.downloads.missing-content.continuing": {
+		"message": "Continuing installation"
+	},
+	"app.downloads.missing-content.continuing-body": {
+		"message": "All required files are ready. The launcher is verifying them again and continuing installation."
+	},
+	"app.downloads.missing-content.expected-size": {
+		"message": "Expected size: {size}"
+	},
+	"app.downloads.missing-content.fallbacks": {
+		"message": "{count} fallback links"
+	},
+	"app.downloads.missing-content.retry": {
+		"message": "Retry download"
+	},
+	"app.downloads.missing-content.retry-all": {
+		"message": "Retry all missing files"
+	},
+	"app.downloads.missing-content.browser-download": {
+		"message": "Browser download"
+	},
+	"app.downloads.missing-content.choose-file": {
+		"message": "Choose local file"
+	},
+	"app.downloads.missing-content.attempts": {
+		"message": "Attempt {attempt}/{max}"
+	},
+	"app.downloads.missing-content.no-attempts": {
+		"message": "No attempt information"
+	},
 	"app.downloads.clear-history": {
 		"message": "Clear history"
 	},

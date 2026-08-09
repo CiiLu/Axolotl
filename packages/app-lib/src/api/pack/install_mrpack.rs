@@ -4,7 +4,9 @@ use crate::api::content_search::{
     original_content_relative_path,
 };
 use crate::event::emit::loading_try_for_each_concurrent;
-use crate::install::model::InstallPauseReason;
+use crate::install::model::{
+    InstallPauseReason, MissingModpackContentState, MissingModpackFileState,
+};
 use crate::install::{
     InstallErrorContext, InstallJobEventKind, InstallPhaseDetails,
     InstallPhaseId, InstallProgress, InstallProgressReporter,
@@ -21,8 +23,9 @@ use crate::state::{
     Settings, SideType,
 };
 use crate::util::fetch::{
-    DownloadMeta, DownloadReason, DownloadRequest, FetchProgressFn, Integrity,
-    ResourceClass, download_to_path, sha1_file_async,
+    ContentValidation, DownloadMeta, DownloadReason, DownloadRequest,
+    FetchProgressFn, Integrity, ResourceClass, download_to_path,
+    sha1_file_async,
 };
 use crate::util::io;
 use async_zip::base::read::seek::ZipFileReader as SeekZipFileReader;
@@ -847,6 +850,17 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
             max_attempts: estimated_file_max_attempts(file) as u32,
         }
     }));
+    queued_events.extend(pack.files.iter().filter_map(|file| {
+        let urls = crate::install::missing_content::browser_download_urls(
+            &file.downloads,
+        );
+        (!urls.is_empty()).then(|| {
+            InstallJobEventKind::ContentFileBrowserOptions {
+                path: content_context.resolve_install_path(file),
+                urls,
+            }
+        })
+    }));
     reporter
         .update_with_events(
             InstallPhaseId::DownloadingContent,
@@ -863,6 +877,38 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
             modpack_details.clone(),
             queued_events,
         )
+        .await?;
+    reporter
+        .set_missing_content(Some(MissingModpackContentState {
+            files: pack
+                .files
+                .iter()
+                .map(|file| {
+                    let target_path =
+                        content_context.resolve_install_path(file);
+                    MissingModpackFileState {
+                        item_id: target_path.clone(),
+                        manifest_path: file.path.as_str().to_string(),
+                        target_path,
+                        expected_size: file.file_size as u64,
+                        sha1: file.hashes.get(&PackFileHash::Sha1).cloned(),
+                        sha512: file
+                            .hashes
+                            .get(&PackFileHash::Sha512)
+                            .cloned(),
+                        download_urls: file.downloads.clone(),
+                        browser_urls: crate::install::missing_content::browser_download_urls(
+                            &file.downloads,
+                        ),
+                        validate_as_jar: file
+                            .path
+                            .as_str()
+                            .to_ascii_lowercase()
+                            .ends_with(".jar"),
+                    }
+                })
+                .collect(),
+        }))
         .await?;
     reporter
         .track_rollback_paths(
@@ -1003,12 +1049,49 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         .hashes
                         .get(&PackFileHash::Sha512)
                         .cloned(),
+                    content: if project
+                        .path
+                        .as_str()
+                        .to_ascii_lowercase()
+                        .ends_with(".jar")
+                    {
+                        ContentValidation::Jar
+                    } else {
+                        ContentValidation::None
+                    },
                     ..Integrity::default()
                 };
+								// ===== TEST ONLY: Stage 3 GUI validation =====
+								let inject_stage3_failure =
+										project_path.contains("AmbientSounds");
+
+								let primary_url = if inject_stage3_failure {
+										tracing::warn!(
+												path = %project_path,
+												"TEST ONLY: injecting Stage 3 missing-content failure"
+										);
+
+										"https://127.0.0.1:9/axolotl-stage3-forced-failure.jar"
+								} else {
+										primary_url.as_str()
+								};
+
+								let candidate_urls = if inject_stage3_failure {
+										Vec::new()
+								} else {
+										project
+												.downloads
+												.iter()
+												.skip(1)
+												.cloned()
+												.collect::<Vec<_>>()
+								};
+								// ===== END TEST ONLY =====
                 let download = match download_to_path(
                     DownloadRequest::new(primary_url, ResourceClass::Modpack)
                         .with_candidate_urls(
-                            project.downloads.iter().skip(1).cloned(),
+                            // project.downloads.iter().skip(1).cloned(),
+														candidate_urls //TEST ONLY
                         )
                         .with_integrity(integrity)
                         .with_download_meta(

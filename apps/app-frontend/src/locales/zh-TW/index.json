@@ -458,6 +458,48 @@
   "app.downloads.cancel": {
     "message": "取消"
   },
+  "app.downloads.complete-missing-files": {
+    "message": "補全缺失檔案"
+  },
+  "app.downloads.missing-content.header": {
+    "message": "補全缺失檔案"
+  },
+  "app.downloads.missing-content.body": {
+    "message": "本機檔案必須通過完整性驗證，才能取代實例中的目標檔案。"
+  },
+  "app.downloads.missing-content.remaining": {
+    "message": "還有 {count} 個檔案需要補全"
+  },
+  "app.downloads.missing-content.continuing": {
+    "message": "正在繼續安裝"
+  },
+  "app.downloads.missing-content.continuing-body": {
+    "message": "全部必要檔案已就緒。啟動器正在重新驗證並繼續安裝。"
+  },
+  "app.downloads.missing-content.expected-size": {
+    "message": "預期大小：{size}"
+  },
+  "app.downloads.missing-content.fallbacks": {
+    "message": "{count} 個備用連結"
+  },
+  "app.downloads.missing-content.retry": {
+    "message": "重新下載"
+  },
+  "app.downloads.missing-content.retry-all": {
+    "message": "重新嘗試全部缺失檔案"
+  },
+  "app.downloads.missing-content.browser-download": {
+    "message": "瀏覽器下載"
+  },
+  "app.downloads.missing-content.choose-file": {
+    "message": "選擇本機檔案"
+  },
+  "app.downloads.missing-content.attempts": {
+    "message": "第 {attempt}/{max} 次嘗試"
+  },
+  "app.downloads.missing-content.no-attempts": {
+    "message": "暫無嘗試資訊"
+  },
   "app.downloads.clear-history": {
     "message": "清除歷史紀錄"
   },

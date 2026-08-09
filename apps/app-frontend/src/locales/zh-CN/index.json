@@ -488,6 +488,48 @@
 	"app.downloads.cancel": {
 		"message": "取消"
 	},
+	"app.downloads.complete-missing-files": {
+		"message": "补全缺失文件"
+	},
+	"app.downloads.missing-content.header": {
+		"message": "补全缺失文件"
+	},
+	"app.downloads.missing-content.body": {
+		"message": "本地文件必须通过完整性校验，才能替换实例中的目标文件。"
+	},
+	"app.downloads.missing-content.remaining": {
+		"message": "还有 {count} 个文件需要补全"
+	},
+	"app.downloads.missing-content.continuing": {
+		"message": "正在继续安装"
+	},
+	"app.downloads.missing-content.continuing-body": {
+		"message": "全部必需文件已就绪。启动器正在重新校验并继续安装。"
+	},
+	"app.downloads.missing-content.expected-size": {
+		"message": "预期大小：{size}"
+	},
+	"app.downloads.missing-content.fallbacks": {
+		"message": "{count} 个备用链接"
+	},
+	"app.downloads.missing-content.retry": {
+		"message": "重新下载"
+	},
+	"app.downloads.missing-content.retry-all": {
+		"message": "重新尝试全部缺失文件"
+	},
+	"app.downloads.missing-content.browser-download": {
+		"message": "浏览器下载"
+	},
+	"app.downloads.missing-content.choose-file": {
+		"message": "选择本地文件"
+	},
+	"app.downloads.missing-content.attempts": {
+		"message": "第 {attempt}/{max} 次尝试"
+	},
+	"app.downloads.missing-content.no-attempts": {
+		"message": "暂无尝试信息"
+	},
 	"app.downloads.clear-history": {
 		"message": "清空历史"
 	},

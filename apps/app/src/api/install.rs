@@ -24,6 +24,9 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             install_job_get,
             install_job_retry,
             install_job_resume,
+            install_job_missing_files,
+            install_job_retry_missing_file,
+            install_job_import_missing_file,
             install_job_cancel,
             install_job_dismiss,
             install_job_support_details,
@@ -197,6 +200,35 @@ pub async fn install_job_retry(job_id: Uuid) -> Result<InstallJobSnapshot> {
 #[tauri::command]
 pub async fn install_job_resume(job_id: Uuid) -> Result<InstallJobSnapshot> {
     Ok(theseus::install::resume_job(job_id).await?)
+}
+
+#[tauri::command]
+pub async fn install_job_missing_files(
+    job_id: Uuid,
+) -> Result<theseus::install::MissingModpackContentView> {
+    Ok(theseus::install::list_missing_modpack_files(job_id).await?)
+}
+
+#[tauri::command]
+pub async fn install_job_retry_missing_file(
+    job_id: Uuid,
+    item_id: String,
+) -> Result<InstallJobSnapshot> {
+    Ok(theseus::install::retry_missing_modpack_file(job_id, item_id).await?)
+}
+
+#[tauri::command]
+pub async fn install_job_import_missing_file(
+    job_id: Uuid,
+    item_id: String,
+    selected_file_path: PathBuf,
+) -> Result<InstallJobSnapshot> {
+    Ok(theseus::install::import_missing_modpack_file(
+        job_id,
+        item_id,
+        selected_file_path,
+    )
+    .await?)
 }
 
 #[tauri::command]

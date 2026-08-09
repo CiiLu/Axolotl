@@ -205,6 +205,10 @@ fn timeline_event_description(event: &InstallJobEvent) -> Option<String> {
         }
         InstallJobEventKind::ContentDownloadStarted { .. }
         | InstallJobEventKind::ContentFileQueued { .. }
+        | InstallJobEventKind::ContentFileBrowserOptions { .. }
+        | InstallJobEventKind::ContentFileVerificationStarted { .. }
+        | InstallJobEventKind::ContentFileWritingStarted { .. }
+        | InstallJobEventKind::ContentFileRecovered { .. }
         | InstallJobEventKind::ContentFileDownloadAttempt { .. }
         | InstallJobEventKind::ContentFileSkipped { .. }
         | InstallJobEventKind::ContentFileFailed { .. }

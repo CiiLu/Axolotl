@@ -1,11 +1,17 @@
 mod diagnostics;
 pub mod events;
+pub(crate) mod missing_content;
 pub mod model;
 pub mod recovery;
 pub mod runner;
 pub mod store;
 
 pub use events::InstallProgressReporter;
+pub use missing_content::{
+    MissingModpackContentView, MissingModpackFileView,
+    import_missing_modpack_file, list_missing_modpack_files,
+    retry_missing_modpack_file,
+};
 pub use model::{
     DownloadItemSnapshot, DownloadItemStatus, DownloadJobSummary,
     InstallErrorContext, InstallErrorView, InstallJavaStep,

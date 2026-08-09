@@ -2920,7 +2920,10 @@ async fn validate_file_content(
     Ok(())
 }
 
-async fn verify_file(path: &Path, integrity: &Integrity) -> crate::Result<u64> {
+pub(crate) async fn verify_file(
+    path: &Path,
+    integrity: &Integrity,
+) -> crate::Result<u64> {
     let computed = compute_file_integrity(path, integrity).await?;
     verify_computed_integrity(integrity, &computed)?;
     validate_file_content(path, integrity.content).await?;
