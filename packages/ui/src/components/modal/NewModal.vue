@@ -418,7 +418,11 @@ defineOptions({
 
 	// Fade variants
 	&.standard {
-		background: linear-gradient(to bottom, rgba(29, 48, 43, 0.52) 0%, rgba(14, 21, 26, 0.95) 100%);
+		background: linear-gradient(
+			to bottom,
+			color-mix(in srgb, var(--color-brand-shadow) 10%, rgba(0, 0, 0, 0.52)) 0%,
+			color-mix(in srgb, var(--color-brand-shadow) 2%, rgba(0, 0, 0, 0.95)) 100%
+		);
 	}
 
 	&.warning {
