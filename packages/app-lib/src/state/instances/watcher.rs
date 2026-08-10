@@ -16,6 +16,7 @@ use std::{
 use tokio::sync::{RwLock, mpsc::channel};
 
 use super::adapters::sqlite::instance_rows;
+use super::config_sync::{CONFIG_FILE_NAME, CONFIG_FILE_TEMP_NAME};
 
 pub struct FileWatcher {
     watcher: RwLock<Debouncer<RecommendedWatcher>>,
@@ -77,6 +78,11 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
                                 .skip_while(|x| x.as_os_str() != instance_path)
                                 .nth(1)
                                 .map(|x| x.as_os_str());
+                            if first_file_name
+                                .is_some_and(is_config_sync_file_name)
+                            {
+                                continue;
+                            }
                             let is_crash_report = first_file_name
                                 .as_ref()
                                 .is_some_and(|x| *x == "crash-reports")
@@ -371,6 +377,11 @@ fn crash_task(instance_id: String) {
     });
 }
 
+fn is_config_sync_file_name(name: &std::ffi::OsStr) -> bool {
+    let name = name.to_string_lossy();
+    name == CONFIG_FILE_NAME || name == CONFIG_FILE_TEMP_NAME
+}
+
 #[cfg(all(test, windows))]
 mod tests {
     use super::*;
@@ -432,5 +443,21 @@ mod tests {
         );
 
         drop(watcher);
+    }
+}
+
+#[cfg(test)]
+mod config_file_name_tests {
+    use super::is_config_sync_file_name;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn recognizes_sync_config_files_but_not_other_instance_events() {
+        assert!(is_config_sync_file_name(OsStr::new("axolotl_config.json")));
+        assert!(is_config_sync_file_name(OsStr::new(
+            "axolotl_config.json.tmp"
+        )));
+        assert!(!is_config_sync_file_name(OsStr::new("mods")));
+        assert!(!is_config_sync_file_name(OsStr::new("servers.dat")));
     }
 }

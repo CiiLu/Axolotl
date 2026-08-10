@@ -544,6 +544,10 @@ impl DirectoryInfo {
                 )
                 .execute(exec)
                 .await?;
+                crate::state::instances::adapters::sqlite::config_sync_rows::mark_all_config_dirty(
+                    exec,
+                )
+                .await?;
             }
 
             settings.custom_dir = Some(new_dir);

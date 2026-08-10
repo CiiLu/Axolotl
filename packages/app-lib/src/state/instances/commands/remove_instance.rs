@@ -1,5 +1,6 @@
 use crate::state::State;
 use crate::state::instances::adapters::sqlite::instance_rows;
+use crate::state::instances::config_sync;
 use crate::util::io;
 
 pub(crate) async fn remove_instance(
@@ -22,6 +23,7 @@ pub(crate) async fn remove_instance(
     let jobs = crate::install::store::mark_instance_deleted(instance_id, state)
         .await?;
     instance_rows::delete_instance_by_id(&instance.id, &state.pool).await?;
+    config_sync::remove_config_file(&state.directories, &instance.path).await?;
     for job in jobs {
         if let Err(error) =
             crate::install::events::emit_install_job(&job.snapshot()).await

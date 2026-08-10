@@ -1,3 +1,4 @@
+pub(crate) mod config_sync;
 mod content;
 pub use self::content::*;
 

@@ -1,6 +1,7 @@
 use crate::state::instances::{
     ContentSourceKind, Instance, InstanceLaunchOverrides, InstanceLink,
-    adapters::sqlite::{content_rows, instance_rows},
+    adapters::sqlite::{config_sync_rows, content_rows, instance_rows},
+    config_sync,
 };
 use crate::state::{
     Hooks, InstanceInstallStage, LauncherFeatureVersion, MemorySettings,
@@ -173,7 +174,10 @@ pub(crate) async fn edit_instance(
             .await?;
     }
 
+    config_sync_rows::upsert_config_updated_at(&instance.id, &mut *tx).await?;
     tx.commit().await?;
+
+    config_sync::mark_dirty(&instance.id);
 
     Ok(instance)
 }
