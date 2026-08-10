@@ -289,6 +289,14 @@ impl ZipEntrySet {
         self.has_file(base, "axolotl_config.json")
     }
 
+    /// Whether a direct child folder under `base` has `axolotl_config.json`
+    /// (a container of Axolotl instances).
+    fn has_direct_axolotl_config(&self, base: &str) -> bool {
+        self.child_folders(base).iter().any(|child| {
+            self.has_file(&format!("{base}{child}/"), "axolotl_config.json")
+        })
+    }
+
     /// Whether direct child folders under `base` look like version folders
     /// (`<id>/<id>.json`). A base folder named `versions`, at least two
     /// matching children, or a matching child with the same-name `.jar`
@@ -583,7 +591,9 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
     // 2. Compressed instances / `.minecraft`. Checked before the content
     //    markers because instances embed resource packs, shader packs and
     //    worlds.
-    let launcher_type = if entries.has_axolotl_config(base) {
+    let launcher_type = if entries.has_axolotl_config(base)
+        || entries.has_direct_axolotl_config(base)
+    {
         Some(ImportLauncherType::Axolotl)
     } else if entries.has_file(base, "multimc.cfg") {
         Some(ImportLauncherType::MultiMC)
@@ -1163,7 +1173,7 @@ fn classify_jar(path: &Path) -> DroppedItemType {
 
 fn classify_folder(path: &Path) -> DroppedItemType {
     // Check launcher signatures in priority order.
-    if path.join("axolotl_config.json").is_file() {
+    if is_axolotl_folder(path) {
         return DroppedItemType::Launcher {
             launcher_type: ImportLauncherType::Axolotl,
             base_path: path.to_path_buf(),
@@ -1244,7 +1254,7 @@ fn classify_file(path: &Path) -> DroppedItemType {
 // ─── Step 7: Content-type detection for folders/extracted ZIPs ─────────────
 
 pub(crate) fn classify_folder_content(path: &Path) -> DroppedItemType {
-    if path.join("axolotl_config.json").is_file() {
+    if is_axolotl_folder(path) {
         return DroppedItemType::Launcher {
             launcher_type: ImportLauncherType::Axolotl,
             base_path: path.to_path_buf(),
@@ -1395,6 +1405,24 @@ fn has_direct_version_json(path: &Path) -> bool {
             .file_name()
             .and_then(|name| name.to_str())
             .is_some_and(|id| child.join(format!("{id}.jar")).is_file())
+    })
+}
+
+/// Whether `path` is an Axolotl instance root or a container whose direct
+/// child folders are Axolotl instances.
+fn is_axolotl_folder(path: &Path) -> bool {
+    path.join("axolotl_config.json").is_file()
+        || has_direct_axolotl_config(path)
+}
+
+/// Whether a direct child folder of `path` has `axolotl_config.json`.
+fn has_direct_axolotl_config(path: &Path) -> bool {
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        let child = entry.path();
+        child.is_dir() && child.join("axolotl_config.json").is_file()
     })
 }
 
