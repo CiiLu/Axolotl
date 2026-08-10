@@ -206,7 +206,7 @@
       {
         "name": "launch_overrides?: String",
         "ordinal": 40,
-        "type_info": "Null"
+        "type_info": "Text"
       }
     ],
     "parameters": {

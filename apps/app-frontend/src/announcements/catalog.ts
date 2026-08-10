@@ -68,6 +68,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added automatic backup of instance settings to the instance folder, allowing users to restore the instance after a database loss.',
 					'zh-CN': '数据库将自动备份实例的设置到实例文件夹，以便在数据库丢失后恢复实例。',
 				},
+				{
+					'en-US':
+						'Added automatic backup of instance settings to the instance folder, allowing users to restore the instance after a database loss.',
+					'zh-CN': '支持导入本就是本启动器的实例文件夹，会完全保留实例设置。',
+				},
 			],
 			fixed: [
 				{
