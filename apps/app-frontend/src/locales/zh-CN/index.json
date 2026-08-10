@@ -531,7 +531,13 @@
 		"message": "暂无尝试信息"
 	},
 	"app.downloads.missing-content.automatic-import": {
-		"message": "自动从 Downloads 导入"
+		"message": "自动从监控目录导入"
+	},
+	"app.downloads.missing-content.automatic-import-disabled": {
+		"message": "自动导入已关闭"
+	},
+	"app.downloads.missing-content.automatic-import-disabled-body": {
+		"message": "你仍可重新下载，或手动选择每个缺失文件。"
 	},
 	"app.downloads.missing-content.checking-downloads": {
 		"message": "正在检查系统 Downloads 文件夹..."
@@ -542,14 +548,26 @@
 	"app.downloads.missing-content.verifying-candidate-body": {
 		"message": "正在确认候选文件是否与整合包要求的文件一致。"
 	},
+	"app.downloads.missing-content.importing-candidate": {
+		"message": "正在导入已验证文件"
+	},
+	"app.downloads.missing-content.importing-candidate-body": {
+		"message": "正在将已验证文件导入实例..."
+	},
+	"app.downloads.missing-content.watching-downloads-title": {
+		"message": "正在监控导入目录"
+	},
+	"app.downloads.missing-content.watching-downloads-body": {
+		"message": "下载完成后将自动校验并导入。"
+	},
 	"app.downloads.missing-content.watching-downloads": {
 		"message": "正在监控 {path}。匹配文件通过校验后才会导入。"
 	},
 	"app.downloads.missing-content.waiting-for-completion": {
-		"message": "正在等待浏览器完成文件写入..."
+		"message": "检测到下载文件，正在等待写入完成..."
 	},
 	"app.downloads.missing-content.downloads-unavailable": {
-		"message": "系统 Downloads 文件夹不可用，仍可手动选择本地文件。"
+		"message": "监控目录不可用，仍可手动选择本地文件。"
 	},
 	"app.downloads.missing-content.scanner-failed": {
 		"message": "自动检查失败，仍可手动选择本地文件。"
@@ -564,7 +582,7 @@
 		"message": "启动器会继续等待正确文件，你也可以手动选择。"
 	},
 	"app.downloads.missing-content.imported-automatically": {
-		"message": "已自动导入 {count} 个文件，继续检查剩余文件。"
+		"message": "已自动导入 {count} 个文件，还有 {remaining} 个文件需要补全。"
 	},
 	"app.downloads.clear-history": {
 		"message": "清空历史"
@@ -2338,6 +2356,27 @@
 	},
 	"app.settings.resources.maximum-writes-description": {
 		"message": "启动器同时写入磁盘的最大文件数。如果经常出现 I/O 错误，请降低此值；更改需要重启应用后生效。"
+	},
+	"app.settings.resources.missing-content-auto-import": {
+		"message": "自动导入缺失的整合包文件"
+	},
+	"app.settings.resources.missing-content-auto-import-description": {
+		"message": "补全缺失文件时监控一个文件夹，自动校验并导入匹配文件。"
+	},
+	"app.settings.resources.missing-content-import-directory": {
+		"message": "监控导入目录"
+	},
+	"app.settings.resources.missing-content-import-directory-description": {
+		"message": "未选择自定义目录时使用系统 Downloads 文件夹。不会扫描子目录。"
+	},
+	"app.settings.resources.system-downloads-directory": {
+		"message": "系统 Downloads 文件夹"
+	},
+	"app.settings.resources.select-import-directory": {
+		"message": "选择监控目录"
+	},
+	"app.settings.resources.reset-import-directory": {
+		"message": "使用系统 Downloads 文件夹"
 	},
 	"app.settings.resources.open-backups-folder": {
 		"message": "打开备份文件夹"

@@ -32,7 +32,9 @@
 				<template #icon>
 					<SpinnerIcon
 						v-if="
-							scannerPresentation.phase === 'scanning' || scannerPresentation.phase === 'verifying'
+							scannerPresentation.phase === 'importing' ||
+							scannerPresentation.phase === 'verifying' ||
+							scannerPresentation.phase === 'waiting_for_stability'
 						"
 						class="size-5 animate-spin"
 					/>
@@ -142,11 +144,13 @@ import { computed, onUnmounted, ref } from 'vue'
 import {
 	createDownloadsScanLoop,
 	createDownloadsScannerPresentationState,
+	getMissingContentScannerSettings,
 	reduceDownloadsScannerPresentation,
 } from '@/helpers/downloads-scanner'
 import { install_job_listener } from '@/helpers/events'
 import {
 	install_job_import_missing_file,
+	install_job_get,
 	install_job_missing_files,
 	install_job_resume,
 	install_job_retry_missing_file,
@@ -168,31 +172,50 @@ const continuing = ref(false)
 const busy = ref(new Set<string>())
 const scannerPresentation = ref(createDownloadsScannerPresentationState())
 const scannerErrors = ref(new Map<string, string>())
+const scannerEnabled = ref(true)
+const scanDirectory = ref<string | null>(null)
 let unlisten: (() => void) | null = null
 
 const files = computed(() => content.value.files)
 const remaining = computed(() => content.value.remaining)
 const scannerHeader = computed(() => {
+	if (!scannerEnabled.value) return formatMessage(messages.automaticImportDisabled)
 	if (scannerPresentation.value.phase === 'rejected') {
 		return formatMessage(messages.fileMismatchTitle)
 	}
 	if (scannerPresentation.value.phase === 'verifying') {
 		return formatMessage(messages.verifyingCandidate)
 	}
+	if (scannerPresentation.value.phase === 'importing') {
+		return formatMessage(messages.importingCandidate)
+	}
+	if (
+		scannerPresentation.value.phase === 'monitoring' ||
+		scannerPresentation.value.phase === 'idle'
+	) {
+		return formatMessage(messages.watchingDownloadsTitle)
+	}
 	return formatMessage(messages.automaticImport)
 })
 const scannerStatus = computed(() => {
+	if (!scannerEnabled.value) return formatMessage(messages.automaticImportDisabledBody)
 	const state = scannerPresentation.value
+	if (state.phase === 'importing') return formatMessage(messages.importingCandidateBody)
 	if (state.phase === 'verifying') return formatMessage(messages.verifyingCandidateBody)
 	if (state.phase === 'waiting_for_stability') return formatMessage(messages.waitingForCompletion)
 	if (state.phase === 'rejected') return formatMessage(messages.fileMismatchBody)
-	if (state.phase === 'scanning') return formatMessage(messages.checkingDownloads)
 	if (state.phase === 'imported') {
-		return formatMessage(messages.importedAutomatically, { count: state.importedCount })
+		return formatMessage(messages.importedAutomatically, {
+			count: state.importedCount,
+			remaining: remaining.value,
+		})
 	}
 	if (state.phase === 'error') return formatMessage(messages.scannerFailed)
-	if (state.phase === 'watching' && state.downloadDirectory) {
-		return formatMessage(messages.watchingDownloads, { path: state.downloadDirectory })
+	if (state.phase === 'monitoring' && state.downloadDirectory) {
+		return formatMessage(messages.watchingDirectory, { path: state.downloadDirectory })
+	}
+	if (state.phase === 'idle') {
+		return formatMessage(messages.watchingDownloadsBody)
 	}
 	return formatMessage(messages.downloadsUnavailable)
 })
@@ -248,11 +271,15 @@ const messages = defineMessages({
 	},
 	automaticImport: {
 		id: 'app.downloads.missing-content.automatic-import',
-		defaultMessage: 'Automatic import from Downloads',
+		defaultMessage: 'Automatic import from monitored folder',
 	},
-	checkingDownloads: {
-		id: 'app.downloads.missing-content.checking-downloads',
-		defaultMessage: 'Checking the system Downloads folder...',
+	automaticImportDisabled: {
+		id: 'app.downloads.missing-content.automatic-import-disabled',
+		defaultMessage: 'Automatic import is disabled',
+	},
+	automaticImportDisabledBody: {
+		id: 'app.downloads.missing-content.automatic-import-disabled-body',
+		defaultMessage: 'Retry downloading or choose each missing file manually.',
 	},
 	verifyingCandidate: {
 		id: 'app.downloads.missing-content.verifying-candidate',
@@ -262,7 +289,23 @@ const messages = defineMessages({
 		id: 'app.downloads.missing-content.verifying-candidate-body',
 		defaultMessage: 'Checking that the candidate matches the file required by the modpack.',
 	},
-	watchingDownloads: {
+	importingCandidate: {
+		id: 'app.downloads.missing-content.importing-candidate',
+		defaultMessage: 'Importing verified file',
+	},
+	importingCandidateBody: {
+		id: 'app.downloads.missing-content.importing-candidate-body',
+		defaultMessage: 'Adding the verified file to the instance...',
+	},
+	watchingDownloadsTitle: {
+		id: 'app.downloads.missing-content.watching-downloads-title',
+		defaultMessage: 'Watching the import folder',
+	},
+	watchingDownloadsBody: {
+		id: 'app.downloads.missing-content.watching-downloads-body',
+		defaultMessage: 'Completed downloads will be verified and imported automatically.',
+	},
+	watchingDirectory: {
 		id: 'app.downloads.missing-content.watching-downloads',
 		defaultMessage: 'Watching {path}. Matching files are verified before import.',
 	},
@@ -272,7 +315,7 @@ const messages = defineMessages({
 	},
 	downloadsUnavailable: {
 		id: 'app.downloads.missing-content.downloads-unavailable',
-		defaultMessage: 'The system Downloads folder is unavailable. Choose a local file instead.',
+		defaultMessage: 'The monitored folder is unavailable. Choose a local file instead.',
 	},
 	scannerFailed: {
 		id: 'app.downloads.missing-content.scanner-failed',
@@ -294,7 +337,7 @@ const messages = defineMessages({
 	importedAutomatically: {
 		id: 'app.downloads.missing-content.imported-automatically',
 		defaultMessage:
-			'{count, plural, one {# file imported automatically} other {# files imported automatically}}. Checking the remaining files.',
+			'{count, plural, one {# file imported automatically} other {# files imported automatically}}. {remaining, plural, one {# file still needs to be completed} other {# files still need to be completed}}.',
 	},
 })
 
@@ -310,7 +353,7 @@ const statusMessages = defineMessages({
 const scanner = createDownloadsScanLoop({
 	scan: async () => {
 		if (!jobId.value) throw new Error('Missing install job ID')
-		return await install_job_scan_missing_files(jobId.value)
+		return await install_job_scan_missing_files(jobId.value, scanDirectory.value)
 	},
 	onResult: (result) => {
 		content.value = result.content
@@ -318,7 +361,7 @@ const scanner = createDownloadsScanLoop({
 			type: 'scan_result',
 			downloadDirectory: result.downloadDirectory ?? null,
 			importedItemIds: result.importedItemIds,
-			mismatchedItemIds: result.mismatchedItemIds,
+			rejectedItemIds: result.rejectedItemIds,
 			pendingCandidates: result.pendingCandidates,
 			hasErrors: result.errors.length > 0,
 			items: result.content.files.map((file) => ({ id: file.itemId, status: file.status })),
@@ -337,16 +380,14 @@ const scanner = createDownloadsScanLoop({
 			type: 'scan_failed',
 		})
 	},
-	onScanningChange: (value) => {
-		scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
-			type: value ? 'scan_started' : 'scan_finished',
-		})
-	},
 	intervalMs: 3000,
 })
 
 async function show(job: InstallJobSnapshot) {
 	stopScanning()
+	const scannerSettings = getMissingContentScannerSettings()
+	scannerEnabled.value = scannerSettings.enabled
+	scanDirectory.value = scannerSettings.directory
 	jobId.value = job.job_id
 	continuing.value = false
 	scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
@@ -374,7 +415,7 @@ async function show(job: InstallJobSnapshot) {
 			}
 		})
 	}
-	scanner.start()
+	if (scannerEnabled.value) scanner.start()
 }
 
 function stopScanning() {
@@ -405,29 +446,50 @@ async function runItem(itemId: string, action: () => Promise<InstallJobSnapshot>
 	busy.value = new Set([...busy.value, itemId])
 	try {
 		const job = await action()
-		if (
-			job.status !== 'waiting_for_user' ||
-			job.items.some((item) => item.id === itemId && item.status === 'completed')
-		) {
-			scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
-				type: 'items_resolved',
-				itemIds: [itemId],
-			})
-			scannerErrors.value.delete(itemId)
-		}
-		if (job.status === 'waiting_for_user') await refresh()
-		else {
-			continuing.value = true
-			stopScanning()
-		}
+		await applyItemResult(itemId, job)
 	} catch (error) {
-		handleError(error)
-		await refresh()
+		const latest = jobId.value ? await install_job_get(jobId.value).catch(() => null) : null
+		if (
+			latest &&
+			(isContinuingStatus(latest.status) ||
+				latest.items.some(
+					(item) => item.id === itemId && ['completed', 'skipped'].includes(item.status),
+				))
+		) {
+			await applyItemResult(itemId, latest)
+		} else {
+			handleError(error)
+			await refresh()
+		}
 	} finally {
 		const next = new Set(busy.value)
 		next.delete(itemId)
 		busy.value = next
 	}
+}
+
+async function applyItemResult(itemId: string, job: InstallJobSnapshot) {
+	if (
+		job.status !== 'waiting_for_user' ||
+		job.items.some(
+			(item) => item.id === itemId && ['completed', 'skipped'].includes(item.status),
+		)
+	) {
+		scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
+			type: 'items_resolved',
+			itemIds: [itemId],
+		})
+		scannerErrors.value.delete(itemId)
+	}
+	if (job.status === 'waiting_for_user') await refresh()
+	else if (isContinuingStatus(job.status)) {
+		continuing.value = true
+		stopScanning()
+	}
+}
+
+function isContinuingStatus(status: InstallJobSnapshot['status']) {
+	return status === 'queued' || status === 'running' || status === 'succeeded'
 }
 
 async function retryOne(itemId: string) {
@@ -459,12 +521,18 @@ function selectedPath(selected: unknown) {
 async function retryAll() {
 	if (!jobId.value) return
 	loading.value = true
+	stopScanning()
 	try {
 		await install_job_resume(jobId.value)
 		continuing.value = true
-		stopScanning()
 	} catch (error) {
-		handleError(error)
+		const latest = await install_job_get(jobId.value).catch(() => null)
+		if (latest && isContinuingStatus(latest.status)) {
+			continuing.value = true
+		} else {
+			handleError(error)
+			if (latest?.status === 'waiting_for_user' && scannerEnabled.value) scanner.start()
+		}
 	} finally {
 		loading.value = false
 	}

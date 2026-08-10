@@ -750,7 +750,13 @@
 		"message": "No attempt information"
 	},
 	"app.downloads.missing-content.automatic-import": {
-		"message": "Automatic import from Downloads"
+		"message": "Automatic import from monitored folder"
+	},
+	"app.downloads.missing-content.automatic-import-disabled": {
+		"message": "Automatic import is disabled"
+	},
+	"app.downloads.missing-content.automatic-import-disabled-body": {
+		"message": "Retry downloading or choose each missing file manually."
 	},
 	"app.downloads.missing-content.checking-downloads": {
 		"message": "Checking the system Downloads folder..."
@@ -761,14 +767,26 @@
 	"app.downloads.missing-content.verifying-candidate-body": {
 		"message": "Checking that the candidate matches the file required by the modpack."
 	},
+	"app.downloads.missing-content.importing-candidate": {
+		"message": "Importing verified file"
+	},
+	"app.downloads.missing-content.importing-candidate-body": {
+		"message": "Adding the verified file to the instance..."
+	},
+	"app.downloads.missing-content.watching-downloads-title": {
+		"message": "Watching the import folder"
+	},
+	"app.downloads.missing-content.watching-downloads-body": {
+		"message": "Completed downloads will be verified and imported automatically."
+	},
 	"app.downloads.missing-content.watching-downloads": {
 		"message": "Watching {path}. Matching files are verified before import."
 	},
 	"app.downloads.missing-content.waiting-for-completion": {
-		"message": "Waiting for a browser download to finish writing..."
+		"message": "Detected a download file. Waiting for it to finish writing..."
 	},
 	"app.downloads.missing-content.downloads-unavailable": {
-		"message": "The system Downloads folder is unavailable. Choose a local file instead."
+		"message": "The monitored folder is unavailable. Choose a local file instead."
 	},
 	"app.downloads.missing-content.scanner-failed": {
 		"message": "Automatic checking failed. Manual file selection is still available."
@@ -783,7 +801,7 @@
 		"message": "The launcher will keep waiting for the correct file. You can also choose a local file manually."
 	},
 	"app.downloads.missing-content.imported-automatically": {
-		"message": "{count, plural, one {# file imported automatically} other {# files imported automatically}}. Checking the remaining files."
+		"message": "{count, plural, one {# file imported automatically} other {# files imported automatically}}. {remaining, plural, one {# file still needs to be completed} other {# files still need to be completed}}."
 	},
 	"app.downloads.clear-history": {
 		"message": "Clear history"
@@ -4954,6 +4972,27 @@
 	},
 	"app.settings.resources.modrinth-mirror-description": {
 		"message": "Modrinth public API requests and file downloads."
+	},
+	"app.settings.resources.missing-content-auto-import": {
+		"message": "Automatically import missing modpack files"
+	},
+	"app.settings.resources.missing-content-auto-import-description": {
+		"message": "Watch one folder while resolving missing modpack files, then verify and import matching files automatically."
+	},
+	"app.settings.resources.missing-content-import-directory": {
+		"message": "Monitored import folder"
+	},
+	"app.settings.resources.missing-content-import-directory-description": {
+		"message": "The system Downloads folder is used when no custom folder is selected. Subfolders are not scanned."
+	},
+	"app.settings.resources.system-downloads-directory": {
+		"message": "System Downloads folder"
+	},
+	"app.settings.resources.select-import-directory": {
+		"message": "Select monitored folder"
+	},
+	"app.settings.resources.reset-import-directory": {
+		"message": "Use system Downloads folder"
 	},
 	"app.settings.resources.open-backups-folder": {
 		"message": "Open backups folder"

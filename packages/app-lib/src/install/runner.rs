@@ -259,6 +259,7 @@ pub async fn resume_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
         )
         .into());
     };
+    InstallProgressReporter::reset_job(job_id);
     emit_install_job(&record.snapshot()).await?;
     spawn_job(job_id);
     Ok(store::get_required(job_id, &state).await?.snapshot())

@@ -10,10 +10,12 @@ use crate::util::fetch::{
     ContentValidation, DownloadRequest, Integrity, ResourceClass,
     download_to_path, verify_file,
 };
+use futures::{StreamExt, stream};
 use parking_lot::Mutex;
 use path_util::SafeRelativeUtf8UnixPathBuf;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
+use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::time::{Duration, Instant, SystemTime};
@@ -52,6 +54,7 @@ pub struct MissingModpackScanResult {
     pub content: MissingModpackContentView,
     pub imported_item_ids: Vec<String>,
     pub mismatched_item_ids: Vec<String>,
+    pub rejected_item_ids: Vec<String>,
     pub checked_candidates: usize,
     pub pending_candidates: usize,
     pub errors: Vec<MissingModpackScanError>,
@@ -69,6 +72,15 @@ pub struct MissingModpackScanError {
 struct CandidateStamp {
     size: u64,
     modified: Option<SystemTime>,
+    identity: Option<CandidateFileIdentity>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum CandidateFileIdentity {
+    #[cfg(windows)]
+    Windows { volume_serial: u32, file_index: u64 },
+    #[cfg(unix)]
+    Unix { device: u64, inode: u64 },
 }
 
 struct CandidateObservation {
@@ -97,12 +109,27 @@ struct MissingFileCandidateSpec {
 struct StableDownloadCandidate {
     item_id: String,
     path: PathBuf,
+    expected_size: u64,
     stamp: CandidateStamp,
 }
 
 struct CandidateCollection {
     stable: Vec<StableDownloadCandidate>,
     pending: usize,
+}
+
+struct CandidateGroup {
+    item_id: String,
+    candidates: Vec<StableDownloadCandidate>,
+}
+
+struct CandidateGroupResult {
+    item_id: String,
+    imported: bool,
+    mismatched: bool,
+    rejected: bool,
+    checked_candidates: usize,
+    error: Option<String>,
 }
 
 pub async fn list_missing_modpack_files(
@@ -115,10 +142,17 @@ pub async fn list_missing_modpack_files(
 
 pub async fn scan_missing_modpack_files(
     job_id: Uuid,
+    scan_directory: Option<PathBuf>,
 ) -> crate::Result<MissingModpackScanResult> {
     let state = State::get().await?;
     let job = waiting_job(job_id, &state).await?;
-    let Some(download_directory) = dirs::download_dir() else {
+    let Some(download_directory) = scan_directory.or_else(dirs::download_dir)
+    else {
+        return unavailable_scan_result(job);
+    };
+    let Ok(download_directory) =
+        tokio::fs::canonicalize(download_directory).await
+    else {
         return unavailable_scan_result(job);
     };
     if !tokio::fs::metadata(&download_directory)
@@ -138,6 +172,7 @@ fn unavailable_scan_result(
         content: missing_content_view(&job.state)?,
         imported_item_ids: Vec::new(),
         mismatched_item_ids: Vec::new(),
+        rejected_item_ids: Vec::new(),
         checked_candidates: 0,
         pending_candidates: 0,
         errors: Vec::new(),
@@ -167,75 +202,48 @@ async fn scan_missing_modpack_files_in_at(
     let pending_candidates = candidates.pending;
     let mut imported_item_ids = Vec::new();
     let mut mismatched_item_ids = Vec::new();
+    let mut rejected_item_ids = Vec::new();
     let mut checked_candidates = 0;
     let mut errors = Vec::new();
-    let mut handled_items = HashSet::new();
-
-    for candidate in candidates.stable {
-        if handled_items.contains(&candidate.item_id)
-            || candidate_was_rejected(
-                job_id,
-                &candidate.item_id,
-                &candidate.path,
-                &candidate.stamp,
+    let groups = group_candidates_by_item(candidates.stable);
+    let _permit = state.install_job_semaphore.acquire().await?;
+    let current = store::get_required(job_id, &state).await?;
+    if current.status == InstallJobStatus::WaitingForUser {
+        let concurrency = state.download_concurrency().max(1);
+        let results =
+            process_candidate_groups_concurrently(
+                groups,
+                concurrency,
+                |group| {
+                    let state = state.clone();
+                    async move {
+                        process_candidate_group(job_id, group, &state).await
+                    }
+                },
             )
-        {
-            continue;
-        }
-        let current = store::get_required(job_id, &state).await?;
-        match item_resolution_state(&current, &candidate.item_id) {
-            ItemResolutionState::Resolved => {
-                handled_items.insert(candidate.item_id);
-                continue;
-            }
-            ItemResolutionState::JobResumed => break,
-            ItemResolutionState::Pending => {}
-        }
-        let file = pending_file(&current.state, &candidate.item_id)?.clone();
-        let integrity = required_integrity(&file)?;
-        checked_candidates += 1;
-        if verify_file(&candidate.path, &integrity).await.is_err() {
-            mark_candidate_rejected(
-                job_id,
-                &candidate.item_id,
-                &candidate.path,
-                candidate.stamp,
-            );
-            if !mismatched_item_ids.contains(&candidate.item_id) {
-                mismatched_item_ids.push(candidate.item_id);
-            }
-            continue;
-        }
+            .await;
 
-        match import_missing_modpack_file(
-            job_id,
-            candidate.item_id.clone(),
-            candidate.path.clone(),
-        )
-        .await
-        {
-            Ok(snapshot) => {
-                handled_items.insert(candidate.item_id.clone());
-                imported_item_ids.push(candidate.item_id);
-                if snapshot.status != InstallJobStatus::WaitingForUser {
-                    break;
-                }
+        for result in results {
+            let result = result?;
+            checked_candidates += result.checked_candidates;
+            if result.imported {
+                imported_item_ids.push(result.item_id.clone());
             }
-            Err(error) => {
-                let latest = store::get_required(job_id, &state).await?;
-                match item_resolution_state(&latest, &candidate.item_id) {
-                    ItemResolutionState::Resolved => {
-                        handled_items.insert(candidate.item_id);
-                    }
-                    ItemResolutionState::JobResumed => break,
-                    ItemResolutionState::Pending => {
-                        errors.push(MissingModpackScanError {
-                            item_id: candidate.item_id,
-                            message: user_import_error(&error),
-                        });
-                    }
-                }
+            if result.mismatched {
+                mismatched_item_ids.push(result.item_id.clone());
             }
+            if result.rejected {
+                rejected_item_ids.push(result.item_id.clone());
+            }
+            if let Some(message) = result.error {
+                errors.push(MissingModpackScanError {
+                    item_id: result.item_id,
+                    message,
+                });
+            }
+        }
+        if !imported_item_ids.is_empty() {
+            let _ = resume_if_complete(job_id, &state).await?;
         }
     }
 
@@ -254,10 +262,160 @@ async fn scan_missing_modpack_files_in_at(
         },
         imported_item_ids,
         mismatched_item_ids,
+        rejected_item_ids,
         checked_candidates,
         pending_candidates,
         errors,
         job: latest.snapshot(),
+    })
+}
+
+fn group_candidates_by_item(
+    candidates: Vec<StableDownloadCandidate>,
+) -> Vec<CandidateGroup> {
+    let mut groups = Vec::<CandidateGroup>::new();
+    for candidate in candidates {
+        if let Some(group) = groups
+            .iter_mut()
+            .find(|group| group.item_id == candidate.item_id)
+        {
+            group.candidates.push(candidate);
+        } else {
+            groups.push(CandidateGroup {
+                item_id: candidate.item_id.clone(),
+                candidates: vec![candidate],
+            });
+        }
+    }
+    groups
+}
+
+async fn process_candidate_groups_concurrently<F, Fut>(
+    groups: Vec<CandidateGroup>,
+    concurrency: usize,
+    process: F,
+) -> Vec<crate::Result<CandidateGroupResult>>
+where
+    F: Fn(CandidateGroup) -> Fut,
+    Fut: Future<Output = crate::Result<CandidateGroupResult>>,
+{
+    stream::iter(groups)
+        .map(process)
+        .buffered(concurrency.max(1))
+        .collect()
+        .await
+}
+
+async fn process_candidate_group(
+    job_id: Uuid,
+    group: CandidateGroup,
+    state: &State,
+) -> crate::Result<CandidateGroupResult> {
+    let mut checked_candidates = 0;
+    let mut mismatched = false;
+    let mut rejected = false;
+    let mut error = None;
+    for candidate in group.candidates {
+        if candidate_was_rejected(
+            job_id,
+            &candidate.item_id,
+            &candidate.path,
+            &candidate.stamp,
+        ) {
+            rejected = true;
+            continue;
+        }
+        if candidate.stamp.size != candidate.expected_size {
+            mark_candidate_rejected(
+                job_id,
+                &candidate.item_id,
+                &candidate.path,
+                candidate.stamp,
+            );
+            mismatched = true;
+            rejected = true;
+            continue;
+        }
+        let current = store::get_required(job_id, state).await?;
+        match item_resolution_state(&current, &candidate.item_id) {
+            ItemResolutionState::Resolved | ItemResolutionState::JobResumed => {
+                break;
+            }
+            ItemResolutionState::Pending => {}
+        }
+        let file = pending_file(&current.state, &candidate.item_id)?.clone();
+        let integrity = required_integrity(&file)?;
+        let reporter = InstallProgressReporter::new(job_id, current.state);
+        reporter
+            .record_events(vec![
+                InstallJobEventKind::ContentFileVerificationStarted {
+                    path: candidate.item_id.clone(),
+                },
+            ])
+            .await?;
+        let _io_permit = state.io_semaphore.0.acquire().await?;
+        checked_candidates += 1;
+        if verify_file(&candidate.path, &integrity).await.is_err() {
+            mark_candidate_rejected(
+                job_id,
+                &candidate.item_id,
+                &candidate.path,
+                candidate.stamp,
+            );
+            reporter
+                .record_events(vec![InstallJobEventKind::ContentFileFailed {
+                    path: candidate.item_id.clone(),
+                    reason: "The downloaded file does not match this modpack"
+                        .to_string(),
+                    project_id: None,
+                    version_id: None,
+                }])
+                .await?;
+            mismatched = true;
+            rejected = true;
+            continue;
+        }
+
+        match import_missing_modpack_file_locked(
+            job_id,
+            candidate.item_id.clone(),
+            candidate.path.clone(),
+            state,
+            true,
+        )
+        .await
+        {
+            Ok(()) => {
+                return Ok(CandidateGroupResult {
+                    item_id: group.item_id,
+                    imported: true,
+                    mismatched: false,
+                    rejected: false,
+                    checked_candidates,
+                    error: None,
+                });
+            }
+            Err(import_error) => {
+                mark_candidate_rejected(
+                    job_id,
+                    &candidate.item_id,
+                    &candidate.path,
+                    candidate.stamp,
+                );
+                mismatched = true;
+                rejected = true;
+                error = Some(user_import_error(&import_error));
+            }
+        }
+    }
+
+    Ok(CandidateGroupResult {
+        item_id: group.item_id,
+        imported: false,
+        mismatched,
+        rejected,
+        checked_candidates,
+        error,
     })
 }
 
@@ -335,15 +493,15 @@ async fn collect_download_candidates(
         let stamp = CandidateStamp {
             size: metadata.len(),
             modified: metadata.modified().ok(),
+            identity: candidate_file_identity(&path, &metadata),
         };
         for spec in matched_specs {
-            if spec.expected_size == stamp.size {
-                discovered.push(StableDownloadCandidate {
-                    item_id: spec.item_id.clone(),
-                    path: path.clone(),
-                    stamp: stamp.clone(),
-                });
-            }
+            discovered.push(StableDownloadCandidate {
+                item_id: spec.item_id.clone(),
+                path: path.clone(),
+                expected_size: spec.expected_size,
+                stamp: stamp.clone(),
+            });
         }
     }
 
@@ -355,6 +513,16 @@ async fn collect_download_candidates(
     });
     let job_cache = cache.jobs.entry(job_id).or_default();
     job_cache.last_used = Some(now);
+    let discovered_paths = discovered
+        .iter()
+        .map(|candidate| candidate.path.as_path())
+        .collect::<HashSet<_>>();
+    job_cache
+        .observations
+        .retain(|path, _| discovered_paths.contains(path.as_path()));
+    job_cache
+        .rejected
+        .retain(|(_, path), _| discovered_paths.contains(path.as_path()));
     let mut stable = Vec::new();
     let mut pending_paths = HashSet::new();
     for candidate in discovered {
@@ -373,6 +541,48 @@ async fn collect_download_candidates(
         stable,
         pending: pending_paths.len(),
     })
+}
+
+fn candidate_file_identity(
+    path: &Path,
+    metadata: &std::fs::Metadata,
+) -> Option<CandidateFileIdentity> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        use windows::Win32::Foundation::HANDLE;
+        use windows::Win32::Storage::FileSystem::{
+            BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
+        };
+
+        let _ = metadata;
+        let file = std::fs::File::open(path).ok()?;
+        let mut information = BY_HANDLE_FILE_INFORMATION::default();
+        unsafe {
+            GetFileInformationByHandle(
+                HANDLE(file.as_raw_handle()),
+                &mut information,
+            )
+            .ok()?;
+        }
+        return Some(CandidateFileIdentity::Windows {
+            volume_serial: information.dwVolumeSerialNumber,
+            file_index: ((information.nFileIndexHigh as u64) << 32)
+                | information.nFileIndexLow as u64,
+        });
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+
+        return Some(CandidateFileIdentity::Unix {
+            device: metadata.dev(),
+            inode: metadata.ino(),
+        });
+    }
+    #[allow(unreachable_code)]
+    let _ = (path, metadata);
+    None
 }
 
 fn candidate_is_stable(
@@ -460,12 +670,37 @@ fn item_resolution_state(
     }
 }
 
+fn missing_item_is_resolved(
+    job: &store::InstallJobRecord,
+    item_id: &str,
+) -> crate::Result<bool> {
+    SafeRelativeUtf8UnixPathBuf::try_from(item_id.to_string())?;
+    if !matches!(
+        &job.state.request,
+        InstallRequest::CreateModpackInstance { .. }
+            | InstallRequest::InstallPackToExistingInstance { .. }
+    ) {
+        return Ok(false);
+    }
+    Ok(job.state.download_items().into_iter().any(|item| {
+        item.id == item_id
+            && matches!(
+                item.status,
+                DownloadItemStatus::Completed | DownloadItemStatus::Skipped
+            )
+    }))
+}
+
 pub async fn retry_missing_modpack_file(
     job_id: Uuid,
     item_id: String,
 ) -> crate::Result<InstallJobSnapshot> {
     let state = State::get().await?;
     let _permit = state.install_job_semaphore.acquire().await?;
+    let current = store::get_required(job_id, &state).await?;
+    if missing_item_is_resolved(&current, &item_id)? {
+        return Ok(current.snapshot());
+    }
     let job = waiting_job(job_id, &state).await?;
     let file = pending_file(&job.state, &item_id)?.clone();
     let instance_base = instance_base(&job.state, &state).await?;
@@ -552,22 +787,47 @@ pub async fn import_missing_modpack_file(
 ) -> crate::Result<InstallJobSnapshot> {
     let state = State::get().await?;
     let _permit = state.install_job_semaphore.acquire().await?;
-    let job = waiting_job(job_id, &state).await?;
-    let file = pending_file(&job.state, &item_id)?.clone();
-    let instance_base = instance_base(&job.state, &state).await?;
+    let current = store::get_required(job_id, &state).await?;
+    if missing_item_is_resolved(&current, &item_id)? {
+        return Ok(current.snapshot());
+    }
+    import_missing_modpack_file_locked(
+        job_id,
+        item_id,
+        selected_file_path,
+        &state,
+        false,
+    )
+    .await?;
+    resume_if_complete(job_id, &state).await
+}
+
+async fn import_missing_modpack_file_locked(
+    job_id: Uuid,
+    item_id: String,
+    selected_file_path: PathBuf,
+    state: &State,
+    verification_started: bool,
+) -> crate::Result<()> {
+    let job = waiting_job(job_id, state).await?;
+    let file =
+        resolvable_file(&job.state, &item_id, verification_started)?.clone();
+    let instance_base = instance_base(&job.state, state).await?;
     let target = super::recovery::checked_instance_path(
         &instance_base,
         &file.target_path,
     )?;
     let integrity = required_integrity(&file)?;
     let reporter = InstallProgressReporter::new(job_id, job.state.clone());
-    reporter
-        .record_events(vec![
-            InstallJobEventKind::ContentFileVerificationStarted {
-                path: item_id.clone(),
-            },
-        ])
-        .await?;
+    if !verification_started {
+        reporter
+            .record_events(vec![
+                InstallJobEventKind::ContentFileVerificationStarted {
+                    path: item_id.clone(),
+                },
+            ])
+            .await?;
+    }
 
     let import = materialize_verified_file(
         &selected_file_path,
@@ -600,7 +860,7 @@ pub async fn import_missing_modpack_file(
                     },
                 ])
                 .await?;
-            resume_if_complete(job_id, &state).await
+            Ok(())
         }
         Err(error) => {
             tracing::warn!(job_id = %job_id, item_id, selected_path = %selected_file_path.display(), %error, "Selected modpack file was rejected");
@@ -724,6 +984,14 @@ fn pending_file<'a>(
     job_state: &'a InstallJobState,
     item_id: &str,
 ) -> crate::Result<&'a MissingModpackFileState> {
+    resolvable_file(job_state, item_id, false)
+}
+
+fn resolvable_file<'a>(
+    job_state: &'a InstallJobState,
+    item_id: &str,
+    allow_verifying: bool,
+) -> crate::Result<&'a MissingModpackFileState> {
     SafeRelativeUtf8UnixPathBuf::try_from(item_id.to_string())?;
     let file = job_state
         .missing_content
@@ -737,7 +1005,9 @@ fn pending_file<'a>(
         .into_iter()
         .find(|item| item.id == item_id)
         .ok_or_else(|| unknown_item_error(item_id))?;
-    if item.status != DownloadItemStatus::Failed {
+    if item.status != DownloadItemStatus::Failed
+        && !(allow_verifying && item.status == DownloadItemStatus::Verifying)
+    {
         return Err(crate::ErrorKind::InputError(
             "Only failed required modpack files can be resolved".to_string(),
         )
@@ -914,7 +1184,7 @@ mod tests {
     use super::*;
     use crate::api::pack::install_from::CreatePackLocation;
     use crate::install::model::{
-        InstallPauseReason, MissingModpackContentState,
+        InstallJobExecutionMode, InstallPauseReason, MissingModpackContentState,
     };
     use crate::state::{InstanceLink, ModLoader};
     use sha1_smol::Sha1;
@@ -1146,6 +1416,7 @@ mod tests {
         let stamp = CandidateStamp {
             size: 8,
             modified: Some(SystemTime::UNIX_EPOCH),
+            identity: None,
         };
         mark_candidate_rejected(job_id, item_id, &path, stamp.clone());
         assert!(candidate_was_rejected(job_id, item_id, &path, &stamp));
@@ -1156,7 +1427,89 @@ mod tests {
             &CandidateStamp {
                 size: 9,
                 modified: stamp.modified,
+                identity: stamp.identity.clone(),
             }
+        ));
+    }
+
+    #[tokio::test]
+    async fn same_path_same_size_and_mtime_replacement_is_a_new_candidate() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("required.bin");
+        crate::util::io::write(&path, b"wrong123").await.unwrap();
+        let original_modified = tokio::fs::metadata(&path)
+            .await
+            .unwrap()
+            .modified()
+            .unwrap();
+        let specs = vec![MissingFileCandidateSpec {
+            item_id: "mods/required.bin".to_string(),
+            file_name: "required.bin".to_string(),
+            expected_size: 8,
+        }];
+        let job_id = Uuid::new_v4();
+        let first_seen = Instant::now();
+        let first = collect_download_candidates(
+            job_id,
+            directory.path(),
+            &specs,
+            first_seen,
+        )
+        .await
+        .unwrap();
+        assert_eq!(first.pending, 1);
+        let original = collect_download_candidates(
+            job_id,
+            directory.path(),
+            &specs,
+            first_seen + DOWNLOAD_STABILITY_WINDOW,
+        )
+        .await
+        .unwrap();
+        let original_stamp = original.stable[0].stamp.clone();
+        mark_candidate_rejected(
+            job_id,
+            "mods/required.bin",
+            &path,
+            original_stamp.clone(),
+        );
+
+        tokio::fs::remove_file(&path).await.unwrap();
+        crate::util::io::write(&path, b"correct!").await.unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(original_modified)
+            .unwrap();
+
+        let replacement = collect_download_candidates(
+            job_id,
+            directory.path(),
+            &specs,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 2,
+        )
+        .await
+        .unwrap();
+        assert_eq!(replacement.pending, 1);
+        assert!(replacement.stable.is_empty());
+        let stable_replacement = collect_download_candidates(
+            job_id,
+            directory.path(),
+            &specs,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 3,
+        )
+        .await
+        .unwrap();
+        let replacement_stamp = &stable_replacement.stable[0].stamp;
+        assert_eq!(replacement_stamp.size, original_stamp.size);
+        assert_eq!(replacement_stamp.modified, original_stamp.modified);
+        assert_ne!(replacement_stamp.identity, original_stamp.identity);
+        assert!(!candidate_was_rejected(
+            job_id,
+            "mods/required.bin",
+            &path,
+            replacement_stamp,
         ));
     }
 
@@ -1199,6 +1552,43 @@ mod tests {
             item_resolution_state(&record, "mods/resolved.bin"),
             ItemResolutionState::JobResumed
         ));
+    }
+
+    #[tokio::test]
+    async fn candidate_groups_are_processed_concurrently() {
+        use std::sync::Arc;
+        use tokio::sync::Barrier;
+
+        let barrier = Arc::new(Barrier::new(2));
+        let groups = ["mods/one.bin", "mods/two.bin"]
+            .into_iter()
+            .map(|item_id| CandidateGroup {
+                item_id: item_id.to_string(),
+                candidates: Vec::new(),
+            })
+            .collect();
+        let results = tokio::time::timeout(
+            Duration::from_secs(1),
+            process_candidate_groups_concurrently(groups, 2, |group| {
+                let barrier = barrier.clone();
+                async move {
+                    barrier.wait().await;
+                    Ok(CandidateGroupResult {
+                        item_id: group.item_id,
+                        imported: false,
+                        mismatched: false,
+                        rejected: false,
+                        checked_candidates: 0,
+                        error: None,
+                    })
+                }
+            }),
+        )
+        .await
+        .expect("both candidate groups should run before either completes");
+
+        assert_eq!(results.len(), 2);
+        assert!(results.into_iter().all(|result| result.is_ok()));
     }
 
     #[tokio::test]
@@ -1258,6 +1648,11 @@ mod tests {
                 post_install_edit: None,
             },
         );
+        job_state.set_progress(
+            crate::install::model::InstallPhaseId::DownloadingContent,
+            None,
+            crate::install::model::InstallPhaseDetails::Empty,
+        );
         job_state.missing_content = Some(MissingModpackContentState {
             files: vec![first.clone(), second.clone()],
         });
@@ -1266,6 +1661,9 @@ mod tests {
                 failed_files: 2,
                 paths: vec![first.item_id.clone(), second.item_id.clone()],
             });
+        job_state.record_event(InstallJobEventKind::WaitingForUser {
+            reason: job_state.pause_reason.clone().unwrap(),
+        });
         for file in [&first, &second] {
             job_state.record_event(InstallJobEventKind::ContentFileQueued {
                 path: file.item_id.clone(),
@@ -1310,6 +1708,40 @@ mod tests {
         crate::util::io::write(&selected, first_bytes)
             .await
             .unwrap();
+        assert!(
+            import_missing_modpack_file(
+                queued_job_id,
+                first.item_id.clone(),
+                selected.clone(),
+            )
+            .await
+            .is_err()
+        );
+        let mut resolved_queued_state = job_state.clone();
+        resolved_queued_state.record_event(
+            InstallJobEventKind::ContentFileRecovered {
+                path: first.item_id.clone(),
+                bytes: first.expected_size,
+            },
+        );
+        let resolved_queued_job_id = Uuid::new_v4();
+        store::insert(
+            resolved_queued_job_id,
+            &resolved_queued_state,
+            InstallJobStatus::Queued,
+            &state,
+        )
+        .await
+        .unwrap();
+        assert!(
+            import_missing_modpack_file(
+                resolved_queued_job_id,
+                first.item_id.clone(),
+                selected.clone(),
+            )
+            .await
+            .is_ok()
+        );
         assert!(
             import_missing_modpack_file(
                 job_id,
@@ -1371,8 +1803,9 @@ mod tests {
             )
         );
         let scan_result = scan_result.unwrap();
+        assert!(manual_result.is_ok());
         assert!(
-            manual_result.is_ok()
+            scan_result.imported_item_ids.is_empty()
                 || scan_result.imported_item_ids == vec![first.item_id.clone()]
         );
         let snapshot = store::get_required(job_id, &state)
@@ -1408,7 +1841,7 @@ mod tests {
                 root.join("one-selected.bin"),
             )
             .await
-            .is_err()
+            .is_ok()
         );
 
         let second_target = instance_base.join(&second.target_path);
@@ -1431,7 +1864,7 @@ mod tests {
 
         let downloads = root.join("Downloads");
         crate::util::io::create_dir_all(&downloads).await.unwrap();
-        crate::util::io::write(&downloads.join("two.bin"), b"wrong--two!!")
+        crate::util::io::write(&downloads.join("two.bin"), b"wrong")
             .await
             .unwrap();
         crate::util::io::write(
@@ -1448,32 +1881,101 @@ mod tests {
         assert!(first_scan.imported_item_ids.is_empty());
         assert_eq!(first_scan.pending_candidates, 1);
 
-        let wrong_scan = scan_missing_modpack_files_in_at(
+        let wrong_size_scan = scan_missing_modpack_files_in_at(
             job_id,
             &downloads,
             first_seen + DOWNLOAD_STABILITY_WINDOW,
         )
         .await
         .unwrap();
-        assert!(wrong_scan.imported_item_ids.is_empty());
+        assert!(wrong_size_scan.imported_item_ids.is_empty());
         assert_eq!(
-            wrong_scan.mismatched_item_ids,
+            wrong_size_scan.mismatched_item_ids,
             vec![second.item_id.clone()]
         );
-        assert_eq!(wrong_scan.checked_candidates, 1);
-        assert_eq!(wrong_scan.job.status, InstallJobStatus::WaitingForUser);
+        assert_eq!(wrong_size_scan.checked_candidates, 0);
+        assert_eq!(
+            wrong_size_scan.rejected_item_ids,
+            vec![second.item_id.clone()]
+        );
+        assert_eq!(
+            wrong_size_scan.job.status,
+            InstallJobStatus::WaitingForUser
+        );
         assert_eq!(
             crate::util::io::read(&second_target).await.unwrap(),
             b"keep-this-bad-target"
         );
 
-        crate::util::io::write(&downloads.join("two (1).bin"), second_bytes)
+        tokio::fs::remove_file(downloads.join("two.bin"))
             .await
+            .unwrap();
+        crate::util::io::write(&downloads.join("two.bin"), b"wrong--two!!")
+            .await
+            .unwrap();
+        let rejected_modified = tokio::fs::metadata(downloads.join("two.bin"))
+            .await
+            .unwrap()
+            .modified()
+            .unwrap();
+        let hash_candidate_scan = scan_missing_modpack_files_in_at(
+            job_id,
+            &downloads,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 2,
+        )
+        .await
+        .unwrap();
+        assert_eq!(hash_candidate_scan.pending_candidates, 1);
+        assert_eq!(hash_candidate_scan.checked_candidates, 0);
+
+        let wrong_scan = scan_missing_modpack_files_in_at(
+            job_id,
+            &downloads,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 3,
+        )
+        .await
+        .unwrap();
+        assert_eq!(wrong_scan.checked_candidates, 1);
+        assert_eq!(wrong_scan.rejected_item_ids, vec![second.item_id.clone()]);
+
+        let unchanged_scan = scan_missing_modpack_files_in_at(
+            job_id,
+            &downloads,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 4,
+        )
+        .await
+        .unwrap();
+        assert_eq!(unchanged_scan.checked_candidates, 0);
+        assert_eq!(
+            unchanged_scan.rejected_item_ids,
+            vec![second.item_id.clone()]
+        );
+
+        tokio::fs::remove_file(downloads.join("two.bin"))
+            .await
+            .unwrap();
+        let disappeared_scan = scan_missing_modpack_files_in_at(
+            job_id,
+            &downloads,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 5,
+        )
+        .await
+        .unwrap();
+        assert!(disappeared_scan.rejected_item_ids.is_empty());
+
+        crate::util::io::write(&downloads.join("two.bin"), second_bytes)
+            .await
+            .unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(downloads.join("two.bin"))
+            .unwrap()
+            .set_modified(rejected_modified)
             .unwrap();
         let new_candidate_scan = scan_missing_modpack_files_in_at(
             job_id,
             &downloads,
-            first_seen + DOWNLOAD_STABILITY_WINDOW,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 6,
         )
         .await
         .unwrap();
@@ -1484,7 +1986,7 @@ mod tests {
         let completed_scan = scan_missing_modpack_files_in_at(
             job_id,
             &downloads,
-            first_seen + DOWNLOAD_STABILITY_WINDOW * 2,
+            first_seen + DOWNLOAD_STABILITY_WINDOW * 7,
         )
         .await
         .unwrap();
@@ -1492,8 +1994,12 @@ mod tests {
             completed_scan.imported_item_ids,
             vec![second.item_id.clone()]
         );
-        assert!(completed_scan.checked_candidates <= 2);
+        assert_eq!(completed_scan.checked_candidates, 1);
         assert_ne!(completed_scan.job.status, InstallJobStatus::WaitingForUser);
+        assert_eq!(
+            completed_scan.job.execution_mode,
+            InstallJobExecutionMode::RecoveryValidation
+        );
         assert_eq!(
             crate::util::io::read(&second_target).await.unwrap(),
             second_bytes

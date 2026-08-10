@@ -1035,6 +1035,16 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         estimated_file_max_attempts(&project),
                     )
                     .await?;
+                if tokio::fs::try_exists(&target_path).await.unwrap_or(false) {
+                    content_context
+                        .reporter
+                        .record_events(vec![
+                            InstallJobEventKind::ContentFileVerificationStarted {
+                                path: project_path.clone(),
+                            },
+                        ])
+                        .await?;
+                }
                 let Some(primary_url) = project.downloads.first() else {
                     return Err(crate::ErrorKind::InputError(format!(
                         "Modpack file {} has no download URL",

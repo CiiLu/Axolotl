@@ -409,6 +409,60 @@ mod tests {
     }
 
     #[test]
+    fn resumed_existing_file_moves_from_queued_to_verifying() {
+        let mut job =
+            InstallJobState::new(InstallRequest::CreateModpackInstance {
+                location: CreatePackLocation::FromFile {
+                    path: PathBuf::from("test.mrpack"),
+                },
+                post_install_edit: None,
+            });
+        let path = "mods/missing.jar".to_string();
+        job.missing_content = Some(MissingModpackContentState::default());
+        job.set_progress(
+            InstallPhaseId::DownloadingContent,
+            None,
+            InstallPhaseDetails::Empty,
+        );
+        job.record_event(InstallJobEventKind::ContentFileQueued {
+            path: path.clone(),
+            bytes_total: Some(100),
+            max_attempts: 4,
+        });
+        job.record_event(InstallJobEventKind::WaitingForUser {
+            reason: InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec![path.clone()],
+            },
+        });
+        job.record_event(InstallJobEventKind::ContentFileRecovered {
+            path: path.clone(),
+            bytes: 100,
+        });
+        job.record_event(InstallJobEventKind::JobQueued {
+            kind: InstallJobKind::CreateModpackInstance,
+        });
+        job.record_event(InstallJobEventKind::ContentFileQueued {
+            path: path.clone(),
+            bytes_total: Some(100),
+            max_attempts: 4,
+        });
+        assert_eq!(job.download_items()[0].status, DownloadItemStatus::Queued);
+
+        job.record_event(InstallJobEventKind::ContentFileVerificationStarted {
+            path,
+        });
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::RecoveryValidation
+        );
+        assert_eq!(
+            job.download_items()[0].status,
+            DownloadItemStatus::Verifying
+        );
+    }
+
+    #[test]
     fn all_successful_required_content_items_are_completed() {
         let mut job = job_state();
         for (path, bytes) in [("mods/a.jar", 100), ("mods/b.jar", 200)] {

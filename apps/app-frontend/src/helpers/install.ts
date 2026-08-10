@@ -231,6 +231,7 @@ export interface MissingModpackScanResult {
 	content: MissingModpackContentView
 	importedItemIds: string[]
 	mismatchedItemIds: string[]
+	rejectedItemIds: string[]
 	checkedCandidates: number
 	pendingCandidates: number
 	errors: Array<{ itemId: string; message: string }>
@@ -344,10 +345,13 @@ export async function install_job_missing_files(jobId: string) {
 	})
 }
 
-export async function install_job_scan_missing_files(jobId: string) {
+export async function install_job_scan_missing_files(
+	jobId: string,
+	scanDirectory?: string | null,
+) {
 	return await invoke<MissingModpackScanResult>(
 		'plugin:install|install_job_scan_missing_files',
-		{ jobId },
+		{ jobId, scanDirectory: scanDirectory ?? null },
 	)
 }
 

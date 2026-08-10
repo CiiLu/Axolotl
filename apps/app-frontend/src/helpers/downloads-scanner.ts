@@ -8,15 +8,54 @@ export interface DownloadsScanLoopOptions<T> {
 	cancelSchedule?: (timer: unknown) => void
 }
 
+export interface MissingContentScannerSettings {
+	enabled: boolean
+	directory: string | null
+}
+
+type ScannerSettingsStorage = Pick<Storage, 'getItem' | 'setItem'>
+
+const MISSING_CONTENT_SCANNER_SETTINGS_KEY = 'axolotl-missing-content-scanner'
+
+export function getMissingContentScannerSettings(
+	storage: ScannerSettingsStorage = localStorage,
+): MissingContentScannerSettings {
+	try {
+		const parsed = JSON.parse(storage.getItem(MISSING_CONTENT_SCANNER_SETTINGS_KEY) ?? '{}')
+		return {
+			enabled: parsed.enabled !== false,
+			directory:
+				typeof parsed.directory === 'string' && parsed.directory.trim()
+					? parsed.directory
+					: null,
+		}
+	} catch {
+		return { enabled: true, directory: null }
+	}
+}
+
+export function setMissingContentScannerSettings(
+	settings: MissingContentScannerSettings,
+	storage: ScannerSettingsStorage = localStorage,
+) {
+	storage.setItem(
+		MISSING_CONTENT_SCANNER_SETTINGS_KEY,
+		JSON.stringify({
+			enabled: settings.enabled,
+			directory: settings.directory?.trim() || null,
+		}),
+	)
+}
+
 export type DownloadsScannerPresentationPhase =
 	| 'idle'
-	| 'scanning'
+	| 'monitoring'
+	| 'importing'
 	| 'verifying'
 	| 'waiting_for_stability'
 	| 'rejected'
 	| 'imported'
 	| 'error'
-	| 'watching'
 	| 'unavailable'
 
 export interface DownloadsScannerPresentationState {
@@ -24,14 +63,13 @@ export interface DownloadsScannerPresentationState {
 	downloadDirectory: string | null
 	importedCount: number
 	pendingCandidates: number
+	importingItemIds: string[]
 	rejectedItemIds: string[]
 	verifyingItemIds: string[]
 }
 
 export type DownloadsScannerPresentationEvent =
 	| { type: 'reset' }
-	| { type: 'scan_started' }
-	| { type: 'scan_finished' }
 	| { type: 'scan_failed' }
 	| {
 			type: 'items_updated'
@@ -41,7 +79,7 @@ export type DownloadsScannerPresentationEvent =
 			type: 'scan_result'
 			downloadDirectory: string | null
 			importedItemIds: string[]
-			mismatchedItemIds: string[]
+			rejectedItemIds: string[]
 			pendingCandidates: number
 			hasErrors: boolean
 			items: Array<{ id: string; status: string }>
@@ -54,15 +92,14 @@ export function createDownloadsScannerPresentationState(): DownloadsScannerPrese
 		downloadDirectory: null,
 		importedCount: 0,
 		pendingCandidates: 0,
+		importingItemIds: [],
 		rejectedItemIds: [],
 		verifyingItemIds: [],
 	}
 }
 
-function candidateProcessingItemIds(items: Array<{ id: string; status: string }>) {
-	return items
-		.filter((item) => item.status === 'verifying' || item.status === 'writing')
-		.map((item) => item.id)
+function itemIdsWithStatus(items: Array<{ id: string; status: string }>, status: string) {
+	return items.filter((item) => item.status === status).map((item) => item.id)
 }
 
 function withoutItemIds(current: string[], removed: string[]) {
@@ -72,16 +109,16 @@ function withoutItemIds(current: string[], removed: string[]) {
 
 function withPhase(
 	state: Omit<DownloadsScannerPresentationState, 'phase'>,
-	options: { scanning?: boolean; failed?: boolean } = {},
+	options: { failed?: boolean } = {},
 ): DownloadsScannerPresentationState {
 	let phase: DownloadsScannerPresentationPhase
-	if (state.verifyingItemIds.length > 0) phase = 'verifying'
+	if (state.importingItemIds.length > 0) phase = 'importing'
+	else if (state.verifyingItemIds.length > 0) phase = 'verifying'
 	else if (state.pendingCandidates > 0) phase = 'waiting_for_stability'
 	else if (state.rejectedItemIds.length > 0) phase = 'rejected'
-	else if (options.scanning) phase = 'scanning'
 	else if (state.importedCount > 0) phase = 'imported'
 	else if (options.failed) phase = 'error'
-	else if (state.downloadDirectory) phase = 'watching'
+	else if (state.downloadDirectory) phase = 'monitoring'
 	else phase = 'unavailable'
 	return { ...state, phase }
 }
@@ -96,41 +133,54 @@ export function reduceDownloadsScannerPresentation(
 		downloadDirectory: state.downloadDirectory,
 		importedCount: state.importedCount,
 		pendingCandidates: state.pendingCandidates,
+		importingItemIds: [...state.importingItemIds],
 		rejectedItemIds: [...state.rejectedItemIds],
 		verifyingItemIds: [...state.verifyingItemIds],
 	}
 
-	if (event.type === 'scan_started') return withPhase(current, { scanning: true })
-	if (event.type === 'scan_finished') {
-		if (state.phase === 'idle' || state.phase === 'error') return state
-		return withPhase(current)
+	if (event.type === 'scan_failed') {
+		if (
+			state.importingItemIds.length > 0 ||
+			state.verifyingItemIds.length > 0 ||
+			state.pendingCandidates > 0 ||
+			state.rejectedItemIds.length > 0 ||
+			state.importedCount > 0
+		) {
+			return state
+		}
+		return withPhase(current, { failed: true })
 	}
-	if (event.type === 'scan_failed') return withPhase(current, { failed: true })
 
 	if (event.type === 'items_updated') {
-		const verifyingItemIds = candidateProcessingItemIds(event.items)
-		if (verifyingItemIds.length === 0) return state
+		const importingItemIds = itemIdsWithStatus(event.items, 'writing')
+		const verifyingItemIds = itemIdsWithStatus(event.items, 'verifying')
+		if (importingItemIds.length === 0 && verifyingItemIds.length === 0) return state
+		current.importingItemIds = importingItemIds
 		current.verifyingItemIds = verifyingItemIds
-		current.rejectedItemIds = withoutItemIds(current.rejectedItemIds, verifyingItemIds)
+		current.rejectedItemIds = withoutItemIds(current.rejectedItemIds, [
+			...importingItemIds,
+			...verifyingItemIds,
+		])
 		return withPhase(current)
 	}
 
 	if (event.type === 'items_resolved') {
 		current.pendingCandidates = 0
 		current.rejectedItemIds = withoutItemIds(current.rejectedItemIds, event.itemIds)
+		current.importingItemIds = withoutItemIds(current.importingItemIds, event.itemIds)
 		current.verifyingItemIds = withoutItemIds(current.verifyingItemIds, event.itemIds)
 		return withPhase(current)
 	}
 
 	current.downloadDirectory = event.downloadDirectory
 	current.pendingCandidates = event.pendingCandidates
-	current.verifyingItemIds = candidateProcessingItemIds(event.items)
-	if (event.pendingCandidates > 0) current.rejectedItemIds = []
-	current.rejectedItemIds = withoutItemIds(current.rejectedItemIds, [
+	current.importingItemIds = itemIdsWithStatus(event.items, 'writing')
+	current.verifyingItemIds = itemIdsWithStatus(event.items, 'verifying')
+	current.rejectedItemIds = withoutItemIds(event.rejectedItemIds, [
 		...event.importedItemIds,
+		...current.importingItemIds,
 		...current.verifyingItemIds,
 	])
-	current.rejectedItemIds = [...new Set([...current.rejectedItemIds, ...event.mismatchedItemIds])]
 	current.importedCount += event.importedItemIds.length
 	return withPhase(current, { failed: event.hasErrors })
 }

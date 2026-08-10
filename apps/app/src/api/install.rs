@@ -213,8 +213,12 @@ pub async fn install_job_missing_files(
 #[tauri::command]
 pub async fn install_job_scan_missing_files(
     job_id: Uuid,
+    scan_directory: Option<PathBuf>,
 ) -> Result<theseus::install::MissingModpackScanResult> {
-    Ok(theseus::install::scan_missing_modpack_files(job_id).await?)
+    Ok(
+        theseus::install::scan_missing_modpack_files(job_id, scan_directory)
+            .await?,
+    )
 }
 
 #[tauri::command]

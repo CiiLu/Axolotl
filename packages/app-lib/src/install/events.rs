@@ -72,6 +72,10 @@ enum DownloadRequestUpdate {
 }
 
 impl InstallProgressReporter {
+    pub(crate) fn reset_job(job_id: Uuid) {
+        REPORTER_STATES.remove(&job_id);
+    }
+
     pub fn new(job_id: Uuid, mut state: InstallJobState) -> Self {
         state.compact_transient_download_events();
         let shared_state = match REPORTER_STATES.entry(job_id) {
@@ -838,7 +842,13 @@ async fn emit_download_request_update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::pack::install_from::CreatePackLocation;
     use crate::install::InstallRequest;
+    use crate::install::model::{
+        InstallJobEventKind, InstallJobExecutionMode, InstallJobKind,
+        InstallJobStatus, InstallPauseReason, InstallPhaseDetails,
+        InstallPhaseId, MissingModpackContentState,
+    };
     use crate::state::{InstanceLink, ModLoader};
 
     #[test]
@@ -877,6 +887,52 @@ mod tests {
 
         assert!(second.is_java_download_postponed(21).await);
         assert!(!second.is_java_download_postponed(17).await);
+    }
+
+    #[tokio::test]
+    async fn reset_job_starts_resume_with_fresh_typed_state() {
+        let job_id = Uuid::new_v4();
+        let request = InstallRequest::CreateModpackInstance {
+            location: CreatePackLocation::FromFile {
+                path: "test.mrpack".into(),
+            },
+            post_install_edit: None,
+        };
+        let stale = InstallProgressReporter::new(
+            job_id,
+            InstallJobState::new(request.clone()),
+        );
+        let mut resumed = InstallJobState::new(request);
+        resumed.missing_content = Some(MissingModpackContentState::default());
+        resumed.set_progress(
+            InstallPhaseId::DownloadingContent,
+            None,
+            InstallPhaseDetails::Empty,
+        );
+        resumed.record_event(InstallJobEventKind::WaitingForUser {
+            reason: InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/missing.jar".to_string()],
+            },
+        });
+        resumed.record_event(InstallJobEventKind::JobQueued {
+            kind: InstallJobKind::CreateModpackInstance,
+        });
+
+        InstallProgressReporter::reset_job(job_id);
+        let fresh = InstallProgressReporter::new(job_id, resumed);
+
+        assert!(!Arc::ptr_eq(&stale.state, &fresh.state));
+        assert_eq!(
+            fresh
+                .state
+                .lock()
+                .await
+                .job
+                .execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::RecoveryValidation
+        );
+        InstallProgressReporter::reset_job(job_id);
     }
 
     #[test]
