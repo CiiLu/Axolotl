@@ -1,7 +1,8 @@
 use super::model::{
-    ActiveDownloadState, DownloadItemStatus, InstallErrorContext,
-    InstallJobEventKind, InstallJobSnapshot, InstallJobState,
-    InstallPhaseDetails, InstallPhaseId, InstallProgress,
+    ActiveDownloadState, DownloadItemStatus, InstallContinuationState,
+    InstallErrorContext, InstallJobEventKind, InstallJobSnapshot,
+    InstallJobState, InstallPauseReason, InstallPhaseDetails, InstallPhaseId,
+    InstallProgress, InstallRollbackState, MissingModpackContentState,
 };
 use super::store;
 use chrono::Utc;
@@ -71,6 +72,10 @@ enum DownloadRequestUpdate {
 }
 
 impl InstallProgressReporter {
+    pub(crate) fn reset_job(job_id: Uuid) {
+        REPORTER_STATES.remove(&job_id);
+    }
+
     pub fn new(job_id: Uuid, mut state: InstallJobState) -> Self {
         state.compact_transient_download_events();
         let shared_state = match REPORTER_STATES.entry(job_id) {
@@ -229,6 +234,104 @@ impl InstallProgressReporter {
         let mut state = self.state.lock().await;
         self.sync_latest(&mut state, &app_state).await?;
         Ok(state.job.clone())
+    }
+
+    pub async fn set_continuation(
+        &self,
+        continuation: Option<InstallContinuationState>,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        state.job.continuation = continuation;
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
+    }
+
+    pub async fn set_missing_content(
+        &self,
+        missing_content: Option<MissingModpackContentState>,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        state.job.missing_content = missing_content;
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
+    }
+
+    pub async fn record_events(
+        &self,
+        events: Vec<InstallJobEventKind>,
+    ) -> crate::Result<InstallJobSnapshot> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        let refresh_missing_reason = events.iter().any(|event| {
+            matches!(
+                event,
+                InstallJobEventKind::ContentFileRecovered { .. }
+                    | InstallJobEventKind::ContentFileFailed { .. }
+            )
+        });
+        for event in events {
+            state.job.record_event(event);
+        }
+        if refresh_missing_reason {
+            refresh_missing_pause_reason(&mut state.job);
+        }
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        let snapshot = record.snapshot();
+        emit_install_job(&snapshot).await?;
+        Ok(snapshot)
+    }
+
+    pub(crate) async fn set_rollback(
+        &self,
+        rollback: Option<InstallRollbackState>,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        state.job.rollback = rollback;
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
+    }
+
+    pub async fn track_rollback_paths(
+        &self,
+        paths: Vec<String>,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        let Some(snapshot) = state
+            .job
+            .rollback
+            .as_mut()
+            .and_then(|rollback| rollback.content.as_mut())
+        else {
+            return Ok(());
+        };
+        for path in paths {
+            path_util::SafeRelativeUtf8UnixPathBuf::try_from(path.clone())?;
+            if !snapshot.replacement_paths.contains(&path) {
+                snapshot.replacement_paths.push(path);
+            }
+        }
+        snapshot.replacement_paths.sort();
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
     }
 
     pub async fn persist_failure_context(&self, context: InstallErrorContext) {
@@ -625,6 +728,34 @@ impl InstallProgressReporter {
     }
 }
 
+fn refresh_missing_pause_reason(job: &mut InstallJobState) {
+    if !matches!(
+        job.pause_reason,
+        Some(InstallPauseReason::MissingRequiredContent { .. })
+    ) {
+        return;
+    }
+    let Some(content) = &job.missing_content else {
+        return;
+    };
+    let items = job.download_items();
+    let paths = content
+        .files
+        .iter()
+        .filter(|file| {
+            items.iter().any(|item| {
+                item.id == file.item_id
+                    && item.status == DownloadItemStatus::Failed
+            })
+        })
+        .map(|file| file.item_id.clone())
+        .collect::<Vec<_>>();
+    job.pause_reason = Some(InstallPauseReason::MissingRequiredContent {
+        failed_files: paths.len() as u64,
+        paths,
+    });
+}
+
 impl InstallProgressReporterState {
     fn should_persist(&self, phase_started: bool) -> bool {
         if phase_started {
@@ -711,7 +842,13 @@ async fn emit_download_request_update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::pack::install_from::CreatePackLocation;
     use crate::install::InstallRequest;
+    use crate::install::model::{
+        InstallJobEventKind, InstallJobExecutionMode, InstallJobKind,
+        InstallJobStatus, InstallPauseReason, InstallPhaseDetails,
+        InstallPhaseId, MissingModpackContentState,
+    };
     use crate::state::{InstanceLink, ModLoader};
 
     #[test]
@@ -750,6 +887,52 @@ mod tests {
 
         assert!(second.is_java_download_postponed(21).await);
         assert!(!second.is_java_download_postponed(17).await);
+    }
+
+    #[tokio::test]
+    async fn reset_job_starts_resume_with_fresh_typed_state() {
+        let job_id = Uuid::new_v4();
+        let request = InstallRequest::CreateModpackInstance {
+            location: CreatePackLocation::FromFile {
+                path: "test.mrpack".into(),
+            },
+            post_install_edit: None,
+        };
+        let stale = InstallProgressReporter::new(
+            job_id,
+            InstallJobState::new(request.clone()),
+        );
+        let mut resumed = InstallJobState::new(request);
+        resumed.missing_content = Some(MissingModpackContentState::default());
+        resumed.set_progress(
+            InstallPhaseId::DownloadingContent,
+            None,
+            InstallPhaseDetails::Empty,
+        );
+        resumed.record_event(InstallJobEventKind::WaitingForUser {
+            reason: InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/missing.jar".to_string()],
+            },
+        });
+        resumed.record_event(InstallJobEventKind::JobQueued {
+            kind: InstallJobKind::CreateModpackInstance,
+        });
+
+        InstallProgressReporter::reset_job(job_id);
+        let fresh = InstallProgressReporter::new(job_id, resumed);
+
+        assert!(!Arc::ptr_eq(&stale.state, &fresh.state));
+        assert_eq!(
+            fresh
+                .state
+                .lock()
+                .await
+                .job
+                .execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::RecoveryValidation
+        );
+        InstallProgressReporter::reset_job(job_id);
     }
 
     #[test]

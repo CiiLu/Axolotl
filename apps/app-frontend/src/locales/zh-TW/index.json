@@ -458,6 +458,102 @@
   "app.downloads.cancel": {
     "message": "取消"
   },
+  "app.downloads.complete-missing-files": {
+    "message": "補全缺失檔案"
+  },
+  "app.downloads.missing-content.header": {
+    "message": "補全缺失檔案"
+  },
+  "app.downloads.missing-content.body": {
+    "message": "本機檔案必須通過完整性驗證，才能取代實例中的目標檔案。"
+  },
+  "app.downloads.missing-content.remaining": {
+    "message": "還有 {count} 個檔案需要補全"
+  },
+  "app.downloads.missing-content.continuing": {
+    "message": "正在繼續安裝"
+  },
+  "app.downloads.missing-content.continuing-body": {
+    "message": "全部必要檔案已就緒。啟動器正在重新驗證並繼續安裝。"
+  },
+  "app.downloads.missing-content.expected-size": {
+    "message": "預期大小：{size}"
+  },
+  "app.downloads.missing-content.fallbacks": {
+    "message": "{count} 個備用連結"
+  },
+  "app.downloads.missing-content.retry": {
+    "message": "重新下載"
+  },
+  "app.downloads.missing-content.retry-all": {
+    "message": "重新嘗試全部缺失檔案"
+  },
+  "app.downloads.missing-content.browser-download": {
+    "message": "瀏覽器下載"
+  },
+  "app.downloads.missing-content.choose-file": {
+    "message": "選擇本機檔案"
+  },
+  "app.downloads.missing-content.attempts": {
+    "message": "第 {attempt}/{max} 次嘗試"
+  },
+  "app.downloads.missing-content.no-attempts": {
+    "message": "暫無嘗試資訊"
+  },
+  "app.downloads.missing-content.automatic-import": {
+    "message": "自動從監控目錄匯入"
+  },
+  "app.downloads.missing-content.automatic-import-disabled": {
+    "message": "自動匯入已關閉"
+  },
+  "app.downloads.missing-content.automatic-import-disabled-body": {
+    "message": "你仍可重新下載，或手動選擇每個缺少檔案。"
+  },
+  "app.downloads.missing-content.checking-downloads": {
+    "message": "正在檢查系統 Downloads 資料夾..."
+  },
+  "app.downloads.missing-content.verifying-candidate": {
+    "message": "正在驗證下載檔案"
+  },
+  "app.downloads.missing-content.verifying-candidate-body": {
+    "message": "正在確認候選檔案是否與整合包要求的檔案一致。"
+  },
+  "app.downloads.missing-content.importing-candidate": {
+    "message": "正在匯入已驗證檔案"
+  },
+  "app.downloads.missing-content.importing-candidate-body": {
+    "message": "正在將已驗證檔案匯入實例..."
+  },
+  "app.downloads.missing-content.watching-downloads-title": {
+    "message": "正在監控匯入目錄"
+  },
+  "app.downloads.missing-content.watching-downloads-body": {
+    "message": "下載完成後將自動驗證並匯入。"
+  },
+  "app.downloads.missing-content.watching-downloads": {
+    "message": "正在監控 {path}。匹配檔案通過驗證後才會匯入。"
+  },
+  "app.downloads.missing-content.waiting-for-completion": {
+    "message": "偵測到下載檔案，正在等待寫入完成..."
+  },
+  "app.downloads.missing-content.downloads-unavailable": {
+    "message": "監控目錄無法使用，仍可手動選擇本機檔案。"
+  },
+  "app.downloads.missing-content.scanner-failed": {
+    "message": "自動檢查失敗，仍可手動選擇本機檔案。"
+  },
+  "app.downloads.missing-content.file-mismatch": {
+    "message": "發現同名候選檔案，但它不是整合包要求的檔案。"
+  },
+  "app.downloads.missing-content.file-mismatch-title": {
+    "message": "發現同名檔案，但檔案驗證未通過"
+  },
+  "app.downloads.missing-content.file-mismatch-body": {
+    "message": "啟動器會繼續等待正確檔案，你也可以手動選擇。"
+  },
+  "app.downloads.missing-content.imported-automatically": {
+    "message": "已自動匯入 {count} 個檔案，還有 {remaining} 個檔案需要補全。"
+  },
   "app.downloads.clear-history": {
     "message": "清除歷史紀錄"
   },
@@ -521,6 +617,9 @@
   "app.downloads.item-status.downloading": {
     "message": "下載中"
   },
+  "app.downloads.item-status.pending-verification": {
+    "message": "待檢查"
+  },
   "app.downloads.item-status.skipped": {
     "message": "已略過"
   },
@@ -559,6 +658,9 @@
   },
   "app.downloads.phase.downloading-content": {
     "message": "正在下載內容"
+  },
+  "app.downloads.phase.verifying-downloaded-files": {
+    "message": "正在驗證並繼續安裝"
   },
   "app.downloads.phase.downloading-minecraft": {
     "message": "正在下載 Minecraft"
@@ -601,6 +703,15 @@
   },
   "app.downloads.retry": {
     "message": "重試"
+  },
+  "app.downloads.retry-missing-files": {
+    "message": "重試缺失檔案"
+  },
+  "app.downloads.action-needed": {
+    "message": "需要操作"
+  },
+  "app.downloads.missing-required-content": {
+    "message": "已完成 {completed} / {total} 個必要檔案，還有 {missing} 個檔案需要補全。"
   },
   "app.downloads.search": {
     "message": "搜尋下載任務"
@@ -1666,6 +1777,27 @@
   },
   "app.settings.resources.maximum-writes-description": {
     "message": "啟動器同時寫入磁碟的最大檔案數。如果經常出現 I/O 錯誤，請降低此值；變更將在重新啟動應用程式後生效。"
+  },
+  "app.settings.resources.missing-content-auto-import": {
+    "message": "自動匯入缺少的整合包檔案"
+  },
+  "app.settings.resources.missing-content-auto-import-description": {
+    "message": "補齊缺少檔案時監控一個資料夾，自動驗證並匯入相符檔案。"
+  },
+  "app.settings.resources.missing-content-import-directory": {
+    "message": "監控匯入目錄"
+  },
+  "app.settings.resources.missing-content-import-directory-description": {
+    "message": "未選擇自訂目錄時使用系統 Downloads 資料夾。不會掃描子目錄。"
+  },
+  "app.settings.resources.system-downloads-directory": {
+    "message": "系統 Downloads 資料夾"
+  },
+  "app.settings.resources.select-import-directory": {
+    "message": "選擇監控目錄"
+  },
+  "app.settings.resources.reset-import-directory": {
+    "message": "使用系統 Downloads 資料夾"
   },
   "app.settings.resources.open-backups-folder": {
     "message": "開啟備份資料夾"

@@ -463,6 +463,16 @@ impl State {
         Ok(())
     }
 
+    #[cfg(test)]
+    pub(crate) async fn init_for_test(
+        app_identifier: String,
+    ) -> crate::Result<Arc<Self>> {
+        LAUNCHER_STATE
+            .get_or_try_init(move || Self::initialize_state(app_identifier))
+            .await
+            .cloned()
+    }
+
     /// Get the current launcher state, waiting for initialization
     pub async fn get() -> crate::Result<Arc<Self>> {
         if !LAUNCHER_STATE.initialized() {

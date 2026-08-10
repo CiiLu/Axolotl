@@ -182,6 +182,34 @@ pub(crate) async fn edit_instance(
     Ok(instance)
 }
 
+pub(crate) async fn restore_instance_metadata(
+    metadata: &crate::state::InstanceMetadata,
+    pool: &SqlitePool,
+) -> crate::Result<()> {
+    let mut tx = pool.begin().await?;
+    let instance = metadata.instance.clone();
+    let mut content_set = metadata.applied_content_set.clone();
+    let mut launch_overrides = metadata.launch_overrides.clone();
+
+    instance_rows::update_instance(&instance, &mut tx).await?;
+    content_rows::update_content_set(&mut content_set, &mut tx).await?;
+    instance_rows::upsert_instance_link(&instance.id, &metadata.link, &mut tx)
+        .await?;
+    instance_rows::replace_instance_groups(
+        &instance.id,
+        &metadata.groups,
+        &mut tx,
+    )
+    .await?;
+    instance_rows::upsert_instance_launch_overrides(
+        &mut launch_overrides,
+        &mut tx,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
 fn apply_instance_patch(
     instance: &mut Instance,
     patch: &EditInstance,

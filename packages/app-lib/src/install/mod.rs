@@ -1,11 +1,18 @@
 mod diagnostics;
 pub mod events;
+pub(crate) mod missing_content;
 pub mod model;
 pub mod recovery;
 pub mod runner;
 pub mod store;
 
 pub use events::InstallProgressReporter;
+pub use missing_content::{
+    MissingModpackContentView, MissingModpackFileView, MissingModpackScanError,
+    MissingModpackScanResult, import_missing_modpack_file,
+    list_missing_modpack_files, retry_missing_modpack_file,
+    scan_missing_modpack_files,
+};
 pub use model::{
     DownloadItemSnapshot, DownloadItemStatus, DownloadJobSummary,
     InstallErrorContext, InstallErrorView, InstallJavaStep,
@@ -19,5 +26,5 @@ pub use runner::{
     dismiss_job, download_java, duplicate_instance, get_job, import_instance,
     import_instance_with_path, install_content, install_curseforge_content,
     install_existing_instance, install_pack_to_existing_instance,
-    job_support_details, list_jobs, retry_job, retry_job_as_new,
+    job_support_details, list_jobs, resume_job, retry_job, retry_job_as_new,
 };

@@ -23,12 +23,18 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             install_job_list,
             install_job_get,
             install_job_retry,
+            install_job_resume,
+            install_job_missing_files,
+            install_job_scan_missing_files,
+            install_job_retry_missing_file,
+            install_job_import_missing_file,
             install_job_cancel,
             install_job_dismiss,
             install_job_support_details,
             download_job_list,
             download_job_get,
             download_job_retry,
+            download_job_resume,
             download_job_cancel,
             download_job_delete,
             download_history_clear,
@@ -193,6 +199,51 @@ pub async fn install_job_retry(job_id: Uuid) -> Result<InstallJobSnapshot> {
 }
 
 #[tauri::command]
+pub async fn install_job_resume(job_id: Uuid) -> Result<InstallJobSnapshot> {
+    Ok(theseus::install::resume_job(job_id).await?)
+}
+
+#[tauri::command]
+pub async fn install_job_missing_files(
+    job_id: Uuid,
+) -> Result<theseus::install::MissingModpackContentView> {
+    Ok(theseus::install::list_missing_modpack_files(job_id).await?)
+}
+
+#[tauri::command]
+pub async fn install_job_scan_missing_files(
+    job_id: Uuid,
+    scan_directory: Option<PathBuf>,
+) -> Result<theseus::install::MissingModpackScanResult> {
+    Ok(
+        theseus::install::scan_missing_modpack_files(job_id, scan_directory)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn install_job_retry_missing_file(
+    job_id: Uuid,
+    item_id: String,
+) -> Result<InstallJobSnapshot> {
+    Ok(theseus::install::retry_missing_modpack_file(job_id, item_id).await?)
+}
+
+#[tauri::command]
+pub async fn install_job_import_missing_file(
+    job_id: Uuid,
+    item_id: String,
+    selected_file_path: PathBuf,
+) -> Result<InstallJobSnapshot> {
+    Ok(theseus::install::import_missing_modpack_file(
+        job_id,
+        item_id,
+        selected_file_path,
+    )
+    .await?)
+}
+
+#[tauri::command]
 pub async fn install_job_cancel(job_id: Uuid) -> Result<InstallJobSnapshot> {
     Ok(theseus::install::cancel_job(job_id).await?)
 }
@@ -276,6 +327,11 @@ pub async fn download_job_get(job_id: Uuid) -> Result<InstallJobSnapshot> {
 #[tauri::command]
 pub async fn download_job_retry(job_id: Uuid) -> Result<InstallJobSnapshot> {
     Ok(theseus::install::retry_job_as_new(job_id).await?)
+}
+
+#[tauri::command]
+pub async fn download_job_resume(job_id: Uuid) -> Result<InstallJobSnapshot> {
+    install_job_resume(job_id).await
 }
 
 #[tauri::command]

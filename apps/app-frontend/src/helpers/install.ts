@@ -117,6 +117,12 @@ export interface InstallErrorView {
 	} | null
 }
 
+export type InstallPauseReason = {
+	type: 'missing_required_content'
+	failed_files: number
+	paths: string[]
+}
+
 export interface InstallJobSnapshot {
 	job_id: string
 	instance_id?: string | null
@@ -131,6 +137,7 @@ export interface InstallJobSnapshot {
 		| 'install_content'
 		| 'download_java'
 	status: InstallJobStatus
+	execution_mode: 'normal' | 'recovery_validation'
 	provider: 'modrinth' | 'curse_forge' | 'minecraft' | 'java' | 'application' | 'local'
 	target:
 		| { type: 'new_instance'; instance_id?: string | null }
@@ -152,6 +159,7 @@ export interface InstallJobSnapshot {
 	display?: { title: string; icon?: string | null } | null
 	error?: InstallErrorView | null
 	rollback_error?: InstallErrorView | null
+	pause_reason?: InstallPauseReason | null
 	created: string
 	modified: string
 	finished?: string | null
@@ -202,6 +210,32 @@ export interface DownloadJobListRequest {
 export interface DownloadJobPage {
 	jobs: InstallJobSnapshot[]
 	nextCursor?: string | null
+}
+
+export interface MissingModpackContentView {
+	remaining: number
+	files: Array<{
+		itemId: string
+		path: string
+		expectedSize: number
+		status: InstallJobSnapshot['items'][number]['status']
+		lastError?: string | null
+		browserUrls: string[]
+		attempt?: number | null
+		maxAttempts?: number | null
+	}>
+}
+
+export interface MissingModpackScanResult {
+	downloadDirectory?: string | null
+	content: MissingModpackContentView
+	importedItemIds: string[]
+	mismatchedItemIds: string[]
+	rejectedItemIds: string[]
+	checkedCandidates: number
+	pendingCandidates: number
+	errors: Array<{ itemId: string; message: string }>
+	job: InstallJobSnapshot
 }
 
 export type DownloadRequestUpdate =
@@ -301,6 +335,45 @@ export async function install_job_retry(jobId: string) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_job_retry', { jobId })
 }
 
+export async function install_job_resume(jobId: string) {
+	return await invoke<InstallJobSnapshot>('plugin:install|install_job_resume', { jobId })
+}
+
+export async function install_job_missing_files(jobId: string) {
+	return await invoke<MissingModpackContentView>('plugin:install|install_job_missing_files', {
+		jobId,
+	})
+}
+
+export async function install_job_scan_missing_files(
+	jobId: string,
+	scanDirectory?: string | null,
+) {
+	return await invoke<MissingModpackScanResult>(
+		'plugin:install|install_job_scan_missing_files',
+		{ jobId, scanDirectory: scanDirectory ?? null },
+	)
+}
+
+export async function install_job_retry_missing_file(jobId: string, itemId: string) {
+	return await invoke<InstallJobSnapshot>('plugin:install|install_job_retry_missing_file', {
+		jobId,
+		itemId,
+	})
+}
+
+export async function install_job_import_missing_file(
+	jobId: string,
+	itemId: string,
+	selectedFilePath: string,
+) {
+	return await invoke<InstallJobSnapshot>('plugin:install|install_job_import_missing_file', {
+		jobId,
+		itemId,
+		selectedFilePath,
+	})
+}
+
 export async function install_job_cancel(jobId: string) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_job_cancel', { jobId })
 }
@@ -323,6 +396,10 @@ export async function download_job_get(jobId: string) {
 
 export async function download_job_retry(jobId: string) {
 	return await invoke<InstallJobSnapshot>('plugin:install|download_job_retry', { jobId })
+}
+
+export async function download_job_resume(jobId: string) {
+	return await invoke<InstallJobSnapshot>('plugin:install|download_job_resume', { jobId })
 }
 
 export async function download_job_cancel(jobId: string) {

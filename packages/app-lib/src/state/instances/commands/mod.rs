@@ -3,9 +3,11 @@ pub use self::create_instance::CreateInstance;
 pub(crate) use self::create_instance::create_instance;
 
 mod edit_instance;
-pub(crate) use self::edit_instance::edit_instance;
 pub use self::edit_instance::{
     AppliedContentSetPatch, EditInstance, InstanceLaunchOverridesPatch,
+};
+pub(crate) use self::edit_instance::{
+    edit_instance, restore_instance_metadata,
 };
 
 mod get_instance;

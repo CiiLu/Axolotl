@@ -2,7 +2,9 @@ use crate::api::curseforge::CurseForgeInstallRequest;
 use crate::api::pack::import::ImportLauncherType;
 use crate::api::pack::install_from::{CreatePackInstance, CreatePackLocation};
 use crate::state::{
+    ContentEntry, ContentProviderRef, ContentUpdateCheck, InstanceFile,
     InstanceInstallStage, InstanceLink, InstanceMetadata, ModLoader,
+    PackMember,
 };
 use chrono::{DateTime, Utc};
 use modrinth_content_management::{ContentType, ResolutionPreferences};
@@ -11,6 +13,21 @@ use std::{collections::HashMap, path::PathBuf};
 use uuid::Uuid;
 
 pub type InstallModpackPreview = CreatePackInstance;
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum InstallPauseReason {
+    MissingRequiredContent {
+        failed_files: u64,
+        paths: Vec<String>,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum InstallContinuationState {
+    InstallingPackToExistingInstance { disabled_project_ids: Vec<String> },
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InstallJobState {
@@ -32,6 +49,12 @@ pub struct InstallJobState {
     pub error: Option<InstallErrorView>,
     #[serde(default)]
     pub rollback_error: Option<InstallErrorView>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pause_reason: Option<InstallPauseReason>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub continuation: Option<InstallContinuationState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub missing_content: Option<MissingModpackContentState>,
 }
 
 impl InstallJobState {
@@ -62,6 +85,9 @@ impl InstallJobState {
             rollback: None,
             error: None,
             rollback_error: None,
+            pause_reason: None,
+            continuation: None,
+            missing_content: None,
         }
     }
 
@@ -71,6 +97,7 @@ impl InstallJobState {
             InstallJobEventKind::JobStarted
                 | InstallJobEventKind::JobSucceeded { .. }
                 | InstallJobEventKind::JobCanceled { .. }
+                | InstallJobEventKind::WaitingForUser { .. }
         ) {
             self.active_downloads.clear();
         }
@@ -186,6 +213,7 @@ mod tests {
                 launch_overrides: InstanceLaunchOverrides::empty(instance_id),
             },
             install_stage: InstanceInstallStage::Installed,
+            content: None,
         });
 
         let mut legacy = serde_json::to_value(job).unwrap();
@@ -293,6 +321,226 @@ mod tests {
         assert_eq!(items[2].project_id.as_deref(), Some("789"));
         assert_eq!(items[2].version_id.as_deref(), Some("987"));
         assert!(items[2].manual_url.is_none());
+    }
+
+    #[test]
+    fn required_content_items_are_queued_before_download_requests_start() {
+        let mut job = job_state();
+        job.record_event(InstallJobEventKind::ContentDownloadStarted {
+            files: 2,
+            bytes: Some(300),
+        });
+        job.record_event(InstallJobEventKind::ContentFileQueued {
+            path: "mods/a.jar".to_string(),
+            bytes_total: Some(100),
+            max_attempts: 4,
+        });
+        job.record_event(InstallJobEventKind::ContentFileQueued {
+            path: "mods/b.jar".to_string(),
+            bytes_total: Some(200),
+            max_attempts: 6,
+        });
+
+        let items = job.download_items();
+        assert_eq!(items.len(), 2);
+        assert!(
+            items
+                .iter()
+                .all(|item| item.status == DownloadItemStatus::Queued)
+        );
+        assert!(items.iter().all(|item| item.attempt == Some(0)));
+        assert_eq!(items[0].max_attempts, Some(4));
+        assert_eq!(items[1].bytes_total, Some(200));
+        assert!(items.iter().all(|item| item.request_url.is_none()));
+        assert!(items.iter().all(|item| item.source.is_none()));
+    }
+
+    #[test]
+    fn recovery_validation_mode_is_derived_from_typed_resume_history() {
+        let mut job =
+            InstallJobState::new(InstallRequest::CreateModpackInstance {
+                location: CreatePackLocation::FromFile {
+                    path: PathBuf::from("test.mrpack"),
+                },
+                post_install_edit: None,
+            });
+        job.missing_content = Some(MissingModpackContentState::default());
+        job.set_progress(
+            InstallPhaseId::DownloadingContent,
+            None,
+            InstallPhaseDetails::Empty,
+        );
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::Normal
+        );
+
+        job.record_event(InstallJobEventKind::WaitingForUser {
+            reason: InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/missing.jar".to_string()],
+            },
+        });
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::WaitingForUser),
+            InstallJobExecutionMode::Normal
+        );
+        job.record_event(InstallJobEventKind::JobQueued {
+            kind: InstallJobKind::CreateModpackInstance,
+        });
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Queued),
+            InstallJobExecutionMode::RecoveryValidation
+        );
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::RecoveryValidation
+        );
+
+        job.set_progress(
+            InstallPhaseId::ExtractingOverrides,
+            None,
+            InstallPhaseDetails::Empty,
+        );
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::Normal
+        );
+    }
+
+    #[test]
+    fn resumed_existing_file_moves_from_queued_to_verifying() {
+        let mut job =
+            InstallJobState::new(InstallRequest::CreateModpackInstance {
+                location: CreatePackLocation::FromFile {
+                    path: PathBuf::from("test.mrpack"),
+                },
+                post_install_edit: None,
+            });
+        let path = "mods/missing.jar".to_string();
+        job.missing_content = Some(MissingModpackContentState::default());
+        job.set_progress(
+            InstallPhaseId::DownloadingContent,
+            None,
+            InstallPhaseDetails::Empty,
+        );
+        job.record_event(InstallJobEventKind::ContentFileQueued {
+            path: path.clone(),
+            bytes_total: Some(100),
+            max_attempts: 4,
+        });
+        job.record_event(InstallJobEventKind::WaitingForUser {
+            reason: InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec![path.clone()],
+            },
+        });
+        job.record_event(InstallJobEventKind::ContentFileRecovered {
+            path: path.clone(),
+            bytes: 100,
+        });
+        job.record_event(InstallJobEventKind::JobQueued {
+            kind: InstallJobKind::CreateModpackInstance,
+        });
+        job.record_event(InstallJobEventKind::ContentFileQueued {
+            path: path.clone(),
+            bytes_total: Some(100),
+            max_attempts: 4,
+        });
+        assert_eq!(job.download_items()[0].status, DownloadItemStatus::Queued);
+
+        job.record_event(InstallJobEventKind::ContentFileVerificationStarted {
+            path,
+        });
+        assert_eq!(
+            job.execution_mode(InstallJobStatus::Running),
+            InstallJobExecutionMode::RecoveryValidation
+        );
+        assert_eq!(
+            job.download_items()[0].status,
+            DownloadItemStatus::Verifying
+        );
+    }
+
+    #[test]
+    fn all_successful_required_content_items_are_completed() {
+        let mut job = job_state();
+        for (path, bytes) in [("mods/a.jar", 100), ("mods/b.jar", 200)] {
+            job.record_event(InstallJobEventKind::ContentFileQueued {
+                path: path.to_string(),
+                bytes_total: Some(bytes),
+                max_attempts: 4,
+            });
+            job.record_event(InstallJobEventKind::ContentFileCompleted {
+                path: path.to_string(),
+                bytes,
+            });
+        }
+
+        let items = job.download_items();
+        assert_eq!(items.len(), 2);
+        assert!(
+            items
+                .iter()
+                .all(|item| item.status == DownloadItemStatus::Completed)
+        );
+    }
+
+    #[test]
+    fn skipped_required_content_item_is_not_failed() {
+        let mut job = job_state();
+        job.record_event(InstallJobEventKind::ContentFileQueued {
+            path: "mods/client-unsupported.jar".to_string(),
+            bytes_total: Some(100),
+            max_attempts: 2,
+        });
+        job.record_event(InstallJobEventKind::ContentFileSkipped {
+            path: "mods/client-unsupported.jar".to_string(),
+            reason: "unsupported on client".to_string(),
+            project_id: None,
+            version_id: None,
+            manual_url: None,
+        });
+
+        let items = job.download_items();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].status, DownloadItemStatus::Skipped);
+        assert_ne!(items[0].status, DownloadItemStatus::Failed);
+    }
+
+    #[test]
+    fn multiple_required_content_failures_have_individual_failed_items() {
+        let mut job = job_state();
+        for path in ["mods/a.jar", "mods/b.jar", "mods/c.jar"] {
+            job.record_event(InstallJobEventKind::ContentFileQueued {
+                path: path.to_string(),
+                bytes_total: Some(100),
+                max_attempts: 4,
+            });
+        }
+        for path in ["mods/a.jar", "mods/c.jar"] {
+            job.record_event(InstallJobEventKind::ContentFileFailed {
+                path: path.to_string(),
+                reason: "download failed".to_string(),
+                project_id: None,
+                version_id: None,
+            });
+        }
+        job.record_event(InstallJobEventKind::ContentFileCompleted {
+            path: "mods/b.jar".to_string(),
+            bytes: 100,
+        });
+
+        let items = job.download_items();
+        assert_eq!(items.len(), 3);
+        assert_eq!(
+            items
+                .iter()
+                .filter(|item| item.status == DownloadItemStatus::Failed)
+                .count(),
+            2
+        );
+        assert_eq!(items[1].status, DownloadItemStatus::Completed);
     }
 
     #[test]
@@ -493,6 +741,51 @@ mod tests {
             assert!(!status.is_finished());
         }
     }
+
+    #[test]
+    fn waiting_job_state_round_trip_preserves_pause_and_file_items() {
+        let mut job = job_state();
+        for path in ["mods/complete.jar", "mods/missing.jar"] {
+            job.record_event(InstallJobEventKind::ContentFileQueued {
+                path: path.to_string(),
+                bytes_total: Some(100),
+                max_attempts: 4,
+            });
+        }
+        job.record_event(InstallJobEventKind::ContentFileCompleted {
+            path: "mods/complete.jar".to_string(),
+            bytes: 100,
+        });
+        job.record_event(InstallJobEventKind::ContentFileFailed {
+            path: "mods/missing.jar".to_string(),
+            reason: "network failure".to_string(),
+            project_id: None,
+            version_id: None,
+        });
+        let reason = InstallPauseReason::MissingRequiredContent {
+            failed_files: 1,
+            paths: vec!["mods/missing.jar".to_string()],
+        };
+        job.pause_reason = Some(reason.clone());
+        job.continuation =
+            Some(InstallContinuationState::InstallingPackToExistingInstance {
+                disabled_project_ids: vec!["project-a".to_string()],
+            });
+        job.record_event(InstallJobEventKind::WaitingForUser {
+            reason: reason.clone(),
+        });
+
+        let restored: InstallJobState =
+            serde_json::from_str(&serde_json::to_string(&job).unwrap())
+                .unwrap();
+        let items = restored.download_items();
+
+        assert_eq!(restored.pause_reason, Some(reason));
+        assert_eq!(restored.continuation, job.continuation);
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].status, DownloadItemStatus::Completed);
+        assert_eq!(items[1].status, DownloadItemStatus::Failed);
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -521,6 +814,9 @@ pub enum InstallJobEventKind {
     JobCanceled {
         phase: InstallPhaseId,
     },
+    WaitingForUser {
+        reason: InstallPauseReason,
+    },
     PhaseStarted {
         phase: InstallPhaseId,
         details: InstallPhaseDetails,
@@ -528,6 +824,25 @@ pub enum InstallJobEventKind {
     ContentDownloadStarted {
         files: u64,
         bytes: Option<u64>,
+    },
+    ContentFileQueued {
+        path: String,
+        bytes_total: Option<u64>,
+        max_attempts: u32,
+    },
+    ContentFileBrowserOptions {
+        path: String,
+        urls: Vec<String>,
+    },
+    ContentFileVerificationStarted {
+        path: String,
+    },
+    ContentFileWritingStarted {
+        path: String,
+    },
+    ContentFileRecovered {
+        path: String,
+        bytes: u64,
     },
     ContentFileDownloadAttempt {
         path: String,
@@ -877,6 +1192,13 @@ pub enum InstallJobStatus {
     Canceled,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallJobExecutionMode {
+    Normal,
+    RecoveryValidation,
+}
+
 impl InstallJobStatus {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -912,14 +1234,14 @@ impl InstallJobStatus {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum InstallTarget {
     NewInstance { instance_id: Option<String> },
     ExistingInstance { instance_id: String },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum InstallCleanup {
     DeleteNewInstance { instance_id: Option<String> },
@@ -1063,6 +1385,68 @@ pub struct InstallJobDisplay {
 pub struct InstallRollbackState {
     pub instance: InstanceMetadata,
     pub install_stage: InstanceInstallStage,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<InstallContentRollbackSnapshot>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallContentRollbackStage {
+    Planned,
+    Ready,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct InstallContentRollbackSnapshot {
+    pub staging_id: String,
+    pub stage: InstallContentRollbackStage,
+    pub files: Vec<InstallRollbackFile>,
+    pub entries: Vec<InstallRollbackContentEntry>,
+    pub pack_members: Vec<PackMember>,
+    #[serde(default)]
+    pub replacement_paths: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct InstallRollbackFile {
+    pub relative_path: String,
+    pub staged_name: String,
+    pub existed: bool,
+    pub physical_sha1: Option<String>,
+    pub physical_size: Option<u64>,
+    pub instance_file: Option<InstanceFile>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct InstallRollbackContentEntry {
+    pub entry: ContentEntry,
+    pub provider_refs: Vec<InstallRollbackProviderRef>,
+    pub update_check: Option<ContentUpdateCheck>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct InstallRollbackProviderRef {
+    pub provider_ref: ContentProviderRef,
+    pub origin: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct MissingModpackContentState {
+    pub files: Vec<MissingModpackFileState>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MissingModpackFileState {
+    pub item_id: String,
+    pub manifest_path: String,
+    pub target_path: String,
+    pub expected_size: u64,
+    pub sha1: Option<String>,
+    pub sha512: Option<String>,
+    pub download_urls: Vec<String>,
+    pub browser_urls: Vec<String>,
+    #[serde(default)]
+    pub validate_as_jar: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -1150,6 +1534,7 @@ pub struct InstallJobSnapshot {
     pub instance_deleted: bool,
     pub kind: InstallJobKind,
     pub status: InstallJobStatus,
+    pub execution_mode: InstallJobExecutionMode,
     pub provider: InstallJobProvider,
     pub target: InstallTarget,
     pub phase: InstallPhaseId,
@@ -1158,6 +1543,7 @@ pub struct InstallJobSnapshot {
     pub display: Option<InstallJobDisplay>,
     pub error: Option<InstallErrorView>,
     pub rollback_error: Option<InstallErrorView>,
+    pub pause_reason: Option<InstallPauseReason>,
     pub created: DateTime<Utc>,
     pub modified: DateTime<Utc>,
     pub finished: Option<DateTime<Utc>>,
@@ -1166,6 +1552,45 @@ pub struct InstallJobSnapshot {
 }
 
 impl InstallJobState {
+    pub fn execution_mode(
+        &self,
+        status: InstallJobStatus,
+    ) -> InstallJobExecutionMode {
+        if !matches!(
+            status,
+            InstallJobStatus::Queued | InstallJobStatus::Running
+        ) || self.progress.phase != InstallPhaseId::DownloadingContent
+            || self.missing_content.is_none()
+            || !matches!(
+                &self.request,
+                InstallRequest::CreateModpackInstance { .. }
+                    | InstallRequest::InstallPackToExistingInstance { .. }
+            )
+        {
+            return InstallJobExecutionMode::Normal;
+        }
+
+        let last_missing_pause = self.events.iter().rposition(|event| {
+            matches!(
+                &event.kind,
+                InstallJobEventKind::WaitingForUser {
+                    reason: InstallPauseReason::MissingRequiredContent { .. }
+                }
+            )
+        });
+        let last_queued = self.events.iter().rposition(|event| {
+            matches!(&event.kind, InstallJobEventKind::JobQueued { .. })
+        });
+        if last_missing_pause
+            .zip(last_queued)
+            .is_some_and(|(paused, queued)| queued > paused)
+        {
+            InstallJobExecutionMode::RecoveryValidation
+        } else {
+            InstallJobExecutionMode::Normal
+        }
+    }
+
     pub fn instance_deleted(&self) -> bool {
         self.events.iter().any(|event| {
             matches!(
@@ -1215,6 +1640,78 @@ impl InstallJobState {
         let mut items = Vec::<DownloadItemSnapshot>::new();
         for event in &self.events {
             match &event.kind {
+                InstallJobEventKind::ContentFileQueued {
+                    path,
+                    bytes_total,
+                    max_attempts,
+                } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.status = DownloadItemStatus::Queued;
+                        item.bytes_downloaded = 0;
+                        item.bytes_total = *bytes_total;
+                        item.attempt = Some(0);
+                        item.max_attempts = Some(*max_attempts);
+                        item.error = None;
+                        item.request_url = None;
+                        item.source = None;
+                    } else {
+                        items.push(DownloadItemSnapshot {
+                            id: path.clone(),
+                            name: path.clone(),
+                            project_id: None,
+                            version_id: None,
+                            status: DownloadItemStatus::Queued,
+                            bytes_downloaded: 0,
+                            bytes_total: *bytes_total,
+                            attempt: Some(0),
+                            max_attempts: Some(*max_attempts),
+                            error: None,
+                            manual_url: None,
+                            request_url: None,
+                            source: None,
+                        });
+                    }
+                }
+                InstallJobEventKind::ContentFileBrowserOptions {
+                    path,
+                    urls,
+                } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.manual_url = urls.first().cloned();
+                    }
+                }
+                InstallJobEventKind::ContentFileVerificationStarted {
+                    path,
+                } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.status = DownloadItemStatus::Verifying;
+                        item.error = None;
+                    }
+                }
+                InstallJobEventKind::ContentFileWritingStarted { path } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.status = DownloadItemStatus::Writing;
+                        item.error = None;
+                    }
+                }
+                InstallJobEventKind::ContentFileRecovered { path, bytes } => {
+                    if let Some(item) =
+                        items.iter_mut().find(|item| item.id == *path)
+                    {
+                        item.status = DownloadItemStatus::Completed;
+                        item.bytes_downloaded = *bytes;
+                        item.bytes_total = item.bytes_total.or(Some(*bytes));
+                        item.error = None;
+                    }
+                }
                 InstallJobEventKind::ContentFileDownloadAttempt {
                     path,
                     bytes_total,
@@ -1380,7 +1877,6 @@ impl InstallJobState {
                         item.project_id = project_id.clone();
                         item.version_id = version_id.clone();
                         item.error = Some(reason.clone());
-                        item.manual_url = None;
                     } else {
                         items.push(DownloadItemSnapshot {
                             id: path.clone(),
@@ -1470,6 +1966,10 @@ impl InstallJobState {
                 }
                 InstallJobEventKind::ContentFileCompleted { bytes, .. } => {
                     summary.files_completed += 1;
+                    summary.bytes_downloaded =
+                        summary.bytes_downloaded.saturating_add(*bytes);
+                }
+                InstallJobEventKind::ContentFileRecovered { bytes, .. } => {
                     summary.bytes_downloaded =
                         summary.bytes_downloaded.saturating_add(*bytes);
                 }

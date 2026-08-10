@@ -2941,7 +2941,10 @@ async fn validate_file_content(
     Ok(())
 }
 
-async fn verify_file(path: &Path, integrity: &Integrity) -> crate::Result<u64> {
+pub(crate) async fn verify_file(
+    path: &Path,
+    integrity: &Integrity,
+) -> crate::Result<u64> {
     let computed = compute_file_integrity(path, integrity).await?;
     verify_computed_integrity(integrity, &computed)?;
     validate_file_content(path, integrity.content).await?;
@@ -7810,6 +7813,71 @@ mod tests {
         for index in 0..MAX_SEGMENT_CONCURRENCY {
             assert!(!segment_path(&part_path, index).exists());
         }
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn valid_existing_destination_is_reused_without_network_request() {
+        let data = Arc::new(b"already complete".to_vec());
+        let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
+        let (url, requests, _, server) =
+            spawn_range_server(data.clone(), false, false, false, false, false)
+                .await;
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("existing.bin");
+        tokio::fs::write(&destination, &data[..]).await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let result = download_to_path(
+            DownloadRequest::new(&url, ResourceClass::Other).with_integrity(
+                Integrity::sha1(hash).with_size(data.len() as u64),
+            ),
+            &destination,
+            &FetchSemaphore(Semaphore::new(2)),
+            &pool,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.attempts, 0);
+        assert_eq!(requests.load(Ordering::Relaxed), 0);
+        assert_eq!(tokio::fs::read(&destination).await.unwrap(), *data);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn invalid_existing_destination_is_redownloaded() {
+        let data = Arc::new(b"correct content".to_vec());
+        let hash = sha1_smol::Sha1::from(&data[..]).hexdigest();
+        let (url, requests, _, server) =
+            spawn_range_server(data.clone(), false, false, false, false, false)
+                .await;
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("stale.bin");
+        tokio::fs::write(&destination, b"wrong content")
+            .await
+            .unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        download_to_path(
+            DownloadRequest::new(&url, ResourceClass::Other).with_integrity(
+                Integrity::sha1(hash).with_size(data.len() as u64),
+            ),
+            &destination,
+            &FetchSemaphore(Semaphore::new(2)),
+            &pool,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+        assert_eq!(tokio::fs::read(&destination).await.unwrap(), *data);
         server.abort();
     }
 

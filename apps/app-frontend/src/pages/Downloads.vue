@@ -121,7 +121,7 @@
 							/>
 						</div>
 						<div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-secondary">
-							<span>{{ phaseLabel(job.phase) }}</span>
+							<span>{{ jobPhaseLabel(job) }}</span>
 							<BulletDivider />
 							<span>{{ formatDate(job.finished ?? job.modified) }}</span>
 							<template v-if="job.instance_id">
@@ -177,13 +177,18 @@
 								<RefreshCwIcon />{{ formatMessage(messages.retry) }}
 							</button>
 						</ButtonStyled>
+						<ButtonStyled v-if="job.status === 'waiting_for_user'" color="brand" size="small">
+							<button :disabled="busy.has(job.job_id)" @click="resolveMissing(job)">
+								<DownloadIcon />{{ formatMessage(messages.completeMissingFiles) }}
+							</button>
+						</ButtonStyled>
 						<ButtonStyled v-if="job.error" type="outlined" size="small">
 							<button :disabled="busy.has(job.job_id)" @click="copyDiagnostics(job)">
 								<ClipboardCopyIcon />{{ formatMessage(messages.copyDiagnostics) }}
 							</button>
 						</ButtonStyled>
 						<ButtonStyled
-							v-if="job.instance_id && !job.instance_deleted"
+							v-if="job.instance_id && !job.instance_deleted && job.status !== 'waiting_for_user'"
 							type="outlined"
 							size="small"
 						>
@@ -224,6 +229,21 @@
 						show-progress
 					/>
 				</div>
+
+				<Admonition
+					v-if="job.status === 'waiting_for_user'"
+					class="mx-4 mb-4"
+					type="warning"
+					:header="formatMessage(messages.actionNeeded)"
+				>
+					{{
+						formatMessage(messages.missingRequiredContent, {
+							completed: completedRequiredFiles(job),
+							total: job.summary.files_total ?? job.items.length,
+							missing: missingRequiredFiles(job),
+						})
+					}}
+				</Admonition>
 
 				<div
 					v-if="expanded.has(job.job_id)"
@@ -283,7 +303,10 @@
 							</div>
 						</template>
 						<template #cell-status="{ row }">
-							<Badge :color="itemStatusColor(row.status)" :type="statusLabel(row.status)" />
+							<Badge
+								:color="itemStatusColor(row.status)"
+								:type="itemStatusLabel(job, row.status)"
+							/>
 						</template>
 						<template #cell-attempts="{ row }">
 							<span>{{ itemAttempts(row) }}</span>
@@ -322,6 +345,7 @@
 		:proceed-label="formatMessage(messages.clearHistory)"
 		@proceed="clearHistory"
 	/>
+	<MissingModpackContentModal ref="missingContentModal" />
 </template>
 
 <script setup lang="ts">
@@ -365,6 +389,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import MissingModpackContentModal from '@/components/ui/modal/MissingModpackContentModal.vue'
 import {
 	download_job_support_details,
 	type InstallJobSnapshot,
@@ -389,6 +414,7 @@ const historyStatus = ref('all')
 const expanded = ref(new Set<string>())
 const busy = ref(new Set<string>())
 const clearHistoryModal = ref<InstanceType<typeof ConfirmModal>>()
+const missingContentModal = ref<InstanceType<typeof MissingModpackContentModal>>()
 
 const messages = defineMessages({
 	newDownload: { id: 'app.downloads.new-download', defaultMessage: 'New download' },
@@ -406,6 +432,16 @@ const messages = defineMessages({
 	},
 	cancel: { id: 'app.downloads.cancel', defaultMessage: 'Cancel' },
 	retry: { id: 'app.downloads.retry', defaultMessage: 'Retry' },
+	completeMissingFiles: {
+		id: 'app.downloads.complete-missing-files',
+		defaultMessage: 'Complete missing files',
+	},
+	actionNeeded: { id: 'app.downloads.action-needed', defaultMessage: 'Action needed' },
+	missingRequiredContent: {
+		id: 'app.downloads.missing-required-content',
+		defaultMessage:
+			'{completed} / {total} required files are ready. {missing, plural, one {# file still needs to be downloaded.} other {# files still need to be downloaded.}}',
+	},
 	copyDiagnostics: { id: 'app.downloads.copy-diagnostics', defaultMessage: 'Copy diagnostics' },
 	openInstance: { id: 'app.downloads.open-instance', defaultMessage: 'Open instance' },
 	instanceDeleted: { id: 'app.downloads.instance-deleted', defaultMessage: 'Instance deleted' },
@@ -460,6 +496,14 @@ const messages = defineMessages({
 		defaultMessage: 'Project {projectId} · File {fileId}',
 	},
 	downloadSource: { id: 'app.downloads.download-source', defaultMessage: 'Source: {source}' },
+	verifyingDownloadedFiles: {
+		id: 'app.downloads.phase.verifying-downloaded-files',
+		defaultMessage: 'Verifying files and continuing installation',
+	},
+	pendingVerification: {
+		id: 'app.downloads.item-status.pending-verification',
+		defaultMessage: 'Pending verification',
+	},
 	downloadSourceOfficial: { id: 'app.downloads.source.official', defaultMessage: 'Official' },
 	downloadSourceBmclapi: { id: 'app.downloads.source.bmclapi', defaultMessage: 'OpenBMCLAPI' },
 	downloadSourceMcim: { id: 'app.downloads.source.mcim', defaultMessage: 'MCIM' },
@@ -483,10 +527,6 @@ const messages = defineMessages({
 	downloadFallbacks: {
 		id: 'app.downloads.download-fallbacks',
 		defaultMessage: '{count} fallbacks',
-	},
-	completedSummary: {
-		id: 'app.downloads.completed-summary',
-		defaultMessage: '{count, number} items completed',
 	},
 	moreActiveRequests: {
 		id: 'app.downloads.more-active-requests',
@@ -663,6 +703,27 @@ function phaseLabel(phase: InstallPhaseId) {
 	return formatMessage(phaseMessages[phase])
 }
 
+function isRecoveryValidation(job: InstallJobSnapshot) {
+	return job.execution_mode === 'recovery_validation'
+}
+
+function isLocalRecoveryValidation(job: InstallJobSnapshot) {
+	return isRecoveryValidation(job) && activeRequestItems(job).length === 0
+}
+
+function jobPhaseLabel(job: InstallJobSnapshot) {
+	return isLocalRecoveryValidation(job)
+		? formatMessage(messages.verifyingDownloadedFiles)
+		: phaseLabel(job.phase)
+}
+
+function itemStatusLabel(job: InstallJobSnapshot, status: DownloadItem['status']) {
+	if (isRecoveryValidation(job) && status === 'queued') {
+		return formatMessage(messages.pendingVerification)
+	}
+	return statusLabel(status)
+}
+
 function statusColor(status: InstallJobStatus): 'green' | 'red' | 'orange' | 'blue' | 'gray' {
 	if (status === 'succeeded') return 'green'
 	if (status === 'failed' || status === 'interrupted' || status === 'canceled') return 'red'
@@ -682,7 +743,7 @@ function itemStatusColor(
 }
 
 function canCancel(job: InstallJobSnapshot) {
-	return job.status === 'queued' || job.status === 'running'
+	return ['queued', 'running', 'waiting_for_user'].includes(job.status)
 }
 
 function canRetry(job: InstallJobSnapshot) {
@@ -690,11 +751,16 @@ function canRetry(job: InstallJobSnapshot) {
 }
 
 function showProgress(job: InstallJobSnapshot) {
-	return ['queued', 'running', 'canceling'].includes(job.status)
+	return ['queued', 'running', 'canceling', 'waiting_for_user'].includes(job.status)
 }
 
 function jobPercent(job: InstallJobSnapshot) {
 	if (job.status === 'succeeded') return 100
+	if (job.status === 'waiting_for_user') {
+		const total = job.summary.files_total ?? job.items.length
+		if (!total) return 0
+		return Math.min(99, Math.floor((completedRequiredFiles(job) / total) * 100))
+	}
 	const progress = effectiveInstallProgress(job)
 	if (!hasDeterminateInstallProgress(progress)) return 0
 	return Math.min(99, Math.max(0, Math.floor((progress.current / progress.total) * 100)))
@@ -705,6 +771,19 @@ function hasDeterminateProgress(job: InstallJobSnapshot) {
 }
 
 function progressText(job: InstallJobSnapshot) {
+	if (job.status === 'waiting_for_user') {
+		return `${completedRequiredFiles(job)} / ${job.summary.files_total ?? job.items.length}`
+	}
+	if (isLocalRecoveryValidation(job)) {
+		const progress = effectiveInstallProgress(job)
+		if (hasDeterminateInstallProgress(progress)) {
+			const checked = job.progress?.secondary
+				? `${formatBytes(progress.current)} / ${formatBytes(progress.total)}`
+				: `${progress.current} / ${progress.total}`
+			return `${formatMessage(messages.verifyingDownloadedFiles)}: ${checked}`
+		}
+		return formatMessage(messages.verifyingDownloadedFiles)
+	}
 	const finalStage = job.items.find(
 		(item) => item.status === 'writing' || item.status === 'verifying',
 	)
@@ -723,10 +802,21 @@ function progressText(job: InstallJobSnapshot) {
 	return phaseLabel(job.phase)
 }
 
+function completedRequiredFiles(job: InstallJobSnapshot) {
+	return job.items.filter((item) => item.status === 'completed' || item.status === 'skipped').length
+}
+
+function missingRequiredFiles(job: InstallJobSnapshot) {
+	if (job.pause_reason?.type === 'missing_required_content') {
+		return job.pause_reason.failed_files
+	}
+	return job.items.filter((item) => item.status === 'failed').length
+}
+
 function downloadTelemetry(job: InstallJobSnapshot) {
 	const summary = job.summary
 	const metrics: string[] = []
-	if (summary.source) {
+	if (summary.source && !isRecoveryValidation(job)) {
 		metrics.push(
 			formatMessage(messages.downloadSource, {
 				source: downloadSourceLabel(summary.source),
@@ -743,7 +833,7 @@ function downloadTelemetry(job: InstallJobSnapshot) {
 	if (summary.eta_seconds != null) {
 		metrics.push(formatDownloadEta(summary.eta_seconds))
 	}
-	if (summary.fallback_count > 0) {
+	if (summary.fallback_count > 0 && !isRecoveryValidation(job)) {
 		metrics.push(formatMessage(messages.downloadFallbacks, { count: summary.fallback_count }))
 	}
 	return metrics
@@ -763,15 +853,15 @@ function downloadSourceLabel(source: string) {
 }
 
 const STATUS_ORDER: Record<string, number> = {
-	skipped: 0,
-	waiting_for_user: 1,
-	failed: 2,
-	canceled: 2,
-	queued: 3,
-	downloading: 4,
-	verifying: 5,
-	writing: 6,
-	completed: 7,
+	failed: 0,
+	downloading: 1,
+	queued: 2,
+	verifying: 3,
+	writing: 4,
+	completed: 5,
+	skipped: 6,
+	waiting_for_user: 7,
+	canceled: 8,
 }
 function compareItemStatus(a: DownloadItem, b: DownloadItem) {
 	return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)
@@ -780,22 +870,7 @@ const itemsCache = new Map<string, { items: InstallJobSnapshot['items']; result:
 function reorderJobItems(job: InstallJobSnapshot): DownloadItem[] {
 	const seen = itemsCache.get(job.job_id)
 	if (seen && seen.items === job.items) return seen.result
-	const sorted = [...job.items].sort(compareItemStatus)
-	const cutoff = sorted.findIndex((item) => item.status === 'completed')
-	const result: DownloadItem[] =
-		cutoff <= 0
-			? sorted
-			: [
-					...sorted.slice(0, cutoff),
-					{
-						id: `${job.job_id}__completed-summary`,
-						name: formatMessage(messages.completedSummary, { count: sorted.length - cutoff }),
-						project_id: null,
-						version_id: null,
-						status: 'completed',
-						bytes_downloaded: 0,
-					} as DownloadItem,
-				]
+	const result = [...job.items].sort(compareItemStatus)
 	itemsCache.set(job.job_id, { items: job.items, result })
 	return result
 }
@@ -825,7 +900,7 @@ function itemProgress(item: DownloadItem) {
 }
 
 function itemAttempts(item: DownloadItem) {
-	if (!item.attempt || !item.max_attempts) return formatMessage(messages.notAvailable)
+	if (item.attempt == null || item.max_attempts == null) return formatMessage(messages.notAvailable)
 	return formatMessage(messages.attemptProgress, {
 		attempt: item.attempt,
 		maxAttempts: item.max_attempts,
@@ -887,6 +962,10 @@ async function cancel(job: InstallJobSnapshot) {
 
 async function retry(job: InstallJobSnapshot) {
 	await withBusy(job.job_id, () => manager.retry(job.job_id))
+}
+
+async function resolveMissing(job: InstallJobSnapshot) {
+	await missingContentModal.value?.show(job)
 }
 
 async function remove(job: InstallJobSnapshot) {

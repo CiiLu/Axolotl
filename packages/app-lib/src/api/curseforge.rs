@@ -3590,7 +3590,7 @@ async fn find_manual_download_candidate(
 
     while let Some(entry) = entries.next_entry().await? {
         let actual_file_name = entry.file_name().to_string_lossy().to_string();
-        if !manual_download_file_name_matches(
+        if !crate::util::downloads::browser_download_file_name_matches(
             &actual_file_name,
             &download.file_name,
         ) {
@@ -3645,48 +3645,6 @@ fn manual_download_matches_without_hash(
     download.hashes.is_empty()
         && download.file_fingerprint == 0
         && actual_file_name.eq_ignore_ascii_case(&download.file_name)
-}
-
-fn manual_download_file_name_matches(actual: &str, expected: &str) -> bool {
-    if actual.eq_ignore_ascii_case(expected) {
-        return true;
-    }
-    let actual = Path::new(actual);
-    let expected = Path::new(expected);
-    if actual
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .zip(
-            expected
-                .extension()
-                .and_then(|extension| extension.to_str()),
-        )
-        .is_none_or(|(actual, expected)| !actual.eq_ignore_ascii_case(expected))
-    {
-        return false;
-    }
-    let Some(actual_stem) = actual.file_stem().and_then(|stem| stem.to_str())
-    else {
-        return false;
-    };
-    let Some(expected_stem) =
-        expected.file_stem().and_then(|stem| stem.to_str())
-    else {
-        return false;
-    };
-    let actual_stem = actual_stem.to_lowercase();
-    let expected_stem = expected_stem.to_lowercase();
-    let Some(suffix) = actual_stem.strip_prefix(&expected_stem) else {
-        return false;
-    };
-    let suffix = suffix.trim();
-    suffix
-        .strip_prefix('(')
-        .and_then(|suffix| suffix.strip_suffix(')'))
-        .is_some_and(|number| {
-            !number.is_empty()
-                && number.bytes().all(|byte| byte.is_ascii_digit())
-        })
 }
 
 async fn install_manual_download(
@@ -5090,19 +5048,19 @@ mod tests {
 
     #[test]
     fn browser_duplicate_download_names_match_the_expected_file() {
-        assert!(manual_download_file_name_matches(
+        assert!(crate::util::downloads::browser_download_file_name_matches(
             "example-mod (1).jar",
             "example-mod.jar"
         ));
-        assert!(manual_download_file_name_matches(
+        assert!(crate::util::downloads::browser_download_file_name_matches(
             "EXAMPLE-MOD.JAR",
             "example-mod.jar"
         ));
-        assert!(!manual_download_file_name_matches(
+        assert!(!crate::util::downloads::browser_download_file_name_matches(
             "example-mod-fabric.jar",
             "example-mod.jar"
         ));
-        assert!(!manual_download_file_name_matches(
+        assert!(!crate::util::downloads::browser_download_file_name_matches(
             "example-mod.jar.crdownload",
             "example-mod.jar"
         ));
