@@ -109,8 +109,24 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 }
 
 #[tauri::command]
-pub async fn purge_cache_types(cache_types: Vec<CacheValueType>) -> Result<()> {
+pub async fn purge_cache_types(cache_types: Vec<String>) -> Result<()> {
+    let cache_types = supported_cache_types(&cache_types);
     Ok(theseus::cache::purge_cache_types(&cache_types).await?)
+}
+
+fn supported_cache_types(cache_types: &[String]) -> Vec<CacheValueType> {
+    cache_types
+        .iter()
+        .filter_map(|cache_type| {
+            let parsed = CacheValueType::from_string(cache_type);
+            if parsed.as_str() == cache_type {
+                Some(parsed)
+            } else {
+                tracing::warn!(cache_type, "Ignoring unsupported cache type");
+                None
+            }
+        })
+        .collect()
 }
 
 #[tauri::command]
@@ -122,4 +138,24 @@ pub async fn get_project_versions(
         theseus::cache::get_project_versions(project_id, cache_behaviour)
             .await?,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::supported_cache_types;
+    use theseus::prelude::CacheValueType;
+
+    #[test]
+    fn cache_purge_keeps_supported_types_and_ignores_unknown_types() {
+        let cache_types = vec![
+            "project".to_string(),
+            "curseforge_project".to_string(),
+            "future_cache_type".to_string(),
+        ];
+
+        assert_eq!(
+            supported_cache_types(&cache_types),
+            vec![CacheValueType::Project, CacheValueType::CurseForgeProject,]
+        );
+    }
 }

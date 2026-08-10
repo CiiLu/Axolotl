@@ -33,6 +33,37 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.3',
+		version: '1.7.3',
+		publishedAt: '2026-08-10',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.3',
+			'zh-CN': 'Axolotl Launcher 1.7.3',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added animation for switching launcher pages',
+					'zh-CN': '为启动器页面切换添加了动画',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed cache purging failing when the frontend sends cache types unsupported by the running backend.',
+					'zh-CN': '修复前端发送当前后端不支持的缓存类型时，清理缓存失败的问题。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'When changing theme color, the shadow color of the launcher now changes accordingly',
+					'zh-CN': '更改主题颜色时，现在启动器的阴影颜色也会随之变动',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.2',
 		version: '1.7.2',
 		publishedAt: '2026-08-10',
