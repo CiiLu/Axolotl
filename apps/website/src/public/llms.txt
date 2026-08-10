@@ -10,6 +10,8 @@ Axolotl Labs includes:
 - Gradient text generator
 - Minecraft Java Edition seed map
 - 3D schematic workshop
+- Recipe generator
+- AI Powered Minecraft mod translation tool
 
 Axolotl Launcher is a fork of Modrinth App.
 

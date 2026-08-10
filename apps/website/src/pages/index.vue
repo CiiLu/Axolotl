@@ -733,6 +733,15 @@ const messages = defineMessages({
 		defaultMessage:
 			'Axolotl Labs is a collection of built-in launcher tools, including a gradient text generator, Java Edition seed map, and 3D schematic workshop.',
 	},
+	faqProjectDisclaimerQuestion: {
+		id: 'axolotl-site.faq.project-disclaimer.question',
+		defaultMessage: 'Is Axolotl Launcher and Axolotl Client the same project?',
+	},
+	faqProjectDisclaimerAnswer: {
+		id: 'axolotl-site.faq.project-disclaimer.answer',
+		defaultMessage:
+			'No. Axolotl Launcher and Axolotl Client are separate projects. Axolotl Launcher is an independent, unofficial downstream launcher based on the Modrinth monorepo. It is not affiliated with other Minecraft projects named Axolotl Client.',
+	},
 	seoKeywords: {
 		id: 'axolotl-site.seo.keywords',
 		defaultMessage:
@@ -775,6 +784,10 @@ const faqItems = computed(() => [
 		question: formatMessage(messages.faqLabQuestion),
 		answer: formatMessage(messages.faqLabAnswer),
 	},
+	{
+		question: formatMessage(messages.faqProjectDisclaimerQuestion),
+		answer: formatMessage(messages.faqProjectDisclaimerAnswer),
+	},
 ])
 const keywords = computed(() => formatMessage(messages.seoKeywords))
 
@@ -807,6 +820,8 @@ const structuredData = computed(() => ({
 			'@type': 'SoftwareApplication',
 			'@id': `${canonicalUrl}#software`,
 			name: 'Axolotl Launcher',
+			alternateName: ['美西螈启动器', 'AXL Launcher'],
+			sameAs: [githubUrl, 'https://cnb.cool/axlmc/Axolotl'],
 			description: description.value,
 			url: canonicalUrl,
 			downloadUrl: `${canonicalUrl}#download`,

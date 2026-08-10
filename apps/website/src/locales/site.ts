@@ -219,8 +219,12 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'axolotl-settings.done': '完成',
 		'axolotl-site.faq.lab.question': '什么是 Axolotl 实验室？',
 		'axolotl-site.faq.lab.answer':
-			'Axolotl 实验室是一个内置的网页工具集合，提供渐变文字生成器、Java 版种子地图和 3D 投影工坊等功能。内容持续更新中。',
+			'Axolotl 实验室是一个内置的网页工具集合，提供渐变文字生成器、Java 版种子地图、3D 投影工坊、配方生成器、Minecraft 模组翻译工具等功能。内容持续更新中。',
 		'axolotl-site.seo.keywords':
-			'Axolotl Launcher, 美西螈启动器, Minecraft 启动器, Modrinth, CurseForge, Minecraft Java 版, 模组, 整合包, 资源包, 光影, Axolotl 实验室',
+			'Axolotl Launcher, 美西螈启动器, Minecraft 启动器, Modrinth, CurseForge, Minecraft Java 版, 模组, 整合包, 资源包, 光影, Axolotl 实验室, Axolotl Launcher 下载, Axolotl Launcher 安装, Axolotl Launcher 中文, Axolotl Launcher 开源, Axolotl Launcher 免费, Axolotl Launcher 跨平台, Axolotl Launcher Windows, Axolotl Launcher macOS, Axolotl Launcher Linux',
+		'axolotl-site.faq.project-disclaimer.question':
+			'Axolotl Launcher 和 Axolotl Client 是同一个项目吗？',
+		'axolotl-site.faq.project-disclaimer.answer':
+			'不是。Axolotl Launcher 和 Axolotl Client 是两个独立的项目。Axolotl Launcher 是基于 Modrinth 单体仓库的独立非官方下游启动器，与其他名为 Axolotl Client 的 Minecraft 项目无关联。',
 	},
 }
