@@ -398,19 +398,19 @@ mod tests {
     #[test]
     fn parses_custom_offline_uuid() {
         let expected =
-            uuid::Uuid::parse_str("b50ad385-829d-3141-a216-7e7d7539ba7f")
+            uuid::Uuid::parse_str("b50ad385-829d-3141-a216-7e7d7539ca7f")
                 .unwrap();
 
         assert_eq!(
             parse_custom_uuid(Some(
-                "b50ad385829d3141a2167e7d7539ba7f".to_string()
+                "b50ad385829d3141a2167e7d7539ca7f".to_string()
             ))
             .unwrap(),
             Some(expected)
         );
         assert_eq!(
             parse_custom_uuid(Some(
-                "B50AD385-829D-3141-A216-7E7D7539BA7F".to_string()
+                "B50AD385-829D-3141-A216-7E7D7539CA7F".to_string()
             ))
             .unwrap(),
             Some(expected)
@@ -419,7 +419,7 @@ mod tests {
         assert!(parse_custom_uuid(Some("not-a-uuid".to_string())).is_err());
         assert!(
             parse_custom_uuid(Some(
-                "b50ad385829d3141a2167e7d7539ba7".to_string()
+                "b50ad385829d3141a2167e7d7539ca7".to_string()
             ))
             .is_err()
         );
