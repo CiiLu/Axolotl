@@ -286,7 +286,7 @@ onBeforeUnmount(() => {
 								<img src="/axolotl.png" alt="" />
 								<div>
 									<strong>Axolotl Launcher</strong>
-									<span>Website 2026</span>
+									<span>Website {{ new Date().getFullYear() }}</span>
 								</div>
 							</div>
 						</aside>
