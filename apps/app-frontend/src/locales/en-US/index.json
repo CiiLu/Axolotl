@@ -2795,9 +2795,6 @@
 	"app.lab.recipe-generator.preview.image-copied": {
 		"message": "Preview image copied"
 	},
-	"app.lab.recipe-generator.preview.result-count": {
-		"message": "Result count"
-	},
 	"app.lab.recipe-generator.preview.title": {
 		"message": "Preview"
 	},
@@ -2848,9 +2845,6 @@
 	},
 	"app.lab.recipe-generator.slots.grid-full": {
 		"message": "The grid is full. Clear a slot first."
-	},
-	"app.lab.recipe-generator.slots.result-count": {
-		"message": "Result count"
 	},
 	"app.lab.recipe-generator.tags.add": {
 		"message": "Add tag"
