@@ -146,6 +146,9 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'axolotl-site.navigation.open-settings': '打开显示设置',
 		'axolotl-site.navigation.open-menu': '打开导航',
 		'axolotl-site.navigation.close-menu': '关闭导航',
+		'axolotl-site.navigation.terms': '服务条款',
+		'axolotl-site.navigation.privacy': '隐私政策',
+		'axolotl-site.legal.updated': '最后更新：{updatedAt}',
 		'axolotl-site.footer.description':
 			'一款适用于 Windows、macOS 和 Linux 的自由开源 Minecraft 启动器。',
 		'axolotl-site.footer.developer': 'Axolotl Launcher 开发组',

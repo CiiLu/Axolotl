@@ -11,6 +11,8 @@ const messages = defineMessages({
 	faq: { id: 'axolotl-site.navigation.faq', defaultMessage: 'FAQ' },
 	downloads: { id: 'axolotl-site.footer.downloads', defaultMessage: 'Downloads' },
 	changelog: { id: 'axolotl-site.footer.release-history', defaultMessage: 'Changelog' },
+	terms: { id: 'axolotl-site.navigation.terms', defaultMessage: 'Terms of Service' },
+	privacy: { id: 'axolotl-site.navigation.privacy', defaultMessage: 'Privacy Policy' },
 	sourceCode: { id: 'axolotl-site.footer.source-code', defaultMessage: 'GitHub' },
 	description: {
 		id: 'axolotl-site.footer.description',

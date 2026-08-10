@@ -135,7 +135,10 @@ export default defineNuxtPlugin({
 		function t(key: string, values?: Record<string, unknown>): string {
 			const currentLocale = locale.value
 			const localeMessages = messageCache.get(currentLocale)
-			const fallbackMessages = messageCache.get(DEFAULT_LOCALE)
+			// 只有默认语言才回退到默认语言消息；其他语言缺失时返回 key，
+			// 由 formatMessage 使用英文 defaultMessage
+			const fallbackMessages =
+				currentLocale === DEFAULT_LOCALE ? messageCache.get(DEFAULT_LOCALE) : undefined
 			const msg = localeMessages?.[key] ?? fallbackMessages?.[key]
 
 			if (!msg) {
