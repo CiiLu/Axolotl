@@ -123,16 +123,16 @@
 					</button>
 					<div class="flex shrink-0 items-center">
 						<button
-							type="button"
 							v-tooltip="formatMessage(messages.copyUuid)"
+							type="button"
 							class="button-base border-0 bg-transparent p-1.5 cursor-pointer text-secondary hover:text-brand"
 							@click="copyAccountUuid(account)"
 						>
 							<CopyIcon />
 						</button>
 						<button
-							type="button"
 							v-tooltip="formatMessage(messages.removeAccount)"
+							type="button"
 							class="button-base border-0 bg-transparent p-1.5 cursor-pointer text-secondary hover:text-red"
 							@click="logout(account)"
 						>

@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Bạn không có quyền."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Không thể tải cài đặt máy chủ"
-  },
   "badge.alpha": {
     "defaultMessage": "Alpha"
   },
@@ -248,9 +245,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Cập nhật dự án"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Nhẫn giữ phím Shift trong khi ấn \"Cập nhật tất cả\" để bỏ qua bước xác nhận."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Cập nhật {count, plural, other {# dự án}}"
   },
@@ -365,41 +359,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Cảnh báo"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Đang tạo bản sao lưu..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Bản sao lưu đã được tạo thành công"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Tạo bản sao lưu thất bại. Bạn vẫn có thể tiếp tục."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Quá trình sao lưu đang diễn ra, bạn nên đợi hoàn tất trước khi thực hiện hành động này."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Việc tạo backup có thể mất vài phút tùy thuộc vào kích thước server của bạn."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Tạo bản sao lưu"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "cấu hình"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Giữ nút Shift khi click để bỏ qua xác nhận."
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "Chúng tôi khuyên bạn nên tạo bản dự phòng trước để khi có gì hỏng thì bạn có thể hoàn tác lại."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "thế giới"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Thêm mod"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Vui lòng chờ quá trình xử lý hoàn tất trước khi chỉnh sửa nội dung."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Thêm hoặc tải lên {contentType} để bắt đầu"
@@ -559,105 +520,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Không có phiên bản khả dụng"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Lựa chọn khác"
-  },
-  "creation-flow.modal.final-config.backup.before-reset-server.name": {
-    "defaultMessage": "Trước khi xóa máy chủ"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Dễ"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Khó"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Độ khó"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Trung bình"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Yên bình"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Chọn phiên bản game"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Sáng tạo"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Hardcore"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Chế độ"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Sinh tồn"
-  },
-  "creation-flow.modal.final-config.generate-structures.description": {
-    "defaultMessage": "Sửa đổi về việc Làng, Cổng The End, hoặc các công trình tương tự được tạo ra hay không."
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "Tạo Công trình"
-  },
-  "creation-flow.modal.final-config.generator-settings-json.placeholder": {
-    "defaultMessage": "Nhập dòng cài đặt JSON cho bộ tạo thế giới tại đây"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Tùy chỉnh"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Mặc định"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "Được sử dụng để tùy chỉnh thế giới như việc tùy chỉnh các lớp khối trong thế giới siêu phẳng."
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Phẳng"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "Tùy chọn bộ khởi tạo thế giới"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "Chọn chế độ khởi tạo"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Tên thế giới"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Nhập tên thế giới"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "Để trống cho hạt giống ngẫu nhiên."
-  },
-  "creation-flow.modal.final-config.world-seed.label-with-optional": {
-    "defaultMessage": "Hạt giống thế giới <optional>(Không bắt buộc)</optional>"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "Nhập hạt giống thế giới"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "Khuếch đại"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Mặc định"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Loại thế giới"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Quần xã lớn"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Chọn loại thế giới"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "Quần xã đơn"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Siêu phẳng"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "Cấu hình là một bản cài Minecraft với mod, phiên bản và loader của riêng nó."
@@ -875,9 +737,6 @@
   "files.item-type.folders": {
     "defaultMessage": "thư mục"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "Các thao tác với tệp sẽ bị vô hiệu hóa trong khi thao tác đang diễn ra."
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Lỗi khi chạy thử nghiệm không tải"
   },
@@ -956,24 +815,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": "Tải lên từ URL tệp .zip"
   },
-  "files.operations.current-file": {
-    "defaultMessage": "Tệp hiện tại: {file}"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "Đã giải nén {size}"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "Đang giải nén {source}"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "Đã hoàn tất trích xuất {source}"
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "Không thể trích xuất {source}"
-  },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "modpack từ URL"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "Đổi tên {name}"
   },
@@ -1015,9 +856,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "Bắt buộc phải có tên."
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "Cài đặt modpack của CurseForge"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "Cài đặt một modpack của CurseForge"
@@ -1189,111 +1027,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Độ phân giải"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Không thể xóa nội dung"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "Không thể tắt nội dung"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "Không thể bật nội dung"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "Không thể cập nhật nội dung"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "Không thể tải nội dung"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Không thể tải nội dung của modpack"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "Lỗi load phiên bản"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "Không thể xóa nội dung"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "Lỗi khi chuyển đổi {name}"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Hủy liên kết modpack thất bại"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "Thất bại trong khi cập nhật"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Thất bại trong việc tải file lên"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "Không thể thay đổi phiên bản modpack"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "Không thể truy cập được phiên bản"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "Không thể cài lại modpack"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Không thể khắc phục máy chủ"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "Không thể tải lại máy chủ vào trạng thái khởi đầu"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "Không thể lưu cài đặt"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Không thể ngừng liên kết modpack"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "Phiên bản {loader, select, null {Loader} other {{loader}}}"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "Máy chủ của bạn đã được khắc phục."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Đã khắc phục"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "Cài lại máy chủ"
-  },
-  "hosting.loader.reset-server-description": {
-    "defaultMessage": "Xóa tất cả dữ liệu trong máy chủ, bao gồm thế giới, mod, và tệp cấu hình. Các bản sao lưu vẫn sẽ được giữ nguyên và có thể dùng khôi phục lại."
-  },
-  "hosting.loader.reset-to-onboarding-button": {
-    "defaultMessage": "Cài lại về sự khởi đầu"
-  },
-  "hosting.loader.reset-to-onboarding-modal-description": {
-    "defaultMessage": "Điều này sẽ đưa máy chủ trở lại từ đầu để quá trình cài đặt sẽ được thực hiên lần nữa. Bạn chắc chắn sẽ tiếp tục chứ?"
-  },
-  "hosting.loader.reset-to-onboarding-modal-title": {
-    "defaultMessage": "Cài lại từ đầu"
-  },
-  "hosting.loader.reset-to-onboarding-success-description": {
-    "defaultMessage": "Máy chủ này đã được đưa về trạng thái khởi đầu."
-  },
-  "hosting.loader.reset-to-onboarding-success-title": {
-    "defaultMessage": "Đã cài lại máy chủ"
-  },
-  "hosting.loader.support-options-title": {
-    "defaultMessage": "Cài đặt hỗ trợ"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Tăng tốc tối đa lên {cpus} CPU"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "Tính năng tăng tốc CPU cho phép máy chủ của bạn tạm thời sử dụng thêm các luồng để giúp giảm thiểu hiện tượng tụt TPS. Nhấp để xem chi tiết."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB bộ nhớ"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} CPU dùng chung"
   },
   "icon-select.edit": {
     "defaultMessage": "Chỉnh sửa biểu tượng"
@@ -2113,12 +1846,6 @@
   },
   "markdown-editor.video-modal.url-field.title": {
     "defaultMessage": "URL video Youtube"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Thêm phương thức thanh toán"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Đang thêm phương thức thanh toán"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Tự động cài đặt các nội dung cần thiết"
@@ -2978,171 +2705,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
-  "servers.busy.backup-creating": {
-    "defaultMessage": "Đang tạo bản sao lưu"
-  },
-  "servers.busy.backup-restoring": {
-    "defaultMessage": "Đang khôi phục bản sao lưu"
-  },
-  "servers.busy.installing": {
-    "defaultMessage": "Đang cài máy chủ"
-  },
-  "servers.busy.syncing-content": {
-    "defaultMessage": "Đang đồng bộ nội dung"
-  },
-  "servers.installing-banner.error.header": {
-    "defaultMessage": "Tải thất bại"
-  },
-  "servers.installing-banner.error.internal-platform": {
-    "defaultMessage": "Đã xảy ra lỗi nội bộ trong quá trình cài đặt nền tảng. Thử lại."
-  },
-  "servers.installing-banner.error.invalid-loader-version": {
-    "defaultMessage": "Không thể tải loader hoặc phiên bản Minecraft đã chọn. Nó có thể không phù hợp hoặc không được hỗ trợ."
-  },
-  "servers.installing-banner.error.modpack-install-failed": {
-    "defaultMessage": "Modpack này không thể tải được. Nó có thể bị hỏng hoặc không tương thích."
-  },
-  "servers.installing-banner.error.no-primary-file": {
-    "defaultMessage": "Phiên bản modpack này không chứa tệp có thể tải xuống. Nó có thể không được làm đúng cách."
-  },
-  "servers.installing-banner.error.unknown": {
-    "defaultMessage": "Có lỗi lạ xảy ra trong khi tải."
-  },
-  "servers.installing-banner.error.unsupported-loader-version": {
-    "defaultMessage": "Phiên bản minecraft hoặc loader hiện không được hỗ trợ bởi Modrinth Hosting."
-  },
-  "servers.installing-banner.phase.installing-addons": {
-    "defaultMessage": "Đang cài addon..."
-  },
-  "servers.installing-banner.phase.installing-modpack": {
-    "defaultMessage": "Đang cài modpack..."
-  },
-  "servers.installing-banner.phase.installing-platform": {
-    "defaultMessage": "Đang cài platform..."
-  },
-  "servers.installing-banner.preparing.header": {
-    "defaultMessage": "Chúng tôi đang sửa máy chủ của bạn"
-  },
-  "servers.installing-banner.ticker.adding-java": {
-    "defaultMessage": "Đang thêm Java..."
-  },
-  "servers.installing-banner.ticker.configuring-server": {
-    "defaultMessage": "Đang chỉnh sửa máy chủ..."
-  },
-  "servers.installing-banner.ticker.downloading-mods": {
-    "defaultMessage": "Đang tải mod..."
-  },
-  "servers.installing-banner.ticker.organizing-files": {
-    "defaultMessage": "Đang sắp sếp tệp..."
-  },
-  "servers.installing-banner.ticker.setting-up-environment": {
-    "defaultMessage": "Đang thiết lập môi trường..."
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "Đã có máy chủ rồi?"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Tìm hiểu thêm về Modrinth Hosting"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "Máy chủ mới"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Cài mod, mời bạn bè, và chơi cùng nhau mà chỉ cần Ứng dụng Modrinth."
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "Không máy chủ khả dụng"
-  },
-  "servers.list-empty.one-click-mod-installs-description": {
-    "defaultMessage": "Chọn bản mod mà bạn yêu thích và chúng tôi sẽ làm tất cả phần còn lại."
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "Cài mod với một cú nhấp"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "Mời bạn bè và giúp họ thiết lập ngay trong ứng dụng Modrinth."
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "Chơi với bạn bè"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Đăng nhập"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "Thiết lập máy chủ giống như thế giới chơi đơn."
-  },
-  "servers.list-empty.simple-setup-title": {
-    "defaultMessage": "Thiết lập đơn giản"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Đã sao chép"
-  },
-  "servers.listing.copy-code-tooltip": {
-    "defaultMessage": "Sao chép mã vào bảng nhớ tạm"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "Sao chép ID"
-  },
-  "servers.listing.download-latest-backup-tooltip": {
-    "defaultMessage": "Tải bản sao lưu mới nhất"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Mới"
-  },
-  "servers.listing.notice.files-kept-for-download": {
-    "defaultMessage": "Tệp của bạn vẫn được giữ trong vòng <days-remaining>{daysRemaining} ngày{daysRemaining, plural, other {nữa}}</days-remaining>. liên hệ với bên hỗ trợ để tải tệp về trước khi chúng bị xóa."
-  },
-  "servers.listing.notice.files-preserved-after-cancellation": {
-    "defaultMessage": "Tệp của bạn sẽ được giữ trong vòng 30 ngày trước khi bị xóa."
-  },
-  "servers.listing.notice.moderated": {
-    "defaultMessage": "Máy chủ của bạn đã bị đình chỉ do hành động bên kiểm duyệt."
-  },
-  "servers.listing.notice.pending-change": {
-    "defaultMessage": "Máy chủ của bạn sẽ {verb, select, downgrade {bị hạ cấp} other {được nâng cấp}} đến Gói {planSize} vào <date>{formattedDate}</date>."
-  },
-  "servers.listing.notice.provisioning": {
-    "defaultMessage": "Vui lòng đợi trong khi chúng tôi thiết lập máy chủ của bạn. Điều này sẽ mất tối đa 10 phút."
-  },
-  "servers.listing.notice.subscription-cancelled": {
-    "defaultMessage": "Gói đăng ký của bạn đã bị hủy."
-  },
-  "servers.listing.notice.subscription-cancelled-on-date": {
-    "defaultMessage": "Gói đăng ký của bạn đã bị hủy vào <date>{formattedDate}</date>."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed": {
-    "defaultMessage": "Gói đăng ký của bạn đã bị hủy do thất bại giao dịch thanh toán."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed-on-date": {
-    "defaultMessage": "Gói đăng ký của bạn đã bị hủy vào <date>{formattedDate}</date> do thất bại giao dịch thanh toán. "
-  },
-  "servers.listing.notice.subscription-set-to-cancel": {
-    "defaultMessage": "Gói đăng ký của bạn được thiết lập để hủy."
-  },
-  "servers.listing.notice.subscription-set-to-cancel-on-date": {
-    "defaultMessage": "Gói đăng ký của bạn được thiết lập để hủy vào <date>{formattedDate}</date>. "
-  },
-  "servers.listing.notice.suspended": {
-    "defaultMessage": "Máy chủ của bạn đã bị đình chỉ, liên hệ bên hỗ trợ Modrinth để biết thêm thông tin."
-  },
-  "servers.listing.notice.upgrading": {
-    "defaultMessage": "Phần cứng máy chủ của bạn hiện đang được nâng cấp và sẽ hoạt động trở lại trong thời gian ngắn."
-  },
-  "servers.listing.resubscribe-label": {
-    "defaultMessage": "Đăng ký lại"
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "Biểu tượng máy chủ"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Hỗ trợ"
-  },
-  "servers.listing.using-project-label": {
-    "defaultMessage": "Đang sử dụng {projectTitle}"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Bỏ qua"
   },
@@ -3176,12 +2738,6 @@
   "servers.region.central-europe": {
     "defaultMessage": "Trung Âu"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Bạn muốn máy chủ mình có bao nhiêu dung lượng RAM?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "RAM"
-  },
   "servers.region.north-america-central": {
     "defaultMessage": "Trung Bắc Mỹ"
   },
@@ -3191,74 +2747,11 @@
   "servers.region.north-america-west": {
     "defaultMessage": "Tây Bắc Mỹ"
   },
-  "servers.region.prompt": {
-    "defaultMessage": "Bạn muốn khu vực máy chủ của bạn được nằm ở đâu?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Khu vực không được liệt kê? <link>Hãy cho chúng tôi biết nơi mà bạn muốn Modrinth Hosting sẽ có trong tương lai!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Đông Nam Á"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Tây Âu"
-  },
-  "servers.setup.onboarding.installation-failed.text": {
-    "defaultMessage": "Có lỗi xảy ra trong khi tải. Thử lại sau."
-  },
-  "servers.setup.onboarding.installation-failed.title": {
-    "defaultMessage": "Cài đặt thất bại"
-  },
-  "servers.setup.onboarding.modpack-upload-failed.text": {
-    "defaultMessage": "Có lỗi xảy ra trong khi tải lên. Thử lại sau."
-  },
-  "servers.setup.onboarding.modpack-upload-failed.title": {
-    "defaultMessage": "Tải lên modpack thất bại"
-  },
-  "servers.setup.onboarding.setup-server.button": {
-    "defaultMessage": "Thiết lập máy chủ"
-  },
-  "servers.setup.onboarding.step.choose.description": {
-    "defaultMessage": "Chọn modpack bạn yêu thích, hoặc chọn loader và thêm bản mod bạn muốn."
-  },
-  "servers.setup.onboarding.step.choose.title": {
-    "defaultMessage": "Chọn thứ để chơi"
-  },
-  "servers.setup.onboarding.step.configure-world.description": {
-    "defaultMessage": "Thiết lập thế giới của bạn y hệt chơi đơn. Chọn Chế độ và hạt giống thế giới."
-  },
-  "servers.setup.onboarding.step.configure-world.title": {
-    "defaultMessage": "Chỉnh sửa thế giới"
-  },
-  "servers.setup.onboarding.step.invite-friends.description": {
-    "defaultMessage": "Chia sẻ máy chủ của bạn với bạn bè bằng cách sao chép địa chỉ và cho họ biết họ sẽ cần dùng bản mod nào để vào."
-  },
-  "servers.setup.onboarding.step.invite-friends.title": {
-    "defaultMessage": "Mời bạn bè"
-  },
-  "servers.setup.onboarding.steps.heading": {
-    "defaultMessage": "Thiết lập máy chủ (~2 phút)"
-  },
-  "servers.setup.onboarding.uploading.progress": {
-    "defaultMessage": "Đang tải lên ({percent, number}%)"
-  },
-  "servers.setup.onboarding.welcome.description": {
-    "defaultMessage": "Máy chủ của bạn đã sẵn sàng. Bạn sẽ cần làm những điều này để bắt đầu chơi!"
-  },
-  "servers.setup.onboarding.welcome.title": {
-    "defaultMessage": "Chào mừng đến Modrinth Hosting"
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "Bạn đang bị giới hạn lượt truy cập. Vui lòng thử lại sau."
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "Không thể cài đặt lại máy chủ"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Đã xảy ra lỗi không mong muốn trong quá trình cài đặt lại. Vui lòng thử lại sau."
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "Lỗi cài đặt lại"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "Vui lòng giữ trang này mở cho đến khi quá trình tải lên hoàn tất."

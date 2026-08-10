@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Anda tidak memiliki izin."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Gagal memuat pengaturan server"
-  },
   "badge.alpha": {
     "defaultMessage": "Alpha"
   },
@@ -248,9 +245,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Perbarui proyek"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Tahan tombol Shift saat mengeklik \"Perbarui semua\" untuk melewati pesan konfirmasi ini untuk kedepannya."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Perbarui {count, plural, other {# proyek}}"
   },
@@ -338,41 +332,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Peringatan"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Membuat cadangan..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Berhasil membuat cadangan"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Gagal membuat cadangan. Anda tetap dapat melanjutkan."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Proses pencadangan sedang berlangsung; disarankan untuk menunggu hingga proses tersebut selesai sebelum melakukan tindakan ini."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Pembuatan cadangan mungkin memerlukan waktu beberapa menit, tergantung pada ukuran server Anda."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Buat cadangan"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "instans"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Tahan tombol Shift saat mengeklik untuk melewati pesan konfirmasi."
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "Kami menyarankan Anda membuat cadangan terlebih dahulu sebelum melanjutkan, sehingga Anda dapat memulihkan {type} Anda bila terjadi masalah."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "dunia"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Jelajahi konten"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Mohon tunggu hingga proses selesai sebelum menyunting konten."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Telusuri atau unggah {contentType} untuk memulai"
@@ -523,99 +484,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Tidak ada versi tersedia"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Pengaturan tambahan"
-  },
-  "creation-flow.modal.final-config.backup.before-reset-server.name": {
-    "defaultMessage": "Pra-pengaturan ulang server"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Mudah"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Sulit"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Kesulitan"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Normal"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Damai"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Pilih versi permainan"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Kreatif"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Menantang"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Mode permainan"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Sintas"
-  },
-  "creation-flow.modal.final-config.generator-settings-json.placeholder": {
-    "defaultMessage": "Masukkan JSON untuk pengaturan penghasil"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Tersuai"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Bawaan"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "Digunakan untuk penyesuaian dunia lanjutan seperti lapisan Superrata tersuai."
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Superrata"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "Pengaturan penghasil"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "Pilih pengaturan penghasil"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Nama dunia"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Masukkan nama dunia"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "Kosongkan untuk benih acak."
-  },
-  "creation-flow.modal.final-config.world-seed.label-with-optional": {
-    "defaultMessage": "Benih dunia <optional>(Opsional)</optional>"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "Masukkan benih dunia"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "Diperkuat"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Bawaan"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Jenis dunia"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Bioma Besar"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Pilih jenis dunia"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "Bioma Tunggal"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Superrata"
   },
   "creation-flow.modal.setup-type.option.vanilla-minecraft.description": {
     "defaultMessage": "Minecraft klasik tanpa mod atau pasang-masuk."
@@ -779,9 +647,6 @@
   "files.item-type.folders": {
     "defaultMessage": "folder"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "Operasi berkas dimatikan selama proses sedang berlangsung."
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Terjadi kesalahan saat menguji coba"
   },
@@ -811,18 +676,6 @@
   },
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": "Unggah dari URL .zip"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "{size} terekstraksi"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "Mengekstraksi {source}"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "Selesai mengekstraksi {source}"
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "Gagal mengekstraksi {source}"
   },
   "files.rename-modal.header": {
     "defaultMessage": "Ganti nama {name}"
@@ -964,21 +817,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Resolusi"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Letupkan hingga {cpus} CPU"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "Meletupkan CPU memungkinkan server Anda untuk sementara menggunakan utas tambahan untuk membantu mengurangi pelonjakan latensi TPD (tik per detik). Klik untuk info lebih lanjut."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "RAM {ram} GB"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "Penyimpanan {storage} GB"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} CPU Terbagi"
   },
   "icon-select.edit": {
     "defaultMessage": "Sunting ikon"
@@ -1297,12 +1135,6 @@
   },
   "locale.zh-TW": {
     "defaultMessage": "Bahasa China (Aksara Tradisional)"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Tambah metode pembayaran"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Menambah metode pembayaran"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Konten yang diperlukan terpasang secara otomatis"
@@ -2081,9 +1913,6 @@
   "search.filter_type.shader_loader": {
     "defaultMessage": "Pemuat"
   },
-  "servers.listing.owner-tooltip": {
-    "defaultMessage": "Dimiliki oleh {username}"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Abaikan"
   },
@@ -2117,12 +1946,6 @@
   "servers.region.central-europe": {
     "defaultMessage": "Eropa Tengah"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Berapa besar RAM yang diinginkan untuk server Anda?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "RAM"
-  },
   "servers.region.north-america-central": {
     "defaultMessage": "Amerika Utara Tengah"
   },
@@ -2131,12 +1954,6 @@
   },
   "servers.region.north-america-west": {
     "defaultMessage": "Amerika Utara Barat"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Lokasi manakah yang Anda inginkan untuk server Anda?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Wilayah tidak terdaftar? <link>Beri tahu kami di mana Anda ingin melihat Modrinth Hosting untuk kedepannya!</link>"
   },
   "servers.region.southeast-asia": {
     "defaultMessage": "Asia Tenggara"

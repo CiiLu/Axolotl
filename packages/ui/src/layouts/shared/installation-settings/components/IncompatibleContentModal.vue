@@ -92,6 +92,7 @@ import { commonMessages } from '#ui/utils/common-messages'
 
 const modal = ref<InstanceType<typeof NewModal>>()
 const loadingAction = ref<'auto-fix' | 'disable-conflicts' | null>(null)
+const { formatMessage } = useVIntl()
 
 defineProps<{
 	variant: 'loader-change' | 'game-version-change'

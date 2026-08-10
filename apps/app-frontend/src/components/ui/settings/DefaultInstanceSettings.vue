@@ -10,8 +10,8 @@ import {
 } from '@modrinth/ui'
 import { ref, watch } from 'vue'
 
-import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
 import JavaArgumentsInput from '@/components/ui/JavaArgumentsInput.vue'
+import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
 import useMemorySlider from '@/composables/useMemorySlider'
 import { get, set } from '@/helpers/settings.ts'
 

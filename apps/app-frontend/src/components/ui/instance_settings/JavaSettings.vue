@@ -9,8 +9,8 @@ import {
 } from '@modrinth/ui'
 import { computed, readonly, ref, watch } from 'vue'
 
-import JavaSelector from '@/components/ui/JavaSelector.vue'
 import JavaArgumentsInput from '@/components/ui/JavaArgumentsInput.vue'
+import JavaSelector from '@/components/ui/JavaSelector.vue'
 import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
 import useMemorySlider from '@/composables/useMemorySlider'
 import { edit, get_optimal_jre_key } from '@/helpers/instance'

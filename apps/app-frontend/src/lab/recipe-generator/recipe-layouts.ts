@@ -1,8 +1,8 @@
-import campfireImage from '@/components/lab/recipe-generator/bg/篝火.png?url'
-import craftingImage from '@/components/lab/recipe-generator/bg/合成.png?url'
-import smithingImage from '@/components/lab/recipe-generator/bg/锻造.png?url'
-import smeltingImage from '@/components/lab/recipe-generator/bg/熔炼.png?url'
 import stonecutterImage from '@/components/lab/recipe-generator/bg/切石机.png?url'
+import craftingImage from '@/components/lab/recipe-generator/bg/合成.png?url'
+import smeltingImage from '@/components/lab/recipe-generator/bg/熔炼.png?url'
+import campfireImage from '@/components/lab/recipe-generator/bg/篝火.png?url'
+import smithingImage from '@/components/lab/recipe-generator/bg/锻造.png?url'
 
 import type { RecipeSlot, RecipeType } from './types.ts'
 

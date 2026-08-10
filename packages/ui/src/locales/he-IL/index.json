@@ -1,7 +1,4 @@
 {
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "טעינת הגרסה נכשלה"
-  },
   "badge.beta": {
     "defaultMessage": "בטא"
   },
@@ -205,12 +202,6 @@
   },
   "content.diff-modal.diff-type.updated": {
     "defaultMessage": "עודכן"
-  },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "יוצר גיבוי..."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "צור גיבוי"
   },
   "content.page-layout.empty.no-content-installed": {
     "defaultMessage": "אין תוכן מותקן"
@@ -505,12 +496,6 @@
   },
   "label.yes": {
     "defaultMessage": "כן"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "הוסף שיטת תשלום"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "מוסיף שיטת תשלום"
   },
   "notification.error.title": {
     "defaultMessage": "אירעה שגיאה"
@@ -919,12 +904,6 @@
   },
   "servers.region.central-europe": {
     "defaultMessage": "מרכז אירופה"
-  },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "כמה זיכרון RAM תרצה שהשרת שלך יקבל?"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "באיזה מיקום תרצה שהשרת שלך יימצא?"
   },
   "servers.region.southeast-asia": {
     "defaultMessage": "דרום־מזרח אסיה"

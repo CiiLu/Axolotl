@@ -54,10 +54,7 @@ export async function loadVersionResources(
 	const cached = versionResourcesCache.get(version)
 	if (cached) return cached
 	const promise = (async () => {
-		const [items, vanillaTags] = await Promise.all([
-			loadItems(version),
-			loadVanillaTags(version),
-		])
+		const [items, vanillaTags] = await Promise.all([loadItems(version), loadVanillaTags(version)])
 		const itemsById: Record<string, ItemInfo> = {}
 		for (const item of items) itemsById[item.id] = item
 		return { version, items, itemsById, vanillaTags }

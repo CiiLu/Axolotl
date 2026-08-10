@@ -120,7 +120,9 @@ function formatDuration(seconds: number): string {
 	border-radius: var(--radius-md);
 	background: var(--color-brand-highlight);
 	color: var(--color-brand);
-	transition: background 0.3s ease, color 0.3s ease;
+	transition:
+		background 0.3s ease,
+		color 0.3s ease;
 }
 
 .file-badge :deep(svg) {

@@ -125,10 +125,10 @@ import {
 	list as listInstances,
 	run,
 } from '@/helpers/instance'
+import { reconcileMojangAuthSourceAtStartup } from '@/helpers/mojang-auth'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { get as getSettings, getUpdateSource, set as setSettings } from '@/helpers/settings.ts'
-import { reconcileMojangAuthSourceAtStartup } from '@/helpers/mojang-auth'
 import { get_opening_command, initialize_state, set_discord_activity } from '@/helpers/state'
 import {
 	areUpdatesEnabled,

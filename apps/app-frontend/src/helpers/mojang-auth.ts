@@ -1,6 +1,6 @@
 import { check_mojang_services } from '@/helpers/auth.js'
 import { ensureFallenAuthProxyArgs, removeFallenAuthProxyArgs } from '@/helpers/java-arguments'
-import { get, set, type AppSettings } from '@/helpers/settings'
+import { type AppSettings, get, set } from '@/helpers/settings'
 
 const DEFAULT_RETRIES = 3
 const RETRY_DELAY_MS = 1000

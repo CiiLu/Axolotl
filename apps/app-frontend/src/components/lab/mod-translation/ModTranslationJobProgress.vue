@@ -43,7 +43,11 @@ function formatWeight(value: number): string {
 					class="connector"
 					:class="{ 'connector--on': index <= activeIndex || job.status === 'completed' }"
 				/>
-				<span class="step" :class="`step--${stepState(step.id)}`" :title="formatMessage(step.label)">
+				<span
+					class="step"
+					:class="`step--${stepState(step.id)}`"
+					:title="formatMessage(step.label)"
+				>
 					<component :is="step.icon" />
 				</span>
 			</template>
@@ -107,7 +111,9 @@ function formatWeight(value: number): string {
 	border-radius: 999px;
 	background: var(--color-button-bg);
 	color: var(--color-text-secondary);
-	transition: background 0.25s ease, color 0.25s ease;
+	transition:
+		background 0.25s ease,
+		color 0.25s ease;
 }
 
 .step :deep(svg) {
@@ -172,8 +178,12 @@ function formatWeight(value: number): string {
 }
 
 @keyframes indeterminate {
-	0% { transform: translateX(-110%); }
-	100% { transform: translateX(310%); }
+	0% {
+		transform: translateX(-110%);
+	}
+	100% {
+		transform: translateX(310%);
+	}
 }
 
 .live {

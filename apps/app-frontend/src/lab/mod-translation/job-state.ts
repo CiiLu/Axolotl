@@ -21,9 +21,11 @@ export function phaseIndex(phase: ModTranslationPhase): number {
 	return MOD_TRANSLATION_PHASES.indexOf(phase)
 }
 
-export function countModTranslationJobs(
-	jobs: ReadonlyArray<Pick<ModTranslationJob, 'status'>>,
-): { running: number; completed: number; failed: number } {
+export function countModTranslationJobs(jobs: ReadonlyArray<Pick<ModTranslationJob, 'status'>>): {
+	running: number
+	completed: number
+	failed: number
+} {
 	return jobs.reduce(
 		(counts, job) => {
 			counts[job.status] += 1
@@ -46,7 +48,10 @@ function monotonicPhase(current: ModTranslationPhase, incoming: ModTranslationPh
 	return phaseIndex(incoming) >= phaseIndex(current) ? incoming : current
 }
 
-function applyProgress(job: ModTranslationJob, progress: ModTranslationProgress): ModTranslationJob {
+function applyProgress(
+	job: ModTranslationJob,
+	progress: ModTranslationProgress,
+): ModTranslationJob {
 	const failedPackagingSignal = progress.finished && !progress.ok && progress.phase === 'packaging'
 	const phase = failedPackagingSignal ? job.phase : monotonicPhase(job.phase, progress.phase)
 	const hasWorkWeight = progress.weightTotal > 0
@@ -118,7 +123,9 @@ export function reduceModTranslationJob(
 		status: event.status,
 		updatedAt: event.occurredAt,
 		lastSequence: event.sequence,
-		events: [...job.events, event].sort((left, right) => left.sequence - right.sequence).slice(-400),
+		events: [...job.events, event]
+			.sort((left, right) => left.sequence - right.sequence)
+			.slice(-400),
 		report: event.report ?? job.report,
 		error: event.error ?? job.error,
 	}

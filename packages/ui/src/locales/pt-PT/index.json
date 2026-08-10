@@ -1,7 +1,4 @@
 {
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Falha ao carregar configurações do servidor"
-  },
   "badge.alpha": {
     "defaultMessage": "Alpha"
   },
@@ -191,9 +188,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Atualizar projetos"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Segure Shift enquanto clica em ''Atualizar tudo'' para pular essa confirmação futuramente."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Atualizar {count, plural, one {# projeto} other {# projetos}}"
   },
@@ -248,32 +242,8 @@
   "content.diff-modal.updated-count": {
     "defaultMessage": "{count} atualizados"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "A criar cópia de segurança..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Cópia de segurança criada com sucesso"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Criação do backup falhou. Você ainda pode proceder."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Um backup está a decorrer, recomenda-se esperar que ele termine antes de realizar esta ação."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "A criação do backup pode levar vários minutos, dependendo do tamanho do teu servidor."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Criar cópia de segurança"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Pressiona Shift enquanto clicas para saltar a confirmação."
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Navegar conteúdo"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Aguarde essa operação ser finalizada antes de editar o conteúdo."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Navegue ou envie {contentType} para começar"
@@ -446,9 +416,6 @@
   "files.navbar.share-to-mclogs": {
     "defaultMessage": "Partilhar no mclo.gs"
   },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "modpack a partir de URL"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "Renomear {name}"
   },
@@ -580,24 +547,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Resolução"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Falha ao excluir conteúdo"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Turbo até {cpus} CPUs"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "Turbo de CPUs permite ao teu servidor usar temporariamente threads adicionais para ajudar a mitigar picos de TPS. Clica para mais informação."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Armazenamento"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} CPUs Partilhadas"
   },
   "icon-select.edit": {
     "defaultMessage": "Editar ícone"
@@ -919,12 +868,6 @@
   },
   "locale.zh-TW": {
     "defaultMessage": "Chinês (Tradicional)"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Adicionar método de pagamento"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "A adicionar método de pagamento"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Instala conteúdo necessário automaticamente"
@@ -1738,15 +1681,6 @@
   },
   "servers.region.central-europe": {
     "defaultMessage": "Europa Central"
-  },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Quanta RAM queres que o teu servidor tenha?"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Onde queres que o teu servidor esteja localizado?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Região não listada? <link>Deixa-nos saber onde gostarias de ver Modrinth Hosting a seguir!</link>"
   },
   "servers.region.southeast-asia": {
     "defaultMessage": "Sudeste Asiático"

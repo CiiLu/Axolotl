@@ -128,9 +128,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Opdater projekter"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Hold Shift imens du klikker \"Opdater alle\" for at springe denne bekræftelse over fremover."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Opdater {count, plural, one {# projekt} other {# projekter}}"
   },
@@ -223,21 +220,6 @@
   },
   "header.category.category": {
     "defaultMessage": "Kategorier"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Booster op til {cpus} CPUer"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "CPU boosting tillader din server midlertidig bruge ydeligere tråde for at hjælpe metigere TPS toppe. Klik for mere information."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB Hukommelse"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Lagerplads"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} Delte CPUer"
   },
   "icon-select.edit": {
     "defaultMessage": "Rediger ikon"
@@ -478,12 +460,6 @@
   },
   "label.yes": {
     "defaultMessage": "Ja"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Tilføj betalingsmetode"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Tilføjer en betalingsmetode"
   },
   "notification.error.title": {
     "defaultMessage": "En fejl opstod"
@@ -934,12 +910,6 @@
   },
   "servers.region.central-europe": {
     "defaultMessage": "Centraleuropa"
-  },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Hvor meget RAM vil du have din server har?"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Hvor vil du gerne have din server er lokaliseret?"
   },
   "servers.region.southeast-asia": {
     "defaultMessage": "Sydøstasien"

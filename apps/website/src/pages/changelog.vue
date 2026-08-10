@@ -6,10 +6,10 @@ import TagItem from '@modrinth/ui/src/components/base/TagItem.vue'
 import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
 
 import {
+	parseReleaseNotes,
 	RELEASE_CHANGE_TYPES,
 	type ReleaseChangeType,
 	type ReleaseNotesLocale,
-	parseReleaseNotes,
 } from '~/utils/release-notes'
 
 type GitHubRelease = {

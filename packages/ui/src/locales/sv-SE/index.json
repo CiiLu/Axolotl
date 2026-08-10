@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Du har inte behörighet."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Kunde inte ladda in server inställningar"
-  },
   "badge.alpha": {
     "defaultMessage": "Alfa"
   },
@@ -251,9 +248,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Uppdatera projekt"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Håll in Shift och klicka \"Uppdatera allt\" för att skippa denna bekräftelsen i framtiden."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Uppdatera {count} projekt"
   },
@@ -353,41 +347,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Varningar"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Skapar säkerhetskopia..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Lyckades skapa säkerhetskopia"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Kunde inte skapa en säkerhetskopia. Du kan fortfarande fortsätta."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "En säkerhetskopia skapas just nu, det är rekommenderat att vänta tills det är klart innan du gör detta."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Att skapa en säkerhetskopia kan ta flera minuter beroende på storleken av din server."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Skapa säkerhetskopia"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "instans"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Håll Skift medan du klickar för att hoppa över bekräftelsen."
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "Vi rekommenderar att du skapar en säkerhetskopia innan du fortsätter så att du kan återställa din {type} om något går sönder."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "värld"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Utforska innehåll"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Vänta på att operationen klaras innan du redigerar innehåll."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Hitta eller ladda upp {contentType} för att börja"
@@ -535,81 +496,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Ingen version tillgänglig"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Ytterligare inställningar"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Lätt"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Svår"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Svårighetsgrad"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Normal"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Fredlig"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Välj spelversion"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Kreativ"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Hardcore"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Spelläge"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Överlevnad"
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "Generera strukturer"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Anpassad"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Standard"
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Platt"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Värld namn"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Skriva värld namn"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "Lämna tom för slumpmässig utsäde."
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "Förstärkt"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Standard"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Världstyp"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Stora biomer"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Välj världstyp"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "En biom"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Superplatt"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "En instans är ett Minecraft-upplägg med en specifik laddare, version och moddar."
@@ -815,9 +701,6 @@
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Ladda upp .zip-fil"
   },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "modpaket från en webbadress"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "Ändra namn på {name}"
   },
@@ -997,78 +880,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Kvalitet"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Kunde inte radera innehållet"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "Kunde inte inaktivera innehållet"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "Kunde inte aktivera innehållet"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "Kunde inte uppdatera innehållet"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "Kunde inte installera innehåll"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Kunde inte ladda modpaketets innehåll"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "Kunde inte ladda versionerna"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "Kunde inte radera innehållet"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "Kunde inte växla {name}"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Kunde inte avlänka modpaketet"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "Kunde inte uppdatera"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Kunde inte ladda upp filen"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "Kunde inte ändra modpaketets version"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "Kunde inte ladda versioner"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "Kunde inte ominstallera modpaketet"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Kunde inte reparera server"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "Kunde inte spara installationsinställningarna"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Kunde inte avlänka modpaketet"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "{loader, select, null {Loader} other {{loader}}} version"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Ökar upp till {cpus} CPU:er"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "CPU-ökning låter din server att för tillfället använda fler tråd för att försöka dämpa TPS-spikar. Klicka för mer info."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Lagring"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} Delade CPU"
   },
   "icon-select.edit": {
     "defaultMessage": "Redigera-ikon"
@@ -1738,12 +1549,6 @@
   },
   "markdown-editor.video-embed.title": {
     "defaultMessage": "YouTube videospelare"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Lägg till betalningsmetod"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Lägg till en betalningsmetod"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Installera krävt innehåll automatiskt"
@@ -2582,18 +2387,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
-  "servers.installing-banner.error.header": {
-    "defaultMessage": "Installering misslyckades"
-  },
-  "servers.installing-banner.error.internal-platform": {
-    "defaultMessage": "Ett internt fel inträffade när plattformen installerades. Vänligen försök igen."
-  },
-  "servers.installing-banner.error.modpack-install-failed": {
-    "defaultMessage": "Modpaketet kunde inte installeras. Det kanske är korrumperad eller inkompatibel."
-  },
-  "servers.installing-banner.error.unknown": {
-    "defaultMessage": "Ett oväntat fel inträffade under installeringen."
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Avvisa"
   },
@@ -2624,38 +2417,11 @@
   "servers.region.central-europe": {
     "defaultMessage": "Centraleuropa"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Hur mycket RAM vill du att din server ska ha?"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Vart vill du att din server ska vara placerad?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Är området inte med i listan? <link>Berätta vart du vill se Modrinth Hosting härnäst!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Sydostasien"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Västeuropa"
-  },
-  "servers.setup.onboarding.installation-failed.text": {
-    "defaultMessage": "Ett oväntat fel inträffade under installeringen. Vänligen försök igen senare."
-  },
-  "servers.setup.onboarding.modpack-upload-failed.text": {
-    "defaultMessage": "Ett oväntat fel inträffade under uppladdningen. Vänligen försök igen senare."
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "Du blir hastighetsbegränsad. Vänligen försök igen senare."
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "Kunde inte ominstallera servern"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Ett oförväntat fel uppstod under ominstalleringen. Vänligen försök igen senare."
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "Ominstallation misslyckades"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "Vänligen stäng inte sidan medan uppladdningen pågår."

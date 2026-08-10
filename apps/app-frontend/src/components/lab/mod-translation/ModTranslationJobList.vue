@@ -61,7 +61,10 @@ const headerState = computed(() => {
 				<span v-if="counts.failed" class="header-chip header-chip--failed">
 					{{ formatMessage(messages.failedCount, { count: counts.failed }) }}
 				</span>
-				<span v-if="counts.completed && (counts.running || counts.failed)" class="header-chip header-chip--done">
+				<span
+					v-if="counts.completed && (counts.running || counts.failed)"
+					class="header-chip header-chip--done"
+				>
 					{{ formatMessage(messages.completedCount, { count: counts.completed }) }}
 				</span>
 				<span v-if="!counts.running && !counts.failed" class="header-chip header-chip--done">

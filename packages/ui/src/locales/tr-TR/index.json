@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Bu işlemi yapma izniniz yok."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Sunucu ayarları yüklenemedi"
-  },
   "badge.alpha": {
     "defaultMessage": "Alfa"
   },
@@ -251,9 +248,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Projeleri güncelle"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Gelecekte bu onayı atlamak için \"Hepsini güncelle\" seçeneğine tıklarken Shift tuşuna basılı tutun."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "{count} projeyi güncelle"
   },
@@ -338,41 +332,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Uyarı"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Yedekleniyor..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Yedek başarıyla oluşturuldu"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Yedek oluşturma başarısız. Yine de devam edebilirsiniz."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Bunu yapmadan önce yedek alma işleminin bitmesini beklemeniz önerilir."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Sunucunuzun boyutuna göre yedek oluşturmak bir kaç dakika alabilir."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Yedek oluştur"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "oturum"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Doğrulamayı atlamak için tıklarken Shift basılı tutun."
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "Herhangi bir sorun durumunda {type} inizi geri yükleyebilmeniz için, devam etmeden önce mutlaka bir yedekleme oluşturmanızı öneririz."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "dünya"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "İçerik ara"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Lütfen içeriği düzenlemeye devam etmeden önce işlemin nitmesini bekleyin."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Başlamak için {contentType} arayın ya da yükleyin"
@@ -532,105 +493,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Uygun sürüm yok"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Diğer ayarlar"
-  },
-  "creation-flow.modal.final-config.backup.before-reset-server.name": {
-    "defaultMessage": "Sunucu sıfırlamadan önce"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Kolay"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Zor"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Zorluk"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Normal"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Barışçıl"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Oyun sürümü seç"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Yaratıcı"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Zorlayıcı"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Oyun modu"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Hayatta Kalma"
-  },
-  "creation-flow.modal.final-config.generate-structures.description": {
-    "defaultMessage": "Köylerin, kalelerin ve diğer yapıların yeni parçalar halinde oluşturulup oluşturulmayacağını kontrol eder."
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "Yapılar oluşturun"
-  },
-  "creation-flow.modal.final-config.generator-settings-json.placeholder": {
-    "defaultMessage": "Jeneratör ayarlarını girin JSON"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Özel"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Sıradan"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "Özel Superflat katmanları gibi gelişmiş dünya özelleştirmeleri için kullanılır."
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Düz"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "Oluşturucu ayarları"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "Oluşturucu ayarları seçin"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Dünya adı"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Dünya adı girin"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "Rastgele bir tohum için boş bırakın."
-  },
-  "creation-flow.modal.final-config.world-seed.label-with-optional": {
-    "defaultMessage": "Dünya seed'i <optional>(İsteğe bağlı)</optional>"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "Dünya tohumu girin"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "Güçlendirilmiş"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Varsayılan"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Dünya türü"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Büyük Biyomlar"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Dünya türü seçin"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "Tek Biyom"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Dümdüz"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "Her bir 'kurulum', kendine has yükleyicisi (modloader), sürümü ve modları olan bir Minecraft kurulumudur."
@@ -848,9 +710,6 @@
   "files.item-type.folders": {
     "defaultMessage": "klasörler"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "İşlem devam ederken dosya işlemleri devre dışı bırakılır."
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Kuru çalıştırma (dry run) yürütülürken hata oluştu"
   },
@@ -929,24 +788,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": ".zip URL'sinden yükle"
   },
-  "files.operations.current-file": {
-    "defaultMessage": "Geçerli dosya: {file}"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "{size} çıkarıldı"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "{source} çıkarılıyor"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "{source}tan veri çekme işlemi tamamlandı."
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "{source}'dan veri çekme işlemi başarısız oldu."
-  },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "URL'den mod paketi"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "{name} adını değiştir"
   },
@@ -988,9 +829,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "Ad gerekli."
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "CurseForge mod paketi kurulumu"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "Install a CurseForge modpack"
@@ -1162,111 +1000,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Çözünürlük"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "İçeriği silmek başarısız"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "İçeriği kapatmak başarısız"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "İçeriği açmak başarısız"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "İçeriği güncelleme başarısız"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "İçerik yüklenemedi"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Mod paketinin içeriği yüklenemedi"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "Sürümler yüklenemedi"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "İçerik çıkarılamadı"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "{name} durumu değiştirilemedi"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Mod paketinin bağlantısı koparılamadı"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "Güncellenemedi"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Dosya yükleme başarısız"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "Mod paketi sürümü değiştirilemedi"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "Sürümler yüklenemedi"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "Modpack yeniden yüklenemedi"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Sunucu tamir edilemedi"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "Sunucu başlangıç ayarlarına sıfırlanamadı"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "Kurulum ayarları kaydedilemedi"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Mod paketi bağlantısı kaldırılamadı"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "{loader, select, null {Yükleyici} other {{loader}}} sürüm"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "Sunucu kurulumunuz başarıyla onarıldı."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Tamir tamamlandı"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "Sunucuyu sıfırla"
-  },
-  "hosting.loader.reset-server-description": {
-    "defaultMessage": "Sunucunuzdaki tüm verileri, dünyalarınızı, modları ve yapılandırma dosyalarınızı siler. Yedekler korunur ve geri yüklenebilir."
-  },
-  "hosting.loader.reset-to-onboarding-button": {
-    "defaultMessage": "Kurulum aşamasına sıfırla"
-  },
-  "hosting.loader.reset-to-onboarding-modal-description": {
-    "defaultMessage": "Bu sunucuyu kurulum aşamasına geri gönderecek. Devam etmek istediğinizden emin misiniz?"
-  },
-  "hosting.loader.reset-to-onboarding-modal-title": {
-    "defaultMessage": "Kurulum aşamasına sıfırla"
-  },
-  "hosting.loader.reset-to-onboarding-success-description": {
-    "defaultMessage": "Sunucu ilk katılım akışına geri döndürüldü."
-  },
-  "hosting.loader.reset-to-onboarding-success-title": {
-    "defaultMessage": "Sunucu, yeni başlayanlar için ayarlanmıştır."
-  },
-  "hosting.loader.support-options-title": {
-    "defaultMessage": "Destek seçenekleri"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "{cpus} CPUya kadar çıkar"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "CPU çıkması, sunucunuzun geçici olarak ek Thread(iş parçacığı) kullanabilmesini sağlar. Daha fazla bilgi için tıklayın."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Depolama"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} Paylaşılan CPU"
   },
   "icon-select.edit": {
     "defaultMessage": "Simgeyi düzenle"
@@ -2086,12 +1819,6 @@
   },
   "markdown-editor.video-modal.url-field.title": {
     "defaultMessage": "YouTube video URL'si"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Ödeme yöntemi ekle"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Ödeme yöntemi ekleme"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Gerekli içerikleri otomatik olarak indir"
@@ -2951,222 +2678,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilya"
   },
-  "servers.busy.backup-creating": {
-    "defaultMessage": "Yedek oluşturma sürüyor"
-  },
-  "servers.busy.backup-restoring": {
-    "defaultMessage": "Yedeğe dönme sürüyor"
-  },
-  "servers.busy.installing": {
-    "defaultMessage": "Sunucu kuruluyor"
-  },
-  "servers.busy.syncing-content": {
-    "defaultMessage": "İçerik eşlemesi sürüyor"
-  },
-  "servers.grant-access-modal.add-as-friend": {
-    "defaultMessage": "Ayrıca bir arkadaş isteği gönderin"
-  },
-  "servers.grant-access-modal.already-member-tooltip": {
-    "defaultMessage": "Bu kullanıcıya zaten davet gönderildi"
-  },
-  "servers.grant-access-modal.cancel": {
-    "defaultMessage": "İptal et"
-  },
-  "servers.grant-access-modal.header": {
-    "defaultMessage": "Kullanıcıyı ekle"
-  },
-  "servers.grant-access-modal.invite": {
-    "defaultMessage": "Davet"
-  },
-  "servers.grant-access-modal.permissions-help": {
-    "defaultMessage": "Her rol için izinlerin tam listesini <link>burada</link> görüntüleyin."
-  },
-  "servers.grant-access-modal.role.editor": {
-    "defaultMessage": "Editör"
-  },
-  "servers.grant-access-modal.role.editor-description": {
-    "defaultMessage": "İnstance içeriğini, dosyaları, yedeklemeleri ve diğer ayarları yönetin."
-  },
-  "servers.grant-access-modal.role.label": {
-    "defaultMessage": "Rolü seçin"
-  },
-  "servers.grant-access-modal.role.viewer": {
-    "defaultMessage": "Sınırlı"
-  },
-  "servers.grant-access-modal.role.viewer-description": {
-    "defaultMessage": "Sunucuyu başlatın, durdurun ve değiştirmeden görüntüleyin."
-  },
-  "servers.grant-access-modal.suggestion-avatar-alt": {
-    "defaultMessage": "{username} ın avatarı"
-  },
-  "servers.grant-access-modal.target.help": {
-    "defaultMessage": "Onların Minecraft kullanıcı adlarını kullanmayın."
-  },
-  "servers.grant-access-modal.target.label": {
-    "defaultMessage": "Modrinth kullanıcı adı"
-  },
-  "servers.grant-access-modal.target.no-suggestions": {
-    "defaultMessage": "Eşleşen kullanıcı bulunamadı."
-  },
-  "servers.grant-access-modal.target.placeholder": {
-    "defaultMessage": "Modrinth kullanıcı adınızı girin"
-  },
-  "servers.grant-access-modal.target.searching": {
-    "defaultMessage": "Arama yapılıyor..."
-  },
-  "servers.installing-banner.error.header": {
-    "defaultMessage": "Kurulum başarısız oldu"
-  },
-  "servers.installing-banner.error.internal-platform": {
-    "defaultMessage": "Platform yüklenirken dahili bir hata oluştu. Lütfen tekrar deneyin."
-  },
-  "servers.installing-banner.error.invalid-loader-version": {
-    "defaultMessage": "Belirtilen yükleyici veya Minecraft sürümü kurulamazdı. Belki de geçersiz veya desteklenmeyen bir sürüm olabilir."
-  },
-  "servers.installing-banner.error.modpack-install-failed": {
-    "defaultMessage": "Mod paketi yüklenemedi. Bozuk veya uyumsuz olabilir."
-  },
-  "servers.installing-banner.error.no-primary-file": {
-    "defaultMessage": "Bu mod paketi sürümü indirilebilir bir dosya içermez. Yanlış paketlenmiş olabilir."
-  },
-  "servers.installing-banner.error.unknown": {
-    "defaultMessage": "Kurulum sırasında beklenmeyen bir hata oluştu."
-  },
-  "servers.installing-banner.error.unsupported-loader-version": {
-    "defaultMessage": "Minecraft veya yükleyicinin bu sürümü henüz Modrinth Hosting tarafından desteklenmemektedir."
-  },
-  "servers.installing-banner.phase.installing-addons": {
-    "defaultMessage": "Eklentiler yükleniyor..."
-  },
-  "servers.installing-banner.phase.installing-modpack": {
-    "defaultMessage": "Mod paketi indiriliyor..."
-  },
-  "servers.installing-banner.phase.installing-platform": {
-    "defaultMessage": "Platform yükleniyor..."
-  },
-  "servers.installing-banner.preparing.header": {
-    "defaultMessage": "Sunucunuzu hazırlıyoruz"
-  },
-  "servers.installing-banner.ticker.adding-java": {
-    "defaultMessage": "Java ekleniyor..."
-  },
-  "servers.installing-banner.ticker.configuring-server": {
-    "defaultMessage": "Sunucu yapılandırılıyor..."
-  },
-  "servers.installing-banner.ticker.downloading-mods": {
-    "defaultMessage": "Modlar indiriliyor..."
-  },
-  "servers.installing-banner.ticker.organizing-files": {
-    "defaultMessage": "Dosyalar düzenleniyor..."
-  },
-  "servers.installing-banner.ticker.setting-up-environment": {
-    "defaultMessage": "Ortam hazırlanıyor..."
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "Zaten sunucunuz var mı?"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Modrinth Hosting hakkında daha fazla bilgi edinin"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "Yeni sunucu"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Mod kur, arkadaş davet et, birlikte oyna ve hepsini Modrinth App'ten yap."
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "Daha sunucu yok"
-  },
-  "servers.list-empty.one-click-mod-installs-description": {
-    "defaultMessage": "Beğendiğiniz modları seçin ve biz geri kalan işi hallederiz."
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "Tek-tıklamada mod kurma"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "Arkadaşlarınızı davet edin ve onları doğrudan Modrinth App'den ayarlayın."
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "Arkadaşlarınızla oynayın"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Giriş yap"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "Sunucunuzu tıpkı tek oyunculu bir dünya gibi kurun."
-  },
-  "servers.list-empty.simple-setup-title": {
-    "defaultMessage": "Basit kurulum"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Kopyalandı"
-  },
-  "servers.listing.copy-code-tooltip": {
-    "defaultMessage": "Kodu panoya kopyala"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "ID'yi Kopyala"
-  },
-  "servers.listing.download-latest-backup-tooltip": {
-    "defaultMessage": "Son yedeği indirin"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Yeni"
-  },
-  "servers.listing.notice.files-preserved-after-cancellation": {
-    "defaultMessage": "Dosyalarınız iptal işleminden sonra 30 gün boyunca saklanacaktır."
-  },
-  "servers.listing.notice.moderated": {
-    "defaultMessage": "Sunucunuz, moderasyon nedeniyle askıya alınmıştır."
-  },
-  "servers.listing.notice.provisioning": {
-    "defaultMessage": "Sunucunuzu kurarken lütfen bekleyin. Bu işlem 10 dakika kadar sürebilir."
-  },
-  "servers.listing.notice.subscription-cancelled": {
-    "defaultMessage": "Aboneliğiniz iptal edildi."
-  },
-  "servers.listing.notice.subscription-cancelled-on-date": {
-    "defaultMessage": "Aboneliğiniz <date>{formattedDate}</date> tarihinde iptal edildi."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed": {
-    "defaultMessage": "Aboneliğiniz ödeme hatası nedeniyle iptal edildi."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed-on-date": {
-    "defaultMessage": "Aboneliğiniz <date>{formattedDate}</date> tarihinde ödeme hatası nedeniyle iptal edildi. "
-  },
-  "servers.listing.notice.subscription-set-to-cancel": {
-    "defaultMessage": "Aboneliğiniz iptal edilmek üzere ayarlanmıştır."
-  },
-  "servers.listing.notice.subscription-set-to-cancel-on-date": {
-    "defaultMessage": "Aboneliğiniz <date>{formattedDate}</date> tarihinde iptal edilmek üzere ayarlanmıştır. "
-  },
-  "servers.listing.notice.suspended": {
-    "defaultMessage": "Sunucunuz askıya alındı. Daha fazla bilgi için lütfen Modrinth Destek ile iletişime geçin."
-  },
-  "servers.listing.notice.upgrading": {
-    "defaultMessage": "Sunucunuzun donanımı şu anda yükseltilmektedir ve kısa süre içinde tekrar çevrimiçi olacaktır."
-  },
-  "servers.listing.owner-avatar-alt": {
-    "defaultMessage": "{username} nın avatarı"
-  },
-  "servers.listing.owner-tooltip": {
-    "defaultMessage": "{username} tarafından Sahibi"
-  },
-  "servers.listing.resubscribe-label": {
-    "defaultMessage": "Yeniden abone ol"
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "Sunucu ikonu"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Destek"
-  },
-  "servers.listing.using-project-label": {
-    "defaultMessage": "{projectTitle} kullanılıyor"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Görmezden gel"
   },
@@ -3200,12 +2711,6 @@
   "servers.region.central-europe": {
     "defaultMessage": "Merkez Avrupa"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Sunucun ne kadar RAM'e sahip olsun istersin?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "RAM"
-  },
   "servers.region.north-america-central": {
     "defaultMessage": "Orta Kuzey Amerika"
   },
@@ -3215,122 +2720,11 @@
   "servers.region.north-america-west": {
     "defaultMessage": "Batı Kuzey Amerika"
   },
-  "servers.region.prompt": {
-    "defaultMessage": "Sunucunun nerede bulunmasını istersin?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Bölgen listede yok mu? <link>Modrinth Hosting'i gelecekte nerede görmek istediğini bize söyle!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Güneydoğu Asya"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Batı Avrupa"
-  },
-  "servers.remove-access-modal.added-label": {
-    "defaultMessage": "{time} eklendi"
-  },
-  "servers.remove-access-modal.cancel-button": {
-    "defaultMessage": "Daveti iptal et"
-  },
-  "servers.remove-access-modal.cancel-effect-access": {
-    "defaultMessage": "Bunlar bu sunucuya eklenmeyecektir"
-  },
-  "servers.remove-access-modal.cancel-effect-invite": {
-    "defaultMessage": "Buna ek olarak, daha sonra onlara başka bir davet gönderebilirsiniz"
-  },
-  "servers.remove-access-modal.cancel-header": {
-    "defaultMessage": "Daveti iptal et"
-  },
-  "servers.remove-access-modal.cancel-warning-body": {
-    "defaultMessage": "Bu daveti geri alırsanız, {username} bu sunucuya katılabilmek için yeni bir davete ihtiyaç duyacaktır."
-  },
-  "servers.remove-access-modal.header": {
-    "defaultMessage": "Erişi iptal et"
-  },
-  "servers.remove-access-modal.invited-label": {
-    "defaultMessage": "Davet edildi ({time})"
-  },
-  "servers.remove-access-modal.pending-invite-label": {
-    "defaultMessage": "Bekleyen davet"
-  },
-  "servers.remove-access-modal.remove-button": {
-    "defaultMessage": "Erişi iptal et"
-  },
-  "servers.remove-access-modal.remove-effect-access": {
-    "defaultMessage": "Onlar anında sunucu paneline erişimlerini kaybedecek ve artık içeriği düzenleyemeyecekler."
-  },
-  "servers.remove-access-modal.remove-effect-join": {
-    "defaultMessage": "Onlar hala sunucuya katılabilir ve oyunu oynayabilirler, ancak siz ayrı değişiklikler yapmadığınız sürece."
-  },
-  "servers.remove-access-modal.unknown-added-label": {
-    "defaultMessage": "Tarih bilinmiyor"
-  },
-  "servers.remove-access-modal.user-avatar-alt": {
-    "defaultMessage": "{username} ın avatarı"
-  },
-  "servers.remove-access-modal.warning-body": {
-    "defaultMessage": "Eğer bir kullanıcının sunucunuza erişimini iptal ederseniz, erişimi geri sağlamak için onlara tekrar davet etmeniz gerekecektir."
-  },
-  "servers.remove-access-modal.what-happens-label": {
-    "defaultMessage": "Ne olur?"
-  },
-  "servers.setup.onboarding.installation-failed.text": {
-    "defaultMessage": "Kurulum sırasında beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin."
-  },
-  "servers.setup.onboarding.installation-failed.title": {
-    "defaultMessage": "Kurulum başarısız oldu"
-  },
-  "servers.setup.onboarding.modpack-upload-failed.text": {
-    "defaultMessage": "Yükleme sırasında beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin."
-  },
-  "servers.setup.onboarding.modpack-upload-failed.title": {
-    "defaultMessage": "Mod paketi yüklemesi başarısız oldu"
-  },
-  "servers.setup.onboarding.setup-server.button": {
-    "defaultMessage": "Sunucu kur"
-  },
-  "servers.setup.onboarding.step.choose.description": {
-    "defaultMessage": "Modrinth'ten favori mod paketinizi seçin veya bir yükleyici seçin ve istediğiniz modları ekleyin."
-  },
-  "servers.setup.onboarding.step.choose.title": {
-    "defaultMessage": "Ne oynayacağınızı seçin"
-  },
-  "servers.setup.onboarding.step.configure-world.description": {
-    "defaultMessage": "Dünyanızı tıpkı tek oyunculu modda olduğu gibi kurun. Oyun modunuzu ve dünya seed'inizi seçin."
-  },
-  "servers.setup.onboarding.step.configure-world.title": {
-    "defaultMessage": "Dünyanızı yapılandırın"
-  },
-  "servers.setup.onboarding.step.invite-friends.description": {
-    "defaultMessage": "Adresi kopyalayarak ve katılmak için hangi modlara ihtiyaç duyacaklarını bildirerek sunucunuzu arkadaşlarınızla paylaşın."
-  },
-  "servers.setup.onboarding.step.invite-friends.title": {
-    "defaultMessage": "Arkadaşlarınızı davet edin"
-  },
-  "servers.setup.onboarding.steps.heading": {
-    "defaultMessage": "Sunucunuzu kurun (~2 dakika)"
-  },
-  "servers.setup.onboarding.uploading.progress": {
-    "defaultMessage": "Yükleniyor ({percent, number}%)"
-  },
-  "servers.setup.onboarding.welcome.description": {
-    "defaultMessage": "Sunucunuz hazır. İşte oynamaya başlamak için yapmanız gerekenler!"
-  },
-  "servers.setup.onboarding.welcome.title": {
-    "defaultMessage": "Modrinth Hosting'e Hoş Geldiniz"
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "Sınırlandırılıyorsunuz. Lütfen sonra tekrar deneyin."
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "Sunucu yeniden yüklenemiyor"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Yeniden yükleme sırasında beklenmedik hata ile karşılaşıldı. Lütfen sonra tekrar deneyin."
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "Yeniden Kurulum Başarısız"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "Lütfen yükleme sırasında bu sayfayı kapatmayın."

@@ -68,11 +68,7 @@
 			</div>
 		</div>
 
-		<Admonition
-			v-if="readonly"
-			type="warning"
-			:header="formatMessage(messages.lockedHeading)"
-		>
+		<Admonition v-if="readonly" type="warning" :header="formatMessage(messages.lockedHeading)">
 			{{ formatMessage(messages.lockedBody) }}
 		</Admonition>
 		<SymlinkInstanceWarning
@@ -176,7 +172,9 @@
 				autocomplete="off"
 				:spellcheck="false"
 				clearable
-				:placeholder="formatMessage(messages.searchRulesPlaceholder, { count: data.game_rules.length })"
+				:placeholder="
+					formatMessage(messages.searchRulesPlaceholder, { count: data.game_rules.length })
+				"
 				wrapper-class="max-w-md"
 			/>
 			<div v-if="ruleGroups.length === 0" class="text-secondary">
@@ -321,7 +319,15 @@ const GAME_MODE_OPTIONS: SingleplayerGameMode[] = ['survival', 'creative', 'adve
 const DIFFICULTY_OPTIONS: WorldDifficulty[] = ['peaceful', 'easy', 'normal', 'hard']
 const BOOLEAN_OPTIONS = ['true', 'false']
 
-const RULE_CATEGORY_ORDER = ['player', 'mobs', 'drops', 'world', 'chat', 'commands', 'other'] as const
+const RULE_CATEGORY_ORDER = [
+	'player',
+	'mobs',
+	'drops',
+	'world',
+	'chat',
+	'commands',
+	'other',
+] as const
 
 type FormState = {
 	name: string
@@ -457,11 +463,7 @@ const ruleGroups = computed(() => {
 	for (const entry of data.value.game_rules) {
 		const meta = getGameRuleMetadata(entry.key)
 		const label = meta ? formatMessage(meta.name) : entry.key
-		if (
-			query &&
-			!label.toLowerCase().includes(query) &&
-			!entry.key.toLowerCase().includes(query)
-		) {
+		if (query && !label.toLowerCase().includes(query) && !entry.key.toLowerCase().includes(query)) {
 			continue
 		}
 		const currentValue = form.value.rules[entry.key] ?? entry.value
@@ -470,10 +472,8 @@ const ruleGroups = computed(() => {
 			key: entry.key,
 			label,
 			widget: resolveGameRuleType(entry.value),
-			modifiedFromDefault:
-				meta?.defaultValue !== undefined && currentValue !== meta.defaultValue,
-			canResetToDefault:
-				meta?.defaultValue !== undefined && currentValue !== meta.defaultValue,
+			modifiedFromDefault: meta?.defaultValue !== undefined && currentValue !== meta.defaultValue,
+			canResetToDefault: meta?.defaultValue !== undefined && currentValue !== meta.defaultValue,
 			defaultValue: meta?.defaultValue,
 		}
 		const rows = grouped.get(category)

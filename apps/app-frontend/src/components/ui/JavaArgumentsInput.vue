@@ -216,8 +216,8 @@ function isPresetActive(preset: JavaArgumentPreset) {
 					<div class="flex items-center gap-2">
 						<div class="h-px min-w-0 flex-1 bg-surface-4" />
 						<button
-							type="button"
 							v-tooltip="formatMessage(messages.presetArguments)"
+							type="button"
 							:aria-label="formatMessage(messages.presetArguments)"
 							class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-secondary transition-colors hover:bg-surface-5 hover:text-contrast"
 							@click="togglePresetCollapsed(preset)"

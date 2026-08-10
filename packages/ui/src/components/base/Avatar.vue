@@ -110,8 +110,8 @@ function onError(e) {
 function updatePixelated() {
 	autoUnframed.value = Boolean(
 		img.value &&
-			props.unframedNaturalWidth !== undefined &&
-			img.value.naturalWidth === props.unframedNaturalWidth,
+		props.unframedNaturalWidth !== undefined &&
+		img.value.naturalWidth === props.unframedNaturalWidth,
 	)
 
 	if (img.value && img.value.naturalWidth && img.value.naturalWidth < 32) {

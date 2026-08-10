@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Nu ai permisiune."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "A eșuat încărcarea setărilor de server"
-  },
   "badge.alpha": {
     "defaultMessage": "Alfa"
   },
@@ -248,9 +245,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Actualizare proiecte"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Tine apăsat Shift in timp ce dai click pe \"Actualizează tot\" ca să sari peste această confirmare in viitor."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "{count, plural, one {proiect} other {proiecte}}"
   },
@@ -313,27 +307,6 @@
   },
   "content.filter.warnings": {
     "defaultMessage": "Avertismente"
-  },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Se creează o copie de rezervă..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Copie de rezervă creată cu succes"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Crearea copiei de rezervă a eșuat. Poți sa continui."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "O copie de rezervă se creează, este recomandat să aștepți ca sa se termine înainte de perfomarea acestei acțiuni."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Crearea copiei de rezervă poate dura câteva minute depinzând de dimensiunea serverului."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Creează o copie de rezervă"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "instanță"
   },
   "content.page-layout.share.label": {
     "defaultMessage": "Distribuie"
@@ -433,12 +406,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Nu exista versiuni disponibile"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Setări adiționale"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Ușor"
   },
   "files.create-modal.create-button": {
     "defaultMessage": "Creează {type}"
@@ -577,9 +544,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "Numele este obligatoriu."
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "Instalează un pachet de moduri CurseForge"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "Instalează un pachet de moduri CurseForge"
@@ -745,84 +709,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Rezoluție"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Nu s-a putut șterge conținutul"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "Nu s-a putut dezactiva conținutul"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "Nu s-a putut activa conținutul"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "Nu s-a putut actualiza conținutul"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "Nu s-a putut instala conținutul"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Nu s-a putut încărca conținutul pachetului de moduri"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "Nu s-a putut încarcă versiunile"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "Nu s-a putut înlătura conținutul"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "Nu s-a putut comuta {name}"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Nu s-a putut nelinka pachetul de moduri"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "Nu s-a putut actualiza"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Nu s-a putut posta fișierul"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "Nu s-a putut schimba versiunea pachetului de moduri"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "Nu s-a putut încărca versiunile"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "Nu s-a putut reinstala pachetul de moduri"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Nu s-a putut repara server-ul"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "Nu s-a putut reseta server-ul la îmbarcare"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "Nu s-a putut salva setările de instalare"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Nu s-a putut nelinka pachetul de moduri"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "Instalarea server-ului tău s-a reparat."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Reparare completă"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Extinde pana la {cpus}-CPU"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "Izbucnind CPU permite serverului dvs. să utilizeze temporar thread-uri suplimentare pentru a ajuta la atenuarea vârfurilor TPS. Faceți clic pentru mai multe informații."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Stocare"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} CPU-uri Shared"
   },
   "icon-select.edit": {
     "defaultMessage": "Editează pictograma"
@@ -1504,12 +1390,6 @@
   },
   "markdown-editor.video-modal.url-field.title": {
     "defaultMessage": "Video YouTube URL"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Adaugă metodă de plată"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Adaugă o metodă de plată"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Instalați automat conținutul necesar"
@@ -2251,15 +2131,6 @@
   },
   "servers.region.central-europe": {
     "defaultMessage": "Europa Centrală"
-  },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Cât de mult RAM vrei ca serverul tău să aibă?"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Unde ți-ar plăcea ca serverul să fie localizat?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Regiunea nu este listată? <link>Spuneți-ne unde doriți să vedeți în continuare Modrinth Hosting!</link>"
   },
   "servers.region.southeast-asia": {
     "defaultMessage": "Asia Sud-Estică"
