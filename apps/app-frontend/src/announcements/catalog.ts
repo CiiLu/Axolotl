@@ -59,6 +59,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Added a mod translation tool in Lab for translating mod content.',
 					'zh-CN': '实验室新增模组翻译工具，可翻译模组内容。',
 				},
+				{
+					'en-US':
+						'Added a "Auto Import Missing Files" button in Settings. You can also customize the monitoring location. When enabled, the launcher will automatically scan files in the monitoring location and automatically import missing files into the instance when scenarios such as downloading an integration package fail.',
+					'zh-CN':
+						'在设置中新增了自动导入缺失文件开关按钮，并可自定义监控位置。当启用时，启动器会自动扫描监控位置的文件，并将下载整合包等场景文件下载失败时，自动把缺失的文件导入到实例中。',
+				},
 			],
 			fixed: [
 				{
@@ -91,6 +97,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed the issue of search result translations being switched from the general translation API to mcim.',
 					'zh-CN': '将搜索结果的翻译由通用翻译API切换至mcim',
+				},
+				{
+					'en-US':
+						'When downloading modpacks and other files, if a mod download fails, the launcher now provides three options to continue downloading the modpack: "Launcher re-download", "Manual import of missing files", and "Monitor folder for automatic import of files". This avoids rolling back the entire download due to a single file failure.',
+					'zh-CN':
+						'当下载整合包等文件时，如果模组下载失败，现在会提供 启动器重新下载/手动导入缺失文件/监控文件夹自动导入文件 三个选项来继续下载整合包，避免一个文件下载失败直接全部回滚。',
 				},
 			],
 		},
