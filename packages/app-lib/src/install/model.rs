@@ -125,7 +125,7 @@ impl InstallJobState {
     pub fn set_progress(
         &mut self,
         phase: InstallPhaseId,
-        progress: Option<InstallProgress>,
+        mut progress: Option<InstallProgress>,
         details: InstallPhaseDetails,
     ) {
         if self.progress.phase != phase
@@ -139,6 +139,21 @@ impl InstallJobState {
         }
 
         self.progress.phase = phase;
+        //直接避免新的progress被更小的覆盖，我懒得管那些什么鬼覆盖的了
+        if let Some(new_progress) = &mut progress {
+            if let Some(old_progress) = &self.progress.progress {
+                if let (Some(old_secondary), Some(new_secondary)) =
+                    (&old_progress.secondary, &new_progress.secondary)
+                {
+                    new_progress.secondary = Some(InstallProgressSecondary {
+                        current: old_secondary
+                            .current
+                            .max(new_secondary.current),
+                        total: new_secondary.total,
+                    });
+                }
+            }
+        }
         self.progress.progress = progress;
         self.progress.details = details;
     }
@@ -1955,6 +1970,7 @@ impl InstallJobState {
 
     pub fn download_summary(&self) -> DownloadJobSummary {
         let mut summary = DownloadJobSummary::default();
+        let mut settled_content = HashMap::<String, u64>::new();
         for event in &self.events {
             match &event.kind {
                 InstallJobEventKind::ContentDownloadStarted {
@@ -1964,19 +1980,21 @@ impl InstallJobState {
                     summary.files_total = Some(*files);
                     summary.bytes_total = *bytes;
                 }
-                InstallJobEventKind::ContentFileCompleted { bytes, .. } => {
-                    summary.files_completed += 1;
-                    summary.bytes_downloaded =
-                        summary.bytes_downloaded.saturating_add(*bytes);
+
+                InstallJobEventKind::ContentFileCompleted { path, bytes }
+                | InstallJobEventKind::ContentFileRecovered { path, bytes } => {
+                    // 同一个文件在暂停/恢复后可能再次产生 settled 事件。
+                    // 按 path 保存最终状态，避免重复累计。
+                    settled_content.insert(path.clone(), *bytes);
                 }
-                InstallJobEventKind::ContentFileRecovered { bytes, .. } => {
-                    summary.bytes_downloaded =
-                        summary.bytes_downloaded.saturating_add(*bytes);
+
+                InstallJobEventKind::ContentFileSkipped { path, .. }
+                | InstallJobEventKind::ContentFileFailed { path, .. } => {
+                    // Failed / Skipped 算作已处理，但不贡献完成字节。
+                    // 如果之后恢复成功，同一个 path 会被 Recovered 覆盖成真实大小。
+                    settled_content.insert(path.clone(), 0);
                 }
-                InstallJobEventKind::ContentFileSkipped { .. }
-                | InstallJobEventKind::ContentFileFailed { .. } => {
-                    summary.files_completed += 1;
-                }
+
                 InstallJobEventKind::DownloadMetrics {
                     source,
                     fallback_count,
@@ -1985,13 +2003,20 @@ impl InstallJobState {
                     summary.fallback_count =
                         summary.fallback_count.saturating_add(*fallback_count);
                 }
+
                 _ => {}
             }
         }
+        summary.files_completed = settled_content.len() as u64;
+        summary.bytes_downloaded = settled_content
+            .values()
+            .copied()
+            .fold(0_u64, u64::saturating_add);
         if let Some(progress) = &self.progress.progress {
             if self.progress.phase == InstallPhaseId::DownloadingContent {
                 summary.files_completed = progress.current;
                 summary.files_total = Some(progress.total);
+
                 if let Some(bytes) = &progress.secondary {
                     summary.bytes_downloaded = bytes.current;
                     summary.bytes_total = Some(bytes.total);

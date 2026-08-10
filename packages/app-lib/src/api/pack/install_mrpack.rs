@@ -1071,10 +1071,39 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                     },
                     ..Integrity::default()
                 };
+								// ===== TEST ONLY: Stage 3 GUI validation =====
+								let inject_stage3_failure =
+										project_path.contains("AmbientSounds")
+												|| project_path.contains("DistantHorizons")
+												|| project_path.contains("Flashback");
+
+								let primary_url = if inject_stage3_failure {
+										tracing::warn!(
+												path = %project_path,
+												"TEST ONLY: injecting Stage 3 missing-content failure"
+										);
+
+										"https://127.0.0.1:9/axolotl-stage3-forced-failure.jar"
+								} else {
+										primary_url.as_str()
+								};
+
+								let candidate_urls = if inject_stage3_failure {
+										Vec::new()
+								} else {
+										project
+												.downloads
+												.iter()
+												.skip(1)
+												.cloned()
+												.collect::<Vec<_>>()
+								};
+								// ===== END TEST ONLY =====
                 let download = match download_to_path(
                     DownloadRequest::new(primary_url, ResourceClass::Modpack)
                         .with_candidate_urls(
-                            project.downloads.iter().skip(1).cloned(),
+                            // project.downloads.iter().skip(1).cloned(),
+														candidate_urls //TEST ONLY
                         )
                         .with_integrity(integrity)
                         .with_download_meta(
@@ -1162,15 +1191,28 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                     }
                 }
 
-                content_context
-                    .mark_file_settled(
-                        downloaded_bytes,
-                        InstallJobEventKind::ContentFileCompleted {
-                            path: project_path.clone(),
-                            bytes: downloaded_bytes,
-                        },
-                    )
-                    .await?;
+								let recovered = download.attempts == 0; //When recovered, the download attempts were set to 0 by download_to_path_inner()
+								if recovered {
+									content_context
+										.mark_file_settled(
+												downloaded_bytes,
+												InstallJobEventKind::ContentFileRecovered {
+														path: project_path.clone(),
+														bytes: downloaded_bytes,
+												},
+										)
+										.await?;
+								} else {
+									content_context
+											.mark_file_settled(
+													downloaded_bytes,
+													InstallJobEventKind::ContentFileCompleted {
+															path: project_path.clone(),
+															bytes: downloaded_bytes,
+													},
+											)
+											.await?;
+								}
                 Ok(())
                 }
                 .await;

@@ -57,6 +57,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed Curseforge import missing files issues',
 					'zh-CN': '修复 Curseforge 导入缺失文件问题',
 				},
+				{
+					'en-US':
+						'Fixed the issue when after manually added missing files, the download indicator will wrongly show a downloaded size larger than excepted size.',
+					'zh-CN': '修复手动添加缺失文件后，下载指示器错误显示已下载文件大小大于预期大小的问题',
+				},
 			],
 			changed: [
 				{

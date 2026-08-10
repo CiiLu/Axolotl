@@ -270,6 +270,7 @@ fn prepare_resumed_job(job_state: &mut InstallJobState) {
     job_state.error = None;
     job_state.rollback_error = None;
     job_state.context = None;
+    job_state.active_downloads.clear();
     job_state.record_event(InstallJobEventKind::JobQueued {
         kind: job_state.request.kind(),
     });
