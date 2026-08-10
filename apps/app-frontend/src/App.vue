@@ -93,6 +93,8 @@ import { AxolotlBrandConfig, config, getOfficialLabrinthBaseUrl } from '@/config
 import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
+import { configureCurseForgeManualDownloadWatcher } from '@/helpers/curseforge'
+import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
 import {
 	type ClassificationResult,
 	classifyDroppedItem,
@@ -975,6 +977,13 @@ provide('previewUpdateAnnouncement', (version = null) => {
 const stateFailed = ref(false)
 stateInitialization
 	.then(() => {
+		const scannerSettings = getMissingContentScannerSettings()
+		void configureCurseForgeManualDownloadWatcher(
+			scannerSettings.enabled,
+			scannerSettings.directory,
+		).catch((error) => {
+			console.warn('Failed to configure manual-download watcher', error)
+		})
 		setupApp().catch((err) => {
 			stateFailed.value = true
 			console.error(err)

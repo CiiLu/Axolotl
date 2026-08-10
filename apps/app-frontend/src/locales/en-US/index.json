@@ -620,14 +620,17 @@
 	"app.curseforge.manual-downloads.automatic-import": {
 		"message": "Automatic import"
 	},
+	"app.curseforge.manual-downloads.automatic-import-disabled": {
+		"message": "Automatic import is disabled in Resource Management settings."
+	},
 	"app.curseforge.manual-downloads.body": {
 		"message": "Installed {installed, number} files automatically. {manual, number} files require browser download."
 	},
 	"app.curseforge.manual-downloads.checking-downloads": {
-		"message": "Checking the Downloads folder..."
+		"message": "Checking the monitored import folder..."
 	},
 	"app.curseforge.manual-downloads.downloads-unavailable": {
-		"message": "The system Downloads folder is unavailable."
+		"message": "The monitored import folder is unavailable."
 	},
 	"app.curseforge.manual-downloads.existing-body": {
 		"message": "{manual, number} files still require browser download. Downloaded files will be verified and imported automatically."
@@ -669,7 +672,7 @@
 		"message": "Project {projectId} / File {fileId}"
 	},
 	"app.curseforge.manual-downloads.retrying": {
-		"message": "Import failed; retrying"
+		"message": "File verification failed. Choose the required file."
 	},
 	"app.curseforge.manual-downloads.scanner-failed": {
 		"message": "Automatic import check failed; retrying."
@@ -984,7 +987,7 @@
 		"message": "Action needed"
 	},
 	"app.downloads.missing-required-content": {
-		"message": "{completed} / {total} required files are ready. {missing, plural, one {# file still needs to be downloaded.} other {# files still need to be downloaded.}}"
+		"message": "{completed} / {total} required files are ready. {missing, plural, one {# file still needs to be downloaded.} other {# files still need to be downloaded.}} Click Complete missing files button to continue installation."
 	},
 	"app.downloads.search": {
 		"message": "Search downloads"
@@ -2046,7 +2049,10 @@
 		"message": "Sharing modpack content"
 	},
 	"app.instance.mods.skipped-files-warning.body": {
-		"message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Select a file to download it; the launcher will verify and import downloaded files automatically."
+		"message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Select a file to download it; the monitored import folder will be verified automatically when the Complete Missing Files dialog is opened. You can also directly drag the downloaded file into this instance."
+	},
+	"app.instance.mods.skipped-files-warning.body-disabled": {
+		"message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Drag the downloaded file into this instance, or enable automatic import in Resource Management settings. The automatic import feature for the monitored folder is disabled. You can enable it in Settings."
 	},
 	"app.instance.mods.skipped-files-warning.more": {
 		"message": "And {count, number} more."
@@ -6529,5 +6535,11 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "Unknown file warning"
+	},
+	"app.curseforge.manual-downloads.choose-file": {
+		"message": "Choose local file"
+	},
+	"app.instance.mods.skipped-files-warning.complete": {
+		"message": "Complete missing files"
 	}
 }

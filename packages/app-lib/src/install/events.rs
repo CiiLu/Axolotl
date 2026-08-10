@@ -735,10 +735,24 @@ fn refresh_missing_pause_reason(job: &mut InstallJobState) {
     ) {
         return;
     }
+    let items = job.download_items();
     let Some(content) = &job.missing_content else {
+        let paths = items
+            .iter()
+            .filter(|item| {
+                item.status == DownloadItemStatus::Skipped
+                    && item.manual_url.is_some()
+                    && item.project_id.is_some()
+                    && item.version_id.is_some()
+            })
+            .map(|item| item.id.clone())
+            .collect::<Vec<_>>();
+        job.pause_reason = Some(InstallPauseReason::MissingRequiredContent {
+            failed_files: paths.len() as u64,
+            paths,
+        });
         return;
     };
-    let items = job.download_items();
     let paths = content
         .files
         .iter()
@@ -983,6 +997,50 @@ mod tests {
                 "status": "verifying",
                 "speed_bytes_per_second": null,
                 "eta_seconds": null,
+            })
+        );
+    }
+
+    #[test]
+    fn recovered_curseforge_manual_item_clears_pause_count() {
+        let path = "manual.jar".to_string();
+        let mut job = InstallJobState::new(InstallRequest::CreateInstance {
+            name: "CurseForge pack".to_string(),
+            game_version: "1.12.2".to_string(),
+            loader: ModLoader::Forge,
+            loader_version: None,
+            icon_path: None,
+            link: InstanceLink::CurseForgeModpack {
+                project_id: "123".to_string(),
+                version_id: "456".to_string(),
+            },
+        });
+        job.record_event(InstallJobEventKind::ContentFileSkipped {
+            path: path.clone(),
+            reason: "CurseForge requires manual download".to_string(),
+            project_id: Some("10".to_string()),
+            version_id: Some("20".to_string()),
+            manual_url: Some(
+                "https://www.curseforge.com/minecraft/mc-mods/example/download/20"
+                    .to_string(),
+            ),
+        });
+        job.pause_reason = Some(InstallPauseReason::MissingRequiredContent {
+            failed_files: 1,
+            paths: vec![path.clone()],
+        });
+        job.record_event(InstallJobEventKind::ContentFileRecovered {
+            path,
+            bytes: 12,
+        });
+
+        refresh_missing_pause_reason(&mut job);
+
+        assert_eq!(
+            job.pause_reason,
+            Some(InstallPauseReason::MissingRequiredContent {
+                failed_files: 0,
+                paths: Vec::new(),
             })
         );
     }

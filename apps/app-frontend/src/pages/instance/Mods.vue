@@ -18,13 +18,7 @@
 				</span>
 			</template>
 			<div class="border-0 border-t border-solid border-brand-orange/60 bg-bg-orange p-4">
-				<p class="m-0">
-					{{
-						formatMessage(messages.skippedFilesWarningBody, {
-							count: skippedManualDownloads.length,
-						})
-					}}
-				</p>
+				<p class="m-0">{{ skippedFilesWarningBody }}</p>
 				<ul class="mb-0 mt-2 flex list-none flex-col gap-1 p-0">
 					<li
 						v-for="item in visibleSkippedManualDownloads"
@@ -47,6 +41,14 @@
 						})
 					}}
 				</p>
+				<div class="mt-3 flex justify-end">
+					<ButtonStyled color="orange" size="small">
+						<button @click="openManualCurseForgeResolver">
+							<FolderSearchIcon />
+							{{ formatMessage(messages.completeSkippedFiles) }}
+						</button>
+					</ButtonStyled>
+				</div>
 			</div>
 		</CollapsibleAdmonition>
 		<CollapsibleAdmonition
@@ -185,6 +187,7 @@ import {
 	ExternalIcon,
 	FileIcon,
 	FolderOpenIcon,
+	FolderSearchIcon,
 	PencilIcon,
 	SpinnerIcon,
 	UndoIcon,
@@ -231,6 +234,7 @@ import {
 	type CurseForgeManualDownloadItem,
 	getCurseForgeManualDownloadUrl,
 } from '@/helpers/curseforge-manual'
+import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
 import { instance_listener } from '@/helpers/events.js'
 import { install_duplicate_instance, installJobInstanceId } from '@/helpers/install'
 import {
@@ -321,11 +325,20 @@ const messages = defineMessages({
 	skippedFilesWarningBody: {
 		id: 'app.instance.mods.skipped-files-warning.body',
 		defaultMessage:
-			'{count, plural, one {# file was} other {# files were}} skipped during installation. Select a file to download it; the launcher will verify and import downloaded files automatically.',
+			'{count, plural, one {# file was} other {# files were}} skipped during installation. Select a file to download it; the monitored import folder is verified automatically. You can also drag the downloaded file into this instance.',
+	},
+	skippedFilesWarningBodyDisabled: {
+		id: 'app.instance.mods.skipped-files-warning.body-disabled',
+		defaultMessage:
+			'{count, plural, one {# file was} other {# files were}} skipped during installation. Drag the downloaded file into this instance, or enable automatic import in Resource Management settings.',
 	},
 	skippedFilesWarningMore: {
 		id: 'app.instance.mods.skipped-files-warning.more',
 		defaultMessage: 'And {count, number} more.',
+	},
+	completeSkippedFiles: {
+		id: 'app.instance.mods.skipped-files-warning.complete',
+		defaultMessage: 'Complete missing files',
 	},
 	missingFilesWarningTitle: {
 		id: 'app.instance.mods.missing-files-warning.title',
@@ -515,6 +528,15 @@ const manualDownloadCandidates = computed<CurseForgeManualDownloadItem[]>(() => 
 })
 
 const skippedManualDownloads = computed(() => manualDownloadCandidates.value)
+const automaticManualImportEnabled = getMissingContentScannerSettings().enabled
+const skippedFilesWarningBody = computed(() =>
+	formatMessage(
+		automaticManualImportEnabled
+			? messages.skippedFilesWarningBody
+			: messages.skippedFilesWarningBodyDisabled,
+		{ count: skippedManualDownloads.value.length },
+	),
+)
 const missingPackMembers = computed(
 	() =>
 		contentSnapshot.value?.items.filter(
@@ -586,6 +608,10 @@ const hiddenSkippedManualDownloadCount = computed(() =>
 async function openManualCurseForgeDownload(item: CurseForgeManualDownloadItem) {
 	showCurseForgeManualDownloads(props.instance.id, skippedManualDownloads.value)
 	await openUrl(getCurseForgeManualDownloadUrl(item))
+}
+
+function openManualCurseForgeResolver() {
+	showCurseForgeManualDownloads(props.instance.id, skippedManualDownloads.value)
 }
 
 function isRestoringMissingPackMember(item: InstanceContentSnapshotItem) {

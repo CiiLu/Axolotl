@@ -63,12 +63,24 @@
 							</span>
 						</div>
 					</div>
-					<ButtonStyled v-if="!isImported(item)" type="outlined" size="small">
-						<button @click="openOne(item)">
-							<ExternalIcon aria-hidden="true" />
-							{{ formatMessage(messages.open) }}
-						</button>
-					</ButtonStyled>
+					<div v-if="!isImported(item)" class="flex shrink-0 flex-wrap justify-end gap-2">
+						<ButtonStyled type="outlined" size="small">
+							<button :disabled="busyKeys.has(itemKey(item))" @click="openOne(item)">
+								<ExternalIcon aria-hidden="true" />
+								{{ formatMessage(messages.open) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled type="outlined" size="small">
+							<button :disabled="busyKeys.has(itemKey(item))" @click="chooseLocalFile(item)">
+								<SpinnerIcon
+									v-if="busyKeys.has(itemKey(item))"
+									class="animate-spin"
+								/>
+								<UploadIcon v-else aria-hidden="true" />
+								{{ formatMessage(messages.chooseFile) }}
+							</button>
+						</ButtonStyled>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -97,32 +109,37 @@
 </template>
 
 <script setup lang="ts">
-import { CheckIcon, ExternalIcon, FolderSearchIcon, SpinnerIcon } from '@modrinth/assets'
+import { CheckIcon, ExternalIcon, FolderSearchIcon, SpinnerIcon, UploadIcon } from '@modrinth/assets'
 import {
 	Admonition,
 	ButtonStyled,
 	commonMessages,
 	defineMessages,
+	injectNotificationManager,
 	NewModal,
 	useVIntl,
 } from '@modrinth/ui'
+import { open } from '@tauri-apps/plugin-dialog'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import {
-	type CurseForgeInstallResult,
 	type CurseForgeManualDownloadImport,
 	type CurseForgeManualDownloadScanResult,
 	importCurseForgeManualDownloads,
+	importPendingCurseForgeManualDownloadFile,
+	listPendingCurseForgeManualDownloads,
 } from '@/helpers/curseforge'
 import {
 	type CurseForgeManualDownloadItem,
 	getCurseForgeManualDownloadUrl,
 } from '@/helpers/curseforge-manual'
+import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
 import { instance_listener } from '@/helpers/events.js'
 import { get_content_snapshot } from '@/helpers/instance'
 
 const { formatMessage } = useVIntl()
+const { handleError } = injectNotificationManager()
 
 const messages = defineMessages({
 	header: {
@@ -151,6 +168,10 @@ const messages = defineMessages({
 		id: 'app.curseforge.manual-downloads.open-all',
 		defaultMessage: 'Open missing',
 	},
+	chooseFile: {
+		id: 'app.curseforge.manual-downloads.choose-file',
+		defaultMessage: 'Choose local file',
+	},
 	viewInstance: {
 		id: 'app.curseforge.manual-downloads.view-instance',
 		defaultMessage: 'View instance',
@@ -165,7 +186,7 @@ const messages = defineMessages({
 	},
 	checkingDownloads: {
 		id: 'app.curseforge.manual-downloads.checking-downloads',
-		defaultMessage: 'Checking the Downloads folder...',
+		defaultMessage: 'Checking the monitored import folder...',
 	},
 	watchingDownloads: {
 		id: 'app.curseforge.manual-downloads.watching-downloads',
@@ -173,7 +194,11 @@ const messages = defineMessages({
 	},
 	downloadsUnavailable: {
 		id: 'app.curseforge.manual-downloads.downloads-unavailable',
-		defaultMessage: 'The system Downloads folder is unavailable.',
+		defaultMessage: 'The monitored import folder is unavailable.',
+	},
+	automaticImportDisabled: {
+		id: 'app.curseforge.manual-downloads.automatic-import-disabled',
+		defaultMessage: 'Automatic import is disabled in Resource Management settings.',
 	},
 	scannerFailed: {
 		id: 'app.curseforge.manual-downloads.scanner-failed',
@@ -189,7 +214,7 @@ const messages = defineMessages({
 	},
 	retrying: {
 		id: 'app.curseforge.manual-downloads.retrying',
-		defaultMessage: 'Import failed; retrying',
+		defaultMessage: 'File verification failed. Choose the required file.',
 	},
 })
 
@@ -205,11 +230,15 @@ const instanceId = ref<string | null>(null)
 const scanning = ref(false)
 const scanError = ref(false)
 const downloadDirectory = ref<string | null>(null)
+const scannerEnabled = ref(true)
+const scanDirectory = ref<string | null>(null)
 const importedKeys = ref(new Set<string>())
 const errorKeys = ref(new Set<string>())
+const busyKeys = ref(new Set<string>())
 let scannerActive = false
 let scanGeneration = 0
 let scanInFlight: Promise<CurseForgeManualDownloadScanResult> | undefined
+let scanInterval: ReturnType<typeof setInterval> | null = null
 let unlistenInstances: (() => void) | null = null
 
 const remainingCount = computed(
@@ -217,6 +246,7 @@ const remainingCount = computed(
 )
 const scannerStatus = computed(() => {
 	if (remainingCount.value === 0) return formatMessage(messages.importComplete)
+	if (!scannerEnabled.value) return formatMessage(messages.automaticImportDisabled)
 	if (scanError.value) return formatMessage(messages.scannerFailed)
 	if (downloadDirectory.value) {
 		return formatMessage(messages.watchingDownloads, { path: downloadDirectory.value })
@@ -239,32 +269,12 @@ function itemStatus(item: CurseForgeManualDownloadItem) {
 	return formatMessage(messages.waiting)
 }
 
-function scanPayload(
-	item: CurseForgeManualDownloadItem,
-): CurseForgeInstallResult['manualDownloads'][number] | null {
-	const projectType = item.projectType ?? 'mod'
-	if (projectType === 'modpack') return null
-	return {
-		projectId: item.projectId,
-		fileId: item.fileId,
-		fileName: item.fileName,
-		websiteUrl: item.websiteUrl,
-		projectType,
-		projectSlug: item.projectSlug ?? '',
-		targetFolder: item.targetFolder ?? '',
-		hashes: item.hashes ?? [],
-		fileLength: item.fileLength ?? 0,
-		fileFingerprint: item.fileFingerprint ?? 0,
-	}
-}
-
 function show(payload: {
 	items: CurseForgeManualDownloadItem[]
 	installed?: number
 	instanceId?: string | null
 }) {
 	stopScanning()
-	scanGeneration += 1
 	scannerActive = true
 	items.value = payload.items
 	installed.value = payload.installed ?? null
@@ -273,8 +283,32 @@ function show(payload: {
 	scanError.value = false
 	importedKeys.value = new Set()
 	errorKeys.value = new Set()
+	busyKeys.value = new Set()
+	const scannerSettings = getMissingContentScannerSettings()
+	scannerEnabled.value = scannerSettings.enabled
+	scanDirectory.value = scannerSettings.directory
 	modal.value?.show()
-	void scanDownloads()
+	void refreshPendingDownloads()
+	if (scannerEnabled.value) {
+		void scanDownloads()
+		scanInterval = setInterval(() => {
+			if (scannerActive) void scanDownloads()
+		}, 3000)
+	}
+}
+
+async function refreshPendingDownloads() {
+	const currentInstanceId = instanceId.value
+	if (!scannerActive || !currentInstanceId) return
+	try {
+		const pending = await listPendingCurseForgeManualDownloads(currentInstanceId)
+		if (!scannerActive || currentInstanceId !== instanceId.value) return
+		const existing = new Map(items.value.map((item) => [itemKey(item), item]))
+		for (const item of pending) existing.set(itemKey(item), item)
+		items.value = [...existing.values()]
+	} catch (error) {
+		handleError(error)
+	}
 }
 
 function hide() {
@@ -283,9 +317,15 @@ function hide() {
 
 function stopScanning() {
 	scannerActive = false
+	scanGeneration += 1
+	if (scanInterval != null) {
+		clearInterval(scanInterval)
+		scanInterval = null
+	}
 }
 
 async function scanDownloads(): Promise<void> {
+	if (!scannerEnabled.value) return
 	if (scanInFlight) {
 		await scanInFlight.catch(() => undefined)
 		return
@@ -294,14 +334,13 @@ async function scanDownloads(): Promise<void> {
 	const currentInstanceId = instanceId.value
 	if (!currentInstanceId) return
 	const generation = scanGeneration
-	const downloads = items.value
-		.filter((item) => !isImported(item))
-		.map(scanPayload)
-		.filter((item): item is CurseForgeInstallResult['manualDownloads'][number] => !!item)
-	if (downloads.length === 0) return
+	if (remainingCount.value === 0) return
 
 	scanning.value = true
-	const operation = importCurseForgeManualDownloads(currentInstanceId, downloads)
+	const operation = importCurseForgeManualDownloads(
+		currentInstanceId,
+		scanDirectory.value,
+	)
 	scanInFlight = operation
 	try {
 		const result = await operation
@@ -324,7 +363,9 @@ async function scanDownloads(): Promise<void> {
 	} catch {
 		if (generation !== scanGeneration) return
 		scanError.value = true
-		errorKeys.value = new Set(downloads.map((item) => `${item.projectId}:${item.fileId}`))
+		errorKeys.value = new Set(
+			items.value.filter((item) => !isImported(item)).map((item) => itemKey(item)),
+		)
 	} finally {
 		if (scanInFlight === operation) scanInFlight = undefined
 		if (generation === scanGeneration) {
@@ -383,6 +424,39 @@ async function refreshImportedState() {
 
 async function openOne(item: CurseForgeManualDownloadItem) {
 	await openUrl(getCurseForgeManualDownloadUrl(item))
+}
+
+async function chooseLocalFile(item: CurseForgeManualDownloadItem) {
+	const currentInstanceId = instanceId.value
+	const key = itemKey(item)
+	if (!currentInstanceId || busyKeys.value.has(key)) return
+	const selected = await open({ multiple: false })
+	const sourcePath = typeof selected === 'string' ? selected : null
+	if (!sourcePath) return
+	busyKeys.value = new Set(busyKeys.value).add(key)
+	try {
+		const imported = await importPendingCurseForgeManualDownloadFile(
+			currentInstanceId,
+			item.projectId,
+			item.fileId,
+			sourcePath,
+		)
+		const nextImported = new Set(importedKeys.value)
+		nextImported.add(key)
+		importedKeys.value = nextImported
+		const nextErrors = new Set(errorKeys.value)
+		nextErrors.delete(key)
+		errorKeys.value = nextErrors
+		emit('imported', currentInstanceId, [imported])
+	} catch {
+		const nextErrors = new Set(errorKeys.value)
+		nextErrors.add(key)
+		errorKeys.value = nextErrors
+	} finally {
+		const nextBusy = new Set(busyKeys.value)
+		nextBusy.delete(key)
+		busyKeys.value = nextBusy
+	}
 }
 
 async function openAll() {

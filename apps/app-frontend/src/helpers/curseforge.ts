@@ -347,11 +347,40 @@ export function recognizeCurseForgeFiles(instanceId: string) {
 
 export function importCurseForgeManualDownloads(
 	instanceId: string,
-	downloads: CurseForgeInstallResult['manualDownloads'],
+	scanDirectory?: string | null,
 ) {
 	return invoke<CurseForgeManualDownloadScanResult>(
 		'plugin:curseforge|curseforge_import_manual_downloads',
-		{ instanceId, downloads },
+		{ instanceId, scanDirectory: scanDirectory ?? null },
+	)
+}
+
+export function listPendingCurseForgeManualDownloads(instanceId: string) {
+	return invoke<CurseForgeInstallResult['manualDownloads']>(
+		'plugin:curseforge|curseforge_list_pending_manual_downloads',
+		{ instanceId },
+	)
+}
+
+export function importPendingCurseForgeManualDownloadFile(
+	instanceId: string,
+	projectId: number,
+	fileId: number,
+	sourcePath: string,
+) {
+	return invoke<CurseForgeManualDownloadImport>(
+		'plugin:curseforge|curseforge_import_pending_manual_download_file',
+		{ instanceId, projectId, fileId, sourcePath },
+	)
+}
+
+export function configureCurseForgeManualDownloadWatcher(
+	enabled: boolean,
+	scanDirectory?: string | null,
+) {
+	return invoke<string | null>(
+		'plugin:curseforge|curseforge_configure_manual_download_watcher',
+		{ enabled, scanDirectory: scanDirectory ?? null },
 	)
 }
 

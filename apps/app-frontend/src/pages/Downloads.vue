@@ -239,7 +239,7 @@
 					{{
 						formatMessage(messages.missingRequiredContent, {
 							completed: completedRequiredFiles(job),
-							total: job.summary.files_total ?? job.items.length,
+							total: totalRequiredFiles(job),
 							missing: missingRequiredFiles(job),
 						})
 					}}
@@ -390,6 +390,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import MissingModpackContentModal from '@/components/ui/modal/MissingModpackContentModal.vue'
+import type { CurseForgeManualDownloadItem } from '@/helpers/curseforge-manual'
 import {
 	download_job_support_details,
 	type InstallJobSnapshot,
@@ -398,11 +399,13 @@ import {
 } from '@/helpers/install'
 import { effectiveInstallProgress, hasDeterminateInstallProgress } from '@/helpers/install-progress'
 import type { LoadingBar } from '@/helpers/state'
+import { injectContentInstall } from '@/providers/content-install'
 import { injectDownloadManager } from '@/providers/download-manager'
 
 type DownloadItem = InstallJobSnapshot['items'][number]
 
 const manager = injectDownloadManager()
+const { showCurseForgeManualDownloads } = injectContentInstall()
 const router = useRouter()
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
@@ -757,7 +760,7 @@ function showProgress(job: InstallJobSnapshot) {
 function jobPercent(job: InstallJobSnapshot) {
 	if (job.status === 'succeeded') return 100
 	if (job.status === 'waiting_for_user') {
-		const total = job.summary.files_total ?? job.items.length
+		const total = totalRequiredFiles(job)
 		if (!total) return 0
 		return Math.min(99, Math.floor((completedRequiredFiles(job) / total) * 100))
 	}
@@ -772,7 +775,7 @@ function hasDeterminateProgress(job: InstallJobSnapshot) {
 
 function progressText(job: InstallJobSnapshot) {
 	if (job.status === 'waiting_for_user') {
-		return `${completedRequiredFiles(job)} / ${job.summary.files_total ?? job.items.length}`
+		return `${completedRequiredFiles(job)} / ${totalRequiredFiles(job)}`
 	}
 	if (isLocalRecoveryValidation(job)) {
 		const progress = effectiveInstallProgress(job)
@@ -803,7 +806,10 @@ function progressText(job: InstallJobSnapshot) {
 }
 
 function completedRequiredFiles(job: InstallJobSnapshot) {
-	return job.items.filter((item) => item.status === 'completed' || item.status === 'skipped').length
+	return job.items.filter(
+		(item) =>
+			item.status === 'completed' || (item.status === 'skipped' && item.manual_url == null),
+	).length
 }
 
 function missingRequiredFiles(job: InstallJobSnapshot) {
@@ -811,6 +817,12 @@ function missingRequiredFiles(job: InstallJobSnapshot) {
 		return job.pause_reason.failed_files
 	}
 	return job.items.filter((item) => item.status === 'failed').length
+}
+
+function totalRequiredFiles(job: InstallJobSnapshot) {
+	const completed = completedRequiredFiles(job)
+	const missing = missingRequiredFiles(job)
+	return Math.max(job.summary.files_total ?? 0, job.items.length, completed + missing)
 }
 
 function downloadTelemetry(job: InstallJobSnapshot) {
@@ -854,14 +866,14 @@ function downloadSourceLabel(source: string) {
 
 const STATUS_ORDER: Record<string, number> = {
 	failed: 0,
-	downloading: 1,
-	queued: 2,
+	skipped: 1,
+	waiting_for_user: 2,
+	downloading: 3,
 	verifying: 3,
-	writing: 4,
-	completed: 5,
-	skipped: 6,
-	waiting_for_user: 7,
-	canceled: 8,
+	writing: 3,
+	queued: 4,
+	canceled: 5,
+	completed: 6,
 }
 function compareItemStatus(a: DownloadItem, b: DownloadItem) {
 	return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)
@@ -965,6 +977,23 @@ async function retry(job: InstallJobSnapshot) {
 }
 
 async function resolveMissing(job: InstallJobSnapshot) {
+	const curseForgeItems = job.items
+		.filter(
+			(item) =>
+				item.status === 'skipped' && item.manual_url && item.project_id && item.version_id,
+		)
+		.map(
+			(item): CurseForgeManualDownloadItem => ({
+				projectId: Number(item.project_id),
+				fileId: Number(item.version_id),
+				fileName: item.name,
+				websiteUrl: item.manual_url ?? undefined,
+			}),
+		)
+	if (job.instance_id && curseForgeItems.length > 0) {
+		showCurseForgeManualDownloads(job.instance_id, curseForgeItems)
+		return
+	}
 	await missingContentModal.value?.show(job)
 }
 

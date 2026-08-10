@@ -407,14 +407,17 @@
 	"app.curseforge.manual-downloads.automatic-import": {
 		"message": "自动导入"
 	},
+	"app.curseforge.manual-downloads.automatic-import-disabled": {
+		"message": "资源管理设置中的自动导入已关闭。"
+	},
 	"app.curseforge.manual-downloads.body": {
 		"message": "已自动安装 {installed, number} 个文件，另有 {manual, number} 个文件需要通过浏览器下载。"
 	},
 	"app.curseforge.manual-downloads.checking-downloads": {
-		"message": "正在检查下载文件夹..."
+		"message": "正在检查监控导入目录..."
 	},
 	"app.curseforge.manual-downloads.downloads-unavailable": {
-		"message": "无法访问系统下载文件夹。"
+		"message": "无法访问监控导入目录。"
 	},
 	"app.curseforge.manual-downloads.existing-body": {
 		"message": "仍有 {manual, number} 个文件需要通过浏览器下载。下载完成并通过校验后，启动器会自动导入。"
@@ -456,7 +459,7 @@
 		"message": "项目 {projectId} / 文件 {fileId}"
 	},
 	"app.curseforge.manual-downloads.retrying": {
-		"message": "导入失败，正在重试"
+		"message": "文件校验未通过，请选择正确文件"
 	},
 	"app.curseforge.manual-downloads.scanner-failed": {
 		"message": "自动导入检查失败，正在重试。"
@@ -765,7 +768,7 @@
 		"message": "需要操作"
 	},
 	"app.downloads.missing-required-content": {
-		"message": "已完成 {completed} / {total} 个必需文件，还有 {missing} 个文件需要补全。"
+		"message": "已完成 {completed} / {total} 个必需文件，还有 {missing} 个文件需要补全。点击 补全缺失文件 按钮可以选择下载或让启动器自动从监听文件夹中导入。"
 	},
 	"app.downloads.search": {
 		"message": "搜索下载任务"
@@ -1221,7 +1224,10 @@
 		"message": "整合包文件缺失"
 	},
 	"app.instance.mods.skipped-files-warning.body": {
-		"message": "因为网络原因或根据模组开发者要求，安装过程中跳过了 {count, number} 个文件。点击文件名下载；启动器会监控系统下载目录，并在校验通过后自动导入。"
+		"message": "因为网络原因或根据模组开发者要求，安装过程中跳过了 {count, number} 个文件。点击文件名下载；打开“补全缺失文件”对话框时，启动器会自动检查监听的导入文件夹。你也可以直接将下载的文件拖入此实例。"
+	},
+	"app.instance.mods.skipped-files-warning.body-disabled": {
+		"message": "因为网络原因或根据模组开发者要求，安装过程中跳过了 {count, number} 个文件。请把下载后的文件拖入此实例，或在资源管理设置中开启自动导入。监听文件夹自动导入功能已关闭，你可以在设置中打开。"
 	},
 	"app.instance.mods.skipped-files-warning.more": {
 		"message": "另有 {count, number} 个文件。"
@@ -6772,5 +6778,11 @@
 	},
 	"app.lab.mod-translation.summary.warnings": {
 		"message": "警告"
+	},
+	"app.curseforge.manual-downloads.choose-file": {
+		"message": "选择本地文件"
+	},
+	"app.instance.mods.skipped-files-warning.complete": {
+		"message": "补全缺失文件"
 	}
 }

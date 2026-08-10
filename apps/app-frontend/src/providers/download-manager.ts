@@ -60,8 +60,10 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 	const pendingRequestUpdates = new Map<string, DownloadRequestUpdate[]>()
 
 	function persistManualDownloadsFromJob(job: InstallJobSnapshot) {
-		if (job.status !== 'succeeded') return
+		if (job.status !== 'waiting_for_user' && job.status !== 'succeeded') return
 		const instanceId = installJobInstanceId(job)
+		const hasManualDownloadHistory = job.items.some((item) => item.manual_url)
+		if (!instanceId || !hasManualDownloadHistory) return
 		const manualItems = job.items
 			.filter(
 				(item) =>
@@ -73,9 +75,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 				fileName: item.name,
 				websiteUrl: item.manual_url ?? undefined,
 			}))
-		if (instanceId && manualItems.length > 0) {
-			setCurseForgeManualDownloads(instanceId, manualItems)
-		}
+		setCurseForgeManualDownloads(instanceId, manualItems)
 	}
 
 	function setJob(job: InstallJobSnapshot) {

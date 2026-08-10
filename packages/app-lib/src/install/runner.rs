@@ -903,7 +903,7 @@ async fn run_request(
                 .await?;
                 emit_instance(&instance_id, InstancePayloadType::Edited)
                     .await?;
-                crate::api::curseforge::install_modpack_with_reporter(
+                let result = crate::api::curseforge::install_modpack_with_reporter(
                     crate::api::curseforge::CurseForgeModpackInstallRequest {
                         instance_id: instance_id.clone(),
                         project_id,
@@ -914,6 +914,10 @@ async fn run_request(
                     Some(reporter.clone()),
                 )
                 .await?;
+                if let Some(reason) = curseforge_manual_download_pause(&result)
+                {
+                    return Ok(InstallExecutionOutcome::WaitingForUser(reason));
+                }
             }
             reporter
                 .update(
@@ -1691,7 +1695,7 @@ async fn install_local_pack_file(
             );
         }
         LocalPackFormat::CurseForge => {
-            crate::api::curseforge::install_modpack_from_local_archive_with_reporter(
+            let result = crate::api::curseforge::install_modpack_from_local_archive_with_reporter(
                 instance_id,
                 path,
                 detected.base_folder,
@@ -1700,6 +1704,9 @@ async fn install_local_pack_file(
                 reporter,
             )
             .await?;
+            if let Some(reason) = curseforge_manual_download_pause(&result) {
+                return Ok(InstallExecutionOutcome::WaitingForUser(reason));
+            }
         }
         LocalPackFormat::Mcbbs => {
             crate::api::pack::install_mcbbs::install_mcbbs_pack_with_reporter(
@@ -1829,6 +1836,23 @@ async fn install_local_pack_file(
         }
     }
     Ok(InstallExecutionOutcome::Completed(()))
+}
+
+fn curseforge_manual_download_pause(
+    result: &crate::api::curseforge::CurseForgeModpackInstallResult,
+) -> Option<InstallPauseReason> {
+    if result.content.manual_downloads.is_empty() {
+        return None;
+    }
+    Some(InstallPauseReason::MissingRequiredContent {
+        failed_files: result.content.manual_downloads.len() as u64,
+        paths: result
+            .content
+            .manual_downloads
+            .iter()
+            .map(|download| download.file_name.clone())
+            .collect(),
+    })
 }
 
 async fn prepare_existing_rollback(
@@ -2097,6 +2121,44 @@ mod tests {
             &event.kind,
             InstallJobEventKind::RollbackStarted { .. }
         )));
+    }
+
+    #[test]
+    fn curseforge_manual_downloads_create_a_recoverable_pause() {
+        let manual_download =
+            crate::api::curseforge::CurseForgeManualDownload {
+                project_id: 123,
+                file_id: 456,
+                file_name: "mods/manual.jar".to_string(),
+                ownership_kind:
+                    crate::state::instances::ContentOwnershipKind::PackManaged,
+                operation_kind: crate::state::instances::ManualDownloadOperationKind::PackInstall,
+                website_url: Some(
+                    "https://www.curseforge.com/minecraft/mc-mods/example/download/456"
+                        .to_string(),
+                ),
+                project_type: "mod".to_string(),
+                project_slug: "example".to_string(),
+                target_folder: "mods".to_string(),
+                hashes: Vec::new(),
+                file_length: 12,
+                file_fingerprint: 34,
+            };
+        let result = crate::api::curseforge::CurseForgeModpackInstallResult {
+            content: crate::api::curseforge::CurseForgeInstallResult {
+                manual_downloads: vec![manual_download],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            curseforge_manual_download_pause(&result),
+            Some(InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/manual.jar".to_string()],
+            })
+        );
     }
 
     #[test]

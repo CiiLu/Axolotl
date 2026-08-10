@@ -5,9 +5,9 @@ use theseus::curseforge::{
     CurseForgeFilesRequest, CurseForgeFilesResponse,
     CurseForgeFingerprintResult, CurseForgeInstallRequest,
     CurseForgeInstallResult, CurseForgeManualDownload,
-    CurseForgeManualDownloadScanResult, CurseForgeModpackInstallRequest,
-    CurseForgeModpackInstallResult, CurseForgeProject,
-    CurseForgeRecognitionResult, CurseForgeSearchRequest,
+    CurseForgeManualDownloadImport, CurseForgeManualDownloadScanResult,
+    CurseForgeModpackInstallRequest, CurseForgeModpackInstallResult,
+    CurseForgeProject, CurseForgeRecognitionResult, CurseForgeSearchRequest,
     UnifiedSearchResponse,
 };
 
@@ -32,6 +32,9 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             curseforge_switch_installed_file_version,
             curseforge_recognize_instance_files,
             curseforge_import_manual_downloads,
+            curseforge_list_pending_manual_downloads,
+            curseforge_import_pending_manual_download_file,
+            curseforge_configure_manual_download_watcher,
             curseforge_install_modpack,
             curseforge_update_managed_modpack,
         ])
@@ -183,12 +186,51 @@ pub async fn curseforge_recognize_instance_files(
 #[tauri::command]
 pub async fn curseforge_import_manual_downloads(
     instance_id: String,
-    downloads: Vec<CurseForgeManualDownload>,
+    scan_directory: Option<std::path::PathBuf>,
 ) -> Result<CurseForgeManualDownloadScanResult> {
+    Ok(theseus::curseforge::import_manual_downloads(
+        &instance_id,
+        scan_directory,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn curseforge_list_pending_manual_downloads(
+    instance_id: String,
+) -> Result<Vec<CurseForgeManualDownload>> {
     Ok(
-        theseus::curseforge::import_manual_downloads(&instance_id, downloads)
+        theseus::curseforge::list_pending_manual_downloads(&instance_id)
             .await?,
     )
+}
+
+#[tauri::command]
+pub async fn curseforge_import_pending_manual_download_file(
+    instance_id: String,
+    project_id: u32,
+    file_id: u32,
+    source_path: std::path::PathBuf,
+) -> Result<CurseForgeManualDownloadImport> {
+    Ok(theseus::curseforge::import_pending_manual_download_file(
+        &instance_id,
+        project_id,
+        file_id,
+        source_path,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn curseforge_configure_manual_download_watcher(
+    enabled: bool,
+    scan_directory: Option<std::path::PathBuf>,
+) -> Result<Option<String>> {
+    Ok(theseus::curseforge::configure_manual_download_watcher(
+        enabled,
+        scan_directory,
+    )
+    .await?)
 }
 
 #[tauri::command]

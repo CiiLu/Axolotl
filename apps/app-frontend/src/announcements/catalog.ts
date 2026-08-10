@@ -53,6 +53,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed cache purging failing when the frontend sends cache types unsupported by the running backend.',
 					'zh-CN': '修复前端发送当前后端不支持的缓存类型时，清理缓存失败的问题。',
 				},
+				{
+					'en-US': 'Fixed Curseforge import missing files issues',
+					'zh-CN': '修复 Curseforge 导入缺失文件问题',
+				},
 			],
 			changed: [
 				{

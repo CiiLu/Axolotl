@@ -16,6 +16,7 @@ import { computed, ref, watch } from 'vue'
 
 import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'
 import { purge_cache_types } from '@/helpers/cache.js'
+import { configureCurseForgeManualDownloadWatcher } from '@/helpers/curseforge'
 import {
 	getMissingContentScannerSettings,
 	setMissingContentScannerSettings,
@@ -302,7 +303,10 @@ watch(
 
 watch(
 	missingContentScannerSettings,
-	(value) => setMissingContentScannerSettings(value),
+	(value) => {
+		setMissingContentScannerSettings(value)
+		void configureCurseForgeManualDownloadWatcher(value.enabled, value.directory).catch(handleError)
+	},
 	{ deep: true },
 )
 
