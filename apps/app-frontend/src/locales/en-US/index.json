@@ -792,10 +792,10 @@
 		"message": "Automatic checking failed. Manual file selection is still available."
 	},
 	"app.downloads.missing-content.file-mismatch": {
-		"message": "A similarly named file was found, but it did not match this required file."
+		"message": "A same-named file was found, but it did not match this required file."
 	},
 	"app.downloads.missing-content.file-mismatch-title": {
-		"message": "A same-named file was found, but file verification failed"
+		"message": "A same-named file was found, but file verification failed. Please check if it is the correct file."
 	},
 	"app.downloads.missing-content.file-mismatch-body": {
 		"message": "The launcher will keep waiting for the correct file. You can also choose a local file manually."

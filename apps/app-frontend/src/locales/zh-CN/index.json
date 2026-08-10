@@ -576,7 +576,7 @@
 		"message": "发现同名候选文件，但它不是整合包要求的文件。"
 	},
 	"app.downloads.missing-content.file-mismatch-title": {
-		"message": "发现同名文件，但文件校验未通过"
+		"message": "发现同名文件，但文件校验未通过，请确认文件是否正确。"
 	},
 	"app.downloads.missing-content.file-mismatch-body": {
 		"message": "启动器会继续等待正确文件，你也可以手动选择。"
