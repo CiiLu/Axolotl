@@ -2981,7 +2981,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				{{ formatMessage(messages.authUnreachableBody) }}
 			</Admonition>
 			<RouterView v-slot="{ Component, route }">
-				<transition name="slide" mode="out-in">
+				<transition name="slide">
 					<template v-if="Component">
 						<Suspense @pending="onSuspensePending" @resolve="onSuspenseResolve">
 							<component :is="Component" :key="route.fullPath"></component>
