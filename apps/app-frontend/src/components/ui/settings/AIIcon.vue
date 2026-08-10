@@ -75,13 +75,14 @@ const modelBackground = computed(() => {
 })
 const modelComponent = computed(() => {
 	if (!modelMapping.value || !modelAvatar.value) return undefined
-	if (['aihubmix', 'dalle', 'lg', 'nanobanana', 'sora', 'stepfun'].includes(modelMapping.value.slug)) {
+	if (
+		['aihubmix', 'dalle', 'lg', 'nanobanana', 'sora', 'stepfun'].includes(modelMapping.value.slug)
+	) {
 		return undefined
 	}
 	const suffix = modelAvatar.value.asset === 'color' ? '-color' : ''
 	return (
-		iconComponents[`${modelMapping.value.slug}${suffix}`] ??
-		iconComponents[modelMapping.value.slug]
+		iconComponents[`${modelMapping.value.slug}${suffix}`] ?? iconComponents[modelMapping.value.slug]
 	)
 })
 const modelAvatarStyle = computed(() => ({
@@ -172,10 +173,7 @@ const avatarStyle = computed(() => ({
 			<LobeBrandCombine brand="bedrock" :size="combineSize" />
 		</template>
 		<template v-else-if="providerConfig?.combine.kind === 'google'">
-			<component
-				:is="specialAsset"
-				:style="{ height: `${combineSize * 0.95}px`, width: 'auto' }"
-			/>
+			<component :is="specialAsset" :style="{ height: `${combineSize * 0.95}px`, width: 'auto' }" />
 			<span class="special-divider" :style="{ margin: `0 ${combineSize / 6}px` }" />
 			<LobeBrandCombine brand="gemini" :size="combineSize" />
 		</template>

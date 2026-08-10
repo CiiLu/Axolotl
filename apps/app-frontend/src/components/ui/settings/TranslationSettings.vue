@@ -12,7 +12,7 @@ import {
 } from '@modrinth/ui'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
-import { type AIProviderDefinition,getAICatalog, getAIState, sharedAIState } from '@/helpers/ai'
+import { type AIProviderDefinition, getAICatalog, getAIState, sharedAIState } from '@/helpers/ai'
 import {
 	clearTranslationCache,
 	getTranslationErrorKind,

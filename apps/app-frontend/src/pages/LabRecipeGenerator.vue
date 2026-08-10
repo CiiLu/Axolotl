@@ -28,6 +28,7 @@ import RecipeSlotGrid from '@/components/lab/recipe-generator/RecipeSlotGrid.vue
 import TagPalette from '@/components/lab/recipe-generator/TagPalette.vue'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { useResultCountWheel } from '@/composables/lab/useResultCountWheel'
+import { drawCountOnCanvas } from '@/lab/recipe-generator/count-display'
 import {
 	createDatapackFiles,
 	type DatapackRecipe,
@@ -35,20 +36,19 @@ import {
 	saveDatapackAs,
 	saveJsonFile,
 } from '@/lab/recipe-generator/datapack'
-import { drawCountOnCanvas } from '@/lab/recipe-generator/count-display'
 import { getSlotDisplay, type SlotDisplay } from '@/lab/recipe-generator/display'
-import { exportDatapackToWorld } from '@/lab/recipe-generator/instance-export'
 import { parseIdentifier } from '@/lab/recipe-generator/identifier'
+import { exportDatapackToWorld } from '@/lab/recipe-generator/instance-export'
 import { resolveRecipeItemName } from '@/lab/recipe-generator/item-names'
 import { categoryMessages, recipeTypeMessages } from '@/lab/recipe-generator/messages'
 import { getCurrentRecipeName } from '@/lab/recipe-generator/naming'
+import { CRAFTING_GRID_SLOTS, generateJavaRecipe } from '@/lab/recipe-generator/recipe-engine'
 import {
 	getRecipeLayout,
 	RECIPE_IMAGE_HEIGHT,
 	RECIPE_IMAGE_WIDTH,
 	type RecipeLayoutSlotBox,
 } from '@/lab/recipe-generator/recipe-layouts'
-import { CRAFTING_GRID_SLOTS, generateJavaRecipe } from '@/lab/recipe-generator/recipe-engine'
 import {
 	buildSlotContext,
 	type LoadedVersionResources,
@@ -76,7 +76,6 @@ import {
 	DEFAULT_COOKING_TIME,
 	getRecipeCategoryOptions,
 	getSupportedRecipeTypes,
-	isVersionAtLeast,
 	JAVA_VERSIONS,
 	supportsCustomTags,
 	supportsRecipeCategory,
@@ -1471,6 +1470,7 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 							</div>
 							<div
 								v-else
+								v-tooltip="resultWheelHint(entry.targetSlot)"
 								class="recipe-layout-hotspot"
 								:data-recipe-slot="entry.targetSlot"
 								:style="slotBoxStyle(entry.box)"
@@ -1479,7 +1479,6 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 								@dragover="onHotspotDragOver"
 								@drop="onHotspotDrop($event, entry.targetSlot)"
 								@wheel="onResultSlotWheel(entry.targetSlot, $event)"
-								v-tooltip="resultWheelHint(entry.targetSlot)"
 							>
 								<span v-if="slotDisplayFor(entry.targetSlot)" class="recipe-layout-icon">
 									<RecipeItemIcon

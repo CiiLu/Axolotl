@@ -307,14 +307,11 @@ export function queueCurseForgeFile(
 	request: CurseForgeInstallRequest,
 	display: { title: string; iconUrl?: string | null },
 ) {
-	return invoke<InstallJobSnapshot>(
-		'plugin:instance|instance_queue_curseforge_content',
-		{
-			request,
-			displayTitle: display.title,
-			displayIcon: display.iconUrl ?? null,
-		},
-	)
+	return invoke<InstallJobSnapshot>('plugin:instance|instance_queue_curseforge_content', {
+		request,
+		displayTitle: display.title,
+		displayIcon: display.iconUrl ?? null,
+	})
 }
 
 export function updateCurseForgeFile(instanceId: string, relativePath: string) {

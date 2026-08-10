@@ -80,32 +80,19 @@ export async function generatePlayerHeadBlob(skinUrl: string): Promise<Blob> {
 
 				outputCtx.imageSmoothingEnabled = false
 
-				outputCtx.drawImage(
-					img,
-					8,
-					8,
-					8,
-					8,
-					baseOffset,
-					baseOffset,
-					64,
-					64,
-				)
+				outputCtx.drawImage(img, 8, 8, 8, 8, baseOffset, baseOffset, 64, 64)
 
 				if (hasOuterLayer) {
 					outputCtx.drawImage(outerLayerCanvas, 0, 0, 8, 8, 0, 0, outputSize, outputSize)
 				}
 
-				outputCanvas.toBlob(
-					(blob) => {
-						if (blob) {
-							resolve(blob)
-						} else {
-							reject(new Error('Failed to create blob from canvas'))
-						}
-					},
-					'image/png',
-				)
+				outputCanvas.toBlob((blob) => {
+					if (blob) {
+						resolve(blob)
+					} else {
+						reject(new Error('Failed to create blob from canvas'))
+					}
+				}, 'image/png')
 			} catch (error) {
 				reject(error)
 			}

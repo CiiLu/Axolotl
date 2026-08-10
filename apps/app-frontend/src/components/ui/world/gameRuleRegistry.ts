@@ -2,14 +2,7 @@ import { defineMessages, type MessageDescriptor } from '@modrinth/ui'
 
 export type GameRuleType = 'boolean' | 'integer'
 
-export type GameRuleCategory =
-	| 'player'
-	| 'mobs'
-	| 'drops'
-	| 'world'
-	| 'chat'
-	| 'commands'
-	| 'other'
+export type GameRuleCategory = 'player' | 'mobs' | 'drops' | 'world' | 'chat' | 'commands' | 'other'
 
 export type ResolvedGameRule = {
 	name: MessageDescriptor

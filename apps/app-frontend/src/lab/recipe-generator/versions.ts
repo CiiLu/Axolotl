@@ -8,10 +8,7 @@ export type JavaVersionMeta = {
 	hasVanillaTags: boolean
 }
 
-const metadata: Record<
-	JavaVersionId,
-	Omit<JavaVersionMeta, 'id' | 'hasVanillaTags'>
-> = {
+const metadata: Record<JavaVersionId, Omit<JavaVersionMeta, 'id' | 'hasVanillaTags'>> = {
 	'1.12': { packFormat: null, recipeDir: null, tagDir: null },
 	'1.13': { packFormat: 4, recipeDir: 'recipes', tagDir: 'tags/items' },
 	'1.14': { packFormat: 4, recipeDir: 'recipes', tagDir: 'tags/items' },

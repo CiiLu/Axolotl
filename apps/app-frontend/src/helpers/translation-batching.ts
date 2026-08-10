@@ -138,9 +138,7 @@ export async function translateInBatches(
 				batch.map(async (segment) => {
 					const fallback = await limitedExecute({ ...request, segments: [segment] })
 					if (!hasCompleteBatchResult([segment], fallback)) {
-						throw new Error(
-							`Translation provider returned an incomplete result for ${segment.id}`,
-						)
+						throw new Error(`Translation provider returned an incomplete result for ${segment.id}`)
 					}
 					onBatch?.(fallback)
 					return fallback.segments[0]

@@ -14,7 +14,7 @@ const RECIPE_SLOT_MIME_TYPE = 'application/x-axolotl-recipe-slot'
 
 const props = withDefaults(
 	defineProps<{
-		slot: RecipeSlot
+		recipeSlot: RecipeSlot
 		value: SlotValue | undefined
 		display: SlotDisplay | null
 		atlas: TextureAtlas
@@ -43,9 +43,9 @@ const messages = defineMessages({
 })
 
 const dragActive = computed(() => dragDepth.value > 0)
-const slotLabel = computed(() => `${formatMessage(messages.emptySlot)} ${props.slot}`)
+const slotLabel = computed(() => `${formatMessage(messages.emptySlot)} ${props.recipeSlot}`)
 const { hint: wheelHint, onWheel: onResultWheel } = useResultCountWheel({
-	getSlot: () => (props.countEditable ? props.slot : null),
+	getSlot: () => (props.countEditable ? props.recipeSlot : null),
 	getValue: () => props.value,
 	getCount: () => props.count ?? 1,
 	setCount: (count) => emit('updateCount', count),
@@ -129,7 +129,7 @@ function onDrop(event: DragEvent) {
 	<div
 		class="recipe-slot-cell"
 		:class="{ 'is-drag-target': dragActive }"
-		:data-recipe-slot="slot"
+		:data-recipe-slot="recipeSlot"
 		@axolotl-recipe-slot-drop="onSlotDropEvent"
 		@dragenter="onDragEnter"
 		@dragover="onDragOver"
@@ -137,14 +137,14 @@ function onDrop(event: DragEvent) {
 		@drop="onDrop"
 	>
 		<button
+			v-tooltip="wheelHint"
 			type="button"
 			class="recipe-slot-button"
 			:class="{ 'recipe-result-button': result }"
 			:title="wheelHint ?? slotLabel"
 			:aria-label="wheelHint ?? slotLabel"
 			@click="emit('clear')"
-			@wheel="onResultWheel(slot, $event)"
-			v-tooltip="wheelHint"
+			@wheel="onResultWheel(recipeSlot, $event)"
 		>
 			<RecipeItemIcon :display="display" :atlas="atlas" :size="48" />
 		</button>

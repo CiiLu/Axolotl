@@ -26,6 +26,7 @@ use crate::{
 };
 
 pub mod atlauncher;
+mod axolotl;
 pub mod curseforge;
 pub mod gdlauncher;
 pub(crate) mod generic;
@@ -48,6 +49,7 @@ pub struct ImportableInstance {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ImportLauncherType {
+    Axolotl,
     MultiMC,
     PrismLauncher,
     ATLauncher,
@@ -65,6 +67,7 @@ pub enum ImportLauncherType {
 impl fmt::Display for ImportLauncherType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ImportLauncherType::Axolotl => write!(f, "Axolotl"),
             ImportLauncherType::MultiMC => write!(f, "MultiMC"),
             ImportLauncherType::PrismLauncher => write!(f, "PrismLauncher"),
             ImportLauncherType::ATLauncher => write!(f, "ATLauncher"),
@@ -89,6 +92,7 @@ pub async fn get_importable_instances(
     base_path: PathBuf,
 ) -> crate::Result<Vec<ImportableInstance>> {
     match launcher_type {
+        ImportLauncherType::Axolotl => get_axolotl_instances(&base_path).await,
         ImportLauncherType::ModrinthApp => {
             get_modrinth_app_instances(&base_path).await
         }
@@ -211,6 +215,40 @@ async fn get_hmcl_instances(
     collect_launcher_instances(&mut collector, hmcl::get_instances(base_path))
         .await;
     Ok(collector.instances)
+}
+
+/// Collects Axolotl instances from a base path. A base path holding
+/// `axolotl_config.json` is itself an instance; otherwise direct child
+/// folders with their own config are treated as instances.
+async fn get_axolotl_instances(
+    base_path: &Path,
+) -> crate::Result<Vec<ImportableInstance>> {
+    if base_path.join("axolotl_config.json").is_file() {
+        let name = base_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "imported".to_string());
+        return Ok(vec![ImportableInstance {
+            name,
+            path: base_path.to_string_lossy().to_string(),
+        }]);
+    }
+
+    let mut instances = Vec::new();
+    let mut dir = io::read_dir(base_path).await?;
+    while let Some(entry) = dir.next_entry().await? {
+        let path = entry.path();
+        if path.is_dir()
+            && path.join("axolotl_config.json").is_file()
+            && let Some(name) = path.file_name()
+        {
+            instances.push(ImportableInstance {
+                name: name.to_string_lossy().to_string(),
+                path: path.to_string_lossy().to_string(),
+            });
+        }
+    }
+    Ok(instances)
 }
 
 /// Scans a generic launcher folder for instance JSONs.
@@ -394,6 +432,19 @@ async fn scan_instances_at(
         return Vec::new();
     }
     let mut instances = Vec::new();
+
+    // A `versions` container lists its direct children as instances. Keep
+    // the name as the plain child folder name so re-resolution does not turn
+    // it into `versions/versions/<id>`.
+    if path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("versions"))
+    {
+        collect_child_instances(&mut instances, path, prefix, false).await;
+        return instances;
+    }
+
     if instance_json::detect(path).is_some() {
         let name = path
             .file_name()
@@ -409,26 +460,9 @@ async fn scan_instances_at(
         ));
     }
     let versions_dir = path.join("versions");
-    if versions_dir.is_dir()
-        && let Ok(mut dir) = io::read_dir(&versions_dir).await
-    {
-        while let Ok(Some(entry)) = dir.next_entry().await {
-            if entry.path().is_dir()
-                && instance_json::detect(&entry.path()).is_some()
-                && let Some(name) = entry.path().file_name()
-            {
-                let name = name.to_string_lossy().to_string();
-                let ipath = entry.path();
-                instances.push((
-                    if let Some(pre) = prefix {
-                        format!("{pre}:versions/{name}")
-                    } else {
-                        format!("versions/{name}")
-                    },
-                    ipath,
-                ));
-            }
-        }
+    if versions_dir.is_dir() {
+        collect_child_instances(&mut instances, &versions_dir, prefix, true)
+            .await;
     }
     tracing::debug!(
         "scan_instances_at: path={} prefix={:?} found={}",
@@ -437,6 +471,41 @@ async fn scan_instances_at(
         instances.len()
     );
     instances
+}
+
+/// Scans direct child folders of `dir` for importable instances and appends
+/// them to `instances`. Child names are optionally prefixed with the launcher
+/// name and, for a nested `versions/` folder, the `versions/` path segment.
+async fn collect_child_instances(
+    instances: &mut Vec<(String, PathBuf)>,
+    dir: &Path,
+    prefix: Option<&str>,
+    is_versions_subdir: bool,
+) {
+    let Ok(mut entries) = io::read_dir(dir).await else {
+        return;
+    };
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+        if path.is_dir()
+            && instance_json::detect(&path).is_some()
+            && let Some(name) = path.file_name()
+        {
+            let name = name.to_string_lossy().to_string();
+            let instance_name = if let Some(pre) = prefix {
+                if is_versions_subdir {
+                    format!("{pre}:versions/{name}")
+                } else {
+                    format!("{pre}:{name}")
+                }
+            } else if is_versions_subdir {
+                format!("versions/{name}")
+            } else {
+                name
+            };
+            instances.push((instance_name, path));
+        }
+    }
 }
 
 fn resolve_instance_path(base_path: &Path, instance_folder: &str) -> PathBuf {
@@ -449,6 +518,14 @@ fn resolve_instance_path(base_path: &Path, instance_folder: &str) -> PathBuf {
         .as_deref()
         == Some(instance_folder)
     {
+        base_path.to_path_buf()
+    } else {
+        base_path.join(instance_folder)
+    }
+}
+
+fn resolve_axolotl_source(base_path: &Path, instance_folder: &str) -> PathBuf {
+    if base_path.join("axolotl_config.json").is_file() {
         base_path.to_path_buf()
     } else {
         base_path.join(instance_folder)
@@ -645,6 +722,17 @@ async fn import_via_launcher(
             })
             .await
         }
+        ImportLauncherType::Axolotl => {
+            let path = resolve_axolotl_source(base_path, instance_folder);
+            axolotl::import_axolotl(
+                path,
+                instance_id,
+                reporter.clone(),
+                details,
+                *symlink,
+            )
+            .await
+        }
         ImportLauncherType::Generic => {
             let path = resolve_instance_path(base_path, instance_folder);
             generic::import_generic(
@@ -740,6 +828,7 @@ pub fn get_default_launcher_path(
                 None
             }
         }
+        ImportLauncherType::Axolotl => None,
         ImportLauncherType::HMCL => None,
         ImportLauncherType::Generic => None,
         ImportLauncherType::Unknown => None,
@@ -817,6 +906,9 @@ pub async fn is_valid_importable_instance(
             curseforge::is_valid_curseforge(instance_path).await
         }
         ImportLauncherType::ModrinthApp => instance_path.is_dir(),
+        ImportLauncherType::Axolotl => {
+            instance_path.join("axolotl_config.json").is_file()
+        }
         ImportLauncherType::PCL2
         | ImportLauncherType::PCL2CE
         | ImportLauncherType::HMCL

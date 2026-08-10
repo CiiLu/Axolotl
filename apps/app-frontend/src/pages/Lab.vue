@@ -13,10 +13,10 @@ import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import gradientTextToolCover from '@/assets/lab/gradient-text-tool-cover.png'
+import modTranslationCover from '@/assets/lab/mod-translation-cover.png'
 import recipeGeneratorToolCover from '@/assets/lab/recipe-generator-tool-cover.png'
 import schematicPreviewToolCover from '@/assets/lab/schematic-preview-cover.png'
 import seedMapToolCover from '@/assets/lab/seed-map-tool-cover.png'
-import modTranslationCover from '@/assets/lab/mod-translation-cover.png'
 import { type LabToolDefinition, labTools } from '@/lab/registry'
 
 type LabCategory = 'all' | LabToolDefinition['category']

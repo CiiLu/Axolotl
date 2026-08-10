@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Anda tidak mempunyai keizinan."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Gagal memuat tetapan pelayan"
-  },
   "badge.alpha": {
     "defaultMessage": "Alfa"
   },
@@ -242,9 +239,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Kemas kini projek"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Tahan Shift sambil mengklik \"Kemas kini semua\" untuk melangkau pengesahan ini pada masa akan datang."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Kemas kini {count, plural, other {# projek}}"
   },
@@ -311,41 +305,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Amaran"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Sedang mencipta sandaran..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Sandaran berjaya dicipta"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Penciptaan sandaran gagal. Anda masih boleh meneruskan."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Sandaran sedang dijalankan, disyorkan untuk menunggu sehingga penyandaran selesai sebelum melakukan tindakan ini."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Penciptaan sandaran mungkin mengambil masa beberapa minit bergantung pada saiz pelayan anda."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Cipta sandaran"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "pemasangan"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Tahan Shift sambil mengklik untuk melangkau pengesahan."
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "Kami mengesyorkan agar anda membuat sandaran sebelum meneruskan supaya anda boleh memulihkan {type} anda sekiranya terdapat sebarang kerosakan."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "dunia"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Layari kandungan"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Sila tunggu sehingga operasi selesai sebelum menyunting kandungan."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Layari atau muat naik {contentType} untuk bermula"
@@ -499,99 +460,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Tiada versi tersedia"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Tetapan tambahan"
-  },
-  "creation-flow.modal.final-config.backup.before-reset-server.name": {
-    "defaultMessage": "Sebelum menetapkan semula pelayan"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Senang"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Sukar"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Kesukaran"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Biasa"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Aman"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Pilih versi permainan"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Kreatif"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Tegar"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Mod permainan"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Kemandirian"
-  },
-  "creation-flow.modal.final-config.generate-structures.description": {
-    "defaultMessage": "Mengawal sama ada kampung, kubu kuat dan struktur lain menjana dalam cebisan baharu."
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "Jana struktur"
-  },
-  "creation-flow.modal.final-config.generator-settings-json.placeholder": {
-    "defaultMessage": "Masukkan JSON tetapan penjana"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Tersuai"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Lalai"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "Digunakan untuk penyesuaian dunia lanjutan seperti lapisan Lampau Rata tersuai."
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Datar"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "Tetapan penjana"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "Pilih tetapan penjana"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Nama dunia"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Masukkan nama dunia"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "Masukkan benih dunia"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "Dikuatkan"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Lalai"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Jenis dunia"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Biom Besar"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Pilih jenis dunia"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "Biom Tunggal"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Lampau Rata"
   },
   "creation-flow.modal.setup-type.option.custom-setup.title": {
     "defaultMessage": "Persediaan tersuai"
@@ -794,9 +662,6 @@
   "files.item-type.folders": {
     "defaultMessage": "folder"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "Operasi fail dinyahdayakan semasa operasi sedang dijalankan."
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Ralat semasa menjalankan simulasi percubaan"
   },
@@ -875,24 +740,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": "Muat naik daripada URL .zip"
   },
-  "files.operations.current-file": {
-    "defaultMessage": "Fail semasa: {file}"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "{size} diekstrak"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "Mengekstrak {source}"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "Pengekstrakan {source} selesai"
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "Pengekstrakan {source} gagal"
-  },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "pek mod daripada URL"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "Namakan semula {name}"
   },
@@ -934,9 +781,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "Nama diperlukan."
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "Pemasangan pek mod CurseForge"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "Pasang pek mod CurseForge"
@@ -1108,111 +952,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Resolusi"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Gagal memadamkan kandungan"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "Gagal menyahdayakan kandungan"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "Gagal mendayakan kandungan"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "Gagal mengemas kini kandungan"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "Gagal memasang kandungan"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Gagal memuat kandungan pek mod"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "Gagal memuat versi"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "Gagal mengalih keluar kandungan"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "Gagal menogol {name}"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Gagal menyahpaut pek mod"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "Gagal mengemas kini"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Gagal memuat naik fail"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "Gagal menukar versi pek mod"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "Gagal memuat versi"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "Gagal memasang semula pek mod"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Gagal membaiki pelayan"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "Gagal menetapkan semula pelayan kepada proses penetapan awal"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "Gagal menyimpan tetapan pemasangan"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Gagal menyahpaut pek mod"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "Versi {loader, select, null {pemuat} other {{loader}}}"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "Pemasangan pelayan anda telah dibaiki."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Pembaikan selesai"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "Tetap semula pelayan"
-  },
-  "hosting.loader.reset-server-description": {
-    "defaultMessage": "Mengalih keluar semua data pada pelayan anda, termasuk dunia, mod dan fail konfigurasi anda. Sandaran akan kekal dan boleh dipulihkan."
-  },
-  "hosting.loader.reset-to-onboarding-button": {
-    "defaultMessage": "Tetap semula ke proses penetapan awal"
-  },
-  "hosting.loader.reset-to-onboarding-modal-description": {
-    "defaultMessage": "Pilihan ini akan mengembalikan pelayan ke proses penetapan awal supaya penetapan boleh diselesaikan semula. Adakah anda pasti mahu meneruskan?"
-  },
-  "hosting.loader.reset-to-onboarding-modal-title": {
-    "defaultMessage": "Tetap semula ke proses penetapan awal"
-  },
-  "hosting.loader.reset-to-onboarding-success-description": {
-    "defaultMessage": "Pelayan telah dikembalikan ke aliran penetapan awal."
-  },
-  "hosting.loader.reset-to-onboarding-success-title": {
-    "defaultMessage": "Pelayan ditetapkan semula ke proses penetapan awal"
-  },
-  "hosting.loader.support-options-title": {
-    "defaultMessage": "Pilihan sokongan"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Boleh memecut sehingga {cpus} CPU"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "Pemecutan CPU membolehkan pelayan anda menggunakan bebenang tambahan buat sementara waktu untuk membantu mengurangkan lonjakan TPS. Klik untuk maklumat lanjut."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "RAM {ram} GB"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "Penyimpanan {storage} GB"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} CPU Berkongsi"
   },
   "icon-select.edit": {
     "defaultMessage": "Sunting ikon"
@@ -1993,12 +1732,6 @@
   },
   "markdown-editor.video-modal.url-field.title": {
     "defaultMessage": "URL video YouTube"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Tambah kaedah pembayaran"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Sedang menambah kaedah pembayaran"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Pasang kandungan yang diperlukan secara automatik"
@@ -2858,192 +2591,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanila"
   },
-  "servers.busy.backup-creating": {
-    "defaultMessage": "Penciptaan sandaran sedang dijalankan"
-  },
-  "servers.busy.backup-restoring": {
-    "defaultMessage": "Pemulihan sandaran sedang dijalankan"
-  },
-  "servers.busy.installing": {
-    "defaultMessage": "Pelayan sedang dipasang"
-  },
-  "servers.busy.syncing-content": {
-    "defaultMessage": "Penyegerakan kandungan sedang dijalankan"
-  },
-  "servers.grant-access-modal.cancel": {
-    "defaultMessage": "Batal"
-  },
-  "servers.grant-access-modal.header": {
-    "defaultMessage": "Tambah pengguna"
-  },
-  "servers.grant-access-modal.invite": {
-    "defaultMessage": "Jemput"
-  },
-  "servers.grant-access-modal.permissions-help": {
-    "defaultMessage": "Lihat senarai penuh keizinan untuk setiap peranan <link>di sini</link>."
-  },
-  "servers.grant-access-modal.role.editor": {
-    "defaultMessage": "Penyunting"
-  },
-  "servers.grant-access-modal.role.label": {
-    "defaultMessage": "Pilih peranan"
-  },
-  "servers.grant-access-modal.role.viewer": {
-    "defaultMessage": "Terhad"
-  },
-  "servers.grant-access-modal.suggestion-avatar-alt": {
-    "defaultMessage": "Avatar {username}"
-  },
-  "servers.grant-access-modal.target.searching": {
-    "defaultMessage": "Sedang mencari..."
-  },
-  "servers.installing-banner.error.header": {
-    "defaultMessage": "Pemasangan gagal"
-  },
-  "servers.installing-banner.error.internal-platform": {
-    "defaultMessage": "Sebuah ralat dalaman telah berlaku semasa memasang platform. Sila cuba lagi kemudian."
-  },
-  "servers.installing-banner.error.invalid-loader-version": {
-    "defaultMessage": "Pemuat atau versi Minecraft yang dinyatakan tidak dapat dipasang. Ia mungkin tidak sah atau tidak disokong."
-  },
-  "servers.installing-banner.error.no-primary-file": {
-    "defaultMessage": "Versi pek mod ini tidak menyertakan fail yang boleh dimuat turun. Ia mungkin telah dibungkus secara salah."
-  },
-  "servers.installing-banner.error.unsupported-loader-version": {
-    "defaultMessage": "Versi Minecraft atau pemuat ini belum disokong oleh Modrinth Hosting."
-  },
-  "servers.installing-banner.phase.installing-addons": {
-    "defaultMessage": "Sedang memasang tambahan..."
-  },
-  "servers.installing-banner.phase.installing-modpack": {
-    "defaultMessage": "Sedang memasang pek mod..."
-  },
-  "servers.installing-banner.phase.installing-platform": {
-    "defaultMessage": "Sedang memasang platform..."
-  },
-  "servers.installing-banner.preparing.header": {
-    "defaultMessage": "Kami sedang menyediakan pelayan anda"
-  },
-  "servers.installing-banner.ticker.adding-java": {
-    "defaultMessage": "Sedang menambah Java..."
-  },
-  "servers.installing-banner.ticker.configuring-server": {
-    "defaultMessage": "Sedang mengkonfigurasikan pelayan..."
-  },
-  "servers.installing-banner.ticker.downloading-mods": {
-    "defaultMessage": "Sedang memuat turun mod..."
-  },
-  "servers.installing-banner.ticker.organizing-files": {
-    "defaultMessage": "Sedang menyusun fail..."
-  },
-  "servers.installing-banner.ticker.setting-up-environment": {
-    "defaultMessage": "Sedang menyediakan persekitaran..."
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "Sudah mempunyai pelayan?"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Ketahui lebih lanjut tentang Modrinth Hosting"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "Pelayan baharu"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Pasang mod, jemput rakan dan main bersama-sama, semuanya dari Modrinth App."
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "Belum ada pelayan"
-  },
-  "servers.list-empty.one-click-mod-installs-description": {
-    "defaultMessage": "Pilih mod kegemaran anda dan kami uruskan selebihnya."
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "Pemasangan mod sekali klik"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "Jemput rakan-rakan dan sediakan mereka terus dalam Modrinth App."
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "Main bersama rakan"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Daftar masuk"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "Sediakan pelayan anda seperti dunia ekapemain."
-  },
-  "servers.list-empty.simple-setup-title": {
-    "defaultMessage": "Persediaan yang mudah"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Disalin"
-  },
-  "servers.listing.copy-code-tooltip": {
-    "defaultMessage": "Salin kod ke papan keratan"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "Salin ID"
-  },
-  "servers.listing.download-latest-backup-tooltip": {
-    "defaultMessage": "Muat turun sandaran terkini"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Baharu"
-  },
-  "servers.listing.notice.files-kept-for-download": {
-    "defaultMessage": "Fail anda akan disimpan selama <days-remaining>{daysRemaining} {daysRemaining, plural, other {hari}} lagi</days-remaining>. Hubungi sokongan untuk memuat turun fail sebelum ia dipadamkan."
-  },
-  "servers.listing.notice.files-preserved-after-cancellation": {
-    "defaultMessage": "Fail anda akan disimpan selama 30 hari selepas pembatalan."
-  },
-  "servers.listing.notice.pending-change": {
-    "defaultMessage": "Pelayan anda akan {verb, select, downgrade {diturunkan taraf} other {dinaikkan taraf}} kepada Pelan {planSize} pada <date>{formattedDate}</date>."
-  },
-  "servers.listing.notice.provisioning": {
-    "defaultMessage": "Sila tunggu sementara kami menyediakan pelayan anda. Ini boleh mengambil masa sehingga 10 minit."
-  },
-  "servers.listing.notice.subscription-cancelled": {
-    "defaultMessage": "Langganan anda telah dibatalkan."
-  },
-  "servers.listing.notice.subscription-cancelled-on-date": {
-    "defaultMessage": "Langganan anda telah dibatalkan pada <date>{formattedDate}</date>."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed": {
-    "defaultMessage": "Langganan anda telah dibatalkan kerana kegagalan pembayaran."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed-on-date": {
-    "defaultMessage": "Langganan anda telah dibatalkan pada <date>{formattedDate}</date> kerana kegagalan pembayaran. "
-  },
-  "servers.listing.notice.subscription-set-to-cancel": {
-    "defaultMessage": "Langganan anda ditetapkan untuk dibatalkan."
-  },
-  "servers.listing.notice.subscription-set-to-cancel-on-date": {
-    "defaultMessage": "Langganan anda ditetapkan untuk dibatalkan pada <date>{formattedDate}</date>. "
-  },
-  "servers.listing.notice.suspended": {
-    "defaultMessage": "Pelayan anda telah digantung. Sila hubungi Sokongan Modrinth untuk maklumat lanjut."
-  },
-  "servers.listing.notice.upgrading": {
-    "defaultMessage": "Perkakasan pelayan anda sedang dinaik taraf dan akan kembali beroperasi tidak lama lagi."
-  },
-  "servers.listing.owner-avatar-alt": {
-    "defaultMessage": "Avatar {username}"
-  },
-  "servers.listing.resubscribe-label": {
-    "defaultMessage": "Langgan semula"
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "Ikon pelayan"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Sokongan"
-  },
-  "servers.listing.using-project-label": {
-    "defaultMessage": "Menggunakan {projectTitle}"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Ketepikan"
   },
@@ -3077,12 +2624,6 @@
   "servers.region.central-europe": {
     "defaultMessage": "Eropah Tengah"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Berapa banyak RAM yang anda mahu pelayan anda ada?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "RAM"
-  },
   "servers.region.north-america-central": {
     "defaultMessage": "Amerika Utara Tengah"
   },
@@ -3092,80 +2633,11 @@
   "servers.region.north-america-west": {
     "defaultMessage": "Amerika Utara Barat"
   },
-  "servers.region.prompt": {
-    "defaultMessage": "Di manakah anda mahu pelayan anda ditempatkan?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Rantau tidak disenaraikan? <link>Beritahu kami di mana anda ingin melihat Modrinth Hosting tersedia!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Asia Tenggara"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Eropah Barat"
-  },
-  "servers.remove-access-modal.cancel-warning-body": {
-    "defaultMessage": "Jika anda membatalkan jemputan ini, {username} memerlukan jemputan baharu sebelum mereka boleh menyertai pelayan ini."
-  },
-  "servers.remove-access-modal.remove-effect-access": {
-    "defaultMessage": "Mereka akan serta-merta kehilangan akses kepada panel pelayan dan tidak lagi dapat menyunting kandungan"
-  },
-  "servers.remove-access-modal.remove-effect-join": {
-    "defaultMessage": "Mereka masih boleh menyertai dan bermain di pelayan melainkan anda membuat perubahan berasingan"
-  },
-  "servers.remove-access-modal.user-avatar-alt": {
-    "defaultMessage": "Avatar {username}"
-  },
-  "servers.remove-access-modal.warning-body": {
-    "defaultMessage": "Jika anda membatalkan akses pengguna ke pelayan anda, anda perlu menjemput semula mereka untuk memulihkan akses."
-  },
-  "servers.setup.onboarding.installation-failed.title": {
-    "defaultMessage": "Pemasangan gagal"
-  },
-  "servers.setup.onboarding.modpack-upload-failed.title": {
-    "defaultMessage": "Pemuatnaikan pek mod gagal"
-  },
-  "servers.setup.onboarding.setup-server.button": {
-    "defaultMessage": "Sediakan pelayan"
-  },
-  "servers.setup.onboarding.step.choose.description": {
-    "defaultMessage": "Pilih pek mod kegemaran anda daripada Modrinth, atau pilih pemuat dan tambahkan mod yang anda inginkan."
-  },
-  "servers.setup.onboarding.step.choose.title": {
-    "defaultMessage": "Pilih apa yang hendak dimainkan"
-  },
-  "servers.setup.onboarding.step.configure-world.description": {
-    "defaultMessage": "Sediakan dunia anda seperti dunia ekapemain. Pilih mod permainan dan benih dunia."
-  },
-  "servers.setup.onboarding.step.configure-world.title": {
-    "defaultMessage": "Konfigurasikan dunia anda"
-  },
-  "servers.setup.onboarding.step.invite-friends.description": {
-    "defaultMessage": "Kongsikan pelayan anda dengan rakan-rakan anda dengan menyalin alamat dan memberitahu mereka mod yang mereka perlukan untuk sertai."
-  },
-  "servers.setup.onboarding.step.invite-friends.title": {
-    "defaultMessage": "Jemput rakan anda"
-  },
-  "servers.setup.onboarding.steps.heading": {
-    "defaultMessage": "Sediakan pelayan anda (~2 minit)"
-  },
-  "servers.setup.onboarding.welcome.description": {
-    "defaultMessage": "Pelayan anda sudah sedia. Inilah yang perlu anda lakukan untuk mula bermain!"
-  },
-  "servers.setup.onboarding.welcome.title": {
-    "defaultMessage": "Selamat Datang ke Modrinth Hosting"
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "Anda sedang dihadkan kekerapan. Sila cuba lagi kemudian."
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "Tidak dapat memasang semula pelayan"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Sebuah ralat yang tidak dijangka telah berlaku semasa memasang semula. Sila cuba lagi kemudian."
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "Pemasangan Semula Gagal"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "Tolong jangan tutup laman ini semasa memuat naik."

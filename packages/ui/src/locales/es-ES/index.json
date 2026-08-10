@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "No tienes permiso."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "No se han podido cargar las versiones del servidor"
-  },
   "badge.alpha": {
     "defaultMessage": "Alpha"
   },
@@ -251,9 +248,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Actualizar proyectos"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Mantén Shift mientras pulsas \"Actualizar todo\" para omitir esta confirmación en el futuro."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Actualizar {count, plural, one {# proyecto} other {# proyectos}}"
   },
@@ -368,41 +362,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Advertencias"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Creando copia de seguridad..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "La copia de seguridad se ha creado correctamente"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "No se ha podido crear la copia de seguridad. Aun así, puede continuar."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Se está realizando una copia de seguridad, se recomienda esperar a que finalice antes de realizar esta acción."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "La creación de una copia de seguridad puede tardar varios minutos, dependiendo del tamaño de tu servidor."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Hacer copia de seguridad"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "instancia"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Mantén pulsada la tecla Mayús mientras haces clic para omitir la confirmación."
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "Recomendamos crear un backup antes de proceder, para que puedas restaurar tu {type} si algo male sal."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": " mundo"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Explorar el contenido"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Por favor, espere a que finalice la operación antes de editar el contenido."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Explora o sube {contentType} para empezar"
@@ -562,105 +523,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "No hay versiones disponibles"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Configuraciones adicionales"
-  },
-  "creation-flow.modal.final-config.backup.before-reset-server.name": {
-    "defaultMessage": "Antes de resetear el servidor"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Fácil"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Difícil"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Dificultad"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Normal"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Pacífico"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Seleccionar versión del juego"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Creativo"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Hardcore"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Modo de juego"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Supervivencia"
-  },
-  "creation-flow.modal.final-config.generate-structures.description": {
-    "defaultMessage": "Controla si aldeas, strongholds, y otras estructuras se generan en chunks nuevos."
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "Generar estructuras"
-  },
-  "creation-flow.modal.final-config.generator-settings-json.placeholder": {
-    "defaultMessage": "Introduzca la configuración JSON del generador"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Personalizado"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Predeterminado"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "Usado para customización avanzada de mundos, como Superflat layers."
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Plano"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "Configuración de generador"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "Seleccionar configuración de generador"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Nombre del mundo"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Introduzca el nombre del mundo"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "Deje en blanco para que se genere una semilla aleatoria."
-  },
-  "creation-flow.modal.final-config.world-seed.label-with-optional": {
-    "defaultMessage": "Semilla de mundo <optional>(Opcional)</optional>"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "Introduzca la semilla del mundo"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "Amplificado"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Predeterminado"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Tipo de mundo"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Biomas grandes"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Seleccione el tipo de mundo"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "Un solo bioma"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Superplano"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "Una instancia es una configuración de Minecraft con un específico loader, versión, y mods."
@@ -878,9 +740,6 @@
   "files.item-type.folders": {
     "defaultMessage": "carpetas"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "Las operaciones de archivos están deshabilitadas mientras la operación está en progreso."
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Ocurrió un error en la ejecución de prueba"
   },
@@ -959,24 +818,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": "Subir desde una URL .zip"
   },
-  "files.operations.current-file": {
-    "defaultMessage": "Actual archivo: {file}"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "{size} extraídos"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "Extrayendo {source}"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "Extracción de {source} terminada"
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "Extracción de {source} fallada"
-  },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "pack de mods desde una URL"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "Renombrar {name}"
   },
@@ -1018,9 +859,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "El nombre es obligatorio."
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "Modpack instalado de CurseForge"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "Instala un modpack de CurseForge"
@@ -1192,111 +1030,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Resolución"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "No se ha podido eliminar el contenido"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "No se ha podido desactivar el contenido"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "No se ha podido habilitar el contenido"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "No se ha podido actualizar el contenido"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "No se ha podido instalar el contenido"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "No se ha podido cargar el contenido del modpack"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "No se han podido cargar las versiones"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "No se ha podido eliminar el contenido"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "No se ha podido alternar {name}"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "No se ha podido desvincular el modpack"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "No se ha podido actualizar"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "No se ha podido subir el archivo"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "No se pudo cambiar la versión del modpack"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "No se pudieron cargar las versiones"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "No se pudo reinstalar el modpack"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "No se pudo reparar el servidor"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "Error al volver a la configuración inicial"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "No se pudo guardar la configuración de instalación"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "No se pudo desvincular el modpack"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "Versión de {loader, select, null {Loader} other {{loader}}}"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "La instalación de su servidor ha sido reparada."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Reparación completada"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "Resetear servidor"
-  },
-  "hosting.loader.reset-server-description": {
-    "defaultMessage": "Elimina todos los datos de su servidor, incluidos sus mundos, mods y archivos de configuración. Las copias de seguridad permanecerán y podrán restaurarse."
-  },
-  "hosting.loader.reset-to-onboarding-button": {
-    "defaultMessage": "Volver a la configuración inicial"
-  },
-  "hosting.loader.reset-to-onboarding-modal-description": {
-    "defaultMessage": "Esto hará que el servidor vuelva al proceso de configuración inicial para que se pueda completar de nuevo. ¿Estás seguro de que quieres continuar?"
-  },
-  "hosting.loader.reset-to-onboarding-modal-title": {
-    "defaultMessage": "Volver a la configuración inicial"
-  },
-  "hosting.loader.reset-to-onboarding-success-description": {
-    "defaultMessage": "El servidor ha vuelto al proceso de configuración inicial."
-  },
-  "hosting.loader.reset-to-onboarding-success-title": {
-    "defaultMessage": "Servidor restablecido a la configuración inicial"
-  },
-  "hosting.loader.support-options-title": {
-    "defaultMessage": "Opciones de asistencia"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Aumenta hasta {cpus} CPUs"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "La limitación de la CPU permite que tu servidor use subprocesos adicionales temporalmente para distribuir los picos de TPS. Haz clic para más información."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB de RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB de almacenamiento"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} CPUs compartidas"
   },
   "icon-select.edit": {
     "defaultMessage": "Editar icono"
@@ -2113,12 +1846,6 @@
   },
   "markdown-editor.video-modal.url-field.title": {
     "defaultMessage": "URL del video de YouTube"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Añadir método de pago"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Añadiendo método de pago"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Instalar automáticamente el contenido requerido"
@@ -2990,228 +2717,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
-  "servers.busy.backup-creating": {
-    "defaultMessage": "Creación de copia de seguridad en curso"
-  },
-  "servers.busy.backup-restoring": {
-    "defaultMessage": "Restauración del respaldo en progreso"
-  },
-  "servers.busy.installing": {
-    "defaultMessage": "El servidor se está instalando"
-  },
-  "servers.busy.syncing-content": {
-    "defaultMessage": "Sincronización de contenido en progreso"
-  },
-  "servers.grant-access-modal.add-as-friend": {
-    "defaultMessage": "Enviar también una solicitud de amistad"
-  },
-  "servers.grant-access-modal.already-member-tooltip": {
-    "defaultMessage": "Este usuario ya ha sido invitado"
-  },
-  "servers.grant-access-modal.cancel": {
-    "defaultMessage": "Cancelar"
-  },
-  "servers.grant-access-modal.header": {
-    "defaultMessage": "Añadir usuario"
-  },
-  "servers.grant-access-modal.invite": {
-    "defaultMessage": "Invitar"
-  },
-  "servers.grant-access-modal.permissions-help": {
-    "defaultMessage": "Consulta la lista completa de permisos para cada rol <link>aquí</link>."
-  },
-  "servers.grant-access-modal.role.editor": {
-    "defaultMessage": "Editor"
-  },
-  "servers.grant-access-modal.role.editor-description": {
-    "defaultMessage": "Gestiona el contenido de la instancia, archivos, copias de seguridad y otros ajustes."
-  },
-  "servers.grant-access-modal.role.label": {
-    "defaultMessage": "Seleccionar rol"
-  },
-  "servers.grant-access-modal.role.viewer": {
-    "defaultMessage": "Limitado"
-  },
-  "servers.grant-access-modal.role.viewer-description": {
-    "defaultMessage": "Inicia, detén y visualiza el servidor sin realizar cambios."
-  },
-  "servers.grant-access-modal.suggestion-avatar-alt": {
-    "defaultMessage": "Avatar de {username}"
-  },
-  "servers.grant-access-modal.target.help": {
-    "defaultMessage": "No uses su nombre de usuario de Minecraft."
-  },
-  "servers.grant-access-modal.target.label": {
-    "defaultMessage": "Nombre de usuario de Modrinth"
-  },
-  "servers.grant-access-modal.target.no-suggestions": {
-    "defaultMessage": "No se han encontrado usuarios coincidentes."
-  },
-  "servers.grant-access-modal.target.placeholder": {
-    "defaultMessage": "Introduce el nombre de usuario de Modrinth"
-  },
-  "servers.grant-access-modal.target.searching": {
-    "defaultMessage": "Buscando..."
-  },
-  "servers.installing-banner.error.header": {
-    "defaultMessage": "Instalación fallida"
-  },
-  "servers.installing-banner.error.internal-platform": {
-    "defaultMessage": "Se ha producido un error interno durante la instalación de la plataforma. Por favor, inténtalo de nuevo."
-  },
-  "servers.installing-banner.error.invalid-loader-version": {
-    "defaultMessage": "No se pudo instalar el loader o la versión de Minecraft especificados. Es posible que no sean válidos o que no sean compatibles."
-  },
-  "servers.installing-banner.error.modpack-install-failed": {
-    "defaultMessage": "No se pudo instalar el modpack. Es posible que esté dañado o que no sea compatible."
-  },
-  "servers.installing-banner.error.no-primary-file": {
-    "defaultMessage": "Esta versión del modpack no incluye ningún archivo descargable. Es posible que se haya empaquetado incorrectamente."
-  },
-  "servers.installing-banner.error.unknown": {
-    "defaultMessage": "Se produjo un error inesperado durante la instalación."
-  },
-  "servers.installing-banner.error.unsupported-loader-version": {
-    "defaultMessage": "Esta versión de Minecraft o del loader aún no es compatible con Modrinth Hosting."
-  },
-  "servers.installing-banner.phase.installing-addons": {
-    "defaultMessage": "Instalando addons..."
-  },
-  "servers.installing-banner.phase.installing-modpack": {
-    "defaultMessage": "Instalando modpack..."
-  },
-  "servers.installing-banner.phase.installing-platform": {
-    "defaultMessage": "Instalando plataforma..."
-  },
-  "servers.installing-banner.preparing.header": {
-    "defaultMessage": "Estamos preparando tu servidor"
-  },
-  "servers.installing-banner.ticker.adding-java": {
-    "defaultMessage": "Añadiendo Java..."
-  },
-  "servers.installing-banner.ticker.configuring-server": {
-    "defaultMessage": "Configurando servidor..."
-  },
-  "servers.installing-banner.ticker.downloading-mods": {
-    "defaultMessage": "Descargando mods..."
-  },
-  "servers.installing-banner.ticker.organizing-files": {
-    "defaultMessage": "Organizando archivos..."
-  },
-  "servers.installing-banner.ticker.setting-up-environment": {
-    "defaultMessage": "Preparando entorno..."
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "¿Ya tienes un servidor?"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Conoce más sobre el alojamiento de servidores de Modrinth"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "Nuevo servidor"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Instala mods, invita amigos, y jueguen todos juntos desde la Modrinth App."
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "No se han encontrado servidores todavía"
-  },
-  "servers.list-empty.one-click-mod-installs-description": {
-    "defaultMessage": "Elige tus mods favoritos y nosotros nos encargamos del resto."
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "Instala mod en un clic"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "Invita a tus amigos y deja que se unan fácilmente desde la App de Modrinth."
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "Juega con amigos"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Inicia sesión"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "Prepara tu servidor tal como si fuera un mundo de un solo jugador."
-  },
-  "servers.list-empty.simple-setup-title": {
-    "defaultMessage": "Configuración Simple"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Copiado"
-  },
-  "servers.listing.copy-code-tooltip": {
-    "defaultMessage": "Copiar código al portapapeles"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "Copiar ID"
-  },
-  "servers.listing.download-latest-backup-tooltip": {
-    "defaultMessage": "Descargar último respaldo"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Nuevo"
-  },
-  "servers.listing.notice.files-kept-for-download": {
-    "defaultMessage": "Tus archivos se mantrendran por <days-remaining>{daysRemaining} {daysRemaining, plural, one {día} other {días}} más</days-remaining>. Contacta con el soporte para descargarlos antes de que sean eliminados."
-  },
-  "servers.listing.notice.files-preserved-after-cancellation": {
-    "defaultMessage": "Tus archivos se preservarán por 30 días tras la cancelación."
-  },
-  "servers.listing.notice.moderated": {
-    "defaultMessage": "Tu servidor ha sido suspendido por acciones de moderación."
-  },
-  "servers.listing.notice.pending-change": {
-    "defaultMessage": "Tu servidor será {verb, select, downgrade {degradado} other {actualizado}} al Plan {planSize} en la fecha <date>{formattedDate}</date>."
-  },
-  "servers.listing.notice.provisioning": {
-    "defaultMessage": "Por favor espere mientras preparamos tu servidor. Esto puede tomar hasta 10 minutos."
-  },
-  "servers.listing.notice.subscription-cancelled": {
-    "defaultMessage": "Tu suscripción ha sido cancelada."
-  },
-  "servers.listing.notice.subscription-cancelled-on-date": {
-    "defaultMessage": "Tu suscripción fue cancelada en la fecha <date>{formattedDate}</date>."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed": {
-    "defaultMessage": "Tu suscripción fue cancelada debido a un error en el pago."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed-on-date": {
-    "defaultMessage": "Tu suscripción fue cancelada el  <date>{formattedDate}</date> debido a un error en el pago. "
-  },
-  "servers.listing.notice.subscription-set-to-cancel": {
-    "defaultMessage": "Tu suscripción no será renovada."
-  },
-  "servers.listing.notice.subscription-set-to-cancel-on-date": {
-    "defaultMessage": "Tu suscripción será cancelada el <date>{formattedDate}</date>. "
-  },
-  "servers.listing.notice.suspended": {
-    "defaultMessage": "Tu servidor ha sido suspendido. Por favor contacta al Soporte de Modrinth para más información."
-  },
-  "servers.listing.notice.upgrading": {
-    "defaultMessage": "El hardware de tu servidor está siendo actualizado y volverá a estar en línea en breve."
-  },
-  "servers.listing.owner-avatar-alt": {
-    "defaultMessage": "Avatar de {username}"
-  },
-  "servers.listing.owner-tooltip": {
-    "defaultMessage": "Propiedad de {username}"
-  },
-  "servers.listing.resubscribe-label": {
-    "defaultMessage": "Reactivar suscripción"
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "Icono del servidor"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Soporte"
-  },
-  "servers.listing.using-project-label": {
-    "defaultMessage": "Usando {projectTitle}"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Descartar"
   },
@@ -3245,12 +2750,6 @@
   "servers.region.central-europe": {
     "defaultMessage": "Europa Central"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "¿Cuánta memoria RAM quieres que tenga tu servidor?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "Memoria"
-  },
   "servers.region.north-america-central": {
     "defaultMessage": "Norteamérica Central"
   },
@@ -3260,122 +2759,11 @@
   "servers.region.north-america-west": {
     "defaultMessage": "Norteamérica Occidental"
   },
-  "servers.region.prompt": {
-    "defaultMessage": "¿Dónde le gustaría que estuviera ubicado su servidor?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "¿Tu región no aparece en la lista? <link>¡Dinos dónde te gustaría ver los servidores Modrinth la próxima vez!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Sudeste Asiático"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Europa Occidental"
-  },
-  "servers.remove-access-modal.added-label": {
-    "defaultMessage": "Añadido {time}"
-  },
-  "servers.remove-access-modal.cancel-button": {
-    "defaultMessage": "Revocar invitación"
-  },
-  "servers.remove-access-modal.cancel-effect-access": {
-    "defaultMessage": "No se le añadirá a este servidor"
-  },
-  "servers.remove-access-modal.cancel-effect-invite": {
-    "defaultMessage": "Puedes enviarle otra invitación más adelante"
-  },
-  "servers.remove-access-modal.cancel-header": {
-    "defaultMessage": "Revocar invitación"
-  },
-  "servers.remove-access-modal.cancel-warning-body": {
-    "defaultMessage": "Si revocas esta invitación, {username} necesitará una nueva para poder unirse a este servidor."
-  },
-  "servers.remove-access-modal.header": {
-    "defaultMessage": "Revocar acceso"
-  },
-  "servers.remove-access-modal.invited-label": {
-    "defaultMessage": "Invitado {time}"
-  },
-  "servers.remove-access-modal.pending-invite-label": {
-    "defaultMessage": "Invitación pendiente"
-  },
-  "servers.remove-access-modal.remove-button": {
-    "defaultMessage": "Revocar acceso"
-  },
-  "servers.remove-access-modal.remove-effect-access": {
-    "defaultMessage": "Perderá inmediatamente el acceso al panel del servidor y ya no podrá editar el contenido"
-  },
-  "servers.remove-access-modal.remove-effect-join": {
-    "defaultMessage": "Podrá seguir uniéndose y jugando en el servidor a menos que realices otros cambios"
-  },
-  "servers.remove-access-modal.unknown-added-label": {
-    "defaultMessage": "Fecha de adición desconocida"
-  },
-  "servers.remove-access-modal.user-avatar-alt": {
-    "defaultMessage": "Avatar de {username}"
-  },
-  "servers.remove-access-modal.warning-body": {
-    "defaultMessage": "Si revocas el acceso de un usuario de tu servidor, necesitarás invitarle nuevamente para restaurar el acceso."
-  },
-  "servers.remove-access-modal.what-happens-label": {
-    "defaultMessage": "¿Qué pasará?"
-  },
-  "servers.setup.onboarding.installation-failed.text": {
-    "defaultMessage": "Se ha producido un error inesperado durante la instalación. Inténtalo de nuevo más tarde."
-  },
-  "servers.setup.onboarding.installation-failed.title": {
-    "defaultMessage": "Instalación fallida"
-  },
-  "servers.setup.onboarding.modpack-upload-failed.text": {
-    "defaultMessage": "Se ha producido un error inesperado durante la carga. Inténtalo de nuevo más tarde."
-  },
-  "servers.setup.onboarding.modpack-upload-failed.title": {
-    "defaultMessage": "Carga de modpack fallada"
-  },
-  "servers.setup.onboarding.setup-server.button": {
-    "defaultMessage": "Configurar servidor"
-  },
-  "servers.setup.onboarding.step.choose.description": {
-    "defaultMessage": "Selecciona tu modpack favorito de Modrinth, o elige un loader y añade los mods que quiera."
-  },
-  "servers.setup.onboarding.step.choose.title": {
-    "defaultMessage": "Elige que jugar"
-  },
-  "servers.setup.onboarding.step.configure-world.description": {
-    "defaultMessage": "Configure tu mundo. Elige tu gamemode y semilla de mundo."
-  },
-  "servers.setup.onboarding.step.configure-world.title": {
-    "defaultMessage": "Configure tu mundo"
-  },
-  "servers.setup.onboarding.step.invite-friends.description": {
-    "defaultMessage": "Comparte tu servidor con amigos copiando el link y dejándoles saber que mods necesitan para poder unirse."
-  },
-  "servers.setup.onboarding.step.invite-friends.title": {
-    "defaultMessage": "Invita a tus amigos"
-  },
-  "servers.setup.onboarding.steps.heading": {
-    "defaultMessage": "Configura tu servidor (~2mins)"
-  },
-  "servers.setup.onboarding.uploading.progress": {
-    "defaultMessage": "Cargando ({percent, number}%)"
-  },
-  "servers.setup.onboarding.welcome.description": {
-    "defaultMessage": "Tu servidor está listo. ¡Esto es lo que necesitas hacer para empezar a jugar!"
-  },
-  "servers.setup.onboarding.welcome.title": {
-    "defaultMessage": "¡Bienvenido a Modrinth Hosting!"
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "Se ha alcanzado el límite de solicitudes. Inténtalo de nuevo más tarde."
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "No se puede reinstalar el servidor"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Se ha producido un error inesperado durante la reinstalación. Inténtalo de nuevo más tarde."
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "Error en la reinstalación"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "Por favor, no cierres esta página mientras se realiza la subida."

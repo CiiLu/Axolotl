@@ -125,6 +125,7 @@ import {
 	list as listInstances,
 	run,
 } from '@/helpers/instance'
+import { reconcileMojangAuthSourceAtStartup } from '@/helpers/mojang-auth'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { get as getSettings, getUpdateSource, set as setSettings } from '@/helpers/settings.ts'
@@ -838,6 +839,7 @@ async function setupApp() {
 	themeStore.devMode = developer_mode
 	themeStore.featureFlags = feature_flags
 	stateInitialized.value = true
+	void reconcileMojangAuthSourceAtStartup().catch(handleError)
 
 	isMaximized.value = await getCurrentWindow().isMaximized()
 

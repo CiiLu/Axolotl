@@ -203,32 +203,8 @@
   "content.diff-modal.updated-count": {
     "defaultMessage": "{count} oppdatert"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Oppretter sikkerhetskopiering..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Suksessfult oppretta sikkerhetskopiering"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Oppretting av sikkerhetskopiering feila. Du kan fortsatt gå videre."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Ei sikkerhetskopiering holder på, det er anbefalt at du venter til den er ferdig før du går videre med handlinga."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Å lage ei sikkerhetskopiering kan ta flere minutt, angående størrelsen på serveren din."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Opprett sikkerhetskopiering"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Hold inne Skift mens du klikker for å hoppe over bekreftelse."
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Gå gjennom innhold"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Vær så snill å vent til operasjonen er fullført før du redigerer innhold."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Gå gjennom eller last opp {contentType} for å komme i gang"
@@ -319,21 +295,6 @@
   },
   "header.category.performance-impact": {
     "defaultMessage": "Ytelsespåvirkning"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Burst opp til {cpus} CPU-er"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "CPU-bursting lar serveren din midlertidig bruke yttligere tråder for å hjelpe med å mitigere TPS-hopp. Klikk for mer informasjon."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Lagringsplass"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} Delte CPU-er"
   },
   "icon-select.edit": {
     "defaultMessage": "Rediger ikon"
@@ -718,12 +679,6 @@
   },
   "locale.zh-TW": {
     "defaultMessage": "Kinesisk (Tradisjonelt)"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Legg til betalingsmetode"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Legger til en betalingsmetode"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Automatisk installer påkrevd innhold"
@@ -1435,15 +1390,6 @@
   },
   "servers.region.central-europe": {
     "defaultMessage": "Sentral-Europa"
-  },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Hvor mye RAM ønsker du at serveren din skal ha?"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Hvor vil du at serveren din skal være plassert?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Region ikke oppført? <link>Gi oss beskjed om hvor du ønsker å se Modrinth Hosting neste gang!</link>"
   },
   "servers.region.southeast-asia": {
     "defaultMessage": "Sørøst-Asia"

@@ -132,6 +132,26 @@ const messages = defineMessages({
 		id: 'app.settings.resources.curseforge-mirror-description',
 		defaultMessage: 'CurseForge public API requests and file downloads.',
 	},
+	mojangAuthService: {
+		id: 'app.settings.resources.mojang-auth-service',
+		defaultMessage: 'Mojang authentication service',
+	},
+	mojangAuthServiceDescription: {
+		id: 'app.settings.resources.mojang-auth-service-description',
+		defaultMessage: 'Mojang authentication service for logging in and verifying accounts.',
+	},
+	mojangAuthOfficialPreferred: {
+		id: 'app.settings.resources.source.mojang-official-preferred',
+		defaultMessage: 'Prefer official source',
+	},
+	mojangAuthMirrorPreferred: {
+		id: 'app.settings.resources.source.mojang-mirror-preferred',
+		defaultMessage: 'Prefer Fallen-Proxy',
+	},
+	mojangAuthOfficialOnly: {
+		id: 'app.settings.resources.source.mojang-official-only',
+		defaultMessage: 'Official source only',
+	},
 	maximumDownloads: {
 		id: 'app.settings.resources.maximum-downloads',
 		defaultMessage: 'Maximum concurrent downloads',
@@ -235,6 +255,13 @@ const mcimSourceOptions = computed(() => [
 	officialPreferredSourceOption.value,
 	{ value: 'mirror_preferred', label: formatMessage(messages.mcimSource) },
 	officialOnlySourceOption.value,
+])
+const mojangAuthSource = downloadSourceModel('mojang_auth_source')
+const mojangAuthSourceOptions = computed(() => [
+	automaticSourceOption.value,
+	{ value: 'official_preferred', label: formatMessage(messages.mojangAuthOfficialPreferred) },
+	{ value: 'mirror_preferred', label: formatMessage(messages.mojangAuthMirrorPreferred) },
+	{ value: 'official_only', label: formatMessage(messages.mojangAuthOfficialOnly) },
 ])
 const downloadConcurrencyMode = computed({
 	get: () => (settings.value.auto_concurrent_downloads ? 'auto' : 'manual'),
@@ -456,6 +483,20 @@ function resetMissingContentImportDirectory() {
 				</div>
 				<div class="w-48 shrink-0">
 					<Combobox v-model="curseforgeDownloadSource" :options="mcimSourceOptions" />
+				</div>
+			</div>
+
+			<div class="flex items-center justify-between gap-4">
+				<div class="flex flex-col gap-1">
+					<h3 class="m-0 text-base font-semibold text-contrast">
+						{{ formatMessage(messages.mojangAuthService) }}
+					</h3>
+					<p class="m-0 leading-tight text-secondary">
+						{{ formatMessage(messages.mojangAuthServiceDescription) }}
+					</p>
+				</div>
+				<div class="w-48 shrink-0">
+					<Combobox v-model="mojangAuthSource" :options="mojangAuthSourceOptions" />
 				</div>
 			</div>
 		</div>

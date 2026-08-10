@@ -1412,6 +1412,9 @@
 	"app.instances.group.none": {
 		"message": "无"
 	},
+	"app.instances.group.ungrouped": {
+		"message": "无分组"
+	},
 	"app.instances.search": {
 		"message": "搜索"
 	},
@@ -1477,6 +1480,30 @@
 	},
 	"app.java.select-version": {
 		"message": "选择 Java 版本"
+	},
+	"app.java-arguments.presets.applied": {
+		"message": "已应用"
+	},
+	"app.java-arguments.presets.arguments": {
+		"message": "参数"
+	},
+	"app.java-arguments.presets.auth-mirror.description": {
+		"message": "来自 Fallen-Breath 搭建的 Mojang 认证服务器 HTTP 转发。"
+	},
+	"app.java-arguments.presets.auth-mirror.title": {
+		"message": "镜像认证服务"
+	},
+	"app.java-arguments.presets.button": {
+		"message": "参数预设"
+	},
+	"app.java-arguments.presets.modal-title": {
+		"message": "Java 参数预设"
+	},
+	"app.java-arguments.presets.remove": {
+		"message": "移除预设"
+	},
+	"app.java-arguments.presets.use": {
+		"message": "使用预设"
 	},
 	"app.java.test-installation": {
 		"message": "测试 Java 安装"
@@ -2327,6 +2354,12 @@
 	"app.settings.resources.curseforge-mirror-description": {
 		"message": "CurseForge 公共 API 请求和文件下载。"
 	},
+	"app.settings.resources.mojang-auth-service": {
+		"message": "Mojang 认证服务"
+	},
+	"app.settings.resources.mojang-auth-service-description": {
+		"message": "Mojang 的正版登录认证服务，应用于游戏JVM参数。"
+	},
 	"app.settings.resources.concurrency.manual": {
 		"message": "手动"
 	},
@@ -2344,6 +2377,15 @@
 	},
 	"app.settings.resources.source.mcim": {
 		"message": "优先 MCIM"
+	},
+	"app.settings.resources.source.mojang-mirror-preferred": {
+		"message": "优先 Fallen Proxy"
+	},
+	"app.settings.resources.source.mojang-official-only": {
+		"message": "仅官方源"
+	},
+	"app.settings.resources.source.mojang-official-preferred": {
+		"message": "优先官方源"
 	},
 	"app.settings.resources.maximum-downloads": {
 		"message": "最大并发下载数"
@@ -3557,11 +3599,17 @@
 	"minecraft-account.add-third-party-account": {
 		"message": "添加第三方账号"
 	},
+	"minecraft-account.copy-uuid": {
+		"message": "复制 UUID"
+	},
 	"minecraft-account.label": {
 		"message": "Minecraft 账户"
 	},
 	"minecraft-account.not-signed-in": {
 		"message": "未登录"
+	},
+	"minecraft-account.official-badge": {
+		"message": "官方"
 	},
 	"minecraft-account.offline-account": {
 		"message": "Minecraft 离线账户"
@@ -3574,6 +3622,21 @@
 	},
 	"minecraft-account.offline-modal.chinese-username-warning": {
 		"message": "Minecraft 1.18 及以上版本可能会拒绝中文用户名，导致无法进入单人世界或服务器。请在旧版本中使用此账户，或为新版本改用英文用户名。"
+	},
+	"minecraft-account.offline-modal.custom-uuid": {
+		"message": "自定义 UUID"
+	},
+	"minecraft-account.offline-modal.custom-uuid-input-label": {
+		"message": "UUID 值"
+	},
+	"minecraft-account.offline-modal.custom-uuid-placeholder": {
+		"message": "00000000-0000-0000-0000-000000000000"
+	},
+	"minecraft-account.offline-modal.custom-uuid-validation": {
+		"message": "请输入 32 位十六进制字符，可包含连字符。"
+	},
+	"minecraft-account.offline-modal.custom-uuid-warning": {
+		"message": "如果您不了解这是什么，请不要开启此功能"
 	},
 	"minecraft-account.offline-modal.description": {
 		"message": "选择离线游戏中使用的用户名。此账户只能加入允许离线玩家的服务器。"

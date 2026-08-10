@@ -311,7 +311,14 @@ pub(crate) async fn get_content_snapshot(
     } else {
         CacheBehaviour::CacheOnly
     };
-    match list_all_content(instance_id, Some(cache_behaviour), state).await {
+    match list_all_content(
+        instance_id,
+        Some(cache_behaviour),
+        refresh_remote,
+        state,
+    )
+    .await
+    {
         Ok(enriched) => {
             let enriched = enriched
                 .into_iter()

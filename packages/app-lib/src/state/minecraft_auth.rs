@@ -297,30 +297,43 @@ impl OnlineProfileCacheIntent {
     }
 }
 
+fn validate_offline_username(username: &str) -> crate::Result<String> {
+    let username = username.trim();
+    if !(1..=16).contains(&username.chars().count())
+        || !username
+            .chars()
+            .all(|character| character.is_alphanumeric() || character == '_')
+    {
+        return Err(ErrorKind::InputError(
+            "Minecraft usernames must be 1-16 characters and contain only letters, numbers, and underscores"
+                .to_string(),
+        )
+        .as_error());
+    }
+    Ok(username.to_string())
+}
+
 impl Credentials {
     pub fn offline(username: &str) -> crate::Result<Self> {
-        let username = username.trim();
-        if !(1..=16).contains(&username.chars().count())
-            || !username.chars().all(|character| {
-                character.is_alphanumeric() || character == '_'
-            })
-        {
-            return Err(ErrorKind::InputError(
-                "Minecraft usernames must be 1-16 characters and contain only letters, numbers, and underscores"
-                    .to_string(),
-            )
-            .as_error());
-        }
-
+        let username = validate_offline_username(username)?;
         let mut uuid_bytes =
             md5::compute(format!("OfflinePlayer:{username}")).0;
         uuid_bytes[6] = (uuid_bytes[6] & 0x0f) | 0x30;
         uuid_bytes[8] = (uuid_bytes[8] & 0x3f) | 0x80;
 
+        Self::offline_with_uuid(&username, Uuid::from_bytes(uuid_bytes))
+    }
+
+    pub fn offline_with_uuid(
+        username: &str,
+        uuid: Uuid,
+    ) -> crate::Result<Self> {
+        let username = validate_offline_username(username)?;
+
         Ok(Self {
             offline_profile: MinecraftProfile {
-                id: Uuid::from_bytes(uuid_bytes),
-                name: username.to_string(),
+                id: uuid,
+                name: username,
                 ..MinecraftProfile::default()
             },
             account_type: MinecraftAccountType::Offline,
@@ -939,6 +952,18 @@ mod offline_account_tests {
     }
 
     #[test]
+    fn creates_offline_account_with_custom_uuid() {
+        let uuid = Uuid::new_v4();
+        let credentials =
+            Credentials::offline_with_uuid("CustomUuid", uuid).unwrap();
+
+        assert_eq!(credentials.offline_profile.id, uuid);
+        assert_eq!(credentials.offline_profile.name, "CustomUuid");
+        assert_eq!(credentials.account_type, MinecraftAccountType::Offline);
+        assert_eq!(credentials.access_token, "0");
+    }
+
+    #[test]
     fn validates_offline_username() {
         assert!(Credentials::offline("abc").is_ok());
         assert!(Credentials::offline("Player_123").is_ok());
@@ -972,6 +997,26 @@ mod offline_account_tests {
         assert_eq!(stored.offline_profile.id, credentials.offline_profile.id);
         assert!(stored.is_offline());
         assert!(stored.active);
+    }
+
+    #[tokio::test]
+    async fn persists_offline_account_with_custom_uuid() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+
+        let uuid = Uuid::new_v4();
+        let credentials =
+            Credentials::offline_with_uuid("CustomUuid", uuid).unwrap();
+        credentials.upsert(&pool).await.unwrap();
+
+        let stored = Credentials::get_active(&pool).await.unwrap().unwrap();
+        assert_eq!(stored.offline_profile.id, uuid);
+        assert_eq!(stored.offline_profile.name, "CustomUuid");
+        assert!(stored.is_offline());
     }
 
     #[tokio::test]

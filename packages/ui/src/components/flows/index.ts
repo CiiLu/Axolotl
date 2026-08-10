@@ -1,4 +1,3 @@
-export * from './drop'
 export type {
 	CreationFlowContextValue,
 	CreationFlowOptions,
@@ -10,3 +9,4 @@ export type {
 	SetupType,
 } from './creation-flow-modal/creation-flow-context'
 export { default as CreationFlowModal } from './creation-flow-modal/index.vue'
+export * from './drop'

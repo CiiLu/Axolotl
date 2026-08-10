@@ -131,7 +131,12 @@ export const lobeCombineBrands: Record<string, LobeCombineBrandConfig> = {
 	ai21: { standalone: 'ai21-brand-color', textMultiple: 0.75 },
 	ai302: { logo: 'ai302-color', spaceMultiple: 0.15, text: 'ai302-text', textMultiple: 0.8 },
 	ai360: { logo: 'ai360-color', spaceMultiple: 0.2, text: 'ai360-text', textMultiple: 0.7 },
-	aihubmix: { logo: 'aihubmix-color', spaceMultiple: 0.2, text: 'aihubmix-text', textMultiple: 0.7 },
+	aihubmix: {
+		logo: 'aihubmix-color',
+		spaceMultiple: 0.2,
+		text: 'aihubmix-text',
+		textMultiple: 0.7,
+	},
 	aimass: { logo: 'aimass-color', spaceMultiple: 0.2, text: 'aimass-text', textMultiple: 0.65 },
 	akashchat: {
 		logo: 'akashchat-color',
@@ -344,7 +349,13 @@ export const lobeCombineBrands: Record<string, LobeCombineBrandConfig> = {
 		text: 'xinference-text',
 		textMultiple: 0.7,
 	},
-	zenmux: { inverse: true, logo: 'zenmux', spaceMultiple: 0.1, text: 'zenmux-text', textMultiple: 1 },
+	zenmux: {
+		inverse: true,
+		logo: 'zenmux',
+		spaceMultiple: 0.1,
+		text: 'zenmux-text',
+		textMultiple: 1,
+	},
 	zeroone: { color: '#003425', standalone: 'zeroone-text', textMultiple: 0.8 },
 	zhipu: { logo: 'zhipu-color', spaceMultiple: 0.2, text: 'zhipu-text', textMultiple: 0.65 },
 }

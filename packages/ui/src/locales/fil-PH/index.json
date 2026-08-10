@@ -176,21 +176,6 @@
   "content.diff-modal.diff-type.updated": {
     "defaultMessage": "Na-update"
   },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Matagumpay na nilikha ang backup"
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Kasalukuyang nagba-backup, inimumungkahi na maghintay upang matapos ito bago magawa ang aksiyong ito."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Lumikha ng backup"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Idiin ang Shift habang pumipindot upang laktawan ang kumpirmasyon."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "mundo"
-  },
   "content.page-layout.please-wait": {
     "defaultMessage": "Mangyaring maghintay"
   },
@@ -229,27 +214,6 @@
   },
   "creation-flow.modal.custom-setup.name.label": {
     "defaultMessage": "Pangalan"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Karagdagang settings"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Madali"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Mahirap"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Kahirapan"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Katamtaman"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Mapayapa"
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Patag"
   },
   "external-project-license-status.no": {
     "defaultMessage": "Hindi"
@@ -301,9 +265,6 @@
   },
   "files.item-type.file": {
     "defaultMessage": "talaksan"
-  },
-  "files.layout.busy-warning": {
-    "defaultMessage": "Nakapatay ang mga operasyon sa talaksan habang ang operasyon ay isinasagawa."
   },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Error sa pagpatakbo ng dry run"
@@ -448,30 +409,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Resolusyon"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "Bigong mapatay ang tumutunggaling kontento"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "Bigong mabukas ang kontento"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Bigong ma-unlink ang modpack"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Mag-burst ng hanggang sa {cpus} CPU"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "Ang CPU bursting ay nagbibigay daan sa iyong server na madaliang madagdagan ng thread upang malabanan ang TPS spike. Pindutin upang matuto pa."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Storage"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} Shared CPUs"
   },
   "icon-select.edit": {
     "defaultMessage": "Baguhin ang ikono"
@@ -943,12 +880,6 @@
   },
   "markdown-editor.url-label": {
     "defaultMessage": "URL"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Magdagdag ng paraan ng pagbabayad"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Nagdaragdag ng praan ng pagbabayad"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Kusang ma-install ang kinailangang kontento"
@@ -1763,21 +1694,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "Mayroon ka nang server?"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Mag-sign-in"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Kopyado"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Panibago"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Suporta"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Alisin"
   },
@@ -1811,32 +1727,11 @@
   "servers.region.central-europe": {
     "defaultMessage": "Sentrong Yuropa"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Ilang RAM ba ang nais mong magamit ng sever mo?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "RAM"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Saan mo nais malagay ang server mo?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Hindi nakalista na rehiyon? <link>Ipaalam sa amin kung saan mo pa nais sunod makita ang Modrinth Hosting!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Timog-silangang Asya"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Kanlurang Yuropa"
-  },
-  "servers.setup.onboarding.installation-failed.text": {
-    "defaultMessage": "Isang di-inaasahang error ang naganap habang nag-install. Mangyaring subukan muli mamaya."
-  },
-  "servers.setup.onboarding.modpack-upload-failed.text": {
-    "defaultMessage": "Isang di-inaasahang error ang naganap habang nag-upload. Mangyaring subukan muli mamaya."
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Isang di-inaasahang error ang naganap habang nag-reinstall. Mangyaring subukan muli mamaya."
   },
   "settings.account.title": {
     "defaultMessage": "Account at seguridad"

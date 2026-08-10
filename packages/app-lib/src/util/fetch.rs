@@ -683,6 +683,27 @@ fn is_safe_redirect_location(location: &str) -> bool {
     location.len() <= MAX_REDIRECT_LOCATION_BYTES && location.is_ascii()
 }
 
+fn repair_official_cdn_redirect(
+    original: &Url,
+    redirect: &Url,
+    location: &str,
+) -> Option<Url> {
+    if location.is_ascii()
+        || !redirect
+            .host_str()
+            .is_some_and(|host| host.eq_ignore_ascii_case("cdn.modrinth.com"))
+        || original.path().is_empty()
+    {
+        return None;
+    }
+
+    let mut repaired = redirect.clone();
+    repaired.set_path(original.path());
+    repaired.set_query(original.query());
+    repaired.set_fragment(original.fragment());
+    Some(repaired)
+}
+
 fn is_official_modrinth_cdn_redirect(location: Option<&str>) -> bool {
     let Some(location) = location.filter(|location| {
         is_safe_redirect_location(location)
@@ -3291,28 +3312,31 @@ async fn send_path_request_with_clients(
             .into());
         }
         let location = response
-            .headers()
-            .get(header::LOCATION)
-            .and_then(|value| value.to_str().ok())
-            .ok_or_else(|| {
-                ErrorKind::OtherError(format!(
-                    "Redirect from {current} did not include a valid Location header"
-                ))
-            })?;
-        if !is_safe_redirect_location(location) {
+			.headers()
+			.get(header::LOCATION)
+			.map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned())
+			.ok_or_else(|| {
+				ErrorKind::OtherError(format!(
+					"Redirect from {current} did not include a valid Location header"
+				))
+			})?;
+        if location.len() > MAX_REDIRECT_LOCATION_BYTES
+            || location.chars().any(char::is_control)
+        {
             return Err(ErrorKind::OtherError(format!(
                 "Redirect from {current} included an unsafe Location header"
             ))
             .into());
         }
-        let next = current.join(location)?;
+        let next = current.join(&location)?;
         if !is_allowed_download_redirect(&next) {
             return Err(ErrorKind::OtherError(format!(
                 "Refusing insecure redirect from {current} to {next}"
             ))
             .into());
         }
-        current = next;
+        current = repair_official_cdn_redirect(&original, &next, &location)
+            .unwrap_or(next);
     }
     unreachable!()
 }
@@ -6890,6 +6914,30 @@ mod tests {
         assert!(!is_safe_redirect_location(
             &"a".repeat(MAX_REDIRECT_LOCATION_BYTES + 1)
         ));
+    }
+
+    #[test]
+    fn malformed_official_cdn_redirects_reuse_the_original_encoded_path() {
+        let original = Url::parse(
+			"https://mod.mcimirror.top/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip",
+		)
+		.unwrap();
+        let redirect = Url::parse(
+			"https://cdn.modrinth.com/data/project/versions/version/\u{91c8}\u{91c8}.zip",
+		)
+		.unwrap();
+
+        let repaired = repair_official_cdn_redirect(
+			&original,
+			&redirect,
+			"https://cdn.modrinth.com/data/project/versions/version/\u{91c8}\u{91c8}.zip",
+		)
+		.unwrap();
+
+        assert_eq!(
+            repaired.as_str(),
+            "https://cdn.modrinth.com/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip"
+        );
     }
 
     #[test]

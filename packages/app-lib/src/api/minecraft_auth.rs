@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use reqwest::StatusCode;
 use serde::Serialize;
 use std::time::Duration;
+use uuid::Uuid;
 
 use crate::State;
 pub use crate::state::YggdrasilLoginResult;
@@ -27,6 +28,47 @@ pub async fn check_reachable() -> crate::Result<()> {
     Ok(())
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct MojangServiceStatus {
+    pub service: &'static str,
+    pub url: &'static str,
+    pub reachable: bool,
+}
+
+const MOJANG_SERVICES: [(&str, &str); 5] = [
+    ("auth", "https://authserver.mojang.com/"),
+    ("account", "https://api.mojang.com/"),
+    (
+        "session",
+        "https://sessionserver.mojang.com/session/minecraft/hasJoined",
+    ),
+    ("services", "https://api.minecraftservices.com/"),
+    (
+        "profiles",
+        "https://api.mojang.com/users/profiles/minecraft/",
+    ),
+];
+
+#[tracing::instrument]
+pub async fn check_mojang_services() -> Vec<MojangServiceStatus> {
+    futures::future::join_all(MOJANG_SERVICES.map(
+        |(service, url)| async move {
+            let reachable = INSECURE_REQWEST_CLIENT
+                .get(url)
+                .timeout(Duration::from_secs(5))
+                .send()
+                .await
+                .is_ok();
+            MojangServiceStatus {
+                service,
+                url,
+                reachable,
+            }
+        },
+    ))
+    .await
+}
+
 #[tracing::instrument]
 pub async fn begin_login() -> crate::Result<MinecraftLoginFlow> {
     let state = State::get().await?;
@@ -45,9 +87,26 @@ pub async fn finish_login(
 }
 
 #[tracing::instrument]
-pub async fn add_offline_user(username: &str) -> crate::Result<Credentials> {
+pub async fn add_offline_user(
+    username: &str,
+    uuid: Option<Uuid>,
+) -> crate::Result<Credentials> {
     let state = State::get().await?;
-    let credentials = Credentials::offline(username)?;
+    let credentials = match uuid {
+        Some(uuid) => Credentials::offline_with_uuid(username, uuid)?,
+        None => Credentials::offline(username)?,
+    };
+
+    if uuid.is_some() {
+        let users = Credentials::get_all_without_refresh(&state.pool).await?;
+        if users.contains_key(&credentials.offline_profile.id) {
+            return Err(crate::ErrorKind::InputError(
+                "An account with this UUID already exists".to_string(),
+            )
+            .as_error());
+        }
+    }
+
     credentials.upsert(&state.pool).await?;
     Ok(credentials)
 }

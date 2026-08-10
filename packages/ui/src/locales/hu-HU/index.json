@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Nincsen hozzá jogosultságod."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Nem sikerült betölteni a szerverbeállításokat"
-  },
   "badge.alpha": {
     "defaultMessage": "Alfa"
   },
@@ -242,9 +239,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Projektek frissítése"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Tartsd lenyomva a Shift-et, miközben az „Összes frissítése” gombra kattintasz, hogy a jövőben elkerüld ezt a megerősítést."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "{count} projekt frissítése"
   },
@@ -320,38 +314,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Figyelmeztetések"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Biztonsági mentés létrehozása..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Biztonsági mentés sikeresen létrehozva"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Biztonsági mentés készítés nem sikerült. A műveletet folytathatod ennek ellenére."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "A biztonsági mentés folyamatban van, érdemes várni a mentés befejezésére a művelet végrehajtása előtt."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "A biztonsági mentés néhány percet igénybe vehet, függ a szerver nagyságától."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Biztonsági mentés létrehozása"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "profil"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "A megerősítés kihagyásához tartsd lenyomva a Shift billentyűt a kattintás közben."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "világ"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Tartalom böngészése"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Kérlek várd meg a művelet befejezését a tartalom szerkesztése előtt."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Böngéssz vagy tölts fel projekteket a kezdéshez"
@@ -481,99 +445,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Nincsenek elérhető verziók"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "További beállítások"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Könnyű"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Nehéz"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Nehézség"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Normál"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Békés"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Válaszd ki a játékverziót"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Kreatív"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Hardcore"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Játékmód"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Túlélő"
-  },
-  "creation-flow.modal.final-config.generate-structures.description": {
-    "defaultMessage": "Azt szabályozza, hogy falvak, erődítmények és egyéb építmények generálódjanak-e új chunkokban."
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "Struktúrák generálása"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Egyéni"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Alapértelmezett"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "Speciális világ-testreszabáshoz, például egyéni lapos rétegekhez használatos."
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Lapos"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "Generátor beállításai"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "Válaszd ki a generálás típusát"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Világ neve"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Add meg a világ nevét"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "Hagyd üresen véletlenszerű kezdőértékért."
-  },
-  "creation-flow.modal.final-config.world-seed.label-with-optional": {
-    "defaultMessage": "Kezdőérték <optional>(opcionális)</optional>"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "Add meg a kezdőértéket"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "SZÉLSŐSÉGES"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Alapértelmezett"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Világ típusa"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Nagy biomok"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Válaszd ki a világ típusát"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "Egyetlen biom"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Teljesen lapos"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "A profil egy külön Minecraft-környezet adott modbetöltővel, verzióval és modokkal."
@@ -830,21 +701,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": "Feltöltés .zip URL-ből"
   },
-  "files.operations.current-file": {
-    "defaultMessage": "Jelenlegi fájl: {file}"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "{size} kibontva"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "{source} kicsomagolása"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "{source} kicsomagolása befejeződött"
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "{source} kibontása sikertelen"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "{name} átnevezése"
   },
@@ -886,9 +742,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "Név szükséges"
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "CurseForge modcsomag letöltése"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "CurseForge modcsomag telepítése"
@@ -1060,78 +913,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Felbontás"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Nem sikerült törölni a tartalmat"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "A tartalom letiltása nem sikerült"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "A tartalom engedélyezése nem sikerült"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "Tartalom frissítése sikertelen"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "A tartalom telepítése nem sikerült"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "A modcsomag tartalmának betöltése nem sikerült"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "A verziók betöltése nem sikerült"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Nem sikerült leválasztani a modcsomagot"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "A frissítés nem sikerült"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Nem sikerült feltölteni a fájlt"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "A modcsomag verziójának módosítása nem sikerült"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "A verziók betöltése nem sikerült"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "A modcsomag újratelepítése nem sikerült"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Hiba a szerver javításában"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "A telepítési beállítások mentése nem sikerült"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Nem sikerült leválasztani a modcsomagot"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "{loader, select, null {Betöltő verziója} other {{loader} verzió}}"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "A szerver telepítése meg lett javítva."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Javítás befejezve"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "Szerver javítása"
-  },
-  "hosting.loader.reset-server-description": {
-    "defaultMessage": "A szerverről minden adatot eltávolít, beleértve a világokat, a modokat és a konfigurációs fájlokat is. A biztonsági mentések megmaradnak, és visszaállíthatók."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Tárhely"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} Megosztott CPU-k"
   },
   "icon-select.edit": {
     "defaultMessage": "Ikon szerkesztése"
@@ -1921,12 +1702,6 @@
   },
   "markdown-editor.video-modal.url-field.title": {
     "defaultMessage": "YouTube-videó hivatkozás"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Adj hozzá fizetési módot"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Fizetési mód hozzáadása"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "A szükséges tartalom automatikus telepítése"
@@ -2783,168 +2558,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
-  "servers.busy.backup-creating": {
-    "defaultMessage": "Biztonsági mentés létrehozás folyamatban van"
-  },
-  "servers.busy.backup-restoring": {
-    "defaultMessage": "Biztonsági mentés visszaálltás folyamatban van"
-  },
-  "servers.busy.installing": {
-    "defaultMessage": "A szerver települ"
-  },
-  "servers.grant-access-modal.already-member-tooltip": {
-    "defaultMessage": "Ez a felhasználó már meg lett meghíva"
-  },
-  "servers.grant-access-modal.cancel": {
-    "defaultMessage": "Mégse"
-  },
-  "servers.grant-access-modal.header": {
-    "defaultMessage": "Felhasználó hozzáadása"
-  },
-  "servers.grant-access-modal.invite": {
-    "defaultMessage": "Meghívás"
-  },
-  "servers.grant-access-modal.permissions-help": {
-    "defaultMessage": "Az egyes rangokhoz tartozó jogosultságok teljes listáját <link>itt</link> tekintheti meg."
-  },
-  "servers.grant-access-modal.role.editor": {
-    "defaultMessage": "Szerkesztő"
-  },
-  "servers.grant-access-modal.role.editor-description": {
-    "defaultMessage": "Példány tartalom, fájlok, biztonsági mentések, és más beállítások kezelése."
-  },
-  "servers.grant-access-modal.role.label": {
-    "defaultMessage": "Rang kiválasztása"
-  },
-  "servers.grant-access-modal.role.viewer": {
-    "defaultMessage": "Limitált"
-  },
-  "servers.grant-access-modal.role.viewer-description": {
-    "defaultMessage": "Indítás, leállítás, és szerver megtekintése módosítások mentése nélkül."
-  },
-  "servers.grant-access-modal.suggestion-avatar-alt": {
-    "defaultMessage": "{username} avatárja"
-  },
-  "servers.grant-access-modal.target.help": {
-    "defaultMessage": "Ne használd a Minecraft felhasználó nevűket."
-  },
-  "servers.grant-access-modal.target.label": {
-    "defaultMessage": "Modrinth felhasználónév"
-  },
-  "servers.grant-access-modal.target.no-suggestions": {
-    "defaultMessage": "Nem találtunk megfelelő felhasználókat."
-  },
-  "servers.grant-access-modal.target.placeholder": {
-    "defaultMessage": "Modrinth felhasználónév megadása"
-  },
-  "servers.grant-access-modal.target.searching": {
-    "defaultMessage": "Keresés..."
-  },
-  "servers.installing-banner.error.header": {
-    "defaultMessage": "A telepítés nem sikerült"
-  },
-  "servers.installing-banner.error.internal-platform": {
-    "defaultMessage": "Egy internal hiba történt a telepítés közben. Kérlek probáld újra."
-  },
-  "servers.installing-banner.phase.installing-addons": {
-    "defaultMessage": "Kiegészítők telepítése..."
-  },
-  "servers.installing-banner.phase.installing-modpack": {
-    "defaultMessage": "A modcsomag telepítése..."
-  },
-  "servers.installing-banner.phase.installing-platform": {
-    "defaultMessage": "A platform telepítése..."
-  },
-  "servers.installing-banner.preparing.header": {
-    "defaultMessage": "Előkészítjük a szervered"
-  },
-  "servers.installing-banner.ticker.adding-java": {
-    "defaultMessage": "Java hozzáadása..."
-  },
-  "servers.installing-banner.ticker.configuring-server": {
-    "defaultMessage": "A szerver beállítása..."
-  },
-  "servers.installing-banner.ticker.downloading-mods": {
-    "defaultMessage": "Modok letöltése..."
-  },
-  "servers.installing-banner.ticker.organizing-files": {
-    "defaultMessage": "Fájlok rendezése..."
-  },
-  "servers.installing-banner.ticker.setting-up-environment": {
-    "defaultMessage": "Környezet beállítása..."
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "Már van egy szervered?"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Tudj meg többet a Modrinth Hostingról"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "Új szerver"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Telepíts modokat, hívd meg a barátaidat, és játsszatok együtt, mindezt a Modrinth Appban."
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "Még nincsenek szerverek"
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "Modok telepítése egy kattintással"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "Hívd meg a barátaidat, és állítsd be őket közvetlenül a Modrinth Appban."
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "Játssz a barátaiddal"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Bejelentkezés"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "Állítsd be a szerveredet úgy, mint egy egyjátékos világot."
-  },
-  "servers.list-empty.simple-setup-title": {
-    "defaultMessage": "Egyszerű beállítás"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Másolva"
-  },
-  "servers.listing.copy-code-tooltip": {
-    "defaultMessage": "Kód másolása a vágólapra"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "Azonosító másolása"
-  },
-  "servers.listing.download-latest-backup-tooltip": {
-    "defaultMessage": "A legfrissebb biztonsági mentés letöltése"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Új"
-  },
-  "servers.listing.notice.files-preserved-after-cancellation": {
-    "defaultMessage": "A fájlok a lemondást követően 30 napig megmaradnak."
-  },
-  "servers.listing.notice.provisioning": {
-    "defaultMessage": "Kérlek, várj, amíg beállítjuk a szervered. Ez akár 10 percig is eltarthat."
-  },
-  "servers.listing.notice.subscription-cancelled": {
-    "defaultMessage": "Az előfizetésedet töröltük."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed": {
-    "defaultMessage": "Előfizetésed fizetési hiba miatt töröltük."
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "Szerverikon"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Támogatás"
-  },
-  "servers.listing.using-project-label": {
-    "defaultMessage": "A(z) {projectTitle} modcsomagot használja"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Elutasítás"
   },
@@ -2975,80 +2588,11 @@
   "servers.region.central-europe": {
     "defaultMessage": "Közép-Európa"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Mennyi RAM-ot szeretnél szerveredhez?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "memória"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Hol szeretnéd elhelyezni a szerveredet?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Nincs a listán a régiód? <link>Jelezd nekünk, hogy hol szeretnéd látni legközelebb a Modrinth Hostingot!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Délkelet-Ázsia"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Nyugat-Európa"
-  },
-  "servers.setup.onboarding.installation-failed.text": {
-    "defaultMessage": "A telepítés során váratlan hiba történt. Kérlek, próbáld újra később."
-  },
-  "servers.setup.onboarding.installation-failed.title": {
-    "defaultMessage": "A telepítés nem sikerült"
-  },
-  "servers.setup.onboarding.modpack-upload-failed.text": {
-    "defaultMessage": "A feltöltés során váratlan hiba történt. Kérlek, próbáld újra később."
-  },
-  "servers.setup.onboarding.modpack-upload-failed.title": {
-    "defaultMessage": "A modcsomag feltöltése sikertelen volt"
-  },
-  "servers.setup.onboarding.setup-server.button": {
-    "defaultMessage": "A szerver beállítása"
-  },
-  "servers.setup.onboarding.step.choose.description": {
-    "defaultMessage": "Válaszd ki a kedvenc modcsomagodat a Modrinthról, vagy válassz egy betöltőt, és add hozzá a kívánt modokat."
-  },
-  "servers.setup.onboarding.step.choose.title": {
-    "defaultMessage": "Válaszd ki, mit szeretnél játszani"
-  },
-  "servers.setup.onboarding.step.configure-world.description": {
-    "defaultMessage": "Állítsd be a világodat, akárcsak az egyjátékos módban. Válaszd ki a játékmódot és a világ kezdőértékét."
-  },
-  "servers.setup.onboarding.step.configure-world.title": {
-    "defaultMessage": "Állítsd be a világodat"
-  },
-  "servers.setup.onboarding.step.invite-friends.description": {
-    "defaultMessage": "Oszd meg a szerveredet a barátaiddal úgy, hogy kimásolod a címet, és megmondod nekik, melyik modokra lesz szükségük a csatlakozáshoz."
-  },
-  "servers.setup.onboarding.step.invite-friends.title": {
-    "defaultMessage": "Hívd meg a barátaidat"
-  },
-  "servers.setup.onboarding.steps.heading": {
-    "defaultMessage": "Állítsd be a szervered (~2 perc)"
-  },
-  "servers.setup.onboarding.uploading.progress": {
-    "defaultMessage": "Feltöltés... ({percent, number}%)"
-  },
-  "servers.setup.onboarding.welcome.description": {
-    "defaultMessage": "A szervered készen áll. Íme, mit kell tenned a játék elkezdéséhez!"
-  },
-  "servers.setup.onboarding.welcome.title": {
-    "defaultMessage": "Üdvözlünk a Modrinth Hostingnál"
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "A rendszer korlátozza a lekérdezések számát. Kérlek próbáld újra később."
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "A szerver nem telepíthető újra"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Az újratelepítés során váratlan hiba történt. Kérlek, próbáld újra később."
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "Az újratelepítés sikertelen"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "Kérlek, ne zárd be ezt az oldalt a feltöltés közben."

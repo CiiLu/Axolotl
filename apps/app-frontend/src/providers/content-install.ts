@@ -8,12 +8,7 @@ import { nextTick, type Ref, ref } from 'vue'
 import type { Router } from 'vue-router'
 
 import { trackEvent } from '@/helpers/analytics'
-import {
-	get_organization,
-	get_project,
-	get_team,
-	get_version_many,
-} from '@/helpers/cache.js'
+import { get_organization, get_project, get_team, get_version_many } from '@/helpers/cache.js'
 import {
 	type CurseForgeFile,
 	type CurseForgeInstallResult,
@@ -1162,11 +1157,15 @@ export function createContentInstall(opts: {
 		if (currentProvider === 'modrinth') {
 			if (storeInstance) storeInstance.installing = true
 			try {
-				await queue_project_with_dependencies(instance.id, {
-					project_id: currentProject.id,
-					version_id: version.id,
-					content_type: resolveContentType(currentProject.project_type),
-				}, { title: currentProject.title, iconUrl: currentProject.icon_url })
+				await queue_project_with_dependencies(
+					instance.id,
+					{
+						project_id: currentProject.id,
+						version_id: version.id,
+						content_type: resolveContentType(currentProject.project_type),
+					},
+					{ title: currentProject.title, iconUrl: currentProject.icon_url },
+				)
 				trackEvent('ProjectInstall', {
 					loader: selectedInstance.loader,
 					game_version: selectedInstance.game_version,
@@ -1574,11 +1573,15 @@ export function createContentInstall(opts: {
 					}
 				}
 
-				await queue_project_with_dependencies(instance.id, {
-					project_id: project.id,
-					version_id: version.id,
-					content_type: resolveContentType(project.project_type),
-				}, { title: project.title, iconUrl: project.icon_url })
+				await queue_project_with_dependencies(
+					instance.id,
+					{
+						project_id: project.id,
+						version_id: version.id,
+						content_type: resolveContentType(project.project_type),
+					},
+					{ title: project.title, iconUrl: project.icon_url },
+				)
 				trackEvent('ProjectInstall', {
 					loader: instance.loader,
 					game_version: instance.game_version,

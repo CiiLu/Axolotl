@@ -34,10 +34,22 @@ const hasWarnings = computed(
 				<span>模组</span><strong>{{ job.report.modName.name }}</strong>
 			</div>
 			<div class="result-stats">
-				<div><span>语言条目</span><strong>{{ job.report?.languageAccepted ?? 0 }}/{{ job.report?.languageAttempted ?? 0 }}</strong></div>
-				<div v-if="job.report?.classTotal"><span>Class 文本</span><strong>{{ job.report.classResolved }}/{{ job.report.classTotal }}</strong></div>
+				<div>
+					<span>语言条目</span
+					><strong
+						>{{ job.report?.languageAccepted ?? 0 }}/{{
+							job.report?.languageAttempted ?? 0
+						}}</strong
+					>
+				</div>
+				<div v-if="job.report?.classTotal">
+					<span>Class 文本</span
+					><strong>{{ job.report.classResolved }}/{{ job.report.classTotal }}</strong>
+				</div>
 			</div>
-			<span v-if="job.report?.classChangedFiles?.length" class="secondary">改动文件：{{ job.report.classChangedFiles.join('、') }}</span>
+			<span v-if="job.report?.classChangedFiles?.length" class="secondary"
+				>改动文件：{{ job.report.classChangedFiles.join('、') }}</span
+			>
 			<ul v-if="job.report?.warnings?.length" class="warnings">
 				<li v-for="warning in job.report.warnings" :key="warning">{{ warning }}</li>
 			</ul>

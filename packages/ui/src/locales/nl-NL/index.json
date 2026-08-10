@@ -1,7 +1,4 @@
 {
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "De serverinstellingen konden niet worden geladen"
-  },
   "badge.alpha": {
     "defaultMessage": "Alfa"
   },
@@ -221,9 +218,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Update projecten"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Houd Shift ingedrukt terwijl je op “Alles bijwerken” klikt om deze bevestiging in de toekomst over te slaan."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Update {count, plural, one {# project} other {# projecten}}"
   },
@@ -278,32 +272,8 @@
   "content.diff-modal.updated-count": {
     "defaultMessage": "{count} bijgewerkt"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Backup aan het maken..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Back-up succesvol gemaakt"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Back-up mislukt. Je kan wel verder gaan."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Er is een back-up bezig, het wordt aangeraden te wachten totdat deze klaar is voordat je deze actie doet."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Een back-up maken kan enkele minuten duren, afhankelijk van de grootte van je server."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Back-up maken"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Houd Shift ingedrukt tijdens het klikken om de bevestiging over te slaan."
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Blader door content"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Wacht totdat de bewerking is voltooid voordat je content aanpast."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Blader of upload {contentType} om te beginnen"
@@ -412,12 +382,6 @@
   },
   "creation-flow.modal.custom-setup.game-version.placeholder": {
     "defaultMessage": "Selecteer game versie"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Creatief"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Hardcore"
   },
   "files.conflict-modal.header": {
     "defaultMessage": "Samenvatting"
@@ -536,9 +500,6 @@
   "files.image_viewer.zoom_out": {
     "defaultMessage": "Uitzoomen"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "Bestandsbewerkingen zijn uitgeschakeld terwijl de bewerking wordt uitgevoerd."
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Fout bij het uitvoeren van een proefdraaien"
   },
@@ -614,12 +575,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": "Uploaden via een .zip-URL"
   },
-  "files.operations.extracted": {
-    "defaultMessage": "{size} Geëxtraheerd"
-  },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "Modpack via URL"
-  },
   "files.rename-modal.new-name-label": {
     "defaultMessage": "Nieuwe naam"
   },
@@ -658,9 +613,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "De naam is verplicht."
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "CurseForge modpack installeren"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "Installeer een CurseForge modpack"
@@ -817,108 +769,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Resolutie"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Het verwijderen van content is mislukt"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "Het uitschakelen van content is mislukt"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "Het inschakelen van content is mislukt"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "Het updaten van content is mislukt"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Het laden van de modpack content is mislukt"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "Het laden van versies is mislukt"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "Het verwijderen van content is mislukt"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "Het omschakelen van {name} is mislukt"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Het ontkoppelen van het modpack is mislukt"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "Het bijwerken is mislukt"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Het uploaden van het bestand is mislukt"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "Het is niet gelukt om de versie van het modpack te wijzigen"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "Kan versies niet laden"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "Het opnieuw installeren van het modpack is mislukt"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Kon de server niet herstellen"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "Het is niet gelukt om de server opnieuw in te stellen voor onboarding"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "Het opslaan van de installatie-instellingen is mislukt"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Het ontkoppelen van het modpack is mislukt"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "{loader, select, null {Loader} other {{loader}}} versie"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "De installatie van uw server is hersteld."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Herstellen voltooid"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "Server opnieuw opstarten"
-  },
-  "hosting.loader.reset-server-description": {
-    "defaultMessage": "Hiermee worden alle gegevens op je server verwijderd, inclusief je werelden, mods en configuratiebestanden. Back-ups blijven behouden en kunnen worden hersteld."
-  },
-  "hosting.loader.reset-to-onboarding-button": {
-    "defaultMessage": "Terug naar de introductie"
-  },
-  "hosting.loader.reset-to-onboarding-modal-description": {
-    "defaultMessage": "Hierdoor wordt de server opnieuw in de onboarding fase gezet, zodat de installatie opnieuw kan worden voltooid. Weet u zeker dat u door wilt gaan?"
-  },
-  "hosting.loader.reset-to-onboarding-modal-title": {
-    "defaultMessage": "Terug naar de introductie"
-  },
-  "hosting.loader.reset-to-onboarding-success-description": {
-    "defaultMessage": "De server is teruggezet naar het onboardingproces."
-  },
-  "hosting.loader.reset-to-onboarding-success-title": {
-    "defaultMessage": "Server opnieuw ingesteld voor onboarding"
-  },
-  "hosting.loader.support-options-title": {
-    "defaultMessage": "Ondersteuningsmogelijkheden"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Burst tot {cpus} CPU's"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "Met CPU-bursting kan uw server tijdelijk extra threads gebruiken om TPS-pieken te verminderen. Klik hier voor meer informatie."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Opslag"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} Gedeelde CPU's"
   },
   "icon-select.edit": {
     "defaultMessage": "Wijzig icoon"
@@ -1498,12 +1348,6 @@
   },
   "locale.zh-TW": {
     "defaultMessage": "Chinees (traditioneel)"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Voeg betaalmethode toe"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Betaalmethode toevoegen"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Installeer vereiste content automatisch"
@@ -2336,108 +2180,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Standaard"
   },
-  "servers.busy.backup-creating": {
-    "defaultMessage": "Er wordt een back-up gemaakt"
-  },
-  "servers.busy.backup-restoring": {
-    "defaultMessage": "Het terugzetten van de back-up is bezig"
-  },
-  "servers.busy.installing": {
-    "defaultMessage": "De server wordt geïnstalleerd"
-  },
-  "servers.busy.syncing-content": {
-    "defaultMessage": "Inhoud wordt gesynchroniseerd"
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "Heb je al een server?"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Meer informatie over Modrinth Hosting"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "Nieuwe server"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Installeer mods, nodig vrienden uit en speel samen – allemaal via de Modrinth app."
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "Nog geen servers"
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "Mods installeren met één klik"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "Nodig vrienden uit en help ze op weg in de Modrinth app."
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "Speel met vrienden"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Inloggen"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "Stel je server in zoals een wereld voor één speler."
-  },
-  "servers.list-empty.simple-setup-title": {
-    "defaultMessage": "Eenvoudige set-up"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Gekopieerd"
-  },
-  "servers.listing.copy-code-tooltip": {
-    "defaultMessage": "Kopieer de code naar het klembord"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "Kopieer ID"
-  },
-  "servers.listing.download-latest-backup-tooltip": {
-    "defaultMessage": "Laatste back-up downloaden"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Nieuw"
-  },
-  "servers.listing.notice.files-preserved-after-cancellation": {
-    "defaultMessage": "Uw bestanden blijven na opzegging nog 30 dagen bewaard."
-  },
-  "servers.listing.notice.provisioning": {
-    "defaultMessage": "Even geduld a.u.b. terwijl we uw server instellen. Dit kan tot 10 minuten duren."
-  },
-  "servers.listing.notice.subscription-cancelled": {
-    "defaultMessage": "Uw abonnement is opgezegd."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed": {
-    "defaultMessage": "Uw abonnement is opgezegd vanwege een mislukte betaling."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed-on-date": {
-    "defaultMessage": "Uw abonnement is op <date>{formattedDate}</date> opgezegd vanwege een mislukte betaling. "
-  },
-  "servers.listing.notice.subscription-set-to-cancel": {
-    "defaultMessage": "Uw abonnement wordt opgezegd."
-  },
-  "servers.listing.notice.subscription-set-to-cancel-on-date": {
-    "defaultMessage": "Uw abonnement wordt op <date>{formattedDate}</date> opgezegd. "
-  },
-  "servers.listing.notice.suspended": {
-    "defaultMessage": "Uw server is geblokkeerd. Neem contact op met de klantenservice van Modrinth voor meer informatie."
-  },
-  "servers.listing.notice.upgrading": {
-    "defaultMessage": "De hardware van uw server wordt momenteel geüpgraded en zal binnenkort weer online zijn."
-  },
-  "servers.listing.resubscribe-label": {
-    "defaultMessage": "Opnieuw abonneren"
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "Serverpictogram"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Ondersteuning"
-  },
-  "servers.listing.using-project-label": {
-    "defaultMessage": "{projectTitle} Gebruiken"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Negeer"
   },
@@ -2468,32 +2210,11 @@
   "servers.region.central-europe": {
     "defaultMessage": "Centraal Europa"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Hoeveel geheugen moet jouw server krijgen?"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "Uit welk regio wil je een server?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Staat jouw regio er niet bij? <link>Laat ons weten waar je Modrinth Hosting graag als volgende zou willen zien!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Southeast Asia"
   },
   "servers.region.western-europe": {
     "defaultMessage": "West Europa"
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "Er geldt een verwerkingslimiet. Probeer het later nog eens."
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "De server kan niet opnieuw worden geïnstalleerd"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Er is een onverwachte fout opgetreden tijdens het opnieuw installeren. Probeer het later nog eens."
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "Herinstallatie mislukt"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "Sluit deze pagina alstublieft niet tijdens het uploaden."

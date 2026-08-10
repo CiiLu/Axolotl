@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Недостатньо прав."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Не вдалося завантажити налаштування сервера"
-  },
   "badge.alpha": {
     "defaultMessage": "Альфа"
   },
@@ -248,9 +245,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Оновлення проєктів"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Щоб пропустити це підтвердження в майбутньому, утримуйте клавішу Shift, натискаючи «Оновити все»."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Оновити {count, plural, one {# проєкт} few {# проєкти} other {# проєктів}}"
   },
@@ -323,41 +317,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Попереджає"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Створення резервної копії…"
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Резервну копію успішно створено"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Не вдалося створити резервну копію. Ви все одно можете продовжити."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Триває процес створення резервної копії. Рекомендовано дочекатися завершення, а лише тоді виконувати цю дію."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Створення резервної копії може зайняти кілька хвилин, залежно від розміру вашого сервера."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Створити резервну копію"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "профіль"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Утримуйте клавішу Shift під час натискання, щоб пропустити підтвердження."
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "Ми рекомендуємо створити резервну копію перш ніж продовжувати, щоб ви могли відновити свій {type}, якщо щось піде не так."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "світ"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Шукати вміст"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Будь ласка, дочекайтеся завершення операції, перш ніж редагувати вміст."
   },
   "content.page-layout.empty.no-content-installed": {
     "defaultMessage": "Немає встановленого вмісту"
@@ -487,105 +448,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Нема доступних версій"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Додаткові налаштування"
-  },
-  "creation-flow.modal.final-config.backup.before-reset-server.name": {
-    "defaultMessage": "Після скидання сервера"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Легка"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Складна"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Складність"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Нормальна"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Мирна"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Виберіть версію гри"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Творчість"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Гардкор"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Режим гри"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Виживання"
-  },
-  "creation-flow.modal.final-config.generate-structures.description": {
-    "defaultMessage": "Керує тим, чи генеруються села, цитаделі та інші споруди генеруються в нових чанках."
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "Генерувати структури"
-  },
-  "creation-flow.modal.final-config.generator-settings-json.placeholder": {
-    "defaultMessage": "Уведіть JSON налаштувань генератора"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Користувацькі"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Усталені"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "Використовується для розширених налаштувань світу, такого як користувацькі шари надплаского світу."
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Надплаский світ"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "Налаштування генератора"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "Виберіть налаштування генератора"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Назва світу"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Уведіть назву світу"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "Залиште поле порожнім для випадкового початкового значення."
-  },
-  "creation-flow.modal.final-config.world-seed.label-with-optional": {
-    "defaultMessage": "Зерно світу <optional>(Необов'язково)</optional>"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "Уведіть зерно світу"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "Розширений"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Усталений"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Тип світу"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Великі біоми"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Виберіть тип світу"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "Один біом"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Надплаский"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "Профіль — це налаштування Minecraft із певним завантажувачем, версією та модами."
@@ -803,9 +665,6 @@
   "files.item-type.folders": {
     "defaultMessage": "теки"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "Операції з файлами вимкнено, поки вони використовуються."
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Помилка запуску сухого запуску"
   },
@@ -884,24 +743,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": "Вивантажити з посилання на .zip"
   },
-  "files.operations.current-file": {
-    "defaultMessage": "Поточний файл: {file}"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "Видобуто {size}"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "Видобування {source}"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "Витягування {source} завершено"
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "Не вдалося витягнути {source}"
-  },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "збірки із посилання"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "Перейменувати «{name}»"
   },
@@ -943,9 +784,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "Назва є обов’язковою."
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "Установлення збірки CurseForge"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "Установити збірку CurseForge"
@@ -1117,111 +955,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Роздільність"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Не вдалося видалити вміст"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "Не вдалося вимкнути вміст"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "Не вдалося ввімкнути вміст"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "Не вдалося оновити вміст"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "Не вдалося встановити вміст"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Не вдалося завантажити вміст збірки"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "Не вдалося завантажити версії"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "Не вдалося видалити вміст"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "Не вдалося перемкнути {name}"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Не вдалося відв’язати збірку"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "Не вдалося оновити"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Не вдалося оновити файл"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "Не вдалося змінити версію збірки"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "Не вдалося завантажити версії"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "Не вдалося перевстановити збірку"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Не вдалося полагодити сервер"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "Не вдалося скинути до початкового стану"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "Не вдалося зберегти налаштування інсталяції"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Не вдалося відв’язати збірку"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "Версія {loader, select, null {завантажувача} other {{loader}}}"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "Інсталяція вашого сервера була полагоджена."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Лагодження завершено"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "Скинути сервер"
-  },
-  "hosting.loader.reset-server-description": {
-    "defaultMessage": "Видаляє всі дані на вашому сервері, включаючи світи, моди та файли налаштувань. Резервні копії збережуться, і їх можна буде відновити."
-  },
-  "hosting.loader.reset-to-onboarding-button": {
-    "defaultMessage": "Скинути до початкового стану"
-  },
-  "hosting.loader.reset-to-onboarding-modal-description": {
-    "defaultMessage": "Це призведе до повернення сервера в початковий стан, щоб можна було повторно виконати процес налаштування. Ви впевнені, що хочете продовжити?"
-  },
-  "hosting.loader.reset-to-onboarding-modal-title": {
-    "defaultMessage": "Скинути до початкового стану"
-  },
-  "hosting.loader.reset-to-onboarding-success-description": {
-    "defaultMessage": "Сервер повернуто до початкового стану для налаштування."
-  },
-  "hosting.loader.reset-to-onboarding-success-title": {
-    "defaultMessage": "Сервер скинуто до початкового стану"
-  },
-  "hosting.loader.support-options-title": {
-    "defaultMessage": "Налаштування підтримки"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Короткочасно до {cpus} ЦП"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "Короткочасне посилення ЦП дозволяє вашому серверу використовувати додаткові потоки для пом’якшення стрибків TPS. Натисніть, щоб дізнатися більше."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} ГБ ОЗП"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} ГБ сховища"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} спільних ЦП"
   },
   "icon-select.edit": {
     "defaultMessage": "Редагувати значок"
@@ -2041,12 +1774,6 @@
   },
   "markdown-editor.video-modal.url-field.title": {
     "defaultMessage": "Посилання на відео YouTube"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Додати спосіб оплати"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Додавання способу оплати"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "Автоматично встановлюється потрібний уміст"
@@ -2906,213 +2633,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Ванільний"
   },
-  "servers.busy.backup-creating": {
-    "defaultMessage": "Триває створення резервної копії"
-  },
-  "servers.busy.backup-restoring": {
-    "defaultMessage": "Триває відновлення резервної копії"
-  },
-  "servers.busy.installing": {
-    "defaultMessage": "Сервер установлюється"
-  },
-  "servers.busy.syncing-content": {
-    "defaultMessage": "Триває синхронізація вмісту"
-  },
-  "servers.grant-access-modal.permissions-help": {
-    "defaultMessage": "Перегляньте повний список дозволів для кожної ролі <link>тут</link>."
-  },
-  "servers.grant-access-modal.role.editor": {
-    "defaultMessage": "Редактор"
-  },
-  "servers.grant-access-modal.role.editor-description": {
-    "defaultMessage": "Керуйте вмістом екземпляра, файлами, резервними копіями та іншими налаштуваннями."
-  },
-  "servers.grant-access-modal.role.label": {
-    "defaultMessage": "Обрати роль"
-  },
-  "servers.grant-access-modal.role.viewer": {
-    "defaultMessage": "Обмеження"
-  },
-  "servers.grant-access-modal.role.viewer-description": {
-    "defaultMessage": "Запуск, зупинка та перегляд сервера без унесення змін."
-  },
-  "servers.grant-access-modal.suggestion-avatar-alt": {
-    "defaultMessage": "Аватар {username}"
-  },
-  "servers.grant-access-modal.target.help": {
-    "defaultMessage": "Не використовуйте їхнє ім'я гравця Minecraft."
-  },
-  "servers.grant-access-modal.target.label": {
-    "defaultMessage": "Ім'я користувача Modrinth"
-  },
-  "servers.grant-access-modal.target.no-suggestions": {
-    "defaultMessage": "За вашим запитом користувачів не знайдено."
-  },
-  "servers.grant-access-modal.target.placeholder": {
-    "defaultMessage": "Уведіть ім'я користувача Modrinth"
-  },
-  "servers.grant-access-modal.target.searching": {
-    "defaultMessage": "Пошук…"
-  },
-  "servers.installing-banner.error.header": {
-    "defaultMessage": "Не вдалося встановити"
-  },
-  "servers.installing-banner.error.internal-platform": {
-    "defaultMessage": "Під час установлення платформи сталася внутрішня помилка. Спробуйте ще раз."
-  },
-  "servers.installing-banner.error.invalid-loader-version": {
-    "defaultMessage": "Не вдалося встановити вказаний завантажувач або версію Minecraft. Він може бути недійсним або не підтримуватися."
-  },
-  "servers.installing-banner.error.modpack-install-failed": {
-    "defaultMessage": "Збірку не вдалося встановити. Вона може бути пошкоджена або несумісна."
-  },
-  "servers.installing-banner.error.no-primary-file": {
-    "defaultMessage": "Ця версія збірки не містить завантажуваних файлів. Можливо, вона була неправильно впакований."
-  },
-  "servers.installing-banner.error.unknown": {
-    "defaultMessage": "Під час встановлення сталася неочікувана помилка."
-  },
-  "servers.installing-banner.error.unsupported-loader-version": {
-    "defaultMessage": "Ця версія Minecraft або завантажувача ще не підтримується Modrinth Hosting."
-  },
-  "servers.installing-banner.phase.installing-addons": {
-    "defaultMessage": "Установлення доповнень…"
-  },
-  "servers.installing-banner.phase.installing-modpack": {
-    "defaultMessage": "Установлення збірки…"
-  },
-  "servers.installing-banner.phase.installing-platform": {
-    "defaultMessage": "Установлення платформи…"
-  },
-  "servers.installing-banner.preparing.header": {
-    "defaultMessage": "Ми підготовлюємо ваш сервер"
-  },
-  "servers.installing-banner.ticker.adding-java": {
-    "defaultMessage": "Додання Java…"
-  },
-  "servers.installing-banner.ticker.configuring-server": {
-    "defaultMessage": "Налаштування сервера…"
-  },
-  "servers.installing-banner.ticker.downloading-mods": {
-    "defaultMessage": "Завантаження модів…"
-  },
-  "servers.installing-banner.ticker.organizing-files": {
-    "defaultMessage": "Організування файлів…"
-  },
-  "servers.installing-banner.ticker.setting-up-environment": {
-    "defaultMessage": "Налаштування середовища…"
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "Уже маєте сервер?"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Більше про Modrinth Hosting"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "Новий сервер"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Установлюйте моди, запрошуйте друзів і грайте разом із Modrinth App."
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "Серверів ще немає"
-  },
-  "servers.list-empty.one-click-mod-installs-description": {
-    "defaultMessage": "Виберіть свої улюблені моди, а ми подбаємо про решту."
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "Установлення в одне натискання"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "Запросіть друзів і налаштуйте їх прямо в Modrinth App."
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "Грайте з друзями"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Увійти"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "Налаштуйте свій сервер як світ для гри наодинці."
-  },
-  "servers.list-empty.simple-setup-title": {
-    "defaultMessage": "Просте налаштування"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Скопійовано"
-  },
-  "servers.listing.copy-code-tooltip": {
-    "defaultMessage": "Скопіювати код у буфер обміну"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "Скопіювати ID"
-  },
-  "servers.listing.download-latest-backup-tooltip": {
-    "defaultMessage": "Завантажити останню резервну копію"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Новий"
-  },
-  "servers.listing.notice.files-kept-for-download": {
-    "defaultMessage": "Ваші файли зберігатимуться ще <days-remaining>{daysRemaining} {daysRemaining, plural, one {день} few {дні} many {днів} other {днів} }</days-remaining>. Зверніться до служби підтримки, щоб завантажити файли, перш ніж їх буде видалено."
-  },
-  "servers.listing.notice.files-preserved-after-cancellation": {
-    "defaultMessage": "Ваші файли зберігатимуться протягом 30 днів після скасування."
-  },
-  "servers.listing.notice.moderated": {
-    "defaultMessage": "Ваш сервер призупинено модерацією."
-  },
-  "servers.listing.notice.pending-change": {
-    "defaultMessage": "Ваш сервер {verb, select, downgrade {погіршиться} other {покращиться}} до плану «{planSize}» <date>{formattedDate}</date>."
-  },
-  "servers.listing.notice.provisioning": {
-    "defaultMessage": "Зачекайте, поки ми налаштуємо ваш сервер. Це може тривати до 10 хвилин."
-  },
-  "servers.listing.notice.subscription-cancelled": {
-    "defaultMessage": "Вашу підписку скасовано."
-  },
-  "servers.listing.notice.subscription-cancelled-on-date": {
-    "defaultMessage": "Вашу підписку скасовано <date>{formattedDate}</date>."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed": {
-    "defaultMessage": "Вашу підписку скасовано через помилку оплати."
-  },
-  "servers.listing.notice.subscription-cancelled-payment-failed-on-date": {
-    "defaultMessage": "Вашу підписку скасовано <date>{formattedDate}</date> через помилку оплати. "
-  },
-  "servers.listing.notice.subscription-set-to-cancel": {
-    "defaultMessage": "Вашу підписку встановлено на скасування."
-  },
-  "servers.listing.notice.subscription-set-to-cancel-on-date": {
-    "defaultMessage": "Вашу підписку встановлено на скасовання <date>{formattedDate}</date>. "
-  },
-  "servers.listing.notice.suspended": {
-    "defaultMessage": "Ваш сервер призупинено. Для подробиць зверніться до служби підтримки Modrinth."
-  },
-  "servers.listing.notice.upgrading": {
-    "defaultMessage": "Апаратне забезпечення вашого сервера зараз оновлюється та незабаром відновиться."
-  },
-  "servers.listing.owner-avatar-alt": {
-    "defaultMessage": "Аватар {username}"
-  },
-  "servers.listing.owner-tooltip": {
-    "defaultMessage": "Власник {username}"
-  },
-  "servers.listing.resubscribe-label": {
-    "defaultMessage": "Підписатися повторно"
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "Значок сервера"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Підтримка"
-  },
-  "servers.listing.using-project-label": {
-    "defaultMessage": "Використання {projectTitle}"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Відхилити"
   },
@@ -3146,12 +2666,6 @@
   "servers.region.central-europe": {
     "defaultMessage": "Центральна Європа"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Скільки оперативної пам’яті ви хочете мати на сервері?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "ОЗП"
-  },
   "servers.region.north-america-central": {
     "defaultMessage": "Центральна частина Північної Америки"
   },
@@ -3161,122 +2675,11 @@
   "servers.region.north-america-west": {
     "defaultMessage": "Західна частина Північної Америки"
   },
-  "servers.region.prompt": {
-    "defaultMessage": "Де б ви хотіли розмістити свій сервер?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Регіону немає в списку? <link>Повідомте нам, де ви ще хотіли б побачити Modrinth Hosting!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Південно-східна Азія"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Західна Європа"
-  },
-  "servers.remove-access-modal.added-label": {
-    "defaultMessage": "Додано {time}"
-  },
-  "servers.remove-access-modal.cancel-button": {
-    "defaultMessage": "Скасувати запрошення"
-  },
-  "servers.remove-access-modal.cancel-effect-access": {
-    "defaultMessage": "Їх не буде додано до цього сервера"
-  },
-  "servers.remove-access-modal.cancel-effect-invite": {
-    "defaultMessage": "Ви можете надіслати їм інше запрошення пізніше"
-  },
-  "servers.remove-access-modal.cancel-header": {
-    "defaultMessage": "Скасувати запрошення"
-  },
-  "servers.remove-access-modal.cancel-warning-body": {
-    "defaultMessage": "Якщо ви скасуєте це запрошення, {username} потребуватиме нового запрошення, перш ніж зможе приєднатися до цього."
-  },
-  "servers.remove-access-modal.header": {
-    "defaultMessage": "Скасувати права"
-  },
-  "servers.remove-access-modal.invited-label": {
-    "defaultMessage": "Запрошено {time}"
-  },
-  "servers.remove-access-modal.pending-invite-label": {
-    "defaultMessage": "Очікує запрошення"
-  },
-  "servers.remove-access-modal.remove-button": {
-    "defaultMessage": "Скасувати доступ"
-  },
-  "servers.remove-access-modal.remove-effect-access": {
-    "defaultMessage": "Вони негайно втратять доступ до панелі сервера та більше не зможуть редагувати вміст"
-  },
-  "servers.remove-access-modal.remove-effect-join": {
-    "defaultMessage": "Вони все ще зможуть приєднатися та грати на сервері, якщо ви не внесете окремі зміни"
-  },
-  "servers.remove-access-modal.unknown-added-label": {
-    "defaultMessage": "Дата додавання невідома"
-  },
-  "servers.remove-access-modal.user-avatar-alt": {
-    "defaultMessage": "Аватар {username}"
-  },
-  "servers.remove-access-modal.warning-body": {
-    "defaultMessage": "Якщо ви скасуєте доступ користувача до вашого сервера, вам потрібно буде повторно запросити його, щоб відновити доступ."
-  },
-  "servers.remove-access-modal.what-happens-label": {
-    "defaultMessage": "Що відбудеться?"
-  },
-  "servers.setup.onboarding.installation-failed.text": {
-    "defaultMessage": "Під час установлення сталася несподівана помилка. Спробуйте ще раз пізніше."
-  },
-  "servers.setup.onboarding.installation-failed.title": {
-    "defaultMessage": "Не вдалося встановити"
-  },
-  "servers.setup.onboarding.modpack-upload-failed.text": {
-    "defaultMessage": "Під час вивантаження сталася несподівана помилка. Спробуйте ще раз пізніше."
-  },
-  "servers.setup.onboarding.modpack-upload-failed.title": {
-    "defaultMessage": "Не вдалося вивантажити збірку"
-  },
-  "servers.setup.onboarding.setup-server.button": {
-    "defaultMessage": "Налаштування сервера"
-  },
-  "servers.setup.onboarding.step.choose.description": {
-    "defaultMessage": "Виберіть свою улюблену збірку із Modrinth або виберіть завантажувач і додайте потрібні моди."
-  },
-  "servers.setup.onboarding.step.choose.title": {
-    "defaultMessage": "Виберіть в що грати"
-  },
-  "servers.setup.onboarding.step.configure-world.description": {
-    "defaultMessage": "Налаштуйте свій світ, як у грі наодинці. Виберіть свій ігровий режим і зерно світу."
-  },
-  "servers.setup.onboarding.step.configure-world.title": {
-    "defaultMessage": "Налаштуйте свій світ"
-  },
-  "servers.setup.onboarding.step.invite-friends.description": {
-    "defaultMessage": "Поділіться своїм сервером з друзями, скопіювавши адресу та повідомивши їм, які моди потрібні, щоб приєднатися."
-  },
-  "servers.setup.onboarding.step.invite-friends.title": {
-    "defaultMessage": "Запросіть свої друзів"
-  },
-  "servers.setup.onboarding.steps.heading": {
-    "defaultMessage": "Налаштування вашого сервера (~2хв)"
-  },
-  "servers.setup.onboarding.uploading.progress": {
-    "defaultMessage": "Вивантаження ({percent, number}%)"
-  },
-  "servers.setup.onboarding.welcome.description": {
-    "defaultMessage": "Ваш сервер готовий. Ось що вам потрібно зробити, щоб почати грати!"
-  },
-  "servers.setup.onboarding.welcome.title": {
-    "defaultMessage": "Ласкаво просимо до Modrinth Hosting"
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "На вас накладено обмеження через кількість запитів. Спробуйте ще раз пізніше."
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "Не вдалося перевстановити сервер"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "Під час перевстановлення сталася несподівана помилка. Спробуйте ще раз пізніше."
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "Не вдалося перевстановити"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "Будь ласка, не закривайте цю сторінку поки триває вивантаження."

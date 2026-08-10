@@ -33,10 +33,42 @@ function copy() {
 </template>
 
 <style scoped>
-.technical { display: flex; flex-direction: column; gap: 0.4rem; }
-.head { display: flex; justify-content: space-between; gap: 0.5rem; }
-.head button { display: inline-flex; align-items: center; gap: 0.3rem; border: 0; background: transparent; padding: 0.2rem; color: var(--color-text-secondary); font-size: 0.68rem; }
-.head button:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-.head :deep(svg) { width: 0.75rem; height: 0.75rem; }
-pre { max-height: 18rem; overflow: auto; margin: 0; border-radius: var(--radius-sm); background: var(--surface-1); padding: 0.65rem; font-size: 0.62rem; white-space: pre-wrap; }
+.technical {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+.head {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+.head button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	border: 0;
+	background: transparent;
+	padding: 0.2rem;
+	color: var(--color-text-secondary);
+	font-size: 0.68rem;
+}
+.head button:focus-visible {
+	outline: 2px solid var(--color-brand);
+	outline-offset: 2px;
+}
+.head :deep(svg) {
+	width: 0.75rem;
+	height: 0.75rem;
+}
+pre {
+	max-height: 18rem;
+	overflow: auto;
+	margin: 0;
+	border-radius: var(--radius-sm);
+	background: var(--surface-1);
+	padding: 0.65rem;
+	font-size: 0.62rem;
+	white-space: pre-wrap;
+}
 </style>

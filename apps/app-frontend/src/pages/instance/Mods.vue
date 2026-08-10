@@ -739,7 +739,7 @@ const modpackUpdateConfirmModal = ref<InstanceType<typeof ConfirmModpackUpdateMo
 async function loadLinkedModpackContentItems(
 	cacheBehaviour?: CacheBehaviour,
 ): Promise<ContentItem[]> {
-	await initProjects(cacheBehaviour)
+	await initProjects(cacheBehaviour ?? 'bypass')
 	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
 	return displayedLinkedModpackContentItems.value
 }
@@ -2195,11 +2195,11 @@ async function loadInitialContent(): Promise<void> {
 	}
 
 	if (hasCachedContent) {
-		initProjects().catch(handleError)
+		initProjects('bypass').catch(handleError)
 		return
 	}
 
-	await initProjects()
+	await initProjects('bypass')
 }
 
 async function restoreModpackContentModalState() {

@@ -1,6 +1,8 @@
 use crate::state::InstanceInstallStage;
 use crate::state::instances::{
-    InstanceLaunchContext, adapters::sqlite::instance_rows, playtime_to_storage,
+    InstanceLaunchContext,
+    adapters::sqlite::{config_sync_rows, instance_rows},
+    config_sync, playtime_to_storage,
 };
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 use sqlx::SqlitePool;
@@ -44,6 +46,7 @@ pub(crate) async fn set_applied_content_set_loader_version(
     pool: &SqlitePool,
 ) -> crate::Result<()> {
     let modified = Utc::now().timestamp();
+    let mut tx = pool.begin().await?;
 
     sqlx::query!(
         "
@@ -59,8 +62,12 @@ pub(crate) async fn set_applied_content_set_loader_version(
         modified,
         instance_id,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    config_sync_rows::upsert_config_updated_at(instance_id, &mut *tx).await?;
+    tx.commit().await?;
+
+    config_sync::mark_dirty(instance_id);
 
     Ok(())
 }
@@ -72,6 +79,7 @@ pub(crate) async fn set_applied_content_set_protocol_version(
 ) -> crate::Result<()> {
     let protocol_version = protocol_version.map(i64::from);
     let modified = Utc::now().timestamp();
+    let mut tx = pool.begin().await?;
 
     sqlx::query!(
         "
@@ -87,8 +95,12 @@ pub(crate) async fn set_applied_content_set_protocol_version(
         modified,
         instance_id,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    config_sync_rows::upsert_config_updated_at(instance_id, &mut *tx).await?;
+    tx.commit().await?;
+
+    config_sync::mark_dirty(instance_id);
 
     Ok(())
 }

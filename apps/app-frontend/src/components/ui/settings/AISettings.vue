@@ -258,7 +258,9 @@ const allDisabledProviderItems = computed(() =>
 	providerItems.value.filter(({ config }) => !config.enabled),
 )
 const providerDescriptions = computed<Record<string, string>>(() =>
-	locale.value.toLocaleLowerCase().startsWith('zh') ? providerDescriptionsZh : providerDescriptionsEn,
+	locale.value.toLocaleLowerCase().startsWith('zh')
+		? providerDescriptionsZh
+		: providerDescriptionsEn,
 )
 
 const selectedDefinition = computed<AIProviderDefinition | undefined>(() =>
@@ -799,12 +801,7 @@ onMounted(async () => {
 									<AIIcon kind="provider-avatar" :value="definition.id" :size="24" />
 									<strong>{{ definition.name }}</strong>
 								</template>
-								<AIIcon
-									v-else
-									kind="provider-combine"
-									:value="definition.id"
-									:size="24"
-								/>
+								<AIIcon v-else kind="provider-combine" :value="definition.id" :size="24" />
 							</span>
 							<span class="ai-provider-card-description">
 								{{ providerDescription(definition.id) }}
@@ -849,12 +846,7 @@ onMounted(async () => {
 									<AIIcon kind="provider-avatar" :value="definition.id" :size="24" />
 									<strong>{{ definition.name }}</strong>
 								</template>
-								<AIIcon
-									v-else
-									kind="provider-combine"
-									:value="definition.id"
-									:size="24"
-								/>
+								<AIIcon v-else kind="provider-combine" :value="definition.id" :size="24" />
 							</span>
 							<span class="ai-provider-card-description">
 								{{ providerDescription(definition.id) }}

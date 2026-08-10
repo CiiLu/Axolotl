@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "権限がありません"
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "サーバー設定の読み込みに失敗しました"
-  },
   "badge.alpha": {
     "defaultMessage": "Alpha"
   },
@@ -245,9 +242,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "プロジェクトをアップデート"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Shiftキーを押しながら「すべて更新」をクリックすると、今後この確認をスキップできます。"
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "プロジェクトをアップデート"
   },
@@ -320,41 +314,8 @@
   "content.filter.warnings": {
     "defaultMessage": "警告"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "バックアップを作成中…"
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "バックアップを正常に作成しました"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "バックアップの作成に失敗しました。操作は続行できます。"
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "バックアップを作成中です。バックアップが完了してからこの操作を実行することをおすすめします。"
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "サーバーのサイズによっては、バックアップの作成に数分かかる場合があります。"
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "バックアップを作成"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "インスタンス"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Shiftを押しながらクリックすることで確認をスキップできます。"
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "操作を進める前にバックアップを作成することをおすすめします。もし{type}に問題が発生しても、バックアップから復元できるようになります。"
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "ワールド"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "コンテンツを探す"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "コンテンツを編集する前に、操作の完了をお待ちください。"
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "{contentType}を検索またはアップロードしてみましょう"
@@ -514,105 +475,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "利用可能なバージョンがありません"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "追加の設定"
-  },
-  "creation-flow.modal.final-config.backup.before-reset-server.name": {
-    "defaultMessage": "サーバーのリセット前"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "イージー"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "ハード"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "難易度"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "ノーマル"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "ピースフル"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "ゲームバージョンを選択"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "クリエイティブ"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "ハードコア"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "ゲームモード"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "サバイバル"
-  },
-  "creation-flow.modal.final-config.generate-structures.description": {
-    "defaultMessage": "村や要塞などの構造物が新しいチャンクに生成されるかを管理します"
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "構造物を生成"
-  },
-  "creation-flow.modal.final-config.generator-settings-json.placeholder": {
-    "defaultMessage": "ジェネレーターの設定用JSONを入力"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "カスタム"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "デフォルト"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "カスタムスーパーフラットの地層など、高度なワールドカスタマイズに使用されます"
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "フラット"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "ジェネレーターの設定"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "ジェネレーターの設定を選択"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "ワールドの名前"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "ワールドの名前を入力"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "空欄にしてシードをランダムにします"
-  },
-  "creation-flow.modal.final-config.world-seed.label-with-optional": {
-    "defaultMessage": "ワールドのシード値 <optional>(任意)</optional>"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "ワールドのシード値を入力"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "アンプリファイド"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "デフォルト"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "ワールドタイプ"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "大きなバイオーム"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "ワールドタイプを選択"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "シングルバイオーム"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "スーパーフラット"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "インスタンスとは、特定のローダー、バージョン、およびModを備えたMinecraftの起動構成のことです"
@@ -812,9 +674,6 @@
   "files.item-type.folders": {
     "defaultMessage": "フォルダ"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "ファイル操作進行中は新たにファイル操作を行うことができません。"
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "実行確認中にエラーが発生"
   },
@@ -893,24 +752,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": ".zip URLからアップロード"
   },
-  "files.operations.current-file": {
-    "defaultMessage": "現在のファイル: {file}"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "{size} 展開済み"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "{source} を展開中"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "{source}の抽出が完了しました"
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "{source} の抽出に失敗しました"
-  },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "modpackのURL"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "名前変更 {name}"
   },
@@ -952,9 +793,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "名前は必須です。"
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "CurseForgeのmodpackをインストール"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "CurseForgeのmodpackをインストールする"
@@ -1126,111 +964,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "解像度"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "コンテンツの削除に失敗しました"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "コンテンツの無効化に失敗しました"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "コンテンツの有効化に失敗しました"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "コンテンツの更新に失敗しました"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "インストールに失敗しました"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Modパックコンテンツの読み込みに失敗しました"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "バージョンの読み込みに失敗しました"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "コンテンツの削除に失敗しました"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "{name}の切り替えに失敗しました"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Modパックのリンク解除に失敗しました"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "更新に失敗しました"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "ファイルのアップデートに失敗しました"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "modpackのバージョン変更に失敗しました"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "バージョンの読み込みに失敗しました"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "modpackの再インストールに失敗しました"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "サーバーの修復に失敗しました"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "サーバーをオンボーディング状態にリセットできませんでした"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "インストール設定の保存に失敗しました"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "modpackのリンク解除に失敗しました"
-  },
-  "hosting.loader.loader-version": {
-    "defaultMessage": "{loader, select, null {ローダ} other {{loader}}} バージョン"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "サーバーのインストールが修復されました。"
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "修理完了"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "サーバーをリセット"
-  },
-  "hosting.loader.reset-server-description": {
-    "defaultMessage": "サーバー上のすべてのデータ（ワールド、MOD、設定ファイルなど）を削除します。バックアップは保持され、復元可能です。"
-  },
-  "hosting.loader.reset-to-onboarding-button": {
-    "defaultMessage": "オンボーディング画面にリセット"
-  },
-  "hosting.loader.reset-to-onboarding-modal-description": {
-    "defaultMessage": "これによりサーバーはオンボーディングモードに戻り、セットアップを再度完了できるようになります。本当に続行しますか？"
-  },
-  "hosting.loader.reset-to-onboarding-modal-title": {
-    "defaultMessage": "オンボーディング画面にリセット"
-  },
-  "hosting.loader.reset-to-onboarding-success-description": {
-    "defaultMessage": "サーバーはオンボーディングフローに戻りました。"
-  },
-  "hosting.loader.reset-to-onboarding-success-title": {
-    "defaultMessage": "サーバーがオンボーディングにリセットされました"
-  },
-  "hosting.loader.support-options-title": {
-    "defaultMessage": "サポートオプション"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "{cpus}個のCPUに増加"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "CPUバースト機能により、サーバーは一時的に追加のスレッドを使用してTPSの急増を緩和できます。詳細はこちらをクリックしてください。"
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram}GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage}GBストレージ"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus}個の共有されたCPU"
   },
   "icon-select.edit": {
     "defaultMessage": "アイコンを編集"
@@ -1948,12 +1681,6 @@
   },
   "markdown-editor.video-modal.url-field.title": {
     "defaultMessage": "Youtube動画のURL"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "支払い方法を追加する"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "支払い方法を追加中"
   },
   "modal.open-in-app.benefit.install": {
     "defaultMessage": "必要なコンテンツを自動でインストールする"
@@ -2786,69 +2513,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "バニラ(Mod非導入)"
   },
-  "servers.busy.backup-creating": {
-    "defaultMessage": "バックアップ作成中"
-  },
-  "servers.busy.backup-restoring": {
-    "defaultMessage": "バックアップ復元処理中"
-  },
-  "servers.busy.installing": {
-    "defaultMessage": "サーバーがインストール中です"
-  },
-  "servers.busy.syncing-content": {
-    "defaultMessage": "コンテンツの同期処理中です"
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "既にサーバーをお持ちですか？"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Modrinth Hostingについて詳しくはこちらをご覧ください"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "新しいサーバー"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Modrinth Appを使えば、MODのインストール、友達の招待、そして一緒にプレイすることなど、すべてが可能です。"
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "サーバーはまだありません"
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "ワンクリックでMODをインストール"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "友達を招待して、Modrinth Appで簡単に設定してあげましょう。"
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "友達と遊ぶ"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "サインイン"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "サーバーは、シングルプレイヤーワールドと同じように設定してください。"
-  },
-  "servers.list-empty.simple-setup-title": {
-    "defaultMessage": "簡単なセットアップ"
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "コピーしました"
-  },
-  "servers.listing.copy-code-tooltip": {
-    "defaultMessage": "コードをクリップボードにコピー"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "IDをコピー"
-  },
-  "servers.listing.download-latest-backup-tooltip": {
-    "defaultMessage": "最新のバックアップをダウンロード"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "新規"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "閉じる"
   },
@@ -2882,32 +2546,11 @@
   "servers.region.central-europe": {
     "defaultMessage": "中央ヨーロッパ"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "サーバーに必要なRAMはどのくらいですか？"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "サーバーをどこに設置しますか？"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "ご希望の地域が見つかりませんか？ <link>Modrinth Hostingを利用したい場所をお知らせください！</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "東南アジア"
   },
   "servers.region.western-europe": {
     "defaultMessage": "西ヨーロッパ"
-  },
-  "servers.setup.rate-limit.text": {
-    "defaultMessage": "レート制限に達しました。時間をおいて再試行してください。"
-  },
-  "servers.setup.rate-limit.title": {
-    "defaultMessage": "サーバーを再インストールできません"
-  },
-  "servers.setup.reinstall-failed.text": {
-    "defaultMessage": "再インストール中に予期しないエラーが発生しました。時間をおいて再試行してください。"
-  },
-  "servers.setup.reinstall-failed.title": {
-    "defaultMessage": "再インストールに失敗"
   },
   "servers.setup.upload-warning": {
     "defaultMessage": "アップロード中はこのページを閉じないでください。"

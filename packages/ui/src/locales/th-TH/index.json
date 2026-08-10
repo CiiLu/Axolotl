@@ -197,12 +197,6 @@
   "form.placeholder.state": {
     "defaultMessage": "กรอกรัฐหรือจังหวัด"
   },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "ไม่สามารถลบเนื้อหาได้"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "ไม่สามารถปิดใช้งานเนื้อหาได้"
-  },
   "icon-select.edit": {
     "defaultMessage": "แก้ไขไอคอน"
   },
@@ -361,12 +355,6 @@
   },
   "label.visibility": {
     "defaultMessage": "การเปิดเผย"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "เพิ่มช่องทางการชำระเงิน"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "กำลังเพิ่มช่องทางการชำระเงิน"
   },
   "notification.error.title": {
     "defaultMessage": "เกิดข้อผิดพลาด"
@@ -565,12 +553,6 @@
   },
   "search.filter_type.server_content_type": {
     "defaultMessage": "ประเภท"
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "เซิร์ฟเวอร์ไอคอน"
-  },
-  "servers.region.prompt": {
-    "defaultMessage": "คุณอยากตั้งเซิร์ฟเวอร์ไว้ที่ไหน"
   },
   "servers.region.western-europe": {
     "defaultMessage": "ยุโรปตะวันตก"

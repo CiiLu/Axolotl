@@ -423,6 +423,11 @@ impl State {
             tracing::error!("Error recovering interrupted install jobs: {e}");
         }
 
+        let config_sync_state = Arc::clone(state);
+        tokio::task::spawn(async move {
+            instances::config_sync::run(config_sync_state).await;
+        });
+
         let concurrency_state = Arc::clone(state);
         tokio::spawn(async move {
             concurrency_state.run_auto_concurrency_controller().await;
@@ -796,6 +801,48 @@ impl State {
     ) -> InstanceLockGuard<'_> {
         self.instance_locks.lock(instance_id).await
     }
+}
+
+#[cfg(test)]
+pub(crate) async fn test_state(
+    directories: DirectoryInfo,
+    pool: SqlitePool,
+) -> crate::Result<Arc<State>> {
+    let file_watcher = instances::watcher::init_watcher().await?;
+
+    Ok(Arc::new(State {
+        directories,
+        fetch_semaphore: FetchSemaphore(Semaphore::new(8)),
+        download_semaphore: FetchSemaphore(Semaphore::new(8)),
+        io_semaphore: IoSemaphore(Semaphore::new(8)),
+        api_semaphore: FetchSemaphore(Semaphore::new(8)),
+        minecraft_metadata_source: AtomicU8::new(0),
+        minecraft_file_source: AtomicU8::new(0),
+        modrinth_source: AtomicU8::new(0),
+        curseforge_source: AtomicU8::new(0),
+        auto_prefers_mirror: AtomicBool::new(false),
+        download_concurrency_target: AtomicUsize::new(8),
+        download_concurrency_limit: AtomicUsize::new(8),
+        fetch_concurrency_limit: AtomicUsize::new(8),
+        api_concurrency_limit: AtomicUsize::new(8),
+        auto_concurrent_downloads: AtomicBool::new(false),
+        auto_concurrency_ceiling: AtomicUsize::new(8),
+        download_active_connections: AtomicUsize::new(0),
+        download_sample_bytes: AtomicU64::new(0),
+        download_sample_requests: AtomicU64::new(0),
+        download_sample_errors: AtomicU64::new(0),
+        download_sample_throttles: AtomicU64::new(0),
+        install_job_semaphore: Semaphore::new(1),
+        install_db_semaphore: Semaphore::new(1),
+        install_job_cancellations: DashMap::new(),
+        discord_rpc: DiscordGuard::init()?,
+        process_manager: ProcessManager::new(),
+        friends_socket: FriendsSocket::new(),
+        restart_after_pending_update: AtomicBool::new(false),
+        instance_locks: InstanceLockManager::default(),
+        pool,
+        file_watcher,
+    }))
 }
 
 #[cfg(test)]

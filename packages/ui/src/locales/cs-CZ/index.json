@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "Nemáš oprávnění."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "Načtení nastavení serveru se nezdařilo"
-  },
   "badge.alpha": {
     "defaultMessage": "Alfa"
   },
@@ -254,9 +251,6 @@
   "content.confirm-bulk-update.header": {
     "defaultMessage": "Aktualizovat projekty"
   },
-  "content.confirm-bulk-update.shift-click-hint": {
-    "defaultMessage": "Chcete-li toto potvrzení příště přeskočit, podržte Shift při kliknutí na \"Aktualizovat vše\"."
-  },
   "content.confirm-bulk-update.update-button": {
     "defaultMessage": "Aktualizovat {count, plural, one {# projekt} other {# projektů}}"
   },
@@ -365,41 +359,8 @@
   "content.filter.warnings": {
     "defaultMessage": "Varování"
   },
-  "content.inline-backup.backing-up": {
-    "defaultMessage": "Vytvářim zálohu..."
-  },
-  "content.inline-backup.backup-complete": {
-    "defaultMessage": "Záloha úspěšně vytvořena"
-  },
-  "content.inline-backup.backup-failed": {
-    "defaultMessage": "Vytvoření zálohy se nezdařilo. Můžeš přesto pokračovat."
-  },
-  "content.inline-backup.backup-in-progress": {
-    "defaultMessage": "Probíhá zálohování. Doporučujeme počkat na jeho dokončení, než tuto akci provedeš."
-  },
-  "content.inline-backup.backup-takes-a-while": {
-    "defaultMessage": "Vytvoření zálohy může trvat několik minut dle velikosti tvého serveru."
-  },
-  "content.inline-backup.create-backup": {
-    "defaultMessage": "Vytvořit zálohu"
-  },
-  "content.inline-backup.instance-label": {
-    "defaultMessage": "instance"
-  },
-  "content.inline-backup.shift-click-hint": {
-    "defaultMessage": "Podrž Shift a klikni, jestli chceš přeskočit potvrzení."
-  },
-  "content.inline-backup.warning-body": {
-    "defaultMessage": "Doporučujeme vytvoření zálohy před pokračováním dále. V případě nějaké chyby můžeš obnovit {type} pokud se něco rozbije."
-  },
-  "content.inline-backup.world-label": {
-    "defaultMessage": "svět"
-  },
   "content.page-layout.browse-content": {
     "defaultMessage": "Prozkoumat"
-  },
-  "content.page-layout.busy-description": {
-    "defaultMessage": "Před úpravou obsahu prosím počkej, až se operace dokončí."
   },
   "content.page-layout.empty.hint": {
     "defaultMessage": "Pro začátek prozkoumej nebo nahraj {contentType}"
@@ -541,102 +502,6 @@
   },
   "creation-flow.modal.custom-setup.options.no-versions-available": {
     "defaultMessage": "Žádné dostupné verze"
-  },
-  "creation-flow.modal.final-config.additional-settings.title": {
-    "defaultMessage": "Další nastavení"
-  },
-  "creation-flow.modal.final-config.backup.before-reset-server.name": {
-    "defaultMessage": "Před resetem serveru"
-  },
-  "creation-flow.modal.final-config.difficulty.easy": {
-    "defaultMessage": "Lehká"
-  },
-  "creation-flow.modal.final-config.difficulty.hard": {
-    "defaultMessage": "Těžká"
-  },
-  "creation-flow.modal.final-config.difficulty.label": {
-    "defaultMessage": "Obtížnost"
-  },
-  "creation-flow.modal.final-config.difficulty.normal": {
-    "defaultMessage": "Normální"
-  },
-  "creation-flow.modal.final-config.difficulty.peaceful": {
-    "defaultMessage": "Mírumilovná"
-  },
-  "creation-flow.modal.final-config.game-version.placeholder": {
-    "defaultMessage": "Vyber verzi hry"
-  },
-  "creation-flow.modal.final-config.gamemode.creative": {
-    "defaultMessage": "Tvořivá hra"
-  },
-  "creation-flow.modal.final-config.gamemode.hardcore": {
-    "defaultMessage": "Nemilosrdná hra"
-  },
-  "creation-flow.modal.final-config.gamemode.label": {
-    "defaultMessage": "Typ hry"
-  },
-  "creation-flow.modal.final-config.gamemode.survival": {
-    "defaultMessage": "Hra o přežití"
-  },
-  "creation-flow.modal.final-config.generate-structures.label": {
-    "defaultMessage": "Náhodné stavby"
-  },
-  "creation-flow.modal.final-config.generator-settings-json.placeholder": {
-    "defaultMessage": "Zadejte nastavení generátoru v JSONu"
-  },
-  "creation-flow.modal.final-config.generator-settings.custom": {
-    "defaultMessage": "Vlastní"
-  },
-  "creation-flow.modal.final-config.generator-settings.default": {
-    "defaultMessage": "Výchozí"
-  },
-  "creation-flow.modal.final-config.generator-settings.description": {
-    "defaultMessage": "Používá se pro pokročilé přizpůsobení světa, například vlastní vrstvy Superplochého světa."
-  },
-  "creation-flow.modal.final-config.generator-settings.flat": {
-    "defaultMessage": "Plochý"
-  },
-  "creation-flow.modal.final-config.generator-settings.label": {
-    "defaultMessage": "Nastavení generování"
-  },
-  "creation-flow.modal.final-config.generator-settings.placeholder": {
-    "defaultMessage": "Vyber nastavení generátoru"
-  },
-  "creation-flow.modal.final-config.world-name.label": {
-    "defaultMessage": "Název světa"
-  },
-  "creation-flow.modal.final-config.world-name.placeholder": {
-    "defaultMessage": "Zadej název světa"
-  },
-  "creation-flow.modal.final-config.world-seed.description": {
-    "defaultMessage": "Nech prázdné pro náhodný seed."
-  },
-  "creation-flow.modal.final-config.world-seed.label-with-optional": {
-    "defaultMessage": "Seed světa <optional>(Volitelný)</optional>"
-  },
-  "creation-flow.modal.final-config.world-seed.placeholder": {
-    "defaultMessage": "Zadej seed světa"
-  },
-  "creation-flow.modal.final-config.world-type.amplified": {
-    "defaultMessage": "Zesílený"
-  },
-  "creation-flow.modal.final-config.world-type.default": {
-    "defaultMessage": "Výchozí"
-  },
-  "creation-flow.modal.final-config.world-type.label": {
-    "defaultMessage": "Typ světa"
-  },
-  "creation-flow.modal.final-config.world-type.large-biomes": {
-    "defaultMessage": "Rozlehlé biomy"
-  },
-  "creation-flow.modal.final-config.world-type.placeholder": {
-    "defaultMessage": "Vyber typ světa"
-  },
-  "creation-flow.modal.final-config.world-type.single-biome": {
-    "defaultMessage": "Jediný biom"
-  },
-  "creation-flow.modal.final-config.world-type.superflat": {
-    "defaultMessage": "Dokonalá rovina"
   },
   "creation-flow.modal.setup-type.instance.description": {
     "defaultMessage": "Instance je nastavení Minecraftu s konkrétním loaderem, verzí a módy."
@@ -845,9 +710,6 @@
   "files.item-type.folders": {
     "defaultMessage": "složky"
   },
-  "files.layout.busy-warning": {
-    "defaultMessage": "Souborové operace jsou vypnuty dokud běží tato operace."
-  },
   "files.layout.dry-run-failed-text": {
     "defaultMessage": "Chyby při testovacím spuštění"
   },
@@ -926,24 +788,6 @@
   "files.navbar.upload-from-zip-url": {
     "defaultMessage": "Nahrát ze souboru .zip URL"
   },
-  "files.operations.current-file": {
-    "defaultMessage": "Aktuální soubor: {file}"
-  },
-  "files.operations.extracted": {
-    "defaultMessage": "{size} extrahováno"
-  },
-  "files.operations.extracting": {
-    "defaultMessage": "Extrahování {source}"
-  },
-  "files.operations.extracting-completed": {
-    "defaultMessage": "Extrahování {source} dokončeno"
-  },
-  "files.operations.extracting-failed": {
-    "defaultMessage": "Extrahování {source} selhalo"
-  },
-  "files.operations.modpack-from-url": {
-    "defaultMessage": "modpack z URL"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "Přejmenovat {name}"
   },
@@ -985,9 +829,6 @@
   },
   "files.validation.name-required": {
     "defaultMessage": "Název je povinný."
-  },
-  "files.zip-url-modal.backup-name": {
-    "defaultMessage": "Instalace CurseForge modpacku"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "Instalace CurseForge modpacku"
@@ -1159,87 +1000,6 @@
   },
   "header.category.resolutions": {
     "defaultMessage": "Rozlišení"
-  },
-  "hosting.content.failed-to-bulk-delete": {
-    "defaultMessage": "Obsah se nepodařilo smazat"
-  },
-  "hosting.content.failed-to-bulk-disable": {
-    "defaultMessage": "Obsah se nepodařilo vypnout"
-  },
-  "hosting.content.failed-to-bulk-enable": {
-    "defaultMessage": "Obsah se nepodařilo zapnout"
-  },
-  "hosting.content.failed-to-bulk-update": {
-    "defaultMessage": "Obsah se nepodařilo nahrát"
-  },
-  "hosting.content.failed-to-install": {
-    "defaultMessage": "Obsah se nepodařilo nainstalovat"
-  },
-  "hosting.content.failed-to-load-modpack-content": {
-    "defaultMessage": "Obsah modpacku se nepodařilo načíst"
-  },
-  "hosting.content.failed-to-load-versions": {
-    "defaultMessage": "Verze se nepodařilo načíst"
-  },
-  "hosting.content.failed-to-remove": {
-    "defaultMessage": "Obsah se nepodařilo odebrat"
-  },
-  "hosting.content.failed-to-toggle": {
-    "defaultMessage": "Nepodařilo se přepnout {name}"
-  },
-  "hosting.content.failed-to-unlink": {
-    "defaultMessage": "Modpack se nepodařilo odpojit"
-  },
-  "hosting.content.failed-to-update": {
-    "defaultMessage": "Aktualizace se nezdařila"
-  },
-  "hosting.content.failed-to-upload": {
-    "defaultMessage": "Soubor se nepodařilo nahrát"
-  },
-  "hosting.loader.failed-to-change-version": {
-    "defaultMessage": "Nepodařilo se změnit verzi modpacku"
-  },
-  "hosting.loader.failed-to-load-versions": {
-    "defaultMessage": "Nepodařilo se načíst verze"
-  },
-  "hosting.loader.failed-to-reinstall": {
-    "defaultMessage": "Nepodařilo se přeinstalovat modpack"
-  },
-  "hosting.loader.failed-to-repair": {
-    "defaultMessage": "Server se nepodařilo opravit"
-  },
-  "hosting.loader.failed-to-reset-to-onboarding": {
-    "defaultMessage": "Nepodařilo se resetovat server do úvodního nastavení"
-  },
-  "hosting.loader.failed-to-save-settings": {
-    "defaultMessage": "Nepodařilo se uložit nastavení instalace"
-  },
-  "hosting.loader.failed-to-unlink": {
-    "defaultMessage": "Nepodařilo se odpojit modpack"
-  },
-  "hosting.loader.repair-started-text": {
-    "defaultMessage": "Vaše serverová instalace byla opravena."
-  },
-  "hosting.loader.repair-started-title": {
-    "defaultMessage": "Oprava dokončena"
-  },
-  "hosting.loader.reset-server": {
-    "defaultMessage": "Resetovat server"
-  },
-  "hosting.specs.burst": {
-    "defaultMessage": "Vylítne až na {cpus} CPUs"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "CPU vylítávání dovolí tvýmu serveru dočasně použít přídavné vlákna aby to pohlo rozsprostřít TPS spiky. Klikněte pro více infa."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} GB RAM"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB Storage"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} Shared CPUs"
   },
   "icon-select.edit": {
     "defaultMessage": "Upravit ikonu"
@@ -1912,12 +1672,6 @@
   },
   "markdown-editor.video-modal.header": {
     "defaultMessage": "Vložit YouTube video"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "Přidat platební metodu"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "Přidávání platební metody"
   },
   "modal.open-in-app.get-app": {
     "defaultMessage": "Získat Modrinth App"
@@ -2714,111 +2468,6 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
-  "servers.grant-access-modal.already-member-tooltip": {
-    "defaultMessage": "Uživatel je již pozván"
-  },
-  "servers.grant-access-modal.invite": {
-    "defaultMessage": "Pozvat"
-  },
-  "servers.grant-access-modal.suggestion-avatar-alt": {
-    "defaultMessage": "Avatar uživatele {username}"
-  },
-  "servers.grant-access-modal.target.searching": {
-    "defaultMessage": "Vyhledávání..."
-  },
-  "servers.installing-banner.error.unsupported-loader-version": {
-    "defaultMessage": "Modrinth Hosting tuto verzi Minecraftu nebo loaderu zatím nepodporuje."
-  },
-  "servers.installing-banner.phase.installing-addons": {
-    "defaultMessage": "Instalování addonů..."
-  },
-  "servers.installing-banner.phase.installing-modpack": {
-    "defaultMessage": "Instalování modpacku..."
-  },
-  "servers.installing-banner.phase.installing-platform": {
-    "defaultMessage": "Instalování platformy..."
-  },
-  "servers.installing-banner.preparing.header": {
-    "defaultMessage": "Připravujeme váš server"
-  },
-  "servers.installing-banner.ticker.adding-java": {
-    "defaultMessage": "Přidávání Javy..."
-  },
-  "servers.installing-banner.ticker.configuring-server": {
-    "defaultMessage": "Konfigurování serveru..."
-  },
-  "servers.installing-banner.ticker.downloading-mods": {
-    "defaultMessage": "Stahování módů..."
-  },
-  "servers.installing-banner.ticker.organizing-files": {
-    "defaultMessage": "Organizování souborů..."
-  },
-  "servers.installing-banner.ticker.setting-up-environment": {
-    "defaultMessage": "Nastavování prostředí..."
-  },
-  "servers.list-empty.already-have-server-label": {
-    "defaultMessage": "Už máte server?"
-  },
-  "servers.list-empty.learn-more-link": {
-    "defaultMessage": "Zjistěte víc o Modrinth hostingu"
-  },
-  "servers.list-empty.modrinth-hosting-label": {
-    "defaultMessage": "Modrinth Hosting"
-  },
-  "servers.list-empty.new-server-button": {
-    "defaultMessage": "Nový server"
-  },
-  "servers.list-empty.no-servers-description": {
-    "defaultMessage": "Instalujte mody, zvěte přátele a hrajte společně, to vše z Modrinth App."
-  },
-  "servers.list-empty.no-servers-title": {
-    "defaultMessage": "Zatím žádné servery"
-  },
-  "servers.list-empty.one-click-mod-installs-description": {
-    "defaultMessage": "Vyberte si své oblíbené mody a o zbytek se postaráme."
-  },
-  "servers.list-empty.one-click-mod-installs-title": {
-    "defaultMessage": "Instalace módů jedním klikem"
-  },
-  "servers.list-empty.play-with-friends-description": {
-    "defaultMessage": "Pozvěte přátele a nastavte jim vše přímo v Modrinth App."
-  },
-  "servers.list-empty.play-with-friends-title": {
-    "defaultMessage": "Hrajte s přáteli"
-  },
-  "servers.list-empty.sign-in-button": {
-    "defaultMessage": "Přihlásit se"
-  },
-  "servers.list-empty.simple-setup-description": {
-    "defaultMessage": "Nastavte si server stejně jako svět pro jednoho hráče."
-  },
-  "servers.listing.copied-label": {
-    "defaultMessage": "Zkopírováno"
-  },
-  "servers.listing.copy-id-label": {
-    "defaultMessage": "Kopírovat ID"
-  },
-  "servers.listing.new-label": {
-    "defaultMessage": "Nový"
-  },
-  "servers.listing.owner-avatar-alt": {
-    "defaultMessage": "Avatar uživatele {username}"
-  },
-  "servers.listing.owner-tooltip": {
-    "defaultMessage": "Vlastní {username}"
-  },
-  "servers.listing.resubscribe-label": {
-    "defaultMessage": "Obnovit předplatné"
-  },
-  "servers.listing.server-icon-alt": {
-    "defaultMessage": "Ikona serveru"
-  },
-  "servers.listing.support-label": {
-    "defaultMessage": "Podpora"
-  },
-  "servers.listing.using-project-label": {
-    "defaultMessage": "Používá {projectTitle}"
-  },
   "servers.notice.dismiss": {
     "defaultMessage": "Zavřít"
   },
@@ -2852,12 +2501,6 @@
   "servers.region.central-europe": {
     "defaultMessage": "Střední Evropa"
   },
-  "servers.region.custom.prompt": {
-    "defaultMessage": "Kolik paměti RAM má mít tvůj server?"
-  },
-  "servers.region.custom.prompt-ram-only": {
-    "defaultMessage": "RAM"
-  },
   "servers.region.north-america-central": {
     "defaultMessage": "Střední Severní Amerika"
   },
@@ -2867,68 +2510,11 @@
   "servers.region.north-america-west": {
     "defaultMessage": "Západní Severní Amerika"
   },
-  "servers.region.prompt": {
-    "defaultMessage": "Kde bys chtěl mít umístěný svůj server?"
-  },
-  "servers.region.region-unsupported": {
-    "defaultMessage": "Chybí vaše oblast? <link>Dejte nám vědět, kde byste chtěli vidět Modrinth Hosting příště!</link>"
-  },
   "servers.region.southeast-asia": {
     "defaultMessage": "Jihovýchodní Asie"
   },
   "servers.region.western-europe": {
     "defaultMessage": "Západní Evropa"
-  },
-  "servers.remove-access-modal.added-label": {
-    "defaultMessage": "Přidán/a {time}"
-  },
-  "servers.remove-access-modal.cancel-button": {
-    "defaultMessage": "Zrušit pozvánku"
-  },
-  "servers.remove-access-modal.cancel-header": {
-    "defaultMessage": "Zrušit pozvánku"
-  },
-  "servers.remove-access-modal.header": {
-    "defaultMessage": "Odebrat přístup"
-  },
-  "servers.remove-access-modal.invited-label": {
-    "defaultMessage": "Pozván {time}"
-  },
-  "servers.remove-access-modal.pending-invite-label": {
-    "defaultMessage": "Nevyřízená pozvánka"
-  },
-  "servers.remove-access-modal.remove-button": {
-    "defaultMessage": "Odebrat přístup"
-  },
-  "servers.remove-access-modal.user-avatar-alt": {
-    "defaultMessage": "Avatar uživatele {username}"
-  },
-  "servers.remove-access-modal.what-happens-label": {
-    "defaultMessage": "Co se stane?"
-  },
-  "servers.setup.onboarding.installation-failed.title": {
-    "defaultMessage": "Instalace selhala"
-  },
-  "servers.setup.onboarding.modpack-upload-failed.title": {
-    "defaultMessage": "Nahrávání modpacku selhalo"
-  },
-  "servers.setup.onboarding.setup-server.button": {
-    "defaultMessage": "Nastavit server"
-  },
-  "servers.setup.onboarding.step.choose.title": {
-    "defaultMessage": "Vyberte si co chcete hrát"
-  },
-  "servers.setup.onboarding.step.configure-world.title": {
-    "defaultMessage": "Nastavte si svůj svět"
-  },
-  "servers.setup.onboarding.step.invite-friends.title": {
-    "defaultMessage": "Pozvat přátele"
-  },
-  "servers.setup.onboarding.steps.heading": {
-    "defaultMessage": "Nastavte si svůj server (~2min)"
-  },
-  "servers.setup.onboarding.welcome.title": {
-    "defaultMessage": "Vítejte v Modrinth Hostingu"
   },
   "servers.setup.uploading-modpack.header": {
     "defaultMessage": "Nahrávání modpacku"

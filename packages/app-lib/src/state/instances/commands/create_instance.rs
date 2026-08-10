@@ -2,7 +2,8 @@ use crate::launcher::get_loader_version_from_profile;
 use crate::state::instances::{
     ContentSet, ContentSetStatus, ContentSourceKind, Instance,
     InstanceLaunchOverrides, InstanceLink,
-    adapters::sqlite::{content_rows, instance_rows},
+    adapters::sqlite::{config_sync_rows, content_rows, instance_rows},
+    config_sync,
 };
 use crate::state::{
     InstanceInstallStage, LauncherFeatureVersion, ModLoader, ReleaseChannel,
@@ -113,7 +114,11 @@ pub(crate) async fn create_instance(
             &mut tx,
         )
         .await?;
+        config_sync_rows::upsert_config_updated_at(&instance_id, &mut *tx)
+            .await?;
         tx.commit().await?;
+
+        config_sync::mark_dirty(&instance_id);
 
         crate::state::instances::watcher::watch_instance_folder(
             &instance.id,

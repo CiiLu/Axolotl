@@ -46,7 +46,11 @@ export const lobeModelAvatarBrands: Record<string, LobeModelAvatarConfig> = {
 	codegeex: avatar('#00e7e7', '#000', 0.75),
 	cogview: avatar('#000', '#fff', 0.6, 'color'),
 	cohere: avatar('#39594D', '#fff', 0.6),
-	dalle: avatar('conic-gradient(from 180deg, #FFFF67, #43FFFF, #50DA4C, #FF6E3D, #3C46FF)', '#fff', 0.6),
+	dalle: avatar(
+		'conic-gradient(from 180deg, #FFFF67, #43FFFF, #50DA4C, #FF6E3D, #3C46FF)',
+		'#fff',
+		0.6,
+	),
 	dbrx: avatar('#EE3D2C', '#fff', 0.6),
 	deepcogito: avatar('#4e81ee', '#fff', 0.7),
 	deepmind: avatar('#4285F4', '#fff', 0.75),
@@ -309,7 +313,10 @@ export const lobeModelIconMappings: LobeModelIconMapping[] = [
 	{ slug: 'ace', keywords: ['ace-step'] },
 ]
 
-export const openAIModelBackgrounds: Record<NonNullable<LobeModelIconMapping['openAIType']>, string> = {
+export const openAIModelBackgrounds: Record<
+	NonNullable<LobeModelIconMapping['openAIType']>,
+	string
+> = {
 	gpt3: '#19C37D',
 	gpt4: '#AB68FF',
 	gpt5: '#F86AA4',

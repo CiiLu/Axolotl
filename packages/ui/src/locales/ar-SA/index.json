@@ -2,9 +2,6 @@
   "action.no-permission": {
     "defaultMessage": "ليس لديك صلاحية."
   },
-  "app.server-settings.failed-to-load-server": {
-    "defaultMessage": "عذر تحميل خادم الإعدادات"
-  },
   "badge.alpha": {
     "defaultMessage": "نسخه أوليه"
   },
@@ -272,21 +269,6 @@
   "header.category.performance-impact": {
     "defaultMessage": "زيادة FPS"
   },
-  "hosting.specs.burst": {
-    "defaultMessage": "تصل سرعة المعالجة إلى {cpus} وحدة معالجة مركزية"
-  },
-  "hosting.specs.burst.tooltip": {
-    "defaultMessage": "تتيح خاصية زيادة سرعة المعالج لخادمك استخدام خيوط معالجة إضافية مؤقتًا للمساعدة في تخفيف ارتفاعات معدل المعاملات في الثانية. انقر هنا لمزيد من المعلومات."
-  },
-  "hosting.specs.gb-ram": {
-    "defaultMessage": "{ram} جيجابايت من ذاكرة الوصول العشوائي"
-  },
-  "hosting.specs.gb-storage": {
-    "defaultMessage": "{storage} GB مساحة تخزين"
-  },
-  "hosting.specs.shared-cpus": {
-    "defaultMessage": "{cpus} وحدات المعالجة المركزية المشتركة"
-  },
   "icon-select.edit": {
     "defaultMessage": "تعديل الأيقونة"
   },
@@ -484,12 +466,6 @@
   },
   "label.yes": {
     "defaultMessage": "نعم"
-  },
-  "modal.add-payment-method.action": {
-    "defaultMessage": "إضافة طريقة دفع"
-  },
-  "modal.add-payment-method.title": {
-    "defaultMessage": "إضافة طريقة دفع"
   },
   "notification.error.title": {
     "defaultMessage": "حدث خطأ"

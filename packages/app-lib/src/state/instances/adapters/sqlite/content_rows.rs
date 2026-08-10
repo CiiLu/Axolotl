@@ -831,6 +831,141 @@ pub(crate) async fn rename_instance_file(
         .await
 }
 
+pub(crate) async fn move_instance_file_in_transaction(
+    instance_id: &str,
+    old_relative_path: &str,
+    new_relative_path: &str,
+    new_file_name: &str,
+    enabled: bool,
+    sha1: &str,
+    size: u64,
+    local_mod_data: Option<&str>,
+    icon_path: Option<&str>,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<Option<InstanceFile>> {
+    let source_id = sqlx::query_scalar!(
+        "
+		SELECT id
+		FROM instance_files
+		WHERE instance_id = ? AND relative_path = ?
+		",
+        instance_id,
+        old_relative_path,
+    )
+    .fetch_optional(&mut **tx)
+    .await?;
+    let target_id = sqlx::query_scalar!(
+        "
+		SELECT id
+		FROM instance_files
+		WHERE instance_id = ? AND relative_path = ?
+		",
+        instance_id,
+        new_relative_path,
+    )
+    .fetch_optional(&mut **tx)
+    .await?;
+    let Some(source_id) = source_id else {
+        return Ok(None);
+    };
+    if target_id
+        .as_deref()
+        .is_some_and(|target_id| target_id != source_id)
+    {
+        return Ok(None);
+    }
+
+    sqlx::query(
+        "
+		UPDATE instance_files
+		SET
+			relative_path = ?,
+			file_name = ?,
+			enabled = ?,
+			sha1 = ?,
+			size = ?,
+			missing = 0,
+			modified_at = ?,
+			local_mod_data = COALESCE(?, local_mod_data),
+			icon_path = COALESCE(?, icon_path)
+		WHERE instance_id = ? AND relative_path = ?
+		",
+    )
+    .bind(new_relative_path)
+    .bind(new_file_name)
+    .bind(i64::from(enabled))
+    .bind(sha1)
+    .bind(size as i64)
+    .bind(Utc::now().timestamp())
+    .bind(local_mod_data)
+    .bind(icon_path)
+    .bind(instance_id)
+    .bind(old_relative_path)
+    .execute(&mut **tx)
+    .await?;
+
+    let row = sqlx::query_as::<_, InstanceFileRow>(
+        "SELECT * FROM instance_files
+         WHERE instance_id = ? AND relative_path = ?",
+    )
+    .bind(instance_id)
+    .bind(new_relative_path)
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    row.map(TryInto::try_into).transpose()
+}
+
+pub(crate) async fn adopt_untracked_file_in_transaction(
+    instance_id: &str,
+    new_relative_path: &str,
+    tracked_file_id: &str,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<bool> {
+    let untracked_file_id = sqlx::query_scalar!(
+        "
+		SELECT id
+		FROM instance_files
+		WHERE instance_id = ? AND relative_path = ?
+		",
+        instance_id,
+        new_relative_path,
+    )
+    .fetch_optional(&mut **tx)
+    .await?;
+    let Some(untracked_file_id) = untracked_file_id else {
+        return Ok(false);
+    };
+    if untracked_file_id == tracked_file_id {
+        return Ok(false);
+    }
+    let updated = sqlx::query(
+        "UPDATE instance_content_entries
+         SET file_id = ?, modified_at = ?
+         WHERE instance_id = ? AND file_id = ?",
+    )
+    .bind(untracked_file_id)
+    .bind(Utc::now().timestamp())
+    .bind(instance_id)
+    .bind(tracked_file_id)
+    .execute(&mut **tx)
+    .await?;
+    if updated.rows_affected() == 0 {
+        return Ok(false);
+    }
+
+    sqlx::query(
+        "DELETE FROM instance_files
+         WHERE instance_id = ? AND id = ?",
+    )
+    .bind(instance_id)
+    .bind(tracked_file_id)
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(true)
+}
+
 pub(crate) async fn remove_instance_file_by_relative_path(
     instance_id: &str,
     relative_path: &str,

@@ -58,6 +58,7 @@ const messages = defineMessages({
 	group: { id: 'app.instances.group.group', defaultMessage: 'Group' },
 	loader: { id: 'app.instances.group.loader', defaultMessage: 'Loader' },
 	none: { id: 'app.instances.group.none', defaultMessage: 'None' },
+	ungrouped: { id: 'app.instances.group.ungrouped', defaultMessage: 'No group' },
 })
 
 const optionMessages = {
@@ -198,6 +199,8 @@ const state = useStorage(
 	{ mergeDefaults: true },
 )
 
+const UNGROUPED_GROUP_KEY = '__ungrouped__'
+const grouping = computed(() => state.value.group)
 const search = ref('')
 const collapsedSectionKeys = computed(() => new Set(state.value.collapsedGroups ?? []))
 
@@ -278,11 +281,9 @@ const filteredResults = computed(() => {
 		})
 	} else if (group === 'Group') {
 		instances.forEach((instance) => {
-			if (instance.groups.length === 0) {
-				instance.groups.push('None')
-			}
+			const categories = instance.groups.length > 0 ? instance.groups : [UNGROUPED_GROUP_KEY]
 
-			for (const category of instance.groups) {
+			for (const category of categories) {
 				if (!instanceMap.has(category)) {
 					instanceMap.set(category, [])
 				}
@@ -298,11 +299,11 @@ const filteredResults = computed(() => {
 	// ie: Category A should come before B, even if the first instance in B comes before the first instance in A
 	if (sortBy === 'Name') {
 		const sortedEntries = [...instanceMap.entries()].sort((a, b) => {
-			// None should always be first
-			if (a[0] === 'None' && b[0] !== 'None') {
+			// Ungrouped should always be first
+			if (a[0] === UNGROUPED_GROUP_KEY && b[0] !== UNGROUPED_GROUP_KEY) {
 				return -1
 			}
-			if (a[0] !== 'None' && b[0] === 'None') {
+			if (a[0] !== UNGROUPED_GROUP_KEY && b[0] === UNGROUPED_GROUP_KEY) {
 				return 1
 			}
 			return a[0].localeCompare(b[0])
@@ -370,14 +371,18 @@ const filteredResults = computed(() => {
 			value,
 		}))"
 		:key="instanceSection.key"
-		:divider="instanceSection.key !== 'None'"
+		:divider="grouping === 'Group' || instanceSection.key !== UNGROUPED_GROUP_KEY"
 		:open-by-default="!isSectionCollapsed(instanceSection.key)"
 		class="row"
 		@on-open="setSectionCollapsed(instanceSection.key, false)"
 		@on-close="setSectionCollapsed(instanceSection.key, true)"
 	>
-		<template v-if="instanceSection.key !== 'None'" #title>
-			<span class="text-base">{{ instanceSection.key }}</span>
+		<template v-if="grouping === 'Group' || instanceSection.key !== UNGROUPED_GROUP_KEY" #title>
+			<span class="text-base">{{
+				instanceSection.key === UNGROUPED_GROUP_KEY
+					? formatMessage(messages.ungrouped)
+					: instanceSection.key
+			}}</span>
 		</template>
 		<section class="instances">
 			<div

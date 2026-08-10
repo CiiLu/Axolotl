@@ -78,7 +78,7 @@ function updateCount(slot: RecipeSlot, count: number) {
 				<RecipeSlotCell
 					v-for="slot in gridSlots"
 					:key="slot"
-					:slot="slot"
+					:recipe-slot="slot"
 					:value="values[slot]"
 					:display="slotDisplay(slot)"
 					:atlas="atlas"
@@ -91,7 +91,7 @@ function updateCount(slot: RecipeSlot, count: number) {
 			</div>
 			<div v-if="slots.includes('crafting.result')" class="recipe-result-column">
 				<RecipeSlotCell
-					slot="crafting.result"
+					:recipe-slot="'crafting.result'"
 					:value="values['crafting.result']"
 					:display="slotDisplay('crafting.result')"
 					:atlas="atlas"
@@ -108,7 +108,7 @@ function updateCount(slot: RecipeSlot, count: number) {
 			<RecipeSlotCell
 				v-for="slot in slots"
 				:key="slot"
-				:slot="slot"
+				:recipe-slot="slot"
 				:value="values[slot]"
 				:display="slotDisplay(slot)"
 				:atlas="atlas"

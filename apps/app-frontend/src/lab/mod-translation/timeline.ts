@@ -1,7 +1,4 @@
-import type {
-	ModTranslationTaskEvent,
-	ModTranslationTimelineEntry,
-} from './types.ts'
+import type { ModTranslationTaskEvent, ModTranslationTimelineEntry } from './types.ts'
 
 export function mapTaskEventsToTimeline(
 	events: ModTranslationTaskEvent[],
