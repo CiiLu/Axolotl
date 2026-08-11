@@ -5,7 +5,7 @@
 			<TagItem
 				v-for="tag in allTags"
 				:key="tag"
-				:action="props.project.actualProjectType ? () => handleClickTag(tag) : undefined"
+				:action="props.tagAction ? () => props.tagAction?.(tag) : undefined"
 			>
 				<FormattedTag :tag="tag" />
 			</TagItem>
@@ -14,33 +14,17 @@
 </template>
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 import { defineMessages, useVIntl } from '../../composables'
 import FormattedTag from '../base/FormattedTag.vue'
 import TagItem from '../base/TagItem.vue'
 
-const router = useRouter()
-
-const handleClickTag = (tag: string) => {
-	if (!props.project.actualProjectType) return
-
-	const projectType =
-		props.project.actualProjectType === 'minecraft_java_server'
-			? 'server'
-			: props.project.actualProjectType
-
-	const params = projectType === 'server' ? `sc=${tag}` : `f=categories:${tag}`
-
-	router.push(`/discover/${projectType}?${params}`)
-}
-
 const props = defineProps<{
 	project: {
 		categories: string[]
 		additional_categories: string[]
-		actualProjectType?: string
 	}
+	tagAction?: (tag: string) => void
 }>()
 
 const { formatMessage } = useVIntl()

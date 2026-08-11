@@ -1,5 +1,26 @@
 import type { LocationQuery, LocationQueryRaw } from 'vue-router'
 
+export type ProjectBrowseFilter = 'category' | 'loader'
+
+export function createProjectBrowseLocation(
+	projectType: string,
+	filter: ProjectBrowseFilter,
+	value: string,
+): { path: string; query: LocationQueryRaw } {
+	const browseProjectType = projectType === 'minecraft_java_server' ? 'server' : projectType
+	const query =
+		filter === 'loader'
+			? { g: `categories:${value}` }
+			: browseProjectType === 'server'
+				? { sc: value }
+				: { f: `categories:${value}` }
+
+	return {
+		path: `/browse/${browseProjectType}`,
+		query,
+	}
+}
+
 const MODRINTH_HOSTNAMES = new Set(['modrinth.com', 'www.modrinth.com'])
 
 const SUPPORTED_PROJECT_TYPES = new Set([

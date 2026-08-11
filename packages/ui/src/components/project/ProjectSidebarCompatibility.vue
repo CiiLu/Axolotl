@@ -28,7 +28,7 @@
 					<TagItem
 						v-for="platform in project.loaders"
 						:key="`platform-tag-${platform}`"
-						:action="() => router.push(`/${project.project_type}s?g=categories:${platform}`)"
+						:action="props.platformAction ? () => props.platformAction?.(platform) : undefined"
 						:style="`--_color: var(--color-platform-${platform})`"
 					>
 						<component :is="getLoaderIcon(platform)" v-if="getLoaderIcon(platform)" />
@@ -107,15 +107,11 @@ import { FormattedTag, projectCompatibilityMessages, TagItem } from '@modrinth/u
 import type { GameVersionTag, PlatformTag } from '@modrinth/utils'
 import { getVersionsToDisplay } from '@modrinth/utils'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 import { useVIntl } from '../../composables/i18n'
 import EnvironmentTags from './EnvironmentTags.vue'
 
 const { formatMessage } = useVIntl()
-// TODO: anything in this component that uses the router will not work in the app. and this component is used in the app.
-// fix is to replace any router stuff with click handlers and pass in the handlers as props from the parent component
-const router = useRouter()
 
 type EnvironmentValue = 'optional' | 'required' | 'unsupported' | 'unknown'
 
@@ -123,7 +119,6 @@ const TYPES_WITH_ENVS = ['mod', 'modpack'] as const
 
 const props = defineProps<{
 	project: {
-		actualProjectType: string
 		project_type: string
 		loaders: string[]
 		client_side: EnvironmentValue
@@ -135,6 +130,7 @@ const props = defineProps<{
 		gameVersions: GameVersionTag[]
 		loaders: PlatformTag[]
 	}
+	platformAction?: (platform: string) => void
 	projectV3?: Labrinth.Projects.v3.Project
 }>()
 

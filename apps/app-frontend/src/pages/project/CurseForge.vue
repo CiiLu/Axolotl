@@ -8,6 +8,7 @@
 			<ProjectSidebarCompatibility
 				:project="data"
 				:tags="{ loaders: allLoaders, gameVersions: allGameVersions }"
+				:platform-action="(platform) => browseByProjectFilter('loader', platform)"
 				class="project-sidebar-section"
 			/>
 			<ProjectSidebarLinks
@@ -16,7 +17,11 @@
 				:mcmod-url="mcmodUrl"
 				class="project-sidebar-section"
 			/>
-			<ProjectSidebarTags :project="data" class="project-sidebar-section" />
+			<ProjectSidebarTags
+				:project="data"
+				:tag-action="(tag) => browseByProjectFilter('category', tag)"
+				class="project-sidebar-section"
+			/>
 			<ProjectSidebarCreators
 				:members="members"
 				:org-link="() => data.links.website_url"
@@ -209,6 +214,7 @@ import {
 	getCurseForgeImageUrl,
 	getCurseForgeProject,
 } from '@/helpers/curseforge'
+import { createProjectBrowseLocation, type ProjectBrowseFilter } from '@/helpers/project-links'
 import { get_game_versions, get_loaders } from '@/helpers/tags'
 import {
 	getTranslationErrorKind,
@@ -399,7 +405,6 @@ const data = computed(() => {
 		description: value.summary,
 		body: description.value,
 		project_type: projectType.value,
-		actualProjectType: projectType.value,
 		downloads: value.downloadCount,
 		followers: 0,
 		icon_url: getCurseForgeImageUrl(value.logo?.thumbnailUrl),
@@ -436,6 +441,11 @@ const data = computed(() => {
 		})),
 	}
 })
+
+function browseByProjectFilter(filter: ProjectBrowseFilter, value: string) {
+	if (!data.value?.project_type) return
+	void router.push(createProjectBrowseLocation(data.value.project_type, filter, value))
+}
 
 const members = computed(() =>
 	(project.value?.authors ?? []).map((author, index) => ({

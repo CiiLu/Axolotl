@@ -6,6 +6,7 @@
 				:project="data"
 				:tags="{ loaders: allLoaders, gameVersions: allGameVersions }"
 				:project-v3="projectV3"
+				:platform-action="(platform) => browseByProjectFilter('loader', platform)"
 				class="project-sidebar-section"
 			/>
 			<ProjectSidebarServerInfo
@@ -27,7 +28,11 @@
 				:mcmod-url="mcmodUrl"
 				class="project-sidebar-section"
 			/>
-			<ProjectSidebarTags :project="data" class="project-sidebar-section" />
+			<ProjectSidebarTags
+				:project="data"
+				:tag-action="(tag) => browseByProjectFilter('category', tag)"
+				class="project-sidebar-section"
+			/>
 			<ProjectSidebarCreators
 				:organization="organization"
 				:members="members"
@@ -406,6 +411,7 @@ import {
 import { isBuiltInInstanceIcon } from '@/helpers/instance-icon-frame'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
 import { get_by_instance_id } from '@/helpers/process'
+import { createProjectBrowseLocation } from '@/helpers/project-links'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import {
 	getTranslationErrorKind,
@@ -503,6 +509,12 @@ const categories = shallowRef([])
 const organization = shallowRef(null)
 const instance = ref(null)
 const instanceProjects = ref(null)
+
+function browseByProjectFilter(filter, value) {
+	const projectType = isServerProject.value ? 'server' : data.value?.project_type
+	if (!projectType) return
+	void router.push(createProjectBrowseLocation(projectType, filter, value))
+}
 
 const installed = ref(false)
 const installedVersion = ref(null)

@@ -57,6 +57,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the issue of the launcher triggering page transitions when switching tabs within a page.',
 					'zh-CN': '修复在页面内切换标签分类时，启动器会错误触发页面切换动画的问题。',
 				},
+				{
+					'en-US':
+						'Fixed project platform and tag links not returning to Discover Content with the matching filter applied.',
+					'zh-CN': '修复项目详情页的平台与标签链接无法返回发现内容页并应用对应筛选的问题。',
+				},
 			],
 		},
 	},
