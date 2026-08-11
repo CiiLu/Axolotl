@@ -66,13 +66,6 @@ export default defineNuxtConfig({
 		},
 	},
 	nitro: {
-		// 显式锁定静态 preset：Netlify 构建环境存在 NETLIFY 变量时 Nitro 会
-		// 自动切换 netlify preset 并生成 `_redirects: /* /404.html 404` 通配
-		// 规则，该文件规则优先于 netlify.toml，会把 /api/* 转发全部吞成 404。
-		preset: 'static',
-		// preset: 'static' 会把产物输出到 .output/public，这里显式指回 dist，
-		// 保持与 Netlify UI 中配置的 Publish directory (apps/website/dist) 一致。
-		output: { publicDir: '../dist' },
 		prerender: {
 			crawlLinks: false,
 			routes: ['/', '/changelog', '/terms', '/privacy'],

@@ -1,0 +1,2 @@
+/api/releases/latest  /.netlify/functions/releases-latest  200
+/api/releases/catalog  /.netlify/functions/releases-catalog  200
