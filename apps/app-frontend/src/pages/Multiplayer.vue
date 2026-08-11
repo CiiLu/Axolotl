@@ -27,7 +27,11 @@ import {
 import { computed, ref } from 'vue'
 
 import { useTerracottaSession } from '@/composables/useTerracottaSession'
-import type { TerracottaPlayer, TerracottaStatus } from '@/helpers/terracotta'
+import {
+	isValidTerracottaRoomCode,
+	type TerracottaPlayer,
+	type TerracottaStatus,
+} from '@/helpers/terracotta'
 
 const { formatMessage } = useVIntl()
 const messages = defineMessages({
@@ -58,6 +62,10 @@ const messages = defineMessages({
 	roomCodePlaceholder: {
 		id: 'app.multiplayer.room-code-placeholder',
 		defaultMessage: 'e.g. U/ABCD-EFGH-IJKL-MNOP',
+	},
+	roomCodeInvalid: {
+		id: 'app.multiplayer.room-code-invalid',
+		defaultMessage: 'Enter a room code in the format U/XXXX-XXXX-XXXX-XXXX.',
 	},
 	startHosting: {
 		id: 'app.multiplayer.start-hosting',
@@ -179,6 +187,10 @@ const messages = defineMessages({
 		id: 'app.multiplayer.retry',
 		defaultMessage: 'Retry',
 	},
+	exportErrorReport: {
+		id: 'app.multiplayer.export-error-report',
+		defaultMessage: 'Export error report',
+	},
 	checkNetwork: {
 		id: 'app.multiplayer.check-network',
 		defaultMessage: 'Check your network connection',
@@ -246,10 +258,13 @@ const messages = defineMessages({
 })
 
 const tabIndex = ref(0)
+const roomCodeTouched = ref(false)
 const {
 	download: downloadTerracotta,
+	exportReport,
 	host: hostGame,
 	isActionPending,
+	isExportingReport,
 	join: joinGame,
 	platformKey,
 	playerName,
@@ -273,6 +288,10 @@ const canSubmitSession = computed(
 	() =>
 		playerName.value.trim().length > 0 &&
 		(tabIndex.value === 0 || roomCodeInput.value.trim().length > 0),
+)
+const isRoomCodeValid = computed(() => isValidTerracottaRoomCode(roomCodeInput.value))
+const showRoomCodeError = computed(
+	() => tabIndex.value === 1 && roomCodeTouched.value && !isRoomCodeValid.value,
 )
 const guestServerAddress = computed(() =>
 	state.value?.server_port ? `127.0.0.1:${state.value.server_port}` : '',
@@ -350,6 +369,12 @@ const isRecoverable = computed(() => {
 	if (!et) return state.value?.status === 'error'
 	return et !== 'os'
 })
+
+function submitJoin() {
+	roomCodeTouched.value = true
+	if (!isRoomCodeValid.value) return
+	void joinGame()
+}
 </script>
 
 <template>
@@ -483,9 +508,22 @@ const isRecoverable = computed(() => {
 							v-model="roomCodeInput"
 							:icon="UsersIcon"
 							:placeholder="formatMessage(messages.roomCodePlaceholder)"
+							:error="showRoomCodeError"
+							:input-attrs="{
+								'aria-invalid': showRoomCodeError,
+								'aria-describedby': showRoomCodeError ? 'multiplayer-room-code-error' : undefined,
+							}"
 							autocomplete="off"
 							:spellcheck="false"
+							@focusout="roomCodeTouched = true"
 						/>
+						<span
+							v-if="showRoomCodeError"
+							id="multiplayer-room-code-error"
+							class="text-xs text-red"
+						>
+							{{ formatMessage(messages.roomCodeInvalid) }}
+						</span>
 					</label>
 				</div>
 
@@ -504,7 +542,7 @@ const isRecoverable = computed(() => {
 							v-else
 							type="button"
 							:disabled="!canSubmitSession || isActionPending"
-							@click="joinGame"
+							@click="submitJoin"
 						>
 							<LogInIcon />
 							{{ formatMessage(messages.joinRoom) }}
@@ -657,13 +695,30 @@ const isRecoverable = computed(() => {
 		<Card v-else-if="state.status === 'error' || state.status === 'fatal'" class="!m-0">
 			<Admonition type="critical" :header="errorTypeLabel">
 				{{ state.error_message || formatMessage(messages.checkNetwork) }}
-				<template v-if="isRecoverable" #actions>
-					<ButtonStyled color="red" type="outlined">
-						<button type="button" :disabled="isActionPending" @click="resetState">
-							<RefreshCwIcon />
-							{{ formatMessage(messages.retry) }}
-						</button>
-					</ButtonStyled>
+				<template #actions>
+					<div class="flex flex-wrap gap-2">
+						<ButtonStyled v-if="isRecoverable" color="red" type="outlined">
+							<button
+								type="button"
+								:disabled="isActionPending || isExportingReport"
+								@click="resetState"
+							>
+								<RefreshCwIcon />
+								{{ formatMessage(messages.retry) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled color="brand">
+							<button
+								type="button"
+								:disabled="isActionPending || isExportingReport"
+								@click="exportReport"
+							>
+								<SpinnerIcon v-if="isExportingReport" class="animate-spin" />
+								<DownloadIcon v-else />
+								{{ formatMessage(messages.exportErrorReport) }}
+							</button>
+						</ButtonStyled>
+					</div>
 				</template>
 			</Admonition>
 		</Card>

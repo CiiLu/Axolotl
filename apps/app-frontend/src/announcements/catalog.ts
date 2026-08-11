@@ -46,6 +46,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Added a settings for enabling/disabling page transitions.',
 					'zh-CN': '新增启动器设置项，可开启/关闭页面切换动画。',
 				},
+				{
+					'en-US':
+						'Added detailed Multiplayer diagnostics and exportable error reports for troubleshooting connection failures.',
+					'zh-CN': '联机页面新增详细诊断日志与错误报告导出，便于排查连接失败。',
+				},
 			],
 			fixed: [
 				{
@@ -61,6 +66,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed project platform and tag links not returning to Discover Content with the matching filter applied.',
 					'zh-CN': '修复项目详情页的平台与标签链接无法返回发现内容页并应用对应筛选的问题。',
+				},
+				{
+					'en-US':
+						'Fixed invalid Multiplayer room codes showing raw internal errors instead of a localized format hint.',
+					'zh-CN': '修复联机房间码格式错误时显示内部原始报错的问题，现改为本地化格式提示。',
 				},
 			],
 		},

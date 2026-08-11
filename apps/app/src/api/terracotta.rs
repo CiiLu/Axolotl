@@ -14,6 +14,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             terracotta_get_platform_key,
             terracotta_download,
             terracotta_get_player_name,
+            terracotta_get_diagnostic_report,
         ])
         .build()
 }
@@ -38,7 +39,10 @@ pub struct TerracottaMetaResponse {
 pub async fn terracotta_get_meta() -> Result<TerracottaMetaResponse> {
     let meta = theseus::terracotta::get_meta()
         .await
-        .map_err(theseus::Error::from)?;
+        .map_err(|error| {
+            tracing::error!(target: "theseus::terracotta", action = "get_meta", error = %error);
+            theseus::Error::from(error)
+        })?;
     Ok(TerracottaMetaResponse {
         version: meta.version,
         compile_timestamp: meta.compile_timestamp,
@@ -59,7 +63,10 @@ pub async fn terracotta_start(
         auto_download.unwrap_or(true),
     )
     .await
-    .map_err(theseus::Error::from)?;
+    .map_err(|error| {
+        tracing::error!(target: "theseus::terracotta", action = "start", error = %error);
+        theseus::Error::from(error)
+    })?;
     Ok(())
 }
 
@@ -67,7 +74,10 @@ pub async fn terracotta_start(
 pub async fn terracotta_stop() -> Result<()> {
     theseus::terracotta::stop_terracotta()
         .await
-        .map_err(theseus::Error::from)?;
+        .map_err(|error| {
+            tracing::error!(target: "theseus::terracotta", action = "stop", error = %error);
+            theseus::Error::from(error)
+        })?;
     Ok(())
 }
 
@@ -78,7 +88,10 @@ pub async fn terracotta_host(
 ) -> Result<()> {
     theseus::terracotta::start_hosting(room_code, player_name)
         .await
-        .map_err(theseus::Error::from)?;
+        .map_err(|error| {
+            tracing::error!(target: "theseus::terracotta", action = "host", error = %error);
+            theseus::Error::from(error)
+        })?;
     Ok(())
 }
 
@@ -89,7 +102,10 @@ pub async fn terracotta_join(
 ) -> Result<()> {
     theseus::terracotta::start_joining(room_code, player_name)
         .await
-        .map_err(theseus::Error::from)?;
+        .map_err(|error| {
+            tracing::error!(target: "theseus::terracotta", action = "join", error = %error);
+            theseus::Error::from(error)
+        })?;
     Ok(())
 }
 
@@ -97,7 +113,10 @@ pub async fn terracotta_join(
 pub async fn terracotta_reset() -> Result<()> {
     theseus::terracotta::reset_state()
         .await
-        .map_err(theseus::Error::from)?;
+        .map_err(|error| {
+            tracing::error!(target: "theseus::terracotta", action = "reset", error = %error);
+            theseus::Error::from(error)
+        })?;
     Ok(())
 }
 
@@ -110,7 +129,10 @@ pub async fn terracotta_get_platform_key() -> Result<String> {
 pub async fn terracotta_download(version: Option<String>) -> Result<()> {
     theseus::terracotta::download_terracotta(version)
         .await
-        .map_err(theseus::Error::from)?;
+        .map_err(|error| {
+            tracing::error!(target: "theseus::terracotta", action = "download", error = %error);
+            theseus::Error::from(error)
+        })?;
     Ok(())
 }
 
@@ -118,4 +140,14 @@ pub async fn terracotta_download(version: Option<String>) -> Result<()> {
 pub async fn terracotta_get_player_name() -> Result<String> {
     let name = theseus::terracotta::get_player_name().await;
     Ok(name)
+}
+
+#[tauri::command]
+pub async fn terracotta_get_diagnostic_report() -> Result<String> {
+    Ok(theseus::terracotta::get_diagnostic_report()
+        .await
+        .map_err(|error| {
+            tracing::error!(target: "theseus::terracotta", action = "diagnostic_report", error = %error);
+            theseus::Error::from(error)
+        })?)
 }

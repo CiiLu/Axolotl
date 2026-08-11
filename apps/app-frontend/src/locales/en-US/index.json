@@ -4181,6 +4181,9 @@
 	"app.multiplayer.error.unknown": {
 		"message": "Unknown error"
 	},
+	"app.multiplayer.export-error-report": {
+		"message": "Export error report"
+	},
 	"app.multiplayer.extracting": {
 		"message": "Extracting..."
 	},
@@ -4243,6 +4246,9 @@
 	},
 	"app.multiplayer.room-code": {
 		"message": "Room code"
+	},
+	"app.multiplayer.room-code-invalid": {
+		"message": "Enter a room code in the format U/XXXX-XXXX-XXXX-XXXX."
 	},
 	"app.multiplayer.room-code-placeholder": {
 		"message": "e.g. U/ABCD-EFGH-IJKL-MNOP"

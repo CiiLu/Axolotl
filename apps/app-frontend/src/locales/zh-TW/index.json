@@ -4568,8 +4568,14 @@
 	"app.multiplayer.retry": {
 		"message": "重試"
 	},
+	"app.multiplayer.export-error-report": {
+		"message": "匯出錯誤報告"
+	},
 	"app.multiplayer.room-code": {
 		"message": "房間碼"
+	},
+	"app.multiplayer.room-code-invalid": {
+		"message": "請輸入 U/XXXX-XXXX-XXXX-XXXX 格式的房間碼。"
 	},
 	"app.multiplayer.room-code-placeholder": {
 		"message": "例如 U/ABCD-EFGH-IJKL-MNOP"

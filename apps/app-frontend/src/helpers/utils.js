@@ -56,10 +56,13 @@ export async function showLauncherLogsFolder() {
 	return await invoke('plugin:utils|show_launcher_logs_folder', {})
 }
 
-export async function exportErrorLogs(errorMessage) {
+export async function exportErrorLogs(
+	errorMessage,
+	fileNamePrefix = 'Axolotl Launcher error logs',
+) {
 	const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 	const outputPath = await save({
-		defaultPath: `Axolotl Launcher error logs ${timestamp}.zip`,
+		defaultPath: `${fileNamePrefix} ${timestamp}.zip`,
 		filters: [
 			{
 				name: 'ZIP archive',

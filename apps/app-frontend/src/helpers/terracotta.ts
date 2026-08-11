@@ -45,12 +45,19 @@ export interface TerracottaState {
 	profile_index: number | null
 }
 
+const TERRACOTTA_ROOM_CODE_PATTERN = /^U\/[A-Z0-9]{4}(?:-[A-Z0-9]{4}){3}$/i
+
 const command = (name: string) => `plugin:terracotta|${name}`
+
+export function isValidTerracottaRoomCode(roomCode: string): boolean {
+	return TERRACOTTA_ROOM_CODE_PATTERN.test(roomCode.trim())
+}
 
 export const terracotta = {
 	getState: () => invoke<TerracottaState>(command('terracotta_get_state')),
 	getPlatformKey: () => invoke<string>(command('terracotta_get_platform_key')),
 	getPlayerName: () => invoke<string>(command('terracotta_get_player_name')),
+	getDiagnosticReport: () => invoke<string>(command('terracotta_get_diagnostic_report')),
 	start: () => invoke<void>(command('terracotta_start'), { autoDownload: true }),
 	host: (playerName: string) =>
 		invoke<void>(command('terracotta_host'), { playerName: playerName.trim() }),

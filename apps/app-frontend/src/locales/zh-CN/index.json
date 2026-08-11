@@ -5639,6 +5639,9 @@
 	"app.multiplayer.room-code": {
 		"message": "房间码"
 	},
+	"app.multiplayer.room-code-invalid": {
+		"message": "请输入 U/XXXX-XXXX-XXXX-XXXX 格式的房间码。"
+	},
 	"app.multiplayer.room-code-placeholder": {
 		"message": "例如 U/ABCD-EFGH-IJKL-MNOP"
 	},
@@ -5752,6 +5755,9 @@
 	},
 	"app.multiplayer.retry": {
 		"message": "重试"
+	},
+	"app.multiplayer.export-error-report": {
+		"message": "导出错误报告"
 	},
 	"app.multiplayer.verifying": {
 		"message": "验证中..."

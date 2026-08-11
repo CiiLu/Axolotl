@@ -536,6 +536,7 @@ fn main() {
                         "terracotta_get_platform_key",
                         "terracotta_download",
                         "terracotta_get_player_name",
+                        "terracotta_get_diagnostic_report",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
