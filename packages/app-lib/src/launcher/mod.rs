@@ -1208,14 +1208,34 @@ pub async fn launch_minecraft(
             .await?;
     }
 
-    let java_version =
-        get_java_version_from_launch_context(context, &version_info)
-            .await?
-            .ok_or_else(|| {
-                crate::ErrorKind::LauncherError(
-                    "Missing correct java installation".to_string(),
-                )
-            })?;
+    let java_version = if let Some(java) =
+        context.launch_overrides.java_path.as_ref()
+    {
+        crate::api::jre::check_jre(std::path::PathBuf::from(java)).await?
+    } else {
+        let key = version_info
+            .java_version
+            .as_ref()
+            .map_or(8, |it| it.major_version);
+
+        if let Some(java) = crate::api::jre::find_java_for_version(key).await? {
+            java
+        } else if let Some(java) =
+            crate::api::jre::find_compatible_java_for_version(key).await?
+        {
+            tracing::info!(
+                version = java.version,
+                java = java.path,
+                "Using a compatible Java runtime instead of the recommended version"
+            );
+            java
+        } else {
+            return Err(crate::ErrorKind::LauncherError(
+                "Missing correct java installation".to_string(),
+            )
+            .into());
+        }
+    };
 
     // Test jre version
     let java_version =

@@ -49,12 +49,10 @@
 		<span class="installation-buttons">
 			<ButtonStyled v-if="props.version">
 				<button
-					v-tooltip="
-						testingJavaSuccess === true ? formatMessage(messages.alreadyInstalled) : undefined
-					"
+					v-tooltip="recommendedInstalled ? formatMessage(messages.alreadyInstalled) : undefined"
 					class="!shadow-none"
 					:aria-label="formatMessage(messages.installRecommended)"
-					:disabled="props.disabled || installingJava || testingJavaSuccess === true"
+					:disabled="props.disabled || installingJava || recommendedInstalled"
 					@click="reinstallJava"
 				>
 					<DownloadIcon />
@@ -110,7 +108,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import JavaDetectionModal from '@/components/ui/JavaDetectionModal.vue'
 import useJavaTest from '@/composables/useJavaTest'
@@ -185,13 +183,23 @@ const {
 	testJavaInstallationDebounced,
 	testJavaInstallation,
 } = useJavaTest()
+const recommendedJavaTest = useJavaTest()
 
 const installingJava = ref(false)
 const hoveringTest = ref(false)
+const testVersion = computed(() => (props.selectAllVersions ? null : props.version))
+const recommendedInstalled = computed(() => {
+	if (props.version == null) return false
+	if (props.selectAllVersions) return recommendedJavaTest.javaTestResult.value === true
+	return testingJavaSuccess.value === true
+})
 let hasInitialized = false
 
 async function runTest(path) {
-	await testJavaInstallation(path, props.version, true)
+	await testJavaInstallation(path, testVersion.value, true)
+	if (props.version != null) {
+		await recommendedJavaTest.testJavaInstallation(path, props.version, false)
+	}
 }
 
 function commitSelection(javaVersion) {
@@ -204,10 +212,16 @@ watch(
 	(newPath) => {
 		if (newPath) {
 			if (!hasInitialized) {
-				testJavaInstallation(newPath, props.version, false)
+				testJavaInstallation(newPath, testVersion.value, false)
+				if (props.version != null) {
+					recommendedJavaTest.testJavaInstallation(newPath, props.version, false)
+				}
 				hasInitialized = true
 			} else {
-				testJavaInstallationDebounced(newPath, props.version)
+				testJavaInstallationDebounced(newPath, testVersion.value)
+				if (props.version != null) {
+					recommendedJavaTest.testJavaInstallationDebounced(newPath, props.version)
+				}
 			}
 		}
 	},

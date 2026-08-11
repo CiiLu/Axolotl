@@ -57,6 +57,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added detailed Multiplayer diagnostics and exportable error reports for troubleshooting connection failures.',
 					'zh-CN': '联机页面新增详细诊断日志与错误报告导出, 便于排查连接失败。',
 				},
+				{
+					'en-US':
+						'Added a setting for configuring the Mojang authentication service mirror for all possible locations.',
+					'zh-CN': '为所有可能的地方配置了Mojang service换源设置。',
+				},
 			],
 			fixed: [
 				{
@@ -66,6 +71,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Fixed the issue of the loading bar not extending to full screen.',
 					'zh-CN': '修复了加载条未能延伸至全屏的问题。',
+				},
+				{
+					'en-US':
+						'Fixed launch being incorrectly blocked when the custom Java did not match the recommended version; the user-selected Java is now used, with fallback to a compatible runtime when the recommended one is missing.',
+					'zh-CN':
+						'修复自定义 Java 与推荐版本不一致时误阻止启动的问题，现优先使用用户指定 Java，缺失推荐版本时回退至兼容版本。',
 				},
 				{
 					'en-US':

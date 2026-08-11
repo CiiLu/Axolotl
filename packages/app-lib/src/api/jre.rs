@@ -450,6 +450,33 @@ pub async fn find_java_for_version(
         .find(|java| java.parsed_version == major_version))
 }
 
+/// Resolves an installed Java that can run `major_version` without
+/// downloading. Prefers an exact match, then falls back to the closest newer
+/// runtime so a user-installed Java can still be used when the metadata's
+/// recommended major version is not present.
+pub async fn find_compatible_java_for_version(
+    major_version: u32,
+) -> crate::Result<Option<JavaVersion>> {
+    if let Some(java) = find_java_for_version(major_version).await? {
+        return Ok(Some(java));
+    }
+
+    let state = State::get().await?;
+    let mut jres = get_available_jres(false, false, false).await?;
+    jres.extend(JavaVersion::get_all(&state.pool).await?);
+    Ok(closest_compatible_java(jres.iter(), major_version))
+}
+
+fn closest_compatible_java<'a>(
+    jres: impl IntoIterator<Item = &'a JavaVersion>,
+    major_version: u32,
+) -> Option<JavaVersion> {
+    jres.into_iter()
+        .filter(|java| java.parsed_version >= major_version)
+        .min_by_key(|java| (java.parsed_version, java.path.as_str()))
+        .cloned()
+}
+
 pub async fn auto_install_java(
     java_version: u32,
 ) -> crate::Result<Option<PathBuf>> {
@@ -2088,9 +2115,32 @@ fn count_mods(instance_path: &std::path::Path) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::automatic_memory_max_mb;
+    use super::*;
 
     const GIB: u64 = 1024 * 1024 * 1024;
+
+    #[test]
+    fn closest_compatible_prefers_exact_then_newest_small_enough() {
+        let java = |parsed_version: u32, path: &str| JavaVersion {
+            parsed_version,
+            version: parsed_version.to_string(),
+            architecture: "x86_64".to_string(),
+            path: path.to_string(),
+            distribution: None,
+        };
+        let jres =
+            [java(8, "/java8"), java(21, "/java21"), java(25, "/java25")];
+
+        assert_eq!(
+            closest_compatible_java(jres.iter(), 17),
+            Some(java(21, "/java21"))
+        );
+        assert_eq!(
+            closest_compatible_java(jres.iter(), 8),
+            Some(java(8, "/java8"))
+        );
+        assert_eq!(closest_compatible_java(jres.iter(), 26), None);
+    }
 
     #[test]
     fn automatic_memory_matches_vanilla_stages() {
