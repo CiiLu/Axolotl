@@ -1760,6 +1760,11 @@
 		],
 		"githubcopilot": [
 			{
+				"id": "auto",
+				"name": "Auto",
+				"enabled": true
+			},
+			{
 				"id": "gpt-5.4",
 				"name": "GPT-5.4",
 				"enabled": true

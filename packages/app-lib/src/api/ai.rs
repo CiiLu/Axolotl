@@ -1918,6 +1918,35 @@ fn github_copilot_uses_responses(model: &str) -> bool {
         .is_some_and(|minor| minor >= 2)
 }
 
+#[derive(Debug, Deserialize)]
+struct CopilotAutoSelection {
+    session_token: String,
+    selected_model: CopilotAutoModel,
+}
+
+#[derive(Debug, Deserialize)]
+struct CopilotAutoModel {
+    id: String,
+}
+
+fn copilot_headers(
+    builder: reqwest::RequestBuilder,
+    session_token: Option<&str>,
+) -> reqwest::RequestBuilder {
+    let builder = builder
+        .header("Copilot-Integration-Id", "vscode-chat")
+        .header("Editor-Version", "vscode/1.126.0")
+        .header("Editor-Plugin-Version", "copilot-chat/0.54.0")
+        .header("User-Agent", "GitHubCopilotChat/0.54.0")
+        .header("OpenAI-Intent", "conversation-panel")
+        .header("X-GitHub-Api-Version", "2026-06-01")
+        .header("X-Initiator", "user");
+    match session_token {
+        Some(token) => builder.header("Copilot-Session-Token", token),
+        None => builder,
+    }
+}
+
 async fn fresh_oauth_credentials(
     provider_id: &str,
 ) -> crate::Result<OAuthCredentials> {
@@ -2057,11 +2086,45 @@ async fn complete_openai(
             definition.name
         )));
     }
+    let copilot_auto = if definition.id == "githubcopilot"
+        && request.model_id.eq_ignore_ascii_case("auto")
+    {
+        let value = checked_json(
+            copilot_headers(
+                text_client(request)
+                    .post(endpoint_with_path(&config.endpoint, "/auto"))
+                    .bearer_auth(token.clone()),
+                None,
+            )
+            .json(&json!({ "prompt": request.user_prompt }))
+            .send()
+            .await
+            .map_err(|error| ai_network_error(definition.name, error))?,
+            definition.name,
+        )
+        .await?;
+        Some(serde_json::from_value::<CopilotAutoSelection>(value).map_err(
+            |error| {
+                crate::Error::from(ErrorKind::OtherError(format!(
+                    "AI_PROVIDER_FAILED: GitHub Copilot /auto returned an invalid selection: {error}"
+                )))
+            },
+        )?)
+    } else {
+        None
+    };
+    let model_id = copilot_auto
+        .as_ref()
+        .map(|selection| selection.selected_model.id.as_str())
+        .unwrap_or(request.model_id.as_str());
+    let copilot_session_token = copilot_auto
+        .as_ref()
+        .map(|selection| selection.session_token.as_str());
     if definition.id == "githubcopilot"
-        && request.model_id.to_ascii_lowercase().contains("claude")
+        && model_id.to_ascii_lowercase().contains("claude")
     {
         let mut body = json!({
-            "model": request.model_id,
+            "model": model_id,
             "max_tokens": 4096,
             "temperature": 0,
             "system": request.system_prompt,
@@ -2075,17 +2138,17 @@ async fn complete_openai(
             );
         }
         let value = checked_json(
-            text_client(request)
-                .post(endpoint_with_path(&config.endpoint, "/v1/messages"))
-                .bearer_auth(token)
-                .header("Copilot-Integration-Id", "vscode-chat")
-                .header("Editor-Plugin-Version", "AxolotlLauncher/1.7.0")
-                .header("Editor-Version", "AxolotlLauncher/1.7.0")
-                .header("anthropic-version", "2023-06-01")
-                .json(&body)
-                .send()
-                .await
-                .map_err(|error| ai_network_error(definition.name, error))?,
+            copilot_headers(
+                text_client(request)
+                    .post(endpoint_with_path(&config.endpoint, "/v1/messages"))
+                    .bearer_auth(token),
+                copilot_session_token,
+            )
+            .header("anthropic-version", "2023-06-01")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|error| ai_network_error(definition.name, error))?,
             definition.name,
         )
         .await?;
@@ -2177,10 +2240,10 @@ async fn complete_openai(
         .await;
     }
     if definition.id == "githubcopilot"
-        && github_copilot_uses_responses(&request.model_id)
+        && github_copilot_uses_responses(model_id)
     {
         let mut body = json!({
-            "model": request.model_id,
+            "model": model_id,
             "input": [
                 { "role": "developer", "content": request.system_prompt },
                 { "role": "user", "content": request.user_prompt }
@@ -2189,17 +2252,17 @@ async fn complete_openai(
             "stream": true
         });
         apply_responses_translation_options(&mut body, request);
-        let response = text_client(request)
-            .post(endpoint_with_path(&config.endpoint, "/responses"))
-            .bearer_auth(token)
-            .header("Accept", "text/event-stream")
-            .header("Copilot-Integration-Id", "vscode-chat")
-            .header("Editor-Plugin-Version", "LobeChat/1.0")
-            .header("Editor-Version", "LobeChat/1.0")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| ai_network_error(definition.name, error))?;
+        let response = copilot_headers(
+            text_client(request)
+                .post(endpoint_with_path(&config.endpoint, "/responses"))
+                .bearer_auth(token),
+            copilot_session_token,
+        )
+        .header("Accept", "text/event-stream")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|error| ai_network_error(definition.name, error))?;
         return checked_openai_response_stream(response, definition.name).await;
     }
     let endpoint = match config.protocol {
@@ -2209,7 +2272,7 @@ async fn complete_openai(
                 .get("deployment")
                 .map(String::as_str)
                 .filter(|value| !value.is_empty())
-                .unwrap_or(&request.model_id);
+                .unwrap_or(model_id);
             let version = config
                 .settings
                 .get("api_version")
@@ -2225,7 +2288,7 @@ async fn complete_openai(
         _ => endpoint_with_path(&config.endpoint, "/chat/completions"),
     };
     let mut body = json!({
-        "model": request.model_id,
+        "model": model_id,
         "temperature": 0,
         "messages": [
             { "role": "system", "content": request.system_prompt },
@@ -2247,10 +2310,7 @@ async fn complete_openai(
         };
     }
     if definition.id == "githubcopilot" {
-        builder = builder
-            .header("Copilot-Integration-Id", "vscode-chat")
-            .header("Editor-Plugin-Version", "AxolotlLauncher/1.7.0")
-            .header("Editor-Version", "AxolotlLauncher/1.7.0");
+        builder = copilot_headers(builder, copilot_session_token);
     }
     let value = checked_json(
         builder
