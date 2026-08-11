@@ -2991,7 +2991,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			</Admonition>
 			<div class="page-transition-grid">
 				<RouterView v-slot="{ Component, route }">
-					<Transition name="page-slide">
+					<Transition
+						name="page-slide"
+						:css="themeStore.getFeatureFlag('page_transitions')"
+					>
 						<div
 							v-if="Component"
 							:key="route.fullPath"

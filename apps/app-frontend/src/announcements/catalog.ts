@@ -33,6 +33,29 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.4',
+		version: '1.7.4',
+		publishedAt: '2026-08-11',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.4',
+			'zh-CN': 'Axolotl Launcher 1.7.4',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added a settings for enabling/disabling page transitions.',
+					'zh-CN': '新增启动器设置项，可开启/关闭页面切换动画。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed the laggy transition animation.',
+					'zh-CN': '优化了页面切换动画的卡顿问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.3',
 		version: '1.7.3',
 		publishedAt: '2026-08-10',

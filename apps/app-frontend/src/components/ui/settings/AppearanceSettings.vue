@@ -45,6 +45,7 @@ const { handleError } = injectNotificationManager()
 const skipNonEssentialWarningsFlag: FeatureFlag = 'skip_non_essential_warnings'
 const skipUnknownPackWarningFlag: FeatureFlag = 'skip_unknown_pack_warning'
 const showPlayTimeFlag: FeatureFlag = 'show_instance_play_time'
+const pageTransitionsFlag: FeatureFlag = 'page_transitions'
 
 const messages = defineMessages({
 	colorThemeTitle: {
@@ -186,6 +187,14 @@ const messages = defineMessages({
 		id: 'app.appearance-settings.advanced-rendering.description',
 		defaultMessage:
 			'Enables advanced rendering such as blur effects that may cause performance issues without hardware-accelerated rendering.',
+	},
+	pageTransitionsTitle: {
+		id: 'app.appearance-settings.page-transitions.title',
+		defaultMessage: 'Page transition animations',
+	},
+	pageTransitionsDescription: {
+		id: 'app.appearance-settings.page-transitions.description',
+		defaultMessage: 'Animate content when switching between launcher pages.',
 	},
 	hideNametagTitle: {
 		id: 'app.appearance-settings.hide-nametag.title',
@@ -774,6 +783,27 @@ watch(
 				(e) => {
 					themeStore.advancedRendering = !!e
 					settings.advanced_rendering = themeStore.advancedRendering
+				}
+			"
+		/>
+	</div>
+
+	<div class="mt-6 flex items-center justify-between gap-4">
+		<div>
+			<h2 class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.pageTransitionsTitle) }}
+			</h2>
+			<p class="m-0 mt-1">{{ formatMessage(messages.pageTransitionsDescription) }}</p>
+		</div>
+
+		<Toggle
+			id="page-transitions"
+			:model-value="themeStore.getFeatureFlag(pageTransitionsFlag)"
+			@update:model-value="
+				(value) => {
+					const enabled = !!value
+					themeStore.featureFlags[pageTransitionsFlag] = enabled
+					settings.feature_flags[pageTransitionsFlag] = enabled
 				}
 			"
 		/>

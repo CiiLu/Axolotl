@@ -248,6 +248,12 @@
 	"app.appearance-settings.native-decorations.title": {
 		"message": "原生窗口"
 	},
+	"app.appearance-settings.page-transitions.description": {
+		"message": "在启动器页面之间切换时播放内容动画。"
+	},
+	"app.appearance-settings.page-transitions.title": {
+		"message": "页面切换动画"
+	},
 	"app.appearance-settings.select-option": {
 		"message": "选择一个选项"
 	},
