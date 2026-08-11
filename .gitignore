@@ -89,3 +89,6 @@ plugins-workspace/*
 
 # Mimosa security scan artifacts
 .mimosa/
+
+# Local Netlify folder
+.netlify
