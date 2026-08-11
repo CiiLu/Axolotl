@@ -59,6 +59,7 @@ const AGGREGATE_FAILURE_PATH_CHAR_LIMIT: usize = 160;
 const ITEM_FAILURE_REASON_CHAR_LIMIT: usize = 1_024;
 
 pub(crate) enum MrpackInstallOutcome {
+    #[allow(dead_code)]
     Completed(String),
     WaitingForUser(InstallPauseReason),
 }
