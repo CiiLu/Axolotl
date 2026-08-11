@@ -52,6 +52,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed the laggy transition animation.',
 					'zh-CN': '优化了页面切换动画的卡顿问题。',
 				},
+				{
+					'en-US':
+						'When viewing description and versions of the modpacks, the launcher will falsely trigger page transition.',
+					'zh-CN': '修复在查看整合包的描述和版本时，启动器会错误触发页面切换动画的问题。',
+				},
 			],
 		},
 	},

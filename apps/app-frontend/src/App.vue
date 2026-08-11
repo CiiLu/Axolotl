@@ -182,6 +182,14 @@ const onSkinsPage = computed(() => route.path === '/skins')
 const onSchematicWorkshopPage = computed(() => route.path === '/lab/schematic-preview')
 const isSchematicFile = (path: string) => /\.(litematic|schematic|schem)$/i.test(path)
 const APP_LEFT_NAV_WIDTH = '4rem'
+
+function getPageTransitionKey(route: RouteLocationNormalizedLoaded) {
+	const transitionGroup = route.meta.pageTransitionGroup
+	if (typeof transitionGroup !== 'string') return route.fullPath
+
+	const routeId = route.params.id
+	return `${transitionGroup}:${Array.isArray(routeId) ? routeId.join('/') : (routeId ?? '')}`
+}
 const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
 const sidebarToggled = ref(true)
@@ -2997,7 +3005,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 					>
 						<div
 							v-if="Component"
-							:key="route.fullPath"
+							:key="getPageTransitionKey(route)"
 							class="page-transition-layer"
 						>
 							<Suspense @pending="onSuspensePending" @resolve="onSuspenseResolve">
