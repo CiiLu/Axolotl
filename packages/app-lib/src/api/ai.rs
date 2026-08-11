@@ -2245,7 +2245,7 @@ async fn complete_openai(
         let mut body = json!({
             "model": model_id,
             "input": [
-                { "role": "developer", "content": request.system_prompt },
+                { "role": "system", "content": request.system_prompt },
                 { "role": "user", "content": request.user_prompt }
             ],
             "store": false,
