@@ -878,27 +878,6 @@
 	"app.export-modal.version-number-placeholder": {
 		"message": "1.0.0"
 	},
-	"app.fundraiser.days-left": {
-		"message": "剩餘 {count} 天"
-	},
-	"app.fundraiser.dismiss": {
-		"message": "關閉驕傲月募捐活動"
-	},
-	"app.fundraiser.open": {
-		"message": "開啟驕傲月募捐活動"
-	},
-	"app.fundraiser.progress": {
-		"message": "已募 {current}，目標 {target}"
-	},
-	"app.fundraiser.raised": {
-		"message": "已募得 {current}，目標 {target}"
-	},
-	"app.fundraiser.supporters": {
-		"message": "{count} 位支持者"
-	},
-	"app.fundraiser.title": {
-		"message": "2026 驕傲月募捐活動"
-	},
 	"app.home.breadcrumb": {
 		"message": "首頁"
 	},
@@ -2002,12 +1981,6 @@
 	},
 	"app.skins.section.modrinth": {
 		"message": "Modrinth"
-	},
-	"app.skins.section.modrinth-pride": {
-		"message": "Modrinth 驕傲"
-	},
-	"app.skins.section.modrinth-pride.tooltip": {
-		"message": "這些外觀是你在驕傲月期間捐款給 Modrinth 驕傲月籌款活動所獲得的。"
 	},
 	"app.skins.section.mounts-of-mayhem": {
 		"message": "群騎紛爭"

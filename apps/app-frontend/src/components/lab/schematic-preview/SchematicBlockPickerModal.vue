@@ -224,7 +224,7 @@ defineExpose({ show })
 }
 
 .block-picker-option:hover {
-	border-color: var(--surface-6);
+	border-color: var(--surface-5);
 	background: var(--color-button-bg);
 }
 

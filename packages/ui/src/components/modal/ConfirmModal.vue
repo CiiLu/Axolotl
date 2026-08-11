@@ -1,5 +1,11 @@
 <template>
-	<NewModal ref="modal" :noblur="noblur" :danger="danger" :on-hide="onHide" max-width="550px">
+	<NewModal
+		ref="modal"
+		:noblur="noblur"
+		:fade="danger ? 'danger' : 'standard'"
+		:on-hide="onHide"
+		max-width="550px"
+	>
 		<template #title>
 			<slot name="title">
 				<span class="font-extrabold text-contrast text-lg">{{ title }}</span>

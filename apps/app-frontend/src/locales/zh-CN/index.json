@@ -947,27 +947,6 @@
 	"app.export-modal.version-number-placeholder": {
 		"message": "1.0.0"
 	},
-	"app.fundraiser.days-left": {
-		"message": "剩余 {count} 天"
-	},
-	"app.fundraiser.dismiss": {
-		"message": "关闭骄傲月募捐活动"
-	},
-	"app.fundraiser.open": {
-		"message": "打开骄傲月募捐活动"
-	},
-	"app.fundraiser.progress": {
-		"message": "已筹 {current}，目标 {target}"
-	},
-	"app.fundraiser.raised": {
-		"message": "已筹集 {current}，目标 {target}"
-	},
-	"app.fundraiser.supporters": {
-		"message": "{count} 位支持者"
-	},
-	"app.fundraiser.title": {
-		"message": "2026 骄傲月募捐活动"
-	},
 	"app.home.breadcrumb": {
 		"message": "主页"
 	},
@@ -2647,12 +2626,6 @@
 	},
 	"app.skins.section.modrinth": {
 		"message": "Modrinth"
-	},
-	"app.skins.section.modrinth-pride": {
-		"message": "Modrinth 精选"
-	},
-	"app.skins.section.modrinth-pride.tooltip": {
-		"message": "你在骄傲月期间为 Modrinth 的骄傲月筹款活动捐款，因此获得了这些皮肤。"
 	},
 	"app.skins.section.mounts-of-mayhem": {
 		"message": "群骑纷争"

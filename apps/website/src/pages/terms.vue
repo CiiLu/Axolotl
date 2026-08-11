@@ -1,14 +1,25 @@
 <script setup lang="ts">
+import { useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
+
 import LegalDocument from '~/components/ui/LegalDocument.vue'
 
-const title = '服务条款 - Axolotl Launcher'
-const description = '使用 Axolotl Launcher 官方网站及桌面应用前，请阅读本服务条款。'
+const { locale } = useVIntl()
+const isChinese = computed(() => locale.value === 'zh-CN')
+
+const seoTitle = computed(() =>
+	isChinese.value ? '服务条款 - Axolotl Launcher' : 'Terms of Service - Axolotl Launcher',
+)
+const seoDescription = computed(() =>
+	isChinese.value
+		? '使用 Axolotl Launcher 官方网站及桌面应用前，请阅读本服务条款。'
+		: 'Read these terms of service before using the Axolotl Launcher website and desktop application.',
+)
 
 useSeoMeta({
-	title,
-	description,
-	ogTitle: title,
-	ogDescription: description,
+	title: () => seoTitle.value,
+	description: () => seoDescription.value,
+	ogTitle: () => seoTitle.value,
+	ogDescription: () => seoDescription.value,
 	ogType: 'website',
 	ogUrl: 'https://axlmc.org/terms',
 	robots: 'index, follow',
@@ -21,6 +32,8 @@ useHead({
 
 <template>
 	<LegalDocument
+		v-if="isChinese"
+		:key="`zh-${locale}`"
 		eyebrow="服务条款"
 		title="服务条款"
 		description="本条款说明 Axolotl Launcher 各部分适用的开源许可证、官方服务规则及第三方权利边界。"
@@ -145,6 +158,166 @@ useHead({
 				>GitHub Issues</a
 			>
 			联系项目维护者，或加入官方 QQ 群 955605306。本页面不是法律意见。
+		</p>
+	</LegalDocument>
+	<LegalDocument
+		v-else
+		:key="`en-${locale}`"
+		eyebrow="Terms of Service"
+		title="Terms of Service"
+		description="These terms explain the open-source licenses that apply to each part of Axolotl Launcher, the rules for official services, and the boundaries of third-party rights."
+		updated-at="August 2, 2026"
+	>
+		<h2>1. Scope and Effect of This Document</h2>
+		<p>
+			These terms apply to the official Axolotl Launcher website, the officially published desktop
+			application, and related services operated by the project maintainers. Copying, modification,
+			distribution, and network deployment of the software are governed by the licenses and copying
+			notices in the corresponding files of the repository; this page is a plain-language
+			explanation and does not replace, modify, or restrict the original licenses.
+		</p>
+		<p>
+			Under GPL-3.0 and AGPL-3.0, merely receiving or running an unmodified copy of the software
+			does not require you to accept the license. The relevant conditions of the license apply only
+			when you copy, modify, propagate, or distribute the software, or when you provide a modified
+			version governed by the AGPL to users over a network.
+		</p>
+
+		<h2>2. Licenses Used in This Repository</h2>
+		<p>
+			This repository has no single license covering all files. Different parts use different
+			licenses:
+		</p>
+		<ul>
+			<li>
+				The official website source code is licensed under the
+				<a
+					href="https://github.com/Mystic-Stars/Axolotl/blob/main/apps/website/LICENSE"
+					target="_blank"
+					rel="noopener"
+					>GNU Affero General Public License Version 3 only (AGPL-3.0-only)</a
+				>;
+			</li>
+			<li>
+				The desktop application packages are licensed under the
+				<a
+					href="https://github.com/Mystic-Stars/Axolotl/blob/main/apps/app-frontend/LICENSE"
+					target="_blank"
+					rel="noopener"
+					>GNU General Public License Version 3 only (GPL-3.0-only)</a
+				>;
+			</li>
+			<li>
+				Other packages retain their upstream licenses; check the <code>LICENSE</code>,
+				<code>COPYING.md</code>, and source-code notices in the corresponding directories;
+			</li>
+			<li>
+				Third-party code, data, icons, images, trademarks, and other assets may use separate
+				licenses and do not automatically become GPL or AGPL by being included in this repository.
+			</li>
+		</ul>
+
+		<h2>3. Your Rights Under the Open-Source Licenses</h2>
+		<p>
+			Subject to the applicable license, you may run, study, copy, modify, and redistribute code
+			protected by GPL-3.0-only or AGPL-3.0-only, including for a fee. These terms do not add
+			restrictions to the rights already granted by those licenses.
+		</p>
+		<p>
+			When copying or distributing, you usually need to retain copyright, license, and no-warranty
+			notices; when distributing modified versions, you must clearly mark the modifications and
+			their dates and provide recipients with the full license rights and corresponding source code
+			under the applicable license. When distributing object code, provide the corresponding
+			machine-readable source code as required by the license. You may not impose additional
+			restrictions on recipients' exercise of their license rights.
+		</p>
+		<p>
+			If you modify the AGPL-3.0-only website code and let users interact with the modified version
+			over a network, you must offer those users prominent access to the corresponding source code
+			of that version free of charge, as required by Section 13 of the AGPL. The license text takes
+			precedence over this summary.
+		</p>
+
+		<h2>4. Branding, Trademarks, and Restricted Assets</h2>
+		<p>
+			Open-source licenses do not automatically grant trademark rights. Axolotl Launcher is an
+			independent, unofficial project with no affiliation, endorsement, or sponsorship from Mojang,
+			Microsoft, Rinth, Inc., Modrinth, CurseForge, or MinecraftSearch. The related names and
+			trademarks belong to their respective owners.
+		</p>
+		<p>
+			Modrinth trademarks, logos, covers, and other restricted brand assets are not part of the
+			Axolotl Launcher brand. Modrinth brand elements listed in the repository's copying notices
+			must not be used without the explicit written permission of Rinth, Inc. External logos must
+			follow each owner's brand guidelines. Before using or redistributing other third-party images,
+			icons, data, and assets, check the corresponding notices.
+		</p>
+
+		<h2>5. Specific Attributions and Third-Party Licenses</h2>
+		<p>
+			The desktop launcher's Chinese content search includes an unmodified
+			<code>WikiEntries.txt</code> snapshot from Plain Craft Launcher, distributed under the PCL
+			Limited Distribution License and containing Chinese project-name information contributed by MC
+			Wiki. The seed-map feature also includes MIT-licensed cubiomes and images owned by
+			MinecraftSearch, Mojang, or the respective asset creators. These are not covered by the
+			GPL-3.0-only license of Axolotl's desktop code; the exact scope is defined by the repository's
+			copying notices.
+		</p>
+
+		<h2>6. Use of the Official Website and Services</h2>
+		<p>
+			When using the official website, download sources, feedback channels, or other infrastructure
+			operated by the project maintainers, you must comply with applicable law and the rules of the
+			corresponding third-party platforms, and must not attack, interfere with, or abuse the
+			infrastructure, commit fraud, or infringe the rights of others. These service rules only
+			govern the use of official services and do not limit the rights granted to you under GPL or
+			AGPL.
+		</p>
+		<p>
+			The launcher connects to Microsoft, Minecraft, Modrinth, CurseForge, GitHub, CNB, custom
+			Yggdrasil services, and download addresses provided by content authors based on your actions.
+			Third-party services, game content, and files are subject to their own terms, privacy
+			policies, licenses, availability, and regional restrictions; the project maintainers do not
+			warrant third parties.
+		</p>
+
+		<h2>7. No Warranty</h2>
+		<p>
+			Under Section 15 of GPL-3.0 and AGPL-3.0, to the extent permitted by applicable law, the
+			software is provided "as is" without any express or implied warranty, including implied
+			warranties of merchantability and fitness for a particular purpose. You assume the risk of the
+			software's quality and performance; if the software proves defective, you assume the cost of
+			all necessary servicing, repair, or correction, unless otherwise agreed in writing.
+		</p>
+
+		<h2>8. Limitation of Liability</h2>
+		<p>
+			Under Section 16 of GPL-3.0 and AGPL-3.0, except as required by applicable law or agreed in
+			writing, copyright holders and other parties who modify or distribute the software under the
+			license are not liable for general, special, incidental, or consequential damages arising from
+			the use or inability to use the software, including data loss, inaccurate data, third-party
+			losses, or the software failing to interoperate with other programs. If local law does not
+			allow the complete exclusion of liability, it is handled under Section 17 of the license and
+			local law.
+		</p>
+
+		<h2>9. Updates to These Terms and Licenses</h2>
+		<p>
+			These terms may be updated as official services, third-party platforms, or legal requirements
+			change. Updates do not retroactively revoke rights already granted under the applicable
+			open-source licenses, and do not automatically upgrade code marked "Version 3 only" to later
+			license versions. Any license change must be made lawfully by the appropriate rights holder
+			and reflected in the repository files.
+		</p>
+
+		<h2>10. Contact and Full Texts</h2>
+		<p>
+			If you have questions about license scope, first check the <code>COPYING.md</code>,
+			<code>LICENSE</code>, and source-code notices in the repository root and the corresponding
+			packages. For further confirmation, contact the project maintainers via
+			<a href="https://github.com/Mystic-Stars/Axolotl/issues" target="_blank" rel="noopener"
+				>GitHub Issues</a
+			>, or join the official QQ group 955605306. This page is not legal advice.
 		</p>
 	</LegalDocument>
 </template>

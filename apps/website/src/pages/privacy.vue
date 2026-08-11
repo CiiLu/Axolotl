@@ -1,14 +1,25 @@
 <script setup lang="ts">
+import { useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
+
 import LegalDocument from '~/components/ui/LegalDocument.vue'
 
-const title = '隐私政策 - Axolotl Launcher'
-const description = '了解 Axolotl Launcher 官方网站和桌面应用如何处理数据。'
+const { locale } = useVIntl()
+const isChinese = computed(() => locale.value === 'zh-CN')
+
+const seoTitle = computed(() =>
+	isChinese.value ? '隐私政策 - Axolotl Launcher' : 'Privacy Policy - Axolotl Launcher',
+)
+const seoDescription = computed(() =>
+	isChinese.value
+		? '了解 Axolotl Launcher 官方网站和桌面应用如何处理数据。'
+		: 'Learn how the Axolotl Launcher official website and desktop application handle data.',
+)
 
 useSeoMeta({
-	title,
-	description,
-	ogTitle: title,
-	ogDescription: description,
+	title: () => seoTitle.value,
+	description: () => seoDescription.value,
+	ogTitle: () => seoTitle.value,
+	ogDescription: () => seoDescription.value,
 	ogType: 'website',
 	ogUrl: 'https://axlmc.org/privacy',
 	robots: 'index, follow',
@@ -21,7 +32,9 @@ useHead({
 
 <template>
 	<LegalDocument
-		eyebrow="Privacy Policy"
+		v-if="isChinese"
+		:key="`zh-${locale}`"
+		eyebrow="隐私政策"
 		title="隐私政策"
 		description="本政策说明 Axolotl Launcher 官方网站和桌面应用处理数据的方式，以及第三方服务可能接收的信息。"
 		updated-at="2026 年 8 月 2 日"
@@ -107,6 +120,131 @@ useHead({
 			>
 			联系项目维护者。请勿在公开 Issue 中提交账户令牌、密码、完整日志或其他敏感信息。也可加入官方 QQ
 			群 955605306 咨询一般问题。
+		</p>
+	</LegalDocument>
+	<LegalDocument
+		v-else
+		:key="`en-${locale}`"
+		eyebrow="Privacy Policy"
+		title="Privacy Policy"
+		description="This policy explains how the Axolotl Launcher official website and desktop application handle data, and what information third-party services may receive."
+		updated-at="August 2, 2026"
+	>
+		<h2>1. Scope</h2>
+		<p>
+			This policy applies to the www.axlmc.org official website and the Axolotl Launcher desktop
+			application. Third-party websites, APIs, authentication services, servers, and content
+			download addresses accessed through the launcher are governed by their own privacy policies.
+		</p>
+
+		<h2>2. Data Processed by the Official Website</h2>
+		<p>
+			The website does not require an account. To remember your display and download preferences,
+			your browser stores locally:
+		</p>
+		<ul>
+			<li>A language preference cookie (<code>locale</code>);</li>
+			<li>Theme, advanced rendering, reduced motion, and external-link behavior;</li>
+			<li>Your download-source selection (automatic, CNB, or GitHub).</li>
+		</ul>
+		<p>
+			These preferences are mainly stored in cookies or browser localStorage and can be cleared
+			through your browser settings. The website uses no advertising cookies and integrates no
+			project-owned user behavior analytics service.
+		</p>
+		<p>
+			Website hosting and network infrastructure providers may process routine request information
+			such as IP addresses, access times, request paths, User-Agent strings, and error logs to
+			ensure availability, security, and troubleshooting. Such processing is subject to the
+			corresponding providers' policies.
+		</p>
+
+		<h2>3. Data Processed by the Desktop Application</h2>
+		<p>
+			The launcher processes and stores the data needed to run locally on your device, including:
+		</p>
+		<ul>
+			<li>Application settings, interface preferences, and download configuration;</li>
+			<li>Metadata for Minecraft instances, game versions, mods, and other content;</li>
+			<li>
+				Account profiles, login sessions, offline account information, and custom authentication
+				service addresses;
+			</li>
+			<li>Game logs, crash information, caches, download records, and update status.</li>
+		</ul>
+		<p>
+			This data is used for signing in, launching the game, managing content, diagnosing faults, and
+			providing features you actively use. The project currently does not upload telemetry events to
+			any analytics service operated by the maintainers. Developer debug logs may contain local
+			paths, instance, or account-related information; review and remove sensitive content before
+			sharing them publicly.
+		</p>
+
+		<h2>4. Sharing and Transfers with Third Parties</h2>
+		<p>
+			When you use features such as sign-in, search, download, update, skins, or multiplayer, the
+			launcher connects directly to third-party services based on your actions. Requests may include
+			the account tokens, user identifiers, project or file identifiers, IP addresses, device, and
+			network request information needed to complete the operation. Services that may be involved
+			include:
+		</p>
+		<ul>
+			<li>Microsoft and Minecraft sign-in, profile, and game services;</li>
+			<li>Third-party Yggdrasil authentication services you choose;</li>
+			<li>APIs and download addresses provided by Modrinth, CurseForge, and content authors;</li>
+			<li>
+				GitHub, CNB, and other services used for version checks, updates, or file distribution;
+			</li>
+			<li>Minecraft servers or other external links you connect to.</li>
+		</ul>
+		<p>
+			The project maintainers do not sell your personal information. How third parties store and use
+			request data is determined by their respective privacy policies.
+		</p>
+
+		<h2>5. Data Retention and Deletion</h2>
+		<p>
+			Website preferences are stored in your browser; launcher data is mainly stored on your device.
+			You can clear browser site data or remove accounts, instances, and caches inside the launcher.
+			Uninstalling the application does not necessarily delete all data directories automatically;
+			after confirming your backup needs, manually clean up any leftover files.
+		</p>
+		<p>
+			Data stored by third-party services must be managed through the corresponding service's
+			account settings or privacy channels. The project maintainers cannot access, export, or delete
+			data held by third parties on your behalf.
+		</p>
+
+		<h2>6. Data Security</h2>
+		<p>
+			We reduce risk through open-source review, system permissions, and security updates, but
+			cannot guarantee absolute security. Download software from official channels, update
+			regularly, protect your system accounts, and do not publicly share login tokens, full logs, or
+			screenshots containing personal information.
+		</p>
+
+		<h2>7. Minors</h2>
+		<p>
+			Minors should use this project under the guidance of a guardian and comply with the age
+			requirements of their region as well as the rules of Minecraft, Microsoft, and other related
+			services. Do not submit unnecessary personal information through public feedback channels.
+		</p>
+
+		<h2>8. Changes to This Policy</h2>
+		<p>
+			This policy may be updated as features, third-party services, or legal requirements change.
+			New versions will be published on this page with a last-updated date. Significant changes will
+			be announced through the official website, the GitHub repository, or release notes when
+			possible.
+		</p>
+
+		<h2>9. Contact</h2>
+		<p>
+			For privacy questions or security concerns, contact the project maintainers via
+			<a href="https://github.com/Mystic-Stars/Axolotl/issues" target="_blank" rel="noopener"
+				>GitHub Issues</a
+			>. Do not submit account tokens, passwords, full logs, or other sensitive information in
+			public issues. You may also join the official QQ group 955605306 for general questions.
 		</p>
 	</LegalDocument>
 </template>

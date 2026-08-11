@@ -12,8 +12,6 @@ import {
 	commonMessages,
 	ConfirmModal,
 	defineMessages,
-	injectAuth,
-	injectModrinthClient,
 	injectNotificationManager,
 	NavTabs,
 	useVIntl,
@@ -51,7 +49,6 @@ import {
 	save_custom_skin,
 	set_custom_skin_order,
 } from '@/helpers/skins.ts'
-import { hasPride26Badge } from '@/helpers/user-campaigns.ts'
 import { handleSevereError } from '@/store/error'
 import { useTheming } from '@/store/state'
 
@@ -66,20 +63,11 @@ type VirtualSkinSectionListExpose = {
 }
 
 const PENDING_SKIN_REFRESH_DELAY_MS = 11_000
-const DEFAULT_SKIN_SECTION_SORT_ORDER = ['Default skins', 'Modrinth Pride']
+const DEFAULT_SKIN_SECTION_SORT_ORDER = ['Default skins']
 const messages = defineMessages({
 	skinSelectorTitle: {
 		id: 'app.skins.title',
 		defaultMessage: 'Skin selector',
-	},
-	modrinthPrideSection: {
-		id: 'app.skins.section.modrinth-pride',
-		defaultMessage: 'Modrinth Pride',
-	},
-	modrinthPrideTooltip: {
-		id: 'app.skins.section.modrinth-pride.tooltip',
-		defaultMessage:
-			'You received these skins for donating to a Modrinth Pride fundraiser during Pride Month.',
 	},
 	modrinthSection: {
 		id: 'app.skins.section.modrinth',
@@ -222,8 +210,6 @@ const skinSectionList = useTemplateRef<VirtualSkinSectionListExpose>('skinSectio
 const { formatMessage } = useVIntl()
 const notifications = injectNotificationManager()
 const { addNotification, handleError } = notifications
-const auth = injectAuth()
-const client = injectModrinthClient()
 
 const themeStore = useTheming()
 const skins = ref<Skin[]>([])
@@ -266,20 +252,7 @@ const authServerQuery = useQuery({
 	retry: false,
 	refetchOnWindowFocus: false,
 })
-const { data: modrinthUser } = useQuery({
-	queryKey: computed(() => ['authenticated-user', 'campaigns', auth.user.value?.id]),
-	queryFn: () => client.labrinth.users_v3.getAuthenticated(),
-	enabled: () => !!auth.session_token.value,
-	retry: false,
-})
-const hasModrinthPrideCampaign = computed(
-	() => !!auth.session_token.value && hasPride26Badge(modrinthUser.value?.campaigns?.pride_26),
-)
-const defaultSkins = computed(() =>
-	filterDefaultSkins(skins.value).filter(
-		(skin) => skin.section !== 'Modrinth Pride' || hasModrinthPrideCampaign.value,
-	),
-)
+const defaultSkins = computed(() => filterDefaultSkins(skins.value))
 const defaultSkinSections = computed(() => {
 	const sections = new Map<string, Skin[]>()
 
@@ -297,7 +270,6 @@ const defaultSkinSections = computed(() => {
 	return Array.from(sections, ([section, skins]) => ({
 		section,
 		title: getDefaultSkinSectionTitle(section),
-		infoTooltip: getDefaultSkinSectionInfoTooltip(section),
 		skins,
 	})).sort(
 		(a, b) => getDefaultSkinSectionSortIndex(a.section) - getDefaultSkinSectionSortIndex(b.section),
@@ -487,8 +459,6 @@ function isMinecraftSkinRateLimitError(error: unknown) {
 
 function getDefaultSkinSectionTitle(section?: string) {
 	switch (section) {
-		case 'Modrinth Pride':
-			return formatMessage(messages.modrinthPrideSection)
 		case 'Modrinth':
 			return formatMessage(messages.modrinthSection)
 		case 'MINECON Earth 2017':
@@ -513,15 +483,6 @@ function getDefaultSkinSectionTitle(section?: string) {
 			return formatMessage(messages.defaultSkinsSection)
 		default:
 			return section ?? formatMessage(messages.defaultSkinsSection)
-	}
-}
-
-function getDefaultSkinSectionInfoTooltip(section: string) {
-	switch (section) {
-		case 'Modrinth Pride':
-			return formatMessage(messages.modrinthPrideTooltip)
-		default:
-			return undefined
 	}
 }
 

@@ -11,6 +11,13 @@ export default defineNuxtConfig({
 				lang: 'zh-CN',
 			},
 			title: 'Axolotl Launcher - 免费开源的 Minecraft 启动器',
+			// 在 body 渲染前同步应用已保存的主题偏好，避免浅色用户首屏闪深色
+			script: [
+				{
+					key: 'theme-init',
+					innerHTML: `(function(){try{var t=localStorage.getItem('axolotl-theme');var r=t;if(!r||r==='system'){r=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark'}var d=document.documentElement;d.classList.remove('light-mode','dark-mode','oled-mode');d.classList.add(r==='light'?'light-mode':r==='oled'?'oled-mode':'dark-mode');d.style.colorScheme=r==='light'?'light':'dark'}catch(e){}})()`,
+				},
+			],
 			link: [
 				{ rel: 'icon', type: 'image/png', href: '/axolotl.png' },
 				{ rel: 'apple-touch-icon', type: 'image/png', href: '/axolotl.png' },

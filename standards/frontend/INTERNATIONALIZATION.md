@@ -108,7 +108,7 @@ Render with the `<IntlFormatted>` component using named slots:
 </IntlFormatted>
 ```
 
-For simple emphasis (`'Welcome to <strong>Modrinth</strong>!'`):
+For simple emphasis (`'Welcome to <strong>Axolotl</strong>!'`):
 
 ```vue
 <template #strong="{ children }">
