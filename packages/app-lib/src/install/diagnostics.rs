@@ -168,6 +168,9 @@ fn timeline_event_description(event: &InstallJobEvent) -> Option<String> {
         InstallJobEventKind::JobCanceled { phase } => {
             Some(format!("Canceled while {}", phase_label(*phase)))
         }
+        InstallJobEventKind::WaitingForUser { reason } => {
+            Some(format!("Waiting for user: {reason:?}"))
+        }
         InstallJobEventKind::PhaseStarted { phase, details } => Some(format!(
             "Started {}{}",
             phase_label(*phase),
@@ -201,6 +204,11 @@ fn timeline_event_description(event: &InstallJobEvent) -> Option<String> {
             Some(format!("Rollback failed: {message}"))
         }
         InstallJobEventKind::ContentDownloadStarted { .. }
+        | InstallJobEventKind::ContentFileQueued { .. }
+        | InstallJobEventKind::ContentFileBrowserOptions { .. }
+        | InstallJobEventKind::ContentFileVerificationStarted { .. }
+        | InstallJobEventKind::ContentFileWritingStarted { .. }
+        | InstallJobEventKind::ContentFileRecovered { .. }
         | InstallJobEventKind::ContentFileDownloadAttempt { .. }
         | InstallJobEventKind::ContentFileSkipped { .. }
         | InstallJobEventKind::ContentFileFailed { .. }

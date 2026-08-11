@@ -238,6 +238,17 @@ pub async fn add_project_from_path(
     path: &Path,
     project_type: Option<ProjectType>,
 ) -> crate::Result<String> {
+    if let Some(relative_path) =
+        crate::api::curseforge::import_pending_manual_download_from_path(
+            instance_id,
+            path,
+        )
+        .await?
+    {
+        emit_content_changed(instance_id).await?;
+        return Ok(relative_path);
+    }
+
     let state = State::get().await?;
     let result = crate::state::instances::commands::add_project_from_path(
         instance_id,

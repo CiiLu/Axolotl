@@ -10,7 +10,10 @@ use notify_debouncer_mini::{DebounceEventResult, Debouncer, new_debouncer};
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
     time::Duration,
 };
 use tokio::sync::{RwLock, mpsc::channel};
@@ -21,12 +24,17 @@ use super::config_sync::{CONFIG_FILE_NAME, CONFIG_FILE_TEMP_NAME};
 pub struct FileWatcher {
     watcher: RwLock<Debouncer<RecommendedWatcher>>,
     instance_ids: Arc<RwLock<HashMap<String, String>>>,
+    manual_import_directory: Arc<RwLock<Option<PathBuf>>>,
+    manual_import_generation: Arc<AtomicU64>,
 }
 
 pub async fn init_watcher() -> crate::Result<FileWatcher> {
     let (tx, mut rx) = channel(1);
     let instance_ids = Arc::new(RwLock::new(HashMap::new()));
     let event_instance_ids = instance_ids.clone();
+    let manual_import_directory = Arc::new(RwLock::new(None::<PathBuf>));
+    let event_manual_import_directory = manual_import_directory.clone();
+    let manual_import_generation = Arc::new(AtomicU64::new(0));
 
     let file_watcher = new_debouncer(
         Duration::from_secs_f32(1.0),
@@ -44,6 +52,8 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
             match res {
                 Ok(events) => {
                     let instance_ids = event_instance_ids.read().await;
+                    let manual_import_directory =
+                        event_manual_import_directory.read().await.clone();
                     let mut visited_instances = Vec::new();
                     let mut scan_manual_downloads = false;
 
@@ -169,14 +179,21 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
                                     visited_instances.push(instance_id);
                                 }
                             }
-                        } else {
+                        } else if manual_import_directory.as_ref().is_some_and(
+                            |directory| e.path.starts_with(directory),
+                        ) {
                             scan_manual_downloads = true;
                         }
                     }
-                    if scan_manual_downloads {
-                        tokio::spawn(async {
+                    if scan_manual_downloads
+                        && let Some(directory) = manual_import_directory
+                    {
+                        tokio::spawn(async move {
                             if let Err(error) =
-                                crate::api::curseforge::scan_pending_manual_downloads().await
+                                crate::api::curseforge::scan_pending_manual_downloads_in(
+                                    &directory,
+                                )
+                                .await
                             {
                                 tracing::warn!(
                                     "Unable to scan pending manual downloads: {error}"
@@ -193,7 +210,64 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
     Ok(FileWatcher {
         watcher: RwLock::new(file_watcher),
         instance_ids,
+        manual_import_directory,
+        manual_import_generation,
     })
+}
+
+impl FileWatcher {
+    pub(crate) async fn configure_manual_import_directory(
+        &self,
+        directory: Option<PathBuf>,
+    ) -> crate::Result<()> {
+        let current = self.manual_import_directory.read().await.clone();
+        if current == directory {
+            return Ok(());
+        }
+
+        let mut debouncer = self.watcher.write().await;
+        if let Some(directory) = directory.as_ref() {
+            debouncer
+                .watcher()
+                .watch(directory, RecursiveMode::NonRecursive)?;
+        }
+        if let Some(current) = current.as_ref() {
+            let _ = debouncer.watcher().unwatch(current);
+        }
+        *self.manual_import_directory.write().await = directory;
+        let generation = self
+            .manual_import_generation
+            .fetch_add(1, Ordering::Relaxed)
+            + 1;
+        let Some(directory) = self.manual_import_directory.read().await.clone()
+        else {
+            return Ok(());
+        };
+        let active_generation = self.manual_import_generation.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(3));
+            interval.set_missed_tick_behavior(
+                tokio::time::MissedTickBehavior::Skip,
+            );
+            loop {
+                interval.tick().await;
+                if active_generation.load(Ordering::Relaxed) != generation {
+                    break;
+                }
+                if let Err(error) =
+                    crate::api::curseforge::scan_pending_manual_downloads_in(
+                        &directory,
+                    )
+                    .await
+                {
+                    tracing::warn!(
+                        "Unable to poll pending manual downloads: {error}"
+                    );
+                }
+            }
+        });
+        Ok(())
+    }
 }
 
 pub(crate) async fn watch_instances_init(
@@ -209,28 +283,6 @@ pub(crate) async fn watch_instances_init(
         watch_instance_folder(&instance.id, &instance.path, watcher, dirs)
             .await;
     }
-
-    if let Some(download_dir) = dirs::download_dir() {
-        let mut debouncer = watcher.watcher.write().await;
-        if let Err(error) = debouncer
-            .watcher()
-            .watch(&download_dir, RecursiveMode::NonRecursive)
-        {
-            tracing::warn!(
-                "Unable to watch downloads directory {}: {error}",
-                download_dir.display()
-            );
-        }
-    }
-    tokio::spawn(async {
-        if let Err(error) =
-            crate::api::curseforge::scan_pending_manual_downloads().await
-        {
-            tracing::warn!(
-                "Unable to scan pending manual downloads at startup: {error}"
-            );
-        }
-    });
 }
 
 pub(crate) async fn watch_instance_folder(

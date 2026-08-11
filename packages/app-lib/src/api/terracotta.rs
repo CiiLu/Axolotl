@@ -28,6 +28,7 @@ mod binary;
 mod lan;
 
 const MAX_TERRACOTTA_ARCHIVE_SIZE: u64 = 256 * 1024 * 1024;
+const MAX_TERRACOTTA_DIAGNOSTIC_LINES: usize = 2_000;
 const MAX_CONSECUTIVE_POLL_FAILURES: u8 = 3;
 const TERRACOTTA_REQUEST_TIMEOUT: std::time::Duration =
     std::time::Duration::from_secs(10);
@@ -40,6 +41,23 @@ static TERRACOTTA_RUNTIME: LazyLock<Mutex<TerracottaRuntime>> =
 
 static TERRACOTTA_OPERATION: LazyLock<Mutex<()>> =
     LazyLock::new(|| Mutex::new(()));
+
+static TERRACOTTA_DIAGNOSTIC_OUTPUT: LazyLock<
+    std::sync::Mutex<VecDeque<String>>,
+> = LazyLock::new(|| std::sync::Mutex::new(VecDeque::new()));
+
+fn record_terracotta_output(pid: u32, stream: &str, text: &str) {
+    let line = format!(
+        "{} pid={pid} {stream}: {text}",
+        chrono::Local::now().to_rfc3339()
+    );
+    if let Ok(mut output) = TERRACOTTA_DIAGNOSTIC_OUTPUT.lock() {
+        output.push_back(line);
+        while output.len() > MAX_TERRACOTTA_DIAGNOSTIC_LINES {
+            output.pop_front();
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TerracottaState {
@@ -219,7 +237,8 @@ fn capture_terracotta_output<R>(
     tokio::spawn(async move {
         let mut lines = BufReader::new(reader).lines();
         while let Ok(Some(text)) = lines.next_line().await {
-            tracing::debug!(target: "terracotta", pid, stream, "{text}");
+            tracing::info!(pid, stream, "terracotta process: {text}");
+            record_terracotta_output(pid, stream, &text);
             let mut captured = output.lock().await;
             captured.push_back(format!("{stream}: {text}"));
             if captured.len() > 50 {
@@ -328,6 +347,7 @@ async fn get_latest_terracotta_version() -> eyre::Result<String> {
 async fn download_terracotta_inner(
     version: Option<String>,
 ) -> eyre::Result<()> {
+    info!(requested_version = ?version, "starting terracotta download");
     {
         let mut state = TERRACOTTA_STATE.lock().await;
         state.status = TerracottaStatus::Downloading;
@@ -344,6 +364,7 @@ async fn download_terracotta_inner(
     validate_terracotta_version(&version)?;
 
     let platform = terracotta_platform_key();
+    info!(version, platform, "resolved terracotta download");
     if platform == "unsupported" {
         bail!(
             "no terracotta binary available for {}/{}",
@@ -413,6 +434,12 @@ async fn download_terracotta_inner(
                     warn!("download from {url} failed: {error}");
                     continue;
                 }
+
+                info!(
+                    url,
+                    downloaded_bytes = downloaded,
+                    "downloaded terracotta archive"
+                );
 
                 let computed_hash = format!("{:x}", hasher.finalize());
 
@@ -570,6 +597,7 @@ skipping verification"
 async fn run_terracotta_download(version: Option<String>) -> eyre::Result<()> {
     let result = download_terracotta_inner(version).await;
     if let Err(error) = &result {
+        warn!("terracotta download failed: {error:#}");
         let mut state = TERRACOTTA_STATE.lock().await;
         state.status = TerracottaStatus::Error;
         state.download_progress = None;
@@ -668,6 +696,7 @@ async fn poll_terracotta_state(port: u16) {
                 };
 
                 let mut state = TERRACOTTA_STATE.lock().await;
+                let previous_status = state.status;
                 state.http_port = Some(port);
                 state.room_code = api_state.room.clone();
                 state.server_port = server_port;
@@ -678,6 +707,18 @@ async fn poll_terracotta_state(port: u16) {
                         warn!("unknown terracotta state: {}", api_state.state);
                         TerracottaStatus::Error
                     });
+                if state.status != previous_status {
+                    info!(
+                        ?previous_status,
+                        status = ?state.status,
+                        player_count = api_state
+                            .profiles
+                            .as_ref()
+                            .map_or(state.players.len(), Vec::len),
+                        has_room_code = api_state.room.is_some(),
+                        "terracotta state changed"
+                    );
+                }
 
                 if TerracottaStatus::from_api(&api_state.state).is_none() {
                     state.error_type = Some(TerracottaErrorType::Terracotta);
@@ -777,6 +818,12 @@ pub async fn start_terracotta(
     auto_download: bool,
 ) -> eyre::Result<()> {
     let _operation = TERRACOTTA_OPERATION.lock().await;
+    info!(
+        custom_binary = binary_path.is_some(),
+        auto_download,
+        platform = terracotta_platform_key(),
+        "starting terracotta multiplayer service"
+    );
     let custom_bin_path = binary_path.map(PathBuf::from);
     let mut final_path = custom_bin_path.as_deref().map_or_else(
         resolve_installed_terracotta_binary_path,
@@ -800,6 +847,7 @@ pub async fn start_terracotta(
             terracotta_binary_name()
         );
     }
+    info!(binary = %final_path.display(), "using terracotta executable");
 
     let mut runtime = TERRACOTTA_RUNTIME.lock().await;
     if let Some(process) = runtime.process.as_mut() {
@@ -1074,6 +1122,11 @@ pub async fn start_hosting(
 
     let room_param = room_code.as_deref().unwrap_or("");
     let nodes: Vec<String> = Vec::new();
+    info!(
+        port,
+        custom_room_code = room_code.is_some(),
+        "requesting terracotta host session"
+    );
 
     let client = terracotta_client();
     let url = build_room_url(
@@ -1096,6 +1149,7 @@ pub async fn start_hosting(
             status.as_u16()
         );
     }
+    info!(port, "terracotta accepted host session request");
     Ok(())
 }
 
@@ -1116,6 +1170,7 @@ pub async fn start_joining(
     drop(state);
 
     let nodes: Vec<String> = Vec::new();
+    info!(port, "requesting terracotta guest session");
 
     let client = terracotta_client();
     let url = build_room_url(
@@ -1138,6 +1193,7 @@ pub async fn start_joining(
             status.as_u16()
         );
     }
+    info!(port, "terracotta accepted guest session request");
     Ok(())
 }
 
@@ -1146,6 +1202,7 @@ pub async fn reset_state() -> eyre::Result<()> {
     let state = TERRACOTTA_STATE.lock().await;
     let port = state.http_port;
     drop(state);
+    info!(?port, "resetting terracotta multiplayer state");
 
     if let Some(port) = port {
         let client = terracotta_client();
@@ -1173,6 +1230,7 @@ pub async fn reset_state() -> eyre::Result<()> {
     state.profile_index = None;
     drop(state);
     sync_minecraft_lan_announcer(None).await;
+    info!("terracotta multiplayer state reset");
     Ok(())
 }
 
@@ -1216,6 +1274,29 @@ pub async fn get_logs() -> eyre::Result<String> {
         .await
         .wrap_err("failed to read terracotta logs")?;
     Ok(body)
+}
+
+pub async fn get_diagnostic_report() -> eyre::Result<String> {
+    let state = get_state().await;
+    let state = serde_json::to_string_pretty(&state)
+        .wrap_err("failed to serialize terracotta state")?;
+    let output = TERRACOTTA_DIAGNOSTIC_OUTPUT
+        .lock()
+        .map(|output| output.iter().cloned().collect::<Vec<_>>().join("\n"))
+        .unwrap_or_else(|_| "diagnostic output lock was poisoned".to_string());
+    let output = if output.is_empty() {
+        "No Terracotta process output was captured.".to_string()
+    } else {
+        output
+    };
+
+    Ok(format!(
+        "Terracotta multiplayer diagnostics\nPlatform: {}\nBinary: {}\n\nState:\n{}\n\nTerracotta process output:\n{}\n",
+        terracotta_platform_key(),
+        resolve_installed_terracotta_binary_path().display(),
+        state,
+        output
+    ))
 }
 
 #[cfg(all(

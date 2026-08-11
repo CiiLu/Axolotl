@@ -93,6 +93,8 @@ import { AxolotlBrandConfig, config, getOfficialLabrinthBaseUrl } from '@/config
 import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
+import { configureCurseForgeManualDownloadWatcher } from '@/helpers/curseforge'
+import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
 import {
 	type ClassificationResult,
 	classifyDroppedItem,
@@ -180,6 +182,14 @@ const onSkinsPage = computed(() => route.path === '/skins')
 const onSchematicWorkshopPage = computed(() => route.path === '/lab/schematic-preview')
 const isSchematicFile = (path: string) => /\.(litematic|schematic|schem)$/i.test(path)
 const APP_LEFT_NAV_WIDTH = '4rem'
+
+function getPageTransitionKey(route: RouteLocationNormalizedLoaded) {
+	const transitionGroup = route.meta.pageTransitionGroup
+	if (typeof transitionGroup !== 'string') return route.fullPath
+
+	const routeId = route.params.id
+	return `${transitionGroup}:${Array.isArray(routeId) ? routeId.join('/') : (routeId ?? '')}`
+}
 const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
 const sidebarToggled = ref(true)
@@ -975,6 +985,13 @@ provide('previewUpdateAnnouncement', (version = null) => {
 const stateFailed = ref(false)
 stateInitialization
 	.then(() => {
+		const scannerSettings = getMissingContentScannerSettings()
+		void configureCurseForgeManualDownloadWatcher(
+			scannerSettings.enabled,
+			scannerSettings.directory,
+		).catch((error) => {
+			console.warn('Failed to configure manual-download watcher', error)
+		})
 		setupApp().catch((err) => {
 			stateFailed.value = true
 			console.error(err)
@@ -2980,13 +2997,24 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			>
 				{{ formatMessage(messages.authUnreachableBody) }}
 			</Admonition>
-			<RouterView v-slot="{ Component }">
-				<template v-if="Component">
-					<Suspense @pending="onSuspensePending" @resolve="onSuspenseResolve">
-						<component :is="Component"></component>
-					</Suspense>
-				</template>
-			</RouterView>
+			<div class="page-transition-grid">
+				<RouterView v-slot="{ Component, route }">
+					<Transition
+						name="page-slide"
+						:css="themeStore.getFeatureFlag('page_transitions')"
+					>
+						<div
+							v-if="Component"
+							:key="getPageTransitionKey(route)"
+							class="page-transition-layer"
+						>
+							<Suspense @pending="onSuspensePending" @resolve="onSuspenseResolve">
+								<component :is="Component"></component>
+							</Suspense>
+						</div>
+					</Transition>
+				</RouterView>
+			</div>
 		</div>
 		<div
 			class="app-sidebar mt-px shrink-0 flex flex-col border-0 border-l-[1px] border-[--brand-gradient-border] border-solid"

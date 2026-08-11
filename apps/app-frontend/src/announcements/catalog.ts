@@ -33,9 +33,106 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.4',
+		version: '1.7.4',
+		publishedAt: '2026-08-11',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.4',
+			'zh-CN': 'Axolotl Launcher 1.7.4',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added a settings for enabling/disabling page transitions.',
+					'zh-CN': '新增启动器设置项，可开启/关闭页面切换动画。',
+				},
+				{
+					'en-US':
+						'Added detailed Multiplayer diagnostics and exportable error reports for troubleshooting connection failures.',
+					'zh-CN': '联机页面新增详细诊断日志与错误报告导出，便于排查连接失败。',
+				},
+			],
+			fixed: [
+				{
+					'en-US': 'Fixed the laggy transition animation.',
+					'zh-CN': '优化了页面切换动画的卡顿问题。',
+				},
+				{
+					'en-US':
+						'Fixed the issue of the launcher triggering page transitions when switching tabs within a page.',
+					'zh-CN': '修复在页面内切换标签分类时，启动器会错误触发页面切换动画的问题。',
+				},
+				{
+					'en-US':
+						'Fixed project platform and tag links not returning to Discover Content with the matching filter applied.',
+					'zh-CN': '修复项目详情页的平台与标签链接无法返回发现内容页并应用对应筛选的问题。',
+				},
+				{
+					'en-US':
+						'Fixed invalid Multiplayer room codes showing raw internal errors instead of a localized format hint.',
+					'zh-CN': '修复联机房间码格式错误时显示内部原始报错的问题，现改为本地化格式提示。',
+				},
+			],
+		},
+	},
+	{
+		id: 'launcher-1.7.3',
+		version: '1.7.3',
+		publishedAt: '2026-08-10',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.3',
+			'zh-CN': 'Axolotl Launcher 1.7.3',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added animation for switching launcher pages',
+					'zh-CN': '为启动器页面切换添加了动画',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed cache purging failing when the frontend sends cache types unsupported by the running backend.',
+					'zh-CN': '修复前端发送当前后端不支持的缓存类型时，清理缓存失败的问题。',
+				},
+				{
+					'en-US': 'Fixed Curseforge import missing files issues',
+					'zh-CN': '修复 Curseforge 导入缺失文件问题',
+				},
+				{
+					'en-US':
+						'Fixed the issue when after manually added missing files, the download indicator will wrongly show a downloaded size larger than excepted size.',
+					'zh-CN': '修复手动添加缺失文件后，下载指示器错误显示已下载文件大小大于预期大小的问题',
+				},
+				{
+					'en-US':
+						'Fixed the issue when Discord Rich Presence is not reachable, Minecraft can not start properly.',
+					'zh-CN': '修复当 Discord Rich Presence 不可用（超时）时，Minecraft 无法正常启动的问题。',
+				},
+				{
+					'en-US':
+						'Fixed nsis installer not installing the launcher into the correct specified directory.',
+					'zh-CN': '修复 nsis 安装程序未能将启动器安装到指定目录的问题。',
+				},
+				{
+					'en-US': 'Fixed Minecraft account name fetch blocking splash screen from closing.',
+					'zh-CN': '修复 Minecraft 账号名称获取堵塞导致阻止启动器Splash screen关闭的问题。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'When changing theme color, the shadow color of the launcher now changes accordingly',
+					'zh-CN': '更改主题颜色时，现在启动器的阴影颜色也会随之变动',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.2',
 		version: '1.7.2',
-		publishedAt: '2026-08-09',
+		publishedAt: '2026-08-10',
 		title: {
 			'en-US': 'Axolotl Launcher 1.7.2',
 			'zh-CN': 'Axolotl Launcher 1.7.2',
@@ -73,6 +170,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added automatic backup of instance settings to the instance folder, allowing users to restore the instance after a database loss.',
 					'zh-CN': '支持导入本就是本启动器的实例文件夹，会完全保留实例设置。',
 				},
+				{
+					'en-US':
+						'Added a "Auto Import Missing Files" button in Settings. You can also customize the monitoring location. When enabled, the launcher will automatically scan files in the monitoring location and automatically import missing files into the instance when scenarios such as downloading an integration package fail.',
+					'zh-CN':
+						'在设置中新增了自动导入缺失文件开关按钮，并可自定义监控位置。当启用时，启动器会自动扫描监控位置的文件，并将下载整合包等场景文件下载失败时，自动把缺失的文件导入到实例中。',
+				},
 			],
 			fixed: [
 				{
@@ -103,6 +206,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Removed the shadow around the recipe generator background edge',
 					'zh-CN': '移除了配方生成器背景边缘的阴影',
+				},
+				{
+					'en-US':
+						'When downloading modpacks and other files, if a mod download fails, the launcher now provides three options to continue downloading the modpack: "Launcher re-download", "Manual import of missing files", and "Monitor folder for automatic import of files". This avoids rolling back the entire download due to a single file failure.',
+					'zh-CN':
+						'当下载整合包等文件时，如果模组下载失败，现在会提供 启动器重新下载/手动导入缺失文件/监控文件夹自动导入文件 三个选项来继续下载整合包，避免一个文件下载失败直接全部回滚。',
 				},
 			],
 		},

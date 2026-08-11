@@ -4,6 +4,9 @@ use crate::api::content_search::{
     original_content_relative_path,
 };
 use crate::event::emit::loading_try_for_each_concurrent;
+use crate::install::model::{
+    InstallPauseReason, MissingModpackContentState, MissingModpackFileState,
+};
 use crate::install::{
     InstallErrorContext, InstallJobEventKind, InstallPhaseDetails,
     InstallPhaseId, InstallProgress, InstallProgressReporter,
@@ -20,8 +23,9 @@ use crate::state::{
     Settings, SideType,
 };
 use crate::util::fetch::{
-    DownloadMeta, DownloadReason, DownloadRequest, FetchProgressFn, Integrity,
-    ResourceClass, download_to_path, sha1_file_async,
+    ContentValidation, DownloadMeta, DownloadReason, DownloadRequest,
+    FetchProgressFn, Integrity, ResourceClass, download_to_path,
+    sha1_file_async,
 };
 use crate::util::io;
 use async_zip::base::read::seek::ZipFileReader as SeekZipFileReader;
@@ -30,6 +34,8 @@ use async_zip::tokio::read::fs::ZipFileReader as FsZipFileReader;
 use futures::StreamExt;
 use path_util::SafeRelativeUtf8UnixPathBuf;
 use std::collections::{HashMap, HashSet};
+#[cfg(test)]
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::{
@@ -47,6 +53,126 @@ use tokio::sync::Mutex;
 type ExtractProgressFn<'a> = dyn FnMut(u64) -> Pin<Box<dyn Future<Output = crate::Result<()>> + Send + 'a>>
     + Send
     + 'a;
+
+const AGGREGATE_FAILURE_PATH_LIMIT: usize = 3;
+const AGGREGATE_FAILURE_PATH_CHAR_LIMIT: usize = 160;
+const ITEM_FAILURE_REASON_CHAR_LIMIT: usize = 1_024;
+
+pub(crate) enum MrpackInstallOutcome {
+    #[allow(dead_code)]
+    Completed(String),
+    WaitingForUser(InstallPauseReason),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RequiredFileFailure {
+    manifest_index: usize,
+    path: String,
+    reason: String,
+}
+
+impl RequiredFileFailure {
+    fn new(manifest_index: usize, path: &str, reason: &str) -> Self {
+        Self {
+            manifest_index,
+            path: bounded_text(path, AGGREGATE_FAILURE_PATH_CHAR_LIMIT),
+            reason: bounded_text(reason, ITEM_FAILURE_REASON_CHAR_LIMIT),
+        }
+    }
+}
+
+#[cfg(test)]
+struct RequiredFileFailures<'a>(&'a [RequiredFileFailure]);
+
+#[cfg(test)]
+impl fmt::Display for RequiredFileFailures<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let failures = self.0;
+        write!(
+            formatter,
+            "{} required modpack file{} failed",
+            failures.len(),
+            if failures.len() == 1 { "" } else { "s" }
+        )?;
+        let shown = failures
+            .iter()
+            .take(AGGREGATE_FAILURE_PATH_LIMIT)
+            .map(|failure| failure.path.as_str())
+            .collect::<Vec<_>>();
+        if !shown.is_empty() {
+            write!(formatter, ": {}", shown.join(", "))?;
+        }
+        if failures.len() > shown.len() {
+            write!(formatter, " (+{} more)", failures.len() - shown.len())?;
+        }
+        Ok(())
+    }
+}
+
+fn bounded_text(value: &str, max_chars: usize) -> String {
+    let mut chars = value.chars();
+    let bounded = chars.by_ref().take(max_chars).collect::<String>();
+    if chars.next().is_some() {
+        format!("{bounded}...")
+    } else {
+        bounded
+    }
+}
+
+fn estimated_file_max_attempts(file: &PackFile) -> usize {
+    file.downloads.len().saturating_mul(2).max(1)
+}
+
+async fn collect_required_file_failures_concurrently<T, F, Fut>(
+    items: Vec<T>,
+    limit: Option<usize>,
+    mut task: F,
+) -> crate::Result<Vec<RequiredFileFailure>>
+where
+    T: Send,
+    F: FnMut(T) -> Fut + Send,
+    Fut: Future<Output = Result<(), RequiredFileFailure>> + Send,
+{
+    let failures = Arc::new(Mutex::new(Vec::<RequiredFileFailure>::new()));
+    let collected_failures = failures.clone();
+    let num_items = items.len();
+    loading_try_for_each_concurrent(
+        futures::stream::iter(items).map(Ok::<T, crate::Error>),
+        limit,
+        None,
+        70.0,
+        num_items,
+        None,
+        move |item| {
+            let future = task(item);
+            let failures = failures.clone();
+            async move {
+                if let Err(failure) = future.await {
+                    failures.lock().await.push(failure);
+                }
+                Ok(())
+            }
+        },
+    )
+    .await?;
+    let mut failures = collected_failures.lock().await.clone();
+    failures.sort_unstable_by_key(|failure| failure.manifest_index);
+    Ok(failures)
+}
+
+fn missing_required_content_pause(
+    failures: &[RequiredFileFailure],
+) -> Option<InstallPauseReason> {
+    (!failures.is_empty()).then(|| InstallPauseReason::MissingRequiredContent {
+        failed_files: failures.len() as u64,
+        paths: failures
+            .iter()
+            .take(AGGREGATE_FAILURE_PATH_LIMIT)
+            .map(|failure| failure.path.clone())
+            .collect(),
+    })
+}
+
 #[derive(Clone)]
 struct ModpackContentInstallContext {
     instance_id: String,
@@ -180,16 +306,16 @@ impl ModpackContentInstallContext {
             .await
     }
 
-    async fn mark_downloaded(
+    async fn mark_file_settled(
         &self,
-        file_size: u64,
+        settled_bytes: u64,
         event: InstallJobEventKind,
     ) -> crate::Result<()> {
         let current = self.content_progress.fetch_add(1, Ordering::Relaxed) + 1;
         let current_bytes = self
             .content_bytes_progress
-            .fetch_add(file_size, Ordering::Relaxed)
-            + file_size;
+            .fetch_add(settled_bytes, Ordering::Relaxed)
+            + settled_bytes;
 
         self.reporter
             .update_with_events(
@@ -453,7 +579,7 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
     ignore_lock: bool,
     reason: DownloadReason,
     reporter: InstallProgressReporter,
-) -> crate::Result<String> {
+) -> crate::Result<MrpackInstallOutcome> {
     let state = &State::get().await?;
 
     let file = create_pack.file;
@@ -513,7 +639,6 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
     let overrides_prefix = format!("{archive_base}overrides/");
     let client_overrides_prefix = format!("{archive_base}client-overrides/");
     let server_overrides_prefix = format!("{archive_base}server-overrides/");
-
     let mut manifest = String::new();
     manifest.push_str(&zip_reader.read_entry_to_string(manifest_idx).await?);
 
@@ -653,26 +778,6 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         .iter()
         .map(|file| file.file_size as u64)
         .sum::<u64>();
-    reporter
-        .update_with_events(
-            InstallPhaseId::DownloadingContent,
-            Some(InstallProgress {
-                current: 0,
-                total: num_files as u64,
-                secondary: (content_total_bytes > 0).then_some(
-                    InstallProgressSecondary {
-                        current: 0,
-                        total: content_total_bytes,
-                    },
-                ),
-            }),
-            modpack_details.clone(),
-            vec![InstallJobEventKind::ContentDownloadStarted {
-                files: num_files as u64,
-                bytes: (content_total_bytes > 0).then_some(content_total_bytes),
-            }],
-        )
-        .await?;
     let content_progress = Arc::new(AtomicU64::new(0));
     let content_bytes_progress = Arc::new(AtomicU64::new(0));
     let active_download_bytes =
@@ -734,14 +839,91 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         num_files,
         content_total_bytes,
     };
-    loading_try_for_each_concurrent(
-        futures::stream::iter(pack.files).map(Ok::<PackFile, crate::Error>),
+    let mut queued_events = Vec::with_capacity(num_files.saturating_add(1));
+    queued_events.push(InstallJobEventKind::ContentDownloadStarted {
+        files: num_files as u64,
+        bytes: (content_total_bytes > 0).then_some(content_total_bytes),
+    });
+    queued_events.extend(pack.files.iter().map(|file| {
+        InstallJobEventKind::ContentFileQueued {
+            path: content_context.resolve_install_path(file),
+            bytes_total: (file.file_size > 0).then_some(file.file_size as u64),
+            max_attempts: estimated_file_max_attempts(file) as u32,
+        }
+    }));
+    queued_events.extend(pack.files.iter().filter_map(|file| {
+        let urls = crate::install::missing_content::browser_download_urls(
+            &file.downloads,
+        );
+        (!urls.is_empty()).then(|| {
+            InstallJobEventKind::ContentFileBrowserOptions {
+                path: content_context.resolve_install_path(file),
+                urls,
+            }
+        })
+    }));
+    reporter
+        .update_with_events(
+            InstallPhaseId::DownloadingContent,
+            Some(InstallProgress {
+                current: 0,
+                total: num_files as u64,
+                secondary: (content_total_bytes > 0).then_some(
+                    InstallProgressSecondary {
+                        current: 0,
+                        total: content_total_bytes,
+                    },
+                ),
+            }),
+            modpack_details.clone(),
+            queued_events,
+        )
+        .await?;
+    reporter
+        .set_missing_content(Some(MissingModpackContentState {
+            files: pack
+                .files
+                .iter()
+                .map(|file| {
+                    let target_path =
+                        content_context.resolve_install_path(file);
+                    MissingModpackFileState {
+                        item_id: target_path.clone(),
+                        manifest_path: file.path.as_str().to_string(),
+                        target_path,
+                        expected_size: file.file_size as u64,
+                        sha1: file.hashes.get(&PackFileHash::Sha1).cloned(),
+                        sha512: file
+                            .hashes
+                            .get(&PackFileHash::Sha512)
+                            .cloned(),
+                        download_urls: file.downloads.clone(),
+                        browser_urls: crate::install::missing_content::browser_download_urls(
+                            &file.downloads,
+                        ),
+                        validate_as_jar: file
+                            .path
+                            .as_str()
+                            .to_ascii_lowercase()
+                            .ends_with(".jar"),
+                    }
+                })
+                .collect(),
+        }))
+        .await?;
+    reporter
+        .track_rollback_paths(
+            pack.files
+                .iter()
+                .map(|file| content_context.resolve_install_path(file))
+                .collect(),
+        )
+        .await?;
+    let required_file_failures =
+        collect_required_file_failures_concurrently(
+        pack.files.into_iter().enumerate().collect(),
         Some(state.download_concurrency()),
-        None,
-        70.0,
-        num_files,
-        None,
-        |project| {
+        |(manifest_index, project)| {
             let content_context = content_context.clone();
             async move {
                 let project_size = project.file_size as u64;
@@ -749,28 +931,6 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                     content_context.resolve_install_path(&project);
                 let target_path =
                     content_context.instance_full_path.join(&project_path);
-
-                //TODO: Future update: prompt user for optional files in a modpack
-                if let Some(env) = project.env.as_ref()
-                    && env
-                        .get(&EnvType::Client)
-                        .is_some_and(|x| x == &SideType::Unsupported)
-                {
-                    content_context
-                        .mark_downloaded(
-                            project_size,
-                            InstallJobEventKind::ContentFileSkipped {
-                                path: project_path,
-                                reason: "unsupported on client".to_string(),
-                                project_id: None,
-                                version_id: None,
-                                manual_url: None,
-                            },
-                        )
-                        .await?;
-                    return Ok(());
-                }
-
                 let context =
                     InstallErrorContext::new("download modpack content file")
                         .maybe_project_id(
@@ -787,6 +947,29 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         )
                         .expected_size(project_size)
                         .build();
+                let result: crate::Result<()> = async {
+
+                //TODO: Future update: prompt user for optional files in a modpack
+                if let Some(env) = project.env.as_ref()
+                    && env
+                        .get(&EnvType::Client)
+                        .is_some_and(|x| x == &SideType::Unsupported)
+                {
+                    content_context
+                        .mark_file_settled(
+                            0,
+                            InstallJobEventKind::ContentFileSkipped {
+                                path: project_path.clone(),
+                                reason: "unsupported on client".to_string(),
+                                project_id: None,
+                                version_id: None,
+                                manual_url: None,
+                            },
+                        )
+                        .await?;
+                    return Ok(());
+                }
+
                 content_context
                     .reporter
                     .set_transient_context(context.clone())
@@ -850,9 +1033,19 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         project_path.clone(),
                         project_size,
                         1,
-                        project.downloads.len().saturating_mul(2).max(1),
+                        estimated_file_max_attempts(&project),
                     )
                     .await?;
+                if tokio::fs::try_exists(&target_path).await.unwrap_or(false) {
+                    content_context
+                        .reporter
+                        .record_events(vec![
+                            InstallJobEventKind::ContentFileVerificationStarted {
+                                path: project_path.clone(),
+                            },
+                        ])
+                        .await?;
+                }
                 let Some(primary_url) = project.downloads.first() else {
                     return Err(crate::ErrorKind::InputError(format!(
                         "Modpack file {} has no download URL",
@@ -867,6 +1060,16 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         .hashes
                         .get(&PackFileHash::Sha512)
                         .cloned(),
+                    content: if project
+                        .path
+                        .as_str()
+                        .to_ascii_lowercase()
+                        .ends_with(".jar")
+                    {
+                        ContentValidation::Jar
+                    } else {
+                        ContentValidation::None
+                    },
                     ..Integrity::default()
                 };
                 let download = match download_to_path(
@@ -899,10 +1102,6 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                     Err(error) => {
                         content_context
                             .remove_active_download(&project_path)
-                            .await;
-                        content_context
-                            .reporter
-                            .persist_failure_context(context)
                             .await;
                         return Err(error);
                     }
@@ -964,21 +1163,85 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                     }
                 }
 
-                content_context
-                    .mark_downloaded(
-                        project_size,
-                        InstallJobEventKind::ContentFileCompleted {
-                            path: project_path,
-                            bytes: downloaded_bytes,
-                        },
-                    )
-                    .await?;
+								let recovered = download.attempts == 0; //When recovered, the download attempts were set to 0 by download_to_path_inner()
+								if recovered {
+									content_context
+										.mark_file_settled(
+												downloaded_bytes,
+												InstallJobEventKind::ContentFileRecovered {
+														path: project_path.clone(),
+														bytes: downloaded_bytes,
+												},
+										)
+										.await?;
+								} else {
+									content_context
+											.mark_file_settled(
+													downloaded_bytes,
+													InstallJobEventKind::ContentFileCompleted {
+															path: project_path.clone(),
+															bytes: downloaded_bytes,
+													},
+											)
+											.await?;
+								}
                 Ok(())
+                }
+                .await;
+                match result {
+                    Ok(()) => Ok(()),
+                    Err(error) => {
+                        content_context
+                            .remove_active_download(&project_path)
+                            .await;
+                        content_context
+                            .reporter
+                            .persist_failure_context(context)
+                            .await;
+                        let failure = RequiredFileFailure::new(
+                            manifest_index,
+                            &project_path,
+                            &error.to_string(),
+                        );
+                        tracing::warn!(
+                            path = %project_path,
+                            reason = %failure.reason,
+                            "Failed to install required Modrinth pack file"
+                        );
+                        if let Err(report_error) = content_context
+                            .mark_file_settled(
+                                0,
+                                InstallJobEventKind::ContentFileFailed {
+                                    path: project_path.clone(),
+                                    reason: failure.reason.clone(),
+                                    project_id: None,
+                                    version_id: None,
+                                },
+                            )
+                            .await
+                        {
+                            return Err(RequiredFileFailure::new(
+                                manifest_index,
+                                &project_path,
+                                &format!(
+                                    "{}; failed to record item failure: {report_error}",
+                                    failure.reason
+                                ),
+                            ));
+                        }
+                        Err(failure)
+                    }
+                }
             }
         },
     )
     .await?;
     content_context.finish_download_metrics().await?;
+    if let Some(reason) =
+        missing_required_content_pause(&required_file_failures)
+    {
+        return Ok(MrpackInstallOutcome::WaitingForUser(reason));
+    }
 
     let override_file_entries = zip_reader
         .file()
@@ -997,6 +1260,19 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         .iter()
         .map(|(_, file)| file.uncompressed_size())
         .sum::<u64>();
+    reporter
+        .track_rollback_paths(
+            override_file_entries
+                .iter()
+                .map(|(_, file)| {
+                    override_relative_path(
+                        file.filename().as_str().unwrap_or_default(),
+                        &archive_base,
+                    )
+                })
+                .collect::<crate::Result<Vec<_>>>()?,
+        )
+        .await?;
     let progress = (override_total_bytes > 0).then_some(InstallProgress {
         current: 0,
         total: override_total_bytes,
@@ -1045,7 +1321,6 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
             Ok(())
         })
     };
-
     for (index, file) in override_file_entries {
         let entry_name = file.filename().as_str().unwrap();
         let entry_name =
@@ -1146,7 +1421,7 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
     .await?;
     reporter.clear_context().await?;
 
-    Ok::<String, crate::Error>(instance_id.clone())
+    Ok(MrpackInstallOutcome::Completed(instance_id.clone()))
 }
 
 fn pack_source_path(file: &CreatePackFile) -> String {
@@ -1177,6 +1452,60 @@ fn locate_mrpack_manifest(
                     .then(|| (index, format!("{base}/")))
             })
         })
+}
+
+fn override_relative_path(
+    entry_name: &str,
+    archive_base: &str,
+) -> crate::Result<String> {
+    let entry_name =
+        entry_name.strip_prefix(archive_base).unwrap_or(entry_name);
+    let relative =
+        SafeRelativeUtf8UnixPathBuf::try_from(entry_name.to_string())?;
+    let relative = relative
+        .strip_prefix("overrides")
+        .or_else(|_| relative.strip_prefix("client-overrides"))
+        .map_err(|_| {
+            crate::ErrorKind::InputError(format!(
+                "Invalid modpack override path: {relative}"
+            ))
+        })?;
+    Ok(relative.as_str().to_string())
+}
+
+pub(crate) async fn related_file_paths(
+    mrpack_file: &CreatePackFile,
+) -> crate::Result<Vec<String>> {
+    let mut zip_reader = MrpackZipReader::new(mrpack_file).await?;
+    let Some((manifest_idx, archive_base)) =
+        locate_mrpack_manifest(zip_reader.file())
+    else {
+        return Err(crate::ErrorKind::InputError(
+            "No pack manifest found in mrpack".to_string(),
+        )
+        .into());
+    };
+    let manifest = zip_reader.read_entry_to_string(manifest_idx).await?;
+    let pack: PackFormat = serde_json::from_str(&manifest)?;
+    let overrides_prefix = format!("{archive_base}overrides/");
+    let client_overrides_prefix = format!("{archive_base}client-overrides/");
+    let mut paths = pack
+        .files
+        .into_iter()
+        .map(|file| file.path.as_str().to_string())
+        .collect::<Vec<_>>();
+    for entry in zip_reader.file().entries() {
+        let name = entry.filename().as_str().unwrap_or_default();
+        if (name.starts_with(&overrides_prefix)
+            || name.starts_with(&client_overrides_prefix))
+            && !name.ends_with('/')
+        {
+            paths.push(override_relative_path(name, &archive_base)?);
+        }
+    }
+    paths.sort();
+    paths.dedup();
+    Ok(paths)
 }
 
 fn modpack_source_kind(version_id: Option<&str>) -> ContentSourceKind {
@@ -1339,6 +1668,116 @@ mod tests {
     use super::*;
     use async_zip::tokio::write::ZipFileWriter;
     use async_zip::{Compression, ZipEntryBuilder};
+    use std::sync::Mutex as StdMutex;
+
+    async fn run_failure_collection(
+        failed_indices: &[usize],
+    ) -> (Vec<usize>, Vec<RequiredFileFailure>) {
+        let attempted = Arc::new(StdMutex::new(Vec::new()));
+        let failed_indices = Arc::new(failed_indices.to_vec());
+        let failures = collect_required_file_failures_concurrently(
+            (0..4).map(|index| (index, index)).collect(),
+            Some(1),
+            {
+                let attempted = attempted.clone();
+                move |(manifest_index, value)| {
+                    let attempted = attempted.clone();
+                    let failed_indices = failed_indices.clone();
+                    async move {
+                        attempted.lock().unwrap().push(value);
+                        if failed_indices.contains(&value) {
+                            Err(RequiredFileFailure::new(
+                                manifest_index,
+                                &format!("mods/{value}.jar"),
+                                "test download failure",
+                            ))
+                        } else {
+                            Ok(())
+                        }
+                    }
+                }
+            },
+        )
+        .await
+        .unwrap();
+        let attempted = attempted.lock().unwrap().clone();
+        (attempted, failures)
+    }
+
+    #[tokio::test]
+    async fn all_required_file_tasks_complete_without_failures() {
+        let (attempted, failures) = run_failure_collection(&[]).await;
+
+        assert_eq!(attempted, vec![0, 1, 2, 3]);
+        assert!(failures.is_empty());
+        assert!(missing_required_content_pause(&failures).is_none());
+    }
+
+    #[tokio::test]
+    async fn first_required_file_failure_does_not_stop_later_tasks() {
+        let (attempted, failures) = run_failure_collection(&[0]).await;
+
+        assert_eq!(attempted, vec![0, 1, 2, 3]);
+        assert_eq!(failures.len(), 1);
+        assert_eq!(failures[0].path, "mods/0.jar");
+    }
+
+    #[tokio::test]
+    async fn middle_required_file_failure_does_not_stop_later_tasks() {
+        let (attempted, failures) = run_failure_collection(&[1]).await;
+
+        assert_eq!(attempted, vec![0, 1, 2, 3]);
+        assert_eq!(failures.len(), 1);
+        assert_eq!(failures[0].path, "mods/1.jar");
+    }
+
+    #[tokio::test]
+    async fn multiple_required_file_failures_are_all_collected() {
+        let (attempted, failures) = run_failure_collection(&[0, 2, 3]).await;
+
+        assert_eq!(attempted, vec![0, 1, 2, 3]);
+        assert_eq!(
+            failures
+                .iter()
+                .map(|failure| failure.path.as_str())
+                .collect::<Vec<_>>(),
+            vec!["mods/0.jar", "mods/2.jar", "mods/3.jar"]
+        );
+        let summary = RequiredFileFailures(&failures).to_string();
+        assert!(summary.contains("3 required modpack files failed"));
+        assert!(summary.contains("mods/0.jar"));
+
+        let pause = missing_required_content_pause(&failures).unwrap();
+        assert_eq!(
+            pause,
+            InstallPauseReason::MissingRequiredContent {
+                failed_files: 3,
+                paths: vec![
+                    "mods/0.jar".to_string(),
+                    "mods/2.jar".to_string(),
+                    "mods/3.jar".to_string(),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn aggregate_required_file_error_has_bounded_path_details() {
+        let failures = (0..10)
+            .map(|index| {
+                RequiredFileFailure::new(
+                    index,
+                    &format!("mods/{index}-{}.jar", "x".repeat(500)),
+                    "failed",
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let message = RequiredFileFailures(&failures).to_string();
+        assert!(message.contains("10 required modpack files failed"));
+        assert!(message.contains("(+7 more)"));
+        assert!(message.len() < 600);
+    }
 
     #[tokio::test]
     async fn local_mrpack_uses_the_file_backed_reader() {

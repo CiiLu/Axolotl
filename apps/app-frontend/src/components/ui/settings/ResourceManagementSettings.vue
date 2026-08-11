@@ -7,6 +7,7 @@ import {
 	injectNotificationManager,
 	Slider,
 	StyledInput,
+	Toggle,
 	useVIntl,
 } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
@@ -15,6 +16,11 @@ import { computed, ref, watch } from 'vue'
 
 import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'
 import { purge_cache_types } from '@/helpers/cache.js'
+import { configureCurseForgeManualDownloadWatcher } from '@/helpers/curseforge'
+import {
+	getMissingContentScannerSettings,
+	setMissingContentScannerSettings,
+} from '@/helpers/downloads-scanner'
 import { get, set } from '@/helpers/settings.ts'
 import { showAppDbBackupsFolder } from '@/helpers/utils.js'
 import { useTheming } from '@/store/state'
@@ -22,6 +28,7 @@ import { useTheming } from '@/store/state'
 const { handleError } = injectNotificationManager()
 const themeStore = useTheming()
 const settings = ref(await get())
+const missingContentScannerSettings = ref(getMissingContentScannerSettings())
 const purgeCacheConfirmModal = ref(null)
 const { formatMessage } = useVIntl()
 
@@ -168,6 +175,36 @@ const messages = defineMessages({
 		defaultMessage:
 			'The maximum number of files the launcher can write to disk at once. Use a lower value if you frequently get I/O errors. An app restart is required.',
 	},
+	missingContentAutoImport: {
+		id: 'app.settings.resources.missing-content-auto-import',
+		defaultMessage: 'Automatically import missing modpack files',
+	},
+	missingContentAutoImportDescription: {
+		id: 'app.settings.resources.missing-content-auto-import-description',
+		defaultMessage:
+			'Watch one folder while resolving missing modpack files, then verify and import matching files automatically.',
+	},
+	missingContentImportDirectory: {
+		id: 'app.settings.resources.missing-content-import-directory',
+		defaultMessage: 'Monitored import folder',
+	},
+	missingContentImportDirectoryDescription: {
+		id: 'app.settings.resources.missing-content-import-directory-description',
+		defaultMessage:
+			'The system Downloads folder is used when no custom folder is selected. Subfolders are not scanned.',
+	},
+	systemDownloadsDirectory: {
+		id: 'app.settings.resources.system-downloads-directory',
+		defaultMessage: 'System Downloads folder',
+	},
+	selectImportDirectory: {
+		id: 'app.settings.resources.select-import-directory',
+		defaultMessage: 'Select monitored folder',
+	},
+	resetImportDirectory: {
+		id: 'app.settings.resources.reset-import-directory',
+		defaultMessage: 'Use system Downloads folder',
+	},
 	databaseBackups: {
 		id: 'app.settings.resources.database-backups',
 		defaultMessage: 'App database backups',
@@ -264,6 +301,15 @@ watch(
 	{ deep: true },
 )
 
+watch(
+	missingContentScannerSettings,
+	(value) => {
+		setMissingContentScannerSettings(value)
+		void configureCurseForgeManualDownloadWatcher(value.enabled, value.directory).catch(handleError)
+	},
+	{ deep: true },
+)
+
 async function purgeCache() {
 	await purge_cache_types([
 		'project',
@@ -311,6 +357,21 @@ async function findLauncherDir() {
 	if (newDir) {
 		settings.value.custom_dir = newDir
 	}
+}
+
+async function findMissingContentImportDirectory() {
+	const directory = await open({
+		multiple: false,
+		directory: true,
+		title: formatMessage(messages.selectImportDirectory),
+	})
+	if (typeof directory === 'string') {
+		missingContentScannerSettings.value.directory = directory
+	}
+}
+
+function resetMissingContentImportDirectory() {
+	missingContentScannerSettings.value.directory = null
 }
 </script>
 
@@ -479,6 +540,62 @@ async function findLauncherDir() {
 			/>
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.maximumWritesDescription) }}
+			</p>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<h2 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.missingContentAutoImport) }}
+					</h2>
+					<p class="m-0 mt-1 leading-tight text-secondary">
+						{{ formatMessage(messages.missingContentAutoImportDescription) }}
+					</p>
+				</div>
+				<Toggle
+					id="missing-content-auto-import"
+					v-model="missingContentScannerSettings.enabled"
+				/>
+			</div>
+
+			<h3 class="mb-0 mt-2 text-base font-semibold text-contrast">
+				{{ formatMessage(messages.missingContentImportDirectory) }}
+			</h3>
+			<StyledInput
+				id="missing-content-import-directory"
+				:model-value="
+					missingContentScannerSettings.directory ??
+					formatMessage(messages.systemDownloadsDirectory)
+				"
+				:icon="FolderOpenIcon"
+				type="text"
+				readonly
+				wrapper-class="w-full"
+			>
+				<template #right>
+					<ButtonStyled circular>
+						<button
+							class="ml-1.5"
+							:disabled="!missingContentScannerSettings.enabled"
+							:title="formatMessage(messages.selectImportDirectory)"
+							@click="findMissingContentImportDirectory"
+						>
+							<FolderSearchIcon />
+						</button>
+					</ButtonStyled>
+				</template>
+			</StyledInput>
+			<button
+				v-if="missingContentScannerSettings.directory"
+				class="btn min-w-max"
+				:disabled="!missingContentScannerSettings.enabled"
+				@click="resetMissingContentImportDirectory"
+			>
+				{{ formatMessage(messages.resetImportDirectory) }}
+			</button>
+			<p class="m-0 leading-tight text-secondary">
+				{{ formatMessage(messages.missingContentImportDirectoryDescription) }}
 			</p>
 		</div>
 

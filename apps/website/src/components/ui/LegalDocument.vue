@@ -1,10 +1,21 @@
 <script setup lang="ts">
+import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
+
 defineProps<{
 	eyebrow: string
 	title: string
 	description: string
 	updatedAt: string
 }>()
+
+const { formatMessage } = useVIntl()
+
+const messages = defineMessages({
+	updated: {
+		id: 'axolotl-site.legal.updated',
+		defaultMessage: 'Last updated: {updatedAt}',
+	},
+})
 </script>
 
 <template>
@@ -13,7 +24,7 @@ defineProps<{
 			<span class="section-eyebrow">{{ eyebrow }}</span>
 			<h1>{{ title }}</h1>
 			<p>{{ description }}</p>
-			<p class="updated-at">最后更新：{{ updatedAt }}</p>
+			<p class="updated-at">{{ formatMessage(messages.updated, { updatedAt }) }}</p>
 		</header>
 
 		<div class="legal-content">

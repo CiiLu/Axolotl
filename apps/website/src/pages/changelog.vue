@@ -5,26 +5,38 @@ import ButtonStyled from '@modrinth/ui/src/components/base/ButtonStyled.vue'
 import TagItem from '@modrinth/ui/src/components/base/TagItem.vue'
 import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
 
-import {
-	parseReleaseNotes,
-	RELEASE_CHANGE_TYPES,
-	type ReleaseChangeType,
-	type ReleaseNotesLocale,
-} from '~/utils/release-notes'
+type AnnouncementLocale = 'en-US' | 'zh-CN'
+type AnnouncementChangeType = 'added' | 'changed' | 'deprecated' | 'removed' | 'fixed' | 'security'
+type LocalizedAnnouncementText = Record<AnnouncementLocale, string>
 
-type GitHubRelease = {
-	id: number
-	draft: boolean
-	prerelease: boolean
-	tag_name: string
-	name: string | null
-	body: string | null
-	published_at: string | null
+type LauncherAnnouncement = {
+	id: string
+	version: string
+	publishedAt: string
+	title: LocalizedAnnouncementText
+	changes: Partial<Record<AnnouncementChangeType, LocalizedAnnouncementText[]>>
+	notes?: LocalizedAnnouncementText
+	externalUrl?: string
 }
 
-const GITHUB_RELEASES_URL = 'https://api.github.com/repos/Mystic-Stars/Axolotl/releases'
-const RELEASES_PER_PAGE = 100
-const FIRST_RELEASE_VERSION = [1, 4, 0] as const
+type AnnouncementCatalog = {
+	updated_at: string
+	announcements: LauncherAnnouncement[]
+}
+
+// 每次用户访问时从客户端实时拉取。数据来自 app 前端的公告 catalog
+// （apps/app-frontend/src/announcements/catalog.ts），由发布 CI 导出并经
+// CNB 镜像同步，由本站 Netlify Function（/api/releases/catalog）实时转发
+// ——客户端直连 CNB 会被 CORS 拦截，整个链路不依赖 GitHub API。
+const CATALOG_URL = '/api/releases/catalog'
+const CHANGE_TYPES: readonly AnnouncementChangeType[] = [
+	'added',
+	'changed',
+	'deprecated',
+	'removed',
+	'fixed',
+	'security',
+]
 
 const { formatMessage, locale } = useVIntl()
 
@@ -54,7 +66,7 @@ const messages = defineMessages({
 	errorDescription: {
 		id: 'axolotl-site.changelog.error.description',
 		defaultMessage:
-			'We could not fetch the release history. Your network may be unavailable, or the GitHub API request limit for this network may have been reached.',
+			'We could not fetch the release history. Your network may be unavailable, or the data source is temporarily unreachable.',
 	},
 	retry: { id: 'axolotl-site.changelog.retry', defaultMessage: 'Retry' },
 	empty: {
@@ -76,59 +88,7 @@ const messages = defineMessages({
 	security: { id: 'axolotl-site.changelog.category.security', defaultMessage: 'Security' },
 })
 
-const {
-	data: releases,
-	error,
-	status,
-	refresh,
-} = await useAsyncData(
-	'axolotl-github-releases',
-	async () => {
-		const allReleases: GitHubRelease[] = []
-
-		for (let page = 1; ; page++) {
-			const releasePage = await $fetch<GitHubRelease[]>(GITHUB_RELEASES_URL, {
-				query: { per_page: RELEASES_PER_PAGE, page },
-			})
-
-			allReleases.push(...releasePage)
-
-			if (releasePage.length < RELEASES_PER_PAGE) break
-		}
-
-		return allReleases.filter(
-			(release) =>
-				!release.draft &&
-				!release.prerelease &&
-				isReleaseAtLeast(release.tag_name, FIRST_RELEASE_VERSION),
-		)
-	},
-	{ server: false },
-)
-
-function isReleaseAtLeast(tagName: string, minimumVersion: readonly number[]) {
-	const match = tagName.match(/^v?(\d+)\.(\d+)\.(\d+)/)
-	if (!match) return false
-
-	const version = match.slice(1).map(Number)
-
-	for (const [index, part] of version.entries()) {
-		if (part > minimumVersion[index]) return true
-		if (part < minimumVersion[index]) return false
-	}
-
-	return true
-}
-
-function getReleaseTitle(release: GitHubRelease) {
-	return release.name?.trim() || release.tag_name
-}
-
-function getReleaseDate(publishedAt: string | null) {
-	return publishedAt?.slice(0, 10) ?? ''
-}
-
-const categoryClasses: Record<ReleaseChangeType, string> = {
+const categoryClasses: Record<AnnouncementChangeType, string> = {
 	added: 'bg-brand-green',
 	changed: 'bg-brand-blue',
 	deprecated: 'bg-brand-orange',
@@ -137,35 +97,27 @@ const categoryClasses: Record<ReleaseChangeType, string> = {
 	security: 'bg-brand-orange',
 }
 
-const releaseNotesLocale = computed<ReleaseNotesLocale>(() =>
-	locale.value === 'zh-CN' ? 'zh-CN' : 'en-US',
-)
-const releaseCategories = computed(() =>
-	(releases.value ?? []).map((release) => {
-		const notes = parseReleaseNotes(release.body)[releaseNotesLocale.value]
-
-		return {
-			id: release.id,
-			categories: RELEASE_CHANGE_TYPES.flatMap((type) => {
-				const changes = notes[type]
-				if (!changes?.length) return []
-
-				return [
-					{
-						type,
-						label: formatMessage(messages[type]),
-						className: categoryClasses[type],
-						changes,
-					},
-				]
-			}),
-		}
-	}),
-)
-
-function getReleaseCategories(releaseId: number) {
-	return releaseCategories.value.find((release) => release.id === releaseId)?.categories ?? []
+function getLocalizedText(text: LocalizedAnnouncementText): string {
+	return text[locale.value === 'zh-CN' ? 'zh-CN' : 'en-US']
 }
+
+function getAnnouncementChangeTypes(announcement: LauncherAnnouncement): AnnouncementChangeType[] {
+	return CHANGE_TYPES.filter((type) => announcement.changes?.[type]?.length)
+}
+
+const {
+	data: announcements,
+	error,
+	status,
+	refresh,
+} = await useAsyncData(
+	'axolotl-release-catalog',
+	async () => {
+		const catalog = await $fetch<AnnouncementCatalog>(CATALOG_URL, { timeout: 8000 })
+		return catalog.announcements
+	},
+	{ server: false },
+)
 
 const isLoading = computed(() => status.value === 'idle' || status.value === 'pending')
 const seoTitle = computed(() => formatMessage(messages.seoTitle))
@@ -209,14 +161,14 @@ useHead({
 			</ButtonStyled>
 		</div>
 
-		<p v-else-if="!releases?.length" class="status-panel">
+		<p v-else-if="!announcements?.length" class="status-panel">
 			{{ formatMessage(messages.empty) }}
 		</p>
 
 		<div v-else class="announcement-list">
 			<Accordion
-				v-for="(release, index) in releases"
-				:key="release.id"
+				v-for="(announcement, index) in announcements"
+				:key="announcement.id"
 				:open-by-default="index === 0"
 				class="announcement"
 				button-class="group flex w-full cursor-pointer items-center gap-4 border-0 bg-transparent px-5 py-4 text-left"
@@ -224,34 +176,42 @@ useHead({
 				<template #title>
 					<div class="announcement-heading">
 						<div class="announcement-title-row">
-							<h2>{{ getReleaseTitle(release) }}</h2>
-							<TagItem>{{ release.tag_name }}</TagItem>
+							<h2>{{ getLocalizedText(announcement.title) }}</h2>
+							<TagItem>{{ announcement.version }}</TagItem>
 						</div>
 						<div class="announcement-date">
 							<CalendarIcon aria-hidden="true" />
-							<time :datetime="release.published_at ?? undefined">
-								{{ getReleaseDate(release.published_at) }}
+							<time :datetime="announcement.publishedAt">
+								{{ announcement.publishedAt }}
 							</time>
 						</div>
 					</div>
 				</template>
 
 				<div class="announcement-content">
-					<p v-if="getReleaseCategories(release.id).length === 0" class="no-release-notes">
+					<p
+						v-if="
+							!announcement.changes ||
+							CHANGE_TYPES.every((type) => !announcement.changes?.[type]?.length)
+						"
+						class="no-release-notes"
+					>
 						{{ formatMessage(messages.noReleaseNotes) }}
 					</p>
 					<section
-						v-for="(category, categoryIndex) in getReleaseCategories(release.id)"
-						:key="category.type"
+						v-for="(type, typeIndex) in getAnnouncementChangeTypes(announcement)"
+						:key="type"
 						class="change-group"
-						:class="{ 'first-change-group': categoryIndex === 0 }"
+						:class="{ 'first-change-group': typeIndex === 0 }"
 					>
 						<h3>
-							<span :class="category.className" aria-hidden="true" />
-							{{ category.label }}
+							<span :class="categoryClasses[type]" aria-hidden="true" />
+							{{ formatMessage(messages[type]) }}
 						</h3>
 						<ul>
-							<li v-for="change in category.changes" :key="change">{{ change }}</li>
+							<li v-for="change in announcement.changes[type]" :key="change">
+								{{ getLocalizedText(change) }}
+							</li>
 						</ul>
 					</section>
 				</div>

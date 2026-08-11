@@ -52,6 +52,10 @@ The website and app `prepr` commands
 
 - Do not take screenshots or perform automated, visual, or manual self-testing of the local app.
 
+### Website Verification
+
+- Do not use browser automation tools to perform excessive testing of website frontend changes (interaction flows, theme toggling, responsive checks, screenshots) unless the user explicitly requests it. The user verifies visual and interaction changes themselves.
+
 ### Remote Commits
 
 - Before pushing a remote commit, inspect its changed paths. If it does not change the desktop app (`apps/app/`, `apps/app-frontend/`) or its app-specific dependencies, prevent unnecessary GitHub Actions usage by including `[skip ci]` in the commit message.
@@ -158,4 +162,12 @@ For Edit, use: `		private byte tag;` (copy everything after →, including the t
 
 ## Standards
 
-Standards available at the @standards/ folder.
+Standards available at the @standards/ folder. Read the relevant standard before working on related code:
+
+- @standards/frontend/SURFACE_SYSTEM.md — UI elevation/separator tokens; consult on any UI work using surfaces or strokes
+- @standards/frontend/MODALS.md — regular and multistage modal APIs; consult before building or changing any modal
+- @standards/frontend/ADDING_API_MODULES.md — adding a new module to packages/api-client
+- @standards/frontend/DEPENDENCY_INJECTION.md — the provide/inject DI layer for platform abstraction and page-level context
+- @standards/frontend/INTERNATIONALIZATION.md — translatable strings, ICU message format, and i18n conventions
+- @standards/frontend/FIGMA_MCP_USAGE.md — translating Figma designs into Vue components via the Figma MCP server
+- @standards/maintaining/CHANGELOG.md — changelog entry style; consult when writing or reviewing changelog entries

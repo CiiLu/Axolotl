@@ -46,6 +46,7 @@ export default new createRouter({
 				useContext: true,
 				breadcrumb: [{ name: '?BrowseTitle' }],
 				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'browse',
 			},
 		},
 		{
@@ -135,6 +136,7 @@ export default new createRouter({
 			meta: {
 				breadcrumb: [{ name: 'Library' }],
 				discordActivity: 'Browsing instances...',
+				pageTransitionGroup: 'library',
 			},
 			children: [
 				{
@@ -180,6 +182,7 @@ export default new createRouter({
 				useContext: true,
 				breadcrumb: [{ name: '?Project' }],
 				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'curseforge-project',
 			},
 		},
 		{
@@ -191,6 +194,7 @@ export default new createRouter({
 				useContext: true,
 				breadcrumb: [{ name: '?Project', link: '/project/curseforge/{id}' }, { name: 'Versions' }],
 				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'curseforge-project',
 			},
 		},
 		{
@@ -202,6 +206,7 @@ export default new createRouter({
 				useContext: true,
 				breadcrumb: [{ name: '?Project', link: '/project/curseforge/{id}' }, { name: 'Gallery' }],
 				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'curseforge-project',
 			},
 		},
 		{
@@ -211,6 +216,7 @@ export default new createRouter({
 			props: true,
 			meta: {
 				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'project',
 			},
 			children: [
 				{
@@ -263,6 +269,7 @@ export default new createRouter({
 			props: true,
 			meta: {
 				discordActivity: 'Browsing instances...',
+				pageTransitionGroup: 'instance',
 			},
 			children: [
 				// {

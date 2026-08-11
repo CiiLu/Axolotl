@@ -9,6 +9,7 @@ import {
 	download_job_delete,
 	download_job_get,
 	download_job_list,
+	download_job_resume,
 	download_job_retry,
 	type DownloadRequestUpdate,
 	installJobInstanceId,
@@ -38,6 +39,7 @@ export interface DownloadManager {
 	refresh: () => Promise<void>
 	cancel: (jobId: string) => Promise<void>
 	retry: (jobId: string) => Promise<void>
+	resume: (jobId: string) => Promise<void>
 	remove: (jobId: string) => Promise<void>
 	clearHistory: () => Promise<void>
 	dispose: () => void
@@ -58,8 +60,10 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 	const pendingRequestUpdates = new Map<string, DownloadRequestUpdate[]>()
 
 	function persistManualDownloadsFromJob(job: InstallJobSnapshot) {
-		if (job.status !== 'succeeded') return
+		if (job.status !== 'waiting_for_user' && job.status !== 'succeeded') return
 		const instanceId = installJobInstanceId(job)
+		const hasManualDownloadHistory = job.items.some((item) => item.manual_url)
+		if (!instanceId || !hasManualDownloadHistory) return
 		const manualItems = job.items
 			.filter(
 				(item) =>
@@ -71,9 +75,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 				fileName: item.name,
 				websiteUrl: item.manual_url ?? undefined,
 			}))
-		if (instanceId && manualItems.length > 0) {
-			setCurseForgeManualDownloads(instanceId, manualItems)
-		}
+		setCurseForgeManualDownloads(instanceId, manualItems)
 	}
 
 	function setJob(job: InstallJobSnapshot) {
@@ -229,6 +231,11 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 		await reconcileJob(job)
 	}
 
+	async function resume(jobId: string) {
+		const job = await download_job_resume(jobId)
+		await reconcileJob(job)
+	}
+
 	/**
 	 * The job may already have reached a terminal state (or been removed) by
 	 * the time the retry/cancel command returns. Fetch the freshest snapshot so
@@ -268,6 +275,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 		refresh,
 		cancel,
 		retry,
+		resume,
 		remove,
 		clearHistory,
 		dispose() {

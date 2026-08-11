@@ -127,7 +127,7 @@ defineOptions({
 .accordion-content {
 	display: grid;
 	grid-template-rows: 0fr;
-	transition: grid-template-rows 0.3s ease-in-out;
+	transition: grid-template-rows 0.3s cubic-bezier(0, 0.6, 0.3, 1);
 }
 
 @media (prefers-reduced-motion) {

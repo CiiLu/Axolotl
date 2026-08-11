@@ -15,7 +15,7 @@ import {
 	injectPageContext,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
@@ -120,6 +120,11 @@ const floatingControlsStyle = computed(() => ({
 	bottom: themeStore.getFeatureFlag('page_path') ? '3.5rem' : '1rem',
 	right: `calc(${pageContext.floatingActionBarOffsets?.right.value ?? '0px'} + 1rem)`,
 }))
+
+const animateSidebarShow = ref(false)
+setTimeout(() => {
+	animateSidebarShow.value = true
+}, 200)
 
 async function clearMissingMinimalInstance() {
 	const selectedId = themeStore.minimalHomeInstanceId
@@ -238,7 +243,7 @@ function openWidgetPicker() {
 }
 
 const instancesLoaded = await fetchInstances()
-if (!instancesLoaded || instances.value.length > 0) await fetchPlayerName()
+if (!instancesLoaded || instances.value.length > 0) void fetchPlayerName()
 await loadDashboardConfig()
 
 const unlistenInstance = await instance_listener(async () => {
@@ -365,7 +370,10 @@ onUnmounted(() => {
 		</button>
 	</div>
 	<Teleport v-if="!isMinimal" to="#sidebar-default-teleport-target">
-		<div class="flex min-w-0 flex-col">
+		<div
+			class="flex min-w-0 flex-col slide-enter-active"
+			:class="{ 'slide-enter-from': !animateSidebarShow }"
+		>
 			<HomePlayInsights />
 			<HomeDailyChallenge />
 			<HomeMinecraftNews />

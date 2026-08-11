@@ -1,4 +1,3 @@
-import type { RawDecimal } from '../../utils/types'
 import type { ISO3166 } from '../iso3166/types'
 
 export namespace Labrinth {
@@ -49,16 +48,6 @@ export namespace Labrinth {
 					| 'no_compatible_version'
 					| 'missing_version'
 					| 'quilt_fabric_api'
-			}
-		}
-	}
-
-	export namespace Campaign {
-		export namespace Internal {
-			export type CampaignInfo = {
-				total_donations_usd: RawDecimal
-				target_usd: RawDecimal
-				num_donators: number
 			}
 		}
 	}
@@ -958,7 +947,6 @@ export namespace Labrinth {
 				id: string
 				slug: string
 				project_type: ProjectType
-				actualProjectType: ProjectType
 				team: string
 				organization: string | null
 				title: string
@@ -1623,16 +1611,6 @@ export namespace Labrinth {
 			export type AuthProvider = Common.AuthProvider
 			export type UserPayoutData = Common.UserPayoutData
 
-			export type Pride26CampaignDonation = {
-				last_donated_at: string
-				has_badge: boolean
-				has_midas: boolean
-			}
-
-			export type UserCampaigns = {
-				pride_26: Pride26CampaignDonation | null
-			}
-
 			export type User = {
 				id: string
 				username: string
@@ -1641,7 +1619,6 @@ export namespace Labrinth {
 				created: string
 				role: Role
 				badges: number
-				campaigns: UserCampaigns
 				auth_providers?: AuthProvider[]
 				email?: string
 				email_verified?: boolean

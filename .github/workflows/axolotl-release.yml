@@ -234,6 +234,9 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: main
 
       - name: Download updater signatures
         env:
@@ -265,6 +268,27 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${GITHUB_REF_NAME}" release-check/latest.json --clobber
+
+      - name: Publish website download metadata
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/axolotl/create-website-release-metadata.mjs \
+            release-check/release.json \
+            apps/website/releases/latest.json
+          node scripts/axolotl/create-website-release-catalog.mjs \
+            apps/website/releases/catalog.json
+
+          git config user.name "Axolotl Release Bot"
+          git config user.email "release@axolotl.local"
+          git add apps/website/releases/latest.json apps/website/releases/catalog.json
+          if git diff --cached --quiet; then
+            echo "Website metadata is unchanged"
+          else
+            git commit -m "chore(website): update download metadata to ${GITHUB_REF_NAME} [skip ci]"
+            git push origin main
+          fi
 
       - name: Publish release
         env:
