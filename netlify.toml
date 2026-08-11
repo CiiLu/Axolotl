@@ -8,11 +8,11 @@
 # CORS 拦截，见 netlify/functions/releases-*.mjs）。
 
 [[redirects]]
-  from = "/api/releases/latest"
-  to = "/.netlify/functions/releases-latest"
-  status = 200
+from = "/api/releases/latest"
+to = "/.netlify/functions/releases-latest"
+status = 200
 
 [[redirects]]
-  from = "/api/releases/catalog"
-  to = "/.netlify/functions/releases-catalog"
-  status = 200
+from = "/api/releases/catalog"
+to = "/.netlify/functions/releases-catalog"
+status = 200
