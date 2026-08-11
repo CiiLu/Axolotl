@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-11T01:34:12.678Z",
+  "updated_at": "2026-08-11T07:47:57.942Z",
   "announcements": [
     {
       "id": "launcher-1.7.3",
@@ -24,6 +24,22 @@
           {
             "en-US": "Fixed Curseforge import missing files issues",
             "zh-CN": "修复 Curseforge 导入缺失文件问题"
+          },
+          {
+            "en-US": "Fixed the issue when after manually added missing files, the download indicator will wrongly show a downloaded size larger than excepted size.",
+            "zh-CN": "修复手动添加缺失文件后，下载指示器错误显示已下载文件大小大于预期大小的问题"
+          },
+          {
+            "en-US": "Fixed the issue when Discord Rich Presence is not reachable, Minecraft can not start properly.",
+            "zh-CN": "修复当 Discord Rich Presence 不可用（超时）时，Minecraft 无法正常启动的问题。"
+          },
+          {
+            "en-US": "Fixed nsis installer not installing the launcher into the correct specified directory.",
+            "zh-CN": "修复 nsis 安装程序未能将启动器安装到指定目录的问题。"
+          },
+          {
+            "en-US": "Fixed Minecraft account name fetch blocking splash screen from closing.",
+            "zh-CN": "修复 Minecraft 账号名称获取堵塞导致阻止启动器Splash screen关闭的问题。"
           }
         ],
         "changed": [

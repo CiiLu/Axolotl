@@ -6,18 +6,17 @@
 		height="24"
 		viewBox="0 0 24 24"
 		fill="none"
-		stroke="url(#multiplayer-gradient-dark)"
+		stroke="url(#import-gradient-dark)"
 		stroke-width="2"
 		stroke-linecap="round"
 		stroke-linejoin="round"
 	>
-		<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-		<circle cx="9" cy="7" r="4" />
-		<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-		<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+		<path d="M12 3v12" />
+		<path d="m8 11 4 4 4-4" />
+		<path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" />
 		<defs>
 			<linearGradient
-				id="multiplayer-gradient-dark"
+				id="import-gradient-dark"
 				x1="12"
 				y1="0"
 				x2="12"
@@ -37,18 +36,17 @@
 		height="24"
 		viewBox="0 0 24 24"
 		fill="none"
-		stroke="url(#multiplayer-gradient-light)"
+		stroke="url(#import-gradient-light)"
 		stroke-width="2"
 		stroke-linecap="round"
 		stroke-linejoin="round"
 	>
-		<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-		<circle cx="9" cy="7" r="4" />
-		<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-		<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+		<path d="M12 3v12" />
+		<path d="m8 11 4 4 4-4" />
+		<path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" />
 		<defs>
 			<linearGradient
-				id="multiplayer-gradient-light"
+				id="import-gradient-light"
 				x1="12"
 				y1="0"
 				x2="12"
