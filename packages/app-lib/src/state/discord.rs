@@ -1,17 +1,41 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::sync::{
+    Arc, Mutex, TryLockError, atomic::AtomicBool, atomic::Ordering,
+};
+use std::time::Duration;
 
 use discord_rich_presence::{
     DiscordIpc, DiscordIpcClient,
     activity::{Activity, Assets},
 };
 use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
 
 use crate::State;
 
 pub struct DiscordGuard {
-    client: Arc<RwLock<DiscordIpcClient>>,
+    client: Arc<Mutex<DiscordIpcClient>>,
     connected: Arc<AtomicBool>,
     launcher_activity: Arc<RwLock<String>>,
+}
+
+const DISCORD_IPC_TIMEOUT: Duration = Duration::from_secs(2);
+
+async fn await_ipc_task<T>(
+    operation: &'static str,
+    timeout: Duration,
+    task: JoinHandle<T>,
+) -> Option<T> {
+    match tokio::time::timeout(timeout, task).await {
+        Ok(Ok(result)) => Some(result),
+        Ok(Err(error)) => {
+            tracing::warn!(%error, operation, "Discord IPC worker failed");
+            None
+        }
+        Err(_) => {
+            tracing::warn!(operation, "Discord IPC operation timed out");
+            None
+        }
+    }
 }
 
 impl DiscordGuard {
@@ -21,26 +45,58 @@ impl DiscordGuard {
         let dipc = DiscordIpcClient::new("1533353147349864458");
 
         Ok(DiscordGuard {
-            client: Arc::new(RwLock::new(dipc)),
+            client: Arc::new(Mutex::new(dipc)),
             connected: Arc::new(AtomicBool::new(false)),
             launcher_activity: Arc::new(RwLock::new("Idling...".to_string())),
         })
     }
 
-    /// If the client failed connecting during init(), this will check for connection and attempt to reconnect
-    /// This MUST be called first in any client method that requires a connection, because those can PANIC if the client is not connected
-    /// (No connection is different than a failed connection, the latter will not panic and can be retried)
-    pub async fn retry_if_not_ready(&self) -> bool {
-        let mut client = self.client.write().await;
-        if !self.connected.load(std::sync::atomic::Ordering::Relaxed) {
-            if client.connect().is_ok() {
-                self.connected
-                    .store(true, std::sync::atomic::Ordering::Relaxed);
-                return true;
+    async fn run_ipc<F>(
+        &self,
+        operation: &'static str,
+        connect_if_needed: bool,
+        action: F,
+    ) where
+        F: FnOnce(&mut DiscordIpcClient) -> crate::Result<()> + Send + 'static,
+    {
+        let client = self.client.clone();
+        let connected = self.connected.clone();
+        let task = tokio::task::spawn_blocking(move || {
+            let mut client = match client.try_lock() {
+                Ok(client) => client,
+                Err(TryLockError::WouldBlock) => {
+                    tracing::warn!(
+                        operation,
+                        "Discord IPC client is busy; skipping activity update"
+                    );
+                    return;
+                }
+                Err(TryLockError::Poisoned(error)) => {
+                    tracing::warn!(
+                        operation,
+                        "Discord IPC client lock was poisoned; recovering"
+                    );
+                    error.into_inner()
+                }
+            };
+
+            if !connected.load(Ordering::Relaxed) {
+                if !connect_if_needed {
+                    return;
+                }
+                if client.connect().is_err() {
+                    return;
+                }
+                connected.store(true, Ordering::Relaxed);
             }
-            return false;
-        }
-        true
+
+            if let Err(error) = action(&mut client) {
+                connected.store(false, Ordering::Relaxed);
+                tracing::warn!(%error, operation, "Discord IPC operation failed");
+            }
+        });
+
+        let _ = await_ipc_task(operation, DISCORD_IPC_TIMEOUT, task).await;
     }
 
     /// Set the activity to the given message
@@ -81,31 +137,24 @@ impl DiscordGuard {
         msg: &str,
         reconnect_if_fail: bool,
     ) -> crate::Result<()> {
-        // Attempt to connect if not connected. Do not continue if it fails, as the client.set_activity can panic if it never was connected
-        if !self.retry_if_not_ready().await {
-            return Ok(());
-        }
+        let msg = msg.to_string();
+        self.run_ipc("set activity", true, move |client| {
+            let activity = Activity::new().state(&msg).assets(
+                Assets::new()
+                    .large_image("modrinth_simple")
+                    .large_text("Modrinth Logo"),
+            );
+            let result = client.set_activity(activity.clone());
 
-        let activity = Activity::new().state(msg).assets(
-            Assets::new()
-                .large_image("modrinth_simple")
-                .large_text("Modrinth Logo"),
-        );
-
-        // Attempt to set the activity
-        // If the existing connection fails, attempt to reconnect and try again
-        let mut client: tokio::sync::RwLockWriteGuard<'_, DiscordIpcClient> =
-            self.client.write().await;
-        let res = client.set_activity(activity.clone());
-
-        if reconnect_if_fail {
-            if let Err(_e) = res {
+            if reconnect_if_fail && result.is_err() {
                 client.reconnect()?;
-                return Ok(client.set_activity(activity)?); // try again, but don't reconnect if it fails again
+                client.set_activity(activity)?;
+            } else {
+                result?;
             }
-        } else {
-            res?;
-        }
+            Ok(())
+        })
+        .await;
 
         Ok(())
     }
@@ -115,24 +164,18 @@ impl DiscordGuard {
         &self,
         reconnect_if_fail: bool,
     ) -> crate::Result<()> {
-        // Attempt to connect if not connected. Do not continue if it fails, as the client.clear_activity can panic if it never was connected
-        if !self.retry_if_not_ready().await {
-            return Ok(());
-        }
+        self.run_ipc("clear activity", false, move |client| {
+            let result = client.clear_activity();
 
-        // Attempt to clear the activity
-        // If the existing connection fails, attempt to reconnect and try again
-        let mut client = self.client.write().await;
-        let res = client.clear_activity();
-
-        if reconnect_if_fail {
-            if res.is_err() {
+            if reconnect_if_fail && result.is_err() {
                 client.reconnect()?;
-                return Ok(client.clear_activity()?); // try again, but don't reconnect if it fails again
+                client.clear_activity()?;
+            } else {
+                result?;
             }
-        } else {
-            res?;
-        }
+            Ok(())
+        })
+        .await;
         Ok(())
     }
 
@@ -162,5 +205,34 @@ impl DiscordGuard {
                 .await?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::await_ipc_task;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn ipc_task_returns_completed_result() {
+        let task = tokio::task::spawn_blocking(|| 42);
+
+        assert_eq!(
+            await_ipc_task("test", Duration::from_secs(1), task).await,
+            Some(42)
+        );
+    }
+
+    #[tokio::test]
+    async fn ipc_task_stops_waiting_after_timeout() {
+        let task = tokio::task::spawn_blocking(|| {
+            std::thread::sleep(Duration::from_millis(100));
+            42
+        });
+
+        assert_eq!(
+            await_ipc_task("test", Duration::from_millis(10), task).await,
+            None
+        );
     }
 }
