@@ -1313,27 +1313,6 @@
 	"app.export-modal.version-number-placeholder": {
 		"message": "1.0.0"
 	},
-	"app.fundraiser.days-left": {
-		"message": "{count, plural, one {# day left} other {# days left}}"
-	},
-	"app.fundraiser.dismiss": {
-		"message": "Dismiss Pride fundraiser"
-	},
-	"app.fundraiser.open": {
-		"message": "Open Pride fundraiser"
-	},
-	"app.fundraiser.progress": {
-		"message": "{current} of {target}"
-	},
-	"app.fundraiser.raised": {
-		"message": "{current} of {target} raised"
-	},
-	"app.fundraiser.supporters": {
-		"message": "{count, plural, one {# supporter} other {# supporters}}"
-	},
-	"app.fundraiser.title": {
-		"message": "Pride Fundraiser 2026"
-	},
 	"app.home.breadcrumb": {
 		"message": "Home"
 	},
@@ -5260,12 +5239,6 @@
 	},
 	"app.skins.section.modrinth": {
 		"message": "Modrinth"
-	},
-	"app.skins.section.modrinth-pride": {
-		"message": "Modrinth Pride"
-	},
-	"app.skins.section.modrinth-pride.tooltip": {
-		"message": "You received these skins for donating to a Modrinth Pride fundraiser during Pride Month."
 	},
 	"app.skins.section.mounts-of-mayhem": {
 		"message": "Mounts of Mayhem"
