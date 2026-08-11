@@ -72,6 +72,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed nsis installer not installing the launcher into the correct specified directory.',
 					'zh-CN': '修复 nsis 安装程序未能将启动器安装到指定目录的问题。',
 				},
+				{
+					'en-US': 'Fixed Minecraft account name fetch blocking splash screen from closing.',
+					'zh-CN': '修复 Minecraft 账号名称获取堵塞导致阻止启动器Splash screen关闭的问题。',
+				},
 			],
 			changed: [
 				{

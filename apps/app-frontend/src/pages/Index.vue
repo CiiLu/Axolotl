@@ -243,7 +243,7 @@ function openWidgetPicker() {
 }
 
 const instancesLoaded = await fetchInstances()
-if (!instancesLoaded || instances.value.length > 0) await fetchPlayerName()
+if (!instancesLoaded || instances.value.length > 0) void fetchPlayerName()
 await loadDashboardConfig()
 
 const unlistenInstance = await instance_listener(async () => {
