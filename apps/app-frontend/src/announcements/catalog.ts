@@ -69,6 +69,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
+						'Fixed the issue of the launcher not being able to start when the system language is set to Chinese.',
+					'zh-CN':
+						'针对Github Copilot auto模型做了特殊处理，现在Github Copilot 免费套餐也可以使用Auto模型。',
+				},
+				{
+					'en-US':
 						'Fixed the issue of the launcher triggering page transitions when switching tabs within a page.',
 					'zh-CN': '修复在页面内切换标签分类时，启动器会错误触发页面切换动画的问题。',
 				},
