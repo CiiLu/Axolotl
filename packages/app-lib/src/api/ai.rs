@@ -1939,7 +1939,7 @@ fn copilot_headers(
         .header("Editor-Plugin-Version", "copilot-chat/0.54.0")
         .header("User-Agent", "GitHubCopilotChat/0.54.0")
         .header("OpenAI-Intent", "conversation-panel")
-        .header("X-GitHub-Api-Version", "2026-06-01")
+        .header("X-GitHub-Api-Version", "2026-08-01")
         .header("X-Initiator", "user");
     match session_token {
         Some(token) => builder.header("Copilot-Session-Token", token),
