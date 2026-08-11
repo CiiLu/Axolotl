@@ -188,8 +188,42 @@ function handleSystemTheme(event: MediaQueryListEvent) {
 	if (preferredTheme.value === 'system') applyTheme()
 }
 
+const settingsPanel = ref<HTMLElement | null>(null)
+let lastFocusedElement: HTMLElement | null = null
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+	return Array.from(
+		container.querySelectorAll<HTMLElement>(
+			'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+		),
+	).filter((element) => !element.hasAttribute('disabled'))
+}
+
 function handleKeyDown(event: KeyboardEvent) {
-	if (event.key === 'Escape') open.value = false
+	if (event.key === 'Escape') {
+		open.value = false
+		return
+	}
+
+	// Tab 焦点圈定在弹窗内，避免焦点逃逸到背景页面
+	if (event.key !== 'Tab' || !open.value) return
+
+	const panel = settingsPanel.value
+	if (!panel) return
+
+	const focusable = getFocusableElements(panel)
+	if (!focusable.length) return
+
+	const first = focusable[0]
+	const last = focusable[focusable.length - 1]
+
+	if (event.shiftKey && document.activeElement === first) {
+		event.preventDefault()
+		last.focus()
+	} else if (!event.shiftKey && document.activeElement === last) {
+		event.preventDefault()
+		first.focus()
+	}
 }
 
 function handleExternalLink(event: MouseEvent) {
@@ -207,6 +241,20 @@ function handleExternalLink(event: MouseEvent) {
 watch(open, (isOpen) => {
 	if (!import.meta.client) return
 	document.body.style.overflow = isOpen ? 'hidden' : ''
+
+	if (isOpen) {
+		// 记住打开前的焦点，关闭时还原
+		lastFocusedElement = document.activeElement as HTMLElement | null
+		nextTick(() => {
+			const panel = settingsPanel.value
+			if (!panel) return
+			const focusable = getFocusableElements(panel)
+			;(focusable[0] ?? panel).focus()
+		})
+	} else {
+		lastFocusedElement?.focus()
+		lastFocusedElement = null
+	}
 })
 
 watch(selectedSource, setDownloadSource)
@@ -239,6 +287,7 @@ onBeforeUnmount(() => {
 		<Transition name="settings-modal">
 			<div v-if="open" class="settings-backdrop" @click.self="open = false">
 				<section
+					ref="settingsPanel"
 					class="settings-panel"
 					role="dialog"
 					aria-modal="true"

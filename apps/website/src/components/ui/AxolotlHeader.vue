@@ -6,6 +6,7 @@ import SettingsIcon from '@modrinth/assets/icons/settings.svg?component'
 import XIcon from '@modrinth/assets/icons/x.svg?component'
 import ButtonStyled from '@modrinth/ui/src/components/base/ButtonStyled.vue'
 import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
+import type { ComponentPublicInstance } from 'vue'
 
 import AxolotlWordmark from '~/components/brand/AxolotlWordmark.vue'
 
@@ -14,7 +15,28 @@ const emit = defineEmits<{
 }>()
 
 const mobileMenuOpen = ref(false)
+const mobileMenuRef = ref<HTMLElement | null>(null)
+const mobileMenuButtonRef = ref<ComponentPublicInstance | null>(null)
 const { formatMessage } = useVIntl()
+
+// 点击菜单与开关之外的区域时收起移动端菜单
+function handleOutsideClick(event: MouseEvent) {
+	if (!mobileMenuOpen.value) return
+
+	const target = event.target as Node
+	const buttonElement = mobileMenuButtonRef.value?.$el
+	if (!mobileMenuRef.value?.contains(target) && !buttonElement?.contains(target)) {
+		mobileMenuOpen.value = false
+	}
+}
+
+onMounted(() => {
+	document.addEventListener('click', handleOutsideClick)
+})
+
+onBeforeUnmount(() => {
+	document.removeEventListener('click', handleOutsideClick)
+})
 
 const messages = defineMessages({
 	home: { id: 'axolotl-site.navigation.home', defaultMessage: 'Axolotl Launcher home' },
@@ -88,7 +110,12 @@ function openSettings() {
 						<SettingsIcon aria-hidden="true" />
 					</button>
 				</ButtonStyled>
-				<ButtonStyled class="mobile-menu-button" circular type="transparent">
+				<ButtonStyled
+					ref="mobileMenuButtonRef"
+					class="mobile-menu-button"
+					circular
+					type="transparent"
+				>
 					<button
 						:aria-label="formatMessage(mobileMenuOpen ? messages.closeMenu : messages.openMenu)"
 						:aria-expanded="mobileMenuOpen"
@@ -104,6 +131,7 @@ function openSettings() {
 		<Transition name="mobile-menu">
 			<nav
 				v-if="mobileMenuOpen"
+				ref="mobileMenuRef"
 				class="mobile-navigation"
 				:aria-label="formatMessage(messages.mobile)"
 			>

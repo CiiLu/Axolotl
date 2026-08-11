@@ -59,8 +59,8 @@ const messages = defineMessages({
 					<NuxtLink to="/#faq">{{ formatMessage(messages.faq) }}</NuxtLink>
 					<a href="#download">{{ formatMessage(messages.downloads) }}</a>
 					<NuxtLink to="/changelog">{{ formatMessage(messages.changelog) }}</NuxtLink>
-					<NuxtLink to="/terms">服务条款</NuxtLink>
-					<NuxtLink to="/privacy">隐私政策</NuxtLink>
+					<NuxtLink to="/terms">{{ formatMessage(messages.terms) }}</NuxtLink>
+					<NuxtLink to="/privacy">{{ formatMessage(messages.privacy) }}</NuxtLink>
 					<a href="https://github.com/Mystic-Stars/Axolotl" target="_blank" rel="noopener">
 						{{ formatMessage(messages.sourceCode) }}
 					</a>

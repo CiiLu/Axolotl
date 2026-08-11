@@ -24,14 +24,9 @@ import OfflineModeIcon from '~/components/landing/OfflineModeIcon.vue'
 import OpenSourceIcon from '~/components/landing/OpenSourceIcon.vue'
 import WindowsLogo from '~/components/landing/WindowsLogo.vue'
 
-interface GitHubReleaseAsset {
-	browser_download_url: string
-	name: string
-}
-
-interface GitHubRelease {
-	assets: GitHubReleaseAsset[]
+interface WebsiteReleaseMetadata {
 	tag_name: string
+	assets: string[]
 }
 
 type OSType = 'Mac' | 'Windows' | 'Linux' | null
@@ -65,6 +60,7 @@ const resetHeroTilt = () => {
 
 const { resolvedSource } = useDownloadSource()
 const CNB_RELEASE_BASE_URL = 'https://cnb.cool/axlmc/Axolotl/-/releases/download'
+const GITHUB_RELEASE_BASE_URL = 'https://github.com/Mystic-Stars/Axolotl/releases/download'
 
 const windowsLink = ref<string | null>(null)
 
@@ -78,10 +74,17 @@ const macLinks = reactive({
 	universal: null as string | null,
 })
 
-const { data: launcherRelease } = await useFetch<GitHubRelease>(
-	'https://api.github.com/repos/Mystic-Stars/Axolotl/releases/latest',
-	{
+// 每次用户访问时从客户端请求最新发布元数据。元数据文件由发布 CI 写入仓库
+// main 分支（apps/website/releases/latest.json），经 CNB 镜像同步后由本站
+// Netlify Function（/api/releases/latest）实时转发——客户端直连 CNB 会被
+// CORS 拦截，整个链路不依赖 GitHub API。失败时进入降级状态，错误条提供
+// CNB / GitHub Releases 手动下载入口。
+const { data: launcherRelease, status: launcherReleaseStatus } =
+	await useFetch<WebsiteReleaseMetadata>('/api/releases/latest', {
 		server: false,
+		// 慢网络下 8 秒超时后进入降级状态，
+		// 避免按钮无限停留在"正在获取下载链接"。
+		timeout: 8000,
 		getCachedData(key, nuxtApp) {
 			const cached = (nuxtApp.ssrContext?.cache as any)?.[key] || nuxtApp.payload.data[key]
 			if (!cached) return
@@ -102,7 +105,20 @@ const { data: launcherRelease } = await useFetch<GitHubRelease>(
 				_cacheTime: Date.now(),
 			}
 		},
-	},
+	})
+
+// 下载链接的三种状态：获取中 / 就绪 / 失败。失败时主 CTA 降级为跳转下载区，
+// 下载区显示错误提示与 GitHub Releases 手动下载入口，避免点击死链接。
+const downloadState = computed<'loading' | 'ready' | 'error'>(() => {
+	if (launcherReleaseStatus.value === 'success') return 'ready'
+	if (launcherReleaseStatus.value === 'error') return 'error'
+	return 'loading'
+})
+
+const linkUnavailableLabel = computed(() =>
+	downloadState.value === 'error'
+		? formatMessage(messages.downloadLinksFailed)
+		: formatMessage(messages.fetchingDownloadLinks),
 )
 
 const platform = computed<string>(() => {
@@ -204,7 +220,18 @@ const rows = Array.from({ length: rowCount }, (_, index) =>
 	newProjects.slice(index * perRow, (index + 1) * perRow),
 )
 
+// 演示表格的交互状态：checkbox 真实可切换，删除按钮移除对应行（刷新恢复）
+const checkedMods = ref(modManagementData.map(() => true))
+const removeMod = (index: number) => {
+	modManagementData.splice(index, 1)
+	checkedMods.value.splice(index, 1)
+}
+
 const downloadLauncher = computed(() => {
+	// 获取中：按钮禁用，不做任何事
+	if (downloadState.value === 'loading') return () => {}
+	// 获取失败：降级为跳转下载区（那里有错误提示和手动下载入口）
+	if (downloadState.value === 'error') return scrollToSection
 	if (os.value === 'Windows') {
 		return () => {
 			downloadWindows.value?.click()
@@ -228,16 +255,16 @@ watch(
 	[launcherRelease, resolvedSource],
 	([release]) => {
 		const findAsset = (patterns: RegExp[]) => {
-			const asset = release?.assets.find((item) =>
-				patterns.some((pattern) => pattern.test(item.name)),
+			const assetName = release?.assets.find((name) =>
+				patterns.some((pattern) => pattern.test(name)),
 			)
-			if (!asset) return null
+			if (!assetName) return null
 
 			if (resolvedSource.value === 'cnb') {
-				return `${CNB_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(asset.name)}`
+				return `${CNB_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(assetName)}`
 			}
 
-			return asset.browser_download_url
+			return `${GITHUB_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(assetName)}`
 		}
 
 		windowsLink.value = findAsset([/x64-setup\.exe$/i, /\.exe$/i])
@@ -388,6 +415,22 @@ const messages = defineMessages({
 	downloadAxolotlButton: {
 		id: 'axolotl-marketing.hero.download-button',
 		defaultMessage: 'Download Axolotl',
+	},
+	fetchingDownloadLinks: {
+		id: 'axolotl-marketing.download.fetching-links',
+		defaultMessage: 'Fetching download links…',
+	},
+	downloadLinksFailed: {
+		id: 'axolotl-marketing.download.links-failed',
+		defaultMessage: 'Could not fetch the latest download links.',
+	},
+	manualDownloadFallback: {
+		id: 'axolotl-marketing.download.manual-fallback',
+		defaultMessage: 'Download manually from GitHub Releases',
+	},
+	cnbReleasesLink: {
+		id: 'axolotl-marketing.download.cnb-releases',
+		defaultMessage: 'CNB Releases (recommended in mainland China)',
 	},
 	moreDownloadOptions: {
 		id: 'app-marketing.hero.more-download-options',
@@ -929,11 +972,19 @@ useHead(() => ({
 				</p>
 				<div class="button-group">
 					<ButtonStyled v-if="os" color="brand" size="large">
-						<button rel="noopener nofollow" @click="handleDownload">
+						<button
+							class="hero-download-button"
+							:disabled="downloadState === 'loading'"
+							@click="handleDownload"
+						>
 							<LinuxIcon v-if="os === 'Linux'" />
 							<WindowsIcon v-else-if="os === 'Windows'" />
 							<AppleIcon v-else-if="os === 'Mac'" />
-							{{ formatMessage(messages.downloadAxolotlButton) }}
+							{{
+								downloadState === 'loading'
+									? formatMessage(messages.fetchingDownloadLinks)
+									: formatMessage(messages.downloadAxolotlButton)
+							}}
 						</button>
 					</ButtonStyled>
 					<ButtonStyled type="outlined" size="large">
@@ -1057,7 +1108,7 @@ useHead(() => ({
 						<div class="cell">{{ formatMessage(messages.version) }}</div>
 						<div class="cell">{{ formatMessage(messages.actions) }}</div>
 					</div>
-					<div class="table">
+					<TransitionGroup name="mod-row" tag="div" class="table">
 						<div
 							v-for="(mod, index) in modManagementData"
 							:key="mod.id"
@@ -1074,15 +1125,21 @@ useHead(() => ({
 							</div>
 							<div class="cell">{{ mod.version }}</div>
 							<div class="cell check">
-								<Checkbox :model-value="true" tabindex="-1" />
+								<Checkbox
+									v-model="checkedMods[index]"
+									:aria-label="`${mod.name} ${formatMessage(messages.installedMods)}`"
+								/>
 								<ButtonStyled circular type="transparent">
-									<button tabindex="-1">
+									<button
+										:aria-label="`${formatMessage(messages.actions)}: ${mod.name}`"
+										@click="removeMod(index)"
+									>
 										<TrashIcon />
 									</button>
 								</ButtonStyled>
 							</div>
 						</div>
-					</div>
+					</TransitionGroup>
 					<h3>{{ formatMessage(messages.modManagement) }}</h3>
 					<p>
 						{{ formatMessage(messages.modManagementDescription) }}
@@ -1182,10 +1239,13 @@ useHead(() => ({
 						{{ formatMessage(messages.windows) }}
 					</div>
 					<div class="description">
-						<a ref="downloadWindows" :href="windowsLink || undefined" download="">
+						<a v-if="windowsLink" ref="downloadWindows" :href="windowsLink" download="">
 							<DownloadIcon />
 							<span>{{ formatMessage(messages.downloadInstaller) }}</span>
 						</a>
+						<span v-else class="download-unavailable">
+							{{ linkUnavailableLabel }}
+						</span>
 					</div>
 				</div>
 				<div class="divider" />
@@ -1195,10 +1255,13 @@ useHead(() => ({
 						{{ formatMessage(messages.mac) }}
 					</div>
 					<div class="description apple">
-						<a ref="downloadMac" :href="macLinks.universal || undefined" download="">
+						<a v-if="macLinks.universal" ref="downloadMac" :href="macLinks.universal" download="">
 							<DownloadIcon />
 							<span>{{ formatMessage(messages.downloadInstaller) }}</span>
 						</a>
+						<span v-else class="download-unavailable">
+							{{ linkUnavailableLabel }}
+						</span>
 					</div>
 				</div>
 				<div class="divider" />
@@ -1210,10 +1273,13 @@ useHead(() => ({
 						</div>
 					</div>
 					<div class="description apple">
-						<a :href="linuxLinks.appImage || undefined" download="">
+						<a v-if="linuxLinks.appImage" :href="linuxLinks.appImage" download="">
 							<DownloadIcon />
 							<span>{{ formatMessage(messages.downloadAppImage) }}</span>
 						</a>
+						<span v-else class="download-unavailable">
+							{{ linkUnavailableLabel }}
+						</span>
 						<Accordion
 							class="mt-2 flex flex-col items-center"
 							content-class="flex flex-col items-start gap-2 mt-2 text-sm"
@@ -1225,17 +1291,38 @@ useHead(() => ({
 							<span class="grid grid-cols-[auto_1fr] gap-2 text-left text-orange"
 								><IssuesIcon class="mt-1" /> {{ formatMessage(messages.notRecommended) }}</span
 							>
-							<a :href="linuxLinks.deb || undefined" download="" class="text-primary">
+							<a v-if="linuxLinks.deb" :href="linuxLinks.deb" download="" class="text-primary">
 								<DownloadIcon />
 								<span>{{ formatMessage(messages.downloadTheDEB) }}</span>
 							</a>
-							<a :href="linuxLinks.rpm || undefined" download="" class="text-primary">
+							<span v-else class="download-unavailable text-primary">
+								{{ linkUnavailableLabel }}
+							</span>
+							<a v-if="linuxLinks.rpm" :href="linuxLinks.rpm" download="" class="text-primary">
 								<DownloadIcon />
 								<span>{{ formatMessage(messages.downloadTheRPM) }}</span>
 							</a>
+							<span v-else class="download-unavailable text-primary">
+								{{ linkUnavailableLabel }}
+							</span>
 						</Accordion>
 					</div>
 				</div>
+			</div>
+			<div v-if="downloadState === 'error'" class="download-error-banner" role="alert">
+				<span>{{ formatMessage(messages.downloadLinksFailed) }}</span>
+				<span class="download-error-links">
+					<a href="https://cnb.cool/axlmc/Axolotl/-/releases" target="_blank" rel="noopener">
+						{{ formatMessage(messages.cnbReleasesLink) }}
+					</a>
+					<a
+						href="https://github.com/Mystic-Stars/Axolotl/releases/latest"
+						target="_blank"
+						rel="noopener"
+					>
+						{{ formatMessage(messages.manualDownloadFallback) }}
+					</a>
+				</span>
 			</div>
 			<p class="terms">
 				<IntlFormatted :message-id="messages.downloadTerms">
@@ -1505,6 +1592,13 @@ useHead(() => ({
 	gap: 0.75rem;
 	margin: 2rem 0 0;
 	mask-image: none;
+
+	.hero-download-button {
+		&:disabled {
+			opacity: 0.65;
+			cursor: wait;
+		}
+	}
 }
 
 .hero-product {
@@ -1920,16 +2014,26 @@ useHead(() => ({
 						position: relative;
 						display: flex;
 
-						cursor: pointer;
+						cursor: default;
 						padding: 1rem;
 						gap: 1rem;
 						border-radius: 1rem;
 						border: 1px solid var(--landing-border-color);
 						transition:
 							background 0.5s ease-in-out,
-							transform 0.05s ease-in-out;
+							transform 0.18s ease-in-out,
+							box-shadow 0.18s ease-in-out;
 						// Removed due to lag on mobile :(
 						background: var(--landing-blob-gradient);
+
+						&:hover {
+							transform: translateY(-0.2rem);
+							box-shadow: 0 0.75rem 1.75rem rgb(0 0 0 / 18%);
+						}
+
+						&:active {
+							transform: translateY(0) scale(0.985);
+						}
 
 						img {
 							height: 3rem;
@@ -2080,12 +2184,6 @@ useHead(() => ({
 	background: rgba(59, 63, 85, 0.15);
 	box-shadow: 2px 2px 12px 0px rgba(0, 0, 0, 0.16);
 
-	button {
-		&:hover {
-			cursor: default !important;
-		}
-	}
-
 	.first {
 		border-top: none !important;
 	}
@@ -2097,9 +2195,31 @@ useHead(() => ({
 	}
 }
 
+.mod-row-leave-active {
+	transition:
+		opacity 0.2s ease,
+		transform 0.2s ease;
+}
+
+.mod-row-leave-to {
+	opacity: 0;
+	transform: translateX(-0.5rem);
+}
+
+// 表格是真实文本（模组名、版本），允许选中复制；projects 滚动区保持禁选
+.table .row {
+	user-select: text;
+}
+
 .row,
-.header,
-.table,
+.header {
+	user-select: none;
+
+	&:hover {
+		cursor: default;
+	}
+}
+
 .project,
 .export-card {
 	user-select: none;
@@ -2230,6 +2350,18 @@ useHead(() => ({
 						text-align: left;
 					}
 				}
+
+				.download-unavailable {
+					display: inline-flex;
+					align-items: center;
+					justify-content: center;
+					gap: var(--gap-sm);
+					min-height: 2.25rem;
+					color: var(--color-secondary);
+					font-size: var(--font-size-sm);
+					text-align: center;
+					cursor: default;
+				}
 			}
 
 			:deep(.animated-dropdown) {
@@ -2254,6 +2386,45 @@ useHead(() => ({
 				.selected-option {
 					background-color: var(--color-brand);
 				}
+			}
+		}
+	}
+
+	.download-error-banner {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.5rem 1rem;
+		width: min(100%, 68.5rem);
+		margin: 0 auto;
+		padding: 0.75rem 1.25rem;
+		border: 1px solid color-mix(in srgb, var(--color-brand) 40%, transparent);
+		border-radius: var(--radius-md);
+		background: var(--color-brand-highlight);
+		color: var(--color-contrast);
+		font-size: var(--font-size-sm);
+		text-align: center;
+
+		.download-error-links {
+			display: inline-flex;
+			align-items: center;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 0.5rem 1rem;
+
+			a {
+				color: var(--color-brand);
+				font-weight: 700;
+				text-decoration: underline;
+				text-underline-offset: 0.15rem;
+			}
+
+			a + a::before {
+				content: '·';
+				margin-right: 1rem;
+				color: var(--color-secondary);
+				font-weight: 400;
 			}
 		}
 	}
@@ -2436,6 +2607,31 @@ useHead(() => ({
 
 		.hero-wordmark {
 			color: rgb(105 73 88 / 8%);
+		}
+
+		.hero-index {
+			color: rgb(105 73 88 / 55%);
+			border-color: rgb(105 73 88 / 16%);
+		}
+
+		.hero-grid {
+			background-image: linear-gradient(rgb(105 73 88 / 5%) 1px, transparent 1px);
+		}
+
+		.hero-sun {
+			border-color: rgb(199 47 108 / 16%);
+			box-shadow:
+				0 0 0 5rem rgb(199 47 108 / 3%),
+				0 0 0 10rem rgb(199 47 108 / 1.5%);
+		}
+
+		.hero-product {
+			border-color: rgb(105 73 88 / 18%);
+			background: linear-gradient(145deg, rgb(255 255 255 / 55%), rgb(255 255 255 / 15%));
+		}
+
+		&::after {
+			background: linear-gradient(90deg, transparent, rgb(199 47 108 / 22%), transparent);
 		}
 	}
 

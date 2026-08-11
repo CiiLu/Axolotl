@@ -21,6 +21,21 @@ function isSupportedLocale(locale: string): boolean {
 	return supportedLocales.some((item) => item.code === locale)
 }
 
+// 解析 Accept-Language 头：取第一个可支持的语言，zh* 归一为 zh-CN，en* 归一为 en-US
+function parseAcceptLanguage(header: string): string {
+	for (const part of header.split(',')) {
+		const [code] = part.trim().split(';')
+		if (!code) continue
+		if (isSupportedLocale(code)) return code
+
+		const language = code.toLowerCase()
+		if (language.startsWith('zh')) return 'zh-CN'
+		if (language.startsWith('en')) return 'en-US'
+	}
+
+	return DEFAULT_LOCALE
+}
+
 function getBrowserLocale(): string {
 	if (!import.meta.client) return DEFAULT_LOCALE
 
@@ -130,7 +145,16 @@ export default defineNuxtPlugin({
 	async setup(nuxtApp) {
 		const locale = ref(DEFAULT_LOCALE)
 		const savedLocale = useCookie<string | null>('locale').value
-		const initialLocale = DEFAULT_LOCALE
+
+		// 首屏语言优先级：cookie > Accept-Language（SSR）> 默认中文。
+		// SSR 阶段就决定语言，避免客户端挂载后整页跳变。
+		let initialLocale = DEFAULT_LOCALE
+		if (savedLocale && isSupportedLocale(savedLocale)) {
+			initialLocale = savedLocale
+		} else if (import.meta.server) {
+			const acceptLanguage = useRequestHeaders(['accept-language'])['accept-language']
+			if (acceptLanguage) initialLocale = parseAcceptLanguage(acceptLanguage)
+		}
 
 		function t(key: string, values?: Record<string, unknown>): string {
 			const currentLocale = locale.value
