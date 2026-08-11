@@ -36,9 +36,6 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'axolotl-marketing.highlights.title-second': '不再绕路',
 		'axolotl-marketing.highlights.description':
 			'搜索 Modrinth 与 CurseForge，查看项目详情、选择版本并安装内容，由启动器处理依赖和更新。',
-		'axolotl-marketing.highlights.modrinth.title': 'Modrinth 与 CurseForge',
-		'axolotl-marketing.highlights.modrinth.description':
-			'无需离开启动器，即可从两个来源探索模组、整合包、资源包、光影及更多内容。',
 		'axolotl-marketing.highlights.ad-free.title': '免费、开源且独立',
 		'axolotl-marketing.highlights.ad-free.description':
 			'基于 GPL-3.0 发布，免费使用且无广告。Axolotl 不是 Modrinth 官方客户端。',
@@ -77,44 +74,20 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'app-marketing.features.mod-management.title': '高效实例管理',
 		'app-marketing.features.mod-management.description':
 			'创建、导入和批量管理实例；集中管理模组、资源包、光影、文件、世界、截图和日志，以及更新、启动设置与整合包导出。',
-		'app-marketing.features.play.title': '畅玩你喜爱的模组',
-		'app-marketing.features.play.description':
-			'创建实例、加入喜爱的内容，只需几次点击即可进入 Minecraft。',
-		'app-marketing.features.sharing.title': '分享整合包',
-		'app-marketing.features.sharing.description':
-			'轻松创建、导出并分享整合包，同时完整保留依赖与版本信息。',
-		'app-marketing.features.sharing.share-button': '分享',
-		'app-marketing.features.sharing.modpack': '整合包',
-		'app-marketing.features.performance.activity-monitor': '活动监视器',
-		'app-marketing.features.performance.good-performance': '性能良好',
-		'app-marketing.features.performance.process-name': '进程名称',
-		'app-marketing.features.performance.cpu-percent': 'CPU 占用',
-		'app-marketing.features.performance.ram': '内存',
-		'axolotl-marketing.features.performance.axolotl-app': 'Axolotl Launcher',
-		'app-marketing.features.performance.small': '轻量',
-		'app-marketing.features.performance.less-than-150mb': '低于 150 MB',
-		'app-marketing.features.performance.google-chrome': 'Google Chrome',
-		'app-marketing.features.performance.discord': 'Discord',
-		'app-marketing.features.performance.infinite-mb': '∞ MB',
-		'app-marketing.features.performance.one-billion-percent': '10 亿 %',
-		'app-marketing.features.performance.infinite-times-infinite-mb': '∞ × ∞ MB',
 		'app-marketing.features.performance.title': '高性能',
 		'app-marketing.features.performance.description':
 			'Axolotl 以灵敏的界面与轻量的桌面核心保持安静、高效，不打扰你的游戏。',
-		'app-marketing.features.website.title': '在一个启动器中搜索两个来源',
+		'app-marketing.features.website.title': '从发现到安装',
 		'app-marketing.features.website.description':
 			'从 Modrinth 或 CurseForge 发现内容后，通过项目详情和版本选择直接安装到实例中，并在原处处理依赖和更新。',
 		'app-marketing.features.importing.title': '导入配置',
 		'app-marketing.features.importing.description':
-			'从常用启动器导入现有配置，无需手动重建即可继续游玩。',
-		'app-marketing.features.open-source.title': 'Tauri v2，在开放中开发',
-		'app-marketing.features.open-source.description':
-			'Axolotl 使用 Tauri v2 桌面基础，而不是 Electron；它是基于 Modrinth 单体仓库下游开发的独立非官方客户端。可在 <github-link>GitHub</github-link> 关注开发。',
+			'从 PCL2, HMCL 或任意你喜欢的启动器一键导入现有配置，无需手动重建即可继续游玩。',
 		'app-marketing.features.offline.title': '每个世界都用得上的能力',
 		'app-marketing.features.offline.description':
 			'中文搜索和项目翻译、拖拽导入、Java 管理、离线模式与皮肤管理，随时为你准备好。',
-		'app-marketing.features.follow.title': '测试版联机能力',
-		'app-marketing.features.follow.description': '在持续开发中体验启动器联机功能。',
+		'app-marketing.features.follow.title': '联机能力',
+		'app-marketing.features.follow.description': '由陶瓦联机强力驱动，一键体验启动器联机功能，方便快捷。',
 		'app-marketing.download.options-title': '下载选项',
 		'axolotl-marketing.download.title': '下载 Axolotl Launcher',
 		'app-marketing.download.description': '桌面应用支持多个平台，请选择适合你的版本。',
@@ -133,8 +106,6 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'app-marketing.download.linux-disclaimer':
 			'每个版本都会发布 Linux 软件包。请在<issues-link>发布页面</issues-link>查看架构详情；如果你的发行版需要额外配置，也可以<prism-link>报告问题</prism-link>。',
 		'app-marketing.hero.app-screenshot-alt': 'Axolotl Launcher 实例内容预览。',
-		'app-marketing.features.importing.gdlauncher-alt': 'GDLauncher',
-		'app-marketing.features.importing.multimc-alt': 'MultiMC',
 		'axolotl-marketing.hero.open-source': 'Tauri v2 · Rust · Vue 3',
 		'axolotl-marketing.demo.one-launcher': '一个启动器，承载每一个世界。',
 		'axolotl-marketing.demo.everything-together': '配置、模组、存档和设置始终井然有序。',

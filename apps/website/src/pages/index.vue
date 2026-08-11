@@ -3,11 +3,11 @@ import AppleIcon from '@modrinth/assets/external/apple.svg?component'
 import LinuxIcon from '@modrinth/assets/external/linux.svg?component'
 import WindowsIcon from '@modrinth/assets/external/windows.svg?component'
 import ArrowDownIcon from '@modrinth/assets/icons/arrow-down.svg?component'
-import CompassIcon from '@modrinth/assets/icons/compass.svg?component'
+import BoxesIcon from '@modrinth/assets/icons/boxes.svg?component'
 import DownloadIcon from '@modrinth/assets/icons/download.svg?component'
-import EyeOffIcon from '@modrinth/assets/icons/eye-off.svg?component'
+import GaugeIcon from '@modrinth/assets/icons/gauge.svg?component'
+import GitGraphIcon from '@modrinth/assets/icons/git-graph.svg?component'
 import IssuesIcon from '@modrinth/assets/icons/issues.svg?component'
-import LanguagesIcon from '@modrinth/assets/icons/languages.svg?component'
 import SearchIcon from '@modrinth/assets/icons/search.svg?component'
 import TrashIcon from '@modrinth/assets/icons/trash.svg?component'
 import Accordion from '@modrinth/ui/src/components/base/Accordion.vue'
@@ -19,10 +19,11 @@ import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
 
 import AppleLogo from '~/components/landing/AppleLogo.vue'
 import CommunitySection from '~/components/landing/CommunitySection.vue'
+import ImportGradientIcon from '~/components/landing/ImportGradientIcon.vue'
 import LinuxLogo from '~/components/landing/LinuxLogo.vue'
 import MultiplayerIcon from '~/components/landing/MultiplayerIcon.vue'
 import OfflineModeIcon from '~/components/landing/OfflineModeIcon.vue'
-import OpenSourceIcon from '~/components/landing/OpenSourceIcon.vue'
+import ProjectsShowcase from '~/components/landing/ProjectsShowcase.vue'
 import WindowsLogo from '~/components/landing/WindowsLogo.vue'
 
 interface WebsiteReleaseMetadata {
@@ -174,8 +175,7 @@ const modManagementData = [
 		name: 'Mod Menu',
 		author: 'Prospector',
 		version: '7.2.1',
-		iconUrl:
-			'https://cdn.modrinth.com/data/mOgUt4GM/1bfe2006b38340e9d064700e41adf84a8abb1bd4_96.webp',
+		iconUrl: 'https://cdn.modrinth.com/data/mOgUt4GM/5a20ed1450a0e1e79a1fe04e61bb4e5878bf1d20.png',
 	},
 	{
 		id: '9s6osm5g',
@@ -199,25 +199,6 @@ const modManagementData = [
 		iconUrl: 'https://cdn.modrinth.com/data/nrJ2NpD0/4f21214db060ed4542b1f3983c4113d293480a1b.webp',
 	},
 ]
-
-const newProjects = Array.from({ length: 40 }, (_, index) => {
-	const project = modManagementData[index % modManagementData.length]
-
-	return {
-		id: `${project.id}-${index}`,
-		icon_url: project.iconUrl,
-		title: project.name,
-		description: `${project.name} is available through Axolotl's content browser.`,
-
-		// 第一轮是真实语义内容，后面的只是视觉重复
-		isVisualDuplicate: index >= modManagementData.length,
-	}
-})
-const rowCount = 5
-const perRow = Math.ceil(newProjects.length / rowCount)
-const rows = Array.from({ length: rowCount }, (_, index) =>
-	newProjects.slice(index * perRow, (index + 1) * perRow),
-)
 
 // 演示表格的交互状态：checkbox 真实可切换，删除按钮移除对应行（刷新恢复）
 const checkedMods = ref(modManagementData.map(() => true))
@@ -339,15 +320,6 @@ const messages = defineMessages({
 		defaultMessage:
 			'Search Modrinth and CurseForge, then inspect projects, choose versions, install content, resolve dependencies, and keep it updated from the launcher.',
 	},
-	modrinthNative: {
-		id: 'axolotl-marketing.highlights.modrinth.title',
-		defaultMessage: 'Modrinth and CurseForge',
-	},
-	modrinthNativeDescription: {
-		id: 'axolotl-marketing.highlights.modrinth.description',
-		defaultMessage:
-			'Discover mods, modpacks, resource packs, shaders, and more from both sources without leaving your launcher.',
-	},
 	adFree: {
 		id: 'axolotl-marketing.highlights.ad-free.title',
 		defaultMessage: 'Free, open, and independent',
@@ -435,14 +407,6 @@ const messages = defineMessages({
 		id: 'app-marketing.hero.more-download-options',
 		defaultMessage: 'More Download Options',
 	},
-	unlikeAnyLauncher: {
-		id: 'app-marketing.features.unlike-any-launcher',
-		defaultMessage: 'Unlike any launcher',
-	},
-	youveUsedBefore: {
-		id: 'app-marketing.features.youve-used-before',
-		defaultMessage: "you've used before",
-	},
 	installedMods: {
 		id: 'app-marketing.features.mod-management.installed-mods',
 		defaultMessage: 'Installed mods',
@@ -476,84 +440,6 @@ const messages = defineMessages({
 		defaultMessage:
 			'Create, import, and manage instances in bulk. Keep mods, resource packs, shaders, files, worlds, screenshots, and logs together with updates, launch settings, and modpack export.',
 	},
-	playWithFavoriteMods: {
-		id: 'app-marketing.features.play.title',
-		defaultMessage: 'Play with your favorite mods',
-	},
-	playWithFavoriteModsDescription: {
-		id: 'app-marketing.features.play.description',
-		defaultMessage:
-			'Build an instance, add your favorite content, and jump into Minecraft in a few clicks.',
-	},
-	shareModpacks: {
-		id: 'app-marketing.features.sharing.title',
-		defaultMessage: 'Share modpacks',
-	},
-	shareModpacksDescription: {
-		id: 'app-marketing.features.sharing.description',
-		defaultMessage:
-			'Build, export, and share modpacks while keeping every dependency and version together.',
-	},
-	share: {
-		id: 'app-marketing.features.sharing.share-button',
-		defaultMessage: 'Share',
-	},
-	modpack: {
-		id: 'app-marketing.features.sharing.modpack',
-		defaultMessage: 'Modpack',
-	},
-	activityMonitor: {
-		id: 'app-marketing.features.performance.activity-monitor',
-		defaultMessage: 'Activity monitor',
-	},
-	goodPerformance: {
-		id: 'app-marketing.features.performance.good-performance',
-		defaultMessage: 'Good performance',
-	},
-	processName: {
-		id: 'app-marketing.features.performance.process-name',
-		defaultMessage: 'Process name',
-	},
-	cpuPercent: {
-		id: 'app-marketing.features.performance.cpu-percent',
-		defaultMessage: '% CPU',
-	},
-	ram: {
-		id: 'app-marketing.features.performance.ram',
-		defaultMessage: 'RAM',
-	},
-	axolotlApp: {
-		id: 'axolotl-marketing.features.performance.axolotl-app',
-		defaultMessage: 'Axolotl Launcher',
-	},
-	small: {
-		id: 'app-marketing.features.performance.small',
-		defaultMessage: 'Small',
-	},
-	lessThan150MB: {
-		id: 'app-marketing.features.performance.less-than-150mb',
-		defaultMessage: '< 150 MB',
-	},
-	googleChrome: {
-		id: 'app-marketing.features.performance.google-chrome',
-		defaultMessage: 'Google Chrome',
-	},
-	discord: {
-		id: 'app-marketing.features.performance.discord',
-		defaultMessage: 'Discord',
-	},
-	infiniteMB: {
-		id: 'app-marketing.features.performance.infinite-mb',
-		defaultMessage: '∞ MB',
-	},
-	oneBillionPercent: {
-		id: 'app-marketing.features.performance.one-billion-percent',
-		defaultMessage: '1 billion %',
-	},
-	infiniteTimesInfiniteMB: {
-		id: 'app-marketing.features.performance.infinite-times-infinite-mb',
-		defaultMessage: '∞ × ∞ MB',
-	},
 	performant: {
 		id: 'app-marketing.features.performance.title',
 		defaultMessage: 'Performant',
@@ -563,15 +449,6 @@ const messages = defineMessages({
 		defaultMessage:
 			'Axolotl stays out of your way with a responsive interface and a lightweight desktop core.',
 	},
-	websiteIntegration: {
-		id: 'app-marketing.features.website.title',
-		defaultMessage: 'Search both sources in one launcher',
-	},
-	websiteIntegrationDescription: {
-		id: 'app-marketing.features.website.description',
-		defaultMessage:
-			'Use project details and version selection to move from Modrinth or CurseForge discovery to an installed instance, with dependencies and updates handled in place.',
-	},
 	profileImporting: {
 		id: 'app-marketing.features.importing.title',
 		defaultMessage: 'Profile importing',
@@ -579,16 +456,7 @@ const messages = defineMessages({
 	profileImportingDescription: {
 		id: 'app-marketing.features.importing.description',
 		defaultMessage:
-			'Bring your existing profiles from popular launchers and continue playing without rebuilding everything by hand.',
-	},
-	openSource: {
-		id: 'app-marketing.features.open-source.title',
-		defaultMessage: 'Tauri v2, built in the open',
-	},
-	openSourceDescription: {
-		id: 'app-marketing.features.open-source.description',
-		defaultMessage:
-			'Axolotl uses a Tauri v2 desktop foundation instead of Electron. It is an independent, unofficial downstream client based on the Modrinth monorepo. Follow development on <github-link>GitHub</github-link>.',
+			'Import your existing profiles from PCL2, HMCL, or any launcher you like with one click, and keep playing without rebuilding everything by hand.',
 	},
 	offlineMode: {
 		id: 'app-marketing.features.offline.title',
@@ -601,11 +469,11 @@ const messages = defineMessages({
 	},
 	followProjects: {
 		id: 'app-marketing.features.follow.title',
-		defaultMessage: 'Beta multiplayer support',
+		defaultMessage: 'Multiplayer support',
 	},
 	followProjectsDescription: {
 		id: 'app-marketing.features.follow.description',
-		defaultMessage: 'Try the launcher multiplayer features while they continue to develop.',
+		defaultMessage: 'Terracotta-powered multiplayer networking, jump in with a single click.',
 	},
 	downloadOptions: {
 		id: 'app-marketing.download.options-title',
@@ -743,14 +611,6 @@ const messages = defineMessages({
 	appScreenshotAlt: {
 		id: 'app-marketing.hero.app-screenshot-alt',
 		defaultMessage: `Axolotl Launcher instance content preview.`,
-	},
-	gdlauncherAlt: {
-		id: 'app-marketing.features.importing.gdlauncher-alt',
-		defaultMessage: 'GDLauncher',
-	},
-	multimcAlt: {
-		id: 'app-marketing.features.importing.multimc-alt',
-		defaultMessage: 'MultiMC',
 	},
 	structuredFeatureContentSources: {
 		id: 'axolotl-site.structured-data.feature.content-sources',
@@ -1005,7 +865,7 @@ useHead(() => ({
 			<div class="hero-scroll-mark" aria-hidden="true"><span /></div>
 			<div class="bottom-transition" />
 		</div>
-		<section class="axolotl-highlights" aria-labelledby="axolotl-highlights-title">
+		<section id="features" class="axolotl-highlights" aria-labelledby="axolotl-highlights-title">
 			<div class="highlights-intro">
 				<span class="section-eyebrow">{{ formatMessage(messages.builtOnModrinth) }}</span>
 				<h2 id="axolotl-highlights-title">
@@ -1016,20 +876,20 @@ useHead(() => ({
 			</div>
 
 			<div class="modrinth-feature-grid">
-				<article class="feature gradient-border promise-card">
-					<div class="promise-meta"><CompassIcon /><span>01</span></div>
-					<h3>{{ formatMessage(messages.modrinthNative) }}</h3>
-					<p>{{ formatMessage(messages.modrinthNativeDescription) }}</p>
-				</article>
-				<article class="feature gradient-border promise-card">
-					<div class="promise-meta"><EyeOffIcon /><span>02</span></div>
+				<article class="feature gradient-border promise-card" data-number="01">
+					<div class="promise-meta"><GitGraphIcon /><span>01</span></div>
 					<h3>{{ formatMessage(messages.adFree) }}</h3>
 					<p>{{ formatMessage(messages.adFreeDescription) }}</p>
 				</article>
-				<article class="feature gradient-border promise-card">
-					<div class="promise-meta"><LanguagesIcon /><span>03</span></div>
+				<article class="feature gradient-border promise-card" data-number="02">
+					<div class="promise-meta"><BoxesIcon /><span>02</span></div>
 					<h3>{{ formatMessage(messages.localized) }}</h3>
 					<p>{{ formatMessage(messages.localizedDescription) }}</p>
+				</article>
+				<article class="feature gradient-border promise-card" data-number="03">
+					<div class="promise-meta"><GaugeIcon /><span>03</span></div>
+					<h3>{{ formatMessage(messages.performant) }}</h3>
+					<p>{{ formatMessage(messages.performantDescription) }}</p>
 				</article>
 				<article class="feature gradient-border showcase-card showcase-card-wide">
 					<div class="showcase-copy">
@@ -1081,10 +941,7 @@ useHead(() => ({
 						loading="lazy"
 					/>
 				</article>
-			</div>
-		</section>
-		<div id="features" class="features">
-			<div class="feature-grid">
+
 				<div class="feature gradient-border mods">
 					<div class="search-bar">
 						<h4>{{ formatMessage(messages.installedMods) }}</h4>
@@ -1137,49 +994,17 @@ useHead(() => ({
 					</p>
 				</div>
 				<div class="feature gradient-border website">
-					<img class="website-logo" src="/axolotl.png" alt="" aria-hidden="true" />
-					<div class="projects-showcase">
-						<div v-for="(row, index) in rows" :key="index" class="row">
-							<div v-for="n in 2" :key="n" class="row__content" :class="{ offset: index % 2 }">
-								<div
-									v-for="project in row"
-									:key="project.id"
-									class="project button-animation gradient-border"
-									:aria-hidden="project.isVisualDuplicate ? 'true' : undefined"
-								>
-									<Avatar :src="project.icon_url!" alt="" size="sm" />
-									<div class="project-info">
-										<span class="title">
-											{{ project.title }}
-										</span>
-										<span class="description">
-											{{ project.description }}
-										</span>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-					<h3>{{ formatMessage(messages.websiteIntegration) }}</h3>
-					<p>
-						{{ formatMessage(messages.websiteIntegrationDescription) }}
-					</p>
+					<ProjectsShowcase />
 				</div>
 			</div>
 			<div class="feature-row">
 				<div class="point">
 					<div class="title">
-						<OpenSourceIcon />
-						<h3>{{ formatMessage(messages.openSource) }}</h3>
+						<ImportGradientIcon />
+						<h3>{{ formatMessage(messages.profileImporting) }}</h3>
 					</div>
 					<div class="description">
-						<IntlFormatted :message-id="messages.openSourceDescription">
-							<template #github-link="{ children }">
-								<a href="https://github.com/Mystic-Stars/Axolotl" rel="noopener" target="_blank">
-									<component :is="() => children" />
-								</a>
-							</template>
-						</IntlFormatted>
+						{{ formatMessage(messages.profileImportingDescription) }}
 					</div>
 				</div>
 				<div class="point">
@@ -1199,7 +1024,7 @@ useHead(() => ({
 					<div class="description">{{ formatMessage(messages.followProjectsDescription) }}</div>
 				</div>
 			</div>
-		</div>
+		</section>
 		<section id="faq" class="faq-section" aria-labelledby="faq-title">
 			<div class="faq-intro">
 				<span class="section-eyebrow">{{ formatMessage(messages.faqEyebrow) }}</span>
@@ -1708,6 +1533,7 @@ useHead(() => ({
 		position: absolute;
 		right: -1.75rem;
 		bottom: -2.25rem;
+		z-index: -1;
 		color: rgb(255 255 255 / 4%);
 		content: attr(data-number);
 		font-size: 8rem;
@@ -1722,6 +1548,7 @@ useHead(() => ({
 	min-width: 0;
 	flex-direction: column;
 	overflow: hidden;
+	padding: 0;
 }
 
 .showcase-card-wide {
@@ -1768,322 +1595,182 @@ useHead(() => ({
 	background: #f8f7f8;
 }
 
-.features {
-	position: relative;
-	width: 100%;
-	background: var(--landing-transition-gradient-end);
-	align-content: center;
-	justify-content: center;
-	display: flex;
-	flex-direction: column;
-	padding: 3rem 0 clamp(5rem, 9vw, 8rem);
+:global(html.light-mode) .promise-card::after {
+	color: rgb(0 0 0 / 5%);
+}
+
+:global(html.light-mode) .mods .row:not(.header):hover {
+	background: rgb(0 0 0 / 4%);
+}
+
+.mods,
+.website {
+	grid-column: span 3;
+	z-index: 1;
+
+	h3,
+	p {
+		margin: 0;
+	}
 
 	h3 {
 		font-weight: 500;
-		font-size: var(--font-size-xl) !important;
+		font-size: var(--font-size-xl);
+		color: var(--landing-color-heading);
+		margin-bottom: 0.375rem;
 	}
 
 	p {
-		font-size: var(--font-size-md) !important;
+		font-size: var(--font-size-md);
+		color: var(--landing-color-subheading);
+	}
+}
+
+.mods {
+	.table {
+		margin-bottom: 1rem;
+		overflow: hidden;
+		max-height: 32rem;
 	}
 
-	.feature-grid {
+	h3,
+	p {
+		text-align: center;
+	}
+
+	h4 {
+		margin: 0;
+		color: var(--color-contrast);
+	}
+
+	.search-bar {
+		width: 100%;
+		padding: var(--gap-sm);
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		border-radius: var(--radius-md);
+		border: 1px solid var(--landing-border-color);
+		background: linear-gradient(0deg, #3b3f55 0%, #3b3f55 100%), rgba(59, 63, 85, 0.15);
+		margin-bottom: 0.5rem;
+		white-space: nowrap;
+		font-size: var(--font-size-sm);
+
+		.mini-input {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			gap: 0.5rem;
+			padding: var(--gap-sm) var(--gap-md);
+			border-radius: var(--radius-sm);
+			background-color: #1e202f;
+			flex-grow: 1;
+			max-width: 12rem;
+		}
+
+		h4 {
+			font-weight: normal;
+			margin-left: 0.5rem;
+		}
+	}
+
+	.row {
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		grid-template-rows: minmax(33rem, auto);
-		max-width: 68.5rem;
-		width: min(calc(100% - 3rem), 68.5rem);
+		grid-template-columns: 3rem 2fr 1fr 3.75rem;
+		padding: 0 var(--gap-sm);
 		gap: 1rem;
-		margin: 0 auto;
-		padding: 0;
 
-		.mods {
-			grid-column: 1 / 2;
-			grid-row: 1 / 2;
+		&:not(.header):hover {
+			background: rgb(255 255 255 / 5%);
+		}
 
-			.table {
-				margin-bottom: 1rem;
-				overflow: hidden;
-				max-height: 32rem;
-			}
+		.cell {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			padding: var(--gap-sm) 0;
+			font-size: var(--font-size-sm);
 
-			h3,
-			p {
-				text-align: center;
-			}
-
-			h4 {
-				margin: 0;
+			.name {
 				color: var(--color-contrast);
 			}
 
-			.search-bar {
-				width: 100%;
-				padding: var(--gap-sm);
-				display: flex;
-				flex-direction: row;
-				justify-content: space-between;
+			.description {
+				font-size: var(--font-size-xs);
+			}
+
+			&.last {
+				align-items: flex-end;
+			}
+
+			&.check {
 				align-items: center;
-				border-radius: var(--radius-md);
-				border: 1px solid var(--landing-border-color);
-				background: linear-gradient(0deg, #3b3f55 0%, #3b3f55 100%), rgba(59, 63, 85, 0.15);
-				margin-bottom: 0.5rem;
-				white-space: nowrap;
-				font-size: var(--font-size-sm);
-
-				.mini-input {
-					display: flex;
-					flex-direction: row;
-					align-items: center;
-					gap: 0.5rem;
-					padding: var(--gap-sm) var(--gap-md);
-					border-radius: var(--radius-sm);
-					background-color: #1e202f;
-					flex-grow: 1;
-					max-width: 12rem;
-				}
-
-				h4 {
-					font-weight: normal;
-					margin-left: 0.5rem;
-				}
-			}
-
-			.row {
-				display: grid;
-				grid-template-columns: 3rem 2fr 1fr 3.75rem;
-				padding: 0 var(--gap-sm);
-				gap: 1rem;
-
-				.cell {
-					display: flex;
-					flex-direction: column;
-					justify-content: center;
-					padding: var(--gap-sm) 0;
-					font-size: var(--font-size-sm);
-
-					.name {
-						color: var(--color-contrast);
-					}
-
-					.description {
-						font-size: var(--font-size-xs);
-					}
-
-					&.last {
-						align-items: flex-end;
-					}
-
-					&.check {
-						align-items: center;
-						flex-direction: row;
-					}
-				}
-			}
-
-			.header {
-				.cell {
-					color: var(--color-base);
-				}
-			}
-		}
-
-		.website {
-			grid-column: 2 / 3;
-			grid-row: 1 / 2;
-			text-align: center;
-			padding: 0 !important;
-
-			position: relative;
-
-			.projects-showcase {
-				margin: calc(5rem + var(--gap-xl)) 0 var(--gap-xl);
-				z-index: 3;
-				text-align: left;
-
-				.row {
-					--gap: var(--gap-md);
-
-					width: 100vw;
-					gap: var(--gap);
-					margin-bottom: var(--gap);
-					display: flex;
-					overflow: hidden;
-					user-select: none;
-
-					.row__content {
-						flex-shrink: 0;
-						display: flex;
-						min-width: 100%;
-						gap: var(--gap);
-						transform: translateX(-15%);
-
-						&.offset {
-							transform: translateX(-130%);
-						}
-					}
-
-					.project {
-						position: relative;
-						display: flex;
-
-						cursor: default;
-						padding: 1rem;
-						gap: 1rem;
-						border-radius: 1rem;
-						border: 1px solid var(--landing-border-color);
-						transition:
-							background 0.5s ease-in-out,
-							transform 0.18s ease-in-out,
-							box-shadow 0.18s ease-in-out;
-						// Removed due to lag on mobile :(
-						background: var(--landing-blob-gradient);
-
-						&:hover {
-							transform: translateY(-0.2rem);
-							box-shadow: 0 0.75rem 1.75rem rgb(0 0 0 / 18%);
-						}
-
-						&:active {
-							transform: translateY(0) scale(0.985);
-						}
-
-						img {
-							height: 3rem;
-						}
-
-						.project-info {
-							box-sizing: border-box;
-						}
-
-						.title {
-							color: var(--landing-color-heading);
-							max-width: 13.75rem;
-							overflow: hidden;
-							white-space: nowrap;
-							text-overflow: ellipsis;
-							margin: 0;
-							font-weight: 600;
-							font-size: 1.25rem;
-							line-height: 110%;
-							display: block;
-						}
-
-						.description {
-							width: 13.75rem;
-
-							display: -webkit-box;
-							-webkit-line-clamp: 2;
-							-webkit-box-orient: vertical;
-							overflow: hidden;
-
-							font-weight: 500;
-							font-size: 0.875rem;
-							line-height: 125%;
-							margin: 0.25rem 0 0;
-						}
-					}
-				}
-			}
-
-			.website-logo {
-				position: absolute;
-				top: 1.5rem;
-				left: 50%;
-				width: 3.5rem;
-				height: 3.5rem;
-				transform: translateX(-50%);
-				z-index: 4;
-				object-fit: contain;
-			}
-
-			p {
-				padding: var(--gap-xl);
-				padding-top: 0;
-			}
-		}
-
-		.feature {
-			padding: var(--gap-xl);
-			z-index: 1;
-			background: radial-gradient(
-				50% 50% at 50% 50%,
-				rgba(44, 48, 79, 0.35) 0%,
-				rgba(32, 35, 50, 0.27) 100%
-			);
-			box-shadow:
-				2px 2px 12px 0 rgba(0, 0, 0, 0.16),
-				2px 2px 64px 0 rgba(57, 61, 94, 0.45) inset;
-			backdrop-filter: blur(6px);
-			-webkit-backdrop-filter: blur(6px);
-			max-width: 540px;
-			width: 100%;
-			overflow: hidden;
-
-			h3,
-			p {
-				margin: 0;
-			}
-
-			h3 {
-				font-size: var(--font-size-xl);
-				color: var(--landing-color-heading);
-				margin-bottom: 0.375rem;
-			}
-
-			p {
-				color: var(--landing-color-subheading);
+				flex-direction: row;
 			}
 		}
 	}
 
-	.feature-row {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--gap-lg);
-		max-width: 1096px;
-		margin: 0 auto;
-		padding: calc(var(--gap-xl) * 2) 1rem;
-
-		@media (max-width: 1024px) {
-			grid-template-columns: repeat(1, 1fr);
-
-			.point {
-				text-align: center;
-
-				.title {
-					justify-content: center;
-				}
-			}
+	.header {
+		.cell {
+			color: var(--color-base);
 		}
+	}
+}
+
+.website {
+	text-align: center;
+	padding: 0 !important;
+
+	position: relative;
+}
+
+.feature-row {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: var(--gap-lg);
+	max-width: 1096px;
+	margin: 0 auto;
+	padding: calc(var(--gap-xl) * 2) 1rem;
+
+	@media (max-width: 1024px) {
+		grid-template-columns: repeat(1, 1fr);
 
 		.point {
-			display: flex;
-			flex-direction: column;
-			gap: var(--gap-md);
-			padding: 1rem 0;
+			text-align: center;
 
 			.title {
-				display: flex;
-				align-items: center;
-				gap: 0.5rem;
+				justify-content: center;
 			}
+		}
+	}
 
-			h3 {
-				font-size: var(--font-size-lg);
-				font-weight: normal;
-				color: var(--landing-color-heading);
-				margin: 0;
-			}
+	.point {
+		display: flex;
+		flex-direction: column;
+		gap: var(--gap-md);
+		padding: 1rem 0;
 
-			p {
-				color: var(--landing-color-subheading);
-				margin: 0;
-			}
+		.title {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
 
-			a {
-				text-decoration: underline;
-			}
+		h3 {
+			font-size: var(--font-size-lg);
+			font-weight: normal;
+			color: var(--landing-color-heading);
+			margin: 0;
+		}
+
+		p {
+			color: var(--landing-color-subheading);
+			margin: 0;
+		}
+
+		a {
+			text-decoration: underline;
 		}
 	}
 }
@@ -2124,7 +1811,6 @@ useHead(() => ({
 	user-select: text;
 }
 
-.row,
 .header {
 	user-select: none;
 
@@ -2133,7 +1819,6 @@ useHead(() => ({
 	}
 }
 
-.project,
 .export-card {
 	user-select: none;
 
@@ -2392,23 +2077,9 @@ useHead(() => ({
 }
 
 @media screen and (max-width: 1024px) {
-	.feature-grid {
-		grid-template-columns: 1fr !important;
-		grid-template-rows: none !important;
-		gap: var(--gap-lg);
-		margin: 0 auto;
-		align-content: center;
-
-		.feature {
-			width: 100% !important;
-			margin: 0 auto;
-		}
-
-		.mods,
-		.website {
-			grid-row: auto !important;
-			grid-column: 1 / 2 !important;
-		}
+	.mods,
+	.website {
+		grid-column: 1 / -1 !important;
 	}
 
 	.main-header {
@@ -2437,13 +2108,10 @@ useHead(() => ({
 		grid-template-columns: 1fr;
 	}
 
-	.features .feature-grid {
-		width: min(calc(100% - 2rem), 68.5rem);
-		gap: 1rem;
-	}
-
 	.promise-card,
-	.showcase-card {
+	.showcase-card,
+	.mods,
+	.website {
 		grid-column: auto;
 	}
 
@@ -2475,8 +2143,7 @@ useHead(() => ({
 }
 
 .light-mode {
-	.footer,
-	.features {
+	.footer {
 		background: #f8f7f8;
 	}
 
@@ -2529,10 +2196,6 @@ useHead(() => ({
 
 	.table {
 		background: white;
-	}
-
-	.project {
-		background: rgba(255, 255, 255, 0.8) !important;
 	}
 
 	.export-card {
