@@ -456,7 +456,7 @@
 		"message": "Native decorations"
 	},
 	"app.appearance-settings.page-transitions.description": {
-		"message": "Animate content when switching between launcher pages."
+		"message": "Use a smooth transition when switching between launcher pages."
 	},
 	"app.appearance-settings.page-transitions.title": {
 		"message": "Page transition animations"
