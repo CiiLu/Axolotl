@@ -41,6 +41,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.7.4',
 		},
 		changes: {
+			changed: [
+				{
+					'en-US': 'Changed the implementation of automatic switching of instance icons.',
+					'zh-CN': '更改了自动切换实例图标的实现方式。',
+				},
+			],
 			added: [
 				{
 					'en-US': 'Added a settings for enabling/disabling page transitions.',
@@ -56,6 +62,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Fixed the laggy transition animation.',
 					'zh-CN': '优化了页面切换动画的卡顿问题。',
+				},
+				{
+					'en-US': 'Fixed the issue of the loading bar not extending to full screen.',
+					'zh-CN': '修复了加载条未能延伸至全屏的问题。',
 				},
 				{
 					'en-US':
