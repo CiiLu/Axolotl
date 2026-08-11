@@ -1,28 +1,16 @@
 <script setup lang="ts">
 import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
 
-import AxolotlWordmark from '~/components/brand/AxolotlWordmark.vue'
-
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
-	home: { id: 'axolotl-site.navigation.home', defaultMessage: 'Axolotl Launcher home' },
 	features: { id: 'axolotl-site.navigation.features', defaultMessage: 'Features' },
 	faq: { id: 'axolotl-site.navigation.faq', defaultMessage: 'FAQ' },
 	downloads: { id: 'axolotl-site.footer.downloads', defaultMessage: 'Downloads' },
 	changelog: { id: 'axolotl-site.footer.release-history', defaultMessage: 'Changelog' },
 	terms: { id: 'axolotl-site.navigation.terms', defaultMessage: 'Terms of Service' },
 	privacy: { id: 'axolotl-site.navigation.privacy', defaultMessage: 'Privacy Policy' },
-	sourceCode: { id: 'axolotl-site.footer.source-code', defaultMessage: 'GitHub' },
-	description: {
-		id: 'axolotl-site.footer.description',
-		defaultMessage: 'A free and open-source Minecraft launcher for Windows, macOS, and Linux.',
-	},
 	developer: { id: 'axolotl-site.footer.developer', defaultMessage: 'Axolotl Launcher Team' },
-	qqGroup: {
-		id: 'axolotl-site.footer.qq-group',
-		defaultMessage: 'Official QQ group',
-	},
 	openSourcePrefix: {
 		id: 'axolotl-site.footer.open-source-prefix',
 		defaultMessage: 'Axolotl is',
@@ -41,33 +29,8 @@ const messages = defineMessages({
 
 <template>
 	<footer class="site-footer">
-		<div class="footer-shell">
-			<div class="footer-main">
-				<div class="footer-brand">
-					<NuxtLink to="/" :aria-label="formatMessage(messages.home)" class="button-animation">
-						<AxolotlWordmark />
-					</NuxtLink>
-					<p>{{ formatMessage(messages.description) }}</p>
-					<div class="qq-group">
-						<span>{{ formatMessage(messages.qqGroup) }}</span>
-						<strong>955605306</strong>
-					</div>
-				</div>
-
-				<nav class="footer-links" aria-label="Footer">
-					<NuxtLink to="/#features">{{ formatMessage(messages.features) }}</NuxtLink>
-					<NuxtLink to="/#faq">{{ formatMessage(messages.faq) }}</NuxtLink>
-					<a href="#download">{{ formatMessage(messages.downloads) }}</a>
-					<NuxtLink to="/changelog">{{ formatMessage(messages.changelog) }}</NuxtLink>
-					<NuxtLink to="/terms">{{ formatMessage(messages.terms) }}</NuxtLink>
-					<NuxtLink to="/privacy">{{ formatMessage(messages.privacy) }}</NuxtLink>
-					<a href="https://github.com/Mystic-Stars/Axolotl" target="_blank" rel="noopener">
-						{{ formatMessage(messages.sourceCode) }}
-					</a>
-				</nav>
-			</div>
-
-			<div class="footer-bottom">
+		<div class="footer-inner">
+			<div class="footer-legal">
 				<p>© {{ new Date().getFullYear() }} {{ formatMessage(messages.developer) }}</p>
 				<p class="open-source">
 					{{ formatMessage(messages.openSourcePrefix) }}
@@ -75,8 +38,18 @@ const messages = defineMessages({
 						{{ formatMessage(messages.openSourceLink) }} </a
 					>.
 				</p>
-				<p class="disclaimer">{{ formatMessage(messages.disclaimer) }}</p>
 			</div>
+
+			<nav class="footer-links" aria-label="Footer">
+				<NuxtLink to="/#features">{{ formatMessage(messages.features) }}</NuxtLink>
+				<NuxtLink to="/#faq">{{ formatMessage(messages.faq) }}</NuxtLink>
+				<a href="#download">{{ formatMessage(messages.downloads) }}</a>
+				<NuxtLink to="/changelog">{{ formatMessage(messages.changelog) }}</NuxtLink>
+				<NuxtLink to="/terms">{{ formatMessage(messages.terms) }}</NuxtLink>
+				<NuxtLink to="/privacy">{{ formatMessage(messages.privacy) }}</NuxtLink>
+			</nav>
+
+			<p class="disclaimer">{{ formatMessage(messages.disclaimer) }}</p>
 		</div>
 	</footer>
 </template>
@@ -85,14 +58,14 @@ const messages = defineMessages({
 .site-footer {
 	position: relative;
 	border-top: 1px solid var(--color-divider);
-	background: color-mix(in srgb, var(--surface-1) 96%, var(--color-brand));
+	background: var(--surface-1);
 	color: var(--color-base);
 
 	&::before {
 		position: absolute;
 		top: -1px;
 		left: 50%;
-		width: min(28rem, 60vw);
+		width: min(76rem, calc(100% - 3rem));
 		height: 1px;
 		transform: translateX(-50%);
 		background: linear-gradient(90deg, transparent, var(--color-brand), transparent);
@@ -101,93 +74,22 @@ const messages = defineMessages({
 	}
 }
 
-.footer-shell {
-	width: min(80rem, calc(100% - 3rem));
+.footer-inner {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 0.8rem 2.5rem;
+	width: min(76rem, calc(100% - 3rem));
 	margin: 0 auto;
-	padding: 3.25rem 0 1.5rem;
+	padding: 1.75rem 0;
 }
 
-.footer-main {
-	display: grid;
-	align-items: center;
-	grid-template-columns: minmax(0, 1fr) auto;
-	gap: 3rem;
-}
-
-.footer-brand {
+.footer-legal {
 	display: flex;
-	align-items: flex-start;
-	flex-direction: column;
-	gap: 0.7rem;
-
-	p {
-		max-width: 30rem;
-		margin: 0;
-		color: var(--color-secondary);
-		font-size: 0.875rem;
-		line-height: 1.6;
-	}
-}
-
-.qq-group {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.45rem 0.7rem;
-	border: 1px solid color-mix(in srgb, var(--color-brand) 35%, var(--color-divider));
-	border-radius: 0.7rem;
-	background: color-mix(in srgb, var(--color-brand) 8%, var(--surface-3));
-	font-size: 0.8125rem;
-
-	span {
-		color: var(--color-secondary);
-	}
-
-	strong {
-		color: var(--color-contrast);
-		font-variant-numeric: tabular-nums;
-		user-select: all;
-	}
-}
-
-.footer-links {
-	display: flex;
-	align-items: center;
 	flex-wrap: wrap;
-	gap: 0.15rem;
-	padding: 0.3rem;
-	border: 1px solid var(--color-divider);
-	border-radius: 0.9rem;
-	background: color-mix(in srgb, var(--surface-3) 70%, transparent);
-
-	a {
-		color: var(--color-secondary);
-		font-size: 0.875rem;
-		font-weight: 600;
-		text-decoration: none;
-		padding: 0.55rem 0.8rem;
-		border-radius: 0.65rem;
-		transition:
-			background 120ms ease,
-			color 120ms ease;
-
-		&:hover {
-			background: var(--surface-4);
-			color: var(--color-contrast);
-		}
-	}
-}
-
-.footer-bottom {
-	display: grid;
-	align-items: center;
-	grid-template-columns: minmax(0, 1fr) auto;
-	gap: 0.55rem 2rem;
-	margin-top: 2.5rem;
-	padding-top: 1.25rem;
-	border-top: 1px solid var(--color-divider);
+	gap: 0.4rem 1.4rem;
 	color: var(--color-secondary);
-	font-size: 0.72rem;
+	font-size: 0.78rem;
 
 	p {
 		margin: 0;
@@ -199,39 +101,48 @@ const messages = defineMessages({
 	}
 }
 
-.open-source {
-	text-align: right;
+.footer-links {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.35rem 1.3rem;
+
+	a {
+		color: var(--color-secondary);
+		font-size: 0.82rem;
+		font-weight: 500;
+		text-decoration: none;
+		transition: color 140ms ease;
+
+		&:hover {
+			color: var(--color-brand);
+		}
+	}
 }
 
 .disclaimer {
 	grid-column: 1 / -1;
+	margin: 0;
+	color: var(--color-secondary);
 	font-size: 0.64rem;
 	letter-spacing: 0.015em;
+	text-align: center;
 	opacity: 0.45;
 }
 
-@media (max-width: 700px) {
-	.footer-shell {
+@media (max-width: 900px) {
+	.footer-inner {
+		grid-template-columns: 1fr;
+	}
+
+	.footer-links {
+		justify-content: flex-start;
+	}
+}
+
+@media (max-width: 560px) {
+	.footer-inner {
 		width: calc(100% - 2rem);
-		padding-top: 2rem;
-	}
-
-	.footer-main {
-		align-items: flex-start;
-		grid-template-columns: 1fr;
-		gap: 2rem;
-	}
-
-	.footer-bottom {
-		grid-template-columns: 1fr;
-		margin-top: 2rem;
-		gap: 0.55rem;
-	}
-
-	.open-source,
-	.disclaimer {
-		grid-column: 1;
-		text-align: left;
 	}
 }
 </style>

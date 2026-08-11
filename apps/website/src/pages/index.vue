@@ -18,6 +18,7 @@ import IntlFormatted from '@modrinth/ui/src/components/base/IntlFormatted.vue'
 import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
 
 import AppleLogo from '~/components/landing/AppleLogo.vue'
+import CommunitySection from '~/components/landing/CommunitySection.vue'
 import LinuxLogo from '~/components/landing/LinuxLogo.vue'
 import MultiplayerIcon from '~/components/landing/MultiplayerIcon.vue'
 import OfflineModeIcon from '~/components/landing/OfflineModeIcon.vue'
@@ -36,7 +37,7 @@ const downloadMac = ref<HTMLAnchorElement | null>(null)
 const downloadSection = ref<HTMLElement | null>(null)
 const hero = ref<HTMLElement | null>(null)
 
-const updateHeroTilt = (event: PointerEvent) => {
+const updateHeroGlow = (event: PointerEvent) => {
 	if (!hero.value) return
 
 	const bounds = hero.value.getBoundingClientRect()
@@ -45,17 +46,13 @@ const updateHeroTilt = (event: PointerEvent) => {
 
 	hero.value.style.setProperty('--pointer-x', `${x * 100}%`)
 	hero.value.style.setProperty('--pointer-y', `${y * 100}%`)
-	hero.value.style.setProperty('--tilt-x', `${(0.5 - y) * 4}deg`)
-	hero.value.style.setProperty('--tilt-y', `${(x - 0.5) * 5}deg`)
 }
 
-const resetHeroTilt = () => {
+const resetHeroGlow = () => {
 	if (!hero.value) return
 
 	hero.value.style.removeProperty('--pointer-x')
 	hero.value.style.removeProperty('--pointer-y')
-	hero.value.style.removeProperty('--tilt-x')
-	hero.value.style.removeProperty('--tilt-y')
 }
 
 const { resolvedSource } = useDownloadSource()
@@ -130,7 +127,9 @@ const platform = computed<string>(() => {
 	}
 })
 const os = computed<OSType>(() => {
-	if (platform.value.includes('Mac')) {
+	if (/(iPhone|iPad|Android|Mobile)/.test(platform.value)) {
+		return null
+	} else if (platform.value.includes('Mac')) {
 		return 'Mac'
 	} else if (platform.value.includes('Win')) {
 		return 'Windows'
@@ -799,7 +798,7 @@ const messages = defineMessages({
 const config = useRuntimeConfig()
 const siteUrl = config.public.siteUrl
 const canonicalUrl = `${siteUrl}/`
-const socialImageUrl = `${siteUrl}/showcase/launcher-home.png`
+const socialImageUrl = `${siteUrl}/showcase/launcher-home.webp`
 const githubUrl = 'https://github.com/Mystic-Stars/Axolotl'
 const licenseUrl = `${githubUrl}/blob/main/LICENSE`
 
@@ -921,8 +920,8 @@ useSeoMeta({
 	ogLocaleAlternate: () => (locale.value === 'zh-CN' ? 'en_US' : 'zh_CN'),
 	ogImage: socialImageUrl,
 	ogImageAlt: () => socialImageAlt.value,
-	ogImageWidth: 3104,
-	ogImageHeight: 1806,
+	ogImageWidth: 2560,
+	ogImageHeight: 1489,
 	twitterCard: 'summary_large_image',
 	twitterTitle: () => title.value,
 	twitterDescription: () => description.value,
@@ -953,15 +952,12 @@ useHead(() => ({
 		<div
 			ref="hero"
 			class="landing-hero"
-			@pointerleave="resetHeroTilt"
-			@pointermove="updateHeroTilt"
+			@pointerleave="resetHeroGlow"
+			@pointermove="updateHeroGlow"
 		>
 			<div class="hero-grid" aria-hidden="true" />
-			<div class="hero-sun" aria-hidden="true" />
-			<div class="hero-wordmark" aria-hidden="true">AXOLOTL</div>
 			<div class="hero-content">
 				<div class="hero-meta">
-					<span class="hero-index">AXL / 01</span>
 					<div class="hero-kicker">
 						{{ formatMessage(messages.openSourceBadge) }}
 					</div>
@@ -996,17 +992,12 @@ useHead(() => ({
 				</div>
 			</div>
 			<div class="hero-product">
-				<div class="hero-product-bar" aria-hidden="true">
-					<span />
-					<span />
-					<span />
-				</div>
 				<img
 					class="hero-screenshot"
-					src="/showcase/launcher-home.png"
+					src="/showcase/launcher-home.webp"
 					:alt="formatMessage(messages.heroScreenshotAlt)"
-					width="3104"
-					height="1806"
+					width="2560"
+					height="1489"
 					decoding="async"
 					fetchpriority="high"
 				/>
@@ -1222,6 +1213,7 @@ useHead(() => ({
 				</details>
 			</div>
 		</section>
+		<CommunitySection />
 		<div id="download" ref="downloadSection" class="footer">
 			<div class="section-badge">{{ formatMessage(messages.downloadOptions) }}</div>
 			<div class="section-subheader">
@@ -1436,8 +1428,6 @@ useHead(() => ({
 .landing-hero {
 	--pointer-x: 50%;
 	--pointer-y: 40%;
-	--tilt-x: 0deg;
-	--tilt-y: 0deg;
 	position: relative;
 	display: flex;
 	min-height: min(63rem, calc(100svh + 8rem));
@@ -1494,36 +1484,6 @@ useHead(() => ({
 	pointer-events: none;
 }
 
-.hero-sun {
-	position: absolute;
-	top: 4.5rem;
-	right: clamp(-8rem, 6vw, 5rem);
-	z-index: -1;
-	width: clamp(21rem, 38vw, 38rem);
-	aspect-ratio: 1;
-	border: 1px solid rgb(255 185 213 / 14%);
-	border-radius: 50%;
-	box-shadow:
-		0 0 0 5rem rgb(255 160 201 / 2%),
-		0 0 0 10rem rgb(255 160 201 / 1%);
-	pointer-events: none;
-}
-
-.hero-wordmark {
-	position: absolute;
-	top: clamp(11rem, 20vw, 15rem);
-	left: 50%;
-	z-index: -1;
-	color: rgb(255 255 255 / 3%);
-	font-size: clamp(7rem, 21vw, 22rem);
-	font-weight: 800;
-	letter-spacing: 0;
-	line-height: 0.8;
-	white-space: nowrap;
-	transform: translateX(-50%);
-	user-select: none;
-}
-
 .hero-content {
 	display: flex;
 	align-items: center;
@@ -1538,30 +1498,21 @@ useHead(() => ({
 	gap: 0.75rem;
 }
 
-.hero-index,
 .hero-kicker {
 	display: inline-flex;
 	align-items: center;
-	min-height: 2rem;
-	padding: 0.35rem 0.65rem;
-	border: 1px solid rgb(255 255 255 / 12%);
-	font-size: 0.7rem;
-	font-weight: 800;
-	letter-spacing: 0.08em;
-	line-height: 1;
-	text-transform: uppercase;
-}
-
-.hero-index {
-	color: rgb(255 255 255 / 45%);
-	font-variant-numeric: tabular-nums;
-}
-
-.hero-kicker {
-	border-color: color-mix(in srgb, var(--color-brand) 35%, transparent);
-	background: color-mix(in srgb, var(--color-brand) 11%, transparent);
+	width: fit-content;
+	height: fit-content;
+	padding: 0.25rem 0.75rem;
+	border-radius: 9999px;
+	background: color-mix(in srgb, var(--color-brand) 12%, transparent);
 	color: var(--color-brand);
-	box-shadow: 0 0.75rem 2.5rem color-mix(in srgb, var(--color-brand) 10%, transparent);
+	font-size: 0.875rem;
+	font-weight: 700;
+	line-height: 1;
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	box-shadow: 0 0.75rem 2.5rem color-mix(in srgb, var(--color-brand) 12%, transparent);
 }
 
 .main-header {
@@ -1605,43 +1556,6 @@ useHead(() => ({
 	position: relative;
 	width: min(79rem, 112%);
 	margin-top: clamp(3.25rem, 7vw, 5.5rem);
-	padding: 0.5rem;
-	border: 1px solid rgb(255 255 255 / 16%);
-	border-radius: 0.75rem 0.75rem 0 0;
-	background: linear-gradient(145deg, rgb(255 255 255 / 15%), rgb(255 255 255 / 2%));
-	box-shadow:
-		0 2rem 6rem rgb(0 0 0 / 42%),
-		0 0 6rem rgb(255 112 172 / 14%);
-	transform: perspective(1500px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
-	transform-origin: center bottom;
-	transition: transform 260ms ease-out;
-	will-change: transform;
-}
-
-.hero-product::after {
-	position: absolute;
-	inset: 0;
-	border: 1px solid rgb(255 255 255 / 6%);
-	border-radius: inherit;
-	content: '';
-	pointer-events: none;
-}
-
-.hero-product-bar {
-	display: flex;
-	gap: 0.33rem;
-	padding: 0.2rem 0.3rem 0.7rem;
-
-	span {
-		width: 0.45rem;
-		height: 0.45rem;
-		border-radius: 50%;
-		background: rgb(255 255 255 / 28%);
-	}
-
-	span:first-child {
-		background: var(--color-brand);
-	}
 }
 
 .hero-screenshot {
@@ -1649,7 +1563,6 @@ useHead(() => ({
 	width: 100%;
 	height: auto;
 	border-radius: 0.25rem;
-	box-shadow: 0 1px 0 rgb(255 255 255 / 10%) inset;
 }
 
 .hero-scroll-mark {
@@ -2605,29 +2518,8 @@ useHead(() => ({
 			radial-gradient(circle at 82% 36%, rgb(142 119 230 / 11%), transparent 32rem),
 			linear-gradient(180deg, #fff9fc 0%, #faf6fa 58%, #f8f4f7 100%);
 
-		.hero-wordmark {
-			color: rgb(105 73 88 / 8%);
-		}
-
-		.hero-index {
-			color: rgb(105 73 88 / 55%);
-			border-color: rgb(105 73 88 / 16%);
-		}
-
 		.hero-grid {
 			background-image: linear-gradient(rgb(105 73 88 / 5%) 1px, transparent 1px);
-		}
-
-		.hero-sun {
-			border-color: rgb(199 47 108 / 16%);
-			box-shadow:
-				0 0 0 5rem rgb(199 47 108 / 3%),
-				0 0 0 10rem rgb(199 47 108 / 1.5%);
-		}
-
-		.hero-product {
-			border-color: rgb(105 73 88 / 18%);
-			background: linear-gradient(145deg, rgb(255 255 255 / 55%), rgb(255 255 255 / 15%));
 		}
 
 		&::after {
