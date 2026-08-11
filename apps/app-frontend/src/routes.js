@@ -269,6 +269,7 @@ export default new createRouter({
 			props: true,
 			meta: {
 				discordActivity: 'Browsing instances...',
+				pageTransitionGroup: 'instance',
 			},
 			children: [
 				// {
