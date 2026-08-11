@@ -3234,6 +3234,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	background-color: var(--color-bg);
 	border-top-left-radius: var(--radius-xl);
 	overflow: hidden;
+	--right-bar-width: 0px;
 
 	display: grid;
 	grid-template-columns: 1fr 0px;
@@ -3241,6 +3242,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	&.sidebar-enabled {
 		grid-template-columns: 1fr 300px;
+		--right-bar-width: 300px;
 	}
 
 	&.has-custom-background,
