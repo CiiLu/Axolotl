@@ -402,6 +402,9 @@ const { addNotification, handleError } = injectNotificationManager()
 const { playServerProject } = injectServerInstall()
 const queryClient = useQueryClient()
 const route = useRoute()
+const props = defineProps<{
+	id: string
+}>()
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
@@ -483,7 +486,7 @@ const activeInstanceId = ref<string>()
 watch(
 	() => router.currentRoute.value,
 	(nextRoute) => {
-		if (nextRoute.path.startsWith('/instance')) {
+		if (nextRoute.path.startsWith('/instance') && nextRoute.params.id === props.id) {
 			displayedInstanceRoute.value = nextRoute
 		}
 	},
@@ -509,7 +512,7 @@ async function fetchInstance() {
 	linkedProjectV3.value = undefined
 	resetServerStatus()
 
-	const nextInstance = await get(route.params.id as string).catch(handleError)
+	const nextInstance = await get(props.id).catch(handleError)
 	instance.value = nextInstance ?? undefined
 	activeInstanceId.value = nextInstance?.id
 	let nextLinkedProjectV3: Labrinth.Projects.v3.Project | undefined
@@ -581,17 +584,16 @@ function fetchDeferredData(instanceId?: string) {
 }
 
 async function updatePlayState() {
-	if (!route.params.id) return
-	const runningProcesses = await get_by_instance_id(route.params.id as string).catch(handleError)
+	const runningProcesses = await get_by_instance_id(props.id).catch(handleError)
 
 	playing.value = Array.isArray(runningProcesses) && runningProcesses.length > 0
 }
 
 await fetchInstance()
 watch(
-	() => route.params.id,
+	() => props.id,
 	async () => {
-		if (route.params.id && route.path.startsWith('/instance')) {
+		if (route.path.startsWith('/instance')) {
 			await fetchInstance()
 		}
 	},
@@ -681,15 +683,15 @@ const startInstance = async (context: string) => {
 		launchElapsedSeconds.value += 1
 	}, 1000)
 	try {
-		await run(route.params.id as string)
+		await run(props.id)
 		playing.value = true
 	} catch (err) {
 		const handled = await handleMinecraftLaunchError(err, {
-			instance_id: route.params.id as string,
+			instance_id: props.id,
 			instance_name: instance.value.name,
 		})
 		if (!handled) {
-			handleSevereError(err, { instanceId: route.params.id as string })
+			handleSevereError(err, { instanceId: props.id })
 		}
 	} finally {
 		clearInterval(launchElapsedTimer)
@@ -706,7 +708,7 @@ const startInstance = async (context: string) => {
 
 const stopInstance = async (context: string) => {
 	stopping.value = true
-	await kill(route.params.id as string).catch(handleError)
+	await kill(props.id).catch(handleError)
 	stopping.value = false
 	playing.value = false
 
@@ -806,7 +808,7 @@ const handleOptionsClick = async (args: { option: string; item: unknown }) => {
 		case 'add_content':
 			await router.push({
 				path: `/browse/${instance.value?.loader === 'vanilla' ? 'datapack' : 'mod'}`,
-				query: { i: route.params.id },
+				query: { i: props.id },
 			})
 			break
 		case 'edit':
@@ -827,14 +829,14 @@ const handleOptionsClick = async (args: { option: string; item: unknown }) => {
 
 const unlistenInstances = await instance_listener(
 	async (event: { instance_id: string; event: string }) => {
-		if (event.instance_id !== route.params.id) return
+		if (event.instance_id !== props.id) return
 		if (event.event === 'removed' || route.path === '/') {
 			if (route.path !== '/') {
 				await router.push({ path: '/' })
 			}
 			return
 		}
-		instance.value = await get(route.params.id as string).catch((err) => {
+		instance.value = await get(props.id).catch((err) => {
 			if (String(err).includes('not managed')) {
 				router.push({ path: '/' })
 				return undefined
@@ -849,7 +851,7 @@ const unlistenInstances = await instance_listener(
 )
 
 const unlistenProcesses = await process_listener((e: { event: string; instance_id: string }) => {
-	if (e.event === 'finished' && e.instance_id === route.params.id) {
+	if (e.event === 'finished' && e.instance_id === props.id) {
 		playing.value = false
 	}
 })

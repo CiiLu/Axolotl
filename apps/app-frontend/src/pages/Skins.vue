@@ -25,6 +25,7 @@ import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { computedAsync } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 
 import type AccountsCard from '@/components/ui/AccountsCard.vue'
 import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
@@ -206,8 +207,10 @@ const messages = defineMessages({
 const editSkinModal = useTemplateRef('editSkinModal')
 const addSkinFileInput = useTemplateRef<HTMLInputElement>('addSkinFileInput')
 const skinSectionList = useTemplateRef<VirtualSkinSectionListExpose>('skinSectionList')
+const skinPreviewArea = useTemplateRef<HTMLElement>('skinPreviewArea')
 
 const { formatMessage } = useVIntl()
+const router = useRouter()
 const notifications = injectNotificationManager()
 const { addNotification, handleError } = notifications
 
@@ -320,6 +323,8 @@ let userCheckInterval: number | null = null
 let pendingSkinRefreshTimeout: number | null = null
 let isUnmounted = false
 let unlistenNativeDrop: (() => void) | null = null
+let skinNavigationRevision = 0
+const skinNavigationRevisions = new WeakMap<object, number>()
 
 const isDraggingSkinFile = ref(false)
 const isAddSkinButtonDragActive = ref(false)
@@ -925,6 +930,30 @@ watch(isSkinManagementReadOnly, (readOnly) => {
 	}
 })
 
+const removeNavigationFailureHandler = router.afterEach((to, _from, failure) => {
+	if (
+		failure &&
+		skinNavigationRevisions.get(to) === skinNavigationRevision &&
+		skinPreviewArea.value
+	) {
+		skinPreviewArea.value.style.visibility = ''
+	}
+})
+
+onBeforeRouteLeave(async (to) => {
+	const previewArea = skinPreviewArea.value
+	if (!previewArea) return true
+
+	skinNavigationRevision += 1
+	skinNavigationRevisions.set(to, skinNavigationRevision)
+	previewArea.style.visibility = 'hidden'
+
+	await new Promise<void>((resolve) => {
+		window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()))
+	})
+	return true
+})
+
 onMounted(() => {
 	userCheckInterval = window.setInterval(checkUserChanges, 250)
 	void setupNativeDropHandler()
@@ -932,6 +961,7 @@ onMounted(() => {
 
 onUnmounted(() => {
 	isUnmounted = true
+	removeNavigationFailureHandler()
 	if (userCheckInterval !== null) {
 		window.clearInterval(userCheckInterval)
 	}
@@ -1024,6 +1054,7 @@ await loadSkins()
 				{{ formatMessage(messages.skinSelectorTitle) }}
 			</h1>
 			<div
+				ref="skinPreviewArea"
 				class="ml-5 mt-4 flex h-[calc(80vh-1rem)] items-center justify-center max-[700px]:h-[calc(50vh-1rem)]"
 			>
 				<SkinPreviewRenderer
