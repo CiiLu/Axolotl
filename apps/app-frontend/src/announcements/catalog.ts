@@ -62,6 +62,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the issue when after manually added missing files, the download indicator will wrongly show a downloaded size larger than excepted size.',
 					'zh-CN': '修复手动添加缺失文件后，下载指示器错误显示已下载文件大小大于预期大小的问题',
 				},
+				{
+					'en-US':
+						'Fixed the issue when Discord Rich Presence is not reachable, Minecraft can not start properly.',
+					'zh-CN': '修复当 Discord Rich Presence 不可用（超时）时，Minecraft 无法正常启动的问题。',
+				},
+				{
+					'en-US':
+						'Fixed nsis installer not installing the launcher into the correct specified directory.',
+					'zh-CN': '修复 nsis 安装程序未能将启动器安装到指定目录的问题。',
+				},
 			],
 			changed: [
 				{
