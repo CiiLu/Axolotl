@@ -202,6 +202,7 @@ async function stopInstance(instance: GameInstance) {
 					:instance-id="item.instance.id"
 					:instance-name="item.instance.name"
 					:instance-icon="item.instance.icon_path"
+					:instance-loader="item.instance.loader"
 					:shortcut-instance-id="item.instance.id"
 					:flat="dashboard"
 					:dashboard-density="itemDensity"

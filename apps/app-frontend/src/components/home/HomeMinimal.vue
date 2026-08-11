@@ -226,6 +226,7 @@ onUnmounted(() => {
 								class="size-20 shrink-0 transition-transform group-hover:scale-[1.03]"
 								:icon-path="selectedInstance.icon_path"
 								:instance-id="selectedInstance.id"
+								:loader="selectedInstance.loader"
 							/>
 							<div class="flex min-w-0 flex-1 flex-col gap-1.5">
 								<h2 class="m-0 truncate text-xl font-bold text-contrast group-hover:underline">

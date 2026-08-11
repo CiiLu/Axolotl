@@ -18,6 +18,7 @@
 					<InstanceIcon
 						:icon-path="instance.icon_path"
 						:instance-id="instance.id"
+						:loader="instance.loader"
 						:alt="instance.name"
 						size="64px"
 					/>

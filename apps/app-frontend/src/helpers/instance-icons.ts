@@ -1,4 +1,8 @@
+import { convertFileSrc } from '@tauri-apps/api/core'
+
 import { defineMessage, type MessageDescriptor } from '@modrinth/ui'
+
+import { isBuiltInInstanceIcon } from './instance-icon-frame'
 
 export interface BuiltInInstanceIcon {
 	id: string
@@ -188,3 +192,39 @@ export const builtInInstanceIcons: BuiltInInstanceIcon[] = [
 		url: new URL('../assets/instance-icons/Quilt.png', import.meta.url).href,
 	},
 ]
+
+const builtInInstanceIconMap = new Map(builtInInstanceIcons.map((icon) => [icon.id, icon]))
+
+const loaderIconIds: Record<string, string> = {
+	vanilla: 'grass-block',
+	fabric: 'fabric',
+	forge: 'anvil',
+	neoforge: 'neoforge',
+	quilt: 'quilt',
+}
+
+export interface DisplayInstanceIcon {
+	url: string | null
+	frameless: boolean
+}
+
+export function getLoaderInstanceIcon(
+	loader: string | null | undefined,
+): BuiltInInstanceIcon | undefined {
+	if (!loader) return undefined
+	const iconId = loaderIconIds[loader]
+	return (
+		(iconId ? builtInInstanceIconMap.get(iconId) : undefined) ?? builtInInstanceIconMap.get('stone')
+	)
+}
+
+export function getDisplayInstanceIcon(
+	iconPath: string | null | undefined,
+	loader: string | null | undefined,
+): DisplayInstanceIcon {
+	const fallbackIcon = getLoaderInstanceIcon(loader)
+	return {
+		url: iconPath ? convertFileSrc(iconPath) : (fallbackIcon?.url ?? null),
+		frameless: isBuiltInInstanceIcon(iconPath) || !!fallbackIcon,
+	}
+}

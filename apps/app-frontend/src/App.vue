@@ -114,6 +114,7 @@ import {
 	warning_listener,
 } from '@/helpers/events.js'
 import { import_instance } from '@/helpers/import.js'
+import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import {
 	install_create_modpack_instance,
 	install_get_modpack_preview,
@@ -1664,7 +1665,7 @@ async function handleDropConfirm(type: string) {
 			instances = allInstances.map((inst) => ({
 				id: inst.id,
 				name: inst.name,
-				iconUrl: inst.icon_path ? convertFileSrc(inst.icon_path) : null,
+				iconUrl: getDisplayInstanceIcon(inst.icon_path, inst.loader).url,
 				gameVersion: inst.game_version || null,
 				loader: inst.loader || null,
 			}))

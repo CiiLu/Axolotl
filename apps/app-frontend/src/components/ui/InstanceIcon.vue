@@ -1,30 +1,29 @@
 <script setup lang="ts">
 import { Avatar } from '@modrinth/ui'
-import { convertFileSrc } from '@tauri-apps/api/core'
 import { computed } from 'vue'
 
-import { isBuiltInInstanceIcon } from '@/helpers/instance-icon-frame'
+import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 
 const props = withDefaults(
 	defineProps<{
 		iconPath?: string | null
 		instanceId?: string | null
+		loader?: string | null
 	}>(),
 	{
 		iconPath: null,
 		instanceId: null,
+		loader: null,
 	},
 )
 
-const iconUrl = computed(() => (props.iconPath ? convertFileSrc(props.iconPath) : null))
+const displayIcon = computed(() => getDisplayInstanceIcon(props.iconPath, props.loader))
 </script>
 
 <template>
 	<Avatar
-		:src="iconUrl"
+		:src="displayIcon.url"
 		:tint-by="instanceId"
-		:class="{
-			'!border-0 !rounded-none !bg-transparent !shadow-none': isBuiltInInstanceIcon(iconPath),
-		}"
+		:class="{ '!border-0 !rounded-none !bg-transparent !shadow-none': displayIcon.frameless }"
 	/>
 </template>

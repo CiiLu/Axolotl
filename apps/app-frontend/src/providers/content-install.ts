@@ -1,7 +1,6 @@
 import type { Labrinth } from '@modrinth/api-client'
 import type { ContentInstallInstance, ContentInstallProjectInfo, ContentItem } from '@modrinth/ui'
 import { createContext, defineMessage, useDebugLogger, useVIntl } from '@modrinth/ui'
-import { convertFileSrc } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import dayjs from 'dayjs'
 import { nextTick, type Ref, ref } from 'vue'
@@ -44,7 +43,7 @@ import {
 	queue_project_with_dependencies,
 	remove_project,
 } from '@/helpers/instance'
-import { isBuiltInInstanceIcon } from '@/helpers/instance-icon-frame'
+import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_game_versions } from '@/helpers/tags'
 import type { GameInstance, InstanceLoader } from '@/helpers/types'
 import { useTheming } from '@/store/state'
@@ -789,11 +788,12 @@ export function createContentInstall(opts: {
 			const newInstanceMap: Record<string, InstallTargetInstance> = {}
 			const newInstances: ContentInstallInstance[] = candidates.map((instance) => {
 				newInstanceMap[instance.id] = instance
+				const displayIcon = getDisplayInstanceIcon(instance.icon_path, instance.loader)
 				return {
 					id: instance.id,
 					name: instance.name,
-					iconUrl: instance.icon_path ? convertFileSrc(instance.icon_path) : null,
-					iconFrameless: isBuiltInInstanceIcon(instance.icon_path),
+					iconUrl: displayIcon.url,
+					iconFrameless: displayIcon.frameless,
 					installed: instance.installed,
 					compatible: instance.compatible,
 					installing: false,

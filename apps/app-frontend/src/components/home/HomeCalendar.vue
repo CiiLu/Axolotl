@@ -310,6 +310,7 @@ watch(instanceRevision, async () => {
 					<InstanceIcon
 						:icon-path="row.instance?.icon_path"
 						:instance-id="row.entry.instance_id"
+						:loader="row.instance?.loader"
 						size="36px"
 						class="shrink-0"
 					/>

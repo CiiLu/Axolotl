@@ -597,36 +597,6 @@ pub async fn set_instance_information(
         None
     };
 
-    let icon_path = match &description.icon {
-        Some(icon) => Some(icon.to_string_lossy().to_string()),
-        None => {
-            if let Some((filename, bytes)) =
-                crate::api::pack::icons::get_builtin_icon_bytes(&mod_loader)
-            {
-                let state = crate::State::get().await?;
-                match write_cached_icon(
-                    filename,
-                    &state.directories.caches_dir(),
-                    bytes,
-                    &state.io_semaphore,
-                )
-                .await
-                {
-                    Ok(path) => Some(path.to_string_lossy().to_string()),
-                    Err(err) => {
-                        tracing::warn!(
-                            "Failed to write fallback icon for {}: {}",
-                            mod_loader.as_str(),
-                            err
-                        );
-                        None
-                    }
-                }
-            } else {
-                None
-            }
-        }
-    };
     let link = match (&description.project_id, &description.version_id) {
         (Some(project_id), Some(version_id)) => {
             Some(InstanceLink::ModrinthModpack {
@@ -664,7 +634,10 @@ pub async fn set_instance_information(
                     .clone()
                     .unwrap_or_else(|| backup_name.to_string()),
             ),
-            icon_path: Some(icon_path),
+            icon_path: description
+                .icon
+                .as_ref()
+                .map(|icon| Some(icon.to_string_lossy().to_string())),
             link,
             content_set_patch: Some(AppliedContentSetPatch {
                 source_kind,

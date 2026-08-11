@@ -198,6 +198,7 @@ defineExpose({ show })
 								class="size-10 shrink-0"
 								:icon-path="instance.icon_path"
 								:instance-id="instance.id"
+								:loader="instance.loader"
 							/>
 							<span class="flex min-w-0 flex-1 flex-col gap-0.5">
 								<strong class="truncate text-contrast">{{ instance.name }}</strong>

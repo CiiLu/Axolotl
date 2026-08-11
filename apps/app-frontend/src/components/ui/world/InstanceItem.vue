@@ -174,6 +174,7 @@ onUnmounted(() => {
 			<InstanceIcon
 				:icon-path="instance.icon_path"
 				:instance-id="instance.id"
+				:loader="instance.loader"
 				:size="dashboardDensity === 'compact' ? '40px' : '48px'"
 			/>
 			<div class="flex flex-col col-span-2 justify-between h-full">

@@ -34,7 +34,6 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useQueryClient } from '@tanstack/vue-query'
-import { convertFileSrc } from '@tauri-apps/api/core'
 import type { Ref } from 'vue'
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import type { LocationQuery } from 'vue-router'
@@ -84,7 +83,7 @@ import {
 	get as getInstance,
 	get_installed_project_ids as getInstalledProjectIds,
 } from '@/helpers/instance'
-import { isBuiltInInstanceIcon } from '@/helpers/instance-icon-frame'
+import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
@@ -815,12 +814,13 @@ const installContext = computed(() => {
 		}
 	}
 	if (instance.value) {
+		const displayIcon = getDisplayInstanceIcon(instance.value.icon_path, instance.value.loader)
 		return {
 			name: instance.value.name,
 			loader: instance.value.loader,
 			gameVersion: instance.value.game_version,
-			iconSrc: instance.value.icon_path ? convertFileSrc(instance.value.icon_path) : null,
-			iconFrameless: isBuiltInInstanceIcon(instance.value.icon_path),
+			iconSrc: displayIcon.url,
+			iconFrameless: displayIcon.frameless,
 			backUrl: `/instance/${encodeURIComponent(instance.value.id)}${isFromWorlds.value ? '/worlds' : ''}`,
 			backLabel: formatMessage(messages.backToInstance),
 			heading: formatMessage(

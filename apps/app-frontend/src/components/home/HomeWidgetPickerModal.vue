@@ -326,6 +326,7 @@ defineExpose({ show })
 						class="size-8 shrink-0"
 						:icon-path="selectedInstance.icon_path"
 						:instance-id="selectedInstance.id"
+						:loader="selectedInstance.loader"
 					/>
 					<span class="truncate text-sm font-semibold text-contrast">{{
 						selectedInstance.name
@@ -398,6 +399,7 @@ defineExpose({ show })
 								class="size-9 shrink-0"
 								:icon-path="item.icon_path"
 								:instance-id="item.id"
+								:loader="item.loader"
 							/>
 							<ServerIcon v-else-if="item.type === 'server'" class="size-5 shrink-0" />
 							<GameIcon v-else class="size-5 shrink-0" />

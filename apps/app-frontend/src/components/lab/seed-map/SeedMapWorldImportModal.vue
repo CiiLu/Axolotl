@@ -165,6 +165,7 @@ defineExpose({ show })
 							class="seed-import-avatar"
 							:icon-path="instance.icon_path"
 							:instance-id="instance.id"
+							:loader="instance.loader"
 						/>
 						<span class="seed-import-row-text">
 							<span class="seed-import-row-title">{{ instance.name }}</span>

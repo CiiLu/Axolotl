@@ -294,6 +294,7 @@ watch(
 					class="home-shortcut-icon"
 					:icon-path="instance.icon_path"
 					:instance-id="instance.id"
+					:loader="instance.loader"
 					:size="dashboardSize === '2x1' ? '72px' : '44px'"
 				/>
 			</router-link>

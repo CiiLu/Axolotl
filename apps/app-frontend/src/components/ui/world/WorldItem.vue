@@ -97,6 +97,7 @@ const props = withDefaults(
 		instanceId?: string
 		instanceName?: string
 		instanceIcon?: string
+		instanceLoader?: string
 		shortcutInstanceId?: string
 		flat?: boolean
 		dashboardDensity?: 'compact' | 'comfortable'
@@ -119,6 +120,7 @@ const props = withDefaults(
 		instanceId: undefined,
 		instanceName: undefined,
 		instanceIcon: undefined,
+		instanceLoader: undefined,
 		shortcutInstanceId: undefined,
 		flat: false,
 		dashboardDensity: undefined,
@@ -394,6 +396,7 @@ const messages = defineMessages({
 							<InstanceIcon
 								:icon-path="instanceIcon"
 								:instance-id="instanceId"
+								:loader="instanceLoader"
 								size="16px"
 								class="shrink-0"
 							/>

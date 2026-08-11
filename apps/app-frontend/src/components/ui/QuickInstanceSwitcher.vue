@@ -67,6 +67,7 @@ onUnmounted(() => {
 			<InstanceIcon
 				:icon-path="instance.icon_path"
 				:instance-id="instance.id"
+				:loader="instance.loader"
 				size="28px"
 				:class="`transition-all ${instance.install_stage !== 'installed' ? `brightness-[0.25] scale-[0.85]` : `group-hover:brightness-75`}`"
 			/>
