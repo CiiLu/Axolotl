@@ -24,7 +24,7 @@
 					role="dialog"
 					aria-modal="true"
 					:aria-labelledby="headerId"
-					class="modal-body flex flex-col bg-bg-raised rounded-2xl border border-solid border-surface-5"
+					class="modal-body flex flex-col bg-surface-3 rounded-2xl border border-solid border-surface-5"
 					v-bind="$attrs"
 					@keydown="handleKeyDown"
 				>
