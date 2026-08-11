@@ -1,5 +1,6 @@
 use std::{
     env, fs,
+    os::windows::process::CommandExt,
     path::{Path, PathBuf},
     process::{Command, ExitStatus},
     thread,
@@ -355,7 +356,7 @@ fn validate_request(
     fresh_install: bool,
 ) -> Result<(), (&'static str, &'static str)> {
     let install_dir = PathBuf::from(request.install_dir.trim());
-    if !install_dir.is_absolute() {
+    if !install_dir.is_absolute() || request.install_dir.contains('"') {
         return Err(("install", "absolutePath"));
     }
 
@@ -364,7 +365,7 @@ fn validate_request(
     }
 
     let resource_dir = PathBuf::from(request.resource_dir.trim());
-    if !resource_dir.is_absolute() {
+    if !resource_dir.is_absolute() || request.resource_dir.contains('"') {
         return Err(("resource", "absolutePath"));
     }
     if resource_dir.parent().is_none() {
@@ -426,11 +427,14 @@ fn start_install(
         let _ = fs::remove_file(&status_path);
 
         let mut command = Command::new(installer);
+        command.arg("/S");
+        command.raw_arg(nsis_value_option("INSTALL_DIR", &request.install_dir));
         command
-            .arg("/S")
-            .arg(format!("/INSTALL_DIR={}", request.install_dir))
-            .arg(format!("/RESOURCE_DIR={}", request.resource_dir))
-            .arg(format!("/STATUS_FILE={}", status_path.display()));
+            .raw_arg(nsis_value_option("RESOURCE_DIR", &request.resource_dir));
+        command.raw_arg(nsis_value_option(
+            "STATUS_FILE",
+            &status_path.to_string_lossy(),
+        ));
         if !request.desktop_shortcut {
             command.arg("/NO_DESKTOP_SHORTCUT");
         }
@@ -446,6 +450,10 @@ fn start_install(
         let _ = fs::remove_file(status_path);
         let _ = proxy.send_event(UserEvent::Finished(result));
     });
+}
+
+fn nsis_value_option(name: &str, value: &str) -> String {
+    format!(r#"/{name}="{value}""#)
 }
 
 fn wait_for_installer(
@@ -506,7 +514,10 @@ fn send_to_webview(webview: Option<&WebView>, payload: serde_json::Value) {
 
 #[cfg(test)]
 mod tests {
-    use super::{UiCommand, dialog_initial_location, launch_main_process};
+    use super::{
+        UiCommand, dialog_initial_location, launch_main_process,
+        nsis_value_option,
+    };
     use std::{
         path::PathBuf,
         time::{SystemTime, UNIX_EPOCH},
@@ -550,6 +561,17 @@ mod tests {
         };
 
         assert!(request.launch_after);
+    }
+
+    #[test]
+    fn nsis_option_keeps_name_outside_quoted_value() {
+        assert_eq!(
+            nsis_value_option(
+                "INSTALL_DIR",
+                r"C:\Program Files\Axolotl Launcher",
+            ),
+            r#"/INSTALL_DIR="C:\Program Files\Axolotl Launcher""#,
+        );
     }
 
     #[test]
