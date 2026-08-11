@@ -46,6 +46,7 @@ export default new createRouter({
 				useContext: true,
 				breadcrumb: [{ name: '?BrowseTitle' }],
 				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'browse',
 			},
 		},
 		{
@@ -135,6 +136,7 @@ export default new createRouter({
 			meta: {
 				breadcrumb: [{ name: 'Library' }],
 				discordActivity: 'Browsing instances...',
+				pageTransitionGroup: 'library',
 			},
 			children: [
 				{

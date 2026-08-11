@@ -54,8 +54,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
-						'When viewing description and versions of the modpacks, the launcher will falsely trigger page transition.',
-					'zh-CN': '修复在查看整合包的描述和版本时，启动器会错误触发页面切换动画的问题。',
+						'Fixed the issue of the launcher triggering page transitions when switching tabs within a page.',
+					'zh-CN': '修复在页面内切换标签分类时，启动器会错误触发页面切换动画的问题。',
 				},
 			],
 		},
