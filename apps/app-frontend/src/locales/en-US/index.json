@@ -5001,7 +5001,7 @@
 		"message": "Mojang authentication service"
 	},
 	"app.settings.resources.mojang-auth-service-description": {
-		"message": "Mojang authentication service for logging in and verifying accounts."
+		"message": "Mojang login, profile, skin, cape, session verification and so on."
 	},
 	"app.settings.resources.missing-content-auto-import": {
 		"message": "Automatically import missing modpack files"

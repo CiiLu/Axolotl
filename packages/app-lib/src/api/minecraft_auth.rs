@@ -13,11 +13,16 @@ use crate::state::{
     YggdrasilAccount,
 };
 use crate::util::fetch::INSECURE_REQWEST_CLIENT;
+use crate::util::mojang::{mojang_service_url, should_use_mojang_mirror};
 
 #[tracing::instrument]
 pub async fn check_reachable() -> crate::Result<()> {
+    let url = mojang_service_url(
+        "https://sessionserver.mojang.com/session/minecraft/hasJoined",
+        should_use_mojang_mirror(),
+    );
     let resp = INSECURE_REQWEST_CLIENT
-        .get("https://sessionserver.mojang.com/session/minecraft/hasJoined")
+        .get(url.as_ref())
         .timeout(Duration::from_secs(5))
         .send()
         .await?;
@@ -25,6 +30,20 @@ pub async fn check_reachable() -> crate::Result<()> {
         return Ok(());
     }
     resp.error_for_status()?;
+    Ok(())
+}
+
+pub async fn set_mojang_auth_use_mirror(
+    use_mirror: bool,
+    automatic: bool,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    state.set_mojang_auth_use_mirror(use_mirror);
+    if use_mirror && automatic {
+        tracing::info!(
+            "Mojang services are unreachable; routing Mojang service requests through the Fallen proxy"
+        );
+    }
     Ok(())
 }
 

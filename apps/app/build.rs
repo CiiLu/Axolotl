@@ -40,6 +40,7 @@ fn main() {
                     .commands(&[
                         "check_reachable",
                         "check_mojang_services",
+                        "set_mojang_auth_use_mirror",
                         "login",
                         "begin_yggdrasil_login",
                         "finish_yggdrasil_login",

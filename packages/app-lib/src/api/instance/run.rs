@@ -6,6 +6,7 @@ use crate::state::{
 };
 use crate::util::fetch;
 use crate::util::io::IOError;
+use crate::util::mojang::mojang_service_url;
 use serde_json::json;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -178,8 +179,12 @@ async fn run_credentials(
         && !project_id.trim().is_empty()
     {
         let server_id = uuid::Uuid::new_v4().to_string();
+        let join_url = mojang_service_url(
+            "https://sessionserver.mojang.com/session/minecraft/join",
+            state.mojang_auth_use_mirror(),
+        );
         let join_result = fetch::INSECURE_REQWEST_CLIENT
-			.post("https://sessionserver.mojang.com/session/minecraft/join")
+			.post(join_url.as_ref())
 			.json(&json!({
 				"accessToken": &credentials.access_token,
 				"selectedProfile": credentials.offline_profile.id.simple().to_string(),

@@ -95,6 +95,7 @@ pub struct State {
     minecraft_file_source: AtomicU8,
     modrinth_source: AtomicU8,
     curseforge_source: AtomicU8,
+    mojang_auth_use_mirror: AtomicBool,
     auto_prefers_mirror: AtomicBool,
     download_concurrency_target: AtomicUsize,
     download_concurrency_limit: AtomicUsize,
@@ -517,6 +518,15 @@ impl State {
         )
     }
 
+    pub fn mojang_auth_use_mirror(&self) -> bool {
+        self.mojang_auth_use_mirror.load(Ordering::Relaxed)
+    }
+
+    pub fn set_mojang_auth_use_mirror(&self, use_mirror: bool) {
+        self.mojang_auth_use_mirror
+            .store(use_mirror, Ordering::Relaxed);
+    }
+
     pub(crate) fn auto_prefers_mirror(&self) -> bool {
         self.auto_prefers_mirror.load(Ordering::Relaxed)
     }
@@ -562,6 +572,16 @@ impl State {
             .store(settings.modrinth_source as u8, Ordering::Relaxed);
         self.curseforge_source
             .store(settings.curseforge_source as u8, Ordering::Relaxed);
+        match settings.mojang_auth_source {
+            DownloadSourceMode::MirrorPreferred => {
+                self.mojang_auth_use_mirror.store(true, Ordering::Relaxed);
+            }
+            DownloadSourceMode::OfficialOnly => {
+                self.mojang_auth_use_mirror.store(false, Ordering::Relaxed);
+            }
+            DownloadSourceMode::Auto
+            | DownloadSourceMode::OfficialPreferred => {}
+        }
         self.auto_prefers_mirror
             .store(settings.auto_prefers_mirror(), Ordering::Relaxed);
         let was_auto = self
@@ -763,6 +783,14 @@ impl State {
             ),
             modrinth_source: AtomicU8::new(settings.modrinth_source as u8),
             curseforge_source: AtomicU8::new(settings.curseforge_source as u8),
+            mojang_auth_use_mirror: AtomicBool::new(
+                match settings.mojang_auth_source {
+                    DownloadSourceMode::MirrorPreferred => true,
+                    DownloadSourceMode::Auto => auto_prefers_mirror,
+                    DownloadSourceMode::OfficialOnly
+                    | DownloadSourceMode::OfficialPreferred => false,
+                },
+            ),
             auto_prefers_mirror: AtomicBool::new(auto_prefers_mirror),
             download_concurrency_target: AtomicUsize::new(download_concurrency),
             download_concurrency_limit: AtomicUsize::new(download_concurrency),
@@ -820,6 +848,7 @@ pub(crate) async fn test_state(
         minecraft_file_source: AtomicU8::new(0),
         modrinth_source: AtomicU8::new(0),
         curseforge_source: AtomicU8::new(0),
+        mojang_auth_use_mirror: AtomicBool::new(false),
         auto_prefers_mirror: AtomicBool::new(false),
         download_concurrency_target: AtomicUsize::new(8),
         download_concurrency_limit: AtomicUsize::new(8),

@@ -1,5 +1,6 @@
 use crate::ErrorKind;
 use crate::util::fetch::INSECURE_REQWEST_CLIENT;
+use crate::util::mojang::{mojang_service_url, should_use_mojang_mirror};
 use base64::Engine;
 use base64::prelude::{BASE64_STANDARD, BASE64_URL_SAFE_NO_PAD};
 use chrono::{DateTime, Duration, TimeZone, Utc};
@@ -1521,9 +1522,13 @@ async fn minecraft_token(
 
     let token = token.token;
 
+    let url = mojang_service_url(
+        "https://api.minecraftservices.com/launcher/login",
+        should_use_mojang_mirror(),
+    );
     let res = auth_retry(|| {
         INSECURE_REQWEST_CLIENT
-            .post("https://api.minecraftservices.com/launcher/login")
+            .post(url.as_ref())
             .header("Accept", "application/json")
             .header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
             .json(&json!({
@@ -1750,9 +1755,13 @@ impl Deref for MaybeOnlineMinecraftProfile<'_> {
 async fn minecraft_profile(
     token: &str,
 ) -> Result<MinecraftProfile, MinecraftAuthenticationError> {
+    let url = mojang_service_url(
+        "https://api.minecraftservices.com/minecraft/profile",
+        should_use_mojang_mirror(),
+    );
     let res = auth_retry(|| {
         INSECURE_REQWEST_CLIENT
-            .get("https://api.minecraftservices.com/minecraft/profile")
+            .get(url.as_ref())
             .header("Accept", "application/json")
             .header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
             .bearer_auth(token)
@@ -1802,15 +1811,24 @@ struct MinecraftEntitlements {}
 async fn minecraft_entitlements(
     token: &str,
 ) -> Result<MinecraftEntitlements, MinecraftAuthenticationError> {
+    let request_url = format!(
+        "https://api.minecraftservices.com/entitlements/license?requestId={}",
+        Uuid::new_v4()
+    );
+    let url = mojang_service_url(&request_url, should_use_mojang_mirror());
     let res = auth_retry(|| {
-		INSECURE_REQWEST_CLIENT
-			.get(format!("https://api.minecraftservices.com/entitlements/license?requestId={}", Uuid::new_v4()))
-			.header("Accept", "application/json")
-			.header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
-			.bearer_auth(token)
-			.send()
-	})
-    .await.map_err(|source| MinecraftAuthenticationError::Request { source, step: MinecraftAuthStep::MinecraftEntitlements })?;
+        INSECURE_REQWEST_CLIENT
+            .get(url.as_ref())
+            .header("Accept", "application/json")
+            .header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
+            .bearer_auth(token)
+            .send()
+    })
+    .await
+    .map_err(|source| MinecraftAuthenticationError::Request {
+        source,
+        step: MinecraftAuthStep::MinecraftEntitlements,
+    })?;
 
     let status = res.status();
     let text = res.text().await.map_err(|source| {

@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core'
+
 import { check_mojang_services } from '@/helpers/auth.js'
 import { ensureFallenAuthProxyArgs, removeFallenAuthProxyArgs } from '@/helpers/java-arguments'
 import { type AppSettings, get, set } from '@/helpers/settings'
@@ -29,8 +31,13 @@ function sameArgs(left: string[], right: string[]) {
 	return left.length === right.length && left.every((arg, index) => arg === right[index])
 }
 
+export async function setMojangAuthUseMirror(useMirror: boolean, automatic: boolean) {
+	await invoke('plugin:auth|set_mojang_auth_use_mirror', { useMirror, automatic })
+}
+
 export async function reconcileMojangAuthSource(settings: AppSettings): Promise<boolean> {
 	const mode = settings.mojang_auth_source ?? 'auto'
+	const automatic = mode === 'auto' || mode === 'official_preferred'
 	let useMirror: boolean
 	if (mode === 'mirror_preferred') {
 		useMirror = true
@@ -41,6 +48,8 @@ export async function reconcileMojangAuthSource(settings: AppSettings): Promise<
 		// Minecraft versions, falling back only when one of them is down.
 		useMirror = !(await checkMojangAuthServers())
 	}
+
+	await setMojangAuthUseMirror(useMirror, automatic)
 
 	const nextArgs = useMirror
 		? ensureFallenAuthProxyArgs(settings.extra_launch_args)

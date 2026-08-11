@@ -2349,7 +2349,7 @@
 		"message": "Mojang 认证服务"
 	},
 	"app.settings.resources.mojang-auth-service-description": {
-		"message": "Mojang 的正版登录认证服务，应用于游戏JVM参数。"
+		"message": "Mojang 登录、资料、皮肤、披风、会话验证等。"
 	},
 	"app.settings.resources.concurrency.manual": {
 		"message": "手动"

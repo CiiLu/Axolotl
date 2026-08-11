@@ -139,7 +139,8 @@ const messages = defineMessages({
 	},
 	mojangAuthServiceDescription: {
 		id: 'app.settings.resources.mojang-auth-service-description',
-		defaultMessage: 'Mojang authentication service for logging in and verifying accounts.',
+		defaultMessage:
+			'Mojang login, profile, skin, cape, and session verification requests used by the launcher and the game.',
 	},
 	mojangAuthOfficialPreferred: {
 		id: 'app.settings.resources.source.mojang-official-preferred',

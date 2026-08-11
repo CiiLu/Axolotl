@@ -15,6 +15,7 @@ use crate::{
         ProfileCacheEntry,
     },
     util::fetch::INSECURE_REQWEST_CLIENT,
+    util::mojang::{mojang_service_url, should_use_mojang_mirror},
 };
 
 /// Provides operations for interacting with capes on a Minecraft player profile.
@@ -25,19 +26,23 @@ impl MinecraftCapeOperation {
         credentials: &Credentials,
         cape_id: Uuid,
     ) -> crate::Result<()> {
+        let url = mojang_service_url(
+            "https://api.minecraftservices.com/minecraft/profile/capes/active",
+            should_use_mojang_mirror(),
+        );
         update_profile_cache_from_response(
             INSECURE_REQWEST_CLIENT
-				.put("https://api.minecraftservices.com/minecraft/profile/capes/active")
-				.header("Content-Type", "application/json; charset=utf-8")
-				.header("Accept", "application/json")
-				.header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
-				.bearer_auth(&credentials.access_token)
-				.json(&json!({
-					"capeId": cape_id.hyphenated(),
+                .put(url.as_ref())
+                .header("Content-Type", "application/json; charset=utf-8")
+                .header("Accept", "application/json")
+                .header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
+                .bearer_auth(&credentials.access_token)
+                .json(&json!({
+                    "capeId": cape_id.hyphenated(),
                 }))
                 .send()
                 .await
-                .and_then(|response| response.error_for_status())?
+                .and_then(|response| response.error_for_status())?,
         )
         .await;
 
@@ -45,15 +50,19 @@ impl MinecraftCapeOperation {
     }
 
     pub async fn unequip_any(credentials: &Credentials) -> crate::Result<()> {
+        let url = mojang_service_url(
+            "https://api.minecraftservices.com/minecraft/profile/capes/active",
+            should_use_mojang_mirror(),
+        );
         update_profile_cache_from_response(
-			INSECURE_REQWEST_CLIENT
-				.delete("https://api.minecraftservices.com/minecraft/profile/capes/active")
-				.header("Accept", "application/json")
-				.header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
-				.bearer_auth(&credentials.access_token)
-				.send()
-				.await
-                .and_then(|response| response.error_for_status())?
+            INSECURE_REQWEST_CLIENT
+                .delete(url.as_ref())
+                .header("Accept", "application/json")
+                .header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
+                .bearer_auth(&credentials.access_token)
+                .send()
+                .await
+                .and_then(|response| response.error_for_status())?,
         )
         .await;
 
@@ -96,11 +105,13 @@ impl MinecraftSkinOperation {
                     .file_name("skin.png"),
             );
 
+        let url = mojang_service_url(
+            "https://api.minecraftservices.com/minecraft/profile/skins",
+            should_use_mojang_mirror(),
+        );
         let profile = update_profile_cache_from_response(
             INSECURE_REQWEST_CLIENT
-                .post(
-                    "https://api.minecraftservices.com/minecraft/profile/skins",
-                )
+                .post(url.as_ref())
                 .header("Accept", "application/json")
                 .header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
                 .bearer_auth(&credentials.access_token)
@@ -115,15 +126,19 @@ impl MinecraftSkinOperation {
     }
 
     pub async fn unequip_any(credentials: &Credentials) -> crate::Result<()> {
+        let url = mojang_service_url(
+            "https://api.minecraftservices.com/minecraft/profile/skins/active",
+            should_use_mojang_mirror(),
+        );
         update_profile_cache_from_response(
-			INSECURE_REQWEST_CLIENT
-				.delete("https://api.minecraftservices.com/minecraft/profile/skins/active")
-				.header("Accept", "application/json")
-				.header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
-				.bearer_auth(&credentials.access_token)
-				.send()
-				.await
-                .and_then(|response| response.error_for_status())?
+            INSECURE_REQWEST_CLIENT
+                .delete(url.as_ref())
+                .header("Accept", "application/json")
+                .header("User-Agent", MINECRAFT_SERVICES_USER_AGENT)
+                .bearer_auth(&credentials.access_token)
+                .send()
+                .await
+                .and_then(|response| response.error_for_status())?,
         )
         .await;
 

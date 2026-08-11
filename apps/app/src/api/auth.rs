@@ -10,6 +10,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             check_reachable,
             check_mojang_services,
+            set_mojang_auth_use_mirror,
             login,
             begin_yggdrasil_login,
             finish_yggdrasil_login,
@@ -38,6 +39,19 @@ pub async fn check_reachable() -> Result<()> {
 pub async fn check_mojang_services()
 -> Result<Vec<minecraft_auth::MojangServiceStatus>> {
     Ok(minecraft_auth::check_mojang_services().await)
+}
+
+/// Stores whether the launcher should route Mojang service requests through
+/// the Fallen proxy.
+#[tauri::command]
+pub async fn set_mojang_auth_use_mirror(
+    use_mirror: bool,
+    automatic: bool,
+) -> Result<()> {
+    Ok(
+        minecraft_auth::set_mojang_auth_use_mirror(use_mirror, automatic)
+            .await?,
+    )
 }
 
 /// Authenticate a user with Hydra - part 1
