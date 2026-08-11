@@ -50,12 +50,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US': 'Added a settings for enabling/disabling page transitions.',
-					'zh-CN': '新增启动器设置项，可开启/关闭页面切换动画。',
+					'zh-CN': '新增启动器设置项, 可开启/关闭页面切换动画。',
 				},
 				{
 					'en-US':
 						'Added detailed Multiplayer diagnostics and exportable error reports for troubleshooting connection failures.',
-					'zh-CN': '联机页面新增详细诊断日志与错误报告导出，便于排查连接失败。',
+					'zh-CN': '联机页面新增详细诊断日志与错误报告导出, 便于排查连接失败。',
 				},
 			],
 			fixed: [
@@ -71,12 +71,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed the issue of the launcher not being able to start when the system language is set to Chinese.',
 					'zh-CN':
-						'针对Github Copilot auto模型做了特殊处理，现在Github Copilot 免费套餐也可以使用Auto模型。',
+						'针对Github Copilot auto模型做了特殊处理, 现在Github Copilot 免费套餐也可以使用Auto模型。',
 				},
 				{
 					'en-US':
 						'Fixed the issue of the launcher triggering page transitions when switching tabs within a page.',
-					'zh-CN': '修复在页面内切换标签分类时，启动器会错误触发页面切换动画的问题。',
+					'zh-CN': '修复在页面内切换标签分类时, 启动器会错误触发页面切换动画的问题。',
 				},
 				{
 					'en-US':
@@ -86,7 +86,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed invalid Multiplayer room codes showing raw internal errors instead of a localized format hint.',
-					'zh-CN': '修复联机房间码格式错误时显示内部原始报错的问题，现改为本地化格式提示。',
+					'zh-CN': '修复联机房间码格式错误时显示内部原始报错的问题, 现改为本地化格式提示。',
 				},
 			],
 		},
@@ -110,7 +110,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed cache purging failing when the frontend sends cache types unsupported by the running backend.',
-					'zh-CN': '修复前端发送当前后端不支持的缓存类型时，清理缓存失败的问题。',
+					'zh-CN': '修复前端发送当前后端不支持的缓存类型时, 清理缓存失败的问题。',
 				},
 				{
 					'en-US': 'Fixed Curseforge import missing files issues',
@@ -119,12 +119,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed the issue when after manually added missing files, the download indicator will wrongly show a downloaded size larger than excepted size.',
-					'zh-CN': '修复手动添加缺失文件后，下载指示器错误显示已下载文件大小大于预期大小的问题',
+					'zh-CN': '修复手动添加缺失文件后, 下载指示器错误显示已下载文件大小大于预期大小的问题',
 				},
 				{
 					'en-US':
 						'Fixed the issue when Discord Rich Presence is not reachable, Minecraft can not start properly.',
-					'zh-CN': '修复当 Discord Rich Presence 不可用（超时）时，Minecraft 无法正常启动的问题。',
+					'zh-CN': '修复当 Discord Rich Presence 不可用（超时）时, Minecraft 无法正常启动的问题。',
 				},
 				{
 					'en-US':
@@ -140,7 +140,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'When changing theme color, the shadow color of the launcher now changes accordingly',
-					'zh-CN': '更改主题颜色时，现在启动器的阴影颜色也会随之变动',
+					'zh-CN': '更改主题颜色时, 现在启动器的阴影颜色也会随之变动',
 				},
 			],
 		},
@@ -158,39 +158,39 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Added JVM argument presets, currently including Fallen’s Mojang authentication service HTTP forwarding.',
-					'zh-CN': '添加了JVM参数预设功能，目前内置Fallen的Mojang认证服务HTTP转发。',
+					'zh-CN': '添加了JVM参数预设功能, 目前内置Fallen的Mojang认证服务HTTP转发。',
 				},
 				{
 					'en-US':
 						'Added Mojang authentication as a resource mirror configuration to the settings interface, now set to automatic to automatically switch to Fallen’s authentication service when the Mojang authentication service is unavailable. Mitigations include but are not limited to errors such as "Authentication server down" when logging in with a valid account.',
 					'zh-CN':
-						'将Mojang认证作为资源镜像配置添加到设置界面，现在设置为自动即可在Mojang认证服务不可用时自动切换到Fallen的认证服务。缓解包括但不限于正版登录时出现“认证服务器宕机”之类的报错。',
+						'将Mojang认证作为资源镜像配置添加到设置界面, 现在设置为自动即可在Mojang认证服务不可用时自动切换到Fallen的认证服务。缓解包括但不限于正版登录时出现“认证服务器宕机”之类的报错。',
 				},
 				{
 					'en-US':
 						'Added a custom UUID configuration for offline login, along with a UUID copy button to directly copy the UUID.',
-					'zh-CN': '离线登陆可以配置自定义UUID，并且添加了UUID复制按钮，可直接复制UUID。',
+					'zh-CN': '离线登陆可以配置自定义UUID, 并且添加了UUID复制按钮, 可直接复制UUID。',
 				},
 				{
 					'en-US':
 						'Added a collapse button for ungrouped instances, allowing users to collapse and hide the list of ungrouped instances.',
-					'zh-CN': '为未分组的实例添加了折叠按钮，可以折叠隐藏未分组的实例列表。',
+					'zh-CN': '为未分组的实例添加了折叠按钮, 可以折叠隐藏未分组的实例列表。',
 				},
 				{
 					'en-US':
 						'Added automatic backup of instance settings to the instance folder, allowing users to restore the instance after a database loss.',
-					'zh-CN': '数据库将自动备份实例的设置到实例文件夹，以便在数据库丢失后恢复实例。',
+					'zh-CN': '数据库将自动备份实例的设置到实例文件夹, 以便在数据库丢失后恢复实例。',
 				},
 				{
 					'en-US':
 						'Added automatic backup of instance settings to the instance folder, allowing users to restore the instance after a database loss.',
-					'zh-CN': '支持导入本就是本启动器的实例文件夹，会完全保留实例设置。',
+					'zh-CN': '支持导入本就是本启动器的实例文件夹, 会完全保留实例设置。',
 				},
 				{
 					'en-US':
 						'Added a "Auto Import Missing Files" button in Settings. You can also customize the monitoring location. When enabled, the launcher will automatically scan files in the monitoring location and automatically import missing files into the instance when scenarios such as downloading an integration package fail.',
 					'zh-CN':
-						'在设置中新增了自动导入缺失文件开关按钮，并可自定义监控位置。当启用时，启动器会自动扫描监控位置的文件，并将下载整合包等场景文件下载失败时，自动把缺失的文件导入到实例中。',
+						'在设置中新增了自动导入缺失文件开关按钮, 并可自定义监控位置。当启用时, 启动器会自动扫描监控位置的文件, 并将下载整合包等场景文件下载失败时, 自动把缺失的文件导入到实例中。',
 				},
 			],
 			fixed: [
@@ -203,19 +203,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed the issue of database records for renamed files being lost during migration, now automatically merging and migrating records based on hash, and rebuilding ownership based on Modrinth hash when original ownership is lost.',
 					'zh-CN':
-						'现在会自动按照hash合并、迁移重命名文件的数据库记录，在原归属丢失时依据 Modrinth hash 重建归属。',
+						'现在会自动按照hash合并、迁移重命名文件的数据库记录, 在原归属丢失时依据 Modrinth hash 重建归属。',
 				},
 				{
 					'en-US':
 						'Fixed update checks for mods and other instance content using a permanent cache, so newly published updates could stay hidden even after refreshing; refreshing now rechecks the latest versions.',
 					'zh-CN':
-						'修复实例中模组等内容的更新检查使用永久缓存，发布新版本后刷新仍不显示的问题；现在刷新会重新检查最新版本。',
+						'修复实例中模组等内容的更新检查使用永久缓存, 发布新版本后刷新仍不显示的问题；现在刷新会重新检查最新版本。',
 				},
 				{
 					'en-US':
 						'Fixed false "update available" badges when the installed file was already included in the target version or the installed version was identified incorrectly.',
 					'zh-CN':
-						'修复已安装文件已包含在目标版本中、或当前安装版本被识别错误时，没有新版本却仍显示“可更新”的问题。',
+						'修复已安装文件已包含在目标版本中、或当前安装版本被识别错误时, 没有新版本却仍显示“可更新”的问题。',
 				},
 			],
 			changed: [
@@ -227,7 +227,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'When downloading modpacks and other files, if a mod download fails, the launcher now provides three options to continue downloading the modpack: "Launcher re-download", "Manual import of missing files", and "Monitor folder for automatic import of files". This avoids rolling back the entire download due to a single file failure.',
 					'zh-CN':
-						'当下载整合包等文件时，如果模组下载失败，现在会提供 启动器重新下载/手动导入缺失文件/监控文件夹自动导入文件 三个选项来继续下载整合包，避免一个文件下载失败直接全部回滚。',
+						'当下载整合包等文件时, 如果模组下载失败, 现在会提供 启动器重新下载/手动导入缺失文件/监控文件夹自动导入文件 三个选项来继续下载整合包, 避免一个文件下载失败直接全部回滚。',
 				},
 			],
 		},
@@ -253,24 +253,24 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Added a recipe generator in Lab for creating custom crafting tables and other datapacks.',
-					'zh-CN': '实验室新增配方生成器，可自制合成表等数据包。',
+					'zh-CN': '实验室新增配方生成器, 可自制合成表等数据包。',
 				},
 				{
 					'en-US': 'Added a mod translation tool in Lab for translating mod content.',
-					'zh-CN': '实验室新增模组翻译工具，可翻译模组内容。',
+					'zh-CN': '实验室新增模组翻译工具, 可翻译模组内容。',
 				},
 			],
 			fixed: [
 				{
 					'en-US':
 						'Fixed the installer Browse buttons not opening a folder picker when the default destination did not exist yet.',
-					'zh-CN': '修复默认目标目录尚未创建时，安装程序的“浏览”按钮无法打开文件夹选择器的问题。',
+					'zh-CN': '修复默认目标目录尚未创建时, 安装程序的“浏览”按钮无法打开文件夹选择器的问题。',
 				},
 				{
 					'en-US':
 						'Fixed the installer remaining open after installation when Launch when complete was selected; it now closes after the launcher starts successfully and stays open if launching fails.',
 					'zh-CN':
-						'修复勾选“完成后启动”时安装程序不会自动退出的问题；启动器成功启动后安装程序会退出，启动失败时则保留窗口。',
+						'修复勾选“完成后启动”时安装程序不会自动退出的问题；启动器成功启动后安装程序会退出, 启动失败时则保留窗口。',
 				},
 				{
 					'en-US':
@@ -307,22 +307,22 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US': 'Added AI integrations for translation and launcher assistance.',
-					'zh-CN': '新增 AI 集成功能，支持翻译和启动器辅助功能。',
+					'zh-CN': '新增 AI 集成功能, 支持翻译和启动器辅助功能。',
 				},
 			],
 			changed: [
 				{
 					'en-US': 'Improved translation logic and AI integration for more consistent results.',
-					'zh-CN': '优化翻译逻辑和 AI 集成，提升翻译结果的一致性。',
+					'zh-CN': '优化翻译逻辑和 AI 集成, 提升翻译结果的一致性。',
 				},
 				{
 					'en-US':
 						'Simplified download error dialogs to make failures easier to understand and recover from.',
-					'zh-CN': '简化下载错误提示框，让失败原因和恢复操作更清晰。',
+					'zh-CN': '简化下载错误提示框, 让失败原因和恢复操作更清晰。',
 				},
 				{
 					'en-US': 'Improved mod-related downloads for more reliable content installation.',
-					'zh-CN': '优化模组相关下载，提升内容安装的可靠性。',
+					'zh-CN': '优化模组相关下载, 提升内容安装的可靠性。',
 				},
 			],
 			fixed: [
@@ -334,12 +334,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed Minecraft account avatars sometimes remaining on the default skin after startup; failed skin loads now retry automatically and refresh after navigation.',
 					'zh-CN':
-						'修复 Minecraft 账号头像在启动后偶尔持续显示默认皮肤的问题；皮肤加载失败后现在会自动重试，并在切换页面时重新获取。',
+						'修复 Minecraft 账号头像在启动后偶尔持续显示默认皮肤的问题；皮肤加载失败后现在会自动重试, 并在切换页面时重新获取。',
 				},
 				{
 					'en-US':
 						'Fixed an issue where the import instance window would flash all import options when closed or when clicking the "What can I drop?" button.',
-					'zh-CN': '修复了导入实例窗口关闭或点击 我可以拖入什么 按钮时，全部导入选项闪现的问题',
+					'zh-CN': '修复了导入实例窗口关闭或点击 我可以拖入什么 按钮时, 全部导入选项闪现的问题',
 				},
 			],
 		},
@@ -356,7 +356,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US': 'Completely redesigned homepage with widgetized components',
-					'zh-CN': '完全重新设计主页，使其小组件化',
+					'zh-CN': '完全重新设计主页, 使其小组件化',
 				},
 			],
 			changed: [
@@ -370,12 +370,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'CurseForge files bundled inside a modpack now remain in the modpack group, and existing instances are reconciled automatically without reclassifying user-added content.',
 					'zh-CN':
-						'CurseForge 整合包内置的文件现在会正确归入整合包分组；已有实例会自动校准，且不会误归类用户后来添加的内容。',
+						'CurseForge 整合包内置的文件现在会正确归入整合包分组；已有实例会自动校准, 且不会误归类用户后来添加的内容。',
 				},
 				{
 					'en-US':
 						'Modpack group rows now fall back to the instance icon when provider artwork is missing.',
-					'zh-CN': '整合包平台图标缺失时，内容分组现在会正确回落显示实例图标。',
+					'zh-CN': '整合包平台图标缺失时, 内容分组现在会正确回落显示实例图标。',
 				},
 				{
 					'en-US': 'Fixed local mods without a content record failing to enable or disable.',
@@ -384,7 +384,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed content toggles reverting visually after a mod was successfully enabled or disabled.',
-					'zh-CN': '修复 Mod 成功启用或禁用后，内容开关在界面上回弹的问题。',
+					'zh-CN': '修复 Mod 成功启用或禁用后, 内容开关在界面上回弹的问题。',
 				},
 				{
 					'en-US':
@@ -419,17 +419,17 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Game rules can now be edited with localized names, category grouping, search, and one-click reset to the vanilla default.',
-					'zh-CN': '支持编辑游戏规则：规则名称已本地化，按分类分组，可搜索并一键恢复默认值。',
+					'zh-CN': '支持编辑游戏规则：规则名称已本地化, 按分类分组, 可搜索并一键恢复默认值。',
 				},
 				{
 					'en-US':
 						'The world editor backs up level.dat before saving and stays read-only while the world is open in game.',
-					'zh-CN': '世界编辑器保存前会自动备份 level.dat，存档正在游戏中打开时会自动进入只读状态。',
+					'zh-CN': '世界编辑器保存前会自动备份 level.dat, 存档正在游戏中打开时会自动进入只读状态。',
 				},
 				{
 					'en-US':
 						'Added automatic high-performance GPU selection for Minecraft on Linux, supporting AMD and NVIDIA systems.',
-					'zh-CN': '新增 Linux 高性能显卡自动选择，支持 AMD 和 NVIDIA 显卡运行 Minecraft。',
+					'zh-CN': '新增 Linux 高性能显卡自动选择, 支持 AMD 和 NVIDIA 显卡运行 Minecraft。',
 				},
 			],
 			changed: [
@@ -448,7 +448,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed an upgrade failure that could prevent the launcher from opening when existing modpack content contained duplicate records.',
-					'zh-CN': '修复旧版整合包内容存在重复记录时升级失败，导致启动器无法启动的问题。',
+					'zh-CN': '修复旧版整合包内容存在重复记录时升级失败, 导致启动器无法启动的问题。',
 				},
 			],
 		},
@@ -466,7 +466,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Minecraft account avatars now render supported skin outer layers with a layered 2D effect and silhouette shadow.',
-					'zh-CN': 'Minecraft 账号头像现支持渲染皮肤外层，并以分层 2D 效果和轮廓阴影显示。',
+					'zh-CN': 'Minecraft 账号头像现支持渲染皮肤外层, 并以分层 2D 效果和轮廓阴影显示。',
 				},
 			],
 			changed: [
@@ -474,25 +474,25 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Reworked instance content management so local files and modpack groups remain visible and manageable when an online provider is unavailable.',
 					'zh-CN':
-						'重构实例内容管理，在线内容提供方不可用时，本地文件和整合包分组仍会完整显示并可正常管理。',
+						'重构实例内容管理, 在线内容提供方不可用时, 本地文件和整合包分组仍会完整显示并可正常管理。',
 				},
 				{
 					'en-US':
 						'One-click content updates now update only content added after installation; modpack updates remain separate and preserve added content and local overrides.',
 					'zh-CN':
-						'一键更新现在仅更新安装整合包后添加的内容；整合包更新保持独立，并会保留后装内容和本地覆盖。',
+						'一键更新现在仅更新安装整合包后添加的内容；整合包更新保持独立, 并会保留后装内容和本地覆盖。',
 				},
 				{
 					'en-US':
 						'Launcher networking now follows the operating system proxy automatically without a separate proxy toggle.',
-					'zh-CN': '启动器网络现在会自动跟随操作系统代理，无需单独配置代理开关。',
+					'zh-CN': '启动器网络现在会自动跟随操作系统代理, 无需单独配置代理开关。',
 				},
 			],
 			fixed: [
 				{
 					'en-US':
 						'Fixed Minecraft account avatars sometimes failing to display or shifting when hovering account options.',
-					'zh-CN': '修复 Minecraft 账号头像偶尔无法显示，以及悬停账号选项时发生抖动的问题。',
+					'zh-CN': '修复 Minecraft 账号头像偶尔无法显示, 以及悬停账号选项时发生抖动的问题。',
 				},
 				{
 					'en-US': 'Fixed an oversized border around the expanded account selector.',
@@ -502,12 +502,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed CurseForge author-restricted files opening invalid download pages, failing to import after browser download, or reporting completion before all files were present.',
 					'zh-CN':
-						'修复 CurseForge 作者限制文件打开错误下载页、浏览器下载后无法导入，以及文件未齐时提前提示完成的问题。',
+						'修复 CurseForge 作者限制文件打开错误下载页、浏览器下载后无法导入, 以及文件未齐时提前提示完成的问题。',
 				},
 				{
 					'en-US':
 						'Fixed incorrect content counts and missing-file warnings caused by shader configuration sidecar files being treated as shader packs.',
-					'zh-CN': '修复光影配置附属文件被误识别为光影包，导致内容数量和文件缺失提示错误的问题。',
+					'zh-CN': '修复光影配置附属文件被误识别为光影包, 导致内容数量和文件缺失提示错误的问题。',
 				},
 				{
 					'en-US':
@@ -560,14 +560,14 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Improved download routing, concurrency, segmented transfers, and stalled-tail recovery for faster installs.',
-					'zh-CN': '优化下载路由、并发、分段传输与慢尾恢复，提升整体安装速度。',
+					'zh-CN': '优化下载路由、并发、分段传输与慢尾恢复, 提升整体安装速度。',
 				},
 			],
 			fixed: [
 				{
 					'en-US':
 						'Fixed inaccurate speed and ETA reporting and downloads appearing stuck at 99% or 100%.',
-					'zh-CN': '修复下载速度与剩余时间显示不准，以及进度卡在 99% 或 100% 的问题。',
+					'zh-CN': '修复下载速度与剩余时间显示不准, 以及进度卡在 99% 或 100% 的问题。',
 				},
 				{
 					'en-US':
@@ -748,20 +748,20 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Added Schematic workshop in Lab. Open local or instance .litematic and .schem files to inspect builds in 3D, measure and manage layers and materials, edit blocks, and export your work.',
 					'zh-CN':
-						'实验室新增投影工坊：可打开本地或实例内的 .litematic 和 .schem 文件，在 3D 工作区查看建筑、测量并管理层级和材料、编辑方块，以及导出修改后的投影。',
+						'实验室新增投影工坊：可打开本地或实例内的 .litematic 和 .schem 文件, 在 3D 工作区查看建筑、测量并管理层级和材料、编辑方块, 以及导出修改后的投影。',
 				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Adjusted the position of source filter buttons on the Discover page for better usability.',
-					'zh-CN': '调整了发现页的来源筛选按钮位置，提升使用体验。',
+					'zh-CN': '调整了发现页的来源筛选按钮位置, 提升使用体验。',
 				},
 				{
 					'en-US':
 						'Manual CurseForge downloads skipped during an installation now remain listed after the task finishes, making them easier to complete later.',
 					'zh-CN':
-						'安装过程中跳过的 CurseForge 手动下载现在会在任务完成后保留在列表中，便于稍后完成。',
+						'安装过程中跳过的 CurseForge 手动下载现在会在任务完成后保留在列表中, 便于稍后完成。',
 				},
 			],
 			fixed: [
@@ -773,7 +773,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed Modrinth update checks so CurseForge-tracked files are not suggested as Modrinth updates, while eligible manually added content can still be matched.',
 					'zh-CN':
-						'修复 Modrinth 更新检查：由 CurseForge 跟踪的文件不再被当作 Modrinth 更新推荐，同时符合条件的手动添加内容仍可匹配更新。',
+						'修复 Modrinth 更新检查：由 CurseForge 跟踪的文件不再被当作 Modrinth 更新推荐, 同时符合条件的手动添加内容仍可匹配更新。',
 				},
 				{
 					'en-US':
@@ -828,21 +828,21 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			changed: [
 				{
 					'en-US': 'Improved download speed for more efficient content installation.',
-					'zh-CN': '优化下载速度，内容安装更加高效。',
+					'zh-CN': '优化下载速度, 内容安装更加高效。',
 				},
 				{
 					'en-US':
 						'Disabled automatic updates in portable mode. Portable users should update manually from GitHub.',
-					'zh-CN': '便携模式下禁用自动更新，便携版用户请前往 GitHub 手动更新。',
+					'zh-CN': '便携模式下禁用自动更新, 便携版用户请前往 GitHub 手动更新。',
 				},
 				{
 					'en-US':
 						'Removed automatic redirect to the Create page when no instances exist. Users can now view the empty home page.',
-					'zh-CN': '移除了无实例时自动跳转到创建页面的行为，现在可以正常浏览空白首页。',
+					'zh-CN': '移除了无实例时自动跳转到创建页面的行为, 现在可以正常浏览空白首页。',
 				},
 				{
 					'en-US': 'Optimized instance page caching to avoid reloading data on every visit.',
-					'zh-CN': '优化实例页面缓存机制，避免每次访问时重新加载数据。',
+					'zh-CN': '优化实例页面缓存机制, 避免每次访问时重新加载数据。',
 				},
 				{
 					'en-US':
@@ -853,7 +853,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US': 'Added a back-to-top button on the instance content page for easier navigation.',
-					'zh-CN': '实例内容页面新增回到顶部按钮，长页面浏览更加便捷。',
+					'zh-CN': '实例内容页面新增回到顶部按钮, 长页面浏览更加便捷。',
 				},
 			],
 		},
@@ -871,11 +871,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Redesigned Java management with clearer default-version controls and a more streamlined download experience.',
-					'zh-CN': '优化 Java 管理界面与交互，更清晰地管理各版本默认 Java，并简化下载流程。',
+					'zh-CN': '优化 Java 管理界面与交互, 更清晰地管理各版本默认 Java, 并简化下载流程。',
 				},
 				{
 					'en-US': 'Improved the Downloads page layout and actions for easier task management.',
-					'zh-CN': '优化下载页面的布局与操作，下载任务管理更加便捷。',
+					'zh-CN': '优化下载页面的布局与操作, 下载任务管理更加便捷。',
 				},
 			],
 			fixed: [
@@ -906,14 +906,14 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US': 'Added Lab with a gradient color generator and a Java Edition Seed Map.',
-					'zh-CN': '新增实验室，首批提供渐变颜色生成器和 Java 版种子地图。',
+					'zh-CN': '新增实验室, 首批提供渐变颜色生成器和 Java 版种子地图。',
 				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Improved download routing, retries, and progress reporting for more reliable installs.',
-					'zh-CN': '优化下载源切换、重试与进度展示，提升安装下载的稳定性。',
+					'zh-CN': '优化下载源切换、重试与进度展示, 提升安装下载的稳定性。',
 				},
 				{
 					'en-US': 'Changed the way the launcher handles modpack parsing.',
@@ -927,19 +927,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'To avoid confusion caused by loaders that have not yet been parsed during batch imports, instances are now imported one by one with progress displayed.',
-					'zh-CN': '为避免批量导入过程中还未来得及解析的加载器造成误解，现在逐个导入实例并显示进度',
+					'zh-CN': '为避免批量导入过程中还未来得及解析的加载器造成误解, 现在逐个导入实例并显示进度',
 				},
 				{
 					'en-US':
 						'Improved the Linux desktop file (.desktop) with Comment, Keywords, StartupWMClass, and StartupNotify fields; added x-scheme-handler/axolotl protocol association and Chinese localization; and set WEBKIT_DISABLE_DMABUF_RENDERER=1 for Exec.',
 					'zh-CN':
-						'优化 Linux 桌面文件（.desktop）：补充 Comment、Keywords、StartupWMClass、StartupNotify 等字段，添加 x-scheme-handler/axolotl 协议关联与中文本地化，并为 Exec 添加 WEBKIT_DISABLE_DMABUF_RENDERER=1 环境变量。',
+						'优化 Linux 桌面文件（.desktop）：补充 Comment、Keywords、StartupWMClass、StartupNotify 等字段, 添加 x-scheme-handler/axolotl 协议关联与中文本地化, 并为 Exec 添加 WEBKIT_DISABLE_DMABUF_RENDERER=1 环境变量。',
 				},
 				{
 					'en-US':
 						'Replaced Tauri template variables in the Linux desktop file template with fixed values, ensuring the built .desktop file uses "Axolotl Launcher" directly for its name, icon, and executable.',
 					'zh-CN':
-						'将 Linux 桌面文件模板从 Tauri 模板变量格式改为固定值格式，确保编译后的 .desktop 文件直接使用 "Axolotl Launcher" 作为名称、图标和可执行文件。',
+						'将 Linux 桌面文件模板从 Tauri 模板变量格式改为固定值格式, 确保编译后的 .desktop 文件直接使用 "Axolotl Launcher" 作为名称、图标和可执行文件。',
 				},
 			],
 			fixed: [
@@ -967,19 +967,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'The offline mode notice now has a refresh button to re-check the session server connection without restarting the launcher.',
-					'zh-CN': '离线模式提示中新增刷新按钮，无需重启启动器即可重新检测会话服务器连接状态。',
+					'zh-CN': '离线模式提示中新增刷新按钮, 无需重启启动器即可重新检测会话服务器连接状态。',
 				},
 				{
 					'en-US':
 						'Interrupted downloads of large files now resume from where they left off instead of restarting from zero, including after switching download sources or retrying a failed install.',
 					'zh-CN':
-						'大文件下载中断后现在会从断点继续，而不是从头重新下载——切换下载源或重试失败的安装时同样生效。',
+						'大文件下载中断后现在会从断点继续, 而不是从头重新下载——切换下载源或重试失败的安装时同样生效。',
 				},
 				{
 					'en-US':
 						'Project pages now link to the matching MC Mod (mcmod.cn) wiki page — in the sidebar links and the top-right menu — when the project is found in the bundled wiki index. Works for both Modrinth and CurseForge projects.',
 					'zh-CN':
-						'项目详情页现在会链接到对应的 MC 百科（mcmod.cn）页面——位于侧栏相关链接和右上角菜单中，仅当项目能在内置百科索引中找到时显示。Modrinth 和 CurseForge 项目均支持。',
+						'项目详情页现在会链接到对应的 MC 百科（mcmod.cn）页面——位于侧栏相关链接和右上角菜单中, 仅当项目能在内置百科索引中找到时显示。Modrinth 和 CurseForge 项目均支持。',
 				},
 			],
 			changed: [
@@ -987,7 +987,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						"Checking a modpack's contents no longer loads the entire pack file into memory; it now streams to the download cache and is reused by a later install of the same version.",
 					'zh-CN':
-						'解析整合包内容时不再将整个整合包文件载入内存，而是流式下载到缓存，之后安装同一版本时可直接复用。',
+						'解析整合包内容时不再将整个整合包文件载入内存, 而是流式下载到缓存, 之后安装同一版本时可直接复用。',
 				},
 				{
 					'en-US':
@@ -1000,19 +1000,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed a freeze caused by an infinite loop when closing the import method dialog, and its Cancel action is now a real button.',
 					'zh-CN':
-						'修复了关闭导入方式弹窗时因无限循环导致卡死的问题，同时「取消」现在是真正的按钮。',
+						'修复了关闭导入方式弹窗时因无限循环导致卡死的问题, 同时「取消」现在是真正的按钮。',
 				},
 				{
 					'en-US':
 						'Forge, Fabric, and NeoForge files can now fall back to their official servers when download mirrors are unavailable or have not synced a newly released version yet.',
 					'zh-CN':
-						'当下载镜像不可用或尚未同步新发布的版本时，Forge、Fabric 和 NeoForge 文件现在会回退到官方服务器下载。',
+						'当下载镜像不可用或尚未同步新发布的版本时, Forge、Fabric 和 NeoForge 文件现在会回退到官方服务器下载。',
 				},
 				{
 					'en-US':
 						'Servers that mishandle multi-connection downloads are now remembered during a session, so large files stop wasting a doomed segmented attempt before every download.',
 					'zh-CN':
-						'不支持多线程分段下载的服务器现在会在会话内被记住，大文件不再每次下载都先经历一轮注定失败的分段尝试。',
+						'不支持多线程分段下载的服务器现在会在会话内被记住, 大文件不再每次下载都先经历一轮注定失败的分段尝试。',
 				},
 				{
 					'en-US':
@@ -1023,29 +1023,29 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Importing an instance no longer shows a success notification before the import actually finishes — failures now report an error instead of a false success.',
 					'zh-CN':
-						'导入实例不再在导入真正完成前提示成功——导入失败时现在会提示错误，而不是错误地提示成功。',
+						'导入实例不再在导入真正完成前提示成功——导入失败时现在会提示错误, 而不是错误地提示成功。',
 				},
 				{
 					'en-US':
 						'Changing the app directory now moves shared instance links without moving or copying their original files.',
-					'zh-CN': '更改应用目录时，现在仅迁移共享实例链接，不再移动或复制其原始文件。',
+					'zh-CN': '更改应用目录时, 现在仅迁移共享实例链接, 不再移动或复制其原始文件。',
 				},
 				{
 					'en-US':
 						'Creating a custom instance once again defaults its icon to the selected mod loader (Fabric, Forge, Quilt, NeoForge) instead of the generic placeholder.',
 					'zh-CN':
-						'创建自定义实例时，图标重新默认使用所选加载器的图标（Fabric、Forge、Quilt、NeoForge），不再是通用占位图。',
+						'创建自定义实例时, 图标重新默认使用所选加载器的图标（Fabric、Forge、Quilt、NeoForge）, 不再是通用占位图。',
 				},
 				{
 					'en-US':
 						'Loader and other newer built-in instance icons now display without the avatar frame, matching the rest of the built-in icons.',
-					'zh-CN': '加载器及其他较新的内置实例图标现在与其余内置图标一致，不再带边框显示。',
+					'zh-CN': '加载器及其他较新的内置实例图标现在与其余内置图标一致, 不再带边框显示。',
 				},
 				{
 					'en-US':
 						'Fixed the launcher failing to start with a "Cannot save an incomplete Java installation" error when a leftover unfinished Java download was found while changing the app directory or migrating old launcher data.',
 					'zh-CN':
-						'修复更改应用目录或迁移旧启动器数据时，遗留的未完成 Java 下载会导致启动器无法启动并报 "Cannot save an incomplete Java installation" 错误的问题。',
+						'修复更改应用目录或迁移旧启动器数据时, 遗留的未完成 Java 下载会导致启动器无法启动并报 "Cannot save an incomplete Java installation" 错误的问题。',
 				},
 			],
 		},
@@ -1063,12 +1063,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Added a transparent background option in Settings > Appearance, with a slider to control how much of your desktop shows through the launcher window.',
-					'zh-CN': '设置 > 外观新增「透明背景」选项，可通过滑块调节桌面透过启动器窗口显示的程度。',
+					'zh-CN': '设置 > 外观新增「透明背景」选项, 可通过滑块调节桌面透过启动器窗口显示的程度。',
 				},
 				{
 					'en-US':
 						'Added a background blur toggle for the transparent background, frosting whatever shows through the window.',
-					'zh-CN': '透明背景新增「背景模糊」开关，可将透出的画面做磨砂玻璃处理。',
+					'zh-CN': '透明背景新增「背景模糊」开关, 可将透出的画面做磨砂玻璃处理。',
 				},
 				{
 					'en-US': 'Added powerful modpack parsing functionality.',
@@ -1100,7 +1100,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Added translation for new entries, allowing the translation feature to be applied to titles and descriptions outside of entries.',
-					'zh-CN': '新增条目翻译功能，让翻译功能可以应用到条目外的标题和介绍。',
+					'zh-CN': '新增条目翻译功能, 让翻译功能可以应用到条目外的标题和介绍。',
 				},
 			],
 			fixed: [
@@ -1133,7 +1133,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Changed the scanning logic to optimize some parts of the import scanning, improving compatibility.',
-					'zh-CN': '修改扫描逻辑，优化导入扫描的部分石山，提升兼容性。',
+					'zh-CN': '修改扫描逻辑, 优化导入扫描的部分石山, 提升兼容性。',
 				},
 			],
 		},
@@ -1152,7 +1152,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Drag and drop mods, resource packs, shader packs, world saves, schematic files, and launcher instances anywhere in the launcher for instant import — no need to navigate menus.',
 					'zh-CN':
-						'新增全局拖拽功能：直接拖入模组、资源包、光影包、存档、投影文件及启动器，即可快速导入，无需在菜单中翻找。',
+						'新增全局拖拽功能：直接拖入模组、资源包、光影包、存档、投影文件及启动器, 即可快速导入, 无需在菜单中翻找。',
 				},
 				{
 					'en-US':
@@ -1163,7 +1163,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Added mod import validation — when installing a mod, the launcher now checks if it is compatible with your current Minecraft version and mod loader, and warns you before installing if something does not match.',
 					'zh-CN':
-						'新增模组导入校验：安装模组时，启动器会自动检测其与当前 Minecraft 版本和加载器的兼容性，不匹配时会提前提醒。',
+						'新增模组导入校验：安装模组时, 启动器会自动检测其与当前 Minecraft 版本和加载器的兼容性, 不匹配时会提前提醒。',
 				},
 				{
 					'en-US':
@@ -1175,30 +1175,30 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Installed mods in the instance content tab and the modpack content dialog now show bilingual "中文名 (English)" titles under the Simplified Chinese locale, and installed content can be searched in Chinese.',
 					'zh-CN':
-						'中文界面下，实例内容页与整合包内容弹窗的已装模组现以「中文名 (英文名)」显示，并支持用中文搜索已装内容。',
+						'中文界面下, 实例内容页与整合包内容弹窗的已装模组现以「中文名 (英文名)」显示, 并支持用中文搜索已装内容。',
 				},
 				{
 					'en-US':
 						'Under the Simplified Chinese locale, newly downloaded mods, resource packs, shader packs and data packs are saved as "[中文名]original-name" when a Chinese name is known; unknown files keep their original names and exported modpacks always restore the original file names.',
 					'zh-CN':
-						'中文界面下，新下载的模组、资源包、光影包和数据包会以「[中文名]原文件名」保存；查不到中文名时保持原样，导出整合包时自动还原为原文件名。',
+						'中文界面下, 新下载的模组、资源包、光影包和数据包会以「[中文名]原文件名」保存；查不到中文名时保持原样, 导出整合包时自动还原为原文件名。',
 				},
 				{
 					'en-US':
 						'Browsing the Discover Content page without searching now also shows bilingual "中文名 (English)" titles under the Simplified Chinese locale, for both Modrinth and CurseForge results.',
 					'zh-CN':
-						'中文界面下，「发现内容」页直接浏览（不搜索）时也会显示「中文名 (英文名)」双语标题，Modrinth 与 CurseForge 结果均生效。',
+						'中文界面下, 「发现内容」页直接浏览（不搜索）时也会显示「中文名 (英文名)」双语标题, Modrinth 与 CurseForge 结果均生效。',
 				},
 				{
 					'en-US':
 						'The game language now follows the launcher language on the first launch of an instance, including imported modpacks, using the correct language code for each game version; instances you already play keep your in-game choice.',
 					'zh-CN':
-						'游戏语言现在会在实例首次启动时自动跟随启动器语言（包括导入的整合包），并按游戏版本写入正确的语言代码；已游玩过的实例仍保留游戏内的语言设置。',
+						'游戏语言现在会在实例首次启动时自动跟随启动器语言（包括导入的整合包）, 并按游戏版本写入正确的语言代码；已游玩过的实例仍保留游戏内的语言设置。',
 				},
 				{
 					'en-US':
 						'The left sidebar now animates the active highlight sliding between pages when switching sections, matching the content type tabs.',
-					'zh-CN': '左侧导航栏切换页面时，选中高亮改为滑动过渡动画，与顶部内容类型标签栏保持一致。',
+					'zh-CN': '左侧导航栏切换页面时, 选中高亮改为滑动过渡动画, 与顶部内容类型标签栏保持一致。',
 				},
 				{
 					'en-US':
@@ -1208,12 +1208,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Translation results now appear in staggered batches with a smooth floating animation.',
-					'zh-CN': '翻译结果现在以逐批浮动动画显示，视觉体验更流畅。',
+					'zh-CN': '翻译结果现在以逐批浮动动画显示, 视觉体验更流畅。',
 				},
 				{
 					'en-US':
 						'Added a Windows option to use the high-performance GPU for the launcher and Java.',
-					'zh-CN': '新增 Windows 高性能显卡选项，可用于启动器和 Java。',
+					'zh-CN': '新增 Windows 高性能显卡选项, 可用于启动器和 Java。',
 				},
 				{
 					'en-US': 'Added local Minecraft crash diagnosis and exportable diagnostic reports.',
@@ -1234,7 +1234,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Improved modpack import compatibility — more modpack formats are supported and edge cases are handled better, so more modpacks import successfully.',
 					'zh-CN':
-						'优化整合包导入兼容性：支持更多整合包格式，能更好地处理各种特殊情况，导入成功率更高。',
+						'优化整合包导入兼容性：支持更多整合包格式, 能更好地处理各种特殊情况, 导入成功率更高。',
 				},
 				{
 					'en-US':
@@ -1245,18 +1245,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Java detection is now faster: it reads a metadata file in each installation to determine the version instead of launching a JVM for every candidate, reducing the delay of the first system scan.',
 					'zh-CN':
-						'加快 Java 检测：现在优先读取每个安装目录的元数据文件判断版本，避免为每个候选启动 JVM，减少首次扫描的耗时。',
+						'加快 Java 检测：现在优先读取每个安装目录的元数据文件判断版本, 避免为每个候选启动 JVM, 减少首次扫描的耗时。',
 				},
 				{
 					'en-US':
 						'Downloading or launching an instance now scans the system for an already-installed Java of the required version before downloading a new runtime, reusing an existing installation instead of downloading a duplicate.',
 					'zh-CN':
-						'下载或启动实例时，现在会先扫描本机是否已安装所需版本的 Java，找到则复用，仅在确实没有时才下载新的运行时，避免重复下载。',
+						'下载或启动实例时, 现在会先扫描本机是否已安装所需版本的 Java, 找到则复用, 仅在确实没有时才下载新的运行时, 避免重复下载。',
 				},
 				{
 					'en-US':
 						'Crash diagnostics now combine related logs and provide direct analysis and export actions.',
-					'zh-CN': '崩溃诊断现在会归集相关日志，并提供直接分析和导出操作。',
+					'zh-CN': '崩溃诊断现在会归集相关日志, 并提供直接分析和导出操作。',
 				},
 				{
 					'en-US':
@@ -1266,18 +1266,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Empty log consoles now show Chinese startup guidance with a pink side-view axolotl illustration matching the launcher icon.',
-					'zh-CN': '空日志控制台现在会显示中文启动提示，以及贴近启动器图标的粉色美西螈侧视字符画。',
+					'zh-CN': '空日志控制台现在会显示中文启动提示, 以及贴近启动器图标的粉色美西螈侧视字符画。',
 				},
 				{
 					'en-US':
 						'Translation requests are now sent in batches (5 segments per batch) to reduce API overhead.',
-					'zh-CN': '翻译请求现在分批发送（每批5个段落），降低 API 调用频率。',
+					'zh-CN': '翻译请求现在分批发送（每批5个段落）, 降低 API 调用频率。',
 				},
 				{
 					'en-US':
 						'Offline account creation now warns when a Chinese username may be incompatible with Minecraft 1.18 and newer.',
 					'zh-CN':
-						'创建离线账户时，若使用中文用户名，现在会提示其可能与 Minecraft 1.18 及以上版本不兼容。',
+						'创建离线账户时, 若使用中文用户名, 现在会提示其可能与 Minecraft 1.18 及以上版本不兼容。',
 				},
 			],
 			fixed: [
@@ -1306,7 +1306,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						"Fixed database backups being written to Modrinth's directory; backups are now stored in the launcher's own data directory.",
 					'zh-CN':
-						'修复数据库备份被写入 Modrinth 目录的问题，现在改为保存到启动器自己的应用数据目录。',
+						'修复数据库备份被写入 Modrinth 目录的问题, 现在改为保存到启动器自己的应用数据目录。',
 				},
 				{
 					'en-US': 'Improved crash diagnosis when multiple instances fail close together.',
@@ -1333,30 +1333,30 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Expanded Java detection to search JAVA_HOME sibling installations, common vendor locations, official Minecraft Launcher runtimes, and likely installation folders.',
 					'zh-CN':
-						'扩展 Java 自动检测范围，现可搜索 JAVA_HOME 同级安装、常见发行版目录、Minecraft 官方启动器运行时及可能的安装目录。',
+						'扩展 Java 自动检测范围, 现可搜索 JAVA_HOME 同级安装、常见发行版目录、Minecraft 官方启动器运行时及可能的安装目录。',
 				},
 				{
 					'en-US':
 						'Added automatic memory allocation that adapts to available RAM and installed mods each time an instance launches.',
-					'zh-CN': '新增自动分配内存，可在每次启动实例时根据可用内存和已安装模组动态调整。',
+					'zh-CN': '新增自动分配内存, 可在每次启动实例时根据可用内存和已安装模组动态调整。',
 				},
 				{
 					'en-US':
 						'Added a live memory allocation display and one-click memory optimization on Windows.',
-					'zh-CN': '新增实时内存分配展示，并在 Windows 上提供一键内存优化。',
+					'zh-CN': '新增实时内存分配展示, 并在 Windows 上提供一键内存优化。',
 				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Java detection now caches results, scans sources concurrently, and refreshes the installation list in the background.',
-					'zh-CN': 'Java 检测现在会缓存结果、并行扫描不同来源，并在后台刷新安装列表。',
+					'zh-CN': 'Java 检测现在会缓存结果、并行扫描不同来源, 并在后台刷新安装列表。',
 				},
 				{
 					'en-US':
 						'The launcher now reuses an already detected Java runtime with the required version before downloading a new one.',
 					'zh-CN':
-						'启动实例缺少所需 Java 版本时，现在会优先复用已检测到的同版本运行时，再考虑下载新的运行时。',
+						'启动实例缺少所需 Java 版本时, 现在会优先复用已检测到的同版本运行时, 再考虑下载新的运行时。',
 				},
 			],
 			fixed: [
@@ -1387,12 +1387,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Added HMCL, PCL2, and PCL2CE launcher instance import — all instances are now discovered and imported directly from these launchers.',
-					'zh-CN': '新增 HMCL、PCL2、PCL2CE 启动器实例导入支持，可直接根据启动器解析出所有实例。',
+					'zh-CN': '新增 HMCL、PCL2、PCL2CE 启动器实例导入支持, 可直接根据启动器解析出所有实例。',
 				},
 				{
 					'en-US':
 						'Added generic folder import — any directory containing a .minecraft folder can now be imported as an instance.',
-					'zh-CN': '新增通用文件夹导入功能，可导入任意含 .minecraft 的目录。',
+					'zh-CN': '新增通用文件夹导入功能, 可导入任意含 .minecraft 的目录。',
 				},
 				{
 					'en-US':
@@ -1412,7 +1412,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Added drag-and-drop import: drop mods, resource packs, shader packs, world saves, schematics, and launcher instances directly onto the launcher for instant import.',
 					'zh-CN':
-						'新增拖放导入功能：直接拖入模组、资源包、光影包、存档、投影文件及启动器实例，即可快速导入。',
+						'新增拖放导入功能：直接拖入模组、资源包、光影包、存档、投影文件及启动器实例, 即可快速导入。',
 				},
 			],
 			changed: [
@@ -1420,7 +1420,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Optimised copy_dotminecraft_with_reporter: serial copies are now concurrent, reducing time complexity from O(n·t) to O(max(t)), and progress reporting has been improved.',
 					'zh-CN':
-						'优化 copy_dotminecraft_with_reporter：串行复制改为并发，时间复杂度由 O(n·t) 降为 O(max(t))，优化进度上报时机。',
+						'优化 copy_dotminecraft_with_reporter：串行复制改为并发, 时间复杂度由 O(n·t) 降为 O(max(t)), 优化进度上报时机。',
 				},
 				{
 					'en-US': 'Updated shared instance indicators and warning hints for clarity.',
@@ -1430,7 +1430,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Greatly improved modpack import compatibility — now handles CurseForge, MCBBS, HMCL, MultiMC, PCL launcher-bundled archives and various non-standard pack formats.',
 					'zh-CN':
-						'大大增强整合包导入兼容性，兼容 CurseForge、MCBBS、HMCL、MultiMC、PCL 等导出的附带启动器的整合包以及各种不完全符合规范的整合包格式。',
+						'大大增强整合包导入兼容性, 兼容 CurseForge、MCBBS、HMCL、MultiMC、PCL 等导出的附带启动器的整合包以及各种不完全符合规范的整合包格式。',
 				},
 			],
 			fixed: [
@@ -1463,36 +1463,36 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Modpack imports now detect the archive format by content: CurseForge, MCBBS, HMCL, and MultiMC/Prism export packs, launcher-bundled archives, and zipped game folders can be imported alongside .mrpack files.',
 					'zh-CN':
-						'整合包导入现在按压缩包内容识别格式：除 .mrpack 外，还支持 CurseForge、MCBBS、HMCL、MultiMC/Prism 导出包、附带启动器的整合包以及打包的游戏目录。',
+						'整合包导入现在按压缩包内容识别格式：除 .mrpack 外, 还支持 CurseForge、MCBBS、HMCL、MultiMC/Prism 导出包、附带启动器的整合包以及打包的游戏目录。',
 				},
 				{
 					'en-US':
 						'Added OptiFine support: modpacks declaring OptiFine install it automatically, standalone as the loader or as a mod alongside Forge/NeoForge.',
 					'zh-CN':
-						'新增 OptiFine 支持：声明了 OptiFine 的整合包会自动安装——单独存在时作为加载器，与 Forge/NeoForge 共存时作为模组安装。',
+						'新增 OptiFine 支持：声明了 OptiFine 的整合包会自动安装——单独存在时作为加载器, 与 Forge/NeoForge 共存时作为模组安装。',
 				},
 				{
 					'en-US':
 						'Added an appearance setting to limit the number of recent instances shown in the sidebar, with 0 showing all instances.',
-					'zh-CN': '新增外观设置，可限制侧边栏显示的最近实例数量，设为 0 时显示全部实例。',
+					'zh-CN': '新增外观设置, 可限制侧边栏显示的最近实例数量, 设为 0 时显示全部实例。',
 				},
 				{
 					'en-US':
 						'Added custom accent colors with a preset palette, hue slider, hex input, and automatic light and dark theme variants.',
 					'zh-CN':
-						'新增自定义强调色，支持预设色板、色相滑块、十六进制色号及自动生成浅色和深色主题变体。',
+						'新增自定义强调色, 支持预设色板、色相滑块、十六进制色号及自动生成浅色和深色主题变体。',
 				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Improved the update settings version history with clearer release cards and details.',
-					'zh-CN': '优化更新设置中的版本历史，提供更清晰的发布卡片和详情展示。',
+					'zh-CN': '优化更新设置中的版本历史, 提供更清晰的发布卡片和详情展示。',
 				},
 				{
 					'en-US':
 						'The sidebar instance list now scrolls independently when it exceeds the available space.',
-					'zh-CN': '侧边栏实例列表超出可用空间时，现在可以独立滚动。',
+					'zh-CN': '侧边栏实例列表超出可用空间时, 现在可以独立滚动。',
 				},
 			],
 			fixed: [
@@ -1505,7 +1505,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed local modpack installs appearing stuck at 100% and hanging when a Minecraft file download stops receiving data.',
 					'zh-CN':
-						'修复本地整合包安装在 100% 后看似卡住，以及 Minecraft 文件下载停止接收数据时任务无法结束的问题。',
+						'修复本地整合包安装在 100% 后看似卡住, 以及 Minecraft 文件下载停止接收数据时任务无法结束的问题。',
 				},
 				{
 					'en-US':
@@ -1533,11 +1533,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Added categorized update announcements after app updates and a permanent release history in settings.',
-					'zh-CN': '新增应用更新后的分类公告弹窗，以及设置中的永久版本历史记录。',
+					'zh-CN': '新增应用更新后的分类公告弹窗, 以及设置中的永久版本历史记录。',
 				},
 				{
 					'en-US': 'Added a first-run onboarding guide that can also be replayed from settings.',
-					'zh-CN': '新增首次使用引导，并支持从设置中重新播放。',
+					'zh-CN': '新增首次使用引导, 并支持从设置中重新播放。',
 				},
 			],
 			changed: [
@@ -1556,12 +1556,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US': 'Large error log exports now use streaming compression to reduce memory usage.',
-					'zh-CN': '错误日志导出现在使用流式压缩，降低大日志导出时的内存占用。',
+					'zh-CN': '错误日志导出现在使用流式压缩, 降低大日志导出时的内存占用。',
 				},
 				{
 					'en-US':
 						'WARN and ERROR logs now rotate before the 30 MiB boundary without splitting individual events.',
-					'zh-CN': 'WARN 和 ERROR 日志现在会在 30 MiB 边界内保持完整，轮转时不会拆分单个事件。',
+					'zh-CN': 'WARN 和 ERROR 日志现在会在 30 MiB 边界内保持完整, 轮转时不会拆分单个事件。',
 				},
 				{
 					'en-US': 'Launcher logs older than three days are now removed automatically.',
@@ -1571,18 +1571,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US': 'Fixed skipped mods remaining in the list after manually installing them.',
-					'zh-CN': '修复手动安装跳过下载的模组后，已跳过模组列表不会更新的问题。',
+					'zh-CN': '修复手动安装跳过下载的模组后, 已跳过模组列表不会更新的问题。',
 				},
 				{
 					'en-US':
 						'Fixed duplicate download events causing complete installation states to be logged repeatedly.',
-					'zh-CN': '修复下载事件重复记录完整安装状态，导致启动器日志快速膨胀的问题。',
+					'zh-CN': '修复下载事件重复记录完整安装状态, 导致启动器日志快速膨胀的问题。',
 				},
 				{
 					'en-US':
 						'Fixed the Fabric/Modrinth content page watcher repeatedly writing the same map and getting stuck loading.',
 					'zh-CN':
-						'修复 Fabric/Modrinth 实例内容页 watcher 重复写入相同 Map，触发递归更新并持续加载的问题。',
+						'修复 Fabric/Modrinth 实例内容页 watcher 重复写入相同 Map, 触发递归更新并持续加载的问题。',
 				},
 			],
 			security: [
