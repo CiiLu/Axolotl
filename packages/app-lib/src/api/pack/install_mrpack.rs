@@ -839,6 +839,14 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         num_files,
         content_total_bytes,
     };
+    let skipped_missing_content_paths = Arc::new(
+        reporter
+            .current_state()
+            .await?
+            .skipped_missing_content_paths
+            .into_iter()
+            .collect::<HashSet<_>>(),
+    );
     let mut queued_events = Vec::with_capacity(num_files.saturating_add(1));
     queued_events.push(InstallJobEventKind::ContentDownloadStarted {
         files: num_files as u64,
@@ -925,6 +933,8 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         Some(state.download_concurrency()),
         |(manifest_index, project)| {
             let content_context = content_context.clone();
+            let skipped_missing_content_paths =
+                skipped_missing_content_paths.clone();
             async move {
                 let project_size = project.file_size as u64;
                 let project_path =
@@ -948,6 +958,22 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         .expected_size(project_size)
                         .build();
                 let result: crate::Result<()> = async {
+
+                if skipped_missing_content_paths.contains(&project_path) {
+                    content_context
+                        .mark_file_settled(
+                            0,
+                            InstallJobEventKind::ContentFileSkipped {
+                                path: project_path.clone(),
+                                reason: "skipped by user".to_string(),
+                                project_id: None,
+                                version_id: None,
+                                manual_url: None,
+                            },
+                        )
+                        .await?;
+                    return Ok(());
+                }
 
                 //TODO: Future update: prompt user for optional files in a modpack
                 if let Some(env) = project.env.as_ref()

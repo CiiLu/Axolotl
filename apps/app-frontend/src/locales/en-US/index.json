@@ -734,6 +734,9 @@
 	"app.downloads.cancel": {
 		"message": "Cancel"
 	},
+	"app.downloads.skip-missing-files": {
+		"message": "Skip all missing files"
+	},
 	"app.downloads.complete-missing-files": {
 		"message": "Complete missing files"
 	},

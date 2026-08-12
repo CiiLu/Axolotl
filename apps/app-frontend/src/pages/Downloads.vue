@@ -177,6 +177,16 @@
 								<RefreshCwIcon />{{ formatMessage(messages.retry) }}
 							</button>
 						</ButtonStyled>
+						<ButtonStyled
+							v-if="canSkipMissingContent(job)"
+							color="orange"
+							type="outlined"
+							size="small"
+						>
+							<button :disabled="busy.has(job.job_id)" @click="skipMissingContent(job)">
+								{{ formatMessage(messages.skipMissingFiles) }}
+							</button>
+						</ButtonStyled>
 						<ButtonStyled v-if="job.status === 'waiting_for_user'" color="brand" size="small">
 							<button :disabled="busy.has(job.job_id)" @click="resolveMissing(job)">
 								<DownloadIcon />{{ formatMessage(messages.completeMissingFiles) }}
@@ -437,6 +447,10 @@ const messages = defineMessages({
 	},
 	cancel: { id: 'app.downloads.cancel', defaultMessage: 'Cancel' },
 	retry: { id: 'app.downloads.retry', defaultMessage: 'Retry' },
+	skipMissingFiles: {
+		id: 'app.downloads.skip-missing-files',
+		defaultMessage: 'Skip all missing files',
+	},
 	completeMissingFiles: {
 		id: 'app.downloads.complete-missing-files',
 		defaultMessage: 'Complete missing files',
@@ -760,6 +774,14 @@ function canRetry(job: InstallJobSnapshot) {
 	return job.status === 'failed' || job.status === 'interrupted' || job.status === 'canceled'
 }
 
+function canSkipMissingContent(job: InstallJobSnapshot) {
+	return (
+		job.status === 'waiting_for_user' &&
+		job.pause_reason?.type === 'missing_required_content' &&
+		job.pause_reason.failed_files > 0
+	)
+}
+
 function showProgress(job: InstallJobSnapshot) {
 	return ['queued', 'running', 'canceling', 'waiting_for_user'].includes(job.status)
 }
@@ -980,6 +1002,10 @@ async function cancel(job: InstallJobSnapshot) {
 
 async function retry(job: InstallJobSnapshot) {
 	await withBusy(job.job_id, () => manager.retry(job.job_id))
+}
+
+async function skipMissingContent(job: InstallJobSnapshot) {
+	await withBusy(job.job_id, () => manager.skipMissingContent(job.job_id))
 }
 
 async function resolveMissing(job: InstallJobSnapshot) {

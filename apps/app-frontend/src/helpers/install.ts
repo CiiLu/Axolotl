@@ -395,6 +395,12 @@ export async function install_job_resume(jobId: string) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_job_resume', { jobId })
 }
 
+export async function install_job_skip_missing_content(jobId: string) {
+	return await invoke<InstallJobSnapshot>('plugin:install|install_job_skip_missing_content', {
+		jobId,
+	})
+}
+
 export async function install_job_missing_files(jobId: string) {
 	return await invoke<MissingModpackContentView>('plugin:install|install_job_missing_files', {
 		jobId,

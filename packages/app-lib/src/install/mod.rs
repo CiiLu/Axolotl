@@ -33,4 +33,5 @@ pub use runner::{
     install_curseforge_content, install_existing_instance,
     install_pack_to_existing_instance, job_support_details, list_jobs,
     repair_cache_and_retry_job, resume_job, retry_job, retry_job_as_new,
+    skip_missing_content_and_resume_job,
 };

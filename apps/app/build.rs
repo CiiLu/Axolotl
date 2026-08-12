@@ -252,6 +252,7 @@ fn main() {
                         "install_job_retry",
                         "install_job_repair_cache_and_retry",
                         "install_job_resume",
+                        "install_job_skip_missing_content",
                         "install_job_missing_files",
                         "install_job_scan_missing_files",
                         "install_job_retry_missing_file",

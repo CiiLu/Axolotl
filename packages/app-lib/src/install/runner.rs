@@ -371,7 +371,65 @@ pub async fn resume_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
         .into());
     }
 
+    queue_waiting_job(job_id, job.state, &state).await
+}
+
+pub async fn skip_missing_content_and_resume_job(
+    job_id: Uuid,
+) -> crate::Result<InstallJobSnapshot> {
+    let state = State::get().await?;
+    let job = store::get_required(job_id, &state).await?;
+    if job.status != InstallJobStatus::WaitingForUser {
+        return Err(crate::ErrorKind::InputError(
+            "Only install jobs waiting for user action can skip missing content"
+                .to_string(),
+        )
+        .into());
+    }
+
+    let mut current_missing_paths = job
+        .snapshot()
+        .items
+        .into_iter()
+        .filter(|item| {
+            item.status == super::model::DownloadItemStatus::Failed
+                || (item.status == super::model::DownloadItemStatus::Skipped
+                    && item.manual_url.is_some())
+        })
+        .map(|item| item.id)
+        .collect::<Vec<_>>();
     let mut job_state = job.state;
+    let InstallPauseReason::MissingRequiredContent { paths, .. } = job_state
+        .pause_reason
+        .as_ref()
+        .ok_or_else(|| {
+            crate::ErrorKind::InputError(
+                "Install job has no missing content to skip".to_string(),
+            )
+        })?;
+    if current_missing_paths.is_empty() {
+        current_missing_paths = paths.clone();
+    }
+    if current_missing_paths.is_empty() {
+        return Err(crate::ErrorKind::InputError(
+            "Install job has no missing content to skip".to_string(),
+        )
+        .into());
+    }
+    job_state
+        .skipped_missing_content_paths
+        .extend(current_missing_paths);
+    job_state.skipped_missing_content_paths.sort_unstable();
+    job_state.skipped_missing_content_paths.dedup();
+
+    queue_waiting_job(job_id, job_state, &state).await
+}
+
+async fn queue_waiting_job(
+    job_id: Uuid,
+    mut job_state: InstallJobState,
+    state: &State,
+) -> crate::Result<InstallJobSnapshot> {
     prepare_resumed_job(&mut job_state);
     let Some(record) = store::update_status_if(
         job_id,
@@ -869,6 +927,7 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
             job_state.pause_reason = None;
             job_state.continuation = None;
             job_state.missing_content = None;
+            job_state.skipped_missing_content_paths.clear();
             job_state.context = None;
             let instance_id = current_instance_id(&job_state);
             let mut completed_state = job_state.clone();
@@ -1107,8 +1166,10 @@ async fn run_request(
                     Some(reporter.clone()),
                 )
                 .await?;
-                if let Some(reason) = curseforge_manual_download_pause(&result)
-                {
+                if let Some(reason) = curseforge_manual_download_pause(
+                    &result,
+                    &job_state.skipped_missing_content_paths,
+                ) {
                     return Ok(InstallExecutionOutcome::WaitingForUser(reason));
                 }
             }
@@ -1899,6 +1960,10 @@ async fn install_local_pack_file(
             );
         }
         LocalPackFormat::CurseForge => {
+            let skipped_missing_content_paths = reporter
+                .current_state()
+                .await?
+                .skipped_missing_content_paths;
             let result = crate::api::curseforge::install_modpack_from_local_archive_with_reporter(
                 instance_id,
                 path,
@@ -1909,7 +1974,10 @@ async fn install_local_pack_file(
                 crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
             )
             .await?;
-            if let Some(reason) = curseforge_manual_download_pause(&result) {
+            if let Some(reason) = curseforge_manual_download_pause(
+                &result,
+                &skipped_missing_content_paths,
+            ) {
                 return Ok(InstallExecutionOutcome::WaitingForUser(reason));
             }
         }
@@ -2046,15 +2114,22 @@ async fn install_local_pack_file(
 
 fn curseforge_manual_download_pause(
     result: &crate::api::curseforge::CurseForgeModpackInstallResult,
+    skipped_missing_content_paths: &[String],
 ) -> Option<InstallPauseReason> {
-    if result.content.manual_downloads.is_empty() {
+    let missing_downloads = result
+        .content
+        .manual_downloads
+        .iter()
+        .filter(|download| {
+            !skipped_missing_content_paths.contains(&download.file_name)
+        })
+        .collect::<Vec<_>>();
+    if missing_downloads.is_empty() {
         return None;
     }
     Some(InstallPauseReason::MissingRequiredContent {
-        failed_files: result.content.manual_downloads.len() as u64,
-        paths: result
-            .content
-            .manual_downloads
+        failed_files: missing_downloads.len() as u64,
+        paths: missing_downloads
             .iter()
             .map(|download| download.file_name.clone())
             .collect(),
@@ -2466,11 +2541,18 @@ mod tests {
         };
 
         assert_eq!(
-            curseforge_manual_download_pause(&result),
+            curseforge_manual_download_pause(&result, &[]),
             Some(InstallPauseReason::MissingRequiredContent {
                 failed_files: 1,
                 paths: vec!["mods/manual.jar".to_string()],
             })
+        );
+        assert_eq!(
+            curseforge_manual_download_pause(
+                &result,
+                &["mods/manual.jar".to_string()],
+            ),
+            None
         );
     }
 

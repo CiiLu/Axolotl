@@ -461,6 +461,9 @@
 	"app.downloads.cancel": {
 		"message": "取消"
 	},
+	"app.downloads.skip-missing-files": {
+		"message": "略過全部缺失檔案"
+	},
 	"app.downloads.complete-missing-files": {
 		"message": "補全缺失檔案"
 	},

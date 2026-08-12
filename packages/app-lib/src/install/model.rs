@@ -55,6 +55,8 @@ pub struct InstallJobState {
     pub continuation: Option<InstallContinuationState>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub missing_content: Option<MissingModpackContentState>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skipped_missing_content_paths: Vec<String>,
 }
 
 impl InstallJobState {
@@ -88,6 +90,7 @@ impl InstallJobState {
             pause_reason: None,
             continuation: None,
             missing_content: None,
+            skipped_missing_content_paths: Vec::new(),
         }
     }
 
