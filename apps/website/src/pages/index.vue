@@ -540,7 +540,8 @@ const messages = defineMessages({
 	},
 	seoTitle: {
 		id: 'axolotl-site.seo.title',
-		defaultMessage: 'Axolotl Launcher - Free Open-Source Modrinth + Curseforge Minecraft Launcher',
+		defaultMessage:
+			'Axolotl Launcher - Free Open-Source Modrinth plus Curseforge Minecraft Launcher',
 	},
 	seoDescription: {
 		id: 'axolotl-site.seo.description',
