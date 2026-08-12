@@ -117,6 +117,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed invalid Multiplayer room codes showing raw internal errors instead of a localized format hint.',
 					'zh-CN': '修复联机房间码格式错误时显示内部原始报错的问题, 现改为本地化格式提示。',
 				},
+				{
+					'en-US': 'Removed the weird padding of home layout switch (issue #210)',
+					'zh-CN': '移除了主页布局切换按钮的奇怪内边距（issue #210）',
+				},
 			],
 		},
 	},
