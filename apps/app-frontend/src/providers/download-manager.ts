@@ -29,6 +29,9 @@ export const downloadBarTypes = new Set([
 	'launcher_update',
 ])
 
+const pendingRequestUpdates: DownloadRequestUpdate[] = []
+let requestFlushTimer: ReturnType<typeof setTimeout> | null = null
+
 export interface DownloadManager {
 	jobs: Ref<InstallJobSnapshot[]>
 	legacyDownloads: Ref<LoadingBar[]>
@@ -59,7 +62,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 	const pendingInitialUpdates: Array<
 		{ kind: 'job'; job: InstallJobSnapshot } | { kind: 'request'; update: DownloadRequestUpdate }
 	> = []
-	const pendingRequestUpdates = new Map<string, DownloadRequestUpdate[]>()
+	const pendingRequestUpdatesByJob = new Map<string, DownloadRequestUpdate[]>()
 
 	function persistManualDownloadsFromJob(job: InstallJobSnapshot) {
 		if (job.status !== 'waiting_for_user' && job.status !== 'succeeded') return
@@ -90,9 +93,9 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 		jobs.value = [job, ...jobs.value.filter((candidate) => candidate.job_id !== job.job_id)].sort(
 			(a, b) => b.created.localeCompare(a.created),
 		)
-		const pending = pendingRequestUpdates.get(job.job_id)
+		const pending = pendingRequestUpdatesByJob.get(job.job_id)
 		if (pending) {
-			pendingRequestUpdates.delete(job.job_id)
+			pendingRequestUpdatesByJob.delete(job.job_id)
 			for (const update of pending) updateRequest(update)
 		}
 		persistManualDownloadsFromJob(job)
@@ -103,15 +106,41 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 			pendingInitialUpdates.push({ kind: 'request', update })
 			return
 		}
-		const jobIndex = jobs.value.findIndex((job) => job.job_id === update.job_id)
+		pendingRequestUpdates.push(update)
+		scheduleRequestFlush()
+	}
+
+	function scheduleRequestFlush() {
+		if (requestFlushTimer !== null) return
+		requestFlushTimer = setTimeout(() => {
+			requestFlushTimer = null
+			flushRequestUpdates()
+		}, 120)
+	}
+
+	function flushRequestUpdates() {
+		if (pendingRequestUpdates.length === 0) return
+		const updates = pendingRequestUpdates.splice(0)
+		let next = jobs.value
+		for (const update of updates) {
+			next = applyRequestUpdate(update, next)
+		}
+		jobs.value = next
+	}
+
+	function applyRequestUpdate(
+		update: DownloadRequestUpdate,
+		jobs: InstallJobSnapshot[],
+	): InstallJobSnapshot[] {
+		const jobIndex = jobs.findIndex((job) => job.job_id === update.job_id)
 		if (jobIndex === -1) {
-			const pending = pendingRequestUpdates.get(update.job_id) ?? []
+			const pending = pendingRequestUpdatesByJob.get(update.job_id) ?? []
 			pending.push(update)
-			pendingRequestUpdates.set(update.job_id, pending)
-			return
+			pendingRequestUpdatesByJob.set(update.job_id, pending)
+			return jobs
 		}
 
-		const job = jobs.value[jobIndex]
+		const job = jobs[jobIndex]
 		const itemIndex = job.items.findIndex((item) => item.id === update.id)
 		const current = itemIndex === -1 ? null : job.items[itemIndex]
 		let item: InstallJobSnapshot['items'][number]
@@ -134,7 +163,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 				}
 				break
 			case 'progress':
-				if (!current) return
+				if (!current) return jobs
 				item = {
 					...current,
 					status: update.status,
@@ -142,7 +171,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 				}
 				break
 			case 'finished':
-				if (!current) return
+				if (!current) return jobs
 				item = {
 					...current,
 					status: 'completed',
@@ -151,7 +180,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 				}
 				break
 			case 'failed':
-				if (!current) return
+				if (!current) return jobs
 				item = { ...current, status: 'failed' }
 				break
 		}
@@ -159,7 +188,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 		const items = [...job.items]
 		if (itemIndex === -1) items.push(item)
 		else items[itemIndex] = item
-		const nextJobs = [...jobs.value]
+		const nextJobs = [...jobs]
 		nextJobs[jobIndex] = {
 			...job,
 			items,
@@ -172,7 +201,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 						}
 					: job.summary,
 		}
-		jobs.value = nextJobs
+		return nextJobs
 	}
 
 	async function refresh() {
@@ -193,6 +222,8 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 		}
 	}
 
+	let legacyRefreshTimer: ReturnType<typeof setTimeout> | null = null
+
 	async function refreshLegacyDownloads() {
 		const bars = await progress_bars_list().catch((error) => {
 			handleError(error)
@@ -206,6 +237,14 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 			}))
 	}
 
+	function scheduleLegacyRefresh() {
+		if (legacyRefreshTimer !== null) return
+		legacyRefreshTimer = setTimeout(() => {
+			legacyRefreshTimer = null
+			void refreshLegacyDownloads()
+		}, 300)
+	}
+
 	async function start() {
 		if (started || disposed) return
 		started = true
@@ -214,7 +253,7 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 			updateRequest(update),
 		)
 		unlistenJobs = await install_job_listener((job: InstallJobSnapshot) => setJob(job))
-		unlistenLoading = await loading_listener(() => void refreshLegacyDownloads())
+		unlistenLoading = await loading_listener(() => scheduleLegacyRefresh())
 		await Promise.all([refresh(), refreshLegacyDownloads()])
 		initializing = false
 		for (const update of pendingInitialUpdates.splice(0)) {
@@ -290,7 +329,16 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 			disposed = true
 			initializing = false
 			pendingInitialUpdates.length = 0
-			pendingRequestUpdates.clear()
+			pendingRequestUpdatesByJob.clear()
+			if (requestFlushTimer !== null) {
+				clearTimeout(requestFlushTimer)
+				requestFlushTimer = null
+			}
+			if (legacyRefreshTimer !== null) {
+				clearTimeout(legacyRefreshTimer)
+				legacyRefreshTimer = null
+			}
+			pendingRequestUpdates.length = 0
 			unlistenJobs?.()
 			unlistenRequests?.()
 			unlistenLoading?.()
