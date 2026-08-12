@@ -92,6 +92,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed corrupted launcher databases repeatedly showing errors when opening instance content; Axolotl now restores the latest verified backup while preserving the damaged database files.',
+					'zh-CN':
+						'修复启动器数据库损坏后，打开实例内容页会反复报错的问题；现在会从最新且校验正常的备份恢复，并保留损坏的数据库文件。',
+				},
+				{
+					'en-US':
 						'Fixed external Minecraft instance imports occasionally failing with an "i/o error" when duplicate native libraries were extracted concurrently.',
 					'zh-CN':
 						'修复同时导入外部 Minecraft 实例时，重复原生库并发解压可能导致“i/o error”并使导入失败的问题。',
