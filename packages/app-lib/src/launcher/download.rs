@@ -27,6 +27,7 @@ use daedalus::{
 use futures::prelude::*;
 use reqwest::Method;
 use std::{
+    collections::HashSet,
     future::Future,
     path::{Path, PathBuf},
     pin::Pin,
@@ -1527,9 +1528,14 @@ pub async fn download_libraries(
         io::create_dir_all(st.directories.libraries_dir()),
         io::create_dir_all(st.directories.version_natives_dir(version))
     }?;
+    let libraries = deduplicate_native_downloads(
+        libraries,
+        java_arch,
+        minecraft_updated,
+    );
     let num_files = libraries.len();
     loading_try_for_each_concurrent(
-        stream::iter(libraries.iter()).map(Ok::<&Library, crate::Error>),
+		stream::iter(libraries).map(Ok::<&Library, crate::Error>),
 		Some(st.download_concurrency().saturating_mul(2)),
         loading_bar,
         loading_amount,
@@ -1772,6 +1778,54 @@ pub async fn download_libraries(
 
     tracing::debug!("Done loading libraries!");
     Ok(())
+}
+
+fn deduplicate_native_downloads<'a>(
+    libraries: &'a [Library],
+    java_arch: &str,
+    minecraft_updated: bool,
+) -> Vec<&'a Library> {
+    let mut native_hashes = HashSet::new();
+    libraries
+        .iter()
+        .filter(|library| {
+            if let Some(rules) = &library.rules
+                && !parse_rules(
+                    rules,
+                    java_arch,
+                    &QuickPlayType::None,
+                    minecraft_updated,
+                )
+            {
+                return true;
+            }
+            if !library.downloadable {
+                return true;
+            }
+            let Some((os_key, classifiers)) =
+                library.natives_os_key_and_classifiers(java_arch)
+            else {
+                return true;
+            };
+            let parsed_key =
+                os_key.replace("${arch}", crate::util::platform::ARCH_WIDTH);
+            let Some(native) = classifiers.get(&parsed_key) else {
+                return true;
+            };
+            if native.sha1.is_empty() {
+                return true;
+            }
+            let first = native_hashes.insert(native.sha1.clone());
+            if !first {
+                tracing::debug!(
+                    "Skipped duplicate native archive {} ({})",
+                    library.name,
+                    native.sha1
+                );
+            }
+            first
+        })
+        .collect()
 }
 
 #[tracing::instrument(skip_all)]

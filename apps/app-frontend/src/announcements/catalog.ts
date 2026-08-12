@@ -79,6 +79,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed external Minecraft instance imports occasionally failing with an "i/o error" when duplicate native libraries were extracted concurrently.',
+					'zh-CN':
+						'修复同时导入外部 Minecraft 实例时，重复原生库并发解压可能导致“i/o error”并使导入失败的问题。',
+				},
+				{
+					'en-US':
 						'Refactored the recognition logic when importing resources, fixing the issue of incorrect root directories when importing nested resources.',
 					'zh-CN': '重构了导入资源时的识别逻辑，修复了导入资源嵌套时根目录错误的问题。',
 				},
