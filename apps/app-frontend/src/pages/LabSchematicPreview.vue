@@ -2348,10 +2348,10 @@ onBeforeUnmount(() => {
 
 .schematic-mode-toolbar {
 	position: absolute;
-	top: 0.75rem;
+	top: 3.75rem;
 	left: 50%;
 	display: flex;
-	max-width: calc(100% - 22rem);
+	max-width: calc(100% - 1.5rem);
 	align-items: center;
 	gap: 0.15rem;
 	transform: translateX(-50%);
@@ -2375,7 +2375,7 @@ onBeforeUnmount(() => {
 .schematic-tool-context {
 	position: absolute;
 	z-index: 9;
-	top: 3.75rem;
+	top: 6.75rem;
 	left: 50%;
 	display: flex;
 	width: min(32rem, calc(100% - 1.5rem));
@@ -2908,7 +2908,7 @@ onBeforeUnmount(() => {
 	}
 
 	.schematic-walk-control {
-		top: 4rem;
+		top: 0.75rem;
 		right: 0.5rem;
 	}
 }

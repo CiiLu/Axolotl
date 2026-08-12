@@ -132,6 +132,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Removed the weird padding of home layout switch (issue #210)',
 					'zh-CN': '移除了主页布局切换按钮的奇怪内边距（issue #210）',
 				},
+				{
+					'en-US':
+						'Fixed: Buttons would be overlapping in the schematic preview edit panel (issue #212)',
+					'zh-CN': '修复了在投影预览编辑面板中按钮重叠的问题。(issue #212)',
+				},
 			],
 		},
 	},
