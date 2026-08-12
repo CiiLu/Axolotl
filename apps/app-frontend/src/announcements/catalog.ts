@@ -35,127 +35,20 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
 		id: 'launcher-1.7.4',
 		version: '1.7.4',
-		publishedAt: '2026-08-11',
+		publishedAt: '2026-08-12',
 		title: {
 			'en-US': 'Axolotl Launcher 1.7.4',
 			'zh-CN': 'Axolotl Launcher 1.7.4',
 		},
 		changes: {
-			changed: [
-				{
-					'en-US': 'Changed the implementation of automatic switching of instance icons.',
-					'zh-CN': '更改了自动切换实例图标的实现方式。',
-				},
-				{
-					'en-US': 'Refactored the interface for importing instances.',
-					'zh-CN': '全新的导入实例的界面，可以自定义更多选项',
-				},
-			],
 			added: [
 				{
-					'en-US': 'Added a settings for enabling/disabling page transitions.',
-					'zh-CN': '新增启动器设置项, 可开启/关闭页面切换动画。',
+					'en-US': 'Added RedStone multiplayer for creating rooms that friends can join directly.',
+					'zh-CN': '新增红石联机，可创建房间供好友直接加入。',
 				},
 				{
-					'en-US':
-						'Added detailed Multiplayer diagnostics and exportable error reports for troubleshooting connection failures.',
-					'zh-CN': '联机页面新增详细诊断日志与错误报告导出, 便于排查连接失败。',
-				},
-				{
-					'en-US':
-						'Added a setting for configuring the Mojang authentication service mirror for all possible locations.',
-					'zh-CN': '为所有可能的地方配置了Mojang service换源设置。',
-				},
-				{
-					'en-US': 'Added support for automatic import of datapacks.',
-					'zh-CN': '添加对数据包的自动导入支持。',
-				},
-				{
-					'en-US':
-						'Added a mechanism to reuse existing resources when importing external instances, now avoiding some duplicate downloads.',
-					'zh-CN': '添加了在导入外部实例时复用已有资源的机制，现在避免一部分重复下载。',
-				},
-			],
-			fixed: [
-				{
-					'en-US':
-						'Fixed external Minecraft instance imports occasionally failing with an "i/o error" when duplicate native libraries were extracted concurrently.',
-					'zh-CN':
-						'修复同时导入外部 Minecraft 实例时，重复原生库并发解压可能导致“i/o error”并使导入失败的问题。',
-				},
-				{
-					'en-US':
-						'Refactored the recognition logic when importing resources, fixing the issue of incorrect root directories when importing nested resources.',
-					'zh-CN': '重构了导入资源时的识别逻辑，修复了导入资源嵌套时根目录错误的问题。',
-				},
-				{
-					'en-US': 'Fixed the laggy transition animation.',
-					'zh-CN': '优化了页面切换动画的卡顿问题。',
-				},
-				{
-					'en-US': 'Fixed the issue of the loading bar not extending to full screen.',
-					'zh-CN': '修复了加载条未能延伸至全屏的问题。',
-				},
-				{
-					'en-US':
-						'Fixed launch being incorrectly blocked when the custom Java did not match the recommended version; the user-selected Java is now used, with fallback to a compatible runtime when the recommended one is missing.',
-					'zh-CN':
-						'修复自定义 Java 与推荐版本不一致时误阻止启动的问题，现优先使用用户指定 Java，缺失推荐版本时回退至兼容版本。',
-				},
-				{
-					'en-US':
-						'Fixed the issue of the launcher not being able to start when the system language is set to Chinese.',
-					'zh-CN':
-						'针对Github Copilot auto模型做了特殊处理, 现在Github Copilot 免费套餐也可以使用Auto模型。',
-				},
-				{
-					'en-US':
-						'Fixed the issue of the launcher triggering page transitions when switching tabs within a page.',
-					'zh-CN': '修复在页面内切换标签分类时, 启动器会错误触发页面切换动画的问题。',
-				},
-				{
-					'en-US':
-						'Fixed project platform and tag links not returning to Discover Content with the matching filter applied.',
-					'zh-CN': '修复项目详情页的平台与标签链接无法返回发现内容页并应用对应筛选的问题。',
-				},
-				{
-					'en-US':
-						'Fixed invalid Multiplayer room codes showing raw internal errors instead of a localized format hint.',
-					'zh-CN': '修复联机房间码格式错误时显示内部原始报错的问题, 现改为本地化格式提示。',
-				},
-				{
-					'en-US':
-						'en-US locales modification to avoid translation overflow in buttons. (issue #212)',
-					'zh-CN': '修复了按钮中的英语翻译过长导致按钮文案溢出的问题。(issue #212)',
-				},
-				{
-					'en-US': 'Removed the weird padding of home layout switch (issue #210)',
-					'zh-CN': '移除了主页布局切换按钮的奇怪内边距（issue #210）',
-				},
-				{
-					'en-US':
-						'Fixed: Buttons would be overlapping in the schematic preview edit panel (issue #212)',
-					'zh-CN': '修复了在投影预览编辑面板中按钮重叠的问题。(issue #212)',
-				},
-				{
-					'en-US': 'Fixed overflow of directory in the warning of deleting symlink instances',
-					'zh-CN': '修复了删除符号链接实例的警告中提示的目录溢出的问题',
-				},
-				{
-					'en-US': 'Fixed the broken live log terminal',
-					'zh-CN': '修复了实时日志无法正常更新的问题',
-				},
-				{
-					'en-US':
-						'When launcher gets a conflicting cache alias from database, it will now resolve cache conflicts automatically, instead of throwing an error.',
-					'zh-CN':
-						'当启动器从数据库获取到冲突的缓存别名时，现在会自动解决缓存冲突，而不是抛出错误。',
-				},
-				{
-					'en-US':
-						'Fixed modpack installations failing after remote project metadata was fetched but could not be written to the local cache.',
-					'zh-CN':
-						'修复远程项目元数据已获取成功、但无法写入本地缓存时导致整合包安装失败的问题。',
+					'en-US': 'Added custom public node configuration for Terracotta multiplayer.',
+					'zh-CN': '新增陶瓦联机自定义公共节点配置。',
 				},
 			],
 		},
