@@ -456,7 +456,7 @@
 		"message": "Native decorations"
 	},
 	"app.appearance-settings.page-transitions.description": {
-		"message": "Use a smooth transition when switching between launcher pages."
+		"message": "Animate content when switching between launcher pages."
 	},
 	"app.appearance-settings.page-transitions.title": {
 		"message": "Page transition animations"
@@ -792,7 +792,7 @@
 		"message": "Watching {path}. Matching files are verified before import."
 	},
 	"app.downloads.missing-content.waiting-for-completion": {
-		"message": "Detected a download file. Waiting for it to finish writing..."
+		"message": "Waiting for a browser download to finish writing..."
 	},
 	"app.downloads.missing-content.downloads-unavailable": {
 		"message": "The monitored folder is unavailable. Choose a local file instead."
@@ -801,10 +801,10 @@
 		"message": "Automatic checking failed. Manual file selection is still available."
 	},
 	"app.downloads.missing-content.file-mismatch": {
-		"message": "A same-named file was found, but it did not match this required file."
+		"message": "A similarly named file was found, but it did not match this required file."
 	},
 	"app.downloads.missing-content.file-mismatch-title": {
-		"message": "A same-named file was found, but file verification failed. Please check if it is the correct file."
+		"message": "A same-named file was found, but file verification failed"
 	},
 	"app.downloads.missing-content.file-mismatch-body": {
 		"message": "The launcher will keep waiting for the correct file. You can also choose a local file manually."
@@ -993,7 +993,7 @@
 		"message": "Action needed"
 	},
 	"app.downloads.missing-required-content": {
-		"message": "{completed} / {total} required files are ready. {missing, plural, one {# file still needs to be downloaded.} other {# files still need to be downloaded.}} Click Complete missing files button to continue installation."
+		"message": "{completed} / {total} required files are ready. {missing, plural, one {# file still needs to be downloaded.} other {# files still need to be downloaded.}}"
 	},
 	"app.downloads.search": {
 		"message": "Search downloads"
@@ -2034,10 +2034,10 @@
 		"message": "Sharing modpack content"
 	},
 	"app.instance.mods.skipped-files-warning.body": {
-		"message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Select a file to download it; the monitored import folder will be verified automatically when the Complete Missing Files dialog is opened. You can also directly drag the downloaded file into this instance."
+		"message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Select a file to download it; the monitored import folder is verified automatically. You can also drag the downloaded file into this instance."
 	},
 	"app.instance.mods.skipped-files-warning.body-disabled": {
-		"message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Drag the downloaded file into this instance, or enable automatic import in Resource Management settings. The automatic import feature for the monitored folder is disabled. You can enable it in Settings."
+		"message": "{count, plural, one {# file was} other {# files were}} skipped during installation. Drag the downloaded file into this instance, or enable automatic import in Resource Management settings."
 	},
 	"app.instance.mods.skipped-files-warning.more": {
 		"message": "And {count, number} more."
@@ -4217,6 +4217,78 @@
 	"app.multiplayer.loading": {
 		"message": "Initializing..."
 	},
+	"app.multiplayer.provider.terracotta": {
+		"message": "Terracotta"
+	},
+	"app.multiplayer.provider.hongshi": {
+		"message": "RedStone"
+	},
+	"app.multiplayer.hongshi.unsupported": {
+		"message": "RedStone is not available for this operating system or architecture."
+	},
+	"app.multiplayer.switch-warning": {
+		"message": "Switching services will disconnect the current multiplayer session. Continue?"
+	},
+	"app.multiplayer.hongshi.local-port": {
+		"message": "Local Minecraft port"
+	},
+	"app.multiplayer.hongshi.detected-port": {
+		"message": "{instance} — port {port}"
+	},
+	"app.multiplayer.hongshi.manual-port": {
+		"message": "Enter port manually"
+	},
+	"app.multiplayer.hongshi.port-hint": {
+		"message": "Open a world to LAN. Axolotl will detect the port automatically; external games can use a manual port."
+	},
+	"app.multiplayer.hongshi.node": {
+		"message": "Relay node"
+	},
+	"app.multiplayer.hongshi.node-auto": {
+		"message": "Auto — lowest latency"
+	},
+	"app.multiplayer.hongshi.node-label": {
+		"message": "{name} — {latency} ms{cached}"
+	},
+	"app.multiplayer.hongshi.cached": {
+		"message": " (cached)"
+	},
+	"app.multiplayer.hongshi.unreachable": {
+		"message": "unreachable"
+	},
+	"app.multiplayer.hongshi.refresh-nodes": {
+		"message": "Refresh nodes"
+	},
+	"app.multiplayer.hongshi.create": {
+		"message": "Create public room"
+	},
+	"app.multiplayer.hongshi.creating": {
+		"message": "Creating tunnel..."
+	},
+	"app.multiplayer.hongshi.public-address": {
+		"message": "Public address"
+	},
+	"app.multiplayer.hongshi.public-address-hint": {
+		"message": "Friends can enter this address directly in Minecraft. They do not need RedStone."
+	},
+	"app.multiplayer.hongshi.limits": {
+		"message": "Tunnels close after 10 minutes without players or 6 hours total. Maximum 10 players and 10 Mbps shared bandwidth."
+	},
+	"app.multiplayer.hongshi.port-changed": {
+		"message": "Minecraft opened a different LAN port. Restart the tunnel before sharing it."
+	},
+	"app.multiplayer.hongshi.restart": {
+		"message": "Restart tunnel"
+	},
+	"app.multiplayer.hongshi.open-logs": {
+		"message": "Open RedStone logs"
+	},
+	"app.multiplayer.hongshi.closed": {
+		"message": "The RedStone room has closed. Create a new room to receive a new address."
+	},
+	"app.multiplayer.hongshi.selecting-node": {
+		"message": "Selecting the best relay node..."
+	},
 	"app.multiplayer.no-players": {
 		"message": "No players in room"
 	},
@@ -5001,7 +5073,7 @@
 		"message": "Mojang authentication service"
 	},
 	"app.settings.resources.mojang-auth-service-description": {
-		"message": "Mojang login, profile, skin, cape, session verification and so on."
+		"message": "Mojang login, profile, skin, cape, and session verification requests used by the launcher and the game."
 	},
 	"app.settings.resources.missing-content-auto-import": {
 		"message": "Automatically import missing modpack files"
@@ -6535,5 +6607,44 @@
 	},
 	"app.instance.mods.skipped-files-warning.complete": {
 		"message": "Complete missing files"
+	},
+	"app.downloads.item-status.failed": {
+		"message": "Failed"
+	},
+	"app.multiplayer.hongshi.binary-missing": {
+		"message": "Download the RedStone kernel for this device before creating a room."
+	},
+	"app.multiplayer.hongshi.download": {
+		"message": "Download RedStone"
+	},
+	"app.multiplayer.terracotta.public-node-invalid": {
+		"message": "Invalid node URI: {node}. Use http, https, tcp, tls, udp, ws, or wss."
+	},
+	"app.multiplayer.terracotta.public-nodes": {
+		"message": "Terracotta public nodes"
+	},
+	"app.multiplayer.terracotta.public-nodes-description": {
+		"message": "Enter one node URI per line. Changes apply the next time you host or join a room. Leave empty to use only Terracotta defaults."
+	},
+	"app.multiplayer.terracotta.public-nodes-placeholder": {
+		"message": "wss://center.node.1tmc.top"
+	},
+	"app.multiplayer.terracotta.public-nodes-saved": {
+		"message": "Terracotta public nodes saved"
+	},
+	"app.multiplayer.terracotta.save-public-nodes": {
+		"message": "Save nodes"
+	},
+	"app.settings.resources.source.mojang-mirror-preferred": {
+		"message": "Prefer Fallen-Proxy"
+	},
+	"app.settings.resources.source.mojang-official-only": {
+		"message": "Official source only"
+	},
+	"app.settings.resources.source.mojang-official-preferred": {
+		"message": "Prefer official source"
+	},
+	"app.settings.tabs.multiplayer": {
+		"message": "Multiplayer"
 	}
 }

@@ -85,6 +85,7 @@ export type AppSettings = {
 	home_layout: HomeLayout
 	minimal_home_instance_id: string | null
 	home_widgets: HomeDashboardConfig | null
+	terracotta_public_nodes: string[]
 
 	telemetry: boolean
 	discord_rpc: boolean
@@ -145,6 +146,7 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 	settings.curseforge_source ??=
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_curseforge_mirror)
 	settings.mojang_auth_source ??= 'auto'
+	settings.terracotta_public_nodes ??= ['wss://center.node.1tmc.top']
 
 	return settings
 }

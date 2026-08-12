@@ -144,6 +144,8 @@ pub struct Settings {
     pub minimal_home_instance_id: Option<String>,
     #[serde(default)]
     pub home_widgets: Option<serde_json::Value>,
+    #[serde(default = "default_terracotta_public_nodes")]
+    pub terracotta_public_nodes: Vec<String>,
 
     pub telemetry: bool,
     pub discord_rpc: bool,
@@ -221,6 +223,7 @@ impl Settings {
                 transparent_background, transparent_background_opacity, transparent_background_blur,
                 sidebar_instance_count, home_layout, minimal_home_instance_id,
                 json(home_widgets) as \"home_widgets?: String\", auto_hide_downloads_button,
+                json(terracotta_public_nodes) terracotta_public_nodes,
                 version
             FROM settings
             "
@@ -274,6 +277,11 @@ impl Settings {
                 .home_widgets
                 .as_ref()
                 .and_then(|value| serde_json::from_str(value).ok()),
+            terracotta_public_nodes: res
+                .terracotta_public_nodes
+                .as_ref()
+                .and_then(|value| serde_json::from_str(value).ok())
+                .unwrap_or_else(default_terracotta_public_nodes),
             telemetry: res.telemetry == 1,
             discord_rpc: res.discord_rpc == 1,
             developer_mode: res.developer_mode == 1,
@@ -352,6 +360,8 @@ impl Settings {
             .as_ref()
             .map(serde_json::to_string)
             .transpose()?;
+        let terracotta_public_nodes =
+            serde_json::to_string(&self.terracotta_public_nodes)?;
         let version = self.version as i64;
         let onboarding_version = self.onboarding_version as i64;
         let minecraft_metadata_source = self.minecraft_metadata_source.as_str();
@@ -438,7 +448,8 @@ impl Settings {
                 minimal_home_instance_id = $55,
                 auto_hide_downloads_button = $56,
                 home_widgets = jsonb($57),
-                mojang_auth_source = $58
+                mojang_auth_source = $58,
+                terracotta_public_nodes = jsonb($59)
             ",
             max_concurrent_writes,
             max_concurrent_downloads,
@@ -498,6 +509,7 @@ impl Settings {
             self.auto_hide_downloads_button,
             home_widgets,
             mojang_auth_source,
+            terracotta_public_nodes,
         )
         .execute(exec)
         .await?;
@@ -639,6 +651,10 @@ impl Settings {
 
         Ok(())
     }
+}
+
+pub fn default_terracotta_public_nodes() -> Vec<String> {
+    vec!["wss://center.node.1tmc.top".to_string()]
 }
 
 fn locale_prefers_mirror(value: &str) -> bool {
@@ -993,6 +1009,28 @@ mod tests {
 
         let reloaded = Settings::get(&pool).await.unwrap();
         assert_eq!(reloaded.home_widgets, Some(expected));
+    }
+
+    #[tokio::test]
+    async fn terracotta_public_nodes_default_and_empty_list_round_trip() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+
+        let mut settings = Settings::get(&pool).await.unwrap();
+        assert_eq!(
+            settings.terracotta_public_nodes,
+            default_terracotta_public_nodes()
+        );
+
+        settings.terracotta_public_nodes.clear();
+        settings.update(&pool).await.unwrap();
+
+        let reloaded = Settings::get(&pool).await.unwrap();
+        assert!(reloaded.terracotta_public_nodes.is_empty());
     }
 
     #[tokio::test]

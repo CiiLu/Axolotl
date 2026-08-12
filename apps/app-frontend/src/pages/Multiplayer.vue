@@ -4,10 +4,13 @@ import {
 	BinaryIcon,
 	CheckCircleIcon,
 	DownloadIcon,
+	DropdownIcon,
+	GlobeIcon,
 	LogInIcon,
 	LogOutIcon,
 	PlayIcon,
 	RefreshCwIcon,
+	ServerIcon,
 	SpinnerIcon,
 	UserIcon,
 	UsersIcon,
@@ -18,15 +21,26 @@ import {
 	Card,
 	CopyCode,
 	defineMessages,
+	DropdownSelect,
 	NavTabs,
+	PopoutMenu,
 	ProgressBar,
 	StyledInput,
 	TagItem,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-import { useTerracottaSession } from '@/composables/useTerracottaSession'
+import hongshiIcon from '@/assets/multiplayer/hongshi.png'
+import terracottaIcon from '@/assets/multiplayer/terracotta.png'
+import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
+import {
+	selectedDetectedInstance,
+	selectedNodePreference,
+	storedMultiplayerProvider,
+	type MultiplayerProvider,
+	validLocalPort,
+} from '@/helpers/multiplayer'
 import {
 	isValidTerracottaRoomCode,
 	type TerracottaPlayer,
@@ -255,24 +269,241 @@ const messages = defineMessages({
 		id: 'app.multiplayer.no-players',
 		defaultMessage: 'No players in room',
 	},
+	terracottaProvider: {
+		id: 'app.multiplayer.provider.terracotta',
+		defaultMessage: 'Terracotta',
+	},
+	hongshiProvider: {
+		id: 'app.multiplayer.provider.hongshi',
+		defaultMessage: 'RedStone',
+	},
+	hongshiUnsupported: {
+		id: 'app.multiplayer.hongshi.unsupported',
+		defaultMessage: 'RedStone is not available for this operating system or architecture.',
+	},
+	downloadHongshi: {
+		id: 'app.multiplayer.hongshi.download',
+		defaultMessage: 'Download RedStone',
+	},
+	hongshiBinaryMissing: {
+		id: 'app.multiplayer.hongshi.binary-missing',
+		defaultMessage: 'Download the RedStone kernel for this device before creating a room.',
+	},
+	switchWarning: {
+		id: 'app.multiplayer.switch-warning',
+		defaultMessage: 'Switching services will disconnect the current multiplayer session. Continue?',
+	},
+	localPort: { id: 'app.multiplayer.hongshi.local-port', defaultMessage: 'Local Minecraft port' },
+	detectedPort: {
+		id: 'app.multiplayer.hongshi.detected-port',
+		defaultMessage: '{instance} — port {port}',
+	},
+	manualPort: { id: 'app.multiplayer.hongshi.manual-port', defaultMessage: 'Enter port manually' },
+	portHint: {
+		id: 'app.multiplayer.hongshi.port-hint',
+		defaultMessage:
+			'Open a world to LAN. Axolotl will detect the port automatically; external games can use a manual port.',
+	},
+	node: { id: 'app.multiplayer.hongshi.node', defaultMessage: 'Relay node' },
+	autoNode: { id: 'app.multiplayer.hongshi.node-auto', defaultMessage: 'Auto — lowest latency' },
+	nodeLabel: {
+		id: 'app.multiplayer.hongshi.node-label',
+		defaultMessage: '{name} — {latency} ms{cached}',
+	},
+	cachedNode: { id: 'app.multiplayer.hongshi.cached', defaultMessage: ' (cached)' },
+	unreachableNode: { id: 'app.multiplayer.hongshi.unreachable', defaultMessage: 'unreachable' },
+	refreshNodes: { id: 'app.multiplayer.hongshi.refresh-nodes', defaultMessage: 'Refresh nodes' },
+	createTunnel: { id: 'app.multiplayer.hongshi.create', defaultMessage: 'Create public room' },
+	creatingTunnel: { id: 'app.multiplayer.hongshi.creating', defaultMessage: 'Creating tunnel...' },
+	publicAddress: { id: 'app.multiplayer.hongshi.public-address', defaultMessage: 'Public address' },
+	publicAddressHint: {
+		id: 'app.multiplayer.hongshi.public-address-hint',
+		defaultMessage: 'Friends can enter this address directly in Minecraft. They do not need RedStone.',
+	},
+	hongshiLimits: {
+		id: 'app.multiplayer.hongshi.limits',
+		defaultMessage:
+			'Tunnels close after 10 minutes without players or 6 hours total. Maximum 10 players and 10 Mbps shared bandwidth.',
+	},
+	portChanged: {
+		id: 'app.multiplayer.hongshi.port-changed',
+		defaultMessage: 'Minecraft opened a different LAN port. Restart the tunnel before sharing it.',
+	},
+	restartTunnel: { id: 'app.multiplayer.hongshi.restart', defaultMessage: 'Restart tunnel' },
+	openLogs: { id: 'app.multiplayer.hongshi.open-logs', defaultMessage: 'Open RedStone logs' },
+	closedTunnel: {
+		id: 'app.multiplayer.hongshi.closed',
+		defaultMessage: 'The RedStone room has closed. Create a new room to receive a new address.',
+	},
+	selectingNode: {
+		id: 'app.multiplayer.hongshi.selecting-node',
+		defaultMessage: 'Selecting the best relay node...',
+	},
 })
 
 const tabIndex = ref(0)
 const roomCodeTouched = ref(false)
 const {
-	download: downloadTerracotta,
-	exportReport,
-	host: hostGame,
+	activeProvider,
+	detectedPorts,
+	downloadHongshi,
+	downloadTerracotta,
+	exportTerracottaReport,
+	hongshiState,
+	hostHongshi,
+	hostTerracotta: hostGame,
 	isActionPending,
+	isNodesLoading,
 	isExportingReport,
-	join: joinGame,
+	joinTerracotta: joinGame,
+	nodes,
+	openHongshiLogs,
 	platformKey,
 	playerName,
+	refreshNodes,
 	reset: resetState,
 	roomCodeInput,
-	start: startTerracotta,
+	startTerracotta,
 	state,
-} = useTerracottaSession()
+	stop: stopMultiplayer,
+	switchProvider,
+} = useMultiplayerSession()
+
+const providerStorageKey = 'axolotl-multiplayer-provider'
+const nodeStorageKey = 'axolotl-hongshi-node'
+const storedProvider = localStorage.getItem(providerStorageKey)
+const selectedProvider = ref<MultiplayerProvider>(storedMultiplayerProvider(storedProvider))
+const selectedNodeName = ref(localStorage.getItem(nodeStorageKey) ?? 'auto')
+const selectedInstanceId = ref('manual')
+const manualPort = ref('25565')
+
+const hongshiSupported = computed(() => hongshiState.value?.supported ?? false)
+const detectedPortOptions = computed(() => [
+	'manual',
+	...detectedPorts.value.map((entry) => entry.instance_id),
+])
+const nodeOptions = computed(() => ['auto', ...nodes.value.map((node) => node.name)])
+const selectedDetectedPort = computed(() =>
+	detectedPorts.value.find((entry) => entry.instance_id === selectedInstanceId.value),
+)
+const effectiveLocalPort = computed(() => {
+	if (selectedDetectedPort.value) return selectedDetectedPort.value.port
+	return validLocalPort(manualPort.value)
+})
+const isHongshiBusy = computed(() =>
+	['downloading', 'selecting_node', 'starting'].includes(hongshiState.value?.status ?? ''),
+)
+const selectedNode = computed(() =>
+	selectedNodeName.value === 'auto'
+		? null
+		: nodes.value.find((node) => node.name === selectedNodeName.value) ?? null,
+)
+const hasLoadedNodes = ref(false)
+const providerOptions = computed(() => [
+	{
+		id: 'terracotta' as const,
+		label: messages.terracottaProvider,
+		image: terracottaIcon,
+		disabled: false,
+	},
+	{
+		id: 'hongshi' as const,
+		label: messages.hongshiProvider,
+		image: hongshiIcon,
+		disabled: !hongshiSupported.value,
+	},
+])
+const selectedProviderOption = computed(
+	() =>
+		providerOptions.value.find((option) => option.id === selectedProvider.value) ??
+		providerOptions.value[0],
+)
+
+watch(
+	detectedPorts,
+	(ports) => {
+		selectedInstanceId.value = selectedDetectedInstance(selectedInstanceId.value, ports)
+	},
+	{ immediate: true },
+)
+
+watch(nodes, (value) => {
+	selectedNodeName.value = selectedNodePreference(selectedNodeName.value, value)
+	if (value.length > 0) hasLoadedNodes.value = true
+})
+
+watch(activeProvider, (provider) => {
+	if (!provider) return
+	selectedProvider.value = provider
+	localStorage.setItem(providerStorageKey, provider)
+})
+
+watch(hongshiState, (state) => {
+	if (state && !state.supported && selectedProvider.value === 'hongshi') {
+		selectedProvider.value = 'terracotta'
+		localStorage.setItem(providerStorageKey, 'terracotta')
+	}
+})
+
+watch(
+	[selectedProvider, hongshiSupported],
+	([provider, supported]) => {
+		if (provider === 'hongshi' && supported && !hasLoadedNodes.value) {
+			void refreshNodes()
+		}
+	},
+	{ immediate: true },
+)
+
+watch(selectedNodeName, (value) => localStorage.setItem(nodeStorageKey, value))
+
+async function selectProvider(provider: MultiplayerProvider) {
+	if (provider === selectedProvider.value || (provider === 'hongshi' && !hongshiSupported.value)) return
+	if (activeProvider.value && activeProvider.value !== provider) {
+		if (!window.confirm(formatMessage(messages.switchWarning))) return
+		if (!(await switchProvider(provider))) return
+	}
+	selectedProvider.value = provider
+	localStorage.setItem(providerStorageKey, provider)
+}
+
+function detectedPortLabel(value: string) {
+	if (value === 'manual') return formatMessage(messages.manualPort)
+	const entry = detectedPorts.value.find((port) => port.instance_id === value)
+	return entry
+		? formatMessage(messages.detectedPort, { instance: entry.instance_name, port: entry.port })
+		: value
+}
+
+function nodeOptionLabel(value: string) {
+	if (value === 'auto') return formatMessage(messages.autoNode)
+	const node = nodes.value.find((entry) => entry.name === value)
+	if (!node) return value
+	if (!node.reachable) {
+		return `${node.name} — ${formatMessage(messages.unreachableNode)}${
+			node.cached ? formatMessage(messages.cachedNode) : ''
+		}`
+	}
+	return formatMessage(messages.nodeLabel, {
+		name: node.name,
+		latency: node.latency_ms,
+		cached: node.cached ? formatMessage(messages.cachedNode) : '',
+	})
+}
+
+async function startHongshiTunnel() {
+	if (!effectiveLocalPort.value) return
+	await hostHongshi(
+		effectiveLocalPort.value,
+		selectedNodeName.value === 'auto' ? null : selectedNodeName.value,
+		selectedInstanceId.value === 'manual' ? null : selectedInstanceId.value,
+	)
+}
+
+async function restartHongshiTunnel() {
+	if (!(await stopMultiplayer())) return
+	await startHongshiTunnel()
+}
 
 const tabLinks = computed(() => [
 	{ label: formatMessage(messages.host), href: 'host', icon: UsersIcon },
@@ -379,9 +610,41 @@ function submitJoin() {
 
 <template>
 	<div class="box-border flex min-h-full w-full flex-col gap-3 p-6">
-		<h1 class="m-0 text-2xl font-semibold text-contrast">
-			{{ formatMessage(messages.title) }}
-		</h1>
+		<div class="flex min-w-0 flex-wrap items-center justify-between gap-3">
+			<h1 class="m-0 text-2xl font-semibold text-contrast">
+				{{ formatMessage(messages.title) }}
+			</h1>
+			<PopoutMenu placement="bottom-end">
+				<ButtonStyled size="standard" type="standard">
+					<button class="flex min-w-36 items-center gap-2">
+						<img :src="selectedProviderOption.image" class="size-5 shrink-0 object-contain" alt="" />
+						<span class="flex-1 text-left">{{ formatMessage(selectedProviderOption.label) }}</span>
+						<DropdownIcon class="size-4 shrink-0" />
+					</button>
+				</ButtonStyled>
+				<template #menu>
+					<div class="flex w-44 flex-col gap-1 p-1">
+						<ButtonStyled
+							v-for="option in providerOptions"
+							:key="option.id"
+							:type="selectedProvider === option.id ? 'filled' : 'transparent'"
+						>
+							<button
+								type="button"
+								class="flex w-full items-center gap-2 !justify-start text-left"
+								:disabled="option.disabled"
+								@click="selectProvider(option.id)"
+							>
+								<img :src="option.image" class="size-4 shrink-0 object-contain" alt="" />
+								{{ formatMessage(option.label) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</template>
+			</PopoutMenu>
+		</div>
+
+		<template v-if="selectedProvider === 'terracotta'">
 
 		<Card v-if="!state" class="!m-0">
 			<div class="flex items-center gap-3">
@@ -711,7 +974,7 @@ function submitJoin() {
 							<button
 								type="button"
 								:disabled="isActionPending || isExportingReport"
-								@click="exportReport"
+								@click="exportTerracottaReport"
 							>
 								<SpinnerIcon v-if="isExportingReport" class="animate-spin" />
 								<DownloadIcon v-else />
@@ -754,5 +1017,258 @@ function submitJoin() {
 		<div class="mt-auto pt-6 text-center text-xs text-secondary">
 			{{ formatMessage(messages.poweredByTerracotta) }}
 		</div>
+		</template>
+
+		<template v-else>
+			<Card v-if="!hongshiState" class="!m-0">
+				<div class="flex items-center gap-3">
+					<SpinnerIcon class="size-8 animate-spin text-brand" />
+					<h2 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.loading) }}
+					</h2>
+				</div>
+			</Card>
+
+			<Card v-else-if="!hongshiState.binary_installed" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex items-start gap-3">
+						<div
+							class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-highlight-orange text-orange"
+						>
+							<BinaryIcon class="size-5" />
+						</div>
+						<div class="min-w-0">
+							<h2 class="m-0 text-lg font-semibold text-contrast">
+								{{ formatMessage(messages.downloadHongshi) }}
+							</h2>
+							<p class="mb-0 mt-1 text-secondary">
+								{{ formatMessage(messages.hongshiBinaryMissing) }}
+							</p>
+						</div>
+					</div>
+
+					<ProgressBar
+						v-if="hongshiState.status === 'downloading'"
+						full-width
+						:progress="hongshiState.download_progress ?? 0"
+						:max="100"
+						:waiting="hongshiState.download_progress === null || hongshiState.download_progress === 0"
+						:label="formatMessage(messages.statusDownloading)"
+						show-progress
+					/>
+
+					<div v-else class="flex flex-wrap gap-2">
+						<ButtonStyled color="brand">
+							<button type="button" :disabled="isActionPending" @click="downloadHongshi">
+								<DownloadIcon />
+								{{ formatMessage(messages.downloadHongshi) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<Card v-else-if="hongshiState.status === 'open'" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex flex-wrap items-start justify-between gap-3">
+						<div class="flex items-center gap-3">
+							<CheckCircleIcon class="size-7 shrink-0 text-green" />
+							<div>
+								<h2 class="m-0 text-lg font-semibold text-contrast">
+									{{ formatMessage(messages.statusHostReady) }}
+								</h2>
+								<p class="mb-0 mt-1 text-sm text-secondary">
+									{{ formatMessage(messages.publicAddressHint) }}
+								</p>
+							</div>
+						</div>
+						<TagItem>
+							<ServerIcon />
+							{{ hongshiState.node?.name }}
+						</TagItem>
+					</div>
+
+					<div
+						v-if="hongshiState.public_address"
+						class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 p-4"
+					>
+						<div class="min-w-0">
+							<div class="font-semibold text-contrast">
+								{{ formatMessage(messages.publicAddress) }}
+							</div>
+							<div class="mt-1 text-sm text-secondary">
+								{{ hongshiState.node?.name }} · 127.0.0.1:{{ hongshiState.local_port }}
+							</div>
+						</div>
+						<CopyCode :text="hongshiState.public_address" />
+					</div>
+
+					<Admonition
+						v-if="hongshiState.port_changed"
+						type="warning"
+						:header="formatMessage(messages.localPort)"
+					>
+						{{ formatMessage(messages.portChanged) }}
+						<template #actions>
+							<ButtonStyled color="orange">
+								<button type="button" :disabled="isActionPending" @click="restartHongshiTunnel">
+									<RefreshCwIcon />
+									{{ formatMessage(messages.restartTunnel) }}
+								</button>
+							</ButtonStyled>
+						</template>
+					</Admonition>
+
+					<Admonition type="info" :header="formatMessage(messages.hongshiProvider)">
+						{{ formatMessage(messages.hongshiLimits) }}
+					</Admonition>
+
+					<div class="flex flex-wrap gap-2">
+						<ButtonStyled color="red" type="outlined">
+							<button type="button" :disabled="isActionPending" @click="stopMultiplayer">
+								<LogOutIcon />
+								{{ formatMessage(messages.disconnect) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled type="outlined">
+							<button type="button" :disabled="isActionPending" @click="openHongshiLogs">
+								<BinaryIcon />
+								{{ formatMessage(messages.openLogs) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<Card v-else-if="isHongshiBusy" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex items-center gap-3">
+						<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
+						<h2 class="m-0 text-lg font-semibold text-contrast">
+							{{
+								formatMessage(
+									hongshiState.status === 'selecting_node'
+										? messages.selectingNode
+										: hongshiState.status === 'downloading'
+											? messages.statusDownloading
+											: messages.creatingTunnel,
+								)
+							}}
+						</h2>
+					</div>
+					<div class="flex flex-wrap gap-2">
+						<ButtonStyled color="red" type="outlined">
+							<button type="button" :disabled="isActionPending" @click="stopMultiplayer">
+								<LogOutIcon />
+								{{ formatMessage(messages.disconnect) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<Card v-else class="!m-0">
+				<div class="flex flex-col gap-5">
+					<Admonition
+						v-if="hongshiState.status === 'error'"
+						type="critical"
+						:header="formatMessage(messages.errorNetwork)"
+					>
+						{{ hongshiState.error_message || formatMessage(messages.checkNetwork) }}
+						<template #actions>
+							<ButtonStyled type="outlined">
+								<button type="button" @click="openHongshiLogs">
+									<BinaryIcon />
+									{{ formatMessage(messages.openLogs) }}
+								</button>
+							</ButtonStyled>
+						</template>
+					</Admonition>
+
+					<Admonition
+						v-else-if="hongshiState.status === 'closed'"
+						type="warning"
+						:header="formatMessage(messages.statusIdle)"
+					>
+						{{ formatMessage(messages.closedTunnel) }}
+					</Admonition>
+
+					<div>
+						<h2 class="m-0 text-lg font-semibold text-contrast">
+							{{ formatMessage(messages.hongshiProvider) }}
+						</h2>
+						<p class="mb-0 mt-1 text-secondary">
+							{{ formatMessage(messages.portHint) }}
+						</p>
+					</div>
+
+					<div class="grid gap-4 md:grid-cols-2">
+						<div class="flex min-w-0 flex-col gap-2">
+							<span class="font-semibold text-contrast">{{ formatMessage(messages.localPort) }}</span>
+							<DropdownSelect
+								v-model="selectedInstanceId"
+								class="!w-full"
+								:options="detectedPortOptions"
+								:display-name="detectedPortLabel"
+								name="RedStone local port source"
+							/>
+						</div>
+
+						<div class="flex min-w-0 flex-col gap-2">
+							<span class="font-semibold text-contrast">{{ formatMessage(messages.node) }}</span>
+							<DropdownSelect
+								v-model="selectedNodeName"
+								class="!w-full"
+								:options="nodeOptions"
+								:display-name="nodeOptionLabel"
+								name="RedStone relay node"
+							/>
+						</div>
+
+						<label
+							v-if="selectedInstanceId === 'manual'"
+							class="flex min-w-0 flex-col gap-2"
+							for="hongshi-local-port"
+						>
+							<span class="font-semibold text-contrast">{{ formatMessage(messages.manualPort) }}</span>
+							<StyledInput
+								id="hongshi-local-port"
+								v-model="manualPort"
+								:icon="ServerIcon"
+								inputmode="numeric"
+								placeholder="25565"
+							/>
+						</label>
+					</div>
+
+					<Admonition type="info" :header="formatMessage(messages.hongshiProvider)">
+						{{ formatMessage(messages.hongshiLimits) }}
+					</Admonition>
+
+					<div class="flex flex-wrap gap-2">
+						<ButtonStyled color="brand">
+							<button
+								type="button"
+								:disabled="!effectiveLocalPort || nodes.length === 0 || isActionPending || isNodesLoading || (selectedNode && !selectedNode.reachable)"
+								@click="startHongshiTunnel"
+							>
+								<GlobeIcon />
+								{{ formatMessage(messages.createTunnel) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled type="outlined">
+							<button type="button" :disabled="isNodesLoading" @click="refreshNodes(true)">
+								<RefreshCwIcon :class="{ 'animate-spin': isNodesLoading }" />
+								{{ formatMessage(messages.refreshNodes) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<div class="mt-auto pt-6 text-center text-xs text-secondary">
+				{{ formatMessage(messages.hongshiProvider) }}
+			</div>
+		</template>
 	</div>
 </template>

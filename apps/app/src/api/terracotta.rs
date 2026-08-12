@@ -39,10 +39,7 @@ pub struct TerracottaMetaResponse {
 pub async fn terracotta_get_meta() -> Result<TerracottaMetaResponse> {
     let meta = theseus::terracotta::get_meta()
         .await
-        .map_err(|error| {
-            tracing::error!(target: "theseus::terracotta", action = "get_meta", error = %error);
-            theseus::Error::from(error)
-        })?;
+        .map_err(theseus::Error::from)?;
     Ok(TerracottaMetaResponse {
         version: meta.version,
         compile_timestamp: meta.compile_timestamp,
@@ -58,7 +55,7 @@ pub async fn terracotta_start(
     binary_path: Option<String>,
     auto_download: Option<bool>,
 ) -> Result<()> {
-    theseus::terracotta::start_terracotta(
+    theseus::multiplayer::prepare_terracotta_with_options(
         binary_path,
         auto_download.unwrap_or(true),
     )
@@ -72,7 +69,7 @@ pub async fn terracotta_start(
 
 #[tauri::command]
 pub async fn terracotta_stop() -> Result<()> {
-    theseus::terracotta::stop_terracotta()
+    theseus::multiplayer::stop_terracotta_compat()
         .await
         .map_err(|error| {
             tracing::error!(target: "theseus::terracotta", action = "stop", error = %error);
@@ -86,12 +83,17 @@ pub async fn terracotta_host(
     room_code: Option<String>,
     player_name: String,
 ) -> Result<()> {
-    theseus::terracotta::start_hosting(room_code, player_name)
-        .await
-        .map_err(|error| {
-            tracing::error!(target: "theseus::terracotta", action = "host", error = %error);
-            theseus::Error::from(error)
-        })?;
+    theseus::multiplayer::host(
+        theseus::multiplayer::MultiplayerHostRequest::Terracotta {
+            room_code,
+            player_name,
+        },
+    )
+    .await
+    .map_err(|error| {
+        tracing::error!(target: "theseus::terracotta", action = "host", error = %error);
+        theseus::Error::from(error)
+    })?;
     Ok(())
 }
 
@@ -100,18 +102,22 @@ pub async fn terracotta_join(
     room_code: String,
     player_name: String,
 ) -> Result<()> {
-    theseus::terracotta::start_joining(room_code, player_name)
-        .await
-        .map_err(|error| {
-            tracing::error!(target: "theseus::terracotta", action = "join", error = %error);
-            theseus::Error::from(error)
-        })?;
+    theseus::multiplayer::join(theseus::multiplayer::MultiplayerJoinRequest {
+        provider: theseus::multiplayer::MultiplayerProvider::Terracotta,
+        room_code,
+        player_name,
+    })
+    .await
+    .map_err(|error| {
+        tracing::error!(target: "theseus::terracotta", action = "join", error = %error);
+        theseus::Error::from(error)
+    })?;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn terracotta_reset() -> Result<()> {
-    theseus::terracotta::reset_state()
+    theseus::multiplayer::reset_terracotta_compat()
         .await
         .map_err(|error| {
             tracing::error!(target: "theseus::terracotta", action = "reset", error = %error);

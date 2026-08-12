@@ -546,6 +546,27 @@ fn main() {
                     ),
             )
             .plugin(
+                "multiplayer",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "multiplayer_get_state",
+                        "multiplayer_get_nodes",
+                        "multiplayer_get_detected_ports",
+                        "multiplayer_download_hongshi",
+                        "multiplayer_switch_provider",
+                        "multiplayer_prepare_terracotta",
+                        "multiplayer_host",
+                        "multiplayer_join",
+                        "multiplayer_stop",
+                        "multiplayer_reset",
+                        "multiplayer_get_player_name",
+                        "multiplayer_open_hongshi_logs",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "mod-translation",
                 InlinedPlugin::new()
                     .commands(&[

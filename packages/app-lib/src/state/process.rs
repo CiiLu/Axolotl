@@ -179,10 +179,14 @@ impl ProcessManager {
 
             let instance_id = metadata.instance_id.clone();
             let instance_path = metadata.instance_path.clone();
+            let instance_name = metadata.instance_name.clone();
+            let process_id = metadata.uuid.to_string();
             tokio::spawn(async move {
                 Process::process_output(
                     &instance_id,
                     &instance_path,
+                    &instance_name,
+                    &process_id,
                     stdout,
                     log_path_clone,
                     xml_logging,
@@ -196,10 +200,14 @@ impl ProcessManager {
 
             let instance_id = metadata.instance_id.clone();
             let instance_path = metadata.instance_path.clone();
+            let instance_name = metadata.instance_name.clone();
+            let process_id = metadata.uuid.to_string();
             tokio::spawn(async move {
                 Process::process_output(
                     &instance_id,
                     &instance_path,
+                    &instance_name,
+                    &process_id,
                     stderr,
                     log_path_clone,
                     xml_logging,
@@ -355,6 +363,8 @@ impl Process {
     async fn process_output<R>(
         instance_id: &str,
         _instance_path: &str,
+        instance_name: &str,
+        process_id: &str,
         reader: R,
         log_path: impl AsRef<Path>,
         xml_logging: bool,
@@ -514,6 +524,13 @@ impl Process {
                                             .as_deref()
                                             .unwrap_or("")
                                             .trim();
+                                        crate::api::multiplayer::observe_minecraft_log(
+                                        instance_id,
+                                        instance_name,
+                                        process_id,
+                                        message,
+                                    )
+                                    .await;
                                         if let Err(e) = Self::maybe_handle_server_join_logging(
 											instance_id,
 											&timestamp,
@@ -579,6 +596,13 @@ impl Process {
                         tracing::warn!("Failed to write to log file: {}", e);
                     }
                     Self::emit_legacy_log(instance_id, line.trim_ascii_end());
+                    crate::api::multiplayer::observe_minecraft_log(
+                        instance_id,
+                        instance_name,
+                        process_id,
+                        line.trim_ascii_end(),
+                    )
+                    .await;
                     if let Err(e) = Self::maybe_handle_old_server_join_logging(
                         instance_id,
                         line.trim_ascii_end(),
@@ -893,6 +917,7 @@ impl Process {
 
         let manually_killed = state.process_manager.was_manually_killed(uuid);
         state.process_manager.remove(uuid);
+        crate::api::multiplayer::minecraft_process_finished(&instance_id).await;
 
         // Now fully complete- update playtime one last time
         update_playtime(&mut last_updated_playtime, &instance_id, true).await;

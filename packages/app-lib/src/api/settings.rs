@@ -17,6 +17,9 @@ pub async fn get() -> crate::Result<Settings> {
 #[tracing::instrument]
 pub async fn set(mut settings: Settings) -> crate::Result<()> {
     let state = State::get().await?;
+    super::terracotta::validate_public_nodes(
+        &settings.terracotta_public_nodes,
+    )?;
     settings.apply_legacy_download_source_settings();
     settings.update(&state.pool).await?;
     state.update_download_settings(&settings);

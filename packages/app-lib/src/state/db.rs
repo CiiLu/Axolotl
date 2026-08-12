@@ -988,6 +988,8 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
 
+    const TERRACOTTA_PUBLIC_NODES_MIGRATION_VERSION: i64 = 20260812120000;
+
     async fn settings_snapshot(pool: &Pool<Sqlite>) -> Vec<(String, String)> {
         let columns: Vec<String> = sqlx::query_scalar(
             "SELECT name FROM pragma_table_info('settings') ORDER BY cid",
@@ -1007,6 +1009,54 @@ mod tests {
             snapshot.push((column, value));
         }
         snapshot
+    }
+
+    #[tokio::test]
+    async fn terracotta_public_nodes_migration_preserves_existing_settings() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < TERRACOTTA_PUBLIC_NODES_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        sqlx::query("UPDATE settings SET locale = 'zh-TW' WHERE id = 0")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let (locale, nodes): (String, String) = sqlx::query_as(
+            "SELECT locale, json(terracotta_public_nodes) FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(locale, "zh-TW");
+        assert_eq!(nodes, "[\"wss://center.node.1tmc.top\"]");
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
     }
 
     fn initial_migration() -> &'static Migration {

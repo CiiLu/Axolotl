@@ -1083,6 +1083,11 @@ pub async fn stop_terracotta() -> eyre::Result<()> {
     let mut state = TERRACOTTA_STATE.lock().await;
     *state = TerracottaState::default();
     state.binary_installed = is_binary_installed();
+    drop(state);
+    super::multiplayer::release_provider(
+        super::multiplayer::MultiplayerProvider::Terracotta,
+    )
+    .await;
     Ok(())
 }
 
@@ -1105,6 +1110,28 @@ fn build_room_url(
     url
 }
 
+pub(crate) fn validate_public_nodes(nodes: &[String]) -> eyre::Result<()> {
+    for node in nodes {
+        let parsed = url::Url::parse(node).wrap_err_with(|| {
+            format!("invalid terracotta public node: {node}")
+        })?;
+        if !matches!(
+            parsed.scheme(),
+            "http" | "https" | "tcp" | "tls" | "udp" | "ws" | "wss"
+        ) || parsed.host_str().is_none()
+        {
+            bail!("unsupported terracotta public node: {node}");
+        }
+    }
+    Ok(())
+}
+
+async fn configured_public_nodes() -> eyre::Result<Vec<String>> {
+    let settings = super::settings::get().await?;
+    validate_public_nodes(&settings.terracotta_public_nodes)?;
+    Ok(settings.terracotta_public_nodes)
+}
+
 pub async fn start_hosting(
     room_code: Option<String>,
     player_name: String,
@@ -1121,7 +1148,7 @@ pub async fn start_hosting(
     drop(state);
 
     let room_param = room_code.as_deref().unwrap_or("");
-    let nodes: Vec<String> = Vec::new();
+    let nodes = configured_public_nodes().await?;
     info!(
         port,
         custom_room_code = room_code.is_some(),
@@ -1169,7 +1196,7 @@ pub async fn start_joining(
         .ok_or_else(|| eyre::eyre!("terracotta is not running"))?;
     drop(state);
 
-    let nodes: Vec<String> = Vec::new();
+    let nodes = configured_public_nodes().await?;
     info!(port, "requesting terracotta guest session");
 
     let client = terracotta_client();
@@ -1521,6 +1548,46 @@ mod tests {
         );
         assert!(parse_room_code("ABCD-EFGH-IJKL-MNOP").is_err());
         assert!(parse_room_code("U/ABCD-EFGH-IJKL-MNO!").is_err());
+    }
+
+    #[test]
+    fn builds_room_urls_with_repeated_public_node_parameters() {
+        let nodes = vec![
+            "wss://center.node.1tmc.top".to_string(),
+            "tcp://example.com:11010".to_string(),
+        ];
+        let url = build_room_url(
+            12345,
+            "/state/scanning",
+            "U/ABCD-EFGH-IJKL-MNOP",
+            "Player One",
+            &nodes,
+        );
+
+        assert_eq!(
+            url,
+            "http://127.0.0.1:12345/state/scanning?room=U%2FABCD-EFGH-IJKL-MNOP&player=Player%20One&public_nodes=wss%3A%2F%2Fcenter.node.1tmc.top&public_nodes=tcp%3A%2F%2Fexample.com%3A11010"
+        );
+        assert!(
+            !build_room_url(12345, "/state/scanning", "", "Player", &[])
+                .contains("public_nodes")
+        );
+    }
+
+    #[test]
+    fn validates_supported_public_node_urls() {
+        assert!(
+            validate_public_nodes(&[
+                "wss://center.node.1tmc.top".to_string(),
+                "udp://example.com:11010".to_string(),
+            ])
+            .is_ok()
+        );
+        assert!(validate_public_nodes(&[]).is_ok());
+        assert!(
+            validate_public_nodes(&["ftp://example.com".to_string()]).is_err()
+        );
+        assert!(validate_public_nodes(&["wss://".to_string()]).is_err());
     }
 
     #[test]

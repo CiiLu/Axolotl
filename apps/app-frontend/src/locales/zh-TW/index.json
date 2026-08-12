@@ -4792,5 +4792,26 @@
 	},
 	"app.instance.mods.skipped-files-warning.complete": {
 		"message": "補齊缺失檔案"
+	},
+	"app.settings.tabs.multiplayer": {
+		"message": "多人聯機"
+	},
+	"app.multiplayer.terracotta.public-nodes": {
+		"message": "陶瓦公共節點"
+	},
+	"app.multiplayer.terracotta.public-nodes-description": {
+		"message": "每行輸入一個節點 URI。變更將在下次建立或加入房間時生效。留空則僅使用陶瓦內建節點。"
+	},
+	"app.multiplayer.terracotta.public-nodes-placeholder": {
+		"message": "wss://center.node.1tmc.top"
+	},
+	"app.multiplayer.terracotta.public-node-invalid": {
+		"message": "節點 URI 無效：{node}。請使用 http、https、tcp、tls、udp、ws 或 wss。"
+	},
+	"app.multiplayer.terracotta.save-public-nodes": {
+		"message": "儲存節點"
+	},
+	"app.multiplayer.terracotta.public-nodes-saved": {
+		"message": "陶瓦公共節點已儲存"
 	}
 }

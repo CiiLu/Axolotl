@@ -13,6 +13,7 @@ pub mod metadata;
 pub mod minecraft_skins;
 pub mod mod_translation;
 pub mod mr_auth;
+pub mod multiplayer;
 pub mod process;
 pub mod schematic_preview;
 pub mod seed_map;
