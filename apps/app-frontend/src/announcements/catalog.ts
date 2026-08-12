@@ -48,7 +48,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US': 'Refactored the interface for importing instances.',
-					'zh-CN': '重构导入实例的界面。',
+					'zh-CN': '全新的导入实例的界面，可以自定义更多选项',
 				},
 			],
 			added: [
@@ -70,8 +70,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Added support for automatic import of datapacks.',
 					'zh-CN': '添加对数据包的自动导入支持。',
 				},
+				{
+					'en-US':
+						'Added a mechanism to reuse existing resources when importing external instances, now avoiding some duplicate downloads.',
+					'zh-CN': '添加了在导入外部实例时复用已有资源的机制，现在避免一部分重复下载。',
+				},
 			],
 			fixed: [
+				{
+					'en-US':
+						'Refactored the recognition logic when importing resources, fixing the issue of incorrect root directories when importing nested resources.',
+					'zh-CN': '重构了导入资源时的识别逻辑，修复了导入资源嵌套时根目录错误的问题。',
+				},
 				{
 					'en-US': 'Fixed the laggy transition animation.',
 					'zh-CN': '优化了页面切换动画的卡顿问题。',
