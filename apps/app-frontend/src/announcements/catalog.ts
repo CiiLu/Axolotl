@@ -124,6 +124,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '修复联机房间码格式错误时显示内部原始报错的问题, 现改为本地化格式提示。',
 				},
 				{
+					'en-US':
+						'en-US locales modification to avoid translation overflow in buttons. (issue #212)',
+					'zh-CN': '修复了按钮中的英语翻译过长导致按钮文案溢出的问题。(issue #212)',
+				},
+				{
 					'en-US': 'Removed the weird padding of home layout switch (issue #210)',
 					'zh-CN': '移除了主页布局切换按钮的奇怪内边距（issue #210）',
 				},

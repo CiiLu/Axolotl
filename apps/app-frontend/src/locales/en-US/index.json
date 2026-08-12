@@ -3111,13 +3111,13 @@
 		"message": "Drop schematic to open"
 	},
 	"app.lab.schematic-preview.edit.delete": {
-		"message": "Delete selected"
+		"message": "Delete"
 	},
 	"app.lab.schematic-preview.edit.redo": {
 		"message": "Redo"
 	},
 	"app.lab.schematic-preview.edit.replace": {
-		"message": "Replace selected"
+		"message": "Replace with..."
 	},
 	"app.lab.schematic-preview.edit.undo": {
 		"message": "Undo"
