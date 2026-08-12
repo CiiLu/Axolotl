@@ -242,6 +242,8 @@ fn main() {
                         "install_create_instance",
                         "install_create_modpack_instance",
                         "install_import_instance",
+                        "install_start_import_plan",
+                        "install_cancel_import_plan",
                         "install_duplicate_instance",
                         "install_existing_instance",
                         "install_pack_to_existing_instance",

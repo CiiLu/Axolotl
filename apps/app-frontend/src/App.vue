@@ -43,11 +43,13 @@ import {
 	useFormatBytes,
 	useGlobalDrop,
 	useVIntl,
+	type SymlinkMethodChoice,
 } from '@modrinth/ui'
 import ConfirmDropTypeModal from '@modrinth/ui/src/components/flows/drop/ConfirmDropTypeModal.vue'
 import GenericContentInstallModal from '@modrinth/ui/src/components/flows/drop/GenericContentInstallModal.vue'
 import LauncherImportModal from '@modrinth/ui/src/components/flows/drop/LauncherImportModal.vue'
 import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMethodCards.vue'
+import InstanceExportModal from '@/components/lab/recipe-generator/InstanceExportModal.vue'
 import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-context'
 import { useQuery } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
@@ -110,6 +112,7 @@ import {
 } from '@/helpers/drop'
 import {
 	command_listener,
+	drop_classify_progress_listener,
 	java_download_confirmation_listener,
 	warning_listener,
 } from '@/helpers/events.js'
@@ -125,6 +128,7 @@ import {
 	check_symlink_capability,
 	get as getInstance,
 	import_world_save,
+	install_datapack_to_world,
 	list as listInstances,
 	run,
 } from '@/helpers/instance'
@@ -888,6 +892,16 @@ async function setupApp() {
 	await java_download_confirmation_listener((request) => {
 		javaDownloadConfirmationModal.value?.show(request)
 	})
+	await drop_classify_progress_listener((payload) => {
+		if (dropProcessingNotificationId.value === null) return
+		const name = payload.currentItem?.split(/[/\\]/).pop() || 'file'
+		notificationManager.removeNotification(dropProcessingNotificationId.value)
+		dropProcessingNotificationId.value = addNotification({
+			title: formatMessage(messages.dropProcessing, { name }),
+			type: 'info',
+			autoCloseMs: null,
+		}).id
+	})
 
 	get_opening_command().then(handleCommand)
 	fetchCredentials()
@@ -1258,16 +1272,18 @@ const { isInInstance, instanceId } = useInstanceContext()
 const genericInstallModal = ref<InstanceType<typeof GenericContentInstallModal> | null>(null)
 const launcherImportModal = ref<InstanceType<typeof LauncherImportModal> | null>(null)
 const symlinkCardsModal = ref<InstanceType<typeof SymlinkMethodCards> | null>(null)
+const dataPackWorldModal = ref<InstanceType<typeof InstanceExportModal> | null>(null)
 const contentFileProjectTypeMap: Record<string, ContentFileProjectType | undefined> = {
 	mod: 'mod',
 	resource_pack: 'resourcepack',
+	data_pack: 'datapack',
 	shader_pack: 'shaderpack',
 	litematic: 'schematic',
 	schematic: 'schematic',
 }
 
 const scanningInstances = ref(false)
-const pendingInstall = ref<{ type: string; filePath: string } | null>(null)
+const pendingInstall = ref<{ type: string; filePath: string; innerBase?: string } | null>(null)
 const pendingDropIncompatibility = ref<{
 	filePath: string
 	instId: string
@@ -1409,7 +1425,7 @@ function handleDropCancel() {
 	dropClassification.value = null
 }
 
-async function handleDropConfirm(type: string) {
+async function handleDropConfirm(type: string, innerBase?: string) {
 	const classification = dropClassification.value
 	dropClassification.value = null
 	confirmDropModal.value?.hide()
@@ -1488,7 +1504,14 @@ async function handleDropConfirm(type: string) {
 			]
 			const cap = await check_symlink_capability()
 			symlinkCardsModal.value?.show({
-				instanceNames: [single.name],
+				instances: [
+					{
+						name: single.name,
+						path: single.path,
+						launcherType: 'Generic',
+						basePath: dropFilePath.value,
+					},
+				],
 				symlinkCapable: cap,
 			})
 			return
@@ -1590,7 +1613,14 @@ async function handleDropConfirm(type: string) {
 			}
 			const cap = await check_symlink_capability()
 			symlinkCardsModal.value?.show({
-				instanceNames: [single.name],
+				instances: [
+					{
+						name: single.name,
+						path: single.path,
+						launcherType,
+						basePath: scanBasePath,
+					},
+				],
 				symlinkCapable: cap,
 			})
 			return
@@ -1623,6 +1653,7 @@ async function handleDropConfirm(type: string) {
 	const contentTypes = [
 		'mod',
 		'resource_pack',
+		'data_pack',
 		'shader_pack',
 		'world_save',
 		'litematic',
@@ -1642,15 +1673,24 @@ async function handleDropConfirm(type: string) {
 		hasInstanceId: !!instanceId.value,
 	})
 
+	if (type === 'data_pack') {
+		dropDebug('handleDropConfirm: data pack requires a world target', {
+			filePath,
+		})
+		pendingInstall.value = { type, filePath, innerBase }
+		dataPackWorldModal.value?.show()
+		return
+	}
+
 	if (isInInstance.value && instanceId.value) {
 		dropDebug('handleDropConfirm: installing directly to current instance', {
 			instanceId: instanceId.value,
 		})
-		await installContentDirectly(type, filePath, instanceId.value)
+		await installContentDirectly(type, filePath, instanceId.value, innerBase)
 	} else {
 		// Store pending install info for when an instance is selected
 		dropDebug('handleDropConfirm: storing pending install, showing instance selection modal')
-		pendingInstall.value = { type, filePath }
+		pendingInstall.value = { type, filePath, innerBase }
 
 		// Load all instances for the selection modal
 		let instances: {
@@ -1680,10 +1720,10 @@ async function handleDropConfirm(type: string) {
 	}
 }
 
-async function installContentDirectly(type: string, filePath: string, instId: string) {
+async function installContentDirectly(type: string, filePath: string, instId: string, innerBase?: string) {
 	try {
 		if (type === 'world_save') {
-			await import_world_save(instId, filePath)
+			await import_world_save(instId, filePath, innerBase)
 			addNotification({
 				title: formatMessage(messages.dropWorldImportedTitle),
 				text: formatMessage(messages.dropWorldImportedText),
@@ -1788,7 +1828,7 @@ async function installContentDirectly(type: string, filePath: string, instId: st
 		}
 
 		const projectType = contentFileProjectTypeMap[type]
-		await add_project_from_path(instId, filePath, projectType)
+		await add_project_from_path(instId, filePath, projectType, innerBase)
 		addNotification({
 			title: formatMessage(messages.dropContentInstalledTitle),
 			text: formatMessage(messages.dropContentInstalledText),
@@ -1904,7 +1944,11 @@ async function continueWithClassification(result: ClassificationResult, fallback
 			await handleDropConfirm('instance')
 			break
 		default:
-			// mod, resource_pack, shader_pack, litematic to content install
+			if (result.item_type === 'resource_pack' || result.item_type === 'multiple') {
+				confirmDropModal.value?.show()
+				return
+			}
+			// mod, shader_pack, litematic to content install
 			await handleDropConfirm(result.item_type)
 			break
 	}
@@ -1979,12 +2023,38 @@ async function handleGenericInstall(instanceId: string) {
 	pendingInstall.value = null
 	if (!pending) return
 
-	await installContentDirectly(pending.type, pending.filePath, instanceId)
+	await installContentDirectly(pending.type, pending.filePath, instanceId, pending.innerBase)
 }
 
 async function handleGenericInstallNavigateCreate() {
 	genericInstallModal.value?.hide()
 	router.push('/create')
+}
+
+async function handleDatapackWorldSelect(target: { instanceId: string; worldPath: string }) {
+	const pending = pendingInstall.value
+	pendingInstall.value = null
+	if (!pending) return
+	clearDropProcessingNotification()
+	try {
+		await install_datapack_to_world(
+			target.instanceId,
+			target.worldPath,
+			pending.filePath,
+			pending.innerBase,
+		)
+		addNotification({
+			title: formatMessage(messages.dropContentInstalledTitle),
+			text: formatMessage(messages.dropContentInstalledText),
+			type: 'success',
+		})
+	} catch (e) {
+		addNotification({
+			title: formatMessage(messages.dropInstallFailedTitle),
+			text: e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e),
+			type: 'error',
+		})
+	}
 }
 
 let symlinkChoiceResolve: ((symlink: boolean) => void) | null = null
@@ -2016,7 +2086,10 @@ function chooseImportMethod(options: {
 }): Promise<boolean> {
 	return new Promise((resolve) => {
 		symlinkChoiceResolve = resolve
-		symlinkCardsModal.value?.show(options)
+		symlinkCardsModal.value?.show({
+			instances: options.instanceNames.map((name) => ({ name })),
+			symlinkCapable: options.symlinkCapable,
+		})
 	})
 }
 
@@ -2053,7 +2126,12 @@ async function onImportSelected(
 
 	const cap = await check_symlink_capability()
 	symlinkCardsModal.value?.show({
-		instanceNames: allSelected.map((i) => i.name),
+		instances: allSelected.map((i) => ({
+			name: i.name,
+			path: i.path,
+			launcherType: i.launcherType,
+			basePath: i.basePath || i.path,
+		})),
 		symlinkCapable: cap,
 	})
 }
@@ -2067,10 +2145,10 @@ function onSymlinkMethodCancelled() {
 	cleanupLauncherZipTemp()
 }
 
-async function onSymlinkMethodConfirmed(symlink: boolean) {
+async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean) {
 	// Resolve the promise-based chooser first (if called from creation-modal flow)
 	if (symlinkChoiceResolve) {
-		symlinkChoiceResolve(symlink)
+		symlinkChoiceResolve(Array.isArray(choices) ? (choices[0]?.symlink ?? false) : choices)
 		symlinkChoiceResolve = null
 		return
 	}
@@ -2088,12 +2166,21 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 	// Single instance: simple notification (no progress overlay needed)
 	if (instances.length === 1) {
 		const inst = instances[0]
+		const choice = Array.isArray(choices)
+			? choices.find(
+					(c) => c.instanceName === inst.name && (c.instancePath ?? undefined) === (inst.path ?? undefined),
+				)
+			: undefined
 		try {
 			const job = await import_instance(
 				ctx?.launcherType ?? inst.launcherType,
 				ctx?.basePath ?? inst.path,
 				inst.name,
-				symlink,
+				choice?.symlink ?? (Array.isArray(choices) ? false : choices),
+				undefined,
+				choice?.gameVersion,
+				choice?.loader,
+				choice?.loaderVersion,
 			)
 			await wait_for_install_job(job.job_id)
 			addNotification({
@@ -2127,6 +2214,11 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 
 	for (let i = 0; i < instances.length; i++) {
 		const inst = instances[i]
+		const choice = Array.isArray(choices)
+			? choices.find(
+					(c) => c.instanceName === inst.name && (c.instancePath ?? undefined) === (inst.path ?? undefined),
+				)
+			: undefined
 
 		// Update progress notification
 		notificationManager.removeNotification(progressNotif.id)
@@ -2145,7 +2237,11 @@ async function onSymlinkMethodConfirmed(symlink: boolean) {
 				ctx?.launcherType ?? inst.launcherType,
 				ctx?.basePath ?? inst.path,
 				inst.name,
-				symlink,
+				choice?.symlink ?? (Array.isArray(choices) ? false : choices),
+				undefined,
+				choice?.gameVersion,
+				choice?.loader,
+				choice?.loaderVersion,
 			)
 			await wait_for_install_job(job.job_id)
 			completed++
@@ -3153,6 +3249,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		@install="handleGenericInstall"
 		@cancel="dropClassification = null"
 		@navigate-create="handleGenericInstallNavigateCreate"
+	/>
+
+	<!-- Data pack world selection modal -->
+	<InstanceExportModal
+		ref="dataPackWorldModal"
+		:show-save-as="false"
+		@select="handleDatapackWorldSelect"
 	/>
 
 	<!-- Launcher import instance selection modal -->

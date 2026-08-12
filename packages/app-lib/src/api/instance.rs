@@ -31,7 +31,7 @@ pub use self::paths::{get_full_path, get_mod_full_path};
 pub(crate) use self::projects::emit_content_changed;
 pub use self::projects::{
     InstallProjectWithDependenciesRequest, add_project_from_path,
-    add_project_from_version, import_world_save,
+    add_project_from_version, import_world_save, install_datapack_to_world,
     install_project_with_dependencies, queue_curseforge_content,
     queue_project_with_dependencies, remove_content_entry, remove_project,
     repair_managed_modrinth, restore_pack_member_default, rollback_project,

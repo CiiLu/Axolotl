@@ -1,5 +1,6 @@
 mod diagnostics;
 pub mod events;
+pub mod import_plan;
 pub(crate) mod missing_content;
 pub mod model;
 pub mod recovery;
@@ -13,6 +14,10 @@ pub use missing_content::{
     list_missing_modpack_files, retry_missing_modpack_file,
     scan_missing_modpack_files,
 };
+pub use import_plan::{
+    ImportPlanCounts, ImportPlanRequest, ImportPlanSnapshot, ImportPlanStage,
+    cancel_import_plan, start_import_plan,
+};
 pub use model::{
     DownloadItemSnapshot, DownloadItemStatus, DownloadJobSummary,
     InstallErrorContext, InstallErrorView, InstallJavaStep,
@@ -24,7 +29,8 @@ pub use model::{
 pub use runner::{
     cancel_job, clear_job_history, create_instance, create_modpack_instance,
     dismiss_job, download_java, duplicate_instance, get_job, import_instance,
-    import_instance_with_path, install_content, install_curseforge_content,
-    install_existing_instance, install_pack_to_existing_instance,
-    job_support_details, list_jobs, resume_job, retry_job, retry_job_as_new,
+    import_instance_with_path, import_instance_with_plan, install_content,
+    install_curseforge_content, install_existing_instance,
+    install_pack_to_existing_instance, job_support_details, list_jobs,
+    resume_job, retry_job, retry_job_as_new,
 };

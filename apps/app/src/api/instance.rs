@@ -52,6 +52,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_switch_project_version_with_dependencies,
             instance_add_project_from_path,
             instance_import_world_save,
+            instance_install_datapack_to_world,
             instance_toggle_disable_project,
             instance_toggle_content_entry,
             instance_rollback_project,
@@ -735,11 +736,13 @@ pub async fn instance_add_project_from_path(
     instance_id: &str,
     project_path: &Path,
     project_type: Option<ProjectType>,
+    inner_base: Option<String>,
 ) -> Result<String> {
     Ok(theseus::instance::add_project_from_path(
         instance_id,
         project_path,
         project_type,
+        inner_base.as_deref(),
     )
     .await?)
 }
@@ -748,10 +751,28 @@ pub async fn instance_add_project_from_path(
 pub async fn instance_import_world_save(
     instance_id: String,
     source_path: String,
+    inner_base: Option<String>,
 ) -> Result<String> {
     Ok(theseus::instance::import_world_save(
         &instance_id,
         &std::path::PathBuf::from(&source_path),
+        inner_base.as_deref(),
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_install_datapack_to_world(
+    instance_id: String,
+    world_path: String,
+    source_path: String,
+    inner_base: Option<String>,
+) -> Result<String> {
+    Ok(theseus::instance::install_datapack_to_world(
+        &instance_id,
+        &world_path,
+        &std::path::PathBuf::from(&source_path),
+        inner_base.as_deref(),
     )
     .await?)
 }

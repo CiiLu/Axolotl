@@ -5,7 +5,11 @@
  */
 import { invoke } from '@tauri-apps/api/core'
 
-import { install_import_instance } from './install'
+import {
+	install_cancel_import_plan,
+	install_import_instance,
+	install_start_import_plan,
+} from './install'
 
 /*
   API for importing instances from other launchers
@@ -38,6 +42,9 @@ export async function import_instance(
 	instanceFolder,
 	symlink = false,
 	instancePath = undefined,
+	gameVersion = undefined,
+	loader = undefined,
+	loaderVersion = undefined,
 ) {
 	return await install_import_instance(
 		launcherType,
@@ -45,7 +52,18 @@ export async function import_instance(
 		instanceFolder,
 		symlink,
 		instancePath,
+		gameVersion,
+		loader,
+		loaderVersion,
 	)
+}
+
+export async function start_import_plan(request) {
+	return await install_start_import_plan(request)
+}
+
+export async function cancel_import_plan(requestId) {
+	return await install_cancel_import_plan(requestId)
 }
 
 /// Checks if this instance is valid for importing, given a certain launcher type

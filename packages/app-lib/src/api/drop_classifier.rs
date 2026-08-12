@@ -44,12 +44,22 @@ pub enum DroppedItemType {
     Mod { file_path: PathBuf },
     /// A `.litematic` or `.schematic` file.
     Litematic { file_path: PathBuf },
-    /// A resource pack or data pack.
-    ResourcePack { file_path: PathBuf },
+    /// A resource pack and/or data pack.
+    ResourcePack {
+        file_path: PathBuf,
+        candidates: Vec<String>,
+        inner_base: Option<String>,
+    },
     /// A shader pack.
-    ShaderPack { file_path: PathBuf },
+    ShaderPack {
+        file_path: PathBuf,
+        inner_base: Option<String>,
+    },
     /// A Minecraft world save folder or archive.
-    WorldSave { file_path: PathBuf },
+    WorldSave {
+        file_path: PathBuf,
+        inner_base: Option<String>,
+    },
     /// A shortcut / symlink that was resolved to another item type.
     ShortcutResolved {
         original: PathBuf,
@@ -57,8 +67,22 @@ pub enum DroppedItemType {
     },
     /// A modpack archive (.mrpack, CurseForge, MultiMC, etc.).
     Modpack { file_path: PathBuf },
+    /// Multiple import candidates found in one source, ordered by priority.
+    Multiple {
+        file_path: PathBuf,
+        candidates: Vec<DroppedCandidate>,
+    },
     /// Could not be classified.
     Unknown { reason: String },
+}
+
+/// One importable candidate inside a multi-candidate classification result.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DroppedCandidate {
+    pub item_type: String,
+    pub file_path: PathBuf,
+    pub inner_base: Option<String>,
+    pub candidates: Vec<String>,
 }
 
 /// Classify a dropped file or folder path into a `DroppedItemType`.
@@ -139,7 +163,7 @@ fn classify_dropped_item_inner(
 
     // Step 5: Directory.
     if path.is_dir() {
-        let result = classify_folder(path);
+        let result = classify_folder(path, allow_nested_unpack);
         tracing::debug!(
             "classify_dropped_item: directory path={} result={:?}",
             path.display(),
@@ -440,6 +464,13 @@ impl ZipEntrySet {
         children
     }
 
+    /// Whether `base` has a direct child folder with the given name.
+    fn has_child_folder(&self, base: &str, name: &str) -> bool {
+        self.child_folders(base)
+            .iter()
+            .any(|child| child.eq_ignore_ascii_case(name))
+    }
+
     /// Direct child files under `base` that are themselves ZIP-family
     /// archives (.zip / .mrpack).
     fn nested_zip_files(&self, base: &str) -> Vec<String> {
@@ -506,13 +537,20 @@ fn classify_zip_path(
     path: &Path,
     allow_nested_unpack: bool,
 ) -> DroppedItemType {
-    classify_zip_file_at_depth(path, 0, allow_nested_unpack)
+    let mut nested_unpack_bytes: u64 = 0;
+    classify_zip_file_at_depth(
+        path,
+        0,
+        allow_nested_unpack,
+        &mut nested_unpack_bytes,
+    )
 }
 
 fn classify_zip_file_at_depth(
     path: &Path,
     depth: u32,
     allow_nested_unpack: bool,
+    nested_unpack_bytes: &mut u64,
 ) -> DroppedItemType {
     let Ok(file) = std::fs::File::open(path) else {
         return DroppedItemType::Unknown {
@@ -528,7 +566,6 @@ fn classify_zip_file_at_depth(
         Ok(set) => set,
         Err(reason) => return DroppedItemType::Unknown { reason },
     };
-    let mut nested_unpack_bytes: u64 = 0;
     classify_zip_entries(
         path,
         &mut archive,
@@ -536,7 +573,7 @@ fn classify_zip_file_at_depth(
         depth,
         "",
         allow_nested_unpack,
-        &mut nested_unpack_bytes,
+        nested_unpack_bytes,
     )
 }
 
@@ -636,14 +673,26 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
     //    Nested folders are handled by the recursion below, which re-runs
     //    this whole flow with the folder as the new root.
     if entries.has_file(base, "pack.mcmeta") {
-        tracing::debug!(
-            "ZIP classify: pack.mcmeta → ResourcePack at base {:?} — {}",
-            base,
-            result_path.display()
-        );
-        return DroppedItemType::ResourcePack {
-            file_path: result_path.to_path_buf(),
-        };
+        let mut candidates = Vec::new();
+        if entries.has_child_folder(base, "data") {
+            candidates.push("data_pack".to_string());
+        }
+        if entries.has_child_folder(base, "assets") {
+            candidates.push("resource_pack".to_string());
+        }
+        if !candidates.is_empty() {
+            tracing::debug!(
+                "ZIP classify: pack.mcmeta with candidates {candidates:?} at base {:?} — {}",
+                base,
+                result_path.display()
+            );
+            return DroppedItemType::ResourcePack {
+                file_path: result_path.to_path_buf(),
+                candidates,
+                inner_base: (!base.is_empty())
+                    .then(|| base.trim_end_matches('/').to_string()),
+            };
+        }
     }
     if entries.has_populated_shaders_dir(base) {
         tracing::debug!(
@@ -653,6 +702,8 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         );
         return DroppedItemType::ShaderPack {
             file_path: result_path.to_path_buf(),
+            inner_base: (!base.is_empty())
+                .then(|| base.trim_end_matches('/').to_string()),
         };
     }
     if entries.has_file(base, "level.dat") {
@@ -663,6 +714,8 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         );
         return DroppedItemType::WorldSave {
             file_path: result_path.to_path_buf(),
+            inner_base: (!base.is_empty())
+                .then(|| base.trim_end_matches('/').to_string()),
         };
     }
 
@@ -798,20 +851,41 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
         };
     }
 
-    let result =
-        classify_zip_file_at_depth(&nested_path, depth, allow_nested_unpack);
+    let mut nested_unpack_bytes: u64 = 0;
+    let result = classify_zip_file_at_depth(
+        &nested_path,
+        depth,
+        allow_nested_unpack,
+        &mut nested_unpack_bytes,
+    );
+    let remap_inner = |inner_base: Option<String>| -> Option<String> {
+        Some(match inner_base {
+            Some(inner) => format!("{entry_path}/{inner}"),
+            None => entry_path.trim_end_matches('/').to_string(),
+        })
+    };
     match result {
         DroppedItemType::Unknown { reason } => DroppedItemType::Unknown {
             reason: format!("nested archive {entry_path}: {reason}"),
         },
-        DroppedItemType::WorldSave { .. } => DroppedItemType::WorldSave {
+        DroppedItemType::WorldSave { inner_base, .. } => DroppedItemType::WorldSave {
             file_path: result_path.to_path_buf(),
+            inner_base: remap_inner(inner_base),
         },
-        DroppedItemType::ResourcePack { .. } => DroppedItemType::ResourcePack {
+        DroppedItemType::ResourcePack {
+            candidates,
+            inner_base,
+            ..
+        } => {
+            DroppedItemType::ResourcePack {
+                file_path: result_path.to_path_buf(),
+                candidates,
+                inner_base: remap_inner(inner_base),
+            }
+        }
+        DroppedItemType::ShaderPack { inner_base, .. } => DroppedItemType::ShaderPack {
             file_path: result_path.to_path_buf(),
-        },
-        DroppedItemType::ShaderPack { .. } => DroppedItemType::ShaderPack {
-            file_path: result_path.to_path_buf(),
+            inner_base: remap_inner(inner_base),
         },
         DroppedItemType::Modpack { .. } => DroppedItemType::Modpack {
             file_path: result_path.to_path_buf(),
@@ -908,7 +982,7 @@ pub fn classify_zip_with_extraction(path: &Path) -> DroppedItemType {
     } else if root_files.len() == 1 && child_folders.is_empty() {
         classify_dropped_item(&temp_dir.path().join(root_files[0]))
     } else {
-        classify_folder_content(temp_dir.path())
+        classify_folder_content(temp_dir.path(), true)
     }
     // temp_dir is dropped here, cleaning up the extracted files automatically.
 }
@@ -1171,7 +1245,50 @@ fn classify_jar(path: &Path) -> DroppedItemType {
 
 // ─── Step 5: Folder classification ─────────────────────────────────────────
 
-fn classify_folder(path: &Path) -> DroppedItemType {
+fn classify_folder(path: &Path, allow_nested_unpack: bool) -> DroppedItemType {
+    classify_folder_content(path, allow_nested_unpack)
+}
+
+// ─── Step 6: File classification (non-JAR, non-EXE, non-ZIP) ───────────────
+
+fn classify_file(path: &Path) -> DroppedItemType {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+        .unwrap_or_default();
+
+    match ext.as_str() {
+        "litematic" | "schematic" => DroppedItemType::Litematic {
+            file_path: path.to_path_buf(),
+        },
+        _ => DroppedItemType::Unknown {
+            reason: format!("Unrecognised file type: {}", path.display()),
+        },
+    }
+}
+
+// ─── Step 7: Content-type detection for folders/extracted ZIPs ─────────────
+
+pub(crate) fn classify_folder_content(
+    path: &Path,
+    allow_nested_unpack: bool,
+) -> DroppedItemType {
+    let mut nested_unpack_bytes: u64 = 0;
+    classify_folder_content_inner(
+        path,
+        allow_nested_unpack,
+        0,
+        &mut nested_unpack_bytes,
+    )
+}
+
+fn classify_folder_content_inner(
+    path: &Path,
+    allow_nested_unpack: bool,
+    depth: u32,
+    nested_unpack_bytes: &mut u64,
+) -> DroppedItemType {
     // Check launcher signatures in priority order.
     if is_axolotl_folder(path) {
         return DroppedItemType::Launcher {
@@ -1229,39 +1346,6 @@ fn classify_folder(path: &Path) -> DroppedItemType {
     }
 
     // Step 7: Content-type detection for folders.
-    classify_folder_content(path)
-}
-
-// ─── Step 6: File classification (non-JAR, non-EXE, non-ZIP) ───────────────
-
-fn classify_file(path: &Path) -> DroppedItemType {
-    let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|e| e.to_ascii_lowercase())
-        .unwrap_or_default();
-
-    match ext.as_str() {
-        "litematic" | "schematic" => DroppedItemType::Litematic {
-            file_path: path.to_path_buf(),
-        },
-        _ => DroppedItemType::Unknown {
-            reason: format!("Unrecognised file type: {}", path.display()),
-        },
-    }
-}
-
-// ─── Step 7: Content-type detection for folders/extracted ZIPs ─────────────
-
-pub(crate) fn classify_folder_content(path: &Path) -> DroppedItemType {
-    if is_axolotl_folder(path) {
-        return DroppedItemType::Launcher {
-            launcher_type: ImportLauncherType::Axolotl,
-            base_path: path.to_path_buf(),
-            inner_base: None,
-        };
-    }
-
     if let Some(result) = classify_world_save_folder(path) {
         return result;
     }
@@ -1276,6 +1360,64 @@ pub(crate) fn classify_folder_content(path: &Path) -> DroppedItemType {
             launcher_type: ImportLauncherType::Generic,
             base_path: path.to_path_buf(),
             inner_base: None,
+        };
+    }
+
+    if depth >= MAX_ZIP_NESTING_DEPTH {
+        return DroppedItemType::Unknown {
+            reason: format!(
+                "Folder nesting is too deep to analyze (limit {MAX_ZIP_NESTING_DEPTH} levels)"
+            ),
+        };
+    }
+
+    let mut children: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            if file_type.is_symlink() {
+                continue;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            if is_noise_entry(&name) {
+                continue;
+            }
+            let child = entry.path();
+            if file_type.is_dir() || is_zip_path(&child) {
+                children.push(child);
+            }
+        }
+    }
+    children.sort();
+
+    for child in children {
+        let result = if child.is_dir() {
+            classify_folder_content_inner(
+                &child,
+                allow_nested_unpack,
+                depth + 1,
+                nested_unpack_bytes,
+            )
+        } else {
+            classify_zip_file_at_depth(
+                &child,
+                depth + 1,
+                allow_nested_unpack,
+                nested_unpack_bytes,
+            )
+        };
+        if !matches!(result, DroppedItemType::Unknown { .. }) {
+            return result;
+        }
+    }
+
+    if *nested_unpack_bytes > 0 {
+        return DroppedItemType::Unknown {
+            reason: format!(
+                "Archive contains nested archives that must be unpacked to analyze (total {nested_unpack_bytes} bytes)"
+            ),
         };
     }
 
@@ -1295,16 +1437,37 @@ fn classify_world_save_folder(path: &Path) -> Option<DroppedItemType> {
         .is_file()
         .then(|| DroppedItemType::WorldSave {
             file_path: path.to_path_buf(),
+            inner_base: None,
         })
 }
 
 /// Classify a folder as a resource pack when it contains a `pack.mcmeta`.
 fn classify_resource_pack_folder(path: &Path) -> Option<DroppedItemType> {
-    path.join("pack.mcmeta")
-        .is_file()
-        .then(|| DroppedItemType::ResourcePack {
-            file_path: path.to_path_buf(),
+    if !path.join("pack.mcmeta").is_file() {
+        return None;
+    }
+    let mut candidates = Vec::new();
+    if has_child_dir(path, "data") {
+        candidates.push("data_pack".to_string());
+    }
+    if has_child_dir(path, "assets") {
+        candidates.push("resource_pack".to_string());
+    }
+    (!candidates.is_empty()).then(|| DroppedItemType::ResourcePack {
+        file_path: path.to_path_buf(),
+        candidates,
+        inner_base: None,
+    })
+}
+
+/// Whether a direct child directory with the given name exists.
+fn has_child_dir(path: &Path, name: &str) -> bool {
+    std::fs::read_dir(path).ok().is_some_and(|entries| {
+        entries.flatten().any(|entry| {
+            entry.file_name().to_string_lossy().eq_ignore_ascii_case(name)
+                && entry.file_type().map(|t| t.is_dir()).unwrap_or(false)
         })
+    })
 }
 
 /// Classify a folder as a shader pack when `shaders/` exists and contains at
@@ -1317,7 +1480,416 @@ fn classify_shader_pack_folder(path: &Path) -> Option<DroppedItemType> {
     let has_any_entry = std::fs::read_dir(&shaders).ok()?.next().is_some();
     has_any_entry.then(|| DroppedItemType::ShaderPack {
         file_path: path.to_path_buf(),
+        inner_base: None,
     })
+}
+
+/// Classify an input and attach any alternative content candidates found in
+/// the same folder / archive tree. The primary hit is always first.
+pub fn classify_dropped_item_with_candidates(
+    path: &Path,
+    allow_nested_unpack: bool,
+) -> DroppedItemType {
+    let primary = classify_dropped_item_inner(path, 0, allow_nested_unpack);
+    if matches!(
+        primary,
+        DroppedItemType::Launcher { .. } | DroppedItemType::HmclLauncher { .. }
+    ) {
+        return primary;
+    }
+    let mut alternatives = collect_content_candidates(path, allow_nested_unpack);
+    if matches!(primary, DroppedItemType::Unknown { .. })
+        && alternatives.is_empty()
+    {
+        return primary;
+    }
+
+    let mut all = Vec::new();
+    let primary_path = primary_path_of(&primary);
+    let primary_inner_base = relative_to(path, &primary_path);
+    if let Some(primary_candidate) =
+        candidate_from_result(&primary, primary_inner_base)
+    {
+        all.push(primary_candidate);
+    }
+    for candidate in alternatives.drain(..) {
+        if !all
+            .iter()
+            .any(|existing| same_candidate(existing, &candidate))
+        {
+            all.push(candidate);
+        }
+    }
+
+    if all.len() <= 1 && !matches!(primary, DroppedItemType::Unknown { .. }) {
+        return primary;
+    }
+
+    let has_primary = !matches!(primary, DroppedItemType::Unknown { .. })
+        && all.first().is_some();
+    let primary_candidate = has_primary.then(|| all.remove(0));
+    all.sort_by(|a, b| {
+        candidate_priority(b)
+            .cmp(&candidate_priority(a))
+            .then_with(|| a.file_path.cmp(&b.file_path))
+    });
+    if let Some(primary_candidate) = primary_candidate {
+        all.insert(0, primary_candidate);
+    }
+
+    DroppedItemType::Multiple {
+        file_path: path.to_path_buf(),
+        candidates: all,
+    }
+}
+
+fn primary_path_of(item: &DroppedItemType) -> PathBuf {
+    match item {
+        DroppedItemType::Launcher { base_path, .. } => base_path.clone(),
+        DroppedItemType::HmclLauncher { launcher_dir, .. } => {
+            launcher_dir.clone()
+        }
+        DroppedItemType::Mod { file_path } => file_path.clone(),
+        DroppedItemType::Litematic { file_path } => file_path.clone(),
+        DroppedItemType::ResourcePack { file_path, .. } => file_path.clone(),
+        DroppedItemType::ShaderPack { file_path, .. } => file_path.clone(),
+        DroppedItemType::WorldSave { file_path, .. } => file_path.clone(),
+        DroppedItemType::Modpack { file_path } => file_path.clone(),
+        DroppedItemType::ShortcutResolved { resolved_to, .. } => {
+            primary_path_of(resolved_to)
+        }
+        DroppedItemType::Unknown { .. } | DroppedItemType::Multiple { .. } => {
+            PathBuf::new()
+        }
+    }
+}
+
+fn collect_content_candidates(
+    path: &Path,
+    allow_nested_unpack: bool,
+) -> Vec<DroppedCandidate> {
+    if path.is_dir() {
+        let mut candidates = Vec::new();
+        collect_folder_candidates(path, allow_nested_unpack, path, 0, &mut candidates);
+        candidates
+    } else if is_zip_path(path) {
+        collect_zip_candidates(path, allow_nested_unpack)
+    } else {
+        Vec::new()
+    }
+}
+
+fn collect_folder_candidates(
+    path: &Path,
+    allow_nested_unpack: bool,
+    root: &Path,
+    depth: u32,
+    out: &mut Vec<DroppedCandidate>,
+) {
+    if depth >= MAX_ZIP_NESTING_DEPTH {
+        return;
+    }
+
+    let inner_base = relative_to(root, path);
+    if let Some(result) = classify_world_save_folder(path) {
+        push_candidate(out, candidate_from_result(&result, inner_base.clone()));
+    }
+    if let Some(result) = classify_resource_pack_folder(path) {
+        push_candidate(out, candidate_from_result(&result, inner_base.clone()));
+    }
+    if let Some(result) = classify_shader_pack_folder(path) {
+        push_candidate(out, candidate_from_result(&result, inner_base.clone()));
+    }
+
+    let mut children: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            if file_type.is_symlink() {
+                continue;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            if is_noise_entry(&name) {
+                continue;
+            }
+            let child = entry.path();
+            if file_type.is_dir() || is_zip_path(&child) {
+                children.push(child);
+            }
+        }
+    }
+    children.sort();
+
+    for child in children {
+        if child.is_dir() {
+            collect_folder_candidates(
+                &child,
+                allow_nested_unpack,
+                root,
+                depth + 1,
+                out,
+            );
+        } else {
+            let result = classify_zip_path(&child, allow_nested_unpack);
+            let child_base = relative_to(root, &child);
+            push_candidate(out, candidate_from_result(&result, child_base));
+        }
+    }
+}
+
+fn collect_zip_candidates(
+    path: &Path,
+    allow_nested_unpack: bool,
+) -> Vec<DroppedCandidate> {
+    let Ok(file) = std::fs::File::open(path) else {
+        return Vec::new();
+    };
+    let Ok(mut archive) = zip::ZipArchive::new(file) else {
+        return Vec::new();
+    };
+    let Ok(entries) = ZipEntrySet::from_archive(&mut archive) else {
+        return Vec::new();
+    };
+
+    let mut candidates = Vec::new();
+    collect_zip_candidates_at(
+        path,
+        &mut archive,
+        &entries,
+        "",
+        0,
+        allow_nested_unpack,
+        &mut candidates,
+    );
+    candidates
+}
+
+fn collect_zip_candidates_at<R: std::io::Read + std::io::Seek>(
+    result_path: &Path,
+    archive: &mut zip::ZipArchive<R>,
+    entries: &ZipEntrySet,
+    base: &str,
+    depth: u32,
+    allow_nested_unpack: bool,
+    out: &mut Vec<DroppedCandidate>,
+) {
+    if depth >= MAX_ZIP_NESTING_DEPTH {
+        return;
+    }
+
+    let inner_base = (!base.is_empty())
+        .then(|| base.trim_end_matches('/').to_string());
+    if entries.has_file(base, "pack.mcmeta") {
+        let mut candidates = Vec::new();
+        if entries.has_child_folder(base, "data") {
+            candidates.push("data_pack".to_string());
+        }
+        if entries.has_child_folder(base, "assets") {
+            candidates.push("resource_pack".to_string());
+        }
+        if !candidates.is_empty() {
+            push_candidate(
+                out,
+                Some(DroppedCandidate {
+                    item_type: "resource_pack".to_string(),
+                    file_path: result_path.to_path_buf(),
+                    inner_base: inner_base.clone(),
+                    candidates,
+                }),
+            );
+        }
+    }
+    if entries.has_populated_shaders_dir(base) {
+        push_candidate(
+            out,
+            Some(DroppedCandidate {
+                item_type: "shader_pack".to_string(),
+                file_path: result_path.to_path_buf(),
+                inner_base: inner_base.clone(),
+                candidates: Vec::new(),
+            }),
+        );
+    }
+    if entries.has_file(base, "level.dat") {
+        push_candidate(
+            out,
+            Some(DroppedCandidate {
+                item_type: "world_save".to_string(),
+                file_path: result_path.to_path_buf(),
+                inner_base,
+                candidates: Vec::new(),
+            }),
+        );
+    }
+
+    for child in entries.child_folders(base) {
+        if is_noise_entry(&child) {
+            continue;
+        }
+        collect_zip_candidates_at(
+            result_path,
+            archive,
+            entries,
+            &format!("{base}{child}/"),
+            depth + 1,
+            allow_nested_unpack,
+            out,
+        );
+    }
+
+    if allow_nested_unpack {
+        for nested in entries.nested_zip_files(base) {
+            let result = classify_nested_zip(
+                result_path,
+                archive,
+                depth + 1,
+                &format!("{base}{nested}"),
+                true,
+            );
+            push_candidate(out, candidate_from_result(&result, None));
+        }
+    }
+}
+
+fn candidate_from_result(
+    result: &DroppedItemType,
+    outer_inner_base: Option<String>,
+) -> Option<DroppedCandidate> {
+    let (item_type, file_path, candidates, inner_base) = match result {
+        DroppedItemType::Launcher {
+            base_path,
+            inner_base,
+            ..
+        } => (
+            "launcher".to_string(),
+            base_path.clone(),
+            Vec::new(),
+            inner_base.clone(),
+        ),
+        DroppedItemType::HmclLauncher { launcher_dir, .. } => (
+            "hmcl_launcher".to_string(),
+            launcher_dir.clone(),
+            Vec::new(),
+            None,
+        ),
+        DroppedItemType::Mod { file_path } => (
+            "mod".to_string(),
+            file_path.clone(),
+            Vec::new(),
+            None,
+        ),
+        DroppedItemType::Litematic { file_path } => (
+            "litematic".to_string(),
+            file_path.clone(),
+            Vec::new(),
+            None,
+        ),
+        DroppedItemType::ResourcePack {
+            file_path,
+            candidates,
+            inner_base,
+        } => (
+            "resource_pack".to_string(),
+            file_path.clone(),
+            candidates.clone(),
+            inner_base.clone(),
+        ),
+        DroppedItemType::ShaderPack {
+            file_path,
+            inner_base,
+        } => (
+            "shader_pack".to_string(),
+            file_path.clone(),
+            Vec::new(),
+            inner_base.clone(),
+        ),
+        DroppedItemType::WorldSave {
+            file_path,
+            inner_base,
+        } => (
+            "world_save".to_string(),
+            file_path.clone(),
+            Vec::new(),
+            inner_base.clone(),
+        ),
+        DroppedItemType::Modpack { file_path } => (
+            "modpack".to_string(),
+            file_path.clone(),
+            Vec::new(),
+            None,
+        ),
+        DroppedItemType::ShortcutResolved { resolved_to, .. } => {
+            return candidate_from_result(resolved_to, outer_inner_base)
+        }
+        DroppedItemType::Unknown { .. } | DroppedItemType::Multiple { .. } => {
+            return None
+        }
+    };
+
+    Some(DroppedCandidate {
+        item_type,
+        file_path,
+        inner_base: merge_inner_base(outer_inner_base, inner_base),
+        candidates,
+    })
+}
+
+fn merge_inner_base(
+    outer: Option<String>,
+    inner: Option<String>,
+) -> Option<String> {
+    match (outer, inner) {
+        (Some(outer), Some(inner)) => Some(format!("{outer}/{inner}")),
+        (Some(outer), None) => Some(outer),
+        (None, inner) => inner,
+    }
+}
+
+fn push_candidate(out: &mut Vec<DroppedCandidate>, candidate: Option<DroppedCandidate>) {
+    let Some(candidate) = candidate else {
+        return;
+    };
+    if candidate.item_type == "unknown"
+        || out.iter().any(|existing| same_candidate(existing, &candidate))
+        || out.len() >= 8
+    {
+        return;
+    }
+    out.push(candidate);
+}
+
+fn same_candidate(a: &DroppedCandidate, b: &DroppedCandidate) -> bool {
+    a.item_type == b.item_type
+        && a.file_path == b.file_path
+        && a.inner_base == b.inner_base
+}
+
+fn candidate_priority(candidate: &DroppedCandidate) -> i32 {
+    let base = match candidate.item_type.as_str() {
+        "modpack" => 100,
+        "launcher" | "hmcl_launcher" => 90,
+        "world_save" => 70,
+        "data_pack" => 65,
+        "resource_pack" => 60,
+        "shader_pack" => 55,
+        "litematic" => 50,
+        _ => 0,
+    };
+    let depth = candidate
+        .inner_base
+        .as_deref()
+        .map(|base| base.split('/').count() as i32)
+        .unwrap_or(0);
+    base - depth * 5
+}
+
+fn relative_to(root: &Path, path: &Path) -> Option<String> {
+    path.strip_prefix(root)
+        .ok()
+        .map(|rel| rel.to_string_lossy().replace('\\', "/"))
+        .filter(|rel| !rel.is_empty())
 }
 
 /// Detect launcher instance markers:
@@ -1617,6 +2189,7 @@ mod tests {
         std::fs::create_dir(&rp).expect("create dir");
         std::fs::write(rp.join("pack.mcmeta"), VALID_PACK_MCMETA)
             .expect("write pack.mcmeta");
+        std::fs::create_dir(rp.join("assets")).expect("create assets dir");
 
         let result = classify_dropped_item(&rp);
         assert!(
@@ -1767,6 +2340,11 @@ mod tests {
         )
         .expect("start entry");
         zip.write_all(VALID_PACK_MCMETA).expect("write");
+        zip.start_file(
+            "My Pack/assets/",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
         zip.finish().expect("finish");
 
         let result = classify_dropped_item(&zip_path);
@@ -2446,6 +3024,11 @@ mod tests {
         )
         .expect("start entry");
         zip.write_all(b"not json").expect("write");
+        zip.start_file(
+            "Fake Pack/assets/",
+            zip::write::FileOptions::<()>::default(),
+        )
+        .expect("start entry");
         zip.finish().expect("finish");
 
         let result = classify_dropped_item(&zip_path);
@@ -2784,6 +3367,8 @@ mod tests {
             .expect("start entry");
         zip.write_all(b"\xEF\xBB\xBF{\"pack\":{\"pack_format\":16}}")
             .expect("write");
+        zip.start_file("assets/", zip::write::FileOptions::<()>::default())
+            .expect("start entry");
         zip.finish().expect("finish");
 
         let result = classify_dropped_item(&zip_path);

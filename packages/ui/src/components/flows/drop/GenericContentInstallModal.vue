@@ -146,6 +146,7 @@ const contentTypeLabel = ref('')
 const contentTypeMap: Record<string, string> = {
 	mod: 'Mod',
 	resource_pack: 'Resource Pack',
+	data_pack: 'Data Pack',
 	shader_pack: 'Shader Pack',
 	world_save: 'World',
 	litematic: 'Schematic',

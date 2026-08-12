@@ -21,6 +21,7 @@
 <script setup lang="ts">
 import {
 	BookIcon,
+	BracesIcon,
 	FolderOpenIcon,
 	GridIcon,
 	MapIcon,
@@ -85,6 +86,18 @@ const messages = defineMessages({
 	},
 	resourcePacksFormats: {
 		id: 'drop.help.resource-packs-formats',
+		defaultMessage: '.zip',
+	},
+	dataPacksTitle: {
+		id: 'drop.help.data-packs-title',
+		defaultMessage: 'Data Packs',
+	},
+	dataPacksDesc: {
+		id: 'drop.help.data-packs-desc',
+		defaultMessage: "Drag data pack ZIP files to install them into a world's datapacks folder.",
+	},
+	dataPacksFormats: {
+		id: 'drop.help.data-packs-formats',
 		defaultMessage: '.zip',
 	},
 	shaderPacksTitle: {
@@ -161,6 +174,13 @@ const sections: HelpSection[] = [
 		titleMsg: messages.resourcePacksTitle,
 		descMsg: messages.resourcePacksDesc,
 		formatsMsg: messages.resourcePacksFormats,
+	},
+	{
+		key: 'data-packs',
+		icon: BracesIcon,
+		titleMsg: messages.dataPacksTitle,
+		descMsg: messages.dataPacksDesc,
+		formatsMsg: messages.dataPacksFormats,
 	},
 	{
 		key: 'shader-packs',

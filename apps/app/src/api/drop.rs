@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 use theseus::drop_classifier::{
-    DroppedItemType, ModrinthLookupResult, classify_dropped_item,
-    classify_dropped_item_without_nested_unpack, classify_zip_with_extraction,
+    DroppedCandidate, DroppedItemType, ModrinthLookupResult,
+    classify_dropped_item_with_candidates, classify_zip_with_extraction,
     lookup_mod_hash,
 };
 use theseus::pack::import::{ImportLauncherType, get_importable_instances};
 use theseus::{LockingProcess, get_locking_processes};
+use tauri::Emitter;
 use tracing::{debug, info, warn};
 
 /// A scanned importable instance: name plus the resolved filesystem path.
@@ -14,6 +15,18 @@ use tracing::{debug, info, warn};
 pub struct ScannedInstance {
     pub name: String,
     pub path: String,
+}
+
+/// One candidate inside a multi-candidate classification result.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CandidateResult {
+    pub item_type: String,
+    pub file_path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inner_base: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub candidates: Vec<String>,
 }
 
 /// Serializable classification result mapped from `DroppedItemType`.
@@ -45,13 +58,43 @@ pub enum ClassificationResult {
     #[serde(rename = "litematic")]
     Litematic { file_path: String },
     #[serde(rename = "resource_pack")]
-    ResourcePack { file_path: String },
+    ResourcePack {
+        file_path: String,
+        candidates: Vec<String>,
+        #[serde(
+            rename = "innerBase",
+            default,
+            skip_serializing_if = "Option::is_none"
+        )]
+        inner_base: Option<String>,
+    },
     #[serde(rename = "shader_pack")]
-    ShaderPack { file_path: String },
+    ShaderPack {
+        file_path: String,
+        #[serde(
+            rename = "innerBase",
+            default,
+            skip_serializing_if = "Option::is_none"
+        )]
+        inner_base: Option<String>,
+    },
     #[serde(rename = "world_save")]
-    WorldSave { file_path: String },
+    WorldSave {
+        file_path: String,
+        #[serde(
+            rename = "innerBase",
+            default,
+            skip_serializing_if = "Option::is_none"
+        )]
+        inner_base: Option<String>,
+    },
     #[serde(rename = "modpack")]
     Modpack { file_path: String },
+    #[serde(rename = "multiple")]
+    Multiple {
+        file_path: String,
+        candidates: Vec<CandidateResult>,
+    },
     #[serde(rename = "shortcut_resolved")]
     ShortcutResolved {
         original: String,
@@ -59,6 +102,17 @@ pub enum ClassificationResult {
     },
     #[serde(rename = "unknown")]
     Unknown { reason: String },
+}
+
+impl From<DroppedCandidate> for CandidateResult {
+    fn from(candidate: DroppedCandidate) -> Self {
+        CandidateResult {
+            item_type: candidate.item_type,
+            file_path: candidate.file_path.to_string_lossy().to_string(),
+            inner_base: candidate.inner_base,
+            candidates: candidate.candidates,
+        }
+    }
 }
 
 impl From<DroppedItemType> for ClassificationResult {
@@ -88,19 +142,31 @@ impl From<DroppedItemType> for ClassificationResult {
                     file_path: file_path.to_string_lossy().to_string(),
                 }
             }
-            DroppedItemType::ResourcePack { file_path } => {
-                ClassificationResult::ResourcePack {
-                    file_path: file_path.to_string_lossy().to_string(),
-                }
-            }
-            DroppedItemType::ShaderPack { file_path } => {
+            DroppedItemType::ResourcePack {
+                file_path,
+                candidates,
+                inner_base,
+            } => ClassificationResult::ResourcePack {
+                file_path: file_path.to_string_lossy().to_string(),
+                candidates,
+                inner_base,
+            },
+            DroppedItemType::ShaderPack {
+                file_path,
+                inner_base,
+            } => {
                 ClassificationResult::ShaderPack {
                     file_path: file_path.to_string_lossy().to_string(),
+                    inner_base,
                 }
             }
-            DroppedItemType::WorldSave { file_path } => {
+            DroppedItemType::WorldSave {
+                file_path,
+                inner_base,
+            } => {
                 ClassificationResult::WorldSave {
                     file_path: file_path.to_string_lossy().to_string(),
+                    inner_base,
                 }
             }
             DroppedItemType::ShortcutResolved {
@@ -115,6 +181,13 @@ impl From<DroppedItemType> for ClassificationResult {
                     file_path: file_path.to_string_lossy().to_string(),
                 }
             }
+            DroppedItemType::Multiple {
+                file_path,
+                candidates,
+            } => ClassificationResult::Multiple {
+                file_path: file_path.to_string_lossy().to_string(),
+                candidates: candidates.into_iter().map(Into::into).collect(),
+            },
             DroppedItemType::Unknown { reason } => {
                 ClassificationResult::Unknown { reason }
             }
@@ -142,20 +215,39 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 /// Returns a `ClassificationResult` with an `item_type` tag that the frontend
 /// can use to decide what UI to show (confirm dialog, error, etc.).
 #[tauri::command]
-pub async fn drop_classify(
+pub async fn drop_classify<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     path: String,
     allow_nested_extraction: Option<bool>,
 ) -> Result<ClassificationResult, String> {
     debug!("Drop event received: {}", path);
     let path = std::path::PathBuf::from(&path);
+    let _ = app.emit(
+        "drop_classify_progress",
+        serde_json::json!({
+            "phase": "classify",
+            "currentItem": path.to_string_lossy(),
+            "processed": 0,
+            "total": null,
+        }),
+    );
     // The first pass never unpacks nested archives; when one would be needed
     // the classification reports the total nested size so the frontend can
     // confirm the potentially slow unpack with the user before retrying.
     let result = if allow_nested_extraction.unwrap_or(false) {
-        classify_dropped_item(&path)
+        classify_dropped_item_with_candidates(&path, true)
     } else {
-        classify_dropped_item_without_nested_unpack(&path)
+        classify_dropped_item_with_candidates(&path, false)
     };
+    let _ = app.emit(
+        "drop_classify_progress",
+        serde_json::json!({
+            "phase": "done",
+            "currentItem": path.to_string_lossy(),
+            "processed": 1,
+            "total": 1,
+        }),
+    );
     let classification = ClassificationResult::from(result);
     info!("Classification result: {:?}", classification);
     Ok(classification)
@@ -164,16 +256,36 @@ pub async fn drop_classify(
 /// Classify ZIP
 
 #[tauri::command]
-pub async fn drop_classify_extract(
+pub async fn drop_classify_extract<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     path: String,
 ) -> Result<ClassificationResult, String> {
     debug!("Drop classify with extraction: {}", path);
     let path = std::path::PathBuf::from(&path);
+    let path_label = path.to_string_lossy().to_string();
+    let _ = app.emit(
+        "drop_classify_progress",
+        serde_json::json!({
+            "phase": "extract",
+            "currentItem": &path_label,
+            "processed": 0,
+            "total": null,
+        }),
+    );
     let result = tokio::task::spawn_blocking(move || {
         classify_zip_with_extraction(&path)
     })
     .await
     .map_err(|e| format!("Extraction task panicked: {e}"))?;
+    let _ = app.emit(
+        "drop_classify_progress",
+        serde_json::json!({
+            "phase": "done",
+            "currentItem": &path_label,
+            "processed": 1,
+            "total": 1,
+        }),
+    );
     let classification = ClassificationResult::from(result);
     info!(
         "Classification result (with extraction): {:?}",
@@ -225,13 +337,24 @@ fn sweep_stale_launcher_import_dirs(base: &std::path::Path) {
 /// calls [`drop_remove_temp_dir`] to clean it up — the archive is unpacked
 /// exactly once.
 #[tauri::command]
-pub async fn drop_extract_zip_to_temp(
+pub async fn drop_extract_zip_to_temp<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     zip_path: String,
 ) -> Result<String, String> {
     let zip_path = std::path::PathBuf::from(&zip_path);
     info!("Extracting launcher ZIP to temp: {}", zip_path.display());
+    let _ = app.emit(
+        "drop_classify_progress",
+        serde_json::json!({
+            "phase": "extract",
+            "currentItem": zip_path.to_string_lossy(),
+            "processed": 0,
+            "total": null,
+        }),
+    );
 
     let base = launcher_import_temp_base();
+    let zip_path_label = zip_path.to_string_lossy().to_string();
     let extracted =
         tokio::task::spawn_blocking(move || -> Result<String, String> {
             std::fs::create_dir_all(&base).map_err(|e| {
@@ -266,6 +389,15 @@ pub async fn drop_extract_zip_to_temp(
         })??;
 
     info!("Extracted launcher ZIP to: {extracted}");
+    let _ = app.emit(
+        "drop_classify_progress",
+        serde_json::json!({
+            "phase": "done",
+            "currentItem": zip_path_label,
+            "processed": 1,
+            "total": 1,
+        }),
+    );
     Ok(extracted)
 }
 
@@ -304,12 +436,23 @@ pub async fn drop_remove_temp_dir(path: String) -> Result<(), String> {
 /// `launcher_type` must be one of the `ImportLauncherType` variant names
 /// (e.g. `"MultiMC"`, `"PrismLauncher"`, `"HMCL"`).
 #[tauri::command]
-pub async fn drop_scan_launcher_instances(
+pub async fn drop_scan_launcher_instances<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     launcher_type: String,
     base_path: String,
 ) -> Result<Vec<ScannedInstance>, String> {
     info!(
         "Scanning launcher instances — type: {launcher_type}, path: {base_path}"
+    );
+    let base_path_label = base_path.clone();
+    let _ = app.emit(
+        "drop_classify_progress",
+        serde_json::json!({
+            "phase": "scan",
+            "currentItem": &base_path_label,
+            "processed": 0,
+            "total": null,
+        }),
     );
     let lt: ImportLauncherType =
         serde_json::from_str(&format!("\"{launcher_type}\"")).map_err(|e| {
@@ -320,6 +463,15 @@ pub async fn drop_scan_launcher_instances(
         .await
         .map_err(|e| e.to_string())?;
     info!("Scan complete — found {} instance(s)", instances.len());
+    let _ = app.emit(
+        "drop_classify_progress",
+        serde_json::json!({
+            "phase": "done",
+            "currentItem": &base_path_label,
+            "processed": 1,
+            "total": 1,
+        }),
+    );
     Ok(instances
         .into_iter()
         .map(|i| ScannedInstance {

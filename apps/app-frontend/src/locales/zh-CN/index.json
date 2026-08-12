@@ -3827,6 +3827,15 @@
 	"drop.help.resource-packs-formats": {
 		"message": "格式：.zip"
 	},
+	"drop.help.data-packs-title": {
+		"message": "数据包"
+	},
+	"drop.help.data-packs-desc": {
+		"message": "拖放数据包 ZIP 文件来安装到世界的 datapacks 文件夹。"
+	},
+	"drop.help.data-packs-formats": {
+		"message": "格式：.zip"
+	},
 	"drop.help.shader-packs-title": {
 		"message": "光影包"
 	},

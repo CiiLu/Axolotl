@@ -12,8 +12,9 @@ use crate::{
         InstallPhaseDetails, InstallPhaseId, InstallProgress,
         InstallProgressReporter,
     },
+    launcher::download::LocalRuntimeSource,
     state::{
-        State,
+        ModLoader, State,
         instances::{
             adapters::sqlite::instance_rows,
             watcher::{unwatch_instance_folder, watch_instance_folder},
@@ -546,6 +547,14 @@ struct ImportJob {
     instance_path: Option<String>,
     reporter: InstallProgressReporter,
     symlink: bool,
+    overrides: ImportOverrides,
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct ImportOverrides {
+    pub game_version: Option<String>,
+    pub loader: Option<ModLoader>,
+    pub loader_version: Option<String>,
 }
 
 /// Imports an instance from a generic folder with config name resolution.
@@ -566,6 +575,7 @@ async fn import_configured_instance(
         job.reporter.clone(),
         details,
         job.symlink,
+        &job.overrides,
     )
     .await
 }
@@ -576,6 +586,7 @@ pub(crate) async fn import_instance_with_reporter(
     base_path: PathBuf,
     instance_folder: String,
     instance_path: Option<String>,
+    overrides: ImportOverrides,
     reporter: InstallProgressReporter,
     symlink: bool,
 ) -> crate::Result<()> {
@@ -587,6 +598,7 @@ pub(crate) async fn import_instance_with_reporter(
             instance_path,
             reporter,
             symlink,
+            overrides,
         },
         launcher_type,
     )
@@ -640,6 +652,7 @@ async fn import_via_launcher(
         instance_path,
         reporter,
         symlink,
+        overrides,
     } = job;
 
     match launcher_type {
@@ -705,6 +718,7 @@ async fn import_via_launcher(
                     reporter.clone(),
                     details,
                     *symlink,
+                    overrides,
                 )
                 .await
             } else {
@@ -730,6 +744,7 @@ async fn import_via_launcher(
                 reporter.clone(),
                 details,
                 *symlink,
+                overrides,
             )
             .await
         }
@@ -741,6 +756,7 @@ async fn import_via_launcher(
                 reporter.clone(),
                 details,
                 *symlink,
+                overrides,
             )
             .await
         }
@@ -1101,6 +1117,8 @@ pub(crate) async fn finish_import(
     details: InstallPhaseDetails,
     symlink: bool,
 ) -> crate::Result<()> {
+    let local_source = LocalRuntimeSource::discover(&dotminecraft);
+
     if symlink {
         let instance_path =
             crate::api::instance::get_full_path(instance_id).await?;
@@ -1204,8 +1222,9 @@ pub(crate) async fn finish_import(
         .await?;
     }
 
-    crate::launcher::install_minecraft_for_instance_id_with_reporter(
+    crate::launcher::install_minecraft_for_instance_id_with_local_source(
         instance_id,
+        local_source,
         false,
         Some(reporter),
     )

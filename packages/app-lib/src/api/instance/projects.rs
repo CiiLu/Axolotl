@@ -237,6 +237,7 @@ pub async fn add_project_from_path(
     instance_id: &str,
     path: &Path,
     project_type: Option<ProjectType>,
+    inner_base: Option<&str>,
 ) -> crate::Result<String> {
     if let Some(relative_path) =
         crate::api::curseforge::import_pending_manual_download_from_path(
@@ -254,6 +255,7 @@ pub async fn add_project_from_path(
         instance_id,
         path,
         project_type,
+        inner_base,
         &state,
     )
     .await;
@@ -269,12 +271,31 @@ pub async fn add_project_from_path(
 pub async fn import_world_save(
     instance_id: &str,
     source_path: &Path,
+    inner_base: Option<&str>,
 ) -> crate::Result<String> {
     let state = State::get().await?;
     crate::state::instances::commands::import_world_save(
         &state,
         instance_id,
         source_path,
+        inner_base,
+    )
+    .await
+}
+
+pub async fn install_datapack_to_world(
+    instance_id: &str,
+    world_path: &str,
+    source_path: &Path,
+    inner_base: Option<&str>,
+) -> crate::Result<String> {
+    let state = State::get().await?;
+    crate::state::instances::commands::install_datapack_to_world(
+        instance_id,
+        world_path,
+        source_path,
+        inner_base,
+        &state,
     )
     .await
 }

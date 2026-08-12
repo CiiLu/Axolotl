@@ -10,12 +10,12 @@
 			<div class="grid grid-cols-2 gap-3">
 				<BigOptionButton
 					v-for="option in visibleOptions"
-					:key="option.type"
+					:key="`${option.type}-${option.innerBase ?? ''}`"
 					:icon="option.icon"
 					:title="formatMessage(option.titleMsg)"
 					:description="formatMessage(option.descMsg)"
 					no-icon-border
-					@click="emit('confirm', option.type)"
+					@click="emit('confirm', option.type, option.innerBase)"
 				/>
 			</div>
 		</div>
@@ -50,6 +50,7 @@
 <script setup lang="ts">
 import {
 	BookIcon,
+	BracesIcon,
 	FolderOpenIcon,
 	GridIcon,
 	HelpCircleIcon,
@@ -136,6 +137,14 @@ const messages = defineMessages({
 		id: 'drop.confirm.as-resource-pack-desc',
 		defaultMessage: 'Install a resource pack to an instance',
 	},
+	dataPackTitle: {
+		id: 'drop.confirm.as-data-pack',
+		defaultMessage: 'Data Pack',
+	},
+	dataPackDesc: {
+		id: 'drop.confirm.as-data-pack-desc',
+		defaultMessage: 'Install a data pack to an save',
+	},
 	shaderPackTitle: {
 		id: 'drop.confirm.as-shader-pack',
 		defaultMessage: 'Shader Pack',
@@ -167,6 +176,7 @@ interface DropOption {
 	icon: Component
 	titleMsg: { id: string; defaultMessage: string }
 	descMsg: { id: string; defaultMessage: string }
+	innerBase?: string
 }
 
 const optionByType: Record<string, DropOption> = {
@@ -200,6 +210,12 @@ const optionByType: Record<string, DropOption> = {
 		titleMsg: messages.resourcePackTitle,
 		descMsg: messages.resourcePackDesc,
 	},
+	data_pack: {
+		type: 'data_pack',
+		icon: BracesIcon,
+		titleMsg: messages.dataPackTitle,
+		descMsg: messages.dataPackDesc,
+	},
 	shader_pack: {
 		type: 'shader_pack',
 		icon: SparklesIcon,
@@ -226,7 +242,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-	(e: 'confirm', type: string): void
+	(e: 'confirm', type: string, innerBase?: string): void
 	(e: 'cancel' | 'help'): void
 }>()
 
@@ -248,6 +264,7 @@ const OPTION_GROUPS: Record<string, string[]> = {
 	instance: ['instance'],
 	modpack: ['modpack'],
 	resource_pack: ['resource_pack'],
+	data_pack: ['data_pack'],
 	shader_pack: ['shader_pack'],
 	world_save: ['world_save'],
 	litematic: ['litematic'],
@@ -261,8 +278,17 @@ const OPTION_GROUPS: Record<string, string[]> = {
  * button correctly shows "This is not a Launcher" etc.
  */
 const detectedTypeName = computed((): string => {
-	const itemType = props.classification?.item_type
+	const classification = props.classification
+	const itemType = classification?.item_type
 	if (!itemType) return ''
+	if (itemType === 'resource_pack' && classification.candidates?.length === 1) {
+		const candidate = optionByType[classification.candidates[0]]
+		if (candidate) return formatMessage(candidate.titleMsg)
+	}
+	if (itemType === 'multiple' && classification.choices?.[0]) {
+		const choice = optionByType[classification.choices[0].itemType]
+		if (choice) return formatMessage(choice.titleMsg)
+	}
 	// Check display options first (content types)
 	const option = optionByType[itemType]
 	if (option) return formatMessage(option.titleMsg)
@@ -308,6 +334,16 @@ const visibleOptions = computed((): DropOption[] => {
 		const resolvedType = classification.resolved_to.item_type
 		debug('visibleOptions: shortcut_resolved, delegating to resolved type', { resolvedType })
 		if (resolvedType !== 'unknown' && resolvedType !== 'shortcut_resolved') {
+			if (resolvedType === 'resource_pack') {
+				const candidates = classification.resolved_to.candidates?.length
+					? classification.resolved_to.candidates
+					: ['resource_pack']
+				const result = candidates.map((c) => optionByType[c]).filter(Boolean)
+				debug('visibleOptions: result from shortcut resource pack candidates', {
+					types: result.map((o) => o.type),
+				})
+				return result
+			}
 			const keys = OPTION_GROUPS[resolvedType]
 			const result = keys ? keys.map((k) => optionByType[k]) : Object.values(optionByType)
 			debug('visibleOptions: result from shortcut delegation', { types: result.map((o) => o.type) })
@@ -327,6 +363,40 @@ const visibleOptions = computed((): DropOption[] => {
 		const result = OPTION_GROUPS.world_save.map((k) => optionByType[k])
 		debug('visibleOptions: world_save type, showing world only', {
 			types: result.map((o) => o.type),
+		})
+		return result
+	}
+
+	if (itemType === 'multiple' && classification.choices?.length) {
+		const result: DropOption[] = []
+		for (const choice of classification.choices) {
+			const baseOption = optionByType[choice.itemType]
+			if (!baseOption) continue
+			if (choice.itemType === 'resource_pack' && choice.candidates?.length) {
+				for (const candidate of choice.candidates) {
+					const candidateOption = optionByType[candidate]
+					if (candidateOption) {
+						result.push({ ...candidateOption, innerBase: choice.innerBase })
+					}
+				}
+			} else {
+				result.push({ ...baseOption, innerBase: choice.innerBase })
+			}
+		}
+		debug('visibleOptions: multiple choices', {
+			types: result.map((o) => o.type),
+		})
+		return result
+	}
+
+	if (itemType === 'resource_pack') {
+		const candidates = classification.candidates?.length
+			? classification.candidates
+			: ['resource_pack']
+		const result = candidates.map((c) => optionByType[c]).filter(Boolean)
+		debug('visibleOptions: resource pack candidates', {
+			candidates,
+			resultTypes: result.map((o) => o.type),
 		})
 		return result
 	}

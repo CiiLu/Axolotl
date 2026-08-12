@@ -422,8 +422,30 @@ export async function switch_project_version_with_dependencies(
 
 // Import a world save into an instance
 // Returns the imported world name
-export async function import_world_save(instanceId: string, sourcePath: string): Promise<string> {
-	return await invoke('plugin:instance|instance_import_world_save', { instanceId, sourcePath })
+export async function import_world_save(
+	instanceId: string,
+	sourcePath: string,
+	innerBase?: string,
+): Promise<string> {
+	return await invoke('plugin:instance|instance_import_world_save', {
+		instanceId,
+		sourcePath,
+		innerBase,
+	})
+}
+
+export async function install_datapack_to_world(
+	instanceId: string,
+	worldPath: string,
+	sourcePath: string,
+	innerBase?: string,
+): Promise<string> {
+	return await invoke('plugin:instance|instance_install_datapack_to_world', {
+		instanceId,
+		worldPath,
+		sourcePath,
+		innerBase,
+	})
 }
 
 // Add a project to an instance from a path + project_type
@@ -432,11 +454,13 @@ export async function add_project_from_path(
 	instanceId: string,
 	projectPath: string,
 	projectType?: ContentFileProjectType,
+	innerBase?: string,
 ): Promise<string> {
 	return await invoke('plugin:instance|instance_add_project_from_path', {
 		instanceId,
 		projectPath,
 		projectType,
+		innerBase,
 	})
 }
 

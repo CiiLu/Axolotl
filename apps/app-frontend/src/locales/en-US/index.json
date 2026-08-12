@@ -5933,6 +5933,15 @@
 	"drop.help.resource-packs-title": {
 		"message": "Resource Packs"
 	},
+	"drop.help.data-packs-desc": {
+		"message": "Drag data pack ZIP files to install them into a world's datapacks folder."
+	},
+	"drop.help.data-packs-formats": {
+		"message": ".zip"
+	},
+	"drop.help.data-packs-title": {
+		"message": "Data Packs"
+	},
 	"drop.help.schematics-desc": {
 		"message": "Drag .litematic files to import them as schematics."
 	},

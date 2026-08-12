@@ -4172,8 +4172,122 @@
 	"drop.symlink_method.cancel": {
 		"message": "取消"
 	},
+	"drop.symlink_method.reset_changes": {
+		"message": "重置更改"
+	},
 	"drop.symlink_method.confirm": {
 		"message": "确认"
+	},
+	"drop.symlink_method.next": {
+		"message": "下一步"
+	},
+	"drop.symlink_method.instance_nav_label": {
+		"message": "切换到 {name}"
+	},
+	"drop.symlink_method.detecting": {
+		"message": "检测中..."
+	},
+	"drop.symlink_method.game_version": {
+		"message": "游戏版本"
+	},
+	"drop.symlink_method.import_path": {
+		"message": "版本路径"
+	},
+	"drop.symlink_method.import_path_tooltip": {
+		"message": "导入路径"
+	},
+	"drop.symlink_method.instance": {
+		"message": "实例"
+	},
+	"drop.symlink_method.loader": {
+		"message": "加载器"
+	},
+	"drop.symlink_method.loader_type_unknown_tooltip": {
+		"message": "此版本安装有Mod，但未识别到加载器。"
+	},
+	"drop.symlink_method.loader_version": {
+		"message": "加载器版本"
+	},
+	"drop.symlink_method.loader_version_unknown_tooltip": {
+		"message": "未检测到加载器版本，将使用自定义版本。"
+	},
+	"drop.symlink_method.latest": {
+		"message": "最新"
+	},
+	"drop.symlink_method.method": {
+		"message": "导入方式"
+	},
+	"drop.symlink_method.missing": {
+		"message": "缺失"
+	},
+	"drop.symlink_method.missing_path": {
+		"message": "没有可用的导入路径"
+	},
+	"drop.symlink_method.not_available": {
+		"message": "不可用"
+	},
+	"drop.symlink_method.plan_failed": {
+		"message": "未能估算进度"
+	},
+	"drop.symlink_method.unrecognized": {
+		"message": "未识别"
+	},
+	"drop.symlink_method.custom": {
+		"message": "自定义"
+	},
+	"drop.symlink_method.custom_tooltip": {
+		"message": "通常您不应该自定义它，除非您确认它识别错误。"
+	},
+	"drop.symlink_method.runtime_root": {
+		"message": "根目录"
+	},
+	"drop.symlink_method.runtime_root_tooltip": {
+		"message": "Runtime 根目录"
+	},
+	"drop.symlink_method.search_game_version": {
+		"message": "搜索游戏版本"
+	},
+	"drop.symlink_method.search_loader_version": {
+		"message": "搜索加载器版本"
+	},
+	"drop.symlink_method.select_game_version": {
+		"message": "选择游戏版本"
+	},
+	"drop.symlink_method.select_instance": {
+		"message": "选择实例"
+	},
+	"drop.symlink_method.select_loader_version": {
+		"message": "选择加载器版本"
+	},
+	"drop.symlink_method.stats": {
+		"message": "估计"
+	},
+	"drop.symlink_method.stats_cache": {
+		"message": "缓存"
+	},
+	"drop.symlink_method.stats_cache_tooltip": {
+		"message": "Axolotl 缓存"
+	},
+	"drop.symlink_method.stats_local": {
+		"message": "复用"
+	},
+	"drop.symlink_method.stats_local_tooltip": {
+		"message": "本地复用"
+	},
+	"drop.symlink_method.stats_migrate": {
+		"message": "迁移"
+	},
+	"drop.symlink_method.stats_migrate_tooltip": {
+		"message": "需要迁移"
+	},
+	"drop.symlink_method.stats_files": {
+		"message": "{files} 个文件"
+	},
+	"drop.symlink_method.stats_network": {
+		"message": "下载"
+	},
+	"drop.symlink_method.stats_network_tooltip": {
+		"message": "需要下载"
 	},
 	"instances.updater-modal.search-compat": {
 		"message": "查找兼容版本"
@@ -4195,5 +4309,7 @@
 	},
 	"creation-flow.modal.import-instance.select-file.description": {
 		"defaultMessage": "导入整合包文件或启动器(HMCL、PCL)"
-	}
+	},
+	"drop.confirm.as-data-pack": "数据包",
+	"drop.confirm.as-data-pack-desc": "将数据包安装到存档"
 }

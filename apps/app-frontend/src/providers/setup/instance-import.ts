@@ -3,11 +3,16 @@ import { provideInstanceImport } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
 
 import {
+	cancel_import_plan,
 	get_default_launcher_path,
 	get_importable_instances,
 	import_instance,
+	start_import_plan,
 } from '@/helpers/import.js'
+import { import_plan_listener } from '@/helpers/events.js'
 import { wait_for_install_job } from '@/helpers/install'
+import { get_loader_versions } from '@/helpers/metadata.js'
+import { openPath } from '@/helpers/utils.js'
 
 export function setupInstanceImportProvider(notificationManager: AbstractWebNotificationManager) {
 	const { handleError } = notificationManager
@@ -44,6 +49,31 @@ export function setupInstanceImportProvider(notificationManager: AbstractWebNoti
 		async getImportableInstances(launcherName: string, path: string) {
 			return (await get_importable_instances(launcherName, path)) ?? []
 		},
+		async getLoaderVersions(loader: string, gameVersion: string) {
+			const manifest = await get_loader_versions(loader)
+			const gameVersions = manifest?.gameVersions ?? manifest?.game_versions ?? []
+			const versionGroups = manifest?.versionGroups ?? manifest?.version_groups ?? []
+			const entry = gameVersions.find(
+				(version) =>
+					(version.id ?? '').replace('${modrinth.gameVersion}', gameVersion) === gameVersion,
+			)
+			let loaders: any[] = []
+			if (entry) {
+				if (entry.versionGroup) {
+					loaders =
+						versionGroups.find((group) => group.id === entry.versionGroup)?.loaders ?? []
+				} else {
+					loaders = entry.loaders ?? entry.loader_versions ?? []
+				}
+			}
+			const versions = loaders.map((loaderVersion) => loaderVersion?.id ?? loaderVersion)
+			console.debug('[InstanceImport] loader versions', loader, gameVersion, versions.length)
+			return [...new Set(versions.filter((version) => typeof version === 'string' && version))]
+		},
+		openPath: (path) => openPath(path),
+		startImportPlan: (request) => start_import_plan(request),
+		cancelImportPlan: (requestId) => cancel_import_plan(requestId),
+		listenImportPlan: (callback) => import_plan_listener(callback),
 		async importInstances(selections) {
 			for (const sel of selections) {
 				for (let i = 0; i < sel.instanceNames.length; i++) {
@@ -54,8 +84,11 @@ export function setupInstanceImportProvider(notificationManager: AbstractWebNoti
 							sel.launcherType ?? sel.launcher,
 							sel.path,
 							instanceName,
-							false,
+							sel.symlink ?? false,
 							instancePath,
+							sel.gameVersion,
+							sel.loader,
+							sel.loaderVersion,
 						)
 						await wait_for_install_job(job.job_id)
 					} catch (error) {

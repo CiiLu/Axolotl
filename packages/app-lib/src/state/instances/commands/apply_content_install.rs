@@ -30,7 +30,10 @@ use modrinth_content_management::{
     ResolvedContent,
 };
 use std::path::{Path, PathBuf};
+use std::io::{Cursor, Write};
 use tracing::warn;
+use zip::write::SimpleFileOptions;
+use zip::CompressionMethod;
 
 pub(crate) struct ContentScope {
     pub instance: Instance,
@@ -780,8 +783,66 @@ pub(crate) async fn add_project_from_path(
     instance_id: &str,
     path: &Path,
     project_type: Option<ProjectType>,
+    inner_base: Option<&str>,
     state: &State,
 ) -> crate::Result<String> {
+    if let Some(inner_base) = inner_base {
+        let temp_dir = if is_zip_path(path) {
+            Some(tempfile::tempdir().map_err(|e| {
+                crate::ErrorKind::InputError(format!(
+                    "Failed to create temporary directory: {e}"
+                ))
+            })?)
+        } else {
+            None
+        };
+
+        let source = if let Some(temp_dir) = &temp_dir {
+            extract_zip_to_dir_async(path, temp_dir.path()).await?;
+            temp_dir.path().join(inner_base)
+        } else {
+            path.join(inner_base)
+        };
+
+        let result = if source.is_dir() {
+            let bytes = zip_directory(&source)?;
+            let file_name = source
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+                + ".zip";
+            add_project_bytes(
+                instance_id,
+                &file_name,
+                bytes,
+                None,
+                project_type,
+                ContentSourceKind::Local,
+                state,
+            )
+            .await
+        } else {
+            let file = io::read(&source).await?;
+            let file_name = source
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            add_project_bytes(
+                instance_id,
+                &file_name,
+                Bytes::from(file),
+                None,
+                project_type,
+                ContentSourceKind::Local,
+                state,
+            )
+            .await
+        };
+        return result;
+    }
+
     let file = io::read(path).await?;
     let file_name = path
         .file_name()
@@ -799,6 +860,183 @@ pub(crate) async fn add_project_from_path(
         state,
     )
     .await
+}
+
+fn is_zip_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| {
+            ext.eq_ignore_ascii_case("zip")
+                || ext.eq_ignore_ascii_case("mrpack")
+        })
+}
+
+fn zip_directory(path: &Path) -> crate::Result<Bytes> {
+    let Some(root_name) = path.file_name() else {
+        return Err(crate::ErrorKind::InputError(
+            "Cannot determine folder name for zipped pack".to_string(),
+        )
+        .into());
+    };
+    let mut files = Vec::new();
+    collect_zip_files(path, path, &mut files)?;
+
+    let mut cursor = Cursor::new(Vec::new());
+    {
+        let mut zip = zip::ZipWriter::new(&mut cursor);
+        let options = SimpleFileOptions::default()
+            .compression_method(CompressionMethod::Deflated);
+        for (absolute, relative) in files {
+            let name = format!(
+                "{}/{}",
+                root_name.to_string_lossy(),
+                relative.to_string_lossy().replace('\\', "/")
+            );
+            zip.start_file(name.as_str(), options).map_err(|e| {
+                crate::Error::from(crate::ErrorKind::InputError(format!(
+                    "Failed to start zip entry {name}: {e}"
+                )))
+            })?;
+            let bytes = std::fs::read(&absolute).map_err(|e| {
+                crate::Error::from(crate::ErrorKind::InputError(format!(
+                    "Failed to read {}: {e}",
+                    absolute.display()
+                )))
+            })?;
+            zip.write_all(&bytes).map_err(|e| {
+                crate::Error::from(crate::ErrorKind::InputError(format!(
+                    "Failed to write zip entry {name}: {e}"
+                )))
+            })?;
+        }
+        zip.finish().map_err(|e| {
+            crate::Error::from(crate::ErrorKind::InputError(format!(
+                "Failed to finalize zip: {e}"
+            )))
+        })?;
+    }
+    Ok(Bytes::from(cursor.into_inner()))
+}
+
+fn collect_zip_files(
+    root: &Path,
+    dir: &Path,
+    out: &mut Vec<(PathBuf, PathBuf)>,
+) -> crate::Result<()> {
+    let entries = std::fs::read_dir(dir).map_err(|e| {
+        crate::Error::from(crate::ErrorKind::InputError(format!(
+            "Failed to read {}: {e}",
+            dir.display()
+        )))
+    })?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let relative = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
+        if path.is_dir() {
+            collect_zip_files(root, &path, out)?;
+        } else {
+            out.push((path, relative));
+        }
+    }
+    Ok(())
+}
+
+pub(crate) async fn install_datapack_to_world(
+    instance_id: &str,
+    world_path: &str,
+    path: &Path,
+    inner_base: Option<&str>,
+    state: &State,
+) -> crate::Result<String> {
+    let scope = resolve_content_scope(instance_id, None, state).await?;
+    let world_path = sanitize_world_path(world_path)?;
+    let datapacks_dir = instance_full_path(state, &scope.instance)
+        .join("saves")
+        .join(&world_path)
+        .join("datapacks");
+    io::create_dir_all(&datapacks_dir).await?;
+
+    let temp_dir = if path.is_dir() {
+        None
+    } else if is_zip_path(path) {
+        Some(tempfile::tempdir().map_err(|e| {
+            crate::ErrorKind::InputError(format!(
+                "Failed to create temporary directory: {e}"
+            ))
+        })?)
+    } else {
+        None
+    };
+
+    let source = if let Some(temp_dir) = &temp_dir {
+        extract_zip_to_dir_async(path, temp_dir.path()).await?;
+        inner_base
+            .map(|base| temp_dir.path().join(base))
+            .unwrap_or_else(|| temp_dir.path().to_path_buf())
+    } else if let Some(inner_base) = inner_base {
+        path.join(inner_base)
+    } else {
+        path.to_path_buf()
+    };
+
+    let (bytes, file_name) = if source.is_dir() {
+        let bytes = zip_directory(&source)?;
+        let name = source
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        (bytes, format!("{name}.zip"))
+    } else {
+        let bytes = Bytes::from(io::read(&source).await?);
+        let name = source
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        (bytes, name)
+    };
+
+    let file_name = sanitize_file_name(&file_name);
+    let full_path = datapacks_dir.join(&file_name);
+    fetch::write(&full_path, &bytes, &state.io_semaphore).await?;
+    Ok(format!("saves/{world_path}/datapacks/{file_name}"))
+}
+
+fn sanitize_world_path(world_path: &str) -> crate::Result<String> {
+    let normalized = world_path.replace('\\', "/");
+    let mut safe = Vec::new();
+    for segment in normalized.split('/') {
+        if segment.is_empty() || segment == "." {
+            continue;
+        }
+        if segment == ".." || segment.contains(':') {
+            return Err(crate::ErrorKind::InputError(
+                "Invalid world path".to_string(),
+            )
+            .into());
+        }
+        safe.push(segment);
+    }
+    if safe.is_empty() {
+        return Err(crate::ErrorKind::InputError(
+            "World path is empty".to_string(),
+        )
+        .into());
+    }
+    Ok(safe.join("/"))
+}
+
+fn sanitize_file_name(file_name: &str) -> String {
+    let name = Path::new(file_name)
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| "datapack.zip".to_string());
+    if name.is_empty() {
+        "datapack.zip".to_string()
+    } else {
+        name
+    }
 }
 
 pub(crate) async fn add_project_bytes(
@@ -906,9 +1144,10 @@ enum WrappedPackPlan {
     Children { children: Vec<String> },
 }
 
-/// Detect whether `bytes` is a resource/shader pack ZIP wrapped in a single
-/// top-level folder. Returns the install plan, or `None` for flat archives,
-/// other content types and mixed layouts (which are installed as-is).
+/// Detect whether `bytes` is a resource/data/shader pack ZIP wrapped in a
+/// single top-level folder. Returns the install plan, or `None` for flat
+/// archives, other content types and mixed layouts (which are installed
+/// as-is).
 fn wrapped_pack_plan(
     bytes: &[u8],
     project_type: ProjectType,
@@ -917,7 +1156,9 @@ fn wrapped_pack_plan(
 
     if !matches!(
         project_type,
-        ProjectType::ResourcePack | ProjectType::ShaderPack
+        ProjectType::ResourcePack
+            | ProjectType::DataPack
+            | ProjectType::ShaderPack
     ) {
         return None;
     }
@@ -936,7 +1177,7 @@ fn wrapped_pack_plan(
         let pack_mcmeta = format!("{prefix}pack.mcmeta");
         let shaders = format!("{prefix}shaders/");
         match project_type {
-            ProjectType::ResourcePack => {
+            ProjectType::ResourcePack | ProjectType::DataPack => {
                 names.iter().any(|name| name == &pack_mcmeta)
             }
             ProjectType::ShaderPack => names.iter().any(|name| {
@@ -1012,9 +1253,9 @@ fn wrapped_pack_plan(
     Some(WrappedPackPlan::Children { children })
 }
 
-/// Materialize a wrapped resource/shader pack into the instance's
-/// `resourcepacks/` / `shaderpacks/` folder by extracting it (no
-/// recompression). Returns the relative path of the installed pack.
+/// Materialize a wrapped resource/data/shader pack into the instance's
+/// `resourcepacks/` / `datapacks/` / `shaderpacks/` folder by extracting it
+/// (no recompression). Returns the relative path of the installed pack.
 async fn install_wrapped_pack(
     bytes: &Bytes,
     plan: &WrappedPackPlan,

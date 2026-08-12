@@ -13,7 +13,7 @@ use crate::{
     util::io,
 };
 
-use super::{finish_import, generic, recache_icon};
+use super::{ImportOverrides, finish_import, generic, recache_icon};
 
 const CONFIG_FILE_NAME: &str = "axolotl_config.json";
 const CONFIG_SCHEMA_VERSION: u32 = 1;
@@ -54,6 +54,7 @@ pub(crate) async fn import_axolotl(
     reporter: InstallProgressReporter,
     details: InstallPhaseDetails,
     symlink: bool,
+    overrides: &ImportOverrides,
 ) -> crate::Result<()> {
     let config_path = source_path.join(CONFIG_FILE_NAME);
     let content = io::read_any_encoding_to_string(&config_path)
@@ -80,6 +81,7 @@ pub(crate) async fn import_axolotl(
                 reporter,
                 details,
                 symlink,
+                overrides,
             )
             .await;
         }
@@ -105,6 +107,7 @@ pub(crate) async fn import_axolotl(
             reporter,
             details,
             symlink,
+            overrides,
         )
         .await;
     }

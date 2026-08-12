@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::instance_json;
+use super::{ImportOverrides, instance_json};
 use crate::{
     State,
     install::{InstallPhaseDetails, InstallProgressReporter},
@@ -26,9 +26,10 @@ pub async fn import_generic(
     reporter: InstallProgressReporter,
     details: InstallPhaseDetails,
     symlink: bool,
+    overrides: &ImportOverrides,
 ) -> crate::Result<()> {
     let (name, dotminecraft) = resolve_dotminecraft(&instance_folder);
-    let info = detect_instance_info(&dotminecraft).await?;
+    let info = detect_instance_info(&dotminecraft, overrides).await?;
     register_instance(instance_id, &name, &info).await?;
     copy_instance_files(instance_id, &dotminecraft, reporter, details, symlink)
         .await
@@ -62,22 +63,66 @@ fn resolve_dotminecraft(instance_folder: &Path) -> (String, PathBuf) {
 /// Stage 2 — validate the folder contains a Minecraft version JSON.
 async fn detect_instance_info(
     dotminecraft: &Path,
+    overrides: &ImportOverrides,
 ) -> crate::Result<instance_json::InstanceInfo> {
     tracing::debug!(
         "import_generic: about to detect instance_json at dotminecraft={}",
         dotminecraft.display()
     );
-    instance_json::detect(dotminecraft).ok_or_else(|| {
-        tracing::warn!(
-            "import_generic: instance_json::detect returned None for {}",
-            dotminecraft.display()
-        );
-        crate::ErrorKind::InputError(
-            "Could not detect Minecraft version. Make sure the folder contains a valid version JSON."
-                .into(),
-        )
-        .into()
-    })
+    let Some(mut info) = instance_json::detect(dotminecraft) else {
+        let Some(game_version) = overrides
+            .game_version
+            .as_ref()
+            .filter(|version| !version.trim().is_empty())
+        else {
+            tracing::warn!(
+                "import_generic: instance_json::detect returned None for {}",
+                dotminecraft.display()
+            );
+            return Err(crate::ErrorKind::InputError(
+                "Could not detect Minecraft version. Make sure the folder contains a valid version JSON."
+                    .into(),
+            )
+            .into());
+        };
+        return Ok(instance_json::InstanceInfo {
+            vanilla_name: game_version.clone(),
+            loader: overrides
+                .loader
+                .filter(|loader| *loader != ModLoader::Vanilla)
+                .map(|loader| loader.as_str().to_string()),
+            loader_version: overrides
+                .loader_version
+                .clone()
+                .filter(|version| !version.is_empty() && version != "latest"),
+        });
+    };
+
+    if let Some(game_version) = overrides
+        .game_version
+        .as_ref()
+        .filter(|version| !version.trim().is_empty())
+    {
+        info.vanilla_name.clone_from(game_version);
+    }
+    if let Some(loader) = overrides.loader {
+        if loader == ModLoader::Vanilla {
+            info.loader = None;
+            info.loader_version = None;
+        } else {
+            info.loader = Some(loader.as_str().to_string());
+            info.loader_version = None;
+        }
+    }
+    if let Some(loader_version) = overrides
+        .loader_version
+        .as_ref()
+        .filter(|version| !version.is_empty() && *version != "latest")
+    {
+        info.loader_version = Some(loader_version.clone());
+    }
+
+    Ok(info)
 }
 
 /// Stage 3 — register the instance metadata (name, game version, loaders)
@@ -180,7 +225,11 @@ fn loader_dependency(loader: &str) -> Option<PackDependency> {
 async fn resolve_loader_version(
     info: &instance_json::InstanceInfo,
 ) -> Option<String> {
-    if info.loader_version.is_some() {
+    if info
+        .loader_version
+        .as_deref()
+        .is_some_and(|version| !version.is_empty() && version != "latest")
+    {
         return info.loader_version.clone();
     }
     let loader = info.loader.as_deref()?;
@@ -284,5 +333,61 @@ mod tests {
         ] {
             assert_eq!(loader_dependency(loader), None, "{loader}");
         }
+    }
+
+    #[tokio::test]
+    async fn detect_overrides_replace_missing_detection() {
+        let directory = tempfile::tempdir().unwrap();
+        let overrides = ImportOverrides {
+            game_version: Some("1.20.1".to_string()),
+            loader: Some(ModLoader::Fabric),
+            loader_version: Some("0.15.11".to_string()),
+        };
+
+        let info = detect_instance_info(directory.path(), &overrides)
+            .await
+            .unwrap();
+
+        assert_eq!(info.vanilla_name, "1.20.1");
+        assert_eq!(info.loader.as_deref(), Some("fabric"));
+        assert_eq!(info.loader_version.as_deref(), Some("0.15.11"));
+    }
+
+    #[tokio::test]
+    async fn detect_overrides_ignore_blank_and_latest_loader_version() {
+        let directory = tempfile::tempdir().unwrap();
+        for loader_version in ["", "latest"] {
+            let overrides = ImportOverrides {
+                game_version: Some("1.20.1".to_string()),
+                loader: Some(ModLoader::Fabric),
+                loader_version: Some(loader_version.to_string()),
+            };
+
+            let info = detect_instance_info(directory.path(), &overrides)
+                .await
+                .unwrap();
+
+            assert_eq!(info.loader_version, None);
+        }
+    }
+
+    #[tokio::test]
+    async fn build_dependencies_uses_override_values() {
+        let info = instance_json::InstanceInfo {
+            vanilla_name: "1.20.1".to_string(),
+            loader: Some("fabric".to_string()),
+            loader_version: Some("0.15.11".to_string()),
+        };
+
+        let dependencies = build_dependencies(&info).await;
+
+        assert_eq!(
+            dependencies.get(&PackDependency::Minecraft),
+            Some(&"1.20.1".to_string())
+        );
+        assert_eq!(
+            dependencies.get(&PackDependency::FabricLoader),
+            Some(&"0.15.11".to_string())
+        );
     }
 }

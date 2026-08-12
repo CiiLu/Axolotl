@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use theseus::data::ModLoader;
 use theseus::install::{
-    InstallJobSnapshot, InstallModpackPreview, InstallPostInstallEdit,
+    ImportPlanRequest, InstallJobSnapshot, InstallModpackPreview,
+    InstallPostInstallEdit,
 };
 use theseus::pack::import::ImportLauncherType;
 use theseus::pack::install_from::CreatePackLocation;
@@ -17,6 +18,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             install_create_instance,
             install_create_modpack_instance,
             install_import_instance,
+            install_start_import_plan,
+            install_cancel_import_plan,
             install_duplicate_instance,
             install_existing_instance,
             install_pack_to_existing_instance,
@@ -121,9 +124,12 @@ pub async fn install_import_instance(
     instance_folder: String,
     instance_path: Option<String>,
     symlink: bool,
+    game_version: Option<String>,
+    loader: Option<ModLoader>,
+    loader_version: Option<String>,
 ) -> Result<InstallJobSnapshot> {
     tracing::debug!(
-        "install_import_instance called: launcher_type={launcher_type:?} base_path={} instance_folder={} instance_path={:?} symlink={symlink}",
+        "install_import_instance called: launcher_type={launcher_type:?} base_path={} instance_folder={} instance_path={:?} symlink={symlink} game_version={game_version:?} loader={loader:?} loader_version={loader_version:?}",
         base_path.display(),
         instance_folder,
         instance_path,
@@ -142,14 +148,29 @@ pub async fn install_import_instance(
         ))
         .into());
     }
-    Ok(theseus::install::import_instance_with_path(
+    Ok(theseus::install::import_instance_with_plan(
         launcher_type,
         base_path,
         instance_folder,
         instance_path,
         symlink,
+        game_version,
+        loader,
+        loader_version,
     )
     .await?)
+}
+
+#[tauri::command]
+pub async fn install_start_import_plan(
+    request: ImportPlanRequest,
+) -> Result<String> {
+    Ok(theseus::install::start_import_plan(request)?)
+}
+
+#[tauri::command]
+pub async fn install_cancel_import_plan(request_id: String) -> Result<()> {
+    Ok(theseus::install::cancel_import_plan(&request_id).await?)
 }
 
 #[tauri::command]

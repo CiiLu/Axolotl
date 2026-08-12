@@ -15,8 +15,16 @@ pub async fn import_world_save(
     _state: &State,
     instance_id: &str,
     source_path: &Path,
+    inner_base: Option<&str>,
 ) -> Result<String> {
     let instance_id_str = instance_id.to_string();
+    let resolved_source = if source_path.is_dir() {
+        inner_base
+            .map(|base| source_path.join(base))
+            .unwrap_or_else(|| source_path.to_path_buf())
+    } else {
+        source_path.to_path_buf()
+    };
 
     // Resolve the instance's saves directory.
     let instance_path =
@@ -24,9 +32,9 @@ pub async fn import_world_save(
     let saves_dir = instance_path.join("saves");
 
     // Determine the world folder name and source type.
-    let (world_name, source_is_zip) = if source_path.is_dir() {
+    let (world_name, source_is_zip) = if resolved_source.is_dir() {
         // Direct folder: use the folder name as the world name.
-        let name = source_path
+        let name = resolved_source
             .file_name()
             .ok_or_else(|| {
                 ErrorKind::InputError(
@@ -36,12 +44,12 @@ pub async fn import_world_save(
             .to_string_lossy()
             .to_string();
         (name, false)
-    } else if source_path.is_file() {
+    } else if resolved_source.is_file() {
         // Check if it's a ZIP archive by examining the file signature.
-        let is_zip = is_zip_file(source_path).await?;
+        let is_zip = is_zip_file(&resolved_source).await?;
         if is_zip {
             // ZIP file: use the file stem as the world name.
-            let name = source_path
+            let name = resolved_source
                 .file_stem()
                 .ok_or_else(|| {
                     ErrorKind::InputError(
@@ -81,7 +89,7 @@ pub async fn import_world_save(
 
     if source_is_zip {
         // Extract ZIP archive to the target directory.
-        extract_world_zip(source_path, &target_dir).await?;
+        extract_world_zip(&resolved_source, &target_dir).await?;
         // Deep-nesting fallback: the archive may wrap the world in backup
         // folders or even inside another ZIP. Hoist the first `level.dat`'s
         // folder to the target root, extracting nested archives as needed.
@@ -100,7 +108,7 @@ pub async fn import_world_save(
         })?;
     } else {
         // Copy the folder recursively.
-        io::copy_dir(source_path, &target_dir).await?;
+        io::copy_dir(&resolved_source, &target_dir).await?;
     }
 
     // Verify that the extracted/copied world has a level.dat file.

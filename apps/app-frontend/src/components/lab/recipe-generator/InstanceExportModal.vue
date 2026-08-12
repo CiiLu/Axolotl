@@ -38,6 +38,10 @@ const emit = defineEmits<{
 	saveAs: []
 }>()
 
+const props = withDefaults(defineProps<{ showSaveAs?: boolean }>(), {
+	showSaveAs: true,
+})
+
 const { formatMessage, locale } = useVIntl()
 const formatRelativeTime = useRelativeTime()
 const modal = useTemplateRef<InstanceType<typeof NewModal>>('modal')
@@ -277,7 +281,7 @@ defineExpose({ show })
 		</div>
 
 		<template #actions>
-			<div class="flex justify-end">
+			<div v-if="showSaveAs" class="flex justify-end">
 				<ButtonStyled color="brand">
 					<button type="button" @click="saveAs">
 						<SaveIcon />{{ formatMessage(messages.saveAs) }}

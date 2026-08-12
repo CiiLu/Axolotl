@@ -7,7 +7,7 @@ use crate::install::{
     InstallProgressReporter,
 };
 use crate::instance::QuickPlayType;
-use crate::launcher::download::download_log_config;
+use crate::launcher::download::{LocalRuntimeSource, download_log_config};
 use crate::launcher::io::IOError;
 use crate::launcher::quick_play_version::{
     QuickPlayServerVersion, QuickPlayVersion,
@@ -529,6 +529,16 @@ pub async fn install_minecraft_with_reporter(
     repairing: bool,
     reporter: Option<InstallProgressReporter>,
 ) -> crate::Result<()> {
+    install_minecraft_with_local_source(context, repairing, reporter, None)
+        .await
+}
+
+async fn install_minecraft_with_local_source(
+    context: &InstanceLaunchContext,
+    repairing: bool,
+    reporter: Option<InstallProgressReporter>,
+    local_source: Option<&LocalRuntimeSource>,
+) -> crate::Result<()> {
     let instance = &context.instance;
     let content_set = &context.applied_content_set;
     let phase_details = InstallPhaseDetails::Minecraft {
@@ -722,6 +732,8 @@ pub async fn install_minecraft_with_reporter(
     }
     download::download_minecraft(
         &state,
+        local_source,
+        &content_set.game_version,
         &version_info,
         loading_bar.as_ref(),
         java_version
@@ -1022,6 +1034,34 @@ pub async fn install_minecraft_for_instance_id_with_reporter(
     install_minecraft_with_reporter(&context, repairing, reporter).await
 }
 
+pub async fn install_minecraft_for_instance_id_with_local_source(
+    instance_id: &str,
+    local_source: Option<LocalRuntimeSource>,
+    repairing: bool,
+    reporter: Option<InstallProgressReporter>,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    let context =
+        crate::state::instances::commands::get_instance_launch_context(
+            instance_id,
+            &state.pool,
+        )
+        .await?
+        .ok_or_else(|| {
+            crate::ErrorKind::OtherError(format!(
+                "Tried to install a nonexistent or unloaded instance {instance_id}!"
+            ))
+        })?;
+
+    install_minecraft_with_local_source(
+        &context,
+        repairing,
+        reporter,
+        local_source.as_ref(),
+    )
+    .await
+}
+
 pub async fn read_protocol_version_from_jar(
     path: PathBuf,
 ) -> crate::Result<Option<u32>> {
@@ -1204,8 +1244,9 @@ pub async fn launch_minecraft(
     if offline_mode {
         download::ensure_local_log_config(&state, &version_info)?;
     } else {
-        let _ = download_log_config(&state, &version_info, None, false, None)
-            .await?;
+        let _ =
+            download_log_config(&state, None, &version_info, None, false, None)
+                .await?;
     }
 
     let java_version = if let Some(java) =

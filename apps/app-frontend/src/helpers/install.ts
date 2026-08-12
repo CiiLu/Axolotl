@@ -262,6 +262,40 @@ export type DownloadRequestUpdate =
 	| { type: 'finished'; job_id: string; id: string; bytes: number }
 	| { type: 'failed'; job_id: string; id: string }
 
+export type ImportPlanStage = 'resolving' | 'scanning' | 'done' | 'error'
+
+export interface ImportPlanCounts {
+	files: number
+	bytes: number
+}
+
+export interface ImportPlanSnapshot {
+	requestId: string
+	stage: ImportPlanStage
+	gameVersion: string | null
+	loader: string | null
+	loaderVersion: string | null
+	importPath: string
+	minecraftRoot: string
+	modCount: number
+	cache: ImportPlanCounts
+	local: ImportPlanCounts
+	network: ImportPlanCounts
+	migrate: ImportPlanCounts
+	error?: string | null
+}
+
+export interface ImportPlanRequest {
+	requestId: string
+	launcherType: string
+	basePath: string
+	instanceFolder: string
+	instancePath?: string | null
+	gameVersion?: string | null
+	loader?: string | null
+	loaderVersion?: string | null
+}
+
 export async function install_get_modpack_preview(location: CreatePackLocation) {
 	return await invoke<InstallModpackPreview>('plugin:install|install_get_modpack_preview', {
 		location,
@@ -288,6 +322,9 @@ export async function install_import_instance(
 	instanceFolder: string,
 	symlink?: boolean,
 	instancePath?: string,
+	gameVersion?: string | null,
+	loader?: string | null,
+	loaderVersion?: string | null,
 ) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_import_instance', {
 		launcherType,
@@ -295,7 +332,18 @@ export async function install_import_instance(
 		instanceFolder,
 		instancePath,
 		symlink,
+		gameVersion,
+		loader,
+		loaderVersion,
 	})
+}
+
+export async function install_start_import_plan(request: ImportPlanRequest) {
+	return await invoke<string>('plugin:install|install_start_import_plan', { request })
+}
+
+export async function install_cancel_import_plan(requestId: string) {
+	return await invoke<void>('plugin:install|install_cancel_import_plan', { requestId })
 }
 
 export async function install_duplicate_instance(sourceInstanceId: string) {

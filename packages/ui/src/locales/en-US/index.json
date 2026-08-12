@@ -1112,8 +1112,17 @@
 	"drop.symlink_method.cancel": {
 		"defaultMessage": "Cancel"
 	},
+	"drop.symlink_method.reset_changes": {
+		"defaultMessage": "Reset changes"
+	},
 	"drop.symlink_method.confirm": {
 		"defaultMessage": "Confirm"
+	},
+	"drop.symlink_method.next": {
+		"defaultMessage": "Next"
+	},
+	"drop.symlink_method.instance_nav_label": {
+		"defaultMessage": "Switch to {name}"
 	},
 	"drop.symlink_method.copy_desc": {
 		"defaultMessage": "Copy to Axolotl directory"
@@ -1124,8 +1133,113 @@
 	"drop.symlink_method.copy_title": {
 		"defaultMessage": "Copy files"
 	},
+	"drop.symlink_method.detecting": {
+		"defaultMessage": "Detecting..."
+	},
+	"drop.symlink_method.game_version": {
+		"defaultMessage": "Game version"
+	},
+	"drop.symlink_method.import_path": {
+		"defaultMessage": "Version path"
+	},
+	"drop.symlink_method.import_path_tooltip": {
+		"defaultMessage": "Import path"
+	},
+	"drop.symlink_method.instance": {
+		"defaultMessage": "Instance"
+	},
+	"drop.symlink_method.loader": {
+		"defaultMessage": "Loader"
+	},
+	"drop.symlink_method.loader_type_unknown_tooltip": {
+		"defaultMessage": "Loader not recognized. Mods may not load correctly."
+	},
+	"drop.symlink_method.loader_version": {
+		"defaultMessage": "Loader version"
+	},
+	"drop.symlink_method.loader_version_unknown_tooltip": {
+		"defaultMessage": "Loader version not detected. A custom version will be used."
+	},
+	"drop.symlink_method.latest": {
+		"defaultMessage": "Latest"
+	},
+	"drop.symlink_method.method": {
+		"defaultMessage": "Import method"
+	},
+	"drop.symlink_method.missing": {
+		"defaultMessage": "Missing"
+	},
+	"drop.symlink_method.missing_path": {
+		"defaultMessage": "No import path available"
+	},
+	"drop.symlink_method.not_available": {
+		"defaultMessage": "Unavailable"
+	},
+	"drop.symlink_method.plan_failed": {
+		"defaultMessage": "Import estimate failed"
+	},
+	"drop.symlink_method.unrecognized": {
+		"defaultMessage": "Unrecognized"
+	},
+	"drop.symlink_method.custom": {
+		"defaultMessage": "Custom"
+	},
+	"drop.symlink_method.custom_tooltip": {
+		"defaultMessage": "Usually you should not customize it, unless you are sure it was detected incorrectly."
+	},
 	"drop.symlink_method.requires_admin": {
 		"defaultMessage": "Administrator authorization (UAC) will be requested once when creating the link"
+	},
+	"drop.symlink_method.runtime_root": {
+		"defaultMessage": "Root"
+	},
+	"drop.symlink_method.runtime_root_tooltip": {
+		"defaultMessage": "Runtime root"
+	},
+	"drop.symlink_method.search_game_version": {
+		"defaultMessage": "Search game versions"
+	},
+	"drop.symlink_method.search_loader_version": {
+		"defaultMessage": "Search loader versions"
+	},
+	"drop.symlink_method.select_game_version": {
+		"defaultMessage": "Select game version"
+	},
+	"drop.symlink_method.select_instance": {
+		"defaultMessage": "Select instance"
+	},
+	"drop.symlink_method.select_loader_version": {
+		"defaultMessage": "Select loader version"
+	},
+	"drop.symlink_method.stats": {
+		"defaultMessage": "Estimate"
+	},
+	"drop.symlink_method.stats_cache": {
+		"defaultMessage": "Cache"
+	},
+	"drop.symlink_method.stats_cache_tooltip": {
+		"defaultMessage": "Axolotl cache"
+	},
+	"drop.symlink_method.stats_local": {
+		"defaultMessage": "Reuse"
+	},
+	"drop.symlink_method.stats_local_tooltip": {
+		"defaultMessage": "Local reuse"
+	},
+	"drop.symlink_method.stats_migrate": {
+		"defaultMessage": "Migrate"
+	},
+	"drop.symlink_method.stats_migrate_tooltip": {
+		"defaultMessage": "Needs migration"
+	},
+	"drop.symlink_method.stats_files": {
+		"defaultMessage": "{files} files"
+	},
+	"drop.symlink_method.stats_network": {
+		"defaultMessage": "Download"
+	},
+	"drop.symlink_method.stats_network_tooltip": {
+		"defaultMessage": "Needs download"
 	},
 	"drop.symlink_method.subtitle": {
 		"defaultMessage": "Importing {n} instance(s)"

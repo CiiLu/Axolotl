@@ -73,6 +73,9 @@ pub async fn import_instance(
         instance_folder,
         instance_path: None,
         symlink,
+        game_version: None,
+        loader: None,
+        loader_version: None,
     })
     .await
 }
@@ -93,6 +96,32 @@ pub async fn import_instance_with_path(
         instance_folder,
         instance_path,
         symlink,
+        game_version: None,
+        loader: None,
+        loader_version: None,
+    })
+    .await
+}
+
+pub async fn import_instance_with_plan(
+    launcher_type: crate::api::pack::import::ImportLauncherType,
+    base_path: PathBuf,
+    instance_folder: String,
+    instance_path: Option<String>,
+    symlink: bool,
+    game_version: Option<String>,
+    loader: Option<crate::state::ModLoader>,
+    loader_version: Option<String>,
+) -> crate::Result<InstallJobSnapshot> {
+    start(InstallRequest::ImportInstance {
+        launcher_type,
+        base_path,
+        instance_folder,
+        instance_path,
+        symlink,
+        game_version,
+        loader,
+        loader_version,
     })
     .await
 }
@@ -986,6 +1015,9 @@ async fn run_request(
             instance_folder,
             instance_path,
             symlink,
+            game_version,
+            loader,
+            loader_version,
         } => {
             tracing::debug!(
                 "InstallRequest::ImportInstance: launcher_type={launcher_type} base_path={} instance_folder={instance_folder} symlink={symlink}",
@@ -1014,6 +1046,14 @@ async fn run_request(
                 base_path,
                 instance_folder,
                 instance_path,
+                crate::api::pack::import::ImportOverrides {
+                    game_version,
+                    loader,
+                    loader_version,
+                },
+                // TODO(B2): apply overrides to launcher-specific importers
+                // (MultiMC/Prism/ATLauncher/GDLauncher/Curseforge/ModrinthApp);
+                // generic/PCL/HMCL/Axolotl paths already consume them.
                 InstallProgressReporter::new(job_id, job_state.clone()),
                 symlink,
             )
@@ -1832,6 +1872,7 @@ async fn install_local_pack_file(
                 reporter,
                 details,
                 false,
+                &crate::api::pack::import::ImportOverrides::default(),
             )
             .await?;
         }

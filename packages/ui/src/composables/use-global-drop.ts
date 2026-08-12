@@ -19,8 +19,11 @@ export interface ClassificationResult {
 		| 'shader_pack'
 		| 'world_save'
 		| 'shortcut_resolved'
+		| 'multiple'
 		| 'unknown'
 	file_path?: string
+	candidates?: string[]
+	choices?: ClassificationChoice[]
 	launcher_type?: string
 	base_path?: string
 	/** For ZIP sources, the virtual folder inside the archive where launcher
@@ -32,6 +35,13 @@ export interface ClassificationResult {
 	original?: string
 	resolved_to?: ClassificationResult
 	reason?: string
+}
+
+export interface ClassificationChoice {
+	itemType: string
+	filePath?: string
+	innerBase?: string
+	candidates?: string[]
 }
 
 export interface UseGlobalDropOptions {

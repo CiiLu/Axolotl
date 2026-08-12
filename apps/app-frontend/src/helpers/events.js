@@ -86,6 +86,14 @@ export async function install_job_listener(callback) {
 	return await listen('install_job', (event) => callback(event.payload))
 }
 
+export async function import_plan_listener(callback) {
+	return await listen('import_plan', (event) => callback(event.payload))
+}
+
+export async function drop_classify_progress_listener(callback) {
+	return await listen('drop_classify_progress', (event) => callback(event.payload))
+}
+
 export async function download_request_listener(callback) {
 	return await listen('download_request', (event) => callback(event.payload))
 }

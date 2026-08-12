@@ -952,6 +952,12 @@ pub enum InstallRequest {
         instance_path: Option<String>,
         #[serde(default)]
         symlink: bool,
+        #[serde(default)]
+        game_version: Option<String>,
+        #[serde(default)]
+        loader: Option<ModLoader>,
+        #[serde(default)]
+        loader_version: Option<String>,
     },
     DuplicateInstance {
         source_instance_id: String,

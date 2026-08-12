@@ -46,6 +46,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Changed the implementation of automatic switching of instance icons.',
 					'zh-CN': '更改了自动切换实例图标的实现方式。',
 				},
+				{
+					'en-US': 'Refactored the interface for importing instances.',
+					'zh-CN': '重构导入实例的界面。',
+				},
 			],
 			added: [
 				{
@@ -61,6 +65,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Added a setting for configuring the Mojang authentication service mirror for all possible locations.',
 					'zh-CN': '为所有可能的地方配置了Mojang service换源设置。',
+				},
+				{
+					'en-US': 'Added support for automatic import of datapacks.',
+					'zh-CN': '添加对数据包的自动导入支持。',
 				},
 			],
 			fixed: [
