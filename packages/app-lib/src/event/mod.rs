@@ -210,6 +210,7 @@ pub struct JavaDiscoveryPayload {
 }
 
 #[derive(Serialize, Clone)]
+#[cfg(feature = "tauri")]
 #[serde(rename_all = "camelCase")]
 pub struct JavaDownloadConfirmationPayload {
     pub request_id: Uuid,

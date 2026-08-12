@@ -778,11 +778,10 @@ pub async fn create_symlink(
         ));
     }
 
-    let is_dir = target.is_dir();
     let link_target = target.clone();
     let link_path = link.clone();
     let result = spawn_blocking(move || {
-        super::symlink::create_link_blocking(&link_target, &link_path, is_dir)
+        super::symlink::create_link_blocking(&link_target, &link_path)
     })
     .await
     .map_err(|e| {
@@ -803,11 +802,9 @@ pub async fn create_symlink(
                 // Developer Mode is off. Run the creation in a short-lived
                 // elevated helper process (UAC prompt) instead of elevating
                 // the launcher itself, which would break drag-and-drop.
-                return super::symlink::create_link_elevated(
-                    &target, &link, is_dir,
-                )
-                .await
-                .map_err(|e| IOError::with_path(e, &link_for_error));
+                return super::symlink::create_link_elevated(&target, &link)
+                    .await
+                    .map_err(|e| IOError::with_path(e, &link_for_error));
             }
             Err(IOError::with_path(error, &link_for_error))
         }

@@ -1,8 +1,10 @@
 use std::sync::OnceLock;
 
-use base64::Engine;
+#[cfg(target_os = "windows")]
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(target_os = "windows")]
+use std::path::PathBuf;
 use tokio::fs;
 use tracing::error;
 
@@ -113,14 +115,15 @@ async fn check_symlink_capability_internal() -> SymlinkCapability {
     }
 }
 
+#[cfg(target_os = "windows")]
 #[derive(Serialize, Deserialize)]
 struct ElevatedLinkRequest {
     target: PathBuf,
     link: PathBuf,
-    is_dir: bool,
     result_file: PathBuf,
 }
 
+#[cfg(target_os = "windows")]
 #[derive(Serialize, Deserialize)]
 struct ElevatedLinkResult {
     ok: bool,
@@ -133,7 +136,6 @@ struct ElevatedLinkResult {
 pub(crate) fn create_link_blocking(
     target: &Path,
     link: &Path,
-    is_dir: bool,
 ) -> std::io::Result<()> {
     if let Some(parent) = link.parent() {
         std::fs::create_dir_all(parent)?;
@@ -148,7 +150,7 @@ pub(crate) fn create_link_blocking(
 
     #[cfg(target_os = "windows")]
     {
-        if is_dir {
+        if target.is_dir() {
             match junction::create(target, link) {
                 Ok(()) => Ok(()),
                 Err(junction_error) => {
@@ -175,12 +177,11 @@ pub(crate) fn create_link_blocking(
 pub(crate) async fn create_link_elevated(
     target: &Path,
     link: &Path,
-    is_dir: bool,
 ) -> std::io::Result<()> {
     let target = target.to_path_buf();
     let link = link.to_path_buf();
     tokio::task::spawn_blocking(move || {
-        create_link_elevated_blocking(&target, &link, is_dir)
+        create_link_elevated_blocking(&target, &link)
     })
     .await
     .map_err(|error| {
@@ -192,7 +193,6 @@ pub(crate) async fn create_link_elevated(
 fn create_link_elevated_blocking(
     target: &Path,
     link: &Path,
-    is_dir: bool,
 ) -> std::io::Result<()> {
     use std::process::Command;
 
@@ -201,10 +201,10 @@ fn create_link_elevated_blocking(
     let request = ElevatedLinkRequest {
         target: target.to_path_buf(),
         link: link.to_path_buf(),
-        is_dir,
         result_file: result_file.clone(),
     };
-    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(
+    let payload = base64::Engine::encode(
+        &base64::engine::general_purpose::URL_SAFE_NO_PAD,
         serde_json::to_vec(&request).map_err(|error| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
@@ -268,60 +268,49 @@ fn create_link_elevated_blocking(
 /// request, creates the link, writes the outcome to the result file, and
 /// returns an exit code. The launcher binary calls this before Tauri
 /// initializes when started with `--elevated-create-link`.
+#[cfg(target_os = "windows")]
 pub fn create_link_elevated_helper(payload: &str) -> i32 {
-    #[cfg(target_os = "windows")]
-    {
-        let request = base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .decode(payload.trim())
-            .ok()
-            .and_then(|bytes| {
-                serde_json::from_slice::<ElevatedLinkRequest>(&bytes).ok()
-            });
+    let request = base64::Engine::decode(
+        &base64::engine::general_purpose::URL_SAFE_NO_PAD,
+        payload.trim(),
+    )
+    .ok()
+    .and_then(|bytes| {
+        serde_json::from_slice::<ElevatedLinkRequest>(&bytes).ok()
+    });
 
-        let Some(request) = request else {
-            tracing::error!("Elevated link creation: invalid request payload");
-            return 1;
-        };
+    let Some(request) = request else {
+        tracing::error!("Elevated link creation: invalid request payload");
+        return 1;
+    };
 
-        let result = match create_link_blocking(
-            &request.target,
-            &request.link,
-            request.is_dir,
-        ) {
-            Ok(()) => ElevatedLinkResult {
-                ok: true,
-                error: None,
-            },
-            Err(link_error) => ElevatedLinkResult {
-                ok: false,
-                error: Some(link_error.to_string()),
-            },
-        };
+    let result = match create_link_blocking(&request.target, &request.link) {
+        Ok(()) => ElevatedLinkResult {
+            ok: true,
+            error: None,
+        },
+        Err(link_error) => ElevatedLinkResult {
+            ok: false,
+            error: Some(link_error.to_string()),
+        },
+    };
 
-        let serialized = match serde_json::to_vec(&result) {
-            Ok(serialized) => serialized,
-            Err(serialize_error) => {
-                tracing::error!(
-                    "Elevated link creation: failed to serialize result: {serialize_error}"
-                );
-                return 1;
-            }
-        };
-
-        if let Err(write_error) =
-            std::fs::write(&request.result_file, serialized)
-        {
+    let serialized = match serde_json::to_vec(&result) {
+        Ok(serialized) => serialized,
+        Err(serialize_error) => {
             tracing::error!(
-                "Elevated link creation: failed to write result file: {write_error}"
+                "Elevated link creation: failed to serialize result: {serialize_error}"
             );
             return 1;
         }
+    };
 
-        if result.ok { 0 } else { 1 }
+    if let Err(write_error) = std::fs::write(&request.result_file, serialized) {
+        tracing::error!(
+            "Elevated link creation: failed to write result file: {write_error}"
+        );
+        return 1;
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        tracing::error!("Elevated link creation is only supported on Windows");
-        1
-    }
+
+    if result.ok { 0 } else { 1 }
 }

@@ -493,7 +493,10 @@ async fn collect_download_candidates(
         let stamp = CandidateStamp {
             size: metadata.len(),
             modified: metadata.modified().ok(),
-            identity: candidate_file_identity(&path, &metadata),
+            #[cfg(windows)]
+            identity: candidate_file_identity(&path),
+            #[cfg(not(windows))]
+            identity: candidate_file_identity(&metadata),
         };
         for spec in matched_specs {
             discovered.push(StableDownloadCandidate {
@@ -543,46 +546,40 @@ async fn collect_download_candidates(
     })
 }
 
+#[cfg(windows)]
+fn candidate_file_identity(path: &Path) -> Option<CandidateFileIdentity> {
+    use std::os::windows::io::AsRawHandle;
+    use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::Storage::FileSystem::{
+        BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
+    };
+
+    let file = std::fs::File::open(path).ok()?;
+    let mut information = BY_HANDLE_FILE_INFORMATION::default();
+    unsafe {
+        GetFileInformationByHandle(
+            HANDLE(file.as_raw_handle()),
+            &mut information,
+        )
+        .ok()?;
+    }
+    Some(CandidateFileIdentity::Windows {
+        volume_serial: information.dwVolumeSerialNumber,
+        file_index: ((information.nFileIndexHigh as u64) << 32)
+            | information.nFileIndexLow as u64,
+    })
+}
+
+#[cfg(not(windows))]
 fn candidate_file_identity(
-    path: &Path,
     metadata: &std::fs::Metadata,
 ) -> Option<CandidateFileIdentity> {
-    #[cfg(windows)]
-    {
-        use std::os::windows::io::AsRawHandle;
-        use windows::Win32::Foundation::HANDLE;
-        use windows::Win32::Storage::FileSystem::{
-            BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
-        };
+    use std::os::unix::fs::MetadataExt;
 
-        let _ = metadata;
-        let file = std::fs::File::open(path).ok()?;
-        let mut information = BY_HANDLE_FILE_INFORMATION::default();
-        unsafe {
-            GetFileInformationByHandle(
-                HANDLE(file.as_raw_handle()),
-                &mut information,
-            )
-            .ok()?;
-        }
-        return Some(CandidateFileIdentity::Windows {
-            volume_serial: information.dwVolumeSerialNumber,
-            file_index: ((information.nFileIndexHigh as u64) << 32)
-                | information.nFileIndexLow as u64,
-        });
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-
-        return Some(CandidateFileIdentity::Unix {
-            device: metadata.dev(),
-            inode: metadata.ino(),
-        });
-    }
-    #[allow(unreachable_code)]
-    let _ = (path, metadata);
-    None
+    Some(CandidateFileIdentity::Unix {
+        device: metadata.dev(),
+        inode: metadata.ino(),
+    })
 }
 
 fn candidate_is_stable(
