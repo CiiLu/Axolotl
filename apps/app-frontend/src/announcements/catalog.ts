@@ -99,9 +99,9 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '新增陶瓦联机自定义公共节点配置。',
 				},
 				{
-					'zh-CN': '现在允许用户在遇到缺失文件时选择跳过，后续再导入。',
 					'en-US':
 						'Now the launcher allows users to skip missing files when importing, and import later.',
+					'zh-CN': '现在允许用户在遇到缺失文件时选择跳过，后续再导入。',
 				},
 			],
 			fixed: [
