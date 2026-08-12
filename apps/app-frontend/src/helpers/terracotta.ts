@@ -46,11 +46,43 @@ export interface TerracottaState {
 }
 
 const TERRACOTTA_ROOM_CODE_PATTERN = /^U\/[A-Z0-9]{4}(?:-[A-Z0-9]{4}){3}$/i
+const TERRACOTTA_PUBLIC_NODE_SCHEMES = new Set([
+	'http:',
+	'https:',
+	'tcp:',
+	'tls:',
+	'udp:',
+	'ws:',
+	'wss:',
+])
 
 const command = (name: string) => `plugin:terracotta|${name}`
 
 export function isValidTerracottaRoomCode(roomCode: string): boolean {
 	return TERRACOTTA_ROOM_CODE_PATTERN.test(roomCode.trim())
+}
+
+export function parseTerracottaPublicNodes(value: string): {
+	nodes: string[]
+	invalidNode: string | null
+} {
+	const nodes = value
+		.split(/[\n,]+/)
+		.map((node) => node.trim())
+		.filter(Boolean)
+
+	for (const node of nodes) {
+		try {
+			const url = new URL(node)
+			if (!TERRACOTTA_PUBLIC_NODE_SCHEMES.has(url.protocol) || !url.hostname) {
+				return { nodes, invalidNode: node }
+			}
+		} catch {
+			return { nodes, invalidNode: node }
+		}
+	}
+
+	return { nodes, invalidNode: null }
 }
 
 export const terracotta = {

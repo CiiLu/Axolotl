@@ -11,6 +11,7 @@ import {
 	RefreshCwIcon,
 	SettingsIcon,
 	ToggleRightIcon,
+	UsersIcon,
 } from '@modrinth/assets'
 import {
 	commonMessages,
@@ -32,6 +33,7 @@ import DefaultInstanceSettings from '@/components/ui/settings/DefaultInstanceSet
 import FeatureFlagSettings from '@/components/ui/settings/FeatureFlagSettings.vue'
 import JavaSettings from '@/components/ui/settings/JavaSettings.vue'
 import LanguageSettings from '@/components/ui/settings/LanguageSettings.vue'
+import MultiplayerSettings from '@/components/ui/settings/MultiplayerSettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
 import TranslationSettings from '@/components/ui/settings/TranslationSettings.vue'
 import UpdateSettings from '@/components/ui/settings/UpdateSettings.vue'
@@ -118,6 +120,14 @@ const tabs = [
 		icon: GaugeIcon,
 		content: ResourceManagementSettings,
 		onboardingId: 'settings-tab-resources',
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.multiplayer',
+			defaultMessage: 'Multiplayer',
+		}),
+		icon: UsersIcon,
+		content: MultiplayerSettings,
 	},
 	{
 		name: defineMessage({

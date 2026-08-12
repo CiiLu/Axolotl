@@ -471,6 +471,7 @@ fn main() {
         .plugin(api::files::init())
         .plugin(api::worlds::init())
         .plugin(api::terracotta::init())
+        .plugin(api::multiplayer::init())
         .manage(PendingUpdateData::default())
         .invoke_handler(tauri::generate_handler![
             initialize_state,
@@ -508,6 +509,16 @@ fn main() {
                 {
                     tracing::warn!(
                         "Failed to flush pending Minecraft skin change before exit: {error}"
+                    );
+                }
+
+                if matches!(&event, tauri::RunEvent::ExitRequested { .. })
+                    && let Err(error) = tauri::async_runtime::block_on(
+                        theseus::multiplayer::shutdown(),
+                    )
+                {
+                    tracing::warn!(
+                        "Failed to stop multiplayer services before exit: {error}"
                     );
                 }
 
