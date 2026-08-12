@@ -4,6 +4,7 @@
 			<BigOptionButton
 				data-onboarding-id="creation-import-file"
 				:icon="FileIcon"
+				no-icon-border
 				:title="formatMessage(messages.selectFile)"
 				:description="formatMessage(messages.selectFileDescription)"
 				@click="handleOpenFilePicker"
@@ -11,6 +12,7 @@
 			<BigOptionButton
 				data-onboarding-id="creation-import-folder"
 				:icon="FolderIcon"
+				no-icon-border
 				:title="formatMessage(messages.selectFolder)"
 				:description="formatMessage(messages.selectFolderDescription)"
 				@click="handleOpenFolderPicker"
