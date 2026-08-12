@@ -29,9 +29,6 @@ export const downloadBarTypes = new Set([
 	'launcher_update',
 ])
 
-const pendingRequestUpdates: DownloadRequestUpdate[] = []
-let requestFlushTimer: ReturnType<typeof setTimeout> | null = null
-
 export interface DownloadManager {
 	jobs: Ref<InstallJobSnapshot[]>
 	legacyDownloads: Ref<LoadingBar[]>
@@ -63,6 +60,9 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 		{ kind: 'job'; job: InstallJobSnapshot } | { kind: 'request'; update: DownloadRequestUpdate }
 	> = []
 	const pendingRequestUpdatesByJob = new Map<string, DownloadRequestUpdate[]>()
+	const pendingRequestUpdates: DownloadRequestUpdate[] = []
+	let requestFlushTimer: ReturnType<typeof setTimeout> | null = null
+	let legacyRefreshTimer: ReturnType<typeof setTimeout> | null = null
 
 	function persistManualDownloadsFromJob(job: InstallJobSnapshot) {
 		if (job.status !== 'waiting_for_user' && job.status !== 'succeeded') return
@@ -221,8 +221,6 @@ export function createDownloadManager(handleError: (error: unknown) => void): Do
 			}
 		}
 	}
-
-	let legacyRefreshTimer: ReturnType<typeof setTimeout> | null = null
 
 	async function refreshLegacyDownloads() {
 		const bars = await progress_bars_list().catch((error) => {
