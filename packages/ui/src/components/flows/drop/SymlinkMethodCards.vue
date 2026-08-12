@@ -990,8 +990,10 @@ async function startAllPlans() {
 	}
 }
 
+const pendingSnapshots = new Map<number, ImportPlanSnapshot>()
+let snapshotFlushPending = false
+
 function handleSnapshot(snapshot: ImportPlanSnapshot) {
-	console.debug('[SymlinkMethodCards] import plan snapshot', snapshot)
 	let index = Object.entries(requestIds.value).findIndex(
 		([, requestId]) => requestId === snapshot.requestId,
 	)
@@ -1001,6 +1003,26 @@ function handleSnapshot(snapshot: ImportPlanSnapshot) {
 		)
 	}
 	if (index === -1 || requestIds.value[index] !== snapshot.requestId) return
+
+	pendingSnapshots.set(index, snapshot)
+	if (!snapshotFlushPending) {
+		snapshotFlushPending = true
+		requestAnimationFrame(() => {
+			snapshotFlushPending = false
+			const batch = [...pendingSnapshots.entries()]
+			pendingSnapshots.clear()
+			for (const [batchIndex, batchSnapshot] of batch) {
+				applyImportPlanSnapshot(batchIndex, batchSnapshot)
+			}
+		})
+	}
+}
+
+function applyImportPlanSnapshot(index: number, snapshot: ImportPlanSnapshot) {
+	if (requestIds.value[index] !== snapshot.requestId) return
+	if (snapshot.stage === 'done' || snapshot.stage === 'error') {
+		console.debug('[SymlinkMethodCards] import plan final snapshot', index, snapshot)
+	}
 	const detected = detectedByInstance.value[index]
 	if (snapshot.gameVersion) {
 		if (!detected) {
@@ -1188,6 +1210,8 @@ function show(options: {
 		window.clearTimeout(rescanTimer)
 		rescanTimer = null
 	}
+	pendingSnapshots.clear()
+	snapshotFlushPending = false
 	instances.value = options.instances
 	symlinkCapable.value = options.symlinkCapable
 	instanceChoices.value = {}

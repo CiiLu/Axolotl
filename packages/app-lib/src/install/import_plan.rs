@@ -239,14 +239,21 @@ where
         .clone()
         .filter(|version| !version.trim().is_empty())
         .or_else(|| detected.vanilla_name.clone());
-    let loader = request
+    let mut loader = request
         .loader
         .map(|loader| loader.as_str().to_string())
         .or_else(|| detected.loader.clone());
-    let loader_version = request
+    let mut loader_version = request
         .loader_version
         .clone()
         .or_else(|| detected.loader_version.clone());
+    if !matches!(
+        loader.as_deref(),
+        Some("forge" | "neoforge" | "fabric" | "quilt")
+    ) {
+        loader = None;
+        loader_version = None;
+    }
 
     emit(&snapshot_for(
         request,
@@ -421,47 +428,39 @@ fn detect_import_plan_info(source: &Path, dotminecraft: &Path) -> DetectedInstan
     let json_info = instance_json::detect(dotminecraft);
     let config_info = read_axolotl_config(source);
     DetectedInstanceInfo {
-        vanilla_name: json_info
+        vanilla_name: config_info
             .as_ref()
-            .map(|info| info.vanilla_name.clone())
-            .or_else(|| {
-                config_info
-                    .as_ref()
-                    .and_then(|config| {
-                        config
-                            .content_set
-                            .game_version
-                            .clone()
-                            .filter(|version| !version.trim().is_empty())
-                    })
-            }),
-        loader: json_info
+            .and_then(|config| {
+                config
+                    .content_set
+                    .game_version
+                    .clone()
+                    .filter(|version| !version.trim().is_empty())
+            })
+            .or_else(|| json_info.as_ref().map(|info| info.vanilla_name.clone())),
+        loader: config_info
             .as_ref()
-            .and_then(|info| info.loader.clone())
-            .or_else(|| {
-                config_info
-                    .as_ref()
-                    .and_then(|config| {
-                        config
-                            .content_set
-                            .loader
-                            .clone()
-                            .filter(|loader| !loader.trim().is_empty())
-                    })
-            }),
-        loader_version: json_info
+            .and_then(|config| {
+                config
+                    .content_set
+                    .loader
+                    .clone()
+                    .filter(|loader| !loader.trim().is_empty())
+            })
+            .or_else(|| json_info.as_ref().and_then(|info| info.loader.clone())),
+        loader_version: config_info
             .as_ref()
-            .and_then(|info| info.loader_version.clone())
+            .and_then(|config| {
+                config
+                    .content_set
+                    .loader_version
+                    .clone()
+                    .filter(|version| !version.trim().is_empty())
+            })
             .or_else(|| {
-                config_info
+                json_info
                     .as_ref()
-                    .and_then(|config| {
-                        config
-                            .content_set
-                            .loader_version
-                            .clone()
-                            .filter(|version| !version.trim().is_empty())
-                    })
+                    .and_then(|info| info.loader_version.clone())
             }),
     }
 }
@@ -500,7 +499,7 @@ async fn scan_import_plan(
                     .to_string(),
             )
         })?;
-    let loader = request
+    let mut loader = request
         .loader
         .or_else(|| {
             detected.loader.as_deref().and_then(|loader_name| match loader_name {
@@ -508,15 +507,21 @@ async fn scan_import_plan(
                 "neoforge" => Some(ModLoader::NeoForge),
                 "fabric" => Some(ModLoader::Fabric),
                 "quilt" => Some(ModLoader::Quilt),
-                "optifine" => Some(ModLoader::OptiFine),
                 _ => None,
             })
         })
         .unwrap_or(ModLoader::Vanilla);
-    let loader_version = request
+    let mut loader_version = request
         .loader_version
         .clone()
         .or_else(|| detected.loader_version.clone());
+    if !matches!(
+        loader,
+        ModLoader::Forge | ModLoader::NeoForge | ModLoader::Fabric | ModLoader::Quilt
+    ) {
+        loader = ModLoader::Vanilla;
+        loader_version = None;
+    }
     let requested_loader_version = loader_version
         .as_deref()
         .filter(|version| !version.is_empty() && *version != "latest");
@@ -947,7 +952,7 @@ async fn scan_counts_emitting(
                 mod_count += 1;
             }
             processed += 1;
-            if processed == 1 || processed % 16 == 0 {
+            if processed <= 64 || processed % 16 == 0 {
                 emit_import_plan(&snapshot_for(
                     request,
                     ImportPlanStage::Scanning,
