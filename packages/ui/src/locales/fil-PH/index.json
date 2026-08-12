@@ -2257,11 +2257,5 @@
   },
   "ui.component.unsaved-changes-popup.body": {
     "defaultMessage": "Mayroon kang hindi na-save na pagbabago."
-  },
-  "user.profile.badge.alpha.about.1": {
-    "defaultMessage": "Ang tagagamit na ito ay nandirito simula pa sa Modrinth Alpha, na nagtapos noon Nobyembre 2020."
-  },
-  "user.profile.badge.staff.name": {
-    "defaultMessage": "Koponan ng Modrinth"
   }
 }

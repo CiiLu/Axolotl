@@ -1976,9 +1976,6 @@
   "payment-method.visa": {
     "defaultMessage": "Visa"
   },
-  "profile.label.badges": {
-    "defaultMessage": "배지"
-  },
   "project-card.date.published.tooltip": {
     "defaultMessage": "{date}에 게시됨"
   },
@@ -3319,20 +3316,5 @@
   },
   "ui.stacked-admonitions.dismiss-all": {
     "defaultMessage": "모두 닫기"
-  },
-  "user.profile.badge.alpha.about.1": {
-    "defaultMessage": "이 사용자는 2020년 11월에 종료된 Modrinth 알파 버전 시절부터 활동해 왔습니다."
-  },
-  "user.profile.badge.alpha.name": {
-    "defaultMessage": "알파 테스터"
-  },
-  "user.profile.badge.beta.about.1": {
-    "defaultMessage": "이 사용자는 2022년 2월에 종료된 Modrinth 베타 버전 시절부터 활동해 왔습니다."
-  },
-  "user.profile.badge.beta.link": {
-    "defaultMessage": "Modrinth 베타 출시 소식을 보려면 여기를 클릭하세요."
-  },
-  "user.profile.badge.beta.name": {
-    "defaultMessage": "베타 테스터"
   }
 }

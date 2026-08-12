@@ -121,10 +121,7 @@ function createDefaultRecipeGeneratorStore(): RecipeGeneratorStore {
 	}
 }
 
-function ensureRecipeTypeForVersion(
-	recipes: RecipeState[],
-	version: JavaVersionId,
-): RecipeState[] {
+function ensureRecipeTypeForVersion(recipes: RecipeState[], version: JavaVersionId): RecipeState[] {
 	const supported = new Set(getSupportedRecipeTypes(version))
 	return recipes.map((recipe) =>
 		supported.has(recipe.recipeType)

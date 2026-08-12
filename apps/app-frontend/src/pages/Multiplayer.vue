@@ -35,10 +35,10 @@ import hongshiIcon from '@/assets/multiplayer/hongshi.png'
 import terracottaIcon from '@/assets/multiplayer/terracotta.png'
 import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
 import {
+	type MultiplayerProvider,
 	selectedDetectedInstance,
 	selectedNodePreference,
 	storedMultiplayerProvider,
-	type MultiplayerProvider,
 	validLocalPort,
 } from '@/helpers/multiplayer'
 import {
@@ -318,7 +318,8 @@ const messages = defineMessages({
 	publicAddress: { id: 'app.multiplayer.hongshi.public-address', defaultMessage: 'Public address' },
 	publicAddressHint: {
 		id: 'app.multiplayer.hongshi.public-address-hint',
-		defaultMessage: 'Friends can enter this address directly in Minecraft. They do not need RedStone.',
+		defaultMessage:
+			'Friends can enter this address directly in Minecraft. They do not need RedStone.',
 	},
 	hongshiLimits: {
 		id: 'app.multiplayer.hongshi.limits',
@@ -396,7 +397,7 @@ const isHongshiBusy = computed(() =>
 const selectedNode = computed(() =>
 	selectedNodeName.value === 'auto'
 		? null
-		: nodes.value.find((node) => node.name === selectedNodeName.value) ?? null,
+		: (nodes.value.find((node) => node.name === selectedNodeName.value) ?? null),
 )
 const hasLoadedNodes = ref(false)
 const providerOptions = computed(() => [
@@ -458,7 +459,8 @@ watch(
 watch(selectedNodeName, (value) => localStorage.setItem(nodeStorageKey, value))
 
 async function selectProvider(provider: MultiplayerProvider) {
-	if (provider === selectedProvider.value || (provider === 'hongshi' && !hongshiSupported.value)) return
+	if (provider === selectedProvider.value || (provider === 'hongshi' && !hongshiSupported.value))
+		return
 	if (activeProvider.value && activeProvider.value !== provider) {
 		if (!window.confirm(formatMessage(messages.switchWarning))) return
 		if (!(await switchProvider(provider))) return
@@ -617,7 +619,11 @@ function submitJoin() {
 			<PopoutMenu placement="bottom-end">
 				<ButtonStyled size="standard" type="standard">
 					<button class="flex min-w-36 items-center gap-2">
-						<img :src="selectedProviderOption.image" class="size-5 shrink-0 object-contain" alt="" />
+						<img
+							:src="selectedProviderOption.image"
+							class="size-5 shrink-0 object-contain"
+							alt=""
+						/>
 						<span class="flex-1 text-left">{{ formatMessage(selectedProviderOption.label) }}</span>
 						<DropdownIcon class="size-4 shrink-0" />
 					</button>
@@ -645,378 +651,377 @@ function submitJoin() {
 		</div>
 
 		<template v-if="selectedProvider === 'terracotta'">
-
-		<Card v-if="!state" class="!m-0">
-			<div class="flex items-center gap-3">
-				<SpinnerIcon class="size-8 animate-spin text-brand" />
-				<h2 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.loading) }}
-				</h2>
-			</div>
-		</Card>
-
-		<Card v-else-if="!state.binary_installed" class="!m-0">
-			<div class="flex flex-col gap-5">
-				<div class="flex items-start gap-3">
-					<div
-						class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-highlight-orange text-orange"
-					>
-						<BinaryIcon class="size-5" />
-					</div>
-					<div class="min-w-0">
-						<h2 class="m-0 text-lg font-semibold text-contrast">
-							{{ formatMessage(messages.downloadTerracotta) }}
-						</h2>
-						<p class="mb-0 mt-1 text-secondary">
-							{{ formatMessage(messages.notRunning) }}
-						</p>
-					</div>
-				</div>
-
-				<Admonition type="warning" :header="formatMessage(messages.binaryNotFound)">
-					<div class="flex flex-col gap-2">
-						<span>{{ formatMessage(messages.platformInfo, { platform: platformKey }) }}</span>
-						<code class="w-fit max-w-full select-all break-all rounded-lg bg-surface-3 px-2 py-1">
-							{{ binaryPathHint }}
-						</code>
-					</div>
-				</Admonition>
-
-				<ProgressBar
-					v-if="state.status === 'downloading'"
-					full-width
-					:progress="state.download_progress ?? 0"
-					:max="100"
-					:waiting="state.download_progress === null || state.download_progress === 0"
-					:label="downloadStageText || statusText"
-					show-progress
-				/>
-
-				<div v-else class="flex flex-wrap gap-2">
-					<ButtonStyled color="brand">
-						<button type="button" :disabled="isActionPending" @click="downloadTerracotta">
-							<DownloadIcon />
-							{{ formatMessage(messages.downloadTerracotta) }}
-						</button>
-					</ButtonStyled>
-				</div>
-			</div>
-		</Card>
-
-		<Card v-else-if="state.status === 'starting' || state.status === 'downloading'" class="!m-0">
-			<div class="flex flex-col gap-5">
+			<Card v-if="!state" class="!m-0">
 				<div class="flex items-center gap-3">
-					<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
-					<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
-				</div>
-				<ProgressBar
-					v-if="state.status === 'downloading'"
-					full-width
-					:progress="state.download_progress ?? 0"
-					:max="100"
-					:waiting="state.download_progress === null"
-					:label="downloadStageText"
-					show-progress
-				/>
-			</div>
-		</Card>
-
-		<Card
-			v-else-if="isRunning && (state.status === 'idle' || state.status === 'waiting')"
-			class="!m-0"
-		>
-			<div class="flex flex-col gap-5">
-				<NavTabs
-					mode="local"
-					:active-index="tabIndex"
-					:links="tabLinks"
-					@tab-click="tabIndex = $event"
-				/>
-
-				<div>
+					<SpinnerIcon class="size-8 animate-spin text-brand" />
 					<h2 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(tabIndex === 0 ? messages.host : messages.join) }}
+						{{ formatMessage(messages.loading) }}
 					</h2>
-					<p class="mb-0 mt-1 text-secondary">
-						{{
-							formatMessage(tabIndex === 0 ? messages.hostDescription : messages.joinDescription)
-						}}
-					</p>
 				</div>
+			</Card>
 
-				<div class="grid gap-4 md:grid-cols-2">
-					<label class="flex min-w-0 flex-col gap-2" for="multiplayer-player-name">
-						<span class="font-semibold text-contrast">
-							{{ formatMessage(messages.playerName) }}
-						</span>
-						<StyledInput
-							id="multiplayer-player-name"
-							v-model="playerName"
-							:icon="UserIcon"
-							:placeholder="formatMessage(messages.playerName)"
-							autocomplete="off"
-						/>
-					</label>
-
-					<label
-						v-if="tabIndex === 1"
-						class="flex min-w-0 flex-col gap-2"
-						for="multiplayer-room-code"
-					>
-						<span class="font-semibold text-contrast">
-							{{ formatMessage(messages.roomCode) }}
-						</span>
-						<StyledInput
-							id="multiplayer-room-code"
-							v-model="roomCodeInput"
-							:icon="UsersIcon"
-							:placeholder="formatMessage(messages.roomCodePlaceholder)"
-							:error="showRoomCodeError"
-							:input-attrs="{
-								'aria-invalid': showRoomCodeError,
-								'aria-describedby': showRoomCodeError ? 'multiplayer-room-code-error' : undefined,
-							}"
-							autocomplete="off"
-							:spellcheck="false"
-							@focusout="roomCodeTouched = true"
-						/>
-						<span
-							v-if="showRoomCodeError"
-							id="multiplayer-room-code-error"
-							class="text-xs text-red"
+			<Card v-else-if="!state.binary_installed" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex items-start gap-3">
+						<div
+							class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-highlight-orange text-orange"
 						>
-							{{ formatMessage(messages.roomCodeInvalid) }}
-						</span>
-					</label>
-				</div>
-
-				<div class="flex flex-wrap gap-2">
-					<ButtonStyled color="brand">
-						<button
-							v-if="tabIndex === 0"
-							type="button"
-							:disabled="!canSubmitSession || isActionPending"
-							@click="hostGame"
-						>
-							<PlayIcon />
-							{{ formatMessage(messages.startHosting) }}
-						</button>
-						<button
-							v-else
-							type="button"
-							:disabled="!canSubmitSession || isActionPending"
-							@click="submitJoin"
-						>
-							<LogInIcon />
-							{{ formatMessage(messages.joinRoom) }}
-						</button>
-					</ButtonStyled>
-				</div>
-			</div>
-		</Card>
-
-		<Card
-			v-else-if="state.status === 'host_scanning' || state.status === 'host_starting'"
-			class="!m-0"
-		>
-			<div class="flex flex-col gap-5">
-				<div class="flex items-center gap-3">
-					<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
-					<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
-				</div>
-				<Admonition type="info" :header="formatMessage(messages.host)">
-					{{ formatMessage(messages.lanHint) }}
-				</Admonition>
-				<div class="flex flex-wrap gap-2">
-					<ButtonStyled type="outlined">
-						<button type="button" :disabled="isActionPending" @click="resetState">
-							<ArrowLeftIcon />
-							{{ formatMessage(messages.back) }}
-						</button>
-					</ButtonStyled>
-				</div>
-			</div>
-		</Card>
-
-		<Card v-else-if="isSessionReady" class="!m-0">
-			<div class="flex flex-col gap-5">
-				<div class="flex flex-wrap items-start justify-between gap-3">
-					<div class="flex items-center gap-3">
-						<CheckCircleIcon class="size-7 shrink-0 text-green" />
-						<div>
-							<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
-							<p class="mb-0 mt-1 text-sm text-secondary">
-								{{ formatMessage(messages.playersInRoom, { count: playerCount }) }}
+							<BinaryIcon class="size-5" />
+						</div>
+						<div class="min-w-0">
+							<h2 class="m-0 text-lg font-semibold text-contrast">
+								{{ formatMessage(messages.downloadTerracotta) }}
+							</h2>
+							<p class="mb-0 mt-1 text-secondary">
+								{{ formatMessage(messages.notRunning) }}
 							</p>
 						</div>
 					</div>
-					<TagItem>
-						<UsersIcon v-if="isHostSession" />
-						<LogInIcon v-else />
-						{{ formatMessage(isHostSession ? messages.hostLabel : messages.guestLabel) }}
-					</TagItem>
-				</div>
 
-				<div
-					v-if="isHostSession && state.room_code"
-					class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 p-4"
-				>
-					<div class="min-w-0">
-						<div class="font-semibold text-contrast">{{ formatMessage(messages.roomCode) }}</div>
-						<div class="mt-1 text-sm text-secondary">
-							{{ formatMessage(messages.shareCode) }}
+					<Admonition type="warning" :header="formatMessage(messages.binaryNotFound)">
+						<div class="flex flex-col gap-2">
+							<span>{{ formatMessage(messages.platformInfo, { platform: platformKey }) }}</span>
+							<code class="w-fit max-w-full select-all break-all rounded-lg bg-surface-3 px-2 py-1">
+								{{ binaryPathHint }}
+							</code>
 						</div>
-					</div>
-					<CopyCode :text="state.room_code" />
-				</div>
+					</Admonition>
 
-				<div
-					v-if="!isHostSession && guestServerAddress"
-					class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 p-4"
-				>
-					<div class="min-w-0">
-						<div class="font-semibold text-contrast">
-							{{ formatMessage(messages.serverAddress) }}
+					<ProgressBar
+						v-if="state.status === 'downloading'"
+						full-width
+						:progress="state.download_progress ?? 0"
+						:max="100"
+						:waiting="state.download_progress === null || state.download_progress === 0"
+						:label="downloadStageText || statusText"
+						show-progress
+					/>
+
+					<div v-else class="flex flex-wrap gap-2">
+						<ButtonStyled color="brand">
+							<button type="button" :disabled="isActionPending" @click="downloadTerracotta">
+								<DownloadIcon />
+								{{ formatMessage(messages.downloadTerracotta) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<Card v-else-if="state.status === 'starting' || state.status === 'downloading'" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex items-center gap-3">
+						<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
+						<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
+					</div>
+					<ProgressBar
+						v-if="state.status === 'downloading'"
+						full-width
+						:progress="state.download_progress ?? 0"
+						:max="100"
+						:waiting="state.download_progress === null"
+						:label="downloadStageText"
+						show-progress
+					/>
+				</div>
+			</Card>
+
+			<Card
+				v-else-if="isRunning && (state.status === 'idle' || state.status === 'waiting')"
+				class="!m-0"
+			>
+				<div class="flex flex-col gap-5">
+					<NavTabs
+						mode="local"
+						:active-index="tabIndex"
+						:links="tabLinks"
+						@tab-click="tabIndex = $event"
+					/>
+
+					<div>
+						<h2 class="m-0 text-lg font-semibold text-contrast">
+							{{ formatMessage(tabIndex === 0 ? messages.host : messages.join) }}
+						</h2>
+						<p class="mb-0 mt-1 text-secondary">
+							{{
+								formatMessage(tabIndex === 0 ? messages.hostDescription : messages.joinDescription)
+							}}
+						</p>
+					</div>
+
+					<div class="grid gap-4 md:grid-cols-2">
+						<label class="flex min-w-0 flex-col gap-2" for="multiplayer-player-name">
+							<span class="font-semibold text-contrast">
+								{{ formatMessage(messages.playerName) }}
+							</span>
+							<StyledInput
+								id="multiplayer-player-name"
+								v-model="playerName"
+								:icon="UserIcon"
+								:placeholder="formatMessage(messages.playerName)"
+								autocomplete="off"
+							/>
+						</label>
+
+						<label
+							v-if="tabIndex === 1"
+							class="flex min-w-0 flex-col gap-2"
+							for="multiplayer-room-code"
+						>
+							<span class="font-semibold text-contrast">
+								{{ formatMessage(messages.roomCode) }}
+							</span>
+							<StyledInput
+								id="multiplayer-room-code"
+								v-model="roomCodeInput"
+								:icon="UsersIcon"
+								:placeholder="formatMessage(messages.roomCodePlaceholder)"
+								:error="showRoomCodeError"
+								:input-attrs="{
+									'aria-invalid': showRoomCodeError,
+									'aria-describedby': showRoomCodeError ? 'multiplayer-room-code-error' : undefined,
+								}"
+								autocomplete="off"
+								:spellcheck="false"
+								@focusout="roomCodeTouched = true"
+							/>
+							<span
+								v-if="showRoomCodeError"
+								id="multiplayer-room-code-error"
+								class="text-xs text-red"
+							>
+								{{ formatMessage(messages.roomCodeInvalid) }}
+							</span>
+						</label>
+					</div>
+
+					<div class="flex flex-wrap gap-2">
+						<ButtonStyled color="brand">
+							<button
+								v-if="tabIndex === 0"
+								type="button"
+								:disabled="!canSubmitSession || isActionPending"
+								@click="hostGame"
+							>
+								<PlayIcon />
+								{{ formatMessage(messages.startHosting) }}
+							</button>
+							<button
+								v-else
+								type="button"
+								:disabled="!canSubmitSession || isActionPending"
+								@click="submitJoin"
+							>
+								<LogInIcon />
+								{{ formatMessage(messages.joinRoom) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<Card
+				v-else-if="state.status === 'host_scanning' || state.status === 'host_starting'"
+				class="!m-0"
+			>
+				<div class="flex flex-col gap-5">
+					<div class="flex items-center gap-3">
+						<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
+						<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
+					</div>
+					<Admonition type="info" :header="formatMessage(messages.host)">
+						{{ formatMessage(messages.lanHint) }}
+					</Admonition>
+					<div class="flex flex-wrap gap-2">
+						<ButtonStyled type="outlined">
+							<button type="button" :disabled="isActionPending" @click="resetState">
+								<ArrowLeftIcon />
+								{{ formatMessage(messages.back) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<Card v-else-if="isSessionReady" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex flex-wrap items-start justify-between gap-3">
+						<div class="flex items-center gap-3">
+							<CheckCircleIcon class="size-7 shrink-0 text-green" />
+							<div>
+								<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
+								<p class="mb-0 mt-1 text-sm text-secondary">
+									{{ formatMessage(messages.playersInRoom, { count: playerCount }) }}
+								</p>
+							</div>
 						</div>
-					</div>
-					<CopyCode :text="guestServerAddress" />
-				</div>
-
-				<section class="flex flex-col gap-3">
-					<div class="flex items-center justify-between gap-3">
-						<h3 class="m-0 text-base font-semibold text-contrast">
-							{{ formatMessage(messages.players) }}
-						</h3>
 						<TagItem>
-							<UsersIcon />
-							{{ playerCount }}
+							<UsersIcon v-if="isHostSession" />
+							<LogInIcon v-else />
+							{{ formatMessage(isHostSession ? messages.hostLabel : messages.guestLabel) }}
 						</TagItem>
 					</div>
 
 					<div
-						v-if="state.players.length > 0"
-						class="overflow-hidden rounded-xl border border-solid border-surface-5"
+						v-if="isHostSession && state.room_code"
+						class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 p-4"
 					>
-						<div
-							v-for="(player, index) in state.players"
-							:key="player.machine_id || index"
-							class="flex min-w-0 items-center gap-3 border-0 border-b border-solid border-divider bg-surface-2 px-4 py-3 last:border-b-0"
-						>
-							<div
-								class="flex size-9 shrink-0 items-center justify-center rounded-full bg-highlight-green text-green"
-							>
-								<UserIcon class="size-4" />
+						<div class="min-w-0">
+							<div class="font-semibold text-contrast">{{ formatMessage(messages.roomCode) }}</div>
+							<div class="mt-1 text-sm text-secondary">
+								{{ formatMessage(messages.shareCode) }}
 							</div>
-							<span class="min-w-0 flex-1 truncate font-medium text-contrast">
-								{{ player.name }}
-							</span>
+						</div>
+						<CopyCode :text="state.room_code" />
+					</div>
+
+					<div
+						v-if="!isHostSession && guestServerAddress"
+						class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 p-4"
+					>
+						<div class="min-w-0">
+							<div class="font-semibold text-contrast">
+								{{ formatMessage(messages.serverAddress) }}
+							</div>
+						</div>
+						<CopyCode :text="guestServerAddress" />
+					</div>
+
+					<section class="flex flex-col gap-3">
+						<div class="flex items-center justify-between gap-3">
+							<h3 class="m-0 text-base font-semibold text-contrast">
+								{{ formatMessage(messages.players) }}
+							</h3>
 							<TagItem>
-								{{ formatMessage(playerRoleMessage(player.kind)) }}
+								<UsersIcon />
+								{{ playerCount }}
 							</TagItem>
 						</div>
-					</div>
-					<div
-						v-else
-						class="flex items-center gap-2 rounded-xl bg-surface-2 px-4 py-5 text-secondary"
-					>
-						<UsersIcon class="size-5" />
-						{{ formatMessage(messages.noPlayers) }}
-					</div>
-				</section>
 
-				<div class="flex flex-wrap gap-2">
-					<ButtonStyled color="red" type="outlined">
-						<button type="button" :disabled="isActionPending" @click="resetState">
-							<LogOutIcon />
-							{{ formatMessage(messages.disconnect) }}
-						</button>
-					</ButtonStyled>
-				</div>
-			</div>
-		</Card>
+						<div
+							v-if="state.players.length > 0"
+							class="overflow-hidden rounded-xl border border-solid border-surface-5"
+						>
+							<div
+								v-for="(player, index) in state.players"
+								:key="player.machine_id || index"
+								class="flex min-w-0 items-center gap-3 border-0 border-b border-solid border-divider bg-surface-2 px-4 py-3 last:border-b-0"
+							>
+								<div
+									class="flex size-9 shrink-0 items-center justify-center rounded-full bg-highlight-green text-green"
+								>
+									<UserIcon class="size-4" />
+								</div>
+								<span class="min-w-0 flex-1 truncate font-medium text-contrast">
+									{{ player.name }}
+								</span>
+								<TagItem>
+									{{ formatMessage(playerRoleMessage(player.kind)) }}
+								</TagItem>
+							</div>
+						</div>
+						<div
+							v-else
+							class="flex items-center gap-2 rounded-xl bg-surface-2 px-4 py-5 text-secondary"
+						>
+							<UsersIcon class="size-5" />
+							{{ formatMessage(messages.noPlayers) }}
+						</div>
+					</section>
 
-		<Card
-			v-else-if="state.status === 'guest_connecting' || state.status === 'guest_starting'"
-			class="!m-0"
-		>
-			<div class="flex flex-col gap-5">
-				<div class="flex items-center gap-3">
-					<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
-					<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
-				</div>
-				<div class="flex flex-wrap gap-2">
-					<ButtonStyled type="outlined">
-						<button type="button" :disabled="isActionPending" @click="resetState">
-							<ArrowLeftIcon />
-							{{ formatMessage(messages.back) }}
-						</button>
-					</ButtonStyled>
-				</div>
-			</div>
-		</Card>
-
-		<Card v-else-if="state.status === 'error' || state.status === 'fatal'" class="!m-0">
-			<Admonition type="critical" :header="errorTypeLabel">
-				{{ state.error_message || formatMessage(messages.checkNetwork) }}
-				<template #actions>
 					<div class="flex flex-wrap gap-2">
-						<ButtonStyled v-if="isRecoverable" color="red" type="outlined">
-							<button
-								type="button"
-								:disabled="isActionPending || isExportingReport"
-								@click="resetState"
-							>
-								<RefreshCwIcon />
-								{{ formatMessage(messages.retry) }}
+						<ButtonStyled color="red" type="outlined">
+							<button type="button" :disabled="isActionPending" @click="resetState">
+								<LogOutIcon />
+								{{ formatMessage(messages.disconnect) }}
 							</button>
 						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<Card
+				v-else-if="state.status === 'guest_connecting' || state.status === 'guest_starting'"
+				class="!m-0"
+			>
+				<div class="flex flex-col gap-5">
+					<div class="flex items-center gap-3">
+						<SpinnerIcon class="size-6 shrink-0 animate-spin text-orange" />
+						<h2 class="m-0 text-lg font-semibold text-contrast">{{ statusText }}</h2>
+					</div>
+					<div class="flex flex-wrap gap-2">
+						<ButtonStyled type="outlined">
+							<button type="button" :disabled="isActionPending" @click="resetState">
+								<ArrowLeftIcon />
+								{{ formatMessage(messages.back) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</div>
+			</Card>
+
+			<Card v-else-if="state.status === 'error' || state.status === 'fatal'" class="!m-0">
+				<Admonition type="critical" :header="errorTypeLabel">
+					{{ state.error_message || formatMessage(messages.checkNetwork) }}
+					<template #actions>
+						<div class="flex flex-wrap gap-2">
+							<ButtonStyled v-if="isRecoverable" color="red" type="outlined">
+								<button
+									type="button"
+									:disabled="isActionPending || isExportingReport"
+									@click="resetState"
+								>
+									<RefreshCwIcon />
+									{{ formatMessage(messages.retry) }}
+								</button>
+							</ButtonStyled>
+							<ButtonStyled color="brand">
+								<button
+									type="button"
+									:disabled="isActionPending || isExportingReport"
+									@click="exportTerracottaReport"
+								>
+									<SpinnerIcon v-if="isExportingReport" class="animate-spin" />
+									<DownloadIcon v-else />
+									{{ formatMessage(messages.exportErrorReport) }}
+								</button>
+							</ButtonStyled>
+						</div>
+					</template>
+				</Admonition>
+			</Card>
+
+			<Card v-else-if="!isRunning" class="!m-0">
+				<div class="flex flex-col gap-5">
+					<div class="flex items-start gap-3">
+						<div
+							class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-highlight text-brand"
+						>
+							<UsersIcon class="size-5" />
+						</div>
+						<div class="min-w-0">
+							<h2 class="m-0 text-lg font-semibold text-contrast">
+								{{ formatMessage(messages.notRunningTitle) }}
+							</h2>
+							<p class="mb-0 mt-1 text-secondary">
+								{{ formatMessage(messages.notRunning) }}
+							</p>
+						</div>
+					</div>
+					<div class="flex flex-wrap gap-2">
 						<ButtonStyled color="brand">
-							<button
-								type="button"
-								:disabled="isActionPending || isExportingReport"
-								@click="exportTerracottaReport"
-							>
-								<SpinnerIcon v-if="isExportingReport" class="animate-spin" />
-								<DownloadIcon v-else />
-								{{ formatMessage(messages.exportErrorReport) }}
+							<button type="button" :disabled="isActionPending" @click="startTerracotta">
+								<PlayIcon />
+								{{ formatMessage(messages.startTerracotta) }}
 							</button>
 						</ButtonStyled>
 					</div>
-				</template>
-			</Admonition>
-		</Card>
+				</div>
+			</Card>
 
-		<Card v-else-if="!isRunning" class="!m-0">
-			<div class="flex flex-col gap-5">
-				<div class="flex items-start gap-3">
-					<div
-						class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-highlight text-brand"
-					>
-						<UsersIcon class="size-5" />
-					</div>
-					<div class="min-w-0">
-						<h2 class="m-0 text-lg font-semibold text-contrast">
-							{{ formatMessage(messages.notRunningTitle) }}
-						</h2>
-						<p class="mb-0 mt-1 text-secondary">
-							{{ formatMessage(messages.notRunning) }}
-						</p>
-					</div>
-				</div>
-				<div class="flex flex-wrap gap-2">
-					<ButtonStyled color="brand">
-						<button type="button" :disabled="isActionPending" @click="startTerracotta">
-							<PlayIcon />
-							{{ formatMessage(messages.startTerracotta) }}
-						</button>
-					</ButtonStyled>
-				</div>
+			<div class="mt-auto pt-6 text-center text-xs text-secondary">
+				{{ formatMessage(messages.poweredByTerracotta) }}
 			</div>
-		</Card>
-
-		<div class="mt-auto pt-6 text-center text-xs text-secondary">
-			{{ formatMessage(messages.poweredByTerracotta) }}
-		</div>
 		</template>
 
 		<template v-else>
@@ -1052,7 +1057,9 @@ function submitJoin() {
 						full-width
 						:progress="hongshiState.download_progress ?? 0"
 						:max="100"
-						:waiting="hongshiState.download_progress === null || hongshiState.download_progress === 0"
+						:waiting="
+							hongshiState.download_progress === null || hongshiState.download_progress === 0
+						"
 						:label="formatMessage(messages.statusDownloading)"
 						show-progress
 					/>
@@ -1204,7 +1211,9 @@ function submitJoin() {
 
 					<div class="grid gap-4 md:grid-cols-2">
 						<div class="flex min-w-0 flex-col gap-2">
-							<span class="font-semibold text-contrast">{{ formatMessage(messages.localPort) }}</span>
+							<span class="font-semibold text-contrast">{{
+								formatMessage(messages.localPort)
+							}}</span>
 							<DropdownSelect
 								v-model="selectedInstanceId"
 								class="!w-full"
@@ -1230,7 +1239,9 @@ function submitJoin() {
 							class="flex min-w-0 flex-col gap-2"
 							for="hongshi-local-port"
 						>
-							<span class="font-semibold text-contrast">{{ formatMessage(messages.manualPort) }}</span>
+							<span class="font-semibold text-contrast">{{
+								formatMessage(messages.manualPort)
+							}}</span>
 							<StyledInput
 								id="hongshi-local-port"
 								v-model="manualPort"
@@ -1249,7 +1260,13 @@ function submitJoin() {
 						<ButtonStyled color="brand">
 							<button
 								type="button"
-								:disabled="!effectiveLocalPort || nodes.length === 0 || isActionPending || isNodesLoading || (selectedNode && !selectedNode.reachable)"
+								:disabled="
+									!effectiveLocalPort ||
+									nodes.length === 0 ||
+									isActionPending ||
+									isNodesLoading ||
+									(selectedNode && !selectedNode.reachable)
+								"
 								@click="startHongshiTunnel"
 							>
 								<GlobeIcon />

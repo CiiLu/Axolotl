@@ -232,7 +232,12 @@ function startPointerDrag(event: PointerEvent, entry: PaletteEntry, startDrag: S
 								@dragstart="onDragStart($event, entry)"
 								@dragend="onDragEnd"
 							>
-								<RecipeItemIcon :display="entry.display" :atlas="atlas" :size="34" :show-count="false" />
+								<RecipeItemIcon
+									:display="entry.display"
+									:atlas="atlas"
+									:size="34"
+									:show-count="false"
+								/>
 								<span class="recipe-palette-name">{{ entry.name }}</span>
 							</button>
 						</template>

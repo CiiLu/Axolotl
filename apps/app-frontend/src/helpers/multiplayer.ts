@@ -83,10 +83,7 @@ export function validLocalPort(value: string): number | null {
 	return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : null
 }
 
-export function selectedDetectedInstance(
-	current: string,
-	ports: DetectedLanPort[],
-): string {
+export function selectedDetectedInstance(current: string, ports: DetectedLanPort[]): string {
 	if (current !== 'manual' && ports.some((entry) => entry.instance_id === current)) {
 		return current
 	}
@@ -103,8 +100,7 @@ export const multiplayer = {
 	getState: () => invoke<MultiplayerState>(command('multiplayer_get_state')),
 	getNodes: (forceRefresh = false) =>
 		invoke<HongshiNode[]>(command('multiplayer_get_nodes'), { forceRefresh }),
-	getDetectedPorts: () =>
-		invoke<DetectedLanPort[]>(command('multiplayer_get_detected_ports')),
+	getDetectedPorts: () => invoke<DetectedLanPort[]>(command('multiplayer_get_detected_ports')),
 	downloadHongshi: () => invoke<void>(command('multiplayer_download_hongshi')),
 	switchProvider: (provider: MultiplayerProvider) =>
 		invoke<void>(command('multiplayer_switch_provider'), { provider }),

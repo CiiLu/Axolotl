@@ -1562,9 +1562,6 @@
   "payment-method.visa": {
     "defaultMessage": "Visa"
   },
-  "profile.label.badges": {
-    "defaultMessage": "Insigne"
-  },
   "project-card.date.published.tooltip": {
     "defaultMessage": "Publicat {date}"
   },

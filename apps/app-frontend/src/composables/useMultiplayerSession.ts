@@ -2,9 +2,9 @@ import { injectNotificationManager } from '@modrinth/ui'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import {
-	multiplayer,
 	type DetectedLanPort,
 	type HongshiNode,
+	multiplayer,
 	type MultiplayerProvider,
 	type MultiplayerState,
 } from '@/helpers/multiplayer'
@@ -96,8 +96,7 @@ export function useMultiplayerSession() {
 	const switchProvider = (provider: MultiplayerProvider) =>
 		runAction(() => multiplayer.switchProvider(provider))
 	const startTerracotta = () => runAction(multiplayer.prepareTerracotta)
-	const hostTerracotta = () =>
-		runAction(() => multiplayer.hostTerracotta(playerName.value))
+	const hostTerracotta = () => runAction(() => multiplayer.hostTerracotta(playerName.value))
 	const joinTerracotta = () =>
 		runAction(() => multiplayer.joinTerracotta(playerName.value, roomCodeInput.value))
 	const hostHongshi = (localPort: number, nodeName: string | null, instanceId: string | null) =>

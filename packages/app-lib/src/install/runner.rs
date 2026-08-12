@@ -399,10 +399,8 @@ pub async fn skip_missing_content_and_resume_job(
         .map(|item| item.id)
         .collect::<Vec<_>>();
     let mut job_state = job.state;
-    let InstallPauseReason::MissingRequiredContent { paths, .. } = job_state
-        .pause_reason
-        .as_ref()
-        .ok_or_else(|| {
+    let InstallPauseReason::MissingRequiredContent { paths, .. } =
+        job_state.pause_reason.as_ref().ok_or_else(|| {
             crate::ErrorKind::InputError(
                 "Install job has no missing content to skip".to_string(),
             )

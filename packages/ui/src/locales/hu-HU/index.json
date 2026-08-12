@@ -1871,9 +1871,6 @@
   "payment-method.visa": {
     "defaultMessage": "Visa"
   },
-  "profile.label.badges": {
-    "defaultMessage": "Jelvények"
-  },
   "project-card.date.published.tooltip": {
     "defaultMessage": "Közzététel: {date}"
   },
@@ -3103,17 +3100,5 @@
   },
   "ui.stacked-admonitions.alert-count": {
     "defaultMessage": "{count} figyelmeztetés"
-  },
-  "user.profile.badge.downloads.about.1": {
-    "defaultMessage": "Ez a felhasználó projektjei összesen {download_sum} letöltést értek el."
-  },
-  "user.profile.badge.downloads.name": {
-    "defaultMessage": "{download_sum} letöltés"
-  },
-  "user.profile.badge.plus.link": {
-    "defaultMessage": "Kattints ide, ha többet szeretnél megtudni arról, hogy hogyan válhatsz taggá."
-  },
-  "user.profile.badge.plus.name": {
-    "defaultMessage": "Modrinth+ tag"
   }
 }
