@@ -145,6 +145,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed the broken live log terminal',
 					'zh-CN': '修复了实时日志无法正常更新的问题',
 				},
+				{
+					'en-US':
+						'When launcher gets a conflicting cache alias from database, it will now resolve cache conflicts automatically, instead of throwing an error.',
+					'zh-CN':
+						'当启动器从数据库获取到冲突的缓存别名时，现在会自动解决缓存冲突，而不是抛出错误。',
+				},
 			],
 		},
 	},

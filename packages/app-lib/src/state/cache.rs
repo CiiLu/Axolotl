@@ -1144,6 +1144,354 @@ mod curseforge_project_cache_tests {
     }
 }
 
+#[cfg(test)]
+mod cache_upsert_tests {
+    use super::{CacheValue, CacheValueType, CachedEntry};
+    use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
+
+    async fn create_pool() -> SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE cache (
+                id TEXT NOT NULL,
+                data_type TEXT NOT NULL,
+                alias TEXT NULL,
+                data JSONB NULL,
+                expires INTEGER NOT NULL,
+                UNIQUE (data_type, alias),
+                PRIMARY KEY (id, data_type)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        pool
+    }
+
+    fn entry(
+        id: &str,
+        type_: CacheValueType,
+        alias: Option<&str>,
+        expires: i64,
+    ) -> CachedEntry {
+        CachedEntry {
+            id: id.to_string(),
+            alias: alias.map(str::to_string),
+            type_,
+            data: None,
+            expires,
+        }
+    }
+
+    fn report_types_entry(
+        id: &str,
+        alias: Option<&str>,
+        value: &str,
+        expires: i64,
+    ) -> CachedEntry {
+        CachedEntry {
+            id: id.to_string(),
+            alias: alias.map(str::to_string),
+            type_: CacheValueType::ReportTypes,
+            data: Some(CacheValue::ReportTypes(vec![value.to_string()])),
+            expires,
+        }
+    }
+
+    async fn ids(pool: &SqlitePool) -> Vec<String> {
+        sqlx::query_scalar("SELECT id FROM cache ORDER BY id")
+            .fetch_all(pool)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_replaces_matching_id() {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[report_types_entry(
+                "same-id",
+                Some("old-alias"),
+                "old-data",
+                1,
+            )],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        CachedEntry::upsert_many(
+            &[report_types_entry(
+                "same-id",
+                Some("new-alias"),
+                "new-data",
+                2,
+            )],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        let row = sqlx::query_as::<_, (String, String, i64)>(
+            "SELECT alias, json_extract(data, '$[0]'), expires
+             FROM cache
+             WHERE id = 'same-id' AND data_type = 'report_types'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(row, ("new-alias".to_string(), "new-data".to_string(), 2));
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_moves_alias_to_new_id() {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[entry(
+                "old-id",
+                CacheValueType::ReportTypes,
+                Some("shared-alias"),
+                1,
+            )],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        CachedEntry::upsert_many(
+            &[entry(
+                "new-id",
+                CacheValueType::ReportTypes,
+                Some("shared-alias"),
+                2,
+            )],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(ids(&pool).await, vec!["new-id"]);
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_resolves_id_and_alias_conflicts_with_different_rows()
+    {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[
+                entry("id-a", CacheValueType::ReportTypes, Some("alias-a"), 1),
+                entry("id-b", CacheValueType::ReportTypes, Some("alias-b"), 1),
+            ],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        CachedEntry::upsert_many(
+            &[entry(
+                "id-a",
+                CacheValueType::ReportTypes,
+                Some("alias-b"),
+                2,
+            )],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        let rows = sqlx::query_as::<_, (String, String, i64)>(
+            "SELECT id, alias, expires FROM cache",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(rows, vec![("id-a".to_string(), "alias-b".to_string(), 2)]);
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_keeps_same_alias_across_types() {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[
+                entry(
+                    "report-types",
+                    CacheValueType::ReportTypes,
+                    Some("shared-alias"),
+                    1,
+                ),
+                entry(
+                    "loaders",
+                    CacheValueType::Loaders,
+                    Some("shared-alias"),
+                    1,
+                ),
+            ],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(ids(&pool).await, vec!["loaders", "report-types"]);
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_keeps_multiple_null_aliases() {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[
+                entry("id-a", CacheValueType::ReportTypes, None, 1),
+                entry("id-b", CacheValueType::ReportTypes, None, 1),
+            ],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(ids(&pool).await, vec!["id-a", "id-b"]);
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_batch_uses_last_matching_id() {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[
+                entry(
+                    "same-id",
+                    CacheValueType::ReportTypes,
+                    Some("first-alias"),
+                    1,
+                ),
+                entry(
+                    "same-id",
+                    CacheValueType::ReportTypes,
+                    Some("last-alias"),
+                    2,
+                ),
+            ],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        let row = sqlx::query_as::<_, (String, i64)>(
+            "SELECT alias, expires FROM cache WHERE id = 'same-id'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(row, ("last-alias".to_string(), 2));
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_batch_uses_last_matching_alias() {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[
+                entry(
+                    "first-id",
+                    CacheValueType::ReportTypes,
+                    Some("same-alias"),
+                    1,
+                ),
+                entry(
+                    "last-id",
+                    CacheValueType::ReportTypes,
+                    Some("same-alias"),
+                    2,
+                ),
+            ],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(ids(&pool).await, vec!["last-id"]);
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_empty_batch_preserves_existing_rows() {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[entry(
+                "existing-id",
+                CacheValueType::ReportTypes,
+                Some("existing-alias"),
+                1,
+            )],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        CachedEntry::upsert_many(&[], &pool).await.unwrap();
+
+        assert_eq!(ids(&pool).await, vec!["existing-id"]);
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_statement_is_atomic_on_non_conflict_error() {
+        let pool = create_pool().await;
+        sqlx::query(
+            "CREATE TRIGGER reject_bad_cache_entry
+             BEFORE INSERT ON cache
+             WHEN NEW.id = 'bad-id'
+             BEGIN
+                 SELECT RAISE(ABORT, 'forced failure');
+             END",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let result = CachedEntry::upsert_many(
+            &[
+                entry("good-id", CacheValueType::ReportTypes, None, 1),
+                entry("bad-id", CacheValueType::ReportTypes, None, 1),
+            ],
+            &pool,
+        )
+        .await;
+
+        assert!(result.is_err());
+        assert!(ids(&pool).await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn cache_upsert_reassigns_curseforge_slug_without_2067() {
+        let pool = create_pool().await;
+        CachedEntry::upsert_many(
+            &[entry(
+                "42",
+                CacheValueType::CurseForgeProject,
+                Some("atm10sky"),
+                1,
+            )],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        CachedEntry::upsert_many(
+            &[entry(
+                "84",
+                CacheValueType::CurseForgeProject,
+                Some("atm10sky"),
+                2,
+            )],
+            &pool,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(ids(&pool).await, vec!["84"]);
+    }
+}
+
 impl_cache_method_singular!(
     (MinecraftManifest, daedalus::minecraft::VersionManifest),
     (Categories, Vec<Category>),
@@ -2353,8 +2701,38 @@ impl CachedEntry {
         items: &[Self],
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     ) -> crate::Result<()> {
+        if items.is_empty() {
+            return Ok(());
+        }
+
+        let mut last_id_positions = HashMap::new();
+        let mut last_alias_positions = HashMap::new();
+
+        for (position, item) in items.iter().enumerate() {
+            last_id_positions
+                .insert((item.id.as_str(), item.type_.as_str()), position);
+
+            if let Some(alias) = item.alias.as_deref() {
+                last_alias_positions
+                    .insert((item.type_.as_str(), alias), position);
+            }
+        }
+
         let items = items
             .iter()
+            .enumerate()
+            .filter(|(position, item)| {
+                let is_last_id = last_id_positions
+                    .get(&(item.id.as_str(), item.type_.as_str()))
+                    == Some(position);
+                let is_last_alias = item.alias.as_deref().is_none_or(|alias| {
+                    last_alias_positions.get(&(item.type_.as_str(), alias))
+                        == Some(position)
+                });
+
+                is_last_id && is_last_alias
+            })
+            .map(|(_, item)| item)
             .map(|item| {
                 let data = item
                     .data
@@ -2373,9 +2751,9 @@ impl CachedEntry {
             .collect::<crate::Result<Vec<_>>>()?;
         let items = serde_json::to_string(&items)?;
 
-        sqlx::query!(
+        sqlx::query(
             "
-            INSERT INTO cache (id, data_type, alias, data, expires)
+            INSERT OR REPLACE INTO cache (id, data_type, alias, data, expires)
                 SELECT
                     json_extract(value, '$.id') AS id,
                     json_extract(value, '$.data_type') AS data_type,
@@ -2384,14 +2762,9 @@ impl CachedEntry {
                     json_extract(value, '$.expires') AS expires
                 FROM
                     json_each($1)
-                WHERE TRUE
-            ON CONFLICT (id, data_type) DO UPDATE SET
-                alias = excluded.alias,
-                data = excluded.data,
-                expires = excluded.expires
             ",
-            items,
         )
+        .bind(items)
         .execute(exec)
         .await?;
 
