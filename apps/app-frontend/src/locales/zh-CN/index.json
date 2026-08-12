@@ -6851,6 +6851,9 @@
 	"app.instance.mods.skipped-files-warning.complete": {
 		"message": "补全缺失文件"
 	},
+	"app.downloads.item-status.failed": {
+		"message": "失败"
+	},
 	"app.settings.tabs.multiplayer": {
 		"message": "多人联机"
 	},
@@ -6867,7 +6870,7 @@
 		"message": "每行输入一个节点 URI。更改将在下次创建或加入房间时生效。留空则仅使用陶瓦内置节点。"
 	},
 	"app.multiplayer.terracotta.public-nodes-placeholder": {
-		"message": "wss://center.node.1tmc.top"
+		"message": "示例：wss://center.node.1tmc.top"
 	},
 	"app.multiplayer.terracotta.public-node-invalid": {
 		"message": "节点 URI 无效：{node}。请使用 http、https、tcp、tls、udp、ws 或 wss。"
