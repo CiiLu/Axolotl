@@ -249,6 +249,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '修复 nsis 安装程序未能将启动器安装到指定目录的问题。',
 				},
 				{
+					'en-US':
+						'Fixed the issue of front-end performance blocking when downloading too many small files.',
+					'zh-CN': '修复在下载小文件过多时造成的前端性能阻塞问题。',
+				},
+				{
 					'en-US': 'Fixed Minecraft account name fetch blocking splash screen from closing.',
 					'zh-CN': '修复 Minecraft 账号名称获取堵塞导致阻止启动器Splash screen关闭的问题。',
 				},
