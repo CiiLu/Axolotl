@@ -844,6 +844,21 @@ pub enum CacheBehaviour {
     Bypass,
 }
 
+#[derive(Copy, Clone)]
+enum CacheRefreshSource {
+    Foreground,
+    Background,
+}
+
+impl CacheRefreshSource {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Foreground => "foreground",
+            Self::Background => "background",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedEntry {
     id: String,
@@ -1492,6 +1507,176 @@ mod cache_upsert_tests {
     }
 }
 
+#[cfg(test)]
+mod fetched_cache_persistence_tests {
+    use super::{
+        CacheBehaviour, CacheRefreshSource, CacheValueType, CachedEntry,
+    };
+    use crate::util::fetch::FetchSemaphore;
+    use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
+    use std::io::Write;
+    use std::sync::{Arc, Mutex};
+    use tokio::sync::Semaphore;
+
+    async fn create_pool(with_cache_table: bool) -> SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        if with_cache_table {
+            sqlx::query(
+                "CREATE TABLE cache (
+                    id TEXT NOT NULL,
+                    data_type TEXT NOT NULL,
+                    alias TEXT NULL,
+                    data JSONB NULL,
+                    expires INTEGER NOT NULL,
+                    UNIQUE (data_type, alias),
+                    PRIMARY KEY (id, data_type)
+                )",
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        pool
+    }
+
+    fn entry(id: &str) -> CachedEntry {
+        CachedEntry {
+            id: id.to_string(),
+            alias: None,
+            type_: CacheValueType::CurseForgeProject,
+            data: None,
+            expires: 1,
+        }
+    }
+
+    async fn make_pool_read_only(pool: &SqlitePool) {
+        sqlx::query("PRAGMA query_only = TRUE")
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn foreground_fetch_returns_values_when_cache_write_fails() {
+        let pool = create_pool(true).await;
+        make_pool_read_only(&pool).await;
+
+        let values = CachedEntry::get_many(
+            CacheValueType::CurseForgeProject,
+            &["not-a-numeric-project-id"],
+            Some(CacheBehaviour::Bypass),
+            &pool,
+            &FetchSemaphore(Semaphore::new(1)),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0].id, "not-a-numeric-project-id");
+    }
+
+    #[tokio::test]
+    async fn background_cache_write_failure_is_nonfatal() {
+        let pool = create_pool(true).await;
+        make_pool_read_only(&pool).await;
+
+        CachedEntry::persist_fetched_cache_best_effort(
+            CacheValueType::CurseForgeProject,
+            &[entry("background-entry")],
+            &pool,
+            CacheRefreshSource::Background,
+        )
+        .await;
+
+        let count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM cache")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn direct_cache_write_failure_still_propagates() {
+        let pool = create_pool(true).await;
+        make_pool_read_only(&pool).await;
+
+        let result =
+            CachedEntry::upsert_many(&[entry("direct-entry")], &pool).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn cache_read_failure_still_propagates() {
+        let pool = create_pool(false).await;
+
+        let result = CachedEntry::get_many(
+            CacheValueType::CurseForgeProject,
+            &["missing"],
+            Some(CacheBehaviour::CacheOnly),
+            &pool,
+            &FetchSemaphore(Semaphore::new(1)),
+        )
+        .await;
+
+        assert!(result.is_err());
+    }
+
+    struct TestWriter(Arc<Mutex<Vec<u8>>>);
+
+    impl Write for TestWriter {
+        fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(buffer);
+            Ok(buffer.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn cache_write_warning_contains_diagnostics_without_payload() {
+        let pool = create_pool(true).await;
+        make_pool_read_only(&pool).await;
+        let error = CachedEntry::upsert_many(&[entry("secret-payload")], &pool)
+            .await
+            .unwrap_err();
+        let output = Arc::new(Mutex::new(Vec::new()));
+        let writer_output = Arc::clone(&output);
+        let subscriber = tracing_subscriber::fmt()
+            .without_time()
+            .with_ansi(false)
+            .with_target(false)
+            .with_writer(move || TestWriter(Arc::clone(&writer_output)))
+            .finish();
+
+        tracing::subscriber::with_default(subscriber, || {
+            CachedEntry::log_cache_write_failure(
+                CacheValueType::CurseForgeProject,
+                1,
+                CacheRefreshSource::Foreground,
+                &error,
+            );
+        });
+
+        let output = String::from_utf8(output.lock().unwrap().clone()).unwrap();
+        assert!(output.contains("cache_write_discarded=true"));
+        assert!(output.contains("cache_type=\"curseforge_project\""));
+        assert!(output.contains("entry_count=1"));
+        assert!(output.contains("refresh_source=\"foreground\""));
+        assert!(output.contains("error_category=\"sqlx_database\""));
+        assert!(output.contains("database_code=\"8\""));
+        assert!(!output.contains("secret-payload"));
+    }
+}
+
 impl_cache_method_singular!(
     (MinecraftManifest, daedalus::minecraft::VersionManifest),
     (Categories, Vec<Category>),
@@ -1502,6 +1687,53 @@ impl_cache_method_singular!(
 );
 
 impl CachedEntry {
+    async fn persist_fetched_cache_best_effort(
+        type_: CacheValueType,
+        entries: &[Self],
+        pool: &SqlitePool,
+        refresh_source: CacheRefreshSource,
+    ) {
+        if entries.is_empty() {
+            return;
+        }
+
+        if let Err(error) = Self::upsert_many(entries, pool).await {
+            Self::log_cache_write_failure(
+                type_,
+                entries.len(),
+                refresh_source,
+                &error,
+            );
+        }
+    }
+
+    fn log_cache_write_failure(
+        type_: CacheValueType,
+        entry_count: usize,
+        refresh_source: CacheRefreshSource,
+        error: &crate::Error,
+    ) {
+        let (error_category, database_code) = match error.raw.as_ref() {
+            crate::ErrorKind::Sqlx(sqlx::Error::Database(database_error)) => (
+                "sqlx_database",
+                database_error.code().map(|code| code.into_owned()),
+            ),
+            crate::ErrorKind::Sqlx(_) => ("sqlx", None),
+            _ => ("other", None),
+        };
+
+        tracing::warn!(
+            cache_write_discarded = true,
+            cache_type = type_.as_str(),
+            entry_count,
+            refresh_source = refresh_source.as_str(),
+            error_category,
+            database_code = database_code.as_deref().unwrap_or("none"),
+            error = %error,
+            "Failed to persist fetched cache entries; continuing with fetched values"
+        );
+    }
+
     #[tracing::instrument(skip(pool, fetch_semaphore))]
     pub async fn get(
         type_: CacheValueType,
@@ -1663,12 +1895,16 @@ impl CachedEntry {
                 }
             } else {
                 let values = res?;
+                let entries =
+                    values.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
 
-                Self::upsert_many(
-                    &values.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+                Self::persist_fetched_cache_best_effort(
+                    type_,
+                    &entries,
                     pool,
+                    CacheRefreshSource::Foreground,
                 )
-                .await?;
+                .await;
 
                 if !values.is_empty() {
                     return_vals.append(
@@ -1695,25 +1931,41 @@ impl CachedEntry {
 
         if !expired_keys.is_empty() && should_background_refresh {
             tokio::task::spawn(async move {
-                // TODO: if possible- find a way to do this without invoking state get
-                let state = crate::state::State::get().await?;
+                let result = async {
+                    // TODO: if possible- find a way to do this without invoking state get
+                    let state = crate::state::State::get().await?;
 
-                let values = Self::fetch_many(
-                    type_,
-                    expired_keys,
-                    &state.api_semaphore,
-                    &state.pool,
-                )
-                .await?
-                .into_iter()
-                .map(|x| x.0)
-                .collect::<Vec<_>>();
+                    let values = Self::fetch_many(
+                        type_,
+                        expired_keys,
+                        &state.api_semaphore,
+                        &state.pool,
+                    )
+                    .await?
+                    .into_iter()
+                    .map(|x| x.0)
+                    .collect::<Vec<_>>();
 
-                if !values.is_empty() {
-                    Self::upsert_many(&values, &state.pool).await?;
+                    Self::persist_fetched_cache_best_effort(
+                        type_,
+                        &values,
+                        &state.pool,
+                        CacheRefreshSource::Background,
+                    )
+                    .await;
+
+                    Ok::<(), crate::Error>(())
                 }
+                .await;
 
-                Ok::<(), crate::Error>(())
+                if let Err(error) = result {
+                    tracing::warn!(
+                        cache_type = type_.as_str(),
+                        refresh_source = CacheRefreshSource::Background.as_str(),
+                        error = %error,
+                        "Background cache refresh failed"
+                    );
+                }
             });
         }
 

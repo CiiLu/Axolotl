@@ -151,6 +151,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'当启动器从数据库获取到冲突的缓存别名时，现在会自动解决缓存冲突，而不是抛出错误。',
 				},
+				{
+					'en-US':
+						'Fixed modpack installations failing after remote project metadata was fetched but could not be written to the local cache.',
+					'zh-CN':
+						'修复远程项目元数据已获取成功、但无法写入本地缓存时导致整合包安装失败的问题。',
+				},
 			],
 		},
 	},
