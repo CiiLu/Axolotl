@@ -11,6 +11,24 @@
 	"app.action-bar.downloads": {
 		"message": "Downloads"
 	},
+	"app.action-bar.install.cache-repair.action": {
+		"message": "Clear project cache and retry"
+	},
+	"app.action-bar.install.cache-repair.description": {
+		"message": "The launcher could not read the local CurseForge project cache, so installation was stopped."
+	},
+	"app.action-bar.install.cache-repair.failed": {
+		"message": "Project cache cleanup failed; retry was not started."
+	},
+	"app.action-bar.install.cache-repair.in-progress": {
+		"message": "Clearing project cache…"
+	},
+	"app.action-bar.install.cache-repair.title": {
+		"message": "Project metadata cache error"
+	},
+	"app.action-bar.install.deleted-instance": {
+		"message": "Deleted instance"
+	},
 	"app.action-bar.exporting-modpack": {
 		"message": "Exporting modpack"
 	},

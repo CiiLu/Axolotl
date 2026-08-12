@@ -105,6 +105,8 @@ export interface InstallErrorView {
 		file_path?: string | null
 		entry_path?: string | null
 		urls?: string[]
+		cache_types?: string[]
+		sqlite_code?: string | null
 		expected_hash?: string | null
 		expected_size?: number | null
 		project_id?: string | null
@@ -381,6 +383,12 @@ export async function install_job_get(jobId: string) {
 
 export async function install_job_retry(jobId: string) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_job_retry', { jobId })
+}
+
+export async function install_job_repair_cache_and_retry(jobId: string) {
+	return await invoke<InstallJobSnapshot>('plugin:install|install_job_repair_cache_and_retry', {
+		jobId,
+	})
 }
 
 export async function install_job_resume(jobId: string) {

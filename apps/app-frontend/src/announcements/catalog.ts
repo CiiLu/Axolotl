@@ -75,6 +75,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added a mechanism to reuse existing resources when importing external instances, now avoiding some duplicate downloads.',
 					'zh-CN': '添加了在导入外部实例时复用已有资源的机制，现在避免一部分重复下载。',
 				},
+				{
+					'en-US':
+						'Added a targeted project-cache repair and retry action for recoverable CurseForge metadata cache failures.',
+					'zh-CN': '为可恢复的 CurseForge 项目元数据缓存故障新增定向清理缓存并重试操作。',
+				},
 			],
 			fixed: [
 				{
@@ -154,8 +159,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed modpack installations failing after remote project metadata was fetched but could not be written to the local cache.',
+					'zh-CN': '修复远程项目元数据已获取成功、但无法写入本地缓存时导致整合包安装失败的问题。',
+				},
+				{
+					'en-US':
+						'Fixed instances being shown as ready before installation fully completed, which could trigger incorrect refreshes after a failed install.',
+					'zh-CN': '修复实例在安装完全结束前就显示为可用，导致安装失败后仍可能错误刷新的问题。',
+				},
+				{
+					'en-US':
+						'Fixed canceling a modpack install during override extraction leaving the new instance and partially installed files behind instead of completing rollback.',
 					'zh-CN':
-						'修复远程项目元数据已获取成功、但无法写入本地缓存时导致整合包安装失败的问题。',
+						'修复在解压整合包覆盖文件时取消安装，回滚未完成并残留新实例及部分安装文件的问题。',
 				},
 			],
 		},

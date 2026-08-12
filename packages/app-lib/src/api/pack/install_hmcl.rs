@@ -190,7 +190,9 @@ pub(crate) async fn install_hmcl_pack_with_reporter(
         .await?;
     let instance_path =
         crate::api::instance::get_full_path(&instance_id).await?;
-    archive_util::extract_archive_subdir(
+    archive_util::extract_archive_subdir_for_instance(
+        instance_id.clone(),
+        reporter.cancellation_token(),
         archive_path,
         format!("{base_folder}minecraft/"),
         instance_path.clone(),
@@ -201,6 +203,7 @@ pub(crate) async fn install_hmcl_pack_with_reporter(
         &instance_id,
         false,
         Some(reporter.clone()),
+        crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
     )
     .await?;
 
@@ -208,6 +211,7 @@ pub(crate) async fn install_hmcl_pack_with_reporter(
         && let Err(error) = super::install_mcbbs::install_optifine_mod(
             &state,
             &instance_id,
+            reporter.cancellation_token(),
             &game_version,
             &optifine_version,
             &instance_path,

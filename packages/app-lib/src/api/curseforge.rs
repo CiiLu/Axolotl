@@ -1957,10 +1957,21 @@ pub async fn install_modpack_with_reporter(
     let should_commit = content.manual_downloads.is_empty()
         && (!request.allow_target_change || update_ready);
     let overrides_written = if should_commit {
-        tokio::task::spawn_blocking(move || {
-            extract_modpack_overrides(&pack_path, &instance_path)
-        })
-        .await??
+        crate::api::pack::archive_util::run_blocking_instance_write(
+            request.instance_id.clone(),
+            reporter
+                .as_ref()
+                .map(InstallProgressReporter::cancellation_token)
+                .unwrap_or_default(),
+            move |cancellation| {
+                extract_modpack_overrides(
+                    &pack_path,
+                    &instance_path,
+                    Some(cancellation),
+                )
+            },
+        )
+        .await?
     } else {
         0
     };
@@ -2038,6 +2049,7 @@ pub async fn install_modpack_from_local_archive_with_reporter(
     source_filename: Option<String>,
     install_optional: bool,
     reporter: InstallProgressReporter,
+    completion_policy: crate::launcher::InstanceCompletionPolicy,
 ) -> crate::Result<CurseForgeModpackInstallResult> {
     let manifest_archive_path = archive_path.clone();
     let manifest = tokio::task::spawn_blocking(move || {
@@ -2141,15 +2153,25 @@ pub async fn install_modpack_from_local_archive_with_reporter(
     let instance_path =
         crate::api::instance::get_full_path(&instance_id).await?;
     let overrides_archive_path = archive_path.clone();
-    let overrides_written = tokio::task::spawn_blocking(move || {
-        extract_modpack_overrides(&overrides_archive_path, &instance_path)
-    })
-    .await??;
+    let overrides_written =
+        crate::api::pack::archive_util::run_blocking_instance_write(
+            instance_id.clone(),
+            reporter.cancellation_token(),
+            move |cancellation| {
+                extract_modpack_overrides(
+                    &overrides_archive_path,
+                    &instance_path,
+                    Some(cancellation),
+                )
+            },
+        )
+        .await?;
 
     crate::launcher::install_minecraft_for_instance_id_with_reporter(
         &instance_id,
         false,
         Some(reporter.clone()),
+        completion_policy,
     )
     .await?;
     reporter.clear_context().await?;
@@ -2962,6 +2984,7 @@ async fn cache_instance_icon_from_url(
 fn extract_modpack_overrides(
     archive_path: &Path,
     instance_path: &Path,
+    cancellation: Option<&tokio_util::sync::CancellationToken>,
 ) -> crate::Result<u32> {
     let file = std::fs::File::open(archive_path)?;
     let mut archive = zip::ZipArchive::new(file).map_err(modpack_zip_error)?;
@@ -2970,6 +2993,7 @@ fn extract_modpack_overrides(
     let mut files_written = 0_u32;
     let mut total_size = 0_u64;
     for index in 0..archive.len() {
+        crate::api::pack::archive_util::check_cancellation(cancellation)?;
         let mut entry = archive.by_index(index).map_err(modpack_zip_error)?;
         let entry_name =
             crate::pack::detect::decode_zip_entry_name(entry.name_raw());
@@ -2990,8 +3014,13 @@ fn extract_modpack_overrides(
         if let Some(parent) = target.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let mut output = std::fs::File::create(target)?;
-        let written = std::io::copy(&mut entry, &mut output)?;
+        let mut output = std::fs::File::create(&target)?;
+        let written = crate::api::pack::archive_util::copy_with_cancellation(
+            &mut entry,
+            &mut output,
+            cancellation,
+            &target,
+        )?;
         if written != entry.size() {
             return Err(ErrorKind::InputError(
                 "CurseForge modpack override was truncated during extraction"

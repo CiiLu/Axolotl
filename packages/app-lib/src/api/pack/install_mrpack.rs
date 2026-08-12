@@ -1417,6 +1417,7 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         &instance_id,
         false,
         Some(reporter.clone()),
+        crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
     )
     .await?;
     reporter.clear_context().await?;

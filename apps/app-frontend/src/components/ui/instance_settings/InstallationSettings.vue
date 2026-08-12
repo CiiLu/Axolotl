@@ -124,7 +124,9 @@ const isImportedModpack = computed(() => instance.value.link?.type === 'imported
 const modpackInfoQuery = useQuery({
 	queryKey: computed(() => ['linkedModpackInfo', instance.value.id]),
 	queryFn: () => get_linked_modpack_info(instance.value.id, 'must_revalidate'),
-	enabled: computed(() => isLinkedManagedModpack.value && !offline),
+	enabled: computed(
+		() => instance.value.install_stage === 'installed' && isLinkedManagedModpack.value && !offline,
+	),
 })
 const modpackInfo = modpackInfoQuery.data
 

@@ -108,6 +108,17 @@ impl CacheValueType {
         }
     }
 
+    pub fn from_repairable_str(val: &str) -> Option<CacheValueType> {
+        match val {
+            "curseforge_project" => Some(CacheValueType::CurseForgeProject),
+            _ => None,
+        }
+    }
+
+    fn is_repairable_install_cache(self) -> bool {
+        matches!(self, CacheValueType::CurseForgeProject)
+    }
+
     /// All cache entries are effectively permanent — data is served from cache
     /// immediately and refreshed asynchronously in the background.
     pub fn expiry(&self) -> i64 {
@@ -151,6 +162,32 @@ impl CacheValueType {
             | CacheValueType::ProjectVersions => None,
         }
     }
+}
+
+fn cache_read_failure(
+    cache_type: CacheValueType,
+    cache_error: crate::Error,
+    remote_error: Option<crate::Error>,
+) -> crate::Error {
+    if !cache_type.is_repairable_install_cache() {
+        return cache_error;
+    }
+    let sqlite_code = match cache_error.raw.as_ref() {
+        crate::ErrorKind::Sqlx(sqlx::Error::Database(error)) => {
+            error.code().map(|code| code.into_owned())
+        }
+        _ => None,
+    };
+    let remote_suffix = remote_error
+        .is_some()
+        .then_some("; remote replacement data was unavailable")
+        .unwrap_or_default();
+    crate::ErrorKind::CacheReadError {
+        cache_type: cache_type.as_str().to_string(),
+        message: format!("{cache_error}{remote_suffix}"),
+        sqlite_code,
+    }
+    .into()
 }
 
 /// Cached modpack file hashes for filtering content
@@ -1776,6 +1813,7 @@ impl CachedEntry {
         let mut return_vals = Vec::new();
         let expired_keys = DashSet::new();
         let background_refresh_keys = DashSet::new();
+        let mut cache_read_error: Option<crate::Error> = None;
 
         if cache_behaviour != CacheBehaviour::Bypass {
             let type_str = type_.as_str();
@@ -1805,12 +1843,26 @@ impl CachedEntry {
                 alias_keys
             )
             .fetch_all(pool)
-            .await?;
+            .await;
+
+            let query = match query {
+                Ok(query) => query,
+                Err(error) => {
+                    cache_read_error = Some(error.into());
+                    Vec::new()
+                }
+            };
 
             let now = Utc::now().timestamp();
             for row in query {
                 let parsed_data = if let Some(data) = row.data.clone() {
-                    Some(Self::deserialize_cache_value(type_, data, &row.id)?)
+                    match Self::deserialize_cache_value(type_, data, &row.id) {
+                        Ok(value) => Some(value),
+                        Err(error) => {
+                            cache_read_error = Some(error);
+                            break;
+                        }
+                    }
                 } else {
                     None
                 };
@@ -1844,13 +1896,14 @@ impl CachedEntry {
 
                 if let Some(data) = parsed_data {
                     if data.get_type() != type_ {
-                        return Err(crate::ErrorKind::OtherError(format!(
+                        cache_read_error = Some(crate::ErrorKind::OtherError(format!(
                             "Cache type mismatch for id {}: expected {:?}, got {:?}",
                             row.id,
                             type_,
                             data.get_type()
                         ))
                         .as_error());
+                        break;
                     }
 
                     if data.is_empty_collection() {
@@ -1873,6 +1926,22 @@ impl CachedEntry {
                     remaining_keys.retain(remove_matching_key);
                 }
             }
+
+            if cache_read_error.is_some() {
+                return_vals.clear();
+                expired_keys.clear();
+                background_refresh_keys.clear();
+                remaining_keys.clear();
+                for key in keys {
+                    remaining_keys.insert(*key);
+                }
+            }
+        }
+
+        if cache_behaviour == CacheBehaviour::CacheOnly
+            && let Some(cache_error) = cache_read_error.take()
+        {
+            return Err(cache_read_failure(type_, cache_error, None));
         }
 
         if !remaining_keys.is_empty()
@@ -1886,34 +1955,55 @@ impl CachedEntry {
             )
             .await;
 
-            if res.is_err()
-                && cache_behaviour
-                    == CacheBehaviour::StaleWhileRevalidateSkipOffline
-            {
-                for key in remaining_keys {
-                    expired_keys.insert(key.to_string());
+            match res {
+                Err(remote_error) => {
+                    if let Some(cache_error) = cache_read_error.take() {
+                        return Err(cache_read_failure(
+                            type_,
+                            cache_error,
+                            Some(remote_error),
+                        ));
+                    }
+                    if cache_behaviour
+                        == CacheBehaviour::StaleWhileRevalidateSkipOffline
+                    {
+                        for key in remaining_keys {
+                            expired_keys.insert(key.to_string());
+                        }
+                    } else {
+                        return Err(remote_error);
+                    }
                 }
-            } else {
-                let values = res?;
-                let entries =
-                    values.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
+                Ok(values) => {
+                    if values.is_empty()
+                        && let Some(cache_error) = cache_read_error.take()
+                    {
+                        return Err(cache_read_failure(
+                            type_,
+                            cache_error,
+                            None,
+                        ));
+                    }
+                    let entries =
+                        values.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
 
-                Self::persist_fetched_cache_best_effort(
-                    type_,
-                    &entries,
-                    pool,
-                    CacheRefreshSource::Foreground,
-                )
-                .await;
+                    Self::persist_fetched_cache_best_effort(
+                        type_,
+                        &entries,
+                        pool,
+                        CacheRefreshSource::Foreground,
+                    )
+                    .await;
 
-                if !values.is_empty() {
-                    return_vals.append(
-                        &mut values
-                            .into_iter()
-                            .filter(|(_, include)| *include)
-                            .map(|x| x.0)
-                            .collect::<Vec<_>>(),
-                    );
+                    if !values.is_empty() {
+                        return_vals.append(
+                            &mut values
+                                .into_iter()
+                                .filter(|(_, include)| *include)
+                                .map(|x| x.0)
+                                .collect::<Vec<_>>(),
+                        );
+                    }
                 }
             }
         }
@@ -3189,8 +3279,8 @@ pub async fn cache_file_hash_metadata(
 #[cfg(test)]
 mod game_version_cache_tests {
     use super::{
-        CacheBehaviour, CacheValue, CachedEntry, CachedProjectVersions,
-        GameVersion,
+        CacheBehaviour, CacheValue, CacheValueType, CachedEntry,
+        CachedProjectVersions, GameVersion,
     };
     use crate::util::fetch::FetchSemaphore;
     use sqlx::sqlite::SqlitePoolOptions;
@@ -3248,6 +3338,39 @@ mod game_version_cache_tests {
         .execute(pool)
         .await
         .unwrap();
+    }
+
+    #[tokio::test]
+    async fn corrupt_curseforge_project_cache_is_typed_for_repair() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        create_cache_table(&pool).await;
+        let semaphore = FetchSemaphore(Semaphore::new(1));
+        sqlx::query(
+            "INSERT INTO cache (id, data_type, alias, data, expires)
+             VALUES ('123', 'curseforge_project', NULL, '{\"invalid\":true}', 4102444800)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let error = CachedEntry::get_many(
+            CacheValueType::CurseForgeProject,
+            &["123"],
+            Some(CacheBehaviour::CacheOnly),
+            &pool,
+            &semaphore,
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(
+            error.raw.as_ref(),
+            crate::ErrorKind::CacheReadError { cache_type, .. }
+                if cache_type == "curseforge_project"
+        ));
     }
 
     #[tokio::test]

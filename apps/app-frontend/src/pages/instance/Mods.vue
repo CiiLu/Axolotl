@@ -746,6 +746,34 @@ watch(
 const isModpackUpdating = ref(false)
 const isBulkOperating = ref(false)
 const isInstanceBusy = computed(() => props.instance?.install_stage !== 'installed')
+let contentRequestGeneration = 0
+let isUnmounted = false
+
+function isCurrentContentRequest(instanceId: string, generation: number) {
+	return (
+		!isUnmounted &&
+		props.instance.id === instanceId &&
+		props.instance.install_stage === 'installed' &&
+		contentRequestGeneration === generation
+	)
+}
+
+function invalidateContentRequests(clearState = false) {
+	contentRequestGeneration += 1
+	if (!clearState) return
+
+	contentSnapshot.value = null
+	projects.value = []
+	linkedModpackContentItems.value = []
+	installingBuffer.value = []
+	linkedModpackProject.value = null
+	linkedModpackVersion.value = null
+	linkedModpackOwner.value = null
+	linkedModpackCategories.value = []
+	linkedModpackHasUpdate.value = false
+	linkedModpackUpdateVersionId.value = null
+	loading.value = false
+}
 const isPackLocked = computed(
 	() =>
 		props.instance?.link?.type === 'modrinth_modpack' ||
@@ -1838,24 +1866,47 @@ function openSchematicInWorkshop(item: ContentItem) {
 }
 
 async function initProjects(cacheBehaviour?: CacheBehaviour) {
-	if (!props.instance) return
-
-	debugState('initProjects start', { instanceId: props.instance.id, cacheBehaviour })
-	const contentData = await loadInstanceContentData(props.instance.id, cacheBehaviour, handleError)
-	if (!contentData) {
-		loading.value = false
+	if (!props.instance || props.instance.install_stage !== 'installed') {
+		invalidateContentRequests(true)
 		return
 	}
-	if (contentData.contentItems) {
-		contentData.contentItems = await translateContentItemTitles(
-			contentData.contentItems,
+
+	const instanceId = props.instance.id
+	const generation = ++contentRequestGeneration
+	debugState('initProjects start', { instanceId, cacheBehaviour, generation })
+	let contentData: InstanceContentData | null
+	try {
+		contentData = await loadInstanceContentData(instanceId, cacheBehaviour)
+	} catch (error) {
+		if (isCurrentContentRequest(instanceId, generation)) {
+			handleError(error as Error)
+			loading.value = false
+		}
+		return
+	}
+	if (!contentData) {
+		if (isCurrentContentRequest(instanceId, generation)) loading.value = false
+		return
+	}
+	try {
+		if (contentData.contentItems) {
+			contentData.contentItems = await translateContentItemTitles(
+				contentData.contentItems,
+				i18n.global.locale.value,
+			)
+		}
+		contentData.linkedContentItems = await translateContentItemTitles(
+			contentData.linkedContentItems,
 			i18n.global.locale.value,
 		)
+	} catch (error) {
+		if (isCurrentContentRequest(instanceId, generation)) {
+			handleError(error as Error)
+			loading.value = false
+		}
+		return
 	}
-	contentData.linkedContentItems = await translateContentItemTitles(
-		contentData.linkedContentItems,
-		i18n.global.locale.value,
-	)
+	if (!isCurrentContentRequest(instanceId, generation)) return
 	applyContentData(contentData)
 	if (cacheBehaviour !== 'bypass' && beginLegacyCurseForgeReconciliation(contentData)) {
 		await initProjects('bypass')
@@ -1875,7 +1926,7 @@ function beginLegacyCurseForgeReconciliation(contentData: InstanceContentData) {
 }
 
 function applyContentData(contentData: InstanceContentData) {
-	if (contentData.path !== props.instance.id) {
+	if (props.instance.install_stage !== 'installed' || contentData.path !== props.instance.id) {
 		debugState('applyContentData path mismatch', {
 			expected: props.instance.id,
 			got: contentData.path,
@@ -2182,6 +2233,10 @@ function getInstallRevision() {
 }
 
 async function loadInitialContent(): Promise<void> {
+	if (props.instance.install_stage !== 'installed') {
+		invalidateContentRequests(true)
+		return
+	}
 	const installRevision = getInstallRevision()
 	const cached = readInstanceCache(props.instance.id)
 
@@ -2243,12 +2298,15 @@ const removeBeforeEach = router.beforeEach(() => {
 	savedModalState = state ?? null
 })
 
-let isUnmounted = false
 let unlistenInstances: UnlistenFn | null = null
 
 onMounted(() => {
 	void instance_listener(
 		async (event: { event: string; instance_id: string; revision?: number }) => {
+			if (event.instance_id === props.instance.id && event.event === 'removed') {
+				invalidateContentRequests(true)
+				return
+			}
 			if (
 				props.instance &&
 				event.instance_id === props.instance.id &&
@@ -2284,8 +2342,19 @@ watch(
 	async (newStage, oldStage) => {
 		if (oldStage !== 'installed' && newStage === 'installed') {
 			await refreshContentState('bypass')
-		} else if (oldStage === 'not_installed' && newStage === 'pack_installing') {
-			await initProjects()
+		} else if (newStage !== 'installed') {
+			invalidateContentRequests(true)
+		}
+	},
+)
+
+watch(
+	() => props.instance.id,
+	async (newId, oldId) => {
+		if (newId === oldId) return
+		invalidateContentRequests(true)
+		if (props.instance.install_stage === 'installed') {
+			await refreshContentState('bypass')
 		}
 	},
 )
@@ -2310,6 +2379,7 @@ watch(
 
 onUnmounted(() => {
 	isUnmounted = true
+	invalidateContentRequests()
 	removeBeforeEach()
 	unlistenInstances?.()
 })

@@ -26,6 +26,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             install_job_list,
             install_job_get,
             install_job_retry,
+            install_job_repair_cache_and_retry,
             install_job_resume,
             install_job_missing_files,
             install_job_scan_missing_files,
@@ -217,6 +218,13 @@ pub async fn install_job_get(job_id: Uuid) -> Result<InstallJobSnapshot> {
 #[tauri::command]
 pub async fn install_job_retry(job_id: Uuid) -> Result<InstallJobSnapshot> {
     Ok(theseus::install::retry_job(job_id).await?)
+}
+
+#[tauri::command]
+pub async fn install_job_repair_cache_and_retry(
+    job_id: Uuid,
+) -> Result<InstallJobSnapshot> {
+    Ok(theseus::install::repair_cache_and_retry_job(job_id).await?)
 }
 
 #[tauri::command]

@@ -413,6 +413,16 @@ fn write_error_context(
             let _ = writeln!(details, "- {url}");
         }
     }
+    if !context.cache_types.is_empty() {
+        let _ = writeln!(
+            details,
+            "Cache types: {}",
+            context.cache_types.join(", ")
+        );
+    }
+    if let Some(sqlite_code) = &context.sqlite_code {
+        let _ = writeln!(details, "SQLite code: {sqlite_code}");
+    }
     if let Some(expected_hash) = &context.expected_hash {
         let _ = writeln!(details, "Expected hash: {expected_hash}");
     }

@@ -11,6 +11,24 @@
 	"app.action-bar.downloads": {
 		"message": "下载"
 	},
+	"app.action-bar.install.cache-repair.action": {
+		"message": "清除项目缓存并重试"
+	},
+	"app.action-bar.install.cache-repair.description": {
+		"message": "启动器无法读取本地 CurseForge 项目缓存，安装已停止。"
+	},
+	"app.action-bar.install.cache-repair.failed": {
+		"message": "项目缓存清除失败；尚未开始重试。"
+	},
+	"app.action-bar.install.cache-repair.in-progress": {
+		"message": "正在清除项目缓存…"
+	},
+	"app.action-bar.install.cache-repair.title": {
+		"message": "项目元数据缓存异常"
+	},
+	"app.action-bar.install.deleted-instance": {
+		"message": "实例已删除"
+	},
 	"app.action-bar.hide-more-running-instances": {
 		"message": "隐藏更多运行中的实例"
 	},

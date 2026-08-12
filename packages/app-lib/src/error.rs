@@ -122,6 +122,11 @@ pub enum ErrorKind {
     #[error("Instance {0} is not managed by the app!")]
     UnmanagedInstanceError(String),
 
+    #[error(
+        "Instance {instance_id} is not ready while install stage is {stage}"
+    )]
+    InstanceNotReady { instance_id: String, stage: String },
+
     #[error("User is not logged in, no credentials available!")]
     NoCredentialsError,
 
@@ -152,6 +157,13 @@ pub enum ErrorKind {
 
     #[error("Error interacting with database: {0}")]
     Sqlx(#[from] sqlx::Error),
+
+    #[error("Unable to read {cache_type} cache: {message}")]
+    CacheReadError {
+        cache_type: String,
+        message: String,
+        sqlite_code: Option<String>,
+    },
 
     #[error("Error while applying migrations: {0}")]
     SqlxMigrate(#[from] sqlx::migrate::MigrateError),

@@ -94,6 +94,7 @@ pub async fn refresh_content(
     instance_id: &str,
 ) -> crate::Result<InstanceContentSnapshot> {
     let state = State::get().await?;
+    require_installed_instance(instance_id, &state).await?;
     crate::state::get_content_snapshot(instance_id, true, &state).await
 }
 
@@ -388,6 +389,7 @@ pub async fn get_linked_modpack_info(
     cache_behaviour: Option<CacheBehaviour>,
 ) -> crate::Result<Option<LinkedModpackInfo>> {
     let state = State::get().await?;
+    require_installed_instance(instance_id, &state).await?;
     crate::state::get_linked_modpack_info(
         instance_id,
         None,
@@ -395,6 +397,29 @@ pub async fn get_linked_modpack_info(
         &state,
     )
     .await
+}
+
+async fn require_installed_instance(
+    instance_id: &str,
+    state: &State,
+) -> crate::Result<()> {
+    let metadata = crate::state::instances::commands::get_instance_metadata(
+        instance_id,
+        &state.pool,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::UnmanagedInstanceError(instance_id.to_string())
+    })?;
+    let stage = metadata.instance.install_stage;
+    if stage != crate::state::InstanceInstallStage::Installed {
+        return Err(crate::ErrorKind::InstanceNotReady {
+            instance_id: instance_id.to_string(),
+            stage: stage.as_str().to_string(),
+        }
+        .into());
+    }
+    Ok(())
 }
 
 #[cfg(test)]

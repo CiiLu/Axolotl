@@ -12,6 +12,7 @@ import type { Router } from 'vue-router'
 
 import {
 	install_job_dismiss,
+	install_job_repair_cache_and_retry,
 	install_job_retry,
 	install_job_support_details,
 	installJobInstanceId,
@@ -52,6 +53,31 @@ const messages = defineMessages({
 	unknownInstance: {
 		id: 'app.action-bar.install.unknown-instance',
 		defaultMessage: 'Unknown instance',
+	},
+	deletedInstance: {
+		id: 'app.action-bar.install.deleted-instance',
+		defaultMessage: 'Deleted instance',
+	},
+	cacheRepairTitle: {
+		id: 'app.action-bar.install.cache-repair.title',
+		defaultMessage: 'Project metadata cache error',
+	},
+	cacheRepairDescription: {
+		id: 'app.action-bar.install.cache-repair.description',
+		defaultMessage:
+			'The launcher could not read the local CurseForge project cache, so installation was stopped.',
+	},
+	cacheRepairAction: {
+		id: 'app.action-bar.install.cache-repair.action',
+		defaultMessage: 'Clear project cache and retry',
+	},
+	cacheRepairing: {
+		id: 'app.action-bar.install.cache-repair.in-progress',
+		defaultMessage: 'Clearing project cache…',
+	},
+	cacheRepairFailed: {
+		id: 'app.action-bar.install.cache-repair.failed',
+		defaultMessage: 'Project cache cleanup failed; retry was not started.',
 	},
 })
 
@@ -257,6 +283,7 @@ export async function useInstallJobNotifications(opts: {
 	const iconUrls = ref<Record<string, string | null>>({})
 	const instanceNames = ref<Record<string, string>>({})
 	const copiedJobIds = ref<Set<string>>(new Set())
+	const repairingJobIds = ref<Set<string>>(new Set())
 	const jobOrder = new Map<string, number>()
 	let refreshRequest = 0
 	let metadataRequest = 0
@@ -265,17 +292,23 @@ export async function useInstallJobNotifications(opts: {
 	const progressSnapshots = new Map<string, ProgressSnapshot>()
 
 	function getTitle(job: InstallJobSnapshot): string {
+		if (job.error?.code === 'cache_repair_required') {
+			return formatMessage(messages.cacheRepairTitle)
+		}
 		if (job.display?.title) return job.display.title
 		if (job.details.type === 'instance') return job.details.name
 		if (job.details.type === 'modpack' && job.details.title) return job.details.title
 		const instanceId = installJobInstanceId(job)
-		return (
-			(instanceId ? instanceNames.value[instanceId] : null) ??
-			formatMessage(messages.unknownInstance)
-		)
+		return job.instance_deleted
+			? formatMessage(messages.deletedInstance)
+			: ((instanceId ? instanceNames.value[instanceId] : null) ??
+					formatMessage(messages.unknownInstance))
 	}
 
 	function getText(job: InstallJobSnapshot): string {
+		if (job.error?.code === 'cache_repair_required') {
+			return formatMessage(messages.cacheRepairDescription)
+		}
 		if (job.status === 'failed' || job.status === 'interrupted') {
 			return getFailureSummary(job)
 		}
@@ -294,11 +327,11 @@ export async function useInstallJobNotifications(opts: {
 		if (code === 'app_closed' || (job.status === 'interrupted' && code === 'interrupted')) {
 			return formatMessage(failureSummaryMessages.appClosed)
 		}
-		if (code === 'canceled') {
-			return formatMessage(failureSummaryMessages.canceled)
-		}
 		if (job.rollback_error || code === 'rollback_error') {
 			return formatMessage(failureSummaryMessages.cleanupIncomplete)
+		}
+		if (code === 'canceled') {
+			return formatMessage(failureSummaryMessages.canceled)
 		}
 		if (hasPermissionError(job)) {
 			return formatMessage(failureSummaryMessages.noWritePermission)
@@ -591,14 +624,44 @@ export async function useInstallJobNotifications(opts: {
 		const buttons: PopupNotificationButton[] = []
 
 		if (isTerminalJob(job)) {
+			const requiresCacheRepair = job.error?.code === 'cache_repair_required'
+			const repairing = repairingJobIds.value.has(job.job_id)
 			buttons.push({
-				label: formatMessage(messages.retry),
+				label: formatMessage(
+					requiresCacheRepair
+						? repairing
+							? messages.cacheRepairing
+							: messages.cacheRepairAction
+						: messages.retry,
+				),
 				icon: UpdatedIcon,
 				color: 'brand',
 				keepOpen: true,
 				action: async () => {
-					await install_job_retry(job.job_id).catch(opts.handleError)
-					await refresh()
+					if (repairingJobIds.value.has(job.job_id)) return
+					if (!requiresCacheRepair) {
+						await install_job_retry(job.job_id).catch(opts.handleError)
+						await refresh()
+						return
+					}
+
+					repairingJobIds.value = new Set([...repairingJobIds.value, job.job_id])
+					opts.onChange()
+					try {
+						const snapshot = await install_job_repair_cache_and_retry(job.job_id)
+						setJobs(jobs.value.map((item) => (item.job_id === job.job_id ? snapshot : item)))
+						opts.onChange()
+						await refresh()
+					} catch (error) {
+						opts.handleError(
+							new Error(`${formatMessage(messages.cacheRepairFailed)} ${String(error)}`),
+						)
+					} finally {
+						const next = new Set(repairingJobIds.value)
+						next.delete(job.job_id)
+						repairingJobIds.value = next
+						opts.onChange()
+					}
 				},
 			})
 		}
@@ -675,7 +738,7 @@ export async function useInstallJobNotifications(opts: {
 
 	async function refreshMetadata(notify = true) {
 		const request = ++metadataRequest
-		const sourceJobs = jobs.value
+		const sourceJobs = jobs.value.filter((job) => !job.instance_deleted)
 		const instanceIds = Array.from(
 			new Set(
 				sourceJobs
@@ -683,14 +746,19 @@ export async function useInstallJobNotifications(opts: {
 					.filter((instanceId): instanceId is string => !!instanceId),
 			),
 		)
+		let metadataError: unknown = null
 		const instances = instanceIds.length
 			? await getInstances(instanceIds).catch((error) => {
-					opts.handleError(error)
+					metadataError = error
 					return []
 				})
 			: []
 
 		if (request !== metadataRequest) {
+			return
+		}
+		if (metadataError) {
+			opts.handleError(metadataError)
 			return
 		}
 

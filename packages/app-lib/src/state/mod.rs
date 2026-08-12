@@ -111,6 +111,8 @@ pub struct State {
     pub(crate) install_job_semaphore: Semaphore,
     pub(crate) install_db_semaphore: Semaphore,
     pub(crate) install_job_cancellations: DashMap<Uuid, CancellationToken>,
+    pub(crate) install_job_operation_locks:
+        DashMap<Uuid, Arc<AsyncMutex<InstallJobOperationState>>>,
 
     /// Discord RPC
     pub discord_rpc: DiscordGuard,
@@ -132,11 +134,16 @@ pub struct State {
     /// Per-instance locks serializing content writes against instance
     /// deletion, so a delete can never commit between a command loading an
     /// instance and writing rows that reference it.
-    pub(crate) instance_locks: InstanceLockManager,
+    pub(crate) instance_locks: Arc<InstanceLockManager>,
 
     pub(crate) pool: SqlitePool,
 
     pub(crate) file_watcher: FileWatcher,
+}
+
+#[derive(Default)]
+pub(crate) struct InstallJobOperationState {
+    pub(crate) cache_repair_started: bool,
 }
 
 pub(crate) struct DownloadConnectionActivity {
@@ -192,9 +199,9 @@ pub(crate) struct InstanceLockManager {
 
 impl InstanceLockManager {
     pub(crate) async fn lock(
-        &self,
+        self: &Arc<Self>,
         instance_id: &str,
-    ) -> InstanceLockGuard<'_> {
+    ) -> InstanceLockGuard {
         let lock = self
             .locks
             .entry(instance_id.to_string())
@@ -210,9 +217,9 @@ impl InstanceLockManager {
             .is_some_and(|held| held.contains(instance_id))
         {
             return InstanceLockGuard {
-                manager: self,
+                manager: Arc::clone(self),
                 inner: None,
-                owner,
+                owner: Some(owner),
                 instance_id: instance_id.to_string(),
             };
         }
@@ -226,9 +233,28 @@ impl InstanceLockManager {
             .insert(instance_id.to_string());
 
         InstanceLockGuard {
-            manager: self,
+            manager: Arc::clone(self),
             inner: Some(inner),
-            owner,
+            owner: Some(owner),
+            instance_id: instance_id.to_string(),
+        }
+    }
+
+    pub(crate) async fn lock_exclusive(
+        self: &Arc<Self>,
+        instance_id: &str,
+    ) -> InstanceLockGuard {
+        let lock = self
+            .locks
+            .entry(instance_id.to_string())
+            .or_insert_with(|| Arc::new(AsyncMutex::new(())))
+            .clone();
+        let inner = lock.lock_owned().await;
+
+        InstanceLockGuard {
+            manager: Arc::clone(self),
+            inner: Some(inner),
+            owner: None,
             instance_id: instance_id.to_string(),
         }
     }
@@ -253,28 +279,30 @@ fn current_lock_owner() -> LockOwner {
 
 /// RAII guard for an instance lock. Only the outermost holder releases the
 /// underlying mutex and removes the owner from the reentrancy registry.
-pub(crate) struct InstanceLockGuard<'a> {
-    manager: &'a InstanceLockManager,
+pub(crate) struct InstanceLockGuard {
+    manager: Arc<InstanceLockManager>,
     inner: Option<tokio::sync::OwnedMutexGuard<()>>,
-    owner: LockOwner,
+    owner: Option<LockOwner>,
     instance_id: String,
 }
 
-impl Drop for InstanceLockGuard<'_> {
+impl Drop for InstanceLockGuard {
     fn drop(&mut self) {
-        if self.inner.is_some() {
+        if self.inner.is_some()
+            && let Some(owner) = self.owner
+        {
             let mut held = self
                 .manager
                 .held_by_owner
                 .lock()
                 .unwrap_or_else(|poison| poison.into_inner());
             let mut remove_owner = false;
-            if let Some(held_instances) = held.get_mut(&self.owner) {
+            if let Some(held_instances) = held.get_mut(&owner) {
                 held_instances.remove(&self.instance_id);
                 remove_owner = held_instances.is_empty();
             }
             if remove_owner {
-                held.remove(&self.owner);
+                held.remove(&owner);
             }
         }
     }
@@ -810,11 +838,12 @@ impl State {
             install_job_semaphore: Semaphore::new(MAX_CONCURRENT_INSTALL_JOBS),
             install_db_semaphore: Semaphore::new(1),
             install_job_cancellations: DashMap::new(),
+            install_job_operation_locks: DashMap::new(),
             discord_rpc,
             process_manager,
             friends_socket,
             restart_after_pending_update: AtomicBool::new(false),
-            instance_locks: InstanceLockManager::default(),
+            instance_locks: Arc::new(InstanceLockManager::default()),
             pool,
             file_watcher,
             // app_identifier,
@@ -826,8 +855,15 @@ impl State {
     pub(crate) async fn lock_instance_content(
         &self,
         instance_id: &str,
-    ) -> InstanceLockGuard<'_> {
+    ) -> InstanceLockGuard {
         self.instance_locks.lock(instance_id).await
+    }
+
+    pub(crate) async fn lock_instance_content_exclusive(
+        &self,
+        instance_id: &str,
+    ) -> InstanceLockGuard {
+        self.instance_locks.lock_exclusive(instance_id).await
     }
 }
 
@@ -864,11 +900,12 @@ pub(crate) async fn test_state(
         install_job_semaphore: Semaphore::new(1),
         install_db_semaphore: Semaphore::new(1),
         install_job_cancellations: DashMap::new(),
+        install_job_operation_locks: DashMap::new(),
         discord_rpc: DiscordGuard::init()?,
         process_manager: ProcessManager::new(),
         friends_socket: FriendsSocket::new(),
         restart_after_pending_update: AtomicBool::new(false),
-        instance_locks: InstanceLockManager::default(),
+        instance_locks: Arc::new(InstanceLockManager::default()),
         pool,
         file_watcher,
     }))
@@ -961,7 +998,7 @@ mod instance_lock_tests {
 
     #[tokio::test]
     async fn does_not_serialize_different_instances() {
-        let manager = InstanceLockManager::default();
+        let manager = Arc::new(InstanceLockManager::default());
         let first = manager.lock("instance-1").await;
         let second = tokio::time::timeout(
             Duration::from_millis(200),
@@ -975,7 +1012,7 @@ mod instance_lock_tests {
 
     #[tokio::test]
     async fn is_reentrant_within_the_same_task() {
-        let manager = InstanceLockManager::default();
+        let manager = Arc::new(InstanceLockManager::default());
         let outer = manager.lock("instance-1").await;
         let inner = tokio::time::timeout(
             Duration::from_millis(200),
@@ -989,7 +1026,7 @@ mod instance_lock_tests {
 
     #[tokio::test]
     async fn releases_the_lock_for_other_tasks_after_drop() {
-        let manager = InstanceLockManager::default();
+        let manager = Arc::new(InstanceLockManager::default());
         let outer = manager.lock("instance-1").await;
         drop(outer);
 
@@ -1000,5 +1037,44 @@ mod instance_lock_tests {
         .await
         .expect("the lock must be free after the guard drops");
         drop(acquired);
+    }
+
+    #[tokio::test]
+    async fn detached_blocking_writer_keeps_instance_locked_until_exit() {
+        let manager = Arc::new(InstanceLockManager::default());
+        let (acquired_tx, acquired_rx) = tokio::sync::oneshot::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        let (done_tx, done_rx) = tokio::sync::oneshot::channel();
+        let guard = manager.lock_exclusive("instance-1").await;
+        let writer = tokio::task::spawn_blocking(move || {
+            let _guard = guard;
+            let _ = acquired_tx.send(());
+            let _ = release_rx.recv();
+            let _ = done_tx.send(());
+        });
+
+        tokio::time::timeout(Duration::from_millis(500), acquired_rx)
+            .await
+            .expect("blocking writer acquires the instance lock")
+            .unwrap();
+        drop(writer);
+
+        let mut contender = Box::pin(manager.lock("instance-1"));
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), &mut contender)
+                .await
+                .is_err(),
+            "cleanup in the original task must wait for the detached writer"
+        );
+
+        release_tx.send(()).unwrap();
+        tokio::time::timeout(Duration::from_millis(500), done_rx)
+            .await
+            .expect("blocking writer exits after release")
+            .unwrap();
+        let guard = tokio::time::timeout(Duration::from_millis(500), contender)
+            .await
+            .expect("cleanup can acquire the lock after the writer exits");
+        drop(guard);
     }
 }

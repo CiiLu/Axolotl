@@ -32,5 +32,5 @@ pub use runner::{
     import_instance_with_path, import_instance_with_plan, install_content,
     install_curseforge_content, install_existing_instance,
     install_pack_to_existing_instance, job_support_details, list_jobs,
-    resume_job, retry_job, retry_job_as_new,
+    repair_cache_and_retry_job, resume_job, retry_job, retry_job_as_new,
 };

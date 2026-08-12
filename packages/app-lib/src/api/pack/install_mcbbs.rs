@@ -274,7 +274,9 @@ pub(crate) async fn install_mcbbs_pack_with_reporter(
         .await?;
     let instance_path =
         crate::api::instance::get_full_path(&instance_id).await?;
-    archive_util::extract_archive_subdir(
+    archive_util::extract_archive_subdir_for_instance(
+        instance_id.clone(),
+        reporter.cancellation_token(),
         archive_path,
         format!("{base_folder}overrides/"),
         instance_path.clone(),
@@ -285,6 +287,7 @@ pub(crate) async fn install_mcbbs_pack_with_reporter(
         &instance_id,
         false,
         Some(reporter.clone()),
+        crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
     )
     .await?;
 
@@ -292,6 +295,7 @@ pub(crate) async fn install_mcbbs_pack_with_reporter(
         && let Err(error) = install_optifine_mod(
             &state,
             &instance_id,
+            reporter.cancellation_token(),
             &game_version,
             &optifine_version,
             &instance_path,
@@ -331,6 +335,7 @@ pub(crate) async fn install_mcbbs_pack_with_reporter(
 pub(crate) async fn install_optifine_mod(
     state: &State,
     instance_id: &str,
+    cancellation: tokio_util::sync::CancellationToken,
     game_version: &str,
     optifine_version: &str,
     instance_path: &std::path::Path,
@@ -379,6 +384,8 @@ pub(crate) async fn install_optifine_mod(
 
     crate::launcher::optifine::install_optifine_as_mod(
         state,
+        instance_id,
+        cancellation,
         std::path::Path::new(&java.path),
         game_version,
         optifine_version,

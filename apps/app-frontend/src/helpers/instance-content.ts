@@ -126,8 +126,11 @@ export async function loadInstanceContentData(
 			modpack: normalizePack(snapshot),
 		}
 	} catch (error) {
-		onError?.(error as Error)
-		return null
+		if (onError) {
+			onError(error as Error)
+			return null
+		}
+		throw error
 	}
 }
 

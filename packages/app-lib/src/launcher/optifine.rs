@@ -378,20 +378,20 @@ pub(crate) async fn install_optifine_libraries(
     }
 
     if info.needs_patching {
-        let output = Command::new(java_path)
+        let mut command = Command::new(java_path);
+        command
+            .kill_on_drop(true)
             .arg("-cp")
             .arg(&installer)
             .arg("optifine.Patcher")
             .arg(client_jar_path)
             .arg(&installer)
-            .arg(&optifine_target)
-            .output()
-            .await
-            .map_err(|error| {
-                crate::ErrorKind::LauncherError(format!(
-                    "Error running OptiFine patcher: {error}"
-                ))
-            })?;
+            .arg(&optifine_target);
+        let output = command.output().await.map_err(|error| {
+            crate::ErrorKind::LauncherError(format!(
+                "Error running OptiFine patcher: {error}"
+            ))
+        })?;
         if !output.status.success() {
             return Err(crate::ErrorKind::LauncherError(format!(
                 "OptiFine patcher error: {}",
@@ -411,6 +411,8 @@ pub(crate) async fn install_optifine_libraries(
 /// target file path.
 pub async fn install_optifine_as_mod(
     state: &State,
+    instance_id: &str,
+    cancellation: tokio_util::sync::CancellationToken,
     java_path: &Path,
     game_version: &str,
     requested_version: &str,
@@ -431,20 +433,25 @@ pub async fn install_optifine_as_mod(
     io::create_dir_all(mods_dir).await?;
 
     if info.needs_patching {
-        let output = Command::new(java_path)
+        let mut command = Command::new(java_path);
+        command
             .arg("-cp")
             .arg(&installer)
             .arg("optifine.Patcher")
             .arg(client_jar_path)
             .arg(&installer)
-            .arg(&target)
-            .output()
-            .await
-            .map_err(|error| {
-                crate::ErrorKind::LauncherError(format!(
-                    "Error running OptiFine patcher: {error}"
-                ))
-            })?;
+            .arg(&target);
+        let output = super::run_instance_install_command(
+            instance_id.to_string(),
+            cancellation,
+            command,
+        )
+        .await
+        .map_err(|error| {
+            crate::ErrorKind::LauncherError(format!(
+                "Error running OptiFine patcher: {error}"
+            ))
+        })?;
         if !output.status.success() {
             return Err(crate::ErrorKind::LauncherError(format!(
                 "OptiFine patcher error: {}",

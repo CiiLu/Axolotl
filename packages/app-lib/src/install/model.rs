@@ -1367,6 +1367,12 @@ pub struct InstallErrorContext {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub urls: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[builder(default)]
+    pub cache_types: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(into)]
+    pub sqlite_code: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[builder(into)]
     pub expected_hash: Option<String>,

@@ -250,12 +250,14 @@
 					class="border-0 border-t border-solid border-divider p-4"
 				>
 					<Admonition
-						v-if="job.error"
+						v-if="job.rollback_error || job.error"
 						class="mb-4"
 						type="critical"
-						:header="formatMessage(messages.errorDetails)"
+						:header="
+							formatMessage(job.rollback_error ? messages.cleanupIncomplete : messages.errorDetails)
+						"
 					>
-						{{ job.error.message }}
+						{{ job.rollback_error?.message ?? job.error?.message }}
 					</Admonition>
 					<Table
 						v-if="job.items.length"
@@ -452,6 +454,10 @@ const messages = defineMessages({
 	hideDetails: { id: 'app.downloads.hide-details', defaultMessage: 'Hide details' },
 	deleteRecord: { id: 'app.downloads.delete-record', defaultMessage: 'Delete record' },
 	errorDetails: { id: 'app.downloads.error-details', defaultMessage: 'Download failed' },
+	cleanupIncomplete: {
+		id: 'app.action-bar.install.summary.cleanup-incomplete',
+		defaultMessage: "Cleanup didn't finish",
+	},
 	progress: { id: 'app.downloads.progress', defaultMessage: 'Progress' },
 	noFileDetailsTitle: {
 		id: 'app.downloads.no-file-details-title',
@@ -715,6 +721,7 @@ function isLocalRecoveryValidation(job: InstallJobSnapshot) {
 }
 
 function jobPhaseLabel(job: InstallJobSnapshot) {
+	if (job.rollback_error) return formatMessage(messages.cleanupIncomplete)
 	return isLocalRecoveryValidation(job)
 		? formatMessage(messages.verifyingDownloadedFiles)
 		: phaseLabel(job.phase)

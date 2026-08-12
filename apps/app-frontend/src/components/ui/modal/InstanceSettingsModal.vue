@@ -46,6 +46,7 @@ const emit = defineEmits<{
 
 const isMinecraftServer = ref(false)
 const handleUnlinked = () => emit('unlinked')
+let serverMetadataGeneration = 0
 
 const instanceRef = computed(() => props.instance)
 const tabbedModal = ref<InstanceType<typeof TabbedModal> | null>(null)
@@ -65,11 +66,18 @@ provideInstanceSettings({
 watch(
 	() => props.instance,
 	(instance) => {
+		const generation = ++serverMetadataGeneration
 		isMinecraftServer.value = false
-		if (instance.link?.project_id) {
+		if (instance.install_stage === 'installed' && instance.link?.project_id) {
+			const instanceId = instance.id
 			get_project_v3(instance.link.project_id, 'must_revalidate')
 				.then((project: Labrinth.Projects.v3.Project | undefined) => {
-					if (project?.minecraft_server != null) {
+					if (
+						generation === serverMetadataGeneration &&
+						props.instance.id === instanceId &&
+						props.instance.install_stage === 'installed' &&
+						project?.minecraft_server != null
+					) {
 						isMinecraftServer.value = true
 					}
 				})
@@ -158,11 +166,16 @@ useQuery({
 useQuery({
 	queryKey: computed(() => ['linkedModpackInfo', props.instance.id]),
 	queryFn: () => get_linked_modpack_info(props.instance.id, 'stale_while_revalidate'),
-	enabled: computed(() => !!props.instance.link?.project_id && !props.offline),
+	enabled: computed(
+		() =>
+			props.instance.install_stage === 'installed' &&
+			!!props.instance.link?.project_id &&
+			!props.offline,
+	),
 })
 
 function show(tabIndex?: number) {
-	if (props.instance.link?.project_id) {
+	if (props.instance.install_stage === 'installed' && props.instance.link?.project_id) {
 		queryClient.prefetchQuery({
 			queryKey: ['linkedModpackInfo', props.instance.id],
 			queryFn: () => get_linked_modpack_info(props.instance.id, 'stale_while_revalidate'),

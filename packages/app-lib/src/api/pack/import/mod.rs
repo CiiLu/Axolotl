@@ -1227,6 +1227,7 @@ pub(crate) async fn finish_import(
         local_source,
         false,
         Some(reporter),
+        crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
     )
     .await?;
 

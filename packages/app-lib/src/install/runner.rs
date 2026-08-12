@@ -261,6 +261,105 @@ pub async fn retry_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     Ok(store::get_required(job_id, &state).await?.snapshot())
 }
 
+pub async fn repair_cache_and_retry_job(
+    job_id: Uuid,
+) -> crate::Result<InstallJobSnapshot> {
+    let state = State::get().await?;
+    let initial_job = store::get_required(job_id, &state).await?;
+    let _ = validated_cache_repair_types(&initial_job)?;
+
+    let operation_lock = state
+        .install_job_operation_locks
+        .entry(job_id)
+        .or_default()
+        .clone();
+    let mut operation = operation_lock.lock().await;
+    if operation.cache_repair_started {
+        return Ok(store::get_required(job_id, &state).await?.snapshot());
+    }
+
+    let job = store::get_required(job_id, &state).await?;
+    let cache_types = validated_cache_repair_types(&job)?;
+    operation.cache_repair_started = true;
+
+    if let Err(error) =
+        crate::state::CachedEntry::purge_cache_types(&cache_types, &state.pool)
+            .await
+    {
+        operation.cache_repair_started = false;
+        return Err(crate::ErrorKind::OtherError(format!(
+            "Project cache cleanup failed; retry was not started: {error}"
+        ))
+        .into());
+    }
+
+    retry_job(job_id).await.map_err(|error| {
+        crate::ErrorKind::OtherError(format!(
+            "Project cache was cleared, but retry could not be started: {error}"
+        ))
+        .into()
+    })
+}
+
+fn validated_cache_repair_types(
+    job: &store::InstallJobRecord,
+) -> crate::Result<Vec<crate::state::CacheValueType>> {
+    validated_cache_repair_types_for(job.status, job.state.error.as_ref())
+}
+
+fn validated_cache_repair_types_for(
+    status: InstallJobStatus,
+    error: Option<&InstallErrorView>,
+) -> crate::Result<Vec<crate::state::CacheValueType>> {
+    if !matches!(
+        status,
+        InstallJobStatus::Failed | InstallJobStatus::Interrupted
+    ) {
+        return Err(crate::ErrorKind::InputError(
+            "Only failed or interrupted install jobs can repair cache"
+                .to_string(),
+        )
+        .into());
+    }
+    let error = error.ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "Install job has no cache repair error".to_string(),
+        )
+    })?;
+    if error.code != "cache_repair_required" {
+        return Err(crate::ErrorKind::InputError(
+            "Install job does not require cache repair".to_string(),
+        )
+        .into());
+    }
+    let cache_types = error
+        .context
+        .as_ref()
+        .map(|context| context.cache_types.as_slice())
+        .unwrap_or_default();
+    if cache_types.is_empty() {
+        return Err(crate::ErrorKind::InputError(
+            "Install job has no repairable cache types".to_string(),
+        )
+        .into());
+    }
+
+    let mut validated = Vec::new();
+    for cache_type in cache_types {
+        let cache_type =
+            crate::state::CacheValueType::from_repairable_str(cache_type)
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError(format!(
+                        "Cache type is not repairable: {cache_type}"
+                    ))
+                })?;
+        if !validated.contains(&cache_type) {
+            validated.push(cache_type);
+        }
+    }
+    Ok(validated)
+}
+
 pub async fn resume_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     let state = State::get().await?;
     let job = store::get_required(job_id, &state).await?;
@@ -383,23 +482,29 @@ pub async fn cancel_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
         }
     };
 
-    match recovery::apply_cleanup(&mut job.state, &state).await {
-        Ok(()) => job
-            .state
-            .record_event(InstallJobEventKind::RollbackCompleted),
-        Err(error) => {
-            job.state.rollback_error = Some(InstallErrorView::from_error(
-                "rollback_error",
-                InstallPhaseId::RollingBack,
-                &error,
-                None,
-            ));
-            job.state.record_event(InstallJobEventKind::RollbackFailed {
-                message: error.to_string(),
-            });
-        }
+    let cleanup_succeeded =
+        match recovery::apply_cleanup(&mut job.state, &state).await {
+            Ok(()) => {
+                job.state
+                    .record_event(InstallJobEventKind::RollbackCompleted);
+                true
+            }
+            Err(error) => {
+                job.state.rollback_error = Some(InstallErrorView::from_error(
+                    "rollback_error",
+                    InstallPhaseId::RollingBack,
+                    &error,
+                    None,
+                ));
+                job.state.record_event(InstallJobEventKind::RollbackFailed {
+                    message: error.to_string(),
+                });
+                false
+            }
+        };
+    if cleanup_succeeded {
+        clear_deleted_new_instance_id(&mut job.state);
     }
-    clear_deleted_new_instance_id(&mut job.state);
     let record = store::update_status(
         job_id,
         InstallJobStatus::Canceled,
@@ -749,6 +854,10 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
             if let Some(instance_id) = instance_id {
                 set_instance_id(&mut job_state, instance_id);
             }
+            if cancellation.is_cancelled() {
+                finish_canceled_job(job_id, &mut job_state, &state).await?;
+                return Ok(());
+            }
             job_state.record_event(InstallJobEventKind::JobSucceeded {
                 instance_id: current_instance_id(&job_state),
             });
@@ -761,17 +870,51 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
             job_state.continuation = None;
             job_state.missing_content = None;
             job_state.context = None;
-            let record = store::update_status(
+            let instance_id = current_instance_id(&job_state);
+            let mut completed_state = job_state.clone();
+            completed_state.rollback = None;
+            let Some(record) = store::complete_running_job(
                 job_id,
-                InstallJobStatus::Succeeded,
-                &job_state,
+                instance_id.as_deref(),
+                &completed_state,
                 &state,
             )
-            .await?;
-            emit_install_job(&record.snapshot()).await?;
-            recovery::discard_content_rollback(&mut job_state, &state).await?;
-            if job_state.rollback.is_some() {
-                store::update_state(job_id, &job_state, &state).await?;
+            .await?
+            else {
+                if store::get_required(job_id, &state).await?.status
+                    == InstallJobStatus::Canceling
+                {
+                    finish_canceled_job(job_id, &mut job_state, &state).await?;
+                }
+                return Ok(());
+            };
+            if let Err(error) =
+                recovery::discard_content_rollback(&mut job_state, &state).await
+            {
+                tracing::warn!(
+                    job_id = %job_id,
+                    error = %error,
+                    "Install job succeeded, but rollback staging could not be discarded"
+                );
+            }
+            if let Err(error) = emit_install_job(&record.snapshot()).await {
+                tracing::warn!(
+                    job_id = %job_id,
+                    error = %error,
+                    "Install job succeeded, but its final event could not be emitted"
+                );
+            }
+            if let Some(instance_id) = instance_id
+                && let Err(error) =
+                    emit_instance(&instance_id, InstancePayloadType::Edited)
+                        .await
+            {
+                tracing::warn!(
+                    job_id = %job_id,
+                    instance_id,
+                    error = %error,
+                    "Install job succeeded, but its final instance event could not be emitted"
+                );
             }
         }
         RunResult::Completed(Ok(InstallExecutionOutcome::WaitingForUser(
@@ -802,24 +945,37 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
         }
         RunResult::Completed(Err(error)) => {
             begin_failed_job_rollback(&mut job_state, &error);
-            if let Err(rollback_error) =
-                recovery::apply_cleanup(&mut job_state, &state).await
+            let cleanup_succeeded = match recovery::apply_cleanup(
+                &mut job_state,
+                &state,
+            )
+            .await
             {
-                tracing::error!(
-                    "Error rolling back failed install job {job_id}: {rollback_error}"
-                );
-                job_state.rollback_error = Some(install_error_view(
-                    InstallPhaseId::RollingBack,
-                    &rollback_error,
-                    None,
-                ));
-                job_state.record_event(InstallJobEventKind::RollbackFailed {
-                    message: rollback_error.to_string(),
-                });
-            } else {
-                job_state.record_event(InstallJobEventKind::RollbackCompleted);
+                Err(rollback_error) => {
+                    tracing::error!(
+                        "Error rolling back failed install job {job_id}: {rollback_error}"
+                    );
+                    job_state.rollback_error = Some(install_error_view(
+                        InstallPhaseId::RollingBack,
+                        &rollback_error,
+                        None,
+                    ));
+                    job_state.record_event(
+                        InstallJobEventKind::RollbackFailed {
+                            message: rollback_error.to_string(),
+                        },
+                    );
+                    false
+                }
+                Ok(()) => {
+                    job_state
+                        .record_event(InstallJobEventKind::RollbackCompleted);
+                    true
+                }
+            };
+            if cleanup_succeeded {
+                clear_deleted_new_instance_id(&mut job_state);
             }
-            clear_deleted_new_instance_id(&mut job_state);
             let record = store::update_status(
                 job_id,
                 InstallJobStatus::Failed,
@@ -856,20 +1012,27 @@ async fn finish_canceled_job(
     job_state.record_event(InstallJobEventKind::RollbackStarted {
         cleanup: job_state.cleanup.clone(),
     });
-    if let Err(rollback_error) = recovery::apply_cleanup(job_state, state).await
-    {
-        job_state.rollback_error = Some(install_error_view(
-            InstallPhaseId::RollingBack,
-            &rollback_error,
-            None,
-        ));
-        job_state.record_event(InstallJobEventKind::RollbackFailed {
-            message: rollback_error.to_string(),
-        });
-    } else {
-        job_state.record_event(InstallJobEventKind::RollbackCompleted);
+    let cleanup_succeeded =
+        match recovery::apply_cleanup(job_state, state).await {
+            Err(rollback_error) => {
+                job_state.rollback_error = Some(install_error_view(
+                    InstallPhaseId::RollingBack,
+                    &rollback_error,
+                    None,
+                ));
+                job_state.record_event(InstallJobEventKind::RollbackFailed {
+                    message: rollback_error.to_string(),
+                });
+                false
+            }
+            Ok(()) => {
+                job_state.record_event(InstallJobEventKind::RollbackCompleted);
+                true
+            }
+        };
+    if cleanup_succeeded {
+        clear_deleted_new_instance_id(job_state);
     }
-    clear_deleted_new_instance_id(job_state);
     let record = store::update_status(
         job_id,
         InstallJobStatus::Canceled,
@@ -972,6 +1135,7 @@ async fn run_request(
                 &context,
                 false,
                 Some(reporter),
+                crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
             )
             .await?;
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
@@ -1071,9 +1235,9 @@ async fn run_request(
                 &context,
                 false,
                 Some(InstallProgressReporter::new(job_id, job_state.clone())),
+                crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
             )
             .await?;
-            emit_instance(&instance_id, InstancePayloadType::Edited).await?;
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::DuplicateInstance { source_instance_id } => {
@@ -1114,9 +1278,9 @@ async fn run_request(
                 &context,
                 false,
                 Some(InstallProgressReporter::new(job_id, job_state.clone())),
+                crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
             )
             .await?;
-            emit_instance(&instance_id, InstancePayloadType::Edited).await?;
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::InstallExistingInstance { instance_id, force } => {
@@ -1142,6 +1306,7 @@ async fn run_request(
                 &context,
                 force,
                 Some(InstallProgressReporter::new(job_id, job_state.clone())),
+                crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
             )
             .await?;
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
@@ -1335,8 +1500,6 @@ async fn apply_post_install_edit(
         },
     )
     .await?;
-    emit_instance(instance_id, InstancePayloadType::Edited).await?;
-
     Ok(())
 }
 
@@ -1743,6 +1906,7 @@ async fn install_local_pack_file(
                 source_filename,
                 false,
                 reporter,
+                crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
             )
             .await?;
             if let Some(reason) = curseforge_manual_download_pause(&result) {
@@ -1997,6 +2161,21 @@ fn install_error_view(
     error: &crate::Error,
     context: Option<InstallErrorContext>,
 ) -> InstallErrorView {
+    let context = match error.raw.as_ref() {
+        ErrorKind::CacheReadError {
+            cache_type,
+            sqlite_code,
+            ..
+        } => {
+            let mut context = context.unwrap_or_else(|| {
+                InstallErrorContext::new("read project metadata cache").build()
+            });
+            context.cache_types = vec![cache_type.clone()];
+            context.sqlite_code = sqlite_code.clone();
+            Some(context)
+        }
+        _ => context,
+    };
     InstallErrorView::from_error(
         install_error_code(phase, error),
         phase,
@@ -2012,6 +2191,7 @@ fn install_error_code(
     use InstallPhaseId::*;
 
     match error.raw.as_ref() {
+        ErrorKind::CacheReadError { .. } => "cache_repair_required",
         ErrorKind::InputError(msg)
             if msg.starts_with("Unrecognized modpack format")
                 && matches!(phase, ResolvingPack) =>
@@ -2125,6 +2305,97 @@ mod tests {
         assert_eq!(
             install_error_code(InstallPhaseId::DownloadingMinecraft, &error),
             "network_error"
+        );
+    }
+
+    #[test]
+    fn cache_read_errors_have_repair_context_but_generic_sqlx_does_not() {
+        let cache_error: crate::Error = crate::ErrorKind::CacheReadError {
+            cache_type: "curseforge_project".to_string(),
+            message: "malformed cache row".to_string(),
+            sqlite_code: Some("11".to_string()),
+        }
+        .into();
+        let view = install_error_view(
+            InstallPhaseId::ResolvingPack,
+            &cache_error,
+            None,
+        );
+        assert_eq!(view.code, "cache_repair_required");
+        let context = view.context.unwrap();
+        assert_eq!(context.cache_types, vec!["curseforge_project"]);
+        assert_eq!(context.sqlite_code.as_deref(), Some("11"));
+
+        let database_error: crate::Error =
+            crate::ErrorKind::Sqlx(sqlx::Error::RowNotFound).into();
+        assert_eq!(
+            install_error_code(InstallPhaseId::ResolvingPack, &database_error),
+            "database_error"
+        );
+    }
+
+    #[test]
+    fn cache_repair_validation_rejects_old_or_unknown_context() {
+        let old_context = InstallErrorContext::new("read cache").build();
+        let old_error = InstallErrorView::from_message(
+            "cache_repair_required",
+            InstallPhaseId::ResolvingPack,
+            "cache failed",
+        );
+        assert!(
+            validated_cache_repair_types_for(
+                InstallJobStatus::Failed,
+                Some(&InstallErrorView {
+                    context: Some(old_context),
+                    ..old_error.clone()
+                }),
+            )
+            .is_err()
+        );
+
+        let mut unknown_context =
+            InstallErrorContext::new("read cache").build();
+        unknown_context.cache_types = vec!["install_jobs".to_string()];
+        assert!(
+            validated_cache_repair_types_for(
+                InstallJobStatus::Failed,
+                Some(&InstallErrorView {
+                    context: Some(unknown_context),
+                    ..old_error
+                }),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn cache_repair_validation_accepts_only_whitelisted_terminal_jobs() {
+        let mut context = InstallErrorContext::new("read cache").build();
+        context.cache_types = vec![
+            "curseforge_project".to_string(),
+            "curseforge_project".to_string(),
+        ];
+        let error = InstallErrorView {
+            code: "cache_repair_required".to_string(),
+            phase: Some(InstallPhaseId::ResolvingPack),
+            message: "cache failed".to_string(),
+            api: None,
+            context: Some(context),
+        };
+        assert_eq!(
+            validated_cache_repair_types_for(
+                InstallJobStatus::Interrupted,
+                Some(&error),
+            )
+            .unwrap(),
+            vec![crate::state::CacheValueType::CurseForgeProject]
+        );
+        assert!(
+            validated_cache_repair_types_for(
+                InstallJobStatus::Running,
+                Some(&error),
+            )
+            .is_err()
         );
     }
 

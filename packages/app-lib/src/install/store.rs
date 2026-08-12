@@ -1,7 +1,7 @@
 use super::model::{
     InstallJobKind, InstallJobSnapshot, InstallJobState, InstallJobStatus,
 };
-use crate::state::State;
+use crate::state::{InstanceInstallStage, State};
 use chrono::{DateTime, TimeZone, Utc};
 use uuid::Uuid;
 
@@ -397,6 +397,69 @@ pub async fn update_status_if(
     }
 
     sync_download_details(id, state, app_state).await?;
+    Ok(Some(get_required(id, app_state).await?))
+}
+
+pub async fn complete_running_job(
+    id: Uuid,
+    instance_id: Option<&str>,
+    state: &InstallJobState,
+    app_state: &State,
+) -> crate::Result<Option<InstallJobRecord>> {
+    let now = Utc::now();
+    let modified = now.timestamp();
+    let json = serde_json::to_string(state)?;
+    let id_value = id.to_string();
+    let mut transaction = app_state.pool.begin().await?;
+
+    if let Some(instance_id) = instance_id {
+        let result = sqlx::query(
+            "UPDATE instances
+             SET install_stage = ?, modified = ?
+             WHERE id = ?",
+        )
+        .bind(InstanceInstallStage::Installed.as_str())
+        .bind(modified)
+        .bind(instance_id)
+        .execute(&mut *transaction)
+        .await?;
+        if result.rows_affected() != 1 {
+            return Err(crate::ErrorKind::InputError(format!(
+                "Install target instance {instance_id} no longer exists"
+            ))
+            .into());
+        }
+    }
+
+    let result = sqlx::query(
+        "UPDATE install_jobs
+         SET instance_id = (SELECT id FROM instances WHERE id = ?),
+             status = ?, state = ?, modified = ?, finished = ?
+         WHERE id = ? AND status = ?",
+    )
+    .bind(instance_id)
+    .bind(InstallJobStatus::Succeeded.as_str())
+    .bind(json)
+    .bind(modified)
+    .bind(now.timestamp())
+    .bind(&id_value)
+    .bind(InstallJobStatus::Running.as_str())
+    .execute(&mut *transaction)
+    .await?;
+
+    if result.rows_affected() != 1 {
+        transaction.rollback().await?;
+        return Ok(None);
+    }
+    transaction.commit().await?;
+
+    if let Err(error) = sync_download_details(id, state, app_state).await {
+        tracing::warn!(
+            job_id = %id,
+            error = %error,
+            "Install job succeeded, but final download details could not be synchronized"
+        );
+    }
     Ok(Some(get_required(id, app_state).await?))
 }
 

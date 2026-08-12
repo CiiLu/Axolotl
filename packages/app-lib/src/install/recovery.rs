@@ -42,25 +42,33 @@ pub async fn recover_interrupted_jobs(state: &State) -> crate::Result<()> {
             .record_event(InstallJobEventKind::RollbackStarted {
                 cleanup: job.state.cleanup.clone(),
             });
-        if let Err(error) = apply_cleanup(&mut job.state, state).await {
-            tracing::error!(
-                "Error cleaning up interrupted install job {}: {error}",
-                job.id
-            );
-            job.state.rollback_error = Some(InstallErrorView::from_error(
-                "rollback_error",
-                InstallPhaseId::RollingBack,
-                &error,
-                None,
-            ));
-            job.state.record_event(InstallJobEventKind::RollbackFailed {
-                message: error.to_string(),
-            });
-        } else {
-            job.state
-                .record_event(InstallJobEventKind::RollbackCompleted);
+        let cleanup_succeeded = match apply_cleanup(&mut job.state, state).await
+        {
+            Err(error) => {
+                tracing::error!(
+                    "Error cleaning up interrupted install job {}: {error}",
+                    job.id
+                );
+                job.state.rollback_error = Some(InstallErrorView::from_error(
+                    "rollback_error",
+                    InstallPhaseId::RollingBack,
+                    &error,
+                    None,
+                ));
+                job.state.record_event(InstallJobEventKind::RollbackFailed {
+                    message: error.to_string(),
+                });
+                false
+            }
+            Ok(()) => {
+                job.state
+                    .record_event(InstallJobEventKind::RollbackCompleted);
+                true
+            }
+        };
+        if cleanup_succeeded {
+            clear_deleted_new_instance_id(&mut job.state);
         }
-        clear_deleted_new_instance_id(&mut job.state);
 
         let record = store::update_status(
             job.id,
@@ -150,19 +158,42 @@ pub async fn apply_cleanup(
     match job_state.cleanup.clone() {
         InstallCleanup::DeleteNewInstance { instance_id } => {
             if let Some(instance_id) = instance_id {
-                let _ =
-                    crate::state::remove_instance(&instance_id, state).await;
-                let _ =
-                    emit_instance(&instance_id, InstancePayloadType::Removed)
-                        .await;
+                if !job_state.instance_deleted() {
+                    crate::state::remove_instance(&instance_id, state).await?;
+                    job_state.record_event(
+                        InstallJobEventKind::TargetInstanceDeleted {
+                            instance_id: instance_id.clone(),
+                        },
+                    );
+                    if let Err(error) = emit_instance(
+                        &instance_id,
+                        InstancePayloadType::Removed,
+                    )
+                    .await
+                    {
+                        tracing::warn!(
+                            instance_id,
+                            error = %error,
+                            "Install cleanup deleted a new instance, but its removal event could not be emitted"
+                        );
+                    }
+                }
             }
         }
         InstallCleanup::RestoreExistingInstance { instance_id } => {
             if job_state.rollback.is_some() {
                 restore_existing_instance(job_state, state, &instance_id)
                     .await?;
-                emit_instance(&instance_id, InstancePayloadType::Edited)
-                    .await?;
+                if let Err(error) =
+                    emit_instance(&instance_id, InstancePayloadType::Edited)
+                        .await
+                {
+                    tracing::warn!(
+                        instance_id,
+                        error = %error,
+                        "Install cleanup restored an instance, but its edited event could not be emitted"
+                    );
+                }
             }
         }
         InstallCleanup::None => {}
@@ -1200,6 +1231,87 @@ mod tests {
                 .unwrap()
                 .len(),
             1
+        );
+
+        let new_instance = crate::api::instance::create(
+            "Canceled New Instance".to_string(),
+            "1.21.1".to_string(),
+            ModLoader::Vanilla,
+            None,
+            None,
+            InstanceLink::Unmanaged,
+            None,
+        )
+        .await
+        .unwrap();
+        let new_instance_id = new_instance.instance.id.clone();
+        let new_instance_base = state
+            .directories
+            .instances_dir()
+            .join(&new_instance.instance.path);
+        crate::util::io::create_dir_all(new_instance_base.join("mods"))
+            .await
+            .unwrap();
+        crate::util::io::write(
+            new_instance_base.join("mods/partial.jar"),
+            b"partial install",
+        )
+        .await
+        .unwrap();
+        let mut new_instance_job =
+            InstallJobState::new(InstallRequest::DownloadJava {
+                vendor: "test".to_string(),
+                version: 21,
+            });
+        new_instance_job.cleanup = InstallCleanup::DeleteNewInstance {
+            instance_id: Some(new_instance_id.clone()),
+        };
+        let cancellation = tokio_util::sync::CancellationToken::new();
+        let writer_cancellation = cancellation.clone();
+        let writer_path = new_instance_base.join("config/late-write.cfg");
+        let writer_lock = state
+            .lock_instance_content_exclusive(&new_instance_id)
+            .await;
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let (done_tx, done_rx) = tokio::sync::oneshot::channel();
+        let writer = tokio::task::spawn_blocking(move || {
+            let _writer_lock = writer_lock;
+            let _ = started_tx.send(());
+            while !writer_cancellation.is_cancelled() {
+                std::thread::yield_now();
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            std::fs::create_dir_all(writer_path.parent().unwrap()).unwrap();
+            std::fs::write(writer_path, b"late write").unwrap();
+            let _ = done_tx.send(());
+        });
+        started_rx.await.unwrap();
+        cancellation.cancel();
+        drop(writer);
+        apply_cleanup(&mut new_instance_job, &state).await.unwrap();
+        done_rx.await.unwrap();
+        assert!(new_instance_job.instance_deleted());
+        assert!(!new_instance_base.exists());
+        assert!(
+            crate::state::get_instance(&new_instance_id, &state.pool)
+                .await
+                .unwrap()
+                .is_none()
+        );
+
+        let mut missing_instance_job =
+            InstallJobState::new(InstallRequest::DownloadJava {
+                vendor: "test".to_string(),
+                version: 21,
+            });
+        missing_instance_job.cleanup = InstallCleanup::DeleteNewInstance {
+            instance_id: Some("missing-instance".to_string()),
+        };
+        assert!(
+            apply_cleanup(&mut missing_instance_job, &state)
+                .await
+                .is_err(),
+            "new-instance cleanup must report deletion failures"
         );
     }
 }

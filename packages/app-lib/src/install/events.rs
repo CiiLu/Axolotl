@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 const PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(3);
@@ -74,6 +75,17 @@ enum DownloadRequestUpdate {
 impl InstallProgressReporter {
     pub(crate) fn reset_job(job_id: Uuid) {
         REPORTER_STATES.remove(&job_id);
+    }
+
+    pub(crate) fn cancellation_token(&self) -> CancellationToken {
+        crate::State::get_if_initialized()
+            .and_then(|state| {
+                state
+                    .install_job_cancellations
+                    .get(&self.job_id)
+                    .map(|entry| entry.value().clone())
+            })
+            .unwrap_or_else(CancellationToken::new)
     }
 
     pub fn new(job_id: Uuid, mut state: InstallJobState) -> Self {

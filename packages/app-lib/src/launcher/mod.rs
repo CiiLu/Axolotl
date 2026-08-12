@@ -8,7 +8,6 @@ use crate::install::{
 };
 use crate::instance::QuickPlayType;
 use crate::launcher::download::{LocalRuntimeSource, download_log_config};
-use crate::launcher::io::IOError;
 use crate::launcher::quick_play_version::{
     QuickPlayServerVersion, QuickPlayVersion,
 };
@@ -31,8 +30,11 @@ use regex::Regex;
 use serde::Deserialize;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
+use std::process::{Output, Stdio};
 use std::time::Instant;
+use tokio::io::AsyncReadExt;
 use tokio::process::Command;
+use tokio_util::sync::CancellationToken;
 
 #[cfg(target_os = "windows")]
 use winreg::{RegKey, enums::HKEY_CURRENT_USER};
@@ -524,13 +526,90 @@ async fn get_instance_full_path(instance_path: &str) -> crate::Result<PathBuf> {
     Ok(full_path)
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InstanceCompletionPolicy {
+    FinalizeHere,
+    DeferToInstallJob,
+}
+
+pub(crate) async fn run_instance_install_command(
+    instance_id: String,
+    cancellation: CancellationToken,
+    mut command: Command,
+) -> crate::Result<Output> {
+    let state = State::get().await?;
+    let instance_lock =
+        state.lock_instance_content_exclusive(&instance_id).await;
+    let task = tokio::spawn(async move {
+        let _instance_lock = instance_lock;
+        if cancellation.is_cancelled() {
+            return Err(crate::ErrorKind::OtherError(
+                "Install was canceled".to_string(),
+            )
+            .into());
+        }
+        command
+            .kill_on_drop(true)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = command.spawn()?;
+        let stdout = child.stdout.take();
+        let stderr = child.stderr.take();
+        let stdout_task = tokio::spawn(async move {
+            let mut output = Vec::new();
+            if let Some(mut stdout) = stdout {
+                stdout.read_to_end(&mut output).await?;
+            }
+            Ok::<_, std::io::Error>(output)
+        });
+        let stderr_task = tokio::spawn(async move {
+            let mut output = Vec::new();
+            if let Some(mut stderr) = stderr {
+                stderr.read_to_end(&mut output).await?;
+            }
+            Ok::<_, std::io::Error>(output)
+        });
+
+        let (status, canceled) = tokio::select! {
+            biased;
+            _ = cancellation.cancelled() => {
+                let _ = child.start_kill();
+                (child.wait().await?, true)
+            }
+            status = child.wait() => (status?, false),
+        };
+        let stdout = stdout_task.await.map_err(std::io::Error::other)??;
+        let stderr = stderr_task.await.map_err(std::io::Error::other)??;
+        if canceled {
+            return Err(crate::ErrorKind::OtherError(
+                "Install was canceled".to_string(),
+            )
+            .into());
+        }
+        Ok(Output {
+            status,
+            stdout,
+            stderr,
+        })
+    });
+
+    task.await?
+}
+
 pub async fn install_minecraft_with_reporter(
     context: &InstanceLaunchContext,
     repairing: bool,
     reporter: Option<InstallProgressReporter>,
+    completion_policy: InstanceCompletionPolicy,
 ) -> crate::Result<()> {
-    install_minecraft_with_local_source(context, repairing, reporter, None)
-        .await
+    install_minecraft_with_local_source(
+        context,
+        repairing,
+        reporter,
+        None,
+        completion_policy,
+    )
+    .await
 }
 
 async fn install_minecraft_with_local_source(
@@ -538,6 +617,7 @@ async fn install_minecraft_with_local_source(
     repairing: bool,
     reporter: Option<InstallProgressReporter>,
     local_source: Option<&LocalRuntimeSource>,
+    completion_policy: InstanceCompletionPolicy,
 ) -> crate::Result<()> {
     let instance = &context.instance;
     let content_set = &context.applied_content_set;
@@ -761,13 +841,15 @@ async fn install_minecraft_with_local_source(
             &state.pool,
         )
         .await?;
-        crate::state::instances::commands::set_instance_install_stage(
-            &instance.id,
-            InstanceInstallStage::Installed,
-            &state.pool,
-        )
-        .await?;
-        emit_instance(&instance.id, InstancePayloadType::Edited).await?;
+        if completion_policy == InstanceCompletionPolicy::FinalizeHere {
+            crate::state::instances::commands::set_instance_install_stage(
+                &instance.id,
+                InstanceInstallStage::Installed,
+                &state.pool,
+            )
+            .await?;
+            emit_instance(&instance.id, InstancePayloadType::Edited).await?;
+        }
         if let Some(loading_bar) = &loading_bar {
             emit_loading(
                 loading_bar,
@@ -916,7 +998,8 @@ async fn install_minecraft_with_local_source(
                     cp
                 };
 
-                let child = Command::new(&java_version.path)
+                let mut command = Command::new(&java_version.path);
+                command
                     .arg("-cp")
                     .arg(args::get_class_paths_jar(
                         &libraries_dir,
@@ -941,15 +1024,21 @@ async fn install_minecraft_with_local_source(
                         &libraries_dir,
                         &processor.args,
                         data,
-                    )?)
-                    .output()
-                    .await
-                    .map_err(|e| IOError::with_path(e, &java_version.path))
-                    .map_err(|err| {
-                        crate::ErrorKind::LauncherError(format!(
-                            "Error running processor: {err}",
-                        ))
-                    })?;
+                    )?);
+                let child = run_instance_install_command(
+                    instance.id.clone(),
+                    reporter
+                        .as_ref()
+                        .map(InstallProgressReporter::cancellation_token)
+                        .unwrap_or_default(),
+                    command,
+                )
+                .await
+                .map_err(|err| {
+                    crate::ErrorKind::LauncherError(format!(
+                        "Error running processor: {err}",
+                    ))
+                })?;
 
                 if !child.status.success() {
                     return Err(crate::ErrorKind::LauncherError(format!(
@@ -993,19 +1082,21 @@ async fn install_minecraft_with_local_source(
 
     let protocol_version = read_protocol_version_from_jar(client_path).await?;
 
-    crate::state::instances::commands::set_instance_install_stage(
-        &instance.id,
-        InstanceInstallStage::Installed,
-        &state.pool,
-    )
-    .await?;
-    emit_instance(&instance.id, InstancePayloadType::Edited).await?;
     crate::state::instances::commands::set_applied_content_set_protocol_version(
         &instance.id,
         protocol_version,
         &state.pool,
     )
     .await?;
+    if completion_policy == InstanceCompletionPolicy::FinalizeHere {
+        crate::state::instances::commands::set_instance_install_stage(
+            &instance.id,
+            InstanceInstallStage::Installed,
+            &state.pool,
+        )
+        .await?;
+        emit_instance(&instance.id, InstancePayloadType::Edited).await?;
+    }
     if let Some(loading_bar) = &loading_bar {
         emit_loading(loading_bar, 1.0, Some("Finished installing"))?;
     }
@@ -1017,6 +1108,7 @@ pub async fn install_minecraft_for_instance_id_with_reporter(
     instance_id: &str,
     repairing: bool,
     reporter: Option<InstallProgressReporter>,
+    completion_policy: InstanceCompletionPolicy,
 ) -> crate::Result<()> {
     let state = State::get().await?;
     let context =
@@ -1031,7 +1123,13 @@ pub async fn install_minecraft_for_instance_id_with_reporter(
             ))
         })?;
 
-    install_minecraft_with_reporter(&context, repairing, reporter).await
+    install_minecraft_with_reporter(
+        &context,
+        repairing,
+        reporter,
+        completion_policy,
+    )
+    .await
 }
 
 pub async fn install_minecraft_for_instance_id_with_local_source(
@@ -1039,6 +1137,7 @@ pub async fn install_minecraft_for_instance_id_with_local_source(
     local_source: Option<LocalRuntimeSource>,
     repairing: bool,
     reporter: Option<InstallProgressReporter>,
+    completion_policy: InstanceCompletionPolicy,
 ) -> crate::Result<()> {
     let state = State::get().await?;
     let context =
@@ -1058,6 +1157,7 @@ pub async fn install_minecraft_for_instance_id_with_local_source(
         repairing,
         reporter,
         local_source.as_ref(),
+        completion_policy,
     )
     .await
 }
