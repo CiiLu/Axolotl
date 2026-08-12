@@ -456,7 +456,7 @@ onUnmounted(() => {
 	display: grid;
 	grid-template-columns: repeat(2, 2rem);
 	align-items: center;
-	width: 4.25rem;
+	/* width: 4.25rem; */ /* closes #210 */
 	height: 2rem;
 	margin: 0;
 	padding: 0;
