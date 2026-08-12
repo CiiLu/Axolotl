@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { defineMessages, StyledInput, useVIntl } from '@modrinth/ui'
+import { defineMessages, StyledInput, useVIntl, useVirtualScroll } from '@modrinth/ui'
 import Fuse from 'fuse.js'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import type { SlotDisplay } from '@/lab/recipe-generator/display'
 import type { TextureAtlas } from '@/lab/recipe-generator/resources'
@@ -39,6 +39,9 @@ let suppressClicksUntil = 0
 
 const RECIPE_SLOT_MIME_TYPE = 'application/x-axolotl-recipe-slot'
 const isTauriRuntime = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+const PALETTE_MIN_COLUMN_WIDTH = 72
+const PALETTE_ROW_GAP = 6.4
+const PALETTE_ROW_HEIGHT = 64 + PALETTE_ROW_GAP
 
 type StartDrag = (
 	event: PointerEvent,
@@ -82,6 +85,62 @@ const visibleEntries = computed(() => {
 	if (!query) return props.entries
 	return fuse.value.search(query).map((result) => result.item)
 })
+
+const gridScroller = ref<HTMLElement | null>(null)
+const columns = ref(1)
+let gridObserver: ResizeObserver | null = null
+
+function updateColumns() {
+	const element = gridScroller.value
+	if (!element) return
+	const availableWidth = Math.max(0, element.clientWidth - 6)
+	columns.value = Math.max(
+		1,
+		Math.floor((availableWidth + PALETTE_ROW_GAP) / (PALETTE_MIN_COLUMN_WIDTH + PALETTE_ROW_GAP)),
+	)
+}
+
+watch(
+	gridScroller,
+	(element) => {
+		gridObserver?.disconnect()
+		gridObserver = null
+		if (!element) return
+		updateColumns()
+		if (typeof ResizeObserver === 'undefined') return
+		gridObserver = new ResizeObserver(updateColumns)
+		gridObserver.observe(element)
+	},
+	{ flush: 'post' },
+)
+
+onBeforeUnmount(() => {
+	gridObserver?.disconnect()
+	gridObserver = null
+})
+
+const paletteRows = computed<PaletteEntry[][]>(() => {
+	const count = Math.max(1, columns.value)
+	const rows: PaletteEntry[][] = []
+	for (let index = 0; index < visibleEntries.value.length; index += count) {
+		rows.push(visibleEntries.value.slice(index, index + count))
+	}
+	return rows
+})
+
+const {
+	listContainer,
+	totalHeight,
+	visibleTop,
+	visibleItems: visibleRows,
+} = useVirtualScroll(paletteRows, {
+	itemHeight: PALETTE_ROW_HEIGHT,
+	bufferSize: 4,
+})
+
+function rowKey(row: PaletteEntry[]) {
+	return row[0]?.key ?? row.length
+}
 
 function pick(value: SlotValue) {
 	const key = JSON.stringify(value)
@@ -144,25 +203,41 @@ function startPointerDrag(event: PointerEvent, entry: PaletteEntry, startDrag: S
 			>
 				{{ formatMessage(messages.empty) }}
 			</div>
-			<div v-else class="recipe-palette-grid">
-				<button
-					v-for="entry in visibleEntries"
-					:key="entry.key"
-					type="button"
-					:draggable="!isTauriRuntime"
-					class="recipe-palette-item"
-					:class="{ 'is-dragging': draggingKey === entry.key }"
-					:style="{ touchAction: isTauriRuntime ? 'none' : undefined }"
-					:title="`${formatMessage(messages.addItem)}: ${entry.name}`"
-					:aria-label="`${formatMessage(messages.addItem)}: ${entry.name}`"
-					@click="pickFromClick($event, entry.value)"
-					@pointerdown="startPointerDrag($event, entry, startDrag)"
-					@dragstart="onDragStart($event, entry)"
-					@dragend="onDragEnd"
+			<div v-else ref="gridScroller" class="recipe-palette-grid">
+				<div
+					ref="listContainer"
+					class="recipe-palette-virtual"
+					:style="{ height: `${totalHeight}px`, overflowAnchor: 'none' }"
 				>
-					<RecipeItemIcon :display="entry.display" :atlas="atlas" :size="34" :show-count="false" />
-					<span class="recipe-palette-name">{{ entry.name }}</span>
-				</button>
+					<div
+						class="recipe-palette-window"
+						:style="{
+							top: `${visibleTop}px`,
+							gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+						}"
+					>
+						<template v-for="row in visibleRows" :key="rowKey(row)">
+							<button
+								v-for="entry in row"
+								:key="entry.key"
+								type="button"
+								:draggable="!isTauriRuntime"
+								class="recipe-palette-item"
+								:class="{ 'is-dragging': draggingKey === entry.key }"
+								:style="{ touchAction: isTauriRuntime ? 'none' : undefined }"
+								:title="`${formatMessage(messages.addItem)}: ${entry.name}`"
+								:aria-label="`${formatMessage(messages.addItem)}: ${entry.name}`"
+								@click="pickFromClick($event, entry.value)"
+								@pointerdown="startPointerDrag($event, entry, startDrag)"
+								@dragstart="onDragStart($event, entry)"
+								@dragend="onDragEnd"
+							>
+								<RecipeItemIcon :display="entry.display" :atlas="atlas" :size="34" :show-count="false" />
+								<span class="recipe-palette-name">{{ entry.name }}</span>
+							</button>
+						</template>
+					</div>
+				</div>
 			</div>
 		</div>
 	</RecipeSlotDragLayer>
@@ -170,15 +245,24 @@ function startPointerDrag(event: PointerEvent, entry: PaletteEntry, startDrag: S
 
 <style scoped>
 .recipe-palette-grid {
-	display: grid;
 	min-height: 0;
 	flex: 1;
-	grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
-	grid-auto-rows: 4rem;
-	align-content: start;
-	gap: 0.4rem;
 	overflow-y: auto;
 	overscroll-behavior: contain;
+}
+
+.recipe-palette-virtual {
+	position: relative;
+	width: 100%;
+	min-height: 0;
+}
+
+.recipe-palette-window {
+	position: absolute;
+	inset-inline: 0;
+	display: grid;
+	grid-auto-rows: 4rem;
+	gap: 0.4rem;
 	padding: 0.1rem 0.25rem 0.25rem 0.1rem;
 }
 

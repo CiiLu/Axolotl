@@ -50,6 +50,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Refactored the interface for importing instances.',
 					'zh-CN': '全新的导入实例的界面，可以自定义更多选项',
 				},
+				{
+					'en-US':
+						'Further optimized the download strategy and process to reduce the probability of download failures.',
+					'zh-CN': '进一步优化下载策略与流程。',
+				},
+				{
+					'en-US':
+						'Optimized the recipe generator page, changing the list to lazy loading to improve performance.',
+					'zh-CN': '优化配方生成器页面，列表改为懒加载，提升性能。',
+				},
 			],
 			added: [
 				{
@@ -190,6 +200,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed canceling a modpack install during override extraction leaving the new instance and partially installed files behind instead of completing rollback.',
 					'zh-CN':
 						'修复在解压整合包覆盖文件时取消安装，回滚未完成并残留新实例及部分安装文件的问题。',
+				},
+				{
+					'en-US': 'Fixed the issue of the recipe generator crashing in some cases.',
+					'zh-CN': '修复配方生成器中部分情况崩溃的问题。',
 				},
 			],
 		},

@@ -55,16 +55,11 @@ import {
 	loadVersionResources,
 	TEXTURE_ATLAS,
 } from '@/lab/recipe-generator/resources'
-import {
-	createDefaultRecipeState,
-	ensureRecipeTypeForVersion,
-	loadRecipeGeneratorStore,
-	saveRecipeGeneratorStore,
-} from '@/lab/recipe-generator/storage'
 import type {
 	CustomItem,
 	CustomTag,
 	JavaVersionId,
+	RecipeGeneratorStore,
 	RecipeSlot,
 	RecipeSlotContext,
 	RecipeState,
@@ -73,10 +68,12 @@ import type {
 } from '@/lab/recipe-generator/types'
 import { type RecipeIssueCode, validateRecipe } from '@/lab/recipe-generator/validation'
 import {
+	coerceRecipeTypeForVersion,
 	DEFAULT_COOKING_TIME,
 	getRecipeCategoryOptions,
 	getSupportedRecipeTypes,
 	JAVA_VERSIONS,
+	LATEST_JAVA_VERSION,
 	supportsCustomTags,
 	supportsRecipeCategory,
 	supportsShowNotification,
@@ -86,7 +83,57 @@ import {
 
 const { addNotification, handleError } = injectNotificationManager()
 const { formatMessage, locale } = useVIntl()
-const store = reactive(loadRecipeGeneratorStore())
+
+function createDefaultRecipeState(type: RecipeState['recipeType'] = 'crafting'): RecipeState {
+	return {
+		id: crypto.randomUUID(),
+		recipeType: type,
+		group: '',
+		category: '',
+		showNotification: true,
+		nameMode: 'auto',
+		name: '',
+		slots: {},
+		crafting: {
+			shapeless: false,
+			keepWhitespace: false,
+			twoByTwo: false,
+		},
+		cooking: {
+			time: null,
+			experience: 0,
+		},
+		smithing: {
+			trimPattern: '',
+		},
+	}
+}
+
+function createDefaultRecipeGeneratorStore(): RecipeGeneratorStore {
+	const recipe = createDefaultRecipeState()
+	return {
+		version: 1,
+		selectedVersion: LATEST_JAVA_VERSION,
+		recipes: [recipe],
+		selectedRecipeId: recipe.id,
+		customItems: [],
+		customTags: [],
+	}
+}
+
+function ensureRecipeTypeForVersion(
+	recipes: RecipeState[],
+	version: JavaVersionId,
+): RecipeState[] {
+	const supported = new Set(getSupportedRecipeTypes(version))
+	return recipes.map((recipe) =>
+		supported.has(recipe.recipeType)
+			? recipe
+			: { ...recipe, recipeType: coerceRecipeTypeForVersion(recipe.recipeType, version) },
+	)
+}
+
+const store = reactive(createDefaultRecipeGeneratorStore())
 const resources = shallowRef<LoadedVersionResources | null>(null)
 const loadingResources = ref(false)
 const resourceError = ref('')
@@ -636,18 +683,6 @@ watch(
 		loadResources(version)
 	},
 	{ immediate: true },
-)
-
-watch(
-	() => ({
-		version: store.selectedVersion,
-		recipes: store.recipes,
-		selectedRecipeId: store.selectedRecipeId,
-		customItems: store.customItems,
-		customTags: store.customTags,
-	}),
-	() => saveRecipeGeneratorStore(store),
-	{ deep: true },
 )
 
 watch(
@@ -1382,7 +1417,7 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 							<span class="recipe-field-label">{{ formatMessage(messages.experience) }}</span>
 							<StyledInput
 								:model-value="String(currentRecipe.cooking.experience)"
-								input-attrs="{ type: 'number', min: 0, step: 0.05 }"
+								:input-attrs="{ type: 'number', min: 0, step: 0.05 }"
 								size="small"
 								@update:model-value="
 									currentRecipe.cooking.experience = Math.max(0, Number($event) || 0)
@@ -1402,7 +1437,7 @@ function slotEditorSlots(type: RecipeType): RecipeSlot[] {
 										: String(currentRecipe.cooking.time)
 								"
 								:disabled="cookingTimeIsDefault"
-								input-attrs="{ type: 'number', min: 1 }"
+								:input-attrs="{ type: 'number', min: 1 }"
 								size="small"
 								@update:model-value="
 									currentRecipe.cooking.time = Math.max(1, Math.round(Number($event) || 1))

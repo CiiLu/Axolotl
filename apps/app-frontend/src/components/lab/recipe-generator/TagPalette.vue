@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PlusIcon, TrashIcon } from '@modrinth/assets'
-import { defineMessages, StyledInput, useVIntl } from '@modrinth/ui'
+import { defineMessages, StyledInput, useVIntl, useVirtualScroll } from '@modrinth/ui'
 import Fuse from 'fuse.js'
 import { computed, ref } from 'vue'
 
@@ -37,6 +37,7 @@ let suppressClicksUntil = 0
 
 const RECIPE_SLOT_MIME_TYPE = 'application/x-axolotl-recipe-slot'
 const isTauriRuntime = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+const TAG_ROW_HEIGHT = 44.8
 
 type StartDrag = (
 	event: PointerEvent,
@@ -80,6 +81,16 @@ const visibleVanillaTags = computed(() => {
 	const query = search.value.trim()
 	if (!query) return vanillaList.value
 	return fuse.value.search(query).map((result) => result.item)
+})
+
+const {
+	listContainer,
+	totalHeight,
+	visibleTop,
+	visibleItems: visibleVanillaRows,
+} = useVirtualScroll(visibleVanillaTags, {
+	itemHeight: TAG_ROW_HEIGHT,
+	bufferSize: 8,
 })
 
 function vanillaDisplay(tagId: string) {
@@ -212,35 +223,43 @@ function draftText(tag: CustomTag) {
 					{{ formatMessage(messages.empty) }}
 				</div>
 				<div v-else class="recipe-tag-scroll">
-					<button
-						v-for="item in visibleVanillaTags"
-						:key="item"
-						type="button"
-						:draggable="!isTauriRuntime"
-						class="recipe-tag-row"
-						:title="formatMessage(messages.useTag)"
-						:aria-label="`${formatMessage(messages.useTag)}: ${item}`"
-						:style="{ touchAction: isTauriRuntime ? 'none' : undefined }"
-						@click="pickFromClick($event, { kind: 'vanilla_tag', id: item })"
-						@pointerdown="
-							startPointerDrag(
-								$event,
-								{ kind: 'vanilla_tag', id: item },
-								vanillaDisplay(item),
-								startDrag,
-							)
-						"
-						@dragstart="onTagDragStart($event, { kind: 'vanilla_tag', id: item })"
-						@dragend="onDragEnd"
+					<div
+						ref="listContainer"
+						class="recipe-tag-virtual"
+						:style="{ height: `${totalHeight}px`, overflowAnchor: 'none' }"
 					>
-						<RecipeItemIcon
-							:display="vanillaDisplay(item)"
-							:atlas="atlas"
-							:size="26"
-							:show-count="false"
-						/>
-						<span>{{ item }}</span>
-					</button>
+						<div class="recipe-tag-window" :style="{ top: `${visibleTop}px` }">
+							<button
+								v-for="item in visibleVanillaRows"
+								:key="item"
+								type="button"
+								:draggable="!isTauriRuntime"
+								class="recipe-tag-row"
+								:title="formatMessage(messages.useTag)"
+								:aria-label="`${formatMessage(messages.useTag)}: ${item}`"
+								:style="{ touchAction: isTauriRuntime ? 'none' : undefined }"
+								@click="pickFromClick($event, { kind: 'vanilla_tag', id: item })"
+								@pointerdown="
+									startPointerDrag(
+										$event,
+										{ kind: 'vanilla_tag', id: item },
+										vanillaDisplay(item),
+										startDrag,
+									)
+								"
+								@dragstart="onTagDragStart($event, { kind: 'vanilla_tag', id: item })"
+								@dragend="onDragEnd"
+							>
+								<RecipeItemIcon
+									:display="vanillaDisplay(item)"
+									:atlas="atlas"
+									:size="26"
+									:show-count="false"
+								/>
+								<span>{{ item }}</span>
+							</button>
+						</div>
+					</div>
 				</div>
 			</template>
 
@@ -356,9 +375,22 @@ function draftText(tag: CustomTag) {
 	min-height: 0;
 	flex: 1;
 	flex-direction: column;
-	gap: 0.3rem;
 	overflow-y: auto;
 	overscroll-behavior: contain;
+}
+
+.recipe-tag-virtual {
+	position: relative;
+	width: 100%;
+	min-height: 0;
+}
+
+.recipe-tag-window {
+	position: absolute;
+	inset-inline: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
 	padding: 0.1rem 0.25rem 0.25rem 0.1rem;
 }
 
