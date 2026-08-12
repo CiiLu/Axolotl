@@ -1528,11 +1528,8 @@ pub async fn download_libraries(
         io::create_dir_all(st.directories.libraries_dir()),
         io::create_dir_all(st.directories.version_natives_dir(version))
     }?;
-    let libraries = deduplicate_native_downloads(
-        libraries,
-        java_arch,
-        minecraft_updated,
-    );
+    let libraries =
+        deduplicate_native_downloads(libraries, java_arch, minecraft_updated);
     let num_files = libraries.len();
     loading_try_for_each_concurrent(
 		stream::iter(libraries).map(Ok::<&Library, crate::Error>),
