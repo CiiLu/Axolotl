@@ -96,7 +96,7 @@ const messages = defineMessages({
 	},
 })
 
-async function show() {
+async function show(instanceId?: string) {
 	selectedInstance.value = null
 	worlds.value = []
 	error.value = ''
@@ -113,6 +113,10 @@ async function show() {
 					Number(new Date(right.last_played ?? 0)) - Number(new Date(left.last_played ?? 0))
 				return lastPlayed || left.name.localeCompare(right.name, locale.value)
 			})
+		const initialInstance = instances.value.find((instance) => instance.id === instanceId)
+		if (initialInstance) {
+			await openInstance(initialInstance)
+		}
 	} catch (caught) {
 		instances.value = []
 		error.value = caught instanceof Error ? caught.message : String(caught)

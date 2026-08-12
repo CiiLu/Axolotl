@@ -1678,7 +1678,7 @@ async function handleDropConfirm(type: string, innerBase?: string) {
 			filePath,
 		})
 		pendingInstall.value = { type, filePath, innerBase }
-		dataPackWorldModal.value?.show()
+		dataPackWorldModal.value?.show(isInInstance.value ? instanceId.value : undefined)
 		return
 	}
 
