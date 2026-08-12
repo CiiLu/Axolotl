@@ -322,6 +322,7 @@ fn main() {
                         "instance_switch_project_version_with_dependencies",
                         "instance_add_project_from_path",
                         "instance_import_world_save",
+                        "instance_install_datapack_to_world",
                         "instance_toggle_disable_project",
                         "instance_toggle_content_entry",
                         "instance_rollback_project",
