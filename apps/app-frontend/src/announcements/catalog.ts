@@ -141,6 +141,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed overflow of directory in the warning of deleting symlink instances',
 					'zh-CN': '修复了删除符号链接实例的警告中提示的目录溢出的问题',
 				},
+				{
+					'en-US': 'Fixed the broken live log terminal',
+					'zh-CN': '修复了实时日志无法正常更新的问题',
+				},
 			],
 		},
 	},
