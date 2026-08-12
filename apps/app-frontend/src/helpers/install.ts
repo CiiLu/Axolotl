@@ -393,14 +393,11 @@ export async function install_job_missing_files(jobId: string) {
 	})
 }
 
-export async function install_job_scan_missing_files(
-	jobId: string,
-	scanDirectory?: string | null,
-) {
-	return await invoke<MissingModpackScanResult>(
-		'plugin:install|install_job_scan_missing_files',
-		{ jobId, scanDirectory: scanDirectory ?? null },
-	)
+export async function install_job_scan_missing_files(jobId: string, scanDirectory?: string | null) {
+	return await invoke<MissingModpackScanResult>('plugin:install|install_job_scan_missing_files', {
+		jobId,
+		scanDirectory: scanDirectory ?? null,
+	})
 }
 
 export async function install_job_retry_missing_file(jobId: string, itemId: string) {

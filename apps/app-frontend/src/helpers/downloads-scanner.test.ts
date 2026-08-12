@@ -249,10 +249,7 @@ test('missing-content scanner settings default enabled and persist a custom fold
 		directory: null,
 	})
 
-	setMissingContentScannerSettings(
-		{ enabled: false, directory: 'D:\\Modpack Imports' },
-		storage,
-	)
+	setMissingContentScannerSettings({ enabled: false, directory: 'D:\\Modpack Imports' }, storage)
 	assert.deepEqual(getMissingContentScannerSettings(storage), {
 		enabled: false,
 		directory: 'D:\\Modpack Imports',

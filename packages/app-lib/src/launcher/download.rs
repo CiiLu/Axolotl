@@ -660,6 +660,41 @@ async fn try_reuse_local_artifact(
     .await
 }
 
+async fn download_or_reuse_local<F, Fut>(
+    st: &State,
+    local: Option<&LocalRuntimeSource>,
+    relative_path: &Path,
+    destination: &Path,
+    expected_sha1: Option<&str>,
+    expected_size: Option<u64>,
+    progress: Option<&MinecraftDownloadProgress>,
+    context: InstallErrorContext,
+    force: bool,
+    download: F,
+) -> crate::Result<bool>
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = crate::Result<DownloadResult>>,
+{
+    if !force
+        && try_reuse_local_artifact(
+            st,
+            local,
+            relative_path,
+            destination,
+            expected_sha1,
+            expected_size,
+            progress,
+            context,
+        )
+        .await?
+    {
+        return Ok(true);
+    }
+    download().await?;
+    Ok(false)
+}
+
 fn should_download(path_exists: bool, force: bool) -> bool {
     !path_exists || force
 }
@@ -1238,34 +1273,35 @@ pub async fn download_client(
             .file_path(format!("{version}.jar"))
             .target_path(path.display().to_string())
             .build();
-        if !force
-            && try_reuse_local_artifact(
-                st,
-                local_source,
-                &local_client_path(game_version),
-                &path,
-                Some(&client_download.sha1),
-                Some(client_download.size as u64),
-                progress.as_ref(),
-                context.clone(),
-            )
-            .await?
-        {
+        let reused = download_or_reuse_local(
+            st,
+            local_source,
+            &local_client_path(game_version),
+            &path,
+            Some(&client_download.sha1),
+            Some(client_download.size as u64),
+            progress.as_ref(),
+            context.clone(),
+            force,
+            || {
+                download_minecraft_file(
+                    st,
+                    &client_download.url,
+                    Some(&client_download.sha1),
+                    Some(client_download.size as u64),
+                    &path,
+                    ResourceClass::MinecraftLibrary,
+                    ContentValidation::Jar,
+                    force,
+                    progress.clone(),
+                    context,
+                )
+            },
+        )
+        .await?;
+        if reused {
             tracing::trace!("Reused local client version {version}");
         } else {
-            download_minecraft_file(
-                st,
-                &client_download.url,
-                Some(&client_download.sha1),
-                Some(client_download.size as u64),
-                &path,
-                ResourceClass::MinecraftLibrary,
-                ContentValidation::Jar,
-                force,
-                progress,
-                context,
-            )
-            .await?;
             tracing::trace!("Fetched client version {version}");
         }
     }
@@ -1305,37 +1341,38 @@ pub async fn download_assets_index(
                 .file_path(format!("{}.json", version.asset_index.id))
                 .target_path(path.display().to_string())
                 .build();
-        if !force
-            && try_reuse_local_artifact(
-                st,
-                local_source,
-                &local_asset_index_path(&version.asset_index.id),
-                &path,
-                Some(&version.asset_index.sha1),
-                Some(version.asset_index.size as u64),
-                progress.as_ref(),
-                context.clone(),
-            )
-            .await?
-        {
+        let reused = download_or_reuse_local(
+            st,
+            local_source,
+            &local_asset_index_path(&version.asset_index.id),
+            &path,
+            Some(&version.asset_index.sha1),
+            Some(version.asset_index.size as u64),
+            progress.as_ref(),
+            context.clone(),
+            force,
+            || {
+                download_minecraft_file(
+                    st,
+                    &version.asset_index.url,
+                    Some(&version.asset_index.sha1),
+                    Some(version.asset_index.size as u64),
+                    &path,
+                    ResourceClass::Metadata,
+                    ContentValidation::Json,
+                    force,
+                    progress.clone(),
+                    context,
+                )
+            },
+        )
+        .await?;
+        if reused {
             tracing::info!("Reused local assets index");
         } else {
-            download_minecraft_file(
-                st,
-                &version.asset_index.url,
-                Some(&version.asset_index.sha1),
-                Some(version.asset_index.size as u64),
-                &path,
-                ResourceClass::Metadata,
-                ContentValidation::Json,
-                force,
-                progress,
-                context,
-            )
-            .await?;
+            tracing::info!("Fetched assets index");
         }
         let index = serde_json::from_slice(&io::read(&path).await?)?;
-        tracing::info!("Fetched assets index");
         Ok(index)
     }?;
 
@@ -1404,34 +1441,35 @@ pub async fn download_assets(
                                     .file_path(name.clone())
                                     .target_path(resource_path.display().to_string())
                                     .build();
-                            if !force
-                                && try_reuse_local_artifact(
-                                    st,
-                                    local_source,
-                                    &local_asset_object_path(hash),
-                                    &resource_path,
-                                    Some(hash),
-                                    Some(asset.size as u64),
-                                    object_progress.as_ref(),
-                                    context.clone(),
-                                )
-                                .await?
-                            {
+                            let reused = download_or_reuse_local(
+                                st,
+                                local_source,
+                                &local_asset_object_path(hash),
+                                &resource_path,
+                                Some(hash),
+                                Some(asset.size as u64),
+                                object_progress.as_ref(),
+                                context.clone(),
+                                force,
+                                || {
+                                    download_minecraft_file(
+                                        st,
+                                        &url,
+                                        Some(hash),
+                                        Some(asset.size as u64),
+                                        &resource_path,
+                                        ResourceClass::MinecraftAsset,
+                                        ContentValidation::None,
+                                        force,
+                                        object_progress.clone(),
+                                        context,
+                                    )
+                                },
+                            )
+                            .await?;
+                            if reused {
                                 tracing::trace!("Reused asset with hash {hash}");
                             } else {
-                                download_minecraft_file(
-                                    st,
-                                    &url,
-                                    Some(hash),
-                                    Some(asset.size as u64),
-                                    &resource_path,
-                                    ResourceClass::MinecraftAsset,
-                                    ContentValidation::None,
-                                    force,
-                                    object_progress,
-                                    context,
-                                )
-                                .await?;
                                 tracing::trace!("Fetched asset with hash {hash}");
                             }
                         }
@@ -1545,47 +1583,39 @@ pub async fn download_libraries(
                             .to_string(),
                     )
                     .build();
-                    let reused = if !force {
-                        match local_source {
-                            Some(local_source) => {
-                                let local_relative = local_native_library_path(
-                                    library,
-                                    native,
-                                    &parsed_key,
-                                )?;
-                                try_reuse_local_artifact(
-                                    st,
-                                    Some(local_source),
-                                    &local_relative,
-                                    &native_cache_path,
-                                    Some(&native.sha1),
-                                    Some(native.size as u64),
-                                    progress.as_ref(),
-                                    context.clone(),
-                                )
-                                .await?
-                            }
-                            None => false,
-                        }
-                    } else {
-                        false
-                    };
+                    let local_relative = local_native_library_path(
+                        library,
+                        native,
+                        &parsed_key,
+                    )?;
+                    let reused = download_or_reuse_local(
+                        st,
+                        local_source,
+                        &local_relative,
+                        &native_cache_path,
+                        Some(&native.sha1),
+                        Some(native.size as u64),
+                        progress.as_ref(),
+                        context.clone(),
+                        force,
+                        || {
+                            download_minecraft_file(
+                                st,
+                                &native.url,
+                                Some(&native.sha1),
+                                Some(native.size as u64),
+                                &native_cache_path,
+                                ResourceClass::MinecraftLibrary,
+                                ContentValidation::Jar,
+                                force,
+                                progress.clone(),
+                                context,
+                            )
+                        },
+                    )
+                    .await?;
                     if reused {
                         tracing::trace!("Reused native {}", &library.name);
-                    } else {
-                        download_minecraft_file(
-                            st,
-                            &native.url,
-                            Some(&native.sha1),
-                            Some(native.size as u64),
-                            &native_cache_path,
-                            ResourceClass::MinecraftLibrary,
-                            ContentValidation::Jar,
-                            force,
-                            progress.clone(),
-                            context,
-                        )
-                        .await?;
                     }
 
                     let native_target =
@@ -1632,39 +1662,39 @@ pub async fn download_libraries(
                     .file_path(library.name.clone())
                     .target_path(path.display().to_string())
                     .build();
-                    if !force
-                        && try_reuse_local_artifact(
-                            st,
-                            local_source,
-                            &local_relative,
-                            &path,
-                            Some(&artifact.sha1),
-                            Some(artifact.size as u64),
-                            progress.as_ref(),
-                            context.clone(),
-                        )
-                        .await?
-                    {
+                    let reused = download_or_reuse_local(
+                        st,
+                        local_source,
+                        &local_relative,
+                        &path,
+                        Some(&artifact.sha1),
+                        Some(artifact.size as u64),
+                        progress.as_ref(),
+                        context.clone(),
+                        force,
+                        || {
+                            download_minecraft_file(
+                                st,
+                                &artifact.url,
+                                Some(&artifact.sha1),
+                                Some(artifact.size as u64),
+                                &path,
+                                ResourceClass::MinecraftLibrary,
+                                ContentValidation::None,
+                                force,
+                                progress.clone(),
+                                context,
+                            )
+                        },
+                    )
+                    .await?;
+                    if reused {
                         tracing::trace!(
                             "Reused library {} to path {:?}",
                             &library.name,
                             &path
                         );
                     } else {
-                        download_minecraft_file(
-                            st,
-                            &artifact.url,
-                            Some(&artifact.sha1),
-                            Some(artifact.size as u64),
-                            &path,
-                            ResourceClass::MinecraftLibrary,
-                            ContentValidation::None,
-                            force,
-                            progress.clone(),
-                            context,
-                        )
-                        .await?;
-
                         tracing::trace!(
                             "Fetched library {} to path {:?}",
                             &library.name,
@@ -1691,39 +1721,39 @@ pub async fn download_libraries(
                     .file_path(library.name.clone())
                     .target_path(path.display().to_string())
                     .build();
-                    if !force
-                        && try_reuse_local_artifact(
-                            st,
-                            local_source,
-                            &local_relative,
-                            &path,
-                            legacy_library_sha1(library),
-                            None,
-                            progress.as_ref(),
-                            context.clone(),
-                        )
-                        .await?
-                    {
+                    let reused = download_or_reuse_local(
+                        st,
+                        local_source,
+                        &local_relative,
+                        &path,
+                        legacy_library_sha1(library),
+                        None,
+                        progress.as_ref(),
+                        context.clone(),
+                        force,
+                        || {
+                            download_minecraft_file_with_candidates(
+                                st,
+                                &urls,
+                                legacy_library_sha1(library),
+                                None,
+                                &path,
+                                ResourceClass::Loader,
+                                legacy_library_content_validation(&artifact_path),
+                                force,
+                                progress.clone(),
+                                context,
+                            )
+                        },
+                    )
+                    .await?;
+                    if reused {
                         tracing::debug!(
                             "Reused legacy library {} to path {:?}",
                             &library.name,
                             &path
                         );
                     } else {
-                        download_minecraft_file_with_candidates(
-                            st,
-                            &urls,
-                            legacy_library_sha1(library),
-                            None,
-                            &path,
-                            ResourceClass::Loader,
-                            legacy_library_content_validation(&artifact_path),
-                            force,
-                            progress.clone(),
-                            context,
-                        )
-                        .await?;
-
                         tracing::debug!(
                             "Fetched legacy library {} to path {:?}",
                             &library.name,
@@ -1775,34 +1805,35 @@ pub async fn download_log_config(
             .file_path(log_download.id.clone())
             .target_path(path.display().to_string())
             .build();
-        if !force
-            && try_reuse_local_artifact(
-                st,
-                local_source,
-                &local_log_config_path(&log_download.id),
-                &path,
-                Some(&log_download.sha1),
-                Some(log_download.size as u64),
-                progress.as_ref(),
-                context.clone(),
-            )
-            .await?
-        {
+        let reused = download_or_reuse_local(
+            st,
+            local_source,
+            &local_log_config_path(&log_download.id),
+            &path,
+            Some(&log_download.sha1),
+            Some(log_download.size as u64),
+            progress.as_ref(),
+            context.clone(),
+            force,
+            || {
+                download_minecraft_file(
+                    st,
+                    &log_download.url,
+                    Some(&log_download.sha1),
+                    Some(log_download.size as u64),
+                    &path,
+                    ResourceClass::MinecraftLibrary,
+                    ContentValidation::None,
+                    force,
+                    progress.clone(),
+                    context,
+                )
+            },
+        )
+        .await?;
+        if reused {
             tracing::trace!("Reused log config {}", log_download.id);
         } else {
-            download_minecraft_file(
-                st,
-                &log_download.url,
-                Some(&log_download.sha1),
-                Some(log_download.size as u64),
-                &path,
-                ResourceClass::MinecraftLibrary,
-                ContentValidation::None,
-                force,
-                progress,
-                context,
-            )
-            .await?;
             tracing::trace!("Fetched log config {}", log_download.id);
         }
     }

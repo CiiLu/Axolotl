@@ -149,8 +149,8 @@ import {
 } from '@/helpers/downloads-scanner'
 import { install_job_listener } from '@/helpers/events'
 import {
-	install_job_import_missing_file,
 	install_job_get,
+	install_job_import_missing_file,
 	install_job_missing_files,
 	install_job_resume,
 	install_job_retry_missing_file,
@@ -471,9 +471,7 @@ async function runItem(itemId: string, action: () => Promise<InstallJobSnapshot>
 async function applyItemResult(itemId: string, job: InstallJobSnapshot) {
 	if (
 		job.status !== 'waiting_for_user' ||
-		job.items.some(
-			(item) => item.id === itemId && ['completed', 'skipped'].includes(item.status),
-		)
+		job.items.some((item) => item.id === itemId && ['completed', 'skipped'].includes(item.status))
 	) {
 		scannerPresentation.value = reduceDownloadsScannerPresentation(scannerPresentation.value, {
 			type: 'items_resolved',

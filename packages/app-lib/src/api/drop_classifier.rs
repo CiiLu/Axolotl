@@ -501,6 +501,43 @@ fn is_noise_entry(name: &str) -> bool {
         .any(|noise| name.eq_ignore_ascii_case(noise))
 }
 
+/// Direct child folders and ZIP archives under `path`, sorted for stable
+/// classification and without symlinks or OS noise entries.
+fn sorted_folder_children(path: &Path) -> Vec<PathBuf> {
+    let mut children = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            if file_type.is_symlink() {
+                continue;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            if is_noise_entry(&name) {
+                continue;
+            }
+            let child = entry.path();
+            if file_type.is_dir() || is_zip_path(&child) {
+                children.push(child);
+            }
+        }
+    }
+    children.sort();
+    children
+}
+
+fn resource_pack_candidates(entries: &ZipEntrySet, base: &str) -> Vec<String> {
+    let mut candidates = Vec::new();
+    if entries.has_child_folder(base, "data") {
+        candidates.push("data_pack".to_string());
+    }
+    if entries.has_child_folder(base, "assets") {
+        candidates.push("resource_pack".to_string());
+    }
+    candidates
+}
+
 /// Whether the filesystem holding `dir` has at least `required` bytes free.
 /// Returns `true` when the free space cannot be determined so the hard size
 /// cap still applies as a fallback.
@@ -663,8 +700,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         return DroppedItemType::Launcher {
             launcher_type,
             base_path: result_path.to_path_buf(),
-            inner_base: (!base.is_empty())
-                .then(|| base.trim_end_matches('/').to_string()),
+            inner_base: zip_inner_base(base),
         };
     }
 
@@ -673,13 +709,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
     //    Nested folders are handled by the recursion below, which re-runs
     //    this whole flow with the folder as the new root.
     if entries.has_file(base, "pack.mcmeta") {
-        let mut candidates = Vec::new();
-        if entries.has_child_folder(base, "data") {
-            candidates.push("data_pack".to_string());
-        }
-        if entries.has_child_folder(base, "assets") {
-            candidates.push("resource_pack".to_string());
-        }
+        let candidates = resource_pack_candidates(entries, base);
         if !candidates.is_empty() {
             tracing::debug!(
                 "ZIP classify: pack.mcmeta with candidates {candidates:?} at base {:?} — {}",
@@ -689,8 +719,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
             return DroppedItemType::ResourcePack {
                 file_path: result_path.to_path_buf(),
                 candidates,
-                inner_base: (!base.is_empty())
-                    .then(|| base.trim_end_matches('/').to_string()),
+                inner_base: zip_inner_base(base),
             };
         }
     }
@@ -702,8 +731,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         );
         return DroppedItemType::ShaderPack {
             file_path: result_path.to_path_buf(),
-            inner_base: (!base.is_empty())
-                .then(|| base.trim_end_matches('/').to_string()),
+            inner_base: zip_inner_base(base),
         };
     }
     if entries.has_file(base, "level.dat") {
@@ -714,8 +742,7 @@ fn classify_zip_entries<R: std::io::Read + std::io::Seek>(
         );
         return DroppedItemType::WorldSave {
             file_path: result_path.to_path_buf(),
-            inner_base: (!base.is_empty())
-                .then(|| base.trim_end_matches('/').to_string()),
+            inner_base: zip_inner_base(base),
         };
     }
 
@@ -859,34 +886,37 @@ fn classify_nested_zip<R: std::io::Read + std::io::Seek>(
         &mut nested_unpack_bytes,
     );
     let remap_inner = |inner_base: Option<String>| -> Option<String> {
-        Some(match inner_base {
+        let combined = match inner_base {
             Some(inner) => format!("{entry_path}/{inner}"),
             None => entry_path.trim_end_matches('/').to_string(),
-        })
+        };
+        sanitize_inner_base(&combined)
     };
     match result {
         DroppedItemType::Unknown { reason } => DroppedItemType::Unknown {
             reason: format!("nested archive {entry_path}: {reason}"),
         },
-        DroppedItemType::WorldSave { inner_base, .. } => DroppedItemType::WorldSave {
-            file_path: result_path.to_path_buf(),
-            inner_base: remap_inner(inner_base),
-        },
+        DroppedItemType::WorldSave { inner_base, .. } => {
+            DroppedItemType::WorldSave {
+                file_path: result_path.to_path_buf(),
+                inner_base: remap_inner(inner_base),
+            }
+        }
         DroppedItemType::ResourcePack {
             candidates,
             inner_base,
             ..
-        } => {
-            DroppedItemType::ResourcePack {
+        } => DroppedItemType::ResourcePack {
+            file_path: result_path.to_path_buf(),
+            candidates,
+            inner_base: remap_inner(inner_base),
+        },
+        DroppedItemType::ShaderPack { inner_base, .. } => {
+            DroppedItemType::ShaderPack {
                 file_path: result_path.to_path_buf(),
-                candidates,
                 inner_base: remap_inner(inner_base),
             }
         }
-        DroppedItemType::ShaderPack { inner_base, .. } => DroppedItemType::ShaderPack {
-            file_path: result_path.to_path_buf(),
-            inner_base: remap_inner(inner_base),
-        },
         DroppedItemType::Modpack { .. } => DroppedItemType::Modpack {
             file_path: result_path.to_path_buf(),
         },
@@ -1371,26 +1401,7 @@ fn classify_folder_content_inner(
         };
     }
 
-    let mut children: Vec<PathBuf> = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(path) {
-        for entry in entries.flatten() {
-            let Ok(file_type) = entry.file_type() else {
-                continue;
-            };
-            if file_type.is_symlink() {
-                continue;
-            }
-            let name = entry.file_name().to_string_lossy().to_string();
-            if is_noise_entry(&name) {
-                continue;
-            }
-            let child = entry.path();
-            if file_type.is_dir() || is_zip_path(&child) {
-                children.push(child);
-            }
-        }
-    }
-    children.sort();
+    let children = sorted_folder_children(path);
 
     for child in children {
         let result = if child.is_dir() {
@@ -1464,7 +1475,10 @@ fn classify_resource_pack_folder(path: &Path) -> Option<DroppedItemType> {
 fn has_child_dir(path: &Path, name: &str) -> bool {
     std::fs::read_dir(path).ok().is_some_and(|entries| {
         entries.flatten().any(|entry| {
-            entry.file_name().to_string_lossy().eq_ignore_ascii_case(name)
+            entry
+                .file_name()
+                .to_string_lossy()
+                .eq_ignore_ascii_case(name)
                 && entry.file_type().map(|t| t.is_dir()).unwrap_or(false)
         })
     })
@@ -1497,7 +1511,8 @@ pub fn classify_dropped_item_with_candidates(
     ) {
         return primary;
     }
-    let mut alternatives = collect_content_candidates(path, allow_nested_unpack);
+    let mut alternatives =
+        collect_content_candidates(path, allow_nested_unpack);
     if matches!(primary, DroppedItemType::Unknown { .. })
         && alternatives.is_empty()
     {
@@ -1525,8 +1540,8 @@ pub fn classify_dropped_item_with_candidates(
         return primary;
     }
 
-    let has_primary = !matches!(primary, DroppedItemType::Unknown { .. })
-        && all.first().is_some();
+    let has_primary =
+        !matches!(primary, DroppedItemType::Unknown { .. }) && !all.is_empty();
     let primary_candidate = has_primary.then(|| all.remove(0));
     all.sort_by(|a, b| {
         candidate_priority(b)
@@ -1570,7 +1585,13 @@ fn collect_content_candidates(
 ) -> Vec<DroppedCandidate> {
     if path.is_dir() {
         let mut candidates = Vec::new();
-        collect_folder_candidates(path, allow_nested_unpack, path, 0, &mut candidates);
+        collect_folder_candidates(
+            path,
+            allow_nested_unpack,
+            path,
+            0,
+            &mut candidates,
+        );
         candidates
     } else if is_zip_path(path) {
         collect_zip_candidates(path, allow_nested_unpack)
@@ -1598,29 +1619,10 @@ fn collect_folder_candidates(
         push_candidate(out, candidate_from_result(&result, inner_base.clone()));
     }
     if let Some(result) = classify_shader_pack_folder(path) {
-        push_candidate(out, candidate_from_result(&result, inner_base.clone()));
+        push_candidate(out, candidate_from_result(&result, inner_base));
     }
 
-    let mut children: Vec<PathBuf> = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(path) {
-        for entry in entries.flatten() {
-            let Ok(file_type) = entry.file_type() else {
-                continue;
-            };
-            if file_type.is_symlink() {
-                continue;
-            }
-            let name = entry.file_name().to_string_lossy().to_string();
-            if is_noise_entry(&name) {
-                continue;
-            }
-            let child = entry.path();
-            if file_type.is_dir() || is_zip_path(&child) {
-                children.push(child);
-            }
-        }
-    }
-    children.sort();
+    let children = sorted_folder_children(path);
 
     for child in children {
         if child.is_dir() {
@@ -1679,16 +1681,9 @@ fn collect_zip_candidates_at<R: std::io::Read + std::io::Seek>(
         return;
     }
 
-    let inner_base = (!base.is_empty())
-        .then(|| base.trim_end_matches('/').to_string());
+    let inner_base = zip_inner_base(base);
     if entries.has_file(base, "pack.mcmeta") {
-        let mut candidates = Vec::new();
-        if entries.has_child_folder(base, "data") {
-            candidates.push("data_pack".to_string());
-        }
-        if entries.has_child_folder(base, "assets") {
-            candidates.push("resource_pack".to_string());
-        }
+        let candidates = resource_pack_candidates(entries, base);
         if !candidates.is_empty() {
             push_candidate(
                 out,
@@ -1774,18 +1769,12 @@ fn candidate_from_result(
             Vec::new(),
             None,
         ),
-        DroppedItemType::Mod { file_path } => (
-            "mod".to_string(),
-            file_path.clone(),
-            Vec::new(),
-            None,
-        ),
-        DroppedItemType::Litematic { file_path } => (
-            "litematic".to_string(),
-            file_path.clone(),
-            Vec::new(),
-            None,
-        ),
+        DroppedItemType::Mod { file_path } => {
+            ("mod".to_string(), file_path.clone(), Vec::new(), None)
+        }
+        DroppedItemType::Litematic { file_path } => {
+            ("litematic".to_string(), file_path.clone(), Vec::new(), None)
+        }
         DroppedItemType::ResourcePack {
             file_path,
             candidates,
@@ -1814,17 +1803,14 @@ fn candidate_from_result(
             Vec::new(),
             inner_base.clone(),
         ),
-        DroppedItemType::Modpack { file_path } => (
-            "modpack".to_string(),
-            file_path.clone(),
-            Vec::new(),
-            None,
-        ),
+        DroppedItemType::Modpack { file_path } => {
+            ("modpack".to_string(), file_path.clone(), Vec::new(), None)
+        }
         DroppedItemType::ShortcutResolved { resolved_to, .. } => {
-            return candidate_from_result(resolved_to, outer_inner_base)
+            return candidate_from_result(resolved_to, outer_inner_base);
         }
         DroppedItemType::Unknown { .. } | DroppedItemType::Multiple { .. } => {
-            return None
+            return None;
         }
     };
 
@@ -1847,12 +1833,17 @@ fn merge_inner_base(
     }
 }
 
-fn push_candidate(out: &mut Vec<DroppedCandidate>, candidate: Option<DroppedCandidate>) {
+fn push_candidate(
+    out: &mut Vec<DroppedCandidate>,
+    candidate: Option<DroppedCandidate>,
+) {
     let Some(candidate) = candidate else {
         return;
     };
     if candidate.item_type == "unknown"
-        || out.iter().any(|existing| same_candidate(existing, &candidate))
+        || out
+            .iter()
+            .any(|existing| same_candidate(existing, &candidate))
         || out.len() >= 8
     {
         return;
@@ -1890,6 +1881,38 @@ fn relative_to(root: &Path, path: &Path) -> Option<String> {
         .ok()
         .map(|rel| rel.to_string_lossy().replace('\\', "/"))
         .filter(|rel| !rel.is_empty())
+}
+
+fn zip_inner_base(base: &str) -> Option<String> {
+    (!base.is_empty())
+        .then(|| base.trim_end_matches('/'))
+        .and_then(sanitize_inner_base)
+}
+
+fn sanitize_inner_base(base: &str) -> Option<String> {
+    let normalized = base.replace('\\', "/");
+    let path = std::path::Path::new(&normalized);
+    if path.is_absolute() {
+        return None;
+    }
+
+    let mut parts = Vec::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::Normal(part) => {
+                parts.push(part.to_string_lossy().into_owned());
+            }
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir
+            | std::path::Component::RootDir
+            | std::path::Component::Prefix(_) => return None,
+        }
+    }
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join("/"))
+    }
 }
 
 /// Detect launcher instance markers:

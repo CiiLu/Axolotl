@@ -29,11 +29,11 @@ use modrinth_content_management::{
     ResolutionPreferences, ResolveContentPlan, ResolveContentRequest,
     ResolvedContent,
 };
-use std::path::{Path, PathBuf};
 use std::io::{Cursor, Write};
+use std::path::{Path, PathBuf};
 use tracing::warn;
-use zip::write::SimpleFileOptions;
 use zip::CompressionMethod;
+use zip::write::SimpleFileOptions;
 
 pub(crate) struct ContentScope {
     pub instance: Instance,
@@ -308,13 +308,12 @@ pub(crate) async fn switch_project_version_with_dependencies(
         .await?;
     }
 
-    if new_path != project_path {
-        if archive_project_file(instance_id, project_path, &new_path, state)
+    if new_path != project_path
+        && archive_project_file(instance_id, project_path, &new_path, state)
             .await?
             .is_none()
-        {
-            remove_project(instance_id, project_path, state).await?;
-        }
+    {
+        remove_project(instance_id, project_path, state).await?;
     }
 
     Ok(new_path)
@@ -799,9 +798,9 @@ pub(crate) async fn add_project_from_path(
 
         let source = if let Some(temp_dir) = &temp_dir {
             extract_zip_to_dir_async(path, temp_dir.path()).await?;
-            temp_dir.path().join(inner_base)
+            crate::util::io::join_within_root(temp_dir.path(), inner_base)?
         } else {
-            path.join(inner_base)
+            crate::util::io::join_within_root(path, inner_base)?
         };
 
         let result = if source.is_dir() {
@@ -932,7 +931,13 @@ fn collect_zip_files(
     for entry in entries.flatten() {
         let path = entry.path();
         let relative = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
-        if path.is_dir() {
+        let Ok(metadata) = std::fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if metadata.file_type().is_symlink() {
+            continue;
+        }
+        if metadata.is_dir() {
             collect_zip_files(root, &path, out)?;
         } else {
             out.push((path, relative));
@@ -970,11 +975,14 @@ pub(crate) async fn install_datapack_to_world(
 
     let source = if let Some(temp_dir) = &temp_dir {
         extract_zip_to_dir_async(path, temp_dir.path()).await?;
-        inner_base
-            .map(|base| temp_dir.path().join(base))
-            .unwrap_or_else(|| temp_dir.path().to_path_buf())
+        match inner_base {
+            Some(base) => {
+                crate::util::io::join_within_root(temp_dir.path(), base)?
+            }
+            None => temp_dir.path().to_path_buf(),
+        }
     } else if let Some(inner_base) = inner_base {
-        path.join(inner_base)
+        crate::util::io::join_within_root(path, inner_base)?
     } else {
         path.to_path_buf()
     };

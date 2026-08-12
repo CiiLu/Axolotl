@@ -25,9 +25,7 @@ export function getMissingContentScannerSettings(
 		return {
 			enabled: parsed.enabled !== false,
 			directory:
-				typeof parsed.directory === 'string' && parsed.directory.trim()
-					? parsed.directory
-					: null,
+				typeof parsed.directory === 'string' && parsed.directory.trim() ? parsed.directory : null,
 		}
 	} catch {
 		return { enabled: true, directory: null }

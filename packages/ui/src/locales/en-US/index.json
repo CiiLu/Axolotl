@@ -1001,6 +1001,12 @@
 	"creation-flow.title.set-up-server": {
 		"defaultMessage": "Set up server"
 	},
+	"drop.confirm.as-data-pack": {
+		"defaultMessage": "Data Pack"
+	},
+	"drop.confirm.as-data-pack-desc": {
+		"defaultMessage": "Install a data pack to an save"
+	},
 	"drop.confirm.as-dot-minecraft": {
 		"defaultMessage": ".minecraft"
 	},

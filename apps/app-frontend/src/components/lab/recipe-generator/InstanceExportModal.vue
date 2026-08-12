@@ -38,7 +38,7 @@ const emit = defineEmits<{
 	saveAs: []
 }>()
 
-const props = withDefaults(defineProps<{ showSaveAs?: boolean }>(), {
+withDefaults(defineProps<{ showSaveAs?: boolean }>(), {
 	showSaveAs: true,
 })
 

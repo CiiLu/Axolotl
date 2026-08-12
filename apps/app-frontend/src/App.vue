@@ -39,17 +39,16 @@ import {
 	provideNotificationManager,
 	providePageContext,
 	providePopupNotificationManager,
+	type SymlinkMethodChoice,
 	useDebugLogger,
 	useFormatBytes,
 	useGlobalDrop,
 	useVIntl,
-	type SymlinkMethodChoice,
 } from '@modrinth/ui'
 import ConfirmDropTypeModal from '@modrinth/ui/src/components/flows/drop/ConfirmDropTypeModal.vue'
 import GenericContentInstallModal from '@modrinth/ui/src/components/flows/drop/GenericContentInstallModal.vue'
 import LauncherImportModal from '@modrinth/ui/src/components/flows/drop/LauncherImportModal.vue'
 import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMethodCards.vue'
-import InstanceExportModal from '@/components/lab/recipe-generator/InstanceExportModal.vue'
 import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-context'
 import { useQuery } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
@@ -63,6 +62,7 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 
 import { type RouteLocationNormalizedLoaded, RouterView, useRoute, useRouter } from 'vue-router'
 
 import { getAnnouncementByVersion } from '@/announcements/catalog'
+import InstanceExportModal from '@/components/lab/recipe-generator/InstanceExportModal.vue'
 import AccountsCard from '@/components/ui/AccountsCard.vue'
 import UpdateAnnouncementModal from '@/components/ui/announcement/UpdateAnnouncementModal.vue'
 import AppActionBar from '@/components/ui/AppActionBar.vue'
@@ -117,7 +117,6 @@ import {
 	warning_listener,
 } from '@/helpers/events.js'
 import { import_instance } from '@/helpers/import.js'
-import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import {
 	install_create_modpack_instance,
 	install_get_modpack_preview,
@@ -132,6 +131,7 @@ import {
 	list as listInstances,
 	run,
 } from '@/helpers/instance'
+import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { reconcileMojangAuthSourceAtStartup } from '@/helpers/mojang-auth'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
@@ -1720,7 +1720,12 @@ async function handleDropConfirm(type: string, innerBase?: string) {
 	}
 }
 
-async function installContentDirectly(type: string, filePath: string, instId: string, innerBase?: string) {
+async function installContentDirectly(
+	type: string,
+	filePath: string,
+	instId: string,
+	innerBase?: string,
+) {
 	try {
 		if (type === 'world_save') {
 			await import_world_save(instId, filePath, innerBase)
@@ -2168,7 +2173,9 @@ async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean
 		const inst = instances[0]
 		const choice = Array.isArray(choices)
 			? choices.find(
-					(c) => c.instanceName === inst.name && (c.instancePath ?? undefined) === (inst.path ?? undefined),
+					(c) =>
+						c.instanceName === inst.name &&
+						(c.instancePath ?? undefined) === (inst.path ?? undefined),
 				)
 			: undefined
 		try {
@@ -2216,7 +2223,9 @@ async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean
 		const inst = instances[i]
 		const choice = Array.isArray(choices)
 			? choices.find(
-					(c) => c.instanceName === inst.name && (c.instancePath ?? undefined) === (inst.path ?? undefined),
+					(c) =>
+						c.instanceName === inst.name &&
+						(c.instancePath ?? undefined) === (inst.path ?? undefined),
 				)
 			: undefined
 
@@ -3096,15 +3105,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			</Admonition>
 			<div class="page-transition-grid">
 				<RouterView v-slot="{ Component, route }">
-					<Transition
-						name="page-slide"
-						:css="themeStore.getFeatureFlag('page_transitions')"
-					>
-						<div
-							v-if="Component"
-							:key="getPageTransitionKey(route)"
-							class="page-transition-layer"
-						>
+					<Transition name="page-slide" :css="themeStore.getFeatureFlag('page_transitions')">
+						<div v-if="Component" :key="getPageTransitionKey(route)" class="page-transition-layer">
 							<Suspense @pending="onSuspensePending" @resolve="onSuspenseResolve">
 								<component :is="Component"></component>
 							</Suspense>

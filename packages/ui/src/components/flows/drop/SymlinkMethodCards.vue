@@ -94,78 +94,78 @@
 						:class="[pageAnimationClass, pageAnim ? 'overflow-hidden' : '']"
 					>
 						<div class="flex flex-col gap-2">
-						<div class="relative flex items-center gap-2">
-							<span class="text-sm font-semibold text-contrast">
-								{{ formatMessage(messages.loaderLabel) }}
-							</span>
-							<TagItem
-								v-if="warnings.loaderTypeCustom || warnings.loaderTypeUnrecognized"
-								class="shrink-0 border !border-solid border-orange"
-								:style="{
-									'--_bg-color': 'var(--color-orange-bg)',
-									'--_color': 'var(--color-orange)',
-								}"
-							>
-								<span
-									class="inline-flex items-center gap-1"
-									v-tooltip="
-										warnings.loaderTypeCustom
-											? formatMessage(messages.customTooltip ?? customTooltipMessage)
-											: formatMessage(messages.loaderTypeUnknownTooltip)
-									"
-								>
-									<CircleAlertIcon />
-									{{
-										warnings.loaderTypeCustom
-											? formatMessage(messages.custom)
-											: formatMessage(messages.unrecognized)
-									}}
-								</span>
-							</TagItem>
-						</div>
-						<Chips
-							v-model="loader"
-							:items="loaderItems"
-							:format-label="formatLoader"
-							size="small"
-						/>
-						</div>
-
-						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-							<div class="flex flex-col gap-2">
 							<div class="relative flex items-center gap-2">
 								<span class="text-sm font-semibold text-contrast">
-									{{ formatMessage(messages.gameVersionLabel) }}
+									{{ formatMessage(messages.loaderLabel) }}
 								</span>
 								<TagItem
-									v-if="warnings.gameVersionCustom"
-									class="absolute right-0 top-1/2 -translate-y-1/2 border !border-solid border-orange"
+									v-if="warnings.loaderTypeCustom || warnings.loaderTypeUnrecognized"
+									class="shrink-0 border !border-solid border-orange"
 									:style="{
 										'--_bg-color': 'var(--color-orange-bg)',
 										'--_color': 'var(--color-orange)',
 									}"
 								>
 									<span
+										v-tooltip="
+											warnings.loaderTypeCustom
+												? formatMessage(messages.customTooltip)
+												: formatMessage(messages.loaderTypeUnknownTooltip)
+										"
 										class="inline-flex items-center gap-1"
-										v-tooltip="formatMessage(messages.customTooltip ?? customTooltipMessage)"
 									>
 										<CircleAlertIcon />
-										{{ formatMessage(messages.custom) }}
+										{{
+											warnings.loaderTypeCustom
+												? formatMessage(messages.custom)
+												: formatMessage(messages.unrecognized)
+										}}
 									</span>
 								</TagItem>
 							</div>
-							<Combobox
-								v-model="gameVersion"
-								:options="gameVersionOptions"
-								:placeholder="
-									statsLoading
-										? formatMessage(messages.detecting)
-										: formatMessage(messages.selectGameVersion)
-								"
-								:search-placeholder="formatMessage(messages.searchGameVersion)"
-								searchable
-								@search-input="handleGameVersionSearch"
+							<Chips
+								v-model="loader"
+								:items="loaderItems"
+								:format-label="formatLoader"
+								size="small"
 							/>
+						</div>
+
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+							<div class="flex flex-col gap-2">
+								<div class="relative flex items-center gap-2">
+									<span class="text-sm font-semibold text-contrast">
+										{{ formatMessage(messages.gameVersionLabel) }}
+									</span>
+									<TagItem
+										v-if="warnings.gameVersionCustom"
+										class="absolute right-0 top-1/2 -translate-y-1/2 border !border-solid border-orange"
+										:style="{
+											'--_bg-color': 'var(--color-orange-bg)',
+											'--_color': 'var(--color-orange)',
+										}"
+									>
+										<span
+											v-tooltip="formatMessage(messages.customTooltip)"
+											class="inline-flex items-center gap-1"
+										>
+											<CircleAlertIcon />
+											{{ formatMessage(messages.custom) }}
+										</span>
+									</TagItem>
+								</div>
+								<Combobox
+									v-model="gameVersion"
+									:options="gameVersionOptions"
+									:placeholder="
+										statsLoading
+											? formatMessage(messages.detecting)
+											: formatMessage(messages.selectGameVersion)
+									"
+									:search-placeholder="formatMessage(messages.searchGameVersion)"
+									searchable
+									@search-input="handleGameVersionSearch"
+								/>
 							</div>
 
 							<div class="flex flex-col gap-2">
@@ -185,12 +185,12 @@
 										}"
 									>
 										<span
-											class="inline-flex items-center gap-1"
 											v-tooltip="
 												warnings.loaderVersionCustom
-													? formatMessage(messages.customTooltip ?? customTooltipMessage)
+													? formatMessage(messages.customTooltip)
 													: formatMessage(messages.loaderVersionUnknownTooltip)
 											"
+											class="inline-flex items-center gap-1"
 										>
 											<CircleAlertIcon />
 											{{
@@ -228,7 +228,9 @@
 									readonly
 								>
 									<template #right>
-										<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5">
+										<span
+											class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5"
+										>
 											<button
 												type="button"
 												class="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:text-contrast disabled:opacity-50"
@@ -259,7 +261,9 @@
 									readonly
 								>
 									<template #right>
-										<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5">
+										<span
+											class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5"
+										>
 											<button
 												type="button"
 												class="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:text-contrast disabled:opacity-50"
@@ -299,9 +303,7 @@
 											}`
 								"
 								:aria-pressed="index === activeIndex"
-								:aria-label="
-									formatMessage(messages.instanceNavLabel, { name: instance.name })
-								"
+								:aria-label="formatMessage(messages.instanceNavLabel, { name: instance.name })"
 								:data-active="index === activeIndex"
 								@click="goTo(index)"
 								@focus="scrollFocusedNavIntoView"
@@ -362,23 +364,25 @@ import ProgressBar from '#ui/components/base/ProgressBar.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
 import TagItem from '#ui/components/base/TagItem.vue'
 import NewModal from '#ui/components/modal/NewModal.vue'
+import { useFormatBytes } from '#ui/composables/format-bytes.ts'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import {
-	injectInstanceImport,
-	injectTags,
+	type ImportPlanCounts,
 	importPlanDefaultGameVersion,
 	importPlanDefaultLoader,
 	importPlanDefaultLoaderVersion,
-	importPlanWarnings,
-	reduceImportPlanSnapshot,
-	type ImportPlanCounts,
 	type ImportPlanSnapshot,
+	importPlanWarnings,
+	injectInstanceImport,
+	injectTags,
+	reduceImportPlanSnapshot,
 	type SymlinkMethodChoice,
 	type SymlinkMethodInstance,
 } from '#ui/providers'
 import { formatLoaderLabel } from '#ui/utils/loaders'
 
 const { formatMessage } = useVIntl()
+const formatBytes = useFormatBytes()
 const instanceImport = injectInstanceImport()
 const tags = injectTags()
 
@@ -579,12 +583,6 @@ const messages = defineMessages({
 	},
 })
 
-const customTooltipMessage = {
-	id: 'drop.symlink_method.custom_tooltip',
-	defaultMessage:
-		'Usually you should not customize it, unless you are sure it was detected incorrectly.',
-}
-
 const emit = defineEmits<{
 	(e: 'confirm', choices: SymlinkMethodChoice[]): void
 	(e: 'cancel'): void
@@ -622,10 +620,7 @@ const touched = ref({
 const internalUpdating = ref(false)
 const snapshots = ref<Record<number, ImportPlanSnapshot | null>>({})
 const detectedByInstance = ref<
-	Record<
-		number,
-		{ gameVersion: string; loader: string; loaderVersion: string; modCount: number }
-	>
+	Record<number, { gameVersion: string; loader: string; loaderVersion: string; modCount: number }>
 >({})
 const requestIds = ref<Record<number, string | null>>({})
 const scanning = ref<Record<number, boolean>>({})
@@ -683,7 +678,12 @@ async function loadLoaderVersions() {
 	const request = ++loaderVersionRequest
 	try {
 		const versions = await instanceImport.getLoaderVersions(apiLoader, version)
-		console.debug('[SymlinkMethodCards] loader versions loaded', apiLoader, version, versions.length)
+		console.debug(
+			'[SymlinkMethodCards] loader versions loaded',
+			apiLoader,
+			version,
+			versions.length,
+		)
 		if (request === loaderVersionRequest) {
 			loaderVersions.value = versions
 		}
@@ -787,24 +787,11 @@ async function openVersionPath() {
 
 function formatCounts(counts?: ImportPlanCounts | null) {
 	if (!counts) return formatMessage(messages.notAvailable)
-	return formatSize(counts.bytes)
+	return formatBytes(counts.bytes)
 }
 
 function formatFiles(count: number): string {
 	return formatMessage(messages.statsFiles, { files: count })
-}
-
-const sizeUnits = ['B', 'KB', 'MB', 'GB', 'TB']
-
-function formatSize(bytes: number): string {
-	let value = bytes
-	let unit = 0
-	while (value >= 1024 && unit < sizeUnits.length - 1) {
-		value /= 1024
-		unit++
-	}
-	const decimals = value >= 100 ? 0 : value >= 10 ? 1 : 2
-	return `${value.toFixed(decimals)} ${sizeUnits[unit]}`
 }
 
 const totalCounts = computed(() => {
@@ -1045,9 +1032,7 @@ function applyImportPlanSnapshot(index: number, snapshot: ImportPlanSnapshot) {
 	if (merged) snapshots.value[index] = merged
 	scanning.value[index] = snapshot.stage === 'resolving' || snapshot.stage === 'scanning'
 	planErrors.value[index] =
-		snapshot.stage === 'error'
-			? (snapshot.error ?? formatMessage(messages.planFailed))
-			: null
+		snapshot.stage === 'error' ? (snapshot.error ?? formatMessage(messages.planFailed)) : null
 
 	internalUpdating.value = true
 	if (index === activeIndex.value) {
@@ -1069,7 +1054,12 @@ function applyImportPlanSnapshot(index: number, snapshot: ImportPlanSnapshot) {
 }
 
 async function goTo(index: number) {
-	if (pageAnim.value || index === activeIndex.value || index < 0 || index >= instances.value.length) {
+	if (
+		pageAnim.value ||
+		index === activeIndex.value ||
+		index < 0 ||
+		index >= instances.value.length
+	) {
 		return
 	}
 	saveCurrentChoices()
@@ -1086,13 +1076,13 @@ async function goTo(index: number) {
 	const detected = detectedByInstance.value[index]
 	gameVersion.value = saved?.touched.gameVersion
 		? saved.gameVersion
-		: detected?.gameVersion ?? importPlanDefaultGameVersion(snapshot?.gameVersion)
+		: (detected?.gameVersion ?? importPlanDefaultGameVersion(snapshot?.gameVersion))
 	loader.value = saved?.touched.loader
 		? saved.loader
-		: detected?.loader ?? importPlanDefaultLoader(snapshot?.loader)
+		: (detected?.loader ?? importPlanDefaultLoader(snapshot?.loader))
 	loaderVersion.value = saved?.touched.loaderVersion
 		? saved.loaderVersion
-		: detected?.loaderVersion ?? importPlanDefaultLoaderVersion(snapshot?.loaderVersion)
+		: (detected?.loaderVersion ?? importPlanDefaultLoaderVersion(snapshot?.loaderVersion))
 	touched.value = saved?.touched ?? { gameVersion: false, loader: false, loaderVersion: false }
 	internalUpdating.value = false
 
@@ -1165,9 +1155,7 @@ function handleConfirm() {
 				saved?.gameVersion || importPlanDefaultGameVersion(snapshot?.gameVersion) || null,
 			loader: saved?.loader || importPlanDefaultLoader(snapshot?.loader) || null,
 			loaderVersion:
-				saved?.loaderVersion ||
-				importPlanDefaultLoaderVersion(snapshot?.loaderVersion) ||
-				null,
+				saved?.loaderVersion || importPlanDefaultLoaderVersion(snapshot?.loaderVersion) || null,
 		}
 	})
 
@@ -1261,17 +1249,25 @@ watch(
 	{ flush: 'sync' },
 )
 
-watch(gameVersion, () => {
-	if (internalUpdating.value || !isOpen.value) return
-	touched.value.gameVersion = true
-	scheduleRescan()
-}, { flush: 'sync' })
+watch(
+	gameVersion,
+	() => {
+		if (internalUpdating.value || !isOpen.value) return
+		touched.value.gameVersion = true
+		scheduleRescan()
+	},
+	{ flush: 'sync' },
+)
 
-watch(loaderVersion, () => {
-	if (internalUpdating.value || !isOpen.value) return
-	touched.value.loaderVersion = true
-	scheduleRescan()
-}, { flush: 'sync' })
+watch(
+	loaderVersion,
+	() => {
+		if (internalUpdating.value || !isOpen.value) return
+		touched.value.loaderVersion = true
+		scheduleRescan()
+	},
+	{ flush: 'sync' },
+)
 
 watch([loader, gameVersion], () => {
 	if (!isOpen.value) return

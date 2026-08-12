@@ -2,6 +2,7 @@ import type { AbstractWebNotificationManager } from '@modrinth/ui'
 import { provideInstanceImport } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
 
+import { import_plan_listener } from '@/helpers/events.js'
 import {
 	cancel_import_plan,
 	get_default_launcher_path,
@@ -9,7 +10,6 @@ import {
 	import_instance,
 	start_import_plan,
 } from '@/helpers/import.js'
-import { import_plan_listener } from '@/helpers/events.js'
 import { wait_for_install_job } from '@/helpers/install'
 import { get_loader_versions } from '@/helpers/metadata.js'
 import { openPath } from '@/helpers/utils.js'
@@ -57,18 +57,19 @@ export function setupInstanceImportProvider(notificationManager: AbstractWebNoti
 				(version) =>
 					(version.id ?? '').replace('${modrinth.gameVersion}', gameVersion) === gameVersion,
 			)
-			let loaders: any[] = []
+			let loaders: Array<string | { id?: string }> = []
 			if (entry) {
 				if (entry.versionGroup) {
-					loaders =
-						versionGroups.find((group) => group.id === entry.versionGroup)?.loaders ?? []
+					loaders = versionGroups.find((group) => group.id === entry.versionGroup)?.loaders ?? []
 				} else {
 					loaders = entry.loaders ?? entry.loader_versions ?? []
 				}
 			}
-			const versions = loaders.map((loaderVersion) => loaderVersion?.id ?? loaderVersion)
+			const versions = loaders.map((loaderVersion) =>
+				typeof loaderVersion === 'string' ? loaderVersion : loaderVersion.id,
+			)
 			console.debug('[InstanceImport] loader versions', loader, gameVersion, versions.length)
-			return [...new Set(versions.filter((version) => typeof version === 'string' && version))]
+			return [...new Set(versions.filter((version): version is string => !!version))]
 		},
 		openPath: (path) => openPath(path),
 		startImportPlan: (request) => start_import_plan(request),

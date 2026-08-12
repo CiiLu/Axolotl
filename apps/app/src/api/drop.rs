@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tauri::Emitter;
 use theseus::drop_classifier::{
     DroppedCandidate, DroppedItemType, ModrinthLookupResult,
     classify_dropped_item_with_candidates, classify_zip_with_extraction,
@@ -6,7 +7,6 @@ use theseus::drop_classifier::{
 };
 use theseus::pack::import::{ImportLauncherType, get_importable_instances};
 use theseus::{LockingProcess, get_locking_processes};
-use tauri::Emitter;
 use tracing::{debug, info, warn};
 
 /// A scanned importable instance: name plus the resolved filesystem path.
@@ -154,21 +154,17 @@ impl From<DroppedItemType> for ClassificationResult {
             DroppedItemType::ShaderPack {
                 file_path,
                 inner_base,
-            } => {
-                ClassificationResult::ShaderPack {
-                    file_path: file_path.to_string_lossy().to_string(),
-                    inner_base,
-                }
-            }
+            } => ClassificationResult::ShaderPack {
+                file_path: file_path.to_string_lossy().to_string(),
+                inner_base,
+            },
             DroppedItemType::WorldSave {
                 file_path,
                 inner_base,
-            } => {
-                ClassificationResult::WorldSave {
-                    file_path: file_path.to_string_lossy().to_string(),
-                    inner_base,
-                }
-            }
+            } => ClassificationResult::WorldSave {
+                file_path: file_path.to_string_lossy().to_string(),
+                inner_base,
+            },
             DroppedItemType::ShortcutResolved {
                 original,
                 resolved_to,

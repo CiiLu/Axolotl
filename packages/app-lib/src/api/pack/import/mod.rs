@@ -1271,7 +1271,7 @@ fn is_busy_dir_error(error: &eyre::Report) -> bool {
             cause
                 .downcast_ref::<std::io::Error>()
                 .is_some_and(|io_error| {
-                    matches!(io_error.raw_os_error(), Some(5) | Some(32))
+                    matches!(io_error.raw_os_error(), Some(5 | 32))
                 })
         })
     }

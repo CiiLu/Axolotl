@@ -140,19 +140,15 @@ impl InstallJobState {
 
         self.progress.phase = phase;
         //直接避免新的progress被更小的覆盖，我懒得管那些什么鬼覆盖的了
-        if let Some(new_progress) = &mut progress {
-            if let Some(old_progress) = &self.progress.progress {
-                if let (Some(old_secondary), Some(new_secondary)) =
-                    (&old_progress.secondary, &new_progress.secondary)
-                {
-                    new_progress.secondary = Some(InstallProgressSecondary {
-                        current: old_secondary
-                            .current
-                            .max(new_secondary.current),
-                        total: new_secondary.total,
-                    });
-                }
-            }
+        if let Some(new_progress) = &mut progress
+            && let Some(old_progress) = &self.progress.progress
+            && let (Some(old_secondary), Some(new_secondary)) =
+                (&old_progress.secondary, &new_progress.secondary)
+        {
+            new_progress.secondary = Some(InstallProgressSecondary {
+                current: old_secondary.current.max(new_secondary.current),
+                total: new_secondary.total,
+            });
         }
         self.progress.progress = progress;
         self.progress.details = details;

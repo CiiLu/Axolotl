@@ -345,10 +345,7 @@ export function recognizeCurseForgeFiles(instanceId: string) {
 	}>('plugin:curseforge|curseforge_recognize_instance_files', { instanceId })
 }
 
-export function importCurseForgeManualDownloads(
-	instanceId: string,
-	scanDirectory?: string | null,
-) {
+export function importCurseForgeManualDownloads(instanceId: string, scanDirectory?: string | null) {
 	return invoke<CurseForgeManualDownloadScanResult>(
 		'plugin:curseforge|curseforge_import_manual_downloads',
 		{ instanceId, scanDirectory: scanDirectory ?? null },
@@ -378,10 +375,10 @@ export function configureCurseForgeManualDownloadWatcher(
 	enabled: boolean,
 	scanDirectory?: string | null,
 ) {
-	return invoke<string | null>(
-		'plugin:curseforge|curseforge_configure_manual_download_watcher',
-		{ enabled, scanDirectory: scanDirectory ?? null },
-	)
+	return invoke<string | null>('plugin:curseforge|curseforge_configure_manual_download_watcher', {
+		enabled,
+		scanDirectory: scanDirectory ?? null,
+	})
 }
 
 export function installCurseForgeModpack(request: {

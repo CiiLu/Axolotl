@@ -554,10 +554,7 @@ function resetMissingContentImportDirectory() {
 						{{ formatMessage(messages.missingContentAutoImportDescription) }}
 					</p>
 				</div>
-				<Toggle
-					id="missing-content-auto-import"
-					v-model="missingContentScannerSettings.enabled"
-				/>
+				<Toggle id="missing-content-auto-import" v-model="missingContentScannerSettings.enabled" />
 			</div>
 
 			<h3 class="mb-0 mt-2 text-base font-semibold text-contrast">

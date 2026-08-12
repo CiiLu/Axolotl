@@ -807,8 +807,7 @@ function progressText(job: InstallJobSnapshot) {
 
 function completedRequiredFiles(job: InstallJobSnapshot) {
 	return job.items.filter(
-		(item) =>
-			item.status === 'completed' || (item.status === 'skipped' && item.manual_url == null),
+		(item) => item.status === 'completed' || (item.status === 'skipped' && item.manual_url == null),
 	).length
 }
 
@@ -979,8 +978,7 @@ async function retry(job: InstallJobSnapshot) {
 async function resolveMissing(job: InstallJobSnapshot) {
 	const curseForgeItems = job.items
 		.filter(
-			(item) =>
-				item.status === 'skipped' && item.manual_url && item.project_id && item.version_id,
+			(item) => item.status === 'skipped' && item.manual_url && item.project_id && item.version_id,
 		)
 		.map(
 			(item): CurseForgeManualDownloadItem => ({

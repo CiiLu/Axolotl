@@ -4310,6 +4310,10 @@
 	"creation-flow.modal.import-instance.select-file.description": {
 		"defaultMessage": "导入整合包文件或启动器(HMCL、PCL)"
 	},
-	"drop.confirm.as-data-pack": "数据包",
-	"drop.confirm.as-data-pack-desc": "将数据包安装到存档"
+	"drop.confirm.as-data-pack": {
+		"defaultMessage": "数据包"
+	},
+	"drop.confirm.as-data-pack-desc": {
+		"defaultMessage": "将数据包安装到存档"
+	}
 }

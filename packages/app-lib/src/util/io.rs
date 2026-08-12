@@ -60,6 +60,44 @@ pub(crate) fn io_error_with_lock_info(
     io_error_with_lock_info_for_paths(source, path, &[path])
 }
 
+/// Join a user-provided relative path onto `root`, rejecting traversal.
+pub(crate) fn join_within_root(
+    root: &Path,
+    relative: &str,
+) -> crate::Result<PathBuf> {
+    let normalized = relative.replace('\\', "/");
+    let path = Path::new(&normalized);
+    if path.is_absolute() {
+        return Err(crate::ErrorKind::InputError(
+            "Inner path must be relative".to_string(),
+        )
+        .into());
+    }
+
+    let mut safe = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::Normal(part) => safe.push(part),
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir
+            | std::path::Component::RootDir
+            | std::path::Component::Prefix(_) => {
+                return Err(crate::ErrorKind::InputError(
+                    "Inner path escapes the source root".to_string(),
+                )
+                .into());
+            }
+        }
+    }
+    if safe.as_os_str().is_empty() {
+        return Err(crate::ErrorKind::InputError(
+            "Inner path must not be empty".to_string(),
+        )
+        .into());
+    }
+    Ok(root.join(safe))
+}
+
 pub(crate) fn io_error_with_lock_info_for_paths(
     source: std::io::Error,
     error_path: &Path,

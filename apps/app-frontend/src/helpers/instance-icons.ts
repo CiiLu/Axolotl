@@ -1,6 +1,5 @@
-import { convertFileSrc } from '@tauri-apps/api/core'
-
 import { defineMessage, type MessageDescriptor } from '@modrinth/ui'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
 import { isBuiltInInstanceIcon } from './instance-icon-frame'
 

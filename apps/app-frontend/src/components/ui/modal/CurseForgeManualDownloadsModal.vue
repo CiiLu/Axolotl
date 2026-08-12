@@ -72,10 +72,7 @@
 						</ButtonStyled>
 						<ButtonStyled type="outlined" size="small">
 							<button :disabled="busyKeys.has(itemKey(item))" @click="chooseLocalFile(item)">
-								<SpinnerIcon
-									v-if="busyKeys.has(itemKey(item))"
-									class="animate-spin"
-								/>
+								<SpinnerIcon v-if="busyKeys.has(itemKey(item))" class="animate-spin" />
 								<UploadIcon v-else aria-hidden="true" />
 								{{ formatMessage(messages.chooseFile) }}
 							</button>
@@ -109,7 +106,13 @@
 </template>
 
 <script setup lang="ts">
-import { CheckIcon, ExternalIcon, FolderSearchIcon, SpinnerIcon, UploadIcon } from '@modrinth/assets'
+import {
+	CheckIcon,
+	ExternalIcon,
+	FolderSearchIcon,
+	SpinnerIcon,
+	UploadIcon,
+} from '@modrinth/assets'
 import {
 	Admonition,
 	ButtonStyled,
@@ -337,10 +340,7 @@ async function scanDownloads(): Promise<void> {
 	if (remainingCount.value === 0) return
 
 	scanning.value = true
-	const operation = importCurseForgeManualDownloads(
-		currentInstanceId,
-		scanDirectory.value,
-	)
+	const operation = importCurseForgeManualDownloads(currentInstanceId, scanDirectory.value)
 	scanInFlight = operation
 	try {
 		const result = await operation

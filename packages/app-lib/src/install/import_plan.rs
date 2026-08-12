@@ -1,7 +1,5 @@
 use std::{
-    future::Future,
     path::{Path, PathBuf},
-    pin::Pin,
     sync::LazyLock,
 };
 
@@ -146,76 +144,6 @@ async fn run_import_plan(
     request: &ImportPlanRequest,
     cancellation: &CancellationToken,
 ) -> crate::Result<()> {
-    run_import_plan_with(
-        request,
-        cancellation,
-        |snapshot| Box::pin(emit_import_plan(snapshot)),
-        |request, dotminecraft, cancellation| {
-            Box::pin(scan_import_plan(request, dotminecraft, cancellation))
-        },
-    )
-    .await
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-struct ImportPlanCountsBySource {
-    cache: ImportPlanCounts,
-    local: ImportPlanCounts,
-    network: ImportPlanCounts,
-}
-
-impl std::ops::AddAssign for ImportPlanCountsBySource {
-    fn add_assign(&mut self, rhs: Self) {
-        self.cache.files += rhs.cache.files;
-        self.cache.bytes += rhs.cache.bytes;
-        self.local.files += rhs.local.files;
-        self.local.bytes += rhs.local.bytes;
-        self.network.files += rhs.network.files;
-        self.network.bytes += rhs.network.bytes;
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-struct ImportPlanScanResult {
-    mod_count: u64,
-    migrate: ImportPlanCounts,
-    counts: ImportPlanCountsBySource,
-    category_progress: Vec<ImportPlanCountsBySource>,
-}
-
-#[derive(Debug, Clone)]
-struct RequiredArtifact {
-    relative_path: PathBuf,
-    destination: PathBuf,
-    expected_sha1: Option<String>,
-    expected_size: Option<u64>,
-}
-
-#[allow(clippy::type_complexity)]
-async fn run_import_plan_with<E, S>(
-    request: &ImportPlanRequest,
-    cancellation: &CancellationToken,
-    mut emit: E,
-    scan: S,
-) -> crate::Result<()>
-where
-    E: for<'a> FnMut(
-        &'a ImportPlanSnapshot,
-    ) -> Pin<
-        Box<dyn Future<Output = crate::Result<()>> + Send + 'a>,
-    >,
-    S: for<'a> FnOnce(
-        &'a ImportPlanRequest,
-        &'a Path,
-        &'a CancellationToken,
-    ) -> Pin<
-        Box<
-            dyn Future<Output = crate::Result<ImportPlanScanResult>>
-                + Send
-                + 'a,
-        >,
-    >,
-{
     if cancellation.is_cancelled() {
         return Ok(());
     }
@@ -255,7 +183,7 @@ where
         loader_version = None;
     }
 
-    emit(&snapshot_for(
+    emit_import_plan(&snapshot_for(
         request,
         ImportPlanStage::Resolving,
         &import_path,
@@ -273,7 +201,7 @@ where
         return Ok(());
     }
 
-    emit(&snapshot_for(
+    emit_import_plan(&snapshot_for(
         request,
         ImportPlanStage::Scanning,
         &import_path,
@@ -291,7 +219,16 @@ where
         return Ok(());
     }
 
-    let result = match scan(request, &dotminecraft, cancellation).await {
+    let result = match scan_import_plan(
+        request,
+        &source,
+        &dotminecraft,
+        local_source.as_ref(),
+        &detected,
+        cancellation,
+    )
+    .await
+    {
         Ok(result) => result,
         Err(error) => {
             if cancellation.is_cancelled() {
@@ -310,7 +247,7 @@ where
                 ImportPlanCounts::default(),
                 Some(error.to_string()),
             );
-            emit(&snapshot).await?;
+            emit_import_plan(&snapshot).await?;
             return Err(error);
         }
     };
@@ -320,7 +257,7 @@ where
     }
 
     for counts in &result.category_progress {
-        emit(&snapshot_for(
+        emit_import_plan(&snapshot_for(
             request,
             ImportPlanStage::Scanning,
             &import_path,
@@ -339,7 +276,7 @@ where
         }
     }
 
-    emit(&snapshot_for(
+    emit_import_plan(&snapshot_for(
         request,
         ImportPlanStage::Done,
         &import_path,
@@ -355,6 +292,40 @@ where
     .await?;
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct ImportPlanCountsBySource {
+    cache: ImportPlanCounts,
+    local: ImportPlanCounts,
+    network: ImportPlanCounts,
+}
+
+impl std::ops::AddAssign for ImportPlanCountsBySource {
+    fn add_assign(&mut self, rhs: Self) {
+        self.cache.files += rhs.cache.files;
+        self.cache.bytes += rhs.cache.bytes;
+        self.local.files += rhs.local.files;
+        self.local.bytes += rhs.local.bytes;
+        self.network.files += rhs.network.files;
+        self.network.bytes += rhs.network.bytes;
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct ImportPlanScanResult {
+    mod_count: u64,
+    migrate: ImportPlanCounts,
+    counts: ImportPlanCountsBySource,
+    category_progress: Vec<ImportPlanCountsBySource>,
+}
+
+#[derive(Debug, Clone)]
+struct RequiredArtifact {
+    relative_path: PathBuf,
+    destination: PathBuf,
+    expected_sha1: Option<String>,
+    expected_size: Option<u64>,
 }
 
 fn snapshot_for(
@@ -424,7 +395,10 @@ fn resolve_source(request: &ImportPlanRequest) -> PathBuf {
     }
 }
 
-fn detect_import_plan_info(source: &Path, dotminecraft: &Path) -> DetectedInstanceInfo {
+fn detect_import_plan_info(
+    source: &Path,
+    dotminecraft: &Path,
+) -> DetectedInstanceInfo {
     let json_info = instance_json::detect(dotminecraft);
     let config_info = read_axolotl_config(source);
     DetectedInstanceInfo {
@@ -437,7 +411,9 @@ fn detect_import_plan_info(source: &Path, dotminecraft: &Path) -> DetectedInstan
                     .clone()
                     .filter(|version| !version.trim().is_empty())
             })
-            .or_else(|| json_info.as_ref().map(|info| info.vanilla_name.clone())),
+            .or_else(|| {
+                json_info.as_ref().map(|info| info.vanilla_name.clone())
+            }),
         loader: config_info
             .as_ref()
             .and_then(|config| {
@@ -447,7 +423,9 @@ fn detect_import_plan_info(source: &Path, dotminecraft: &Path) -> DetectedInstan
                     .clone()
                     .filter(|loader| !loader.trim().is_empty())
             })
-            .or_else(|| json_info.as_ref().and_then(|info| info.loader.clone())),
+            .or_else(|| {
+                json_info.as_ref().and_then(|info| info.loader.clone())
+            }),
         loader_version: config_info
             .as_ref()
             .and_then(|config| {
@@ -477,17 +455,17 @@ fn read_axolotl_config(source: &Path) -> Option<AxolotlConfigMetadata> {
 
 async fn scan_import_plan(
     request: &ImportPlanRequest,
+    source: &Path,
     dotminecraft: &Path,
+    local_source: Option<&LocalRuntimeSource>,
+    detected: &DetectedInstanceInfo,
     cancellation: &CancellationToken,
 ) -> crate::Result<ImportPlanScanResult> {
-    let source = resolve_source(request);
     let import_path = source.to_string_lossy().to_string();
-    let minecraft_root = LocalRuntimeSource::discover(dotminecraft)
+    let minecraft_root = local_source
         .map(|source| source.root.to_string_lossy().to_string())
         .unwrap_or_default();
     let state = State::get().await?;
-    let local_source = LocalRuntimeSource::discover(dotminecraft);
-    let detected = detect_import_plan_info(&source, dotminecraft);
     let game_version = request
         .game_version
         .clone()
@@ -502,13 +480,16 @@ async fn scan_import_plan(
     let mut loader = request
         .loader
         .or_else(|| {
-            detected.loader.as_deref().and_then(|loader_name| match loader_name {
-                "forge" => Some(ModLoader::Forge),
-                "neoforge" => Some(ModLoader::NeoForge),
-                "fabric" => Some(ModLoader::Fabric),
-                "quilt" => Some(ModLoader::Quilt),
-                _ => None,
-            })
+            detected
+                .loader
+                .as_deref()
+                .and_then(|loader_name| match loader_name {
+                    "forge" => Some(ModLoader::Forge),
+                    "neoforge" => Some(ModLoader::NeoForge),
+                    "fabric" => Some(ModLoader::Fabric),
+                    "quilt" => Some(ModLoader::Quilt),
+                    _ => None,
+                })
         })
         .unwrap_or(ModLoader::Vanilla);
     let mut loader_version = request
@@ -517,7 +498,10 @@ async fn scan_import_plan(
         .or_else(|| detected.loader_version.clone());
     if !matches!(
         loader,
-        ModLoader::Forge | ModLoader::NeoForge | ModLoader::Fabric | ModLoader::Quilt
+        ModLoader::Forge
+            | ModLoader::NeoForge
+            | ModLoader::Fabric
+            | ModLoader::Quilt
     ) {
         loader = ModLoader::Vanilla;
         loader_version = None;
@@ -545,7 +529,7 @@ async fn scan_import_plan(
 
     let categories = build_runtime_artifact_categories(
         &state,
-        local_source.as_ref(),
+        local_source,
         &game_version,
         loader,
         requested_loader_version,
@@ -562,8 +546,7 @@ async fn scan_import_plan(
             break;
         }
         counts +=
-            classify_artifacts(local_source.as_ref(), &artifacts, cancellation)
-                .await?;
+            classify_artifacts(local_source, &artifacts, cancellation).await?;
         category_progress.push(counts);
     }
 
@@ -813,7 +796,7 @@ async fn load_assets_index(
         }
     }
 
-    Ok(crate::util::fetch::fetch_json(
+    crate::util::fetch::fetch_json(
         Method::GET,
         &version_info.asset_index.url,
         Some(&version_info.asset_index.sha1),
@@ -822,7 +805,7 @@ async fn load_assets_index(
         &state.api_semaphore,
         &state.pool,
     )
-    .await?)
+    .await
 }
 
 async fn classify_artifacts(
@@ -853,14 +836,12 @@ async fn classify_artifacts(
                         .unwrap_or(0)
                 }
                 ArtifactAvailability::LocalReusable => match local {
-                    Some(source) => {
-                        crate::util::io::metadata(
-                            &source.root.join(&artifact.relative_path),
-                        )
-                        .await
-                        .map(|metadata| metadata.len())
-                        .unwrap_or(0)
-                    }
+                    Some(source) => crate::util::io::metadata(
+                        &source.root.join(&artifact.relative_path),
+                    )
+                    .await
+                    .map(|metadata| metadata.len())
+                    .unwrap_or(0),
                     None => 0,
                 },
                 ArtifactAvailability::NetworkRequired => 0,
@@ -916,9 +897,11 @@ async fn scan_counts_emitting(
         let mut entries = tokio::fs::read_dir(&dir).await.map_err(|error| {
             crate::util::io::IOError::with_path(error, &dir)
         })?;
-        while let Some(entry) = entries.next_entry().await.map_err(|error| {
-            crate::util::io::IOError::with_path(error, &dir)
-        })? {
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|error| crate::util::io::IOError::with_path(error, &dir))?
+        {
             if cancellation.is_cancelled() {
                 break;
             }
@@ -952,7 +935,7 @@ async fn scan_counts_emitting(
                 mod_count += 1;
             }
             processed += 1;
-            if processed <= 64 || processed % 16 == 0 {
+            if processed <= 64 || processed.is_multiple_of(16) {
                 emit_import_plan(&snapshot_for(
                     request,
                     ImportPlanStage::Scanning,

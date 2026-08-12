@@ -19,9 +19,10 @@ pub async fn import_world_save(
 ) -> Result<String> {
     let instance_id_str = instance_id.to_string();
     let resolved_source = if source_path.is_dir() {
-        inner_base
-            .map(|base| source_path.join(base))
-            .unwrap_or_else(|| source_path.to_path_buf())
+        match inner_base {
+            Some(base) => io::join_within_root(source_path, base)?,
+            None => source_path.to_path_buf(),
+        }
     } else {
         source_path.to_path_buf()
     };

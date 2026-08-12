@@ -15,7 +15,7 @@ import {
 	injectPageContext,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
