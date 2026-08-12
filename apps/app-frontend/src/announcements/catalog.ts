@@ -205,6 +205,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Fixed the issue of the recipe generator crashing in some cases.',
 					'zh-CN': '修复配方生成器中部分情况崩溃的问题。',
 				},
+				{
+					'en-US':
+						'Fixed the issue of front-end performance blocking when downloading too many small files.',
+					'zh-CN': '修复在下载小文件过多时造成的前端性能阻塞问题。',
+				},
 			],
 		},
 	},
@@ -247,11 +252,6 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed nsis installer not installing the launcher into the correct specified directory.',
 					'zh-CN': '修复 nsis 安装程序未能将启动器安装到指定目录的问题。',
-				},
-				{
-					'en-US':
-						'Fixed the issue of front-end performance blocking when downloading too many small files.',
-					'zh-CN': '修复在下载小文件过多时造成的前端性能阻塞问题。',
 				},
 				{
 					'en-US': 'Fixed Minecraft account name fetch blocking splash screen from closing.',
