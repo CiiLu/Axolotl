@@ -24,7 +24,7 @@
 					{{ relativeTimeLabel }}
 				</span>
 			</div>
-			<div class="font-normal text-contrast/85 leading-tight">
+			<div class="font-normal text-contrast/85 leading-tight [overflow-wrap:anywhere]">
 				<slot>{{ body }}</slot>
 			</div>
 			<div v-if="showActionsUnderneath || $slots.actions" class="mt-2">

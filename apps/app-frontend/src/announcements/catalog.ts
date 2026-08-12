@@ -137,6 +137,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed: Buttons would be overlapping in the schematic preview edit panel (issue #212)',
 					'zh-CN': '修复了在投影预览编辑面板中按钮重叠的问题。(issue #212)',
 				},
+				{
+					'en-US': 'Fixed overflow of directory in the warning of deleting symlink instances',
+					'zh-CN': '修复了删除符号链接实例的警告中提示的目录溢出的问题',
+				},
 			],
 		},
 	},
