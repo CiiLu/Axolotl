@@ -1664,6 +1664,7 @@ impl InstallJobState {
 
     pub fn download_items(&self) -> Vec<DownloadItemSnapshot> {
         let mut items = Vec::<DownloadItemSnapshot>::new();
+        let mut indices = HashMap::<String, usize>::new();
         for event in &self.events {
             match &event.kind {
                 InstallJobEventKind::ContentFileQueued {
@@ -1671,8 +1672,9 @@ impl InstallJobState {
                     bytes_total,
                     max_attempts,
                 } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Queued;
                         item.bytes_downloaded = 0;
@@ -1683,6 +1685,7 @@ impl InstallJobState {
                         item.request_url = None;
                         item.source = None;
                     } else {
+                        let index = items.len();
                         items.push(DownloadItemSnapshot {
                             id: path.clone(),
                             name: path.clone(),
@@ -1698,14 +1701,16 @@ impl InstallJobState {
                             request_url: None,
                             source: None,
                         });
+                        indices.insert(path.clone(), index);
                     }
                 }
                 InstallJobEventKind::ContentFileBrowserOptions {
                     path,
                     urls,
                 } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.manual_url = urls.first().cloned();
                     }
@@ -1713,24 +1718,27 @@ impl InstallJobState {
                 InstallJobEventKind::ContentFileVerificationStarted {
                     path,
                 } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Verifying;
                         item.error = None;
                     }
                 }
                 InstallJobEventKind::ContentFileWritingStarted { path } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Writing;
                         item.error = None;
                     }
                 }
                 InstallJobEventKind::ContentFileRecovered { path, bytes } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Completed;
                         item.bytes_downloaded = *bytes;
@@ -1744,8 +1752,9 @@ impl InstallJobState {
                     attempt,
                     max_attempts,
                 } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Queued;
                         item.bytes_downloaded = 0;
@@ -1756,6 +1765,7 @@ impl InstallJobState {
                         item.request_url = None;
                         item.source = None;
                     } else {
+                        let index = items.len();
                         items.push(DownloadItemSnapshot {
                             id: path.clone(),
                             name: path.clone(),
@@ -1771,6 +1781,7 @@ impl InstallJobState {
                             request_url: None,
                             source: None,
                         });
+                        indices.insert(path.clone(), index);
                     }
                 }
                 InstallJobEventKind::DownloadRequestStarted {
@@ -1782,8 +1793,9 @@ impl InstallJobState {
                     attempt,
                     max_attempts,
                 } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Downloading;
                         item.bytes_total = item.bytes_total.or(*bytes_total);
@@ -1793,6 +1805,7 @@ impl InstallJobState {
                         item.request_url = Some(url.clone());
                         item.source = Some(source.clone());
                     } else {
+                        let index = items.len();
                         items.push(DownloadItemSnapshot {
                             id: path.clone(),
                             name: name.clone(),
@@ -1808,14 +1821,16 @@ impl InstallJobState {
                             request_url: Some(url.clone()),
                             source: Some(source.clone()),
                         });
+                        indices.insert(path.clone(), index);
                     }
                 }
                 InstallJobEventKind::DownloadRequestFinished {
                     path,
                     bytes,
                 } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Completed;
                         item.bytes_downloaded = *bytes;
@@ -1823,21 +1838,24 @@ impl InstallJobState {
                     }
                 }
                 InstallJobEventKind::DownloadRequestFailed { path } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Failed;
                     }
                 }
                 InstallJobEventKind::ContentFileCompleted { path, bytes } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Completed;
                         item.bytes_downloaded = *bytes;
                         item.bytes_total = Some(*bytes);
                         item.error = None;
                     } else {
+                        let index = items.len();
                         items.push(DownloadItemSnapshot {
                             id: path.clone(),
                             name: path.clone(),
@@ -1853,6 +1871,7 @@ impl InstallJobState {
                             request_url: None,
                             source: None,
                         });
+                        indices.insert(path.clone(), index);
                     }
                 }
                 InstallJobEventKind::ContentFileSkipped {
@@ -1862,8 +1881,9 @@ impl InstallJobState {
                     version_id,
                     manual_url,
                 } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Skipped;
                         item.bytes_downloaded = 0;
@@ -1872,6 +1892,7 @@ impl InstallJobState {
                         item.error = Some(reason.clone());
                         item.manual_url = manual_url.clone();
                     } else {
+                        let index = items.len();
                         items.push(DownloadItemSnapshot {
                             id: path.clone(),
                             name: path.clone(),
@@ -1887,6 +1908,7 @@ impl InstallJobState {
                             request_url: None,
                             source: None,
                         });
+                        indices.insert(path.clone(), index);
                     }
                 }
                 InstallJobEventKind::ContentFileFailed {
@@ -1895,8 +1917,9 @@ impl InstallJobState {
                     project_id,
                     version_id,
                 } => {
-                    if let Some(item) =
-                        items.iter_mut().find(|item| item.id == *path)
+                    if let Some(item) = indices
+                        .get(path)
+                        .and_then(|&index| items.get_mut(index))
                     {
                         item.status = DownloadItemStatus::Failed;
                         item.bytes_downloaded = 0;
@@ -1904,6 +1927,7 @@ impl InstallJobState {
                         item.version_id = version_id.clone();
                         item.error = Some(reason.clone());
                     } else {
+                        let index = items.len();
                         items.push(DownloadItemSnapshot {
                             id: path.clone(),
                             name: path.clone(),
@@ -1919,6 +1943,7 @@ impl InstallJobState {
                             request_url: None,
                             source: None,
                         });
+                        indices.insert(path.clone(), index);
                     }
                 }
                 InstallJobEventKind::JobCanceled { .. } => {
@@ -1946,7 +1971,8 @@ impl InstallJobState {
         });
         if !terminal {
             for (id, active) in &self.active_downloads {
-                if let Some(item) = items.iter_mut().find(|item| item.id == *id)
+                if let Some(item) =
+                    indices.get(id).and_then(|&index| items.get_mut(index))
                 {
                     item.name = active.name.clone();
                     item.status = active.status;

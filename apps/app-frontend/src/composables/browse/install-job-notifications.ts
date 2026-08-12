@@ -805,6 +805,10 @@ export async function useInstallJobNotifications(opts: {
 		}
 	}
 
+	let lastCompositionSignature: string | null = null
+	let lastMetadataRefreshAt = 0
+	let lastEnteredPackDownload = false
+
 	setJobs(opts.manager.jobs.value)
 	await refreshMetadata(false)
 	const stopJobsWatch = watch(
@@ -816,9 +820,18 @@ export async function useInstallJobNotifications(opts: {
 					job.phase === 'downloading_pack_file' &&
 					previousPhases.get(job.job_id) !== 'downloading_pack_file',
 			)
+			const signature = nextJobs.map((job) => `${job.job_id}:${job.status}:${job.phase}`).join('|')
+			const compositionChanged = signature !== lastCompositionSignature
+			lastCompositionSignature = signature
 			setJobs(nextJobs)
-			opts.onChange(enteredPackDownload)
-			void refreshMetadata()
+			if (enteredPackDownload !== lastEnteredPackDownload) {
+				lastEnteredPackDownload = enteredPackDownload
+				opts.onChange(enteredPackDownload)
+			}
+			if (compositionChanged || Date.now() - lastMetadataRefreshAt >= 2000) {
+				lastMetadataRefreshAt = Date.now()
+				void refreshMetadata()
+			}
 		},
 	)
 

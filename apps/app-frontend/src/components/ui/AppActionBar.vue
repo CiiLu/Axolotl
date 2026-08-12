@@ -546,14 +546,27 @@ const installJobNotifications = await useInstallJobNotifications({
 
 await refreshLoadingBars()
 
+let newBarDuringWindow = false
+let loadingNotificationTimer: ReturnType<typeof setTimeout> | null = null
+
 const unlistenLoading = await loading_listener((payload: LoadingEventPayload) => {
 	const isNewBar = applyLoadingEvent(payload)
 	if (isNewBar) {
-		removeNotification()
-		updateNotification(true)
-	} else {
-		updateNotification()
+		newBarDuringWindow = true
 	}
+	if (loadingNotificationTimer !== null) {
+		return
+	}
+	loadingNotificationTimer = setTimeout(() => {
+		loadingNotificationTimer = null
+		if (newBarDuringWindow) {
+			newBarDuringWindow = false
+			removeNotification()
+			updateNotification(true)
+		} else {
+			updateNotification()
+		}
+	}, 250)
 })
 
 function goToDownloads() {
@@ -570,6 +583,10 @@ function selectProcess(process: RunningProcess) {
 }
 
 onBeforeUnmount(() => {
+	if (loadingNotificationTimer !== null) {
+		clearTimeout(loadingNotificationTimer)
+		loadingNotificationTimer = null
+	}
 	removeNotification()
 	dismissed.value = false
 	unlistenProcess()
