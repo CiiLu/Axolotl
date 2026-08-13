@@ -129,7 +129,6 @@
 					:enable-toggle="!props.isServerInstance"
 					:busy="isBulkOperating"
 					:get-overflow-options="getOverflowOptions"
-					:switch-version="handleSwitchVersion"
 					@update:enabled="handleModpackContentToggle"
 					@bulk:enable="(items) => handleModpackContentBulkToggle(items, true)"
 					@bulk:disable="(items) => handleModpackContentBulkToggle(items, false)"
@@ -1586,6 +1585,20 @@ async function handleModpackUpdate() {
 
 	const initialVersionId =
 		linkedModpackUpdateVersionId.value ?? props.instance?.link?.version_id ?? undefined
+	const projectId =
+		props.instance?.link?.type === 'server_project_modpack'
+			? (linkedModpackProject.value?.id ??
+				props.instance.link.content_project_id ??
+				props.instance.link.project_id ??
+				'')
+			: (props.instance?.link?.project_id ?? linkedModpackProject.value?.id ?? '')
+	debug('handleModpackUpdate: resolved modpack updater project', {
+		type: 'modpack',
+		projectId,
+		linkedModpackProjectId: linkedModpackProject.value?.id ?? null,
+		updateProvider: contentSnapshot.value?.pack?.metadata?.update?.provider ?? null,
+		link: props.instance.link,
+	})
 	debug('handleModpackUpdate: opening modpack updater modal', {
 		type: 'modpack',
 		initialVersionId,
@@ -1614,7 +1627,7 @@ async function handleModpackUpdate() {
 	})
 	contentUpdaterModal.value?.show(initialVersionId)
 
-	const versions = await getUpdaterProjectVersions(props.instance.link.project_id, initialVersionId)
+	const versions = await getUpdaterProjectVersions(projectId, initialVersionId)
 
 	if (!isActiveUpdateRequest(requestId) || !updatingModpack.value) return
 
@@ -2205,7 +2218,9 @@ provideContentManager({
 						? formatMessage(messages.packMemberRemoved)
 						: null,
 			toggleDisabled: item.instanceCapabilities?.canToggle === false,
-			hideSwitchVersion: item.instanceCapabilities?.canChangeVersion === false,
+			hideSwitchVersion:
+				item.instanceOwnershipKind === 'pack_managed' ||
+				item.instanceCapabilities?.canChangeVersion === false,
 			pendingManualDownload: item.pendingManualDownload,
 			installing: item.installing,
 			inlineActions:

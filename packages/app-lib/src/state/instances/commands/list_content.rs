@@ -746,27 +746,71 @@ async fn get_curseforge_linked_modpack_info(
                 })
             };
 
-            // Check modpack update: prefer Modrinth versions
-            let version_id =
-                mr_version_opt.map_or(version.id.clone(), |v| v.id.clone());
-            let (_, update_version_id, update_version) = check_modpack_update(
-                &version_id,
-                &version,
-                mr_versions,
-                preferred_update_channel,
-            );
+            let files = crate::api::curseforge::get_files(
+                numeric_project_id,
+                crate::api::curseforge::CurseForgeFilesRequest {
+                    game_version: None,
+                    mod_loader_type: None,
+                    game_version_type_id: None,
+                    index: 0,
+                    page_size: 50,
+                },
+            )
+            .await
+            .ok()
+            .map(|response| response.files)
+            .unwrap_or_default();
+            let installed_cf_version = cf_tuple
+                .as_ref()
+                .map(|(_, cf_file)| curseforge_file_to_version(cf_file));
+            let all_versions = files
+                .into_iter()
+                .filter(|file| file.is_available)
+                .map(|file| curseforge_file_to_version(&file))
+                .collect::<Vec<_>>();
+            let cf_version_count = all_versions.len();
+            let (_, update_version_id, update_version) = installed_cf_version
+                .as_ref()
+                .map_or((false, None, None), |installed| {
+                    check_modpack_update(
+                        &installed.id,
+                        installed,
+                        Some(all_versions),
+                        preferred_update_channel,
+                    )
+                });
             let update = update_version_id.and_then(|target| {
-                let target_id = ModrinthVersionId::new(target).ok()?;
-                let project_id =
-                    ModrinthProjectId::new(mr_project.id.clone()).ok()?;
-                let current_id =
-                    ModrinthVersionId::new(version.id.clone()).ok()?;
-                Some(ContentItemUpdate::Modrinth {
-                    project_id,
-                    current_version_id: current_id,
-                    target_version_id: target_id,
+                Some(ContentItemUpdate::CurseForge {
+                    project_id: crate::state::CurseForgeProjectId::new(
+                        numeric_project_id,
+                    )
+                    .ok()?,
+                    current_file_id: crate::state::CurseForgeFileId::new(
+                        numeric_file_id,
+                    )
+                    .ok()?,
+                    target_file_id: crate::state::CurseForgeFileId::new(
+                        target.parse().ok()?,
+                    )
+                    .ok()?,
                 })
             });
+
+            tracing::debug!(
+                project_id,
+                version_id,
+                mr_project = %mr_project.id,
+                cf_versions = cf_version_count,
+                update = ?update.as_ref().map(|value| match value {
+                    ContentItemUpdate::CurseForge { target_file_id, .. } => {
+                        target_file_id.get().to_string()
+                    }
+                    ContentItemUpdate::Modrinth { target_version_id, .. } => {
+                        target_version_id.to_string()
+                    }
+                }),
+                "resolved CurseForge modpack update"
+            );
 
             Ok(Some(LinkedModpackInfo {
                 project: mr_project,
@@ -2181,6 +2225,16 @@ fn check_modpack_update(
     let effective_channel =
         preferred_update_channel.least_stable(installed_channel);
 
+    tracing::debug!(
+        installed_version_id,
+        installed_version_number = %installed_version.version_number,
+        installed_date = %installed_version.date_published,
+        installed_channel = ?installed_channel,
+        effective_channel = ?effective_channel,
+        version_count = versions.len(),
+        "checking modpack update"
+    );
+
     for version_types in effective_channel.version_type_fallbacks() {
         if !versions.iter().any(|version| {
             version_types.contains(&version.version_type.as_str())
@@ -2200,9 +2254,19 @@ fn check_modpack_update(
             .sort_by_key(|version| std::cmp::Reverse(version.date_published));
 
         if let Some(newest) = newer_versions.first() {
+            tracing::debug!(
+                target_version_id = %newest.id,
+                target_version_number = %newest.version_number,
+                target_date = %newest.date_published,
+                "modpack update found"
+            );
             return (true, Some(newest.id.clone()), Some((*newest).clone()));
         }
 
+        tracing::debug!(
+            version_types = ?version_types,
+            "no newer modpack version in channel fallback"
+        );
         return (false, None, None);
     }
 

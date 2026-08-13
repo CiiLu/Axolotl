@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-	ArrowLeftRightIcon,
 	BoxIcon,
 	FilterIcon,
 	GlassesIcon,
@@ -45,7 +44,6 @@ interface Props {
 	actionDisabled?: boolean
 	actionDisabledTooltip?: string | null
 	getOverflowOptions?: (item: ContentItem) => OverflowMenuOption[]
-	switchVersion?: (item: ContentItem) => void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -55,7 +53,6 @@ const props = withDefaults(defineProps<Props>(), {
 	actionDisabled: false,
 	actionDisabledTooltip: undefined,
 	getOverflowOptions: undefined,
-	switchVersion: undefined,
 })
 
 const emit = defineEmits<{
@@ -273,18 +270,7 @@ const tableItems = computed<ContentCardTableItem[]>(() =>
 		disabled:
 			props.actionDisabled || disabledIds.value.has(item.file_name) || item.installing === true,
 		disabledTooltip: props.actionDisabled ? props.actionDisabledTooltip : undefined,
-		overflowOptions: [
-			...(props.switchVersion
-				? [
-						{
-							id: formatMessage(commonMessages.switchVersionButton),
-							icon: ArrowLeftRightIcon,
-							action: () => props.switchVersion!(item),
-						},
-					]
-				: []),
-			...(props.getOverflowOptions?.(item) ?? []),
-		],
+		overflowOptions: [...(props.getOverflowOptions?.(item) ?? [])],
 	})),
 )
 

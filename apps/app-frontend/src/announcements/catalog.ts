@@ -50,7 +50,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed the issue of CurseForge modpacks not showing updates after the latest version was published.',
-					'zh-CN': '修复Courseforge整合包错误显示更新的问题。',
+					'zh-CN': '修复CurseForge整合包错误显示更新的问题。',
 				},
 			],
 			changed: [
