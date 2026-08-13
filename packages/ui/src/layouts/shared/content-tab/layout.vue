@@ -916,12 +916,12 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 							<button
 								class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
 								:class="
-									!selectedTypeFilter
+									selectedTypeFilter.length === 0
 										? 'bg-brand-highlight text-brand'
 										: 'bg-surface-4 text-primary hover:bg-surface-5'
 								"
-								:aria-pressed="!selectedTypeFilter"
-								@click="selectedTypeFilter = null"
+								:aria-pressed="selectedTypeFilter.length === 0"
+								@click="selectedTypeFilter = []"
 							>
 								{{ formatMessage(commonMessages.allProjectType) }}
 								<span class="ml-1 text-sm font-normal opacity-70">{{ totalCount }}</span>
@@ -931,12 +931,12 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 								:key="option.id"
 								class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
 								:class="
-									selectedTypeFilter === option.id
+									selectedTypeFilter.includes(option.id)
 										? 'bg-brand-highlight text-brand'
 										: 'bg-surface-4 text-primary hover:bg-surface-5'
 								"
-								:aria-pressed="selectedTypeFilter === option.id"
-								@click="toggleTypeFilter(option.id)"
+								:aria-pressed="selectedTypeFilter.includes(option.id)"
+								@click="toggleTypeFilter(option.id, $event)"
 							>
 								{{ option.label }}
 								<span class="ml-1 text-sm font-normal opacity-70">{{

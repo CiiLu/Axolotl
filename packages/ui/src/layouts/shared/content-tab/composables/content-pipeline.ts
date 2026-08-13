@@ -91,16 +91,21 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 
 	// ---- filter state ----
 
-	const selectedTypeFilter = ref<string | null>(null)
+	const selectedTypeFilter = ref<string[]>([])
 	const selectedStatusFilters = ref<string[]>([])
 
-	const filterMemory = getMap<string, { type: string | null; status: string[] }>('filter')
+	function normalizeTypeFilters(value: string | string[] | null | undefined): string[] {
+		if (!value) return []
+		return Array.isArray(value) ? value : [value]
+	}
+
+	const filterMemory = getMap<string, { type: string[]; status: string[] }>('filter')
 	watch(
 		() => memoryKey,
 		(key) => {
 			if (key) {
 				const entry = filterMemory.get(key)
-				selectedTypeFilter.value = entry?.type ?? null
+				selectedTypeFilter.value = normalizeTypeFilters(entry?.type)
 				selectedStatusFilters.value = entry?.status ?? []
 			}
 		},
@@ -110,7 +115,7 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 	watch([selectedTypeFilter, selectedStatusFilters], () => {
 		if (memoryKey) {
 			filterMemory.set(memoryKey, {
-				type: selectedTypeFilter.value,
+				type: [...selectedTypeFilter.value],
 				status: [...selectedStatusFilters.value],
 			})
 		}
@@ -175,7 +180,7 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 
 	function runPipeline(): PipelineResult {
 		const query = searchQuery.value.trim()
-		const typeFilter = selectedTypeFilter.value
+		const typeFilters = selectedTypeFilter.value
 		const statusFilters = selectedStatusFilters.value
 
 		// Step 1: Fuse search once (old code calls fuse.search 3 times, we call once)
@@ -204,9 +209,12 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 		const searchedAllItems = [...modpackSearched, ...regularSearched]
 
 		// Step 3: Compute typeFilteredItems and statusFilteredItems from searchedAllItems
-		const typeFiltered: ContentItem[] = typeFilter
-			? searchedAllItems.filter((item) => normalizeProjectType(item.project_type) === typeFilter)
-			: searchedAllItems
+		const typeFiltered: ContentItem[] =
+			typeFilters.length > 0
+				? searchedAllItems.filter((item) =>
+						typeFilters.includes(normalizeProjectType(item.project_type)),
+					)
+				: searchedAllItems
 		const hasEnabled = typeFiltered.some(isEnabledContentItem)
 		const hasDisabled = typeFiltered.some(isDisabledContentItem)
 		const availableStatusFilters = new Set<string>()
@@ -294,8 +302,10 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 		// Old filteredModpackItems = applyFilters(search(modpackItemsNoUpdate).filter(modpackIds))
 		function applyFilters(source: ContentItem[]): ContentItem[] {
 			let result = source
-			if (typeFilter) {
-				result = result.filter((item) => normalizeProjectType(item.project_type) === typeFilter)
+			if (typeFilters.length > 0) {
+				result = result.filter((item) =>
+					typeFilters.includes(normalizeProjectType(item.project_type)),
+				)
 			}
 			if (effectiveStatusFilters.length > 0) {
 				result = result.filter((item) => {
@@ -389,18 +399,24 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 		allFilterOptions,
 		() => {
 			const validIds = new Set(allFilterOptions.value.map((opt) => opt.id))
-			if (selectedTypeFilter.value && !validIds.has(selectedTypeFilter.value)) {
-				selectedTypeFilter.value = null
+			const validTypeFilters = selectedTypeFilter.value.filter((id) => validIds.has(id))
+			if (validTypeFilters.length !== selectedTypeFilter.value.length) {
+				selectedTypeFilter.value = validTypeFilters
 			}
 			selectedStatusFilters.value = selectedStatusFilters.value.filter((f) => validIds.has(f))
 		},
 		{ immediate: true },
 	)
 
-	function toggleTypeFilter(filterId: string) {
-		if (selectedTypeFilter.value !== filterId) {
-			selectedTypeFilter.value = filterId
+	function toggleTypeFilter(filterId: string, event?: MouseEvent | KeyboardEvent) {
+		if (event?.ctrlKey || event?.metaKey) {
+			selectedTypeFilter.value = selectedTypeFilter.value.includes(filterId)
+				? selectedTypeFilter.value.filter((id) => id !== filterId)
+				: [...selectedTypeFilter.value, filterId]
+			return
 		}
+
+		selectedTypeFilter.value = [filterId]
 	}
 
 	function toggleStatusFilter(filterId: string) {
