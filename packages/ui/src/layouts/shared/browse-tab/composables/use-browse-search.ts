@@ -27,6 +27,7 @@ export interface UseBrowseSearchOptions {
 	getExtraQueryParams?: () => Record<string, string | undefined>
 	maxResultsOptions?: ComputedRef<number[]>
 	displayMode?: Ref<'list' | 'grid' | 'gallery'> | ComputedRef<'list' | 'grid' | 'gallery'>
+	initialSearchResponse?: BrowseSearchResponse
 }
 
 export interface BrowseSearchState {
@@ -168,10 +169,15 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 		...loadersNotForThisType.value,
 	])
 
-	const loading = ref(true)
-	const projectHits = shallowRef<BrowseSearchResponse['projectHits']>([])
-	const serverHits = shallowRef<BrowseSearchResponse['serverHits']>([])
-	const totalHits = ref(0)
+	const initialSearchResponse = options.initialSearchResponse
+	const loading = ref(!initialSearchResponse)
+	const projectHits = shallowRef<BrowseSearchResponse['projectHits']>(
+		initialSearchResponse?.projectHits ?? [],
+	)
+	const serverHits = shallowRef<BrowseSearchResponse['serverHits']>(
+		initialSearchResponse?.serverHits ?? [],
+	)
+	const totalHits = ref(initialSearchResponse?.total_hits ?? 0)
 
 	const pageCount = computed(() => {
 		if (totalHits.value === 0) return 1

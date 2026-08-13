@@ -11,7 +11,13 @@ import {
 	PlusIcon,
 	SpinnerIcon,
 } from '@modrinth/assets'
-import type { BrowseInstallContentType, CardAction, ProjectType, Tags } from '@modrinth/ui'
+import type {
+	BrowseInstallContentType,
+	BrowseSearchResponse,
+	CardAction,
+	ProjectType,
+	Tags,
+} from '@modrinth/ui'
 import {
 	BrowsePageLayout,
 	BrowseSidebar,
@@ -35,7 +41,7 @@ import {
 } from '@modrinth/ui'
 import { useQueryClient } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import type { LocationQuery } from 'vue-router'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 
@@ -44,6 +50,12 @@ import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { useTranslationToggle } from '@/composables/useTranslationToggle'
 import { mergeProviderResults } from '@/helpers/browse-merge'
+import {
+	completeBrowseReturnNavigation,
+	consumeBrowseReturnSnapshot,
+	isBrowseReturnSourcePath,
+	saveBrowseReturnSnapshot,
+} from '@/helpers/browse-return-state.ts'
 import {
 	cancel_search_request,
 	get_project,
@@ -109,6 +121,13 @@ const debugLog = useDebugLogger('Browse')
 const router = useRouter()
 const route = useRoute()
 const projectType = ref<ProjectType>(route.params.projectType as ProjectType)
+
+type BrowseReturnState = {
+	searchResponse: BrowseSearchResponse
+	originalProjectHits: BrowseSearchResponse['projectHits']
+	originalServerHits: BrowseSearchResponse['serverHits']
+	translationActive: boolean
+}
 
 const curseForgeClassIds: Partial<Record<ProjectType, number>> = {
 	mod: 6,
@@ -671,7 +690,26 @@ if (instance.value) {
 	breadcrumbs.setContext(null)
 }
 
-onBeforeRouteLeave(() => {
+onBeforeRouteLeave((to) => {
+	if (isBrowseReturnSourcePath(to.path)) {
+		const viewport = document.querySelector<HTMLElement>('.app-viewport')
+		saveBrowseReturnSnapshot<BrowseReturnState>({
+			url: route.fullPath,
+			scrollTop: viewport?.scrollTop ?? 0,
+			state: {
+				searchResponse: {
+					projectHits: searchState.projectHits.value,
+					serverHits: searchState.serverHits.value,
+					total_hits: searchState.totalHits.value,
+					per_page: searchState.maxResults.value,
+				},
+				originalProjectHits: originalProjectHits.value,
+				originalServerHits: originalServerHits.value,
+				translationActive: translationActive.value,
+			},
+		})
+	}
+
 	breadcrumbs.setContext({
 		name: browseTitle.value,
 		link: `/browse/${projectType.value}`,
@@ -1701,6 +1739,8 @@ const lockedFilterMessages = computed(() => ({
 	),
 }))
 
+const browseReturnSnapshot = consumeBrowseReturnSnapshot<BrowseReturnState>(route.fullPath)
+
 const searchState = useBrowseSearch({
 	projectType,
 	tags,
@@ -1714,6 +1754,7 @@ const searchState = useBrowseSearch({
 		shi: serverHideInstalled.value ? 'true' : undefined,
 		source: contentSource.value === 'all' ? undefined : contentSource.value,
 	}),
+	initialSearchResponse: browseReturnSnapshot?.state.searchResponse,
 })
 
 /** Translation state for search result titles and descriptions. */
@@ -1729,6 +1770,12 @@ const {
 	toggle,
 	cancel: cancelTranslation,
 } = useTranslationToggle()
+
+if (browseReturnSnapshot) {
+	originalProjectHits.value = browseReturnSnapshot.state.originalProjectHits
+	originalServerHits.value = browseReturnSnapshot.state.originalServerHits
+	translationActive.value = browseReturnSnapshot.state.translationActive
+}
 
 // Keep a pristine copy when genuine search results arrive (project hits).
 watch(
@@ -1886,7 +1933,9 @@ if (instance.value?.game_version) {
 	}
 }
 
-void searchState.refreshSearch()
+if (!browseReturnSnapshot) {
+	void searchState.refreshSearch()
+}
 
 type UnlistenFn = () => void
 
@@ -1894,6 +1943,21 @@ let isUnmounted = false
 let unlistenInstances: UnlistenFn | null = null
 
 onMounted(() => {
+	if (browseReturnSnapshot) {
+		void nextTick().then(
+			() =>
+				new Promise<void>((resolve) => {
+					requestAnimationFrame(() => {
+						document.querySelector<HTMLElement>('.app-viewport')?.scrollTo({
+							top: browseReturnSnapshot.scrollTop,
+						})
+						completeBrowseReturnNavigation(route.fullPath)
+						resolve()
+					})
+				}),
+		)
+	}
+
 	instance_listener(async (event: { event: string; instance_id: string }) => {
 		if (instance.value && event.instance_id === instance.value.id && event.event === 'synced') {
 			await refreshInstalledProjectIds()

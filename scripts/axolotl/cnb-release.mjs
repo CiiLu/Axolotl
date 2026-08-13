@@ -2,8 +2,6 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { Readable } from 'node:stream'
-import { pipeline } from 'node:stream/promises'
 
 const [command, tag, outputDirectory] = process.argv.slice(2)
 const apiEndpoint = (process.env.CNB_API_ENDPOINT || 'https://api.cnb.cool').replace(/\/$/, '')
@@ -17,7 +15,11 @@ const githubReleaseBaseUrl = (
 const githubApiBaseUrl = (
 	process.env.GITHUB_API_BASE_URL || 'https://api.github.com/repos/Mystic-Stars/Axolotl'
 ).replace(/\/$/, '')
-const pollIntervalMs = Number(process.env.RELEASE_POLL_INTERVAL_MS || 30_000)
+const configuredAssetMirrorConcurrency = Number(process.env.ASSET_MIRROR_CONCURRENCY || 4)
+const assetMirrorConcurrency =
+	Number.isSafeInteger(configuredAssetMirrorConcurrency) && configuredAssetMirrorConcurrency > 0
+		? configuredAssetMirrorConcurrency
+		: 4
 
 if (command !== 'finalize' || !tag || !outputDirectory || !token) {
 	throw new Error('Usage: node cnb-release.mjs finalize <tag> <output-dir>; CNB_TOKEN is required')
@@ -26,6 +28,11 @@ if (command !== 'finalize' || !tag || !outputDirectory || !token) {
 const apiHeaders = {
 	Accept: 'application/vnd.cnb.api+json',
 	Authorization: `Bearer ${token}`,
+}
+const githubApiHeaders = {
+	Accept: 'application/vnd.github+json',
+	'User-Agent': 'Axolotl-CNB-Release',
+	...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
 }
 
 async function apiRequest(url, options = {}, allowedStatuses = []) {
@@ -53,7 +60,7 @@ async function getRelease() {
 	return response.status === 404 ? null : await response.json()
 }
 
-async function ensureRelease() {
+async function ensureRelease(githubRelease) {
 	const existing = await getRelease()
 	if (existing) {
 		return existing
@@ -68,8 +75,11 @@ async function ensureRelease() {
 			body: JSON.stringify({
 				tag_name: tag,
 				target_commitish: process.env.CNB_COMMIT || tag,
-				name: process.env.CNB_TAG_RELEASE_TITLE || `Axolotl Launcher ${tag}`,
-				body: process.env.CNB_TAG_RELEASE_DESC || '',
+				name:
+					process.env.CNB_TAG_RELEASE_TITLE ||
+					githubRelease.name ||
+					`Axolotl Launcher ${tag}`,
+				body: process.env.CNB_TAG_RELEASE_DESC || githubRelease.body || '',
 				draft: true,
 				prerelease,
 				make_latest: 'false',
@@ -91,9 +101,7 @@ async function ensureRelease() {
 	throw new Error(`Release ${tag} was created concurrently but could not be loaded`)
 }
 
-async function uploadAsset(release, filePath) {
-	const assetName = path.basename(filePath)
-	const size = fs.statSync(filePath).size
+async function createAssetUpload(release, assetName, size) {
 	const uploadResponse = await apiRequest(
 		`${apiEndpoint}/${repo}/-/releases/${release.id}/asset-upload-url`,
 		{
@@ -102,7 +110,18 @@ async function uploadAsset(release, filePath) {
 			body: JSON.stringify({ asset_name: assetName, size, overwrite: true, ttl: 0 }),
 		},
 	)
-	const upload = await uploadResponse.json()
+	return await uploadResponse.json()
+}
+
+async function verifyAssetUpload(upload) {
+	const verifyUrl = new URL(upload.verify_url, apiEndpoint).toString()
+	await apiRequest(`${verifyUrl}${verifyUrl.includes('?') ? '&' : '?'}ttl=0`, { method: 'POST' })
+}
+
+async function uploadAsset(release, filePath) {
+	const assetName = path.basename(filePath)
+	const size = fs.statSync(filePath).size
+	const upload = await createAssetUpload(release, assetName, size)
 	const fileResponse = await fetch(upload.upload_url, {
 		method: 'PUT',
 		body: fs.createReadStream(filePath),
@@ -117,47 +136,28 @@ async function uploadAsset(release, filePath) {
 			`Uploading ${assetName} failed (${fileResponse.status}): ${await fileResponse.text()}`,
 		)
 	}
-
-	const verifyUrl = new URL(upload.verify_url, apiEndpoint).toString()
-	await apiRequest(`${verifyUrl}${verifyUrl.includes('?') ? '&' : '?'}ttl=0`, { method: 'POST' })
+	await verifyAssetUpload(upload)
 	console.log(`Uploaded ${assetName}`)
 }
 
-async function waitForGithubManifest() {
+async function loadGithubManifest() {
 	const manifestUrl = `${githubReleaseBaseUrl}/${encodeURIComponent(tag)}/latest.json`
-	for (let attempt = 0; attempt < 180; attempt++) {
-		let response
-		try {
-			response = await fetch(manifestUrl)
-		} catch (error) {
-			console.log(`GitHub release is not ready: ${error}`)
-		}
-
-		if (response?.ok) {
-			const manifest = await response.json()
-			if (manifest.version !== tag.replace(/^v/, '')) {
-				throw new Error(`GitHub manifest version ${manifest.version} does not match ${tag}`)
-			}
-			return manifest
-		}
-		if (response && response.status !== 404 && response.status < 500) {
-			throw new Error(
-				`Downloading GitHub manifest failed (${response.status}): ${await response.text()}`,
-			)
-		}
-
-		console.log(`Waiting for GitHub release manifest (${attempt + 1}/180)`)
-		await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+	const response = await fetch(manifestUrl)
+	if (!response.ok) {
+		throw new Error(
+			`Downloading GitHub manifest failed (${response.status}): ${await response.text()}`,
+		)
 	}
-	throw new Error('Timed out waiting for the GitHub release manifest')
+	const manifest = await response.json()
+	if (manifest.version !== tag.replace(/^v/, '')) {
+		throw new Error(`GitHub manifest version ${manifest.version} does not match ${tag}`)
+	}
+	return manifest
 }
 
 async function loadGithubRelease(url) {
 	const response = await fetch(url, {
-		headers: {
-			Accept: 'application/vnd.github+json',
-			'User-Agent': 'Axolotl-CNB-Release',
-		},
+		headers: githubApiHeaders,
 	})
 	if (!response.ok) {
 		throw new Error(`Loading GitHub release failed (${response.status}): ${await response.text()}`)
@@ -175,28 +175,60 @@ async function getLatestGithubRelease() {
 	return await loadGithubRelease(`${githubApiBaseUrl}/releases/latest`)
 }
 
-async function downloadFile(url, outputPath) {
-	const response = await fetch(url)
+async function mirrorGithubAsset(release, asset) {
+	const upload = await createAssetUpload(release, asset.name, asset.size)
+	const response = await fetch(asset.browser_download_url)
 	if (!response.ok || !response.body) {
-		throw new Error(`Downloading ${url} failed (${response.status}): ${await response.text()}`)
+		throw new Error(
+			`Downloading ${asset.name} failed (${response.status}): ${await response.text()}`,
+		)
 	}
-	await pipeline(Readable.fromWeb(response.body), fs.createWriteStream(outputPath))
+	const uploadResponse = await fetch(upload.upload_url, {
+		method: 'PUT',
+		body: response.body,
+		duplex: 'half',
+		headers: {
+			'Content-Length': String(asset.size),
+			'Content-Type': 'application/octet-stream',
+		},
+	})
+	if (!uploadResponse.ok) {
+		throw new Error(
+			`Uploading ${asset.name} failed (${uploadResponse.status}): ${await uploadResponse.text()}`,
+		)
+	}
+	await verifyAssetUpload(upload)
+	console.log(`Mirrored ${asset.name}`)
 }
 
 async function mirrorGithubAssets(release, githubRelease) {
-	const mirroredNames = new Set()
-	for (const asset of githubRelease.assets || []) {
-		if (asset.name === 'latest.json') {
-			continue
-		}
-		if (!asset.name || !asset.browser_download_url || mirroredNames.has(asset.name)) {
+	const assets = (githubRelease.assets || []).filter((asset) => asset.name !== 'latest.json')
+	const mirroredNames = new Set(assets.map((asset) => asset.name))
+	if (mirroredNames.size !== assets.length) {
+		throw new Error('GitHub release contains duplicate asset names')
+	}
+	for (const asset of assets) {
+		if (
+			!asset.name ||
+			!asset.browser_download_url ||
+			!Number.isSafeInteger(asset.size) ||
+			asset.size < 0
+		) {
 			throw new Error(`Invalid or duplicate GitHub release asset: ${asset.name}`)
 		}
-		const outputPath = path.join(outputDirectory, asset.name)
-		await downloadFile(asset.browser_download_url, outputPath)
-		await uploadAsset(release, outputPath)
-		mirroredNames.add(asset.name)
 	}
+
+	let nextAsset = 0
+	const workers = Array.from(
+		{ length: Math.min(assetMirrorConcurrency, assets.length) },
+		async () => {
+			while (nextAsset < assets.length) {
+				const asset = assets[nextAsset++]
+				await mirrorGithubAsset(release, asset)
+			}
+		},
+	)
+	await Promise.all(workers)
 	return mirroredNames
 }
 
@@ -259,13 +291,13 @@ function publishUpdateBranch(manifestPath) {
 
 async function finalizeRelease() {
 	fs.mkdirSync(outputDirectory, { recursive: true })
-	const githubManifest = await waitForGithubManifest()
-	const [githubRelease, latestGithubRelease] = await Promise.all([
+	const [githubManifest, githubRelease, latestGithubRelease] = await Promise.all([
+		loadGithubManifest(),
 		getGithubRelease(),
 		getLatestGithubRelease(),
 	])
 	const isLatestRelease = githubRelease.tag_name === latestGithubRelease.tag_name
-	const release = await ensureRelease()
+	const release = await ensureRelease(githubRelease)
 	const mirroredNames = await mirrorGithubAssets(release, githubRelease)
 	const manifest = createCnbManifest(githubManifest, mirroredNames)
 	const manifestPath = path.join(outputDirectory, 'latest.json')
@@ -277,6 +309,8 @@ async function finalizeRelease() {
 		method: 'PATCH',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
+			name: githubRelease.name || `Axolotl Launcher ${tag}`,
+			body: githubRelease.body || '',
 			draft: false,
 			prerelease,
 			make_latest: isLatestRelease ? 'true' : 'false',

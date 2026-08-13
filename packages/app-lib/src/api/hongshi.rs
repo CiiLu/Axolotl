@@ -22,6 +22,8 @@ const CONTROL_PORT: u16 = 7000;
 const NODE_PROBE_TIMEOUT: Duration = Duration::from_millis(1500);
 const START_TIMEOUT: Duration = Duration::from_secs(20);
 const MAX_BINARY_SIZE: u64 = 256 * 1024 * 1024;
+const DOWNLOAD_URL_CACHE_TTL: Duration = Duration::from_secs(28 * 60);
+const DOWNLOAD_RATE_LIMIT_RETRY_DELAY: Duration = Duration::from_secs(61);
 
 static HONGSHI_STATE: LazyLock<Mutex<HongshiState>> =
     LazyLock::new(|| Mutex::new(HongshiState::default()));
@@ -29,6 +31,8 @@ static HONGSHI_RUNTIME: LazyLock<Mutex<HongshiRuntime>> =
     LazyLock::new(|| Mutex::new(HongshiRuntime::default()));
 static HONGSHI_OPERATION: LazyLock<Mutex<()>> =
     LazyLock::new(|| Mutex::new(()));
+static HONGSHI_DOWNLOAD_URL: LazyLock<Mutex<Option<CachedDownloadUrl>>> =
+    LazyLock::new(|| Mutex::new(None));
 static DETECTED_PORTS: LazyLock<Mutex<HashMap<String, DetectedLanPort>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static NODE_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
@@ -322,6 +326,17 @@ struct HongshiDownloadResponse {
 }
 
 #[derive(Debug, Deserialize)]
+struct HongshiApiError {
+    detail: String,
+}
+
+#[derive(Debug)]
+struct CachedDownloadUrl {
+    url: reqwest::Url,
+    expires_at: Instant,
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum HongshiNodeResponse {
     Map(BTreeMap<String, String>),
@@ -360,6 +375,97 @@ fn download_endpoint() -> eyre::Result<String> {
     download_endpoint_for(std::env::consts::OS, std::env::consts::ARCH)
 }
 
+fn is_daily_download_limit(detail: &str) -> bool {
+    let detail = detail.to_ascii_lowercase();
+    detail.contains("daily")
+        || detail.contains("today")
+        || detail.contains("每日")
+        || detail.contains("今日")
+        || detail.contains("当天")
+}
+
+fn retry_after_delay(response: &reqwest::Response) -> Duration {
+    response
+        .headers()
+        .get(reqwest::header::RETRY_AFTER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok())
+        .map(Duration::from_secs)
+        .unwrap_or(DOWNLOAD_RATE_LIMIT_RETRY_DELAY)
+}
+
+async fn parse_api_error(response: reqwest::Response) -> String {
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    serde_json::from_str::<HongshiApiError>(&body)
+        .map(|error| error.detail)
+        .unwrap_or_else(|_| {
+            if body.trim().is_empty() {
+                status.to_string()
+            } else {
+                body
+            }
+        })
+}
+
+async fn request_download_url(endpoint: &str) -> eyre::Result<reqwest::Url> {
+    {
+        let mut cached = HONGSHI_DOWNLOAD_URL.lock().await;
+        if let Some(entry) = cached.as_ref()
+            && entry.expires_at > Instant::now()
+        {
+            return Ok(entry.url.clone());
+        }
+        *cached = None;
+    }
+
+    let mut response = DOWNLOAD_CLIENT
+        .get(endpoint)
+        .send()
+        .await
+        .wrap_err("failed to request RedStone download URL")?;
+    if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        let delay = retry_after_delay(&response);
+        let detail = parse_api_error(response).await;
+        if is_daily_download_limit(&detail) {
+            bail!("RedStone daily download limit reached: {detail}")
+        }
+        warn!(
+            retry_after_seconds = delay.as_secs(),
+            "RedStone download URL request was rate limited; retrying once"
+        );
+        tokio::time::sleep(delay).await;
+        response = DOWNLOAD_CLIENT
+            .get(endpoint)
+            .send()
+            .await
+            .wrap_err("failed to retry RedStone download URL request")?;
+        if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            let detail = parse_api_error(response).await;
+            bail!(
+                "RedStone download API is still rate limited after waiting; the daily limit may have been reached: {detail}"
+            )
+        }
+    }
+
+    let response = response
+        .error_for_status()
+        .wrap_err("RedStone download URL request failed")?
+        .json::<HongshiDownloadResponse>()
+        .await
+        .wrap_err("invalid RedStone download response")?;
+    let download_url = reqwest::Url::parse(&response.url)
+        .wrap_err("invalid RedStone kernel download URL")?;
+    if download_url.scheme() != "https" {
+        bail!("RedStone kernel download URL must use HTTPS")
+    }
+    *HONGSHI_DOWNLOAD_URL.lock().await = Some(CachedDownloadUrl {
+        url: download_url.clone(),
+        expires_at: Instant::now() + DOWNLOAD_URL_CACHE_TTL,
+    });
+    Ok(download_url)
+}
+
 async fn download_inner() -> eyre::Result<()> {
     let _operation = HONGSHI_OPERATION.lock().await;
     if !is_supported() {
@@ -379,21 +485,7 @@ async fn download_inner() -> eyre::Result<()> {
         state.error_type = None;
         state.error_message = None;
     }
-    let response = DOWNLOAD_CLIENT
-        .get(endpoint)
-        .send()
-        .await
-        .wrap_err("failed to request RedStone download URL")?
-        .error_for_status()
-        .wrap_err("RedStone download URL request failed")?
-        .json::<HongshiDownloadResponse>()
-        .await
-        .wrap_err("invalid RedStone download response")?;
-    let download_url = reqwest::Url::parse(&response.url)
-        .wrap_err("invalid RedStone kernel download URL")?;
-    if download_url.scheme() != "https" {
-        bail!("RedStone kernel download URL must use HTTPS")
-    }
+    let download_url = request_download_url(&endpoint).await?;
     let response = DOWNLOAD_CLIENT
         .get(download_url)
         .send()
@@ -1216,6 +1308,14 @@ mod tests {
             "https://hongshi.site/api/download/linux?arch=amd64"
         );
         assert!(download_endpoint_for("linux", "riscv64").is_err());
+    }
+
+    #[test]
+    fn distinguishes_daily_download_limits_from_short_rate_limits() {
+        assert!(is_daily_download_limit("今日下载次数已达上限"));
+        assert!(is_daily_download_limit("Daily download limit reached"));
+        assert!(!is_daily_download_limit("60 秒内请勿重复请求"));
+        assert!(!is_daily_download_limit("Too many requests"));
     }
 
     #[test]

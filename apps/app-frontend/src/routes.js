@@ -1,5 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import {
+	isBrowseReturnNavigation,
+	prepareBrowseReturnNavigation,
+} from '@/helpers/browse-return-state.ts'
+
 /**
  * Configures application routing. Add page to pages/index and then add to route table here.
  */
@@ -354,7 +359,15 @@ export default new createRouter({
 	],
 	linkActiveClass: 'router-link-active',
 	linkExactActiveClass: 'router-link-exact-active',
+	beforeEach(to, from) {
+		if (to.path.startsWith('/browse/')) {
+			prepareBrowseReturnNavigation(to.fullPath, from.path)
+		}
+	},
 	scrollBehavior(to, from) {
+		if (to.path.startsWith('/browse/') && isBrowseReturnNavigation(to.fullPath)) {
+			return false
+		}
 		if (to.path === from.path) return
 		// Sometimes Vue's scroll behavior is not working as expected, so we need to manually scroll to top (especially on Linux)
 		document.querySelector('.app-viewport')?.scrollTo(0, 0)
