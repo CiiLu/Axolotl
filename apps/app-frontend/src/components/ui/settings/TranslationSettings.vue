@@ -30,7 +30,7 @@ import AIIcon from './AIIcon.vue'
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 const settings = ref<TranslationSettingsState>({
-	provider: 'microsoft',
+	provider: 'google',
 	target_language: '',
 	mode: 'bilingual',
 	auto_translate: false,
@@ -291,7 +291,7 @@ watch(
 	[aiAvailable, configuredAIProviders],
 	() => {
 		if (!aiAvailable.value) {
-			if (settings.value.provider === 'ai') settings.value.provider = 'microsoft'
+			if (settings.value.provider === 'ai') settings.value.provider = 'google'
 			return
 		}
 		if (
