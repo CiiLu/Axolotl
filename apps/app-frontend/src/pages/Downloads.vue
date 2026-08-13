@@ -184,7 +184,7 @@
 							size="small"
 						>
 							<button :disabled="busy.has(job.job_id)" @click="skipMissingContent(job)">
-								{{ formatMessage(messages.skipMissingFiles) }}
+								<ArrowBigRightDashIcon />{{ formatMessage(messages.skipMissingFiles) }}
 							</button>
 						</ButtonStyled>
 						<ButtonStyled v-if="job.status === 'waiting_for_user'" color="brand" size="small">
@@ -240,20 +240,20 @@
 					/>
 				</div>
 
-				<Admonition
-					v-if="job.status === 'waiting_for_user'"
-					class="mx-4 mb-4"
-					type="warning"
-					:header="formatMessage(messages.actionNeeded)"
-				>
-					{{
-						formatMessage(messages.missingRequiredContent, {
-							completed: completedRequiredFiles(job),
-							total: totalRequiredFiles(job),
-							missing: missingRequiredFiles(job),
-						})
-					}}
-				</Admonition>
+				<div v-if="job.status === 'waiting_for_user'" class="px-4 pb-4">
+					<Admonition
+						type="warning"
+						:header="formatMessage(messages.actionNeeded)"
+					>
+						{{
+							formatMessage(messages.missingRequiredContent, {
+								completed: completedRequiredFiles(job),
+								total: totalRequiredFiles(job),
+								missing: missingRequiredFiles(job),
+							})
+						}}
+					</Admonition>
+				</div>
 
 				<div
 					v-if="expanded.has(job.job_id)"
@@ -362,6 +362,7 @@
 
 <script setup lang="ts">
 import {
+	ArrowBigRightDashIcon,
 	ChevronDownIcon,
 	ClipboardCopyIcon,
 	ClockIcon,
@@ -449,7 +450,7 @@ const messages = defineMessages({
 	retry: { id: 'app.downloads.retry', defaultMessage: 'Retry' },
 	skipMissingFiles: {
 		id: 'app.downloads.skip-missing-files',
-		defaultMessage: 'Skip all missing files',
+		defaultMessage: 'Skip',
 	},
 	completeMissingFiles: {
 		id: 'app.downloads.complete-missing-files',

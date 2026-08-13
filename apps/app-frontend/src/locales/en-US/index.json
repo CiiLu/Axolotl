@@ -1014,7 +1014,7 @@
     "message": "Search downloads"
   },
   "app.downloads.skip-missing-files": {
-    "message": "Skip all missing files"
+    "message": "Skip"
   },
   "app.downloads.source.alternate": {
     "message": "Alternate source"
