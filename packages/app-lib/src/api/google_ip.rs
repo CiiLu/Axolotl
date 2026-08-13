@@ -7,13 +7,13 @@
 
 use std::collections::HashSet;
 use std::net::{IpAddr, SocketAddr};
-use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use futures::{StreamExt, stream};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use sqlx::{Row, SqlitePool};
 use tokio::sync::Mutex;
 
 use crate::{ErrorKind, State};
@@ -22,7 +22,6 @@ use crate::{ErrorKind, State};
 // https://github.com/Ponderfly/GoogleTranslateIpCheck
 const IP_LIST_URL: &str = "https://ghfast.top/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/refs/heads/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt";
 const GOOGLE_TRANSLATE_HOST: &str = "translate-pa.googleapis.com";
-const CACHE_FILE_NAME: &str = "google_translate_ips.json";
 const TOP_IPS: usize = 20;
 const SCAN_BATCH_SIZE: usize = 1000;
 const PROBE_CONCURRENCY: usize = 32;
@@ -133,32 +132,29 @@ pub async fn ip_pool_size() -> usize {
             return runtime.candidates.len();
         }
     }
-    let Ok(path) = cache_path().await else {
-        tracing::warn!("Unable to resolve Google Translate IP cache path");
+    let Ok(state) = State::get().await else {
+        tracing::warn!(
+            "Unable to resolve launcher state for Google Translate IP cache"
+        );
         return 0;
     };
-    let stale = cache_is_stale(&path).await;
-    let cached = load_cache(&path).await;
+    let pool = &state.pool;
+    let stale = cache_is_stale(pool).await;
+    let cached = load_cache(pool).await;
     let size = cached.len();
     if cached.is_empty() {
         tracing::warn!(
-            path = %path.display(),
             "Google Translate IP cache is missing or empty; starting background refresh"
         );
         let _ = start_refresh().await;
     } else if stale {
         tracing::info!(
-            path = %path.display(),
             size,
             "Google Translate IP cache is stale; starting background refresh"
         );
         let _ = start_refresh().await;
     } else {
-        tracing::info!(
-            path = %path.display(),
-            size,
-            "Google Translate IP cache loaded"
-        );
+        tracing::info!(size, "Google Translate IP cache loaded from database");
     }
     size
 }
@@ -203,22 +199,21 @@ pub async fn preload() {
         }
     }
 
-    let Ok(path) = cache_path().await else {
+    let Ok(state) = State::get().await else {
         tracing::warn!(
-            "Unable to resolve Google Translate IP cache path during preload"
+            "Unable to resolve launcher state during Google Translate IP preload"
         );
         return;
     };
-    let candidates = load_cache(&path).await;
-    let stale = cache_is_stale(&path).await;
+    let pool = &state.pool;
+    let candidates = load_cache(pool).await;
+    let stale = cache_is_stale(pool).await;
     tracing::info!(
-        path = %path.display(),
         cached = candidates.len(),
         "Preloading Google Translate IP pool"
     );
     if candidates.is_empty() {
         tracing::warn!(
-            path = %path.display(),
             "Google Translate IP cache missing or empty during preload; starting background refresh"
         );
         let _ = start_refresh().await;
@@ -226,7 +221,6 @@ pub async fn preload() {
     }
     if stale {
         tracing::info!(
-            path = %path.display(),
             "Google Translate IP cache stale during preload; starting background refresh"
         );
         let _ = start_refresh().await;
@@ -546,8 +540,8 @@ async fn refresh_in_background() {
             .into());
         }
 
-        let path = cache_path().await?;
-        if let Err(error) = save_cache(&path, &candidates).await {
+        let state = State::get().await?;
+        if let Err(error) = save_cache(&state.pool, &candidates).await {
             tracing::warn!(%error, "Unable to persist Google Translate IP cache");
         }
         Ok(())
@@ -589,54 +583,86 @@ async fn wait_for_refresh(handle: &RefreshHandle) {
     let _ = done.wait_for(|done| *done).await;
 }
 
-async fn cache_path() -> crate::Result<PathBuf> {
-    let state = State::get().await?;
-    Ok(state.directories.caches_dir().join(CACHE_FILE_NAME))
-}
-
-async fn load_cache(path: &Path) -> Vec<GoogleTranslateIp> {
-    let Ok(bytes) = tokio::fs::read(path).await else {
-        return Vec::new();
-    };
-    serde_json::from_slice::<Vec<GoogleTranslateIp>>(&bytes)
-        .map(rank_candidates)
-        .unwrap_or_else(|error| {
+async fn load_cache(pool: &SqlitePool) -> Vec<GoogleTranslateIp> {
+    let rows = match sqlx::query(
+        "SELECT ip, latency_ms FROM google_translate_ip_cache \
+         ORDER BY latency_ms ASC, ip ASC LIMIT ?",
+    )
+    .bind(TOP_IPS as i32)
+    .fetch_all(pool)
+    .await
+    {
+        Ok(rows) => rows,
+        Err(error) => {
             tracing::warn!(
-                path = %path.display(),
                 %error,
-                "Unable to parse Google Translate IP cache; treating it as empty"
+                "Unable to read Google Translate IP cache from database; treating it as empty"
             );
-            Vec::new()
+            return Vec::new();
+        }
+    };
+    let candidates = rows
+        .into_iter()
+        .filter_map(|row| {
+            let ip: String = row.try_get("ip").ok()?;
+            let latency_ms: i64 = row.try_get("latency_ms").ok()?;
+            Some(GoogleTranslateIp {
+                ip,
+                latency_ms: latency_ms.max(0) as u64,
+            })
         })
+        .collect();
+    rank_candidates(candidates)
 }
 
 async fn save_cache(
-    path: &Path,
+    pool: &SqlitePool,
     candidates: &[GoogleTranslateIp],
 ) -> crate::Result<()> {
-    if let Some(parent) = path.parent() {
-        crate::util::io::create_dir_all(parent).await?;
+    let created_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or(0);
+    let mut transaction = pool.begin().await?;
+    sqlx::query("DELETE FROM google_translate_ip_cache")
+        .execute(&mut *transaction)
+        .await?;
+    for candidate in candidates {
+        sqlx::query(
+            "INSERT INTO google_translate_ip_cache (ip, latency_ms, created_at) \
+             VALUES (?, ?, ?)",
+        )
+        .bind(&candidate.ip)
+        .bind(candidate.latency_ms as i64)
+        .bind(created_at)
+        .execute(&mut *transaction)
+        .await?;
     }
-    let json = serde_json::to_vec_pretty(candidates)?;
-    crate::util::io::write(path, json).await?;
+    transaction.commit().await?;
     tracing::info!(
-        path = %path.display(),
         count = candidates.len(),
-        "Google Translate IP cache saved"
+        "Google Translate IP cache saved to database"
     );
     Ok(())
 }
 
-async fn cache_is_stale(path: &Path) -> bool {
-    let Ok(metadata) = tokio::fs::metadata(path).await else {
+async fn cache_is_stale(pool: &SqlitePool) -> bool {
+    let Ok(created_at) = sqlx::query_scalar::<_, Option<i64>>(
+        "SELECT MAX(created_at) FROM google_translate_ip_cache",
+    )
+    .fetch_one(pool)
+    .await
+    else {
         return true;
     };
-    let Ok(modified) = metadata.modified() else {
+    let Some(created_at) = created_at else {
         return true;
     };
-    SystemTime::now()
-        .duration_since(modified)
-        .is_ok_and(|age| age >= CACHE_REFRESH_AGE)
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or(0);
+    now.saturating_sub(created_at) >= CACHE_REFRESH_AGE.as_secs() as i64
 }
 
 #[cfg(test)]
@@ -736,8 +762,22 @@ mod tests {
 
     #[tokio::test]
     async fn cache_round_trip() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join(CACHE_FILE_NAME);
+        use sqlx::SqlitePoolOptions;
+
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE google_translate_ip_cache (
+                ip TEXT NOT NULL PRIMARY KEY,
+                latency_ms INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
         let candidates = vec![
             GoogleTranslateIp {
                 ip: "1.1.1.1".to_string(),
@@ -748,7 +788,7 @@ mod tests {
                 latency_ms: 20,
             },
         ];
-        save_cache(&path, &candidates).await.unwrap();
-        assert_eq!(load_cache(&path).await, candidates);
+        save_cache(&pool, &candidates).await.unwrap();
+        assert_eq!(load_cache(&pool).await, candidates);
     }
 }
