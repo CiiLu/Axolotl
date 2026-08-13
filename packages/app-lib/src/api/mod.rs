@@ -5,6 +5,7 @@ pub mod content_search;
 pub mod curseforge;
 pub mod drop_classifier;
 pub mod friends;
+pub mod google_ip;
 pub mod handler;
 pub mod hongshi;
 pub mod instance;

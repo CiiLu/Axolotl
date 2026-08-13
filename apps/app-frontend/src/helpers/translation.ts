@@ -107,6 +107,10 @@ export async function clearTranslationCache(): Promise<void> {
 	await invoke('plugin:translation|translation_clear_cache')
 }
 
+export async function getGoogleIpPoolSize(): Promise<number> {
+	return await invoke('plugin:translation|translation_google_ip_pool_size')
+}
+
 export type TranslationErrorKind =
 	| 'rate-limited'
 	| 'authentication'
