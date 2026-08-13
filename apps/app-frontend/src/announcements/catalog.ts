@@ -33,6 +33,36 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.5',
+		version: '1.7.5',
+		publishedAt: '2026-08-13',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.5',
+			'zh-CN': 'Axolotl Launcher 1.7.5',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed unpredictable account ordering when multiple accounts share the same name and login type.',
+					'zh-CN': '修复了多个同名同类型账号顺序不固定的问题。',
+				},
+				{
+					'en-US':
+						'Fixed the issue of CurseForge modpacks not showing updates after the latest version was published.',
+					'zh-CN': '修复Courseforge整合包错误显示更新的问题。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Improved the readability of the duplicate custom UUID error message in the offline account dialog.',
+					'zh-CN': '优化了离线账户弹窗中重复自定义 UUID 的错误提示可读性。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.4',
 		version: '1.7.4',
 		publishedAt: '2026-08-12',

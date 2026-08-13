@@ -3623,6 +3623,9 @@
   "minecraft-account.offline-modal.custom-uuid": {
     "message": "自定义 UUID"
   },
+  "minecraft-account.offline-modal.custom-uuid-duplicate": {
+    "message": "已存在使用此 UUID 的账户，请更换一个 UUID。"
+  },
   "minecraft-account.offline-modal.custom-uuid-input-label": {
     "message": "UUID 值"
   },

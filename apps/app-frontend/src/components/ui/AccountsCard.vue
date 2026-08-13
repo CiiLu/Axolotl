@@ -214,6 +214,11 @@
 			>
 				{{ formatMessage(messages.customUuidValidation) }}
 			</p>
+			<Admonition
+				v-if="offlineUuidDuplicate"
+				type="critical"
+				:body="formatMessage(messages.customUuidDuplicate)"
+			/>
 			<div class="input-group push-right">
 				<ButtonStyled>
 					<button :disabled="loginDisabled" @click="offlineAccountModal?.hide()">
@@ -361,6 +366,7 @@ import axolotlLogo from '@/assets/axolotl.png'
 import steveSkinTexture from '@/assets/skins/steve.png?inline'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
+import { compareMinecraftAccounts } from '@/helpers/accounts'
 import { trackEvent } from '@/helpers/analytics'
 import {
 	add_offline_user,
@@ -460,6 +466,7 @@ const offlineAccountModal = ref<InstanceType<typeof ModalWrapper> | null>(null)
 const offlineUsername = ref('')
 const offlineCustomUuid = ref(false)
 const offlineUuid = ref('')
+const offlineUuidDuplicate = ref(false)
 const offlineUsernameValid = computed(() =>
 	/^[\p{L}\p{N}_]{1,16}$/u.test(offlineUsername.value.trim()),
 )
@@ -469,6 +476,9 @@ const offlineUuidValid = computed(() =>
 const offlineFormValid = computed(
 	() => offlineUsernameValid.value && (!offlineCustomUuid.value || offlineUuidValid.value),
 )
+watch([offlineUuid, offlineCustomUuid], () => {
+	offlineUuidDuplicate.value = false
+})
 const offlineUsernameContainsChinese = computed(() =>
 	/\p{Script=Han}/u.test(offlineUsername.value.trim()),
 )
@@ -500,12 +510,6 @@ function createSkinHeadDataUrl(textureUrl: string) {
 }
 
 const defaultSteveHeadUrl = createSkinHeadDataUrl(steveSkinTexture)
-
-const ACCOUNT_TYPE_ORDER = {
-	microsoft: 0,
-	yggdrasil: 1,
-	offline: 2,
-} as const
 
 const HEAD_REFRESH_RETRY_DELAYS = [1500, 5000, 15000, 30000] as const
 const HEAD_REFRESH_CONTINUOUS_DELAY = 60_000
@@ -566,15 +570,7 @@ async function refreshValues(headRefreshAttempt = 0) {
 	accounts.value = Array.isArray(userList)
 		? [...(userList as unknown as MinecraftCredential[])]
 		: []
-	accounts.value.sort((a, b) => {
-		const nameCmp = (a.profile?.name ?? '').localeCompare(b.profile?.name ?? '')
-		if (nameCmp !== 0) return nameCmp
-
-		return (
-			(ACCOUNT_TYPE_ORDER[a.account_type as keyof typeof ACCOUNT_TYPE_ORDER] ?? 3) -
-			(ACCOUNT_TYPE_ORDER[b.account_type as keyof typeof ACCOUNT_TYPE_ORDER] ?? 3)
-		)
-	})
+	accounts.value.sort(compareMinecraftAccounts)
 	await renderAccountHeads(accounts.value, generation)
 	if (generation !== refreshGeneration) return
 	try {
@@ -773,6 +769,7 @@ function showOfflineAccountModal() {
 	offlineUsername.value = ''
 	offlineCustomUuid.value = false
 	offlineUuid.value = ''
+	offlineUuidDuplicate.value = false
 	offlineAccountModal.value?.show()
 }
 
@@ -956,6 +953,7 @@ async function addOfflineAccount() {
 	if (!offlineFormValid.value || loginDisabled.value) return
 
 	loginDisabled.value = true
+	offlineUuidDuplicate.value = false
 	try {
 		const account = await add_offline_user(
 			offlineUsername.value.trim(),
@@ -965,10 +963,21 @@ async function addOfflineAccount() {
 		await setAccount(account)
 		trackEvent('OfflineAccountAdd')
 	} catch (error) {
-		handleError(error as Error)
+		offlineUuidDuplicate.value = isDuplicateUuidError(error)
+		if (!offlineUuidDuplicate.value) handleError(error as Error)
 	} finally {
 		loginDisabled.value = false
 	}
+}
+
+function isDuplicateUuidError(error: unknown) {
+	const rawMessage =
+		error instanceof Error
+			? error.message
+			: typeof error === 'string'
+				? error
+				: JSON.stringify(error)
+	return rawMessage?.includes('An account with this UUID already exists') ?? false
 }
 
 async function logout(account: MinecraftCredential) {
@@ -1136,6 +1145,10 @@ const messages = defineMessages({
 	customUuidLabel: {
 		id: 'minecraft-account.offline-modal.custom-uuid',
 		defaultMessage: 'Custom UUID',
+	},
+	customUuidDuplicate: {
+		id: 'minecraft-account.offline-modal.custom-uuid-duplicate',
+		defaultMessage: 'An account with this UUID already exists. Please use a different UUID.',
 	},
 	customUuidWarning: {
 		id: 'minecraft-account.offline-modal.custom-uuid-warning',

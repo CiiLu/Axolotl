@@ -6506,6 +6506,9 @@
   "minecraft-account.offline-modal.custom-uuid": {
     "message": "Custom UUID"
   },
+  "minecraft-account.offline-modal.custom-uuid-duplicate": {
+    "message": "An account with this UUID already exists. Please use a different UUID."
+  },
   "minecraft-account.offline-modal.custom-uuid-input-label": {
     "message": "UUID"
   },
