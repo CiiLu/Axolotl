@@ -63,21 +63,38 @@ mod tests {
 
     #[test]
     fn browser_duplicates_match_but_incomplete_files_do_not() {
-        assert!(browser_download_file_name_matches(
-            "example-mod (1).jar",
-            "example-mod.jar"
-        ));
-        assert!(browser_download_file_name_matches(
+        for actual in [
+            "example-mod.jar",
             "EXAMPLE-MOD.JAR",
-            "example-mod.jar"
-        ));
-        assert!(!browser_download_file_name_matches(
+            "example-mod (1).jar",
+            "example-mod(2).jar",
+            "example-mod (123).JAR",
+        ] {
+            assert!(
+                browser_download_file_name_matches(actual, "example-mod.jar"),
+                "expected {actual:?} to match"
+            );
+        }
+        for actual in [
             "example-mod-fabric.jar",
-            "example-mod.jar"
-        ));
+            "example-mod (copy).jar",
+            "example-mod ().jar",
+            "example-mod (1) copy.jar",
+            "example-mod (1).zip",
+            "other-mod (1).jar",
+        ] {
+            assert!(
+                !browser_download_file_name_matches(actual, "example-mod.jar"),
+                "expected {actual:?} not to match"
+            );
+        }
         for suffix in ["crdownload", "part", "partial", "tmp", "download"] {
             assert!(!browser_download_file_name_matches(
                 &format!("example-mod.jar.{suffix}"),
+                "example-mod.jar"
+            ));
+            assert!(!browser_download_file_name_matches(
+                &format!("example-mod.jar.{}", suffix.to_ascii_uppercase()),
                 "example-mod.jar"
             ));
         }

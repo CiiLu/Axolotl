@@ -12,6 +12,13 @@ fn main() {
     println!("cargo::rerun-if-changed=java/settings.gradle.kts");
     println!("cargo::rerun-if-changed=java/gradle.properties");
 
+    #[cfg(target_os = "windows")]
+    if env::var_os("CARGO_FEATURE_TAURI").is_some() {
+        println!(
+            "cargo::rustc-link-arg=/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'"
+        );
+    }
+
     set_env();
     build_java_jars();
 }

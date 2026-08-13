@@ -3507,6 +3507,7 @@ pub async fn import_manual_downloads(
 ) -> crate::Result<CurseForgeManualDownloadScanResult> {
     let Some(download_directory) = scan_directory.or_else(dirs::download_dir)
     else {
+        finalize_curseforge_manual_download_import(instance_id, false).await?;
         return Ok(CurseForgeManualDownloadScanResult::default());
     };
     let mut result = CurseForgeManualDownloadScanResult {
@@ -3562,9 +3563,11 @@ pub async fn import_manual_downloads(
         }
     }
 
-    if !result.imported.is_empty() {
-        crate::api::instance::emit_content_changed(instance_id).await?;
-    }
+    finalize_curseforge_manual_download_import(
+        instance_id,
+        !result.imported.is_empty(),
+    )
+    .await?;
 
     Ok(result)
 }
@@ -3642,7 +3645,7 @@ pub(crate) async fn scan_pending_manual_downloads_in(
         .filter_map(|job| job.instance_id)
         .collect::<HashSet<_>>();
     for instance_id in waiting_instances {
-        resume_curseforge_jobs_if_complete(&instance_id).await?;
+        reconcile_curseforge_waiting_jobs_for_instance(&instance_id).await?;
     }
 
     Ok(())
@@ -3722,11 +3725,27 @@ async fn find_manual_download_candidate(
             continue;
         }
         let path = entry.path();
+        tracing::debug!(
+            project_id = download.project_id,
+            file_id = download.file_id,
+            candidate_path = %path.display(),
+            "Found CurseForge manual download filename candidate"
+        );
         match verify_manual_download_candidate(&path, download, true).await {
             Ok(Some((size, sha1))) => {
                 return Ok(Some((path, size, sha1)));
             }
-            Ok(None) | Err(_) => continue,
+            Ok(None) => continue,
+            Err(error) => {
+                tracing::debug!(
+                    project_id = download.project_id,
+                    file_id = download.file_id,
+                    candidate_path = %path.display(),
+                    %error,
+                    "Unable to inspect CurseForge manual download candidate"
+                );
+                continue;
+            }
         }
     }
 
@@ -3749,13 +3768,32 @@ async fn verify_manual_download_candidate(
             &download.file_name,
         )
     {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "name_mismatch",
+        );
         return Ok(None);
     }
     let metadata = tokio::fs::symlink_metadata(path).await?;
-    if !metadata.is_file()
-        || crate::util::io::is_symlink_or_reparse(&metadata)
-        || download.file_length > 0 && metadata.len() != download.file_length
-    {
+    if crate::util::io::is_symlink_or_reparse(&metadata) {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "symlink_or_reparse",
+        );
+        return Ok(None);
+    }
+    if !metadata.is_file() {
+        trace_manual_download_candidate_rejection(path, download, "non_file");
+        return Ok(None);
+    }
+    if download.file_length > 0 && metadata.len() != download.file_length {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "size_mismatch",
+        );
         return Ok(None);
     }
 
@@ -3766,21 +3804,52 @@ async fn verify_manual_download_candidate(
         .find(|hash| hash.algo == 1)
         .map(|hash| hash.value.as_str())
     {
-        return Ok(sha1
-            .eq_ignore_ascii_case(expected_sha1)
-            .then_some((size, sha1)));
+        if !sha1.eq_ignore_ascii_case(expected_sha1) {
+            trace_manual_download_candidate_rejection(
+                path,
+                download,
+                "sha1_mismatch",
+            );
+            return Ok(None);
+        }
+        return Ok(Some((size, sha1)));
     }
     if manual_download_matches_without_hash(download, &actual_file_name) {
         return Ok(Some((size, sha1)));
     }
     if download.file_fingerprint == 0 {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "missing_integrity_metadata",
+        );
         return Ok(None);
     }
     let bytes = tokio::fs::read(path).await?;
-    Ok(
-        (compute_fingerprint(&bytes) as u64 == download.file_fingerprint)
-            .then_some((size, sha1)),
-    )
+    if compute_fingerprint(&bytes) as u64 != download.file_fingerprint {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "fingerprint_mismatch",
+        );
+        return Ok(None);
+    }
+    Ok(Some((size, sha1)))
+}
+
+fn trace_manual_download_candidate_rejection(
+    path: &Path,
+    download: &CurseForgeManualDownload,
+    reason: &'static str,
+) {
+    tracing::trace!(
+        project_id = download.project_id,
+        file_id = download.file_id,
+        candidate_path = %path.display(),
+        expected_file_name = %download.file_name,
+        rejection_reason = reason,
+        "Rejected CurseForge manual download candidate"
+    );
 }
 
 pub(crate) async fn import_pending_manual_download_from_path(
@@ -3813,15 +3882,16 @@ pub(crate) async fn import_pending_manual_download_from_path(
         else {
             continue;
         };
-        return install_manual_download(
+        let relative_path = install_manual_download(
             instance_id,
             &download,
             source_path,
             size,
             &sha1,
         )
-        .await
-        .map(Some);
+        .await?;
+        finalize_curseforge_manual_download_import(instance_id, false).await?;
+        return Ok(Some(relative_path));
     }
     if matched_pending_name {
         return Err(ErrorKind::InputError(
@@ -3839,18 +3909,32 @@ pub async fn import_pending_manual_download_file(
     file_id: u32,
     source_path: PathBuf,
 ) -> crate::Result<CurseForgeManualDownloadImport> {
-    let download = list_pending_manual_downloads(instance_id)
-        .await?
-        .into_iter()
-        .find(|download| {
-            download.project_id == project_id && download.file_id == file_id
-        })
-        .ok_or_else(|| {
-            ErrorKind::InputError(
-                "The selected CurseForge file is not pending for this instance"
-                    .to_string(),
-            )
-        })?;
+    tracing::debug!(
+        instance_id,
+        project_id,
+        file_id,
+        source_path = %source_path.display(),
+        "Importing selected CurseForge manual download file"
+    );
+    let pending = list_pending_manual_downloads(instance_id).await?;
+    let pending_count = pending.len();
+    let download = pending.into_iter().find(|download| {
+        download.project_id == project_id && download.file_id == file_id
+    });
+    tracing::debug!(
+        instance_id,
+        project_id,
+        file_id,
+        pending_count,
+        pending_found = download.is_some(),
+        "Looked up selected CurseForge pending manual download"
+    );
+    let download = download.ok_or_else(|| {
+        ErrorKind::InputError(
+            "The selected CurseForge file is not pending for this instance"
+                .to_string(),
+        )
+    })?;
     let Some((size, sha1)) =
         verify_manual_download_candidate(&source_path, &download, false)
             .await?
@@ -3869,7 +3953,7 @@ pub async fn import_pending_manual_download_file(
         &sha1,
     )
     .await?;
-    crate::api::instance::emit_content_changed(instance_id).await?;
+    finalize_curseforge_manual_download_import(instance_id, true).await?;
     Ok(CurseForgeManualDownloadImport {
         project_id,
         file_id,
@@ -3877,10 +3961,64 @@ pub async fn import_pending_manual_download_file(
     })
 }
 
-async fn resume_curseforge_jobs_if_complete(
+async fn finalize_curseforge_manual_download_import(
+    instance_id: &str,
+    emit_content_changed: bool,
+) -> crate::Result<()> {
+    let reconciliation =
+        reconcile_curseforge_waiting_jobs_for_instance(instance_id).await;
+    let content_changed = if emit_content_changed {
+        crate::api::instance::emit_content_changed(instance_id).await
+    } else {
+        Ok(())
+    };
+    reconciliation?;
+    content_changed
+}
+
+pub(crate) async fn reconcile_curseforge_waiting_jobs_for_instance(
     instance_id: &str,
 ) -> crate::Result<()> {
     let state = State::get().await?;
+    reconcile_curseforge_waiting_jobs_for_instance_with_state(
+        instance_id,
+        &state,
+    )
+    .await
+}
+
+pub(crate) async fn reconcile_persisted_curseforge_waiting_jobs(
+    state: &State,
+) -> crate::Result<()> {
+    let jobs = crate::install::store::list(false, state).await?;
+    for instance_id in curseforge_waiting_job_instance_ids(&jobs) {
+        reconcile_curseforge_waiting_jobs_for_instance_with_state(
+            &instance_id,
+            state,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+fn curseforge_waiting_job_instance_ids(
+    jobs: &[crate::install::store::InstallJobRecord],
+) -> Vec<String> {
+    let mut instance_ids = jobs
+        .iter()
+        .filter(|job| is_reconcilable_curseforge_waiting_job(job))
+        .filter_map(|job| job.instance_id.clone())
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    instance_ids.sort_unstable();
+    instance_ids
+}
+
+async fn reconcile_curseforge_waiting_jobs_for_instance_with_state(
+    instance_id: &str,
+    state: &State,
+) -> crate::Result<()> {
     let pending = crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
 		instance_id,
 		&state.pool,
@@ -3892,60 +4030,122 @@ async fn resume_curseforge_jobs_if_complete(
 		(download.provider_project_id, download.provider_release_id)
 	})
 	.collect::<HashSet<_>>();
+    let materialized = crate::state::instances::adapters::sqlite::content_rows::get_materialized_curseforge_downloads(
+        instance_id,
+        &state.pool,
+    )
+    .await?
+    .into_iter()
+    .collect::<HashSet<_>>();
 
-    for job in crate::install::store::list(false, &state).await? {
-        if job.status != crate::install::InstallJobStatus::WaitingForUser
-            || job.instance_id.as_deref() != Some(instance_id)
-            || !is_curseforge_manual_download_job(&job.state)
-            || !matches!(
-                &job.state.pause_reason,
-                Some(crate::install::model::InstallPauseReason::MissingRequiredContent { .. })
-            )
+    let jobs = crate::install::store::list(false, &state).await?;
+    let waiting_job_count = jobs
+        .iter()
+        .filter(|job| {
+            job.instance_id.as_deref() == Some(instance_id)
+                && is_reconcilable_curseforge_waiting_job(job)
+        })
+        .count();
+    tracing::debug!(
+        instance_id,
+        pending_key_count = pending.len(),
+        waiting_job_count,
+        "Starting CurseForge waiting install job reconciliation"
+    );
+    let mut recovered_item_count = 0usize;
+    let mut resume_job_called = false;
+    for job in jobs {
+        if job.instance_id.as_deref() != Some(instance_id)
+            || !is_reconcilable_curseforge_waiting_job(&job)
         {
             continue;
         }
-        let items = job.state.download_items();
-        let recovered = items
-            .iter()
-            .filter(|item| {
-                item.status
-                    == crate::install::model::DownloadItemStatus::Skipped
-                    && item.manual_url.is_some()
-                    && item
-                        .project_id
-                        .as_ref()
-                        .zip(item.version_id.as_ref())
-                        .is_some_and(|(project_id, version_id)| {
-                            !pending.contains(&(
-                                project_id.clone(),
-                                version_id.clone(),
-                            ))
-                        })
-            })
-            .map(|item| InstallJobEventKind::ContentFileRecovered {
-                path: item.id.clone(),
-                bytes: item.bytes_total.unwrap_or(0),
-            })
-            .collect::<Vec<_>>();
-        let latest = if recovered.is_empty() {
-            job.snapshot()
-        } else {
-            InstallProgressReporter::new(job.id, job.state)
-                .record_events(recovered)
-                .await?
-        };
-        let remaining = latest.items.iter().any(|item| {
-            item.status == crate::install::model::DownloadItemStatus::Skipped
-                && item.manual_url.is_some()
-                && item.project_id.is_some()
-                && item.version_id.is_some()
-        });
-        if !remaining {
-            match crate::install::runner::resume_job(job.id).await {
-                Ok(_) => {}
+
+        let operation_lock = state
+            .install_job_operation_locks
+            .entry(job.id)
+            .or_default()
+            .clone();
+        let _operation_guard = operation_lock.lock().await;
+        let current =
+            crate::install::store::get_required(job.id, state).await?;
+        if current.instance_id.as_deref() != Some(instance_id)
+            || !is_reconcilable_curseforge_waiting_job(&current)
+        {
+            continue;
+        }
+
+        let reconciliation = curseforge_manual_download_reconciliation(
+            &current.state.download_items(),
+            &pending,
+            &materialized,
+        );
+        for inconsistent in &reconciliation.inconsistent {
+            tracing::warn!(
+                job_id = %current.id,
+                instance_id,
+                project_id = %inconsistent.project_id,
+                file_id = %inconsistent.file_id,
+                item_path = %inconsistent.path,
+                reason = inconsistent.reason,
+                "CurseForge manual download job state is inconsistent"
+            );
+        }
+
+        let recovered_count = reconciliation.recovered.len();
+        recovered_item_count += recovered_count;
+        if recovered_count > 0 {
+            InstallProgressReporter::new(current.id, current.state)
+                .record_events(reconciliation.recovered)
+                .await?;
+        }
+
+        let latest = crate::install::store::get_required(job.id, state).await?;
+        if latest.status != crate::install::InstallJobStatus::WaitingForUser {
+            continue;
+        }
+        let latest_reconciliation = curseforge_manual_download_reconciliation(
+            &latest.state.download_items(),
+            &pending,
+            &materialized,
+        );
+        tracing::debug!(
+            job_id = %latest.id,
+            instance_id,
+            pending_count = pending.len(),
+            manual_skipped_count = reconciliation.manual_skipped_count,
+            materialized_exact_match_count =
+                reconciliation.materialized_exact_match_count,
+            recovered_count,
+            unresolved_pending_count =
+                latest_reconciliation.unresolved_pending_count,
+            inconsistent_count = latest_reconciliation.inconsistent.len(),
+            "Reconciled CurseForge waiting install job"
+        );
+
+        if latest_reconciliation.unresolved_pending_count == 0
+            && latest_reconciliation.inconsistent.is_empty()
+        {
+            resume_job_called = true;
+            match crate::install::runner::resume_job(latest.id).await {
+                Ok(_) => {
+                    tracing::info!(
+                        job_id = %latest.id,
+                        instance_id,
+                        pending_count = pending.len(),
+                        manual_skipped_count =
+                            reconciliation.manual_skipped_count,
+                        materialized_exact_match_count =
+                            reconciliation.materialized_exact_match_count,
+                        recovered_count,
+                        unresolved_pending_count = 0,
+                        inconsistent_count = 0,
+                        "Reconciled completed CurseForge manual downloads and resuming install job"
+                    );
+                }
                 Err(error) => {
                     let current =
-                        crate::install::store::get_required(job.id, &state)
+                        crate::install::store::get_required(latest.id, state)
                             .await?;
                     if current.status
                         == crate::install::InstallJobStatus::WaitingForUser
@@ -3956,7 +4156,91 @@ async fn resume_curseforge_jobs_if_complete(
             }
         }
     }
+    tracing::debug!(
+        instance_id,
+        pending_key_count = pending.len(),
+        waiting_job_count,
+        recovered_item_count,
+        resume_job_called,
+        "Completed CurseForge waiting install job reconciliation"
+    );
     Ok(())
+}
+
+#[derive(Debug)]
+struct CurseForgeManualDownloadInconsistency {
+    path: String,
+    project_id: String,
+    file_id: String,
+    reason: &'static str,
+}
+
+#[derive(Debug, Default)]
+struct CurseForgeManualDownloadReconciliation {
+    recovered: Vec<InstallJobEventKind>,
+    inconsistent: Vec<CurseForgeManualDownloadInconsistency>,
+    manual_skipped_count: usize,
+    materialized_exact_match_count: usize,
+    unresolved_pending_count: usize,
+}
+
+fn curseforge_manual_download_reconciliation(
+    items: &[crate::install::model::DownloadItemSnapshot],
+    pending: &HashSet<(String, String)>,
+    materialized: &HashSet<(String, String)>,
+) -> CurseForgeManualDownloadReconciliation {
+    let mut result = CurseForgeManualDownloadReconciliation::default();
+    for item in items.iter().filter(|item| {
+        item.status == crate::install::model::DownloadItemStatus::Skipped
+            && item.manual_url.is_some()
+            && item.project_id.is_some()
+            && item.version_id.is_some()
+    }) {
+        result.manual_skipped_count += 1;
+        let project_id = item.project_id.as_ref().expect("filtered project ID");
+        let version_id = item.version_id.as_ref().expect("filtered file ID");
+        if pending.contains(&(project_id.clone(), version_id.clone())) {
+            result.unresolved_pending_count += 1;
+        } else if materialized
+            .contains(&(project_id.clone(), version_id.clone()))
+        {
+            result.materialized_exact_match_count += 1;
+            result
+                .recovered
+                .push(InstallJobEventKind::ContentFileRecovered {
+                    path: item.id.clone(),
+                    bytes: item.bytes_total.unwrap_or(0),
+                });
+        } else {
+            result
+                .inconsistent
+                .push(CurseForgeManualDownloadInconsistency {
+                    path: item.id.clone(),
+                    project_id: project_id.clone(),
+                    file_id: version_id.clone(),
+                    reason: "pending_missing_but_not_materialized",
+                });
+        }
+    }
+    result
+}
+
+fn is_reconcilable_curseforge_waiting_job(
+    job: &crate::install::store::InstallJobRecord,
+) -> bool {
+    job.status == crate::install::InstallJobStatus::WaitingForUser
+        && job.instance_id.is_some()
+        && is_curseforge_manual_download_job(&job.state)
+        && matches!(
+            &job.state.pause_reason,
+            Some(crate::install::model::InstallPauseReason::MissingRequiredContent { .. })
+        )
+        && job.state.download_items().iter().any(|item| {
+            item.status == crate::install::model::DownloadItemStatus::Skipped
+                && item.manual_url.is_some()
+                && item.project_id.is_some()
+                && item.version_id.is_some()
+        })
 }
 
 fn is_curseforge_manual_download_job(
@@ -4025,10 +4309,18 @@ async fn install_manual_download(
         crate::state::instances::adapters::sqlite::content_rows::bump_content_set_revision_in_transaction(
 			&content_set.id,
 			&mut tx,
-		)
+        )
 		.await?;
         tx.commit().await?;
-        return Ok(source_path.to_string_lossy().to_string());
+        let relative_path = source_path.to_string_lossy().to_string();
+        tracing::info!(
+            instance_id,
+            project_id = download.project_id,
+            file_id = download.file_id,
+            relative_path = %relative_path,
+            "Completed CurseForge pending manual download record"
+        );
+        return Ok(relative_path);
     }
     let project_type = managed_project_type(&download.project_type)?;
     let target_folder = manual_download_target_folder(download, project_type)?;
@@ -4086,13 +4378,13 @@ async fn install_manual_download(
             return Err(error);
         }
     }
-    if let Err(error) = resume_curseforge_jobs_if_complete(instance_id).await {
-        tracing::warn!(
-            instance_id,
-            %error,
-            "Unable to resume CurseForge install after manual import"
-        );
-    }
+    tracing::info!(
+        instance_id,
+        project_id = download.project_id,
+        file_id = download.file_id,
+        relative_path = %relative_path,
+        "Completed CurseForge pending manual download record"
+    );
     if download.ownership_kind
         == crate::state::instances::ContentOwnershipKind::PackManaged
         && download.operation_kind
@@ -5219,6 +5511,320 @@ fn murmur2(data: &[u8], seed: u32) -> u32 {
 mod tests {
     use super::*;
 
+    fn skipped_curseforge_manual_item(
+        id: &str,
+        project_id: &str,
+        version_id: &str,
+    ) -> crate::install::model::DownloadItemSnapshot {
+        crate::install::model::DownloadItemSnapshot {
+            id: id.to_string(),
+            name: id.to_string(),
+            project_id: Some(project_id.to_string()),
+            version_id: Some(version_id.to_string()),
+            status: crate::install::model::DownloadItemStatus::Skipped,
+            bytes_downloaded: 0,
+            bytes_total: Some(42),
+            attempt: Some(1),
+            max_attempts: Some(1),
+            error: Some("CurseForge requires manual download".to_string()),
+            manual_url: Some("https://www.curseforge.com/download".to_string()),
+            request_url: None,
+            source: None,
+        }
+    }
+
+    fn waiting_manual_job_record(
+        instance_id: &str,
+        request: crate::install::model::InstallRequest,
+    ) -> crate::install::store::InstallJobRecord {
+        let mut state = crate::install::model::InstallJobState::new(request);
+        state.record_event(InstallJobEventKind::ContentFileSkipped {
+            path: "mods/one.jar".to_string(),
+            reason: "manual download required".to_string(),
+            project_id: Some("1".to_string()),
+            version_id: Some("10".to_string()),
+            manual_url: Some("https://www.curseforge.com/download".to_string()),
+        });
+        state.record_event(InstallJobEventKind::WaitingForUser {
+            reason:
+                crate::install::model::InstallPauseReason::MissingRequiredContent {
+                    failed_files: 1,
+                    paths: vec!["mods/one.jar".to_string()],
+                },
+        });
+        state.pause_reason = Some(
+            crate::install::model::InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/one.jar".to_string()],
+            },
+        );
+        let now = chrono::Utc::now();
+        crate::install::store::InstallJobRecord {
+            id: uuid::Uuid::new_v4(),
+            instance_id: Some(instance_id.to_string()),
+            kind: crate::install::model::InstallJobKind::InstallContent,
+            status: crate::install::model::InstallJobStatus::WaitingForUser,
+            state,
+            created: now,
+            modified: now,
+            finished: None,
+            dismissed: false,
+        }
+    }
+
+    fn apply_recovered_events(
+        items: &mut [crate::install::model::DownloadItemSnapshot],
+        events: &[InstallJobEventKind],
+    ) {
+        for event in events {
+            let InstallJobEventKind::ContentFileRecovered { path, bytes } =
+                event
+            else {
+                continue;
+            };
+            let item = items.iter_mut().find(|item| item.id == *path).unwrap();
+            item.status = crate::install::model::DownloadItemStatus::Completed;
+            item.bytes_downloaded = *bytes;
+        }
+    }
+
+    fn reconcile_and_simulate_resume(
+        items: &mut [crate::install::model::DownloadItemSnapshot],
+        pending: &HashSet<(String, String)>,
+        materialized: &HashSet<(String, String)>,
+        resume_count: &mut usize,
+    ) -> CurseForgeManualDownloadReconciliation {
+        let result = curseforge_manual_download_reconciliation(
+            items,
+            pending,
+            materialized,
+        );
+        apply_recovered_events(items, &result.recovered);
+        let latest = curseforge_manual_download_reconciliation(
+            items,
+            pending,
+            materialized,
+        );
+        if latest.unresolved_pending_count == 0
+            && latest.inconsistent.is_empty()
+        {
+            *resume_count += 1;
+        }
+        result
+    }
+
+    #[test]
+    fn restart_split_state_self_heals() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let materialized = HashSet::from([("1".to_string(), "10".to_string())]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &HashSet::new(),
+            &materialized,
+            &mut resume_count,
+        );
+
+        assert_eq!(result.recovered.len(), 1);
+        assert_eq!(result.materialized_exact_match_count, 1);
+        assert_eq!(resume_count, 1);
+        assert_eq!(
+            items[0].status,
+            crate::install::model::DownloadItemStatus::Completed
+        );
+    }
+
+    #[test]
+    fn missing_pending_without_materialization_does_not_resume() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &HashSet::new(),
+            &HashSet::new(),
+            &mut resume_count,
+        );
+
+        assert!(result.recovered.is_empty());
+        assert_eq!(result.inconsistent.len(), 1);
+        assert_eq!(
+            result.inconsistent[0].reason,
+            "pending_missing_but_not_materialized"
+        );
+        assert_eq!(resume_count, 0);
+        assert_eq!(
+            items[0].status,
+            crate::install::model::DownloadItemStatus::Skipped
+        );
+    }
+
+    #[test]
+    fn pending_still_exists_does_not_resume() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let pending = HashSet::from([("1".to_string(), "10".to_string())]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &pending,
+            &HashSet::new(),
+            &mut resume_count,
+        );
+
+        assert!(result.recovered.is_empty());
+        assert_eq!(result.unresolved_pending_count, 1);
+        assert!(result.inconsistent.is_empty());
+        assert_eq!(resume_count, 0);
+    }
+
+    #[test]
+    fn partial_reconciliation() {
+        let mut items = vec![
+            skipped_curseforge_manual_item("mods/a.jar", "1", "10"),
+            skipped_curseforge_manual_item("mods/b.jar", "2", "20"),
+            skipped_curseforge_manual_item("mods/c.jar", "3", "30"),
+        ];
+        let pending = HashSet::from([("1".to_string(), "10".to_string())]);
+        let materialized = HashSet::from([
+            ("2".to_string(), "20".to_string()),
+            ("3".to_string(), "30".to_string()),
+        ]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &pending,
+            &materialized,
+            &mut resume_count,
+        );
+
+        assert_eq!(result.recovered.len(), 2);
+        assert_eq!(result.unresolved_pending_count, 1);
+        assert_eq!(resume_count, 0);
+        assert_eq!(
+            items[0].status,
+            crate::install::model::DownloadItemStatus::Skipped
+        );
+        assert!(items[1..].iter().all(|item| {
+            item.status == crate::install::model::DownloadItemStatus::Completed
+        }));
+    }
+
+    #[test]
+    fn repeated_reconciliation_is_idempotent() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let materialized = HashSet::from([("1".to_string(), "10".to_string())]);
+        let mut resume_count = 0;
+        let mut waiting_for_user = true;
+        let mut recovered_count = 0;
+
+        for _ in 0..3 {
+            if !waiting_for_user {
+                continue;
+            }
+            let result = reconcile_and_simulate_resume(
+                &mut items,
+                &HashSet::new(),
+                &materialized,
+                &mut resume_count,
+            );
+            recovered_count += result.recovered.len();
+            if resume_count > 0 {
+                waiting_for_user = false;
+            }
+        }
+
+        assert_eq!(recovered_count, 1);
+        assert_eq!(resume_count, 1);
+    }
+
+    #[test]
+    fn scanner_disabled_restart_still_self_heals() {
+        let curseforge_job = waiting_manual_job_record(
+            "curseforge-instance",
+            crate::install::model::InstallRequest::InstallCurseForgeContent {
+                request: CurseForgeInstallRequest {
+                    instance_id: "curseforge-instance".to_string(),
+                    project_id: 1,
+                    file_id: 10,
+                    project_type: "mod".to_string(),
+                    ownership_kind:
+                        crate::state::instances::ContentOwnershipKind::PackManaged,
+                    manual_operation_kind: crate::state::instances::ManualDownloadOperationKind::PackInstall,
+                    game_version: None,
+                    mod_loader_type: None,
+                    world_name: None,
+                    install_dependencies: true,
+                },
+                display_title: "CurseForge".to_string(),
+                display_icon: None,
+            },
+        );
+        let modrinth_job = waiting_manual_job_record(
+            "modrinth-instance",
+            crate::install::model::InstallRequest::InstallPackToExistingInstance {
+                instance_id: "modrinth-instance".to_string(),
+                location: crate::api::pack::install_from::CreatePackLocation::FromVersionId {
+                    project_id: "project".to_string(),
+                    version_id: "version".to_string(),
+                    title: "Modrinth".to_string(),
+                    icon_url: None,
+                },
+                post_install_edit: None,
+            },
+        );
+        assert_eq!(
+            curseforge_waiting_job_instance_ids(&[
+                curseforge_job,
+                modrinth_job,
+            ]),
+            vec!["curseforge-instance".to_string()]
+        );
+
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let materialized = HashSet::from([("1".to_string(), "10".to_string())]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &HashSet::new(),
+            &materialized,
+            &mut resume_count,
+        );
+
+        assert_eq!(result.recovered.len(), 1);
+        assert_eq!(resume_count, 1);
+    }
+
+    #[test]
+    fn wrong_instance_or_release_never_recovers() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let other_instance_or_release = HashSet::from([
+            ("1".to_string(), "11".to_string()),
+            ("2".to_string(), "10".to_string()),
+        ]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &HashSet::new(),
+            &other_instance_or_release,
+            &mut resume_count,
+        );
+
+        assert!(result.recovered.is_empty());
+        assert_eq!(result.inconsistent.len(), 1);
+        assert_eq!(resume_count, 0);
+    }
+
     #[test]
     fn fingerprint_ignores_curseforge_whitespace() {
         assert_eq!(
@@ -5483,6 +6089,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "tauri"))]
     #[tokio::test]
     async fn manual_import_completes_persisted_pack_member() {
         crate::event::EventState::init().await.unwrap();
