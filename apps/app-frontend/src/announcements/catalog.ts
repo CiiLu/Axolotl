@@ -33,6 +33,25 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.6',
+		version: '1.7.6',
+		publishedAt: '2026-08-14',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.6',
+			'zh-CN': 'Axolotl Launcher 1.7.6',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Added a preferred IP solution for domestic use of Google Translate, now Google Translate can be used in domestic network environments.',
+					'zh-CN':
+						'为Google翻译的国内使用提供了优选IP方案，现在可以在国内网络环境使用Google翻译了。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.5',
 		version: '1.7.5',
 		publishedAt: '2026-08-13',

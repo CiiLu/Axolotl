@@ -1,4 +1,5 @@
 use crate::api::Result;
+use theseus::google_ip;
 use theseus::translation::{
     self, TranslationProvider, TranslationRequest, TranslationResponse,
     TranslationSettings,
@@ -12,6 +13,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             translation_test_provider,
             translation_translate,
             translation_clear_cache,
+            translation_google_ip_pool_size,
         ])
         .build()
 }
@@ -45,4 +47,9 @@ pub async fn translation_translate(
 #[tauri::command]
 pub async fn translation_clear_cache() -> Result<()> {
     Ok(translation::clear_cache().await?)
+}
+
+#[tauri::command]
+pub async fn translation_google_ip_pool_size() -> usize {
+    google_ip::ip_pool_size().await
 }
