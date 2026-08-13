@@ -1,6 +1,6 @@
 CREATE TABLE translation_settings (
 	id INTEGER NOT NULL CHECK (id = 0),
-	provider TEXT NOT NULL DEFAULT 'microsoft',
+	provider TEXT NOT NULL DEFAULT 'google',
 	target_language TEXT NOT NULL DEFAULT '',
 	mode TEXT NOT NULL DEFAULT 'bilingual',
 	auto_translate INTEGER NOT NULL DEFAULT FALSE,
