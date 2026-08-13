@@ -184,6 +184,14 @@ pub struct UnifiedSearchResponse {
     pub total_hits: u32,
 }
 
+fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de> + Default,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UnifiedSearchHit {
     pub provider: ContentProvider,
@@ -194,13 +202,16 @@ pub struct UnifiedSearchHit {
     pub title: String,
     pub description: String,
     pub project_type: String,
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub categories: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub versions: Vec<String>,
     pub downloads: u64,
     pub icon_url: Option<String>,
     pub date_created: String,
     pub date_modified: String,
     pub latest_version: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub gallery: Vec<String>,
     pub website_url: Option<String>,
     pub source_url: Option<String>,
@@ -277,18 +288,18 @@ pub struct CurseForgeProject {
     pub download_count: u64,
     pub is_featured: bool,
     pub primary_category_id: u32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub categories: Vec<CurseForgeCategory>,
     pub class_id: Option<u32>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub authors: Vec<CurseForgeAuthor>,
     pub logo: Option<CurseForgeAsset>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub screenshots: Vec<CurseForgeAsset>,
     pub main_file_id: u32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub latest_files: Vec<CurseForgeFile>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub latest_files_indexes: Vec<CurseForgeFileIndex>,
     pub date_created: String,
     pub date_modified: String,
@@ -340,18 +351,18 @@ pub struct CurseForgeFile {
     pub file_name: String,
     pub release_type: u32,
     pub file_status: u32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub hashes: Vec<CurseForgeFileHash>,
     pub file_date: String,
     pub file_length: u64,
     pub download_count: u64,
     pub file_size_on_disk: Option<u64>,
     pub download_url: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub game_versions: Vec<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub sortable_game_versions: Vec<CurseForgeSortableGameVersion>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub dependencies: Vec<CurseForgeFileDependency>,
     pub expose_as_alternative: Option<bool>,
     pub parent_project_file_id: Option<u32>,
@@ -361,7 +372,7 @@ pub struct CurseForgeFile {
     pub is_early_access_content: Option<bool>,
     pub early_access_end_date: Option<String>,
     pub file_fingerprint: u64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub modules: Vec<CurseForgeFileModule>,
 }
 
@@ -5218,6 +5229,56 @@ fn murmur2(data: &[u8], seed: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unified_search_hit_accepts_null_gallery() {
+        let hit: UnifiedSearchHit = serde_json::from_value(serde_json::json!({
+            "provider": "curseforge",
+            "project_id": "250419",
+            "slug": null,
+            "author": "DarkhaxDev",
+            "author_url": null,
+            "title": "Enchantment Descriptions",
+            "description": "description",
+            "project_type": "mod",
+            "categories": [],
+            "versions": [],
+            "downloads": 0,
+            "icon_url": null,
+            "date_created": "2026-01-01T00:00:00Z",
+            "date_modified": "2026-01-01T00:00:00Z",
+            "latest_version": null,
+            "gallery": null,
+            "website_url": null,
+            "source_url": null,
+            "allow_mod_distribution": null,
+        }))
+        .unwrap();
+
+        assert!(hit.gallery.is_empty());
+    }
+
+    #[test]
+    fn curseforge_file_accepts_null_modules() {
+        let file: CurseForgeFile = serde_json::from_value(serde_json::json!({
+            "id": 4031925,
+            "gameId": 432,
+            "modId": 250419,
+            "isAvailable": true,
+            "displayName": "old.jar",
+            "fileName": "old.jar",
+            "releaseType": 1,
+            "fileStatus": 4,
+            "fileDate": "2026-01-01T00:00:00Z",
+            "fileLength": 1,
+            "downloadCount": 0,
+            "fileFingerprint": 0,
+            "modules": null,
+        }))
+        .unwrap();
+
+        assert!(file.modules.is_empty());
+    }
 
     #[test]
     fn fingerprint_ignores_curseforge_whitespace() {
