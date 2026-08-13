@@ -1,6 +1,41 @@
 {
-  "updated_at": "2026-08-13T00:13:46.467Z",
+  "updated_at": "2026-08-13T11:49:14.262Z",
   "announcements": [
+    {
+      "id": "launcher-1.7.5",
+      "version": "1.7.5",
+      "publishedAt": "2026-08-13",
+      "title": {
+        "en-US": "Axolotl Launcher 1.7.5",
+        "zh-CN": "Axolotl Launcher 1.7.5"
+      },
+      "changes": {
+        "fixed": [
+          {
+            "en-US": "Fixed unpredictable account ordering when multiple accounts share the same name and login type.",
+            "zh-CN": "修复了多个同名同类型账号顺序不固定的问题。"
+          },
+          {
+            "en-US": "Fixed the issue of CurseForge modpacks not showing updates after the latest version was published.",
+            "zh-CN": "修复CurseForge整合包错误显示更新的问题。"
+          },
+          {
+            "en-US": "Fixed the issue of CurseForge resources failing to parse correctly.",
+            "zh-CN": "修复CurseForge资源解析错误问题。"
+          }
+        ],
+        "changed": [
+          {
+            "en-US": "Improved the readability of the duplicate custom UUID error message in the offline account dialog.",
+            "zh-CN": "优化了离线账户弹窗中重复自定义 UUID 的错误提示可读性。"
+          },
+          {
+            "en-US": "Optimized the filtering function of the instance interface content section, now allowing multiple filter conditions to be selected by holding down ctrl.",
+            "zh-CN": "优化实例界面内容板块的筛选功能，现在按住ctrl可多选筛选条件。"
+          }
+        ]
+      }
+    },
     {
       "id": "launcher-1.7.4",
       "version": "1.7.4",
