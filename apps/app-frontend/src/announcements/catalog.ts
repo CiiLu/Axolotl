@@ -52,12 +52,21 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the issue of CurseForge modpacks not showing updates after the latest version was published.',
 					'zh-CN': '修复CurseForge整合包错误显示更新的问题。',
 				},
+				{
+					'en-US': 'Fixed the issue of CurseForge resources failing to parse correctly.',
+					'zh-CN': '修复CurseForge资源解析错误问题。',
+				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Improved the readability of the duplicate custom UUID error message in the offline account dialog.',
 					'zh-CN': '优化了离线账户弹窗中重复自定义 UUID 的错误提示可读性。',
+				},
+				{
+					'en-US':
+						'Optimized the filtering function of the instance interface content section, now allowing multiple filter conditions to be selected by holding down ctrl.',
+					'zh-CN': '优化实例界面内容板块的筛选功能，现在按住ctrl可多选筛选条件。',
 				},
 			],
 		},
