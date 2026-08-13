@@ -1,6 +1,6 @@
 CREATE TABLE translation_settings (
 	id INTEGER NOT NULL CHECK (id = 0),
-	provider TEXT NOT NULL DEFAULT 'google',
+	provider TEXT NOT NULL DEFAULT 'microsoft',
 	target_language TEXT NOT NULL DEFAULT '',
 	mode TEXT NOT NULL DEFAULT 'bilingual',
 	auto_translate INTEGER NOT NULL DEFAULT FALSE,
@@ -21,4 +21,4 @@ CREATE TABLE translation_cache (
 	created_at INTEGER NOT NULL
 );
 
-CREATE INDEX translation_cache_created_at ON translation_cache(created_at);
+CREATE INDEX translation_cache_created_at ON translation_cache (created_at);
