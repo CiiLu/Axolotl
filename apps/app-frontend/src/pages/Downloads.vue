@@ -241,10 +241,7 @@
 				</div>
 
 				<div v-if="job.status === 'waiting_for_user'" class="px-4 pb-4">
-					<Admonition
-						type="warning"
-						:header="formatMessage(messages.actionNeeded)"
-					>
+					<Admonition type="warning" :header="formatMessage(messages.actionNeeded)">
 						{{
 							formatMessage(messages.missingRequiredContent, {
 								completed: completedRequiredFiles(job),
