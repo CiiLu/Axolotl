@@ -56,7 +56,7 @@ interface PipelineResult {
 const filterMessages = defineMessages({
 	updates: {
 		id: 'content.filter.updates',
-		defaultMessage: '可更新',
+		defaultMessage: 'Update available',
 	},
 	warnings: {
 		id: 'content.filter.warnings',

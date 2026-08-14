@@ -2,10 +2,6 @@ import type { ComputedRef, Ref } from 'vue'
 import { computed, ref, watch } from 'vue'
 
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
-import {
-	commonProjectTypeCategoryMessages,
-	normalizeProjectType,
-} from '#ui/utils/common-messages'
 
 import type { ContentItem } from '../types'
 
@@ -64,15 +60,9 @@ const openSourceLicenseIds = new Set([
 	'Zlib',
 ])
 
-type EnvironmentFilterValue =
-	| 'client'
-	| 'server'
-	| 'client_and_server'
-	| 'singleplayer'
+type EnvironmentFilterValue = 'client' | 'server' | 'client_and_server' | 'singleplayer'
 
-function getEnvironmentFilterValue(
-	environment?: string,
-): EnvironmentFilterValue | undefined {
+function getEnvironmentFilterValue(environment?: string): EnvironmentFilterValue | undefined {
 	switch (environment) {
 		case 'client_only':
 			return 'client'
@@ -102,83 +92,95 @@ const loaderKeys = new Set(['fabric', 'forge', 'neoforge', 'quilt'])
 const messages = defineMessages({
 	categoryState: {
 		id: 'content.metadata-filter.state',
-		defaultMessage: '状态',
+		defaultMessage: 'Status',
 	},
 	categoryUpdates: {
 		id: 'content.metadata-filter.updates',
-		defaultMessage: '更新',
-	},
-	categoryType: {
-		id: 'content.metadata-filter.type',
-		defaultMessage: '类型',
+		defaultMessage: 'Updates',
 	},
 	categoryAuthor: {
 		id: 'content.metadata-filter.author',
-		defaultMessage: '作者',
+		defaultMessage: 'Author',
 	},
 	categoryEnvironment: {
 		id: 'content.metadata-filter.environment',
-		defaultMessage: '环境',
+		defaultMessage: 'Environment',
 	},
 	categoryLoader: {
 		id: 'content.metadata-filter.loader',
-		defaultMessage: '加载器',
+		defaultMessage: 'Loader',
 	},
 	categorySource: {
 		id: 'content.metadata-filter.source',
-		defaultMessage: '来源',
+		defaultMessage: 'Source',
 	},
 	categoryExternal: {
 		id: 'content.metadata-filter.external',
-		defaultMessage: '外部文件',
+		defaultMessage: 'External files',
 	},
 	categoryOpenSource: {
 		id: 'content.metadata-filter.open-source',
-		defaultMessage: '开源',
+		defaultMessage: 'Open source',
 	},
 	optionEnabled: {
 		id: 'content.metadata-filter.state.enabled',
-		defaultMessage: '已启用',
+		defaultMessage: 'Enabled',
 	},
 	optionDisabled: {
 		id: 'content.metadata-filter.state.disabled',
-		defaultMessage: '已禁用',
+		defaultMessage: 'Disabled',
 	},
 	optionUpdateAvailable: {
 		id: 'content.metadata-filter.update.available',
-		defaultMessage: '可更新',
+		defaultMessage: 'Update available',
 	},
 	optionUpToDate: {
 		id: 'content.metadata-filter.update.up-to-date',
-		defaultMessage: '已是最新',
+		defaultMessage: 'Up to date',
 	},
 	optionUnknown: {
 		id: 'content.metadata-filter.unknown',
-		defaultMessage: '未知',
+		defaultMessage: 'Unknown',
 	},
 	optionClient: {
 		id: 'content.metadata-filter.environment.client',
-		defaultMessage: '客户端',
+		defaultMessage: 'Client',
 	},
 	optionServer: {
 		id: 'content.metadata-filter.environment.server',
-		defaultMessage: '服务端',
+		defaultMessage: 'Server',
 	},
 	optionClientAndServer: {
 		id: 'content.metadata-filter.environment.client-and-server',
-		defaultMessage: '客户端和服务端',
+		defaultMessage: 'Client & server',
 	},
 	optionSingleplayer: {
 		id: 'content.metadata-filter.environment.singleplayer',
-		defaultMessage: '单人游戏',
+		defaultMessage: 'Singleplayer',
 	},
 	optionOtherLoader: {
 		id: 'content.metadata-filter.loader.other',
-		defaultMessage: '其他',
+		defaultMessage: 'Other',
+	},
+	loaderFabric: {
+		id: 'content.metadata-filter.loader.fabric',
+		defaultMessage: 'Fabric',
+	},
+	loaderForge: {
+		id: 'content.metadata-filter.loader.forge',
+		defaultMessage: 'Forge',
+	},
+	loaderNeoForge: {
+		id: 'content.metadata-filter.loader.neoforge',
+		defaultMessage: 'NeoForge',
+	},
+	loaderQuilt: {
+		id: 'content.metadata-filter.loader.quilt',
+		defaultMessage: 'Quilt',
 	},
 	optionSourceLocal: {
 		id: 'content.metadata-filter.source.local',
-		defaultMessage: '本地',
+		defaultMessage: 'Local',
 	},
 	optionSourceCurseforge: {
 		id: 'content.metadata-filter.source.curseforge',
@@ -186,43 +188,35 @@ const messages = defineMessages({
 	},
 	optionSourceModrinthModpack: {
 		id: 'content.metadata-filter.source.modrinth-modpack',
-		defaultMessage: 'Modrinth 整合包',
+		defaultMessage: 'Modrinth modpack',
 	},
 	optionSourceImportedModpack: {
 		id: 'content.metadata-filter.source.imported-modpack',
-		defaultMessage: '导入整合包',
+		defaultMessage: 'Imported modpack',
 	},
 	optionSourceServerProject: {
 		id: 'content.metadata-filter.source.server-project',
-		defaultMessage: '服务器项目',
+		defaultMessage: 'Server project',
 	},
 	optionSourceSharedInstance: {
 		id: 'content.metadata-filter.source.shared-instance',
-		defaultMessage: '共享实例',
+		defaultMessage: 'Shared instance',
 	},
 	optionExternal: {
 		id: 'content.metadata-filter.external.external',
-		defaultMessage: '外部文件',
+		defaultMessage: 'External file',
 	},
 	optionLinked: {
 		id: 'content.metadata-filter.external.linked',
-		defaultMessage: '在线项目',
+		defaultMessage: 'Online project',
 	},
 	optionOpenSource: {
 		id: 'content.metadata-filter.open-source.open',
-		defaultMessage: '开源',
+		defaultMessage: 'Open source',
 	},
 	optionClosedSource: {
 		id: 'content.metadata-filter.open-source.closed',
-		defaultMessage: '非开源',
-	},
-	searchPlaceholder: {
-		id: 'content.metadata-filter.search',
-		defaultMessage: '搜索...',
-	},
-	clearLabel: {
-		id: 'content.metadata-filter.clear',
-		defaultMessage: '清除',
+		defaultMessage: 'Closed source',
 	},
 })
 
@@ -243,16 +237,13 @@ export function useContentMetadataFilters(
 	const { formatMessage } = useVIntl()
 
 	const definitions = computed<MetadataFilterDefinition[]>(() => {
-		const typeMessages = commonProjectTypeCategoryMessages
 		return [
 			{
 				key: 'state',
 				label: formatMessage(messages.categoryState),
 				order: ['enabled', 'disabled'],
 				values: (item) =>
-					item.enabled === undefined
-						? []
-						: [item.enabled ? 'enabled' : 'disabled'],
+					item.enabled === undefined ? [] : [item.enabled ? 'enabled' : 'disabled'],
 				labelFor: (value) =>
 					value === 'enabled'
 						? formatMessage(messages.optionEnabled)
@@ -262,34 +253,18 @@ export function useContentMetadataFilters(
 				key: 'updates',
 				label: formatMessage(messages.categoryUpdates),
 				order: ['available', 'current'],
-				values: (item) => [
-					item.update != null ? 'available' : 'current',
-				],
+				values: (item) => [item.update != null ? 'available' : 'current'],
 				labelFor: (value) =>
 					value === 'available'
 						? formatMessage(messages.optionUpdateAvailable)
 						: formatMessage(messages.optionUpToDate),
 			},
 			{
-				key: 'type',
-				label: formatMessage(messages.categoryType),
-				values: (item) => [normalizeProjectType(item.project_type)],
-				labelFor: (value) => {
-					const message =
-						typeMessages[value as keyof typeof typeMessages]
-					return message ? formatMessage(message) : value
-				},
-			},
-			{
 				key: 'author',
 				label: formatMessage(messages.categoryAuthor),
 				searchable: true,
-				values: (item) =>
-					item.owner?.name ? [item.owner.name] : [UNKNOWN],
-				labelFor: (value) =>
-					value === UNKNOWN
-						? formatMessage(messages.optionUnknown)
-						: value,
+				values: (item) => (item.owner?.name ? [item.owner.name] : [UNKNOWN]),
+				labelFor: (value) => (value === UNKNOWN ? formatMessage(messages.optionUnknown) : value),
 			},
 			{
 				key: 'environment',
@@ -325,13 +300,13 @@ export function useContentMetadataFilters(
 				labelFor: (value) => {
 					switch (value) {
 						case 'fabric':
-							return 'Fabric'
+							return formatMessage(messages.loaderFabric)
 						case 'forge':
-							return 'Forge'
+							return formatMessage(messages.loaderForge)
 						case 'neoforge':
-							return 'NeoForge'
+							return formatMessage(messages.loaderNeoForge)
 						case 'quilt':
-							return 'Quilt'
+							return formatMessage(messages.loaderQuilt)
 						case 'other':
 							return formatMessage(messages.optionOtherLoader)
 						default:
@@ -350,8 +325,7 @@ export function useContentMetadataFilters(
 					'server_project',
 					'shared_instance',
 				],
-				values: (item) =>
-					item.source_kind ? [item.source_kind] : [UNKNOWN],
+				values: (item) => (item.source_kind ? [item.source_kind] : [UNKNOWN]),
 				labelFor: (value) => {
 					switch (value) {
 						case 'local':
@@ -359,21 +333,13 @@ export function useContentMetadataFilters(
 						case 'curseforge':
 							return formatMessage(messages.optionSourceCurseforge)
 						case 'modrinth_modpack':
-							return formatMessage(
-								messages.optionSourceModrinthModpack,
-							)
+							return formatMessage(messages.optionSourceModrinthModpack)
 						case 'imported_modpack':
-							return formatMessage(
-								messages.optionSourceImportedModpack,
-							)
+							return formatMessage(messages.optionSourceImportedModpack)
 						case 'server_project':
-							return formatMessage(
-								messages.optionSourceServerProject,
-							)
+							return formatMessage(messages.optionSourceServerProject)
 						case 'shared_instance':
-							return formatMessage(
-								messages.optionSourceSharedInstance,
-							)
+							return formatMessage(messages.optionSourceSharedInstance)
 						default:
 							return formatMessage(messages.optionUnknown)
 					}
@@ -383,9 +349,7 @@ export function useContentMetadataFilters(
 				key: 'external',
 				label: formatMessage(messages.categoryExternal),
 				order: ['linked', 'external'],
-				values: (item) => [
-					item.external ? 'external' : 'linked',
-				],
+				values: (item) => [item.external ? 'external' : 'linked'],
 				labelFor: (value) =>
 					value === 'external'
 						? formatMessage(messages.optionExternal)
@@ -412,7 +376,6 @@ export function useContentMetadataFilters(
 			},
 		]
 	})
-
 	const metadataFilterCategories = computed<MetadataFilterCategory[]>(() =>
 		definitions.value
 			.map((definition) => {
@@ -435,9 +398,7 @@ export function useContentMetadataFilters(
 
 				const total = items.value.length
 				const visible = [...options.values()]
-					.filter(
-						(option) => (counts.get(option.value) ?? 0) !== total,
-					)
+					.filter((option) => (counts.get(option.value) ?? 0) !== total)
 					.sort((a, b) => {
 						if (a.value === UNKNOWN) return 1
 						if (b.value === UNKNOWN) return -1
@@ -469,16 +430,10 @@ export function useContentMetadataFilters(
 	// ---- 选择状态（排除式：勾选 = 显示，取消勾选 = 隐藏；默认全部勾选） ----
 
 	const memory = getMap<string, Record<string, string[]>>('metadataFilters')
-	const excluded = ref<Record<string, string[]>>(
-		persistKey ? (memory.get(persistKey) ?? {}) : {},
-	)
+	const excluded = ref<Record<string, string[]>>(persistKey ? (memory.get(persistKey) ?? {}) : {})
 
 	function optionsByKey(key: string): MetadataFilterOption[] {
-		return (
-			metadataFilterCategories.value.find(
-				(category) => category.key === key,
-			)?.options ?? []
-		)
+		return metadataFilterCategories.value.find((category) => category.key === key)?.options ?? []
 	}
 
 	function getExcludedSet(key: string): Set<string> {
@@ -505,15 +460,13 @@ export function useContentMetadataFilters(
 		}
 	}
 
-	function getExcludedCount(key: string): number {
-		return excluded.value[key]?.length ?? 0
-	}
-
-	/** A category filters only while at least one option stays selected; an
-	 * empty selection means "no filter" (everything is shown). */
+	/** 分类在"有选项被取消勾选"时施加约束：全部勾选 = 不过滤；部分勾选 = 仅显示勾选项；
+	 * 全部取消勾选 = 该分类无任何允许值 → 整表为空（各分类条件必须同时满足才显示）。 */
 	function isCategoryFiltering(key: string): boolean {
+		const options = optionsByKey(key)
+		if (options.length === 0) return false
 		const excludedSet = getExcludedSet(key)
-		return optionsByKey(key).some((option) => !excludedSet.has(option.value))
+		return excludedSet.size > 0
 	}
 
 	// 选项变化时修剪失效的排除值（选项消失 → 自动从排除集移除）。
@@ -543,17 +496,16 @@ export function useContentMetadataFilters(
 	)
 
 	function applyMetadataFilters(source: ContentItem[]): ContentItem[] {
-		const active = definitions.value.filter((definition) =>
-			isCategoryFiltering(definition.key),
-		)
+		const active = definitions.value.filter((definition) => isCategoryFiltering(definition.key))
 		if (active.length === 0) return source
 
 		return source.filter((item) =>
 			active.every((definition) => {
+				const options = optionsByKey(definition.key)
 				const excludedSet = getExcludedSet(definition.key)
-				return definition
-					.values(item)
-					.some((value) => !excludedSet.has(value))
+				// 该分类所有选项都被取消勾选 → 没有任何允许值 → 任何条目都不满足该分类
+				if (excludedSet.size === options.length) return false
+				return definition.values(item).some((value) => !excludedSet.has(value))
 			}),
 		)
 	}
@@ -562,7 +514,6 @@ export function useContentMetadataFilters(
 		metadataFilterCategories,
 		getSelectedValues,
 		setCategorySelection,
-		getExcludedCount,
 		isCategoryFiltering,
 		applyMetadataFilters,
 	}

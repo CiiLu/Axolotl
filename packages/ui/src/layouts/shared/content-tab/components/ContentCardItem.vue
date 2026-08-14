@@ -14,7 +14,6 @@ import {
 	UndoIcon,
 } from '@modrinth/assets'
 import { useMagicKeys } from '@vueuse/core'
-import { Tooltip } from 'floating-vue'
 import { computed, getCurrentInstance, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
@@ -171,17 +170,6 @@ function handleRowClick(event: MouseEvent) {
 	if (target.closest(interactiveSelectors)) return
 	emit('toggleExpand')
 }
-
-const clientWarningMessage = computed(() => {
-	switch (props.clientWarning) {
-		case 'retained':
-			return commonMessages.clientRetainedWarning
-		case 'depends':
-			return commonMessages.clientDependsWarning
-		default:
-			return commonMessages.clientOnlyWarning
-	}
-})
 
 const { shift: shiftHeld } = useMagicKeys()
 const deleteHovered = ref(false)
@@ -453,25 +441,6 @@ const deleteHovered = ref(false)
 							{{ project.title }}
 						</AutoLink>
 						<slot name="title-badges" />
-						<Tooltip
-							v-if="isClientOnly"
-							theme="dismissable-prompt"
-							class="inline-flex shrink-0"
-							:triggers="['hover', 'focus']"
-							no-auto-focus
-						>
-							<span
-								class="inline-flex size-5 shrink-0 cursor-help items-center justify-center"
-								tabindex="0"
-							>
-								<TriangleAlertIcon class="pointer-events-none size-4 text-orange" />
-							</span>
-							<template #popper>
-								<div class="max-w-[18rem] text-sm">
-									{{ formatMessage(clientWarningMessage) }}
-								</div>
-							</template>
-						</Tooltip>
 					</div>
 
 					<div class="flex min-w-0 items-center gap-1">

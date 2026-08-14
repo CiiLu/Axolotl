@@ -216,21 +216,38 @@
 							class="flex items-center justify-between gap-3 border-0 border-b border-solid border-b-surface-5 bg-surface-4 px-4 py-2.5 text-sm"
 						>
 							<span class="font-semibold text-secondary">{{ selectionActionsLabel }}</span>
-							<button
-								type="button"
-								class="border-0 bg-transparent p-0 text-sm font-semibold text-secondary shadow-none transition-all"
-								:class="
-									hasSelectedOptions
-										? 'hover:bg-transparent hover:text-contrast'
-										: 'cursor-not-allowed opacity-50'
-								"
-								:disabled="!hasSelectedOptions"
-								@click="clearAll"
-								@keydown.enter.stop
-								@keydown.space.stop
-							>
-								{{ selectionActionsClearLabel }}
-							</button>
+							<div class="flex items-center gap-3">
+								<button
+									type="button"
+									class="border-0 bg-transparent p-0 text-sm font-semibold text-secondary shadow-none transition-all"
+									:class="
+										canSelectAllOptions
+											? 'hover:bg-transparent hover:text-contrast'
+											: 'cursor-not-allowed opacity-50'
+									"
+									:disabled="!canSelectAllOptions"
+									@click="selectAllOptions"
+									@keydown.enter.stop
+									@keydown.space.stop
+								>
+									{{ selectionActionsSelectAllLabel }}
+								</button>
+								<button
+									type="button"
+									class="border-0 bg-transparent p-0 text-sm font-semibold text-secondary shadow-none transition-all"
+									:class="
+										hasSelectedOptions
+											? 'hover:bg-transparent hover:text-contrast'
+											: 'cursor-not-allowed opacity-50'
+									"
+									:disabled="!hasSelectedOptions"
+									@click="clearAll"
+									@keydown.enter.stop
+									@keydown.space.stop
+								>
+									{{ selectionActionsClearLabel }}
+								</button>
+							</div>
 						</div>
 					</div>
 
@@ -360,21 +377,38 @@
 							class="flex items-center justify-between gap-3 border-0 border-b border-solid border-b-surface-5 px-4 py-2.5 text-sm"
 						>
 							<span class="font-semibold text-secondary">{{ selectionActionsLabel }}</span>
-							<button
-								type="button"
-								class="border-0 bg-transparent p-0 text-sm font-semibold text-secondary shadow-none transition-all"
-								:class="
-									hasSelectedOptions
-										? 'hover:bg-transparent hover:text-contrast'
-										: 'cursor-not-allowed opacity-50'
-								"
-								:disabled="!hasSelectedOptions"
-								@click="clearAll"
-								@keydown.enter.stop
-								@keydown.space.stop
-							>
-								{{ selectionActionsClearLabel }}
-							</button>
+							<div class="flex items-center gap-3">
+								<button
+									type="button"
+									class="border-0 bg-transparent p-0 text-sm font-semibold text-secondary shadow-none transition-all"
+									:class="
+										canSelectAllOptions
+											? 'hover:bg-transparent hover:text-contrast'
+											: 'cursor-not-allowed opacity-50'
+									"
+									:disabled="!canSelectAllOptions"
+									@click="selectAllOptions"
+									@keydown.enter.stop
+									@keydown.space.stop
+								>
+									{{ selectionActionsSelectAllLabel }}
+								</button>
+								<button
+									type="button"
+									class="border-0 bg-transparent p-0 text-sm font-semibold text-secondary shadow-none transition-all"
+									:class="
+										hasSelectedOptions
+											? 'hover:bg-transparent hover:text-contrast'
+											: 'cursor-not-allowed opacity-50'
+									"
+									:disabled="!hasSelectedOptions"
+									@click="clearAll"
+									@keydown.enter.stop
+									@keydown.space.stop
+								>
+									{{ selectionActionsClearLabel }}
+								</button>
+							</div>
 						</div>
 						<div
 							v-if="isNoOptionsState && noOptionsMessage"
@@ -417,6 +451,8 @@ import {
 	useSlots,
 	watch,
 } from 'vue'
+
+import { defineMessages, useVIntl } from '#ui/composables/i18n'
 
 import { useVirtualScroll } from '../../composables/virtual-scroll'
 import StyledInput from './StyledInput.vue'
@@ -484,6 +520,13 @@ function isOption<T>(item: MultiSelectItem<T>): item is MultiSelectOption<T> {
 	return !isSectionHeader(item)
 }
 
+const messages = defineMessages({
+	selectionActionsLabel: {
+		id: 'multiselect.selection-actions.label',
+		defaultMessage: '{count, number} selected',
+	},
+})
+
 const props = withDefaults(
 	defineProps<{
 		modelValue: T[]
@@ -510,6 +553,9 @@ const props = withDefaults(
 		selectAllLabel?: string
 		showSelectionActions?: boolean
 		selectionActionsClearLabel?: string
+		/** Label for the "Select all" action shown next to the clear action in
+		 * the selection actions footer. */
+		selectionActionsSelectAllLabel?: string
 		maxTagRows?: number
 		checkboxPosition?: 'left' | 'right'
 		/** Open the dropdown on mouse hover and close it when the pointer leaves. */
@@ -531,6 +577,7 @@ const props = withDefaults(
 		selectAllLabel: 'Select all',
 		showSelectionActions: false,
 		selectionActionsClearLabel: 'Clear',
+		selectionActionsSelectAllLabel: 'Select all',
 		maxTagRows: 1,
 		checkboxPosition: 'left',
 		hoverOpen: false,
@@ -544,6 +591,7 @@ const emit = defineEmits<{
 	searchInput: [query: string]
 }>()
 
+const { formatMessage } = useVIntl()
 const slots = useSlots()
 const isOpen = ref(false)
 const searchQuery = ref('')
@@ -716,9 +764,21 @@ const shouldShowSelectAll = computed(
 const selectedOptionCount = computed(() => selectedOptions.value.length)
 const hasSelectedOptions = computed(() => selectedOptionCount.value > 0)
 const shouldShowSelectionActions = computed(() => props.showSelectionActions)
-const selectionActionsLabel = computed(() => {
-	return selectedOptionCount.value === 1 ? '1 selected' : `${selectedOptionCount.value} selected`
-})
+const canSelectAllOptions = computed(
+	() => enabledSelectableOptions.value.length > 0 && !isAllSelected.value,
+)
+const selectionActionsLabel = computed(() =>
+	formatMessage(messages.selectionActionsLabel, {
+		count: selectedOptionCount.value,
+	}),
+)
+
+function selectAllOptions() {
+	emit(
+		'update:modelValue',
+		enabledSelectableOptions.value.map((opt) => opt.value),
+	)
+}
 
 function isSelected(value: T) {
 	return selectedValueSet.value.has(value)
@@ -1431,6 +1491,16 @@ watch(isOpen, (value) => {
 		updateDropdownPosition()
 	}
 })
+
+// 悬停打开模式下，外部把 hover-open 关掉（如筛选条滚动后的短暂抑制）时立即收回下拉
+watch(
+	() => props.hoverOpen,
+	(open, previous) => {
+		if (previous === true && !open && isOpen.value) {
+			closeDropdown()
+		}
+	},
+)
 
 watch(filteredOptions, () => {
 	if (isOpen.value) {

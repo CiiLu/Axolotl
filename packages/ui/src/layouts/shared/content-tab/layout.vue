@@ -2,7 +2,6 @@
 import {
 	ArrowDownAZIcon,
 	ArrowUpZAIcon,
-	ChevronLeftIcon,
 	ChevronUpIcon,
 	ClockArrowDownIcon,
 	ClockArrowUpIcon,
@@ -137,11 +136,15 @@ const messages = defineMessages({
 	},
 	metadataFilterSearchPlaceholder: {
 		id: 'content.metadata-filter.search',
-		defaultMessage: '搜索...',
+		defaultMessage: 'Search...',
 	},
 	metadataFilterClear: {
 		id: 'content.metadata-filter.clear',
-		defaultMessage: '清除',
+		defaultMessage: 'Clear',
+	},
+	metadataFilterSelectAll: {
+		id: 'content.metadata-filter.select-all',
+		defaultMessage: 'Select all',
 	},
 	pleaseWait: {
 		id: 'content.page-layout.please-wait',
@@ -247,8 +250,13 @@ const {
 	searchableItemCount,
 	modpackItemsNoUpdate,
 	modpackChildIdSet,
+	selectedTypeFilter,
+	row1FilterOptions,
+	totalCount,
+	filterCounts,
 	filteredItems: pipelineFilteredItems,
 	filteredModpackItems: pipelineFilteredModpackItems,
+	toggleTypeFilter,
 } = useContentPipeline({
 	items: ctx.items,
 	modpackItems: ctx.modpackItems,
@@ -268,19 +276,14 @@ const {
 	isCategoryFiltering,
 	applyMetadataFilters,
 } = useContentMetadataFilters(
-	computed(() => [
-		...ctx.items.value,
-		...(ctx.modpackItems?.value ?? []),
-	]),
+	computed(() => [...ctx.items.value, ...(ctx.modpackItems?.value ?? [])]),
 	ctx.instanceId,
 )
 
 // Metadata filters (作者/环境/状态/更新/类型/加载器/来源/外部文件/开源) apply on
 // top of the search pipeline, so the whole table (including modpack groups)
 // is filtered consistently.
-const filteredItems = computed(() =>
-	applyMetadataFilters(pipelineFilteredItems.value),
-)
+const filteredItems = computed(() => applyMetadataFilters(pipelineFilteredItems.value))
 const filteredModpackItems = computed(() =>
 	applyMetadataFilters(pipelineFilteredModpackItems.value),
 )
@@ -345,6 +348,56 @@ const showScrollToTop = ref(false)
 const sidebarVisible = ref(false)
 const SCROLL_THRESHOLD = 300
 
+// 内容筛选行：鼠标悬停其上滚轮滚动时，把纵向滚轮转换为横向滚动，
+// 而不是滚动主界面。到滚动边界时放行（回落到主界面滚动）。
+const filterScrollRef = ref<HTMLElement | null>(null)
+let filterScrollWheelHandler: ((event: WheelEvent) => void) | null = null
+
+// 筛选条滚动后 0.5s 内抑制 hover 弹出下拉，避免滚动时鼠标扫过 chips 误开菜单；
+// 已打开的下拉在滚动开始（hover-open 变 false）时立即收回。
+const suppressFilterHoverOpen = ref(false)
+let filterHoverSuppressTimer: ReturnType<typeof setTimeout> | null = null
+
+function handleFilterStripScroll() {
+	suppressFilterHoverOpen.value = true
+	if (filterHoverSuppressTimer) clearTimeout(filterHoverSuppressTimer)
+	filterHoverSuppressTimer = setTimeout(() => {
+		suppressFilterHoverOpen.value = false
+		filterHoverSuppressTimer = null
+	}, 500)
+}
+
+watch(
+	filterScrollRef,
+	(container, previous) => {
+		if (previous && filterScrollWheelHandler) {
+			previous.removeEventListener('wheel', filterScrollWheelHandler)
+			filterScrollWheelHandler = null
+		}
+		if (!container) return
+
+		filterScrollWheelHandler = (event) => {
+			// 横向手势（触控板）交给容器原生横向滚动。
+			if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
+			const canScroll = container.scrollWidth > container.clientWidth + 1
+			if (!canScroll) return
+			const atStart = container.scrollLeft <= 0
+			const atEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1
+			const scrollingForward = event.deltaY > 0
+			if ((scrollingForward && atEnd) || (!scrollingForward && atStart)) {
+				return
+			}
+			event.preventDefault()
+			const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY
+			container.scrollLeft += delta
+		}
+		container.addEventListener('wheel', filterScrollWheelHandler, {
+			passive: false,
+		})
+	},
+	{ immediate: true },
+)
+
 function getScrollContainer(): Element | null {
 	return document.querySelector('.app-viewport')
 }
@@ -388,6 +441,14 @@ onBeforeUnmount(() => {
 	const container = getScrollContainer()
 	if (container) {
 		container.removeEventListener('scroll', handleScroll)
+	}
+	if (filterScrollRef.value && filterScrollWheelHandler) {
+		filterScrollRef.value.removeEventListener('wheel', filterScrollWheelHandler)
+		filterScrollWheelHandler = null
+	}
+	if (filterHoverSuppressTimer) {
+		clearTimeout(filterHoverSuppressTimer)
+		filterHoverSuppressTimer = null
 	}
 })
 
@@ -442,17 +503,25 @@ const { folderRows: schematicFolderRows, regularItems: schematicGroupRegularItem
 		},
 		getItemId,
 		mapToTableItem,
-		isGroupedItem: (item) => normalizeProjectType(item.project_type) === 'schematic',
+		isGroupedItem: (item) =>
+			['schematic', 'datapack'].includes(normalizeProjectType(item.project_type)),
 		treePath: (item) => {
 			const path = item.file_path ?? item.file_name
 			const segments = path.split(/[\\/]/).filter(Boolean)
 			if (segments[0]?.toLocaleLowerCase() === 'schematics') {
 				return segments.slice(1).join('/')
 			}
+			// saves/<world>/datapacks/<file> → <world>/datapacks/<file>
+			if (segments[0]?.toLocaleLowerCase() === 'saves' && segments[2]?.toLocaleLowerCase() === 'datapacks') {
+				return segments.slice(1).join('/')
+			}
 			return path
 		},
-		folderGroupId: (path) => `schematic-folder:${path}`,
-		folderGroupIdPrefix: 'schematic-folder:',
+		folderGroupId: (path) => {
+			if (path.includes('/datapacks/')) return `datapack-folder:${path}`
+			return `schematic-folder:${path}`
+		},
+		folderGroupIdPrefix: ['schematic-folder:', 'datapack-folder:'],
 		locale,
 	})
 
@@ -886,31 +955,225 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 				</div>
 			</div>
 
-			<template v-else>
-				<template v-if="ctx.items.value.length > 0 || (ctx.modpackItems?.value?.length ?? 0) > 0">
-					<div class="flex flex-wrap items-center gap-2">
-						<StyledInput
-							v-model="searchQuery"
-							:icon="SearchIcon"
-							type="text"
-							autocomplete="off"
-							:spellcheck="false"
-							input-class="!h-10"
-							wrapper-class="flex-1 min-w-0"
-							clearable
-							:placeholder="
-								formatMessage(messages.searchPlaceholder, {
-									count: searchableItemCount,
+			<template
+				v-else-if="ctx.items.value.length > 0 || (ctx.modpackItems?.value?.length ?? 0) > 0"
+			>
+				<div class="flex flex-wrap items-center gap-2">
+					<StyledInput
+						v-model="searchQuery"
+								:icon="SearchIcon"
+								type="text"
+								autocomplete="off"
+								:spellcheck="false"
+								input-class="!h-10"
+								wrapper-class="flex-1 min-w-0"
+								clearable
+								:placeholder="
+									formatMessage(messages.searchPlaceholder, {
+										count: searchableItemCount,
+										contentType: formatContentTypeSentence(
+											formatMessage,
+											ctx.contentTypeLabel.value,
+											searchableItemCount,
+										),
+									})
+								"
+							/>
+
+							<div class="flex items-center gap-2">
+								<ButtonStyled color="brand">
+									<button
+										v-tooltip="
+											ctx.busyMessage?.value ??
+											(ctx.disableAddContent?.value ? ctx.disableAddContentTooltip : undefined)
+										"
+										:disabled="ctx.isBusy.value || ctx.disableAddContent?.value"
+										class="!h-10 flex items-center gap-2"
+										@click="ctx.browse"
+									>
+										<CompassIcon class="size-5" />
+										<span>{{ formatMessage(messages.browseContent) }}</span>
+									</button>
+								</ButtonStyled>
+								<ButtonStyled type="outlined">
+									<button
+										v-tooltip="ctx.busyMessage?.value"
+										:disabled="refreshing"
+										class="!h-10"
+										@click="handleRefresh"
+									>
+										<RefreshCwIcon :class="['size-5', { 'animate-spin': refreshing }]" />
+										{{ formatMessage(commonMessages.refreshButton) }}
+									</button>
+								</ButtonStyled>
+							</div>
+						</div>
+
+						<div class="@container flex flex-col gap-2">
+							<div class="flex flex-wrap items-center gap-1.5">
+								<button
+									class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
+									:class="
+										selectedTypeFilter.length === 0
+											? 'bg-brand-highlight text-brand'
+											: 'bg-surface-4 text-primary hover:bg-surface-5'
+									"
+									:aria-pressed="selectedTypeFilter.length === 0"
+									@click="selectedTypeFilter = []"
+								>
+									{{ formatMessage(commonMessages.allProjectType) }}
+									<span class="ml-1 text-sm font-normal opacity-70">{{ totalCount }}</span>
+								</button>
+								<button
+									v-for="option in row1FilterOptions"
+									:key="option.id"
+									class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
+									:class="
+										selectedTypeFilter.includes(option.id)
+											? 'bg-brand-highlight text-brand'
+											: 'bg-surface-4 text-primary hover:bg-surface-5'
+									"
+									:aria-pressed="selectedTypeFilter.includes(option.id)"
+									@click="toggleTypeFilter(option.id, $event)"
+								>
+									{{ option.label }}
+									<span class="ml-1 text-sm font-normal opacity-70">{{
+										filterCounts[option.id] ?? 0
+									}}</span>
+								</button>
+							</div>
+						</div>
+
+						<ContentCardTable
+							v-model:selected-ids="selectedIds"
+							:items="tableItems"
+							:show-selection="true"
+							:expanded-groups="expandedGroups"
+							@update:enabled="handleToggleEnabledById"
+							@delete="handleDeleteById"
+							@update="handleUpdateById"
+							@switch-version="handleSwitchVersionById"
+							@rollback="handleRollbackById"
+							@toggle-expand="toggleGroupExpand"
+						>
+							<template #header-project>
+								<div
+									ref="filterScrollRef"
+									class="content-filter-scroll flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto pe-28"
+									@scroll="handleFilterStripScroll"
+								>
+									<MultiSelect
+										v-for="category in metadataFilterCategories"
+										:key="category.key"
+										:model-value="getMetadataSelectedValues(category.key)"
+										:options="category.options"
+										:max-height="420"
+										:clearable="false"
+										:show-chevron="false"
+										:fit-content="true"
+										:searchable="category.searchable"
+										:search-placeholder="formatMessage(messages.metadataFilterSearchPlaceholder)"
+										:trigger-class="'h-8 shrink-0 !rounded-full border-0 bg-surface-4 px-2.5 transition-all hover:brightness-110 active:brightness-110'"
+										:dropdown-min-width="'15rem'"
+										:checkbox-position="'left'"
+										:hover-open="!suppressFilterHoverOpen"
+										show-selection-actions
+										:selection-actions-clear-label="formatMessage(messages.metadataFilterClear)"
+										:selection-actions-select-all-label="
+											formatMessage(messages.metadataFilterSelectAll)
+										"
+										@update:model-value="(values) => setCategorySelection(category.key, values)"
+									>
+										<template #input-content>
+											<span class="flex items-center gap-1.5 text-sm font-semibold text-primary">
+												<span class="truncate">{{ category.label }}</span>
+												<span
+													v-if="isCategoryFiltering(category.key)"
+													class="rounded-full bg-brand-highlight px-1.5 text-xs font-normal tabular-nums text-brand"
+												>
+													{{ getMetadataSelectedValues(category.key).length }}/{{
+														category.options.length
+													}}
+												</span>
+											</span>
+										</template>
+									</MultiSelect>
+								</div>
+							</template>
+							<template #header-actions>
+								<div class="flex items-center justify-end gap-2">
+									<ButtonStyled circular type="transparent">
+										<button
+											v-tooltip="sortTooltipConfig"
+											:aria-label="
+												formatMessage(messages.sortByLabel, { mode: sortLabels[sortMode]() })
+											"
+											@click="cycleSortMode"
+										>
+											<ArrowUpZAIcon v-if="sortMode === 'alphabetical-desc'" /><ClockArrowDownIcon
+												v-else-if="sortMode === 'date-added-newest'"
+											/><ClockArrowUpIcon
+												v-else-if="sortMode === 'date-added-oldest'"
+											/><ArrowDownAZIcon v-else />
+										</button>
+									</ButtonStyled>
+
+									<ButtonStyled
+										v-if="hasBulkUpdateSupport && hasOutdatedProjects"
+										circular
+										color="green"
+										type="transparent"
+										color-fill="text"
+										hover-color-fill="background"
+									>
+										<button
+											v-tooltip="
+												ctx.bulkUpdateAllDescription ??
+												ctx.bulkUpdateAllLabel ??
+												formatMessage(messages.updateAll)
+											"
+											:disabled="isBulkOperating"
+											@click="promptUpdateAll"
+										>
+											<DownloadIcon />
+										</button>
+									</ButtonStyled>
+								</div>
+							</template>
+							<template #empty>
+								<span>{{ formatMessage(messages.noContentFound) }}</span>
+							</template>
+						</ContentCardTable>
+					</template>
+
+					<EmptyState v-else type="empty-inbox">
+						<template #heading>
+							{{ formatMessage(messages.noContentInstalled) }}
+						</template>
+						<template #description>
+							{{
+								formatMessage(messages.emptyHint, {
 									contentType: formatContentTypeSentence(
 										formatMessage,
 										ctx.contentTypeLabel.value,
-										searchableItemCount,
+										2,
+										'content',
 									),
 								})
-							"
-						/>
-
-						<div class="flex items-center gap-2">
+							}}
+						</template>
+						<template #actions>
+							<ButtonStyled type="outlined">
+								<button
+									v-tooltip="ctx.busyMessage?.value"
+									:disabled="refreshing"
+									class="!h-10"
+									@click="handleRefresh"
+								>
+									<RefreshCwIcon :class="['size-5', { 'animate-spin': refreshing }]" />
+									{{ formatMessage(commonMessages.refreshButton) }}
+								</button>
+							</ButtonStyled>
 							<ButtonStyled color="brand">
 								<button
 									v-tooltip="
@@ -925,172 +1188,8 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 									<span>{{ formatMessage(messages.browseContent) }}</span>
 								</button>
 							</ButtonStyled>
-							<ButtonStyled type="outlined">
-								<button
-									v-tooltip="ctx.busyMessage?.value"
-									:disabled="refreshing"
-									class="!h-10"
-									@click="handleRefresh"
-								>
-									<RefreshCwIcon :class="['size-5', { 'animate-spin': refreshing }]" />
-									{{ formatMessage(commonMessages.refreshButton) }}
-								</button>
-							</ButtonStyled>
-						</div>
-					</div>
-
-					<div class="@container flex flex-col gap-2">
-						<div class="flex flex-wrap items-center gap-1.5">
-							<MultiSelect
-								v-for="category in metadataFilterCategories"
-								:key="category.key"
-								:model-value="getMetadataSelectedValues(category.key)"
-								:options="category.options"
-								:max-height="420"
-								:clearable="false"
-								:show-chevron="false"
-								:fit-content="true"
-								:searchable="category.searchable"
-								:search-placeholder="formatMessage(messages.metadataFilterSearchPlaceholder)"
-								:trigger-class="'h-10 !rounded-full border-0 bg-surface-4 px-4 transition-all hover:brightness-110 active:brightness-110'"
-								:dropdown-min-width="'15rem'"
-								:checkbox-position="'left'"
-								hover-open
-								show-selection-actions
-								:selection-actions-clear-label="formatMessage(messages.metadataFilterClear)"
-								@update:model-value="(values) => setCategorySelection(category.key, values)"
-							>
-								<template #input-content="{ isOpen, openDirection }">
-									<span
-										class="flex min-w-0 items-center gap-1.5 text-base font-semibold text-primary"
-									>
-										<span class="truncate">{{ category.label }}</span>
-										<span
-											v-if="isCategoryFiltering(category.key)"
-											class="rounded-full bg-brand-highlight px-1.5 text-sm font-normal tabular-nums text-brand"
-										>
-											{{ getMetadataSelectedValues(category.key).length }}/{{
-												category.options.length
-											}}
-										</span>
-										<ChevronLeftIcon
-											class="size-4 shrink-0 text-secondary transition-transform duration-150"
-											:class="
-												isOpen
-													? openDirection === 'down'
-														? 'rotate-90'
-														: '-rotate-90'
-													: '-rotate-90'
-											"
-										/>
-									</span>
-								</template>
-							</MultiSelect>
-						</div>
-					</div>
-
-					<ContentCardTable
-						v-model:selected-ids="selectedIds"
-						:items="tableItems"
-						:show-selection="true"
-						:expanded-groups="expandedGroups"
-						@update:enabled="handleToggleEnabledById"
-						@delete="handleDeleteById"
-						@update="handleUpdateById"
-						@switch-version="handleSwitchVersionById"
-						@rollback="handleRollbackById"
-						@toggle-expand="toggleGroupExpand"
-					>
-						<template #header-actions>
-							<div class="flex items-center justify-end gap-2">
-								<ButtonStyled circular type="transparent">
-									<button
-										v-tooltip="sortTooltipConfig"
-										:aria-label="
-											formatMessage(messages.sortByLabel, { mode: sortLabels[sortMode]() })
-										"
-										@click="cycleSortMode"
-									>
-										<ArrowUpZAIcon v-if="sortMode === 'alphabetical-desc'" /><ClockArrowDownIcon
-											v-else-if="sortMode === 'date-added-newest'"
-										/><ClockArrowUpIcon
-											v-else-if="sortMode === 'date-added-oldest'"
-										/><ArrowDownAZIcon v-else />
-									</button>
-								</ButtonStyled>
-
-								<ButtonStyled
-									v-if="hasBulkUpdateSupport && hasOutdatedProjects"
-									circular
-									color="green"
-									type="transparent"
-									color-fill="text"
-									hover-color-fill="background"
-								>
-									<button
-										v-tooltip="
-											ctx.bulkUpdateAllDescription ??
-											ctx.bulkUpdateAllLabel ??
-											formatMessage(messages.updateAll)
-										"
-										:disabled="isBulkOperating"
-										@click="promptUpdateAll"
-									>
-										<DownloadIcon />
-									</button>
-								</ButtonStyled>
-							</div>
 						</template>
-						<template #empty>
-							<span>{{ formatMessage(messages.noContentFound) }}</span>
-						</template>
-					</ContentCardTable>
-				</template>
-
-				<EmptyState v-else type="empty-inbox">
-					<template #heading>
-						{{ formatMessage(messages.noContentInstalled) }}
-					</template>
-					<template #description>
-						{{
-							formatMessage(messages.emptyHint, {
-								contentType: formatContentTypeSentence(
-									formatMessage,
-									ctx.contentTypeLabel.value,
-									2,
-									'content',
-								),
-							})
-						}}
-					</template>
-					<template #actions>
-						<ButtonStyled type="outlined">
-							<button
-								v-tooltip="ctx.busyMessage?.value"
-								:disabled="refreshing"
-								class="!h-10"
-								@click="handleRefresh"
-							>
-								<RefreshCwIcon :class="['size-5', { 'animate-spin': refreshing }]" />
-								{{ formatMessage(commonMessages.refreshButton) }}
-							</button>
-						</ButtonStyled>
-						<ButtonStyled color="brand">
-							<button
-								v-tooltip="
-									ctx.busyMessage?.value ??
-									(ctx.disableAddContent?.value ? ctx.disableAddContentTooltip : undefined)
-								"
-								:disabled="ctx.isBusy.value || ctx.disableAddContent?.value"
-								class="!h-10 flex items-center gap-2"
-								@click="ctx.browse"
-							>
-								<CompassIcon class="size-5" />
-								<span>{{ formatMessage(messages.browseContent) }}</span>
-							</button>
-						</ButtonStyled>
-					</template>
-				</EmptyState>
+					</EmptyState>
 			</template>
 		</template>
 
@@ -1262,6 +1361,33 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 </template>
 
 <style scoped>
+/* 内容筛选行：默认隐藏滚动条，鼠标悬停时才显示 */
+.content-filter-scroll {
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+	scrollbar-gutter: stable;
+}
+
+.content-filter-scroll:hover {
+	scrollbar-color: var(--surface-5) transparent;
+}
+
+.content-filter-scroll::-webkit-scrollbar {
+	height: 6px;
+}
+
+.content-filter-scroll::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.content-filter-scroll::-webkit-scrollbar-thumb {
+	background: transparent;
+	border-radius: 3px;
+}
+
+.content-filter-scroll:hover::-webkit-scrollbar-thumb {
+	background: var(--surface-5);
+}
 .scroll-to-top-btn {
 	@apply fixed bottom-6 z-50 flex items-center justify-center rounded-full bg-brand p-3 text-brand-inverted shadow-lg transition-all duration-200 hover:brightness-110 hover:shadow-xl active:scale-95;
 	right: 24px;

@@ -756,10 +756,115 @@
     "defaultMessage": "Enabled"
   },
   "content.filter.updates": {
-    "defaultMessage": "可更新"
+    "defaultMessage": "Update available"
   },
   "content.filter.warnings": {
     "defaultMessage": "Warnings"
+  },
+  "content.metadata-filter.author": {
+    "defaultMessage": "Author"
+  },
+  "content.metadata-filter.clear": {
+    "defaultMessage": "Clear"
+  },
+  "content.metadata-filter.environment": {
+    "defaultMessage": "Environment"
+  },
+  "content.metadata-filter.environment.client": {
+    "defaultMessage": "Client"
+  },
+  "content.metadata-filter.environment.client-and-server": {
+    "defaultMessage": "Client & server"
+  },
+  "content.metadata-filter.environment.server": {
+    "defaultMessage": "Server"
+  },
+  "content.metadata-filter.environment.singleplayer": {
+    "defaultMessage": "Singleplayer"
+  },
+  "content.metadata-filter.external": {
+    "defaultMessage": "External files"
+  },
+  "content.metadata-filter.external.external": {
+    "defaultMessage": "External file"
+  },
+  "content.metadata-filter.external.linked": {
+    "defaultMessage": "Online project"
+  },
+  "content.metadata-filter.loader": {
+    "defaultMessage": "Loader"
+  },
+  "content.metadata-filter.loader.fabric": {
+    "defaultMessage": "Fabric"
+  },
+  "content.metadata-filter.loader.forge": {
+    "defaultMessage": "Forge"
+  },
+  "content.metadata-filter.loader.neoforge": {
+    "defaultMessage": "NeoForge"
+  },
+  "content.metadata-filter.loader.other": {
+    "defaultMessage": "Other"
+  },
+  "content.metadata-filter.loader.quilt": {
+    "defaultMessage": "Quilt"
+  },
+  "content.metadata-filter.open-source": {
+    "defaultMessage": "Open source"
+  },
+  "content.metadata-filter.open-source.closed": {
+    "defaultMessage": "Closed source"
+  },
+  "content.metadata-filter.open-source.open": {
+    "defaultMessage": "Open source"
+  },
+  "content.metadata-filter.search": {
+    "defaultMessage": "Search..."
+  },
+  "content.metadata-filter.select-all": {
+    "defaultMessage": "Select all"
+  },
+  "content.metadata-filter.source": {
+    "defaultMessage": "Source"
+  },
+  "content.metadata-filter.source.curseforge": {
+    "defaultMessage": "CurseForge"
+  },
+  "content.metadata-filter.source.imported-modpack": {
+    "defaultMessage": "Imported modpack"
+  },
+  "content.metadata-filter.source.local": {
+    "defaultMessage": "Local"
+  },
+  "content.metadata-filter.source.modrinth-modpack": {
+    "defaultMessage": "Modrinth modpack"
+  },
+  "content.metadata-filter.source.server-project": {
+    "defaultMessage": "Server project"
+  },
+  "content.metadata-filter.source.shared-instance": {
+    "defaultMessage": "Shared instance"
+  },
+  "content.metadata-filter.state": {
+    "defaultMessage": "Status"
+  },
+  "content.metadata-filter.state.disabled": {
+    "defaultMessage": "Disabled"
+  },
+  "content.metadata-filter.state.enabled": {
+    "defaultMessage": "Enabled"
+  },
+  "content.metadata-filter.unknown": {
+    "defaultMessage": "Unknown"
+  },
+  "content.metadata-filter.update.available": {
+    "defaultMessage": "Update available"
+  },
+  "content.metadata-filter.update.up-to-date": {
+    "defaultMessage": "Up to date"
+  },
+  "content.metadata-filter.updates": {
+    "defaultMessage": "Updates"
   },
   "content.page-layout.browse-content": {
     "defaultMessage": "Browse content"
@@ -2602,6 +2707,9 @@
   },
   "modal.open-in-app.why-use": {
     "defaultMessage": "Why use the Modrinth App"
+  },
+  "multiselect.selection-actions.label": {
+    "defaultMessage": "{count, number} selected"
   },
   "notification.error.title": {
     "defaultMessage": "An error occurred"
