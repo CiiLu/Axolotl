@@ -15,6 +15,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { type AIProviderDefinition, getAICatalog, getAIState, sharedAIState } from '@/helpers/ai'
 import {
 	clearTranslationCache,
+	getGoogleIpPoolSize,
 	getTranslationErrorKind,
 	getTranslationSettings,
 	testTranslationProvider,
@@ -29,7 +30,7 @@ import AIIcon from './AIIcon.vue'
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 const settings = ref<TranslationSettingsState>({
-	provider: 'microsoft',
+	provider: 'google',
 	target_language: '',
 	mode: 'bilingual',
 	auto_translate: false,
@@ -42,7 +43,9 @@ const aiCatalog = ref<AIProviderDefinition[]>([])
 const loading = ref(true)
 const status = ref('')
 const testing = ref(false)
+const googleIpPoolSize = ref(0)
 let saveTimer: ReturnType<typeof setTimeout> | undefined
+let poolTimer: ReturnType<typeof setInterval> | undefined
 
 const messages = defineMessages({
 	title: { id: 'app.translation-settings.title', defaultMessage: 'Translation' },
@@ -59,6 +62,10 @@ const messages = defineMessages({
 	google: {
 		id: 'app.translation-settings.provider.google',
 		defaultMessage: 'Google Translate (free)',
+	},
+	googleIpPool: {
+		id: 'app.translation-settings.google-ip-pool',
+		defaultMessage: 'IP pool {count}',
 	},
 	ai: { id: 'app.translation-settings.provider.ai', defaultMessage: 'AI model' },
 	aiProvider: { id: 'app.translation-settings.ai-provider', defaultMessage: 'AI provider' },
@@ -284,7 +291,7 @@ watch(
 	[aiAvailable, configuredAIProviders],
 	() => {
 		if (!aiAvailable.value) {
-			if (settings.value.provider === 'ai') settings.value.provider = 'microsoft'
+			if (settings.value.provider === 'ai') settings.value.provider = 'google'
 			return
 		}
 		if (
@@ -327,7 +334,27 @@ watch(
 	{ deep: true },
 )
 
+async function refreshGoogleIpPool() {
+	try {
+		googleIpPoolSize.value = await getGoogleIpPoolSize()
+	} catch (error) {
+		reportOperationError(error)
+	}
+}
+
+watch(
+	() => settings.value.provider,
+	(provider) => {
+		clearInterval(poolTimer)
+		if (provider !== 'google') return
+		void refreshGoogleIpPool()
+		poolTimer = setInterval(() => void refreshGoogleIpPool(), 5000)
+	},
+	{ immediate: true },
+)
+
 onUnmounted(() => {
+	clearInterval(poolTimer)
 	if (loading.value || !saveTimer) return
 	clearTimeout(saveTimer)
 	void updateTranslationSettings(settings.value).catch(reportOperationError)
@@ -387,6 +414,9 @@ async function clearCache() {
 			<label class="flex flex-col gap-2 font-semibold text-contrast">
 				{{ formatMessage(messages.provider) }}
 				<Combobox v-model="settings.provider" :options="providerOptions" />
+				<span v-if="settings.provider === 'google'" class="text-xs font-normal text-secondary">
+					{{ formatMessage(messages.googleIpPool, { count: googleIpPoolSize }) }}
+				</span>
 			</label>
 			<label class="flex flex-col gap-2 font-semibold text-contrast">
 				{{ formatMessage(messages.targetLanguage) }}

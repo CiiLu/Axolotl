@@ -465,6 +465,10 @@ impl State {
         crate::telemetry::start(Arc::clone(state));
 
         tokio::task::spawn(async move {
+            crate::google_ip::preload().await;
+        });
+
+        tokio::task::spawn(async move {
             crate::util::fetch::cleanup_stale_partial_downloads(vec![
                 state.directories.metadata_dir(),
                 state.directories.caches_dir(),

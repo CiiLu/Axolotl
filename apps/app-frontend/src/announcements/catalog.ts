@@ -33,6 +33,42 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.7',
+		version: '1.7.7',
+		publishedAt: '2026-08-14',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.7',
+			'zh-CN': 'Axolotl Launcher 1.7.7',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Emergency fix for DB migration crash.',
+					'zh-CN': '紧急修复DB migration崩溃。',
+				},
+			],
+		},
+	},
+	{
+		id: 'launcher-1.7.6',
+		version: '1.7.6',
+		publishedAt: '2026-08-14',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.6',
+			'zh-CN': 'Axolotl Launcher 1.7.6',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Added a preferred IP solution for domestic use of Google Translate, now Google Translate can be used in domestic network environments.',
+					'zh-CN':
+						'为Google翻译的国内使用提供了优选IP方案，现在可以在国内网络环境使用Google翻译了。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.5',
 		version: '1.7.5',
 		publishedAt: '2026-08-13',
@@ -52,12 +88,21 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the issue of CurseForge modpacks not showing updates after the latest version was published.',
 					'zh-CN': '修复CurseForge整合包错误显示更新的问题。',
 				},
+				{
+					'en-US': 'Fixed the issue of CurseForge resources failing to parse correctly.',
+					'zh-CN': '修复CurseForge资源解析错误问题。',
+				},
 			],
 			changed: [
 				{
 					'en-US':
 						'Improved the readability of the duplicate custom UUID error message in the offline account dialog.',
 					'zh-CN': '优化了离线账户弹窗中重复自定义 UUID 的错误提示可读性。',
+				},
+				{
+					'en-US':
+						'Optimized the filtering function of the instance interface content section, now allowing multiple filter conditions to be selected by holding down ctrl.',
+					'zh-CN': '优化实例界面内容板块的筛选功能，现在按住ctrl可多选筛选条件。',
 				},
 			],
 		},

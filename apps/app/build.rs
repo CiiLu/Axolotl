@@ -443,6 +443,7 @@ fn main() {
                         "translation_test_provider",
                         "translation_translate",
                         "translation_clear_cache",
+                        "translation_google_ip_pool_size",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

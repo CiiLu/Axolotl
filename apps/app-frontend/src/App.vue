@@ -23,7 +23,6 @@ import {
 import {
 	Admonition,
 	Avatar,
-	ButtonStyled,
 	commonMessages,
 	ContentInstallModal,
 	ContentUpdaterModal,
@@ -565,6 +564,14 @@ const messages = defineMessages({
 	playingAs: {
 		id: 'app.minecraft.playing-as',
 		defaultMessage: 'Playing as',
+	},
+	collapseSidebar: {
+		id: 'app.sidebar.collapse',
+		defaultMessage: 'Collapse sidebar',
+	},
+	expandSidebar: {
+		id: 'app.sidebar.expand',
+		defaultMessage: 'Expand sidebar',
 	},
 	warning: {
 		id: 'app.notification.warning',
@@ -3097,19 +3104,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				<Breadcrumbs class="pt-[2px]" />
 			</div>
 			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
-				<ButtonStyled
-					v-if="!forceSidebar && themeStore.toggleSidebar"
-					:type="sidebarToggled ? 'standard' : 'transparent'"
-					circular
-				>
-					<button
-						class="mr-3 transition-transform"
-						:class="{ 'rotate-180': !sidebarToggled }"
-						@click="sidebarToggled = !sidebarToggled"
-					>
-						<RightArrowIcon />
-					</button>
-				</ButtonStyled>
 				<div class="flex mr-3">
 					<Suspense>
 						<AppActionBar />
@@ -3176,6 +3170,27 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		<div
 			class="app-sidebar mt-px shrink-0 flex flex-col border-0 border-l-[1px] border-[--brand-gradient-border] border-solid"
 		>
+			<button
+				v-if="!forceSidebar && themeStore.toggleSidebar"
+				v-tooltip.left="
+					sidebarToggled
+						? formatMessage(messages.collapseSidebar)
+						: formatMessage(messages.expandSidebar)
+				"
+				class="sidebar-toggle-handle"
+				:aria-label="
+					sidebarToggled
+						? formatMessage(messages.collapseSidebar)
+						: formatMessage(messages.expandSidebar)
+				"
+				type="button"
+				@click="sidebarToggled = !sidebarToggled"
+			>
+				<RightArrowIcon
+					class="w-3 h-3 transition-transform duration-300"
+					:class="{ 'rotate-180': sidebarToggled }"
+				/>
+			</button>
 			<div
 				v-overlay-scrollbars="sidebarOverlayScrollbarsOptions"
 				class="app-sidebar-scrollable relative min-h-0 flex-1"
@@ -3500,6 +3515,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	overflow: visible;
 	width: 300px;
 	position: relative;
+	z-index: 11;
 	height: calc(100vh - var(--top-bar-height));
 	background: var(--brand-gradient-bg);
 
@@ -3534,6 +3550,78 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	width: 2rem;
 	position: absolute;
 	pointer-events: none;
+}
+
+.sidebar-toggle-handle {
+	--handle-fill: color-mix(in srgb, var(--color-brand) 12%, var(--color-bg));
+
+	position: absolute;
+	top: 50%;
+
+	left: -15px;
+	transform: translateY(-50%);
+
+	z-index: 12;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 46px;
+	padding: 0;
+
+	border: 1px solid var(--brand-gradient-border);
+	border-right: none;
+	border-radius: 9px 0 0 9px;
+	box-shadow: -4px 0 10px rgba(0, 0, 0, 0.08);
+
+	background-color: var(--handle-fill);
+	color: var(--color-contrast);
+	cursor: pointer;
+
+	&:hover {
+		color: var(--color-button-text-selected);
+		background-color: color-mix(in srgb, var(--color-brand) 20%, var(--color-bg));
+	}
+
+	&:hover svg {
+		transform: scale(1.12);
+	}
+
+	&:active svg {
+		transform: scale(0.9);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--color-button-text-selected);
+		outline-offset: 1px;
+	}
+
+	&::before {
+		content: '';
+		position: absolute;
+		top: -8px;
+		right: -1px;
+		width: 8px;
+		height: 8px;
+		background: transparent;
+		border-bottom-right-radius: 8px;
+		box-shadow: 4px 4px 0 0 var(--handle-fill);
+		pointer-events: none;
+	}
+
+	&::after {
+		content: '';
+		position: absolute;
+		bottom: -8px;
+		right: -1px;
+		width: 8px;
+		height: 8px;
+		background: transparent;
+		border-top-right-radius: 8px;
+		box-shadow: 4px -4px 0 0 var(--handle-fill);
+		pointer-events: none;
+	}
 }
 
 .app-viewport {

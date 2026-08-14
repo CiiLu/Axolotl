@@ -5309,6 +5309,12 @@
   "app.settings.updates.up-to-date": {
     "message": "Axolotl is up to date."
   },
+  "app.sidebar.collapse": {
+    "message": "Collapse sidebar"
+  },
+  "app.sidebar.expand": {
+    "message": "Expand sidebar"
+  },
   "app.skins.add-button": {
     "message": "Add skin"
   },
@@ -5536,6 +5542,9 @@
   },
   "app.translation-settings.display-mode.translation-only": {
     "message": "Translation only"
+  },
+  "app.translation-settings.google-ip-pool": {
+    "message": "IP pool {count}"
   },
   "app.translation-settings.operation-failed": {
     "message": "The translation operation failed. Check the configuration and try again."
