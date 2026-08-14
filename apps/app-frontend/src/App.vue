@@ -23,7 +23,6 @@ import {
 import {
 	Admonition,
 	Avatar,
-	ButtonStyled,
 	commonMessages,
 	ContentInstallModal,
 	ContentUpdaterModal,
@@ -555,6 +554,14 @@ const messages = defineMessages({
 	playingAs: {
 		id: 'app.minecraft.playing-as',
 		defaultMessage: 'Playing as',
+	},
+	collapseSidebar: {
+		id: 'app.sidebar.collapse',
+		defaultMessage: 'Collapse sidebar',
+	},
+	expandSidebar: {
+		id: 'app.sidebar.expand',
+		defaultMessage: 'Expand sidebar',
 	},
 	warning: {
 		id: 'app.notification.warning',
@@ -3039,19 +3046,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				<Breadcrumbs class="pt-[2px]" />
 			</div>
 			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
-				<ButtonStyled
-					v-if="!forceSidebar && themeStore.toggleSidebar"
-					:type="sidebarToggled ? 'standard' : 'transparent'"
-					circular
-				>
-					<button
-						class="mr-3 transition-transform"
-						:class="{ 'rotate-180': !sidebarToggled }"
-						@click="sidebarToggled = !sidebarToggled"
-					>
-						<RightArrowIcon />
-					</button>
-				</ButtonStyled>
 				<div class="flex mr-3">
 					<Suspense>
 						<AppActionBar />
@@ -3137,6 +3131,28 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				</div>
 			</div>
 		</div>
+		<button
+			v-if="!forceSidebar && themeStore.toggleSidebar"
+			v-tooltip.left="
+				sidebarToggled
+					? formatMessage(messages.collapseSidebar)
+					: formatMessage(messages.expandSidebar)
+			"
+			class="sidebar-toggle-handle"
+			:class="{ 'sidebar-toggle-handle-collapsed': !sidebarToggled }"
+			:aria-label="
+				sidebarToggled
+					? formatMessage(messages.collapseSidebar)
+					: formatMessage(messages.expandSidebar)
+			"
+			type="button"
+			@click="sidebarToggled = !sidebarToggled"
+		>
+			<RightArrowIcon
+				class="w-3 h-3 transition-transform"
+				:class="{ 'rotate-180': !sidebarToggled }"
+			/>
+		</button>
 	</div>
 	<I18nDebugPanel />
 	<NotificationPanel
@@ -3440,7 +3456,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 .app-sidebar {
 	overflow: visible;
 	width: 300px;
+	// Paints above the toggle handle so the handle's right edge tucks
+	// underneath the sidebar instead of floating beside its border.
 	position: relative;
+	z-index: 11;
 	height: calc(100vh - var(--top-bar-height));
 	background: var(--brand-gradient-bg);
 
@@ -3475,6 +3494,78 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	width: 2rem;
 	position: absolute;
 	pointer-events: none;
+}
+
+.sidebar-toggle-handle {
+	--handle-fill: color-mix(in srgb, var(--color-brand) 12%, var(--color-bg));
+	--handle-notch: var(--color-bg);
+
+	position: absolute;
+	top: 50%;
+
+	right: calc(var(--right-bar-width) - 5px);
+	transform: translateY(-50%);
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 46px;
+	padding: 0;
+	border: 1px solid var(--brand-gradient-border);
+	border-right: none;
+	box-shadow: -4px 0 10px rgba(0, 0, 0, 0.08);
+	border-radius: 9px 0 0 9px;
+	background-color: var(--handle-fill);
+	color: var(--color-contrast);
+	cursor: pointer;
+
+	&:hover {
+		color: var(--color-button-text-selected);
+	}
+
+	&:hover svg {
+		transform: scale(1.12);
+	}
+
+	&:active svg {
+		transform: scale(0.9);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--color-button-text-selected);
+		outline-offset: 1px;
+	}
+
+	&::before {
+		content: '';
+		position: absolute;
+		top: -9px;
+		left: 0;
+		width: 9px;
+		height: 9px;
+		background: transparent;
+		border-bottom-left-radius: 9px;
+		box-shadow: -4.5px 4.5px 0 4.5px var(--handle-notch);
+		pointer-events: none;
+	}
+
+	&::after {
+		content: '';
+		position: absolute;
+		bottom: -9px;
+		left: 0;
+		width: 9px;
+		height: 9px;
+		background: transparent;
+		border-top-left-radius: 9px;
+		box-shadow: -4.5px -4.5px 0 4.5px var(--handle-notch);
+		pointer-events: none;
+	}
+}
+
+.sidebar-toggle-handle-collapsed {
+	right: 0;
 }
 
 .app-viewport {

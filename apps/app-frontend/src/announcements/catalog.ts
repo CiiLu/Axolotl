@@ -33,6 +33,23 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.7',
+		version: '1.7.7',
+		publishedAt: '2026-08-14',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.7',
+			'zh-CN': 'Axolotl Launcher 1.7.7',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Emergency fix for DB migration crash.',
+					'zh-CN': '紧急修复DB migration崩溃。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.6',
 		version: '1.7.6',
 		publishedAt: '2026-08-14',
