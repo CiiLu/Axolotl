@@ -64,7 +64,7 @@
 					@create="showCreateModal"
 					@unzip-from-url="showUnzipFromUrlModal"
 					@refresh="ctx.refresh"
-					@share="() => fileEditorRef?.shareToMclogs()"
+					@share="() => fileEditorRef?.shareLog()"
 					@find="() => fileEditorRef?.toggleFind()"
 				/>
 

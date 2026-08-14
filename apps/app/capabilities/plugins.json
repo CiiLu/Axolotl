@@ -35,6 +35,12 @@
 					"url": "https://api.mclo.gs/*"
 				},
 				{
+					"url": "https://api.logshare.cn/*"
+				},
+				{
+					"url": "https://logshare.cn/*"
+				},
+				{
 					"url": "https://fill.papermc.io/*"
 				},
 				{

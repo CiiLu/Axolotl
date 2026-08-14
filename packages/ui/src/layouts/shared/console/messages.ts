@@ -6,6 +6,24 @@ export const consoleMessages = defineMessages({
 		defaultMessage: 'Export crash context',
 	},
 	searchLogs: { id: 'console.search.placeholder', defaultMessage: 'Search logs' },
+	toggleWrap: { id: 'console.log.toggle-wrap', defaultMessage: 'Toggle line wrapping' },
+	wrapLabel: { id: 'console.log.wrap-label', defaultMessage: 'Wrap' },
+	emptyInstanceTitle: {
+		id: 'console.empty.instance-title',
+		defaultMessage: 'No logs yet',
+	},
+	emptyInstanceDescription: {
+		id: 'console.empty.instance-description',
+		defaultMessage: 'Click the Play button to start receiving live logs.',
+	},
+	emptyServerTitle: {
+		id: 'console.empty.server-title',
+		defaultMessage: 'Welcome to your Modrinth server!',
+	},
+	emptyServerDescription: {
+		id: 'console.empty.server-description',
+		defaultMessage: 'Click the green start button to start the server!',
+	},
 	shareLogs: { id: 'console.share-modal.title', defaultMessage: 'Share Logs' },
 	deleteLogFile: { id: 'console.delete-modal.title', defaultMessage: 'Delete log file' },
 	deleteIrreversible: {
@@ -52,6 +70,10 @@ export const consoleMessages = defineMessages({
 	shareFailedTitle: {
 		id: 'console.notification.share-failed',
 		defaultMessage: 'Failed to share logs',
+	},
+	shareTruncatedWarning: {
+		id: 'console.notification.share-truncated',
+		defaultMessage: 'The log is too large, so only the last 9 MB was uploaded.',
 	},
 	unknownError: { id: 'console.notification.unknown-error', defaultMessage: 'Unknown error.' },
 })

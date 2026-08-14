@@ -42,7 +42,7 @@ async function hydrate(instanceId: string): Promise<void> {
 
 	const buffer = await get_live_log_buffer(instanceId)
 	if (buffer) {
-		entry.liveConsole.addLegacyLog(buffer)
+		await entry.liveConsole.addLegacyLog(buffer)
 	}
 }
 

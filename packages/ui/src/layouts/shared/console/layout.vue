@@ -46,39 +46,67 @@
 			</div>
 		</div>
 
-		<div class="flex items-center justify-between">
+		<div class="flex items-center gap-2">
 			<ConsoleFilterPills v-model="activeFilters" @toggle="handleFilterToggle" />
-			<ConsoleActionButtons
-				:show-clear="isLiveSource"
-				:has-logs="hasLogs"
-				:share-disabled="resolvedShareDisabled"
-				:sharing="isSharing"
-				:fullscreen="isFullscreen"
-				:clear-disabled="resolvedClearDisabled"
-				:clear-disabled-tooltip="resolvedClearDisabledTooltip"
-				:show-delete="showDelete"
-				:delete-disabled="resolvedDeleteDisabled"
-				:delete-disabled-tooltip="resolvedDeleteDisabledTooltip"
-				@clear="handleClear"
-				@share="handleShare"
-				@toggle-fullscreen="toggleFullscreen"
-				@delete="handleDelete"
-			/>
+			<div class="ml-auto flex items-center gap-2">
+				<ButtonStyled type="transparent" :highlighted="wrapLines">
+					<button
+						:aria-pressed="wrapLines"
+						:title="formatMessage(consoleMessages.toggleWrap)"
+						@click="wrapLines = !wrapLines"
+					>
+						<WrapTextIcon />
+						{{ formatMessage(consoleMessages.wrapLabel) }}
+					</button>
+				</ButtonStyled>
+				<div class="w-28">
+					<Combobox
+						:model-value="logFontSize"
+						:options="fontSizeOptions"
+						@update:model-value="(v) => (logFontSize = v)"
+					/>
+				</div>
+				<ConsoleActionButtons
+					:show-clear="isLiveSource"
+					:has-logs="hasLogs"
+					:share-disabled="resolvedShareDisabled"
+					:sharing="isSharing"
+					:fullscreen="isFullscreen"
+					:clear-disabled="resolvedClearDisabled"
+					:clear-disabled-tooltip="resolvedClearDisabledTooltip"
+					:show-delete="showDelete"
+					:delete-disabled="resolvedDeleteDisabled"
+					:delete-disabled-tooltip="resolvedDeleteDisabledTooltip"
+					@clear="handleClear"
+					@share="handleShare"
+					@toggle-fullscreen="toggleFullscreen"
+					@delete="handleDelete"
+				/>
+			</div>
 		</div>
 
-		<BaseTerminal
-			ref="terminalRef"
-			class="min-h-0 flex-1"
-			:show-input="resolvedShowInput"
-			:disable-input="resolvedInputDisabled"
-			:disable-input-tooltip="resolvedInputDisabledTooltip"
-			:disabled-input-placeholder="resolvedInputDisabledPlaceholder"
-			:fullscreen="isFullscreen"
-			:empty-state-type="ctx.emptyStateType"
-			:loading="resolvedLoading"
-			@command="handleCommand"
-			@ready="handleTerminalReady"
-		/>
+		<div
+			class="relative min-h-0 flex-1 overflow-hidden rounded-[20px] border border-solid border-surface-4"
+		>
+			<LogViewport
+				ref="viewportRef"
+				class="h-full"
+				:lines="filteredLines"
+				:search-query="searchQuery"
+				:wrap="wrapLines"
+				:font-size="logFontSize"
+				:empty-state-type="ctx.emptyStateType"
+			/>
+			<Transition name="terminal-loading-fade">
+				<div
+					v-if="resolvedLoading"
+					class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-surface-3/80 px-8"
+					aria-hidden="true"
+				>
+					<LoadingIndicator />
+				</div>
+			</Transition>
+		</div>
 	</div>
 	<ShareModal
 		ref="shareModal"
@@ -117,16 +145,16 @@
 </template>
 
 <script setup lang="ts">
-import { DownloadIcon, SearchIcon, TrashIcon, XIcon } from '@modrinth/assets'
-import type { Terminal } from '@xterm/xterm'
-import { computed, isRef, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { DownloadIcon, SearchIcon, TrashIcon, WrapTextIcon, XIcon } from '@modrinth/assets'
+import { computed, isRef, onBeforeUnmount, ref } from 'vue'
 
 import Admonition from '#ui/components/base/Admonition.vue'
-import BaseTerminal from '#ui/components/base/BaseTerminal.vue'
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import type { CollapsibleAdmonitionItem } from '#ui/components/base/CollapsibleAdmonition.vue'
 import CollapsibleAdmonition from '#ui/components/base/CollapsibleAdmonition.vue'
+import type { ComboboxOption } from '#ui/components/base/Combobox.vue'
 import Combobox from '#ui/components/base/Combobox.vue'
+import LoadingIndicator from '#ui/components/base/LoadingIndicator.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
 import NewModal from '#ui/components/modal/NewModal.vue'
 import ShareModal from '#ui/components/modal/ShareModal.vue'
@@ -136,17 +164,12 @@ import { injectModalBehavior } from '#ui/providers/modal-behavior'
 import { injectPageContext } from '#ui/providers/page-context'
 import { injectNotificationManager } from '#ui/providers/web-notifications.ts'
 import { commonMessages } from '#ui/utils/common-messages'
+import { shareLogs } from '#ui/utils/log-share'
 
 import ConsoleActionButtons from './components/ConsoleActionButtons.vue'
 import ConsoleFilterPills from './components/ConsoleFilterPills.vue'
-import {
-	clearSearchHighlights,
-	colorize,
-	getHighlightVersion,
-	highlightAppendedRange,
-	rewriteTerminal,
-	useConsoleFilters,
-} from './composables'
+import LogViewport from './components/LogViewport.vue'
+import { useConsoleFilters } from './composables'
 import { consoleMessages, localFindingMessages } from './messages'
 import { injectConsoleManager } from './providers'
 import type { LogLevel, LogLine } from './types'
@@ -390,12 +413,20 @@ const crashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 	}))
 })
 
-const terminalRef = ref<InstanceType<typeof BaseTerminal> | null>(null)
+const viewportRef = ref<InstanceType<typeof LogViewport> | null>(null)
 const shareModal = ref<InstanceType<typeof ShareModal> | null>(null)
 const deleteModal = ref<InstanceType<typeof NewModal> | null>(null)
 const isDeleting = ref(false)
 const exportingCrashContext = ref(false)
 const searchQuery = ref('')
+const wrapLines = ref(false)
+const logFontSize = ref(12)
+
+const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24] as const
+const fontSizeOptions = computed<ComboboxOption<number>[]>(() =>
+	FONT_SIZES.map((size) => ({ value: size, label: `${size}px` })),
+)
+
 const isFullscreen = ref(false)
 const fullscreenBodyClass = 'modrinth-console-fullscreen-active'
 const fullscreenIntercomPadding = 20
@@ -436,6 +467,19 @@ function buildCombinedPredicate(): ((line: LogLine) => boolean) | null {
 	}
 }
 
+const filteredLines = computed(() => {
+	const predicate = buildCombinedPredicate()
+	const src = ctx.logLines.value
+	if (!predicate) {
+		return src.map((line, i) => ({ line, originalIndex: i }))
+	}
+	const out: Array<{ line: LogLine; originalIndex: number }> = []
+	for (let i = 0; i < src.length; i++) {
+		if (predicate(src[i]!)) out.push({ line: src[i]!, originalIndex: i })
+	}
+	return out
+})
+
 onBeforeUnmount(() => {
 	if (isFullscreen.value) {
 		document.body.style.overflow = ''
@@ -448,47 +492,12 @@ onBeforeUnmount(() => {
 	}
 })
 
-let lastWrittenIndex = 0
-let searchDebounce: ReturnType<typeof setTimeout> | null = null
-
-const resolvedShowInput = computed(() => {
-	const v = ctx.showCommandInput
-	if (v === undefined) return false
-	if (typeof v === 'boolean') return v
-	return isRef(v) ? v.value : v
-})
-
-const resolvedDisableInput = computed(() => {
-	const v = ctx.disableCommandInput
-	if (!v) return false
-	return isRef(v) ? v.value : v
-})
-
-function unwrapMaybeRef<T>(value: T | { value: T } | undefined): T | undefined {
-	if (value === undefined) return undefined
-	return isRef(value) ? value.value : value
-}
-
 // needs historical log start/end flags on ws to be properly useful
 const resolvedLoading = computed(() => {
 	const v = ctx.loading
 	if (!v) return false
 	return v.value
 })
-
-const resolvedInputDisabled = computed(() => resolvedDisableInput.value || resolvedLoading.value)
-
-const resolvedInputDisabledTooltip = computed(() =>
-	resolvedDisableInput.value ? unwrapMaybeRef(ctx.disableCommandInputTooltip) : undefined,
-)
-
-const resolvedInputDisabledPlaceholder = computed(() =>
-	formatMessage(
-		resolvedInputDisabledTooltip.value
-			? consoleMessages.commandInputDisabled
-			: consoleMessages.serverNotRunning,
-	),
-)
 
 const resolvedShareDisabled = computed(() => {
 	const v = ctx.shareDisabled
@@ -504,6 +513,11 @@ const resolvedDeleteDisabled = computed(() => {
 	return isRef(v) ? v.value : v
 })
 
+function unwrapMaybeRef<T>(value: T | { value: T } | undefined): T | undefined {
+	if (value === undefined) return undefined
+	return isRef(value) ? value.value : value
+}
+
 const resolvedDeleteDisabledTooltip = computed(() =>
 	resolvedDeleteDisabled.value ? unwrapMaybeRef(ctx.deleteDisabledTooltip) : undefined,
 )
@@ -518,36 +532,8 @@ const resolvedClearDisabledTooltip = computed(() =>
 	resolvedClearDisabled.value ? unwrapMaybeRef(ctx.clearDisabledTooltip) : undefined,
 )
 
-function handleTerminalReady(_terminal: Terminal) {
-	rewriteFiltered()
-}
-
 function handleFilterToggle(value: LogLevel) {
 	toggleFilter(value)
-	rewriteFiltered()
-}
-
-function activeSearchQuery(): string {
-	return searchQuery.value.trim().toLowerCase()
-}
-
-function rewriteFiltered() {
-	const term = terminalRef.value?.terminal
-	if (!term) return
-	const lines = ctx.logLines.value
-	if (resolvedLoading.value && lines.length === 0 && isLiveSource.value) {
-		terminalRef.value?.clearEmptyState()
-		lastWrittenIndex = 0
-		return
-	}
-	if (lines.length === 0 && isLiveSource.value) {
-		writeEmptyState()
-		return
-	}
-	terminalRef.value?.clearEmptyState()
-	const predicate = buildCombinedPredicate()
-	rewriteTerminal(term, lines, predicate, activeSearchQuery())
-	lastWrittenIndex = lines.length
 }
 
 function toggleFullscreen() {
@@ -569,85 +555,10 @@ function toggleFullscreen() {
 		)
 		modalBehavior?.onHide?.()
 	}
-	nextTick(() => {
-		terminalRef.value?.fit()
-	})
-}
-
-function writeEmptyState() {
-	terminalRef.value?.writeEmptyState()
-	lastWrittenIndex = 0
-}
-
-watch(ctx.logLines, (lines, oldLines) => {
-	const term = terminalRef.value?.terminal
-	if (!term) return
-
-	if (lines.length === 0 && isLiveSource.value) {
-		if (resolvedLoading.value) {
-			terminalRef.value?.clearEmptyState()
-			lastWrittenIndex = 0
-			return
-		}
-
-		writeEmptyState()
-		return
-	}
-
-	if (
-		terminalRef.value?.showingEmptyState ||
-		lines !== oldLines ||
-		lines.length < lastWrittenIndex
-	) {
-		terminalRef.value?.clearEmptyState()
-		rewriteFiltered()
-		return
-	}
-
-	const predicate = buildCombinedPredicate()
-	const newLines: string[] = []
-	for (let i = lastWrittenIndex; i < lines.length; i++) {
-		if (!predicate || predicate(lines[i])) {
-			newLines.push(colorize(lines[i]))
-		}
-	}
-	if (newLines.length > 0) {
-		const buffer = term.buffer.active
-		const onFreshLine = buffer.cursorX === 0
-		const data = onFreshLine ? newLines.join('\r\n') : '\r\n' + newLines.join('\r\n')
-		const fromRow = buffer.baseY + buffer.cursorY
-		const version = getHighlightVersion(term)
-		term.write(data, () => {
-			highlightAppendedRange(term, fromRow, version)
-		})
-	}
-	lastWrittenIndex = lines.length
-})
-
-watch(searchQuery, () => {
-	if (searchDebounce) clearTimeout(searchDebounce)
-	searchDebounce = setTimeout(() => {
-		rewriteFiltered()
-	}, 200)
-})
-
-watch(resolvedLoading, (loading) => {
-	if (!loading) {
-		rewriteFiltered()
-	}
-})
-
-function handleCommand(cmd: string) {
-	if (resolvedInputDisabled.value) return
-	ctx.sendCommand?.(cmd)
 }
 
 function handleClear() {
 	if (resolvedClearDisabled.value) return
-	const term = terminalRef.value?.terminal
-	if (term) clearSearchHighlights(term)
-	terminalRef.value?.reset()
-	lastWrittenIndex = 0
 	ctx.onClear?.()
 }
 
@@ -680,9 +591,15 @@ async function handleShare() {
 
 	isSharing.value = true
 	try {
-		const data = await client.mclogs.logs_v1.create(content)
-		if (data.url) {
-			shareModal.value?.show(data.url)
+		const result = await shareLogs(client, content)
+		if (result.truncated) {
+			addNotification({
+				type: 'warning',
+				title: formatMessage(consoleMessages.shareTruncatedWarning),
+			})
+		}
+		if (result.url) {
+			shareModal.value?.show(result.url)
 		}
 	} catch (err) {
 		console.error('Failed to share logs:', err)
@@ -698,6 +615,16 @@ async function handleShare() {
 </script>
 
 <style>
+.terminal-loading-fade-enter-active,
+.terminal-loading-fade-leave-active {
+	transition: opacity 250ms ease-in-out;
+}
+
+.terminal-loading-fade-enter-from,
+.terminal-loading-fade-leave-to {
+	opacity: 0;
+}
+
 .modrinth-console-fullscreen-active .intercom-lightweight-app,
 .modrinth-console-fullscreen-active .intercom-lightweight-app-launcher,
 .modrinth-console-fullscreen-active .intercom-lightweight-app-messenger,

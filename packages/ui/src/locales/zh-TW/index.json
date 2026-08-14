@@ -1178,9 +1178,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "搜尋檔案"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "分享至 mclo.gs"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "從 .zip 檔案上傳"
   },

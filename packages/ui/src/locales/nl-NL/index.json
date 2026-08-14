@@ -566,9 +566,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "Bestanden zoeken"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "Delen op mclo.gs"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Uploaden vanuit een .zip-bestand"
   },

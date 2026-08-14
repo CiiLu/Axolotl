@@ -33,6 +33,31 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.7.8',
+		version: '1.7.8',
+		publishedAt: '2026-08-15',
+		title: {
+			'en-US': 'Axolotl Launcher 1.7.8',
+			'zh-CN': 'Axolotl Launcher 1.7.8',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Added logshare.cn log sharing and AI log analysis features, and optimized the log viewer page.',
+					'zh-CN': '新增logshare.cn的日志分享和AI日志分析功能，优化了日志查看器页面。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Changed the sidebar collapse method and optimized the sidebar collapse and expand interaction.',
+					'zh-CN': '修改侧边栏折叠方式，优化了侧边栏的收起展开交互。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.7.7',
 		version: '1.7.7',
 		publishedAt: '2026-08-14',

@@ -413,9 +413,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "Procurar ficheiros"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "Partilhar no mclo.gs"
-  },
   "files.rename-modal.header": {
     "defaultMessage": "Renomear {name}"
   },

@@ -734,9 +734,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "Пошук файлів"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "Поширити в mclo.gs"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Вивантажити з файлу .zip"
   },

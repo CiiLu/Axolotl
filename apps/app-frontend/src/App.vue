@@ -3171,7 +3171,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			class="app-sidebar mt-px shrink-0 flex flex-col border-0 border-l-[1px] border-[--brand-gradient-border] border-solid"
 		>
 			<button
-				v-if="!forceSidebar && themeStore.toggleSidebar"
+				v-if="!forceSidebar"
 				v-tooltip.left="
 					sidebarToggled
 						? formatMessage(messages.collapseSidebar)
@@ -3187,8 +3187,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				@click="sidebarToggled = !sidebarToggled"
 			>
 				<RightArrowIcon
-					class="w-3 h-3 transition-transform duration-300"
-					:class="{ 'rotate-180': sidebarToggled }"
+					class="w-2.5 h-2.5 -translate-x-[1px] transition-transform duration-300"
+					:class="{ 'rotate-180': !sidebarToggled }"
 				/>
 			</button>
 			<div
@@ -3553,35 +3553,44 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 }
 
 .sidebar-toggle-handle {
-	--handle-fill: color-mix(in srgb, var(--color-brand) 12%, var(--color-bg));
+	--handle-bg: color-mix(in srgb, var(--color-brand) 12%, var(--color-bg));
+	--handle-bg-hover: color-mix(in srgb, var(--color-brand) 20%, var(--color-bg));
+	--handle-border: var(--brand-gradient-border);
+	--handle-border-hover: color-mix(in srgb, var(--color-brand) 45%, transparent);
 
 	position: absolute;
 	top: 50%;
-
-	left: -15px;
+	left: -13px;
 	transform: translateY(-50%);
-
 	z-index: 12;
 
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 16px;
-	height: 46px;
+	width: 13px;
+	height: 36px;
 	padding: 0;
 
-	border: 1px solid var(--brand-gradient-border);
+	// 只让外侧(左边)圆润,右边与 Sidebar 完全贴合,单一元素完成形状
+	border: 1px solid var(--handle-border);
 	border-right: none;
-	border-radius: 9px 0 0 9px;
-	box-shadow: -4px 0 10px rgba(0, 0, 0, 0.08);
+	border-radius: 11px 0 0 11px;
 
-	background-color: var(--handle-fill);
+	background-color: var(--handle-bg);
 	color: var(--color-contrast);
 	cursor: pointer;
 
+	box-shadow: -4px 0 10px rgba(0, 0, 0, 0.08);
+
+	transition:
+		background-color 180ms ease,
+		border-color 180ms ease,
+		color 180ms ease;
+
 	&:hover {
 		color: var(--color-button-text-selected);
-		background-color: color-mix(in srgb, var(--color-brand) 20%, var(--color-bg));
+		background-color: var(--handle-bg-hover);
+		border-color: var(--handle-border-hover);
 	}
 
 	&:hover svg {
@@ -3597,30 +3606,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		outline-offset: 1px;
 	}
 
-	&::before {
-		content: '';
-		position: absolute;
-		top: -8px;
-		right: -1px;
-		width: 8px;
-		height: 8px;
-		background: transparent;
-		border-bottom-right-radius: 8px;
-		box-shadow: 4px 4px 0 0 var(--handle-fill);
-		pointer-events: none;
-	}
-
-	&::after {
-		content: '';
-		position: absolute;
-		bottom: -8px;
-		right: -1px;
-		width: 8px;
-		height: 8px;
-		background: transparent;
-		border-top-right-radius: 8px;
-		box-shadow: 4px -4px 0 0 var(--handle-fill);
-		pointer-events: none;
+	svg {
+		transform-origin: center;
+		transition: transform 180ms ease;
 	}
 }
 

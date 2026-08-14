@@ -178,8 +178,8 @@
 			<div v-else-if="!isEditingImage" class="flex gap-2">
 				<ButtonStyled v-if="isLogFile" type="transparent" circular>
 					<button
-						v-tooltip="formatMessage(messages.shareToMclogs)"
-						:aria-label="formatMessage(messages.shareToMclogs)"
+						v-tooltip="formatMessage(messages.shareLog)"
+						:aria-label="formatMessage(messages.shareLog)"
 						@click="$emit('share')"
 					>
 						<ShareIcon />
@@ -274,9 +274,9 @@ const messages = defineMessages({
 		id: 'files.navbar.install-curseforge-pack',
 		defaultMessage: 'Install CurseForge pack',
 	},
-	shareToMclogs: {
-		id: 'files.navbar.share-to-mclogs',
-		defaultMessage: 'Share to mclo.gs',
+	shareLog: {
+		id: 'files.navbar.share-log',
+		defaultMessage: 'Share log',
 	},
 	findInFile: {
 		id: 'files.navbar.find-in-file',

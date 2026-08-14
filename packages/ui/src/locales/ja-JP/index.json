@@ -743,9 +743,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "ファイルを探す"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "mclo.gsに公開"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": ".zipファイルからアップロード"
   },

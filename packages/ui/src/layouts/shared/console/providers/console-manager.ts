@@ -1,4 +1,4 @@
-import type { Mclogs } from '@modrinth/api-client'
+import type { Logshare } from '@modrinth/api-client'
 import type { ComputedRef, Ref } from 'vue'
 
 import { createContext } from '#ui/providers/create-context'
@@ -48,7 +48,7 @@ export interface ConsoleManagerContext {
 	localCrashAnalysis?: Ref<LocalCrashAnalysis | null>
 	crashAnalysisLoading?: Ref<boolean>
 	onExportCrashContext?: () => Promise<void>
-	crashAnalysis?: Ref<Mclogs.Insights.v1.InsightsResponse | null>
+	crashAnalysis?: Ref<Logshare.Insights.v1.InsightsResponse | null>
 	onDismissCrash?: () => void
 }
 

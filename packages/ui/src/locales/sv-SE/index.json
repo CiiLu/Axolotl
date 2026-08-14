@@ -695,9 +695,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "Sök filer"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "Dela till mclo.gs"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Ladda upp .zip-fil"
   },
