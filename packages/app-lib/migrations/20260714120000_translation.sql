@@ -21,4 +21,4 @@ CREATE TABLE translation_cache (
 	created_at INTEGER NOT NULL
 );
 
-CREATE INDEX translation_cache_created_at ON translation_cache (created_at);
+CREATE INDEX translation_cache_created_at ON translation_cache(created_at);
