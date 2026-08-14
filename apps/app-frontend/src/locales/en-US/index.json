@@ -4124,9 +4124,6 @@
 	"app.minecraft-crash.exited-before-initialization": {
 		"message": "The Java process exited before it could connect to the launcher. The selected Java version is probably incompatible with this Minecraft or Mod loader version. Select the Java version required by the instance, then try again."
 	},
-	"app.minecraft-crash.export-context": {
-		"message": "Export Minecraft error report"
-	},
 	"app.minecraft-crash.initialization-timed-out": {
 		"message": "The Java process started but did not connect to the launcher within 15 seconds. Check the selected Java version and any wrapper command, then try again."
 	},
@@ -4171,9 +4168,6 @@
 	},
 	"app.minecraft-crash.title": {
 		"message": "{instanceName} crashed"
-	},
-	"app.minecraft-crash.view-logs": {
-		"message": "View logs and analysis"
 	},
 	"app.minecraft.playing-as": {
 		"message": "Playing as"
@@ -4757,6 +4751,12 @@
 	"app.onboarding.mascot-alt": {
 		"message": "Axolotl guide"
 	},
+	"app.onboarding.privacy.description": {
+		"message": "Change anonymous telemetry and Discord Rich Presence independently whenever you need to."
+	},
+	"app.onboarding.privacy.title": {
+		"message": "Your data, your call"
+	},
 	"app.onboarding.resources.description": {
 		"message": "Tune downloads, storage, and app resources. Give the fan a little dignity."
 	},
@@ -4801,6 +4801,30 @@
 	},
 	"app.onboarding.welcome.title": {
 		"message": "Everything is ready"
+	},
+	"app.privacy-consent.continue": {
+		"message": "Save and continue"
+	},
+	"app.privacy-consent.discord-rpc": {
+		"message": "Discord Rich Presence"
+	},
+	"app.privacy-consent.discord-rpc-description": {
+		"message": "Shows your current launcher or game activity in Discord when Discord is running."
+	},
+	"app.privacy-consent.intro": {
+		"message": "Choose what Axolotl may send or display. Nothing is sent until you confirm these choices."
+	},
+	"app.privacy-consent.privacy-policy": {
+		"message": "Read the privacy policy"
+	},
+	"app.privacy-consent.telemetry": {
+		"message": "Allow anonymous telemetry"
+	},
+	"app.privacy-consent.telemetry-description": {
+		"message": "Helps count opted-in installations and diagnose launcher errors using sanitized, limited reports. Full Minecraft logs and account credentials are not uploaded."
+	},
+	"app.privacy-consent.title": {
+		"message": "Privacy & security"
 	},
 	"app.project.curseforge.loading": {
 		"message": "Loading CurseForge project…"
@@ -4912,6 +4936,9 @@
 	},
 	"app.settings.about.preview-minecraft-crash-modal": {
 		"message": "Preview Minecraft crash window"
+	},
+	"app.settings.about.preview-privacy-consent-modal": {
+		"message": "Preview privacy & security modal"
 	},
 	"app.settings.about.product-title": {
 		"message": "About {productName}"
@@ -5132,6 +5159,21 @@
 	"app.settings.logs.title": {
 		"message": "Log analysis service"
 	},
+	"app.settings.privacy.data-handling": {
+		"message": "Telemetry uses a random installation identifier. Error context is sanitized and limited before it leaves this device. Turning telemetry off clears pending reports immediately."
+	},
+	"app.settings.privacy.discord-rpc": {
+		"message": "Discord Rich Presence"
+	},
+	"app.settings.privacy.discord-rpc-description": {
+		"message": "Show your current launcher or game activity in Discord."
+	},
+	"app.settings.privacy.telemetry": {
+		"message": "Allow telemetry"
+	},
+	"app.settings.privacy.telemetry-description": {
+		"message": "Send an anonymous daily activity signal and sanitized launcher error reports. Minecraft logs and account credentials are never uploaded."
+	},
 	"app.settings.resources.app-cache": {
 		"message": "App cache"
 	},
@@ -5287,6 +5329,9 @@
 	},
 	"app.settings.tabs.multiplayer": {
 		"message": "Multiplayer"
+	},
+	"app.settings.tabs.privacy-security": {
+		"message": "Privacy & security"
 	},
 	"app.settings.tabs.resource-management": {
 		"message": "Resource management"

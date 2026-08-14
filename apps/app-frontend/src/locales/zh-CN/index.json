@@ -1709,9 +1709,6 @@
 	"app.minecraft-crash.exited-before-initialization": {
 		"message": "Java 进程尚未连接到启动器便已退出。最可能的原因是所选 Java 版本与当前 Minecraft 或模组加载器不兼容。请选择该实例所需的 Java 版本，然后重试。"
 	},
-	"app.minecraft-crash.export-context": {
-		"message": "导出 Minecraft 错误报告"
-	},
 	"app.minecraft-crash.initialization-timed-out": {
 		"message": "Java 进程已经启动，但在 15 秒内未能连接到启动器。请检查所选 Java 版本和包装器命令，然后重试。"
 	},
@@ -1756,9 +1753,6 @@
 	},
 	"app.minecraft-crash.title": {
 		"message": "{instanceName} 已崩溃"
-	},
-	"app.minecraft-crash.view-logs": {
-		"message": "查看日志与分析"
 	},
 	"app.minecraft.playing-as": {
 		"message": "当前游玩账号："
@@ -6751,6 +6745,57 @@
 	},
 	"app.multiplayer.terracotta.public-nodes-saved": {
 		"message": "陶瓦公共节点已保存"
+	},
+	"app.onboarding.privacy.description": {
+		"message": "匿名遥测与 Discord Rich Presence 可以随时独立调整。"
+	},
+	"app.onboarding.privacy.title": {
+		"message": "你的数据，由你决定"
+	},
+	"app.privacy-consent.continue": {
+		"message": "保存并继续"
+	},
+	"app.privacy-consent.discord-rpc": {
+		"message": "Discord 活动状态"
+	},
+	"app.privacy-consent.discord-rpc-description": {
+		"message": "Discord 运行时显示你当前使用启动器或游玩的状态。"
+	},
+	"app.privacy-consent.intro": {
+		"message": "选择 Axolotl 可以发送或展示的内容。确认前不会发送任何遥测。"
+	},
+	"app.privacy-consent.privacy-policy": {
+		"message": "阅读隐私政策"
+	},
+	"app.privacy-consent.telemetry": {
+		"message": "允许匿名遥测"
+	},
+	"app.privacy-consent.telemetry-description": {
+		"message": "通过脱敏且限长的报告统计选择加入的安装量并排查启动器错误。不会上传完整 Minecraft 日志或账户凭据。"
+	},
+	"app.privacy-consent.title": {
+		"message": "隐私与安全"
+	},
+	"app.settings.about.preview-privacy-consent-modal": {
+		"message": "预览隐私与安全弹窗"
+	},
+	"app.settings.privacy.data-handling": {
+		"message": "遥测使用随机安装标识。错误上下文离开设备前会经过脱敏和长度限制。关闭遥测会立即清空待发送报告。"
+	},
+	"app.settings.privacy.discord-rpc": {
+		"message": "Discord 活动状态"
+	},
+	"app.settings.privacy.discord-rpc-description": {
+		"message": "在 Discord 中显示你当前使用启动器或游玩的状态。"
+	},
+	"app.settings.privacy.telemetry": {
+		"message": "允许遥测"
+	},
+	"app.settings.privacy.telemetry-description": {
+		"message": "发送匿名每日活跃信号和脱敏的启动器错误报告。绝不上传 Minecraft 日志或账户凭据。"
+	},
+	"app.settings.tabs.privacy-security": {
+		"message": "隐私与安全"
 	},
 	"app.curseforge.manual-downloads.state-changed": {
 		"message": "下载状态已被更改，正在等待同步。"
