@@ -60,6 +60,15 @@ Thumbs.db
 target
 generated
 .env
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+*.d1
+*.dump.sql
+access-jwt*.txt
+/docs/
+.vercel/
 
 .astro
 .claude/*
@@ -92,3 +101,5 @@ plugins-workspace/*
 
 # Local Netlify folder
 .netlify
+.cf-reconcile-test
+.cf-reconcile-state-a

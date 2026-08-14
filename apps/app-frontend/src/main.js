@@ -8,6 +8,7 @@ import { createApp } from 'vue'
 
 import App from '@/App.vue'
 import { overlayScrollbarsDirective } from '@/directives/overlayScrollbars'
+import { installTelemetryErrorHandlers } from '@/helpers/telemetry'
 import i18nPlugin from '@/plugins/i18n'
 import i18nDebugPlugin from '@/plugins/i18n-debug'
 import router from '@/routes'
@@ -15,6 +16,8 @@ import router from '@/routes'
 const pinia = createPinia()
 
 const app = createApp(App)
+
+installTelemetryErrorHandlers(app)
 
 app.use(VueQueryPlugin)
 app.use(router)

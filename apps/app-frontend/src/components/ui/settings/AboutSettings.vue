@@ -17,6 +17,7 @@ const copied = ref(false)
 const { addNotification } = injectNotificationManager()
 const replayOnboarding = inject<(mode: 'main' | 'instance') => Promise<void>>('replayOnboarding')
 const previewMinecraftCrashModal = inject<() => void>('previewMinecraftCrashModal')
+const previewPrivacyConsentModal = inject<() => Promise<void>>('previewPrivacyConsentModal')
 
 async function copyQqGroupNumber() {
 	await navigator.clipboard.writeText(AxolotlBrandConfig.qqGroupNumber)
@@ -99,6 +100,10 @@ const messages = defineMessages({
 		id: 'app.settings.about.preview-minecraft-crash-modal',
 		defaultMessage: 'Preview Minecraft crash window',
 	},
+	previewPrivacyConsentModal: {
+		id: 'app.settings.about.preview-privacy-consent-modal',
+		defaultMessage: 'Preview privacy & security modal',
+	},
 	contentSearchAttribution: {
 		id: 'app.settings.about.content-search-attribution',
 		defaultMessage:
@@ -174,6 +179,11 @@ function triggerTestNotificationError() {
 				<ButtonStyled>
 					<button @click="previewMinecraftCrashModal?.()">
 						<WrenchIcon /> {{ formatMessage(messages.previewMinecraftCrashModal) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button @click="previewPrivacyConsentModal?.()">
+						<WrenchIcon /> {{ formatMessage(messages.previewPrivacyConsentModal) }}
 					</button>
 				</ButtonStyled>
 			</div>

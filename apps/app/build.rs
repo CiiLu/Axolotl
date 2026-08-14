@@ -351,6 +351,10 @@ fn main() {
                     .commands(&[
                         "settings_get",
                         "settings_set",
+                        "privacy_get",
+                        "privacy_set",
+                        "telemetry_set",
+                        "discord_rpc_set",
                         "cancel_directory_change",
                     ])
                     .default_permission(

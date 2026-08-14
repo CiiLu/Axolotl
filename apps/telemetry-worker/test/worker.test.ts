@@ -1,0 +1,190 @@
+import { env, SELF } from 'cloudflare:test'
+import { describe, expect, it } from 'vitest'
+
+import type { Bindings } from '../src'
+import { batchSchema } from '../src/schema'
+
+declare module 'cloudflare:test' {
+	interface ProvidedEnv extends Bindings {}
+}
+
+const installationId = '018f6ee8-4cb1-7db3-8a8d-8df96f122d85'
+
+function batch(
+	batchId: string,
+	events: Array<Record<string, unknown>>,
+	clientInstallationId = installationId,
+): Record<string, unknown> {
+	return {
+		schema_version: 1,
+		batch_id: batchId,
+		installation_id: clientInstallationId,
+		app: {
+			version: '1.7.1',
+			environment: 'production',
+			platform: 'windows',
+			arch: 'x86_64',
+		},
+		events,
+	}
+}
+
+async function post(payload: unknown): Promise<Response> {
+	return await SELF.fetch('https://telemetry.example/v1/batch', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(payload),
+	})
+}
+
+describe('telemetry worker', () => {
+	it('serves health without storage access', async () => {
+		const response = await SELF.fetch('https://telemetry.example/health')
+		expect(response.status).toBe(200)
+		expect(await response.json()).toEqual({ status: 'ok', schema_version: 1 })
+	})
+
+	it('rejects unknown structures and oversized requests', async () => {
+		const invalid = batch('11111111-1111-4111-8111-111111111111', [
+			{
+				type: 'heartbeat',
+				event_id: '21111111-1111-4111-8111-111111111111',
+				occurred_at: new Date().toISOString(),
+				day: '2026-08-14',
+				unknown: true,
+			},
+		])
+		expect(batchSchema.safeParse(invalid).success).toBe(false)
+		expect((await post(invalid)).status).toBe(400)
+
+		const oversized = await SELF.fetch('https://telemetry.example/v1/batch', {
+			method: 'POST',
+			body: 'x'.repeat(65 * 1024),
+		})
+		expect(oversized.status).toBe(413)
+	})
+
+	it('hashes installations and keeps heartbeat batches idempotent', async () => {
+		const payload = batch('31111111-1111-4111-8111-111111111111', [
+			{
+				type: 'heartbeat',
+				event_id: '41111111-1111-4111-8111-111111111111',
+				occurred_at: new Date().toISOString(),
+				day: '2026-08-14',
+			},
+		])
+		expect((await post(payload)).status).toBe(200)
+		expect((await post(payload)).status).toBe(200)
+
+		const installation = await env.DB.prepare('SELECT installation_hash FROM installations').first<{
+			installation_hash: string
+		}>()
+		expect(installation?.installation_hash).toMatch(/^[0-9a-f]{64}$/)
+		expect(installation?.installation_hash).not.toBe(installationId)
+
+		const active = await env.DB.prepare('SELECT COUNT(*) AS count FROM daily_active').first<{
+			count: number
+		}>()
+		expect(active?.count).toBe(1)
+	})
+
+	it('keeps offline heartbeat dates for DAU, WAU, and MAU queries', async () => {
+		const day = (daysAgo: number) =>
+			new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10)
+		const samples = [
+			{
+				batchId: '32111111-1111-4111-8111-111111111111',
+				eventId: '42111111-1111-4111-8111-111111111111',
+				installationId: '018f6ee8-4cb1-7db3-8a8d-8df96f122d81',
+				daysAgo: 0,
+			},
+			{
+				batchId: '33111111-1111-4111-8111-111111111111',
+				eventId: '43111111-1111-4111-8111-111111111111',
+				installationId: '018f6ee8-4cb1-7db3-8a8d-8df96f122d82',
+				daysAgo: 6,
+			},
+			{
+				batchId: '34111111-1111-4111-8111-111111111111',
+				eventId: '44111111-1111-4111-8111-111111111111',
+				installationId: '018f6ee8-4cb1-7db3-8a8d-8df96f122d83',
+				daysAgo: 29,
+			},
+		]
+
+		for (const sample of samples) {
+			const heartbeatDay = day(sample.daysAgo)
+			const response = await post(
+				batch(
+					sample.batchId,
+					[
+						{
+							type: 'heartbeat',
+							event_id: sample.eventId,
+							occurred_at: `${heartbeatDay}T12:00:00.000Z`,
+							day: heartbeatDay,
+						},
+					],
+					sample.installationId,
+				),
+			)
+			expect(response.status).toBe(200)
+		}
+
+		const counts = await env.DB.prepare(
+			`SELECT
+				COUNT(DISTINCT CASE WHEN day = ? THEN installation_hash END) AS dau,
+				COUNT(DISTINCT CASE WHEN day >= date(?, '-6 days') THEN installation_hash END) AS wau,
+				COUNT(DISTINCT CASE WHEN day >= date(?, '-29 days') THEN installation_hash END) AS mau
+			FROM daily_active`,
+		)
+			.bind(day(0), day(0), day(0))
+			.first<{ dau: number; wau: number; mau: number }>()
+		expect(counts).toEqual({ dau: 1, wau: 2, mau: 3 })
+	})
+
+	it('redacts error context and enforces the daily R2 reservation cap', async () => {
+		const firstEvent = {
+			type: 'error',
+			event_id: '51111111-1111-4111-8111-111111111111',
+			occurred_at: new Date().toISOString(),
+			fingerprint: 'a'.repeat(64),
+			occurrence_count: 2,
+			error_type: 'window_error',
+			message: 'Failed for user@example.com',
+			stack: 'C:\\Users\\Alice\\launcher.js:1',
+			route: '/settings?token=secret',
+			command: null,
+			context: `Authorization: Bearer abc.def ${'x'.repeat(16_000)}`,
+		}
+		const secondEvent = {
+			...firstEvent,
+			event_id: '61111111-1111-4111-8111-111111111111',
+			fingerprint: 'b'.repeat(64),
+		}
+
+		expect((await post(batch('71111111-1111-4111-8111-111111111111', [firstEvent]))).status).toBe(
+			200,
+		)
+		expect((await post(batch('81111111-1111-4111-8111-111111111111', [secondEvent]))).status).toBe(
+			200,
+		)
+
+		const reservations = await env.DB.prepare(
+			'SELECT COUNT(*) AS count FROM error_context_reservations',
+		).first<{ count: number }>()
+		expect(reservations?.count).toBe(1)
+
+		const reservation = await env.DB.prepare(
+			'SELECT object_key FROM error_context_reservations LIMIT 1',
+		).first<{ object_key: string }>()
+		const object = await env.ERROR_CONTEXTS.get(reservation!.object_key)
+		expect(object).not.toBeNull()
+		const decompressed = object!.body.pipeThrough(new DecompressionStream('gzip'))
+		const text = await new Response(decompressed).text()
+		expect(new TextEncoder().encode(text).byteLength).toBeLessThanOrEqual(16 * 1024)
+		expect(text).not.toContain('user@example.com')
+		expect(text).not.toContain('abc.def')
+		expect(text).not.toContain('C:\\Users\\Alice')
+	})
+})

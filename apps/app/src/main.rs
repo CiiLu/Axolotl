@@ -462,6 +462,7 @@ fn main() {
         .plugin(api::schematic_preview::init())
         .plugin(api::shortcuts::init())
         .plugin(api::tags::init())
+        .plugin(api::telemetry::init())
         .plugin(api::translation::init())
         .plugin(api::utils::init())
         .plugin(api::cache::init())

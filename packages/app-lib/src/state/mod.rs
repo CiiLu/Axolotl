@@ -451,6 +451,16 @@ impl State {
         {
             tracing::error!("Error recovering interrupted install jobs: {e}");
         }
+        if let Err(e) =
+            crate::api::curseforge::reconcile_persisted_curseforge_waiting_jobs(
+                state,
+            )
+            .await
+        {
+            tracing::error!(
+                "Error reconciling persisted CurseForge waiting install jobs: {e}"
+            );
+        }
 
         let config_sync_state = Arc::clone(state);
         tokio::task::spawn(async move {
@@ -461,6 +471,8 @@ impl State {
         tokio::spawn(async move {
             concurrency_state.run_auto_concurrency_controller().await;
         });
+
+        crate::telemetry::start(Arc::clone(state));
 
         tokio::task::spawn(async move {
             crate::google_ip::preload().await;
@@ -496,7 +508,7 @@ impl State {
         Ok(())
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, not(feature = "tauri")))]
     pub(crate) async fn init_for_test(
         app_identifier: String,
     ) -> crate::Result<Arc<Self>> {

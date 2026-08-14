@@ -3476,13 +3476,16 @@ pub async fn recognize_instance_files(
         if let Some(file) = matches.get(&fingerprint) {
             for path in paths {
                 let full_path = instance_path.join(&path);
-                let (size, sha1) = sha1_file_async(&full_path).await?;
-                let state = State::get().await?;
-                let provider_ref = ContentProviderRef::CurseForge {
-                    project_id: CurseForgeProjectId::new(file.mod_id)?,
-                    file_id: Some(CurseForgeFileId::new(file.id)?),
+                let Some((size, sha1)) = verify_recognized_curseforge_file(
+                    &full_path,
+                    file.file_fingerprint,
+                )
+                .await?
+                else {
+                    continue;
                 };
-                crate::state::record_project_file_atomic(
+                let state = State::get().await?;
+                crate::state::record_verified_curseforge_project_file_atomic(
                     instance_id,
                     &path,
                     &sha1,
@@ -3490,9 +3493,9 @@ pub async fn recognize_instance_files(
                     ProjectType::Mod,
                     ContentSourceKind::CurseForge,
                     crate::state::instances::ContentOwnershipKind::UserAdded,
-                    Some(&provider_ref),
+                    CurseForgeProjectId::new(file.mod_id)?,
+                    CurseForgeFileId::new(file.id)?,
                     false,
-                    None,
                     &state,
                 )
                 .await?;
@@ -3512,12 +3515,30 @@ pub async fn recognize_instance_files(
     Ok(result)
 }
 
+async fn verify_recognized_curseforge_file(
+    path: &Path,
+    expected_fingerprint: u64,
+) -> crate::Result<Option<(u64, String)>> {
+    if expected_fingerprint == 0 {
+        return Ok(None);
+    }
+    let bytes = tokio::fs::read(path).await?;
+    if compute_fingerprint(&bytes) as u64 != expected_fingerprint {
+        return Ok(None);
+    }
+    Ok(Some((
+        bytes.len() as u64,
+        sha1_smol::Sha1::from(&bytes).hexdigest(),
+    )))
+}
+
 pub async fn import_manual_downloads(
     instance_id: &str,
     scan_directory: Option<PathBuf>,
 ) -> crate::Result<CurseForgeManualDownloadScanResult> {
     let Some(download_directory) = scan_directory.or_else(dirs::download_dir)
     else {
+        finalize_curseforge_manual_download_import(instance_id, false).await?;
         return Ok(CurseForgeManualDownloadScanResult::default());
     };
     let mut result = CurseForgeManualDownloadScanResult {
@@ -3573,9 +3594,11 @@ pub async fn import_manual_downloads(
         }
     }
 
-    if !result.imported.is_empty() {
-        crate::api::instance::emit_content_changed(instance_id).await?;
-    }
+    finalize_curseforge_manual_download_import(
+        instance_id,
+        !result.imported.is_empty(),
+    )
+    .await?;
 
     Ok(result)
 }
@@ -3653,7 +3676,7 @@ pub(crate) async fn scan_pending_manual_downloads_in(
         .filter_map(|job| job.instance_id)
         .collect::<HashSet<_>>();
     for instance_id in waiting_instances {
-        resume_curseforge_jobs_if_complete(&instance_id).await?;
+        reconcile_curseforge_waiting_jobs_for_instance(&instance_id).await?;
     }
 
     Ok(())
@@ -3711,6 +3734,94 @@ fn pending_manual_download(
         })
 }
 
+#[derive(Clone, Debug)]
+struct CurseForgeManualDownloadIntegrityMetadata {
+    project_id: u32,
+    file_id: u32,
+    hashes: Vec<CurseForgeFileHash>,
+    file_length: u64,
+    file_fingerprint: u64,
+}
+
+impl From<CurseForgeFile> for CurseForgeManualDownloadIntegrityMetadata {
+    fn from(file: CurseForgeFile) -> Self {
+        Self {
+            project_id: file.mod_id,
+            file_id: file.id,
+            hashes: file.hashes,
+            file_length: file.file_length,
+            file_fingerprint: file.file_fingerprint,
+        }
+    }
+}
+
+fn manual_download_has_integrity_metadata(
+    download: &CurseForgeManualDownload,
+) -> bool {
+    download
+        .hashes
+        .iter()
+        .any(|hash| hash.algo == 1 && !hash.value.trim().is_empty())
+        || download.file_fingerprint != 0
+}
+
+async fn ensure_manual_download_integrity_metadata(
+    download: &CurseForgeManualDownload,
+) -> crate::Result<CurseForgeManualDownload> {
+    ensure_manual_download_integrity_metadata_with(
+        download,
+        resolve_manual_download_integrity_metadata,
+    )
+    .await
+}
+
+async fn resolve_manual_download_integrity_metadata(
+    project_id: u32,
+    file_id: u32,
+) -> crate::Result<CurseForgeManualDownloadIntegrityMetadata> {
+    Ok(get_file(project_id, file_id).await?.into())
+}
+
+async fn ensure_manual_download_integrity_metadata_with<F, Fut>(
+    download: &CurseForgeManualDownload,
+    resolve_metadata: F,
+) -> crate::Result<CurseForgeManualDownload>
+where
+    F: FnOnce(u32, u32) -> Fut,
+    Fut: std::future::Future<
+            Output = crate::Result<CurseForgeManualDownloadIntegrityMetadata>,
+        >,
+{
+    if manual_download_has_integrity_metadata(download) {
+        return Ok(download.clone());
+    }
+
+    let metadata =
+        resolve_metadata(download.project_id, download.file_id).await?;
+    if metadata.project_id != download.project_id
+        || metadata.file_id != download.file_id
+    {
+        return Err(ErrorKind::InputError(
+            "CurseForge returned metadata for a different project or file"
+                .to_string(),
+        )
+        .into());
+    }
+
+    let mut hydrated = download.clone();
+    hydrated.hashes = metadata.hashes;
+    hydrated.file_length = metadata.file_length;
+    hydrated.file_fingerprint = metadata.file_fingerprint;
+    if !manual_download_has_integrity_metadata(&hydrated) {
+        return Err(ErrorKind::InputError(
+            "The required CurseForge file has no usable integrity metadata"
+                .to_string(),
+        )
+        .into());
+    }
+    Ok(hydrated)
+}
+
 async fn find_manual_download_candidate(
     download_directory: &Path,
     download: &CurseForgeManualDownload,
@@ -3724,6 +3835,7 @@ async fn find_manual_download_candidate(
         Err(error) => return Err(error.into()),
     };
 
+    let mut verified_download = None;
     while let Some(entry) = entries.next_entry().await? {
         let actual_file_name = entry.file_name().to_string_lossy().to_string();
         if !crate::util::downloads::browser_download_file_name_matches(
@@ -3733,11 +3845,40 @@ async fn find_manual_download_candidate(
             continue;
         }
         let path = entry.path();
-        match verify_manual_download_candidate(&path, download, true).await {
+        tracing::debug!(
+            project_id = download.project_id,
+            file_id = download.file_id,
+            candidate_path = %path.display(),
+            "Found CurseForge manual download filename candidate"
+        );
+        if verified_download.is_none() {
+            verified_download = Some(
+                ensure_manual_download_integrity_metadata(download).await?,
+            );
+        }
+        match verify_manual_download_candidate_with_integrity(
+            &path,
+            verified_download
+                .as_ref()
+                .expect("integrity metadata resolved"),
+            true,
+        )
+        .await
+        {
             Ok(Some((size, sha1))) => {
                 return Ok(Some((path, size, sha1)));
             }
-            Ok(None) | Err(_) => continue,
+            Ok(None) => continue,
+            Err(error) => {
+                tracing::debug!(
+                    project_id = download.project_id,
+                    file_id = download.file_id,
+                    candidate_path = %path.display(),
+                    %error,
+                    "Unable to inspect CurseForge manual download candidate"
+                );
+                continue;
+            }
         }
     }
 
@@ -3745,6 +3886,20 @@ async fn find_manual_download_candidate(
 }
 
 async fn verify_manual_download_candidate(
+    path: &Path,
+    download: &CurseForgeManualDownload,
+    require_matching_name: bool,
+) -> crate::Result<Option<(u64, String)>> {
+    let download = ensure_manual_download_integrity_metadata(download).await?;
+    verify_manual_download_candidate_with_integrity(
+        path,
+        &download,
+        require_matching_name,
+    )
+    .await
+}
+
+async fn verify_manual_download_candidate_with_integrity(
     path: &Path,
     download: &CurseForgeManualDownload,
     require_matching_name: bool,
@@ -3760,13 +3915,32 @@ async fn verify_manual_download_candidate(
             &download.file_name,
         )
     {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "name_mismatch",
+        );
         return Ok(None);
     }
     let metadata = tokio::fs::symlink_metadata(path).await?;
-    if !metadata.is_file()
-        || crate::util::io::is_symlink_or_reparse(&metadata)
-        || download.file_length > 0 && metadata.len() != download.file_length
-    {
+    if crate::util::io::is_symlink_or_reparse(&metadata) {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "symlink_or_reparse",
+        );
+        return Ok(None);
+    }
+    if !metadata.is_file() {
+        trace_manual_download_candidate_rejection(path, download, "non_file");
+        return Ok(None);
+    }
+    if download.file_length > 0 && metadata.len() != download.file_length {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "size_mismatch",
+        );
         return Ok(None);
     }
 
@@ -3774,24 +3948,56 @@ async fn verify_manual_download_candidate(
     if let Some(expected_sha1) = download
         .hashes
         .iter()
-        .find(|hash| hash.algo == 1)
+        .find(|hash| hash.algo == 1 && !hash.value.trim().is_empty())
         .map(|hash| hash.value.as_str())
     {
-        return Ok(sha1
-            .eq_ignore_ascii_case(expected_sha1)
-            .then_some((size, sha1)));
-    }
-    if manual_download_matches_without_hash(download, &actual_file_name) {
+        if !sha1.eq_ignore_ascii_case(expected_sha1) {
+            trace_manual_download_candidate_rejection(
+                path,
+                download,
+                "sha1_mismatch",
+            );
+            return Ok(None);
+        }
         return Ok(Some((size, sha1)));
     }
     if download.file_fingerprint == 0 {
-        return Ok(None);
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "missing_integrity_metadata",
+        );
+        return Err(ErrorKind::InputError(
+            "The required CurseForge file has no usable integrity metadata"
+                .to_string(),
+        )
+        .into());
     }
     let bytes = tokio::fs::read(path).await?;
-    Ok(
-        (compute_fingerprint(&bytes) as u64 == download.file_fingerprint)
-            .then_some((size, sha1)),
-    )
+    if compute_fingerprint(&bytes) as u64 != download.file_fingerprint {
+        trace_manual_download_candidate_rejection(
+            path,
+            download,
+            "fingerprint_mismatch",
+        );
+        return Ok(None);
+    }
+    Ok(Some((size, sha1)))
+}
+
+fn trace_manual_download_candidate_rejection(
+    path: &Path,
+    download: &CurseForgeManualDownload,
+    reason: &'static str,
+) {
+    tracing::trace!(
+        project_id = download.project_id,
+        file_id = download.file_id,
+        candidate_path = %path.display(),
+        expected_file_name = %download.file_name,
+        rejection_reason = reason,
+        "Rejected CurseForge manual download candidate"
+    );
 }
 
 pub(crate) async fn import_pending_manual_download_from_path(
@@ -3824,15 +4030,16 @@ pub(crate) async fn import_pending_manual_download_from_path(
         else {
             continue;
         };
-        return install_manual_download(
+        let relative_path = install_manual_download(
             instance_id,
             &download,
             source_path,
             size,
             &sha1,
         )
-        .await
-        .map(Some);
+        .await?;
+        finalize_curseforge_manual_download_import(instance_id, false).await?;
+        return Ok(Some(relative_path));
     }
     if matched_pending_name {
         return Err(ErrorKind::InputError(
@@ -3850,21 +4057,66 @@ pub async fn import_pending_manual_download_file(
     file_id: u32,
     source_path: PathBuf,
 ) -> crate::Result<CurseForgeManualDownloadImport> {
-    let download = list_pending_manual_downloads(instance_id)
-        .await?
-        .into_iter()
-        .find(|download| {
-            download.project_id == project_id && download.file_id == file_id
-        })
-        .ok_or_else(|| {
-            ErrorKind::InputError(
-                "The selected CurseForge file is not pending for this instance"
-                    .to_string(),
-            )
-        })?;
-    let Some((size, sha1)) =
-        verify_manual_download_candidate(&source_path, &download, false)
-            .await?
+    import_pending_manual_download_file_with_integrity_resolver(
+        instance_id,
+        project_id,
+        file_id,
+        source_path,
+        resolve_manual_download_integrity_metadata,
+    )
+    .await
+}
+
+async fn import_pending_manual_download_file_with_integrity_resolver<F, Fut>(
+    instance_id: &str,
+    project_id: u32,
+    file_id: u32,
+    source_path: PathBuf,
+    resolve_metadata: F,
+) -> crate::Result<CurseForgeManualDownloadImport>
+where
+    F: FnOnce(u32, u32) -> Fut,
+    Fut: std::future::Future<
+            Output = crate::Result<CurseForgeManualDownloadIntegrityMetadata>,
+        >,
+{
+    tracing::debug!(
+        instance_id,
+        project_id,
+        file_id,
+        source_path = %source_path.display(),
+        "Importing selected CurseForge manual download file"
+    );
+    let pending = list_pending_manual_downloads(instance_id).await?;
+    let pending_count = pending.len();
+    let download = pending.into_iter().find(|download| {
+        download.project_id == project_id && download.file_id == file_id
+    });
+    tracing::debug!(
+        instance_id,
+        project_id,
+        file_id,
+        pending_count,
+        pending_found = download.is_some(),
+        "Looked up selected CurseForge pending manual download"
+    );
+    let download = download.ok_or_else(|| {
+        ErrorKind::InputError(
+            "The selected CurseForge file is not pending for this instance"
+                .to_string(),
+        )
+    })?;
+    let download = ensure_manual_download_integrity_metadata_with(
+        &download,
+        resolve_metadata,
+    )
+    .await?;
+    let Some((size, sha1)) = verify_manual_download_candidate_with_integrity(
+        &source_path,
+        &download,
+        false,
+    )
+    .await?
     else {
         return Err(ErrorKind::InputError(
             "The selected file does not match the required CurseForge file"
@@ -3880,7 +4132,7 @@ pub async fn import_pending_manual_download_file(
         &sha1,
     )
     .await?;
-    crate::api::instance::emit_content_changed(instance_id).await?;
+    finalize_curseforge_manual_download_import(instance_id, true).await?;
     Ok(CurseForgeManualDownloadImport {
         project_id,
         file_id,
@@ -3888,10 +4140,106 @@ pub async fn import_pending_manual_download_file(
     })
 }
 
-async fn resume_curseforge_jobs_if_complete(
+async fn finalize_curseforge_manual_download_import(
+    instance_id: &str,
+    emit_content_changed: bool,
+) -> crate::Result<()> {
+    let reconciliation =
+        reconcile_curseforge_waiting_jobs_for_instance(instance_id).await;
+    let content_changed = if emit_content_changed {
+        crate::api::instance::emit_content_changed(instance_id).await
+    } else {
+        Ok(())
+    };
+    reconciliation?;
+    content_changed
+}
+
+pub(crate) async fn reconcile_curseforge_waiting_jobs_for_instance(
     instance_id: &str,
 ) -> crate::Result<()> {
     let state = State::get().await?;
+    reconcile_curseforge_waiting_jobs_for_instance_with_state(
+        instance_id,
+        &state,
+    )
+    .await
+}
+
+pub(crate) async fn reconcile_persisted_curseforge_waiting_jobs(
+    state: &State,
+) -> crate::Result<()> {
+    let mut resume_job = resume_curseforge_install_job;
+    reconcile_persisted_curseforge_waiting_jobs_with_resume(
+        state,
+        &mut resume_job,
+    )
+    .await
+}
+
+async fn reconcile_persisted_curseforge_waiting_jobs_with_resume<F, Fut>(
+    state: &State,
+    resume_job: &mut F,
+) -> crate::Result<()>
+where
+    F: FnMut(uuid::Uuid) -> Fut,
+    Fut: std::future::Future<Output = crate::Result<()>>,
+{
+    let jobs = crate::install::store::list(false, state).await?;
+    for instance_id in curseforge_waiting_job_instance_ids(&jobs) {
+        reconcile_curseforge_waiting_jobs_for_instance_with_resume(
+            &instance_id,
+            state,
+            resume_job,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+fn curseforge_waiting_job_instance_ids(
+    jobs: &[crate::install::store::InstallJobRecord],
+) -> Vec<String> {
+    let mut instance_ids = jobs
+        .iter()
+        .filter(|job| is_reconcilable_curseforge_waiting_job(job))
+        .filter_map(|job| job.instance_id.clone())
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    instance_ids.sort_unstable();
+    instance_ids
+}
+
+async fn reconcile_curseforge_waiting_jobs_for_instance_with_state(
+    instance_id: &str,
+    state: &State,
+) -> crate::Result<()> {
+    let mut resume_job = resume_curseforge_install_job;
+    reconcile_curseforge_waiting_jobs_for_instance_with_resume(
+        instance_id,
+        state,
+        &mut resume_job,
+    )
+    .await
+}
+
+async fn resume_curseforge_install_job(
+    job_id: uuid::Uuid,
+) -> crate::Result<()> {
+    crate::install::runner::resume_job(job_id).await?;
+    Ok(())
+}
+
+async fn reconcile_curseforge_waiting_jobs_for_instance_with_resume<F, Fut>(
+    instance_id: &str,
+    state: &State,
+    resume_job: &mut F,
+) -> crate::Result<()>
+where
+    F: FnMut(uuid::Uuid) -> Fut,
+    Fut: std::future::Future<Output = crate::Result<()>>,
+{
     let pending = crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
 		instance_id,
 		&state.pool,
@@ -3903,60 +4251,120 @@ async fn resume_curseforge_jobs_if_complete(
 		(download.provider_project_id, download.provider_release_id)
 	})
 	.collect::<HashSet<_>>();
+    let materialized = crate::state::instances::adapters::sqlite::content_rows::get_materialized_curseforge_downloads(
+        instance_id,
+        &state.pool,
+    )
+    .await?
+    .into_iter()
+    .collect::<HashSet<_>>();
 
-    for job in crate::install::store::list(false, &state).await? {
-        if job.status != crate::install::InstallJobStatus::WaitingForUser
-            || job.instance_id.as_deref() != Some(instance_id)
-            || !is_curseforge_manual_download_job(&job.state)
-            || !matches!(
-                &job.state.pause_reason,
-                Some(crate::install::model::InstallPauseReason::MissingRequiredContent { .. })
-            )
+    let jobs = crate::install::store::list(false, &state).await?;
+    let waiting_job_count = jobs
+        .iter()
+        .filter(|job| {
+            job.instance_id.as_deref() == Some(instance_id)
+                && is_reconcilable_curseforge_waiting_job(job)
+        })
+        .count();
+    tracing::debug!(
+        instance_id,
+        pending_key_count = pending.len(),
+        waiting_job_count,
+        "Starting CurseForge waiting install job reconciliation"
+    );
+    let mut recovered_item_count = 0usize;
+    let mut resume_job_called = false;
+    for job in jobs {
+        if job.instance_id.as_deref() != Some(instance_id)
+            || !is_reconcilable_curseforge_waiting_job(&job)
         {
             continue;
         }
-        let items = job.state.download_items();
-        let recovered = items
-            .iter()
-            .filter(|item| {
-                item.status
-                    == crate::install::model::DownloadItemStatus::Skipped
-                    && item.manual_url.is_some()
-                    && item
-                        .project_id
-                        .as_ref()
-                        .zip(item.version_id.as_ref())
-                        .is_some_and(|(project_id, version_id)| {
-                            !pending.contains(&(
-                                project_id.clone(),
-                                version_id.clone(),
-                            ))
-                        })
-            })
-            .map(|item| InstallJobEventKind::ContentFileRecovered {
-                path: item.id.clone(),
-                bytes: item.bytes_total.unwrap_or(0),
-            })
-            .collect::<Vec<_>>();
-        let latest = if recovered.is_empty() {
-            job.snapshot()
-        } else {
-            InstallProgressReporter::new(job.id, job.state)
-                .record_events(recovered)
-                .await?
-        };
-        let remaining = latest.items.iter().any(|item| {
-            item.status == crate::install::model::DownloadItemStatus::Skipped
-                && item.manual_url.is_some()
-                && item.project_id.is_some()
-                && item.version_id.is_some()
-        });
-        if !remaining {
-            match crate::install::runner::resume_job(job.id).await {
-                Ok(_) => {}
+
+        let operation_lock = state
+            .install_job_operation_locks
+            .entry(job.id)
+            .or_default()
+            .clone();
+        let _operation_guard = operation_lock.lock().await;
+        let current =
+            crate::install::store::get_required(job.id, state).await?;
+        if current.instance_id.as_deref() != Some(instance_id)
+            || !is_reconcilable_curseforge_waiting_job(&current)
+        {
+            continue;
+        }
+
+        let reconciliation = curseforge_manual_download_reconciliation(
+            &current.state.download_items(),
+            &pending,
+            &materialized,
+        );
+        for inconsistent in &reconciliation.inconsistent {
+            tracing::warn!(
+                job_id = %current.id,
+                instance_id,
+                project_id = %inconsistent.project_id,
+                file_id = %inconsistent.file_id,
+                item_path = %inconsistent.path,
+                reason = inconsistent.reason,
+                "CurseForge manual download job state is inconsistent"
+            );
+        }
+
+        let recovered_count = reconciliation.recovered.len();
+        recovered_item_count += recovered_count;
+        if recovered_count > 0 {
+            InstallProgressReporter::new(current.id, current.state)
+                .record_events(reconciliation.recovered)
+                .await?;
+        }
+
+        let latest = crate::install::store::get_required(job.id, state).await?;
+        if latest.status != crate::install::InstallJobStatus::WaitingForUser {
+            continue;
+        }
+        let latest_reconciliation = curseforge_manual_download_reconciliation(
+            &latest.state.download_items(),
+            &pending,
+            &materialized,
+        );
+        tracing::debug!(
+            job_id = %latest.id,
+            instance_id,
+            pending_count = pending.len(),
+            manual_skipped_count = reconciliation.manual_skipped_count,
+            materialized_exact_match_count =
+                reconciliation.materialized_exact_match_count,
+            recovered_count,
+            unresolved_pending_count =
+                latest_reconciliation.unresolved_pending_count,
+            inconsistent_count = latest_reconciliation.inconsistent.len(),
+            "Reconciled CurseForge waiting install job"
+        );
+
+        if latest_reconciliation.should_resume() {
+            resume_job_called = true;
+            match resume_job(latest.id).await {
+                Ok(_) => {
+                    tracing::info!(
+                        job_id = %latest.id,
+                        instance_id,
+                        pending_count = pending.len(),
+                        manual_skipped_count =
+                            reconciliation.manual_skipped_count,
+                        materialized_exact_match_count =
+                            reconciliation.materialized_exact_match_count,
+                        recovered_count,
+                        unresolved_pending_count = 0,
+                        inconsistent_count = 0,
+                        "Reconciled completed CurseForge manual downloads and resuming install job"
+                    );
+                }
                 Err(error) => {
                     let current =
-                        crate::install::store::get_required(job.id, &state)
+                        crate::install::store::get_required(latest.id, state)
                             .await?;
                     if current.status
                         == crate::install::InstallJobStatus::WaitingForUser
@@ -3967,7 +4375,97 @@ async fn resume_curseforge_jobs_if_complete(
             }
         }
     }
+    tracing::debug!(
+        instance_id,
+        pending_key_count = pending.len(),
+        waiting_job_count,
+        recovered_item_count,
+        resume_job_called,
+        "Completed CurseForge waiting install job reconciliation"
+    );
     Ok(())
+}
+
+#[derive(Debug)]
+struct CurseForgeManualDownloadInconsistency {
+    path: String,
+    project_id: String,
+    file_id: String,
+    reason: &'static str,
+}
+
+#[derive(Debug, Default)]
+struct CurseForgeManualDownloadReconciliation {
+    recovered: Vec<InstallJobEventKind>,
+    inconsistent: Vec<CurseForgeManualDownloadInconsistency>,
+    manual_skipped_count: usize,
+    materialized_exact_match_count: usize,
+    unresolved_pending_count: usize,
+}
+
+impl CurseForgeManualDownloadReconciliation {
+    fn should_resume(&self) -> bool {
+        self.unresolved_pending_count == 0 && self.inconsistent.is_empty()
+    }
+}
+
+fn curseforge_manual_download_reconciliation(
+    items: &[crate::install::model::DownloadItemSnapshot],
+    pending: &HashSet<(String, String)>,
+    materialized: &HashSet<(String, String)>,
+) -> CurseForgeManualDownloadReconciliation {
+    let mut result = CurseForgeManualDownloadReconciliation::default();
+    for item in items.iter().filter(|item| {
+        item.status == crate::install::model::DownloadItemStatus::Skipped
+            && item.manual_url.is_some()
+            && item.project_id.is_some()
+            && item.version_id.is_some()
+    }) {
+        result.manual_skipped_count += 1;
+        let project_id = item.project_id.as_ref().expect("filtered project ID");
+        let version_id = item.version_id.as_ref().expect("filtered file ID");
+        if pending.contains(&(project_id.clone(), version_id.clone())) {
+            result.unresolved_pending_count += 1;
+        } else if materialized
+            .contains(&(project_id.clone(), version_id.clone()))
+        {
+            result.materialized_exact_match_count += 1;
+            result
+                .recovered
+                .push(InstallJobEventKind::ContentFileRecovered {
+                    path: item.id.clone(),
+                    bytes: item.bytes_total.unwrap_or(0),
+                });
+        } else {
+            result
+                .inconsistent
+                .push(CurseForgeManualDownloadInconsistency {
+                    path: item.id.clone(),
+                    project_id: project_id.clone(),
+                    file_id: version_id.clone(),
+                    reason: "pending_missing_but_not_materialized",
+                });
+        }
+    }
+    result
+}
+
+fn is_reconcilable_curseforge_waiting_job(
+    job: &crate::install::store::InstallJobRecord,
+) -> bool {
+    job.status == crate::install::InstallJobStatus::WaitingForUser
+        && job.instance_id.is_some()
+        && is_curseforge_manual_download_job(&job.state)
+        && matches!(
+            &job.state.pause_reason,
+            Some(crate::install::model::InstallPauseReason::MissingRequiredContent { .. })
+        )
+        && job.state.download_items().iter().any(|item| {
+            item.status == crate::install::model::DownloadItemStatus::Skipped
+                && item.manual_url.is_some()
+                && item.project_id.is_some()
+                && item.version_id.is_some()
+        })
 }
 
 fn is_curseforge_manual_download_job(
@@ -3987,15 +4485,6 @@ fn is_curseforge_manual_download_job(
     })
 }
 
-fn manual_download_matches_without_hash(
-    download: &CurseForgeManualDownload,
-    actual_file_name: &str,
-) -> bool {
-    download.hashes.is_empty()
-        && download.file_fingerprint == 0
-        && actual_file_name.eq_ignore_ascii_case(&download.file_name)
-}
-
 async fn install_manual_download(
     instance_id: &str,
     download: &CurseForgeManualDownload,
@@ -4004,10 +4493,20 @@ async fn install_manual_download(
     sha1: &str,
 ) -> crate::Result<String> {
     if download.project_type == "modpack" {
+        let verified_directory = tempfile::tempdir()?;
+        let verified_source =
+            verified_directory.path().join("manual-download.pack");
+        crate::state::materialize_verified_project_download_copy(
+            source_path,
+            &verified_source,
+            size,
+            sha1,
+        )
+        .await?;
         crate::install::install_pack_to_existing_instance(
             instance_id.to_string(),
             crate::api::pack::install_from::CreatePackLocation::FromFile {
-                path: source_path.to_path_buf(),
+                path: verified_source,
             },
             None,
         )
@@ -4036,10 +4535,18 @@ async fn install_manual_download(
         crate::state::instances::adapters::sqlite::content_rows::bump_content_set_revision_in_transaction(
 			&content_set.id,
 			&mut tx,
-		)
+        )
 		.await?;
         tx.commit().await?;
-        return Ok(source_path.to_string_lossy().to_string());
+        let relative_path = source_path.to_string_lossy().to_string();
+        tracing::info!(
+            instance_id,
+            project_id = download.project_id,
+            file_id = download.file_id,
+            relative_path = %relative_path,
+            "Completed CurseForge pending manual download record"
+        );
+        return Ok(relative_path);
     }
     let project_type = managed_project_type(&download.project_type)?;
     let target_folder = manual_download_target_folder(download, project_type)?;
@@ -4061,26 +4568,28 @@ async fn install_manual_download(
         .await?
         .join(&relative_path);
     let previous_path =
-        crate::state::materialize_project_download(source_path, &full_path)
-            .await?;
-    let provider_ref = ContentProviderRef::CurseForge {
-        project_id: CurseForgeProjectId::new(download.project_id)?,
-        file_id: Some(CurseForgeFileId::new(download.file_id)?),
-    };
-    let record_result = crate::state::record_project_file_atomic(
-        instance_id,
-        &relative_path,
-        sha1,
-        size,
-        project_type,
-        ContentSourceKind::CurseForge,
-        download.ownership_kind,
-        Some(&provider_ref),
-        true,
-        None,
-        &state,
-    )
-    .await;
+        crate::state::materialize_verified_project_download_copy(
+            source_path,
+            &full_path,
+            size,
+            sha1,
+        )
+        .await?;
+    let record_result =
+        crate::state::record_verified_curseforge_project_file_atomic(
+            instance_id,
+            &relative_path,
+            sha1,
+            size,
+            project_type,
+            ContentSourceKind::CurseForge,
+            download.ownership_kind,
+            CurseForgeProjectId::new(download.project_id)?,
+            CurseForgeFileId::new(download.file_id)?,
+            true,
+            &state,
+        )
+        .await;
     match record_result {
         Ok(()) => {
             crate::state::finalize_project_materialization(
@@ -4097,13 +4606,13 @@ async fn install_manual_download(
             return Err(error);
         }
     }
-    if let Err(error) = resume_curseforge_jobs_if_complete(instance_id).await {
-        tracing::warn!(
-            instance_id,
-            %error,
-            "Unable to resume CurseForge install after manual import"
-        );
-    }
+    tracing::info!(
+        instance_id,
+        project_id = download.project_id,
+        file_id = download.file_id,
+        relative_path = %relative_path,
+        "Completed CurseForge pending manual download record"
+    );
     if download.ownership_kind
         == crate::state::instances::ContentOwnershipKind::PackManaged
         && download.operation_kind
@@ -4719,6 +5228,13 @@ async fn download_installed_file(
     ownership_kind: crate::state::instances::ContentOwnershipKind,
     download_metrics: Option<&CurseForgeDownloadMetrics>,
 ) -> crate::Result<String> {
+    if file.mod_id != project_id || file.id != file_id {
+        return Err(ErrorKind::InputError(
+            "CurseForge returned metadata for a different project or file"
+                .to_string(),
+        )
+        .into());
+    }
     let state = State::get().await?;
     validate_file_name(&file.file_name)?;
     let folder = content_target_folder(project_type, world_name)?;
@@ -4759,27 +5275,13 @@ async fn download_installed_file(
         crate::state::materialize_project_download(download_path, &full_path)
             .await?;
     crate::util::io::remove_file(download_path).await?;
-    let sha1 =
-        if let Some(hash) = file.hashes.iter().find(|hash| hash.algo == 1) {
-            hash.value.clone()
-        } else {
-            sha1_file_async(&full_path).await?.1
-        };
-    let provider_ref = ContentProviderRef::CurseForge {
-        project_id: CurseForgeProjectId::new(project_id)?,
-        file_id: Some(CurseForgeFileId::new(file_id)?),
-    };
-    let record_result = crate::state::record_project_file_atomic(
+    let record_result = record_installed_curseforge_file(
         instance_id,
         &relative_path,
-        &sha1,
-        result.size,
+        &full_path,
+        file,
         project_type,
-        ContentSourceKind::CurseForge,
         ownership_kind,
-        Some(&provider_ref),
-        true,
-        None,
         &state,
     )
     .await;
@@ -4800,6 +5302,119 @@ async fn download_installed_file(
         }
     }
     Ok(relative_path)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CurseForgePendingCompletionProof {
+    None,
+    AuthoritativeSha1,
+    AuthoritativeFingerprint,
+}
+
+struct VerifiedInstalledCurseForgeFile {
+    size: u64,
+    sha1: String,
+    pending_completion: CurseForgePendingCompletionProof,
+}
+
+async fn verify_installed_curseforge_file(
+    path: &Path,
+    file: &CurseForgeFile,
+) -> crate::Result<VerifiedInstalledCurseForgeFile> {
+    if let Some(expected_sha1) = file
+        .hashes
+        .iter()
+        .find(|hash| hash.algo == 1 && !hash.value.trim().is_empty())
+        .map(|hash| hash.value.as_str())
+    {
+        let (size, sha1) = sha1_file_async(path).await?;
+        if !sha1.eq_ignore_ascii_case(expected_sha1) {
+            return Err(
+                ErrorKind::HashError(expected_sha1.to_string(), sha1).into()
+            );
+        }
+        return Ok(VerifiedInstalledCurseForgeFile {
+            size,
+            sha1,
+            pending_completion:
+                CurseForgePendingCompletionProof::AuthoritativeSha1,
+        });
+    }
+
+    if file.file_fingerprint != 0 {
+        let bytes = tokio::fs::read(path).await?;
+        if compute_fingerprint(&bytes) as u64 != file.file_fingerprint {
+            return Err(ErrorKind::InputError(
+                "The downloaded file does not match the required CurseForge fingerprint"
+                    .to_string(),
+            )
+            .into());
+        }
+        return Ok(VerifiedInstalledCurseForgeFile {
+            size: bytes.len() as u64,
+            sha1: sha1_smol::Sha1::from(&bytes).hexdigest(),
+            pending_completion:
+                CurseForgePendingCompletionProof::AuthoritativeFingerprint,
+        });
+    }
+
+    let (size, sha1) = sha1_file_async(path).await?;
+    Ok(VerifiedInstalledCurseForgeFile {
+        size,
+        sha1,
+        pending_completion: CurseForgePendingCompletionProof::None,
+    })
+}
+
+async fn record_installed_curseforge_file(
+    instance_id: &str,
+    relative_path: &str,
+    full_path: &Path,
+    file: &CurseForgeFile,
+    project_type: ProjectType,
+    ownership_kind: crate::state::instances::ContentOwnershipKind,
+    state: &State,
+) -> crate::Result<()> {
+    let verified = verify_installed_curseforge_file(full_path, file).await?;
+    match verified.pending_completion {
+        CurseForgePendingCompletionProof::None => {
+            let provider_ref = ContentProviderRef::CurseForge {
+                project_id: CurseForgeProjectId::new(file.mod_id)?,
+                file_id: Some(CurseForgeFileId::new(file.id)?),
+            };
+            crate::state::record_project_file_atomic(
+                instance_id,
+                relative_path,
+                &verified.sha1,
+                verified.size,
+                project_type,
+                ContentSourceKind::CurseForge,
+                ownership_kind,
+                Some(&provider_ref),
+                true,
+                None,
+                state,
+            )
+            .await
+        }
+        CurseForgePendingCompletionProof::AuthoritativeSha1
+        | CurseForgePendingCompletionProof::AuthoritativeFingerprint => {
+            crate::state::record_verified_curseforge_project_file_atomic(
+                instance_id,
+                relative_path,
+                &verified.sha1,
+                verified.size,
+                project_type,
+                ContentSourceKind::CurseForge,
+                ownership_kind,
+                CurseForgeProjectId::new(file.mod_id)?,
+                CurseForgeFileId::new(file.id)?,
+                true,
+                state,
+            )
+            .await
+        }
+    }
 }
 
 pub fn compute_fingerprint(data: &[u8]) -> u32 {
@@ -5230,6 +5845,916 @@ fn murmur2(data: &[u8], seed: u32) -> u32 {
 mod tests {
     use super::*;
 
+    fn skipped_curseforge_manual_item(
+        id: &str,
+        project_id: &str,
+        version_id: &str,
+    ) -> crate::install::model::DownloadItemSnapshot {
+        crate::install::model::DownloadItemSnapshot {
+            id: id.to_string(),
+            name: id.to_string(),
+            project_id: Some(project_id.to_string()),
+            version_id: Some(version_id.to_string()),
+            status: crate::install::model::DownloadItemStatus::Skipped,
+            bytes_downloaded: 0,
+            bytes_total: Some(42),
+            attempt: Some(1),
+            max_attempts: Some(1),
+            error: Some("CurseForge requires manual download".to_string()),
+            manual_url: Some("https://www.curseforge.com/download".to_string()),
+            request_url: None,
+            source: None,
+        }
+    }
+
+    fn waiting_manual_job_record(
+        instance_id: &str,
+        request: crate::install::model::InstallRequest,
+    ) -> crate::install::store::InstallJobRecord {
+        let mut state = crate::install::model::InstallJobState::new(request);
+        state.record_event(InstallJobEventKind::ContentFileSkipped {
+            path: "mods/one.jar".to_string(),
+            reason: "manual download required".to_string(),
+            project_id: Some("1".to_string()),
+            version_id: Some("10".to_string()),
+            manual_url: Some("https://www.curseforge.com/download".to_string()),
+        });
+        state.record_event(InstallJobEventKind::WaitingForUser {
+            reason:
+                crate::install::model::InstallPauseReason::MissingRequiredContent {
+                    failed_files: 1,
+                    paths: vec!["mods/one.jar".to_string()],
+                },
+        });
+        state.pause_reason = Some(
+            crate::install::model::InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/one.jar".to_string()],
+            },
+        );
+        let now = chrono::Utc::now();
+        crate::install::store::InstallJobRecord {
+            id: uuid::Uuid::new_v4(),
+            instance_id: Some(instance_id.to_string()),
+            kind: crate::install::model::InstallJobKind::InstallContent,
+            status: crate::install::model::InstallJobStatus::WaitingForUser,
+            state,
+            created: now,
+            modified: now,
+            finished: None,
+            dismissed: false,
+        }
+    }
+
+    fn apply_recovered_events(
+        items: &mut [crate::install::model::DownloadItemSnapshot],
+        events: &[InstallJobEventKind],
+    ) {
+        for event in events {
+            let InstallJobEventKind::ContentFileRecovered { path, bytes } =
+                event
+            else {
+                continue;
+            };
+            let item = items.iter_mut().find(|item| item.id == *path).unwrap();
+            item.status = crate::install::model::DownloadItemStatus::Completed;
+            item.bytes_downloaded = *bytes;
+        }
+    }
+
+    fn reconcile_and_simulate_resume(
+        items: &mut [crate::install::model::DownloadItemSnapshot],
+        pending: &HashSet<(String, String)>,
+        materialized: &HashSet<(String, String)>,
+        resume_count: &mut usize,
+    ) -> CurseForgeManualDownloadReconciliation {
+        let result = curseforge_manual_download_reconciliation(
+            items,
+            pending,
+            materialized,
+        );
+        apply_recovered_events(items, &result.recovered);
+        let latest = curseforge_manual_download_reconciliation(
+            items,
+            pending,
+            materialized,
+        );
+        if latest.should_resume() {
+            *resume_count += 1;
+        }
+        result
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn stage6_state() -> std::sync::Arc<State> {
+        crate::event::EventState::init().await.unwrap();
+        let state_root = tempfile::tempdir().unwrap().keep();
+        State::init_for_test(state_root.to_string_lossy().to_string())
+            .await
+            .unwrap()
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn create_stage6_instance(
+        label: &str,
+    ) -> (std::sync::Arc<State>, String) {
+        let state = stage6_state().await;
+        let created = crate::api::instance::create(
+            format!("Stage 6 {label} {}", uuid::Uuid::new_v4()),
+            "1.20.1".to_string(),
+            ModLoader::Vanilla,
+            None,
+            None,
+            InstanceLink::Unmanaged,
+            None,
+        )
+        .await
+        .unwrap();
+        (state, created.instance.id)
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    fn stage6_manual_download(
+        project_id: u32,
+        file_id: u32,
+        file_name: &str,
+        expected_bytes: &[u8],
+    ) -> CurseForgeManualDownload {
+        CurseForgeManualDownload {
+            project_id,
+            file_id,
+            file_name: file_name.to_string(),
+            ownership_kind:
+                crate::state::instances::ContentOwnershipKind::PackManaged,
+            operation_kind:
+                crate::state::instances::ManualDownloadOperationKind::PackInstall,
+            website_url: None,
+            project_type: "mod".to_string(),
+            project_slug: format!("stage-6-{project_id}-{file_id}"),
+            target_folder: "mods".to_string(),
+            hashes: vec![CurseForgeFileHash {
+                value: sha1_smol::Sha1::from(expected_bytes).hexdigest(),
+                algo: 1,
+            }],
+            file_length: expected_bytes.len() as u64,
+            file_fingerprint: 0,
+        }
+    }
+
+    fn stage8_legacy_manual_download(
+        project_id: u32,
+        file_id: u32,
+        file_name: &str,
+    ) -> CurseForgeManualDownload {
+        CurseForgeManualDownload {
+            project_id,
+            file_id,
+            file_name: file_name.to_string(),
+            ownership_kind:
+                crate::state::instances::ContentOwnershipKind::PackManaged,
+            operation_kind:
+                crate::state::instances::ManualDownloadOperationKind::PackInstall,
+            website_url: None,
+            project_type: "mod".to_string(),
+            project_slug: format!("stage-8-{project_id}-{file_id}"),
+            target_folder: "mods".to_string(),
+            hashes: Vec::new(),
+            file_length: 0,
+            file_fingerprint: 0,
+        }
+    }
+
+    fn stage8_integrity_metadata(
+        download: &CurseForgeManualDownload,
+        hashes: Vec<CurseForgeFileHash>,
+        file_length: u64,
+        file_fingerprint: u64,
+    ) -> CurseForgeManualDownloadIntegrityMetadata {
+        CurseForgeManualDownloadIntegrityMetadata {
+            project_id: download.project_id,
+            file_id: download.file_id,
+            hashes,
+            file_length,
+            file_fingerprint,
+        }
+    }
+
+    fn stage8_curseforge_file(
+        project_id: u32,
+        file_id: u32,
+        file_name: &str,
+        file_length: u64,
+        hashes: Vec<CurseForgeFileHash>,
+        file_fingerprint: u64,
+    ) -> CurseForgeFile {
+        CurseForgeFile {
+            id: file_id,
+            game_id: MINECRAFT_GAME_ID,
+            mod_id: project_id,
+            is_available: true,
+            display_name: file_name.to_string(),
+            file_name: file_name.to_string(),
+            release_type: 1,
+            file_status: 4,
+            hashes,
+            file_date: String::new(),
+            file_length,
+            download_count: 0,
+            file_size_on_disk: Some(file_length),
+            download_url: None,
+            game_versions: Vec::new(),
+            sortable_game_versions: Vec::new(),
+            dependencies: Vec::new(),
+            expose_as_alternative: None,
+            parent_project_file_id: None,
+            alternate_file_id: None,
+            is_server_pack: None,
+            server_pack_file_id: None,
+            is_early_access_content: None,
+            early_access_end_date: None,
+            file_fingerprint,
+            modules: Vec::new(),
+        }
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn stage8_pending_keys(
+        state: &State,
+        instance_id: &str,
+    ) -> HashSet<(String, String)> {
+        crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+            instance_id,
+            &state.pool,
+        )
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|download| {
+            (
+                download.provider_project_id,
+                download.provider_release_id,
+            )
+        })
+        .collect()
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn import_stage6_manual_download(
+        instance_id: &str,
+        download: &CurseForgeManualDownload,
+        bytes: &[u8],
+    ) {
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join(&download.file_name);
+        crate::util::io::write(&source, bytes).await.unwrap();
+        import_pending_manual_download_file(
+            instance_id,
+            download.project_id,
+            download.file_id,
+            source,
+        )
+        .await
+        .unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    fn stage6_waiting_manual_job_state(
+        instance_id: &str,
+        items: &[(&str, &str, &str)],
+    ) -> crate::install::model::InstallJobState {
+        let mut state = crate::install::model::InstallJobState::new(
+            crate::install::model::InstallRequest::InstallPackToExistingInstance {
+                instance_id: instance_id.to_string(),
+                location: crate::api::pack::install_from::CreatePackLocation::FromFile {
+                    path: PathBuf::from(format!(
+                        "missing-stage-6-{}.mrpack",
+                        uuid::Uuid::new_v4()
+                    )),
+                },
+                post_install_edit: None,
+            },
+        );
+        let paths = items
+            .iter()
+            .map(|(path, _, _)| (*path).to_string())
+            .collect::<Vec<_>>();
+        for (path, project_id, file_id) in items {
+            state.record_event(InstallJobEventKind::ContentFileQueued {
+                path: (*path).to_string(),
+                bytes_total: Some(42),
+                max_attempts: 1,
+            });
+            state.record_event(InstallJobEventKind::ContentFileSkipped {
+                path: (*path).to_string(),
+                reason: "manual download required".to_string(),
+                project_id: Some((*project_id).to_string()),
+                version_id: Some((*file_id).to_string()),
+                manual_url: Some(
+                    "https://www.curseforge.com/download".to_string(),
+                ),
+            });
+        }
+        let reason =
+            crate::install::model::InstallPauseReason::MissingRequiredContent {
+                failed_files: paths.len() as u64,
+                paths,
+            };
+        state.pause_reason = Some(reason.clone());
+        state.record_event(InstallJobEventKind::WaitingForUser { reason });
+        state
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn insert_stage6_waiting_manual_job(
+        state: &State,
+        instance_id: &str,
+        items: &[(&str, &str, &str)],
+    ) -> uuid::Uuid {
+        let job_id = uuid::Uuid::new_v4();
+        let job_state = stage6_waiting_manual_job_state(instance_id, items);
+        crate::install::store::insert(
+            job_id,
+            &job_state,
+            crate::install::model::InstallJobStatus::WaitingForUser,
+            state,
+        )
+        .await
+        .unwrap();
+        job_id
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn assert_stage6_job_is_unresolved(
+        state: &State,
+        job_id: uuid::Uuid,
+        item_path: &str,
+    ) {
+        let job = crate::install::store::get_required(job_id, state)
+            .await
+            .unwrap();
+        assert_eq!(
+            job.status,
+            crate::install::model::InstallJobStatus::WaitingForUser
+        );
+        assert_eq!(
+            job.snapshot()
+                .items
+                .iter()
+                .find(|item| item.id == item_path)
+                .unwrap()
+                .status,
+            crate::install::model::DownloadItemStatus::Skipped
+        );
+        assert_eq!(
+            job.state
+                .events
+                .iter()
+                .filter(|event| matches!(
+                    event.kind,
+                    InstallJobEventKind::ContentFileRecovered { .. }
+                ))
+                .count(),
+            0
+        );
+    }
+
+    #[test]
+    fn curseforge_final_manual_completion_recovers_and_resumes() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let materialized = HashSet::from([("1".to_string(), "10".to_string())]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &HashSet::new(),
+            &materialized,
+            &mut resume_count,
+        );
+
+        assert_eq!(result.recovered.len(), 1);
+        assert_eq!(result.materialized_exact_match_count, 1);
+        assert_eq!(resume_count, 1);
+        assert_eq!(
+            items[0].status,
+            crate::install::model::DownloadItemStatus::Completed
+        );
+    }
+
+    #[test]
+    fn curseforge_missing_pending_without_materialization_does_not_resume() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &HashSet::new(),
+            &HashSet::new(),
+            &mut resume_count,
+        );
+
+        assert!(result.recovered.is_empty());
+        assert_eq!(result.inconsistent.len(), 1);
+        assert_eq!(
+            result.inconsistent[0].reason,
+            "pending_missing_but_not_materialized"
+        );
+        assert_eq!(resume_count, 0);
+        assert_eq!(
+            items[0].status,
+            crate::install::model::DownloadItemStatus::Skipped
+        );
+    }
+
+    #[test]
+    fn curseforge_pending_still_exists_does_not_resume() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let pending = HashSet::from([("1".to_string(), "10".to_string())]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &pending,
+            &HashSet::new(),
+            &mut resume_count,
+        );
+
+        assert!(result.recovered.is_empty());
+        assert_eq!(result.unresolved_pending_count, 1);
+        assert!(result.inconsistent.is_empty());
+        assert_eq!(resume_count, 0);
+    }
+
+    #[test]
+    fn curseforge_partial_manual_completion_does_not_resume() {
+        let mut items = vec![
+            skipped_curseforge_manual_item("mods/a.jar", "1", "10"),
+            skipped_curseforge_manual_item("mods/b.jar", "2", "20"),
+            skipped_curseforge_manual_item("mods/c.jar", "3", "30"),
+        ];
+        let keys = [
+            ("1".to_string(), "10".to_string()),
+            ("2".to_string(), "20".to_string()),
+            ("3".to_string(), "30".to_string()),
+        ];
+        let mut pending = keys.iter().cloned().collect::<HashSet<_>>();
+        let mut materialized = HashSet::new();
+        let mut resume_count = 0;
+
+        for (index, key) in keys.into_iter().enumerate() {
+            assert!(pending.remove(&key));
+            assert!(materialized.insert(key));
+            let result = reconcile_and_simulate_resume(
+                &mut items,
+                &pending,
+                &materialized,
+                &mut resume_count,
+            );
+
+            assert_eq!(result.recovered.len(), 1);
+            assert!(items[..=index].iter().all(|item| {
+                item.status
+                    == crate::install::model::DownloadItemStatus::Completed
+            }));
+            assert!(items[index + 1..].iter().all(|item| {
+                item.status
+                    == crate::install::model::DownloadItemStatus::Skipped
+            }));
+            assert_eq!(resume_count, usize::from(index == 2));
+        }
+    }
+
+    #[test]
+    fn curseforge_repeated_reconciliation_is_idempotent() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let materialized = HashSet::from([("1".to_string(), "10".to_string())]);
+        let mut resume_count = 0;
+        let mut waiting_for_user = true;
+        let mut recovered_count = 0;
+
+        for _ in 0..3 {
+            if !waiting_for_user {
+                continue;
+            }
+            let result = reconcile_and_simulate_resume(
+                &mut items,
+                &HashSet::new(),
+                &materialized,
+                &mut resume_count,
+            );
+            recovered_count += result.recovered.len();
+            if resume_count > 0 {
+                waiting_for_user = false;
+            }
+        }
+
+        assert_eq!(recovered_count, 1);
+        assert_eq!(resume_count, 1);
+    }
+
+    #[test]
+    fn curseforge_startup_selects_only_reconcilable_jobs() {
+        let curseforge_job = waiting_manual_job_record(
+            "curseforge-instance",
+            crate::install::model::InstallRequest::InstallCurseForgeContent {
+                request: CurseForgeInstallRequest {
+                    instance_id: "curseforge-instance".to_string(),
+                    project_id: 1,
+                    file_id: 10,
+                    project_type: "mod".to_string(),
+                    ownership_kind:
+                        crate::state::instances::ContentOwnershipKind::PackManaged,
+                    manual_operation_kind: crate::state::instances::ManualDownloadOperationKind::PackInstall,
+                    game_version: None,
+                    mod_loader_type: None,
+                    world_name: None,
+                    install_dependencies: true,
+                },
+                display_title: "CurseForge".to_string(),
+                display_icon: None,
+            },
+        );
+        let modrinth_job = waiting_manual_job_record(
+            "modrinth-instance",
+            crate::install::model::InstallRequest::InstallPackToExistingInstance {
+                instance_id: "modrinth-instance".to_string(),
+                location: crate::api::pack::install_from::CreatePackLocation::FromVersionId {
+                    project_id: "project".to_string(),
+                    version_id: "version".to_string(),
+                    title: "Modrinth".to_string(),
+                    icon_url: None,
+                },
+                post_install_edit: None,
+            },
+        );
+        assert_eq!(
+            curseforge_waiting_job_instance_ids(&[
+                curseforge_job,
+                modrinth_job,
+            ]),
+            vec!["curseforge-instance".to_string()]
+        );
+
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let materialized = HashSet::from([("1".to_string(), "10".to_string())]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &HashSet::new(),
+            &materialized,
+            &mut resume_count,
+        );
+
+        assert_eq!(result.recovered.len(), 1);
+        assert_eq!(resume_count, 1);
+    }
+
+    #[test]
+    fn curseforge_wrong_instance_or_release_never_recovers() {
+        let mut items =
+            vec![skipped_curseforge_manual_item("mods/one.jar", "1", "10")];
+        let other_instance_or_release = HashSet::from([
+            ("1".to_string(), "11".to_string()),
+            ("2".to_string(), "10".to_string()),
+        ]);
+        let mut resume_count = 0;
+
+        let result = reconcile_and_simulate_resume(
+            &mut items,
+            &HashSet::new(),
+            &other_instance_or_release,
+            &mut resume_count,
+        );
+
+        assert!(result.recovered.is_empty());
+        assert_eq!(result.inconsistent.len(), 1);
+        assert_eq!(resume_count, 0);
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_pending_is_scoped_by_instance() {
+        let (state, instance_a) = create_stage6_instance("scope A").await;
+        let (_, instance_b) = create_stage6_instance("scope B").await;
+        let completed = stage6_manual_download(
+            101,
+            1001,
+            "scope-one.jar",
+            b"scope-one-content",
+        );
+        let other_release = stage6_manual_download(
+            101,
+            1002,
+            "scope-two.jar",
+            b"scope-two-content",
+        );
+        persist_manual_download(&instance_a, &completed)
+            .await
+            .unwrap();
+        persist_manual_download(&instance_a, &other_release)
+            .await
+            .unwrap();
+        persist_manual_download(&instance_b, &completed)
+            .await
+            .unwrap();
+        let job_a = insert_stage6_waiting_manual_job(
+            &state,
+            &instance_a,
+            &[
+                ("mods/scope-one.jar", "101", "1001"),
+                ("mods/scope-two.jar", "101", "1002"),
+            ],
+        )
+        .await;
+        let job_b = insert_stage6_waiting_manual_job(
+            &state,
+            &instance_b,
+            &[("mods/scope-one.jar", "101", "1001")],
+        )
+        .await;
+
+        import_stage6_manual_download(
+            &instance_a,
+            &completed,
+            b"scope-one-content",
+        )
+        .await;
+
+        let pending_a = crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+            &instance_a,
+            &state.pool,
+        )
+        .await
+        .unwrap();
+        let pending_b = crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+            &instance_b,
+            &state.pool,
+        )
+        .await
+        .unwrap();
+        assert_eq!(pending_a.len(), 1);
+        assert_eq!(pending_a[0].provider_project_id, "101");
+        assert_eq!(pending_a[0].provider_release_id, "1002");
+        assert_eq!(pending_b.len(), 1);
+        assert_eq!(pending_b[0].provider_project_id, "101");
+        assert_eq!(pending_b[0].provider_release_id, "1001");
+
+        let reconciled_a = crate::install::store::get_required(job_a, &state)
+            .await
+            .unwrap();
+        assert_eq!(
+            reconciled_a.status,
+            crate::install::model::InstallJobStatus::WaitingForUser
+        );
+        let items_a = reconciled_a.snapshot().items;
+        assert_eq!(
+            items_a
+                .iter()
+                .find(|item| item.id == "mods/scope-one.jar")
+                .unwrap()
+                .status,
+            crate::install::model::DownloadItemStatus::Completed
+        );
+        assert_eq!(
+            items_a
+                .iter()
+                .find(|item| item.id == "mods/scope-two.jar")
+                .unwrap()
+                .status,
+            crate::install::model::DownloadItemStatus::Skipped
+        );
+        assert_eq!(
+            reconciled_a
+                .state
+                .events
+                .iter()
+                .filter(|event| matches!(
+                    event.kind,
+                    InstallJobEventKind::ContentFileRecovered { .. }
+                ))
+                .count(),
+            1
+        );
+        assert_stage6_job_is_unresolved(&state, job_b, "mods/scope-one.jar")
+            .await;
+        crate::install::store::dismiss(job_a, &state).await.unwrap();
+        crate::install::store::dismiss(job_b, &state).await.unwrap();
+        crate::api::instance::remove(&instance_a).await.unwrap();
+        crate::api::instance::remove(&instance_b).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_missing_pending_without_materialization_keeps_real_job_waiting()
+     {
+        let (state, instance_id) =
+            create_stage6_instance("missing materialization").await;
+        let job_id = insert_stage6_waiting_manual_job(
+            &state,
+            &instance_id,
+            &[("mods/missing.jar", "201", "2001")],
+        )
+        .await;
+
+        reconcile_curseforge_waiting_jobs_for_instance_with_state(
+            &instance_id,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert_stage6_job_is_unresolved(&state, job_id, "mods/missing.jar")
+            .await;
+        crate::install::store::dismiss(job_id, &state)
+            .await
+            .unwrap();
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_pending_still_exists_keeps_real_job_waiting() {
+        let (state, instance_id) = create_stage6_instance("pending").await;
+        let download = stage6_manual_download(
+            301,
+            3001,
+            "pending.jar",
+            b"pending-content",
+        );
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let job_id = insert_stage6_waiting_manual_job(
+            &state,
+            &instance_id,
+            &[("mods/pending.jar", "301", "3001")],
+        )
+        .await;
+
+        reconcile_curseforge_waiting_jobs_for_instance_with_state(
+            &instance_id,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert_stage6_job_is_unresolved(&state, job_id, "mods/pending.jar")
+            .await;
+        crate::install::store::dismiss(job_id, &state)
+            .await
+            .unwrap();
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_wrong_release_keeps_real_job_waiting() {
+        let (state, instance_id) =
+            create_stage6_instance("wrong release").await;
+        let other_release = stage6_manual_download(
+            401,
+            4002,
+            "other-release.jar",
+            b"other-release-content",
+        );
+        persist_manual_download(&instance_id, &other_release)
+            .await
+            .unwrap();
+        import_stage6_manual_download(
+            &instance_id,
+            &other_release,
+            b"other-release-content",
+        )
+        .await;
+        let job_id = insert_stage6_waiting_manual_job(
+            &state,
+            &instance_id,
+            &[("mods/target-release.jar", "401", "4001")],
+        )
+        .await;
+
+        reconcile_curseforge_waiting_jobs_for_instance_with_state(
+            &instance_id,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert_stage6_job_is_unresolved(
+            &state,
+            job_id,
+            "mods/target-release.jar",
+        )
+        .await;
+        crate::install::store::dismiss(job_id, &state)
+            .await
+            .unwrap();
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_startup_reconciliation_recovers_and_resumes_once() {
+        let (state, instance_id) = create_stage6_instance("startup").await;
+        let download = stage6_manual_download(
+            501,
+            5001,
+            "startup.jar",
+            b"startup-content",
+        );
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        import_stage6_manual_download(
+            &instance_id,
+            &download,
+            b"startup-content",
+        )
+        .await;
+        let job_id = insert_stage6_waiting_manual_job(
+            &state,
+            &instance_id,
+            &[("mods/startup.jar", "501", "5001")],
+        )
+        .await;
+        let resume_count =
+            std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let state_for_resume = std::sync::Arc::clone(&state);
+        let resume_count_for_callback = std::sync::Arc::clone(&resume_count);
+        let mut resume_job = move |job_id| {
+            let state = std::sync::Arc::clone(&state_for_resume);
+            let resume_count =
+                std::sync::Arc::clone(&resume_count_for_callback);
+            async move {
+                let current =
+                    crate::install::store::get_required(job_id, &state).await?;
+                let claimed = crate::install::store::update_status_if(
+                    job_id,
+                    crate::install::model::InstallJobStatus::WaitingForUser,
+                    crate::install::model::InstallJobStatus::Queued,
+                    &current.state,
+                    &state,
+                )
+                .await?;
+                assert!(
+                    claimed.is_some(),
+                    "resume status claim must succeed once"
+                );
+                resume_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Ok(())
+            }
+        };
+
+        for _ in 0..3 {
+            reconcile_persisted_curseforge_waiting_jobs_with_resume(
+                &state,
+                &mut resume_job,
+            )
+            .await
+            .unwrap();
+        }
+
+        let reconciled = crate::install::store::get_required(job_id, &state)
+            .await
+            .unwrap();
+        assert_eq!(
+            reconciled.status,
+            crate::install::model::InstallJobStatus::Queued
+        );
+        assert_eq!(
+            reconciled
+                .snapshot()
+                .items
+                .iter()
+                .find(|item| item.id == "mods/startup.jar")
+                .unwrap()
+                .status,
+            crate::install::model::DownloadItemStatus::Completed
+        );
+        assert_eq!(
+            reconciled
+                .state
+                .events
+                .iter()
+                .filter(|event| matches!(
+                    event.kind,
+                    InstallJobEventKind::ContentFileRecovered { .. }
+                ))
+                .count(),
+            1
+        );
+        assert_eq!(resume_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+        crate::install::store::dismiss(job_id, &state)
+            .await
+            .unwrap();
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
     #[test]
     fn unified_search_hit_accepts_null_gallery() {
         let hit: UnifiedSearchHit = serde_json::from_value(serde_json::json!({
@@ -5472,37 +6997,197 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn legacy_manual_downloads_require_an_exact_file_name_without_hashes() {
-        let download = CurseForgeManualDownload {
-            project_id: 1,
-            file_id: 2,
-            file_name: "example-mod.jar".to_string(),
-            ownership_kind: crate::state::instances::ContentOwnershipKind::UserAdded,
-            operation_kind: crate::state::instances::ManualDownloadOperationKind::ContentInstall,
-            website_url: None,
-            project_type: "mod".to_string(),
-            project_slug: String::new(),
-            target_folder: "mods".to_string(),
-            hashes: Vec::new(),
-            file_length: 0,
-            file_fingerprint: 0,
-        };
+    #[tokio::test]
+    async fn curseforge_metadata_less_exact_name_is_not_trusted() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("example-mod.jar");
+        crate::util::io::write(&path, b"wrong exact-name jar")
+            .await
+            .unwrap();
+        let download = stage8_legacy_manual_download(1, 2, "example-mod.jar");
 
-        assert!(manual_download_matches_without_hash(
-            &download,
-            "EXAMPLE-MOD.JAR"
-        ));
-        assert!(!manual_download_matches_without_hash(
-            &download,
-            "example-mod (1).jar"
+        let error = verify_manual_download_candidate_with_integrity(
+            &path, &download, true,
+        )
+        .await
+        .expect_err("filename alone must not verify a candidate");
+
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "The required CurseForge file has no usable integrity metadata"
         ));
     }
 
     #[tokio::test]
-    async fn selected_directory_candidate_requires_expected_integrity() {
+    async fn curseforge_hydration_is_scoped_to_exact_release() {
+        let download =
+            stage8_legacy_manual_download(11, 101, "exact-release.jar");
+        let error = ensure_manual_download_integrity_metadata_with(
+            &download,
+            |project_id, file_id| async move {
+                assert_eq!(project_id, 11);
+                assert_eq!(file_id, 101);
+                Ok(CurseForgeManualDownloadIntegrityMetadata {
+                    project_id,
+                    file_id: 102,
+                    hashes: vec![CurseForgeFileHash {
+                        value: "wrong-release-sha1".to_string(),
+                        algo: 1,
+                    }],
+                    file_length: 1,
+                    file_fingerprint: 0,
+                })
+            },
+        )
+        .await
+        .expect_err("metadata for another file must be rejected");
+
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "CurseForge returned metadata for a different project or file"
+        ));
+    }
+
+    #[tokio::test]
+    async fn curseforge_existing_integrity_skips_hydration() {
+        let mut sha1_download =
+            stage8_legacy_manual_download(12, 201, "existing-sha1.jar");
+        sha1_download.hashes = vec![CurseForgeFileHash {
+            value: "existing-sha1".to_string(),
+            algo: 1,
+        }];
+        let hydrated = ensure_manual_download_integrity_metadata_with(
+            &sha1_download,
+            |_, _| async {
+                Err(ErrorKind::InputError(
+                    "metadata resolver must not run".to_string(),
+                )
+                .into())
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(hydrated.hashes[0].value, "existing-sha1");
+
+        let mut fingerprint_download =
+            stage8_legacy_manual_download(12, 202, "existing-fingerprint.jar");
+        fingerprint_download.file_fingerprint = 12345;
+        let hydrated = ensure_manual_download_integrity_metadata_with(
+            &fingerprint_download,
+            |_, _| async {
+                Err(ErrorKind::InputError(
+                    "metadata resolver must not run".to_string(),
+                )
+                .into())
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(hydrated.file_fingerprint, 12345);
+    }
+
+    #[tokio::test]
+    async fn curseforge_hydrated_fingerprint_verifies_candidate() {
         let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("example-mod.jar");
+        let path = directory.path().join("fingerprint.jar");
+        let bytes = b"legacy fingerprint content";
+        crate::util::io::write(&path, bytes).await.unwrap();
+        let download =
+            stage8_legacy_manual_download(13, 301, "fingerprint.jar");
+        let metadata = stage8_integrity_metadata(
+            &download,
+            Vec::new(),
+            bytes.len() as u64,
+            compute_fingerprint(bytes) as u64,
+        );
+        let hydrated = ensure_manual_download_integrity_metadata_with(
+            &download,
+            move |project_id, file_id| async move {
+                assert_eq!((project_id, file_id), (13, 301));
+                Ok(metadata)
+            },
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            verify_manual_download_candidate_with_integrity(
+                &path, &hydrated, true,
+            )
+            .await
+            .unwrap()
+            .is_some()
+        );
+    }
+
+    #[tokio::test]
+    async fn curseforge_manual_materialization_is_copy_isolated() {
+        let source_directory = tempfile::tempdir().unwrap();
+        let destination_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join("manual.jar");
+        let destination = destination_directory.path().join("manual.jar");
+        let verified_bytes = b"verified manual bytes";
+        crate::util::io::write(&source, verified_bytes)
+            .await
+            .unwrap();
+        let (verified_size, verified_sha1) =
+            sha1_file_async(&source).await.unwrap();
+
+        crate::state::materialize_verified_project_download_copy(
+            &source,
+            &destination,
+            verified_size,
+            &verified_sha1,
+        )
+        .await
+        .unwrap();
+        crate::util::io::write(&source, b"mutated source content")
+            .await
+            .unwrap();
+
+        assert_eq!(
+            crate::util::io::read(&destination).await.unwrap(),
+            verified_bytes
+        );
+        assert_eq!(
+            sha1_file_async(&destination).await.unwrap(),
+            (verified_size, verified_sha1)
+        );
+    }
+
+    #[tokio::test]
+    async fn curseforge_fingerprint_recognition_rechecks_current_bytes() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("recognized.jar");
+        let matched_bytes = b"matched fingerprint bytes";
+        let expected_fingerprint = compute_fingerprint(matched_bytes) as u64;
+        crate::util::io::write(&path, matched_bytes).await.unwrap();
+        assert!(
+            verify_recognized_curseforge_file(&path, expected_fingerprint)
+                .await
+                .unwrap()
+                .is_some()
+        );
+
+        crate::util::io::write(&path, b"changed after fingerprint match")
+            .await
+            .unwrap();
+        assert!(
+            verify_recognized_curseforge_file(&path, expected_fingerprint)
+                .await
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn curseforge_localized_candidate_still_requires_integrity() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("[测试]example-mod (1).jar");
         crate::util::io::write(&path, b"expected curseforge file")
             .await
             .unwrap();
@@ -5544,6 +7229,641 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_legacy_pending_imports_after_exact_metadata_hydration()
+    {
+        let (state, instance_id) =
+            create_stage6_instance("legacy hydration").await;
+        let download =
+            stage8_legacy_manual_download(14, 401, "legacy-hydration.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join(&download.file_name);
+        let bytes = b"legacy hydrated content";
+        crate::util::io::write(&source, bytes).await.unwrap();
+        let metadata = stage8_integrity_metadata(
+            &download,
+            vec![CurseForgeFileHash {
+                value: sha1_smol::Sha1::from(bytes).hexdigest(),
+                algo: 1,
+            }],
+            bytes.len() as u64,
+            0,
+        );
+
+        let imported =
+            import_pending_manual_download_file_with_integrity_resolver(
+                &instance_id,
+                download.project_id,
+                download.file_id,
+                source.clone(),
+                move |project_id, file_id| async move {
+                    assert_eq!((project_id, file_id), (14, 401));
+                    Ok(metadata)
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(source.exists());
+        assert_eq!(imported.relative_path, "mods/legacy-hydration.jar");
+        assert!(
+            crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+                &instance_id,
+                &state.pool,
+            )
+            .await
+            .unwrap()
+            .is_empty()
+        );
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("14")
+                && item.provider_release_id.as_deref() == Some("401")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+                && item.content.is_some()
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_missing_integrity_after_hydration_keeps_pending_unresolved()
+     {
+        let (state, instance_id) =
+            create_stage6_instance("missing hydrated integrity").await;
+        let download =
+            stage8_legacy_manual_download(15, 501, "missing-integrity.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let job_id = insert_stage6_waiting_manual_job(
+            &state,
+            &instance_id,
+            &[("mods/missing-integrity.jar", "15", "501")],
+        )
+        .await;
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join(&download.file_name);
+        crate::util::io::write(&source, b"unverifiable content")
+            .await
+            .unwrap();
+        let metadata = stage8_integrity_metadata(&download, Vec::new(), 20, 0);
+
+        let fetch_error =
+            import_pending_manual_download_file_with_integrity_resolver(
+                &instance_id,
+                download.project_id,
+                download.file_id,
+                source.clone(),
+                |project_id, file_id| async move {
+                    assert_eq!((project_id, file_id), (15, 501));
+                    Err(ErrorKind::InputError(
+                        "simulated CurseForge metadata fetch failure"
+                            .to_string(),
+                    )
+                    .into())
+                },
+            )
+            .await
+            .expect_err("metadata fetch failures must block import");
+        assert!(matches!(
+            fetch_error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "simulated CurseForge metadata fetch failure"
+        ));
+
+        let error =
+            import_pending_manual_download_file_with_integrity_resolver(
+                &instance_id,
+                download.project_id,
+                download.file_id,
+                source.clone(),
+                move |project_id, file_id| async move {
+                    assert_eq!((project_id, file_id), (15, 501));
+                    Ok(metadata)
+                },
+            )
+            .await
+            .expect_err("missing authoritative integrity must block import");
+
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "The required CurseForge file has no usable integrity metadata"
+        ));
+        assert!(source.exists());
+        assert_eq!(
+            crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+                &instance_id,
+                &state.pool,
+            )
+            .await
+            .unwrap()
+            .len(),
+            1
+        );
+        let target = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join("mods/missing-integrity.jar");
+        assert!(!target.exists());
+        assert_stage6_job_is_unresolved(
+            &state,
+            job_id,
+            "mods/missing-integrity.jar",
+        )
+        .await;
+        let job = crate::install::store::get_required(job_id, &state)
+            .await
+            .unwrap();
+        assert_eq!(
+            job.state
+                .events
+                .iter()
+                .filter(|event| matches!(
+                    event.kind,
+                    InstallJobEventKind::ContentFileRecovered { .. }
+                ))
+                .count(),
+            0
+        );
+        crate::install::store::dismiss(job_id, &state)
+            .await
+            .unwrap();
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_generic_record_does_not_complete_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("generic record provenance").await;
+        let download =
+            stage8_legacy_manual_download(16, 601, "generic-record.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/generic-record.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"generic recorded bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let (_, sha1) = sha1_file_async(&full_path).await.unwrap();
+        let provider_ref = ContentProviderRef::CurseForge {
+            project_id: CurseForgeProjectId::new(16).unwrap(),
+            file_id: Some(CurseForgeFileId::new(601).unwrap()),
+        };
+
+        crate::state::record_project_file_atomic(
+            &instance_id,
+            relative_path,
+            &sha1,
+            bytes.len() as u64,
+            ProjectType::Mod,
+            ContentSourceKind::CurseForge,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            Some(&provider_ref),
+            true,
+            None,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            stage8_pending_keys(&state, &instance_id)
+                .await
+                .contains(&("16".to_string(), "601".to_string()))
+        );
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("16")
+                && item.provider_release_id.as_deref() == Some("601")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+                && item.content.is_some()
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_verified_record_completes_only_exact_pending() {
+        let (state, instance_a) =
+            create_stage6_instance("verified record A").await;
+        let (_, instance_b) = create_stage6_instance("verified record B").await;
+        let file_1 = stage8_legacy_manual_download(17, 701, "one.jar");
+        let file_2 = stage8_legacy_manual_download(17, 702, "two.jar");
+        persist_manual_download(&instance_a, &file_1).await.unwrap();
+        persist_manual_download(&instance_a, &file_2).await.unwrap();
+        persist_manual_download(&instance_b, &file_1).await.unwrap();
+        let relative_path = "mods/one.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_a)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"verified exact record";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let (_, sha1) = sha1_file_async(&full_path).await.unwrap();
+
+        crate::state::record_verified_curseforge_project_file_atomic(
+            &instance_a,
+            relative_path,
+            &sha1,
+            bytes.len() as u64,
+            ProjectType::Mod,
+            ContentSourceKind::CurseForge,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            CurseForgeProjectId::new(17).unwrap(),
+            CurseForgeFileId::new(701).unwrap(),
+            true,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            stage8_pending_keys(&state, &instance_a).await,
+            HashSet::from([("17".to_string(), "702".to_string())])
+        );
+        assert_eq!(
+            stage8_pending_keys(&state, &instance_b).await,
+            HashSet::from([("17".to_string(), "701".to_string())])
+        );
+        crate::api::instance::remove(&instance_a).await.unwrap();
+        crate::api::instance::remove(&instance_b).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_manual_materialization_detects_source_change() {
+        let (state, instance_id) =
+            create_stage6_instance("manual copy TOCTOU").await;
+        let download = stage8_legacy_manual_download(18, 801, "toctou.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join("toctou.jar");
+        crate::util::io::write(&source, b"original verified bytes")
+            .await
+            .unwrap();
+        let (verified_size, verified_sha1) =
+            sha1_file_async(&source).await.unwrap();
+        crate::util::io::write(&source, b"changed after verification")
+            .await
+            .unwrap();
+        let destination = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join("mods/toctou.jar");
+        let previous_bytes = b"previous destination";
+        crate::util::io::write(&destination, previous_bytes)
+            .await
+            .unwrap();
+
+        crate::state::materialize_verified_project_download_copy(
+            &source,
+            &destination,
+            verified_size,
+            &verified_sha1,
+        )
+        .await
+        .expect_err("changed source must fail copied-byte identity");
+
+        assert_eq!(
+            crate::util::io::read(&destination).await.unwrap(),
+            previous_bytes
+        );
+        assert!(
+            stage8_pending_keys(&state, &instance_id)
+                .await
+                .contains(&("18".to_string(), "801".to_string()))
+        );
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(!snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("18")
+                && item.provider_release_id.as_deref() == Some("801")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+                && item.content.is_some()
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_automatic_sha1_record_can_complete_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("automatic SHA1").await;
+        let download =
+            stage8_legacy_manual_download(19, 901, "automatic-sha1.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/automatic-sha1.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"automatic SHA1 bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let (_, sha1) = sha1_file_async(&full_path).await.unwrap();
+        let file = stage8_curseforge_file(
+            19,
+            901,
+            "automatic-sha1.jar",
+            bytes.len() as u64,
+            vec![CurseForgeFileHash {
+                value: sha1,
+                algo: 1,
+            }],
+            0,
+        );
+
+        record_installed_curseforge_file(
+            &instance_id,
+            relative_path,
+            &full_path,
+            &file,
+            ProjectType::Mod,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(stage8_pending_keys(&state, &instance_id).await.is_empty());
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_automatic_fingerprint_record_can_complete_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("automatic fingerprint").await;
+        let download = stage8_legacy_manual_download(
+            20,
+            1001,
+            "automatic-fingerprint.jar",
+        );
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/automatic-fingerprint.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"automatic fingerprint bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let file = stage8_curseforge_file(
+            20,
+            1001,
+            "automatic-fingerprint.jar",
+            bytes.len() as u64,
+            Vec::new(),
+            compute_fingerprint(bytes) as u64,
+        );
+
+        record_installed_curseforge_file(
+            &instance_id,
+            relative_path,
+            &full_path,
+            &file,
+            ProjectType::Mod,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(stage8_pending_keys(&state, &instance_id).await.is_empty());
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_automatic_weak_record_keeps_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("automatic weak metadata").await;
+        let download =
+            stage8_legacy_manual_download(21, 1101, "automatic-md5.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/automatic-md5.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"automatic MD5-only bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let file = stage8_curseforge_file(
+            21,
+            1101,
+            "automatic-md5.jar",
+            bytes.len() as u64,
+            vec![CurseForgeFileHash {
+                value: "validated-md5".to_string(),
+                algo: 2,
+            }],
+            0,
+        );
+
+        record_installed_curseforge_file(
+            &instance_id,
+            relative_path,
+            &full_path,
+            &file,
+            ProjectType::Mod,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            stage8_pending_keys(&state, &instance_id)
+                .await
+                .contains(&("21".to_string(), "1101".to_string()))
+        );
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("21")
+                && item.provider_release_id.as_deref() == Some("1101")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_rollback_identity_record_does_not_complete_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("rollback provenance").await;
+        let download = stage8_legacy_manual_download(22, 1201, "rollback.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/rollback.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"historical rollback bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let (_, sha1) = sha1_file_async(&full_path).await.unwrap();
+        let provider_ref = ContentProviderRef::CurseForge {
+            project_id: CurseForgeProjectId::new(22).unwrap(),
+            file_id: Some(CurseForgeFileId::new(1201).unwrap()),
+        };
+
+        crate::state::record_project_file_atomic(
+            &instance_id,
+            relative_path,
+            &sha1,
+            bytes.len() as u64,
+            ProjectType::Mod,
+            ContentSourceKind::CurseForge,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            Some(&provider_ref),
+            true,
+            None,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            stage8_pending_keys(&state, &instance_id)
+                .await
+                .contains(&("22".to_string(), "1201".to_string()))
+        );
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_non_pending_import_fails_before_verification() {
+        let (state, instance_id) =
+            create_stage6_instance("non-pending import").await;
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join("invalid.jar");
+        crate::util::io::write(&source, b"not the required file")
+            .await
+            .unwrap();
+
+        let error = import_pending_manual_download_file(
+            &instance_id,
+            601,
+            6001,
+            source.clone(),
+        )
+        .await
+        .expect_err("missing pending identity must be rejected");
+
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "The selected CurseForge file is not pending for this instance"
+        ));
+        assert!(source.exists());
+        assert!(
+            crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+                &instance_id,
+                &state.pool,
+            )
+            .await
+            .unwrap()
+            .is_empty()
+        );
+        let target = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join("mods/invalid.jar");
+        assert!(!target.exists());
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_wrong_pending_file_fails_integrity() {
+        let (state, instance_id) =
+            create_stage6_instance("wrong pending file").await;
+        let download = stage6_manual_download(
+            701,
+            7001,
+            "expected.jar",
+            b"required pending bytes",
+        );
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join("selected.jar");
+        crate::util::io::write(&source, b"wrong pending bytes")
+            .await
+            .unwrap();
+
+        let error = import_pending_manual_download_file(
+            &instance_id,
+            download.project_id,
+            download.file_id,
+            source.clone(),
+        )
+        .await
+        .expect_err("wrong pending file must fail integrity");
+
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "The selected file does not match the required CurseForge file"
+        ));
+        assert!(source.exists());
+        let pending = crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+            &instance_id,
+            &state.pool,
+        )
+        .await
+        .unwrap();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].provider_project_id, "701");
+        assert_eq!(pending[0].provider_release_id, "7001");
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(!snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("701")
+                && item.provider_release_id.as_deref() == Some("7001")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+                && item.content.is_some()
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
     #[tokio::test]
     async fn manual_import_completes_persisted_pack_member() {
         crate::event::EventState::init().await.unwrap();
@@ -5652,9 +7972,13 @@ mod tests {
             .instances_dir()
             .join(created.instance.path)
             .join(relative_path);
-        assert_eq!(crate::util::io::read(instance_path).await.unwrap(), bytes);
+        assert_eq!(crate::util::io::read(&instance_path).await.unwrap(), bytes);
         assert!(source.exists());
         assert!(selected.exists());
+        crate::util::io::write(&selected, b"mutated selected source")
+            .await
+            .unwrap();
+        assert_eq!(crate::util::io::read(instance_path).await.unwrap(), bytes);
     }
 
     #[test]

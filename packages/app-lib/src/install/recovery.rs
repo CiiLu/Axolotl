@@ -860,7 +860,7 @@ async fn verify_restored_snapshot(
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "tauri")))]
 mod tests {
     use super::*;
     use crate::api::pack::install_from::CreatePackLocation;

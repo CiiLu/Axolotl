@@ -1,0 +1,5 @@
+# Fictional local values only. Never commit a real Access token or audience.
+TELEMETRY_ADMIN_MOCK_AUTH=true
+TELEMETRY_ADMIN_MOCK_SCENARIO=normal
+NUXT_ACCESS_TEAM_DOMAIN=example
+NUXT_ACCESS_AUDIENCE=fixture-audience

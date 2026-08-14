@@ -907,8 +907,8 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
         RunResult::Completed(Ok(InstallExecutionOutcome::Completed(
             instance_id,
         ))) => {
-            if let Some(instance_id) = instance_id {
-                set_instance_id(&mut job_state, instance_id);
+            if let Some(instance_id) = instance_id.as_ref() {
+                set_instance_id(&mut job_state, instance_id.clone());
             }
             if cancellation.is_cancelled() {
                 finish_canceled_job(job_id, &mut job_state, &state).await?;
@@ -927,16 +927,11 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
             job_state.missing_content = None;
             job_state.skipped_missing_content_paths.clear();
             job_state.context = None;
-            let instance_id = current_instance_id(&job_state);
             let mut completed_state = job_state.clone();
             completed_state.rollback = None;
-            let Some(record) = store::complete_running_job(
-                job_id,
-                instance_id.as_deref(),
-                &completed_state,
-                &state,
-            )
-            .await?
+            let Some(record) =
+                store::complete_running_job(job_id, &completed_state, &state)
+                    .await?
             else {
                 if store::get_required(job_id, &state).await?.status
                     == InstallJobStatus::Canceling

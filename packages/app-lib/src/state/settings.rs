@@ -148,6 +148,8 @@ pub struct Settings {
     pub terracotta_public_nodes: Vec<String>,
 
     pub telemetry: bool,
+    #[serde(default)]
+    pub telemetry_consent_version: u32,
     pub discord_rpc: bool,
     #[serde(skip, default)]
     pub personalized_ads: bool,
@@ -177,6 +179,13 @@ pub struct Settings {
     pub auto_download_updates: Option<bool>,
 
     pub version: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct PrivacySettings {
+    pub telemetry: bool,
+    pub discord_rpc: bool,
+    pub consent_version: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq)]
@@ -211,7 +220,7 @@ impl Settings {
                 auto_concurrent_downloads, minecraft_metadata_source,
                 minecraft_file_source, modrinth_source, curseforge_source, mojang_auth_source,
                 theme, locale, default_page, collapsed_navigation, hide_nametag_skins_page, advanced_rendering, native_decorations,
-                discord_rpc, developer_mode, telemetry, personalized_ads,
+				discord_rpc, developer_mode, telemetry, telemetry_consent_version, personalized_ads,
                 onboarded, onboarding_version, onboarding_instance_tour_completed,
                 json(extra_launch_args) extra_launch_args, json(custom_env_vars) custom_env_vars,
                 mc_memory_max, mc_memory_auto, mc_force_fullscreen, mc_game_resolution_x, mc_game_resolution_y, hide_on_process_start,
@@ -283,6 +292,7 @@ impl Settings {
                 .and_then(|value| serde_json::from_str(value).ok())
                 .unwrap_or_else(default_terracotta_public_nodes),
             telemetry: res.telemetry == 1,
+            telemetry_consent_version: res.telemetry_consent_version as u32,
             discord_rpc: res.discord_rpc == 1,
             developer_mode: res.developer_mode == 1,
             personalized_ads: res.personalized_ads == 1,
@@ -449,7 +459,8 @@ impl Settings {
                 auto_hide_downloads_button = $56,
                 home_widgets = jsonb($57),
                 mojang_auth_source = $58,
-                terracotta_public_nodes = jsonb($59)
+				terracotta_public_nodes = jsonb($59),
+				telemetry_consent_version = $60
             ",
             max_concurrent_writes,
             max_concurrent_downloads,
@@ -510,6 +521,7 @@ impl Settings {
             home_widgets,
             mojang_auth_source,
             terracotta_public_nodes,
+            self.telemetry_consent_version,
         )
         .execute(exec)
         .await?;
@@ -1150,5 +1162,64 @@ mod tests {
         assert_eq!(settings.minecraft_file_source, DownloadSourceMode::Auto);
         assert_eq!(settings.modrinth_source, DownloadSourceMode::Auto);
         assert_eq!(settings.curseforge_source, DownloadSourceMode::Auto);
+    }
+
+    #[tokio::test]
+    async fn telemetry_schema_migrates_fresh_and_existing_settings_databases() {
+        let fresh = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&fresh).await.unwrap();
+        let settings = Settings::get(&fresh).await.unwrap();
+        assert!(!settings.telemetry);
+        assert_eq!(settings.telemetry_consent_version, 0);
+        assert!(
+            sqlx::query("PRAGMA foreign_key_check")
+                .fetch_all(&fresh)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+
+        let upgrade = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK (id = 0), telemetry INTEGER NOT NULL DEFAULT 0, discord_rpc INTEGER NOT NULL DEFAULT 1)",
+        )
+        .execute(&upgrade)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO settings (id, telemetry, discord_rpc) VALUES (0, 0, 1)",
+        )
+        .execute(&upgrade)
+        .await
+        .unwrap();
+        sqlx::raw_sql(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/migrations/20260814120000_telemetry.sql"
+        )))
+        .execute(&upgrade)
+        .await
+        .unwrap();
+        let consent_version = sqlx::query_scalar::<_, i64>(
+            "SELECT telemetry_consent_version FROM settings WHERE id = 0",
+        )
+        .fetch_one(&upgrade)
+        .await
+        .unwrap();
+        assert_eq!(consent_version, 0);
+        assert!(
+            sqlx::query("PRAGMA foreign_key_check")
+                .fetch_all(&upgrade)
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 }

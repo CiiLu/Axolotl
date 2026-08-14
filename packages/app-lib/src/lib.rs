@@ -19,6 +19,7 @@ mod launcher;
 mod logger;
 pub mod mod_metadata;
 mod state;
+pub mod telemetry;
 
 pub use api::*;
 pub use error::*;
