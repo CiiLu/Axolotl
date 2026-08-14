@@ -403,6 +403,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import MissingModpackContentModal from '@/components/ui/modal/MissingModpackContentModal.vue'
+import { listPendingCurseForgeManualDownloads } from '@/helpers/curseforge'
 import type { CurseForgeManualDownloadItem } from '@/helpers/curseforge-manual'
 import {
 	download_job_support_details,
@@ -835,17 +836,33 @@ function progressText(job: InstallJobSnapshot) {
 	return phaseLabel(job.phase)
 }
 
+function isResolvedRequiredFile(item: DownloadItem) {
+	return item.status === 'completed' || (item.status === 'skipped' && item.manual_url == null)
+}
+
+function isUnresolvedRequiredFile(item: DownloadItem) {
+	return item.status === 'failed' || (item.status === 'skipped' && item.manual_url != null)
+}
+
 function completedRequiredFiles(job: InstallJobSnapshot) {
-	return job.items.filter(
-		(item) => item.status === 'completed' || (item.status === 'skipped' && item.manual_url == null),
-	).length
+	return job.items.filter(isResolvedRequiredFile).length
+}
+
+function hasCurrentRequiredFileResolutionState(job: InstallJobSnapshot) {
+	return (
+		job.items.some(isUnresolvedRequiredFile) ||
+		(job.items.length > 0 && job.items.every(isResolvedRequiredFile))
+	)
 }
 
 function missingRequiredFiles(job: InstallJobSnapshot) {
+	if (hasCurrentRequiredFileResolutionState(job)) {
+		return job.items.filter(isUnresolvedRequiredFile).length
+	}
 	if (job.pause_reason?.type === 'missing_required_content') {
 		return job.pause_reason.failed_files
 	}
-	return job.items.filter((item) => item.status === 'failed').length
+	return 0
 }
 
 function totalRequiredFiles(job: InstallJobSnapshot) {
@@ -1010,23 +1027,42 @@ async function skipMissingContent(job: InstallJobSnapshot) {
 }
 
 async function resolveMissing(job: InstallJobSnapshot) {
-	const curseForgeItems = job.items
-		.filter(
-			(item) => item.status === 'skipped' && item.manual_url && item.project_id && item.version_id,
-		)
-		.map(
-			(item): CurseForgeManualDownloadItem => ({
-				projectId: Number(item.project_id),
-				fileId: Number(item.version_id),
-				fileName: item.name,
-				websiteUrl: item.manual_url ?? undefined,
-			}),
-		)
-	if (job.instance_id && curseForgeItems.length > 0) {
-		showCurseForgeManualDownloads(job.instance_id, curseForgeItems)
-		return
-	}
-	await missingContentModal.value?.show(job)
+	await withBusy(job.job_id, async () => {
+		const fallbackCurseForgeItems = job.items
+			.filter(
+				(item) =>
+					item.status === 'skipped' && item.manual_url && item.project_id && item.version_id,
+			)
+			.map(
+				(item): CurseForgeManualDownloadItem => ({
+					projectId: Number(item.project_id),
+					fileId: Number(item.version_id),
+					fileName: item.name,
+					websiteUrl: item.manual_url ?? undefined,
+				}),
+			)
+		const instanceId = job.instance_id
+		const hasGeneralMissingItems = job.items.some((item) => item.status === 'failed')
+		if (instanceId && (job.provider === 'curse_forge' || fallbackCurseForgeItems.length > 0)) {
+			try {
+				const pending = await listPendingCurseForgeManualDownloads(instanceId)
+				if (pending.length > 0) {
+					showCurseForgeManualDownloads(instanceId, pending)
+					return
+				}
+				await manager.refresh()
+				if (!hasGeneralMissingItems) return
+			} catch (error) {
+				handleError(error)
+				if (fallbackCurseForgeItems.length > 0) {
+					showCurseForgeManualDownloads(instanceId, fallbackCurseForgeItems)
+					return
+				}
+				if (!hasGeneralMissingItems) return
+			}
+		}
+		await missingContentModal.value?.show(job)
+	})
 }
 
 async function remove(job: InstallJobSnapshot) {
