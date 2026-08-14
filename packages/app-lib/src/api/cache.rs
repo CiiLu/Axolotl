@@ -1,7 +1,7 @@
 use crate::state::{
     CacheBehaviour, CacheValueType, CachedEntry, ModrinthProjectId,
     ModrinthVersionId, Organization, Project, ProjectV3, SearchResults,
-    SearchResultsV3, TeamMember, User, Version,
+    SearchResultsV3, TeamMember, User, Version, VersionV3,
 };
 
 macro_rules! impl_cache_methods {
@@ -106,6 +106,41 @@ pub async fn get_version_many(
         .collect::<crate::Result<Vec<_>>>()?;
     let state = crate::State::get().await?;
     CachedEntry::get_version_many(
+        &ids,
+        cache_behaviour,
+        &state.pool,
+        &state.api_semaphore,
+    )
+    .await
+}
+
+#[tracing::instrument]
+pub async fn get_version_v3(
+    id: &str,
+    cache_behaviour: Option<CacheBehaviour>,
+) -> crate::Result<Option<VersionV3>> {
+    let id = ModrinthVersionId::new(id.to_string())?;
+    let state = crate::State::get().await?;
+    CachedEntry::get_version_v3(
+        &id,
+        cache_behaviour,
+        &state.pool,
+        &state.api_semaphore,
+    )
+    .await
+}
+
+#[tracing::instrument]
+pub async fn get_version_v3_many(
+    ids: &[&str],
+    cache_behaviour: Option<CacheBehaviour>,
+) -> crate::Result<Vec<VersionV3>> {
+    let ids = ids
+        .iter()
+        .map(|id| ModrinthVersionId::new((*id).to_string()))
+        .collect::<crate::Result<Vec<_>>>()?;
+    let state = crate::State::get().await?;
+    CachedEntry::get_version_v3_many(
         &ids,
         cache_behaviour,
         &state.pool,

@@ -34,6 +34,7 @@ pub enum CacheValueType {
     ProjectV3,
     CurseForgeProject,
     Version,
+    VersionV3,
     User,
     Team,
     Organization,
@@ -61,6 +62,7 @@ impl CacheValueType {
             CacheValueType::ProjectV3 => "project_v3",
             CacheValueType::CurseForgeProject => "curseforge_project",
             CacheValueType::Version => "version",
+            CacheValueType::VersionV3 => "version_v3",
             CacheValueType::User => "user",
             CacheValueType::Team => "team",
             CacheValueType::Organization => "organization",
@@ -87,6 +89,7 @@ impl CacheValueType {
             "project_v3" => CacheValueType::ProjectV3,
             "curseforge_project" => CacheValueType::CurseForgeProject,
             "version" => CacheValueType::Version,
+            "version_v3" => CacheValueType::VersionV3,
             "user" => CacheValueType::User,
             "team" => CacheValueType::Team,
             "organization" => CacheValueType::Organization,
@@ -152,6 +155,7 @@ impl CacheValueType {
             | CacheValueType::GameVersions
             | CacheValueType::DonationPlatforms
             | CacheValueType::Version
+            | CacheValueType::VersionV3
             | CacheValueType::Team
             | CacheValueType::File
             | CacheValueType::LoaderManifest
@@ -226,6 +230,7 @@ pub enum CacheValue {
     Project(Project),
     CurseForgeProject(CurseForgeProject),
     Version(Version),
+    VersionV3(VersionV3),
     User(User),
     Team(Vec<TeamMember>),
     Organization(Organization),
@@ -577,6 +582,30 @@ pub struct Version {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VersionV3 {
+    pub id: String,
+    pub files: Vec<VersionFile>,
+    #[serde(default)]
+    pub environment: Option<VersionEnvironment>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum VersionEnvironment {
+    ClientAndServer,
+    ClientOnly,
+    ClientOnlyServerOptional,
+    SingleplayerOnly,
+    ServerOnly,
+    ServerOnlyClientOptional,
+    DedicatedServerOnly,
+    ClientOrServer,
+    ClientOrServerPrefersBoth,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct VersionFile {
     pub hashes: HashMap<String, String>,
     pub url: String,
@@ -713,6 +742,7 @@ impl CacheValue {
                 CacheValueType::CurseForgeProject
             }
             CacheValue::Version(_) => CacheValueType::Version,
+            CacheValue::VersionV3(_) => CacheValueType::VersionV3,
             CacheValue::User(_) => CacheValueType::User,
             CacheValue::Team { .. } => CacheValueType::Team,
             CacheValue::Organization(_) => CacheValueType::Organization,
@@ -743,6 +773,7 @@ impl CacheValue {
             CacheValue::ProjectV3(project) => project.id.clone(),
             CacheValue::CurseForgeProject(project) => project.id.to_string(),
             CacheValue::Version(version) => version.id.clone(),
+            CacheValue::VersionV3(version) => version.id.clone(),
             CacheValue::User(user) => user.id.clone(),
             CacheValue::Team(members) => members
                 .iter()
@@ -804,6 +835,7 @@ impl CacheValue {
             | CacheValue::GameVersions(_)
             | CacheValue::DonationPlatforms(_)
             | CacheValue::Version(_)
+            | CacheValue::VersionV3(_)
             | CacheValue::Team { .. }
             | CacheValue::File { .. }
             | CacheValue::LoaderManifest { .. }
@@ -823,6 +855,7 @@ impl CacheValue {
                 serde_json::to_value(project)
             }
             CacheValue::Version(version) => serde_json::to_value(version),
+            CacheValue::VersionV3(version) => serde_json::to_value(version),
             CacheValue::User(user) => serde_json::to_value(user),
             CacheValue::Team(members) => serde_json::to_value(members),
             CacheValue::Organization(org) => serde_json::to_value(org),
@@ -1114,6 +1147,50 @@ impl CachedEntry {
             .into_iter()
             .filter_map(|entry| match entry.data {
                 Some(CacheValue::Version(version)) => Some(version),
+                _ => None,
+            })
+            .collect())
+    }
+
+    pub async fn get_version_v3(
+        id: &ModrinthVersionId,
+        cache_behaviour: Option<CacheBehaviour>,
+        pool: &SqlitePool,
+        fetch_semaphore: &FetchSemaphore,
+    ) -> crate::Result<Option<VersionV3>> {
+        Ok(Self::get_version_v3_many(
+            std::slice::from_ref(id),
+            cache_behaviour,
+            pool,
+            fetch_semaphore,
+        )
+        .await?
+        .into_iter()
+        .next())
+    }
+
+    pub async fn get_version_v3_many(
+        ids: &[ModrinthVersionId],
+        cache_behaviour: Option<CacheBehaviour>,
+        pool: &SqlitePool,
+        fetch_semaphore: &FetchSemaphore,
+    ) -> crate::Result<Vec<VersionV3>> {
+        let id_refs = ids
+            .iter()
+            .map(ModrinthVersionId::as_str)
+            .collect::<Vec<_>>();
+        let entries = Self::get_many(
+            CacheValueType::VersionV3,
+            &id_refs,
+            cache_behaviour,
+            pool,
+            fetch_semaphore,
+        )
+        .await?;
+        Ok(entries
+            .into_iter()
+            .filter_map(|entry| match entry.data {
+                Some(CacheValue::VersionV3(version)) => Some(version),
                 _ => None,
             })
             .collect())
@@ -2249,6 +2326,15 @@ impl CachedEntry {
                     CacheValue::Version
                 )
             }
+            CacheValueType::VersionV3 => {
+                fetch_original_values!(
+                    VersionV3,
+                    env!("MODRINTH_API_URL_V3"),
+                    "versions",
+                    Some("/v3/versions"),
+                    CacheValue::VersionV3
+                )
+            }
             CacheValueType::User => {
                 fetch_original_values!(
                     User,
@@ -2989,6 +3075,11 @@ impl CachedEntry {
             CacheValueType::Version => {
                 CacheValue::Version(parse(data, id, "version")?)
             }
+            CacheValueType::VersionV3 => CacheValue::VersionV3(parse(
+                data,
+                id,
+                "version_v3",
+            )?),
             CacheValueType::User => CacheValue::User(parse(data, id, "user")?),
             CacheValueType::Team => CacheValue::Team(parse(data, id, "team")?),
             CacheValueType::Organization => {

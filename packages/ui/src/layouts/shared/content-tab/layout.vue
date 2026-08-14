@@ -2,6 +2,7 @@
 import {
 	ArrowDownAZIcon,
 	ArrowUpZAIcon,
+	ChevronLeftIcon,
 	ChevronUpIcon,
 	ClockArrowDownIcon,
 	ClockArrowUpIcon,
@@ -21,6 +22,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import EmptyState from '#ui/components/base/EmptyState.vue'
+import MultiSelect from '#ui/components/base/MultiSelect.vue'
 import OverflowMenu from '#ui/components/base/OverflowMenu.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
@@ -46,6 +48,7 @@ import {
 	useBulkOperation,
 	useChangingItems,
 	useContentFolderGroups,
+	useContentMetadataFilters,
 	useContentPipeline,
 	useContentSelection,
 } from './composables'
@@ -131,6 +134,14 @@ const messages = defineMessages({
 	sortByLabel: {
 		id: 'content.page-layout.sort.label',
 		defaultMessage: 'Sort by {mode}',
+	},
+	metadataFilterSearchPlaceholder: {
+		id: 'content.metadata-filter.search',
+		defaultMessage: '搜索...',
+	},
+	metadataFilterClear: {
+		id: 'content.metadata-filter.clear',
+		defaultMessage: '清除',
 	},
 	pleaseWait: {
 		id: 'content.page-layout.please-wait',
@@ -236,15 +247,8 @@ const {
 	searchableItemCount,
 	modpackItemsNoUpdate,
 	modpackChildIdSet,
-	selectedTypeFilter,
-	selectedStatusFilters,
-	row1FilterOptions,
-	row2FilterOptions,
-	totalCount,
-	filterCounts,
-	filteredItems,
-	filteredModpackItems,
-	toggleTypeFilter,
+	filteredItems: pipelineFilteredItems,
+	filteredModpackItems: pipelineFilteredModpackItems,
 } = useContentPipeline({
 	items: ctx.items,
 	modpackItems: ctx.modpackItems,
@@ -256,6 +260,30 @@ const {
 	isPackLocked: ctx.isPackLocked,
 	memoryKey: ctx.instanceId,
 })
+
+const {
+	metadataFilterCategories,
+	getSelectedValues: getMetadataSelectedValues,
+	setCategorySelection,
+	isCategoryFiltering,
+	applyMetadataFilters,
+} = useContentMetadataFilters(
+	computed(() => [
+		...ctx.items.value,
+		...(ctx.modpackItems?.value ?? []),
+	]),
+	ctx.instanceId,
+)
+
+// Metadata filters (作者/环境/状态/更新/类型/加载器/来源/外部文件/开源) apply on
+// top of the search pipeline, so the whole table (including modpack groups)
+// is filtered consistently.
+const filteredItems = computed(() =>
+	applyMetadataFilters(pipelineFilteredItems.value),
+)
+const filteredModpackItems = computed(() =>
+	applyMetadataFilters(pipelineFilteredModpackItems.value),
+)
 
 const { selectedIds, selectedItems, clearSelection, removeFromSelection } = useContentSelection(
 	computed(() => {
@@ -913,36 +941,51 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 
 					<div class="@container flex flex-col gap-2">
 						<div class="flex flex-wrap items-center gap-1.5">
-							<button
-								class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
-								:class="
-									selectedTypeFilter.length === 0
-										? 'bg-brand-highlight text-brand'
-										: 'bg-surface-4 text-primary hover:bg-surface-5'
-								"
-								:aria-pressed="selectedTypeFilter.length === 0"
-								@click="selectedTypeFilter = []"
+							<MultiSelect
+								v-for="category in metadataFilterCategories"
+								:key="category.key"
+								:model-value="getMetadataSelectedValues(category.key)"
+								:options="category.options"
+								:max-height="420"
+								:clearable="false"
+								:show-chevron="false"
+								:fit-content="true"
+								:searchable="category.searchable"
+								:search-placeholder="formatMessage(messages.metadataFilterSearchPlaceholder)"
+								:trigger-class="'h-10 !rounded-full border-0 bg-surface-4 px-4 transition-all hover:brightness-110 active:brightness-110'"
+								:dropdown-min-width="'15rem'"
+								:checkbox-position="'left'"
+								hover-open
+								show-selection-actions
+								:selection-actions-clear-label="formatMessage(messages.metadataFilterClear)"
+								@update:model-value="(values) => setCategorySelection(category.key, values)"
 							>
-								{{ formatMessage(commonMessages.allProjectType) }}
-								<span class="ml-1 text-sm font-normal opacity-70">{{ totalCount }}</span>
-							</button>
-							<button
-								v-for="option in row1FilterOptions"
-								:key="option.id"
-								class="cursor-pointer rounded-full px-3 py-1.5 text-base font-semibold leading-5 transition-all duration-100 active:scale-[0.97]"
-								:class="
-									selectedTypeFilter.includes(option.id)
-										? 'bg-brand-highlight text-brand'
-										: 'bg-surface-4 text-primary hover:bg-surface-5'
-								"
-								:aria-pressed="selectedTypeFilter.includes(option.id)"
-								@click="toggleTypeFilter(option.id, $event)"
-							>
-								{{ option.label }}
-								<span class="ml-1 text-sm font-normal opacity-70">{{
-									filterCounts[option.id] ?? 0
-								}}</span>
-							</button>
+								<template #input-content="{ isOpen, openDirection }">
+									<span
+										class="flex min-w-0 items-center gap-1.5 text-base font-semibold text-primary"
+									>
+										<span class="truncate">{{ category.label }}</span>
+										<span
+											v-if="isCategoryFiltering(category.key)"
+											class="rounded-full bg-brand-highlight px-1.5 text-sm font-normal tabular-nums text-brand"
+										>
+											{{ getMetadataSelectedValues(category.key).length }}/{{
+												category.options.length
+											}}
+										</span>
+										<ChevronLeftIcon
+											class="size-4 shrink-0 text-secondary transition-transform duration-150"
+											:class="
+												isOpen
+													? openDirection === 'down'
+														? 'rotate-90'
+														: '-rotate-90'
+													: '-rotate-90'
+											"
+										/>
+									</span>
+								</template>
+							</MultiSelect>
 						</div>
 					</div>
 
@@ -958,45 +1001,6 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 						@rollback="handleRollbackById"
 						@toggle-expand="toggleGroupExpand"
 					>
-						<template #header-project>
-							<div class="flex items-center gap-4">
-								<button
-									class="relative pb-1 text-base font-semibold transition-colors"
-									:class="
-										selectedStatusFilters.length === 0
-											? 'text-brand'
-											: 'text-secondary hover:text-primary'
-									"
-									@click="selectedStatusFilters = []"
-								>
-									{{ formatMessage(commonMessages.allProjectType) }}
-									<span
-										v-if="selectedStatusFilters.length === 0"
-										class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
-									/>
-								</button>
-								<button
-									v-for="option in row2FilterOptions"
-									:key="option.id"
-									class="relative pb-1 text-base font-semibold transition-colors"
-									:class="
-										selectedStatusFilters.includes(option.id)
-											? 'text-brand'
-											: 'text-secondary hover:text-primary'
-									"
-									@click="selectedStatusFilters = [option.id]"
-								>
-									{{ option.label }}
-									<span class="ml-1 text-sm font-normal opacity-70">{{
-										filterCounts[option.id] ?? 0
-									}}</span>
-									<span
-										v-if="selectedStatusFilters.includes(option.id)"
-										class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand"
-									/>
-								</button>
-							</div>
-						</template>
 						<template #header-actions>
 							<div class="flex items-center justify-end gap-2">
 								<ButtonStyled circular type="transparent">

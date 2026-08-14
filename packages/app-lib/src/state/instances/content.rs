@@ -1,8 +1,10 @@
 use crate::state::{
-    ContentItemUpdate, ContentProvider, ContentProviderRef, Project,
-    ProjectType, Version,
+    ContentItemUpdate, ContentProvider, ContentProviderRef, License, Project,
+    ProjectType, Version, VersionEnvironment,
 };
 use serde::{Deserialize, Serialize};
+
+use super::ContentSourceKind;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ContentItem {
@@ -22,6 +24,18 @@ pub struct ContentItem {
     /// Present when an update backup (`{active}_{previous}.old`) exists and
     /// can be rolled back; `file_name` is the file that would be restored.
     pub rollback: Option<ContentItemRollback>,
+    /// Version-level environment (client/server/singleplayer) from the
+    /// Modrinth v3 version API. `None` when the file has no Modrinth
+    /// version match (e.g. CurseForge-only content).
+    pub environment: Option<VersionEnvironment>,
+    /// Local content source kind (local file, CurseForge pack member, ...).
+    pub source_kind: Option<ContentSourceKind>,
+    /// True when the file is not linked to any online project (no Modrinth
+    /// hash match and no CurseForge reference).
+    pub external: bool,
+    /// Loader derived from the installed version's loaders when a Modrinth
+    /// match exists, falling back to the locally parsed mod metadata.
+    pub loader: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -35,6 +49,7 @@ pub struct ContentItemProject {
     pub slug: Option<String>,
     pub title: String,
     pub icon_url: Option<String>,
+    pub license: Option<License>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
