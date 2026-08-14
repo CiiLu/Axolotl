@@ -727,7 +727,7 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 								:value="colors[colors.length - 1]"
 								:aria-label="formatMessage(messages.addColor)"
 								class="lab-new-color-picker"
-								@input="addPickedColor(($event.target as HTMLInputElement).value)"
+								@change="addPickedColor(($event.target as HTMLInputElement).value)"
 							/>
 							<ButtonStyled color="brand" size="small">
 								<button @click="openNewColorPicker">

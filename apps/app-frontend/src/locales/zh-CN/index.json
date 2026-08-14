@@ -1584,7 +1584,7 @@
 		"message": "未知错误"
 	},
 	"app.ai-log-analysis.analyzing": {
-		"message": "正在AI分析日志……"
+		"message": "正在AI分析日志……这可能需要等待半分钟"
 	},
 	"app.ai-log-analysis.cancel": {
 		"message": "取消"

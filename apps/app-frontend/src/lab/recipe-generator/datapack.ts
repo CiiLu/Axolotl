@@ -2,6 +2,7 @@ import { save } from '@tauri-apps/plugin-dialog'
 import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import { strToU8, zipSync } from 'fflate'
 
+import { DATAPACK_ICON_BASE64 } from './datapack-icon.ts'
 import { parseIdentifier, rawId } from './identifier.ts'
 import type { JavaVersionId } from './types.ts'
 import { getJavaVersionMeta } from './versions.ts'
@@ -24,26 +25,69 @@ export type DatapackTag = {
 
 export type DatapackSaveSource = PackFile[] | Blob
 
-const PACK_DESCRIPTION = 'Generated with Axolotl Recipe Generator'
+const PACK_DESCRIPTION = 'Axolotl Recipe Generator'
 
-export function createPackMcmeta(packFormat: number | [number, number]): string {
+function formatDatapackTimestamp(date: Date): string {
+	const pad = (value: number) => String(value).padStart(2, '0')
+	return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(
+		date.getHours(),
+	)}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+}
+
+export function createDatapackFileName(version: JavaVersionId, date = new Date()): string {
+	return `axolotl-recipes-${version}-${formatDatapackTimestamp(date)}.zip`
+}
+
+export function createDatapackDescription(productNames: readonly string[]): string {
+	const names = productNames
+		.map((name) => name.trim())
+		.filter(Boolean)
+		.map((name) => `[${name}]`)
+		.join(' ')
+	return names ? `${PACK_DESCRIPTION}\n${names}` : PACK_DESCRIPTION
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+	const binary = atob(base64)
+	const bytes = new Uint8Array(binary.length)
+	for (let index = 0; index < binary.length; index += 1) {
+		bytes[index] = binary.charCodeAt(index)
+	}
+	return bytes
+}
+
+let packIconBytes: Uint8Array | null = null
+
+function getPackIconBytes(): Uint8Array {
+	if (!packIconBytes) packIconBytes = base64ToUint8Array(DATAPACK_ICON_BASE64)
+	return packIconBytes
+}
+
+export function createPackMcmeta(
+	packFormat: number | [number, number],
+	description = PACK_DESCRIPTION,
+): string {
 	const pack = Array.isArray(packFormat)
 		? { min_format: packFormat, max_format: packFormat }
 		: { pack_format: packFormat }
-	return JSON.stringify({ pack: { description: PACK_DESCRIPTION, ...pack } }, null, 2)
+	return JSON.stringify({ pack: { description, ...pack } }, null, 2)
 }
 
 export function createDatapackFiles(
 	version: JavaVersionId,
 	recipes: DatapackRecipe[],
 	tags: DatapackTag[],
+	description = PACK_DESCRIPTION,
 ): PackFile[] {
 	const meta = getJavaVersionMeta(version)
 	if (!meta.packFormat || !meta.recipeDir || !meta.tagDir) {
 		throw new Error(`Datapack export is not available for ${version}`)
 	}
 
-	const files: PackFile[] = [{ path: 'pack.mcmeta', content: createPackMcmeta(meta.packFormat) }]
+	const files: PackFile[] = [
+		{ path: 'pack.mcmeta', content: createPackMcmeta(meta.packFormat, description) },
+		{ path: 'pack.png', content: getPackIconBytes() },
+	]
 	for (const recipe of recipes) {
 		files.push({
 			path: `data/crafting/${meta.recipeDir}/${recipe.name}.json`,

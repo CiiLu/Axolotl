@@ -1103,6 +1103,26 @@ pub(crate) async fn install_datapack_to_world(
     Ok(format!("saves/{world_path}/datapacks/{file_name}"))
 }
 
+pub(crate) async fn install_datapack_bytes_to_world(
+    instance_id: &str,
+    world_path: &str,
+    file_name: &str,
+    bytes: &[u8],
+    state: &State,
+) -> crate::Result<String> {
+    let scope = resolve_content_scope(instance_id, None, state).await?;
+    let world_path = sanitize_world_path(world_path)?;
+    let file_name = sanitize_file_name(file_name);
+    let datapacks_dir = instance_full_path(state, &scope.instance)
+        .join("saves")
+        .join(&world_path)
+        .join("datapacks");
+    io::create_dir_all(&datapacks_dir).await?;
+    let full_path = datapacks_dir.join(&file_name);
+    fetch::write(&full_path, bytes, &state.io_semaphore).await?;
+    Ok(format!("saves/{world_path}/datapacks/{file_name}"))
+}
+
 fn sanitize_world_path(world_path: &str) -> crate::Result<String> {
     let normalized = world_path.replace('\\', "/");
     let mut safe = Vec::new();

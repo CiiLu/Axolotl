@@ -11,9 +11,8 @@ use crate::state::{
 use crate::util::protocol_version::OLD_PROTOCOL_VERSIONS;
 pub use crate::util::protocol_version::ProtocolVersion;
 
-mod level_data;
 mod datapacks;
-pub use datapacks::*;
+mod level_data;
 pub use crate::util::server_ping::{
     ServerGameProfile, ServerPlayers, ServerStatus, ServerVersion,
 };
@@ -23,6 +22,7 @@ use async_minecraft_ping::ServerDescription;
 use async_walkdir::WalkDir;
 use async_zip::{Compression, ZipEntryBuilder};
 use chrono::{DateTime, Local, TimeZone, Utc};
+pub use datapacks::*;
 use either::Either;
 use enumset::{EnumSet, EnumSetType};
 use fs4::tokio::AsyncFileExt;
@@ -458,11 +458,12 @@ async fn read_world_datapack_state(
 ) -> Result<(Vec<String>, Vec<String>)> {
     let world_path = world_path.to_path_buf();
     tokio::task::spawn_blocking(move || {
-        let raw = std::fs::read(world_path.join("level.dat")).map_err(|error| {
-            Error::from(ErrorKind::InputError(format!(
-                "Could not read level.dat: {error}"
-            )))
-        })?;
+        let raw =
+            std::fs::read(world_path.join("level.dat")).map_err(|error| {
+                Error::from(ErrorKind::InputError(format!(
+                    "Could not read level.dat: {error}"
+                )))
+            })?;
         let (root, _) = quartz_nbt::io::read_nbt(
             &mut Cursor::new(raw),
             quartz_nbt::io::Flavor::GzCompressed,

@@ -1,6 +1,7 @@
 export const HOME_DASHBOARD_VERSION = 1 as const
 export const HOME_WIDGET_LAYOUTS = ['grid', 'free'] as const
-export const HOME_WIDGET_SIZES = ['1x1', '2x1', '1x2', '2x2'] as const
+export const HOME_WIDGET_STANDARD_SIZES = ['1x1', '2x1', '1x2', '2x2'] as const
+export const HOME_WIDGET_SIZES = [...HOME_WIDGET_STANDARD_SIZES, '3x1', '3x2'] as const
 export const HOME_WIDGET_GRID_GAP = 16
 export const HOME_WIDGET_GRID_ROW_HEIGHT = 160
 export const HOME_RECENT_LIMIT_OPTIONS = [2, 4, 6, 8] as const
@@ -78,11 +79,11 @@ export type HomeDashboardSaveQueue = {
 
 export const HOME_WIDGET_SIZE_OPTIONS: Record<HomeWidgetKind, readonly HomeWidgetSize[]> = {
 	greeting: ['2x1'],
-	recent: ['2x1', '1x2', '2x2'],
+	recent: ['2x1', '2x2', '3x1', '3x2'],
 	calendar: ['1x2'],
-	'pinned-instances': HOME_WIDGET_SIZES,
-	'pinned-worlds': HOME_WIDGET_SIZES,
-	'pinned-servers': HOME_WIDGET_SIZES,
+	'pinned-instances': HOME_WIDGET_STANDARD_SIZES,
+	'pinned-worlds': HOME_WIDGET_STANDARD_SIZES,
+	'pinned-servers': HOME_WIDGET_STANDARD_SIZES,
 	instance: ['1x1', '2x1'],
 	world: ['1x1', '2x1'],
 	server: ['1x1', '2x1'],
@@ -98,6 +99,17 @@ export const HOME_WIDGET_DEFAULT_SIZE: Record<HomeWidgetKind, HomeWidgetSize> = 
 	instance: '1x1',
 	world: '1x1',
 	server: '1x1',
+}
+
+export function getHomeWidgetCardDensity(
+	dashboardSize: HomeWidgetSize | null | undefined,
+): 'compact' | 'comfortable' {
+	return dashboardSize === '1x1' ||
+		dashboardSize === '1x2' ||
+		dashboardSize === '2x1' ||
+		dashboardSize === '2x2'
+		? 'compact'
+		: 'comfortable'
 }
 
 const HOME_WIDGET_KINDS = new Set<HomeWidgetKind>(

@@ -1,8 +1,31 @@
 import { type ContentItem, useDebugLogger } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 
-import { deleteDatapack, listDatapacks, type WorldWithDatapacks } from '@/helpers/datapacks'
+import {
+	deleteDatapack,
+	listDatapacks,
+	setDatapackEnabled,
+	type WorldWithDatapacks,
+} from '@/helpers/datapacks'
 import { getPackFormatRange } from '@/helpers/pack-formats'
+
+function datapackDescription(description: unknown): string | undefined {
+	if (typeof description === 'string') return description
+	if (Array.isArray(description)) {
+		return description.map(datapackDescription).filter(Boolean).join(' ')
+	}
+	if (description && typeof description === 'object') {
+		const record = description as Record<string, unknown>
+		if (typeof record.text === 'string') {
+			const extra = Array.isArray(record.extra)
+				? record.extra.map(datapackDescription).filter(Boolean).join('')
+				: ''
+			return record.text + extra
+		}
+		if (typeof record.translate === 'string') return record.translate
+	}
+	return undefined
+}
 
 export function useWorldDatapacks(getInstanceId: () => string) {
 	const debugState = useDebugLogger('Mods:world-datapacks')
@@ -50,10 +73,17 @@ export function useWorldDatapacks(getInstanceId: () => string) {
 					enabled: datapack.enabled !== false,
 					external: true,
 					source_kind: 'world_datapack',
+					groupMeta: {
+						icon_url: entry.icon,
+						title: entry.name,
+						last_played: entry.last_played,
+						game_mode: entry.game_mode,
+						hardcore: entry.hardcore,
+					},
 					instanceOwnershipKind: 'local_discovered',
 					instanceMaterializationState: 'present',
 					instanceCapabilities: {
-						canToggle: false,
+						canToggle: true,
 						canDelete: true,
 						canUpdate: false,
 						canChangeVersion: false,
@@ -64,6 +94,7 @@ export function useWorldDatapacks(getInstanceId: () => string) {
 						slug: datapack.display_name,
 						title: datapack.display_name,
 						icon_url: datapack.icon,
+						description: datapackDescription(datapack.description),
 					},
 					version: {
 						id: datapack.file_name,
@@ -91,11 +122,37 @@ export function useWorldDatapacks(getInstanceId: () => string) {
 		await loadWorldDatapacks()
 	}
 
+	async function toggleWorldDatapackItem(item: ContentItem, enabled: boolean) {
+		const segments = (item.file_path ?? '').split('/')
+		const worldPath = segments[1]
+		const fileName = segments[3]
+		if (!worldPath || !fileName) {
+			throw new Error('Invalid world datapack path')
+		}
+
+		const world = worldDatapacks.value.find((entry) => entry.path === worldPath)
+		const datapack = world?.datapacks.find((entry) => entry.file_name === fileName)
+		const previousEnabled = datapack?.enabled
+		if (datapack) {
+			datapack.enabled = enabled
+		}
+
+		try {
+			await setDatapackEnabled(getInstanceId(), worldPath, fileName, enabled)
+		} catch (error) {
+			if (datapack) {
+				datapack.enabled = previousEnabled
+			}
+			throw error
+		}
+	}
+
 	return {
 		worldDatapacks,
 		loadWorldDatapacks,
 		worldDatapackItems,
 		isWorldDatapackItem,
 		deleteWorldDatapackItem,
+		toggleWorldDatapackItem,
 	}
 }

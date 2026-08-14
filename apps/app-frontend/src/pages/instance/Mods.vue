@@ -640,8 +640,13 @@ function localIconUrl(iconUrl?: string | null): string {
 	return /^(https?:|data:|blob:|asset:|tauri:)/.test(iconUrl) ? iconUrl : convertFileSrc(iconUrl)
 }
 
-const { worldDatapackItems, isWorldDatapackItem, loadWorldDatapacks, deleteWorldDatapackItem } =
-	useWorldDatapacks(() => props.instance.id)
+const {
+	worldDatapackItems,
+	isWorldDatapackItem,
+	loadWorldDatapacks,
+	deleteWorldDatapackItem,
+	toggleWorldDatapackItem,
+} = useWorldDatapacks(() => props.instance.id)
 
 const mergedProjects = computed<ContentItem[]>(() => {
 	const active = installingItems.value.get(props.instance.id)
@@ -1116,6 +1121,25 @@ async function handleUploadFiles() {
 }
 
 async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
+	if (isWorldDatapackItem(mod)) {
+		if (mod.instanceCapabilities?.canToggle === false) return
+		const enabled = desiredEnabled ?? !mod.enabled
+		try {
+			await toggleWorldDatapackItem(mod, enabled)
+			trackEvent('InstanceProjectDisable', {
+				loader: props.instance.loader,
+				game_version: props.instance.game_version,
+				id: mod.project?.id,
+				name: mod.project?.title ?? mod.file_name,
+				project_type: mod.project_type,
+				disabled: !enabled,
+			})
+		} catch (err) {
+			handleError(err as Error)
+		}
+		return
+	}
+
 	const contentId = getStableContentId(mod)
 	if (!mod.file_path || !contentId || mod.instanceCapabilities?.canToggle === false) return
 	const operation = beginContentOperation(mod)
@@ -1188,7 +1212,13 @@ const toggleDisableDebounced = toggleDisableMod
 
 async function removeMod(mod: ContentItem) {
 	const contentId = getStableContentId(mod)
-	if (!mod.file_path || !contentId || mod.instanceCapabilities?.canDelete === false) return
+	if (
+		!mod.file_path ||
+		mod.instanceCapabilities?.canDelete === false ||
+		(!isWorldDatapackItem(mod) && !contentId)
+	) {
+		return
+	}
 	const operation = beginContentOperation(mod)
 	if (!operation) return
 

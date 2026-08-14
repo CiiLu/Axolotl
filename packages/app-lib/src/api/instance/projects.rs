@@ -300,6 +300,23 @@ pub async fn install_datapack_to_world(
     .await
 }
 
+pub async fn install_datapack_bytes_to_world(
+    instance_id: &str,
+    world_path: &str,
+    file_name: &str,
+    bytes: Vec<u8>,
+) -> crate::Result<String> {
+    let state = State::get().await?;
+    crate::state::instances::commands::install_datapack_bytes_to_world(
+        instance_id,
+        world_path,
+        file_name,
+        &bytes,
+        &state,
+    )
+    .await
+}
+
 #[tracing::instrument]
 pub async fn toggle_disable_project(
     instance_id: &str,

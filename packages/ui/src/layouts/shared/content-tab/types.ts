@@ -9,6 +9,7 @@ export type ContentCardProject = Pick<
 	'id' | 'slug' | 'title' | 'icon_url'
 > & {
 	license?: Labrinth.Projects.v2.Project['license'] | null
+	description?: string
 }
 
 export type ContentCardVersion = Pick<Labrinth.Versions.v2.Version, 'id' | 'version_number'> & {
@@ -31,6 +32,14 @@ export interface ContentRowInlineAction {
 	label: string
 	icon: Component
 	action: () => void
+}
+
+export interface ContentWorldGroupMeta {
+	icon_url?: string | null
+	title?: string
+	last_played?: string
+	game_mode?: string
+	hardcore?: boolean
 }
 
 export interface ContentCardTableItem {
@@ -76,6 +85,8 @@ export interface ContentCardTableItem {
 	groupSwitchVersion?: () => void
 	groupChildIds?: string[]
 	isGroupChild?: boolean
+	groupKind?: 'folder' | 'world'
+	groupMeta?: ContentWorldGroupMeta
 	downloads?: number | null
 	followers?: number | null
 	categories?: ContentModpackCardCategory[]

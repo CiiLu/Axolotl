@@ -3,7 +3,13 @@ import test from 'node:test'
 
 import { unzipSync } from 'fflate'
 
-import { createDatapackBlob, createDatapackFiles, createPackMcmeta } from './datapack.ts'
+import {
+	createDatapackBlob,
+	createDatapackDescription,
+	createDatapackFileName,
+	createDatapackFiles,
+	createPackMcmeta,
+} from './datapack.ts'
 
 test('creates pack.mcmeta with legacy and ranged pack formats', () => {
 	assert.equal(JSON.parse(createPackMcmeta(48)).pack.pack_format, 48)
@@ -12,6 +18,20 @@ test('creates pack.mcmeta with legacy and ranged pack formats', () => {
 		min_format: [107, 1],
 		max_format: [107, 1],
 	})
+})
+
+test('creates a datapack file name with a timestamp', () => {
+	assert.equal(
+		createDatapackFileName('1.21', new Date('2026-01-02T03:04:05')),
+		'axolotl-recipes-1.21-20260102-030405.zip',
+	)
+})
+
+test('creates a description listing recipe product names in brackets', () => {
+	assert.equal(
+		createDatapackDescription(['橡木活板门', '闪长岩台阶']),
+		'Generated with Axolotl Recipe Generator\n[橡木活板门] [闪长岩台阶]',
+	)
 })
 
 test('builds datapack files with versioned recipe and tag directories', async () => {
@@ -28,10 +48,16 @@ test('builds datapack files with versioned recipe and tag directories', async ()
 	)
 	assert.deepEqual(
 		files.map((file) => file.path),
-		['pack.mcmeta', 'data/crafting/recipe/iron_bars.json', 'data/crafting/tags/item/my_tag.json'],
+		[
+			'pack.mcmeta',
+			'pack.png',
+			'data/crafting/recipe/iron_bars.json',
+			'data/crafting/tags/item/my_tag.json',
+		],
 	)
 	const blob = createDatapackBlob(files)
 	const archive = unzipSync(new Uint8Array(await blob.arrayBuffer()))
+	assert.ok(archive['pack.png']?.length)
 	assert.deepEqual(
 		JSON.parse(new TextDecoder().decode(archive['data/crafting/recipe/iron_bars.json'])),
 		{

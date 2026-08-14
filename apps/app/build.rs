@@ -101,7 +101,11 @@ fn main() {
             .plugin(
                 "datapacks",
                 InlinedPlugin::new()
-                    .commands(&["list_datapacks", "delete_datapack"])
+                    .commands(&[
+                        "list_datapacks",
+                        "delete_datapack",
+                        "set_datapack_enabled",
+                    ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),
@@ -331,6 +335,7 @@ fn main() {
                         "instance_add_project_from_path",
                         "instance_import_world_save",
                         "instance_install_datapack_to_world",
+                        "instance_install_datapack_to_world_bytes",
                         "instance_toggle_disable_project",
                         "instance_toggle_content_entry",
                         "instance_rollback_project",

@@ -53,6 +53,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_add_project_from_path,
             instance_import_world_save,
             instance_install_datapack_to_world,
+            instance_install_datapack_to_world_bytes,
             instance_toggle_disable_project,
             instance_toggle_content_entry,
             instance_rollback_project,
@@ -773,6 +774,22 @@ pub async fn instance_install_datapack_to_world(
         &world_path,
         &std::path::PathBuf::from(&source_path),
         inner_base.as_deref(),
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_install_datapack_to_world_bytes(
+    instance_id: String,
+    world_path: String,
+    file_name: String,
+    bytes: Vec<u8>,
+) -> Result<String> {
+    Ok(theseus::instance::install_datapack_bytes_to_world(
+        &instance_id,
+        &world_path,
+        &file_name,
+        bytes,
     )
     .await?)
 }

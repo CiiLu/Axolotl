@@ -6,6 +6,7 @@ import dayjs from 'dayjs'
 import { computed, ref, watch } from 'vue'
 
 import {
+	getHomeWidgetCardDensity,
 	HOME_RECENT_DEFAULT_LIMIT,
 	type HomeRecentLimit,
 	type HomeWidgetSize,
@@ -87,9 +88,7 @@ const recentItems = computed<RecentItem[]>(() => {
 		.sort((a, b) => b.last_played.diff(a.last_played))
 		.slice(0, props.limit)
 })
-const itemDensity = computed(() =>
-	props.dashboardSize?.startsWith('1') ? ('compact' as const) : ('comfortable' as const),
-)
+const itemDensity = computed(() => getHomeWidgetCardDensity(props.dashboardSize))
 
 function worldKey(world: WorldWithInstance): string {
 	return `${world.instance_id}:${world.type}:${getWorldIdentifier(world)}`

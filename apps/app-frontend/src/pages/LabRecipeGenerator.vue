@@ -31,6 +31,7 @@ import { useResultCountWheel } from '@/composables/lab/useResultCountWheel'
 import { drawCountOnCanvas } from '@/lab/recipe-generator/count-display'
 import {
 	createDatapackDescription,
+	createDatapackFileName,
 	createDatapackFiles,
 	type DatapackRecipe,
 	type PackFile,
@@ -1141,7 +1142,10 @@ async function saveAs() {
 	try {
 		const files = buildDatapackFiles()
 		if (!files) return
-		const path = await saveDatapackAs(files, `axolotl-recipes-${store.selectedVersion}.zip`)
+		const path = await saveDatapackAs(
+			files,
+			pendingDatapack.value?.fileName ?? createDatapackFileName(store.selectedVersion),
+		)
 		if (path) addNotification({ type: 'success', title: formatMessage(messages.datapackSaved) })
 	} catch (error) {
 		handleError(error)
@@ -1184,7 +1188,7 @@ function buildDatapackFiles(): PackFile[] | null {
 		const productNames = store.recipes.map((recipe) => sidebarTitle(recipe))
 		const description = createDatapackDescription(productNames)
 		const files = createDatapackFiles(store.selectedVersion, recipes, tags, description)
-		const fileName = `axolotl-recipes-${store.selectedVersion}.zip`
+		const fileName = createDatapackFileName(store.selectedVersion)
 		pendingDatapack.value = { files, fileName }
 		return files
 	} catch (error) {

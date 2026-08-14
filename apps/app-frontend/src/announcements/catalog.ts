@@ -53,6 +53,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'新增 CurseForge 手动下载安装任务的自动恢复机制，启动器重启后也能安全恢复并继续未完成的整合包安装。',
 				},
+				{
+					'en-US':
+						'Added instance content filtering, allowing users to filter instance content by type, source, and other metadata.',
+					'zh-CN': '新增实例内容筛选功能。',
+				},
+				{
+					'en-US': 'Added data pack management features.',
+					'zh-CN': '新增数据包管理功能。',
+				},
+				{
+					'en-US': 'Datapacks exported from the recipe generator now have descriptions and icons.',
+					'zh-CN': '数据包配方生成器导出的数据包现在有了描述和图标。',
+				},
 			],
 			changed: [
 				{
@@ -78,6 +91,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'加强 CurseForge 手动文件的校验与导入处理，在自动导入与手动导入同时发生时也能更可靠地避免重复导入或错误接受文件。',
 				},
+				{
+					'en-US':
+						'Improved the recent projects widget layout: added 3x1 and 3x2 sizes, and hid game mode labels and the metadata separator dot in the 2x1 and 2x2 sizes.',
+					'zh-CN':
+						'改进“从最近的项目开始”组件布局：新增 3x1 和 3x2 尺寸，并在 2x1 和 2x2 尺寸下隐藏游戏模式及分隔小圆点。',
+				},
+				{
+					'en-US': 'Pinned worlds now hide game mode in the 2x1 and 2x2 sizes.',
+					'zh-CN': '“固定的世界”组件现在也会在 2x1 和 2x2 尺寸下隐藏游戏模式。',
+				},
 			],
 			fixed: [
 				{
@@ -85,6 +108,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed cases where an already imported CurseForge file could still be reported as not pending or shown as a verification failure because of stale recovery state.',
 					'zh-CN':
 						'修复 CurseForge 文件已经成功导入后，因恢复状态过期仍提示“文件不在待处理列表中”或错误显示为校验失败的问题。',
+				},
+				{
+					'en-US':
+						'Fixed the color picker timing issue in the Gradient Text Generator in the Labs section.',
+					'zh-CN': '修复实验室中“渐变文字生成器”的取色器取色时机问题。',
 				},
 				{
 					'en-US':

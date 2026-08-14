@@ -3,7 +3,7 @@ import { GameIcon } from '@modrinth/assets'
 import { defineMessages, GAME_MODES, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed, ref, watch } from 'vue'
 
-import type { HomeWidgetSize } from '@/components/home/home-dashboard'
+import { getHomeWidgetCardDensity, type HomeWidgetSize } from '@/components/home/home-dashboard'
 import { useHomeDashboardRuntime } from '@/components/home/home-dashboard-runtime'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
@@ -53,9 +53,7 @@ const favorites = computed(() =>
 		return instance ? [{ instance, world }] : []
 	}),
 )
-const worldDensity = computed(() =>
-	props.dashboardSize?.startsWith('1') ? ('compact' as const) : ('comfortable' as const),
-)
+const worldDensity = computed(() => getHomeWidgetCardDensity(props.dashboardSize))
 
 function favoriteKey(world: WorldWithInstance): string {
 	return `${world.instance_id}:${world.type}:${getWorldIdentifier(world)}`

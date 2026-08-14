@@ -1,9 +1,13 @@
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use either::Either;
+use quartz_nbt::{NbtCompound, NbtList, NbtTag};
 use serde::{Deserialize, Serialize};
-use std::io::Read;
+use std::collections::HashMap;
+use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
+use std::sync::{LazyLock, Mutex};
+use std::time::SystemTime;
 use tokio::task::JoinSet;
 use url::Url;
 
@@ -12,7 +16,8 @@ use crate::util::io;
 use crate::{ErrorKind, Result};
 
 use super::{
-    get_singleplayer_worlds_in_instance, read_world_datapack_state, World, WorldDetails,
+    World, WorldDetails, get_singleplayer_worlds_in_instance,
+    read_world_datapack_state,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,9 +57,24 @@ pub struct WorldWithDatapacks {
     pub datapacks: Vec<WorldDatapack>,
 }
 
+struct CachedZipDatapackMeta {
+    len: u64,
+    modified: Option<SystemTime>,
+    pack_format: Option<i32>,
+    supported_formats: Option<Vec<i32>>,
+    description: Option<serde_json::Value>,
+    icon: Option<Vec<u8>>,
+}
+
+static ZIP_DATAPACK_META_CACHE: LazyLock<
+    Mutex<HashMap<PathBuf, CachedZipDatapackMeta>>,
+> = LazyLock::new(|| Mutex::new(HashMap::new()));
+
 /// Lists every singleplayer save in the instance together with the datapacks
 /// found in each save's `datapacks` folder.
-pub async fn list_world_datapacks(instance_id: &str) -> Result<Vec<WorldWithDatapacks>> {
+pub async fn list_world_datapacks(
+    instance_id: &str,
+) -> Result<Vec<WorldWithDatapacks>> {
     let instance_dir = get_full_path(instance_id).await?;
     let mut worlds = Vec::new();
     get_singleplayer_worlds_in_instance(&instance_dir, &mut worlds).await?;
@@ -93,17 +113,24 @@ pub async fn delete_world_datapack(
     let instance_dir = get_full_path(instance_id).await?;
     let world_path = Path::new(world_path);
     if world_path.components().count() != 1 {
-        return Err(ErrorKind::InputError("Invalid world path".into()).as_error());
+        return Err(
+            ErrorKind::InputError("Invalid world path".into()).as_error()
+        );
     }
     let file_name = Path::new(file_name);
     if file_name.components().count() != 1 || file_name.as_os_str().is_empty() {
-        return Err(ErrorKind::InputError("Invalid datapack file name".into()).as_error());
+        return Err(ErrorKind::InputError("Invalid datapack file name".into())
+            .as_error());
     }
 
-    let datapacks_dir = instance_dir.join("saves").join(world_path).join("datapacks");
+    let datapacks_dir = instance_dir
+        .join("saves")
+        .join(world_path)
+        .join("datapacks");
     let target = datapacks_dir.join(file_name);
     if target.parent() != Some(datapacks_dir.as_path()) {
-        return Err(ErrorKind::InputError("Invalid datapack file name".into()).as_error());
+        return Err(ErrorKind::InputError("Invalid datapack file name".into())
+            .as_error());
     }
 
     let meta = io::metadata(&target).await?;
@@ -115,31 +142,136 @@ pub async fn delete_world_datapack(
     Ok(())
 }
 
-async fn read_world_datapacks(world_path: PathBuf, world: World) -> Result<WorldWithDatapacks> {
+/// Enables or disables a datapack by updating the `DataPacks` tag in the
+/// world's `level.dat`.
+pub async fn set_world_datapack_enabled(
+    instance_id: &str,
+    world_path: &str,
+    file_name: &str,
+    enabled: bool,
+) -> Result<()> {
+    let instance_dir = get_full_path(instance_id).await?;
+    let world_path = Path::new(world_path);
+    if world_path.components().count() != 1 {
+        return Err(
+            ErrorKind::InputError("Invalid world path".into()).as_error()
+        );
+    }
+    let file_name = Path::new(file_name);
+    if file_name.components().count() != 1 || file_name.as_os_str().is_empty() {
+        return Err(ErrorKind::InputError("Invalid datapack file name".into())
+            .as_error());
+    }
+
+    let world_dir = instance_dir.join("saves").join(world_path);
+    let datapacks_dir = world_dir.join("datapacks");
+    let target = datapacks_dir.join(file_name);
+    if target.parent() != Some(datapacks_dir.as_path()) {
+        return Err(ErrorKind::InputError("Invalid datapack file name".into())
+            .as_error());
+    }
+    if !target.exists() {
+        return Err(
+            ErrorKind::InputError("Datapack does not exist".into()).as_error()
+        );
+    }
+
+    let file_id = if target.is_dir() {
+        format!("file/{}", file_name.to_string_lossy())
+    } else {
+        let stem = file_name.file_stem().unwrap_or_default().to_string_lossy();
+        format!("file/{stem}")
+    };
+
+    let level_dat_path = world_dir.join("level.dat");
+    let raw = io::read(&level_dat_path).await?;
+    let updated = tokio::task::spawn_blocking(move || {
+        let (mut root, _) = quartz_nbt::io::read_nbt(
+            &mut Cursor::new(raw),
+            quartz_nbt::io::Flavor::GzCompressed,
+        )?;
+        let data = root.get_mut::<_, &mut NbtCompound>("Data")?;
+
+        if data.get::<_, &NbtCompound>("DataPacks").is_err() {
+            data.insert("DataPacks", NbtTag::Compound(NbtCompound::new()));
+        }
+        let data_packs = data.get_mut::<_, &mut NbtCompound>("DataPacks")?;
+
+        for key in ["Enabled", "Disabled"] {
+            if let Ok(list) = data_packs.get_mut::<_, &mut NbtList>(key) {
+                list.inner_mut().retain(|tag| {
+                    !matches!(tag, NbtTag::String(value) if value == &file_id)
+                });
+            }
+        }
+
+        let key = if enabled { "Enabled" } else { "Disabled" };
+        if let Ok(list) = data_packs.get_mut::<_, &mut NbtList>(key) {
+            list.push(NbtTag::String(file_id.clone()));
+        } else {
+            let mut list = NbtList::new();
+            list.push(NbtTag::String(file_id));
+            data_packs.insert(key, list);
+        }
+
+        let mut level_data = vec![];
+        quartz_nbt::io::write_nbt(
+            &mut level_data,
+            None,
+            &root,
+            quartz_nbt::io::Flavor::GzCompressed,
+        )?;
+        Ok::<_, crate::Error>(level_data)
+    })
+    .await
+    .map_err(|error| {
+        ErrorKind::InputError(format!(
+            "Datapack state write task failed: {error}"
+        ))
+        .as_error()
+    })??;
+
+    io::write(level_dat_path, updated).await?;
+    Ok(())
+}
+
+async fn read_world_datapacks(
+    world_path: PathBuf,
+    world: World,
+) -> Result<WorldWithDatapacks> {
     let datapacks_dir = world_path.join("datapacks");
     let mut datapacks = Vec::new();
     if datapacks_dir.exists() {
         // Only read the world's level.dat for the enabled/disabled state when it
         // actually has a datapacks folder, and tolerate a missing/corrupt file.
-        let (enabled, disabled) = match read_world_datapack_state(&world_path).await {
-            Ok(state) => state,
-            Err(error) => {
-                tracing::debug!(
-                    "Could not read datapack state for world {}: {error}",
-                    world.name
-                );
-                (Vec::new(), Vec::new())
-            }
-        };
+        let (enabled, disabled) =
+            match read_world_datapack_state(&world_path).await {
+                Ok(state) => state,
+                Err(error) => {
+                    tracing::debug!(
+                        "Could not read datapack state for world {}: {error}",
+                        world.name
+                    );
+                    (Vec::new(), Vec::new())
+                }
+            };
 
         let mut entries = io::read_dir(&datapacks_dir).await?;
         let mut tasks = JoinSet::new();
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
             if entry.file_type().await?.is_dir() {
-                tasks.spawn(read_folder_datapack(path, enabled.clone(), disabled.clone()));
+                tasks.spawn(read_folder_datapack(
+                    path,
+                    enabled.clone(),
+                    disabled.clone(),
+                ));
             } else if is_zip_path(&path) {
-                tasks.spawn(read_zip_datapack(path, enabled.clone(), disabled.clone()));
+                tasks.spawn(read_zip_datapack(
+                    path,
+                    enabled.clone(),
+                    disabled.clone(),
+                ));
             }
         }
         while let Some(joined) = tasks.join_next().await {
@@ -169,7 +301,8 @@ async fn read_folder_datapack(
         .to_string_lossy()
         .to_string();
 
-    let (pack_format, supported_formats, description) = read_folder_pack_meta(&dir).await;
+    let (pack_format, supported_formats, description) =
+        read_folder_pack_meta(&dir).await;
 
     let icon = if dir.join("pack.png").exists() {
         Some(Either::Left(dir.join("pack.png")))
@@ -218,7 +351,10 @@ async fn read_zip_datapack(
         tokio::task::spawn_blocking(move || read_zip_pack_meta(&zip_path))
             .await
             .map_err(|error| {
-                ErrorKind::InputError(format!("Datapack zip read task failed: {error}")).as_error()
+                ErrorKind::InputError(format!(
+                    "Datapack zip read task failed: {error}"
+                ))
+                .as_error()
             })??;
 
     let icon = icon_bytes
@@ -265,7 +401,9 @@ async fn read_folder_pack_meta(
     parse_pack_mcmeta(&bytes)
 }
 
-fn parse_pack_mcmeta(bytes: &[u8]) -> (Option<i32>, Option<Vec<i32>>, Option<serde_json::Value>) {
+fn parse_pack_mcmeta(
+    bytes: &[u8],
+) -> (Option<i32>, Option<Vec<i32>>, Option<serde_json::Value>) {
     let Ok(value) = serde_json::from_slice::<serde_json::Value>(bytes) else {
         return (None, None, None);
     };
@@ -301,13 +439,61 @@ fn read_zip_pack_meta(
     Option<serde_json::Value>,
     Option<Vec<u8>>,
 )> {
+    let metadata = std::fs::metadata(path)?;
+    let signature = (metadata.len(), metadata.modified().ok());
+    let cache_key = path.to_path_buf();
+
+    {
+        let cache = ZIP_DATAPACK_META_CACHE.lock().unwrap();
+        if let Some(cached) = cache.get(&cache_key) {
+            if cached.len == signature.0 && cached.modified == signature.1 {
+                return Ok((
+                    cached.pack_format.clone(),
+                    cached.supported_formats.clone(),
+                    cached.description.clone(),
+                    cached.icon.clone(),
+                ));
+            }
+        }
+    }
+
+    let parsed = read_zip_pack_meta_uncached(path)?;
+
+    let mut cache = ZIP_DATAPACK_META_CACHE.lock().unwrap();
+    if cache.len() >= 1024 {
+        cache.clear();
+    }
+    cache.insert(
+        cache_key,
+        CachedZipDatapackMeta {
+            len: signature.0,
+            modified: signature.1,
+            pack_format: parsed.0.clone(),
+            supported_formats: parsed.1.clone(),
+            description: parsed.2.clone(),
+            icon: parsed.3.clone(),
+        },
+    );
+
+    Ok(parsed)
+}
+
+fn read_zip_pack_meta_uncached(
+    path: &Path,
+) -> std::io::Result<(
+    Option<i32>,
+    Option<Vec<i32>>,
+    Option<serde_json::Value>,
+    Option<Vec<u8>>,
+)> {
     let file = std::fs::File::open(path)?;
     let mut archive = zip::ZipArchive::new(file)?;
 
-    let (pack_format, supported_formats, description) = read_zip_entry(&mut archive, "pack.mcmeta")?
-        .as_deref()
-        .map(parse_pack_mcmeta)
-        .unwrap_or((None, None, None));
+    let (pack_format, supported_formats, description) =
+        read_zip_entry(&mut archive, "pack.mcmeta")?
+            .as_deref()
+            .map(parse_pack_mcmeta)
+            .unwrap_or((None, None, None));
     let icon = read_zip_entry(&mut archive, "pack.png")?;
 
     Ok((pack_format, supported_formats, description, icon))
@@ -335,7 +521,11 @@ fn read_zip_entry(
     Ok(None)
 }
 
-fn match_datapack_state(name: &str, enabled: &[String], disabled: &[String]) -> Option<bool> {
+fn match_datapack_state(
+    name: &str,
+    enabled: &[String],
+    disabled: &[String],
+) -> Option<bool> {
     let file_id = format!("file/{name}");
     if enabled.iter().any(|value| value == &file_id) {
         return Some(true);
@@ -362,7 +552,8 @@ async fn folder_size(dir: &Path) -> std::io::Result<u64> {
             if entry.file_type().await?.is_dir() {
                 stack.push(entry.path());
             } else {
-                total += entry.metadata().await.map(|meta| meta.len()).unwrap_or(0);
+                total +=
+                    entry.metadata().await.map(|meta| meta.len()).unwrap_or(0);
             }
         }
     }

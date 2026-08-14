@@ -629,6 +629,12 @@
   "content-type.item.lowercase": {
     "defaultMessage": "{count, plural, one {个项目} other {个项目}}"
   },
+  "content.card.group.hardcore": {
+    "defaultMessage": "硬核模式"
+  },
+  "content.card.group.not-played-yet": {
+    "defaultMessage": "尚未游玩"
+  },
   "content.card.pending-manual-download": {
     "defaultMessage": "需要手动下载"
   },

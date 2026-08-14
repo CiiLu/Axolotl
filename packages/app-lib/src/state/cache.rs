@@ -3075,11 +3075,9 @@ impl CachedEntry {
             CacheValueType::Version => {
                 CacheValue::Version(parse(data, id, "version")?)
             }
-            CacheValueType::VersionV3 => CacheValue::VersionV3(parse(
-                data,
-                id,
-                "version_v3",
-            )?),
+            CacheValueType::VersionV3 => {
+                CacheValue::VersionV3(parse(data, id, "version_v3")?)
+            }
             CacheValueType::User => CacheValue::User(parse(data, id, "user")?),
             CacheValueType::Team => CacheValue::Team(parse(data, id, "team")?),
             CacheValueType::Organization => {

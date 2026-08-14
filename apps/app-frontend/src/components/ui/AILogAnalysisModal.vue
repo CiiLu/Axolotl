@@ -50,7 +50,7 @@ const messages = defineMessages({
 	},
 	analyzing: {
 		id: 'app.ai-log-analysis.analyzing',
-		defaultMessage: 'Analyzing your log with AI...',
+		defaultMessage: 'Analyzing your log with AI...It may take up to half a minute to complete.',
 	},
 	error: {
 		id: 'app.ai-log-analysis.error',

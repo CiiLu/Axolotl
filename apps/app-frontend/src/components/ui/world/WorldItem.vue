@@ -388,7 +388,7 @@ const messages = defineMessages({
 						<template v-else> {{ formatMessage(messages.notPlayedYet) }} </template>
 					</div>
 					<template v-if="instanceId">
-						•
+						<span v-if="dashboardDensity !== 'compact'" aria-hidden="true">•</span>
 						<router-link
 							class="flex items-center gap-1 truncate hover:underline text-secondary smart-clickable:allow-pointer-events"
 							:to="`/instance/${instanceId}`"

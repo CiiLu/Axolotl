@@ -73,7 +73,7 @@ function isCategoryFiltering(category: MetadataFilterCategory): boolean {
 				:searchable="category.searchable"
 				:search-placeholder="formatMessage(messages.searchPlaceholder)"
 				:trigger-class="'h-8 shrink-0 !rounded-full border-0 px-2.5 transition-all hover:brightness-110 active:brightness-110'"
-				:active="isCategoryFiltering(category)"
+				:active="selectedCount(category) === category.options.length"
 				:dropdown-min-width="'15rem'"
 				:checkbox-position="'left'"
 				:hover-open="!suppressHoverOpen"

@@ -39,6 +39,10 @@ test('derives responsive widget dimensions from the current grid', () => {
 		width: 320,
 		height: 160,
 	})
+	assert.deepEqual(getHomeWidgetDimensions('3x2', 4, 1008), {
+		width: 752,
+		height: 336,
+	})
 })
 
 test('temporarily clamps wide widgets without changing their preferred size', () => {
@@ -306,4 +310,20 @@ test('normalizes and updates recently played item limits', () => {
 		[4, 8, 4],
 	)
 	assert.equal(setHomeRecentLimit(normalized, 'legacy', 6).widgets[0].options?.recentLimit, 6)
+})
+
+test('accepts and resizes the recent widget to 3-column layouts', () => {
+	const normalized = normalizeHomeDashboard({
+		version: 1,
+		widgets: [{ id: 'recent', kind: 'recent', size: '3x2' }],
+	})!
+	const config = createDefaultHomeDashboard()
+	const recent = config.widgets.find((widget) => widget.kind === 'recent')!
+
+	assert.equal(normalized.widgets[0].size, '3x2')
+	assert.equal(
+		resizeHomeWidget(config, recent.id, '3x1').widgets.find((widget) => widget.id === recent.id)
+			?.size,
+		'3x1',
+	)
 })

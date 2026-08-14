@@ -36,3 +36,17 @@ export async function deleteDatapack(
 		fileName,
 	})
 }
+
+export async function setDatapackEnabled(
+	instanceId: string,
+	worldPath: string,
+	fileName: string,
+	enabled: boolean,
+): Promise<void> {
+	return await invoke('plugin:datapacks|set_datapack_enabled', {
+		instanceId,
+		worldPath,
+		fileName,
+		enabled,
+	})
+}

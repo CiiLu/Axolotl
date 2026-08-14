@@ -198,7 +198,7 @@ onUnmounted(() => {
 						</template>
 						<template v-else> {{ formatMessage(messages.notPlayedYet) }} </template>
 					</div>
-					•
+					<span v-if="dashboardDensity !== 'compact'" aria-hidden="true">•</span>
 					<span v-if="modpack" class="flex items-center gap-1 truncate text-secondary">
 						<router-link
 							class="inline-flex items-center gap-1 truncate hover:underline text-secondary smart-clickable:allow-pointer-events"

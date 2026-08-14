@@ -45,7 +45,12 @@ import {
 	useContentSelection,
 } from './composables'
 import { injectContentManager } from './providers/content-manager'
-import type { BulkOperationStatus, ContentCardTableItem, ContentItem } from './types'
+import type {
+	BulkOperationStatus,
+	ContentCardTableItem,
+	ContentItem,
+	ContentWorldGroupMeta,
+} from './types'
 
 const { formatMessage, locale } = useVIntl()
 
@@ -401,24 +406,25 @@ function mapToTableItem(item: ContentItem, group?: string): ContentCardTableItem
 }
 
 /**
- * Overflow-menu options for a content row. Grouped items (schematics in
- * subfolders, world datapacks) hide the row-level delete button, so expose
- * delete in the overflow menu; it goes through the same confirmation flow and
- * removes the file at its real (possibly nested) path via the content entry.
+ * Overflow-menu options for a content row. Deletion is always available as a
+ * row-level trash button, so the overflow menu only carries non-destructive
+ * actions.
  */
 function buildItemOverflowOptions(item: ContentItem): OverflowMenuOption[] | undefined {
 	const options = ctx.getOverflowOptions?.(item) ?? []
-	const groupedType = ['schematic', 'datapack'].includes(normalizeProjectType(item.project_type))
-	if (groupedType && item.instanceCapabilities?.canDelete !== false) {
-		options.push({
-			id: formatMessage(commonMessages.deleteLabel),
-			icon: TrashIcon,
-			color: 'red',
-			hoverFilled: true,
-			action: () => handleDeleteById(getItemId(item)),
-		})
-	}
 	return options.length > 0 ? options : undefined
+}
+
+function datapackTreePath(item: ContentItem): string {
+	const path = item.file_path ?? item.file_name
+	const segments = path.split(/[\\/]/).filter(Boolean)
+	if (
+		segments[0]?.toLocaleLowerCase() === 'saves' &&
+		segments[2]?.toLocaleLowerCase() === 'datapacks'
+	) {
+		return segments.slice(1, 2).concat(segments.slice(3)).join('/')
+	}
+	return path
 }
 
 const { folderRows: schematicFolderRows, regularItems: schematicGroupRegularItems } =
@@ -440,21 +446,44 @@ const { folderRows: schematicFolderRows, regularItems: schematicGroupRegularItem
 			if (segments[0]?.toLocaleLowerCase() === 'schematics') {
 				return segments.slice(1).join('/')
 			}
-			if (
-				segments[0]?.toLocaleLowerCase() === 'saves' &&
-				segments[2]?.toLocaleLowerCase() === 'datapacks'
-			) {
-				return segments.slice(1).join('/')
-			}
-			return path
+			return datapackTreePath(item)
 		},
 		folderGroupId: (path) => {
-			if (path.includes('/datapacks/')) return `datapack-folder:${path}`
-			return `schematic-folder:${path}`
+			const isWorldDatapackFolder = filteredItems.value.some((item) => {
+				if (item.source_kind !== 'world_datapack') return false
+				const itemPath = datapackTreePath(item)
+				return itemPath === path || itemPath.startsWith(`${path}/`)
+			})
+			return isWorldDatapackFolder ? `datapack-folder:${path}` : `schematic-folder:${path}`
 		},
 		folderGroupIdPrefix: ['schematic-folder:', 'datapack-folder:'],
 		locale,
 	})
+
+function getWorldGroupMeta(row: ContentCardTableItem): ContentWorldGroupMeta | undefined {
+	if (!row.isGroupHeader || !row.group?.startsWith('datapack-folder:')) return undefined
+	const child = row.groupChildIds
+		?.map((id) => findContentItem(id))
+		.find((item) => item?.source_kind === 'world_datapack' && item?.groupMeta)
+	return child?.groupMeta
+}
+
+const folderRows = computed<ContentCardTableItem[]>(() =>
+	schematicFolderRows.value.map((row) => {
+		const meta = getWorldGroupMeta(row)
+		if (!meta) return row
+		return {
+			...row,
+			groupKind: 'world',
+			groupMeta: meta,
+			project: {
+				...row.project,
+				title: meta.title ?? row.project.title,
+				icon_url: meta.icon_url ?? row.project.icon_url,
+			},
+		}
+	}),
+)
 
 const tableItems = computed<ContentCardTableItem[]>(() => {
 	const items: ContentCardTableItem[] = []
@@ -512,7 +541,7 @@ const tableItems = computed<ContentCardTableItem[]>(() => {
 		items.push(...groupItems)
 	}
 
-	items.push(...schematicFolderRows.value)
+	items.push(...folderRows.value)
 	for (const item of schematicGroupRegularItems.value) {
 		items.push(mapToTableItem(item))
 	}

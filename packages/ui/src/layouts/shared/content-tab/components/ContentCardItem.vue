@@ -7,11 +7,13 @@ import {
 	DownloadIcon,
 	HeartIcon,
 	MoreVerticalIcon,
+	SkullIcon,
 	SpinnerIcon,
 	TrashExclamationIcon,
 	TrashIcon,
 	TriangleAlertIcon,
 	UndoIcon,
+	UserIcon,
 } from '@modrinth/assets'
 import { useMagicKeys } from '@vueuse/core'
 import { computed, getCurrentInstance, ref } from 'vue'
@@ -36,6 +38,7 @@ import type {
 	ContentCardVersion,
 	ContentOwner,
 	ContentRowInlineAction,
+	ContentWorldGroupMeta,
 } from '../types'
 
 const { formatMessage } = useVIntl()
@@ -52,6 +55,14 @@ const messages = defineMessages({
 	rollbackTooltip: {
 		id: 'content.card.rollback-tooltip',
 		defaultMessage: 'Roll back to {fileName}',
+	},
+	notPlayedYet: {
+		id: 'content.card.group.not-played-yet',
+		defaultMessage: 'Not played yet',
+	},
+	hardcore: {
+		id: 'content.card.group.hardcore',
+		defaultMessage: 'Hardcore mode',
 	},
 })
 
@@ -85,6 +96,8 @@ interface Props {
 	groupExpanded?: boolean
 	groupSwitchVersion?: () => void
 	isGroupChild?: boolean
+	groupKind?: 'folder' | 'world'
+	groupMeta?: ContentWorldGroupMeta
 	groupCheckboxIndeterminate?: boolean
 	downloads?: number | null
 	followers?: number | null
@@ -124,6 +137,8 @@ const props = withDefaults(defineProps<Props>(), {
 	groupExpanded: false,
 	groupSwitchVersion: undefined,
 	isGroupChild: false,
+	groupKind: 'folder',
+	groupMeta: undefined,
 	groupCheckboxIndeterminate: false,
 	downloads: null,
 	followers: null,
@@ -179,9 +194,18 @@ const deleteHovered = ref(false)
 	<div
 		v-if="isGroupHeader"
 		role="row"
-		class="flex h-[74px] cursor-pointer items-center justify-between gap-4 px-3 hover:bg-[hsla(0,0%,50%,0.1)]"
-		:class="{ 'opacity-50': disabled }"
-		:style="groupDepth ? { paddingLeft: `${groupDepth * 2.5}rem` } : undefined"
+		class="flex h-[74px] cursor-pointer items-center justify-between gap-4"
+		:class="[
+			{ 'opacity-50': disabled },
+			groupKind === 'world'
+				? selected
+					? 'card-shadow !bg-surface-2.5 rounded-lg p-3'
+					: 'card-shadow !bg-bg-raised rounded-lg p-3 hover:!bg-bg-raised'
+				: 'px-3 hover:bg-[hsla(0,0%,50%,0.1)]',
+		]"
+		:style="
+			groupDepth && groupKind !== 'world' ? { paddingLeft: `${groupDepth * 2.5}rem` } : undefined
+		"
 		@click="handleRowClick"
 	>
 		<div
@@ -216,57 +240,88 @@ const deleteHovered = ref(false)
 									: undefined
 							"
 							:to="projectLink"
-							class="truncate font-semibold leading-6 text-contrast !decoration-contrast"
-							:class="{ 'hover:underline': projectLink }"
+							class="truncate text-contrast !decoration-contrast"
+							:class="[
+								groupKind === 'world' ? 'text-lg font-bold' : 'font-semibold leading-6',
+								{ 'hover:underline': projectLink },
+							]"
 						>
 							{{ project.title }}
 						</AutoLink>
+						<span
+							v-if="groupKind === 'world'"
+							class="flex items-center gap-1 whitespace-nowrap text-sm font-semibold text-secondary"
+						>
+							<UserIcon
+								aria-hidden="true"
+								class="h-4 w-4 shrink-0 text-secondary"
+								stroke-width="3px"
+							/>
+							{{ formatMessage(commonMessages.singleplayerLabel) }}
+						</span>
 						<span class="shrink-0 text-sm font-medium text-secondary">
 							({{ groupItemCount }})
 						</span>
 					</div>
 					<div class="flex min-w-0 items-center gap-1">
-						<AutoLink
-							v-if="owner"
-							:target="
-								typeof owner.link === 'string' && owner.link.startsWith('http')
-									? '_blank'
-									: undefined
-							"
-							:to="owner.link"
-							class="flex shrink-0 items-center gap-1 !decoration-secondary"
-							:class="{ 'hover:underline': owner.link }"
-						>
-							<Avatar
-								:src="owner.avatar_url"
-								:alt="owner.name"
-								size="1.5rem"
-								:circle="owner.type === 'user'"
-								no-shadow
-								class="shrink-0"
-							/>
-							<span class="text-sm leading-5 text-secondary">{{ owner.name }}</span>
-						</AutoLink>
-						<template v-if="version">
-							<BulletDivider class="shrink-0 @[800px]:hidden" />
+						<template v-if="groupKind === 'world'">
+							<template v-if="groupMeta?.last_played">
+								<ClockIcon class="size-4 shrink-0 text-secondary" />
+								<span class="truncate text-sm leading-5 text-secondary">
+									{{
+										formatMessage(commonMessages.playedLabel, {
+											ago: formatTimeAgo(new Date(groupMeta.last_played)),
+										})
+									}}
+								</span>
+							</template>
+							<span v-else class="truncate text-sm leading-5 text-secondary">
+								{{ formatMessage(messages.notPlayedYet) }}
+							</span>
+						</template>
+						<template v-else>
 							<AutoLink
+								v-if="owner"
 								:target="
-									typeof versionLink === 'string' && versionLink.startsWith('http')
+									typeof owner.link === 'string' && owner.link.startsWith('http')
 										? '_blank'
 										: undefined
 								"
-								:to="versionLink"
-								class="truncate text-sm leading-5 text-secondary !decoration-secondary @[800px]:hidden"
-								:class="{ 'hover:underline': versionLink }"
+								:to="owner.link"
+								class="flex shrink-0 items-center gap-1 !decoration-secondary"
+								:class="{ 'hover:underline': owner.link }"
 							>
-								{{ version.version_number }}
+								<Avatar
+									:src="owner.avatar_url"
+									:alt="owner.name"
+									size="1.5rem"
+									:circle="owner.type === 'user'"
+									no-shadow
+									class="shrink-0"
+								/>
+								<span class="text-sm leading-5 text-secondary">{{ owner.name }}</span>
 							</AutoLink>
-							<template v-if="version.date_published">
+							<template v-if="version">
 								<BulletDivider class="shrink-0 @[800px]:hidden" />
-								<ClockIcon class="size-4 shrink-0 text-secondary @[800px]:hidden" />
-								<span class="shrink-0 text-sm leading-5 text-secondary @[800px]:hidden">
-									{{ formatTimeAgo(new Date(version.date_published)) }}
-								</span>
+								<AutoLink
+									:target="
+										typeof versionLink === 'string' && versionLink.startsWith('http')
+											? '_blank'
+											: undefined
+									"
+									:to="versionLink"
+									class="truncate text-sm leading-5 text-secondary !decoration-secondary @[800px]:hidden"
+									:class="{ 'hover:underline': versionLink }"
+								>
+									{{ version.version_number }}
+								</AutoLink>
+								<template v-if="version.date_published">
+									<BulletDivider class="shrink-0 @[800px]:hidden" />
+									<ClockIcon class="size-4 shrink-0 text-secondary @[800px]:hidden" />
+									<span class="shrink-0 text-sm leading-5 text-secondary @[800px]:hidden">
+										{{ formatTimeAgo(new Date(version.date_published)) }}
+									</span>
+								</template>
 							</template>
 						</template>
 					</div>
@@ -278,7 +333,18 @@ const deleteHovered = ref(false)
 			class="hidden flex-col gap-0.5 @[800px]:flex"
 			:class="hideActions ? 'flex-1' : 'flex-1 min-w-0'"
 		>
-			<template v-if="version">
+			<template v-if="groupKind === 'world'">
+				<div class="flex min-w-0 items-center gap-1.5 font-medium leading-6 text-contrast">
+					<template v-if="groupMeta?.hardcore">
+						<SkullIcon aria-hidden="true" class="h-4 w-4 shrink-0 text-red" />
+						<span class="text-red">{{ formatMessage(messages.hardcore) }}</span>
+					</template>
+					<span v-else-if="groupMeta?.game_mode" class="text-secondary">
+						{{ groupMeta.game_mode.charAt(0).toUpperCase() + groupMeta.game_mode.slice(1) }}
+					</span>
+				</div>
+			</template>
+			<template v-else-if="version">
 				<div class="flex min-w-0 items-center gap-1.5 font-medium leading-6 text-contrast">
 					<AutoLink
 						:target="
@@ -321,34 +387,36 @@ const deleteHovered = ref(false)
 		</div>
 
 		<div v-if="!hideActions" class="flex min-w-[160px] shrink-0 items-center justify-end gap-2">
-			<ButtonStyled
-				v-if="hasUpdate"
-				circular
-				type="transparent"
-				color="green"
-				color-fill="text"
-				hover-color-fill="background"
-			>
-				<button
-					v-tooltip="
-						isDisabled && disabledTooltip
-							? disabledTooltip
-							: formatMessage(commonMessages.updateAvailableLabel)
-					"
-					:disabled="isDisabled"
-					@click.stop="emit('update')"
+			<template v-if="groupKind !== 'world'">
+				<ButtonStyled
+					v-if="hasUpdate"
+					circular
+					type="transparent"
+					color="green"
+					color-fill="text"
+					hover-color-fill="background"
 				>
-					<DownloadIcon class="size-5" />
-				</button>
-			</ButtonStyled>
-			<ButtonStyled v-else-if="groupSwitchVersion" circular type="transparent">
-				<button
-					v-tooltip="formatMessage(commonMessages.switchVersionButton)"
-					@click.stop="groupSwitchVersion"
-				>
-					<ArrowLeftRightIcon class="size-5" />
-				</button>
-			</ButtonStyled>
+					<button
+						v-tooltip="
+							isDisabled && disabledTooltip
+								? disabledTooltip
+								: formatMessage(commonMessages.updateAvailableLabel)
+						"
+						:disabled="isDisabled"
+						@click.stop="emit('update')"
+					>
+						<DownloadIcon class="size-5" />
+					</button>
+				</ButtonStyled>
+				<ButtonStyled v-else-if="groupSwitchVersion" circular type="transparent">
+					<button
+						v-tooltip="formatMessage(commonMessages.switchVersionButton)"
+						@click.stop="groupSwitchVersion"
+					>
+						<ArrowLeftRightIcon class="size-5" />
+					</button>
+				</ButtonStyled>
+			</template>
 			<ButtonStyled circular type="transparent">
 				<button
 					class="flex items-center text-secondary hover:text-primary transition-colors"
@@ -444,8 +512,15 @@ const deleteHovered = ref(false)
 					</div>
 
 					<div class="flex min-w-0 items-center gap-1">
+						<span
+							v-if="project.description"
+							class="truncate text-sm leading-5 text-secondary"
+							:title="project.description"
+						>
+							{{ project.description }}
+						</span>
 						<AutoLink
-							v-if="owner"
+							v-if="owner && !project.description"
 							:target="
 								typeof owner.link === 'string' && owner.link.startsWith('http')
 									? '_blank'
@@ -465,7 +540,22 @@ const deleteHovered = ref(false)
 							/>
 							<span class="text-sm leading-5 text-secondary">{{ owner.name }}</span>
 						</AutoLink>
-						<template v-if="version">
+						<template v-if="version && !project.description">
+							<BulletDivider class="shrink-0 @[800px]:hidden" />
+							<AutoLink
+								:target="
+									typeof versionLink === 'string' && versionLink.startsWith('http')
+										? '_blank'
+										: undefined
+								"
+								:to="versionLink"
+								class="truncate text-sm leading-5 text-secondary !decoration-secondary @[800px]:hidden"
+								:class="{ 'hover:underline': versionLink }"
+							>
+								{{ version.version_number }}
+							</AutoLink>
+						</template>
+						<template v-else-if="version && project.description">
 							<BulletDivider class="shrink-0 @[800px]:hidden" />
 							<AutoLink
 								:target="
@@ -611,11 +701,7 @@ const deleteHovered = ref(false)
 				@update:model-value="(val) => emit('update:enabled', val as boolean)"
 			/>
 
-			<ButtonStyled
-				v-if="hasDeleteListener && !props.hideDelete && !props.isGroupChild"
-				circular
-				type="transparent"
-			>
+			<ButtonStyled v-if="hasDeleteListener && !props.hideDelete" circular type="transparent">
 				<button
 					v-tooltip="
 						isDisabled && disabledTooltip

@@ -1150,9 +1150,8 @@ pub(crate) async fn dependencies_to_content_items(
                 environment: None,
                 source_kind: None,
                 external: false,
-                loader: version.and_then(|version| {
-                    version.loaders.first().cloned()
-                }),
+                loader: version
+                    .and_then(|version| version.loaders.first().cloned()),
             })
         })
         .collect::<Vec<_>>();
@@ -1837,7 +1836,8 @@ async fn content_files_to_content_items(
                         })
                     })
                 });
-            let environment = version_v3.and_then(|version| version.environment);
+            let environment =
+                version_v3.and_then(|version| version.environment);
             let source_kind = source_kind_by_path.get(path).copied();
             let external = provider_refs.is_empty();
             // Parse local_mod_data for fallback display when Modrinth /
@@ -1851,21 +1851,16 @@ async fn content_files_to_content_items(
             // Loader priority: locally parsed mod metadata (most reliable for
             // CurseForge-only files, whose CF game versions often omit the
             // loader token) → installed version loaders → local metadata.
-            let local_loader = local_mod
-                .as_ref()
-                .and_then(|meta| meta.loader.clone());
+            let local_loader =
+                local_mod.as_ref().and_then(|meta| meta.loader.clone());
             let loader = local_loader
                 .as_deref()
                 .filter(|loader| {
-                    matches!(
-                        *loader,
-                        "fabric" | "forge" | "quilt" | "neoforge"
-                    )
+                    matches!(*loader, "fabric" | "forge" | "quilt" | "neoforge")
                 })
                 .map(str::to_string)
                 .or_else(|| {
-                    version
-                        .and_then(|version| version.loaders.first().cloned())
+                    version.and_then(|version| version.loaders.first().cloned())
                 })
                 .or(local_loader);
             let owner = project.and_then(|project| {
