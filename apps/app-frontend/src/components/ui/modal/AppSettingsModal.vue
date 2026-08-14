@@ -10,6 +10,7 @@ import {
 	PaintbrushIcon,
 	RefreshCwIcon,
 	SettingsIcon,
+	ShieldIcon,
 	ToggleRightIcon,
 	UsersIcon,
 } from '@modrinth/assets'
@@ -34,6 +35,7 @@ import FeatureFlagSettings from '@/components/ui/settings/FeatureFlagSettings.vu
 import JavaSettings from '@/components/ui/settings/JavaSettings.vue'
 import LanguageSettings from '@/components/ui/settings/LanguageSettings.vue'
 import MultiplayerSettings from '@/components/ui/settings/MultiplayerSettings.vue'
+import PrivacySettings from '@/components/ui/settings/PrivacySettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
 import TranslationSettings from '@/components/ui/settings/TranslationSettings.vue'
 import UpdateSettings from '@/components/ui/settings/UpdateSettings.vue'
@@ -93,6 +95,15 @@ const tabs = [
 		flushContent: true,
 		badge: commonMessages.beta,
 		onboardingId: 'settings-tab-ai',
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.privacy-security',
+			defaultMessage: 'Privacy & security',
+		}),
+		icon: ShieldIcon,
+		content: PrivacySettings,
+		onboardingId: 'settings-tab-privacy',
 	},
 	{
 		name: defineMessage({

@@ -81,6 +81,7 @@ import InstallToPlayModal from '@/components/ui/modal/InstallToPlayModal.vue'
 import InstanceIconPickerModal from '@/components/ui/modal/InstanceIconPickerModal.vue'
 import JavaDownloadConfirmationModal from '@/components/ui/modal/JavaDownloadConfirmationModal.vue'
 import ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
+import PrivacyConsentModal from '@/components/ui/modal/PrivacyConsentModal.vue'
 import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
 import NavRail from '@/components/ui/NavRail.vue'
@@ -92,7 +93,7 @@ import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
 import { minecraftLaunchErrorKey } from '@/composables/useMinecraftLaunchError'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { AxolotlBrandConfig, config, getOfficialLabrinthBaseUrl } from '@/config'
-import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
+import { trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
 import { configureCurseForgeManualDownloadWatcher } from '@/helpers/curseforge'
@@ -135,7 +136,14 @@ import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { reconcileMojangAuthSourceAtStartup } from '@/helpers/mojang-auth'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
-import { get as getSettings, getUpdateSource, set as setSettings } from '@/helpers/settings.ts'
+import {
+	get as getSettings,
+	getPrivacySettings,
+	getUpdateSource,
+	type PrivacySettings,
+	savePrivacySettings,
+	set as setSettings,
+} from '@/helpers/settings.ts'
 import { get_opening_command, initialize_state, set_discord_activity } from '@/helpers/state'
 import {
 	areUpdatesEnabled,
@@ -342,6 +350,8 @@ watch(
 )
 
 const stateInitialized = ref(false)
+const privacyConsentModal = ref<InstanceType<typeof PrivacyConsentModal>>()
+const privacyConsentPending = ref(false)
 const communityAnnouncementModal = ref()
 const updateAnnouncementModal = ref()
 const minecraftCrashModal = ref()
@@ -781,6 +791,8 @@ async function setupApp() {
 		accent_color,
 		locale,
 		telemetry,
+		telemetry_consent_version,
+		discord_rpc,
 		collapsed_navigation,
 		hide_nametag_skins_page,
 		advanced_rendering,
@@ -823,10 +835,10 @@ async function setupApp() {
 	os.value = await getOS()
 	const dev = await isDev()
 	isDevEnvironment.value = dev
-	const version = await getVersion()
 	pendingUpdateAnnouncementVersion.value = pending_update_toast_for_version
 	if (!onboarded && route.path !== '/') await router.replace('/')
-	showOnboarding.value = !onboarded
+	privacyConsentPending.value = telemetry_consent_version < 1
+	showOnboarding.value = false
 	onboardingSettings.value = initialSettings
 
 	nativeDecorations.value = native_decorations
@@ -854,6 +866,16 @@ async function setupApp() {
 	themeStore.devMode = developer_mode
 	themeStore.featureFlags = feature_flags
 	stateInitialized.value = true
+	if (privacyConsentPending.value) {
+		await nextTick()
+		privacyConsentModal.value?.show({
+			telemetry,
+			discord_rpc,
+			consent_version: telemetry_consent_version,
+		})
+	} else {
+		showOnboarding.value = !onboarded
+	}
 	void reconcileMojangAuthSourceAtStartup().catch(handleError)
 
 	isMaximized.value = await getCurrentWindow().isMaximized()
@@ -861,12 +883,6 @@ async function setupApp() {
 	await getCurrentWindow().onResized(async () => {
 		isMaximized.value = await getCurrentWindow().isMaximized()
 	})
-
-	if (telemetry) {
-		initAnalytics()
-		if (dev) debugAnalytics()
-		trackEvent('Launched', { version, dev, onboarded })
-	}
 
 	if (!dev) document.addEventListener('contextmenu', (event) => event.preventDefault())
 
@@ -971,7 +987,13 @@ async function handleUpdateAnnouncementClosed(version) {
 }
 
 async function scheduleStartupDialogs() {
-	if (!stateInitialized.value || showOnboarding.value || updateAnnouncementShowing.value) return
+	if (
+		!stateInitialized.value ||
+		privacyConsentPending.value ||
+		showOnboarding.value ||
+		updateAnnouncementShowing.value
+	)
+		return
 
 	if (pendingUpdateAnnouncementVersion.value && updateAnnouncementModal.value) {
 		updateAnnouncementShowing.value = true
@@ -984,6 +1006,41 @@ async function scheduleStartupDialogs() {
 	communityAnnouncementModal.value?.showIfNeeded()
 }
 
+async function handlePrivacyConsentSaved(privacy: PrivacySettings) {
+	privacyConsentPending.value = false
+	if (onboardingSettings.value) {
+		onboardingSettings.value.telemetry = privacy.telemetry
+		onboardingSettings.value.discord_rpc = privacy.discord_rpc
+		onboardingSettings.value.telemetry_consent_version = privacy.consent_version
+	}
+	if (!onboardingSettings.value?.onboarded) {
+		startOnboarding('main')
+	} else {
+		await scheduleStartupDialogs()
+	}
+}
+
+async function previewPrivacyConsentModal() {
+	try {
+		const current = await getPrivacySettings()
+		const privacy = await savePrivacySettings({
+			telemetry: false,
+			discord_rpc: current.discord_rpc,
+			consent_version: 0,
+		})
+		privacyConsentPending.value = true
+		if (onboardingSettings.value) {
+			onboardingSettings.value.telemetry = privacy.telemetry
+			onboardingSettings.value.discord_rpc = privacy.discord_rpc
+			onboardingSettings.value.telemetry_consent_version = privacy.consent_version
+		}
+		await nextTick()
+		privacyConsentModal.value?.show(privacy)
+	} catch (error) {
+		handleError(error)
+	}
+}
+
 provide('replayOnboarding', replayOnboarding)
 provide(
 	minecraftLaunchErrorKey,
@@ -991,6 +1048,7 @@ provide(
 		(await minecraftCrashModal.value?.handleLaunchError(launchError, payload)) ?? false,
 )
 provide('previewMinecraftCrashModal', () => minecraftCrashModal.value?.showPreview())
+provide('previewPrivacyConsentModal', previewPrivacyConsentModal)
 provide('chooseImportMethod', chooseImportMethod)
 provide('previewUpdateAnnouncement', (version = null) => {
 	const previewVersion = version ?? pendingUpdateAnnouncementVersion.value
@@ -3151,6 +3209,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	/>
 	<MinecraftCrashModal ref="minecraftCrashModal" @error="handleError" />
 	<JavaDownloadConfirmationModal ref="javaDownloadConfirmationModal" />
+	<PrivacyConsentModal ref="privacyConsentModal" @saved="handlePrivacyConsentSaved" />
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
 	<ErrorModal ref="errorModal" />

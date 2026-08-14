@@ -462,6 +462,8 @@ impl State {
             concurrency_state.run_auto_concurrency_controller().await;
         });
 
+        crate::telemetry::start(Arc::clone(state));
+
         tokio::task::spawn(async move {
             crate::util::fetch::cleanup_stale_partial_downloads(vec![
                 state.directories.metadata_dir(),

@@ -1925,6 +1925,12 @@
   "app.onboarding.mascot-alt": {
     "message": "引导吉祥物"
   },
+  "app.onboarding.privacy.description": {
+    "message": "匿名遥测与 Discord Rich Presence 可以随时独立调整。"
+  },
+  "app.onboarding.privacy.title": {
+    "message": "你的数据，由你决定"
+  },
   "app.onboarding.resources.description": {
     "message": "调节下载、储存和启动器资源。给风扇一点尊严。"
   },
@@ -1969,6 +1975,30 @@
   },
   "app.onboarding.welcome.title": {
     "message": "一切就绪"
+  },
+  "app.privacy-consent.continue": {
+    "message": "保存并继续"
+  },
+  "app.privacy-consent.discord-rpc": {
+    "message": "Discord 活动状态"
+  },
+  "app.privacy-consent.discord-rpc-description": {
+    "message": "Discord 运行时显示你当前使用启动器或游玩的状态。"
+  },
+  "app.privacy-consent.intro": {
+    "message": "选择 Axolotl 可以发送或展示的内容。确认前不会发送任何遥测。"
+  },
+  "app.privacy-consent.privacy-policy": {
+    "message": "阅读隐私政策"
+  },
+  "app.privacy-consent.telemetry": {
+    "message": "允许匿名遥测"
+  },
+  "app.privacy-consent.telemetry-description": {
+    "message": "通过脱敏且限长的报告统计选择加入的安装量并排查启动器错误。不会上传完整 Minecraft 日志或账户凭据。"
+  },
+  "app.privacy-consent.title": {
+    "message": "隐私与安全"
   },
   "app.project.curseforge.loading": {
     "message": "正在加载 CurseForge 项目…"
@@ -2083,6 +2113,9 @@
   },
   "app.settings.about.preview-minecraft-crash-modal": {
     "message": "预览 Minecraft 崩溃窗口"
+  },
+  "app.settings.about.preview-privacy-consent-modal": {
+    "message": "预览隐私与安全弹窗"
   },
   "app.settings.about.project-website": {
     "message": "访问项目网站"
@@ -2306,6 +2339,21 @@
   "app.settings.java.download.title": {
     "message": "下载 Java"
   },
+  "app.settings.privacy.data-handling": {
+    "message": "遥测使用随机安装标识。错误上下文离开设备前会经过脱敏和长度限制。关闭遥测会立即清空待发送报告。"
+  },
+  "app.settings.privacy.discord-rpc": {
+    "message": "Discord 活动状态"
+  },
+  "app.settings.privacy.discord-rpc-description": {
+    "message": "在 Discord 中显示你当前使用启动器或游玩的状态。"
+  },
+  "app.settings.privacy.telemetry": {
+    "message": "允许遥测"
+  },
+  "app.settings.privacy.telemetry-description": {
+    "message": "发送匿名每日活跃信号和脱敏的启动器错误报告。绝不上传 Minecraft 日志或账户凭据。"
+  },
   "app.settings.resources.app-cache": {
     "message": "应用缓存"
   },
@@ -2509,6 +2557,9 @@
   },
   "app.settings.tabs.language": {
     "message": "语言"
+  },
+  "app.settings.tabs.privacy-security": {
+    "message": "隐私与安全"
   },
   "app.settings.tabs.resource-management": {
     "message": "资源管理"

@@ -43,10 +43,10 @@ pub mod data {
         JavaVersion, LinkedModpackInfo, ManualDownloadOperationKind,
         ManualDownloadState, MemorySettings, ModLoader, ModrinthCredentials,
         Organization, OwnerType, PackMemberMaterializationState,
-        PackMemberOverrideKind, PendingManualDownload, ProcessMetadata,
-        Project, ProjectType, ProjectV3, SearchResult, SearchResults,
-        SearchResultsV3, Settings, TeamMember, Theme, User, UserFriend,
-        Version, WindowSize,
+        PackMemberOverrideKind, PendingManualDownload, PrivacySettings,
+        ProcessMetadata, Project, ProjectType, ProjectV3, SearchResult,
+        SearchResults, SearchResultsV3, Settings, TeamMember, Theme, User,
+        UserFriend, Version, WindowSize,
     };
     pub use ariadne::users::UserStatus;
     pub use modrinth_content_management::{

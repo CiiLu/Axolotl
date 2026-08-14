@@ -190,6 +190,15 @@ export const onboardingMessages = defineMessages({
 		id: 'app.onboarding.resources.description',
 		defaultMessage: 'Tune downloads, storage, and app resources. Give the fan a little dignity.',
 	},
+	privacyTitle: {
+		id: 'app.onboarding.privacy.title',
+		defaultMessage: 'Your data, your call',
+	},
+	privacyDescription: {
+		id: 'app.onboarding.privacy.description',
+		defaultMessage:
+			'Change anonymous telemetry and Discord Rich Presence independently whenever you need to.',
+	},
 	updatesTitle: { id: 'app.onboarding.updates.title', defaultMessage: 'Stay in the loop' },
 	updatesDescription: {
 		id: 'app.onboarding.updates.description',
@@ -438,6 +447,12 @@ const settingsTourSteps: Array<[string, string, MessageDescriptor, MessageDescri
 		'settings-tab-resources',
 		onboardingMessages.resourcesTitle,
 		onboardingMessages.resourcesDescription,
+	],
+	[
+		'settings-privacy',
+		'settings-tab-privacy',
+		onboardingMessages.privacyTitle,
+		onboardingMessages.privacyDescription,
 	],
 	[
 		'settings-updates',
