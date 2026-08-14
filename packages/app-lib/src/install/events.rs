@@ -706,12 +706,18 @@ impl InstallProgressReporter {
                 &state.job.progress.details,
                 InstallPhaseDetails::Empty
             ) && !matches!(&details, InstallPhaseDetails::Empty);
+        let progress_counter_started = state.job.progress.phase == phase
+            && match (&state.job.progress.progress, &progress) {
+                (None, Some(_)) => true,
+                (Some(old), Some(new)) => old.total != new.total,
+                _ => false,
+            };
         state.job.set_progress(phase, progress, details);
         for event in events {
             state.job.record_event(event);
         }
 
-        if !state.should_persist(phase_started) {
+        if !state.should_persist(phase_started || progress_counter_started) {
             return Ok(());
         }
 
@@ -783,8 +789,8 @@ fn refresh_missing_pause_reason(job: &mut InstallJobState) {
 }
 
 impl InstallProgressReporterState {
-    fn should_persist(&self, phase_started: bool) -> bool {
-        if phase_started {
+    fn should_persist(&self, state_transition: bool) -> bool {
+        if state_transition {
             return true;
         }
 
@@ -873,9 +879,57 @@ mod tests {
     use crate::install::model::{
         InstallJobEventKind, InstallJobExecutionMode, InstallJobKind,
         InstallJobStatus, InstallPauseReason, InstallPhaseDetails,
-        InstallPhaseId, MissingModpackContentState,
+        InstallPhaseId, InstallProgress, InstallProgressSecondary,
+        MissingModpackContentState,
     };
     use crate::state::{InstanceLink, ModLoader};
+
+    fn minecraft_details() -> InstallPhaseDetails {
+        InstallPhaseDetails::Minecraft {
+            game_version: "1.21.1".to_string(),
+            loader: ModLoader::Vanilla,
+        }
+    }
+
+    fn minecraft_progress(current: u64, total: u64) -> InstallProgress {
+        InstallProgress {
+            current,
+            total,
+            secondary: None,
+        }
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn stored_minecraft_progress_job(
+        current: u64,
+        total: u64,
+    ) -> (std::sync::Arc<crate::State>, Uuid, InstallProgressReporter) {
+        crate::event::EventState::init().await.unwrap();
+        let root = tempfile::tempdir().unwrap().keep();
+        let app_state =
+            crate::State::init_for_test(root.to_string_lossy().to_string())
+                .await
+                .unwrap();
+        let job_id = Uuid::new_v4();
+        let mut job = InstallJobState::new(InstallRequest::CreateInstance {
+            name: "Test".to_string(),
+            game_version: "1.21.1".to_string(),
+            loader: ModLoader::Vanilla,
+            loader_version: None,
+            icon_path: None,
+            link: InstanceLink::Unmanaged,
+        });
+        job.set_progress(
+            InstallPhaseId::DownloadingMinecraft,
+            Some(minecraft_progress(current, total)),
+            minecraft_details(),
+        );
+        store::insert(job_id, &job, InstallJobStatus::Running, &app_state)
+            .await
+            .unwrap();
+        let reporter = InstallProgressReporter::new(job_id, job);
+        (app_state, job_id, reporter)
+    }
 
     #[test]
     fn separately_created_reporters_share_job_state() {
@@ -958,6 +1012,130 @@ mod tests {
                 .execution_mode(InstallJobStatus::Running),
             InstallJobExecutionMode::RecoveryValidation
         );
+        InstallProgressReporter::reset_job(job_id);
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn first_concrete_progress_after_phase_only_update_is_persisted() {
+        crate::event::EventState::init().await.unwrap();
+        let root = tempfile::tempdir().unwrap().keep();
+        let app_state =
+            crate::State::init_for_test(root.to_string_lossy().to_string())
+                .await
+                .unwrap();
+        let job_id = Uuid::new_v4();
+        let mut job = InstallJobState::new(InstallRequest::CreateInstance {
+            name: "Test".to_string(),
+            game_version: "1.21.1".to_string(),
+            loader: ModLoader::Vanilla,
+            loader_version: None,
+            icon_path: None,
+            link: InstanceLink::Unmanaged,
+        });
+        job.record_event(InstallJobEventKind::ContentDownloadStarted {
+            files: 1,
+            bytes: Some(300),
+        });
+        job.record_event(InstallJobEventKind::ContentFileCompleted {
+            path: "mods/content.jar".to_string(),
+            bytes: 268,
+        });
+        job.set_progress(
+            InstallPhaseId::DownloadingContent,
+            Some(InstallProgress {
+                current: 1,
+                total: 1,
+                secondary: Some(InstallProgressSecondary {
+                    current: 268,
+                    total: 300,
+                }),
+            }),
+            InstallPhaseDetails::Empty,
+        );
+        store::insert(job_id, &job, InstallJobStatus::Running, &app_state)
+            .await
+            .unwrap();
+        let reporter = InstallProgressReporter::new(job_id, job);
+        let minecraft_details = minecraft_details();
+
+        reporter
+            .update(
+                InstallPhaseId::DownloadingMinecraft,
+                None,
+                minecraft_details.clone(),
+            )
+            .await
+            .unwrap();
+        reporter
+            .update(
+                InstallPhaseId::DownloadingMinecraft,
+                Some(minecraft_progress(0, 18)),
+                minecraft_details,
+            )
+            .await
+            .unwrap();
+
+        let snapshot = store::get_required(job_id, &app_state)
+            .await
+            .unwrap()
+            .snapshot();
+        assert_eq!(snapshot.phase, InstallPhaseId::DownloadingMinecraft);
+        let progress = snapshot.progress.unwrap();
+        assert_eq!(progress.current, 0);
+        assert_eq!(progress.total, 18);
+        assert_eq!(snapshot.summary.bytes_downloaded, 0);
+        assert_eq!(snapshot.summary.bytes_total, Some(18));
+        InstallProgressReporter::reset_job(job_id);
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn same_progress_counter_remains_throttled() {
+        let (app_state, job_id, reporter) =
+            stored_minecraft_progress_job(0, 18).await;
+
+        reporter
+            .update(
+                InstallPhaseId::DownloadingMinecraft,
+                Some(minecraft_progress(1, 18)),
+                minecraft_details(),
+            )
+            .await
+            .unwrap();
+
+        let snapshot = store::get_required(job_id, &app_state)
+            .await
+            .unwrap()
+            .snapshot();
+        let progress = snapshot.progress.unwrap();
+        assert_eq!(progress.current, 0);
+        assert_eq!(progress.total, 18);
+        InstallProgressReporter::reset_job(job_id);
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn changed_progress_total_is_persisted_immediately() {
+        let (app_state, job_id, reporter) =
+            stored_minecraft_progress_job(5, 18).await;
+
+        reporter
+            .update(
+                InstallPhaseId::DownloadingMinecraft,
+                Some(minecraft_progress(0, 20)),
+                minecraft_details(),
+            )
+            .await
+            .unwrap();
+
+        let snapshot = store::get_required(job_id, &app_state)
+            .await
+            .unwrap()
+            .snapshot();
+        let progress = snapshot.progress.unwrap();
+        assert_eq!(progress.current, 0);
+        assert_eq!(progress.total, 20);
         InstallProgressReporter::reset_job(job_id);
     }
 

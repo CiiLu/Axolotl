@@ -131,7 +131,8 @@ impl InstallJobState {
         mut progress: Option<InstallProgress>,
         details: InstallPhaseDetails,
     ) {
-        if self.progress.phase != phase
+        let same_phase = self.progress.phase == phase;
+        if !same_phase
             || matches!(&self.progress.details, InstallPhaseDetails::Empty)
                 && !matches!(&details, InstallPhaseDetails::Empty)
         {
@@ -141,18 +142,19 @@ impl InstallJobState {
             });
         }
 
-        self.progress.phase = phase;
-        //直接避免新的progress被更小的覆盖，我懒得管那些什么鬼覆盖的了
-        if let Some(new_progress) = &mut progress
+        if same_phase
+            && let Some(new_progress) = &mut progress
             && let Some(old_progress) = &self.progress.progress
             && let (Some(old_secondary), Some(new_secondary)) =
                 (&old_progress.secondary, &new_progress.secondary)
+            && old_secondary.total == new_secondary.total
         {
             new_progress.secondary = Some(InstallProgressSecondary {
                 current: old_secondary.current.max(new_secondary.current),
                 total: new_secondary.total,
             });
         }
+        self.progress.phase = phase;
         self.progress.progress = progress;
         self.progress.details = details;
     }
@@ -176,6 +178,90 @@ mod tests {
             icon_path: None,
             link: InstanceLink::Unmanaged,
         })
+    }
+
+    fn set_secondary_progress(
+        job: &mut InstallJobState,
+        phase: InstallPhaseId,
+        current: u64,
+        total: u64,
+    ) {
+        job.set_progress(
+            phase,
+            Some(InstallProgress {
+                current: 0,
+                total: 1,
+                secondary: Some(InstallProgressSecondary { current, total }),
+            }),
+            InstallPhaseDetails::Empty,
+        );
+    }
+
+    fn secondary_progress(job: &InstallJobState) -> (u64, u64) {
+        let secondary = job
+            .progress
+            .progress
+            .as_ref()
+            .and_then(|progress| progress.secondary.as_ref())
+            .unwrap();
+        (secondary.current, secondary.total)
+    }
+
+    #[test]
+    fn same_phase_same_secondary_total_keeps_progress_monotonic() {
+        let mut job = job_state();
+        set_secondary_progress(
+            &mut job,
+            InstallPhaseId::DownloadingContent,
+            268,
+            300,
+        );
+        set_secondary_progress(
+            &mut job,
+            InstallPhaseId::DownloadingContent,
+            200,
+            300,
+        );
+
+        assert_eq!(secondary_progress(&job), (268, 300));
+    }
+
+    #[test]
+    fn different_phase_does_not_retain_secondary_progress() {
+        let mut job = job_state();
+        set_secondary_progress(
+            &mut job,
+            InstallPhaseId::DownloadingContent,
+            268,
+            300,
+        );
+        set_secondary_progress(
+            &mut job,
+            InstallPhaseId::DownloadingMinecraft,
+            0,
+            16,
+        );
+
+        assert_eq!(secondary_progress(&job), (0, 16));
+    }
+
+    #[test]
+    fn same_phase_different_secondary_total_starts_new_counter() {
+        let mut job = job_state();
+        set_secondary_progress(
+            &mut job,
+            InstallPhaseId::DownloadingContent,
+            268,
+            300,
+        );
+        set_secondary_progress(
+            &mut job,
+            InstallPhaseId::DownloadingContent,
+            0,
+            16,
+        );
+
+        assert_eq!(secondary_progress(&job), (0, 16));
     }
 
     #[test]

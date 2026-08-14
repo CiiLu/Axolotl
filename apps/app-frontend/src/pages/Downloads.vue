@@ -411,7 +411,11 @@ import {
 	type InstallJobStatus,
 	type InstallPhaseId,
 } from '@/helpers/install'
-import { effectiveInstallProgress, hasDeterminateInstallProgress } from '@/helpers/install-progress'
+import {
+	effectiveInstallProgress,
+	hasDeterminateInstallProgress,
+	installProgressTextSource,
+} from '@/helpers/install-progress'
 import type { LoadingBar } from '@/helpers/state'
 import { injectContentInstall } from '@/providers/content-install'
 import { injectDownloadManager } from '@/providers/download-manager'
@@ -805,7 +809,8 @@ function hasDeterminateProgress(job: InstallJobSnapshot) {
 }
 
 function progressText(job: InstallJobSnapshot) {
-	if (job.status === 'waiting_for_user') {
+	const textSource = installProgressTextSource(job)
+	if (textSource.type === 'required_files') {
 		return `${completedRequiredFiles(job)} / ${totalRequiredFiles(job)}`
 	}
 	if (isLocalRecoveryValidation(job)) {
@@ -830,9 +835,9 @@ function progressText(job: InstallJobSnapshot) {
 		activeRequestItems(job).length === 0
 	)
 		return statusLabel('verifying')
-	if (job.summary.bytes_total)
-		return `${formatBytes(job.summary.bytes_downloaded)} / ${formatBytes(job.summary.bytes_total)}`
-	if (job.summary.files_total) return `${job.summary.files_completed} / ${job.summary.files_total}`
+	if (textSource.type === 'bytes')
+		return `${formatBytes(textSource.current)} / ${formatBytes(textSource.total)}`
+	if (textSource.type === 'items') return `${textSource.current} / ${textSource.total}`
 	return phaseLabel(job.phase)
 }
 
