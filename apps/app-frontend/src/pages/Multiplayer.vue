@@ -251,7 +251,7 @@ const messages = defineMessages({
 	},
 	poweredByTerracotta: {
 		id: 'app.multiplayer.powered-by-terracotta',
-		defaultMessage: 'Powered by Terracotta | 陶瓦联机',
+		defaultMessage: 'Powered by Terracotta',
 	},
 	startTerracotta: {
 		id: 'app.multiplayer.start-terracotta',

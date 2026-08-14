@@ -143,7 +143,6 @@ function handleSort(column: ContentCardTableSortColumn) {
 			role="rowgroup"
 			class="sticky top-0 z-10 flex h-12 items-center justify-between gap-4 bg-surface-3 px-3"
 			:class="[
-				$slots['header-project'] ? 'relative' : '',
 				flat || isStuck ? 'rounded-none' : 'rounded-t-[20px]',
 				isStuck
 					? 'transition-[border-radius] duration-100 border-0 border-y border-solid border-surface-4 shadow-md before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-5 before:bg-surface-3'
@@ -210,11 +209,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 			<div
 				v-if="hasAnyActions || $slots['header-actions']"
 				role="columnheader"
-				:class="
-					$slots['header-project']
-						? 'absolute right-3 top-1/2 z-10 flex -translate-y-1/2 items-center justify-end'
-						: 'min-w-[160px] shrink-0'
-				"
+				:class="$slots['header-project'] ? 'shrink-0' : 'min-w-[160px] shrink-0'"
 			>
 				<slot name="header-actions" />
 			</div>

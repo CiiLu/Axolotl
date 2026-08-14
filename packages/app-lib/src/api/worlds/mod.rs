@@ -12,6 +12,8 @@ use crate::util::protocol_version::OLD_PROTOCOL_VERSIONS;
 pub use crate::util::protocol_version::ProtocolVersion;
 
 mod level_data;
+mod datapacks;
+pub use datapacks::*;
 pub use crate::util::server_ping::{
     ServerGameProfile, ServerPlayers, ServerStatus, ServerVersion,
 };
@@ -26,7 +28,7 @@ use enumset::{EnumSet, EnumSetType};
 use fs4::tokio::AsyncFileExt;
 use futures::StreamExt;
 pub use level_data::*;
-use quartz_nbt::{NbtCompound, NbtTag};
+use quartz_nbt::{NbtCompound, NbtList, NbtTag};
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
@@ -446,6 +448,51 @@ async fn read_singleplayer_world_maybe_locked(
             locked,
         },
     })
+}
+
+/// Reads the `DataPacks` tag from a world's `level.dat` to determine which
+/// datapacks the game has enabled or disabled. Entries look like
+/// `file/<name>` (or `vanilla`); matching happens in `datapacks::match_datapack_state`.
+async fn read_world_datapack_state(
+    world_path: &Path,
+) -> Result<(Vec<String>, Vec<String>)> {
+    let world_path = world_path.to_path_buf();
+    tokio::task::spawn_blocking(move || {
+        let raw = std::fs::read(world_path.join("level.dat")).map_err(|error| {
+            Error::from(ErrorKind::InputError(format!(
+                "Could not read level.dat: {error}"
+            )))
+        })?;
+        let (root, _) = quartz_nbt::io::read_nbt(
+            &mut Cursor::new(raw),
+            quartz_nbt::io::Flavor::GzCompressed,
+        )?;
+        let data = root.get::<_, &NbtCompound>("Data").map_err(|_| {
+            Error::from(ErrorKind::InputError(
+                "Missing Data tag in level.dat".into(),
+            ))
+        })?;
+        let data_packs = data.get::<_, &NbtCompound>("DataPacks").ok();
+
+        let read_list = |key: &str| -> Vec<String> {
+            data_packs
+                .and_then(|packs| packs.get::<_, &NbtList>(key).ok())
+                .map(|list| {
+                    list.iter_map::<&str>()
+                        .filter_map(|value| value.ok().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+
+        Ok::<_, Error>((read_list("Enabled"), read_list("Disabled")))
+    })
+    .await
+    .map_err(|error| {
+        Error::from(ErrorKind::InputError(format!(
+            "Datapack state read task failed: {error}"
+        )))
+    })?
 }
 
 async fn get_server_worlds_in_instance(

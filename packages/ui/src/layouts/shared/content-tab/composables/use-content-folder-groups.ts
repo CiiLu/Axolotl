@@ -12,8 +12,8 @@ export interface ContentFolderGroupPolicy {
 	treePath: (item: ContentItem) => string
 	/** Stable group id for a folder path, kept distinct from other group ids. */
 	folderGroupId: (path: string) => string
-	/** Prefix used to recognize this policy's group ids in the shared expanded set. */
-	folderGroupIdPrefix: string
+	/** Prefix(es) used to recognize this policy's group ids in the shared expanded set. */
+	folderGroupIdPrefix: string | string[]
 }
 
 export interface UseContentFolderGroupsOptions extends ContentFolderGroupPolicy {
@@ -72,11 +72,16 @@ export function useContentFolderGroups(options: UseContentFolderGroupsOptions) {
 		})),
 	)
 
+	const groupIdPrefixes = Array.isArray(folderGroupIdPrefix)
+		? folderGroupIdPrefix
+		: [folderGroupIdPrefix]
+
 	const expandedFolderPaths = computed(() => {
 		const paths = new Set<string>()
 		for (const id of expandedGroups.value) {
-			if (id.startsWith(folderGroupIdPrefix)) {
-				paths.add(id.slice(folderGroupIdPrefix.length))
+			const prefix = groupIdPrefixes.find((candidate) => id.startsWith(candidate))
+			if (prefix) {
+				paths.add(id.slice(prefix.length))
 			}
 		}
 		return paths

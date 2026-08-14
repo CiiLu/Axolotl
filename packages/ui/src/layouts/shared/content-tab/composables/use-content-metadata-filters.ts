@@ -460,8 +460,6 @@ export function useContentMetadataFilters(
 		}
 	}
 
-	/** 分类在"有选项被取消勾选"时施加约束：全部勾选 = 不过滤；部分勾选 = 仅显示勾选项；
-	 * 全部取消勾选 = 该分类无任何允许值 → 整表为空（各分类条件必须同时满足才显示）。 */
 	function isCategoryFiltering(key: string): boolean {
 		const options = optionsByKey(key)
 		if (options.length === 0) return false

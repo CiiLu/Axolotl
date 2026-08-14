@@ -2603,6 +2603,12 @@
 	"app.settings.tabs.translation": {
 		"message": "翻译"
 	},
+	"app.sidebar.collapse": {
+		"message": "收起边栏"
+	},
+	"app.sidebar.expand": {
+		"message": "展开边栏"
+	},
 	"app.skins.add-button": {
 		"message": "添加皮肤"
 	},

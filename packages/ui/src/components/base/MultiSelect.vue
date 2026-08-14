@@ -4,9 +4,10 @@
 			ref="triggerRef"
 			role="button"
 			tabindex="0"
-			class="relative flex items-center overflow-hidden rounded-xl bg-surface-4 px-4 py-1 text-left transition-all duration-200"
+			class="relative flex items-center overflow-hidden rounded-xl px-4 py-1 text-left transition-all duration-200"
 			:class="[
 				fitContent ? 'w-auto max-w-full' : 'w-full',
+				active ? 'bg-brand-highlight text-brand' : 'bg-surface-4 text-primary',
 				triggerClass,
 				{
 					'z-[9999]': isOpen,
@@ -560,6 +561,8 @@ const props = withDefaults(
 		checkboxPosition?: 'left' | 'right'
 		/** Open the dropdown on mouse hover and close it when the pointer leaves. */
 		hoverOpen?: boolean
+		/** Render the trigger in the highlighted "active" tone (e.g. all options selected). */
+		active?: boolean
 	}>(),
 	{
 		placeholder: 'Select options',
@@ -581,6 +584,7 @@ const props = withDefaults(
 		maxTagRows: 1,
 		checkboxPosition: 'left',
 		hoverOpen: false,
+		active: false,
 	},
 )
 

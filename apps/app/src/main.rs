@@ -468,6 +468,7 @@ fn main() {
         .plugin(api::cache::init())
         .plugin(api::content_search::init())
         .plugin(api::curseforge::init())
+        .plugin(api::datapacks::init())
         .plugin(api::drop::init())
         .plugin(api::files::init())
         .plugin(api::worlds::init())

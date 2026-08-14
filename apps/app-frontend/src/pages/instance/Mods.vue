@@ -233,6 +233,7 @@ import {
 	type CurseForgeManualDownloadItem,
 	getCurseForgeManualDownloadUrl,
 } from '@/helpers/curseforge-manual'
+import { deleteDatapack, listDatapacks, type WorldWithDatapacks } from '@/helpers/datapacks'
 import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
 import { instance_listener } from '@/helpers/events.js'
 import { install_duplicate_instance, installJobInstanceId } from '@/helpers/install'
@@ -252,6 +253,7 @@ import {
 } from '@/helpers/instance'
 import { readInstanceCache, writeInstanceCache } from '@/helpers/instance-cache'
 import { type InstanceContentData, loadInstanceContentData } from '@/helpers/instance-content'
+import { getPackFormatRange } from '@/helpers/pack-formats'
 import type { CacheBehaviour, GameInstance } from '@/helpers/types'
 import { highlightModInInstance } from '@/helpers/utils.js'
 import i18n from '@/i18n.config'
@@ -354,23 +356,23 @@ const messages = defineMessages({
 	},
 	parsingFiles: {
 		id: 'app.instance.mods.parsing-files',
-		defaultMessage: '正在解析，较大的文件可能会耗费一些时间',
+		defaultMessage: 'Parsing... larger files may take a while',
 	},
 	dragDropHint: {
 		id: 'app.instance.mods.drag-drop-hint',
-		defaultMessage: '释放文件以安装到当前实例',
+		defaultMessage: 'Release the file to install it into the current instance',
 	},
 	parseFailed: {
 		id: 'app.instance.mods.parse-failed',
-		defaultMessage: '解析失败，这可能不是一个整合包',
+		defaultMessage: 'Failed to parse. This may not be a modpack',
 	},
 	fileAlreadyExists: {
 		id: 'app.instance.mods.file-already-exists',
-		defaultMessage: '添加失败，该文件可能已存在',
+		defaultMessage: 'Failed to add. The file may already exist',
 	},
 	dismiss: {
 		id: 'app.instance.mods.dismiss',
-		defaultMessage: '知道了',
+		defaultMessage: 'Got it',
 	},
 	restorePackDefault: {
 		id: 'app.instance.mods.restore-pack-default',
@@ -639,6 +641,75 @@ function localIconUrl(iconUrl?: string | null): string {
 	return /^(https?:|data:|blob:|asset:|tauri:)/.test(iconUrl) ? iconUrl : convertFileSrc(iconUrl)
 }
 
+const worldDatapacks = ref<WorldWithDatapacks[]>([])
+let worldDatapackRequest = 0
+async function loadWorldDatapacks() {
+	const request = ++worldDatapackRequest
+	try {
+		const data = await listDatapacks(props.instance.id)
+		if (request !== worldDatapackRequest) return
+		worldDatapacks.value = data ?? []
+		debugState('world datapacks loaded', {
+			worlds: worldDatapacks.value.length,
+			datapacks: worldDatapacks.value.reduce((total, world) => total + world.datapacks.length, 0),
+		})
+	} catch (error) {
+		if (request !== worldDatapackRequest) return
+		worldDatapacks.value = []
+		console.warn('Could not load world datapacks:', error)
+	}
+}
+
+/**
+ * World datapacks (files inside `saves/<world>/datapacks/`) are surfaced as
+ * plain content items so the content tab treats them exactly like mods,
+ * resource packs, shaders and schematics: the type filter pill and its count
+ * come from real items, rows render in the content table grouped per save,
+ * and delete goes through the world-datapack command.
+ */
+const worldDatapackItems = computed<ContentItem[]>(() =>
+	worldDatapacks.value.flatMap((entry) =>
+		entry.datapacks.map((datapack) => {
+			const id = `local:world-datapack:${entry.path}:${datapack.file_name}`
+			const versionRange = getPackFormatRange(datapack.pack_format)
+			const versionNumber =
+				versionRange?.min ?? (datapack.pack_format != null ? String(datapack.pack_format) : '')
+			return {
+				id,
+				file_name: datapack.file_name,
+				file_path: `saves/${entry.path}/datapacks/${datapack.file_name}`,
+				project_type: 'datapack',
+				update: null,
+				origin_provider: null,
+				enabled: datapack.enabled !== false,
+				external: true,
+				source_kind: 'world_datapack',
+				instanceOwnershipKind: 'local_discovered',
+				instanceMaterializationState: 'present',
+				instanceCapabilities: {
+					canToggle: false,
+					canDelete: true,
+					canUpdate: false,
+					canChangeVersion: false,
+					canRestorePackDefault: false,
+				},
+				project: {
+					id,
+					slug: datapack.display_name,
+					title: datapack.display_name,
+					icon_url: datapack.icon,
+				},
+				version: {
+					id: datapack.file_name,
+					version_number: versionNumber,
+					file_name: datapack.file_name,
+				},
+				provider_refs: [],
+			} satisfies ContentItem
+		}),
+	),
+)
+
 const mergedProjects = computed<ContentItem[]>(() => {
 	const active = installingItems.value.get(props.instance.id)
 	const pending = active ?? installingBuffer.value
@@ -659,7 +730,7 @@ const mergedProjects = computed<ContentItem[]>(() => {
 	})
 	const realProjectIds = new Set(displayProjects.map((p) => p.project?.id).filter(Boolean))
 	const placeholders = pending.filter((item) => !realProjectIds.has(item.project?.id))
-	return [...displayProjects, ...placeholders]
+	return [...displayProjects, ...placeholders, ...worldDatapackItems.value]
 })
 
 const displayedLinkedModpackContentItems = computed(() => [
@@ -1189,9 +1260,13 @@ async function removeMod(mod: ContentItem) {
 	if (!operation) return
 
 	try {
-		const removedPath = mod.file_path
-		await remove_content_entry(props.instance.id, contentId)
-		projects.value = projects.value.filter((x) => removedPath !== x.file_path)
+		if (isWorldDatapackItem(mod)) {
+			await deleteWorldDatapackItem(mod)
+		} else {
+			const removedPath = mod.file_path
+			await remove_content_entry(props.instance.id, contentId)
+			projects.value = projects.value.filter((x) => removedPath !== x.file_path)
+		}
 
 		trackEvent('InstanceProjectRemove', {
 			loader: props.instance.loader,
@@ -1205,6 +1280,21 @@ async function removeMod(mod: ContentItem) {
 	} finally {
 		finishContentOperation(mod, operation)
 	}
+}
+
+function isWorldDatapackItem(item: ContentItem) {
+	return item.project_type === 'datapack' && item.source_kind === 'world_datapack'
+}
+
+async function deleteWorldDatapackItem(item: ContentItem) {
+	const segments = (item.file_path ?? '').split('/')
+	const worldPath = segments[1]
+	const fileName = segments[3]
+	if (!worldPath || !fileName) {
+		throw new Error('Invalid world datapack path')
+	}
+	await deleteDatapack(props.instance.id, worldPath, fileName)
+	await loadWorldDatapacks()
 }
 
 async function restorePackDefault(item: ContentItem) {
@@ -1879,6 +1969,7 @@ function openSchematicInWorkshop(item: ContentItem) {
 }
 
 async function initProjects(cacheBehaviour?: CacheBehaviour) {
+	void loadWorldDatapacks()
 	if (!props.instance || props.instance.install_stage !== 'installed') {
 		invalidateContentRequests(true)
 		return

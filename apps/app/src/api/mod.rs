@@ -28,6 +28,7 @@ pub mod utils;
 pub mod cache;
 pub mod content_search;
 pub mod curseforge;
+pub mod datapacks;
 pub mod drop;
 pub mod files;
 pub mod worlds;

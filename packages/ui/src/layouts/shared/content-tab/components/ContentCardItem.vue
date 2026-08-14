@@ -584,6 +584,19 @@ const deleteHovered = ref(false)
 				</ButtonStyled>
 			</div>
 
+			<template v-for="action in inlineActions" :key="action.id">
+				<ButtonStyled circular type="transparent">
+					<button
+						v-tooltip="action.label"
+						:aria-label="action.label"
+						:disabled="isDisabled"
+						@click="action.action"
+					>
+						<component :is="action.icon" class="size-5" />
+					</button>
+				</ButtonStyled>
+			</template>
+
 			<Toggle
 				v-if="enabled !== undefined"
 				v-tooltip="
@@ -630,19 +643,6 @@ const deleteHovered = ref(false)
 					</span>
 				</button>
 			</ButtonStyled>
-
-			<template v-for="action in inlineActions" :key="action.id">
-				<ButtonStyled circular type="transparent">
-					<button
-						v-tooltip="action.label"
-						:aria-label="action.label"
-						:disabled="isDisabled"
-						@click="action.action"
-					>
-						<component :is="action.icon" class="size-5" />
-					</button>
-				</ButtonStyled>
-			</template>
 
 			<slot name="additionalButtonsRight" />
 
