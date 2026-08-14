@@ -59,10 +59,6 @@ const props = withDefaults(
 )
 
 const messages = defineMessages({
-	loadingContent: {
-		id: 'content.page-layout.loading',
-		defaultMessage: 'Loading content...',
-	},
 	failedToLoad: {
 		id: 'content.page-layout.failed-to-load',
 		defaultMessage: 'Failed to load content',
@@ -110,10 +106,6 @@ const messages = defineMessages({
 	sortByLabel: {
 		id: 'content.page-layout.sort.label',
 		defaultMessage: 'Sort by {mode}',
-	},
-	pleaseWait: {
-		id: 'content.page-layout.please-wait',
-		defaultMessage: 'Please wait',
 	},
 })
 

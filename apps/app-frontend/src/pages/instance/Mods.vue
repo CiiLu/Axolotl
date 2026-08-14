@@ -225,6 +225,7 @@ import { useRouter } from 'vue-router'
 
 import ExportModal from '@/components/ui/ExportModal.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
+import { useWorldDatapacks } from '@/composables/useWorldDatapacks'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
 import { applyContentItemUpdates, matchesContentItem } from '@/helpers/content-item-state'
@@ -233,7 +234,6 @@ import {
 	type CurseForgeManualDownloadItem,
 	getCurseForgeManualDownloadUrl,
 } from '@/helpers/curseforge-manual'
-import { deleteDatapack, listDatapacks, type WorldWithDatapacks } from '@/helpers/datapacks'
 import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
 import { instance_listener } from '@/helpers/events.js'
 import { install_duplicate_instance, installJobInstanceId } from '@/helpers/install'
@@ -253,7 +253,6 @@ import {
 } from '@/helpers/instance'
 import { readInstanceCache, writeInstanceCache } from '@/helpers/instance-cache'
 import { type InstanceContentData, loadInstanceContentData } from '@/helpers/instance-content'
-import { getPackFormatRange } from '@/helpers/pack-formats'
 import type { CacheBehaviour, GameInstance } from '@/helpers/types'
 import { highlightModInInstance } from '@/helpers/utils.js'
 import i18n from '@/i18n.config'
@@ -641,74 +640,8 @@ function localIconUrl(iconUrl?: string | null): string {
 	return /^(https?:|data:|blob:|asset:|tauri:)/.test(iconUrl) ? iconUrl : convertFileSrc(iconUrl)
 }
 
-const worldDatapacks = ref<WorldWithDatapacks[]>([])
-let worldDatapackRequest = 0
-async function loadWorldDatapacks() {
-	const request = ++worldDatapackRequest
-	try {
-		const data = await listDatapacks(props.instance.id)
-		if (request !== worldDatapackRequest) return
-		worldDatapacks.value = data ?? []
-		debugState('world datapacks loaded', {
-			worlds: worldDatapacks.value.length,
-			datapacks: worldDatapacks.value.reduce((total, world) => total + world.datapacks.length, 0),
-		})
-	} catch (error) {
-		if (request !== worldDatapackRequest) return
-		worldDatapacks.value = []
-		console.warn('Could not load world datapacks:', error)
-	}
-}
-
-/**
- * World datapacks (files inside `saves/<world>/datapacks/`) are surfaced as
- * plain content items so the content tab treats them exactly like mods,
- * resource packs, shaders and schematics: the type filter pill and its count
- * come from real items, rows render in the content table grouped per save,
- * and delete goes through the world-datapack command.
- */
-const worldDatapackItems = computed<ContentItem[]>(() =>
-	worldDatapacks.value.flatMap((entry) =>
-		entry.datapacks.map((datapack) => {
-			const id = `local:world-datapack:${entry.path}:${datapack.file_name}`
-			const versionRange = getPackFormatRange(datapack.pack_format)
-			const versionNumber =
-				versionRange?.min ?? (datapack.pack_format != null ? String(datapack.pack_format) : '')
-			return {
-				id,
-				file_name: datapack.file_name,
-				file_path: `saves/${entry.path}/datapacks/${datapack.file_name}`,
-				project_type: 'datapack',
-				update: null,
-				origin_provider: null,
-				enabled: datapack.enabled !== false,
-				external: true,
-				source_kind: 'world_datapack',
-				instanceOwnershipKind: 'local_discovered',
-				instanceMaterializationState: 'present',
-				instanceCapabilities: {
-					canToggle: false,
-					canDelete: true,
-					canUpdate: false,
-					canChangeVersion: false,
-					canRestorePackDefault: false,
-				},
-				project: {
-					id,
-					slug: datapack.display_name,
-					title: datapack.display_name,
-					icon_url: datapack.icon,
-				},
-				version: {
-					id: datapack.file_name,
-					version_number: versionNumber,
-					file_name: datapack.file_name,
-				},
-				provider_refs: [],
-			} satisfies ContentItem
-		}),
-	),
-)
+const { worldDatapackItems, isWorldDatapackItem, loadWorldDatapacks, deleteWorldDatapackItem } =
+	useWorldDatapacks(() => props.instance.id)
 
 const mergedProjects = computed<ContentItem[]>(() => {
 	const active = installingItems.value.get(props.instance.id)
@@ -1280,21 +1213,6 @@ async function removeMod(mod: ContentItem) {
 	} finally {
 		finishContentOperation(mod, operation)
 	}
-}
-
-function isWorldDatapackItem(item: ContentItem) {
-	return item.project_type === 'datapack' && item.source_kind === 'world_datapack'
-}
-
-async function deleteWorldDatapackItem(item: ContentItem) {
-	const segments = (item.file_path ?? '').split('/')
-	const worldPath = segments[1]
-	const fileName = segments[3]
-	if (!worldPath || !fileName) {
-		throw new Error('Invalid world datapack path')
-	}
-	await deleteDatapack(props.instance.id, worldPath, fileName)
-	await loadWorldDatapacks()
 }
 
 async function restorePackDefault(item: ContentItem) {

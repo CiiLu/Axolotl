@@ -344,14 +344,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "İçerik yüklemesi başarısız oldu"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "İçerik yükleniyor..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Hiç içerik bulunamadı."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Lütfen bekleyin"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "{count, number} türündeki içerikleri arayın..."

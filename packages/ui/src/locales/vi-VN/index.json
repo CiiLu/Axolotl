@@ -371,14 +371,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Không thể tải nội dung"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Đang tải nội dung..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Không có nội dung nào được tìm thấy."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Vui lòng chờ"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Tìm trong {count, number} {contentType}..."

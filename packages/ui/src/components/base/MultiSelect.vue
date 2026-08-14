@@ -561,7 +561,7 @@ const props = withDefaults(
 		checkboxPosition?: 'left' | 'right'
 		/** Open the dropdown on mouse hover and close it when the pointer leaves. */
 		hoverOpen?: boolean
-		/** Render the trigger in the highlighted "active" tone (e.g. all options selected). */
+		/** Render the trigger in the highlighted "active" tone. */
 		active?: boolean
 	}>(),
 	{

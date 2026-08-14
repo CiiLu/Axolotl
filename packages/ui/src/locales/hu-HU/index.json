@@ -326,14 +326,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Hiba történt a tartalom betöltésekor"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Tartalom betöltése..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Nincsen tartalom."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Kérjük, várjon"
   },
   "content.page-layout.share.file-names": {
     "defaultMessage": "Fájlnevek"

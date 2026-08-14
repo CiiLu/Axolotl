@@ -377,14 +377,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Error al cargar contenido"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Cargando contenido..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "No se encontró contenido."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Por favor, espera"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Buscar {count, number} {contentType}..."

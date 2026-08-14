@@ -371,14 +371,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Nepodařilo se načíst obsah"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Načítání obsahu..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Nebyl nalezen obsah."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Prosím, počkej"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Prohledat {count, number} {contentType}..."

@@ -377,14 +377,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Laden von Inhalten fehlgeschlagen"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Lade Inhalte..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Keine Inhalte gefunden."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Bitte warten"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "{count, number} {contentType} durchsuchen..."

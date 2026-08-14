@@ -878,14 +878,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Failed to load content"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Loading content..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "No content found."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Please wait"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Search {count, number} {contentType}..."

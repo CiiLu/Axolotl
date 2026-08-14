@@ -137,9 +137,6 @@
   "content.confirm-deletion.admonition-header": {
     "defaultMessage": "Advarsel ved sletning"
   },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Vent venligst"
-  },
   "form.label.address-line": {
     "defaultMessage": "Adresse"
   },

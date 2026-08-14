@@ -713,14 +713,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "無法載入內容"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "正在載入內容..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "找不到內容。"
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "請稍候"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "搜尋 {count, number} 個{contentType}..."

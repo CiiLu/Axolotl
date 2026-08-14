@@ -254,14 +254,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Falha ao carregar conteúdo"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Carregando conteúdo"
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Nenhum conteúdo encontrado"
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Aguarde"
   },
   "content.page-layout.share.file-names": {
     "defaultMessage": "Nomes dos ficheiros"

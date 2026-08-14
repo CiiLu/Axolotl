@@ -326,14 +326,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "コンテンツの読み込みに失敗しました"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "コンテンツを読み込んでいます…"
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "コンテンツが見つかりませんでした。"
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "お待ちください"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "フォルダ内の{contentType}を検索..."

@@ -284,14 +284,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Fout bij het laden van content"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Content aan het laden..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Geen content gevonden."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Wacht alsjeblieft"
   },
   "content.page-layout.share.file-names": {
     "defaultMessage": "Bestandsnamen"

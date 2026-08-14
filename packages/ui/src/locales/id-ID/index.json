@@ -344,14 +344,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Gagal memuat konten"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Sedang memuat konten..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Konten tidak ditemukan."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Mohon tunggu"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Cari {count, number} {contentType}..."

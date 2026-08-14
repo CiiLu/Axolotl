@@ -99,6 +99,14 @@ fn main() {
                     ),
             )
             .plugin(
+                "datapacks",
+                InlinedPlugin::new()
+                    .commands(&["list_datapacks", "delete_datapack"])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "curseforge",
                 InlinedPlugin::new()
                     .commands(&[

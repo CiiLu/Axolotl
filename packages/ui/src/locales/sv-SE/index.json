@@ -359,14 +359,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Kunde inte ladda innehåll"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Laddar innehåll..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Inget innehåll hittades."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Vänligen vänta"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Sök {count, number} {contentType}..."

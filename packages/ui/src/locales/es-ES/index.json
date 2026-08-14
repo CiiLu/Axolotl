@@ -374,14 +374,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "No se ha podido cargar el contenido"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Cargando contenido..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "No se ha encontrado ningún contenido."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Por favor, espere"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Buscar {count, number} {contentType}..."

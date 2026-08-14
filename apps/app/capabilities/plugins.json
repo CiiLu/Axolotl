@@ -118,6 +118,7 @@
 		"cache:default",
 		"content-search:default",
 		"curseforge:default",
+		"datapacks:default",
 		"files:default",
 		"settings:default",
 		"seed-map:default",

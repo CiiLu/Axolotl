@@ -353,14 +353,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Не удалось загрузить контент"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Загрузка контента..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Ничего не найдено."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Подождите"
   },
   "content.page-layout.share.file-names": {
     "defaultMessage": "Названия файлов"

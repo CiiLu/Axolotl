@@ -317,14 +317,8 @@
   "content.page-layout.failed-to-load": {
     "defaultMessage": "Gagal memuat kandungan"
   },
-  "content.page-layout.loading": {
-    "defaultMessage": "Sedang memuat kandungan..."
-  },
   "content.page-layout.no-content-found": {
     "defaultMessage": "Tiada kandungan dijumpai."
-  },
-  "content.page-layout.please-wait": {
-    "defaultMessage": "Sila tunggu"
   },
   "content.page-layout.share.file-names": {
     "defaultMessage": "Nama fail"
