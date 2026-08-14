@@ -414,10 +414,7 @@ async function clearCache() {
 			<label class="flex flex-col gap-2 font-semibold text-contrast">
 				{{ formatMessage(messages.provider) }}
 				<Combobox v-model="settings.provider" :options="providerOptions" />
-				<span
-					v-if="settings.provider === 'google'"
-					class="text-xs font-normal text-secondary"
-				>
+				<span v-if="settings.provider === 'google'" class="text-xs font-normal text-secondary">
 					{{ formatMessage(messages.googleIpPool, { count: googleIpPoolSize }) }}
 				</span>
 			</label>

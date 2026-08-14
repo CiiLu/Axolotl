@@ -762,7 +762,7 @@ mod tests {
 
     #[tokio::test]
     async fn cache_round_trip() {
-        use sqlx::SqlitePoolOptions;
+        use sqlx::sqlite::SqlitePoolOptions;
 
         let pool = SqlitePoolOptions::new()
             .connect("sqlite::memory:")
