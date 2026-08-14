@@ -37,7 +37,7 @@ useHead({
 		eyebrow="隐私政策"
 		title="隐私政策"
 		description="本政策说明 Axolotl Launcher 官方网站和桌面应用处理数据的方式，以及第三方服务可能接收的信息。"
-		updated-at="2026 年 8 月 2 日"
+		updated-at="2026 年 8 月 14 日"
 	>
 		<h2>1. 适用范围</h2>
 		<p>
@@ -54,7 +54,8 @@ useHead({
 		</ul>
 		<p>
 			这些偏好主要保存在 Cookie 或浏览器 localStorage 中，你可通过浏览器设置清除。网站不使用广告
-			Cookie，也未集成项目自有的用户行为分析服务。
+			Cookie。网站接入<a href="https://howxm.com" target="_blank" rel="noopener">浩客（Howxm）</a>
+			作为第三方用户体验分析和反馈收集服务；其可根据服务配置处理与网站访问、交互、设备或浏览器及网络请求相关的信息，以展示问卷、收集评价和改进网站体验。
 		</p>
 		<p>
 			网站托管和网络基础设施提供者可能为保障访问、安全和故障排查而处理常规请求信息，例如 IP
@@ -83,6 +84,7 @@ useHead({
 			<li>你选择的第三方 Yggdrasil 认证服务；</li>
 			<li>Modrinth、CurseForge 及内容作者提供的 API 和下载地址；</li>
 			<li>GitHub、CNB 及其他用于版本检查、更新或文件分发的服务；</li>
+			<li>用于官网用户体验分析和反馈收集的浩客（Howxm）；</li>
 			<li>你主动连接的 Minecraft 服务器或其他外部链接。</li>
 		</ul>
 		<p>项目维护者不会出售你的个人信息。第三方如何保存和使用请求数据，由其各自的隐私政策决定。</p>
@@ -128,7 +130,7 @@ useHead({
 		eyebrow="Privacy Policy"
 		title="Privacy Policy"
 		description="This policy explains how the Axolotl Launcher official website and desktop application handle data, and what information third-party services may receive."
-		updated-at="August 2, 2026"
+		updated-at="August 14, 2026"
 	>
 		<h2>1. Scope</h2>
 		<p>
@@ -149,8 +151,12 @@ useHead({
 		</ul>
 		<p>
 			These preferences are mainly stored in cookies or browser localStorage and can be cleared
-			through your browser settings. The website uses no advertising cookies and integrates no
-			project-owned user behavior analytics service.
+			through your browser settings. The website uses no advertising cookies. It integrates
+			<a href="https://howxm.com" target="_blank" rel="noopener">Howxm</a> as a third-party
+			user-experience analytics and feedback collection service. Depending on its service
+			configuration, Howxm may process information related to website visits, interactions, devices
+			or browsers, and network requests to display surveys, collect ratings, and improve the website
+			experience.
 		</p>
 		<p>
 			Website hosting and network infrastructure providers may process routine request information
@@ -195,6 +201,7 @@ useHead({
 			<li>
 				GitHub, CNB, and other services used for version checks, updates, or file distribution;
 			</li>
+			<li>Howxm for official-website user-experience analytics and feedback collection;</li>
 			<li>Minecraft servers or other external links you connect to.</li>
 		</ul>
 		<p>
