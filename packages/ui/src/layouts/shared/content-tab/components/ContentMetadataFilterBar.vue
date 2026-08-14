@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FilterIcon } from '@modrinth/assets'
-import { ref, watch } from 'vue'
+import { Tooltip } from 'floating-vue'
+import { onBeforeUnmount, ref } from 'vue'
 
 import ButtonStyled from '#ui/components/base/ButtonStyled.vue'
 import MultiSelect from '#ui/components/base/MultiSelect.vue'
@@ -27,6 +28,10 @@ const messages = defineMessages({
 		id: 'content.metadata-filter.toggle',
 		defaultMessage: 'Filter',
 	},
+	longPressReset: {
+		id: 'content.metadata-filter.long-press-reset',
+		defaultMessage: 'Long-press to reset filters',
+	},
 })
 
 const props = withDefaults(
@@ -44,12 +49,20 @@ const emit = defineEmits<{
 	'update:category': [key: string, values: string[]]
 }>()
 
-/** 筛选条折叠状态：默认折叠，点击筛选按钮展开/收起。 */
-const expanded = ref(false)
+/** 筛选条折叠状态：默认折叠，点击筛选按钮展开/收起。父层据此决定是否应用筛选。 */
+const expanded = defineModel<boolean>('expanded', { default: false })
 
-// 收起筛选器时自动重置筛选（全选）
-watch(expanded, (isExpanded) => {
-	if (isExpanded) return
+// ---- 长按重置筛选（仅在展开状态生效） ----
+
+const LONG_PRESS_MS = 600
+const RING_DELAY_MS = 120
+const RING_FILL_MS = LONG_PRESS_MS - RING_DELAY_MS
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+let ringTimer: ReturnType<typeof setTimeout> | null = null
+let longPressTriggered = false
+const pressing = ref(false)
+
+function resetAllFilters() {
 	for (const category of props.categories) {
 		emit(
 			'update:category',
@@ -57,6 +70,46 @@ watch(expanded, (isExpanded) => {
 			category.options.map((option) => option.value),
 		)
 	}
+}
+
+function startLongPress() {
+	if (!expanded.value) return
+	longPressTriggered = false
+	ringTimer = setTimeout(() => {
+		ringTimer = null
+		pressing.value = true
+	}, RING_DELAY_MS)
+	longPressTimer = setTimeout(() => {
+		longPressTimer = null
+		pressing.value = false
+		longPressTriggered = true
+		resetAllFilters()
+	}, LONG_PRESS_MS)
+}
+
+function cancelLongPress() {
+	if (ringTimer !== null) {
+		clearTimeout(ringTimer)
+		ringTimer = null
+	}
+	if (longPressTimer !== null) {
+		clearTimeout(longPressTimer)
+		longPressTimer = null
+	}
+	pressing.value = false
+}
+
+function handleToggleClick() {
+	if (longPressTriggered) {
+		longPressTriggered = false
+		return
+	}
+	expanded.value = !expanded.value
+}
+
+onBeforeUnmount(() => {
+	if (longPressTimer !== null) clearTimeout(longPressTimer)
+	if (ringTimer !== null) clearTimeout(ringTimer)
 })
 
 const filterScrollRef = ref<HTMLElement | null>(null)
@@ -77,22 +130,55 @@ function isCategoryFiltering(category: MetadataFilterCategory): boolean {
 
 <template>
 	<div class="group relative flex min-w-0 flex-1 items-center gap-1.5">
-		<ButtonStyled
-			circular
-			:type="expanded ? 'chip' : 'transparent'"
-			:color="expanded ? 'brand' : 'standard'"
-			color-fill="text"
-			hover-color-fill="background"
+		<Tooltip
+			:delay="{ show: 0, hide: 0 }"
+			popper-class="filter-metadata-tooltip"
+			placement="bottom"
+			:distance="6"
 		>
-			<button
-				v-tooltip="formatMessage(messages.filterToggle)"
-				:aria-label="formatMessage(messages.filterToggle)"
-				:aria-expanded="expanded"
-				@click="expanded = !expanded"
+			<ButtonStyled
+				circular
+				:type="expanded ? 'chip' : 'transparent'"
+				:color="expanded ? 'brand' : 'standard'"
+				color-fill="text"
+				hover-color-fill="background"
 			>
-				<FilterIcon />
-			</button>
-		</ButtonStyled>
+				<button
+					:aria-label="
+						expanded ? formatMessage(messages.longPressReset) : formatMessage(messages.filterToggle)
+					"
+					:aria-expanded="expanded"
+					@click="handleToggleClick"
+					@pointerdown="startLongPress"
+					@pointerup="cancelLongPress"
+					@pointerleave="cancelLongPress"
+					@pointercancel="cancelLongPress"
+				>
+					<FilterIcon />
+				</button>
+			</ButtonStyled>
+
+			<template #popper>
+				<div class="flex flex-col items-center gap-1">
+					<span class="whitespace-nowrap text-xs font-semibold">
+						{{
+							expanded
+								? formatMessage(messages.longPressReset)
+								: formatMessage(messages.filterToggle)
+						}}
+					</span>
+					<div
+						v-if="pressing"
+						class="long-press-bar h-1 w-full min-w-[5rem] overflow-hidden rounded-full bg-surface-5"
+					>
+						<div
+							class="long-press-bar-fill h-full rounded-full bg-brand"
+							:style="{ animationDuration: RING_FILL_MS + 'ms' }"
+						/>
+					</div>
+				</div>
+			</template>
+		</Tooltip>
 
 		<div
 			class="grid min-w-0 flex-1 transition-[grid-template-columns] duration-300 ease-in-out"
@@ -158,5 +244,24 @@ function isCategoryFiltering(category: MetadataFilterCategory): boolean {
 
 .content-filter-scroll::-webkit-scrollbar {
 	display: none;
+}
+
+.long-press-bar-fill {
+	animation: long-press-bar-fill 480ms linear forwards;
+}
+
+@keyframes long-press-bar-fill {
+	from {
+		width: 0%;
+	}
+	to {
+		width: 100%;
+	}
+}
+</style>
+
+<style>
+.filter-metadata-tooltip {
+	transition: none !important;
 }
 </style>

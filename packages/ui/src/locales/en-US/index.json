@@ -815,6 +815,9 @@
   "content.metadata-filter.loader.quilt": {
     "defaultMessage": "Quilt"
   },
+  "content.metadata-filter.long-press-reset": {
+    "defaultMessage": "Long-press to reset filters"
+  },
   "content.metadata-filter.open-source": {
     "defaultMessage": "Open source"
   },

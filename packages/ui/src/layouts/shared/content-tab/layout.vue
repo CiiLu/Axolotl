@@ -250,13 +250,20 @@ const metadataFilteringKeys = computed(() =>
 		.filter((category) => isCategoryFiltering(category.key))
 		.map((category) => category.key),
 )
+const metadataFilterExpanded = ref(false)
 
 // Metadata filters (作者/环境/状态/更新/类型/加载器/来源/外部文件/开源) apply on
 // top of the search pipeline, so the whole table (including modpack groups)
 // is filtered consistently.
-const filteredItems = computed(() => applyMetadataFilters(pipelineFilteredItems.value))
+const filteredItems = computed(() =>
+	metadataFilterExpanded.value
+		? applyMetadataFilters(pipelineFilteredItems.value)
+		: pipelineFilteredItems.value,
+)
 const filteredModpackItems = computed(() =>
-	applyMetadataFilters(pipelineFilteredModpackItems.value),
+	metadataFilterExpanded.value
+		? applyMetadataFilters(pipelineFilteredModpackItems.value)
+		: pipelineFilteredModpackItems.value,
 )
 
 const { selectedIds, selectedItems, clearSelection, removeFromSelection } = useContentSelection(
@@ -953,6 +960,7 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 				>
 					<template #header-project>
 						<ContentMetadataFilterBar
+							v-model:expanded="metadataFilterExpanded"
 							:categories="metadataFilterCategories"
 							:model-value="metadataFilterSelectedValues"
 							:filtering-keys="metadataFilteringKeys"
