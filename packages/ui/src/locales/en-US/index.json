@@ -939,7 +939,7 @@
     "defaultMessage": "Select file to import"
   },
   "creation-flow.modal.import-instance.select-file.description": {
-    "defaultMessage": "Import a modpack file or launcher archive (.mrpack, .zip)"
+    "defaultMessage": "Import a modpack file or launcher archive"
   },
   "creation-flow.modal.import-instance.select-folder": {
     "defaultMessage": "Select folder to import"

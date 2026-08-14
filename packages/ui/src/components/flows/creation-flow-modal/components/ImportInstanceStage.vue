@@ -41,7 +41,7 @@ const messages = defineMessages({
 	},
 	selectFileDescription: {
 		id: 'creation-flow.modal.import-instance.select-file.description',
-		defaultMessage: 'Import a modpack file or launcher archive (.mrpack, .zip)',
+		defaultMessage: 'Import a modpack file or launcher archive',
 	},
 	selectFolder: {
 		id: 'creation-flow.modal.import-instance.select-folder',
@@ -64,7 +64,6 @@ async function handleOpenFilePicker() {
 		const { open } = await import('@tauri-apps/plugin-dialog')
 		const result = await open({
 			multiple: false,
-			filters: [{ name: 'Modpack', extensions: ['mrpack', 'zip'] }],
 		})
 		const filePath = typeof result === 'string' ? result : (result?.path ?? null)
 		if (!filePath) return

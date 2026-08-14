@@ -1780,7 +1780,7 @@ async function unpairInstance() {
 	linkedModpackUpdateVersionId.value = null
 	localImportedModpackUnlinked.value = true
 	linkedModpackContentItems.value = []
-	await initProjects()
+	await initProjects('bypass')
 }
 
 async function handleShareItems(
@@ -1960,8 +1960,14 @@ function applyContentData(contentData: InstanceContentData) {
 		paths: contentData.contentItems.map((c) => c.file_name).slice(0, 20),
 	})
 	contentSnapshot.value = contentData.snapshot
-	projects.value = contentData.contentItems
-	linkedModpackContentItems.value = contentData.linkedContentItems
+	let contentItems = contentData.contentItems
+	let linkedContentItems = contentData.linkedContentItems
+	if (!contentData.modpack && !isPackLocked.value && linkedContentItems.length > 0) {
+		contentItems = [...contentItems, ...linkedContentItems]
+		linkedContentItems = []
+	}
+	projects.value = contentItems
+	linkedModpackContentItems.value = linkedContentItems
 	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
 
 	if (contentData.modpack) {
@@ -1982,12 +1988,11 @@ function applyContentData(contentData: InstanceContentData) {
 
 	loading.value = false
 
-	const hasContent =
-		contentData.contentItems.length > 0 || contentData.linkedContentItems.length > 0
+	const hasContent = contentItems.length > 0 || linkedContentItems.length > 0
 	if (hasContent) {
 		writeInstanceCache(props.instance.id, {
-			contentItems: contentData.contentItems,
-			linkedContentItems: contentData.linkedContentItems,
+			contentItems,
+			linkedContentItems,
 			modpack: contentData.modpack
 				? {
 						project: contentData.modpack.project,
@@ -2219,7 +2224,7 @@ provideContentManager({
 						: null,
 			toggleDisabled: item.instanceCapabilities?.canToggle === false,
 			hideSwitchVersion:
-				item.instanceOwnershipKind === 'pack_managed' ||
+				(isPackLocked.value && item.instanceOwnershipKind === 'pack_managed') ||
 				item.instanceCapabilities?.canChangeVersion === false,
 			pendingManualDownload: item.pendingManualDownload,
 			installing: item.installing,
@@ -2264,8 +2269,14 @@ async function loadInitialContent(): Promise<void> {
 			contentItems: cached.contentItems.length,
 			linkedItems: cached.linkedContentItems.length,
 		})
-		projects.value = cached.contentItems
-		linkedModpackContentItems.value = cached.linkedContentItems
+		let cachedContentItems = cached.contentItems
+		let cachedLinkedItems = cached.linkedContentItems
+		if (!cached.modpack && !isPackLocked.value && cachedLinkedItems.length > 0) {
+			cachedContentItems = [...cachedContentItems, ...cachedLinkedItems]
+			cachedLinkedItems = []
+		}
+		projects.value = cachedContentItems
+		linkedModpackContentItems.value = cachedLinkedItems
 		if (cached.modpack) {
 			linkedModpackProject.value = cached.modpack.project
 			linkedModpackVersion.value = cached.modpack.version
