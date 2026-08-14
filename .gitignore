@@ -92,3 +92,5 @@ plugins-workspace/*
 
 # Local Netlify folder
 .netlify
+.cf-reconcile-test
+.cf-reconcile-state-a

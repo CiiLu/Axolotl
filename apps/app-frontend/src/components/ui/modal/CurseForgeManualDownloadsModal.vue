@@ -11,10 +11,10 @@
 			<p class="m-0 text-secondary">
 				{{
 					installed == null
-						? formatMessage(messages.existingBody, { manual: items.length })
+						? formatMessage(messages.existingBody, { manual: remainingCount })
 						: formatMessage(messages.body, {
 								installed,
-								manual: items.length,
+								manual: remainingCount,
 							})
 				}}
 			</p>
@@ -219,6 +219,10 @@ const messages = defineMessages({
 		id: 'app.curseforge.manual-downloads.retrying',
 		defaultMessage: 'File verification failed. Choose the required file.',
 	},
+	stateChanged: {
+		id: 'app.curseforge.manual-downloads.state-changed',
+		defaultMessage: 'Download state changed. Waiting for synchronization.',
+	},
 })
 
 const emit = defineEmits<{
@@ -228,6 +232,7 @@ const emit = defineEmits<{
 
 const modal = ref<InstanceType<typeof NewModal>>()
 const items = ref<CurseForgeManualDownloadItem[]>([])
+const candidateItems = ref<CurseForgeManualDownloadItem[]>([])
 const installed = ref<number | null>(null)
 const instanceId = ref<string | null>(null)
 const scanning = ref(false)
@@ -236,10 +241,12 @@ const downloadDirectory = ref<string | null>(null)
 const scannerEnabled = ref(true)
 const scanDirectory = ref<string | null>(null)
 const importedKeys = ref(new Set<string>())
+const inconsistentKeys = ref(new Set<string>())
 const errorKeys = ref(new Set<string>())
 const busyKeys = ref(new Set<string>())
 let scannerActive = false
 let scanGeneration = 0
+let reconciliationGeneration = 0
 let scanInFlight: Promise<CurseForgeManualDownloadScanResult> | undefined
 let scanInterval: ReturnType<typeof setInterval> | null = null
 let unlistenInstances: (() => void) | null = null
@@ -269,6 +276,7 @@ function isImported(item: CurseForgeManualDownloadItem) {
 function itemStatus(item: CurseForgeManualDownloadItem) {
 	if (isImported(item)) return formatMessage(messages.importComplete)
 	if (errorKeys.value.has(itemKey(item))) return formatMessage(messages.retrying)
+	if (inconsistentKeys.value.has(itemKey(item))) return formatMessage(messages.stateChanged)
 	return formatMessage(messages.waiting)
 }
 
@@ -279,19 +287,22 @@ function show(payload: {
 }) {
 	stopScanning()
 	scannerActive = true
-	items.value = payload.items
+	const seededItems = [...new Map(payload.items.map((item) => [itemKey(item), item])).values()]
+	candidateItems.value = seededItems
+	items.value = seededItems
 	installed.value = payload.installed ?? null
 	instanceId.value = payload.instanceId ?? null
 	downloadDirectory.value = null
 	scanError.value = false
 	importedKeys.value = new Set()
+	inconsistentKeys.value = new Set()
 	errorKeys.value = new Set()
 	busyKeys.value = new Set()
 	const scannerSettings = getMissingContentScannerSettings()
 	scannerEnabled.value = scannerSettings.enabled
 	scanDirectory.value = scannerSettings.directory
 	modal.value?.show()
-	void refreshPendingDownloads()
+	void reconcileManualDownloadState().catch(handleError)
 	if (scannerEnabled.value) {
 		void scanDownloads()
 		scanInterval = setInterval(() => {
@@ -300,18 +311,66 @@ function show(payload: {
 	}
 }
 
-async function refreshPendingDownloads() {
+async function reconcileManualDownloadState() {
 	const currentInstanceId = instanceId.value
 	if (!scannerActive || !currentInstanceId) return
-	try {
-		const pending = await listPendingCurseForgeManualDownloads(currentInstanceId)
-		if (!scannerActive || currentInstanceId !== instanceId.value) return
-		const existing = new Map(items.value.map((item) => [itemKey(item), item]))
-		for (const item of pending) existing.set(itemKey(item), item)
-		items.value = [...existing.values()]
-	} catch (error) {
-		handleError(error)
+	const generation = ++reconciliationGeneration
+	const [pending, snapshot] = await Promise.all([
+		listPendingCurseForgeManualDownloads(currentInstanceId),
+		get_content_snapshot(currentInstanceId),
+	])
+	if (
+		!scannerActive ||
+		currentInstanceId !== instanceId.value ||
+		generation !== reconciliationGeneration
+	) {
+		return
 	}
+
+	const pendingByKey = new Map(pending.map((item) => [itemKey(item), item]))
+	const candidateByKey = new Map(candidateItems.value.map((item) => [itemKey(item), item]))
+	for (const [key, item] of pendingByKey) candidateByKey.set(key, item)
+	const nextCandidates = [...candidateByKey.values()]
+	const nextItems = nextCandidates.map((item) => pendingByKey.get(itemKey(item)) ?? item)
+	const materializedByKey = new Map<string, string>()
+	for (const item of snapshot.items) {
+		if (
+			item.provider === 'curseforge' &&
+			item.providerProjectId != null &&
+			item.providerReleaseId != null &&
+			item.materializationState === 'present' &&
+			item.content != null
+		) {
+			materializedByKey.set(
+				`${item.providerProjectId}:${item.providerReleaseId}`,
+				item.expectedRelativePath,
+			)
+		}
+	}
+
+	const nextImported = new Set<string>()
+	const nextInconsistent = new Set<string>()
+	const newlyImported: CurseForgeManualDownloadImport[] = []
+	for (const item of nextItems) {
+		const key = itemKey(item)
+		if (pendingByKey.has(key)) continue
+		const relativePath = materializedByKey.get(key)
+		if (relativePath == null) {
+			nextInconsistent.add(key)
+			continue
+		}
+		nextImported.add(key)
+		if (!importedKeys.value.has(key)) {
+			newlyImported.push({ projectId: item.projectId, fileId: item.fileId, relativePath })
+		}
+	}
+
+	candidateItems.value = nextCandidates
+	items.value = nextItems
+	importedKeys.value = nextImported
+	inconsistentKeys.value = nextInconsistent
+	errorKeys.value = new Set([...errorKeys.value].filter((key) => pendingByKey.has(key)))
+	if (newlyImported.length > 0) emit('imported', currentInstanceId, newlyImported)
 }
 
 function hide() {
@@ -321,6 +380,7 @@ function hide() {
 function stopScanning() {
 	scannerActive = false
 	scanGeneration += 1
+	reconciliationGeneration += 1
 	if (scanInterval != null) {
 		clearInterval(scanInterval)
 		scanInterval = null
@@ -348,23 +408,14 @@ async function scanDownloads(): Promise<void> {
 		scanError.value = false
 		downloadDirectory.value = result.downloadDirectory ?? null
 		errorKeys.value = new Set(result.errors.map((item) => `${item.projectId}:${item.fileId}`))
-		if (result.imported.length > 0) {
-			const nextImported = new Set(importedKeys.value)
-			const nextErrors = new Set(errorKeys.value)
-			for (const item of result.imported) {
-				const key = `${item.projectId}:${item.fileId}`
-				nextImported.add(key)
-				nextErrors.delete(key)
-			}
-			importedKeys.value = nextImported
-			errorKeys.value = nextErrors
-			emit('imported', currentInstanceId, result.imported)
-		}
+		await reconcileManualDownloadState().catch(handleError)
 	} catch {
 		if (generation !== scanGeneration) return
 		scanError.value = true
 		errorKeys.value = new Set(
-			items.value.filter((item) => !isImported(item)).map((item) => itemKey(item)),
+			items.value
+				.filter((item) => !isImported(item) && !inconsistentKeys.value.has(itemKey(item)))
+				.map((item) => itemKey(item)),
 		)
 	} finally {
 		if (scanInFlight === operation) scanInFlight = undefined
@@ -374,52 +425,6 @@ async function scanDownloads(): Promise<void> {
 			scanning.value = false
 		}
 	}
-}
-
-async function refreshImportedState() {
-	const currentInstanceId = instanceId.value
-	if (!scannerActive || !currentInstanceId) return
-
-	const snapshot = await get_content_snapshot(currentInstanceId)
-	if (!scannerActive || currentInstanceId !== instanceId.value) return
-	const pendingKeys = new Set(
-		snapshot.pendingManualDownloads
-			.filter((download) => download.provider === 'curseforge')
-			.map((download) => `${download.providerProjectId}:${download.providerReleaseId}`),
-	)
-	const materializedByKey = new Map<string, string>()
-	for (const item of snapshot.items) {
-		if (
-			item.provider === 'curseforge' &&
-			item.providerProjectId != null &&
-			item.providerReleaseId != null &&
-			item.materializationState === 'present' &&
-			item.content != null
-		) {
-			materializedByKey.set(
-				`${item.providerProjectId}:${item.providerReleaseId}`,
-				item.expectedRelativePath,
-			)
-		}
-	}
-	const imported = items.value.flatMap((item) => {
-		const key = itemKey(item)
-		const relativePath = materializedByKey.get(key)
-		if (isImported(item) || pendingKeys.has(key) || relativePath == null) return []
-		return [{ projectId: item.projectId, fileId: item.fileId, relativePath }]
-	})
-	if (imported.length === 0) return
-
-	const nextImported = new Set(importedKeys.value)
-	const nextErrors = new Set(errorKeys.value)
-	for (const item of imported) {
-		const key = `${item.projectId}:${item.fileId}`
-		nextImported.add(key)
-		nextErrors.delete(key)
-	}
-	importedKeys.value = nextImported
-	errorKeys.value = nextErrors
-	emit('imported', currentInstanceId, imported)
 }
 
 async function openOne(item: CurseForgeManualDownloadItem) {
@@ -435,19 +440,13 @@ async function chooseLocalFile(item: CurseForgeManualDownloadItem) {
 	if (!sourcePath) return
 	busyKeys.value = new Set(busyKeys.value).add(key)
 	try {
-		const imported = await importPendingCurseForgeManualDownloadFile(
+		await importPendingCurseForgeManualDownloadFile(
 			currentInstanceId,
 			item.projectId,
 			item.fileId,
 			sourcePath,
 		)
-		const nextImported = new Set(importedKeys.value)
-		nextImported.add(key)
-		importedKeys.value = nextImported
-		const nextErrors = new Set(errorKeys.value)
-		nextErrors.delete(key)
-		errorKeys.value = nextErrors
-		emit('imported', currentInstanceId, [imported])
+		await reconcileManualDownloadState().catch(handleError)
 	} catch {
 		const nextErrors = new Set(errorKeys.value)
 		nextErrors.add(key)
@@ -479,7 +478,7 @@ onMounted(() => {
 			event.instance_id === instanceId.value &&
 			scannerActive
 		) {
-			await refreshImportedState().catch(() => {
+			await reconcileManualDownloadState().catch(() => {
 				scanError.value = true
 			})
 		}
