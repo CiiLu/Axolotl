@@ -145,8 +145,8 @@ BEGIN
 		SET
 			last_seen_day = excluded.last_seen_day,
 			occurrence_count = occurrence_count + excluded.occurrence_count,
-			installation_count = installation_count + IIF(
-				NOT EXISTS (
+			installation_count = installation_count + CASE
+				WHEN NOT EXISTS (
 					SELECT 1
 					FROM error_reports AS previous
 					WHERE
@@ -154,10 +154,9 @@ BEGIN
 						AND previous.app_version = NEW.app_version
 						AND previous.installation_hash = NEW.installation_hash
 						AND previous.event_id != NEW.event_id
-				),
-				1,
-				0
-			),
+				) THEN 1
+				ELSE 0
+			END,
 			latest_error_type = excluded.latest_error_type,
 			latest_message = excluded.latest_message,
 			sample_object_key = COALESCE(error_groups.sample_object_key, excluded.sample_object_key);
@@ -168,8 +167,8 @@ BEGIN
 	ON CONFLICT (day, fingerprint, app_version) DO UPDATE
 		SET
 			occurrence_count = occurrence_count + excluded.occurrence_count,
-			installation_count = installation_count + IIF(
-				NOT EXISTS (
+			installation_count = installation_count + CASE
+				WHEN NOT EXISTS (
 					SELECT 1
 					FROM error_reports AS previous
 					WHERE
@@ -178,18 +177,17 @@ BEGIN
 						AND previous.app_version = NEW.app_version
 						AND previous.installation_hash = NEW.installation_hash
 						AND previous.event_id != NEW.event_id
-				),
-				1,
-				0
-			);
+				) THEN 1
+				ELSE 0
+			END;
 
 	INSERT INTO daily_totals (day, error_occurrences, distinct_error_groups)
 	VALUES
 		(
 			NEW.day,
 			NEW.occurrence_count,
-			IIF(
-				NOT EXISTS (
+			CASE
+				WHEN NOT EXISTS (
 					SELECT 1
 					FROM error_reports AS previous
 					WHERE
@@ -197,10 +195,9 @@ BEGIN
 						AND previous.fingerprint = NEW.fingerprint
 						AND previous.app_version = NEW.app_version
 						AND previous.event_id != NEW.event_id
-				),
-				1,
-				0
-			)
+				) THEN 1
+				ELSE 0
+			END
 		)
 	ON CONFLICT (day) DO UPDATE
 		SET
