@@ -1634,9 +1634,6 @@
 	"app.minecraft-crash.ai-unavailable": {
 		"message": "当前日志服务（mclo.gs）不支持 AI 分析，请在设置中切换到 LogShare.CN。"
 	},
-	"app.minecraft-crash.body": {
-		"message": "寻求帮助时不要发送此窗口截图。请导出错误报告，这样对方才能同时检查崩溃报告、游戏日志、调试日志和 JVM 信息。"
-	},
 	"app.minecraft-crash.analyzing": {
 		"message": "正在分析本次启动留下的日志……"
 	},
