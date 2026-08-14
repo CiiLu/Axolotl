@@ -97,10 +97,6 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'改进“从最近的项目开始”组件布局：新增 3x1 和 3x2 尺寸，并在 2x1 和 2x2 尺寸下隐藏游戏模式及分隔小圆点。',
 				},
-				{
-					'en-US': 'Pinned worlds now hide game mode in the 2x1 and 2x2 sizes.',
-					'zh-CN': '“固定的世界”组件现在也会在 2x1 和 2x2 尺寸下隐藏游戏模式。',
-				},
 			],
 			fixed: [
 				{
