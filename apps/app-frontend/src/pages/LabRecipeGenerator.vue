@@ -30,6 +30,7 @@ import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { useResultCountWheel } from '@/composables/lab/useResultCountWheel'
 import { drawCountOnCanvas } from '@/lab/recipe-generator/count-display'
 import {
+	createDatapackDescription,
 	createDatapackFiles,
 	type DatapackRecipe,
 	type PackFile,
@@ -1180,7 +1181,9 @@ function buildDatapackFiles(): PackFile[] | null {
 		}
 	})
 	try {
-		const files = createDatapackFiles(store.selectedVersion, recipes, tags)
+		const productNames = store.recipes.map((recipe) => sidebarTitle(recipe))
+		const description = createDatapackDescription(productNames)
+		const files = createDatapackFiles(store.selectedVersion, recipes, tags, description)
 		const fileName = `axolotl-recipes-${store.selectedVersion}.zip`
 		pendingDatapack.value = { files, fileName }
 		return files
