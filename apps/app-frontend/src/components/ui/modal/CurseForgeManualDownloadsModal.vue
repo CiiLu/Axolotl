@@ -127,6 +127,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import {
+	classifyCurseForgeManualDownloadImportError,
 	type CurseForgeManualDownloadImport,
 	type CurseForgeManualDownloadScanResult,
 	importCurseForgeManualDownloads,
@@ -447,10 +448,23 @@ async function chooseLocalFile(item: CurseForgeManualDownloadItem) {
 			sourcePath,
 		)
 		await reconcileManualDownloadState().catch(handleError)
-	} catch {
-		const nextErrors = new Set(errorKeys.value)
-		nextErrors.add(key)
-		errorKeys.value = nextErrors
+	} catch (error) {
+		const errorKind = classifyCurseForgeManualDownloadImportError(error)
+		if (errorKind === 'verification_failed') {
+			const nextErrors = new Set(errorKeys.value)
+			nextErrors.add(key)
+			errorKeys.value = nextErrors
+			const nextInconsistent = new Set(inconsistentKeys.value)
+			nextInconsistent.delete(key)
+			inconsistentKeys.value = nextInconsistent
+		} else if (errorKind === 'not_pending') {
+			const nextErrors = new Set(errorKeys.value)
+			nextErrors.delete(key)
+			errorKeys.value = nextErrors
+			await reconcileManualDownloadState().catch(handleError)
+		} else {
+			handleError(error)
+		}
 	} finally {
 		const nextBusy = new Set(busyKeys.value)
 		nextBusy.delete(key)
