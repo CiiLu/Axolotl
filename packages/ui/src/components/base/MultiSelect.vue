@@ -19,6 +19,8 @@
 			:aria-disabled="disabled || undefined"
 			@click="handleTriggerClick($event)"
 			@keydown="handleTriggerKeydown"
+			@mouseenter="handleTriggerMouseEnter"
+			@mouseleave="handleTriggerMouseLeave"
 		>
 			<slot
 				v-if="hasCustomInputContent"
@@ -121,6 +123,8 @@
 					aria-multiselectable="true"
 					@mousedown.stop
 					@keydown="handleDropdownKeydown"
+					@mouseenter="handleDropdownMouseEnter"
+					@mouseleave="handleDropdownMouseLeave"
 				>
 					<div class="empty:hidden">
 						<div
@@ -508,6 +512,8 @@ const props = withDefaults(
 		selectionActionsClearLabel?: string
 		maxTagRows?: number
 		checkboxPosition?: 'left' | 'right'
+		/** Open the dropdown on mouse hover and close it when the pointer leaves. */
+		hoverOpen?: boolean
 	}>(),
 	{
 		placeholder: 'Select options',
@@ -527,6 +533,7 @@ const props = withDefaults(
 		selectionActionsClearLabel: 'Clear',
 		maxTagRows: 1,
 		checkboxPosition: 'left',
+		hoverOpen: false,
 	},
 )
 
@@ -552,6 +559,7 @@ const rafId = ref<number | null>(null)
 const tagsContainerRef = ref<HTMLElement>()
 const optionsOverlayScrollbars = ref<OverlayScrollbarsInstance | null>(null)
 const lastSelectionActionsHeight = ref(0)
+const hoverCloseTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const dropdownStyle = ref({
 	top: '0px',
@@ -841,6 +849,54 @@ function toggleDropdown() {
 		closeDropdown()
 	} else {
 		openDropdown()
+	}
+}
+
+function handleTriggerMouseEnter() {
+	if (!props.hoverOpen || props.disabled) return
+	if (hoverCloseTimer.value) {
+		clearTimeout(hoverCloseTimer.value)
+		hoverCloseTimer.value = null
+	}
+	if (!isOpen.value) {
+		openDropdown()
+	}
+}
+
+function handleTriggerMouseLeave() {
+	if (!props.hoverOpen) return
+	scheduleHoverClose()
+}
+
+function handleDropdownMouseEnter() {
+	if (!props.hoverOpen) return
+	if (hoverCloseTimer.value) {
+		clearTimeout(hoverCloseTimer.value)
+		hoverCloseTimer.value = null
+	}
+}
+
+function handleDropdownMouseLeave() {
+	if (!props.hoverOpen) return
+	scheduleHoverClose()
+}
+
+function scheduleHoverClose() {
+	if (hoverCloseTimer.value) {
+		clearTimeout(hoverCloseTimer.value)
+	}
+	hoverCloseTimer.value = setTimeout(() => {
+		hoverCloseTimer.value = null
+		if (isOpen.value) {
+			closeDropdown()
+		}
+	}, 200)
+}
+
+function clearHoverCloseTimer() {
+	if (hoverCloseTimer.value) {
+		clearTimeout(hoverCloseTimer.value)
+		hoverCloseTimer.value = null
 	}
 }
 
@@ -1367,6 +1423,7 @@ onUnmounted(() => {
 	window.removeEventListener('resize', handleWindowResize)
 	stopPositionTracking()
 	destroyOptionsOverlayScrollbars()
+	clearHoverCloseTimer()
 })
 
 watch(isOpen, (value) => {

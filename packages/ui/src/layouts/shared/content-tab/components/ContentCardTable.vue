@@ -199,16 +199,13 @@ function handleSort(column: ContentCardTableSortColumn) {
 					class="flex items-center gap-1.5 font-semibold text-secondary"
 					@click="handleSort('version')"
 				>
-					{{ formatMessage(commonMessages.versionLabel) }}
 					<ChevronUpIcon v-if="sortBy === 'version' && sortDirection === 'asc'" class="size-4" />
 					<ChevronDownIcon
 						v-else-if="sortBy === 'version' && sortDirection === 'desc'"
 						class="size-4"
 					/>
 				</button>
-				<span v-else role="columnheader" class="font-semibold text-secondary">{{
-					formatMessage(commonMessages.versionLabel)
-				}}</span>
+				<span v-else role="columnheader" class="font-semibold text-secondary"></span>
 			</div>
 
 			<div

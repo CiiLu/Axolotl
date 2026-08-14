@@ -240,6 +240,7 @@ pub(crate) async fn get_content_snapshot(
                     .map(|stem| stem.to_string_lossy().into_owned())
             })
             .unwrap_or_else(|| file.file_name.clone());
+        let external = provider_refs.is_empty();
         let content = ContentItem {
             file_name: file.file_name.clone(),
             file_path: file.relative_path.clone(),
@@ -258,6 +259,7 @@ pub(crate) async fn get_content_snapshot(
                     .map(|metadata| metadata.mod_id.clone()),
                 title,
                 icon_url: file.icon_path.clone(),
+                license: None,
             }),
             version: local_mod.as_ref().and_then(|metadata| {
                 metadata.version.clone().map(|version| ContentItemVersion {
@@ -273,6 +275,10 @@ pub(crate) async fn get_content_snapshot(
             provider_refs,
             origin_provider,
             rollback: None,
+            environment: None,
+            source_kind: entry.map(|entry| entry.source_kind),
+            external,
+            loader: local_mod.as_ref().and_then(|meta| meta.loader.clone()),
         };
         items.push(snapshot_item(
             Some(file.id.clone()),

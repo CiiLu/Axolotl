@@ -7,7 +7,9 @@ import type { Option as OverflowMenuOption } from '#ui/components/base/OverflowM
 export type ContentCardProject = Pick<
 	Labrinth.Projects.v2.Project,
 	'id' | 'slug' | 'title' | 'icon_url'
->
+> & {
+	license?: Labrinth.Projects.v2.Project['license'] | null
+}
 
 export type ContentCardVersion = Pick<Labrinth.Versions.v2.Version, 'id' | 'version_number'> & {
 	file_name: string
@@ -117,6 +119,12 @@ export interface ContentItem extends Omit<
 	origin_provider: 'modrinth' | 'curseforge' | null
 	date_added?: string
 	environment?: string
+	/** Local content source kind (local / curseforge / modrinth_modpack / server_project / imported_modpack / shared_instance). */
+	source_kind?: string
+	/** True when the file is not linked to any online project. */
+	external?: boolean
+	/** Loader derived from the installed version or locally parsed mod metadata. */
+	loader?: string
 	pack_client_retained?: boolean
 	pack_client_depends?: boolean
 	installing?: boolean

@@ -17,7 +17,7 @@ use crate::state::{
     ContentItemVersion, ContentProvider, ContentProviderRef, Dependency,
     LinkedModpackInfo, ModLoader, ModrinthFileMatch, ModrinthProjectId,
     ModrinthVersionId, Organization, OwnerType, Project, ProjectType,
-    ReleaseChannel, TeamMember, Version,
+    ReleaseChannel, TeamMember, Version, VersionV3,
 };
 use crate::util::fetch::{
     ContentValidation, DownloadMeta, DownloadReason, DownloadRequest,
@@ -1116,6 +1116,7 @@ pub(crate) async fn dependencies_to_content_items(
                     slug: project.slug.clone(),
                     title: project.title.clone(),
                     icon_url: project.icon_url.clone(),
+                    license: Some(project.license.clone()),
                 }),
                 version: version.map(|version| ContentItemVersion {
                     id: version.id.clone(),
@@ -1146,6 +1147,12 @@ pub(crate) async fn dependencies_to_content_items(
                 }],
                 origin_provider: Some(ContentProvider::Modrinth),
                 rollback: None,
+                environment: None,
+                source_kind: None,
+                external: false,
+                loader: version.and_then(|version| {
+                    version.loaders.first().cloned()
+                }),
             })
         })
         .collect::<Vec<_>>();
@@ -1577,9 +1584,10 @@ async fn content_files_to_content_items(
     let mut provider_refs_by_path =
         HashMap::<String, Vec<ContentProviderRef>>::new();
     let mut origin_provider_by_path = HashMap::<String, ContentProvider>::new();
+    let mut source_kind_by_path = HashMap::<String, ContentSourceKind>::new();
     let provider_rows = sqlx::query(
         "SELECT file.relative_path, ref.provider, ref.provider_project_id,
-                ref.provider_release_id, ref.is_origin
+                ref.provider_release_id, ref.is_origin, entry.source_kind
          FROM instance_files file
          INNER JOIN instance_content_entries entry ON entry.file_id = file.id
          INNER JOIN instance_content_provider_refs ref
@@ -1603,6 +1611,13 @@ async fn content_files_to_content_items(
         if row.try_get::<i64, _>("is_origin")? != 0 {
             origin_provider_by_path
                 .insert(row.try_get("relative_path")?, provider);
+        }
+        if let Some(source_kind) =
+            row.try_get::<Option<String>, _>("source_kind")?
+            && let Ok(source_kind) = ContentSourceKind::from_str(&source_kind)
+        {
+            source_kind_by_path
+                .insert(row.try_get("relative_path")?, source_kind);
         }
     }
     let curseforge_project_ids = provider_refs_by_path
@@ -1808,10 +1823,23 @@ async fn content_files_to_content_items(
                         })
                     })
                 });
-            let owner = project.and_then(|project| {
-                resolve_owner(project, &meta.teams, &meta.organizations)
-            });
-
+            let version_v3 = installed_version_id
+                .as_ref()
+                .and_then(|version_id| {
+                    meta.versions_v3
+                        .iter()
+                        .find(|version| version.id == version_id.as_str())
+                })
+                .or_else(|| {
+                    file.modrinth.as_ref().and_then(|metadata| {
+                        meta.versions_v3.iter().find(|version| {
+                            version.id == metadata.version_id.as_str()
+                        })
+                    })
+                });
+            let environment = version_v3.and_then(|version| version.environment);
+            let source_kind = source_kind_by_path.get(path).copied();
+            let external = provider_refs.is_empty();
             // Parse local_mod_data for fallback display when Modrinth /
             // CurseForge has no match for this file.
             let local_mod = file.local_mod_data.as_ref().and_then(|json| {
@@ -1820,6 +1848,30 @@ async fn content_files_to_content_items(
                 )
                 .ok()
             });
+            // Loader priority: locally parsed mod metadata (most reliable for
+            // CurseForge-only files, whose CF game versions often omit the
+            // loader token) → installed version loaders → local metadata.
+            let local_loader = local_mod
+                .as_ref()
+                .and_then(|meta| meta.loader.clone());
+            let loader = local_loader
+                .as_deref()
+                .filter(|loader| {
+                    matches!(
+                        *loader,
+                        "fabric" | "forge" | "quilt" | "neoforge"
+                    )
+                })
+                .map(str::to_string)
+                .or_else(|| {
+                    version
+                        .and_then(|version| version.loaders.first().cloned())
+                })
+                .or(local_loader);
+            let owner = project.and_then(|project| {
+                resolve_owner(project, &meta.teams, &meta.organizations)
+            });
+
             let cached_icon = file
                 .icon_path
                 .as_ref()
@@ -1839,6 +1891,7 @@ async fn content_files_to_content_items(
                         slug: project.slug.clone(),
                         title: project.title.clone(),
                         icon_url: project.icon_url.clone(),
+                        license: Some(project.license.clone()),
                     })
                     .or_else(|| {
                         curseforge_project.map(|project| ContentItemProject {
@@ -1849,6 +1902,7 @@ async fn content_files_to_content_items(
                                 .logo
                                 .as_ref()
                                 .map(|logo| logo.thumbnail_url.clone()),
+                            license: None,
                         })
                     })
                     .or_else(|| {
@@ -1860,6 +1914,7 @@ async fn content_files_to_content_items(
                                 .clone()
                                 .unwrap_or_else(|| meta.mod_id.clone()),
                             icon_url: cached_icon.clone(),
+                            license: None,
                         })
                     })
                     .or_else(|| {
@@ -1877,6 +1932,7 @@ async fn content_files_to_content_items(
                                     })
                                     .unwrap_or_else(|| file.file_name.clone()),
                                 icon_url: cached_icon.clone(),
+                                license: None,
                             }
                         })
                     }),
@@ -1961,6 +2017,10 @@ async fn content_files_to_content_items(
                     &file.file_name,
                     &content_backups,
                 ),
+                environment,
+                source_kind,
+                external,
+                loader,
             }
         })
         .collect::<Vec<_>>();
@@ -2010,6 +2070,7 @@ fn rollback_for_content_file(
 struct ResolvedMetadata {
     projects: Vec<Project>,
     versions: Vec<Version>,
+    versions_v3: Vec<VersionV3>,
     teams: Vec<Vec<TeamMember>>,
     organizations: Vec<Organization>,
 }
@@ -2029,7 +2090,7 @@ async fn resolve_metadata(
         .iter()
         .map(|id| ModrinthVersionId::new(id.clone()))
         .collect::<crate::Result<Vec<_>>>()?;
-    let (projects, versions) =
+    let (projects, versions, versions_v3) =
         if !project_ids.is_empty() || !version_ids.is_empty() {
             tokio::try_join!(
                 async {
@@ -2057,10 +2118,23 @@ async fn resolve_metadata(
                         )
                         .await
                     }
+                },
+                async {
+                    if version_ids.is_empty() {
+                        Ok(Vec::new())
+                    } else {
+                        CachedEntry::get_version_v3_many(
+                            &version_id_refs,
+                            cache_behaviour,
+                            pool,
+                            fetch_semaphore,
+                        )
+                        .await
+                    }
                 }
             )?
         } else {
-            (Vec::new(), Vec::new())
+            (Vec::new(), Vec::new(), Vec::new())
         };
     let team_ids = projects
         .iter()
@@ -2109,6 +2183,7 @@ async fn resolve_metadata(
     Ok(ResolvedMetadata {
         projects,
         versions,
+        versions_v3,
         teams,
         organizations,
     })
