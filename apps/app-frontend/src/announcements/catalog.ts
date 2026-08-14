@@ -74,6 +74,15 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '修改侧边栏折叠方式，优化了侧边栏的收起展开交互。',
 				},
 				{
+					'en-US': 'Removed duplicate options in the content interface, such as the delete button.',
+					'zh-CN': '移除内容界面部分重复的选项，例如删除按钮。',
+				},
+				{
+					'en-US':
+						'Added a delete button to the schematic management interface and moved the edit button to a more organized position.',
+					'zh-CN': '为投影管理增加删除按钮，移动编辑按钮到整齐的位置。',
+				},
+				{
 					'en-US':
 						'Improved the CurseForge missing-file recovery workflow. Manual imports, monitored-folder imports, and the missing-files dialog now use the latest pending state to stay synchronized.',
 					'zh-CN':

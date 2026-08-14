@@ -325,7 +325,10 @@ export function useContentMetadataFilters(
 					'server_project',
 					'shared_instance',
 				],
-				values: (item) => (item.source_kind ? [item.source_kind] : [UNKNOWN]),
+				values: (item) => {
+					const kind = item.source_kind === 'world_datapack' ? 'local' : item.source_kind
+					return kind ? [kind] : [UNKNOWN]
+				},
 				labelFor: (value) => {
 					switch (value) {
 						case 'local':
@@ -340,8 +343,11 @@ export function useContentMetadataFilters(
 							return formatMessage(messages.optionSourceServerProject)
 						case 'shared_instance':
 							return formatMessage(messages.optionSourceSharedInstance)
-						default:
+						case UNKNOWN:
 							return formatMessage(messages.optionUnknown)
+						default:
+							// 未登记的新来源值：显示可读的原始值，避免与真正的"未知"选项重复
+							return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 					}
 				},
 			},

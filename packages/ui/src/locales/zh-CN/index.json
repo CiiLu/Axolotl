@@ -860,6 +860,9 @@
   "content.metadata-filter.state.enabled": {
     "defaultMessage": "已启用"
   },
+  "content.metadata-filter.toggle": {
+    "defaultMessage": "筛选"
+  },
   "content.metadata-filter.unknown": {
     "defaultMessage": "未知"
   },

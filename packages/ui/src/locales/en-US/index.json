@@ -860,6 +860,9 @@
   "content.metadata-filter.state.enabled": {
     "defaultMessage": "Enabled"
   },
+  "content.metadata-filter.toggle": {
+    "defaultMessage": "Filter"
+  },
   "content.metadata-filter.unknown": {
     "defaultMessage": "Unknown"
   },
