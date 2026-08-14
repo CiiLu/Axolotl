@@ -4225,5 +4225,7 @@
   },
   "drop.confirm.as-data-pack-desc": {
     "defaultMessage": "将数据包安装到存档"
-  }
+  },
+  "app.sidebar.collapse": "收起侧栏",
+  "app.sidebar.expand": "展开侧栏"
 }
