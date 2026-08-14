@@ -1,9 +1,19 @@
 <script setup lang="ts">
-import { DownloadIcon, ExternalIcon } from '@modrinth/assets'
-import { Admonition, ButtonStyled, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
+import { ExternalIcon } from '@modrinth/assets'
+import {
+	Admonition,
+	ButtonStyled,
+	defineMessages,
+	injectModrinthClient,
+	injectNotificationManager,
+	isAIAnalysisAvailable,
+	NewModal,
+	shareLogs,
+	useVIntl,
+} from '@modrinth/ui'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 
+import AILogAnalysisModal from '@/components/ui/AILogAnalysisModal.vue'
 import {
 	clearCrashAnalysis,
 	type CrashAnalysisResult,
@@ -12,7 +22,6 @@ import {
 import type { MinecraftLaunchErrorPayload } from '@/composables/useMinecraftLaunchError'
 import { process_listener } from '@/helpers/events.js'
 import { get as getInstance } from '@/helpers/instance'
-import { export_crash_context } from '@/helpers/logs.js'
 import { shouldShowMinecraftCrash } from '@/helpers/process.js'
 
 interface CrashModalPayload extends MinecraftLaunchErrorPayload {
@@ -35,17 +44,14 @@ interface CrashWarningPayload extends MinecraftLaunchErrorPayload {
 
 type Unlisten = () => void
 
-const emit = defineEmits<{
-	error: [error: unknown]
-}>()
-
-const router = useRouter()
 const { formatMessage } = useVIntl()
+const client = injectModrinthClient()
+const { addNotification } = injectNotificationManager()
 const modal = ref<InstanceType<typeof NewModal>>()
+const aiModal = ref<InstanceType<typeof AILogAnalysisModal>>()
 const payload = ref<Partial<CrashModalPayload>>({})
-const preview = ref(false)
-const exporting = ref(false)
-const analyzing = ref(false)
+const sharing = ref(false)
+let lastAnalysis: CrashAnalysisResult | null = null
 const activeRuns = new Map<string, string>()
 const lastShownAt = new Map<string, number>()
 let unlistenProcess: Unlisten | undefined
@@ -70,14 +76,6 @@ const messages = defineMessages({
 		id: 'app.minecraft-crash.support-hint',
 		defaultMessage:
 			'When asking for help, send the exported ZIP. Do not send only a screenshot of this window because it does not contain the diagnostic evidence.',
-	},
-	exportContext: {
-		id: 'app.minecraft-crash.export-context',
-		defaultMessage: 'Export Minecraft error report',
-	},
-	viewLogs: {
-		id: 'app.minecraft-crash.view-logs',
-		defaultMessage: 'View logs and analysis',
 	},
 	previewInstance: {
 		id: 'app.minecraft-crash.preview-instance',
@@ -209,6 +207,44 @@ const messages = defineMessages({
 		defaultMessage:
 			'This is an automatic guess, not a guaranteed diagnosis. Open the log analysis for the full context before applying the suggested fix.',
 	},
+	shareDiagnostic: {
+		id: 'app.minecraft-crash.share-diagnostic',
+		defaultMessage: 'Share diagnostic',
+	},
+	sharingDiagnostic: {
+		id: 'app.minecraft-crash.sharing-diagnostic',
+		defaultMessage: 'Sharing diagnostic...',
+	},
+	shareFailed: {
+		id: 'app.minecraft-crash.share-failed',
+		defaultMessage: 'Failed to share the diagnostic',
+	},
+	shareTruncated: {
+		id: 'app.minecraft-crash.share-truncated',
+		defaultMessage: 'The diagnostic log is too large, so only the last 9 MB was uploaded.',
+	},
+	shareCopied: {
+		id: 'app.minecraft-crash.share-copied',
+		defaultMessage: 'Diagnostic link copied to your clipboard',
+	},
+	copyLink: {
+		id: 'app.minecraft-crash.copy-link',
+		defaultMessage: 'Copy link',
+	},
+	aiAnalyze: {
+		id: 'app.minecraft-crash.ai-analyze',
+		defaultMessage: 'AI analysis',
+	},
+	noLogContent: {
+		id: 'app.minecraft-crash.no-log-content',
+		defaultMessage:
+			'No log content was found to share or analyze. Make sure the instance has logs generated in the last few minutes.',
+	},
+	aiUnavailable: {
+		id: 'app.minecraft-crash.ai-unavailable',
+		defaultMessage:
+			'AI analysis is not supported by the current log service (mclo.gs). Switch to LogShare.CN in Settings to use it.',
+	},
 })
 
 const diagnosisMessages = {
@@ -267,7 +303,6 @@ function show(modalPayload: CrashModalPayload, isPreview = false): boolean {
 	}
 	analysisVersion += 1
 	payload.value = modalPayload
-	preview.value = isPreview
 	modal.value?.show()
 	return true
 }
@@ -312,20 +347,16 @@ async function analyzeAndUpdate(
 	fallbackHint?: string,
 ): Promise<CrashAnalysisResult | null> {
 	const version = analysisVersion
-	analyzing.value = true
-	try {
-		const analysis = await refreshCrashAnalysis(modalPayload.instance_id).catch((error) => {
-			console.error('Failed to analyze Minecraft crash', error)
-			return null
-		})
-		if (mounted && version === analysisVersion) {
-			payload.value = applyAnalysis(modalPayload, analysis)
-			if (!analysis?.findings.length && fallbackHint) payload.value.hint = fallbackHint
-		}
-		return analysis
-	} finally {
-		if (mounted && version === analysisVersion) analyzing.value = false
+	const analysis = await refreshCrashAnalysis(modalPayload.instance_id).catch((error) => {
+		console.error('Failed to analyze Minecraft crash', error)
+		return null
+	})
+	lastAnalysis = analysis
+	if (mounted && version === analysisVersion) {
+		payload.value = applyAnalysis(modalPayload, analysis)
+		if (!analysis?.findings.length && fallbackHint) payload.value.hint = fallbackHint
 	}
+	return analysis
 }
 
 async function handleLaunchError(
@@ -364,25 +395,76 @@ function showPreview(): void {
 	)
 }
 
-async function exportContext(): Promise<void> {
-	const instanceId = payload.value.instance_id
-	if (preview.value || !instanceId || exporting.value) return
+const shareUrl = ref('')
+let lastShare: { id?: string; url?: string } | null = null
 
-	exporting.value = true
+function notifyNoLogContent(): void {
+	addNotification({
+		title: formatMessage(messages.noLogContent),
+		type: 'warning',
+	})
+}
+
+async function shareDiagnostic(): Promise<void> {
+	if (sharing.value) return
+	if (!lastAnalysis?.combined_log) {
+		notifyNoLogContent()
+		return
+	}
+	sharing.value = true
+	shareUrl.value = ''
 	try {
-		await export_crash_context(instanceId, payload.value.instance_name || 'Minecraft')
+		const result = await shareLogs(client, lastAnalysis.combined_log)
+		if (result.truncated) {
+			addNotification({
+				title: formatMessage(messages.shareTruncated),
+				type: 'warning',
+			})
+		}
+		shareUrl.value = result.url
+		lastShare = result.id ? { id: result.id, url: result.url } : null
+		await navigator.clipboard.writeText(result.url)
+		addNotification({
+			title: formatMessage(messages.shareCopied),
+			type: 'success',
+		})
 	} catch (error) {
-		emit('error', error)
+		console.error('Failed to share crash diagnostic', error)
+		addNotification({
+			title: formatMessage(messages.shareFailed),
+			type: 'error',
+		})
 	} finally {
-		exporting.value = false
+		sharing.value = false
 	}
 }
 
-async function openLogs(): Promise<void> {
-	const instanceId = payload.value.instance_id
-	if (preview.value || !instanceId) return
-	modal.value?.hide()
-	await router.push(`/instance/${encodeURIComponent(instanceId)}/logs`)
+async function copyShareUrl(): Promise<void> {
+	if (!shareUrl.value) return
+	try {
+		await navigator.clipboard.writeText(shareUrl.value)
+		addNotification({
+			title: formatMessage(messages.shareCopied),
+			type: 'success',
+		})
+	} catch (error) {
+		console.error('Failed to copy share URL', error)
+	}
+}
+
+function openAIAnalysis(): void {
+	if (!lastAnalysis?.combined_log) {
+		notifyNoLogContent()
+		return
+	}
+	if (!isAIAnalysisAvailable()) {
+		addNotification({
+			title: formatMessage(messages.aiUnavailable),
+			type: 'warning',
+		})
+		return
+	}
+	aiModal.value?.show(lastAnalysis, lastShare)
 }
 
 async function handleProcessEvent(event: ProcessEvent): Promise<void> {
@@ -405,6 +487,7 @@ async function handleProcessEvent(event: ProcessEvent): Promise<void> {
 			console.error('Failed to analyze finished Minecraft process', error)
 			return null
 		})
+		lastAnalysis = analysis
 		if (!mounted) return
 
 		const instance = await getInstance(event.instance_id).catch(() => null)
@@ -455,22 +538,41 @@ defineExpose({ handleLaunchError, handleWarning, isLaunchFailure, showPreview })
 			<p v-if="showSupportHint" class="m-0 text-secondary">
 				{{ formatMessage(messages.supportHint) }}
 			</p>
+			<div v-if="shareUrl" class="flex items-center gap-2 rounded-lg bg-surface-2 p-3">
+				<ExternalIcon class="h-4 w-4 shrink-0 text-secondary" />
+				<a
+					:href="shareUrl"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="min-w-0 flex-1 truncate text-primary underline"
+				>
+					{{ shareUrl }}
+				</a>
+				<ButtonStyled type="outlined">
+					<button @click="copyShareUrl">
+						{{ formatMessage(messages.copyLink) }}
+					</button>
+				</ButtonStyled>
+			</div>
 		</div>
 		<template #actions>
 			<div class="flex flex-wrap justify-end gap-2">
 				<ButtonStyled type="outlined">
-					<button :disabled="analyzing" @click="openLogs">
-						<ExternalIcon />
-						{{ formatMessage(messages.viewLogs) }}
+					<button :disabled="sharing" @click="shareDiagnostic">
+						{{
+							sharing
+								? formatMessage(messages.sharingDiagnostic)
+								: formatMessage(messages.shareDiagnostic)
+						}}
 					</button>
 				</ButtonStyled>
 				<ButtonStyled color="brand">
-					<button :disabled="analyzing || exporting" @click="exportContext">
-						<DownloadIcon />
-						{{ formatMessage(messages.exportContext) }}
+					<button @click="openAIAnalysis">
+						{{ formatMessage(messages.aiAnalyze) }}
 					</button>
 				</ButtonStyled>
 			</div>
 		</template>
 	</NewModal>
+	<AILogAnalysisModal ref="aiModal" />
 </template>

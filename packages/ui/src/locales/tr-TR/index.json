@@ -779,9 +779,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "Dosyaları ara"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "mclo.gs'de paylaş"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Upload from .zip file"
   },

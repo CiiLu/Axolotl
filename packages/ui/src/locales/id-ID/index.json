@@ -668,9 +668,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "Cari berkas"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "Bagikan ke mclo.gs"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Unggah dari berkas .zip"
   },

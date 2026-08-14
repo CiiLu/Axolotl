@@ -1,5 +1,11 @@
 <template>
-	<div v-if="instance" :class="{ 'flex h-full flex-col': isFixedRender }">
+	<div
+		v-if="instance"
+		:class="{
+			'flex h-full flex-col': isFixedRender,
+			'instance-fixed-render': isFixedRender,
+		}"
+	>
 		<div
 			:class="['p-6 pr-2 pb-4', { 'shrink-0': isFixedRender }]"
 			@contextmenu.prevent.stop="(event) => handleRightClick(event)"
@@ -1088,5 +1094,16 @@ Button {
 			display: none;
 		}
 	}
+}
+</style>
+
+<style>
+/*
+ * fixed 渲染模式（日志页）：页面自身不滚动，日志区内部滚动，
+ * 关掉 .app-viewport 的滚动与 scrollbar-gutter，避免出现多余的外层滚动条。
+ */
+.app-viewport:has(.instance-fixed-render) {
+	overflow: hidden;
+	scrollbar-gutter: auto;
 }
 </style>

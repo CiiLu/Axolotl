@@ -155,6 +155,45 @@
   "app.action-bar.view-logs": {
     "message": "View logs"
   },
+  "app.ai-log-analysis.analyzing": {
+    "message": "Analyzing your log with AI..."
+  },
+  "app.ai-log-analysis.cancel": {
+    "message": "Cancel"
+  },
+  "app.ai-log-analysis.close": {
+    "message": "Close"
+  },
+  "app.ai-log-analysis.copy-link": {
+    "message": "Copy link"
+  },
+  "app.ai-log-analysis.copy-result": {
+    "message": "Copy result"
+  },
+  "app.ai-log-analysis.error": {
+    "message": "AI analysis failed: {message}"
+  },
+  "app.ai-log-analysis.link-copied": {
+    "message": "Link copied to your clipboard"
+  },
+  "app.ai-log-analysis.logshare-unavailable": {
+    "message": "LogShare.CN is unavailable, so AI analysis cannot be used (mclo.gs does not support AI analysis). {message}"
+  },
+  "app.ai-log-analysis.privacy": {
+    "message": "Your log content will be uploaded and sent to a third-party AI service to be analyzed. Treat it as public information."
+  },
+  "app.ai-log-analysis.result-copied": {
+    "message": "Analysis copied to your clipboard"
+  },
+  "app.ai-log-analysis.title": {
+    "message": "AI log analysis"
+  },
+  "app.ai-log-analysis.upload-failed": {
+    "message": "Upload failed, analyzing the log content directly without a share link."
+  },
+  "app.ai-log-analysis.uploading": {
+    "message": "Uploading your log..."
+  },
   "app.ai-settings.add-model": {
     "message": "Add model"
   },
@@ -4004,11 +4043,20 @@
   "app.minecraft-auth.what-happened": {
     "message": "What we think happened"
   },
+  "app.minecraft-crash.ai-analyze": {
+    "message": "AI analysis"
+  },
+  "app.minecraft-crash.ai-unavailable": {
+    "message": "AI analysis is not supported by the current log service (mclo.gs). Switch to LogShare.CN in Settings to use it."
+  },
   "app.minecraft-crash.analyzing": {
     "message": "Analyzing the logs from this launch..."
   },
   "app.minecraft-crash.body": {
     "message": "Do not send a screenshot of this window when asking for help. Export the error report instead so the crash report, game logs, debug log, and JVM details can be checked together."
+  },
+  "app.minecraft-crash.copy-link": {
+    "message": "Copy link"
   },
   "app.minecraft-crash.diagnosis.forge-java.action": {
     "message": "You can try using the Java version expected by this Forge release, or updating Forge."
@@ -4076,9 +4124,6 @@
   "app.minecraft-crash.exited-before-initialization": {
     "message": "The Java process exited before it could connect to the launcher. The selected Java version is probably incompatible with this Minecraft or Mod loader version. Select the Java version required by the instance, then try again."
   },
-  "app.minecraft-crash.export-context": {
-    "message": "Export Minecraft error report"
-  },
   "app.minecraft-crash.initialization-timed-out": {
     "message": "The Java process started but did not connect to the launcher within 15 seconds. Check the selected Java version and any wrapper command, then try again."
   },
@@ -4091,11 +4136,29 @@
   "app.minecraft-crash.launch-failure-hint": {
     "message": "Open the Minecraft logs to view the captured Java output. When asking for help, export and send the complete Minecraft diagnostic package."
   },
+  "app.minecraft-crash.no-log-content": {
+    "message": "No log content was found to share or analyze. Make sure the instance has logs generated in the last few minutes."
+  },
   "app.minecraft-crash.preparation-timed-out": {
     "message": "Launch preparation did not finish within 60 seconds and was cancelled. Check the Java path, launch hooks, wrapper command, and network connection, then try again."
   },
   "app.minecraft-crash.preview-instance": {
     "message": "Minecraft test instance"
+  },
+  "app.minecraft-crash.share-copied": {
+    "message": "Diagnostic link copied to your clipboard"
+  },
+  "app.minecraft-crash.share-diagnostic": {
+    "message": "Share diagnostic"
+  },
+  "app.minecraft-crash.share-failed": {
+    "message": "Failed to share the diagnostic"
+  },
+  "app.minecraft-crash.share-truncated": {
+    "message": "The diagnostic log is too large, so only the last 9 MB was uploaded."
+  },
+  "app.minecraft-crash.sharing-diagnostic": {
+    "message": "Sharing diagnostic..."
   },
   "app.minecraft-crash.summary": {
     "message": "Minecraft stopped unexpectedly."
@@ -4105,9 +4168,6 @@
   },
   "app.minecraft-crash.title": {
     "message": "{instanceName} crashed"
-  },
-  "app.minecraft-crash.view-logs": {
-    "message": "View logs and analysis"
   },
   "app.minecraft.playing-as": {
     "message": "Playing as"
@@ -5042,6 +5102,30 @@
   "app.settings.java.view-installed": {
     "message": "View installed Java"
   },
+  "app.settings.logs.description": {
+    "message": "Choose the service used to analyze and share Minecraft logs. LogShare.CN is preferred and mclo.gs is used as a fallback so sharing keeps working."
+  },
+  "app.settings.logs.provider.auto": {
+    "message": "Automatic (recommended)"
+  },
+  "app.settings.logs.provider.auto-description": {
+    "message": "Prefers LogShare.CN, automatically switching to mclo.gs when it is unavailable."
+  },
+  "app.settings.logs.provider.logshare": {
+    "message": "LogShare.CN"
+  },
+  "app.settings.logs.provider.logshare-description": {
+    "message": "Uses LogShare.CN for analysis and sharing, including AI analysis, falling back to mclo.gs when unavailable."
+  },
+  "app.settings.logs.provider.mclogs": {
+    "message": "mclo.gs"
+  },
+  "app.settings.logs.provider.mclogs-description": {
+    "message": "Uses mclo.gs for analysis and sharing. AI analysis is not available."
+  },
+  "app.settings.logs.title": {
+    "message": "Log analysis service"
+  },
   "app.settings.resources.app-cache": {
     "message": "App cache"
   },
@@ -5192,6 +5276,9 @@
   "app.settings.tabs.language": {
     "message": "Language"
   },
+  "app.settings.tabs.logs": {
+    "message": "Logs"
+  },
   "app.settings.tabs.multiplayer": {
     "message": "Multiplayer"
   },
@@ -5257,6 +5344,12 @@
   },
   "app.settings.updates.up-to-date": {
     "message": "Axolotl is up to date."
+  },
+  "app.sidebar.collapse": {
+    "message": "Collapse sidebar"
+  },
+  "app.sidebar.expand": {
+    "message": "Expand sidebar"
   },
   "app.skins.add-button": {
     "message": "Add skin"

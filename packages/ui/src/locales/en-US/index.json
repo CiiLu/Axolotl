@@ -578,6 +578,18 @@
   "console.delete-modal.title": {
     "defaultMessage": "Delete log file"
   },
+  "console.empty.instance-description": {
+    "defaultMessage": "Click the Play button to start receiving live logs."
+  },
+  "console.empty.instance-title": {
+    "defaultMessage": "No logs yet"
+  },
+  "console.empty.server-description": {
+    "defaultMessage": "Click the green start button to start the server!"
+  },
+  "console.empty.server-title": {
+    "defaultMessage": "Welcome to your Modrinth server!"
+  },
   "console.filter.error": {
     "defaultMessage": "Error"
   },
@@ -587,11 +599,20 @@
   "console.filter.warn": {
     "defaultMessage": "Warn"
   },
+  "console.log.toggle-wrap": {
+    "defaultMessage": "Toggle line wrapping"
+  },
+  "console.log.wrap-label": {
+    "defaultMessage": "Wrap"
+  },
   "console.notification.delete-failed": {
     "defaultMessage": "Failed to delete log file"
   },
   "console.notification.share-failed": {
     "defaultMessage": "Failed to share logs"
+  },
+  "console.notification.share-truncated": {
+    "defaultMessage": "The log is too large, so only the last 9 MB was uploaded."
   },
   "console.notification.unknown-error": {
     "defaultMessage": "Unknown error."
@@ -1344,7 +1365,7 @@
     "defaultMessage": "Failed to open file"
   },
   "files.editor.failed-to-share-text": {
-    "defaultMessage": "Could not upload to mclo.gs."
+    "defaultMessage": "Could not share the log file."
   },
   "files.editor.failed-to-share-title": {
     "defaultMessage": "Failed to share file"
@@ -1396,6 +1417,9 @@
   },
   "files.editor.save-failed-title": {
     "defaultMessage": "Save failed"
+  },
+  "files.editor.share-truncated-warning": {
+    "defaultMessage": "The log file is too large, so only the last 9 MB was uploaded."
   },
   "files.error.go-to-home": {
     "defaultMessage": "Go to home folder"
@@ -1505,8 +1529,8 @@
   "files.navbar.search-files": {
     "defaultMessage": "Search files"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "Share to mclo.gs"
+  "files.navbar.share-log": {
+    "defaultMessage": "Share log"
   },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Upload from .zip file"

@@ -692,9 +692,6 @@
   "files.navbar.search-files": {
     "defaultMessage": "Fájlok keresése"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "Megosztás az mclo.gs-en"
-  },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "Feltöltés .zip fájlból"
   },

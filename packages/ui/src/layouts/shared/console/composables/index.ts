@@ -1,13 +1,4 @@
-export {
-	applySearchHighlights,
-	clearSearchHighlights,
-	colorize,
-	type ConditionalLevel,
-	type FilterPredicate,
-	getHighlightVersion,
-	highlightAppendedRange,
-	rewriteTerminal,
-	useConsoleFilters,
-} from './console-filtering'
-export { computeHighlightColors, LogHighlightAddon } from './log-highlight-addon'
+export { type ConditionalLevel, type FilterPredicate, useConsoleFilters } from './console-filtering'
+export type { LogHighlightMode } from './log-highlight'
+export { clearHighlightCache, detectStrictLevel, highlightLine } from './log-highlight'
 export { detectLogLevel } from './log-level'

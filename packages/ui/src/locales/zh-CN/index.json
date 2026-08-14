@@ -593,8 +593,29 @@
   "console.notification.share-failed": {
     "defaultMessage": "分享日志失败"
   },
+  "console.notification.share-truncated": {
+    "defaultMessage": "日志过大，已自动截取最后 9MB 上传。"
+  },
   "console.notification.unknown-error": {
     "defaultMessage": "未知错误。"
+  },
+  "console.log.toggle-wrap": {
+    "defaultMessage": "切换换行"
+  },
+  "console.log.wrap-label": {
+    "defaultMessage": "换行"
+  },
+  "console.empty.instance-title": {
+    "defaultMessage": "暂无日志"
+  },
+  "console.empty.instance-description": {
+    "defaultMessage": "点击右上角「开始游戏」即可接收实时日志"
+  },
+  "console.empty.server-title": {
+    "defaultMessage": "欢迎使用 Modrinth 服务器！"
+  },
+  "console.empty.server-description": {
+    "defaultMessage": "点击绿色启动按钮即可启动服务器！"
   },
   "console.search.placeholder": {
     "defaultMessage": "搜索日志"
@@ -1077,7 +1098,7 @@
     "defaultMessage": "打开文件失败"
   },
   "files.editor.failed-to-share-text": {
-    "defaultMessage": "无法上传到 mclo.gs。"
+    "defaultMessage": "无法分享日志文件。"
   },
   "files.editor.failed-to-share-title": {
     "defaultMessage": "分享文件失败"
@@ -1129,6 +1150,9 @@
   },
   "files.editor.save-failed-title": {
     "defaultMessage": "保存失败"
+  },
+  "files.editor.share-truncated-warning": {
+    "defaultMessage": "日志文件过大，已自动截取最后 9MB 上传。"
   },
   "files.error.go-to-home": {
     "defaultMessage": "前往主文件夹"
@@ -1238,8 +1262,8 @@
   "files.navbar.search-files": {
     "defaultMessage": "搜索文件"
   },
-  "files.navbar.share-to-mclogs": {
-    "defaultMessage": "分享到 mclo.gs"
+  "files.navbar.share-log": {
+    "defaultMessage": "分享日志"
   },
   "files.navbar.upload-from-zip": {
     "defaultMessage": "从 .zip 文件导入"
@@ -4225,7 +4249,5 @@
   },
   "drop.confirm.as-data-pack-desc": {
     "defaultMessage": "将数据包安装到存档"
-  },
-  "app.sidebar.collapse": "收起侧栏",
-  "app.sidebar.expand": "展开侧栏"
+  }
 }

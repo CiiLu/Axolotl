@@ -2,6 +2,7 @@
 import {
 	BotIcon,
 	CoffeeIcon,
+	FileTextIcon,
 	GameIcon,
 	GaugeIcon,
 	GlobeIcon,
@@ -33,6 +34,7 @@ import DefaultInstanceSettings from '@/components/ui/settings/DefaultInstanceSet
 import FeatureFlagSettings from '@/components/ui/settings/FeatureFlagSettings.vue'
 import JavaSettings from '@/components/ui/settings/JavaSettings.vue'
 import LanguageSettings from '@/components/ui/settings/LanguageSettings.vue'
+import LogSettings from '@/components/ui/settings/LogSettings.vue'
 import MultiplayerSettings from '@/components/ui/settings/MultiplayerSettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
 import TranslationSettings from '@/components/ui/settings/TranslationSettings.vue'
@@ -72,6 +74,15 @@ const tabs = [
 		content: LanguageSettings,
 		badge: commonMessages.beta,
 		onboardingId: 'settings-tab-language',
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.logs',
+			defaultMessage: 'Logs',
+		}),
+		icon: FileTextIcon,
+		content: LogSettings,
+		onboardingId: 'settings-tab-logs',
 	},
 	{
 		name: defineMessage({

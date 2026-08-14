@@ -6,6 +6,7 @@
 
 <script setup>
 import {
+	analyseLogs,
 	ConsolePageLayout,
 	defineMessages,
 	injectModrinthClient,
@@ -151,7 +152,7 @@ async function analyseForCrash() {
 	})
 	if (!localAnalysis?.crashed || !localAnalysis.combined_log || props.offline) return
 	try {
-		const data = await client.mclogs.insights_v1.analyse(localAnalysis.combined_log)
+		const data = await analyseLogs(client, localAnalysis.combined_log)
 		if (data.analysis?.problems?.length > 0) {
 			crashAnalysis.value = data
 		}
@@ -214,7 +215,7 @@ watch(selectedLogIndex, async (newIndex) => {
 	const cached = getHistoricalContent(log.filename)
 	if (cached) {
 		historicalConsole.clear()
-		historicalConsole.addLegacyLog(cached)
+		await historicalConsole.addLegacyLog(cached)
 		return
 	}
 
@@ -223,7 +224,7 @@ watch(selectedLogIndex, async (newIndex) => {
 	)
 	if (output) {
 		historicalConsole.clear()
-		historicalConsole.addLegacyLog(output)
+		await historicalConsole.addLegacyLog(output)
 	}
 })
 
@@ -239,7 +240,7 @@ const unlistenLog = await log_listener((payload) => {
 	if (payload.type === 'log4j') {
 		liveConsole.addLog4jEvent(payload)
 	} else if (payload.type === 'legacy') {
-		liveConsole.addLegacyLog(payload.message)
+		void liveConsole.addLegacyLog(payload.message)
 	}
 })
 

@@ -11,7 +11,7 @@ const ENTRY_START_RE = /^\[\d{2}:\d{2}:\d{2}\]/
 export interface ConsoleState {
 	output: Ref<LogLine[]>
 	addLog4jEvent: (event: Log4jEvent) => void
-	addLegacyLog: (message: string) => void
+	addLegacyLog: (message: string) => Promise<void>
 	clear: () => void
 }
 
@@ -148,7 +148,9 @@ export function createConsoleState(): ConsoleState {
 		addLines(formatLog4jLines(event))
 	}
 
-	function addLegacyLog(message: string) {
+	// 历史日志/缓冲大文本一次进入数据（保持行序），渲染由高亮管线分帧消化，
+	// 避免分块写入把实时事件插到历史行之间造成顺序错乱
+	function addLegacyLog(message: string): Promise<void> {
 		const lines = message
 			.split(/[\r\n]+/)
 			.filter(Boolean)
@@ -163,7 +165,15 @@ export function createConsoleState(): ConsoleState {
 			}
 		}
 
-		addLines(lines)
+		for (const line of lines) {
+			output.value.push(line)
+		}
+		const overflow = output.value.length - ARCHIVE_CAPACITY
+		if (overflow > 0) {
+			output.value.splice(0, overflow)
+		}
+		triggerRef(output)
+		return Promise.resolve()
 	}
 
 	function clear() {

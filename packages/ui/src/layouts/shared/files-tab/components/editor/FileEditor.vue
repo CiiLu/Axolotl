@@ -49,6 +49,7 @@ import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { injectModrinthClient } from '#ui/providers'
 import { injectNotificationManager } from '#ui/providers/web-notifications'
 import { getEditorLanguage, getFileExtension, isImageFile } from '#ui/utils/file-extensions'
+import { shareLogs } from '#ui/utils/log-share'
 
 import { injectFileManager } from '../../providers/file-manager'
 import type { EditingFile } from '../../types'
@@ -108,7 +109,11 @@ const messages = defineMessages({
 	},
 	failedToShareText: {
 		id: 'files.editor.failed-to-share-text',
-		defaultMessage: 'Could not upload to mclo.gs.',
+		defaultMessage: 'Could not share the log file.',
+	},
+	logTruncatedWarning: {
+		id: 'files.editor.share-truncated-warning',
+		defaultMessage: 'The log file is too large, so only the last 9 MB was uploaded.',
 	},
 })
 
@@ -267,24 +272,30 @@ async function saveFileContent(exit: boolean = false) {
 	}
 }
 
-async function shareToMclogs() {
-	if (ctx.shareToMclogs) {
-		await ctx.shareToMclogs(fileContent.value)
+async function shareLog() {
+	if (ctx.shareLogs) {
+		await ctx.shareLogs(fileContent.value)
 		return
 	}
 
 	try {
-		const data = await client.mclogs.logs_v1.create(fileContent.value)
+		const result = await shareLogs(client, fileContent.value)
 
-		if (data.success && data.url) {
-			await navigator.clipboard.writeText(data.url)
+		if (result.url) {
+			if (result.truncated) {
+				addNotification({
+					title: formatMessage(messages.logTruncatedWarning),
+					type: 'warning',
+				})
+			}
+			await navigator.clipboard.writeText(result.url)
 			addNotification({
 				title: formatMessage(messages.logUrlCopiedTitle),
 				text: formatMessage(messages.logUrlCopiedText),
 				type: 'success',
 			})
 		} else {
-			throw new Error('mclo.gs upload failed')
+			throw new Error('log share failed')
 		}
 	} catch (error) {
 		console.error('Error sharing file:', error)
@@ -396,7 +407,7 @@ onUnmounted(() => {
 
 defineExpose({
 	saveFileContent,
-	shareToMclogs,
+	shareLog,
 	close,
 	isEditingImage,
 	isFindOpen,
