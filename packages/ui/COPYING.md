@@ -21,7 +21,7 @@ The following files are owned by their respective copyright holders and must be 
 
 ## LogShare-Web-UI log viewer
 
-The log viewer (log highlighting engine, virtualized log viewport, and console toolbar) is adapted from [LogShare-Web-UI](https://github.com/NingZeStudio/LogShare-Web-UI), the frontend of the LogShare.CN log analysis platform, at commit `b5ae2dc`. LogShare-Web-UI is distributed under the MIT License, Copyright (c) 2024 LogShare.CN Team; a verbatim copy of that license is provided in [third-party/licenses/LogShare-Web-UI-MIT.txt](../../third-party/licenses/LogShare-Web-UI-MIT.txt).
+The log viewer (log highlighting engine, virtualized log viewport, and console toolbar) is adapted from [LogShare-Web-UI](https://github.com/NingZeStudio/LogShare-Web-UI), the frontend of the LogShare.CN log analysis platform, at commit `b5ae2dc`. LogShare-Web-UI is distributed under the MIT License, Copyright (c) 2024 LogShare.CN Team; a verbatim copy of that license is provided in [third-party/licenses/MIT.txt](../../third-party/licenses/MIT.txt).
 
 The following files are adapted from LogShare-Web-UI:
 
