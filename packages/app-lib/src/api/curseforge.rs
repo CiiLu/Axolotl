@@ -3465,13 +3465,16 @@ pub async fn recognize_instance_files(
         if let Some(file) = matches.get(&fingerprint) {
             for path in paths {
                 let full_path = instance_path.join(&path);
-                let (size, sha1) = sha1_file_async(&full_path).await?;
-                let state = State::get().await?;
-                let provider_ref = ContentProviderRef::CurseForge {
-                    project_id: CurseForgeProjectId::new(file.mod_id)?,
-                    file_id: Some(CurseForgeFileId::new(file.id)?),
+                let Some((size, sha1)) = verify_recognized_curseforge_file(
+                    &full_path,
+                    file.file_fingerprint,
+                )
+                .await?
+                else {
+                    continue;
                 };
-                crate::state::record_project_file_atomic(
+                let state = State::get().await?;
+                crate::state::record_verified_curseforge_project_file_atomic(
                     instance_id,
                     &path,
                     &sha1,
@@ -3479,9 +3482,9 @@ pub async fn recognize_instance_files(
                     ProjectType::Mod,
                     ContentSourceKind::CurseForge,
                     crate::state::instances::ContentOwnershipKind::UserAdded,
-                    Some(&provider_ref),
+                    CurseForgeProjectId::new(file.mod_id)?,
+                    CurseForgeFileId::new(file.id)?,
                     false,
-                    None,
                     &state,
                 )
                 .await?;
@@ -3499,6 +3502,23 @@ pub async fn recognize_instance_files(
     }
     result.unmatched_paths.sort();
     Ok(result)
+}
+
+async fn verify_recognized_curseforge_file(
+    path: &Path,
+    expected_fingerprint: u64,
+) -> crate::Result<Option<(u64, String)>> {
+    if expected_fingerprint == 0 {
+        return Ok(None);
+    }
+    let bytes = tokio::fs::read(path).await?;
+    if compute_fingerprint(&bytes) as u64 != expected_fingerprint {
+        return Ok(None);
+    }
+    Ok(Some((
+        bytes.len() as u64,
+        sha1_smol::Sha1::from(&bytes).hexdigest(),
+    )))
 }
 
 pub async fn import_manual_downloads(
@@ -3703,6 +3723,94 @@ fn pending_manual_download(
         })
 }
 
+#[derive(Clone, Debug)]
+struct CurseForgeManualDownloadIntegrityMetadata {
+    project_id: u32,
+    file_id: u32,
+    hashes: Vec<CurseForgeFileHash>,
+    file_length: u64,
+    file_fingerprint: u64,
+}
+
+impl From<CurseForgeFile> for CurseForgeManualDownloadIntegrityMetadata {
+    fn from(file: CurseForgeFile) -> Self {
+        Self {
+            project_id: file.mod_id,
+            file_id: file.id,
+            hashes: file.hashes,
+            file_length: file.file_length,
+            file_fingerprint: file.file_fingerprint,
+        }
+    }
+}
+
+fn manual_download_has_integrity_metadata(
+    download: &CurseForgeManualDownload,
+) -> bool {
+    download
+        .hashes
+        .iter()
+        .any(|hash| hash.algo == 1 && !hash.value.trim().is_empty())
+        || download.file_fingerprint != 0
+}
+
+async fn ensure_manual_download_integrity_metadata(
+    download: &CurseForgeManualDownload,
+) -> crate::Result<CurseForgeManualDownload> {
+    ensure_manual_download_integrity_metadata_with(
+        download,
+        resolve_manual_download_integrity_metadata,
+    )
+    .await
+}
+
+async fn resolve_manual_download_integrity_metadata(
+    project_id: u32,
+    file_id: u32,
+) -> crate::Result<CurseForgeManualDownloadIntegrityMetadata> {
+    Ok(get_file(project_id, file_id).await?.into())
+}
+
+async fn ensure_manual_download_integrity_metadata_with<F, Fut>(
+    download: &CurseForgeManualDownload,
+    resolve_metadata: F,
+) -> crate::Result<CurseForgeManualDownload>
+where
+    F: FnOnce(u32, u32) -> Fut,
+    Fut: std::future::Future<
+            Output = crate::Result<CurseForgeManualDownloadIntegrityMetadata>,
+        >,
+{
+    if manual_download_has_integrity_metadata(download) {
+        return Ok(download.clone());
+    }
+
+    let metadata =
+        resolve_metadata(download.project_id, download.file_id).await?;
+    if metadata.project_id != download.project_id
+        || metadata.file_id != download.file_id
+    {
+        return Err(ErrorKind::InputError(
+            "CurseForge returned metadata for a different project or file"
+                .to_string(),
+        )
+        .into());
+    }
+
+    let mut hydrated = download.clone();
+    hydrated.hashes = metadata.hashes;
+    hydrated.file_length = metadata.file_length;
+    hydrated.file_fingerprint = metadata.file_fingerprint;
+    if !manual_download_has_integrity_metadata(&hydrated) {
+        return Err(ErrorKind::InputError(
+            "The required CurseForge file has no usable integrity metadata"
+                .to_string(),
+        )
+        .into());
+    }
+    Ok(hydrated)
+}
+
 async fn find_manual_download_candidate(
     download_directory: &Path,
     download: &CurseForgeManualDownload,
@@ -3716,6 +3824,7 @@ async fn find_manual_download_candidate(
         Err(error) => return Err(error.into()),
     };
 
+    let mut verified_download = None;
     while let Some(entry) = entries.next_entry().await? {
         let actual_file_name = entry.file_name().to_string_lossy().to_string();
         if !crate::util::downloads::browser_download_file_name_matches(
@@ -3731,7 +3840,20 @@ async fn find_manual_download_candidate(
             candidate_path = %path.display(),
             "Found CurseForge manual download filename candidate"
         );
-        match verify_manual_download_candidate(&path, download, true).await {
+        if verified_download.is_none() {
+            verified_download = Some(
+                ensure_manual_download_integrity_metadata(download).await?,
+            );
+        }
+        match verify_manual_download_candidate_with_integrity(
+            &path,
+            verified_download
+                .as_ref()
+                .expect("integrity metadata resolved"),
+            true,
+        )
+        .await
+        {
             Ok(Some((size, sha1))) => {
                 return Ok(Some((path, size, sha1)));
             }
@@ -3753,6 +3875,20 @@ async fn find_manual_download_candidate(
 }
 
 async fn verify_manual_download_candidate(
+    path: &Path,
+    download: &CurseForgeManualDownload,
+    require_matching_name: bool,
+) -> crate::Result<Option<(u64, String)>> {
+    let download = ensure_manual_download_integrity_metadata(download).await?;
+    verify_manual_download_candidate_with_integrity(
+        path,
+        &download,
+        require_matching_name,
+    )
+    .await
+}
+
+async fn verify_manual_download_candidate_with_integrity(
     path: &Path,
     download: &CurseForgeManualDownload,
     require_matching_name: bool,
@@ -3801,7 +3937,7 @@ async fn verify_manual_download_candidate(
     if let Some(expected_sha1) = download
         .hashes
         .iter()
-        .find(|hash| hash.algo == 1)
+        .find(|hash| hash.algo == 1 && !hash.value.trim().is_empty())
         .map(|hash| hash.value.as_str())
     {
         if !sha1.eq_ignore_ascii_case(expected_sha1) {
@@ -3814,16 +3950,17 @@ async fn verify_manual_download_candidate(
         }
         return Ok(Some((size, sha1)));
     }
-    if manual_download_matches_without_hash(download, &actual_file_name) {
-        return Ok(Some((size, sha1)));
-    }
     if download.file_fingerprint == 0 {
         trace_manual_download_candidate_rejection(
             path,
             download,
             "missing_integrity_metadata",
         );
-        return Ok(None);
+        return Err(ErrorKind::InputError(
+            "The required CurseForge file has no usable integrity metadata"
+                .to_string(),
+        )
+        .into());
     }
     let bytes = tokio::fs::read(path).await?;
     if compute_fingerprint(&bytes) as u64 != download.file_fingerprint {
@@ -3909,6 +4046,29 @@ pub async fn import_pending_manual_download_file(
     file_id: u32,
     source_path: PathBuf,
 ) -> crate::Result<CurseForgeManualDownloadImport> {
+    import_pending_manual_download_file_with_integrity_resolver(
+        instance_id,
+        project_id,
+        file_id,
+        source_path,
+        resolve_manual_download_integrity_metadata,
+    )
+    .await
+}
+
+async fn import_pending_manual_download_file_with_integrity_resolver<F, Fut>(
+    instance_id: &str,
+    project_id: u32,
+    file_id: u32,
+    source_path: PathBuf,
+    resolve_metadata: F,
+) -> crate::Result<CurseForgeManualDownloadImport>
+where
+    F: FnOnce(u32, u32) -> Fut,
+    Fut: std::future::Future<
+            Output = crate::Result<CurseForgeManualDownloadIntegrityMetadata>,
+        >,
+{
     tracing::debug!(
         instance_id,
         project_id,
@@ -3935,9 +4095,17 @@ pub async fn import_pending_manual_download_file(
                 .to_string(),
         )
     })?;
-    let Some((size, sha1)) =
-        verify_manual_download_candidate(&source_path, &download, false)
-            .await?
+    let download = ensure_manual_download_integrity_metadata_with(
+        &download,
+        resolve_metadata,
+    )
+    .await?;
+    let Some((size, sha1)) = verify_manual_download_candidate_with_integrity(
+        &source_path,
+        &download,
+        false,
+    )
+    .await?
     else {
         return Err(ErrorKind::InputError(
             "The selected file does not match the required CurseForge file"
@@ -4306,15 +4474,6 @@ fn is_curseforge_manual_download_job(
     })
 }
 
-fn manual_download_matches_without_hash(
-    download: &CurseForgeManualDownload,
-    actual_file_name: &str,
-) -> bool {
-    download.hashes.is_empty()
-        && download.file_fingerprint == 0
-        && actual_file_name.eq_ignore_ascii_case(&download.file_name)
-}
-
 async fn install_manual_download(
     instance_id: &str,
     download: &CurseForgeManualDownload,
@@ -4323,10 +4482,20 @@ async fn install_manual_download(
     sha1: &str,
 ) -> crate::Result<String> {
     if download.project_type == "modpack" {
+        let verified_directory = tempfile::tempdir()?;
+        let verified_source =
+            verified_directory.path().join("manual-download.pack");
+        crate::state::materialize_verified_project_download_copy(
+            source_path,
+            &verified_source,
+            size,
+            sha1,
+        )
+        .await?;
         crate::install::install_pack_to_existing_instance(
             instance_id.to_string(),
             crate::api::pack::install_from::CreatePackLocation::FromFile {
-                path: source_path.to_path_buf(),
+                path: verified_source,
             },
             None,
         )
@@ -4388,26 +4557,28 @@ async fn install_manual_download(
         .await?
         .join(&relative_path);
     let previous_path =
-        crate::state::materialize_project_download(source_path, &full_path)
-            .await?;
-    let provider_ref = ContentProviderRef::CurseForge {
-        project_id: CurseForgeProjectId::new(download.project_id)?,
-        file_id: Some(CurseForgeFileId::new(download.file_id)?),
-    };
-    let record_result = crate::state::record_project_file_atomic(
-        instance_id,
-        &relative_path,
-        sha1,
-        size,
-        project_type,
-        ContentSourceKind::CurseForge,
-        download.ownership_kind,
-        Some(&provider_ref),
-        true,
-        None,
-        &state,
-    )
-    .await;
+        crate::state::materialize_verified_project_download_copy(
+            source_path,
+            &full_path,
+            size,
+            sha1,
+        )
+        .await?;
+    let record_result =
+        crate::state::record_verified_curseforge_project_file_atomic(
+            instance_id,
+            &relative_path,
+            sha1,
+            size,
+            project_type,
+            ContentSourceKind::CurseForge,
+            download.ownership_kind,
+            CurseForgeProjectId::new(download.project_id)?,
+            CurseForgeFileId::new(download.file_id)?,
+            true,
+            &state,
+        )
+        .await;
     match record_result {
         Ok(()) => {
             crate::state::finalize_project_materialization(
@@ -5046,6 +5217,13 @@ async fn download_installed_file(
     ownership_kind: crate::state::instances::ContentOwnershipKind,
     download_metrics: Option<&CurseForgeDownloadMetrics>,
 ) -> crate::Result<String> {
+    if file.mod_id != project_id || file.id != file_id {
+        return Err(ErrorKind::InputError(
+            "CurseForge returned metadata for a different project or file"
+                .to_string(),
+        )
+        .into());
+    }
     let state = State::get().await?;
     validate_file_name(&file.file_name)?;
     let folder = content_target_folder(project_type, world_name)?;
@@ -5086,27 +5264,13 @@ async fn download_installed_file(
         crate::state::materialize_project_download(download_path, &full_path)
             .await?;
     crate::util::io::remove_file(download_path).await?;
-    let sha1 =
-        if let Some(hash) = file.hashes.iter().find(|hash| hash.algo == 1) {
-            hash.value.clone()
-        } else {
-            sha1_file_async(&full_path).await?.1
-        };
-    let provider_ref = ContentProviderRef::CurseForge {
-        project_id: CurseForgeProjectId::new(project_id)?,
-        file_id: Some(CurseForgeFileId::new(file_id)?),
-    };
-    let record_result = crate::state::record_project_file_atomic(
+    let record_result = record_installed_curseforge_file(
         instance_id,
         &relative_path,
-        &sha1,
-        result.size,
+        &full_path,
+        file,
         project_type,
-        ContentSourceKind::CurseForge,
         ownership_kind,
-        Some(&provider_ref),
-        true,
-        None,
         &state,
     )
     .await;
@@ -5127,6 +5291,119 @@ async fn download_installed_file(
         }
     }
     Ok(relative_path)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CurseForgePendingCompletionProof {
+    None,
+    AuthoritativeSha1,
+    AuthoritativeFingerprint,
+}
+
+struct VerifiedInstalledCurseForgeFile {
+    size: u64,
+    sha1: String,
+    pending_completion: CurseForgePendingCompletionProof,
+}
+
+async fn verify_installed_curseforge_file(
+    path: &Path,
+    file: &CurseForgeFile,
+) -> crate::Result<VerifiedInstalledCurseForgeFile> {
+    if let Some(expected_sha1) = file
+        .hashes
+        .iter()
+        .find(|hash| hash.algo == 1 && !hash.value.trim().is_empty())
+        .map(|hash| hash.value.as_str())
+    {
+        let (size, sha1) = sha1_file_async(path).await?;
+        if !sha1.eq_ignore_ascii_case(expected_sha1) {
+            return Err(
+                ErrorKind::HashError(expected_sha1.to_string(), sha1).into()
+            );
+        }
+        return Ok(VerifiedInstalledCurseForgeFile {
+            size,
+            sha1,
+            pending_completion:
+                CurseForgePendingCompletionProof::AuthoritativeSha1,
+        });
+    }
+
+    if file.file_fingerprint != 0 {
+        let bytes = tokio::fs::read(path).await?;
+        if compute_fingerprint(&bytes) as u64 != file.file_fingerprint {
+            return Err(ErrorKind::InputError(
+                "The downloaded file does not match the required CurseForge fingerprint"
+                    .to_string(),
+            )
+            .into());
+        }
+        return Ok(VerifiedInstalledCurseForgeFile {
+            size: bytes.len() as u64,
+            sha1: sha1_smol::Sha1::from(&bytes).hexdigest(),
+            pending_completion:
+                CurseForgePendingCompletionProof::AuthoritativeFingerprint,
+        });
+    }
+
+    let (size, sha1) = sha1_file_async(path).await?;
+    Ok(VerifiedInstalledCurseForgeFile {
+        size,
+        sha1,
+        pending_completion: CurseForgePendingCompletionProof::None,
+    })
+}
+
+async fn record_installed_curseforge_file(
+    instance_id: &str,
+    relative_path: &str,
+    full_path: &Path,
+    file: &CurseForgeFile,
+    project_type: ProjectType,
+    ownership_kind: crate::state::instances::ContentOwnershipKind,
+    state: &State,
+) -> crate::Result<()> {
+    let verified = verify_installed_curseforge_file(full_path, file).await?;
+    match verified.pending_completion {
+        CurseForgePendingCompletionProof::None => {
+            let provider_ref = ContentProviderRef::CurseForge {
+                project_id: CurseForgeProjectId::new(file.mod_id)?,
+                file_id: Some(CurseForgeFileId::new(file.id)?),
+            };
+            crate::state::record_project_file_atomic(
+                instance_id,
+                relative_path,
+                &verified.sha1,
+                verified.size,
+                project_type,
+                ContentSourceKind::CurseForge,
+                ownership_kind,
+                Some(&provider_ref),
+                true,
+                None,
+                state,
+            )
+            .await
+        }
+        CurseForgePendingCompletionProof::AuthoritativeSha1
+        | CurseForgePendingCompletionProof::AuthoritativeFingerprint => {
+            crate::state::record_verified_curseforge_project_file_atomic(
+                instance_id,
+                relative_path,
+                &verified.sha1,
+                verified.size,
+                project_type,
+                ContentSourceKind::CurseForge,
+                ownership_kind,
+                CurseForgeProjectId::new(file.mod_id)?,
+                CurseForgeFileId::new(file.id)?,
+                true,
+                state,
+            )
+            .await
+        }
+    }
 }
 
 pub fn compute_fingerprint(data: &[u8]) -> u32 {
@@ -5711,6 +5988,103 @@ mod tests {
             file_length: expected_bytes.len() as u64,
             file_fingerprint: 0,
         }
+    }
+
+    fn stage8_legacy_manual_download(
+        project_id: u32,
+        file_id: u32,
+        file_name: &str,
+    ) -> CurseForgeManualDownload {
+        CurseForgeManualDownload {
+            project_id,
+            file_id,
+            file_name: file_name.to_string(),
+            ownership_kind:
+                crate::state::instances::ContentOwnershipKind::PackManaged,
+            operation_kind:
+                crate::state::instances::ManualDownloadOperationKind::PackInstall,
+            website_url: None,
+            project_type: "mod".to_string(),
+            project_slug: format!("stage-8-{project_id}-{file_id}"),
+            target_folder: "mods".to_string(),
+            hashes: Vec::new(),
+            file_length: 0,
+            file_fingerprint: 0,
+        }
+    }
+
+    fn stage8_integrity_metadata(
+        download: &CurseForgeManualDownload,
+        hashes: Vec<CurseForgeFileHash>,
+        file_length: u64,
+        file_fingerprint: u64,
+    ) -> CurseForgeManualDownloadIntegrityMetadata {
+        CurseForgeManualDownloadIntegrityMetadata {
+            project_id: download.project_id,
+            file_id: download.file_id,
+            hashes,
+            file_length,
+            file_fingerprint,
+        }
+    }
+
+    fn stage8_curseforge_file(
+        project_id: u32,
+        file_id: u32,
+        file_name: &str,
+        file_length: u64,
+        hashes: Vec<CurseForgeFileHash>,
+        file_fingerprint: u64,
+    ) -> CurseForgeFile {
+        CurseForgeFile {
+            id: file_id,
+            game_id: MINECRAFT_GAME_ID,
+            mod_id: project_id,
+            is_available: true,
+            display_name: file_name.to_string(),
+            file_name: file_name.to_string(),
+            release_type: 1,
+            file_status: 4,
+            hashes,
+            file_date: String::new(),
+            file_length,
+            download_count: 0,
+            file_size_on_disk: Some(file_length),
+            download_url: None,
+            game_versions: Vec::new(),
+            sortable_game_versions: Vec::new(),
+            dependencies: Vec::new(),
+            expose_as_alternative: None,
+            parent_project_file_id: None,
+            alternate_file_id: None,
+            is_server_pack: None,
+            server_pack_file_id: None,
+            is_early_access_content: None,
+            early_access_end_date: None,
+            file_fingerprint,
+            modules: Vec::new(),
+        }
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn stage8_pending_keys(
+        state: &State,
+        instance_id: &str,
+    ) -> HashSet<(String, String)> {
+        crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+            instance_id,
+            &state.pool,
+        )
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|download| {
+            (
+                download.provider_project_id,
+                download.provider_release_id,
+            )
+        })
+        .collect()
     }
 
     #[cfg(not(feature = "tauri"))]
@@ -6562,31 +6936,191 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn legacy_manual_downloads_require_an_exact_file_name_without_hashes() {
-        let download = CurseForgeManualDownload {
-            project_id: 1,
-            file_id: 2,
-            file_name: "example-mod.jar".to_string(),
-            ownership_kind: crate::state::instances::ContentOwnershipKind::UserAdded,
-            operation_kind: crate::state::instances::ManualDownloadOperationKind::ContentInstall,
-            website_url: None,
-            project_type: "mod".to_string(),
-            project_slug: String::new(),
-            target_folder: "mods".to_string(),
-            hashes: Vec::new(),
-            file_length: 0,
-            file_fingerprint: 0,
-        };
+    #[tokio::test]
+    async fn curseforge_metadata_less_exact_name_is_not_trusted() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("example-mod.jar");
+        crate::util::io::write(&path, b"wrong exact-name jar")
+            .await
+            .unwrap();
+        let download = stage8_legacy_manual_download(1, 2, "example-mod.jar");
 
-        assert!(manual_download_matches_without_hash(
-            &download,
-            "EXAMPLE-MOD.JAR"
+        let error = verify_manual_download_candidate_with_integrity(
+            &path, &download, true,
+        )
+        .await
+        .expect_err("filename alone must not verify a candidate");
+
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "The required CurseForge file has no usable integrity metadata"
         ));
-        assert!(!manual_download_matches_without_hash(
+    }
+
+    #[tokio::test]
+    async fn curseforge_hydration_is_scoped_to_exact_release() {
+        let download =
+            stage8_legacy_manual_download(11, 101, "exact-release.jar");
+        let error = ensure_manual_download_integrity_metadata_with(
             &download,
-            "example-mod (1).jar"
+            |project_id, file_id| async move {
+                assert_eq!(project_id, 11);
+                assert_eq!(file_id, 101);
+                Ok(CurseForgeManualDownloadIntegrityMetadata {
+                    project_id,
+                    file_id: 102,
+                    hashes: vec![CurseForgeFileHash {
+                        value: "wrong-release-sha1".to_string(),
+                        algo: 1,
+                    }],
+                    file_length: 1,
+                    file_fingerprint: 0,
+                })
+            },
+        )
+        .await
+        .expect_err("metadata for another file must be rejected");
+
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "CurseForge returned metadata for a different project or file"
         ));
+    }
+
+    #[tokio::test]
+    async fn curseforge_existing_integrity_skips_hydration() {
+        let mut sha1_download =
+            stage8_legacy_manual_download(12, 201, "existing-sha1.jar");
+        sha1_download.hashes = vec![CurseForgeFileHash {
+            value: "existing-sha1".to_string(),
+            algo: 1,
+        }];
+        let hydrated = ensure_manual_download_integrity_metadata_with(
+            &sha1_download,
+            |_, _| async {
+                Err(ErrorKind::InputError(
+                    "metadata resolver must not run".to_string(),
+                )
+                .into())
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(hydrated.hashes[0].value, "existing-sha1");
+
+        let mut fingerprint_download =
+            stage8_legacy_manual_download(12, 202, "existing-fingerprint.jar");
+        fingerprint_download.file_fingerprint = 12345;
+        let hydrated = ensure_manual_download_integrity_metadata_with(
+            &fingerprint_download,
+            |_, _| async {
+                Err(ErrorKind::InputError(
+                    "metadata resolver must not run".to_string(),
+                )
+                .into())
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(hydrated.file_fingerprint, 12345);
+    }
+
+    #[tokio::test]
+    async fn curseforge_hydrated_fingerprint_verifies_candidate() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("fingerprint.jar");
+        let bytes = b"legacy fingerprint content";
+        crate::util::io::write(&path, bytes).await.unwrap();
+        let download =
+            stage8_legacy_manual_download(13, 301, "fingerprint.jar");
+        let metadata = stage8_integrity_metadata(
+            &download,
+            Vec::new(),
+            bytes.len() as u64,
+            compute_fingerprint(bytes) as u64,
+        );
+        let hydrated = ensure_manual_download_integrity_metadata_with(
+            &download,
+            move |project_id, file_id| async move {
+                assert_eq!((project_id, file_id), (13, 301));
+                Ok(metadata)
+            },
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            verify_manual_download_candidate_with_integrity(
+                &path, &hydrated, true,
+            )
+            .await
+            .unwrap()
+            .is_some()
+        );
+    }
+
+    #[tokio::test]
+    async fn curseforge_manual_materialization_is_copy_isolated() {
+        let source_directory = tempfile::tempdir().unwrap();
+        let destination_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join("manual.jar");
+        let destination = destination_directory.path().join("manual.jar");
+        let verified_bytes = b"verified manual bytes";
+        crate::util::io::write(&source, verified_bytes)
+            .await
+            .unwrap();
+        let (verified_size, verified_sha1) =
+            sha1_file_async(&source).await.unwrap();
+
+        crate::state::materialize_verified_project_download_copy(
+            &source,
+            &destination,
+            verified_size,
+            &verified_sha1,
+        )
+        .await
+        .unwrap();
+        crate::util::io::write(&source, b"mutated source content")
+            .await
+            .unwrap();
+
+        assert_eq!(
+            crate::util::io::read(&destination).await.unwrap(),
+            verified_bytes
+        );
+        assert_eq!(
+            sha1_file_async(&destination).await.unwrap(),
+            (verified_size, verified_sha1)
+        );
+    }
+
+    #[tokio::test]
+    async fn curseforge_fingerprint_recognition_rechecks_current_bytes() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("recognized.jar");
+        let matched_bytes = b"matched fingerprint bytes";
+        let expected_fingerprint = compute_fingerprint(matched_bytes) as u64;
+        crate::util::io::write(&path, matched_bytes).await.unwrap();
+        assert!(
+            verify_recognized_curseforge_file(&path, expected_fingerprint)
+                .await
+                .unwrap()
+                .is_some()
+        );
+
+        crate::util::io::write(&path, b"changed after fingerprint match")
+            .await
+            .unwrap();
+        assert!(
+            verify_recognized_curseforge_file(&path, expected_fingerprint)
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -6632,6 +7166,538 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_legacy_pending_imports_after_exact_metadata_hydration()
+    {
+        let (state, instance_id) =
+            create_stage6_instance("legacy hydration").await;
+        let download =
+            stage8_legacy_manual_download(14, 401, "legacy-hydration.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join(&download.file_name);
+        let bytes = b"legacy hydrated content";
+        crate::util::io::write(&source, bytes).await.unwrap();
+        let metadata = stage8_integrity_metadata(
+            &download,
+            vec![CurseForgeFileHash {
+                value: sha1_smol::Sha1::from(bytes).hexdigest(),
+                algo: 1,
+            }],
+            bytes.len() as u64,
+            0,
+        );
+
+        let imported =
+            import_pending_manual_download_file_with_integrity_resolver(
+                &instance_id,
+                download.project_id,
+                download.file_id,
+                source.clone(),
+                move |project_id, file_id| async move {
+                    assert_eq!((project_id, file_id), (14, 401));
+                    Ok(metadata)
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(source.exists());
+        assert_eq!(imported.relative_path, "mods/legacy-hydration.jar");
+        assert!(
+            crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+                &instance_id,
+                &state.pool,
+            )
+            .await
+            .unwrap()
+            .is_empty()
+        );
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("14")
+                && item.provider_release_id.as_deref() == Some("401")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+                && item.content.is_some()
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_missing_integrity_after_hydration_keeps_pending_unresolved()
+     {
+        let (state, instance_id) =
+            create_stage6_instance("missing hydrated integrity").await;
+        let download =
+            stage8_legacy_manual_download(15, 501, "missing-integrity.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let job_id = insert_stage6_waiting_manual_job(
+            &state,
+            &instance_id,
+            &[("mods/missing-integrity.jar", "15", "501")],
+        )
+        .await;
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join(&download.file_name);
+        crate::util::io::write(&source, b"unverifiable content")
+            .await
+            .unwrap();
+        let metadata = stage8_integrity_metadata(&download, Vec::new(), 20, 0);
+
+        let fetch_error =
+            import_pending_manual_download_file_with_integrity_resolver(
+                &instance_id,
+                download.project_id,
+                download.file_id,
+                source.clone(),
+                |project_id, file_id| async move {
+                    assert_eq!((project_id, file_id), (15, 501));
+                    Err(ErrorKind::InputError(
+                        "simulated CurseForge metadata fetch failure"
+                            .to_string(),
+                    )
+                    .into())
+                },
+            )
+            .await
+            .expect_err("metadata fetch failures must block import");
+        assert!(matches!(
+            fetch_error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "simulated CurseForge metadata fetch failure"
+        ));
+
+        let error =
+            import_pending_manual_download_file_with_integrity_resolver(
+                &instance_id,
+                download.project_id,
+                download.file_id,
+                source.clone(),
+                move |project_id, file_id| async move {
+                    assert_eq!((project_id, file_id), (15, 501));
+                    Ok(metadata)
+                },
+            )
+            .await
+            .expect_err("missing authoritative integrity must block import");
+
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::InputError(message)
+                if message
+                    == "The required CurseForge file has no usable integrity metadata"
+        ));
+        assert!(source.exists());
+        assert_eq!(
+            crate::state::instances::adapters::sqlite::content_rows::get_pending_manual_downloads(
+                &instance_id,
+                &state.pool,
+            )
+            .await
+            .unwrap()
+            .len(),
+            1
+        );
+        let target = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join("mods/missing-integrity.jar");
+        assert!(!target.exists());
+        assert_stage6_job_is_unresolved(
+            &state,
+            job_id,
+            "mods/missing-integrity.jar",
+        )
+        .await;
+        let job = crate::install::store::get_required(job_id, &state)
+            .await
+            .unwrap();
+        assert_eq!(
+            job.state
+                .events
+                .iter()
+                .filter(|event| matches!(
+                    event.kind,
+                    InstallJobEventKind::ContentFileRecovered { .. }
+                ))
+                .count(),
+            0
+        );
+        crate::install::store::dismiss(job_id, &state)
+            .await
+            .unwrap();
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_generic_record_does_not_complete_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("generic record provenance").await;
+        let download =
+            stage8_legacy_manual_download(16, 601, "generic-record.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/generic-record.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"generic recorded bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let (_, sha1) = sha1_file_async(&full_path).await.unwrap();
+        let provider_ref = ContentProviderRef::CurseForge {
+            project_id: CurseForgeProjectId::new(16).unwrap(),
+            file_id: Some(CurseForgeFileId::new(601).unwrap()),
+        };
+
+        crate::state::record_project_file_atomic(
+            &instance_id,
+            relative_path,
+            &sha1,
+            bytes.len() as u64,
+            ProjectType::Mod,
+            ContentSourceKind::CurseForge,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            Some(&provider_ref),
+            true,
+            None,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            stage8_pending_keys(&state, &instance_id)
+                .await
+                .contains(&("16".to_string(), "601".to_string()))
+        );
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("16")
+                && item.provider_release_id.as_deref() == Some("601")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+                && item.content.is_some()
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_verified_record_completes_only_exact_pending() {
+        let (state, instance_a) =
+            create_stage6_instance("verified record A").await;
+        let (_, instance_b) = create_stage6_instance("verified record B").await;
+        let file_1 = stage8_legacy_manual_download(17, 701, "one.jar");
+        let file_2 = stage8_legacy_manual_download(17, 702, "two.jar");
+        persist_manual_download(&instance_a, &file_1).await.unwrap();
+        persist_manual_download(&instance_a, &file_2).await.unwrap();
+        persist_manual_download(&instance_b, &file_1).await.unwrap();
+        let relative_path = "mods/one.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_a)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"verified exact record";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let (_, sha1) = sha1_file_async(&full_path).await.unwrap();
+
+        crate::state::record_verified_curseforge_project_file_atomic(
+            &instance_a,
+            relative_path,
+            &sha1,
+            bytes.len() as u64,
+            ProjectType::Mod,
+            ContentSourceKind::CurseForge,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            CurseForgeProjectId::new(17).unwrap(),
+            CurseForgeFileId::new(701).unwrap(),
+            true,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            stage8_pending_keys(&state, &instance_a).await,
+            HashSet::from([("17".to_string(), "702".to_string())])
+        );
+        assert_eq!(
+            stage8_pending_keys(&state, &instance_b).await,
+            HashSet::from([("17".to_string(), "701".to_string())])
+        );
+        crate::api::instance::remove(&instance_a).await.unwrap();
+        crate::api::instance::remove(&instance_b).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_manual_materialization_detects_source_change() {
+        let (state, instance_id) =
+            create_stage6_instance("manual copy TOCTOU").await;
+        let download = stage8_legacy_manual_download(18, 801, "toctou.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = source_directory.path().join("toctou.jar");
+        crate::util::io::write(&source, b"original verified bytes")
+            .await
+            .unwrap();
+        let (verified_size, verified_sha1) =
+            sha1_file_async(&source).await.unwrap();
+        crate::util::io::write(&source, b"changed after verification")
+            .await
+            .unwrap();
+        let destination = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join("mods/toctou.jar");
+        let previous_bytes = b"previous destination";
+        crate::util::io::write(&destination, previous_bytes)
+            .await
+            .unwrap();
+
+        crate::state::materialize_verified_project_download_copy(
+            &source,
+            &destination,
+            verified_size,
+            &verified_sha1,
+        )
+        .await
+        .expect_err("changed source must fail copied-byte identity");
+
+        assert_eq!(
+            crate::util::io::read(&destination).await.unwrap(),
+            previous_bytes
+        );
+        assert!(
+            stage8_pending_keys(&state, &instance_id)
+                .await
+                .contains(&("18".to_string(), "801".to_string()))
+        );
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(!snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("18")
+                && item.provider_release_id.as_deref() == Some("801")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+                && item.content.is_some()
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_automatic_sha1_record_can_complete_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("automatic SHA1").await;
+        let download =
+            stage8_legacy_manual_download(19, 901, "automatic-sha1.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/automatic-sha1.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"automatic SHA1 bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let (_, sha1) = sha1_file_async(&full_path).await.unwrap();
+        let file = stage8_curseforge_file(
+            19,
+            901,
+            "automatic-sha1.jar",
+            bytes.len() as u64,
+            vec![CurseForgeFileHash {
+                value: sha1,
+                algo: 1,
+            }],
+            0,
+        );
+
+        record_installed_curseforge_file(
+            &instance_id,
+            relative_path,
+            &full_path,
+            &file,
+            ProjectType::Mod,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(stage8_pending_keys(&state, &instance_id).await.is_empty());
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_automatic_fingerprint_record_can_complete_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("automatic fingerprint").await;
+        let download = stage8_legacy_manual_download(
+            20,
+            1001,
+            "automatic-fingerprint.jar",
+        );
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/automatic-fingerprint.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"automatic fingerprint bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let file = stage8_curseforge_file(
+            20,
+            1001,
+            "automatic-fingerprint.jar",
+            bytes.len() as u64,
+            Vec::new(),
+            compute_fingerprint(bytes) as u64,
+        );
+
+        record_installed_curseforge_file(
+            &instance_id,
+            relative_path,
+            &full_path,
+            &file,
+            ProjectType::Mod,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(stage8_pending_keys(&state, &instance_id).await.is_empty());
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_automatic_weak_record_keeps_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("automatic weak metadata").await;
+        let download =
+            stage8_legacy_manual_download(21, 1101, "automatic-md5.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/automatic-md5.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"automatic MD5-only bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let file = stage8_curseforge_file(
+            21,
+            1101,
+            "automatic-md5.jar",
+            bytes.len() as u64,
+            vec![CurseForgeFileHash {
+                value: "validated-md5".to_string(),
+                algo: 2,
+            }],
+            0,
+        );
+
+        record_installed_curseforge_file(
+            &instance_id,
+            relative_path,
+            &full_path,
+            &file,
+            ProjectType::Mod,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            stage8_pending_keys(&state, &instance_id)
+                .await
+                .contains(&("21".to_string(), "1101".to_string()))
+        );
+        let snapshot = crate::api::instance::get_content_snapshot(&instance_id)
+            .await
+            .unwrap();
+        assert!(snapshot.items.iter().any(|item| {
+            item.provider_project_id.as_deref() == Some("21")
+                && item.provider_release_id.as_deref() == Some("1101")
+                && item.materialization_state
+                    == crate::state::instances::PackMemberMaterializationState::Present
+        }));
+        crate::api::instance::remove(&instance_id).await.unwrap();
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_rollback_identity_record_does_not_complete_pending() {
+        let (state, instance_id) =
+            create_stage6_instance("rollback provenance").await;
+        let download = stage8_legacy_manual_download(22, 1201, "rollback.jar");
+        persist_manual_download(&instance_id, &download)
+            .await
+            .unwrap();
+        let relative_path = "mods/rollback.jar";
+        let full_path = crate::api::instance::get_full_path(&instance_id)
+            .await
+            .unwrap()
+            .join(relative_path);
+        let bytes = b"historical rollback bytes";
+        crate::util::io::write(&full_path, bytes).await.unwrap();
+        let (_, sha1) = sha1_file_async(&full_path).await.unwrap();
+        let provider_ref = ContentProviderRef::CurseForge {
+            project_id: CurseForgeProjectId::new(22).unwrap(),
+            file_id: Some(CurseForgeFileId::new(1201).unwrap()),
+        };
+
+        crate::state::record_project_file_atomic(
+            &instance_id,
+            relative_path,
+            &sha1,
+            bytes.len() as u64,
+            ProjectType::Mod,
+            ContentSourceKind::CurseForge,
+            crate::state::instances::ContentOwnershipKind::PackManaged,
+            Some(&provider_ref),
+            true,
+            None,
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            stage8_pending_keys(&state, &instance_id)
+                .await
+                .contains(&("22".to_string(), "1201".to_string()))
+        );
+        crate::api::instance::remove(&instance_id).await.unwrap();
     }
 
     #[cfg(not(feature = "tauri"))]
@@ -6845,9 +7911,13 @@ mod tests {
             .instances_dir()
             .join(created.instance.path)
             .join(relative_path);
-        assert_eq!(crate::util::io::read(instance_path).await.unwrap(), bytes);
+        assert_eq!(crate::util::io::read(&instance_path).await.unwrap(), bytes);
         assert!(source.exists());
         assert!(selected.exists());
+        crate::util::io::write(&selected, b"mutated selected source")
+            .await
+            .unwrap();
+        assert_eq!(crate::util::io::read(instance_path).await.unwrap(), bytes);
     }
 
     #[test]

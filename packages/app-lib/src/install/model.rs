@@ -1007,6 +1007,20 @@ pub struct InstallPostInstallEdit {
 }
 
 impl InstallRequest {
+    pub(crate) fn completes_instance_install_stage(&self) -> bool {
+        match self {
+            Self::CreateInstance { .. }
+            | Self::CreateModpackInstance { .. }
+            | Self::ImportInstance { .. }
+            | Self::DuplicateInstance { .. }
+            | Self::InstallExistingInstance { .. }
+            | Self::InstallPackToExistingInstance { .. } => true,
+            Self::InstallContent { .. }
+            | Self::InstallCurseForgeContent { .. }
+            | Self::DownloadJava { .. } => false,
+        }
+    }
+
     pub fn kind(&self) -> InstallJobKind {
         match self {
             Self::CreateInstance { .. } => InstallJobKind::CreateInstance,
