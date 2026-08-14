@@ -202,6 +202,11 @@ export interface CurseForgeManualDownloadImport {
 	relativePath: string
 }
 
+export type CurseForgeManualDownloadImportErrorKind =
+	| 'not_pending'
+	| 'verification_failed'
+	| 'other'
+
 export interface CurseForgeManualDownloadScanResult {
 	downloadDirectory?: string | null
 	imported: CurseForgeManualDownloadImport[]
@@ -228,15 +233,28 @@ export function summarizeCurseForgeInstall(result: CurseForgeInstallResult) {
 	return { installed, manual, failed, optional, incompatible }
 }
 
+function getErrorMessage(error: unknown): string | null {
+	if (error instanceof Error) return error.message
+	if (typeof error === 'string') return error
+	if (typeof error !== 'object' || error === null || !('message' in error)) return null
+	return String(error.message)
+}
+
+export function classifyCurseForgeManualDownloadImportError(
+	error: unknown,
+): CurseForgeManualDownloadImportErrorKind {
+	const message = getErrorMessage(error)
+	if (message?.includes('The selected CurseForge file is not pending for this instance')) {
+		return 'not_pending'
+	}
+	if (message?.includes('The selected file does not match the required CurseForge file')) {
+		return 'verification_failed'
+	}
+	return 'other'
+}
+
 export function getCurseForgeDownloadFailureDetails(error: unknown): string | null {
-	const message =
-		error instanceof Error
-			? error.message
-			: typeof error === 'string'
-				? error
-				: typeof error === 'object' && error !== null && 'message' in error
-					? String(error.message)
-					: null
+	const message = getErrorMessage(error)
 	if (!message) return null
 
 	const normalized = message.toLowerCase()

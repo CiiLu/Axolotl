@@ -1180,9 +1180,10 @@ fn all_missing_content_resolved(
 mod tests {
     use super::*;
     use crate::api::pack::install_from::CreatePackLocation;
-    use crate::install::model::{
-        InstallJobExecutionMode, InstallPauseReason, MissingModpackContentState,
-    };
+    use crate::install::model::MissingModpackContentState;
+    #[cfg(not(feature = "tauri"))]
+    use crate::install::model::{InstallJobExecutionMode, InstallPauseReason};
+    #[cfg(not(feature = "tauri"))]
     use crate::state::{InstanceLink, ModLoader};
     use sha1_smol::Sha1;
 
@@ -1588,6 +1589,7 @@ mod tests {
         assert!(results.into_iter().all(|result| result.is_ok()));
     }
 
+    #[cfg(not(feature = "tauri"))]
     #[tokio::test]
     async fn import_api_trusts_persisted_job_context_and_keeps_other_missing_files_waiting()
      {

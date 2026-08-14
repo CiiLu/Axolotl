@@ -9,6 +9,21 @@ export interface ProgressSnapshot {
 	progress?: ProgressValue | null
 }
 
+export interface ProgressTextSnapshot extends ProgressSnapshot {
+	status: string
+	details?: { type: string; step?: string } | null
+	summary: {
+		files_completed: number
+		files_total?: number | null
+		bytes_downloaded: number
+		bytes_total?: number | null
+	}
+}
+
+export type InstallProgressTextSource =
+	| { type: 'required_files' | 'phase' }
+	| { type: 'bytes' | 'items'; current: number; total: number }
+
 export function effectiveInstallProgress(
 	snapshot: ProgressSnapshot,
 ): ProgressValue | null | undefined {
@@ -36,4 +51,50 @@ export function installProgressFraction(snapshot: ProgressSnapshot): number | nu
 	if (!hasDeterminateInstallProgress(progress)) return null
 
 	return Math.max(0, Math.min(1, progress.current / progress.total))
+}
+
+export function installProgressTextSource(
+	snapshot: ProgressTextSnapshot,
+): InstallProgressTextSource {
+	if (snapshot.status === 'waiting_for_user') return { type: 'required_files' }
+
+	const isContentDownload = snapshot.phase === 'downloading_content'
+	const isByteDownload =
+		snapshot.phase === 'downloading_pack_file' ||
+		snapshot.phase === 'downloading_minecraft' ||
+		(snapshot.phase === 'preparing_java' &&
+			snapshot.details?.type === 'java' &&
+			snapshot.details.step === 'downloading')
+	const progress = effectiveInstallProgress(snapshot)
+	if (hasDeterminateInstallProgress(progress)) {
+		if (isContentDownload) {
+			return {
+				type: snapshot.progress?.secondary ? 'bytes' : 'items',
+				current: progress.current,
+				total: progress.total,
+			}
+		}
+		if (isByteDownload) {
+			return { type: 'bytes', current: progress.current, total: progress.total }
+		}
+	}
+
+	if (snapshot.progress != null) return { type: 'phase' }
+
+	if ((isContentDownload || isByteDownload) && snapshot.summary.bytes_total) {
+		return {
+			type: 'bytes',
+			current: snapshot.summary.bytes_downloaded,
+			total: snapshot.summary.bytes_total,
+		}
+	}
+	if (isContentDownload && snapshot.summary.files_total) {
+		return {
+			type: 'items',
+			current: snapshot.summary.files_completed,
+			total: snapshot.summary.files_total,
+		}
+	}
+
+	return { type: 'phase' }
 }

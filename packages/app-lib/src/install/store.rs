@@ -402,7 +402,6 @@ pub async fn update_status_if(
 
 pub async fn complete_running_job(
     id: Uuid,
-    instance_id: Option<&str>,
     state: &InstallJobState,
     app_state: &State,
 ) -> crate::Result<Option<InstallJobRecord>> {
@@ -410,9 +409,12 @@ pub async fn complete_running_job(
     let modified = now.timestamp();
     let json = serde_json::to_string(state)?;
     let id_value = id.to_string();
+    let instance_id = instance_id(state);
     let mut transaction = app_state.pool.begin().await?;
 
-    if let Some(instance_id) = instance_id {
+    if state.request.completes_instance_install_stage()
+        && let Some(instance_id) = instance_id.as_deref()
+    {
         let result = sqlx::query(
             "UPDATE instances
              SET install_stage = ?, modified = ?
@@ -437,7 +439,7 @@ pub async fn complete_running_job(
              status = ?, state = ?, modified = ?, finished = ?
          WHERE id = ? AND status = ?",
     )
-    .bind(instance_id)
+    .bind(instance_id.as_deref())
     .bind(InstallJobStatus::Succeeded.as_str())
     .bind(json)
     .bind(modified)
@@ -495,6 +497,206 @@ async fn compare_and_swap_status(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(feature = "tauri"))]
+    async fn create_completion_test_instance(
+        label: &str,
+    ) -> (std::sync::Arc<State>, String) {
+        crate::event::EventState::init().await.unwrap();
+        let root = tempfile::tempdir().unwrap().keep();
+        let state = State::init_for_test(root.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        let created = crate::api::instance::create(
+            format!("Install completion {label} {}", Uuid::new_v4()),
+            "1.20.1".to_string(),
+            crate::state::ModLoader::Vanilla,
+            None,
+            None,
+            crate::state::InstanceLink::Unmanaged,
+            None,
+        )
+        .await
+        .unwrap();
+        crate::state::instances::commands::set_instance_install_stage(
+            &created.instance.id,
+            InstanceInstallStage::PackInstalling,
+            &state.pool,
+        )
+        .await
+        .unwrap();
+        (state, created.instance.id)
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    fn curseforge_content_request(
+        instance_id: &str,
+    ) -> super::super::model::InstallRequest {
+        super::super::model::InstallRequest::InstallCurseForgeContent {
+            request: crate::api::curseforge::CurseForgeInstallRequest {
+                instance_id: instance_id.to_string(),
+                project_id: 348_025,
+                file_id: 4_436_467,
+                project_type: "mod".to_string(),
+                ownership_kind: Default::default(),
+                manual_operation_kind: Default::default(),
+                game_version: None,
+                mod_loader_type: None,
+                world_name: None,
+                install_dependencies: false,
+            },
+            display_title: "CurseForge content".to_string(),
+            display_icon: None,
+        }
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn instance_install_stage(
+        instance_id: &str,
+        state: &State,
+    ) -> InstanceInstallStage {
+        crate::state::get_instance(instance_id, &state.pool)
+            .await
+            .unwrap()
+            .unwrap()
+            .instance
+            .install_stage
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    async fn insert_running_job(
+        state: &InstallJobState,
+        app_state: &State,
+    ) -> InstallJobRecord {
+        insert(Uuid::new_v4(), state, InstallJobStatus::Running, app_state)
+            .await
+            .unwrap()
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn curseforge_content_completion_preserves_incomplete_instance_stage()
+    {
+        let (state, instance_id) =
+            create_completion_test_instance("CurseForge content").await;
+        let job_state =
+            InstallJobState::new(curseforge_content_request(&instance_id));
+        let job = insert_running_job(&job_state, &state).await;
+
+        let completed = complete_running_job(job.id, &job_state, &state)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(completed.status, InstallJobStatus::Succeeded);
+        assert_eq!(
+            instance_install_stage(&instance_id, &state).await,
+            InstanceInstallStage::PackInstalling
+        );
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn modrinth_content_completion_preserves_incomplete_instance_stage() {
+        let (state, instance_id) =
+            create_completion_test_instance("Modrinth content").await;
+        let job_state = InstallJobState::new(
+            super::super::model::InstallRequest::InstallContent {
+                instance_id: instance_id.clone(),
+                project_id: "project".to_string(),
+                version_id: Some("version".to_string()),
+                content_type: modrinth_content_management::ContentType::Mod,
+                selected: Default::default(),
+                display_title: "Modrinth content".to_string(),
+                display_icon: None,
+            },
+        );
+        let job = insert_running_job(&job_state, &state).await;
+
+        let completed = complete_running_job(job.id, &job_state, &state)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(completed.status, InstallJobStatus::Succeeded);
+        assert_eq!(
+            instance_install_stage(&instance_id, &state).await,
+            InstanceInstallStage::PackInstalling
+        );
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn lifecycle_completion_marks_instance_installed() {
+        let (state, instance_id) =
+            create_completion_test_instance("lifecycle owner").await;
+        let job_state = InstallJobState::new(
+            super::super::model::InstallRequest::InstallExistingInstance {
+                instance_id: instance_id.clone(),
+                force: false,
+            },
+        );
+        let job = insert_running_job(&job_state, &state).await;
+
+        let completed = complete_running_job(job.id, &job_state, &state)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(completed.status, InstallJobStatus::Succeeded);
+        assert_eq!(
+            instance_install_stage(&instance_id, &state).await,
+            InstanceInstallStage::Installed
+        );
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn waiting_lifecycle_job_survives_content_job_completion() {
+        let (state, instance_id) =
+            create_completion_test_instance("waiting lifecycle").await;
+        let mut waiting_state = InstallJobState::new(
+			super::super::model::InstallRequest::InstallPackToExistingInstance {
+				instance_id: instance_id.clone(),
+				location: crate::api::pack::install_from::CreatePackLocation::FromFile {
+					path: std::path::PathBuf::from("unused.mrpack"),
+				},
+				post_install_edit: None,
+			},
+		);
+        waiting_state.pause_reason = Some(
+            super::super::model::InstallPauseReason::MissingRequiredContent {
+                failed_files: 1,
+                paths: vec!["mods/manual.jar".to_string()],
+            },
+        );
+        let waiting_job = insert(
+            Uuid::new_v4(),
+            &waiting_state,
+            InstallJobStatus::WaitingForUser,
+            &state,
+        )
+        .await
+        .unwrap();
+        let content_state =
+            InstallJobState::new(curseforge_content_request(&instance_id));
+        let content_job = insert_running_job(&content_state, &state).await;
+
+        let completed =
+            complete_running_job(content_job.id, &content_state, &state)
+                .await
+                .unwrap()
+                .unwrap();
+        let waiting = get_required(waiting_job.id, &state).await.unwrap();
+
+        assert_eq!(waiting.status, InstallJobStatus::WaitingForUser);
+        assert!(waiting.state.pause_reason.is_some());
+        assert_eq!(completed.status, InstallJobStatus::Succeeded);
+        assert_eq!(
+            instance_install_stage(&instance_id, &state).await,
+            InstanceInstallStage::PackInstalling
+        );
+    }
 
     #[tokio::test]
     async fn only_one_waiting_job_resume_can_claim_the_status() {

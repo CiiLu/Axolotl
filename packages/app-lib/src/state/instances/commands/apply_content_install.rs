@@ -11,10 +11,10 @@ use crate::state::instances::{
     },
 };
 use crate::state::{
-    CacheBehaviour, CachedEntry, ContentProviderRef, Dependency,
-    DependencyType, KnownModrinthFile, ModLoader, ModrinthProjectId,
-    ModrinthVersionId, ProjectType, State, Version, cache_file_hash,
-    cache_file_hash_metadata,
+    CacheBehaviour, CachedEntry, ContentProviderRef, CurseForgeFileId,
+    CurseForgeProjectId, Dependency, DependencyType, KnownModrinthFile,
+    ModLoader, ModrinthProjectId, ModrinthVersionId, ProjectType, State,
+    Version, cache_file_hash, cache_file_hash_metadata,
 };
 use crate::util::fetch::{
     self, ContentValidation, DownloadMeta, DownloadReason, DownloadRequest,
@@ -752,6 +752,98 @@ pub(crate) async fn materialize_project_download(
         .filter(|path| path.exists()))
 }
 
+pub(crate) async fn materialize_verified_project_download_copy(
+    source: &Path,
+    destination: &Path,
+    verified_size: u64,
+    verified_sha1: &str,
+) -> crate::Result<Option<PathBuf>> {
+    if let Some(parent) = destination.parent() {
+        io::create_dir_all(parent).await?;
+    }
+    let mut temporary = destination.as_os_str().to_os_string();
+    temporary.push(".installing");
+    let temporary = PathBuf::from(temporary);
+    if temporary.exists() {
+        io::remove_file(&temporary).await?;
+    }
+    if let Err(error) = tokio::fs::copy(source, &temporary).await {
+        if temporary.exists() {
+            let _ = io::remove_file(&temporary).await;
+        }
+        return Err(error.into());
+    }
+    if let Err(error) = verify_project_download_identity(
+        &temporary,
+        verified_size,
+        verified_sha1,
+    )
+    .await
+    {
+        let _ = io::remove_file(&temporary).await;
+        return Err(error);
+    }
+
+    let mut backup = destination.as_os_str().to_os_string();
+    backup.push(".installing.previous");
+    let backup = PathBuf::from(backup);
+    if backup.exists() {
+        io::remove_file(&backup).await?;
+    }
+    if destination.exists() {
+        tokio::fs::rename(destination, &backup).await?;
+    }
+    if let Err(error) = tokio::fs::rename(&temporary, destination).await {
+        if backup.exists() {
+            let _ = tokio::fs::rename(&backup, destination).await;
+        }
+        let _ = io::remove_file(&temporary).await;
+        return Err(crate::Error::from(io_error_with_lock_info(
+            error,
+            destination,
+        )));
+    }
+
+    let previous = destination
+        .exists()
+        .then_some(backup)
+        .filter(|path| path.exists());
+    if let Err(error) = verify_project_download_identity(
+        destination,
+        verified_size,
+        verified_sha1,
+    )
+    .await
+    {
+        restore_project_materialization(destination, previous.as_deref())
+            .await?;
+        return Err(error);
+    }
+    Ok(previous)
+}
+
+async fn verify_project_download_identity(
+    path: &Path,
+    verified_size: u64,
+    verified_sha1: &str,
+) -> crate::Result<()> {
+    let (actual_size, actual_sha1) = fetch::sha1_file_async(path).await?;
+    if actual_size != verified_size {
+        return Err(crate::ErrorKind::OtherError(format!(
+            "Copied manual download size changed: {verified_size} != {actual_size}"
+        ))
+        .into());
+    }
+    if !actual_sha1.eq_ignore_ascii_case(verified_sha1) {
+        return Err(crate::ErrorKind::HashError(
+            verified_sha1.to_string(),
+            actual_sha1,
+        )
+        .into());
+    }
+    Ok(())
+}
+
 pub(crate) async fn finalize_project_materialization(
     previous_path: Option<&Path>,
 ) -> crate::Result<()> {
@@ -1356,6 +1448,84 @@ pub(crate) async fn record_project_file_atomic(
     known_modrinth_file: Option<KnownModrinthFile<'_>>,
     state: &State,
 ) -> crate::Result<()> {
+    record_project_file_atomic_with_pending_completion(
+        instance_id,
+        relative_path,
+        sha1,
+        size,
+        project_type,
+        source_kind,
+        ownership_kind,
+        provider_ref,
+        origin,
+        known_modrinth_file,
+        PendingManualDownloadCompletion::None,
+        state,
+    )
+    .await
+}
+
+pub(crate) async fn record_verified_curseforge_project_file_atomic(
+    instance_id: &str,
+    relative_path: &str,
+    sha1: &str,
+    size: u64,
+    project_type: ProjectType,
+    source_kind: ContentSourceKind,
+    ownership_kind: ContentOwnershipKind,
+    project_id: CurseForgeProjectId,
+    file_id: CurseForgeFileId,
+    origin: bool,
+    state: &State,
+) -> crate::Result<()> {
+    let provider_ref = ContentProviderRef::CurseForge {
+        project_id,
+        file_id: Some(file_id),
+    };
+    record_project_file_atomic_with_pending_completion(
+        instance_id,
+        relative_path,
+        sha1,
+        size,
+        project_type,
+        source_kind,
+        ownership_kind,
+        Some(&provider_ref),
+        origin,
+        None,
+        PendingManualDownloadCompletion::VerifiedCurseForge {
+            project_id,
+            file_id,
+        },
+        state,
+    )
+    .await
+}
+
+#[derive(Clone, Copy)]
+enum PendingManualDownloadCompletion {
+    None,
+    VerifiedCurseForge {
+        project_id: CurseForgeProjectId,
+        file_id: CurseForgeFileId,
+    },
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn record_project_file_atomic_with_pending_completion(
+    instance_id: &str,
+    relative_path: &str,
+    sha1: &str,
+    size: u64,
+    project_type: ProjectType,
+    source_kind: ContentSourceKind,
+    ownership_kind: ContentOwnershipKind,
+    provider_ref: Option<&ContentProviderRef>,
+    origin: bool,
+    known_modrinth_file: Option<KnownModrinthFile<'_>>,
+    pending_completion: PendingManualDownloadCompletion,
+    state: &State,
+) -> crate::Result<()> {
     let _instance_lock = state.lock_instance_content(instance_id).await;
 
     let scope = resolve_content_scope(instance_id, None, state).await?;
@@ -1456,10 +1626,10 @@ pub(crate) async fn record_project_file_atomic(
         )
         .await?;
     }
-    if let Some(ContentProviderRef::CurseForge {
+    if let PendingManualDownloadCompletion::VerifiedCurseForge {
         project_id,
-        file_id: Some(file_id),
-    }) = provider_ref
+        file_id,
+    } = pending_completion
     {
         content_rows::complete_pending_manual_download(
             instance_id,

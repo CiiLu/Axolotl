@@ -22,7 +22,8 @@ pub(crate) use self::commands::{
     get_content_projects, get_installed_project_ids_for_instance,
     get_instance_install_candidates, get_linked_modpack_info, list_content,
     list_content_sets, list_linked_modpack_content,
-    materialize_project_download, record_project_file_atomic,
+    materialize_project_download, materialize_verified_project_download_copy,
+    record_project_file_atomic, record_verified_curseforge_project_file_atomic,
     resolve_content_install_relative_path, restore_project_materialization,
     sync_content_files,
 };

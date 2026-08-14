@@ -1626,6 +1626,50 @@ pub(crate) async fn get_pack_members(
     rows.into_iter().map(TryInto::try_into).collect()
 }
 
+pub(crate) async fn get_materialized_curseforge_downloads(
+    instance_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Vec<(String, String)>> {
+    let rows = sqlx::query(
+        "SELECT DISTINCT ref.provider_project_id, ref.provider_release_id
+         FROM instances instance
+         INNER JOIN instance_content_entries entry
+            ON entry.content_set_id = instance.applied_content_set_id
+         INNER JOIN instance_files file
+            ON file.id = entry.file_id AND file.instance_id = instance.id
+         INNER JOIN instance_content_provider_refs ref
+            ON ref.content_entry_id = entry.id
+            AND ref.provider = 'curseforge'
+         LEFT JOIN instance_pack_members member
+            ON member.content_set_id = entry.content_set_id
+            AND member.content_entry_id = entry.id
+         WHERE instance.id = ?
+            AND file.missing = 0
+            AND ref.provider_release_id IS NOT NULL
+            AND (
+                member.id IS NULL
+                OR (
+                    member.provider = 'curseforge'
+                    AND member.provider_project_id = ref.provider_project_id
+                    AND member.provider_release_id = ref.provider_release_id
+                    AND member.materialization_state = 'present'
+                )
+            )",
+    )
+    .bind(instance_id)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|row| {
+            Ok((
+                row.try_get::<String, _>("provider_project_id")?,
+                row.try_get::<String, _>("provider_release_id")?,
+            ))
+        })
+        .collect()
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct ContentMutationTarget {
     pub entry_id: Option<String>,
@@ -1973,6 +2017,129 @@ mod tests {
             .await
             .expect("instance_content_sets table");
         pool
+    }
+
+    #[tokio::test]
+    async fn materialized_curseforge_downloads_require_current_exact_content() {
+        let pool = test_pool().await;
+        sqlx::query(
+            "ALTER TABLE instances ADD COLUMN applied_content_set_id TEXT NULL",
+        )
+        .execute(&pool)
+        .await
+        .expect("applied content set column");
+        sqlx::raw_sql(
+            "
+            CREATE TABLE instance_files (
+                id TEXT PRIMARY KEY,
+                instance_id TEXT NOT NULL,
+                missing INTEGER NOT NULL
+            );
+            CREATE TABLE instance_content_entries (
+                id TEXT PRIMARY KEY,
+                content_set_id TEXT NOT NULL,
+                file_id TEXT NULL
+            );
+            CREATE TABLE instance_content_provider_refs (
+                content_entry_id TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                provider_project_id TEXT NOT NULL,
+                provider_release_id TEXT NULL
+            );
+            CREATE TABLE instance_pack_members (
+                id TEXT PRIMARY KEY,
+                content_set_id TEXT NOT NULL,
+                content_entry_id TEXT NULL,
+                provider TEXT NULL,
+                provider_project_id TEXT NULL,
+                provider_release_id TEXT NULL,
+                materialization_state TEXT NOT NULL
+            );
+            ",
+        )
+        .execute(&pool)
+        .await
+        .expect("content tables");
+        sqlx::query(
+            "INSERT INTO instance_content_sets (id) VALUES ('target-set'), ('other-set')",
+        )
+        .execute(&pool)
+        .await
+        .expect("content sets");
+        sqlx::query(
+            "INSERT INTO instances (id, applied_content_set_id)
+             VALUES ('target', 'target-set'), ('other', 'other-set')",
+        )
+        .execute(&pool)
+        .await
+        .expect("instances");
+        sqlx::query(
+            "INSERT INTO instance_files (id, instance_id, missing) VALUES
+                ('file-present', 'target', 0),
+                ('file-member-missing', 'target', 0),
+                ('file-untracked', 'target', 0),
+                ('file-missing', 'target', 1),
+                ('file-other', 'other', 0)",
+        )
+        .execute(&pool)
+        .await
+        .expect("files");
+        sqlx::query(
+            "INSERT INTO instance_content_entries (id, content_set_id, file_id) VALUES
+                ('entry-present', 'target-set', 'file-present'),
+                ('entry-member-missing', 'target-set', 'file-member-missing'),
+                ('entry-untracked', 'target-set', 'file-untracked'),
+                ('entry-missing', 'target-set', 'file-missing'),
+                ('entry-other', 'other-set', 'file-other')",
+        )
+        .execute(&pool)
+        .await
+        .expect("entries");
+        sqlx::query(
+            "INSERT INTO instance_content_provider_refs (
+                content_entry_id, provider, provider_project_id,
+                provider_release_id
+             ) VALUES
+                ('entry-present', 'curseforge', '1', '10'),
+                ('entry-member-missing', 'curseforge', '1', '11'),
+                ('entry-untracked', 'curseforge', '2', '20'),
+                ('entry-missing', 'curseforge', '3', '30'),
+                ('entry-other', 'curseforge', '9', '90')",
+        )
+        .execute(&pool)
+        .await
+        .expect("provider refs");
+        sqlx::query(
+            "INSERT INTO instance_pack_members (
+                id, content_set_id, content_entry_id, provider,
+                provider_project_id, provider_release_id,
+                materialization_state
+             ) VALUES
+                ('member-present', 'target-set', 'entry-present',
+                    'curseforge', '1', '10', 'present'),
+                ('member-missing', 'target-set', 'entry-member-missing',
+                    'curseforge', '1', '11', 'missing'),
+                ('member-other', 'other-set', 'entry-other',
+                    'curseforge', '9', '90', 'present')",
+        )
+        .execute(&pool)
+        .await
+        .expect("pack members");
+
+        let materialized =
+            get_materialized_curseforge_downloads("target", &pool)
+                .await
+                .expect("materialized CurseForge downloads")
+                .into_iter()
+                .collect::<std::collections::HashSet<_>>();
+
+        assert_eq!(
+            materialized,
+            std::collections::HashSet::from([
+                ("1".to_string(), "10".to_string()),
+                ("2".to_string(), "20".to_string()),
+            ])
+        );
     }
 
     #[tokio::test]
