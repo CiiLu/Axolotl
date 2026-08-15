@@ -286,6 +286,13 @@ export function getCurseForgeProject(projectId: number) {
 	return invoke<CurseForgeProject>('plugin:curseforge|curseforge_get_project', { projectId })
 }
 
+export function getCurseForgeChangelog(projectId: number, fileId: number) {
+	return invoke<string>('plugin:curseforge|curseforge_get_changelog', {
+		projectId,
+		fileId,
+	})
+}
+
 export function getCurseForgeDescription(projectId: number) {
 	return invoke<string>('plugin:curseforge|curseforge_get_description', {
 		projectId,

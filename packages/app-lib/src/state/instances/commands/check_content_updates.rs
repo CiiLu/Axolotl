@@ -325,12 +325,15 @@ async fn resolve_curseforge_updates(
     context: &InstalledContentContext,
     state: &State,
 ) -> crate::Result<Vec<ContentUpdate>> {
-    let curseforge_projects =
-        curseforge_projects_for_updates(&context.provider_refs_by_file_id)
-            .await?;
     let mut output = Vec::new();
+    if crate::api::curseforge::capability().status
+        != crate::api::curseforge::CurseForgeCapabilityStatus::Ready
+    {
+        return Ok(output);
+    }
     let _instance_lock =
         state.lock_instance_content(&context.instance.id).await;
+    let mut target_files_by_project = HashMap::<u32, Option<u32>>::new();
     for (file_id, refs) in &context.provider_refs_by_file_id {
         if context
             .origin_provider_by_file_id
@@ -355,26 +358,36 @@ async fn resolve_curseforge_updates(
         let Some(project_type) = project_type_for_file(instance_file) else {
             continue;
         };
-        let Some(project) = curseforge_projects.get(&project_id.get()) else {
-            continue;
-        };
-        let Some(target_file_id) =
-            project.latest_files_indexes.iter().find_map(|index| {
-                if index.game_version != context.content_set.game_version
-                    || (project_type == ProjectType::Mod
-                        && index.mod_loader
-                            != curseforge_loader_type(
-                                context.content_set.loader.as_str(),
-                            ))
-                {
-                    return None;
+        let target_file_id =
+            match target_files_by_project.get(&project_id.get()) {
+                Some(target_file_id) => *target_file_id,
+                None => {
+                    let target_file_id =
+                        crate::api::curseforge::select_latest_compatible_file(
+                            project_id.get(),
+                            Some(context.content_set.game_version.clone()),
+                            (project_type == ProjectType::Mod)
+                                .then(|| {
+                                    curseforge_loader_type(
+                                        context.content_set.loader.as_str(),
+                                    )
+                                })
+                                .flatten(),
+                            Some(context.instance.update_channel),
+                        )
+                        .await?
+                        .map(|file| file.id);
+                    target_files_by_project
+                        .insert(project_id.get(), target_file_id);
+                    target_file_id
                 }
-                (index.file_id != current_file_id.get())
-                    .then_some(index.file_id)
-            })
-        else {
+            };
+        let Some(target_file_id) = target_file_id else {
             continue;
         };
+        if target_file_id == current_file_id.get() {
+            continue;
+        }
         let target_file_id = CurseForgeFileId::new(target_file_id)?;
         if let Some(entry) = context.entries_by_file_id.get(file_id) {
             let project_id_string = project_id.get().to_string();
@@ -395,36 +408,6 @@ async fn resolve_curseforge_updates(
     }
 
     Ok(output)
-}
-
-async fn curseforge_projects_for_updates(
-    provider_refs_by_file_id: &HashMap<String, Vec<ContentProviderRef>>,
-) -> crate::Result<HashMap<u32, crate::api::curseforge::CurseForgeProject>> {
-    if crate::api::curseforge::capability().status
-        != crate::api::curseforge::CurseForgeCapabilityStatus::Ready
-    {
-        return Ok(HashMap::new());
-    }
-    let project_ids = provider_refs_by_file_id
-        .values()
-        .flatten()
-        .filter_map(|reference| match reference {
-            ContentProviderRef::CurseForge { project_id, .. } => {
-                Some(project_id.get())
-            }
-            ContentProviderRef::Modrinth { .. } => None,
-        })
-        .collect::<std::collections::HashSet<_>>();
-    if project_ids.is_empty() {
-        return Ok(HashMap::new());
-    }
-    Ok(
-        crate::api::curseforge::get_projects(project_ids.into_iter().collect())
-            .await?
-            .into_iter()
-            .map(|project| (project.id, project))
-            .collect(),
-    )
 }
 
 fn curseforge_loader_type(loader: &str) -> Option<u32> {

@@ -129,6 +129,7 @@ fn main() {
                         "curseforge_match_fingerprints",
                         "curseforge_install_file",
                         "curseforge_update_installed_file",
+                        "curseforge_switch_installed_file_version",
                         "curseforge_recognize_instance_files",
                         "curseforge_import_manual_downloads",
                         "curseforge_list_pending_manual_downloads",

@@ -1222,6 +1222,21 @@ pub(crate) async fn finish_import(
         .await?;
     }
 
+    let recognition_instance_id = instance_id.to_string();
+    tokio::spawn(async move {
+        if let Err(error) = crate::api::curseforge::recognize_instance_files(
+            &recognition_instance_id,
+        )
+        .await
+        {
+            tracing::warn!(
+                instance_id = %recognition_instance_id,
+                %error,
+                "CurseForge file recognition after import failed"
+            );
+        }
+    });
+
     crate::launcher::install_minecraft_for_instance_id_with_local_source(
         instance_id,
         local_source,

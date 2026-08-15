@@ -12,7 +12,7 @@ use crate::install::{
 use crate::state::{
     CachedEntry, ContentProvider, ContentProviderRef, ContentSourceKind,
     CurseForgeFileId, CurseForgeProjectId, DownloadSourceMode, EditInstance,
-    InstanceLink, ModLoader, ProjectType,
+    InstanceLink, ModLoader, ProjectType, ReleaseChannel,
 };
 use crate::util::fetch::{
     ContentValidation, DownloadRequest, DownloadResult, DownloadRouteSource,
@@ -36,6 +36,10 @@ const API_BASE_URL: &str = "https://api.curseforge.com";
 const MINECRAFT_GAME_ID: u32 = 432;
 const MAX_PAGE_SIZE: u32 = 50;
 const MODPACK_FILE_INSTALL_ATTEMPTS: usize = 3;
+const DEPENDENCY_RELATION_OPTIONAL: u32 = 2;
+const DEPENDENCY_RELATION_REQUIRED: u32 = 3;
+const DEPENDENCY_RELATION_INCOMPATIBLE: u32 = 5;
+const DEPENDENCY_RELATION_INCLUDE: u32 = 6;
 
 static UNAUTHORIZED: AtomicBool = AtomicBool::new(false);
 static CATEGORY_CACHE: LazyLock<RwLock<Option<Vec<CurseForgeCategory>>>> =
@@ -1153,13 +1157,43 @@ async fn install_file_with_metrics(
         if request.install_dependencies {
             for dependency_ref in &file.dependencies {
                 match dependency_ref.relation_type {
-                    2 => {
+                    DEPENDENCY_RELATION_OPTIONAL => {
                         result.optional_dependencies.push(dependency_ref.mod_id)
                     }
-                    5 => result
+                    DEPENDENCY_RELATION_INCOMPATIBLE => result
                         .incompatible_dependencies
                         .push(dependency_ref.mod_id),
-                    3 | 6 => {
+                    DEPENDENCY_RELATION_REQUIRED
+                    | DEPENDENCY_RELATION_INCLUDE => {
+                        let dependency_project = match projects
+                            .get(&dependency_ref.mod_id)
+                        {
+                            Some(project) => project.clone(),
+                            None => {
+                                let project =
+                                    get_project(dependency_ref.mod_id).await?;
+                                projects.insert(
+                                    dependency_ref.mod_id,
+                                    project.clone(),
+                                );
+                                project
+                            }
+                        };
+                        let Some(dependency_type) = recognized_project_type(
+                            dependency_project.class_id,
+                        ) else {
+                            result.failed_downloads.push(
+                                CurseForgeFailedDownload {
+                                    project_id: dependency_ref.mod_id,
+                                    file_id: 0,
+                                    file_name: dependency_project.name.clone(),
+                                    reason:
+                                        "The dependency project type is not supported"
+                                            .to_string(),
+                                },
+                            );
+                            continue;
+                        };
                         if let Some(dependency_file) = select_dependency_file(
                             dependency_ref.mod_id,
                             request.game_version.clone(),
@@ -1170,7 +1204,7 @@ async fn install_file_with_metrics(
                             pending.push((
                                 dependency_ref.mod_id,
                                 dependency_file.id,
-                                ProjectType::Mod,
+                                dependency_type,
                                 true,
                             ));
                         }
@@ -3220,13 +3254,15 @@ pub async fn update_installed_file(
     let row = sqlx::query(
 		"SELECT ref.provider_project_id, ref.provider_release_id, entry.project_type,
 				entry.ownership_kind,
-				content_set.game_version, content_set.loader
+				content_set.game_version, content_set.loader,
+				instance.update_channel
          FROM instance_files file
          INNER JOIN instance_content_entries entry ON entry.file_id = file.id
          INNER JOIN instance_content_provider_refs ref
             ON ref.content_entry_id = entry.id AND ref.provider = 'curseforge'
          INNER JOIN instance_content_sets content_set
             ON content_set.id = entry.content_set_id
+         INNER JOIN instances instance ON instance.id = file.instance_id
          WHERE file.instance_id = ? AND file.relative_path = ?
          ORDER BY entry.modified_at DESC
          LIMIT 1",
@@ -3258,6 +3294,11 @@ pub async fn update_installed_file(
         )?;
     let game_version = row.try_get::<String, _>("game_version")?;
     let loader = row.try_get::<String, _>("loader")?;
+    let update_channel = row
+        .try_get::<Option<String>, _>("update_channel")?
+        .as_deref()
+        .map(ReleaseChannel::from_key)
+        .unwrap_or(ReleaseChannel::Release);
     let mod_loader_type = match loader.as_str() {
         "forge" => Some(1),
         "fabric" => Some(4),
@@ -3265,20 +3306,13 @@ pub async fn update_installed_file(
         "neoforge" => Some(6),
         _ => None,
     };
-    let latest = get_files(
+    let latest = select_latest_compatible_file(
         project_id,
-        CurseForgeFilesRequest {
-            game_version: Some(game_version.clone()),
-            mod_loader_type,
-            game_version_type_id: None,
-            index: 0,
-            page_size: MAX_PAGE_SIZE,
-        },
+        Some(game_version.clone()),
+        mod_loader_type,
+        Some(update_channel),
     )
     .await?
-    .files
-    .into_iter()
-    .find(|file| file.is_available)
     .ok_or_else(|| {
         ErrorKind::InputError(
             "No compatible CurseForge update was found".to_string(),
@@ -3442,22 +3476,59 @@ async fn install_selected_file(
 pub async fn recognize_instance_files(
     instance_id: &str,
 ) -> crate::Result<CurseForgeRecognitionResult> {
+    let mut result = CurseForgeRecognitionResult::default();
+    if capability().status != CurseForgeCapabilityStatus::Ready {
+        return Ok(result);
+    }
+
+    let state = State::get().await?;
     let instance_files =
         crate::api::instance::sync_content_files(instance_id).await?;
+    let tracked_file_ids = match crate::state::instances::adapters::sqlite::content_rows::get_applied_content_set(
+        instance_id,
+        &state.pool,
+    )
+    .await?
+    {
+        Some(content_set) => {
+            crate::state::instances::adapters::sqlite::content_rows::get_content_entries(
+                &content_set.id,
+                &state.pool,
+            )
+            .await?
+            .into_iter()
+            .filter_map(|entry| entry.file_id)
+            .collect::<HashSet<_>>()
+        }
+        None => HashSet::new(),
+    };
     let instance_path =
         crate::api::instance::get_full_path(instance_id).await?;
     let mut fingerprints = Vec::new();
-    let mut paths_by_fingerprint = HashMap::<u64, Vec<String>>::new();
+    let mut paths_by_fingerprint =
+        HashMap::<u64, Vec<(String, ProjectType)>>::new();
 
     for file in instance_files.into_iter().filter(|file| !file.missing) {
-        let bytes =
-            tokio::fs::read(instance_path.join(&file.relative_path)).await?;
+        if tracked_file_ids.contains(&file.id) {
+            continue;
+        }
+        let Some(project_type) =
+            crate::state::instances::adapters::filesystem::project_type_from_relative_path(
+                &file.relative_path,
+            )
+        else {
+            continue;
+        };
+        let full_path = instance_path.join(&file.relative_path);
+        let Ok(bytes) = tokio::fs::read(&full_path).await else {
+            continue;
+        };
         let fingerprint = compute_fingerprint(&bytes) as u64;
         fingerprints.push(fingerprint);
         paths_by_fingerprint
             .entry(fingerprint)
             .or_default()
-            .push(file.relative_path);
+            .push((file.relative_path, project_type));
     }
 
     let mut matches = HashMap::new();
@@ -3468,13 +3539,36 @@ pub async fn recognize_instance_files(
         }
     }
 
-    let mut result = CurseForgeRecognitionResult {
-        scanned: fingerprints.len() as u32,
-        ..Default::default()
+    result.scanned = fingerprints.len() as u32;
+    let matched_project_ids =
+        matches.values().map(|file| file.mod_id).collect::<Vec<_>>();
+    let matched_projects = if matched_project_ids.is_empty() {
+        HashMap::new()
+    } else {
+        match get_projects(matched_project_ids).await {
+            Ok(projects) => projects
+                .into_iter()
+                .map(|project| (project.id, project))
+                .collect(),
+            Err(error) => {
+                tracing::warn!(
+                    %error,
+                    "Failed to resolve CurseForge project types while recognizing instance files"
+                );
+                HashMap::new()
+            }
+        }
     };
+
     for (fingerprint, paths) in paths_by_fingerprint {
         if let Some(file) = matches.get(&fingerprint) {
-            for path in paths {
+            for (path, path_project_type) in paths {
+                let project_type = matched_projects
+                    .get(&file.mod_id)
+                    .and_then(|project| {
+                        recognized_project_type(project.class_id)
+                    })
+                    .unwrap_or(path_project_type);
                 let full_path = instance_path.join(&path);
                 let Some((size, sha1)) = verify_recognized_curseforge_file(
                     &full_path,
@@ -3484,18 +3578,17 @@ pub async fn recognize_instance_files(
                 else {
                     continue;
                 };
-                let state = State::get().await?;
                 crate::state::record_verified_curseforge_project_file_atomic(
                     instance_id,
                     &path,
                     &sha1,
                     size,
-                    ProjectType::Mod,
+                    project_type,
                     ContentSourceKind::CurseForge,
                     crate::state::instances::ContentOwnershipKind::UserAdded,
                     CurseForgeProjectId::new(file.mod_id)?,
                     CurseForgeFileId::new(file.id)?,
-                    false,
+                    true,
                     &state,
                 )
                 .await?;
@@ -3508,7 +3601,9 @@ pub async fn recognize_instance_files(
                 result.matched += 1;
             }
         } else {
-            result.unmatched_paths.extend(paths);
+            result
+                .unmatched_paths
+                .extend(paths.into_iter().map(|(path, _)| path));
         }
     }
     result.unmatched_paths.sort();
@@ -4693,6 +4788,34 @@ fn manual_download_target_folder(
     .into())
 }
 
+pub(crate) async fn select_latest_compatible_file(
+    project_id: u32,
+    game_version: Option<String>,
+    mod_loader_type: Option<u32>,
+    release_channel: Option<ReleaseChannel>,
+) -> crate::Result<Option<CurseForgeFile>> {
+    let response = get_files(
+        project_id,
+        CurseForgeFilesRequest {
+            game_version,
+            mod_loader_type,
+            game_version_type_id: None,
+            index: 0,
+            page_size: MAX_PAGE_SIZE,
+        },
+    )
+    .await?;
+
+    Ok(response.files.into_iter().find(|file| {
+        file.is_available
+            && match release_channel {
+                Some(ReleaseChannel::Release) => file.release_type == 1,
+                Some(ReleaseChannel::Beta) => file.release_type <= 2,
+                Some(ReleaseChannel::Alpha) | None => true,
+            }
+    }))
+}
+
 async fn select_dependency_file(
     project_id: u32,
     game_version: Option<String>,
@@ -5489,6 +5612,17 @@ fn project_type_for_class(class_id: Option<u32>) -> &'static str {
         Some(4471) => "modpack",
         Some(6552) => "shader",
         _ => "mod",
+    }
+}
+
+fn recognized_project_type(class_id: Option<u32>) -> Option<ProjectType> {
+    match class_id {
+        Some(6) => Some(ProjectType::Mod),
+        Some(12) => Some(ProjectType::ResourcePack),
+        Some(6552) => Some(ProjectType::ShaderPack),
+        Some(6945) => Some(ProjectType::DataPack),
+        Some(17) => Some(ProjectType::WorldSave),
+        _ => None,
     }
 }
 
@@ -8100,5 +8234,28 @@ mod tests {
                 loader_version: None,
             }
         );
+    }
+
+    #[test]
+    fn recognized_project_types_map_curseforge_classes() {
+        assert_eq!(recognized_project_type(Some(6)), Some(ProjectType::Mod));
+        assert_eq!(
+            recognized_project_type(Some(12)),
+            Some(ProjectType::ResourcePack),
+        );
+        assert_eq!(
+            recognized_project_type(Some(6552)),
+            Some(ProjectType::ShaderPack),
+        );
+        assert_eq!(
+            recognized_project_type(Some(6945)),
+            Some(ProjectType::DataPack),
+        );
+        assert_eq!(
+            recognized_project_type(Some(17)),
+            Some(ProjectType::WorldSave),
+        );
+        assert_eq!(recognized_project_type(Some(4471)), None);
+        assert_eq!(recognized_project_type(None), None);
     }
 }

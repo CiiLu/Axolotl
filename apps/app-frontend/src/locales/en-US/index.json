@@ -677,6 +677,12 @@
 	"app.curseforge.automatic-downloads-failed.notification-title": {
 		"message": "Some CurseForge downloads failed"
 	},
+	"app.curseforge.dependency-notes.notification-body": {
+		"message": "{optional, plural, =0 {No optional dependencies were skipped.} one {# optional dependency was skipped.} other {# optional dependencies were skipped.}} {incompatible, plural, =0 {No incompatible dependencies were detected.} one {# incompatible dependency was detected.} other {# incompatible dependencies were detected.}}"
+	},
+	"app.curseforge.dependency-notes.notification-title": {
+		"message": "CurseForge dependency notes"
+	},
 	"app.curseforge.manual-downloads.all-imported": {
 		"message": "All files imported"
 	},

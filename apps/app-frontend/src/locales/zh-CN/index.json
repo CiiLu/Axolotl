@@ -5279,6 +5279,12 @@
 	"app.curseforge.automatic-downloads-failed.notification-title": {
 		"message": "部分 CurseForge 文件下载失败"
 	},
+	"app.curseforge.dependency-notes.notification-body": {
+		"message": "{optional, plural, =0 {没有跳过可选前置模组。} other {跳过了 # 个可选前置模组。}} {incompatible, plural, =0 {未检测到不兼容的前置模组。} other {检测到 # 个不兼容的前置模组。}}"
+	},
+	"app.curseforge.dependency-notes.notification-title": {
+		"message": "CurseForge 前置模组提示"
+	},
 	"app.curseforge.network-download-failed.notification-body": {
 		"message": "无法连接 CurseForge 下载该文件。当前网络或代理可能阻止了 CurseForge。请关闭或更换 VPN/代理，改用其他网络后重试。"
 	},

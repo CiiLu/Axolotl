@@ -230,6 +230,7 @@ import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
 import { applyContentItemUpdates, matchesContentItem } from '@/helpers/content-item-state'
 import { translateContentItemTitles } from '@/helpers/content-search'
+import { getCurseForgeChangelog } from '@/helpers/curseforge'
 import {
 	type CurseForgeManualDownloadItem,
 	getCurseForgeManualDownloadUrl,
@@ -1710,16 +1711,57 @@ async function fetchAndSpliceVersion(
 	updatingProjectVersions.value = mergeVersionIntoList(updatingProjectVersions.value, fullVersion)
 }
 
+function isCurseForgeUpdaterRequest() {
+	if (updatingModpack.value) {
+		return props.instance?.link?.type === 'curseforge_modpack'
+	}
+	const item = updatingProject.value
+	return (
+		item?.origin_provider === 'curseforge' ||
+		!!item?.project?.id.startsWith('curseforge:') ||
+		item?.provider_refs?.some((ref) => ref.provider === 'curseforge')
+	)
+}
+
+async function fetchAndSpliceCurseForgeVersion(
+	versionId: string,
+	requestId = activeUpdateRequestId.value,
+) {
+	const rawProjectId =
+		updatingProject.value?.project?.id ??
+		(updatingModpack.value ? (props.instance?.link?.project_id ?? '') : '')
+	const projectId = parseCurseForgeProjectId(rawProjectId)
+	const fileId = Number(versionId)
+	if (projectId == null || !Number.isFinite(fileId)) return
+
+	const changelog = await getCurseForgeChangelog(projectId, fileId).catch((err) => {
+		handleError(err as Error)
+		return null
+	})
+	if (!isActiveUpdateRequest(requestId)) return
+	const version = updatingProjectVersions.value.find((candidate) => candidate.id === versionId)
+	if (version) {
+		updatingProjectVersions.value = mergeVersionIntoList(updatingProjectVersions.value, {
+			...version,
+			changelog: changelog ?? '',
+		})
+	}
+}
+
 async function handleVersionSelect(version: Labrinth.Versions.v2.Version) {
 	if (version.changelog != null) return
 	const requestId = activeUpdateRequestId.value
 	loadingChangelog.value = true
-	await fetchAndSpliceVersion(
-		version.id,
-		'bypass',
-		handleError as (err: unknown) => void,
-		requestId,
-	)
+	if (isCurseForgeUpdaterRequest()) {
+		await fetchAndSpliceCurseForgeVersion(version.id, requestId)
+	} else {
+		await fetchAndSpliceVersion(
+			version.id,
+			'bypass',
+			handleError as (err: unknown) => void,
+			requestId,
+		)
+	}
 	if (isActiveUpdateRequest(requestId)) {
 		loadingChangelog.value = false
 	}
@@ -1727,6 +1769,10 @@ async function handleVersionSelect(version: Labrinth.Versions.v2.Version) {
 
 async function handleVersionHover(version: Labrinth.Versions.v2.Version) {
 	if (version.changelog != null) return
+	if (isCurseForgeUpdaterRequest()) {
+		await fetchAndSpliceCurseForgeVersion(version.id, activeUpdateRequestId.value)
+		return
+	}
 	await fetchAndSpliceVersion(version.id, undefined, undefined, activeUpdateRequestId.value)
 }
 

@@ -120,6 +120,15 @@ const automaticDownloadsFailedMessage = defineMessage({
 	defaultMessage:
 		'{failed, number} files failed after retrying ({list}). See Downloads for the recorded errors.',
 })
+const dependencyNotesTitleMessage = defineMessage({
+	id: 'app.curseforge.dependency-notes.notification-title',
+	defaultMessage: 'CurseForge dependency notes',
+})
+const dependencyNotesMessage = defineMessage({
+	id: 'app.curseforge.dependency-notes.notification-body',
+	defaultMessage:
+		'{optional, plural, =0 {No optional dependencies were skipped.} one {# optional dependency was skipped.} other {# optional dependencies were skipped.}} {incompatible, plural, =0 {No incompatible dependencies were detected.} one {# incompatible dependency was detected.} other {# incompatible dependencies were detected.}}',
+})
 const curseForgeNetworkFailureTitleMessage = defineMessage({
 	id: 'app.curseforge.network-download-failed.notification-title',
 	defaultMessage: 'Could not download from CurseForge',
@@ -991,6 +1000,18 @@ export function createContentInstall(opts: {
 		})
 	}
 
+	function showCurseForgeDependencyNotes(result: CurseForgeInstallResult) {
+		const optional = result.optionalDependencies?.length ?? 0
+		const incompatible = result.incompatibleDependencies?.length ?? 0
+		if (optional === 0 && incompatible === 0) return
+
+		opts.addNotification({
+			title: formatMessage(dependencyNotesTitleMessage),
+			text: formatMessage(dependencyNotesMessage, { optional, incompatible }),
+			type: 'info',
+		})
+	}
+
 	function handleContentInstallError(error: unknown) {
 		const technicalDetails = getCurseForgeDownloadFailureDetails(error)
 		if (currentProvider === 'curseforge' && technicalDetails) {
@@ -1062,6 +1083,7 @@ export function createContentInstall(opts: {
 
 		showManualCurseForgeDownloads(instance.id, result)
 		showFailedCurseForgeDownloads(result)
+		showCurseForgeDependencyNotes(result)
 		const installedProjectIds = [
 			...new Set(result.installed.map((installed) => `curseforge:${installed.projectId}`)),
 		]

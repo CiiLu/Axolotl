@@ -1758,6 +1758,12 @@ async fn content_files_to_content_items(
                     "neoforge" => Some(6),
                     _ => None,
                 };
+                let release_type_allowed =
+                    |release_type: u32| match instance.update_channel {
+                        ReleaseChannel::Release => release_type == 1,
+                        ReleaseChannel::Beta => release_type <= 2,
+                        ReleaseChannel::Alpha => true,
+                    };
 
                 if let Some(index) = curseforge_project?
                     .latest_files_indexes
@@ -1766,6 +1772,7 @@ async fn content_files_to_content_items(
                         index.game_version == content_set.game_version
                             && (file.project_type != ProjectType::Mod
                                 || index.mod_loader == loader_type)
+                            && release_type_allowed(index.release_type)
                     })
                 {
                     return (index.file_id != current_file_id)
@@ -1774,7 +1781,9 @@ async fn content_files_to_content_items(
 
                 let fallback = curseforge_project?.latest_files.iter().find(
                     |candidate| {
-                        if !candidate.is_available {
+                        if !candidate.is_available
+                            || !release_type_allowed(candidate.release_type)
+                        {
                             return false;
                         }
                         let has_game_version = candidate

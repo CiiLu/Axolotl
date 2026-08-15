@@ -32,6 +32,7 @@
 			<ProjectSidebarDetails
 				:project="data"
 				:has-versions="versions.length > 0"
+				hide-license
 				link-target="_blank"
 				class="project-sidebar-section"
 			/>
@@ -421,7 +422,7 @@ const data = computed(() => {
 		approved: value.dateReleased || value.dateCreated,
 		updated: value.dateModified,
 		queued: null,
-		license: { id: 'LicenseRef-All-Rights-Reserved', name: 'All Rights Reserved', url: null },
+		license: { id: 'LicenseRef-Unknown', name: 'Unknown', url: null },
 		issues_url: value.links.issuesUrl ?? '',
 		source_url: value.links.sourceUrl ?? '',
 		wiki_url: value.links.wikiUrl ?? '',
