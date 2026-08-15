@@ -3,7 +3,13 @@ name: Axolotl desktop CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'apps/telemetry-dashboard/**'
+      - 'apps/telemetry-worker/**'
   pull_request:
+    paths-ignore:
+      - 'apps/telemetry-dashboard/**'
+      - 'apps/telemetry-worker/**'
   workflow_dispatch:
 
 permissions:

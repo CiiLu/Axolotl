@@ -32,7 +32,11 @@ pnpm --filter @axolotl/telemetry-dashboard dev
 Supported deterministic scenarios are `normal`, `empty`, `api-error`, `no-sample`,
 `budget-reached`, `unconfigured-auth`, and `forbidden`. All mock values are synthetic fixtures.
 
-## Vercel production deployment
+## Production deployment (Cloudflare Workers)
+
+The dashboard runs on the `axolotl-telemetry-dashboard` Worker with the custom domain
+`admin.axlmc.org`. It uses the native D1 and R2 bindings declared in `wrangler.toml`; no data
+credentials are sent to the browser.
 
 Do not deploy the dashboard until every item below is complete:
 
@@ -44,24 +48,40 @@ Do not deploy the dashboard until every item below is complete:
 3. Create a self-hosted Access application for `admin.axlmc.org` with an 8-hour session duration.
 4. Create one Allow policy with `Include -> GitHub Organization -> Axolotl-Launcher`. Do not add a
    bypass policy or a broader include rule.
-5. Link `apps/telemetry-dashboard` to the Vercel project and add the following Production
-   environment variables with `vercel env add`. Never prefix Cloudflare credentials with
-   `NUXT_PUBLIC_`:
-   - `CF_ACCESS_TEAM_DOMAIN`: the team slug from `<team-name>.cloudflareaccess.com`.
-   - `CF_ACCESS_AUDIENCE`: the Access application audience (`AUD` tag).
-   - `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`, and `CLOUDFLARE_API_TOKEN`: a token
-     limited to read access for the telemetry D1 database.
-   - `CLOUDFLARE_R2_ACCESS_KEY_ID`, `CLOUDFLARE_R2_SECRET_ACCESS_KEY`, and
-     `CLOUDFLARE_R2_BUCKET_NAME`: read-only S3 credentials limited to the error-context bucket.
+5. Keep the Worker custom domain `admin.axlmc.org` bound to `axolotl-telemetry-dashboard`. The DNS
+   records for `axlmc.org` stay proxied through Cloudflare.
 
-6. Deploy from `apps/telemetry-dashboard` with `vercel --prod`. The Vercel build selects Nitro's
-   Vercel preset and queries D1 through Cloudflare's server-side REST API. Registered R2 objects are
-   read through the server-side S3 API. No credential is included in browser runtime config.
-7. Add `admin.axlmc.org` to the Vercel project. In Cloudflare DNS, create a proxied CNAME for
-   `admin` pointing to Vercel's assigned CNAME target. Keep the Access application on the hostname;
-   do not add a bypass policy.
-8. Verify an unauthenticated request is intercepted by Cloudflare Access, then verify
-   `/api/admin/session` reports `dataSource: production` after authentication.
+Build and deploy from `apps/telemetry-dashboard`:
+
+```powershell
+pnpm --filter @axolotl/telemetry-dashboard build
+pnpm --filter @axolotl/telemetry-dashboard exec wrangler deploy
+```
+
+`nuxi build` uses Nitro's `cloudflare-module` preset by default and emits
+`.output/server/index.mjs` plus `.output/public`, exactly what `wrangler.toml` references.
+
+### Automatic deployment
+
+`.github/workflows/deploy-telemetry-dashboard.yml` deploys on every push to `main` that touches
+`apps/telemetry-dashboard/**`, and can also be triggered manually. It requires one repository
+secret:
+
+- `CLOUDFLARE_API_TOKEN`: an API token with Workers Scripts Edit and Workers Routes Edit
+  permission for the account that owns `axolotl-telemetry-dashboard`.
+
+Do not add `[skip ci]` to commits that should reach production: GitHub Actions skips all workflows
+for such commits, including this deployment.
+
+### Unused Vercel target
+
+An earlier Vercel project (`axolotl-telemetry-dashboard`) exists, but its `admin.axlmc.org` domain
+was never pointed at Vercel and traffic is served by the Cloudflare Worker. The Nitro `vercel`
+preset and `server/utils/vercel-data-source.ts` remain as an offline fallback and are not part of
+the production path. Do not enable both targets for the same hostname.
+
+Verify an unauthenticated request is intercepted by Cloudflare Access, then verify
+`/api/admin/session` reports `dataSource: production` after authentication.
 
 The server fails closed when Access or the remote data source configuration is absent. A production
 build ignores the mock provider even if a mock environment variable is present. All Admin API D1
