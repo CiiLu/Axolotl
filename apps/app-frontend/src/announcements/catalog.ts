@@ -33,12 +33,12 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
-		id: 'launcher-1.7.8',
-		version: '1.7.8',
+		id: 'launcher-1.8.0',
+		version: '1.8.0',
 		publishedAt: '2026-08-15',
 		title: {
-			'en-US': 'Axolotl Launcher 1.7.8',
-			'zh-CN': 'Axolotl Launcher 1.7.8',
+			'en-US': 'Axolotl Launcher 1.8.0',
+			'zh-CN': 'Axolotl Launcher 1.8.0',
 		},
 		changes: {
 			added: [
@@ -65,6 +65,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Datapacks exported from the recipe generator now have descriptions and icons.',
 					'zh-CN': '数据包配方生成器导出的数据包现在有了描述和图标。',
+				},
+				{
+					'en-US': 'Added telemetry features.',
+					'zh-CN': '新增遥测功能',
 				},
 			],
 			changed: [
