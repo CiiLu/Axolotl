@@ -28,12 +28,7 @@ node_modules
 .trae/*
 
 # IDE - IntelliJ
-.idea/*
-!.idea/code.iml
-!.idea/gradle.xml
-!.idea/icon.svg
-!.idea/modules.xml
-!.idea/vcs.xml
+.idea/
 
 # misc
 /.sass-cache
@@ -74,6 +69,9 @@ access-jwt*.txt
 .claude/*
 !.claude/skills/
 .letta
+
+# Agent skill lock files
+/skills-lock.json
 
 # Codex local verification artifacts
 /.codex-*
