@@ -124,9 +124,7 @@ const withAll = (items: string[], label: string) => [
 		/>
 
 		<Card class="overflow-hidden">
-			<div
-				class="flex flex-wrap items-center gap-2 border-b border-surface-4 bg-muted/30 p-3 md:p-4"
-			>
+			<div class="flex flex-wrap items-center gap-2 border-b border-surface-4 bg-surface-3/35 p-3">
 				<label class="relative min-w-56 flex-1 lg:max-w-sm">
 					<span class="sr-only">搜索错误</span>
 					<Search
@@ -134,7 +132,7 @@ const withAll = (items: string[], label: string) => [
 					/>
 					<input
 						v-model="searchInput"
-						class="h-9 w-full rounded-md border border-surface-4 bg-surface-2 pl-9 pr-3 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground hover:border-surface-5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+						class="h-9 w-full rounded-md border border-surface-4 bg-surface-2 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground hover:border-surface-5 focus:ring-2 focus:ring-ring"
 						placeholder="搜索指纹、类型或消息"
 						maxlength="120"
 					/>
@@ -221,7 +219,7 @@ const withAll = (items: string[], label: string) => [
 					/>
 				</div>
 				<footer
-					class="flex flex-wrap items-center justify-between gap-3 border-t border-surface-4 px-4 py-3 text-xs text-muted-foreground"
+					class="flex flex-wrap items-center justify-between gap-3 border-t px-3 py-2.5 text-xs text-muted-foreground"
 				>
 					<p>
 						<span class="font-medium tabular-nums text-foreground">{{
@@ -245,7 +243,6 @@ const withAll = (items: string[], label: string) => [
 						<Button
 							variant="outline"
 							size="icon"
-							class="size-8"
 							:disabled="page <= 1 || status === 'pending'"
 							aria-label="上一页"
 							@click="page--"
@@ -255,7 +252,6 @@ const withAll = (items: string[], label: string) => [
 						<Button
 							variant="outline"
 							size="icon"
-							class="size-8"
 							:disabled="page >= data.totalPages || status === 'pending'"
 							aria-label="下一页"
 							@click="page++"
