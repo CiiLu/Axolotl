@@ -3173,6 +3173,24 @@
 	"project.versions.platform.modloader.short": {
 		"defaultMessage": "模组加载器"
 	},
+	"project.versions.table.downloads": {
+		"defaultMessage": "下载量"
+	},
+	"project.versions.table.environment": {
+		"defaultMessage": "运行环境"
+	},
+	"project.versions.table.game-version": {
+		"defaultMessage": "游戏版本"
+	},
+	"project.versions.table.platform": {
+		"defaultMessage": "平台"
+	},
+	"project.versions.table.published": {
+		"defaultMessage": "发布时间"
+	},
+	"project.versions.table.version": {
+		"defaultMessage": "版本"
+	},
 	"project.versions.version.withheld": {
 		"defaultMessage": "保留"
 	},

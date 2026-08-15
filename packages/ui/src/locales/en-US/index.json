@@ -3452,6 +3452,24 @@
 	"project.versions.platform.modloader.short": {
 		"defaultMessage": "ModLoader"
 	},
+	"project.versions.table.downloads": {
+		"defaultMessage": "Downloads"
+	},
+	"project.versions.table.environment": {
+		"defaultMessage": "Environment"
+	},
+	"project.versions.table.game-version": {
+		"defaultMessage": "Game version"
+	},
+	"project.versions.table.platform": {
+		"defaultMessage": "Platform"
+	},
+	"project.versions.table.published": {
+		"defaultMessage": "Published"
+	},
+	"project.versions.table.version": {
+		"defaultMessage": "Version"
+	},
 	"project.versions.version.withheld": {
 		"defaultMessage": "Withheld"
 	},

@@ -541,17 +541,17 @@ const versionColumns = computed<TableColumn<VersionTableColumn>[]>(() => {
 		},
 		{
 			key: 'name',
-			label: 'Version',
+			label: formatMessage(messages.tableVersion),
 			cellClass: '!overflow-visible py-3 pr-4 min-w-[7rem]',
 		},
 		{
 			key: 'gameVersions',
-			label: 'Game version',
+			label: formatMessage(messages.tableGameVersion),
 			cellClass: '!overflow-visible py-3 align-middle pr-2.5 min-w-0 max-w-[12rem]',
 		},
 		{
 			key: 'platforms',
-			label: 'Platform',
+			label: formatMessage(messages.tablePlatform),
 			cellClass: '!overflow-visible py-3 align-middle pr-2.5 min-w-0 max-w-[12rem]',
 		},
 	]
@@ -559,7 +559,7 @@ const versionColumns = computed<TableColumn<VersionTableColumn>[]>(() => {
 	if (props.showEnvironmentColumn) {
 		columns.push({
 			key: 'environment',
-			label: 'Environment',
+			label: formatMessage(messages.tableEnvironment),
 			cellClass: `${visibleCellClass} min-w-0 max-w-[12rem]`,
 		})
 	}
@@ -567,13 +567,13 @@ const versionColumns = computed<TableColumn<VersionTableColumn>[]>(() => {
 	columns.push(
 		{
 			key: 'published',
-			label: 'Published',
+			label: formatMessage(messages.tablePublished),
 			cellClass: '!overflow-visible align-middle pr-2.5 w-max',
 			width: '12%',
 		},
 		{
 			key: 'downloads',
-			label: 'Downloads',
+			label: formatMessage(messages.tableDownloads),
 			cellClass: '!overflow-visible align-middle',
 			width: '12%',
 		},
@@ -756,6 +756,30 @@ const messages = defineMessages({
 	modloaderShort: {
 		id: 'project.versions.platform.modloader.short',
 		defaultMessage: 'ModLoader',
+	},
+	tableVersion: {
+		id: 'project.versions.table.version',
+		defaultMessage: 'Version',
+	},
+	tableGameVersion: {
+		id: 'project.versions.table.game-version',
+		defaultMessage: 'Game version',
+	},
+	tablePlatform: {
+		id: 'project.versions.table.platform',
+		defaultMessage: 'Platform',
+	},
+	tableEnvironment: {
+		id: 'project.versions.table.environment',
+		defaultMessage: 'Environment',
+	},
+	tablePublished: {
+		id: 'project.versions.table.published',
+		defaultMessage: 'Published',
+	},
+	tableDownloads: {
+		id: 'project.versions.table.downloads',
+		defaultMessage: 'Downloads',
 	},
 })
 </script>
