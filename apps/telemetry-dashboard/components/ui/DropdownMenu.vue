@@ -27,10 +27,10 @@ const themes: Array<{ value: ThemeMode; label: string; icon: typeof Sun }> = [
 <template>
 	<DropdownMenuRoot>
 		<DropdownMenuTrigger
-			class="inline-flex h-9 min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-surface-4 bg-surface-2 px-2.5 text-sm shadow-sm outline-none transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring"
+			class="inline-flex h-9 min-w-0 cursor-pointer items-center gap-2 rounded-md border border-surface-4 bg-surface-2 px-2.5 text-sm outline-none transition-colors hover:border-surface-5 hover:bg-surface-3 focus:ring-2 focus:ring-ring"
 		>
 			<span
-				class="bg-primary/12 flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold text-primary"
+				class="flex size-6 shrink-0 items-center justify-center rounded bg-primary/15 text-xs font-semibold text-primary"
 			>
 				{{ session.identity.name.slice(0, 1).toUpperCase() }}
 			</span>
@@ -40,8 +40,8 @@ const themes: Array<{ value: ThemeMode; label: string; icon: typeof Sun }> = [
 		<DropdownMenuPortal>
 			<DropdownMenuContent
 				align="end"
-				:side-offset="8"
-				class="popover-content z-50 w-64 rounded-xl border border-surface-5 bg-popover p-1.5 text-popover-foreground shadow-lg outline-none"
+				:side-offset="6"
+				class="z-50 w-64 rounded-lg border border-surface-5 bg-popover p-1 text-popover-foreground shadow-xl outline-none"
 			>
 				<DropdownMenuLabel class="px-2 py-1.5">
 					<p class="truncate text-sm font-medium">{{ session.identity.name }}</p>
@@ -56,7 +56,7 @@ const themes: Array<{ value: ThemeMode; label: string; icon: typeof Sun }> = [
 				<DropdownMenuItem
 					v-for="theme in themes"
 					:key="theme.value"
-					class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-3"
+					class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none hover:bg-surface-3 focus:bg-surface-3"
 					@click="mode = theme.value"
 				>
 					<component :is="theme.icon" class="size-4 text-muted-foreground" />
@@ -67,7 +67,7 @@ const themes: Array<{ value: ThemeMode; label: string; icon: typeof Sun }> = [
 				<DropdownMenuItem as-child>
 					<a
 						:href="session.logoutUrl"
-						class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-3"
+						class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none hover:bg-surface-3 focus:bg-surface-3"
 					>
 						<LogOut class="size-4 text-muted-foreground" />
 						退出登录

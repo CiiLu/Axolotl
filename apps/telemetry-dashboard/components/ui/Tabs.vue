@@ -12,7 +12,7 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
 	<div
 		role="tablist"
 		:aria-label="label"
-		class="inline-flex h-9 items-center rounded-lg border border-surface-4 bg-surface-3 p-1 text-muted-foreground"
+		class="inline-flex h-9 items-center rounded-md border border-surface-4 bg-surface-3 p-1"
 	>
 		<button
 			v-for="item in items"
@@ -20,7 +20,7 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
 			type="button"
 			role="tab"
 			:aria-selected="modelValue === item.value"
-			class="inline-flex h-7 cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-2.5 text-xs font-medium transition-all hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			class="h-7 cursor-pointer rounded px-2.5 text-xs font-medium text-muted-foreground transition-[color,background-color,box-shadow] hover:text-foreground active:bg-surface-4"
 			:class="modelValue === item.value && 'bg-surface-2 text-foreground shadow-sm'"
 			@click="$emit('update:modelValue', item.value)"
 		>

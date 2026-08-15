@@ -6,7 +6,6 @@ import {
 	isError,
 } from 'h3'
 
-import { toAdminHttpError } from './admin-http-error'
 import { AdminApiError } from './errors'
 
 export function defineAdminHandler<T>(
@@ -16,7 +15,13 @@ export function defineAdminHandler<T>(
 		try {
 			return await handler(event)
 		} catch (error) {
-			if (error instanceof AdminApiError) throw toAdminHttpError(error)
+			if (error instanceof AdminApiError) {
+				throw createError({
+					statusCode: error.statusCode,
+					statusMessage: error.message,
+					data: { error: { code: error.code, message: error.message } },
+				})
+			}
 			if (isError(error) && 'statusCode' in error && Number(error.statusCode) < 500) throw error
 			throw createError({
 				statusCode: 503,

@@ -68,7 +68,7 @@ function move(event: PointerEvent): void {
 		</div>
 		<div
 			v-if="hovered !== null && available"
-			class="pointer-events-none absolute right-2 top-2 z-10 min-w-40 rounded-lg border border-surface-4 bg-popover p-2.5 text-xs text-popover-foreground shadow-lg"
+			class="pointer-events-none absolute right-2 top-2 z-10 min-w-40 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md"
 			role="tooltip"
 		>
 			<p class="mb-1 font-medium">{{ data[hovered].day }}（UTC）</p>

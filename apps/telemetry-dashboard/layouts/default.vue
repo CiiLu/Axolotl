@@ -118,14 +118,14 @@ watch(
 				class="fixed inset-y-0 left-0 z-40 flex w-60 -translate-x-full flex-col border-r border-surface-4 bg-surface-2 transition-transform duration-200 md:translate-x-0"
 				:class="mobileOpen && 'translate-x-0'"
 			>
-				<div class="flex h-16 items-center gap-3 border-b px-4">
+				<div class="flex h-16 items-center gap-3 border-b border-surface-4 px-4">
 					<div
-						class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm"
+						class="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm"
 					>
 						<Activity class="size-[18px]" />
 					</div>
 					<div class="min-w-0">
-						<p class="truncate text-sm font-semibold tracking-tight">Axolotl 遥测中心</p>
+						<p class="truncate text-sm font-semibold">Axolotl 遥测中心</p>
 						<p class="mt-0.5 text-[11px] text-muted-foreground">只读管理控制台</p>
 					</div>
 					<Button
@@ -138,18 +138,14 @@ watch(
 						<X class="size-4" />
 					</Button>
 				</div>
-				<div class="px-3 pb-2 pt-5 text-xs font-medium text-muted-foreground">工作区</div>
+				<div class="px-3 pb-2 pt-4 text-[11px] font-medium text-muted-foreground">工作区</div>
 				<nav class="space-y-1 px-3" aria-label="主导航">
 					<NuxtLink
 						v-for="item in nav"
 						:key="item.path"
 						:to="item.path"
-						class="flex h-9 cursor-pointer items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors"
-						:class="
-							route.path === item.path
-								? 'bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary'
-								: 'hover:bg-accent hover:text-accent-foreground'
-						"
+						class="flex h-10 cursor-pointer items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground active:bg-surface-4"
+						:class="route.path === item.path && 'bg-primary/10 text-primary'"
 					>
 						<component :is="item.icon" class="size-4" />
 						{{ item.label }}
@@ -157,7 +153,7 @@ watch(
 				</nav>
 
 				<div class="mt-auto p-3">
-					<div class="rounded-xl border border-surface-4 bg-muted/40 p-3.5">
+					<div class="rounded-md border border-surface-4 bg-surface-1 p-3">
 						<div class="flex items-center justify-between gap-2">
 							<span class="inline-flex items-center gap-2 text-xs font-medium">
 								<Database class="size-3.5 text-primary" />数据源
@@ -166,22 +162,20 @@ watch(
 								{{ session.dataSource === 'production' ? '生产数据' : '模拟数据' }}
 							</Badge>
 						</div>
-						<p class="mt-2 text-xs leading-5 text-muted-foreground">
+						<p class="mt-2 text-[11px] leading-5 text-muted-foreground">
 							统计范围仅包含主动同意遥测的匿名安装。
 						</p>
-						<div
-							class="mt-3 flex items-center gap-2 border-t border-surface-4 pt-3 text-[11px] text-muted-foreground"
-						>
-							<ShieldCheck class="size-3.5 shrink-0 text-emerald-600" />
-							Cloudflare Access 已保护
-						</div>
+					</div>
+					<div class="mt-3 flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
+						<ShieldCheck class="size-3.5 text-emerald-600" />
+						Cloudflare Access 已保护
 					</div>
 				</div>
 			</aside>
 
 			<div class="min-w-0 md:pl-60">
 				<header
-					class="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-surface-4 bg-surface-1/80 px-3 backdrop-blur-sm md:px-6"
+					class="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-surface-4 bg-surface-2/95 px-3 backdrop-blur md:px-5"
 				>
 					<Button
 						variant="ghost"
@@ -194,12 +188,12 @@ watch(
 					</Button>
 					<button
 						type="button"
-						class="hidden h-9 min-w-52 cursor-pointer items-center gap-2 rounded-lg border border-surface-4 bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground lg:flex"
+						class="hidden h-9 min-w-52 cursor-pointer items-center gap-2 rounded-md border border-surface-4 bg-surface-1 px-3 text-sm text-muted-foreground transition-colors hover:border-surface-5 hover:bg-surface-3 lg:flex"
 						@click="commandOpen = true"
 					>
 						<Search class="size-4" />
 						<span class="flex-1 text-left">快速跳转</span>
-						<kbd class="rounded-md border border-surface-4 bg-surface-2 px-1.5 py-0.5 text-[10px]"
+						<kbd class="rounded border border-surface-4 bg-surface-2 px-1.5 py-0.5 text-[10px]"
 							>Ctrl K</kbd
 						>
 					</button>
@@ -227,7 +221,7 @@ watch(
 						@update:model-value="setRange"
 					/>
 				</div>
-				<main class="mx-auto min-w-0 max-w-[1600px] p-4 md:p-6 lg:p-8">
+				<main class="mx-auto min-w-0 max-w-[1680px] p-4 md:p-5 lg:p-6">
 					<slot />
 				</main>
 			</div>

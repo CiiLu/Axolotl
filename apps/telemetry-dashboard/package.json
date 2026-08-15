@@ -4,7 +4,6 @@
 	"type": "module",
 	"scripts": {
 		"build": "nuxi build",
-		"deploy": "pnpm run build && wrangler deploy",
 		"dev": "nuxi dev",
 		"preview": "nuxi preview",
 		"postinstall": "nuxi prepare",

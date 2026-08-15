@@ -12,16 +12,16 @@ const variants = { available: 'success', degraded: 'warning', unavailable: 'seco
 
 <template>
 	<div
-		class="flex flex-wrap items-center gap-3 border-b border-surface-4 px-5 py-4 transition-colors last:border-0 hover:bg-muted/40"
+		class="flex flex-wrap items-center gap-3 border-b border-surface-4 px-4 py-3.5 transition-colors last:border-0 hover:bg-surface-3/45"
 	>
 		<component
 			:is="icons[check.status]"
 			class="size-4 shrink-0"
 			:class="
 				check.status === 'available'
-					? 'text-emerald-600 dark:text-emerald-400'
+					? 'text-emerald-600'
 					: check.status === 'degraded'
-						? 'text-amber-600 dark:text-amber-400'
+						? 'text-amber-600'
 						: 'text-muted-foreground'
 			"
 		/>

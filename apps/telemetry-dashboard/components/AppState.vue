@@ -43,17 +43,15 @@ const content = computed(() => {
 		class="flex flex-col items-center justify-center px-4 text-center"
 		:data-state="kind"
 	>
-		<div class="w-full max-w-md rounded-xl border border-surface-4 bg-surface-2 p-8 shadow-sm">
-			<div class="mx-auto flex size-10 items-center justify-center rounded-full bg-muted">
-				<component :is="content.icon" class="size-5 text-muted-foreground" />
-			</div>
-			<h2 class="mt-4 text-lg font-semibold tracking-tight">{{ content.title }}</h2>
-			<p class="mt-1.5 text-sm text-muted-foreground">{{ content.detail }}</p>
-			<Button v-if="content.action" class="mt-5" @click="emit('retry')">
-				<RefreshCw v-if="kind === 'error'" class="size-4" />
-				<LogIn v-else class="size-4" />
-				{{ content.action }}
-			</Button>
+		<div class="flex size-10 items-center justify-center rounded-lg bg-muted">
+			<component :is="content.icon" class="size-5 text-muted-foreground" />
 		</div>
+		<h2 class="mt-4 text-base font-semibold">{{ content.title }}</h2>
+		<p class="mt-1 max-w-md text-sm text-muted-foreground">{{ content.detail }}</p>
+		<Button v-if="content.action" class="mt-4" variant="outline" @click="emit('retry')">
+			<RefreshCw v-if="kind === 'error'" class="size-4" />
+			<LogIn v-else class="size-4" />
+			{{ content.action }}
+		</Button>
 	</div>
 </template>

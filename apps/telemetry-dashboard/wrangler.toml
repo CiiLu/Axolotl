@@ -3,6 +3,7 @@ main = ".output/server/index.mjs"
 compatibility_date = "2025-08-13"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
+routes = [{ pattern = "admin.axlmc.org", custom_domain = true }]
 
 [assets]
 directory = ".output/public"
