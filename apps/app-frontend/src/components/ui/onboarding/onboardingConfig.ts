@@ -197,7 +197,7 @@ export const onboardingMessages = defineMessages({
 	privacyDescription: {
 		id: 'app.onboarding.privacy.description',
 		defaultMessage:
-			'Change anonymous telemetry and Discord Rich Presence independently whenever you need to.',
+			'Manage anonymous telemetry, Discord Rich Presence, and the Minecraft log analysis service whenever you need to.',
 	},
 	updatesTitle: { id: 'app.onboarding.updates.title', defaultMessage: 'Stay in the loop' },
 	updatesDescription: {

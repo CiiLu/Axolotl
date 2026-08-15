@@ -180,18 +180,21 @@ a {
 	scrollbar-color: var(--color-scrollbar) var(--color-bg);
 }
 
-// Desktop app surfaces behave like an application, not a document: prevent
-// accidental text selection while dragging. Editable controls stay selectable.
-* {
+// Text stays selectable by default so users can copy content anywhere. The
+// browser default (`auto`) already covers editable controls, so only surfaces
+// that conflict with native window behaviour opt out: drag regions and
+// explicit `.no-select` / `select-none` controls.
+[data-tauri-drag-region],
+[data-tauri-drag-region] * {
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
 }
 
-input,
-textarea,
-[contenteditable] {
+[data-tauri-drag-region] input,
+[data-tauri-drag-region] textarea,
+[data-tauri-drag-region] [contenteditable] {
 	-webkit-user-select: text;
 	-moz-user-select: text;
 	-ms-user-select: text;

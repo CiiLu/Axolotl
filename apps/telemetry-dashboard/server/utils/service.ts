@@ -32,10 +32,14 @@ export function getAdminApi(event: H3Event): TelemetryAdminApi {
 	const remote = remoteTelemetryDataSource()
 	const db = (bindings.DB as unknown as TelemetryDatabase | undefined) ?? remote?.db
 	const r2 = (bindings.ERROR_CONTEXTS as unknown as TelemetryObjectStore | undefined) ?? remote?.r2
+	const accountTag = String(bindings.CLOUDFLARE_ACCOUNT_ID ?? '').trim()
+	const analyticsToken = String(bindings.CLOUDFLARE_ANALYTICS_TOKEN ?? '').trim()
 	if (db) {
 		context.adminApi = new D1TelemetryAdminApi(db, r2, {
 			storeErrorContext: String(config.storeErrorContext) === 'true',
 			healthUrl: String(config.publicWorkerHealthUrl),
+			analytics:
+				accountTag && analyticsToken ? { accountTag, apiToken: analyticsToken } : undefined,
 		})
 	} else if (context.adminSession?.mock) {
 		context.adminApi = new MockTelemetryAdminApi(mockScenario(config))

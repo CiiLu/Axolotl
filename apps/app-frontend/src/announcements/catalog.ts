@@ -33,6 +33,27 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.1',
+		version: '1.8.1',
+		publishedAt: '2026-08-15',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.1',
+			'zh-CN': 'Axolotl Launcher 1.8.1',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US': 'Optimized the category menu in settings.',
+					'zh-CN': '优化了设置中的分类菜单。',
+				},
+				{
+					'en-US': 'Redesigned the "About" page.',
+					'zh-CN': '重新设计了“关于”页面。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.0',
 		version: '1.8.0',
 		publishedAt: '2026-08-15',

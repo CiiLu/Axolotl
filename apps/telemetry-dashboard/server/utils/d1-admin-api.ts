@@ -87,9 +87,106 @@ export interface TelemetryObjectStore {
 }
 
 const SAMPLE_UNCOMPRESSED_LIMIT = 32 * 1024
+const ANALYTICS_ENDPOINT = 'https://api.cloudflare.com/client/v4/graphql'
+const WORKERS_FREE_DAILY_REQUESTS = 100_000
+const D1_FREE_DAILY_ROWS_READ = 5_000_000
+const D1_FREE_DAILY_ROWS_WRITTEN = 100_000
+const R2_FREE_MONTHLY_CLASS_A_OPS = 1_000_000
+const USAGE_WARN_RATIO = 0.9
+
+export interface CloudflareAnalyticsSettings {
+	accountTag: string
+	apiToken: string
+}
+
+interface AnalyticsResponse {
+	data?: Record<string, unknown> | null
+	errors?: Array<{ message?: string }>
+}
 
 function utcDay(now = new Date()): string {
 	return now.toISOString().slice(0, 10)
+}
+
+function formatCount(value: number): string {
+	return Math.round(value).toLocaleString('en-US')
+}
+
+function errorMessage(error: unknown): string {
+	const message = error instanceof Error ? error.message : String(error)
+	return message.slice(0, 160)
+}
+
+async function withTimeout<T>(
+	milliseconds: number,
+	run: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+	const controller = new AbortController()
+	const timer = setTimeout(() => controller.abort(), milliseconds)
+	try {
+		return await run(controller.signal)
+	} finally {
+		clearTimeout(timer)
+	}
+}
+
+async function queryAnalytics(
+	fetcher: typeof fetch,
+	settings: CloudflareAnalyticsSettings,
+	query: string,
+): Promise<Record<string, unknown>> {
+	const response = await withTimeout(10_000, (signal) =>
+		fetcher(ANALYTICS_ENDPOINT, {
+			method: 'POST',
+			headers: {
+				authorization: `Bearer ${settings.apiToken}`,
+				'content-type': 'application/json',
+			},
+			body: JSON.stringify({ query }),
+			signal,
+		}),
+	)
+	let body: AnalyticsResponse = {}
+	try {
+		body = (await response.json()) as AnalyticsResponse
+	} catch {
+		// A non-JSON error body is reported through the HTTP status below.
+	}
+	if (!response.ok) {
+		throw new Error(`GraphQL 请求失败（HTTP ${response.status}）`)
+	}
+	if (body.errors?.length) {
+		throw new Error(
+			body.errors
+				.map((entry) => entry.message ?? '未知错误')
+				.join('；')
+				.slice(0, 160),
+		)
+	}
+	if (!body.data) throw new Error('GraphQL 响应缺少 data')
+	return body.data
+}
+
+function analyticsRows(data: Record<string, unknown>, dataset: string): unknown[] {
+	const accounts = (data.viewer as { accounts?: unknown } | undefined)?.accounts
+	if (!Array.isArray(accounts) || accounts.length === 0) return []
+	const node = (accounts[0] as Record<string, unknown> | undefined)?.[dataset]
+	return Array.isArray(node) ? node : []
+}
+
+function sumOf(row: unknown, path: string[]): number {
+	let current: unknown = row
+	for (const field of path) {
+		if (typeof current !== 'object' || current === null) return 0
+		current = (current as Record<string, unknown>)[field]
+	}
+	const parsed = Number(current)
+	return Number.isFinite(parsed) ? parsed : 0
+}
+
+function requireRow(rows: unknown[]): Record<string, unknown> {
+	if (rows.length === 0) throw new Error('数据集暂无数据')
+	return rows[0] as Record<string, unknown>
 }
 
 function mapError(row: ErrorRow): ErrorRowDto {
@@ -139,6 +236,7 @@ export class D1TelemetryAdminApi implements TelemetryAdminApi {
 		private readonly options: {
 			storeErrorContext: boolean
 			healthUrl: string
+			analytics?: CloudflareAnalyticsSettings
 			fetcher?: typeof fetch
 			now?: () => Date
 		},
@@ -385,14 +483,130 @@ export class D1TelemetryAdminApi implements TelemetryAdminApi {
 		}
 	}
 
+	private async workersRequests24h(
+		settings: CloudflareAnalyticsSettings,
+		fetcher: typeof fetch,
+		now: Date,
+	): Promise<number> {
+		const start = new Date(now.getTime() - 24 * 60 * 60 * 1_000).toISOString()
+		const data = await queryAnalytics(
+			fetcher,
+			settings,
+			`{ viewer { accounts(filter: { accountTag: "${settings.accountTag}" }) {
+				workersInvocationsAdaptive(
+					filter: { datetime_geq: "${start}", datetime_lt: "${now.toISOString()}" }
+					limit: 1
+				) { sum { requests } }
+			} } }`,
+		)
+		return sumOf(requireRow(analyticsRows(data, 'workersInvocationsAdaptive')), ['sum', 'requests'])
+	}
+
+	private async d1UsageToday(
+		settings: CloudflareAnalyticsSettings,
+		fetcher: typeof fetch,
+		now: Date,
+	): Promise<{ rowsRead: number; rowsWritten: number }> {
+		const today = utcDay(now)
+		const data = await queryAnalytics(
+			fetcher,
+			settings,
+			`{ viewer { accounts(filter: { accountTag: "${settings.accountTag}" }) {
+				d1AnalyticsAdaptiveGroups(
+					filter: { date_geq: "${today}", date_leq: "${today}" }
+					limit: 1
+				) { sum { rowsRead rowsWritten } }
+			} } }`,
+		)
+		const row = requireRow(analyticsRows(data, 'd1AnalyticsAdaptiveGroups'))
+		return {
+			rowsRead: sumOf(row, ['sum', 'rowsRead']),
+			rowsWritten: sumOf(row, ['sum', 'rowsWritten']),
+		}
+	}
+
+	private async r2Operations30d(
+		settings: CloudflareAnalyticsSettings,
+		fetcher: typeof fetch,
+		now: Date,
+	): Promise<number> {
+		const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10)
+		const data = await queryAnalytics(
+			fetcher,
+			settings,
+			`{ viewer { accounts(filter: { accountTag: "${settings.accountTag}" }) {
+				r2OperationsAdaptiveGroups(
+					filter: { date_geq: "${start}", date_leq: "${utcDay(now)}" }
+					limit: 1
+				) { sum { requests } }
+			} } }`,
+		)
+		return sumOf(requireRow(analyticsRows(data, 'r2OperationsAdaptiveGroups')), ['sum', 'requests'])
+	}
+
+	private async accountUsage(settings: CloudflareAnalyticsSettings): Promise<ServiceCheckDto> {
+		if (!/^[0-9a-f]{32}$/i.test(settings.accountTag)) {
+			return service('unavailable', '未配置', 'CLOUDFLARE_ACCOUNT_ID 格式无效（应为 32 位账户 ID）')
+		}
+		const fetcher = this.options.fetcher ?? fetch
+		const now = this.now()
+		const parts: string[] = []
+		const failures: string[] = []
+		let workersRatio = 0
+		let d1WriteRatio = 0
+		let r2Ratio = 0
+
+		try {
+			const requests = await this.workersRequests24h(settings, fetcher, now)
+			workersRatio = requests / WORKERS_FREE_DAILY_REQUESTS
+			parts.push(
+				`Workers ${formatCount(requests)}/${formatCount(WORKERS_FREE_DAILY_REQUESTS)} 请求（24h）`,
+			)
+		} catch (error) {
+			failures.push(`Workers 用量查询失败：${errorMessage(error)}`)
+		}
+		try {
+			const { rowsRead, rowsWritten } = await this.d1UsageToday(settings, fetcher, now)
+			d1WriteRatio = rowsWritten / D1_FREE_DAILY_ROWS_WRITTEN
+			parts.push(
+				`D1 读 ${formatCount(rowsRead)}/${formatCount(D1_FREE_DAILY_ROWS_READ)}、写 ${formatCount(rowsWritten)}/${formatCount(D1_FREE_DAILY_ROWS_WRITTEN)} 行（今日 UTC）`,
+			)
+		} catch (error) {
+			failures.push(`D1 用量查询失败：${errorMessage(error)}`)
+		}
+		try {
+			const requests = await this.r2Operations30d(settings, fetcher, now)
+			r2Ratio = requests / R2_FREE_MONTHLY_CLASS_A_OPS
+			parts.push(
+				`R2 ${formatCount(requests)}/${formatCount(R2_FREE_MONTHLY_CLASS_A_OPS)} 操作（30 天，Class A+B 合计）`,
+			)
+		} catch (error) {
+			failures.push(`R2 用量查询失败：${errorMessage(error)}`)
+		}
+
+		if (parts.length === 0) {
+			return service('unavailable', '查询失败', failures.join('；') || 'Analytics API 无可用数据')
+		}
+		const detail = failures.length
+			? `${parts.join(' · ')}；${failures.join('；')}`
+			: parts.join(' · ')
+		if (failures.length > 0) return service('degraded', '部分可用', detail)
+		if (Math.max(workersRatio, d1WriteRatio, r2Ratio) >= USAGE_WARN_RATIO) {
+			return service('degraded', '接近配额', detail)
+		}
+		return service('available', '额度充足', detail)
+	}
+
 	async system(): Promise<SystemDto> {
 		const now = this.now()
 		let publicWorker = service('unavailable', '不可用', '健康检查端点未响应')
 		try {
-			const response = await (this.options.fetcher ?? fetch)(this.options.healthUrl, {
-				signal: AbortSignal.timeout(3_000),
-				headers: { accept: 'application/json' },
-			})
+			const response = await withTimeout(3_000, (signal) =>
+				(this.options.fetcher ?? fetch)(this.options.healthUrl, {
+					signal,
+					headers: { accept: 'application/json' },
+				}),
+			)
 			if (response.ok) publicWorker = service('available', '运行正常', '公开采集服务健康检查通过')
 		} catch {
 			publicWorker = service('unavailable', '不可用', '健康检查端点未响应')
@@ -428,7 +642,14 @@ export class D1TelemetryAdminApi implements TelemetryAdminApi {
 		} else if (this.r2 && sampleKey) {
 			try {
 				const sample = await this.r2.get(sampleKey, { range: { offset: 0, length: 1 } })
-				if (sample) r2 = service('available', '可读取', '已确认一个登记样本可读取')
+				if (sample) {
+					try {
+						await sample.body.cancel()
+					} catch {
+						// The probe reads a single byte; cancellation failures are irrelevant.
+					}
+					r2 = service('available', '可读取', '已确认一个登记样本可读取')
+				}
 			} catch {
 				r2 = service('unavailable', '不可用', '登记样本无法读取')
 			}
@@ -444,6 +665,14 @@ export class D1TelemetryAdminApi implements TelemetryAdminApi {
 			: latestDataDay >= expected
 				? service('available', '数据最新', `最近聚合日期：${latestDataDay}（UTC）`)
 				: service('degraded', '数据滞后', `最近聚合日期：${latestDataDay}（UTC）`)
+
+		const accountUsage = !this.options.analytics
+			? service(
+					'unavailable',
+					'未配置',
+					'尚未配置 Cloudflare Analytics API：请为 dashboard Worker 设置 CLOUDFLARE_ACCOUNT_ID 与 CLOUDFLARE_ANALYTICS_TOKEN（Account Analytics: Read）',
+				)
+			: await this.accountUsage(this.options.analytics)
 
 		return {
 			generatedAt: now.toISOString(),
@@ -461,7 +690,7 @@ export class D1TelemetryAdminApi implements TelemetryAdminApi {
 			},
 			latestDataDay,
 			cron,
-			accountUsage: service('unavailable', '不可用', '尚未配置 Cloudflare Analytics API'),
+			accountUsage,
 		}
 	}
 }

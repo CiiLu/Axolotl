@@ -1,14 +1,35 @@
 <script setup lang="ts">
-import { CheckIcon, CopyIcon, ExternalIcon, WrenchIcon } from '@modrinth/assets'
-import { ButtonStyled, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
+import {
+	CheckIcon,
+	ChevronDownIcon,
+	CopyIcon,
+	ExternalIcon,
+	GithubIcon,
+	GlobeIcon,
+	HeartHandshakeIcon,
+	IssuesIcon,
+	ScaleIcon,
+	UsersIcon,
+	WrenchIcon,
+} from '@modrinth/assets'
+import {
+	Avatar,
+	ButtonStyled,
+	defineMessages,
+	injectNotificationManager,
+	useVIntl,
+} from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
 import { inject, ref } from 'vue'
 
 import AfdianIcon from '@/assets/external/afdian.png'
 import QqIcon from '@/assets/external/qq.svg?component'
 import { AxolotlBrandConfig } from '@/config'
+import { contributors, teamMembers } from '@/data/about'
 import { isDev } from '@/helpers/utils'
 import { handleSevereError } from '@/store/error.js'
+
+import QqChannelIcon from './QqChannelIcon.vue'
 
 const { formatMessage } = useVIntl()
 const version = await getVersion()
@@ -18,6 +39,9 @@ const { addNotification } = injectNotificationManager()
 const replayOnboarding = inject<(mode: 'main' | 'instance') => Promise<void>>('replayOnboarding')
 const previewMinecraftCrashModal = inject<() => void>('previewMinecraftCrashModal')
 const previewPrivacyConsentModal = inject<() => Promise<void>>('previewPrivacyConsentModal')
+
+const licenseUrl = `${AxolotlBrandConfig.repositoryUrl}/blob/main/LICENSE`
+const thirdPartyLicensesUrl = `${AxolotlBrandConfig.repositoryUrl}/tree/main/third-party/licenses`
 
 async function copyQqGroupNumber() {
 	await navigator.clipboard.writeText(AxolotlBrandConfig.qqGroupNumber)
@@ -32,25 +56,45 @@ const messages = defineMessages({
 		id: 'app.settings.about.product-title',
 		defaultMessage: 'About {productName}',
 	},
+	productDescription: {
+		id: 'app.settings.about.description',
+		defaultMessage: 'Your last launcher.',
+	},
 	version: {
 		id: 'app.settings.about.version',
 		defaultMessage: 'Version {version}',
 	},
-	developer: {
-		id: 'app.settings.about.developer',
-		defaultMessage: 'Developed by {developerName} at {organizationName}.',
+	replayOnboarding: {
+		id: 'app.settings.about.replay-onboarding',
+		defaultMessage: 'Replay tour',
 	},
-	attribution: {
-		id: 'app.settings.about.attribution',
-		defaultMessage: 'This application is a modified version of the open-source Modrinth project.',
+	developmentTeam: {
+		id: 'app.settings.about.development-team',
+		defaultMessage: 'Development team',
 	},
 	communitySupport: {
 		id: 'app.settings.about.community-support',
-		defaultMessage: 'Community & support',
+		defaultMessage: 'Project & community',
+	},
+	projectWebsite: {
+		id: 'app.settings.about.project-website',
+		defaultMessage: 'Project website',
+	},
+	repository: {
+		id: 'app.settings.about.repository',
+		defaultMessage: 'Source code',
+	},
+	reportIssue: {
+		id: 'app.settings.about.report-issue',
+		defaultMessage: 'Issues & feedback',
 	},
 	qqGroup: {
 		id: 'app.settings.about.qq-group',
 		defaultMessage: 'Player QQ group',
+	},
+	qqChannel: {
+		id: 'app.settings.about.qq-channel',
+		defaultMessage: 'QQ channel',
 	},
 	copyQqGroup: {
 		id: 'app.settings.about.copy-qq-group',
@@ -68,17 +112,42 @@ const messages = defineMessages({
 		id: 'app.settings.about.afdian-description',
 		defaultMessage: 'Help support continued development',
 	},
+	licenseAttribution: {
+		id: 'app.settings.about.license-attribution',
+		defaultMessage: 'License & attribution',
+	},
+	attribution: {
+		id: 'app.settings.about.attribution',
+		defaultMessage: 'Axolotl Launcher is a modified version of the open-source Modrinth codebase.',
+	},
+	notAffiliated: {
+		id: 'app.settings.about.not-affiliated',
+		defaultMessage:
+			'Modrinth is a trademark of Rinth, Inc. Axolotl Launcher is not affiliated with or endorsed by Rinth, Inc.',
+	},
 	originalSource: {
 		id: 'app.settings.about.original-source',
-		defaultMessage: 'View the original Modrinth source code',
+		defaultMessage: 'Original Modrinth source',
 	},
-	projectWebsite: {
-		id: 'app.settings.about.project-website',
-		defaultMessage: 'Visit the project website',
+	projectLicense: {
+		id: 'app.settings.about.project-license',
+		defaultMessage: 'Project license (GPL-3.0)',
 	},
-	replayOnboarding: {
-		id: 'app.settings.about.replay-onboarding',
-		defaultMessage: 'Replay tour',
+	thirdPartyLicenses: {
+		id: 'app.settings.about.third-party-licenses',
+		defaultMessage: 'Third-party licenses',
+	},
+	contributors: {
+		id: 'app.settings.about.contributors',
+		defaultMessage: 'Contributors',
+	},
+	contributorsCount: {
+		id: 'app.settings.about.contributors-count',
+		defaultMessage: '{count, plural, one {# contributor} other {# contributors}}',
+	},
+	developerTools: {
+		id: 'app.settings.about.developer-tools',
+		defaultMessage: 'Developer tools',
 	},
 	testError: {
 		id: 'app.settings.about.test-error',
@@ -104,20 +173,30 @@ const messages = defineMessages({
 		id: 'app.settings.about.preview-privacy-consent-modal',
 		defaultMessage: 'Preview privacy & security modal',
 	},
-	contentSearchAttribution: {
-		id: 'app.settings.about.content-search-attribution',
-		defaultMessage:
-			'Chinese content search uses project-name data from Plain Craft Launcher and MC Encyclopedia.',
-	},
-	pclSource: {
-		id: 'app.settings.about.pcl-source',
-		defaultMessage: 'View the Plain Craft Launcher source and license',
-	},
-	mcModWebsite: {
-		id: 'app.settings.about.mcmod-website',
-		defaultMessage: 'Visit MC Encyclopedia',
-	},
 })
+
+const projectLinks = [
+	{
+		href: AxolotlBrandConfig.website,
+		label: messages.projectWebsite,
+		icon: GlobeIcon,
+	},
+	{
+		href: AxolotlBrandConfig.repositoryUrl,
+		label: messages.repository,
+		icon: GithubIcon,
+	},
+	{
+		href: AxolotlBrandConfig.supportUrl,
+		label: messages.reportIssue,
+		icon: IssuesIcon,
+	},
+	{
+		href: AxolotlBrandConfig.qqChannelUrl,
+		label: messages.qqChannel,
+		icon: QqChannelIcon,
+	},
+]
 
 function triggerTestError() {
 	handleSevereError(new Error(formatMessage(messages.testErrorMessage)))
@@ -134,66 +213,74 @@ function triggerTestNotificationError() {
 
 <template>
 	<div class="flex flex-col gap-6">
-		<div class="flex items-center gap-4">
-			<img class="size-20 object-contain" src="@/assets/axolotl.png" alt="" />
-			<div>
-				<h2 class="m-0 text-xl font-semibold text-contrast">
-					{{
-						formatMessage(messages.productTitle, {
-							productName: AxolotlBrandConfig.productName,
-						})
-					}}
-				</h2>
-				<p class="m-0 mt-1 text-secondary">
-					{{ formatMessage(messages.version, { version }) }}
-				</p>
+		<section class="rounded-xl bg-surface-4 p-5">
+			<div class="flex items-center gap-4">
+				<img class="size-20 object-contain" src="@/assets/axolotl.png" alt="" />
+				<div class="min-w-0">
+					<h2 class="m-0 text-xl font-semibold text-contrast">
+						{{
+							formatMessage(messages.productTitle, {
+								productName: AxolotlBrandConfig.productName,
+							})
+						}}
+					</h2>
+					<p class="m-0 mt-1 text-secondary">
+						{{ formatMessage(messages.version, { version }) }}
+					</p>
+				</div>
 			</div>
-		</div>
+			<p class="m-0 mt-4 text-primary">
+				{{ formatMessage(messages.productDescription) }}
+			</p>
+		</section>
 
-		<div class="rounded-xl bg-surface-4 p-4">
-			<p class="m-0 text-primary">
-				{{
-					formatMessage(messages.developer, {
-						developerName: AxolotlBrandConfig.developerName,
-						organizationName: AxolotlBrandConfig.organizationName,
-					})
-				}}
-			</p>
-			<p class="m-0 mt-3 text-primary">
-				{{ formatMessage(messages.attribution) }}
-			</p>
-			<p class="m-0 mt-3 text-primary">
-				{{ formatMessage(messages.contentSearchAttribution) }}
-			</p>
-			<div v-if="isDevEnvironment" class="mt-4 flex flex-wrap gap-2">
-				<ButtonStyled>
-					<button @click="triggerTestError">
-						<WrenchIcon /> {{ formatMessage(messages.testError) }}
-					</button>
-				</ButtonStyled>
-				<ButtonStyled>
-					<button @click="triggerTestNotificationError">
-						<WrenchIcon /> {{ formatMessage(messages.testNotificationError) }}
-					</button>
-				</ButtonStyled>
-				<ButtonStyled>
-					<button @click="previewMinecraftCrashModal?.()">
-						<WrenchIcon /> {{ formatMessage(messages.previewMinecraftCrashModal) }}
-					</button>
-				</ButtonStyled>
-				<ButtonStyled>
-					<button @click="previewPrivacyConsentModal?.()">
-						<WrenchIcon /> {{ formatMessage(messages.previewPrivacyConsentModal) }}
-					</button>
-				</ButtonStyled>
-			</div>
-		</div>
+		<section>
+			<h3 class="m-0 mb-3 flex items-center gap-2 text-base font-semibold text-contrast">
+				<UsersIcon class="size-5 text-secondary" />
+				{{ formatMessage(messages.developmentTeam) }}
+			</h3>
+			<ul class="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3">
+				<li v-for="member in teamMembers" :key="member.name" class="min-w-0">
+					<component
+						:is="member.url ? 'a' : 'div'"
+						:href="member.url"
+						:target="member.url ? '_blank' : undefined"
+						:rel="member.url ? 'noopener noreferrer' : undefined"
+						class="flex min-w-0 flex-col items-center gap-3 rounded-xl bg-surface-4 p-4"
+						:class="member.url ? 'transition-colors hover:bg-surface-5' : 'cursor-default'"
+					>
+						<Avatar :src="member.avatarUrl" :alt="member.name" size="4rem" circle no-shadow />
+						<span class="block truncate text-center font-semibold text-contrast">{{ member.name }}</span>
+					</component>
+				</li>
+			</ul>
+		</section>
 
-		<div>
-			<h3 class="m-0 mb-3 text-base font-semibold text-contrast">
+		<section>
+			<h3 class="m-0 mb-3 flex items-center gap-2 text-base font-semibold text-contrast">
+				<HeartHandshakeIcon class="size-5 text-secondary" />
 				{{ formatMessage(messages.communitySupport) }}
 			</h3>
 			<div class="grid gap-3 sm:grid-cols-2">
+				<a
+					v-for="link in projectLinks"
+					:key="link.label"
+					:href="link.href"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="flex min-w-0 items-center gap-3 rounded-xl bg-surface-4 p-4 transition-colors hover:bg-surface-5"
+				>
+					<span
+						class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-contrast"
+					>
+						<component :is="link.icon" class="size-6" />
+					</span>
+					<span class="min-w-0 flex-1 font-semibold text-contrast">
+						{{ formatMessage(link.label) }}
+					</span>
+					<ExternalIcon class="size-5 shrink-0 text-secondary" />
+				</a>
+
 				<button
 					type="button"
 					:disabled="copied"
@@ -231,7 +318,7 @@ function triggerTestNotificationError() {
 					:href="AxolotlBrandConfig.sponsorUrl"
 					target="_blank"
 					rel="noopener noreferrer"
-					class="flex min-w-0 items-center gap-3 rounded-xl bg-surface-4 p-4 text-left transition-colors hover:bg-surface-5"
+					class="flex min-w-0 items-center gap-3 rounded-xl bg-surface-4 p-4 transition-colors hover:bg-surface-5"
 				>
 					<span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-2">
 						<img :src="AfdianIcon" alt="" class="size-7 object-contain" />
@@ -247,7 +334,84 @@ function triggerTestNotificationError() {
 					<ExternalIcon class="size-5 shrink-0 text-secondary" />
 				</a>
 			</div>
-		</div>
+		</section>
+
+		<section>
+			<h3 class="m-0 mb-3 flex items-center gap-2 text-base font-semibold text-contrast">
+				<ScaleIcon class="size-5 text-secondary" />
+				{{ formatMessage(messages.licenseAttribution) }}
+			</h3>
+			<div class="rounded-xl bg-surface-4 p-4">
+				<p class="m-0 text-primary">
+					{{ formatMessage(messages.attribution) }}
+				</p>
+				<p class="m-0 mt-2 text-sm text-secondary">
+					{{ formatMessage(messages.notAffiliated) }}
+				</p>
+			</div>
+			<div class="mt-3 flex flex-wrap gap-2">
+				<a
+					:href="licenseUrl"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="inline-flex items-center gap-2 rounded-lg bg-surface-4 px-3 py-2 text-sm font-semibold text-contrast transition-colors hover:bg-surface-5"
+				>
+					{{ formatMessage(messages.projectLicense) }}
+					<ExternalIcon class="size-4 text-secondary" />
+				</a>
+				<a
+					:href="thirdPartyLicensesUrl"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="inline-flex items-center gap-2 rounded-lg bg-surface-4 px-3 py-2 text-sm font-semibold text-contrast transition-colors hover:bg-surface-5"
+				>
+					{{ formatMessage(messages.thirdPartyLicenses) }}
+					<ExternalIcon class="size-4 text-secondary" />
+				</a>
+				<a
+					href="https://github.com/modrinth/code"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="inline-flex items-center gap-2 rounded-lg bg-surface-4 px-3 py-2 text-sm font-semibold text-contrast transition-colors hover:bg-surface-5"
+				>
+					{{ formatMessage(messages.originalSource) }}
+					<ExternalIcon class="size-4 text-secondary" />
+				</a>
+			</div>
+		</section>
+
+		<details class="group border-t border-surface-4 pt-4">
+			<summary
+				class="flex cursor-pointer list-none items-center gap-2 text-base font-semibold text-contrast [&::-webkit-details-marker]:hidden"
+			>
+				<UsersIcon class="size-5 text-secondary" />
+				<span>{{ formatMessage(messages.contributors) }}</span>
+				<span class="rounded-full bg-surface-4 px-2 py-0.5 text-xs text-secondary">
+					{{ formatMessage(messages.contributorsCount, { count: contributors.length }) }}
+				</span>
+				<ChevronDownIcon class="ml-auto size-5 text-secondary transition-transform group-open:rotate-180" />
+			</summary>
+			<div class="mt-3 flex flex-wrap gap-2">
+				<a
+					v-for="contributor in contributors"
+					:key="contributor.name"
+					:href="contributor.url"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="flex min-w-0 items-center gap-1.5 rounded-full bg-surface-4 py-1 pl-1 pr-2.5 transition-colors hover:bg-surface-5"
+				>
+					<Avatar
+						:src="contributor.avatarUrl"
+						:alt="contributor.name"
+						size="1.5rem"
+						circle
+						no-shadow
+						loading="lazy"
+					/>
+					<span class="truncate text-sm text-primary">{{ contributor.name }}</span>
+				</a>
+			</div>
+		</details>
 
 		<div class="flex flex-wrap gap-2">
 			<ButtonStyled>
@@ -257,43 +421,33 @@ function triggerTestNotificationError() {
 			</ButtonStyled>
 		</div>
 
-		<div class="flex flex-col items-start gap-3">
-			<a
-				href="https://github.com/modrinth/code"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="inline-flex items-center gap-2 font-semibold text-brand hover:underline"
-			>
-				{{ formatMessage(messages.originalSource) }}
-				<ExternalIcon class="size-4" />
-			</a>
-			<a
-				:href="AxolotlBrandConfig.website"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="inline-flex items-center gap-2 font-semibold text-brand hover:underline"
-			>
-				{{ formatMessage(messages.projectWebsite) }}
-				<ExternalIcon class="size-4" />
-			</a>
-			<a
-				href="https://github.com/Meloong-Git/PCL/tree/fd7b722346523d9574678a8a4a02928d31cd1e0c"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="inline-flex items-center gap-2 font-semibold text-brand hover:underline"
-			>
-				{{ formatMessage(messages.pclSource) }}
-				<ExternalIcon class="size-4" />
-			</a>
-			<a
-				href="https://www.mcmod.cn/"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="inline-flex items-center gap-2 font-semibold text-brand hover:underline"
-			>
-				{{ formatMessage(messages.mcModWebsite) }}
-				<ExternalIcon class="size-4" />
-			</a>
-		</div>
+		<section v-if="isDevEnvironment">
+			<h3 class="m-0 mb-3 flex items-center gap-2 text-base font-semibold text-contrast">
+				<WrenchIcon class="size-5 text-secondary" />
+				{{ formatMessage(messages.developerTools) }}
+			</h3>
+			<div class="flex flex-wrap gap-2">
+				<ButtonStyled>
+					<button @click="triggerTestError">
+						<WrenchIcon /> {{ formatMessage(messages.testError) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button @click="triggerTestNotificationError">
+						<WrenchIcon /> {{ formatMessage(messages.testNotificationError) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button @click="previewMinecraftCrashModal?.()">
+						<WrenchIcon /> {{ formatMessage(messages.previewMinecraftCrashModal) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button @click="previewPrivacyConsentModal?.()">
+						<WrenchIcon /> {{ formatMessage(messages.previewPrivacyConsentModal) }}
+					</button>
+				</ButtonStyled>
+			</div>
+		</section>
 	</div>
 </template>

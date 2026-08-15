@@ -96,9 +96,8 @@ defineExpose({ show })
 		:header="formatMessage(messages.title)"
 		:closable="false"
 		max-width="600px"
-		actions-divider
 	>
-		<div class="flex flex-col gap-5">
+		<div class="flex flex-col gap-6">
 			<div class="flex items-start gap-3">
 				<ShieldIcon class="mt-0.5 size-6 shrink-0 text-brand" />
 				<p class="m-0 leading-relaxed text-primary">
@@ -106,9 +105,7 @@ defineExpose({ show })
 				</p>
 			</div>
 
-			<div
-				class="flex items-center justify-between gap-5 border-0 border-y border-solid border-surface-4 py-4"
-			>
+			<div class="flex items-center justify-between gap-5">
 				<div class="min-w-0">
 					<label for="consent-telemetry" class="font-semibold text-contrast">
 						{{ formatMessage(messages.telemetry) }}

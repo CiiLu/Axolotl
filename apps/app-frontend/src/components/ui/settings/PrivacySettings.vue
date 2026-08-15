@@ -1,6 +1,15 @@
 <script setup lang="ts">
-import { defineMessages, injectNotificationManager, Toggle, useVIntl } from '@modrinth/ui'
-import { ref } from 'vue'
+import {
+	Combobox,
+	defineMessages,
+	getLogShareProvider,
+	injectNotificationManager,
+	type LogShareProvider,
+	setLogShareProvider,
+	Toggle,
+	useVIntl,
+} from '@modrinth/ui'
+import { computed, ref, watch } from 'vue'
 
 import { getPrivacySettings, setDiscordRpcEnabled, setTelemetryEnabled } from '@/helpers/settings'
 
@@ -9,6 +18,7 @@ const { handleError } = injectNotificationManager()
 const privacy = ref(await getPrivacySettings())
 const telemetrySaving = ref(false)
 const discordSaving = ref(false)
+const selectedProvider = ref<LogShareProvider>(getLogShareProvider())
 
 const messages = defineMessages({
 	telemetry: {
@@ -33,6 +43,67 @@ const messages = defineMessages({
 		defaultMessage:
 			'Telemetry uses a random installation identifier. Error context is sanitized and limited before it leaves this device. Turning telemetry off clears pending reports immediately.',
 	},
+	logAnalysisTitle: {
+		id: 'app.settings.logs.title',
+		defaultMessage: 'Log analysis service',
+	},
+	logAnalysisDescription: {
+		id: 'app.settings.logs.description',
+		defaultMessage:
+			'Choose the service used to analyze and share Minecraft logs. LogShare.CN is preferred and mclo.gs is used as a fallback so sharing keeps working.',
+	},
+	auto: {
+		id: 'app.settings.logs.provider.auto',
+		defaultMessage: 'Automatic (recommended)',
+	},
+	autoDescription: {
+		id: 'app.settings.logs.provider.auto-description',
+		defaultMessage:
+			'Prefers LogShare.CN, automatically switching to mclo.gs when it is unavailable.',
+	},
+	logshare: {
+		id: 'app.settings.logs.provider.logshare',
+		defaultMessage: 'LogShare.CN',
+	},
+	logshareDescription: {
+		id: 'app.settings.logs.provider.logshare-description',
+		defaultMessage:
+			'Uses LogShare.CN for analysis and sharing, including AI analysis, falling back to mclo.gs when unavailable.',
+	},
+	mclogs: {
+		id: 'app.settings.logs.provider.mclogs',
+		defaultMessage: 'mclo.gs',
+	},
+	mclogsDescription: {
+		id: 'app.settings.logs.provider.mclogs-description',
+		defaultMessage: 'Uses mclo.gs for analysis and sharing. AI analysis is not available.',
+	},
+})
+
+const providerInfo: Record<LogShareProvider, { label: string; description: string }> = {
+	auto: {
+		label: formatMessage(messages.auto),
+		description: formatMessage(messages.autoDescription),
+	},
+	logshare: {
+		label: formatMessage(messages.logshare),
+		description: formatMessage(messages.logshareDescription),
+	},
+	mclogs: {
+		label: formatMessage(messages.mclogs),
+		description: formatMessage(messages.mclogsDescription),
+	},
+}
+
+const options = Object.entries(providerInfo).map(([value, info]) => ({
+	value,
+	label: info.label,
+}))
+
+const selectedInfo = computed(() => providerInfo[selectedProvider.value])
+
+watch(selectedProvider, (provider) => {
+	setLogShareProvider(provider)
 })
 
 async function updateTelemetry(value: boolean) {
@@ -70,15 +141,13 @@ async function updateDiscordRpc(value: boolean) {
 </script>
 
 <template>
-	<div class="flex max-w-3xl flex-col gap-0">
-		<div
-			class="flex items-center justify-between gap-6 border-0 border-b border-solid border-surface-4 py-5 first:pt-0"
-		>
-			<div class="min-w-0">
-				<label for="privacy-telemetry" class="text-lg font-semibold text-contrast">
+	<div class="flex max-w-3xl flex-col gap-6">
+		<div class="flex items-center justify-between gap-4">
+			<div class="flex min-w-0 flex-col gap-1">
+				<h3 class="m-0 text-lg font-semibold text-contrast">
 					{{ formatMessage(messages.telemetry) }}
-				</label>
-				<p class="mb-0 mt-1 leading-relaxed text-secondary">
+				</h3>
+				<p class="m-0 leading-tight text-secondary">
 					{{ formatMessage(messages.telemetryDescription) }}
 				</p>
 			</div>
@@ -90,12 +159,12 @@ async function updateDiscordRpc(value: boolean) {
 			/>
 		</div>
 
-		<div class="flex items-center justify-between gap-6 py-5">
-			<div class="min-w-0">
-				<label for="privacy-discord-rpc" class="text-lg font-semibold text-contrast">
+		<div class="flex items-center justify-between gap-4">
+			<div class="flex min-w-0 flex-col gap-1">
+				<h3 class="m-0 text-lg font-semibold text-contrast">
 					{{ formatMessage(messages.discordRpc) }}
-				</label>
-				<p class="mb-0 mt-1 leading-relaxed text-secondary">
+				</h3>
+				<p class="m-0 leading-tight text-secondary">
 					{{ formatMessage(messages.discordRpcDescription) }}
 				</p>
 			</div>
@@ -107,10 +176,31 @@ async function updateDiscordRpc(value: boolean) {
 			/>
 		</div>
 
-		<p
-			class="m-0 border-0 border-t border-solid border-surface-4 pt-5 text-sm leading-relaxed text-secondary"
-		>
+		<p class="m-0 text-sm leading-relaxed text-secondary">
 			{{ formatMessage(messages.dataHandling) }}
+		</p>
+
+		<div class="grid grid-cols-[minmax(0,1fr)_11rem] items-center gap-6">
+			<div class="flex min-w-0 flex-col gap-1">
+				<h3 class="m-0 text-lg font-semibold text-contrast">
+					{{ formatMessage(messages.logAnalysisTitle) }}
+				</h3>
+				<p class="m-0 leading-tight text-secondary">
+					{{ formatMessage(messages.logAnalysisDescription) }}
+				</p>
+			</div>
+			<div class="w-44">
+				<Combobox
+					id="log-share-provider"
+					v-model="selectedProvider"
+					name="Log analysis service"
+					:options="options"
+				/>
+			</div>
+		</div>
+
+		<p class="m-0 rounded-xl bg-surface-4 p-4 text-sm leading-tight text-secondary">
+			{{ selectedInfo.description }}
 		</p>
 	</div>
 </template>

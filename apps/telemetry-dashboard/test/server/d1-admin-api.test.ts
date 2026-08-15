@@ -5,6 +5,8 @@ import { D1TelemetryAdminApi } from '../../server/utils/d1-admin-api'
 import { parseErrorQuery } from '../../server/utils/validation'
 
 const NOW = new Date('2026-08-14T10:00:00.000Z')
+const ANALYTICS_URL = 'https://api.cloudflare.com/client/v4/graphql'
+const FIXTURE_ACCOUNT_TAG = 'a7659e62e4d157aba4a45e4829b24e91'
 
 async function gzip(input: string): Promise<ArrayBuffer> {
 	return new Response(
@@ -73,12 +75,71 @@ async function seed(): Promise<void> {
 	)
 }
 
-function api(): D1TelemetryAdminApi {
+function api(analytics?: 'configured' | 'partial' | 'unconfigured'): D1TelemetryAdminApi {
+	const fetcher: typeof fetch = async (input, init) => {
+		const url = String(input)
+		if (url === 'https://fixture.invalid/health') {
+			return new Response(JSON.stringify({ status: 'ok' }))
+		}
+		if (url === ANALYTICS_URL) {
+			const query = JSON.parse(String(init?.body ?? '{}')).query as string
+			if (analytics === 'partial' && query.includes('workersInvocationsAdaptive')) {
+				return new Response(
+					JSON.stringify({ data: null, errors: [{ message: 'fixture analytics failure' }] }),
+				)
+			}
+			if (query.includes('workersInvocationsAdaptive')) {
+				return new Response(
+					JSON.stringify({
+						data: {
+							viewer: {
+								accounts: [{ workersInvocationsAdaptive: [{ sum: { requests: 12_345 } }] }],
+							},
+						},
+					}),
+				)
+			}
+			if (query.includes('d1AnalyticsAdaptiveGroups')) {
+				return new Response(
+					JSON.stringify({
+						data: {
+							viewer: {
+								accounts: [
+									{
+										d1AnalyticsAdaptiveGroups: [{ sum: { rowsRead: 45_012, rowsWritten: 3_201 } }],
+									},
+								],
+							},
+						},
+					}),
+				)
+			}
+			if (query.includes('r2OperationsAdaptiveGroups')) {
+				return new Response(
+					JSON.stringify({
+						data: {
+							viewer: {
+								accounts: [{ r2OperationsAdaptiveGroups: [{ sum: { requests: 8_412 } }] }],
+							},
+						},
+					}),
+				)
+			}
+			return new Response(
+				JSON.stringify({ data: null, errors: [{ message: 'unknown fixture query' }] }),
+			)
+		}
+		return new Response('not found', { status: 404 })
+	}
 	return new D1TelemetryAdminApi(env.DB, env.ERROR_CONTEXTS, {
 		storeErrorContext: true,
 		healthUrl: 'https://fixture.invalid/health',
-		fetcher: async () => new Response(JSON.stringify({ status: 'ok' })),
+		fetcher,
 		now: () => NOW,
+		analytics:
+			analytics === 'unconfigured'
+				? undefined
+				: { accountTag: FIXTURE_ACCOUNT_TAG, apiToken: 'fixture-analytics-token' },
 	})
 }
 
@@ -128,5 +189,27 @@ describe('D1TelemetryAdminApi', () => {
 		})
 		expect(JSON.stringify(registered)).not.toMatch(/installation_hash|object_key|must-not-leak/)
 		expect(await api().errorSample('fixture-unregistered')).toBeNull()
+	})
+
+	it('reports the unconfigured state when analytics credentials are absent', async () => {
+		const system = await api('unconfigured').system()
+		expect(system.accountUsage).toMatchObject({ status: 'unavailable', label: '未配置' })
+		expect(system.accountUsage.detail).toContain('尚未配置 Cloudflare Analytics API')
+	})
+
+	it('aggregates Workers, D1, and R2 usage into one account usage check', async () => {
+		const system = await api('configured').system()
+		expect(system.accountUsage.status).toBe('available')
+		expect(system.accountUsage.detail).toContain('Workers 12,345/100,000 请求')
+		expect(system.accountUsage.detail).toContain('写 3,201/100,000 行')
+		expect(system.accountUsage.detail).toContain('R2 8,412/1,000,000 操作')
+	})
+
+	it('degrades when one analytics dataset fails but others respond', async () => {
+		const system = await api('partial').system()
+		expect(system.accountUsage).toMatchObject({ status: 'degraded', label: '部分可用' })
+		expect(system.accountUsage.detail).toContain('fixture analytics failure')
+		expect(system.accountUsage.detail).toContain('D1')
+		expect(system.accountUsage.detail).toContain('R2')
 	})
 })

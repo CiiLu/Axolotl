@@ -2112,13 +2112,16 @@
 		"message": "支持项目持续开发"
 	},
 	"app.settings.about.attribution": {
-		"message": "本程序由 Modrinth 开源项目修改而来。"
+		"message": "Axolotl Launcher 是开源项目 Modrinth 代码库的修改版本。"
 	},
 	"app.settings.about.community-support": {
-		"message": "社区与支持"
+		"message": "项目与社区"
 	},
-	"app.settings.about.content-search-attribution": {
-		"message": "中文内容搜索使用了 Plain Craft Launcher 与 MC 百科提供的项目名称数据。"
+	"app.settings.about.contributors": {
+		"message": "贡献者"
+	},
+	"app.settings.about.contributors-count": {
+		"message": "{count} 位贡献者"
 	},
 	"app.settings.about.copied-qq-group": {
 		"message": "已复制群号"
@@ -2126,29 +2129,50 @@
 	"app.settings.about.copy-qq-group": {
 		"message": "复制群号"
 	},
-	"app.settings.about.developer": {
-		"message": "由 {organizationName} 的 {developerName} 开发。"
+	"app.settings.about.description": {
+		"message": "你的最后一款启动器。"
 	},
-	"app.settings.about.mcmod-website": {
-		"message": "访问 MC 百科"
+	"app.settings.about.developer-tools": {
+		"message": "开发工具"
+	},
+	"app.settings.about.development-team": {
+		"message": "开发组"
+	},
+	"app.settings.about.license-attribution": {
+		"message": "许可证与来源声明"
+	},
+	"app.settings.about.not-affiliated": {
+		"message": "Modrinth 是 Rinth, Inc. 的商标。Axolotl Launcher 与 Rinth, Inc. 无关联，亦未获得其认可。"
 	},
 	"app.settings.about.original-source": {
-		"message": "查看 Modrinth 原始源代码"
-	},
-	"app.settings.about.pcl-source": {
-		"message": "查看 Plain Craft Launcher 源代码与许可"
-	},
-	"app.settings.about.product-title": {
-		"message": "关于 {productName}"
+		"message": "Modrinth 原始源代码"
 	},
 	"app.settings.about.preview-minecraft-crash-modal": {
 		"message": "预览 Minecraft 崩溃窗口"
 	},
+	"app.settings.about.product-title": {
+		"message": "关于 {productName}"
+	},
+	"app.settings.about.project-license": {
+		"message": "项目许可证（GPL-3.0）"
+	},
 	"app.settings.about.project-website": {
-		"message": "访问项目网站"
+		"message": "项目网站"
+	},
+	"app.settings.about.qq-channel": {
+		"message": "QQ 频道"
+	},
+	"app.settings.about.qq-group": {
+		"message": "玩家 QQ 群"
 	},
 	"app.settings.about.replay-onboarding": {
 		"message": "重放导览"
+	},
+	"app.settings.about.report-issue": {
+		"message": "问题与反馈"
+	},
+	"app.settings.about.repository": {
+		"message": "源代码"
 	},
 	"app.settings.about.test-error": {
 		"message": "触发测试错误"
@@ -2162,8 +2186,8 @@
 	"app.settings.about.test-notification-error-title": {
 		"message": "测试通知错误"
 	},
-	"app.settings.about.qq-group": {
-		"message": "玩家 QQ 群"
+	"app.settings.about.third-party-licenses": {
+		"message": "第三方许可证"
 	},
 	"app.settings.about.version": {
 		"message": "版本 {version}"
@@ -2593,9 +2617,6 @@
 	},
 	"app.settings.tabs.language": {
 		"message": "语言"
-	},
-	"app.settings.tabs.logs": {
-		"message": "日志"
 	},
 	"app.settings.tabs.resource-management": {
 		"message": "资源管理"
@@ -6753,7 +6774,7 @@
 		"message": "陶瓦公共节点已保存"
 	},
 	"app.onboarding.privacy.description": {
-		"message": "匿名遥测与 Discord Rich Presence 可以随时独立调整。"
+		"message": "匿名遥测、Discord 活动状态与 Minecraft 日志分析服务都可以在这里调整。"
 	},
 	"app.onboarding.privacy.title": {
 		"message": "你的数据，由你决定"

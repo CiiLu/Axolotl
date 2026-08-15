@@ -73,6 +73,23 @@ secret:
 Do not add `[skip ci]` to commits that should reach production: GitHub Actions skips all workflows
 for such commits, including this deployment.
 
+### Cloudflare account usage check
+
+The system page reports account-wide Workers, D1, and R2 usage through the GraphQL Analytics API.
+Enable it once with two Worker secrets; secrets survive CI deploys because they live on the Worker,
+not in the repository:
+
+1. Create an API token at `dash.cloudflare.com` → My Profile → API Tokens with the
+   `Account Analytics: Read` permission for the account that owns the telemetry resources.
+2. From `apps/telemetry-dashboard`, run
+   `pnpm exec wrangler secret put CLOUDFLARE_ANALYTICS_TOKEN` and paste that token.
+3. Run `pnpm exec wrangler secret put CLOUDFLARE_ACCOUNT_ID` and paste the 32-character account ID.
+
+The check stays fail-closed: without both values the row reports 尚未配置, and any dataset failure
+only degrades the row. The token is used server-side for three read-only GraphQL queries per system
+page load (Workers invocations 24h, D1 rows today, R2 operations 30d) and is never sent to the
+browser.
+
 ### Unused Vercel target
 
 An earlier Vercel project (`axolotl-telemetry-dashboard`) exists, but its `admin.axlmc.org` domain

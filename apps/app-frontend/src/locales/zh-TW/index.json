@@ -1581,13 +1581,16 @@
 		"message": "支持專案持續開發"
 	},
 	"app.settings.about.attribution": {
-		"message": "本程式由 Modrinth 開源專案修改而來。"
+		"message": "Axolotl Launcher 是開源專案 Modrinth 程式碼庫的修改版本。"
 	},
 	"app.settings.about.community-support": {
-		"message": "社群與支援"
+		"message": "專案與社群"
 	},
-	"app.settings.about.content-search-attribution": {
-		"message": "中文內容搜尋使用了 Plain Craft Launcher 與 MC 百科 提供的專案名稱資料。"
+	"app.settings.about.contributors": {
+		"message": "貢獻者"
+	},
+	"app.settings.about.contributors-count": {
+		"message": "{count} 位貢獻者"
 	},
 	"app.settings.about.copied-qq-group": {
 		"message": "已複製群組號碼"
@@ -1595,26 +1598,47 @@
 	"app.settings.about.copy-qq-group": {
 		"message": "複製群組號碼"
 	},
-	"app.settings.about.developer": {
-		"message": "由 {organizationName} 的 {developerName} 開發。"
+	"app.settings.about.description": {
+		"message": "你的最後一款啟動器。"
 	},
-	"app.settings.about.mcmod-website": {
-		"message": "造訪 MC 百科"
+	"app.settings.about.developer-tools": {
+		"message": "開發工具"
+	},
+	"app.settings.about.development-team": {
+		"message": "開發團隊"
+	},
+	"app.settings.about.license-attribution": {
+		"message": "授權條款與來源聲明"
+	},
+	"app.settings.about.not-affiliated": {
+		"message": "Modrinth 是 Rinth, Inc. 的商標。Axolotl Launcher 與 Rinth, Inc. 無關聯，亦未獲得其認可。"
 	},
 	"app.settings.about.original-source": {
-		"message": "查看 Modrinth 原始碼"
-	},
-	"app.settings.about.pcl-source": {
-		"message": "查看 Plain Craft Launcher 原始碼與授權條款"
+		"message": "Modrinth 原始碼"
 	},
 	"app.settings.about.product-title": {
 		"message": "關於 {productName}"
 	},
+	"app.settings.about.project-license": {
+		"message": "專案授權條款（GPL-3.0）"
+	},
 	"app.settings.about.project-website": {
-		"message": "造訪專案網站"
+		"message": "專案網站"
+	},
+	"app.settings.about.qq-channel": {
+		"message": "QQ 頻道"
 	},
 	"app.settings.about.qq-group": {
 		"message": "使用者 QQ 群組"
+	},
+	"app.settings.about.report-issue": {
+		"message": "問題與意見回饋"
+	},
+	"app.settings.about.repository": {
+		"message": "原始碼"
+	},
+	"app.settings.about.third-party-licenses": {
+		"message": "第三方授權條款"
 	},
 	"app.settings.about.version": {
 		"message": "版本 {version}"
@@ -3205,6 +3229,9 @@
 	},
 	"app.settings.about.preview-minecraft-crash-modal": {
 		"message": "預覽 Minecraft 崩潰窗口"
+	},
+	"app.settings.about.preview-privacy-consent-modal": {
+		"message": "預覽隱私與安全彈窗"
 	},
 	"app.appearance-settings.sidebar-instance-count.title": {
 		"message": "側邊欄實例數量限制"

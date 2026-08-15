@@ -3418,6 +3418,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	grid-area: nav;
 	position: relative;
 	z-index: 2;
+	user-select: none;
 }
 
 .app-grid-statusbar {
