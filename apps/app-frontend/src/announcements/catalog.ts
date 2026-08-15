@@ -110,6 +110,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'改进“从最近的项目开始”组件布局：新增 3x1 和 3x2 尺寸，并在 2x1 和 2x2 尺寸下隐藏游戏模式及分隔小圆点。',
 				},
+				{
+					'zh-CN': '补齐了部分本地化翻译',
+					'en-US': 'Completed some localizations',
+				},
 			],
 			fixed: [
 				{
