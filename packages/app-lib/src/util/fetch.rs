@@ -17,6 +17,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::error::Error;
 use std::ffi::OsStr;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -95,6 +96,9 @@ const BMCL_RATE_RECOVERY_INTERVAL: time::Duration =
     time::Duration::from_millis(100);
 const MAX_DOWNLOAD_ATTEMPT_HISTORY: usize = 12;
 const MAX_DOWNLOAD_DIAGNOSTIC_BYTES: usize = 8 * 1024;
+const H2_FALLBACK_TTL: time::Duration = time::Duration::from_secs(600);
+const COLD_START_PROBE_MAX_ROUTES: usize = 3;
+const COLD_START_ROUTE_HEALTH_SAMPLE_THRESHOLD: u32 = 2;
 
 #[derive(
     Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize,
@@ -1272,6 +1276,51 @@ static MIRROR_REQUEST_LIMITERS: LazyLock<
 static TAIL_HEDGE_SEMAPHORE: LazyLock<Semaphore> =
     LazyLock::new(|| Semaphore::new(MAX_GLOBAL_TAIL_HEDGES));
 
+static H2_FALLBACK_AUTHORITIES: LazyLock<Mutex<HashMap<String, Instant>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn authority_uses_http1_fallback(authority: &str) -> bool {
+    let mut fallbacks = H2_FALLBACK_AUTHORITIES.lock();
+    match fallbacks.get(authority) {
+        Some(until) if *until > Instant::now() => true,
+        Some(_) => {
+            fallbacks.remove(authority);
+            false
+        }
+        None => false,
+    }
+}
+
+fn record_authority_h2_failure(authority: &str) {
+    let now = Instant::now();
+    let mut fallbacks = H2_FALLBACK_AUTHORITIES.lock();
+    fallbacks.retain(|_, until| *until > now);
+    fallbacks.insert(authority.to_string(), now + H2_FALLBACK_TTL);
+}
+
+fn is_h2_protocol_failure(error: &reqwest::Error) -> bool {
+    let mut chain = String::new();
+    let mut source = error.source();
+    while let Some(next) = source {
+        if !chain.is_empty() {
+            chain.push(' ');
+        }
+        chain.push_str(&next.to_string());
+        source = next.source();
+    }
+    let chain = chain.to_ascii_lowercase();
+    [
+        "http2",
+        "http/2",
+        "goaway",
+        "stream error",
+        "protocol error",
+        "refused stream",
+    ]
+    .iter()
+    .any(|marker| chain.contains(marker))
+}
+
 fn reqwest_client_builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
         .connect_timeout(FILE_TRANSFER_CONNECT_TIMEOUT)
@@ -1284,6 +1333,12 @@ fn reqwest_client_builder() -> reqwest::ClientBuilder {
 }
 
 fn file_reqwest_client_builder() -> reqwest::ClientBuilder {
+    reqwest_client_builder()
+        .http2_adaptive_window(true)
+        .http2_keep_alive_interval(Some(time::Duration::from_secs(15)))
+}
+
+fn http1_file_reqwest_client_builder() -> reqwest::ClientBuilder {
     reqwest_client_builder().http1_only()
 }
 
@@ -1320,6 +1375,29 @@ static DIRECT_REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .build()
         .expect("client configuration should be valid")
 });
+
+static HTTP1_NO_REDIRECT_REQWEST_CLIENT: LazyLock<reqwest::Client> =
+    LazyLock::new(|| {
+        let builder = http1_file_reqwest_client_builder()
+            .redirect(reqwest::redirect::Policy::none());
+        #[cfg(not(test))]
+        let builder = builder.https_only(true);
+        builder
+            .build()
+            .expect("client configuration should be valid")
+    });
+
+static HTTP1_DIRECT_REQWEST_CLIENT: LazyLock<reqwest::Client> =
+    LazyLock::new(|| {
+        let builder = http1_file_reqwest_client_builder()
+            .no_proxy()
+            .redirect(reqwest::redirect::Policy::none());
+        #[cfg(not(test))]
+        let builder = builder.https_only(true);
+        builder
+            .build()
+            .expect("client configuration should be valid")
+    });
 
 static DIRECT_FETCH_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     let builder = reqwest_client_builder().no_proxy();
@@ -3231,10 +3309,23 @@ async fn send_path_request_with_clients(
     };
     let mut reused_redirect_target = current != original;
     for redirect_count in 0..=5 {
-        let client = if route.proxy == ProxyPolicy::Direct {
-            direct_client
+        let fallback_to_http1 = url_authority(current.as_str())
+            .is_some_and(|authority| authority_uses_http1_fallback(&authority));
+        let (system_client_for_hop, direct_client_for_hop): (
+            &reqwest::Client,
+            &reqwest::Client,
+        ) = if fallback_to_http1 {
+            (
+                &HTTP1_NO_REDIRECT_REQWEST_CLIENT,
+                &HTTP1_DIRECT_REQWEST_CLIENT,
+            )
         } else {
-            system_client
+            (system_client, direct_client)
+        };
+        let client = if route.proxy == ProxyPolicy::Direct {
+            direct_client_for_hop
+        } else {
+            system_client_for_hop
         };
         let same_as_original = same_origin(&original, &current);
         let allow_sensitive = route.allow_sensitive_headers && same_as_original;
@@ -3263,7 +3354,25 @@ async fn send_path_request_with_clients(
                 .header(header::ACCEPT_ENCODING, "identity");
         }
 
-        let response = request.send().await?;
+        let response = match request.send().await {
+            Ok(response) => response,
+            Err(error) => {
+                if !fallback_to_http1
+                    && redirect_count < 5
+                    && is_h2_protocol_failure(&error)
+                    && let Some(authority) = url_authority(current.as_str())
+                {
+                    tracing::warn!(
+                        authority,
+                        error = %error.without_url(),
+                        "HTTP/2 download request failed; retrying over HTTP/1.1"
+                    );
+                    record_authority_h2_failure(&authority);
+                    continue;
+                }
+                return Err(error.into());
+            }
+        };
         if matches!(
             response.status(),
             StatusCode::TOO_MANY_REQUESTS | StatusCode::SERVICE_UNAVAILABLE
@@ -3300,6 +3409,7 @@ async fn send_path_request_with_clients(
                 original_url = %sanitize_url_for_log(&route.url),
                 final_host = current.host_str().unwrap_or_default(),
                 reused_redirect_target,
+                http1_fallback = fallback_to_http1,
                 "Resolved file download route"
             );
             return Ok((response, current.into()));
@@ -3889,6 +3999,105 @@ async fn probe_faster_route(
     None
 }
 
+fn route_health_is_cold(
+    route: &DownloadRoute,
+    resource: ResourceClass,
+) -> bool {
+    route_health_key(route, resource).is_none_or(|key| {
+        ROUTE_HEALTH.lock().get(&key).is_none_or(|entry| {
+            entry.success_samples < COLD_START_ROUTE_HEALTH_SAMPLE_THRESHOLD
+        })
+    })
+}
+
+async fn select_cold_start_route(
+    request: &DownloadRequest,
+    routes: &mut Vec<DownloadRoute>,
+    semaphore: &FetchSemaphore,
+    system_client: &reqwest::Client,
+    direct_client: &reqwest::Client,
+) {
+    let Some(size) = request.integrity.size else {
+        return;
+    };
+    if size < SEGMENTED_DOWNLOAD_THRESHOLD
+        || !matches!(
+            source_mode_for_resource(request.resource),
+            crate::state::DownloadSourceMode::Auto
+        )
+        || !route_health_is_cold(&routes[0], request.resource)
+    {
+        return;
+    }
+    let candidates: Vec<&DownloadRoute> = routes
+        .iter()
+        .filter(|route| route.supports_range && range_splitting_allowed(route))
+        .take(COLD_START_PROBE_MAX_ROUTES)
+        .collect();
+    if candidates.len() < 2 {
+        return;
+    }
+    if semaphore.0.available_permits() < candidates.len() {
+        return;
+    }
+    let mut probes = futures::stream::FuturesUnordered::new();
+    for (index, route) in candidates.iter().copied().enumerate() {
+        probes.push(async move {
+            (
+                index,
+                probe_route_throughput(
+                    route,
+                    None,
+                    size,
+                    request.header.as_ref(),
+                    None,
+                    request.download_meta.as_ref(),
+                    semaphore,
+                    system_client,
+                    direct_client,
+                    request.resource,
+                )
+                .await,
+            )
+        });
+    }
+    let mut measured = HashMap::new();
+    while let Some((index, result)) = probes.next().await {
+        if let Some(result) = result {
+            measured.insert(index, result.bytes_per_second);
+        }
+    }
+    drop(probes);
+    let first_bytes_per_second = match measured.get(&0) {
+        Some(bytes_per_second) => *bytes_per_second,
+        None => return,
+    };
+    let Some((best_index, best_bytes_per_second)) = measured
+        .iter()
+        .max_by_key(|(_, bytes_per_second)| **bytes_per_second)
+    else {
+        return;
+    };
+    if *best_index == 0
+        || !probe_is_meaningfully_faster(
+            *best_bytes_per_second,
+            first_bytes_per_second,
+        )
+    {
+        return;
+    }
+    tracing::debug!(
+        best_bytes_per_second,
+        first_bytes_per_second,
+        "Cold-start probe selected a faster download route"
+    );
+    let best_route = candidates[*best_index].clone();
+    if let Some(index) = routes.iter().position(|route| *route == best_route) {
+        let best_route = routes.remove(index);
+        routes.insert(0, best_route);
+    }
+}
+
 fn segment_path(part_path: &Path, index: usize) -> PathBuf {
     suffixed_path(part_path, &format!(".segment-{index}"))
 }
@@ -4028,7 +4237,17 @@ async fn download_tail_candidate(
         let Some(chunk) = chunk else {
             break;
         };
-        let chunk = chunk.map_err(|_| SegmentDownloadError::Transport)?;
+        let chunk = match chunk {
+            Ok(chunk) => chunk,
+            Err(error) => {
+                if is_h2_protocol_failure(&error)
+                    && let Some(authority) = url_authority(&final_url)
+                {
+                    record_authority_h2_failure(&authority);
+                }
+                return Err(SegmentDownloadError::Transport);
+            }
+        };
         let accepted = usize::try_from(expected.saturating_sub(received))
             .unwrap_or(usize::MAX)
             .min(chunk.len());
@@ -4410,6 +4629,11 @@ async fn download_segment(
             let chunk = match chunk {
                 Ok(chunk) => chunk,
                 Err(error) => {
+                    if is_h2_protocol_failure(&error)
+                        && let Some(authority) = url_authority(&final_url)
+                    {
+                        record_authority_h2_failure(&authority);
+                    }
                     stream_end_reason = Some(error.to_string());
                     break;
                 }
@@ -5049,6 +5273,14 @@ async fn download_to_path_inner(
         any_route_can_resume(&routes),
     )
     .await?;
+    select_cold_start_route(
+        &request,
+        &mut routes,
+        semaphore,
+        &NO_REDIRECT_REQWEST_CLIENT,
+        &DIRECT_REQWEST_CLIENT,
+    )
+    .await;
 
     let mut attempts = 0;
     let mut last_error = None;
@@ -5617,6 +5849,12 @@ async fn download_to_path_inner(
                             let chunk = match item {
                                 Ok(chunk) => chunk,
                                 Err(error) => {
+                                    if is_h2_protocol_failure(&error)
+                                        && let Some(authority) =
+                                            url_authority(&final_url)
+                                    {
+                                        record_authority_h2_failure(&authority);
+                                    }
                                     transfer_error = Some(error.into());
                                     break;
                                 }
@@ -8322,5 +8560,13 @@ mod tests {
         assert!(values.is_empty());
         assert_eq!(requests.load(Ordering::Relaxed), 1);
         server.abort();
+    }
+
+    #[test]
+    fn h2_fallback_authority_marking() {
+        record_authority_h2_failure("example.com:443");
+        assert!(authority_uses_http1_fallback("example.com:443"));
+        assert!(!authority_uses_http1_fallback("other.com:443"));
+        H2_FALLBACK_AUTHORITIES.lock().clear();
     }
 }
