@@ -20,9 +20,9 @@ const maximum = computed(() => Math.max(1, ...props.items.map((item) => item.val
 					formatNumber(item.value)
 				}}</span>
 			</div>
-			<div class="h-1.5 overflow-hidden rounded-sm bg-surface-3">
+			<div class="h-1.5 overflow-hidden rounded-full bg-muted">
 				<div
-					class="h-full rounded-sm transition-[width] duration-300"
+					class="h-full rounded-full transition-[width] duration-300"
 					:style="{ width: `${(item.value / maximum) * 100}%`, backgroundColor: color }"
 				></div>
 			</div>

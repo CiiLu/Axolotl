@@ -16,7 +16,6 @@ import DistributionChart from '~/components/charts/DistributionChart.vue'
 import TrendChart from '~/components/charts/TrendChart.vue'
 import MetricCard from '~/components/MetricCard.vue'
 import PageHeader from '~/components/PageHeader.vue'
-import Alert from '~/components/ui/Alert.vue'
 import Badge from '~/components/ui/Badge.vue'
 import Card from '~/components/ui/Card.vue'
 import Skeleton from '~/components/ui/Skeleton.vue'
@@ -42,14 +41,14 @@ const { data, status, error, refresh } = await useAsyncData(
 )
 
 const metricDefinitions = [
-	{ key: 'totalInstallations', title: '累计同意遥测安装', icon: Database, tone: 'green' },
-	{ key: 'dau', title: '日活跃安装（DAU）', icon: Activity, tone: 'cyan' },
-	{ key: 'wau', title: '周活跃安装（WAU）', icon: CalendarDays, tone: 'cyan' },
-	{ key: 'mau', title: '月活跃安装（MAU）', icon: Users, tone: 'cyan' },
-	{ key: 'newInstallationsToday', title: '今日新增安装', icon: PackagePlus, tone: 'green' },
-	{ key: 'errorOccurrences', title: '错误发生次数', icon: Bug, tone: 'coral' },
-	{ key: 'distinctErrorGroups', title: '不同错误组', icon: Gauge, tone: 'gold' },
-	{ key: 'r2SamplesToday', title: '今日 R2 样本', icon: FolderArchive, tone: 'gold' },
+	{ key: 'totalInstallations', title: '累计同意遥测安装', icon: Database },
+	{ key: 'dau', title: '日活跃安装（DAU）', icon: Activity },
+	{ key: 'wau', title: '周活跃安装（WAU）', icon: CalendarDays },
+	{ key: 'mau', title: '月活跃安装（MAU）', icon: Users },
+	{ key: 'newInstallationsToday', title: '今日新增安装', icon: PackagePlus },
+	{ key: 'errorOccurrences', title: '错误发生次数', icon: Bug },
+	{ key: 'distinctErrorGroups', title: '不同错误组', icon: Gauge },
+	{ key: 'r2SamplesToday', title: '今日 R2 样本', icon: FolderArchive },
 ] as const
 
 const trendCharts = [
@@ -104,26 +103,26 @@ const distributionCharts = computed(() => [
 			title="数据总览"
 			description="查看匿名启动器遥测的活跃度、增长、错误和运行环境分布。"
 		>
-			<Badge v-if="data" variant="secondary" class="gap-1.5 px-2.5 py-1">
+			<Badge v-if="data" variant="secondary" class="gap-1.5">
 				<Clock3 class="size-3.5" />更新于 {{ formatUtcTimestamp(data.overview.generatedAt) }}
 			</Badge>
 		</PageHeader>
-		<Alert title="统计口径" class="mb-5">
-			所有统计仅包含主动同意遥测的匿名安装，时间均按 UTC 计算。
-		</Alert>
 
 		<div v-if="status === 'pending' && !data" data-state="loading">
-			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+			<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
 				<Skeleton v-for="index in 8" :key="index" class="h-32" />
 			</div>
-			<div class="mt-5 grid gap-4 xl:grid-cols-2">
-				<Skeleton v-for="index in 4" :key="index" class="h-80" />
+			<div class="mt-8 grid gap-4 xl:grid-cols-3">
+				<Skeleton v-for="index in 3" :key="index" class="h-80" />
+			</div>
+			<div class="mt-8 grid gap-4 lg:grid-cols-3">
+				<Skeleton v-for="index in 3" :key="index" class="h-72" />
 			</div>
 		</div>
 		<AppState v-else-if="error || !data" compact kind="error" @retry="refresh" />
 		<template v-else>
 			<div
-				class="grid grid-cols-2 gap-3 lg:grid-cols-4"
+				class="grid grid-cols-2 gap-4 lg:grid-cols-4"
 				:class="status === 'pending' && 'opacity-65'"
 				:aria-busy="status === 'pending'"
 			>
@@ -134,32 +133,31 @@ const distributionCharts = computed(() => [
 					:value="data.overview.metrics[metric.key].value"
 					:detail="data.overview.metrics[metric.key].label"
 					:icon="metric.icon"
-					:tone="metric.tone"
 				/>
 			</div>
 
-			<section class="mt-6">
-				<div class="mb-3">
-					<h2 class="text-sm font-semibold">活跃与质量趋势</h2>
-					<p class="mt-0.5 text-xs text-muted-foreground">当前范围 {{ range }}，截止今日 UTC。</p>
+			<section class="mt-8">
+				<div class="mb-4">
+					<h2 class="text-lg font-semibold tracking-tight">活跃与质量趋势</h2>
+					<p class="mt-1 text-sm text-muted-foreground">按 UTC 自然日聚合，截止今日。</p>
 				</div>
 				<div class="grid gap-4 xl:grid-cols-3">
-					<Card v-for="chart in trendCharts" :key="chart.title" class="min-w-0 p-4">
-						<h3 class="text-sm font-semibold">{{ chart.title }}</h3>
+					<Card v-for="chart in trendCharts" :key="chart.title" class="min-w-0 p-5">
+						<h3 class="text-sm font-semibold tracking-tight">{{ chart.title }}</h3>
 						<p class="mt-1 text-xs text-muted-foreground">{{ chart.description }}</p>
-						<TrendChart class="mt-3" :data="data.activity.points" :series="chart.series" />
+						<TrendChart class="mt-4" :data="data.activity.points" :series="chart.series" />
 					</Card>
 				</div>
 			</section>
 
-			<section class="mt-6">
-				<div class="mb-3">
-					<h2 class="text-sm font-semibold">运行环境分布</h2>
-					<p class="mt-0.5 text-xs text-muted-foreground">所选时间范围内的唯一活跃安装。</p>
+			<section class="mt-8">
+				<div class="mb-4">
+					<h2 class="text-lg font-semibold tracking-tight">运行环境分布</h2>
+					<p class="mt-1 text-sm text-muted-foreground">所选时间范围内按维度统计的唯一活跃安装。</p>
 				</div>
 				<div class="grid gap-4 lg:grid-cols-3">
-					<Card v-for="chart in distributionCharts" :key="chart.title" class="min-w-0 p-4">
-						<h3 class="text-sm font-semibold">{{ chart.title }}</h3>
+					<Card v-for="chart in distributionCharts" :key="chart.title" class="min-w-0 p-5">
+						<h3 class="text-sm font-semibold tracking-tight">{{ chart.title }}</h3>
 						<p class="mt-1 text-xs text-muted-foreground">{{ chart.description }}</p>
 						<DistributionChart class="mt-4" :items="chart.items" :color="chart.color" />
 					</Card>

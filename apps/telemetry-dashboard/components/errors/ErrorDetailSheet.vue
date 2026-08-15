@@ -69,67 +69,73 @@ async function copyFingerprint(): Promise<void> {
 				</div>
 			</section>
 
-			<dl class="grid grid-cols-2 gap-x-5 gap-y-4 border-y py-4 text-sm">
+			<dl
+				class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-surface-4 bg-muted/30 p-4 text-sm"
+			>
 				<div>
 					<dt class="text-xs text-muted-foreground">首次出现</dt>
-					<dd class="mt-1 tabular-nums">{{ formatUtcDay(detail.firstSeen) }}（UTC）</dd>
+					<dd class="mt-1 font-medium tabular-nums">{{ formatUtcDay(detail.firstSeen) }}（UTC）</dd>
 				</div>
 				<div>
 					<dt class="text-xs text-muted-foreground">最近出现</dt>
-					<dd class="mt-1 tabular-nums">{{ formatUtcDay(detail.lastSeen) }}（UTC）</dd>
+					<dd class="mt-1 font-medium tabular-nums">{{ formatUtcDay(detail.lastSeen) }}（UTC）</dd>
 				</div>
 				<div>
 					<dt class="text-xs text-muted-foreground">发生次数</dt>
-					<dd class="mt-1 tabular-nums">{{ formatNumber(detail.occurrenceCount) }}</dd>
+					<dd class="mt-1 font-medium tabular-nums">{{ formatNumber(detail.occurrenceCount) }}</dd>
 				</div>
 				<div>
 					<dt class="text-xs text-muted-foreground">影响安装数</dt>
-					<dd class="mt-1 tabular-nums">{{ formatNumber(detail.affectedInstallations) }}</dd>
+					<dd class="mt-1 font-medium tabular-nums">
+						{{ formatNumber(detail.affectedInstallations) }}
+					</dd>
 				</div>
 			</dl>
 
 			<section>
-				<h3 class="text-xs font-semibold uppercase text-muted-foreground">最新脱敏消息</h3>
-				<p class="mt-2 whitespace-pre-wrap break-words text-sm">{{ detail.latestMessage }}</p>
+				<h3 class="text-sm font-semibold tracking-tight">最新脱敏消息</h3>
+				<p class="mt-2 whitespace-pre-wrap break-words text-sm leading-6">
+					{{ detail.latestMessage }}
+				</p>
 			</section>
 
 			<Alert v-if="!sample" title="没有登记样本"> 该错误指纹没有可读取的 R2 上下文样本。 </Alert>
 			<template v-else>
 				<section>
-					<h3 class="text-xs font-semibold uppercase text-muted-foreground">已登记的 R2 样本</h3>
+					<h3 class="text-sm font-semibold tracking-tight">已登记的 R2 样本</h3>
 					<p class="mt-1 text-xs text-muted-foreground">
-						{{ formatUtcTimestamp(sample.occurredAt) }}
+						采集于 {{ formatUtcTimestamp(sample.occurredAt) }}
 					</p>
-					<dl class="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+					<dl class="mt-4 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
 						<div>
 							<dt class="text-xs text-muted-foreground">路由</dt>
-							<dd class="mt-1 break-all">{{ sample.route || '暂无' }}</dd>
+							<dd class="mt-1 break-all font-medium">{{ sample.route || '暂无' }}</dd>
 						</div>
 						<div>
 							<dt class="text-xs text-muted-foreground">命令</dt>
-							<dd class="mt-1 break-all">{{ sample.command || '暂无' }}</dd>
+							<dd class="mt-1 break-all font-medium">{{ sample.command || '暂无' }}</dd>
 						</div>
 						<div>
 							<dt class="text-xs text-muted-foreground">操作系统</dt>
-							<dd class="mt-1">{{ sample.platform }}</dd>
+							<dd class="mt-1 font-medium">{{ sample.platform }}</dd>
 						</div>
 						<div>
 							<dt class="text-xs text-muted-foreground">CPU 架构</dt>
-							<dd class="mt-1">{{ sample.architecture }}</dd>
+							<dd class="mt-1 font-medium">{{ sample.architecture }}</dd>
 						</div>
 					</dl>
 				</section>
 				<section v-if="sample.stack">
-					<h3 class="text-xs font-semibold text-muted-foreground">脱敏调用栈</h3>
+					<h3 class="text-sm font-semibold tracking-tight">脱敏调用栈</h3>
 					<pre
-						class="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg border bg-muted/45 p-3 font-mono text-xs"
+						class="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-surface-4 bg-muted/50 p-4 font-mono text-xs leading-5"
 						>{{ sample.stack }}</pre
 					>
 				</section>
 				<section v-if="sample.context">
-					<h3 class="text-xs font-semibold text-muted-foreground">脱敏上下文</h3>
+					<h3 class="text-sm font-semibold tracking-tight">脱敏上下文</h3>
 					<pre
-						class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border bg-muted/45 p-3 font-mono text-xs"
+						class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-surface-4 bg-muted/50 p-4 font-mono text-xs leading-5"
 						>{{ sample.context }}</pre
 					>
 				</section>

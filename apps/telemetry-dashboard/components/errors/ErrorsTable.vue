@@ -27,14 +27,16 @@ const columns: Array<{ key: ErrorSort; label: string }> = [
 <template>
 	<div class="overflow-x-auto">
 		<table class="w-full min-w-[1040px] table-fixed text-left text-sm">
-			<thead class="border-b border-surface-4 bg-surface-3 text-xs text-muted-foreground">
+			<thead class="border-b border-surface-4 bg-muted/50 text-xs text-muted-foreground">
 				<tr>
 					<th class="w-[25%] px-3 py-2.5 font-medium">错误指纹</th>
 					<th class="w-[15%] px-3 py-2.5 font-medium">错误类型</th>
 					<th class="w-[12%] px-3 py-2.5 font-medium">版本</th>
 					<th v-for="column in columns" :key="column.key" class="w-[11%] px-3 py-2.5 font-medium">
 						<button
-							class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground"
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							:aria-label="`按${column.label}排序`"
 							@click="emit('sort', column.key)"
 						>
 							{{ column.label }}
@@ -53,7 +55,7 @@ const columns: Array<{ key: ErrorSort; label: string }> = [
 				<tr
 					v-for="item in items"
 					:key="item.fingerprint"
-					class="cursor-pointer border-b border-surface-4 transition-colors last:border-0 hover:bg-surface-3/70 active:bg-surface-4/60"
+					class="cursor-pointer border-b border-surface-4 transition-colors last:border-0 hover:bg-muted/50"
 					tabindex="0"
 					@click="emit('select', item.fingerprint)"
 					@keydown.enter="emit('select', item.fingerprint)"

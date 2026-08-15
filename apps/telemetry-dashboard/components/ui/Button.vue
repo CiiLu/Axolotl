@@ -13,12 +13,12 @@ const props = withDefaults(
 )
 
 const variants = {
-	default: 'bg-primary text-primary-foreground shadow-sm hover:brightness-95 active:brightness-90',
-	secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/75',
-	ghost: 'text-foreground hover:bg-surface-3 active:bg-surface-4',
+	default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
+	secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+	ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
 	outline:
-		'border-surface-4 bg-surface-2 text-foreground hover:border-surface-5 hover:bg-surface-3 active:bg-surface-4',
-	destructive: 'bg-destructive text-destructive-foreground hover:brightness-95',
+		'border-input bg-surface-2 text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground',
+	destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
 }
 
 const sizes = {
@@ -33,7 +33,7 @@ const sizes = {
 		:data-variant="variant"
 		:class="
 			cn(
-				'inline-flex cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-medium transition-[color,background-color,border-color,box-shadow,filter] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50',
+				'inline-flex cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:brightness-95 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50',
 				variants[props.variant],
 				sizes[props.size],
 				props.class,

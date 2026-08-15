@@ -23,12 +23,12 @@ const retentionRows = computed(() =>
 	data.value
 		? [
 				{
-					label: 'daily_active',
+					label: '日活跃记录',
 					value: `${data.value.limits.dailyActiveRetentionDays} 天`,
 					icon: Database,
 				},
 				{
-					label: 'error_reports',
+					label: '错误上报记录',
 					value: `${data.value.limits.errorReportsRetentionDays} 天`,
 					icon: Archive,
 				},
@@ -38,12 +38,18 @@ const retentionRows = computed(() =>
 					icon: FolderArchive,
 				},
 				{
-					label: 'error_groups / error_daily',
+					label: '聚合错误记录',
 					value: `${data.value.limits.errorAggregatesRetentionDays} 天`,
 					icon: TimerReset,
 				},
 			]
 		: [],
+)
+
+const budgetPercent = computed(() =>
+	data.value
+		? Math.min(100, Math.round((data.value.r2Budget.used / data.value.r2Budget.limit) * 100))
+		: 0,
 )
 </script>
 
@@ -77,8 +83,8 @@ const retentionRows = computed(() =>
 				:aria-busy="status === 'pending'"
 			>
 				<Card class="overflow-hidden">
-					<div class="border-b px-4 py-3">
-						<h2 class="text-sm font-semibold">服务检查</h2>
+					<div class="border-b border-surface-4 px-5 py-4">
+						<h2 class="text-sm font-semibold tracking-tight">服务检查</h2>
 						<p class="mt-0.5 text-xs text-muted-foreground">
 							检查时间 {{ formatUtcTimestamp(data.generatedAt) }}
 						</p>
@@ -90,39 +96,39 @@ const retentionRows = computed(() =>
 					<StatusRow name="Cloudflare 账户用量" :check="data.accountUsage" />
 				</Card>
 
-				<Card class="p-4">
+				<Card class="p-5">
 					<div class="flex items-start justify-between gap-3">
 						<div>
-							<h2 class="text-sm font-semibold">错误上下文预算</h2>
+							<h2 class="text-sm font-semibold tracking-tight">错误上下文预算</h2>
 							<p class="mt-1 text-xs text-muted-foreground">今日 UTC 对象预留使用情况。</p>
 						</div>
 						<Gauge class="size-5 text-muted-foreground" />
 					</div>
-					<div class="mt-7 flex items-end justify-between gap-4">
-						<p class="text-3xl font-semibold tabular-nums">
+					<div class="mt-8 flex items-end justify-between gap-4">
+						<p class="text-3xl font-semibold tabular-nums tracking-tight">
 							{{ formatNumber(data.r2Budget.used) }}
 							<span class="text-base font-normal text-muted-foreground"
 								>/ {{ formatNumber(data.r2Budget.limit) }}</span
 							>
 						</p>
 						<Badge :variant="data.r2Budget.used >= data.r2Budget.limit ? 'destructive' : 'success'">
-							{{ data.r2Budget.used >= data.r2Budget.limit ? '已达上限' : '配额正常' }}
+							{{
+								data.r2Budget.used >= data.r2Budget.limit ? '已达上限' : `${budgetPercent}% 已用`
+							}}
 						</Badge>
 					</div>
-					<div class="mt-4 h-2 overflow-hidden rounded-sm bg-muted">
+					<div class="mt-4 h-2 overflow-hidden rounded-full bg-muted">
 						<div
-							class="h-full rounded-sm"
+							class="h-full rounded-full transition-[width] duration-300"
 							:class="data.r2Budget.used >= data.r2Budget.limit ? 'bg-destructive' : 'bg-primary'"
-							:style="{
-								width: `${Math.min(100, (data.r2Budget.used / data.r2Budget.limit) * 100)}%`,
-							}"
+							:style="{ width: `${budgetPercent}%` }"
 						></div>
 					</div>
-					<dl class="mt-7 grid grid-cols-2 gap-4 border-t pt-4 text-sm">
+					<dl class="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-surface-4 pt-5 text-sm">
 						<div>
-							<dt class="text-xs text-muted-foreground">STORE_ERROR_CONTEXT</dt>
+							<dt class="text-xs text-muted-foreground">错误上下文存储</dt>
 							<dd class="mt-1 font-medium">
-								{{ data.storeErrorContext ? 'Enabled' : 'Disabled' }}
+								{{ data.storeErrorContext ? '已启用' : '已停用' }}
 							</dd>
 						</div>
 						<div>
@@ -145,22 +151,22 @@ const retentionRows = computed(() =>
 				</Card>
 
 				<Card class="overflow-hidden lg:col-span-2">
-					<div class="border-b px-4 py-3">
-						<h2 class="text-sm font-semibold">数据保留策略</h2>
+					<div class="border-b border-surface-4 px-5 py-4">
+						<h2 class="text-sm font-semibold tracking-tight">数据保留策略</h2>
 						<p class="mt-0.5 text-xs text-muted-foreground">生产环境当前配置的保留时间窗口。</p>
 					</div>
 					<div class="grid sm:grid-cols-2 xl:grid-cols-4">
 						<div
 							v-for="row in retentionRows"
 							:key="row.label"
-							class="flex items-center gap-3 border-b p-4 last:border-0 sm:border-r xl:border-b-0"
+							class="flex items-center gap-3 border-b p-5 last:border-0 sm:border-r xl:border-b-0"
 						>
-							<div class="flex size-8 items-center justify-center rounded-md bg-muted">
+							<div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
 								<component :is="row.icon" class="size-4 text-muted-foreground" />
 							</div>
 							<div class="min-w-0">
-								<p class="truncate font-mono text-xs">{{ row.label }}</p>
-								<p class="mt-1 text-sm font-medium">{{ row.value }}</p>
+								<p class="truncate text-xs text-muted-foreground">{{ row.label }}</p>
+								<p class="mt-1 text-sm font-medium tabular-nums">{{ row.value }}</p>
 							</div>
 						</div>
 					</div>

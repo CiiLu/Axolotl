@@ -10,9 +10,9 @@ const props = withDefaults(
 
 const icons = { info: Info, success: CircleCheck, destructive: AlertCircle }
 const styles = {
-	info: 'border-border bg-muted/40',
-	success: 'border-emerald-500/30 bg-emerald-500/10',
-	destructive: 'border-red-500/30 bg-red-500/10',
+	info: 'border-border bg-muted/40 text-card-foreground [&>svg]:text-muted-foreground',
+	success: 'border-emerald-500/30 bg-emerald-500/10 [&>svg]:text-emerald-600',
+	destructive: 'border-red-500/30 bg-red-500/10 [&>svg]:text-red-600',
 }
 </script>
 
