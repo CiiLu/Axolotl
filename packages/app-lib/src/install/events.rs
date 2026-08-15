@@ -88,6 +88,10 @@ impl InstallProgressReporter {
             .unwrap_or_else(CancellationToken::new)
     }
 
+    pub(crate) fn job_id(&self) -> Uuid {
+        self.job_id
+    }
+
     pub fn new(job_id: Uuid, mut state: InstallJobState) -> Self {
         state.compact_transient_download_events();
         let shared_state = match REPORTER_STATES.entry(job_id) {
