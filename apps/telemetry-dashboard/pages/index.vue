@@ -41,14 +41,14 @@ const { data, status, error, refresh } = await useAsyncData(
 )
 
 const metricDefinitions = [
-	{ key: 'totalInstallations', title: '累计同意遥测安装', icon: Database },
-	{ key: 'dau', title: '日活跃安装（DAU）', icon: Activity },
-	{ key: 'wau', title: '周活跃安装（WAU）', icon: CalendarDays },
-	{ key: 'mau', title: '月活跃安装（MAU）', icon: Users },
-	{ key: 'newInstallationsToday', title: '今日新增安装', icon: PackagePlus },
-	{ key: 'errorOccurrences', title: '错误发生次数', icon: Bug },
-	{ key: 'distinctErrorGroups', title: '不同错误组', icon: Gauge },
-	{ key: 'r2SamplesToday', title: '今日 R2 样本', icon: FolderArchive },
+	{ key: 'totalInstallations', title: '累计同意遥测安装', icon: Database, tone: 'emerald' },
+	{ key: 'dau', title: '日活跃安装（DAU）', icon: Activity, tone: 'indigo' },
+	{ key: 'wau', title: '周活跃安装（WAU）', icon: CalendarDays, tone: 'cyan' },
+	{ key: 'mau', title: '月活跃安装（MAU）', icon: Users, tone: 'violet' },
+	{ key: 'newInstallationsToday', title: '今日新增安装', icon: PackagePlus, tone: 'sky' },
+	{ key: 'errorOccurrences', title: '错误发生次数', icon: Bug, tone: 'rose' },
+	{ key: 'distinctErrorGroups', title: '不同错误组', icon: Gauge, tone: 'amber' },
+	{ key: 'r2SamplesToday', title: '今日 R2 样本', icon: FolderArchive, tone: 'amber' },
 ] as const
 
 const trendCharts = [
@@ -133,6 +133,7 @@ const distributionCharts = computed(() => [
 					:value="data.overview.metrics[metric.key].value"
 					:detail="data.overview.metrics[metric.key].label"
 					:icon="metric.icon"
+					:tone="metric.tone"
 				/>
 			</div>
 
@@ -142,7 +143,11 @@ const distributionCharts = computed(() => [
 					<p class="mt-1 text-sm text-muted-foreground">按 UTC 自然日聚合，截止今日。</p>
 				</div>
 				<div class="grid gap-4 xl:grid-cols-3">
-					<Card v-for="chart in trendCharts" :key="chart.title" class="min-w-0 p-5">
+					<Card
+						v-for="chart in trendCharts"
+						:key="chart.title"
+						class="min-w-0 p-5 transition-shadow hover:shadow-md"
+					>
 						<h3 class="text-sm font-semibold tracking-tight">{{ chart.title }}</h3>
 						<p class="mt-1 text-xs text-muted-foreground">{{ chart.description }}</p>
 						<TrendChart class="mt-4" :data="data.activity.points" :series="chart.series" />
@@ -156,7 +161,11 @@ const distributionCharts = computed(() => [
 					<p class="mt-1 text-sm text-muted-foreground">所选时间范围内按维度统计的唯一活跃安装。</p>
 				</div>
 				<div class="grid gap-4 lg:grid-cols-3">
-					<Card v-for="chart in distributionCharts" :key="chart.title" class="min-w-0 p-5">
+					<Card
+						v-for="chart in distributionCharts"
+						:key="chart.title"
+						class="min-w-0 p-5 transition-shadow hover:shadow-md"
+					>
 						<h3 class="text-sm font-semibold tracking-tight">{{ chart.title }}</h3>
 						<p class="mt-1 text-xs text-muted-foreground">{{ chart.description }}</p>
 						<DistributionChart class="mt-4" :items="chart.items" :color="chart.color" />

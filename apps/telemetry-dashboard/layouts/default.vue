@@ -120,7 +120,7 @@ watch(
 			>
 				<div class="flex h-16 items-center gap-3 border-b px-4">
 					<div
-						class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm"
+						class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm"
 					>
 						<Activity class="size-[18px]" />
 					</div>
@@ -144,8 +144,12 @@ watch(
 						v-for="item in nav"
 						:key="item.path"
 						:to="item.path"
-						class="flex h-9 cursor-pointer items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
-						:class="route.path === item.path && 'bg-surface-3 text-foreground shadow-sm'"
+						class="flex h-9 cursor-pointer items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors"
+						:class="
+							route.path === item.path
+								? 'bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary'
+								: 'hover:bg-accent hover:text-accent-foreground'
+						"
 					>
 						<component :is="item.icon" class="size-4" />
 						{{ item.label }}
@@ -156,7 +160,7 @@ watch(
 					<div class="rounded-xl border border-surface-4 bg-muted/40 p-3.5">
 						<div class="flex items-center justify-between gap-2">
 							<span class="inline-flex items-center gap-2 text-xs font-medium">
-								<Database class="size-3.5" />数据源
+								<Database class="size-3.5 text-primary" />数据源
 							</span>
 							<Badge :variant="session.dataSource === 'production' ? 'success' : 'warning'">
 								{{ session.dataSource === 'production' ? '生产数据' : '模拟数据' }}
@@ -177,7 +181,7 @@ watch(
 
 			<div class="min-w-0 md:pl-60">
 				<header
-					class="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-surface-4 bg-surface-2/80 px-3 backdrop-blur-sm md:px-6"
+					class="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-surface-4 bg-surface-1/80 px-3 backdrop-blur-sm md:px-6"
 				>
 					<Button
 						variant="ghost"

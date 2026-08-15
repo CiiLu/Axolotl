@@ -30,7 +30,7 @@ const themes: Array<{ value: ThemeMode; label: string; icon: typeof Sun }> = [
 			class="inline-flex h-9 min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-surface-4 bg-surface-2 px-2.5 text-sm shadow-sm outline-none transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring"
 		>
 			<span
-				class="flex size-6 shrink-0 items-center justify-center rounded bg-primary/15 text-xs font-semibold text-primary"
+				class="bg-primary/12 flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold text-primary"
 			>
 				{{ session.identity.name.slice(0, 1).toUpperCase() }}
 			</span>
