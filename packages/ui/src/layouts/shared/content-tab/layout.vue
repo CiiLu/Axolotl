@@ -541,7 +541,6 @@ const tableItems = computed<ContentCardTableItem[]>(() => {
 			disabledTooltip:
 				modpack.disabledText ?? (ctx.isBusy.value ? (ctx.busyMessage?.value ?? null) : null),
 			downloads: modpack.project.downloads ?? null,
-			followers: modpack.project.followers ?? null,
 			categories: modpack.categories,
 		})
 
