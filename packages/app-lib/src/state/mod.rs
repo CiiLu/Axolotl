@@ -75,6 +75,9 @@ const AUTO_DOWNLOAD_CONCURRENCY_INITIAL: usize = 64;
 const AUTO_DOWNLOAD_CONCURRENCY_MIN: usize = 16;
 const AUTO_DOWNLOAD_CONCURRENCY_MAX: usize = 128;
 const AUTO_DOWNLOAD_CONCURRENCY_STEP: usize = 8;
+/// Number of consecutive pressured sample windows required before the global
+/// download concurrency backs off. Host-level throttling reacts immediately.
+const AUTO_DOWNLOAD_PRESSURE_WINDOWS: usize = 2;
 const AUTO_DOWNLOAD_SAMPLE_INTERVAL: Duration = Duration::from_secs(3);
 const AUTO_DOWNLOAD_PROBE_COOLDOWN: Duration = Duration::from_secs(30);
 pub struct State {
@@ -169,6 +172,7 @@ struct AutoConcurrencyProbe {
 #[derive(Debug, Default)]
 struct AutoConcurrencyController {
     high_utilization_windows: usize,
+    pressure_windows: usize,
     probe: Option<AutoConcurrencyProbe>,
     cooldown_until: Option<Instant>,
 }
@@ -383,12 +387,26 @@ impl AutoConcurrencyController {
         } else {
             sample.errors as f64 / sample.requests as f64
         };
-        if sample.throttles > 0 || error_rate >= 0.05 {
+        // A single throttled window is handled by the per-host limiter; the
+        // global concurrency only backs off when pressure persists across
+        // several samples, and then in small steps instead of a big cut.
+        let pressured = sample.throttles > 0 || error_rate >= 0.05;
+        if pressured {
             self.high_utilization_windows = 0;
             self.probe = None;
-            self.cooldown_until = Some(now + AUTO_DOWNLOAD_PROBE_COOLDOWN);
-            return (current * 3 / 4).max(AUTO_DOWNLOAD_CONCURRENCY_MIN);
+            if self.cooldown_until.is_none_or(|until| until <= now) {
+                self.pressure_windows += 1;
+                if self.pressure_windows >= AUTO_DOWNLOAD_PRESSURE_WINDOWS {
+                    self.cooldown_until =
+                        Some(now + AUTO_DOWNLOAD_PROBE_COOLDOWN);
+                    return current
+                        .saturating_sub(AUTO_DOWNLOAD_CONCURRENCY_STEP)
+                        .max(AUTO_DOWNLOAD_CONCURRENCY_MIN);
+                }
+            }
+            return current;
         }
+        self.pressure_windows = 0;
 
         if let Some(probe) = &mut self.probe {
             probe.windows += 1;
@@ -958,7 +976,7 @@ mod auto_concurrency_tests {
     }
 
     #[test]
-    fn unproductive_probe_reverts_and_throttle_drops_quarter() {
+    fn unproductive_probe_reverts_and_throttle_reacts_to_sustained_pressure() {
         let mut controller = AutoConcurrencyController::default();
         let now = Instant::now();
         controller.next_target(now, 64, 128, healthy(64, 100));
@@ -970,7 +988,44 @@ mod auto_concurrency_tests {
             throttles: 1,
             ..healthy(96, 100)
         };
-        assert_eq!(controller.next_target(now, 96, 128, throttled), 72);
+        // A single throttled window is absorbed by the per-host limiter.
+        let mut throttled_controller = AutoConcurrencyController::default();
+        assert_eq!(
+            throttled_controller.next_target(now, 96, 128, throttled),
+            96
+        );
+        // Sustained pressure backs off by one step, not a quarter.
+        assert_eq!(
+            throttled_controller.next_target(now, 96, 128, throttled),
+            88
+        );
+    }
+
+    #[test]
+    fn sustained_pressure_steps_down_across_cooldowns_and_recovers() {
+        let mut controller = AutoConcurrencyController::default();
+        let now = Instant::now();
+        let throttled = AutoConcurrencySample {
+            throttles: 1,
+            ..healthy(96, 100)
+        };
+        assert_eq!(controller.next_target(now, 96, 128, throttled), 96);
+        assert_eq!(controller.next_target(now, 96, 128, throttled), 88);
+        // Backing off starts a cooldown that absorbs further pressure.
+        assert_eq!(controller.next_target(now, 88, 128, throttled), 88);
+        // After the cooldown, continued pressure steps down again.
+        let later = now + Duration::from_secs(31);
+        assert_eq!(controller.next_target(later, 88, 128, throttled), 80);
+        // Clean samples reset pressure and allow growth after the cooldown.
+        let later_2 = now + Duration::from_secs(62);
+        assert_eq!(
+            controller.next_target(later_2, 80, 128, healthy(80, 100)),
+            80
+        );
+        assert_eq!(
+            controller.next_target(later_2, 80, 128, healthy(80, 100)),
+            88
+        );
     }
 
     #[test]
