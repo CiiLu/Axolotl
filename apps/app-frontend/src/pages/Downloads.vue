@@ -778,6 +778,9 @@ function canRetry(job: InstallJobSnapshot) {
 }
 
 function canSkipMissingContent(job: InstallJobSnapshot) {
+	if (job.provider === 'curse_forge' && job.kind === 'install_pack_to_existing_instance') {
+		return false
+	}
 	return (
 		job.status === 'waiting_for_user' &&
 		job.pause_reason?.type === 'missing_required_content' &&

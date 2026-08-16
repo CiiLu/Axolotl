@@ -1,5 +1,6 @@
 use crate::api::Result;
 use async_zip::base::read::seek::ZipFileReader;
+use image::ImageEncoder;
 use serde::Serialize;
 use std::io::Cursor;
 use tauri::Runtime;
@@ -12,6 +13,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             file_extract_zip,
             file_save_as,
             file_read_dragged_file,
+            screenshot_thumbnail,
         ])
         .build()
 }
@@ -38,6 +40,85 @@ pub async fn file_read_dragged_file(
     // JSON number array, which would balloon multi-hundred-MB files to
     // gigabytes of transient memory on both sides of the IPC boundary.
     Ok(tauri::ipc::Response::new(tokio::fs::read(path).await?))
+}
+
+/// Decodes a screenshot and returns a downscaled thumbnail as raw image bytes,
+/// so the webview never decodes high-resolution originals in the screenshots grid.
+/// Files that already fit within `max_dimension` are returned unchanged.
+#[tauri::command]
+pub async fn screenshot_thumbnail(
+    instance_id: &str,
+    file_path: &str,
+    max_dimension: u32,
+) -> Result<tauri::ipc::Response> {
+    let base = get_full_path(instance_id).await?;
+    let canonical_source =
+        tokio::fs::canonicalize(base.join(file_path)).await?;
+    let canonical_base = tokio::fs::canonicalize(&base).await?;
+    if !canonical_source.starts_with(&canonical_base) {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            "file_path escapes the instance directory".to_string(),
+        ))
+        .into());
+    }
+
+    let bytes = tokio::fs::read(&canonical_source).await?;
+    let max_dimension = max_dimension.max(1);
+    let thumbnail = tokio::task::spawn_blocking(move || -> Result<Vec<u8>> {
+        let (width, height) =
+            image::ImageReader::new(Cursor::new(bytes.as_slice()))
+                .with_guessed_format()
+                .map_err(|error| thumbnail_error(error.into()))?
+                .into_dimensions()
+                .map_err(thumbnail_error)?;
+        if width <= max_dimension && height <= max_dimension {
+            return Ok(bytes);
+        }
+
+        let decoded = image::ImageReader::new(Cursor::new(bytes.as_slice()))
+            .with_guessed_format()
+            .map_err(|error| thumbnail_error(error.into()))?
+            .decode()
+            .map_err(thumbnail_error)?;
+        let thumbnail = decoded.thumbnail(max_dimension, max_dimension);
+        let mut output = Vec::new();
+        if thumbnail.color().has_alpha() {
+            let rgba = thumbnail.to_rgba8();
+            image::codecs::png::PngEncoder::new(&mut output)
+                .write_image(
+                    rgba.as_raw(),
+                    rgba.width(),
+                    rgba.height(),
+                    image::ExtendedColorType::Rgba8,
+                )
+                .map_err(thumbnail_error)?;
+        } else {
+            let rgb = thumbnail.to_rgb8();
+            image::codecs::jpeg::JpegEncoder::new_with_quality(&mut output, 85)
+                .write_image(
+                    rgb.as_raw(),
+                    rgb.width(),
+                    rgb.height(),
+                    image::ExtendedColorType::Rgb8,
+                )
+                .map_err(thumbnail_error)?;
+        }
+        Ok(output)
+    })
+    .await
+    .map_err(|e| {
+        theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+            "Screenshot thumbnail task failed: {e}"
+        )))
+    })??;
+
+    Ok(tauri::ipc::Response::new(thumbnail))
+}
+
+fn thumbnail_error(error: image::ImageError) -> theseus::Error {
+    theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+        "Failed to process screenshot: {error}"
+    )))
 }
 
 #[tauri::command]

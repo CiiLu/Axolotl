@@ -10,6 +10,7 @@ export interface ContentInstallPreviewDependency {
 	fileName?: string
 	requiredBy: string[]
 	alreadyInstalled: boolean
+	versionMismatch?: boolean
 }
 
 export interface ContentInstallPreviewSkipped {
@@ -57,6 +58,10 @@ const messages = defineMessages({
 	alreadyInstalled: {
 		id: 'app.content-install.preview.already-installed',
 		defaultMessage: 'Already installed',
+	},
+	versionMismatch: {
+		id: 'app.content-install.preview.version-mismatch',
+		defaultMessage: 'Version may not match this instance',
 	},
 	skippedHeader: {
 		id: 'app.content-install.preview.skipped-header',
@@ -245,6 +250,12 @@ defineExpose({ show })
 							}}
 						</span>
 					</div>
+					<span
+						v-if="dependency.versionMismatch"
+						class="shrink-0 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text"
+					>
+						{{ formatMessage(messages.versionMismatch) }}
+					</span>
 					<span
 						v-if="dependency.alreadyInstalled"
 						class="shrink-0 rounded-full bg-surface-4 px-2 py-0.5 text-xs font-medium text-secondary"

@@ -7,8 +7,12 @@ import {
 	injectFilePicker,
 	injectNotificationManager,
 	InstallationSettingsLayout,
+	type LoaderMetadataStatus,
+	loaderSupportState,
+	loaderVersionsForGameVersion,
 	provideAppBackup,
 	provideInstallationSettings,
+	scopedLoaderMetadataQueryKey,
 	useDebugLogger,
 	useVIntl,
 } from '@modrinth/ui'
@@ -19,7 +23,7 @@ import { computed, ref } from 'vue'
 import SymlinkInstanceWarning from '@/components/ui/SymlinkInstanceWarning.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version } from '@/helpers/cache'
-import { updateManagedCurseForgeModpack } from '@/helpers/curseforge'
+import { updateManagedCurseForgeModpack, type CurseForgeFile } from '@/helpers/curseforge'
 import {
 	install_duplicate_instance,
 	install_existing_instance,
@@ -68,40 +72,48 @@ function getSupportedModpackLoaders() {
 	)
 }
 
-const fabricVersionsQuery = useQuery({
-	queryKey: ['instance-settings', 'loader-versions', 'fabric'],
-	queryFn: () => get_loader_versions('fabric') as Promise<Manifest>,
-})
-const forgeVersionsQuery = useQuery({
-	queryKey: ['instance-settings', 'loader-versions', 'forge'],
-	queryFn: () => get_loader_versions('forge') as Promise<Manifest>,
-})
-const quiltVersionsQuery = useQuery({
-	queryKey: ['instance-settings', 'loader-versions', 'quilt'],
-	queryFn: () => get_loader_versions('quilt') as Promise<Manifest>,
-})
-const neoforgeVersionsQuery = useQuery({
-	queryKey: ['instance-settings', 'loader-versions', 'neo'],
-	queryFn: () => get_loader_versions('neo') as Promise<Manifest>,
-})
 const gameVersionsQuery = useQuery({
 	queryKey: ['instance-settings', 'game-versions'],
 	queryFn: () => get_game_versions() as Promise<GameVersionTag[]>,
 })
+
+const editingPlatform = ref(instance.value.loader)
+const editingGameVersion = ref(instance.value.game_version)
+const scopedLoader = computed(() =>
+	editingPlatform.value === 'neoforge' ? 'neo' : editingPlatform.value,
+)
+const scopedLoaderQueryEnabled = computed(
+	() => editingPlatform.value !== 'vanilla' && !!editingGameVersion.value,
+)
+const scopedLoaderVersionsQuery = useQuery({
+	queryKey: computed(() =>
+		scopedLoaderMetadataQueryKey('instance-settings', scopedLoader.value, editingGameVersion.value),
+	),
+	queryFn: ({ queryKey }) => get_loader_versions(queryKey[2], queryKey[3]) as Promise<Manifest>,
+	enabled: scopedLoaderQueryEnabled,
+})
+const scopedLoaderMetadataStatus = computed<LoaderMetadataStatus>(() => {
+	if (!scopedLoaderQueryEnabled.value) return 'unknown'
+	if (scopedLoaderVersionsQuery.isPending.value || scopedLoaderVersionsQuery.isFetching.value) {
+		return 'loading'
+	}
+	if (scopedLoaderVersionsQuery.isError.value) return 'error'
+	return 'success'
+})
+const scopedLoaderVersionState = computed(() =>
+	loaderSupportState(
+		scopedLoaderMetadataStatus.value,
+		scopedLoaderVersionsQuery.data.value,
+		editingGameVersion.value,
+	),
+)
 const loadersQuery = useQuery({
 	queryKey: ['instance-settings', 'loaders', 'modpack'],
 	queryFn: getSupportedModpackLoaders,
 })
 
 const metadataLoading = computed(() =>
-	[
-		fabricVersionsQuery,
-		forgeVersionsQuery,
-		quiltVersionsQuery,
-		neoforgeVersionsQuery,
-		gameVersionsQuery,
-		loadersQuery,
-	].some((query) => query.isLoading.value),
+	[gameVersionsQuery, loadersQuery].some((query) => query.isLoading.value),
 )
 
 debug('metadata queries configured', {
@@ -139,22 +151,6 @@ const messages = defineMessages({
 		defaultMessage: '{loader} version',
 	},
 })
-
-function getManifest(loader: string) {
-	const map: Record<string, Manifest | undefined> = {
-		fabric: fabricVersionsQuery.data.value,
-		forge: forgeVersionsQuery.data.value,
-		quilt: quiltVersionsQuery.data.value,
-		neoforge: neoforgeVersionsQuery.data.value,
-	}
-	const manifest = map[loader]
-	debug('getManifest:', {
-		loader,
-		hasManifest: !!manifest,
-		gameVersions: manifest?.gameVersions?.length ?? 0,
-	})
-	return manifest
-}
 
 async function installLocalModpackFromPicker() {
 	const picked = await filePicker.pickModpackFile({ readFile: false })
@@ -277,22 +273,19 @@ provideInstallationSettings({
 	currentGameVersion: computed(() => instance.value.game_version),
 	currentLoaderVersion: computed(() => instance.value.loader_version ?? ''),
 	availablePlatforms: computed(() => loadersQuery.data.value?.map((x) => x.name) ?? []),
+	editingPlatformRef: editingPlatform,
+	editingGameVersionRef: editingGameVersion,
+	loaderVersionState: scopedLoaderVersionState,
 
 	resolveGameVersions(loader, showSnapshots) {
 		const versions = gameVersionsQuery.data.value ?? []
-		const filtered = versions.filter((item) => {
-			if (loader === 'vanilla') return true
-			const manifest = getManifest(loader)
-			return !!manifest?.gameVersions?.some((x) => item.version === x.id)
-		})
 		const result = (
-			showSnapshots ? filtered : filtered.filter((x) => x.version_type === 'release')
+			showSnapshots ? versions : versions.filter((x) => x.version_type === 'release')
 		).map((x) => ({ value: x.version, label: x.version }))
 		debug('resolveGameVersions:', {
 			loader,
 			showSnapshots,
 			totalVersions: versions.length,
-			filteredVersions: filtered.length,
 			resultVersions: result.length,
 		})
 		return result
@@ -303,56 +296,22 @@ provideInstallationSettings({
 			debug('resolveLoaderVersions: skipped', { loader, gameVersion })
 			return []
 		}
-		const manifest = getManifest(loader)
-		if (!manifest) {
-			debug('resolveLoaderVersions: no manifest', { loader, gameVersion })
+		if (loader !== editingPlatform.value || gameVersion !== editingGameVersion.value) {
+			debug('resolveLoaderVersions: stale selection', { loader, gameVersion })
 			return []
 		}
-		const entry = manifest.gameVersions?.find((item) => item.id === gameVersion)
-		if (entry?.versionGroup) {
-			const result =
-				manifest.versionGroups?.find((group) => group.id === entry.versionGroup)?.loaders ?? []
-			debug('resolveLoaderVersions: version group result', {
-				loader,
-				gameVersion,
-				versionGroup: entry.versionGroup,
-				count: result.length,
-			})
-			return result
-		}
-		const placeholder = manifest.gameVersions?.find((item) => item.id === '${modrinth.gameVersion}')
-		if (placeholder) {
-			const result = manifest.gameVersions?.some((item) => item.id === gameVersion)
-				? placeholder.loaders
-				: []
-			debug('resolveLoaderVersions: placeholder result', {
-				loader,
-				gameVersion,
-				count: result.length,
-			})
-			return result
-		}
-		const result = entry?.loaders ?? []
+		if (scopedLoaderVersionState.value !== 'supported') return []
+		const result = loaderVersionsForGameVersion(scopedLoaderVersionsQuery.data.value, gameVersion)
 		debug('resolveLoaderVersions: result', { loader, gameVersion, count: result.length })
 		return result
 	},
 
 	resolveHasSnapshots(loader) {
 		const versions = gameVersionsQuery.data.value ?? []
-		if (loader === 'vanilla') {
-			const result = versions.some((x) => x.version_type !== 'release')
-			debug('resolveHasSnapshots: vanilla', { loader, result })
-			return result
-		}
-		const manifest = getManifest(loader)
-		const supported = versions.filter(
-			(item) => !!manifest?.gameVersions?.some((x) => item.version === x.id),
-		)
-		const result = supported.some((x) => x.version_type !== 'release')
+		const result = versions.some((x) => x.version_type !== 'release')
 		debug('resolveHasSnapshots:', {
 			loader,
 			totalVersions: versions.length,
-			supportedVersions: supported.length,
 			result,
 		})
 		return result
@@ -471,12 +430,32 @@ provideInstallationSettings({
 					: rawProjectId,
 			)
 			if (!Number.isFinite(projectId)) return []
-			const { getCurseForgeFiles } = await import('@/helpers/curseforge')
-			const response = await getCurseForgeFiles(projectId, {
-				index: 0,
-				pageSize: 50,
-			}).catch(handleError)
-			const versions = (response?.files ?? [])
+			const { getCurseForgeFile, getCurseForgeFiles } = await import('@/helpers/curseforge')
+			const files: CurseForgeFile[] = []
+			let index = 0
+			while (true) {
+				const response = await getCurseForgeFiles(projectId, {
+					index,
+					pageSize: 50,
+				}).catch(handleError)
+				if (!response) break
+				files.push(...response.files)
+				index += response.files.length
+				if (
+					response.files.length === 0 ||
+					index >= (response.pagination?.totalCount ?? response.files.length)
+				) {
+					break
+				}
+			}
+			const installedFileId = Number(instance.value.link?.version_id)
+			if (Number.isFinite(installedFileId) && !files.some((file) => file.id === installedFileId)) {
+				const installedFile = await getCurseForgeFile(projectId, installedFileId).catch(() => null)
+				if (installedFile?.isAvailable) {
+					files.push(installedFile)
+				}
+			}
+			const versions = files
 				.filter((file) => file.isAvailable)
 				.map((file) => {
 					const loaders = [
@@ -535,6 +514,22 @@ provideInstallationSettings({
 
 	async getVersionChangelog(versionId: string) {
 		debug('getVersionChangelog: called', { versionId })
+		if (isCurseForgeLinkedModpack.value) {
+			const rawProjectId = instance.value.link?.project_id
+			const fileId = Number(versionId)
+			const projectId = rawProjectId
+				? Number(
+						rawProjectId.startsWith('curseforge:')
+							? rawProjectId.slice('curseforge:'.length)
+							: rawProjectId,
+					)
+				: NaN
+			if (!Number.isFinite(projectId) || !Number.isFinite(fileId)) return null
+			const { getCurseForgeChangelog } = await import('@/helpers/curseforge')
+			const changelog = await getCurseForgeChangelog(projectId, fileId).catch(() => null)
+			if (changelog == null) return null
+			return { id: versionId, changelog } as unknown as Labrinth.Versions.v2.Version
+		}
 		return (await get_version(versionId, 'must_revalidate').catch(
 			() => null,
 		)) as Labrinth.Versions.v2.Version | null
@@ -545,18 +540,22 @@ provideInstallationSettings({
 			versionId: version.id,
 			instanceId: instance.value.id,
 		})
-		if (isCurseForgeLinkedModpack.value) {
-			const fileId = Number(version.id)
-			if (!Number.isFinite(fileId)) {
-				throw new Error('Invalid CurseForge file ID')
+		try {
+			if (isCurseForgeLinkedModpack.value) {
+				const fileId = Number(version.id)
+				if (!Number.isFinite(fileId)) {
+					throw new Error('Invalid CurseForge file ID')
+				}
+				await updateManagedCurseForgeModpack(instance.value.id, fileId)
+			} else {
+				await update_managed_modrinth_version(instance.value.id, version.id)
 			}
-			await updateManagedCurseForgeModpack(instance.value.id, fileId)
-		} else {
-			await update_managed_modrinth_version(instance.value.id, version.id)
+			await queryClient.invalidateQueries({
+				queryKey: ['linkedModpackInfo', instance.value.id],
+			})
+		} catch (error) {
+			handleError(error as Error)
 		}
-		await queryClient.invalidateQueries({
-			queryKey: ['linkedModpackInfo', instance.value.id],
-		})
 		debug('onModpackVersionConfirm: done')
 	},
 

@@ -48,6 +48,22 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'“发现内容”板块现在会记住上次选择的模组来源（Modrinth、CurseForge 或所有来源），再次打开时恢复上次使用的平台，不再重置为所有来源。',
 				},
+				{
+					'en-US':
+						'Screenshots in the instance screenshots page now load through optimized thumbnails, so large screenshot libraries open faster and use less memory.',
+					'zh-CN': '实例截图页现在会加载优化后的缩略图，截图较多时打开更快、占用内存更低。',
+				},
+				{
+					'en-US':
+						'CurseForge install previews now flag dependency versions that may not match the target instance, so incompatible fallback selections are visible before installing.',
+					'zh-CN':
+						'CurseForge 安装预览现在会标记可能与目标实例版本不匹配的依赖版本，在安装前即可看到不兼容的兜底选择。',
+				},
+				{
+					'en-US':
+						'Added a gallery layout to the Discover page for browsing content with visual thumbnails.',
+					'zh-CN': '发现内容页新增画廊布局，支持以缩略图形式浏览内容。',
+				},
 			],
 			changed: [
 				{
@@ -61,6 +77,62 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Optimized dependency-related handling logic.',
 					'zh-CN': '优化依赖相关处理逻辑。',
+				},
+				{
+					'en-US':
+						'CurseForge managed modpack version switching now runs as a tracked download task like Modrinth updates, with real progress, success and failure notifications, and automatic resume after manually downloaded files are imported.',
+					'zh-CN':
+						'CurseForge 整合包切换版本现在会像 Modrinth 更新一样作为可跟踪的下载任务运行，显示真实进度与成功/失败通知，并可在手动下载的文件补齐后自动继续。',
+				},
+				{
+					'en-US':
+						'Switched Fabric, Forge, NeoForge, and Quilt version metadata to official sources with Modrinth fallback, providing more complete and up-to-date loader version lists.',
+					'zh-CN':
+						'Fabric、Forge、NeoForge 和 Quilt 的版本元数据现优先从官方源获取，并在必要时回退至 Modrinth，提供更完整、更及时的加载器版本列表。',
+				},
+				{
+					'en-US':
+						'Improved loader version compatibility across instance creation, settings, repair, offline launch, and imported instances, preserving exact loader versions and preventing unintended fallback to newer releases.',
+					'zh-CN':
+						'改进了实例创建、设置、修复、离线启动和实例导入中的加载器版本兼容性，保留精确的加载器版本，并避免意外回退到更新版本。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed CurseForge modpack version switching appearing to do nothing after confirmation; errors are now reported and the switch is tracked in the download manager.',
+					'zh-CN':
+						'修复 CurseForge 整合包确认切换版本后看起来毫无反应的问题；现在会显示错误信息，并在下载管理器中跟踪切换进度。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge modpack update progress staying stuck while the launcher calibrated the pack before downloading.',
+					'zh-CN': '修复 CurseForge 整合包更新在下载前校准阶段进度一直不动的问题。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge modpack version lists only showing the latest 50 files; all published versions now appear and the currently installed version is always included.',
+					'zh-CN':
+						'修复 CurseForge 整合包版本列表只显示最新 50 个文件的问题；现在会显示全部已发布版本，并始终包含当前安装的版本。',
+				},
+				{
+					'en-US': 'Fixed modal close buttons shifting out of place in merged-header dialogs.',
+					'zh-CN': '修复合并式标题栏弹窗中关闭按钮位置偏移的问题。',
+				},
+				{
+					'en-US':
+						'Fixed day buttons in the home page calendar widget being partially obscured by overlapping elements.',
+					'zh-CN': '修复主页日历组件内天数按钮会被遮挡的问题。',
+				},
+				{
+					'en-US':
+						'Fixed truncated titles faintly visible in the Discover page, improving text clipping and layout boundaries.',
+					'zh-CN': '修复发现内容页隐约能看到截断的标题的问题，优化了文本裁剪和布局边界。',
+				},
+				{
+					'en-US':
+						'Fixed loader tags not displaying on the Discover page, so mod loader labels now appear correctly.',
+					'zh-CN': '修复发现内容页不显示加载器标签的问题，现在模组加载器标签可以正常显示。',
 				},
 			],
 		},

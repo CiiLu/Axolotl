@@ -1979,6 +1979,36 @@ pub async fn fetch(
     .await
 }
 
+/// Downloads a file from its official source without applying mirror routes.
+#[tracing::instrument(skip_all)]
+pub async fn fetch_official(
+    url: &str,
+    sha1: Option<&str>,
+    download_meta: Option<&DownloadMeta>,
+    uri_path: Option<&'static str>,
+    semaphore: &FetchSemaphore,
+    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
+) -> crate::Result<Bytes> {
+    fetch_advanced_with_client_and_progress(
+        Method::GET,
+        url,
+        sha1,
+        None,
+        None,
+        download_meta,
+        None,
+        uri_path,
+        semaphore,
+        exec,
+        &INSECURE_REQWEST_CLIENT,
+        Some(crate::state::DownloadSourceMode::OfficialOnly),
+        None,
+        None,
+        METADATA_ATTEMPT_BUDGET,
+    )
+    .await
+}
+
 #[tracing::instrument(skip_all)]
 pub async fn fetch_json<T>(
     method: Method,
@@ -2009,6 +2039,7 @@ where
         semaphore,
         exec,
         &INSECURE_REQWEST_CLIENT,
+        None,
         None,
         Some(&validate_json),
         METADATA_ATTEMPT_BUDGET,
@@ -2060,6 +2091,7 @@ where
         semaphore,
         exec,
         &INSECURE_REQWEST_CLIENT,
+        None,
         None,
         Some(&validate_json),
         METADATA_ATTEMPT_BUDGET,
@@ -2130,6 +2162,7 @@ pub async fn fetch_advanced_with_client(
         client,
         None,
         None,
+        None,
         METADATA_ATTEMPT_BUDGET,
     )
     .await
@@ -2149,6 +2182,7 @@ async fn fetch_advanced_with_client_and_progress(
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     client: &reqwest::Client,
+    source_mode: Option<crate::state::DownloadSourceMode>,
     mut progress: Option<&mut FetchProgressFn<'_>>,
     response_validator: Option<
         &(dyn Fn(&Bytes) -> crate::Result<()> + Send + Sync),
@@ -2156,7 +2190,8 @@ async fn fetch_advanced_with_client_and_progress(
     attempt_budget: usize,
 ) -> crate::Result<Bytes> {
     let resource = infer_resource_class(url);
-    let mode = source_mode_for_resource(resource);
+    let mode =
+        source_mode.unwrap_or_else(|| source_mode_for_resource(resource));
     let mut request_routes = resolve_download_routes_for(url, resource, mode);
     let modrinth_request_kind = modrinth_request_kind(url);
     let is_mrpack_download =

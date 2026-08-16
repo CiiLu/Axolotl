@@ -268,8 +268,8 @@ pub async fn apply_content_update_plan(
                                     .to_string(),
                             )
                         })?;
-                    crate::api::curseforge::update_managed_modpack(
-                        &plan.instance_id,
+                    crate::install::runner::update_managed_curseforge_modpack(
+                        plan.instance_id.clone(),
                         file_id,
                     )
                     .await?;

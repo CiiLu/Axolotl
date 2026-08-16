@@ -222,6 +222,7 @@ export interface CurseForgeInstallPreview {
 		size: number
 		requiredByProjectIds: number[]
 		iconUrl?: string | null
+		versionMismatch?: boolean
 	}>
 	skipped: Array<{
 		projectId: number
@@ -460,11 +461,8 @@ export function installCurseForgeModpack(request: {
 }
 
 export function updateManagedCurseForgeModpack(instanceId: string, fileId: number) {
-	return invoke<CurseForgeModpackInstallResult>(
-		'plugin:curseforge|curseforge_update_managed_modpack',
-		{
-			instanceId,
-			fileId,
-		},
-	)
+	return invoke<InstallJobSnapshot>('plugin:curseforge|curseforge_update_managed_modpack', {
+		instanceId,
+		fileId,
+	})
 }
