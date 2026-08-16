@@ -227,7 +227,7 @@ watch(instanceRevision, async () => {
 </script>
 
 <template>
-	<section class="home-calendar-dashboard">
+	<section class="home-calendar-dashboard p-2">
 		<header class="home-calendar-header">
 			<div class="home-calendar-title">
 				<CalendarIcon class="size-5 shrink-0 text-brand" aria-hidden="true" />
@@ -376,7 +376,6 @@ watch(instanceRevision, async () => {
 	flex-direction: column;
 	gap: 0.625rem;
 	overflow: hidden;
-	padding: 0.2rem;
 }
 
 .home-calendar-header {
