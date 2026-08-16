@@ -6,7 +6,9 @@ import {
 	CurseForgeIcon,
 	ExternalIcon,
 	GlobeIcon,
+	ImageIcon,
 	LanguagesIcon,
+	ListIcon,
 	ModrinthIcon,
 	PlusIcon,
 	SpinnerIcon,
@@ -1741,6 +1743,12 @@ const lockedFilterMessages = computed(() => ({
 
 const browseReturnSnapshot = consumeBrowseReturnSnapshot<BrowseReturnState>(route.fullPath)
 
+const displayMode = ref<'list' | 'grid'>('list')
+
+function cycleDisplayMode() {
+	displayMode.value = displayMode.value === 'list' ? 'grid' : 'list'
+}
+
 const searchState = useBrowseSearch({
 	projectType,
 	tags,
@@ -1755,6 +1763,7 @@ const searchState = useBrowseSearch({
 		source: contentSource.value === 'all' ? undefined : contentSource.value,
 	}),
 	initialSearchResponse: browseReturnSnapshot?.state.searchResponse,
+	displayMode,
 })
 
 /** Translation state for search result titles and descriptions. */
@@ -2068,6 +2077,8 @@ provideBrowseManager({
 	},
 	offline,
 	lockedFilterMessages,
+	displayMode,
+	cycleDisplayMode,
 })
 </script>
 
@@ -2120,6 +2131,9 @@ provideBrowseManager({
 						</div>
 					</template>
 				</PopoutMenu>
+			</template>
+			<template #display-mode-icon>
+				<component :is="displayMode === 'grid' ? ImageIcon : ListIcon" />
 			</template>
 			<template #after>
 				<ContextMenu ref="contextMenuRef" @option-clicked="handleOptionsClick">
