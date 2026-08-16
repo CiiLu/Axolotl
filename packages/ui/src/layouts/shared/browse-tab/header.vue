@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LeftArrowIcon } from '@modrinth/assets'
+import { BoxIcon, getLoaderIcon, LeftArrowIcon } from '@modrinth/assets'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -37,14 +37,9 @@ const iconSrc = computed(() => {
 	return fetchedIcon.value ?? installContext.value?.iconSrc ?? null
 })
 
-const metadataItems = computed(() => {
-	const context = installContext.value
-	if (!context) return []
-	return [
-		context.heading,
-		context.gameVersion ? `MC ${context.gameVersion}` : '',
-		context.loader ? formatLoaderLabel(context.loader) : '',
-	].filter(Boolean)
+const loaderIcon = computed(() => {
+	const loader = installContext.value?.loader
+	return loader ? getLoaderIcon(loader) : undefined
 })
 
 const selectedCount = computed(() => installContext.value?.selectedProjects?.length ?? 0)
@@ -123,16 +118,32 @@ async function handleSelectedProjectsLeaveResult(
 							{{ installContext.name }}
 						</h1>
 						<div
-							v-if="metadataItems.length"
+							v-if="installContext.heading || installContext.gameVersion || installContext.loader"
 							class="flex flex-wrap items-center gap-2 text-base font-medium leading-6 text-primary"
 						>
-							<template v-for="(item, index) in metadataItems" :key="item">
-								<span
-									v-if="index > 0"
-									class="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60"
-								/>
-								<span>{{ item }}</span>
-							</template>
+							<span v-if="installContext.heading">{{ installContext.heading }}</span>
+
+							<div
+								v-if="
+									installContext.heading && (installContext.gameVersion || installContext.loader)
+								"
+								class="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60"
+							/>
+
+							<div v-if="installContext.gameVersion" class="flex items-center gap-1.5">
+								<BoxIcon class="h-4 w-4" />
+								{{ installContext.gameVersion }}
+							</div>
+
+							<div
+								v-if="installContext.gameVersion && installContext.loader"
+								class="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60"
+							/>
+
+							<div v-if="installContext.loader" class="flex items-center gap-1.5 capitalize">
+								<component :is="loaderIcon" v-if="loaderIcon" class="h-4 w-4" />
+								{{ formatLoaderLabel(installContext.loader) }}
+							</div>
 						</div>
 					</div>
 				</div>
