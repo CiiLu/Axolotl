@@ -5,7 +5,6 @@ import {
 	ChevronRightIcon,
 	ClockIcon,
 	DownloadIcon,
-	HeartIcon,
 	MoreVerticalIcon,
 	SkullIcon,
 	SpinnerIcon,
@@ -100,7 +99,6 @@ interface Props {
 	groupMeta?: ContentWorldGroupMeta
 	groupCheckboxIndeterminate?: boolean
 	downloads?: number | null
-	followers?: number | null
 	categories?: Array<{
 		name: string
 		icon?: string
@@ -141,7 +139,6 @@ const props = withDefaults(defineProps<Props>(), {
 	groupMeta: undefined,
 	groupCheckboxIndeterminate: false,
 	downloads: null,
-	followers: null,
 	categories: undefined,
 })
 
@@ -371,17 +368,10 @@ const deleteHovered = ref(false)
 					<span class="truncate">{{ version.file_name }}</span>
 				</span>
 			</template>
-			<div
-				v-if="downloads != null || followers != null"
-				class="flex flex-nowrap items-center gap-3 overflow-hidden"
-			>
+			<div v-if="downloads != null" class="flex flex-nowrap items-center gap-3 overflow-hidden">
 				<div v-if="downloads != null" class="flex items-center gap-2 text-secondary">
 					<DownloadIcon class="size-4" />
 					<span class="text-sm font-medium">{{ formatCompact(downloads) }}</span>
-				</div>
-				<div v-if="followers != null" class="flex items-center gap-2 text-secondary">
-					<HeartIcon class="size-4" />
-					<span class="text-sm font-medium">{{ formatCompact(followers) }}</span>
 				</div>
 			</div>
 		</div>

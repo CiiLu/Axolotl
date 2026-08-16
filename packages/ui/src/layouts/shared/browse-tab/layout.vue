@@ -305,7 +305,6 @@ const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 					:all-tags="result.categories"
 					:deprioritized-tags="ctx.deprioritizedTags.value"
 					:exclude-loaders="ctx.excludeLoaders.value"
-					:followers="result.follows"
 					:banner="result.featured_gallery ?? undefined"
 					:color="result.color ?? undefined"
 					:provider="result.provider"
