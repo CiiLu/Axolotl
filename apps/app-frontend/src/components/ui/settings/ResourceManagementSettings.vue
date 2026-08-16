@@ -117,14 +117,6 @@ const messages = defineMessages({
 		id: 'app.settings.resources.minecraft-file-source-description',
 		defaultMessage: 'Game files, assets, libraries, mod loaders, and Java runtimes.',
 	},
-	modrinthMirror: {
-		id: 'app.settings.resources.modrinth-mirror',
-		defaultMessage: 'Modrinth',
-	},
-	modrinthMirrorDescription: {
-		id: 'app.settings.resources.modrinth-mirror-description',
-		defaultMessage: 'Modrinth public API requests and file downloads.',
-	},
 	curseforgeMirror: {
 		id: 'app.settings.resources.curseforge-mirror',
 		defaultMessage: 'CurseForge',
@@ -164,16 +156,15 @@ const messages = defineMessages({
 	},
 	downloadEngineDescription: {
 		id: 'app.settings.resources.download-engine-description',
-		defaultMessage:
-			'Choose which download engine the launcher uses. The XMCL-compatible engine aggressively switches slow mirrors and recovers from stalled connections.',
+		defaultMessage: 'Choose which download engine the launcher uses.',
 	},
 	legacyEngine: {
 		id: 'app.settings.resources.download-engine.legacy',
-		defaultMessage: 'Legacy engine',
+		defaultMessage: 'Native engine',
 	},
 	xmclEngine: {
 		id: 'app.settings.resources.download-engine.xmcl',
-		defaultMessage: 'XMCL-compatible (recommended)',
+		defaultMessage: 'XMCL-compatible',
 	},
 	maximumDownloadsDescription: {
 		id: 'app.settings.resources.maximum-downloads-description',
@@ -249,7 +240,6 @@ function downloadSourceModel(setting) {
 
 const minecraftMetadataSource = downloadSourceModel('minecraft_metadata_source')
 const minecraftFileSource = downloadSourceModel('minecraft_file_source')
-const modrinthDownloadSource = downloadSourceModel('modrinth_source')
 const curseforgeDownloadSource = downloadSourceModel('curseforge_source')
 const automaticSourceOption = computed(() => ({
 	value: 'auto',
@@ -306,12 +296,12 @@ const downloadEngine = computed({
 })
 const downloadEngineOptions = computed(() => [
 	{
-		value: 'xmcl',
-		label: formatMessage(messages.xmclEngine),
-	},
-	{
 		value: 'legacy',
 		label: formatMessage(messages.legacyEngine),
+	},
+	{
+		value: 'xmcl',
+		label: formatMessage(messages.xmclEngine),
 	},
 ])
 
@@ -493,20 +483,6 @@ function resetMissingContentImportDirectory() {
 				</div>
 				<div class="w-48 shrink-0">
 					<Combobox v-model="minecraftFileSource" :options="minecraftSourceOptions" />
-				</div>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.modrinthMirror) }}
-					</h3>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.modrinthMirrorDescription) }}
-					</p>
-				</div>
-				<div class="w-48 shrink-0">
-					<Combobox v-model="modrinthDownloadSource" :options="mcimSourceOptions" />
 				</div>
 			</div>
 

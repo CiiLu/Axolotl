@@ -1745,12 +1745,6 @@
   "app.settings.resources.download-mirrors-description": {
     "message": "為每項服務選擇下載來源。當鏡像來源請求失敗時，將自動退回至官方來源。"
   },
-  "app.settings.resources.modrinth-mirror": {
-    "message": "Modrinth"
-  },
-  "app.settings.resources.modrinth-mirror-description": {
-    "message": "使用 MCIM 加速 Modrinth API 請求與檔案下載。"
-  },
   "app.settings.resources.curseforge-mirror": {
     "message": "CurseForge 服務"
   },
@@ -1773,13 +1767,13 @@
     "message": "下載引擎"
   },
   "app.settings.resources.download-engine-description": {
-    "message": "選擇啟動器使用的下載引擎。XMCL 相容引擎會主動切換慢速鏡像，並自動從卡住的連線中恢復。"
+    "message": "選擇啟動器使用的下載引擎。"
   },
   "app.settings.resources.download-engine.legacy": {
-    "message": "舊版引擎"
+    "message": "原生引擎"
   },
   "app.settings.resources.download-engine.xmcl": {
-    "message": "XMCL 相容（推薦）"
+    "message": "XMCL 相容"
   },
   "app.settings.resources.maximum-downloads": {
     "message": "最大同時下載數"

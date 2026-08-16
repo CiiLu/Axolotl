@@ -40,6 +40,30 @@ impl DownloadDnsResolver {
             .unwrap_or_default()
     }
 
+    /// Resolves a host ahead of the first request so batch downloads can
+    /// share a single ordered address list. Idempotent and non-fatal: a
+    /// failed lookup leaves the resolver untouched and requests will resolve
+    /// on demand later.
+    pub async fn pre_resolve(&self, host: &str) {
+        if !self.resolved_addresses(host).is_empty() {
+            return;
+        }
+        let Ok(addresses) = tokio::net::lookup_host((host, 0)).await else {
+            return;
+        };
+        let mut addresses = addresses.collect::<Vec<_>>();
+        if addresses.is_empty() {
+            return;
+        }
+        addresses.sort_unstable_by_key(|address| address.ip());
+        addresses.dedup_by_key(|address| address.ip());
+        let addresses = self.order_addresses(host, addresses);
+        self.last_resolved.lock().insert(
+            host.to_string(),
+            addresses.iter().map(|address| address.ip()).collect(),
+        );
+    }
+
     #[cfg(test)]
     fn set_test_addresses(&self, host: &str, addresses: Vec<SocketAddr>) {
         self.test_addresses

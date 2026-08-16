@@ -5241,13 +5241,13 @@
     "message": "Download engine"
   },
   "app.settings.resources.download-engine-description": {
-    "message": "Choose which download engine the launcher uses. The XMCL-compatible engine aggressively switches slow mirrors and recovers from stalled connections."
+    "message": "Choose which download engine the launcher uses."
   },
   "app.settings.resources.download-engine.legacy": {
-    "message": "Legacy engine"
+    "message": "Native engine"
   },
   "app.settings.resources.download-engine.xmcl": {
-    "message": "XMCL-compatible (recommended)"
+    "message": "XMCL-compatible"
   },
   "app.settings.resources.download-mirrors": {
     "message": "Download sources"
@@ -5290,12 +5290,6 @@
   },
   "app.settings.resources.missing-content-import-directory-description": {
     "message": "The system Downloads folder is used when no custom folder is selected. Subfolders are not scanned."
-  },
-  "app.settings.resources.modrinth-mirror": {
-    "message": "Modrinth"
-  },
-  "app.settings.resources.modrinth-mirror-description": {
-    "message": "Modrinth public API requests and file downloads."
   },
   "app.settings.resources.mojang-auth-service": {
     "message": "Mojang authentication service"

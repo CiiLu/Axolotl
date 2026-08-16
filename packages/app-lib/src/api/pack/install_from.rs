@@ -37,7 +37,7 @@ pub struct PackFormat {
     pub dependencies: HashMap<PackDependency, String>,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PackFile {
     pub path: SafeRelativeUtf8UnixPathBuf,
@@ -47,7 +47,7 @@ pub struct PackFile {
     pub file_size: u32,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase", from = "String")]
 pub enum PackFileHash {
     Sha1,
@@ -65,7 +65,7 @@ impl From<String> for PackFileHash {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum EnvType {
     Client,

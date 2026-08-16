@@ -39,6 +39,8 @@ pub const DOWNLOAD_META_HEADER: &str = "modrinth-download-meta";
 
 const BMCLAPI_BASE_URL: &str = "https://bmclapi2.bangbang93.com";
 const MCIM_BASE_URL: &str = "https://mod.mcimirror.top";
+pub(crate) const MODRINTH_CDN_OFFICIAL_HOST: &str = "cdn-alt.modrinth.com";
+const MODRINTH_CDN_LEGACY_HOST: &str = "cdn.modrinth.com";
 const METADATA_ATTEMPT_BUDGET: usize = 4;
 #[cfg(not(test))]
 const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_secs(2);
@@ -221,11 +223,14 @@ impl Integrity {
     /// Resuming a partial download is only safe when a content hash can
     /// prove the stitched-together file is what the server intended.
     fn supports_resume(&self) -> bool {
-        self.size.is_some()
-            && (self.sha1.is_some()
-                || self.sha512.is_some()
-                || self.sha256.is_some()
-                || self.md5.is_some())
+        self.size.is_some() && self.has_hash()
+    }
+
+    fn has_hash(&self) -> bool {
+        self.sha1.is_some()
+            || self.sha512.is_some()
+            || self.sha256.is_some()
+            || self.md5.is_some()
     }
 }
 
@@ -237,6 +242,10 @@ pub struct DownloadRequest {
     pub download_meta: Option<DownloadMeta>,
     pub header: Option<(String, String)>,
     pub candidate_urls: Vec<String>,
+    /// Whether range-segmented (multi-connection) downloading is allowed.
+    /// Batch schedulers disable it so many small files share one connection
+    /// budget instead of each file multiplying its connections.
+    pub allow_segmented_download: bool,
     install_tracking: Option<DownloadInstallTracking>,
 }
 
@@ -256,8 +265,14 @@ impl DownloadRequest {
             download_meta: None,
             header: None,
             candidate_urls: Vec::new(),
+            allow_segmented_download: true,
             install_tracking: None,
         }
+    }
+
+    pub fn with_segmented_download(mut self, allow: bool) -> Self {
+        self.allow_segmented_download = allow;
+        self
     }
 
     pub fn with_integrity(mut self, integrity: Integrity) -> Self {
@@ -347,6 +362,68 @@ static ROUTE_HEALTH: LazyLock<Mutex<HashMap<RouteHealthKey, RouteHealth>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static ROUTE_EFFECTIVE_AUTHORITIES: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Per-authority congestion state for rate-limited responses (429/503).
+/// A throttled host is slept through before the next request to it, so a
+/// single slow CDN cannot stall the whole batch; successful responses decay
+/// the backoff again.
+#[derive(Clone, Default)]
+struct HostThrottle {
+    cooldown_until: Option<Instant>,
+    backoff: u32,
+}
+
+static HOST_THROTTLES: LazyLock<Mutex<HashMap<String, HostThrottle>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn throttle_host(authority: &str, retry_after: Option<time::Duration>) {
+    let mut throttles = HOST_THROTTLES.lock();
+    let throttle = throttles.entry(authority.to_string()).or_default();
+    throttle.backoff = throttle.backoff.saturating_add(1).min(6);
+    let delay = retry_after
+        .unwrap_or_else(|| time::Duration::from_secs(1_u64 << throttle.backoff))
+        .max(time::Duration::from_millis(250));
+    throttle.cooldown_until = Some(Instant::now() + delay);
+    tracing::debug!(
+        authority,
+        backoff = throttle.backoff,
+        delay_ms = delay.as_millis(),
+        "Host throttled after a rate-limited response"
+    );
+}
+
+async fn wait_for_host_throttle(authority: &str) {
+    loop {
+        let wait = {
+            let mut throttles = HOST_THROTTLES.lock();
+            let Some(throttle) = throttles.get_mut(authority) else {
+                return;
+            };
+            let Some(cooldown_until) = throttle.cooldown_until else {
+                return;
+            };
+            let now = Instant::now();
+            if now >= cooldown_until {
+                throttle.cooldown_until = None;
+                throttle.backoff = throttle.backoff.saturating_sub(1);
+                return;
+            }
+            cooldown_until.saturating_duration_since(now)
+        };
+        tokio::time::sleep(wait).await;
+    }
+}
+
+fn record_host_success(authority: &str) {
+    let mut throttles = HOST_THROTTLES.lock();
+    let Some(throttle) = throttles.get_mut(authority) else {
+        return;
+    };
+    throttle.backoff = throttle.backoff.saturating_sub(1);
+    if throttle.backoff == 0 {
+        throttle.cooldown_until = None;
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum TaskProbeKey {
@@ -543,11 +620,72 @@ fn modrinth_request_kind(url: &str) -> Option<&'static str> {
         || url.starts_with(env!("MODRINTH_API_URL_V3"))
     {
         Some("API")
-    } else if url.starts_with("https://cdn.modrinth.com") {
+    } else if url.starts_with("https://cdn-alt.modrinth.com")
+        || url.starts_with("https://cdn.modrinth.com")
+    {
         Some("CDN")
     } else {
         None
     }
+}
+
+/// Rewrites the legacy `cdn.modrinth.com` host to the official
+/// `cdn-alt.modrinth.com` host, preserving scheme, path and query. Other
+/// hosts are returned unchanged, so the result can be used unconditionally.
+fn canonical_modrinth_cdn_url(url: &str) -> String {
+    let Ok(mut parsed) = Url::parse(url) else {
+        return url.to_string();
+    };
+    if parsed.scheme() == "https"
+        && parsed
+            .host_str()
+            .is_some_and(|host| {
+                host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
+            })
+    {
+        let _ = parsed.set_host(Some(MODRINTH_CDN_OFFICIAL_HOST));
+    }
+    parsed.into()
+}
+
+fn is_modrinth_cdn_url(url: &str) -> bool {
+    url.starts_with("https://cdn-alt.modrinth.com")
+}
+
+fn is_modrinth_host_url(url: &str) -> bool {
+    Url::parse(url).ok().is_some_and(|parsed| {
+        matches!(
+            parsed.host_str(),
+            Some(
+                "api.modrinth.com"
+                    | "cdn.modrinth.com"
+                    | "cdn-alt.modrinth.com"
+            )
+        )
+    })
+}
+
+/// Appends a cache-busting query parameter so a retry bypasses a corrupt
+/// edge-cache object (a truncated or checksum-mismatched body served for an
+/// otherwise valid URL). Existing query pairs are preserved.
+fn cache_busted_download_url(url: &str, attempt: usize) -> String {
+    let Ok(mut parsed) = Url::parse(url) else {
+        return url.to_string();
+    };
+    let original_pairs = parsed
+        .query_pairs()
+        .filter(|(key, _)| key != "axolotl_retry")
+        .map(|(key, value)| (key.into_owned(), value.into_owned()))
+        .collect::<Vec<_>>();
+    parsed.set_query(None);
+    {
+        let mut pairs = parsed.query_pairs_mut();
+        for (key, value) in original_pairs {
+            pairs.append_pair(&key, &value);
+        }
+        pairs.append_pair("axolotl_retry", &attempt.to_string());
+    }
+    parsed.into()
 }
 
 fn sanitize_url_for_log(url: &str) -> String {
@@ -767,7 +905,10 @@ fn repair_official_cdn_redirect(
     if location.is_ascii()
         || !redirect
             .host_str()
-            .is_some_and(|host| host.eq_ignore_ascii_case("cdn.modrinth.com"))
+            .is_some_and(|host| {
+                host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
+                    || host.eq_ignore_ascii_case(MODRINTH_CDN_OFFICIAL_HOST)
+            })
         || original.path().is_empty()
     {
         return None;
@@ -793,7 +934,9 @@ fn is_official_modrinth_cdn_redirect(location: Option<&str>) -> bool {
         .split(['/', '?', '#'])
         .next()
         .unwrap_or_default();
-    authority.eq_ignore_ascii_case("cdn.modrinth.com")
+    authority.eq_ignore_ascii_case("cdn-alt.modrinth.com")
+        || authority.eq_ignore_ascii_case("cdn-alt.modrinth.com:443")
+        || authority.eq_ignore_ascii_case("cdn.modrinth.com")
         || authority.eq_ignore_ascii_case("cdn.modrinth.com:443")
 }
 
@@ -820,7 +963,8 @@ fn route(
 }
 
 fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
-    let source = Url::parse(url)
+    let url = canonical_modrinth_cdn_url(url);
+    let source = Url::parse(&url)
         .ok()
         .and_then(|url| url.host_str().map(str::to_string))
         .map_or(DownloadRouteSource::Official, |host| match host.as_str() {
@@ -841,7 +985,7 @@ fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
     #[cfg(test)]
     let route = {
         let mut route = route;
-        if Url::parse(url)
+        if Url::parse(&url)
             .ok()
             .and_then(|url| url.host_str().and_then(|host| host.parse().ok()))
             .is_some_and(|address: std::net::IpAddr| address.is_loopback())
@@ -949,18 +1093,6 @@ fn explicit_mirror_routes(
             path.to_string(),
             DownloadRouteSource::Bmclapi,
         ),
-        "api.modrinth.com" => push_mirror(
-            &mut routes,
-            MCIM_BASE_URL,
-            format!("/modrinth{path}"),
-            DownloadRouteSource::Mcim,
-        ),
-        "cdn.modrinth.com" => push_mirror(
-            &mut routes,
-            MCIM_BASE_URL,
-            path.to_string(),
-            DownloadRouteSource::Mcim,
-        ),
         "api.curseforge.com" => push_mirror(
             &mut routes,
             MCIM_BASE_URL,
@@ -991,7 +1123,11 @@ fn is_official_modrinth_download_url(url: &str) -> bool {
     Url::parse(url).is_ok_and(|url| {
         matches!(
             url.host_str(),
-            Some("api.modrinth.com" | "cdn.modrinth.com")
+            Some(
+                "api.modrinth.com"
+                    | "cdn.modrinth.com"
+                    | "cdn-alt.modrinth.com"
+            )
         )
     })
 }
@@ -1091,13 +1227,21 @@ pub fn resolve_download_routes_for(
     resource: ResourceClass,
     mode: crate::state::DownloadSourceMode,
 ) -> Vec<DownloadRoute> {
-    let official = official_route(url, resource);
-    let mirror_first_loader = uses_mirror_first_loader_routes(url, resource);
-    let mut routes = explicit_mirror_routes(url, resource);
+    let url = canonical_modrinth_cdn_url(url);
+    let official = official_route(&url, resource);
+    let mirror_first_loader = uses_mirror_first_loader_routes(&url, resource);
+    let mut routes = explicit_mirror_routes(&url, resource);
     routes.push(official);
+    // Modrinth content has no mirrors by design: all downloads and API
+    // requests must use the official sources, so their mode is fixed.
+    let mode = if is_modrinth_host_url(&url) {
+        crate::state::DownloadSourceMode::OfficialOnly
+    } else {
+        mode
+    };
     match mode {
         crate::state::DownloadSourceMode::Auto
-            if is_official_version_manifest_url(url) =>
+            if is_official_version_manifest_url(&url) =>
         {
             routes.sort_by_key(|route| route.is_mirror)
         }
@@ -1166,7 +1310,9 @@ fn infer_resource_class(url: &str) -> ResourceClass {
         "launcher.mojang.com" | "piston-data.mojang.com" => {
             ResourceClass::MinecraftLibrary
         }
-        "api.modrinth.com" | "cdn.modrinth.com" => ResourceClass::Modrinth,
+        "api.modrinth.com"
+        | "cdn.modrinth.com"
+        | "cdn-alt.modrinth.com" => ResourceClass::Modrinth,
         "api.curseforge.com"
         | "edge.forgecdn.net"
         | "media.forgecdn.net"
@@ -2212,6 +2358,9 @@ async fn fetch_advanced_with_client_and_progress(
 
             let permit = semaphore.0.acquire().await?;
             let request_started = Instant::now();
+            if let Some(authority) = url_authority(&request_url) {
+                wait_for_host_throttle(&authority).await;
+            }
             let result = req.send().await;
             let ttfb = request_started.elapsed();
             match result {
@@ -2296,6 +2445,14 @@ async fn fetch_advanced_with_client_and_progress(
                         break;
                     }
                     if status.is_client_error() || status.is_server_error() {
+                        if status == StatusCode::TOO_MANY_REQUESTS
+                            || status == StatusCode::SERVICE_UNAVAILABLE
+                        {
+                            if let Some(authority) = url_authority(&request_url)
+                            {
+                                throttle_host(&authority, retry_after);
+                            }
+                        }
                         if let Some(fence_key) = fence_key
                             && status.is_server_error()
                         {
@@ -2415,6 +2572,9 @@ async fn fetch_advanced_with_client_and_progress(
 
                     let response_url = resp.url().to_string();
                     let log_response_url = sanitize_url_for_log(&response_url);
+                    if let Some(authority) = url_authority(&request_url) {
+                        record_host_success(&authority);
+                    }
                     if is_mirror && modrinth_request_kind == Some("CDN") {
                         let cache_status = resp
                             .headers()
@@ -3032,11 +3192,21 @@ fn verify_computed_integrity(
     if let Some(size) = expected.size
         && actual.size != size
     {
-        return Err(ErrorKind::OtherError(format!(
-            "Incorrect size for download: {size} != {}",
-            actual.size
-        ))
-        .into());
+        // A broken CDN cache or a pack manifest that disagrees with the real
+        // file by a few bytes must not reject content that hashes correctly:
+        // the hash is authoritative whenever one is available.
+        if !expected.has_hash() {
+            return Err(ErrorKind::OtherError(format!(
+                "Incorrect size for download: {size} != {}",
+                actual.size
+            ))
+            .into());
+        }
+        tracing::warn!(
+            expected_size = size,
+            actual_size = actual.size,
+            "Downloaded size differs from the expected size; relying on content hash verification"
+        );
     }
 
     let checks = [
@@ -3425,6 +3595,9 @@ async fn send_path_request_with_clients(
                 .header(header::RANGE, range)
                 .header(header::ACCEPT_ENCODING, "identity");
         }
+        if let Some(authority) = url_authority(current.as_str()) {
+            wait_for_host_throttle(&authority).await;
+        }
 
         let response = match request.send().await {
             Ok(response) => response,
@@ -3450,8 +3623,16 @@ async fn send_path_request_with_clients(
             StatusCode::TOO_MANY_REQUESTS | StatusCode::SERVICE_UNAVAILABLE
         ) {
             throttle_mirror_request_slot(route, retry_after(&response));
+            if let Some(authority) = url_authority(current.as_str()) {
+                throttle_host(&authority, retry_after(&response));
+            }
         }
         if !response.status().is_redirection() {
+            if response.status().is_success()
+                && let Some(authority) = url_authority(current.as_str())
+            {
+                record_host_success(&authority);
+            }
             if reused_redirect_target
                 && (response.status().is_client_error()
                     || response.status().is_server_error())
@@ -3517,8 +3698,11 @@ async fn send_path_request_with_clients(
             ))
             .into());
         }
-        current = repair_official_cdn_redirect(&original, &next, &location)
-            .unwrap_or(next);
+        current = Url::parse(&canonical_modrinth_cdn_url(
+            &repair_official_cdn_redirect(&original, &next, &location)
+                .unwrap_or(next)
+                .to_string(),
+        ))?;
     }
     unreachable!()
 }
@@ -3779,7 +3963,9 @@ fn route_segmented_concurrency_cap(
     available_permits: usize,
 ) -> usize {
     let cap = segmented_concurrency_cap(available_permits);
-    if route.source == DownloadRouteSource::Bmclapi {
+    if route.source == DownloadRouteSource::Bmclapi
+        || is_modrinth_cdn_url(&route.url)
+    {
         cap.min(4)
     } else {
         cap
@@ -5288,6 +5474,23 @@ async fn record_install_download_stage(
     }
 }
 
+/// Resolves hosts ahead of the first request without blocking the caller.
+/// Used before batch downloads so every file shares one ordered address list
+/// instead of racing the same DNS queries.
+pub(crate) fn prewarm_download_dns(hosts: &[&str]) {
+    for host in hosts {
+        let resolver = Arc::clone(&DOWNLOAD_DNS_RESOLVER);
+        let host = host.to_string();
+        tokio::spawn(async move {
+            let _ = tokio::time::timeout(
+                time::Duration::from_secs(10),
+                resolver.pre_resolve(&host),
+            )
+            .await;
+        });
+    }
+}
+
 /// Streams a download to a sibling `.part` file, verifies it, then atomically
 /// moves it into place.
 #[tracing::instrument(skip(semaphore, _exec, progress, request, destination))]
@@ -5322,11 +5525,20 @@ pub async fn download_to_path(
 }
 
 async fn download_to_path_inner(
-    request: DownloadRequest,
+    mut request: DownloadRequest,
     destination: &Path,
     semaphore: &FetchSemaphore,
     mut progress: Option<&mut FetchProgressFn<'_>>,
 ) -> crate::Result<DownloadResult> {
+    // All Modrinth CDN traffic must target the official cdn-alt host. This is
+    // applied at the single entry point so every caller (modpacks, single
+    // content installs, missing-content recovery) gets the same behaviour.
+    request.url = canonical_modrinth_cdn_url(&request.url);
+    request.candidate_urls = request
+        .candidate_urls
+        .iter()
+        .map(|url| canonical_modrinth_cdn_url(url))
+        .collect();
     if let Some(parent) = destination.parent() {
         io::create_dir_all(parent).await?;
     }
@@ -5430,6 +5642,7 @@ async fn download_to_path_inner(
     let mut partial_route_index = None;
     let mut terminal_routes = HashSet::new();
     let mut preferred_route = None;
+    let mut busted_for_route: Option<(usize, String)> = None;
     let file_attempt_budget = routes.len().saturating_mul(3).max(1);
     for (round, retry_with_single_thread) in
         [false, true, true].into_iter().enumerate()
@@ -5500,7 +5713,8 @@ async fn download_to_path_inner(
                 // Segmented downloads restart from scratch, so when a partial
                 // file already covers at least half of the expected data,
                 // resuming it over a single connection wastes less transfer.
-                if !retry_with_single_thread
+                if request.allow_segmented_download
+                    && !retry_with_single_thread
                     && route.supports_range
                     && range_splitting_allowed(route)
                     && request.integrity.size.is_some_and(|size| {
@@ -5685,10 +5899,22 @@ async fn download_to_path_inner(
                 )
                 .await;
                 let request_started = Instant::now();
+                // A truncated or invalid body may be a corrupt edge-cache
+                // object; the retry then uses a cache-busted URL that forces a
+                // fresh origin fetch instead of the same broken copy.
+                let attempt_route = busted_for_route
+                    .as_ref()
+                    .filter(|(index, _)| *index == route_index)
+                    .map(|(_, url)| {
+                        let mut busted = route.clone();
+                        busted.url = url.clone();
+                        busted
+                    })
+                    .unwrap_or_else(|| route.clone());
                 let (response, final_url) = match tokio::time::timeout(
                     FILE_TRANSFER_FIRST_BYTE_TIMEOUT,
                     send_path_request(
-                        route,
+                        &attempt_route,
                         request.header.as_ref(),
                         credentials.as_ref(),
                         request.download_meta.as_ref(),
@@ -6147,10 +6373,23 @@ async fn download_to_path_inner(
 
                 if let Some(expected) = expected_size
                     && downloaded < expected
+                    && !request.integrity.has_hash()
                 {
-                    // A close-delimited body can end short without a stream
-                    // error; treat it as a transfer failure so the valid data
-                    // received so far stays available for a resume.
+                    // No hash to fall back on: a close-delimited body that
+                    // ends short is a transfer failure, keeping the valid
+                    // data so far available for a resume. With a hash present
+                    // the short body is verified below instead, because a
+                    // broken CDN or manifest can under-report the size while
+                    // the received content is actually complete and correct.
+                    if http_version == reqwest::Version::HTTP_2
+                        && let Some(authority) = url_authority(&route.url)
+                    {
+                        tracing::warn!(
+                            authority,
+                            "Truncated HTTP/2 response; retrying over HTTP/1.1"
+                        );
+                        record_authority_h2_failure(&authority);
+                    }
                     record_route_failure(route, request.resource, None);
                     preserve_or_remove_partial(
                         &part_path,
@@ -6172,6 +6411,12 @@ async fn download_to_path_inner(
                         remote_addr,
                         Some(http_version),
                     );
+                    if attempts < file_attempt_budget {
+                        busted_for_route = Some((
+                            route_index,
+                            cache_busted_download_url(&route.url, attempts),
+                        ));
+                    }
                     last_error = Some(error);
                     break;
                 }
@@ -6185,7 +6430,27 @@ async fn download_to_path_inner(
                     verify_computed_integrity(&request.integrity, &computed)
                 {
                     record_route_failure(route, request.resource, None);
-                    remove_if_exists(&part_path).await?;
+                    if http_version == reqwest::Version::HTTP_2
+                        && let Some(authority) = url_authority(&route.url)
+                    {
+                        tracing::warn!(
+                            authority,
+                            "Integrity failure on an HTTP/2 response; retrying over HTTP/1.1"
+                        );
+                        record_authority_h2_failure(&authority);
+                    }
+                    // A short body is kept as a resumable partial; a body that
+                    // arrived in full is discarded so the retry restarts.
+                    if downloaded < expected_size.unwrap_or(0) {
+                        preserve_or_remove_partial(
+                            &part_path,
+                            &request.integrity,
+                            any_route_can_resume(&routes),
+                        )
+                        .await?;
+                    } else {
+                        remove_if_exists(&part_path).await?;
+                    }
                     let decision = if routes.len() > 1 {
                         "clear_partial_and_switch"
                     } else if attempts >= 2 {
@@ -6203,6 +6468,12 @@ async fn download_to_path_inner(
                         remote_addr,
                         Some(http_version),
                     );
+                    if attempts < file_attempt_budget {
+                        busted_for_route = Some((
+                            route_index,
+                            cache_busted_download_url(&route.url, attempts),
+                        ));
+                    }
                     if routes.len() > 1 || attempts >= 2 {
                         terminal_routes.insert(route.url.clone());
                     }
@@ -6214,7 +6485,25 @@ async fn download_to_path_inner(
                         .await
                 {
                     record_route_failure(route, request.resource, None);
-                    remove_if_exists(&part_path).await?;
+                    if http_version == reqwest::Version::HTTP_2
+                        && let Some(authority) = url_authority(&route.url)
+                    {
+                        tracing::warn!(
+                            authority,
+                            "Content validation failed on an HTTP/2 response; retrying over HTTP/1.1"
+                        );
+                        record_authority_h2_failure(&authority);
+                    }
+                    if downloaded < expected_size.unwrap_or(0) {
+                        preserve_or_remove_partial(
+                            &part_path,
+                            &request.integrity,
+                            any_route_can_resume(&routes),
+                        )
+                        .await?;
+                    } else {
+                        remove_if_exists(&part_path).await?;
+                    }
                     let decision = if routes.len() > 1 {
                         "clear_partial_and_switch"
                     } else if attempts >= 2 {
@@ -6232,6 +6521,12 @@ async fn download_to_path_inner(
                         remote_addr,
                         Some(http_version),
                     );
+                    if attempts < file_attempt_budget {
+                        busted_for_route = Some((
+                            route_index,
+                            cache_busted_download_url(&route.url, attempts),
+                        ));
+                    }
                     if routes.len() > 1 || attempts >= 2 {
                         terminal_routes.insert(route.url.clone());
                     }
@@ -6467,6 +6762,8 @@ mod tests {
     static MIRROR_REQUEST_SLOT_TEST_LOCK: LazyLock<AsyncMutex<()>> =
         LazyLock::new(|| AsyncMutex::new(()));
     static AUTO_SOURCE_TEST_LOCK: LazyLock<std::sync::Mutex<()>> =
+        LazyLock::new(|| std::sync::Mutex::new(()));
+    static HOST_THROTTLE_TEST_LOCK: LazyLock<std::sync::Mutex<()>> =
         LazyLock::new(|| std::sync::Mutex::new(()));
 
     async fn spawn_range_server(
@@ -6843,7 +7140,146 @@ mod tests {
             ),
             Some("CDN")
         );
+        assert_eq!(
+            modrinth_request_kind(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+            ),
+            Some("CDN")
+        );
         assert_eq!(modrinth_request_kind("https://example.com/file.jar"), None);
+    }
+
+    #[test]
+    fn modrinth_cdn_urls_are_canonicalized_to_cdn_alt() {
+        assert_eq!(
+            canonical_modrinth_cdn_url(
+                "https://cdn.modrinth.com/data/project/version/file.jar?download=1"
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1"
+        );
+        assert_eq!(
+            canonical_modrinth_cdn_url(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+        );
+        assert_eq!(
+            canonical_modrinth_cdn_url("https://example.com/data/file.jar"),
+            "https://example.com/data/file.jar"
+        );
+        assert_eq!(canonical_modrinth_cdn_url("not-a-url"), "not-a-url");
+    }
+
+    #[test]
+    fn modrinth_routes_are_official_only_and_canonicalized() {
+        for mode in [
+            crate::state::DownloadSourceMode::Auto,
+            crate::state::DownloadSourceMode::OfficialOnly,
+            crate::state::DownloadSourceMode::MirrorPreferred,
+            crate::state::DownloadSourceMode::OfficialPreferred,
+        ] {
+            let api_routes = resolve_download_routes_for(
+                "https://api.modrinth.com/v2/tag/game_version",
+                ResourceClass::Modrinth,
+                mode,
+            );
+            assert_eq!(api_routes.len(), 1);
+            assert_eq!(api_routes[0].source, DownloadRouteSource::Official);
+            assert!(!api_routes[0].is_mirror);
+
+            let cdn_routes = resolve_download_routes_for(
+                "https://cdn.modrinth.com/data/project/version/file.jar",
+                ResourceClass::Modpack,
+                mode,
+            );
+            assert_eq!(cdn_routes.len(), 1);
+            assert_eq!(
+                cdn_routes[0].url,
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+            );
+            assert_eq!(cdn_routes[0].source, DownloadRouteSource::Official);
+            assert!(!cdn_routes[0].is_mirror);
+            assert!(cdn_routes[0].allow_sensitive_headers);
+        }
+    }
+
+    #[test]
+    fn modrinth_download_url_recognition_includes_cdn_alt() {
+        assert!(is_official_modrinth_download_url(
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+        ));
+        assert!(is_official_modrinth_download_url(
+            "https://cdn.modrinth.com/data/project/version/file.jar"
+        ));
+        assert!(is_official_modrinth_download_url(
+            "https://api.modrinth.com/v2/project/abc"
+        ));
+        assert!(!is_official_modrinth_download_url(
+            "https://example.com/file.jar"
+        ));
+    }
+
+    #[test]
+    fn cache_busted_urls_preserve_existing_query() {
+        assert_eq!(
+            cache_busted_download_url(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1",
+                2,
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1&axolotl_retry=2"
+        );
+        assert_eq!(
+            cache_busted_download_url(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar",
+                1,
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?axolotl_retry=1"
+        );
+        // A previous buster is replaced, not stacked.
+        assert_eq!(
+            cache_busted_download_url(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar?axolotl_retry=1&download=1",
+                3,
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1&axolotl_retry=3"
+        );
+    }
+
+    #[test]
+    fn size_mismatch_is_lenient_when_a_hash_matches() {
+        let matching = ComputedIntegrity {
+            size: 122_777,
+            sha1: Some("abc".to_string()),
+            ..ComputedIntegrity::default()
+        };
+        let hashed = Integrity {
+            size: Some(122_778),
+            sha1: Some("abc".to_string()),
+            ..Integrity::default()
+        };
+        assert!(
+            verify_computed_integrity(&hashed, &matching).is_ok(),
+            "a hash match must win over an off-by-a-few-bytes size claim"
+        );
+        let size_only = Integrity {
+            size: Some(122_778),
+            ..Integrity::default()
+        };
+        assert!(
+            verify_computed_integrity(&size_only, &matching).is_err(),
+            "without a hash the size claim is still enforced"
+        );
+    }
+
+    #[test]
+    fn segmented_download_flag_is_buildable_per_request() {
+        let request = DownloadRequest::new(
+            "https://example.com/a.jar",
+            ResourceClass::Modpack,
+        );
+        assert!(request.allow_segmented_download);
+        let request = request.with_segmented_download(false);
+        assert!(!request.allow_segmented_download);
     }
 
     #[tokio::test]
@@ -6900,6 +7336,42 @@ mod tests {
 
         assert_eq!(result.size, 4);
         assert_eq!(tokio::fs::read(&destination).await.unwrap(), b"done");
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn segmentation_disabled_downloads_use_a_single_connection() {
+        let _guard = RANGE_SPLITTING_TEST_LOCK.lock().await;
+        RANGE_SPLITTING_PROTOCOL_FAILURES.lock().clear();
+        let size = (SEGMENTED_DOWNLOAD_THRESHOLD * 2) as usize;
+        let data = Arc::new(
+            (0..size)
+                .map(|index| (index % 251) as u8)
+                .collect::<Vec<_>>(),
+        );
+        let (url, requests, normal_requests, server) =
+            spawn_range_server(data, false, false, false, false, false).await;
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("batch.bin");
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let result = download_to_path(
+            DownloadRequest::new(&url, ResourceClass::Other)
+                .with_segmented_download(false)
+                .with_integrity(Integrity::default().with_size(size as u64)),
+            &destination,
+            &FetchSemaphore(Semaphore::new(2)),
+            &pool,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.size, size as u64);
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+        assert_eq!(normal_requests.load(Ordering::Relaxed), 1);
         server.abort();
     }
 
@@ -7235,6 +7707,52 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn host_throttle_blocks_then_recovers_on_success() {
+        let _guard = HOST_THROTTLE_TEST_LOCK.lock().unwrap();
+        HOST_THROTTLES.lock().clear();
+        let authority = "cdn-alt.modrinth.com:443";
+
+        throttle_host(authority, Some(time::Duration::from_millis(50)));
+        let started = Instant::now();
+        wait_for_host_throttle(authority).await;
+        assert!(
+            started.elapsed() >= Duration::from_millis(40),
+            "a throttled host should sleep through its cooldown"
+        );
+
+        record_host_success(authority);
+        let throttle = HOST_THROTTLES.lock().get(authority).cloned().unwrap();
+        assert_eq!(throttle.backoff, 0);
+        assert!(throttle.cooldown_until.is_none());
+
+        HOST_THROTTLES.lock().clear();
+    }
+
+    #[tokio::test]
+    async fn host_throttle_backoff_grows_with_repeated_pressure() {
+        let _guard = HOST_THROTTLE_TEST_LOCK.lock().unwrap();
+        HOST_THROTTLES.lock().clear();
+        let authority = "cdn-alt.modrinth.com:443";
+
+        throttle_host(authority, None);
+        let first_backoff = HOST_THROTTLES
+            .lock()
+            .get(authority)
+            .unwrap()
+            .backoff;
+        throttle_host(authority, None);
+        let second_backoff = HOST_THROTTLES
+            .lock()
+            .get(authority)
+            .unwrap()
+            .backoff;
+        assert_eq!(first_backoff, 1);
+        assert_eq!(second_backoff, 2);
+
+        HOST_THROTTLES.lock().clear();
+    }
+
     #[test]
     fn auto_source_health_is_scoped_by_resource_family() {
         let _guard = AUTO_SOURCE_TEST_LOCK.lock().unwrap();
@@ -7269,6 +7787,9 @@ mod tests {
             "https://cdn.modrinth.com/data/project/versions/version/file.jar"
         )));
         assert!(is_official_modrinth_cdn_redirect(Some(
+            "https://cdn-alt.modrinth.com/data/project/versions/version/file.jar"
+        )));
+        assert!(is_official_modrinth_cdn_redirect(Some(
             "https://CDN.MODRINTH.COM/data/project/versions/version/file.jar"
         )));
         assert!(!is_official_modrinth_cdn_redirect(Some(
@@ -7281,7 +7802,7 @@ mod tests {
             "https://cdn.modrinth.com@evil.example/file.jar"
         )));
         assert!(!is_official_modrinth_cdn_redirect(Some(
-            "https://cdn.modrinth.com/\u{4e0b}\u{8f7d}/file.jar"
+            "https://cdn-alt.modrinth.com/\u{4e0b}\u{8f7d}/file.jar"
         )));
         assert!(!is_official_modrinth_cdn_redirect(None));
     }
@@ -7298,25 +7819,29 @@ mod tests {
     #[test]
     fn malformed_official_cdn_redirects_reuse_the_original_encoded_path() {
         let original = Url::parse(
-			"https://mod.mcimirror.top/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip",
+			"https://cdn-alt.modrinth.com/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip",
 		)
 		.unwrap();
-        let redirect = Url::parse(
-			"https://cdn.modrinth.com/data/project/versions/version/\u{91c8}\u{91c8}.zip",
-		)
-		.unwrap();
+        for host in ["cdn-alt.modrinth.com", "cdn.modrinth.com"] {
+            let redirect = Url::parse(&format!(
+				"https://{host}/data/project/versions/version/\u{91c8}\u{91c8}.zip",
+			))
+			.unwrap();
 
-        let repaired = repair_official_cdn_redirect(
-			&original,
-			&redirect,
-			"https://cdn.modrinth.com/data/project/versions/version/\u{91c8}\u{91c8}.zip",
-		)
-		.unwrap();
+            let repaired = repair_official_cdn_redirect(
+				&original,
+				&redirect,
+				&format!("https://{host}/data/project/versions/version/\u{91c8}\u{91c8}.zip"),
+			)
+			.unwrap();
 
-        assert_eq!(
-            repaired.as_str(),
-            "https://cdn.modrinth.com/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip"
-        );
+            assert_eq!(
+                repaired.as_str(),
+                format!(
+                    "https://{host}/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip"
+                )
+            );
+        }
     }
 
     #[test]

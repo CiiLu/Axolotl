@@ -6,7 +6,6 @@
 import { invoke } from '@tauri-apps/api/core'
 
 import type { HomeDashboardConfig } from '@/components/home/home-dashboard'
-import { setModrinthSourceMode } from '@/config'
 import type { Hooks, MemorySettings, WindowSize } from '@/helpers/types'
 import type { AccentColorSetting, ColorTheme, FeatureFlag, HomeLayout } from '@/store/theme.ts'
 import { DEFAULT_FEATURE_FLAGS } from '@/store/theme.ts'
@@ -146,7 +145,7 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 		enabled ? 'mirror_preferred' : 'official_only'
 
 	settings.auto_concurrent_downloads ??= true
-	settings.download_engine ??= 'xmcl'
+	settings.download_engine ??= 'legacy'
 	settings.auto_set_java_high_performance_mode ??= true
 	settings.minecraft_metadata_source ??=
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_minecraft_mirror)
@@ -198,7 +197,6 @@ export async function get() {
 	const settings = normalizeDownloadSettings(
 		(await invoke('plugin:settings|settings_get')) as AppSettings & LegacyMirrorSettings,
 	)
-	setModrinthSourceMode(settings.modrinth_source)
 	return settings
 }
 
@@ -206,7 +204,6 @@ export async function get() {
 export async function set(settings: AppSettings) {
 	syncLegacyMirrorSettings(settings)
 	const result = await invoke('plugin:settings|settings_set', { settings })
-	setModrinthSourceMode(settings.modrinth_source)
 	return result
 }
 
