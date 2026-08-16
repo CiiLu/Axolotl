@@ -5494,6 +5494,17 @@ pub(crate) fn prewarm_download_dns(hosts: &[&str]) {
 /// Streams a download to a sibling `.part` file, verifies it, then atomically
 /// moves it into place.
 #[tracing::instrument(skip(semaphore, _exec, progress, request, destination))]
+fn error_chain(error: &crate::Error) -> String {
+    let mut chain = error.to_string();
+    let mut source = error.source();
+    while let Some(cause) = source {
+        chain.push_str("\nCaused by: ");
+        chain.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    chain
+}
+
 pub async fn download_to_path(
     request: DownloadRequest,
     destination: impl AsRef<Path>,
@@ -5515,6 +5526,7 @@ pub async fn download_to_path(
             url = %request_url,
             destination = %destination.as_ref().display(),
             error = %error,
+            error_chain = %error_chain(error),
             "Download failed"
         );
     }
