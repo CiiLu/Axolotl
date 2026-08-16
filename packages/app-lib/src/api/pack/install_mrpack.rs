@@ -927,6 +927,12 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                 .collect(),
         )
         .await?;
+    // Warm the shared DNS cache for the official Modrinth hosts so the batch
+    // download starts with an ordered address list instead of racing queries.
+    crate::util::fetch::prewarm_download_dns(&[
+        crate::util::fetch::MODRINTH_CDN_OFFICIAL_HOST,
+        "api.modrinth.com",
+    ]);
     let required_file_failures =
         collect_required_file_failures_concurrently(
         pack.files.into_iter().enumerate().collect(),
@@ -1106,6 +1112,9 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         .with_integrity(integrity)
                         .with_download_meta(
                             content_context.download_meta.clone(),
+                        )
+                        .with_segmented_download(
+                            content_context.num_files <= 1,
                         )
                         .with_install_tracking(
                             content_context.reporter.clone(),
