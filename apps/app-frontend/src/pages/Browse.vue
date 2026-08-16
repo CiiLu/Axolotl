@@ -99,7 +99,13 @@ import {
 } from '@/helpers/instance'
 import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
-import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
+import {
+	type BrowseContentSource,
+	get as getSettings,
+	getLastBrowseContentSource,
+	set as setSettings,
+	setLastBrowseContentSource,
+} from '@/helpers/settings.ts'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { translateSearchDescriptions } from '@/helpers/translation'
 import { get_instance_worlds } from '@/helpers/worlds'
@@ -146,15 +152,25 @@ const curseForgeCapability = ref(
 		configured: false,
 	})),
 )
-const contentSource = ref<'all' | 'modrinth' | 'curseforge'>(
-	curseForgeCapability.value.configured && route.query.source === 'curseforge'
-		? 'curseforge'
-		: route.query.source === 'modrinth'
-			? 'modrinth'
-			: curseForgeCapability.value.configured
-				? 'all'
-				: 'modrinth',
-)
+const rememberedContentSource = getLastBrowseContentSource()
+
+function resolveInitialContentSource(): BrowseContentSource {
+	if (curseForgeCapability.value.configured && route.query.source === 'curseforge') {
+		return 'curseforge'
+	}
+	if (route.query.source === 'modrinth') {
+		return 'modrinth'
+	}
+	if (rememberedContentSource === 'curseforge' && curseForgeCapability.value.configured) {
+		return 'curseforge'
+	}
+	if (rememberedContentSource === 'modrinth') {
+		return 'modrinth'
+	}
+	return curseForgeCapability.value.configured ? 'all' : 'modrinth'
+}
+
+const contentSource = ref<BrowseContentSource>(resolveInitialContentSource())
 const curseForgeCategoriesByClass = ref<Record<number, CurseForgeCategory[]>>({})
 
 async function ensureCurseForgeCategories(projectTypeValue: ProjectType) {
@@ -1935,6 +1951,7 @@ watch(projectType, async (type) => {
 function selectContentSource(source: string) {
 	if (source === 'all' || source === 'modrinth' || source === 'curseforge') {
 		contentSource.value = source
+		setLastBrowseContentSource(source)
 	}
 }
 
