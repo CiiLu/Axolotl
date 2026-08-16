@@ -31,22 +31,44 @@ const props = withDefaults(
 
 const sortedTags = computed(() => uniqueSorted(props.tags))
 const sortedExtraTags = computed(() => uniqueSorted(props.extraTags))
+
+const filterTag = (tag: string) =>
+	!props.deprioritizedTags.includes(tag) && (!props.excludeLoaders || !isLoader(tag))
+
 const filteredTags = computed(() => {
 	if (!sortedTags.value) {
 		return undefined
 	}
-	return sortedTags.value.filter(
-		(tag) => !props.deprioritizedTags.includes(tag) && (!props.excludeLoaders || !isLoader(tag)),
-	)
+	return sortedTags.value.filter(filterTag)
 })
 
-const visibleTags = computed(() => filteredTags.value?.slice(0, props.maxTags))
-const overflowTags = computed(() => [
-	...new Set([
-		...(props.tags.filter((x) => !visibleTags.value?.includes(x)) ?? []),
-		...(sortedExtraTags.value?.filter((x) => !visibleTags.value?.includes(x)) ?? []),
-	]),
-])
+const filteredExtraTags = computed(() => {
+	if (!sortedExtraTags.value) {
+		return undefined
+	}
+	return sortedExtraTags.value.filter(filterTag)
+})
+
+const visibleTags = computed(() => {
+	const mainTags = filteredTags.value ?? []
+	const extraTags = filteredExtraTags.value ?? []
+	const combined = [...mainTags, ...extraTags]
+
+	// 将加载器标签排在最前面
+	const loaders = combined.filter(isLoader)
+	const nonLoaders = combined.filter((tag) => !isLoader(tag))
+	const sorted = [...loaders, ...nonLoaders]
+
+	return sorted.slice(0, props.maxTags)
+})
+
+const overflowTags = computed(() => {
+	const mainTags = filteredTags.value ?? []
+	const extraTags = filteredExtraTags.value ?? []
+	const combined = [...mainTags, ...extraTags]
+	const overflow = combined.filter((x) => !visibleTags.value?.includes(x))
+	return [...new Set(overflow)]
+})
 </script>
 
 <template>
