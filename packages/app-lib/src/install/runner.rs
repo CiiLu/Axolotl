@@ -195,6 +195,17 @@ pub async fn install_pack_to_existing_instance(
     .await
 }
 
+pub async fn update_managed_curseforge_modpack(
+    instance_id: String,
+    file_id: u32,
+) -> crate::Result<InstallJobSnapshot> {
+    start(InstallRequest::UpdateManagedCurseForgeModpack {
+        instance_id,
+        file_id,
+    })
+    .await
+}
+
 pub async fn list_jobs(
     include_finished: bool,
 ) -> crate::Result<Vec<InstallJobSnapshot>> {
@@ -384,6 +395,16 @@ pub async fn skip_missing_content_and_resume_job(
     if job.status != InstallJobStatus::WaitingForUser {
         return Err(crate::ErrorKind::InputError(
             "Only install jobs waiting for user action can skip missing content"
+                .to_string(),
+        )
+        .into());
+    }
+    if matches!(
+        job.state.request,
+        InstallRequest::UpdateManagedCurseForgeModpack { .. }
+    ) {
+        return Err(crate::ErrorKind::InputError(
+            "CurseForge modpack version updates cannot skip required manual downloads"
                 .to_string(),
         )
         .into());
@@ -770,6 +791,9 @@ async fn prepare_initial_instance(
         }
         InstallRequest::InstallExistingInstance { instance_id, .. }
         | InstallRequest::InstallPackToExistingInstance {
+            instance_id, ..
+        }
+        | InstallRequest::UpdateManagedCurseForgeModpack {
             instance_id, ..
         } => {
             prepare_existing_rollback(job_state, state, &instance_id).await?;
@@ -1545,6 +1569,50 @@ async fn run_request(
                 },
             )
             .await?;
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
+        }
+        InstallRequest::UpdateManagedCurseForgeModpack {
+            instance_id,
+            file_id,
+        } => {
+            prepare_existing_rollback(job_state, state, &instance_id).await?;
+            crate::state::instances::commands::set_instance_install_stage(
+                &instance_id,
+                InstanceInstallStage::PackInstalling,
+                &state.pool,
+            )
+            .await?;
+            emit_instance(&instance_id, InstancePayloadType::Edited).await?;
+            update_progress(
+                job_id,
+                job_state,
+                state,
+                InstallPhaseId::DownloadingContent,
+                InstallPhaseDetails::Empty,
+            )
+            .await?;
+            let reporter =
+                InstallProgressReporter::new(job_id, job_state.clone());
+            let result =
+                crate::api::curseforge::update_managed_modpack_with_reporter(
+                    &instance_id,
+                    file_id,
+                    Some(reporter.clone()),
+                )
+                .await?;
+            if !result.content.failed_downloads.is_empty() {
+                return Err(ErrorKind::NetworkError(format!(
+                    "{} CurseForge files could not be downloaded automatically",
+                    result.content.failed_downloads.len()
+                ))
+                .into());
+            }
+            if let Some(reason) = curseforge_manual_download_pause(
+                &result,
+                &job_state.skipped_missing_content_paths,
+            ) {
+                return Ok(InstallExecutionOutcome::WaitingForUser(reason));
+            }
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::DownloadJava { vendor, version } => {

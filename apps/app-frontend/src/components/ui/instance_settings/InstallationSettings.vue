@@ -19,7 +19,7 @@ import { computed, ref } from 'vue'
 import SymlinkInstanceWarning from '@/components/ui/SymlinkInstanceWarning.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version } from '@/helpers/cache'
-import { updateManagedCurseForgeModpack } from '@/helpers/curseforge'
+import { updateManagedCurseForgeModpack, type CurseForgeFile } from '@/helpers/curseforge'
 import {
 	install_duplicate_instance,
 	install_existing_instance,
@@ -471,12 +471,32 @@ provideInstallationSettings({
 					: rawProjectId,
 			)
 			if (!Number.isFinite(projectId)) return []
-			const { getCurseForgeFiles } = await import('@/helpers/curseforge')
-			const response = await getCurseForgeFiles(projectId, {
-				index: 0,
-				pageSize: 50,
-			}).catch(handleError)
-			const versions = (response?.files ?? [])
+			const { getCurseForgeFile, getCurseForgeFiles } = await import('@/helpers/curseforge')
+			const files: CurseForgeFile[] = []
+			let index = 0
+			while (true) {
+				const response = await getCurseForgeFiles(projectId, {
+					index,
+					pageSize: 50,
+				}).catch(handleError)
+				if (!response) break
+				files.push(...response.files)
+				index += response.files.length
+				if (
+					response.files.length === 0 ||
+					index >= (response.pagination?.totalCount ?? response.files.length)
+				) {
+					break
+				}
+			}
+			const installedFileId = Number(instance.value.link?.version_id)
+			if (Number.isFinite(installedFileId) && !files.some((file) => file.id === installedFileId)) {
+				const installedFile = await getCurseForgeFile(projectId, installedFileId).catch(() => null)
+				if (installedFile?.isAvailable) {
+					files.push(installedFile)
+				}
+			}
+			const versions = files
 				.filter((file) => file.isAvailable)
 				.map((file) => {
 					const loaders = [
@@ -535,6 +555,22 @@ provideInstallationSettings({
 
 	async getVersionChangelog(versionId: string) {
 		debug('getVersionChangelog: called', { versionId })
+		if (isCurseForgeLinkedModpack.value) {
+			const rawProjectId = instance.value.link?.project_id
+			const fileId = Number(versionId)
+			const projectId = rawProjectId
+				? Number(
+						rawProjectId.startsWith('curseforge:')
+							? rawProjectId.slice('curseforge:'.length)
+							: rawProjectId,
+					)
+				: NaN
+			if (!Number.isFinite(projectId) || !Number.isFinite(fileId)) return null
+			const { getCurseForgeChangelog } = await import('@/helpers/curseforge')
+			const changelog = await getCurseForgeChangelog(projectId, fileId).catch(() => null)
+			if (changelog == null) return null
+			return { id: versionId, changelog } as unknown as Labrinth.Versions.v2.Version
+		}
 		return (await get_version(versionId, 'must_revalidate').catch(
 			() => null,
 		)) as Labrinth.Versions.v2.Version | null
@@ -545,18 +581,22 @@ provideInstallationSettings({
 			versionId: version.id,
 			instanceId: instance.value.id,
 		})
-		if (isCurseForgeLinkedModpack.value) {
-			const fileId = Number(version.id)
-			if (!Number.isFinite(fileId)) {
-				throw new Error('Invalid CurseForge file ID')
+		try {
+			if (isCurseForgeLinkedModpack.value) {
+				const fileId = Number(version.id)
+				if (!Number.isFinite(fileId)) {
+					throw new Error('Invalid CurseForge file ID')
+				}
+				await updateManagedCurseForgeModpack(instance.value.id, fileId)
+			} else {
+				await update_managed_modrinth_version(instance.value.id, version.id)
 			}
-			await updateManagedCurseForgeModpack(instance.value.id, fileId)
-		} else {
-			await update_managed_modrinth_version(instance.value.id, version.id)
+			await queryClient.invalidateQueries({
+				queryKey: ['linkedModpackInfo', instance.value.id],
+			})
+		} catch (error) {
+			handleError(error as Error)
 		}
-		await queryClient.invalidateQueries({
-			queryKey: ['linkedModpackInfo', instance.value.id],
-		})
 		debug('onModpackVersionConfirm: done')
 	},
 

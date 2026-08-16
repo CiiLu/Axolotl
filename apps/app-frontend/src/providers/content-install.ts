@@ -1362,6 +1362,7 @@ export function createContentInstall(opts: {
 				.map((projectId) => titleById.get(projectId))
 				.filter((title): title is string => !!title),
 			alreadyInstalled: false,
+			versionMismatch: dependency.versionMismatch ?? false,
 		}))
 		const skipped = preview.skipped.map((item) => ({
 			id: String(item.projectId),

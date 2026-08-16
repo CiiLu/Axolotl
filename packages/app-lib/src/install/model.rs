@@ -819,6 +819,31 @@ mod tests {
     }
 
     #[test]
+    fn curseforge_managed_modpack_updates_are_tracked_as_pack_install_jobs() {
+        let job = InstallJobState::new(
+            InstallRequest::UpdateManagedCurseForgeModpack {
+                instance_id: "instance".to_string(),
+                file_id: 456,
+            },
+        );
+
+        assert_eq!(job.provider(), InstallJobProvider::CurseForge);
+        assert_eq!(
+            job.request.kind(),
+            InstallJobKind::InstallPackToExistingInstance
+        );
+        assert!(job.request.completes_instance_install_stage());
+        assert!(matches!(
+            job.request.target(),
+            InstallTarget::ExistingInstance { .. }
+        ));
+        assert!(matches!(
+            job.request.cleanup(),
+            InstallCleanup::RestoreExistingInstance { .. }
+        ));
+    }
+
+    #[test]
     fn deleted_instance_is_exposed_by_download_snapshot_state() {
         let mut job = job_state();
         assert!(!job.instance_deleted());
@@ -1057,6 +1082,10 @@ pub enum InstallRequest {
         #[serde(default)]
         post_install_edit: Option<InstallPostInstallEdit>,
     },
+    UpdateManagedCurseForgeModpack {
+        instance_id: String,
+        file_id: u32,
+    },
     InstallContent {
         instance_id: String,
         project_id: String,
@@ -1102,7 +1131,8 @@ impl InstallRequest {
             | Self::ImportInstance { .. }
             | Self::DuplicateInstance { .. }
             | Self::InstallExistingInstance { .. }
-            | Self::InstallPackToExistingInstance { .. } => true,
+            | Self::InstallPackToExistingInstance { .. }
+            | Self::UpdateManagedCurseForgeModpack { .. } => true,
             Self::InstallContent { .. }
             | Self::InstallCurseForgeContent { .. }
             | Self::DownloadJava { .. } => false,
@@ -1123,6 +1153,9 @@ impl InstallRequest {
             Self::InstallPackToExistingInstance { .. } => {
                 InstallJobKind::InstallPackToExistingInstance
             }
+            Self::UpdateManagedCurseForgeModpack { .. } => {
+                InstallJobKind::InstallPackToExistingInstance
+            }
             Self::InstallContent { .. } => InstallJobKind::InstallContent,
             Self::InstallCurseForgeContent { .. } => {
                 InstallJobKind::InstallContent
@@ -1135,6 +1168,7 @@ impl InstallRequest {
         match self {
             Self::InstallExistingInstance { instance_id, .. }
             | Self::InstallPackToExistingInstance { instance_id, .. }
+            | Self::UpdateManagedCurseForgeModpack { instance_id, .. }
             | Self::InstallContent { instance_id, .. } => {
                 InstallTarget::ExistingInstance {
                     instance_id: instance_id.clone(),
@@ -1152,7 +1186,8 @@ impl InstallRequest {
     pub fn cleanup(&self) -> InstallCleanup {
         match self {
             Self::InstallExistingInstance { instance_id, .. }
-            | Self::InstallPackToExistingInstance { instance_id, .. } => {
+            | Self::InstallPackToExistingInstance { instance_id, .. }
+            | Self::UpdateManagedCurseForgeModpack { instance_id, .. } => {
                 InstallCleanup::RestoreExistingInstance {
                     instance_id: instance_id.clone(),
                 }
@@ -1753,7 +1788,8 @@ impl InstallJobState {
             InstallRequest::InstallContent { .. } => {
                 InstallJobProvider::Modrinth
             }
-            InstallRequest::InstallCurseForgeContent { .. } => {
+            InstallRequest::InstallCurseForgeContent { .. }
+            | InstallRequest::UpdateManagedCurseForgeModpack { .. } => {
                 InstallJobProvider::CurseForge
             }
             InstallRequest::DownloadJava { .. } => InstallJobProvider::Java,

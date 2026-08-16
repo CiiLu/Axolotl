@@ -120,7 +120,8 @@ fn display_from_request(state: &InstallJobState) -> Option<InstallJobDisplay> {
         }),
         InstallRequest::DuplicateInstance { .. }
         | InstallRequest::InstallExistingInstance { .. }
-        | InstallRequest::InstallPackToExistingInstance { .. } => {
+        | InstallRequest::InstallPackToExistingInstance { .. }
+        | InstallRequest::UpdateManagedCurseForgeModpack { .. } => {
             state.rollback.as_ref().map(|rollback| InstallJobDisplay {
                 title: rollback.instance.instance.name.clone(),
                 icon: rollback.instance.instance.icon_path.clone(),

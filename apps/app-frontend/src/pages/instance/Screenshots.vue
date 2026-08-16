@@ -36,6 +36,8 @@ interface Screenshot {
 	name: string
 	path: string
 	url: string
+	thumbnailUrl?: string
+	thumbnailFailed?: boolean
 	objectUrl?: string
 	modified: Date
 	size: number
@@ -133,6 +135,8 @@ const MIME_TYPES: Record<string, string> = {
 	jpeg: 'image/jpeg',
 	webp: 'image/webp',
 }
+const THUMBNAIL_MAX_DIMENSION = 1024
+const THUMBNAIL_CONCURRENCY = 2
 
 const instanceRoot = ref('')
 const screenshots = ref<Screenshot[]>([])
@@ -191,7 +195,42 @@ function revokePreviewUrls(items = screenshots.value) {
 			URL.revokeObjectURL(screenshot.objectUrl)
 			screenshot.objectUrl = undefined
 		}
+		if (screenshot.thumbnailUrl) {
+			URL.revokeObjectURL(screenshot.thumbnailUrl)
+			screenshot.thumbnailUrl = undefined
+		}
 	}
+}
+
+let thumbnailGeneration = 0
+
+async function loadScreenshotThumbnail(screenshot: Screenshot, generation: number) {
+	if (screenshot.thumbnailUrl || screenshot.thumbnailFailed) return
+
+	try {
+		const bytes = await invoke<ArrayBuffer>('plugin:files|screenshot_thumbnail', {
+			instanceId: props.instance.id,
+			filePath: `screenshots/${screenshot.name}`,
+			maxDimension: THUMBNAIL_MAX_DIMENSION,
+		})
+		if (generation !== thumbnailGeneration) return
+		screenshot.thumbnailUrl = URL.createObjectURL(new Blob([bytes]))
+	} catch {
+		screenshot.thumbnailFailed = true
+	}
+}
+
+async function generateThumbnails(items: Screenshot[]) {
+	const generation = thumbnailGeneration
+	let nextIndex = 0
+
+	async function worker() {
+		while (nextIndex < items.length) {
+			await loadScreenshotThumbnail(items[nextIndex++], generation)
+		}
+	}
+
+	await Promise.all(Array.from({ length: THUMBNAIL_CONCURRENCY }, worker))
 }
 
 async function loadScreenshotPreview(screenshot: Screenshot) {
@@ -212,6 +251,7 @@ async function loadScreenshotPreview(screenshot: Screenshot) {
 
 async function refresh() {
 	loading.value = true
+	thumbnailGeneration += 1
 	try {
 		if (!(await exists(screenshotsPath.value))) {
 			revokePreviewUrls()
@@ -244,6 +284,7 @@ async function refresh() {
 		screenshots.value = nextScreenshots
 			.filter((screenshot): screenshot is Screenshot => screenshot !== null)
 			.sort((a, b) => b.modified.getTime() - a.modified.getTime())
+		void generateThumbnails(screenshots.value)
 	} catch (error) {
 		revokePreviewUrls()
 		screenshots.value = []
@@ -436,6 +477,7 @@ onMounted(() => {
 onUnmounted(() => {
 	window.removeEventListener('keydown', handleKeydown)
 	window.removeEventListener('focus', refresh)
+	thumbnailGeneration += 1
 	revokePreviewUrls()
 })
 
@@ -500,7 +542,8 @@ await initialize(props.instance.id)
 						@click="viewScreenshot(screenshot)"
 					>
 						<img
-							:src="screenshot.url"
+							v-if="screenshot.thumbnailUrl || screenshot.thumbnailFailed"
+							:src="screenshot.thumbnailUrl ?? screenshot.url"
 							:alt="screenshot.name"
 							class="size-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
 							@error="loadScreenshotPreview(screenshot)"
@@ -584,7 +627,11 @@ await initialize(props.instance.id)
 			class="relative flex min-h-64 max-h-[calc(100vh-13rem)] items-center justify-center overflow-auto bg-surface-1 p-4"
 		>
 			<img
-				:src="selectedScreenshot.url"
+				:src="
+					zoomedIn
+						? selectedScreenshot.url
+						: (selectedScreenshot.thumbnailUrl ?? selectedScreenshot.url)
+				"
 				:alt="selectedScreenshot.name"
 				:class="
 					zoomedIn
@@ -595,16 +642,21 @@ await initialize(props.instance.id)
 				@error="loadScreenshotPreview(selectedScreenshot)"
 				@contextmenu.prevent.stop="(event) => showScreenshotContextMenu(event, selectedScreenshot)"
 			/>
-			<ButtonStyled v-if="screenshots.length > 1" class="absolute left-4" circular>
+			<ButtonStyled v-if="screenshots.length > 1" circular>
 				<button
+					class="absolute left-4 top-1/2 -translate-y-1/2"
 					:aria-label="formatMessage(commonMessages.backButton)"
 					@click="changeScreenshot(-1)"
 				>
 					<LeftArrowIcon />
 				</button>
 			</ButtonStyled>
-			<ButtonStyled v-if="screenshots.length > 1" class="absolute right-4" circular>
-				<button :aria-label="formatMessage(commonMessages.nextButton)" @click="changeScreenshot(1)">
+			<ButtonStyled v-if="screenshots.length > 1" circular>
+				<button
+					class="absolute right-4 top-1/2 -translate-y-1/2"
+					:aria-label="formatMessage(commonMessages.nextButton)"
+					@click="changeScreenshot(1)"
+				>
 					<RightArrowIcon />
 				</button>
 			</ButtonStyled>
