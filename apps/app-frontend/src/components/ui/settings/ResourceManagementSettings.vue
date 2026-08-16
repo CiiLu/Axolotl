@@ -158,6 +158,23 @@ const messages = defineMessages({
 		id: 'app.settings.resources.maximum-downloads',
 		defaultMessage: 'Maximum concurrent downloads',
 	},
+	downloadEngine: {
+		id: 'app.settings.resources.download-engine',
+		defaultMessage: 'Download engine',
+	},
+	downloadEngineDescription: {
+		id: 'app.settings.resources.download-engine-description',
+		defaultMessage:
+			'Choose which download engine the launcher uses. The XMCL-compatible engine aggressively switches slow mirrors and recovers from stalled connections.',
+	},
+	legacyEngine: {
+		id: 'app.settings.resources.download-engine.legacy',
+		defaultMessage: 'Legacy engine',
+	},
+	xmclEngine: {
+		id: 'app.settings.resources.download-engine.xmcl',
+		defaultMessage: 'XMCL-compatible (recommended)',
+	},
 	maximumDownloadsDescription: {
 		id: 'app.settings.resources.maximum-downloads-description',
 		defaultMessage:
@@ -279,6 +296,22 @@ const downloadConcurrencyOptions = computed(() => [
 	{
 		value: 'manual',
 		label: formatMessage(messages.manualConcurrency),
+	},
+])
+const downloadEngine = computed({
+	get: () => settings.value.download_engine,
+	set: (engine) => {
+		settings.value.download_engine = engine
+	},
+})
+const downloadEngineOptions = computed(() => [
+	{
+		value: 'xmcl',
+		label: formatMessage(messages.xmclEngine),
+	},
+	{
+		value: 'legacy',
+		label: formatMessage(messages.legacyEngine),
 	},
 ])
 
@@ -502,6 +535,22 @@ function resetMissingContentImportDirectory() {
 				</div>
 				<div class="w-48 shrink-0">
 					<Combobox v-model="mojangAuthSource" :options="mojangAuthSourceOptions" />
+				</div>
+			</div>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<h2 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.downloadEngine) }}
+					</h2>
+					<p class="m-0 leading-tight text-secondary">
+						{{ formatMessage(messages.downloadEngineDescription) }}
+					</p>
+				</div>
+				<div class="w-48 shrink-0">
+					<Combobox v-model="downloadEngine" :options="downloadEngineOptions" />
 				</div>
 			</div>
 		</div>

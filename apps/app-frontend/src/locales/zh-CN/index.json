@@ -2474,6 +2474,18 @@
 	"app.settings.resources.source.mojang-official-preferred": {
 		"message": "优先官方源"
 	},
+	"app.settings.resources.download-engine": {
+		"message": "下载引擎"
+	},
+	"app.settings.resources.download-engine-description": {
+		"message": "选择启动器使用的下载引擎。"
+	},
+	"app.settings.resources.download-engine.legacy": {
+		"message": "旧版引擎"
+	},
+	"app.settings.resources.download-engine.xmcl": {
+		"message": "XMCL（推荐）"
+	},
 	"app.settings.resources.maximum-downloads": {
 		"message": "最大并发下载数"
 	},

@@ -9,6 +9,7 @@ import type { HomeDashboardConfig } from '@/components/home/home-dashboard'
 import { setModrinthSourceMode } from '@/config'
 import type { Hooks, MemorySettings, WindowSize } from '@/helpers/types'
 import type { AccentColorSetting, ColorTheme, FeatureFlag, HomeLayout } from '@/store/theme.ts'
+import { DEFAULT_FEATURE_FLAGS } from '@/store/theme.ts'
 
 // Settings object
 /*
@@ -39,6 +40,7 @@ export type DownloadSourceMode =
 	| 'official_only'
 	| 'mirror_preferred'
 	| 'official_preferred'
+export type DownloadEngine = 'legacy' | 'xmcl'
 
 const UPDATE_SOURCE_STORAGE_KEY = 'axolotl-update-source'
 
@@ -58,6 +60,7 @@ export function setUpdateSource(source: UpdateSource) {
 export type AppSettings = {
 	max_concurrent_downloads: number
 	max_concurrent_writes: number
+	download_engine: DownloadEngine
 	auto_concurrent_downloads: boolean
 	minecraft_metadata_source: DownloadSourceMode
 	minecraft_file_source: DownloadSourceMode
@@ -143,6 +146,7 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 		enabled ? 'mirror_preferred' : 'official_only'
 
 	settings.auto_concurrent_downloads ??= true
+	settings.download_engine ??= 'xmcl'
 	settings.auto_set_java_high_performance_mode ??= true
 	settings.minecraft_metadata_source ??=
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_minecraft_mirror)
@@ -154,6 +158,10 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_curseforge_mirror)
 	settings.mojang_auth_source ??= 'auto'
 	settings.terracotta_public_nodes ??= ['wss://center.node.1tmc.top']
+	settings.feature_flags ??= {}
+	for (const [key, value] of Object.entries(DEFAULT_FEATURE_FLAGS)) {
+		settings.feature_flags[key as FeatureFlag] ??= value
+	}
 
 	return settings
 }
