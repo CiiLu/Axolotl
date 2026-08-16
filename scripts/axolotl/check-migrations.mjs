@@ -197,15 +197,44 @@ function auditPublishedReleases(currentRef) {
 }
 
 function resolveBaseRef(baseRef) {
-	try {
-		git(['rev-parse', '--verify', `${baseRef}^{commit}`])
-		return baseRef
-	} catch {
-		console.warn(
-			`Migration guard: base ref ${baseRef} is not available locally; falling back to HEAD^`,
-		)
-		return 'HEAD^'
+	const isAvailable = () => {
+		try {
+			git(['rev-parse', '--verify', `${baseRef}^{commit}`])
+			return true
+		} catch {
+			return false
+		}
 	}
+
+	if (isAvailable()) return baseRef
+
+	for (const remote of ['origin', 'AXL']) {
+		try {
+			git(['fetch', remote, baseRef])
+			if (isAvailable()) return baseRef
+		} catch {
+			// Try the next remote.
+		}
+	}
+
+	try {
+		const upstream = git([
+			'rev-parse',
+			'--abbrev-ref',
+			'--symbolic-full-name',
+			'@{upstream}',
+		]).trim()
+		const upstreamCommit = git(['rev-parse', `${upstream}^{commit}`]).trim()
+		const headCommit = git(['rev-parse', 'HEAD^{commit}']).trim()
+		if (upstream && upstreamCommit !== headCommit) return upstream
+	} catch {
+		// Fall through to HEAD^.
+	}
+
+	console.warn(
+		`Migration guard: base ref ${baseRef} is not available locally; falling back to HEAD^`,
+	)
+	return 'HEAD^'
 }
 
 function compareWithBase(baseRef, currentRef) {

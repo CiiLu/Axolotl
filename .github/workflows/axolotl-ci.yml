@@ -31,7 +31,10 @@ jobs:
       - name: Check immutable database migrations
         env:
           MIGRATION_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: node scripts/axolotl/check-migrations.mjs --base "${MIGRATION_BASE_REF:-HEAD^}"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/axolotl/check-migrations.mjs --base "${MIGRATION_BASE_REF:-HEAD^}"
+          node scripts/axolotl/check-migrations.mjs --release
       - run: node scripts/axolotl/brand-guard.mjs
       - run: node scripts/axolotl/i18n-check.mjs
       - run: cargo fmt --all --check
