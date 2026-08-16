@@ -19,8 +19,8 @@ pub mod xmcl;
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
 pub enum DownloadEngine {
-    #[default]
     Legacy,
+    #[default]
     #[serde(rename = "xmcl", alias = "xmcl_compat")]
     XmclCompat,
 }
@@ -41,7 +41,7 @@ impl DownloadEngine {
     }
 }
 
-static ACTIVE_ENGINE: AtomicU8 = AtomicU8::new(0);
+static ACTIVE_ENGINE: AtomicU8 = AtomicU8::new(1);
 
 /// Returns the engine the launcher should use for new downloads.
 pub fn active_engine() -> DownloadEngine {
