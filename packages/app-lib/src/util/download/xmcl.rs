@@ -390,6 +390,7 @@ async fn download_attempt(
 	require_range: bool,
 	no_abort: bool,
 	flow_started_at: Instant,
+	progress_bytes: Option<Arc<AtomicU64>>,
 	progress: &mut Option<&mut fetch::FetchProgressFn<'_>>,
 ) -> Result<u64, AttemptError> {
 	let Some(authority) = authority_of(url) else {
@@ -498,6 +499,7 @@ async fn download_attempt(
 	let mut offset = effective_offset;
 	let mut first_byte_at = None;
 	let mut last_byte_at = Instant::now();
+	let mut last_progress_update: Option<Instant> = None;
 	let mut window_start = Instant::now();
 	let mut window_bytes: u64 = 0;
 	let mut slow_streak: u32 = 0;
@@ -535,9 +537,17 @@ async fn download_attempt(
 				offset,
 			})?;
 		offset = offset.saturating_add(chunk.len() as u64);
-		if let Some(progress) = progress.as_mut() {
+		if let Some(progress_bytes) = &progress_bytes {
+			progress_bytes.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+		} else if let Some(progress) = progress.as_mut() {
 			let total = expected_total.unwrap_or(offset);
-			let _ = progress(offset, total).await;
+			let should_update = last_progress_update
+				.map_or(true, |last| last.elapsed() >= Duration::from_millis(100))
+				|| offset >= total;
+			if should_update {
+				let _ = progress(offset, total).await;
+				last_progress_update = Some(Instant::now());
+			}
 		}
 
 		if first_byte_at.is_some() && is_reassignable(&authority) {
@@ -623,6 +633,7 @@ async fn run_single_stream(
 			false,
 			committed,
 			flow_started_at,
+			None,
 			progress,
 		)
 		.await;
@@ -738,6 +749,7 @@ async fn run_segment(
 	start: u64,
 	end: u64,
 	flow_started_at: Instant,
+	progress_bytes: Option<Arc<AtomicU64>>,
 ) -> Result<u64, SegmentError> {
 	let segment_total = end.saturating_sub(start).saturating_add(1);
 	let mut relative_offset = 0u64;
@@ -772,6 +784,7 @@ async fn run_segment(
 			true,
 			committed,
 			flow_started_at,
+			progress_bytes.clone(),
 			&mut None,
 		)
 		.await;
@@ -880,6 +893,7 @@ async fn download_segments(
 	part_path: &Path,
 	total: u64,
 	flow_started_at: Instant,
+	progress: &mut Option<&mut fetch::FetchProgressFn<'_>>,
 ) -> Result<(), SegmentError> {
 	let chunk_size = total.div_ceil(XMCL_RANGE_CONCURRENCY as u64);
 	let mut segment_paths = Vec::new();
@@ -890,6 +904,7 @@ async fn download_segments(
 		}
 		segment_paths.push(segment_path(part_path, index));
 	}
+	let downloaded = Arc::new(AtomicU64::new(0));
 	let mut tasks = Vec::new();
 	for (index, segment_path) in segment_paths.iter().enumerate() {
 		let start = (index as u64).saturating_mul(chunk_size);
@@ -901,11 +916,29 @@ async fn download_segments(
 			start,
 			end,
 			flow_started_at,
+			Some(Arc::clone(&downloaded)),
 		));
 	}
-	for result in futures::future::join_all(tasks).await {
-		result?;
-	}
+	let segments = async {
+		for result in futures::future::join_all(tasks).await {
+			result?;
+		}
+		Ok::<(), SegmentError>(())
+	};
+	let reporter = async {
+		loop {
+			let bytes = downloaded.load(Ordering::Relaxed);
+			if let Some(progress) = progress.as_mut() {
+				let _ = progress(bytes, total).await;
+			}
+			if bytes >= total {
+				break;
+			}
+			tokio::time::sleep(Duration::from_millis(100)).await;
+		}
+	};
+	let (segment_result, _) = tokio::join!(segments, reporter);
+	segment_result?;
 	concatenate_segments(part_path, total)
 		.await
 		.map_err(SegmentError::Other)
@@ -971,7 +1004,7 @@ async fn download_to_path_inner(
 	if let Some(total) = expected_total {
 		if total >= SEGMENTED_DOWNLOAD_THRESHOLD && initial_offset == 0 {
 			tracing::debug!(total, "Using segmented XMCL download");
-			match download_segments(request, routes, part_path, total, flow_started_at).await {
+			match download_segments(request, routes, part_path, total, flow_started_at, &mut progress).await {
 				Ok(()) => {
 					let size = fetch::verify_file(part_path, &request.integrity).await?;
 					fetch::finalize_download(part_path, destination).await?;
