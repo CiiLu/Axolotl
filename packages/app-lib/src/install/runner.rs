@@ -145,6 +145,7 @@ pub async fn install_content(
     version_id: Option<String>,
     content_type: modrinth_content_management::ContentType,
     selected: modrinth_content_management::ResolutionPreferences,
+    excluded_project_ids: Vec<String>,
     display_title: String,
     display_icon: Option<String>,
 ) -> crate::Result<InstallJobSnapshot> {
@@ -154,6 +155,7 @@ pub async fn install_content(
         version_id,
         content_type,
         selected,
+        excluded_project_ids,
         display_title,
         display_icon,
     })
@@ -1429,6 +1431,7 @@ async fn run_request(
             version_id,
             content_type,
             selected,
+            excluded_project_ids,
             display_title: _,
             display_icon: _,
         } => {
@@ -1443,10 +1446,11 @@ async fn run_request(
             let plan = crate::state::instances::commands::resolve_install_plan(
                 &instance_id,
                 crate::state::instances::commands::InstanceInstallProjectRequest {
-                    project_id,
+                    project_id: project_id.clone(),
                     version_id,
                     content_type,
                     selected,
+                    excluded_project_ids,
                 },
                 state,
             )
@@ -1465,9 +1469,10 @@ async fn run_request(
                     InstallPhaseDetails::Empty,
                 )
                 .await?;
-            crate::state::instances::commands::install_resolved_content_plan(
+            crate::state::instances::commands::install_resolved_content_plan_with_reporter(
                 &instance_id,
                 &plan,
+                Some(reporter.clone()),
                 state,
             )
             .await?;
@@ -1483,6 +1488,21 @@ async fn run_request(
                 )
                 .await?;
             crate::api::instance::emit_content_changed(&instance_id).await?;
+            let dependency_project_ids = plan
+                .dependencies
+                .iter()
+                .map(|dependency| dependency.project_id.clone())
+                .collect::<Vec<_>>();
+            emit_instance(
+                &instance_id,
+                InstancePayloadType::ContentInstallFinished {
+                    project_ids: std::iter::once(project_id.clone())
+                        .chain(dependency_project_ids.iter().cloned())
+                        .collect(),
+                    dependency_project_ids,
+                },
+            )
+            .await?;
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::InstallCurseForgeContent {
@@ -1491,6 +1511,7 @@ async fn run_request(
             display_icon: _,
         } => {
             let instance_id = request.instance_id.clone();
+            let primary_project_id = request.project_id;
             update_progress(
                 job_id,
                 job_state,
@@ -1501,11 +1522,29 @@ async fn run_request(
             .await?;
             let reporter =
                 InstallProgressReporter::new(job_id, job_state.clone());
-            crate::api::curseforge::install_file_with_reporter(
+            let result = crate::api::curseforge::install_file_with_reporter(
                 request, reporter,
             )
             .await?;
             crate::api::instance::emit_content_changed(&instance_id).await?;
+            let dependency_project_ids = result
+                .installed
+                .iter()
+                .filter(|installed| installed.dependency)
+                .map(|installed| format!("curseforge:{}", installed.project_id))
+                .collect::<Vec<_>>();
+            emit_instance(
+                &instance_id,
+                InstancePayloadType::ContentInstallFinished {
+                    project_ids: std::iter::once(format!(
+                        "curseforge:{primary_project_id}"
+                    ))
+                    .chain(dependency_project_ids.iter().cloned())
+                    .collect(),
+                    dependency_project_ids,
+                },
+            )
+            .await?;
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
         InstallRequest::DownloadJava { vendor, version } => {

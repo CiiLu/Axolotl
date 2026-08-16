@@ -50,59 +50,61 @@
 						</div>
 					</div>
 				</div>
-				<div class="flex gap-2 shrink-0 empty:hidden smart-clickable:allow-pointer-events">
-					<slot name="actions" />
-				</div>
-				<div class="mt-auto flex flex-col gap-3 flex-wrap overflow-hidden justify-between grow">
-					<div class="flex items-center gap-1 flex-wrap overflow-hidden">
-						<template v-if="isServerProject">
-							<ServerOnlinePlayers
-								v-if="serverOnlinePlayers !== undefined"
-								:online="serverOnlinePlayers"
-								:status-online="serverStatusOnline"
-								:hide-label="true"
+				<div class="mt-auto flex gap-3 justify-between items-end">
+					<div class="flex flex-col gap-3 flex-wrap overflow-hidden grow">
+						<div class="flex items-center gap-1 flex-wrap overflow-hidden">
+							<template v-if="isServerProject">
+								<ServerOnlinePlayers
+									v-if="serverOnlinePlayers !== undefined"
+									:online="serverOnlinePlayers"
+									:status-online="serverStatusOnline"
+									:hide-label="true"
+								/>
+								<ServerRecentPlays
+									v-if="serverRecentPlays !== undefined"
+									:recent-plays="serverRecentPlays"
+									:hide-label="true"
+								/>
+								<ServerPing v-if="serverPing && serverStatusOnline" :ping="serverPing" />
+								<ServerRegion
+									v-if="serverRegion"
+									:region="serverRegion"
+									class="smart-clickable:allow-pointer-events"
+								/>
+							</template>
+							<ProjectCardEnvironment
+								v-if="environment"
+								:client-side="environment.clientSide"
+								:server-side="environment.serverSide"
 							/>
-							<ServerRecentPlays
-								v-if="serverRecentPlays !== undefined"
-								:recent-plays="serverRecentPlays"
-								:hide-label="true"
+							<ProjectCardTags
+								v-if="tags"
+								:tags="tags"
+								:extra-tags="extraTags"
+								:exclude-loaders="excludeLoaders"
+								:deprioritized-tags="deprioritizedTags"
+								:max-tags="(maxTags || 6) + (!!environment ? 0 : 1)"
 							/>
-							<ServerPing v-if="serverPing && serverStatusOnline" :ping="serverPing" />
-							<ServerRegion
-								v-if="serverRegion"
-								:region="serverRegion"
-								class="smart-clickable:allow-pointer-events"
+							<ServerModpackContent
+								v-if="serverModpackContent"
+								:name="serverModpackContent.name"
+								:icon="serverModpackContent.icon"
+								:onclick="serverModpackContent.onclick"
+								:show-custom-modpack-tooltip="serverModpackContent.showCustomModpackTooltip"
+								class="text-primary"
 							/>
-						</template>
-						<ProjectCardEnvironment
-							v-if="environment"
-							:client-side="environment.clientSide"
-							:server-side="environment.serverSide"
-						/>
-						<ProjectCardTags
-							v-if="tags"
-							:tags="tags"
-							:exclude-loaders="excludeLoaders"
-							:deprioritized-tags="deprioritizedTags"
-							:max-tags="(maxTags || 6) + (!!environment ? 0 : 1)"
-						/>
-						<ServerModpackContent
-							v-if="serverModpackContent"
-							:name="serverModpackContent.name"
-							:icon="serverModpackContent.icon"
-							:onclick="serverModpackContent.onclick"
-							:show-custom-modpack-tooltip="serverModpackContent.showCustomModpackTooltip"
-							class="text-primary"
-						/>
-					</div>
-					<div
-						v-if="downloads !== undefined || followers !== undefined"
-						class="flex items-center gap-3 justify-between flex-wrap"
-					>
-						<div class="flex items-center gap-3 no-wrap flex-wrap">
-							<ProjectCardStats :downloads="downloads" :followers="followers" />
 						</div>
-						<ProjectCardDate v-if="date && autoDisplayDate" :type="autoDisplayDate" :date="date" />
+						<div v-if="downloads !== undefined" class="flex items-center gap-3 flex-wrap">
+							<ProjectCardStats :downloads="downloads" />
+							<ProjectCardDate
+								v-if="date && autoDisplayDate"
+								:type="autoDisplayDate"
+								:date="date"
+							/>
+						</div>
+					</div>
+					<div class="flex gap-2 shrink-0 empty:hidden smart-clickable:allow-pointer-events">
+						<slot name="actions" />
 					</div>
 				</div>
 			</div>
@@ -148,11 +150,8 @@
 				class="flex flex-col gap-3 items-end shrink-0 ml-auto empty:hidden grid-project-card-list__stats"
 				:class="{ 'mt-3': !!$slots.actions }"
 			>
-				<div
-					v-if="downloads !== undefined || followers !== undefined"
-					class="flex items-center gap-3"
-				>
-					<ProjectCardStats :downloads="downloads" :followers="followers" />
+				<div v-if="downloads !== undefined" class="flex items-center gap-3">
+					<ProjectCardStats :downloads="downloads" />
 				</div>
 				<ProjectCardDate v-if="date && autoDisplayDate" :type="autoDisplayDate" :date="date" />
 			</div>
@@ -251,7 +250,6 @@ const props = defineProps<{
 	deprioritizedTags?: string[]
 	excludeLoaders?: boolean
 	downloads?: number
-	followers?: number
 	dateUpdated?: string
 	datePublished?: string
 	displayedDate?: 'updated' | 'published'

@@ -12,15 +12,17 @@ use crate::state::instances::adapters::{
     sqlite::{content_rows, instance_rows},
 };
 use crate::state::instances::{
-    ContentItemCapabilities, ContentOwnershipKind, InstanceContentPack,
-    InstanceContentSnapshot, InstanceContentSnapshotItem,
-    InstanceContentWarning, InstanceLink, ManualDownloadOperationKind,
-    ManualDownloadState, PackMemberMaterializationState,
-    PackMemberOverrideKind, PendingManualDownload,
+    ContentDependencyInfo, ContentDependencyRef, ContentItemCapabilities,
+    ContentOwnershipKind, InstanceContentPack, InstanceContentSnapshot,
+    InstanceContentSnapshotItem, InstanceContentWarning, InstanceLink,
+    ManualDownloadOperationKind, ManualDownloadState,
+    PackMemberMaterializationState, PackMemberOverrideKind,
+    PendingManualDownload,
 };
 use crate::state::{
-    CacheBehaviour, ContentItem, ContentItemProject, ContentItemVersion,
-    ContentProvider, ContentProviderRef, ContentRequirement, ContentSourceKind,
+    CacheBehaviour, CachedEntry, ContentItem, ContentItemProject,
+    ContentItemVersion, ContentProvider, ContentProviderRef,
+    ContentRequirement, ContentSourceKind,
 };
 
 pub(crate) async fn get_content_snapshot(
@@ -203,6 +205,20 @@ pub(crate) async fn get_content_snapshot(
                 .map(|entry_id| (entry_id, member))
         })
         .collect::<HashMap<_, _>>();
+    let mut local_metadata_by_entry = HashMap::new();
+    for file in &files {
+        let Some(entry) = entries_by_file_id.get(&file.id) else {
+            continue;
+        };
+        let Some(json) = file.local_mod_data.as_ref() else {
+            continue;
+        };
+        if let Ok(metadata) =
+            serde_json::from_str::<crate::mod_metadata::LocalModMetadata>(json)
+        {
+            local_metadata_by_entry.insert(entry.id.clone(), metadata);
+        }
+    }
     let mut represented_members = HashSet::new();
     let mut items = Vec::new();
 
@@ -311,6 +327,18 @@ pub(crate) async fn get_content_snapshot(
             None,
         ));
     }
+
+    backfill_dependency_edges_from_metadata(
+        &entries,
+        &refs_by_entry,
+        &content_set,
+        &local_metadata_by_entry,
+        state,
+    )
+    .await?;
+
+    attach_dependency_info(&mut items, &entries, &content_set.id, state)
+        .await?;
 
     let cache_behaviour = if refresh_remote {
         CacheBehaviour::MustRevalidate
@@ -708,6 +736,7 @@ async fn reconcile_curseforge_override_entries_in_transaction(
                 } else {
                     ContentOwnershipKind::UserAdded
                 },
+                auto_dependency: false,
                 server_requirement: ContentRequirement::Required,
                 client_requirement: ContentRequirement::Required,
                 enabled,
@@ -881,6 +910,482 @@ fn normalized_content_path(path: &str) -> String {
         .to_ascii_lowercase()
 }
 
+async fn backfill_dependency_edges_from_metadata(
+    entries: &[crate::state::instances::ContentEntry],
+    refs_by_entry: &HashMap<String, Vec<ContentProviderRef>>,
+    content_set: &crate::state::instances::ContentSet,
+    local_metadata_by_entry: &HashMap<
+        String,
+        crate::mod_metadata::LocalModMetadata,
+    >,
+    state: &State,
+) -> crate::Result<()> {
+    // Only entries that have never had their edges persisted are backfilled.
+    // Checking the table as a whole would leave entries installed before the
+    // edges feature without edges as soon as any other entry had edges.
+    let existing = content_rows::get_content_dependency_edges(
+        &content_set.id,
+        &state.pool,
+    )
+    .await?;
+    let entries_with_edges = existing
+        .iter()
+        .map(|edge| edge.parent_entry_id.as_str())
+        .collect::<HashSet<_>>();
+
+    for entry in entries {
+        if entries_with_edges.contains(entry.id.as_str()) {
+            continue;
+        }
+        let Some(provider_refs) = refs_by_entry.get(&entry.id) else {
+            continue;
+        };
+        let Some(origin) =
+            provider_refs.iter().find_map(|reference| match reference {
+                ContentProviderRef::Modrinth {
+                    project_id,
+                    version_id: Some(version_id),
+                } => Some((project_id.clone(), version_id.clone())),
+                _ => None,
+            })
+        else {
+            continue;
+        };
+        // Use the default cache behaviour (serve stale, fetch when missing,
+        // tolerate offline) instead of CacheOnly: on a fresh instance the
+        // version metadata for pack members is not cached yet, and the
+        // enrichment pass that would cache it runs after this backfill.
+        // Fetching here lets the very first snapshot build the edges.
+        let Some(version) = CachedEntry::get_version(
+            &origin.1,
+            None,
+            &state.pool,
+            &state.api_semaphore,
+        )
+        .await?
+        else {
+            continue;
+        };
+        for dependency in version.dependencies {
+            if !matches!(
+                dependency.dependency_type,
+                crate::state::DependencyType::Required
+            ) {
+                continue;
+            }
+            let Some(dependency_project_id) = dependency.project_id.clone()
+            else {
+                continue;
+            };
+            let dependency_project_id = if content_set.loader
+                == crate::state::ModLoader::Quilt
+                && dependency_project_id == "P7dR8mSH"
+            {
+                "qvIfYCYJ".to_string()
+            } else {
+                dependency_project_id
+            };
+            let child_entry =
+                if let Some(version_id) = dependency.version_id.as_deref() {
+                    match content_rows::get_content_entry_by_provider_ref(
+                        &content_set.id,
+                        ContentProvider::Modrinth,
+                        &dependency_project_id,
+                        version_id,
+                        &state.pool,
+                    )
+                    .await?
+                    {
+                        Some(entry) => Some(entry),
+                        None => {
+                            // The installed version may differ from the
+                            // declared one; match by project as a fallback.
+                            content_rows::get_content_entry_by_provider_project(
+                                &content_set.id,
+                                ContentProvider::Modrinth,
+                                &dependency_project_id,
+                                &state.pool,
+                            )
+                            .await?
+                        }
+                    }
+                } else {
+                    content_rows::get_content_entry_by_provider_project(
+                        &content_set.id,
+                        ContentProvider::Modrinth,
+                        &dependency_project_id,
+                        &state.pool,
+                    )
+                    .await?
+                };
+            let Some(child_entry) = child_entry else {
+                continue;
+            };
+            let child_release_id = refs_by_entry
+                .get(&child_entry.id)
+                .and_then(|references| {
+                    references.iter().find_map(|reference| match reference {
+                        ContentProviderRef::Modrinth {
+                            version_id: Some(version_id),
+                            ..
+                        } => Some(version_id.to_string()),
+                        _ => None,
+                    })
+                })
+                .unwrap_or_else(|| {
+                    dependency.version_id.clone().unwrap_or_default()
+                });
+            if child_release_id.is_empty() {
+                continue;
+            }
+            let now = chrono::Utc::now();
+            content_rows::upsert_content_dependency_edge(
+                &crate::state::instances::ContentDependencyEdge {
+                    id: format!("content-dependency:{}", uuid::Uuid::new_v4()),
+                    content_set_id: content_set.id.clone(),
+                    parent_entry_id: entry.id.clone(),
+                    child_entry_id: child_entry.id,
+                    provider: ContentProvider::Modrinth,
+                    dependency_kind:
+                        crate::state::instances::ContentDependencyKind::Required,
+                    parent_project_id: origin.0.to_string(),
+                    parent_release_id: origin.1.to_string(),
+                    child_project_id: dependency_project_id,
+                    child_release_id,
+                    created_at: now,
+                    modified_at: now,
+                },
+                &state.pool,
+            )
+            .await?;
+        }
+    }
+
+    backfill_curseforge_dependency_edges(
+        entries,
+        refs_by_entry,
+        &entries_with_edges,
+        content_set,
+        state,
+    )
+    .await?;
+
+    backfill_local_dependency_edges(
+        entries,
+        refs_by_entry,
+        &entries_with_edges,
+        content_set,
+        local_metadata_by_entry,
+        state,
+    )
+    .await
+}
+
+/// Link CurseForge-identified entries (installed files and pack members alike)
+/// through the dependency relations of their installed file. Pack members are
+/// not special-cased: every CurseForge entry without persisted edges is
+/// resolved the same way, in one batched API request.
+async fn backfill_curseforge_dependency_edges(
+    entries: &[crate::state::instances::ContentEntry],
+    refs_by_entry: &HashMap<String, Vec<ContentProviderRef>>,
+    entries_with_edges: &HashSet<&str>,
+    content_set: &crate::state::instances::ContentSet,
+    state: &State,
+) -> crate::Result<()> {
+    let backfilled_entry_ids =
+        content_rows::get_dependency_backfilled_entry_ids(
+            &content_set.id,
+            &state.pool,
+        )
+        .await?;
+    let mut pending = Vec::new();
+    for entry in entries {
+        if entries_with_edges.contains(entry.id.as_str())
+            || backfilled_entry_ids.contains(&entry.id)
+        {
+            continue;
+        }
+        let Some((project_id, file_id)) =
+            refs_by_entry.get(&entry.id).and_then(|references| {
+                references.iter().find_map(|reference| match reference {
+                    ContentProviderRef::CurseForge {
+                        project_id,
+                        file_id: Some(file_id),
+                    } => Some((project_id.get(), file_id.get())),
+                    _ => None,
+                })
+            })
+        else {
+            continue;
+        };
+        pending.push((entry, project_id, file_id));
+    }
+    if pending.is_empty() {
+        return Ok(());
+    }
+
+    // One batched request covers every pending entry. A failure here must not
+    // break the content page: skip this snapshot and retry on the next one.
+    let file_ids = pending
+        .iter()
+        .map(|(_, _, file_id)| *file_id)
+        .collect::<Vec<_>>();
+    let files = match crate::api::curseforge::get_files_many(file_ids).await {
+        Ok(files) => files,
+        Err(error) => {
+            tracing::warn!("CurseForge dependency backfill skipped: {error}");
+            return Ok(());
+        }
+    };
+    let dependencies_by_file_id = files
+        .into_iter()
+        .map(|file| (file.id, file.dependencies))
+        .collect::<HashMap<_, _>>();
+
+    let is_quilt = content_set.loader == crate::state::ModLoader::Quilt;
+    for (entry, project_id, file_id) in pending {
+        let Some(dependencies) = dependencies_by_file_id.get(&file_id) else {
+            continue;
+        };
+        let mut resolved_all = true;
+        for dependency in dependencies {
+            if !matches!(
+                dependency.relation_type,
+                crate::api::curseforge::DEPENDENCY_RELATION_REQUIRED
+                    | crate::api::curseforge::DEPENDENCY_RELATION_INCLUDE
+            ) {
+                continue;
+            }
+            let dependency_project_id = if is_quilt
+                && dependency.mod_id
+                    == crate::api::curseforge::FABRIC_API_CURSEFORGE_PROJECT_ID
+            {
+                crate::api::curseforge::QUILTED_FABRIC_API_CURSEFORGE_PROJECT_ID
+            } else {
+                dependency.mod_id
+            };
+            let Some(child_entry) =
+                content_rows::get_content_entry_by_provider_project(
+                    &content_set.id,
+                    ContentProvider::CurseForge,
+                    &dependency_project_id.to_string(),
+                    &state.pool,
+                )
+                .await?
+            else {
+                // Leave the entry unmarked so a later install of the missing
+                // dependency is picked up by a future backfill pass.
+                resolved_all = false;
+                continue;
+            };
+            let child_release_id = refs_by_entry
+                .get(&child_entry.id)
+                .and_then(|references| {
+                    references.iter().find_map(|reference| match reference {
+                        ContentProviderRef::CurseForge {
+                            file_id: Some(file_id),
+                            ..
+                        } => Some(file_id.get().to_string()),
+                        _ => None,
+                    })
+                })
+                .unwrap_or_default();
+            let now = chrono::Utc::now();
+            content_rows::upsert_content_dependency_edge(
+                &crate::state::instances::ContentDependencyEdge {
+                    id: format!("content-dependency:{}", uuid::Uuid::new_v4()),
+                    content_set_id: content_set.id.clone(),
+                    parent_entry_id: entry.id.clone(),
+                    child_entry_id: child_entry.id,
+                    provider: ContentProvider::CurseForge,
+                    dependency_kind: if dependency.relation_type
+                        == crate::api::curseforge::DEPENDENCY_RELATION_INCLUDE
+                    {
+                        crate::state::instances::ContentDependencyKind::Include
+                    } else {
+                        crate::state::instances::ContentDependencyKind::Required
+                    },
+                    parent_project_id: project_id.to_string(),
+                    parent_release_id: file_id.to_string(),
+                    child_project_id: dependency_project_id.to_string(),
+                    child_release_id,
+                    created_at: now,
+                    modified_at: now,
+                },
+                &state.pool,
+            )
+            .await?;
+        }
+        if resolved_all {
+            content_rows::set_content_entry_dependency_backfilled(
+                &entry.id,
+                &state.pool,
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+/// Link locally identified files (no online provider refs) through the
+/// dependency declarations embedded in their own metadata. Mod ids from
+/// `fabric.mod.json`, `quilt.mod.json`, and Forge `mods.toml` are matched
+/// against other locally identified files only, mirroring Prism Launcher's
+/// local mod id matching.
+async fn backfill_local_dependency_edges(
+    entries: &[crate::state::instances::ContentEntry],
+    refs_by_entry: &HashMap<String, Vec<ContentProviderRef>>,
+    entries_with_edges: &HashSet<&str>,
+    content_set: &crate::state::instances::ContentSet,
+    local_metadata_by_entry: &HashMap<
+        String,
+        crate::mod_metadata::LocalModMetadata,
+    >,
+    state: &State,
+) -> crate::Result<()> {
+    let local_entry_ids = entries
+        .iter()
+        .filter(|entry| !refs_by_entry.contains_key(&entry.id))
+        .map(|entry| entry.id.as_str())
+        .collect::<HashSet<_>>();
+    if local_entry_ids.is_empty() {
+        return Ok(());
+    }
+
+    let mut entry_id_by_mod_id = HashMap::new();
+    for entry in entries {
+        if !local_entry_ids.contains(entry.id.as_str()) {
+            continue;
+        }
+        let Some(metadata) = local_metadata_by_entry.get(&entry.id) else {
+            continue;
+        };
+        entry_id_by_mod_id
+            .entry(metadata.mod_id.as_str())
+            .or_insert(entry.id.as_str());
+    }
+
+    for entry in entries {
+        if !local_entry_ids.contains(entry.id.as_str())
+            || entries_with_edges.contains(entry.id.as_str())
+        {
+            continue;
+        }
+        let Some(metadata) = local_metadata_by_entry.get(&entry.id) else {
+            continue;
+        };
+        let Some(dependencies) = metadata.dependencies.as_ref() else {
+            continue;
+        };
+        for dependency in dependencies {
+            let Some(child_entry_id) =
+                entry_id_by_mod_id.get(dependency.mod_id.as_str())
+            else {
+                continue;
+            };
+            if *child_entry_id == entry.id {
+                continue;
+            }
+            let Some(child_metadata) =
+                local_metadata_by_entry.get(*child_entry_id)
+            else {
+                continue;
+            };
+            let now = chrono::Utc::now();
+            content_rows::upsert_content_dependency_edge(
+                &crate::state::instances::ContentDependencyEdge {
+                    id: format!("content-dependency:{}", uuid::Uuid::new_v4()),
+                    content_set_id: content_set.id.clone(),
+                    parent_entry_id: entry.id.clone(),
+                    child_entry_id: (*child_entry_id).to_string(),
+                    provider: ContentProvider::Local,
+                    dependency_kind:
+                        crate::state::instances::ContentDependencyKind::Required,
+                    parent_project_id: format!("local:{}", metadata.mod_id),
+                    parent_release_id: metadata
+                        .version
+                        .clone()
+                        .unwrap_or_default(),
+                    child_project_id: format!(
+                        "local:{}",
+                        child_metadata.mod_id
+                    ),
+                    child_release_id: child_metadata
+                        .version
+                        .clone()
+                        .unwrap_or_default(),
+                    created_at: now,
+                    modified_at: now,
+                },
+                &state.pool,
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+async fn attach_dependency_info(
+    items: &mut [InstanceContentSnapshotItem],
+    entries: &[crate::state::instances::ContentEntry],
+    content_set_id: &str,
+    state: &State,
+) -> crate::Result<()> {
+    let edges =
+        content_rows::get_content_dependency_edges(content_set_id, &state.pool)
+            .await?;
+    let mut required_by: HashMap<String, Vec<ContentDependencyRef>> =
+        HashMap::new();
+    let mut requires: HashMap<String, Vec<ContentDependencyRef>> =
+        HashMap::new();
+    for edge in &edges {
+        required_by
+            .entry(edge.child_entry_id.clone())
+            .or_default()
+            .push(ContentDependencyRef {
+                provider: edge.provider,
+                project_id: edge.parent_project_id.clone(),
+                release_id: edge.parent_release_id.clone(),
+            });
+        requires
+            .entry(edge.parent_entry_id.clone())
+            .or_default()
+            .push(ContentDependencyRef {
+                provider: edge.provider,
+                project_id: edge.child_project_id.clone(),
+                release_id: edge.child_release_id.clone(),
+            });
+    }
+
+    let entry_by_id = entries
+        .iter()
+        .map(|entry| (entry.id.as_str(), entry))
+        .collect::<HashMap<_, _>>();
+    for item in items {
+        let Some(entry_id) = item.entry_id.as_deref() else {
+            continue;
+        };
+        let Some(entry) = entry_by_id.get(entry_id) else {
+            continue;
+        };
+        let required_by = required_by.remove(entry_id).unwrap_or_default();
+        let requires = requires.remove(entry_id).unwrap_or_default();
+        if !entry.auto_dependency
+            && required_by.is_empty()
+            && requires.is_empty()
+        {
+            continue;
+        }
+        item.dependency = Some(ContentDependencyInfo {
+            auto_dependency: entry.auto_dependency,
+            orphaned: entry.auto_dependency && required_by.is_empty(),
+            required_by,
+            requires,
+        });
+    }
+    Ok(())
+}
+
 fn snapshot_item(
     file_id: Option<String>,
     entry_id: Option<String>,
@@ -953,6 +1458,7 @@ fn snapshot_item(
                         == PackMemberMaterializationState::Missing),
         },
         content,
+        dependency: None,
     }
 }
 

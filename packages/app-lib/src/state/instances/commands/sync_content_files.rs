@@ -169,8 +169,21 @@ pub(crate) async fn sync_instance_content_files(
         let Some(project_type) = project_type_for_file(file) else {
             continue;
         };
-        let extract_metadata =
-            project_type == ProjectType::Mod && file.local_mod_data.is_none();
+        // Re-extract metadata written before dependency extraction existed:
+        // legacy JSON parses with `dependencies: None` and needs one pass
+        // through the updated extractor.
+        let extract_metadata = project_type == ProjectType::Mod
+            && file
+                .local_mod_data
+                .as_ref()
+                .and_then(|json| {
+                    serde_json::from_str::<
+                        crate::mod_metadata::LocalModMetadata,
+                    >(json)
+                    .ok()
+                })
+                .and_then(|metadata| metadata.dependencies)
+                .is_none();
         let extract_icon = file.icon_path.is_none()
             && matches!(
                 project_type,
@@ -424,7 +437,9 @@ pub(crate) fn modrinth_update_enabled(
 ) -> bool {
     match origin_provider {
         Some(ContentProvider::Modrinth) => true,
-        Some(ContentProvider::CurseForge) => false,
+        Some(ContentProvider::CurseForge) | Some(ContentProvider::Local) => {
+            false
+        }
         None => provider_refs.iter().all(|reference| {
             matches!(reference, ContentProviderRef::Modrinth { .. })
         }),

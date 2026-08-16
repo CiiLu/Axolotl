@@ -67,6 +67,7 @@ import UpdateAnnouncementModal from '@/components/ui/announcement/UpdateAnnounce
 import AppActionBar from '@/components/ui/AppActionBar.vue'
 import AxolotlLogo from '@/components/ui/AxolotlLogo.vue'
 import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
+import ContentInstallPreviewModal from '@/components/ui/ContentInstallPreviewModal.vue'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
 import AddServerToInstanceModal from '@/components/ui/install_flow/AddServerToInstanceModal.vue'
 import UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPackWarningModal.vue'
@@ -1231,6 +1232,7 @@ const {
 	handleNavigate: handleContentInstallNavigate,
 	handleCancel: handleContentInstallCancel,
 	setContentInstallModal,
+	setContentInstallPreviewModal,
 	setModpackAlreadyInstalledModal: setContentInstallModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway: handleContentInstallModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance: handleContentInstallModpackDuplicateGoToInstance,
@@ -1315,6 +1317,7 @@ const {
 } = serverInstall
 
 const modInstallModal = ref()
+const contentInstallPreviewModal = ref<InstanceType<typeof ContentInstallPreviewModal> | null>(null)
 const modpackAlreadyInstalledModal = ref()
 const contentInstallModpackAlreadyInstalledModal = ref()
 const contentInstallCurseForgeManualDownloadsModal = ref()
@@ -2429,6 +2432,7 @@ onMounted(() => {
 
 	setContentIncompatibilityWarningModal(incompatibilityWarningModal.value)
 	setContentInstallModal(modInstallModal.value)
+	setContentInstallPreviewModal(contentInstallPreviewModal.value)
 	setContentInstallModpackAlreadyInstalledModal(contentInstallModpackAlreadyInstalledModal.value)
 	setContentInstallCurseForgeManualDownloadsModal(
 		contentInstallCurseForgeManualDownloadsModal.value,
@@ -3244,6 +3248,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		@navigate="handleContentInstallNavigate"
 		@cancel="handleContentInstallCancel"
 	/>
+	<ContentInstallPreviewModal ref="contentInstallPreviewModal" />
 	<ModpackAlreadyInstalledModal
 		ref="modpackAlreadyInstalledModal"
 		@create-anyway="handleModpackDuplicateCreateAnyway"

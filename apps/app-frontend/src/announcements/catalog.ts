@@ -35,7 +35,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
 		id: 'launcher-1.8.1',
 		version: '1.8.1',
-		publishedAt: '2026-08-15',
+		publishedAt: '2026-08-16',
 		title: {
 			'en-US': 'Axolotl Launcher 1.8.1',
 			'zh-CN': 'Axolotl Launcher 1.8.1',
@@ -49,6 +49,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Redesigned the "About" page.',
 					'zh-CN': '重新设计了“关于”页面。',
+				},
+				{
+					'en-US': 'Optimized dependency-related handling logic.',
+					'zh-CN': '优化依赖相关处理逻辑。',
 				},
 			],
 		},

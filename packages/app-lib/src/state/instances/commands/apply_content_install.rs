@@ -27,8 +27,9 @@ use bytes::Bytes;
 use modrinth_content_management::{
     ContentMetadataProvider, ContentType, Error as ResolveError,
     ResolutionPreferences, ResolveContentPlan, ResolveContentRequest,
-    ResolvedContent,
+    ResolvedContent, SkippedReason,
 };
+use std::future::Future;
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use tracing::warn;
@@ -61,6 +62,7 @@ pub(crate) struct InstanceInstallProjectRequest {
     pub version_id: Option<String>,
     pub content_type: ContentType,
     pub selected: ResolutionPreferences,
+    pub excluded_project_ids: Vec<String>,
 }
 
 struct CachedEntryContentProvider<'a> {
@@ -213,6 +215,33 @@ pub(crate) async fn resolve_install_plan(
             content_type,
         ),
         existing_project_ids,
+        excluded_project_ids: request.excluded_project_ids,
+    };
+
+    modrinth_content_management::resolve_content(provider, request)
+        .await
+        .map_err(resolver_error)
+}
+
+pub(crate) async fn resolve_install_plan_for_target(
+    request: InstanceInstallProjectRequest,
+    game_version: String,
+    loader: ModLoader,
+    state: &State,
+) -> crate::Result<ResolveContentPlan> {
+    let provider = CachedEntryContentProvider {
+        state,
+        cache_behaviour: Some(CacheBehaviour::MustRevalidate),
+    };
+    let content_type = request.content_type;
+    let request = ResolveContentRequest {
+        project_id: request.project_id,
+        version_id: request.version_id,
+        content_type,
+        selected: request.selected,
+        target: target_preferences(game_version, loader, content_type),
+        existing_project_ids: Vec::new(),
+        excluded_project_ids: request.excluded_project_ids,
     };
 
     modrinth_content_management::resolve_content(provider, request)
@@ -224,25 +253,110 @@ pub(crate) async fn install_resolved_content_plan(
     instance_id: &str,
     plan: &ResolveContentPlan,
     state: &State,
-) -> crate::Result<()> {
-    add_resolved_content(
-        instance_id,
-        &plan.primary,
-        DownloadReason::Standalone,
-        state,
-    )
-    .await?;
-    for dependency in &plan.dependencies {
-        add_resolved_content(
+) -> crate::Result<Vec<String>> {
+    install_resolved_content_plan_with_reporter(instance_id, plan, None, state)
+        .await
+}
+
+pub(crate) async fn install_resolved_content_plan_with_reporter(
+    instance_id: &str,
+    plan: &ResolveContentPlan,
+    reporter: Option<crate::install::InstallProgressReporter>,
+    state: &State,
+) -> crate::Result<Vec<String>> {
+    let mut paths = Vec::with_capacity(plan.dependencies.len() + 1);
+    let total_bytes = resolved_plan_total_bytes(plan, state).await?;
+    let file_count = (plan.dependencies.len() + 1) as u64;
+    let mut base_bytes = 0_u64;
+
+    let primary_progress =
+        reporter
+            .as_ref()
+            .map(|reporter| ResolvedContentDownloadProgress {
+                reporter: reporter.clone(),
+                file_index: 0,
+                file_count,
+                base_bytes: 0,
+                total_bytes,
+            });
+    paths.push(
+        add_resolved_content_with_progress(
             instance_id,
-            dependency,
-            DownloadReason::Dependency,
+            &plan.primary,
+            DownloadReason::Standalone,
+            false,
+            primary_progress,
             state,
         )
-        .await?;
+        .await?,
+    );
+    base_bytes += resolved_content_file_size(&plan.primary, state).await?;
+
+    for (index, dependency) in plan.dependencies.iter().enumerate() {
+        let file_index = (index + 1) as u64;
+        let dependency_progress =
+            reporter
+                .as_ref()
+                .map(|reporter| ResolvedContentDownloadProgress {
+                    reporter: reporter.clone(),
+                    file_index,
+                    file_count,
+                    base_bytes,
+                    total_bytes,
+                });
+        paths.push(
+            add_resolved_content_with_progress(
+                instance_id,
+                dependency,
+                DownloadReason::Dependency,
+                true,
+                dependency_progress,
+                state,
+            )
+            .await?,
+        );
+        base_bytes += resolved_content_file_size(dependency, state).await?;
     }
 
-    Ok(())
+    persist_resolved_plan_dependency_edges(instance_id, &paths, plan, state)
+        .await?;
+    Ok(paths)
+}
+
+async fn resolved_plan_total_bytes(
+    plan: &ResolveContentPlan,
+    state: &State,
+) -> crate::Result<u64> {
+    let mut total = resolved_content_file_size(&plan.primary, state).await?;
+    for dependency in &plan.dependencies {
+        total += resolved_content_file_size(dependency, state).await?;
+    }
+    Ok(total.max(1))
+}
+
+async fn resolved_content_file_size(
+    content: &ResolvedContent,
+    state: &State,
+) -> crate::Result<u64> {
+    let version = CachedEntry::get_version(
+        &ModrinthVersionId::new(content.version_id.clone())?,
+        None,
+        &state.pool,
+        &state.api_semaphore,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError(format!(
+            "Unable to resolve version {} for progress",
+            content.version_id
+        ))
+    })?;
+    let file = version
+        .files
+        .iter()
+        .find(|file| file.primary)
+        .or_else(|| version.files.first());
+    Ok(file.map_or(1, |file| (file.size as u64).max(1)))
 }
 
 pub(crate) async fn switch_project_version_with_dependencies(
@@ -273,6 +387,7 @@ pub(crate) async fn switch_project_version_with_dependencies(
             version_id: Some(version_id.to_string()),
             content_type,
             selected: ResolutionPreferences::default(),
+            excluded_project_ids: Vec::new(),
         },
         state,
     )
@@ -298,15 +413,27 @@ pub(crate) async fn switch_project_version_with_dependencies(
                 .await?;
     }
 
+    let mut installed_paths = Vec::with_capacity(plan.dependencies.len() + 1);
+    installed_paths.push(new_path.clone());
     for dependency in &plan.dependencies {
-        add_resolved_content(
-            instance_id,
-            dependency,
-            DownloadReason::Dependency,
-            state,
-        )
-        .await?;
+        installed_paths.push(
+            add_resolved_content(
+                instance_id,
+                dependency,
+                DownloadReason::Dependency,
+                true,
+                state,
+            )
+            .await?,
+        );
     }
+    persist_resolved_plan_dependency_edges(
+        instance_id,
+        &installed_paths,
+        &plan,
+        state,
+    )
+    .await?;
 
     if new_path != project_path
         && archive_project_file(instance_id, project_path, &new_path, state)
@@ -319,22 +446,209 @@ pub(crate) async fn switch_project_version_with_dependencies(
     Ok(new_path)
 }
 
-async fn add_resolved_content(
+pub(crate) async fn add_resolved_content(
     instance_id: &str,
     content: &ResolvedContent,
     reason: DownloadReason,
+    auto_dependency: bool,
     state: &State,
 ) -> crate::Result<String> {
-    add_project_from_version(
+    add_resolved_content_with_progress(
+        instance_id,
+        content,
+        reason,
+        auto_dependency,
+        None,
+        state,
+    )
+    .await
+}
+
+async fn add_resolved_content_with_progress(
+    instance_id: &str,
+    content: &ResolvedContent,
+    reason: DownloadReason,
+    auto_dependency: bool,
+    progress: Option<ResolvedContentDownloadProgress>,
+    state: &State,
+) -> crate::Result<String> {
+    let path = add_project_from_version_with_progress(
         instance_id,
         &content.version_id,
         reason,
         content.dependent_on_version_id.clone(),
         ContentSourceKind::Local,
         ContentOwnershipKind::UserAdded,
+        progress,
         state,
     )
-    .await
+    .await?;
+    if auto_dependency {
+        let scope = resolve_content_scope(instance_id, None, state).await?;
+        if let Some(entry) = content_rows::get_content_entry_by_relative_path(
+            &scope.content_set_id,
+            &path,
+            &state.pool,
+        )
+        .await?
+        {
+            content_rows::set_content_entry_auto_dependency(
+                &entry.id,
+                true,
+                &state.pool,
+            )
+            .await?;
+        }
+    }
+    Ok(path)
+}
+
+pub(crate) async fn persist_resolved_plan_dependency_edges(
+    instance_id: &str,
+    paths: &[String],
+    plan: &ResolveContentPlan,
+    state: &State,
+) -> crate::Result<()> {
+    if plan.dependencies.is_empty() {
+        return Ok(());
+    }
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+    let scope = resolve_content_scope(instance_id, None, state).await?;
+    let planned = std::iter::once(&plan.primary)
+        .chain(plan.dependencies.iter())
+        .collect::<Vec<_>>();
+
+    let mut tx = state.pool.begin().await?;
+    for (index, dependency) in plan.dependencies.iter().enumerate() {
+        let Some(parent) = dependency
+            .dependent_on_version_id
+            .as_deref()
+            .and_then(|parent_version_id| {
+                planned
+                    .iter()
+                    .find(|planned| planned.version_id == parent_version_id)
+            })
+        else {
+            continue;
+        };
+        let parent_index = planned
+            .iter()
+            .position(|planned| planned.version_id == parent.version_id)
+            .unwrap_or(0);
+        let Some(parent_path) = paths.get(parent_index) else {
+            continue;
+        };
+        let Some(parent_entry) =
+            content_rows::get_content_entry_by_relative_path(
+                &scope.content_set_id,
+                parent_path,
+                &state.pool,
+            )
+            .await?
+        else {
+            continue;
+        };
+        let Some(child_entry) =
+            content_rows::get_content_entry_by_relative_path(
+                &scope.content_set_id,
+                &paths[index + 1],
+                &state.pool,
+            )
+            .await?
+        else {
+            continue;
+        };
+        let now = chrono::Utc::now();
+        content_rows::upsert_content_dependency_edge_in_transaction(
+            &crate::state::instances::ContentDependencyEdge {
+                id: format!("content-dependency:{}", uuid::Uuid::new_v4()),
+                content_set_id: scope.content_set_id.clone(),
+                parent_entry_id: parent_entry.id,
+                child_entry_id: child_entry.id,
+                provider: crate::state::ContentProvider::Modrinth,
+                dependency_kind:
+                    crate::state::instances::ContentDependencyKind::Required,
+                parent_project_id: parent.project_id.clone(),
+                parent_release_id: parent.version_id.clone(),
+                child_project_id: dependency.project_id.clone(),
+                child_release_id: dependency.version_id.clone(),
+                created_at: now,
+                modified_at: now,
+            },
+            &mut tx,
+        )
+        .await?;
+    }
+    for skipped in &plan.skipped {
+        if skipped.reason != SkippedReason::AlreadyInstalled {
+            continue;
+        }
+        let Some(parent_version_id) =
+            skipped.dependent_on_version_id.as_deref()
+        else {
+            continue;
+        };
+        let Some(parent) = planned
+            .iter()
+            .find(|planned| planned.version_id == parent_version_id)
+        else {
+            continue;
+        };
+        let parent_index = planned
+            .iter()
+            .position(|planned| planned.version_id == parent_version_id)
+            .unwrap_or(0);
+        let Some(parent_path) = paths.get(parent_index) else {
+            continue;
+        };
+        let Some(parent_entry) =
+            content_rows::get_content_entry_by_relative_path(
+                &scope.content_set_id,
+                parent_path,
+                &state.pool,
+            )
+            .await?
+        else {
+            continue;
+        };
+        let Some(child_release_id) = skipped.version_id.as_deref() else {
+            continue;
+        };
+        let Some(child_entry) =
+            content_rows::get_content_entry_by_provider_ref(
+                &scope.content_set_id,
+                crate::state::ContentProvider::Modrinth,
+                &skipped.project_id,
+                child_release_id,
+                &state.pool,
+            )
+            .await?
+        else {
+            continue;
+        };
+        let now = chrono::Utc::now();
+        content_rows::upsert_content_dependency_edge_in_transaction(
+            &crate::state::instances::ContentDependencyEdge {
+                id: format!("content-dependency:{}", uuid::Uuid::new_v4()),
+                content_set_id: scope.content_set_id.clone(),
+                parent_entry_id: parent_entry.id,
+                child_entry_id: child_entry.id,
+                provider: crate::state::ContentProvider::Modrinth,
+                dependency_kind:
+                    crate::state::instances::ContentDependencyKind::Required,
+                parent_project_id: parent.project_id.clone(),
+                parent_release_id: parent.version_id.clone(),
+                child_project_id: skipped.project_id.clone(),
+                child_release_id: child_release_id.to_string(),
+                created_at: now,
+                modified_at: now,
+            },
+            &mut tx,
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
 }
 
 pub(crate) async fn resolve_content_scope(
@@ -372,11 +686,36 @@ pub(crate) async fn add_project_from_version(
     ownership_kind: ContentOwnershipKind,
     state: &State,
 ) -> crate::Result<String> {
-    let downloaded = download_project_version(
+    add_project_from_version_with_progress(
         instance_id,
         version_id,
         reason,
         dependent_on_version_id,
+        source_kind,
+        ownership_kind,
+        None,
+        state,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn add_project_from_version_with_progress(
+    instance_id: &str,
+    version_id: &str,
+    reason: DownloadReason,
+    dependent_on_version_id: Option<String>,
+    source_kind: ContentSourceKind,
+    ownership_kind: ContentOwnershipKind,
+    progress: Option<ResolvedContentDownloadProgress>,
+    state: &State,
+) -> crate::Result<String> {
+    let downloaded = download_project_version_with_progress(
+        instance_id,
+        version_id,
+        reason,
+        dependent_on_version_id,
+        progress,
         state,
     )
     .await?;
@@ -398,6 +737,35 @@ pub(crate) async fn download_project_version(
     dependent_on_version_id: Option<String>,
     state: &State,
 ) -> crate::Result<DownloadedProjectVersion> {
+    download_project_version_with_progress(
+        instance_id,
+        version_id,
+        reason,
+        dependent_on_version_id,
+        None,
+        state,
+    )
+    .await
+}
+
+/// Progress context for one file inside a multi-file content install.
+#[derive(Clone)]
+pub(crate) struct ResolvedContentDownloadProgress {
+    pub reporter: crate::install::InstallProgressReporter,
+    pub file_index: u64,
+    pub file_count: u64,
+    pub base_bytes: u64,
+    pub total_bytes: u64,
+}
+
+pub(crate) async fn download_project_version_with_progress(
+    instance_id: &str,
+    version_id: &str,
+    reason: DownloadReason,
+    dependent_on_version_id: Option<String>,
+    progress: Option<ResolvedContentDownloadProgress>,
+    state: &State,
+) -> crate::Result<DownloadedProjectVersion> {
     let prepared = prepare_version_download(
         instance_id,
         version_id,
@@ -406,15 +774,69 @@ pub(crate) async fn download_project_version(
         state,
     )
     .await?;
-
-    let download = download_to_path(
+    let mut request =
         DownloadRequest::new(&prepared.url, ResourceClass::Modrinth)
             .with_integrity(prepared.integrity)
-            .with_download_meta(prepared.download_meta),
+            .with_download_meta(prepared.download_meta);
+    if let Some(progress) = &progress {
+        request = request.with_install_tracking(
+            progress.reporter.clone(),
+            &prepared.path.display().to_string(),
+            &prepared.file_name,
+        );
+    }
+
+    let mut last_reported_bytes = 0_u64;
+    let mut progress_callback = progress.map(|progress| {
+        let reporter = progress.reporter.clone();
+        let file_index = progress.file_index;
+        let file_count = progress.file_count;
+        let base_bytes = progress.base_bytes;
+        let total_bytes = progress.total_bytes.max(1);
+        move |current: u64,
+              total: u64|
+              -> std::pin::Pin<
+            Box<dyn Future<Output = crate::Result<()>> + Send + '_>,
+        > {
+            let min_delta = (total / 200).max(256 * 1024);
+            if current < total
+                && current.saturating_sub(last_reported_bytes) < min_delta
+            {
+                return Box::pin(async { Ok(()) });
+            }
+            last_reported_bytes = current;
+            let current_total = (base_bytes + current).min(total_bytes);
+            let secondary = crate::install::InstallProgressSecondary {
+                current: current_total,
+                total: total_bytes,
+            };
+            let reporter = reporter.clone();
+            Box::pin(async move {
+                reporter
+                    .update(
+                        crate::install::InstallPhaseId::DownloadingContent,
+                        Some(crate::install::InstallProgress {
+                            current: file_index,
+                            total: file_count,
+                            secondary: Some(secondary),
+                        }),
+                        crate::install::InstallPhaseDetails::Empty,
+                    )
+                    .await?;
+                Ok(())
+            })
+        }
+    });
+    let progress = progress_callback
+        .as_mut()
+        .map(|progress| progress as &mut fetch::FetchProgressFn<'_>);
+
+    let download = download_to_path(
+        request,
         &prepared.path,
         &state.download_semaphore,
         &state.pool,
-        None,
+        progress,
     )
     .await?;
 
@@ -1584,6 +2006,7 @@ async fn record_project_file_atomic_with_pending_completion(
             project_type,
             source_kind,
             ownership_kind,
+            auto_dependency: false,
             server_requirement: ContentRequirement::Required,
             client_requirement: ContentRequirement::Required,
             enabled: file.enabled,
@@ -1739,6 +2162,7 @@ pub(crate) async fn toggle_disable_project(
                 project_type,
                 source_kind: ContentSourceKind::Local,
                 ownership_kind: ContentOwnershipKind::UserAdded,
+                auto_dependency: false,
                 server_requirement: ContentRequirement::Required,
                 client_requirement: ContentRequirement::Required,
                 enabled,
@@ -2368,6 +2792,7 @@ async fn upsert_entry_for_file(
             project_type,
             source_kind,
             ownership_kind,
+            auto_dependency: false,
             server_requirement: ContentRequirement::Required,
             client_requirement: ContentRequirement::Required,
             enabled: file.enabled,

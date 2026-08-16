@@ -5,7 +5,6 @@ import {
 	ChevronRightIcon,
 	ClockIcon,
 	DownloadIcon,
-	HeartIcon,
 	MoreVerticalIcon,
 	SkullIcon,
 	SpinnerIcon,
@@ -56,6 +55,14 @@ const messages = defineMessages({
 		id: 'content.card.rollback-tooltip',
 		defaultMessage: 'Roll back to {fileName}',
 	},
+	dependencyBadge: {
+		id: 'content.card.dependency-badge',
+		defaultMessage: 'Dependency',
+	},
+	orphanedDependencyBadge: {
+		id: 'content.card.orphaned-dependency-badge',
+		defaultMessage: 'Orphaned dependency',
+	},
 	notPlayedYet: {
 		id: 'content.card.group.not-played-yet',
 		defaultMessage: 'Not played yet',
@@ -86,6 +93,10 @@ interface Props {
 	disabledTooltip?: string | null
 	toggleDisabled?: boolean
 	toggleDisabledTooltip?: string | null
+	dependencyBadge?: {
+		autoDependency: boolean
+		orphaned: boolean
+	} | null
 	showCheckbox?: boolean
 	hideDelete?: boolean
 	hideActions?: boolean
@@ -100,7 +111,6 @@ interface Props {
 	groupMeta?: ContentWorldGroupMeta
 	groupCheckboxIndeterminate?: boolean
 	downloads?: number | null
-	followers?: number | null
 	categories?: Array<{
 		name: string
 		icon?: string
@@ -127,6 +137,7 @@ const props = withDefaults(defineProps<Props>(), {
 	disabledTooltip: undefined,
 	toggleDisabled: false,
 	toggleDisabledTooltip: undefined,
+	dependencyBadge: null,
 	showCheckbox: false,
 	hideDelete: false,
 	hideActions: false,
@@ -141,7 +152,6 @@ const props = withDefaults(defineProps<Props>(), {
 	groupMeta: undefined,
 	groupCheckboxIndeterminate: false,
 	downloads: null,
-	followers: null,
 	categories: undefined,
 })
 
@@ -371,17 +381,10 @@ const deleteHovered = ref(false)
 					<span class="truncate">{{ version.file_name }}</span>
 				</span>
 			</template>
-			<div
-				v-if="downloads != null || followers != null"
-				class="flex flex-nowrap items-center gap-3 overflow-hidden"
-			>
+			<div v-if="downloads != null" class="flex flex-nowrap items-center gap-3 overflow-hidden">
 				<div v-if="downloads != null" class="flex items-center gap-2 text-secondary">
 					<DownloadIcon class="size-4" />
 					<span class="text-sm font-medium">{{ formatCompact(downloads) }}</span>
-				</div>
-				<div v-if="followers != null" class="flex items-center gap-2 text-secondary">
-					<HeartIcon class="size-4" />
-					<span class="text-sm font-medium">{{ formatCompact(followers) }}</span>
 				</div>
 			</div>
 		</div>
@@ -508,6 +511,21 @@ const deleteHovered = ref(false)
 						>
 							{{ project.title }}
 						</AutoLink>
+						<span
+							v-if="dependencyBadge"
+							v-tooltip="
+								dependencyBadge.orphaned
+									? formatMessage(messages.orphanedDependencyBadge)
+									: formatMessage(messages.dependencyBadge)
+							"
+							class="shrink-0 rounded-md bg-surface-3 px-1.5 py-0.5 text-xs font-medium leading-4 text-secondary"
+						>
+							{{
+								dependencyBadge.orphaned
+									? formatMessage(messages.orphanedDependencyBadge)
+									: formatMessage(messages.dependencyBadge)
+							}}
+						</span>
 						<slot name="title-badges" />
 					</div>
 

@@ -637,11 +637,9 @@ fn canonical_modrinth_cdn_url(url: &str) -> String {
         return url.to_string();
     };
     if parsed.scheme() == "https"
-        && parsed
-            .host_str()
-            .is_some_and(|host| {
-                host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
-            })
+        && parsed.host_str().is_some_and(|host| {
+            host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
+        })
     {
         let _ = parsed.set_host(Some(MODRINTH_CDN_OFFICIAL_HOST));
     }
@@ -903,12 +901,10 @@ fn repair_official_cdn_redirect(
     location: &str,
 ) -> Option<Url> {
     if location.is_ascii()
-        || !redirect
-            .host_str()
-            .is_some_and(|host| {
-                host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
-                    || host.eq_ignore_ascii_case(MODRINTH_CDN_OFFICIAL_HOST)
-            })
+        || !redirect.host_str().is_some_and(|host| {
+            host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
+                || host.eq_ignore_ascii_case(MODRINTH_CDN_OFFICIAL_HOST)
+        })
         || original.path().is_empty()
     {
         return None;
@@ -1310,9 +1306,9 @@ fn infer_resource_class(url: &str) -> ResourceClass {
         "launcher.mojang.com" | "piston-data.mojang.com" => {
             ResourceClass::MinecraftLibrary
         }
-        "api.modrinth.com"
-        | "cdn.modrinth.com"
-        | "cdn-alt.modrinth.com" => ResourceClass::Modrinth,
+        "api.modrinth.com" | "cdn.modrinth.com" | "cdn-alt.modrinth.com" => {
+            ResourceClass::Modrinth
+        }
         "api.curseforge.com"
         | "edge.forgecdn.net"
         | "media.forgecdn.net"
@@ -7736,17 +7732,11 @@ mod tests {
         let authority = "cdn-alt.modrinth.com:443";
 
         throttle_host(authority, None);
-        let first_backoff = HOST_THROTTLES
-            .lock()
-            .get(authority)
-            .unwrap()
-            .backoff;
+        let first_backoff =
+            HOST_THROTTLES.lock().get(authority).unwrap().backoff;
         throttle_host(authority, None);
-        let second_backoff = HOST_THROTTLES
-            .lock()
-            .get(authority)
-            .unwrap()
-            .backoff;
+        let second_backoff =
+            HOST_THROTTLES.lock().get(authority).unwrap().backoff;
         assert_eq!(first_backoff, 1);
         assert_eq!(second_backoff, 2);
 

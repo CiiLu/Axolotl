@@ -17,6 +17,7 @@ export const DEFAULT_FEATURE_FLAGS = {
 	show_instance_play_time: true,
 	page_transitions: true,
 	advanced_filters_collapsed: true,
+	auto_install_dependencies: true,
 }
 
 export const THEME_OPTIONS = ['dark', 'light', 'oled', 'system'] as const
