@@ -35,6 +35,8 @@ const XMCL_SLOW_MIN_FLOW_SECS: Duration = Duration::from_secs(10);
 const XMCL_SLOW_WINDOW: Duration = Duration::from_secs(3);
 const XMCL_SLOW_CONSECUTIVE: u32 = 2;
 const XMCL_STALL_FLOOR: u64 = 16 * 1024;
+const XMCL_MIN_GLOBAL_SAMPLES: u64 = 3;
+const XMCL_RECONNECT_OVERHEAD_SECS: f64 = 0.6;
 const XMCL_MAX_RESUMES: usize = 5;
 const XMCL_MAX_NO_PROGRESS: usize = 2;
 const XMCL_BMCL_CONCURRENCY: usize = 16;
@@ -356,11 +358,33 @@ fn content_range_start(response: &reqwest::Response) -> Option<u64> {
 		.and_then(|(start, _)| start.parse::<u64>().ok())
 }
 
+fn is_slow_speed(speed: u64, remaining: Option<u64>) -> bool {
+	if speed < XMCL_STALL_FLOOR {
+		return true;
+	}
+	let reputation = REPUTATION.lock().unwrap_or_else(|error| error.into_inner());
+	if reputation.global.count < XMCL_MIN_GLOBAL_SAMPLES || reputation.global.score <= 0.0 {
+		return false;
+	}
+	let e_fresh = reputation.global.score;
+	if let Some(remaining) = remaining {
+		if remaining == 0 {
+			return false;
+		}
+		let v_min = remaining as f64
+			/ (XMCL_RECONNECT_OVERHEAD_SECS + remaining as f64 / e_fresh);
+		(speed as f64) < v_min * 0.85
+	} else {
+		(speed as f64) < e_fresh * 0.4
+	}
+}
+
 async fn download_attempt(
 	url: &str,
 	header_value: Option<(&str, &str)>,
 	part_path: &Path,
 	resume_offset: u64,
+	request_offset: u64,
 	range_end: Option<u64>,
 	expected_total: Option<u64>,
 	require_range: bool,
@@ -389,37 +413,47 @@ async fn download_attempt(
 	};
 	let mut request = client.get(url);
 	if let Some(end) = range_end {
-		request = request.header(header::RANGE, format!("bytes={resume_offset}-{end}"));
-	} else if resume_offset > 0 {
-		request = request.header(header::RANGE, format!("bytes={resume_offset}-"));
+		request = request.header(header::RANGE, format!("bytes={request_offset}-{end}"));
+	} else if request_offset > 0 {
+		request = request.header(header::RANGE, format!("bytes={request_offset}-"));
 	}
 	if let Some((name, value)) = header_value {
 		request = request.header(name, value);
 	}
 
-	let response = tokio::time::timeout(XMCL_TTFB_TIMEOUT, request.send())
-		.await
-		.map_err(|_| AttemptError::Managed {
-			reason: ManagedReason::Ttfb,
-			offset: resume_offset,
-		})?
-		.map_err(|error| AttemptError::Http {
-			error: error.into(),
-			offset: resume_offset,
-		})?;
+	let response = if is_reassignable(&authority) {
+		tokio::time::timeout(XMCL_TTFB_TIMEOUT, request.send())
+			.await
+			.map_err(|_| AttemptError::Managed {
+				reason: ManagedReason::Ttfb,
+				offset: resume_offset,
+			})?
+			.map_err(|error| AttemptError::Http {
+				error: error.into(),
+				offset: resume_offset,
+			})?
+	} else {
+		request
+			.send()
+			.await
+			.map_err(|error| AttemptError::Http {
+				error: error.into(),
+				offset: resume_offset,
+			})?
+	};
 
 	if require_range {
 		if response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
 			return Err(AttemptError::RangeNotSupported);
 		}
 		if let Some(start) = content_range_start(&response) {
-			if start != resume_offset {
+			if start != request_offset {
 				return Err(AttemptError::RangeNotSupported);
 			}
 		}
 	} else if response.status() == reqwest::StatusCode::PARTIAL_CONTENT {
 		if let Some(start) = content_range_start(&response) {
-			if start != resume_offset {
+			if start != request_offset {
 				return Err(AttemptError::RangeNotSupported);
 			}
 		}
@@ -441,7 +475,7 @@ async fn download_attempt(
 			offset: resume_offset,
 		})?;
 	let mut effective_offset = resume_offset;
-	if resume_offset > 0 && response.status() == reqwest::StatusCode::OK {
+	if request_offset > 0 && response.status() == reqwest::StatusCode::OK {
 		file.set_len(0)
 			.await
 			.map_err(|error| AttemptError::Http {
@@ -468,13 +502,20 @@ async fn download_attempt(
 	let mut window_bytes: u64 = 0;
 	let mut slow_streak: u32 = 0;
 
-	while let Some(chunk) = tokio::time::timeout(XMCL_STALL_TIMEOUT, stream.next())
-		.await
-		.map_err(|_| AttemptError::Managed {
-			reason: ManagedReason::Stall,
-			offset,
-		})?
-	{
+	loop {
+		let next = if is_reassignable(&authority) {
+			tokio::time::timeout(XMCL_STALL_TIMEOUT, stream.next())
+				.await
+				.map_err(|_| AttemptError::Managed {
+					reason: ManagedReason::Stall,
+					offset,
+				})?
+		} else {
+			stream.next().await
+		};
+		let Some(chunk) = next else {
+			break;
+		};
 		let chunk = chunk.map_err(|error| AttemptError::Http {
 			error: error.into(),
 			offset,
@@ -499,7 +540,7 @@ async fn download_attempt(
 			let _ = progress(offset, total).await;
 		}
 
-		if first_byte_at.is_some() {
+		if first_byte_at.is_some() && is_reassignable(&authority) {
 			if !no_abort {
 				window_bytes = window_bytes.saturating_add(chunk.len() as u64);
 				if window_start.elapsed() >= XMCL_SLOW_WINDOW {
@@ -507,7 +548,8 @@ async fn download_attempt(
 					let speed = window_bytes.saturating_mul(1000) / window_ms;
 					window_bytes = 0;
 					window_start = Instant::now();
-					if speed < XMCL_STALL_FLOOR {
+					let remaining = expected_total.map(|total| total.saturating_sub(offset));
+					if is_slow_speed(speed, remaining) {
 						slow_streak += 1;
 					} else {
 						slow_streak = 0;
@@ -574,6 +616,7 @@ async fn run_single_stream(
 			url,
 			header_value,
 			part_path,
+			offset,
 			offset,
 			None,
 			expected_total,
@@ -697,7 +740,7 @@ async fn run_segment(
 	flow_started_at: Instant,
 ) -> Result<u64, SegmentError> {
 	let segment_total = end.saturating_sub(start).saturating_add(1);
-	let mut offset = start;
+	let mut relative_offset = 0u64;
 	let mut resumes = 0;
 	let mut no_progress = 0;
 	let mut committed = false;
@@ -716,13 +759,14 @@ async fn run_segment(
 			url_index += 1;
 			continue;
 		}
-		let offset_before = offset;
+		let offset_before = relative_offset;
 		let attempt_started = Instant::now();
 		let result = download_attempt(
 			url,
 			header_value,
 			segment_path,
-			offset,
+			relative_offset,
+			start.saturating_add(relative_offset),
 			Some(end),
 			Some(segment_total),
 			true,
@@ -744,10 +788,10 @@ async fn run_segment(
 
 		match result {
 			Ok(new_offset) => {
-				if new_offset > end {
+				if new_offset >= segment_total {
 					return Ok(new_offset);
 				}
-				offset = new_offset;
+				relative_offset = new_offset;
 				if resumes < XMCL_MAX_RESUMES {
 					resumes += 1;
 					continue;
@@ -759,7 +803,7 @@ async fn run_segment(
 				reason,
 				offset: error_offset,
 			}) => {
-				offset = offset.max(error_offset);
+				relative_offset = relative_offset.max(error_offset);
 				match reason {
 					ManagedReason::Ttfb | ManagedReason::Stall => {
 						report_stall(
@@ -795,7 +839,7 @@ async fn run_segment(
 				error,
 				offset: error_offset,
 			}) => {
-				offset = offset.max(error_offset);
+				relative_offset = relative_offset.max(error_offset);
 				last_error = Some(error);
 				let should_reroll = is_reassignable(
 					authority_of(url).as_deref().unwrap_or_default(),
