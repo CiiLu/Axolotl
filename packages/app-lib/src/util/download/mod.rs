@@ -39,7 +39,7 @@ impl DownloadEngine {
 	}
 }
 
-static ACTIVE_ENGINE: AtomicU8 = AtomicU8::new(1);
+static ACTIVE_ENGINE: AtomicU8 = AtomicU8::new(0);
 
 /// Returns the engine the launcher should use for new downloads.
 pub fn active_engine() -> DownloadEngine {

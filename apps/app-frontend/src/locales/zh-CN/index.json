@@ -2481,10 +2481,10 @@
 		"message": "选择启动器使用的下载引擎。"
 	},
 	"app.settings.resources.download-engine.legacy": {
-		"message": "旧版引擎"
+		"message": "原生引擎"
 	},
 	"app.settings.resources.download-engine.xmcl": {
-		"message": "XMCL（推荐）"
+		"message": "XMCL"
 	},
 	"app.settings.resources.maximum-downloads": {
 		"message": "最大并发下载数"

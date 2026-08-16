@@ -185,7 +185,6 @@ import { useTheming } from '@/store/state'
 import { get_available_capes, get_available_skins } from './helpers/skins'
 import { AppNotificationManager } from './providers/app-notifications'
 import { AppPopupNotificationManager } from './providers/app-popup-notifications'
-import { ModrinthMirrorFallbackFeature } from './providers/modrinth-mirror-fallback'
 
 const themeStore = useTheming()
 const router = useRouter()
@@ -246,7 +245,6 @@ const tauriApiClient = new TauriModrinthClient({
 					}),
 				]
 			: []),
-		new ModrinthMirrorFallbackFeature(),
 		new VerboseLoggingFeature(),
 	],
 })
