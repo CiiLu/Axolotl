@@ -5412,7 +5412,7 @@
 		"message": "部分 CurseForge 文件下载失败"
 	},
 	"app.curseforge.dependency-notes.notification-body": {
-		"message": "{optional, plural, =0 {没有跳过可选前置模组。} other {跳过了 # 个可选前置模组。}} {incompatible, plural, =0 {未检测到不兼容的前置模组。} other {检测到 # 个不兼容的前置模组。}}"
+		"message": "{optional, plural, =0 {没有跳过可选前置模组。} other {跳过了 # 个可选前置模组。}} {incompatible, plural, =0 {未检测到不兼容的前置模组。} other {检测到 # 个不兼容的前置模组。}} {skipped, plural, =0 {没有跳过其他前置模组。} other {跳过了 # 个其他前置模组。}}"
 	},
 	"app.curseforge.dependency-notes.notification-title": {
 		"message": "CurseForge 前置模组提示"
