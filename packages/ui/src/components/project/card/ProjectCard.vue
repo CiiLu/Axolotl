@@ -40,7 +40,6 @@
 									>
 										{{ provider === 'curseforge' ? 'CurseForge' : 'Modrinth' }}
 									</span>
-									<ProjectCardAuthor v-if="author" :author="author" />
 									<ProjectStatusBadge v-if="status" :status="status" class="text-sm" />
 								</div>
 								<div class="m-0 font-normal line-clamp-2">
@@ -132,7 +131,6 @@
 					>
 						{{ provider === 'curseforge' ? 'CurseForge' : 'Modrinth' }}
 					</span>
-					<ProjectCardAuthor v-if="author" :author="author" />
 					<ProjectStatusBadge v-if="status" :status="status" />
 				</div>
 				<div class="project-card-summary m-0 font-normal line-clamp-2">
