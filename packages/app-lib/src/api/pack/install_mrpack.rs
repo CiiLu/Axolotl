@@ -185,13 +185,64 @@ struct ModpackContentInstallContext {
     content_progress: Arc<AtomicU64>,
     content_bytes_progress: Arc<AtomicU64>,
     active_download_bytes: Arc<Mutex<HashMap<String, u64>>>,
+    active_download_total: Arc<AtomicU64>,
     download_source: Arc<Mutex<Option<String>>>,
     fallback_count: Arc<AtomicU64>,
-    file_infos_by_hash: Arc<HashMap<String, ModrinthHashMatch>>,
+    file_infos_by_hash:
+        Arc<Mutex<Option<HashMap<String, ModrinthHashMatch>>>>,
+    file_infos_loading: Arc<Mutex<()>>,
+    file_info_hashes: Arc<Vec<String>>,
     chinese_titles_by_sha1: Arc<HashMap<String, String>>,
     existing_paths_by_original: Arc<HashMap<String, String>>,
     num_files: usize,
     content_total_bytes: u64,
+}
+
+/// Resolves Modrinth file metadata by SHA-1 hash. All completions share a
+/// single lookup (double-checked locking through `file_infos_loading`);
+/// failures are cached as an empty map so a broken lookup is not retried once
+/// per remaining file.
+async fn load_modpack_file_infos(
+    file_infos_by_hash: &Arc<
+        Mutex<Option<HashMap<String, ModrinthHashMatch>>>,
+    >,
+    file_infos_loading: &Arc<Mutex<()>>,
+    file_info_hashes: &Arc<Vec<String>>,
+    pool: &sqlx::SqlitePool,
+    api_semaphore: &crate::util::fetch::FetchSemaphore,
+) {
+    {
+        let guard = file_infos_by_hash.lock().await;
+        if guard.is_some() {
+            return;
+        }
+    }
+    let _loading = file_infos_loading.lock().await;
+    {
+        let guard = file_infos_by_hash.lock().await;
+        if guard.is_some() {
+            return;
+        }
+    }
+    let hash_refs = file_info_hashes
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    let loaded = CachedEntry::get_file_many(
+        &hash_refs,
+        None,
+        pool,
+        api_semaphore,
+    )
+    .await
+    .map(|files| {
+        files
+            .into_iter()
+            .map(|file| (file.hash.clone(), file))
+            .collect::<HashMap<_, _>>()
+    })
+    .unwrap_or_default();
+    *file_infos_by_hash.lock().await = Some(loaded);
 }
 
 /// Maps manifest file hashes to sanitized Chinese titles by resolving the
@@ -339,7 +390,10 @@ impl ModpackContentInstallContext {
 
     async fn remove_active_download(&self, path: &str) {
         let mut active_download_bytes = self.active_download_bytes.lock().await;
-        active_download_bytes.remove(path);
+        if let Some(previous) = active_download_bytes.remove(path) {
+            self.active_download_total
+                .fetch_sub(previous, Ordering::Relaxed);
+        }
     }
 
     async fn update_active_download(
@@ -348,8 +402,12 @@ impl ModpackContentInstallContext {
         downloaded: u64,
     ) -> u64 {
         let mut active_download_bytes = self.active_download_bytes.lock().await;
-        active_download_bytes.insert(path, downloaded);
-        active_download_bytes.values().sum::<u64>()
+        let previous = active_download_bytes
+            .insert(path, downloaded)
+            .unwrap_or(0);
+        self.active_download_total
+            .fetch_add(downloaded.saturating_sub(previous), Ordering::Relaxed);
+        self.active_download_total.load(Ordering::Relaxed)
     }
 
     async fn record_download_result(
@@ -782,29 +840,38 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
     let content_bytes_progress = Arc::new(AtomicU64::new(0));
     let active_download_bytes =
         Arc::new(Mutex::new(HashMap::<String, u64>::new()));
-    let file_info_hashes = pack
-        .files
-        .iter()
-        .filter_map(|file| {
-            file.hashes.get(&PackFileHash::Sha1).map(String::as_str)
-        })
-        .collect::<Vec<_>>();
-    let file_infos_by_hash = Arc::new(
-        CachedEntry::get_file_many(
-            &file_info_hashes,
-            None,
-            &state.pool,
-            &state.api_semaphore,
-        )
-        .await?
-        .into_iter()
-        .map(|file| (file.hash.clone(), file))
-        .collect::<HashMap<_, _>>(),
+    let active_download_total = Arc::new(AtomicU64::new(0));
+    let file_info_hashes = Arc::new(
+        pack.files
+            .iter()
+            .filter_map(|file| {
+                file.hashes.get(&PackFileHash::Sha1).cloned()
+            })
+            .collect::<Vec<_>>(),
     );
+    let file_infos_by_hash = Arc::new(Mutex::new(None::<
+        HashMap<String, ModrinthHashMatch>,
+    >));
+    let file_infos_loading = Arc::new(Mutex::new(()));
     let chinese_naming_enabled =
         Settings::get(&state.pool).await?.locale == "zh-CN";
     let chinese_titles_by_sha1 = Arc::new(if chinese_naming_enabled {
-        resolve_chinese_titles_by_sha1(&file_infos_by_hash, state).await
+        // Chinese titles shape the on-disk file names, so they must be known
+        // before any download starts. All other installs resolve them lazily
+        // on the first completed file.
+        load_modpack_file_infos(
+            &file_infos_by_hash,
+            &file_infos_loading,
+            &file_info_hashes,
+            &state.pool,
+            &state.api_semaphore,
+        )
+        .await;
+        let infos = file_infos_by_hash.lock().await;
+        let infos = infos
+            .as_ref()
+            .expect("file metadata was just loaded");
+        resolve_chinese_titles_by_sha1(infos, state).await
     } else {
         HashMap::new()
     });
@@ -831,9 +898,12 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         content_progress,
         content_bytes_progress,
         active_download_bytes,
+        active_download_total,
         download_source: Arc::new(Mutex::new(None)),
         fallback_count: Arc::new(AtomicU64::new(0)),
         file_infos_by_hash,
+        file_infos_loading,
+        file_info_hashes,
         chinese_titles_by_sha1,
         existing_paths_by_original,
         num_files,
@@ -1152,14 +1222,27 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                     sha1_file_async(&path).await?.1
                 };
 
+                load_modpack_file_infos(
+                    &content_context.file_infos_by_hash,
+                    &content_context.file_infos_loading,
+                    &content_context.file_info_hashes,
+                    &state.pool,
+                    &state.api_semaphore,
+                )
+                .await;
+                let file_info = content_context
+                    .file_infos_by_hash
+                    .lock()
+                    .await
+                    .as_ref()
+                    .and_then(|infos| infos.get(&sha1))
+                    .cloned();
                 {
                     let _permit = state.install_db_semaphore.acquire().await?;
                     if let Some(project_type) =
                     ProjectType::get_from_parent_folder(project.path.as_str())
                     {
-                    let file_info =
-                        content_context.file_infos_by_hash.get(&sha1);
-                    let provider_ref = match file_info {
+                    let provider_ref = match file_info.as_ref() {
                         Some(file) => Some(ContentProviderRef::Modrinth {
                             project_id: ModrinthProjectId::new(
                                 file.project_id.clone(),
@@ -1184,9 +1267,9 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
 									content_context.pack_version_id.as_deref(),
 								),
 								crate::state::instances::ContentOwnershipKind::PackManaged,
-								provider_ref.as_ref(),
+                                provider_ref.as_ref(),
                                 false,
-                                file_info.map(|file| KnownModrinthFile {
+                                file_info.as_ref().map(|file| KnownModrinthFile {
                                     project_id: &file.project_id,
                                     version_id: &file.version_id,
                                 }),

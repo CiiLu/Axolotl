@@ -350,6 +350,68 @@ static ROUTE_HEALTH: LazyLock<Mutex<HashMap<RouteHealthKey, RouteHealth>>> =
 static ROUTE_EFFECTIVE_AUTHORITIES: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Per-authority congestion state for rate-limited responses (429/503).
+/// A throttled host is slept through before the next request to it, so a
+/// single slow CDN cannot stall the whole batch; successful responses decay
+/// the backoff again.
+#[derive(Clone, Default)]
+struct HostThrottle {
+    cooldown_until: Option<Instant>,
+    backoff: u32,
+}
+
+static HOST_THROTTLES: LazyLock<Mutex<HashMap<String, HostThrottle>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn throttle_host(authority: &str, retry_after: Option<time::Duration>) {
+    let mut throttles = HOST_THROTTLES.lock();
+    let throttle = throttles.entry(authority.to_string()).or_default();
+    throttle.backoff = throttle.backoff.saturating_add(1).min(6);
+    let delay = retry_after
+        .unwrap_or_else(|| time::Duration::from_secs(1_u64 << throttle.backoff))
+        .max(time::Duration::from_millis(250));
+    throttle.cooldown_until = Some(Instant::now() + delay);
+    tracing::debug!(
+        authority,
+        backoff = throttle.backoff,
+        delay_ms = delay.as_millis(),
+        "Host throttled after a rate-limited response"
+    );
+}
+
+async fn wait_for_host_throttle(authority: &str) {
+    loop {
+        let wait = {
+            let mut throttles = HOST_THROTTLES.lock();
+            let Some(throttle) = throttles.get_mut(authority) else {
+                return;
+            };
+            let Some(cooldown_until) = throttle.cooldown_until else {
+                return;
+            };
+            let now = Instant::now();
+            if now >= cooldown_until {
+                throttle.cooldown_until = None;
+                throttle.backoff = throttle.backoff.saturating_sub(1);
+                return;
+            }
+            cooldown_until.saturating_duration_since(now)
+        };
+        tokio::time::sleep(wait).await;
+    }
+}
+
+fn record_host_success(authority: &str) {
+    let mut throttles = HOST_THROTTLES.lock();
+    let Some(throttle) = throttles.get_mut(authority) else {
+        return;
+    };
+    throttle.backoff = throttle.backoff.saturating_sub(1);
+    if throttle.backoff == 0 {
+        throttle.cooldown_until = None;
+    }
+}
+
 fn url_authority(url: &str) -> Option<String> {
     let url = Url::parse(url).ok()?;
     let host = url.host_str()?.to_ascii_lowercase();
@@ -2198,6 +2260,9 @@ async fn fetch_advanced_with_client_and_progress(
 
             let permit = semaphore.0.acquire().await?;
             let request_started = Instant::now();
+            if let Some(authority) = url_authority(&request_url) {
+                wait_for_host_throttle(&authority).await;
+            }
             let result = req.send().await;
             let ttfb = request_started.elapsed();
             match result {
@@ -2282,6 +2347,14 @@ async fn fetch_advanced_with_client_and_progress(
                         break;
                     }
                     if status.is_client_error() || status.is_server_error() {
+                        if status == StatusCode::TOO_MANY_REQUESTS
+                            || status == StatusCode::SERVICE_UNAVAILABLE
+                        {
+                            if let Some(authority) = url_authority(&request_url)
+                            {
+                                throttle_host(&authority, retry_after);
+                            }
+                        }
                         if let Some(fence_key) = fence_key
                             && status.is_server_error()
                         {
@@ -2401,6 +2474,9 @@ async fn fetch_advanced_with_client_and_progress(
 
                     let response_url = resp.url().to_string();
                     let log_response_url = sanitize_url_for_log(&response_url);
+                    if let Some(authority) = url_authority(&request_url) {
+                        record_host_success(&authority);
+                    }
                     if is_mirror && modrinth_request_kind == Some("CDN") {
                         let cache_status = resp
                             .headers()
@@ -3411,6 +3487,9 @@ async fn send_path_request_with_clients(
                 .header(header::RANGE, range)
                 .header(header::ACCEPT_ENCODING, "identity");
         }
+        if let Some(authority) = url_authority(current.as_str()) {
+            wait_for_host_throttle(&authority).await;
+        }
 
         let response = match request.send().await {
             Ok(response) => response,
@@ -3436,8 +3515,16 @@ async fn send_path_request_with_clients(
             StatusCode::TOO_MANY_REQUESTS | StatusCode::SERVICE_UNAVAILABLE
         ) {
             throttle_mirror_request_slot(route, retry_after(&response));
+            if let Some(authority) = url_authority(current.as_str()) {
+                throttle_host(&authority, retry_after(&response));
+            }
         }
         if !response.status().is_redirection() {
+            if response.status().is_success()
+                && let Some(authority) = url_authority(current.as_str())
+            {
+                record_host_success(&authority);
+            }
             if reused_redirect_target
                 && (response.status().is_client_error()
                     || response.status().is_server_error())
@@ -6417,6 +6504,8 @@ mod tests {
         LazyLock::new(|| AsyncMutex::new(()));
     static AUTO_SOURCE_TEST_LOCK: LazyLock<std::sync::Mutex<()>> =
         LazyLock::new(|| std::sync::Mutex::new(()));
+    static HOST_THROTTLE_TEST_LOCK: LazyLock<std::sync::Mutex<()>> =
+        LazyLock::new(|| std::sync::Mutex::new(()));
 
     async fn spawn_range_server(
         data: Arc<Vec<u8>>,
@@ -7305,6 +7394,52 @@ mod tests {
             started.elapsed() >= time::Duration::from_millis(2),
             "a request after the burst should wait for a token"
         );
+    }
+
+    #[tokio::test]
+    async fn host_throttle_blocks_then_recovers_on_success() {
+        let _guard = HOST_THROTTLE_TEST_LOCK.lock().unwrap();
+        HOST_THROTTLES.lock().clear();
+        let authority = "cdn-alt.modrinth.com:443";
+
+        throttle_host(authority, Some(time::Duration::from_millis(50)));
+        let started = Instant::now();
+        wait_for_host_throttle(authority).await;
+        assert!(
+            started.elapsed() >= Duration::from_millis(40),
+            "a throttled host should sleep through its cooldown"
+        );
+
+        record_host_success(authority);
+        let throttle = HOST_THROTTLES.lock().get(authority).cloned().unwrap();
+        assert_eq!(throttle.backoff, 0);
+        assert!(throttle.cooldown_until.is_none());
+
+        HOST_THROTTLES.lock().clear();
+    }
+
+    #[tokio::test]
+    async fn host_throttle_backoff_grows_with_repeated_pressure() {
+        let _guard = HOST_THROTTLE_TEST_LOCK.lock().unwrap();
+        HOST_THROTTLES.lock().clear();
+        let authority = "cdn-alt.modrinth.com:443";
+
+        throttle_host(authority, None);
+        let first_backoff = HOST_THROTTLES
+            .lock()
+            .get(authority)
+            .unwrap()
+            .backoff;
+        throttle_host(authority, None);
+        let second_backoff = HOST_THROTTLES
+            .lock()
+            .get(authority)
+            .unwrap()
+            .backoff;
+        assert_eq!(first_backoff, 1);
+        assert_eq!(second_backoff, 2);
+
+        HOST_THROTTLES.lock().clear();
     }
 
     #[test]
