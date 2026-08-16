@@ -3447,6 +3447,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	display: grid;
 	grid-template-columns: 1fr 0px;
+	// 显式行高：让 .app-viewport 的 height: 100% 有确定参照（隐式 auto 行会使百分比高度失效）
+	grid-template-rows: 1fr;
 	// transition: grid-template-columns 0.4s ease-in-out;
 
 	&.sidebar-enabled {
