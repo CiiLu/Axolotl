@@ -54,7 +54,9 @@ pub async fn discord_rpc_set(enabled: bool) -> Result<PrivacySettings> {
 }
 
 #[tauri::command]
-pub async fn download_engine_set(engine: settings::DownloadEngine) -> Result<()> {
+pub async fn download_engine_set(
+    engine: settings::DownloadEngine,
+) -> Result<()> {
     settings::set_download_engine(engine).await?;
     Ok(())
 }
