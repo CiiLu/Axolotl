@@ -5697,8 +5697,11 @@ async fn download_to_path_inner(
             )
             .await;
         }
-        record_install_download_stage(&request, DownloadItemStatus::Downloading)
-            .await;
+        record_install_download_stage(
+            &request,
+            DownloadItemStatus::Downloading,
+        )
+        .await;
         return crate::util::download::xmcl::download_to_path(
             &request,
             destination,

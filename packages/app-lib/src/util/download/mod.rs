@@ -56,7 +56,6 @@ pub fn set_active_engine(engine: DownloadEngine) {
     ACTIVE_ENGINE.store(engine as u8, Ordering::Relaxed);
 }
 
-
 pub(crate) fn task_concurrency_limit(state: &crate::State) -> Option<usize> {
     if active_engine() == DownloadEngine::XmclCompat {
         None
