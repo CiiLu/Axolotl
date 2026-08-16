@@ -463,15 +463,17 @@ impl InstallProgressReporter {
                     .saturating_mul(1_000)
                     .checked_div(sample_elapsed_ms)
                     .unwrap_or(0);
-                let alpha =
-                    1.0 - (-(sample_elapsed_ms as f64) / 5_000.0_f64).exp();
-                active.speed_bytes_per_second = Some(
-                    active.speed_bytes_per_second.map_or(sample, |speed| {
-                        ((speed as f64) * (1.0 - alpha)
-                            + (sample as f64) * alpha)
+                let new_speed = match active.speed_bytes_per_second {
+                    Some(previous) if sample > previous => {
+                        previous + (((sample - previous) as f64) * 0.5) as u64
+                    }
+                    Some(previous) => {
+                        (((previous as f64) * 0.95) + ((sample as f64) * 0.05))
                             as u64
-                    }),
-                );
+                    }
+                    None => sample,
+                };
+                active.speed_bytes_per_second = Some(new_speed);
                 active.speed_sample_started_at = now;
                 active.speed_sample_started_bytes = bytes;
             }
