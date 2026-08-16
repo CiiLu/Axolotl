@@ -40,7 +40,7 @@ const XMCL_RECONNECT_OVERHEAD_SECS: f64 = 0.6;
 const XMCL_MAX_RESUMES: usize = 5;
 const XMCL_MAX_NO_PROGRESS: usize = 2;
 const XMCL_BMCL_CONCURRENCY: usize = 16;
-const XMCL_OTHER_CONCURRENCY: usize = 64;
+const XMCL_OTHER_CONCURRENCY: usize = 16;
 
 static AUTHORITY_SEMAPHORES: LazyLock<Mutex<HashMap<String, Arc<Semaphore>>>> =
 	LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -407,6 +407,8 @@ async fn download_attempt(
 			offset: resume_offset,
 		}
 	})?;
+	let _activity = crate::State::get_if_initialized()
+		.map(|state| state.begin_download_connection());
 
 	let client = if range_end.is_some() {
 		&XMCL_SEGMENT_CLIENT
@@ -538,6 +540,9 @@ async fn download_attempt(
 				offset,
 			})?;
 		offset = offset.saturating_add(chunk.len() as u64);
+		if let Some(state) = crate::State::get_if_initialized() {
+			state.record_download_bytes(chunk.len() as u64);
+		}
 		if let Some(progress_bytes) = &progress_bytes {
 			progress_bytes.fetch_add(chunk.len() as u64, Ordering::Relaxed);
 		} else if let Some(progress) = progress.as_mut() {
@@ -942,7 +947,15 @@ async fn download_segments(
 			tokio::time::sleep(Duration::from_millis(100)).await;
 		}
 	};
-	let (segment_result, _) = tokio::join!(segments, reporter);
+	let segment_result = match futures::future::select(
+		Box::pin(segments),
+		Box::pin(reporter),
+	)
+	.await
+	{
+		futures::future::Either::Left((result, _reporter)) => result,
+		futures::future::Either::Right(((), segments)) => segments.await,
+	};
 	segment_result?;
 	concatenate_segments(part_path, total)
 		.await
@@ -1015,6 +1028,7 @@ async fn download_to_path_inner(
 					let size = fetch::verify_file(part_path, &request.integrity).await?;
 					fetch::record_install_download_stage(request, crate::install::DownloadItemStatus::Writing).await;
 					fetch::finalize_download(part_path, destination).await?;
+					fetch::record_install_download_finished(request, size).await;
 					crate::telemetry::record_download_stats(1, 1, size, 0, 0, 0, 0);
 					let route = routes.first().cloned().unwrap_or_else(|| fetch::DownloadRoute {
 						url: request.url.clone(),
@@ -1060,6 +1074,7 @@ async fn download_to_path_inner(
 	fetch::record_install_download_stage(request, crate::install::DownloadItemStatus::Writing)
 		.await;
 	fetch::finalize_download(part_path, destination).await?;
+	fetch::record_install_download_finished(request, size).await;
 	crate::telemetry::record_download_stats(1, 1, size, 0, 0, 0, 0);
 
 	let route = routes
@@ -1102,6 +1117,9 @@ pub(crate) async fn download_to_path(
 	)
 	.await;
 	if result.is_err() {
+		if let Some(state) = crate::State::get_if_initialized() {
+			state.record_download_error();
+		}
 		cleanup_segment_files(part_path).await;
 		crate::telemetry::record_download_stats(1, 0, 0, 1, 0, 0, 0);
 	}

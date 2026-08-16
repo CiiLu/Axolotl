@@ -5474,6 +5474,22 @@ pub(crate) async fn record_install_download_stage(
     }
 }
 
+pub(crate) async fn record_install_download_finished(
+    request: &DownloadRequest,
+    bytes: u64,
+) {
+    let Some(tracking) = &request.install_tracking else {
+        return;
+    };
+    if let Err(error) = tracking
+        .reporter
+        .record_download_request_finished(&tracking.item_id, bytes)
+        .await
+    {
+        tracing::warn!(%error, "Failed to record finished download request");
+    }
+}
+
 /// Resolves hosts ahead of the first request without blocking the caller.
 /// Used before batch downloads so every file shares one ordered address list
 /// instead of racing the same DNS queries.

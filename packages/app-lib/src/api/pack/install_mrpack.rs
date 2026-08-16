@@ -1009,7 +1009,7 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         let pass_failures =
             collect_required_file_failures_concurrently(
         tasks,
-        Some(state.download_concurrency()),
+        crate::util::download::task_concurrency_limit(state),
         |(manifest_index, project)| {
             let content_context = content_context.clone();
             let skipped_missing_content_paths =

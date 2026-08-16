@@ -1402,7 +1402,7 @@ pub async fn download_assets(
         .map(Ok::<(&String, &Asset), crate::Error>);
 
     loading_try_for_each_concurrent(assets,
-			Some(st.download_concurrency().saturating_mul(2)),
+			crate::util::download::task_concurrency_limit(&st).map(|limit| limit.saturating_mul(2)),
             loading_bar,
             loading_amount,
             num_futs,
@@ -1533,7 +1533,7 @@ pub async fn download_libraries(
     let num_files = libraries.len();
     loading_try_for_each_concurrent(
 		stream::iter(libraries).map(Ok::<&Library, crate::Error>),
-		Some(st.download_concurrency().saturating_mul(2)),
+		crate::util::download::task_concurrency_limit(&st).map(|limit| limit.saturating_mul(2)),
         loading_bar,
         loading_amount,
         num_files,
