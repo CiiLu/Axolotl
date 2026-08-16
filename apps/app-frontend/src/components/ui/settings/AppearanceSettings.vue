@@ -46,6 +46,7 @@ const skipNonEssentialWarningsFlag: FeatureFlag = 'skip_non_essential_warnings'
 const skipUnknownPackWarningFlag: FeatureFlag = 'skip_unknown_pack_warning'
 const showPlayTimeFlag: FeatureFlag = 'show_instance_play_time'
 const pageTransitionsFlag: FeatureFlag = 'page_transitions'
+const autoInstallDependenciesFlag: FeatureFlag = 'auto_install_dependencies'
 
 const messages = defineMessages({
 	colorThemeTitle: {
@@ -195,6 +196,15 @@ const messages = defineMessages({
 	pageTransitionsDescription: {
 		id: 'app.appearance-settings.page-transitions.description',
 		defaultMessage: 'Animate content when switching between launcher pages.',
+	},
+	autoInstallDependenciesTitle: {
+		id: 'app.appearance-settings.auto-install-dependencies.title',
+		defaultMessage: 'Automatically install dependencies',
+	},
+	autoInstallDependenciesDescription: {
+		id: 'app.appearance-settings.auto-install-dependencies.description',
+		defaultMessage:
+			'Download required dependencies when installing content. You can adjust the selection in the confirmation dialog before each install.',
 	},
 	hideNametagTitle: {
 		id: 'app.appearance-settings.hide-nametag.title',
@@ -804,6 +814,28 @@ watch(
 					const enabled = !!value
 					themeStore.featureFlags[pageTransitionsFlag] = enabled
 					settings.feature_flags[pageTransitionsFlag] = enabled
+				}
+			"
+		/>
+	</div>
+
+	<div class="mt-6 flex items-center justify-between gap-4">
+		<div>
+			<h2 class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.autoInstallDependenciesTitle) }}
+			</h2>
+			<p class="m-0 mt-1">
+				{{ formatMessage(messages.autoInstallDependenciesDescription) }}
+			</p>
+		</div>
+		<Toggle
+			id="auto-install-dependencies"
+			:model-value="themeStore.getFeatureFlag(autoInstallDependenciesFlag)"
+			@update:model-value="
+				(value) => {
+					const enabled = !!value
+					themeStore.featureFlags[autoInstallDependenciesFlag] = enabled
+					settings.feature_flags[autoInstallDependenciesFlag] = enabled
 				}
 			"
 		/>

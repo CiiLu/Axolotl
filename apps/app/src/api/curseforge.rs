@@ -28,6 +28,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             curseforge_get_categories,
             curseforge_match_fingerprints,
             curseforge_install_file,
+            curseforge_preview_install_file,
             curseforge_update_installed_file,
             curseforge_switch_installed_file_version,
             curseforge_recognize_instance_files,
@@ -146,6 +147,13 @@ pub async fn curseforge_install_file(
     request: CurseForgeInstallRequest,
 ) -> Result<CurseForgeInstallResult> {
     Ok(theseus::curseforge::install_file(request).await?)
+}
+
+#[tauri::command]
+pub async fn curseforge_preview_install_file(
+    request: CurseForgeInstallRequest,
+) -> Result<theseus::curseforge::CurseForgeInstallPreview> {
+    Ok(theseus::curseforge::preview_install_file(request).await?)
 }
 
 #[tauri::command]

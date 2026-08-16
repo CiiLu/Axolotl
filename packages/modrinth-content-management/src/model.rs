@@ -48,6 +48,8 @@ pub struct ResolveContentRequest {
     pub target: ResolutionPreferences,
     #[serde(default)]
     pub existing_project_ids: Vec<String>,
+    #[serde(default)]
+    pub excluded_project_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -81,6 +83,7 @@ pub enum SkippedReason {
     NoCompatibleVersion,
     MissingVersion,
     QuiltFabricApi,
+    ExcludedByUser,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

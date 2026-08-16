@@ -1064,6 +1064,8 @@ pub enum InstallRequest {
         content_type: ContentType,
         #[serde(default)]
         selected: ResolutionPreferences,
+        #[serde(default)]
+        excluded_project_ids: Vec<String>,
         display_title: String,
         #[serde(default)]
         display_icon: Option<String>,

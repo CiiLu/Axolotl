@@ -36,7 +36,6 @@ pub(crate) struct ModsTomlEntry {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ForgeDependencyEntry {
     pub mod_id: Option<String>,
-    #[allow(dead_code)]
     pub mandatory: Option<bool>,
     pub version_range: Option<String>,
     #[allow(dead_code)]

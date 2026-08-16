@@ -163,6 +163,7 @@ export interface CurseForgeInstallRequest {
 	modLoaderType?: number
 	worldName?: string
 	installDependencies?: boolean
+	excludedDependencyProjectIds?: number[]
 }
 
 export interface CurseForgeInstallResult {
@@ -190,6 +191,41 @@ export interface CurseForgeInstallResult {
 		projectId: number
 		fileId: number
 		fileName: string
+		reason: string
+	}>
+	optionalDependencies: number[]
+	incompatibleDependencies: number[]
+	skippedDependencies?: Array<{
+		projectId: number
+		fileId: number | null
+		reason: string
+	}>
+}
+
+export interface CurseForgeInstallPreview {
+	primary: {
+		projectId: number
+		fileId: number
+		title: string
+		versionNumber: string
+		fileName: string
+		size: number
+		requiredByProjectIds: number[]
+		iconUrl?: string | null
+	}
+	dependencies: Array<{
+		projectId: number
+		fileId: number
+		title: string
+		versionNumber: string
+		fileName: string
+		size: number
+		requiredByProjectIds: number[]
+		iconUrl?: string | null
+	}>
+	skipped: Array<{
+		projectId: number
+		fileId: number | null
 		reason: string
 	}>
 	optionalDependencies: number[]
@@ -326,6 +362,12 @@ export function getCurseForgeCategories(classId?: number) {
 
 export function installCurseForgeFile(request: CurseForgeInstallRequest) {
 	return invoke<CurseForgeInstallResult>('plugin:curseforge|curseforge_install_file', { request })
+}
+
+export function previewCurseForgeFile(request: CurseForgeInstallRequest) {
+	return invoke<CurseForgeInstallPreview>('plugin:curseforge|curseforge_preview_install_file', {
+		request,
+	})
 }
 
 export function queueCurseForgeFile(

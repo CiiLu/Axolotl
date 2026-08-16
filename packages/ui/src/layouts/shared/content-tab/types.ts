@@ -76,6 +76,24 @@ export interface ContentCardTableItem {
 		canChangeVersion: boolean
 		canRestorePackDefault: boolean
 	}
+	dependency?: {
+		autoDependency: boolean
+		requiredBy: Array<{
+			provider: 'modrinth' | 'curseforge' | 'local'
+			projectId: string
+			releaseId: string
+		}>
+		requires: Array<{
+			provider: 'modrinth' | 'curseforge' | 'local'
+			projectId: string
+			releaseId: string
+		}>
+		orphaned: boolean
+	} | null
+	dependencyBadge?: {
+		autoDependency: boolean
+		orphaned: boolean
+	} | null
 	overflowOptions?: OverflowMenuOption[]
 	inlineActions?: ContentRowInlineAction[]
 	isGroupHeader?: boolean

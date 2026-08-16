@@ -55,6 +55,14 @@ const messages = defineMessages({
 		id: 'content.card.rollback-tooltip',
 		defaultMessage: 'Roll back to {fileName}',
 	},
+	dependencyBadge: {
+		id: 'content.card.dependency-badge',
+		defaultMessage: 'Dependency',
+	},
+	orphanedDependencyBadge: {
+		id: 'content.card.orphaned-dependency-badge',
+		defaultMessage: 'Orphaned dependency',
+	},
 	notPlayedYet: {
 		id: 'content.card.group.not-played-yet',
 		defaultMessage: 'Not played yet',
@@ -85,6 +93,10 @@ interface Props {
 	disabledTooltip?: string | null
 	toggleDisabled?: boolean
 	toggleDisabledTooltip?: string | null
+	dependencyBadge?: {
+		autoDependency: boolean
+		orphaned: boolean
+	} | null
 	showCheckbox?: boolean
 	hideDelete?: boolean
 	hideActions?: boolean
@@ -125,6 +137,7 @@ const props = withDefaults(defineProps<Props>(), {
 	disabledTooltip: undefined,
 	toggleDisabled: false,
 	toggleDisabledTooltip: undefined,
+	dependencyBadge: null,
 	showCheckbox: false,
 	hideDelete: false,
 	hideActions: false,
@@ -498,6 +511,21 @@ const deleteHovered = ref(false)
 						>
 							{{ project.title }}
 						</AutoLink>
+						<span
+							v-if="dependencyBadge"
+							v-tooltip="
+								dependencyBadge.orphaned
+									? formatMessage(messages.orphanedDependencyBadge)
+									: formatMessage(messages.dependencyBadge)
+							"
+							class="shrink-0 rounded-md bg-surface-3 px-1.5 py-0.5 text-xs font-medium leading-4 text-secondary"
+						>
+							{{
+								dependencyBadge.orphaned
+									? formatMessage(messages.orphanedDependencyBadge)
+									: formatMessage(messages.dependencyBadge)
+							}}
+						</span>
 						<slot name="title-badges" />
 					</div>
 

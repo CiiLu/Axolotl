@@ -27,6 +27,13 @@ const JAVA_DEFAULT_VERSIONS_MIGRATION_VERSION: i64 = 20260729110000;
 #[cfg(test)]
 const SYSTEM_PROXY_SETTING_MIGRATION_VERSION: i64 = 20260802122000;
 const INSTANCE_CONTENT_OWNERSHIP_MIGRATION_VERSION: i64 = 20260803120000;
+#[cfg(test)]
+const CONTENT_DEPENDENCY_EDGES_MIGRATION_VERSION: i64 = 20260815000000;
+#[cfg(test)]
+const CONTENT_DEPENDENCY_LOCAL_PROVIDER_MIGRATION_VERSION: i64 = 20260815000001;
+#[cfg(test)]
+const CONTENT_DEPENDENCY_BACKFILL_MARKER_MIGRATION_VERSION: i64 =
+    20260815000002;
 const AI_PROVIDER_MIGRATION_VERSION: i64 = 20260805120000;
 
 // This migration was changed by the launcher rebrand after it had already
@@ -2981,6 +2988,350 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(legacy_credential_cleanup, 0);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn content_dependency_edges_migration_creates_fresh_schema() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let has_auto_dependency: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+                SELECT 1 FROM pragma_table_info('instance_content_entries')
+                WHERE name = 'auto_dependency'
+            )",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(has_auto_dependency);
+
+        let has_edges: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+                SELECT 1 FROM sqlite_master
+                WHERE type = 'table'
+                    AND name = 'instance_content_dependencies'
+            )",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(has_edges);
+
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn content_dependency_edges_migration_upgrades_previous_schema() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < CONTENT_DEPENDENCY_EDGES_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        let had_edges: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+                SELECT 1 FROM sqlite_master
+                WHERE type = 'table'
+                    AND name = 'instance_content_dependencies'
+            )",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(!had_edges);
+
+        MIGRATOR.run(&pool).await.unwrap();
+        let has_edges: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+                SELECT 1 FROM sqlite_master
+                WHERE type = 'table'
+                    AND name = 'instance_content_dependencies'
+            )",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(has_edges);
+
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    async fn insert_dependency_edge_fixture(pool: &sqlx::SqlitePool) {
+        sqlx::raw_sql(
+            r#"
+            INSERT INTO instances (
+                id, path, applied_content_set_id, install_stage,
+                launcher_feature_version, name, created, modified
+            ) VALUES
+                ('local-edge-instance', 'local-edge-instance', NULL,
+                    'installed', '1', 'Local Edge', 1, 1);
+
+            INSERT INTO instance_content_sets (
+                id, instance_id, name, source_kind, status, game_version,
+                loader, created, modified
+            ) VALUES
+                ('local-edge-set', 'local-edge-instance', 'Default',
+                    'local', 'applied', '1.20.1', 'fabric', 1, 1);
+
+            UPDATE instances SET applied_content_set_id = 'local-edge-set';
+
+            INSERT INTO instance_content_entries (
+                id, instance_id, content_set_id, file_id, project_type,
+                source_kind, server_requirement, client_requirement,
+                enabled, added_at, modified_at
+            ) VALUES
+                ('parent-entry', 'local-edge-instance', 'local-edge-set',
+                    NULL, 'mod', 'local', 'required', 'required', 1, 1, 1),
+                ('child-entry', 'local-edge-instance', 'local-edge-set',
+                    NULL, 'mod', 'local', 'required', 'required', 1, 1, 1),
+                ('child-entry-local', 'local-edge-instance',
+                    'local-edge-set', NULL, 'mod', 'local', 'required',
+                    'required', 1, 1, 1);
+            "#,
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    fn dependency_edge_row(
+        provider: &str,
+        child_entry_id: &str,
+        child_project_id: &str,
+    ) -> String {
+        format!(
+            "INSERT INTO instance_content_dependencies (
+                id, content_set_id, parent_entry_id, child_entry_id,
+                provider, dependency_kind, parent_project_id,
+                parent_release_id, child_project_id, child_release_id,
+                created_at, modified_at
+            ) VALUES
+                ('edge-{provider}', 'local-edge-set', 'parent-entry',
+                    '{child_entry_id}', '{provider}', 'required',
+                    'local:parent', '1.0.0', '{child_project_id}', '2.0.0',
+                    1, 1)"
+        )
+    }
+
+    #[tokio::test]
+    async fn content_dependency_local_provider_migration_accepts_local_rows_fresh()
+     {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        MIGRATOR.run(&pool).await.unwrap();
+        insert_dependency_edge_fixture(&pool).await;
+
+        sqlx::raw_sql(&dependency_edge_row(
+            "local",
+            "child-entry-local",
+            "local:child-local",
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let providers: Vec<String> = sqlx::query_scalar(
+            "SELECT provider FROM instance_content_dependencies",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(providers, ["local"]);
+
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn content_dependency_local_provider_migration_upgrades_preserving_rows()
+     {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < CONTENT_DEPENDENCY_LOCAL_PROVIDER_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        insert_dependency_edge_fixture(&pool).await;
+        sqlx::raw_sql(&dependency_edge_row(
+            "modrinth",
+            "child-entry",
+            "local:child",
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let local_row = dependency_edge_row(
+            "local",
+            "child-entry-local",
+            "local:child-local",
+        )
+        .replace("edge-local", "edge-local-before");
+        let local_before: Result<sqlx::sqlite::SqliteQueryResult, _> =
+            sqlx::raw_sql(&local_row).execute(&pool).await;
+        assert!(local_before.is_err());
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let providers: Vec<String> = sqlx::query_scalar(
+            "SELECT provider FROM instance_content_dependencies
+             ORDER BY id",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(providers, ["modrinth"]);
+
+        sqlx::raw_sql(&dependency_edge_row(
+            "local",
+            "child-entry-local",
+            "local:child-local",
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let providers: Vec<String> = sqlx::query_scalar(
+            "SELECT provider FROM instance_content_dependencies
+             ORDER BY id",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(providers, ["local", "modrinth"]);
+
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn content_dependency_backfill_marker_migration_upgrades_preserving_rows()
+     {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < CONTENT_DEPENDENCY_BACKFILL_MARKER_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        insert_dependency_edge_fixture(&pool).await;
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let markers: Vec<(String, i64)> = sqlx::query_as(
+            "SELECT id, dependency_backfilled
+             FROM instance_content_entries ORDER BY id",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            markers,
+            [
+                ("child-entry".to_string(), 0),
+                ("child-entry-local".to_string(), 0),
+                ("parent-entry".to_string(), 0),
+            ]
+        );
+
+        sqlx::query(
+            "UPDATE instance_content_entries
+             SET dependency_backfilled = 1 WHERE id = 'parent-entry'",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
         let foreign_key_errors: Vec<(String, i64, String, i64)> =
             sqlx::query_as("PRAGMA foreign_key_check")
                 .fetch_all(&pool)
