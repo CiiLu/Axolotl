@@ -1797,6 +1797,7 @@ const searchState = useBrowseSearch({
 	projectType,
 	tags,
 	providedFilters: combinedProvidedFilters,
+	installContextLoader: computed(() => installContext.value?.loader),
 	search,
 	persistentQueryParams: ['i', 'ai', 'shi', 'sid', 'wid', 'from', 'source'],
 	getExtraQueryParams: () => ({
