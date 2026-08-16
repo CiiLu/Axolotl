@@ -41,6 +41,14 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.8.1',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Discover now remembers the last selected content source (Modrinth, CurseForge, or all sources), reopening on the previously used platform instead of resetting.',
+					'zh-CN':
+						'“发现内容”板块现在会记住上次选择的模组来源（Modrinth、CurseForge 或所有来源），再次打开时恢复上次使用的平台，不再重置为所有来源。',
+				},
+			],
 			changed: [
 				{
 					'en-US': 'Optimized the category menu in settings.',
