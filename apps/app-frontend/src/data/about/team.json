@@ -12,5 +12,30 @@
 	{
 		"name": "MagicCube",
 		"avatar": "magiccube.jpg"
+	},
+	{
+		"name": "Lintern",
+		"avatar": "https://avatars.githubusercontent.com/u/100106683?v=4&s=96",
+		"url": "https://github.com/Lintern"
+	},
+	{
+		"name": "KaKa",
+		"avatar": "https://avatars.githubusercontent.com/u/110977625?v=4&s=96",
+		"url": "https://github.com/kakala666"
+	},
+	{
+		"name": "Bcmray",
+		"avatar": "https://avatars.githubusercontent.com/u/65066644?v=4&s=96",
+		"url": "https://github.com/bcmRayCrazy-coder"
+	},
+	{
+		"name": "Fgaoxing",
+		"avatar": "https://avatars.githubusercontent.com/u/92655031?v=4&s=96",
+		"url": "https://github.com/fgaoxing"
+	},
+	{
+		"name": "zzhzhouzhou",
+		"avatar": "https://avatars.githubusercontent.com/u/135128723?v=4&s=96",
+		"url": "https://github.com/zzhzhouzhou"
 	}
 ]
