@@ -3840,7 +3840,12 @@ function clampWorldCoordinate(value: number) {
 	}
 
 	.toolbar-secondary {
-		flex-wrap: wrap;
+		grid-template-columns: auto minmax(0, 1fr);
+	}
+
+	.share-button {
+		grid-column: 1 / -1;
+		justify-self: end;
 	}
 
 	.coordinate-group {
