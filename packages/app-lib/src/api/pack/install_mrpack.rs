@@ -57,6 +57,11 @@ type ExtractProgressFn<'a> = dyn FnMut(u64) -> Pin<Box<dyn Future<Output = crate
 const AGGREGATE_FAILURE_PATH_LIMIT: usize = 3;
 const AGGREGATE_FAILURE_PATH_CHAR_LIMIT: usize = 160;
 const ITEM_FAILURE_REASON_CHAR_LIMIT: usize = 1_024;
+/// Batch-level automatic retry passes for failed modpack files, in addition
+/// to the per-file retries inside `download_to_path`. Failed files are retried
+/// over a single connection (no range segmentation) and only after every pass
+/// is exhausted does the install ask the user about missing content.
+const AUTO_RETRY_PASSES: usize = 2;
 
 pub(crate) enum MrpackInstallOutcome {
     #[allow(dead_code)]
@@ -1003,9 +1008,20 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         crate::util::fetch::MODRINTH_CDN_OFFICIAL_HOST,
         "api.modrinth.com",
     ]);
-    let required_file_failures =
-        collect_required_file_failures_concurrently(
-        pack.files.into_iter().enumerate().collect(),
+    let pack_files = pack.files;
+    let mut retry_indices = (0..pack_files.len()).collect::<Vec<_>>();
+    let mut required_file_failures = Vec::new();
+    for pass in 0..=AUTO_RETRY_PASSES {
+        if retry_indices.is_empty() {
+            break;
+        }
+        let tasks = retry_indices
+            .iter()
+            .map(|&index| (index, pack_files[index].clone()))
+            .collect::<Vec<_>>();
+        let pass_failures =
+            collect_required_file_failures_concurrently(
+        tasks,
         Some(state.download_concurrency()),
         |(manifest_index, project)| {
             let content_context = content_context.clone();
@@ -1184,7 +1200,7 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                             content_context.download_meta.clone(),
                         )
                         .with_segmented_download(
-                            content_context.num_files <= 1,
+                            pass == 0 && content_context.num_files <= 1,
                         )
                         .with_install_tracking(
                             content_context.reporter.clone(),
@@ -1312,48 +1328,81 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         content_context
                             .remove_active_download(&project_path)
                             .await;
-                        content_context
-                            .reporter
-                            .persist_failure_context(context)
-                            .await;
-                        let failure = RequiredFileFailure::new(
-                            manifest_index,
-                            &project_path,
-                            &error.to_string(),
-                        );
-                        tracing::warn!(
-                            path = %project_path,
-                            reason = %failure.reason,
-                            "Failed to install required Modrinth pack file"
-                        );
-                        if let Err(report_error) = content_context
-                            .mark_file_settled(
-                                0,
-                                InstallJobEventKind::ContentFileFailed {
-                                    path: project_path.clone(),
-                                    reason: failure.reason.clone(),
-                                    project_id: None,
-                                    version_id: None,
-                                },
-                            )
-                            .await
-                        {
-                            return Err(RequiredFileFailure::new(
+                        if pass == AUTO_RETRY_PASSES {
+                            content_context
+                                .reporter
+                                .persist_failure_context(context)
+                                .await;
+                            let failure = RequiredFileFailure::new(
                                 manifest_index,
                                 &project_path,
-                                &format!(
-                                    "{}; failed to record item failure: {report_error}",
-                                    failure.reason
-                                ),
-                            ));
+                                &error.to_string(),
+                            );
+                            tracing::warn!(
+                                path = %project_path,
+                                reason = %failure.reason,
+                                "Failed to install required Modrinth pack file"
+                            );
+                            if let Err(report_error) = content_context
+                                .mark_file_settled(
+                                    0,
+                                    InstallJobEventKind::ContentFileFailed {
+                                        path: project_path.clone(),
+                                        reason: failure.reason.clone(),
+                                        project_id: None,
+                                        version_id: None,
+                                    },
+                                )
+                                .await
+                            {
+                                return Err(RequiredFileFailure::new(
+                                    manifest_index,
+                                    &project_path,
+                                    &format!(
+                                        "{}; failed to record item failure: {report_error}",
+                                        failure.reason
+                                    ),
+                                ));
+                            }
+                            Err(failure)
+                        } else {
+                            tracing::warn!(
+                                path = %project_path,
+                                pass = pass + 1,
+                                retries_left =
+                                    AUTO_RETRY_PASSES.saturating_sub(pass),
+                                reason = %error,
+                                "Modpack file failed; scheduling an automatic retry"
+                            );
+                            Err(RequiredFileFailure::new(
+                                manifest_index,
+                                &project_path,
+                                &error.to_string(),
+                            ))
                         }
-                        Err(failure)
                     }
                 }
             }
         },
     )
     .await?;
+        required_file_failures = pass_failures;
+        if required_file_failures.is_empty() {
+            break;
+        }
+        if pass < AUTO_RETRY_PASSES {
+            tracing::warn!(
+                files = required_file_failures.len(),
+                pass = pass + 1,
+                retries_left = AUTO_RETRY_PASSES.saturating_sub(pass),
+                "Automatic retry pass for failed modpack files"
+            );
+        }
+        retry_indices = required_file_failures
+            .iter()
+            .map(|failure| failure.manifest_index)
+            .collect();
+    }
     content_context.finish_download_metrics().await?;
     if let Some(reason) =
         missing_required_content_pause(&required_file_failures)

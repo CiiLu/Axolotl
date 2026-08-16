@@ -213,11 +213,14 @@ impl Integrity {
     /// Resuming a partial download is only safe when a content hash can
     /// prove the stitched-together file is what the server intended.
     fn supports_resume(&self) -> bool {
-        self.size.is_some()
-            && (self.sha1.is_some()
-                || self.sha512.is_some()
-                || self.sha256.is_some()
-                || self.md5.is_some())
+        self.size.is_some() && self.has_hash()
+    }
+
+    fn has_hash(&self) -> bool {
+        self.sha1.is_some()
+            || self.sha512.is_some()
+            || self.sha256.is_some()
+            || self.md5.is_some()
     }
 }
 
@@ -588,6 +591,29 @@ fn is_modrinth_host_url(url: &str) -> bool {
             )
         )
     })
+}
+
+/// Appends a cache-busting query parameter so a retry bypasses a corrupt
+/// edge-cache object (a truncated or checksum-mismatched body served for an
+/// otherwise valid URL). Existing query pairs are preserved.
+fn cache_busted_download_url(url: &str, attempt: usize) -> String {
+    let Ok(mut parsed) = Url::parse(url) else {
+        return url.to_string();
+    };
+    let original_pairs = parsed
+        .query_pairs()
+        .filter(|(key, _)| key != "axolotl_retry")
+        .map(|(key, value)| (key.into_owned(), value.into_owned()))
+        .collect::<Vec<_>>();
+    parsed.set_query(None);
+    {
+        let mut pairs = parsed.query_pairs_mut();
+        for (key, value) in original_pairs {
+            pairs.append_pair(&key, &value);
+        }
+        pairs.append_pair("axolotl_retry", &attempt.to_string());
+    }
+    parsed.into()
 }
 
 fn sanitize_url_for_log(url: &str) -> String {
@@ -3094,11 +3120,21 @@ fn verify_computed_integrity(
     if let Some(size) = expected.size
         && actual.size != size
     {
-        return Err(ErrorKind::OtherError(format!(
-            "Incorrect size for download: {size} != {}",
-            actual.size
-        ))
-        .into());
+        // A broken CDN cache or a pack manifest that disagrees with the real
+        // file by a few bytes must not reject content that hashes correctly:
+        // the hash is authoritative whenever one is available.
+        if !expected.has_hash() {
+            return Err(ErrorKind::OtherError(format!(
+                "Incorrect size for download: {size} != {}",
+                actual.size
+            ))
+            .into());
+        }
+        tracing::warn!(
+            expected_size = size,
+            actual_size = actual.size,
+            "Downloaded size differs from the expected size; relying on content hash verification"
+        );
     }
 
     let checks = [
@@ -5465,6 +5501,7 @@ async fn download_to_path_inner(
     let mut partial_route_index = None;
     let mut terminal_routes = HashSet::new();
     let mut preferred_route = None;
+    let mut busted_for_route: Option<(usize, String)> = None;
     let file_attempt_budget = routes.len().saturating_mul(3).max(1);
     for (round, retry_with_single_thread) in
         [false, true, true].into_iter().enumerate()
@@ -5721,10 +5758,22 @@ async fn download_to_path_inner(
                 )
                 .await;
                 let request_started = Instant::now();
+                // A truncated or invalid body may be a corrupt edge-cache
+                // object; the retry then uses a cache-busted URL that forces a
+                // fresh origin fetch instead of the same broken copy.
+                let attempt_route = busted_for_route
+                    .as_ref()
+                    .filter(|(index, _)| *index == route_index)
+                    .map(|(_, url)| {
+                        let mut busted = route.clone();
+                        busted.url = url.clone();
+                        busted
+                    })
+                    .unwrap_or_else(|| route.clone());
                 let (response, final_url) = match tokio::time::timeout(
                     FILE_TRANSFER_FIRST_BYTE_TIMEOUT,
                     send_path_request(
-                        route,
+                        &attempt_route,
                         request.header.as_ref(),
                         credentials.as_ref(),
                         request.download_meta.as_ref(),
@@ -6183,10 +6232,23 @@ async fn download_to_path_inner(
 
                 if let Some(expected) = expected_size
                     && downloaded < expected
+                    && !request.integrity.has_hash()
                 {
-                    // A close-delimited body can end short without a stream
-                    // error; treat it as a transfer failure so the valid data
-                    // received so far stays available for a resume.
+                    // No hash to fall back on: a close-delimited body that
+                    // ends short is a transfer failure, keeping the valid
+                    // data so far available for a resume. With a hash present
+                    // the short body is verified below instead, because a
+                    // broken CDN or manifest can under-report the size while
+                    // the received content is actually complete and correct.
+                    if http_version == reqwest::Version::HTTP_2
+                        && let Some(authority) = url_authority(&route.url)
+                    {
+                        tracing::warn!(
+                            authority,
+                            "Truncated HTTP/2 response; retrying over HTTP/1.1"
+                        );
+                        record_authority_h2_failure(&authority);
+                    }
                     record_route_failure(route, request.resource, None);
                     preserve_or_remove_partial(
                         &part_path,
@@ -6208,6 +6270,12 @@ async fn download_to_path_inner(
                         remote_addr,
                         Some(http_version),
                     );
+                    if attempts < file_attempt_budget {
+                        busted_for_route = Some((
+                            route_index,
+                            cache_busted_download_url(&route.url, attempts),
+                        ));
+                    }
                     last_error = Some(error);
                     break;
                 }
@@ -6221,7 +6289,27 @@ async fn download_to_path_inner(
                     verify_computed_integrity(&request.integrity, &computed)
                 {
                     record_route_failure(route, request.resource, None);
-                    remove_if_exists(&part_path).await?;
+                    if http_version == reqwest::Version::HTTP_2
+                        && let Some(authority) = url_authority(&route.url)
+                    {
+                        tracing::warn!(
+                            authority,
+                            "Integrity failure on an HTTP/2 response; retrying over HTTP/1.1"
+                        );
+                        record_authority_h2_failure(&authority);
+                    }
+                    // A short body is kept as a resumable partial; a body that
+                    // arrived in full is discarded so the retry restarts.
+                    if downloaded < expected_size.unwrap_or(0) {
+                        preserve_or_remove_partial(
+                            &part_path,
+                            &request.integrity,
+                            any_route_can_resume(&routes),
+                        )
+                        .await?;
+                    } else {
+                        remove_if_exists(&part_path).await?;
+                    }
                     let decision = if routes.len() > 1 {
                         "clear_partial_and_switch"
                     } else if attempts >= 2 {
@@ -6239,6 +6327,12 @@ async fn download_to_path_inner(
                         remote_addr,
                         Some(http_version),
                     );
+                    if attempts < file_attempt_budget {
+                        busted_for_route = Some((
+                            route_index,
+                            cache_busted_download_url(&route.url, attempts),
+                        ));
+                    }
                     if routes.len() > 1 || attempts >= 2 {
                         terminal_routes.insert(route.url.clone());
                     }
@@ -6250,7 +6344,25 @@ async fn download_to_path_inner(
                         .await
                 {
                     record_route_failure(route, request.resource, None);
-                    remove_if_exists(&part_path).await?;
+                    if http_version == reqwest::Version::HTTP_2
+                        && let Some(authority) = url_authority(&route.url)
+                    {
+                        tracing::warn!(
+                            authority,
+                            "Content validation failed on an HTTP/2 response; retrying over HTTP/1.1"
+                        );
+                        record_authority_h2_failure(&authority);
+                    }
+                    if downloaded < expected_size.unwrap_or(0) {
+                        preserve_or_remove_partial(
+                            &part_path,
+                            &request.integrity,
+                            any_route_can_resume(&routes),
+                        )
+                        .await?;
+                    } else {
+                        remove_if_exists(&part_path).await?;
+                    }
                     let decision = if routes.len() > 1 {
                         "clear_partial_and_switch"
                     } else if attempts >= 2 {
@@ -6268,6 +6380,12 @@ async fn download_to_path_inner(
                         remote_addr,
                         Some(http_version),
                     );
+                    if attempts < file_attempt_budget {
+                        busted_for_route = Some((
+                            route_index,
+                            cache_busted_download_url(&route.url, attempts),
+                        ));
+                    }
                     if routes.len() > 1 || attempts >= 2 {
                         terminal_routes.insert(route.url.clone());
                     }
@@ -6958,6 +7076,58 @@ mod tests {
         assert!(!is_official_modrinth_download_url(
             "https://example.com/file.jar"
         ));
+    }
+
+    #[test]
+    fn cache_busted_urls_preserve_existing_query() {
+        assert_eq!(
+            cache_busted_download_url(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1",
+                2,
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1&axolotl_retry=2"
+        );
+        assert_eq!(
+            cache_busted_download_url(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar",
+                1,
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?axolotl_retry=1"
+        );
+        // A previous buster is replaced, not stacked.
+        assert_eq!(
+            cache_busted_download_url(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar?axolotl_retry=1&download=1",
+                3,
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1&axolotl_retry=3"
+        );
+    }
+
+    #[test]
+    fn size_mismatch_is_lenient_when_a_hash_matches() {
+        let matching = ComputedIntegrity {
+            size: 122_777,
+            sha1: Some("abc".to_string()),
+            ..ComputedIntegrity::default()
+        };
+        let hashed = Integrity {
+            size: Some(122_778),
+            sha1: Some("abc".to_string()),
+            ..Integrity::default()
+        };
+        assert!(
+            verify_computed_integrity(&hashed, &matching).is_ok(),
+            "a hash match must win over an off-by-a-few-bytes size claim"
+        );
+        let size_only = Integrity {
+            size: Some(122_778),
+            ..Integrity::default()
+        };
+        assert!(
+            verify_computed_integrity(&size_only, &matching).is_err(),
+            "without a hash the size claim is still enforced"
+        );
     }
 
     #[test]
