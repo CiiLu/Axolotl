@@ -196,6 +196,18 @@ function auditPublishedReleases(currentRef) {
 	finish(failures, warnings, `published release history from ${canonicalBootstrap.tag}`)
 }
 
+function resolveBaseRef(baseRef) {
+	try {
+		git(['rev-parse', '--verify', `${baseRef}^{commit}`])
+		return baseRef
+	} catch {
+		console.warn(
+			`Migration guard: base ref ${baseRef} is not available locally; falling back to HEAD^`,
+		)
+		return 'HEAD^'
+	}
+}
+
 function compareWithBase(baseRef, currentRef) {
 	const failures = []
 	const canonical = migrationMapAt(baseRef)
@@ -226,7 +238,7 @@ const baseIndex = args.indexOf('--base')
 if (args.includes('--release')) {
 	auditPublishedReleases(currentRef)
 } else if (baseIndex !== -1 && args[baseIndex + 1]) {
-	compareWithBase(args[baseIndex + 1], currentRef)
+	compareWithBase(resolveBaseRef(args[baseIndex + 1]), currentRef)
 } else {
 	console.error(
 		'Usage: node check-migrations.mjs (--release | --base <git-ref>) [--current <git-ref>]',
