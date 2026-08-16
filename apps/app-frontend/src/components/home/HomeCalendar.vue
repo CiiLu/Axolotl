@@ -376,6 +376,7 @@ watch(instanceRevision, async () => {
 	flex-direction: column;
 	gap: 0.625rem;
 	overflow: hidden;
+	padding: 0.2rem;
 }
 
 .home-calendar-header {
