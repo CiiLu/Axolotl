@@ -38,6 +38,8 @@ pub const DOWNLOAD_META_HEADER: &str = "modrinth-download-meta";
 
 const BMCLAPI_BASE_URL: &str = "https://bmclapi2.bangbang93.com";
 const MCIM_BASE_URL: &str = "https://mod.mcimirror.top";
+pub(crate) const MODRINTH_CDN_OFFICIAL_HOST: &str = "cdn-alt.modrinth.com";
+const MODRINTH_CDN_LEGACY_HOST: &str = "cdn.modrinth.com";
 const METADATA_ATTEMPT_BUDGET: usize = 4;
 #[cfg(not(test))]
 const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_secs(2);
@@ -227,6 +229,10 @@ pub struct DownloadRequest {
     pub download_meta: Option<DownloadMeta>,
     pub header: Option<(String, String)>,
     pub candidate_urls: Vec<String>,
+    /// Whether range-segmented (multi-connection) downloading is allowed.
+    /// Batch schedulers disable it so many small files share one connection
+    /// budget instead of each file multiplying its connections.
+    pub allow_segmented_download: bool,
     install_tracking: Option<DownloadInstallTracking>,
 }
 
@@ -246,8 +252,14 @@ impl DownloadRequest {
             download_meta: None,
             header: None,
             candidate_urls: Vec::new(),
+            allow_segmented_download: true,
             install_tracking: None,
         }
+    }
+
+    pub fn with_segmented_download(mut self, allow: bool) -> Self {
+        self.allow_segmented_download = allow;
+        self
     }
 
     pub fn with_integrity(mut self, integrity: Integrity) -> Self {
@@ -471,11 +483,49 @@ fn modrinth_request_kind(url: &str) -> Option<&'static str> {
         || url.starts_with(env!("MODRINTH_API_URL_V3"))
     {
         Some("API")
-    } else if url.starts_with("https://cdn.modrinth.com") {
+    } else if url.starts_with("https://cdn-alt.modrinth.com")
+        || url.starts_with("https://cdn.modrinth.com")
+    {
         Some("CDN")
     } else {
         None
     }
+}
+
+/// Rewrites the legacy `cdn.modrinth.com` host to the official
+/// `cdn-alt.modrinth.com` host, preserving scheme, path and query. Other
+/// hosts are returned unchanged, so the result can be used unconditionally.
+fn canonical_modrinth_cdn_url(url: &str) -> String {
+    let Ok(mut parsed) = Url::parse(url) else {
+        return url.to_string();
+    };
+    if parsed.scheme() == "https"
+        && parsed
+            .host_str()
+            .is_some_and(|host| {
+                host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
+            })
+    {
+        let _ = parsed.set_host(Some(MODRINTH_CDN_OFFICIAL_HOST));
+    }
+    parsed.into()
+}
+
+fn is_modrinth_cdn_url(url: &str) -> bool {
+    url.starts_with("https://cdn-alt.modrinth.com")
+}
+
+fn is_modrinth_host_url(url: &str) -> bool {
+    Url::parse(url).ok().is_some_and(|parsed| {
+        matches!(
+            parsed.host_str(),
+            Some(
+                "api.modrinth.com"
+                    | "cdn.modrinth.com"
+                    | "cdn-alt.modrinth.com"
+            )
+        )
+    })
 }
 
 fn sanitize_url_for_log(url: &str) -> String {
@@ -695,7 +745,10 @@ fn repair_official_cdn_redirect(
     if location.is_ascii()
         || !redirect
             .host_str()
-            .is_some_and(|host| host.eq_ignore_ascii_case("cdn.modrinth.com"))
+            .is_some_and(|host| {
+                host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
+                    || host.eq_ignore_ascii_case(MODRINTH_CDN_OFFICIAL_HOST)
+            })
         || original.path().is_empty()
     {
         return None;
@@ -721,7 +774,9 @@ fn is_official_modrinth_cdn_redirect(location: Option<&str>) -> bool {
         .split(['/', '?', '#'])
         .next()
         .unwrap_or_default();
-    authority.eq_ignore_ascii_case("cdn.modrinth.com")
+    authority.eq_ignore_ascii_case("cdn-alt.modrinth.com")
+        || authority.eq_ignore_ascii_case("cdn-alt.modrinth.com:443")
+        || authority.eq_ignore_ascii_case("cdn.modrinth.com")
         || authority.eq_ignore_ascii_case("cdn.modrinth.com:443")
 }
 
@@ -748,7 +803,8 @@ fn route(
 }
 
 fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
-    let source = Url::parse(url)
+    let url = canonical_modrinth_cdn_url(url);
+    let source = Url::parse(&url)
         .ok()
         .and_then(|url| url.host_str().map(str::to_string))
         .map_or(DownloadRouteSource::Official, |host| match host.as_str() {
@@ -769,7 +825,7 @@ fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
     #[cfg(test)]
     let route = {
         let mut route = route;
-        if Url::parse(url)
+        if Url::parse(&url)
             .ok()
             .and_then(|url| url.host_str().and_then(|host| host.parse().ok()))
             .is_some_and(|address: std::net::IpAddr| address.is_loopback())
@@ -877,18 +933,6 @@ fn explicit_mirror_routes(
             path.to_string(),
             DownloadRouteSource::Bmclapi,
         ),
-        "api.modrinth.com" => push_mirror(
-            &mut routes,
-            MCIM_BASE_URL,
-            format!("/modrinth{path}"),
-            DownloadRouteSource::Mcim,
-        ),
-        "cdn.modrinth.com" => push_mirror(
-            &mut routes,
-            MCIM_BASE_URL,
-            path.to_string(),
-            DownloadRouteSource::Mcim,
-        ),
         "api.curseforge.com" => push_mirror(
             &mut routes,
             MCIM_BASE_URL,
@@ -919,7 +963,11 @@ fn is_official_modrinth_download_url(url: &str) -> bool {
     Url::parse(url).is_ok_and(|url| {
         matches!(
             url.host_str(),
-            Some("api.modrinth.com" | "cdn.modrinth.com")
+            Some(
+                "api.modrinth.com"
+                    | "cdn.modrinth.com"
+                    | "cdn-alt.modrinth.com"
+            )
         )
     })
 }
@@ -1019,13 +1067,21 @@ pub fn resolve_download_routes_for(
     resource: ResourceClass,
     mode: crate::state::DownloadSourceMode,
 ) -> Vec<DownloadRoute> {
-    let official = official_route(url, resource);
-    let mirror_first_loader = uses_mirror_first_loader_routes(url, resource);
-    let mut routes = explicit_mirror_routes(url, resource);
+    let url = canonical_modrinth_cdn_url(url);
+    let official = official_route(&url, resource);
+    let mirror_first_loader = uses_mirror_first_loader_routes(&url, resource);
+    let mut routes = explicit_mirror_routes(&url, resource);
     routes.push(official);
+    // Modrinth content has no mirrors by design: all downloads and API
+    // requests must use the official sources, so their mode is fixed.
+    let mode = if is_modrinth_host_url(&url) {
+        crate::state::DownloadSourceMode::OfficialOnly
+    } else {
+        mode
+    };
     match mode {
         crate::state::DownloadSourceMode::Auto
-            if is_official_version_manifest_url(url) =>
+            if is_official_version_manifest_url(&url) =>
         {
             routes.sort_by_key(|route| route.is_mirror)
         }
@@ -1094,7 +1150,9 @@ fn infer_resource_class(url: &str) -> ResourceClass {
         "launcher.mojang.com" | "piston-data.mojang.com" => {
             ResourceClass::MinecraftLibrary
         }
-        "api.modrinth.com" | "cdn.modrinth.com" => ResourceClass::Modrinth,
+        "api.modrinth.com"
+        | "cdn.modrinth.com"
+        | "cdn-alt.modrinth.com" => ResourceClass::Modrinth,
         "api.curseforge.com"
         | "edge.forgecdn.net"
         | "media.forgecdn.net"
@@ -3445,8 +3503,11 @@ async fn send_path_request_with_clients(
             ))
             .into());
         }
-        current = repair_official_cdn_redirect(&original, &next, &location)
-            .unwrap_or(next);
+        current = Url::parse(&canonical_modrinth_cdn_url(
+            &repair_official_cdn_redirect(&original, &next, &location)
+                .unwrap_or(next)
+                .to_string(),
+        ))?;
     }
     unreachable!()
 }
@@ -3707,7 +3768,9 @@ fn route_segmented_concurrency_cap(
     available_permits: usize,
 ) -> usize {
     let cap = segmented_concurrency_cap(available_permits);
-    if route.source == DownloadRouteSource::Bmclapi {
+    if route.source == DownloadRouteSource::Bmclapi
+        || is_modrinth_cdn_url(&route.url)
+    {
         cap.min(4)
     } else {
         cap
@@ -5160,6 +5223,23 @@ async fn record_install_download_stage(
     }
 }
 
+/// Resolves hosts ahead of the first request without blocking the caller.
+/// Used before batch downloads so every file shares one ordered address list
+/// instead of racing the same DNS queries.
+pub(crate) fn prewarm_download_dns(hosts: &[&str]) {
+    for host in hosts {
+        let resolver = Arc::clone(&DOWNLOAD_DNS_RESOLVER);
+        let host = host.to_string();
+        tokio::spawn(async move {
+            let _ = tokio::time::timeout(
+                time::Duration::from_secs(10),
+                resolver.pre_resolve(&host),
+            )
+            .await;
+        });
+    }
+}
+
 /// Streams a download to a sibling `.part` file, verifies it, then atomically
 /// moves it into place.
 #[tracing::instrument(skip(semaphore, _exec, progress, request, destination))]
@@ -5194,11 +5274,20 @@ pub async fn download_to_path(
 }
 
 async fn download_to_path_inner(
-    request: DownloadRequest,
+    mut request: DownloadRequest,
     destination: &Path,
     semaphore: &FetchSemaphore,
     mut progress: Option<&mut FetchProgressFn<'_>>,
 ) -> crate::Result<DownloadResult> {
+    // All Modrinth CDN traffic must target the official cdn-alt host. This is
+    // applied at the single entry point so every caller (modpacks, single
+    // content installs, missing-content recovery) gets the same behaviour.
+    request.url = canonical_modrinth_cdn_url(&request.url);
+    request.candidate_urls = request
+        .candidate_urls
+        .iter()
+        .map(|url| canonical_modrinth_cdn_url(url))
+        .collect();
     if let Some(parent) = destination.parent() {
         io::create_dir_all(parent).await?;
     }
@@ -5359,7 +5448,8 @@ async fn download_to_path_inner(
                 // Segmented downloads restart from scratch, so when a partial
                 // file already covers at least half of the expected data,
                 // resuming it over a single connection wastes less transfer.
-                if !retry_with_single_thread
+                if request.allow_segmented_download
+                    && !retry_with_single_thread
                     && route.supports_range
                     && range_splitting_allowed(route)
                     && request.integrity.size.is_some_and(|size| {
@@ -6702,7 +6792,94 @@ mod tests {
             ),
             Some("CDN")
         );
+        assert_eq!(
+            modrinth_request_kind(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+            ),
+            Some("CDN")
+        );
         assert_eq!(modrinth_request_kind("https://example.com/file.jar"), None);
+    }
+
+    #[test]
+    fn modrinth_cdn_urls_are_canonicalized_to_cdn_alt() {
+        assert_eq!(
+            canonical_modrinth_cdn_url(
+                "https://cdn.modrinth.com/data/project/version/file.jar?download=1"
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1"
+        );
+        assert_eq!(
+            canonical_modrinth_cdn_url(
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+            ),
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+        );
+        assert_eq!(
+            canonical_modrinth_cdn_url("https://example.com/data/file.jar"),
+            "https://example.com/data/file.jar"
+        );
+        assert_eq!(canonical_modrinth_cdn_url("not-a-url"), "not-a-url");
+    }
+
+    #[test]
+    fn modrinth_routes_are_official_only_and_canonicalized() {
+        for mode in [
+            crate::state::DownloadSourceMode::Auto,
+            crate::state::DownloadSourceMode::OfficialOnly,
+            crate::state::DownloadSourceMode::MirrorPreferred,
+            crate::state::DownloadSourceMode::OfficialPreferred,
+        ] {
+            let api_routes = resolve_download_routes_for(
+                "https://api.modrinth.com/v2/tag/game_version",
+                ResourceClass::Modrinth,
+                mode,
+            );
+            assert_eq!(api_routes.len(), 1);
+            assert_eq!(api_routes[0].source, DownloadRouteSource::Official);
+            assert!(!api_routes[0].is_mirror);
+
+            let cdn_routes = resolve_download_routes_for(
+                "https://cdn.modrinth.com/data/project/version/file.jar",
+                ResourceClass::Modpack,
+                mode,
+            );
+            assert_eq!(cdn_routes.len(), 1);
+            assert_eq!(
+                cdn_routes[0].url,
+                "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+            );
+            assert_eq!(cdn_routes[0].source, DownloadRouteSource::Official);
+            assert!(!cdn_routes[0].is_mirror);
+            assert!(cdn_routes[0].allow_sensitive_headers);
+        }
+    }
+
+    #[test]
+    fn modrinth_download_url_recognition_includes_cdn_alt() {
+        assert!(is_official_modrinth_download_url(
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar"
+        ));
+        assert!(is_official_modrinth_download_url(
+            "https://cdn.modrinth.com/data/project/version/file.jar"
+        ));
+        assert!(is_official_modrinth_download_url(
+            "https://api.modrinth.com/v2/project/abc"
+        ));
+        assert!(!is_official_modrinth_download_url(
+            "https://example.com/file.jar"
+        ));
+    }
+
+    #[test]
+    fn segmented_download_flag_is_buildable_per_request() {
+        let request = DownloadRequest::new(
+            "https://example.com/a.jar",
+            ResourceClass::Modpack,
+        );
+        assert!(request.allow_segmented_download);
+        let request = request.with_segmented_download(false);
+        assert!(!request.allow_segmented_download);
     }
 
     #[tokio::test]
@@ -6759,6 +6936,42 @@ mod tests {
 
         assert_eq!(result.size, 4);
         assert_eq!(tokio::fs::read(&destination).await.unwrap(), b"done");
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn segmentation_disabled_downloads_use_a_single_connection() {
+        let _guard = RANGE_SPLITTING_TEST_LOCK.lock().await;
+        RANGE_SPLITTING_PROTOCOL_FAILURES.lock().clear();
+        let size = (SEGMENTED_DOWNLOAD_THRESHOLD * 2) as usize;
+        let data = Arc::new(
+            (0..size)
+                .map(|index| (index % 251) as u8)
+                .collect::<Vec<_>>(),
+        );
+        let (url, requests, normal_requests, server) =
+            spawn_range_server(data, false, false, false, false, false).await;
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("batch.bin");
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let result = download_to_path(
+            DownloadRequest::new(&url, ResourceClass::Other)
+                .with_segmented_download(false)
+                .with_integrity(Integrity::default().with_size(size as u64)),
+            &destination,
+            &FetchSemaphore(Semaphore::new(2)),
+            &pool,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.size, size as u64);
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+        assert_eq!(normal_requests.load(Ordering::Relaxed), 1);
         server.abort();
     }
 
@@ -7128,6 +7341,9 @@ mod tests {
             "https://cdn.modrinth.com/data/project/versions/version/file.jar"
         )));
         assert!(is_official_modrinth_cdn_redirect(Some(
+            "https://cdn-alt.modrinth.com/data/project/versions/version/file.jar"
+        )));
+        assert!(is_official_modrinth_cdn_redirect(Some(
             "https://CDN.MODRINTH.COM/data/project/versions/version/file.jar"
         )));
         assert!(!is_official_modrinth_cdn_redirect(Some(
@@ -7140,7 +7356,7 @@ mod tests {
             "https://cdn.modrinth.com@evil.example/file.jar"
         )));
         assert!(!is_official_modrinth_cdn_redirect(Some(
-            "https://cdn.modrinth.com/\u{4e0b}\u{8f7d}/file.jar"
+            "https://cdn-alt.modrinth.com/\u{4e0b}\u{8f7d}/file.jar"
         )));
         assert!(!is_official_modrinth_cdn_redirect(None));
     }
@@ -7157,25 +7373,29 @@ mod tests {
     #[test]
     fn malformed_official_cdn_redirects_reuse_the_original_encoded_path() {
         let original = Url::parse(
-			"https://mod.mcimirror.top/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip",
+			"https://cdn-alt.modrinth.com/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip",
 		)
 		.unwrap();
-        let redirect = Url::parse(
-			"https://cdn.modrinth.com/data/project/versions/version/\u{91c8}\u{91c8}.zip",
-		)
-		.unwrap();
+        for host in ["cdn-alt.modrinth.com", "cdn.modrinth.com"] {
+            let redirect = Url::parse(&format!(
+				"https://{host}/data/project/versions/version/\u{91c8}\u{91c8}.zip",
+			))
+			.unwrap();
 
-        let repaired = repair_official_cdn_redirect(
-			&original,
-			&redirect,
-			"https://cdn.modrinth.com/data/project/versions/version/\u{91c8}\u{91c8}.zip",
-		)
-		.unwrap();
+            let repaired = repair_official_cdn_redirect(
+				&original,
+				&redirect,
+				&format!("https://{host}/data/project/versions/version/\u{91c8}\u{91c8}.zip"),
+			)
+			.unwrap();
 
-        assert_eq!(
-            repaired.as_str(),
-            "https://cdn.modrinth.com/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip"
-        );
+            assert_eq!(
+                repaired.as_str(),
+                format!(
+                    "https://{host}/data/project/versions/version/%E9%87%91%E5%90%88%E6%AC%A2_1.21%2B.zip"
+                )
+            );
+        }
     }
 
     #[test]
