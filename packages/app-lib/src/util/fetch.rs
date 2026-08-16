@@ -41,6 +41,9 @@ const BMCLAPI_BASE_URL: &str = "https://bmclapi2.bangbang93.com";
 const MCIM_BASE_URL: &str = "https://mod.mcimirror.top";
 pub(crate) const MODRINTH_CDN_OFFICIAL_HOST: &str = "cdn-alt.modrinth.com";
 const MODRINTH_CDN_LEGACY_HOST: &str = "cdn.modrinth.com";
+/// TEMP: force all Modrinth CDN downloads to the main host. Set to
+/// "cdn-alt.modrinth.com" to restore the previous behavior.
+const TEMP_MODRINTH_CDN_HOST: &str = "cdn.modrinth.com";
 const METADATA_ATTEMPT_BUDGET: usize = 4;
 #[cfg(not(test))]
 const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_secs(2);
@@ -639,9 +642,10 @@ fn canonical_modrinth_cdn_url(url: &str) -> String {
     if parsed.scheme() == "https"
         && parsed.host_str().is_some_and(|host| {
             host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
+                || host.eq_ignore_ascii_case(MODRINTH_CDN_OFFICIAL_HOST)
         })
     {
-        let _ = parsed.set_host(Some(MODRINTH_CDN_OFFICIAL_HOST));
+        let _ = parsed.set_host(Some(TEMP_MODRINTH_CDN_HOST));
     }
     parsed.into()
 }
