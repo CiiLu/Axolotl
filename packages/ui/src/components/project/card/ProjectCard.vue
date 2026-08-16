@@ -1,5 +1,5 @@
 <template>
-	<SmartClickable class="w-full project-card-container">
+	<SmartClickable ref="cardRef" class="w-full project-card-container">
 		<template v-if="link" #clickable>
 			<AutoLink
 				:to="link"
@@ -51,8 +51,8 @@
 					</div>
 				</div>
 				<div class="mt-auto flex gap-3 justify-between items-end">
-					<div class="flex flex-col gap-3 flex-wrap overflow-hidden grow">
-						<div class="flex items-center gap-1 flex-wrap overflow-hidden">
+					<div class="flex flex-col gap-3 grow min-w-0">
+						<div class="flex items-center gap-1 min-w-0">
 							<template v-if="isServerProject">
 								<ServerOnlinePlayers
 									v-if="serverOnlinePlayers !== undefined"
@@ -83,7 +83,7 @@
 								:extra-tags="extraTags"
 								:exclude-loaders="excludeLoaders"
 								:deprioritized-tags="deprioritizedTags"
-								:max-tags="(maxTags || 6) + (!!environment ? 0 : 1)"
+								:max-tags="computedMaxTags"
 							/>
 							<ServerModpackContent
 								v-if="serverModpackContent"
@@ -94,7 +94,7 @@
 								class="text-primary"
 							/>
 						</div>
-						<div v-if="downloads !== undefined" class="flex items-center gap-3 flex-wrap">
+						<div v-if="downloads !== undefined" class="flex flex-col gap-1 w-fit">
 							<ProjectCardStats :downloads="downloads" />
 							<ProjectCardDate
 								v-if="date && autoDisplayDate"
@@ -190,7 +190,7 @@
 							:extra-tags="extraTags"
 							:exclude-loaders="excludeLoaders"
 							:deprioritized-tags="deprioritizedTags"
-							:max-tags="(maxTags || (!!$slots.actions ? 4 : 5)) + (!!environment ? 0 : 1)"
+							:max-tags="computedMaxTags"
 						/>
 					</div>
 					<ServerModpackContent
@@ -209,8 +209,9 @@
 
 <script setup lang="ts">
 import type { ProjectStatus } from '@modrinth/utils'
+import { useElementSize } from '@vueuse/core'
 import dayjs from 'dayjs'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
 import { AutoLink, Avatar } from '../../base'
@@ -234,6 +235,10 @@ defineEmits<{
 	mouseenter: []
 	mouseleave: []
 }>()
+
+const cardRef = ref<InstanceType<typeof SmartClickable> | null>(null)
+const cardElement = computed(() => cardRef.value?.$el as HTMLElement | undefined)
+const { width: cardWidth } = useElementSize(cardElement)
 
 const props = defineProps<{
 	layout: 'list' | 'grid'
@@ -305,6 +310,30 @@ const date = computed(() => {
 })
 
 const extraTags = computed(() => props.allTags?.filter((tag) => !props.tags?.includes(tag)))
+
+const computedMaxTags = computed(() => {
+	// 如果外部传入了 maxTags，优先使用
+	if (props.maxTags !== undefined) {
+		return props.maxTags + (props.environment ? 0 : 1)
+	}
+
+	const hasActions = !!props.layout
+	const environmentOffset = props.environment ? 0 : 1
+
+	// 根据卡片宽度动态计算
+	if (props.layout === 'grid') {
+		// Grid 布局：长方形，底部空间窄
+		if (cardWidth.value >= 600) return 5 + environmentOffset
+		if (cardWidth.value >= 400) return 4 + environmentOffset
+		return 3 + environmentOffset
+	} else {
+		// List 布局：长条形，横向空间充足
+		if (cardWidth.value >= 800) return 8 + environmentOffset
+		if (cardWidth.value >= 600) return 6 + environmentOffset
+		if (cardWidth.value >= 400) return 5 + environmentOffset
+		return 4 + environmentOffset
+	}
+})
 
 const cssColor = computed(() => {
 	if (props.color === undefined || typeof props.color === 'string') {

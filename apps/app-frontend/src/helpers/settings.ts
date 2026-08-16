@@ -56,6 +56,19 @@ export function setUpdateSource(source: UpdateSource) {
 	localStorage.setItem(UPDATE_SOURCE_STORAGE_KEY, source)
 }
 
+export type BrowseContentSource = 'all' | 'modrinth' | 'curseforge'
+
+const BROWSE_CONTENT_SOURCE_STORAGE_KEY = 'axolotl-browse-content-source'
+
+export function getLastBrowseContentSource(): BrowseContentSource | null {
+	const value = localStorage.getItem(BROWSE_CONTENT_SOURCE_STORAGE_KEY)
+	return value === 'all' || value === 'modrinth' || value === 'curseforge' ? value : null
+}
+
+export function setLastBrowseContentSource(source: BrowseContentSource) {
+	localStorage.setItem(BROWSE_CONTENT_SOURCE_STORAGE_KEY, source)
+}
+
 export type AppSettings = {
 	max_concurrent_downloads: number
 	max_concurrent_writes: number
