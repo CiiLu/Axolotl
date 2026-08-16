@@ -33,6 +33,23 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.2',
+		version: '1.8.2',
+		publishedAt: '2026-08-16',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.2',
+			'zh-CN': 'Axolotl Launcher 1.8.2',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US': 'Fixed some forge artifacts cannot be downloaded',
+					'zh-CN': '修复了部分 forge 资源无法下载的问题',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.1',
 		version: '1.8.1',
 		publishedAt: '2026-08-16',

@@ -957,14 +957,29 @@ fn parse_installer(
     for library in &mut installer.libraries {
         library.include_in_classpath = false;
     }
+
+    let has_processors = !installer.processors.is_empty();
+
     for library in &mut partial.libraries {
-        if library
+        let library_name = library.name.clone();
+
+        if let Some(artifact) = library
             .downloads
-            .as_ref()
-            .and_then(|downloads| downloads.artifact.as_ref())
-            .is_some_and(|artifact| artifact.url.is_empty())
+            .as_mut()
+            .and_then(|downloads| downloads.artifact.as_mut())
+            && artifact.url.is_empty()
         {
-            library.downloadable = false;
+            if !has_processors
+                && let Some(full_version) =
+                    library_name.strip_prefix("net.minecraftforge:forge:")
+            {
+                artifact.url = format!(
+                    "{FORGE_MAVEN_URL}{full_version}/forge-{full_version}-universal.jar"
+                );
+                library.downloadable = true;
+            } else {
+                library.downloadable = false;
+            }
         }
     }
 
