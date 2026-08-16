@@ -91,12 +91,7 @@ defineExpose({ show })
 </script>
 
 <template>
-	<NewModal
-		ref="modal"
-		:header="formatMessage(messages.title)"
-		:closable="false"
-		max-width="600px"
-	>
+	<NewModal ref="modal" :header="formatMessage(messages.title)" :closable="false" max-width="600px">
 		<div class="flex flex-col gap-6">
 			<div class="flex items-start gap-3">
 				<ShieldIcon class="mt-0.5 size-6 shrink-0 text-brand" />

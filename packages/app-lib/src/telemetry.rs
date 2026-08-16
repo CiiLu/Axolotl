@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -39,6 +39,19 @@ static LOG_RING: LazyLock<Mutex<VecDeque<LogLine>>> =
     LazyLock::new(|| Mutex::new(VecDeque::with_capacity(256)));
 static PENDING_RUST_ERRORS: LazyLock<Mutex<VecDeque<PendingRustError>>> =
     LazyLock::new(|| Mutex::new(VecDeque::with_capacity(32)));
+
+#[derive(Default, Clone, Copy)]
+struct DownloadAggregates {
+    files: u64,
+    bytes: u64,
+    failed: u64,
+    stalls: u64,
+    wasted: u64,
+    switches: u64,
+}
+
+static DOWNLOAD_AGGREGATES: LazyLock<Mutex<HashMap<u8, DownloadAggregates>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 static BEARER_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\bbearer\s+[a-z0-9._~+/=-]+").expect("valid regex")
@@ -271,6 +284,77 @@ pub async fn submit_frontend_error(
     Ok(())
 }
 
+pub async fn submit_download_stall(
+    engine: &str,
+    rule: u8,
+    source: &str,
+    detail: &str,
+    context: &str,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    let message = format!("download_stall engine={engine} rule={rule} src={source} {detail}");
+    queue_error(
+        &state,
+        FrontendErrorReport {
+            error_type: "download_stall".to_string(),
+            message,
+            stack: None,
+            route: Some(source.to_string()),
+            command: Some("download".to_string()),
+            context: Some(context.to_string()),
+        },
+    )
+    .await?;
+    wake();
+    Ok(())
+}
+
+pub async fn submit_download_error(
+    engine: &str,
+    category: &str,
+    message: &str,
+    route: Option<&str>,
+    command: Option<&str>,
+    context: Option<&str>,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    let message = format!("download_error engine={engine} category={category} {message}");
+    queue_error(
+        &state,
+        FrontendErrorReport {
+            error_type: "download_error".to_string(),
+            message,
+            stack: None,
+            route: route.map(str::to_string),
+            command: command.map(str::to_string),
+            context: context.map(str::to_string),
+        },
+    )
+    .await?;
+    wake();
+    Ok(())
+}
+
+pub fn record_download_stats(
+    engine: u8,
+    files: u64,
+    bytes: u64,
+    failed: u64,
+    stalls: u64,
+    wasted: u64,
+    switches: u64,
+) {
+    if let Ok(mut aggregates) = DOWNLOAD_AGGREGATES.lock() {
+        let entry = aggregates.entry(engine).or_default();
+        entry.files = entry.files.saturating_add(files);
+        entry.bytes = entry.bytes.saturating_add(bytes);
+        entry.failed = entry.failed.saturating_add(failed);
+        entry.stalls = entry.stalls.saturating_add(stalls);
+        entry.wasted = entry.wasted.saturating_add(wasted);
+        entry.switches = entry.switches.saturating_add(switches);
+    }
+}
+
 pub fn notify_online() {
     wake();
 }
@@ -347,11 +431,32 @@ async fn enqueue_heartbeat(state: &State) -> crate::Result<()> {
     }
 
     let event_id = Uuid::new_v4().to_string();
+    let download_stats = {
+        let mut stats = serde_json::Map::new();
+        if let Ok(mut aggregates) = DOWNLOAD_AGGREGATES.lock() {
+            for (engine, aggregate) in aggregates.iter() {
+                stats.insert(
+                    engine.to_string(),
+                    json!({
+                        "files": aggregate.files,
+                        "bytes": aggregate.bytes,
+                        "failed": aggregate.failed,
+                        "stalls": aggregate.stalls,
+                        "wasted": aggregate.wasted,
+                        "switches": aggregate.switches,
+                    }),
+                );
+            }
+            aggregates.clear();
+        }
+        Value::Object(stats)
+    };
     let payload = json!({
         "type": "heartbeat",
         "event_id": event_id,
         "occurred_at": Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
         "day": day,
+        "download_stats": download_stats,
     });
     insert_outbox_event(
         state,
@@ -831,6 +936,9 @@ fn clear_runtime_buffers() {
     }
     if let Ok(mut ring) = LOG_RING.lock() {
         ring.clear();
+    }
+    if let Ok(mut aggregates) = DOWNLOAD_AGGREGATES.lock() {
+        aggregates.clear();
     }
 }
 

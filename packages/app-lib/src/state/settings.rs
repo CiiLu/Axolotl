@@ -1,7 +1,8 @@
 //! Theseus settings file
 
+use crate::util::download::DownloadEngine;
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Row, Sqlite};
 use std::collections::HashMap;
 
 // Types
@@ -101,6 +102,8 @@ impl<'de> Deserialize<'de> for HomeLayout {
 pub struct Settings {
     pub max_concurrent_downloads: usize,
     pub max_concurrent_writes: usize,
+    #[serde(default)]
+    pub download_engine: DownloadEngine,
     #[serde(default)]
     pub auto_concurrent_downloads: bool,
     #[serde(default)]
@@ -205,14 +208,18 @@ pub enum FeatureFlag {
     ShowInstancePlayTime,
     SkipNonEssentialWarnings,
     AdvancedFiltersCollapsed,
+    PageTransitions,
+    ShowVersionEnvironmentColumn,
+    XmclDownloadEngine,
 }
 
 impl Settings {
     const CURRENT_VERSION: usize = 3;
 
-    pub async fn get(
-        exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
-    ) -> crate::Result<Self> {
+    pub async fn get<'a, E>(exec: E) -> crate::Result<Self>
+    where
+        E: sqlx::Executor<'a, Database = sqlx::Sqlite> + Copy,
+    {
         let res = sqlx::query!(
             "
             SELECT
@@ -240,9 +247,16 @@ impl Settings {
             .fetch_one(exec)
             .await?;
 
-        Ok(Self {
+        let engine_row = sqlx::query("SELECT download_engine FROM settings WHERE id = 0")
+            .fetch_one(exec)
+            .await?;
+        let download_engine =
+            DownloadEngine::from_str(&engine_row.get::<String, _>("download_engine"));
+
+        let settings = Self {
             max_concurrent_downloads: res.max_concurrent_downloads as usize,
             max_concurrent_writes: res.max_concurrent_writes as usize,
+            download_engine,
             auto_concurrent_downloads: res.auto_concurrent_downloads == 1,
             minecraft_metadata_source: DownloadSourceMode::from_string(
                 &res.minecraft_metadata_source,
@@ -342,13 +356,18 @@ impl Settings {
                 .pending_update_toast_for_version,
             auto_download_updates: res.auto_download_updates.map(|x| x == 1),
             version: res.version as usize,
-        })
+        };
+        crate::util::download::set_active_engine(settings.download_engine);
+        Ok(settings)
     }
 
-    pub async fn update(
+    pub async fn update<'a, E>(
         &self,
-        exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
-    ) -> crate::Result<()> {
+        exec: E,
+    ) -> crate::Result<()>
+    where
+        E: sqlx::Executor<'a, Database = sqlx::Sqlite> + Copy,
+    {
         let max_concurrent_writes = self.max_concurrent_writes as i32;
         let max_concurrent_downloads =
             self.max_concurrent_downloads.clamp(1, 256) as i32;
@@ -525,6 +544,11 @@ impl Settings {
         )
         .execute(exec)
         .await?;
+
+        sqlx::query("UPDATE settings SET download_engine = ? WHERE id = 0")
+            .bind(self.download_engine.as_str())
+            .execute(exec)
+            .await?;
 
         Ok(())
     }
