@@ -19,6 +19,7 @@ pub mod xmcl;
 pub enum DownloadEngine {
 	#[default]
 	Legacy,
+	#[serde(rename = "xmcl", alias = "xmcl_compat")]
 	XmclCompat,
 }
 
@@ -32,7 +33,7 @@ impl DownloadEngine {
 
 	pub fn from_str(value: &str) -> Self {
 		match value {
-			"xmcl" => Self::XmclCompat,
+			"xmcl" | "xmcl_compat" => Self::XmclCompat,
 			_ => Self::Legacy,
 		}
 	}
