@@ -1020,6 +1020,10 @@ fn explicit_mirror_routes(
                        base: &str,
                        path: String,
                        source: DownloadRouteSource| {
+        // TEMP: MCIM mirror disabled. Remove this line to restore MCIM.
+        if source == DownloadRouteSource::Mcim {
+            return;
+        }
         if let Some(url) = url_with_base(&parsed, base, &path) {
             routes.push(route(url, source, true, supports_range));
         }
