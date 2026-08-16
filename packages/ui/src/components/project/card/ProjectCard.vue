@@ -31,8 +31,8 @@
 					<Avatar :src="iconUrl" size="96px" class="project-card__icon ease-brightness" no-shadow />
 					<div class="flex flex-col gap-2 w-full">
 						<div class="grid grid-cols-[1fr_auto] gap-4">
-							<div class="flex flex-col gap-1">
-								<div class="flex gap-2 items-center">
+							<div class="flex min-w-0 flex-col gap-1">
+								<div class="flex min-w-0 gap-2 items-center">
 									<ProjectCardTitle :title="title" compact />
 									<span
 										v-if="provider"
@@ -121,8 +121,8 @@
 				class="project-card__icon grid-project-card-list__icon ease-brightness"
 				no-shadow
 			/>
-			<div class="flex flex-col gap-2 grid-project-card-list__info">
-				<div class="flex gap-2 items-center">
+			<div class="flex min-w-0 flex-col gap-2 grid-project-card-list__info">
+				<div class="flex min-w-0 gap-2 items-center">
 					<ProjectCardTitle :title="title" />
 					<span
 						v-if="provider"

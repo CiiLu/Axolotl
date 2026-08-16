@@ -279,7 +279,7 @@ onUnmounted(() => unlisten())
 						<button
 							v-tooltip="formatMessage(commonMessages.stopButton)"
 							:class="{ 'scale-100 opacity-100': isPlaying }"
-							class="transition-all scale-75 origin-bottom opacity-0 card-shadow"
+							class="transition-all origin-bottom opacity-0 card-shadow"
 							@click="(e) => stop(e, 'InstanceCard')"
 							@mousehover="checkProcess"
 						>

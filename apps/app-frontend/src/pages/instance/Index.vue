@@ -1099,11 +1099,11 @@ Button {
 
 <style>
 /*
- * fixed 渲染模式（日志页）：页面自身不滚动，日志区内部滚动，
- * 关掉 .app-viewport 的滚动与 scrollbar-gutter，避免出现多余的外层滚动条。
+ * fixed 渲染模式（日志页）：页面自身不滚动，日志区内部滚动。
+ * 只去掉 .app-viewport 的 scrollbar-gutter（避免多余的空滚动条轨道），
+ * 保留 overflow: auto 作为兜底——内容万一超出视口仍可滚动，不会被裁切。
  */
 .app-viewport:has(.instance-fixed-render) {
-	overflow: hidden;
 	scrollbar-gutter: auto;
 }
 </style>

@@ -27,12 +27,13 @@ use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 use std::time::{self, Instant};
-use tokio::sync::{Mutex as AsyncMutex, Semaphore, SemaphorePermit};
+use tokio::sync::{Mutex as AsyncMutex, Notify, Semaphore, SemaphorePermit};
 use tokio::{
     fs::File,
     io::{AsyncReadExt, AsyncWriteExt},
 };
 use url::Url;
+use uuid::Uuid;
 
 pub const DOWNLOAD_META_HEADER: &str = "modrinth-download-meta";
 
@@ -99,7 +100,16 @@ const BMCL_RATE_RECOVERY_INTERVAL: time::Duration =
 const MAX_DOWNLOAD_ATTEMPT_HISTORY: usize = 12;
 const MAX_DOWNLOAD_DIAGNOSTIC_BYTES: usize = 8 * 1024;
 const H2_FALLBACK_TTL: time::Duration = time::Duration::from_secs(600);
-const COLD_START_PROBE_MAX_ROUTES: usize = 3;
+const TASK_PROBE_MAX_ROUTES: usize = 3;
+const MAX_TASK_PROBE_STATES: usize = 64;
+#[cfg(not(test))]
+const TASK_PROBE_WINDOW: time::Duration = time::Duration::from_secs(60);
+#[cfg(test)]
+const TASK_PROBE_WINDOW: time::Duration = time::Duration::from_secs(5);
+#[cfg(not(test))]
+const TASK_PROBE_MAX_WAIT: time::Duration = time::Duration::from_secs(10);
+#[cfg(test)]
+const TASK_PROBE_MAX_WAIT: time::Duration = time::Duration::from_secs(2);
 const COLD_START_ROUTE_HEALTH_SAMPLE_THRESHOLD: u32 = 2;
 
 #[derive(
@@ -353,6 +363,7 @@ static ROUTE_HEALTH: LazyLock<Mutex<HashMap<RouteHealthKey, RouteHealth>>> =
 static ROUTE_EFFECTIVE_AUTHORITIES: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+<<<<<<< HEAD
 /// Per-authority congestion state for rate-limited responses (429/503).
 /// A throttled host is slept through before the next request to it, so a
 /// single slow CDN cannot stall the whole batch; successful responses decay
@@ -414,6 +425,69 @@ fn record_host_success(authority: &str) {
         throttle.cooldown_until = None;
     }
 }
+=======
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum TaskProbeKey {
+    Job(Uuid),
+    Anonymous,
+}
+
+#[derive(Default)]
+struct TaskProbeState {
+    families: Mutex<HashMap<ResourceFamily, FamilyProbeState>>,
+}
+
+impl TaskProbeState {
+    fn has_in_flight(&self) -> bool {
+        self.families
+            .lock()
+            .values()
+            .any(|family| family.in_flight.is_some())
+    }
+}
+
+#[derive(Default)]
+struct FamilyProbeState {
+    last_probed: Option<Instant>,
+    in_flight: Option<Arc<Notify>>,
+}
+
+struct TaskProbeGuard {
+    state: Arc<TaskProbeState>,
+    family: ResourceFamily,
+    notify: Arc<Notify>,
+    armed: bool,
+}
+
+impl TaskProbeGuard {
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for TaskProbeGuard {
+    fn drop(&mut self) {
+        if !self.armed {
+            return;
+        }
+        let mut families = self.state.families.lock();
+        if let Some(entry) = families.get_mut(&self.family) {
+            if entry
+                .in_flight
+                .as_ref()
+                .is_some_and(|in_flight| Arc::ptr_eq(in_flight, &self.notify))
+            {
+                entry.in_flight = None;
+                entry.last_probed = None;
+            }
+        }
+    }
+}
+
+static TASK_PROBE_STATES: LazyLock<
+    Mutex<HashMap<TaskProbeKey, Arc<TaskProbeState>>>,
+> = LazyLock::new(|| Mutex::new(HashMap::new()));
+>>>>>>> upstream/main
 
 fn url_authority(url: &str) -> Option<String> {
     let url = Url::parse(url).ok()?;
@@ -3289,7 +3363,7 @@ async fn response_status_error(
     }
 }
 
-async fn finalize_download(
+pub(crate) async fn finalize_download(
     part_path: &Path,
     destination: &Path,
 ) -> crate::Result<()> {
@@ -4196,29 +4270,41 @@ fn route_health_is_cold(
     })
 }
 
-async fn select_cold_start_route(
+/// Ensures the download task has a fresh throughput measurement before the
+/// first file of a resource family starts downloading in Auto mode.
+/// Candidate routes are probed concurrently once per task; other files of
+/// the same family wait for that probe instead of running their own, so
+/// small files get measured route ordering without per-file probing.
+async fn ensure_task_routes_probed(
     request: &DownloadRequest,
     routes: &mut Vec<DownloadRoute>,
     semaphore: &FetchSemaphore,
     system_client: &reqwest::Client,
     direct_client: &reqwest::Client,
 ) {
-    let Some(size) = request.integrity.size else {
+    if !matches!(
+        source_mode_for_resource(request.resource),
+        crate::state::DownloadSourceMode::Auto
+    ) {
+        return;
+    }
+    let Some(size) = request.integrity.size.filter(|size| *size > 0) else {
         return;
     };
-    if size < SEGMENTED_DOWNLOAD_THRESHOLD
-        || !matches!(
-            source_mode_for_resource(request.resource),
-            crate::state::DownloadSourceMode::Auto
-        )
-        || !route_health_is_cold(&routes[0], request.resource)
-    {
+    let Some(family) = routes
+        .first()
+        .and_then(|route| route_health_key(route, request.resource))
+        .map(|key| key.family)
+    else {
+        return;
+    };
+    if !route_health_is_cold(&routes[0], request.resource) {
         return;
     }
     let candidates: Vec<&DownloadRoute> = routes
         .iter()
         .filter(|route| route.supports_range && range_splitting_allowed(route))
-        .take(COLD_START_PROBE_MAX_ROUTES)
+        .take(TASK_PROBE_MAX_ROUTES)
         .collect();
     if candidates.len() < 2 {
         return;
@@ -4226,62 +4312,106 @@ async fn select_cold_start_route(
     if semaphore.0.available_permits() < candidates.len() {
         return;
     }
-    let mut probes = futures::stream::FuturesUnordered::new();
-    for (index, route) in candidates.iter().copied().enumerate() {
-        probes.push(async move {
-            (
-                index,
-                probe_route_throughput(
-                    route,
-                    None,
-                    size,
-                    request.header.as_ref(),
-                    None,
-                    request.download_meta.as_ref(),
-                    semaphore,
-                    system_client,
-                    direct_client,
-                    request.resource,
-                )
-                .await,
-            )
-        });
+    let task_key = request
+        .install_tracking
+        .as_ref()
+        .map(|tracking| TaskProbeKey::Job(tracking.reporter.job_id()))
+        .unwrap_or(TaskProbeKey::Anonymous);
+    let state = {
+        let mut tasks = TASK_PROBE_STATES.lock();
+        if tasks.len() >= MAX_TASK_PROBE_STATES {
+            tasks.retain(|_, state| state.has_in_flight());
+        }
+        tasks.entry(task_key).or_default().clone()
+    };
+    enum TaskProbeDecision {
+        Run(Arc<Notify>),
+        Wait(Arc<Notify>),
+        Done,
     }
-    let mut measured = HashMap::new();
-    while let Some((index, result)) = probes.next().await {
-        if let Some(result) = result {
-            measured.insert(index, result.bytes_per_second);
+    let decision = {
+        let mut families = state.families.lock();
+        let entry = families.entry(family).or_default();
+        let recently_probed = entry.last_probed.is_some_and(|probed| {
+            matches!(task_key, TaskProbeKey::Job(_))
+                || probed.elapsed() < TASK_PROBE_WINDOW
+        });
+        if recently_probed {
+            TaskProbeDecision::Done
+        } else if let Some(notify) = entry.in_flight.clone() {
+            TaskProbeDecision::Wait(notify)
+        } else {
+            let notify = Arc::new(Notify::new());
+            entry.in_flight = Some(notify.clone());
+            TaskProbeDecision::Run(notify)
+        }
+    };
+    match decision {
+        TaskProbeDecision::Done => {}
+        TaskProbeDecision::Wait(notify) => {
+            let notified = notify.notified();
+            let already_done = {
+                let families = state.families.lock();
+                families.get(&family).is_none_or(|entry| {
+                    entry.in_flight.as_ref().is_none_or(|in_flight| {
+                        !Arc::ptr_eq(in_flight, &notify)
+                    })
+                })
+            };
+            if !already_done {
+                let _ =
+                    tokio::time::timeout(TASK_PROBE_MAX_WAIT, notified).await;
+            }
+        }
+        TaskProbeDecision::Run(notify) => {
+            let probe = async {
+                let mut guard = TaskProbeGuard {
+                    state: state.clone(),
+                    family,
+                    notify: notify.clone(),
+                    armed: true,
+                };
+                let mut probes = futures::stream::FuturesUnordered::new();
+                for route in candidates.iter().copied() {
+                    probes.push(probe_route_throughput(
+                        route,
+                        None,
+                        size,
+                        request.header.as_ref(),
+                        None,
+                        request.download_meta.as_ref(),
+                        semaphore,
+                        system_client,
+                        direct_client,
+                        request.resource,
+                    ));
+                }
+                while probes.next().await.is_some() {}
+                guard.disarm();
+            };
+            let completed = tokio::time::timeout(TASK_PROBE_MAX_WAIT, probe)
+                .await
+                .is_ok();
+            {
+                let mut families = state.families.lock();
+                if let Some(entry) = families.get_mut(&family) {
+                    if completed {
+                        entry.last_probed = Some(Instant::now());
+                    }
+                    entry.in_flight = None;
+                }
+            }
+            notify.notify_waiters();
+            tracing::debug!(
+                ?family,
+                completed,
+                "Task download route probe finished"
+            );
         }
     }
-    drop(probes);
-    let first_bytes_per_second = match measured.get(&0) {
-        Some(bytes_per_second) => *bytes_per_second,
-        None => return,
-    };
-    let Some((best_index, best_bytes_per_second)) = measured
-        .iter()
-        .max_by_key(|(_, bytes_per_second)| **bytes_per_second)
-    else {
-        return;
-    };
-    if *best_index == 0
-        || !probe_is_meaningfully_faster(
-            *best_bytes_per_second,
-            first_bytes_per_second,
-        )
-    {
-        return;
-    }
-    tracing::debug!(
-        best_bytes_per_second,
-        first_bytes_per_second,
-        "Cold-start probe selected a faster download route"
-    );
-    let best_route = candidates[*best_index].clone();
-    if let Some(index) = routes.iter().position(|route| *route == best_route) {
-        let best_route = routes.remove(index);
-        routes.insert(0, best_route);
-    }
+    let mirror_first_loader =
+        uses_mirror_first_loader_routes(&request.url, request.resource);
+    order_auto_routes(routes, request.resource, mirror_first_loader);
 }
 
 fn segment_path(part_path: &Path, index: usize) -> PathBuf {
@@ -5485,7 +5615,20 @@ async fn download_to_path_inner(
         any_route_can_resume(&routes),
     )
     .await?;
-    select_cold_start_route(
+    if crate::util::download::active_engine()
+        == crate::util::download::DownloadEngine::XmclCompat
+    {
+        return crate::util::download::xmcl::download_to_path(
+            &request,
+            destination,
+            &routes,
+            semaphore,
+            &part_path,
+            progress,
+        )
+        .await;
+    }
+    ensure_task_routes_probed(
         &request,
         &mut routes,
         semaphore,
