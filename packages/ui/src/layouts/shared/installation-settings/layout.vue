@@ -265,7 +265,7 @@ function handleModpackPrimaryAction() {
 	}
 }
 
-function handleModpackUpdateConfirm() {
+async function handleModpackUpdateConfirm() {
 	debug('handleModpackUpdateConfirm: start', {
 		pendingVersionId: pendingUpdateVersion.value?.id,
 		snapshot: stateSnapshot(),
@@ -277,12 +277,12 @@ function handleModpackUpdateConfirm() {
 	}
 	const version = pendingUpdateVersion.value
 	if (version) {
-		debug('handleModpackUpdateConfirm: hiding updater and closing settings')
+		debug('handleModpackUpdateConfirm: hiding updater and queueing update')
+		pendingUpdateVersion.value = null
 		contentUpdaterModal.value?.hide()
 		form.cancelEditing()
+		await form.handleUpdaterConfirm(version)
 		ctx.closeSettings?.()
-		form.handleUpdaterConfirm(version)
-		pendingUpdateVersion.value = null
 		debug('handleModpackUpdateConfirm: done')
 	}
 }

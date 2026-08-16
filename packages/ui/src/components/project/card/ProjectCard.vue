@@ -315,7 +315,6 @@ const computedMaxTags = computed(() => {
 		return props.maxTags + (props.environment ? 0 : 1)
 	}
 
-	const hasActions = !!props.layout
 	const environmentOffset = props.environment ? 0 : 1
 
 	// 根据卡片宽度动态计算

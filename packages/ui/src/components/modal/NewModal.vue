@@ -52,13 +52,10 @@
 						</ButtonStyled>
 					</div>
 
-					<ButtonStyled
-						v-if="props.mergeHeader && closable"
-						class="absolute top-4 right-4 z-10"
-						circular
-					>
+					<ButtonStyled v-if="props.mergeHeader && closable" circular>
 						<button
 							v-tooltip="closeLabel"
+							class="absolute top-4 right-4 z-10"
 							:aria-label="closeLabel"
 							:disabled="disableClose"
 							@click="hide"

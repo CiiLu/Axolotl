@@ -232,7 +232,7 @@ import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
 import { applyContentItemUpdates, matchesContentItem } from '@/helpers/content-item-state'
 import { translateContentItemTitles } from '@/helpers/content-search'
-import { getCurseForgeChangelog } from '@/helpers/curseforge'
+import { getCurseForgeChangelog, type CurseForgeFile } from '@/helpers/curseforge'
 import {
 	type CurseForgeManualDownloadItem,
 	getCurseForgeManualDownloadUrl,
@@ -1041,17 +1041,38 @@ async function getUpdaterProjectVersions(projectId: string, pinnedVersionId?: st
 		(curseForgeProjectId != null && props.instance?.link?.type === 'curseforge_modpack')
 	) {
 		if (curseForgeProjectId == null) return []
-		const { getCurseForgeFiles } = await import('@/helpers/curseforge')
-		const response = await getCurseForgeFiles(curseForgeProjectId, {
-			index: 0,
-			pageSize: 50,
-		}).catch((err) => {
-			handleError(err as Error)
-			return null
-		})
-		if (!response) return []
+		const { getCurseForgeFile, getCurseForgeFiles } = await import('@/helpers/curseforge')
+		const files: CurseForgeFile[] = []
+		let index = 0
+		while (true) {
+			const response = await getCurseForgeFiles(curseForgeProjectId, {
+				index,
+				pageSize: 50,
+			}).catch((err) => {
+				handleError(err as Error)
+				return null
+			})
+			if (!response) break
+			files.push(...response.files)
+			index += response.files.length
+			if (
+				response.files.length === 0 ||
+				index >= (response.pagination?.totalCount ?? response.files.length)
+			) {
+				break
+			}
+		}
+		const pinnedFileId = Number(pinnedVersionId)
+		if (Number.isFinite(pinnedFileId) && !files.some((file) => file.id === pinnedFileId)) {
+			const pinnedFile = await getCurseForgeFile(curseForgeProjectId, pinnedFileId).catch(
+				() => null,
+			)
+			if (pinnedFile?.isAvailable) {
+				files.push(pinnedFile)
+			}
+		}
 		return sortVersionsByPublishedDate(
-			response.files
+			files
 				.filter((file) => file.isAvailable)
 				.map((file) => mapCurseForgeFileToUpdaterVersion(file, curseForgeProjectId)),
 		)
@@ -1994,6 +2015,8 @@ async function handleModpackUpdateConfirm() {
 		const plan = await plan_content_updates(props.instance.id, 'pack', version.id)
 		await apply_content_update_plan(plan.id)
 		await initProjects()
+	} catch (error) {
+		handleError(error as Error)
 	} finally {
 		isModpackUpdating.value = false
 		resetUpdateState()

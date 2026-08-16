@@ -629,6 +629,14 @@ pub(crate) async fn get_modpack_expected_members(
     project_id: u32,
     file_id: u32,
 ) -> crate::Result<CurseForgePackExpectedContent> {
+    get_modpack_expected_members_with_reporter(project_id, file_id, None).await
+}
+
+pub(crate) async fn get_modpack_expected_members_with_reporter(
+    project_id: u32,
+    file_id: u32,
+    reporter: Option<&InstallProgressReporter>,
+) -> crate::Result<CurseForgePackExpectedContent> {
     let pack_file = get_file(project_id, file_id).await?;
     let project = get_project(project_id).await?;
     let download_url = if project.allow_mod_distribution == Some(false) {
@@ -645,12 +653,63 @@ pub(crate) async fn get_modpack_expected_members(
 				.to_string(),
 		)
 	})?;
+    let pack_details = InstallPhaseDetails::Modpack {
+        project_id: Some(project_id.to_string()),
+        version_id: Some(file_id.to_string()),
+        title: Some(project.name.clone()),
+    };
+    if let Some(reporter) = reporter {
+        reporter
+            .update(
+                InstallPhaseId::ResolvingPack,
+                Some(InstallProgress {
+                    current: 0,
+                    total: pack_file.file_length.max(1),
+                    secondary: None,
+                }),
+                pack_details.clone(),
+            )
+            .await?;
+    }
+    let progress_reporter = reporter.cloned();
+    let mut last_downloaded = 0_u64;
+    let mut progress = move |current: u64,
+                             total: u64|
+          -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::Result<()>> + Send>,
+    > {
+        let Some(reporter) = progress_reporter.as_ref() else {
+            return Box::pin(async { Ok(()) });
+        };
+        let min_delta = (total / 200).max(256 * 1024);
+        if current < total
+            && current.saturating_sub(last_downloaded) < min_delta
+        {
+            return Box::pin(async { Ok(()) });
+        }
+        last_downloaded = current;
+        let reporter = reporter.clone();
+        let details = pack_details.clone();
+        Box::pin(async move {
+            reporter
+                .update(
+                    InstallPhaseId::ResolvingPack,
+                    Some(InstallProgress {
+                        current,
+                        total,
+                        secondary: None,
+                    }),
+                    details,
+                )
+                .await
+        })
+    };
     let pack_download = download_curseforge_archive(
         project_id,
         file_id,
         &pack_file,
         &download_url,
-        None,
+        Some(&mut progress as &mut FetchProgressFn<'_>),
         None,
     )
     .await?;
@@ -1300,13 +1359,14 @@ async fn install_file_with_metrics(
                             );
                             continue;
                         };
-                        if let Some(dependency_file) = select_dependency_file(
+                        if let Some(selected) = select_dependency_file(
                             dependency_project_id,
                             request.game_version.clone(),
                             request.mod_loader_type,
                         )
                         .await?
                         {
+                            let dependency_file = selected.file;
                             pending.push(PendingCurseForgeFile {
                                 project_id: dependency_project_id,
                                 file_id: dependency_file.id,
@@ -1505,6 +1565,10 @@ pub struct CurseForgePreviewItem {
     pub required_by_project_ids: Vec<u32>,
     #[serde(default)]
     pub icon_url: Option<String>,
+    /// True when the file does not match the instance's game version/loader
+    /// and was selected from the project's newest available files instead.
+    #[serde(default)]
+    pub version_mismatch: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -1635,7 +1699,7 @@ pub async fn preview_install_file(
                             });
                             continue;
                         };
-                        let Some(dependency_file) = select_dependency_file(
+                        let Some(selected) = select_dependency_file(
                             dependency_project_id,
                             request.game_version.clone(),
                             request.mod_loader_type,
@@ -1649,6 +1713,7 @@ pub async fn preview_install_file(
                             });
                             continue;
                         };
+                        let dependency_file = selected.file;
                         let existing = dependencies.iter_mut().find(|item| {
                             item.project_id == dependency_project_id
                         });
@@ -1682,6 +1747,7 @@ pub async fn preview_install_file(
                                 .logo
                                 .as_ref()
                                 .map(|logo| logo.thumbnail_url.clone()),
+                            version_mismatch: selected.version_mismatch,
                         });
                         pending.push((
                             dependency_project_id,
@@ -1715,6 +1781,7 @@ pub async fn preview_install_file(
                     .logo
                     .as_ref()
                     .map(|logo| logo.thumbnail_url.clone()),
+                version_mismatch: false,
             };
             return Ok(CurseForgeInstallPreview {
                 primary,
@@ -3034,6 +3101,14 @@ pub async fn update_managed_modpack(
     instance_id: &str,
     file_id: u32,
 ) -> crate::Result<CurseForgeModpackInstallResult> {
+    update_managed_modpack_with_reporter(instance_id, file_id, None).await
+}
+
+pub(crate) async fn update_managed_modpack_with_reporter(
+    instance_id: &str,
+    file_id: u32,
+    reporter: Option<InstallProgressReporter>,
+) -> crate::Result<CurseForgeModpackInstallResult> {
     let state = State::get().await?;
     let metadata = crate::state::instances::commands::get_instance_metadata(
         instance_id,
@@ -3068,7 +3143,12 @@ pub async fn update_managed_modpack(
 		)
 		.into());
     }
-    let expected = get_modpack_expected_members(project_id, file_id).await?;
+    let expected = get_modpack_expected_members_with_reporter(
+        project_id,
+        file_id,
+        reporter.as_ref(),
+    )
+    .await?;
     let pack_file = get_file(project_id, file_id).await?;
     let game_version = pack_file
         .game_versions
@@ -3149,6 +3229,19 @@ pub async fn update_managed_modpack(
         for download in &manual_downloads {
             persist_manual_download(instance_id, download).await?;
         }
+        if let Some(reporter) = &reporter {
+            let events = manual_downloads
+                .iter()
+                .map(|download| InstallJobEventKind::ContentFileSkipped {
+                    path: download.file_name.clone(),
+                    reason: "CurseForge requires manual download".to_string(),
+                    project_id: Some(download.project_id.to_string()),
+                    version_id: Some(download.file_id.to_string()),
+                    manual_url: download.website_url.clone(),
+                })
+                .collect();
+            reporter.record_events(events).await?;
+        }
         return Ok(CurseForgeModpackInstallResult {
             content: CurseForgeInstallResult {
                 manual_downloads,
@@ -3180,13 +3273,16 @@ pub async fn update_managed_modpack(
         &metadata, &members, &entries, &files, &state,
     )
     .await?;
-    let result = match install_modpack(CurseForgeModpackInstallRequest {
-        instance_id: instance_id.to_string(),
-        project_id,
-        file_id,
-        install_optional: false,
-        allow_target_change: true,
-    })
+    let result = match install_modpack_with_reporter(
+        CurseForgeModpackInstallRequest {
+            instance_id: instance_id.to_string(),
+            project_id,
+            file_id,
+            install_optional: false,
+            allow_target_change: true,
+        },
+        reporter,
+    )
     .await
     {
         Ok(result) => result,
@@ -5279,11 +5375,20 @@ pub(crate) async fn select_latest_compatible_file(
     }))
 }
 
+/// A CurseForge file selected for a dependency, plus whether the selection
+/// only matches the target loosely. When the project has no available file
+/// for the instance's game version/loader, the newest available file is used
+/// instead and `version_mismatch` is set so the UI can warn the user.
+struct SelectedDependencyFile {
+    file: CurseForgeFile,
+    version_mismatch: bool,
+}
+
 async fn select_dependency_file(
     project_id: u32,
     game_version: Option<String>,
     mod_loader_type: Option<u32>,
-) -> crate::Result<Option<CurseForgeFile>> {
+) -> crate::Result<Option<SelectedDependencyFile>> {
     let filtered = get_files(
         project_id,
         CurseForgeFilesRequest {
@@ -5296,9 +5401,12 @@ async fn select_dependency_file(
     )
     .await?
     .files;
-    let available = filtered.iter().find(|file| file.is_available).cloned();
-    if available.is_some() {
-        return Ok(available);
+    if let Some(file) = filtered.iter().find(|file| file.is_available).cloned()
+    {
+        return Ok(Some(SelectedDependencyFile {
+            file,
+            version_mismatch: false,
+        }));
     }
     let unfiltered = get_files(
         project_id,
@@ -5312,7 +5420,13 @@ async fn select_dependency_file(
     )
     .await?
     .files;
-    Ok(unfiltered.into_iter().find(|file| file.is_available))
+    Ok(unfiltered
+        .into_iter()
+        .find(|file| file.is_available)
+        .map(|file| SelectedDependencyFile {
+            file,
+            version_mismatch: true,
+        }))
 }
 
 fn managed_project_type(value: &str) -> crate::Result<ProjectType> {

@@ -469,7 +469,7 @@ export function useInstallationForm(
 		const i = updatingProjectVersions.value.findIndex((v) => v.id === full.id)
 		if (i !== -1) {
 			const arr = [...updatingProjectVersions.value]
-			arr[i] = full
+			arr[i] = { ...arr[i], ...full }
 			updatingProjectVersions.value = arr
 		}
 	}
@@ -521,14 +521,22 @@ export function useInstallationForm(
 		debug('handleUpdaterConfirm: start', { versionId: version.id, isBusy: ctx.isBusy.value })
 		if (ctx.isBusy.value) {
 			debug('handleUpdaterConfirm: ignored busy')
-			return
+			return false
 		}
+		let succeeded = false
 		try {
 			await ctx.onModpackVersionConfirm(version)
+			succeeded = true
+		} catch (error) {
+			debug('handleUpdaterConfirm: failed', {
+				versionId: version.id,
+				error: error instanceof Error ? error.message : String(error),
+			})
 		} finally {
 			resetUpdateState()
-			debug('handleUpdaterConfirm: done')
+			debug('handleUpdaterConfirm: done', { succeeded })
 		}
+		return succeeded
 	}
 
 	return {

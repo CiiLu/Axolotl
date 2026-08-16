@@ -252,9 +252,10 @@ pub async fn curseforge_install_modpack(
 pub async fn curseforge_update_managed_modpack(
     instance_id: String,
     file_id: u32,
-) -> Result<CurseForgeModpackInstallResult> {
-    Ok(
-        theseus::curseforge::update_managed_modpack(&instance_id, file_id)
-            .await?,
+) -> Result<theseus::install::InstallJobSnapshot> {
+    Ok(theseus::install::runner::update_managed_curseforge_modpack(
+        instance_id,
+        file_id,
     )
+    .await?)
 }
