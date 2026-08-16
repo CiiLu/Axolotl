@@ -876,9 +876,7 @@ async fn run_segment(
             }) => {
                 relative_offset = relative_offset.max(error_offset);
                 last_error = Some(error);
-                let should_reroll = is_reassignable(
-                    authority_of(url).as_deref().unwrap_or_default(),
-                ) && !is_terminal_http(&last_error);
+                let should_reroll = !is_terminal_http(&last_error);
                 if should_reroll && resumes < XMCL_MAX_RESUMES {
                     resumes += 1;
                     continue;
