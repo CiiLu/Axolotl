@@ -21,6 +21,7 @@ export interface UseBrowseSearchOptions {
 	tags: Ref<Tags>
 	providedFilters?: ComputedRef<FilterValue[]>
 	environmentOverride?: ComputedRef<EnvironmentSearchOverride | undefined>
+	installContextLoader?: ComputedRef<string | undefined>
 	search: (params: string, signal: AbortSignal) => Promise<BrowseSearchResponse>
 	syncQueryParams?: boolean
 	persistentQueryParams: string[]
@@ -156,7 +157,9 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 		() =>
 			currentFilters.value.some((f) =>
 				LOADER_FILTER_TYPES.includes(f.type as (typeof LOADER_FILTER_TYPES)[number]),
-			) || ['resourcepack', 'datapack'].includes(options.projectType.value),
+			) ||
+			!!options.installContextLoader?.value ||
+			['resourcepack', 'datapack'].includes(options.projectType.value),
 	)
 	const loadersNotForThisType = computed(
 		() =>
