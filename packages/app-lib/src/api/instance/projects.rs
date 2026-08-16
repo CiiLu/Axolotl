@@ -20,6 +20,8 @@ pub struct InstallProjectWithDependenciesRequest {
     pub content_type: ContentType,
     #[serde(default)]
     pub selected: ResolutionPreferences,
+    #[serde(default)]
+    pub excluded_project_ids: Vec<String>,
 }
 
 #[tracing::instrument]
@@ -109,6 +111,7 @@ pub async fn install_project_with_dependencies(
             version_id: request.version_id,
             content_type: request.content_type,
             selected: request.selected,
+            excluded_project_ids: request.excluded_project_ids,
         },
         &state,
     )
@@ -125,11 +128,15 @@ pub async fn install_project_with_dependencies(
         )
         .await
         {
-            Ok(()) => {
+            Ok(_paths) => {
                 if let Err(error) = emit_instance(
                     &instance_id,
                     InstancePayloadType::ContentInstallFinished {
                         project_ids: project_ids.clone(),
+                        dependency_project_ids: plan_project_ids(&install_plan)
+                            .into_iter()
+                            .skip(1)
+                            .collect(),
                     },
                 )
                 .await
@@ -166,6 +173,51 @@ pub async fn install_project_with_dependencies(
 }
 
 #[tracing::instrument]
+pub async fn preview_project_with_dependencies(
+    instance_id: &str,
+    request: InstallProjectWithDependenciesRequest,
+) -> crate::Result<ResolveContentPlan> {
+    let state = State::get().await?;
+    super::get::get(instance_id).await?.ok_or_else(|| {
+        crate::ErrorKind::InputError("Unknown instance".to_string())
+    })?;
+    crate::state::instances::commands::resolve_install_plan(
+        instance_id,
+        crate::state::instances::commands::InstanceInstallProjectRequest {
+            project_id: request.project_id,
+            version_id: request.version_id,
+            content_type: request.content_type,
+            selected: request.selected,
+            excluded_project_ids: request.excluded_project_ids,
+        },
+        &state,
+    )
+    .await
+}
+
+#[tracing::instrument]
+pub async fn preview_project_with_dependencies_for_target(
+    request: InstallProjectWithDependenciesRequest,
+    game_version: String,
+    loader: crate::state::ModLoader,
+) -> crate::Result<ResolveContentPlan> {
+    let state = State::get().await?;
+    crate::state::instances::commands::resolve_install_plan_for_target(
+        crate::state::instances::commands::InstanceInstallProjectRequest {
+            project_id: request.project_id,
+            version_id: request.version_id,
+            content_type: request.content_type,
+            selected: request.selected,
+            excluded_project_ids: request.excluded_project_ids,
+        },
+        game_version,
+        loader,
+        &state,
+    )
+    .await
+}
+
+#[tracing::instrument]
 pub async fn queue_project_with_dependencies(
     instance_id: &str,
     request: InstallProjectWithDependenciesRequest,
@@ -178,6 +230,7 @@ pub async fn queue_project_with_dependencies(
         request.version_id,
         request.content_type,
         request.selected,
+        request.excluded_project_ids,
         display_title,
         display_icon,
     )
@@ -591,6 +644,7 @@ pub async fn restore_pack_member_default(
 					mod_loader_type: curseforge_loader_type(content_set.loader),
 					world_name: None,
 					install_dependencies: false,
+					excluded_dependency_project_ids: Vec::new(),
 				},
 			)
 			.await?;
@@ -614,6 +668,12 @@ pub async fn restore_pack_member_default(
                 .into());
             }
             (restored_path, pending_manual)
+        }
+        Some(ContentProvider::Local) => {
+            return Err(crate::ErrorKind::InputError(
+                "This pack member has no managed provider".to_string(),
+            )
+            .into());
         }
         None => {
             return Err(crate::ErrorKind::InputError(

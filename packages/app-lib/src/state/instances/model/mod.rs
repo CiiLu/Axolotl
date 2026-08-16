@@ -3,6 +3,9 @@
 mod content_entry;
 pub use self::content_entry::*;
 
+mod content_dependency;
+pub use self::content_dependency::*;
+
 mod content_ownership;
 pub use self::content_ownership::*;
 

@@ -310,6 +310,8 @@ pub enum InstancePayloadType {
     Edited,
     ContentInstallFinished {
         project_ids: Vec<String>,
+        #[serde(default)]
+        dependency_project_ids: Vec<String>,
     },
     ContentInstallFailed {
         project_ids: Vec<String>,

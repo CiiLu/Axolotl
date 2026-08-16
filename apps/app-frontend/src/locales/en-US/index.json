@@ -431,6 +431,12 @@
   "app.appearance-settings.auto-hide-downloads-button.title": {
     "message": "Auto-hide downloads button"
   },
+  "app.appearance-settings.auto-install-dependencies.description": {
+    "message": "Download required dependencies when installing content. You can adjust the selection in the confirmation dialog before each install."
+  },
+  "app.appearance-settings.auto-install-dependencies.title": {
+    "message": "Automatically install dependencies"
+  },
   "app.appearance-settings.color-theme.description": {
     "message": "Select your preferred color theme for Axolotl Launcher."
   },
@@ -662,8 +668,92 @@
   "app.community-announcement.title": {
     "message": "To all our users"
   },
+  "app.content-install.dependencies-installed.notification-body": {
+    "message": "Installed {count, plural, one {# dependency} other {# dependencies}} automatically: {list}"
+  },
+  "app.content-install.dependencies-installed.notification-title": {
+    "message": "Dependencies installed"
+  },
+  "app.content-install.dependencies-skipped.notification-body": {
+    "message": "The following dependencies were not installed: {list}"
+  },
+  "app.content-install.dependencies-skipped.notification-title": {
+    "message": "Some dependencies were skipped"
+  },
   "app.content-install.no-compatible-versions": {
-    "message": "No available versions match {compatibilityLabel}. Select a version to install anyway. Dependencies will not be installed automatically."
+    "message": "No available versions match {compatibilityLabel}. Select a version to install anyway. Matching dependencies will still be installed."
+  },
+  "app.content-install.preview.already-installed": {
+    "message": "Already installed"
+  },
+  "app.content-install.preview.cancel": {
+    "message": "Cancel"
+  },
+  "app.content-install.preview.clear-all": {
+    "message": "Clear all"
+  },
+  "app.content-install.preview.dependencies-count": {
+    "message": "{count, plural, one {# dependency} other {# dependencies}}"
+  },
+  "app.content-install.preview.dependencies-header": {
+    "message": "Dependencies"
+  },
+  "app.content-install.preview.description": {
+    "message": "{count, plural, one {# dependency will be installed automatically} other {# dependencies will be installed automatically}} for {project} in {instance}."
+  },
+  "app.content-install.preview.header": {
+    "message": "Confirm installation"
+  },
+  "app.content-install.preview.install": {
+    "message": "Install"
+  },
+  "app.content-install.preview.only-checked": {
+    "message": "Only checked dependencies will be installed."
+  },
+  "app.content-install.preview.required-by": {
+    "message": "Required by {projects}"
+  },
+  "app.content-install.preview.select-all": {
+    "message": "Select all"
+  },
+  "app.content-install.preview.skip.already-installed": {
+    "message": "Already installed"
+  },
+  "app.content-install.preview.skip.conflicting-dependency": {
+    "message": "Conflicting dependency version"
+  },
+  "app.content-install.preview.skip.duplicate-project": {
+    "message": "Already included"
+  },
+  "app.content-install.preview.skip.embedded": {
+    "message": "Embedded in the project"
+  },
+  "app.content-install.preview.skip.excluded-by-user": {
+    "message": "Excluded by user"
+  },
+  "app.content-install.preview.skip.incompatible": {
+    "message": "Incompatible dependency"
+  },
+  "app.content-install.preview.skip.missing-version": {
+    "message": "Referenced version was not found"
+  },
+  "app.content-install.preview.skip.no-compatible-version": {
+    "message": "No compatible version found"
+  },
+  "app.content-install.preview.skip.optional": {
+    "message": "Optional dependency"
+  },
+  "app.content-install.preview.skip.quilt-fabric-api": {
+    "message": "Replaced for quilt"
+  },
+  "app.content-install.preview.skip.tool": {
+    "message": "Development tool, not installed"
+  },
+  "app.content-install.preview.skip.unsupported-project-type": {
+    "message": "Unsupported project type"
+  },
+  "app.content-install.preview.skipped-header": {
+    "message": "Skipped"
   },
   "app.content.add-from-file": {
     "message": "Add from file"
@@ -678,7 +768,7 @@
     "message": "Some CurseForge downloads failed"
   },
   "app.curseforge.dependency-notes.notification-body": {
-    "message": "{optional, plural, =0 {No optional dependencies were skipped.} one {# optional dependency was skipped.} other {# optional dependencies were skipped.}} {incompatible, plural, =0 {No incompatible dependencies were detected.} one {# incompatible dependency was detected.} other {# incompatible dependencies were detected.}}"
+    "message": "{optional, plural, =0 {No optional dependencies were skipped.} one {# optional dependency was skipped.} other {# optional dependencies were skipped.}} {incompatible, plural, =0 {No incompatible dependencies were detected.} one {# incompatible dependency was detected.} other {# incompatible dependencies were detected.}} {skipped, plural, =0 {No other dependencies were skipped.} one {# dependency was skipped.} other {# dependencies were skipped.}}"
   },
   "app.curseforge.dependency-notes.notification-title": {
     "message": "CurseForge dependency notes"
@@ -2072,6 +2162,12 @@
   "app.instance.mods.missing-files-warning.title": {
     "message": "Some modpack files are missing"
   },
+  "app.instance.mods.orphaned-dependencies.body": {
+    "message": "These dependencies are no longer required by other content and will not be removed automatically: {list}"
+  },
+  "app.instance.mods.orphaned-dependencies.title": {
+    "message": "Dependencies are no longer required"
+  },
   "app.instance.mods.pack-member-missing": {
     "message": "This modpack file is missing locally"
   },
@@ -2116,6 +2212,30 @@
   },
   "app.instance.mods.successfully-uploaded": {
     "message": "Successfully uploaded"
+  },
+  "app.instance.mods.toggle-dependencies.apply": {
+    "message": "Toggle related content"
+  },
+  "app.instance.mods.toggle-dependencies.bulk-body": {
+    "message": "Toggling the selected content will affect {count, plural, one {# other item} other {# other items}}."
+  },
+  "app.instance.mods.toggle-dependencies.selected-only": {
+    "message": "Only toggle selected"
+  },
+  "app.instance.mods.toggle-dependencies.single-body": {
+    "message": "Toggling {project} will affect {count, plural, one {# other item} other {# other items}}."
+  },
+  "app.instance.mods.toggle-dependencies.title": {
+    "message": "Confirm toggle"
+  },
+  "app.instance.mods.toggle-dependencies.warning": {
+    "message": "Do you want to apply these related changes automatically? Ignoring them may break the game."
+  },
+  "app.instance.mods.toggle-dependencies.will-disable": {
+    "message": "The following content will be disabled:"
+  },
+  "app.instance.mods.toggle-dependencies.will-enable": {
+    "message": "The following content will be enabled:"
   },
   "app.instance.mods.update-added-content": {
     "message": "Update added content"

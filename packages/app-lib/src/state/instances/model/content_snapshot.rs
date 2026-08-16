@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::{
-    ContentOwnershipKind, PackMemberMaterializationState,
-    PackMemberOverrideKind, PendingManualDownload,
+    ContentDependencyInfo, ContentOwnershipKind,
+    PackMemberMaterializationState, PackMemberOverrideKind,
+    PendingManualDownload,
 };
 use crate::state::{
     ContentItem, ContentProvider, LinkedModpackInfo, ProjectType,
@@ -35,6 +36,7 @@ pub struct InstanceContentSnapshotItem {
     pub provider_release_id: Option<String>,
     pub content: Option<ContentItem>,
     pub capabilities: ContentItemCapabilities,
+    pub dependency: Option<ContentDependencyInfo>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

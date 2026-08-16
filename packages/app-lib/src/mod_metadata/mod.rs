@@ -44,6 +44,36 @@ pub struct LocalModMetadata {
     pub loader_version: Option<String>,
     /// Loader type (e.g. "fabric", "forge", "neoforge", "quilt")
     pub loader: Option<String>,
+    /// Required dependencies declared in the embedded metadata (Fabric
+    /// `depends`, Quilt `depends`, Forge mandatory dependencies).
+    ///
+    /// `None` marks JSON written before dependency extraction existed and
+    /// triggers a one-time re-extraction of the file.
+    #[serde(default)]
+    pub dependencies: Option<Vec<LocalModDependency>>,
+}
+
+/// One required dependency declared in embedded mod metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocalModDependency {
+    pub mod_id: String,
+    #[serde(default)]
+    pub version_range: Option<String>,
+}
+
+/// Dependency ids that refer to the runtime environment instead of content
+/// that can be linked against installed files.
+pub(crate) fn is_env_dependency_id(id: &str) -> bool {
+    matches!(
+        id,
+        "minecraft"
+            | "java"
+            | "fabricloader"
+            | "quilt_loader"
+            | "forge"
+            | "neoforge"
+            | "fml"
+    )
 }
 
 /// Try to extract `LocalModMetadata` from raw JAR bytes.
@@ -107,6 +137,7 @@ fn try_fabric(
             "fabricloader",
         ),
         loader: Some("fabric".into()),
+        dependencies: Some(fabric::fabric_dependencies(&parsed.depends)),
     })
 }
 
@@ -132,6 +163,7 @@ fn try_quilt(
         minecraft_version: fabric::quilt_dep_value(&inner.depends, "minecraft"),
         loader_version: fabric::quilt_dep_value(&inner.depends, "quilt_loader"),
         loader: Some("quilt".into()),
+        dependencies: Some(fabric::quilt_dependencies(&inner.depends)),
     })
 }
 
@@ -186,6 +218,27 @@ fn try_toml_path(
                 .find(|dep| dep.mod_id.as_deref() == Some("minecraft"))
                 .and_then(|dep| dep.version_range.clone())
         });
+    let dependencies = parsed
+        .dependencies
+        .as_ref()
+        .and_then(|deps| deps.get(&mod_id))
+        .map(|entries| {
+            entries
+                .iter()
+                .filter(|dep| dep.mandatory.unwrap_or(true))
+                .filter_map(|dep| {
+                    let dep_id = dep.mod_id.clone()?;
+                    if is_env_dependency_id(&dep_id) {
+                        return None;
+                    }
+                    Some(LocalModDependency {
+                        mod_id: dep_id,
+                        version_range: dep.version_range.clone(),
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
 
     Some(LocalModMetadata {
         mod_id,
@@ -198,6 +251,7 @@ fn try_toml_path(
         minecraft_version,
         loader_version,
         loader,
+        dependencies: Some(dependencies),
     })
 }
 
@@ -222,6 +276,7 @@ fn try_mcmod_info(
         minecraft_version: entry.mcversion,
         loader_version: None,
         loader: Some("forge".into()),
+        dependencies: Some(Vec::new()),
     })
 }
 

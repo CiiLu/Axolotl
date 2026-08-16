@@ -109,6 +109,7 @@ export async function loadInstanceContentData(
 				instanceMaterializationState: item.materializationState,
 				instanceOverrideKind: item.overrideKind,
 				pendingManualDownload: requiresManualDownload,
+				dependency: item.dependency ?? null,
 			}
 		}) satisfies ContentItem[]
 		const contentItems = normalizedItems.filter(

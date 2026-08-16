@@ -211,6 +211,7 @@ pub enum FeatureFlag {
     PageTransitions,
     ShowVersionEnvironmentColumn,
     XmclDownloadEngine,
+    AutoInstallDependencies,
 }
 
 impl Settings {

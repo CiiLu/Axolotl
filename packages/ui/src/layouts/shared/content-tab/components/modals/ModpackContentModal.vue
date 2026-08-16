@@ -234,6 +234,17 @@ const filteredItems = computed(() => {
 	return result
 })
 
+function dependencyBadgeFor(item: ContentItem) {
+	const dependency = item.dependency
+	if (!dependency || (!dependency.autoDependency && dependency.requiredBy.length === 0)) {
+		return null
+	}
+	return {
+		autoDependency: dependency.autoDependency,
+		orphaned: dependency.orphaned,
+	}
+}
+
 const tableItems = computed<ContentCardTableItem[]>(() =>
 	filteredItems.value.map((item) => ({
 		id: item.file_name,
@@ -262,6 +273,7 @@ const tableItems = computed<ContentCardTableItem[]>(() =>
 		installing: item.installing === true,
 		toggleDisabled: props.actionDisabled || !canToggleContentItem(item),
 		toggleDisabledTooltip: props.actionDisabled ? props.actionDisabledTooltip : undefined,
+		dependencyBadge: dependencyBadgeFor(item),
 		isClientOnly:
 			isClientOnlyEnvironment(item.environment) ||
 			!!item.pack_client_retained ||
