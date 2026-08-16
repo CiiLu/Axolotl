@@ -295,6 +295,10 @@ defineExpose({
 	min-width: max-content;
 }
 
+.log-viewport-wrap {
+	overflow-x: hidden;
+}
+
 .log-viewport-wrap .log-viewport-spacer {
 	min-width: 0;
 }
@@ -307,6 +311,10 @@ defineExpose({
 
 .log-viewport-wrap .log-line {
 	white-space: normal;
+}
+
+.log-viewport-wrap .log-line-content {
+	min-width: 0;
 }
 
 .log-line-num {
