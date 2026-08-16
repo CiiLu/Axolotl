@@ -250,7 +250,9 @@ function triggerTestNotificationError() {
 						:class="member.url ? 'transition-colors hover:bg-surface-5' : 'cursor-default'"
 					>
 						<Avatar :src="member.avatarUrl" :alt="member.name" size="4rem" circle no-shadow />
-						<span class="block truncate text-center font-semibold text-contrast">{{ member.name }}</span>
+						<span class="block truncate text-center font-semibold text-contrast">{{
+							member.name
+						}}</span>
 					</component>
 				</li>
 			</ul>
@@ -389,7 +391,9 @@ function triggerTestNotificationError() {
 				<span class="rounded-full bg-surface-4 px-2 py-0.5 text-xs text-secondary">
 					{{ formatMessage(messages.contributorsCount, { count: contributors.length }) }}
 				</span>
-				<ChevronDownIcon class="ml-auto size-5 text-secondary transition-transform group-open:rotate-180" />
+				<ChevronDownIcon
+					class="ml-auto size-5 text-secondary transition-transform group-open:rotate-180"
+				/>
 			</summary>
 			<div class="mt-3 flex flex-wrap gap-2">
 				<a

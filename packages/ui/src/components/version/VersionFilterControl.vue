@@ -128,12 +128,12 @@ import { ChevronLeftIcon, FilterIcon, XCircleIcon, XIcon } from '@modrinth/asset
 import type { MultiSelectOption } from '@modrinth/ui'
 import {
 	Checkbox,
+	defineMessages,
 	formatLoader,
 	FormattedTag,
 	MultiSelect,
 	TagItem,
 	useVIntl,
-	defineMessages,
 } from '@modrinth/ui'
 import type { GameVersionTag, Version } from '@modrinth/utils'
 import { computed, ref } from 'vue'
