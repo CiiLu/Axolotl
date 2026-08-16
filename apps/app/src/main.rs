@@ -471,6 +471,7 @@ fn main() {
         .plugin(api::datapacks::init())
         .plugin(api::drop::init())
         .plugin(api::files::init())
+        .plugin(api::friends::init())
         .plugin(api::worlds::init())
         .plugin(api::terracotta::init())
         .plugin(api::multiplayer::init())

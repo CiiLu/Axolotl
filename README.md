@@ -3,7 +3,6 @@
   <h1>Axolotl Launcher</h1>
   <p><strong>次世代 Minecraft 桌面客户端，全能、美观、全平台覆盖。</strong></p>
 
-
   <p>
     <a href="https://github.com/Mystic-Stars/Axolotl/actions">
       <img src="https://img.shields.io/github/actions/workflow/status/Mystic-Stars/Axolotl/axolotl-ci.yml?style=for-the-badge&logo=github" alt="Desktop CI" />
@@ -27,13 +26,14 @@
 </div>
 
 ---
+
 **Axolotl Launcher（美西螈启动器）** 是一款免费、开源、跨平台的 Minecraft Java 版第三方启动器，支持在一个客户端中搜索、安装和更新来自 Modrinth 与 CurseForge 的模组、整合包、资源包和光影，并提供实例管理、多种账户认证、个性化外观与 Axolotl 实验室工具。
 
 本项目基于 [Modrinth App](https://github.com/modrinth/code) 构建，移除了不适用于本项目的商业化模块，专注于提供纯净、无广告的桌面启动体验。
 
 本项目与客户端项目 Axolotl Client 无任何关联。
 
-*(注：本项目是调用 Modrinth 公开 API 的独立客户端，与 Rinth, Inc. 无任何关联。)*
+_(注：本项目是调用 Modrinth 公开 API 的独立客户端，与 Rinth, Inc. 无任何关联。)_
 
 ## 核心优势
 
@@ -47,11 +47,11 @@
 请前往 [GitHub Releases](https://github.com/Mystic-Stars/Axolotl/releases/latest) 下载适合你操作系统的最新安装包。
 已安装的用户每次均可通过内置的 Tauri 签名校验机制，自动在后台完成更新，无需手动下载安装更新。
 
-| 系统平台 | 推荐下载文件 |
-|---|---|
-| **Windows** (10/11 x64) | 下载 `.exe` (NSIS) 安装程序 |
-| **macOS** | 下载 `通用 .dmg` 镜像文件 |
-| **Linux** (x64) | 提供 `.AppImage`，`.deb`，`.rpm` 多种格式 |
+| 系统平台                | 推荐下载文件                              |
+| ----------------------- | ----------------------------------------- |
+| **Windows** (10/11 x64) | 下载 `.exe` (NSIS) 安装程序               |
+| **macOS**               | 下载 `通用 .dmg` 镜像文件                 |
+| **Linux** (x64)         | 提供 `.AppImage`，`.deb`，`.rpm` 多种格式 |
 
 <details>
 <summary><b>Linux 包管理器快捷安装指令</b></summary>
@@ -68,6 +68,7 @@ yay -S axolotl-launcher-bin
 ```
 
 **Debian / Ubuntu (APT)**：
+
 ```bash
 curl -fsSL https://ppa.axlmc.org/setup.sh | sudo bash
 sudo apt install axolotl-launcher

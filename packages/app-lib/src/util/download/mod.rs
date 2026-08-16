@@ -7,7 +7,6 @@
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU8, Ordering};
 
-pub mod legacy;
 pub mod log;
 pub mod shared;
 pub mod slow;

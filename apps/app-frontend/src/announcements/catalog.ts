@@ -64,6 +64,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added a gallery layout to the Discover page for browsing content with visual thumbnails.',
 					'zh-CN': '发现内容页新增画廊布局，支持以缩略图形式浏览内容。',
 				},
+				{
+					'en-US':
+						'Introduced a new download engine and rewrote the old download engine, which should greatly resolve download issues.',
+					'zh-CN': '引入新的下载引擎和重写旧的下载引擎，现在下载问题应该得到很大程度上解决。',
+				},
 			],
 			changed: [
 				{

@@ -87,7 +87,6 @@ import {
 	curseForgeCategoryValue,
 	findUnmappedCurseForgeCategories,
 	isCurseForgeOnlyCategoryName,
-	localizeCurseForgeCategoryLabels,
 	localizeCurseForgeCategoryName,
 	localizeCurseForgeLabel,
 	resolveCurseForgeCategoryIdsFromFilterValues,

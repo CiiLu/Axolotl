@@ -220,7 +220,6 @@ import ServerOnlinePlayers from '../server/ServerOnlinePlayers.vue'
 import ServerPing from '../server/ServerPing.vue'
 import ServerRecentPlays from '../server/ServerRecentPlays.vue'
 import ServerRegion from '../server/ServerRegion.vue'
-import ProjectCardAuthor from './ProjectCardAuthor.vue'
 import ProjectCardDate from './ProjectCardDate.vue'
 import ProjectCardEnvironment, {
 	type ProjectCardEnvironmentProps,
