@@ -3191,7 +3191,7 @@ async fn response_status_error(
     }
 }
 
-async fn finalize_download(
+pub(crate) async fn finalize_download(
     part_path: &Path,
     destination: &Path,
 ) -> crate::Result<()> {
@@ -5401,6 +5401,19 @@ async fn download_to_path_inner(
         any_route_can_resume(&routes),
     )
     .await?;
+    if crate::util::download::active_engine()
+        == crate::util::download::DownloadEngine::XmclCompat
+    {
+        return crate::util::download::xmcl::download_to_path(
+            &request,
+            destination,
+            &routes,
+            semaphore,
+            &part_path,
+            progress,
+        )
+        .await;
+    }
     ensure_task_routes_probed(
         &request,
         &mut routes,
