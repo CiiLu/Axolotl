@@ -1263,7 +1263,36 @@ function getCurseForgeSortField(sort: string | null) {
 	}
 }
 
+const CURSEFORGE_LOADER_SLUGS = new Set([
+	'forge',
+	'fabric',
+	'quilt',
+	'neoforge',
+	'liteloader',
+	'bukkit',
+	'spigot',
+	'paper',
+	'bungeecord',
+	'velocity',
+	'sponge',
+	'waterfall',
+	'folia',
+	'purpur',
+	'iris',
+	'optifine',
+	'canvas',
+	'geyser',
+])
+
 function mapCurseForgeHit(hit: UnifiedSearchHit) {
+	const categories = hit.categories.map((cat) => {
+		const normalized = cat.toLowerCase().replace(/[_\s]+/g, '-')
+		if (CURSEFORGE_LOADER_SLUGS.has(normalized)) {
+			return normalized
+		}
+		return localizeCurseForgeLabel(cat)
+	})
+
 	return {
 		project_id: `curseforge:${hit.project_id}`,
 		provider_project_id: hit.project_id,
@@ -1274,8 +1303,8 @@ function mapCurseForgeHit(hit: UnifiedSearchHit) {
 		author_url: hit.author_url,
 		title: hit.title,
 		description: hit.description,
-		categories: localizeCurseForgeCategoryLabels(hit.categories),
-		display_categories: localizeCurseForgeCategoryLabels(hit.categories),
+		categories,
+		display_categories: categories,
 		versions: hit.versions,
 		downloads: hit.downloads,
 		follows: 0,

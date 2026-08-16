@@ -6032,13 +6032,25 @@ impl From<CurseForgeProject> for UnifiedSearchHit {
     fn from(project: CurseForgeProject) -> Self {
         let mut versions = Vec::new();
         let mut seen_versions = HashSet::new();
+        let mut loaders = HashSet::new();
         for index in &project.latest_files_indexes {
             if seen_versions.insert(index.game_version.clone()) {
                 versions.push(index.game_version.clone());
             }
+            if let Some(mod_loader) = index.mod_loader {
+                let loader_slug = mod_loader_to_slug(mod_loader);
+                loaders.insert(loader_slug);
+            }
         }
 
         let project_type = project_type_for_class(project.class_id);
+        let mut categories: Vec<String> = project
+            .categories
+            .iter()
+            .map(|category| category.slug.clone())
+            .collect();
+        categories.extend(loaders.iter().map(|s| s.to_string()));
+
         Self {
             provider: ContentProvider::CurseForge,
             project_id: project.id.to_string(),
@@ -6055,11 +6067,7 @@ impl From<CurseForgeProject> for UnifiedSearchHit {
             title: project.name,
             description: project.summary,
             project_type: project_type.to_string(),
-            categories: project
-                .categories
-                .iter()
-                .map(|category| category.slug.clone())
-                .collect(),
+            categories,
             versions,
             downloads: project.download_count,
             icon_url: project.logo.map(|logo| logo.thumbnail_url),
@@ -6078,6 +6086,16 @@ impl From<CurseForgeProject> for UnifiedSearchHit {
             source_url: project.links.source_url,
             allow_mod_distribution: project.allow_mod_distribution,
         }
+    }
+}
+
+fn mod_loader_to_slug(mod_loader_type: u32) -> &'static str {
+    match mod_loader_type {
+        1 => "forge",
+        4 => "fabric",
+        5 => "quilt",
+        6 => "neoforge",
+        _ => "unknown",
     }
 }
 
