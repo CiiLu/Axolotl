@@ -1544,6 +1544,36 @@
 	"app.instances.select": {
 		"message": "请选择……"
 	},
+	"app.instances.select-all": {
+		"message": "全选"
+	},
+	"app.instances.selected-count": {
+		"message": "已选择 {count} 个"
+	},
+	"app.instances.edit-groups": {
+		"message": "编辑分组"
+	},
+	"app.instances.exit-select-mode": {
+		"message": "退出"
+	},
+	"app.instances.deselect-all": {
+		"message": "取消全选"
+	},
+	"app.instances.batch-edit-groups.header": {
+		"message": "编辑分组"
+	},
+	"app.instances.batch-edit-groups.description": {
+		"message": "为 {count} 个实例设置分组"
+	},
+	"app.instances.batch-edit-groups.enter-group-name": {
+		"message": "分组名称"
+	},
+	"app.instances.batch-edit-groups.create-group": {
+		"message": "创建新分组"
+	},
+	"app.instances.batch-edit-groups.apply": {
+		"message": "应用"
+	},
 	"app.instances.sort.date-created": {
 		"message": "创建日期"
 	},
