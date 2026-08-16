@@ -2,6 +2,7 @@ import vue from '@vitejs/plugin-vue'
 import { existsSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
+import vueDevTools from 'vite-plugin-vue-devtools'
 import svgLoader from 'vite-svg-loader'
 
 import tauriConf from '../app/tauri.conf.json'
@@ -49,6 +50,7 @@ export default defineConfig({
 		],
 	},
 	plugins: [
+		vueDevTools(),
 		vue(),
 		svgLoader({
 			svgoConfig: {
