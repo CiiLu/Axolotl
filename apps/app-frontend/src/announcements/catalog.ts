@@ -33,6 +33,23 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.3',
+		version: '1.8.3',
+		publishedAt: '2026-08-17',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.3',
+			'zh-CN': 'Axolotl Launcher 1.8.3',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Long-press instance cards to enable batch editing of custom groups',
+					'zh-CN': '长按实例卡片实现批量编辑自定义分组功能',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.2',
 		version: '1.8.2',
 		publishedAt: '2026-08-16',
@@ -45,6 +62,15 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Fixed some forge artifacts cannot be downloaded',
 					'zh-CN': '修复了部分 forge 资源无法下载的问题',
+				},
+				{
+					'en-US': 'Added prefix icon to the version display below the instance page title',
+					'zh-CN': '给实例页面标题下方的版本显示添加了前缀图标',
+				},
+				{
+					'en-US':
+						'Fixed discover page card tags not hiding the loader tag when entering from instance install content',
+					'zh-CN': '修复了内容发现页卡片标签从实例安装内容进入时不隐藏加载器标签的问题',
 				},
 			],
 		},
