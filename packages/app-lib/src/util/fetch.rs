@@ -1020,7 +1020,7 @@ fn explicit_mirror_routes(
                        base: &str,
                        path: String,
                        source: DownloadRouteSource| {
-        // TEMP: MCIM mirror disabled. Remove this line to restore MCIM.
+        // Disabled MCIM.
         if source == DownloadRouteSource::Mcim {
             return;
         }
@@ -5415,7 +5415,7 @@ async fn try_segmented_download(
     })
 }
 
-async fn record_install_download_started(
+pub(crate) async fn record_install_download_started(
     request: &DownloadRequest,
     route: &DownloadRoute,
     attempt: usize,
@@ -5441,7 +5441,7 @@ async fn record_install_download_started(
     }
 }
 
-async fn record_install_download_progress(
+pub(crate) async fn record_install_download_progress(
     request: &DownloadRequest,
     bytes: u64,
     total: u64,
@@ -5458,7 +5458,7 @@ async fn record_install_download_progress(
     }
 }
 
-async fn record_install_download_stage(
+pub(crate) async fn record_install_download_stage(
     request: &DownloadRequest,
     status: DownloadItemStatus,
 ) {
@@ -5616,6 +5616,17 @@ async fn download_to_path_inner(
     if crate::util::download::active_engine()
         == crate::util::download::DownloadEngine::XmclCompat
     {
+        if let Some(first_route) = routes.first() {
+            record_install_download_started(
+                &request,
+                first_route,
+                0,
+                routes.len().saturating_mul(3).max(1),
+            )
+            .await;
+        }
+        record_install_download_stage(&request, DownloadItemStatus::Downloading)
+            .await;
         return crate::util::download::xmcl::download_to_path(
             &request,
             destination,

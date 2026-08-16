@@ -380,6 +380,7 @@ fn is_slow_speed(speed: u64, remaining: Option<u64>) -> bool {
 }
 
 async fn download_attempt(
+	request: &fetch::DownloadRequest,
 	url: &str,
 	header_value: Option<(&str, &str)>,
 	part_path: &Path,
@@ -412,18 +413,18 @@ async fn download_attempt(
 	} else {
 		&XMCL_SINGLE_CLIENT
 	};
-	let mut request = client.get(url);
+	let mut http_request = client.get(url);
 	if let Some(end) = range_end {
-		request = request.header(header::RANGE, format!("bytes={request_offset}-{end}"));
+		http_request = http_request.header(header::RANGE, format!("bytes={request_offset}-{end}"));
 	} else if request_offset > 0 {
-		request = request.header(header::RANGE, format!("bytes={request_offset}-"));
+		http_request = http_request.header(header::RANGE, format!("bytes={request_offset}-"));
 	}
 	if let Some((name, value)) = header_value {
-		request = request.header(name, value);
+		http_request = http_request.header(name, value);
 	}
 
 	let response = if is_reassignable(&authority) {
-		tokio::time::timeout(XMCL_TTFB_TIMEOUT, request.send())
+		tokio::time::timeout(XMCL_TTFB_TIMEOUT, http_request.send())
 			.await
 			.map_err(|_| AttemptError::Managed {
 				reason: ManagedReason::Ttfb,
@@ -434,7 +435,7 @@ async fn download_attempt(
 				offset: resume_offset,
 			})?
 	} else {
-		request
+		http_request
 			.send()
 			.await
 			.map_err(|error| AttemptError::Http {
@@ -546,6 +547,7 @@ async fn download_attempt(
 				|| offset >= total;
 			if should_update {
 				let _ = progress(offset, total).await;
+				fetch::record_install_download_progress(request, offset, total).await;
 				last_progress_update = Some(Instant::now());
 			}
 		}
@@ -623,6 +625,7 @@ async fn run_single_stream(
 		let offset_before = offset;
 		let attempt_started = Instant::now();
 		let result = download_attempt(
+			request,
 			url,
 			header_value,
 			part_path,
@@ -774,6 +777,7 @@ async fn run_segment(
 		let offset_before = relative_offset;
 		let attempt_started = Instant::now();
 		let result = download_attempt(
+			request,
 			url,
 			header_value,
 			segment_path,
@@ -931,6 +935,7 @@ async fn download_segments(
 			if let Some(progress) = progress.as_mut() {
 				let _ = progress(bytes, total).await;
 			}
+			fetch::record_install_download_progress(request, bytes, total).await;
 			if bytes >= total {
 				break;
 			}
@@ -1006,7 +1011,9 @@ async fn download_to_path_inner(
 			tracing::debug!(total, "Using segmented XMCL download");
 			match download_segments(request, routes, part_path, total, flow_started_at, &mut progress).await {
 				Ok(()) => {
+					fetch::record_install_download_stage(request, crate::install::DownloadItemStatus::Verifying).await;
 					let size = fetch::verify_file(part_path, &request.integrity).await?;
+					fetch::record_install_download_stage(request, crate::install::DownloadItemStatus::Writing).await;
 					fetch::finalize_download(part_path, destination).await?;
 					crate::telemetry::record_download_stats(1, 1, size, 0, 0, 0, 0);
 					let route = routes.first().cloned().unwrap_or_else(|| fetch::DownloadRoute {
@@ -1047,7 +1054,11 @@ async fn download_to_path_inner(
 	)
 	.await?;
 
+	fetch::record_install_download_stage(request, crate::install::DownloadItemStatus::Verifying)
+		.await;
 	let size = fetch::verify_file(part_path, &request.integrity).await?;
+	fetch::record_install_download_stage(request, crate::install::DownloadItemStatus::Writing)
+		.await;
 	fetch::finalize_download(part_path, destination).await?;
 	crate::telemetry::record_download_stats(1, 1, size, 0, 0, 0, 0);
 
