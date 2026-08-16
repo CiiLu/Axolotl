@@ -123,6 +123,7 @@ mod tests {
                 loaders: vec!["fabric".to_string()],
             },
             existing_project_ids: Vec::new(),
+            excluded_project_ids: Vec::new(),
         }
     }
 
@@ -335,24 +336,115 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn quilt_instances_skip_fabric_api_dependency() {
-        let provider = MemoryProvider::default().with_versions(vec![version(
-            "p1v1",
-            "p1",
-            "2024-01-01T00:00:00Z",
-            &["1.20.1"],
-            &["quilt"],
-            vec![required_project_dependency(
-                QUILT_FABRIC_API_EXCEPTION_PROJECT_ID,
-            )],
-        )]);
+    async fn quilt_instances_replace_fabric_api_with_quilted_fabric_api() {
+        let provider = MemoryProvider::default().with_versions(vec![
+            version(
+                "p1v1",
+                "p1",
+                "2024-01-01T00:00:00Z",
+                &["1.20.1"],
+                &["quilt"],
+                vec![required_project_dependency(
+                    QUILT_FABRIC_API_EXCEPTION_PROJECT_ID,
+                )],
+            ),
+            version(
+                "qfabv1",
+                "qvIfYCYJ",
+                "2024-01-01T00:00:00Z",
+                &["1.20.1"],
+                &["quilt"],
+                vec![],
+            ),
+        ]);
         let mut request = request("p1");
         request.target.loaders = vec!["quilt".to_string()];
 
         let plan = resolve_content(provider, request).await.unwrap();
 
+        assert_eq!(plan.dependencies.len(), 1);
+        assert_eq!(plan.dependencies[0].project_id, "qvIfYCYJ");
+        assert!(plan.skipped.is_empty());
+    }
+
+    #[tokio::test]
+    async fn iris_metadata_gap_injects_missing_sodium_dependency() {
+        let provider = MemoryProvider::default().with_versions(vec![
+            version(
+                "Cjwm9s3i",
+                "YL57xq9U",
+                "2023-12-13T02:48:08Z",
+                &["1.20.2"],
+                &["fabric"],
+                vec![],
+            ),
+            version(
+                "pmgeU5yX",
+                "AANobbMI",
+                "2023-12-09T04:07:46Z",
+                &["1.20.2"],
+                &["fabric"],
+                vec![],
+            ),
+        ]);
+        let mut request = request("YL57xq9U");
+        request.target.game_versions = vec!["1.20.2".to_string()];
+
+        let plan = resolve_content(provider, request).await.unwrap();
+
+        assert_eq!(plan.dependencies.len(), 1);
+        assert_eq!(plan.dependencies[0].project_id, "AANobbMI");
+        assert_eq!(plan.dependencies[0].version_id, "pmgeU5yX");
+        assert!(plan.skipped.is_empty());
+    }
+
+    #[tokio::test]
+    async fn iris_metadata_gap_is_not_duplicated_once_upstream_is_fixed() {
+        let provider = MemoryProvider::default().with_versions(vec![
+            version(
+                "Cjwm9s3i",
+                "YL57xq9U",
+                "2023-12-13T02:48:08Z",
+                &["1.20.2"],
+                &["fabric"],
+                vec![required_project_dependency("AANobbMI")],
+            ),
+            version(
+                "pmgeU5yX",
+                "AANobbMI",
+                "2023-12-09T04:07:46Z",
+                &["1.20.2"],
+                &["fabric"],
+                vec![],
+            ),
+        ]);
+        let mut request = request("YL57xq9U");
+        request.target.game_versions = vec!["1.20.2".to_string()];
+
+        let plan = resolve_content(provider, request).await.unwrap();
+
+        assert_eq!(plan.dependencies.len(), 1);
+        assert_eq!(plan.dependencies[0].version_id, "pmgeU5yX");
+        assert!(plan.skipped.is_empty());
+    }
+
+    #[tokio::test]
+    async fn iris_metadata_gap_does_not_apply_to_other_versions() {
+        let provider = MemoryProvider::default().with_versions(vec![version(
+            "other",
+            "YL57xq9U",
+            "2024-01-01T00:00:00Z",
+            &["1.20.2"],
+            &["fabric"],
+            vec![],
+        )]);
+        let mut request = request("YL57xq9U");
+        request.target.game_versions = vec!["1.20.2".to_string()];
+
+        let plan = resolve_content(provider, request).await.unwrap();
+
         assert!(plan.dependencies.is_empty());
-        assert_eq!(plan.skipped[0].reason, SkippedReason::QuiltFabricApi);
+        assert!(plan.skipped.is_empty());
     }
 
     #[tokio::test]
@@ -446,6 +538,7 @@ mod tests {
                 selected: ResolutionPreferences::default(),
                 target: ResolutionPreferences::default(),
                 existing_project_ids: Vec::new(),
+                excluded_project_ids: Vec::new(),
             },
         )
         .await
@@ -539,6 +632,7 @@ mod tests {
                     loaders: vec!["neoforge".to_string()],
                 },
                 existing_project_ids: Vec::new(),
+                excluded_project_ids: Vec::new(),
             },
         )
         .await

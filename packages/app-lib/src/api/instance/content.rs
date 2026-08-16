@@ -274,6 +274,7 @@ pub async fn apply_content_update_plan(
                     )
                     .await?;
                 }
+                ContentProvider::Local => {}
             }
         }
     } else {
@@ -451,6 +452,7 @@ mod tests {
             provider_release_id: None,
             content: None,
             capabilities: ContentItemCapabilities::default(),
+            dependency: None,
         }
     }
 

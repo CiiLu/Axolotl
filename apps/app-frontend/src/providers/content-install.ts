@@ -6,8 +6,16 @@ import dayjs from 'dayjs'
 import { nextTick, type Ref, ref } from 'vue'
 import type { Router } from 'vue-router'
 
+import type ContentInstallPreviewModal from '@/components/ui/ContentInstallPreviewModal.vue'
+import type { ContentInstallPreviewData } from '@/components/ui/ContentInstallPreviewModal.vue'
 import { trackEvent } from '@/helpers/analytics'
-import { get_organization, get_project, get_team, get_version_many } from '@/helpers/cache.js'
+import {
+	get_organization,
+	get_project,
+	get_project_many,
+	get_team,
+	get_version_many,
+} from '@/helpers/cache.js'
 import {
 	type CurseForgeFile,
 	type CurseForgeInstallResult,
@@ -18,6 +26,7 @@ import {
 	getCurseForgeProject,
 	installCurseForgeFile,
 	installCurseForgeModpack,
+	previewCurseForgeFile,
 	queueCurseForgeFile,
 	summarizeCurseForgeInstall,
 } from '@/helpers/curseforge'
@@ -33,15 +42,17 @@ import {
 	wait_for_install_job,
 } from '@/helpers/install'
 import {
-	add_project_from_version,
 	edit,
 	get,
 	get_content_items,
 	get_install_candidates,
 	get_projects,
 	list,
+	preview_project_with_dependencies,
+	preview_project_with_dependencies_for_target,
 	queue_project_with_dependencies,
 	remove_project,
+	type ResolveContentPlan,
 } from '@/helpers/instance'
 import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_game_versions } from '@/helpers/tags'
@@ -69,6 +80,7 @@ type ContentInstallInstanceEvent = {
 	event: string
 	instance_id: string
 	project_ids?: string[]
+	dependency_project_ids?: string[]
 	message?: string
 }
 
@@ -79,7 +91,7 @@ type InstallProvider = 'modrinth' | 'curseforge'
 const noCompatibleVersionsMessage = defineMessage({
 	id: 'app.content-install.no-compatible-versions',
 	defaultMessage:
-		'No available versions match {compatibilityLabel}. Select a version to install anyway. Dependencies will not be installed automatically.',
+		'No available versions match {compatibilityLabel}. Select a version to install anyway. Matching dependencies will still be installed.',
 })
 const manualDownloadsTitleMessage = defineMessage({
 	id: 'app.curseforge.manual-downloads.notification-title',
@@ -127,8 +139,75 @@ const dependencyNotesTitleMessage = defineMessage({
 const dependencyNotesMessage = defineMessage({
 	id: 'app.curseforge.dependency-notes.notification-body',
 	defaultMessage:
-		'{optional, plural, =0 {No optional dependencies were skipped.} one {# optional dependency was skipped.} other {# optional dependencies were skipped.}} {incompatible, plural, =0 {No incompatible dependencies were detected.} one {# incompatible dependency was detected.} other {# incompatible dependencies were detected.}}',
+		'{optional, plural, =0 {No optional dependencies were skipped.} one {# optional dependency was skipped.} other {# optional dependencies were skipped.}} {incompatible, plural, =0 {No incompatible dependencies were detected.} one {# incompatible dependency was detected.} other {# incompatible dependencies were detected.}} {skipped, plural, =0 {No other dependencies were skipped.} one {# dependency was skipped.} other {# dependencies were skipped.}}',
 })
+const dependenciesInstalledTitleMessage = defineMessage({
+	id: 'app.content-install.dependencies-installed.notification-title',
+	defaultMessage: 'Dependencies installed',
+})
+const dependenciesInstalledMessage = defineMessage({
+	id: 'app.content-install.dependencies-installed.notification-body',
+	defaultMessage:
+		'Installed {count, plural, one {# dependency} other {# dependencies}} automatically: {list}',
+})
+const dependenciesSkippedTitleMessage = defineMessage({
+	id: 'app.content-install.dependencies-skipped.notification-title',
+	defaultMessage: 'Some dependencies were skipped',
+})
+const dependenciesSkippedMessage = defineMessage({
+	id: 'app.content-install.dependencies-skipped.notification-body',
+	defaultMessage: 'The following dependencies were not installed: {list}',
+})
+const skippedReasonMessages = {
+	already_installed: defineMessage({
+		id: 'app.content-install.preview.skip.already-installed',
+		defaultMessage: 'Already installed',
+	}),
+	no_compatible_version: defineMessage({
+		id: 'app.content-install.preview.skip.no-compatible-version',
+		defaultMessage: 'No compatible version found',
+	}),
+	embedded: defineMessage({
+		id: 'app.content-install.preview.skip.embedded',
+		defaultMessage: 'Embedded in the project',
+	}),
+	tool: defineMessage({
+		id: 'app.content-install.preview.skip.tool',
+		defaultMessage: 'Development tool, not installed',
+	}),
+	unsupported_project_type: defineMessage({
+		id: 'app.content-install.preview.skip.unsupported-project-type',
+		defaultMessage: 'Unsupported project type',
+	}),
+	optional: defineMessage({
+		id: 'app.content-install.preview.skip.optional',
+		defaultMessage: 'Optional dependency',
+	}),
+	incompatible: defineMessage({
+		id: 'app.content-install.preview.skip.incompatible',
+		defaultMessage: 'Incompatible dependency',
+	}),
+	missing_version: defineMessage({
+		id: 'app.content-install.preview.skip.missing-version',
+		defaultMessage: 'Referenced version was not found',
+	}),
+	conflicting_dependency: defineMessage({
+		id: 'app.content-install.preview.skip.conflicting-dependency',
+		defaultMessage: 'Conflicting dependency version',
+	}),
+	duplicate_project: defineMessage({
+		id: 'app.content-install.preview.skip.duplicate-project',
+		defaultMessage: 'Already included',
+	}),
+	quilt_fabric_api: defineMessage({
+		id: 'app.content-install.preview.skip.quilt-fabric-api',
+		defaultMessage: 'Replaced for quilt',
+	}),
+	excluded_by_user: defineMessage({
+		id: 'app.content-install.preview.skip.excluded-by-user',
+		defaultMessage: 'Excluded by user',
+	}),
+} as const
 const curseForgeNetworkFailureTitleMessage = defineMessage({
 	id: 'app.curseforge.network-download-failed.notification-title',
 	defaultMessage: 'Could not download from CurseForge',
@@ -335,6 +414,9 @@ export interface ContentInstallContext {
 	handleNavigate: (instance: ContentInstallInstance) => void
 	handleCancel: () => void
 	setContentInstallModal: (ref: ModalRef) => void
+	setContentInstallPreviewModal: (
+		ref: InstanceType<typeof ContentInstallPreviewModal> | null,
+	) => void
 	setModpackAlreadyInstalledModal: (ref: ModpackAlreadyInstalledModalRef) => void
 	handleModpackDuplicateCreateAnyway: () => Promise<void>
 	handleModpackDuplicateGoToInstance: (instanceId: string) => void
@@ -547,6 +629,35 @@ export function createContentInstall(opts: {
 		}
 	}
 
+	async function notifyInstalledDependencies(instanceId: string, dependencyProjectIds: string[]) {
+		if (dependencyProjectIds.length === 0) return
+		const items = await get_content_items(instanceId).catch(() => [])
+		const names = dependencyProjectIds
+			.map((id) => {
+				const curseForge = id.startsWith('curseforge:')
+				const rawId = curseForge ? id.slice('curseforge:'.length) : id
+				const item = items.find((candidate) =>
+					candidate.provider_refs.some(
+						(reference) =>
+							reference.provider === (curseForge ? 'curseforge' : 'modrinth') &&
+							String(reference.project_id) === rawId,
+					),
+				)
+				return item?.project?.title ?? item?.file_name
+			})
+			.filter((name): name is string => !!name)
+		if (names.length === 0) return
+		const list = names.length > 5 ? `${names.slice(0, 5).join(', ')}, …` : names.join(', ')
+		opts.addNotification({
+			title: formatMessage(dependenciesInstalledTitleMessage),
+			text: formatMessage(dependenciesInstalledMessage, {
+				count: names.length,
+				list,
+			}),
+			type: 'success',
+		})
+	}
+
 	function markInstanceContentChanged(instanceId: string) {
 		const next = new Map(installRevisionByInstance.value)
 		const newRev = (next.get(instanceId) ?? 0) + 1
@@ -568,6 +679,7 @@ export function createContentInstall(opts: {
 		if (event.event === 'content_install_finished') {
 			markInstanceContentChanged(event.instance_id)
 			removeInstallingItems(event.instance_id, event.project_ids ?? [])
+			void notifyInstalledDependencies(event.instance_id, event.dependency_project_ids ?? [])
 		} else if (event.event === 'content_install_failed') {
 			removeInstallingItems(event.instance_id, event.project_ids ?? [])
 			markInstanceContentInstallFailed(event.instance_id)
@@ -577,6 +689,7 @@ export function createContentInstall(opts: {
 	}).catch(opts.handleError)
 
 	let modalRef: ModalRef | null = null
+	let contentInstallPreviewModalRef: InstanceType<typeof ContentInstallPreviewModal> | null = null
 	let modpackAlreadyInstalledModalRef: ModpackAlreadyInstalledModalRef | null = null
 	let curseForgeManualDownloadsModalRef: CurseForgeManualDownloadsModalRef | null = null
 	let incompatibilityWarningModalRef: ModalRef | null = null
@@ -838,6 +951,119 @@ export function createContentInstall(opts: {
 		trackEvent('ProjectInstallStart', { source: 'ProjectInstallModal' })
 	}
 
+	async function showInstallPreview(
+		instance: InstallTargetInstance,
+		project: Labrinth.Projects.v2.Project,
+		version: Labrinth.Versions.v2.Version,
+		plan: ResolveContentPlan,
+	): Promise<string[] | null> {
+		if (!contentInstallPreviewModalRef) return []
+		if (plan.dependencies.length === 0) {
+			await notifySkippedPlanDependencies(plan.skipped)
+			return []
+		}
+		const projectIds = [
+			...new Set([
+				plan.primary.project_id,
+				...plan.dependencies.map((dependency) => dependency.project_id),
+				...plan.skipped.map((skipped) => skipped.project_id),
+			]),
+		]
+		const versionIds = [
+			...new Set(
+				[
+					plan.primary.version_id,
+					...plan.dependencies.map((dependency) => dependency.version_id),
+				].filter((id): id is string => !!id),
+			),
+		]
+		const [projects, versions] = await Promise.all([
+			get_project_many(projectIds).catch(() => [] as Labrinth.Projects.v2.Project[]),
+			get_version_many(versionIds).catch(() => [] as Labrinth.Versions.v2.Version[]),
+		])
+		const projectsById = new Map(projects.map((candidate) => [candidate.id, candidate]))
+		const versionsById = new Map(versions.map((candidate) => [candidate.id, candidate]))
+		const titleFor = (candidate: { project_id: string; version_id: string }) =>
+			projectsById.get(candidate.project_id)?.title ??
+			versionsById.get(candidate.version_id)?.version_number ??
+			candidate.project_id
+		const planned = [
+			{ project_id: plan.primary.project_id, version_id: plan.primary.version_id },
+			...plan.dependencies.map((dependency) => ({
+				project_id: dependency.project_id,
+				version_id: dependency.version_id,
+			})),
+		]
+		const parentTitles = new Map(
+			planned.map((candidate) => [candidate.version_id, titleFor(candidate)]),
+		)
+		const dependencies = plan.dependencies.map((dependency) => ({
+			id: dependency.project_id,
+			title: projectsById.get(dependency.project_id)?.title ?? dependency.project_id,
+			iconUrl: projectsById.get(dependency.project_id)?.icon_url ?? null,
+			versionNumber: versionsById.get(dependency.version_id)?.version_number,
+			fileName: versionsById.get(dependency.version_id)?.files?.[0]?.filename,
+			requiredBy: dependency.dependent_on_version_id
+				? [parentTitles.get(dependency.dependent_on_version_id)].filter(
+						(title): title is string => !!title,
+					)
+				: [],
+			alreadyInstalled: false,
+		}))
+		const skipped = plan.skipped
+			.filter((item) => item.project_id)
+			.map((item) => ({
+				id: item.project_id,
+				title: projectsById.get(item.project_id)?.title ?? item.project_id,
+				reason: formatMessage(
+					skippedReasonMessages[item.reason as keyof typeof skippedReasonMessages] ??
+						skippedReasonMessages.already_installed,
+				),
+			}))
+		const data: ContentInstallPreviewData = {
+			primary: {
+				title: project.title,
+				iconUrl: project.icon_url,
+				versionNumber: version.version_number,
+			},
+			instanceName: instance.name,
+			installDependencies: themeStore.getFeatureFlag('auto_install_dependencies'),
+			dependencies,
+			skipped,
+		}
+		const approvedIds = await contentInstallPreviewModalRef.show(data)
+		if (approvedIds == null) return null
+		const approved = new Set(approvedIds)
+		return plan.dependencies
+			.map((dependency) => dependency.project_id)
+			.filter((projectId) => !approved.has(projectId))
+	}
+
+	async function notifySkippedPlanDependencies(
+		skipped: Array<{ project_id: string; reason: string }>,
+	) {
+		if (skipped.length === 0) return
+		const projectIds = [...new Set(skipped.map((item) => item.project_id).filter((id) => !!id))]
+		const projects = await get_project_many(projectIds).catch(
+			() => [] as Labrinth.Projects.v2.Project[],
+		)
+		const projectsById = new Map(projects.map((candidate) => [candidate.id, candidate]))
+		const names = skipped.map((item) => {
+			const title = projectsById.get(item.project_id)?.title ?? item.project_id
+			const reason = formatMessage(
+				skippedReasonMessages[item.reason as keyof typeof skippedReasonMessages] ??
+					skippedReasonMessages.already_installed,
+			)
+			return `${title} (${reason})`
+		})
+		const list = names.slice(0, 5).join(', ') + (names.length > 5 ? ', …' : '')
+		opts.addNotification({
+			title: formatMessage(dependenciesSkippedTitleMessage),
+			text: formatMessage(dependenciesSkippedMessage, { list }),
+			type: 'info',
+		})
+	}
+
 	function hideContentInstallModal() {
 		contentInstallModalOpen = false
 		modalRef?.hide()
@@ -1003,11 +1229,12 @@ export function createContentInstall(opts: {
 	function showCurseForgeDependencyNotes(result: CurseForgeInstallResult) {
 		const optional = result.optionalDependencies?.length ?? 0
 		const incompatible = result.incompatibleDependencies?.length ?? 0
-		if (optional === 0 && incompatible === 0) return
+		const skipped = result.skippedDependencies?.length ?? 0
+		if (optional === 0 && incompatible === 0 && skipped === 0) return
 
 		opts.addNotification({
 			title: formatMessage(dependencyNotesTitleMessage),
-			text: formatMessage(dependencyNotesMessage, { optional, incompatible }),
+			text: formatMessage(dependencyNotesMessage, { optional, incompatible, skipped }),
 			type: 'info',
 		})
 	}
@@ -1115,10 +1342,76 @@ export function createContentInstall(opts: {
 		return { installedProjectIds, primaryInstalled }
 	}
 
+	async function showCurseForgeInstallPreview(
+		instance: InstallTargetInstance,
+		preview: Awaited<ReturnType<typeof previewCurseForgeFile>>,
+	): Promise<number[] | null> {
+		if (!contentInstallPreviewModalRef) return []
+		if (preview.dependencies.length === 0) return []
+		const titleById = new Map<number, string>()
+		for (const item of [preview.primary, ...preview.dependencies]) {
+			titleById.set(item.projectId, item.title)
+		}
+		const dependencies = preview.dependencies.map((dependency) => ({
+			id: String(dependency.projectId),
+			title: dependency.title,
+			iconUrl: dependency.iconUrl ?? null,
+			versionNumber: dependency.versionNumber,
+			fileName: dependency.fileName,
+			requiredBy: dependency.requiredByProjectIds
+				.map((projectId) => titleById.get(projectId))
+				.filter((title): title is string => !!title),
+			alreadyInstalled: false,
+		}))
+		const skipped = preview.skipped.map((item) => ({
+			id: String(item.projectId),
+			title: titleById.get(item.projectId) ?? String(item.projectId),
+			reason: formatMessage(
+				skippedReasonMessages[item.reason as keyof typeof skippedReasonMessages] ??
+					skippedReasonMessages.no_compatible_version,
+			),
+		}))
+		for (const projectId of preview.optionalDependencies) {
+			skipped.push({
+				id: String(projectId),
+				title: String(projectId),
+				reason: formatMessage(
+					skippedReasonMessages.optional ?? skippedReasonMessages.no_compatible_version,
+				),
+			})
+		}
+		for (const projectId of preview.incompatibleDependencies) {
+			skipped.push({
+				id: String(projectId),
+				title: String(projectId),
+				reason: formatMessage(
+					skippedReasonMessages.incompatible ?? skippedReasonMessages.no_compatible_version,
+				),
+			})
+		}
+		const approvedIds = await contentInstallPreviewModalRef.show({
+			primary: {
+				title: preview.primary.title,
+				iconUrl: preview.primary.iconUrl,
+				versionNumber: preview.primary.versionNumber,
+			},
+			instanceName: instance.name,
+			installDependencies: themeStore.getFeatureFlag('auto_install_dependencies'),
+			dependencies,
+			skipped,
+		})
+		if (approvedIds == null) return null
+		const approved = new Set(approvedIds.map(Number))
+		return preview.dependencies
+			.map((dependency) => dependency.projectId)
+			.filter((projectId) => !approved.has(projectId))
+	}
+
 	async function queueCurrentCurseForgeVersion(
 		instance: InstallTargetInstance,
 		project: Labrinth.Projects.v2.Project,
 		version: Labrinth.Versions.v2.Version,
+		precomputedExcludedProjectIds?: number[],
 	) {
 		const curseForgeProject = currentCurseForgeProject
 		const file = currentCurseForgeFiles.get(version.id)
@@ -1130,18 +1423,33 @@ export function createContentInstall(opts: {
 		}
 
 		await removeInstalledCurseForgeProject(instance.id, curseForgeProject.id)
+		const request = {
+			instanceId: instance.id,
+			projectId: curseForgeProject.id,
+			fileId: file.id,
+			projectType: project.project_type,
+			ownershipKind: 'user_added' as const,
+			manualOperationKind: 'content_install' as const,
+			gameVersion: instance.game_version,
+			modLoaderType: curseForgeLoaderType(instance.loader),
+			installDependencies: themeStore.getFeatureFlag('auto_install_dependencies'),
+		}
+		const excludedProjectIds =
+			precomputedExcludedProjectIds ??
+			(() => {
+				return null as number[] | null
+			})()
+		if (excludedProjectIds == null) {
+			const preview = await previewCurseForgeFile(request)
+			const computed = await showCurseForgeInstallPreview(instance, preview)
+			if (computed == null) return null
+			return await queueCurseForgeFile(
+				{ ...request, excludedDependencyProjectIds: computed },
+				{ title: project.title, iconUrl: project.icon_url },
+			)
+		}
 		return await queueCurseForgeFile(
-			{
-				instanceId: instance.id,
-				projectId: curseForgeProject.id,
-				fileId: file.id,
-				projectType: project.project_type,
-				ownershipKind: 'user_added',
-				manualOperationKind: 'content_install',
-				gameVersion: instance.game_version,
-				modLoaderType: curseForgeLoaderType(instance.loader),
-				installDependencies: true,
-			},
+			{ ...request, excludedDependencyProjectIds: excludedProjectIds },
 			{ title: project.title, iconUrl: project.icon_url },
 		)
 	}
@@ -1179,13 +1487,25 @@ export function createContentInstall(opts: {
 		if (currentProvider === 'modrinth') {
 			if (storeInstance) storeInstance.installing = true
 			try {
+				const request = {
+					project_id: currentProject.id,
+					version_id: version.id,
+					content_type: resolveContentType(currentProject.project_type),
+				}
+				const previewPlan = await preview_project_with_dependencies(instance.id, request)
+				const excludedProjectIds = await showInstallPreview(
+					selectedInstance,
+					currentProject,
+					version,
+					previewPlan,
+				)
+				if (excludedProjectIds == null) {
+					if (storeInstance) storeInstance.installing = false
+					return
+				}
 				await queue_project_with_dependencies(
 					instance.id,
-					{
-						project_id: currentProject.id,
-						version_id: version.id,
-						content_type: resolveContentType(currentProject.project_type),
-					},
+					{ ...request, excluded_project_ids: excludedProjectIds },
 					{ title: currentProject.title, iconUrl: currentProject.icon_url },
 				)
 				trackEvent('ProjectInstall', {
@@ -1209,7 +1529,11 @@ export function createContentInstall(opts: {
 		if (currentProvider === 'curseforge') {
 			if (storeInstance) storeInstance.installing = true
 			try {
-				await queueCurrentCurseForgeVersion(instance, currentProject, version)
+				const job = await queueCurrentCurseForgeVersion(instance, currentProject, version)
+				if (!job) {
+					if (storeInstance) storeInstance.installing = false
+					return
+				}
 				trackEvent('ProjectInstall', {
 					loader: selectedInstance.loader,
 					game_version: selectedInstance.game_version,
@@ -1313,9 +1637,30 @@ export function createContentInstall(opts: {
 		addInstallingItem(instance.id, project, version)
 		try {
 			if (currentProvider === 'curseforge') {
-				await queueCurrentCurseForgeVersion(instance, project, version)
+				const job = await queueCurrentCurseForgeVersion(instance, project, version)
+				if (!job) {
+					incompatibilityWarningInstalling.value = false
+					removeInstallingItems(instance.id, [project.id])
+					return
+				}
 			} else {
-				await add_project_from_version(instance.id, version.id, 'standalone')
+				const request = {
+					project_id: project.id,
+					version_id: version.id,
+					content_type: resolveContentType(project.project_type),
+				}
+				const previewPlan = await preview_project_with_dependencies(instance.id, request)
+				const excludedProjectIds = await showInstallPreview(instance, project, version, previewPlan)
+				if (excludedProjectIds == null) {
+					incompatibilityWarningInstalling.value = false
+					removeInstallingItems(instance.id, [project.id])
+					return
+				}
+				await queue_project_with_dependencies(
+					instance.id,
+					{ ...request, excluded_project_ids: excludedProjectIds },
+					{ title: project.title, iconUrl: project.icon_url },
+				)
 			}
 		} catch (err) {
 			handleContentInstallError(err)
@@ -1367,6 +1712,8 @@ export function createContentInstall(opts: {
 			) ?? currentVersions[0]
 
 		let createdInstanceId: string | null = null
+		let excludedModrinthProjectIds: string[] = []
+		let excludedCurseForgeProjectIds: number[] = []
 		debugState('handleCreateAndInstall', {
 			provider: currentProvider,
 			projectType: currentProject?.project_type,
@@ -1374,6 +1721,64 @@ export function createContentInstall(opts: {
 			isCurseforgeModpack:
 				currentProvider === 'curseforge' && currentProject?.project_type === 'modpack',
 		})
+		if (currentProvider === 'modrinth' && currentProject) {
+			const installRequest = {
+				project_id: currentProject.id,
+				version_id: version.id,
+				content_type: resolveContentType(currentProject.project_type),
+			}
+			const previewPlan = await preview_project_with_dependencies_for_target(
+				installRequest,
+				data.gameVersion,
+				data.loader,
+			)
+			const result = await showInstallPreview(
+				{
+					id: '',
+					name: data.name,
+					icon_path: data.iconPath ?? undefined,
+					game_version: data.gameVersion,
+					loader: data.loader as InstanceLoader,
+				},
+				currentProject,
+				version,
+				previewPlan,
+			)
+			if (result == null) return
+			excludedModrinthProjectIds = result
+		} else if (
+			currentProvider === 'curseforge' &&
+			currentProject &&
+			currentProject.project_type !== 'modpack' &&
+			currentCurseForgeProject &&
+			currentCurseForgeFiles.get(version.id)
+		) {
+			const curseForgeProject = currentCurseForgeProject
+			const file = currentCurseForgeFiles.get(version.id)!
+			const preview = await previewCurseForgeFile({
+				instanceId: '',
+				projectId: curseForgeProject.id,
+				fileId: file.id,
+				projectType: currentProject.project_type,
+				ownershipKind: 'user_added',
+				manualOperationKind: 'content_install',
+				gameVersion: data.gameVersion,
+				modLoaderType: curseForgeLoaderType(data.loader),
+				installDependencies: themeStore.getFeatureFlag('auto_install_dependencies'),
+			})
+			const result = await showCurseForgeInstallPreview(
+				{
+					id: '',
+					name: data.name,
+					icon_path: data.iconPath ?? undefined,
+					game_version: data.gameVersion,
+					loader: data.loader as InstanceLoader,
+				},
+				preview,
+			)
+			if (result == null) return
+			excludedCurseForgeProjectIds = result
+		}
 		try {
 			const job = await install_create_instance({
 				name: data.name,
@@ -1393,6 +1798,7 @@ export function createContentInstall(opts: {
 						project_id: currentProject!.id,
 						version_id: version.id,
 						content_type: resolveContentType(currentProject!.project_type),
+						excluded_project_ids: excludedModrinthProjectIds,
 					},
 					{ title: currentProject!.title, iconUrl: currentProject!.icon_url },
 				)
@@ -1412,7 +1818,7 @@ export function createContentInstall(opts: {
 			}
 
 			if (currentProvider === 'curseforge' && currentProject!.project_type !== 'modpack') {
-				await queueCurrentCurseForgeVersion(
+				const job = await queueCurrentCurseForgeVersion(
 					{
 						id,
 						name: data.name,
@@ -1422,7 +1828,9 @@ export function createContentInstall(opts: {
 					},
 					currentProject!,
 					version,
+					excludedCurseForgeProjectIds,
 				)
+				if (!job) return
 				trackEvent('InstanceCreate', { source: 'ProjectInstallModal' })
 				trackEvent('ProjectInstall', {
 					loader: data.loader,
@@ -1595,13 +2003,17 @@ export function createContentInstall(opts: {
 					}
 				}
 
+				const installRequest = {
+					project_id: project.id,
+					version_id: version.id,
+					content_type: resolveContentType(project.project_type),
+				}
+				const previewPlan = await preview_project_with_dependencies(instance.id, installRequest)
+				const excludedProjectIds = await showInstallPreview(instance, project, version, previewPlan)
+				if (excludedProjectIds == null) return
 				await queue_project_with_dependencies(
 					instance.id,
-					{
-						project_id: project.id,
-						version_id: version.id,
-						content_type: resolveContentType(project.project_type),
-					},
+					{ ...installRequest, excluded_project_ids: excludedProjectIds },
 					{ title: project.title, iconUrl: project.icon_url },
 				)
 				trackEvent('ProjectInstall', {
@@ -1718,7 +2130,8 @@ export function createContentInstall(opts: {
 				: findPreferredVersion(versions, project, instance)
 			if (!version) version = versions[0]
 			if (isVersionCompatible(version, project, instance)) {
-				await queueCurrentCurseForgeVersion(instance, project, version)
+				const job = await queueCurrentCurseForgeVersion(instance, project, version)
+				if (!job) return
 				trackEvent('ProjectInstall', {
 					loader: instance.loader,
 					game_version: instance.game_version,
@@ -1754,6 +2167,9 @@ export function createContentInstall(opts: {
 		handleCancel,
 		setContentInstallModal(ref: ModalRef) {
 			modalRef = ref
+		},
+		setContentInstallPreviewModal(ref: InstanceType<typeof ContentInstallPreviewModal> | null) {
+			contentInstallPreviewModalRef = ref
 		},
 		setModpackAlreadyInstalledModal(ref: ModpackAlreadyInstalledModalRef) {
 			modpackAlreadyInstalledModalRef = ref

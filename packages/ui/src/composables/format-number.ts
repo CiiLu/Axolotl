@@ -29,10 +29,10 @@ export function useCompactNumber() {
 			return standardFormatter.format(value)
 		}
 		if (value < 1_000_000) {
-			const oneDigitCompactFormatter = getCompactFormatter(locale.value, 1)
+			const oneDigitCompactFormatter = getCompactFormatter('en', 1)
 			return oneDigitCompactFormatter.format(value)
 		}
-		const twoDigitsCompactFormatter = getCompactFormatter(locale.value, 2)
+		const twoDigitsCompactFormatter = getCompactFormatter('en', 2)
 		return twoDigitsCompactFormatter.format(value)
 	}
 

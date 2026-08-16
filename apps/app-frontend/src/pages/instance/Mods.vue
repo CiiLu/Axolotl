@@ -116,6 +116,7 @@
 		</CollapsibleAdmonition>
 		<ContentPageLayout>
 			<template #modals>
+				<ContentToggleDependenciesModal ref="toggleDependenciesModal" />
 				<ShareModalWrapper
 					ref="shareModal"
 					:share-title="formatMessage(messages.shareTitle)"
@@ -224,6 +225,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import ExportModal from '@/components/ui/ExportModal.vue'
+import ContentToggleDependenciesModal from '@/components/ui/modal/ContentToggleDependenciesModal.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
 import { useWorldDatapacks } from '@/composables/useWorldDatapacks'
 import { trackEvent } from '@/helpers/analytics'
@@ -284,6 +286,15 @@ const messages = defineMessages({
 	projectsWereAdded: {
 		id: 'app.instance.mods.projects-were-added',
 		defaultMessage: '{count} projects were added',
+	},
+	orphanedDependenciesTitle: {
+		id: 'app.instance.mods.orphaned-dependencies.title',
+		defaultMessage: 'Dependencies are no longer required',
+	},
+	orphanedDependenciesBody: {
+		id: 'app.instance.mods.orphaned-dependencies.body',
+		defaultMessage:
+			'These dependencies are no longer required by other content and will not be removed automatically: {list}',
 	},
 	contentTypeProject: {
 		id: 'app.instance.mods.content-type-project',
@@ -1121,7 +1132,106 @@ async function handleUploadFiles() {
 	}
 }
 
-async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
+function dependencyRefMatchesContentItem(
+	reference: { provider: 'modrinth' | 'curseforge' | 'local'; projectId: string },
+	item: ContentItem,
+) {
+	const itemProjectId = item.project?.id ?? ''
+	if (reference.provider === 'curseforge') {
+		// CurseForge content items carry either a bare numeric id or a
+		// `curseforge:<id>` prefixed one depending on where they were built.
+		const normalized = itemProjectId.startsWith('curseforge:')
+			? itemProjectId.slice('curseforge:'.length)
+			: itemProjectId
+		return normalized === reference.projectId
+	}
+	// Modrinth and local edges both reference the project id directly.
+	return itemProjectId === reference.projectId
+}
+
+const toggleDependenciesModal = ref<InstanceType<typeof ContentToggleDependenciesModal> | null>(
+	null,
+)
+
+function collectToggleRelated(items: ContentItem[], enabling: boolean): ContentItem[] {
+	const targetIds = new Set(items.map(getContentItemId))
+	const relatedIds = new Set<string>()
+	const related: ContentItem[] = []
+	const queue = [...items]
+	while (queue.length > 0) {
+		const current = queue.shift()
+		if (!current) continue
+		const references = enabling ? current.dependency?.requires : current.dependency?.requiredBy
+		for (const reference of references ?? []) {
+			const match = [...projects.value, ...linkedModpackContentItems.value].find((candidate) =>
+				dependencyRefMatchesContentItem(reference, candidate),
+			)
+			if (!match) continue
+			if (match.instanceCapabilities?.canToggle === false) continue
+			const id = getContentItemId(match)
+			if (targetIds.has(id) || relatedIds.has(id)) continue
+			const needsChange = enabling ? !match.enabled : match.enabled
+			if (!needsChange) continue
+			relatedIds.add(id)
+			related.push(match)
+			queue.push(match)
+		}
+	}
+	return related
+}
+
+async function promptToggleDependencies(
+	targets: ContentItem[],
+	related: ContentItem[],
+	enabling: boolean,
+): Promise<'apply' | 'selected' | 'cancel'> {
+	if (!toggleDependenciesModal.value) return 'selected'
+	return await toggleDependenciesModal.value.show({
+		enabling,
+		bulk: targets.length > 1,
+		primaryTitle: targets[0]?.project?.title ?? targets[0]?.file_name ?? '',
+		related: related.map((item) => ({
+			title: item.project?.title ?? item.file_name,
+			iconUrl: item.project?.icon_url ?? null,
+			versionNumber: item.version?.version_number,
+		})),
+	})
+}
+
+async function toggleDisableBatch(items: ContentItem[], enabling: boolean) {
+	if (items.length === 0) return
+	const related = collectToggleRelated(items, enabling)
+	if (related.length > 0) {
+		const choice = await promptToggleDependencies(items, related, enabling)
+		if (choice === 'cancel') return
+		if (choice === 'apply') {
+			for (const item of related) {
+				await toggleDisableMod(item, enabling, true)
+			}
+		}
+	}
+	for (const item of items) {
+		await toggleDisableMod(item, enabling, true)
+	}
+}
+
+function notifyOrphanedDependencies() {
+	const orphaned = projects.value.filter((item) => item.dependency?.orphaned)
+	if (orphaned.length === 0) return
+	const names = orphaned.map((item) => item.project?.title ?? item.file_name)
+	const list = names.slice(0, 5).join(', ') + (names.length > 5 ? ', …' : '')
+	addNotification({
+		type: 'info',
+		title: formatMessage(messages.orphanedDependenciesTitle),
+		text: formatMessage(messages.orphanedDependenciesBody, { list }),
+	})
+}
+
+async function toggleDisableMod(
+	mod: ContentItem,
+	desiredEnabled?: boolean,
+	skipDependencyPrompt = false,
+) {
 	if (isWorldDatapackItem(mod)) {
 		if (mod.instanceCapabilities?.canToggle === false) return
 		const enabled = desiredEnabled ?? !mod.enabled
@@ -1141,6 +1251,23 @@ async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
 		return
 	}
 
+	const enabled = desiredEnabled ?? !mod.enabled
+	if (!skipDependencyPrompt && mod.dependency) {
+		const related = collectToggleRelated([mod], enabled)
+		if (related.length > 0) {
+			const choice = await promptToggleDependencies([mod], related, enabled)
+			if (choice === 'cancel') return
+			if (choice === 'apply') {
+				for (const item of related) {
+					await toggleDisableMod(item, enabled, true)
+				}
+			}
+		}
+	}
+	await applyToggleDisableMod(mod, enabled)
+}
+
+async function applyToggleDisableMod(mod: ContentItem, enabled: boolean) {
 	const contentId = getStableContentId(mod)
 	if (!mod.file_path || !contentId || mod.instanceCapabilities?.canToggle === false) return
 	const operation = beginContentOperation(mod)
@@ -1148,7 +1275,6 @@ async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
 	const originalFilePath = mod.file_path
 	const originalFileName = mod.file_name
 	const originalEnabled = mod.enabled
-	const enabled = desiredEnabled ?? !mod.enabled
 	let trimmedPath = originalFilePath
 	while (trimmedPath.endsWith('.disabled')) {
 		trimmedPath = trimmedPath.slice(0, -'.disabled'.length)
@@ -1167,7 +1293,7 @@ async function toggleDisableMod(mod: ContentItem, desiredEnabled?: boolean) {
 	operation.keys = [...operation.keys, ...optimisticKeys]
 
 	try {
-		const newPath = await toggle_content_entry(props.instance.id, contentId, desiredEnabled)
+		const newPath = await toggle_content_entry(props.instance.id, contentId, enabled)
 		const newFileName = fileNameFromPath(newPath)
 		const actualEnabled = !newPath.endsWith('.disabled')
 		applyContentItemToggleState(mod, operation.originalFileName, originalFilePath, {
@@ -1242,7 +1368,9 @@ async function removeMod(mod: ContentItem) {
 	} catch (err) {
 		handleError(err as Error)
 	} finally {
+		await refreshContentState('bypass')
 		finishContentOperation(mod, operation)
+		notifyOrphanedDependencies()
 	}
 }
 
@@ -1278,7 +1406,57 @@ async function getDeleteDependencyWarning(items: ContentItem[]) {
 	if (props.isServerInstance) return null
 
 	const deletingIds = new Set(items.map(getContentItemId))
-	const remainingItems = projects.value.filter((item) => !deletingIds.has(getContentItemId(item)))
+	// Pack-managed content participates in the dependency graph like any other
+	// content, so dependents can live in either list.
+	const remainingItems = [...projects.value, ...linkedModpackContentItems.value].filter(
+		(item) => !deletingIds.has(getContentItemId(item)),
+	)
+
+	const persistedWarning = (() => {
+		const dependents = remainingItems
+			.map((candidate) => {
+				const dependencies = items.filter(
+					(item) =>
+						!!item.project?.id &&
+						candidate.dependency?.requires?.some((reference) =>
+							dependencyRefMatchesContentItem(reference, item),
+						),
+				)
+				return dependencies.length > 0 ? { item: candidate, dependencies } : null
+			})
+			.filter(
+				(dependent): dependent is { item: ContentItem; dependencies: ContentItem[] } =>
+					dependent !== null,
+			)
+		if (dependents.length > 0) return { items, dependents }
+		const dependencyItems = items.filter((item) =>
+			item.dependency?.requiredBy?.some((reference) =>
+				remainingItems.some((candidate) => dependencyRefMatchesContentItem(reference, candidate)),
+			),
+		)
+		if (dependencyItems.length > 0) {
+			return {
+				items: dependencyItems,
+				dependents: remainingItems
+					.map((candidate) => {
+						const dependencies = dependencyItems.filter((item) =>
+							candidate.dependency?.requires?.some((reference) =>
+								dependencyRefMatchesContentItem(reference, item),
+							),
+						)
+						return dependencies.length > 0 ? { item: candidate, dependencies } : null
+					})
+					.filter(
+						(dependent): dependent is { item: ContentItem; dependencies: ContentItem[] } =>
+							dependent !== null,
+					),
+			}
+		}
+		return null
+	})()
+
+	if (persistedWarning?.dependents.length) return persistedWarning
+
 	const versionIds = [
 		...new Set(remainingItems.map((item) => item.version?.id).filter((id): id is string => !!id)),
 	]
@@ -1559,16 +1737,15 @@ async function handleModpackContentToggle(item: ContentItem, enabled: boolean) {
 }
 
 async function handleModpackContentBulkToggle(items: ContentItem[], enabled: boolean) {
-	await Promise.all(
-		items
-			.filter(
-				(item) =>
-					item.instanceMaterializationState !== 'missing' &&
-					item.instanceMaterializationState !== 'pending_manual' &&
-					item.instanceMaterializationState !== 'removed' &&
-					item.instanceCapabilities?.canToggle !== false,
-			)
-			.map((item) => toggleDisableMod(item, enabled)),
+	await toggleDisableBatch(
+		items.filter(
+			(item) =>
+				item.instanceMaterializationState !== 'missing' &&
+				item.instanceMaterializationState !== 'pending_manual' &&
+				item.instanceMaterializationState !== 'removed' &&
+				item.instanceCapabilities?.canToggle !== false,
+		),
+		enabled,
 	)
 }
 
@@ -2194,18 +2371,20 @@ provideContentManager({
 	contentTypeLabel: ref(formatMessage(messages.contentTypeProject)),
 	toggleEnabled: toggleDisableDebounced,
 	bulkEnableItems: async (items: ContentItem[]) => {
-		for (const item of items.filter(
-			(item) => item.enabled === false && item.instanceCapabilities?.canToggle !== false,
-		)) {
-			await toggleDisableMod(item, true)
-		}
+		await toggleDisableBatch(
+			items.filter(
+				(item) => item.enabled === false && item.instanceCapabilities?.canToggle !== false,
+			),
+			true,
+		)
 	},
 	bulkDisableItems: async (items: ContentItem[]) => {
-		for (const item of items.filter(
-			(item) => item.enabled === true && item.instanceCapabilities?.canToggle !== false,
-		)) {
-			await toggleDisableMod(item, false)
-		}
+		await toggleDisableBatch(
+			items.filter(
+				(item) => item.enabled === true && item.instanceCapabilities?.canToggle !== false,
+			),
+			false,
+		)
 	},
 	deleteItem: removeMod,
 	bulkDeleteItems: async (items: ContentItem[]) => {
@@ -2284,6 +2463,15 @@ provideContentManager({
 				}
 			: undefined
 
+		const dependency = item.dependency
+		const dependencyBadge =
+			dependency && (dependency.autoDependency || dependency.requiredBy.length > 0)
+				? {
+						autoDependency: dependency.autoDependency,
+						orphaned: dependency.orphaned,
+					}
+				: null
+
 		return {
 			id: getContentItemId(item),
 			project: item.project ?? {
@@ -2313,6 +2501,7 @@ provideContentManager({
 				item.instanceCapabilities?.canChangeVersion === false,
 			pendingManualDownload: item.pendingManualDownload,
 			installing: item.installing,
+			dependencyBadge,
 			inlineActions:
 				item.project_type === 'schematic'
 					? [

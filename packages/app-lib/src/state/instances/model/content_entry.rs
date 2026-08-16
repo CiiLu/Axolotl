@@ -43,6 +43,7 @@ pub struct ContentEntry {
     pub project_type: ProjectType,
     pub source_kind: ContentSourceKind,
     pub ownership_kind: ContentOwnershipKind,
+    pub auto_dependency: bool,
     pub server_requirement: ContentRequirement,
     pub client_requirement: ContentRequirement,
     pub enabled: bool,

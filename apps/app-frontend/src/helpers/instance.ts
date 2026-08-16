@@ -109,6 +109,20 @@ export interface InstanceContentSnapshotItem {
 		canChangeVersion: boolean
 		canRestorePackDefault: boolean
 	}
+	dependency: {
+		autoDependency: boolean
+		requiredBy: Array<{
+			provider: 'modrinth' | 'curseforge' | 'local'
+			projectId: string
+			releaseId: string
+		}>
+		requires: Array<{
+			provider: 'modrinth' | 'curseforge' | 'local'
+			projectId: string
+			releaseId: string
+		}>
+		orphaned: boolean
+	} | null
 }
 
 export interface PendingManualDownload {
@@ -352,6 +366,7 @@ export interface ResolveContentRequest {
 	version_id?: string | null
 	content_type: Labrinth.Content.v3.ContentType
 	selected?: ResolutionPreferences
+	excluded_project_ids?: string[]
 }
 
 export interface ResolvedContent {
@@ -392,6 +407,28 @@ export async function install_project_with_dependencies(
 	return await invoke('plugin:instance|instance_install_project_with_dependencies', {
 		instanceId,
 		request,
+	})
+}
+
+export async function preview_project_with_dependencies(
+	instanceId: string,
+	request: ResolveContentRequest,
+): Promise<ResolveContentPlan> {
+	return await invoke('plugin:instance|instance_preview_project_with_dependencies', {
+		instanceId,
+		request,
+	})
+}
+
+export async function preview_project_with_dependencies_for_target(
+	request: ResolveContentRequest,
+	gameVersion: string,
+	loader: string,
+): Promise<ResolveContentPlan> {
+	return await invoke('plugin:instance|instance_preview_project_with_dependencies_for_target', {
+		request,
+		gameVersion,
+		loader,
 	})
 }
 

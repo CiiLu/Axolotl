@@ -8,8 +8,51 @@ use crate::model::{
 };
 use crate::provider::ContentMetadataProvider;
 
-// Skip Fabric API if you're installing a fabric project onto a quilt instance.
-const QUILT_FABRIC_API_EXCEPTION_PROJECT_ID: &str = "P7dR8mSH";
+// Fabric API is replaced by Quilted Fabric API when the install target is
+// quilt. See Prism Launcher's override table for the equivalent mapping.
+const FABRIC_API_PROJECT_ID: &str = "P7dR8mSH";
+const QUILTED_FABRIC_API_PROJECT_ID: &str = "qvIfYCYJ";
+const IRIS_PROJECT_ID: &str = "YL57xq9U";
+const SODIUM_PROJECT_ID: &str = "AANobbMI";
+const MAX_DEPENDENCY_DEPTH: usize = 20;
+
+// Some Modrinth versions omit required dependencies from their metadata even
+// though the mod JAR itself declares them (e.g. several Iris releases omit
+// Sodium). Correct those records locally so install plans match what the mod
+// actually requires; entries can be removed once upstream metadata is fixed.
+struct MissingDependencyCorrection {
+    project_id: &'static str,
+    version_id: &'static str,
+    dependency_project_id: &'static str,
+}
+
+const MISSING_DEPENDENCY_CORRECTIONS: &[MissingDependencyCorrection] = &[
+    MissingDependencyCorrection {
+        project_id: IRIS_PROJECT_ID,
+        version_id: "Cjwm9s3i", // Iris 1.6.14 for Minecraft 1.20.2
+        dependency_project_id: SODIUM_PROJECT_ID,
+    },
+    MissingDependencyCorrection {
+        project_id: IRIS_PROJECT_ID,
+        version_id: "G5dd9TM4", // Iris 1.7.1 for Minecraft 1.20.1
+        dependency_project_id: SODIUM_PROJECT_ID,
+    },
+    MissingDependencyCorrection {
+        project_id: IRIS_PROJECT_ID,
+        version_id: "keLlmlCc", // Iris 1.7.1 for Minecraft 1.20.5/1.20.6
+        dependency_project_id: SODIUM_PROJECT_ID,
+    },
+    MissingDependencyCorrection {
+        project_id: IRIS_PROJECT_ID,
+        version_id: "Kdz76qQt", // Iris 1.8.0-beta.3 for Fabric 1.21
+        dependency_project_id: SODIUM_PROJECT_ID,
+    },
+    MissingDependencyCorrection {
+        project_id: IRIS_PROJECT_ID,
+        version_id: "di7sM681", // Iris 1.8.0-beta.2 for Fabric 1.21
+        dependency_project_id: SODIUM_PROJECT_ID,
+    },
+];
 
 pub async fn resolve_content<P: ContentMetadataProvider>(
     mut provider: P,
@@ -74,6 +117,7 @@ struct InstallResolver<'a, P> {
     selected: &'a ResolutionPreferences,
     target: &'a ResolutionPreferences,
     existing_project_ids: HashSet<String>,
+    excluded_project_ids: HashSet<String>,
     planned_project_versions: HashMap<String, String>,
     visited_versions: HashSet<String>,
     dependencies: Vec<ResolvedContent>,
@@ -98,6 +142,11 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
                 .iter()
                 .cloned()
                 .collect(),
+            excluded_project_ids: request
+                .excluded_project_ids
+                .iter()
+                .cloned()
+                .collect(),
             planned_project_versions,
             visited_versions: HashSet::new(),
             dependencies: Vec::new(),
@@ -109,31 +158,46 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
         &mut self,
         version: Version,
     ) -> Result<(), Error> {
-        let mut stack = vec![version];
+        let mut stack = vec![(version, 0_usize)];
 
-        while let Some(version) = stack.pop() {
+        while let Some((version, depth)) = stack.pop() {
             if !self.visited_versions.insert(version.id.clone()) {
                 continue;
             }
+            if depth >= MAX_DEPENDENCY_DEPTH {
+                continue;
+            }
 
-            for dependency in &version.dependencies {
+            let corrected_dependencies =
+                dependency_metadata_corrections(&version);
+            for original_dependency in version
+                .dependencies
+                .iter()
+                .chain(corrected_dependencies.iter())
+            {
                 if !matches!(
-                    dependency.dependency_type,
+                    original_dependency.dependency_type,
                     DependencyType::Required
                 ) {
                     continue;
                 }
-
-                if should_skip_quilt_fabric_api(dependency, self.target) {
-                    self.skipped.push(SkippedContent {
-                        project_id: QUILT_FABRIC_API_EXCEPTION_PROJECT_ID
-                            .to_string(),
-                        version_id: dependency.version_id.clone(),
-                        dependent_on_version_id: Some(version.id.clone()),
-                        reason: SkippedReason::QuiltFabricApi,
-                    });
-                    continue;
-                }
+                let overridden_dependency;
+                let dependency = if should_use_quilted_fabric_api(
+                    original_dependency,
+                    self.target,
+                ) {
+                    overridden_dependency = Dependency {
+                        project_id: Some(
+                            QUILTED_FABRIC_API_PROJECT_ID.to_string(),
+                        ),
+                        version_id: None,
+                        file_name: original_dependency.file_name.clone(),
+                        dependency_type: DependencyType::Required,
+                    };
+                    &overridden_dependency
+                } else {
+                    original_dependency
+                };
 
                 let Some(dependency_version) =
                     self.resolve_dependency_version(dependency).await?
@@ -145,6 +209,16 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
                     .project_id
                     .clone()
                     .unwrap_or_else(|| dependency_version.project_id.clone());
+
+                if self.excluded_project_ids.contains(&project_id) {
+                    self.skipped.push(SkippedContent {
+                        project_id,
+                        version_id: Some(dependency_version.id),
+                        dependent_on_version_id: Some(version.id.clone()),
+                        reason: SkippedReason::ExcludedByUser,
+                    });
+                    continue;
+                }
 
                 if self.existing_project_ids.contains(&project_id) {
                     self.skipped.push(SkippedContent {
@@ -183,7 +257,7 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
                     version_id: dependency_version.id.clone(),
                     dependent_on_version_id: Some(version.id.clone()),
                 });
-                stack.push(dependency_version);
+                stack.push((dependency_version, depth + 1));
             }
         }
 
@@ -232,6 +306,28 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
 
         Ok(version)
     }
+}
+
+fn dependency_metadata_corrections(version: &Version) -> Vec<Dependency> {
+    MISSING_DEPENDENCY_CORRECTIONS
+        .iter()
+        .filter(|correction| {
+            correction.project_id == version.project_id
+                && correction.version_id == version.id.as_str()
+        })
+        .map(|correction| Dependency {
+            project_id: Some(correction.dependency_project_id.to_string()),
+            version_id: None,
+            file_name: None,
+            dependency_type: DependencyType::Required,
+        })
+        .filter(|dependency| {
+            !version.dependencies.iter().any(|declared| {
+                declared.project_id.as_deref()
+                    == dependency.project_id.as_deref()
+            })
+        })
+        .collect()
 }
 
 fn select_newest_matching_version(
@@ -341,12 +437,11 @@ fn loader_aliases(loader: &str) -> &'static [&'static str] {
     }
 }
 
-fn should_skip_quilt_fabric_api(
+fn should_use_quilted_fabric_api(
     dependency: &Dependency,
     target: &ResolutionPreferences,
 ) -> bool {
-    dependency.project_id.as_deref()
-        == Some(QUILT_FABRIC_API_EXCEPTION_PROJECT_ID)
+    dependency.project_id.as_deref() == Some(FABRIC_API_PROJECT_ID)
         && target
             .loaders
             .iter()

@@ -629,11 +629,17 @@
   "content-type.item.lowercase": {
     "defaultMessage": "{count, plural, one {item} other {items}}"
   },
+  "content.card.dependency-badge": {
+    "defaultMessage": "Dependency"
+  },
   "content.card.group.hardcore": {
     "defaultMessage": "Hardcore mode"
   },
   "content.card.group.not-played-yet": {
     "defaultMessage": "Not played yet"
+  },
+  "content.card.orphaned-dependency-badge": {
+    "defaultMessage": "Orphaned dependency"
   },
   "content.card.pending-manual-download": {
     "defaultMessage": "Manual download required"

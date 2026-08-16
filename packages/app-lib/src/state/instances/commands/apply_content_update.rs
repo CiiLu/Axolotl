@@ -4,7 +4,7 @@ use crate::state::instances::{
 };
 use crate::state::{
     CacheBehaviour, CachedEntry, ContentProviderRef, Dependency,
-    DependencyType, ModrinthVersionId, State, Version,
+    DependencyType, ModrinthVersionId, ProjectType, State, Version,
 };
 use crate::util::fetch::DownloadReason;
 use futures::stream::{FuturesUnordered, StreamExt};
@@ -13,8 +13,10 @@ use std::collections::{HashMap, HashSet};
 
 use super::apply_content_install::{
     DownloadedProjectVersion, add_downloaded_project_version,
-    add_project_from_version, archive_project_file, content_ownership_for_path,
-    download_project_version, remove_project, toggle_disable_project,
+    add_project_from_version, add_resolved_content, archive_project_file,
+    content_ownership_for_path, download_project_version,
+    persist_resolved_plan_dependency_edges, remove_project,
+    resolve_content_scope, resolve_install_plan, toggle_disable_project,
 };
 use super::check_content_updates::{ContentUpdate, check_content_updates};
 
@@ -28,12 +30,14 @@ struct BulkUpdatePlan {
 #[derive(Clone, Debug)]
 struct PlannedProjectUpdate {
     relative_path: String,
+    project_id: String,
     current_version_id: String,
     update_version_id: String,
 }
 
 #[derive(Clone, Debug)]
 struct PlannedDependencyInstall {
+    project_id: String,
     version_id: String,
     parent_version_id: String,
 }
@@ -46,7 +50,14 @@ enum PlannedDownload {
 
 enum DownloadedBulkProject {
     ProjectUpdate(PlannedProjectUpdate, DownloadedProjectVersion),
-    DependencyAddition(DownloadedProjectVersion),
+    DependencyAddition(PlannedDependencyInstall, DownloadedProjectVersion),
+}
+
+#[derive(Clone, Debug)]
+struct AppliedBulkItem {
+    project_id: String,
+    version_id: String,
+    relative_path: String,
 }
 
 #[derive(Clone, Debug)]
@@ -95,23 +106,76 @@ async fn apply_content_update(
 ) -> crate::Result<String> {
     let mut new_path = match update {
         ContentUpdate::Modrinth {
+            project_id,
             current_version_id,
             update_version_id,
             ..
         } => {
+            let version = CachedEntry::get_version(
+                update_version_id,
+                Some(CacheBehaviour::MustRevalidate),
+                &state.pool,
+                &state.api_semaphore,
+            )
+            .await?
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(format!(
+                    "Unable to install version id {}. Not found.",
+                    update_version_id
+                ))
+            })?;
+            let content_type =
+                ProjectType::get_from_loaders(version.loaders.clone())
+                    .map(modrinth_content_management::ContentType::from)
+                    .unwrap_or(modrinth_content_management::ContentType::Mod);
+            let plan = resolve_install_plan(
+                instance_id,
+                super::apply_content_install::InstanceInstallProjectRequest {
+                    project_id: project_id.to_string(),
+                    version_id: Some(update_version_id.to_string()),
+                    content_type,
+                    selected: Default::default(),
+                    excluded_project_ids: Vec::new(),
+                },
+                state,
+            )
+            .await?;
             let ownership_kind =
                 content_ownership_for_path(instance_id, project_path, state)
                     .await?;
-            add_project_from_version(
+            let mut paths = Vec::with_capacity(plan.dependencies.len() + 1);
+            paths.push(
+                add_project_from_version(
+                    instance_id,
+                    &plan.primary.version_id,
+                    DownloadReason::Update,
+                    Some(current_version_id.to_string()),
+                    ContentSourceKind::Local,
+                    ownership_kind,
+                    state,
+                )
+                .await?,
+            );
+            for dependency in &plan.dependencies {
+                paths.push(
+                    add_resolved_content(
+                        instance_id,
+                        dependency,
+                        DownloadReason::Dependency,
+                        true,
+                        state,
+                    )
+                    .await?,
+                );
+            }
+            persist_resolved_plan_dependency_edges(
                 instance_id,
-                update_version_id.as_str(),
-                DownloadReason::Update,
-                Some(current_version_id.to_string()),
-                ContentSourceKind::Local,
-                ownership_kind,
+                &paths,
+                &plan,
                 state,
             )
-            .await?
+            .await?;
+            paths.remove(0)
         }
         ContentUpdate::CurseForge { .. } => {
             let result = crate::api::curseforge::update_installed_file(
@@ -170,6 +234,7 @@ pub(crate) async fn update_all_projects(
             .await?;
 
     let mut changed = HashMap::new();
+    let mut applied = Vec::<AppliedBulkItem>::new();
     emit_bulk_update_progress(
         instance_id,
         crate::event::InstanceBulkUpdateProgressStage::Finishing,
@@ -218,10 +283,18 @@ pub(crate) async fn update_all_projects(
                     }
                 }
 
+                applied.push(AppliedBulkItem {
+                    project_id: update.project_id,
+                    version_id: update.update_version_id,
+                    relative_path: new_path.clone(),
+                });
                 changed.insert(update.relative_path, new_path);
             }
-            DownloadedBulkProject::DependencyAddition(downloaded) => {
-                add_downloaded_project_version(
+            DownloadedBulkProject::DependencyAddition(
+                dependency,
+                downloaded,
+            ) => {
+                let new_path = add_downloaded_project_version(
                     instance_id,
                     downloaded,
                     ContentSourceKind::Local,
@@ -229,6 +302,28 @@ pub(crate) async fn update_all_projects(
                     state,
                 )
                 .await?;
+                let scope =
+                    resolve_content_scope(instance_id, None, state).await?;
+                if let Some(entry) =
+                    content_rows::get_content_entry_by_relative_path(
+                        &scope.content_set_id,
+                        &new_path,
+                        &state.pool,
+                    )
+                    .await?
+                {
+                    content_rows::set_content_entry_auto_dependency(
+                        &entry.id,
+                        true,
+                        &state.pool,
+                    )
+                    .await?;
+                }
+                applied.push(AppliedBulkItem {
+                    project_id: dependency.project_id,
+                    version_id: dependency.version_id,
+                    relative_path: new_path,
+                });
             }
         }
     }
@@ -241,7 +336,85 @@ pub(crate) async fn update_all_projects(
         changed.insert(relative_path, new_path);
     }
 
+    persist_bulk_dependency_edges(
+        instance_id,
+        &applied,
+        &plan.dependency_additions,
+        state,
+    )
+    .await?;
+
     Ok(changed)
+}
+
+async fn persist_bulk_dependency_edges(
+    instance_id: &str,
+    applied: &[AppliedBulkItem],
+    dependency_additions: &[PlannedDependencyInstall],
+    state: &State,
+) -> crate::Result<()> {
+    if dependency_additions.is_empty() {
+        return Ok(());
+    }
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+    let scope = resolve_content_scope(instance_id, None, state).await?;
+    let mut tx = state.pool.begin().await?;
+    for dependency in dependency_additions {
+        let Some(parent) = applied
+            .iter()
+            .find(|item| item.version_id == dependency.parent_version_id)
+        else {
+            continue;
+        };
+        let Some(child) = applied
+            .iter()
+            .find(|item| item.version_id == dependency.version_id)
+        else {
+            continue;
+        };
+        let Some(parent_entry) =
+            content_rows::get_content_entry_by_relative_path(
+                &scope.content_set_id,
+                &parent.relative_path,
+                &state.pool,
+            )
+            .await?
+        else {
+            continue;
+        };
+        let Some(child_entry) =
+            content_rows::get_content_entry_by_relative_path(
+                &scope.content_set_id,
+                &child.relative_path,
+                &state.pool,
+            )
+            .await?
+        else {
+            continue;
+        };
+        let now = chrono::Utc::now();
+        content_rows::upsert_content_dependency_edge_in_transaction(
+            &crate::state::instances::ContentDependencyEdge {
+                id: format!("content-dependency:{}", uuid::Uuid::new_v4()),
+                content_set_id: scope.content_set_id.clone(),
+                parent_entry_id: parent_entry.id,
+                child_entry_id: child_entry.id,
+                provider: crate::state::ContentProvider::Modrinth,
+                dependency_kind:
+                    crate::state::instances::ContentDependencyKind::Required,
+                parent_project_id: parent.project_id.clone(),
+                parent_release_id: parent.version_id.clone(),
+                child_project_id: child.project_id.clone(),
+                child_release_id: child.version_id.clone(),
+                created_at: now,
+                modified_at: now,
+            },
+            &mut tx,
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
 }
 
 async fn download_planned_projects(
@@ -296,7 +469,9 @@ async fn download_planned_projects(
                     .await?;
 
                     Ok::<_, crate::Error>(
-                        DownloadedBulkProject::DependencyAddition(downloaded),
+                        DownloadedBulkProject::DependencyAddition(
+                            dependency, downloaded,
+                        ),
                     )
                 }
             }
@@ -445,6 +620,7 @@ async fn plan_bulk_update(
             !installed_by_project.contains_key(&dependency.project_id)
         })
         .map(|dependency| PlannedDependencyInstall {
+            project_id: dependency.project_id.clone(),
             version_id: dependency.version_id.clone(),
             parent_version_id: dependency.parent_version_id.clone(),
         })
@@ -457,9 +633,10 @@ async fn plan_bulk_update(
     let project_updates = updates
         .into_iter()
         .filter_map(|update| {
-            let (_, current, target) = update.modrinth_ids()?;
+            let (project_id, current, target) = update.modrinth_ids()?;
             Some(PlannedProjectUpdate {
                 relative_path: update.relative_path().to_string(),
+                project_id: project_id.to_string(),
                 current_version_id: current.to_string(),
                 update_version_id: target.to_string(),
             })

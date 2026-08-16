@@ -1477,6 +1477,7 @@ async fn reconcile_hash_matched_entries(
                 project_type: *project_type,
                 source_kind: ContentSourceKind::Local,
                 ownership_kind: ContentOwnershipKind::UserAdded,
+                auto_dependency: false,
                 server_requirement: ContentRequirement::Required,
                 client_requirement: ContentRequirement::Required,
                 enabled: file.enabled,

@@ -47,6 +47,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_update_project,
             instance_add_project_from_version,
             instance_install_project_with_dependencies,
+            instance_preview_project_with_dependencies,
+            instance_preview_project_with_dependencies_for_target,
             instance_queue_project_with_dependencies,
             instance_queue_curseforge_content,
             instance_switch_project_version_with_dependencies,
@@ -686,6 +688,34 @@ pub async fn instance_install_project_with_dependencies(
         request,
     )
     .await?)
+}
+
+#[tauri::command]
+pub async fn instance_preview_project_with_dependencies(
+    instance_id: &str,
+    request: InstallProjectWithDependenciesRequest,
+) -> Result<ResolveContentPlan> {
+    Ok(theseus::instance::preview_project_with_dependencies(
+        instance_id,
+        request,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_preview_project_with_dependencies_for_target(
+    request: InstallProjectWithDependenciesRequest,
+    game_version: String,
+    loader: ModLoader,
+) -> Result<ResolveContentPlan> {
+    Ok(
+        theseus::instance::preview_project_with_dependencies_for_target(
+            request,
+            game_version,
+            loader,
+        )
+        .await?,
+    )
 }
 
 #[tauri::command]

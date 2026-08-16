@@ -9,6 +9,9 @@ pub enum ContentProvider {
     Modrinth,
     #[serde(rename = "curseforge")]
     CurseForge,
+    /// Dependency edges between locally identified files, matched through
+    /// embedded mod metadata instead of an online provider.
+    Local,
 }
 
 impl ContentProvider {
@@ -16,6 +19,7 @@ impl ContentProvider {
         match self {
             Self::Modrinth => "modrinth",
             Self::CurseForge => "curseforge",
+            Self::Local => "local",
         }
     }
 
@@ -23,6 +27,7 @@ impl ContentProvider {
         match value {
             "modrinth" => Ok(Self::Modrinth),
             "curseforge" => Ok(Self::CurseForge),
+            "local" => Ok(Self::Local),
             other => Err(unknown_value("content provider", other)),
         }
     }
@@ -190,6 +195,11 @@ impl ContentProviderRef {
                     None => None,
                 },
             }),
+            ContentProvider::Local => Err(crate::ErrorKind::InputError(
+                "Local provider references only exist on dependency edges"
+                    .to_string(),
+            )
+            .into()),
         }
     }
 

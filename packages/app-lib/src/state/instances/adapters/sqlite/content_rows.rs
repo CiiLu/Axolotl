@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
 use crate::state::instances::{
-    ContentEntry, ContentOwnershipKind, ContentRequirement, ContentSet,
-    ContentSetRemoteRef, ContentSetRemoteRefType, ContentSetStatus,
-    ContentSetSyncProvider, ContentSetSyncState, ContentSetSyncStatus,
-    ContentSourceKind, ContentUpdateCheck, InstanceFile,
-    ManualDownloadOperationKind, ManualDownloadState, PackMember,
-    PackMemberMaterializationState, PackMemberOverrideKind,
-    PendingManualDownload,
+    ContentDependencyEdge, ContentDependencyKind, ContentEntry,
+    ContentOwnershipKind, ContentRequirement, ContentSet, ContentSetRemoteRef,
+    ContentSetRemoteRefType, ContentSetStatus, ContentSetSyncProvider,
+    ContentSetSyncState, ContentSetSyncStatus, ContentSourceKind,
+    ContentUpdateCheck, InstanceFile, ManualDownloadOperationKind,
+    ManualDownloadState, PackMember, PackMemberMaterializationState,
+    PackMemberOverrideKind, PendingManualDownload,
 };
 use crate::state::{
     ContentProvider, ContentProviderRef, ModLoader, ProjectType, ReleaseChannel,
@@ -193,6 +193,7 @@ pub(crate) struct ContentEntryRow {
     pub project_type: String,
     pub source_kind: String,
     pub ownership_kind: String,
+    pub auto_dependency: i64,
     pub server_requirement: String,
     pub client_requirement: String,
     pub enabled: i64,
@@ -214,6 +215,7 @@ impl TryFrom<ContentEntryRow> for ContentEntry {
             ownership_kind: ContentOwnershipKind::from_str(
                 &row.ownership_kind,
             )?,
+            auto_dependency: row.auto_dependency == 1,
             server_requirement: ContentRequirement::from_str(
                 &row.server_requirement,
             )?,
@@ -586,7 +588,7 @@ where
     let rows = sqlx::query_as::<_, ContentEntryRow>(
         "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
-			source_kind, ownership_kind, server_requirement,
+			source_kind, ownership_kind, auto_dependency, server_requirement,
 			client_requirement, enabled,
 			added_at, modified_at
 		FROM instance_content_entries
@@ -992,6 +994,7 @@ pub(crate) struct UpsertContentEntry<'a> {
     pub project_type: ProjectType,
     pub source_kind: ContentSourceKind,
     pub ownership_kind: ContentOwnershipKind,
+    pub auto_dependency: bool,
     pub server_requirement: ContentRequirement,
     pub client_requirement: ContentRequirement,
     pub enabled: bool,
@@ -1004,7 +1007,7 @@ pub(crate) async fn get_content_entry_by_id(
     let row = sqlx::query_as::<_, ContentEntryRow>(
         "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
-			source_kind, ownership_kind, server_requirement,
+			source_kind, ownership_kind, auto_dependency, server_requirement,
 			client_requirement, enabled,
 			added_at, modified_at
 		FROM instance_content_entries
@@ -1026,7 +1029,7 @@ pub(crate) async fn get_content_entry_by_file(
     let row = sqlx::query_as::<_, ContentEntryRow>(
         "
 		SELECT id, instance_id, content_set_id, file_id, project_type,
-			source_kind, ownership_kind, server_requirement,
+			source_kind, ownership_kind, auto_dependency, server_requirement,
 			client_requirement, enabled,
 			added_at, modified_at
 		FROM instance_content_entries
@@ -1037,6 +1040,33 @@ pub(crate) async fn get_content_entry_by_file(
     )
     .bind(content_set_id)
     .bind(file_id)
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(TryInto::try_into).transpose()
+}
+
+pub(crate) async fn get_content_entry_by_relative_path(
+    content_set_id: &str,
+    relative_path: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Option<ContentEntry>> {
+    let row = sqlx::query_as::<_, ContentEntryRow>(
+        "
+		SELECT entry.id, entry.instance_id, entry.content_set_id, entry.file_id,
+			entry.project_type, entry.source_kind, entry.ownership_kind,
+			entry.auto_dependency, entry.server_requirement,
+			entry.client_requirement, entry.enabled,
+			entry.added_at, entry.modified_at
+		FROM instance_content_entries entry
+		INNER JOIN instance_files file ON file.id = entry.file_id
+		WHERE entry.content_set_id = ? AND file.relative_path = ?
+		ORDER BY entry.modified_at DESC
+		LIMIT 1
+		",
+    )
+    .bind(content_set_id)
+    .bind(relative_path)
     .fetch_optional(pool)
     .await?;
 
@@ -1083,6 +1113,7 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
         project_type: input.project_type,
         source_kind: input.source_kind,
         ownership_kind: input.ownership_kind,
+        auto_dependency: input.auto_dependency,
         server_requirement: input.server_requirement,
         client_requirement: input.client_requirement,
         enabled: input.enabled,
@@ -1105,6 +1136,7 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
     let project_type = entry.project_type.get_name();
     let source_kind = entry.source_kind.as_str();
     let ownership_kind = entry.ownership_kind.as_str();
+    let auto_dependency = i64::from(entry.auto_dependency);
     let server_requirement = entry.server_requirement.as_str();
     let client_requirement = entry.client_requirement.as_str();
     let enabled = i64::from(entry.enabled);
@@ -1121,18 +1153,20 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
 			project_type,
 			source_kind,
 			ownership_kind,
+			auto_dependency,
 			server_requirement,
 			client_requirement,
 			enabled,
 			added_at,
 			modified_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			file_id = excluded.file_id,
 			project_type = excluded.project_type,
 			source_kind = excluded.source_kind,
 			ownership_kind = excluded.ownership_kind,
+			auto_dependency = excluded.auto_dependency,
 			server_requirement = excluded.server_requirement,
 			client_requirement = excluded.client_requirement,
 			enabled = excluded.enabled,
@@ -1146,6 +1180,7 @@ pub(crate) async fn upsert_content_entry_from_parts_in_transaction(
     .bind(project_type)
     .bind(source_kind)
     .bind(ownership_kind)
+    .bind(auto_dependency)
     .bind(server_requirement)
     .bind(client_requirement)
     .bind(enabled)
@@ -1311,9 +1346,9 @@ pub(crate) async fn restore_content_entry_in_transaction(
     sqlx::query(
         "INSERT INTO instance_content_entries (
             id, instance_id, content_set_id, file_id, project_type,
-            source_kind, ownership_kind, server_requirement,
+            source_kind, ownership_kind, auto_dependency, server_requirement,
             client_requirement, enabled, added_at, modified_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             instance_id = excluded.instance_id,
             content_set_id = excluded.content_set_id,
@@ -1321,6 +1356,7 @@ pub(crate) async fn restore_content_entry_in_transaction(
             project_type = excluded.project_type,
             source_kind = excluded.source_kind,
             ownership_kind = excluded.ownership_kind,
+            auto_dependency = excluded.auto_dependency,
             server_requirement = excluded.server_requirement,
             client_requirement = excluded.client_requirement,
             enabled = excluded.enabled,
@@ -1334,6 +1370,7 @@ pub(crate) async fn restore_content_entry_in_transaction(
     .bind(entry.project_type.get_name())
     .bind(entry.source_kind.as_str())
     .bind(entry.ownership_kind.as_str())
+    .bind(i64::from(entry.auto_dependency))
     .bind(entry.server_requirement.as_str())
     .bind(entry.client_requirement.as_str())
     .bind(i64::from(entry.enabled))
@@ -1388,6 +1425,280 @@ pub(crate) async fn get_content_origin_provider(
         .as_deref()
         .map(ContentProvider::from_str)
         .transpose()
+}
+
+pub(crate) async fn get_content_entry_by_provider_ref(
+    content_set_id: &str,
+    provider: ContentProvider,
+    project_id: &str,
+    release_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Option<ContentEntry>> {
+    let row = sqlx::query_as::<_, ContentEntryRow>(
+        "
+		SELECT entry.id, entry.instance_id, entry.content_set_id, entry.file_id,
+			entry.project_type, entry.source_kind, entry.ownership_kind,
+			entry.auto_dependency, entry.server_requirement,
+			entry.client_requirement, entry.enabled,
+			entry.added_at, entry.modified_at
+		FROM instance_content_entries entry
+		INNER JOIN instance_content_provider_refs ref
+			ON ref.content_entry_id = entry.id
+		WHERE entry.content_set_id = ?
+			AND ref.provider = ?
+			AND ref.provider_project_id = ?
+			AND ref.provider_release_id = ?
+		ORDER BY entry.modified_at DESC
+		LIMIT 1
+		",
+    )
+    .bind(content_set_id)
+    .bind(provider.as_str())
+    .bind(project_id)
+    .bind(release_id)
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(TryInto::try_into).transpose()
+}
+
+pub(crate) async fn get_content_entry_by_provider_project(
+    content_set_id: &str,
+    provider: ContentProvider,
+    project_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Option<ContentEntry>> {
+    let row = sqlx::query_as::<_, ContentEntryRow>(
+        "
+		SELECT entry.id, entry.instance_id, entry.content_set_id, entry.file_id,
+			entry.project_type, entry.source_kind, entry.ownership_kind,
+			entry.auto_dependency, entry.server_requirement,
+			entry.client_requirement, entry.enabled,
+			entry.added_at, entry.modified_at
+		FROM instance_content_entries entry
+		INNER JOIN instance_content_provider_refs ref
+			ON ref.content_entry_id = entry.id
+		WHERE entry.content_set_id = ?
+			AND ref.provider = ?
+			AND ref.provider_project_id = ?
+		ORDER BY entry.modified_at DESC
+		LIMIT 1
+		",
+    )
+    .bind(content_set_id)
+    .bind(provider.as_str())
+    .bind(project_id)
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(TryInto::try_into).transpose()
+}
+
+pub(crate) async fn set_content_entry_auto_dependency(
+    content_entry_id: &str,
+    auto_dependency: bool,
+    pool: &SqlitePool,
+) -> crate::Result<()> {
+    sqlx::query(
+        "UPDATE instance_content_entries
+         SET auto_dependency = ?, modified_at = ?
+         WHERE id = ?",
+    )
+    .bind(i64::from(auto_dependency))
+    .bind(Utc::now().timestamp())
+    .bind(content_entry_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub(crate) async fn get_dependency_backfilled_entry_ids(
+    content_set_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<std::collections::HashSet<String>> {
+    let rows = sqlx::query_scalar::<_, String>(
+        "SELECT id FROM instance_content_entries
+         WHERE content_set_id = ? AND dependency_backfilled = 1",
+    )
+    .bind(content_set_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.into_iter().collect())
+}
+
+pub(crate) async fn set_content_entry_dependency_backfilled(
+    content_entry_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<()> {
+    sqlx::query(
+        "UPDATE instance_content_entries
+         SET dependency_backfilled = 1, modified_at = ?
+         WHERE id = ?",
+    )
+    .bind(Utc::now().timestamp())
+    .bind(content_entry_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub(crate) async fn upsert_content_dependency_edge(
+    edge: &ContentDependencyEdge,
+    pool: &SqlitePool,
+) -> crate::Result<()> {
+    let mut tx = pool.begin().await?;
+    upsert_content_dependency_edge_in_transaction(edge, &mut tx).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+pub(crate) async fn upsert_content_dependency_edge_in_transaction(
+    edge: &ContentDependencyEdge,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<()> {
+    sqlx::query(
+        "
+		INSERT INTO instance_content_dependencies (
+			id,
+			content_set_id,
+			parent_entry_id,
+			child_entry_id,
+			provider,
+			dependency_kind,
+			parent_project_id,
+			parent_release_id,
+			child_project_id,
+			child_release_id,
+			created_at,
+			modified_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT (
+			content_set_id,
+			parent_entry_id,
+			child_entry_id,
+			dependency_kind
+		) DO UPDATE SET
+			provider = excluded.provider,
+			parent_project_id = excluded.parent_project_id,
+			parent_release_id = excluded.parent_release_id,
+			child_project_id = excluded.child_project_id,
+			child_release_id = excluded.child_release_id,
+			modified_at = excluded.modified_at
+		",
+    )
+    .bind(&edge.id)
+    .bind(&edge.content_set_id)
+    .bind(&edge.parent_entry_id)
+    .bind(&edge.child_entry_id)
+    .bind(edge.provider.as_str())
+    .bind(edge.dependency_kind.as_str())
+    .bind(&edge.parent_project_id)
+    .bind(&edge.parent_release_id)
+    .bind(&edge.child_project_id)
+    .bind(&edge.child_release_id)
+    .bind(edge.created_at.timestamp())
+    .bind(edge.modified_at.timestamp())
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+pub(crate) async fn replace_content_dependency_edges_for_parent(
+    content_set_id: &str,
+    parent_entry_id: &str,
+    edges: &[ContentDependencyEdge],
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<()> {
+    sqlx::query(
+        "DELETE FROM instance_content_dependencies
+         WHERE content_set_id = ? AND parent_entry_id = ?",
+    )
+    .bind(content_set_id)
+    .bind(parent_entry_id)
+    .execute(&mut **tx)
+    .await?;
+
+    for edge in edges {
+        upsert_content_dependency_edge_in_transaction(edge, tx).await?;
+    }
+    Ok(())
+}
+
+pub(crate) async fn get_content_dependency_edges(
+    content_set_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Vec<ContentDependencyEdge>> {
+    let rows = sqlx::query(
+        "SELECT id, content_set_id, parent_entry_id, child_entry_id,
+                provider, dependency_kind, parent_project_id,
+                parent_release_id, child_project_id, child_release_id,
+                created_at, modified_at
+         FROM instance_content_dependencies
+         WHERE content_set_id = ?
+         ORDER BY created_at ASC",
+    )
+    .bind(content_set_id)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|row| {
+            let provider = ContentProvider::from_str(
+                &row.try_get::<String, _>("provider")?,
+            )?;
+            let dependency_kind = ContentDependencyKind::from_str(
+                &row.try_get::<String, _>("dependency_kind")?,
+            )?;
+            let created_at = timestamp(row.try_get::<i64, _>("created_at")?);
+            let modified_at = timestamp(row.try_get::<i64, _>("modified_at")?);
+
+            Ok(ContentDependencyEdge {
+                id: row.try_get("id")?,
+                content_set_id: row.try_get("content_set_id")?,
+                parent_entry_id: row.try_get("parent_entry_id")?,
+                child_entry_id: row.try_get("child_entry_id")?,
+                provider,
+                dependency_kind,
+                parent_project_id: row.try_get("parent_project_id")?,
+                parent_release_id: row.try_get("parent_release_id")?,
+                child_project_id: row.try_get("child_project_id")?,
+                child_release_id: row.try_get("child_release_id")?,
+                created_at,
+                modified_at,
+            })
+        })
+        .collect()
+}
+
+pub(crate) async fn get_orphaned_auto_dependencies(
+    content_set_id: &str,
+    pool: &SqlitePool,
+) -> crate::Result<Vec<ContentEntry>> {
+    let rows = sqlx::query_as::<_, ContentEntryRow>(
+        "
+		SELECT entry.id, entry.instance_id, entry.content_set_id, entry.file_id,
+			entry.project_type, entry.source_kind, entry.ownership_kind,
+			entry.auto_dependency, entry.server_requirement,
+			entry.client_requirement, entry.enabled,
+			entry.added_at, entry.modified_at
+		FROM instance_content_entries entry
+		WHERE entry.content_set_id = ?
+			AND entry.auto_dependency = 1
+			AND NOT EXISTS (
+				SELECT 1
+				FROM instance_content_dependencies edge
+				WHERE edge.child_entry_id = entry.id
+					AND edge.content_set_id = entry.content_set_id
+			)
+		ORDER BY entry.added_at ASC
+		",
+    )
+    .bind(content_set_id)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter().map(TryInto::try_into).collect()
 }
 
 pub(crate) async fn set_content_entry_enabled_for_file(
