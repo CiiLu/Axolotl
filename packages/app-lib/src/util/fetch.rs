@@ -355,6 +355,68 @@ static ROUTE_HEALTH: LazyLock<Mutex<HashMap<RouteHealthKey, RouteHealth>>> =
 static ROUTE_EFFECTIVE_AUTHORITIES: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Per-authority congestion state for rate-limited responses (429/503).
+/// A throttled host is slept through before the next request to it, so a
+/// single slow CDN cannot stall the whole batch; successful responses decay
+/// the backoff again.
+#[derive(Clone, Default)]
+struct HostThrottle {
+    cooldown_until: Option<Instant>,
+    backoff: u32,
+}
+
+static HOST_THROTTLES: LazyLock<Mutex<HashMap<String, HostThrottle>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn throttle_host(authority: &str, retry_after: Option<time::Duration>) {
+    let mut throttles = HOST_THROTTLES.lock();
+    let throttle = throttles.entry(authority.to_string()).or_default();
+    throttle.backoff = throttle.backoff.saturating_add(1).min(6);
+    let delay = retry_after
+        .unwrap_or_else(|| time::Duration::from_secs(1_u64 << throttle.backoff))
+        .max(time::Duration::from_millis(250));
+    throttle.cooldown_until = Some(Instant::now() + delay);
+    tracing::debug!(
+        authority,
+        backoff = throttle.backoff,
+        delay_ms = delay.as_millis(),
+        "Host throttled after a rate-limited response"
+    );
+}
+
+async fn wait_for_host_throttle(authority: &str) {
+    loop {
+        let wait = {
+            let mut throttles = HOST_THROTTLES.lock();
+            let Some(throttle) = throttles.get_mut(authority) else {
+                return;
+            };
+            let Some(cooldown_until) = throttle.cooldown_until else {
+                return;
+            };
+            let now = Instant::now();
+            if now >= cooldown_until {
+                throttle.cooldown_until = None;
+                throttle.backoff = throttle.backoff.saturating_sub(1);
+                return;
+            }
+            cooldown_until.saturating_duration_since(now)
+        };
+        tokio::time::sleep(wait).await;
+    }
+}
+
+fn record_host_success(authority: &str) {
+    let mut throttles = HOST_THROTTLES.lock();
+    let Some(throttle) = throttles.get_mut(authority) else {
+        return;
+    };
+    throttle.backoff = throttle.backoff.saturating_sub(1);
+    if throttle.backoff == 0 {
+        throttle.cooldown_until = None;
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum TaskProbeKey {
     Job(Uuid),
@@ -950,6 +1012,10 @@ fn explicit_mirror_routes(
                        base: &str,
                        path: String,
                        source: DownloadRouteSource| {
+        // Disabled MCIM.
+        if source == DownloadRouteSource::Mcim {
+            return;
+        }
         if let Some(url) = url_with_base(&parsed, base, &path) {
             routes.push(route(url, source, true, supports_range));
         }
@@ -1767,6 +1833,36 @@ pub async fn fetch(
     .await
 }
 
+/// Downloads a file from its official source without applying mirror routes.
+#[tracing::instrument(skip_all)]
+pub async fn fetch_official(
+    url: &str,
+    sha1: Option<&str>,
+    download_meta: Option<&DownloadMeta>,
+    uri_path: Option<&'static str>,
+    semaphore: &FetchSemaphore,
+    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
+) -> crate::Result<Bytes> {
+    fetch_advanced_with_client_and_progress(
+        Method::GET,
+        url,
+        sha1,
+        None,
+        None,
+        download_meta,
+        None,
+        uri_path,
+        semaphore,
+        exec,
+        &INSECURE_REQWEST_CLIENT,
+        Some(crate::state::DownloadSourceMode::OfficialOnly),
+        None,
+        None,
+        METADATA_ATTEMPT_BUDGET,
+    )
+    .await
+}
+
 #[tracing::instrument(skip_all)]
 pub async fn fetch_json<T>(
     method: Method,
@@ -1797,6 +1893,7 @@ where
         semaphore,
         exec,
         &INSECURE_REQWEST_CLIENT,
+        None,
         None,
         Some(&validate_json),
         METADATA_ATTEMPT_BUDGET,
@@ -1848,6 +1945,7 @@ where
         semaphore,
         exec,
         &INSECURE_REQWEST_CLIENT,
+        None,
         None,
         Some(&validate_json),
         METADATA_ATTEMPT_BUDGET,
@@ -1918,6 +2016,7 @@ pub async fn fetch_advanced_with_client(
         client,
         None,
         None,
+        None,
         METADATA_ATTEMPT_BUDGET,
     )
     .await
@@ -1937,6 +2036,7 @@ async fn fetch_advanced_with_client_and_progress(
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     client: &reqwest::Client,
+    source_mode: Option<crate::state::DownloadSourceMode>,
     mut progress: Option<&mut FetchProgressFn<'_>>,
     response_validator: Option<
         &(dyn Fn(&Bytes) -> crate::Result<()> + Send + Sync),
@@ -1944,7 +2044,8 @@ async fn fetch_advanced_with_client_and_progress(
     attempt_budget: usize,
 ) -> crate::Result<Bytes> {
     let resource = infer_resource_class(url);
-    let mode = source_mode_for_resource(resource);
+    let mode =
+        source_mode.unwrap_or_else(|| source_mode_for_resource(resource));
     let mut request_routes = resolve_download_routes_for(url, resource, mode);
     let modrinth_request_kind = modrinth_request_kind(url);
     let is_mrpack_download =
@@ -2117,6 +2218,9 @@ async fn fetch_advanced_with_client_and_progress(
 
             let permit = semaphore.0.acquire().await?;
             let request_started = Instant::now();
+            if let Some(authority) = url_authority(&request_url) {
+                wait_for_host_throttle(&authority).await;
+            }
             let result = req.send().await;
             let ttfb = request_started.elapsed();
             match result {
@@ -2315,6 +2419,9 @@ async fn fetch_advanced_with_client_and_progress(
 
                     let response_url = resp.url().to_string();
                     let log_response_url = sanitize_url_for_log(&response_url);
+                    if let Some(authority) = url_authority(&request_url) {
+                        record_host_success(&authority);
+                    }
                     if is_mirror && modrinth_request_kind == Some("CDN") {
                         let cache_status = resp
                             .headers()
@@ -3235,6 +3342,9 @@ async fn send_path_request_with_clients(
                 .header(header::RANGE, range)
                 .header(header::ACCEPT_ENCODING, "identity");
         }
+        if let Some(authority) = url_authority(current.as_str()) {
+            wait_for_host_throttle(&authority).await;
+        }
 
         let response = match request.send().await {
             Ok(response) => response,
@@ -3256,6 +3366,11 @@ async fn send_path_request_with_clients(
             }
         };
         if !response.status().is_redirection() {
+            if response.status().is_success()
+                && let Some(authority) = url_authority(current.as_str())
+            {
+                record_host_success(&authority);
+            }
             if reused_redirect_target
                 && (response.status().is_client_error()
                     || response.status().is_server_error())
@@ -5097,6 +5212,22 @@ pub(crate) async fn record_install_download_stage(
     }
 }
 
+pub(crate) async fn record_install_download_finished(
+    request: &DownloadRequest,
+    bytes: u64,
+) {
+    let Some(tracking) = &request.install_tracking else {
+        return;
+    };
+    if let Err(error) = tracking
+        .reporter
+        .record_download_request_finished(&tracking.item_id, bytes)
+        .await
+    {
+        tracing::warn!(%error, "Failed to record finished download request");
+    }
+}
+
 /// Resolves hosts ahead of the first request without blocking the caller.
 /// Used before batch downloads so every file shares one ordered address list
 /// instead of racing the same DNS queries.
@@ -5114,6 +5245,17 @@ pub(crate) fn prewarm_download_dns(hosts: &[&str]) {
     }
 }
 
+fn error_chain(error: &crate::Error) -> String {
+    let mut chain = error.to_string();
+    let mut source = error.source();
+    while let Some(cause) = source {
+        chain.push_str("\nCaused by: ");
+        chain.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    chain
+}
+
 /// Streams a download to a sibling `.part` file, verifies it, then atomically
 /// moves it into place.
 #[tracing::instrument(skip(semaphore, _exec, progress, request, destination))]
@@ -5125,6 +5267,7 @@ pub async fn download_to_path(
     progress: Option<&mut FetchProgressFn<'_>>,
 ) -> crate::Result<DownloadResult> {
     let tracking = request.install_tracking.clone();
+    let request_url = request.url.clone();
     let result = download_to_path_inner(
         request,
         destination.as_ref(),
@@ -5132,6 +5275,15 @@ pub async fn download_to_path(
         progress,
     )
     .await;
+    if let Err(error) = &result {
+        tracing::debug!(
+            url = %request_url,
+            destination = %destination.as_ref().display(),
+            error = %error,
+            error_chain = %error_chain(error),
+            "Download failed"
+        );
+    }
     if result.is_err()
         && let Some(tracking) = tracking
         && let Err(error) = tracking
@@ -5239,6 +5391,20 @@ async fn download_to_path_inner(
     if crate::util::download::active_engine()
         == crate::util::download::DownloadEngine::XmclCompat
     {
+        if let Some(first_route) = routes.first() {
+            record_install_download_started(
+                &request,
+                first_route,
+                0,
+                routes.len().saturating_mul(3).max(1),
+            )
+            .await;
+        }
+        record_install_download_stage(
+            &request,
+            DownloadItemStatus::Downloading,
+        )
+        .await;
         return crate::util::download::xmcl::download_to_path(
             &request,
             destination,
@@ -6435,6 +6601,8 @@ mod tests {
         LazyLock::new(|| AsyncMutex::new(()));
     static AUTO_SOURCE_TEST_LOCK: LazyLock<std::sync::Mutex<()>> =
         LazyLock::new(|| std::sync::Mutex::new(()));
+    static HOST_THROTTLE_TEST_LOCK: LazyLock<std::sync::Mutex<()>> =
+        LazyLock::new(|| std::sync::Mutex::new(()));
 
     async fn spawn_range_server(
         data: Arc<Vec<u8>>,
@@ -7326,6 +7494,95 @@ mod tests {
             ),
             "https://example.com/file.jar"
         );
+    }
+
+    #[tokio::test]
+    async fn mirror_request_token_bucket_honors_cooldown() {
+        let _guard = MIRROR_REQUEST_SLOT_TEST_LOCK.lock().await;
+        let route = DownloadRoute {
+            url: "https://bmclapi2.bangbang93.com/maven/file.jar".to_string(),
+            source: DownloadRouteSource::Bmclapi,
+            is_mirror: true,
+            allow_sensitive_headers: false,
+            supports_range: true,
+            proxy: ProxyPolicy::System,
+        };
+        let key = mirror_limiter_key(&route).unwrap();
+        let now = Instant::now();
+        let mut limiter = MirrorRequestLimiter::new(now);
+        limiter.throttle(now, time::Duration::from_millis(50));
+        MIRROR_REQUEST_LIMITERS.lock().insert(key, limiter);
+
+        let started = Instant::now();
+        wait_for_mirror_request_slot(&route).await;
+        assert!(
+            started.elapsed() >= time::Duration::from_millis(40),
+            "a request should wait for the paced mirror request slot"
+        );
+    }
+
+    #[tokio::test]
+    async fn mirror_request_token_bucket_allows_burst_then_paces() {
+        let _guard = MIRROR_REQUEST_SLOT_TEST_LOCK.lock().await;
+        MIRROR_REQUEST_LIMITERS.lock().clear();
+        let route = DownloadRoute {
+            url: "https://bmclapi2.bangbang93.com/maven/file.jar".to_string(),
+            source: DownloadRouteSource::Bmclapi,
+            is_mirror: true,
+            allow_sensitive_headers: false,
+            supports_range: true,
+            proxy: ProxyPolicy::System,
+        };
+
+        for _ in 0..BMCL_REQUEST_BURST as usize {
+            wait_for_mirror_request_slot(&route).await;
+        }
+        let started = Instant::now();
+        wait_for_mirror_request_slot(&route).await;
+        assert!(
+            started.elapsed() >= time::Duration::from_millis(2),
+            "a request after the burst should wait for a token"
+        );
+    }
+
+    #[tokio::test]
+    async fn host_throttle_blocks_then_recovers_on_success() {
+        let _guard = HOST_THROTTLE_TEST_LOCK.lock().unwrap();
+        HOST_THROTTLES.lock().clear();
+        let authority = "cdn-alt.modrinth.com:443";
+
+        throttle_host(authority, Some(time::Duration::from_millis(50)));
+        let started = Instant::now();
+        wait_for_host_throttle(authority).await;
+        assert!(
+            started.elapsed() >= Duration::from_millis(40),
+            "a throttled host should sleep through its cooldown"
+        );
+
+        record_host_success(authority);
+        let throttle = HOST_THROTTLES.lock().get(authority).cloned().unwrap();
+        assert_eq!(throttle.backoff, 0);
+        assert!(throttle.cooldown_until.is_none());
+
+        HOST_THROTTLES.lock().clear();
+    }
+
+    #[tokio::test]
+    async fn host_throttle_backoff_grows_with_repeated_pressure() {
+        let _guard = HOST_THROTTLE_TEST_LOCK.lock().unwrap();
+        HOST_THROTTLES.lock().clear();
+        let authority = "cdn-alt.modrinth.com:443";
+
+        throttle_host(authority, None);
+        let first_backoff =
+            HOST_THROTTLES.lock().get(authority).unwrap().backoff;
+        throttle_host(authority, None);
+        let second_backoff =
+            HOST_THROTTLES.lock().get(authority).unwrap().backoff;
+        assert_eq!(first_backoff, 1);
+        assert_eq!(second_backoff, 2);
+
+        HOST_THROTTLES.lock().clear();
     }
 
     #[test]

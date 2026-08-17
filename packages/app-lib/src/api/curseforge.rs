@@ -3773,7 +3773,7 @@ fn safe_archive_relative_path(value: &str) -> crate::Result<String> {
     Ok(path.to_string_lossy().replace('\\', "/"))
 }
 
-fn loader_family(loader_id: &str) -> &str {
+pub(crate) fn loader_family(loader_id: &str) -> &str {
     loader_id.split('-').next().unwrap_or(loader_id)
 }
 
@@ -5205,12 +5205,15 @@ async fn install_manual_download(
     let project_type = managed_project_type(&download.project_type)?;
     let target_folder = manual_download_target_folder(download, project_type)?;
     let state = State::get().await?;
-    let localized_candidate =
+    let localized_candidate = if project_type == ProjectType::Mod {
+        None
+    } else {
         chinese_file_title_for_curseforge_slug(&download.project_slug)
             .and_then(|title| {
                 localized_content_file_name(&download.file_name, &title)
             })
-            .map(|file_name| format!("{target_folder}/{file_name}"));
+            .map(|file_name| format!("{target_folder}/{file_name}"))
+    };
     let relative_path = crate::state::resolve_content_install_relative_path(
         instance_id,
         format!("{target_folder}/{}", download.file_name),
@@ -5954,12 +5957,15 @@ async fn download_installed_file(
     let state = State::get().await?;
     validate_file_name(&file.file_name)?;
     let folder = content_target_folder(project_type, world_name)?;
-    let localized_candidate =
+    let localized_candidate = if project_type == ProjectType::Mod {
+        None
+    } else {
         chinese_file_title_for_curseforge_slug(project_slug)
             .and_then(|title| {
                 localized_content_file_name(&file.file_name, &title)
             })
-            .map(|file_name| format!("{folder}/{file_name}"));
+            .map(|file_name| format!("{folder}/{file_name}"))
+    };
     let relative_path = crate::state::resolve_content_install_relative_path(
         instance_id,
         format!("{folder}/{}", file.file_name),

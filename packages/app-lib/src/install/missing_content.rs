@@ -209,7 +209,8 @@ async fn scan_missing_modpack_files_in_at(
     let _permit = state.install_job_semaphore.acquire().await?;
     let current = store::get_required(job_id, &state).await?;
     if current.status == InstallJobStatus::WaitingForUser {
-        let concurrency = state.download_concurrency().max(1);
+        let concurrency = crate::util::download::task_concurrency_limit(&state)
+            .unwrap_or_else(|| groups.len().max(1));
         let results =
             process_candidate_groups_concurrently(
                 groups,

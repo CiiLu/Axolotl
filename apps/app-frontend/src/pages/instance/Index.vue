@@ -35,8 +35,16 @@
 				<template #stats>
 					<div class="flex items-center flex-wrap gap-2">
 						<template v-if="!isServerInstance">
-							<div class="flex items-center gap-2 capitalize font-medium">
-								{{ instance.loader }} {{ instance.game_version }}
+							<div class="flex items-center gap-1.5 font-medium">
+								<BoxIcon class="h-4 w-4" />
+								{{ instance.game_version }}
+							</div>
+
+							<div class="w-1.5 h-1.5 rounded-full bg-surface-5"></div>
+
+							<div class="flex items-center gap-1.5 font-medium capitalize">
+								<component :is="loaderIcon" v-if="loaderIcon" class="h-4 w-4" />
+								{{ instance.loader }} {{ instance.loader_version ? instance.loader_version : '' }}
 							</div>
 
 							<template v-if="showInstancePlayTime">
@@ -326,6 +334,7 @@
 </template>
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
+import { BoxIcon, getLoaderIcon } from '@modrinth/assets'
 import {
 	BoxesIcon,
 	CheckCircleIcon,
@@ -489,6 +498,9 @@ const playersOnline = ref<number | undefined>(undefined)
 const ping = ref<number | undefined>(undefined)
 const loadingServerPing = ref(false)
 const activeInstanceId = ref<string>()
+const loaderIcon = computed(() =>
+	instance.value?.loader ? getLoaderIcon(instance.value.loader) : undefined,
+)
 
 watch(
 	() => router.currentRoute.value,

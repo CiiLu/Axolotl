@@ -19,7 +19,7 @@ use uuid::Uuid;
 
 use crate::{ErrorKind, State};
 
-const CATALOG_SOURCE: &str = "LobeHub ca27228d55bb604f8bcf455a18f5e87d3ba9f9a5";
+const CATALOG_SOURCE: &str = "LobeHub 363797b1eddc01d1d6f07e28148b200618c2d0a2";
 const KEYRING_PREFIX: &str = "ai-provider";
 const OAUTH_CREDENTIAL: &str = "oauth";
 const API_KEY_CREDENTIAL: &str = "api-key";

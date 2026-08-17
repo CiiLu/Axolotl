@@ -2,6 +2,7 @@
 defineProps<{
 	title: string
 	compact?: boolean
+	dense?: boolean
 }>()
 </script>
 
@@ -9,7 +10,7 @@ defineProps<{
 	<!-- the weird padding and negative margin are to include the potential hover underline in bounding box which affects rendering on firefox -->
 	<span
 		class="project-card-title truncate pb-[2px] mb-[-2px] font-semibold text-contrast m-0 leading-none smart-clickable:underline-on-hover"
-		:class="compact ? 'text-lg' : 'text-xl'"
+		:class="dense ? 'text-base' : compact ? 'text-lg' : 'text-xl'"
 	>
 		{{ title }}
 	</span>

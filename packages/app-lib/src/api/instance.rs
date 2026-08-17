@@ -42,6 +42,7 @@ pub use self::projects::{
     update_content_entry, update_managed_modrinth_version, update_project,
 };
 pub use self::run::{
-    QuickPlayType, kill, run, try_update_playtime_by_instance_id,
+    QuickPlayType, kill, run, run_with_extra_launch_args,
+    try_update_playtime_by_instance_id,
 };
 pub use crate::state::{DailyPlaytime, DailyPlaytimeEntry};

@@ -4840,5 +4840,47 @@
   },
   "app.curseforge.manual-downloads.state-changed": {
     "message": "下載狀態已變更，正在等待同步。"
+  },
+  "app.settings.resources.download-engine.xmcl": {
+    "message": "XMCL 相容"
+  },
+  "app.settings.resources.download-engine.legacy": {
+    "message": "原生引擎"
+  },
+  "app.settings.resources.download-engine-description": {
+    "message": "選擇啟動器使用的下載引擎。"
+  },
+  "app.settings.resources.download-engine": {
+    "message": "下載引擎"
+  },
+  "app.instances.selected-count": {
+    "message": "已選擇 {count} 個"
+  },
+  "app.instances.select-all": {
+    "message": "全選"
+  },
+  "app.instances.exit-select-mode": {
+    "message": "退出"
+  },
+  "app.instances.edit-groups": {
+    "message": "編輯分組"
+  },
+  "app.instances.deselect-all": {
+    "message": "取消全選"
+  },
+  "app.instances.batch-edit-groups.header": {
+    "message": "編輯分組"
+  },
+  "app.instances.batch-edit-groups.enter-group-name": {
+    "message": "分組名稱"
+  },
+  "app.instances.batch-edit-groups.description": {
+    "message": "為 {count} 個實例設定分組"
+  },
+  "app.instances.batch-edit-groups.create-group": {
+    "message": "建立新分組"
+  },
+  "app.instances.batch-edit-groups.apply": {
+    "message": "套用"
   }
 }

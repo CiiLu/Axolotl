@@ -1613,6 +1613,9 @@
 	"app.java-arguments.presets.arguments": {
 		"message": "参数"
 	},
+	"app.java-arguments.presets.auth-group-title": {
+		"message": "Mojang认证代理"
+	},
 	"app.java-arguments.presets.auth-mirror.description": {
 		"message": "来自 Fallen-Breath 搭建的 Mojang 认证服务器 HTTP 转发。"
 	},
@@ -1621,6 +1624,51 @@
 	},
 	"app.java-arguments.presets.button": {
 		"message": "参数预设"
+	},
+	"app.java-arguments.presets.collapse-group": {
+		"message": "折叠分组"
+	},
+	"app.java-arguments.presets.expand-group": {
+		"message": "展开分组"
+	},
+	"app.java-arguments.presets.gc-group-title": {
+		"message": "内存回收策略 (GC)"
+	},
+	"app.java-arguments.presets.gc.auto.description": {
+		"message": "自动为你的系统选择最佳 GC 策略"
+	},
+	"app.java-arguments.presets.gc.auto.reason-chain": {
+		"message": "决策路径：{chain}"
+	},
+	"app.java-arguments.presets.gc.auto.resolved": {
+		"message": "已解析 → {strategy}"
+	},
+	"app.java-arguments.presets.gc.auto.title": {
+		"message": "自动GC"
+	},
+	"app.java-arguments.presets.gc.g1gc-mojang.description": {
+		"message": "官方 Minecraft 启动器使用的 G1GC 调优"
+	},
+	"app.java-arguments.presets.gc.g1gc-mojang.title": {
+		"message": "Mojang G1GC"
+	},
+	"app.java-arguments.presets.gc.g1gc-pcl.description": {
+		"message": "PCL 启动器优化的 G1GC 调优"
+	},
+	"app.java-arguments.presets.gc.g1gc-pcl.title": {
+		"message": "PCL G1GC"
+	},
+	"app.java-arguments.presets.gc.shenandoah.description": {
+		"message": "面向中大型整合包的低停顿 GC（Java 12+）"
+	},
+	"app.java-arguments.presets.gc.shenandoah.title": {
+		"message": "Shenandoah"
+	},
+	"app.java-arguments.presets.gc.zgc.description": {
+		"message": "面向高端系统的超低延迟 GC（Java 15+）"
+	},
+	"app.java-arguments.presets.gc.zgc.title": {
+		"message": "ZGC"
 	},
 	"app.java-arguments.presets.modal-title": {
 		"message": "Java 参数预设"
@@ -2551,12 +2599,6 @@
 	},
 	"app.settings.resources.minecraft-file-source-description": {
 		"message": "游戏文件、资源、依赖库、模组加载器和 Java 运行时。"
-	},
-	"app.settings.resources.modrinth-mirror": {
-		"message": "Modrinth"
-	},
-	"app.settings.resources.modrinth-mirror-description": {
-		"message": "Modrinth 公共 API 请求和文件下载。"
 	},
 	"app.settings.resources.curseforge-mirror": {
 		"message": "CurseForge 服务"
@@ -6967,5 +7009,182 @@
 	},
 	"app.curseforge.manual-downloads.state-changed": {
 		"message": "下载状态已被更改，正在等待同步。"
+	},
+	"app.settings.resources.download-engine.xmcl": {
+		"message": "XMCL"
+	},
+	"app.settings.resources.download-engine.legacy": {
+		"message": "原生引擎"
+	},
+	"app.settings.resources.download-engine-description": {
+		"message": "选择启动器使用的下载引擎。"
+	},
+	"app.settings.resources.download-engine": {
+		"message": "下载引擎"
+	},
+	"app.instances.selected-count": {
+		"message": "已选择 {count} 个"
+	},
+	"app.instances.select-all": {
+		"message": "全选"
+	},
+	"app.instances.exit-select-mode": {
+		"message": "退出"
+	},
+	"app.instances.edit-groups": {
+		"message": "编辑分组"
+	},
+	"app.instances.deselect-all": {
+		"message": "取消全选"
+	},
+	"app.instances.batch-edit-groups.header": {
+		"message": "编辑分组"
+	},
+	"app.instances.batch-edit-groups.enter-group-name": {
+		"message": "分组名称"
+	},
+	"app.instances.batch-edit-groups.description": {
+		"message": "为 {count} 个实例设置分组"
+	},
+	"app.instances.batch-edit-groups.create-group": {
+		"message": "创建新分组"
+	},
+	"app.instances.batch-edit-groups.apply": {
+		"message": "应用"
+	},
+	"app.instance.mods.toggle-dependencies.will-enable": {
+		"message": "以下内容将同时启用："
+	},
+	"app.instance.mods.toggle-dependencies.will-disable": {
+		"message": "以下内容将同时禁用："
+	},
+	"app.instance.mods.toggle-dependencies.warning": {
+		"message": "是否自动应用这些相关更改？忽略它们可能导致游戏无法正常运行。"
+	},
+	"app.instance.mods.toggle-dependencies.title": {
+		"message": "确认切换"
+	},
+	"app.instance.mods.toggle-dependencies.single-body": {
+		"message": "切换 {project} 将同时影响 {count} 个其他内容。"
+	},
+	"app.instance.mods.toggle-dependencies.selected-only": {
+		"message": "仅切换所选"
+	},
+	"app.instance.mods.toggle-dependencies.bulk-body": {
+		"message": "切换所选内容将同时影响 {count} 个其他内容。"
+	},
+	"app.instance.mods.toggle-dependencies.apply": {
+		"message": "切换相关内容"
+	},
+	"app.instance.mods.orphaned-dependencies.title": {
+		"message": "前置已不再被需要"
+	},
+	"app.instance.mods.orphaned-dependencies.body": {
+		"message": "以下前置已不再被其他内容需要，且不会被自动删除：{list}"
+	},
+	"app.content-install.preview.skipped-header": {
+		"message": "跳过"
+	},
+	"app.content-install.preview.skip.unsupported-project-type": {
+		"message": "不支持的项目类型"
+	},
+	"app.content-install.preview.skip.tool": {
+		"message": "开发工具，不安装"
+	},
+	"app.content-install.preview.skip.quilt-fabric-api": {
+		"message": "已替换为 Quilt 版本"
+	},
+	"app.content-install.preview.skip.optional": {
+		"message": "可选前置"
+	},
+	"app.content-install.preview.skip.no-compatible-version": {
+		"message": "找不到兼容版本"
+	},
+	"app.content-install.preview.skip.missing-version": {
+		"message": "找不到引用的版本"
+	},
+	"app.content-install.preview.skip.incompatible": {
+		"message": "不兼容的前置"
+	},
+	"app.content-install.preview.skip.excluded-by-user": {
+		"message": "已由用户取消"
+	},
+	"app.content-install.preview.skip.embedded": {
+		"message": "已内置于项目中"
+	},
+	"app.content-install.preview.skip.duplicate-project": {
+		"message": "已包含"
+	},
+	"app.content-install.preview.skip.conflicting-dependency": {
+		"message": "前置版本冲突"
+	},
+	"app.content-install.preview.skip.already-installed": {
+		"message": "已安装"
+	},
+	"app.content-install.preview.select-all": {
+		"message": "全选"
+	},
+	"app.content-install.preview.required-by": {
+		"message": "被 {projects} 需要"
+	},
+	"app.content-install.preview.only-checked": {
+		"message": "只会安装勾选的前置。"
+	},
+	"app.content-install.preview.install": {
+		"message": "安装"
+	},
+	"app.content-install.preview.header": {
+		"message": "确认安装"
+	},
+	"app.content-install.preview.description": {
+		"message": "将在 {instance} 中为 {project} 自动安装 {count, plural, other {# 个前置}}。"
+	},
+	"app.content-install.preview.dependencies-header": {
+		"message": "前置"
+	},
+	"app.content-install.preview.dependencies-count": {
+		"message": "{count, number} 个前置"
+	},
+	"app.content-install.preview.clear-all": {
+		"message": "全部取消"
+	},
+	"app.content-install.preview.cancel": {
+		"message": "取消"
+	},
+	"app.content-install.preview.already-installed": {
+		"message": "已安装"
+	},
+	"app.content-install.dependencies-skipped.notification-title": {
+		"message": "部分前置已跳过"
+	},
+	"app.content-install.dependencies-skipped.notification-body": {
+		"message": "以下前置未安装：{list}"
+	},
+	"app.content-install.dependencies-installed.notification-title": {
+		"message": "已安装前置"
+	},
+	"app.content-install.dependencies-installed.notification-body": {
+		"message": "已自动安装 {count, plural, other {# 个前置}}：{list}"
+	},
+	"app.browse.display-mode.switch": {
+		"message": "切换视图"
+	},
+	"app.browse.display-mode.list": {
+		"message": "列表"
+	},
+	"app.browse.display-mode.grid": {
+		"message": "网格"
+	},
+	"app.browse.display-mode.compact-list": {
+		"message": "紧凑列表"
+	},
+	"app.browse.add": {
+		"message": "添加"
+	},
+	"app.appearance-settings.auto-install-dependencies.title": {
+		"message": "自动安装前置"
+	},
+	"app.appearance-settings.auto-install-dependencies.description": {
+		"message": "安装内容时自动下载所需前置。每次安装前仍可在确认对话框中调整选择。"
 	}
 }

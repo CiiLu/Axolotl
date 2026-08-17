@@ -1,7 +1,7 @@
 import { env, SELF } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
 
-import type { Bindings } from '../src'
+import { runMaintenance, type Bindings } from '../src'
 import { batchSchema } from '../src/schema'
 
 declare module 'cloudflare:test' {
@@ -141,6 +141,91 @@ describe('telemetry worker', () => {
 			.bind(day(0), day(0), day(0))
 			.first<{ dau: number; wau: number; mau: number }>()
 		expect(counts).toEqual({ dau: 1, wau: 2, mau: 3 })
+
+		const seen = await env.DB.prepare(
+			'SELECT (SELECT COUNT(*) FROM wau_seen) AS wau, (SELECT COUNT(*) FROM mau_seen) AS mau',
+		).first<{ wau: number; mau: number }>()
+		expect(seen).toEqual({ wau: 3, mau: 3 })
+	})
+
+	it('caps persisted error detail rows per group per day without losing counts', async () => {
+		const fingerprint = 'c'.repeat(64)
+		const day = new Date().toISOString().slice(0, 10)
+		for (let index = 0; index < 4; index++) {
+			const response = await post(
+				batch(`91111111-1111-4111-8111-11111111111${index}`, [
+					{
+						type: 'error',
+						event_id: `a1111111-1111-4111-8111-11111111111${index}`,
+						occurred_at: new Date().toISOString(),
+						fingerprint,
+						occurrence_count: 1,
+						error_type: 'sample_error',
+						message: 'sampled',
+					},
+				]),
+			)
+			expect(response.status).toBe(200)
+		}
+
+		const reports = await env.DB.prepare('SELECT COUNT(*) AS count FROM error_reports').first<{
+			count: number
+		}>()
+		expect(reports?.count).toBe(2)
+
+		const daily = await env.DB.prepare(
+			'SELECT occurrence_count FROM error_daily WHERE fingerprint = ? AND day = ?',
+		)
+			.bind(fingerprint, day)
+			.first<{ occurrence_count: number }>()
+		expect(daily?.occurrence_count).toBe(4)
+
+		const seen = await env.DB.prepare(
+			'SELECT COUNT(*) AS count FROM error_daily_installations WHERE fingerprint = ?',
+		)
+			.bind(fingerprint)
+			.first<{ count: number }>()
+		expect(seen?.count).toBe(1)
+	})
+
+	it('rolls up daily aggregates through runMaintenance', async () => {
+		const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1_000).toISOString().slice(0, 10)
+		const fingerprint = 'd'.repeat(64)
+		const response = await post(
+			batch('a2111111-1111-4111-8111-111111111111', [
+				{
+					type: 'error',
+					event_id: 'a3111111-1111-4111-8111-111111111111',
+					occurred_at: `${yesterday}T12:00:00.000Z`,
+					fingerprint,
+					occurrence_count: 3,
+					error_type: 'maintenance_error',
+					message: 'maintenance',
+				},
+			]),
+		)
+		expect(response.status).toBe(200)
+
+		await runMaintenance(env.DB)
+
+		const totals = await env.DB.prepare('SELECT error_occurrences FROM daily_totals WHERE day = ?')
+			.bind(yesterday)
+			.first<{ error_occurrences: number }>()
+		expect(totals?.error_occurrences).toBe(3)
+
+		const group = await env.DB.prepare(
+			'SELECT occurrence_count, installation_count FROM error_groups WHERE fingerprint = ?',
+		)
+			.bind(fingerprint)
+			.first<{ occurrence_count: number; installation_count: number }>()
+		expect(group).toEqual({ occurrence_count: 3, installation_count: 1 })
+
+		const stats = await env.DB.prepare(
+			'SELECT occurrence_count FROM error_range_stats WHERE range_days = 7 AND fingerprint = ?',
+		)
+			.bind(fingerprint)
+			.first<{ occurrence_count: number }>()
+		expect(stats?.occurrence_count).toBe(3)
 	})
 
 	it('redacts error context and enforces the daily R2 reservation cap', async () => {

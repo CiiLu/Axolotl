@@ -196,6 +196,47 @@ function auditPublishedReleases(currentRef) {
 	finish(failures, warnings, `published release history from ${canonicalBootstrap.tag}`)
 }
 
+function resolveBaseRef(baseRef) {
+	const isAvailable = () => {
+		try {
+			git(['rev-parse', '--verify', `${baseRef}^{commit}`])
+			return true
+		} catch {
+			return false
+		}
+	}
+
+	if (isAvailable()) return baseRef
+
+	for (const remote of ['origin', 'AXL']) {
+		try {
+			git(['fetch', remote, baseRef])
+			if (isAvailable()) return baseRef
+		} catch {
+			// Try the next remote.
+		}
+	}
+
+	try {
+		const upstream = git([
+			'rev-parse',
+			'--abbrev-ref',
+			'--symbolic-full-name',
+			'@{upstream}',
+		]).trim()
+		const upstreamCommit = git(['rev-parse', `${upstream}^{commit}`]).trim()
+		const headCommit = git(['rev-parse', 'HEAD^{commit}']).trim()
+		if (upstream && upstreamCommit !== headCommit) return upstream
+	} catch {
+		// Fall through to HEAD^.
+	}
+
+	console.warn(
+		`Migration guard: base ref ${baseRef} is not available locally; falling back to HEAD^`,
+	)
+	return 'HEAD^'
+}
+
 function compareWithBase(baseRef, currentRef) {
 	const failures = []
 	const canonical = migrationMapAt(baseRef)
@@ -226,7 +267,7 @@ const baseIndex = args.indexOf('--base')
 if (args.includes('--release')) {
 	auditPublishedReleases(currentRef)
 } else if (baseIndex !== -1 && args[baseIndex + 1]) {
-	compareWithBase(args[baseIndex + 1], currentRef)
+	compareWithBase(resolveBaseRef(args[baseIndex + 1]), currentRef)
 } else {
 	console.error(
 		'Usage: node check-migrations.mjs (--release | --base <git-ref>) [--current <git-ref>]',

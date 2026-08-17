@@ -17,21 +17,23 @@ import {
 	commonMessages,
 	defineMessages,
 	DropdownSelect,
+	FloatingActionBar,
 	formatLoader,
 	injectNotificationManager,
 	OverflowMenu,
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
-import { useStorage } from '@vueuse/core'
-import dayjs from 'dayjs'
 import { computed, ref } from 'vue'
 
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import Instance from '@/components/ui/Instance.vue'
 import ConfirmDeleteInstanceModal from '@/components/ui/modal/ConfirmDeleteInstanceModal.vue'
+import BatchEditGroupsModal from '@/components/ui/modal/BatchEditGroupsModal.vue'
 import { install_duplicate_instance } from '@/helpers/install'
-import { remove, set_pinned } from '@/helpers/instance'
+import { edit, remove, set_pinned } from '@/helpers/instance'
+import { Checkbox } from '@modrinth/ui'
+import { useGridGrouping, UNGROUPED_GROUP_KEY } from '@/composables/useGridGrouping'
 
 const { handleError } = injectNotificationManager()
 
@@ -59,6 +61,14 @@ const messages = defineMessages({
 	loader: { id: 'app.instances.group.loader', defaultMessage: 'Loader' },
 	none: { id: 'app.instances.group.none', defaultMessage: 'None' },
 	ungrouped: { id: 'app.instances.group.ungrouped', defaultMessage: 'No group' },
+	exitSelectMode: { id: 'app.instances.exit-select-mode', defaultMessage: 'Exit' },
+	editGroups: { id: 'app.instances.edit-groups', defaultMessage: 'Edit groups' },
+	selectAll: { id: 'app.instances.select-all', defaultMessage: 'Select all' },
+	deselectAll: { id: 'app.instances.deselect-all', defaultMessage: 'Deselect all' },
+	selectedCount: {
+		id: 'app.instances.selected-count',
+		defaultMessage: '{count, plural, one {# selected} other {# selected}}',
+	},
 })
 
 const optionMessages = {
@@ -87,11 +97,23 @@ const props = defineProps({
 		default: '',
 	},
 })
+
 const instanceOptions = ref(null)
 const instanceComponents = ref(null)
-
 const currentDeleteInstance = ref(null)
 const confirmModal = ref(null)
+const search = ref('')
+
+const filteredInstances = computed(() =>
+	props.instances.filter((instance) =>
+		instance.name.toLowerCase().includes(search.value.toLowerCase()),
+	),
+)
+
+const { state, grouping, filteredResults, isSectionCollapsed, setSectionCollapsed } =
+	useGridGrouping(props.label, filteredInstances, {
+		formatLoader: (loader) => formatLoader(formatMessage, loader),
+	})
 
 async function deleteInstance() {
 	if (currentDeleteInstance.value) {
@@ -188,145 +210,109 @@ const overflowOptions = (instance) => [
 	},
 ]
 
-const state = useStorage(
-	`${props.label}-grid-display-state`,
-	{
-		group: 'Group',
-		sortBy: 'Name',
-		collapsedGroups: [],
-	},
-	localStorage,
-	{ mergeDefaults: true },
-)
+// Selection mode
+const selectMode = ref(false)
+const selectedInstanceIds = ref(new Set())
+const batchEditModal = ref(null)
 
-const UNGROUPED_GROUP_KEY = '__ungrouped__'
-const grouping = computed(() => state.value.group)
-const search = ref('')
-const collapsedSectionKeys = computed(() => new Set(state.value.collapsedGroups ?? []))
+let longPressTimer = null
+let longPressTriggered = false
 
-const getSectionKey = (sectionName) => `${state.value.group}:${sectionName}`
-
-const isSectionCollapsed = (sectionName) => {
-	return collapsedSectionKeys.value.has(getSectionKey(sectionName))
+function startLongPress(instanceId) {
+	longPressTriggered = false
+	longPressTimer = setTimeout(() => {
+		longPressTriggered = true
+		if (!selectMode.value) {
+			selectMode.value = true
+		}
+		toggleInstanceSelection(instanceId)
+	}, 500)
 }
 
-const setSectionCollapsed = (sectionName, collapsed) => {
-	const sectionKey = getSectionKey(sectionName)
-	const collapsedSections = new Set(state.value.collapsedGroups ?? [])
-
-	if (collapsed) {
-		collapsedSections.add(sectionKey)
-	} else {
-		collapsedSections.delete(sectionKey)
+function cancelLongPress() {
+	if (longPressTimer) {
+		clearTimeout(longPressTimer)
+		longPressTimer = null
 	}
-
-	state.value.collapsedGroups = [...collapsedSections]
 }
 
-const filteredResults = computed(() => {
-	const { group = 'Group', sortBy = 'Name' } = state.value
-
-	const instances = props.instances.filter((instance) => {
-		return instance.name.toLowerCase().includes(search.value.toLowerCase())
-	})
-
-	if (sortBy === 'Name') {
-		instances.sort((a, b) => {
-			return a.name.localeCompare(b.name)
-		})
+function handleCardClick(instanceId, event) {
+	if (longPressTriggered) {
+		longPressTriggered = false
+		return
 	}
-
-	if (sortBy === 'Game version') {
-		instances.sort((a, b) => {
-			return a.game_version.localeCompare(b.game_version, undefined, { numeric: true })
-		})
+	if (selectMode.value) {
+		toggleInstanceSelection(instanceId)
 	}
+}
 
-	if (sortBy === 'Last played') {
-		instances.sort((a, b) => {
-			return dayjs(b.last_played ?? 0).diff(dayjs(a.last_played ?? 0))
-		})
+function toggleSelectMode() {
+	selectMode.value = !selectMode.value
+	if (!selectMode.value) {
+		selectedInstanceIds.value.clear()
 	}
+}
 
-	if (sortBy === 'Date created') {
-		instances.sort((a, b) => {
-			return dayjs(b.date_created).diff(dayjs(a.date_created))
-		})
-	}
-
-	if (sortBy === 'Date modified') {
-		instances.sort((a, b) => {
-			return dayjs(b.date_modified).diff(dayjs(a.date_modified))
-		})
-	}
-
-	const instanceMap = new Map()
-
-	if (group === 'Loader') {
-		instances.forEach((instance) => {
-			const loader = formatLoader(formatMessage, instance.loader)
-			if (!instanceMap.has(loader)) {
-				instanceMap.set(loader, [])
-			}
-
-			instanceMap.get(loader).push(instance)
-		})
-	} else if (group === 'Game version') {
-		instances.forEach((instance) => {
-			if (!instanceMap.has(instance.game_version)) {
-				instanceMap.set(instance.game_version, [])
-			}
-
-			instanceMap.get(instance.game_version).push(instance)
-		})
-	} else if (group === 'Group') {
-		instances.forEach((instance) => {
-			const categories = instance.groups.length > 0 ? instance.groups : [UNGROUPED_GROUP_KEY]
-
-			for (const category of categories) {
-				if (!instanceMap.has(category)) {
-					instanceMap.set(category, [])
-				}
-
-				instanceMap.get(category).push(instance)
-			}
-		})
+function toggleInstanceSelection(instanceId) {
+	const newSet = new Set(selectedInstanceIds.value)
+	if (newSet.has(instanceId)) {
+		newSet.delete(instanceId)
 	} else {
-		return instanceMap.set('None', instances)
+		newSet.add(instanceId)
 	}
+	selectedInstanceIds.value = newSet
+	if (newSet.size === 0) {
+		selectMode.value = false
+	}
+}
 
-	// For 'name', we intuitively expect the sorting to apply to the name of the group first, not just the name of the instance
-	// ie: Category A should come before B, even if the first instance in B comes before the first instance in A
-	if (sortBy === 'Name') {
-		const sortedEntries = [...instanceMap.entries()].sort((a, b) => {
-			// Ungrouped should always be first
-			if (a[0] === UNGROUPED_GROUP_KEY && b[0] !== UNGROUPED_GROUP_KEY) {
-				return -1
-			}
-			if (a[0] !== UNGROUPED_GROUP_KEY && b[0] === UNGROUPED_GROUP_KEY) {
-				return 1
-			}
-			return a[0].localeCompare(b[0])
-		})
-		instanceMap.clear()
-		sortedEntries.forEach((entry) => {
-			instanceMap.set(entry[0], entry[1])
-		})
+function handleCheckboxClick(instanceId) {
+	if (!selectMode.value) {
+		selectMode.value = true
 	}
-	// default sorting would do 1.20.4 < 1.8.9 because 2 < 8
-	// localeCompare with numeric=true puts 1.8.9 < 1.20.4 because 8 < 20
-	if (group === 'Game version') {
-		const sortedEntries = [...instanceMap.entries()].sort((a, b) => {
-			return a[0].localeCompare(b[0], undefined, { numeric: true })
-		})
-		instanceMap.clear()
-		sortedEntries.forEach((entry) => {
-			instanceMap.set(entry[0], entry[1])
-		})
-	}
+	toggleInstanceSelection(instanceId)
+}
 
-	return instanceMap
+function openBatchEdit() {
+	batchEditModal.value?.show()
+}
+
+const visibleInstanceIds = computed(() => {
+	const ids = []
+	for (const section of Array.from(filteredResults.value, ([, value]) => value)) {
+		for (const instance of section) {
+			ids.push(instance.id)
+		}
+	}
+	return ids
 })
+
+const isAllSelected = computed(() => {
+	const visibleIds = visibleInstanceIds.value
+	return visibleIds.length > 0 && visibleIds.every((id) => selectedInstanceIds.value.has(id))
+})
+
+function toggleSelectAll() {
+	const visibleIds = visibleInstanceIds.value
+	if (isAllSelected.value) {
+		const newSet = new Set(selectedInstanceIds.value)
+		for (const id of visibleIds) {
+			newSet.delete(id)
+		}
+		selectedInstanceIds.value = newSet
+	} else {
+		const newSet = new Set(selectedInstanceIds.value)
+		for (const id of visibleIds) {
+			newSet.add(id)
+		}
+		selectedInstanceIds.value = newSet
+	}
+}
+
+function onBatchEditApplied() {
+	selectedInstanceIds.value.clear()
+	selectMode.value = false
+}
 </script>
 <template>
 	<div class="flex gap-2">
@@ -388,14 +374,44 @@ const filteredResults = computed(() => {
 			<div
 				v-for="instance in instanceSection.value"
 				:key="instance.id + instance.install_stage"
-				class="relative"
+				class="group relative"
 			>
-				<Instance
-					ref="instanceComponents"
-					:instance="instance"
-					@contextmenu.prevent.stop="(event) => handleRightClick(event, instance.id)"
-				/>
-				<div class="absolute right-2 top-2" @click.stop>
+				<div
+					class="relative cursor-pointer select-none rounded-lg transition-all hover:brightness-90 active:scale-[0.98]"
+					@click="handleCardClick(instance.id, $event)"
+					@mousedown="!selectMode && startLongPress(instance.id)"
+					@mouseup="cancelLongPress"
+					@mouseleave="cancelLongPress"
+					@touchstart="!selectMode && startLongPress(instance.id)"
+					@touchend="cancelLongPress"
+					@touchcancel="cancelLongPress"
+				>
+					<div :class="{ 'pointer-events-none': selectMode }">
+						<Instance
+							ref="instanceComponents"
+							:instance="instance"
+							:disabled="selectMode"
+							:class="{ 'opacity-50': selectMode && !selectedInstanceIds.has(instance.id) }"
+							@contextmenu.prevent.stop="(event) => handleRightClick(event, instance.id)"
+						/>
+					</div>
+				</div>
+				<div
+					class="absolute left-2 top-2 z-10 transition-opacity"
+					:class="
+						selectMode && selectedInstanceIds.has(instance.id)
+							? ''
+							: 'opacity-0 group-hover:opacity-100'
+					"
+					@click.stop="handleCheckboxClick(instance.id)"
+				>
+					<Checkbox :model-value="selectedInstanceIds.has(instance.id)" />
+				</div>
+				<div
+					v-if="!selectMode"
+					class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
+					@click.stop
+				>
 					<ButtonStyled circular size="small" type="transparent">
 						<OverflowMenu
 							:options="overflowOptions(instance)"
@@ -419,6 +435,35 @@ const filteredResults = computed(() => {
 		:symlink-target="currentDeleteInstance?.symlink_target"
 		@delete="deleteInstance"
 	/>
+	<BatchEditGroupsModal
+		ref="batchEditModal"
+		:instance-ids="[...selectedInstanceIds]"
+		@applied="onBatchEditApplied"
+	/>
+	<FloatingActionBar :shown="selectMode" aria-label="Instance selection">
+		<span class="px-3 py-2 text-base font-semibold text-contrast tabular-nums">
+			{{ formatMessage(messages.selectedCount, { count: selectedInstanceIds.size }) }}
+		</span>
+		<div class="mx-0.5 h-6 w-px bg-surface-5" />
+		<ButtonStyled type="transparent">
+			<button type="button" @click="toggleSelectAll">
+				<span>{{
+					isAllSelected ? formatMessage(messages.deselectAll) : formatMessage(messages.selectAll)
+				}}</span>
+			</button>
+		</ButtonStyled>
+		<ButtonStyled type="transparent">
+			<button type="button" @click="openBatchEdit">
+				<span>{{ formatMessage(messages.editGroups) }}</span>
+			</button>
+		</ButtonStyled>
+		<div class="ml-auto" />
+		<ButtonStyled type="transparent">
+			<button type="button" @click="toggleSelectMode">
+				<span>{{ formatMessage(messages.exitSelectMode) }}</span>
+			</button>
+		</ButtonStyled>
+	</FloatingActionBar>
 	<ContextMenu ref="instanceOptions" @option-clicked="handleOptionsClick">
 		<template #play> <PlayIcon /> {{ formatMessage(commonMessages.playButton) }} </template>
 		<template #stop> <StopCircleIcon /> {{ formatMessage(commonMessages.stopButton) }} </template>

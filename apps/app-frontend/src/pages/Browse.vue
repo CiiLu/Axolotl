@@ -5,8 +5,9 @@ import {
 	ClipboardCopyIcon,
 	CurseForgeIcon,
 	ExternalIcon,
+	GenericListIcon,
 	GlobeIcon,
-	ImageIcon,
+	GridIcon,
 	LanguagesIcon,
 	ListIcon,
 	ModrinthIcon,
@@ -15,6 +16,8 @@ import {
 } from '@modrinth/assets'
 import type {
 	BrowseInstallContentType,
+	BrowseDisplayMode,
+	BrowseDisplayModeOption,
 	BrowseSearchResponse,
 	CardAction,
 	ProjectType,
@@ -87,7 +90,6 @@ import {
 	curseForgeCategoryValue,
 	findUnmappedCurseForgeCategories,
 	isCurseForgeOnlyCategoryName,
-	localizeCurseForgeCategoryLabels,
 	localizeCurseForgeCategoryName,
 	localizeCurseForgeLabel,
 	resolveCurseForgeCategoryIdsFromFilterValues,
@@ -102,9 +104,13 @@ import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
 import {
 	type BrowseContentSource,
 	get as getSettings,
+	getLastBrowseContentDisplayMode,
 	getLastBrowseContentSource,
+	isBrowseContentProjectType,
 	set as setSettings,
+	setLastBrowseContentDisplayMode,
 	setLastBrowseContentSource,
+	setLastBrowseContentProjectType,
 } from '@/helpers/settings.ts'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { translateSearchDescriptions } from '@/helpers/translation'
@@ -129,6 +135,20 @@ const debugLog = useDebugLogger('Browse')
 const router = useRouter()
 const route = useRoute()
 const projectType = ref<ProjectType>(route.params.projectType as ProjectType)
+
+function rememberBrowseContentProjectType(type: ProjectType) {
+	if (
+		!route.query.i &&
+		!route.query.sid &&
+		!route.query.wid &&
+		!route.query.from &&
+		isBrowseContentProjectType(type)
+	) {
+		setLastBrowseContentProjectType(type)
+	}
+}
+
+watch(projectType, rememberBrowseContentProjectType, { immediate: true })
 
 type BrowseReturnState = {
 	searchResponse: BrowseSearchResponse
@@ -556,6 +576,10 @@ const {
 const { offline } = useNetworkStatus()
 
 const messages = defineMessages({
+	add: {
+		id: 'app.browse.add',
+		defaultMessage: 'Add',
+	},
 	addServersToInstance: {
 		id: 'app.browse.add-servers-to-instance',
 		defaultMessage: 'Adding server to instance',
@@ -649,9 +673,25 @@ const messages = defineMessages({
 		id: 'app.browse.source.all',
 		defaultMessage: 'All sources',
 	},
+	compactListView: {
+		id: 'app.browse.display-mode.compact-list',
+		defaultMessage: 'Compact list',
+	},
+	gridView: {
+		id: 'app.browse.display-mode.grid',
+		defaultMessage: 'Grid',
+	},
+	listView: {
+		id: 'app.browse.display-mode.list',
+		defaultMessage: 'List',
+	},
 	modrinthSource: {
 		id: 'app.browse.source.modrinth',
 		defaultMessage: 'Modrinth',
+	},
+	switchView: {
+		id: 'app.browse.display-mode.switch',
+		defaultMessage: 'Switch view',
 	},
 	curseForgeSource: {
 		id: 'app.browse.source.curseforge',
@@ -1090,19 +1130,23 @@ function getCardActions(
 	const isModpack =
 		projectResult.project_types?.includes('modpack') || projectResult.project_type === 'modpack'
 	const shouldUseInstallIcon = !!instance.value || isModpack
+	const installActionLabel = isInstalling
+		? messages.installingToServer
+		: isInstalled
+			? commonMessages.installedLabel
+			: shouldUseInstallIcon
+				? commonMessages.installButton
+				: messages.addToAnInstance
+	const compactInstallLabel =
+		!isInstalling && !isInstalled && !shouldUseInstallIcon
+			? formatMessage(messages.add)
+			: undefined
 
 	return [
 		{
 			key: 'install',
-			label: formatMessage(
-				isInstalling
-					? messages.installingToServer
-					: isInstalled
-						? commonMessages.installedLabel
-						: shouldUseInstallIcon
-							? commonMessages.installButton
-							: messages.addToAnInstance,
-			),
+			label: formatMessage(installActionLabel),
+			compactLabel: compactInstallLabel,
 			icon: isInstalling ? SpinnerIcon : isInstalled ? CheckIcon : PlusIcon,
 			iconClass: isInstalling ? 'animate-spin' : undefined,
 			disabled: isInstalled || isInstalling,
@@ -1788,16 +1832,27 @@ const lockedFilterMessages = computed(() => ({
 
 const browseReturnSnapshot = consumeBrowseReturnSnapshot<BrowseReturnState>(route.fullPath)
 
-const displayMode = ref<'list' | 'grid'>('list')
+const displayMode = ref<BrowseDisplayMode>(getLastBrowseContentDisplayMode())
 
-function cycleDisplayMode() {
-	displayMode.value = displayMode.value === 'list' ? 'grid' : 'list'
+const displayModeOptions = computed<BrowseDisplayModeOption[]>(() => [
+	{ id: 'list', label: formatMessage(messages.listView), icon: ListIcon },
+	{ id: 'compact', label: formatMessage(messages.compactListView), icon: GenericListIcon },
+	{ id: 'grid', label: formatMessage(messages.gridView), icon: GridIcon },
+])
+
+const displayModeTooltip = computed(() => formatMessage(messages.switchView))
+
+function setDisplayMode(mode: BrowseDisplayMode) {
+	if (mode === 'gallery') return
+	displayMode.value = mode
+	setLastBrowseContentDisplayMode(mode)
 }
 
 const searchState = useBrowseSearch({
 	projectType,
 	tags,
 	providedFilters: combinedProvidedFilters,
+	installContextLoader: computed(() => installContext.value?.loader),
 	search,
 	persistentQueryParams: ['i', 'ai', 'shi', 'sid', 'wid', 'from', 'source'],
 	getExtraQueryParams: () => ({
@@ -2124,7 +2179,9 @@ provideBrowseManager({
 	offline,
 	lockedFilterMessages,
 	displayMode,
-	cycleDisplayMode,
+	displayModeOptions,
+	displayModeTooltip,
+	setDisplayMode,
 })
 </script>
 
@@ -2177,9 +2234,6 @@ provideBrowseManager({
 						</div>
 					</template>
 				</PopoutMenu>
-			</template>
-			<template #display-mode-icon>
-				<component :is="displayMode === 'grid' ? ImageIcon : ListIcon" />
 			</template>
 			<template #after>
 				<ContextMenu ref="contextMenuRef" @option-clicked="handleOptionsClick">

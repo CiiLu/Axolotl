@@ -2,6 +2,14 @@ import type { Labrinth } from '@modrinth/api-client'
 import type { Component } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
+export type BrowseDisplayMode = 'list' | 'compact' | 'grid' | 'gallery'
+
+export interface BrowseDisplayModeOption {
+	id: BrowseDisplayMode
+	label: string
+	icon: Component
+}
+
 export interface BrowseSearchResponse {
 	projectHits: (Labrinth.Search.v2.ResultSearchProject & {
 		installed?: boolean
@@ -53,6 +61,7 @@ export interface BrowseInstallContext {
 export interface CardAction {
 	key: string
 	label: string
+	compactLabel?: string
 	icon: Component
 	iconClass?: string
 	disabled?: boolean

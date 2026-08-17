@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import dayjs from 'dayjs'
 
 import { isOfflineMode } from '@/composables/useNetworkStatus'
-import { get_full_path } from '@/helpers/instance'
+import { get_full_path, resolveAutoGcLaunchArgs } from '@/helpers/instance'
 import { openPath } from '@/helpers/utils'
 
 type BaseWorld = {
@@ -247,18 +247,22 @@ export async function start_join_singleplayer_world(
 	instanceId: string,
 	world: string,
 ): Promise<unknown> {
+	const extraLaunchArgs = await resolveAutoGcLaunchArgs(instanceId)
 	return await invoke('plugin:worlds|start_join_singleplayer_world', {
 		instanceId,
 		world,
 		offlineMode: isOfflineMode(),
+		extraLaunchArgs,
 	})
 }
 
 export async function start_join_server(instanceId: string, address: string): Promise<unknown> {
+	const extraLaunchArgs = await resolveAutoGcLaunchArgs(instanceId)
 	return await invoke('plugin:worlds|start_join_server', {
 		instanceId,
 		address,
 		offlineMode: isOfflineMode(),
+		extraLaunchArgs,
 	})
 }
 

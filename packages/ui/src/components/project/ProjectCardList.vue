@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(
 	defineProps<{
-		layout?: 'list' | 'grid' | 'gallery'
+		layout?: 'list' | 'compact' | 'grid' | 'gallery'
 	}>(),
 	{
 		layout: 'list',
@@ -12,7 +12,7 @@ withDefaults(
 	<div
 		class="gap-3"
 		:class="{
-			'flex flex-col': layout === 'list',
+			'flex flex-col': layout === 'list' || layout === 'compact',
 			'grid grid-project-list': layout === 'grid' || layout === 'gallery',
 		}"
 		role="list"

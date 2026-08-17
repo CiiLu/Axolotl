@@ -8,6 +8,7 @@ import Combobox, { type ComboboxOption } from '#ui/components/base/Combobox.vue'
 import LoadingIndicator from '#ui/components/base/LoadingIndicator.vue'
 import NavTabs from '#ui/components/base/NavTabs.vue'
 import Pagination from '#ui/components/base/Pagination.vue'
+import PopoutMenu from '#ui/components/base/PopoutMenu.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
 import ProjectCard from '#ui/components/project/card/ProjectCard.vue'
 import ProjectCardList from '#ui/components/project/ProjectCardList.vue'
@@ -90,6 +91,10 @@ const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 		label: formatSortType(sortType),
 	})),
 )
+
+const selectedDisplayMode = computed(() =>
+	ctx.displayModeOptions?.value.find((option) => option.id === ctx.displayMode?.value),
+)
 </script>
 
 <template>
@@ -170,11 +175,35 @@ const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 			</ButtonStyled>
 		</div>
 
-		<ButtonStyled v-if="ctx.cycleDisplayMode" circular>
-			<button @click="ctx.cycleDisplayMode!()">
-				<slot name="display-mode-icon" />
-			</button>
-		</ButtonStyled>
+		<PopoutMenu
+			v-if="ctx.displayMode && ctx.displayModeOptions?.value.length && ctx.setDisplayMode"
+			:tooltip="ctx.displayModeTooltip?.value"
+			placement="bottom-end"
+		>
+			<ButtonStyled circular>
+				<button :aria-label="ctx.displayModeTooltip?.value">
+					<component :is="selectedDisplayMode?.icon" />
+				</button>
+			</ButtonStyled>
+			<template #menu>
+				<div class="flex w-44 flex-col gap-1 p-1">
+					<ButtonStyled
+						v-for="option in ctx.displayModeOptions.value"
+						:key="option.id"
+						:type="ctx.displayMode.value === option.id ? 'filled' : 'transparent'"
+					>
+						<button
+							class="flex w-full items-center gap-2 !justify-start text-left"
+							:aria-pressed="ctx.displayMode.value === option.id"
+							@click="ctx.setDisplayMode!(option.id)"
+						>
+							<component :is="option.icon" class="h-4 w-4" />
+							<span>{{ option.label }}</span>
+						</button>
+					</ButtonStyled>
+				</div>
+			</template>
+		</PopoutMenu>
 
 		<Pagination
 			:page="ctx.currentPage.value"
@@ -257,6 +286,7 @@ const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 								:key="action.key"
 								:color="action.color"
 								:type="action.type"
+								:size="ctx.effectiveLayout.value === 'compact' ? 'small' : 'standard'"
 								:circular="action.circular"
 							>
 								<button
@@ -265,7 +295,11 @@ const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 									@click.stop="action.onClick"
 								>
 									<component :is="action.icon" :class="action.iconClass" />
-									<template v-if="!action.circular">{{ action.label }}</template>
+									<template v-if="!action.circular">{{
+										ctx.effectiveLayout.value === 'compact'
+											? (action.compactLabel ?? action.label)
+											: action.label
+									}}</template>
 								</button>
 							</ButtonStyled>
 						</div>
@@ -328,6 +362,7 @@ const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 								:key="action.key"
 								:color="action.color"
 								:type="action.type"
+								:size="ctx.effectiveLayout.value === 'compact' ? 'small' : 'standard'"
 								:circular="action.circular"
 							>
 								<button
@@ -336,7 +371,11 @@ const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 									@click.stop="action.onClick"
 								>
 									<component :is="action.icon" :class="action.iconClass" />
-									<template v-if="!action.circular">{{ action.label }}</template>
+									<template v-if="!action.circular">{{
+										ctx.effectiveLayout.value === 'compact'
+											? (action.compactLabel ?? action.label)
+											: action.label
+									}}</template>
 								</button>
 							</ButtonStyled>
 						</div>

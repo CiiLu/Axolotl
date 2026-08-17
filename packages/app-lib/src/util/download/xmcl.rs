@@ -40,7 +40,7 @@ const XMCL_RECONNECT_OVERHEAD_SECS: f64 = 0.6;
 const XMCL_MAX_RESUMES: usize = 5;
 const XMCL_MAX_NO_PROGRESS: usize = 2;
 const XMCL_BMCL_CONCURRENCY: usize = 16;
-const XMCL_OTHER_CONCURRENCY: usize = 64;
+const XMCL_OTHER_CONCURRENCY: usize = 16;
 
 static AUTHORITY_SEMAPHORES: LazyLock<Mutex<HashMap<String, Arc<Semaphore>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -62,8 +62,9 @@ static XMCL_SEGMENT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .read_timeout(Duration::from_secs(10))
         .tcp_keepalive(Some(Duration::from_secs(10)))
         .tcp_nodelay(true)
-        .pool_max_idle_per_host(64)
+        .pool_max_idle_per_host(16)
         .http1_only()
+        .redirect(reqwest::redirect::Policy::limited(5))
         .user_agent(crate::launcher_user_agent())
         .build()
         .expect("XMCL segment client configuration should be valid")
@@ -392,6 +393,7 @@ fn is_slow_speed(speed: u64, remaining: Option<u64>) -> bool {
 }
 
 async fn download_attempt(
+    request: &fetch::DownloadRequest,
     url: &str,
     header_value: Option<(&str, &str)>,
     part_path: &Path,
@@ -421,26 +423,28 @@ async fn download_attempt(
                 error: crate::ErrorKind::AcquireError(error).into(),
                 offset: resume_offset,
             })?;
+    let _activity = crate::State::get_if_initialized()
+        .map(|state| state.begin_download_connection());
 
     let client = if range_end.is_some() {
         &XMCL_SEGMENT_CLIENT
     } else {
         &XMCL_SINGLE_CLIENT
     };
-    let mut request = client.get(url);
+    let mut http_request = client.get(url);
     if let Some(end) = range_end {
-        request = request
+        http_request = http_request
             .header(header::RANGE, format!("bytes={request_offset}-{end}"));
     } else if request_offset > 0 {
-        request =
-            request.header(header::RANGE, format!("bytes={request_offset}-"));
+        http_request = http_request
+            .header(header::RANGE, format!("bytes={request_offset}-"));
     }
     if let Some((name, value)) = header_value {
-        request = request.header(name, value);
+        http_request = http_request.header(name, value);
     }
 
     let response = if is_reassignable(&authority) {
-        tokio::time::timeout(XMCL_TTFB_TIMEOUT, request.send())
+        tokio::time::timeout(XMCL_TTFB_TIMEOUT, http_request.send())
             .await
             .map_err(|_| AttemptError::Managed {
                 reason: ManagedReason::Ttfb,
@@ -451,10 +455,13 @@ async fn download_attempt(
                 offset: resume_offset,
             })?
     } else {
-        request.send().await.map_err(|error| AttemptError::Http {
-            error: error.into(),
-            offset: resume_offset,
-        })?
+        http_request
+            .send()
+            .await
+            .map_err(|error| AttemptError::Http {
+                error: error.into(),
+                offset: resume_offset,
+            })?
     };
 
     if require_range {
@@ -517,16 +524,12 @@ async fn download_attempt(
     let mut slow_streak: u32 = 0;
 
     loop {
-        let next = if is_reassignable(&authority) {
-            tokio::time::timeout(XMCL_STALL_TIMEOUT, stream.next())
-                .await
-                .map_err(|_| AttemptError::Managed {
-                    reason: ManagedReason::Stall,
-                    offset,
-                })?
-        } else {
-            stream.next().await
-        };
+        let next = tokio::time::timeout(XMCL_STALL_TIMEOUT, stream.next())
+            .await
+            .map_err(|_| AttemptError::Managed {
+                reason: ManagedReason::Stall,
+                offset,
+            })?;
         let Some(chunk) = next else {
             break;
         };
@@ -549,6 +552,9 @@ async fn download_attempt(
             }
         })?;
         offset = offset.saturating_add(chunk.len() as u64);
+        if let Some(state) = crate::State::get_if_initialized() {
+            state.record_download_bytes(chunk.len() as u64);
+        }
         if let Some(progress_bytes) = &progress_bytes {
             progress_bytes.fetch_add(chunk.len() as u64, Ordering::Relaxed);
         } else if let Some(progress) = progress.as_mut() {
@@ -558,11 +564,13 @@ async fn download_attempt(
             }) || offset >= total;
             if should_update {
                 let _ = progress(offset, total).await;
+                fetch::record_install_download_progress(request, offset, total)
+                    .await;
                 last_progress_update = Some(Instant::now());
             }
         }
 
-        if first_byte_at.is_some() && is_reassignable(&authority) {
+        if first_byte_at.is_some() {
             if !no_abort {
                 window_bytes = window_bytes.saturating_add(chunk.len() as u64);
                 if window_start.elapsed() >= XMCL_SLOW_WINDOW {
@@ -635,6 +643,7 @@ async fn run_single_stream(
         let offset_before = offset;
         let attempt_started = Instant::now();
         let result = download_attempt(
+            request,
             url,
             header_value,
             part_path,
@@ -715,9 +724,7 @@ async fn run_single_stream(
             }) => {
                 offset = offset.max(error_offset);
                 last_error = Some(error);
-                let should_reroll = is_reassignable(
-                    authority_of(url).as_deref().unwrap_or_default(),
-                ) && !is_terminal_http(&last_error);
+                let should_reroll = !is_terminal_http(&last_error);
                 if should_reroll && resumes < XMCL_MAX_RESUMES {
                     resumes += 1;
                     continue;
@@ -789,6 +796,7 @@ async fn run_segment(
         let offset_before = relative_offset;
         let attempt_started = Instant::now();
         let result = download_attempt(
+            request,
             url,
             header_value,
             segment_path,
@@ -869,9 +877,7 @@ async fn run_segment(
             }) => {
                 relative_offset = relative_offset.max(error_offset);
                 last_error = Some(error);
-                let should_reroll = is_reassignable(
-                    authority_of(url).as_deref().unwrap_or_default(),
-                ) && !is_terminal_http(&last_error);
+                let should_reroll = !is_terminal_http(&last_error);
                 if should_reroll && resumes < XMCL_MAX_RESUMES {
                     resumes += 1;
                     continue;
@@ -952,13 +958,21 @@ async fn download_segments(
             if let Some(progress) = progress.as_mut() {
                 let _ = progress(bytes, total).await;
             }
+            fetch::record_install_download_progress(request, bytes, total)
+                .await;
             if bytes >= total {
                 break;
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
     };
-    let (segment_result, _) = tokio::join!(segments, reporter);
+    let segment_result =
+        match futures::future::select(Box::pin(segments), Box::pin(reporter))
+            .await
+        {
+            futures::future::Either::Left((result, _reporter)) => result,
+            futures::future::Either::Right(((), segments)) => segments.await,
+        };
     segment_result?;
     concatenate_segments(part_path, total)
         .await
@@ -1039,10 +1053,22 @@ async fn download_to_path_inner(
             .await
             {
                 Ok(()) => {
+                    fetch::record_install_download_stage(
+                        request,
+                        crate::install::DownloadItemStatus::Verifying,
+                    )
+                    .await;
                     let size =
                         fetch::verify_file(part_path, &request.integrity)
                             .await?;
+                    fetch::record_install_download_stage(
+                        request,
+                        crate::install::DownloadItemStatus::Writing,
+                    )
+                    .await;
                     fetch::finalize_download(part_path, destination).await?;
+                    fetch::record_install_download_finished(request, size)
+                        .await;
                     crate::telemetry::record_download_stats(
                         1, 1, size, 0, 0, 0, 0,
                     );
@@ -1088,8 +1114,19 @@ async fn download_to_path_inner(
     )
     .await?;
 
+    fetch::record_install_download_stage(
+        request,
+        crate::install::DownloadItemStatus::Verifying,
+    )
+    .await;
     let size = fetch::verify_file(part_path, &request.integrity).await?;
+    fetch::record_install_download_stage(
+        request,
+        crate::install::DownloadItemStatus::Writing,
+    )
+    .await;
     fetch::finalize_download(part_path, destination).await?;
+    fetch::record_install_download_finished(request, size).await;
     crate::telemetry::record_download_stats(1, 1, size, 0, 0, 0, 0);
 
     let route =
@@ -1133,6 +1170,9 @@ pub(crate) async fn download_to_path(
     )
     .await;
     if result.is_err() {
+        if let Some(state) = crate::State::get_if_initialized() {
+            state.record_download_error();
+        }
         cleanup_segment_files(part_path).await;
         crate::telemetry::record_download_stats(1, 0, 0, 1, 0, 0, 0);
     }

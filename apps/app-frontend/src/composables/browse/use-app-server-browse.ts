@@ -50,6 +50,10 @@ export interface UseAppServerBrowseOptions {
 }
 
 const messages = defineMessages({
+	add: {
+		id: 'app.browse.add',
+		defaultMessage: 'Add',
+	},
 	addToInstance: {
 		id: 'app.browse.add-to-instance',
 		defaultMessage: 'Add to instance',
@@ -209,6 +213,7 @@ export function useAppServerBrowse(options: UseAppServerBrowseOptions) {
 				{
 					key: 'add-to-instance',
 					label: formatMessage(isInstalled ? messages.added : messages.addToInstance),
+					compactLabel: isInstalled ? undefined : formatMessage(messages.add),
 					icon: isInstalled ? CheckIcon : PlusIcon,
 					disabled: isInstalled,
 					color: 'brand',

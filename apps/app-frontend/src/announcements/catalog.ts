@@ -33,6 +33,77 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.3',
+		version: '1.8.3',
+		publishedAt: '2026-08-17',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.3',
+			'zh-CN': 'Axolotl Launcher 1.8.3',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Long-press instance cards to enable batch editing of custom groups',
+					'zh-CN': '长按实例卡片实现批量编辑自定义分组功能',
+				},
+				{
+					'en-US':
+						'Added a compact list view to Discover, showing more projects while keeping metadata and install actions aligned.',
+					'zh-CN': '发现内容新增紧凑列表视图，能在同一屏内显示更多项目并保持元数据与安装操作对齐。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Discover now reopens the last content type you browsed, including mods, modpacks, resource packs, data packs, and shaders.',
+					'zh-CN':
+						'发现内容现在会记住上次浏览的内容类型，重启后仍会打开对应的模组、整合包、资源包、数据包或光影包。',
+				},
+				{
+					'en-US': 'The launcher now avoids localizing physical mod filenames',
+					'zh-CN': '启动器现在不会对模组文件名进行本地化',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed installations on protected paths not requesting administrator permission when needed.',
+					'zh-CN': '修复在受保护路径安装时无法正确请求管理员权限的问题。',
+				},
+				{
+					'en-US': 'Canonicalized legacy Forge loader versions',
+					'zh-CN': '修复了旧版 Forge 加载器版本无法识别的问题',
+				},
+			],
+		},
+	},
+	{
+		id: 'launcher-1.8.2',
+		version: '1.8.2',
+		publishedAt: '2026-08-16',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.2',
+			'zh-CN': 'Axolotl Launcher 1.8.2',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US': 'Fixed some forge artifacts cannot be downloaded',
+					'zh-CN': '修复了部分 forge 资源无法下载的问题',
+				},
+				{
+					'en-US': 'Added prefix icon to the version display below the instance page title',
+					'zh-CN': '给实例页面标题下方的版本显示添加了前缀图标',
+				},
+				{
+					'en-US':
+						'Fixed discover page card tags not hiding the loader tag when entering from instance install content',
+					'zh-CN': '修复了内容发现页卡片标签从实例安装内容进入时不隐藏加载器标签的问题',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.1',
 		version: '1.8.1',
 		publishedAt: '2026-08-16',
@@ -59,6 +130,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'CurseForge 安装预览现在会标记可能与目标实例版本不匹配的依赖版本，在安装前即可看到不兼容的兜底选择。',
 				},
+				{
+					'en-US':
+						'Added a gallery layout to the Discover page for browsing content with visual thumbnails.',
+					'zh-CN': '发现内容页新增画廊布局，支持以缩略图形式浏览内容。',
+				},
+				{
+					'en-US':
+						'Introduced a new download engine and rewrote the old download engine, which should greatly resolve download issues.',
+					'zh-CN': '引入新的下载引擎和重写旧的下载引擎，现在下载问题应该得到很大程度上解决。',
+				},
 			],
 			changed: [
 				{
@@ -78,6 +159,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'CurseForge managed modpack version switching now runs as a tracked download task like Modrinth updates, with real progress, success and failure notifications, and automatic resume after manually downloaded files are imported.',
 					'zh-CN':
 						'CurseForge 整合包切换版本现在会像 Modrinth 更新一样作为可跟踪的下载任务运行，显示真实进度与成功/失败通知，并可在手动下载的文件补齐后自动继续。',
+				},
+				{
+					'en-US':
+						'Switched Fabric, Forge, NeoForge, and Quilt version metadata to official sources with Modrinth fallback, providing more complete and up-to-date loader version lists.',
+					'zh-CN':
+						'Fabric、Forge、NeoForge 和 Quilt 的版本元数据现优先从官方源获取，并在必要时回退至 Modrinth，提供更完整、更及时的加载器版本列表。',
+				},
+				{
+					'en-US':
+						'Improved loader version compatibility across instance creation, settings, repair, offline launch, and imported instances, preserving exact loader versions and preventing unintended fallback to newer releases.',
+					'zh-CN':
+						'改进了实例创建、设置、修复、离线启动和实例导入中的加载器版本兼容性，保留精确的加载器版本，并避免意外回退到更新版本。',
 				},
 			],
 			fixed: [
@@ -101,6 +194,21 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Fixed modal close buttons shifting out of place in merged-header dialogs.',
 					'zh-CN': '修复合并式标题栏弹窗中关闭按钮位置偏移的问题。',
+				},
+				{
+					'en-US':
+						'Fixed day buttons in the home page calendar widget being partially obscured by overlapping elements.',
+					'zh-CN': '修复主页日历组件内天数按钮会被遮挡的问题。',
+				},
+				{
+					'en-US':
+						'Fixed truncated titles faintly visible in the Discover page, improving text clipping and layout boundaries.',
+					'zh-CN': '修复发现内容页隐约能看到截断的标题的问题，优化了文本裁剪和布局边界。',
+				},
+				{
+					'en-US':
+						'Fixed loader tags not displaying on the Discover page, so mod loader labels now appear correctly.',
+					'zh-CN': '修复发现内容页不显示加载器标签的问题，现在模组加载器标签可以正常显示。',
 				},
 			],
 		},

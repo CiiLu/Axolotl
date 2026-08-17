@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-const PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(3);
+const PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_millis(500);
 const CONTENT_PROGRESS_PERSIST_STEPS: u64 = 25;
 const LIVE_PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(250);
 const LIVE_PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(3);
