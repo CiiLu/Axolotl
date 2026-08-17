@@ -69,6 +69,10 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	disabled: {
+		type: Boolean,
+		default: false,
+	},
 })
 
 const internalPlaying = ref(false)
@@ -304,7 +308,7 @@ onUnmounted(() => unlisten())
 									: formatMessage(commonMessages.repairButton)
 							"
 							:disabled="offline"
-							class="transition-all scale-75 group-hover:scale-100 group-focus-within:scale-100 origin-bottom opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 card-shadow"
+							:class="`transition-all scale-75 origin-bottom card-shadow ${disabled ? 'opacity-0 scale-75' : 'opacity-0 group-hover:scale-100 group-hover:opacity-100 group-focus-within:scale-100 group-focus-within:opacity-100'}`"
 							@click="(e) => repair(e)"
 						>
 							<DownloadIcon />
@@ -313,7 +317,7 @@ onUnmounted(() => unlisten())
 					<ButtonStyled v-else size="large" color="brand" circular>
 						<button
 							v-tooltip="formatMessage(commonMessages.playButton)"
-							class="transition-all scale-75 group-hover:scale-100 group-focus-within:scale-100 origin-bottom opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 card-shadow"
+							:class="`transition-all scale-75 origin-bottom card-shadow ${disabled ? 'opacity-0 scale-75' : 'opacity-0 group-hover:scale-100 group-hover:opacity-100 group-focus-within:scale-100 group-focus-within:opacity-100'}`"
 							@click="(e) => play(e, 'InstanceCard')"
 							@mousehover="checkProcess"
 						>

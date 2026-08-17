@@ -266,6 +266,13 @@ function toggleInstanceSelection(instanceId) {
 	}
 }
 
+function handleCheckboxClick(instanceId) {
+	if (!selectMode.value) {
+		selectMode.value = true
+	}
+	toggleInstanceSelection(instanceId)
+}
+
 function openBatchEdit() {
 	batchEditModal.value?.show()
 }
@@ -367,7 +374,7 @@ function onBatchEditApplied() {
 			<div
 				v-for="instance in instanceSection.value"
 				:key="instance.id + instance.install_stage"
-				class="relative"
+				class="group relative"
 			>
 				<div
 					class="relative cursor-pointer select-none rounded-lg transition-all hover:brightness-90 active:scale-[0.98]"
@@ -390,13 +397,21 @@ function onBatchEditApplied() {
 					</div>
 				</div>
 				<div
-					v-if="selectMode"
-					class="absolute left-2 top-2 z-10"
-					@click.stop="toggleInstanceSelection(instance.id)"
+					class="absolute left-2 top-2 z-10 transition-opacity"
+					:class="
+						selectMode && selectedInstanceIds.has(instance.id)
+							? ''
+							: 'opacity-0 group-hover:opacity-100'
+					"
+					@click.stop="handleCheckboxClick(instance.id)"
 				>
 					<Checkbox :model-value="selectedInstanceIds.has(instance.id)" />
 				</div>
-				<div v-else class="absolute right-2 top-2" @click.stop>
+				<div
+					v-if="!selectMode"
+					class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
+					@click.stop
+				>
 					<ButtonStyled circular size="small" type="transparent">
 						<OverflowMenu
 							:options="overflowOptions(instance)"
