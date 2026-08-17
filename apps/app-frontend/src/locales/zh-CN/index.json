@@ -815,9 +815,6 @@
 	"app.downloads.source.mcim": {
 		"message": "MCIM 镜像"
 	},
-	"app.downloads.source.tianpao": {
-		"message": "Tianpao 镜像"
-	},
 	"app.downloads.source.official": {
 		"message": "官方"
 	},
@@ -2507,12 +2504,6 @@
 	"app.settings.resources.minecraft-file-source-description": {
 		"message": "游戏文件、资源、依赖库、模组加载器和 Java 运行时。"
 	},
-	"app.settings.resources.modrinth-mirror": {
-		"message": "Modrinth"
-	},
-	"app.settings.resources.modrinth-mirror-description": {
-		"message": "Modrinth 文件下载。"
-	},
 	"app.settings.resources.curseforge-mirror": {
 		"message": "CurseForge 服务"
 	},
@@ -2548,9 +2539,6 @@
 	},
 	"app.settings.resources.source.mcim": {
 		"message": "优先 MCIM"
-	},
-	"app.settings.resources.source.tianpao": {
-		"message": "优先 Tianpao"
 	},
 	"app.settings.resources.source.mojang-mirror-preferred": {
 		"message": "优先 Fallen Proxy"
@@ -7105,5 +7093,20 @@
 	},
 	"app.appearance-settings.auto-install-dependencies.description": {
 		"message": "安装内容时自动下载所需前置。每次安装前仍可在确认对话框中调整选择。"
+	},
+	"app.settings.resources.source.tianpao": {
+		"message": "优先 Tianpao"
+	},
+	"app.settings.resources.modrinth-mirror-description": {
+		"message": "Modrinth 文件下载。"
+	},
+	"app.settings.resources.modrinth-mirror": {
+		"message": "Modrinth"
+	},
+	"app.downloads.source.tianpao": {
+		"message": "Tianpao 镜像"
+	},
+	"app.content-install.preview.version-mismatch": {
+		"message": "下载的版本可能与当前版本不兼容。"
 	}
 }
