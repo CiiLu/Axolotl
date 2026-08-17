@@ -14,7 +14,7 @@ use h2::client::SendRequest;
 use rustls::ClientConfig;
 use rustls_pki_types::ServerName;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Mutex, Once, Weak};
 use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio_rustls::TlsConnector;
@@ -48,7 +48,11 @@ impl SharedH2Connection {
         &self,
         request: http::Request<()>,
     ) -> Result<http::Response<h2::RecvStream>, h2::Error> {
-        let sender = self.sender.lock().unwrap().clone();
+        let sender = self
+            .sender
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone();
         let mut sender = sender.ready().await?;
         let (response, send_stream) = sender.send_request(request, false)?;
         drop(send_stream);
@@ -62,9 +66,15 @@ static CONNECTIONS: std::sync::LazyLock<
 > = std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn tls_config() -> Arc<ClientConfig> {
+    static INSTALL_PROVIDER: Once = Once::new();
+    INSTALL_PROVIDER.call_once(|| {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    });
     static CONFIG: std::sync::LazyLock<Mutex<Option<Arc<ClientConfig>>>> =
         std::sync::LazyLock::new(|| Mutex::new(None));
-    let mut guard = CONFIG.lock().unwrap();
+    let mut guard = CONFIG
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     if let Some(config) = guard.as_ref() {
         return Arc::clone(config);
     }
@@ -198,7 +208,9 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
 
     let shared = Arc::new(SharedH2Connection::new(sender));
     {
-        let mut registry = CONNECTIONS.lock().unwrap();
+        let mut registry = CONNECTIONS
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         registry.insert(authority.to_string(), Arc::downgrade(&shared));
     }
 
@@ -220,19 +232,25 @@ pub async fn shared_connection(
 ) -> crate::Result<Arc<SharedH2Connection>> {
     let cached = CONNECTIONS
         .lock()
-        .unwrap()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
         .get(authority)
         .and_then(Weak::upgrade)
         .filter(|connection| !connection.is_dead());
     if let Some(connection) = cached {
         return Ok(connection);
     }
-    CONNECTIONS.lock().unwrap().remove(authority);
+    CONNECTIONS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .remove(authority);
     establish(authority).await
 }
 
 /// Drops all cached connections (used by tests).
 #[cfg(test)]
 pub fn reset_for_tests() {
-    CONNECTIONS.lock().unwrap().clear();
+    CONNECTIONS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clear();
 }

@@ -82,7 +82,7 @@ quick-xml = "0.38.3"
 rand = "=0.8.5"  # Locked on 0.8 until p256 updates to 0.9
 regex = "1.12.2"
 reqwest = { version = "0.12.24", default-features = false }
-rustls = "0.23.42"
+rustls = { version = "0.23.42", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-native-certs = "0.8.4"
 rustls-pki-types = "1.15.0"
 rgb = "0.8.52"
@@ -118,7 +118,7 @@ tempfile = "3.23.0"
 theseus = { path = "packages/app-lib" }
 thiserror = "2.0.17"
 tokio = "1.47.1"
-tokio-rustls = "0.26.4"
+tokio-rustls = { version = "0.26.4", default-features = false, features = ["ring", "tls12"] }
 tokio-util = "0.7.16"
 toml = "0.8.19"
 tracing = "0.1.41"
