@@ -114,7 +114,7 @@
 				<p class="m-0">{{ formatMessage(messages.contentRefreshWarningBody) }}</p>
 			</div>
 		</CollapsibleAdmonition>
-		<ContentPageLayout>
+		<ContentPageLayout @visible-items="handleVisibleItems">
 			<template #modals>
 				<ContentToggleDependenciesModal ref="toggleDependenciesModal" />
 				<ShareModalWrapper
@@ -241,6 +241,7 @@ import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
 import { instance_listener } from '@/helpers/events.js'
 import { install_duplicate_instance, installJobInstanceId } from '@/helpers/install'
 import {
+	get_content_items_by_paths,
 	add_project_from_path,
 	apply_content_update_plan,
 	edit,
@@ -446,6 +447,9 @@ const loading = ref(!hasPreloadedContent(props.preloadedContent))
 const contentSnapshot = ref<InstanceContentData['snapshot'] | null>(null)
 const projects = ref<ContentItem[]>([])
 const linkedModpackContentItems = ref<ContentItem[]>([])
+const visibleMetadataRequestedPaths = new Set<string>()
+const visibleMetadataPendingPaths = new Set<string>()
+let visibleMetadataRefreshRunning = false
 const contentWarnings = computed(() => contentSnapshot.value?.warnings ?? [])
 const contentWarningExpanded = ref(true)
 
@@ -874,6 +878,112 @@ function getContentItemId(item: ContentItem | null | undefined) {
 	)
 }
 
+function mergeVisibleMetadataItems(refreshedItems: ContentItem[]) {
+	const refreshedByPath = new Map(
+		refreshedItems.filter((item) => !!item.file_path).map((item) => [item.file_path!, item]),
+	)
+
+	const mergeItems = (items: ContentItem[]) =>
+		items.map((item) => {
+			const refreshed = item.file_path ? refreshedByPath.get(item.file_path) : undefined
+
+			if (!refreshed) return item
+
+			return {
+				...item,
+				...refreshed,
+			}
+		})
+
+	projects.value = mergeItems(projects.value)
+	linkedModpackContentItems.value = mergeItems(linkedModpackContentItems.value)
+
+	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
+}
+
+async function flushVisibleMetadataRefresh() {
+	if (visibleMetadataRefreshRunning) return
+
+	visibleMetadataRefreshRunning = true
+
+	try {
+		while (visibleMetadataPendingPaths.size > 0) {
+			const instanceId = props.instance.id
+			const paths = [...visibleMetadataPendingPaths]
+			visibleMetadataPendingPaths.clear()
+
+			try {
+				debugState('visible metadata refresh start', {
+					instanceId,
+					count: paths.length,
+					paths,
+				})
+				let refreshedItems = await get_content_items_by_paths(instanceId, paths)
+
+				if (isUnmounted || props.instance.id !== instanceId) return
+
+				refreshedItems = await translateContentItemTitles(
+					refreshedItems,
+					i18n.global.locale.value,
+				).catch(() => refreshedItems)
+
+				if (isUnmounted || props.instance.id !== instanceId) return
+
+				mergeVisibleMetadataItems(refreshedItems)
+				debugState('visible metadata refresh complete', {
+					instanceId,
+					requested: paths.length,
+					received: refreshedItems.length,
+				})
+			} catch (error) {
+				// 后台懒加载失败不弹通知。
+				// 删除 requested 标记，这样以后再次进入可见区域还能重试。
+				for (const path of paths) {
+					visibleMetadataRequestedPaths.delete(path)
+				}
+
+				debugState('visible metadata refresh failed', {
+					instanceId,
+					paths,
+					error,
+				})
+			}
+		}
+	} finally {
+		visibleMetadataRefreshRunning = false
+	}
+}
+
+function handleVisibleItems(items: ContentItem[]) {
+	if (isUnmounted || props.instance.install_stage !== 'installed') {
+		return
+	}
+
+	const knownPaths = new Set(
+		[...projects.value, ...linkedModpackContentItems.value]
+			.map((item) => item.file_path)
+			.filter((path): path is string => !!path),
+	)
+
+	let queued = false
+
+	for (const item of items) {
+		const path = item.file_path
+
+		if (!path || !knownPaths.has(path) || visibleMetadataRequestedPaths.has(path)) {
+			continue
+		}
+
+		visibleMetadataRequestedPaths.add(path)
+		visibleMetadataPendingPaths.add(path)
+		queued = true
+	}
+
+	if (queued) {
+		void flushVisibleMetadataRefresh()
+	}
+}
+
 function getStableContentId(item: ContentItem) {
 	return item.instanceEntryId ?? item.instanceMemberId ?? item.instanceFileId ?? null
 }
@@ -1239,9 +1349,7 @@ async function toggleDisableBatch(items: ContentItem[], enabling: boolean) {
 			targets = [...related, ...targets]
 		}
 	}
-	const uniqueTargets = [
-		...new Map(targets.map((item) => [getContentItemId(item), item])).values(),
-	]
+	const uniqueTargets = [...new Map(targets.map((item) => [getContentItemId(item), item])).values()]
 	const contentTargets = uniqueTargets.filter((item) => !isWorldDatapackItem(item))
 	const worldTargets = uniqueTargets.filter(isWorldDatapackItem)
 
@@ -1467,7 +1575,9 @@ function applyBatchToggleState(
 	restore = false,
 	busy = false,
 ) {
-	const operationsById = new Map(operations.map((operation) => [getContentItemId(operation.item), operation]))
+	const operationsById = new Map(
+		operations.map((operation) => [getContentItemId(operation.item), operation]),
+	)
 	const updateItems = (source: ContentItem[]) =>
 		source.map((item) => {
 			const operation = operationsById.get(getContentItemId(item))
@@ -2714,7 +2824,9 @@ async function loadInitialContent(): Promise<void> {
 			linkedItems: cached.linkedContentItems.length,
 		})
 		let cachedContentItems = cached.contentItems.filter((item) => !isWorldSaveContentItem(item))
-		let cachedLinkedItems = cached.linkedContentItems.filter((item) => !isWorldSaveContentItem(item))
+		let cachedLinkedItems = cached.linkedContentItems.filter(
+			(item) => !isWorldSaveContentItem(item),
+		)
 		if (!cached.modpack && !isPackLocked.value && cachedLinkedItems.length > 0) {
 			cachedContentItems = [...cachedContentItems, ...cachedLinkedItems]
 			cachedLinkedItems = []
@@ -2788,7 +2900,10 @@ function scheduleContentEventRefresh(event: { event: string; revision?: number }
 		) {
 			return
 		}
-		pendingContentChangedRevision = Math.max(pendingContentChangedRevision ?? 0, event.revision ?? 0)
+		pendingContentChangedRevision = Math.max(
+			pendingContentChangedRevision ?? 0,
+			event.revision ?? 0,
+		)
 	} else {
 		return
 	}
@@ -2808,22 +2923,20 @@ function scheduleContentEventRefresh(event: { event: string; revision?: number }
 }
 
 onMounted(() => {
-	void instance_listener(
-		(event: { event: string; instance_id: string; revision?: number }) => {
-			if (event.instance_id === props.instance.id && event.event === 'removed') {
-				invalidateContentRequests(true)
-				return
-			}
-			if (
-				props.instance &&
-				event.instance_id === props.instance.id &&
-				(event.event === 'synced' || event.event === 'content_changed') &&
-				props.instance.install_stage === 'installed'
-			) {
-				scheduleContentEventRefresh(event)
-			}
-		},
-	)
+	void instance_listener((event: { event: string; instance_id: string; revision?: number }) => {
+		if (event.instance_id === props.instance.id && event.event === 'removed') {
+			invalidateContentRequests(true)
+			return
+		}
+		if (
+			props.instance &&
+			event.instance_id === props.instance.id &&
+			(event.event === 'synced' || event.event === 'content_changed') &&
+			props.instance.install_stage === 'installed'
+		) {
+			scheduleContentEventRefresh(event)
+		}
+	})
 		.then((unlisten) => {
 			if (isUnmounted) {
 				unlisten()

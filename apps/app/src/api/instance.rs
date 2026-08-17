@@ -32,6 +32,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_get_install_candidates,
             instance_content,
             instance_get_content_items,
+            instance_get_content_items_by_paths,
             instance_get_content_snapshot,
             instance_refresh_content,
             instance_plan_content_updates,
@@ -524,6 +525,20 @@ pub async fn instance_get_content_items(
 }
 
 #[tauri::command]
+pub async fn instance_get_content_items_by_paths(
+    instance_id: &str,
+    paths: Vec<String>,
+    cache_behaviour: Option<CacheBehaviour>,
+) -> Result<Vec<ContentItem>> {
+    Ok(theseus::instance::get_content_items_by_paths(
+        instance_id,
+        paths,
+        cache_behaviour,
+    )
+    .await?)
+}
+
+#[tauri::command]
 pub async fn instance_get_content_snapshot(
     instance_id: &str,
 ) -> Result<theseus::data::InstanceContentSnapshot> {
@@ -1002,15 +1017,13 @@ pub async fn instance_run(
         Some(addr) => QuickPlayType::Server(ServerAddress::Unresolved(addr)),
         None => QuickPlayType::None,
     };
-    Ok(
-        theseus::instance::run_with_extra_launch_args(
-            instance_id,
-            quick_play,
-            offline_mode,
-            extra_launch_args,
-        )
-        .await?,
+    Ok(theseus::instance::run_with_extra_launch_args(
+        instance_id,
+        quick_play,
+        offline_mode,
+        extra_launch_args,
     )
+    .await?)
 }
 
 #[tauri::command]

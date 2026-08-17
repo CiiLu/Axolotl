@@ -390,6 +390,52 @@ pub(crate) async fn list_all_content(
     .await
 }
 
+pub(crate) async fn list_content_by_paths(
+    instance_id: &str,
+    paths: &[String],
+    cache_behaviour: Option<CacheBehaviour>,
+    state: &State,
+) -> crate::Result<Vec<ContentItem>> {
+    if paths.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let resolved =
+        resolve_content_scope_with_instance(instance_id, None, &state.pool)
+            .await?;
+
+    let path_set = paths.iter().map(String::as_str).collect::<HashSet<_>>();
+
+    let files = sqlite::content_rows::get_instance_files(
+        &resolved.instance.id,
+        &state.pool,
+    )
+    .await?
+    .into_iter()
+    .filter(|file| path_set.contains(file.relative_path.as_str()))
+    .collect::<Vec<_>>();
+
+    let files = content_projects_for_files(
+        &resolved,
+        files,
+        cache_behaviour,
+        state,
+        ContentFilter::All,
+        false,
+    )
+    .await?
+    .into_iter()
+    .collect::<Vec<_>>();
+
+    content_files_to_content_items(
+        &resolved.instance,
+        &files,
+        cache_behaviour,
+        state,
+    )
+    .await
+}
+
 pub(crate) async fn list_linked_modpack_content(
     instance_id: &str,
     content_set_id: Option<&str>,
@@ -1234,6 +1280,26 @@ async fn content_projects_for_scope(
     } else {
         sync_instance_content_files(&resolved.instance, state).await?
     };
+
+    content_projects_for_files(
+        resolved,
+        files,
+        cache_behaviour,
+        state,
+        filter,
+        refresh_file_updates,
+    )
+    .await
+}
+
+async fn content_projects_for_files(
+    resolved: &ResolvedContentScope,
+    files: Vec<InstanceFile>,
+    cache_behaviour: Option<CacheBehaviour>,
+    state: &State,
+    filter: ContentFilter<'_>,
+    refresh_file_updates: bool,
+) -> crate::Result<DashMap<String, ContentFile>> {
     let mut entry_maps =
         load_entry_maps(&resolved.content_set.id, &state.pool).await?;
     let hashes = files
