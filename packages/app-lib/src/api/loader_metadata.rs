@@ -487,19 +487,28 @@ fn forge_manifest(
 ) -> Manifest {
     let mut grouped: HashMap<String, Vec<LoaderVersion>> = HashMap::new();
     for full_version in metadata.versioning.versions.values {
-        let Some((game_version, loader_version)) = full_version.split_once('-')
+        let Some((game_version, raw_loader_version)) =
+            full_version.split_once('-')
         else {
             continue;
         };
+
+        let trailing_game_version = format!("-{game_version}");
+        let loader_version = raw_loader_version
+            .strip_suffix(&trailing_game_version)
+            .unwrap_or(raw_loader_version);
+
         let recommended = promotions
             .promos
             .get(&format!("{game_version}-recommended"));
         let stable =
             recommended.is_some_and(|promoted| promoted == loader_version);
+
         add_forge_loader_version(
             &mut grouped,
             game_version,
             loader_version,
+            &full_version,
             stable,
         );
     }
@@ -531,6 +540,7 @@ fn add_forge_loader_version(
     grouped: &mut HashMap<String, Vec<LoaderVersion>>,
     game_version: &str,
     loader_version: &str,
+    full_version: &str,
     stable: bool,
 ) {
     let loaders = grouped.entry(game_version.to_string()).or_default();
@@ -542,7 +552,6 @@ fn add_forge_loader_version(
         return;
     }
 
-    let full_version = format!("{game_version}-{loader_version}");
     loaders.push(LoaderVersion {
         id: loader_version.to_string(),
         url: format!(

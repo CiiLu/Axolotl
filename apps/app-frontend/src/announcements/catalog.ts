@@ -66,6 +66,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed installations on protected paths not requesting administrator permission when needed.',
 					'zh-CN': '修复在受保护路径安装时无法正确请求管理员权限的问题。',
 				},
+				{
+					'en-US': 'Canonicalized legacy Forge loader versions',
+					'zh-CN': '修复了旧版 Forge 加载器版本无法识别的问题',
+				},
 			],
 		},
 	},
