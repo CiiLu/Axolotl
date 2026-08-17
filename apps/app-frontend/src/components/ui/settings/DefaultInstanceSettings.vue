@@ -119,7 +119,7 @@ const { maxMemory, snapPoints } = (await useMemorySlider().catch(handleError)) a
 const gcContext = ref<GcContext | null>(null)
 
 async function updateGcContext() {
-	gcContext.value = await collectGcContext(settings.value.memory.maximum, 'fabric')
+	gcContext.value = await collectGcContext(settings.value.memory.maximum, null, null, 0)
 }
 
 await updateGcContext()
