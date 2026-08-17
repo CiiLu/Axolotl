@@ -44,6 +44,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Added built-in Terracotta update checks and one-click updates when multiplayer is not running.',
+					'zh-CN': '新增陶瓦联机内置更新检查，并可在服务停止时一键更新。',
+				},
+				{
+					'en-US':
 						'Added CurseForge map browsing and installation into existing instances, including recovery for maps that require a manual ZIP download.',
 					'zh-CN':
 						'新增 CurseForge 地图浏览与安装功能，可直接安装到已有实例，并支持需要手动下载 ZIP 的地图恢复流程。',

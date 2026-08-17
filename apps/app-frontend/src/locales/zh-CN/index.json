@@ -5939,6 +5939,12 @@
 	"app.multiplayer.download-terracotta": {
 		"message": "下载陶瓦联机"
 	},
+	"app.multiplayer.terracotta.update": {
+		"message": "更新陶瓦联机"
+	},
+	"app.multiplayer.terracotta.update-available": {
+		"message": "陶瓦联机 {version} 已可安装。"
+	},
 	"app.multiplayer.status.downloading": {
 		"message": "下载中..."
 	},

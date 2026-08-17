@@ -4514,6 +4514,12 @@
 	"app.multiplayer.download-terracotta": {
 		"message": "Download Terracotta"
 	},
+	"app.multiplayer.terracotta.update": {
+		"message": "Update Terracotta"
+	},
+	"app.multiplayer.terracotta.update-available": {
+		"message": "Terracotta {version} is ready to install."
+	},
 	"app.multiplayer.error.install": {
 		"message": "Installation error"
 	},
