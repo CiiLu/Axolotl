@@ -1991,8 +1991,17 @@
 	"app.instance.confirm-delete.delete-button": {
 		"message": "Delete instance"
 	},
+	"app.instance.confirm-delete.batch-delete-button": {
+		"message": "Delete {count, plural, one {# instance} other {# instances}}"
+	},
 	"app.instance.confirm-delete.header": {
 		"message": "Delete instance"
+	},
+	"app.instance.confirm-delete.batch-header": {
+		"message": "Delete instances"
+	},
+	"app.instance.confirm-delete.batch-admonition-body": {
+		"message": "{count, plural, one {# instance} other {# instances}} will be permanently deleted, including worlds, configs, and all installed content."
 	},
 	"app.instance.confirm-delete.symlink-warning": {
 		"message": "This is a shared instance linked to \"{path}\". Only the link will be removed; the original files will not be deleted."

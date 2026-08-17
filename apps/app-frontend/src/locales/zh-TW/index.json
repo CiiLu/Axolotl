@@ -941,8 +941,17 @@
 	"app.instance.confirm-delete.delete-button": {
 		"message": "刪除實例"
 	},
+	"app.instance.confirm-delete.batch-delete-button": {
+		"message": "刪除 {count, plural, other {#}} 個實例"
+	},
 	"app.instance.confirm-delete.header": {
 		"message": "刪除實例"
+	},
+	"app.instance.confirm-delete.batch-header": {
+		"message": "刪除實例"
+	},
+	"app.instance.confirm-delete.batch-admonition-body": {
+		"message": "將永久刪除 {count, plural, other {#}} 個實例，包括存檔、設定和所有已安裝內容。"
 	},
 	"app.instance.copy-links": {
 		"message": "複製連結"

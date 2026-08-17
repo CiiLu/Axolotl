@@ -100,6 +100,7 @@ const props = defineProps({
 const instanceOptions = ref(null)
 const instanceComponents = ref(null)
 const currentDeleteInstance = ref(null)
+const batchDeleteCount = ref(0)
 const confirmModal = ref(null)
 const search = ref('')
 
@@ -121,6 +122,7 @@ async function deleteInstance() {
 		)
 		await remove(currentDeleteInstance.value.id).catch(handleError)
 	}
+	batchDeleteCount.value = 0
 }
 
 async function duplicateInstance(p) {
@@ -267,6 +269,22 @@ function handleCheckboxClick(instanceId) {
 
 function openBatchEdit() {
 	batchEditModal.value?.show()
+}
+
+const batchDeleteConfirmModal = ref(null)
+
+function openBatchDelete() {
+	batchDeleteCount.value = selectedInstanceIds.value.size
+	batchDeleteConfirmModal.value?.show()
+}
+
+async function batchDeleteInstances() {
+	for (const id of selectedInstanceIds.value) {
+		instanceComponents.value = instanceComponents.value.filter((x) => x.instance.id !== id)
+		await remove(id).catch(handleError)
+	}
+	selectedInstanceIds.value.clear()
+	selectMode.value = false
 }
 
 const visibleInstanceIds = computed(() => {
@@ -416,7 +434,13 @@ function onBatchEditApplied() {
 	<ConfirmDeleteInstanceModal
 		ref="confirmModal"
 		:symlink-target="currentDeleteInstance?.symlink_target"
-		@delete="deleteInstance"
+		:count="batchDeleteCount"
+		@delete="batchDeleteCount > 0 ? batchDeleteInstances() : deleteInstance()"
+	/>
+	<ConfirmDeleteInstanceModal
+		ref="batchDeleteConfirmModal"
+		:count="selectedInstanceIds.size"
+		@delete="batchDeleteInstances"
 	/>
 	<BatchEditGroupsModal
 		ref="batchEditModal"
@@ -440,14 +464,15 @@ function onBatchEditApplied() {
 				<span>{{ formatMessage(messages.editGroups) }}</span>
 			</button>
 		</ButtonStyled>
+		<ButtonStyled color="red" type="transparent">
+			<button type="button" @click="openBatchDelete">
+				<TrashIcon />
+				<span class="bar-label">{{ formatMessage(commonMessages.deleteLabel) }}</span>
+			</button>
+		</ButtonStyled>
 		<div class="ml-auto" />
 		<ButtonStyled type="transparent">
-			<button
-				v-tooltip="formatMessage(commonMessages.clearButton)"
-				class="!text-primary"
-				type="button"
-				@click="toggleSelectMode"
-			>
+			<button class="!text-primary" type="button" @click="toggleSelectMode">
 				<XIcon class="hidden cq-show-icon" />
 				<span class="bar-label">{{ formatMessage(commonMessages.clearButton) }}</span>
 			</button>
