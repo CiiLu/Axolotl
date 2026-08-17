@@ -8135,17 +8135,17 @@ mod tests {
     }
 
     #[test]
-    fn curseforge_routes_include_mirror_and_official_fallback() {
+    fn curseforge_routes_stay_official_without_mirrors() {
         let routes = resolve_download_routes_for(
             "https://api.curseforge.com/v1/mods/search",
             ResourceClass::CurseForge,
             crate::state::DownloadSourceMode::MirrorPreferred,
         );
-        assert_eq!(routes.len(), 2);
-        assert!(routes[0].is_mirror);
-        assert!(!routes[0].allow_sensitive_headers);
-        assert_eq!(routes[1].proxy, ProxyPolicy::System);
-        assert!(routes[1].allow_sensitive_headers);
+        assert_eq!(routes.len(), 1);
+        assert_eq!(routes[0].source, DownloadRouteSource::Official);
+        assert!(!routes[0].is_mirror);
+        assert!(routes[0].allow_sensitive_headers);
+        assert_eq!(routes[0].proxy, ProxyPolicy::System);
     }
 
     #[test]
