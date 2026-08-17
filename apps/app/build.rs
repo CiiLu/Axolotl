@@ -311,6 +311,7 @@ fn main() {
                         "instance_get_installed_project_ids",
                         "instance_get_install_candidates",
                         "instance_content",
+                        "instance_get_content_items_by_paths",
                         "instance_get_content_items",
                         "instance_get_content_snapshot",
                         "instance_refresh_content",

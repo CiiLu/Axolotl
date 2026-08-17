@@ -61,9 +61,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			changed: [
 				{
 					'en-US':
-						'Improved Content tab loading for large modpacks by using indexed local content until an explicit refresh.',
-					'zh-CN':
-						'优化大型整合包的内容页加载，常规打开会优先使用已索引的本地内容，完整扫描仅在手动刷新时进行。',
+						'Optimized the content page loading for large integration packs, opening now will perform lazy loading updates.',
+					'zh-CN': '优化大型整合包的内容页加载，打开现在会进行懒加载更新。',
 				},
 				{
 					'en-US':
