@@ -97,6 +97,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Canonicalized legacy Forge loader versions',
 					'zh-CN': '修复了旧版 Forge 加载器版本无法识别的问题',
 				},
+				{
+					'en-US':
+						'Fixed launcher updates installing to the previous directory after the launcher was moved.',
+					'zh-CN': '修复移动启动器目录后自动更新仍安装到旧目录的问题。',
+				},
 			],
 		},
 	},
