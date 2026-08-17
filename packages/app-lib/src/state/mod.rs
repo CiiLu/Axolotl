@@ -636,10 +636,8 @@ impl State {
             .store(settings.minecraft_metadata_source as u8, Ordering::Relaxed);
         self.minecraft_file_source
             .store(settings.minecraft_file_source as u8, Ordering::Relaxed);
-        // Modrinth content always uses official sources; the setting is
-        // persisted only for compatibility and is never honoured at runtime.
         self.modrinth_source
-            .store(DownloadSourceMode::OfficialOnly as u8, Ordering::Relaxed);
+            .store(settings.modrinth_source as u8, Ordering::Relaxed);
         self.curseforge_source
             .store(settings.curseforge_source as u8, Ordering::Relaxed);
         self.bypass_curseforge_download_restrictions.store(
@@ -855,9 +853,7 @@ impl State {
             minecraft_file_source: AtomicU8::new(
                 settings.minecraft_file_source as u8,
             ),
-            modrinth_source: AtomicU8::new(
-                DownloadSourceMode::OfficialOnly as u8,
-            ),
+            modrinth_source: AtomicU8::new(settings.modrinth_source as u8),
             curseforge_source: AtomicU8::new(settings.curseforge_source as u8),
             bypass_curseforge_download_restrictions: AtomicBool::new(
                 settings.bypass_curseforge_download_restrictions,
@@ -933,7 +929,7 @@ pub(crate) async fn test_state(
         api_semaphore: FetchSemaphore(Semaphore::new(8)),
         minecraft_metadata_source: AtomicU8::new(0),
         minecraft_file_source: AtomicU8::new(0),
-        modrinth_source: AtomicU8::new(DownloadSourceMode::OfficialOnly as u8),
+        modrinth_source: AtomicU8::new(0),
         curseforge_source: AtomicU8::new(0),
         bypass_curseforge_download_restrictions: AtomicBool::new(true),
         mojang_auth_use_mirror: AtomicBool::new(false),

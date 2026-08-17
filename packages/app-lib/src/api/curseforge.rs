@@ -6072,16 +6072,16 @@ fn curseforge_file_page_url(
 }
 
 fn validate_cdn_url(url: &reqwest::Url) -> crate::Result<()> {
-    let host = url.host_str().unwrap_or_default().to_ascii_lowercase();
     #[cfg(debug_assertions)]
     if url.scheme() == "http"
-        && matches!(host.as_str(), "127.0.0.1" | "localhost")
+        && matches!(
+            url.host_str().unwrap_or_default().to_ascii_lowercase().as_str(),
+            "127.0.0.1" | "localhost"
+        )
     {
         return Ok(());
     }
-    if url.scheme() != "https"
-        || (host != "mod.mcimirror.top" && !is_forge_cdn_url(url))
-    {
+    if url.scheme() != "https" || !is_forge_cdn_url(url) {
         return Err(ErrorKind::InputError(
             "CurseForge returned a download URL outside its CDN".to_string(),
         )
@@ -6644,9 +6644,9 @@ fn request_routes_with_mode(
         use_api_key: route.allow_sensitive_headers,
         use_system_proxy: route.proxy == ProxyPolicy::System,
         source: match route.source {
-            DownloadRouteSource::Bmclapi | DownloadRouteSource::Mcim => {
-                RequestRouteSource::Mirror
-            }
+            DownloadRouteSource::Bmclapi
+            | DownloadRouteSource::Mcim
+            | DownloadRouteSource::Tianpao => RequestRouteSource::Mirror,
             DownloadRouteSource::Official | DownloadRouteSource::Alternate => {
                 RequestRouteSource::Official
             }
@@ -7871,14 +7871,18 @@ mod tests {
     }
 
     #[test]
-    fn mirror_first_requests_start_with_mirror() {
+    fn curseforge_requests_stay_official_even_when_mirror_is_requested() {
         let routes = request_routes(
             "/v1/mods/285109/description",
             MirrorPolicy::MirrorFirst,
         );
 
-        assert_eq!(routes[0].source, RequestRouteSource::Mirror);
-        assert_eq!(routes[1].source, RequestRouteSource::Official);
+        assert!(routes.len() >= 1);
+        assert!(
+            routes
+                .iter()
+                .all(|route| route.source == RequestRouteSource::Official)
+        );
     }
 
     #[test]

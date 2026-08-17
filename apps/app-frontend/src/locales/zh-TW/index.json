@@ -1758,7 +1758,7 @@
 		"message": "CurseForge 服務"
 	},
 	"app.settings.resources.curseforge-mirror-description": {
-		"message": "使用 MCIM 加速 CurseForge API 請求與檔案下載。"
+		"message": "CurseForge API 請求與檔案下載。"
 	},
 	"app.settings.resources.source.official-preferred": {
 		"message": "優先官方來源"
@@ -1771,6 +1771,9 @@
 	},
 	"app.settings.resources.source.mcim": {
 		"message": "MCIM 鏡像"
+	},
+	"app.settings.resources.source.tianpao": {
+		"message": "Tianpao 鏡像"
 	},
 	"app.settings.resources.maximum-downloads": {
 		"message": "最大同時下載數"
@@ -3263,6 +3266,12 @@
 	"app.settings.resources.minecraft-file-source-description": {
 		"message": "遊戲文件、資源、依賴庫、模組載入器和 Java 運行時。"
 	},
+	"app.settings.resources.modrinth-mirror": {
+		"message": "Modrinth"
+	},
+	"app.settings.resources.modrinth-mirror-description": {
+		"message": "Modrinth 檔案下載。"
+	},
 	"app.settings.resources.concurrency.manual": {
 		"message": "手動"
 	},
@@ -3334,6 +3343,9 @@
 	},
 	"app.downloads.source.mcim": {
 		"message": "MCIM 鏡像"
+	},
+	"app.downloads.source.tianpao": {
+		"message": "Tianpao 鏡像"
 	},
 	"app.downloads.source.alternate": {
 		"message": "備用來源"

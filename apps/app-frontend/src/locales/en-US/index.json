@@ -1166,6 +1166,9 @@
 	"app.downloads.source.mcim": {
 		"message": "MCIM"
 	},
+	"app.downloads.source.tianpao": {
+		"message": "Tian pao"
+	},
 	"app.downloads.source.official": {
 		"message": "Official"
 	},
@@ -5456,6 +5459,12 @@
 	"app.settings.resources.minecraft-metadata-source-description": {
 		"message": "Version manifests and metadata for Minecraft and supported mod loaders."
 	},
+	"app.settings.resources.modrinth-mirror": {
+		"message": "Modrinth"
+	},
+	"app.settings.resources.modrinth-mirror-description": {
+		"message": "Modrinth file downloads."
+	},
 	"app.settings.resources.missing-content-auto-import": {
 		"message": "Automatically import missing modpack files"
 	},
@@ -5500,6 +5509,9 @@
 	},
 	"app.settings.resources.source.mcim": {
 		"message": "Prefer MCIM"
+	},
+	"app.settings.resources.source.tianpao": {
+		"message": "Prefer Tianpao"
 	},
 	"app.settings.resources.source.mojang-mirror-preferred": {
 		"message": "Prefer Fallen-Proxy"
