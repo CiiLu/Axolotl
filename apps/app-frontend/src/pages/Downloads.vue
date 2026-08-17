@@ -798,11 +798,11 @@ function jobPercent(job: InstallJobSnapshot) {
 	if (job.status === 'waiting_for_user') {
 		const total = totalRequiredFiles(job)
 		if (!total) return 0
-		return Math.min(99, Math.floor((completedRequiredFiles(job) / total) * 100))
+		return Math.min(99, (completedRequiredFiles(job) / total) * 100)
 	}
 	const progress = effectiveInstallProgress(job)
 	if (!hasDeterminateInstallProgress(progress)) return 0
-	return Math.min(99, Math.max(0, Math.floor((progress.current / progress.total) * 100)))
+	return Math.min(99, Math.max(0, (progress.current / progress.total) * 100))
 }
 
 function hasDeterminateProgress(job: InstallJobSnapshot) {
@@ -986,7 +986,7 @@ async function openManualDownload(item: DownloadItem) {
 
 function legacyPercent(bar: LoadingBar) {
 	if (!bar.total) return 0
-	return Math.min(100, Math.max(0, Math.round(((bar.current ?? 0) / bar.total) * 100)))
+	return Math.min(100, Math.max(0, ((bar.current ?? 0) / bar.total) * 100))
 }
 
 function formatDate(value: string) {
