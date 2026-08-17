@@ -59,6 +59,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'发现内容现在会记住上次浏览的内容类型，重启后仍会打开对应的模组、整合包、资源包、数据包或光影包。',
 				},
+				{
+					'en-US': 'The launcher now avoids localizing physical mod filenames',
+					'zh-CN': '启动器现在不会对模组文件名进行本地化',
+				},
 			],
 			fixed: [
 				{

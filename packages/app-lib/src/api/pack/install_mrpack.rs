@@ -295,8 +295,8 @@ async fn resolve_chinese_titles_by_sha1(
 impl ModpackContentInstallContext {
     /// Picks the instance-relative install path for a pack file. Paths already
     /// recorded for this instance win so repairs and locale switches never
-    /// produce duplicate files; new content files get a `[中文名]` prefix when
-    /// Chinese file naming is active.
+    /// produce duplicate files; new non-mod content may get a `[中文名]` prefix
+    /// when Chinese file naming is active. Mod files always keep manifest names.
     fn resolve_install_path(&self, file: &PackFile) -> String {
         let manifest_path = file.path.as_str();
         if let Some(existing) =
@@ -304,7 +304,13 @@ impl ModpackContentInstallContext {
         {
             return existing.clone();
         }
-        if ProjectType::get_from_parent_folder(manifest_path).is_none() {
+        let Some(project_type) =
+            ProjectType::get_from_parent_folder(manifest_path)
+        else {
+            return manifest_path.to_string();
+        };
+
+        if project_type == ProjectType::Mod {
             return manifest_path.to_string();
         }
         let Some(title) = file

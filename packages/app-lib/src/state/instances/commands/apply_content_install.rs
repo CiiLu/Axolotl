@@ -1051,12 +1051,15 @@ pub(crate) async fn add_downloaded_project_version(
         version_id,
     } = downloaded;
     let scope = resolve_content_scope(instance_id, None, state).await?;
-    let localized_candidate =
+    let localized_candidate = if project_type == ProjectType::Mod {
+        None
+    } else {
         modrinth_chinese_file_name_candidate(&project_id, &file_name, state)
             .await
             .map(|file_name| {
                 format!("{}/{}", project_type.get_folder(), file_name)
-            });
+            })
+    };
     let relative_path = resolve_content_install_relative_path(
         instance_id,
         format!("{}/{}", project_type.get_folder(), file_name),
