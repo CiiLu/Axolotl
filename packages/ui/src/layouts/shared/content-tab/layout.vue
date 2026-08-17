@@ -390,7 +390,7 @@ function mapToTableItem(item: ContentItem, group?: string): ContentCardTableItem
 		id,
 		group,
 		disabled:
-			isChanging(id) || ctx.isBusy.value || isBulkOperating.value || item.installing === true,
+			isChanging(id) || ctx.isBusy.value || item.installing === true,
 		disabledTooltip: ctx.isBusy.value
 			? (ctx.busyMessage?.value ?? null)
 			: (base.disabledTooltip ?? null),

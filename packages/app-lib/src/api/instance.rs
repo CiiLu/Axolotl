@@ -30,8 +30,8 @@ pub use self::lifecycle::{cache_icon, edit, edit_icon, remove};
 pub use self::paths::{get_full_path, get_mod_full_path};
 pub(crate) use self::projects::emit_content_changed;
 pub use self::projects::{
-    InstallProjectWithDependenciesRequest, add_project_from_path,
-    add_project_from_version, import_world_save,
+    ContentToggleResult, InstallProjectWithDependenciesRequest,
+    add_project_from_path, add_project_from_version, import_world_save,
     install_datapack_bytes_to_world, install_datapack_to_world,
     install_project_with_dependencies, preview_project_with_dependencies,
     preview_project_with_dependencies_for_target, queue_curseforge_content,
@@ -39,8 +39,9 @@ pub use self::projects::{
     remove_content_entry, remove_project, repair_managed_modrinth,
     restore_pack_member_default, rollback_project,
     switch_content_entry_version, switch_project_version_with_dependencies,
-    toggle_content_entry, toggle_disable_project, update_all_projects,
-    update_content_entry, update_managed_modrinth_version, update_project,
+    toggle_content_entries, toggle_content_entry, toggle_disable_project,
+    update_all_projects, update_content_entry, update_managed_modrinth_version,
+    update_project,
 };
 pub use self::run::{
     QuickPlayType, kill, run, run_with_extra_launch_args,

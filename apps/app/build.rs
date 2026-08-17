@@ -343,6 +343,7 @@ fn main() {
                         "instance_install_datapack_to_world_bytes",
                         "instance_toggle_disable_project",
                         "instance_toggle_content_entry",
+                        "instance_toggle_content_entries",
                         "instance_rollback_project",
                         "instance_remove_project",
                         "instance_remove_content_entry",

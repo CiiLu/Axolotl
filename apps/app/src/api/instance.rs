@@ -59,6 +59,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_install_datapack_to_world_bytes,
             instance_toggle_disable_project,
             instance_toggle_content_entry,
+            instance_toggle_content_entries,
             instance_rollback_project,
             instance_remove_project,
             instance_remove_content_entry,
@@ -862,6 +863,20 @@ pub async fn instance_toggle_content_entry(
     Ok(theseus::instance::toggle_content_entry(
         instance_id,
         content_id,
+        desired_enabled,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_toggle_content_entries(
+    instance_id: &str,
+    content_ids: Vec<String>,
+    desired_enabled: Option<bool>,
+) -> Result<Vec<theseus::instance::ContentToggleResult>> {
+    Ok(theseus::instance::toggle_content_entries(
+        instance_id,
+        content_ids,
         desired_enabled,
     )
     .await?)

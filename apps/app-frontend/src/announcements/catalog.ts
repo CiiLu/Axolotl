@@ -61,6 +61,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			changed: [
 				{
 					'en-US':
+						'Improved Content tab loading for large modpacks by using indexed local content until an explicit refresh.',
+					'zh-CN': '优化大型整合包的内容页加载，常规打开会优先使用已索引的本地内容，完整扫描仅在手动刷新时进行。',
+				},
+				{
+					'en-US':
+						'Batch enabling and disabling content now updates selected items together without repeatedly refreshing the entire list.',
+					'zh-CN': '批量启用或禁用内容现在会一次完成选中项更新，不再反复刷新整个列表。',
+				},
+				{
+					'en-US':
 						'Improved the right sidebar toggle with a slightly larger handle and smoother expand and collapse animation.',
 					'zh-CN': '优化右侧边栏切换按钮，增大手柄尺寸并使展开和收起动画更加平滑。',
 				},
@@ -82,6 +92,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			fixed: [
+				{
+					'en-US':
+						'Fixed CurseForge modpack metadata requests when opening the Content tab from cached content.',
+					'zh-CN': '修复从缓存打开内容页时仍会请求 CurseForge 整合包元数据的问题。',
+				},
 				{
 					'en-US':
 						'Fixed map browsing returning to shaders after restarting, and prevented downloaded maps from being duplicated in the regular content list.',
