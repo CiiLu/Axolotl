@@ -7,6 +7,7 @@ const MAX_REQUEST_BYTES = 64 * 1024
 const MAX_CONTEXT_OBJECT_BYTES = 16 * 1024
 const HARD_MAX_CONTEXTS_PER_DAY = 2_000
 const HARD_MAX_SAMPLES_PER_GROUP = 3
+const DETAIL_SAMPLES_PER_GROUP_PER_DAY = 2
 
 export interface Bindings {
 	DB: D1Database
@@ -19,6 +20,16 @@ export interface Bindings {
 
 type Variables = {
 	requestId: string
+}
+
+interface ErrorGroupKey {
+	day: string
+	fingerprint: string
+	appVersion: string
+	occurrenceCount: number
+	latestErrorType: string
+	latestMessage: string
+	hasSample: boolean
 }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -268,18 +279,17 @@ async function persistBatch(
 	const statements: D1PreparedStatement[] = [
 		db
 			.prepare(
-				`INSERT INTO installations (
+				`INSERT OR IGNORE INTO installations (
 					installation_hash, first_seen_at, last_seen_at,
 					first_seen_day, app_version, platform, arch
-				) VALUES (?, unixepoch(), unixepoch(), ?, ?, ?, ?)
-				ON CONFLICT(installation_hash) DO UPDATE SET
-					last_seen_at = excluded.last_seen_at,
-					app_version = excluded.app_version,
-					platform = excluded.platform,
-					arch = excluded.arch`,
+				) VALUES (?, unixepoch(), unixepoch(), ?, ?, ?, ?)`,
 			)
 			.bind(installationHash, acceptedDay, batch.app.version, batch.app.platform, batch.app.arch),
+		db.prepare('INSERT OR IGNORE INTO platforms (platform) VALUES (?)').bind(batch.app.platform),
 	]
+
+	const groups = new Map<string, ErrorGroupKey>()
+	const detailInserts: D1PreparedStatement[] = []
 
 	for (const event of batch.events) {
 		const day = eventDay(event)
@@ -294,14 +304,32 @@ async function persistBatch(
 			continue
 		}
 
-		statements.push(
+		const key = `${day}\u0000${event.fingerprint}\u0000${batch.app.version}`
+		const group = groups.get(key) ?? {
+			day,
+			fingerprint: event.fingerprint,
+			appVersion: batch.app.version,
+			occurrenceCount: 0,
+			latestErrorType: 'Unknown',
+			latestMessage: '',
+			hasSample: false,
+		}
+		group.occurrenceCount += event.occurrence_count
+		group.latestErrorType = event.error_type
+		group.latestMessage = event.message
+		if (objectKeys.has(event.event_id)) group.hasSample = true
+		groups.set(key, group)
+
+		detailInserts.push(
 			db
 				.prepare(
-					`INSERT OR IGNORE INTO error_reports (
-						event_id, installation_hash, day, occurred_at, fingerprint,
-						app_version, platform, arch, error_type, message,
-						occurrence_count, object_key, created_at
-					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())`,
+					`INSERT INTO error_reports (
+						event_id, installation_hash, day, occurred_at, fingerprint, app_version,
+						platform, arch, error_type, message, occurrence_count, object_key, created_at
+					)
+					SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch()
+					WHERE (SELECT COUNT(*) FROM error_reports
+						WHERE fingerprint = ? AND app_version = ? AND day = ?) < ?`,
 				)
 				.bind(
 					event.event_id,
@@ -316,10 +344,49 @@ async function persistBatch(
 					event.message,
 					event.occurrence_count,
 					objectKeys.get(event.event_id) ?? null,
+					event.fingerprint,
+					batch.app.version,
+					day,
+					DETAIL_SAMPLES_PER_GROUP_PER_DAY,
 				),
 		)
 	}
 
+	for (const group of groups.values()) {
+		statements.push(
+			db
+				.prepare(
+					`INSERT OR IGNORE INTO error_daily_installations (
+						day, fingerprint, app_version, installation_hash
+					) VALUES (?, ?, ?, ?)`,
+				)
+				.bind(group.day, group.fingerprint, group.appVersion, installationHash),
+			db
+				.prepare(
+					`INSERT INTO error_daily (
+						day, fingerprint, app_version, occurrence_count, installation_count,
+						latest_error_type, latest_message, has_sample
+					) VALUES (?, ?, ?, ?, (SELECT changes()), ?, ?, ?)
+					ON CONFLICT (day, fingerprint, app_version) DO UPDATE SET
+						occurrence_count = occurrence_count + excluded.occurrence_count,
+						installation_count = installation_count + (SELECT changes()),
+						latest_error_type = excluded.latest_error_type,
+						latest_message = excluded.latest_message,
+						has_sample = MAX(error_daily.has_sample, excluded.has_sample)`,
+				)
+				.bind(
+					group.day,
+					group.fingerprint,
+					group.appVersion,
+					group.occurrenceCount,
+					group.latestErrorType,
+					group.latestMessage,
+					group.hasSample ? 1 : 0,
+				),
+		)
+	}
+
+	statements.push(...detailInserts)
 	statements.push(
 		db
 			.prepare(
@@ -330,9 +397,145 @@ async function persistBatch(
 	await db.batch(statements)
 }
 
+function rangeStatStatements(
+	db: D1Database,
+	rangeDays: number,
+	start: string,
+	end: string,
+): D1PreparedStatement[] {
+	return [
+		db
+			.prepare(
+				`INSERT INTO error_range_stats (
+					range_days, fingerprint, app_version, first_seen, last_seen,
+					occurrence_count, installation_count, latest_error_type, latest_message,
+					has_sample
+				)
+				SELECT
+					?, ed.fingerprint, ed.app_version, MIN(ed.day), MAX(ed.day),
+					SUM(ed.occurrence_count), SUM(ed.installation_count),
+					COALESCE((SELECT eg.latest_error_type FROM error_groups eg
+						WHERE eg.fingerprint = ed.fingerprint AND eg.app_version = ed.app_version), 'Unknown'),
+					COALESCE((SELECT eg.latest_message FROM error_groups eg
+						WHERE eg.fingerprint = ed.fingerprint AND eg.app_version = ed.app_version), ''),
+					CASE WHEN EXISTS (SELECT 1 FROM error_groups eg
+						WHERE eg.fingerprint = ed.fingerprint AND eg.app_version = ed.app_version
+							AND eg.sample_object_key IS NOT NULL) THEN 1 ELSE 0 END
+				FROM error_daily ed
+				WHERE ed.day >= ? AND ed.day <= ?
+				GROUP BY ed.fingerprint, ed.app_version`,
+			)
+			.bind(rangeDays, start, end),
+	]
+}
+
 async function runMaintenance(db: D1Database): Promise<void> {
-	const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1_000).toISOString().slice(0, 10)
+	const now = new Date()
+	const yesterday = daysAgo(now, 1)
+	const dayMinus = (days: number) => daysAgo(now, days)
+
 	await db.batch([
+		db
+			.prepare(
+				`UPDATE error_daily SET
+					installation_count = (
+						SELECT COUNT(*) FROM error_daily_installations edi
+						WHERE edi.day = error_daily.day
+							AND edi.fingerprint = error_daily.fingerprint
+							AND edi.app_version = error_daily.app_version
+					),
+					latest_error_type = COALESCE((
+						SELECT er.error_type FROM error_reports er
+						WHERE er.fingerprint = error_daily.fingerprint
+							AND er.app_version = error_daily.app_version
+						ORDER BY er.occurred_at DESC, er.event_id DESC LIMIT 1
+					), error_daily.latest_error_type),
+					latest_message = COALESCE((
+						SELECT er.message FROM error_reports er
+						WHERE er.fingerprint = error_daily.fingerprint
+							AND er.app_version = error_daily.app_version
+						ORDER BY er.occurred_at DESC, er.event_id DESC LIMIT 1
+					), error_daily.latest_message),
+					has_sample = CASE WHEN EXISTS (
+						SELECT 1 FROM error_context_reservations r
+						WHERE r.fingerprint = error_daily.fingerprint
+							AND r.app_version = error_daily.app_version
+					) THEN 1 ELSE error_daily.has_sample END
+				WHERE day = ?`,
+			)
+			.bind(yesterday),
+		db
+			.prepare(
+				`INSERT OR IGNORE INTO error_group_installations (
+					fingerprint, app_version, installation_hash, first_seen_day
+				)
+				SELECT fingerprint, app_version, installation_hash, ?
+				FROM error_daily_installations WHERE day = ?`,
+			)
+			.bind(yesterday, yesterday),
+		db
+			.prepare(
+				`UPDATE error_groups SET
+					last_seen_day = ?,
+					occurrence_count = occurrence_count + (
+						SELECT SUM(occurrence_count) FROM error_daily ed
+						WHERE ed.day = ? AND ed.fingerprint = error_groups.fingerprint
+							AND ed.app_version = error_groups.app_version
+					),
+					installation_count = (
+						SELECT COUNT(*) FROM error_group_installations gi
+						WHERE gi.fingerprint = error_groups.fingerprint
+							AND gi.app_version = error_groups.app_version
+					),
+					latest_error_type = (
+						SELECT er.error_type FROM error_reports er
+						WHERE er.fingerprint = error_groups.fingerprint
+							AND er.app_version = error_groups.app_version
+							AND er.day = ?
+						ORDER BY er.occurred_at DESC, er.event_id DESC LIMIT 1
+					),
+					latest_message = (
+						SELECT er.message FROM error_reports er
+						WHERE er.fingerprint = error_groups.fingerprint
+							AND er.app_version = error_groups.app_version
+							AND er.day = ?
+						ORDER BY er.occurred_at DESC, er.event_id DESC LIMIT 1
+					),
+					sample_object_key = COALESCE(error_groups.sample_object_key, (
+						SELECT r.object_key FROM error_context_reservations r
+						WHERE r.fingerprint = error_groups.fingerprint
+							AND r.app_version = error_groups.app_version
+						ORDER BY r.created_at ASC LIMIT 1
+					))
+				WHERE EXISTS (
+					SELECT 1 FROM error_daily ed
+					WHERE ed.day = ? AND ed.fingerprint = error_groups.fingerprint
+						AND ed.app_version = error_groups.app_version
+				)`,
+			)
+			.bind(yesterday, yesterday, yesterday, yesterday, yesterday),
+		db
+			.prepare(
+				`INSERT OR IGNORE INTO error_groups (
+					fingerprint, app_version, first_seen_day, last_seen_day, occurrence_count,
+					installation_count, latest_error_type, latest_message, sample_object_key
+				)
+				SELECT
+					ed.fingerprint, ed.app_version, ?, ?, ed.occurrence_count,
+					(SELECT COUNT(*) FROM error_group_installations gi
+						WHERE gi.fingerprint = ed.fingerprint AND gi.app_version = ed.app_version),
+					COALESCE((SELECT er.error_type FROM error_reports er
+						WHERE er.fingerprint = ed.fingerprint AND er.app_version = ed.app_version
+						ORDER BY er.occurred_at DESC, er.event_id DESC LIMIT 1), 'Unknown'),
+					COALESCE((SELECT er.message FROM error_reports er
+						WHERE er.fingerprint = ed.fingerprint AND er.app_version = ed.app_version
+						ORDER BY er.occurred_at DESC, er.event_id DESC LIMIT 1), ''),
+					(SELECT r.object_key FROM error_context_reservations r
+						WHERE r.fingerprint = ed.fingerprint AND r.app_version = ed.app_version
+						ORDER BY r.created_at ASC LIMIT 1)
+				FROM error_daily ed WHERE ed.day = ?`,
+			)
+			.bind(yesterday, yesterday, yesterday),
 		db
 			.prepare(
 				`INSERT INTO daily_totals (
@@ -341,16 +544,53 @@ async function runMaintenance(db: D1Database): Promise<void> {
 					?,
 					(SELECT COUNT(*) FROM installations WHERE first_seen_day = ?),
 					(SELECT COUNT(*) FROM daily_active WHERE day = ?),
-					(SELECT COALESCE(SUM(occurrence_count), 0) FROM error_reports WHERE day = ?),
+					(SELECT COALESCE(SUM(occurrence_count), 0) FROM error_daily WHERE day = ?),
 					(SELECT COUNT(*) FROM error_daily WHERE day = ?)
 				)
-				ON CONFLICT(day) DO UPDATE SET
+				ON CONFLICT (day) DO UPDATE SET
 					new_installations = excluded.new_installations,
 					active_installations = excluded.active_installations,
 					error_occurrences = excluded.error_occurrences,
 					distinct_error_groups = excluded.distinct_error_groups`,
 			)
 			.bind(yesterday, yesterday, yesterday, yesterday, yesterday),
+		db.prepare('DELETE FROM error_range_stats'),
+		...rangeStatStatements(db, 7, dayMinus(7), yesterday),
+		...rangeStatStatements(db, 30, dayMinus(30), yesterday),
+		...rangeStatStatements(db, 90, dayMinus(90), yesterday),
+		db
+			.prepare(
+				`DELETE FROM wau_seen WHERE NOT EXISTS (
+					SELECT 1 FROM daily_active da
+					WHERE da.installation_hash = wau_seen.installation_hash
+						AND da.day >= ?
+				)`,
+			)
+			.bind(dayMinus(6)),
+		db
+			.prepare(
+				`DELETE FROM mau_seen WHERE NOT EXISTS (
+					SELECT 1 FROM daily_active da
+					WHERE da.installation_hash = mau_seen.installation_hash
+						AND da.day >= ?
+				)`,
+			)
+			.bind(dayMinus(29)),
+		db
+			.prepare(
+				`DELETE FROM platforms WHERE NOT EXISTS (
+					SELECT 1 FROM error_reports er
+					WHERE er.platform = platforms.platform AND er.day >= ?
+				)`,
+			)
+			.bind(dayMinus(29)),
+		db.prepare(
+			`DELETE FROM error_group_installations WHERE NOT EXISTS (
+				SELECT 1 FROM error_groups eg
+				WHERE eg.fingerprint = error_group_installations.fingerprint
+					AND eg.app_version = error_group_installations.app_version
+			)`,
+		),
 		db.prepare("DELETE FROM daily_active WHERE day < date('now', '-35 days')"),
 		db.prepare("DELETE FROM error_reports WHERE day < date('now', '-30 days')"),
 		db.prepare("DELETE FROM error_context_reservations WHERE day < date('now', '-30 days')"),
@@ -359,7 +599,15 @@ async function runMaintenance(db: D1Database): Promise<void> {
 		db.prepare("DELETE FROM error_daily WHERE day < date('now', '-365 days')"),
 		db.prepare("DELETE FROM error_groups WHERE last_seen_day < date('now', '-365 days')"),
 		db.prepare("DELETE FROM accepted_batches WHERE accepted_at < unixepoch('now', '-8 days')"),
+		db.prepare("DELETE FROM error_daily_installations WHERE day < date('now', '-1 days')"),
+		db.prepare("DELETE FROM daily_active_dims WHERE day < date('now', '-365 days')"),
 	])
+}
+
+function daysAgo(now: Date, days: number): string {
+	const date = new Date(now)
+	date.setUTCDate(date.getUTCDate() - days)
+	return date.toISOString().slice(0, 10)
 }
 
 function positiveInteger(value: string | undefined, fallback: number): number {

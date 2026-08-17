@@ -49,6 +49,23 @@ async function seed(): Promise<void> {
 			VALUES ('fixture-event-a', '2026-08-14', 'fixture-render-01', '9.4.0-fixture',
 			'errors/2026-08-14/fixture-render-01/fixture-event-a.json.gz', 1)`,
 		),
+		env.DB.prepare(
+			`INSERT INTO error_daily
+			(day, fingerprint, app_version, occurrence_count, installation_count,
+			latest_error_type, latest_message, has_sample)
+			VALUES ('2026-08-14', 'fixture-render-01', '9.4.0-fixture', 4, 0,
+			'RenderFixtureError', 'Fixture render failure', 1)`,
+		),
+		env.DB.prepare(
+			`INSERT INTO error_daily_installations
+			(day, fingerprint, app_version, installation_hash)
+			VALUES ('2026-08-14', 'fixture-render-01', '9.4.0-fixture', 'fixture-hash-a')`,
+		),
+		env.DB.prepare(
+			`INSERT INTO daily_totals (day, new_installations, active_installations, error_occurrences, distinct_error_groups)
+			VALUES ('2026-08-13', 1, 0, 0, 0)`,
+		),
+		env.DB.prepare(`INSERT INTO platforms (platform) VALUES ('windows-fixture')`),
 	])
 	await env.ERROR_CONTEXTS.put(
 		'errors/2026-08-14/fixture-render-01/fixture-event-a.json.gz',
@@ -136,6 +153,7 @@ function api(analytics?: 'configured' | 'partial' | 'unconfigured'): D1Telemetry
 		healthUrl: 'https://fixture.invalid/health',
 		fetcher,
 		now: () => NOW,
+		cacheTtlMs: 0,
 		analytics:
 			analytics === 'unconfigured'
 				? undefined
