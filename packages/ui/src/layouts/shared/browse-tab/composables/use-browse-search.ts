@@ -14,7 +14,7 @@ import type {
 import { LOADER_FILTER_TYPES, useSearch } from '#ui/utils/search'
 import { useServerSearch } from '#ui/utils/server-search'
 
-import type { BrowseSearchResponse } from '../types'
+import type { BrowseDisplayMode, BrowseSearchResponse } from '../types'
 
 export interface UseBrowseSearchOptions {
 	projectType: Ref<string>
@@ -27,7 +27,7 @@ export interface UseBrowseSearchOptions {
 	persistentQueryParams: string[]
 	getExtraQueryParams?: () => Record<string, string | undefined>
 	maxResultsOptions?: ComputedRef<number[]>
-	displayMode?: Ref<'list' | 'grid' | 'gallery'> | ComputedRef<'list' | 'grid' | 'gallery'>
+	displayMode?: Ref<BrowseDisplayMode> | ComputedRef<BrowseDisplayMode>
 	initialSearchResponse?: BrowseSearchResponse
 }
 
@@ -56,7 +56,7 @@ export interface BrowseSearchState {
 	currentPage: Ref<number>
 
 	isServerType: ComputedRef<boolean>
-	effectiveLayout: ComputedRef<'list' | 'grid'>
+	effectiveLayout: ComputedRef<'list' | 'compact' | 'grid'>
 	deprioritizedTags: ComputedRef<string[]>
 	excludeLoaders: ComputedRef<boolean>
 
@@ -138,10 +138,12 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 	})
 
 	const effectiveDisplayMode = computed(() => options.displayMode?.value ?? 'list')
-	const effectiveLayout = computed<'list' | 'grid'>(() =>
+	const effectiveLayout = computed<'list' | 'compact' | 'grid'>(() =>
 		effectiveDisplayMode.value === 'grid' || effectiveDisplayMode.value === 'gallery'
 			? 'grid'
-			: 'list',
+			: effectiveDisplayMode.value === 'compact'
+				? 'compact'
+				: 'list',
 	)
 
 	const selectedFilterTags = computed(() =>

@@ -46,6 +46,26 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Long-press instance cards to enable batch editing of custom groups',
 					'zh-CN': '长按实例卡片实现批量编辑自定义分组功能',
 				},
+				{
+					'en-US':
+						'Added a compact list view to Discover, showing more projects while keeping metadata and install actions aligned.',
+					'zh-CN': '发现内容新增紧凑列表视图，能在同一屏内显示更多项目并保持元数据与安装操作对齐。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Discover now reopens the last content type you browsed, including mods, modpacks, resource packs, data packs, and shaders.',
+					'zh-CN':
+						'发现内容现在会记住上次浏览的内容类型，重启后仍会打开对应的模组、整合包、资源包、数据包或光影包。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed installations on protected paths not requesting administrator permission when needed.',
+					'zh-CN': '修复在受保护路径安装时无法正确请求管理员权限的问题。',
+				},
 			],
 		},
 	},

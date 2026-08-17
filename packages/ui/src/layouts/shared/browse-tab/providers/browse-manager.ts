@@ -6,6 +6,8 @@ import { createContext } from '#ui/providers/create-context'
 import type { FilterType, FilterValue, SortType, Tags } from '#ui/utils/search'
 
 import type {
+	BrowseDisplayMode,
+	BrowseDisplayModeOption,
 	BrowseInstallContext,
 	BrowseSearchResponse,
 	CardAction,
@@ -72,8 +74,10 @@ export interface BrowseManagerContext {
 	advancedFiltersCollapsed?: Ref<boolean>
 	onInstalled?: (projectId: string) => void
 
-	displayMode?: Ref<'list' | 'grid' | 'gallery'> | ComputedRef<'list' | 'grid' | 'gallery'>
-	cycleDisplayMode?: () => void
+	displayMode?: Ref<BrowseDisplayMode> | ComputedRef<BrowseDisplayMode>
+	displayModeOptions?: ComputedRef<BrowseDisplayModeOption[]>
+	displayModeTooltip?: ComputedRef<string>
+	setDisplayMode?: (mode: BrowseDisplayMode) => void
 	maxResultsOptions?: ComputedRef<number[]>
 
 	serverPings?: Ref<Record<string, number | undefined>>

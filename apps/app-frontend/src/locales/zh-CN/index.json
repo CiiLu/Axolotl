@@ -350,6 +350,9 @@
 	"app.browse.add-to-instance": {
 		"message": "添加到实例"
 	},
+	"app.browse.add": {
+		"message": "添加"
+	},
 	"app.browse.add-to-instance-name": {
 		"message": "添加到 {instanceName}"
 	},
@@ -367,6 +370,18 @@
 	},
 	"app.browse.discover-servers": {
 		"message": "发现服务器"
+	},
+	"app.browse.display-mode.compact-list": {
+		"message": "紧凑列表"
+	},
+	"app.browse.display-mode.grid": {
+		"message": "网格"
+	},
+	"app.browse.display-mode.list": {
+		"message": "列表"
+	},
+	"app.browse.display-mode.switch": {
+		"message": "切换视图"
 	},
 	"app.browse.hide-added-servers": {
 		"message": "隐藏已添加的服务器"

@@ -83,8 +83,8 @@ Launcher release announcements are bundled with `apps/app-frontend` and shown af
 - Add ordinary release announcements only to `apps/app-frontend/src/announcements/catalog.ts`; adding an entry must not require changes to `App.vue`, the updater, or the announcement components.
 - Do not edit the announcement catalog unless the user explicitly asks for an update log. After completing each round of changes, ask whether the user wants an update log for that round.
 - Ask the user for the exact launcher version before writing the announcement unless they already provided it. Use that version exactly; do not query the remote or infer a version from local metadata to choose one automatically.
-- Never append new changes to an announcement that has already been published remotely.
-- Give every release a new immutable ID in the form `launcher-<version>`, use the exact launcher version and ISO `YYYY-MM-DD` publication date, and place the newest release first. Never reuse an ID, edit a published entry, or change its meaning.
+- A catalog entry remains editable until its matching release tag has been published to `origin`. Before changing an existing entry, query both `refs/tags/v<version>` and `refs/tags/<version>` with `git ls-remote --tags --refs origin`; when either exists, the release is published and the entry must not change.
+- Give every release an ID in the form `launcher-<version>`, use the exact launcher version and ISO `YYYY-MM-DD` publication date, and place the newest release first. An unpublished entry may be amended to include its release changes. Once its release tag is published, never reuse its ID, edit the entry, or change its meaning.
 - Use only the Keep a Changelog categories `added`, `changed`, `deprecated`, `removed`, `fixed`, and `security`. Omit empty categories.
 - Provide both `en-US` and `zh-CN` text for the title and every change. Other locales intentionally fall back to English; do not copy announcement bodies into every locale JSON file.
 - Keep entries concise and user-facing. Describe observable features, behavior changes, removals, fixes, and security impact rather than implementation details.

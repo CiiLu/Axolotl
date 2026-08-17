@@ -596,6 +596,9 @@
 	"app.browse.add-to-instance": {
 		"message": "Add to instance"
 	},
+	"app.browse.add": {
+		"message": "Add"
+	},
 	"app.browse.add-to-instance-name": {
 		"message": "Add to {instanceName}"
 	},
@@ -613,6 +616,18 @@
 	},
 	"app.browse.discover-servers": {
 		"message": "Discover servers"
+	},
+	"app.browse.display-mode.compact-list": {
+		"message": "Compact list"
+	},
+	"app.browse.display-mode.grid": {
+		"message": "Grid"
+	},
+	"app.browse.display-mode.list": {
+		"message": "List"
+	},
+	"app.browse.display-mode.switch": {
+		"message": "Switch view"
 	},
 	"app.browse.hide-added-servers": {
 		"message": "Hide servers already added"

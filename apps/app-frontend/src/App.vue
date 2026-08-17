@@ -138,7 +138,9 @@ import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.t
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import {
 	get as getSettings,
+	getLastBrowseContentProjectType,
 	getPrivacySettings,
+	isBrowseContentProjectType,
 	getUpdateSource,
 	type PrivacySettings,
 	savePrivacySettings,
@@ -194,6 +196,21 @@ const onSkinsPage = computed(() => route.path === '/skins')
 const onSchematicWorkshopPage = computed(() => route.path === '/lab/schematic-preview')
 const isSchematicFile = (path: string) => /\.(litematic|schematic|schem)$/i.test(path)
 const APP_LEFT_NAV_WIDTH = '4rem'
+
+const discoverContentPath = computed(() => {
+	const projectType = route.params.projectType
+	if (
+		!route.query.i &&
+		!route.query.sid &&
+		!route.query.wid &&
+		typeof projectType === 'string' &&
+		isBrowseContentProjectType(projectType)
+	) {
+		return `/browse/${projectType}`
+	}
+
+	return `/browse/${getLastBrowseContentProjectType()}`
+})
 
 function getPageTransitionKey(route: RouteLocationNormalizedLoaded) {
 	const transitionGroup = route.meta.pageTransitionGroup
@@ -832,7 +849,7 @@ async function setupApp() {
 
 	const defaultPageRoutes = {
 		Home: '/',
-		DiscoverContent: '/browse/modpack',
+		DiscoverContent: `/browse/${getLastBrowseContentProjectType()}`,
 		Library: '/library',
 	}
 	const defaultPageRoute = offline.value ? '/library' : defaultPageRoutes[default_page]
@@ -2965,7 +2982,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				<NavButton
 					v-tooltip.right="formatMessage(messages.discoverContent)"
 					data-onboarding-id="nav-discover"
-					to="/browse/modpack"
+					:to="discoverContentPath"
 					:disabled="offline"
 					:is-primary="() => route.path.startsWith('/browse') && !route.query.i"
 					:is-subpage="(route) => route.path.startsWith('/project') && !route.query.i"

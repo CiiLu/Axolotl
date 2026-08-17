@@ -8,7 +8,75 @@
 				@mouseleave="$emit('mouseleave')"
 			></AutoLink>
 		</template>
-		<div v-if="layout === 'grid'" :class="[baseCardStyle, 'flex flex-col']">
+		<div v-if="layout === 'compact'" :class="[compactCardStyle, 'project-card--compact']">
+			<Avatar :src="iconUrl" size="48px" class="ease-brightness" no-shadow />
+			<div class="project-card--compact__identity flex min-w-0 flex-col justify-center gap-1">
+				<div class="flex min-w-0 items-center gap-2">
+					<ProjectCardTitle :title="title" dense />
+					<ProjectStatusBadge v-if="status" :status="status" class="text-sm" />
+				</div>
+				<p v-if="summary" class="m-0 truncate text-[13px] leading-4 text-secondary">
+					{{ summary }}
+				</p>
+			</div>
+			<span class="project-card--compact__provider truncate text-[13px] font-medium leading-4 text-secondary">
+				{{ provider === 'curseforge' ? 'CurseForge' : 'Modrinth' }}
+			</span>
+			<div class="project-card--compact__tags flex min-w-0 items-center gap-1 overflow-hidden">
+				<template v-if="isServerProject">
+					<ServerOnlinePlayers
+						v-if="serverOnlinePlayers !== undefined"
+						:online="serverOnlinePlayers"
+						:status-online="serverStatusOnline"
+						:hide-label="true"
+					/>
+					<ServerRecentPlays
+						v-if="serverRecentPlays !== undefined"
+						:recent-plays="serverRecentPlays"
+						:hide-label="true"
+					/>
+					<ServerPing v-if="serverPing && serverStatusOnline" :ping="serverPing" />
+					<ServerRegion
+						v-if="serverRegion"
+						:region="serverRegion"
+						class="smart-clickable:allow-pointer-events"
+					/>
+				</template>
+				<template v-else>
+					<ProjectCardEnvironment
+						v-if="environment"
+						:client-side="environment.clientSide"
+						:server-side="environment.serverSide"
+					/>
+					<ProjectCardTags
+						v-if="tags"
+						:tags="tags"
+						:extra-tags="extraTags"
+						:exclude-loaders="excludeLoaders"
+						:deprioritized-tags="deprioritizedTags"
+						:max-tags="2"
+					/>
+				</template>
+			</div>
+			<ProjectCardStats
+				v-if="downloads !== undefined"
+				class="project-card--compact__downloads gap-1 text-[13px] [&>svg]:size-4"
+				:downloads="downloads"
+			/>
+			<ProjectCardDate
+				v-if="date && autoDisplayDate"
+				class="project-card--compact__date gap-1 text-[13px] [&>svg]:size-4"
+				:type="autoDisplayDate"
+				:date="date"
+			/>
+			<div
+				v-if="!!$slots.actions"
+				class="flex justify-end gap-1 empty:hidden smart-clickable:allow-pointer-events"
+			>
+				<slot name="actions" />
+			</div>
+		</div>
+		<div v-else-if="layout === 'grid'" :class="[baseCardStyle, 'flex flex-col']">
 			<div
 				:style="{ '--_project-color': cssColor }"
 				class="relative bg-project-gradient overflow-clip aspect-[2/1] w-full border-0 border-b-[1px] border-solid border-surface-4"
@@ -238,7 +306,7 @@ const cardElement = computed(() => cardRef.value?.$el as HTMLElement | undefined
 const { width: cardWidth } = useElementSize(cardElement)
 
 const props = defineProps<{
-	layout: 'list' | 'grid'
+	layout: 'list' | 'compact' | 'grid'
 	link?: string | RouteLocationRaw | (() => void)
 	iconUrl?: string
 	title: string
@@ -277,6 +345,9 @@ const props = defineProps<{
 
 const baseCardStyle =
 	'w-full h-full border-[1px] border-solid border-surface-4 overflow-hidden bg-surface-3 rounded-2xl transition-all smart-clickable:outline-on-focus smart-clickable:highlight-on-hover'
+
+const compactCardStyle =
+	'w-full h-16 border-[1px] border-solid border-surface-4 overflow-hidden bg-surface-2 rounded-lg px-2 py-[7px] grid grid-cols-[48px_minmax(0,1fr)_5rem_10rem_4.5rem_4.5rem_5.5rem] items-center gap-3 transition-all smart-clickable:outline-on-focus smart-clickable:highlight-on-hover'
 
 const updatedDate = computed(() =>
 	props.dateUpdated ? dayjs(props.dateUpdated).toDate() : undefined,
@@ -386,6 +457,46 @@ const cssColor = computed(() => {
 
 .grid-project-card-list__tags {
 	grid-area: tags;
+}
+
+@container (width < 720px) {
+	.project-card--compact {
+		grid-template-columns: 48px minmax(0, 1fr) 5rem 4.5rem 4.5rem 5.5rem;
+	}
+
+	.project-card--compact__tags {
+		display: none;
+	}
+}
+
+@container (width < 600px) {
+	.project-card--compact {
+		grid-template-columns: 48px minmax(0, 1fr) 5rem 4.5rem 5.5rem;
+	}
+
+	.project-card--compact__date {
+		display: none;
+	}
+}
+
+@container (width < 520px) {
+	.project-card--compact {
+		grid-template-columns: 48px minmax(0, 1fr) 5rem 5.5rem;
+	}
+
+	.project-card--compact__downloads {
+		display: none;
+	}
+}
+
+@container (width < 440px) {
+	.project-card--compact {
+		grid-template-columns: 48px minmax(0, 1fr) 5.5rem;
+	}
+
+	.project-card--compact__provider {
+		display: none;
+	}
 }
 
 @container (width < 850px) {
