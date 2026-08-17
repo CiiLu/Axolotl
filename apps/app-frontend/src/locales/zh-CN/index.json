@@ -6839,6 +6839,54 @@
   "app.settings.resources.download-engine": {
     "message": "下载引擎"
   },
+  "app.java-arguments.presets.gc.zgc.title": {
+    "message": "ZGC"
+  },
+  "app.java-arguments.presets.gc.zgc.description": {
+    "message": "面向高端系统的超低延迟 GC（Java 15+）"
+  },
+  "app.java-arguments.presets.gc.shenandoah.title": {
+    "message": "Shenandoah"
+  },
+  "app.java-arguments.presets.gc.shenandoah.description": {
+    "message": "面向中大型整合包的低停顿 GC（Java 12+）"
+  },
+  "app.java-arguments.presets.gc.g1gc-pcl.title": {
+    "message": "PCL G1GC"
+  },
+  "app.java-arguments.presets.gc.g1gc-pcl.description": {
+    "message": "PCL 启动器优化的 G1GC 调优"
+  },
+  "app.java-arguments.presets.gc.g1gc-mojang.title": {
+    "message": "Mojang G1GC"
+  },
+  "app.java-arguments.presets.gc.g1gc-mojang.description": {
+    "message": "官方 Minecraft 启动器使用的 G1GC 调优"
+  },
+  "app.java-arguments.presets.gc.auto.title": {
+    "message": "自动"
+  },
+  "app.java-arguments.presets.gc.auto.resolved": {
+    "message": "已解析 → {strategy}"
+  },
+  "app.java-arguments.presets.gc.auto.reason-chain": {
+    "message": "决策路径：{chain}"
+  },
+  "app.java-arguments.presets.gc.auto.description": {
+    "message": "自动为你的系统选择最佳 GC 策略"
+  },
+  "app.java-arguments.presets.gc-group-title": {
+    "message": "内存回收策略 (GC)"
+  },
+  "app.java-arguments.presets.expand-group": {
+    "message": "展开分组"
+  },
+  "app.java-arguments.presets.collapse-group": {
+    "message": "折叠分组"
+  },
+  "app.java-arguments.presets.auth-group-title": {
+    "message": "认证服务"
+  },
   "app.instances.selected-count": {
     "message": "已选择 {count} 个"
   },

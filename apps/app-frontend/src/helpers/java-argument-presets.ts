@@ -1,4 +1,4 @@
-import { defineMessage } from '@modrinth/ui'
+import { defineMessage, type MessageDescriptor } from '@modrinth/ui'
 
 import { createGcPresets } from '@/helpers/gc/gc-presets'
 import type { GcContext, JavaArgumentPreset } from '@/helpers/gc/types'
@@ -9,9 +9,21 @@ import {
 
 export type { JavaArgumentPreset }
 
+export const JAVA_ARGUMENT_PRESET_GROUP_TITLES: Record<string, MessageDescriptor> = {
+	gc: defineMessage({
+		id: 'app.java-arguments.presets.gc-group-title',
+		defaultMessage: 'Memory recycling strategy (GC)',
+	}),
+	auth: defineMessage({
+		id: 'app.java-arguments.presets.auth-group-title',
+		defaultMessage: 'Authentication service',
+	}),
+}
+
 export const JAVA_ARGUMENT_PRESETS: JavaArgumentPreset[] = [
 	{
 		id: 'mojang-auth-mirror',
+		group: 'auth',
 		title: defineMessage({
 			id: 'app.java-arguments.presets.auth-mirror.title',
 			defaultMessage: 'Authentication service mirror',
@@ -31,12 +43,13 @@ export function getJavaArgumentPresets(gcContext?: GcContext): JavaArgumentPrese
 }
 
 export interface JavaArgumentPresetGroup {
-	group?: string
+	group: string
+	title: MessageDescriptor
 	presets: JavaArgumentPreset[]
 }
 
 export function getPresetsByGroup(presets: JavaArgumentPreset[]): JavaArgumentPresetGroup[] {
-	const groups = new Map<string | undefined, JavaArgumentPreset[]>()
+	const groups = new Map<string, JavaArgumentPreset[]>()
 	for (const preset of presets) {
 		const group = preset.group
 		if (!groups.has(group)) {
@@ -44,5 +57,9 @@ export function getPresetsByGroup(presets: JavaArgumentPreset[]): JavaArgumentPr
 		}
 		groups.get(group)!.push(preset)
 	}
-	return Array.from(groups, ([group, groupPresets]) => ({ group, presets: groupPresets }))
+	return Array.from(groups, ([group, groupPresets]) => ({
+		group,
+		title: JAVA_ARGUMENT_PRESET_GROUP_TITLES[group] ?? JAVA_ARGUMENT_PRESET_GROUP_TITLES.auth,
+		presets: groupPresets,
+	}))
 }

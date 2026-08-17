@@ -15,6 +15,7 @@ import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue
 import useMemorySlider from '@/composables/useMemorySlider'
 import { collectGcContext } from '@/helpers/gc/context'
 import type { GcContext } from '@/helpers/gc/types'
+import { getJavaArgumentPresets } from '@/helpers/java-argument-presets'
 import { get, set } from '@/helpers/settings.ts'
 
 const { handleError } = injectNotificationManager()
@@ -110,6 +111,7 @@ fetchSettings.launchArgs = fetchSettings.extra_launch_args.join(' ')
 fetchSettings.envVars = fetchSettings.custom_env_vars.map((x) => x.join('=')).join(' ')
 
 const settings = ref(fetchSettings)
+const shouldApplyDefaultAuto = fetchSettings.extra_launch_args.length === 0
 
 const { maxMemory, snapPoints } = (await useMemorySlider().catch(handleError)) as unknown as {
 	maxMemory: number

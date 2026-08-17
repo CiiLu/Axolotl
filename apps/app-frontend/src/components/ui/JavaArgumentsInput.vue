@@ -17,7 +17,7 @@ import {
 	TagItem,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import type { GcContext } from '@/helpers/gc/types'
 import {
@@ -70,9 +70,13 @@ const messages = defineMessages({
 		id: 'app.java-arguments.presets.arguments',
 		defaultMessage: 'Arguments',
 	},
-	gcGroupTitle: {
-		id: 'app.java-arguments.presets.gc-group-title',
-		defaultMessage: 'Memory recycling strategy (GC)',
+	collapseGroup: {
+		id: 'app.java-arguments.presets.collapse-group',
+		defaultMessage: 'Collapse group',
+	},
+	expandGroup: {
+		id: 'app.java-arguments.presets.expand-group',
+		defaultMessage: 'Expand group',
 	},
 	autoResolved: {
 		id: 'app.java-arguments.presets.gc.auto.resolved',
@@ -89,28 +93,62 @@ const groupedPresets = computed(() => getPresetsByGroup(presets.value))
 
 const modal = ref<InstanceType<typeof NewModal>>()
 const collapsedPresetIds = ref(new Set<string>())
+const collapsedGroupIds = ref(new Set<string>())
 const copiedPresetId = ref<string | null>(null)
 
-function splitPreset(value: string) {
-	const trimmed = value.trimStart()
-	for (const preset of presets.value) {
-		if (trimmed.startsWith(preset.args)) {
-			return { preset, rest: trimmed.slice(preset.args.length).trimStart() }
-		}
-		if (preset.detect && preset.detect(trimmed)) {
-			return { preset, rest: '' }
-		}
-	}
-	return { preset: undefined, rest: value }
+function getDisplayArgs(preset: JavaArgumentPreset): string {
+	return preset.resolveArgs ? preset.resolveArgs(props.gcContext) : preset.args
 }
 
-const activePreset = computed(() => splitPreset(model.value).preset)
+function getActivePresets(value: string): JavaArgumentPreset[] {
+	const trimmed = value.trimStart()
+	const matches = presets.value
+		.filter((preset) =>
+			preset.detect ? preset.detect(trimmed) : trimmed.startsWith(preset.args),
+		)
+		.sort((a, b) => {
+			const aIsAuto = a.id === 'gc-auto' ? 1 : 0
+			const bIsAuto = b.id === 'gc-auto' ? 1 : 0
+			return aIsAuto - bIsAuto || presets.value.indexOf(a) - presets.value.indexOf(b)
+		})
+	const result: JavaArgumentPreset[] = []
+	const seenGroups = new Set<string>()
+	for (const preset of matches) {
+		if (seenGroups.has(preset.group)) continue
+		seenGroups.add(preset.group)
+		result.push(preset)
+	}
+	return result
+}
+
+function removePresetArgs(preset: JavaArgumentPreset, args: string): string {
+	const resolvedArgs = getDisplayArgs(preset)
+	if (args.startsWith(resolvedArgs)) {
+		return args.slice(resolvedArgs.length).trimStart()
+	}
+	if (preset.detect && preset.detect(args)) {
+		return args.replace(resolvedArgs, '').trimStart()
+	}
+	return args
+}
+
+const split = computed(() => {
+	const trimmed = model.value.trimStart()
+	const active = getActivePresets(trimmed)
+	let rest = trimmed
+	for (const preset of active) {
+		rest = removePresetArgs(preset, rest)
+	}
+	return { active, rest }
+})
+
+const activePresets = computed(() => split.value.active)
 
 const rest = computed<string>({
-	get: () => splitPreset(model.value).rest,
+	get: () => split.value.rest,
 	set: (value) => {
-		const current = splitPreset(model.value)
-		model.value = current.preset ? current.preset.args + (value ? ` ${value}` : '') : value
+		const argsToJoin = activePresets.value.map(getDisplayArgs)
+		model.value = argsToJoin.length ? argsToJoin.join(' ') + (value ? ` ${value}` : '') : value
 	},
 })
 
@@ -119,29 +157,22 @@ function onInput(event: Event) {
 }
 
 function removeOtherGroupPresets(preset: JavaArgumentPreset, currentArgs: string): string {
-	if (!preset.group) return currentArgs
-
 	const groupPresets = presets.value.filter((p) => p.group === preset.group && p.id !== preset.id)
 	let result = currentArgs
 	for (const other of groupPresets) {
-		if (other.detect && other.detect(result)) {
-			result = result.replace(other.args, '').trimStart()
-		}
+		result = removePresetArgs(other, result)
 	}
 	return result
 }
 
 function applyPreset(preset: JavaArgumentPreset) {
-	const currentRest = splitPreset(model.value).rest
-	const argsToApply = preset.resolveArgs ? preset.resolveArgs(props.gcContext) : preset.args
-	const cleanedRest = removeOtherGroupPresets(preset, currentRest)
+	const argsToApply = getDisplayArgs(preset)
+	const cleanedRest = removeOtherGroupPresets(preset, split.value.rest)
 	model.value = argsToApply + (cleanedRest ? ` ${cleanedRest}` : '')
-	modal.value?.hide()
 }
 
-function removePreset() {
-	if (!activePreset.value) return
-	model.value = splitPreset(model.value).rest
+function removePreset(preset: JavaArgumentPreset) {
+	model.value = removePresetArgs(preset, model.value.trimStart()).trimStart()
 }
 
 function showPresets() {
@@ -149,7 +180,7 @@ function showPresets() {
 }
 
 async function copyPresetArgs(preset: JavaArgumentPreset) {
-	const argsToCopy = preset.resolveArgs ? preset.resolveArgs(props.gcContext) : preset.args
+	const argsToCopy = getDisplayArgs(preset)
 	await navigator.clipboard.writeText(argsToCopy)
 	copiedPresetId.value = preset.id
 	setTimeout(() => {
@@ -174,11 +205,21 @@ function togglePresetCollapsed(preset: JavaArgumentPreset) {
 }
 
 function isPresetActive(preset: JavaArgumentPreset) {
-	return activePreset.value?.id === preset.id
+	return activePresets.value.some((p) => p.id === preset.id)
 }
 
-function getDisplayArgs(preset: JavaArgumentPreset): string {
-	return preset.resolveArgs ? preset.resolveArgs(props.gcContext) : preset.args
+function isGroupCollapsed(group: string) {
+	return collapsedGroupIds.value.has(group)
+}
+
+function toggleGroupCollapsed(group: string) {
+	const next = new Set(collapsedGroupIds.value)
+	if (next.has(group)) {
+		next.delete(group)
+	} else {
+		next.add(group)
+	}
+	collapsedGroupIds.value = next
 }
 
 function getAutoResolvedLabel(preset: JavaArgumentPreset): string | null {
@@ -190,6 +231,37 @@ function getAutoReasonChainText(preset: JavaArgumentPreset): string | null {
 	if (preset.id !== 'gc-auto' || !preset.autoReasonChain) return null
 	return formatMessage(messages.autoReasonChain, { chain: preset.autoReasonChain.join(' → ') })
 }
+
+const tagsScrollRef = ref<HTMLElement | null>(null)
+const showTagsFade = ref(false)
+let tagsResizeObserver: ResizeObserver | null = null
+
+function updateTagsFade() {
+	const el = tagsScrollRef.value
+	if (!el) return
+	showTagsFade.value = el.scrollWidth > el.clientWidth + 1
+}
+
+watch(tagsScrollRef, (el) => {
+	if (el) {
+		updateTagsFade()
+		tagsResizeObserver?.disconnect()
+		tagsResizeObserver = new ResizeObserver(updateTagsFade)
+		tagsResizeObserver.observe(el)
+	} else {
+		tagsResizeObserver?.disconnect()
+		tagsResizeObserver = null
+	}
+})
+
+watch(activePresets, () => {
+	nextTick(updateTagsFade)
+})
+
+onBeforeUnmount(() => {
+	tagsResizeObserver?.disconnect()
+	tagsResizeObserver = null
+})
 </script>
 
 <template>
@@ -199,15 +271,24 @@ function getAutoReasonChainText(preset: JavaArgumentPreset): string | null {
 				class="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-4 px-3 transition-[box-shadow,color] focus-within:ring-4 focus-within:ring-brand-shadow"
 				:class="props.disabled ? 'cursor-not-allowed opacity-50' : ''"
 			>
-				<TagItem
-					v-if="activePreset"
-					class="shrink-0"
-					:action="props.disabled ? undefined : removePreset"
-					:aria-label="formatMessage(messages.removePreset)"
+				<div
+					v-if="activePresets.length"
+					ref="tagsScrollRef"
+					class="tags-scroll flex min-w-0 max-w-[50%] shrink-0 items-center gap-1 overflow-x-auto"
+					:class="{ 'tags-fade-right': showTagsFade }"
+					@scroll="updateTagsFade"
 				>
-					{{ formatMessage(activePreset.title) }}
-					<XIcon aria-hidden="true" />
-				</TagItem>
+					<TagItem
+						v-for="preset in activePresets"
+						:key="preset.id"
+						class="shrink-0"
+						:action="props.disabled ? undefined : () => removePreset(preset)"
+						:aria-label="formatMessage(messages.removePreset)"
+					>
+						{{ formatMessage(preset.title) }}
+						<XIcon aria-hidden="true" />
+					</TagItem>
+				</div>
 				<input
 					:id="props.id"
 					:value="rest"
@@ -236,100 +317,153 @@ function getAutoReasonChainText(preset: JavaArgumentPreset): string | null {
 			<div class="flex flex-col gap-6">
 				<div
 					v-for="groupEntry in groupedPresets"
-					:key="groupEntry.group ?? 'ungrouped'"
+					:key="groupEntry.group"
 					class="flex flex-col gap-3"
 				>
-					<h3 v-if="groupEntry.group" class="m-0 text-lg font-semibold text-contrast">
-						{{
-							groupEntry.group === 'gc' ? formatMessage(messages.gcGroupTitle) : groupEntry.group
-						}}
-					</h3>
 					<div
-						v-for="preset in groupEntry.presets"
-						:key="preset.id"
-						class="flex flex-col gap-3 rounded-xl border border-solid border-surface-4 bg-surface-2 p-4"
+						role="button"
+						tabindex="0"
+						class="flex w-full cursor-pointer select-none items-center justify-between gap-2"
+						:aria-expanded="!isGroupCollapsed(groupEntry.group)"
+						:aria-label="
+							formatMessage(
+								isGroupCollapsed(groupEntry.group)
+									? messages.expandGroup
+									: messages.collapseGroup,
+							)
+						"
+						@click="toggleGroupCollapsed(groupEntry.group)"
+						@keydown.enter="toggleGroupCollapsed(groupEntry.group)"
+						@keydown.space.prevent="toggleGroupCollapsed(groupEntry.group)"
 					>
-						<div class="flex items-start gap-3 text-left">
-							<GlobeIcon class="mt-0.5 size-6 shrink-0 text-secondary" aria-hidden="true" />
-							<div class="min-w-0 flex-1">
-								<p class="m-0 text-base font-semibold text-contrast">
-									{{ formatMessage(preset.title) }}
-								</p>
-								<AutoLink
-									:to="preset.link"
-									target="_blank"
-									rel="noreferrer"
-									class="inline-flex items-start gap-1 text-sm text-secondary hover:text-brand hover:underline"
-								>
-									<span class="min-w-0">{{ formatMessage(preset.description) }}</span>
-									<ExternalIcon class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-								</AutoLink>
-								<p
-									v-if="getAutoResolvedLabel(preset)"
-									class="m-0 mt-2 text-sm font-medium text-brand"
-								>
-									{{ getAutoResolvedLabel(preset) }}
-								</p>
-								<p v-if="getAutoReasonChainText(preset)" class="m-0 mt-1 text-xs text-secondary">
-									{{ getAutoReasonChainText(preset) }}
-								</p>
-							</div>
-							<ButtonStyled :type="isPresetActive(preset) ? 'standard' : 'outlined'" color="brand">
-								<button
-									type="button"
-									:disabled="isPresetActive(preset)"
-									@click="applyPreset(preset)"
-								>
-									<CheckIcon v-if="isPresetActive(preset)" aria-hidden="true" />
-									{{
-										formatMessage(
-											isPresetActive(preset) ? messages.presetApplied : messages.usePreset,
-										)
-									}}
-								</button>
-							</ButtonStyled>
-						</div>
-						<div class="flex items-center gap-2">
-							<div class="h-px min-w-0 flex-1 bg-surface-4" />
-							<button
-								v-tooltip="formatMessage(messages.presetArguments)"
-								type="button"
-								:aria-label="formatMessage(messages.presetArguments)"
-								class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-secondary transition-colors hover:bg-surface-5 hover:text-contrast"
-								@click="togglePresetCollapsed(preset)"
-							>
-								<DropdownIcon
-									class="size-4 transition-transform"
-									:class="{ 'rotate-180': !isPresetCollapsed(preset) }"
-									aria-hidden="true"
-								/>
-							</button>
-						</div>
-						<Collapsible :collapsed="isPresetCollapsed(preset)">
-							<div class="flex items-start gap-2">
-								<code
-									class="min-w-0 flex-1 overflow-x-auto whitespace-pre-wrap break-all text-left font-mono text-xs leading-relaxed text-primary"
-								>
-									{{ getDisplayArgs(preset) }}
-								</code>
-								<button
-									type="button"
-									:aria-label="formatMessage(messages.presetArguments)"
-									class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-secondary transition-colors hover:bg-surface-5 hover:text-contrast"
-									@click="copyPresetArgs(preset)"
-								>
-									<CheckIcon
-										v-if="copiedPresetId === preset.id"
-										class="size-4 text-green"
-										aria-hidden="true"
-									/>
-									<CopyIcon v-else class="size-4" aria-hidden="true" />
-								</button>
-							</div>
-						</Collapsible>
+						<h3 class="m-0 text-lg font-semibold text-contrast">
+							{{ formatMessage(groupEntry.title) }}
+						</h3>
+						<DropdownIcon
+							class="size-4 shrink-0 text-secondary transition-transform"
+							:class="{ 'rotate-180': !isGroupCollapsed(groupEntry.group) }"
+							aria-hidden="true"
+						/>
 					</div>
+
+					<Collapsible :collapsed="isGroupCollapsed(groupEntry.group)">
+						<div class="flex flex-col gap-3">
+							<div
+								v-for="preset in groupEntry.presets"
+								:key="preset.id"
+								class="flex flex-col gap-3 rounded-xl border border-solid border-surface-4 bg-surface-2 p-4"
+							>
+								<div class="flex items-start gap-3 text-left">
+									<GlobeIcon class="mt-0.5 size-6 shrink-0 text-secondary" aria-hidden="true" />
+									<div class="min-w-0 flex-1">
+										<p class="m-0 text-base font-semibold text-contrast">
+											{{ formatMessage(preset.title) }}
+										</p>
+										<AutoLink
+											:to="preset.link"
+											target="_blank"
+											rel="noreferrer"
+											class="inline-flex items-start gap-1 text-sm text-secondary hover:text-brand hover:underline"
+										>
+											<span class="min-w-0">{{ formatMessage(preset.description) }}</span>
+											<ExternalIcon class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+										</AutoLink>
+										<p
+											v-if="getAutoResolvedLabel(preset)"
+											class="m-0 mt-2 text-sm font-medium text-brand"
+										>
+											{{ getAutoResolvedLabel(preset) }}
+										</p>
+										<p
+											v-if="getAutoReasonChainText(preset)"
+											class="m-0 mt-1 text-xs text-secondary"
+										>
+											{{ getAutoReasonChainText(preset) }}
+										</p>
+									</div>
+									<ButtonStyled :type="isPresetActive(preset) ? 'standard' : 'outlined'" color="brand">
+										<button
+											type="button"
+											:disabled="isPresetActive(preset)"
+											@click="applyPreset(preset)"
+										>
+											<CheckIcon v-if="isPresetActive(preset)" aria-hidden="true" />
+											{{
+												formatMessage(
+													isPresetActive(preset) ? messages.presetApplied : messages.usePreset,
+												)
+											}}
+										</button>
+									</ButtonStyled>
+								</div>
+								<div class="flex items-center gap-2">
+									<div class="h-px min-w-0 flex-1 bg-surface-4" />
+									<button
+										v-tooltip="formatMessage(messages.presetArguments)"
+										type="button"
+										:aria-label="formatMessage(messages.presetArguments)"
+										class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-secondary transition-colors hover:bg-surface-5 hover:text-contrast"
+										@click="togglePresetCollapsed(preset)"
+									>
+										<DropdownIcon
+											class="size-4 transition-transform"
+											:class="{ 'rotate-180': !isPresetCollapsed(preset) }"
+											aria-hidden="true"
+										/>
+									</button>
+								</div>
+								<Collapsible :collapsed="isPresetCollapsed(preset)">
+									<div class="flex items-start gap-2">
+										<code
+											class="min-w-0 flex-1 overflow-x-auto whitespace-pre-wrap break-all text-left font-mono text-xs leading-relaxed text-primary"
+										>
+											{{ getDisplayArgs(preset) }}
+										</code>
+										<button
+											type="button"
+											:aria-label="formatMessage(messages.presetArguments)"
+											class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-secondary transition-colors hover:bg-surface-5 hover:text-contrast"
+											@click="copyPresetArgs(preset)"
+										>
+											<CheckIcon
+												v-if="copiedPresetId === preset.id"
+												class="size-4 text-green"
+												aria-hidden="true"
+											/>
+											<CopyIcon v-else class="size-4" aria-hidden="true" />
+										</button>
+									</div>
+								</Collapsible>
+							</div>
+						</div>
+					</Collapsible>
 				</div>
 			</div>
 		</NewModal>
 	</div>
 </template>
+
+<style scoped>
+.tags-scroll {
+	scrollbar-width: none;
+}
+
+.tags-scroll::-webkit-scrollbar {
+	display: none;
+}
+
+.tags-fade-right {
+	mask-image: linear-gradient(
+		to right,
+		black 0%,
+		black calc(100% - 1.25rem),
+		transparent 100%
+	);
+	-webkit-mask-image: linear-gradient(
+		to right,
+		black 0%,
+		black calc(100% - 1.25rem),
+		transparent 100%
+	);
+}
+</style>

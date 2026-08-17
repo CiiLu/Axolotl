@@ -33,7 +33,7 @@ export interface JavaArgumentPreset {
 	description: MessageDescriptor
 	args: string
 	link: string
-	group?: string
+	group: string
 	resolveArgs?: (context?: GcContext) => string
 	detect?: (currentArgs: string) => boolean
 	autoResolvedName?: string

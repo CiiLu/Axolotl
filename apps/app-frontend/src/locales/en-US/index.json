@@ -2342,6 +2342,45 @@
   "app.java-arguments.presets.button": {
     "message": "Argument presets"
   },
+  "app.java-arguments.presets.gc-group-title": {
+    "message": "Memory recycling strategy (GC)"
+  },
+  "app.java-arguments.presets.gc.auto.description": {
+    "message": "Automatically select the best GC strategy for your system"
+  },
+  "app.java-arguments.presets.gc.auto.reason-chain": {
+    "message": "Decision path: {chain}"
+  },
+  "app.java-arguments.presets.gc.auto.resolved": {
+    "message": "Resolved → {strategy}"
+  },
+  "app.java-arguments.presets.gc.auto.title": {
+    "message": "Auto"
+  },
+  "app.java-arguments.presets.gc.g1gc-mojang.description": {
+    "message": "G1GC tuning used by the official Minecraft launcher"
+  },
+  "app.java-arguments.presets.gc.g1gc-mojang.title": {
+    "message": "Mojang G1GC"
+  },
+  "app.java-arguments.presets.gc.g1gc-pcl.description": {
+    "message": "G1GC tuning optimized by PCL launcher"
+  },
+  "app.java-arguments.presets.gc.g1gc-pcl.title": {
+    "message": "PCL G1GC"
+  },
+  "app.java-arguments.presets.gc.shenandoah.description": {
+    "message": "Low-pause GC for medium-to-heavy modpacks (Java 12+)"
+  },
+  "app.java-arguments.presets.gc.shenandoah.title": {
+    "message": "Shenandoah"
+  },
+  "app.java-arguments.presets.gc.zgc.description": {
+    "message": "Ultra-low latency GC for high-end systems (Java 15+)"
+  },
+  "app.java-arguments.presets.gc.zgc.title": {
+    "message": "ZGC"
+  },
   "app.java-arguments.presets.modal-title": {
     "message": "Java argument presets"
   },
@@ -6839,44 +6878,14 @@
   "app.settings.resources.download-engine": {
     "message": "Download engine"
   },
-  "app.java-arguments.presets.gc.zgc.title": {
-    "message": "ZGC"
+  "app.java-arguments.presets.expand-group": {
+    "message": "Expand group"
   },
-  "app.java-arguments.presets.gc.zgc.description": {
-    "message": "Ultra-low latency GC for high-end systems (Java 15+)"
+  "app.java-arguments.presets.collapse-group": {
+    "message": "Collapse group"
   },
-  "app.java-arguments.presets.gc.shenandoah.title": {
-    "message": "Shenandoah"
-  },
-  "app.java-arguments.presets.gc.shenandoah.description": {
-    "message": "Low-pause GC for medium-to-heavy modpacks (Java 12+)"
-  },
-  "app.java-arguments.presets.gc.g1gc-pcl.title": {
-    "message": "PCL G1GC"
-  },
-  "app.java-arguments.presets.gc.g1gc-pcl.description": {
-    "message": "G1GC tuning optimized by PCL launcher"
-  },
-  "app.java-arguments.presets.gc.g1gc-mojang.title": {
-    "message": "Mojang G1GC"
-  },
-  "app.java-arguments.presets.gc.g1gc-mojang.description": {
-    "message": "G1GC tuning used by the official Minecraft launcher"
-  },
-  "app.java-arguments.presets.gc.auto.title": {
-    "message": "Auto"
-  },
-  "app.java-arguments.presets.gc.auto.resolved": {
-    "message": "Resolved → {strategy}"
-  },
-  "app.java-arguments.presets.gc.auto.reason-chain": {
-    "message": "Decision path: {chain}"
-  },
-  "app.java-arguments.presets.gc.auto.description": {
-    "message": "Automatically select the best GC strategy for your system"
-  },
-  "app.java-arguments.presets.gc-group-title": {
-    "message": "Memory recycling strategy (GC)"
+  "app.java-arguments.presets.auth-group-title": {
+    "message": "Authentication service"
   },
   "app.instances.selected-count": {
     "message": "{count, plural, one {# selected} other {# selected}}"

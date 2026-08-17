@@ -32,6 +32,24 @@ export function createGcPresets(gcContext?: GcContext): JavaArgumentPreset[] {
 
 	return [
 		{
+			id: 'gc-auto',
+			group: 'gc',
+			title: defineMessage({
+				id: 'app.java-arguments.presets.gc.auto.title',
+				defaultMessage: 'Auto',
+			}),
+			description: defineMessage({
+				id: 'app.java-arguments.presets.gc.auto.description',
+				defaultMessage: 'Automatically select the best GC strategy for your system',
+			}),
+			args: buildAutoArgs(gcContext),
+			resolveArgs: (context) => buildAutoArgs(context),
+			detect: detectAuto,
+			link: GC_WIKI_URL,
+			autoResolvedName,
+			autoReasonChain: autoResolution?.reasonChain,
+		},
+		{
 			id: 'gc-g1gc-mojang',
 			group: 'gc',
 			title: defineMessage({
@@ -94,24 +112,6 @@ export function createGcPresets(gcContext?: GcContext): JavaArgumentPreset[] {
 			resolveArgs: (context) => GC_STRATEGY_DEFINITIONS.zgc.buildArgs(context),
 			detect: GC_STRATEGY_DEFINITIONS.zgc.detect,
 			link: ZGC_DOCS_URL,
-		},
-		{
-			id: 'gc-auto',
-			group: 'gc',
-			title: defineMessage({
-				id: 'app.java-arguments.presets.gc.auto.title',
-				defaultMessage: 'Auto',
-			}),
-			description: defineMessage({
-				id: 'app.java-arguments.presets.gc.auto.description',
-				defaultMessage: 'Automatically select the best GC strategy for your system',
-			}),
-			args: buildAutoArgs(gcContext),
-			resolveArgs: (context) => buildAutoArgs(context),
-			detect: detectAuto,
-			link: GC_WIKI_URL,
-			autoResolvedName,
-			autoReasonChain: autoResolution?.reasonChain,
 		},
 	]
 }
