@@ -255,7 +255,11 @@ import {
 	update_content_entry,
 } from '@/helpers/instance'
 import { readInstanceCache, writeInstanceCache } from '@/helpers/instance-cache'
-import { type InstanceContentData, loadInstanceContentData } from '@/helpers/instance-content'
+import {
+	isWorldSaveContentItem,
+	type InstanceContentData,
+	loadInstanceContentData,
+} from '@/helpers/instance-content'
 import type { CacheBehaviour, GameInstance } from '@/helpers/types'
 import { highlightModInInstance } from '@/helpers/utils.js'
 import i18n from '@/i18n.config'
@@ -664,22 +668,26 @@ const mergedProjects = computed<ContentItem[]>(() => {
 	const active = installingItems.value.get(props.instance.id)
 	const pending = active ?? installingBuffer.value
 	const pendingProjectIds = new Set(pending.map((p) => p.project?.id).filter(Boolean))
-	const displayProjects = projects.value.map((project) => {
-		const resolved = project.project?.icon_url
-			? {
-					...project,
-					project: {
-						...project.project,
-						icon_url: localIconUrl(project.project.icon_url),
-					},
-				}
-			: project
-		return resolved.project?.id && pendingProjectIds.has(resolved.project.id)
-			? { ...resolved, installing: true }
-			: resolved
-	})
+	const displayProjects = projects.value
+		.filter((project) => !isWorldSaveContentItem(project))
+		.map((project) => {
+			const resolved = project.project?.icon_url
+				? {
+						...project,
+						project: {
+							...project.project,
+							icon_url: localIconUrl(project.project.icon_url),
+						},
+					}
+				: project
+			return resolved.project?.id && pendingProjectIds.has(resolved.project.id)
+				? { ...resolved, installing: true }
+				: resolved
+		})
 	const realProjectIds = new Set(displayProjects.map((p) => p.project?.id).filter(Boolean))
-	const placeholders = pending.filter((item) => !realProjectIds.has(item.project?.id))
+	const placeholders = pending.filter(
+		(item) => !isWorldSaveContentItem(item) && !realProjectIds.has(item.project?.id),
+	)
 	return [...displayProjects, ...placeholders, ...worldDatapackItems.value]
 })
 
@@ -2245,8 +2253,10 @@ function applyContentData(contentData: InstanceContentData) {
 		paths: contentData.contentItems.map((c) => c.file_name).slice(0, 20),
 	})
 	contentSnapshot.value = contentData.snapshot
-	let contentItems = contentData.contentItems
-	let linkedContentItems = contentData.linkedContentItems
+	let contentItems = contentData.contentItems.filter((item) => !isWorldSaveContentItem(item))
+	let linkedContentItems = contentData.linkedContentItems.filter(
+		(item) => !isWorldSaveContentItem(item),
+	)
 	if (!contentData.modpack && !isPackLocked.value && linkedContentItems.length > 0) {
 		contentItems = [...contentItems, ...linkedContentItems]
 		linkedContentItems = []
@@ -2566,8 +2576,8 @@ async function loadInitialContent(): Promise<void> {
 			contentItems: cached.contentItems.length,
 			linkedItems: cached.linkedContentItems.length,
 		})
-		let cachedContentItems = cached.contentItems
-		let cachedLinkedItems = cached.linkedContentItems
+		let cachedContentItems = cached.contentItems.filter((item) => !isWorldSaveContentItem(item))
+		let cachedLinkedItems = cached.linkedContentItems.filter((item) => !isWorldSaveContentItem(item))
 		if (!cached.modpack && !isPackLocked.value && cachedLinkedItems.length > 0) {
 			cachedContentItems = [...cachedContentItems, ...cachedLinkedItems]
 			cachedLinkedItems = []

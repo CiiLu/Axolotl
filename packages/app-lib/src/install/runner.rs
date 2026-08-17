@@ -175,6 +175,19 @@ pub async fn install_curseforge_content(
     .await
 }
 
+pub async fn install_curseforge_world(
+    request: crate::api::curseforge::CurseForgeWorldInstallRequest,
+    display_title: String,
+    display_icon: Option<String>,
+) -> crate::Result<InstallJobSnapshot> {
+    start(InstallRequest::InstallCurseForgeWorld {
+        request,
+        display_title,
+        display_icon,
+    })
+    .await
+}
+
 pub async fn download_java(
     vendor: String,
     version: u32,
@@ -814,6 +827,21 @@ async fn prepare_initial_instance(
             set_display(job_state, display_title, display_icon);
         }
         InstallRequest::InstallCurseForgeContent {
+            request,
+            display_title,
+            display_icon,
+        } => {
+            crate::state::get_instance(&request.instance_id, &state.pool)
+                .await?
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError(format!(
+                        "Unknown instance {}",
+                        request.instance_id
+                    ))
+                })?;
+            set_display(job_state, display_title, display_icon);
+        }
+        InstallRequest::InstallCurseForgeWorld {
             request,
             display_title,
             display_icon,
@@ -1571,6 +1599,65 @@ async fn run_request(
             .await?;
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
         }
+        InstallRequest::InstallCurseForgeWorld {
+            request,
+            display_title: _,
+            display_icon: _,
+        } => {
+            let instance_id = request.instance_id.clone();
+            if curseforge_world_was_imported_manually(job_state, &request) {
+                return Ok(InstallExecutionOutcome::Completed(Some(
+                    instance_id,
+                )));
+            }
+            update_progress(
+                job_id,
+                job_state,
+                state,
+                InstallPhaseId::DownloadingContent,
+                InstallPhaseDetails::Empty,
+            )
+            .await?;
+            let reporter =
+                InstallProgressReporter::new(job_id, job_state.clone());
+            let result = crate::api::curseforge::install_world_with_reporter(
+                request.clone(),
+                reporter.clone(),
+            )
+            .await?;
+            if let Some(manual_download) = result.manual_download {
+                let path = format!("saves/{}", manual_download.file_name);
+                let manual_url = manual_download.website_url.clone().or_else(|| {
+					Some(format!(
+						"https://www.curseforge.com/minecraft/worlds/{}/download/{}",
+						manual_download.project_slug, manual_download.file_id
+					))
+				});
+                reporter
+                    .record_events(vec![
+                        InstallJobEventKind::ContentFileSkipped {
+                            path: path.clone(),
+                            reason: "CurseForge requires a manual download"
+                                .to_string(),
+                            project_id: Some(
+                                manual_download.project_id.to_string(),
+                            ),
+                            version_id: Some(
+                                manual_download.file_id.to_string(),
+                            ),
+                            manual_url,
+                        },
+                    ])
+                    .await?;
+                return Ok(InstallExecutionOutcome::WaitingForUser(
+                    InstallPauseReason::MissingRequiredContent {
+                        failed_files: 1,
+                        paths: vec![path],
+                    },
+                ));
+            }
+            Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
+        }
         InstallRequest::UpdateManagedCurseForgeModpack {
             instance_id,
             file_id,
@@ -2236,6 +2323,19 @@ fn curseforge_manual_download_pause(
     })
 }
 
+fn curseforge_world_was_imported_manually(
+    job_state: &InstallJobState,
+    request: &crate::api::curseforge::CurseForgeWorldInstallRequest,
+) -> bool {
+    let project_id = request.project_id.to_string();
+    let file_id = request.file_id.to_string();
+    job_state.download_items().iter().any(|item| {
+        item.status == super::model::DownloadItemStatus::Completed
+            && item.project_id.as_deref() == Some(project_id.as_str())
+            && item.version_id.as_deref() == Some(file_id.as_str())
+    })
+}
+
 async fn prepare_existing_rollback(
     job_state: &mut InstallJobState,
     state: &State,
@@ -2654,6 +2754,34 @@ mod tests {
             ),
             None
         );
+    }
+
+    #[test]
+    fn recovered_manual_world_download_does_not_run_again() {
+        let request = crate::api::curseforge::CurseForgeWorldInstallRequest {
+            instance_id: "instance".to_string(),
+            project_id: 123,
+            file_id: 456,
+        };
+        let mut job_state =
+            InstallJobState::new(InstallRequest::InstallCurseForgeWorld {
+                request: request.clone(),
+                display_title: "World".to_string(),
+                display_icon: None,
+            });
+        job_state.record_event(InstallJobEventKind::ContentFileSkipped {
+            path: "saves/world.zip".to_string(),
+            reason: "manual download required".to_string(),
+            project_id: Some(request.project_id.to_string()),
+            version_id: Some(request.file_id.to_string()),
+            manual_url: Some("https://www.curseforge.com/download".to_string()),
+        });
+        job_state.record_event(InstallJobEventKind::ContentFileRecovered {
+            path: "saves/world.zip".to_string(),
+            bytes: 42,
+        });
+
+        assert!(curseforge_world_was_imported_manually(&job_state, &request));
     }
 
     #[test]

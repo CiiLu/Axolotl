@@ -29,6 +29,10 @@ export type InstanceContentModpackData = {
 	updateVersionId: string | null
 }
 
+export function isWorldSaveContentItem(item: Pick<ContentItem, 'project_type'>): boolean {
+	return ['world', 'worldsave', 'world_save'].includes(item.project_type)
+}
+
 export async function loadInstanceContentData(
 	path: string,
 	cacheBehaviour?: CacheBehaviour,

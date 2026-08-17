@@ -581,6 +581,9 @@
 	"app.auth.sign-in-browser": {
 		"message": "Please sign in in the browser window that just opened to continue."
 	},
+	"app.browse.add": {
+		"message": "Add"
+	},
 	"app.browse.add-servers-to-instance": {
 		"message": "Adding server to instance"
 	},
@@ -605,14 +608,29 @@
 	"app.browse.discover-content": {
 		"message": "Discover content"
 	},
+	"app.browse.discover-maps": {
+		"message": "Discover maps"
+	},
 	"app.browse.discover-servers": {
 		"message": "Discover servers"
 	},
 	"app.browse.hide-added-servers": {
 		"message": "Hide servers already added"
 	},
+	"app.browse.maps-unavailable": {
+		"message": "Maps unavailable"
+	},
+	"app.browse.maps-unavailable-description": {
+		"message": "Configure a CurseForge API key to browse and install maps."
+	},
+	"app.browse.maps-no-installable-file": {
+		"message": "The selected CurseForge map does not have an installable file."
+	},
 	"app.browse.project-type.datapacks": {
 		"message": "Data Packs"
+	},
+	"app.browse.project-type.maps": {
+		"message": "Maps"
 	},
 	"app.browse.project-type.modpacks": {
 		"message": "Modpacks"
@@ -664,6 +682,81 @@
 	},
 	"app.content-install.no-compatible-versions": {
 		"message": "No available versions match {compatibilityLabel}. Select a version to install anyway. Matching dependencies will still be installed."
+	},
+	"app.content-install.preview.already-installed": {
+		"message": "Already installed"
+	},
+	"app.content-install.preview.cancel": {
+		"message": "Cancel"
+	},
+	"app.content-install.preview.clear-all": {
+		"message": "Clear all"
+	},
+	"app.content-install.preview.dependencies-count": {
+		"message": "{count, plural, one {# dependency} other {# dependencies}}"
+	},
+	"app.content-install.preview.dependencies-header": {
+		"message": "Dependencies"
+	},
+	"app.content-install.preview.description": {
+		"message": "{count, plural, one {# dependency will be installed automatically} other {# dependencies will be installed automatically}} for {project} in {instance}."
+	},
+	"app.content-install.preview.header": {
+		"message": "Confirm installation"
+	},
+	"app.content-install.preview.install": {
+		"message": "Install"
+	},
+	"app.content-install.preview.only-checked": {
+		"message": "Only checked dependencies will be installed."
+	},
+	"app.content-install.preview.required-by": {
+		"message": "Required by {projects}"
+	},
+	"app.content-install.preview.select-all": {
+		"message": "Select all"
+	},
+	"app.content-install.preview.skip.already-installed": {
+		"message": "Already installed"
+	},
+	"app.content-install.preview.skip.conflicting-dependency": {
+		"message": "Conflicting dependency version"
+	},
+	"app.content-install.preview.skip.duplicate-project": {
+		"message": "Already included"
+	},
+	"app.content-install.preview.skip.embedded": {
+		"message": "Embedded in the project"
+	},
+	"app.content-install.preview.skip.excluded-by-user": {
+		"message": "Excluded by user"
+	},
+	"app.content-install.preview.skip.incompatible": {
+		"message": "Incompatible dependency"
+	},
+	"app.content-install.preview.skip.missing-version": {
+		"message": "Referenced version was not found"
+	},
+	"app.content-install.preview.skip.no-compatible-version": {
+		"message": "No compatible version found"
+	},
+	"app.content-install.preview.skip.optional": {
+		"message": "Optional dependency"
+	},
+	"app.content-install.preview.skip.quilt-fabric-api": {
+		"message": "Replaced for quilt"
+	},
+	"app.content-install.preview.skip.tool": {
+		"message": "Development tool, not installed"
+	},
+	"app.content-install.preview.skip.unsupported-project-type": {
+		"message": "Unsupported project type"
+	},
+	"app.content-install.preview.skipped-header": {
+		"message": "Skipped"
+	},
+	"app.content-install.preview.version-mismatch": {
+		"message": "Version may not match this instance"
 	},
 	"app.content.add-from-file": {
 		"message": "Add from file"
@@ -1595,6 +1688,9 @@
 	"app.home.minimal.picker.no-results": {
 		"message": "No matching instances"
 	},
+	"app.home.minimal.picker.no-instances": {
+		"message": "No instances available"
+	},
 	"app.home.minimal.picker.search": {
 		"message": "Search instances"
 	},
@@ -2225,6 +2321,9 @@
 	"app.instance.worlds.add-server": {
 		"message": "Add server"
 	},
+	"app.instance.worlds.browse-maps": {
+		"message": "Browse maps"
+	},
 	"app.instance.worlds.browse-servers": {
 		"message": "Browse servers"
 	},
@@ -2276,11 +2375,35 @@
 	"app.instances.add-content": {
 		"message": "Add content"
 	},
+	"app.instances.batch-edit-groups.apply": {
+		"message": "Apply"
+	},
+	"app.instances.batch-edit-groups.create-group": {
+		"message": "Create new group"
+	},
+	"app.instances.batch-edit-groups.description": {
+		"message": "Select groups to apply to {count} instance(s)."
+	},
+	"app.instances.batch-edit-groups.enter-group-name": {
+		"message": "Enter group name"
+	},
+	"app.instances.batch-edit-groups.header": {
+		"message": "Edit groups"
+	},
 	"app.instances.copy-path": {
 		"message": "Copy path"
 	},
+	"app.instances.deselect-all": {
+		"message": "Deselect all"
+	},
 	"app.instances.duplicate-instance": {
 		"message": "Duplicate instance"
+	},
+	"app.instances.edit-groups": {
+		"message": "Edit groups"
+	},
+	"app.instances.exit-select-mode": {
+		"message": "Exit"
 	},
 	"app.instances.group-by": {
 		"message": "Group by:"
@@ -2308,6 +2431,12 @@
 	},
 	"app.instances.select": {
 		"message": "Select..."
+	},
+	"app.instances.select-all": {
+		"message": "Select all"
+	},
+	"app.instances.selected-count": {
+		"message": "{count, plural, one {# selected} other {# selected}}"
 	},
 	"app.instances.sort.date-created": {
 		"message": "Date created"
@@ -6215,6 +6344,15 @@
 	"app.world.world-item.players-online": {
 		"message": "{count} online"
 	},
+	"app.worlds.install-map.invalid-project": {
+		"message": "The selected project is not a CurseForge map."
+	},
+	"app.worlds.install-map.instance-not-ready": {
+		"message": "Wait for this instance to finish installing before adding a map."
+	},
+	"app.worlds.install-map.unknown-instance": {
+		"message": "The selected instance is no longer available."
+	},
 	"app.worlds.title": {
 		"message": "Worlds"
 	},
@@ -6887,36 +7025,6 @@
 	"app.settings.resources.download-engine": {
 		"message": "Download engine"
 	},
-	"app.instances.selected-count": {
-		"message": "{count, plural, one {# selected} other {# selected}}"
-	},
-	"app.instances.select-all": {
-		"message": "Select all"
-	},
-	"app.instances.exit-select-mode": {
-		"message": "Exit"
-	},
-	"app.instances.edit-groups": {
-		"message": "Edit groups"
-	},
-	"app.instances.deselect-all": {
-		"message": "Deselect all"
-	},
-	"app.instances.batch-edit-groups.header": {
-		"message": "Edit groups"
-	},
-	"app.instances.batch-edit-groups.enter-group-name": {
-		"message": "Group name"
-	},
-	"app.instances.batch-edit-groups.description": {
-		"message": "Set groups for {count} instance(s)"
-	},
-	"app.instances.batch-edit-groups.create-group": {
-		"message": "Create new group"
-	},
-	"app.instances.batch-edit-groups.apply": {
-		"message": "Apply"
-	},
 	"app.instance.mods.toggle-dependencies.will-enable": {
 		"message": "The following content will be enabled:"
 	},
@@ -6947,78 +7055,6 @@
 	"app.instance.mods.orphaned-dependencies.body": {
 		"message": "These dependencies are no longer required by other content and will not be removed automatically: {list}"
 	},
-	"app.content-install.preview.skipped-header": {
-		"message": "Skipped"
-	},
-	"app.content-install.preview.skip.unsupported-project-type": {
-		"message": "Unsupported project type"
-	},
-	"app.content-install.preview.skip.tool": {
-		"message": "Development tool, not installed"
-	},
-	"app.content-install.preview.skip.quilt-fabric-api": {
-		"message": "Replaced for quilt"
-	},
-	"app.content-install.preview.skip.optional": {
-		"message": "Optional dependency"
-	},
-	"app.content-install.preview.skip.no-compatible-version": {
-		"message": "No compatible version found"
-	},
-	"app.content-install.preview.skip.missing-version": {
-		"message": "Referenced version was not found"
-	},
-	"app.content-install.preview.skip.incompatible": {
-		"message": "Incompatible dependency"
-	},
-	"app.content-install.preview.skip.excluded-by-user": {
-		"message": "Excluded by user"
-	},
-	"app.content-install.preview.skip.embedded": {
-		"message": "Embedded in the project"
-	},
-	"app.content-install.preview.skip.duplicate-project": {
-		"message": "Already included"
-	},
-	"app.content-install.preview.skip.conflicting-dependency": {
-		"message": "Conflicting dependency version"
-	},
-	"app.content-install.preview.skip.already-installed": {
-		"message": "Already installed"
-	},
-	"app.content-install.preview.select-all": {
-		"message": "Select all"
-	},
-	"app.content-install.preview.required-by": {
-		"message": "Required by {projects}"
-	},
-	"app.content-install.preview.only-checked": {
-		"message": "Only checked dependencies will be installed."
-	},
-	"app.content-install.preview.install": {
-		"message": "Install"
-	},
-	"app.content-install.preview.header": {
-		"message": "Confirm installation"
-	},
-	"app.content-install.preview.description": {
-		"message": "{count, plural, one {# dependency will be installed automatically} other {# dependencies will be installed automatically}} for {project} in {instance}."
-	},
-	"app.content-install.preview.dependencies-header": {
-		"message": "Dependencies"
-	},
-	"app.content-install.preview.dependencies-count": {
-		"message": "{count, plural, one {# dependency} other {# dependencies}}"
-	},
-	"app.content-install.preview.clear-all": {
-		"message": "Clear all"
-	},
-	"app.content-install.preview.cancel": {
-		"message": "Cancel"
-	},
-	"app.content-install.preview.already-installed": {
-		"message": "Already installed"
-	},
 	"app.content-install.dependencies-skipped.notification-title": {
 		"message": "Some dependencies were skipped"
 	},
@@ -7042,9 +7078,6 @@
 	},
 	"app.browse.display-mode.compact-list": {
 		"message": "Compact list"
-	},
-	"app.browse.add": {
-		"message": "Add"
 	},
 	"app.appearance-settings.auto-install-dependencies.title": {
 		"message": "Automatically install dependencies"

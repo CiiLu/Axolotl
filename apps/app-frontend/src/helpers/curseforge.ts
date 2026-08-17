@@ -166,6 +166,12 @@ export interface CurseForgeInstallRequest {
 	excludedDependencyProjectIds?: number[]
 }
 
+export interface CurseForgeWorldInstallRequest {
+	instanceId: string
+	projectId: number
+	fileId: number
+}
+
 export interface CurseForgeInstallResult {
 	installed: Array<{
 		projectId: number
@@ -376,6 +382,17 @@ export function queueCurseForgeFile(
 	display: { title: string; iconUrl?: string | null },
 ) {
 	return invoke<InstallJobSnapshot>('plugin:instance|instance_queue_curseforge_content', {
+		request,
+		displayTitle: display.title,
+		displayIcon: display.iconUrl ?? null,
+	})
+}
+
+export function queueCurseForgeWorld(
+	request: CurseForgeWorldInstallRequest,
+	display: { title: string; iconUrl?: string | null },
+) {
+	return invoke<InstallJobSnapshot>('plugin:instance|instance_queue_curseforge_world', {
 		request,
 		displayTitle: display.title,
 		displayIcon: display.iconUrl ?? null,

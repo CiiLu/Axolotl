@@ -15,9 +15,9 @@ import {
 	SpinnerIcon,
 } from '@modrinth/assets'
 import type {
-	BrowseInstallContentType,
 	BrowseDisplayMode,
 	BrowseDisplayModeOption,
+	BrowseInstallContentType,
 	BrowseSearchResponse,
 	CardAction,
 	ProjectType,
@@ -30,6 +30,7 @@ import {
 	commonMessages,
 	CreationFlowModal,
 	defineMessages,
+	EmptyState,
 	getLatestMatchingInstallVersion,
 	getSelectedInstallPreferences,
 	getTargetInstallPreferences,
@@ -109,8 +110,8 @@ import {
 	isBrowseContentProjectType,
 	set as setSettings,
 	setLastBrowseContentDisplayMode,
-	setLastBrowseContentSource,
 	setLastBrowseContentProjectType,
+	setLastBrowseContentSource,
 } from '@/helpers/settings.ts'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { translateSearchDescriptions } from '@/helpers/translation'
@@ -129,12 +130,15 @@ const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 const { installingServerProjects, playServerProject, showAddServerToInstanceModal } =
 	injectServerInstall()
-const { install: installVersion, installCurseForge } = injectContentInstall()
+const { install: installVersion, installCurseForge, installCurseForgeWorld } = injectContentInstall()
 const queryClient = useQueryClient()
 const debugLog = useDebugLogger('Browse')
 const router = useRouter()
 const route = useRoute()
 const projectType = ref<ProjectType>(route.params.projectType as ProjectType)
+const WORLD_BROWSE_PROJECT_TYPE = 'world' as ProjectType
+const isWorldMapBrowse = computed(() => projectType.value === WORLD_BROWSE_PROJECT_TYPE)
+const isWorldMapContext = computed(() => route.query.from === 'world-maps')
 
 function rememberBrowseContentProjectType(type: ProjectType) {
 	if (
@@ -164,6 +168,7 @@ const curseForgeClassIds: Partial<Record<ProjectType, number>> = {
 	datapack: 6945,
 	shader: 6552,
 	modpack: 4471,
+	[WORLD_BROWSE_PROJECT_TYPE]: 17,
 }
 
 const curseForgeCapability = ref(
@@ -175,6 +180,9 @@ const curseForgeCapability = ref(
 const rememberedContentSource = getLastBrowseContentSource()
 
 function resolveInitialContentSource(): BrowseContentSource {
+	if (route.params.projectType === WORLD_BROWSE_PROJECT_TYPE) {
+		return 'curseforge'
+	}
 	if (curseForgeCapability.value.configured && route.query.source === 'curseforge') {
 		return 'curseforge'
 	}
@@ -191,6 +199,9 @@ function resolveInitialContentSource(): BrowseContentSource {
 }
 
 const contentSource = ref<BrowseContentSource>(resolveInitialContentSource())
+if (isWorldMapBrowse.value) {
+	contentSource.value = 'curseforge'
+}
 const curseForgeCategoriesByClass = ref<Record<number, CurseForgeCategory[]>>({})
 
 async function ensureCurseForgeCategories(projectTypeValue: ProjectType) {
@@ -251,17 +262,22 @@ const {
 } = serverInstallContent
 
 debugLog('fetching tags (categories, loaders, gameVersions)')
-const [categories, loaders, availableGameVersions] = await Promise.all([
-	get_categories()
-		.catch(handleError)
-		.then(ref<Labrinth.Tags.v2.Category[]>),
-	get_loaders()
-		.catch(handleError)
-		.then(ref<Labrinth.Tags.v2.Loader[]>),
-	get_game_versions()
-		.catch(handleError)
-		.then(ref<Labrinth.Tags.v2.GameVersion[]>),
-])
+let categories: Ref<Labrinth.Tags.v2.Category[]> = ref([])
+let loaders: Ref<Labrinth.Tags.v2.Loader[]> = ref([])
+let availableGameVersions: Ref<Labrinth.Tags.v2.GameVersion[]> = ref([])
+if (!isWorldMapBrowse.value) {
+	[categories, loaders, availableGameVersions] = await Promise.all([
+		get_categories()
+			.catch(handleError)
+			.then(ref<Labrinth.Tags.v2.Category[]>),
+		get_loaders()
+			.catch(handleError)
+			.then(ref<Labrinth.Tags.v2.Loader[]>),
+		get_game_versions()
+			.catch(handleError)
+			.then(ref<Labrinth.Tags.v2.GameVersion[]>),
+	])
+}
 
 const curseForgeCategoryTags = computed(() => {
 	const classId = curseForgeClassIds[projectType.value]
@@ -596,6 +612,26 @@ const messages = defineMessages({
 		id: 'app.browse.discover-servers',
 		defaultMessage: 'Discover servers',
 	},
+	discoverMaps: {
+		id: 'app.browse.discover-maps',
+		defaultMessage: 'Discover maps',
+	},
+	mapsProjectType: {
+		id: 'app.browse.project-type.maps',
+		defaultMessage: 'Maps',
+	},
+	mapsUnavailable: {
+		id: 'app.browse.maps-unavailable',
+		defaultMessage: 'Maps unavailable',
+	},
+	mapsUnavailableDescription: {
+		id: 'app.browse.maps-unavailable-description',
+		defaultMessage: 'Configure a CurseForge API key to browse and install maps.',
+	},
+	mapsNoInstallableFile: {
+		id: 'app.browse.maps-no-installable-file',
+		defaultMessage: 'The selected CurseForge map does not have an installable file.',
+	},
 	environmentProvidedByServer: {
 		id: 'search.filter.locked.server-environment.title',
 		defaultMessage: 'Only client-side mods can be added to the server instance',
@@ -722,11 +758,15 @@ const sourceIcon = computed(() => {
 	}
 })
 
-const sourceOptions = computed(() => [
-	{ id: 'all' as const, label: messages.allSources, icon: GlobeIcon },
-	{ id: 'modrinth' as const, label: messages.modrinthSource, icon: ModrinthIcon },
-	{ id: 'curseforge' as const, label: messages.curseForgeSource, icon: CurseForgeIcon },
-])
+const sourceOptions = computed(() =>
+	isWorldMapBrowse.value
+		? [{ id: 'curseforge' as const, label: messages.curseForgeSource, icon: CurseForgeIcon }]
+		: [
+				{ id: 'all' as const, label: messages.allSources, icon: GlobeIcon },
+				{ id: 'modrinth' as const, label: messages.modrinthSource, icon: ModrinthIcon },
+				{ id: 'curseforge' as const, label: messages.curseForgeSource, icon: CurseForgeIcon },
+			],
+)
 
 const currentSourceLabel = computed(() => {
 	const current = sourceOptions.value.find((opt) => opt.id === contentSource.value)
@@ -735,14 +775,23 @@ const currentSourceLabel = computed(() => {
 
 const breadcrumbs = useBreadcrumbs()
 const browseTitle = computed(() =>
-	formatMessage(isFromWorlds.value ? messages.discoverServers : messages.discoverContent),
+	formatMessage(
+		isFromWorlds.value
+			? messages.discoverServers
+			: isWorldMapBrowse.value
+				? messages.discoverMaps
+				: messages.discoverContent,
+	),
 )
 breadcrumbs.setName('BrowseTitle', browseTitle.value)
 if (instance.value) {
 	const instanceLink = `/instance/${encodeURIComponent(instance.value.id)}`
 	breadcrumbs.setContext({
 		name: instance.value.name,
-		link: isFromWorlds.value ? `${instanceLink}/worlds` : instanceLink,
+		link:
+			isFromWorlds.value || isWorldMapContext.value
+				? `${instanceLink}/worlds`
+				: instanceLink,
 	})
 } else {
 	breadcrumbs.setContext(null)
@@ -858,6 +907,14 @@ const selectableProjectTypes = computed(() => {
 	if (isFromWorlds.value) {
 		return [{ label: 'Servers', href: `/browse/server${suffix}` }]
 	}
+	if (isWorldMapContext.value) {
+		return [
+			{
+				label: formatMessage(messages.mapsProjectType),
+				href: `/browse/${WORLD_BROWSE_PROJECT_TYPE}${suffix}`,
+			},
+		]
+	}
 
 	return [
 		{
@@ -874,6 +931,10 @@ const selectableProjectTypes = computed(() => {
 			label: formatMessage(messages.datapacksProjectType),
 			href: `/browse/datapack${suffix}`,
 			shown: dataPacks,
+		},
+		{
+			label: formatMessage(messages.mapsProjectType),
+			href: `/browse/${WORLD_BROWSE_PROJECT_TYPE}${suffix}`,
 		},
 		{ label: formatMessage(messages.shadersProjectType), href: `/browse/shader${suffix}` },
 		{
@@ -917,10 +978,12 @@ const installContext = computed(() => {
 			gameVersion: instance.value.game_version,
 			iconSrc: displayIcon.url,
 			iconFrameless: displayIcon.frameless,
-			backUrl: `/instance/${encodeURIComponent(instance.value.id)}${isFromWorlds.value ? '/worlds' : ''}`,
+			backUrl: `/instance/${encodeURIComponent(instance.value.id)}${isFromWorlds.value || isWorldMapContext.value ? '/worlds' : ''}`,
 			backLabel: formatMessage(messages.backToInstance),
 			heading: formatMessage(
-				isFromWorlds.value ? messages.addServersToInstance : commonMessages.installingContentLabel,
+				isFromWorlds.value
+					? messages.addServersToInstance
+					: commonMessages.installingContentLabel,
 			),
 			warning:
 				isServerInstance.value && !isFromWorlds.value
@@ -941,6 +1004,57 @@ function setProjectInstalling(projectId: string, installing: boolean) {
 		next.delete(projectId)
 	}
 	installingProjectIds.value = next
+}
+
+type CurseForgeWorldInstallTarget = {
+	projectId: number
+	fileId: number
+	projectKey: string
+}
+
+function getCurseForgeWorldInstallTarget(project: {
+	project_id: string
+	provider_project_id?: string
+	latest_version?: string | null
+}): CurseForgeWorldInstallTarget {
+	const projectId = Number(project.provider_project_id ?? project.project_id.replace(/^curseforge:/, ''))
+	const fileId = Number(project.latest_version)
+	if (!Number.isSafeInteger(projectId) || projectId <= 0 || !Number.isSafeInteger(fileId) || fileId <= 0) {
+		throw new Error(formatMessage(messages.mapsNoInstallableFile))
+	}
+	return {
+		projectId,
+		fileId,
+		projectKey: project.project_id,
+	}
+}
+
+async function installWorldMap(project: {
+	project_id: string
+	provider_project_id?: string
+	latest_version?: string | null
+	title?: string
+	icon_url?: string | null
+}) {
+	const target = getCurseForgeWorldInstallTarget(project)
+	const targetInstanceId = instance.value?.id
+	if (targetInstanceId) {
+		setProjectInstalling(target.projectKey, true)
+	}
+	try {
+		await installCurseForgeWorld(
+			target.projectId,
+			target.fileId,
+			targetInstanceId,
+			'Browse',
+			() => {
+				if (targetInstanceId) setProjectInstalling(target.projectKey, false)
+			},
+		)
+	} catch (error) {
+		if (targetInstanceId) setProjectInstalling(target.projectKey, false)
+		throw error
+	}
 }
 
 const serverInstallQueue = {
@@ -1035,12 +1149,41 @@ function getCardActions(
 		provider_project_id?: string
 	}
 	if (!isBrowseContentProvider(projectResult.provider)) return []
+	const isInstalling = installingProjectIds.value.has(projectResult.project_id)
+	if (currentProjectType === WORLD_BROWSE_PROJECT_TYPE) {
+		if (projectResult.provider !== 'curseforge') return []
+		return [
+			{
+				key: 'install',
+				label: formatMessage(
+					isInstalling
+						? commonMessages.installingLabel
+						: instance.value
+							? commonMessages.installButton
+							: messages.addToAnInstance,
+				),
+				compactLabel:
+					!isInstalling && !instance.value ? formatMessage(messages.add) : undefined,
+				icon: isInstalling ? SpinnerIcon : PlusIcon,
+				iconClass: isInstalling ? 'animate-spin' : undefined,
+				disabled: isInstalling,
+				color: 'brand',
+				type: 'outlined',
+				onClick: async () => {
+					try {
+						await installWorldMap(projectResult)
+					} catch (error) {
+						handleError(error)
+					}
+				},
+			},
+		]
+	}
 	const isInstalled =
 		projectResult.installed ||
 		allInstalledIds.value.has(projectResult.project_id || '') ||
 		serverContentProjectIds.value.has(projectResult.project_id || '') ||
 		serverContextServerData.value?.upstream?.project_id === projectResult.project_id
-	const isInstalling = installingProjectIds.value.has(projectResult.project_id)
 
 	if (
 		isServerContext.value &&
@@ -1544,12 +1687,20 @@ function rankChineseProviderHits(hits: ChineseSearchHit[], sort: string | null) 
 async function search(requestParams: string, signal: AbortSignal) {
 	debugLog('searching v3', requestParams)
 	const isServer = projectType.value === 'server'
+	if (isWorldMapBrowse.value && !curseForgeCapability.value.configured) {
+		return {
+			projectHits: [],
+			serverHits: [],
+			total_hits: 0,
+			per_page: 20,
+		}
+	}
 	const params = new URLSearchParams(requestParams)
 	const limit = Math.min(Number(params.get('limit') ?? 20), 50)
 	const offset = Number(params.get('offset') ?? 0)
 	const rawQuery = params.get('query') ?? ''
 	let chineseResolution: ChineseSearchResolution | null = null
-	if (containsChineseSearchText(rawQuery)) {
+	if (!isWorldMapBrowse.value && containsChineseSearchText(rawQuery)) {
 		chineseResolution = await resolveChineseContentSearch(rawQuery).catch((error) => {
 			debugLog('chinese search resolution failed, using original query', error)
 			return null
@@ -1565,6 +1716,7 @@ async function search(requestParams: string, signal: AbortSignal) {
 		categoryValues.some((value) => isCurseForgeOnlyCategoryName(value))
 
 	const includeModrinth =
+		!isWorldMapBrowse.value &&
 		(contentSource.value !== 'curseforge' || isServer) &&
 		!(contentSource.value === 'all' && hasOnlyCurseForgeExclusiveCategories)
 	let includeCurseForge =
@@ -1998,12 +2150,17 @@ watch(contentSource, async (source) => {
 })
 
 watch(projectType, async (type) => {
+	if (type === WORLD_BROWSE_PROJECT_TYPE && contentSource.value !== 'curseforge') {
+		contentSource.value = 'curseforge'
+		return
+	}
 	if (contentSource.value === 'curseforge' || contentSource.value === 'all') {
 		await ensureCurseForgeCategories(type).catch(handleError)
 	}
 })
 
 function selectContentSource(source: string) {
+	if (isWorldMapBrowse.value) return
 	if (source === 'all' || source === 'modrinth' || source === 'curseforge') {
 		contentSource.value = source
 		setLastBrowseContentSource(source)
@@ -2153,7 +2310,9 @@ provideBrowseManager({
 		},
 	}),
 	showHideInstalled: computed(
-		() => (isServerContext.value && projectType.value !== 'modpack') || !!instance.value,
+		() =>
+			!isWorldMapBrowse.value &&
+			((isServerContext.value && projectType.value !== 'modpack') || !!instance.value),
 	),
 	hideInstalledLabel: computed(() =>
 		formatMessage(
@@ -2187,7 +2346,7 @@ provideBrowseManager({
 
 <template>
 	<div data-onboarding-id="browse-content" class="flex flex-col gap-3 p-6">
-		<BrowsePageLayout>
+		<BrowsePageLayout v-if="!isWorldMapBrowse || curseForgeCapability.configured">
 			<template #nav-tabs-actions>
 				<ButtonStyled size="large" type="transparent">
 					<button :disabled="translationLoading" @click="toggleTranslation">
@@ -2207,7 +2366,7 @@ provideBrowseManager({
 			</template>
 			<template #search-bar-actions>
 				<PopoutMenu
-					v-if="curseForgeCapability.configured && projectType !== 'server'"
+					v-if="curseForgeCapability.configured && projectType !== 'server' && !isWorldMapBrowse"
 					placement="bottom-end"
 				>
 					<ButtonStyled size="standard" type="standard">
@@ -2246,6 +2405,12 @@ provideBrowseManager({
 				</ContextMenu>
 			</template>
 		</BrowsePageLayout>
+		<EmptyState
+			v-else
+			type="empty-inbox"
+			:heading="formatMessage(messages.mapsUnavailable)"
+			:description="formatMessage(messages.mapsUnavailableDescription)"
+		/>
 		<CreationFlowModal
 			v-if="isServerContext && projectType === 'modpack'"
 			ref="serverSetupModalRef"

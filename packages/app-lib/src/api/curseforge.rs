@@ -12,7 +12,7 @@ use crate::install::{
 use crate::state::{
     CachedEntry, ContentProvider, ContentProviderRef, ContentSourceKind,
     CurseForgeFileId, CurseForgeProjectId, DownloadSourceMode, EditInstance,
-    InstanceLink, ModLoader, ProjectType, ReleaseChannel,
+    InstanceInstallStage, InstanceLink, ModLoader, ProjectType, ReleaseChannel,
 };
 use crate::util::fetch::{
     ContentValidation, DownloadRequest, DownloadResult, DownloadRouteSource,
@@ -432,6 +432,14 @@ pub struct CurseForgeInstallRequest {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CurseForgeWorldInstallRequest {
+    pub instance_id: String,
+    pub project_id: u32,
+    pub file_id: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CurseForgeInstalledFile {
     pub project_id: u32,
     pub file_id: u32,
@@ -518,6 +526,13 @@ pub struct CurseForgeInstallResult {
     pub incompatible_dependencies: Vec<u32>,
     #[serde(default)]
     pub skipped_dependencies: Vec<CurseForgeSkippedDependency>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurseForgeWorldInstallResult {
+    pub world_name: Option<String>,
+    pub manual_download: Option<CurseForgeManualDownload>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -1204,6 +1219,97 @@ pub async fn install_file_with_reporter(
     let result = install_file_with_metrics(request, Some(&metrics)).await?;
     metrics.finish(&reporter).await?;
     Ok(result)
+}
+
+pub async fn install_world_with_reporter(
+    request: CurseForgeWorldInstallRequest,
+    reporter: InstallProgressReporter,
+) -> crate::Result<CurseForgeWorldInstallResult> {
+    let state = State::get().await?;
+    let instance =
+        crate::state::get_instance(&request.instance_id, &state.pool)
+            .await?
+            .ok_or_else(|| {
+                ErrorKind::InputError("Unknown instance".to_string())
+            })?;
+    if instance.instance.install_stage != InstanceInstallStage::Installed {
+        return Err(ErrorKind::InputError(
+            "Maps can only be added to an installed instance".to_string(),
+        )
+        .into());
+    }
+
+    let project = get_project(request.project_id).await?;
+    if project.id != request.project_id || project.class_id != Some(17) {
+        return Err(ErrorKind::InputError(
+            "The selected CurseForge project is not a Minecraft world"
+                .to_string(),
+        )
+        .into());
+    }
+
+    let file = get_file(request.project_id, request.file_id).await?;
+    if file.mod_id != request.project_id {
+        return Err(ErrorKind::InputError(
+            "CurseForge returned a file for a different project".to_string(),
+        )
+        .into());
+    }
+    validate_world_archive_name(&file.file_name)?;
+
+    let download_url = if project.allow_mod_distribution == Some(false) {
+        None
+    } else {
+        match file.download_url.clone() {
+            Some(url) => Some(url),
+            None => {
+                get_download_url(request.project_id, request.file_id).await?
+            }
+        }
+    };
+    let Some(download_url) = download_url else {
+        let manual_download = manual_download_from_file(
+			request.project_id,
+			request.file_id,
+			&file,
+			&project,
+			"world",
+			"saves".to_string(),
+			crate::state::instances::ContentOwnershipKind::UserAdded,
+			crate::state::instances::ManualDownloadOperationKind::ContentInstall,
+		);
+        persist_manual_download(&request.instance_id, &manual_download).await?;
+        return Ok(CurseForgeWorldInstallResult {
+            manual_download: Some(manual_download),
+            ..Default::default()
+        });
+    };
+
+    let staging_directory = tempfile::tempdir()?;
+    let staging_path = staging_directory.path().join(&file.file_name);
+    let tracking_path =
+        format!("worlds/{}/{}", request.project_id, request.file_id);
+    download_curseforge_path(
+        &download_url,
+        &file,
+        &staging_path,
+        curseforge_content_validation(&file.file_name),
+        None,
+        Some((&reporter, &tracking_path)),
+    )
+    .await?;
+    let world_name = crate::state::instances::commands::import_world_save(
+        &state,
+        &request.instance_id,
+        &staging_path,
+        None,
+    )
+    .await?;
+
+    Ok(CurseForgeWorldInstallResult {
+        world_name: Some(world_name),
+        ..Default::default()
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -4950,10 +5056,18 @@ where
             continue;
         }
 
+        let mut reconciled_materialized = materialized.clone();
+        reconciled_materialized.extend(
+            manually_imported_curseforge_world_downloads(
+                instance_id,
+                &current.state,
+            )
+            .await?,
+        );
         let reconciliation = curseforge_manual_download_reconciliation(
             &current.state.download_items(),
             &pending,
-            &materialized,
+            &reconciled_materialized,
         );
         for inconsistent in &reconciliation.inconsistent {
             tracing::warn!(
@@ -4979,10 +5093,18 @@ where
         if latest.status != crate::install::InstallJobStatus::WaitingForUser {
             continue;
         }
+        let mut latest_materialized = materialized.clone();
+        latest_materialized.extend(
+            manually_imported_curseforge_world_downloads(
+                instance_id,
+                &latest.state,
+            )
+            .await?,
+        );
         let latest_reconciliation = curseforge_manual_download_reconciliation(
             &latest.state.download_items(),
             &pending,
-            &materialized,
+            &latest_materialized,
         );
         tracing::debug!(
             job_id = %latest.id,
@@ -5139,6 +5261,45 @@ fn is_curseforge_manual_download_job(
     })
 }
 
+async fn manually_imported_curseforge_world_downloads(
+    instance_id: &str,
+    job_state: &crate::install::model::InstallJobState,
+) -> crate::Result<HashSet<(String, String)>> {
+    let crate::install::model::InstallRequest::InstallCurseForgeWorld {
+        request,
+        ..
+    } = &job_state.request
+    else {
+        return Ok(HashSet::new());
+    };
+    let project_id = request.project_id.to_string();
+    let file_id = request.file_id.to_string();
+    let instance_path =
+        crate::api::instance::get_full_path(instance_id).await?;
+    let imported = job_state.download_items().into_iter().any(|item| {
+        if item.status != crate::install::model::DownloadItemStatus::Skipped
+            || item.project_id.as_deref() != Some(project_id.as_str())
+            || item.version_id.as_deref() != Some(file_id.as_str())
+        {
+            return false;
+        }
+        let Some(file_name) = Path::new(&item.id).file_name() else {
+            return false;
+        };
+        let Some(world_name) = Path::new(file_name).file_stem() else {
+            return false;
+        };
+        instance_path
+            .join("saves")
+            .join(world_name)
+            .join("level.dat")
+            .is_file()
+    });
+    Ok(imported
+        .then(|| HashSet::from([(project_id, file_id)]))
+        .unwrap_or_default())
+}
+
 async fn install_manual_download(
     instance_id: &str,
     download: &CurseForgeManualDownload,
@@ -5201,6 +5362,29 @@ async fn install_manual_download(
             "Completed CurseForge pending manual download record"
         );
         return Ok(relative_path);
+    }
+    if download.project_type == "world" {
+        validate_world_archive_name(&download.file_name)?;
+        let verified_directory = tempfile::tempdir()?;
+        let verified_source =
+            verified_directory.path().join(&download.file_name);
+        crate::state::materialize_verified_project_download_copy(
+            source_path,
+            &verified_source,
+            size,
+            sha1,
+        )
+        .await?;
+        let state = State::get().await?;
+        let world_name = crate::state::instances::commands::import_world_save(
+            &state,
+            instance_id,
+            &verified_source,
+            None,
+        )
+        .await?;
+        complete_manual_world_download(instance_id, download).await?;
+        return Ok(format!("saves/{world_name}"));
     }
     let project_type = managed_project_type(&download.project_type)?;
     let target_folder = manual_download_target_folder(download, project_type)?;
@@ -5547,12 +5731,79 @@ async fn persist_manual_modpack_archive(
     Ok(())
 }
 
+async fn persist_manual_world_archive(
+    instance_id: &str,
+    download: &CurseForgeManualDownload,
+) -> crate::Result<()> {
+    validate_world_archive_name(&download.file_name)?;
+    let state = State::get().await?;
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+    let now = chrono::Utc::now();
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+    crate::state::instances::adapters::sqlite::content_rows::upsert_pending_manual_download_in_transaction(
+		&crate::state::instances::PendingManualDownload {
+			id: format!("manual-download:{}", uuid::Uuid::new_v4()),
+			instance_id: instance_id.to_string(),
+			pack_member_id: None,
+			content_entry_id: None,
+			operation_kind: download.operation_kind,
+			operation_target_id: None,
+			project_type: ProjectType::WorldSave,
+			provider: ContentProvider::CurseForge,
+			provider_project_id: download.project_id.to_string(),
+			provider_release_id: download.file_id.to_string(),
+			file_name: download.file_name.clone(),
+			website_url: download.website_url.clone(),
+			target_relative_path: format!("saves/{}", download.file_name),
+			expected_sha1: download
+				.hashes
+				.iter()
+				.find(|hash| hash.algo == 1)
+				.map(|hash| hash.value.clone()),
+			expected_size: (download.file_length > 0)
+				.then_some(download.file_length),
+			expected_fingerprint: (download.file_fingerprint > 0)
+				.then_some(download.file_fingerprint),
+			state: crate::state::instances::ManualDownloadState::Waiting,
+			context: serde_json::to_value(download)?,
+			created_at: now,
+			modified_at: now,
+		},
+		&mut tx,
+	)
+	.await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn complete_manual_world_download(
+    instance_id: &str,
+    download: &CurseForgeManualDownload,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    let _instance_lock = state.lock_instance_content(instance_id).await;
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+    crate::state::instances::adapters::sqlite::content_rows::complete_pending_manual_download(
+		instance_id,
+		&download.project_id.to_string(),
+		&download.file_id.to_string(),
+		None,
+		&mut tx,
+	)
+	.await?;
+    tx.commit().await?;
+    Ok(())
+}
+
 async fn persist_manual_download(
     instance_id: &str,
     download: &CurseForgeManualDownload,
 ) -> crate::Result<()> {
     if download.project_type == "modpack" {
         return persist_manual_modpack_archive(instance_id, download).await;
+    }
+    if download.project_type == "world" {
+        return persist_manual_world_archive(instance_id, download).await;
     }
     let project_type = managed_project_type(&download.project_type)?;
     let state = State::get().await?;
@@ -5686,6 +5937,21 @@ fn validate_file_name(file_name: &str) -> crate::Result<()> {
         .into());
     }
     Ok(())
+}
+
+fn validate_world_archive_name(file_name: &str) -> crate::Result<()> {
+    validate_file_name(file_name)?;
+    if Path::new(file_name)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("zip"))
+    {
+        return Ok(());
+    }
+    Err(ErrorKind::InputError(
+        "CurseForge world downloads must be ZIP archives".to_string(),
+    )
+    .into())
 }
 
 fn format_bytes(bytes: u64) -> String {
@@ -8875,5 +9141,13 @@ mod tests {
         );
         assert_eq!(recognized_project_type(Some(4471)), None);
         assert_eq!(recognized_project_type(None), None);
+    }
+
+    #[test]
+    fn world_archives_must_use_a_zip_file_name() {
+        assert!(validate_world_archive_name("world.zip").is_ok());
+        assert!(validate_world_archive_name("WORLD.ZIP").is_ok());
+        assert!(validate_world_archive_name("world.rar").is_err());
+        assert!(validate_world_archive_name("../world.zip").is_err());
     }
 }

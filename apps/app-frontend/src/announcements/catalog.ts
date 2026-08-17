@@ -43,6 +43,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 		changes: {
 			added: [
 				{
+					'en-US':
+						'Added CurseForge map browsing and installation into existing instances, including recovery for maps that require a manual ZIP download.',
+					'zh-CN':
+						'新增 CurseForge 地图浏览与安装功能，可直接安装到已有实例，并支持需要手动下载 ZIP 的地图恢复流程。',
+				},
+				{
 					'en-US': 'Long-press instance cards to enable batch editing of custom groups',
 					'zh-CN': '长按实例卡片实现批量编辑自定义分组功能',
 				},
@@ -65,6 +71,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			fixed: [
+				{
+					'en-US':
+						'Fixed map browsing returning to shaders after restarting, and prevented downloaded maps from being duplicated in the regular content list.',
+					'zh-CN':
+						'修复重启后地图浏览会跳回光影的问题，并避免已下载地图在常规内容列表中重复显示。',
+				},
 				{
 					'en-US':
 						'Fixed installations on protected paths not requesting administrator permission when needed.',

@@ -52,6 +52,15 @@
 							<span>{{ formatMessage(messages.browseServers) }}</span>
 						</button>
 					</ButtonStyled>
+					<ButtonStyled type="outlined">
+						<button
+							class="!h-10 flex items-center gap-2"
+							@click="router.push({ path: '/browse/world', query: { i: instance.id, from: 'world-maps' } })"
+						>
+							<WorldIcon class="size-5" />
+							<span>{{ formatMessage(messages.browseMaps) }}</span>
+						</button>
+					</ButtonStyled>
 				</div>
 			</div>
 			<div class="flex flex-wrap items-center justify-between gap-2">
@@ -142,12 +151,28 @@
 						<span>{{ formatMessage(messages.browseServers) }}</span>
 					</button>
 				</ButtonStyled>
+				<ButtonStyled type="outlined">
+					<button
+						class="!h-10 flex items-center gap-2"
+						@click="router.push({ path: '/browse/world', query: { i: instance.id, from: 'world-maps' } })"
+					>
+						<WorldIcon class="size-5" />
+						<span>{{ formatMessage(messages.browseMaps) }}</span>
+					</button>
+				</ButtonStyled>
 			</template>
 		</EmptyState>
 	</ReadyTransition>
 </template>
 <script setup lang="ts">
-import { CompassIcon, FilterIcon, PlusIcon, RefreshCwIcon, SearchIcon } from '@modrinth/assets'
+import {
+	CompassIcon,
+	FilterIcon,
+	PlusIcon,
+	RefreshCwIcon,
+	SearchIcon,
+	WorldIcon,
+} from '@modrinth/assets'
 import {
 	ButtonStyled,
 	commonMessages,
@@ -219,6 +244,10 @@ const messages = defineMessages({
 	browseServers: {
 		id: 'app.instance.worlds.browse-servers',
 		defaultMessage: 'Browse servers',
+	},
+	browseMaps: {
+		id: 'app.instance.worlds.browse-maps',
+		defaultMessage: 'Browse maps',
 	},
 	noWorldsHeading: {
 		id: 'app.instance.worlds.no-worlds-heading',

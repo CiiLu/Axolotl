@@ -14,6 +14,7 @@ import {
 import {
 	Accordion,
 	ButtonStyled,
+	Checkbox,
 	commonMessages,
 	defineMessages,
 	DropdownSelect,
@@ -28,12 +29,11 @@ import { computed, ref } from 'vue'
 
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import Instance from '@/components/ui/Instance.vue'
-import ConfirmDeleteInstanceModal from '@/components/ui/modal/ConfirmDeleteInstanceModal.vue'
 import BatchEditGroupsModal from '@/components/ui/modal/BatchEditGroupsModal.vue'
+import ConfirmDeleteInstanceModal from '@/components/ui/modal/ConfirmDeleteInstanceModal.vue'
+import { UNGROUPED_GROUP_KEY, useGridGrouping } from '@/composables/useGridGrouping'
 import { install_duplicate_instance } from '@/helpers/install'
 import { edit, remove, set_pinned } from '@/helpers/instance'
-import { Checkbox } from '@modrinth/ui'
-import { useGridGrouping, UNGROUPED_GROUP_KEY } from '@/composables/useGridGrouping'
 
 const { handleError } = injectNotificationManager()
 

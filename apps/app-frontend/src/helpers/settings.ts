@@ -10,16 +10,16 @@ import type { Hooks, MemorySettings, WindowSize } from '@/helpers/types'
 import type { AccentColorSetting, ColorTheme, FeatureFlag, HomeLayout } from '@/store/theme.ts'
 import { DEFAULT_FEATURE_FLAGS } from '@/store/theme.ts'
 
+export type {
+	BrowseContentDisplayMode,
+	BrowseContentProjectType,
+} from './browse-display-mode.ts'
 export {
 	getLastBrowseContentDisplayMode,
 	getLastBrowseContentProjectType,
 	isBrowseContentProjectType,
 	setLastBrowseContentDisplayMode,
 	setLastBrowseContentProjectType,
-} from './browse-display-mode.ts'
-export type {
-	BrowseContentDisplayMode,
-	BrowseContentProjectType,
 } from './browse-display-mode.ts'
 
 // Settings object

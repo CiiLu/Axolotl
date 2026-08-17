@@ -1,4 +1,6 @@
-use crate::api::curseforge::CurseForgeInstallRequest;
+use crate::api::curseforge::{
+    CurseForgeInstallRequest, CurseForgeWorldInstallRequest,
+};
 use crate::api::pack::import::ImportLauncherType;
 use crate::api::pack::install_from::{CreatePackInstance, CreatePackLocation};
 use crate::state::{
@@ -1105,6 +1107,12 @@ pub enum InstallRequest {
         #[serde(default)]
         display_icon: Option<String>,
     },
+    InstallCurseForgeWorld {
+        request: CurseForgeWorldInstallRequest,
+        display_title: String,
+        #[serde(default)]
+        display_icon: Option<String>,
+    },
     DownloadJava {
         vendor: String,
         version: u32,
@@ -1135,6 +1143,7 @@ impl InstallRequest {
             | Self::UpdateManagedCurseForgeModpack { .. } => true,
             Self::InstallContent { .. }
             | Self::InstallCurseForgeContent { .. }
+            | Self::InstallCurseForgeWorld { .. }
             | Self::DownloadJava { .. } => false,
         }
     }
@@ -1160,6 +1169,9 @@ impl InstallRequest {
             Self::InstallCurseForgeContent { .. } => {
                 InstallJobKind::InstallContent
             }
+            Self::InstallCurseForgeWorld { .. } => {
+                InstallJobKind::InstallContent
+            }
             Self::DownloadJava { .. } => InstallJobKind::DownloadJava,
         }
     }
@@ -1179,6 +1191,11 @@ impl InstallRequest {
                     instance_id: request.instance_id.clone(),
                 }
             }
+            Self::InstallCurseForgeWorld { request, .. } => {
+                InstallTarget::ExistingInstance {
+                    instance_id: request.instance_id.clone(),
+                }
+            }
             _ => InstallTarget::NewInstance { instance_id: None },
         }
     }
@@ -1194,6 +1211,7 @@ impl InstallRequest {
             }
             Self::InstallContent { .. } => InstallCleanup::None,
             Self::InstallCurseForgeContent { .. } => InstallCleanup::None,
+            Self::InstallCurseForgeWorld { .. } => InstallCleanup::None,
             _ => InstallCleanup::DeleteNewInstance { instance_id: None },
         }
     }
@@ -1789,6 +1807,7 @@ impl InstallJobState {
                 InstallJobProvider::Modrinth
             }
             InstallRequest::InstallCurseForgeContent { .. }
+            | InstallRequest::InstallCurseForgeWorld { .. }
             | InstallRequest::UpdateManagedCurseForgeModpack { .. } => {
                 InstallJobProvider::CurseForge
             }

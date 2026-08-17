@@ -22,12 +22,14 @@ import {
 	type CurseForgeManualDownloadImport,
 	type CurseForgeProject,
 	getCurseForgeDownloadFailureDetails,
+	getCurseForgeFile,
 	getCurseForgeFiles,
 	getCurseForgeProject,
 	installCurseForgeFile,
 	installCurseForgeModpack,
 	previewCurseForgeFile,
 	queueCurseForgeFile,
+	queueCurseForgeWorld,
 	summarizeCurseForgeInstall,
 } from '@/helpers/curseforge'
 import {
@@ -88,10 +90,27 @@ const LOADER_ORDER = ['vanilla', 'fabric', 'quilt', 'neoforge', 'forge']
 const SUPPORTED_LOADERS: Set<string> = new Set(['vanilla', 'forge', 'fabric', 'quilt', 'neoforge'])
 const VANILLA_COMPATIBLE_LOADERS: Set<string> = new Set(['minecraft', 'datapack'])
 type InstallProvider = 'modrinth' | 'curseforge'
+type ContentInstallTargetMode = 'content' | 'world'
 const noCompatibleVersionsMessage = defineMessage({
 	id: 'app.content-install.no-compatible-versions',
 	defaultMessage:
 		'No available versions match {compatibilityLabel}. Select a version to install anyway. Matching dependencies will still be installed.',
+})
+const curseForgeWorldInvalidProjectMessage = defineMessage({
+	id: 'app.worlds.install-map.invalid-project',
+	defaultMessage: 'The selected project is not a CurseForge map.',
+})
+const curseForgeWorldUnavailableMessage = defineMessage({
+	id: 'app.browse.maps-no-installable-file',
+	defaultMessage: 'The selected CurseForge map does not have an installable file.',
+})
+const curseForgeWorldInstanceNotReadyMessage = defineMessage({
+	id: 'app.worlds.install-map.instance-not-ready',
+	defaultMessage: 'Wait for this instance to finish installing before adding a map.',
+})
+const curseForgeWorldUnknownInstanceMessage = defineMessage({
+	id: 'app.worlds.install-map.unknown-instance',
+	defaultMessage: 'The selected instance is no longer available.',
 })
 const manualDownloadsTitleMessage = defineMessage({
 	id: 'app.curseforge.manual-downloads.notification-title',
@@ -455,6 +474,13 @@ export interface ContentInstallContext {
 		createInstanceCallback?: (instanceId: string) => void,
 		hints?: { preferredLoader?: string; preferredGameVersion?: string; showProjectInfo?: boolean },
 	) => Promise<void>
+	installCurseForgeWorld: (
+		projectId: string | number,
+		fileId?: string | number | null,
+		instanceId?: string | null,
+		source?: string,
+		callback?: ContentInstallCallback,
+	) => Promise<void>
 	installingItems: Ref<Map<string, ContentItem[]>>
 	pendingManualDownloadsByInstance: Ref<Map<string, CurseForgeManualDownloadItem[]>>
 	installRevisionByInstance: Ref<Map<string, number>>
@@ -694,10 +720,12 @@ export function createContentInstall(opts: {
 	let curseForgeManualDownloadsModalRef: CurseForgeManualDownloadsModalRef | null = null
 	let incompatibilityWarningModalRef: ModalRef | null = null
 	let currentProvider: InstallProvider = 'modrinth'
+	let currentTargetMode: ContentInstallTargetMode = 'content'
 	let currentProject: Labrinth.Projects.v2.Project | null = null
 	let currentVersions: Labrinth.Versions.v2.Version[] = []
 	let currentCurseForgeProject: CurseForgeProject | null = null
 	let currentCurseForgeFiles = new Map<string, CurseForgeFile>()
+	let currentWorldFileId: string | null = null
 	let currentCallback: ContentInstallCallback = () => {}
 	let contentInstallModalOpen = false
 	let instanceMap: Record<string, InstallTargetInstance> = {}
@@ -782,6 +810,8 @@ export function createContentInstall(opts: {
 		hints?: { preferredLoader?: string; preferredGameVersion?: string; showProjectInfo?: boolean },
 		modalAlreadyOpen = false,
 	) {
+		currentTargetMode = 'content'
+		currentWorldFileId = null
 		currentProject = project
 		currentVersions = versions
 		currentCallback = onInstall
@@ -936,6 +966,8 @@ export function createContentInstall(opts: {
 	}
 
 	async function showContentInstallLoading(callback: ContentInstallCallback) {
+		currentTargetMode = 'content'
+		currentWorldFileId = null
 		currentCallback = callback
 		instances.value = []
 		compatibleLoaders.value = []
@@ -1455,11 +1487,58 @@ export function createContentInstall(opts: {
 		)
 	}
 
+	async function queueCurrentCurseForgeWorld(
+		instance: InstallTargetInstance & Partial<Pick<GameInstance, 'install_stage'>>,
+	) {
+		const curseForgeProject = currentCurseForgeProject
+		const file = currentWorldFileId ? currentCurseForgeFiles.get(currentWorldFileId) : null
+		if (!curseForgeProject || !file || !currentProject) {
+			throw new Error(formatMessage(curseForgeWorldUnavailableMessage))
+		}
+		if (curseForgeProject.classId !== 17) {
+			throw new Error(formatMessage(curseForgeWorldInvalidProjectMessage))
+		}
+		if (instance.install_stage && instance.install_stage !== 'installed') {
+			throw new Error(formatMessage(curseForgeWorldInstanceNotReadyMessage))
+		}
+
+		return await queueCurseForgeWorld(
+			{
+				instanceId: instance.id,
+				projectId: curseForgeProject.id,
+				fileId: file.id,
+			},
+			{ title: currentProject.title, iconUrl: currentProject.icon_url },
+		)
+	}
+
 	async function handleInstallToInstance(instance: ContentInstallInstance) {
 		const selectedInstance = instanceMap[instance.id]
 		const storeInstance = instances.value.find((i) => i.id === instance.id)
 		if (!currentProject || !selectedInstance) {
 			opts.handleError('No project or instance found')
+			return
+		}
+
+		if (currentTargetMode === 'world') {
+			if (storeInstance) storeInstance.installing = true
+			try {
+				await queueCurrentCurseForgeWorld(selectedInstance)
+				trackEvent('ProjectInstall', {
+					loader: selectedInstance.loader,
+					game_version: selectedInstance.game_version,
+					id: currentProject.id,
+					version_id: currentWorldFileId ?? '',
+					project_type: 'world',
+					title: currentProject.title,
+					source: 'ProjectInstallModal',
+				})
+				currentCallback(currentWorldFileId ?? undefined, [currentProject.id])
+				hideContentInstallModal()
+			} catch (err) {
+				if (storeInstance) storeInstance.installing = false
+				handleContentInstallError(err)
+			}
 			return
 		}
 
@@ -1923,6 +2002,8 @@ export function createContentInstall(opts: {
 		hints?: { preferredLoader?: string; preferredGameVersion?: string; showProjectInfo?: boolean },
 	) {
 		currentProvider = 'modrinth'
+		currentTargetMode = 'content'
+		currentWorldFileId = null
 		currentCurseForgeProject = null
 		currentCurseForgeFiles = new Map()
 		const shouldShowInstallTargetModal = !instanceId
@@ -2049,6 +2130,8 @@ export function createContentInstall(opts: {
 		createInstanceCallback: (instanceId: string) => void = () => {},
 		hints?: { preferredLoader?: string; preferredGameVersion?: string; showProjectInfo?: boolean },
 	) {
+		currentTargetMode = 'content'
+		currentWorldFileId = null
 		const numericProjectId = Number(projectId.replace(/^curseforge:/, ''))
 		if (!Number.isFinite(numericProjectId)) {
 			throw new Error('Invalid CurseForge project ID')
@@ -2149,6 +2232,126 @@ export function createContentInstall(opts: {
 		} else {
 			await showModInstallModal(project, versions, callback, hints, true)
 		}
+	}
+
+	function setCurseForgeWorldInstallState(
+		curseForgeProject: CurseForgeProject,
+		file: CurseForgeFile,
+		callback: ContentInstallCallback,
+	) {
+		const project = mapCurseForgeProject(curseForgeProject, [file])
+		currentProvider = 'curseforge'
+		currentTargetMode = 'world'
+		currentProject = project
+		currentVersions = [mapCurseForgeVersion(file, curseForgeProject.id, project.project_type)]
+		currentCurseForgeProject = curseForgeProject
+		currentCurseForgeFiles = new Map([[file.id.toString(), file]])
+		currentWorldFileId = file.id.toString()
+		currentCallback = callback
+	}
+
+	async function showCurseForgeWorldInstallModal(
+		curseForgeProject: CurseForgeProject,
+		file: CurseForgeFile,
+		callback: ContentInstallCallback,
+	) {
+		setCurseForgeWorldInstallState(curseForgeProject, file, callback)
+		instances.value = []
+		compatibleLoaders.value = []
+		gameVersions.value = []
+		releaseGameVersions.value = new Set()
+		preferredLoader.value = null
+		preferredGameVersion.value = null
+		loading.value = true
+		defaultTab.value = 'existing'
+		projectInfo.value = null
+
+		await nextTick()
+		contentInstallModalOpen = true
+		modalRef?.show()
+		trackEvent('ProjectInstallStart', { source: 'ProjectInstallModal' })
+
+		try {
+			const candidates = (await list()).filter(
+				(candidate) => candidate.install_stage === 'installed',
+			)
+			if (
+				currentTargetMode !== 'world' ||
+				currentCurseForgeProject?.id !== curseForgeProject.id ||
+				currentWorldFileId !== file.id.toString()
+			) {
+				return
+			}
+			const newInstanceMap: Record<string, InstallTargetInstance> = {}
+			instances.value = candidates.map((candidate) => {
+				newInstanceMap[candidate.id] = candidate
+				const displayIcon = getDisplayInstanceIcon(candidate.icon_path, candidate.loader)
+				return {
+					id: candidate.id,
+					name: candidate.name,
+					iconUrl: displayIcon.url,
+					iconFrameless: displayIcon.frameless,
+					installed: false,
+					compatible: true,
+					installing: false,
+				}
+			})
+			instanceMap = newInstanceMap
+		} catch (err) {
+			opts.handleError(err)
+		} finally {
+			loading.value = false
+		}
+	}
+
+	async function installCurseForgeWorld(
+		projectId: string | number,
+		fileId?: string | number | null,
+		instanceId?: string | null,
+		source: string = 'unknown',
+		callback: ContentInstallCallback = () => {},
+	) {
+		const numericProjectId = Number(String(projectId).replace(/^curseforge:/, ''))
+		if (!Number.isSafeInteger(numericProjectId) || numericProjectId <= 0) {
+			throw new Error(formatMessage(curseForgeWorldInvalidProjectMessage))
+		}
+		const numericFileId = fileId == null ? null : Number(fileId)
+		if (numericFileId != null && (!Number.isSafeInteger(numericFileId) || numericFileId <= 0)) {
+			throw new Error(formatMessage(curseForgeWorldUnavailableMessage))
+		}
+
+		const curseForgeProject = await getCurseForgeProject(numericProjectId)
+		if (curseForgeProject.classId !== 17) {
+			throw new Error(formatMessage(curseForgeWorldInvalidProjectMessage))
+		}
+		const file = numericFileId
+			? await getCurseForgeFile(numericProjectId, numericFileId)
+			: (await getCurseForgeFiles(numericProjectId, { index: 0, pageSize: 50 })).files.find(
+					(candidate) => candidate.isAvailable,
+				)
+		if (!file?.isAvailable) {
+			throw new Error(formatMessage(curseForgeWorldUnavailableMessage))
+		}
+
+		if (!instanceId) {
+			await showCurseForgeWorldInstallModal(curseForgeProject, file, callback)
+			return
+		}
+
+		setCurseForgeWorldInstallState(curseForgeProject, file, callback)
+		const instance = await get(instanceId)
+		if (!instance) throw new Error(formatMessage(curseForgeWorldUnknownInstanceMessage))
+		await queueCurrentCurseForgeWorld(instance)
+		trackEvent('ProjectInstall', {
+			loader: instance.loader,
+			game_version: instance.game_version,
+			id: currentProject!.id,
+			version_id: file.id.toString(),
+			project_type: 'world',
+			title: currentProject!.title,
+			source,
+		})
+		callback(file.id.toString(), [currentProject!.id])
 	}
 
 	return {
@@ -2256,6 +2459,7 @@ export function createContentInstall(opts: {
 		handleIncompatibilityWarningCancel,
 		install,
 		installCurseForge,
+		installCurseForgeWorld,
 		installingItems,
 		pendingManualDownloadsByInstance,
 		installRevisionByInstance,
