@@ -1582,7 +1582,9 @@ pub(crate) async fn upsert_content_dependency_edge_in_transaction(
 			content_set_id,
 			parent_entry_id,
 			child_entry_id,
-			provider,
+			evidence_provider,
+			parent_provider,
+			child_provider,
 			dependency_kind,
 			parent_project_id,
 			parent_release_id,
@@ -1591,14 +1593,16 @@ pub(crate) async fn upsert_content_dependency_edge_in_transaction(
 			created_at,
 			modified_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (
 			content_set_id,
 			parent_entry_id,
 			child_entry_id,
 			dependency_kind
 		) DO UPDATE SET
-			provider = excluded.provider,
+			evidence_provider = excluded.evidence_provider,
+			parent_provider = excluded.parent_provider,
+			child_provider = excluded.child_provider,
 			parent_project_id = excluded.parent_project_id,
 			parent_release_id = excluded.parent_release_id,
 			child_project_id = excluded.child_project_id,
@@ -1610,7 +1614,9 @@ pub(crate) async fn upsert_content_dependency_edge_in_transaction(
     .bind(&edge.content_set_id)
     .bind(&edge.parent_entry_id)
     .bind(&edge.child_entry_id)
-    .bind(edge.provider.as_str())
+    .bind(edge.evidence_provider.as_str())
+    .bind(edge.parent_provider.as_str())
+    .bind(edge.child_provider.as_str())
     .bind(edge.dependency_kind.as_str())
     .bind(&edge.parent_project_id)
     .bind(&edge.parent_release_id)
@@ -1650,7 +1656,8 @@ pub(crate) async fn get_content_dependency_edges(
 ) -> crate::Result<Vec<ContentDependencyEdge>> {
     let rows = sqlx::query(
         "SELECT id, content_set_id, parent_entry_id, child_entry_id,
-                provider, dependency_kind, parent_project_id,
+                evidence_provider, parent_provider, child_provider,
+                dependency_kind, parent_project_id,
                 parent_release_id, child_project_id, child_release_id,
                 created_at, modified_at
          FROM instance_content_dependencies
@@ -1663,8 +1670,14 @@ pub(crate) async fn get_content_dependency_edges(
 
     rows.into_iter()
         .map(|row| {
-            let provider = ContentProvider::from_str(
-                &row.try_get::<String, _>("provider")?,
+            let evidence_provider = ContentProvider::from_str(
+                &row.try_get::<String, _>("evidence_provider")?,
+            )?;
+            let parent_provider = ContentProvider::from_str(
+                &row.try_get::<String, _>("parent_provider")?,
+            )?;
+            let child_provider = ContentProvider::from_str(
+                &row.try_get::<String, _>("child_provider")?,
             )?;
             let dependency_kind = ContentDependencyKind::from_str(
                 &row.try_get::<String, _>("dependency_kind")?,
@@ -1677,7 +1690,9 @@ pub(crate) async fn get_content_dependency_edges(
                 content_set_id: row.try_get("content_set_id")?,
                 parent_entry_id: row.try_get("parent_entry_id")?,
                 child_entry_id: row.try_get("child_entry_id")?,
-                provider,
+                evidence_provider,
+                parent_provider,
+                child_provider,
                 dependency_kind,
                 parent_project_id: row.try_get("parent_project_id")?,
                 parent_release_id: row.try_get("parent_release_id")?,
