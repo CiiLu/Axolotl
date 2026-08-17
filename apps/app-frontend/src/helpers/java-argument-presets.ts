@@ -4,6 +4,7 @@ import {
 	FALLEN_AUTH_PROXY_BLOG_URL,
 	FALLEN_AUTH_PROXY_JAVA_ARGS_STRING,
 } from '@/helpers/java-arguments'
+import type { GcContext } from '@/helpers/gc/types'
 
 export interface JavaArgumentPreset {
 	id: string
@@ -11,6 +12,11 @@ export interface JavaArgumentPreset {
 	description: MessageDescriptor
 	args: string
 	link: string
+	group?: string
+	resolveArgs?: (context?: GcContext) => string
+	detect?: (currentArgs: string) => boolean
+	autoResolvedName?: string
+	autoReasonChain?: string[]
 }
 
 export const JAVA_ARGUMENT_PRESETS: JavaArgumentPreset[] = [
@@ -29,3 +35,20 @@ export const JAVA_ARGUMENT_PRESETS: JavaArgumentPreset[] = [
 		link: FALLEN_AUTH_PROXY_BLOG_URL,
 	},
 ]
+
+export function getJavaArgumentPresets(gcContext?: GcContext): JavaArgumentPreset[] {
+	const { createGcPresets } = require('@/helpers/gc/gc-presets')
+	return [...JAVA_ARGUMENT_PRESETS, ...createGcPresets(gcContext)]
+}
+
+export function getPresetsByGroup(presets: JavaArgumentPreset[]): Map<string | undefined, JavaArgumentPreset[]> {
+	const groups = new Map<string | undefined, JavaArgumentPreset[]>()
+	for (const preset of presets) {
+		const group = preset.group
+		if (!groups.has(group)) {
+			groups.set(group, [])
+		}
+		groups.get(group)!.push(preset)
+	}
+	return groups
+}
