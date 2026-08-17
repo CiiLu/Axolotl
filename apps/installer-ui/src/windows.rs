@@ -1,5 +1,6 @@
 use std::{
     env, fs,
+    io::Write,
     os::windows::process::CommandExt,
     path::{Path, PathBuf},
     process::{Command, ExitStatus},
@@ -426,19 +427,7 @@ fn start_install(
         ));
         let _ = fs::remove_file(&status_path);
 
-        let mut command = Command::new(installer);
-        command.arg("/S");
-        command.raw_arg(nsis_value_option("INSTALL_DIR", &request.install_dir));
-        command
-            .raw_arg(nsis_value_option("RESOURCE_DIR", &request.resource_dir));
-        command.raw_arg(nsis_value_option(
-            "STATUS_FILE",
-            &status_path.to_string_lossy(),
-        ));
-        if !request.desktop_shortcut {
-            command.arg("/NO_DESKTOP_SHORTCUT");
-        }
-        let result = match command.spawn() {
+        let result = match spawn_installer(&installer, &request, &status_path) {
             Ok(mut child) => {
                 wait_for_installer(&mut child, &status_path, &proxy)
             }
@@ -450,6 +439,80 @@ fn start_install(
         let _ = fs::remove_file(status_path);
         let _ = proxy.send_event(UserEvent::Finished(result));
     });
+}
+
+fn spawn_installer(
+    installer: &Path,
+    request: &InstallRequest,
+    status_path: &Path,
+) -> std::io::Result<std::process::Child> {
+    let arguments = installer_arguments(request, status_path);
+    if install_dir_requires_elevation(Path::new(request.install_dir.trim())) {
+        let command = elevated_powershell_command(installer, &arguments);
+        return Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &command])
+            .spawn();
+    }
+
+    let mut command = Command::new(installer);
+    for argument in arguments {
+        command.raw_arg(argument);
+    }
+    command.spawn()
+}
+
+fn installer_arguments(
+    request: &InstallRequest,
+    status_path: &Path,
+) -> Vec<String> {
+    let mut arguments = vec![
+        "/S".to_string(),
+        nsis_value_option("INSTALL_DIR", request.install_dir.trim()),
+        nsis_value_option("RESOURCE_DIR", request.resource_dir.trim()),
+        nsis_value_option("STATUS_FILE", &status_path.to_string_lossy()),
+    ];
+    if !request.desktop_shortcut {
+        arguments.push("/NO_DESKTOP_SHORTCUT".to_string());
+    }
+    arguments
+}
+
+fn install_dir_requires_elevation(install_dir: &Path) -> bool {
+    let Some(existing_directory) =
+        install_dir.ancestors().find(|candidate| candidate.is_dir())
+    else {
+        return true;
+    };
+
+    let write_test = existing_directory.join(format!(
+        ".axolotl-install-write-test-{}-{}",
+        std::process::id(),
+        thread_id_suffix(),
+    ));
+    let can_write = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&write_test)
+        .and_then(|mut file| file.write_all(b"Axolotl Launcher"))
+        .is_ok();
+    let removed = fs::remove_file(&write_test).is_ok();
+
+    !(can_write && removed)
+}
+
+fn elevated_powershell_command(
+    installer: &Path,
+    arguments: &[String],
+) -> String {
+    let installer = powershell_literal(&installer.to_string_lossy());
+    let arguments = powershell_literal(&arguments.join(" "));
+    format!(
+        "$process = Start-Process -FilePath {installer} -ArgumentList {arguments} -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop; if ($null -eq $process) {{ exit 1 }}; exit $process.ExitCode"
+    )
+}
+
+fn powershell_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
 }
 
 fn nsis_value_option(name: &str, value: &str) -> String {
@@ -515,10 +578,12 @@ fn send_to_webview(webview: Option<&WebView>, payload: serde_json::Value) {
 #[cfg(test)]
 mod tests {
     use super::{
-        UiCommand, dialog_initial_location, launch_main_process,
-        nsis_value_option,
+        UiCommand, dialog_initial_location, elevated_powershell_command,
+        install_dir_requires_elevation, launch_main_process, nsis_value_option,
+        powershell_literal,
     };
     use std::{
+        fs,
         path::PathBuf,
         time::{SystemTime, UNIX_EPOCH},
     };
@@ -571,6 +636,50 @@ mod tests {
                 r"C:\Program Files\Axolotl Launcher",
             ),
             r#"/INSTALL_DIR="C:\Program Files\Axolotl Launcher""#,
+        );
+    }
+
+    #[test]
+    fn writable_install_directory_does_not_require_elevation() {
+        let directory = std::env::temp_dir().join(format!(
+            "axolotl-installer-ui-elevation-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&directory)
+            .expect("test directory should be created");
+
+        assert!(!install_dir_requires_elevation(
+            &directory.join("Axolotl Launcher")
+        ));
+
+        fs::remove_dir_all(directory)
+            .expect("test directory should be removed");
+    }
+
+    #[test]
+    fn powershell_literals_escape_apostrophes() {
+        assert_eq!(
+            powershell_literal("C:\\O'Hare\\setup.exe"),
+            "'C:\\O''Hare\\setup.exe'"
+        );
+    }
+
+    #[test]
+    fn elevated_command_preserves_the_nsis_arguments() {
+        let arguments = vec![
+            "/S".to_string(),
+            r#"/INSTALL_DIR="C:\Program Files\Axolotl Launcher""#.to_string(),
+        ];
+        let command = elevated_powershell_command(
+            &PathBuf::from(r"C:\Downloads\Axolotl Launcher Setup.exe"),
+            &arguments,
+        );
+
+        assert!(command.contains("-Verb RunAs"));
+        assert!(
+            command.contains(
+                r#"/INSTALL_DIR="C:\Program Files\Axolotl Launcher""#
+            )
         );
     }
 
