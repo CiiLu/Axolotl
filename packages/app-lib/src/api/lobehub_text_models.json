@@ -1,5 +1,5 @@
 {
-	"source": "LobeHub ca27228d55bb604f8bcf455a18f5e87d3ba9f9a5 model-bank chat models",
+	"source": "LobeHub 363797b1eddc01d1d6f07e28148b200618c2d0a2 model-bank chat models",
 	"providers": {
 		"ai21": [
 			{
@@ -548,14 +548,19 @@
 				"enabled": false
 			},
 			{
+				"id": "Ling-3.0-flash",
+				"name": "Ling-3.0-flash",
+				"enabled": true
+			},
+			{
 				"id": "Ling-2.6-1T",
 				"name": "Ling-2.6-1T",
-				"enabled": true
+				"enabled": false
 			},
 			{
 				"id": "Ling-2.6-flash",
 				"name": "Ling-2.6-flash",
-				"enabled": true
+				"enabled": false
 			},
 			{
 				"id": "Ling-2.5-1T",
@@ -1012,9 +1017,14 @@
 		],
 		"cerebras": [
 			{
+				"id": "gemma-4-31b",
+				"name": "Gemma 4 31B",
+				"enabled": true
+			},
+			{
 				"id": "gpt-oss-120b",
 				"name": "GPT OSS 120B",
-				"enabled": true
+				"enabled": false
 			},
 			{
 				"id": "zai-glm-4.7",
@@ -1061,11 +1071,6 @@
 				"enabled": false
 			},
 			{
-				"id": "@cf/google/gemma-3-12b-it",
-				"name": "gemma 3 12b",
-				"enabled": false
-			},
-			{
 				"id": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 				"name": "llama 3.3 70b",
 				"enabled": false
@@ -1081,16 +1086,6 @@
 				"enabled": false
 			},
 			{
-				"id": "@cf/openchat/openchat-3.5-0106",
-				"name": "openchat-3.5-0106",
-				"enabled": false
-			},
-			{
-				"id": "@cf/qwen/qwen1.5-14b-chat-awq",
-				"name": "qwen1.5-14b-chat-awq",
-				"enabled": true
-			},
-			{
 				"id": "@cf/meta/llama-3.1-8b-instruct-fast",
 				"name": "llama 3.1 8b",
 				"enabled": false
@@ -1098,24 +1093,19 @@
 		],
 		"cohere": [
 			{
+				"id": "command-a-plus-05-2026",
+				"name": "Command A+ 2605",
+				"enabled": true
+			},
+			{
 				"id": "command-a-03-2025",
 				"name": "Command A 2503",
 				"enabled": true
 			},
 			{
-				"id": "command-r-plus-04-2024",
-				"name": "Command R+ 2404",
-				"enabled": false
-			},
-			{
 				"id": "command-r-plus-08-2024",
 				"name": "Command R+ 2408",
 				"enabled": true
-			},
-			{
-				"id": "command-r-03-2024",
-				"name": "Command R 2403",
-				"enabled": false
 			},
 			{
 				"id": "command-r-08-2024",
@@ -1128,43 +1118,13 @@
 				"enabled": false
 			},
 			{
-				"id": "command",
-				"name": "Command",
-				"enabled": false
-			},
-			{
-				"id": "command-nightly",
-				"name": "Command Nightly",
-				"enabled": false
-			},
-			{
-				"id": "command-light",
-				"name": "Command Light",
-				"enabled": false
-			},
-			{
-				"id": "command-light-nightly",
-				"name": "Command Light Nightly",
-				"enabled": false
-			},
-			{
 				"id": "c4ai-aya-expanse-32b",
 				"name": "Aya Expanse 32B",
 				"enabled": true
 			},
 			{
-				"id": "c4ai-aya-expanse-8b",
-				"name": "Aya Expanse 8B",
-				"enabled": true
-			},
-			{
 				"id": "c4ai-aya-vision-32b",
 				"name": "Aya Vision 32B",
-				"enabled": true
-			},
-			{
-				"id": "c4ai-aya-vision-8b",
-				"name": "Aya Vision 8B",
 				"enabled": true
 			}
 		],
@@ -1914,9 +1874,14 @@
 				"enabled": false
 			},
 			{
+				"id": "gemini-3.7-flash",
+				"name": "Gemini 3.7 Flash",
+				"enabled": true
+			},
+			{
 				"id": "gemini-3.6-flash",
 				"name": "Gemini 3.6 Flash",
-				"enabled": true
+				"enabled": false
 			},
 			{
 				"id": "gemini-3.5-flash",
@@ -1929,9 +1894,14 @@
 				"enabled": true
 			},
 			{
-				"id": "gemini-3.1-flash-image-preview",
+				"id": "gemini-3.1-flash-image",
 				"name": "Nano Banana 2",
 				"enabled": true
+			},
+			{
+				"id": "gemini-3.1-flash-image-preview",
+				"name": "Nano Banana 2",
+				"enabled": false
 			},
 			{
 				"id": "gemini-3.1-flash-lite-image",
@@ -2026,6 +1996,16 @@
 				"enabled": false
 			},
 			{
+				"id": "qwen/qwen3.6-27b",
+				"name": "Qwen3.6 27B",
+				"enabled": true
+			},
+			{
+				"id": "minimaxai/minimax-m2.7",
+				"name": "MiniMax M2.7",
+				"enabled": false
+			},
+			{
 				"id": "openai/gpt-oss-120b",
 				"name": "GPT OSS 120B",
 				"enabled": false
@@ -2033,16 +2013,6 @@
 			{
 				"id": "openai/gpt-oss-20b",
 				"name": "GPT OSS 20B",
-				"enabled": false
-			},
-			{
-				"id": "meta-llama/llama-4-scout-17b-16e-instruct",
-				"name": "Llama 4 Scout (17Bx16E)",
-				"enabled": true
-			},
-			{
-				"id": "qwen/qwen3-32b",
-				"name": "Qwen3 32B",
 				"enabled": false
 			},
 			{
@@ -3112,6 +3082,11 @@
 		],
 		"hunyuan": [
 			{
+				"id": "hy3",
+				"name": "Hy3",
+				"enabled": true
+			},
+			{
 				"id": "hy3-preview",
 				"name": "Hy3 preview",
 				"enabled": true
@@ -3489,8 +3464,8 @@
 		],
 		"longcat": [
 			{
-				"id": "LongCat-2.0-Preview",
-				"name": "LongCat-2.0-Preview",
+				"id": "LongCat-2.0",
+				"name": "LongCat-2.0",
 				"enabled": true
 			}
 		],
@@ -4101,11 +4076,6 @@
 		],
 		"nvidia": [
 			{
-				"id": "minimaxai/minimax-m2.7",
-				"name": "MiniMax-M2.7",
-				"enabled": false
-			},
-			{
 				"id": "meta/llama-3.3-70b-instruct",
 				"name": "Llama 3.3 70B Instruct",
 				"enabled": false
@@ -4138,11 +4108,6 @@
 			{
 				"id": "nvidia/llama-3.1-nemotron-70b-instruct",
 				"name": "Llama 3.1 Nemotron 70B Instruct",
-				"enabled": false
-			},
-			{
-				"id": "google/gemma-2-2b-it",
-				"name": "Gemma 2 2B Instruct",
 				"enabled": false
 			}
 		],
@@ -4450,48 +4415,13 @@
 				"enabled": false
 			},
 			{
-				"id": "qwen3-coder-next",
-				"name": "Qwen3 Coder Next",
-				"enabled": false
-			},
-			{
 				"id": "minimax-m2.5",
 				"name": "MiniMax M2.5",
 				"enabled": false
 			},
 			{
-				"id": "glm-5",
-				"name": "GLM-5",
-				"enabled": false
-			},
-			{
 				"id": "kimi-k2.5",
 				"name": "Kimi K2.5",
-				"enabled": false
-			},
-			{
-				"id": "devstral-2:123b",
-				"name": "Devstral 2",
-				"enabled": false
-			},
-			{
-				"id": "gemini-3-flash-preview",
-				"name": "Gemini 3 Flash Preview",
-				"enabled": false
-			},
-			{
-				"id": "minimax-m2.1",
-				"name": "MiniMax M2.1",
-				"enabled": false
-			},
-			{
-				"id": "glm-4.7",
-				"name": "GLM-4.7",
-				"enabled": false
-			},
-			{
-				"id": "deepseek-v3.1:671b",
-				"name": "DeepSeek V3.1",
 				"enabled": false
 			},
 			{
@@ -4502,26 +4432,6 @@
 			{
 				"id": "gpt-oss:120b",
 				"name": "GPT-OSS 120B",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-coder:480b",
-				"name": "Qwen3 Coder 480B",
-				"enabled": false
-			},
-			{
-				"id": "ministral-3:3b",
-				"name": "Ministral 3 3B",
-				"enabled": false
-			},
-			{
-				"id": "ministral-3:8b",
-				"name": "Ministral 3 8B",
-				"enabled": false
-			},
-			{
-				"id": "ministral-3:14b",
-				"name": "Ministral 3 14B",
 				"enabled": false
 			},
 			{
@@ -4597,11 +4507,6 @@
 				"enabled": false
 			},
 			{
-				"id": "gpt-5.2-codex",
-				"name": "GPT-5.2 Codex",
-				"enabled": false
-			},
-			{
 				"id": "gpt-5.2-pro",
 				"name": "GPT-5.2 pro",
 				"enabled": false
@@ -4617,33 +4522,8 @@
 				"enabled": false
 			},
 			{
-				"id": "gpt-5.1-chat-latest",
-				"name": "GPT-5.1 Chat",
-				"enabled": false
-			},
-			{
-				"id": "gpt-5.1-codex-max",
-				"name": "GPT-5.1 Codex Max",
-				"enabled": false
-			},
-			{
-				"id": "gpt-5.1-codex",
-				"name": "GPT-5.1 Codex",
-				"enabled": false
-			},
-			{
-				"id": "gpt-5.1-codex-mini",
-				"name": "GPT-5.1 Codex mini",
-				"enabled": false
-			},
-			{
 				"id": "gpt-5-pro",
 				"name": "GPT-5 pro",
-				"enabled": false
-			},
-			{
-				"id": "gpt-5-codex",
-				"name": "GPT-5 Codex",
 				"enabled": false
 			},
 			{
@@ -4662,18 +4542,8 @@
 				"enabled": false
 			},
 			{
-				"id": "gpt-5-chat-latest",
-				"name": "GPT-5 Chat",
-				"enabled": false
-			},
-			{
 				"id": "o4-mini",
 				"name": "o4-mini",
-				"enabled": false
-			},
-			{
-				"id": "o4-mini-deep-research",
-				"name": "o4-mini Deep Research",
 				"enabled": false
 			},
 			{
@@ -4684,11 +4554,6 @@
 			{
 				"id": "o3",
 				"name": "o3",
-				"enabled": false
-			},
-			{
-				"id": "o3-deep-research",
-				"name": "o3 Deep Research",
 				"enabled": false
 			},
 			{
@@ -4727,18 +4592,8 @@
 				"enabled": false
 			},
 			{
-				"id": "gpt-4o-mini-search-preview",
-				"name": "GPT-4o mini Search Preview",
-				"enabled": false
-			},
-			{
 				"id": "gpt-4o",
 				"name": "GPT-4o",
-				"enabled": false
-			},
-			{
-				"id": "gpt-4o-search-preview",
-				"name": "GPT-4o Search Preview",
 				"enabled": false
 			},
 			{
@@ -4794,11 +4649,6 @@
 			{
 				"id": "gpt-3.5-turbo-instruct",
 				"name": "GPT-3.5 Turbo Instruct",
-				"enabled": false
-			},
-			{
-				"id": "computer-use-preview",
-				"name": "Computer Use Preview",
 				"enabled": false
 			}
 		],
@@ -5631,9 +5481,14 @@
 				"enabled": false
 			},
 			{
+				"id": "qwen3.7-flash",
+				"name": "Qwen3.7 Flash",
+				"enabled": true
+			},
+			{
 				"id": "qwen3.6-flash",
 				"name": "Qwen3.6 Flash",
-				"enabled": true
+				"enabled": false
 			},
 			{
 				"id": "qwen3.5-flash",
@@ -6043,6 +5898,16 @@
 			}
 		],
 		"siliconcloud": [
+			{
+				"id": "meituan-longcat/LongCat-2.0",
+				"name": "LongCat-2.0",
+				"enabled": false
+			},
+			{
+				"id": "nex-agi/Nex-N2-Pro",
+				"name": "Nex-N2-Pro",
+				"enabled": false
+			},
 			{
 				"id": "zai-org/GLM-5.2",
 				"name": "GLM-5.2",
@@ -7292,9 +7157,14 @@
 		],
 		"vertexai": [
 			{
+				"id": "gemini-3.7-flash",
+				"name": "Gemini 3.7 Flash",
+				"enabled": true
+			},
+			{
 				"id": "gemini-3.6-flash",
 				"name": "Gemini 3.6 Flash",
-				"enabled": true
+				"enabled": false
 			},
 			{
 				"id": "gemini-3.5-flash",
@@ -7463,6 +7333,11 @@
 			{
 				"id": "doubao-seed-2.1-turbo",
 				"name": "Doubao Seed 2.1 Turbo",
+				"enabled": true
+			},
+			{
+				"id": "glm-5-2",
+				"name": "GLM-5.2",
 				"enabled": true
 			},
 			{
@@ -7645,16 +7520,6 @@
 				"enabled": false
 			},
 			{
-				"id": "ernie-speed-pro-128k",
-				"name": "ERNIE Speed Pro 128K",
-				"enabled": false
-			},
-			{
-				"id": "ernie-lite-pro-128k",
-				"name": "ERNIE Lite Pro 128K",
-				"enabled": false
-			},
-			{
 				"id": "ernie-char-fiction-8k",
 				"name": "ERNIE Character Fiction 8K",
 				"enabled": false
@@ -7667,11 +7532,6 @@
 			{
 				"id": "ernie-novel-8k",
 				"name": "ERNIE Novel 8K",
-				"enabled": false
-			},
-			{
-				"id": "ernie-4.5-0.3b",
-				"name": "ERNIE 4.5 0.3B",
 				"enabled": false
 			},
 			{
@@ -7725,38 +7585,13 @@
 				"enabled": false
 			},
 			{
-				"id": "ernie-x1-turbo-32k",
-				"name": "ERNIE X1 Turbo 32K",
-				"enabled": false
-			},
-			{
-				"id": "ernie-x1-turbo-32k-preview",
-				"name": "ERNIE X1 Turbo 32K Preview",
-				"enabled": false
-			},
-			{
 				"id": "qianfan-composition",
 				"name": "Qianfan Composition",
 				"enabled": false
 			},
 			{
-				"id": "qianfan-check-vl",
-				"name": "Qianfan Check VL",
-				"enabled": false
-			},
-			{
 				"id": "qianfan-multipicocr",
 				"name": "Qianfan MultiPicOCR",
-				"enabled": false
-			},
-			{
-				"id": "qianfan-vl-70b",
-				"name": "Qianfan VL 70B",
-				"enabled": false
-			},
-			{
-				"id": "qianfan-vl-8b",
-				"name": "Qianfan VL 8B",
 				"enabled": false
 			},
 			{
@@ -7795,46 +7630,6 @@
 				"enabled": false
 			},
 			{
-				"id": "qwen3-vl-32b-instruct",
-				"name": "Qwen3 VL 32B Instruct",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-vl-32b-thinking",
-				"name": "Qwen3 VL 32B Thinking",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-vl-8b-instruct",
-				"name": "Qwen3 VL 8B Instruct",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-vl-8b-thinking",
-				"name": "Qwen3 VL 8B Thinking",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-vl-30b-a3b-instruct",
-				"name": "Qwen3 VL 30B A3B Instruct",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-vl-30b-a3b-thinking",
-				"name": "Qwen3 VL 30B A3B Thinking",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-vl-235b-a22b-instruct",
-				"name": "Qwen3 VL 235B A22B Instruct",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-vl-235b-a22b-thinking",
-				"name": "Qwen3 VL 235B A22B Thinking",
-				"enabled": false
-			},
-			{
 				"id": "glm-4.5v",
 				"name": "GLM-4.5V",
 				"enabled": false
@@ -7852,16 +7647,6 @@
 			{
 				"id": "deepseek-v3.2-think",
 				"name": "DeepSeek V3.2 Think",
-				"enabled": false
-			},
-			{
-				"id": "deepseek-v3.1-think-250821",
-				"name": "DeepSeek V3.1 Think 250821",
-				"enabled": false
-			},
-			{
-				"id": "deepseek-r1-250528",
-				"name": "DeepSeek R1 250528",
 				"enabled": false
 			},
 			{
@@ -7885,16 +7670,6 @@
 				"enabled": false
 			},
 			{
-				"id": "deepseek-r1-distill-qwen-32b",
-				"name": "DeepSeek R1 Distill Qwen 32B",
-				"enabled": false
-			},
-			{
-				"id": "deepseek-r1-distill-qwen-14b",
-				"name": "DeepSeek R1 Distill Qwen 14B",
-				"enabled": false
-			},
-			{
 				"id": "deepseek-r1-distill-qwen-7b",
 				"name": "DeepSeek R1 Distill Qwen 7B",
 				"enabled": false
@@ -7905,58 +7680,13 @@
 				"enabled": false
 			},
 			{
-				"id": "qwen3-next-80b-a3b-thinking",
-				"name": "Qwen3 Next 80B A3B Thinking",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-235b-a22b-thinking-2507",
-				"name": "Qwen3 235B A22B Thinking 2507",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-30b-a3b-thinking-2507",
-				"name": "Qwen3 30B A3B Thinking 2507",
-				"enabled": false
-			},
-			{
 				"id": "kimi-k2-instruct",
 				"name": "Kimi K2 Instruct",
 				"enabled": false
 			},
 			{
-				"id": "qwen3-coder-480b-a35b-instruct",
-				"name": "Qwen3 Coder 480B A35B Instruct",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-235b-a22b-instruct-2507",
-				"name": "Qwen3 235B A22B Instruct 2507",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-30b-a3b-instruct-2507",
-				"name": "Qwen3 30B A3B Instruct 2507",
-				"enabled": false
-			},
-			{
 				"id": "qwen3-30b-a3b",
 				"name": "Qwen3 30B A3B",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-32b",
-				"name": "Qwen3 32B",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-14b",
-				"name": "Qwen3 14B",
-				"enabled": false
-			},
-			{
-				"id": "qwen3-8b",
-				"name": "Qwen3 8B",
 				"enabled": false
 			}
 		],
@@ -7997,11 +7727,6 @@
 				"id": "mimo-v2.5",
 				"name": "MiMo-V2.5",
 				"enabled": true
-			},
-			{
-				"id": "mimo-v2-flash",
-				"name": "MiMo-V2 Flash",
-				"enabled": false
 			}
 		],
 		"xinference": [
@@ -8487,9 +8212,19 @@
 		],
 		"zhipu": [
 			{
+				"id": "glm-5.3",
+				"name": "GLM-5.3",
+				"enabled": true
+			},
+			{
+				"id": "glm-5.2",
+				"name": "GLM-5.2",
+				"enabled": false
+			},
+			{
 				"id": "glm-5.1",
 				"name": "GLM-5.1",
-				"enabled": true
+				"enabled": false
 			},
 			{
 				"id": "glm-5v-turbo",
@@ -8504,7 +8239,7 @@
 			{
 				"id": "glm-5",
 				"name": "GLM-5",
-				"enabled": true
+				"enabled": false
 			},
 			{
 				"id": "glm-4.7",
