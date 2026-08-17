@@ -111,7 +111,7 @@ fetchSettings.launchArgs = fetchSettings.extra_launch_args.join(' ')
 fetchSettings.envVars = fetchSettings.custom_env_vars.map((x) => x.join('=')).join(' ')
 
 const settings = ref(fetchSettings)
-const shouldApplyDefaultAuto = fetchSettings.extra_launch_args.length === 0
+let shouldApplyDefaultAuto = fetchSettings.extra_launch_args.length === 0
 
 const { maxMemory, snapPoints } = (await useMemorySlider().catch(handleError)) as unknown as {
 	maxMemory: number
@@ -122,6 +122,17 @@ const gcContext = ref<GcContext | null>(null)
 
 async function updateGcContext() {
 	gcContext.value = await collectGcContext(settings.value.memory.maximum, null, null, 0)
+	if (shouldApplyDefaultAuto) {
+		const autoPreset = getJavaArgumentPresets(gcContext.value ?? undefined).find(
+			(preset) => preset.id === 'gc-auto',
+		)
+		if (autoPreset) {
+			settings.value.launchArgs = autoPreset.resolveArgs
+				? autoPreset.resolveArgs(gcContext.value ?? undefined)
+				: autoPreset.args
+		}
+		shouldApplyDefaultAuto = false
+	}
 }
 
 await updateGcContext()

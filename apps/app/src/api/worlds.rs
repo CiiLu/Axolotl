@@ -258,11 +258,13 @@ pub async fn start_join_singleplayer_world(
     instance_id: &str,
     world: String,
     offline_mode: bool,
+    extra_launch_args: Option<Vec<String>>,
 ) -> Result<ProcessMetadata> {
-    let process = instance::run(
+    let process = instance::run_with_extra_launch_args(
         instance_id,
         QuickPlayType::Singleplayer(world),
         offline_mode,
+        extra_launch_args,
     )
     .await?;
 
@@ -274,11 +276,13 @@ pub async fn start_join_server(
     instance_id: &str,
     address: &str,
     offline_mode: bool,
+    extra_launch_args: Option<Vec<String>>,
 ) -> Result<ProcessMetadata> {
-    let process = instance::run(
+    let process = instance::run_with_extra_launch_args(
         instance_id,
         QuickPlayType::Server(ServerAddress::Unresolved(address.to_owned())),
         offline_mode,
+        extra_launch_args,
     )
     .await?;
 

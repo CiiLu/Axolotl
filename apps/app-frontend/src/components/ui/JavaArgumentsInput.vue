@@ -20,6 +20,7 @@ import {
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import type { GcContext } from '@/helpers/gc/types'
+import { resolveAutoGcArgs } from '@/helpers/gc/auto-selector'
 import {
 	getJavaArgumentPresets,
 	getPresetsByGroup,
@@ -34,12 +35,14 @@ const props = withDefaults(
 		placeholder?: string
 		disabled?: boolean
 		gcContext?: GcContext
+		showAutoDetails?: boolean
 	}>(),
 	{
 		id: undefined,
 		placeholder: undefined,
 		disabled: false,
 		gcContext: undefined,
+		showAutoDetails: false,
 	},
 )
 
@@ -92,11 +95,17 @@ const presets = computed(() => getJavaArgumentPresets(props.gcContext))
 const groupedPresets = computed(() => getPresetsByGroup(presets.value))
 
 const modal = ref<InstanceType<typeof NewModal>>()
-const collapsedPresetIds = ref(new Set<string>())
-const collapsedGroupIds = ref(new Set<string>())
+const expandedPresetIds = ref(new Set<string>())
+const expandedGroupIds = ref(new Set<string>())
 const copiedPresetId = ref<string | null>(null)
 
 function getDisplayArgs(preset: JavaArgumentPreset): string {
+	if (preset.id === 'gc-auto') {
+		if (props.showAutoDetails && props.gcContext) {
+			return resolveAutoGcArgs(props.gcContext)
+		}
+		return ''
+	}
 	return preset.resolveArgs ? preset.resolveArgs(props.gcContext) : preset.args
 }
 
@@ -191,17 +200,17 @@ async function copyPresetArgs(preset: JavaArgumentPreset) {
 }
 
 function isPresetCollapsed(preset: JavaArgumentPreset) {
-	return collapsedPresetIds.value.has(preset.id)
+	return !expandedPresetIds.value.has(preset.id)
 }
 
 function togglePresetCollapsed(preset: JavaArgumentPreset) {
-	const next = new Set(collapsedPresetIds.value)
+	const next = new Set(expandedPresetIds.value)
 	if (next.has(preset.id)) {
 		next.delete(preset.id)
 	} else {
 		next.add(preset.id)
 	}
-	collapsedPresetIds.value = next
+	expandedPresetIds.value = next
 }
 
 function isPresetActive(preset: JavaArgumentPreset) {
@@ -209,17 +218,17 @@ function isPresetActive(preset: JavaArgumentPreset) {
 }
 
 function isGroupCollapsed(group: string) {
-	return collapsedGroupIds.value.has(group)
+	return !expandedGroupIds.value.has(group)
 }
 
 function toggleGroupCollapsed(group: string) {
-	const next = new Set(collapsedGroupIds.value)
+	const next = new Set(expandedGroupIds.value)
 	if (next.has(group)) {
 		next.delete(group)
 	} else {
 		next.add(group)
 	}
-	collapsedGroupIds.value = next
+	expandedGroupIds.value = next
 }
 
 function getAutoResolvedLabel(preset: JavaArgumentPreset): string | null {
@@ -369,13 +378,13 @@ onBeforeUnmount(() => {
 											<ExternalIcon class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
 										</AutoLink>
 										<p
-											v-if="getAutoResolvedLabel(preset)"
+											v-if="showAutoDetails && getAutoResolvedLabel(preset)"
 											class="m-0 mt-2 text-sm font-medium text-brand"
 										>
 											{{ getAutoResolvedLabel(preset) }}
 										</p>
 										<p
-											v-if="getAutoReasonChainText(preset)"
+											v-if="showAutoDetails && getAutoReasonChainText(preset)"
 											class="m-0 mt-1 text-xs text-secondary"
 										>
 											{{ getAutoReasonChainText(preset) }}
@@ -396,7 +405,8 @@ onBeforeUnmount(() => {
 										</button>
 									</ButtonStyled>
 								</div>
-								<div class="flex items-center gap-2">
+								<template v-if="preset.id !== 'gc-auto' || showAutoDetails">
+									<div class="flex items-center gap-2">
 									<div class="h-px min-w-0 flex-1 bg-surface-4" />
 									<button
 										v-tooltip="formatMessage(messages.presetArguments)"
@@ -434,6 +444,7 @@ onBeforeUnmount(() => {
 										</button>
 									</div>
 								</Collapsible>
+								</template>
 							</div>
 						</div>
 					</Collapsible>

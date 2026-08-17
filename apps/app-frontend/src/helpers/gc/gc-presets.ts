@@ -1,7 +1,8 @@
 import { defineMessage } from '@modrinth/ui'
 
 import { getResolvedStrategyName, resolveAutoGcStrategy } from '@/helpers/gc/auto-selector'
-import { detectGcStrategy, GC_STRATEGY_DEFINITIONS } from '@/helpers/gc/strategies'
+import { GC_STRATEGY_DEFINITIONS } from '@/helpers/gc/strategies'
+import { AUTO_GC_PRESET_ARG } from '@/helpers/java-arguments'
 import type { GcContext, JavaArgumentPreset } from '@/helpers/gc/types'
 
 const GC_WIKI_URL = 'https://docs.oracle.com/en/java/javase/21/gctuning/introduction.html'
@@ -9,20 +10,6 @@ const G1GC_DOCS_URL =
 	'https://docs.oracle.com/en/java/javase/21/gctuning/garbage-collector-implementation.html'
 const SHENANDOAH_DOCS_URL = 'https://wiki.openjdk.org/display/shenandoah/Main'
 const ZGC_DOCS_URL = 'https://wiki.openjdk.org/display/zgc/Main'
-
-function buildAutoArgs(context: GcContext | undefined): string {
-	if (!context) {
-		return GC_STRATEGY_DEFINITIONS['g1gc-mojang'].baseArgs
-	}
-	const resolution = resolveAutoGcStrategy(context)
-	const strategy = GC_STRATEGY_DEFINITIONS[resolution.resolvedStrategy]
-	return strategy.buildArgs(context)
-}
-
-function detectAuto(currentArgs: string): boolean {
-	const detected = detectGcStrategy(currentArgs)
-	return detected !== null
-}
 
 export function createGcPresets(gcContext?: GcContext): JavaArgumentPreset[] {
 	const autoResolution = gcContext ? resolveAutoGcStrategy(gcContext) : null
@@ -42,9 +29,9 @@ export function createGcPresets(gcContext?: GcContext): JavaArgumentPreset[] {
 				id: 'app.java-arguments.presets.gc.auto.description',
 				defaultMessage: 'Automatically select the best GC strategy for your system',
 			}),
-			args: buildAutoArgs(gcContext),
-			resolveArgs: (context) => buildAutoArgs(context),
-			detect: detectAuto,
+			args: AUTO_GC_PRESET_ARG,
+			resolveArgs: () => AUTO_GC_PRESET_ARG,
+			detect: (currentArgs) => currentArgs.includes(AUTO_GC_PRESET_ARG),
 			link: GC_WIKI_URL,
 			autoResolvedName,
 			autoReasonChain: autoResolution?.reasonChain,

@@ -1,4 +1,10 @@
+import { GC_STRATEGY_DEFINITIONS } from './strategies'
 import type { GcContext, GcResolution, ResolvedGcStrategyId } from './types'
+
+export function resolveAutoGcArgs(context: GcContext): string {
+	const resolution = resolveAutoGcStrategy(context)
+	return GC_STRATEGY_DEFINITIONS[resolution.resolvedStrategy].buildArgs(context)
+}
 
 export function resolveAutoGcStrategy(context: GcContext): GcResolution {
 	const reasonChain: string[] = []

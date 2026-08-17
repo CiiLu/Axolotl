@@ -245,6 +245,7 @@ watch(
 			v-model="javaArgs"
 			:disabled="!overrideJavaArgs"
 			:gc-context="gcContext"
+			:show-auto-details="true"
 			:placeholder="formatMessage(messages.enterJavaArguments)"
 		/>
 
