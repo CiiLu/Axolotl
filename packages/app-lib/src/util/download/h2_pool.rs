@@ -244,12 +244,3 @@ pub async fn shared_connection(
         .remove(authority);
     establish(authority).await
 }
-
-/// Drops all cached connections (used by tests).
-#[cfg(test)]
-pub fn reset_for_tests() {
-    CONNECTIONS
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .clear();
-}
