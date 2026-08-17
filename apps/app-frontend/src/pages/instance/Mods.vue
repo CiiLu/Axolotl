@@ -251,6 +251,7 @@ import {
 	restore_pack_member_default,
 	rollback_project,
 	switch_content_entry_version,
+	toggle_content_entries,
 	toggle_content_entry,
 	update_content_entry,
 } from '@/helpers/instance'
@@ -1230,16 +1231,24 @@ async function promptToggleDependencies(
 async function toggleDisableBatch(items: ContentItem[], enabling: boolean) {
 	if (items.length === 0) return
 	const related = collectToggleRelated(items, enabling)
+	let targets = items
 	if (related.length > 0) {
 		const choice = await promptToggleDependencies(items, related, enabling)
 		if (choice === 'cancel') return
 		if (choice === 'apply') {
-			for (const item of related) {
-				await toggleDisableMod(item, enabling, true)
-			}
+			targets = [...related, ...targets]
 		}
 	}
-	for (const item of items) {
+	const uniqueTargets = [
+		...new Map(targets.map((item) => [getContentItemId(item), item])).values(),
+	]
+	const contentTargets = uniqueTargets.filter((item) => !isWorldDatapackItem(item))
+	const worldTargets = uniqueTargets.filter(isWorldDatapackItem)
+
+	if (contentTargets.length > 0) {
+		await applyToggleDisableBatch(contentTargets, enabling)
+	}
+	for (const item of worldTargets) {
 		await toggleDisableMod(item, enabling, true)
 	}
 }
@@ -1322,6 +1331,7 @@ async function applyToggleDisableMod(mod: ContentItem, enabled: boolean) {
 	operation.keys = [...operation.keys, ...optimisticKeys]
 
 	try {
+		suppressSyncedUntil = Date.now() + CONTENT_EVENT_DEBOUNCE_MS * 4
 		const newPath = await toggle_content_entry(props.instance.id, contentId, enabled)
 		const newFileName = fileNameFromPath(newPath)
 		const actualEnabled = !newPath.endsWith('.disabled')
@@ -1349,6 +1359,133 @@ async function applyToggleDisableMod(mod: ContentItem, enabled: boolean) {
 	} finally {
 		finishContentOperation(mod, operation)
 	}
+}
+
+type ContentToggleBatchOperation = {
+	item: ContentItem
+	keys: string[]
+	originalFileName: string
+	originalFilePath: string
+	originalEnabled: boolean
+	optimisticPath: string
+}
+
+async function applyToggleDisableBatch(items: ContentItem[], enabled: boolean) {
+	const operations: ContentToggleBatchOperation[] = []
+	for (const item of items) {
+		const contentId = getStableContentId(item)
+		if (
+			!contentId ||
+			!item.file_path ||
+			item.instanceCapabilities?.canToggle === false ||
+			hasContentOperation(item)
+		) {
+			continue
+		}
+		let trimmedPath = item.file_path
+		while (trimmedPath.endsWith('.disabled')) {
+			trimmedPath = trimmedPath.slice(0, -'.disabled'.length)
+		}
+		operations.push({
+			item,
+			keys: getContentOperationKeys(item),
+			originalFileName: item.file_name,
+			originalFilePath: item.file_path,
+			originalEnabled: item.enabled,
+			optimisticPath: enabled ? trimmedPath : `${trimmedPath}.disabled`,
+		})
+	}
+	if (operations.length === 0) return
+
+	const activeKeys = new Set(activeContentOperationKeys.value)
+	for (const operation of operations) {
+		for (const key of operation.keys) activeKeys.add(key)
+	}
+	activeContentOperationKeys.value = activeKeys
+	activeContentOperationCount += operations.length
+	isBulkOperating.value = true
+	applyBatchToggleState(operations, enabled, undefined, false, true)
+
+	try {
+		suppressSyncedUntil = Date.now() + CONTENT_EVENT_DEBOUNCE_MS * 4
+		const results = await toggle_content_entries(
+			props.instance.id,
+			operations.map((operation) => getStableContentId(operation.item)!),
+			enabled,
+		)
+		const resultById = new Map(results.map((result) => [result.contentId, result]))
+		applyBatchToggleState(
+			operations.map((operation) => {
+				const result = resultById.get(getStableContentId(operation.item)!)
+				return {
+					...operation,
+					optimisticPath: result?.path ?? operation.optimisticPath,
+				}
+			}),
+			enabled,
+			resultById,
+			false,
+		)
+
+		for (const operation of operations) {
+			trackEvent('InstanceProjectDisable', {
+				loader: props.instance.loader,
+				game_version: props.instance.game_version,
+				id: operation.item.project?.id,
+				name: operation.item.project?.title ?? operation.originalFileName,
+				project_type: operation.item.project_type,
+				disabled: !enabled,
+			})
+		}
+	} catch (error) {
+		for (const operation of operations) {
+			operation.optimisticPath = operation.originalFilePath
+		}
+		applyBatchToggleState(operations, enabled, undefined, true)
+		handleError(error as Error)
+	} finally {
+		const activeKeys = new Set(activeContentOperationKeys.value)
+		for (const operation of operations) {
+			for (const key of operation.keys) activeKeys.delete(key)
+		}
+		activeContentOperationKeys.value = activeKeys
+		activeContentOperationCount = Math.max(0, activeContentOperationCount - operations.length)
+		if (activeContentOperationCount === 0) {
+			isBulkOperating.value = false
+			if (pendingContentRefreshAfterBulk) {
+				pendingContentRefreshAfterBulk = false
+				void initProjects()
+			}
+		}
+	}
+}
+
+function applyBatchToggleState(
+	operations: ContentToggleBatchOperation[],
+	enabled: boolean,
+	results?: Map<string, { path: string; enabled: boolean }>,
+	restore = false,
+	busy = false,
+) {
+	const operationsById = new Map(operations.map((operation) => [getContentItemId(operation.item), operation]))
+	const updateItems = (source: ContentItem[]) =>
+		source.map((item) => {
+			const operation = operationsById.get(getContentItemId(item))
+			if (!operation) return item
+			const result = results?.get(getStableContentId(operation.item)!)
+			const path = restore ? operation.originalFilePath : (result?.path ?? operation.optimisticPath)
+			return {
+				...item,
+				file_path: path,
+				file_name: fileNameFromPath(path),
+				enabled: restore ? operation.originalEnabled : (result?.enabled ?? enabled),
+				installing: busy,
+			}
+		})
+
+	projects.value = updateItems(projects.value)
+	linkedModpackContentItems.value = updateItems(linkedModpackContentItems.value)
+	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
 }
 
 function applyContentItemToggleState(
@@ -2597,7 +2734,7 @@ async function loadInitialContent(): Promise<void> {
 
 	if (installRevision > handledInstallRevision.value) {
 		handledInstallRevision.value = installRevision
-		await initProjects('bypass')
+		await initProjects()
 		return
 	}
 
@@ -2609,11 +2746,11 @@ async function loadInitialContent(): Promise<void> {
 	}
 
 	if (hasCachedContent) {
-		initProjects('bypass').catch(handleError)
+		initProjects().catch(handleError)
 		return
 	}
 
-	await initProjects('bypass')
+	await initProjects()
 }
 
 async function restoreModpackContentModalState() {
@@ -2632,10 +2769,47 @@ const removeBeforeEach = router.beforeEach(() => {
 })
 
 let unlistenInstances: UnlistenFn | null = null
+const CONTENT_EVENT_DEBOUNCE_MS = 180
+let contentEventTimer: ReturnType<typeof setTimeout> | null = null
+let pendingExternalContentSync = false
+let pendingContentChangedRevision: number | null = null
+let pendingContentRefreshAfterBulk = false
+let suppressSyncedUntil = 0
+
+function scheduleContentEventRefresh(event: { event: string; revision?: number }) {
+	if (event.event === 'synced') {
+		if (Date.now() < suppressSyncedUntil) return
+		pendingExternalContentSync = true
+	} else if (event.event === 'content_changed') {
+		if (
+			event.revision != null &&
+			contentSnapshot.value &&
+			event.revision <= contentSnapshot.value.revision
+		) {
+			return
+		}
+		pendingContentChangedRevision = Math.max(pendingContentChangedRevision ?? 0, event.revision ?? 0)
+	} else {
+		return
+	}
+
+	if (contentEventTimer) return
+	contentEventTimer = setTimeout(() => {
+		contentEventTimer = null
+		const refreshFilesystem = pendingExternalContentSync && pendingContentChangedRevision == null
+		pendingExternalContentSync = false
+		pendingContentChangedRevision = null
+		if (isBulkOperating.value) {
+			pendingContentRefreshAfterBulk = true
+			return
+		}
+		void initProjects(refreshFilesystem ? 'bypass' : undefined)
+	}, CONTENT_EVENT_DEBOUNCE_MS)
+}
 
 onMounted(() => {
 	void instance_listener(
-		async (event: { event: string; instance_id: string; revision?: number }) => {
+		(event: { event: string; instance_id: string; revision?: number }) => {
 			if (event.instance_id === props.instance.id && event.event === 'removed') {
 				invalidateContentRequests(true)
 				return
@@ -2644,18 +2818,9 @@ onMounted(() => {
 				props.instance &&
 				event.instance_id === props.instance.id &&
 				(event.event === 'synced' || event.event === 'content_changed') &&
-				props.instance.install_stage === 'installed' &&
-				!isBulkOperating.value
+				props.instance.install_stage === 'installed'
 			) {
-				if (
-					event.event === 'content_changed' &&
-					event.revision != null &&
-					contentSnapshot.value &&
-					event.revision <= contentSnapshot.value.revision
-				) {
-					return
-				}
-				await initProjects()
+				scheduleContentEventRefresh(event)
 			}
 		},
 	)
@@ -2712,6 +2877,7 @@ watch(
 
 onUnmounted(() => {
 	isUnmounted = true
+	if (contentEventTimer) clearTimeout(contentEventTimer)
 	invalidateContentRequests()
 	removeBeforeEach()
 	unlistenInstances?.()

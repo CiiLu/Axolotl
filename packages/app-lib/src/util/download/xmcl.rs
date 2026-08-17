@@ -333,14 +333,6 @@ async fn report_stall(rule: SlowRule, source: &str, detail: String) {
         let path = state.directories.settings_dir.join("download.log");
         let _ = super::log::append_stall(&path, &event);
     }
-    let _ = crate::telemetry::submit_download_stall(
-        "xmcl",
-        rule.as_u8(),
-        source,
-        &event.detail,
-        "",
-    )
-    .await;
 }
 
 fn http_error_for_response(
@@ -1069,9 +1061,6 @@ async fn download_to_path_inner(
                     fetch::finalize_download(part_path, destination).await?;
                     fetch::record_install_download_finished(request, size)
                         .await;
-                    crate::telemetry::record_download_stats(
-                        1, 1, size, 0, 0, 0, 0,
-                    );
                     let route = routes.first().cloned().unwrap_or_else(|| {
                         fetch::DownloadRoute {
                             url: request.url.clone(),
@@ -1127,8 +1116,6 @@ async fn download_to_path_inner(
     .await;
     fetch::finalize_download(part_path, destination).await?;
     fetch::record_install_download_finished(request, size).await;
-    crate::telemetry::record_download_stats(1, 1, size, 0, 0, 0, 0);
-
     let route =
         routes
             .first()
@@ -1174,7 +1161,6 @@ pub(crate) async fn download_to_path(
             state.record_download_error();
         }
         cleanup_segment_files(part_path).await;
-        crate::telemetry::record_download_stats(1, 0, 0, 1, 0, 0, 0);
     }
     result
 }

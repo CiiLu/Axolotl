@@ -49,8 +49,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'新增 CurseForge 地图浏览与安装功能，可直接安装到已有实例，并支持需要手动下载 ZIP 的地图恢复流程。',
 				},
 				{
-					'en-US': 'Long-press instance cards to enable batch editing of custom groups',
-					'zh-CN': '长按实例卡片实现批量编辑自定义分组功能',
+					'en-US': 'Added custom grouping to the instance library selection toolbar',
+					'zh-CN': '为实例库的选择工具栏添加自定义分组功能',
 				},
 				{
 					'en-US':
@@ -59,6 +59,17 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			changed: [
+				{
+					'en-US':
+						'Improved Content tab loading for large modpacks by using indexed local content until an explicit refresh.',
+					'zh-CN':
+						'优化大型整合包的内容页加载，常规打开会优先使用已索引的本地内容，完整扫描仅在手动刷新时进行。',
+				},
+				{
+					'en-US':
+						'Batch enabling and disabling content now updates selected items together without repeatedly refreshing the entire list.',
+					'zh-CN': '批量启用或禁用内容现在会一次完成选中项更新，不再反复刷新整个列表。',
+				},
 				{
 					'en-US':
 						'Improved the right sidebar toggle with a slightly larger handle and smoother expand and collapse animation.',
@@ -81,12 +92,38 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '启动器现在不会对模组文件名进行本地化',
 				},
 			],
+			removed: [
+				{
+					'en-US': 'Removed group settings from the instance settings page.',
+					'zh-CN': '移除原有实例设置里面的分组设置。',
+				},
+				{
+					'en-US': 'Removed the deprecated legacy Modal component.',
+					'zh-CN': '移除已经废弃的旧 Modal 组件。',
+				},
+			],
 			fixed: [
+				{
+					'en-US': 'Fixed popup panels blurring the title bar behind them.',
+					'zh-CN': '修复弹出面板的背景模糊把标题栏也模糊的问题。',
+				},
+				{
+					'en-US': 'Fixed popup panels closing when clicking outside them.',
+					'zh-CN': '修复点击面板外弹出面板就被关闭的问题。',
+				},
+				{
+					'en-US': 'Added delete instance functionality to the instance library selection toolbar.',
+					'zh-CN': '为实例库的选择工具栏加入删除实例功能。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge modpack metadata requests when opening the Content tab from cached content.',
+					'zh-CN': '修复从缓存打开内容页时仍会请求 CurseForge 整合包元数据的问题。',
+				},
 				{
 					'en-US':
 						'Fixed map browsing returning to shaders after restarting, and prevented downloaded maps from being duplicated in the regular content list.',
-					'zh-CN':
-						'修复重启后地图浏览会跳回光影的问题，并避免已下载地图在常规内容列表中重复显示。',
+					'zh-CN': '修复重启后地图浏览会跳回光影的问题，并避免已下载地图在常规内容列表中重复显示。',
 				},
 				{
 					'en-US':

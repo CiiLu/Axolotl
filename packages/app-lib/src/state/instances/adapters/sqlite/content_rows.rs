@@ -726,9 +726,32 @@ pub(crate) async fn rename_instance_file(
     enabled: bool,
     pool: &SqlitePool,
 ) -> crate::Result<Option<InstanceFile>> {
+    let mut tx = pool.begin().await?;
+
+    let file = rename_instance_file_in_transaction(
+        instance_id,
+        old_relative_path,
+        new_relative_path,
+        new_file_name,
+        enabled,
+        &mut tx,
+    )
+    .await?;
+    tx.commit().await?;
+
+    Ok(file)
+}
+
+pub(crate) async fn rename_instance_file_in_transaction(
+    instance_id: &str,
+    old_relative_path: &str,
+    new_relative_path: &str,
+    new_file_name: &str,
+    enabled: bool,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<Option<InstanceFile>> {
     let enabled = i64::from(enabled);
     let modified_at = Utc::now().timestamp();
-    let mut tx = pool.begin().await?;
 
     let source_id = sqlx::query_scalar!(
         "
@@ -739,7 +762,7 @@ pub(crate) async fn rename_instance_file(
         instance_id,
         old_relative_path,
     )
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut **tx)
     .await?;
     let target_id = sqlx::query_scalar!(
         "
@@ -750,7 +773,7 @@ pub(crate) async fn rename_instance_file(
         instance_id,
         new_relative_path,
     )
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut **tx)
     .await?;
 
     if let (Some(source_id), Some(target_id)) =
@@ -778,7 +801,7 @@ pub(crate) async fn rename_instance_file(
             target_id,
             source_id,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
 
         sqlx::query!(
@@ -792,7 +815,7 @@ pub(crate) async fn rename_instance_file(
             instance_id,
             target_id,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
 
         sqlx::query!(
@@ -802,7 +825,7 @@ pub(crate) async fn rename_instance_file(
 				",
             target_id,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
     }
 
@@ -824,13 +847,19 @@ pub(crate) async fn rename_instance_file(
         instance_id,
         old_relative_path,
     )
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
 
-    tx.commit().await?;
+    let row = sqlx::query_as::<_, InstanceFileRow>(
+        "SELECT * FROM instance_files
+         WHERE instance_id = ? AND relative_path = ?",
+    )
+    .bind(instance_id)
+    .bind(new_relative_path)
+    .fetch_optional(&mut **tx)
+    .await?;
 
-    get_instance_file_by_relative_path(instance_id, new_relative_path, pool)
-        .await
+    row.map(TryInto::try_into).transpose()
 }
 
 pub(crate) async fn move_instance_file_in_transaction(
@@ -1526,9 +1555,9 @@ pub(crate) async fn get_dependency_backfilled_entry_ids(
     Ok(rows.into_iter().collect())
 }
 
-pub(crate) async fn set_content_entry_dependency_backfilled(
+pub(crate) async fn set_content_entry_dependency_backfilled_in_transaction(
     content_entry_id: &str,
-    pool: &SqlitePool,
+    tx: &mut Transaction<'_, Sqlite>,
 ) -> crate::Result<()> {
     sqlx::query(
         "UPDATE instance_content_entries
@@ -1537,18 +1566,8 @@ pub(crate) async fn set_content_entry_dependency_backfilled(
     )
     .bind(Utc::now().timestamp())
     .bind(content_entry_id)
-    .execute(pool)
+    .execute(&mut **tx)
     .await?;
-    Ok(())
-}
-
-pub(crate) async fn upsert_content_dependency_edge(
-    edge: &ContentDependencyEdge,
-    pool: &SqlitePool,
-) -> crate::Result<()> {
-    let mut tx = pool.begin().await?;
-    upsert_content_dependency_edge_in_transaction(edge, &mut tx).await?;
-    tx.commit().await?;
     Ok(())
 }
 
