@@ -61,6 +61,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			changed: [
 				{
 					'en-US':
+						'Improved the right sidebar toggle with a slightly larger handle and smoother expand and collapse animation.',
+					'zh-CN': '优化右侧边栏切换按钮，增大手柄尺寸并使展开和收起动画更加平滑。',
+				},
+				{
+					'en-US':
 						'Added a Resources setting to control automatic downloads for CurseForge files with distribution restrictions. It is enabled by default and can be disabled to restore manual downloads.',
 					'zh-CN':
 						'资源设置新增 CurseForge 受限文件自动下载开关，默认开启；关闭后可恢复手动下载流程。',
