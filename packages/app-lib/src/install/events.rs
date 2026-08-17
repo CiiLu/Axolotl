@@ -18,7 +18,6 @@ const CONTENT_PROGRESS_PERSIST_STEPS: u64 = 25;
 const LIVE_PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(250);
 const LIVE_PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(3);
 const LIVE_PROGRESS_MIN_BYTES: u64 = 256 * 1024;
-const SPEED_SMOOTHING_ALPHA: f64 = 0.3;
 
 static REPORTER_STATES: LazyLock<
     dashmap::DashMap<Uuid, Weak<Mutex<InstallProgressReporterState>>>,
@@ -463,14 +462,9 @@ impl InstallProgressReporter {
                     .saturating_sub(active.speed_sample_started_bytes)
                     .saturating_mul(1_000)
                     .checked_div(sample_elapsed_ms)
-                    .unwrap_or(0) as f64;
-                let new_speed = active
-                    .speed_bytes_per_second
-                    .map_or(sample, |current| {
-                        current as f64 * (1.0 - SPEED_SMOOTHING_ALPHA)
-                            + sample * SPEED_SMOOTHING_ALPHA
-                    });
-                active.speed_bytes_per_second = Some(new_speed.max(1.0) as u64);
+                    .unwrap_or(0);
+                let new_speed = sample;
+                active.speed_bytes_per_second = Some(new_speed);
                 active.speed_sample_started_at = now;
                 active.speed_sample_started_bytes = bytes;
             }
