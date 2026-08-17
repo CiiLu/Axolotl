@@ -30,9 +30,12 @@ export function getJavaArgumentPresets(gcContext?: GcContext): JavaArgumentPrese
 	return [...JAVA_ARGUMENT_PRESETS, ...createGcPresets(gcContext)]
 }
 
-export function getPresetsByGroup(
-	presets: JavaArgumentPreset[],
-): Map<string | undefined, JavaArgumentPreset[]> {
+export interface JavaArgumentPresetGroup {
+	group?: string
+	presets: JavaArgumentPreset[]
+}
+
+export function getPresetsByGroup(presets: JavaArgumentPreset[]): JavaArgumentPresetGroup[] {
 	const groups = new Map<string | undefined, JavaArgumentPreset[]>()
 	for (const preset of presets) {
 		const group = preset.group
@@ -41,5 +44,5 @@ export function getPresetsByGroup(
 		}
 		groups.get(group)!.push(preset)
 	}
-	return groups
+	return Array.from(groups, ([group, groupPresets]) => ({ group, presets: groupPresets }))
 }

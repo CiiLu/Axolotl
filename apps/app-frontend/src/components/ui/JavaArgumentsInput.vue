@@ -235,15 +235,17 @@ function getAutoReasonChainText(preset: JavaArgumentPreset): string | null {
 		>
 			<div class="flex flex-col gap-6">
 				<div
-					v-for="(groupPresets, group) in groupedPresets"
-					:key="group ?? 'ungrouped'"
+					v-for="groupEntry in groupedPresets"
+					:key="groupEntry.group ?? 'ungrouped'"
 					class="flex flex-col gap-3"
 				>
-					<h3 v-if="group" class="m-0 text-lg font-semibold text-contrast">
-						{{ group === 'gc' ? formatMessage(messages.gcGroupTitle) : group }}
+					<h3 v-if="groupEntry.group" class="m-0 text-lg font-semibold text-contrast">
+						{{
+							groupEntry.group === 'gc' ? formatMessage(messages.gcGroupTitle) : groupEntry.group
+						}}
 					</h3>
 					<div
-						v-for="preset in groupPresets"
+						v-for="preset in groupEntry.presets"
 						:key="preset.id"
 						class="flex flex-col gap-3 rounded-xl border border-solid border-surface-4 bg-surface-2 p-4"
 					>
