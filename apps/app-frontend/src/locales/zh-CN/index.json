@@ -6929,9 +6929,6 @@
 	"app.instances.select-all": {
 		"message": "全选"
 	},
-	"app.instances.exit-select-mode": {
-		"message": "退出"
-	},
 	"app.instances.edit-groups": {
 		"message": "编辑分组"
 	},

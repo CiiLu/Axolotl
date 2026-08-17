@@ -2402,9 +2402,6 @@
 	"app.instances.edit-groups": {
 		"message": "Edit groups"
 	},
-	"app.instances.exit-select-mode": {
-		"message": "Exit"
-	},
 	"app.instances.group-by": {
 		"message": "Group by:"
 	},

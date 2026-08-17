@@ -15,8 +15,8 @@ function updateFloatingActionBarBodyClass() {
 const props = defineProps<{
 	shown: boolean
 	ariaLabel?: string
-	belowModal?: boolean
 	hideWhenModalOpen?: boolean
+	position?: 'bottom' | 'top'
 }>()
 
 const INTERCOM_BUBBLE_GAP = 8
@@ -30,7 +30,7 @@ const pageContext = injectPageContext(null)
 const shown = computed(() => props.shown && (!props.hideWhenModalOpen || stackCount.value === 0))
 const floatingActionBarId = Symbol('floating-action-bar')
 const intercomBubbleClearanceRequestId = Symbol('floating-action-bar')
-const zIndex = computed(() => 100 + stackCount.value * 10 + 8 + (!props.belowModal ? 1 : 0))
+const zIndex = computed(() => 100 + stackCount.value * 10 + 7)
 const leftOffset = computed(
 	() => pageContext?.floatingActionBarOffsets?.left.value ?? 'var(--left-bar-width, 0px)',
 )
@@ -47,6 +47,11 @@ const barStyle = computed(() => ({
 	zIndex: zIndex.value,
 	'--floating-action-bar-left-offset': leftOffset.value,
 	'--floating-action-bar-right-offset': rightOffset.value,
+}))
+
+const barClasses = computed(() => ({
+	'bottom-0': !props.position || props.position === 'bottom',
+	'top-12': props.position === 'top',
 }))
 
 function checkCompact() {
@@ -205,7 +210,8 @@ onUnmounted(() => {
 			<div
 				v-if="shown"
 				ref="barEl"
-				class="floating-action-bar drop-shadow-2xl fixed p-4 bottom-0"
+				class="floating-action-bar drop-shadow-2xl fixed p-4"
+				:class="barClasses"
 				:style="barStyle"
 				aria-live="polite"
 			>
@@ -227,7 +233,9 @@ onUnmounted(() => {
 .floating-action-bar {
 	left: var(--floating-action-bar-left-offset, var(--left-bar-width, 0px));
 	right: var(--floating-action-bar-right-offset, var(--right-bar-width, 0px));
-	transition: bottom 0.25s ease-in-out;
+	transition:
+		bottom 0.25s ease-in-out,
+		top 0.25s ease-in-out;
 }
 
 .floating-action-bar-enter-active {
@@ -243,21 +251,21 @@ onUnmounted(() => {
 }
 
 .floating-action-bar-enter-from {
-	transform: scale(0.5) translateY(10rem);
+	transform: scale(0.5) translateY(-10rem);
 	opacity: 0;
 }
 
 .floating-action-bar-leave-to {
-	transform: scale(0.96) translateY(0.25rem);
+	transform: scale(0.96) translateY(-0.25rem);
 	opacity: 0;
 }
 
 @media (any-hover: none) and (max-width: 640px) {
-	.floating-action-bar {
+	.floating-action-bar.bottom-0 {
 		bottom: var(--size-mobile-navbar-height);
 	}
 
-	.expanded-mobile-nav .floating-action-bar {
+	.expanded-mobile-nav .floating-action-bar.bottom-0 {
 		bottom: var(--size-mobile-navbar-height-expanded);
 	}
 }

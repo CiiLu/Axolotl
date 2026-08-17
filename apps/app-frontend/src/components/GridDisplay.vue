@@ -10,6 +10,7 @@ import {
 	SearchIcon,
 	StopCircleIcon,
 	TrashIcon,
+	XIcon,
 } from '@modrinth/assets'
 import {
 	Accordion,
@@ -60,7 +61,6 @@ const messages = defineMessages({
 	loader: { id: 'app.instances.group.loader', defaultMessage: 'Loader' },
 	none: { id: 'app.instances.group.none', defaultMessage: 'None' },
 	ungrouped: { id: 'app.instances.group.ungrouped', defaultMessage: 'No group' },
-	exitSelectMode: { id: 'app.instances.exit-select-mode', defaultMessage: 'Exit' },
 	editGroups: { id: 'app.instances.edit-groups', defaultMessage: 'Edit groups' },
 	selectAll: { id: 'app.instances.select-all', defaultMessage: 'Select all' },
 	deselectAll: { id: 'app.instances.deselect-all', defaultMessage: 'Deselect all' },
@@ -423,7 +423,7 @@ function onBatchEditApplied() {
 		:instance-ids="[...selectedInstanceIds]"
 		@applied="onBatchEditApplied"
 	/>
-	<FloatingActionBar :shown="selectMode" aria-label="Instance selection">
+	<FloatingActionBar :shown="selectMode" position="top" aria-label="Instance selection">
 		<span class="px-3 py-2 text-base font-semibold text-contrast tabular-nums">
 			{{ formatMessage(messages.selectedCount, { count: selectedInstanceIds.size }) }}
 		</span>
@@ -442,8 +442,14 @@ function onBatchEditApplied() {
 		</ButtonStyled>
 		<div class="ml-auto" />
 		<ButtonStyled type="transparent">
-			<button type="button" @click="toggleSelectMode">
-				<span>{{ formatMessage(messages.exitSelectMode) }}</span>
+			<button
+				v-tooltip="formatMessage(commonMessages.clearButton)"
+				class="!text-primary"
+				type="button"
+				@click="toggleSelectMode"
+			>
+				<XIcon class="hidden cq-show-icon" />
+				<span class="bar-label">{{ formatMessage(commonMessages.clearButton) }}</span>
 			</button>
 		</ButtonStyled>
 	</FloatingActionBar>
