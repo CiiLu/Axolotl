@@ -509,6 +509,9 @@
 	"app.content-install.preview.skipped-header": {
 		"message": "跳过"
 	},
+	"app.content-install.preview.version-mismatch": {
+		"message": "当前版本可能不匹配实例版本"
+	},
 	"app.content.add-from-file": {
 		"message": "从文件添加"
 	},

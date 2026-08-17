@@ -1,12 +1,15 @@
 //! Modular download engine selection.
 //!
-//! The launcher can use either the legacy adaptive engine or the
-//! XMCL-compatible engine. The legacy engine remains available as a
-//! fallback and for users who opt out of the new engine.
+//! The launcher can use either the native adaptive engine (HTTP/2
+//! multiplexing with shared per-authority connections, falling back to
+//! HTTP/1.1 single-stream) or the XMCL-compatible engine. The native engine
+//! is the default; the XMCL engine remains available for users who prefer it.
 
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU8, Ordering};
 
+pub mod h2_download;
+pub mod h2_pool;
 pub mod legacy;
 pub mod log;
 pub mod shared;

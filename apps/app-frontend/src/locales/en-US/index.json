@@ -755,6 +755,9 @@
   "app.content-install.preview.skipped-header": {
     "message": "Skipped"
   },
+  "app.content-install.preview.version-mismatch": {
+    "message": "Version may not match this instance"
+  },
   "app.content.add-from-file": {
     "message": "Add from file"
   },
