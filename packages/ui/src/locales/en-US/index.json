@@ -1973,6 +1973,12 @@
   "installation-settings.loader-version": {
     "defaultMessage": "{loader} version"
   },
+  "installation-settings.loader-version.error": {
+    "defaultMessage": "Failed to load loader versions"
+  },
+  "installation-settings.loader-version.unsupported": {
+    "defaultMessage": "This loader does not support the selected game version"
+  },
   "installation-settings.platform-lock-tooltip": {
     "defaultMessage": "You will need to reset your server to switch loader."
   },

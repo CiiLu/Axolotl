@@ -66,13 +66,20 @@
 							}}
 						</button>
 					</ButtonStyled>
-					<ButtonStyled v-if="managedProjectType" size="large" color="brand">
+					<ButtonStyled v-if="managedProjectType || isWorldMap" size="large" color="brand">
 						<button :disabled="installing" @click="installSelected(null)">
 							<SpinnerIcon v-if="installing" class="animate-spin" />
+							<PlusIcon v-else-if="isWorldMap" />
 							<DownloadIcon v-else />
 							{{
 								formatMessage(
-									installing ? commonMessages.installingLabel : commonMessages.installButton,
+									installing
+										? commonMessages.installingLabel
+										: isWorldMap
+											? instanceId
+												? commonMessages.installButton
+												: messages.addToAnInstance
+											: commonMessages.installButton,
 								)
 							}}
 						</button>
@@ -142,13 +149,14 @@
 				:show-environment-column="themeStore.featureFlags.show_version_environment_column"
 			>
 				<template #actions="{ version }">
-					<ButtonStyled circular type="transparent" color="green">
+					<ButtonStyled circular type="transparent" :color="isWorldMap ? 'brand' : 'green'">
 						<button
-							v-tooltip="formatMessage(commonMessages.installButton)"
+							v-tooltip="formatMessage(isWorldMap ? messages.addToAnInstance : commonMessages.installButton)"
 							:disabled="installing"
 							@click.stop="installSelected(version.id)"
 						>
-							<DownloadIcon />
+							<PlusIcon v-if="isWorldMap" />
+							<DownloadIcon v-else />
 						</button>
 					</ButtonStyled>
 				</template>
@@ -182,6 +190,7 @@ import {
 	ExternalIcon,
 	LanguagesIcon,
 	MoreVerticalIcon,
+	PlusIcon,
 	SpinnerIcon,
 } from '@modrinth/assets'
 import {
@@ -238,7 +247,7 @@ const breadcrumbs = useBreadcrumbs()
 const themeStore = useTheming()
 const { addNotification, handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
-const { installCurseForge } = injectContentInstall()
+const { installCurseForge, installCurseForgeWorld } = injectContentInstall()
 
 const messages = defineMessages({
 	loading: {
@@ -305,6 +314,10 @@ const messages = defineMessages({
 		id: 'app.project.curseforge.unavailable-description',
 		defaultMessage: 'The CurseForge project did not return any data.',
 	},
+	addToAnInstance: {
+		id: 'app.browse.add-to-an-instance',
+		defaultMessage: 'Add to an instance',
+	},
 })
 
 const loading = ref(true)
@@ -347,6 +360,8 @@ const projectType = computed(() => {
 const managedProjectType = computed(() =>
 	['mod', 'resourcepack', 'shader', 'datapack', 'modpack'].includes(projectType.value),
 )
+const isWorldMap = computed(() => projectType.value === 'world')
+const instanceId = computed(() => (typeof route.query.i === 'string' ? route.query.i : null))
 
 const platformNames = [
 	'forge',
@@ -589,11 +604,28 @@ watch(
 
 async function installSelected(fileId: string | null) {
 	if (!project.value) return
+	if (isWorldMap.value) {
+		installing.value = true
+		await installCurseForgeWorld(
+			project.value.id,
+			fileId,
+			instanceId.value,
+			'ProjectPage',
+			() => {
+				installing.value = false
+			},
+		).catch((error) => {
+			installing.value = false
+			handleError(error)
+		})
+		return
+	}
+
 	installing.value = true
 	await installCurseForge(
 		project.value.id.toString(),
 		fileId,
-		typeof route.query.i === 'string' ? route.query.i : null,
+		instanceId.value,
 		'ProjectPage',
 		() => {
 			installing.value = false

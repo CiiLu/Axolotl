@@ -10,16 +10,16 @@ import type { Hooks, MemorySettings, WindowSize } from '@/helpers/types'
 import type { AccentColorSetting, ColorTheme, FeatureFlag, HomeLayout } from '@/store/theme.ts'
 import { DEFAULT_FEATURE_FLAGS } from '@/store/theme.ts'
 
+export type {
+	BrowseContentDisplayMode,
+	BrowseContentProjectType,
+} from './browse-display-mode.ts'
 export {
 	getLastBrowseContentDisplayMode,
 	getLastBrowseContentProjectType,
 	isBrowseContentProjectType,
 	setLastBrowseContentDisplayMode,
 	setLastBrowseContentProjectType,
-} from './browse-display-mode.ts'
-export type {
-	BrowseContentDisplayMode,
-	BrowseContentProjectType,
 } from './browse-display-mode.ts'
 
 // Settings object
@@ -90,6 +90,7 @@ export type AppSettings = {
 	minecraft_file_source: DownloadSourceMode
 	modrinth_source: DownloadSourceMode
 	curseforge_source: DownloadSourceMode
+	bypass_curseforge_download_restrictions: boolean
 	mojang_auth_source: DownloadSourceMode
 
 	theme: ColorTheme
@@ -180,6 +181,7 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_modrinth_mirror)
 	settings.curseforge_source ??=
 		usesLegacyDefaults || !hasLegacySettings ? 'auto' : legacySource(settings.use_curseforge_mirror)
+	settings.bypass_curseforge_download_restrictions ??= true
 	settings.mojang_auth_source ??= 'auto'
 	settings.terracotta_public_nodes ??= ['wss://center.node.1tmc.top']
 	settings.feature_flags ??= {}

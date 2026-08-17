@@ -43,6 +43,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 		changes: {
 			added: [
 				{
+					'en-US':
+						'Added CurseForge map browsing and installation into existing instances, including recovery for maps that require a manual ZIP download.',
+					'zh-CN':
+						'新增 CurseForge 地图浏览与安装功能，可直接安装到已有实例，并支持需要手动下载 ZIP 的地图恢复流程。',
+				},
+				{
 					'en-US': 'Long-press instance cards to enable batch editing of custom groups',
 					'zh-CN': '长按实例卡片实现批量编辑自定义分组功能',
 				},
@@ -53,6 +59,17 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			changed: [
+				{
+					'en-US':
+						'Improved the right sidebar toggle with a slightly larger handle and smoother expand and collapse animation.',
+					'zh-CN': '优化右侧边栏切换按钮，增大手柄尺寸并使展开和收起动画更加平滑。',
+				},
+				{
+					'en-US':
+						'Added a Resources setting to control automatic downloads for CurseForge files with distribution restrictions. It is enabled by default and can be disabled to restore manual downloads.',
+					'zh-CN':
+						'资源设置新增 CurseForge 受限文件自动下载开关，默认开启；关闭后可恢复手动下载流程。',
+				},
 				{
 					'en-US':
 						'Discover now reopens the last content type you browsed, including mods, modpacks, resource packs, data packs, and shaders.',
@@ -67,12 +84,23 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed map browsing returning to shaders after restarting, and prevented downloaded maps from being duplicated in the regular content list.',
+					'zh-CN':
+						'修复重启后地图浏览会跳回光影的问题，并避免已下载地图在常规内容列表中重复显示。',
+				},
+				{
+					'en-US':
 						'Fixed installations on protected paths not requesting administrator permission when needed.',
 					'zh-CN': '修复在受保护路径安装时无法正确请求管理员权限的问题。',
 				},
 				{
 					'en-US': 'Canonicalized legacy Forge loader versions',
 					'zh-CN': '修复了旧版 Forge 加载器版本无法识别的问题',
+				},
+				{
+					'en-US':
+						'Fixed launcher updates installing to the previous directory after the launcher was moved.',
+					'zh-CN': '修复移动启动器目录后自动更新仍安装到旧目录的问题。',
 				},
 			],
 		},

@@ -251,6 +251,20 @@ pub async fn queue_curseforge_content(
     .await
 }
 
+#[tracing::instrument]
+pub async fn queue_curseforge_world(
+    request: crate::api::curseforge::CurseForgeWorldInstallRequest,
+    display_title: String,
+    display_icon: Option<String>,
+) -> crate::Result<crate::install::InstallJobSnapshot> {
+    crate::install::install_curseforge_world(
+        request,
+        display_title,
+        display_icon,
+    )
+    .await
+}
+
 fn plan_project_ids(plan: &ResolveContentPlan) -> Vec<String> {
     let mut project_ids = Vec::with_capacity(plan.dependencies.len() + 1);
     project_ids.push(plan.primary.project_id.clone());

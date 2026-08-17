@@ -19,7 +19,9 @@
 					{{ summary }}
 				</p>
 			</div>
-			<span class="project-card--compact__provider truncate text-[13px] font-medium leading-4 text-secondary">
+			<span
+				class="project-card--compact__provider truncate text-[13px] font-medium leading-4 text-secondary"
+			>
 				{{ provider === 'curseforge' ? 'CurseForge' : 'Modrinth' }}
 			</span>
 			<div class="project-card--compact__tags flex min-w-0 items-center gap-1 overflow-hidden">

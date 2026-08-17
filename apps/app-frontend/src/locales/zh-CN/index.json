@@ -365,11 +365,23 @@
 	"app.browse.discover-content": {
 		"message": "发现内容"
 	},
+	"app.browse.discover-maps": {
+		"message": "发现地图"
+	},
 	"app.browse.discover-servers": {
 		"message": "发现服务器"
 	},
 	"app.browse.hide-added-servers": {
 		"message": "隐藏已添加的服务器"
+	},
+	"app.browse.maps-unavailable": {
+		"message": "地图不可用"
+	},
+	"app.browse.maps-unavailable-description": {
+		"message": "请配置 CurseForge API Key 以浏览和安装地图。"
+	},
+	"app.browse.maps-no-installable-file": {
+		"message": "所选 CurseForge 地图没有可安装的文件。"
 	},
 	"app.browse.project-type.modpacks": {
 		"message": "整合包"
@@ -382,6 +394,9 @@
 	},
 	"app.browse.project-type.datapacks": {
 		"message": "数据包"
+	},
+	"app.browse.project-type.maps": {
+		"message": "地图"
 	},
 	"app.browse.project-type.shaders": {
 		"message": "光影包"
@@ -1465,6 +1480,9 @@
 	},
 	"app.instance.worlds.add-server": {
 		"message": "添加服务器"
+	},
+	"app.instance.worlds.browse-maps": {
+		"message": "浏览地图"
 	},
 	"app.instance.worlds.browse-servers": {
 		"message": "浏览服务器"
@@ -2606,6 +2624,12 @@
 	"app.settings.resources.curseforge-mirror-description": {
 		"message": "CurseForge 公共 API 请求和文件下载。"
 	},
+	"app.settings.resources.curseforge-restriction-bypass": {
+		"message": "自动下载受限的 CurseForge 文件"
+	},
+	"app.settings.resources.curseforge-restriction-bypass-description": {
+		"message": "当 CurseForge 不提供下载地址时，根据文件信息推导其 CDN 地址并尝试自动下载。关闭后将使用手动下载流程。"
+	},
 	"app.settings.resources.mojang-auth-service": {
 		"message": "Mojang 认证服务"
 	},
@@ -3505,6 +3529,15 @@
 	},
 	"app.world.world-item.players-online": {
 		"message": "{count} 人在线"
+	},
+	"app.worlds.install-map.invalid-project": {
+		"message": "所选项目不是 CurseForge 地图。"
+	},
+	"app.worlds.install-map.instance-not-ready": {
+		"message": "请等待该实例安装完成后再添加地图。"
+	},
+	"app.worlds.install-map.unknown-instance": {
+		"message": "所选实例已不可用。"
 	},
 	"app.worlds.title": {
 		"message": "世界"
@@ -5612,6 +5645,9 @@
 	"app.home.minimal.picker.no-results": {
 		"message": "没有匹配的实例"
 	},
+	"app.home.minimal.picker.no-instances": {
+		"message": "没有可用实例"
+	},
 	"app.home.minimal.picker.search": {
 		"message": "搜索实例"
 	},
@@ -7027,9 +7063,6 @@
 	},
 	"app.instances.select-all": {
 		"message": "全选"
-	},
-	"app.instances.exit-select-mode": {
-		"message": "退出"
 	},
 	"app.instances.edit-groups": {
 		"message": "编辑分组"

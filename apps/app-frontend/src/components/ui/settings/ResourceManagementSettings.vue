@@ -125,6 +125,15 @@ const messages = defineMessages({
 		id: 'app.settings.resources.curseforge-mirror-description',
 		defaultMessage: 'CurseForge public API requests and file downloads.',
 	},
+	curseforgeRestrictionBypass: {
+		id: 'app.settings.resources.curseforge-restriction-bypass',
+		defaultMessage: 'Automatically download restricted CurseForge files',
+	},
+	curseforgeRestrictionBypassDescription: {
+		id: 'app.settings.resources.curseforge-restriction-bypass-description',
+		defaultMessage:
+			'When CurseForge does not provide a download address, derive its CDN address and try downloading the file automatically. Disable this to use the manual download workflow.',
+	},
 	mojangAuthService: {
 		id: 'app.settings.resources.mojang-auth-service',
 		defaultMessage: 'Mojang authentication service',
@@ -498,6 +507,21 @@ function resetMissingContentImportDirectory() {
 				<div class="w-48 shrink-0">
 					<Combobox v-model="curseforgeDownloadSource" :options="mcimSourceOptions" />
 				</div>
+			</div>
+
+			<div class="flex items-center justify-between gap-4">
+				<div class="flex flex-col gap-1">
+					<h3 class="m-0 text-base font-semibold text-contrast">
+						{{ formatMessage(messages.curseforgeRestrictionBypass) }}
+					</h3>
+					<p class="m-0 leading-tight text-secondary">
+						{{ formatMessage(messages.curseforgeRestrictionBypassDescription) }}
+					</p>
+				</div>
+				<Toggle
+					id="curseforge-restriction-bypass"
+					v-model="settings.bypass_curseforge_download_restrictions"
+				/>
 			</div>
 
 			<div class="flex items-center justify-between gap-4">

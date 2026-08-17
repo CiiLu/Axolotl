@@ -51,7 +51,7 @@ test('browse display mode persists valid values and falls back to the list', () 
 	}
 })
 
-test('browse project type persists resources and rejects non-content routes', () => {
+test('browse project type persists content types and rejects non-content routes', () => {
 	const values = installMemoryStorage()
 
 	try {
@@ -60,8 +60,8 @@ test('browse project type persists resources and rejects non-content routes', ()
 		setLastBrowseContentProjectType('mod')
 		assert.equal(getLastBrowseContentProjectType(), 'mod')
 
-		setLastBrowseContentProjectType('shader')
-		assert.equal(getLastBrowseContentProjectType(), 'shader')
+		setLastBrowseContentProjectType('world')
+		assert.equal(getLastBrowseContentProjectType(), 'world')
 
 		values.set(projectTypeStorageKey, 'server')
 		assert.equal(getLastBrowseContentProjectType(), 'modpack')

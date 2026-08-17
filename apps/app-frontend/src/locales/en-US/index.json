@@ -587,6 +587,9 @@
   "app.auth.sign-in-browser": {
     "message": "Please sign in in the browser window that just opened to continue."
   },
+  "app.browse.add": {
+    "message": "Add"
+  },
   "app.browse.add-servers-to-instance": {
     "message": "Adding server to instance"
   },
@@ -611,14 +614,41 @@
   "app.browse.discover-content": {
     "message": "Discover content"
   },
+  "app.browse.discover-maps": {
+    "message": "Discover maps"
+  },
   "app.browse.discover-servers": {
     "message": "Discover servers"
+  },
+  "app.browse.display-mode.compact-list": {
+    "message": "Compact list"
+  },
+  "app.browse.display-mode.grid": {
+    "message": "Grid"
+  },
+  "app.browse.display-mode.list": {
+    "message": "List"
+  },
+  "app.browse.display-mode.switch": {
+    "message": "Switch view"
   },
   "app.browse.hide-added-servers": {
     "message": "Hide servers already added"
   },
+  "app.browse.maps-no-installable-file": {
+    "message": "The selected CurseForge map does not have an installable file."
+  },
+  "app.browse.maps-unavailable": {
+    "message": "Maps unavailable"
+  },
+  "app.browse.maps-unavailable-description": {
+    "message": "Configure a CurseForge API key to browse and install maps."
+  },
   "app.browse.project-type.datapacks": {
     "message": "Data Packs"
+  },
+  "app.browse.project-type.maps": {
+    "message": "Maps"
   },
   "app.browse.project-type.modpacks": {
     "message": "Modpacks"
@@ -1685,6 +1715,9 @@
   "app.home.minimal.choose-instance": {
     "message": "Choose instance"
   },
+  "app.home.minimal.picker.no-instances": {
+    "message": "No instances available"
+  },
   "app.home.minimal.picker.no-results": {
     "message": "No matching instances"
   },
@@ -2348,6 +2381,9 @@
   "app.instance.worlds.add-server": {
     "message": "Add server"
   },
+  "app.instance.worlds.browse-maps": {
+    "message": "Browse maps"
+  },
   "app.instance.worlds.browse-servers": {
     "message": "Browse servers"
   },
@@ -2399,11 +2435,32 @@
   "app.instances.add-content": {
     "message": "Add content"
   },
+  "app.instances.batch-edit-groups.apply": {
+    "message": "Apply"
+  },
+  "app.instances.batch-edit-groups.create-group": {
+    "message": "Create new group"
+  },
+  "app.instances.batch-edit-groups.description": {
+    "message": "Select groups to apply to {count} instance(s)."
+  },
+  "app.instances.batch-edit-groups.enter-group-name": {
+    "message": "Enter group name"
+  },
+  "app.instances.batch-edit-groups.header": {
+    "message": "Edit groups"
+  },
   "app.instances.copy-path": {
     "message": "Copy path"
   },
+  "app.instances.deselect-all": {
+    "message": "Deselect all"
+  },
   "app.instances.duplicate-instance": {
     "message": "Duplicate instance"
+  },
+  "app.instances.edit-groups": {
+    "message": "Edit groups"
   },
   "app.instances.group-by": {
     "message": "Group by:"
@@ -2432,6 +2489,12 @@
   "app.instances.select": {
     "message": "Select..."
   },
+  "app.instances.select-all": {
+    "message": "Select all"
+  },
+  "app.instances.selected-count": {
+    "message": "{count, plural, one {# selected} other {# selected}}"
+  },
   "app.instances.sort.date-created": {
     "message": "Date created"
   },
@@ -2456,6 +2519,9 @@
   "app.java-arguments.presets.arguments": {
     "message": "Arguments"
   },
+  "app.java-arguments.presets.auth-group-title": {
+    "message": "Mojang Auth service proxy"
+  },
   "app.java-arguments.presets.auth-mirror.description": {
     "message": "HTTP forwarding for the Mojang authentication servers hosted by Fallen-Breath."
   },
@@ -2464,6 +2530,51 @@
   },
   "app.java-arguments.presets.button": {
     "message": "Argument presets"
+  },
+  "app.java-arguments.presets.collapse-group": {
+    "message": "Collapse group"
+  },
+  "app.java-arguments.presets.expand-group": {
+    "message": "Expand group"
+  },
+  "app.java-arguments.presets.gc-group-title": {
+    "message": "Memory recycling strategy (GC)"
+  },
+  "app.java-arguments.presets.gc.auto.description": {
+    "message": "Automatically select the best GC strategy for your system"
+  },
+  "app.java-arguments.presets.gc.auto.reason-chain": {
+    "message": "Decision path: {chain}"
+  },
+  "app.java-arguments.presets.gc.auto.resolved": {
+    "message": "Resolved → {strategy}"
+  },
+  "app.java-arguments.presets.gc.auto.title": {
+    "message": "Auto GC"
+  },
+  "app.java-arguments.presets.gc.g1gc-mojang.description": {
+    "message": "G1GC tuning used by the official Minecraft launcher"
+  },
+  "app.java-arguments.presets.gc.g1gc-mojang.title": {
+    "message": "Mojang G1GC"
+  },
+  "app.java-arguments.presets.gc.g1gc-pcl.description": {
+    "message": "G1GC tuning optimized by PCL launcher"
+  },
+  "app.java-arguments.presets.gc.g1gc-pcl.title": {
+    "message": "PCL G1GC"
+  },
+  "app.java-arguments.presets.gc.shenandoah.description": {
+    "message": "Low-pause GC for medium-to-heavy modpacks (Java 12+)"
+  },
+  "app.java-arguments.presets.gc.shenandoah.title": {
+    "message": "Shenandoah"
+  },
+  "app.java-arguments.presets.gc.zgc.description": {
+    "message": "Ultra-low latency GC for high-end systems (Java 15+)"
+  },
+  "app.java-arguments.presets.gc.zgc.title": {
+    "message": "ZGC"
   },
   "app.java-arguments.presets.modal-title": {
     "message": "Java argument presets"
@@ -5354,6 +5465,12 @@
   "app.settings.resources.curseforge-mirror-description": {
     "message": "CurseForge public API requests and file downloads."
   },
+  "app.settings.resources.curseforge-restriction-bypass": {
+    "message": "Automatically download restricted CurseForge files"
+  },
+  "app.settings.resources.curseforge-restriction-bypass-description": {
+    "message": "When CurseForge does not provide a download address, derive its CDN address and try downloading the file automatically. Disable this to use the manual download workflow."
+  },
   "app.settings.resources.database-backups": {
     "message": "App database backups"
   },
@@ -6301,6 +6418,15 @@
   },
   "app.world.world-item.players-online": {
     "message": "{count} online"
+  },
+  "app.worlds.install-map.instance-not-ready": {
+    "message": "Wait for this instance to finish installing before adding a map."
+  },
+  "app.worlds.install-map.invalid-project": {
+    "message": "The selected project is not a CurseForge map."
+  },
+  "app.worlds.install-map.unknown-instance": {
+    "message": "The selected instance is no longer available."
   },
   "app.worlds.title": {
     "message": "Worlds"
