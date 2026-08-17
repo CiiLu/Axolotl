@@ -3489,7 +3489,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			border: none;
 			box-shadow: none;
 		}
+	}
 
+	&.has-custom-background {
 		.loading-indicator-container {
 			border-top-left-radius: 0;
 		}
@@ -3534,7 +3536,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		var(--surface-3-opaque) var(--window-alpha-chrome),
 		transparent
 	);
-	backdrop-filter: blur(18px) saturate(120%);
 
 	&::before {
 		position: absolute;
