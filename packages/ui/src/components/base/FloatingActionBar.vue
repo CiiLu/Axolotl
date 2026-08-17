@@ -31,16 +31,18 @@ const shown = computed(() => props.shown && (!props.hideWhenModalOpen || stackCo
 const floatingActionBarId = Symbol('floating-action-bar')
 const intercomBubbleClearanceRequestId = Symbol('floating-action-bar')
 const zIndex = computed(() => 100 + stackCount.value * 10 + 8 + (!props.belowModal ? 1 : 0))
-const leftOffset = computed(() =>
-	stackCount.value > 0
-		? '0px'
-		: (pageContext?.floatingActionBarOffsets?.left.value ?? 'var(--left-bar-width, 0px)'),
+const leftOffset = computed(
+	() => pageContext?.floatingActionBarOffsets?.left.value ?? 'var(--left-bar-width, 0px)',
 )
-const rightOffset = computed(() =>
-	stackCount.value > 0
-		? '0px'
-		: (pageContext?.floatingActionBarOffsets?.right.value ?? 'var(--right-bar-width, 0px)'),
-)
+const scrollbarWidth = ref(0)
+
+const rightOffset = computed(() => {
+	const base = pageContext?.floatingActionBarOffsets?.right.value ?? 'var(--right-bar-width, 0px)'
+	if (stackCount.value > 0) {
+		return `calc(${base} + ${scrollbarWidth.value}px)`
+	}
+	return base
+})
 const barStyle = computed(() => ({
 	zIndex: zIndex.value,
 	'--floating-action-bar-left-offset': leftOffset.value,
@@ -171,14 +173,22 @@ watch(
 	{ immediate: true },
 )
 
+function handleResize() {
+	if (stackCount.value === 0) {
+		scrollbarWidth.value = window.innerWidth - document.documentElement.clientWidth
+	}
+	scheduleIntercomBubbleClearanceUpdate()
+}
+
 onMounted(() => {
-	window.addEventListener('resize', scheduleIntercomBubbleClearanceUpdate)
+	scrollbarWidth.value = window.innerWidth - document.documentElement.clientWidth
+	window.addEventListener('resize', handleResize)
 	scheduleIntercomBubbleClearanceUpdate()
 })
 
 onUnmounted(() => {
 	observer?.disconnect()
-	window.removeEventListener('resize', scheduleIntercomBubbleClearanceUpdate)
+	window.removeEventListener('resize', handleResize)
 	if (updateFrame !== null) {
 		window.cancelAnimationFrame(updateFrame)
 	}

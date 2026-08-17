@@ -397,7 +397,7 @@ function onBatchEditApplied() {
 					</div>
 				</div>
 				<div
-					class="absolute left-2 top-2 z-10 transition-opacity"
+					class="absolute right-2 bottom-2 z-10 transition-opacity"
 					:class="
 						selectMode && selectedInstanceIds.has(instance.id)
 							? ''
