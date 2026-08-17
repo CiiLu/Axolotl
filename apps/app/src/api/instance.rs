@@ -972,15 +972,13 @@ pub async fn instance_run(
         Some(addr) => QuickPlayType::Server(ServerAddress::Unresolved(addr)),
         None => QuickPlayType::None,
     };
-    Ok(
-        theseus::instance::run_with_extra_launch_args(
-            instance_id,
-            quick_play,
-            offline_mode,
-            extra_launch_args,
-        )
-        .await?,
+    Ok(theseus::instance::run_with_extra_launch_args(
+        instance_id,
+        quick_play,
+        offline_mode,
+        extra_launch_args,
     )
+    .await?)
 }
 
 #[tauri::command]

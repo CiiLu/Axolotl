@@ -9,14 +9,12 @@
 
 use super::h2_pool::SharedH2Connection;
 use crate::util::fetch;
-use crate::util::fetch::{
-    DownloadRequest, DownloadResult, Integrity,
-};
+use crate::util::fetch::{DownloadRequest, DownloadResult, Integrity};
 use bytes::Bytes;
 use http::header::{ACCEPT_ENCODING, RANGE, USER_AGENT};
 use http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
-use std::str::FromStr;
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
@@ -82,30 +80,23 @@ pub(crate) async fn try_download_via_h2(
     } else {
         let mut probe_headers = request_headers(request);
         probe_headers.insert(RANGE, HeaderValue::from_static("bytes=0-0"));
-        probe_headers.insert(
-            ACCEPT_ENCODING,
-            HeaderValue::from_static("identity"),
-        );
+        probe_headers
+            .insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
 
-        let (response, mut probe_body) = match open_stream(
-            &connection,
-            &uri,
-            probe_headers,
-        )
-        .await
-        {
-            Ok(pair) => pair,
-            Err(error) => {
-                tracing::debug!(
-                    url = %fetch::sanitize_url_for_log(&request.url),
-                    error = %error,
-                    "HTTP/2 probe failed; falling back to legacy download"
-                );
-                return H2DownloadOutcome::Fallback {
-                    reason: "probe failed",
-                };
-            }
-        };
+        let (response, mut probe_body) =
+            match open_stream(&connection, &uri, probe_headers).await {
+                Ok(pair) => pair,
+                Err(error) => {
+                    tracing::debug!(
+                        url = %fetch::sanitize_url_for_log(&request.url),
+                        error = %error,
+                        "HTTP/2 probe failed; falling back to legacy download"
+                    );
+                    return H2DownloadOutcome::Fallback {
+                        reason: "probe failed",
+                    };
+                }
+            };
 
         let status = response.status();
         let headers = response.headers();
@@ -219,10 +210,7 @@ fn parse_content_length(headers: &HeaderMap) -> Option<u64> {
 }
 
 fn parse_content_range_total(headers: &HeaderMap) -> Option<u64> {
-    let value = headers
-        .get(http::header::CONTENT_RANGE)?
-        .to_str()
-        .ok()?;
+    let value = headers.get(http::header::CONTENT_RANGE)?.to_str().ok()?;
     let (_, total) = value.split_once('/')?;
     if total == "*" {
         return None;
@@ -245,9 +233,7 @@ async fn open_stream(
         .unwrap();
     *request.headers_mut() = headers;
     let response = connection.open(request).await.map_err(|error| {
-        crate::ErrorKind::NetworkError(format!(
-            "HTTP/2 stream error: {error}"
-        ))
+        crate::ErrorKind::NetworkError(format!("HTTP/2 stream error: {error}"))
     })?;
     let (parts, body) = response.into_parts();
     let response = http::Response::from_parts(parts, ());
@@ -255,11 +241,8 @@ async fn open_stream(
 }
 
 async fn drain_body(stream: &mut h2::RecvStream) {
-    while let Ok(Some(Ok(_))) = tokio::time::timeout(
-        STREAM_RECV_TIMEOUT,
-        stream.data(),
-    )
-    .await
+    while let Ok(Some(Ok(_))) =
+        tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data()).await
     {}
 }
 
@@ -277,8 +260,7 @@ async fn single_stream(
     let mut headers = request_headers(request);
     headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
 
-    let (response, mut stream) =
-        open_stream(connection, uri, headers).await?;
+    let (response, mut stream) = open_stream(connection, uri, headers).await?;
     if !response.status().is_success() {
         return Err(crate::ErrorKind::OtherError(format!(
             "HTTP/2 GET failed with status {}",
@@ -355,8 +337,7 @@ async fn multiplexed_ranges(
         let end = if index + 1 == range_count {
             total_size.saturating_sub(1)
         } else {
-            (total_size * (index + 1) as u64) / range_count as u64
-                - 1
+            (total_size * (index + 1) as u64) / range_count as u64 - 1
         };
         if start > end {
             continue;
@@ -456,8 +437,7 @@ async fn download_segment(
     );
     headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
 
-    let (response, mut stream) =
-        open_stream(connection, uri, headers).await?;
+    let (response, mut stream) = open_stream(connection, uri, headers).await?;
     if response.status() != StatusCode::PARTIAL_CONTENT
         && response.status() != StatusCode::OK
     {
@@ -541,9 +521,7 @@ async fn verify_and_finalize(
 ) -> crate::Result<()> {
     // The size check lives inside `verify_computed_integrity`: the hash is
     // authoritative whenever one is available, mirroring the legacy path.
-    if let Err(error) =
-        fetch::verify_computed_integrity(integrity, &hashers)
-    {
+    if let Err(error) = fetch::verify_computed_integrity(integrity, &hashers) {
         return Err(error);
     }
     if let Err(error) =

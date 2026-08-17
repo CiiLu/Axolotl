@@ -97,11 +97,7 @@ fn platform_root_certs() -> rustls::RootCertStore {
     if certs.errors.is_empty() {
         return store;
     }
-    store.extend(
-        webpki_roots::TLS_SERVER_ROOTS
-            .iter()
-            .cloned(),
-    );
+    store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
     store
 }
 
@@ -109,8 +105,8 @@ async fn connect_tcp(host: &str, port: u16) -> std::io::Result<TcpStream> {
     // Prefer the ordered address list from the shared download resolver
     // (IPv4/IPv6 preference and per-IP reliability), falling back to the
     // system resolver when no list is cached yet.
-    let addresses = crate::util::fetch::DOWNLOAD_DNS_RESOLVER
-        .resolved_addresses(host);
+    let addresses =
+        crate::util::fetch::DOWNLOAD_DNS_RESOLVER.resolved_addresses(host);
     let mut last_error = None;
     if !addresses.is_empty() {
         for address in addresses {
@@ -168,7 +164,9 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
 
     // Pre-resolve so `connect_tcp` gets the ordered, reliability-ranked
     // address list shared with the legacy reqwest path.
-    crate::util::fetch::DOWNLOAD_DNS_RESOLVER.pre_resolve(host).await;
+    crate::util::fetch::DOWNLOAD_DNS_RESOLVER
+        .pre_resolve(host)
+        .await;
 
     let tcp = connect_tcp(host, port).await.map_err(|error| {
         crate::ErrorKind::NetworkError(format!(
@@ -199,8 +197,9 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
         ))
     })?;
 
-    let (sender, connection) =
-        h2::client::handshake(Box::pin(tls)).await.map_err(|error| {
+    let (sender, connection) = h2::client::handshake(Box::pin(tls))
+        .await
+        .map_err(|error| {
             crate::ErrorKind::NetworkError(format!(
                 "HTTP/2 handshake with {authority} failed: {error}"
             ))

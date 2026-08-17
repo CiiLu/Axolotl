@@ -513,7 +513,8 @@ impl InstallProgressReporter {
             live_download_metrics(&state.job);
         let should_persist = state.last_live_persist_at.elapsed()
             >= LIVE_PROGRESS_PERSIST_INTERVAL;
-        let schedule_stall_check = state.pending_stall_checks.insert(path.clone());
+        let schedule_stall_check =
+            state.pending_stall_checks.insert(path.clone());
         // Serialize and summarize under the lock (CPU only); the DB write
         // below runs without holding the reporter mutex so progress
         // callbacks from other files never block on the transaction.

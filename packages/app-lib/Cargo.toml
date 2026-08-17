@@ -9,10 +9,7 @@ ariadne = { workspace = true }
 async-minecraft-ping = { workspace = true, features = ["srv"] }
 async-recursion = { workspace = true }
 async-trait = { workspace = true }
-async-tungstenite = { workspace = true, features = [
-  "tokio-runtime",
-  "tokio-rustls-webpki-roots"
-] }
+async-tungstenite = { workspace = true, features = ["tokio-runtime", "tokio-rustls-webpki-roots"] }
 async-walkdir = { workspace = true }
 async_zip = { workspace = true, features = [
   "bzip2",
@@ -43,8 +40,8 @@ flate2 = { workspace = true }
 fs4 = { workspace = true, features = ["tokio"] }
 futures = { workspace = true, features = ["alloc", "async-await"] }
 futures-lite = { workspace = true }
-heck = { workspace = true }
 h2 = { workspace = true }
+heck = { workspace = true }
 hickory-resolver = { workspace = true }
 hmac = { workspace = true }
 http = { workspace = true }
@@ -117,13 +114,7 @@ tokio = { workspace = true, features = [
   "time",
 ] }
 tokio-rustls = { workspace = true }
-tokio-util = { workspace = true, features = [
-  "compat",
-  "io",
-  "io-util",
-  "rt",
-  "time"
-] }
+tokio-util = { workspace = true, features = ["compat", "io", "io-util", "rt", "time"] }
 toml = { workspace = true }
 tracing = { workspace = true }
 tracing-error = { workspace = true }

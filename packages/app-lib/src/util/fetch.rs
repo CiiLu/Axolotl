@@ -1342,7 +1342,6 @@ pub struct IoSemaphore(pub Semaphore);
 #[derive(Debug)]
 pub struct FetchSemaphore(pub Semaphore);
 
-
 pub(crate) static DOWNLOAD_DNS_RESOLVER: LazyLock<Arc<DownloadDnsResolver>> =
     LazyLock::new(|| Arc::new(DownloadDnsResolver::default()));
 static TAIL_HEDGE_SEMAPHORE: LazyLock<Semaphore> =
@@ -2924,7 +2923,8 @@ fn any_route_can_resume(routes: &[DownloadRoute]) -> bool {
 /// multiplexed path starts from scratch; resume is handled by the legacy
 /// path so a partially downloaded file is never lost.
 async fn part_resume_expected(part_path: &Path) -> bool {
-    tokio::fs::metadata(part_path).await
+    tokio::fs::metadata(part_path)
+        .await
         .map(|metadata| metadata.len() > 0)
         .unwrap_or(false)
 }
@@ -5066,7 +5066,8 @@ async fn try_segmented_download(
             return SegmentedDownloadOutcome::Fatal(error.into());
         }
     };
-    let mut hashers = IntegrityHashers::new_integrity_hashers(&request.integrity);
+    let mut hashers =
+        IntegrityHashers::new_integrity_hashers(&request.integrity);
     let mut merged_size = 0_u64;
     let mut buffer = vec![0_u8; 256 * 1024];
     for range in &ranges {
@@ -5911,7 +5912,8 @@ async fn download_to_path_inner(
                     break;
                 }
 
-                let mut hashers = IntegrityHashers::new_integrity_hashers(&request.integrity);
+                let mut hashers =
+                    IntegrityHashers::new_integrity_hashers(&request.integrity);
                 if resume_offset > 0 {
                     if status == StatusCode::PARTIAL_CONTENT {
                         let content_range = parse_content_range(&response);

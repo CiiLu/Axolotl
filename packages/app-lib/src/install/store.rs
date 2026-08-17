@@ -339,15 +339,15 @@ pub async fn update_state_with_progress_columns(
 }
 
 fn instance_id_from_json(json: &str) -> Option<String> {
-    serde_json::from_str::<serde_json::Value>(json).ok().and_then(
-        |value| {
+    serde_json::from_str::<serde_json::Value>(json)
+        .ok()
+        .and_then(|value| {
             value
                 .get("target")
                 .and_then(|target| target.get("instance_id"))
                 .and_then(|value| value.as_str())
                 .map(str::to_owned)
-        },
-    )
+        })
 }
 
 /// Persists a serialized job state. The caller serializes and summarizes
