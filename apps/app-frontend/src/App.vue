@@ -3451,7 +3451,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	grid-area: status;
 	padding-right: var(--window-controls-width, 0px);
 	position: relative;
-	z-index: 2;
+	z-index: 200;
 }
 
 [data-tauri-drag-region-exclude] {
