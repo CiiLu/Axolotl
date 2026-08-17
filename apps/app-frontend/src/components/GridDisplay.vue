@@ -21,7 +21,6 @@ import {
 	FloatingActionBar,
 	formatLoader,
 	injectNotificationManager,
-	OverflowMenu,
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
@@ -202,13 +201,6 @@ const handleOptionsClick = async (args) => {
 			break
 	}
 }
-
-const overflowOptions = (instance) => [
-	{
-		id: instance.pinned_at ? 'unpin' : 'pin',
-		action: () => set_pinned(instance.id, !instance.pinned_at).catch(handleError),
-	},
-]
 
 // Selection mode
 const selectMode = ref(false)
@@ -410,21 +402,12 @@ function onBatchEditApplied() {
 				<div
 					v-if="!selectMode"
 					class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
-					@click.stop
+					@click.stop="(event) => handleRightClick(event, instance.id)"
 				>
 					<ButtonStyled circular size="small" type="transparent">
-						<OverflowMenu
-							:options="overflowOptions(instance)"
-							:tooltip="
-								formatMessage(instance.pinned_at ? messages.unpinFromHome : messages.pinToHome)
-							"
-						>
+						<button type="button">
 							<MoreVerticalIcon />
-							<template #pin> <PinIcon /> {{ formatMessage(messages.pinToHome) }} </template>
-							<template #unpin>
-								<PinIcon class="rotate-45" /> {{ formatMessage(messages.unpinFromHome) }}
-							</template>
-						</OverflowMenu>
+						</button>
 					</ButtonStyled>
 				</div>
 			</div>
