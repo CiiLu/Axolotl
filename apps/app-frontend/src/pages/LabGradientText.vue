@@ -641,12 +641,12 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 						class="max-w-[21rem] max-[680px]:max-w-none"
 					/>
 				</div>
-				<ButtonStyled size="small" type="outlined">
+				<ButtonStyled size="standard" type="outlined">
 					<button @click="copyOutput">
 						<ClipboardCopyIcon />{{ formatMessage(messages.copy) }}
 					</button>
 				</ButtonStyled>
-				<ButtonStyled size="small" color="brand">
+				<ButtonStyled size="standard" color="brand">
 					<button @click="exportOutput">
 						<DownloadIcon />{{ formatMessage(messages.export) }}
 					</button>
@@ -798,7 +798,7 @@ function formatAdapterName(adapterId: GradientFormatId): string {
 							wrapper-class="min-w-0 flex-1"
 							@keydown.enter.prevent="applyImportedColors"
 						/>
-						<ButtonStyled size="small" type="outlined">
+						<ButtonStyled size="standard" type="outlined">
 							<button @click="applyImportedColors">
 								{{ formatMessage(messages.importColors) }}
 							</button>
