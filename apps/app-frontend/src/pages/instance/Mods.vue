@@ -913,11 +913,6 @@ async function flushVisibleMetadataRefresh() {
 			visibleMetadataPendingPaths.clear()
 
 			try {
-				debugState('visible metadata refresh start', {
-					instanceId,
-					count: paths.length,
-					paths,
-				})
 				let refreshedItems = await get_content_items_by_paths(instanceId, paths)
 
 				if (isUnmounted || props.instance.id !== instanceId) return
@@ -930,11 +925,6 @@ async function flushVisibleMetadataRefresh() {
 				if (isUnmounted || props.instance.id !== instanceId) return
 
 				mergeVisibleMetadataItems(refreshedItems)
-				debugState('visible metadata refresh complete', {
-					instanceId,
-					requested: paths.length,
-					received: refreshedItems.length,
-				})
 			} catch (error) {
 				// 后台懒加载失败不弹通知。
 				// 删除 requested 标记，这样以后再次进入可见区域还能重试。
