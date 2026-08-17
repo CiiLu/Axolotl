@@ -10,14 +10,13 @@
 use super::h2_pool::SharedH2Connection;
 use crate::util::fetch;
 use crate::util::fetch::{DownloadRequest, DownloadResult, Integrity};
-use bytes::Bytes;
 use http::header::{ACCEPT_ENCODING, RANGE, USER_AGENT};
 use http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 const SEGMENTED_DOWNLOAD_THRESHOLD: u64 = 4 * 1024 * 1024;
 const MIN_SEGMENT_SIZE: u64 = 256 * 1024;
@@ -218,6 +217,33 @@ fn parse_content_range_total(headers: &HeaderMap) -> Option<u64> {
     total.parse().ok()
 }
 
+fn content_range_matches(
+    headers: &HeaderMap,
+    expected_start: u64,
+    expected_end: u64,
+    expected_total: u64,
+) -> bool {
+    let Some(value) = headers
+        .get(http::header::CONTENT_RANGE)
+        .and_then(|value| value.to_str().ok())
+    else {
+        return false;
+    };
+    let Some((unit, value)) = value.split_once(' ') else {
+        return false;
+    };
+    let Some((range, total)) = value.split_once('/') else {
+        return false;
+    };
+    let Some((start, end)) = range.split_once('-') else {
+        return false;
+    };
+    unit.eq_ignore_ascii_case("bytes")
+        && start.parse::<u64>().ok() == Some(expected_start)
+        && end.parse::<u64>().ok() == Some(expected_end)
+        && total.parse::<u64>().ok() == Some(expected_total)
+}
+
 type StreamPair = (http::Response<()>, h2::RecvStream);
 
 async fn open_stream(
@@ -345,6 +371,7 @@ async fn multiplexed_ranges(
         segments.push((start, end));
     }
 
+    let segment_count = segments.len();
     let mut handles = Vec::new();
     for (index, (start, end)) in segments.into_iter().enumerate() {
         let connection = connection.clone();
@@ -358,6 +385,7 @@ async fn multiplexed_ranges(
                 headers,
                 start,
                 end,
+                total_size,
                 &segment_path,
             )
             .await;
@@ -369,10 +397,9 @@ async fn multiplexed_ranges(
     }
 
     let mut hashers = fetch::IntegrityHashers::new_integrity_hashers(integrity);
-    let mut file = tokio::fs::File::create(part_path).await?;
     let mut downloaded = 0_u64;
     for (index, handle) in handles.into_iter().enumerate() {
-        let bytes = handle
+        let _segment_size = handle
             .await
             .map_err(|error| {
                 crate::ErrorKind::OtherError(format!(
@@ -384,11 +411,24 @@ async fn multiplexed_ranges(
                     "segment {index} failed: {error}"
                 ))
             })?;
-        hashers.update(&bytes);
-        file.write_all(&bytes).await?;
-        downloaded += bytes.len() as u64;
-        let _ = tokio::fs::remove_file(segment_path(part_path, index)).await;
-        record_install_progress(request, downloaded, total_size).await;
+    }
+
+    let mut file = tokio::fs::File::create(part_path).await?;
+    let mut buffer = vec![0_u8; 256 * 1024];
+    for index in 0..segment_count {
+        let path = segment_path(part_path, index);
+        let mut segment = tokio::fs::File::open(&path).await?;
+        loop {
+            let read = segment.read(&mut buffer).await?;
+            if read == 0 {
+                break;
+            }
+            hashers.update(&buffer[..read]);
+            file.write_all(&buffer[..read]).await?;
+            downloaded += read as u64;
+            record_install_progress(request, downloaded, total_size).await;
+        }
+        tokio::fs::remove_file(path).await?;
     }
     file.flush().await?;
     drop(file);
@@ -429,8 +469,9 @@ async fn download_segment(
     mut headers: HeaderMap,
     start: u64,
     end: u64,
+    total_size: u64,
     segment_path: &Path,
-) -> crate::Result<Bytes> {
+) -> crate::Result<u64> {
     headers.insert(
         RANGE,
         HeaderValue::from_str(&format!("bytes={start}-{end}")).unwrap(),
@@ -438,18 +479,22 @@ async fn download_segment(
     headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
 
     let (response, mut stream) = open_stream(connection, uri, headers).await?;
-    if response.status() != StatusCode::PARTIAL_CONTENT
-        && response.status() != StatusCode::OK
-    {
+    if response.status() != StatusCode::PARTIAL_CONTENT {
         return Err(crate::ErrorKind::OtherError(format!(
             "HTTP/2 range GET failed with status {}",
             response.status()
         ))
         .into());
     }
+    if !content_range_matches(response.headers(), start, end, total_size) {
+        return Err(crate::ErrorKind::OtherError(
+            "HTTP/2 range response had an invalid Content-Range".to_string(),
+        )
+        .into());
+    }
 
     let mut file = tokio::fs::File::create(segment_path).await?;
-    let mut bytes = Vec::with_capacity((end - start + 1) as usize);
+    let mut downloaded = 0_u64;
     loop {
         let chunk = tokio::time::timeout(RANGE_IDLE_TIMEOUT, stream.data())
             .await
@@ -468,11 +513,18 @@ async fn download_segment(
             break;
         };
         file.write_all(&chunk).await?;
-        bytes.extend_from_slice(&chunk);
+        downloaded += chunk.len() as u64;
     }
     file.flush().await?;
     drop(file);
-    Ok(Bytes::from(bytes))
+    let expected = end.saturating_sub(start).saturating_add(1);
+    if downloaded != expected {
+        return Err(crate::ErrorKind::OtherError(format!(
+            "HTTP/2 range response size mismatch: got {downloaded}, expected {expected}"
+        ))
+        .into());
+    }
+    Ok(downloaded)
 }
 
 fn segment_path(part_path: &Path, index: usize) -> std::path::PathBuf {
