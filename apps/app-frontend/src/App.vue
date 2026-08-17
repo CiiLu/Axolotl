@@ -3529,14 +3529,26 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 }
 
 .app-contents.has-transparent-background {
-	// Sourced from the opaque snapshot: `--color-bg` is itself translucent in
-	// this mode, so mixing it again would compound. Sits slightly below the
-	// chosen alpha because pages paint their own surface on top of it.
 	background-color: color-mix(
 		in srgb,
-		var(--surface-1-opaque) calc(var(--window-alpha) * 0.82),
+		var(--surface-3-opaque) var(--window-alpha-chrome),
 		transparent
 	);
+	backdrop-filter: blur(18px) saturate(120%);
+
+	&::before {
+		position: absolute;
+		inset: 0;
+		z-index: -10;
+		border: none;
+		box-shadow: none;
+		border-top-left-radius: var(--radius-xl);
+		background-color: color-mix(
+			in srgb,
+			var(--surface-1-opaque) calc(var(--window-alpha) * 0.82),
+			transparent
+		);
+	}
 }
 
 .loading-indicator-container {
