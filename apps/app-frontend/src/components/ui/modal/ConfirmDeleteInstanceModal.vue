@@ -60,10 +60,15 @@ import { ref } from 'vue'
 
 const { formatMessage } = useVIntl()
 
-defineProps<{
-	symlinkTarget?: string | null
-	count?: number
-}>()
+withDefaults(
+	defineProps<{
+		symlinkTarget?: string | null
+		count?: number
+	}>(),
+	{
+		count: 1,
+	},
+)
 
 const messages = defineMessages({
 	header: {
