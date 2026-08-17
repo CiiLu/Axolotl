@@ -7093,5 +7093,8 @@
 	},
 	"app.appearance-settings.auto-install-dependencies.description": {
 		"message": "安装内容时自动下载所需前置。每次安装前仍可在确认对话框中调整选择。"
+	},
+	"app.content-install.preview.version-mismatch": {
+		"message": "下载的版本可能与当前版本不兼容。"
 	}
 }
