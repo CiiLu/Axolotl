@@ -13,6 +13,8 @@ import { ref, watch } from 'vue'
 import JavaArgumentsInput from '@/components/ui/JavaArgumentsInput.vue'
 import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
 import useMemorySlider from '@/composables/useMemorySlider'
+import { collectGcContext } from '@/helpers/gc/context'
+import type { GcContext } from '@/helpers/gc/types'
 import { get, set } from '@/helpers/settings.ts'
 
 const { handleError } = injectNotificationManager()
@@ -113,6 +115,19 @@ const { maxMemory, snapPoints } = (await useMemorySlider().catch(handleError)) a
 	maxMemory: number
 	snapPoints: number[]
 }
+
+const gcContext = ref<GcContext | null>(null)
+
+async function updateGcContext() {
+	gcContext.value = await collectGcContext(settings.value.memory.maximum, 'fabric')
+}
+
+await updateGcContext()
+
+watch(
+	() => settings.value.memory.maximum,
+	updateGcContext,
+)
 
 watch(
 	settings,
@@ -240,6 +255,7 @@ watch(
 				<JavaArgumentsInput
 					id="java-args"
 					v-model="settings.launchArgs"
+					:gc-context="gcContext"
 					:placeholder="formatMessage(messages.javaArgumentsPlaceholder)"
 				/>
 			</div>
