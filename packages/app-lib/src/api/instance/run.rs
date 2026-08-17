@@ -28,6 +28,16 @@ pub async fn run(
     quick_play_type: QuickPlayType,
     offline_mode: bool,
 ) -> crate::Result<ProcessMetadata> {
+    run_with_extra_launch_args(instance_id, quick_play_type, offline_mode, None).await
+}
+
+#[tracing::instrument]
+pub async fn run_with_extra_launch_args(
+    instance_id: &str,
+    quick_play_type: QuickPlayType,
+    offline_mode: bool,
+    extra_launch_args: Option<Vec<String>>,
+) -> crate::Result<ProcessMetadata> {
     let state = State::get().await?;
     let default_account = if offline_mode {
         Credentials::get_offline_credential(&state.pool)
@@ -52,6 +62,7 @@ pub async fn run(
             &default_account,
             quick_play_type,
             offline_mode,
+            extra_launch_args,
         ),
     )
     .await
@@ -70,6 +81,7 @@ async fn run_credentials(
     credentials: &Credentials,
     quick_play_type: QuickPlayType,
     offline_mode: bool,
+    extra_launch_args: Option<Vec<String>>,
 ) -> crate::Result<ProcessMetadata> {
     let state = State::get().await?;
     let settings = Settings::get(&state.pool).await?;
@@ -137,11 +149,15 @@ async fn run_credentials(
         }
     }
 
-    let java_args = context
-        .launch_overrides
-        .extra_launch_args
-        .clone()
-        .unwrap_or(settings.extra_launch_args);
+    let java_args = if let Some(extra_launch_args) = extra_launch_args {
+        extra_launch_args
+    } else {
+        context
+            .launch_overrides
+            .extra_launch_args
+            .clone()
+            .unwrap_or(settings.extra_launch_args)
+    };
     let wrapper = context
         .launch_overrides
         .hooks

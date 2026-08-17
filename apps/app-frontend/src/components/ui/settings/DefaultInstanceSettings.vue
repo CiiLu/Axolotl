@@ -13,6 +13,9 @@ import { ref, watch } from 'vue'
 import JavaArgumentsInput from '@/components/ui/JavaArgumentsInput.vue'
 import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
 import useMemorySlider from '@/composables/useMemorySlider'
+import { collectGcContext } from '@/helpers/gc/context'
+import type { GcContext } from '@/helpers/gc/types'
+import { getJavaArgumentPresets } from '@/helpers/java-argument-presets'
 import { get, set } from '@/helpers/settings.ts'
 
 const { handleError } = injectNotificationManager()
@@ -108,11 +111,33 @@ fetchSettings.launchArgs = fetchSettings.extra_launch_args.join(' ')
 fetchSettings.envVars = fetchSettings.custom_env_vars.map((x) => x.join('=')).join(' ')
 
 const settings = ref(fetchSettings)
+let shouldApplyDefaultAuto = fetchSettings.extra_launch_args.length === 0
 
 const { maxMemory, snapPoints } = (await useMemorySlider().catch(handleError)) as unknown as {
 	maxMemory: number
 	snapPoints: number[]
 }
+
+const gcContext = ref<GcContext | null>(null)
+
+async function updateGcContext() {
+	gcContext.value = await collectGcContext(settings.value.memory.maximum, null, null, 0)
+	if (shouldApplyDefaultAuto) {
+		const autoPreset = getJavaArgumentPresets(gcContext.value ?? undefined).find(
+			(preset) => preset.id === 'gc-auto',
+		)
+		if (autoPreset) {
+			settings.value.launchArgs = autoPreset.resolveArgs
+				? autoPreset.resolveArgs(gcContext.value ?? undefined)
+				: autoPreset.args
+		}
+		shouldApplyDefaultAuto = false
+	}
+}
+
+await updateGcContext()
+
+watch(() => settings.value.memory.maximum, updateGcContext)
 
 watch(
 	settings,
@@ -240,6 +265,7 @@ watch(
 				<JavaArgumentsInput
 					id="java-args"
 					v-model="settings.launchArgs"
+					:gc-context="gcContext"
 					:placeholder="formatMessage(messages.javaArgumentsPlaceholder)"
 				/>
 			</div>

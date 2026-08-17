@@ -13,7 +13,9 @@ import JavaArgumentsInput from '@/components/ui/JavaArgumentsInput.vue'
 import JavaSelector from '@/components/ui/JavaSelector.vue'
 import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
 import useMemorySlider from '@/composables/useMemorySlider'
-import { edit, get_optimal_jre_key } from '@/helpers/instance'
+import { collectGcContext, extractJavaMajorVersion } from '@/helpers/gc/context'
+import type { GcContext } from '@/helpers/gc/types'
+import { edit, get_content_snapshot, get_optimal_jre_key } from '@/helpers/instance'
 import { get } from '@/helpers/settings'
 import { injectInstanceSettings } from '@/providers/instance-settings'
 
@@ -124,6 +126,31 @@ const memData = await useMemorySlider().catch(() => ({
 const maxMemory = memData.maxMemory
 const snapPoints = memData.snapPoints
 
+const gcContext = ref<GcContext | null>(null)
+
+async function updateGcContext() {
+	const javaMajorVersion = extractJavaMajorVersion(displayedJava.value?.parsed_version)
+	let modCount = 0
+	try {
+		const snapshot = await get_content_snapshot(instance.value.id)
+		modCount = snapshot.items.filter(
+			(item) => item.projectType === 'mod' && item.materializationState === 'present',
+		).length
+	} catch {
+		modCount = 0
+	}
+	gcContext.value = await collectGcContext(
+		memory.value.maximum,
+		instance.value.loader,
+		javaMajorVersion,
+		modCount,
+	)
+}
+
+await updateGcContext()
+
+watch([memory, displayedJava, () => instance.value.loader], updateGcContext)
+
 const editInstanceObject = computed(() => ({
 	java_path:
 		overrideJavaInstall.value && overrideJava.value.path
@@ -217,6 +244,8 @@ watch(
 			id="java-args"
 			v-model="javaArgs"
 			:disabled="!overrideJavaArgs"
+			:gc-context="gcContext"
+			:show-auto-details="true"
 			:placeholder="formatMessage(messages.enterJavaArguments)"
 		/>
 

@@ -8,6 +8,11 @@ import type { ContentItem, ContentOwner } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
 
 import { isOfflineMode } from '@/composables/useNetworkStatus'
+import { resolveAutoGcArgs } from '@/helpers/gc/auto-selector'
+import { collectGcContext } from '@/helpers/gc/context'
+import { AUTO_GC_PRESET_ARG } from '@/helpers/java-arguments'
+import { get_memory_status } from '@/helpers/jre.js'
+import { get as getSettings } from '@/helpers/settings'
 
 import type { InstallJobSnapshot } from './install'
 import { removeInstanceCache } from './instance-cache'
@@ -618,16 +623,61 @@ export async function get_pack_export_candidates(instanceId: string): Promise<st
 	return await invoke('plugin:instance|instance_get_pack_export_candidates', { instanceId })
 }
 
+export async function resolveAutoGcLaunchArgs(
+	instanceId: string,
+): Promise<string[] | null> {
+	const instance = await get(instanceId)
+	if (!instance) return null
+
+	const settings = await getSettings()
+	const effectiveArgs = instance.extra_launch_args ?? settings.extra_launch_args
+	if (!effectiveArgs.includes(AUTO_GC_PRESET_ARG)) return null
+
+	const java = await get_optimal_jre_key(instanceId)
+	const javaMajorVersion = java?.parsed_version ?? null
+	let modCount = 0
+	try {
+		const snapshot = await get_content_snapshot(instanceId)
+		modCount = snapshot.items.filter(
+			(item) => item.projectType === 'mod' && item.materializationState === 'present',
+		).length
+	} catch {
+		modCount = 0
+	}
+
+	const memory = instance.memory ?? settings.memory
+	let allocatedMemoryMb = memory.maximum
+	if (memory.automatic) {
+		try {
+			const status = await get_memory_status(instanceId, memory.maximum, true)
+			allocatedMemoryMb = status.allocated_mb
+		} catch {
+			// Fall back to the configured value when automatic memory info is unavailable.
+		}
+	}
+	const context = await collectGcContext(
+		allocatedMemoryMb,
+		instance.loader,
+		javaMajorVersion,
+		modCount,
+	)
+	const resolvedArgs = resolveAutoGcArgs(context).split(/\s+/).filter(Boolean)
+
+	return effectiveArgs.flatMap((arg) => (arg === AUTO_GC_PRESET_ARG ? resolvedArgs : [arg]))
+}
+
 // Run Minecraft using an instance
 // Returns PID of child
 export async function run(
 	instanceId: string,
 	serverAddress: string | null = null,
 ): Promise<unknown> {
+	const extraLaunchArgs = await resolveAutoGcLaunchArgs(instanceId)
 	return await invoke('plugin:instance|instance_run', {
 		instanceId,
 		serverAddress,
 		offlineMode: isOfflineMode(),
+		extraLaunchArgs,
 	})
 }
 
