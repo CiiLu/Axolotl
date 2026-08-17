@@ -261,6 +261,9 @@ function toggleInstanceSelection(instanceId) {
 		newSet.add(instanceId)
 	}
 	selectedInstanceIds.value = newSet
+	if (newSet.size === 0) {
+		selectMode.value = false
+	}
 }
 
 function openBatchEdit() {
