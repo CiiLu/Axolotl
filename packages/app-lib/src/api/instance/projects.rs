@@ -699,6 +699,7 @@ pub async fn restore_pack_member_default(
 					world_name: None,
 					install_dependencies: false,
 					excluded_dependency_project_ids: Vec::new(),
+					dependency_plan_id: None,
 				},
 			)
 			.await?;

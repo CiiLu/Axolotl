@@ -6992,6 +6992,9 @@
 	"app.content-install.preview.skipped-header": {
 		"message": "跳过"
 	},
+	"app.content-install.preview.unavailable-curseforge-project": {
+		"message": "CurseForge 项目不可用"
+	},
 	"app.content-install.preview.skip.unsupported-project-type": {
 		"message": "不支持的项目类型"
 	},
@@ -7025,8 +7028,20 @@
 	"app.content-install.preview.skip.conflicting-dependency": {
 		"message": "前置版本冲突"
 	},
+	"app.content-install.preview.skip.dependency-cycle": {
+		"message": "检测到前置循环依赖"
+	},
+	"app.content-install.preview.skip.dependency-depth-exceeded": {
+		"message": "已达到前置解析深度上限"
+	},
 	"app.content-install.preview.skip.already-installed": {
 		"message": "已安装"
+	},
+	"app.content-install.preview.skip.modrinth-lookup-failed": {
+		"message": "无法验证 Modrinth 兜底版本"
+	},
+	"app.content-install.preview.sha1-verified-modrinth-fallback": {
+		"message": "已通过 SHA-1 验证的 Modrinth 兜底版本"
 	},
 	"app.content-install.preview.select-all": {
 		"message": "全选"
@@ -7039,6 +7054,9 @@
 	},
 	"app.content-install.preview.install": {
 		"message": "安装"
+	},
+	"app.content-install.preview.install-resolved": {
+		"message": "安装已解析内容"
 	},
 	"app.content-install.preview.header": {
 		"message": "确认安装"

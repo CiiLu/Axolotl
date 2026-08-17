@@ -91,6 +91,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'The launcher now avoids localizing physical mod filenames',
 					'zh-CN': '启动器现在不会对模组文件名进行本地化',
 				},
+				{
+					'en-US':
+						'Improved mod prerequisite resolution to target the selected Minecraft and loader versions, resolve nested requirements, and clearly report anything that cannot be resolved.',
+					'zh-CN':
+						'优化模组前置解析：现在会严格匹配所选 Minecraft 与加载器版本，解析嵌套前置，并清晰列出无法解析的项目。',
+				},
 			],
 			removed: [
 				{
@@ -138,6 +144,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed launcher updates installing to the previous directory after the launcher was moved.',
 					'zh-CN': '修复移动启动器目录后自动更新仍安装到旧目录的问题。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge installs into existing instances not passing the instance target to dependency resolution, which could select an incompatible prerequisite version.',
+					'zh-CN':
+						'修复向已有实例安装 CurseForge 内容时未将实例目标传给前置解析，可能选中不兼容前置版本的问题。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge prerequisite previews showing internal project IDs instead of project names for optional and unavailable prerequisites.',
+					'zh-CN':
+						'修复 CurseForge 前置预览会为可选或不可用前置显示内部项目 ID，而非项目名称的问题。',
 				},
 			],
 		},
