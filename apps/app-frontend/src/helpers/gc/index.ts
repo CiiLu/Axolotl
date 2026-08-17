@@ -1,11 +1,11 @@
-export { GC_STRATEGY_DEFINITIONS, detectGcStrategy, getStrategyBaseArgs } from './strategies'
-export { resolveAutoGcStrategy, getResolvedStrategyName } from './auto-selector'
+export { getResolvedStrategyName, resolveAutoGcStrategy } from './auto-selector'
 export { collectGcContext } from './context'
 export { createGcPresets, getAutoResolution, getResolvedStrategyDisplayName } from './gc-presets'
+export { detectGcStrategy, GC_STRATEGY_DEFINITIONS, getStrategyBaseArgs } from './strategies'
 export type {
 	GcContext,
 	GcResolution,
-	GcStrategyId,
 	GcStrategyDefinition,
+	GcStrategyId,
 	ResolvedGcStrategyId,
 } from './types'

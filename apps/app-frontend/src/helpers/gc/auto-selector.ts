@@ -21,12 +21,16 @@ export function resolveAutoGcStrategy(context: GcContext): GcResolution {
 	}
 
 	if (context.systemCpuCores <= 4 && context.systemLogicalProcessors <= 8) {
-		reasonChain.push(`CPU 资源不足 (${context.systemCpuCores}核/${context.systemLogicalProcessors}线程)`)
+		reasonChain.push(
+			`CPU 资源不足 (${context.systemCpuCores}核/${context.systemLogicalProcessors}线程)`,
+		)
 		return { resolvedStrategy: 'g1gc-mojang', reasonChain }
 	}
 
 	if (context.modCount >= 200 && context.allocatedMemoryMb < 8192) {
-		reasonChain.push(`大型 ModPack (${context.modCount} mods) 但资源不足 (${Math.round(context.allocatedMemoryMb / 1024)}GB < 8GB)`)
+		reasonChain.push(
+			`大型 ModPack (${context.modCount} mods) 但资源不足 (${Math.round(context.allocatedMemoryMb / 1024)}GB < 8GB)`,
+		)
 		return { resolvedStrategy: 'g1gc-mojang', reasonChain }
 	}
 
@@ -45,7 +49,6 @@ export function resolveAutoGcStrategy(context: GcContext): GcResolution {
 	const isResourceLow = context.allocatedMemoryMb < 6144 || context.systemCpuCores <= 6
 	const isResourceMedium =
 		!isResourceLow && context.allocatedMemoryMb < 10240 && context.systemCpuCores <= 12
-	const isResourceHigh = context.allocatedMemoryMb >= 10240 && context.systemCpuCores > 12
 
 	if (isResourceLow) {
 		reasonChain.push(`资源低 (${Math.round(memoryGb)}GB, ${context.systemCpuCores}核)`)

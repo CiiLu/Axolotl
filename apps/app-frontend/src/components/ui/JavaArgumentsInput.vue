@@ -19,13 +19,12 @@ import {
 } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 
+import type { GcContext } from '@/helpers/gc/types'
 import {
 	getJavaArgumentPresets,
 	getPresetsByGroup,
 	type JavaArgumentPreset,
 } from '@/helpers/java-argument-presets'
-import type { GcContext } from '@/helpers/gc/types'
-import { getResolvedStrategyName } from '@/helpers/gc/auto-selector'
 
 const model = defineModel<string>({ required: true })
 
@@ -269,15 +268,16 @@ function getAutoReasonChainText(preset: JavaArgumentPreset): string | null {
 								>
 									{{ getAutoResolvedLabel(preset) }}
 								</p>
-								<p
-									v-if="getAutoReasonChainText(preset)"
-									class="m-0 mt-1 text-xs text-secondary"
-								>
+								<p v-if="getAutoReasonChainText(preset)" class="m-0 mt-1 text-xs text-secondary">
 									{{ getAutoReasonChainText(preset) }}
 								</p>
 							</div>
 							<ButtonStyled :type="isPresetActive(preset) ? 'standard' : 'outlined'" color="brand">
-								<button type="button" :disabled="isPresetActive(preset)" @click="applyPreset(preset)">
+								<button
+									type="button"
+									:disabled="isPresetActive(preset)"
+									@click="applyPreset(preset)"
+								>
 									<CheckIcon v-if="isPresetActive(preset)" aria-hidden="true" />
 									{{
 										formatMessage(

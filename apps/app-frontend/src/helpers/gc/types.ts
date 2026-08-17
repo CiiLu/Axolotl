@@ -1,3 +1,5 @@
+import type { MessageDescriptor } from '@modrinth/ui'
+
 import type { InstanceLoader } from '@/helpers/types'
 
 export type GcStrategyId = 'g1gc-mojang' | 'g1gc-pcl' | 'shenandoah' | 'zgc' | 'auto'
@@ -23,4 +25,17 @@ export interface GcStrategyDefinition {
 	baseArgs: string
 	detect: (currentArgs: string) => boolean
 	buildArgs: (context?: GcContext) => string
+}
+
+export interface JavaArgumentPreset {
+	id: string
+	title: MessageDescriptor
+	description: MessageDescriptor
+	args: string
+	link: string
+	group?: string
+	resolveArgs?: (context?: GcContext) => string
+	detect?: (currentArgs: string) => boolean
+	autoResolvedName?: string
+	autoReasonChain?: string[]
 }

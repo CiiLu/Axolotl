@@ -1,23 +1,13 @@
-import { defineMessage, type MessageDescriptor } from '@modrinth/ui'
+import { defineMessage } from '@modrinth/ui'
 
+import { createGcPresets } from '@/helpers/gc/gc-presets'
+import type { GcContext, JavaArgumentPreset } from '@/helpers/gc/types'
 import {
 	FALLEN_AUTH_PROXY_BLOG_URL,
 	FALLEN_AUTH_PROXY_JAVA_ARGS_STRING,
 } from '@/helpers/java-arguments'
-import type { GcContext } from '@/helpers/gc/types'
 
-export interface JavaArgumentPreset {
-	id: string
-	title: MessageDescriptor
-	description: MessageDescriptor
-	args: string
-	link: string
-	group?: string
-	resolveArgs?: (context?: GcContext) => string
-	detect?: (currentArgs: string) => boolean
-	autoResolvedName?: string
-	autoReasonChain?: string[]
-}
+export type { JavaArgumentPreset }
 
 export const JAVA_ARGUMENT_PRESETS: JavaArgumentPreset[] = [
 	{
@@ -37,11 +27,12 @@ export const JAVA_ARGUMENT_PRESETS: JavaArgumentPreset[] = [
 ]
 
 export function getJavaArgumentPresets(gcContext?: GcContext): JavaArgumentPreset[] {
-	const { createGcPresets } = require('@/helpers/gc/gc-presets')
 	return [...JAVA_ARGUMENT_PRESETS, ...createGcPresets(gcContext)]
 }
 
-export function getPresetsByGroup(presets: JavaArgumentPreset[]): Map<string | undefined, JavaArgumentPreset[]> {
+export function getPresetsByGroup(
+	presets: JavaArgumentPreset[],
+): Map<string | undefined, JavaArgumentPreset[]> {
 	const groups = new Map<string | undefined, JavaArgumentPreset[]>()
 	for (const preset of presets) {
 		const group = preset.group

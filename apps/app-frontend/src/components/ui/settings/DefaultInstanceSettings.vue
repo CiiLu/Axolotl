@@ -124,10 +124,7 @@ async function updateGcContext() {
 
 await updateGcContext()
 
-watch(
-	() => settings.value.memory.maximum,
-	updateGcContext,
-)
+watch(() => settings.value.memory.maximum, updateGcContext)
 
 watch(
 	settings,

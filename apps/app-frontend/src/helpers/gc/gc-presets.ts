@@ -1,13 +1,12 @@
 import { defineMessage } from '@modrinth/ui'
 
-import type { JavaArgumentPreset } from '@/helpers/java-argument-presets'
-import type { GcContext } from '@/helpers/gc/types'
-
-import { GC_STRATEGY_DEFINITIONS, detectGcStrategy } from '@/helpers/gc/strategies'
-import { resolveAutoGcStrategy, getResolvedStrategyName } from '@/helpers/gc/auto-selector'
+import { getResolvedStrategyName, resolveAutoGcStrategy } from '@/helpers/gc/auto-selector'
+import { detectGcStrategy, GC_STRATEGY_DEFINITIONS } from '@/helpers/gc/strategies'
+import type { GcContext, JavaArgumentPreset } from '@/helpers/gc/types'
 
 const GC_WIKI_URL = 'https://docs.oracle.com/en/java/javase/21/gctuning/introduction.html'
-const G1GC_DOCS_URL = 'https://docs.oracle.com/en/java/javase/21/gctuning/garbage-collector-implementation.html'
+const G1GC_DOCS_URL =
+	'https://docs.oracle.com/en/java/javase/21/gctuning/garbage-collector-implementation.html'
 const SHENANDOAH_DOCS_URL = 'https://wiki.openjdk.org/display/shenandoah/Main'
 const ZGC_DOCS_URL = 'https://wiki.openjdk.org/display/zgc/Main'
 
