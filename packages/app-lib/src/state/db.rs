@@ -34,6 +34,9 @@ const CONTENT_DEPENDENCY_LOCAL_PROVIDER_MIGRATION_VERSION: i64 = 20260815000001;
 #[cfg(test)]
 const CONTENT_DEPENDENCY_BACKFILL_MARKER_MIGRATION_VERSION: i64 =
     20260815000002;
+#[cfg(test)]
+const CURSEFORGE_DOWNLOAD_RESTRICTION_BYPASS_MIGRATION_VERSION: i64 =
+    20260817120000;
 const AI_PROVIDER_MIGRATION_VERSION: i64 = 20260805120000;
 
 // This migration was changed by the launcher rebrand after it had already
@@ -1059,6 +1062,54 @@ mod tests {
         .unwrap();
         assert_eq!(locale, "zh-TW");
         assert_eq!(nodes, "[\"wss://center.node.1tmc.top\"]");
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn curseforge_download_restriction_bypass_migration_defaults_on() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < CURSEFORGE_DOWNLOAD_RESTRICTION_BYPASS_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&pool).await.unwrap();
+        sqlx::query("UPDATE settings SET locale = 'zh-CN' WHERE id = 0")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        MIGRATOR.run(&pool).await.unwrap();
+
+        let (locale, bypass): (String, bool) = sqlx::query_as(
+            "SELECT locale, bypass_curseforge_download_restrictions FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(locale, "zh-CN");
+        assert!(bypass);
         let foreign_key_errors: Vec<(String, i64, String, i64)> =
             sqlx::query_as("PRAGMA foreign_key_check")
                 .fetch_all(&pool)

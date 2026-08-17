@@ -5408,6 +5408,12 @@
 	"app.settings.resources.curseforge-mirror-description": {
 		"message": "CurseForge public API requests and file downloads."
 	},
+	"app.settings.resources.curseforge-restriction-bypass": {
+		"message": "Automatically download restricted CurseForge files"
+	},
+	"app.settings.resources.curseforge-restriction-bypass-description": {
+		"message": "When CurseForge does not provide a download address, derive its CDN address and try downloading the file automatically. Disable this to use the manual download workflow."
+	},
 	"app.settings.resources.database-backups": {
 		"message": "App database backups"
 	},

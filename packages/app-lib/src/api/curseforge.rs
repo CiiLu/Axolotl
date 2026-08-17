@@ -654,15 +654,14 @@ pub(crate) async fn get_modpack_expected_members_with_reporter(
 ) -> crate::Result<CurseForgePackExpectedContent> {
     let pack_file = get_file(project_id, file_id).await?;
     let project = get_project(project_id).await?;
-    let download_url = if project.allow_mod_distribution == Some(false) {
-		None
-	} else {
-		match pack_file.download_url.clone() {
-			Some(url) => Some(url),
-			None => get_download_url(project_id, file_id).await?,
-		}
-	}
-	.ok_or_else(|| {
+    let download_url = resolve_curseforge_download_url(
+        project_id,
+        file_id,
+        &project,
+        &pack_file,
+    )
+    .await?
+    .ok_or_else(|| {
 		ErrorKind::InputError(
 			"The linked CurseForge pack archive requires a manual download, so membership cannot be calibrated automatically"
 				.to_string(),
@@ -780,16 +779,14 @@ pub(crate) async fn get_modpack_expected_members_with_reporter(
             managed_project_type(project_type_for_class(project.class_id))?;
         validate_file_name(&file.file_name)?;
         let target_folder = content_target_folder(project_type, None)?;
-        let manual_download_required =
-            if project.allow_mod_distribution == Some(false) {
-                true
-            } else if file.download_url.is_some() {
-                false
-            } else {
-                get_download_url(member.project_id, member.file_id)
-                    .await?
-                    .is_none()
-            };
+        let manual_download_required = resolve_curseforge_download_url(
+            member.project_id,
+            member.file_id,
+            project,
+            file,
+        )
+        .await?
+        .is_none();
         let manual_download = manual_download_required.then(|| {
             manual_download_from_file(
                 member.project_id,
@@ -1164,6 +1161,42 @@ fn normalized_download_url(url: Option<String>) -> Option<String> {
     })
 }
 
+async fn resolve_curseforge_download_url(
+    project_id: u32,
+    file_id: u32,
+    project: &CurseForgeProject,
+    file: &CurseForgeFile,
+) -> crate::Result<Option<String>> {
+    let state = State::get().await?;
+    let bypass_restrictions = state.bypass_curseforge_download_restrictions();
+    if !bypass_restrictions && project.allow_mod_distribution == Some(false) {
+        return Ok(None);
+    }
+    if let Some(url) = normalized_download_url(file.download_url.clone()) {
+        return Ok(Some(url));
+    }
+    if bypass_restrictions {
+        return Ok(Some(derived_curseforge_download_url(
+            file_id,
+            &file.file_name,
+        )?));
+    }
+    get_download_url(project_id, file_id).await
+}
+
+fn derived_curseforge_download_url(
+    file_id: u32,
+    file_name: &str,
+) -> crate::Result<String> {
+    validate_file_name(file_name)?;
+    Ok(format!(
+        "https://edge.forgecdn.net/files/{}/{}/{}",
+        file_id / 1000,
+        file_id % 1000,
+        urlencoding::encode(file_name)
+    ))
+}
+
 pub async fn get_categories(
     class_id: Option<u32>,
 ) -> crate::Result<Vec<CurseForgeCategory>> {
@@ -1257,16 +1290,13 @@ pub async fn install_world_with_reporter(
     }
     validate_world_archive_name(&file.file_name)?;
 
-    let download_url = if project.allow_mod_distribution == Some(false) {
-        None
-    } else {
-        match file.download_url.clone() {
-            Some(url) => Some(url),
-            None => {
-                get_download_url(request.project_id, request.file_id).await?
-            }
-        }
-    };
+    let download_url = resolve_curseforge_download_url(
+        request.project_id,
+        request.file_id,
+        &project,
+        &file,
+    )
+    .await?;
     let Some(download_url) = download_url else {
         let manual_download = manual_download_from_file(
 			request.project_id,
@@ -1505,14 +1535,10 @@ async fn install_file_with_metrics(
             }
         }
 
-        let download_url = if project.allow_mod_distribution == Some(false) {
-            None
-        } else {
-            match file.download_url.clone() {
-                Some(url) => Some(url),
-                None => get_download_url(project_id, file_id).await?,
-            }
-        };
+        let download_url = resolve_curseforge_download_url(
+            project_id, file_id, &project, &file,
+        )
+        .await?;
         let Some(download_url) = download_url else {
             let target_folder = content_target_folder(
                 item_type,
@@ -1917,14 +1943,10 @@ pub async fn get_modpack_target(
 ) -> crate::Result<CurseForgeModpackTarget> {
     let pack_file = get_file(project_id, file_id).await?;
     let project = get_project(project_id).await?;
-    let download_url = if project.allow_mod_distribution == Some(false) {
-        None
-    } else {
-        match pack_file.download_url.clone() {
-            Some(url) => Some(url),
-            None => get_download_url(project_id, file_id).await?,
-        }
-    }
+    let download_url = resolve_curseforge_download_url(
+        project_id, file_id, &project, &pack_file,
+    )
+    .await?
     .ok_or_else(|| {
         ErrorKind::InputError(
             "The CurseForge modpack manifest cannot be downloaded automatically"
@@ -2005,16 +2027,13 @@ pub async fn install_modpack_with_reporter(
             }
         })
         .filter(|url| !url.is_empty());
-    let download_url = if project.allow_mod_distribution == Some(false) {
-        None
-    } else {
-        match pack_file.download_url.clone() {
-            Some(url) => Some(url),
-            None => {
-                get_download_url(request.project_id, request.file_id).await?
-            }
-        }
-    };
+    let download_url = resolve_curseforge_download_url(
+        request.project_id,
+        request.file_id,
+        &project,
+        &pack_file,
+    )
+    .await?;
     let Some(download_url) = download_url else {
         let manual_download = CurseForgeManualDownload {
 			project_id: request.project_id,
@@ -9061,6 +9080,26 @@ mod tests {
                 " https://edge.forgecdn.net/files/1/2/a.jar ".to_string(),
             )),
             Some("https://edge.forgecdn.net/files/1/2/a.jar".to_string()),
+        );
+    }
+
+    #[test]
+    fn derived_download_urls_follow_curseforge_file_id_layout() {
+        assert_eq!(
+            derived_curseforge_download_url(
+                6_767_951,
+                "jei 1.21.5+neoforge.jar"
+            )
+            .unwrap(),
+            "https://edge.forgecdn.net/files/6767/951/jei%201.21.5%2Bneoforge.jar"
+        );
+        assert_eq!(
+            derived_curseforge_download_url(1_234_005, "example.jar").unwrap(),
+            "https://edge.forgecdn.net/files/1234/5/example.jar"
+        );
+        assert!(
+            derived_curseforge_download_url(1_234_005, "../example.jar")
+                .is_err()
         );
     }
 

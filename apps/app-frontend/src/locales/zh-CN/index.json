@@ -2501,6 +2501,12 @@
 	"app.settings.resources.curseforge-mirror-description": {
 		"message": "CurseForge 公共 API 请求和文件下载。"
 	},
+	"app.settings.resources.curseforge-restriction-bypass": {
+		"message": "自动下载受限的 CurseForge 文件"
+	},
+	"app.settings.resources.curseforge-restriction-bypass-description": {
+		"message": "当 CurseForge 不提供下载地址时，根据文件信息推导其 CDN 地址并尝试自动下载。关闭后将使用手动下载流程。"
+	},
 	"app.settings.resources.mojang-auth-service": {
 		"message": "Mojang 认证服务"
 	},

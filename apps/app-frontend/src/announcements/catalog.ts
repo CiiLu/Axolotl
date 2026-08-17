@@ -61,6 +61,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			changed: [
 				{
 					'en-US':
+						'Added a Resources setting to control automatic downloads for CurseForge files with distribution restrictions. It is enabled by default and can be disabled to restore manual downloads.',
+					'zh-CN':
+						'资源设置新增 CurseForge 受限文件自动下载开关，默认开启；关闭后可恢复手动下载流程。',
+				},
+				{
+					'en-US':
 						'Discover now reopens the last content type you browsed, including mods, modpacks, resource packs, data packs, and shaders.',
 					'zh-CN':
 						'发现内容现在会记住上次浏览的内容类型，重启后仍会打开对应的模组、整合包、资源包、数据包或光影包。',
