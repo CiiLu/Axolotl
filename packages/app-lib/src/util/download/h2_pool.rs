@@ -14,9 +14,10 @@ use h2::client::SendRequest;
 use rustls::ClientConfig;
 use rustls_pki_types::ServerName;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, Once, Weak};
+use std::sync::{Arc, Mutex, Once};
 use std::time::Duration;
 use tokio::net::TcpStream;
+use tokio::sync::Mutex as AsyncMutex;
 use tokio_rustls::TlsConnector;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -54,16 +55,25 @@ impl SharedH2Connection {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .clone();
         let mut sender = sender.ready().await?;
-        let (response, send_stream) = sender.send_request(request, false)?;
-        drop(send_stream);
+        let (response, _) = sender.send_request(request, true)?;
         response.await
     }
 }
 
+type ConnectionSlot = Arc<AsyncMutex<Option<Arc<SharedH2Connection>>>>;
+
 /// Registry of live shared connections, keyed by authority.
 static CONNECTIONS: std::sync::LazyLock<
-    Mutex<HashMap<String, Weak<SharedH2Connection>>>,
-> = std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
+    AsyncMutex<HashMap<String, ConnectionSlot>>,
+> = std::sync::LazyLock::new(|| AsyncMutex::new(HashMap::new()));
+
+async fn connection_slot(authority: &str) -> ConnectionSlot {
+    let mut connections = CONNECTIONS.lock().await;
+    connections
+        .entry(authority.to_string())
+        .or_insert_with(|| Arc::new(AsyncMutex::new(None)))
+        .clone()
+}
 
 fn tls_config() -> Arc<ClientConfig> {
     static INSTALL_PROVIDER: Once = Once::new();
@@ -206,12 +216,6 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
         })?;
 
     let shared = Arc::new(SharedH2Connection::new(sender));
-    {
-        let mut registry = CONNECTIONS
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        registry.insert(authority.to_string(), Arc::downgrade(&shared));
-    }
 
     let dead = Arc::clone(&shared.dead);
     let authority = authority.to_string();
@@ -229,18 +233,14 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
 pub async fn shared_connection(
     authority: &str,
 ) -> crate::Result<Arc<SharedH2Connection>> {
-    let cached = CONNECTIONS
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .get(authority)
-        .and_then(Weak::upgrade)
-        .filter(|connection| !connection.is_dead());
-    if let Some(connection) = cached {
-        return Ok(connection);
+    let slot = connection_slot(authority).await;
+    let mut cached = slot.lock().await;
+    if let Some(connection) =
+        cached.as_ref().filter(|connection| !connection.is_dead())
+    {
+        return Ok(Arc::clone(connection));
     }
-    CONNECTIONS
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .remove(authority);
-    establish(authority).await
+    let connection = establish(authority).await?;
+    *cached = Some(Arc::clone(&connection));
+    Ok(connection)
 }

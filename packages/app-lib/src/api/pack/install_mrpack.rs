@@ -1000,7 +1000,8 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
     crate::util::fetch::prewarm_download_dns(&[
         crate::util::fetch::MODRINTH_CDN_OFFICIAL_HOST,
         "api.modrinth.com",
-    ]);
+    ])
+    .await;
     let pack_files = pack.files;
     let mut retry_indices = (0..pack_files.len()).collect::<Vec<_>>();
     let mut required_file_failures = Vec::new();
@@ -1192,9 +1193,7 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         .with_download_meta(
                             content_context.download_meta.clone(),
                         )
-                        .with_segmented_download(
-                            pass == 0 && content_context.num_files <= 1,
-                        )
+                        .with_segmented_download(true)
                         .with_install_tracking(
                             content_context.reporter.clone(),
                             project_path.clone(),

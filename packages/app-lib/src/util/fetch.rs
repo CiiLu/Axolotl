@@ -5152,21 +5152,21 @@ pub(crate) async fn record_install_download_finished(
     }
 }
 
-/// Resolves hosts ahead of the first request without blocking the caller.
-/// Used before batch downloads so every file shares one ordered address list
-/// instead of racing the same DNS queries.
-pub(crate) fn prewarm_download_dns(hosts: &[&str]) {
-    for host in hosts {
+/// Resolves hosts ahead of the first request so every file shares one ordered
+/// address list instead of racing the same DNS queries.
+pub(crate) async fn prewarm_download_dns(hosts: &[&str]) {
+    let requests = hosts.iter().map(|host| {
         let resolver = Arc::clone(&DOWNLOAD_DNS_RESOLVER);
-        let host = host.to_string();
-        tokio::spawn(async move {
+        let host = (*host).to_string();
+        async move {
             let _ = tokio::time::timeout(
                 time::Duration::from_secs(10),
                 resolver.pre_resolve(&host),
             )
             .await;
-        });
-    }
+        }
+    });
+    futures::future::join_all(requests).await;
 }
 
 fn error_chain(error: &crate::Error) -> String {
@@ -5306,6 +5306,10 @@ async fn download_to_path_inner(
             fallback_count: 0,
         });
     }
+    let dns_hosts =
+        routes.iter().filter_map(route_host).collect::<HashSet<_>>();
+    let dns_hosts = dns_hosts.iter().map(String::as_str).collect::<Vec<_>>();
+    prewarm_download_dns(&dns_hosts).await;
     preserve_or_remove_partial(
         &part_path,
         &request.integrity,
@@ -5376,6 +5380,9 @@ async fn download_to_path_inner(
             crate::util::download::h2_download::H2DownloadOutcome::Fallback {
                 reason,
             } => {
+                if let Some(authority) = url_authority(&request.url) {
+                    record_authority_h2_failure(&authority);
+                }
                 tracing::debug!(
                     url = %sanitize_url_for_log(&request.url),
                     reason,
