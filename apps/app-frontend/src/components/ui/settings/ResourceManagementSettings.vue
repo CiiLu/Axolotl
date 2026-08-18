@@ -131,7 +131,7 @@ const messages = defineMessages({
 	},
 	curseforgeMirrorDescription: {
 		id: 'app.settings.resources.curseforge-mirror-description',
-		defaultMessage: 'CurseForge public API requests and file downloads.',
+		defaultMessage: 'CurseForge file downloads.',
 	},
 	curseforgeRestrictionBypass: {
 		id: 'app.settings.resources.curseforge-restriction-bypass',
@@ -286,6 +286,7 @@ const modrinthSourceOptions = computed(() => [
 const curseforgeSourceOptions = computed(() => [
 	automaticSourceOption.value,
 	officialPreferredSourceOption.value,
+	{ value: 'mirror_preferred', label: formatMessage(messages.tianpaoSource) },
 	officialOnlySourceOption.value,
 ])
 const mojangAuthSource = downloadSourceModel('mojang_auth_source')

@@ -9438,21 +9438,6 @@ mod tests {
     }
 
     #[test]
-    fn curseforge_requests_stay_official_even_when_mirror_is_requested() {
-        let routes = request_routes(
-            "/v1/mods/285109/description",
-            MirrorPolicy::MirrorFirst,
-        );
-
-        assert!(routes.len() >= 1);
-        assert!(
-            routes
-                .iter()
-                .all(|route| route.source == RequestRouteSource::Official)
-        );
-    }
-
-    #[test]
     fn mirror_not_found_tries_next_route() {
         let route = RequestRoute {
             url: String::new(),

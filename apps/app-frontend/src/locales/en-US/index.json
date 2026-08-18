@@ -5499,7 +5499,7 @@
 		"message": "CurseForge"
 	},
 	"app.settings.resources.curseforge-mirror-description": {
-		"message": "CurseForge public API requests and file downloads."
+		"message": "CurseForge file downloads."
 	},
 	"app.settings.resources.curseforge-restriction-bypass": {
 		"message": "Automatically download restricted CurseForge files"

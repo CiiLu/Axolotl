@@ -2631,7 +2631,7 @@
 		"message": "CurseForge 服务"
 	},
 	"app.settings.resources.curseforge-mirror-description": {
-		"message": "CurseForge 公共 API 请求和文件下载。"
+		"message": "CurseForge 文件下载。"
 	},
 	"app.settings.resources.curseforge-restriction-bypass": {
 		"message": "自动下载受限的 CurseForge 文件"

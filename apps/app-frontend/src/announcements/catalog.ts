@@ -33,6 +33,35 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.6',
+		version: '1.8.6',
+		publishedAt: '2026-08-18',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.6',
+			'zh-CN': 'Axolotl Launcher 1.8.6',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed the issue where JVM parameters would not automatically fall back when incompatible; JVM parameters will now automatically adjust based on the actual Java environment.',
+					'zh-CN':
+						'修复JVM参数不适配时，不会自动回落的问题，现在JVM参数会根据java实际情况智能逐级自动回落。',
+				},
+			],
+			added: [
+				{
+					'en-US': 'Added a storage page with visual representation of storage space usage.',
+					'zh-CN': '新增存储页面，储存空间占用可视化。',
+				},
+				{
+					'en-US': 'Added tianpao mirror for curseforg.',
+					'zh-CN': '为curseforg 添加tianpao镜像。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.5',
 		version: '1.8.5',
 		publishedAt: '2026-08-18',

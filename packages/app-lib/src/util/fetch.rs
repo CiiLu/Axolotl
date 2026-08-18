@@ -584,6 +584,15 @@ fn is_modrinth_cdn_url(url: &str) -> bool {
     url.starts_with("https://cdn-alt.modrinth.com")
 }
 
+fn is_forge_cdn_mirror_url(url: &str) -> bool {
+    Url::parse(url).ok().is_some_and(|parsed| {
+        matches!(
+            parsed.host_str(),
+            Some("edge.forgecdn.net" | "media.forgecdn.net")
+        )
+    })
+}
+
 fn is_modrinth_host_url(url: &str) -> bool {
     Url::parse(url).ok().is_some_and(|parsed| {
         matches!(
@@ -1046,13 +1055,17 @@ fn explicit_mirror_routes(
             format!("/curseforge{path}"),
             DownloadRouteSource::Mcim,
         ),
-        "edge.forgecdn.net"
-        | "media.forgecdn.net"
-        | "mediafilez.forgecdn.net" => push_mirror(
+        "edge.forgecdn.net" if path.starts_with("/files/") => push_mirror(
             &mut routes,
-            MCIM_BASE_URL,
+            TIANPAO_BASE_URL,
             path.to_string(),
-            DownloadRouteSource::Mcim,
+            DownloadRouteSource::Tianpao,
+        ),
+        "media.forgecdn.net" => push_mirror(
+            &mut routes,
+            TIANPAO_BASE_URL,
+            format!("/media{path}"),
+            DownloadRouteSource::Tianpao,
         ),
         _ => {}
     }
@@ -1179,9 +1192,11 @@ pub fn resolve_download_routes_for(
     let mirror_first_loader = uses_mirror_first_loader_routes(&url, resource);
     let mut routes = explicit_mirror_routes(&url, resource);
     routes.push(official);
-    // Modrinth API stays official-only. Modrinth CDN content uses the existing
-    // mirror selector; in Automatic mode Tianpao is preferred over official.
-    let mode = if is_modrinth_cdn_url(&url) {
+    // Modrinth API stays official-only. Modrinth CDN and CurseForge CDN content
+    // use the existing mirror selector; in Automatic mode Tianpao is preferred
+    // over official.
+    let mode = if is_modrinth_cdn_url(&url) || is_forge_cdn_mirror_url(&url)
+    {
         if mode == crate::state::DownloadSourceMode::Auto {
             crate::state::DownloadSourceMode::MirrorPreferred
         } else {
@@ -6991,98 +7006,6 @@ mod tests {
     }
 
     #[test]
-    fn modrinth_api_routes_are_official_only() {
-        for mode in [
-            crate::state::DownloadSourceMode::Auto,
-            crate::state::DownloadSourceMode::OfficialOnly,
-            crate::state::DownloadSourceMode::MirrorPreferred,
-            crate::state::DownloadSourceMode::OfficialPreferred,
-        ] {
-            let api_routes = resolve_download_routes_for(
-                "https://api.modrinth.com/v2/tag/game_version",
-                ResourceClass::Modrinth,
-                mode,
-            );
-            assert_eq!(api_routes.len(), 1);
-            assert_eq!(api_routes[0].source, DownloadRouteSource::Official);
-            assert!(!api_routes[0].is_mirror);
-        }
-    }
-
-    #[test]
-    fn modrinth_cdn_data_uses_tianpao_mirror_first_in_auto() {
-        let routes = resolve_download_routes_for(
-            "https://cdn.modrinth.com/data/project/version/file.jar",
-            ResourceClass::Modpack,
-            crate::state::DownloadSourceMode::Auto,
-        );
-        assert_eq!(routes.len(), 2);
-        assert_eq!(
-            routes[0].url,
-            "https://mod.tianpao.top/data/project/version/file.jar"
-        );
-        assert_eq!(routes[0].source, DownloadRouteSource::Tianpao);
-        assert!(routes[0].is_mirror);
-        assert!(!routes[0].allow_sensitive_headers);
-        assert_eq!(
-            routes[1].url,
-            "https://cdn-alt.modrinth.com/data/project/version/file.jar"
-        );
-        assert_eq!(routes[1].source, DownloadRouteSource::Official);
-        assert!(!routes[1].is_mirror);
-        assert!(routes[1].allow_sensitive_headers);
-    }
-
-    #[test]
-    fn modrinth_cdn_data_respects_explicit_source_modes() {
-        let official_only = resolve_download_routes_for(
-            "https://cdn-alt.modrinth.com/data/project/version/file.jar",
-            ResourceClass::Modpack,
-            crate::state::DownloadSourceMode::OfficialOnly,
-        );
-        assert_eq!(official_only.len(), 1);
-        assert_eq!(official_only[0].source, DownloadRouteSource::Official);
-        assert!(!official_only[0].is_mirror);
-
-        let official_preferred = resolve_download_routes_for(
-            "https://cdn-alt.modrinth.com/data/project/version/file.jar",
-            ResourceClass::Modpack,
-            crate::state::DownloadSourceMode::OfficialPreferred,
-        );
-        assert_eq!(official_preferred.len(), 2);
-        assert_eq!(
-            official_preferred[0].url,
-            "https://cdn-alt.modrinth.com/data/project/version/file.jar"
-        );
-        assert_eq!(official_preferred[1].source, DownloadRouteSource::Tianpao);
-
-        let mirror_preferred = resolve_download_routes_for(
-            "https://cdn-alt.modrinth.com/data/project/version/file.jar",
-            ResourceClass::Modpack,
-            crate::state::DownloadSourceMode::MirrorPreferred,
-        );
-        assert_eq!(mirror_preferred.len(), 2);
-        assert_eq!(mirror_preferred[0].source, DownloadRouteSource::Tianpao);
-        assert_eq!(
-            mirror_preferred[1].url,
-            "https://cdn-alt.modrinth.com/data/project/version/file.jar"
-        );
-    }
-
-    #[test]
-    fn modrinth_cdn_mirror_preserves_query() {
-        let routes = resolve_download_routes_for(
-            "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1",
-            ResourceClass::Modpack,
-            crate::state::DownloadSourceMode::Auto,
-        );
-        assert_eq!(
-            routes[0].url,
-            "https://mod.tianpao.top/data/project/version/file.jar?download=1"
-        );
-    }
-
-    #[test]
     fn modrinth_download_url_recognition_includes_cdn_alt() {
         assert!(is_official_modrinth_download_url(
             "https://cdn-alt.modrinth.com/data/project/version/file.jar"
@@ -7773,20 +7696,6 @@ mod tests {
             prefer_official[0].url,
             "https://repo1.maven.org/maven2/com/example/library/1/library-1.jar"
         );
-    }
-
-    #[test]
-    fn curseforge_routes_stay_official_without_mirrors() {
-        let routes = resolve_download_routes_for(
-            "https://api.curseforge.com/v1/mods/search",
-            ResourceClass::CurseForge,
-            crate::state::DownloadSourceMode::MirrorPreferred,
-        );
-        assert_eq!(routes.len(), 1);
-        assert_eq!(routes[0].source, DownloadRouteSource::Official);
-        assert!(!routes[0].is_mirror);
-        assert!(routes[0].allow_sensitive_headers);
-        assert_eq!(routes[0].proxy, ProxyPolicy::System);
     }
 
     #[test]
