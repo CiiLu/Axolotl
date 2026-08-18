@@ -978,7 +978,7 @@
 		"message": "无法登录 Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "要游玩此实例，请创建账户。如果没有 Minecraft 账号，可以在右侧使用离线账户登陆。"
+		"message": "要游玩此实例，请在下方使用 Microsoft 账号登录。如果没有 Minecraft 账号，可以在 Minecraft 官网购买游戏。"
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "登录 Minecraft"
@@ -2631,7 +2631,7 @@
 		"message": "CurseForge 服务"
 	},
 	"app.settings.resources.curseforge-mirror-description": {
-		"message": "CurseForge 文件下载。"
+		"message": "CurseForge 公共 API 请求和文件下载。"
 	},
 	"app.settings.resources.curseforge-restriction-bypass": {
 		"message": "自动下载受限的 CurseForge 文件"
@@ -7268,86 +7268,86 @@
 	"app.content-install.preview.version-mismatch": {
 		"message": "下载的版本可能与当前版本不兼容。"
 	},
-	"app.settings.storage.total": {
-		"message": "总大小"
+	"app.browse.choose-instance": {
+		"message": "选择实例"
 	},
-	"app.settings.storage.total-description": {
-		"message": "总大小包含符号链接与 Junction 引用的大小"
+	"app.browse.install-selected": {
+		"message": "安装 {count} 个内容"
 	},
-	"app.settings.storage.instance-data": {
-		"message": "实例数据"
+	"app.browse.preparing-selected": {
+		"message": "正在准备 {completed}/{total}"
 	},
-	"app.settings.storage.cache-data": {
-		"message": "缓存数据"
+	"app.browse.selected": {
+		"message": "已选择"
 	},
-	"app.settings.storage.meta-data": {
-		"message": "Meta 数据"
+	"app.browse.no-compatible-version": {
+		"message": "未找到与所选实例兼容的版本。"
 	},
-	"app.settings.storage.database": {
-		"message": "数据库"
+	"app.browse.instance-selector.title": {
+		"message": "选择一个实例"
 	},
-	"app.settings.storage.other": {
-		"message": "其他"
+	"app.browse.instance-selector.search": {
+		"message": "搜索实例"
 	},
-	"app.settings.storage.instance": {
-		"message": "实例"
+	"app.browse.instance-selector.no-instances": {
+		"message": "请先创建实例再安装内容"
 	},
-	"app.settings.storage.mods": {
-		"message": "模组"
+	"app.browse.instance-selector.no-results": {
+		"message": "没有匹配的实例"
 	},
-	"app.settings.storage.replay": {
-		"message": "回放"
+	"app.browse.instance-selector.select": {
+		"message": "选择 {name}"
 	},
-	"app.settings.storage.resourcepacks": {
-		"message": "资源包"
+	"app.browse.instance-selector.create": {
+		"message": "创建实例"
 	},
-	"app.settings.storage.saves": {
-		"message": "存档"
+	"app.browse.instance-selector.switch-title": {
+		"message": "更改安装目标？"
 	},
-	"app.settings.storage.world": {
-		"message": "世界"
+	"app.browse.instance-selector.switch-description": {
+		"message": "{count, plural, other {已为当前目标解析 # 个选定项目。切换后会丢弃已解析的版本。}}"
 	},
-	"app.settings.storage.schematics": {
-		"message": "投影"
+	"app.browse.instance-selector.current-target": {
+		"message": "当前目标"
 	},
-	"app.settings.storage.screenshots": {
-		"message": "截图"
+	"app.browse.instance-selector.new-target": {
+		"message": "新目标"
 	},
-	"app.settings.storage.shaderpacks": {
-		"message": "光影包"
+	"app.browse.instance-selector.install-current": {
+		"message": "安装到当前实例"
 	},
-	"app.settings.storage.minimap": {
-		"message": "小地图"
+	"app.browse.instance-selector.installing-current": {
+		"message": "正在准备安装…"
 	},
-	"app.settings.storage.distant-horizons": {
-		"message": "虚拟视距缓存"
+	"app.browse.instance-selector.clear-and-switch": {
+		"message": "清空并切换"
 	},
-	"app.settings.storage.db-file": {
-		"message": "数据库文件"
+	"app.browse.instance-selector.cancel": {
+		"message": "取消"
 	},
-	"app.settings.storage.db-backup": {
-		"message": "数据库备份"
+	"app.content-install.preview.batch-description": {
+		"message": "请确认将在 {instance} 中安装 {projectCount, plural, other {# 个内容}} 和 {dependencyCount, plural, other {# 个前置}}。"
 	},
-	"app.settings.storage.item-count": {
-		"message": "{count} 个"
+	"app.content-install.preview.selected-content-header": {
+		"message": "已选内容"
 	},
-	"app.settings.storage.instance-count": {
-		"message": "{count} 个实例"
+	"app.content-install.preview.remove-project": {
+		"message": "从本次安装中移除 {project}"
 	},
-	"app.settings.storage.actual-size-tooltip": {
-		"message": "实际大小：{size}"
+	"app.content-install.preview.conflict-header": {
+		"message": "可能重复的内容"
 	},
-	"app.settings.storage.symlink-size-tooltip": {
-		"message": "符号链接或 Junction 引用的大小：{size}"
+	"app.content-install.preview.conflict-description": {
+		"message": "{candidate} 可能与已安装或已选择的内容相同，仍要继续吗？"
 	},
-	"app.settings.storage.open-action": {
-		"message": "在启动器中打开或打开位置"
+	"app.content-install.preview.continue-anyway": {
+		"message": "仍然安装"
 	},
-	"app.settings.storage.expand-action": {
-		"message": "展开"
+	"app.content-install.preview.existing-content": {
+		"message": "已有内容"
 	},
-	"app.settings.storage.collapse-action": {
-		"message": "收起"
+	"app.content-selection.preview-failed": {
+		"message": "部分所选内容无法准备安装。请移除后重试。"
 	},
 	"app.settings.storage.symlink-label": {
 		"message": "软链接"
@@ -7358,19 +7358,37 @@
 	"app.settings.storage.symlink-help-tooltip": {
 		"message": "软链接指本启动器从其它位置引用的MC资源，这些文件可能实际位于其它启动器的目录\n例如“20MB + 1.2GB”指本启动器目录中有20MB文件，引用外部1.2GB文件"
 	},
-	"app.settings.storage.update": {
-		"message": "更新"
+	"app.content-selection.queue-failed": {
+		"message": "部分内容未能加入安装队列，仍保留在已选列表中。"
 	},
-	"app.settings.storage.updating": {
-		"message": "更新中…"
+	"app.content-selection.dependency-conflict": {
+		"message": "{dependency} 在当前选择中解析出了冲突版本。"
+	},
+	"app.content-selection.unknown-dependency": {
+		"message": "前置 {id}"
 	},
 	"app.settings.storage.last-updated-label": {
 		"message": "上次更新："
 	},
-	"app.settings.storage.scanning": {
-		"message": "正在扫描存储…"
+	"app.content-selection.unknown-reason": {
+		"message": "无法解析"
 	},
-	"app.settings.tabs.storage": {
-		"message": "存储"
+	"app.content-selection.target-changed": {
+		"message": "所选内容属于另一个实例。请切换回该实例或先清空选择。"
+	},
+	"app.content-selection.duplicate-content": {
+		"message": "{project} 已从另一个来源安装或选中。"
+	},
+	"app.content-selection.conflict-unavailable": {
+		"message": "无法确认该内容是否与另一个来源重复。"
+	},
+	"app.project.install-button.no-compatible-version": {
+		"message": "当前实例没有兼容版本。"
+	},
+	"browse.selected-projects-floating-bar.show-projects": {
+		"message": "显示 {count, plural, other {# 个已选内容}}"
+	},
+	"browse.selected-projects-floating-bar.hide-projects": {
+		"message": "隐藏已选内容"
 	}
 }

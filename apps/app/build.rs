@@ -93,6 +93,7 @@ fn main() {
                         "resolve_chinese_content_search",
                         "lookup_chinese_content_names",
                         "lookup_content_wiki_ids",
+                        "lookup_content_identities",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
