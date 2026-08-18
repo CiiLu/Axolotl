@@ -3038,6 +3038,17 @@ pub(crate) fn verify_computed_integrity(
     Ok(())
 }
 
+pub(crate) fn is_integrity_error(error: &crate::Error) -> bool {
+    match error.raw.as_ref() {
+        ErrorKind::HashError(..) => true,
+        ErrorKind::OtherError(message) => {
+            message.starts_with("Incorrect ")
+                && message.contains(" hash for download")
+        }
+        _ => false,
+    }
+}
+
 pub(crate) async fn validate_file_content(
     path: &Path,
     validation: ContentValidation,
@@ -5372,6 +5383,7 @@ async fn download_to_path_inner(
     // Prefer a multiplexed HTTP/2 download over a shared per-authority
     // connection: one handshake per CDN instead of one per file, and range
     // streams for large files. Any failure falls through to the legacy path.
+    let mut h2_failed_mirror = None;
     if request.allow_segmented_download
         && !part_resume_expected(&part_path).await
         && !request.url.starts_with("http://")
@@ -5406,8 +5418,18 @@ async fn download_to_path_inner(
             }
             crate::util::download::h2_download::H2DownloadOutcome::Fallback {
                 reason,
+                integrity_failure,
             } => {
-                if let Some(authority) = url_authority(&h2_route.url) {
+                if integrity_failure {
+                    if h2_route.is_mirror {
+                        h2_failed_mirror = Some(h2_route.url.clone());
+                        tracing::warn!(
+                            url = %sanitize_url_for_log(&h2_route.url),
+                            source = h2_route.source.as_str(),
+                            "Mirror hash validation failed; falling back to the official source"
+                        );
+                    }
+                } else if let Some(authority) = url_authority(&h2_route.url) {
                     record_authority_h2_failure(&authority);
                 }
                 tracing::debug!(
@@ -5425,6 +5447,9 @@ async fn download_to_path_inner(
         }
     }
 
+    if let Some(failed_route) = h2_failed_mirror.take() {
+        routes.retain(|route| route.url != failed_route);
+    }
     ensure_task_routes_probed(
         &request,
         &mut routes,
@@ -7123,6 +7148,27 @@ mod tests {
             verify_computed_integrity(&size_only, &matching).is_err(),
             "without a hash the size claim is still enforced"
         );
+    }
+
+    #[test]
+    fn identifies_hash_integrity_failures_without_treating_size_errors_as_hash_failures()
+     {
+        let hash_error: crate::Error = ErrorKind::OtherError(
+            "Incorrect sha1 hash for download: expected != actual".to_string(),
+        )
+        .into();
+        assert!(is_integrity_error(&hash_error));
+
+        let typed_hash_error: crate::Error =
+            ErrorKind::HashError("expected".to_string(), "actual".to_string())
+                .into();
+        assert!(is_integrity_error(&typed_hash_error));
+
+        let size_error: crate::Error = ErrorKind::OtherError(
+            "Incorrect size for download: 10 != 20".to_string(),
+        )
+        .into();
+        assert!(!is_integrity_error(&size_error));
     }
 
     #[test]

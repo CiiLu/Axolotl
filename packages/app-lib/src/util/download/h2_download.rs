@@ -35,7 +35,10 @@ pub(crate) enum H2DownloadOutcome {
     Completed(DownloadResult),
     /// The multiplexed path cannot be used; the caller should fall back to
     /// the legacy path.
-    Fallback { reason: &'static str },
+    Fallback {
+        reason: &'static str,
+        integrity_failure: bool,
+    },
 }
 
 /// Attempts to download `request` to `destination` over a shared HTTP/2
@@ -49,11 +52,13 @@ pub(crate) async fn try_download_via_h2(
     let Some(connection) = connect_authority(&route.url).await else {
         return H2DownloadOutcome::Fallback {
             reason: "no shared HTTP/2 connection",
+            integrity_failure: false,
         };
     };
     let Ok(uri) = route.url.parse::<Uri>() else {
         return H2DownloadOutcome::Fallback {
             reason: "unparsable URL",
+            integrity_failure: false,
         };
     };
 
@@ -85,6 +90,7 @@ pub(crate) async fn try_download_via_h2(
                     );
                     return H2DownloadOutcome::Fallback {
                         reason: "probe failed",
+                        integrity_failure: false,
                     };
                 }
             };
@@ -100,16 +106,19 @@ pub(crate) async fn try_download_via_h2(
         let Some(total_size) = total_size else {
             return H2DownloadOutcome::Fallback {
                 reason: "unknown content size",
+                integrity_failure: false,
             };
         };
         if total_size == 0 {
             return H2DownloadOutcome::Fallback {
                 reason: "empty content",
+                integrity_failure: false,
             };
         }
         if status != StatusCode::PARTIAL_CONTENT {
             return H2DownloadOutcome::Fallback {
                 reason: "range requests unsupported",
+                integrity_failure: false,
             };
         }
         total_size
@@ -151,6 +160,7 @@ pub(crate) async fn try_download_via_h2(
             );
             H2DownloadOutcome::Fallback {
                 reason: "multiplexed download failed",
+                integrity_failure: fetch::is_integrity_error(&error),
             }
         }
     }
