@@ -311,6 +311,7 @@ fn main() {
                         "instance_get_installed_project_ids",
                         "instance_get_install_candidates",
                         "instance_content",
+                        "instance_get_content_items_by_paths",
                         "instance_get_content_items",
                         "instance_get_content_snapshot",
                         "instance_refresh_content",
@@ -564,7 +565,9 @@ fn main() {
                         "terracotta_join",
                         "terracotta_reset",
                         "terracotta_get_platform_key",
+                        "terracotta_check_for_update",
                         "terracotta_download",
+                        "terracotta_update",
                         "terracotta_get_player_name",
                         "terracotta_get_diagnostic_report",
                     ])

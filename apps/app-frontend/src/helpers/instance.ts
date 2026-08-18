@@ -89,6 +89,18 @@ export async function get_content_items(
 	return items
 }
 
+export async function get_content_items_by_paths(
+	instanceId: string,
+	paths: string[],
+	cacheBehaviour?: CacheBehaviour,
+): Promise<ContentItem[]> {
+	return await invoke<ContentItem[]>('plugin:instance|instance_get_content_items_by_paths', {
+		instanceId,
+		paths,
+		cacheBehaviour,
+	})
+}
+
 export type ContentOwnershipKind = 'pack_managed' | 'user_added' | 'local_discovered'
 export type PackMemberMaterializationState = 'present' | 'pending_manual' | 'missing' | 'removed'
 export type PackMemberOverrideKind = 'none' | 'disabled' | 'removed' | 'version'
@@ -641,9 +653,7 @@ export async function get_pack_export_candidates(instanceId: string): Promise<st
 	return await invoke('plugin:instance|instance_get_pack_export_candidates', { instanceId })
 }
 
-export async function resolveAutoGcLaunchArgs(
-	instanceId: string,
-): Promise<string[] | null> {
+export async function resolveAutoGcLaunchArgs(instanceId: string): Promise<string[] | null> {
 	const instance = await get(instanceId)
 	if (!instance) return null
 
