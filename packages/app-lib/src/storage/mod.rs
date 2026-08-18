@@ -57,7 +57,9 @@ pub struct StoragePath {
     pub kind: StoragePathKind,
 }
 
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(
+    Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq,
+)]
 pub struct StorageSize {
     pub actual: u64,
     pub symlink: u64,
@@ -218,7 +220,9 @@ async fn scan_path(
         };
 
         if crate::util::io::is_symlink_or_reparse(&meta) {
-            stats.symlink = stats.symlink.saturating_add(referenced_size(&child, visited).await);
+            stats.symlink = stats
+                .symlink
+                .saturating_add(referenced_size(&child, visited).await);
         } else if meta.is_dir() {
             let child_stats = scan_path(&child, mode, visited).await;
             stats += child_stats;
@@ -245,7 +249,10 @@ impl std::ops::AddAssign for Stats {
 }
 
 #[async_recursion]
-async fn referenced_stats(link: &Path, visited: &mut HashSet<PathBuf>) -> Stats {
+async fn referenced_stats(
+    link: &Path,
+    visited: &mut HashSet<PathBuf>,
+) -> Stats {
     let target = match fs::canonicalize(link).await {
         Ok(target) => target,
         Err(error) => {
@@ -397,10 +404,14 @@ async fn combined_dir_node(
     ))
 }
 
-async fn scan_saves(instance_path: &Path, instance_id: &str) -> Option<StorageNode> {
+async fn scan_saves(
+    instance_path: &Path,
+    instance_id: &str,
+) -> Option<StorageNode> {
     let saves_path = instance_path.join("saves");
     let mut visited = HashSet::new();
-    let total = to_size(scan_path(&saves_path, ScanMode::Host, &mut visited).await);
+    let total =
+        to_size(scan_path(&saves_path, ScanMode::Host, &mut visited).await);
     if total.total() == 0 {
         return None;
     }
@@ -419,8 +430,9 @@ async fn scan_saves(instance_path: &Path, instance_id: &str) -> Option<StorageNo
         }
 
         let mut world_visited = HashSet::new();
-        let world_size =
-            to_size(scan_path(&world_path, ScanMode::Host, &mut world_visited).await);
+        let world_size = to_size(
+            scan_path(&world_path, ScanMode::Host, &mut world_visited).await,
+        );
         if world_size.total() == 0 {
             continue;
         }
@@ -463,12 +475,21 @@ async fn scan_saves(instance_path: &Path, instance_id: &str) -> Option<StorageNo
         name: None,
         instance_id: Some(instance_id.to_string()),
         size: total,
-        count: Some(children.iter().filter(|n| n.node_type == StorageNodeType::World).count() as u64),
+        count: Some(
+            children
+                .iter()
+                .filter(|n| n.node_type == StorageNodeType::World)
+                .count() as u64,
+        ),
         paths: vec![StoragePath {
             path: node_path(&saves_path),
             kind: StoragePathKind::Directory,
         }],
-        children: if children.is_empty() { None } else { Some(children) },
+        children: if children.is_empty() {
+            None
+        } else {
+            Some(children)
+        },
     })
 }
 
@@ -598,16 +619,21 @@ async fn scan_instance_children(
     (children, covered)
 }
 
-async fn scan_instance(instance: &InstanceMetadata) -> crate::Result<Option<StorageNode>> {
+async fn scan_instance(
+    instance: &InstanceMetadata,
+) -> crate::Result<Option<StorageNode>> {
     let directories = dirs()?;
-    let instance_path = directories.instances_dir().join(&instance.instance.path);
+    let instance_path =
+        directories.instances_dir().join(&instance.instance.path);
 
     let mut visited = HashSet::new();
     let total = match fs::symlink_metadata(&instance_path).await {
         Ok(meta) if crate::util::io::is_symlink_or_reparse(&meta) => {
             to_size(referenced_stats(&instance_path, &mut visited).await)
         }
-        _ => to_size(scan_path(&instance_path, ScanMode::Host, &mut visited).await),
+        _ => to_size(
+            scan_path(&instance_path, ScanMode::Host, &mut visited).await,
+        ),
     };
     if total.total() == 0 {
         return Ok(None);
@@ -642,7 +668,11 @@ async fn scan_instance(instance: &InstanceMetadata) -> crate::Result<Option<Stor
             path: node_path(&instance_path),
             kind: StoragePathKind::Directory,
         }],
-        children: if children.is_empty() { None } else { Some(children) },
+        children: if children.is_empty() {
+            None
+        } else {
+            Some(children)
+        },
     }))
 }
 
@@ -651,7 +681,8 @@ pub async fn scan_instances_category() -> crate::Result<Option<StorageNode>> {
     let instances_dir = directories.instances_dir();
 
     let mut visited = HashSet::new();
-    let root_total = to_size(scan_path(&instances_dir, ScanMode::Host, &mut visited).await);
+    let root_total =
+        to_size(scan_path(&instances_dir, ScanMode::Host, &mut visited).await);
 
     let mut children = Vec::new();
     let mut covered = StorageSize::default();
@@ -694,7 +725,11 @@ pub async fn scan_instances_category() -> crate::Result<Option<StorageNode>> {
             path: node_path(&instances_dir),
             kind: StoragePathKind::Directory,
         }],
-        children: if children.is_empty() { None } else { Some(children) },
+        children: if children.is_empty() {
+            None
+        } else {
+            Some(children)
+        },
     }))
 }
 
@@ -816,7 +851,11 @@ pub async fn scan_database_category() -> crate::Result<Option<StorageNode>> {
             path: node_path(&settings_dir),
             kind: StoragePathKind::Directory,
         }],
-        children: if children.is_empty() { None } else { Some(children) },
+        children: if children.is_empty() {
+            None
+        } else {
+            Some(children)
+        },
     }))
 }
 

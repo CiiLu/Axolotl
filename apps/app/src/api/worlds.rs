@@ -1,11 +1,9 @@
-use crate::api::instance::InstanceRunResult;
 use crate::api::Result;
+use crate::api::instance::InstanceRunResult;
 use either::Either;
 use enumset::EnumSet;
 use tauri::{AppHandle, Manager, Runtime};
-use theseus::instance::{
-    self, GcLaunchIntent, QuickPlayType, get_full_path,
-};
+use theseus::instance::{self, GcLaunchIntent, QuickPlayType, get_full_path};
 use theseus::server_address::ServerAddress;
 use theseus::worlds;
 use theseus::worlds::{

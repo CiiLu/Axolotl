@@ -41,17 +41,15 @@ pub async fn run_with_extra_launch_args(
     offline_mode: bool,
     extra_launch_args: Option<Vec<String>>,
 ) -> crate::Result<ProcessMetadata> {
-    Ok(
-        run_with_extra_launch_args_inner(
-            instance_id,
-            quick_play_type,
-            offline_mode,
-            extra_launch_args,
-            None,
-        )
-        .await?
-        .0,
+    Ok(run_with_extra_launch_args_inner(
+        instance_id,
+        quick_play_type,
+        offline_mode,
+        extra_launch_args,
+        None,
     )
+    .await?
+    .0)
 }
 
 /// Like [`run_with_extra_launch_args`], but additionally resolves a GC-args

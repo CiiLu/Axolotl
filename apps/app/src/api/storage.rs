@@ -61,10 +61,14 @@ pub async fn storage_scan_start<R: Runtime>(
     Ok(())
 }
 
-async fn run_scan<R: Runtime>(app: &tauri::AppHandle<R>, force: bool) -> crate::api::Result<()> {
+async fn run_scan<R: Runtime>(
+    app: &tauri::AppHandle<R>,
+    force: bool,
+) -> crate::api::Result<()> {
     if !force {
         if let Some(tree) = load_storage_cache().await {
-            let _ = app.emit("storage-scan", StorageScanEvent::Complete { tree });
+            let _ =
+                app.emit("storage-scan", StorageScanEvent::Complete { tree });
             return Ok(());
         }
     }
@@ -140,10 +144,9 @@ pub async fn storage_open_paths<R: Runtime>(
     for storage_path in paths {
         let path = PathBuf::from(&storage_path.path);
         let result = match storage_path.kind {
-            StoragePathKind::File => app
-                .opener()
-                .reveal_item_in_dir(path.clone())
-                .map(|_| ()),
+            StoragePathKind::File => {
+                app.opener().reveal_item_in_dir(path.clone()).map(|_| ())
+            }
             StoragePathKind::Directory => app
                 .opener()
                 .open_path(path.to_string_lossy(), None::<&str>)

@@ -70,7 +70,8 @@ impl GcLaunchReport {
     /// Whether the launch deviated from the preferred resolution (strategy
     /// fallback or flag-level pruning).
     pub fn fell_back(&self) -> bool {
-        self.chosen_strategy != self.preferred_strategy || !self.pruned_args.is_empty()
+        self.chosen_strategy != self.preferred_strategy
+            || !self.pruned_args.is_empty()
     }
 }
 
@@ -81,7 +82,8 @@ struct ProbeOutcome {
 
 /// Whether a particular (java, args) set already accepted/succeeded.
 fn probe_cache() -> &'static Mutex<HashMap<(String, Vec<String>), bool>> {
-    static CACHE: OnceLock<Mutex<HashMap<(String, Vec<String>), bool>>> = OnceLock::new();
+    static CACHE: OnceLock<Mutex<HashMap<(String, Vec<String>), bool>>> =
+        OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
@@ -126,10 +128,7 @@ async fn probe_jvm_arguments(java: &Path, args: &[String]) -> ProbeOutcome {
         },
     };
 
-    probe_cache()
-        .lock()
-        .unwrap()
-        .insert(key, outcome.supported);
+    probe_cache().lock().unwrap().insert(key, outcome.supported);
     outcome
 }
 
@@ -165,7 +164,9 @@ fn find_offending_arg(text: &str, args: &[String]) -> Option<usize> {
         if !looks_like_option {
             continue;
         }
-        if let Some(idx) = args.iter().position(|arg| normalize_option_key(arg) == key) {
+        if let Some(idx) =
+            args.iter().position(|arg| normalize_option_key(arg) == key)
+        {
             return Some(idx);
         }
     }
@@ -215,7 +216,8 @@ where
         reason_chain: Vec::new(),
     };
     let mut probes = 0usize;
-    let candidate_count = intent.candidates.len().min(intent.candidate_ids.len());
+    let candidate_count =
+        intent.candidates.len().min(intent.candidate_ids.len());
 
     for index in 0..candidate_count {
         let candidate_id = &intent.candidate_ids[index];
@@ -232,9 +234,10 @@ where
 
         loop {
             if probes >= MAX_PROBES_PER_LAUNCH {
-                report
-                    .reason_chain
-                    .push("JVM probe budget exhausted; using JVM default GC".to_string());
+                report.reason_chain.push(
+                    "JVM probe budget exhausted; using JVM default GC"
+                        .to_string(),
+                );
                 return (Vec::new(), report);
             }
             probes += 1;
@@ -275,9 +278,10 @@ where
 
     // Every candidate failed. Launch with no GC arguments and let the JVM
     // choose its default collector — never block the game over GC tuning.
-    report
-        .reason_chain
-        .push("no GC strategy is supported; falling back to JVM default GC".to_string());
+    report.reason_chain.push(
+        "no GC strategy is supported; falling back to JVM default GC"
+            .to_string(),
+    );
     (Vec::new(), report)
 }
 
@@ -292,8 +296,13 @@ pub async fn select_best_candidate(
 
 /// Replace the preset block (or auto marker) in `args` with the verified
 /// `chosen` tokens. If the block cannot be located, leaves `args` untouched.
-pub fn replace_gc_block(args: &mut Vec<String>, intent: &GcLaunchIntent, chosen: &[String]) {
-    let block_set: HashSet<&str> = intent.block_tokens.iter().map(String::as_str).collect();
+pub fn replace_gc_block(
+    args: &mut Vec<String>,
+    intent: &GcLaunchIntent,
+    chosen: &[String],
+) {
+    let block_set: HashSet<&str> =
+        intent.block_tokens.iter().map(String::as_str).collect();
     let is_auto = block_set.contains(AUTO_GC_PRESET_ARG)
         || intent.block_tokens.iter().any(|t| t == AUTO_GC_PRESET_ARG);
 
@@ -316,7 +325,9 @@ pub fn replace_gc_block(args: &mut Vec<String>, intent: &GcLaunchIntent, chosen:
     }
 
     if !inserted {
-        warn!("GC intent block not found in effective java args; leaving them unchanged");
+        warn!(
+            "GC intent block not found in effective java args; leaving them unchanged"
+        );
         return;
     }
     *args = out;
@@ -363,7 +374,10 @@ mod tests {
     #[test]
     fn normalizes_option_keys() {
         assert_eq!(normalize_option_key("-XX:+UseZGC"), "UseZGC");
-        assert_eq!(normalize_option_key("-XX:G1UncommitBias=1"), "G1UncommitBias");
+        assert_eq!(
+            normalize_option_key("-XX:G1UncommitBias=1"),
+            "G1UncommitBias"
+        );
         assert_eq!(normalize_option_key("UseZGC"), "UseZGC");
         assert_eq!(
             normalize_option_key("-XX:ShenandoahHeapRegionSize=256M"),
@@ -410,8 +424,11 @@ mod tests {
                 vec!["-XX:+UseG1GC".to_string()],
             ],
         };
-        let (chosen, report) =
-            select_best_candidate_with_probe(&intent, &mut StubProbe(fake_supported)).await;
+        let (chosen, report) = select_best_candidate_with_probe(
+            &intent,
+            &mut StubProbe(fake_supported),
+        )
+        .await;
         assert_eq!(report.chosen_strategy, "zgc");
         assert_eq!(chosen, vec!["-XX:+UseZGC"]);
         assert!(!report.fell_back());
@@ -431,17 +448,22 @@ mod tests {
         // A real JVM only rejects `-XX:+ZGenerational` while it is present;
         // once pruned the remaining set must be accepted.
         let probe = |args: &[String]| {
-            if args.iter().any(|a| normalize_option_key(a) == "ZGenerational") {
+            if args
+                .iter()
+                .any(|a| normalize_option_key(a) == "ZGenerational")
+            {
                 ProbeOutcome {
                     supported: false,
-                    stderr_text: "Unrecognized VM option 'ZGenerational'".to_string(),
+                    stderr_text: "Unrecognized VM option 'ZGenerational'"
+                        .to_string(),
                 }
             } else {
                 fake_supported(args)
             }
         };
         let (chosen, report) =
-            select_best_candidate_with_probe(&intent, &mut StubProbe(probe)).await;
+            select_best_candidate_with_probe(&intent, &mut StubProbe(probe))
+                .await;
         assert_eq!(report.chosen_strategy, "zgc");
         assert_eq!(chosen, vec!["-XX:+UseZGC"]);
         assert_eq!(report.pruned_args, vec!["-XX:+ZGenerational"]);
@@ -470,14 +492,17 @@ mod tests {
             }
         };
         let (chosen, report) =
-            select_best_candidate_with_probe(&intent, &mut StubProbe(probe)).await;
+            select_best_candidate_with_probe(&intent, &mut StubProbe(probe))
+                .await;
         assert_eq!(report.chosen_strategy, "g1gc-mojang");
         assert_eq!(chosen, vec!["-XX:+UseG1GC"]);
         assert!(report.fell_back());
-        assert!(report
-            .reason_chain
-            .iter()
-            .any(|r| r.contains("not supported by this JVM")));
+        assert!(
+            report
+                .reason_chain
+                .iter()
+                .any(|r| r.contains("not supported by this JVM"))
+        );
     }
 
     #[tokio::test]
@@ -485,7 +510,10 @@ mod tests {
         let intent = GcLaunchIntent {
             active_preset_id: "gc-auto".to_string(),
             block_tokens: vec!["@axolotl:gc:auto".to_string()],
-            candidate_ids: vec!["g1gc-mojang".to_string(), "minimal-g1".to_string()],
+            candidate_ids: vec![
+                "g1gc-mojang".to_string(),
+                "minimal-g1".to_string(),
+            ],
             candidates: vec![
                 vec!["-XX:+UseG1GC".to_string()],
                 vec!["-XX:+UseG1GC".to_string()],
@@ -496,13 +524,16 @@ mod tests {
             stderr_text: "Unrecognized VM option 'UseG1GC'".to_string(),
         };
         let (chosen, report) =
-            select_best_candidate_with_probe(&intent, &mut StubProbe(probe)).await;
+            select_best_candidate_with_probe(&intent, &mut StubProbe(probe))
+                .await;
         assert!(chosen.is_empty());
         assert!(report.chosen_strategy.is_empty());
-        assert!(report
-            .reason_chain
-            .iter()
-            .any(|r| r.contains("JVM default")));
+        assert!(
+            report
+                .reason_chain
+                .iter()
+                .any(|r| r.contains("JVM default"))
+        );
     }
 
     #[test]
@@ -513,7 +544,8 @@ mod tests {
             candidate_ids: vec!["g1gc-mojang".to_string()],
             candidates: vec![vec!["-XX:+UseG1GC".to_string()]],
         };
-        let mut args = vec!["-Xmx2G".to_string(), "@axolotl:gc:auto".to_string()];
+        let mut args =
+            vec!["-Xmx2G".to_string(), "@axolotl:gc:auto".to_string()];
         replace_gc_block(&mut args, &intent, &["-XX:+UseG1GC".to_string()]);
         assert_eq!(args, vec!["-Xmx2G", "-XX:+UseG1GC"]);
     }

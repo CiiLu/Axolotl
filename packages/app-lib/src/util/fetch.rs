@@ -1195,8 +1195,7 @@ pub fn resolve_download_routes_for(
     // Modrinth API stays official-only. Modrinth CDN and CurseForge CDN content
     // use the existing mirror selector; in Automatic mode Tianpao is preferred
     // over official.
-    let mode = if is_modrinth_cdn_url(&url) || is_forge_cdn_mirror_url(&url)
-    {
+    let mode = if is_modrinth_cdn_url(&url) || is_forge_cdn_mirror_url(&url) {
         if mode == crate::state::DownloadSourceMode::Auto {
             crate::state::DownloadSourceMode::MirrorPreferred
         } else {
