@@ -95,3 +95,7 @@ export function getResolvedStrategyName(strategyId: ResolvedGcStrategyId): strin
 	}
 	return names[strategyId]
 }
+
+// Re-exported from strategies so callers can keep importing from the
+// auto-selector module while the chain stays testable via `node --test`.
+export { buildGcCandidateChain } from './strategies'
