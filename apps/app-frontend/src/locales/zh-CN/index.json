@@ -7350,7 +7350,13 @@
 		"message": "收起"
 	},
 	"app.settings.storage.symlink-label": {
-		"message": "符号链接"
+		"message": "软链接"
+	},
+	"app.settings.storage.symlink-help": {
+		"message": "什么是软链接？"
+	},
+	"app.settings.storage.symlink-help-tooltip": {
+		"message": "软链接指本启动器从其它位置引用的MC资源，这些文件可能实际位于其它启动器的目录\n例如“20MB + 1.2GB”指本启动器目录中有20MB文件，引用外部1.2GB文件"
 	},
 	"app.settings.storage.update": {
 		"message": "更新"
@@ -7358,8 +7364,8 @@
 	"app.settings.storage.updating": {
 		"message": "更新中…"
 	},
-	"app.settings.storage.last-updated": {
-		"message": "上次更新：{time}"
+	"app.settings.storage.last-updated-label": {
+		"message": "上次更新："
 	},
 	"app.settings.storage.scanning": {
 		"message": "正在扫描存储…"

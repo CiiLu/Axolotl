@@ -103,7 +103,16 @@ export const storageMessages = defineMessages({
 	},
 	symlinkLabel: {
 		id: 'app.settings.storage.symlink-label',
-		defaultMessage: 'symbolic link',
+		defaultMessage: 'symlink',
+	},
+	symlinkHelp: {
+		id: 'app.settings.storage.symlink-help',
+		defaultMessage: 'What is a symlink?',
+	},
+	symlinkHelpTooltip: {
+		id: 'app.settings.storage.symlink-help-tooltip',
+		defaultMessage:
+			'Symbolic links reference Minecraft resources from other locations — these files may actually live in another launcher\u2019s directory.\nFor example, \u201c20MB + 1.2GB\u201d means the launcher folder contains 20MB of files and references an external 1.2GB of files.',
 	},
 	update: {
 		id: 'app.settings.storage.update',
@@ -113,9 +122,9 @@ export const storageMessages = defineMessages({
 		id: 'app.settings.storage.updating',
 		defaultMessage: 'Updating…',
 	},
-	lastUpdated: {
-		id: 'app.settings.storage.last-updated',
-		defaultMessage: 'Last updated: {time}',
+	lastUpdatedLabel: {
+		id: 'app.settings.storage.last-updated-label',
+		defaultMessage: 'Last updated:',
 	},
 	scanning: {
 		id: 'app.settings.storage.scanning',

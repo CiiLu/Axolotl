@@ -64,6 +64,11 @@ const displayLabel = computed(() => props.node.name ?? formatMessage(typeLabels[
 
 const tooltipText = computed(() => props.node.paths.map((path) => path.path).join('\n'))
 
+const nameTooltip = computed(() => ({
+	content: tooltipText.value,
+	popperClass: 'storage-tooltip',
+}))
+
 const actualSizeTooltip = computed(() =>
 	formatMessage(storageMessages.actualSizeTooltip, {
 		size: formatBytes(props.node.size.actual),
@@ -81,6 +86,11 @@ const progressTitle = computed(() =>
 		? `${actualSizeTooltip.value}\n${symlinkSizeTooltip.value}`
 		: actualSizeTooltip.value,
 )
+
+const progressTooltip = computed(() => ({
+	content: progressTitle.value,
+	popperClass: 'storage-tooltip',
+}))
 
 const progressLabel = computed(() =>
 	props.node.size.symlink > 0
@@ -113,7 +123,7 @@ const openActionLabel = computed(() => formatMessage(storageMessages.openAction)
 			<button
 				type="button"
 				class="node-type-btn"
-				:title="openActionLabel"
+				v-tooltip="openActionLabel"
 				:aria-label="`${displayLabel}: ${openActionLabel}`"
 				@click.stop="emit('action', node)"
 			>
@@ -123,7 +133,7 @@ const openActionLabel = computed(() => formatMessage(storageMessages.openAction)
 			</button>
 
 			<!-- 节点名称 -->
-			<span class="node-name" :title="tooltipText">
+			<span class="node-name" v-tooltip="nameTooltip">
 				{{ displayLabel }}
 			</span>
 
@@ -143,9 +153,9 @@ const openActionLabel = computed(() => formatMessage(storageMessages.openAction)
 
 			<progress
 				class="storage-progress"
+				v-tooltip="progressTooltip"
 				:value="totalShare"
 				:max="1"
-				:title="progressTitle"
 				:aria-label="progressLabel"
 			/>
 		</div>
@@ -357,5 +367,11 @@ const openActionLabel = computed(() => formatMessage(storageMessages.openAction)
 	.storage-percent {
 		display: none;
 	}
+}
+
+/* 存储页多行 tooltip：内容换行并限制宽度 */
+:global(.v-popper__popper.storage-tooltip .v-popper__inner) {
+	white-space: pre-line;
+	max-width: 22rem;
 }
 </style>

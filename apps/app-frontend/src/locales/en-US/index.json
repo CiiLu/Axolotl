@@ -7203,7 +7203,13 @@
 		"message": "Collapse"
 	},
 	"app.settings.storage.symlink-label": {
-		"message": "symbolic link"
+		"message": "symlink"
+	},
+	"app.settings.storage.symlink-help": {
+		"message": "What is a symlink?"
+	},
+	"app.settings.storage.symlink-help-tooltip": {
+		"message": "Symbolic links reference Minecraft resources from other locations — these files may actually live in another launcher’s directory.\nFor example, “20MB + 1.2GB” means the launcher folder contains 20MB of files and references an external 1.2GB of files."
 	},
 	"app.settings.storage.update": {
 		"message": "Update"
@@ -7211,8 +7217,8 @@
 	"app.settings.storage.updating": {
 		"message": "Updating…"
 	},
-	"app.settings.storage.last-updated": {
-		"message": "Last updated: {time}"
+	"app.settings.storage.last-updated-label": {
+		"message": "Last updated:"
 	},
 	"app.settings.storage.scanning": {
 		"message": "Scanning storage…"

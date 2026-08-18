@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RefreshCwIcon, SpinnerIcon } from '@modrinth/assets'
+import { HelpCircleIcon, RefreshCwIcon, SpinnerIcon } from '@modrinth/assets'
 import { useFormatBytes, useVIntl } from '@modrinth/ui'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -63,6 +63,11 @@ const categoryColors: Record<StorageNodeType, { actual: string; symlink: string 
 }
 
 const hoveredId = ref<string | null>(null)
+
+const symlinkHelpTooltipOptions = computed(() => ({
+	content: formatMessage(storageMessages.symlinkHelpTooltip),
+	popperClass: 'storage-tooltip',
+}))
 
 function sizeTotal(size: StorageSize) {
 	return size.actual + size.symlink
@@ -381,7 +386,8 @@ function formatDateTime(date: Date) {
 							{{ formatMessage(loading ? storageMessages.updating : storageMessages.update) }}
 						</button>
 						<span v-if="lastUpdated" class="storage-last-updated">
-							{{ formatMessage(storageMessages.lastUpdated, { time: formatDateTime(lastUpdated) }) }}
+							<span>{{ formatMessage(storageMessages.lastUpdatedLabel) }}</span>
+							<span class="storage-last-updated-time">{{ formatDateTime(lastUpdated) }}</span>
 						</span>
 					</div>
 				</div>
@@ -438,6 +444,11 @@ function formatDateTime(date: Date) {
 
 			<!-- 实例树节点列表 -->
 			<section v-if="instancesCategory" class="storage-instance-section">
+				<div class="instance-help" v-tooltip="symlinkHelpTooltipOptions">
+					<HelpCircleIcon class="instance-help-icon" aria-hidden="true" />
+					<span>{{ formatMessage(storageMessages.symlinkHelp) }}</span>
+				</div>
+
 				<div class="instance-heading">
 					<span class="storage-section-title">
 						{{ formatMessage(storageMessages.instanceData) }}
@@ -490,6 +501,7 @@ function formatDateTime(date: Date) {
 	border: 1px solid var(--surface-5);
 	border-radius: 0.75rem;
 	background: var(--surface-1, transparent);
+	overflow: hidden;
 }
 
 /* 左侧总大小区域 */
@@ -536,8 +548,14 @@ function formatDateTime(date: Date) {
 }
 
 .storage-last-updated {
+	display: flex;
+	flex-direction: column;
 	font-size: 0.75rem;
 	color: var(--color-secondary);
+}
+
+.storage-last-updated-time {
+	font-variant-numeric: tabular-nums;
 }
 
 /* 右侧核心区域：强制向右对齐 */
@@ -684,6 +702,23 @@ function formatDateTime(date: Date) {
 	color: var(--color-secondary);
 }
 
+.instance-help {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3125rem;
+	margin-bottom: 0.375rem;
+	font-size: 0.75rem;
+	line-height: 1.25rem;
+	color: var(--color-secondary);
+	cursor: help;
+}
+
+.instance-help-icon {
+	width: 0.875rem;
+	height: 0.875rem;
+	flex-shrink: 0;
+}
+
 .storage-tree {
 	display: flex;
 	flex-direction: column;
@@ -714,5 +749,11 @@ function formatDateTime(date: Date) {
 	.storage-legend {
 		grid-template-columns: 1fr;
 	}
+}
+
+/* 存储页多行 tooltip：内容换行并限制宽度 */
+:global(.v-popper__popper.storage-tooltip .v-popper__inner) {
+	white-space: pre-line;
+	max-width: 22rem;
 }
 </style>
