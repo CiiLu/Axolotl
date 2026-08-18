@@ -7120,5 +7120,104 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "Unknown file warning"
+	},
+	"app.settings.storage.total": {
+		"message": "Total size"
+	},
+	"app.settings.storage.total-description": {
+		"message": "Total size including symbolic links and junctions"
+	},
+	"app.settings.storage.instance-data": {
+		"message": "Instance data"
+	},
+	"app.settings.storage.cache-data": {
+		"message": "Cache data"
+	},
+	"app.settings.storage.meta-data": {
+		"message": "Meta data"
+	},
+	"app.settings.storage.database": {
+		"message": "Database"
+	},
+	"app.settings.storage.other": {
+		"message": "Other"
+	},
+	"app.settings.storage.instance": {
+		"message": "Instance"
+	},
+	"app.settings.storage.mods": {
+		"message": "Mods"
+	},
+	"app.settings.storage.replay": {
+		"message": "Replay recordings"
+	},
+	"app.settings.storage.resourcepacks": {
+		"message": "Resource packs"
+	},
+	"app.settings.storage.saves": {
+		"message": "Saves"
+	},
+	"app.settings.storage.world": {
+		"message": "World"
+	},
+	"app.settings.storage.schematics": {
+		"message": "Schematics"
+	},
+	"app.settings.storage.screenshots": {
+		"message": "Screenshots"
+	},
+	"app.settings.storage.shaderpacks": {
+		"message": "Shader packs"
+	},
+	"app.settings.storage.minimap": {
+		"message": "Minimap data"
+	},
+	"app.settings.storage.distant-horizons": {
+		"message": "Distant Horizons cache"
+	},
+	"app.settings.storage.db-file": {
+		"message": "App database"
+	},
+	"app.settings.storage.db-backup": {
+		"message": "Database backups"
+	},
+	"app.settings.storage.item-count": {
+		"message": "{count} items"
+	},
+	"app.settings.storage.instance-count": {
+		"message": "{count} instances"
+	},
+	"app.settings.storage.actual-size-tooltip": {
+		"message": "Actual size: {size}"
+	},
+	"app.settings.storage.symlink-size-tooltip": {
+		"message": "Symbolic link or junction referenced size: {size}"
+	},
+	"app.settings.storage.open-action": {
+		"message": "Open in launcher or open location"
+	},
+	"app.settings.storage.expand-action": {
+		"message": "Expand"
+	},
+	"app.settings.storage.collapse-action": {
+		"message": "Collapse"
+	},
+	"app.settings.storage.symlink-label": {
+		"message": "symbolic link"
+	},
+	"app.settings.storage.update": {
+		"message": "Update"
+	},
+	"app.settings.storage.updating": {
+		"message": "Updating…"
+	},
+	"app.settings.storage.last-updated": {
+		"message": "Last updated: {time}"
+	},
+	"app.settings.storage.scanning": {
+		"message": "Scanning storage…"
+	},
+	"app.settings.tabs.storage": {
+		"message": "Storage"
 	}
 }

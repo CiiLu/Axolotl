@@ -20,9 +20,11 @@ mod launcher;
 mod logger;
 pub mod mod_metadata;
 mod state;
+pub mod storage;
 pub mod telemetry;
 
 pub use api::*;
+pub use storage::*;
 pub use error::*;
 pub use event::{
     EventState, LoadingBar, LoadingBarType, emit::emit_loading,

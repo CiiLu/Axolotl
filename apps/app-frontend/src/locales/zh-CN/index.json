@@ -7267,5 +7267,104 @@
 	},
 	"app.content-install.preview.version-mismatch": {
 		"message": "下载的版本可能与当前版本不兼容。"
+	},
+	"app.settings.storage.total": {
+		"message": "总大小"
+	},
+	"app.settings.storage.total-description": {
+		"message": "总大小包含符号链接与 Junction 引用的大小"
+	},
+	"app.settings.storage.instance-data": {
+		"message": "实例数据"
+	},
+	"app.settings.storage.cache-data": {
+		"message": "缓存数据"
+	},
+	"app.settings.storage.meta-data": {
+		"message": "Meta 数据"
+	},
+	"app.settings.storage.database": {
+		"message": "数据库"
+	},
+	"app.settings.storage.other": {
+		"message": "其他"
+	},
+	"app.settings.storage.instance": {
+		"message": "实例"
+	},
+	"app.settings.storage.mods": {
+		"message": "模组"
+	},
+	"app.settings.storage.replay": {
+		"message": "回放"
+	},
+	"app.settings.storage.resourcepacks": {
+		"message": "资源包"
+	},
+	"app.settings.storage.saves": {
+		"message": "存档"
+	},
+	"app.settings.storage.world": {
+		"message": "世界"
+	},
+	"app.settings.storage.schematics": {
+		"message": "投影"
+	},
+	"app.settings.storage.screenshots": {
+		"message": "截图"
+	},
+	"app.settings.storage.shaderpacks": {
+		"message": "光影包"
+	},
+	"app.settings.storage.minimap": {
+		"message": "小地图"
+	},
+	"app.settings.storage.distant-horizons": {
+		"message": "虚拟视距缓存"
+	},
+	"app.settings.storage.db-file": {
+		"message": "数据库文件"
+	},
+	"app.settings.storage.db-backup": {
+		"message": "数据库备份"
+	},
+	"app.settings.storage.item-count": {
+		"message": "{count} 个"
+	},
+	"app.settings.storage.instance-count": {
+		"message": "{count} 个实例"
+	},
+	"app.settings.storage.actual-size-tooltip": {
+		"message": "实际大小：{size}"
+	},
+	"app.settings.storage.symlink-size-tooltip": {
+		"message": "符号链接或 Junction 引用的大小：{size}"
+	},
+	"app.settings.storage.open-action": {
+		"message": "在启动器中打开或打开位置"
+	},
+	"app.settings.storage.expand-action": {
+		"message": "展开"
+	},
+	"app.settings.storage.collapse-action": {
+		"message": "收起"
+	},
+	"app.settings.storage.symlink-label": {
+		"message": "符号链接"
+	},
+	"app.settings.storage.update": {
+		"message": "更新"
+	},
+	"app.settings.storage.updating": {
+		"message": "更新中…"
+	},
+	"app.settings.storage.last-updated": {
+		"message": "上次更新：{time}"
+	},
+	"app.settings.storage.scanning": {
+		"message": "正在扫描存储…"
+	},
+	"app.settings.tabs.storage": {
+		"message": "存储"
 	}
 }
