@@ -41,30 +41,42 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.8.6',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Added a Storage page with visual disk-usage breakdowns, instance folder details, and symlink-aware reporting.',
+					'zh-CN': '新增存储页面，提供磁盘占用可视化、实例文件夹明细和符号链接占用说明。',
+				},
+				{
+					'en-US':
+						'Added Tianpao mirror routes for CurseForge CDN files, with official-source fallback when needed.',
+					'zh-CN': '为 CurseForge CDN 文件新增 Tianpao 镜像线路，并在需要时回退到官方源。',
+				},
+			],
 			changed: [
 				{
 					'en-US':
-						'Redesigned the content download flow with a unified install cart, dependency preview, and duplicate protection across Modrinth and CurseForge.',
+						'Redesigned content downloads with a unified install cart, dependency preview, and duplicate protection across Modrinth and CurseForge.',
 					'zh-CN':
-						'重设计内容下载流程，统一安装购物车与前置预览，并增加 Modrinth 和 CurseForge 跨来源重复安装防护。',
+						'重设计内容下载流程，统一安装购物车、前置预览和 Modrinth 与 CurseForge 跨来源重复安装防护。',
+				},
+				{
+					'en-US':
+						'Minecraft files now download in parallel, reducing wait times during instance creation and content installation.',
+					'zh-CN': 'Minecraft 文件现在支持并行下载，缩短创建实例和安装内容时的等待时间。',
+				},
+				{
+					'en-US':
+						'The right sidebar now remembers its expanded or collapsed state after the launcher restarts.',
+					'zh-CN': '右侧边栏现在会记住展开或收起状态，重启启动器后仍会保持。',
 				},
 			],
 			fixed: [
 				{
 					'en-US':
-						'Fixed the issue where JVM parameters would not automatically fall back when incompatible; JVM parameters will now automatically adjust based on the actual Java environment.',
+						'Fixed incompatible JVM garbage-collector arguments by verifying them against the installed Java runtime and falling back automatically.',
 					'zh-CN':
-						'修复JVM参数不适配时，不会自动回落的问题，现在JVM参数会根据java实际情况智能逐级自动回落。',
-				},
-			],
-			added: [
-				{
-					'en-US': 'Added a storage page with visual representation of storage space usage.',
-					'zh-CN': '新增存储页面，储存空间占用可视化。',
-				},
-				{
-					'en-US': 'Added tianpao mirror for curseforg.',
-					'zh-CN': '为curseforg 添加tianpao镜像。',
+						'修复 JVM 垃圾回收器参数不兼容的问题，现在会根据实际 Java 环境校验参数并自动回退。',
 				},
 			],
 		},
