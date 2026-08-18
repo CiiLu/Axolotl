@@ -48,6 +48,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复 CurseForge 和 Modrinth 安装会因加载器元数据缺失或过时而拒绝有效旧版模组的问题。',
 				},
+				{
+					'en-US':
+						'Fixed modpack downloads randomly failing when a content refresh removed files that were still being installed.',
+					'zh-CN':
+						'修复下载整合包时，内容刷新误删仍在安装的文件并导致随机下载失败的问题。',
+				},
 			],
 		},
 	},

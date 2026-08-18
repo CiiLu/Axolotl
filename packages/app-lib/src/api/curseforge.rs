@@ -7708,6 +7708,8 @@ async fn download_installed_file(
     if let Some(download_metrics) = download_metrics {
         download_metrics.record(&result);
     }
+    // Transfers remain concurrent; only publishing into an instance is serialized.
+    let _instance_lock = state.lock_instance_content(instance_id).await;
     let previous_path =
         crate::state::materialize_project_download(download_path, &full_path)
             .await?;
