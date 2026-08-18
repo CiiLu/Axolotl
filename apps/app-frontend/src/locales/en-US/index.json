@@ -737,6 +737,9 @@
 	"app.content-install.preview.install": {
 		"message": "Install"
 	},
+	"app.content-install.preview.install-resolved": {
+		"message": "Install resolved content"
+	},
 	"app.content-install.preview.only-checked": {
 		"message": "Only checked dependencies will be installed."
 	},
@@ -746,11 +749,20 @@
 	"app.content-install.preview.select-all": {
 		"message": "Select all"
 	},
+	"app.content-install.preview.sha1-verified-modrinth-fallback": {
+		"message": "Modrinth fallback verified by SHA-1"
+	},
 	"app.content-install.preview.skip.already-installed": {
 		"message": "Already installed"
 	},
 	"app.content-install.preview.skip.conflicting-dependency": {
 		"message": "Conflicting dependency version"
+	},
+	"app.content-install.preview.skip.dependency-cycle": {
+		"message": "Dependency cycle detected"
+	},
+	"app.content-install.preview.skip.dependency-depth-exceeded": {
+		"message": "Dependency depth limit reached"
 	},
 	"app.content-install.preview.skip.duplicate-project": {
 		"message": "Already included"
@@ -766,6 +778,9 @@
 	},
 	"app.content-install.preview.skip.missing-version": {
 		"message": "Referenced version was not found"
+	},
+	"app.content-install.preview.skip.modrinth-lookup-failed": {
+		"message": "Could not verify the Modrinth fallback"
 	},
 	"app.content-install.preview.skip.no-compatible-version": {
 		"message": "No compatible version found"
@@ -784,6 +799,9 @@
 	},
 	"app.content-install.preview.skipped-header": {
 		"message": "Skipped"
+	},
+	"app.content-install.preview.unavailable-curseforge-project": {
+		"message": "Unavailable CurseForge project"
 	},
 	"app.content-install.preview.version-mismatch": {
 		"message": "Version may not match this instance"
@@ -1195,6 +1213,9 @@
 	},
 	"app.downloads.source.mcim": {
 		"message": "MCIM"
+	},
+	"app.downloads.source.tianpao": {
+		"message": "Tian pao"
 	},
 	"app.downloads.source.official": {
 		"message": "Official"
@@ -2529,7 +2550,7 @@
 		"message": "Arguments"
 	},
 	"app.java-arguments.presets.auth-group-title": {
-		"message": "Mojang Auth service proxy"
+		"message": "Authentication service"
 	},
 	"app.java-arguments.presets.auth-mirror.description": {
 		"message": "HTTP forwarding for the Mojang authentication servers hosted by Fallen-Breath."
@@ -2559,7 +2580,7 @@
 		"message": "Resolved → {strategy}"
 	},
 	"app.java-arguments.presets.gc.auto.title": {
-		"message": "Auto GC"
+		"message": "Auto"
 	},
 	"app.java-arguments.presets.gc.g1gc-mojang.description": {
 		"message": "G1GC tuning used by the official Minecraft launcher"
@@ -4493,6 +4514,12 @@
 	"app.multiplayer.download-terracotta": {
 		"message": "Download Terracotta"
 	},
+	"app.multiplayer.terracotta.update": {
+		"message": "Update Terracotta"
+	},
+	"app.multiplayer.terracotta.update-available": {
+		"message": "Terracotta {version} is ready to install."
+	},
 	"app.multiplayer.error.install": {
 		"message": "Installation error"
 	},
@@ -5528,6 +5555,12 @@
 	"app.settings.resources.minecraft-metadata-source-description": {
 		"message": "Version manifests and metadata for Minecraft and supported mod loaders."
 	},
+	"app.settings.resources.modrinth-mirror": {
+		"message": "Modrinth"
+	},
+	"app.settings.resources.modrinth-mirror-description": {
+		"message": "Modrinth file downloads."
+	},
 	"app.settings.resources.missing-content-auto-import": {
 		"message": "Automatically import missing modpack files"
 	},
@@ -5572,6 +5605,9 @@
 	},
 	"app.settings.resources.source.mcim": {
 		"message": "Prefer MCIM"
+	},
+	"app.settings.resources.source.tianpao": {
+		"message": "Prefer Tianpao"
 	},
 	"app.settings.resources.source.mojang-mirror-preferred": {
 		"message": "Prefer Fallen-Proxy"
@@ -6715,18 +6751,6 @@
 	},
 	"instance.settings.tabs.general.icon": {
 		"message": "Icon"
-	},
-	"instance.settings.tabs.general.library-groups": {
-		"message": "Library groups"
-	},
-	"instance.settings.tabs.general.library-groups.create": {
-		"message": "Create new group"
-	},
-	"instance.settings.tabs.general.library-groups.description": {
-		"message": "Library groups allow you to organize your instances into different sections in your library."
-	},
-	"instance.settings.tabs.general.library-groups.enter-name": {
-		"message": "Enter group name"
 	},
 	"instance.settings.tabs.general.name": {
 		"message": "Name"

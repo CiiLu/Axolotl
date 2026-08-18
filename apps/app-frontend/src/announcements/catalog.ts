@@ -44,6 +44,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Added built-in Terracotta update checks and one-click updates when multiplayer is not running.',
+					'zh-CN': '新增陶瓦联机内置更新检查，并可在服务停止时一键更新。',
+				},
+				{
+					'en-US':
 						'Added CurseForge map browsing and installation into existing instances, including recovery for maps that require a manual ZIP download.',
 					'zh-CN':
 						'新增 CurseForge 地图浏览与安装功能，可直接安装到已有实例，并支持需要手动下载 ZIP 的地图恢复流程。',
@@ -61,9 +66,8 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			changed: [
 				{
 					'en-US':
-						'Improved Content tab loading for large modpacks by using indexed local content until an explicit refresh.',
-					'zh-CN':
-						'优化大型整合包的内容页加载，常规打开会优先使用已索引的本地内容，完整扫描仅在手动刷新时进行。',
+						'Optimized the content page loading for large integration packs, opening now will perform lazy loading updates.',
+					'zh-CN': '优化大型整合包的内容页加载，打开现在会进行懒加载更新。',
 				},
 				{
 					'en-US':
@@ -90,6 +94,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'The launcher now avoids localizing physical mod filenames',
 					'zh-CN': '启动器现在不会对模组文件名进行本地化',
+				},
+				{
+					'en-US':
+						'Improved mod prerequisite resolution to target the selected Minecraft and loader versions, resolve nested requirements, and clearly report anything that cannot be resolved.',
+					'zh-CN':
+						'优化模组前置解析：现在会严格匹配所选 Minecraft 与加载器版本，解析嵌套前置，并清晰列出无法解析的项目。',
 				},
 			],
 			removed: [
@@ -138,6 +148,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed launcher updates installing to the previous directory after the launcher was moved.',
 					'zh-CN': '修复移动启动器目录后自动更新仍安装到旧目录的问题。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge installs into existing instances not passing the instance target to dependency resolution, which could select an incompatible prerequisite version.',
+					'zh-CN':
+						'修复向已有实例安装 CurseForge 内容时未将实例目标传给前置解析，可能选中不兼容前置版本的问题。',
+				},
+				{
+					'en-US':
+						'Fixed CurseForge prerequisite previews showing internal project IDs instead of project names for optional and unavailable prerequisites.',
+					'zh-CN':
+						'修复 CurseForge 前置预览会为可选或不可用前置显示内部项目 ID，而非项目名称的问题。',
 				},
 			],
 		},

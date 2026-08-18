@@ -11,11 +11,12 @@ mod projects;
 mod run;
 
 pub use self::content::{
-    apply_content_update_plan, get_content_items, get_content_snapshot,
-    get_dependencies_as_content_items, get_install_candidates,
-    get_installed_project_ids, get_linked_modpack_content,
-    get_linked_modpack_info, get_projects, list_content_sets,
-    plan_content_updates, refresh_content, sync_content_files,
+    apply_content_update_plan, get_content_items, get_content_items_by_paths,
+    get_content_snapshot, get_dependencies_as_content_items,
+    get_install_candidates, get_installed_project_ids,
+    get_linked_modpack_content, get_linked_modpack_info, get_projects,
+    list_content_sets, plan_content_updates, refresh_content,
+    sync_content_files,
 };
 pub use self::export_mrpack::{
     create_mrpack_json, export_mrpack, get_pack_export_candidates,

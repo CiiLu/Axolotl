@@ -32,6 +32,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_get_install_candidates,
             instance_content,
             instance_get_content_items,
+            instance_get_content_items_by_paths,
             instance_get_content_snapshot,
             instance_refresh_content,
             instance_plan_content_updates,
@@ -521,6 +522,20 @@ pub async fn instance_get_content_items(
         theseus::instance::get_content_items(instance_id, cache_behaviour)
             .await?,
     )
+}
+
+#[tauri::command]
+pub async fn instance_get_content_items_by_paths(
+    instance_id: &str,
+    paths: Vec<String>,
+    cache_behaviour: Option<CacheBehaviour>,
+) -> Result<Vec<ContentItem>> {
+    Ok(theseus::instance::get_content_items_by_paths(
+        instance_id,
+        paths,
+        cache_behaviour,
+    )
+    .await?)
 }
 
 #[tauri::command]

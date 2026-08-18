@@ -1180,7 +1180,9 @@ async fn backfill_dependency_edges_from_metadata(
                 content_set_id: content_set.id.clone(),
                 parent_entry_id: entry.id.clone(),
                 child_entry_id: child_entry.id,
-                provider: ContentProvider::Modrinth,
+                evidence_provider: ContentProvider::Modrinth,
+                parent_provider: ContentProvider::Modrinth,
+                child_provider: ContentProvider::Modrinth,
                 dependency_kind: crate::state::instances::ContentDependencyKind::Required,
                 parent_project_id: project_id.to_string(),
                 parent_release_id: version_id.to_string(),
@@ -1332,7 +1334,9 @@ async fn backfill_curseforge_dependency_edges(
                     content_set_id: content_set.id.clone(),
                     parent_entry_id: entry.id.clone(),
                     child_entry_id: child_entry.id,
-                    provider: ContentProvider::CurseForge,
+                    evidence_provider: ContentProvider::CurseForge,
+                    parent_provider: ContentProvider::CurseForge,
+                    child_provider: ContentProvider::CurseForge,
                     dependency_kind: if dependency.relation_type
                         == crate::api::curseforge::DEPENDENCY_RELATION_INCLUDE
                     {
@@ -1426,7 +1430,9 @@ async fn backfill_local_dependency_edges(
                 content_set_id: content_set.id.clone(),
                 parent_entry_id: entry.id.clone(),
                 child_entry_id: (*child_entry_id).to_string(),
-                provider: ContentProvider::Local,
+                evidence_provider: ContentProvider::Local,
+                parent_provider: ContentProvider::Local,
+                child_provider: ContentProvider::Local,
                 dependency_kind: crate::state::instances::ContentDependencyKind::Required,
                 parent_project_id: format!("local:{}", metadata.mod_id),
                 parent_release_id: metadata.version.clone().unwrap_or_default(),
@@ -1458,7 +1464,7 @@ async fn attach_dependency_info(
             .entry(edge.child_entry_id.clone())
             .or_default()
             .push(ContentDependencyRef {
-                provider: edge.provider,
+                provider: edge.parent_provider,
                 project_id: edge.parent_project_id.clone(),
                 release_id: edge.parent_release_id.clone(),
             });
@@ -1466,7 +1472,7 @@ async fn attach_dependency_info(
             .entry(edge.parent_entry_id.clone())
             .or_default()
             .push(ContentDependencyRef {
-                provider: edge.provider,
+                provider: edge.child_provider,
                 project_id: edge.child_project_id.clone(),
                 release_id: edge.child_release_id.clone(),
             });

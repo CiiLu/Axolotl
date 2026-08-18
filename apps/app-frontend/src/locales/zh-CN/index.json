@@ -6074,6 +6074,12 @@
 	"app.multiplayer.download-terracotta": {
 		"message": "下载陶瓦联机"
 	},
+	"app.multiplayer.terracotta.update": {
+		"message": "更新陶瓦联机"
+	},
+	"app.multiplayer.terracotta.update-available": {
+		"message": "陶瓦联机 {version} 已可安装。"
+	},
 	"app.multiplayer.status.downloading": {
 		"message": "下载中..."
 	},
@@ -7127,6 +7133,9 @@
 	"app.content-install.preview.skipped-header": {
 		"message": "跳过"
 	},
+	"app.content-install.preview.unavailable-curseforge-project": {
+		"message": "CurseForge 项目不可用"
+	},
 	"app.content-install.preview.skip.unsupported-project-type": {
 		"message": "不支持的项目类型"
 	},
@@ -7160,8 +7169,20 @@
 	"app.content-install.preview.skip.conflicting-dependency": {
 		"message": "前置版本冲突"
 	},
+	"app.content-install.preview.skip.dependency-cycle": {
+		"message": "检测到前置循环依赖"
+	},
+	"app.content-install.preview.skip.dependency-depth-exceeded": {
+		"message": "已达到前置解析深度上限"
+	},
 	"app.content-install.preview.skip.already-installed": {
 		"message": "已安装"
+	},
+	"app.content-install.preview.skip.modrinth-lookup-failed": {
+		"message": "无法验证 Modrinth 兜底版本"
+	},
+	"app.content-install.preview.sha1-verified-modrinth-fallback": {
+		"message": "已通过 SHA-1 验证的 Modrinth 兜底版本"
 	},
 	"app.content-install.preview.select-all": {
 		"message": "全选"
@@ -7174,6 +7195,9 @@
 	},
 	"app.content-install.preview.install": {
 		"message": "安装"
+	},
+	"app.content-install.preview.install-resolved": {
+		"message": "安装已解析内容"
 	},
 	"app.content-install.preview.header": {
 		"message": "确认安装"
@@ -7228,5 +7252,20 @@
 	},
 	"app.appearance-settings.auto-install-dependencies.description": {
 		"message": "安装内容时自动下载所需前置。每次安装前仍可在确认对话框中调整选择。"
+	},
+	"app.settings.resources.source.tianpao": {
+		"message": "优先 Tianpao"
+	},
+	"app.settings.resources.modrinth-mirror-description": {
+		"message": "Modrinth 文件下载。"
+	},
+	"app.settings.resources.modrinth-mirror": {
+		"message": "Modrinth"
+	},
+	"app.downloads.source.tianpao": {
+		"message": "Tianpao 镜像"
+	},
+	"app.content-install.preview.version-mismatch": {
+		"message": "下载的版本可能与当前版本不兼容。"
 	}
 }

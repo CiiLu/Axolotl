@@ -518,6 +518,25 @@ async fn add_resolved_content_with_progress(
     Ok(path)
 }
 
+/// Materialize one already-resolved Modrinth dependency without also
+/// installing the plan's primary. CurseForge uses this for a SHA-1 verified
+/// cross-source fallback whose primary is already installed from CurseForge.
+pub(crate) async fn install_resolved_dependency(
+    instance_id: &str,
+    content: &ResolvedContent,
+    state: &State,
+) -> crate::Result<String> {
+    add_resolved_content_with_progress(
+        instance_id,
+        content,
+        DownloadReason::Dependency,
+        true,
+        None,
+        state,
+    )
+    .await
+}
+
 pub(crate) async fn persist_resolved_plan_dependency_edges(
     instance_id: &str,
     paths: &[String],
@@ -580,7 +599,9 @@ pub(crate) async fn persist_resolved_plan_dependency_edges(
                 content_set_id: scope.content_set_id.clone(),
                 parent_entry_id: parent_entry.id,
                 child_entry_id: child_entry.id,
-                provider: crate::state::ContentProvider::Modrinth,
+                evidence_provider: crate::state::ContentProvider::Modrinth,
+                parent_provider: crate::state::ContentProvider::Modrinth,
+                child_provider: crate::state::ContentProvider::Modrinth,
                 dependency_kind:
                     crate::state::instances::ContentDependencyKind::Required,
                 parent_project_id: parent.project_id.clone(),
@@ -648,7 +669,9 @@ pub(crate) async fn persist_resolved_plan_dependency_edges(
                 content_set_id: scope.content_set_id.clone(),
                 parent_entry_id: parent_entry.id,
                 child_entry_id: child_entry.id,
-                provider: crate::state::ContentProvider::Modrinth,
+                evidence_provider: crate::state::ContentProvider::Modrinth,
+                parent_provider: crate::state::ContentProvider::Modrinth,
+                child_provider: crate::state::ContentProvider::Modrinth,
                 dependency_kind:
                     crate::state::instances::ContentDependencyKind::Required,
                 parent_project_id: parent.project_id.clone(),
@@ -1066,6 +1089,26 @@ pub(crate) async fn add_downloaded_project_version(
         version_id,
     } = downloaded;
     let scope = resolve_content_scope(instance_id, None, state).await?;
+    if project_type == ProjectType::Mod {
+        let content_set =
+            content_rows::get_content_set(&scope.content_set_id, &state.pool)
+                .await?
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError(format!(
+                        "Unknown content set {}",
+                        scope.content_set_id
+                    ))
+                })?;
+        let bytes = bytes::Bytes::from(tokio::fs::read(&path).await?);
+        crate::mod_metadata::validate_mod_metadata_target(
+            &bytes,
+            Some(&content_set.game_version),
+            Some(content_set.loader.as_str()),
+        )
+        .map_err(|message| {
+            crate::Error::from(crate::ErrorKind::InputError(message))
+        })?;
+    }
     let localized_candidate = if project_type == ProjectType::Mod {
         None
     } else {

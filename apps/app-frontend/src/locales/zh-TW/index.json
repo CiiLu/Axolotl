@@ -1792,6 +1792,8 @@
 	},
 	"app.instance.worlds.search-worlds-placeholder": {
 		"message": "搜尋 {count} 個世界..."
+	"app.settings.resources.curseforge-mirror-description": {
+		"message": "CurseForge API 請求與檔案下載。"
 	},
 	"app.instances.add-content": {
 		"message": "新增內容"
@@ -1807,6 +1809,11 @@
 	},
 	"app.instances.batch-edit-groups.enter-group-name": {
 		"message": "分組名稱"
+	"app.settings.resources.source.tianpao": {
+		"message": "Tianpao 鏡像"
+	},
+	"app.settings.resources.maximum-downloads": {
+		"message": "最大同時下載數"
 	},
 	"app.instances.batch-edit-groups.header": {
 		"message": "編輯分組"
@@ -3268,6 +3275,14 @@
 	},
 	"app.onboarding.language.title": {
 		"message": "說你的語言"
+	"app.settings.resources.modrinth-mirror": {
+		"message": "Modrinth"
+	},
+	"app.settings.resources.modrinth-mirror-description": {
+		"message": "Modrinth 檔案下載。"
+	},
+	"app.settings.resources.concurrency.manual": {
+		"message": "手動"
 	},
 	"app.onboarding.library-page.description": {
 		"message": "按整合包、伺服器或自訂配置篩選，再打開任意實例管理。"
@@ -3340,6 +3355,11 @@
 	},
 	"app.project.install-button.already-installed": {
 		"message": "這個專案已安裝"
+	"app.downloads.source.tianpao": {
+		"message": "Tianpao 鏡像"
+	},
+	"app.downloads.source.alternate": {
+		"message": "備用來源"
 	},
 	"app.project.install-button.switch-version": {
 		"message": "切換版本"
