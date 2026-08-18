@@ -59,6 +59,14 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			added: [
 				{
+					'en-US': 'Minecraft asset downloads now run in highly concurrent batches over a shared HTTP/2 connection, with automatic retries and per-file fallback for faster, more reliable installations.',
+					'zh-CN': 'Minecraft 资源文件现在会通过共享 HTTP/2 连接进行高并发批量下载，单个文件失败自动重试并回退到常规下载，安装更快、更稳定。',
+				},
+				{
+					'en-US': 'Installing a modpack now downloads the Minecraft core in parallel with content, with independent progress shown on the download page.',
+					'zh-CN': '安装整合包时，Minecraft 核心文件现在与内容安装并行下载，并在下载页面显示独立进度。',
+				},
+				{
 					'en-US': 'Added a storage page with visual representation of storage space usage.',
 					'zh-CN': '新增存储页面，储存空间占用可视化。',
 				},
