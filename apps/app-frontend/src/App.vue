@@ -146,6 +146,7 @@ import {
 	savePrivacySettings,
 	set as setSettings,
 } from '@/helpers/settings.ts'
+import { getSidebarExpanded, setSidebarExpanded } from '@/helpers/sidebar-state.ts'
 import { get_opening_command, initialize_state, set_discord_activity } from '@/helpers/state'
 import {
 	areUpdatesEnabled,
@@ -222,10 +223,13 @@ function getPageTransitionKey(route: RouteLocationNormalizedLoaded) {
 }
 const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
-const sidebarToggled = ref(true)
-const unsubscribeSidebarToggle = themeStore.$subscribe(() => {
-	sidebarToggled.value = !themeStore.toggleSidebar
-})
+const sidebarToggled = ref(getSidebarExpanded())
+
+function toggleSidebar() {
+	sidebarToggled.value = !sidebarToggled.value
+	setSidebarExpanded(sidebarToggled.value)
+}
+
 const forceSidebar = computed(
 	() => route.path.startsWith('/browse') || route.path.startsWith('/project'),
 )
@@ -424,7 +428,6 @@ onMounted(async () => {
 onUnmounted(async () => {
 	document.querySelector('body').removeEventListener('click', handleClick)
 	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
-	unsubscribeSidebarToggle()
 	clearDelayedUpdatePopup()
 	await unlistenUpdateDownload?.()
 	downloadManager.dispose()
@@ -3212,7 +3215,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 						: formatMessage(messages.expandSidebar)
 				"
 				type="button"
-				@click="sidebarToggled = !sidebarToggled"
+				@click="toggleSidebar"
 			>
 				<RightArrowIcon
 					class="w-2.5 h-2.5 -translate-x-[1px] transition-transform duration-300"
