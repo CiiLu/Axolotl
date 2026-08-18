@@ -529,8 +529,9 @@ function formatDateTime(date: Date) {
 
 .storage-actions {
 	display: flex;
-	align-items: center;
-	gap: 0.75rem;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.375rem;
 	margin-top: 0.5rem;
 }
 
