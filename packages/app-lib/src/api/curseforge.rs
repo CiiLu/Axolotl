@@ -49,6 +49,8 @@ const DEPENDENCY_RELATION_INCOMPATIBLE: u32 = 5;
 pub(crate) const DEPENDENCY_RELATION_INCLUDE: u32 = 6;
 pub(crate) const FABRIC_API_CURSEFORGE_PROJECT_ID: u32 = 306612;
 pub(crate) const QUILTED_FABRIC_API_CURSEFORGE_PROJECT_ID: u32 = 634179;
+const CURSEFORGE_LOADER_FORGE: u32 = 1;
+const CURSEFORGE_LOADER_FABRIC: u32 = 4;
 const CURSEFORGE_LOADER_QUILT: u32 = 5;
 const MAX_DEPENDENCY_DEPTH: usize = 32;
 const DEPENDENCY_PLAN_TTL: Duration = Duration::from_secs(10 * 60);
@@ -1427,6 +1429,9 @@ async fn install_file_with_metrics(
     download_metrics: Option<&CurseForgeDownloadMetrics>,
 ) -> crate::Result<CurseForgeInstallResult> {
     let state = State::get().await?;
+    let project_type = managed_project_type(&request.project_type)?;
+    let primary_file = get_file(request.project_id, request.file_id).await?;
+    validate_primary_file_target(&primary_file, project_type, &request)?;
     if let Some(plan) =
         load_dependency_resolution_plan(&request, &state).await?
     {
@@ -1442,7 +1447,6 @@ async fn install_file_with_metrics(
         }
         return result;
     }
-    let project_type = managed_project_type(&request.project_type)?;
     let mut result = CurseForgeInstallResult::default();
     let mut visited = HashSet::new();
     let mut projects = HashMap::<u32, CurseForgeProject>::new();
@@ -2578,6 +2582,7 @@ pub async fn preview_install_file(
     let state = State::get().await?;
     let primary_type = managed_project_type(&request.project_type)?;
     let primary_file = get_file(request.project_id, request.file_id).await?;
+    validate_primary_file_target(&primary_file, primary_type, &request)?;
     let primary_project = get_project(request.project_id).await?;
     let primary_ref =
         curseforge_content_ref(request.project_id, request.file_id)?;
@@ -7062,6 +7067,31 @@ fn file_matches_dependency_target(
     game_version_matches && mod_loader_matches
 }
 
+fn validate_primary_file_target(
+    file: &CurseForgeFile,
+    project_type: ProjectType,
+    request: &CurseForgeInstallRequest,
+) -> crate::Result<()> {
+    let Some(game_version) = request.game_version.as_deref() else {
+        return Ok(());
+    };
+    let mod_loader_type = (project_type == ProjectType::Mod)
+        .then_some(request.mod_loader_type)
+        .flatten();
+    if file_matches_dependency_target(file, Some(game_version), mod_loader_type)
+    {
+        return Ok(());
+    }
+    let loader = mod_loader_type
+        .map(mod_loader_to_slug)
+        .unwrap_or("any loader");
+    Err(ErrorKind::InputError(format!(
+        "CurseForge file {} is not compatible with Minecraft {} and {}",
+        file.id, game_version, loader,
+    ))
+    .into())
+}
+
 fn managed_project_type(value: &str) -> crate::Result<ProjectType> {
     match value {
         "mod" => Ok(ProjectType::Mod),
@@ -8351,6 +8381,44 @@ mod tests {
             Some("1.21.1"),
             Some(6),
         ));
+    }
+
+    #[test]
+    fn primary_file_validation_rejects_incompatible_game_or_loader() {
+        let mut file =
+            stage8_curseforge_file(1, 101, "target.jar", 0, Vec::new(), 0);
+        file.game_versions = vec!["26.1.2".to_string(), "Fabric".to_string()];
+        let mut request = CurseForgeInstallRequest {
+            instance_id: "instance".to_string(),
+            project_id: 1,
+            file_id: 101,
+            project_type: "mod".to_string(),
+            ownership_kind: Default::default(),
+            manual_operation_kind: Default::default(),
+            game_version: Some("1.21.1".to_string()),
+            mod_loader_type: Some(CURSEFORGE_LOADER_FABRIC),
+            world_name: None,
+            install_dependencies: true,
+            excluded_dependency_project_ids: Vec::new(),
+            dependency_plan_id: None,
+        };
+
+        assert!(
+            validate_primary_file_target(&file, ProjectType::Mod, &request)
+                .is_err()
+        );
+
+        file.game_versions = vec!["1.21.1".to_string(), "Forge".to_string()];
+        assert!(
+            validate_primary_file_target(&file, ProjectType::Mod, &request)
+                .is_err()
+        );
+
+        request.mod_loader_type = Some(CURSEFORGE_LOADER_FORGE);
+        assert!(
+            validate_primary_file_target(&file, ProjectType::Mod, &request)
+                .is_ok()
+        );
     }
 
     #[test]

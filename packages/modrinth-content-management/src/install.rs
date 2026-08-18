@@ -360,12 +360,42 @@ fn dependency_metadata_corrections(version: &Version) -> Vec<Dependency> {
 }
 
 fn select_newest_matching_version(
-    mut versions: Vec<Version>,
+    versions: Vec<Version>,
     content_type: ContentType,
     selected: &ResolutionPreferences,
     target: &ResolutionPreferences,
 ) -> Option<Version> {
-    versions.sort_by_key(|version| Reverse(version.date_published));
+    select_matching_version(
+        versions,
+        content_type,
+        selected,
+        target,
+        &[
+            ReleaseChannel::Release,
+            ReleaseChannel::Beta,
+            ReleaseChannel::Alpha,
+        ],
+    )
+}
+
+fn select_matching_version(
+    mut versions: Vec<Version>,
+    content_type: ContentType,
+    selected: &ResolutionPreferences,
+    target: &ResolutionPreferences,
+    channel_order: &[ReleaseChannel],
+) -> Option<Version> {
+    versions.sort_by_key(|version| {
+        (
+            channel_order
+                .iter()
+                .position(|channel| {
+                    *channel == release_channel(&version.version_type)
+                })
+                .unwrap_or(channel_order.len()),
+            Reverse(version.date_published),
+        )
+    });
     let merged = selected.merge(target);
 
     versions
@@ -377,6 +407,23 @@ fn select_newest_matching_version(
                 .find(|version| version_matches(version, content_type, target))
         })
         .cloned()
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum ReleaseChannel {
+    Release,
+    Beta,
+    Alpha,
+}
+
+fn release_channel(version_type: &str) -> ReleaseChannel {
+    if version_type.eq_ignore_ascii_case("beta") {
+        ReleaseChannel::Beta
+    } else if version_type.eq_ignore_ascii_case("alpha") {
+        ReleaseChannel::Alpha
+    } else {
+        ReleaseChannel::Release
+    }
 }
 
 trait MergePreferences {

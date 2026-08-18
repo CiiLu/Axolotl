@@ -173,6 +173,7 @@ import {
 	setAppUpdateActions,
 } from '@/providers/app-update.ts'
 import { createContentInstall, provideContentInstall } from '@/providers/content-install'
+import { createContentSelection, provideContentSelection } from '@/providers/content-selection'
 import { createDownloadManager, provideDownloadManager } from '@/providers/download-manager'
 import {
 	provideAppUpdateDownloadProgress,
@@ -246,6 +247,12 @@ provideNotificationManager(notificationManager)
 const { handleError, addNotification } = notificationManager
 const downloadManager = createDownloadManager(handleError)
 provideDownloadManager(downloadManager)
+const contentSelection = createContentSelection({
+	addNotification,
+	handleError,
+	downloadManager,
+})
+provideContentSelection(contentSelection)
 
 const popupNotificationManager = new AppPopupNotificationManager()
 providePopupNotificationManager(popupNotificationManager)
@@ -1253,6 +1260,7 @@ const {
 	setModpackAlreadyInstalledModal: setContentInstallModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway: handleContentInstallModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance: handleContentInstallModpackDuplicateGoToInstance,
+	handleModpackDuplicateCancel,
 	setCurseForgeManualDownloadsModal: setContentInstallCurseForgeManualDownloadsModal,
 	handleCurseForgeManualDownloadsImported: handleContentInstallCurseForgeManualDownloadsImported,
 	setIncompatibilityWarningModal: setContentIncompatibilityWarningModal,
@@ -2450,6 +2458,7 @@ onMounted(() => {
 	setContentIncompatibilityWarningModal(incompatibilityWarningModal.value)
 	setContentInstallModal(modInstallModal.value)
 	setContentInstallPreviewModal(contentInstallPreviewModal.value)
+	contentSelection.setPreviewModal(contentInstallPreviewModal.value)
 	setContentInstallModpackAlreadyInstalledModal(contentInstallModpackAlreadyInstalledModal.value)
 	setContentInstallCurseForgeManualDownloadsModal(
 		contentInstallCurseForgeManualDownloadsModal.value,
@@ -3270,6 +3279,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		ref="modpackAlreadyInstalledModal"
 		@create-anyway="handleModpackDuplicateCreateAnyway"
 		@go-to-instance="handleModpackDuplicateGoToInstance"
+		@cancel="handleModpackDuplicateCancel"
 	/>
 	<AddServerToInstanceModal
 		ref="addServerToInstanceModal"
@@ -3651,6 +3661,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	overflow: auto;
 	overflow-x: hidden;
 	scrollbar-gutter: stable;
+	padding-bottom: var(--floating-action-bar-clearance, 0px);
 }
 
 .app-contents::before {

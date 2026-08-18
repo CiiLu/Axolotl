@@ -71,6 +71,7 @@ export function setUpdateSource(source: UpdateSource) {
 export type BrowseContentSource = 'all' | 'modrinth' | 'curseforge'
 
 const BROWSE_CONTENT_SOURCE_STORAGE_KEY = 'axolotl-browse-content-source'
+const BROWSE_DEFAULT_INSTANCE_STORAGE_KEY = 'axolotl-browse-default-instance'
 
 export function getLastBrowseContentSource(): BrowseContentSource | null {
 	const value = localStorage.getItem(BROWSE_CONTENT_SOURCE_STORAGE_KEY)
@@ -79,6 +80,18 @@ export function getLastBrowseContentSource(): BrowseContentSource | null {
 
 export function setLastBrowseContentSource(source: BrowseContentSource) {
 	localStorage.setItem(BROWSE_CONTENT_SOURCE_STORAGE_KEY, source)
+}
+
+export function getBrowseDefaultInstanceId(): string | null {
+	return localStorage.getItem(BROWSE_DEFAULT_INSTANCE_STORAGE_KEY)
+}
+
+export function setBrowseDefaultInstanceId(instanceId: string | null) {
+	if (instanceId) {
+		localStorage.setItem(BROWSE_DEFAULT_INSTANCE_STORAGE_KEY, instanceId)
+	} else {
+		localStorage.removeItem(BROWSE_DEFAULT_INSTANCE_STORAGE_KEY)
+	}
 }
 
 export type AppSettings = {
