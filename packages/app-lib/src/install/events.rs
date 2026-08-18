@@ -1,7 +1,7 @@
 use super::model::{
     ActiveDownloadState, DownloadItemStatus, InstallContinuationState,
     InstallErrorContext, InstallJobEventKind, InstallJobSnapshot,
-    InstallJobState, InstallPauseReason, InstallParallelProgress,
+    InstallJobState, InstallParallelProgress, InstallPauseReason,
     InstallPhaseDetails, InstallPhaseId, InstallProgress, InstallRollbackState,
     MissingModpackContentState,
 };
@@ -209,8 +209,9 @@ impl InstallProgressReporter {
                 .unwrap_or((0, 0)),
         };
         let previous = &state.job.progress.parallel;
-        let phase_changed =
-            previous.as_ref().is_none_or(|parallel| parallel.phase != phase);
+        let phase_changed = previous
+            .as_ref()
+            .is_none_or(|parallel| parallel.phase != phase);
         let total_changed = previous
             .as_ref()
             .is_none_or(|parallel| parallel.total != total);
@@ -218,7 +219,8 @@ impl InstallProgressReporter {
             .as_ref()
             .map(|parallel| {
                 current.saturating_sub(parallel.current)
-                    >= (parallel.total / 200).max(CONTENT_PROGRESS_PERSIST_STEPS)
+                    >= (parallel.total / 200)
+                        .max(CONTENT_PROGRESS_PERSIST_STEPS)
             })
             .unwrap_or(true);
         state.job.progress.parallel = Some(InstallParallelProgress {

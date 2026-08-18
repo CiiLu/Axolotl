@@ -210,10 +210,10 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
     let (sender, mut connection) = h2::client::handshake(Box::pin(tls))
         .await
         .map_err(|error| {
-            crate::ErrorKind::NetworkError(format!(
-                "HTTP/2 handshake with {authority} failed: {error}"
-            ))
-        })?;
+        crate::ErrorKind::NetworkError(format!(
+            "HTTP/2 handshake with {authority} failed: {error}"
+        ))
+    })?;
 
     // Tune flow-control windows for high-stream multiplexing (e.g. hundreds
     // of concurrent asset downloads over one connection). With the default

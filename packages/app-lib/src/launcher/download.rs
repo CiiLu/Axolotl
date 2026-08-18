@@ -22,7 +22,8 @@ use daedalus::minecraft::{LibraryDownload, LoggingConfiguration, LoggingSide};
 use daedalus::{
     self as d,
     minecraft::{
-        AssetsIndex, Library, Version as GameVersion, VersionInfo as GameVersionInfo,
+        AssetsIndex, Library, Version as GameVersion,
+        VersionInfo as GameVersionInfo,
     },
     modded::LoaderVersion,
 };
@@ -1414,8 +1415,11 @@ pub async fn download_assets(
     let st = State::get().await?;
     let local_source = local_source.cloned();
     let num_futs = index.objects.len();
-    let per_file_fraction =
-        if num_futs > 0 { loading_amount / num_futs as f64 } else { 0.0 };
+    let per_file_fraction = if num_futs > 0 {
+        loading_amount / num_futs as f64
+    } else {
+        0.0
+    };
 
     // Partition assets: batch downloads (object missing), legacy-only copies
     // (object present, legacy missing), and per-file fallbacks (local reuse,
@@ -1427,9 +1431,10 @@ pub async fn download_assets(
     for (name, asset) in index.objects.iter() {
         let hash = &asset.hash;
         let resource_path = st.directories.object_dir(hash);
-        let legacy_resource_path = st.directories.legacy_assets_dir().join(
-            name.replace('/', &String::from(std::path::MAIN_SEPARATOR)),
-        );
+        let legacy_resource_path = st
+            .directories
+            .legacy_assets_dir()
+            .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR)));
         let should_fetch_object = !resource_path.exists() || force;
         let should_fetch_legacy =
             (with_legacy && !legacy_resource_path.exists()) || force;
@@ -1475,10 +1480,13 @@ pub async fn download_assets(
     if !batch_items.is_empty() {
         let source_mode = st.minecraft_file_source();
         let first_url = batch_items[0].url.clone();
-        let route =
-            resolve_download_routes_for(&first_url, ResourceClass::MinecraftAsset, source_mode)
-                .into_iter()
-                .next();
+        let route = resolve_download_routes_for(
+            &first_url,
+            ResourceClass::MinecraftAsset,
+            source_mode,
+        )
+        .into_iter()
+        .next();
         if let Some(route) = route {
             // Resolve each item's URL onto the chosen route (official or
             // mirror) so the batch reuses one connection to that authority.
@@ -1513,9 +1521,13 @@ pub async fn download_assets(
                     })
                 }
             };
-            let failed =
-                download_asset_batch_via_h2(&route, batch_items, ASSET_BATCH_CONCURRENCY, callback)
-                    .await;
+            let failed = download_asset_batch_via_h2(
+                &route,
+                batch_items,
+                ASSET_BATCH_CONCURRENCY,
+                callback,
+            )
+            .await;
             if !failed.is_empty() {
                 let failed_hashes = failed
                     .iter()
@@ -1534,9 +1546,13 @@ pub async fn download_assets(
                             size: asset.size as u64,
                             url,
                             resource_path: st.directories.object_dir(hash),
-                            legacy_resource_path: st.directories.legacy_assets_dir().join(
-                                name.replace('/', &String::from(std::path::MAIN_SEPARATOR)),
-                            ),
+                            legacy_resource_path: st
+                                .directories
+                                .legacy_assets_dir()
+                                .join(name.replace(
+                                    '/',
+                                    &String::from(std::path::MAIN_SEPARATOR),
+                                )),
                         });
                     }
                 }
@@ -1555,9 +1571,13 @@ pub async fn download_assets(
                     size: asset.size as u64,
                     url,
                     resource_path: st.directories.object_dir(hash),
-                    legacy_resource_path: st.directories.legacy_assets_dir().join(
-                        name.replace('/', &String::from(std::path::MAIN_SEPARATOR)),
-                    ),
+                    legacy_resource_path: st
+                        .directories
+                        .legacy_assets_dir()
+                        .join(name.replace(
+                            '/',
+                            &String::from(std::path::MAIN_SEPARATOR),
+                        )),
                 });
             }
         }
@@ -1567,9 +1587,10 @@ pub async fn download_assets(
     for (name, asset) in legacy_copies {
         let hash = &asset.hash;
         let resource_path = st.directories.object_dir(hash);
-        let legacy_resource_path = st.directories.legacy_assets_dir().join(
-            name.replace('/', &String::from(std::path::MAIN_SEPARATOR)),
-        );
+        let legacy_resource_path = st
+            .directories
+            .legacy_assets_dir()
+            .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR)));
         crate::util::fetch::copy(
             &resource_path,
             &legacy_resource_path,

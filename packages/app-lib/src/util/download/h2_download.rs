@@ -660,7 +660,8 @@ pub(crate) async fn download_asset_batch_via_h2<F>(
     on_completed: F,
 ) -> Vec<H2BatchAsset>
 where
-    F: FnMut(H2BatchAsset) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send
+    F: FnMut(H2BatchAsset) -> Pin<Box<dyn Future<Output = ()> + Send>>
+        + Send
         + 'static,
 {
     let Some(connection) = connect_authority(&route.url).await else {
@@ -679,16 +680,14 @@ where
                 let callback = callback.clone();
                 async move {
                     let Ok(uri) = item.url.parse::<Uri>() else {
-                        let error = crate::Error::from(
-                            crate::ErrorKind::InputError(format!(
-                                "invalid asset URL: {}",
-                                item.url
-                            )),
-                        );
+                        let error =
+                            crate::Error::from(crate::ErrorKind::InputError(
+                                format!("invalid asset URL: {}", item.url),
+                            ));
                         return (item, Err(error));
                     };
-                    let result = download_asset_item(&connection, &uri, &item)
-                        .await;
+                    let result =
+                        download_asset_item(&connection, &uri, &item).await;
                     if result.is_ok() {
                         let mut callback = callback.lock().await;
                         callback(item.clone()).await;
@@ -749,7 +748,8 @@ async fn download_asset_item(
         sha1: Some(item.sha1.clone()),
         ..Integrity::default()
     };
-    let mut hashers = fetch::IntegrityHashers::new_integrity_hashers(&integrity);
+    let mut hashers =
+        fetch::IntegrityHashers::new_integrity_hashers(&integrity);
     let part_path = fetch::suffixed_path(&item.destination, ".part");
     if let Some(parent) = part_path.parent() {
         crate::util::io::create_dir_all(parent).await?;
@@ -787,8 +787,7 @@ async fn download_asset_item(
         .into());
     }
     let computed = hashers.finish(downloaded);
-    if let Err(error) =
-        fetch::verify_computed_integrity(&integrity, &computed)
+    if let Err(error) = fetch::verify_computed_integrity(&integrity, &computed)
     {
         let _ = tokio::fs::remove_file(&part_path).await;
         return Err(error);
