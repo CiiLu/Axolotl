@@ -5433,7 +5433,7 @@ async fn download_to_path_inner(
                     record_authority_h2_failure(&authority);
                 }
                 tracing::debug!(
-                    url = %sanitize_url_for_log(&request.url),
+                    url = %sanitize_url_for_log(&h2_route.url),
                     source = h2_route.source.as_str(),
                     reason,
                     "Multiplexed download unavailable; using legacy path"

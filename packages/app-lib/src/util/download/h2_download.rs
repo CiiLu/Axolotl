@@ -191,13 +191,13 @@ fn request_headers(
         HeaderValue::from_str(&crate::launcher_user_agent())
             .unwrap_or_else(|_| HeaderValue::from_static("Axolotl Launcher")),
     );
-    let original_host = Url::parse(&request.url)
+    let route_host = Url::parse(&route.url)
         .ok()
         .and_then(|url| url.host_str().map(str::to_string));
     if let Some((name, value)) = &request.header
         && (route.allow_sensitive_headers || !fetch::is_sensitive_header(name))
         && (!name.eq_ignore_ascii_case("x-api-key")
-            || original_host.as_deref() == Some("api.curseforge.com"))
+            || route_host.as_deref() == Some("api.curseforge.com"))
     {
         if let Ok(name) = http::header::HeaderName::from_str(name) {
             if let Ok(value) = HeaderValue::from_str(value) {
