@@ -1792,6 +1792,7 @@
 	},
 	"app.instance.worlds.search-worlds-placeholder": {
 		"message": "搜尋 {count} 個世界..."
+	},
 	"app.settings.resources.curseforge-mirror-description": {
 		"message": "CurseForge API 請求與檔案下載。"
 	},
@@ -1809,6 +1810,7 @@
 	},
 	"app.instances.batch-edit-groups.enter-group-name": {
 		"message": "分組名稱"
+	},
 	"app.settings.resources.source.tianpao": {
 		"message": "Tianpao 鏡像"
 	},
@@ -3275,6 +3277,7 @@
 	},
 	"app.onboarding.language.title": {
 		"message": "說你的語言"
+	},
 	"app.settings.resources.modrinth-mirror": {
 		"message": "Modrinth"
 	},
@@ -3355,6 +3358,7 @@
 	},
 	"app.project.install-button.already-installed": {
 		"message": "這個專案已安裝"
+	},
 	"app.downloads.source.tianpao": {
 		"message": "Tianpao 鏡像"
 	},
