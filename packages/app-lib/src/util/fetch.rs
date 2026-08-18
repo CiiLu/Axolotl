@@ -1066,7 +1066,7 @@ fn route_host(route: &DownloadRoute) -> Option<String> {
         .and_then(|url| url.host_str().map(str::to_string))
 }
 
-fn is_official_modrinth_download_url(url: &str) -> bool {
+pub(crate) fn is_official_modrinth_download_url(url: &str) -> bool {
     Url::parse(url).is_ok_and(|url| {
         matches!(
             url.host_str(),
@@ -1468,7 +1468,7 @@ fn retry_after(response: &reqwest::Response) -> Option<time::Duration> {
     Some(time::Duration::from_secs(seconds.clamp(0, 60) as u64))
 }
 
-fn is_sensitive_header(name: &str) -> bool {
+pub(crate) fn is_sensitive_header(name: &str) -> bool {
     name.eq_ignore_ascii_case("authorization")
         || name.eq_ignore_ascii_case("proxy-authorization")
         || name.eq_ignore_ascii_case("cookie")
@@ -5375,9 +5375,11 @@ async fn download_to_path_inner(
     if request.allow_segmented_download
         && !part_resume_expected(&part_path).await
         && !request.url.starts_with("http://")
+        && let Some(h2_route) = routes.first().cloned()
     {
         match crate::util::download::h2_download::try_download_via_h2(
             &request,
+            &h2_route,
             destination,
             &part_path,
         )
@@ -5405,11 +5407,12 @@ async fn download_to_path_inner(
             crate::util::download::h2_download::H2DownloadOutcome::Fallback {
                 reason,
             } => {
-                if let Some(authority) = url_authority(&request.url) {
+                if let Some(authority) = url_authority(&h2_route.url) {
                     record_authority_h2_failure(&authority);
                 }
                 tracing::debug!(
                     url = %sanitize_url_for_log(&request.url),
+                    source = h2_route.source.as_str(),
                     reason,
                     "Multiplexed download unavailable; using legacy path"
                 );
