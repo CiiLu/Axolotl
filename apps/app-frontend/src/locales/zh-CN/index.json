@@ -978,7 +978,7 @@
 		"message": "无法登录 Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "要游玩此实例，请在下方使用 Microsoft 账号登录。如果没有 Minecraft 账号，可以在 Minecraft 官网购买游戏。"
+		"message": "要游玩此实例，请创建账户。如果没有 Minecraft 账号，可以在右侧使用离线账户登陆。"
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "登录 Minecraft"

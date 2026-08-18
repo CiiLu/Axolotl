@@ -1023,7 +1023,7 @@
 		"message": "無法登入 Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "要遊玩此實例，請在下方使用 Microsoft 帳號登入。如果沒有 Minecraft 帳號，可以在 Minecraft 官網購買遊戲。"
+		"message": "要遊玩此實例，請創建帳戶。如果沒有 Minecraft 帳號，可以在右侧使用離線帳戶登入。"
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "登入 Minecraft"
