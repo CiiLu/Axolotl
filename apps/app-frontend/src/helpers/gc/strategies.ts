@@ -55,24 +55,36 @@ function buildZgcArgs(javaMajorVersion: number | null): string {
 	return args.join(' ')
 }
 
-// Official G1GC — the only G1 preset; identified by a G1 tuning flag unique to
-// it so a bare `-XX:+UseG1GC` is not mislabelled as the full preset.
+// Detection only tags a preset when its *complete* flag set is present in the
+// pasted args — a partial or edited arg list is treated as the user's own raw
+// args, never auto-mislabeled as a preset.
+function tokensOf(argString: string): string[] {
+	return argString.split(/\s+/).filter(Boolean)
+}
+
+function hasFullArgSet(pastedArgs: string, presetArgString: string): boolean {
+	const inputSet = new Set(tokensOf(pastedArgs))
+	return tokensOf(presetArgString).every((token) => inputSet.has(token))
+}
+
 function detectG1gcMojang(args: string): boolean {
-	return args.includes('-XX:+UseG1GC') && args.includes('-XX:G1MixedGCCountTarget=4')
+	return hasFullArgSet(args, buildG1gcMojangArgs())
 }
 
-// PCL Shenandoah: no large pages.
+// PCL Shenandoah: complete adaptive set, and no large pages.
 function detectPclShenandoah(args: string): boolean {
-	return args.includes('-XX:+UseShenandoahGC') && !args.includes('-XX:+UseLargePages')
+	return (
+		hasFullArgSet(args, buildPclShenandoahArgs()) && !args.includes('-XX:+UseLargePages')
+	)
 }
 
-// Shenandoah with large pages.
+// Shenandoah with large pages (its full set already requires `-XX:+UseLargePages`).
 function detectShenandoah(args: string): boolean {
-	return args.includes('-XX:+UseShenandoahGC') && args.includes('-XX:+UseLargePages')
+	return hasFullArgSet(args, buildShenandoahArgs())
 }
 
 function detectZgc(args: string): boolean {
-	return args.includes('-XX:+UseZGC')
+	return hasFullArgSet(args, buildZgcArgs(null))
 }
 
 export const GC_STRATEGY_DEFINITIONS: Record<ResolvedGcStrategyId, GcStrategyDefinition> = {

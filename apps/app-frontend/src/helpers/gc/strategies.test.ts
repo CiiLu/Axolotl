@@ -104,6 +104,29 @@ test('a bare -XX:+UseG1GC is not treated as the full official preset', () => {
 	assert.equal(detectGcStrategy('-XX:+UseG1GC'), null)
 })
 
+test('a partial ZGC arg list is not auto-tagged', () => {
+	assert.equal(detectGcStrategy('-XX:+UseZGC'), null)
+})
+
+test('a partial Shenandoah arg list is not auto-tagged', () => {
+	assert.equal(detectGcStrategy('-XX:+UseShenandoahGC -XX:ShenandoahGCHeuristics=adaptive'), null)
+})
+
+test('ZGC is recognized if the complete base set is present regardless of order', () => {
+	const args = '-XX:-ZUncommit -XX:+AlwaysPreTouch -XX:+UseZGC'
+	assert.equal(detectGcStrategy(args), 'zgc')
+})
+
+test('ZGC with -XX:+ZGenerational on top of the base set is still ZGC', () => {
+	const args = GC_STRATEGY_DEFINITIONS.zgc.buildArgs(createContext({ javaMajorVersion: 21 }))
+	assert.equal(detectGcStrategy(args), 'zgc')
+})
+
+test('PCL complete set with large pages added is Shenandoah, not PCL', () => {
+	const args = GC_STRATEGY_DEFINITIONS.pcl.buildArgs() + ' -XX:+UseLargePages'
+	assert.equal(detectGcStrategy(args), 'shenandoah')
+})
+
 test('buildGcCandidateChain puts preferred first, dedupes, ends at minimal G1', () => {
 	const { ids, args } = buildGcCandidateChain(createContext(), 'zgc')
 	assert.deepEqual(ids, ['zgc', 'shenandoah', 'pcl', 'g1gc-mojang', 'minimal-g1'])
