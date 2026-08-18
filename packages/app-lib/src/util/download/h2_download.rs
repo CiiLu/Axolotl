@@ -9,7 +9,10 @@
 
 use super::h2_pool::SharedH2Connection;
 use crate::util::fetch;
-use crate::util::fetch::{DownloadRequest, DownloadResult, Integrity};
+use crate::util::fetch::{
+    DownloadRequest, DownloadResult, DownloadRoute, DownloadRouteSource,
+    Integrity,
+};
 use http::header::{ACCEPT_ENCODING, RANGE, USER_AGENT};
 use http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use std::path::Path;
@@ -17,6 +20,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use url::Url;
 
 const SEGMENTED_DOWNLOAD_THRESHOLD: u64 = 4 * 1024 * 1024;
 const MIN_SEGMENT_SIZE: u64 = 256 * 1024;
@@ -31,44 +35,37 @@ pub(crate) enum H2DownloadOutcome {
     Completed(DownloadResult),
     /// The multiplexed path cannot be used; the caller should fall back to
     /// the legacy path.
-    Fallback { reason: &'static str },
+    Fallback {
+        reason: &'static str,
+        integrity_failure: bool,
+    },
 }
 
 /// Attempts to download `request` to `destination` over a shared HTTP/2
 /// connection, multiplexing range streams for large files.
 pub(crate) async fn try_download_via_h2(
     request: &DownloadRequest,
+    route: &DownloadRoute,
     destination: &Path,
     part_path: &Path,
 ) -> H2DownloadOutcome {
-    let Some(connection) = connect_authority(&request.url).await else {
+    let Some(connection) = connect_authority(&route.url).await else {
         return H2DownloadOutcome::Fallback {
             reason: "no shared HTTP/2 connection",
+            integrity_failure: false,
         };
     };
-    let Ok(uri) = request.url.parse::<Uri>() else {
+    let Ok(uri) = route.url.parse::<Uri>() else {
         return H2DownloadOutcome::Fallback {
             reason: "unparsable URL",
+            integrity_failure: false,
         };
     };
 
     let integrity = request.integrity.clone();
     let expected_size = integrity.size;
 
-    fetch::record_install_download_started(
-        request,
-        &fetch::DownloadRoute {
-            url: request.url.clone(),
-            source: fetch::DownloadRouteSource::Official,
-            is_mirror: false,
-            allow_sensitive_headers: false,
-            supports_range: true,
-            proxy: fetch::ProxyPolicy::System,
-        },
-        0,
-        1,
-    )
-    .await;
+    fetch::record_install_download_started(request, route, 0, 1).await;
 
     // When the size is known (Modrinth metadata provides it) skip the probe
     // entirely: small files fetch the body directly, large files split into
@@ -77,7 +74,7 @@ pub(crate) async fn try_download_via_h2(
     let total_size = if let Some(size) = expected_size {
         size
     } else {
-        let mut probe_headers = request_headers(request);
+        let mut probe_headers = request_headers(request, route);
         probe_headers.insert(RANGE, HeaderValue::from_static("bytes=0-0"));
         probe_headers
             .insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
@@ -93,6 +90,7 @@ pub(crate) async fn try_download_via_h2(
                     );
                     return H2DownloadOutcome::Fallback {
                         reason: "probe failed",
+                        integrity_failure: false,
                     };
                 }
             };
@@ -108,16 +106,19 @@ pub(crate) async fn try_download_via_h2(
         let Some(total_size) = total_size else {
             return H2DownloadOutcome::Fallback {
                 reason: "unknown content size",
+                integrity_failure: false,
             };
         };
         if total_size == 0 {
             return H2DownloadOutcome::Fallback {
                 reason: "empty content",
+                integrity_failure: false,
             };
         }
         if status != StatusCode::PARTIAL_CONTENT {
             return H2DownloadOutcome::Fallback {
                 reason: "range requests unsupported",
+                integrity_failure: false,
             };
         }
         total_size
@@ -129,6 +130,7 @@ pub(crate) async fn try_download_via_h2(
             Arc::clone(&connection),
             &uri,
             request,
+            route,
             destination,
             part_path,
             &integrity,
@@ -140,6 +142,7 @@ pub(crate) async fn try_download_via_h2(
             &connection,
             &uri,
             request,
+            route,
             destination,
             part_path,
             &integrity,
@@ -157,6 +160,7 @@ pub(crate) async fn try_download_via_h2(
             );
             H2DownloadOutcome::Fallback {
                 reason: "multiplexed download failed",
+                integrity_failure: fetch::is_integrity_error(&error),
             }
         }
     }
@@ -177,21 +181,34 @@ async fn connect_authority(url: &str) -> Option<Arc<SharedH2Connection>> {
     }
 }
 
-fn request_headers(request: &DownloadRequest) -> HeaderMap {
+fn request_headers(
+    request: &DownloadRequest,
+    route: &DownloadRoute,
+) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(
         USER_AGENT,
         HeaderValue::from_str(&crate::launcher_user_agent())
             .unwrap_or_else(|_| HeaderValue::from_static("Axolotl Launcher")),
     );
-    if let Some((name, value)) = &request.header {
+    let route_host = Url::parse(&route.url)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_string));
+    if let Some((name, value)) = &request.header
+        && (route.allow_sensitive_headers || !fetch::is_sensitive_header(name))
+        && (!name.eq_ignore_ascii_case("x-api-key")
+            || route_host.as_deref() == Some("api.curseforge.com"))
+    {
         if let Ok(name) = http::header::HeaderName::from_str(name) {
             if let Ok(value) = HeaderValue::from_str(value) {
                 headers.insert(name, value);
             }
         }
     }
-    if let Some(download_meta) = &request.download_meta {
+    if route.source == DownloadRouteSource::Official
+        && fetch::is_official_modrinth_download_url(&request.url)
+        && let Some(download_meta) = &request.download_meta
+    {
         if let Ok(value) =
             HeaderValue::from_str(&download_meta.to_header_value())
         {
@@ -278,12 +295,13 @@ async fn single_stream(
     connection: &SharedH2Connection,
     uri: &Uri,
     request: &DownloadRequest,
+    route: &DownloadRoute,
     destination: &Path,
     part_path: &Path,
     integrity: &Integrity,
     total_size: u64,
 ) -> crate::Result<DownloadResult> {
-    let mut headers = request_headers(request);
+    let mut headers = request_headers(request, route);
     headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
 
     let (response, mut stream) = open_stream(connection, uri, headers).await?;
@@ -338,7 +356,7 @@ async fn single_stream(
     Ok(DownloadResult {
         path: destination.to_path_buf(),
         url: uri.to_string(),
-        source: fetch::DownloadRouteSource::Official,
+        source: route.source,
         size: downloaded,
         attempts: 0,
         fallback_count: 0,
@@ -351,6 +369,7 @@ async fn multiplexed_ranges(
     connection: Arc<SharedH2Connection>,
     uri: &Uri,
     request: &DownloadRequest,
+    route: &DownloadRoute,
     destination: &Path,
     part_path: &Path,
     integrity: &Integrity,
@@ -376,7 +395,7 @@ async fn multiplexed_ranges(
     for (index, (start, end)) in segments.into_iter().enumerate() {
         let connection = connection.clone();
         let uri = uri.clone();
-        let headers = request_headers(request);
+        let headers = request_headers(request, route);
         let segment_path = segment_path(part_path, index);
         handles.push(tokio::spawn(async move {
             let result = download_segment(
@@ -448,7 +467,7 @@ async fn multiplexed_ranges(
     Ok(DownloadResult {
         path: destination.to_path_buf(),
         url: uri.to_string(),
-        source: fetch::DownloadRouteSource::Official,
+        source: route.source,
         size: downloaded,
         attempts: 0,
         fallback_count: 0,
