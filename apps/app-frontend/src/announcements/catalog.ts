@@ -33,6 +33,25 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.4',
+		version: '1.8.4',
+		publishedAt: '2026-08-18',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.4',
+			'zh-CN': 'Axolotl Launcher 1.8.4',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed CurseForge and Modrinth installs rejecting valid legacy mods when embedded loader metadata was missing or outdated.',
+					'zh-CN':
+						'修复 CurseForge 和 Modrinth 安装会因加载器元数据缺失或过时而拒绝有效旧版模组的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.3',
 		version: '1.8.3',
 		publishedAt: '2026-08-17',

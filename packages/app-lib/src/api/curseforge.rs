@@ -1701,8 +1701,6 @@ async fn install_file_with_metrics(
             &file,
             item_type,
             request.world_name.as_deref(),
-            request.game_version.as_deref(),
-            request.mod_loader_type.map(mod_loader_to_slug),
             project_id,
             file_id,
             &project.slug,
@@ -2096,8 +2094,6 @@ async fn install_fixed_curseforge_content(
         &file,
         project_type,
         request.world_name.as_deref(),
-        request.game_version.as_deref(),
-        request.mod_loader_type.map(mod_loader_to_slug),
         project_id,
         file_id,
         &project.slug,
@@ -7660,8 +7656,6 @@ async fn download_installed_file(
     file: &CurseForgeFile,
     project_type: ProjectType,
     world_name: Option<&str>,
-    minecraft_version: Option<&str>,
-    loader: Option<&str>,
     project_id: u32,
     file_id: u32,
     project_slug: &str,
@@ -7713,26 +7707,6 @@ async fn download_installed_file(
     .await?;
     if let Some(download_metrics) = download_metrics {
         download_metrics.record(&result);
-    }
-    if project_type == ProjectType::Mod {
-        let validation = async {
-            let bytes =
-                bytes::Bytes::from(tokio::fs::read(download_path).await?);
-            crate::mod_metadata::validate_mod_metadata_target(
-                &bytes,
-                minecraft_version,
-                loader,
-            )
-            .map(|_| ())
-            .map_err(|message| {
-                crate::Error::from(ErrorKind::InputError(message))
-            })
-        }
-        .await;
-        if let Err(error) = validation {
-            let _ = crate::util::io::remove_file(download_path).await;
-            return Err(error);
-        }
     }
     let previous_path =
         crate::state::materialize_project_download(download_path, &full_path)
