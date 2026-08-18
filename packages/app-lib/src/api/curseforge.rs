@@ -7506,7 +7506,10 @@ fn validate_cdn_url(url: &reqwest::Url) -> crate::Result<()> {
     #[cfg(debug_assertions)]
     if url.scheme() == "http"
         && matches!(
-            url.host_str().unwrap_or_default().to_ascii_lowercase().as_str(),
+            url.host_str()
+                .unwrap_or_default()
+                .to_ascii_lowercase()
+                .as_str(),
             "127.0.0.1" | "localhost"
         )
     {
@@ -8996,6 +8999,7 @@ mod tests {
                     world_name: None,
                     install_dependencies: true,
                     excluded_dependency_project_ids: Vec::new(),
+                    dependency_plan_id: None,
                 },
                 display_title: "CurseForge".to_string(),
                 display_icon: None,
