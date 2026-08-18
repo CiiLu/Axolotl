@@ -220,6 +220,8 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
     // 64 KiB connection window, concurrent streams would stall waiting for
     // connection-level window updates; a larger per-stream window also lets
     // the peer send a whole small file without round trips.
+    // `set_target_window_size` returns `()`, while `set_initial_window_size`
+    // returns a `Result`, so only the latter needs its error captured.
     connection.set_target_window_size(64 * 1024 * 1024);
     let _ = connection.set_initial_window_size(1024 * 1024);
 
