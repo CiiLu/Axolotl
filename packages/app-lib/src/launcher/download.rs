@@ -13,13 +13,16 @@ use crate::{
         emit::{emit_loading, loading_try_for_each_concurrent},
     },
     state::State,
+    util::download::h2_download::{
+        ASSET_BATCH_CONCURRENCY, H2BatchAsset, download_asset_batch_via_h2,
+    },
     util::{fetch::*, io},
 };
 use daedalus::minecraft::{LibraryDownload, LoggingConfiguration, LoggingSide};
 use daedalus::{
     self as d,
     minecraft::{
-        Asset, AssetsIndex, Library, Version as GameVersion,
+        AssetsIndex, Library, Version as GameVersion,
         VersionInfo as GameVersionInfo,
     },
     modded::LoaderVersion,
@@ -1382,10 +1385,22 @@ pub async fn download_assets_index(
     Ok(res)
 }
 
+/// Owned per-asset work item for the per-file fallback path of
+/// `download_assets`. Owning the data keeps the concurrent futures 'static so
+/// `buffer_unordered` can be used without lifetime-restricted captures.
+struct FallbackAsset {
+    name: String,
+    hash: String,
+    size: u64,
+    url: String,
+    resource_path: PathBuf,
+    legacy_resource_path: PathBuf,
+}
+
 #[tracing::instrument(skip_all)]
 #[allow(clippy::too_many_arguments)]
 pub async fn download_assets(
-    st: &State,
+    _st: &State,
     local_source: Option<&LocalRuntimeSource>,
     with_legacy: bool,
     index: &AssetsIndex,
@@ -1395,113 +1410,322 @@ pub async fn download_assets(
     progress: Option<MinecraftDownloadProgress>,
 ) -> crate::Result<()> {
     tracing::debug!("Loading assets");
+    // Own the shared state and local source so the concurrent fallback
+    // futures below are 'static + Send (buffer_unordered requires this).
+    let st = State::get().await?;
+    let local_source = local_source.cloned();
     let num_futs = index.objects.len();
-    let assets = stream::iter(index.objects.iter())
-        .map(Ok::<(&String, &Asset), crate::Error>);
+    let per_file_fraction = if num_futs > 0 {
+        loading_amount / num_futs as f64
+    } else {
+        0.0
+    };
 
-    loading_try_for_each_concurrent(assets,
-			crate::util::download::task_concurrency_limit(&st).map(|limit| limit.saturating_mul(2)),
-            loading_bar,
-            loading_amount,
-            num_futs,
-			None,
-            |(name, asset)| {
-                let progress = progress.clone();
-                async move {
-                let hash = &asset.hash;
-                let resource_path = st.directories.object_dir(hash);
-                let legacy_resource_path = st.directories.legacy_assets_dir().join(
-                    name.replace('/', &String::from(std::path::MAIN_SEPARATOR))
-                );
-                let should_fetch_object = !resource_path.exists() || force;
-                let should_fetch_legacy =
-                    (with_legacy && !legacy_resource_path.exists()) || force;
-                let fetch_progress = if should_fetch_object || should_fetch_legacy {
-                    progress.clone()
-                } else {
-                    None
-                };
-                let object_progress = fetch_progress.clone();
-                let legacy_progress = if should_fetch_object {
-                    None
-                } else {
-                    fetch_progress
-                };
+    // Partition assets: batch downloads (object missing), legacy-only copies
+    // (object present, legacy missing), and per-file fallbacks (local reuse,
+    // no batch route, or failed batch items).
+    let mut batch_items = Vec::new();
+    let mut legacy_copies = Vec::new();
+    let mut fallback_assets = Vec::new();
+    let mut skipped_count = 0_u64;
+    for (name, asset) in index.objects.iter() {
+        let hash = &asset.hash;
+        let resource_path = st.directories.object_dir(hash);
+        let legacy_resource_path = st
+            .directories
+            .legacy_assets_dir()
+            .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR)));
+        let should_fetch_object = !resource_path.exists() || force;
+        let should_fetch_legacy =
+            (with_legacy && !legacy_resource_path.exists()) || force;
+
+        if should_fetch_object {
+            if local_source.is_some() {
                 let url = format!(
                     "https://resources.download.minecraft.net/{sub_hash}/{hash}",
                     sub_hash = &hash[..2]
                 );
+                fallback_assets.push(FallbackAsset {
+                    name: name.clone(),
+                    hash: hash.clone(),
+                    size: asset.size as u64,
+                    url,
+                    resource_path,
+                    legacy_resource_path,
+                });
+            } else {
+                let url = format!(
+                    "https://resources.download.minecraft.net/{sub_hash}/{hash}",
+                    sub_hash = &hash[..2]
+                );
+                batch_items.push(H2BatchAsset {
+                    url,
+                    destination: resource_path,
+                    legacy_destination: should_fetch_legacy
+                        .then_some(legacy_resource_path),
+                    sha1: hash.clone(),
+                    size: asset.size as u64,
+                });
+            }
+        } else if should_fetch_legacy {
+            legacy_copies.push((name, asset));
+        } else {
+            skipped_count += 1;
+        }
+    }
 
-                tokio::try_join! {
-                    async {
-                        if should_fetch_object {
-                            let context =
-                                InstallErrorContext::new("download Minecraft asset")
-                                    .file_path(name.clone())
-                                    .target_path(resource_path.display().to_string())
-                                    .build();
-                            let reused = download_or_reuse_local(
-                                st,
-                                local_source,
-                                &local_asset_object_path(hash),
-                                &resource_path,
-                                Some(hash),
-                                Some(asset.size as u64),
-                                object_progress.as_ref(),
-                                context.clone(),
-                                force,
-                                || {
-                                    download_minecraft_file(
-                                        st,
-                                        &url,
-                                        Some(hash),
-                                        Some(asset.size as u64),
-                                        &resource_path,
-                                        ResourceClass::MinecraftAsset,
-                                        ContentValidation::None,
-                                        force,
-                                        object_progress.clone(),
-                                        context,
-                                    )
-                                },
-                            )
-                            .await?;
-                            if reused {
-                                tracing::trace!("Reused asset with hash {hash}");
-                            } else {
-                                tracing::trace!("Fetched asset with hash {hash}");
+    // Batch-download the object files over a single shared HTTP/2 connection:
+    // hundreds of concurrent multiplexed streams, one connection per
+    // authority — never one connection per file.
+    if !batch_items.is_empty() {
+        let source_mode = st.minecraft_file_source();
+        let first_url = batch_items[0].url.clone();
+        let route = resolve_download_routes_for(
+            &first_url,
+            ResourceClass::MinecraftAsset,
+            source_mode,
+        )
+        .into_iter()
+        .next();
+        if let Some(route) = route {
+            // Resolve each item's URL onto the chosen route (official or
+            // mirror) so the batch reuses one connection to that authority.
+            for item in &mut batch_items {
+                item.url = resolve_download_routes_for(
+                    &item.url,
+                    ResourceClass::MinecraftAsset,
+                    source_mode,
+                )
+                .first()
+                .map(|route| route.url.clone())
+                .unwrap_or_else(|| item.url.clone());
+            }
+            let callback = {
+                let progress = progress.clone();
+                let loading_bar = loading_bar.cloned();
+                move |item: H2BatchAsset| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+                    let progress = progress.clone();
+                    let loading_bar = loading_bar.clone();
+                    Box::pin(async move {
+                        if let Some(progress) = progress {
+                            if let Err(error) = progress.add_bytes(item.size).await {
+                                tracing::warn!(
+                                    error = %error,
+                                    "Failed to record batch asset bytes"
+                                );
                             }
                         }
-                        Ok::<_, crate::Error>(())
-                    },
-                    async {
-                        if should_fetch_legacy {
-                            download_minecraft_file(
-                                st,
-                                &url,
-                                Some(hash),
-                                Some(asset.size as u64),
-                                &legacy_resource_path,
-                                ResourceClass::MinecraftAsset,
-                                ContentValidation::None,
-                                force,
-                                legacy_progress,
-                                InstallErrorContext::new("download Minecraft asset")
-                                    .file_path(name.clone())
-                                    .target_path(legacy_resource_path.display().to_string())
-                                    .build(),
-                            )
-                            .await?;
-                            tracing::trace!("Fetched legacy asset with hash {hash}");
+                        if let Some(loading_bar) = loading_bar {
+                            let _ = emit_loading(&loading_bar, per_file_fraction, None);
                         }
-                        Ok::<_, crate::Error>(())
-                    },
-                }?;
-
-                tracing::trace!("Loaded asset with hash {hash}");
-                Ok(())
+                    })
                 }
-            }).await?;
+            };
+            let failed = download_asset_batch_via_h2(
+                &route,
+                batch_items,
+                ASSET_BATCH_CONCURRENCY,
+                callback,
+            )
+            .await;
+            if !failed.is_empty() {
+                let failed_hashes = failed
+                    .iter()
+                    .map(|item| item.sha1.as_str())
+                    .collect::<std::collections::HashSet<_>>();
+                for (name, asset) in index.objects.iter() {
+                    if failed_hashes.contains(asset.hash.as_str()) {
+                        let hash = &asset.hash;
+                        let url = format!(
+                            "https://resources.download.minecraft.net/{sub_hash}/{hash}",
+                            sub_hash = &hash[..2]
+                        );
+                        fallback_assets.push(FallbackAsset {
+                            name: name.clone(),
+                            hash: hash.clone(),
+                            size: asset.size as u64,
+                            url,
+                            resource_path: st.directories.object_dir(hash),
+                            legacy_resource_path: st
+                                .directories
+                                .legacy_assets_dir()
+                                .join(name.replace(
+                                    '/',
+                                    &String::from(std::path::MAIN_SEPARATOR),
+                                )),
+                        });
+                    }
+                }
+            }
+        } else {
+            // No route could be resolved; fall back to per-file for all.
+            for (name, asset) in index.objects.iter() {
+                let hash = &asset.hash;
+                let url = format!(
+                    "https://resources.download.minecraft.net/{sub_hash}/{hash}",
+                    sub_hash = &hash[..2]
+                );
+                fallback_assets.push(FallbackAsset {
+                    name: name.clone(),
+                    hash: hash.clone(),
+                    size: asset.size as u64,
+                    url,
+                    resource_path: st.directories.object_dir(hash),
+                    legacy_resource_path: st
+                        .directories
+                        .legacy_assets_dir()
+                        .join(name.replace(
+                            '/',
+                            &String::from(std::path::MAIN_SEPARATOR),
+                        )),
+                });
+            }
+        }
+    }
+
+    // Legacy copies for assets whose object is already on disk.
+    for (name, asset) in legacy_copies {
+        let hash = &asset.hash;
+        let resource_path = st.directories.object_dir(hash);
+        let legacy_resource_path = st
+            .directories
+            .legacy_assets_dir()
+            .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR)));
+        crate::util::fetch::copy(
+            &resource_path,
+            &legacy_resource_path,
+            &st.io_semaphore,
+        )
+        .await?;
+        if let Some(progress) = &progress {
+            progress.add_bytes(asset.size as u64).await?;
+        }
+        if let Some(loading_bar) = loading_bar {
+            emit_loading(loading_bar, per_file_fraction, None)?;
+        }
+    }
+
+    // Per-file fallback path: local runtime reuse, no batch route, or batch
+    // failures. Runs concurrently (same budget as the original scheduler) so
+    // import flows are not serialised.
+    if !fallback_assets.is_empty() {
+        let limit = crate::util::download::task_concurrency_limit(&st)
+            .map(|limit| limit.saturating_mul(2))
+            .unwrap_or(ASSET_BATCH_CONCURRENCY);
+        let results = futures::stream::iter(fallback_assets)
+            .map(|item| {
+                let progress = progress.clone();
+                let st = st.clone();
+                let local_source = local_source.clone();
+                async move {
+                    let resource_path = &item.resource_path;
+                    let legacy_resource_path = &item.legacy_resource_path;
+                    let hash = &item.hash;
+                    let name = &item.name;
+                    let should_fetch_object = !resource_path.exists() || force;
+                    let should_fetch_legacy =
+                        (with_legacy && !legacy_resource_path.exists()) || force;
+                    let fetch_progress = if should_fetch_object || should_fetch_legacy {
+                        progress.clone()
+                    } else {
+                        None
+                    };
+                    let object_progress = fetch_progress.clone();
+                    let legacy_progress = if should_fetch_object {
+                        None
+                    } else {
+                        fetch_progress
+                    };
+
+                    tokio::try_join! {
+                        async {
+                            if should_fetch_object {
+                                let context =
+                                    InstallErrorContext::new("download Minecraft asset")
+                                        .file_path(name.clone())
+                                        .target_path(resource_path.display().to_string())
+                                        .build();
+                                let reused = download_or_reuse_local(
+                                    &st,
+                                    local_source.as_ref(),
+                                    &local_asset_object_path(hash),
+                                    resource_path,
+                                    Some(hash),
+                                    Some(item.size),
+                                    object_progress.as_ref(),
+                                    context.clone(),
+                                    force,
+                                    || {
+                                        download_minecraft_file(
+                                            &st,
+                                            &item.url,
+                                            Some(hash),
+                                            Some(item.size),
+                                            resource_path,
+                                            ResourceClass::MinecraftAsset,
+                                            ContentValidation::None,
+                                            force,
+                                            object_progress.clone(),
+                                            context,
+                                        )
+                                    },
+                                )
+                                .await?;
+                                if reused {
+                                    tracing::trace!("Reused asset with hash {hash}");
+                                } else {
+                                    tracing::trace!("Fetched asset with hash {hash}");
+                                }
+                            }
+                            Ok::<_, crate::Error>(())
+                        },
+                        async {
+                            if should_fetch_legacy {
+                                download_minecraft_file(
+                                    &st,
+                                    &item.url,
+                                    Some(hash),
+                                    Some(item.size),
+                                    legacy_resource_path,
+                                    ResourceClass::MinecraftAsset,
+                                    ContentValidation::None,
+                                    force,
+                                    legacy_progress,
+                                    InstallErrorContext::new("download Minecraft asset")
+                                        .file_path(name.clone())
+                                        .target_path(legacy_resource_path.display().to_string())
+                                        .build(),
+                                )
+                                .await?;
+                                tracing::trace!("Fetched legacy asset with hash {hash}");
+                            }
+                            Ok::<_, crate::Error>(())
+                        },
+                    }?;
+
+                    if let Some(loading_bar) = loading_bar {
+                        emit_loading(loading_bar, per_file_fraction, None)?;
+                    }
+                    tracing::trace!("Loaded asset with hash {hash}");
+                    Ok::<_, crate::Error>(())
+                }
+            })
+            .buffer_unordered(limit)
+            .collect::<Vec<crate::Result<()>>>()
+            .await;
+        for result in results {
+            result?;
+        }
+    }
+
+    // Account for assets that were already on disk so the loading bar still
+    // reaches its total.
+    for _ in 0..skipped_count {
+        if let Some(loading_bar) = loading_bar {
+            emit_loading(loading_bar, per_file_fraction, None)?;
+        }
+    }
+
     tracing::debug!("Done loading assets!");
     Ok(())
 }

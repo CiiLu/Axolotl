@@ -2825,7 +2825,7 @@ impl IntegrityHashers {
     }
 }
 
-fn suffixed_path(path: &Path, suffix: &str) -> PathBuf {
+pub(crate) fn suffixed_path(path: &Path, suffix: &str) -> PathBuf {
     let mut value = path.as_os_str().to_os_string();
     value.push(suffix);
     PathBuf::from(value)

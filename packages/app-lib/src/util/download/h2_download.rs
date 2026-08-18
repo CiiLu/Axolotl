@@ -13,9 +13,11 @@ use crate::util::fetch::{
     DownloadRequest, DownloadResult, DownloadRoute, DownloadRouteSource,
     Integrity,
 };
+use futures::StreamExt;
 use http::header::{ACCEPT_ENCODING, RANGE, USER_AGENT};
 use http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use std::path::Path;
+use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -28,6 +30,14 @@ const MAX_SEGMENT_CONCURRENCY: usize = 8;
 const INITIAL_SEGMENT_CONCURRENCY: usize = 4;
 const RANGE_IDLE_TIMEOUT: Duration = Duration::from_secs(10);
 const STREAM_RECV_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Client-side concurrency target for the batch asset downloader. All
+/// concurrent streams are multiplexed over one shared HTTP/2 connection per
+/// authority, so this is the number of streams, not connections.
+pub(crate) const ASSET_BATCH_CONCURRENCY: usize = 512;
+/// Internal retry passes for failed batch items before they are handed back
+/// to the caller for the regular per-file download path.
+const ASSET_BATCH_RETRY_PASSES: usize = 2;
 
 /// Outcome of attempting a multiplexed download.
 pub(crate) enum H2DownloadOutcome {
@@ -607,5 +617,188 @@ async fn verify_and_finalize(
         .into());
     }
     fetch::finalize_download(part_path, destination).await?;
+    Ok(())
+}
+
+/// A single small file (a Minecraft asset object) to download over a shared
+/// HTTP/2 connection. All items in one batch must share the same authority.
+pub(crate) struct H2BatchAsset {
+    /// Route-resolved URL for the asset.
+    pub url: String,
+    /// Destination for the object (`assets/objects/<hh>/<hash>`).
+    pub destination: std::path::PathBuf,
+    /// Optional legacy `resources/` copy destination.
+    pub legacy_destination: Option<std::path::PathBuf>,
+    /// Expected SHA-1 hash of the asset (also its file name).
+    pub sha1: String,
+    /// Expected size in bytes.
+    pub size: u64,
+}
+
+impl Clone for H2BatchAsset {
+    fn clone(&self) -> Self {
+        Self {
+            url: self.url.clone(),
+            destination: self.destination.clone(),
+            legacy_destination: self.legacy_destination.clone(),
+            sha1: self.sha1.clone(),
+            size: self.size,
+        }
+    }
+}
+
+/// Downloads a batch of small files over one shared HTTP/2 connection,
+/// multiplexing up to `concurrency` streams. This is deliberately NOT one
+/// connection per file: the caller groups items by authority and every item
+/// opens an independent stream on that single connection. Items that cannot be
+/// downloaded after internal retries are returned so the caller can retry them
+/// through the regular per-file path (which performs route fallback).
+pub(crate) async fn download_asset_batch_via_h2<F>(
+    route: &DownloadRoute,
+    mut items: Vec<H2BatchAsset>,
+    concurrency: usize,
+    on_completed: F,
+) -> Vec<H2BatchAsset>
+where
+    F: FnMut(H2BatchAsset) -> Pin<Box<dyn Future<Output = ()> + Send>>
+        + Send
+        + 'static,
+{
+    let Some(connection) = connect_authority(&route.url).await else {
+        return items;
+    };
+
+    let callback = Arc::new(tokio::sync::Mutex::new(on_completed));
+    let mut failed = Vec::new();
+    for pass in 0..ASSET_BATCH_RETRY_PASSES {
+        if items.is_empty() {
+            break;
+        }
+        let results = futures::stream::iter(items)
+            .map(|item| {
+                let connection = connection.clone();
+                let callback = callback.clone();
+                async move {
+                    let Ok(uri) = item.url.parse::<Uri>() else {
+                        let error =
+                            crate::Error::from(crate::ErrorKind::InputError(
+                                format!("invalid asset URL: {}", item.url),
+                            ));
+                        return (item, Err(error));
+                    };
+                    let result =
+                        download_asset_item(&connection, &uri, &item).await;
+                    if result.is_ok() {
+                        let mut callback = callback.lock().await;
+                        callback(item.clone()).await;
+                    }
+                    (item, result)
+                }
+            })
+            .buffer_unordered(concurrency)
+            .collect::<Vec<_>>()
+            .await;
+        items = Vec::new();
+        for (item, result) in results {
+            match result {
+                Ok(()) => {}
+                Err(error) => {
+                    tracing::warn!(
+                        url = %fetch::sanitize_url_for_log(&item.url),
+                        pass,
+                        error = %error,
+                        "Batch asset download failed"
+                    );
+                    if pass + 1 < ASSET_BATCH_RETRY_PASSES {
+                        items.push(item);
+                    } else {
+                        failed.push(item);
+                    }
+                }
+            }
+        }
+    }
+    failed
+}
+
+async fn download_asset_item(
+    connection: &SharedH2Connection,
+    uri: &Uri,
+    item: &H2BatchAsset,
+) -> crate::Result<()> {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_str(&crate::launcher_user_agent())
+            .unwrap_or_else(|_| HeaderValue::from_static("Axolotl Launcher")),
+    );
+    headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
+
+    let (response, mut stream) = open_stream(connection, uri, headers).await?;
+    if !response.status().is_success() {
+        return Err(crate::ErrorKind::OtherError(format!(
+            "HTTP/2 GET failed with status {}",
+            response.status()
+        ))
+        .into());
+    }
+
+    let integrity = Integrity {
+        size: Some(item.size),
+        sha1: Some(item.sha1.clone()),
+        ..Integrity::default()
+    };
+    let mut hashers =
+        fetch::IntegrityHashers::new_integrity_hashers(&integrity);
+    let part_path = fetch::suffixed_path(&item.destination, ".part");
+    if let Some(parent) = part_path.parent() {
+        crate::util::io::create_dir_all(parent).await?;
+    }
+    let mut file = tokio::fs::File::create(&part_path).await?;
+    let mut downloaded = 0_u64;
+    loop {
+        let chunk = tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data())
+            .await
+            .map_err(|_| {
+                crate::ErrorKind::NetworkError(
+                    "HTTP/2 asset stream receive timed out".into(),
+                )
+            })?
+            .transpose()
+            .map_err(|error| {
+                crate::ErrorKind::NetworkError(format!(
+                    "HTTP/2 asset stream error: {error}"
+                ))
+            })?;
+        let Some(chunk) = chunk else {
+            break;
+        };
+        file.write_all(&chunk).await?;
+        hashers.update(&chunk);
+        downloaded += chunk.len() as u64;
+    }
+    file.flush().await?;
+    drop(file);
+    if downloaded == 0 {
+        let _ = tokio::fs::remove_file(&part_path).await;
+        return Err(crate::ErrorKind::OtherError(
+            "downloaded asset is empty".to_string(),
+        )
+        .into());
+    }
+    let computed = hashers.finish(downloaded);
+    if let Err(error) = fetch::verify_computed_integrity(&integrity, &computed)
+    {
+        let _ = tokio::fs::remove_file(&part_path).await;
+        return Err(error);
+    }
+    fetch::finalize_download(&part_path, &item.destination).await?;
+
+    if let Some(legacy) = &item.legacy_destination {
+        if let Some(parent) = legacy.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+        tokio::fs::copy(&item.destination, legacy).await?;
+    }
     Ok(())
 }
