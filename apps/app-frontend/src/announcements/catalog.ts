@@ -33,6 +33,24 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.5',
+		version: '1.8.5',
+		publishedAt: '2026-08-18',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.5',
+			'zh-CN': 'Axolotl Launcher 1.8.5',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fix the issue where the NSIS installer does not exclude reparse points during uninstallation.',
+					'zh-CN': '修复 NSIS 程序在卸载时未排除重解析点的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.4',
 		version: '1.8.4',
 		publishedAt: '2026-08-18',
@@ -51,8 +69,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed modpack downloads randomly failing when a content refresh removed files that were still being installed.',
-					'zh-CN':
-						'修复下载整合包时，内容刷新误删仍在安装的文件并导致随机下载失败的问题。',
+					'zh-CN': '修复下载整合包时，内容刷新误删仍在安装的文件并导致随机下载失败的问题。',
 				},
 			],
 		},
