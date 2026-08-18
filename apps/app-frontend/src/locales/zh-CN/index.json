@@ -1674,19 +1674,19 @@
 		"message": "自动GC"
 	},
 	"app.java-arguments.presets.gc.g1gc-mojang.description": {
-		"message": "官方 Minecraft 启动器使用的 G1GC 调优"
+		"message": "接近官方的 G1GC 调优"
 	},
 	"app.java-arguments.presets.gc.g1gc-mojang.title": {
 		"message": "Mojang G1GC"
 	},
 	"app.java-arguments.presets.gc.g1gc-pcl.description": {
-		"message": "PCL 启动器优化的 G1GC 调优"
+		"message": "PCL 启动器使用的 Shenandoah（adaptive）调优"
 	},
 	"app.java-arguments.presets.gc.g1gc-pcl.title": {
-		"message": "PCL G1GC"
+		"message": "PCL"
 	},
 	"app.java-arguments.presets.gc.shenandoah.description": {
-		"message": "面向中大型整合包的低停顿 GC（Java 12+）"
+		"message": "自适应低停顿 Shenandoah，启用大页内存（如支持）"
 	},
 	"app.java-arguments.presets.gc.shenandoah.title": {
 		"message": "Shenandoah"

@@ -2583,19 +2583,19 @@
 		"message": "Auto"
 	},
 	"app.java-arguments.presets.gc.g1gc-mojang.description": {
-		"message": "G1GC tuning used by the official Minecraft launcher"
+		"message": "Near-Official G1GC Tuning"
 	},
 	"app.java-arguments.presets.gc.g1gc-mojang.title": {
 		"message": "Mojang G1GC"
 	},
 	"app.java-arguments.presets.gc.g1gc-pcl.description": {
-		"message": "G1GC tuning optimized by PCL launcher"
+		"message": "Shenandoah (adaptive) tuning used by the PCL launcher"
 	},
 	"app.java-arguments.presets.gc.g1gc-pcl.title": {
-		"message": "PCL G1GC"
+		"message": "PCL"
 	},
 	"app.java-arguments.presets.gc.shenandoah.description": {
-		"message": "Low-pause GC for medium-to-heavy modpacks (Java 12+)"
+		"message": "Low-pause adaptive Shenandoah with large pages (if supported)"
 	},
 	"app.java-arguments.presets.gc.shenandoah.title": {
 		"message": "Shenandoah"
