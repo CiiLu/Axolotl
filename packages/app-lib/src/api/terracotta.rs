@@ -1622,6 +1622,19 @@ mod tests {
     }
 
     #[test]
+    fn cleanup_preserves_version_metadata() {
+        assert!(binary::should_cleanup_terracotta_file(
+            "terracotta-0.4.1-windows-x86_64.exe"
+        ));
+        assert!(!binary::should_cleanup_terracotta_file(
+            "terracotta-version.json"
+        ));
+        assert!(!binary::should_cleanup_terracotta_file(
+            "terracotta-version.json.tmp"
+        ));
+    }
+
+    #[test]
     fn provides_independent_download_sources() {
         let urls = terracotta_download_urls("0.4.2", "macos-arm64");
         assert_eq!(urls.len(), 2);
