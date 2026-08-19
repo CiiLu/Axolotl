@@ -2135,19 +2135,6 @@ async fn fetch_advanced_with_client_and_progress(
                 max_attempts = attempt_budget,
                 "Starting metadata or API request attempt"
             );
-            if let Some(request_kind) = modrinth_request_kind {
-                tracing::info!(
-                    request_target,
-                    source = route_source.as_str(),
-                    request_kind,
-                    method = %method,
-                    url = %log_request_url,
-                    route = route_index + 1,
-                    attempt,
-                    max_attempts,
-                    "Attempting Modrinth request"
-                );
-            }
 
             let protected_headers = creds.is_some()
                 || download_meta_header.is_some()
@@ -2579,20 +2566,6 @@ async fn fetch_advanced_with_client_and_progress(
                         tracing::trace!(
                             "Done downloading URL {log_request_url}"
                         );
-                        if let Some(request_kind) = modrinth_request_kind {
-                            tracing::info!(
-                                request_target,
-                                source = route_source.as_str(),
-                                request_kind,
-                                url = %log_request_url,
-                                final_url = %log_response_url,
-                                attempt,
-                                max_attempts,
-                                bytes = bytes.len(),
-                                elapsed_ms = started.elapsed().as_millis(),
-                                "Completed Modrinth request"
-                            );
-                        }
 
                         record_route_success(
                             route,
