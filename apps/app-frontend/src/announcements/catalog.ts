@@ -47,6 +47,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Discover now remembers filters separately for each content type, including manually unlocked instance filters.',
 					'zh-CN': '发现内容现在会按内容类型分别记住筛选条件，包括手动解除的实例筛选。',
 				},
+				{
+					'en-US': 'Moved JVM settings and memory allocation settings to Java Settings.',
+					'zh-CN': '将 JVM 设置和内存分配设置移动到 Java 设置。',
+				},
 			],
 			fixed: [
 				{
