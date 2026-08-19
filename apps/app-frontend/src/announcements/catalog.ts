@@ -133,12 +133,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 		id: 'launcher-1.8.4',
 		version: '1.8.4',
 		publishedAt: '2026-08-18',
-			title: {
-				'en-US': 'Axolotl Launcher 1.8.4',
-				'zh-CN': 'Axolotl Launcher 1.8.4',
-			},
-			changes: {
-				fixed: [
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.4',
+			'zh-CN': 'Axolotl Launcher 1.8.4',
+		},
+		changes: {
+			fixed: [
 				{
 					'en-US':
 						'Fixed CurseForge and Modrinth installs rejecting valid legacy mods when embedded loader metadata was missing or outdated.',

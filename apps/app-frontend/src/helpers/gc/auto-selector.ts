@@ -89,7 +89,7 @@ export function resolveAutoGcStrategy(context: GcContext): GcResolution {
 export function getResolvedStrategyName(strategyId: ResolvedGcStrategyId): string {
 	const names: Record<ResolvedGcStrategyId, string> = {
 		'g1gc-mojang': 'Mojang G1GC',
-		'g1gc-pcl': 'PCL G1GC',
+		pcl: 'PCL',
 		shenandoah: 'Shenandoah',
 		zgc: 'ZGC',
 	}

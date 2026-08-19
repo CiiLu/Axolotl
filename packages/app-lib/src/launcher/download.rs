@@ -22,7 +22,7 @@ use daedalus::minecraft::{LibraryDownload, LoggingConfiguration, LoggingSide};
 use daedalus::{
     self as d,
     minecraft::{
-        AssetsIndex, Library, Version as GameVersion,
+        Asset, AssetsIndex, Library, Version as GameVersion,
         VersionInfo as GameVersionInfo,
     },
     modded::LoaderVersion,
@@ -1386,8 +1386,8 @@ pub async fn download_assets_index(
 }
 
 /// Owned per-asset work item for the per-file fallback path of
-/// `download_assets`. Owning the data keeps the concurrent futures 'static so
-/// `buffer_unordered` can be used without lifetime-restricted captures.
+/// `download_assets`. Owned so the concurrent fallback futures do not borrow
+/// from the assets index.
 struct FallbackAsset {
     name: String,
     hash: String,
@@ -1397,10 +1397,33 @@ struct FallbackAsset {
     legacy_resource_path: PathBuf,
 }
 
+fn build_fallback_asset(
+    st: &State,
+    name: &str,
+    asset: &Asset,
+) -> FallbackAsset {
+    let hash = &asset.hash;
+    let url = format!(
+        "https://resources.download.minecraft.net/{sub_hash}/{hash}",
+        sub_hash = &hash[..2]
+    );
+    FallbackAsset {
+        name: name.to_string(),
+        hash: hash.clone(),
+        size: asset.size as u64,
+        url,
+        resource_path: st.directories.object_dir(hash),
+        legacy_resource_path: st
+            .directories
+            .legacy_assets_dir()
+            .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR))),
+    }
+}
+
 #[tracing::instrument(skip_all)]
 #[allow(clippy::too_many_arguments)]
 pub async fn download_assets(
-    _st: &State,
+    st: &State,
     local_source: Option<&LocalRuntimeSource>,
     with_legacy: bool,
     index: &AssetsIndex,
@@ -1410,10 +1433,6 @@ pub async fn download_assets(
     progress: Option<MinecraftDownloadProgress>,
 ) -> crate::Result<()> {
     tracing::debug!("Loading assets");
-    // Own the shared state and local source so the concurrent fallback
-    // futures below are 'static + Send (buffer_unordered requires this).
-    let st = State::get().await?;
-    let local_source = local_source.cloned();
     let num_futs = index.objects.len();
     let per_file_fraction = if num_futs > 0 {
         loading_amount / num_futs as f64
@@ -1441,18 +1460,7 @@ pub async fn download_assets(
 
         if should_fetch_object {
             if local_source.is_some() {
-                let url = format!(
-                    "https://resources.download.minecraft.net/{sub_hash}/{hash}",
-                    sub_hash = &hash[..2]
-                );
-                fallback_assets.push(FallbackAsset {
-                    name: name.clone(),
-                    hash: hash.clone(),
-                    size: asset.size as u64,
-                    url,
-                    resource_path,
-                    legacy_resource_path,
-                });
+                fallback_assets.push(build_fallback_asset(st, name, asset));
             } else {
                 let url = format!(
                     "https://resources.download.minecraft.net/{sub_hash}/{hash}",
@@ -1490,6 +1498,10 @@ pub async fn download_assets(
         if let Some(route) = route {
             // Resolve each item's URL onto the chosen route (official or
             // mirror) so the batch reuses one connection to that authority.
+            // Items whose resolved URL targets a different authority cannot
+            // share the batch connection and go through the per-file path.
+            let route_authority = url_authority(&route.url);
+            let mut reroute = Vec::new();
             for item in &mut batch_items {
                 item.url = resolve_download_routes_for(
                     &item.url,
@@ -1499,6 +1511,21 @@ pub async fn download_assets(
                 .first()
                 .map(|route| route.url.clone())
                 .unwrap_or_else(|| item.url.clone());
+                if url_authority(&item.url) != route_authority {
+                    reroute.push(item.sha1.clone());
+                }
+            }
+            if !reroute.is_empty() {
+                let reroute_hashes = reroute
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<std::collections::HashSet<_>>();
+                for (name, asset) in index.objects.iter() {
+                    if reroute_hashes.contains(asset.hash.as_str()) {
+                        fallback_assets
+                            .push(build_fallback_asset(st, name, asset));
+                    }
+                }
             }
             let callback = {
                 let progress = progress.clone();
@@ -1529,56 +1556,28 @@ pub async fn download_assets(
             )
             .await;
             if !failed.is_empty() {
+                tracing::warn!(
+                    items = failed.len(),
+                    source = route.source.as_str(),
+                    "Falling back to per-file downloads for {} batch-failed Minecraft assets on route {}",
+                    failed.len(),
+                    route.source.as_str(),
+                );
                 let failed_hashes = failed
                     .iter()
                     .map(|item| item.sha1.as_str())
                     .collect::<std::collections::HashSet<_>>();
                 for (name, asset) in index.objects.iter() {
                     if failed_hashes.contains(asset.hash.as_str()) {
-                        let hash = &asset.hash;
-                        let url = format!(
-                            "https://resources.download.minecraft.net/{sub_hash}/{hash}",
-                            sub_hash = &hash[..2]
-                        );
-                        fallback_assets.push(FallbackAsset {
-                            name: name.clone(),
-                            hash: hash.clone(),
-                            size: asset.size as u64,
-                            url,
-                            resource_path: st.directories.object_dir(hash),
-                            legacy_resource_path: st
-                                .directories
-                                .legacy_assets_dir()
-                                .join(name.replace(
-                                    '/',
-                                    &String::from(std::path::MAIN_SEPARATOR),
-                                )),
-                        });
+                        fallback_assets
+                            .push(build_fallback_asset(st, name, asset));
                     }
                 }
             }
         } else {
             // No route could be resolved; fall back to per-file for all.
             for (name, asset) in index.objects.iter() {
-                let hash = &asset.hash;
-                let url = format!(
-                    "https://resources.download.minecraft.net/{sub_hash}/{hash}",
-                    sub_hash = &hash[..2]
-                );
-                fallback_assets.push(FallbackAsset {
-                    name: name.clone(),
-                    hash: hash.clone(),
-                    size: asset.size as u64,
-                    url,
-                    resource_path: st.directories.object_dir(hash),
-                    legacy_resource_path: st
-                        .directories
-                        .legacy_assets_dir()
-                        .join(name.replace(
-                            '/',
-                            &String::from(std::path::MAIN_SEPARATOR),
-                        )),
-                });
+                fallback_assets.push(build_fallback_asset(st, name, asset));
             }
         }
     }
@@ -1609,14 +1608,13 @@ pub async fn download_assets(
     // failures. Runs concurrently (same budget as the original scheduler) so
     // import flows are not serialised.
     if !fallback_assets.is_empty() {
-        let limit = crate::util::download::task_concurrency_limit(&st)
+        let limit = crate::util::download::task_concurrency_limit(st)
             .map(|limit| limit.saturating_mul(2))
             .unwrap_or(ASSET_BATCH_CONCURRENCY);
-        let results = futures::stream::iter(fallback_assets)
-            .map(|item| {
+        futures::stream::iter(fallback_assets)
+            .map(Ok::<FallbackAsset, crate::Error>)
+            .try_for_each_concurrent(limit, |item| {
                 let progress = progress.clone();
-                let st = st.clone();
-                let local_source = local_source.clone();
                 async move {
                     let resource_path = &item.resource_path;
                     let legacy_resource_path = &item.legacy_resource_path;
@@ -1646,8 +1644,8 @@ pub async fn download_assets(
                                         .target_path(resource_path.display().to_string())
                                         .build();
                                 let reused = download_or_reuse_local(
-                                    &st,
-                                    local_source.as_ref(),
+                                    st,
+                                    local_source,
                                     &local_asset_object_path(hash),
                                     resource_path,
                                     Some(hash),
@@ -1657,7 +1655,7 @@ pub async fn download_assets(
                                     force,
                                     || {
                                         download_minecraft_file(
-                                            &st,
+                                            st,
                                             &item.url,
                                             Some(hash),
                                             Some(item.size),
@@ -1682,7 +1680,7 @@ pub async fn download_assets(
                         async {
                             if should_fetch_legacy {
                                 download_minecraft_file(
-                                    &st,
+                                    st,
                                     &item.url,
                                     Some(hash),
                                     Some(item.size),
@@ -1710,12 +1708,7 @@ pub async fn download_assets(
                     Ok::<_, crate::Error>(())
                 }
             })
-            .buffer_unordered(limit)
-            .collect::<Vec<crate::Result<()>>>()
-            .await;
-        for result in results {
-            result?;
-        }
+            .await?;
     }
 
     // Account for assets that were already on disk so the loading bar still

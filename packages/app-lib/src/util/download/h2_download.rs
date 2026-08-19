@@ -653,9 +653,11 @@ impl Clone for H2BatchAsset {
 /// opens an independent stream on that single connection. Items that cannot be
 /// downloaded after internal retries are returned so the caller can retry them
 /// through the regular per-file path (which performs route fallback).
+/// Returned items have exhausted every batch pass, so downstream can treat
+/// them as persistently failing against the chosen route.
 pub(crate) async fn download_asset_batch_via_h2<F>(
     route: &DownloadRoute,
-    mut items: Vec<H2BatchAsset>,
+    items: Vec<H2BatchAsset>,
     concurrency: usize,
     on_completed: F,
 ) -> Vec<H2BatchAsset>
@@ -667,9 +669,23 @@ where
     let Some(connection) = connect_authority(&route.url).await else {
         return items;
     };
+    let route_authority = fetch::url_authority(&route.url);
+
+    // Items whose URL targets a different authority cannot be multiplexed on
+    // this connection; hand them straight back without wasting batch passes.
+    let (mut items, mut failed): (Vec<_>, Vec<_>) = items
+        .into_iter()
+        .partition(|item| fetch::url_authority(&item.url) == route_authority);
+    if !failed.is_empty() {
+        tracing::warn!(
+            items = failed.len(),
+            route = %fetch::sanitize_url_for_log(&route.url),
+            "Skipping {} assets whose resolved URL does not match the batch authority",
+            failed.len(),
+        );
+    }
 
     let callback = Arc::new(tokio::sync::Mutex::new(on_completed));
-    let mut failed = Vec::new();
     for pass in 0..ASSET_BATCH_RETRY_PASSES {
         if items.is_empty() {
             break;
@@ -703,9 +719,9 @@ where
             match result {
                 Ok(()) => {}
                 Err(error) => {
-                    tracing::warn!(
+                    tracing::debug!(
                         url = %fetch::sanitize_url_for_log(&item.url),
-                        pass,
+                        pass = pass + 1,
                         error = %error,
                         "Batch asset download failed"
                     );
@@ -717,6 +733,16 @@ where
                 }
             }
         }
+    }
+    if !failed.is_empty() {
+        tracing::warn!(
+            items = failed.len(),
+            retry_passes = ASSET_BATCH_RETRY_PASSES,
+            source = route.source.as_str(),
+            "{} assets exhausted all {ASSET_BATCH_RETRY_PASSES} batch retry passes on route {}",
+            failed.len(),
+            route.source.as_str(),
+        );
     }
     failed
 }
@@ -754,51 +780,56 @@ async fn download_asset_item(
     if let Some(parent) = part_path.parent() {
         crate::util::io::create_dir_all(parent).await?;
     }
-    let mut file = tokio::fs::File::create(&part_path).await?;
-    let mut downloaded = 0_u64;
-    loop {
-        let chunk = tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data())
-            .await
-            .map_err(|_| {
-                crate::ErrorKind::NetworkError(
-                    "HTTP/2 asset stream receive timed out".into(),
-                )
-            })?
-            .transpose()
-            .map_err(|error| {
-                crate::ErrorKind::NetworkError(format!(
-                    "HTTP/2 asset stream error: {error}"
-                ))
-            })?;
-        let Some(chunk) = chunk else {
-            break;
-        };
-        file.write_all(&chunk).await?;
-        hashers.update(&chunk);
-        downloaded += chunk.len() as u64;
-    }
-    file.flush().await?;
-    drop(file);
-    if downloaded == 0 {
-        let _ = tokio::fs::remove_file(&part_path).await;
-        return Err(crate::ErrorKind::OtherError(
-            "downloaded asset is empty".to_string(),
-        )
-        .into());
-    }
-    let computed = hashers.finish(downloaded);
-    if let Err(error) = fetch::verify_computed_integrity(&integrity, &computed)
-    {
-        let _ = tokio::fs::remove_file(&part_path).await;
-        return Err(error);
-    }
-    fetch::finalize_download(&part_path, &item.destination).await?;
-
-    if let Some(legacy) = &item.legacy_destination {
-        if let Some(parent) = legacy.parent() {
-            tokio::fs::create_dir_all(parent).await?;
+    // Any failure below leaves a partial file behind; clean it up so retries
+    // start from a clean slate and no orphaned `.part` files accumulate.
+    let result: crate::Result<()> = async {
+        let mut file = tokio::fs::File::create(&part_path).await?;
+        let mut downloaded = 0_u64;
+        loop {
+            let chunk =
+                tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data())
+                    .await
+                    .map_err(|_| {
+                        crate::ErrorKind::NetworkError(
+                            "HTTP/2 asset stream receive timed out".into(),
+                        )
+                    })?
+                    .transpose()
+                    .map_err(|error| {
+                        crate::ErrorKind::NetworkError(format!(
+                            "HTTP/2 asset stream error: {error}"
+                        ))
+                    })?;
+            let Some(chunk) = chunk else {
+                break;
+            };
+            file.write_all(&chunk).await?;
+            hashers.update(&chunk);
+            downloaded += chunk.len() as u64;
         }
-        tokio::fs::copy(&item.destination, legacy).await?;
+        file.flush().await?;
+        drop(file);
+        if downloaded == 0 {
+            return Err(crate::ErrorKind::OtherError(
+                "downloaded asset is empty".to_string(),
+            )
+            .into());
+        }
+        let computed = hashers.finish(downloaded);
+        fetch::verify_computed_integrity(&integrity, &computed)?;
+        fetch::finalize_download(&part_path, &item.destination).await?;
+
+        if let Some(legacy) = &item.legacy_destination {
+            if let Some(parent) = legacy.parent() {
+                crate::util::io::create_dir_all(parent).await?;
+            }
+            tokio::fs::copy(&item.destination, legacy).await?;
+        }
+        Ok(())
     }
-    Ok(())
+    .await;
+    if result.is_err() {
+        let _ = tokio::fs::remove_file(&part_path).await;
+    }
+    result
 }
