@@ -63,6 +63,7 @@ const ITEM_FAILURE_REASON_CHAR_LIMIT: usize = 1_024;
 /// over a single connection (no range segmentation) and only after every pass
 /// is exhausted does the install ask the user about missing content.
 const AUTO_RETRY_PASSES: usize = 2;
+const NATIVE_CONTENT_TASK_CONCURRENCY: usize = 32;
 
 pub(crate) enum MrpackInstallOutcome {
     #[allow(dead_code)]
@@ -1082,7 +1083,15 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
         let pass_failures =
             collect_required_file_failures_concurrently(
         tasks,
-        Some(state.download_concurrency()),
+        Some(if crate::util::download::active_engine()
+            == crate::util::download::DownloadEngine::XmclCompat
+        {
+            state.download_concurrency()
+        } else {
+            state
+                .download_concurrency()
+                .min(NATIVE_CONTENT_TASK_CONCURRENCY)
+        }),
         |(manifest_index, project)| {
             let content_context = content_context.clone();
             let skipped_missing_content_paths =
