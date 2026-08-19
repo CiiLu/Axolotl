@@ -43,6 +43,7 @@ const allowedUntranslatedMessages = new Set([
 	'MiniMessage',
 	'TabooLib',
 	'TrChat',
+	'TNT',
 	'Java {version}',
 ])
 
