@@ -33,6 +33,42 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.7',
+		version: '1.8.7',
+		publishedAt: '2026-08-19',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.7',
+			'zh-CN': 'Axolotl Launcher 1.8.7',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US':
+						'Discover now remembers filters separately for each content type, including manually unlocked instance filters.',
+					'zh-CN': '发现内容现在会按内容类型分别记住筛选条件，包括手动解除的实例筛选。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed explicitly selected and modpack-pinned files being rejected when CurseForge or Modrinth compatibility metadata did not match the instance.',
+					'zh-CN':
+						'修复明确选择或由整合包固定的文件会因 CurseForge 或 Modrinth 兼容性元数据与实例不匹配而被拒绝的问题。',
+				},
+				{
+					'en-US':
+						'Fixed modpack and server browsing being restricted by the default instance Minecraft version.',
+					'zh-CN': '修复浏览整合包和服务器时会被默认实例的 Minecraft 版本限制的问题。',
+				},
+				{
+					'en-US':
+						'Fixed overlapping server metadata and action buttons in compact and grid views on Discover.',
+					'zh-CN': '修复发现内容的紧凑和网格视图中服务器信息与操作按钮重叠的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.6',
 		version: '1.8.6',
 		publishedAt: '2026-08-18',

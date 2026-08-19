@@ -77,6 +77,8 @@ pub async fn resolve_content<P: ContentMetadataProvider>(
     })
 }
 
+/// Resolves exact versions by identity and applies target filters only when
+/// choosing a version automatically.
 async fn resolve_primary_version<P: ContentMetadataProvider>(
     provider: &mut P,
     request: &ResolveContentRequest,
@@ -92,10 +94,6 @@ async fn resolve_primary_version<P: ContentMetadataProvider>(
                 version_id: version.id,
                 project_id: request.project_id.clone(),
             });
-        }
-
-        if !version_matches(&version, request.content_type, &request.target) {
-            return Err(Error::NoCompatibleVersion(request.project_id.clone()));
         }
 
         return Ok(version);
@@ -296,19 +294,6 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
                     dependent_on_version_id: None,
                     reason: SkippedReason::MissingVersion,
                 });
-            } else if let Some(version) = &version
-                && !version_matches(version, self.content_type, self.target)
-            {
-                self.skipped.push(SkippedContent {
-                    project_id: dependency
-                        .project_id
-                        .clone()
-                        .unwrap_or_else(|| version.project_id.clone()),
-                    version_id: Some(version_id.clone()),
-                    dependent_on_version_id: None,
-                    reason: SkippedReason::NoCompatibleVersion,
-                });
-                return Ok(None);
             }
             return Ok(version);
         }

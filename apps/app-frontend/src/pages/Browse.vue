@@ -57,6 +57,11 @@ import InstanceIcon from '@/components/ui/InstanceIcon.vue'
 import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { useTranslationToggle } from '@/composables/useTranslationToggle'
+import {
+	type BrowseFilterMemory,
+	getBrowseFilterMemory,
+	setBrowseFilterMemory,
+} from '@/helpers/browse-filter-memory'
 import { mergeProviderResults } from '@/helpers/browse-merge'
 import {
 	completeBrowseReturnNavigation,
@@ -588,9 +593,11 @@ const serverContextFilters = computed(() => {
 	return filters
 })
 
-const combinedProvidedFilters = computed(() =>
-	isServerContext.value ? serverContextFilters.value : instanceFilters.value,
-)
+const combinedProvidedFilters = computed(() => {
+	if (isServerContext.value) return serverContextFilters.value
+	if (projectType.value === 'modpack' || projectType.value === 'server') return []
+	return instanceFilters.value
+})
 
 const {
 	serverPings,
@@ -2143,6 +2150,94 @@ const searchState = useBrowseSearch({
 	displayMode,
 })
 
+const NON_FILTER_BROWSE_QUERY_PARAMS = new Set([
+	'i',
+	'ai',
+	'shi',
+	'sid',
+	'wid',
+	'from',
+	'source',
+	'q',
+	's',
+	'ss',
+	'm',
+	'o',
+	'page',
+	'b',
+])
+
+function hasExplicitFilterQuery() {
+	return Object.keys(route.query).some((key) => !NON_FILTER_BROWSE_QUERY_PARAMS.has(key))
+}
+
+function availableRememberedFilters(type: ProjectType, filters: BrowseFilterMemory['filters']) {
+	const filterTypes =
+		type === 'server' ? searchState.serverFilterTypes.value : searchState.filters.value
+	return filters.filter((filter) => {
+		const filterType = filterTypes.find((candidate) => candidate.id === filter.type)
+		return (
+			filterType &&
+			(filterType.allows_custom_options ||
+				filterType.options.some((option) => option.id === filter.option))
+		)
+	})
+}
+
+function applyRememberedFilters(type: ProjectType, resetWhenMissing: boolean) {
+	const memory = getBrowseFilterMemory(type)
+	if (!memory && !resetWhenMissing) return
+
+	if (type === 'server') {
+		searchState.serverCurrentFilters.value = memory
+			? availableRememberedFilters(type, memory.filters)
+			: [{ type: 'server_status', option: 'online' }]
+		searchState.serverToggledGroups.value = memory ? [...memory.toggledGroups] : []
+		return
+	}
+
+	const filterTypeIds = new Set(searchState.filters.value.map((filter) => filter.id))
+	searchState.currentFilters.value = memory
+		? availableRememberedFilters(type, memory.filters)
+		: []
+	searchState.toggledGroups.value = memory ? [...memory.toggledGroups] : []
+	searchState.overriddenProvidedFilterTypes.value = memory
+		? memory.overriddenProvidedFilterTypes.filter((filterType) => filterTypeIds.has(filterType))
+		: []
+}
+
+if (!hasExplicitFilterQuery()) {
+	applyRememberedFilters(projectType.value, false)
+}
+
+watch(projectType, (type) => applyRememberedFilters(type, true))
+
+watch(
+	[
+		projectType,
+		searchState.currentFilters,
+		searchState.toggledGroups,
+		searchState.overriddenProvidedFilterTypes,
+		searchState.serverCurrentFilters,
+		searchState.serverToggledGroups,
+	],
+	() => {
+		const isServer = projectType.value === 'server'
+		setBrowseFilterMemory(projectType.value, {
+			filters: isServer
+				? searchState.serverCurrentFilters.value
+				: searchState.currentFilters.value,
+			toggledGroups: isServer
+				? searchState.serverToggledGroups.value
+				: searchState.toggledGroups.value,
+			overriddenProvidedFilterTypes: isServer
+				? []
+				: searchState.overriddenProvidedFilterTypes.value,
+		})
+	},
+	{ deep: true },
+)
+
 /** Translation state for search result titles and descriptions. */
 const originalProjectHits = shallowRef<typeof searchState.projectHits.value>([])
 const originalServerHits = shallowRef<typeof searchState.serverHits.value>([])
@@ -2314,16 +2409,6 @@ watch(queuedServerInstallCount, (count) => {
 		hideSelectedServerInstalls.value = false
 	}
 })
-
-if (activeInstance.value?.game_version) {
-	const gv = activeInstance.value.game_version
-	const alreadyHasGv = searchState.serverCurrentFilters.value.some(
-		(f) => f.type === 'server_game_version' && f.option === gv,
-	)
-	if (!alreadyHasGv) {
-		searchState.serverCurrentFilters.value.push({ type: 'server_game_version', option: gv })
-	}
-}
 
 if (!browseReturnSnapshot) {
 	void searchState.refreshSearch()
