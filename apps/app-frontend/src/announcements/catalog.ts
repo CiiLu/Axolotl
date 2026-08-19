@@ -33,6 +33,30 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.8',
+		version: '1.8.8',
+		publishedAt: '2026-08-19',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.8',
+			'zh-CN': 'Axolotl Launcher 1.8.8',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed when hovering links in browse page will trigger a flashing element behind the left nav bar.',
+					'zh-CN': '修复浏览页面悬停链接时会触发左侧导航栏后面的闪烁元素的问题。',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'Header for instance mod install page is now blurred.',
+					'zh-CN': '实例的模组安装页面的标题栏现在会模糊。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.7',
 		version: '1.8.7',
 		publishedAt: '2026-08-19',
