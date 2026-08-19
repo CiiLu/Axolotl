@@ -1058,6 +1058,12 @@
 	"app.export-modal.export-button": {
 		"message": "导出"
 	},
+	"app.export-modal.export-complete": {
+		"message": "导出完成"
+	},
+	"app.export-modal.export-complete-description": {
+		"message": "{name} 已成功导出。"
+	},
 	"app.export-modal.header": {
 		"message": "导出整合包"
 	},
@@ -1181,8 +1187,50 @@
 	"app.instance.hide-show-unselected": {
 		"message": "显示/隐藏未选项"
 	},
+	"app.instance.icon-picker.background": {
+		"message": "背景"
+	},
+	"app.instance.icon-picker.background.amethyst": {
+		"message": "紫水晶"
+	},
+	"app.instance.icon-picker.background.cherry": {
+		"message": "樱花"
+	},
+	"app.instance.icon-picker.background.deep-dark": {
+		"message": "深暗之域"
+	},
+	"app.instance.icon-picker.background.grass": {
+		"message": "草地"
+	},
+	"app.instance.icon-picker.background.midnight": {
+		"message": "午夜"
+	},
+	"app.instance.icon-picker.background.nether": {
+		"message": "下界"
+	},
+	"app.instance.icon-picker.background.ocean": {
+		"message": "海洋"
+	},
+	"app.instance.icon-picker.background.slime": {
+		"message": "史莱姆"
+	},
+	"app.instance.icon-picker.background.stone": {
+		"message": "石头"
+	},
+	"app.instance.icon-picker.background.sunset": {
+		"message": "日落"
+	},
+	"app.instance.icon-picker.background.transparent": {
+		"message": "透明"
+	},
 	"app.instance.icon-picker.description": {
-		"message": "选择一个内置 Minecraft 图标，或上传自己的图片。"
+		"message": "组合背景和 Minecraft 元素，或上传自己的图片。"
+	},
+	"app.instance.icon-picker.group.modrinth-3d": {
+		"message": "Modrinth 3D 图标"
+	},
+	"app.instance.icon-picker.group.original": {
+		"message": "原版图标"
 	},
 	"app.instance.icon-picker.icon.bread": {
 		"message": "面包"
@@ -1259,11 +1307,155 @@
 	"app.instance.icon-picker.load-error": {
 		"message": "无法加载内置图标。"
 	},
+	"app.instance.icon-picker.modrinth-3d.backpack": {
+		"message": "背包"
+	},
+	"app.instance.icon-picker.modrinth-3d.beacon": {
+		"message": "信标"
+	},
+	"app.instance.icon-picker.modrinth-3d.blue-shark": {
+		"message": "蓝鲨"
+	},
+	"app.instance.icon-picker.modrinth-3d.bookshelf": {
+		"message": "书架"
+	},
+	"app.instance.icon-picker.modrinth-3d.brown-bear": {
+		"message": "棕熊"
+	},
+	"app.instance.icon-picker.modrinth-3d.cake": {
+		"message": "蛋糕"
+	},
+	"app.instance.icon-picker.modrinth-3d.campfire": {
+		"message": "营火"
+	},
+	"app.instance.icon-picker.modrinth-3d.chest": {
+		"message": "箱子"
+	},
+	"app.instance.icon-picker.modrinth-3d.cogwheel": {
+		"message": "齿轮"
+	},
+	"app.instance.icon-picker.modrinth-3d.command-block": {
+		"message": "命令方块"
+	},
+	"app.instance.icon-picker.modrinth-3d.cooking-pot": {
+		"message": "烹饪锅"
+	},
+	"app.instance.icon-picker.modrinth-3d.couch": {
+		"message": "沙发"
+	},
+	"app.instance.icon-picker.modrinth-3d.crafting-table": {
+		"message": "工作台"
+	},
+	"app.instance.icon-picker.modrinth-3d.creeper": {
+		"message": "苦力怕"
+	},
+	"app.instance.icon-picker.modrinth-3d.enchanting-table": {
+		"message": "附魔台"
+	},
+	"app.instance.icon-picker.modrinth-3d.ender-chest": {
+		"message": "末影箱"
+	},
+	"app.instance.icon-picker.modrinth-3d.ender-dragon": {
+		"message": "末影龙"
+	},
+	"app.instance.icon-picker.modrinth-3d.engine": {
+		"message": "引擎"
+	},
+	"app.instance.icon-picker.modrinth-3d.furnace": {
+		"message": "熔炉"
+	},
+	"app.instance.icon-picker.modrinth-3d.gizmo": {
+		"message": "小装置"
+	},
+	"app.instance.icon-picker.modrinth-3d.globe": {
+		"message": "地球仪"
+	},
+	"app.instance.icon-picker.modrinth-3d.grass-block": {
+		"message": "草方块"
+	},
+	"app.instance.icon-picker.modrinth-3d.lantern": {
+		"message": "灯笼"
+	},
+	"app.instance.icon-picker.modrinth-3d.moobloom": {
+		"message": "哞花"
+	},
+	"app.instance.icon-picker.modrinth-3d.mr-pack": {
+		"message": "Mr Pack"
+	},
+	"app.instance.icon-picker.modrinth-3d.orb": {
+		"message": "起源之球"
+	},
+	"app.instance.icon-picker.modrinth-3d.oxygen-distributor": {
+		"message": "氧气分配器"
+	},
+	"app.instance.icon-picker.modrinth-3d.pancakes": {
+		"message": "煎饼"
+	},
+	"app.instance.icon-picker.modrinth-3d.pickaxe": {
+		"message": "镐"
+	},
+	"app.instance.icon-picker.modrinth-3d.poke-ball": {
+		"message": "精灵球"
+	},
+	"app.instance.icon-picker.modrinth-3d.redstone-block": {
+		"message": "红石块"
+	},
+	"app.instance.icon-picker.modrinth-3d.sculk-sensor": {
+		"message": "幽匿感测体"
+	},
+	"app.instance.icon-picker.modrinth-3d.skeleton": {
+		"message": "骷髅"
+	},
+	"app.instance.icon-picker.modrinth-3d.skillet": {
+		"message": "煎锅"
+	},
+	"app.instance.icon-picker.modrinth-3d.slime-block": {
+		"message": "黏液块"
+	},
+	"app.instance.icon-picker.modrinth-3d.space-helmet": {
+		"message": "太空头盔"
+	},
+	"app.instance.icon-picker.modrinth-3d.sticky-piston": {
+		"message": "黏性活塞"
+	},
+	"app.instance.icon-picker.modrinth-3d.sword": {
+		"message": "剑"
+	},
+	"app.instance.icon-picker.modrinth-3d.terminal": {
+		"message": "终端"
+	},
+	"app.instance.icon-picker.modrinth-3d.tiny-potato": {
+		"message": "小土豆"
+	},
+	"app.instance.icon-picker.modrinth-3d.tire": {
+		"message": "轮胎"
+	},
+	"app.instance.icon-picker.modrinth-3d.tnt": {
+		"message": "TNT"
+	},
+	"app.instance.icon-picker.modrinth-3d.wrench": {
+		"message": "扳手"
+	},
+	"app.instance.icon-picker.modrinth-3d.wrench-rinth": {
+		"message": "Modrinth 扳手"
+	},
+	"app.instance.icon-picker.modrinth-3d.zombie": {
+		"message": "僵尸"
+	},
+	"app.instance.icon-picker.saving": {
+		"message": "保存中……"
+	},
+	"app.instance.icon-picker.surprise-me": {
+		"message": "随机生成"
+	},
 	"app.instance.icon-picker.title": {
-		"message": "选择实例图标"
+		"message": "创建实例图标"
 	},
 	"app.instance.icon-picker.upload": {
 		"message": "上传图片"
+	},
+	"app.instance.icon-picker.use-icon": {
+		"message": "使用此图标"
 	},
 	"app.instance.join-server": {
 		"message": "加入服务器"

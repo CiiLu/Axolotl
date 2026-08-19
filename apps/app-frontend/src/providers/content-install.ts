@@ -781,10 +781,7 @@ export function createContentInstall(opts: {
 		currentCallback(...args)
 	}
 
-	function settleInstallSession(
-		sessionId: number,
-		...args: Parameters<ContentInstallCallback>
-	) {
+	function settleInstallSession(sessionId: number, ...args: Parameters<ContentInstallCallback>) {
 		if (sessionId !== currentSessionId) return
 		settleCurrentCallback(...args)
 	}
@@ -2135,6 +2132,14 @@ export function createContentInstall(opts: {
 			}
 			throw error
 		})
+		if (!project) {
+			if (modalSessionId === currentSessionId) {
+				hideContentInstallModal()
+				settleCurrentCallback()
+			}
+			opts.handleError(`Project not found: '${projectId}'`)
+			return
+		}
 		if (modalSessionId !== null && modalSessionId !== currentSessionId) return
 		const requestCallback: ContentInstallCallback =
 			modalSessionId === null
@@ -2554,8 +2559,7 @@ export function createContentInstall(opts: {
 		callback: ContentInstallCallback = () => {},
 	) {
 		return guardInstallRequest(
-			() =>
-				installCurseForgeWorldInternal(projectId, fileId, instanceId, source, callback),
+			() => installCurseForgeWorldInternal(projectId, fileId, instanceId, source, callback),
 			callback,
 		)
 	}
