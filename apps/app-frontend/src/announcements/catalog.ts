@@ -47,6 +47,20 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Discover now remembers filters separately for each content type, including manually unlocked instance filters.',
 					'zh-CN': '发现内容现在会按内容类型分别记住筛选条件，包括手动解除的实例筛选。',
 				},
+				{
+					'en-US': 'Moved JVM settings and memory allocation settings to Java Settings.',
+					'zh-CN': '将 JVM 设置和内存分配设置移动到 Java 设置。',
+				},
+				{
+					'en-US':
+						"Exporting a `.mrpack` now shows a completion notification with an action to open the exported file's folder.",
+					'zh-CN': '导出 `.mrpack` 完成后现在会显示通知，并可直接打开导出文件所在目录。',
+				},
+				{
+					'en-US':
+						'Refreshed buttons throughout Settings with clearer sizing, emphasis, and interaction feedback.',
+					'zh-CN': '更新设置页面中的按钮样式，使尺寸、操作层级和交互反馈更加清晰。',
+				},
 			],
 			fixed: [
 				{
@@ -78,6 +92,35 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': '',
 					'zh-CN': '为错误弹窗添加5行截断',
+				},
+				{
+					'en-US':
+						'Fixed IPv6 server addresses without ports and bracketed IPv6 addresses with custom ports failing to parse.',
+					'zh-CN': '修复无端口 IPv6 地址以及带自定义端口的方括号 IPv6 地址无法解析的问题。',
+				},
+				{
+					'en-US':
+						'Fixed server status pings starting before the instance protocol version was available, which could show incorrect or failed results.',
+					'zh-CN': '修复实例协议版本尚未就绪时便开始服务器状态检测，导致结果错误或检测失败的问题。',
+				},
+				{
+					'en-US':
+						'Fixed Hardcore worlds from Minecraft 26.1 and newer being identified as normal worlds.',
+					'zh-CN': '修复 Minecraft 26.1 及更高版本的极限模式世界被识别为普通世界的问题。',
+				},
+				{
+					'en-US': 'Fixed deep-link installs for projects whose slugs contain a `+` character.',
+					'zh-CN': '修复项目短标识中包含 `+` 字符时无法通过深层链接安装的问题。',
+				},
+				{
+					'en-US':
+						'Added an instance icon creator with transparent and gradient backgrounds, the original icon set, and a new collection of 3D icons.',
+					'zh-CN': '新增实例图标生成器，支持透明与渐变背景、原版图标，以及一组新的 3D 图标。',
+				},
+				{
+					'en-US':
+						'Added start and end layer controls to the Schematic Workshop for viewing selected vertical sections of a build.',
+					'zh-CN': '投影工坊新增起始层和结束层控制，可查看建筑指定高度范围内的内容。',
 				},
 			],
 		},
