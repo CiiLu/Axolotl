@@ -953,6 +953,17 @@ fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
     route
 }
 
+fn is_official_route(route: &DownloadRoute) -> bool {
+    !route.is_mirror && route.source == DownloadRouteSource::Official
+}
+
+fn official_fallback_route(routes: &[DownloadRoute]) -> Option<DownloadRoute> {
+    routes
+        .iter()
+        .find(|candidate| is_official_route(candidate))
+        .cloned()
+}
+
 fn url_with_base(original: &Url, base: &str, path: &str) -> Option<String> {
     let mut target = Url::parse(base).ok()?;
     target.set_path(path);
@@ -3599,6 +3610,7 @@ enum SegmentedDownloadOutcome {
     },
     SwitchRoute(RouteProbeResult),
     SourceFailed,
+    IntegrityFailed(crate::Error),
     Fatal(crate::Error),
 }
 
@@ -4561,6 +4573,11 @@ async fn download_segment(
                 "server ignored Range and returned 200",
             ));
         }
+        if response.status() == StatusCode::RANGE_NOT_SATISFIABLE {
+            return Err(SegmentDownloadError::Protocol(
+                "server returned HTTP 416 for range request",
+            ));
+        }
         if response.status() != StatusCode::PARTIAL_CONTENT {
             if attempt < SEGMENT_RETRY_ATTEMPTS {
                 tokio::time::sleep(fetch_retry_delay(attempt)).await;
@@ -5206,12 +5223,11 @@ async fn try_segmented_download(
     }
     let computed = hashers.finish(merged_size);
     record_install_download_stage(request, DownloadItemStatus::Verifying).await;
-    if verify_computed_integrity(&request.integrity, &computed).is_err() {
+    if let Err(error) =
+        verify_computed_integrity(&request.integrity, &computed)
+    {
         let _ = remove_if_exists(part_path).await;
-        return SegmentedDownloadOutcome::FallbackSingle {
-            disable_range: true,
-            reason: "segmented integrity validation failed",
-        };
+        return SegmentedDownloadOutcome::IntegrityFailed(error);
     }
     if validate_file_content(part_path, request.integrity.content)
         .await
@@ -5514,7 +5530,7 @@ async fn download_to_path_inner(
     // Prefer a multiplexed HTTP/2 download over a shared per-authority
     // connection: one handshake per CDN instead of one per file, and range
     // streams for large files. Any failure falls through to the legacy path.
-    let mut h2_failed_mirror = None;
+    let mut h2_failed_nonofficial = None;
     if request.allow_segmented_download
         && !part_resume_expected(&part_path).await
         && !request.url.starts_with("http://")
@@ -5552,8 +5568,8 @@ async fn download_to_path_inner(
                 preserve_partial,
             } => {
                 if failure.integrity_failure() {
-                    if h2_route.is_mirror {
-                        h2_failed_mirror = Some(h2_route.url.clone());
+                    if !is_official_route(&h2_route) {
+                        h2_failed_nonofficial = Some(h2_route.url.clone());
                         tracing::warn!(
                             url = %sanitize_url_for_log(&h2_route.url),
                             source = h2_route.source.as_str(),
@@ -5582,7 +5598,8 @@ async fn download_to_path_inner(
         }
     }
 
-    if let Some(failed_route) = h2_failed_mirror.take() {
+    let mut official_integrity_retry = h2_failed_nonofficial.is_some();
+    if let Some(failed_route) = h2_failed_nonofficial.take() {
         routes.retain(|route| route.url != failed_route);
     }
     let mut attempts = 0;
@@ -5591,7 +5608,10 @@ async fn download_to_path_inner(
     let mut fallback_count = 0;
     let mut partial_route_index = None;
     let mut terminal_routes = HashSet::new();
-    let mut preferred_route = None;
+    let mut preferred_route = official_integrity_retry
+        .then(|| official_fallback_route(&routes))
+        .flatten();
+    let mut single_thread_routes = HashSet::new();
     let mut busted_for_route: Option<(usize, String)> = None;
     let file_attempt_budget = routes.len().saturating_mul(3).max(1);
     for (round, retry_with_single_thread) in
@@ -5665,6 +5685,7 @@ async fn download_to_path_inner(
                 // resuming it over a single connection wastes less transfer.
                 if request.allow_segmented_download
                     && !retry_with_single_thread
+                    && !single_thread_routes.contains(&route.url)
                     && route.supports_range
                     && range_splitting_allowed(route)
                     && request.integrity.size.is_some_and(|size| {
@@ -5793,6 +5814,49 @@ async fn download_to_path_inner(
                                 "Segmented file download failed; retrying or switching source"
                             );
                             break;
+                        }
+                        SegmentedDownloadOutcome::IntegrityFailed(error) => {
+                            record_route_failure(
+                                route,
+                                request.resource,
+                                None,
+                            );
+                            record_download_attempt_failure(
+                                &mut attempt_history,
+                                route,
+                                attempts,
+                                &error,
+                                if is_official_route(route) {
+                                    "abort"
+                                } else {
+                                    "fallback_official"
+                                },
+                                None,
+                                None,
+                                None,
+                            );
+                            last_error = Some(error);
+                            terminal_routes.insert(route.url.clone());
+                            if !is_official_route(route)
+                                && let Some(official) =
+                                    official_fallback_route(&routes)
+                            {
+                                remove_if_exists(&part_path).await?;
+                                official_integrity_retry = true;
+                                preferred_route = Some(official);
+                                break;
+                            }
+                            if official_integrity_retry {
+                                return Err(attach_download_attempt_history(
+                                    last_error.take().unwrap(),
+                                    &attempt_history,
+                                    attempts,
+                                    file_attempt_budget,
+                                ));
+                            }
+                            disable_range_splitting(route);
+                            single_thread_routes.insert(route.url.clone());
+                            terminal_routes.remove(&route.url);
                         }
                         SegmentedDownloadOutcome::SwitchRoute(probe) => {
                             preferred_route = Some(probe.route);
@@ -5957,14 +6021,16 @@ async fn download_to_path_inner(
                     "Received file download response"
                 );
                 if status.is_client_error() || status.is_server_error() {
-                    record_route_failure(
-                        route,
-                        request.resource,
-                        (status == StatusCode::TOO_MANY_REQUESTS)
-                            .then_some(response_retry_after.unwrap_or_else(
-                                || fetch_retry_delay(attempts),
-                            )),
-                    );
+                    if status != StatusCode::RANGE_NOT_SATISFIABLE {
+                        record_route_failure(
+                            route,
+                            request.resource,
+                            (status == StatusCode::TOO_MANY_REQUESTS)
+                                .then_some(response_retry_after.unwrap_or_else(
+                                    || fetch_retry_delay(attempts),
+                                )),
+                        );
+                    }
                     let error = response_status_error(
                         response,
                         &Method::GET,
@@ -5973,10 +6039,11 @@ async fn download_to_path_inner(
                     .await;
                     drop(permit);
                     drop(activity.take());
-                    if resume_offset > 0
-                        && status == StatusCode::RANGE_NOT_SATISFIABLE
-                    {
+                    if status == StatusCode::RANGE_NOT_SATISFIABLE {
                         remove_if_exists(&part_path).await?;
+                        disable_range_splitting(route);
+                        single_thread_routes.insert(route.url.clone());
+                        preferred_route = Some(route.clone());
                     }
                     let terminal_status = matches!(
                         status,
@@ -6000,7 +6067,10 @@ async fn download_to_path_inner(
                         )
                         .await;
                     }
-                    let decision = if terminal_status {
+                    let decision = if status == StatusCode::RANGE_NOT_SATISFIABLE
+                    {
+                        "disable_range_and_retry_single"
+                    } else if terminal_status {
                         "drop_route"
                     } else if cooldown_and_switch {
                         "cooldown_and_switch"
@@ -6410,9 +6480,15 @@ async fn download_to_path_inner(
                     } else {
                         remove_if_exists(&part_path).await?;
                     }
-                    let decision = if routes.len() > 1 {
-                        "clear_partial_and_switch"
-                    } else if attempts >= 2 {
+                    let official = (!is_official_route(route))
+                        .then(|| official_fallback_route(&routes))
+                        .flatten();
+                    let decision = if official.is_some() {
+                        "fallback_official"
+                    } else if attempts >= 2
+                        || (is_official_route(route)
+                            && official_integrity_retry)
+                    {
                         "drop_route_after_clean_retry"
                     } else {
                         "clear_partial_and_retry"
@@ -6433,10 +6509,27 @@ async fn download_to_path_inner(
                             cache_busted_download_url(&route.url, attempts),
                         ));
                     }
-                    if routes.len() > 1 || attempts >= 2 {
-                        terminal_routes.insert(route.url.clone());
-                    }
                     last_error = Some(error);
+                    if let Some(official) = official {
+                        terminal_routes.insert(route.url.clone());
+                        official_integrity_retry = true;
+                        preferred_route = Some(official);
+                    } else if (is_official_route(route)
+                        && official_integrity_retry)
+                        || attempts >= 2
+                    {
+                        terminal_routes.insert(route.url.clone());
+                        if is_official_route(route)
+                            && official_integrity_retry
+                        {
+                            return Err(attach_download_attempt_history(
+                                last_error.take().unwrap(),
+                                &attempt_history,
+                                attempts,
+                                file_attempt_budget,
+                            ));
+                        }
+                    }
                     break;
                 }
                 if let Err(error) =
@@ -7983,6 +8076,26 @@ mod tests {
         assert_eq!(
             native_first_byte_timeout(&mirror, false),
             FILE_TRANSFER_FIRST_BYTE_TIMEOUT
+        );
+    }
+
+    #[test]
+    fn official_fallback_excludes_alternate_sources() {
+        let alternate = route(
+            "https://alternate.example/file".to_string(),
+            DownloadRouteSource::Alternate,
+            false,
+            true,
+        );
+        let official = route(
+            "https://official.example/file".to_string(),
+            DownloadRouteSource::Official,
+            false,
+            true,
+        );
+        assert_eq!(
+            official_fallback_route(&[alternate, official.clone()]),
+            Some(official)
         );
     }
 
