@@ -51,6 +51,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed explicitly selected and modpack-pinned files being rejected when CurseForge or Modrinth compatibility metadata did not match the instance.',
+					'zh-CN':
+						'修复明确选择或由整合包固定的文件会因 CurseForge 或 Modrinth 兼容性元数据与实例不匹配而被拒绝的问题。',
+				},
+				{
+					'en-US':
 						'Fixed modpack and server browsing being restricted by the default instance Minecraft version.',
 					'zh-CN': '修复浏览整合包和服务器时会被默认实例的 Minecraft 版本限制的问题。',
 				},
