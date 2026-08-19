@@ -444,7 +444,7 @@ function formatDateTime(date: Date) {
 
 			<!-- 实例树节点列表 -->
 			<section v-if="instancesCategory" class="storage-instance-section">
-				<div class="instance-help" v-tooltip="symlinkHelpTooltipOptions">
+				<div v-tooltip="symlinkHelpTooltipOptions" class="instance-help">
 					<HelpCircleIcon class="instance-help-icon" aria-hidden="true" />
 					<span>{{ formatMessage(storageMessages.symlinkHelp) }}</span>
 				</div>

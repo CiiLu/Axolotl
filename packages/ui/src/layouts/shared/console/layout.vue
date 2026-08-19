@@ -107,6 +107,24 @@
 				</div>
 			</Transition>
 		</div>
+
+		<div
+			v-if="showCommandInput"
+			class="rounded-[20px] border border-solid border-surface-4 bg-surface-3 p-4"
+		>
+			<StyledInput
+				v-model="commandInput"
+				v-tooltip="commandDisabled ? commandDisabledTooltip : undefined"
+				:icon="TerminalSquareIcon"
+				:placeholder="commandPlaceholder"
+				:disabled="commandDisabled"
+				wrapper-class="w-full"
+				input-class="!h-10"
+				autocomplete="off"
+				:spellcheck="false"
+				@keydown.enter="submitCommand"
+			/>
+		</div>
 	</div>
 	<ShareModal
 		ref="shareModal"
@@ -145,7 +163,14 @@
 </template>
 
 <script setup lang="ts">
-import { DownloadIcon, SearchIcon, TrashIcon, WrapTextIcon, XIcon } from '@modrinth/assets'
+import {
+	DownloadIcon,
+	SearchIcon,
+	TerminalSquareIcon,
+	TrashIcon,
+	WrapTextIcon,
+	XIcon,
+} from '@modrinth/assets'
 import { computed, isRef, onBeforeUnmount, ref } from 'vue'
 
 import Admonition from '#ui/components/base/Admonition.vue'
@@ -504,6 +529,33 @@ const resolvedShareDisabled = computed(() => {
 	if (!v) return false
 	return isRef(v) ? v.value : v
 })
+
+const commandInput = ref('')
+
+const showCommandInput = computed(() => {
+	if (!ctx.sendCommand) return false
+	return unwrapMaybeRef(ctx.showCommandInput) ?? false
+})
+
+const commandDisabled = computed(() => unwrapMaybeRef(ctx.disableCommandInput) ?? false)
+
+const commandDisabledTooltip = computed(() => ctx.disableCommandInputTooltip?.value)
+
+const commandPlaceholder = computed(() => {
+	if (!commandDisabled.value) return formatMessage(consoleMessages.commandPlaceholder)
+	return formatMessage(
+		ctx.emptyStateType === 'server'
+			? consoleMessages.serverNotRunning
+			: consoleMessages.commandInputDisabled,
+	)
+})
+
+function submitCommand() {
+	const command = commandInput.value.trim()
+	if (!command || commandDisabled.value || !ctx.sendCommand) return
+	ctx.sendCommand(command)
+	commandInput.value = ''
+}
 
 const showDelete = computed(() => !isLiveSource.value && ctx.onDelete != null)
 

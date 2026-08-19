@@ -2056,7 +2056,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				<NavButton
 					v-tooltip.right="formatMessage(messages.multiplayer)"
 					to="/multiplayer"
-					:is-primary="(r) => r.path === '/multiplayer'"
+					:is-primary="(r) => r.path.startsWith('/multiplayer')"
 				>
 					<UsersIcon />
 				</NavButton>
@@ -2719,7 +2719,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	*,
 	:deep(*) {
 		box-shadow: none !important;
-		--tw-drop-shadow:;
+		--tw-drop-shadow: initial;
 	}
 }
 

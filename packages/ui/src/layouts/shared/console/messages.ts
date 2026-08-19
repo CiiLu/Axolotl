@@ -59,6 +59,10 @@ export const consoleMessages = defineMessages({
 		id: 'console.command.disabled-placeholder',
 		defaultMessage: 'Command input disabled',
 	},
+	commandPlaceholder: {
+		id: 'console.command.placeholder',
+		defaultMessage: 'Send a command',
+	},
 	serverNotRunning: {
 		id: 'console.command.server-not-running-placeholder',
 		defaultMessage: 'Server is not running',

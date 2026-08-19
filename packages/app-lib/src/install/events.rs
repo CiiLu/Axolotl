@@ -1053,11 +1053,13 @@ mod tests {
     use crate::install::model::{
         InstallJobEventKind, InstallJobExecutionMode, InstallJobKind,
         InstallJobStatus, InstallPauseReason, InstallPhaseDetails,
-        InstallPhaseId, InstallProgress, InstallProgressSecondary,
-        MissingModpackContentState,
+        InstallPhaseId, InstallProgress, MissingModpackContentState,
     };
+    #[cfg(not(feature = "tauri"))]
+    use crate::install::model::InstallProgressSecondary;
     use crate::state::{InstanceLink, ModLoader};
 
+    #[cfg(not(feature = "tauri"))]
     fn minecraft_details() -> InstallPhaseDetails {
         InstallPhaseDetails::Minecraft {
             game_version: "1.21.1".to_string(),
@@ -1065,6 +1067,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(feature = "tauri"))]
     fn minecraft_progress(current: u64, total: u64) -> InstallProgress {
         InstallProgress {
             current,

@@ -6099,10 +6099,10 @@
 		"message": "查看实例"
 	},
 	"app.navigation.multiplayer": {
-		"message": "联机"
+		"message": "多人游戏"
 	},
 	"app.multiplayer.title": {
-		"message": "联机"
+		"message": "多人游戏"
 	},
 	"app.multiplayer.host": {
 		"message": "创建房间"
@@ -7736,9 +7736,6 @@
 	"app.settings.resources.proxy-mode": {
 		"message": "代理模式"
 	},
-	"app.java-arguments.presets.gc.auto.verified": {
-		"message": "上次启动: {chosen}"
-	},
 	"app.instance.icon-picker.icon.optifine": {
 		"message": "OptiFine"
 	},
@@ -7747,9 +7744,6 @@
 	},
 	"app.instance.icon-picker.icon.cleanroom": {
 		"message": "Cleanroom"
-	},
-	"app.gc-notice.fallback": {
-		"message": "Java 没有接受 {preferred}; 将使用 {chosen}."
 	},
 	"app.browse.project-type.favorites": {
 		"message": "收藏夹"
@@ -7849,5 +7843,236 @@
 	},
 	"app.survey-promotion.defer-hint": {
 		"message": "关闭此弹窗后，你仍可以随时在“设置 → 关于”页面中找到并填写问卷。"
+	},
+	"app.multiplayer.tab.rooms": {
+		"message": "联机房间"
+	},
+	"app.multiplayer.tab.servers": {
+		"message": "服务器"
+	},
+	"app.servers.action.open-folder": {
+		"message": "打开目录"
+	},
+	"app.servers.action.share": {
+		"message": "分享到公网"
+	},
+	"app.servers.action.start": {
+		"message": "启动"
+	},
+	"app.servers.action.stop": {
+		"message": "停止"
+	},
+	"app.servers.card.port": {
+		"message": "端口 {port}"
+	},
+	"app.servers.card.type": {
+		"message": "{type} · {version}"
+	},
+	"app.servers.create.title": {
+		"message": "创建服务器"
+	},
+	"app.servers.count": {
+		"message": "{count, plural, =0 {还没有服务器} other {共 # 个服务器}}"
+	},
+	"app.servers.detail.back": {
+		"message": "服务器"
+	},
+	"app.servers.detail.console": {
+		"message": "控制台"
+	},
+	"app.servers.detail.not-found": {
+		"message": "该服务器已不存在。"
+	},
+	"app.servers.detail.settings": {
+		"message": "设置"
+	},
+	"app.servers.empty.description": {
+		"message": "在启动器中创建服务器，与好友一起游玩。"
+	},
+	"app.servers.empty.heading": {
+		"message": "还没有服务器"
+	},
+	"app.servers.eula.accept": {
+		"message": "同意并继续"
+	},
+	"app.servers.eula.decline": {
+		"message": "取消"
+	},
+	"app.servers.eula.description": {
+		"message": "服务器启动前需要同意 Minecraft 最终用户许可协议（EULA）。请查看以下内容："
+	},
+	"app.servers.eula.title": {
+		"message": "Minecraft EULA"
+	},
+	"app.servers.loading": {
+		"message": "正在加载服务器…"
+	},
+	"app.servers.properties.load-failed": {
+		"message": "加载服务器配置失败。"
+	},
+	"app.servers.properties.missing": {
+		"message": "启动一次服务器即可生成此文件。"
+	},
+	"app.servers.properties.mode.form": {
+		"message": "表单"
+	},
+	"app.servers.properties.mode.text": {
+		"message": "文本"
+	},
+	"app.servers.properties.save": {
+		"message": "保存更改"
+	},
+	"app.servers.properties.saved": {
+		"message": "服务器设置已保存"
+	},
+	"app.servers.properties.title": {
+		"message": "server.properties"
+	},
+	"app.servers.refresh": {
+		"message": "刷新"
+	},
+	"app.servers.settings.config": {
+		"message": "配置文件"
+	},
+	"app.servers.settings.delete": {
+		"message": "删除服务器"
+	},
+	"app.servers.settings.delete-confirm": {
+		"message": "删除 {name} 及其所有文件？此操作无法撤销。"
+	},
+	"app.servers.settings.delete-hint": {
+		"message": "永久删除该服务器及其所有文件。"
+	},
+	"app.servers.settings.delete-proceed": {
+		"message": "删除"
+	},
+	"app.servers.settings.general": {
+		"message": "常规"
+	},
+	"app.servers.settings.java": {
+		"message": "Java"
+	},
+	"app.servers.settings.java-none": {
+		"message": "系统默认"
+	},
+	"app.servers.settings.jvm-args": {
+		"message": "JVM 参数"
+	},
+	"app.servers.settings.jvm-args-hint": {
+		"message": "以空格分隔的参数，例如 -XX:+UseG1GC"
+	},
+	"app.servers.settings.memory": {
+		"message": "内存"
+	},
+	"app.servers.settings.name": {
+		"message": "服务器名称"
+	},
+	"app.servers.settings.save": {
+		"message": "保存更改"
+	},
+	"app.servers.settings.saved": {
+		"message": "服务器设置已保存"
+	},
+	"app.servers.status.crashed": {
+		"message": "已崩溃"
+	},
+	"app.servers.status.created": {
+		"message": "未配置"
+	},
+	"app.servers.status.eula-pending": {
+		"message": "待同意 EULA"
+	},
+	"app.servers.status.ready": {
+		"message": "就绪"
+	},
+	"app.servers.status.running": {
+		"message": "运行中"
+	},
+	"app.servers.status.starting": {
+		"message": "启动中"
+	},
+	"app.servers.wizard.configure-heading": {
+		"message": "调整服务器设置，或直接完成，稍后再编辑。"
+	},
+	"app.servers.wizard.configure-title": {
+		"message": "配置"
+	},
+	"app.servers.wizard.done": {
+		"message": "服务器已就绪"
+	},
+	"app.servers.wizard.downloading": {
+		"message": "正在下载服务端文件…"
+	},
+	"app.servers.wizard.eula-wait": {
+		"message": "等待确认 EULA"
+	},
+	"app.servers.wizard.failed": {
+		"message": "创建失败"
+	},
+	"app.servers.wizard.finish": {
+		"message": "完成"
+	},
+	"app.servers.wizard.first-run": {
+		"message": "正在首次启动…"
+	},
+	"app.servers.wizard.game-version": {
+		"message": "游戏版本"
+	},
+	"app.servers.wizard.install-java": {
+		"message": "安装 Java"
+	},
+	"app.servers.wizard.install-title": {
+		"message": "安装"
+	},
+	"app.servers.wizard.java-missing": {
+		"message": "未找到兼容的 Java。"
+	},
+	"app.servers.wizard.loader-version": {
+		"message": "加载器版本"
+	},
+	"app.servers.wizard.log": {
+		"message": "输出"
+	},
+	"app.servers.wizard.memory-value": {
+		"message": "{value} MB"
+	},
+	"app.servers.wizard.name": {
+		"message": "服务器名称"
+	},
+	"app.servers.wizard.name-placeholder": {
+		"message": "例如：好友生存服"
+	},
+	"app.servers.wizard.next": {
+		"message": "下一步"
+	},
+	"app.servers.wizard.retry": {
+		"message": "重试"
+	},
+	"app.servers.wizard.setup-title": {
+		"message": "设置"
+	},
+	"app.servers.wizard.show-snapshots": {
+		"message": "显示快照版本"
+	},
+	"app.servers.wizard.type-coming-soon": {
+		"message": "即将支持"
+	},
+	"app.servers.wizard.type-heading": {
+		"message": "选择服务端类型"
+	},
+	"app.servers.wizard.type-title": {
+		"message": "服务端类型"
+	},
+	"app.gc-notice.fallback": {
+		"message": "Java 不接受 {preferred}，已改用 {chosen}。"
+	},
+	"app.java-arguments.presets.gc.auto.verified": {
+		"message": "上次启动：{chosen}"
+	},
+	"app.servers.console.command-echo": {
+		"message": "> {command}"
+	},
+	"app.servers.console.not-running": {
+		"message": "服务器未运行"
 	}
 }

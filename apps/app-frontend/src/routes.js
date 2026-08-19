@@ -90,6 +90,29 @@ export default new createRouter({
 				breadcrumb: [{ name: 'Multiplayer' }],
 				discordActivity: 'Idling...',
 			},
+			children: [
+				{
+					path: '',
+					redirect: { name: 'MultiplayerServers' },
+				},
+				{
+					path: 'servers',
+					name: 'MultiplayerServers',
+					component: () =>
+						import('@/components/multiplayer/servers/ServersOverview.vue'),
+				},
+				{
+					path: 'servers/:id',
+					name: 'MultiplayerServerDetail',
+					component: () =>
+						import('@/components/multiplayer/servers/ServerDetail.vue'),
+				},
+				{
+					path: 'rooms',
+					name: 'MultiplayerRooms',
+					component: () => import('@/components/multiplayer/MultiplayerRooms.vue'),
+				},
+			],
 		},
 		{
 			path: '/lab',

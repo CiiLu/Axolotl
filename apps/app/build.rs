@@ -629,6 +629,29 @@ fn main() {
                     ),
             )
             .plugin(
+                "servers",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "servers_list",
+                        "servers_get",
+                        "servers_create",
+                        "servers_update_settings",
+                        "servers_delete",
+                        "servers_read_file",
+                        "servers_write_file",
+                        "servers_download_file",
+                        "servers_start",
+                        "servers_send_command",
+                        "servers_stop",
+                        "servers_kill",
+                        "servers_get_log_buffer",
+                        "servers_clear_log",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "mod-translation",
                 InlinedPlugin::new()
                     .commands(&[

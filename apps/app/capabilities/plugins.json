@@ -138,6 +138,7 @@
 		"worlds:default",
 		"drop:default",
 		"terracotta:default",
-		"multiplayer:default"
+		"multiplayer:default",
+		"servers:default"
 	]
 }
