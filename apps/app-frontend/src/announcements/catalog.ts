@@ -47,6 +47,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed when hovering links in browse page will trigger a flashing element behind the left nav bar.',
 					'zh-CN': '修复浏览页面悬停链接时会触发左侧导航栏后面的闪烁元素的问题。',
 				},
+				{
+					'en-US':
+						'Fixed unknown curseforge ID error when switching mods from curseforge source. (issue #320)',
+					'zh-CN': '修复了从 CurseForge 源切换模组时提示未知 CurseForge ID 的错误。(issue #320)',
+				},
 			],
 			changed: [
 				{
