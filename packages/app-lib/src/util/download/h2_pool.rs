@@ -25,29 +25,29 @@ const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(crate) enum H2ConnectFailureKind {
-	Tcp,
-	Tls,
-	Protocol,
+    Tcp,
+    Tls,
+    Protocol,
 }
 
 #[derive(Debug)]
 pub(crate) struct H2ConnectError {
-	pub(crate) kind: H2ConnectFailureKind,
-	detail: String,
+    pub(crate) kind: H2ConnectFailureKind,
+    detail: String,
 }
 
 impl std::fmt::Display for H2ConnectError {
-	fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		formatter.write_str(&self.detail)
-	}
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.detail)
+    }
 }
 
 impl std::error::Error for H2ConnectError {}
 
 impl H2ConnectError {
-	fn new(kind: H2ConnectFailureKind, detail: String) -> Self {
-		Self { kind, detail }
-	}
+    fn new(kind: H2ConnectFailureKind, detail: String) -> Self {
+        Self { kind, detail }
+    }
 }
 
 /// A live shared HTTP/2 connection to one authority.
@@ -194,7 +194,7 @@ async fn connect_tcp(host: &str, port: u16) -> std::io::Result<TcpStream> {
 
 /// Connects a new shared HTTP/2 connection to `authority` (host[:port]).
 async fn establish(
-	authority: &str,
+    authority: &str,
 ) -> Result<Arc<SharedH2Connection>, H2ConnectError> {
     let (host, port) = authority
         .rsplit_once(':')
@@ -207,7 +207,7 @@ async fn establish(
         .pre_resolve(host)
         .await;
 
-	let tcp = connect_tcp(host, port).await.map_err(|error| {
+    let tcp = connect_tcp(host, port).await.map_err(|error| {
 		H2ConnectError::new(
 			H2ConnectFailureKind::Tcp,
 			format!(
@@ -217,39 +217,39 @@ async fn establish(
 	})?;
 
     let server_name =
-		ServerName::try_from(host.to_string()).map_err(|error| {
-			H2ConnectError::new(
-				H2ConnectFailureKind::Tls,
-				format!("invalid server name for {host}: {error}"),
-			)
-		})?;
+        ServerName::try_from(host.to_string()).map_err(|error| {
+            H2ConnectError::new(
+                H2ConnectFailureKind::Tls,
+                format!("invalid server name for {host}: {error}"),
+            )
+        })?;
     let connector = TlsConnector::from(tls_config());
     let tls = tokio::time::timeout(
         TLS_HANDSHAKE_TIMEOUT,
         connector.connect(server_name, tcp),
     )
     .await
-	.map_err(|_| {
-		H2ConnectError::new(
-			H2ConnectFailureKind::Tls,
-			format!("TLS handshake with {authority} timed out"),
-		)
-	})?
-	.map_err(|error| {
-		H2ConnectError::new(
-			H2ConnectFailureKind::Tls,
-			format!("TLS handshake with {authority} failed: {error}"),
-		)
-	})?;
+    .map_err(|_| {
+        H2ConnectError::new(
+            H2ConnectFailureKind::Tls,
+            format!("TLS handshake with {authority} timed out"),
+        )
+    })?
+    .map_err(|error| {
+        H2ConnectError::new(
+            H2ConnectFailureKind::Tls,
+            format!("TLS handshake with {authority} failed: {error}"),
+        )
+    })?;
 
-	let (sender, mut connection) = h2::client::handshake(Box::pin(tls))
-		.await
-		.map_err(|error| {
-		H2ConnectError::new(
-			H2ConnectFailureKind::Protocol,
-			format!("HTTP/2 handshake with {authority} failed: {error}"),
-		)
-	})?;
+    let (sender, mut connection) = h2::client::handshake(Box::pin(tls))
+        .await
+        .map_err(|error| {
+        H2ConnectError::new(
+            H2ConnectFailureKind::Protocol,
+            format!("HTTP/2 handshake with {authority} failed: {error}"),
+        )
+    })?;
 
     // Tune flow-control windows for high-stream multiplexing (e.g. hundreds
     // of concurrent asset downloads over one connection). With the default
@@ -277,7 +277,7 @@ async fn establish(
 /// Returns the live shared connection for `authority`, establishing one on
 /// first use or after a previous connection died.
 pub(crate) async fn shared_connection(
-	authority: &str,
+    authority: &str,
 ) -> Result<Arc<SharedH2Connection>, H2ConnectError> {
     let slot = connection_slot(authority).await;
     let mut cached = slot.lock().await;
@@ -292,15 +292,15 @@ pub(crate) async fn shared_connection(
 }
 
 pub(crate) async fn has_live_connection(authority: &str) -> bool {
-	let connections = CONNECTIONS.lock().await;
-	let Some(slot) = connections.get(authority).cloned() else {
-		return false;
-	};
-	drop(connections);
-	let live = slot
-		.lock()
-		.await
-		.as_ref()
-		.is_some_and(|connection| !connection.is_dead());
-	live
+    let connections = CONNECTIONS.lock().await;
+    let Some(slot) = connections.get(authority).cloned() else {
+        return false;
+    };
+    drop(connections);
+    let live = slot
+        .lock()
+        .await
+        .as_ref()
+        .is_some_and(|connection| !connection.is_dead());
+    live
 }

@@ -1493,24 +1493,22 @@ pub async fn download_assets(
             ResourceClass::MinecraftAsset,
             source_mode,
         );
-		let apply_native_policy = crate::util::download::active_engine()
-			!= crate::util::download::DownloadEngine::XmclCompat;
-		if apply_native_policy {
-			let probe_request = DownloadRequest::new(
-				&first_url,
-				ResourceClass::MinecraftAsset,
-			)
-			.with_integrity(
-				Integrity::sha1(&batch_items[0].sha1)
-					.with_size(batch_items[0].size),
-			);
-			prepare_native_download_routes(
-				&probe_request,
-				&mut routes,
-				&st.fetch_semaphore,
-			)
-			.await;
-		}
+        let apply_native_policy = crate::util::download::active_engine()
+            != crate::util::download::DownloadEngine::XmclCompat;
+        if apply_native_policy {
+            let probe_request =
+                DownloadRequest::new(&first_url, ResourceClass::MinecraftAsset)
+                    .with_integrity(
+                        Integrity::sha1(&batch_items[0].sha1)
+                            .with_size(batch_items[0].size),
+                    );
+            prepare_native_download_routes(
+                &probe_request,
+                &mut routes,
+                &st.fetch_semaphore,
+            )
+            .await;
+        }
         let route = routes.into_iter().next();
         if let Some(route) = route {
             // Resolve each item's URL onto the chosen route (official or
@@ -1520,21 +1518,21 @@ pub async fn download_assets(
             let route_authority = url_authority(&route.url);
             let mut reroute = Vec::new();
             for item in &mut batch_items {
-				let item_routes = resolve_download_routes_for(
+                let item_routes = resolve_download_routes_for(
                     &item.url,
                     ResourceClass::MinecraftAsset,
                     source_mode,
                 );
-				item.url = item_routes
-					.iter()
-					.find(|candidate| {
-						apply_native_policy
-							&& candidate.source == route.source
-							&& candidate.proxy == route.proxy
-					})
-					.or_else(|| item_routes.first())
-                .map(|route| route.url.clone())
-                .unwrap_or_else(|| item.url.clone());
+                item.url = item_routes
+                    .iter()
+                    .find(|candidate| {
+                        apply_native_policy
+                            && candidate.source == route.source
+                            && candidate.proxy == route.proxy
+                    })
+                    .or_else(|| item_routes.first())
+                    .map(|route| route.url.clone())
+                    .unwrap_or_else(|| item.url.clone());
                 if url_authority(&item.url) != route_authority {
                     reroute.push(item.sha1.clone());
                 }
@@ -1576,8 +1574,8 @@ pub async fn download_assets(
                 &route,
                 batch_items,
                 ASSET_BATCH_CONCURRENCY,
-				apply_native_policy,
-				apply_native_policy.then_some(&st.fetch_semaphore),
+                apply_native_policy,
+                apply_native_policy.then_some(&st.fetch_semaphore),
                 callback,
             )
             .await;

@@ -5,9 +5,7 @@
 //! switch to independent HTTP/1.1 range connections when that is faster;
 //! Minecraft assets use the dedicated batch multiplexer below.
 
-use super::h2_pool::{
-	H2ConnectFailureKind, SharedH2Connection,
-};
+use super::h2_pool::{H2ConnectFailureKind, SharedH2Connection};
 use crate::util::fetch;
 use crate::util::fetch::{
     DownloadRequest, DownloadResult, DownloadRoute, DownloadRouteSource,
@@ -40,51 +38,51 @@ pub(crate) enum H2DownloadOutcome {
     Completed(DownloadResult),
     /// The multiplexed path cannot be used; the caller should fall back to
     /// the legacy path.
-	Fallback {
-		failure: H2DownloadFailure,
-		preserve_partial: bool,
-	},
+    Fallback {
+        failure: H2DownloadFailure,
+        preserve_partial: bool,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum H2DownloadFailure {
-	Ineligible(&'static str),
-	Connect,
-	Tls,
-	Protocol,
-	Http,
-	Integrity,
-	Content,
-	Io,
-	Slow,
+    Ineligible(&'static str),
+    Connect,
+    Tls,
+    Protocol,
+    Http,
+    Integrity,
+    Content,
+    Io,
+    Slow,
 }
 
 impl H2DownloadFailure {
-	pub(crate) const fn as_str(self) -> &'static str {
-		match self {
-			Self::Ineligible(reason) => reason,
-			Self::Connect => "HTTP/2 TCP connection failed",
-			Self::Tls => "HTTP/2 TLS connection failed",
-			Self::Protocol => "HTTP/2 protocol failed",
-			Self::Http => "HTTP/2 response was unsuccessful",
-			Self::Integrity => "HTTP/2 integrity validation failed",
-			Self::Content => "HTTP/2 content validation failed",
-			Self::Io => "HTTP/2 local I/O failed",
-			Self::Slow => "HTTP/2 single stream stayed below expectation",
-		}
-	}
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Ineligible(reason) => reason,
+            Self::Connect => "HTTP/2 TCP connection failed",
+            Self::Tls => "HTTP/2 TLS connection failed",
+            Self::Protocol => "HTTP/2 protocol failed",
+            Self::Http => "HTTP/2 response was unsuccessful",
+            Self::Integrity => "HTTP/2 integrity validation failed",
+            Self::Content => "HTTP/2 content validation failed",
+            Self::Io => "HTTP/2 local I/O failed",
+            Self::Slow => "HTTP/2 single stream stayed below expectation",
+        }
+    }
 
-	pub(crate) const fn should_cooldown_authority(self) -> bool {
-		matches!(self, Self::Protocol)
-	}
+    pub(crate) const fn should_cooldown_authority(self) -> bool {
+        matches!(self, Self::Protocol)
+    }
 
-	pub(crate) const fn is_transfer_failure(self) -> bool {
-		matches!(self, Self::Connect | Self::Tls | Self::Protocol)
-	}
+    pub(crate) const fn is_transfer_failure(self) -> bool {
+        matches!(self, Self::Connect | Self::Tls | Self::Protocol)
+    }
 
-	pub(crate) const fn integrity_failure(self) -> bool {
-		matches!(self, Self::Integrity | Self::Content)
-	}
+    pub(crate) const fn integrity_failure(self) -> bool {
+        matches!(self, Self::Integrity | Self::Content)
+    }
 }
 
 /// Attempts to download `request` as one stream on a shared HTTP/2 connection.
@@ -93,28 +91,28 @@ pub(crate) async fn try_download_via_h2(
     route: &DownloadRoute,
     destination: &Path,
     part_path: &Path,
-	policy: super::native::NativeH2Policy,
+    policy: super::native::NativeH2Policy,
 ) -> H2DownloadOutcome {
-	if let Some(reason) = super::native::h2_ineligible_reason(route) {
-		return H2DownloadOutcome::Fallback {
-			failure: H2DownloadFailure::Ineligible(reason.as_str()),
-			preserve_partial: false,
-		};
-	}
-	let connection = match connect_authority(&route.url).await {
-		Ok(connection) => connection,
-		Err(failure) => {
-			return H2DownloadOutcome::Fallback {
-				failure,
-				preserve_partial: false,
-			};
-		}
-	};
-	let Ok(uri) = route.url.parse::<Uri>() else {
-		return H2DownloadOutcome::Fallback {
-			failure: H2DownloadFailure::Http,
-			preserve_partial: false,
-		};
+    if let Some(reason) = super::native::h2_ineligible_reason(route) {
+        return H2DownloadOutcome::Fallback {
+            failure: H2DownloadFailure::Ineligible(reason.as_str()),
+            preserve_partial: false,
+        };
+    }
+    let connection = match connect_authority(&route.url).await {
+        Ok(connection) => connection,
+        Err(failure) => {
+            return H2DownloadOutcome::Fallback {
+                failure,
+                preserve_partial: false,
+            };
+        }
+    };
+    let Ok(uri) = route.url.parse::<Uri>() else {
+        return H2DownloadOutcome::Fallback {
+            failure: H2DownloadFailure::Http,
+            preserve_partial: false,
+        };
     };
 
     let integrity = request.integrity.clone();
@@ -143,10 +141,10 @@ pub(crate) async fn try_download_via_h2(
                         error = %error,
                         "HTTP/2 probe failed; falling back to legacy download"
                     );
-					return H2DownloadOutcome::Fallback {
-						failure: classify_download_error(&error),
-						preserve_partial: false,
-					};
+                    return H2DownloadOutcome::Fallback {
+                        failure: classify_download_error(&error),
+                        preserve_partial: false,
+                    };
                 }
             };
 
@@ -159,114 +157,113 @@ pub(crate) async fn try_download_via_h2(
         drop(probe_body);
 
         let Some(total_size) = total_size else {
-			return H2DownloadOutcome::Fallback {
-				failure: H2DownloadFailure::Http,
-				preserve_partial: false,
-			};
+            return H2DownloadOutcome::Fallback {
+                failure: H2DownloadFailure::Http,
+                preserve_partial: false,
+            };
         };
         if total_size == 0 {
-			return H2DownloadOutcome::Fallback {
-				failure: H2DownloadFailure::Content,
-				preserve_partial: false,
-			};
+            return H2DownloadOutcome::Fallback {
+                failure: H2DownloadFailure::Content,
+                preserve_partial: false,
+            };
         }
         if status != StatusCode::PARTIAL_CONTENT {
-			return H2DownloadOutcome::Fallback {
-				failure: H2DownloadFailure::Http,
-				preserve_partial: false,
-			};
+            return H2DownloadOutcome::Fallback {
+                failure: H2DownloadFailure::Http,
+                preserve_partial: false,
+            };
         }
         total_size
     };
 
-	let result = single_stream(
-			&connection,
-            &uri,
-            request,
-            route,
-            destination,
-            part_path,
-			&integrity,
-			total_size,
-			policy,
-		)
-		.await;
+    let result = single_stream(
+        &connection,
+        &uri,
+        request,
+        route,
+        destination,
+        part_path,
+        &integrity,
+        total_size,
+        policy,
+    )
+    .await;
     match result {
         Ok(result) => H2DownloadOutcome::Completed(result),
-		Err(error) => {
-			let failure = classify_download_error(&error);
+        Err(error) => {
+            let failure = classify_download_error(&error);
             tracing::debug!(
                 url = %fetch::sanitize_url_for_log(&request.url),
                 error = %error,
                 "Multiplexed download failed; falling back to legacy download"
             );
-			H2DownloadOutcome::Fallback {
-				failure,
-				preserve_partial: integrity.supports_resume()
-					&& matches!(failure, H2DownloadFailure::Protocol),
-			}
+            H2DownloadOutcome::Fallback {
+                failure,
+                preserve_partial: integrity.supports_resume()
+                    && matches!(failure, H2DownloadFailure::Protocol),
+            }
         }
     }
 }
 
 async fn connect_authority(
-	url: &str,
+    url: &str,
 ) -> Result<Arc<SharedH2Connection>, H2DownloadFailure> {
-	let authority =
-		fetch::url_authority(url).ok_or(H2DownloadFailure::Http)?;
-	match super::h2_pool::shared_connection(&authority).await {
-		Ok(connection) => Ok(connection),
-		Err(error) => {
+    let authority = fetch::url_authority(url).ok_or(H2DownloadFailure::Http)?;
+    match super::h2_pool::shared_connection(&authority).await {
+        Ok(connection) => Ok(connection),
+        Err(error) => {
             tracing::debug!(
                 authority,
                 error = %error,
                 "Failed to establish shared HTTP/2 connection"
             );
-			Err(match error.kind {
-				H2ConnectFailureKind::Tcp => H2DownloadFailure::Connect,
-				H2ConnectFailureKind::Tls => H2DownloadFailure::Tls,
-				H2ConnectFailureKind::Protocol => H2DownloadFailure::Protocol,
-			})
-		}
-	}
+            Err(match error.kind {
+                H2ConnectFailureKind::Tcp => H2DownloadFailure::Connect,
+                H2ConnectFailureKind::Tls => H2DownloadFailure::Tls,
+                H2ConnectFailureKind::Protocol => H2DownloadFailure::Protocol,
+            })
+        }
+    }
 }
 
 fn classify_download_error(error: &crate::Error) -> H2DownloadFailure {
-	if fetch::is_integrity_error(error) {
-		return H2DownloadFailure::Integrity;
-	}
-	match error.raw.as_ref() {
-		crate::ErrorKind::HttpError { .. }
-		| crate::ErrorKind::LabrinthError(_) => H2DownloadFailure::Http,
-		crate::ErrorKind::IOError(_)
-		| crate::ErrorKind::StdIOError(_) => H2DownloadFailure::Io,
-		crate::ErrorKind::JSONError(_) => H2DownloadFailure::Content,
-		crate::ErrorKind::NetworkError(message)
-			if message.contains("below expectation") =>
-		{
-			H2DownloadFailure::Slow
-		}
-		crate::ErrorKind::NetworkError(message)
-			if message.contains("HTTP/2")
-				|| message.contains("range stream") =>
-		{
-			H2DownloadFailure::Protocol
-		}
-		crate::ErrorKind::OtherError(message)
-			if message.contains("HTTP/2")
-				|| message.contains("Content-Range")
-				|| message.contains("segment") =>
-		{
-			H2DownloadFailure::Protocol
-		}
-		crate::ErrorKind::OtherError(message)
-			if message.contains("empty")
-				|| message.contains("Invalid JAR") =>
-		{
-			H2DownloadFailure::Content
-		}
-		_ => H2DownloadFailure::Http,
-	}
+    if fetch::is_integrity_error(error) {
+        return H2DownloadFailure::Integrity;
+    }
+    match error.raw.as_ref() {
+        crate::ErrorKind::HttpError { .. }
+        | crate::ErrorKind::LabrinthError(_) => H2DownloadFailure::Http,
+        crate::ErrorKind::IOError(_) | crate::ErrorKind::StdIOError(_) => {
+            H2DownloadFailure::Io
+        }
+        crate::ErrorKind::JSONError(_) => H2DownloadFailure::Content,
+        crate::ErrorKind::NetworkError(message)
+            if message.contains("below expectation") =>
+        {
+            H2DownloadFailure::Slow
+        }
+        crate::ErrorKind::NetworkError(message)
+            if message.contains("HTTP/2")
+                || message.contains("range stream") =>
+        {
+            H2DownloadFailure::Protocol
+        }
+        crate::ErrorKind::OtherError(message)
+            if message.contains("HTTP/2")
+                || message.contains("Content-Range")
+                || message.contains("segment") =>
+        {
+            H2DownloadFailure::Protocol
+        }
+        crate::ErrorKind::OtherError(message)
+            if message.contains("empty") || message.contains("Invalid JAR") =>
+        {
+            H2DownloadFailure::Content
+        }
+        _ => H2DownloadFailure::Http,
+    }
 }
 
 fn request_headers(
@@ -361,28 +358,26 @@ async fn single_stream(
     part_path: &Path,
     integrity: &Integrity,
     total_size: u64,
-	policy: super::native::NativeH2Policy,
+    policy: super::native::NativeH2Policy,
 ) -> crate::Result<DownloadResult> {
     let mut headers = request_headers(request, route);
     headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
 
     let (response, mut stream) = open_stream(connection, uri, headers).await?;
-	if !response.status().is_success() {
-		return Err(crate::ErrorKind::HttpError {
-			status: response.status().as_u16(),
-			method: "GET".to_string(),
-			url: fetch::sanitize_url_for_log(uri.to_string().as_str()),
-		}
-		.into());
-	}
+    if !response.status().is_success() {
+        return Err(crate::ErrorKind::HttpError {
+            status: response.status().as_u16(),
+            method: "GET".to_string(),
+            url: fetch::sanitize_url_for_log(uri.to_string().as_str()),
+        }
+        .into());
+    }
 
     let mut hashers = fetch::IntegrityHashers::new_integrity_hashers(integrity);
     let mut file = tokio::fs::File::create(part_path).await?;
     let mut downloaded = 0_u64;
-	let mut slow_policy = super::native_slow::NativeSlowPolicy::new(
-		0,
-		policy.expected_speed,
-	);
+    let mut slow_policy =
+        super::native_slow::NativeSlowPolicy::new(0, policy.expected_speed);
     loop {
         let chunk = tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data())
             .await
@@ -404,20 +399,19 @@ async fn single_stream(
         hashers.update(&chunk);
         downloaded += chunk.len() as u64;
         record_install_progress(request, downloaded, total_size).await;
-		if policy.abort_if_slow
-			&& matches!(
+        if policy.abort_if_slow
+            && matches!(
 				slow_policy.observe(
 					downloaded,
 					total_size.saturating_sub(downloaded),
 				),
 				super::native_slow::SlowDecision::Probe { .. }
-			)
-		{
-			return Err(crate::ErrorKind::NetworkError(
-				"HTTP/2 single stream stayed below expectation".to_string(),
-			)
-			.into());
-		}
+			) {
+            return Err(crate::ErrorKind::NetworkError(
+                "HTTP/2 single stream stayed below expectation".to_string(),
+            )
+            .into());
+        }
     }
     file.flush().await?;
     drop(file);
@@ -539,7 +533,7 @@ pub(crate) async fn download_asset_batch_via_h2<F>(
     items: Vec<H2BatchAsset>,
     concurrency: usize,
     apply_native_policy: bool,
-	native_semaphore: Option<&fetch::FetchSemaphore>,
+    native_semaphore: Option<&fetch::FetchSemaphore>,
     on_completed: F,
 ) -> Vec<H2BatchAsset>
 where
@@ -547,45 +541,45 @@ where
         + Send
         + 'static,
 {
-	if apply_native_policy
-		&& super::native::h2_ineligible_reason(route).is_some()
-	{
-		return items;
-	}
-	let _authority_permit = if apply_native_policy {
-		match super::native_budget::acquire(route).await {
-			Ok(permit) => Some(permit),
-			Err(_) => return items,
-		}
-	} else {
-		None
-	};
-	let _global_permit = if let Some(semaphore) = native_semaphore {
-		match semaphore.0.acquire().await {
-			Ok(permit) => Some(permit),
-			Err(_) => return items,
-		}
-	} else {
-		None
-	};
-	let connection = match connect_authority(&route.url).await {
-		Ok(connection) => connection,
-		Err(failure) => {
-			if apply_native_policy
-				&& failure.should_cooldown_authority()
-				&& let Some(authority) = fetch::url_authority(&route.url)
-			{
-				fetch::record_authority_h2_failure(&authority);
-			}
-			if apply_native_policy && failure.is_transfer_failure() {
-				super::native_breaker::record_failure(route);
-			}
-			return items;
-		}
-	};
-	if apply_native_policy {
-		super::native_breaker::record_success(route);
-	}
+    if apply_native_policy
+        && super::native::h2_ineligible_reason(route).is_some()
+    {
+        return items;
+    }
+    let _authority_permit = if apply_native_policy {
+        match super::native_budget::acquire(route).await {
+            Ok(permit) => Some(permit),
+            Err(_) => return items,
+        }
+    } else {
+        None
+    };
+    let _global_permit = if let Some(semaphore) = native_semaphore {
+        match semaphore.0.acquire().await {
+            Ok(permit) => Some(permit),
+            Err(_) => return items,
+        }
+    } else {
+        None
+    };
+    let connection = match connect_authority(&route.url).await {
+        Ok(connection) => connection,
+        Err(failure) => {
+            if apply_native_policy
+                && failure.should_cooldown_authority()
+                && let Some(authority) = fetch::url_authority(&route.url)
+            {
+                fetch::record_authority_h2_failure(&authority);
+            }
+            if apply_native_policy && failure.is_transfer_failure() {
+                super::native_breaker::record_failure(route);
+            }
+            return items;
+        }
+    };
+    if apply_native_policy {
+        super::native_breaker::record_success(route);
+    }
     let route_authority = fetch::url_authority(&route.url);
 
     // Items whose URL targets a different authority cannot be multiplexed on

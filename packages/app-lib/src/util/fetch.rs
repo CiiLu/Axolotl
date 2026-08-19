@@ -3802,7 +3802,8 @@ async fn acquire_initial_segment_permits<'a>(
 ) -> crate::Result<Vec<NativeConnectionPermit<'a>>> {
     let queue_started = Instant::now();
     let native_permits =
-        crate::util::download::native_budget::acquire_many(route, count).await?;
+        crate::util::download::native_budget::acquire_many(route, count)
+            .await?;
     let mut global = semaphore.0.acquire_many(count as u32).await?;
     let mut permits = Vec::with_capacity(count);
     for native in native_permits {
@@ -3831,8 +3832,7 @@ async fn acquire_native_connection<'a>(
     route: &DownloadRoute,
     semaphore: &'a FetchSemaphore,
 ) -> crate::Result<NativeConnectionPermit<'a>> {
-    let native =
-        crate::util::download::native_budget::acquire(route).await?;
+    let native = crate::util::download::native_budget::acquire(route).await?;
     let global = semaphore.0.acquire().await?;
     Ok(NativeConnectionPermit {
         _global: global,
@@ -4132,14 +4132,13 @@ fn route_health_is_cold(
             .get(&key)
             .map(|entry| entry.success_samples)
             .unwrap_or(0);
-        let persisted_samples =
-            crate::util::download::native_reputation::get(
-                key.family.as_str(),
-                &key.authority,
-                route.proxy,
-            )
-            .map(|entry| entry.success_samples)
-            .unwrap_or(0);
+        let persisted_samples = crate::util::download::native_reputation::get(
+            key.family.as_str(),
+            &key.authority,
+            route.proxy,
+        )
+        .map(|entry| entry.success_samples)
+        .unwrap_or(0);
         in_memory_samples.max(persisted_samples)
             < COLD_START_ROUTE_HEALTH_SAMPLE_THRESHOLD
     })
@@ -4946,8 +4945,7 @@ async fn try_segmented_download(
     let configured_limit = configured_semaphore_limit(semaphore);
     let concurrency_cap =
         route_segmented_concurrency_cap(route, configured_limit);
-    let requested_initial_count =
-        initial_segment_count(size, concurrency_cap);
+    let requested_initial_count = initial_segment_count(size, concurrency_cap);
     if requested_initial_count < 2 {
         tracing::debug!(
             original_url = %sanitize_url_for_log(&route.url),
@@ -5022,10 +5020,11 @@ async fn try_segmented_download(
     let mut expansion_exhausted = false;
     let mut last_block_reason = None;
     let mut downloaded = 0_u64;
-    let mut slow_policy = crate::util::download::native_slow::NativeSlowPolicy::new(
-        0,
-        expected_route_speed(route, request.resource),
-    );
+    let mut slow_policy =
+        crate::util::download::native_slow::NativeSlowPolicy::new(
+            0,
+            expected_route_speed(route, request.resource),
+        );
     let mut alternate_probe: Option<RouteProbeFuture<'_>> = None;
     let mut alternate_probe_finished = false;
     let mut confirmed_switch = None;
@@ -5321,8 +5320,7 @@ async fn try_segmented_download(
     }
     let computed = hashers.finish(merged_size);
     record_install_download_stage(request, DownloadItemStatus::Verifying).await;
-    if let Err(error) =
-        verify_computed_integrity(&request.integrity, &computed)
+    if let Err(error) = verify_computed_integrity(&request.integrity, &computed)
     {
         let _ = remove_if_exists(part_path).await;
         return SegmentedDownloadOutcome::IntegrityFailed(error);
@@ -5765,9 +5763,9 @@ async fn download_to_path_inner(
                 || single_thread_routes.contains(&route.url);
             if !recovery_route
                 && crate::util::download::native_breaker::should_skip(
-                route,
-                has_breaker_alternate,
-            )
+                    route,
+                    has_breaker_alternate,
+                )
             {
                 continue;
             }
@@ -5980,11 +5978,7 @@ async fn download_to_path_inner(
                             break;
                         }
                         SegmentedDownloadOutcome::IntegrityFailed(error) => {
-                            record_route_failure(
-                                route,
-                                request.resource,
-                                None,
-                            );
+                            record_route_failure(route, request.resource, None);
                             record_download_attempt_failure(
                                 &mut attempt_history,
                                 route,
@@ -6066,7 +6060,8 @@ async fn download_to_path_inner(
                 } else {
                     0
                 };
-                let permit = acquire_native_connection(route, semaphore).await?;
+                let permit =
+                    acquire_native_connection(route, semaphore).await?;
                 let mut activity = crate::State::get_if_initialized()
                     .map(|state| state.begin_download_connection());
                 record_install_download_started(
@@ -6192,9 +6187,11 @@ async fn download_to_path_inner(
                             route,
                             request.resource,
                             (status == StatusCode::TOO_MANY_REQUESTS)
-                                .then_some(response_retry_after.unwrap_or_else(
-                                    || fetch_retry_delay(attempts),
-                                )),
+                                .then_some(
+                                    response_retry_after.unwrap_or_else(|| {
+                                        fetch_retry_delay(attempts)
+                                    }),
+                                ),
                         );
                         if status == StatusCode::TOO_MANY_REQUESTS
                             || status.is_server_error()
@@ -6241,18 +6238,18 @@ async fn download_to_path_inner(
                         )
                         .await;
                     }
-                    let decision = if status == StatusCode::RANGE_NOT_SATISFIABLE
-                    {
-                        "disable_range_and_retry_single"
-                    } else if terminal_status {
-                        "drop_route"
-                    } else if cooldown_and_switch {
-                        "cooldown_and_switch"
-                    } else if status == StatusCode::TOO_MANY_REQUESTS {
-                        "cooldown_then_retry"
-                    } else {
-                        "retry_next_round"
-                    };
+                    let decision =
+                        if status == StatusCode::RANGE_NOT_SATISFIABLE {
+                            "disable_range_and_retry_single"
+                        } else if terminal_status {
+                            "drop_route"
+                        } else if cooldown_and_switch {
+                            "cooldown_and_switch"
+                        } else if status == StatusCode::TOO_MANY_REQUESTS {
+                            "cooldown_then_retry"
+                        } else {
+                            "retry_next_round"
+                        };
                     record_download_attempt_failure(
                         &mut attempt_history,
                         route,
@@ -6694,8 +6691,7 @@ async fn download_to_path_inner(
                         || attempts >= 2
                     {
                         terminal_routes.insert(route.url.clone());
-                        if is_official_route(route)
-                            && official_integrity_retry
+                        if is_official_route(route) && official_integrity_retry
                         {
                             return Err(attach_download_attempt_history(
                                 last_error.take().unwrap(),
@@ -8151,11 +8147,7 @@ mod tests {
                 tokio::time::sleep(Duration::from_millis(50)).await;
                 drop(held);
             },
-            acquire_initial_segment_permits(
-                &route,
-                &semaphore,
-                4,
-            ),
+            acquire_initial_segment_permits(&route, &semaphore, 4,),
         );
         let permits = permits.unwrap();
         assert_eq!(permits.len(), 4);
@@ -8178,10 +8170,7 @@ mod tests {
         );
 
         assert_eq!(route_segmented_concurrency_cap(&bmclapi, 64), 4);
-        assert_eq!(
-            route_segmented_concurrency_cap(&official, 64),
-            4
-        );
+        assert_eq!(route_segmented_concurrency_cap(&official, 64), 4);
     }
 
     #[test]
@@ -8374,7 +8363,7 @@ mod tests {
             &client,
             &client,
             ResourceClass::Other,
-			0,
+            0,
         )
         .await
         .expect("the local range route should be measurably faster");
@@ -8403,7 +8392,7 @@ mod tests {
                 &client,
                 &client,
                 ResourceClass::Other,
-				0,
+                0,
             )
             .await
             .is_none()
@@ -8713,9 +8702,8 @@ mod tests {
             .unwrap();
         let semaphore = FetchSemaphore(Semaphore::new(4));
         let (progress, _receiver) = tokio::sync::mpsc::unbounded_channel();
-        let permit = acquire_native_connection(&route, &semaphore)
-            .await
-            .unwrap();
+        let permit =
+            acquire_native_connection(&route, &semaphore).await.unwrap();
         let speed = DownloadSpeedTracker::default();
         let validator = Mutex::new(None);
         let result = download_segment(
