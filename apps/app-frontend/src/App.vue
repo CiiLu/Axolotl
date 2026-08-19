@@ -4314,8 +4314,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	.app-grid-navbar,
 	.app-grid-statusbar {
-		background-color: color-mix(in srgb, var(--color-raised-bg) 82%, transparent) !important;
-		backdrop-filter: blur(18px) saturate(120%);
+		background-color: color-mix(
+			in srgb,
+			var(--surface-3-opaque) var(--window-alpha-chrome),
+			transparent
+		) !important;
+
+		backdrop-filter: none;
 	}
 }
 
@@ -4428,6 +4433,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			var(--surface-1-opaque) calc(var(--window-alpha) * 0.82),
 			transparent
 		);
+	}
+
+	:deep(.browse-install-header) {
+		background-color: color-mix(in srgb, var(--surface-1-opaque) 68%, transparent) !important;
+
+		backdrop-filter: blur(20px) saturate(115%);
+		-webkit-backdrop-filter: blur(20px) saturate(115%);
 	}
 }
 
