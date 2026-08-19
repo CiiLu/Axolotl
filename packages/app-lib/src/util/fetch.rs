@@ -59,10 +59,6 @@ const SEGMENT_RETRY_ATTEMPTS: usize = 3;
 const SEGMENT_EXPANSION_SAMPLE_COUNT: usize = 3;
 const SEGMENT_EXPANSION_INTERVAL: time::Duration =
     time::Duration::from_millis(1500);
-const SUSTAINED_LOW_THROUGHPUT_WINDOW: time::Duration =
-    time::Duration::from_secs(5);
-const SUSTAINED_LOW_THROUGHPUT_FLOOR: u64 = 256 * 1024;
-const SUSTAINED_LOW_THROUGHPUT_MIN_REMAINING: u64 = 1024 * 1024;
 #[cfg(not(test))]
 const RANGE_IDLE_RECONNECT_TIMEOUT: time::Duration =
     time::Duration::from_secs(8);
@@ -88,9 +84,15 @@ const FILE_TRANSFER_READ_TIMEOUT: time::Duration = time::Duration::from_secs(2);
 #[cfg(not(test))]
 const FILE_TRANSFER_FIRST_BYTE_TIMEOUT: time::Duration =
     time::Duration::from_secs(20);
+#[cfg(not(test))]
+const REASSIGNABLE_FIRST_BYTE_TIMEOUT: time::Duration =
+    time::Duration::from_secs(5);
 #[cfg(test)]
 const FILE_TRANSFER_FIRST_BYTE_TIMEOUT: time::Duration =
     time::Duration::from_secs(2);
+#[cfg(test)]
+const REASSIGNABLE_FIRST_BYTE_TIMEOUT: time::Duration =
+    time::Duration::from_millis(500);
 const MAX_DOWNLOAD_ATTEMPT_HISTORY: usize = 12;
 const MAX_DOWNLOAD_DIAGNOSTIC_BYTES: usize = 8 * 1024;
 const H2_FALLBACK_TTL: time::Duration = time::Duration::from_secs(600);
@@ -337,6 +339,18 @@ enum ResourceFamily {
     Modrinth,
     CurseForge,
     Other,
+}
+
+impl ResourceFamily {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Minecraft => "minecraft",
+            Self::Loader => "loader",
+            Self::Modrinth => "modrinth",
+            Self::CurseForge => "curseforge",
+            Self::Other => "other",
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -1111,12 +1125,28 @@ fn order_auto_routes(
             .is_some_and(|state| state.auto_prefers_mirror());
     let health = ROUTE_HEALTH.lock().clone();
     routes.sort_by(|left, right| {
-        let left_health = route_health_key(left, resource)
-            .and_then(|key| health.get(&key).cloned())
-            .unwrap_or_default();
-        let right_health = route_health_key(right, resource)
-            .and_then(|key| health.get(&key).cloned())
-            .unwrap_or_default();
+        let route_health = |route: &DownloadRoute| {
+            let Some(key) = route_health_key(route, resource) else {
+                return RouteHealth::default();
+            };
+            health.get(&key).cloned().unwrap_or_else(|| {
+                crate::util::download::native_reputation::get(
+                    key.family.as_str(),
+                    &key.authority,
+                    route.proxy,
+                )
+                .map(|persisted| RouteHealth {
+                    success_samples: persisted.success_samples,
+                    ttfb_ms: persisted.ttfb_ms,
+                    throughput_bps: persisted.throughput_bps,
+                    consecutive_failures: persisted.consecutive_failures,
+                    cooldown_until: None,
+                })
+                .unwrap_or_default()
+            })
+        };
+        let left_health = route_health(left);
+        let right_health = route_health(right);
         let now = Instant::now();
         let left_cooling =
             left_health.cooldown_until.is_some_and(|until| until > now);
@@ -1526,6 +1556,19 @@ fn record_route_success(
         DOWNLOAD_DNS_RESOLVER.record_host_success(&host, remote_addr.ip());
     }
     if let Some(key) = route_health_key(route, resource) {
+        let throughput_bps = (!transfer_elapsed.is_zero())
+            .then(|| bytes as f64 / transfer_elapsed.as_secs_f64());
+        if crate::util::download::active_engine()
+            != crate::util::download::DownloadEngine::XmclCompat
+        {
+            crate::util::download::native_reputation::record_success(
+                key.family.as_str(),
+                &key.authority,
+                route.proxy,
+                ttfb.as_secs_f64() * 1000.0,
+                throughput_bps,
+            );
+        }
         let mut health = ROUTE_HEALTH.lock();
         let entry = health.entry(key).or_default();
         entry.success_samples = entry.success_samples.saturating_add(1);
@@ -1558,6 +1601,15 @@ fn record_route_health_failure(
     cooldown: Option<time::Duration>,
 ) {
     if let Some(key) = route_health_key(route, resource) {
+        if crate::util::download::active_engine()
+            != crate::util::download::DownloadEngine::XmclCompat
+        {
+            crate::util::download::native_reputation::record_failure(
+                key.family.as_str(),
+                &key.authority,
+                route.proxy,
+            );
+        }
         let mut health = ROUTE_HEALTH.lock();
         let entry = health.entry(key).or_default();
         entry.consecutive_failures =
@@ -3769,30 +3821,22 @@ fn expansion_block_reason(
     None
 }
 
-fn sustained_low_throughput(
-    downloaded: u64,
-    window_start_bytes: u64,
-    elapsed: time::Duration,
-    remaining_bytes: u64,
-) -> Option<u64> {
-    if elapsed < SUSTAINED_LOW_THROUGHPUT_WINDOW
-        || remaining_bytes < SUSTAINED_LOW_THROUGHPUT_MIN_REMAINING
-    {
-        return None;
-    }
-    let bytes_per_second = downloaded
-        .saturating_sub(window_start_bytes)
-        .checked_div(elapsed.as_secs().max(1))
-        .unwrap_or(0);
-    (bytes_per_second < SUSTAINED_LOW_THROUGHPUT_FLOOR)
-        .then_some(bytes_per_second)
-}
-
 fn allow_low_throughput_route_switch(
     has_alternate_route: bool,
     retry_with_single_thread: bool,
 ) -> bool {
     has_alternate_route && !retry_with_single_thread
+}
+
+fn native_first_byte_timeout(
+    route: &DownloadRoute,
+    has_alternate_route: bool,
+) -> time::Duration {
+    if route.is_mirror && has_alternate_route {
+        REASSIGNABLE_FIRST_BYTE_TIMEOUT
+    } else {
+        FILE_TRANSFER_FIRST_BYTE_TIMEOUT
+    }
 }
 
 fn should_use_segmented_download(size: u64, resumable_part_bytes: u64) -> bool {
@@ -3812,6 +3856,27 @@ fn measured_bytes_per_second(bytes: u64, elapsed: time::Duration) -> u64 {
     let bytes_per_second = u128::from(bytes).saturating_mul(1_000_000_000)
         / elapsed.as_nanos().max(1);
     bytes_per_second.min(u128::from(u64::MAX)) as u64
+}
+
+fn expected_route_speed(
+    route: &DownloadRoute,
+    resource: ResourceClass,
+) -> Option<u64> {
+    let key = route_health_key(route, resource)?;
+    ROUTE_HEALTH
+        .lock()
+        .get(&key)
+        .and_then(|health| health.throughput_bps)
+        .or_else(|| {
+            crate::util::download::native_reputation::get(
+                key.family.as_str(),
+                &key.authority,
+                route.proxy,
+            )
+            .and_then(|health| health.throughput_bps)
+        })
+        .filter(|speed| speed.is_finite() && *speed > 0.0)
+        .map(|speed| speed.min(u64::MAX as f64) as u64)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -3926,6 +3991,7 @@ async fn probe_faster_route(
     system_client: &reqwest::Client,
     direct_client: &reqwest::Client,
     resource: ResourceClass,
+    downloaded_bytes: u64,
 ) -> Option<RouteProbeResult> {
     let current_authority = effective_route_authority(current_route);
     let mut seen = HashSet::new();
@@ -3960,6 +4026,11 @@ async fn probe_faster_route(
         if probe_is_meaningfully_faster(
             probe.bytes_per_second,
             current_bytes_per_second,
+        ) && crate::util::download::native_slow::should_switch(
+            current_bytes_per_second,
+            probe.bytes_per_second,
+            total_size.saturating_sub(downloaded_bytes),
+            total_size,
         ) {
             return Some(probe);
         }
@@ -3972,9 +4043,21 @@ fn route_health_is_cold(
     resource: ResourceClass,
 ) -> bool {
     route_health_key(route, resource).is_none_or(|key| {
-        ROUTE_HEALTH.lock().get(&key).is_none_or(|entry| {
-            entry.success_samples < COLD_START_ROUTE_HEALTH_SAMPLE_THRESHOLD
-        })
+        let in_memory_samples = ROUTE_HEALTH
+            .lock()
+            .get(&key)
+            .map(|entry| entry.success_samples)
+            .unwrap_or(0);
+        let persisted_samples =
+            crate::util::download::native_reputation::get(
+                key.family.as_str(),
+                &key.authority,
+                route.proxy,
+            )
+            .map(|entry| entry.success_samples)
+            .unwrap_or(0);
+        in_memory_samples.max(persisted_samples)
+            < COLD_START_ROUTE_HEALTH_SAMPLE_THRESHOLD
     })
 }
 
@@ -4127,6 +4210,7 @@ pub(crate) async fn prepare_native_download_routes(
     routes: &mut Vec<DownloadRoute>,
     semaphore: &FetchSemaphore,
 ) {
+    crate::util::download::native_reputation::load_if_needed().await;
     ensure_task_routes_probed(
         request,
         routes,
@@ -4135,6 +4219,15 @@ pub(crate) async fn prepare_native_download_routes(
         &DIRECT_REQWEST_CLIENT,
     )
     .await;
+    if source_mode_for_resource(request.resource)
+        == crate::state::DownloadSourceMode::Auto
+    {
+        order_auto_routes(
+            routes,
+            request.resource,
+            uses_mirror_first_loader_routes(&request.url, request.resource),
+        );
+    }
 }
 
 fn segment_path(part_path: &Path, index: usize) -> PathBuf {
@@ -4835,8 +4928,10 @@ async fn try_segmented_download(
     let mut last_expansion = Instant::now();
     let mut last_block_reason = None;
     let mut downloaded = 0_u64;
-    let mut throughput_window_started = Instant::now();
-    let mut throughput_window_bytes = 0_u64;
+    let mut slow_policy = crate::util::download::native_slow::NativeSlowPolicy::new(
+        0,
+        expected_route_speed(route, request.resource),
+    );
     let mut alternate_probe: Option<RouteProbeFuture<'_>> = None;
     let mut alternate_probe_finished = false;
     let mut confirmed_switch = None;
@@ -4896,16 +4991,16 @@ async fn try_segmented_download(
                 }
             }
             _ = scheduler.tick() => {
-                let throughput_elapsed = throughput_window_started.elapsed();
+                let slow_decision = slow_policy.observe(
+                    downloaded,
+                    size.saturating_sub(downloaded),
+                );
                 if allow_low_throughput_abort
                     && !alternate_probe_finished
                     && alternate_probe.is_none()
-                    && let Some(bytes_per_second) = sustained_low_throughput(
-                        downloaded,
-                        throughput_window_bytes,
-                        throughput_elapsed,
-                        size.saturating_sub(downloaded),
-                    )
+                    && let crate::util::download::native_slow::SlowDecision::Probe {
+                        bytes_per_second,
+                    } = slow_decision
                 {
                     tracing::warn!(
                         original_url = %sanitize_url_for_log(&route.url),
@@ -4926,11 +5021,16 @@ async fn try_segmented_download(
                         system_client,
                         direct_client,
                         request.resource,
+                        downloaded,
                     )));
                 }
-                if throughput_elapsed >= SUSTAINED_LOW_THROUGHPUT_WINDOW {
-                    throughput_window_started = Instant::now();
-                    throughput_window_bytes = downloaded;
+                if matches!(
+                    slow_decision,
+                    crate::util::download::native_slow::SlowDecision::Commit
+                ) {
+                    alternate_probe = None;
+                    alternate_probe_finished = true;
+                    slow_policy.commit();
                 }
                 if hedge_active.load(Ordering::Acquire) {
                     continue;
@@ -5749,6 +5849,8 @@ async fn download_to_path_inner(
                 )
                 .await;
                 let request_started = Instant::now();
+                let first_byte_timeout =
+                    native_first_byte_timeout(route, can_switch_route);
                 // A truncated or invalid body may be a corrupt edge-cache
                 // object; the retry then uses a cache-busted URL that forces a
                 // fresh origin fetch instead of the same broken copy.
@@ -5762,7 +5864,7 @@ async fn download_to_path_inner(
                     })
                     .unwrap_or_else(|| route.clone());
                 let (response, final_url) = match tokio::time::timeout(
-                    FILE_TRANSFER_FIRST_BYTE_TIMEOUT,
+                    first_byte_timeout,
                     send_path_request(
                         &attempt_route,
                         request.header.as_ref(),
@@ -5807,7 +5909,7 @@ async fn download_to_path_inner(
                         record_route_failure(route, request.resource, None);
                         let error = ErrorKind::NetworkError(format!(
                             "no response received for {:.0} seconds while downloading {log_url} to {}",
-                            FILE_TRANSFER_FIRST_BYTE_TIMEOUT.as_secs_f64(),
+                            first_byte_timeout.as_secs_f64(),
                             destination.display(),
                         ))
                         .into();
@@ -5825,7 +5927,7 @@ async fn download_to_path_inner(
                             path = %destination.display(),
                             url = %log_url,
                             source = route.source.as_str(),
-                            no_data_seconds = FILE_TRANSFER_FIRST_BYTE_TIMEOUT.as_secs_f64(),
+                            no_data_seconds = first_byte_timeout.as_secs_f64(),
                             downloaded_bytes = 0,
                             attempt = attempts,
                             max_attempts = file_attempt_budget,
@@ -6048,8 +6150,11 @@ async fn download_to_path_inner(
                 let transfer_started = Instant::now();
                 let mut downloaded = starting_size;
                 let mut last_tracking_bytes = starting_size;
-                let mut throughput_window_started = Instant::now();
-                let mut throughput_window_bytes = starting_size;
+                let mut slow_policy =
+                    crate::util::download::native_slow::NativeSlowPolicy::new(
+                        starting_size,
+                        expected_route_speed(route, request.resource),
+                    );
                 let mut throughput_timer =
                     tokio::time::interval(time::Duration::from_millis(250));
                 throughput_timer.tick().await;
@@ -6103,25 +6208,23 @@ async fn download_to_path_inner(
                             }
                         }
                         _ = throughput_timer.tick() => {
-                            let throughput_elapsed =
-                                throughput_window_started.elapsed();
+                            let slow_decision = slow_policy.observe(
+                                downloaded,
+                                total_size.saturating_sub(downloaded),
+                            );
                             if allow_low_throughput_abort
                                 && total_size >= SEGMENTED_DOWNLOAD_THRESHOLD
                                 && !alternate_probe_finished
                                 && alternate_probe.is_none()
-                                && let Some(bytes_per_second) = sustained_low_throughput(
-                                    downloaded,
-                                    throughput_window_bytes,
-                                    throughput_elapsed,
-                                    total_size.saturating_sub(downloaded),
-                                )
+                                && let crate::util::download::native_slow::SlowDecision::Probe {
+                                    bytes_per_second,
+                                } = slow_decision
                             {
                                 tracing::warn!(
                                     path = %destination.display(),
                                     url = %log_url,
                                     source = route.source.as_str(),
                                     bytes_per_second,
-                                    elapsed_ms = throughput_elapsed.as_millis(),
                                     remaining_bytes = total_size.saturating_sub(downloaded),
                                     "Sustained low throughput; probing alternate routes"
                                 );
@@ -6137,11 +6240,16 @@ async fn download_to_path_inner(
                                     &NO_REDIRECT_REQWEST_CLIENT,
                                     &DIRECT_REQWEST_CLIENT,
                                     request.resource,
+                                    downloaded,
                                 )));
                             }
-                            if throughput_elapsed >= SUSTAINED_LOW_THROUGHPUT_WINDOW {
-                                throughput_window_started = Instant::now();
-                                throughput_window_bytes = downloaded;
+                            if matches!(
+                                slow_decision,
+                                crate::util::download::native_slow::SlowDecision::Commit
+                            ) {
+                                alternate_probe = None;
+                                alternate_probe_finished = true;
+                                slow_policy.commit();
                             }
                         }
                         probe = async {
@@ -7854,41 +7962,28 @@ mod tests {
     }
 
     #[test]
-    fn sustained_low_throughput_requires_time_and_remaining_data() {
-        assert_eq!(
-            sustained_low_throughput(
-                128 * 1024,
-                0,
-                SUSTAINED_LOW_THROUGHPUT_WINDOW,
-                2 * 1024 * 1024,
-            ),
-            Some(26_214)
-        );
-        assert_eq!(
-            sustained_low_throughput(
-                2 * 1024 * 1024,
-                0,
-                SUSTAINED_LOW_THROUGHPUT_WINDOW,
-                2 * 1024 * 1024,
-            ),
-            None
-        );
-        assert_eq!(
-            sustained_low_throughput(
-                128 * 1024,
-                0,
-                time::Duration::from_secs(1),
-                2 * 1024 * 1024,
-            ),
-            None
-        );
-    }
-
-    #[test]
     fn low_throughput_only_switches_routes_before_fallback_rounds() {
         assert!(allow_low_throughput_route_switch(true, false));
         assert!(!allow_low_throughput_route_switch(true, true));
         assert!(!allow_low_throughput_route_switch(false, false));
+    }
+
+    #[test]
+    fn reassignable_mirror_uses_shorter_first_byte_timeout() {
+        let mirror = route(
+            "https://mirror.example/file".to_string(),
+            DownloadRouteSource::Bmclapi,
+            true,
+            true,
+        );
+        assert_eq!(
+            native_first_byte_timeout(&mirror, true),
+            REASSIGNABLE_FIRST_BYTE_TIMEOUT
+        );
+        assert_eq!(
+            native_first_byte_timeout(&mirror, false),
+            FILE_TRANSFER_FIRST_BYTE_TIMEOUT
+        );
     }
 
     #[test]
@@ -7983,6 +8078,7 @@ mod tests {
             &client,
             &client,
             ResourceClass::Other,
+			0,
         )
         .await
         .expect("the local range route should be measurably faster");
@@ -8011,6 +8107,7 @@ mod tests {
                 &client,
                 &client,
                 ResourceClass::Other,
+				0,
             )
             .await
             .is_none()
