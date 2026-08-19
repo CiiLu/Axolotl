@@ -2,7 +2,7 @@
 	<div
 		v-if="instance"
 		:class="{
-			'flex h-full flex-col': isFixedRender,
+			'flex h-full min-h-0 flex-col': isFixedRender,
 			'instance-fixed-render': isFixedRender,
 		}"
 	>
@@ -273,7 +273,7 @@
 			/>
 			<NavTabs :links="tabs" />
 		</div>
-		<div :class="['p-6 pt-4', { 'min-h-0 flex-1 overflow-y-auto': isFixedRender }]">
+		<div :class="['p-6 pt-4', { 'flex min-h-0 flex-1 flex-col overflow-hidden': isFixedRender }]">
 			<RouterView v-slot="{ Component }" :key="instance.id" :route="displayedInstanceRoute">
 				<template v-if="Component">
 					<Suspense
@@ -334,8 +334,10 @@
 </template>
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
-import { 	BoxesIcon,
-BoxIcon, 	CheckCircleIcon,
+import {
+	BoxesIcon,
+	BoxIcon,
+	CheckCircleIcon,
 	ClipboardCopyIcon,
 	DownloadIcon,
 	DropdownIcon,
@@ -343,7 +345,7 @@ BoxIcon, 	CheckCircleIcon,
 	ExternalIcon,
 	EyeIcon,
 	FolderOpenIcon,
-getLoaderIcon,
+	getLoaderIcon,
 	GlobeIcon,
 	HashIcon,
 	ImageIcon,
@@ -358,7 +360,8 @@ getLoaderIcon,
 	TerminalSquareIcon,
 	UpdatedIcon,
 	UserPlusIcon,
-	XIcon } from '@modrinth/assets'
+	XIcon,
+} from '@modrinth/assets'
 import {
 	Avatar,
 	ButtonStyled,
@@ -1129,12 +1132,13 @@ Button {
 </style>
 
 <style>
-/*
- * fixed 渲染模式（日志页）：页面自身不滚动，日志区内部滚动。
- * 只去掉 .app-viewport 的 scrollbar-gutter（避免多余的空滚动条轨道），
- * 保留 overflow: auto 作为兜底——内容万一超出视口仍可滚动，不会被裁切。
- */
 .app-viewport:has(.instance-fixed-render) {
 	scrollbar-gutter: auto;
+}
+
+.app-viewport:has(.instance-fixed-render) .page-transition-grid,
+.app-viewport:has(.instance-fixed-render) .page-transition-layer {
+	height: 100%;
+	min-height: 0;
 }
 </style>

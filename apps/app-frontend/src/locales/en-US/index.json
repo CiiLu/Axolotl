@@ -6683,8 +6683,47 @@
 	"instance.files.open-in-schematic-workshop": {
 		"message": "Open in schematic workshop"
 	},
+	"instance.files.open-studio": {
+		"message": "Open Studio"
+	},
 	"instance.files.save-as": {
 		"message": "Save as..."
+	},
+	"instance.files.studio.back-to-files": {
+		"message": "Back to files"
+	},
+	"instance.files.studio.discard-changes": {
+		"message": "Discard changes"
+	},
+	"instance.files.studio.editor-loading": {
+		"message": "Loading editor..."
+	},
+	"instance.files.studio.empty-description": {
+		"message": "Open a properties, TOML, YAML, or JSON file from the explorer."
+	},
+	"instance.files.studio.empty-title": {
+		"message": "Select a configuration file"
+	},
+	"instance.files.studio.files": {
+		"message": "Explorer"
+	},
+	"instance.files.studio.load-directory-failed": {
+		"message": "Could not load directory"
+	},
+	"instance.files.studio.load-file-failed": {
+		"message": "Could not open file"
+	},
+	"instance.files.studio.loading-file": {
+		"message": "Loading file..."
+	},
+	"instance.files.studio.save-failed": {
+		"message": "Could not save file"
+	},
+	"instance.files.studio.title": {
+		"message": "Studio"
+	},
+	"instance.files.studio.unsaved-switch-blocked": {
+		"message": "Save or discard the current changes before opening another file."
 	},
 	"instance.logs.delete.latest-running": {
 		"message": "Cannot delete latest.log while the instance is running"

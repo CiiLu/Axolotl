@@ -22,6 +22,7 @@ image = { workspace = true }
 keyring = { workspace = true }
 libc = { workspace = true }
 native-dialog = { workspace = true }
+notify = { workspace = true }
 paste = { workspace = true }
 path-util = { workspace = true }
 quartz_nbt = { workspace = true, features = ["serde"] }

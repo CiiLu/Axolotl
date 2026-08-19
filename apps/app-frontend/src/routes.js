@@ -345,6 +345,20 @@ export default new createRouter({
 					},
 				},
 				{
+					path: 'files/studio',
+					name: 'FileStudio',
+					component: () => import('@/pages/instance/FileStudio.vue'),
+					meta: {
+						renderMode: 'fixed',
+						useRootContext: true,
+						breadcrumb: [
+							{ name: '?Instance', link: '/instance/{id}/' },
+							{ name: 'Files', link: '/instance/{id}/files' },
+							{ name: 'Studio' },
+						],
+					},
+				},
+				{
 					path: 'logs',
 					name: 'Logs',
 					component: () => import('@/pages/instance/Logs.vue'),

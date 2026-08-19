@@ -1,11 +1,44 @@
 use crate::api::Result;
 use async_zip::base::read::seek::ZipFileReader;
 use image::ImageEncoder;
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
+use std::collections::HashMap;
 use std::io::Cursor;
-use tauri::Runtime;
+use std::path::PathBuf;
+use std::sync::Mutex;
+use tauri::{Emitter, Runtime};
 use tauri_plugin_dialog::DialogExt;
 use theseus::instance::get_full_path;
+
+const STUDIO_FILES_CHANGED_EVENT: &str = "studio-files-changed";
+
+#[derive(Default)]
+pub struct StudioWatchers {
+    watchers: Mutex<HashMap<String, StudioWatcher>>,
+}
+
+struct StudioWatcher {
+    registration_id: String,
+    root: PathBuf,
+    watcher: RecommendedWatcher,
+}
+
+impl Drop for StudioWatcher {
+    fn drop(&mut self) {
+        if let Err(error) = self.watcher.unwatch(&self.root) {
+            tracing::warn!(%error, "Failed to stop Studio file watcher");
+        }
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StudioFilesChangedEvent {
+    instance_id: String,
+    registration_id: String,
+    paths: Vec<String>,
+}
 
 pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("files")
@@ -14,8 +47,116 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             file_save_as,
             file_read_dragged_file,
             screenshot_thumbnail,
+            studio_watch_register,
+            studio_watch_unregister,
         ])
         .build()
+}
+
+#[tauri::command]
+pub async fn studio_watch_register<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    state: tauri::State<'_, StudioWatchers>,
+    instance_id: String,
+) -> Result<String> {
+    let root = get_full_path(&instance_id).await?;
+    if !root.is_dir() {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            "Instance directory does not exist".to_string(),
+        ))
+        .into());
+    }
+
+    let registration_id = uuid::Uuid::new_v4().to_string();
+    let event_instance_id = instance_id.clone();
+    let event_registration_id = registration_id.clone();
+    let event_root = root.clone();
+    let mut watcher = notify::recommended_watcher(
+        move |result: notify::Result<notify::Event>| match result {
+            Ok(event) => {
+                let mut paths = event
+                    .paths
+                    .into_iter()
+                    .filter_map(|path| {
+                        path.strip_prefix(&event_root)
+                            .ok()
+                            .filter(|relative| !relative.as_os_str().is_empty())
+                            .map(|relative| {
+                                relative.to_string_lossy().replace('\\', "/")
+                            })
+                    })
+                    .collect::<Vec<_>>();
+                paths.sort();
+                paths.dedup();
+                if paths.is_empty() {
+                    return;
+                }
+
+                if let Err(error) = app.emit(
+                    STUDIO_FILES_CHANGED_EVENT,
+                    StudioFilesChangedEvent {
+                        instance_id: event_instance_id.clone(),
+                        registration_id: event_registration_id.clone(),
+                        paths,
+                    },
+                ) {
+                    tracing::warn!(%error, "Failed to emit Studio file watcher event");
+                }
+            }
+            Err(error) => {
+                tracing::warn!(%error, "Studio file watcher failed");
+            }
+        },
+    )
+    .map_err(|error| {
+        theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+            "Failed to create Studio file watcher: {error}"
+        )))
+    })?;
+
+    watcher
+        .watch(&root, RecursiveMode::Recursive)
+        .map_err(|error| {
+            theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+                "Failed to watch instance directory: {error}"
+            )))
+        })?;
+
+    let mut watchers = state.watchers.lock().map_err(|_| {
+        theseus::Error::from(theseus::ErrorKind::OtherError(
+            "Studio watcher state is unavailable".to_string(),
+        ))
+    })?;
+    watchers.insert(
+        instance_id,
+        StudioWatcher {
+            registration_id: registration_id.clone(),
+            root,
+            watcher,
+        },
+    );
+
+    Ok(registration_id)
+}
+
+#[tauri::command]
+pub fn studio_watch_unregister(
+    state: tauri::State<'_, StudioWatchers>,
+    instance_id: String,
+    registration_id: String,
+) -> Result<()> {
+    let mut watchers = state.watchers.lock().map_err(|_| {
+        theseus::Error::from(theseus::ErrorKind::OtherError(
+            "Studio watcher state is unavailable".to_string(),
+        ))
+    })?;
+    if watchers
+        .get(&instance_id)
+        .is_some_and(|watcher| watcher.registration_id == registration_id)
+    {
+        watchers.remove(&instance_id);
+    }
+    Ok(())
 }
 
 #[derive(Serialize)]

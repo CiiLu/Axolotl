@@ -3671,8 +3671,47 @@
 	"instance.files.adding-files": {
 		"message": "正在添加文件（{completed}/{total}）"
 	},
+	"instance.files.open-studio": {
+		"message": "打开 Studio"
+	},
 	"instance.files.save-as": {
 		"message": "保存为……"
+	},
+	"instance.files.studio.back-to-files": {
+		"message": "返回文件管理器"
+	},
+	"instance.files.studio.discard-changes": {
+		"message": "放弃更改"
+	},
+	"instance.files.studio.editor-loading": {
+		"message": "正在加载编辑器……"
+	},
+	"instance.files.studio.empty-description": {
+		"message": "从资源管理器打开 properties、TOML、YAML 或 JSON 文件。"
+	},
+	"instance.files.studio.empty-title": {
+		"message": "选择配置文件"
+	},
+	"instance.files.studio.files": {
+		"message": "资源管理器"
+	},
+	"instance.files.studio.load-directory-failed": {
+		"message": "无法加载目录"
+	},
+	"instance.files.studio.load-file-failed": {
+		"message": "无法打开文件"
+	},
+	"instance.files.studio.loading-file": {
+		"message": "正在加载文件……"
+	},
+	"instance.files.studio.save-failed": {
+		"message": "无法保存文件"
+	},
+	"instance.files.studio.title": {
+		"message": "Studio"
+	},
+	"instance.files.studio.unsaved-switch-blocked": {
+		"message": "请先保存或放弃当前更改，再打开其他文件。"
 	},
 	"instance.server-modal.address": {
 		"message": "地址"

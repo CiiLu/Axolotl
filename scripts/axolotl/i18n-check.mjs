@@ -45,6 +45,7 @@ const allowedUntranslatedMessages = new Set([
 	'TrChat',
 	'TNT',
 	'Java {version}',
+	'Studio',
 ])
 
 function messageText(value) {

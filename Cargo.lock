@@ -6832,6 +6832,7 @@ dependencies = [
  "keyring",
  "libc",
  "native-dialog",
+ "notify",
  "paste",
  "path-util",
  "quartz_nbt",

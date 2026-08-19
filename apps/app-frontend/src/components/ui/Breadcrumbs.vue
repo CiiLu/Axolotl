@@ -85,6 +85,7 @@ const messages = defineMessages({
 	},
 	content: { id: 'app.instance.tabs.content', defaultMessage: 'Content' },
 	files: { id: 'app.instance.tabs.files', defaultMessage: 'Files' },
+	studio: { id: 'instance.files.studio.title', defaultMessage: 'Studio' },
 	logs: { id: 'app.instance.tabs.logs', defaultMessage: 'Logs' },
 	editWorld: { id: 'app.navigation.edit-world', defaultMessage: 'Edit world' },
 })
@@ -104,6 +105,7 @@ const staticLabels = {
 	'Mod translation': messages.modTranslation,
 	Content: messages.content,
 	Files: messages.files,
+	Studio: messages.studio,
 	Logs: messages.logs,
 	'Edit world': messages.editWorld,
 }
