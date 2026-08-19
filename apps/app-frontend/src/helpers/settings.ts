@@ -6,14 +6,11 @@
 import { invoke } from '@tauri-apps/api/core'
 
 import type { HomeDashboardConfig } from '@/components/home/home-dashboard'
-import type { Hooks, MemorySettings, WindowSize } from '@/helpers/types'
+import type { Hooks, MemorySettings } from '@/helpers/types'
 import type { AccentColorSetting, ColorTheme, FeatureFlag, HomeLayout } from '@/store/theme.ts'
 import { DEFAULT_FEATURE_FLAGS } from '@/store/theme.ts'
 
-export type {
-	BrowseContentDisplayMode,
-	BrowseContentProjectType,
-} from './browse-display-mode.ts'
+export type { BrowseContentDisplayMode, BrowseContentProjectType } from './browse-display-mode.ts'
 export {
 	getLastBrowseContentDisplayMode,
 	getLastBrowseContentProjectType,
@@ -139,7 +136,7 @@ export type AppSettings = {
 	custom_env_vars: [string, string][]
 	memory: MemorySettings
 	force_fullscreen: boolean
-	game_resolution: WindowSize
+	game_resolution: [number, number]
 	hide_on_process_start: boolean
 	auto_set_java_high_performance_mode: boolean
 	hooks: Hooks
@@ -197,7 +194,7 @@ function normalizeDownloadSettings(settings: AppSettings & LegacyMirrorSettings)
 	settings.bypass_curseforge_download_restrictions ??= true
 	settings.mojang_auth_source ??= 'auto'
 	settings.terracotta_public_nodes ??= ['wss://center.node.1tmc.top']
-	settings.feature_flags ??= {}
+	settings.feature_flags ??= { ...DEFAULT_FEATURE_FLAGS }
 	for (const [key, value] of Object.entries(DEFAULT_FEATURE_FLAGS)) {
 		settings.feature_flags[key as FeatureFlag] ??= value
 	}

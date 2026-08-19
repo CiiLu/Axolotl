@@ -71,9 +71,10 @@ const messages = defineMessages({
 })
 
 const fetchSettings = await get()
-fetchSettings.envVars = fetchSettings.custom_env_vars.map((x) => x.join('=')).join(' ')
-
-const settings = ref(fetchSettings)
+const settings = ref({
+	...fetchSettings,
+	envVars: fetchSettings.custom_env_vars.map((x) => x.join('=')).join(' '),
+})
 
 watch(
 	settings,
@@ -84,7 +85,7 @@ watch(
 			.trim()
 			.split(/\s+/)
 			.filter(Boolean)
-			.map((x) => x.split('=').filter(Boolean))
+			.map((x: string) => x.split('=').filter(Boolean))
 
 		if (!setSettings.hooks.pre_launch) {
 			setSettings.hooks.pre_launch = null
