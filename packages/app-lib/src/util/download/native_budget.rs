@@ -60,6 +60,37 @@ pub(crate) async fn acquire(
 	})
 }
 
+pub(crate) async fn acquire_many(
+	route: &DownloadRoute,
+	count: usize,
+) -> Result<Vec<NativeBudgetPermit>, tokio::sync::AcquireError> {
+	let authority = match budget(route) {
+		Some(budget) => Some(budget.acquire_many_owned(count as u32).await?),
+		None => None,
+	};
+	let global = Arc::clone(&GLOBAL_BUDGET)
+		.acquire_many_owned(count as u32)
+		.await?;
+	let mut global = global;
+	let mut authority = authority;
+	let mut permits = Vec::with_capacity(count);
+	for _ in 0..count {
+		let global = global
+			.split(1)
+			.expect("native global permit batch has enough permits");
+		let authority = authority.as_mut().map(|authority| {
+			authority
+				.split(1)
+				.expect("native authority permit batch has enough permits")
+		});
+		permits.push(NativeBudgetPermit {
+			_global: global,
+			_authority: authority,
+		});
+	}
+	Ok(permits)
+}
+
 pub(crate) fn try_acquire(
 	route: &DownloadRoute,
 ) -> Result<NativeBudgetPermit, TryAcquireError> {

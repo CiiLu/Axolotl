@@ -639,7 +639,11 @@ pub fn start_logger(app_identifier: &str) -> Option<()> {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| {
             tracing_subscriber::EnvFilter::new("theseus=info,theseus_gui=info")
-        });
+        })
+        .add_directive("h2=info".parse().ok()?)
+        .add_directive("hyper=info".parse().ok()?)
+        .add_directive("hyper_util=info".parse().ok()?)
+        .add_directive("sqlx=warn".parse().ok()?);
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().with_writer(|| {
             TruncatedConsoleWriter {
@@ -895,7 +899,11 @@ pub fn start_logger(app_identifier: &str) -> Option<()> {
     };
 
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("theseus=info"));
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("theseus=info"))
+        .add_directive("h2=info".parse().ok()?)
+        .add_directive("hyper=info".parse().ok()?)
+        .add_directive("hyper_util=info".parse().ok()?)
+        .add_directive("sqlx=warn".parse().ok()?);
 
     tracing_subscriber::registry()
         .with(

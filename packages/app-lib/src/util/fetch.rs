@@ -1362,6 +1362,18 @@ pub(crate) static DOWNLOAD_DNS_RESOLVER: LazyLock<Arc<DownloadDnsResolver>> =
     LazyLock::new(|| Arc::new(DownloadDnsResolver::default()));
 static TAIL_HEDGE_SEMAPHORE: LazyLock<Semaphore> =
     LazyLock::new(|| Semaphore::new(MAX_GLOBAL_TAIL_HEDGES));
+static FILE_VALIDATION_SEMAPHORE: LazyLock<Semaphore> =
+    LazyLock::new(|| Semaphore::new(4));
+
+async fn acquire_native_validation_permit()
+-> crate::Result<Option<SemaphorePermit<'static>>> {
+    if crate::util::download::active_engine()
+        == crate::util::download::DownloadEngine::XmclCompat
+    {
+        return Ok(None);
+    }
+    Ok(Some(FILE_VALIDATION_SEMAPHORE.acquire().await?))
+}
 
 static H2_FALLBACK_AUTHORITIES: LazyLock<Mutex<HashMap<String, Instant>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -3069,6 +3081,7 @@ async fn compute_file_integrity(
     path: &Path,
     integrity: &Integrity,
 ) -> crate::Result<ComputedIntegrity> {
+    let _permit = acquire_native_validation_permit().await?;
     let mut file = File::open(path)
         .await
         .map_err(|error| IOError::with_path(error, path))?;
@@ -3152,6 +3165,7 @@ pub(crate) async fn validate_file_content(
     if validation == ContentValidation::None {
         return Ok(());
     }
+    let _permit = acquire_native_validation_permit().await?;
     let path = path.to_path_buf();
     tokio::task::spawn_blocking(move || -> crate::Result<()> {
         let file = std::fs::File::open(&path)
@@ -3787,20 +3801,14 @@ async fn acquire_initial_segment_permits<'a>(
     count: usize,
 ) -> crate::Result<Vec<NativeConnectionPermit<'a>>> {
     let queue_started = Instant::now();
-    let mut batch = semaphore.0.acquire_many(count as u32).await?;
-    let mut global_permits = Vec::with_capacity(count);
-    while batch.num_permits() > 1 {
-        global_permits.push(
-            batch
-                .split(1)
-                .expect("a multi-permit semaphore guard can be split"),
-        );
-    }
-    global_permits.push(batch);
+    let native_permits =
+        crate::util::download::native_budget::acquire_many(route, count).await?;
+    let mut global = semaphore.0.acquire_many(count as u32).await?;
     let mut permits = Vec::with_capacity(count);
-    for global in global_permits {
-        let native = crate::util::download::native_budget::acquire(route)
-            .await?;
+    for native in native_permits {
+        let global = global
+            .split(1)
+            .expect("fetch permit batch has enough permits");
         permits.push(NativeConnectionPermit {
             _global: global,
             _native: native,
@@ -3836,9 +3844,9 @@ fn try_acquire_native_connection<'a>(
     route: &DownloadRoute,
     semaphore: &'a FetchSemaphore,
 ) -> Option<NativeConnectionPermit<'a>> {
-    let global = semaphore.0.try_acquire().ok()?;
     let native =
         crate::util::download::native_budget::try_acquire(route).ok()?;
+    let global = semaphore.0.try_acquire().ok()?;
     Some(NativeConnectionPermit {
         _global: global,
         _native: native,
