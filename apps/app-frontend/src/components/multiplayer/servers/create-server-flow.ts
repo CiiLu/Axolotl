@@ -1,4 +1,4 @@
-import { DownloadIcon, RefreshCwIcon } from '@modrinth/assets'
+import { RefreshCwIcon } from '@modrinth/assets'
 import {
 	fabricInstallerVersionsUrl,
 	type FabricLoaderVersionsResponse,
@@ -11,6 +11,7 @@ import {
 	setEulaAccepted,
 } from '@modrinth/server'
 import {
+	commonMessages,
 	createContext,
 	defineMessages,
 	type MultiStageModal,
@@ -18,7 +19,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
-import { computed, markRaw, type Ref,ref } from 'vue'
+import { computed, markRaw, type Ref, ref } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
 import { auto_install_java, find_filtered_jres, get_max_memory } from '@/helpers/jre'
@@ -74,7 +75,6 @@ export interface CreateServerFlowContext {
 	memoryMb: Ref<number>
 	maxMemoryMb: Ref<number>
 	isJavaLoading: Ref<boolean>
-	isInstallingJava: Ref<boolean>
 
 	installPhase: Ref<InstallPhase>
 	downloadProgress: Ref<{ downloaded: number; total: number | null } | null>
@@ -90,7 +90,6 @@ export interface CreateServerFlowContext {
 
 	loadVersions: () => Promise<void>
 	loadJavaOptions: () => Promise<void>
-	installJava: () => Promise<void>
 	beginInstall: () => Promise<void>
 	retryInstall: () => Promise<void>
 	acceptEula: () => Promise<void>
@@ -117,16 +116,35 @@ async function fetchJson<T>(url: string): Promise<T> {
 	return (await response.json()) as T
 }
 
+function toErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message
+	if (typeof error === 'string') return error
+	if (error && typeof error === 'object') {
+		const record = error as Record<string, unknown>
+		for (const key of ['message', 'error', 'description'] as const) {
+			if (typeof record[key] === 'string') return record[key]
+		}
+	}
+	try {
+		return JSON.stringify(error)
+	} catch {
+		return String(error)
+	}
+}
+
 async function waitForServerStop(serverId: string): Promise<ServerEventPayload | null> {
 	return new Promise((resolve) => {
 		void serverEventListener((eventServerId, payload) => {
 			if (eventServerId !== serverId || payload.event !== 'stopped') return
 			resolve(payload)
 		}).then((unlisten) => {
-			setTimeout(() => {
-				unlisten()
-				resolve(null)
-			}, 10 * 60 * 1000)
+			setTimeout(
+				() => {
+					unlisten()
+					resolve(null)
+				},
+				10 * 60 * 1000,
+			)
 		})
 	})
 }
@@ -161,7 +179,6 @@ export function createCreateServerFlowContext(
 	const memoryMb = ref(2048)
 	const maxMemoryMb = ref(8192)
 	const isJavaLoading = ref(false)
-	const isInstallingJava = ref(false)
 
 	const installPhase = ref<InstallPhase>('idle')
 	const downloadProgress = ref<{ downloaded: number; total: number | null } | null>(null)
@@ -194,7 +211,7 @@ export function createCreateServerFlowContext(
 			}
 			await loadLoaderVersions()
 		} catch (error) {
-			versionsError.value = error instanceof Error ? error.message : String(error)
+			versionsError.value = toErrorMessage(error)
 		} finally {
 			isVersionsLoading.value = false
 		}
@@ -220,8 +237,12 @@ export function createCreateServerFlowContext(
 		isJavaLoading.value = true
 		try {
 			const major = requiredJavaMajorVersion(selectedGameVersion.value || '1.21')
-			const javas = (await find_filtered_jres(major)) as JavaOption[]
-			javaOptions.value = javas
+			const all = (await find_filtered_jres(null)) as JavaOption[]
+			javaOptions.value = all
+			if (!selectedJavaPath.value) {
+				const compatible = (await find_filtered_jres(major)) as JavaOption[]
+				selectedJavaPath.value = compatible[0]?.path ?? all[0]?.path ?? ''
+			}
 		} finally {
 			isJavaLoading.value = false
 		}
@@ -236,18 +257,6 @@ export function createCreateServerFlowContext(
 		}
 	}
 
-	async function installJava() {
-		if (isInstallingJava.value) return
-		isInstallingJava.value = true
-		try {
-			const major = requiredJavaMajorVersion(selectedGameVersion.value || '1.21')
-			await auto_install_java(major)
-			await loadJavaOptions()
-		} finally {
-			isInstallingJava.value = false
-		}
-	}
-
 	async function beginInstall() {
 		if (installPhase.value === 'downloading' || installPhase.value === 'first-run') return
 		installPhase.value = 'preparing'
@@ -255,12 +264,22 @@ export function createCreateServerFlowContext(
 		installLog.value = []
 		downloadProgress.value = null
 		try {
+			let javaPath = selectedJavaPath.value
+			if (!javaPath) {
+				if (javaOptions.value.length > 0) {
+					javaPath = javaOptions.value[0].path
+				} else {
+					const major = requiredJavaMajorVersion(selectedGameVersion.value || '1.21')
+					javaPath = (await auto_install_java(major)) as string
+				}
+				selectedJavaPath.value = javaPath
+			}
 			const manifest = await servers.create({
 				name: name.value,
 				serverType: serverType.value,
 				gameVersion: selectedGameVersion.value,
 				loaderVersion: serverType.value === 'fabric' ? selectedLoaderVersion.value : undefined,
-				javaPath: selectedJavaPath.value || undefined,
+				javaPath: javaPath || undefined,
 				memoryMb: memoryMb.value,
 			})
 			createdServer.value = manifest
@@ -349,7 +368,7 @@ export function createCreateServerFlowContext(
 			installPhase.value = 'done'
 		} catch (error) {
 			installPhase.value = 'error'
-			installError.value = error instanceof Error ? error.message : String(error)
+			installError.value = toErrorMessage(error)
 		}
 	}
 
@@ -366,7 +385,7 @@ export function createCreateServerFlowContext(
 			showEulaModal.value = false
 			installPhase.value = 'done'
 		} catch (error) {
-			installError.value = error instanceof Error ? error.message : String(error)
+			installError.value = toErrorMessage(error)
 			installPhase.value = 'error'
 			showEulaModal.value = false
 		}
@@ -409,10 +428,12 @@ export function createCreateServerFlowContext(
 			stageContent: markRaw(TypeStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.typeStageTitle),
 			cannotNavigateForward: (ctx) => !ctx.canContinueFromType.value,
+			leftButtonConfig: (ctx) => ({
+				label: ctx.formatMessage(commonMessages.cancelButton),
+				onClick: () => ctx.modal.value?.hide(),
+			}),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.next),
-				icon: DownloadIcon,
-				iconPosition: 'after',
 				disabled: !ctx.canContinueFromType.value,
 				onClick: () => ctx.modal.value?.nextStage(),
 			}),
@@ -422,10 +443,12 @@ export function createCreateServerFlowContext(
 			stageContent: markRaw(SetupStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.setupStageTitle),
 			cannotNavigateForward: (ctx) => ctx.name.value.trim() === '',
+			leftButtonConfig: (ctx) => ({
+				label: ctx.formatMessage(commonMessages.cancelButton),
+				onClick: () => ctx.modal.value?.hide(),
+			}),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.next),
-				icon: DownloadIcon,
-				iconPosition: 'after',
 				disabled: ctx.name.value.trim() === '',
 				onClick: async () => {
 					await ctx.loadJavaOptions()
@@ -440,11 +463,17 @@ export function createCreateServerFlowContext(
 			cannotNavigateForward: (ctx) => ctx.installPhase.value !== 'done',
 			disableClose: (ctx) =>
 				ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
+			leftButtonConfig: (ctx) => ({
+				label: ctx.formatMessage(commonMessages.cancelButton),
+				disabled:
+					ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
+				onClick: () => ctx.modal.value?.hide(),
+			}),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(
 					ctx.installPhase.value === 'error' ? wizardMessages.retry : wizardMessages.next,
 				),
-				icon: ctx.installPhase.value === 'error' ? RefreshCwIcon : DownloadIcon,
+				icon: ctx.installPhase.value === 'error' ? RefreshCwIcon : null,
 				iconPosition: 'after',
 				disabled: ctx.installPhase.value !== 'done' && ctx.installPhase.value !== 'error',
 				onClick: () => {
@@ -460,6 +489,10 @@ export function createCreateServerFlowContext(
 			id: 'configure',
 			stageContent: markRaw(ConfigureStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.configureStageTitle),
+			leftButtonConfig: (ctx) => ({
+				label: ctx.formatMessage(commonMessages.cancelButton),
+				onClick: () => ctx.modal.value?.hide(),
+			}),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.finish),
 				onClick: () => ctx.modal.value?.hide(),
@@ -485,7 +518,6 @@ export function createCreateServerFlowContext(
 		memoryMb,
 		maxMemoryMb,
 		isJavaLoading,
-		isInstallingJava,
 		installPhase,
 		downloadProgress,
 		installLog,
@@ -498,7 +530,6 @@ export function createCreateServerFlowContext(
 		canContinueFromType,
 		loadVersions,
 		loadJavaOptions,
-		installJava,
 		beginInstall,
 		retryInstall,
 		acceptEula,

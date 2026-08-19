@@ -26,6 +26,7 @@ watch(ctx.showEulaModal, (visible) => {
 
 function show(event?: MouseEvent) {
 	ctx.reset()
+	modal.value?.setStage(0)
 	modal.value?.show(event)
 }
 
@@ -37,7 +38,16 @@ defineExpose({ show, hide: () => modal.value?.hide() })
 </script>
 
 <template>
-	<MultiStageModal ref="modal" :stages="ctx.stageConfigs" :context="ctx" @hide="handleHide" />
+	<MultiStageModal
+		ref="modal"
+		:stages="ctx.stageConfigs"
+		:context="ctx"
+		:back-button-enabled="
+			(flowCtx) =>
+				flowCtx.installPhase.value !== 'downloading' && flowCtx.installPhase.value !== 'first-run'
+		"
+		@hide="handleHide"
+	/>
 	<EulaModal
 		ref="eulaModal"
 		:text="ctx.eulaText.value"

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { DownloadIcon, ServerIcon, SpinnerIcon } from '@modrinth/assets'
+import { ServerIcon } from '@modrinth/assets'
 import {
-	ButtonStyled,
+	Combobox,
+	type ComboboxOption,
 	defineMessages,
-	DropdownSelect,
 	Slider,
 	StyledInput,
 	useVIntl,
@@ -17,31 +17,55 @@ const ctx = injectCreateServerFlow()
 
 const messages = defineMessages({
 	name: { id: 'app.servers.wizard.name', defaultMessage: 'Server name' },
-	namePlaceholder: {
-		id: 'app.servers.wizard.name-placeholder',
-		defaultMessage: 'e.g. Survival with friends',
-	},
+	namePlaceholder: { id: 'app.servers.wizard.name-placeholder', defaultMessage: 'Survival' },
 	java: { id: 'app.servers.settings.java', defaultMessage: 'Java' },
-	javaNone: { id: 'app.servers.settings.java-none', defaultMessage: 'System default' },
+	javaPlaceholder: {
+		id: 'app.servers.wizard.java-placeholder',
+		defaultMessage: 'Select a Java version',
+	},
 	javaMissing: {
 		id: 'app.servers.wizard.java-missing',
-		defaultMessage: 'No compatible Java installation found.',
+		defaultMessage: 'No Java installations found',
 	},
-	installJava: { id: 'app.servers.wizard.install-java', defaultMessage: 'Install Java' },
+	javaMissingHint: {
+		id: 'app.servers.wizard.java-missing-hint',
+		defaultMessage:
+			'No compatible Java found on your system. The required Java will be installed automatically in the next step.',
+	},
 	memory: { id: 'app.servers.settings.memory', defaultMessage: 'Memory' },
 	memoryValue: { id: 'app.servers.wizard.memory-value', defaultMessage: '{value} MB' },
 })
 
-const javaPathOptions = computed(() => ['', ...ctx.javaOptions.value.map((java) => java.path)])
+const javaOptions = computed<ComboboxOption<string>[]>(() =>
+	ctx.javaOptions.value.map((java) => ({
+		value: java.path,
+		label: `Java ${java.version}`,
+		subLabel: java.path,
+	})),
+)
 
-function javaOptionLabel(value: string) {
-	if (value === '') return formatMessage(messages.javaNone)
-	const java = ctx.javaOptions.value.find((entry) => entry.path === value)
-	return java ? 'Java ' + java.version : value
+const selectedJava = computed({
+	get: () => ctx.selectedJavaPath.value,
+	set: (value) => {
+		if (typeof value === 'string' && value !== '') ctx.selectedJavaPath.value = value
+	},
+})
+
+function suggestName() {
+	const type = ctx.serverType.value
+	const version = ctx.selectedGameVersion.value
+	const flag = Math.random().toString(16).slice(2, 6)
+	const segments = [type, version]
+	if (ctx.selectedLoaderVersion.value) segments.push(ctx.selectedLoaderVersion.value)
+	segments.push(flag)
+	ctx.name.value = segments.filter(Boolean).join('-')
 }
 
 onMounted(() => {
-	if (ctx.javaOptions.value.length === 0) void ctx.loadJavaOptions()
+	void ctx.loadJavaOptions()
+	if (!ctx.name.value.trim() && ctx.selectedGameVersion.value) {
+		suggestName()
+	}
 })
 </script>
 
@@ -59,27 +83,19 @@ onMounted(() => {
 
 		<div class="flex min-w-0 flex-col gap-2">
 			<span class="font-semibold text-contrast">{{ formatMessage(messages.java) }}</span>
-			<DropdownSelect
-				v-model="ctx.selectedJavaPath.value"
-				:options="javaPathOptions"
-				:display-name="javaOptionLabel"
-				:name="formatMessage(messages.java)"
+			<Combobox
+				v-model="selectedJava"
+				:options="javaOptions"
+				:placeholder="formatMessage(messages.javaPlaceholder)"
+				:no-options-message="formatMessage(messages.javaMissing)"
+				:show-no-options-when-empty="!ctx.isJavaLoading.value"
 			/>
-			<div
+			<p
 				v-if="ctx.javaOptions.value.length === 0 && !ctx.isJavaLoading.value"
-				class="flex items-center justify-between gap-3"
+				class="m-0 text-sm text-secondary"
 			>
-				<span class="text-sm text-orange">
-					{{ formatMessage(messages.javaMissing) }}
-				</span>
-				<ButtonStyled color="brand" size="small">
-					<button type="button" :disabled="ctx.isInstallingJava.value" @click="ctx.installJava()">
-						<SpinnerIcon v-if="ctx.isInstallingJava.value" class="animate-spin" />
-						<DownloadIcon v-else />
-						{{ formatMessage(messages.installJava) }}
-					</button>
-				</ButtonStyled>
-			</div>
+				{{ formatMessage(messages.javaMissingHint) }}
+			</p>
 		</div>
 
 		<div class="flex min-w-0 flex-col gap-2">

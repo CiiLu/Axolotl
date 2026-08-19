@@ -87,7 +87,14 @@ const isBusy = computed(
 			{{ ctx.installError.value }}
 		</Admonition>
 
-		<div class="flex flex-col gap-2">
+		<div
+			v-if="
+				ctx.installPhase.value !== 'idle' &&
+				ctx.installPhase.value !== 'preparing' &&
+				ctx.installPhase.value !== 'downloading'
+			"
+			class="flex flex-col gap-2"
+		>
 			<span class="text-sm font-semibold text-secondary">
 				{{ formatMessage(messages.installLog) }}
 			</span>

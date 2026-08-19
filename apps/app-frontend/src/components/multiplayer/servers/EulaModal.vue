@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { CheckIcon, XIcon } from '@modrinth/assets'
-import {
-	ButtonStyled,
-	defineMessages,
-	NewModal,
-	useVIntl,
-} from '@modrinth/ui'
+import { ButtonStyled, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
 import { useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
@@ -53,18 +48,20 @@ defineExpose({
 			>
 		</div>
 		<template #actions>
-			<ButtonStyled color="brand">
-				<button type="button" @click="emit('accept')">
-					<CheckIcon />
-					{{ formatMessage(messages.accept) }}
-				</button>
-			</ButtonStyled>
-			<ButtonStyled type="outlined">
-				<button type="button" @click="emit('decline')">
-					<XIcon />
-					{{ formatMessage(messages.decline) }}
-				</button>
-			</ButtonStyled>
+			<div class="flex flex-col justify-end gap-2 sm:flex-row">
+				<ButtonStyled type="outlined">
+					<button type="button" @click="emit('decline')">
+						<XIcon />
+						{{ formatMessage(messages.decline) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled color="brand">
+					<button type="button" @click="emit('accept')">
+						<CheckIcon />
+						{{ formatMessage(messages.accept) }}
+					</button>
+				</ButtonStyled>
+			</div>
 		</template>
 	</NewModal>
 </template>

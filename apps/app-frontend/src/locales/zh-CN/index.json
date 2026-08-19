@@ -8025,7 +8025,13 @@
 		"message": "安装"
 	},
 	"app.servers.wizard.java-missing": {
-		"message": "未找到兼容的 Java。"
+		"message": "未找到已安装的 Java。"
+	},
+	"app.servers.wizard.java-missing-hint": {
+		"message": "系统中未找到兼容的 Java,下一步将自动安装所需的 Java。"
+	},
+	"app.servers.wizard.java-placeholder": {
+		"message": "选择 Java 版本"
 	},
 	"app.servers.wizard.loader-version": {
 		"message": "加载器版本"
@@ -8040,7 +8046,7 @@
 		"message": "服务器名称"
 	},
 	"app.servers.wizard.name-placeholder": {
-		"message": "例如：好友生存服"
+		"message": "生存服"
 	},
 	"app.servers.wizard.next": {
 		"message": "下一步"
