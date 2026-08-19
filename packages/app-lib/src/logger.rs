@@ -704,7 +704,9 @@ mod tests {
         );
         let output = compact_modrinth_console_event(&input).unwrap();
 
-        assert!(output.starts_with("INFO Modrinth mirror resolved cached file"));
+        assert!(
+            output.starts_with("INFO Modrinth mirror resolved cached file")
+        );
         assert!(output.contains("mirror_status=attempting"));
         assert!(output.contains("source=Mirror"));
         assert!(
