@@ -65,6 +65,20 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed overlapping server metadata and action buttons in compact and grid views on Discover.',
 					'zh-CN': '修复发现内容的紧凑和网格视图中服务器信息与操作按钮重叠的问题。',
 				},
+				{
+					'en-US': '',
+					'zh-CN': '修复XMCL下载引擎部分情况416的问题。',
+				},
+			],
+			added: [
+				{
+					'en-US': '',
+					'zh-CN': '为存档编辑页面下方选项添加折叠，现在它们默认折叠，并在搜索时展开。',
+				},
+				{
+					'en-US': '',
+					'zh-CN': '为错误弹窗添加5行截断',
+				},
 			],
 		},
 	},
