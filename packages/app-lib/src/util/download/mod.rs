@@ -13,6 +13,8 @@ pub mod h2_pool;
 pub mod legacy;
 pub mod log;
 pub(crate) mod native;
+pub(crate) mod native_breaker;
+pub(crate) mod native_budget;
 pub(crate) mod native_reputation;
 pub(crate) mod native_slow;
 pub mod shared;

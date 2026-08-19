@@ -83,6 +83,10 @@ impl H2DownloadFailure {
 		matches!(self, Self::Protocol)
 	}
 
+	pub(crate) const fn is_transfer_failure(self) -> bool {
+		matches!(self, Self::Connect | Self::Tls | Self::Protocol)
+	}
+
 	pub(crate) const fn integrity_failure(self) -> bool {
 		matches!(self, Self::Integrity | Self::Content)
 	}
@@ -740,11 +744,12 @@ impl Clone for H2BatchAsset {
 /// Returned items have exhausted every batch pass, so downstream can treat
 /// them as persistently failing against the chosen route.
 pub(crate) async fn download_asset_batch_via_h2<F>(
-	route: &DownloadRoute,
-	items: Vec<H2BatchAsset>,
-	concurrency: usize,
-	apply_native_policy: bool,
-	on_completed: F,
+    route: &DownloadRoute,
+    items: Vec<H2BatchAsset>,
+    concurrency: usize,
+    apply_native_policy: bool,
+	native_semaphore: Option<&fetch::FetchSemaphore>,
+    on_completed: F,
 ) -> Vec<H2BatchAsset>
 where
     F: FnMut(H2BatchAsset) -> Pin<Box<dyn Future<Output = ()> + Send>>
@@ -756,6 +761,22 @@ where
 	{
 		return items;
 	}
+	let _global_permit = if let Some(semaphore) = native_semaphore {
+		match semaphore.0.acquire().await {
+			Ok(permit) => Some(permit),
+			Err(_) => return items,
+		}
+	} else {
+		None
+	};
+	let _authority_permit = if apply_native_policy {
+		match super::native_budget::acquire(route).await {
+			Ok(permit) => permit,
+			Err(_) => return items,
+		}
+	} else {
+		None
+	};
 	let connection = match connect_authority(&route.url).await {
 		Ok(connection) => connection,
 		Err(failure) => {
@@ -765,9 +786,15 @@ where
 			{
 				fetch::record_authority_h2_failure(&authority);
 			}
+			if apply_native_policy && failure.is_transfer_failure() {
+				super::native_breaker::record_failure(route);
+			}
 			return items;
 		}
 	};
+	if apply_native_policy {
+		super::native_breaker::record_success(route);
+	}
     let route_authority = fetch::url_authority(&route.url);
 
     // Items whose URL targets a different authority cannot be multiplexed on

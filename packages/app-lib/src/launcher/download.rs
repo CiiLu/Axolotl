@@ -1577,6 +1577,7 @@ pub async fn download_assets(
                 batch_items,
                 ASSET_BATCH_CONCURRENCY,
 				apply_native_policy,
+				apply_native_policy.then_some(&st.fetch_semaphore),
                 callback,
             )
             .await;

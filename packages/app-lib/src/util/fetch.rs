@@ -50,7 +50,7 @@ const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_secs(2);
 const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_millis(100);
 const SEGMENTED_DOWNLOAD_THRESHOLD: u64 = 4 * 1024 * 1024;
 const INITIAL_SEGMENT_CONCURRENCY: usize = 4;
-const MAX_SEGMENT_CONCURRENCY: usize = 12;
+const MAX_SEGMENT_CONCURRENCY: usize = 8;
 const MIN_SEGMENT_SIZE: u64 = 256 * 1024;
 const ROUTE_PROBE_BYTES: u64 = 256 * 1024;
 const ROUTE_PROBE_MIN_IMPROVEMENT_PERCENT: u64 = 25;
@@ -1572,6 +1572,7 @@ fn record_route_success(
         if crate::util::download::active_engine()
             != crate::util::download::DownloadEngine::XmclCompat
         {
+            crate::util::download::native_breaker::record_success(route);
             crate::util::download::native_reputation::record_success(
                 key.family.as_str(),
                 &key.authority,
@@ -1604,6 +1605,24 @@ fn record_route_failure(
         state.record_download_error();
     }
     record_route_health_failure(route, resource, cooldown);
+}
+
+fn record_native_transfer_failure(
+    route: &DownloadRoute,
+    cooldown: Option<time::Duration>,
+) {
+    if crate::util::download::active_engine()
+        == crate::util::download::DownloadEngine::XmclCompat
+    {
+        return;
+    }
+    if let Some(cooldown) = cooldown {
+        crate::util::download::native_breaker::record_failure_with_cooldown(
+            route, cooldown,
+        );
+    } else {
+        crate::util::download::native_breaker::record_failure(route);
+    }
 }
 
 fn record_route_health_failure(
@@ -3735,7 +3754,11 @@ fn route_segmented_concurrency_cap(
     route: &DownloadRoute,
     available_permits: usize,
 ) -> usize {
-    let cap = segmented_concurrency_cap(available_permits);
+    let fair_share = (available_permits / 2).max(2);
+    let cap = segmented_concurrency_cap(available_permits)
+        .min(fair_share)
+        .min(8)
+        .min(crate::util::download::native_budget::available(route));
     if route.source == DownloadRouteSource::Bmclapi
         || route.source == DownloadRouteSource::Tianpao
         || is_modrinth_cdn_url(&route.url)
@@ -3759,26 +3782,67 @@ fn configured_semaphore_limit(semaphore: &FetchSemaphore) -> usize {
 }
 
 async fn acquire_initial_segment_permits(
+    route: &DownloadRoute,
     semaphore: &FetchSemaphore,
     count: usize,
-) -> crate::Result<Vec<SemaphorePermit<'_>>> {
+) -> crate::Result<Vec<NativeConnectionPermit<'_>>> {
     let queue_started = Instant::now();
     let mut batch = semaphore.0.acquire_many(count as u32).await?;
-    let mut permits = Vec::with_capacity(count);
+    let mut global_permits = Vec::with_capacity(count);
     while batch.num_permits() > 1 {
-        permits.push(
+        global_permits.push(
             batch
                 .split(1)
                 .expect("a multi-permit semaphore guard can be split"),
         );
     }
-    permits.push(batch);
+    global_permits.push(batch);
+    let mut permits = Vec::with_capacity(count);
+    for global in global_permits {
+        let authority = crate::util::download::native_budget::acquire(route)
+            .await?;
+        permits.push(NativeConnectionPermit {
+            _global: global,
+            _authority: authority,
+        });
+    }
     tracing::debug!(
         queue_wait_ms = queue_started.elapsed().as_millis(),
         actual_segments = permits.len(),
         "Acquired initial segmented download permits"
     );
     Ok(permits)
+}
+
+struct NativeConnectionPermit<'a> {
+    _global: SemaphorePermit<'a>,
+    _authority: Option<tokio::sync::OwnedSemaphorePermit>,
+}
+
+async fn acquire_native_connection<'a>(
+    route: &DownloadRoute,
+    semaphore: &'a FetchSemaphore,
+) -> crate::Result<NativeConnectionPermit<'a>> {
+    let global = semaphore.0.acquire().await?;
+    let authority =
+        crate::util::download::native_budget::acquire(route).await?;
+    Ok(NativeConnectionPermit {
+        _global: global,
+        _authority: authority,
+    })
+}
+
+fn try_acquire_native_connection<'a>(
+    route: &DownloadRoute,
+    semaphore: &'a FetchSemaphore,
+) -> Option<NativeConnectionPermit<'a>> {
+    let global = semaphore.0.try_acquire().ok()?;
+    let authority =
+        crate::util::download::native_budget::try_acquire(route).ok()?;
+    Some(NativeConnectionPermit {
+        _global: global,
+        _authority: authority,
+    })
 }
 
 fn initial_segment_count(size: u64, available_permits: usize) -> usize {
@@ -3910,7 +3974,7 @@ async fn probe_route_throughput(
     }
     let probe_bytes = ROUTE_PROBE_BYTES.min(total_size);
     let probe_end = probe_bytes.checked_sub(1)?;
-    let _permit = semaphore.0.acquire().await.ok()?;
+    let _permit = acquire_native_connection(route, semaphore).await.ok()?;
     let started = Instant::now();
     let response = tokio::time::timeout(
         ROUTE_PROBE_TIMEOUT,
@@ -4492,7 +4556,7 @@ async fn download_segment(
     credentials: Option<&crate::state::ModrinthCredentials>,
     download_meta: Option<&DownloadMeta>,
     part_path: &Path,
-    _permit: SemaphorePermit<'_>,
+    _permit: NativeConnectionPermit<'_>,
     system_client: &reqwest::Client,
     direct_client: &reqwest::Client,
     progress: tokio::sync::mpsc::UnboundedSender<u64>,
@@ -4641,8 +4705,9 @@ async fn download_segment(
                             < MAX_TAIL_HEDGES_PER_FILE;
                     if hedge_reserved {
                         let global_permit = TAIL_HEDGE_SEMAPHORE.try_acquire();
-                        let connection_permit = semaphore.0.try_acquire();
-                        if let (Ok(_global_permit), Ok(_connection_permit)) =
+                        let connection_permit =
+                            try_acquire_native_connection(route, semaphore);
+                        if let (Ok(_global_permit), Some(_connection_permit)) =
                             (global_permit, connection_permit)
                         {
                             hedge_count.fetch_add(1, Ordering::AcqRel);
@@ -4873,7 +4938,8 @@ async fn try_segmented_download(
     let configured_limit = configured_semaphore_limit(semaphore);
     let concurrency_cap =
         route_segmented_concurrency_cap(route, configured_limit);
-    let requested_initial_count = initial_segment_count(size, configured_limit);
+    let requested_initial_count =
+        initial_segment_count(size, concurrency_cap);
     if requested_initial_count < 2 {
         tracing::debug!(
             original_url = %sanitize_url_for_log(&route.url),
@@ -4888,6 +4954,7 @@ async fn try_segmented_download(
         };
     }
     let permits = match acquire_initial_segment_permits(
+        route,
         semaphore,
         requested_initial_count,
     )
@@ -4943,6 +5010,8 @@ async fn try_segmented_download(
     let mut scheduler = tokio::time::interval(time::Duration::from_millis(250));
     scheduler.tick().await;
     let mut last_expansion = Instant::now();
+    let mut expansion_baseline = None;
+    let mut expansion_exhausted = false;
     let mut last_block_reason = None;
     let mut downloaded = 0_u64;
     let mut slow_policy = crate::util::download::native_slow::NativeSlowPolicy::new(
@@ -5059,6 +5128,25 @@ async fn try_segmented_download(
                     .filter(|range| range.is_active())
                     .map(DownloadRange::remaining)
                     .sum();
+                if expansion_exhausted {
+                    continue;
+                }
+                if last_expansion.elapsed() >= SEGMENT_EXPANSION_INTERVAL
+                    && let Some(baseline) = expansion_baseline.take()
+                {
+                    if u128::from(snapshot.recent_average) * 100
+                        < u128::from(baseline) * 115
+                    {
+                        expansion_exhausted = true;
+                        tracing::debug!(
+                            original_url = %sanitize_url_for_log(&route.url),
+                            baseline_speed = baseline,
+                            expanded_speed = snapshot.recent_average,
+                            "Stopping range expansion because the last connection added less than 15 percent throughput"
+                        );
+                        continue;
+                    }
+                }
                 if let Some(reason) = expansion_block_reason(
                     snapshot,
                     active_ranges,
@@ -5089,7 +5177,8 @@ async fn try_segmented_download(
                     .max_by_key(|range| range.remaining())
                     .cloned();
                 if let Some(range) = range
-                    && let Ok(permit) = semaphore.0.try_acquire()
+                    && let Some(permit) =
+                        try_acquire_native_connection(route, semaphore)
                     && let Some(new_range) =
                         range.split_tail(next_range_index)
                     {
@@ -5127,6 +5216,7 @@ async fn try_segmented_download(
                             &hedge_active,
                         ));
                         ranges.push(new_range);
+                        expansion_baseline = Some(snapshot.recent_average);
                         last_expansion = Instant::now();
                         last_block_reason = None;
                     }
@@ -5534,8 +5624,13 @@ async fn download_to_path_inner(
     if request.allow_segmented_download
         && !part_resume_expected(&part_path).await
         && !request.url.starts_with("http://")
+        && request
+            .integrity
+            .size
+            .is_none_or(|size| size < SEGMENTED_DOWNLOAD_THRESHOLD)
         && let Some(h2_route) = routes.first().cloned()
     {
+        let h2_permit = acquire_native_connection(&h2_route, semaphore).await?;
         match crate::util::download::h2_download::try_download_via_h2(
             &request,
             &h2_route,
@@ -5547,6 +5642,9 @@ async fn download_to_path_inner(
             crate::util::download::h2_download::H2DownloadOutcome::Completed(
                 result,
             ) => {
+                crate::util::download::native_breaker::record_success(
+                    &h2_route,
+                );
                 if let Some(tracking) = &request.install_tracking
                     && let Err(error) = tracking
                         .reporter
@@ -5581,6 +5679,9 @@ async fn download_to_path_inner(
                 {
                     record_authority_h2_failure(&authority);
                 }
+                if failure.is_transfer_failure() {
+                    record_native_transfer_failure(&h2_route, None);
+                }
                 tracing::debug!(
                     url = %sanitize_url_for_log(&h2_route.url),
                     source = h2_route.source.as_str(),
@@ -5596,6 +5697,7 @@ async fn download_to_path_inner(
                     .await?;
             }
         }
+        drop(h2_permit);
     }
 
     let mut official_integrity_retry = h2_failed_nonofficial.is_some();
@@ -5620,6 +5722,25 @@ async fn download_to_path_inner(
         let mut attempted_routes = Vec::new();
         for (route_index, route) in routes.iter().enumerate() {
             if terminal_routes.contains(&route.url) {
+                continue;
+            }
+            let has_breaker_alternate = routes.iter().enumerate().any(
+                |(candidate_index, candidate)| {
+                    candidate_index != route_index
+                        && !terminal_routes.contains(&candidate.url)
+                        && !crate::util::download::native_breaker::is_open(
+                            candidate,
+                        )
+                },
+            );
+            let recovery_route = preferred_route.as_ref() == Some(route)
+                || single_thread_routes.contains(&route.url);
+            if !recovery_route
+                && crate::util::download::native_breaker::should_skip(
+                route,
+                has_breaker_alternate,
+            )
+            {
                 continue;
             }
             if preferred_route
@@ -5705,8 +5826,8 @@ async fn download_to_path_inner(
                         semaphore,
                         credentials.as_ref(),
                         progress.as_deref_mut(),
-                        &NO_REDIRECT_REQWEST_CLIENT,
-                        &DIRECT_REQWEST_CLIENT,
+                        &HTTP1_NO_REDIRECT_REQWEST_CLIENT,
+                        &HTTP1_DIRECT_REQWEST_CLIENT,
                         attempts,
                         file_attempt_budget,
                         allow_low_throughput_abort,
@@ -5789,6 +5910,7 @@ async fn download_to_path_inner(
                         }
                         SegmentedDownloadOutcome::SourceFailed => {
                             record_route_failure(route, request.resource, None);
+                            record_native_transfer_failure(route, None);
                             let error: crate::Error = ErrorKind::OtherError(
                                 format!("File transfer failed from {log_url}"),
                             )
@@ -5902,7 +6024,7 @@ async fn download_to_path_inner(
                 } else {
                     0
                 };
-                let permit = semaphore.0.acquire().await?;
+                let permit = acquire_native_connection(route, semaphore).await?;
                 let mut activity = crate::State::get_if_initialized()
                     .map(|state| state.begin_download_connection());
                 record_install_download_started(
@@ -5945,6 +6067,7 @@ async fn download_to_path_inner(
                         drop(permit);
                         drop(activity.take());
                         record_route_failure(route, request.resource, None);
+                        record_native_transfer_failure(route, None);
                         record_download_attempt_failure(
                             &mut attempt_history,
                             route,
@@ -5971,6 +6094,7 @@ async fn download_to_path_inner(
                         drop(permit);
                         drop(activity.take());
                         record_route_failure(route, request.resource, None);
+                        record_native_transfer_failure(route, None);
                         let error = ErrorKind::NetworkError(format!(
                             "no response received for {:.0} seconds while downloading {log_url} to {}",
                             first_byte_timeout.as_secs_f64(),
@@ -6030,6 +6154,14 @@ async fn download_to_path_inner(
                                     || fetch_retry_delay(attempts),
                                 )),
                         );
+                        if status == StatusCode::TOO_MANY_REQUESTS
+                            || status.is_server_error()
+                        {
+                            record_native_transfer_failure(
+                                route,
+                                response_retry_after,
+                            );
+                        }
                     }
                     let error = response_status_error(
                         response,
@@ -6371,6 +6503,7 @@ async fn download_to_path_inner(
 
                 if let Some(error) = transfer_error {
                     record_route_failure(route, request.resource, None);
+                    record_native_transfer_failure(route, None);
                     preserve_or_remove_partial(
                         &part_path,
                         &request.integrity,
@@ -7972,7 +8105,11 @@ mod tests {
                 tokio::time::sleep(Duration::from_millis(50)).await;
                 drop(held);
             },
-            acquire_initial_segment_permits(&semaphore, 4),
+            acquire_initial_segment_permits(
+                &direct_test_route("https://example.com/file"),
+                &semaphore,
+                4,
+            ),
         );
         let permits = permits.unwrap();
         assert_eq!(permits.len(), 4);
@@ -7997,7 +8134,7 @@ mod tests {
         assert_eq!(route_segmented_concurrency_cap(&bmclapi, 64), 4);
         assert_eq!(
             route_segmented_concurrency_cap(&official, 64),
-            MAX_SEGMENT_CONCURRENCY
+            8
         );
     }
 
