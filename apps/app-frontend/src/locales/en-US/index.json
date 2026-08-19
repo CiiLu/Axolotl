@@ -1301,6 +1301,30 @@
 	"app.drop.import-progress-title": {
 		"message": "Importing instances…"
 	},
+	"app.drop.batch.import-cancelled-title": {
+		"message": "Import cancelled"
+	},
+	"app.drop.batch.import-cancelled-text": {
+		"message": "Nothing was imported."
+	},
+	"app.drop.batch.nothing-importable-title": {
+		"message": "Nothing to import"
+	},
+	"app.drop.batch.nothing-importable-text": {
+		"message": "{count, plural, one {# file} other {# files}} could not be recognized."
+	},
+	"app.drop.batch.completed-title": {
+		"message": "Import finished"
+	},
+	"app.drop.batch.completed-text": {
+		"message": "Imported {succeeded} of {total} ({failed} failed, {skipped} skipped)."
+	},
+	"app.drop.batch.target-label": {
+		"message": "Select target instance for this batch"
+	},
+	"app.drop.batch.group-file-label": {
+		"message": "{count, plural, one {# file} other {# files}}: {names}"
+	},
 	"app.drop.install-failed-title": {
 		"message": "Installation failed"
 	},
@@ -1317,7 +1341,7 @@
 		"message": "Version Mismatch"
 	},
 	"app.drop.mod-compatibility-warning": {
-		"message": "This mod targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader})."
+		"message": "{file} targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader})."
 	},
 	"app.drop.modpack-install-failed": {
 		"message": "Failed to install modpack"

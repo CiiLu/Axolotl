@@ -4307,11 +4307,35 @@
 	"app.drop.import-completed-partial-text": {
 		"message": "已导入 {completed} / {total} 个实例（{failed} 个失败）"
 	},
+	"app.drop.batch.import-cancelled-title": {
+		"message": "导入已取消"
+	},
+	"app.drop.batch.import-cancelled-text": {
+		"message": "未导入任何内容。"
+	},
+	"app.drop.batch.nothing-importable-title": {
+		"message": "没有可导入的内容"
+	},
+	"app.drop.batch.nothing-importable-text": {
+		"message": "{count, plural, one {# 个文件} other {# 个文件}}无法识别。"
+	},
+	"app.drop.batch.completed-title": {
+		"message": "导入完成"
+	},
+	"app.drop.batch.completed-text": {
+		"message": "已导入 {succeeded} / {total}（{failed} 失败，{skipped} 跳过）。"
+	},
+	"app.drop.batch.target-label": {
+		"message": "为该批次选择目标实例"
+	},
+	"app.drop.batch.group-file-label": {
+		"message": "{count, plural, one {# 个文件} other {# 个文件}}：{names}"
+	},
 	"app.drop.mod-compatibility-title": {
 		"message": "版本不匹配"
 	},
 	"app.drop.mod-compatibility-warning": {
-		"message": "此模组目标版本为 {modVersion}（{modLoader}），但实例的版本是 {instVersion}（{instLoader}）。"
+		"message": "{file} 的目标版本为 {modVersion}（{modLoader}），但实例的版本是 {instVersion}（{instLoader}）。"
 	},
 	"app.drop.unknown-force-analysis-title": {
 		"message": "无法识别文件类型"
