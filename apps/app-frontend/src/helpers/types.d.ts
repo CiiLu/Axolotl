@@ -137,6 +137,7 @@ type CacheBehaviour =
 type MemorySettings = {
 	maximum: number
 	automatic: boolean
+	optimize_before_launch: boolean
 }
 
 type WindowSize = {

@@ -9,7 +9,7 @@
 		"message": "Downloading update"
 	},
 	"app.action-bar.downloads": {
-		"message": "Downloads"
+		"message": "Download"
 	},
 	"app.action-bar.exporting-modpack": {
 		"message": "Exporting modpack"
@@ -611,6 +611,9 @@
 	"app.browse.back-to-instance": {
 		"message": "Back to instance"
 	},
+	"app.browse.choose-instance": {
+		"message": "Choose instance"
+	},
 	"app.browse.discover-content": {
 		"message": "Discover content"
 	},
@@ -635,6 +638,51 @@
 	"app.browse.hide-added-servers": {
 		"message": "Hide servers already added"
 	},
+	"app.browse.install-selected": {
+		"message": "Install {count} content"
+	},
+	"app.browse.instance-selector.cancel": {
+		"message": "Cancel"
+	},
+	"app.browse.instance-selector.clear-and-switch": {
+		"message": "Clear and switch"
+	},
+	"app.browse.instance-selector.create": {
+		"message": "Create instance"
+	},
+	"app.browse.instance-selector.current-target": {
+		"message": "Current target"
+	},
+	"app.browse.instance-selector.install-current": {
+		"message": "Install to current instance"
+	},
+	"app.browse.instance-selector.installing-current": {
+		"message": "Preparing installation…"
+	},
+	"app.browse.instance-selector.new-target": {
+		"message": "New target"
+	},
+	"app.browse.instance-selector.no-instances": {
+		"message": "Create an instance before installing content"
+	},
+	"app.browse.instance-selector.no-results": {
+		"message": "No matching instances"
+	},
+	"app.browse.instance-selector.search": {
+		"message": "Search instances"
+	},
+	"app.browse.instance-selector.select": {
+		"message": "Choose {name}"
+	},
+	"app.browse.instance-selector.switch-description": {
+		"message": "{count, plural, one {# selected project is} other {# selected projects are}} resolved for the current target. Switching will discard the resolved versions."
+	},
+	"app.browse.instance-selector.switch-title": {
+		"message": "Switch installation target?"
+	},
+	"app.browse.instance-selector.title": {
+		"message": "Choose an instance"
+	},
 	"app.browse.maps-no-installable-file": {
 		"message": "The selected CurseForge map does not have an installable file."
 	},
@@ -643,6 +691,12 @@
 	},
 	"app.browse.maps-unavailable-description": {
 		"message": "Configure a CurseForge API key to browse and install maps."
+	},
+	"app.browse.no-compatible-version": {
+		"message": "No compatible version was found for the selected instance."
+	},
+	"app.browse.preparing-selected": {
+		"message": "Preparing {completed}/{total}"
 	},
 	"app.browse.project-type.datapacks": {
 		"message": "Data Packs"
@@ -664,6 +718,9 @@
 	},
 	"app.browse.project-type.shaders": {
 		"message": "Shaders"
+	},
+	"app.browse.selected": {
+		"message": "Selected"
 	},
 	"app.browse.server-instance-content-warning": {
 		"message": "Adding content can break compatibility when joining the server. Any added content will also be lost when you update the server instance content."
@@ -716,11 +773,23 @@
 	"app.content-install.preview.already-installed": {
 		"message": "Already installed"
 	},
+	"app.content-install.preview.batch-description": {
+		"message": "Review {projectCount, plural, one {# project} other {# projects}} and {dependencyCount, plural, one {# dependency} other {# dependencies}} for {instance}."
+	},
 	"app.content-install.preview.cancel": {
 		"message": "Cancel"
 	},
 	"app.content-install.preview.clear-all": {
 		"message": "Clear all"
+	},
+	"app.content-install.preview.conflict-description": {
+		"message": "{candidate} may be the same content as an installed or selected project. Continue anyway?"
+	},
+	"app.content-install.preview.conflict-header": {
+		"message": "Possible duplicate content"
+	},
+	"app.content-install.preview.continue-anyway": {
+		"message": "Install anyway"
 	},
 	"app.content-install.preview.dependencies-count": {
 		"message": "{count, plural, one {# dependency} other {# dependencies}}"
@@ -730,6 +799,9 @@
 	},
 	"app.content-install.preview.description": {
 		"message": "{count, plural, one {# dependency will be installed automatically} other {# dependencies will be installed automatically}} for {project} in {instance}."
+	},
+	"app.content-install.preview.existing-content": {
+		"message": "Existing content"
 	},
 	"app.content-install.preview.header": {
 		"message": "Confirm installation"
@@ -743,11 +815,17 @@
 	"app.content-install.preview.only-checked": {
 		"message": "Only checked dependencies will be installed."
 	},
+	"app.content-install.preview.remove-project": {
+		"message": "Remove {project} from this installation"
+	},
 	"app.content-install.preview.required-by": {
 		"message": "Required by {projects}"
 	},
 	"app.content-install.preview.select-all": {
 		"message": "Select all"
+	},
+	"app.content-install.preview.selected-content-header": {
+		"message": "Selected content"
 	},
 	"app.content-install.preview.sha1-verified-modrinth-fallback": {
 		"message": "Modrinth fallback verified by SHA-1"
@@ -805,6 +883,30 @@
 	},
 	"app.content-install.preview.version-mismatch": {
 		"message": "Version may not match this instance"
+	},
+	"app.content-selection.conflict-unavailable": {
+		"message": "Could not verify whether this content duplicates another source."
+	},
+	"app.content-selection.dependency-conflict": {
+		"message": "{dependency} resolves to conflicting versions in this selection."
+	},
+	"app.content-selection.duplicate-content": {
+		"message": "{project} is already installed or selected from another source."
+	},
+	"app.content-selection.preview-failed": {
+		"message": "Some selected content could not be prepared. Remove it or try again."
+	},
+	"app.content-selection.queue-failed": {
+		"message": "Some content could not be added to the install queue. It remains selected."
+	},
+	"app.content-selection.target-changed": {
+		"message": "The selected content belongs to another instance. Switch back or clear it first."
+	},
+	"app.content-selection.unknown-dependency": {
+		"message": "Dependency {id}"
+	},
+	"app.content-selection.unknown-reason": {
+		"message": "Could not be resolved"
 	},
 	"app.content.add-from-file": {
 		"message": "Add from file"
@@ -1214,11 +1316,11 @@
 	"app.downloads.source.mcim": {
 		"message": "MCIM"
 	},
-	"app.downloads.source.tianpao": {
-		"message": "Tian pao"
-	},
 	"app.downloads.source.official": {
 		"message": "Official"
+	},
+	"app.downloads.source.tianpao": {
+		"message": "Tianpao"
 	},
 	"app.downloads.status.canceled": {
 		"message": "Canceled"
@@ -1243,6 +1345,30 @@
 	},
 	"app.downloads.status.waiting-for-user": {
 		"message": "Action needed"
+	},
+	"app.drop.batch.completed-text": {
+		"message": "Imported {succeeded} of {total} ({failed} failed, {skipped} skipped)."
+	},
+	"app.drop.batch.completed-title": {
+		"message": "Import finished"
+	},
+	"app.drop.batch.group-file-label": {
+		"message": "{count, plural, one {# file} other {# files}}: {names}"
+	},
+	"app.drop.batch.import-cancelled-text": {
+		"message": "Nothing was imported."
+	},
+	"app.drop.batch.import-cancelled-title": {
+		"message": "Import cancelled"
+	},
+	"app.drop.batch.nothing-importable-text": {
+		"message": "{count, plural, one {# file} other {# files}} could not be recognized."
+	},
+	"app.drop.batch.nothing-importable-title": {
+		"message": "Nothing to import"
+	},
+	"app.drop.batch.target-label": {
+		"message": "Select target instance for this batch"
 	},
 	"app.drop.content-installed-text": {
 		"message": "File has been installed to the instance."
@@ -1434,7 +1560,7 @@
 		"message": "Unable to sign in to Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "To play this instance, sign in with Microsoft below. If you do not have a Minecraft account, you can purchase the game on the Minecraft website."
+		"message": "To play this instance, create an account. If you do not have a Minecraft account, you can log in with an offline account on the right."
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "Sign in to Minecraft"
@@ -1514,6 +1640,12 @@
 	"app.export-modal.export-button": {
 		"message": "Export"
 	},
+	"app.export-modal.export-complete": {
+		"message": "Export complete"
+	},
+	"app.export-modal.export-complete-description": {
+		"message": "{name} was exported successfully."
+	},
 	"app.export-modal.header": {
 		"message": "Export modpack"
 	},
@@ -1528,6 +1660,9 @@
 	},
 	"app.export-modal.version-number-placeholder": {
 		"message": "1.0.0"
+	},
+	"app.gc-notice.fallback": {
+		"message": "Java did not accept {preferred}; using {chosen}."
 	},
 	"app.home.breadcrumb": {
 		"message": "Home"
@@ -2084,8 +2219,50 @@
 	"app.instance.hide-show-unselected": {
 		"message": "Show/hide unselected"
 	},
+	"app.instance.icon-picker.background": {
+		"message": "Background"
+	},
+	"app.instance.icon-picker.background.amethyst": {
+		"message": "Amethyst"
+	},
+	"app.instance.icon-picker.background.cherry": {
+		"message": "Cherry"
+	},
+	"app.instance.icon-picker.background.deep-dark": {
+		"message": "Deep Dark"
+	},
+	"app.instance.icon-picker.background.grass": {
+		"message": "Grass"
+	},
+	"app.instance.icon-picker.background.midnight": {
+		"message": "Midnight"
+	},
+	"app.instance.icon-picker.background.nether": {
+		"message": "Nether"
+	},
+	"app.instance.icon-picker.background.ocean": {
+		"message": "Ocean"
+	},
+	"app.instance.icon-picker.background.slime": {
+		"message": "Slime"
+	},
+	"app.instance.icon-picker.background.stone": {
+		"message": "Stone"
+	},
+	"app.instance.icon-picker.background.sunset": {
+		"message": "Sunset"
+	},
+	"app.instance.icon-picker.background.transparent": {
+		"message": "Transparent"
+	},
 	"app.instance.icon-picker.description": {
 		"message": "Combine a background and a Minecraft element, or upload your own image."
+	},
+	"app.instance.icon-picker.group.modrinth-3d": {
+		"message": "Modrinth 3D icons"
+	},
+	"app.instance.icon-picker.group.original": {
+		"message": "Original icons"
 	},
 	"app.instance.icon-picker.icon.anvil": {
 		"message": "Anvil"
@@ -2162,11 +2339,155 @@
 	"app.instance.icon-picker.load-error": {
 		"message": "Failed to load the bundled icon."
 	},
+	"app.instance.icon-picker.modrinth-3d.backpack": {
+		"message": "Backpack"
+	},
+	"app.instance.icon-picker.modrinth-3d.beacon": {
+		"message": "Beacon"
+	},
+	"app.instance.icon-picker.modrinth-3d.blue-shark": {
+		"message": "Blue Shark"
+	},
+	"app.instance.icon-picker.modrinth-3d.bookshelf": {
+		"message": "Bookshelf"
+	},
+	"app.instance.icon-picker.modrinth-3d.brown-bear": {
+		"message": "Brown Bear"
+	},
+	"app.instance.icon-picker.modrinth-3d.cake": {
+		"message": "Cake"
+	},
+	"app.instance.icon-picker.modrinth-3d.campfire": {
+		"message": "Campfire"
+	},
+	"app.instance.icon-picker.modrinth-3d.chest": {
+		"message": "Chest"
+	},
+	"app.instance.icon-picker.modrinth-3d.cogwheel": {
+		"message": "Cogwheel"
+	},
+	"app.instance.icon-picker.modrinth-3d.command-block": {
+		"message": "Command Block"
+	},
+	"app.instance.icon-picker.modrinth-3d.cooking-pot": {
+		"message": "Cooking Pot"
+	},
+	"app.instance.icon-picker.modrinth-3d.couch": {
+		"message": "Couch"
+	},
+	"app.instance.icon-picker.modrinth-3d.crafting-table": {
+		"message": "Crafting Table"
+	},
+	"app.instance.icon-picker.modrinth-3d.creeper": {
+		"message": "Creeper"
+	},
+	"app.instance.icon-picker.modrinth-3d.enchanting-table": {
+		"message": "Enchanting Table"
+	},
+	"app.instance.icon-picker.modrinth-3d.ender-chest": {
+		"message": "Ender Chest"
+	},
+	"app.instance.icon-picker.modrinth-3d.ender-dragon": {
+		"message": "Ender Dragon"
+	},
+	"app.instance.icon-picker.modrinth-3d.engine": {
+		"message": "Engine"
+	},
+	"app.instance.icon-picker.modrinth-3d.furnace": {
+		"message": "Furnace"
+	},
+	"app.instance.icon-picker.modrinth-3d.gizmo": {
+		"message": "Gizmo"
+	},
+	"app.instance.icon-picker.modrinth-3d.globe": {
+		"message": "Globe"
+	},
+	"app.instance.icon-picker.modrinth-3d.grass-block": {
+		"message": "Grass Block"
+	},
+	"app.instance.icon-picker.modrinth-3d.lantern": {
+		"message": "Lantern"
+	},
+	"app.instance.icon-picker.modrinth-3d.moobloom": {
+		"message": "Moobloom"
+	},
+	"app.instance.icon-picker.modrinth-3d.mr-pack": {
+		"message": "Mr Pack"
+	},
+	"app.instance.icon-picker.modrinth-3d.orb": {
+		"message": "Orb of Origins"
+	},
+	"app.instance.icon-picker.modrinth-3d.oxygen-distributor": {
+		"message": "Oxygen Distributor"
+	},
+	"app.instance.icon-picker.modrinth-3d.pancakes": {
+		"message": "Pancakes"
+	},
+	"app.instance.icon-picker.modrinth-3d.pickaxe": {
+		"message": "Pickaxe"
+	},
+	"app.instance.icon-picker.modrinth-3d.poke-ball": {
+		"message": "Poké Ball"
+	},
+	"app.instance.icon-picker.modrinth-3d.redstone-block": {
+		"message": "Redstone Block"
+	},
+	"app.instance.icon-picker.modrinth-3d.sculk-sensor": {
+		"message": "Sculk Sensor"
+	},
+	"app.instance.icon-picker.modrinth-3d.skeleton": {
+		"message": "Skeleton"
+	},
+	"app.instance.icon-picker.modrinth-3d.skillet": {
+		"message": "Skillet"
+	},
+	"app.instance.icon-picker.modrinth-3d.slime-block": {
+		"message": "Slime Block"
+	},
+	"app.instance.icon-picker.modrinth-3d.space-helmet": {
+		"message": "Space Helmet"
+	},
+	"app.instance.icon-picker.modrinth-3d.sticky-piston": {
+		"message": "Sticky Piston"
+	},
+	"app.instance.icon-picker.modrinth-3d.sword": {
+		"message": "Sword"
+	},
+	"app.instance.icon-picker.modrinth-3d.terminal": {
+		"message": "Terminal"
+	},
+	"app.instance.icon-picker.modrinth-3d.tiny-potato": {
+		"message": "Tiny Potato"
+	},
+	"app.instance.icon-picker.modrinth-3d.tire": {
+		"message": "Tire"
+	},
+	"app.instance.icon-picker.modrinth-3d.tnt": {
+		"message": "TNT"
+	},
+	"app.instance.icon-picker.modrinth-3d.wrench": {
+		"message": "Wrench"
+	},
+	"app.instance.icon-picker.modrinth-3d.wrench-rinth": {
+		"message": "Modrinth Wrench"
+	},
+	"app.instance.icon-picker.modrinth-3d.zombie": {
+		"message": "Zombie"
+	},
+	"app.instance.icon-picker.saving": {
+		"message": "Saving..."
+	},
+	"app.instance.icon-picker.surprise-me": {
+		"message": "Surprise me"
+	},
 	"app.instance.icon-picker.title": {
 		"message": "Create an instance icon"
 	},
 	"app.instance.icon-picker.upload": {
 		"message": "Upload image"
+	},
+	"app.instance.icon-picker.use-icon": {
+		"message": "Use this icon"
 	},
 	"app.instance.join-server": {
 		"message": "Join server"
@@ -2582,8 +2903,11 @@
 	"app.java-arguments.presets.gc.auto.title": {
 		"message": "Auto"
 	},
+	"app.java-arguments.presets.gc.auto.verified": {
+		"message": "Last launch: {chosen}"
+	},
 	"app.java-arguments.presets.gc.g1gc-mojang.description": {
-		"message": "Near-Official G1GC Tuning"
+		"message": "G1GC tuning from the official Minecraft launcher"
 	},
 	"app.java-arguments.presets.gc.g1gc-mojang.title": {
 		"message": "Mojang G1GC"
@@ -4514,12 +4838,6 @@
 	"app.multiplayer.download-terracotta": {
 		"message": "Download Terracotta"
 	},
-	"app.multiplayer.terracotta.update": {
-		"message": "Update Terracotta"
-	},
-	"app.multiplayer.terracotta.update-available": {
-		"message": "Terracotta {version} is ready to install."
-	},
 	"app.multiplayer.error.install": {
 		"message": "Installation error"
 	},
@@ -4753,6 +5071,12 @@
 	},
 	"app.multiplayer.terracotta.save-public-nodes": {
 		"message": "Save nodes"
+	},
+	"app.multiplayer.terracotta.update": {
+		"message": "Update Terracotta"
+	},
+	"app.multiplayer.terracotta.update-available": {
+		"message": "Terracotta {version} is ready to install."
 	},
 	"app.multiplayer.title": {
 		"message": "Multiplayer"
@@ -5117,6 +5441,9 @@
 	"app.project.install-button.already-installed": {
 		"message": "This project is already installed"
 	},
+	"app.project.install-button.no-compatible-version": {
+		"message": "No compatible version was found for this instance."
+	},
 	"app.project.install-button.switch-version": {
 		"message": "Switch version"
 	},
@@ -5309,6 +5636,12 @@
 	"app.settings.defaults.memory-description": {
 		"message": "The memory allocated to each instance when it is run."
 	},
+	"app.settings.defaults.optimize-memory-before-launch": {
+		"message": "Optimize memory before launching the game"
+	},
+	"app.settings.defaults.optimize-memory-before-launch-description": {
+		"message": "Waits for Windows memory optimization to finish before starting the game."
+	},
 	"app.settings.defaults.post-exit-description": {
 		"message": "Run after the game closes."
 	},
@@ -5499,7 +5832,7 @@
 		"message": "CurseForge"
 	},
 	"app.settings.resources.curseforge-mirror-description": {
-		"message": "CurseForge public API requests and file downloads."
+		"message": "CurseForge file downloads."
 	},
 	"app.settings.resources.curseforge-restriction-bypass": {
 		"message": "Automatically download restricted CurseForge files"
@@ -5555,12 +5888,6 @@
 	"app.settings.resources.minecraft-metadata-source-description": {
 		"message": "Version manifests and metadata for Minecraft and supported mod loaders."
 	},
-	"app.settings.resources.modrinth-mirror": {
-		"message": "Modrinth"
-	},
-	"app.settings.resources.modrinth-mirror-description": {
-		"message": "Modrinth file downloads."
-	},
 	"app.settings.resources.missing-content-auto-import": {
 		"message": "Automatically import missing modpack files"
 	},
@@ -5572,6 +5899,12 @@
 	},
 	"app.settings.resources.missing-content-import-directory-description": {
 		"message": "The system Downloads folder is used when no custom folder is selected. Subfolders are not scanned."
+	},
+	"app.settings.resources.modrinth-mirror": {
+		"message": "Modrinth"
+	},
+	"app.settings.resources.modrinth-mirror-description": {
+		"message": "Modrinth file downloads."
 	},
 	"app.settings.resources.mojang-auth-service": {
 		"message": "Mojang authentication service"
@@ -5603,12 +5936,6 @@
 	"app.settings.resources.source.automatic": {
 		"message": "Automatic (recommended)"
 	},
-	"app.settings.resources.source.mcim": {
-		"message": "Prefer MCIM"
-	},
-	"app.settings.resources.source.tianpao": {
-		"message": "Prefer Tianpao"
-	},
 	"app.settings.resources.source.mojang-mirror-preferred": {
 		"message": "Prefer Fallen-Proxy"
 	},
@@ -5627,8 +5954,107 @@
 	"app.settings.resources.source.open-bmcl-api": {
 		"message": "Prefer OpenBMCLAPI"
 	},
+	"app.settings.resources.source.tianpao": {
+		"message": "Prefer Tianpao"
+	},
 	"app.settings.resources.system-downloads-directory": {
 		"message": "System Downloads folder"
+	},
+	"app.settings.storage.actual-size-tooltip": {
+		"message": "Actual size: {size}"
+	},
+	"app.settings.storage.cache-data": {
+		"message": "Cache data"
+	},
+	"app.settings.storage.database": {
+		"message": "Database"
+	},
+	"app.settings.storage.db-backup": {
+		"message": "Database backups"
+	},
+	"app.settings.storage.db-file": {
+		"message": "App database"
+	},
+	"app.settings.storage.distant-horizons": {
+		"message": "Distant Horizons cache"
+	},
+	"app.settings.storage.instance": {
+		"message": "Instance"
+	},
+	"app.settings.storage.instance-count": {
+		"message": "{count} instances"
+	},
+	"app.settings.storage.instance-data": {
+		"message": "Instance data"
+	},
+	"app.settings.storage.item-count": {
+		"message": "{count} items"
+	},
+	"app.settings.storage.last-updated-label": {
+		"message": "Last updated:"
+	},
+	"app.settings.storage.meta-data": {
+		"message": "Meta data"
+	},
+	"app.settings.storage.minimap": {
+		"message": "Minimap data"
+	},
+	"app.settings.storage.mods": {
+		"message": "Mods"
+	},
+	"app.settings.storage.open-action": {
+		"message": "Open in launcher or open location"
+	},
+	"app.settings.storage.other": {
+		"message": "Other"
+	},
+	"app.settings.storage.replay": {
+		"message": "Replay recordings"
+	},
+	"app.settings.storage.resourcepacks": {
+		"message": "Resource packs"
+	},
+	"app.settings.storage.saves": {
+		"message": "Saves"
+	},
+	"app.settings.storage.scanning": {
+		"message": "Scanning storage…"
+	},
+	"app.settings.storage.schematics": {
+		"message": "Schematics"
+	},
+	"app.settings.storage.screenshots": {
+		"message": "Screenshots"
+	},
+	"app.settings.storage.shaderpacks": {
+		"message": "Shader packs"
+	},
+	"app.settings.storage.symlink-help": {
+		"message": "What is a symlink?"
+	},
+	"app.settings.storage.symlink-help-tooltip": {
+		"message": "Symbolic links reference Minecraft resources from other locations — these files may actually live in another launcher’s directory.\nFor example, “20MB + 1.2GB” means the launcher folder contains 20MB of files and references an external 1.2GB of files."
+	},
+	"app.settings.storage.symlink-label": {
+		"message": "symlink"
+	},
+	"app.settings.storage.symlink-size-tooltip": {
+		"message": "Symbolic link or junction referenced size: {size}"
+	},
+	"app.settings.storage.total": {
+		"message": "Total size"
+	},
+	"app.settings.storage.total-description": {
+		"message": "Total size including symbolic links and junctions"
+	},
+	"app.settings.storage.update": {
+		"message": "Update"
+	},
+	"app.settings.storage.updating": {
+		"message": "Updating…"
+	},
+	"app.settings.storage.world": {
+		"message": "World"
 	},
 	"app.settings.tabs.about": {
 		"message": "About"
@@ -5656,6 +6082,9 @@
 	},
 	"app.settings.tabs.resource-management": {
 		"message": "Resource management"
+	},
+	"app.settings.tabs.storage": {
+		"message": "Storage"
 	},
 	"app.settings.tabs.translation": {
 		"message": "Translation"
@@ -6863,6 +7292,12 @@
 	"instance.settings.tabs.java.java-path-placeholder": {
 		"message": "/path/to/java"
 	},
+	"instance.settings.tabs.java.optimize-memory-before-launch": {
+		"message": "Optimize memory before launching the game"
+	},
+	"instance.settings.tabs.java.optimize-memory-before-launch-description": {
+		"message": "Waits for Windows memory optimization to finish before starting the game."
+	},
 	"instance.settings.tabs.window": {
 		"message": "Window"
 	},
@@ -7120,437 +7555,5 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "Unknown file warning"
-	},
-	"app.browse.choose-instance": {
-		"message": "Choose instance"
-	},
-	"app.browse.install-selected": {
-		"message": "Install {count} content"
-	},
-	"app.browse.preparing-selected": {
-		"message": "Preparing {completed}/{total}"
-	},
-	"app.browse.selected": {
-		"message": "Selected"
-	},
-	"app.browse.no-compatible-version": {
-		"message": "No compatible version was found for the selected instance."
-	},
-	"app.browse.instance-selector.title": {
-		"message": "Choose an instance"
-	},
-	"app.browse.instance-selector.search": {
-		"message": "Search instances"
-	},
-	"app.browse.instance-selector.no-instances": {
-		"message": "Create an instance before installing content"
-	},
-	"app.browse.instance-selector.no-results": {
-		"message": "No matching instances"
-	},
-	"app.browse.instance-selector.select": {
-		"message": "Choose {name}"
-	},
-	"app.browse.instance-selector.create": {
-		"message": "Create instance"
-	},
-	"app.browse.instance-selector.switch-title": {
-		"message": "Switch installation target?"
-	},
-	"app.browse.instance-selector.switch-description": {
-		"message": "{count, plural, one {# selected project is} other {# selected projects are}} resolved for the current target. Switching will discard the resolved versions."
-	},
-	"app.browse.instance-selector.current-target": {
-		"message": "Current target"
-	},
-	"app.browse.instance-selector.new-target": {
-		"message": "New target"
-	},
-	"app.browse.instance-selector.install-current": {
-		"message": "Install to current instance"
-	},
-	"app.browse.instance-selector.installing-current": {
-		"message": "Preparing installation…"
-	},
-	"app.browse.instance-selector.clear-and-switch": {
-		"message": "Clear and switch"
-	},
-	"app.browse.instance-selector.cancel": {
-		"message": "Cancel"
-	},
-	"app.content-install.preview.batch-description": {
-		"message": "Review {projectCount, plural, one {# project} other {# projects}} and {dependencyCount, plural, one {# dependency} other {# dependencies}} for {instance}."
-	},
-	"app.content-install.preview.selected-content-header": {
-		"message": "Selected content"
-	},
-	"app.content-install.preview.remove-project": {
-		"message": "Remove {project} from this installation"
-	},
-	"app.content-install.preview.conflict-header": {
-		"message": "Possible duplicate content"
-	},
-	"app.content-install.preview.conflict-description": {
-		"message": "{candidate} may be the same content as an installed or selected project. Continue anyway?"
-	},
-	"app.content-install.preview.continue-anyway": {
-		"message": "Install anyway"
-	},
-	"app.content-install.preview.existing-content": {
-		"message": "Existing content"
-	},
-	"app.content-selection.preview-failed": {
-		"message": "Some selected content could not be prepared. Remove it or try again."
-	},
-	"app.settings.storage.total": {
-		"message": "Total size"
-	},
-	"app.settings.storage.total-description": {
-		"message": "Total size including symbolic links and junctions"
-	},
-	"app.settings.storage.instance-data": {
-		"message": "Instance data"
-	},
-	"app.settings.storage.cache-data": {
-		"message": "Cache data"
-	},
-	"app.settings.storage.meta-data": {
-		"message": "Meta data"
-	},
-	"app.settings.storage.database": {
-		"message": "Database"
-	},
-	"app.settings.storage.other": {
-		"message": "Other"
-	},
-	"app.settings.storage.instance": {
-		"message": "Instance"
-	},
-	"app.settings.storage.mods": {
-		"message": "Mods"
-	},
-	"app.settings.storage.replay": {
-		"message": "Replay recordings"
-	},
-	"app.settings.storage.resourcepacks": {
-		"message": "Resource packs"
-	},
-	"app.settings.storage.saves": {
-		"message": "Saves"
-	},
-	"app.settings.storage.world": {
-		"message": "World"
-	},
-	"app.settings.storage.schematics": {
-		"message": "Schematics"
-	},
-	"app.settings.storage.screenshots": {
-		"message": "Screenshots"
-	},
-	"app.settings.storage.shaderpacks": {
-		"message": "Shader packs"
-	},
-	"app.settings.storage.minimap": {
-		"message": "Minimap data"
-	},
-	"app.settings.storage.distant-horizons": {
-		"message": "Distant Horizons cache"
-	},
-	"app.settings.storage.db-file": {
-		"message": "App database"
-	},
-	"app.settings.storage.db-backup": {
-		"message": "Database backups"
-	},
-	"app.settings.storage.item-count": {
-		"message": "{count} items"
-	},
-	"app.settings.storage.instance-count": {
-		"message": "{count} instances"
-	},
-	"app.settings.storage.actual-size-tooltip": {
-		"message": "Actual size: {size}"
-	},
-	"app.settings.storage.symlink-size-tooltip": {
-		"message": "Symbolic link or junction referenced size: {size}"
-	},
-	"app.settings.storage.open-action": {
-		"message": "Open in launcher or open location"
-	},
-	"app.settings.storage.expand-action": {
-		"message": "Expand"
-	},
-	"app.settings.storage.collapse-action": {
-		"message": "Collapse"
-	},
-	"app.settings.storage.symlink-label": {
-		"message": "symlink"
-	},
-	"app.settings.storage.symlink-help": {
-		"message": "What is a symlink?"
-	},
-	"app.settings.storage.symlink-help-tooltip": {
-		"message": "Symbolic links reference Minecraft resources from other locations — these files may actually live in another launcher’s directory.\nFor example, “20MB + 1.2GB” means the launcher folder contains 20MB of files and references an external 1.2GB of files."
-	},
-	"app.content-selection.queue-failed": {
-		"message": "Some content could not be added to the install queue. It remains selected."
-	},
-	"app.content-selection.dependency-conflict": {
-		"message": "{dependency} resolves to conflicting versions in this selection."
-	},
-	"app.content-selection.unknown-dependency": {
-		"message": "Dependency {id}"
-	},
-	"app.settings.storage.last-updated-label": {
-		"message": "Last updated:"
-	},
-	"app.settings.storage.update": {
-		"message": "Update"
-	},
-	"app.settings.storage.updating": {
-		"message": "Updating…"
-	},
-	"app.settings.storage.scanning": {
-		"message": "Scanning storage…"
-	},
-	"app.content-selection.unknown-reason": {
-		"message": "Could not be resolved"
-	},
-	"app.content-selection.target-changed": {
-		"message": "The selected content belongs to another instance. Switch back or clear it first."
-	},
-	"app.content-selection.duplicate-content": {
-		"message": "{project} is already installed or selected from another source."
-	},
-	"app.content-selection.conflict-unavailable": {
-		"message": "Could not verify whether this content duplicates another source."
-	},
-	"app.project.install-button.no-compatible-version": {
-		"message": "No compatible version was found for this instance."
-	},
-	"browse.selected-projects-floating-bar.show-projects": {
-		"message": "Show {count, plural, one {# selected project} other {# selected projects}}"
-	},
-	"browse.selected-projects-floating-bar.hide-projects": {
-		"message": "Hide selected projects"
-	},
-	"app.settings.tabs.storage": {
-		"message": "Storage"
-	},
-	"app.instance.icon-picker.use-icon": {
-		"message": "Use this icon"
-	},
-	"app.instance.icon-picker.surprise-me": {
-		"message": "Surprise me"
-	},
-	"app.instance.icon-picker.saving": {
-		"message": "Saving..."
-	},
-	"app.instance.icon-picker.modrinth-3d.zombie": {
-		"message": "Zombie"
-	},
-	"app.instance.icon-picker.modrinth-3d.wrench-rinth": {
-		"message": "Modrinth Wrench"
-	},
-	"app.instance.icon-picker.modrinth-3d.wrench": {
-		"message": "Wrench"
-	},
-	"app.instance.icon-picker.modrinth-3d.tnt": {
-		"message": "TNT"
-	},
-	"app.instance.icon-picker.modrinth-3d.tire": {
-		"message": "Tire"
-	},
-	"app.instance.icon-picker.modrinth-3d.tiny-potato": {
-		"message": "Tiny Potato"
-	},
-	"app.instance.icon-picker.modrinth-3d.terminal": {
-		"message": "Terminal"
-	},
-	"app.instance.icon-picker.modrinth-3d.sword": {
-		"message": "Sword"
-	},
-	"app.instance.icon-picker.modrinth-3d.sticky-piston": {
-		"message": "Sticky Piston"
-	},
-	"app.instance.icon-picker.modrinth-3d.space-helmet": {
-		"message": "Space Helmet"
-	},
-	"app.instance.icon-picker.modrinth-3d.slime-block": {
-		"message": "Slime Block"
-	},
-	"app.instance.icon-picker.modrinth-3d.skillet": {
-		"message": "Skillet"
-	},
-	"app.instance.icon-picker.modrinth-3d.skeleton": {
-		"message": "Skeleton"
-	},
-	"app.instance.icon-picker.modrinth-3d.sculk-sensor": {
-		"message": "Sculk Sensor"
-	},
-	"app.instance.icon-picker.modrinth-3d.redstone-block": {
-		"message": "Redstone Block"
-	},
-	"app.instance.icon-picker.modrinth-3d.poke-ball": {
-		"message": "Poké Ball"
-	},
-	"app.instance.icon-picker.modrinth-3d.pickaxe": {
-		"message": "Pickaxe"
-	},
-	"app.instance.icon-picker.modrinth-3d.pancakes": {
-		"message": "Pancakes"
-	},
-	"app.instance.icon-picker.modrinth-3d.oxygen-distributor": {
-		"message": "Oxygen Distributor"
-	},
-	"app.instance.icon-picker.modrinth-3d.orb": {
-		"message": "Orb of Origins"
-	},
-	"app.instance.icon-picker.modrinth-3d.mr-pack": {
-		"message": "Mr Pack"
-	},
-	"app.instance.icon-picker.modrinth-3d.moobloom": {
-		"message": "Moobloom"
-	},
-	"app.instance.icon-picker.modrinth-3d.lantern": {
-		"message": "Lantern"
-	},
-	"app.instance.icon-picker.modrinth-3d.grass-block": {
-		"message": "Grass Block"
-	},
-	"app.instance.icon-picker.modrinth-3d.globe": {
-		"message": "Globe"
-	},
-	"app.instance.icon-picker.modrinth-3d.gizmo": {
-		"message": "Gizmo"
-	},
-	"app.instance.icon-picker.modrinth-3d.furnace": {
-		"message": "Furnace"
-	},
-	"app.instance.icon-picker.modrinth-3d.engine": {
-		"message": "Engine"
-	},
-	"app.instance.icon-picker.modrinth-3d.ender-dragon": {
-		"message": "Ender Dragon"
-	},
-	"app.instance.icon-picker.modrinth-3d.ender-chest": {
-		"message": "Ender Chest"
-	},
-	"app.instance.icon-picker.modrinth-3d.enchanting-table": {
-		"message": "Enchanting Table"
-	},
-	"app.instance.icon-picker.modrinth-3d.creeper": {
-		"message": "Creeper"
-	},
-	"app.instance.icon-picker.modrinth-3d.crafting-table": {
-		"message": "Crafting Table"
-	},
-	"app.instance.icon-picker.modrinth-3d.couch": {
-		"message": "Couch"
-	},
-	"app.instance.icon-picker.modrinth-3d.cooking-pot": {
-		"message": "Cooking Pot"
-	},
-	"app.instance.icon-picker.modrinth-3d.command-block": {
-		"message": "Command Block"
-	},
-	"app.instance.icon-picker.modrinth-3d.cogwheel": {
-		"message": "Cogwheel"
-	},
-	"app.instance.icon-picker.modrinth-3d.chest": {
-		"message": "Chest"
-	},
-	"app.instance.icon-picker.modrinth-3d.campfire": {
-		"message": "Campfire"
-	},
-	"app.instance.icon-picker.modrinth-3d.cake": {
-		"message": "Cake"
-	},
-	"app.instance.icon-picker.modrinth-3d.brown-bear": {
-		"message": "Brown Bear"
-	},
-	"app.instance.icon-picker.modrinth-3d.bookshelf": {
-		"message": "Bookshelf"
-	},
-	"app.instance.icon-picker.modrinth-3d.blue-shark": {
-		"message": "Blue Shark"
-	},
-	"app.instance.icon-picker.modrinth-3d.beacon": {
-		"message": "Beacon"
-	},
-	"app.instance.icon-picker.modrinth-3d.backpack": {
-		"message": "Backpack"
-	},
-	"app.instance.icon-picker.group.original": {
-		"message": "Original icons"
-	},
-	"app.instance.icon-picker.group.modrinth-3d": {
-		"message": "Modrinth 3D icons"
-	},
-	"app.instance.icon-picker.background.transparent": {
-		"message": "Transparent"
-	},
-	"app.instance.icon-picker.background.sunset": {
-		"message": "Sunset"
-	},
-	"app.instance.icon-picker.background.stone": {
-		"message": "Stone"
-	},
-	"app.instance.icon-picker.background.slime": {
-		"message": "Slime"
-	},
-	"app.instance.icon-picker.background.ocean": {
-		"message": "Ocean"
-	},
-	"app.instance.icon-picker.background.nether": {
-		"message": "Nether"
-	},
-	"app.instance.icon-picker.background.midnight": {
-		"message": "Midnight"
-	},
-	"app.instance.icon-picker.background.grass": {
-		"message": "Grass"
-	},
-	"app.instance.icon-picker.background.deep-dark": {
-		"message": "Deep Dark"
-	},
-	"app.instance.icon-picker.background.cherry": {
-		"message": "Cherry"
-	},
-	"app.instance.icon-picker.background.amethyst": {
-		"message": "Amethyst"
-	},
-	"app.instance.icon-picker.background": {
-		"message": "Background"
-	},
-	"app.export-modal.export-complete-description": {
-		"message": "{name} was exported successfully."
-	},
-	"app.export-modal.export-complete": {
-		"message": "Export complete"
-	},
-	"app.drop.batch.target-label": {
-		"message": "Select target instance for this batch"
-	},
-	"app.drop.batch.nothing-importable-title": {
-		"message": "Nothing to import"
-	},
-	"app.drop.batch.nothing-importable-text": {
-		"message": "{count, plural, one {# file} other {# files}} could not be recognized."
-	},
-	"app.drop.batch.import-cancelled-title": {
-		"message": "Import cancelled"
-	},
-	"app.drop.batch.import-cancelled-text": {
-		"message": "Nothing was imported."
-	},
-	"app.drop.batch.group-file-label": {
-		"message": "{count, plural, one {# file} other {# files}}: {names}"
-	},
-	"app.drop.batch.completed-title": {
-		"message": "Import finished"
-	},
-	"app.drop.batch.completed-text": {
-		"message": "Imported {succeeded} of {total} ({failed} failed, {skipped} skipped)."
 	}
 }
