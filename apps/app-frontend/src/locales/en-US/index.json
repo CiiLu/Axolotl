@@ -1514,6 +1514,12 @@
 	"app.export-modal.export-button": {
 		"message": "Export"
 	},
+	"app.export-modal.export-complete": {
+		"message": "Export complete"
+	},
+	"app.export-modal.export-complete-description": {
+		"message": "{name} was exported successfully."
+	},
 	"app.export-modal.header": {
 		"message": "Export modpack"
 	},
@@ -2084,8 +2090,50 @@
 	"app.instance.hide-show-unselected": {
 		"message": "Show/hide unselected"
 	},
+	"app.instance.icon-picker.background": {
+		"message": "Background"
+	},
+	"app.instance.icon-picker.background.amethyst": {
+		"message": "Amethyst"
+	},
+	"app.instance.icon-picker.background.cherry": {
+		"message": "Cherry"
+	},
+	"app.instance.icon-picker.background.deep-dark": {
+		"message": "Deep Dark"
+	},
+	"app.instance.icon-picker.background.grass": {
+		"message": "Grass"
+	},
+	"app.instance.icon-picker.background.midnight": {
+		"message": "Midnight"
+	},
+	"app.instance.icon-picker.background.nether": {
+		"message": "Nether"
+	},
+	"app.instance.icon-picker.background.ocean": {
+		"message": "Ocean"
+	},
+	"app.instance.icon-picker.background.slime": {
+		"message": "Slime"
+	},
+	"app.instance.icon-picker.background.stone": {
+		"message": "Stone"
+	},
+	"app.instance.icon-picker.background.sunset": {
+		"message": "Sunset"
+	},
+	"app.instance.icon-picker.background.transparent": {
+		"message": "Transparent"
+	},
 	"app.instance.icon-picker.description": {
-		"message": "Choose a built-in Minecraft icon or upload your own image."
+		"message": "Combine a background and a Minecraft element, or upload your own image."
+	},
+	"app.instance.icon-picker.group.modrinth-3d": {
+		"message": "Modrinth 3D icons"
+	},
+	"app.instance.icon-picker.group.original": {
+		"message": "Original icons"
 	},
 	"app.instance.icon-picker.icon.anvil": {
 		"message": "Anvil"
@@ -2162,11 +2210,155 @@
 	"app.instance.icon-picker.load-error": {
 		"message": "Failed to load the bundled icon."
 	},
+	"app.instance.icon-picker.modrinth-3d.backpack": {
+		"message": "Backpack"
+	},
+	"app.instance.icon-picker.modrinth-3d.beacon": {
+		"message": "Beacon"
+	},
+	"app.instance.icon-picker.modrinth-3d.blue-shark": {
+		"message": "Blue Shark"
+	},
+	"app.instance.icon-picker.modrinth-3d.bookshelf": {
+		"message": "Bookshelf"
+	},
+	"app.instance.icon-picker.modrinth-3d.brown-bear": {
+		"message": "Brown Bear"
+	},
+	"app.instance.icon-picker.modrinth-3d.cake": {
+		"message": "Cake"
+	},
+	"app.instance.icon-picker.modrinth-3d.campfire": {
+		"message": "Campfire"
+	},
+	"app.instance.icon-picker.modrinth-3d.chest": {
+		"message": "Chest"
+	},
+	"app.instance.icon-picker.modrinth-3d.cogwheel": {
+		"message": "Cogwheel"
+	},
+	"app.instance.icon-picker.modrinth-3d.command-block": {
+		"message": "Command Block"
+	},
+	"app.instance.icon-picker.modrinth-3d.cooking-pot": {
+		"message": "Cooking Pot"
+	},
+	"app.instance.icon-picker.modrinth-3d.couch": {
+		"message": "Couch"
+	},
+	"app.instance.icon-picker.modrinth-3d.crafting-table": {
+		"message": "Crafting Table"
+	},
+	"app.instance.icon-picker.modrinth-3d.creeper": {
+		"message": "Creeper"
+	},
+	"app.instance.icon-picker.modrinth-3d.enchanting-table": {
+		"message": "Enchanting Table"
+	},
+	"app.instance.icon-picker.modrinth-3d.ender-chest": {
+		"message": "Ender Chest"
+	},
+	"app.instance.icon-picker.modrinth-3d.ender-dragon": {
+		"message": "Ender Dragon"
+	},
+	"app.instance.icon-picker.modrinth-3d.engine": {
+		"message": "Engine"
+	},
+	"app.instance.icon-picker.modrinth-3d.furnace": {
+		"message": "Furnace"
+	},
+	"app.instance.icon-picker.modrinth-3d.gizmo": {
+		"message": "Gizmo"
+	},
+	"app.instance.icon-picker.modrinth-3d.globe": {
+		"message": "Globe"
+	},
+	"app.instance.icon-picker.modrinth-3d.grass-block": {
+		"message": "Grass Block"
+	},
+	"app.instance.icon-picker.modrinth-3d.lantern": {
+		"message": "Lantern"
+	},
+	"app.instance.icon-picker.modrinth-3d.moobloom": {
+		"message": "Moobloom"
+	},
+	"app.instance.icon-picker.modrinth-3d.mr-pack": {
+		"message": "Mr Pack"
+	},
+	"app.instance.icon-picker.modrinth-3d.orb": {
+		"message": "Orb of Origins"
+	},
+	"app.instance.icon-picker.modrinth-3d.oxygen-distributor": {
+		"message": "Oxygen Distributor"
+	},
+	"app.instance.icon-picker.modrinth-3d.pancakes": {
+		"message": "Pancakes"
+	},
+	"app.instance.icon-picker.modrinth-3d.pickaxe": {
+		"message": "Pickaxe"
+	},
+	"app.instance.icon-picker.modrinth-3d.poke-ball": {
+		"message": "Poké Ball"
+	},
+	"app.instance.icon-picker.modrinth-3d.redstone-block": {
+		"message": "Redstone Block"
+	},
+	"app.instance.icon-picker.modrinth-3d.sculk-sensor": {
+		"message": "Sculk Sensor"
+	},
+	"app.instance.icon-picker.modrinth-3d.skeleton": {
+		"message": "Skeleton"
+	},
+	"app.instance.icon-picker.modrinth-3d.skillet": {
+		"message": "Skillet"
+	},
+	"app.instance.icon-picker.modrinth-3d.slime-block": {
+		"message": "Slime Block"
+	},
+	"app.instance.icon-picker.modrinth-3d.space-helmet": {
+		"message": "Space Helmet"
+	},
+	"app.instance.icon-picker.modrinth-3d.sticky-piston": {
+		"message": "Sticky Piston"
+	},
+	"app.instance.icon-picker.modrinth-3d.sword": {
+		"message": "Sword"
+	},
+	"app.instance.icon-picker.modrinth-3d.terminal": {
+		"message": "Terminal"
+	},
+	"app.instance.icon-picker.modrinth-3d.tiny-potato": {
+		"message": "Tiny Potato"
+	},
+	"app.instance.icon-picker.modrinth-3d.tire": {
+		"message": "Tire"
+	},
+	"app.instance.icon-picker.modrinth-3d.tnt": {
+		"message": "TNT"
+	},
+	"app.instance.icon-picker.modrinth-3d.wrench": {
+		"message": "Wrench"
+	},
+	"app.instance.icon-picker.modrinth-3d.wrench-rinth": {
+		"message": "Modrinth Wrench"
+	},
+	"app.instance.icon-picker.modrinth-3d.zombie": {
+		"message": "Zombie"
+	},
+	"app.instance.icon-picker.saving": {
+		"message": "Saving..."
+	},
+	"app.instance.icon-picker.surprise-me": {
+		"message": "Surprise me"
+	},
 	"app.instance.icon-picker.title": {
-		"message": "Choose an instance icon"
+		"message": "Create an instance icon"
 	},
 	"app.instance.icon-picker.upload": {
 		"message": "Upload image"
+	},
+	"app.instance.icon-picker.use-icon": {
+		"message": "Use this icon"
 	},
 	"app.instance.join-server": {
 		"message": "Join server"

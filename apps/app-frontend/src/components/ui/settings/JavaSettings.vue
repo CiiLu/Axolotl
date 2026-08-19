@@ -1,10 +1,10 @@
 <script setup>
 import { DownloadIcon, FolderSearchIcon, ListIcon, ScanEyeIcon, SearchIcon } from '@modrinth/assets'
 import {
-	ButtonStyled,
 	Checkbox,
 	defineMessages,
 	injectNotificationManager,
+	NewButton as Button,
 	Slider,
 	Toggle,
 	useVIntl,
@@ -301,49 +301,63 @@ async function onJavaDownloaded(job) {
 		</div>
 
 		<div class="flex flex-wrap gap-2 border-0 border-t border-solid border-button-border pt-5">
-			<ButtonStyled>
-				<button type="button" class="!shadow-none" :disabled="scanning" @click="runScan(false)">
-					<SearchIcon aria-hidden="true" />
-					{{
-						scanning && scanMode === 'quick'
-							? formatMessage(messages.scanning)
-							: formatMessage(messages.findJava)
-					}}
-				</button>
-			</ButtonStyled>
-			<ButtonStyled>
-				<button type="button" class="!shadow-none" :disabled="scanning" @click="runScan(true)">
-					<ScanEyeIcon aria-hidden="true" />
-					{{
-						scanning && scanMode === 'deep'
-							? formatMessage(messages.scanning)
-							: formatMessage(messages.deepScan)
-					}}
-				</button>
-			</ButtonStyled>
-			<ButtonStyled>
-				<button type="button" class="!shadow-none" :disabled="scanning" @click="handleManualAdd">
-					<FolderSearchIcon aria-hidden="true" />
-					{{ formatMessage(messages.manualAdd) }}
-				</button>
-			</ButtonStyled>
-			<ButtonStyled>
-				<button
-					type="button"
-					class="!shadow-none"
-					:disabled="scanning"
-					@click="downloadJavaModal?.show()"
-				>
-					<DownloadIcon aria-hidden="true" />
-					{{ formatMessage(messages.downloadJava) }}
-				</button>
-			</ButtonStyled>
-			<ButtonStyled>
-				<button type="button" class="!shadow-none" @click="installedJavaModal?.show()">
-					<ListIcon aria-hidden="true" />
-					{{ formatMessage(messages.viewInstalled) }}
-				</button>
-			</ButtonStyled>
+			<Button
+				type="base"
+				native-type="button"
+				class="!shadow-none"
+				:disabled="scanning"
+				@click="runScan(false)"
+			>
+				<SearchIcon aria-hidden="true" />
+				{{
+					scanning && scanMode === 'quick'
+						? formatMessage(messages.scanning)
+						: formatMessage(messages.findJava)
+				}}
+			</Button>
+			<Button
+				type="base"
+				native-type="button"
+				class="!shadow-none"
+				:disabled="scanning"
+				@click="runScan(true)"
+			>
+				<ScanEyeIcon aria-hidden="true" />
+				{{
+					scanning && scanMode === 'deep'
+						? formatMessage(messages.scanning)
+						: formatMessage(messages.deepScan)
+				}}
+			</Button>
+			<Button
+				type="base"
+				native-type="button"
+				class="!shadow-none"
+				:disabled="scanning"
+				@click="handleManualAdd"
+			>
+				<FolderSearchIcon aria-hidden="true" />
+				{{ formatMessage(messages.manualAdd) }}
+			</Button>
+			<Button
+				type="base"
+				native-type="button"
+				class="!shadow-none"
+				:disabled="scanning"
+				@click="downloadJavaModal?.show()"
+			>
+				<DownloadIcon aria-hidden="true" />
+				{{ formatMessage(messages.downloadJava) }}
+			</Button>
+			<Button
+				type="base"
+				native-type="button"
+				class="!shadow-none"
+				@click="installedJavaModal?.show()"
+			>
+				<ListIcon aria-hidden="true" />
+				{{ formatMessage(messages.viewInstalled) }}
+			</Button>
 		</div>
 
 		<div
@@ -352,16 +366,12 @@ async function onJavaDownloaded(job) {
 		>
 			<span>{{ formatMessage(messages.deepScanConfirm) }}</span>
 			<div class="flex flex-wrap gap-2">
-				<ButtonStyled color="red">
-					<button type="button" @click="confirmDeepScan">
-						{{ formatMessage(messages.scanAnyway) }}
-					</button>
-				</ButtonStyled>
-				<ButtonStyled type="outlined">
-					<button type="button" @click="showDeepScanConfirm = false">
-						{{ formatMessage(messages.cancel) }}
-					</button>
-				</ButtonStyled>
+				<Button type="colored" color="red" native-type="button" @click="confirmDeepScan">
+					{{ formatMessage(messages.scanAnyway) }}
+				</Button>
+				<Button type="outlined" native-type="button" @click="showDeepScanConfirm = false">
+					{{ formatMessage(messages.cancel) }}
+				</Button>
 			</div>
 		</div>
 
