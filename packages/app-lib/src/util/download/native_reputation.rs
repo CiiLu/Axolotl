@@ -15,6 +15,13 @@ const MAX_ENTRIES: usize = 256;
 const MAX_AGE_SECS: u64 = 7 * 24 * 60 * 60;
 const WRITE_DELAY: Duration = Duration::from_secs(5);
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum NativeTransport {
+	H2Single,
+	Http1MultiRange,
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct ReputationKey {
 	family: String,
@@ -37,6 +44,8 @@ pub(crate) struct NativeRouteReputation {
 struct PersistedStore {
 	version: u32,
 	routes: Vec<PersistedRoute>,
+	#[serde(default)]
+	transports: Vec<PersistedTransport>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -48,8 +57,34 @@ struct PersistedRoute {
 	health: NativeRouteReputation,
 }
 
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+pub(crate) struct NativeTransportReputation {
+	pub(crate) success_samples: u32,
+	pub(crate) throughput_bps: Option<f64>,
+	updated_at: u64,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct TransportKey {
+	authority: String,
+	proxy: ProxyPolicy,
+	transport: NativeTransport,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PersistedTransport {
+	authority: String,
+	proxy: ProxyPolicy,
+	transport: NativeTransport,
+	#[serde(flatten)]
+	health: NativeTransportReputation,
+}
+
 static REPUTATION: LazyLock<Mutex<HashMap<ReputationKey, NativeRouteReputation>>> =
 	LazyLock::new(|| Mutex::new(HashMap::new()));
+static TRANSPORT_REPUTATION: LazyLock<
+	Mutex<HashMap<TransportKey, NativeTransportReputation>>,
+> = LazyLock::new(|| Mutex::new(HashMap::new()));
 static LOAD: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
 static PATH: OnceLock<PathBuf> = OnceLock::new();
 static GENERATION: AtomicU64 = AtomicU64::new(0);
@@ -86,8 +121,65 @@ pub(crate) async fn load_if_needed() {
 				route.health,
 			);
 		}
+		drop(reputation);
+		let mut transports = TRANSPORT_REPUTATION.lock();
+		for transport in store.transports.into_iter().take(MAX_ENTRIES) {
+			if transport.health.updated_at < cutoff {
+				continue;
+			}
+			transports.insert(
+				TransportKey {
+					authority: transport.authority,
+					proxy: transport.proxy,
+					transport: transport.transport,
+				},
+				transport.health,
+			);
+		}
 	})
 	.await;
+}
+
+pub(crate) fn get_transport(
+	authority: &str,
+	proxy: ProxyPolicy,
+	transport: NativeTransport,
+) -> Option<NativeTransportReputation> {
+	TRANSPORT_REPUTATION
+		.lock()
+		.get(&TransportKey {
+			authority: authority.to_string(),
+			proxy,
+			transport,
+		})
+		.copied()
+}
+
+pub(crate) fn record_transport_success(
+	authority: &str,
+	proxy: ProxyPolicy,
+	transport: NativeTransport,
+	throughput_bps: f64,
+) {
+	if !throughput_bps.is_finite() || throughput_bps <= 0.0 {
+		return;
+	}
+	let mut reputation = TRANSPORT_REPUTATION.lock();
+	let entry = reputation
+		.entry(TransportKey {
+			authority: authority.to_string(),
+			proxy,
+			transport,
+		})
+		.or_default();
+	entry.success_samples = entry.success_samples.saturating_add(1);
+	entry.throughput_bps = Some(update_ewma(
+		entry.throughput_bps,
+		throughput_bps,
+	));
+	entry.updated_at = now_secs();
+	drop(reputation);
+	schedule_write();
 }
 
 pub(crate) fn get(
@@ -201,9 +293,24 @@ async fn write_snapshot() -> std::io::Result<()> {
 		.collect::<Vec<_>>();
 	routes.sort_unstable_by_key(|route| std::cmp::Reverse(route.health.updated_at));
 	routes.truncate(MAX_ENTRIES);
+	let mut transports = TRANSPORT_REPUTATION
+		.lock()
+		.iter()
+		.map(|(key, health)| PersistedTransport {
+			authority: key.authority.clone(),
+			proxy: key.proxy,
+			transport: key.transport,
+			health: *health,
+		})
+		.collect::<Vec<_>>();
+	transports.sort_unstable_by_key(|transport| {
+		std::cmp::Reverse(transport.health.updated_at)
+	});
+	transports.truncate(MAX_ENTRIES);
 	let bytes = serde_json::to_vec(&PersistedStore {
 		version: SCHEMA_VERSION,
 		routes,
+		transports,
 	})
 	.map_err(std::io::Error::other)?;
 	if let Some(parent) = path.parent() {
@@ -242,4 +349,35 @@ fn now_secs() -> u64 {
 		.duration_since(UNIX_EPOCH)
 		.map(|duration| duration.as_secs())
 		.unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn transport_reputation_is_independent() {
+		record_transport_success(
+			"transport-reputation.example:443",
+			ProxyPolicy::Direct,
+			NativeTransport::H2Single,
+			1024.0,
+		);
+		assert!(
+			get_transport(
+				"transport-reputation.example:443",
+				ProxyPolicy::Direct,
+				NativeTransport::H2Single,
+			)
+			.is_some()
+		);
+		assert!(
+			get_transport(
+				"transport-reputation.example:443",
+				ProxyPolicy::Direct,
+				NativeTransport::Http1MultiRange,
+			)
+			.is_none()
+		);
+	}
 }

@@ -50,7 +50,7 @@ const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_secs(2);
 const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_millis(100);
 const SEGMENTED_DOWNLOAD_THRESHOLD: u64 = 4 * 1024 * 1024;
 const INITIAL_SEGMENT_CONCURRENCY: usize = 4;
-const MAX_SEGMENT_CONCURRENCY: usize = 8;
+const MAX_SEGMENT_CONCURRENCY: usize = 4;
 const MIN_SEGMENT_SIZE: u64 = 256 * 1024;
 const ROUTE_PROBE_BYTES: u64 = 256 * 1024;
 const ROUTE_PROBE_MIN_IMPROVEMENT_PERCENT: u64 = 25;
@@ -3781,11 +3781,11 @@ fn configured_semaphore_limit(semaphore: &FetchSemaphore) -> usize {
     semaphore.0.available_permits().max(1)
 }
 
-async fn acquire_initial_segment_permits(
+async fn acquire_initial_segment_permits<'a>(
     route: &DownloadRoute,
-    semaphore: &FetchSemaphore,
+    semaphore: &'a FetchSemaphore,
     count: usize,
-) -> crate::Result<Vec<NativeConnectionPermit<'_>>> {
+) -> crate::Result<Vec<NativeConnectionPermit<'a>>> {
     let queue_started = Instant::now();
     let mut batch = semaphore.0.acquire_many(count as u32).await?;
     let mut global_permits = Vec::with_capacity(count);
@@ -3799,11 +3799,11 @@ async fn acquire_initial_segment_permits(
     global_permits.push(batch);
     let mut permits = Vec::with_capacity(count);
     for global in global_permits {
-        let authority = crate::util::download::native_budget::acquire(route)
+        let native = crate::util::download::native_budget::acquire(route)
             .await?;
         permits.push(NativeConnectionPermit {
             _global: global,
-            _authority: authority,
+            _native: native,
         });
     }
     tracing::debug!(
@@ -3816,19 +3816,19 @@ async fn acquire_initial_segment_permits(
 
 struct NativeConnectionPermit<'a> {
     _global: SemaphorePermit<'a>,
-    _authority: Option<tokio::sync::OwnedSemaphorePermit>,
+    _native: crate::util::download::native_budget::NativeBudgetPermit,
 }
 
 async fn acquire_native_connection<'a>(
     route: &DownloadRoute,
     semaphore: &'a FetchSemaphore,
 ) -> crate::Result<NativeConnectionPermit<'a>> {
-    let global = semaphore.0.acquire().await?;
-    let authority =
+    let native =
         crate::util::download::native_budget::acquire(route).await?;
+    let global = semaphore.0.acquire().await?;
     Ok(NativeConnectionPermit {
         _global: global,
-        _authority: authority,
+        _native: native,
     })
 }
 
@@ -3837,11 +3837,11 @@ fn try_acquire_native_connection<'a>(
     semaphore: &'a FetchSemaphore,
 ) -> Option<NativeConnectionPermit<'a>> {
     let global = semaphore.0.try_acquire().ok()?;
-    let authority =
+    let native =
         crate::util::download::native_budget::try_acquire(route).ok()?;
     Some(NativeConnectionPermit {
         _global: global,
-        _authority: authority,
+        _native: native,
     })
 }
 
@@ -5617,25 +5617,36 @@ async fn download_to_path_inner(
 
     prepare_native_download_routes(&request, &mut routes, semaphore).await;
 
-    // Prefer a multiplexed HTTP/2 download over a shared per-authority
-    // connection: one handshake per CDN instead of one per file, and range
-    // streams for large files. Any failure falls through to the legacy path.
+    // Prefer one stream on a healthy shared HTTP/2 connection when the file
+    // size and transport reputation justify it. Larger or slow H2 transfers
+    // fall through to independent HTTP/1.1 range connections.
     let mut h2_failed_nonofficial = None;
-    if request.allow_segmented_download
+    let h2_selection = if request.allow_segmented_download
         && !part_resume_expected(&part_path).await
         && !request.url.starts_with("http://")
-        && request
-            .integrity
-            .size
-            .is_none_or(|size| size < SEGMENTED_DOWNLOAD_THRESHOLD)
-        && let Some(h2_route) = routes.first().cloned()
     {
+        if let Some(h2_route) = routes.first().cloned() {
+            crate::util::download::native::h2_policy(
+                &h2_route,
+                request.integrity.size,
+            )
+            .await
+            .map(|policy| (h2_route, policy))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    if let Some((h2_route, h2_policy)) = h2_selection {
         let h2_permit = acquire_native_connection(&h2_route, semaphore).await?;
+        let h2_started = Instant::now();
         match crate::util::download::h2_download::try_download_via_h2(
             &request,
             &h2_route,
             destination,
             &part_path,
+            h2_policy,
         )
         .await
         {
@@ -5645,6 +5656,15 @@ async fn download_to_path_inner(
                 crate::util::download::native_breaker::record_success(
                     &h2_route,
                 );
+                if let Some(authority) = original_route_authority(&h2_route) {
+                    crate::util::download::native_reputation::record_transport_success(
+                        &authority,
+                        h2_route.proxy,
+                        crate::util::download::native_reputation::NativeTransport::H2Single,
+                        result.size as f64
+                            / h2_started.elapsed().as_secs_f64().max(0.001),
+                    );
+                }
                 if let Some(tracking) = &request.install_tracking
                     && let Err(error) = tracking
                         .reporter
@@ -5836,6 +5856,20 @@ async fn download_to_path_inner(
                     {
                         SegmentedDownloadOutcome::Success(result) => {
                             finalize_download(&part_path, destination).await?;
+                            if let Some(authority) =
+                                original_route_authority(route)
+                            {
+                                crate::util::download::native_reputation::record_transport_success(
+                                    &authority,
+                                    route.proxy,
+                                    crate::util::download::native_reputation::NativeTransport::Http1MultiRange,
+                                    result.size as f64
+                                        / result
+                                            .transfer_elapsed
+                                            .as_secs_f64()
+                                            .max(0.001),
+                                );
+                            }
                             record_route_success(
                                 route,
                                 request.resource,
@@ -8089,7 +8123,7 @@ mod tests {
     #[test]
     fn segmented_concurrency_respects_effective_and_global_limits() {
         assert_eq!(segmented_concurrency_cap(64), MAX_SEGMENT_CONCURRENCY);
-        assert_eq!(segmented_concurrency_cap(8), 8);
+        assert_eq!(segmented_concurrency_cap(8), 4);
         assert_eq!(segmented_concurrency_cap(4), 4);
         assert_eq!(segmented_concurrency_cap(1), 1);
         assert_eq!(initial_segment_count(16 * 1024 * 1024, 3), 3);
@@ -8099,6 +8133,10 @@ mod tests {
     async fn segmented_permits_wait_fairly_instead_of_falling_back() {
         let semaphore = FetchSemaphore(Semaphore::new(4));
         let held = semaphore.0.acquire_many(4).await.unwrap();
+        let route = direct_test_route(
+            "https://example.com/file".to_string(),
+            DownloadRouteSource::Official,
+        );
         let started = Instant::now();
         let (_, permits) = tokio::join!(
             async move {
@@ -8106,7 +8144,7 @@ mod tests {
                 drop(held);
             },
             acquire_initial_segment_permits(
-                &direct_test_route("https://example.com/file"),
+                &route,
                 &semaphore,
                 4,
             ),
@@ -8134,7 +8172,7 @@ mod tests {
         assert_eq!(route_segmented_concurrency_cap(&bmclapi, 64), 4);
         assert_eq!(
             route_segmented_concurrency_cap(&official, 64),
-            8
+            4
         );
     }
 
@@ -8667,7 +8705,9 @@ mod tests {
             .unwrap();
         let semaphore = FetchSemaphore(Semaphore::new(4));
         let (progress, _receiver) = tokio::sync::mpsc::unbounded_channel();
-        let permit = semaphore.0.acquire().await.unwrap();
+        let permit = acquire_native_connection(&route, &semaphore)
+            .await
+            .unwrap();
         let speed = DownloadSpeedTracker::default();
         let validator = Mutex::new(None);
         let result = download_segment(

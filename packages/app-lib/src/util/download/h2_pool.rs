@@ -290,3 +290,17 @@ pub(crate) async fn shared_connection(
     *cached = Some(Arc::clone(&connection));
     Ok(connection)
 }
+
+pub(crate) async fn has_live_connection(authority: &str) -> bool {
+	let connections = CONNECTIONS.lock().await;
+	let Some(slot) = connections.get(authority).cloned() else {
+		return false;
+	};
+	drop(connections);
+	let live = slot
+		.lock()
+		.await
+		.as_ref()
+		.is_some_and(|connection| !connection.is_dead());
+	live
+}

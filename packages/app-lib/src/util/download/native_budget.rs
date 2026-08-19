@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore, TryAcquireError};
 
-const MAX_CONNECTIONS_PER_AUTHORITY: usize = 16;
+const MAX_NATIVE_CONNECTIONS: usize = 32;
+const MAX_CONNECTIONS_PER_AUTHORITY: usize = 8;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct AuthorityKey {
@@ -17,6 +18,13 @@ struct AuthorityKey {
 static AUTHORITY_BUDGETS: LazyLock<
 	Mutex<HashMap<AuthorityKey, Arc<Semaphore>>>,
 > = LazyLock::new(|| Mutex::new(HashMap::new()));
+static GLOBAL_BUDGET: LazyLock<Arc<Semaphore>> =
+	LazyLock::new(|| Arc::new(Semaphore::new(MAX_NATIVE_CONNECTIONS)));
+
+pub(crate) struct NativeBudgetPermit {
+	_global: OwnedSemaphorePermit,
+	_authority: Option<OwnedSemaphorePermit>,
+}
 
 fn budget(route: &DownloadRoute) -> Option<Arc<Semaphore>> {
 	let authority = crate::util::fetch::url_authority(&route.url)?;
@@ -40,20 +48,30 @@ fn budget(route: &DownloadRoute) -> Option<Arc<Semaphore>> {
 
 pub(crate) async fn acquire(
 	route: &DownloadRoute,
-) -> Result<Option<OwnedSemaphorePermit>, tokio::sync::AcquireError> {
-	match budget(route) {
-		Some(budget) => budget.acquire_owned().await.map(Some),
-		None => Ok(None),
-	}
+) -> Result<NativeBudgetPermit, tokio::sync::AcquireError> {
+	let authority = match budget(route) {
+		Some(budget) => Some(budget.acquire_owned().await?),
+		None => None,
+	};
+	let global = Arc::clone(&GLOBAL_BUDGET).acquire_owned().await?;
+	Ok(NativeBudgetPermit {
+		_global: global,
+		_authority: authority,
+	})
 }
 
 pub(crate) fn try_acquire(
 	route: &DownloadRoute,
-) -> Result<Option<OwnedSemaphorePermit>, TryAcquireError> {
-	match budget(route) {
-		Some(budget) => budget.try_acquire_owned().map(Some),
-		None => Ok(None),
-	}
+) -> Result<NativeBudgetPermit, TryAcquireError> {
+	let authority = match budget(route) {
+		Some(budget) => Some(budget.try_acquire_owned()?),
+		None => None,
+	};
+	let global = Arc::clone(&GLOBAL_BUDGET).try_acquire_owned()?;
+	Ok(NativeBudgetPermit {
+		_global: global,
+		_authority: authority,
+	})
 }
 
 pub(crate) fn available(route: &DownloadRoute) -> usize {

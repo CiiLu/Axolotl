@@ -1,11 +1,9 @@
 //! HTTP/2 multiplexed file downloads over shared per-authority connections.
 //!
 //! Every download to the same authority reuses one long-lived HTTP/2
-//! connection: small files are single streams, files at or above
-//! [`SEGMENTED_DOWNLOAD_THRESHOLD`] split into concurrent range streams on
-//! that same connection. Any protocol or server failure falls back to the
-//! legacy HTTP/1.1 single-stream path, so downloads remain correct even when
-//! a server or network does not support HTTP/2 or range requests.
+//! connection. General file downloads use one stream so larger files can
+//! switch to independent HTTP/1.1 range connections when that is faster;
+//! Minecraft assets use the dedicated batch multiplexer below.
 
 use super::h2_pool::{
 	H2ConnectFailureKind, SharedH2Connection,
@@ -23,14 +21,9 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use url::Url;
 
-const SEGMENTED_DOWNLOAD_THRESHOLD: u64 = 4 * 1024 * 1024;
-const MIN_SEGMENT_SIZE: u64 = 256 * 1024;
-const MAX_SEGMENT_CONCURRENCY: usize = 8;
-const INITIAL_SEGMENT_CONCURRENCY: usize = 4;
-const RANGE_IDLE_TIMEOUT: Duration = Duration::from_secs(10);
 const STREAM_RECV_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Client-side concurrency target for the batch asset downloader. All
@@ -63,6 +56,7 @@ pub(crate) enum H2DownloadFailure {
 	Integrity,
 	Content,
 	Io,
+	Slow,
 }
 
 impl H2DownloadFailure {
@@ -76,6 +70,7 @@ impl H2DownloadFailure {
 			Self::Integrity => "HTTP/2 integrity validation failed",
 			Self::Content => "HTTP/2 content validation failed",
 			Self::Io => "HTTP/2 local I/O failed",
+			Self::Slow => "HTTP/2 single stream stayed below expectation",
 		}
 	}
 
@@ -92,13 +87,13 @@ impl H2DownloadFailure {
 	}
 }
 
-/// Attempts to download `request` to `destination` over a shared HTTP/2
-/// connection, multiplexing range streams for large files.
+/// Attempts to download `request` as one stream on a shared HTTP/2 connection.
 pub(crate) async fn try_download_via_h2(
     request: &DownloadRequest,
     route: &DownloadRoute,
     destination: &Path,
     part_path: &Path,
+	policy: super::native::NativeH2Policy,
 ) -> H2DownloadOutcome {
 	if let Some(reason) = super::native::h2_ineligible_reason(route) {
 		return H2DownloadOutcome::Fallback {
@@ -184,32 +179,18 @@ pub(crate) async fn try_download_via_h2(
         total_size
     };
 
-    let segmented = total_size >= SEGMENTED_DOWNLOAD_THRESHOLD;
-    let result = if segmented {
-        multiplexed_ranges(
-            Arc::clone(&connection),
+	let result = single_stream(
+			&connection,
             &uri,
             request,
             route,
             destination,
             part_path,
-            &integrity,
-            total_size,
-        )
-        .await
-    } else {
-        single_stream(
-            &connection,
-            &uri,
-            request,
-            route,
-            destination,
-            part_path,
-            &integrity,
-            total_size,
-        )
-        .await
-    };
+			&integrity,
+			total_size,
+			policy,
+		)
+		.await;
     match result {
         Ok(result) => H2DownloadOutcome::Completed(result),
 		Err(error) => {
@@ -221,8 +202,7 @@ pub(crate) async fn try_download_via_h2(
             );
 			H2DownloadOutcome::Fallback {
 				failure,
-				preserve_partial: !segmented
-					&& integrity.supports_resume()
+				preserve_partial: integrity.supports_resume()
 					&& matches!(failure, H2DownloadFailure::Protocol),
 			}
         }
@@ -261,6 +241,11 @@ fn classify_download_error(error: &crate::Error) -> H2DownloadFailure {
 		crate::ErrorKind::IOError(_)
 		| crate::ErrorKind::StdIOError(_) => H2DownloadFailure::Io,
 		crate::ErrorKind::JSONError(_) => H2DownloadFailure::Content,
+		crate::ErrorKind::NetworkError(message)
+			if message.contains("below expectation") =>
+		{
+			H2DownloadFailure::Slow
+		}
 		crate::ErrorKind::NetworkError(message)
 			if message.contains("HTTP/2")
 				|| message.contains("range stream") =>
@@ -337,33 +322,6 @@ fn parse_content_range_total(headers: &HeaderMap) -> Option<u64> {
     total.parse().ok()
 }
 
-fn content_range_matches(
-    headers: &HeaderMap,
-    expected_start: u64,
-    expected_end: u64,
-    expected_total: u64,
-) -> bool {
-    let Some(value) = headers
-        .get(http::header::CONTENT_RANGE)
-        .and_then(|value| value.to_str().ok())
-    else {
-        return false;
-    };
-    let Some((unit, value)) = value.split_once(' ') else {
-        return false;
-    };
-    let Some((range, total)) = value.split_once('/') else {
-        return false;
-    };
-    let Some((start, end)) = range.split_once('-') else {
-        return false;
-    };
-    unit.eq_ignore_ascii_case("bytes")
-        && start.parse::<u64>().ok() == Some(expected_start)
-        && end.parse::<u64>().ok() == Some(expected_end)
-        && total.parse::<u64>().ok() == Some(expected_total)
-}
-
 type StreamPair = (http::Response<()>, h2::RecvStream);
 
 async fn open_stream(
@@ -403,6 +361,7 @@ async fn single_stream(
     part_path: &Path,
     integrity: &Integrity,
     total_size: u64,
+	policy: super::native::NativeH2Policy,
 ) -> crate::Result<DownloadResult> {
     let mut headers = request_headers(request, route);
     headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
@@ -420,6 +379,10 @@ async fn single_stream(
     let mut hashers = fetch::IntegrityHashers::new_integrity_hashers(integrity);
     let mut file = tokio::fs::File::create(part_path).await?;
     let mut downloaded = 0_u64;
+	let mut slow_policy = super::native_slow::NativeSlowPolicy::new(
+		0,
+		policy.expected_speed,
+	);
     loop {
         let chunk = tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data())
             .await
@@ -441,216 +404,44 @@ async fn single_stream(
         hashers.update(&chunk);
         downloaded += chunk.len() as u64;
         record_install_progress(request, downloaded, total_size).await;
-    }
-    file.flush().await?;
-    drop(file);
-    let computed = hashers.finish(downloaded);
-    record_install_stage(request).await;
-
-    verify_and_finalize(
-        part_path,
-        destination,
-        integrity,
-        computed,
-        downloaded,
-        total_size,
-    )
-    .await?;
-
-    Ok(DownloadResult {
-        path: destination.to_path_buf(),
-        url: uri.to_string(),
-        source: route.source,
-        size: downloaded,
-        attempts: 0,
-        fallback_count: 0,
-    })
-}
-
-/// Downloads a file by multiplexing concurrent range streams over the shared
-/// connection, writing each segment to a sibling file, then merging.
-async fn multiplexed_ranges(
-    connection: Arc<SharedH2Connection>,
-    uri: &Uri,
-    request: &DownloadRequest,
-    route: &DownloadRoute,
-    destination: &Path,
-    part_path: &Path,
-    integrity: &Integrity,
-    total_size: u64,
-) -> crate::Result<DownloadResult> {
-    let range_count = initial_segment_count(total_size);
-    let mut segments = Vec::with_capacity(range_count);
-    for index in 0..range_count {
-        let start = (total_size * index as u64) / range_count as u64;
-        let end = if index + 1 == range_count {
-            total_size.saturating_sub(1)
-        } else {
-            (total_size * (index + 1) as u64) / range_count as u64 - 1
-        };
-        if start > end {
-            continue;
-        }
-        segments.push((start, end));
-    }
-
-    let segment_count = segments.len();
-    let mut handles = Vec::new();
-    for (index, (start, end)) in segments.into_iter().enumerate() {
-        let connection = connection.clone();
-        let uri = uri.clone();
-        let headers = request_headers(request, route);
-        let segment_path = segment_path(part_path, index);
-        handles.push(tokio::spawn(async move {
-            let result = download_segment(
-                &connection,
-                &uri,
-                headers,
-                start,
-                end,
-                total_size,
-                &segment_path,
-            )
-            .await;
-            if result.is_err() {
-                let _ = tokio::fs::remove_file(&segment_path).await;
-            }
-            result
-        }));
-    }
-
-    let mut hashers = fetch::IntegrityHashers::new_integrity_hashers(integrity);
-    let mut downloaded = 0_u64;
-    for (index, handle) in handles.into_iter().enumerate() {
-		let _segment_size = handle.await.map_err(|error| {
-			crate::ErrorKind::OtherError(format!(
-				"segment {index} task failed: {error}"
-			))
-		})??;
-    }
-
-    let mut file = tokio::fs::File::create(part_path).await?;
-    let mut buffer = vec![0_u8; 256 * 1024];
-    for index in 0..segment_count {
-        let path = segment_path(part_path, index);
-        let mut segment = tokio::fs::File::open(&path).await?;
-        loop {
-            let read = segment.read(&mut buffer).await?;
-            if read == 0 {
-                break;
-            }
-            hashers.update(&buffer[..read]);
-            file.write_all(&buffer[..read]).await?;
-            downloaded += read as u64;
-            record_install_progress(request, downloaded, total_size).await;
-        }
-        tokio::fs::remove_file(path).await?;
-    }
-    file.flush().await?;
-    drop(file);
-    let computed = hashers.finish(downloaded);
-    record_install_stage(request).await;
-
-    verify_and_finalize(
-        part_path,
-        destination,
-        integrity,
-        computed,
-        downloaded,
-        total_size,
-    )
-    .await?;
-
-    Ok(DownloadResult {
-        path: destination.to_path_buf(),
-        url: uri.to_string(),
-        source: route.source,
-        size: downloaded,
-        attempts: 0,
-        fallback_count: 0,
-    })
-}
-
-fn initial_segment_count(size: u64) -> usize {
-    let size_limited =
-        usize::try_from(size / MIN_SEGMENT_SIZE).unwrap_or(usize::MAX);
-    INITIAL_SEGMENT_CONCURRENCY
-        .min(MAX_SEGMENT_CONCURRENCY)
-        .min(size_limited.max(1))
-}
-
-async fn download_segment(
-    connection: &SharedH2Connection,
-    uri: &Uri,
-    mut headers: HeaderMap,
-    start: u64,
-    end: u64,
-    total_size: u64,
-    segment_path: &Path,
-) -> crate::Result<u64> {
-    headers.insert(
-        RANGE,
-        HeaderValue::from_str(&format!("bytes={start}-{end}")).unwrap(),
-    );
-    headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
-
-    let (response, mut stream) = open_stream(connection, uri, headers).await?;
-	if response.status() != StatusCode::PARTIAL_CONTENT {
-		return Err(crate::ErrorKind::HttpError {
-			status: response.status().as_u16(),
-			method: "GET".to_string(),
-			url: fetch::sanitize_url_for_log(uri.to_string().as_str()),
+		if policy.abort_if_slow
+			&& matches!(
+				slow_policy.observe(
+					downloaded,
+					total_size.saturating_sub(downloaded),
+				),
+				super::native_slow::SlowDecision::Probe { .. }
+			)
+		{
+			return Err(crate::ErrorKind::NetworkError(
+				"HTTP/2 single stream stayed below expectation".to_string(),
+			)
+			.into());
 		}
-		.into());
-	}
-    if !content_range_matches(response.headers(), start, end, total_size) {
-        return Err(crate::ErrorKind::OtherError(
-            "HTTP/2 range response had an invalid Content-Range".to_string(),
-        )
-        .into());
-    }
-
-    let mut file = tokio::fs::File::create(segment_path).await?;
-    let mut downloaded = 0_u64;
-    loop {
-        let chunk = tokio::time::timeout(RANGE_IDLE_TIMEOUT, stream.data())
-            .await
-            .map_err(|_| {
-                crate::ErrorKind::NetworkError(
-                    "range stream receive timed out".into(),
-                )
-            })?
-            .transpose()
-            .map_err(|error| {
-                crate::ErrorKind::NetworkError(format!(
-                    "range stream error: {error}"
-                ))
-            })?;
-        let Some(chunk) = chunk else {
-            break;
-        };
-        file.write_all(&chunk).await?;
-        downloaded += chunk.len() as u64;
     }
     file.flush().await?;
     drop(file);
-    let expected = end.saturating_sub(start).saturating_add(1);
-    if downloaded != expected {
-        return Err(crate::ErrorKind::OtherError(format!(
-            "HTTP/2 range response size mismatch: got {downloaded}, expected {expected}"
-        ))
-        .into());
-    }
-    Ok(downloaded)
-}
+    let computed = hashers.finish(downloaded);
+    record_install_stage(request).await;
 
-fn segment_path(part_path: &Path, index: usize) -> std::path::PathBuf {
-    let mut name = part_path
-        .file_name()
-        .map(|name| name.to_os_string())
-        .unwrap_or_default();
-    name.push(format!(".segment-{index}"));
-    part_path.with_file_name(name)
+    verify_and_finalize(
+        part_path,
+        destination,
+        integrity,
+        computed,
+        downloaded,
+        total_size,
+    )
+    .await?;
+
+    Ok(DownloadResult {
+        path: destination.to_path_buf(),
+        url: uri.to_string(),
+        source: route.source,
+        size: downloaded,
+        attempts: 0,
+        fallback_count: 0,
+    })
 }
 
 async fn record_install_stage(request: &DownloadRequest) {
@@ -761,17 +552,17 @@ where
 	{
 		return items;
 	}
-	let _global_permit = if let Some(semaphore) = native_semaphore {
-		match semaphore.0.acquire().await {
+	let _authority_permit = if apply_native_policy {
+		match super::native_budget::acquire(route).await {
 			Ok(permit) => Some(permit),
 			Err(_) => return items,
 		}
 	} else {
 		None
 	};
-	let _authority_permit = if apply_native_policy {
-		match super::native_budget::acquire(route).await {
-			Ok(permit) => permit,
+	let _global_permit = if let Some(semaphore) = native_semaphore {
+		match semaphore.0.acquire().await {
+			Ok(permit) => Some(permit),
 			Err(_) => return items,
 		}
 	} else {
