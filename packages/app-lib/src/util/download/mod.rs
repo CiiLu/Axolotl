@@ -12,6 +12,7 @@ pub mod h2_download;
 pub mod h2_pool;
 pub mod legacy;
 pub mod log;
+pub(crate) mod native;
 pub mod shared;
 pub mod slow;
 pub mod xmcl;

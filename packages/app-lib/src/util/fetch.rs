@@ -218,7 +218,7 @@ impl Integrity {
 
     /// Resuming a partial download is only safe when a content hash can
     /// prove the stitched-together file is what the server intended.
-    fn supports_resume(&self) -> bool {
+    pub(crate) fn supports_resume(&self) -> bool {
         self.size.is_some() && self.has_hash()
     }
 
@@ -1325,7 +1325,7 @@ static TAIL_HEDGE_SEMAPHORE: LazyLock<Semaphore> =
 static H2_FALLBACK_AUTHORITIES: LazyLock<Mutex<HashMap<String, Instant>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-fn authority_uses_http1_fallback(authority: &str) -> bool {
+pub(crate) fn authority_uses_http1_fallback(authority: &str) -> bool {
     let mut fallbacks = H2_FALLBACK_AUTHORITIES.lock();
     match fallbacks.get(authority) {
         Some(until) if *until > Instant::now() => true,
@@ -1337,7 +1337,7 @@ fn authority_uses_http1_fallback(authority: &str) -> bool {
     }
 }
 
-fn record_authority_h2_failure(authority: &str) {
+pub(crate) fn record_authority_h2_failure(authority: &str) {
     let now = Instant::now();
     let mut fallbacks = H2_FALLBACK_AUTHORITIES.lock();
     fallbacks.retain(|_, until| *until > now);
@@ -4122,6 +4122,21 @@ async fn ensure_task_routes_probed(
     order_auto_routes(routes, request.resource, mirror_first_loader);
 }
 
+pub(crate) async fn prepare_native_download_routes(
+    request: &DownloadRequest,
+    routes: &mut Vec<DownloadRoute>,
+    semaphore: &FetchSemaphore,
+) {
+    ensure_task_routes_probed(
+        request,
+        routes,
+        semaphore,
+        &NO_REDIRECT_REQWEST_CLIENT,
+        &DIRECT_REQWEST_CLIENT,
+    )
+    .await;
+}
+
 fn segment_path(part_path: &Path, index: usize) -> PathBuf {
     suffixed_path(part_path, &format!(".segment-{index}"))
 }
@@ -5394,6 +5409,8 @@ async fn download_to_path_inner(
         .await;
     }
 
+    prepare_native_download_routes(&request, &mut routes, semaphore).await;
+
     // Prefer a multiplexed HTTP/2 download over a shared per-authority
     // connection: one handshake per CDN instead of one per file, and range
     // streams for large files. Any failure falls through to the legacy path.
@@ -5431,10 +5448,10 @@ async fn download_to_path_inner(
                 return Ok(result);
             }
             crate::util::download::h2_download::H2DownloadOutcome::Fallback {
-                reason,
-                integrity_failure,
+                failure,
+                preserve_partial,
             } => {
-                if integrity_failure {
+                if failure.integrity_failure() {
                     if h2_route.is_mirror {
                         h2_failed_mirror = Some(h2_route.url.clone());
                         tracing::warn!(
@@ -5443,18 +5460,22 @@ async fn download_to_path_inner(
                             "Mirror hash validation failed; falling back to the official source"
                         );
                     }
-                } else if let Some(authority) = url_authority(&h2_route.url) {
+                } else if failure.should_cooldown_authority()
+                    && let Some(authority) = url_authority(&h2_route.url)
+                {
                     record_authority_h2_failure(&authority);
                 }
                 tracing::debug!(
                     url = %sanitize_url_for_log(&h2_route.url),
                     source = h2_route.source.as_str(),
-                    reason,
+                    failure = ?failure,
+                    reason = failure.as_str(),
+                    preserve_partial,
                     "Multiplexed download unavailable; using legacy path"
                 );
-                // Clean up partials and segments left by the multiplexed
-                // attempt; the legacy path starts from a clean slate.
-                remove_if_exists(&part_path).await?;
+                if !preserve_partial {
+                    remove_if_exists(&part_path).await?;
+                }
                 cleanup_segment_files(&part_path, MAX_SEGMENT_CONCURRENCY)
                     .await?;
             }
@@ -5464,15 +5485,6 @@ async fn download_to_path_inner(
     if let Some(failed_route) = h2_failed_mirror.take() {
         routes.retain(|route| route.url != failed_route);
     }
-    ensure_task_routes_probed(
-        &request,
-        &mut routes,
-        semaphore,
-        &NO_REDIRECT_REQWEST_CLIENT,
-        &DIRECT_REQWEST_CLIENT,
-    )
-    .await;
-
     let mut attempts = 0;
     let mut last_error = None;
     let mut attempt_history = VecDeque::new();

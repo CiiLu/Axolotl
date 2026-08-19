@@ -23,6 +23,33 @@ use tokio_rustls::TlsConnector;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub(crate) enum H2ConnectFailureKind {
+	Tcp,
+	Tls,
+	Protocol,
+}
+
+#[derive(Debug)]
+pub(crate) struct H2ConnectError {
+	pub(crate) kind: H2ConnectFailureKind,
+	detail: String,
+}
+
+impl std::fmt::Display for H2ConnectError {
+	fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		formatter.write_str(&self.detail)
+	}
+}
+
+impl std::error::Error for H2ConnectError {}
+
+impl H2ConnectError {
+	fn new(kind: H2ConnectFailureKind, detail: String) -> Self {
+		Self { kind, detail }
+	}
+}
+
 /// A live shared HTTP/2 connection to one authority.
 pub struct SharedH2Connection {
     sender: Mutex<SendRequest<Bytes>>,
@@ -166,7 +193,9 @@ async fn connect_tcp(host: &str, port: u16) -> std::io::Result<TcpStream> {
 }
 
 /// Connects a new shared HTTP/2 connection to `authority` (host[:port]).
-async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
+async fn establish(
+	authority: &str,
+) -> Result<Arc<SharedH2Connection>, H2ConnectError> {
     let (host, port) = authority
         .rsplit_once(':')
         .map(|(host, port)| (host, port.parse::<u16>().unwrap_or(443)))
@@ -178,42 +207,49 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
         .pre_resolve(host)
         .await;
 
-    let tcp = connect_tcp(host, port).await.map_err(|error| {
-        crate::ErrorKind::NetworkError(format!(
-            "failed to establish shared HTTP/2 connection to {authority}: {error}"
-        ))
-    })?;
+	let tcp = connect_tcp(host, port).await.map_err(|error| {
+		H2ConnectError::new(
+			H2ConnectFailureKind::Tcp,
+			format!(
+				"failed to establish shared HTTP/2 connection to {authority}: {error}"
+			),
+		)
+	})?;
 
     let server_name =
-        ServerName::try_from(host.to_string()).map_err(|error| {
-            crate::ErrorKind::InputError(format!(
-                "invalid server name for {host}: {error}"
-            ))
-        })?;
+		ServerName::try_from(host.to_string()).map_err(|error| {
+			H2ConnectError::new(
+				H2ConnectFailureKind::Tls,
+				format!("invalid server name for {host}: {error}"),
+			)
+		})?;
     let connector = TlsConnector::from(tls_config());
     let tls = tokio::time::timeout(
         TLS_HANDSHAKE_TIMEOUT,
         connector.connect(server_name, tcp),
     )
     .await
-    .map_err(|_| {
-        crate::ErrorKind::NetworkError(format!(
-            "TLS handshake with {authority} timed out"
-        ))
-    })?
-    .map_err(|error| {
-        crate::ErrorKind::NetworkError(format!(
-            "TLS handshake with {authority} failed: {error}"
-        ))
-    })?;
+	.map_err(|_| {
+		H2ConnectError::new(
+			H2ConnectFailureKind::Tls,
+			format!("TLS handshake with {authority} timed out"),
+		)
+	})?
+	.map_err(|error| {
+		H2ConnectError::new(
+			H2ConnectFailureKind::Tls,
+			format!("TLS handshake with {authority} failed: {error}"),
+		)
+	})?;
 
-    let (sender, mut connection) = h2::client::handshake(Box::pin(tls))
-        .await
-        .map_err(|error| {
-        crate::ErrorKind::NetworkError(format!(
-            "HTTP/2 handshake with {authority} failed: {error}"
-        ))
-    })?;
+	let (sender, mut connection) = h2::client::handshake(Box::pin(tls))
+		.await
+		.map_err(|error| {
+		H2ConnectError::new(
+			H2ConnectFailureKind::Protocol,
+			format!("HTTP/2 handshake with {authority} failed: {error}"),
+		)
+	})?;
 
     // Tune flow-control windows for high-stream multiplexing (e.g. hundreds
     // of concurrent asset downloads over one connection). With the default
@@ -240,9 +276,9 @@ async fn establish(authority: &str) -> crate::Result<Arc<SharedH2Connection>> {
 
 /// Returns the live shared connection for `authority`, establishing one on
 /// first use or after a previous connection died.
-pub async fn shared_connection(
-    authority: &str,
-) -> crate::Result<Arc<SharedH2Connection>> {
+pub(crate) async fn shared_connection(
+	authority: &str,
+) -> Result<Arc<SharedH2Connection>, H2ConnectError> {
     let slot = connection_slot(authority).await;
     let mut cached = slot.lock().await;
     if let Some(connection) =
