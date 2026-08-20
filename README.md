@@ -83,4 +83,12 @@ Axolotl Launcher 的进步离不开社区的反馈与贡献。
 
 ---
 
-> 推荐 API 服务（广告）：[FutureAPI](https://www.futureapi.cc/register?invite=8xmfivnh)
+## 赞助与合作
+
+感谢以下赞助商与合作伙伴对 Axolotl Launcher 的支持。
+
+|   |   |   |
+| - | - | - |
+| <img src="./.github/assets/codeflow-logo.png" width="72" alt="Codeflow Logo" /> | **Codeflow**<br>更稳、更省地调用顶级 AI 模型<br>原生协议转发 · 无需海外网络 · 支付宝即充即用 | [访问 Codeflow](https://codeflow.asia/register?invite=4UHP2KYH) |
+
+- [在爱发电支持 Axolotl Launcher](https://ifdian.net/a/Mystic-Stars) — 你的支持将帮助项目持续维护与改进
