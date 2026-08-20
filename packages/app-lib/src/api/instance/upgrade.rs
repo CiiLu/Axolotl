@@ -11,7 +11,12 @@ use crate::state::{
     InstanceUpgradeSolutionKind, State,
 };
 
-type StoredUpgradePlan = Arc<Mutex<InstanceUpgradePlan>>;
+struct StoredUpgradePlanState {
+    plan: InstanceUpgradePlan,
+    validation: crate::state::instances::commands::UpgradePlanRuntimeValidation,
+}
+
+type StoredUpgradePlan = Arc<Mutex<StoredUpgradePlanState>>;
 
 static INSTANCE_UPGRADE_PLANS: LazyLock<DashMap<String, StoredUpgradePlan>> =
     LazyLock::new(DashMap::new);
@@ -22,14 +27,30 @@ pub async fn plan_instance_upgrade(
     target_environment: crate::state::InstanceUpgradeEnvironment,
 ) -> crate::Result<InstanceUpgradePlan> {
     let state = State::get().await?;
-    let plan = crate::state::instances::commands::create_instance_upgrade_plan(
+    let creation_watch =
+        state.file_watcher.content_watch_snapshot(instance_id).await;
+    let (plan, source) = crate::state::instances::commands::create_instance_upgrade_plan_with_source(
         instance_id,
         target_environment,
         &state,
     )
     .await?;
-    INSTANCE_UPGRADE_PLANS
-        .insert(plan.id.clone(), Arc::new(Mutex::new(plan.clone())));
+    let mut validation =
+        crate::state::instances::commands::UpgradePlanRuntimeValidation::new(
+            source,
+            instance_id,
+            creation_watch,
+            &state,
+        )
+        .await;
+    validation.validate(&plan, &state).await?;
+    INSTANCE_UPGRADE_PLANS.insert(
+        plan.id.clone(),
+        Arc::new(Mutex::new(StoredUpgradePlanState {
+            plan: plan.clone(),
+            validation,
+        })),
+    );
     Ok(plan)
 }
 
@@ -39,13 +60,13 @@ pub async fn get_instance_upgrade_plan(
 ) -> crate::Result<InstanceUpgradePlan> {
     let state = State::get().await?;
     let handle = stored_plan_handle(plan_id)?;
-    let plan = handle.lock().await;
-    if let Err(error) = ensure_current_revision(&plan, &state).await {
-        drop(plan);
+    let mut stored = handle.lock().await;
+    if let Err(error) = ensure_current_revision(&mut stored, &state).await {
+        drop(stored);
         INSTANCE_UPGRADE_PLANS.remove(plan_id);
         return Err(error);
     }
-    Ok(plan.clone())
+    Ok(stored.plan.clone())
 }
 
 #[tracing::instrument]
@@ -56,8 +77,8 @@ pub async fn update_instance_upgrade_resolution(
     let state = State::get().await?;
     let handle = stored_plan_handle(plan_id)?;
     let mut stored = handle.lock().await;
-    let source = ensure_current_revision(&stored, &state).await?;
-    let mut plan = stored.clone();
+    let source = ensure_current_revision(&mut stored, &state).await?;
+    let mut plan = stored.plan.clone();
     let item = plan
         .items
         .iter_mut()
@@ -78,7 +99,7 @@ pub async fn update_instance_upgrade_resolution(
         &state,
     )
     .await?;
-    *stored = plan.clone();
+    stored.plan = plan.clone();
     Ok(plan)
 }
 
@@ -90,8 +111,8 @@ pub async fn select_instance_upgrade_solution(
     let state = State::get().await?;
     let handle = stored_plan_handle(plan_id)?;
     let mut stored = handle.lock().await;
-    ensure_current_revision(&stored, &state).await?;
-    let mut plan = stored.clone();
+    ensure_current_revision(&mut stored, &state).await?;
+    let mut plan = stored.plan.clone();
     plan.selected_solution = match choice {
         InstanceUpgradeSolutionChoice::Newest => plan.newest_solution.clone(),
         InstanceUpgradeSolutionChoice::MinimalChange => {
@@ -116,7 +137,7 @@ pub async fn select_instance_upgrade_solution(
         .as_ref()
         .map(|solution| solution.dependency_changes.clone())
         .unwrap_or_default();
-    *stored = plan.clone();
+    stored.plan = plan.clone();
     Ok(plan)
 }
 
@@ -128,8 +149,8 @@ pub async fn resolve_custom_instance_upgrade_solution(
     let state = State::get().await?;
     let handle = stored_plan_handle(plan_id)?;
     let mut stored = handle.lock().await;
-    let source = ensure_current_revision(&stored, &state).await?;
-    let mut plan = stored.clone();
+    let source = ensure_current_revision(&mut stored, &state).await?;
+    let mut plan = stored.plan.clone();
     validate_fixed_constraints(&plan, &fixed_constraints)?;
     crate::state::instances::commands::recompute_instance_upgrade_plan_from_source(
         &mut plan,
@@ -140,7 +161,7 @@ pub async fn resolve_custom_instance_upgrade_solution(
     )
     .await?;
     plan.custom_constraints = fixed_constraints;
-    *stored = plan.clone();
+    stored.plan = plan.clone();
     Ok(plan)
 }
 
@@ -157,27 +178,27 @@ fn stored_plan_handle(plan_id: &str) -> crate::Result<StoredUpgradePlan> {
 }
 
 async fn ensure_current_revision(
-    plan: &InstanceUpgradePlan,
+    stored: &mut StoredUpgradePlanState,
     state: &State,
 ) -> crate::Result<crate::state::instances::commands::ReadOnlyUpgradeSource> {
-    let current_revision =
-        content_rows::get_applied_content_set(&plan.instance_id, &state.pool)
-            .await?
-            .ok_or_else(|| {
-                crate::ErrorKind::InputError(
-                    "Instance has no applied content set".to_string(),
-                )
-            })?
-            .revision;
-    if let Err(error) =
-        ensure_instance_upgrade_revision(plan.source_revision, current_revision)
-    {
+    let current_revision = content_rows::get_applied_content_set(
+        &stored.plan.instance_id,
+        &state.pool,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "Instance has no applied content set".to_string(),
+        )
+    })?
+    .revision;
+    if let Err(error) = ensure_instance_upgrade_revision(
+        stored.plan.source_revision,
+        current_revision,
+    ) {
         return Err(error);
     }
-    crate::state::instances::commands::validate_instance_upgrade_plan_source(
-        plan, state,
-    )
-    .await
+    stored.validation.validate(&stored.plan, state).await
 }
 
 fn ensure_instance_upgrade_revision(

@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::time::SystemTime;
 
 use chrono::{DateTime, Utc};
 
@@ -164,6 +165,26 @@ struct SearchState {
 pub(crate) struct ReadOnlyUpgradeSource {
     snapshot: InstanceContentSnapshot,
     source_files: Vec<InstanceUpgradeSourceFile>,
+    instance_path: String,
+    file_states: Vec<UpgradeSourceFileState>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct UpgradeSourceFileState {
+    relative_path: String,
+    size: u64,
+    enabled: bool,
+    modified: Option<SystemTime>,
+}
+
+pub(crate) struct UpgradePlanRuntimeValidation {
+    source: ReadOnlyUpgradeSource,
+    watcher_epoch: Option<u64>,
+    validated_generation: Option<u64>,
+    #[cfg(test)]
+    full_hash_validations: usize,
+    #[cfg(test)]
+    incremental_hashes: usize,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -225,11 +246,11 @@ impl InstalledAliasIndex {
     }
 }
 
-pub(crate) async fn create_instance_upgrade_plan(
+pub(crate) async fn create_instance_upgrade_plan_with_source(
     instance_id: &str,
     target_environment: InstanceUpgradeEnvironment,
     state: &State,
-) -> crate::Result<InstanceUpgradePlan> {
+) -> crate::Result<(InstanceUpgradePlan, ReadOnlyUpgradeSource)> {
     let metadata = super::get_instance_metadata(instance_id, &state.pool)
         .await?
         .ok_or_else(|| {
@@ -251,7 +272,7 @@ pub(crate) async fn create_instance_upgrade_plan(
     }
 
     let source = read_only_upgrade_source(instance_id, state).await?;
-    let snapshot = source.snapshot;
+    let snapshot = source.snapshot.clone();
     if snapshot.revision != metadata.applied_content_set.revision {
         return Err(crate::ErrorKind::InputError(
             "Instance content changed while the upgrade plan was being created; retry planning"
@@ -331,11 +352,11 @@ pub(crate) async fn create_instance_upgrade_plan(
         .map(|solution| solution.dependency_changes.clone())
         .unwrap_or_default();
 
-    Ok(InstanceUpgradePlan {
+    let plan = InstanceUpgradePlan {
         id: format!("instance-upgrade-plan:{}", uuid::Uuid::new_v4()),
         instance_id: instance_id.to_string(),
         source_revision: snapshot.revision,
-        source_files: source.source_files,
+        source_files: source.source_files.clone(),
         source_environment,
         target_environment,
         items,
@@ -346,7 +367,8 @@ pub(crate) async fn create_instance_upgrade_plan(
         minimal_change_solution,
         selected_solution,
         custom_constraints: Vec::new(),
-    })
+    };
+    Ok((plan, source))
 }
 
 async fn read_only_upgrade_source(
@@ -366,6 +388,15 @@ async fn read_only_upgrade_source(
             &state.directories.instances_dir(),
             &instance.path,
         )?;
+    let file_states = scanned
+        .iter()
+        .map(|file| UpgradeSourceFileState {
+            relative_path: file.relative_path.clone(),
+            size: file.size,
+            enabled: file.enabled,
+            modified: file.modified,
+        })
+        .collect();
     let instance_dir = state.directories.instances_dir().join(&instance.path);
     let mut scanned_by_path = HashMap::new();
     let mut source_files = Vec::new();
@@ -453,6 +484,8 @@ async fn read_only_upgrade_source(
     Ok(ReadOnlyUpgradeSource {
         snapshot,
         source_files,
+        instance_path: instance.path,
+        file_states,
     })
 }
 
@@ -467,6 +500,196 @@ pub(crate) async fn validate_instance_upgrade_plan_source(
         &current.source_files,
     )?;
     Ok(current)
+}
+
+impl UpgradePlanRuntimeValidation {
+    pub(crate) async fn new(
+        source: ReadOnlyUpgradeSource,
+        instance_id: &str,
+        creation_watch: Option<
+            crate::state::instances::watcher::InstanceContentWatchSnapshot,
+        >,
+        state: &State,
+    ) -> Self {
+        let watch = state
+            .file_watcher
+            .track_upgrade_source(
+                instance_id,
+                source
+                    .source_files
+                    .iter()
+                    .map(|file| file.relative_path.clone()),
+            )
+            .await;
+        let validated_generation = creation_watch
+            .as_ref()
+            .filter(|creation| {
+                watch
+                    .as_ref()
+                    .is_some_and(|current| current.epoch == creation.epoch)
+            })
+            .map(|creation| creation.generation);
+        Self {
+            source,
+            watcher_epoch: watch.as_ref().map(|watch| watch.epoch),
+            validated_generation,
+            #[cfg(test)]
+            full_hash_validations: 0,
+            #[cfg(test)]
+            incremental_hashes: 0,
+        }
+    }
+
+    pub(crate) async fn validate(
+        &mut self,
+        plan: &InstanceUpgradePlan,
+        state: &State,
+    ) -> crate::Result<ReadOnlyUpgradeSource> {
+        let Some(mut before) = state
+            .file_watcher
+            .content_watch_snapshot(&plan.instance_id)
+            .await
+        else {
+            return self.authoritative_validate(plan, state).await;
+        };
+        if self.watcher_epoch != Some(before.epoch)
+            || self.validated_generation.is_none()
+            || self.validated_generation > Some(before.generation)
+        {
+            return self.authoritative_validate(plan, state).await;
+        }
+
+        for _ in 0..2 {
+            self.incremental_validate(plan, &before, state).await?;
+            let Some(after) = state
+                .file_watcher
+                .content_watch_snapshot(&plan.instance_id)
+                .await
+            else {
+                return self.authoritative_validate(plan, state).await;
+            };
+            if after.epoch == before.epoch
+                && after.generation == before.generation
+            {
+                self.watcher_epoch = Some(after.epoch);
+                self.validated_generation = Some(after.generation);
+                return Ok(self.source.clone());
+            }
+            before = after;
+        }
+
+        self.authoritative_validate(plan, state).await
+    }
+
+    async fn incremental_validate(
+        &mut self,
+        plan: &InstanceUpgradePlan,
+        watch: &crate::state::instances::watcher::InstanceContentWatchSnapshot,
+        state: &State,
+    ) -> crate::Result<()> {
+        let scanned =
+            crate::state::instances::adapters::filesystem::scan_content_files(
+                &state.directories.instances_dir(),
+                &self.source.instance_path,
+            )?;
+        let planned = self
+            .source
+            .source_files
+            .iter()
+            .map(|file| (file.relative_path.as_str(), file))
+            .collect::<HashMap<_, _>>();
+        let previous = self
+            .source
+            .file_states
+            .iter()
+            .map(|file| (file.relative_path.as_str(), file))
+            .collect::<HashMap<_, _>>();
+        if scanned.len() != planned.len()
+            || scanned
+                .iter()
+                .any(|file| !planned.contains_key(file.relative_path.as_str()))
+        {
+            return stale_upgrade_source(&plan.instance_id);
+        }
+
+        let watcher_changed =
+            self.validated_generation != Some(watch.generation);
+        let instance_dir = state
+            .directories
+            .instances_dir()
+            .join(&self.source.instance_path);
+        for file in &scanned {
+            let planned_file = planned[&file.relative_path.as_str()];
+            if file.size != planned_file.size
+                || file.enabled != planned_file.enabled
+            {
+                return stale_upgrade_source(&plan.instance_id);
+            }
+            let metadata_changed = previous
+                .get(file.relative_path.as_str())
+                .is_none_or(|previous| previous.modified != file.modified);
+            let watcher_marked = watcher_changed
+                && watch.dirty_paths.contains(&file.relative_path);
+            if metadata_changed || watcher_marked {
+                let (_, sha1) = crate::util::fetch::sha1_file_async(
+                    instance_dir.join(&file.relative_path),
+                )
+                .await?;
+                #[cfg(test)]
+                {
+                    self.incremental_hashes += 1;
+                }
+                if !planned_file.sha1.eq_ignore_ascii_case(&sha1) {
+                    return stale_upgrade_source(&plan.instance_id);
+                }
+            }
+        }
+        self.source.file_states = scanned
+            .into_iter()
+            .map(|file| UpgradeSourceFileState {
+                relative_path: file.relative_path,
+                size: file.size,
+                enabled: file.enabled,
+                modified: file.modified,
+            })
+            .collect();
+        Ok(())
+    }
+
+    async fn authoritative_validate(
+        &mut self,
+        plan: &InstanceUpgradePlan,
+        state: &State,
+    ) -> crate::Result<ReadOnlyUpgradeSource> {
+        #[cfg(test)]
+        {
+            self.full_hash_validations += 1;
+        }
+        let current =
+            validate_instance_upgrade_plan_source(plan, state).await?;
+        let watch = state
+            .file_watcher
+            .track_upgrade_source(
+                &plan.instance_id,
+                current
+                    .source_files
+                    .iter()
+                    .map(|file| file.relative_path.clone()),
+            )
+            .await;
+        self.watcher_epoch = watch.as_ref().map(|watch| watch.epoch);
+        self.validated_generation =
+            watch.as_ref().map(|watch| watch.generation);
+        self.source = current;
+        Ok(self.source.clone())
+    }
+}
+
+fn stale_upgrade_source<T>(instance_id: &str) -> crate::Result<T> {
+    Err(crate::ErrorKind::StaleInstanceUpgradePlanSource {
+        instance_id: instance_id.to_string(),
+    }
+    .into())
 }
 
 fn ensure_upgrade_source_files_match(
@@ -5517,7 +5740,11 @@ mod tests {
 
         let before =
             planner_state_digest(&pool, &instance_dir, &instance.id).await;
-        let plan = create_instance_upgrade_plan(
+        let creation_watch = state
+            .file_watcher
+            .content_watch_snapshot(&instance.id)
+            .await;
+        let (plan, source) = create_instance_upgrade_plan_with_source(
             &instance.id,
             InstanceUpgradeEnvironment {
                 game_version: "1.21.5".to_string(),
@@ -5538,37 +5765,69 @@ mod tests {
         }));
         assert_eq!(after, before);
 
-        validate_instance_upgrade_plan_source(&plan, &state)
-            .await
-            .unwrap();
-        std::fs::write(mods.join("new.jar"), b"replaced-on-disk").unwrap();
-        assert!(
-            validate_instance_upgrade_plan_source(&plan, &state)
-                .await
-                .is_err()
-        );
+        let mut validation = UpgradePlanRuntimeValidation::new(
+            source,
+            &instance.id,
+            creation_watch,
+            &state,
+        )
+        .await;
+        validation.validate(&plan, &state).await.unwrap();
+        validation.validate(&plan, &state).await.unwrap();
+        assert_eq!(validation.full_hash_validations, 0);
+        assert_eq!(validation.incremental_hashes, 0);
+
+        let source = validation.validate(&plan, &state).await.unwrap();
+        let mut custom = plan.clone();
+        recompute_instance_upgrade_plan_from_source(
+            &mut custom,
+            &[],
+            InstanceUpgradeSolutionKind::Custom,
+            source,
+            &state,
+        )
+        .await
+        .unwrap();
+        assert_eq!(validation.full_hash_validations, 0);
+
+        std::fs::write(mods.join("new.jar"), b"yes-a-real-jar").unwrap();
+        state
+            .file_watcher
+            .record_upgrade_content_change(&instance.id, "mods/new.jar")
+            .await;
+        assert!(validation.validate(&plan, &state).await.is_err());
+        assert_eq!(validation.incremental_hashes, 1);
         std::fs::write(mods.join("new.jar"), b"not-a-real-jar").unwrap();
-        validate_instance_upgrade_plan_source(&plan, &state)
-            .await
-            .unwrap();
+        state
+            .file_watcher
+            .record_upgrade_content_change(&instance.id, "mods/new.jar")
+            .await;
+        validation.validate(&plan, &state).await.unwrap();
+        assert_eq!(validation.incremental_hashes, 2);
 
         std::fs::write(mods.join("added.jar"), b"added").unwrap();
-        assert!(
-            validate_instance_upgrade_plan_source(&plan, &state)
-                .await
-                .is_err()
-        );
+        assert!(validation.validate(&plan, &state).await.is_err());
         std::fs::remove_file(mods.join("added.jar")).unwrap();
-        validate_instance_upgrade_plan_source(&plan, &state)
-            .await
+        validation.validate(&plan, &state).await.unwrap();
+
+        std::fs::create_dir_all(instance_dir.join("config")).unwrap();
+        std::fs::write(instance_dir.join("config/options.txt"), b"ignored")
             .unwrap();
+        state
+            .file_watcher
+            .record_upgrade_content_change(&instance.id, "config/options.txt")
+            .await;
+        validation.validate(&plan, &state).await.unwrap();
+        assert_eq!(validation.incremental_hashes, 2);
 
         std::fs::remove_file(mods.join("new.jar")).unwrap();
-        assert!(
-            validate_instance_upgrade_plan_source(&plan, &state)
-                .await
-                .is_err()
-        );
+        assert!(validation.validate(&plan, &state).await.is_err());
+        std::fs::write(mods.join("new.jar"), b"not-a-real-jar").unwrap();
+        validation.validate(&plan, &state).await.unwrap();
+
+        validation.watcher_epoch = Some(u64::MAX);
+        validation.validate(&plan, &state).await.unwrap();
+        assert_eq!(validation.full_hash_validations, 1);
         let metadata = super::super::get_instance_metadata(&instance.id, &pool)
             .await
             .unwrap()
