@@ -3,7 +3,24 @@ import { test } from 'node:test'
 
 import { classifyServerLogLine, summarizeServerExit } from './log-parse.ts'
 import { computeServerStatus } from './status.ts'
-import { resolveServerJar } from './server-types.ts'
+import { requiredJavaMajorVersion, resolveServerJar } from './server-types.ts'
+
+test('maps legacy game versions to their required Java major', () => {
+	assert.equal(requiredJavaMajorVersion('1.21.4'), 21)
+	assert.equal(requiredJavaMajorVersion('1.20.5'), 21)
+	assert.equal(requiredJavaMajorVersion('1.20.4'), 17)
+	assert.equal(requiredJavaMajorVersion('1.17.1'), 17)
+	assert.equal(requiredJavaMajorVersion('1.16.5'), 8)
+	assert.equal(requiredJavaMajorVersion('1.12.2'), 8)
+})
+
+test('maps year-based game versions to Java 25', () => {
+	assert.equal(requiredJavaMajorVersion('26.2'), 25)
+	assert.equal(requiredJavaMajorVersion('26.1'), 25)
+	assert.equal(requiredJavaMajorVersion('26w14a'), 25)
+	assert.equal(requiredJavaMajorVersion('25w46a'), 21)
+	assert.equal(requiredJavaMajorVersion('unknown'), 25)
+})
 
 test('detects the eula notice in server logs', () => {
 	assert.equal(

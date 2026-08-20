@@ -6,17 +6,17 @@ import {
 	Card,
 	ConfirmModal,
 	defineMessages,
-	DropdownSelect,
 	injectNotificationManager,
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
-import { onMounted, ref, useTemplateRef } from 'vue'
+import { computed, onMounted, ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
 import ServerPropertiesEditor from '@/components/multiplayer/servers/ServerPropertiesEditor.vue'
+import JavaSelector from '@/components/ui/JavaSelector.vue'
 import { type ServerView, useServers } from '@/composables/useServers'
-import { find_filtered_jres } from '@/helpers/jre'
+import { get_jre } from '@/helpers/jre'
 import { servers as serversApi } from '@/helpers/servers'
 
 const props = defineProps<{
@@ -32,7 +32,6 @@ const messages = defineMessages({
 	general: { id: 'app.servers.settings.general', defaultMessage: 'General' },
 	name: { id: 'app.servers.settings.name', defaultMessage: 'Server name' },
 	java: { id: 'app.servers.settings.java', defaultMessage: 'Java' },
-	javaNone: { id: 'app.servers.settings.java-none', defaultMessage: 'System default' },
 	memory: { id: 'app.servers.settings.memory', defaultMessage: 'Memory (MB)' },
 	jvmArgs: { id: 'app.servers.settings.jvm-args', defaultMessage: 'JVM arguments' },
 	jvmArgsHint: {
@@ -58,26 +57,26 @@ const { deleteServer } = useServers()
 const { addNotification, handleError } = injectNotificationManager()
 
 const name = ref(props.server.name)
-const javaPath = ref(props.server.javaPath ?? '')
+const javaSelection = ref<{ path: string; version: string }>({
+	path: props.server.javaPath ?? '',
+	version: '',
+})
 const memoryMb = ref(props.server.memoryMb ?? 2048)
 const jvmArgsText = ref((props.server.jvmArgs ?? []).join(' '))
-const javaOptions = ref<string[]>([])
 const isSaving = ref(false)
 const deleteModal = useTemplateRef<ComponentExposed<typeof ConfirmModal>>('deleteModal')
 
+const requiredJava = computed(() => requiredJavaMajorVersion(props.server.gameVersion))
+
 onMounted(async () => {
+	if (!javaSelection.value.path) return
 	try {
-		const major = requiredJavaMajorVersion(props.server.gameVersion)
-		const javas = (await find_filtered_jres(major)) as Array<{ path: string; version: string }>
-		javaOptions.value = ['', ...javas.map((java) => java.path)]
+		const jre = await get_jre(javaSelection.value.path)
+		if (jre) javaSelection.value.version = jre.version
 	} catch {
-		javaOptions.value = ['']
+		// Keep the path; the selector validates against the required major version.
 	}
 })
-
-function javaOptionLabel(value: string) {
-	return value === '' ? formatMessage(messages.javaNone) : value
-}
 
 async function save() {
 	isSaving.value = true
@@ -85,7 +84,7 @@ async function save() {
 		const jvmArgs = jvmArgsText.value.trim().split(/\s+/).filter(Boolean)
 		await serversApi.updateSettings(props.server.id, {
 			name: name.value.trim(),
-			javaPath: javaPath.value,
+			javaPath: javaSelection.value.path,
 			memoryMb: memoryMb.value,
 			jvmArgs,
 		})
@@ -116,23 +115,25 @@ async function confirmDelete() {
 					<StyledInput id="server-settings-name" v-model="name" />
 				</label>
 
-				<div class="grid gap-4 md:grid-cols-2">
-					<div class="flex min-w-0 flex-col gap-2">
-						<span class="font-semibold text-contrast">{{ formatMessage(messages.java) }}</span>
-						<DropdownSelect
-							v-model="javaPath"
-							class="!w-full"
-							:options="javaOptions"
-							:display-name="javaOptionLabel"
-							:name="formatMessage(messages.java)"
-						/>
-					</div>
-
-					<label class="flex min-w-0 flex-col gap-2" for="server-settings-memory">
-						<span class="font-semibold text-contrast">{{ formatMessage(messages.memory) }}</span>
-						<StyledInput id="server-settings-memory" v-model="memoryMb" inputmode="numeric" />
-					</label>
+				<div class="flex min-w-0 flex-col gap-2">
+					<span class="font-semibold text-contrast">{{ formatMessage(messages.java) }}</span>
+					<JavaSelector
+						id="server-settings-java"
+						v-model="javaSelection"
+						:version="requiredJava"
+						select-all-versions
+					/>
 				</div>
+
+				<label class="flex min-w-0 flex-col gap-2" for="server-settings-memory">
+					<span class="font-semibold text-contrast">{{ formatMessage(messages.memory) }}</span>
+					<StyledInput
+						id="server-settings-memory"
+						v-model="memoryMb"
+						inputmode="numeric"
+						wrapper-class="max-w-40"
+					/>
+				</label>
 
 				<label class="flex min-w-0 flex-col gap-2" for="server-settings-jvm">
 					<span class="font-semibold text-contrast">{{ formatMessage(messages.jvmArgs) }}</span>

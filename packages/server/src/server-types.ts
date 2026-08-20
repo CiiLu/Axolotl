@@ -148,13 +148,30 @@ export function pickFabricLoaderVersion(response: FabricLoaderVersionsResponse):
 }
 
 /** Minimum Java major version required to run a given game version. */
+/**
+ * Minimum Java major version required to run a given game version.
+ * Handles both the legacy `1.x` scheme and the year-based scheme (`26.2`,
+ * `26w14a`), which needs Java 25.
+ */
 export function requiredJavaMajorVersion(gameVersion: string): number {
-	const match = /(\d+)\.(\d+)(?:\.(\d+))?/.exec(gameVersion)
-	if (!match) return 21
-	const minor = Number(match[2])
+	const yearSnapshot = /^(\d{2})w/.exec(gameVersion)
+	if (yearSnapshot) {
+		return Number(yearSnapshot[1]) >= 26 ? 25 : 21
+	}
+
+	const match = /^(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(gameVersion)
+	if (!match) return 25
+	const major = Number(match[1])
+	const minor = Number(match[2] ?? 0)
 	const patch = Number(match[3] ?? 0)
-	if (minor > 20 || (minor === 20 && patch >= 5)) return 21
-	if (minor >= 17) return 17
-	if (minor >= 12) return 17
-	return 8
+
+	// Year-based releases (26.1+) require Java 25
+	if (major >= 21) return 25
+	// Legacy 1.x releases
+	if (major === 1) {
+		if (minor > 20 || (minor === 20 && patch >= 5)) return 21
+		if (minor >= 17) return 17
+		return 8
+	}
+	return 25
 }

@@ -142,78 +142,46 @@ async function save() {
 				class="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-solid border-surface-4 bg-surface-4 md:grid-cols-2"
 			>
 				<template v-for="item in formFields" :key="item.key">
-					<div
-						v-if="item.field.kind === 'boolean'"
-						class="flex min-w-0 items-center justify-between gap-3 bg-surface-2 px-4 py-3"
-					>
+					<div class="flex min-w-0 flex-col gap-1.5 bg-surface-2 px-4 py-3">
 						<label
-							class="truncate text-sm font-medium text-contrast"
+							class="truncate text-xs font-medium text-secondary"
 							:for="`server-prop-${item.key}`"
 						>
 							{{ configFieldLabel(item.key) }}
 						</label>
 						<Toggle
-							:id="`server-prop-${item.key}`"
+							v-if="item.field.kind === 'boolean'"
+							id="`server-prop-${item.key}`"
 							:model-value="item.value === 'true'"
 							small
 							@update:model-value="setFieldValue(item.key, $event ? 'true' : 'false')"
 						/>
-					</div>
 
-					<div
-						v-else-if="item.field.kind === 'integer' || item.field.kind === 'number'"
-						class="flex min-w-0 items-center justify-between gap-3 bg-surface-2 px-4 py-3"
-					>
-						<label
-							class="truncate text-sm font-medium text-contrast"
-							:for="`server-prop-${item.key}`"
-						>
-							{{ configFieldLabel(item.key) }}
-						</label>
 						<StyledInput
-							:id="`server-prop-${item.key}`"
+							v-else-if="item.field.kind === 'integer' || item.field.kind === 'number'"
+							id="`server-prop-${item.key}`"
 							:model-value="item.value"
 							inputmode="numeric"
 							size="small"
-							wrapper-class="w-32 shrink-0"
+							wrapper-class="w-full"
 							@update:model-value="setFieldValue(item.key, $event)"
 						/>
-					</div>
 
-					<div
-						v-else-if="item.field.kind === 'enum'"
-						class="flex min-w-0 items-center justify-between gap-3 bg-surface-2 px-4 py-3"
-					>
-						<label
-							class="truncate text-sm font-medium text-contrast"
-							:for="`server-prop-${item.key}`"
-						>
-							{{ configFieldLabel(item.key) }}
-						</label>
 						<DropdownSelect
+							v-else-if="item.field.kind === 'enum'"
 							:model-value="item.value"
 							:options="item.field.options ?? []"
 							:name="`server-prop-${item.key}`"
-							class="!w-40 shrink-0"
+							class="!w-full"
 							@update:model-value="setFieldValue(item.key, $event)"
 						/>
-					</div>
 
-					<div
-						v-else
-						class="flex min-w-0 items-center justify-between gap-3 bg-surface-2 px-4 py-3"
-					>
-						<label
-							class="truncate text-sm font-medium text-contrast"
-							:for="`server-prop-${item.key}`"
-						>
-							{{ configFieldLabel(item.key) }}
-						</label>
 						<StyledInput
-							:id="`server-prop-${item.key}`"
+							v-else
+							id="`server-prop-${item.key}`"
 							:model-value="item.value"
 							size="small"
-							wrapper-class="w-44 shrink-0"
+							wrapper-class="w-full"
 							@update:model-value="setFieldValue(item.key, $event)"
 						/>
 					</div>

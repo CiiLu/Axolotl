@@ -148,6 +148,16 @@ async function waitForServerStop(serverId: string): Promise<ServerEventPayload |
 	})
 }
 
+function javaMajorFromVersion(version: string): number | null {
+	const parts = version
+		.split(/[._]/)
+		.map(Number)
+		.filter((value) => Number.isInteger(value) && value >= 0)
+	if (parts.length === 0) return null
+	if (parts[0] === 1 && parts.length > 1) return parts[1]
+	return parts[0]
+}
+
 export function createCreateServerFlowContext(
 	modal: Ref<ComponentExposed<typeof MultiStageModal> | null>,
 ): CreateServerFlowContext {
@@ -161,6 +171,11 @@ export function createCreateServerFlowContext(
 		next: { id: 'app.servers.wizard.next', defaultMessage: 'Next' },
 		retry: { id: 'app.servers.wizard.retry', defaultMessage: 'Retry' },
 		finish: { id: 'app.servers.wizard.finish', defaultMessage: 'Finish' },
+		javaTooOld: {
+			id: 'app.servers.wizard.java-too-old',
+			defaultMessage:
+				'Java {selected} cannot run this game version; Java {required} or newer is required.',
+		},
 	})
 
 	const serverType = ref<ServerTypeId>('vanilla')
@@ -274,6 +289,20 @@ export function createCreateServerFlowContext(
 		installLog.value = []
 		downloadProgress.value = null
 		try {
+			const requiredJava = requiredJavaMajorVersion(selectedGameVersion.value)
+			const selectedMajor = javaMajorFromVersion(selectedJava.value.version)
+			if (
+				selectedJava.value.path !== '' &&
+				selectedMajor !== null &&
+				selectedMajor < requiredJava
+			) {
+				throw new Error(
+					formatMessage(wizardMessages.javaTooOld, {
+						selected: selectedMajor,
+						required: requiredJava,
+					}),
+				)
+			}
 			const manifest = await servers.create({
 				name: name.value,
 				serverType: serverType.value,
