@@ -2,7 +2,7 @@
 	<div class="space-y-6">
 		<!-- Instance-specific: Icon upload -->
 		<div v-if="ctx.flowType === 'instance'" class="flex items-center gap-4">
-			<Avatar :src="ctx.instanceIconUrl.value ?? undefined" size="5rem" />
+			<Avatar :src="ctx.instanceIconUrl.value ?? defaultInstanceIconUrl ?? undefined" size="5rem" />
 			<div class="flex flex-col gap-2">
 				<ButtonStyled type="outlined">
 					<button @click="triggerIconInput">
@@ -151,6 +151,31 @@
 				</div>
 			</Collapsible>
 		</template>
+
+		<div v-if="ctx.flowType === 'instance' && adjunctOptions.length" class="flex flex-col gap-2">
+			<span class="font-semibold text-contrast">{{ formatMessage(messages.adjunctLabel) }}</span>
+			<div class="flex flex-wrap gap-x-6 gap-y-3">
+				<div
+					v-for="adjunct in adjunctOptions"
+					:key="adjunct"
+					class="flex min-w-40 max-w-64 flex-col gap-1"
+				>
+					<Checkbox
+						:model-value="isAdjunctSelected(adjunct)"
+						:disabled="adjunctAvailability[adjunct].disabled"
+						:label="formatLoaderLabel(adjunct, formatMessage)"
+						@update:model-value="toggleAdjunct(adjunct)"
+					/>
+					<span
+						v-if="adjunctAvailability[adjunct].reason"
+						class="text-xs leading-normal text-secondary"
+					>
+						{{ adjunctAvailability[adjunct].reason }}
+					</span>
+				</div>
+			</div>
+			<span class="text-sm text-secondary">{{ formatMessage(messages.adjunctHint) }}</span>
+		</div>
 	</div>
 </template>
 
@@ -166,11 +191,12 @@ import { injectFilePicker, injectModrinthClient, injectTags } from '../../../../
 import Avatar from '../../../base/Avatar.vue'
 import ButtonStyled from '../../../base/ButtonStyled.vue'
 import Chips from '../../../base/Chips.vue'
+import Checkbox from '../../../base/Checkbox.vue'
 import Collapsible from '../../../base/Collapsible.vue'
 import Combobox, { type ComboboxOption } from '../../../base/Combobox.vue'
 import PaperChannelBadge from '../../../base/PaperChannelBadge.vue'
 import StyledInput from '../../../base/StyledInput.vue'
-import type { LoaderVersionEntry, LoaderVersionType } from '../creation-flow-context'
+import type { AdjunctLoader, LoaderVersionEntry, LoaderVersionType } from '../creation-flow-context'
 import { injectCreationFlowContext } from '../creation-flow-context'
 import {
 	createLatestRequestGuard,
@@ -178,11 +204,13 @@ import {
 	gameVersionSelectorText,
 	isLoaderSupportStateDisabled,
 	loaderMetadataCacheKey,
+	type LoaderMetadataStatus,
 	type LoaderSupportState,
 	loaderSupportState,
 	loaderVersionSelectorText,
 	loaderVersionsForGameVersion,
 	loaderVersionSummaryState,
+	preserveOrSelectGameVersion,
 } from '../loader-metadata'
 import { formatLoaderLabel, type GameVersionType, isVersionTypeMatch } from '../shared'
 
@@ -221,6 +249,42 @@ const messages = defineMessages({
 	loaderLabel: {
 		id: 'creation-flow.modal.custom-setup.loader.label',
 		defaultMessage: 'Mod Loader',
+	},
+	adjunctLabel: {
+		id: 'creation-flow.modal.custom-setup.adjunct.label',
+		defaultMessage: 'Additional loaders',
+	},
+	adjunctHint: {
+		id: 'creation-flow.modal.custom-setup.adjunct.hint',
+		defaultMessage: 'A compatible version will be selected before downloading.',
+	},
+	adjunctSelectGameVersion: {
+		id: 'creation-flow.modal.custom-setup.adjunct.select-game-version',
+		defaultMessage: 'Select a game version to check compatibility.',
+	},
+	adjunctCheckingCompatibility: {
+		id: 'creation-flow.modal.custom-setup.adjunct.checking-compatibility',
+		defaultMessage: 'Checking compatibility...',
+	},
+	adjunctPrimaryUnsupported: {
+		id: 'creation-flow.modal.custom-setup.adjunct.primary-unsupported',
+		defaultMessage: 'The selected mod loader does not support this game version.',
+	},
+	adjunctUnsupported: {
+		id: 'creation-flow.modal.custom-setup.adjunct.unsupported',
+		defaultMessage: 'No compatible {loader} version is available for this game version.',
+	},
+	adjunctCompatibilityLoadFailed: {
+		id: 'creation-flow.modal.custom-setup.adjunct.compatibility-load-failed',
+		defaultMessage: 'Failed to verify {loader} compatibility.',
+	},
+	adjunctOptiFabricUnsupported: {
+		id: 'creation-flow.modal.custom-setup.adjunct.optifabric-unsupported',
+		defaultMessage: 'OptiFine requires OptiFabric, but no compatible version is available.',
+	},
+	adjunctOptiFabricLoadFailed: {
+		id: 'creation-flow.modal.custom-setup.adjunct.optifabric-load-failed',
+		defaultMessage: 'Failed to verify OptiFabric compatibility.',
 	},
 	contentLoaderLabel: {
 		id: 'creation-flow.modal.custom-setup.content-loader.label',
@@ -290,6 +354,10 @@ const messages = defineMessages({
 		id: 'creation-flow.modal.custom-setup.loader.unsupported-tooltip',
 		defaultMessage: 'This loader does not support the selected game version',
 	},
+	loaderCompatibilityLoadFailed: {
+		id: 'creation-flow.modal.custom-setup.loader.compatibility-load-failed',
+		defaultMessage: 'Failed to verify loader compatibility',
+	},
 	noSuchVersionsAvailable: {
 		id: 'creation-flow.modal.custom-setup.loader.no-such-versions-available',
 		defaultMessage: 'No such versions available',
@@ -347,6 +415,122 @@ const effectiveLoaders = computed(() => {
 	return ctx.availableLoaders
 })
 
+const adjunctOptions = computed(() => {
+	if (ctx.flowType !== 'instance') return [] satisfies AdjunctLoader[]
+
+	switch (selectedLoader.value) {
+		case 'forge':
+			return ['lite_loader', 'optifine'] satisfies AdjunctLoader[]
+		case 'neoforge':
+			return ['optifine'] satisfies AdjunctLoader[]
+		case 'fabric':
+			return ['optifine'] satisfies AdjunctLoader[]
+		case 'legacy_fabric':
+			return ['optifine'] satisfies AdjunctLoader[]
+		default:
+			return [] satisfies AdjunctLoader[]
+	}
+})
+
+interface AdjunctAvailability {
+	disabled: boolean
+	reason?: string
+}
+
+const optiFabricCompatibility = ref<Record<string, boolean>>({})
+const optiFabricMetadataStatus = ref<Record<string, LoaderMetadataStatus>>({})
+
+function loaderStateAvailability(
+	state: LoaderSupportState,
+	unsupportedReason: string,
+	loadFailedReason: string,
+): AdjunctAvailability {
+	if (state === 'supported') return { disabled: false }
+	if (state === 'unsupported') return { disabled: true, reason: unsupportedReason }
+	if (state === 'error') return { disabled: true, reason: loadFailedReason }
+	return {
+		disabled: true,
+		reason: formatMessage(messages.adjunctCheckingCompatibility),
+	}
+}
+
+const optiFabricCompatibilityState = computed<LoaderSupportState>(() => {
+	const gameVersion = selectedGameVersion.value
+	if (!gameVersion) return 'unknown'
+	const status = optiFabricMetadataStatus.value[gameVersion] ?? 'unknown'
+	if (status !== 'success') return status
+	return optiFabricCompatibility.value[gameVersion] ? 'supported' : 'unsupported'
+})
+
+function resolveAdjunctAvailability(adjunct: AdjunctLoader): AdjunctAvailability {
+	const gameVersion = selectedGameVersion.value
+	if (!gameVersion) {
+		return {
+			disabled: true,
+			reason: formatMessage(messages.adjunctSelectGameVersion),
+		}
+	}
+
+	const primary = selectedLoader.value
+	if (!primary) {
+		return {
+			disabled: true,
+			reason: formatMessage(messages.adjunctCheckingCompatibility),
+		}
+	}
+
+	const primaryAvailability = loaderStateAvailability(
+		loaderCompatibilityState(gameVersion, primary),
+		formatMessage(messages.adjunctPrimaryUnsupported),
+		formatMessage(messages.loaderCompatibilityLoadFailed),
+	)
+	if (primaryAvailability.disabled) return primaryAvailability
+
+	const loaderLabel = formatLoaderLabel(adjunct, formatMessage)
+	const adjunctAvailability = loaderStateAvailability(
+		loaderCompatibilityState(gameVersion, adjunct),
+		formatMessage(messages.adjunctUnsupported, { loader: loaderLabel }),
+		formatMessage(messages.adjunctCompatibilityLoadFailed, { loader: loaderLabel }),
+	)
+	if (adjunctAvailability.disabled) return adjunctAvailability
+
+	if (adjunct === 'optifine' && (primary === 'fabric' || primary === 'legacy_fabric')) {
+		return loaderStateAvailability(
+			optiFabricCompatibilityState.value,
+			formatMessage(messages.adjunctOptiFabricUnsupported),
+			formatMessage(messages.adjunctOptiFabricLoadFailed),
+		)
+	}
+
+	return { disabled: false }
+}
+
+const adjunctAvailability = computed<Record<AdjunctLoader, AdjunctAvailability>>(() => ({
+	optifine: resolveAdjunctAvailability('optifine'),
+	lite_loader: resolveAdjunctAvailability('lite_loader'),
+}))
+
+function isAdjunctSelected(adjunct: AdjunctLoader) {
+	return ctx.selectedAdjuncts.value.includes(adjunct)
+}
+
+function toggleAdjunct(adjunct: AdjunctLoader) {
+	if (adjunctAvailability.value[adjunct].disabled) return
+	ctx.selectedAdjuncts.value = isAdjunctSelected(adjunct)
+		? ctx.selectedAdjuncts.value.filter((item) => item !== adjunct)
+		: [...ctx.selectedAdjuncts.value, adjunct]
+}
+
+watch(
+	[adjunctOptions, adjunctAvailability],
+	([options, availability]) => {
+		ctx.selectedAdjuncts.value = ctx.selectedAdjuncts.value.filter(
+			(item) => options.includes(item) && !availability[item].disabled,
+		)
+	},
+	{ immediate: true },
+)
+
 function loaderCompatibilityState(gameVersion: string, loader: string): LoaderSupportState {
 	if (loader === 'vanilla') return 'supported'
 
@@ -395,6 +579,7 @@ function loaderDisabledTooltip(loader: string): string | undefined {
 		return formatMessage(commonMessages.loadingLabel)
 	}
 	if (state === 'unsupported') return formatMessage(messages.loaderUnsupportedTooltip)
+	if (state === 'error') return formatMessage(messages.loaderCompatibilityLoadFailed)
 	return undefined
 }
 
@@ -402,6 +587,37 @@ watch(
 	selectedGameVersion,
 	(gameVersion) => {
 		if (gameVersion) void ctx.prefetchLoaderMetadata(gameVersion)
+	},
+	{ immediate: true },
+)
+
+watch(
+	[adjunctOptions, () => selectedGameVersion.value],
+	([options, gameVersion]) => {
+		if (!gameVersion) return
+		void Promise.allSettled(options.map((adjunct) => ctx.fetchLoaderMetadata(adjunct, gameVersion)))
+	},
+	{ immediate: true },
+)
+
+watch(
+	[() => selectedLoader.value, () => selectedGameVersion.value],
+	async ([loader, gameVersion]) => {
+		if (ctx.flowType !== 'instance') return
+		if ((loader !== 'fabric' && loader !== 'legacy_fabric') || !gameVersion) return
+		const currentStatus = optiFabricMetadataStatus.value[gameVersion]
+		if (currentStatus === 'loading' || currentStatus === 'success') {
+			return
+		}
+
+		optiFabricMetadataStatus.value[gameVersion] = 'loading'
+		try {
+			optiFabricCompatibility.value[gameVersion] = await ctx.hasCompatibleOptiFabric(gameVersion)
+			optiFabricMetadataStatus.value[gameVersion] = 'success'
+		} catch (error) {
+			optiFabricMetadataStatus.value[gameVersion] = 'error'
+			debug('Failed to load OptiFabric compatibility metadata', error)
+		}
 	},
 	{ immediate: true },
 )
@@ -446,6 +662,11 @@ const isPaperLike = computed(
 
 // Icon upload handling
 const filePicker = injectFilePicker()
+const defaultInstanceIconUrl = computed(() =>
+	selectedLoader.value
+		? (filePicker.getLoaderInstanceIconUrl?.(selectedLoader.value) ?? null)
+		: null,
+)
 
 async function triggerIconInput() {
 	const picked = await (filePicker.pickInstanceIcon?.() ?? filePicker.pickImage())
@@ -593,18 +814,15 @@ const gameVersionNoOptionsMessage = computed(() => {
 	return formatMessage(messages.noVersionsAvailable)
 })
 
-// Auto-select latest game version when options load, or clear when selection becomes invalid
+// Select an initial game version without replacing an explicit user selection.
 watch(
 	gameVersionOptions,
 	() => {
 		const options = filteredGameVersionOptions.value
-		if (!selectedGameVersion.value || !options.some((o) => o.value === selectedGameVersion.value)) {
-			if (options.length > 0) {
-				selectedGameVersion.value = options[0].value
-			} else {
-				selectedGameVersion.value = null
-			}
-		}
+		selectedGameVersion.value = preserveOrSelectGameVersion(
+			selectedGameVersion.value,
+			options.map((option) => String(option.value)),
+		)
 	},
 	{ immediate: true },
 )

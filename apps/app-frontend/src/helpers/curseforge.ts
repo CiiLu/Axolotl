@@ -124,6 +124,10 @@ export interface CurseForgeFile {
 	dependencies: Array<{ modId: number; relationType: number }>
 }
 
+export function hasCompatibleCurseForgeFile(files: CurseForgeFile[], gameVersion: string) {
+	return files.some((file) => file.isAvailable && file.gameVersions.includes(gameVersion))
+}
+
 export function getCurseForgeImageUrl(source?: string | null, width = 256): string | undefined {
 	if (!source) return undefined
 
@@ -232,6 +236,7 @@ export interface CurseForgeInstallPreview {
 		iconUrl?: string | null
 		versionMismatch?: boolean
 		selectionReason?: 'native_strict_match' | 'sha1_verified_modrinth_fallback'
+		required?: boolean
 	}>
 	modrinthFallbacks?: Array<{
 		projectId: string
@@ -240,6 +245,7 @@ export interface CurseForgeInstallPreview {
 		versionNumber: string
 		parentProjectId: number
 		iconUrl?: string | null
+		required?: boolean
 	}>
 	skipped: Array<{
 		projectId: number
@@ -340,8 +346,11 @@ export function getCurseForgeProject(projectId: number) {
 	return invoke<CurseForgeProject>('plugin:curseforge|curseforge_get_project', { projectId })
 }
 
-export function getCurseForgeProjects(projectIds: number[]) {
-	return invoke<CurseForgeProject[]>('plugin:curseforge|curseforge_get_projects', { projectIds })
+export function getCurseForgeProjects(projectIds: number[], cacheBehaviour?: CacheBehaviour) {
+	return invoke<CurseForgeProject[]>('plugin:curseforge|curseforge_get_projects', {
+		projectIds,
+		cacheBehaviour,
+	})
 }
 
 export function getCurseForgeChangelog(projectId: number, fileId: number) {

@@ -44,6 +44,17 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/browse/favorites',
+			name: 'Favorites',
+			component: () => import('@/pages/Favorites.vue'),
+			meta: {
+				useContext: true,
+				breadcrumb: [{ name: '?FavoritesTitle' }],
+				discordActivity: 'Browsing favorites...',
+				pageTransitionGroup: 'browse',
+			},
+		},
+		{
 			path: '/browse/:projectType',
 			name: 'Discover content',
 			component: () => import('@/pages/Browse.vue'),

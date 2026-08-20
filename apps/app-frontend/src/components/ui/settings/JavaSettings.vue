@@ -13,16 +13,16 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { platform } from '@tauri-apps/plugin-os'
 import { ref, watch } from 'vue'
 
-import JavaSelector from '@/components/ui/JavaSelector.vue'
 import JavaArgumentsInput from '@/components/ui/JavaArgumentsInput.vue'
+import JavaSelector from '@/components/ui/JavaSelector.vue'
 import MemoryAllocationDisplay from '@/components/ui/MemoryAllocationDisplay.vue'
-import useMemorySlider from '@/composables/useMemorySlider'
-import { collectGcContext } from '@/helpers/gc/context'
-import { getJavaArgumentPresets } from '@/helpers/java-argument-presets'
 import DownloadJavaModal from '@/components/ui/settings/DownloadJavaModal.vue'
 import InstalledJavaModal from '@/components/ui/settings/InstalledJavaModal.vue'
+import useMemorySlider from '@/composables/useMemorySlider'
 import { trackEvent } from '@/helpers/analytics'
+import { collectGcContext } from '@/helpers/gc/context'
 import { wait_for_install_job } from '@/helpers/install'
+import { getJavaArgumentPresets } from '@/helpers/java-argument-presets'
 import {
 	find_filtered_jres,
 	get_java_default_versions,
@@ -102,6 +102,14 @@ const messages = defineMessages({
 		id: 'app.settings.defaults.automatic-memory-description',
 		defaultMessage: 'Adjusts memory for each launch based on available RAM and installed mods.',
 	},
+	optimizeMemoryBeforeLaunch: {
+		id: 'app.settings.defaults.optimize-memory-before-launch',
+		defaultMessage: 'Optimize memory before launching the game',
+	},
+	optimizeMemoryBeforeLaunchDescription: {
+		id: 'app.settings.defaults.optimize-memory-before-launch-description',
+		defaultMessage: 'Waits for Windows memory optimization to finish before starting the game.',
+	},
 	javaArguments: {
 		id: 'app.settings.defaults.java-arguments',
 		defaultMessage: 'Java arguments',
@@ -121,14 +129,18 @@ const downloadJavaModal = ref(null)
 const installedJavaModal = ref(null)
 const defaultSaveQueues = new Map()
 
-const supportsHighPerformanceMode = ['windows', 'linux'].includes(await platform())
+const currentPlatform = await platform()
+const supportsHighPerformanceMode = ['windows', 'linux'].includes(currentPlatform)
+const supportsMemoryOptimization = currentPlatform === 'windows'
 const settings = ref(await get().catch(handleError))
 const autoHighPerformanceMode = ref(settings.value?.auto_set_java_high_performance_mode ?? false)
 
 const javaArgs = ref((settings.value?.extra_launch_args ?? []).join(' '))
 
 const memory = ref(
-	settings.value?.memory ? { ...settings.value.memory } : { maximum: 2048, automatic: true },
+	settings.value?.memory
+		? { optimize_before_launch: false, ...settings.value.memory }
+		: { maximum: 2048, automatic: true, optimize_before_launch: false },
 )
 
 let shouldApplyDefaultAuto = (settings.value?.extra_launch_args?.length ?? 0) === 0
@@ -399,6 +411,15 @@ async function onJavaDownloaded(job) {
 				</h2>
 
 				<Checkbox v-model="memory.automatic" :label="formatMessage(messages.automaticMemory)" />
+				<div v-if="supportsMemoryOptimization" class="flex flex-col gap-1">
+					<Checkbox
+						v-model="memory.optimize_before_launch"
+						:label="formatMessage(messages.optimizeMemoryBeforeLaunch)"
+					/>
+					<p class="m-0 text-xs leading-tight text-secondary">
+						{{ formatMessage(messages.optimizeMemoryBeforeLaunchDescription) }}
+					</p>
+				</div>
 
 				<Slider
 					id="max-memory"

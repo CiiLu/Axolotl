@@ -479,6 +479,12 @@
 	"app.content-install.preview.only-checked": {
 		"message": "只会安装勾选的前置。"
 	},
+	"app.content-install.preview.optional-dependencies-header": {
+		"message": "可选前置"
+	},
+	"app.content-install.preview.required-dependencies-header": {
+		"message": "必要前置"
+	},
 	"app.content-install.preview.required-by": {
 		"message": "被 {projects} 需要"
 	},
@@ -2429,6 +2435,12 @@
 	"app.settings.defaults.memory-description": {
 		"message": "分配给每个实例的内存。"
 	},
+	"app.settings.defaults.optimize-memory-before-launch": {
+		"message": "启动游戏前优化内存"
+	},
+	"app.settings.defaults.optimize-memory-before-launch-description": {
+		"message": "等待 Windows 内存优化完成后再启动游戏。"
+	},
 	"app.memory-display.available": {
 		"message": "可用 {memory}"
 	},
@@ -2659,9 +2671,6 @@
 	},
 	"app.settings.resources.source.open-bmcl-api": {
 		"message": "优先 OpenBMCLAPI"
-	},
-	"app.settings.resources.source.mcim": {
-		"message": "优先 MCIM"
 	},
 	"app.settings.resources.source.mojang-mirror-preferred": {
 		"message": "优先 Fallen Proxy"
@@ -3833,18 +3842,6 @@
 	"instance.settings.tabs.general.icon": {
 		"message": "图标"
 	},
-	"instance.settings.tabs.general.library-groups": {
-		"message": "库分组"
-	},
-	"instance.settings.tabs.general.library-groups.create": {
-		"message": "创建新的分组"
-	},
-	"instance.settings.tabs.general.library-groups.description": {
-		"message": "库分组功能可以让你将实例整理到库中的不同部分。"
-	},
-	"instance.settings.tabs.general.library-groups.enter-name": {
-		"message": "输入分组名称"
-	},
 	"instance.settings.tabs.general.name": {
 		"message": "名称"
 	},
@@ -3955,6 +3952,12 @@
 	},
 	"instance.settings.tabs.java.java-path-placeholder": {
 		"message": "/path/to/java"
+	},
+	"instance.settings.tabs.java.optimize-memory-before-launch": {
+		"message": "启动游戏前优化内存"
+	},
+	"instance.settings.tabs.java.optimize-memory-before-launch-description": {
+		"message": "等待 Windows 内存优化完成后再启动游戏。"
 	},
 	"instance.settings.tabs.window": {
 		"message": "游戏窗口"
@@ -7394,12 +7397,6 @@
 	"app.settings.storage.open-action": {
 		"message": "在启动器中打开或打开位置"
 	},
-	"app.settings.storage.expand-action": {
-		"message": "展开"
-	},
-	"app.settings.storage.collapse-action": {
-		"message": "收起"
-	},
 	"app.settings.storage.symlink-label": {
 		"message": "软链接"
 	},
@@ -7444,12 +7441,6 @@
 	},
 	"app.project.install-button.no-compatible-version": {
 		"message": "当前实例没有兼容版本。"
-	},
-	"browse.selected-projects-floating-bar.show-projects": {
-		"message": "显示 {count, plural, other {# 个已选内容}}"
-	},
-	"browse.selected-projects-floating-bar.hide-projects": {
-		"message": "隐藏已选内容"
 	},
 	"app.settings.tabs.storage": {
 		"message": "存储"
@@ -7669,5 +7660,125 @@
 	},
 	"app.drop.batch.completed-text": {
 		"message": "已导入 {succeeded} / {total}（{failed} 失败，{skipped} 跳过）。"
+	},
+	"app.settings.resources.proxy-username-placeholder": {
+		"message": "用户名（可选）"
+	},
+	"app.settings.resources.proxy-username": {
+		"message": "用户名"
+	},
+	"app.settings.resources.proxy-url-placeholder": {
+		"message": "支持http、https或socks5，eg: socks5://localhost:1080"
+	},
+	"app.settings.resources.proxy-url": {
+		"message": "代理地址"
+	},
+	"app.settings.resources.proxy-url-required": {
+		"message": "代理地址不能为空"
+	},
+	"app.settings.resources.proxy-testing": {
+		"message": "测试中..."
+	},
+	"app.settings.resources.proxy-test-success-latency": {
+		"message": "连接成功（{latency} 毫秒）"
+	},
+	"app.settings.resources.proxy-test-success": {
+		"message": "连接成功"
+	},
+	"app.settings.resources.proxy-test-failed": {
+		"message": "连接失败"
+	},
+	"app.settings.resources.proxy-test": {
+		"message": "测试连接"
+	},
+	"app.settings.resources.proxy-settings-description": {
+		"message": "配置启动器连接互联网的方式。系统代理遵循操作系统设置。自定义代理允许指定代理地址及可选的认证信息。"
+	},
+	"app.settings.resources.proxy-settings": {
+		"message": "代理设置"
+	},
+	"app.settings.resources.proxy-password-placeholder": {
+		"message": "密码（可选）"
+	},
+	"app.settings.resources.proxy-password": {
+		"message": "密码"
+	},
+	"app.settings.resources.proxy-mode.system": {
+		"message": "使用系统代理"
+	},
+	"app.settings.resources.proxy-mode.none": {
+		"message": "不使用代理（直连）"
+	},
+	"app.settings.resources.proxy-mode.custom": {
+		"message": "自定义代理"
+	},
+	"app.settings.resources.proxy-mode": {
+		"message": "代理模式"
+	},
+	"app.java-arguments.presets.gc.auto.verified": {
+		"message": "上次启动: {chosen}"
+	},
+	"app.instance.icon-picker.icon.optifine": {
+		"message": "OptiFine"
+	},
+	"app.instance.icon-picker.icon.liteloader": {
+		"message": "LiteLoader"
+	},
+	"app.instance.icon-picker.icon.cleanroom": {
+		"message": "Cleanroom"
+	},
+	"app.gc-notice.fallback": {
+		"message": "Java 没有接受 {preferred}; 将使用 {chosen}."
+	},
+	"app.browse.project-type.favorites": {
+		"message": "收藏夹"
+	},
+	"app.content-favorites.add": {
+		"message": "添加到收藏夹"
+	},
+	"app.content-favorites.empty-description": {
+		"message": "收藏模组、资源包、数据包和光影包，之后随时安装。"
+	},
+	"app.content-favorites.empty-title": {
+		"message": "暂无收藏"
+	},
+	"app.content-favorites.loading": {
+		"message": "正在更新收藏夹…"
+	},
+	"app.content-favorites.no-matches-description": {
+		"message": "换个搜索词或内容类型试试。"
+	},
+	"app.content-favorites.no-matches-title": {
+		"message": "没有匹配的收藏"
+	},
+	"app.content-favorites.remove": {
+		"message": "从收藏夹移除"
+	},
+	"app.content-favorites.search": {
+		"message": "搜索收藏夹"
+	},
+	"app.content-favorites.sort.recently-saved": {
+		"message": "最近收藏"
+	},
+	"app.content-favorites.title": {
+		"message": "收藏夹"
+	},
+	"app.content-favorites.type.all": {
+		"message": "全部内容类型"
+	},
+	"app.content-favorites.unavailable-description": {
+		"message": "该项目当前暂时不可用。你可以从收藏夹中移除它。"
+	},
+	"app.content-favorites.unavailable-title": {
+		"message": "{provider} 项目 {projectId}"
+	},
+	"app.onboarding.action.click-favorites": {
+		"message": "点击收藏夹，继续"
+	},
+	"app.onboarding.favorites.description": {
+		"message": "打开收藏夹，回看保存的模组、资源包、数据包和光影包。启动器会刷新项目详情；随后你可以选择实例，并把不同来源的内容加入同一个安装购物车。"
+	},
+	"app.onboarding.favorites.title": {
+		"message": "留个清单"
 	}
 }

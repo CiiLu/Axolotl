@@ -296,6 +296,13 @@ async fn run_credentials(
     } else {
         crate::minecraft_skins::flush_pending_skin_change().await?;
     }
+    if memory.optimize_before_launch
+        && crate::api::memory::optimization_supported()
+    {
+        tracing::info!("Optimizing memory before launching Minecraft");
+        crate::api::memory::optimize().await?;
+    }
+
     if memory.automatic {
         let instance_path = state
             .directories
@@ -309,6 +316,9 @@ async fn run_credentials(
                     | crate::state::ModLoader::Fabric
                     | crate::state::ModLoader::Quilt
                     | crate::state::ModLoader::NeoForge
+                    | crate::state::ModLoader::Cleanroom
+                    | crate::state::ModLoader::LiteLoader
+                    | crate::state::ModLoader::LegacyFabric
             ),
         );
         tracing::info!(

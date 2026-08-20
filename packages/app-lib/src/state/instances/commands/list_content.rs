@@ -247,10 +247,9 @@ pub(crate) async fn get_instance_install_candidates(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|row| {
-            let loader = ModLoader::from_string(&row.loader);
+    rows.into_iter()
+        .map(|row| -> crate::Result<_> {
+            let loader = ModLoader::try_from_string(&row.loader)?;
             let compatible = instance_matches_targets(
                 project_type,
                 &row.game_version,
@@ -258,7 +257,7 @@ pub(crate) async fn get_instance_install_candidates(
                 targets,
             );
 
-            InstanceInstallCandidate {
+            Ok(InstanceInstallCandidate {
                 id: row.id,
                 name: row.name,
                 icon_path: row.icon_path,
@@ -266,9 +265,9 @@ pub(crate) async fn get_instance_install_candidates(
                 loader,
                 installed: row.installed != 0,
                 compatible,
-            }
+            })
         })
-        .collect())
+        .collect()
 }
 
 fn instance_matches_targets(

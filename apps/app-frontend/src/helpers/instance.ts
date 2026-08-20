@@ -393,6 +393,7 @@ export interface ResolvedContent {
 	project_id: string
 	version_id: string
 	dependent_on_version_id?: string | null
+	required?: boolean
 }
 
 export interface ResolveContentPlan {

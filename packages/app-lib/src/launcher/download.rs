@@ -614,17 +614,39 @@ pub(crate) fn local_native_library_path(
 ) -> crate::Result<PathBuf> {
     let artifact_path = match native.path.as_deref() {
         Some(path) => path.to_string(),
-        None => {
-            let artifact_path = d::get_path_from_artifact(&library.name)?;
-            if let Some((prefix, extension)) = artifact_path.rsplit_once('.') {
-                format!("{prefix}-{classifier}.{extension}")
-            } else {
-                format!("{artifact_path}-{classifier}")
-            }
-        }
+        None => classified_library_artifact_path(&library.name, classifier)?,
     };
 
     Ok(Path::new("libraries").join(artifact_path))
+}
+
+fn classified_library_artifact_path(
+    library_name: &str,
+    classifier: &str,
+) -> crate::Result<String> {
+    let artifact_path = d::get_path_from_artifact(library_name)?;
+    Ok(
+        if let Some((prefix, extension)) = artifact_path.rsplit_once('.') {
+            format!("{prefix}-{classifier}.{extension}")
+        } else {
+            format!("{artifact_path}-{classifier}")
+        },
+    )
+}
+
+fn library_native_classifier(
+    library: &Library,
+    java_arch: &str,
+) -> Option<String> {
+    let os = d::minecraft::Os::native_arch(java_arch);
+    let base_os = os.get_os();
+    library
+        .natives
+        .as_ref()
+        .and_then(|natives| natives.get(&os).or_else(|| natives.get(&base_os)))
+        .map(|classifier| {
+            classifier.replace("${arch}", crate::util::platform::ARCH_WIDTH)
+        })
 }
 
 pub(crate) fn local_client_path(game_version: &str) -> PathBuf {
@@ -822,13 +844,15 @@ fn missing_library_bytes(
             continue;
         }
 
-        if let Some((os_key, classifiers)) =
-            library.natives_os_key_and_classifiers(java_arch)
-        {
-            let parsed_key =
-                os_key.replace("${arch}", crate::util::platform::ARCH_WIDTH);
-
-            if let Some(native) = classifiers.get(&parsed_key) {
+        if library.natives.is_some() {
+            if let Some(classifier) =
+                library_native_classifier(library, java_arch)
+                && let Some(native) = library
+                    .downloads
+                    .as_ref()
+                    .and_then(|downloads| downloads.classifiers.as_ref())
+                    .and_then(|classifiers| classifiers.get(&classifier))
+            {
                 total += native.size as u64;
             }
         } else {
@@ -986,12 +1010,12 @@ pub async fn download_version_info(
             .err_into::<crate::Error>()
             .await
             .and_then(|ref it| Ok(serde_json::from_slice(it)?))?;
-        if normalize_version_info_libraries(
-            mod_loader,
-            &version.id,
-            &mut info,
-            "cache",
-        ) {
+        let normalized =
+            normalize_version_info(mod_loader, &version.id, &mut info, "cache");
+        let restored_legacy_arguments =
+            restore_legacy_minecraft_arguments(st, version, loader, &mut info)
+                .await?;
+        if normalized || restored_legacy_arguments {
             write_version_info(&path, serde_json::to_vec(&info)?).await?;
         }
         info
@@ -1127,12 +1151,7 @@ pub async fn download_version_info(
             info = d::modded::merge_partial_version(partial, info);
         }
 
-        normalize_version_info_libraries(
-            mod_loader,
-            &version.id,
-            &mut info,
-            "network",
-        );
+        normalize_version_info(mod_loader, &version.id, &mut info, "network");
 
         info.id.clone_from(&version_id);
 
@@ -1173,12 +1192,12 @@ pub async fn load_local_version_info(
 
     let bytes = io::read(&path).err_into::<crate::Error>().await?;
     let mut info: GameVersionInfo = serde_json::from_slice(&bytes)?;
-    if normalize_version_info_libraries(
-        mod_loader,
-        &version.id,
-        &mut info,
-        "cache",
-    ) {
+    let normalized =
+        normalize_version_info(mod_loader, &version.id, &mut info, "cache");
+    let restored_legacy_arguments =
+        restore_legacy_minecraft_arguments(st, version, loader, &mut info)
+            .await?;
+    if normalized || restored_legacy_arguments {
         write_version_info(&path, serde_json::to_vec(&info)?).await?;
     }
     Ok(info)
@@ -1192,7 +1211,61 @@ async fn write_version_info(path: &Path, data: Vec<u8>) -> crate::Result<()> {
     Ok(())
 }
 
-fn normalize_version_info_libraries(
+async fn restore_legacy_minecraft_arguments(
+    st: &State,
+    version: &GameVersion,
+    loader: Option<&LoaderVersion>,
+    version_info: &mut GameVersionInfo,
+) -> crate::Result<bool> {
+    if loader.is_none() || version_info.minecraft_arguments.is_some() {
+        return Ok(false);
+    }
+
+    let vanilla_path = st
+        .directories
+        .version_dir(&version.id)
+        .join(format!("{}.json", version.id));
+    if !vanilla_path.is_file() {
+        return Ok(false);
+    }
+
+    let bytes = match io::read(&vanilla_path).await {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            tracing::warn!(
+                minecraft_version = version.id,
+                path = %vanilla_path.display(),
+                error = %error,
+                "Failed to read vanilla version profile while restoring legacy game arguments"
+            );
+            return Ok(false);
+        }
+    };
+    let vanilla: GameVersionInfo = match serde_json::from_slice(&bytes) {
+        Ok(version_info) => version_info,
+        Err(error) => {
+            tracing::warn!(
+                minecraft_version = version.id,
+                path = %vanilla_path.display(),
+                error = %error,
+                "Failed to parse vanilla version profile while restoring legacy game arguments"
+            );
+            return Ok(false);
+        }
+    };
+    let Some(arguments) = vanilla.minecraft_arguments else {
+        return Ok(false);
+    };
+
+    version_info.minecraft_arguments = Some(arguments);
+    tracing::info!(
+        minecraft_version = version.id,
+        "Restored legacy Minecraft game arguments from the vanilla version profile"
+    );
+    Ok(true)
+}
+
+fn normalize_version_info(
     loader: ModLoader,
     game_version: &str,
     version_info: &mut GameVersionInfo,
@@ -1210,11 +1283,41 @@ fn normalize_version_info_libraries(
             game_version,
             removed_library,
             version_info_source,
-            "Removed obsolete Fabric intermediary library for unobfuscated Minecraft version"
+            "Removed loader-incompatible library from Minecraft version profile"
         );
     }
 
-    !removed.is_empty()
+    let mut changed = !removed.is_empty();
+    if version_info
+        .libraries
+        .iter()
+        .any(|library| is_liteloader_library(&library.name))
+        && version_info
+            .java_version
+            .as_ref()
+            .is_none_or(|java| java.major_version != 8)
+    {
+        version_info.java_version = Some(d::minecraft::JavaVersion {
+            component: "jre-legacy".to_string(),
+            major_version: 8,
+        });
+        tracing::info!(
+            loader = loader.as_meta_str(),
+            game_version,
+            version_info_source,
+            "Pinned LiteLoader version profile to Java 8"
+        );
+        changed = true;
+    }
+
+    changed
+}
+
+fn is_liteloader_library(name: &str) -> bool {
+    let mut coordinates = name.split(':');
+    coordinates.next() == Some("com.mumfrey")
+        && coordinates.next() == Some("liteloader")
+        && coordinates.next().is_some()
 }
 
 pub fn ensure_local_log_config(
@@ -1800,15 +1903,23 @@ pub async fn download_libraries(
                 return Ok(());
             }
 
-            // When a library has natives, we only need to download such natives, as PrismLauncher does
-            if let Some((os_key, classifiers)) =
-                library.natives_os_key_and_classifiers(java_arch)
-            {
-                let parsed_key = os_key
-                    .replace("${arch}", crate::util::platform::ARCH_WIDTH);
-
-                if let Some(native) = classifiers.get(&parsed_key) {
-                    let native_cache_path = st
+            if library.natives.is_some() {
+                let Some(classifier) =
+                    library_native_classifier(library, java_arch)
+                else {
+                    tracing::trace!(
+                        "Skipped native library without a classifier for this platform: {}",
+                        &library.name
+                    );
+                    return Ok(());
+                };
+                let native = library
+                    .downloads
+                    .as_ref()
+                    .and_then(|downloads| downloads.classifiers.as_ref())
+                    .and_then(|classifiers| classifiers.get(&classifier));
+                let native_archive_path = if let Some(native) = native {
+                    let path = st
                         .directories
                         .caches_dir()
                         .join("minecraft-natives")
@@ -1818,23 +1929,15 @@ pub async fn download_libraries(
                     )
                     .minecraft_version(version.to_string())
                     .file_path(library.name.clone())
-                    .target_path(
-                        st.directories
-                            .version_natives_dir(version)
-                            .display()
-                            .to_string(),
-                    )
+                    .target_path(path.display().to_string())
                     .build();
-                    let local_relative = local_native_library_path(
-                        library,
-                        native,
-                        &parsed_key,
-                    )?;
+                    let local_relative =
+                        local_native_library_path(library, native, &classifier)?;
                     let reused = download_or_reuse_local(
                         st,
                         local_source,
                         &local_relative,
-                        &native_cache_path,
+                        &path,
                         Some(&native.sha1),
                         Some(native.size as u64),
                         progress.as_ref(),
@@ -1846,7 +1949,7 @@ pub async fn download_libraries(
                                 &native.url,
                                 Some(&native.sha1),
                                 Some(native.size as u64),
-                                &native_cache_path,
+                                &path,
                                 ResourceClass::MinecraftLibrary,
                                 ContentValidation::Jar,
                                 force,
@@ -1859,29 +1962,96 @@ pub async fn download_libraries(
                     if reused {
                         tracing::trace!("Reused native {}", &library.name);
                     }
+                    path
+                } else {
+                    let artifact_path = classified_library_artifact_path(
+                        &library.name,
+                        &classifier,
+                    )?;
+                    let path =
+                        st.directories.libraries_dir().join(&artifact_path);
+                    let Some(urls) = legacy_library_download_urls(
+                        library.url.as_deref(),
+                        &artifact_path,
+                    ) else {
+                        return Err(crate::ErrorKind::LauncherError(format!(
+                            "No safe Maven repository is known for required native library {}",
+                            library.name
+                        ))
+                        .into());
+                    };
+                    let local_relative =
+                        Path::new("libraries").join(&artifact_path);
+                    let context = InstallErrorContext::new(
+                        "download loader native library",
+                    )
+                    .minecraft_version(version.to_string())
+                    .file_path(format!("{}:{classifier}", library.name))
+                    .urls(urls.clone())
+                    .target_path(path.display().to_string())
+                    .build();
+                    let reused = download_or_reuse_local(
+                        st,
+                        local_source,
+                        &local_relative,
+                        &path,
+                        None,
+                        None,
+                        progress.as_ref(),
+                        context.clone(),
+                        force,
+                        || {
+                            download_minecraft_file_with_candidates(
+                                st,
+                                &urls,
+                                None,
+                                None,
+                                &path,
+                                ResourceClass::Loader,
+                                ContentValidation::Jar,
+                                force,
+                                progress.clone(),
+                                context,
+                            )
+                        },
+                    )
+                    .await?;
+                    if reused {
+                        tracing::debug!(
+                            "Reused legacy native {} to path {:?}",
+                            &library.name,
+                            &path
+                        );
+                    } else {
+                        tracing::debug!(
+                            "Fetched legacy native {} to path {:?}",
+                            &library.name,
+                            &path
+                        );
+                    }
+                    path
+                };
 
-                    let native_target =
-                        st.directories.version_natives_dir(version);
-                    let library_name = library.name.clone();
-                    tokio::task::spawn_blocking(move || {
-                        let file = std::fs::File::open(&native_cache_path)?;
-                        let mut archive = zip::ZipArchive::new(file).map_err(
-                            |error| {
-                                crate::ErrorKind::LauncherError(format!(
-                                    "Failed to open native library archive {library_name}: {error}",
-                                ))
-                            },
-                        )?;
-                        archive.extract(native_target).map_err(|error| {
+                let native_target = st.directories.version_natives_dir(version);
+                let library_name = library.name.clone();
+                tokio::task::spawn_blocking(move || {
+                    let file = std::fs::File::open(&native_archive_path)?;
+                    let mut archive = zip::ZipArchive::new(file).map_err(
+                        |error| {
                             crate::ErrorKind::LauncherError(format!(
-                                "Failed to extract native library {library_name}: {error}",
+                                "Failed to open native library archive {library_name}: {error}",
                             ))
-                        })?;
-                        Ok::<_, crate::Error>(())
-                    })
-                    .await??;
-                    tracing::debug!("Fetched native {}", &library.name);
-                }
+                        },
+                    )?;
+                    archive.extract(native_target).map_err(|error| {
+                        crate::ErrorKind::LauncherError(format!(
+                            "Failed to extract native library {library_name}: {error}",
+                        ))
+                    })?;
+                    Ok::<_, crate::Error>(())
+                })
+                .await??;
+                tracing::debug!("Loaded native {}", &library.name);
             } else {
                 let artifact_path = d::get_path_from_artifact(&library.name)?;
                 let path = st.directories.libraries_dir().join(&artifact_path);
@@ -2141,6 +2311,51 @@ mod tests {
 
     fn urls(values: &[&str]) -> Option<Vec<String>> {
         Some(values.iter().map(|value| (*value).to_string()).collect())
+    }
+
+    #[test]
+    fn liteloader_library_detection_is_coordinate_specific() {
+        assert!(is_liteloader_library(
+            "com.mumfrey:liteloader:1.12.2-SNAPSHOT"
+        ));
+        assert!(!is_liteloader_library("example:liteloader:1.12.2-SNAPSHOT"));
+        assert!(!is_liteloader_library("com.mumfrey:other:1.0"));
+        assert!(!is_liteloader_library("com.mumfrey:liteloader"));
+    }
+
+    #[test]
+    fn legacy_native_library_uses_platform_classifier_without_downloads_block()
+    {
+        let library: Library = serde_json::from_value(serde_json::json!({
+            "name": "org.lwjgl.lwjgl:lwjgl-platform:2.9.4+legacyfabric.17",
+            "url": "https://maven.legacyfabric.net/",
+            "natives": {
+                "linux": "natives-linux",
+                "osx": "natives-osx",
+                "windows": "natives-windows"
+            }
+        }))
+        .unwrap();
+
+        assert!(library.natives_os_key_and_classifiers("x86_64").is_none());
+        let classifier = library_native_classifier(&library, "x86_64").unwrap();
+        let artifact_path =
+            classified_library_artifact_path(&library.name, &classifier)
+                .unwrap();
+        assert_eq!(
+            artifact_path,
+            format!(
+                "org/lwjgl/lwjgl/lwjgl-platform/2.9.4+legacyfabric.17/lwjgl-platform-2.9.4+legacyfabric.17-{classifier}.jar"
+            )
+        );
+        assert_eq!(
+            legacy_library_download_urls(
+                library.url.as_deref(),
+                &artifact_path,
+            )
+            .unwrap()[0],
+            format!("https://maven.legacyfabric.net/{artifact_path}")
+        );
     }
 
     #[tokio::test]

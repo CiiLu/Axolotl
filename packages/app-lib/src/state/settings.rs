@@ -343,6 +343,11 @@ impl Settings {
             memory: MemorySettings {
                 maximum: res.mc_memory_max as u32,
                 automatic: res.mc_memory_auto == 1,
+                optimize_before_launch: sqlx::query_scalar(
+                    "SELECT mc_memory_optimize FROM settings WHERE id = 0",
+                )
+                .fetch_one(exec)
+                .await?,
             },
             force_fullscreen: res.mc_force_fullscreen == 1,
             game_resolution: WindowSize(
@@ -567,6 +572,10 @@ impl Settings {
         .bind(self.bypass_curseforge_download_restrictions)
         .execute(exec)
         .await?;
+        sqlx::query("UPDATE settings SET mc_memory_optimize = ? WHERE id = 0")
+            .bind(self.memory.optimize_before_launch)
+            .execute(exec)
+            .await?;
 
         Ok(())
     }
@@ -846,6 +855,8 @@ pub struct MemorySettings {
     pub maximum: u32,
     #[serde(default = "default_true")]
     pub automatic: bool,
+    #[serde(default)]
+    pub optimize_before_launch: bool,
 }
 
 /// Game window size
@@ -1055,6 +1066,25 @@ mod tests {
 
         let reloaded = Settings::get(&pool).await.unwrap();
         assert!(!reloaded.bypass_curseforge_download_restrictions);
+    }
+
+    #[tokio::test]
+    async fn memory_optimization_round_trips_in_a_fresh_database() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+
+        let mut settings = Settings::get(&pool).await.unwrap();
+        assert!(!settings.memory.optimize_before_launch);
+
+        settings.memory.optimize_before_launch = true;
+        settings.update(&pool).await.unwrap();
+
+        let reloaded = Settings::get(&pool).await.unwrap();
+        assert!(reloaded.memory.optimize_before_launch);
     }
 
     #[tokio::test]

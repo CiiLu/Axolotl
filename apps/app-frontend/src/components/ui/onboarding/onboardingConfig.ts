@@ -75,6 +75,19 @@ export const onboardingMessages = defineMessages({
 		defaultMessage:
 			'Use types, search, and filters to narrow things down. Project pages keep versions, changelogs, galleries, and install options in one place.',
 	},
+	favoritesTitle: {
+		id: 'app.onboarding.favorites.title',
+		defaultMessage: 'Keep a short list',
+	},
+	favoritesDescription: {
+		id: 'app.onboarding.favorites.description',
+		defaultMessage:
+			'Open Favorites to revisit saved mods, resource packs, data packs, and shaders. The launcher refreshes their project details, then you can choose an instance and add mixed sources to the same install cart.',
+	},
+	clickFavorites: {
+		id: 'app.onboarding.action.click-favorites',
+		defaultMessage: 'Click Favorites to continue',
+	},
 	homeLayoutTitle: {
 		id: 'app.onboarding.home-layout.title',
 		defaultMessage: 'Change the amount of detail',
@@ -506,6 +519,22 @@ export const onboardingTours: Record<OnboardingMode, OnboardingStep[]> = {
 			'browse-content',
 			onboardingMessages.browseTitle,
 			onboardingMessages.browseDescription,
+		),
+		step(
+			'discover-favorites-navigation',
+			'navigate',
+			copy(
+				onboardingMessages.favoritesTitle,
+				onboardingMessages.favoritesDescription,
+				onboardingMessages.clickFavorites,
+			),
+			control('browse-favorites-tab', '/browse/favorites'),
+		),
+		inspect(
+			'discover-favorites-content',
+			'browse-favorites-content',
+			onboardingMessages.favoritesTitle,
+			onboardingMessages.favoritesDescription,
 		),
 		step(
 			'skins-navigation',

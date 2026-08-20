@@ -175,6 +175,22 @@ export const builtInInstanceIcons: BuiltInInstanceIcon[] = [
 		url: new URL('../assets/instance-icons/Fabric.png', import.meta.url).href,
 	},
 	{
+		id: 'cleanroom',
+		name: defineMessage({
+			id: 'app.instance.icon-picker.icon.cleanroom',
+			defaultMessage: 'Cleanroom',
+		}),
+		url: new URL('../assets/instance-icons/Cleanroom.png', import.meta.url).href,
+	},
+	{
+		id: 'liteloader',
+		name: defineMessage({
+			id: 'app.instance.icon-picker.icon.liteloader',
+			defaultMessage: 'LiteLoader',
+		}),
+		url: new URL('../assets/instance-icons/LiteLoader.png', import.meta.url).href,
+	},
+	{
 		id: 'neoforge',
 		name: defineMessage({
 			id: 'app.instance.icon-picker.icon.neoforge',
@@ -189,6 +205,14 @@ export const builtInInstanceIcons: BuiltInInstanceIcon[] = [
 			defaultMessage: 'Quilt',
 		}),
 		url: new URL('../assets/instance-icons/Quilt.png', import.meta.url).href,
+	},
+	{
+		id: 'optifine',
+		name: defineMessage({
+			id: 'app.instance.icon-picker.icon.optifine',
+			defaultMessage: 'OptiFine',
+		}),
+		url: new URL('../assets/instance-icons/OptiFine.png', import.meta.url).href,
 	},
 ]
 
@@ -372,6 +396,10 @@ const loaderIconIds: Record<string, string> = {
 	forge: 'anvil',
 	neoforge: 'neoforge',
 	quilt: 'quilt',
+	optifine: 'optifine',
+	cleanroom: 'cleanroom',
+	lite_loader: 'liteloader',
+	legacy_fabric: 'fabric',
 }
 
 export interface DisplayInstanceIcon {

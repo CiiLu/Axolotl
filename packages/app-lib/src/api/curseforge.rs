@@ -1003,6 +1003,13 @@ pub async fn get_project(project_id: u32) -> crate::Result<CurseForgeProject> {
 pub async fn get_projects(
     project_ids: Vec<u32>,
 ) -> crate::Result<Vec<CurseForgeProject>> {
+    get_projects_with_cache_behaviour(project_ids, None).await
+}
+
+pub async fn get_projects_with_cache_behaviour(
+    project_ids: Vec<u32>,
+    cache_behaviour: Option<CacheBehaviour>,
+) -> crate::Result<Vec<CurseForgeProject>> {
     let project_ids = project_ids
         .into_iter()
         .map(CurseForgeProjectId::new)
@@ -1010,7 +1017,7 @@ pub async fn get_projects(
     let state = State::get().await?;
     CachedEntry::get_curseforge_project_many(
         &project_ids,
-        None,
+        cache_behaviour,
         &state.pool,
         &state.api_semaphore,
     )
@@ -1423,6 +1430,8 @@ pub struct CurseForgeModrinthFallbackPreview {
     pub parent_project_id: u32,
     #[serde(default)]
     pub icon_url: Option<String>,
+    #[serde(default = "default_true")]
+    pub required: bool,
 }
 
 async fn install_file_with_metrics(
@@ -1493,10 +1502,6 @@ async fn install_file_with_metrics(
         {
             for dependency_ref in &file.dependencies {
                 match dependency_ref.relation_type {
-                    DEPENDENCY_RELATION_OPTIONAL
-                    | DEPENDENCY_RELATION_INCLUDE => {
-                        result.optional_dependencies.push(dependency_ref.mod_id)
-                    }
                     DEPENDENCY_RELATION_EMBEDDED | DEPENDENCY_RELATION_TOOL => {
                         result.skipped_dependencies.push(
                             CurseForgeSkippedDependency {
@@ -1514,7 +1519,9 @@ async fn install_file_with_metrics(
                     DEPENDENCY_RELATION_INCOMPATIBLE => result
                         .incompatible_dependencies
                         .push(dependency_ref.mod_id),
-                    DEPENDENCY_RELATION_REQUIRED => {
+                    DEPENDENCY_RELATION_OPTIONAL
+                    | DEPENDENCY_RELATION_INCLUDE
+                    | DEPENDENCY_RELATION_REQUIRED => {
                         let dependency_project_id = if request.mod_loader_type
                             == Some(CURSEFORGE_LOADER_QUILT)
                             && dependency_ref.mod_id
@@ -1595,11 +1602,11 @@ async fn install_file_with_metrics(
                                 parent_file_id: Some(file_id),
                                 dependency_kind: Some(
                                     if dependency_ref.relation_type
-                                        == DEPENDENCY_RELATION_INCLUDE
+                                        == DEPENDENCY_RELATION_REQUIRED
                                     {
-                                        crate::state::instances::ContentDependencyKind::Include
-                                    } else {
                                         crate::state::instances::ContentDependencyKind::Required
+                                    } else {
+                                        crate::state::instances::ContentDependencyKind::Include
                                     },
                                 ),
                                 depth: pending_file.depth + 1,
@@ -1861,7 +1868,44 @@ async fn install_file_from_resolution_plan(
     let known_refs = std::iter::once(plan.primary.clone())
         .chain(plan.nodes.iter().map(|node| node.content.clone()))
         .collect::<HashSet<_>>();
-    let mut pending = plan.nodes.clone();
+    let excluded_project_ids = request
+        .excluded_dependency_project_ids
+        .iter()
+        .copied()
+        .collect::<HashSet<_>>();
+    let mut pending = Vec::new();
+    for node in plan.nodes.clone() {
+        let excluded = match &node.content {
+            ContentProviderRef::CurseForge { project_id, .. } => {
+                excluded_project_ids.contains(&project_id.get())
+            }
+            ContentProviderRef::Modrinth { .. } => node
+                .parent
+                .as_ref()
+                .and_then(curseforge_project_id)
+                .is_some_and(|project_id| {
+                    excluded_project_ids.contains(&project_id)
+                }),
+        };
+        if excluded {
+            result
+                .skipped_dependencies
+                .push(CurseForgeSkippedDependency {
+                    project_id: curseforge_project_id(&node.content)
+                        .or_else(|| {
+                            node.parent.as_ref().and_then(curseforge_project_id)
+                        })
+                        .unwrap_or_default(),
+                    file_id: curseforge_file_id(&node.content).or_else(|| {
+                        node.parent.as_ref().and_then(curseforge_file_id)
+                    }),
+                    reason: "excluded_by_user".to_string(),
+                });
+            failed.insert(node.content);
+        } else {
+            pending.push(node);
+        }
+    }
     while !pending.is_empty() {
         let mut progressed = false;
         let mut index = 0;
@@ -2180,6 +2224,7 @@ async fn install_fixed_modrinth_content(
             project_id: project_id.to_string(),
             version_id: version_id.to_string(),
             dependent_on_version_id: None,
+            required: true,
         },
         state,
     )
@@ -2560,6 +2605,8 @@ pub struct CurseForgePreviewItem {
     pub version_mismatch: bool,
     #[serde(default)]
     pub selection_reason: Option<CurseForgeDependencySelectionReason>,
+    #[serde(default = "default_true")]
+    pub required: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -2658,10 +2705,6 @@ pub async fn preview_install_file(
                     dependency_ref.mod_id
                 };
                 match dependency_ref.relation_type {
-                    DEPENDENCY_RELATION_OPTIONAL
-                    | DEPENDENCY_RELATION_INCLUDE => {
-                        optional.push(dependency_ref.mod_id)
-                    }
                     DEPENDENCY_RELATION_INCOMPATIBLE => {
                         incompatible.push(dependency_ref.mod_id)
                     }
@@ -2678,7 +2721,9 @@ pub async fn preview_install_file(
                             },
                         })
                     }
-                    DEPENDENCY_RELATION_REQUIRED => {
+                    DEPENDENCY_RELATION_OPTIONAL
+                    | DEPENDENCY_RELATION_INCLUDE
+                    | DEPENDENCY_RELATION_REQUIRED => {
                         if request
                             .excluded_dependency_project_ids
                             .contains(&dependency_project_id)
@@ -2813,7 +2858,13 @@ pub async fn preview_install_file(
                         plan.edges.push(DependencyResolutionEdge {
 							parent: parent_ref.clone(),
 							child: child_ref.clone(),
-							relation: crate::state::instances::ContentDependencyKind::Required,
+							relation: if dependency_ref.relation_type
+								== DEPENDENCY_RELATION_REQUIRED
+							{
+								crate::state::instances::ContentDependencyKind::Required
+							} else {
+								crate::state::instances::ContentDependencyKind::Include
+							},
 							evidence_provider: ContentProvider::CurseForge,
 						});
                         if !plan
@@ -2824,7 +2875,13 @@ pub async fn preview_install_file(
                             plan.nodes.push(DependencyResolutionNode {
 								content: child_ref,
 								parent: Some(parent_ref),
-								relation: crate::state::instances::ContentDependencyKind::Required,
+							relation: if dependency_ref.relation_type
+								== DEPENDENCY_RELATION_REQUIRED
+							{
+								crate::state::instances::ContentDependencyKind::Required
+							} else {
+								crate::state::instances::ContentDependencyKind::Include
+							},
 								source: ContentProvider::CurseForge,
 								selection_reason: selected.reason.into(),
 								expected_sha1: curseforge_file_sha1(&dependency_file),
@@ -2835,6 +2892,8 @@ pub async fn preview_install_file(
                             item.project_id == dependency_project_id
                         });
                         if let Some(existing) = existing {
+                            existing.required |= dependency_ref.relation_type
+                                == DEPENDENCY_RELATION_REQUIRED;
                             if !existing
                                 .required_by_project_ids
                                 .contains(&project_id)
@@ -2861,6 +2920,8 @@ pub async fn preview_install_file(
                                 .map(|logo| logo.thumbnail_url.clone()),
                             version_mismatch: false,
                             selection_reason: Some(selected.reason),
+                            required: dependency_ref.relation_type
+                                == DEPENDENCY_RELATION_REQUIRED,
                         });
                         let mut ancestors = pending_file.ancestors.clone();
                         ancestors.insert((project_id, file_id));
@@ -2931,6 +2992,7 @@ pub async fn preview_install_file(
                 .map(|logo| logo.thumbnail_url.clone()),
             version_mismatch: false,
             selection_reason: None,
+            required: true,
         },
         dependencies,
         modrinth_fallbacks,
@@ -4301,6 +4363,10 @@ pub(crate) async fn update_managed_modpack_with_reporter(
         .or_else(|| {
             Some(metadata.applied_content_set.loader.as_str().to_string())
         });
+    let content_set_loader = loader
+        .as_deref()
+        .map(crate::data::ModLoader::try_from_string)
+        .transpose()?;
     let installed_releases = members
         .iter()
         .filter(|member| {
@@ -4468,9 +4534,7 @@ pub(crate) async fn update_managed_modpack_with_reporter(
                 source_kind: Some(ContentSourceKind::CurseForge),
                 game_version: Some(game_version),
                 protocol_version: Some(None),
-                loader: loader
-                    .as_deref()
-                    .map(crate::data::ModLoader::from_string),
+                loader: content_set_loader,
                 loader_version: Some(None),
             }),
             ..EditInstance::default()
@@ -4824,7 +4888,18 @@ fn modpack_target(
     };
 
     let family = loader_family(&manifest_loader.id);
+    let manifest_loader_version = manifest_loader
+        .id
+        .strip_prefix(family)
+        .and_then(|version| version.strip_prefix('-'))
+        .filter(|version| !version.is_empty());
+    let disguised_cleanroom = family == "forge"
+        && manifest.minecraft.version == "1.12.2"
+        && manifest_loader_version
+            .is_some_and(|version| version.starts_with("0."));
     let loader = match family {
+        "cleanroom" => ModLoader::Cleanroom,
+        "forge" if disguised_cleanroom => ModLoader::Cleanroom,
         "forge" => ModLoader::Forge,
         "fabric" => ModLoader::Fabric,
         "quilt" => ModLoader::Quilt,
@@ -4837,11 +4912,8 @@ fn modpack_target(
             .into());
         }
     };
-    let loader_version = manifest_loader
-        .id
-        .strip_prefix(family)
-        .and_then(|version| version.strip_prefix('-'))
-        .filter(|version| !version.is_empty())
+    let loader_version = manifest_loader_version
+        .filter(|version| !disguised_cleanroom || version.starts_with("0."))
         .map(str::to_string);
 
     Ok(CurseForgeModpackTarget {
@@ -4880,7 +4952,7 @@ pub(crate) fn loader_family(loader_id: &str) -> &str {
 
 fn loader_type(loader: &str) -> Option<u32> {
     match loader {
-        "forge" => Some(1),
+        "forge" | "cleanroom" => Some(1),
         "fabric" => Some(4),
         "quilt" => Some(5),
         "neoforge" => Some(6),
@@ -6799,6 +6871,7 @@ async fn preview_modrinth_fallbacks(
             version_number: version.version_number,
             parent_project_id,
             icon_url: project.and_then(|project| project.icon_url),
+            required: dependency.required,
         });
     }
     Ok(preview)
@@ -10631,6 +10704,7 @@ mod tests {
     fn curseforge_loader_ids_map_to_instance_loaders() {
         assert_eq!(loader_family("forge-47.4.0"), "forge");
         assert_eq!(loader_family("fabric-0.16.10"), "fabric");
+        assert_eq!(loader_type("cleanroom"), Some(1));
         assert_eq!(loader_type("neoforge"), Some(6));
     }
 
@@ -10656,6 +10730,32 @@ mod tests {
                 game_version: "1.12.2".to_string(),
                 loader: ModLoader::Forge,
                 loader_version: Some("14.23.5.2860".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn modpack_target_recognizes_pcl_cleanroom_version_convention() {
+        let manifest = CurseForgeModpackManifest {
+            minecraft: CurseForgeManifestMinecraft {
+                version: "1.12.2".to_string(),
+                mod_loaders: vec![CurseForgeManifestLoader {
+                    id: "forge-0.3.0-alpha".to_string(),
+                    primary: true,
+                }],
+            },
+            files: Vec::new(),
+            overrides: "overrides".to_string(),
+            name: None,
+            version: None,
+        };
+
+        assert_eq!(
+            modpack_target(&manifest).unwrap(),
+            CurseForgeModpackTarget {
+                game_version: "1.12.2".to_string(),
+                loader: ModLoader::Cleanroom,
+                loader_version: Some("0.3.0-alpha".to_string()),
             }
         );
     }

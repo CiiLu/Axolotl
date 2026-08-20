@@ -64,6 +64,7 @@ pub async fn resolve_content<P: ContentMetadataProvider>(
         project_id: primary_version.project_id.clone(),
         version_id: primary_version.id.clone(),
         dependent_on_version_id: None,
+        required: true,
     };
     let mut resolver = InstallResolver::new(provider, &request);
     resolver
@@ -191,7 +192,7 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
             {
                 if !matches!(
                     original_dependency.dependency_type,
-                    DependencyType::Required
+                    DependencyType::Required | DependencyType::Optional
                 ) {
                     continue;
                 }
@@ -223,6 +224,10 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
                     .project_id
                     .clone()
                     .unwrap_or_else(|| dependency_version.project_id.clone());
+                let required = matches!(
+                    dependency.dependency_type,
+                    DependencyType::Required
+                );
 
                 if self.excluded_project_ids.contains(&project_id) {
                     self.skipped.push(SkippedContent {
@@ -247,6 +252,15 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
                 if let Some(planned_version_id) =
                     self.planned_project_versions.get(&project_id)
                 {
+                    if required {
+                        if let Some(existing) = self
+                            .dependencies
+                            .iter_mut()
+                            .find(|existing| existing.project_id == project_id)
+                        {
+                            existing.required = true;
+                        }
+                    }
                     let reason = if planned_version_id.is_empty()
                         || planned_version_id == &dependency_version.id
                     {
@@ -270,6 +284,7 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
                     project_id,
                     version_id: dependency_version.id.clone(),
                     dependent_on_version_id: Some(version.id.clone()),
+                    required,
                 });
                 stack.push((dependency_version, depth + 1));
             }

@@ -120,6 +120,7 @@
 		"process:default",
 		"cache:default",
 		"content-search:default",
+		"content-favorites:default",
 		"curseforge:default",
 		"datapacks:default",
 		"files:default",

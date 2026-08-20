@@ -19,7 +19,8 @@ use crate::api::pack::install_mrpack::{
 use crate::event::InstancePayloadType;
 use crate::event::emit::emit_instance;
 use crate::state::{
-    ContentProviderRef, InstanceInstallStage, InstanceLink, ModLoader, State,
+    ContentProviderRef, InstanceInstallStage, InstanceLink, LoaderComponent,
+    LoaderComponentKind, LoaderComponentRole, ModLoader, State,
 };
 use crate::util::fetch::DownloadReason;
 use std::collections::HashSet;
@@ -39,11 +40,33 @@ pub async fn create_instance(
     icon_path: Option<String>,
     link: InstanceLink,
 ) -> crate::Result<InstallJobSnapshot> {
+    create_instance_with_adjuncts(
+        name,
+        game_version,
+        loader,
+        loader_version,
+        Vec::new(),
+        icon_path,
+        link,
+    )
+    .await
+}
+
+pub async fn create_instance_with_adjuncts(
+    name: String,
+    game_version: String,
+    loader: ModLoader,
+    loader_version: Option<String>,
+    adjuncts: Vec<crate::state::LoaderComponent>,
+    icon_path: Option<String>,
+    link: InstanceLink,
+) -> crate::Result<InstallJobSnapshot> {
     start(InstallRequest::CreateInstance {
         name,
         game_version,
         loader,
         loader_version,
+        adjuncts,
         icon_path,
         link,
     })
@@ -662,6 +685,7 @@ async fn prepare_initial_instance(
             mut game_version,
             mut loader,
             mut loader_version,
+            mut adjuncts,
             icon_path,
             link,
         } => {
@@ -687,15 +711,33 @@ async fn prepare_initial_instance(
                 game_version = target.game_version;
                 loader = target.loader;
                 loader_version = target.loader_version;
+                adjuncts.clear();
                 job_state.request = InstallRequest::CreateInstance {
                     name: name.clone(),
                     game_version: game_version.clone(),
                     loader,
                     loader_version: loader_version.clone(),
+                    adjuncts: Vec::new(),
                     icon_path: icon_path.clone(),
                     link: link.clone(),
                 };
             }
+            resolve_required_adjuncts(
+                &game_version,
+                loader,
+                &mut adjuncts,
+                state,
+            )
+            .await?;
+            job_state.request = InstallRequest::CreateInstance {
+                name: name.clone(),
+                game_version: game_version.clone(),
+                loader,
+                loader_version: loader_version.clone(),
+                adjuncts: adjuncts.clone(),
+                icon_path: icon_path.clone(),
+                link: link.clone(),
+            };
             let metadata = crate::api::instance::create(
                 name,
                 game_version,
@@ -706,6 +748,21 @@ async fn prepare_initial_instance(
                 None,
             )
             .await?;
+            if !adjuncts.is_empty() {
+                let mut components = metadata.loader_components.clone();
+                for adjunct in &mut adjuncts {
+                    adjunct.instance_id = metadata.instance.id.clone();
+                    adjunct.role = crate::state::LoaderComponentRole::Adjunct;
+                }
+                components.extend(adjuncts);
+                validate_loader_components(&components)?;
+                crate::state::instances::commands::replace_instance_loader_components(
+					&metadata.instance.id,
+					&components,
+					&state.pool,
+				)
+				.await?;
+            }
             set_display(
                 job_state,
                 metadata.instance.name,
@@ -1165,6 +1222,7 @@ async fn run_request(
             game_version,
             loader,
             loader_version: _,
+            adjuncts,
             icon_path: _,
             link,
         } => {
@@ -1230,7 +1288,7 @@ async fn run_request(
                     InstallPhaseId::DownloadingMinecraft,
                     None,
                     InstallPhaseDetails::Minecraft {
-                        game_version,
+                        game_version: game_version.clone(),
                         loader,
                     },
                 )
@@ -1247,8 +1305,17 @@ async fn run_request(
             crate::launcher::install_minecraft_with_reporter(
                 &context,
                 false,
-                Some(reporter),
+                Some(reporter.clone()),
                 crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
+            )
+            .await?;
+            install_adjunct_components(
+                state,
+                &instance_id,
+                &adjuncts,
+                &game_version,
+                loader,
+                reporter.cancellation_token(),
             )
             .await?;
             Ok(InstallExecutionOutcome::Completed(Some(instance_id)))
@@ -2551,6 +2618,480 @@ fn current_instance_id(job_state: &InstallJobState) -> Option<String> {
     }
 }
 
+pub(crate) const OPTIFABRIC_CURSEFORGE_PROJECT_ID: u32 = 322_385;
+
+async fn resolve_required_adjuncts(
+    game_version: &str,
+    loader: ModLoader,
+    adjuncts: &mut Vec<LoaderComponent>,
+    _state: &State,
+) -> crate::Result<()> {
+    for adjunct in adjuncts.iter() {
+        match adjunct.kind {
+            LoaderComponentKind::OptiFine
+                if !matches!(
+                    loader,
+                    ModLoader::Forge
+                        | ModLoader::NeoForge
+                        | ModLoader::Fabric
+                        | ModLoader::LegacyFabric
+                ) =>
+            {
+                return Err(ErrorKind::InputError(format!(
+                    "OptiFine is not supported with {}",
+                    loader.as_str()
+                ))
+                .into());
+            }
+            LoaderComponentKind::LiteLoader if loader != ModLoader::Forge => {
+                return Err(ErrorKind::InputError(format!(
+                    "LiteLoader is not supported with {}",
+                    loader.as_str()
+                ))
+                .into());
+            }
+            _ => {}
+        }
+    }
+    for adjunct in adjuncts.iter_mut() {
+        adjunct.role = LoaderComponentRole::Adjunct;
+        adjunct.instance_id.clear();
+        match adjunct.kind {
+            LoaderComponentKind::OptiFine => {
+                let resolved =
+					crate::launcher::optifine::resolve_loader_version(
+						game_version,
+						adjunct.version.as_deref(),
+					)
+					.await?
+					.ok_or_else(|| {
+						ErrorKind::InputError(format!(
+							"No OptiFine version supports Minecraft {game_version}"
+						))
+					})?;
+                adjunct.version = Some(resolved.id);
+            }
+            LoaderComponentKind::LiteLoader => {
+                let resolved =
+					crate::launcher::get_loader_version_from_profile(
+						game_version,
+						ModLoader::LiteLoader,
+						adjunct.version.as_deref(),
+					)
+					.await?
+					.ok_or_else(|| {
+						ErrorKind::InputError(format!(
+							"No LiteLoader version supports Minecraft {game_version}"
+						))
+					})?;
+                adjunct.version = Some(resolved.id);
+            }
+            _ => {}
+        }
+    }
+    if adjuncts
+        .iter()
+        .any(|component| component.kind == LoaderComponentKind::OptiFine)
+        && matches!(loader, ModLoader::Fabric | ModLoader::LegacyFabric)
+        && !adjuncts
+            .iter()
+            .any(|component| component.kind == LoaderComponentKind::OptiFabric)
+    {
+        let version_id = resolve_optifabric_version(game_version).await?;
+        adjuncts.push(LoaderComponent {
+            instance_id: String::new(),
+            kind: LoaderComponentKind::OptiFabric,
+            version: Some(version_id),
+            role: LoaderComponentRole::Adjunct,
+            provider_metadata: Some(serde_json::json!({
+                "projectId": OPTIFABRIC_CURSEFORGE_PROJECT_ID,
+                "provider": "curseforge"
+            })),
+        });
+    }
+    let mut components =
+        vec![LoaderComponent::new_primary(String::new(), loader, None)];
+    components.extend(adjuncts.iter().cloned());
+    validate_loader_components(&components)
+}
+
+pub(crate) fn validate_loader_components(
+    components: &[LoaderComponent],
+) -> crate::Result<()> {
+    let primary = components
+        .iter()
+        .find(|component| component.role == LoaderComponentRole::Primary)
+        .ok_or_else(|| {
+            ErrorKind::InputError(
+                "Loader selection has no primary loader".to_string(),
+            )
+        })?;
+    let has = |kind| {
+        components.iter().any(|component| {
+            component.role == LoaderComponentRole::Adjunct
+                && component.kind == kind
+        })
+    };
+    if has(LoaderComponentKind::OptiFine) {
+        match primary.kind {
+            LoaderComponentKind::Vanilla => {}
+            LoaderComponentKind::Forge | LoaderComponentKind::NeoForge => {}
+            LoaderComponentKind::Fabric | LoaderComponentKind::LegacyFabric
+                if has(LoaderComponentKind::OptiFabric) => {}
+            _ => {
+                return Err(ErrorKind::InputError(format!(
+                    "OptiFine is not supported with {}",
+                    primary.kind.as_str()
+                ))
+                .into());
+            }
+        }
+    }
+    if has(LoaderComponentKind::OptiFabric)
+        && !has(LoaderComponentKind::OptiFine)
+    {
+        return Err(ErrorKind::InputError(
+            "OptiFabric can only be installed with OptiFine".to_string(),
+        )
+        .into());
+    }
+    if has(LoaderComponentKind::OptiFabric)
+        && !matches!(
+            primary.kind,
+            LoaderComponentKind::Fabric | LoaderComponentKind::LegacyFabric
+        )
+    {
+        return Err(ErrorKind::InputError(format!(
+            "OptiFabric is not supported with {}",
+            primary.kind.as_str()
+        ))
+        .into());
+    }
+    if has(LoaderComponentKind::LiteLoader)
+        && !matches!(
+            primary.kind,
+            LoaderComponentKind::Vanilla | LoaderComponentKind::Forge
+        )
+    {
+        return Err(ErrorKind::InputError(format!(
+            "LiteLoader is not supported with {}",
+            primary.kind.as_str()
+        ))
+        .into());
+    }
+    if components.iter().any(|component| {
+        component.role == LoaderComponentRole::Adjunct
+            && !matches!(
+                component.kind,
+                LoaderComponentKind::OptiFine
+                    | LoaderComponentKind::LiteLoader
+                    | LoaderComponentKind::OptiFabric
+            )
+    }) {
+        return Err(ErrorKind::InputError(
+            "Only OptiFine, LiteLoader, and OptiFabric can be adjunct loaders"
+                .to_string(),
+        )
+        .into());
+    }
+    Ok(())
+}
+
+pub(crate) async fn resolve_optifabric_version(
+    game_version: &str,
+) -> crate::Result<String> {
+    let files = crate::api::curseforge::get_files(
+        OPTIFABRIC_CURSEFORGE_PROJECT_ID,
+        crate::api::curseforge::CurseForgeFilesRequest {
+            game_version: None,
+            mod_loader_type: None,
+            game_version_type_id: None,
+            index: 0,
+            page_size: 50,
+        },
+    )
+    .await?
+    .files;
+    select_optifabric_file_id(&files, game_version)
+        .map(|file_id| file_id.to_string())
+        .ok_or_else(|| {
+            ErrorKind::InputError(format!(
+                "OptiFine requires OptiFabric, but no OptiFabric version supports Minecraft {game_version}"
+            ))
+            .into()
+        })
+}
+
+fn select_optifabric_file_id(
+    files: &[crate::api::curseforge::CurseForgeFile],
+    game_version: &str,
+) -> Option<u32> {
+    files
+        .iter()
+        .find(|file| {
+            file.is_available
+                && file
+                    .game_versions
+                    .iter()
+                    .any(|version| version == game_version)
+        })
+        .map(|file| file.id)
+}
+
+pub(crate) async fn install_optifabric_file(
+    instance_id: &str,
+    game_version: &str,
+    version: &str,
+) -> crate::Result<String> {
+    let file_id = version.parse::<u32>().map_err(|_| {
+        ErrorKind::InputError(
+            "OptiFabric CurseForge file ID is invalid".to_string(),
+        )
+    })?;
+    let file = crate::api::curseforge::get_file(
+        OPTIFABRIC_CURSEFORGE_PROJECT_ID,
+        file_id,
+    )
+    .await?;
+    if file.mod_id != OPTIFABRIC_CURSEFORGE_PROJECT_ID
+        || !file.is_available
+        || !file
+            .game_versions
+            .iter()
+            .any(|version| version == game_version)
+    {
+        return Err(ErrorKind::InputError(format!(
+            "OptiFabric file {file_id} does not support Minecraft {game_version}"
+        ))
+        .into());
+    }
+
+    let result = crate::api::curseforge::install_file(
+        crate::api::curseforge::CurseForgeInstallRequest {
+            instance_id: instance_id.to_string(),
+            project_id: OPTIFABRIC_CURSEFORGE_PROJECT_ID,
+            file_id,
+            project_type: "mod".to_string(),
+            ownership_kind: crate::state::instances::ContentOwnershipKind::UserAdded,
+            manual_operation_kind:
+                crate::state::instances::ManualDownloadOperationKind::ContentInstall,
+            game_version: Some(game_version.to_string()),
+            mod_loader_type: Some(4),
+            world_name: None,
+            install_dependencies: false,
+            excluded_dependency_project_ids: Vec::new(),
+            dependency_plan_id: None,
+        },
+    )
+    .await?;
+    if !result.manual_downloads.is_empty() {
+        return Err(ErrorKind::InputError(
+            "OptiFabric requires a manual CurseForge download".to_string(),
+        )
+        .into());
+    }
+    if let Some(failure) = result.failed_downloads.first() {
+        return Err(ErrorKind::InputError(format!(
+            "Failed to install OptiFabric: {}",
+            failure.reason
+        ))
+        .into());
+    }
+    if !result.installed.iter().any(|installed| {
+        !installed.dependency
+            && installed.project_id == OPTIFABRIC_CURSEFORGE_PROJECT_ID
+            && installed.file_id == file_id
+    }) {
+        return Err(ErrorKind::InputError(
+            "OptiFabric was not installed".to_string(),
+        )
+        .into());
+    }
+    Ok(file_id.to_string())
+}
+
+async fn install_adjunct_components(
+    state: &State,
+    instance_id: &str,
+    adjuncts: &[LoaderComponent],
+    game_version: &str,
+    loader: ModLoader,
+    cancellation: tokio_util::sync::CancellationToken,
+) -> crate::Result<()> {
+    if adjuncts.is_empty() {
+        return Ok(());
+    }
+    let metadata = crate::api::instance::get(instance_id)
+        .await?
+        .ok_or_else(|| ErrorKind::InputError("Unknown instance".to_string()))?;
+    let instance_path = state
+        .directories
+        .instances_dir()
+        .join(&metadata.instance.path);
+    let mut components = metadata.loader_components.clone();
+
+    for adjunct in adjuncts {
+        match adjunct.kind {
+            LoaderComponentKind::OptiFine => {
+                let version = crate::launcher::optifine::resolve_loader_version(
+					game_version,
+					adjunct.version.as_deref(),
+				)
+				.await?
+				.ok_or_else(|| {
+					ErrorKind::InputError(format!(
+						"No OptiFine version supports Minecraft {game_version}"
+					))
+				})?;
+                crate::api::pack::install_mcbbs::install_optifine_mod(
+                    state,
+                    instance_id,
+                    cancellation.clone(),
+                    game_version,
+                    &version.id,
+                    &instance_path,
+                )
+                .await?;
+                set_component_version(
+                    &mut components,
+                    LoaderComponentKind::OptiFine,
+                    version.id,
+                );
+            }
+            LoaderComponentKind::OptiFabric => {
+                let version_id = match &adjunct.version {
+                    Some(version) => version.clone(),
+                    None => resolve_optifabric_version(game_version).await?,
+                };
+                let version_id = install_optifabric_file(
+                    instance_id,
+                    game_version,
+                    &version_id,
+                )
+                .await?;
+                set_component_version(
+                    &mut components,
+                    LoaderComponentKind::OptiFabric,
+                    version_id,
+                );
+            }
+            LoaderComponentKind::LiteLoader => {
+                let version = install_liteloader_adjunct(
+                    state,
+                    &metadata,
+                    game_version,
+                    loader,
+                    adjunct.version.as_deref(),
+                )
+                .await?;
+                set_component_version(
+                    &mut components,
+                    LoaderComponentKind::LiteLoader,
+                    version,
+                );
+            }
+            _ => {}
+        }
+    }
+    crate::state::instances::commands::replace_instance_loader_components(
+        instance_id,
+        &components,
+        &state.pool,
+    )
+    .await
+}
+
+fn set_component_version(
+    components: &mut [LoaderComponent],
+    kind: LoaderComponentKind,
+    version: String,
+) {
+    if let Some(component) = components
+        .iter_mut()
+        .find(|component| component.kind == kind)
+    {
+        component.version = Some(version);
+    }
+}
+
+pub(crate) async fn install_liteloader_adjunct(
+    state: &State,
+    metadata: &crate::state::InstanceMetadata,
+    game_version: &str,
+    primary_loader: ModLoader,
+    requested_version: Option<&str>,
+) -> crate::Result<String> {
+    let version = crate::launcher::get_loader_version_from_profile(
+        game_version,
+        ModLoader::LiteLoader,
+        requested_version,
+    )
+    .await?
+    .ok_or_else(|| {
+        ErrorKind::InputError(format!(
+            "No LiteLoader version supports Minecraft {game_version}"
+        ))
+    })?;
+    install_liteloader_adjunct_resolved(
+        state,
+        metadata,
+        game_version,
+        primary_loader,
+        &version,
+    )
+    .await
+}
+
+pub(crate) async fn install_liteloader_adjunct_resolved(
+    state: &State,
+    metadata: &crate::state::InstanceMetadata,
+    game_version: &str,
+    primary_loader: ModLoader,
+    version: &daedalus::modded::LoaderVersion,
+) -> crate::Result<String> {
+    let partial = crate::api::loader_metadata::resolve_loader_profile(
+        state,
+        game_version,
+        version,
+    )
+    .await?;
+    let primary_version = metadata
+        .applied_content_set
+        .loader_version
+        .as_deref()
+        .ok_or_else(|| {
+            ErrorKind::InputError(format!(
+                "{} adjunct installation requires a pinned primary version",
+                primary_loader.as_str()
+            ))
+        })?;
+    let version_id = format!("{game_version}-{primary_version}");
+    let path = state
+        .directories
+        .version_dir(&version_id)
+        .join(format!("{version_id}.json"));
+    let bytes = crate::util::io::read(&path).await?;
+    let primary: daedalus::minecraft::VersionInfo =
+        serde_json::from_slice(&bytes)?;
+    let mut merged = daedalus::modded::merge_partial_version(partial, primary);
+    merged.id.clone_from(&version_id);
+    crate::launcher::download::download_libraries(
+        state,
+        None,
+        &merged.libraries,
+        &version_id,
+        None,
+        0.0,
+        std::env::consts::ARCH,
+        false,
+        false,
+        None,
+    )
+    .await?;
+    crate::util::io::write(&path, serde_json::to_vec(&merged)?).await?;
+    Ok(version.id.clone())
+}
+
 fn modpack_details(location: &CreatePackLocation) -> InstallPhaseDetails {
     match location {
         CreatePackLocation::FromVersionId {
@@ -2574,6 +3115,114 @@ fn modpack_details(location: &CreatePackLocation) -> InstallPhaseDetails {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn components(
+        primary: ModLoader,
+        adjuncts: &[LoaderComponentKind],
+    ) -> Vec<LoaderComponent> {
+        std::iter::once(LoaderComponent::new_primary("", primary, None))
+            .chain(adjuncts.iter().map(|kind| LoaderComponent {
+                instance_id: String::new(),
+                kind: *kind,
+                version: None,
+                role: LoaderComponentRole::Adjunct,
+                provider_metadata: None,
+            }))
+            .collect()
+    }
+
+    fn curseforge_file(
+        id: u32,
+        is_available: bool,
+        game_versions: &[&str],
+    ) -> crate::api::curseforge::CurseForgeFile {
+        crate::api::curseforge::CurseForgeFile {
+            id,
+            game_id: 432,
+            mod_id: OPTIFABRIC_CURSEFORGE_PROJECT_ID,
+            is_available,
+            display_name: String::new(),
+            file_name: String::new(),
+            release_type: 1,
+            file_status: 4,
+            hashes: Vec::new(),
+            file_date: String::new(),
+            file_length: 0,
+            download_count: 0,
+            file_size_on_disk: None,
+            download_url: None,
+            game_versions: game_versions
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+            sortable_game_versions: Vec::new(),
+            dependencies: Vec::new(),
+            expose_as_alternative: None,
+            parent_project_file_id: None,
+            alternate_file_id: None,
+            is_server_pack: None,
+            server_pack_file_id: None,
+            is_early_access_content: None,
+            early_access_end_date: None,
+            file_fingerprint: 0,
+            modules: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn loader_component_preflight_accepts_verified_combinations() {
+        for components in [
+            components(ModLoader::Vanilla, &[LoaderComponentKind::OptiFine]),
+            components(ModLoader::Vanilla, &[LoaderComponentKind::LiteLoader]),
+            components(ModLoader::Forge, &[LoaderComponentKind::OptiFine]),
+            components(ModLoader::NeoForge, &[LoaderComponentKind::OptiFine]),
+            components(ModLoader::Forge, &[LoaderComponentKind::LiteLoader]),
+            components(
+                ModLoader::Fabric,
+                &[
+                    LoaderComponentKind::OptiFine,
+                    LoaderComponentKind::OptiFabric,
+                ],
+            ),
+        ] {
+            validate_loader_components(&components).unwrap();
+        }
+    }
+
+    #[test]
+    fn loader_component_preflight_rejects_unverified_combinations() {
+        for components in [
+            components(ModLoader::Quilt, &[LoaderComponentKind::OptiFine]),
+            components(ModLoader::Cleanroom, &[LoaderComponentKind::OptiFine]),
+            components(
+                ModLoader::LegacyFabric,
+                &[LoaderComponentKind::LiteLoader],
+            ),
+            components(ModLoader::Fabric, &[LoaderComponentKind::LiteLoader]),
+            components(ModLoader::Fabric, &[LoaderComponentKind::OptiFine]),
+            components(
+                ModLoader::Forge,
+                &[
+                    LoaderComponentKind::OptiFine,
+                    LoaderComponentKind::OptiFabric,
+                ],
+            ),
+        ] {
+            assert!(validate_loader_components(&components).is_err());
+        }
+    }
+
+    #[test]
+    fn optifabric_selection_requires_an_available_exact_game_version() {
+        let files = vec![
+            curseforge_file(1, true, &["1.19.2"]),
+            curseforge_file(2, false, &["1.20.1"]),
+            curseforge_file(3, true, &["1.20.1"]),
+        ];
+
+        assert_eq!(select_optifabric_file_id(&files, "1.20.1"), Some(3));
+        assert_eq!(select_optifabric_file_id(&files, "1.20.2"), None);
+    }
 
     #[test]
     fn stalled_downloads_are_reported_as_network_errors() {

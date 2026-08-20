@@ -41,17 +41,48 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.8.8',
 		},
 		changes: {
+			added: [
+				{
+					'en-US': 'Added Favorites.',
+					'zh-CN': '新增收藏夹功能。',
+				},
+				{
+					'en-US': 'Added LiteLoader, legacy Fabric, and Cleanroom support for Minecraft 1.8.8.',
+					'zh-CN': '为 Minecraft 1.8.8 新增 LiteLoader、旧版 Fabric 和 Cleanroom 支持。',
+				},
+			],
 			fixed: [
 				{
 					'en-US':
 						'Fixed when hovering links in browse page will trigger a flashing element behind the left nav bar.',
 					'zh-CN': '修复浏览页面悬停链接时会触发左侧导航栏后面的闪烁元素的问题。',
 				},
+				{
+					'en-US':
+						'Fixed unknown curseforge ID error when switching mods from curseforge source. (issue #320)',
+					'zh-CN': '修复了从 CurseForge 源切换模组时提示未知 CurseForge ID 的错误。(issue #320)',
+				},
+				{
+					'en-US':
+						'Fixed prerequisite selection so each resolved dependency can be enabled or disabled independently.',
+					'zh-CN': '修复前置解析完成后无法独立启用或禁用前置的问题。',
+				},
+				{
+					'en-US':
+						'The icon picker will now use the icon of the loader by default when creating instance.',
+					'zh-CN': '当创建实例时，图标选择器现在会默认使用加载器的图标。',
+				},
 			],
 			changed: [
 				{
 					'en-US': 'Header for instance mod install page is now blurred.',
 					'zh-CN': '实例的模组安装页面的标题栏现在会模糊。',
+				},
+			],
+			added: [
+				{
+					'en-US': 'Added custom proxy config.',
+					'zh-CN': '现在支持为启动器配置自定义代理。',
 				},
 			],
 		},

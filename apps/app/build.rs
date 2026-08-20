@@ -100,6 +100,18 @@ fn main() {
                     ),
             )
             .plugin(
+                "content-favorites",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "content_favorites_list",
+                        "content_favorites_add",
+                        "content_favorites_remove",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "datapacks",
                 InlinedPlugin::new()
                     .commands(&[
@@ -376,7 +388,11 @@ fn main() {
                         "privacy_set",
                         "telemetry_set",
                         "discord_rpc_set",
+                        "download_engine_set",
                         "cancel_directory_change",
+                        "proxy_get",
+                        "proxy_set",
+                        "proxy_test",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

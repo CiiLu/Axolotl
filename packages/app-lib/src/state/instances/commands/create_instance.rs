@@ -1,8 +1,10 @@
 use crate::launcher::get_loader_version_from_profile;
 use crate::state::instances::{
     ContentSet, ContentSetStatus, ContentSourceKind, Instance,
-    InstanceLaunchOverrides, InstanceLink,
-    adapters::sqlite::{config_sync_rows, content_rows, instance_rows},
+    InstanceLaunchOverrides, InstanceLink, LoaderComponent,
+    adapters::sqlite::{
+        config_sync_rows, content_rows, instance_rows, loader_component_rows,
+    },
     config_sync,
 };
 use crate::state::{
@@ -101,10 +103,21 @@ pub(crate) async fn create_instance(
         };
         let launch_overrides =
             InstanceLaunchOverrides::empty(instance_id.clone());
+        let loader_components = LoaderComponent::from_legacy_projection(
+            instance_id.clone(),
+            input.loader,
+            content_set.loader_version.clone(),
+        );
 
         let mut tx = state.pool.begin().await?;
         instance_rows::insert_instance(&instance, &mut tx).await?;
         content_rows::insert_content_set(&content_set, &mut tx).await?;
+        loader_component_rows::replace_loader_components(
+            &instance_id,
+            &loader_components,
+            &mut tx,
+        )
+        .await?;
         instance_rows::upsert_instance_link(&instance_id, &input.link, &mut tx)
             .await?;
         instance_rows::replace_instance_groups(&instance_id, &[], &mut tx)

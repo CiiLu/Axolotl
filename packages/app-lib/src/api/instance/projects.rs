@@ -831,8 +831,12 @@ async fn content_mutation_target(
 
 fn curseforge_loader_type(loader: crate::state::ModLoader) -> Option<u32> {
     match loader {
-        crate::state::ModLoader::Forge => Some(1),
-        crate::state::ModLoader::Fabric => Some(4),
+        crate::state::ModLoader::Forge | crate::state::ModLoader::Cleanroom => {
+            Some(1)
+        }
+        crate::state::ModLoader::LiteLoader => Some(3),
+        crate::state::ModLoader::Fabric
+        | crate::state::ModLoader::LegacyFabric => Some(4),
         crate::state::ModLoader::Quilt => Some(5),
         crate::state::ModLoader::NeoForge => Some(6),
         _ => None,

@@ -64,6 +64,12 @@ pub struct ResolvedContent {
     pub project_id: String,
     pub version_id: String,
     pub dependent_on_version_id: Option<String>,
+    #[serde(default = "default_true")]
+    pub required: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

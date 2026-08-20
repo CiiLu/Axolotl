@@ -998,6 +998,33 @@
 	"creation-flow.button.setup-server": {
 		"defaultMessage": "初始化服务器"
 	},
+	"creation-flow.modal.custom-setup.adjunct.hint": {
+		"defaultMessage": "下载前会自动选择兼容版本。"
+	},
+	"creation-flow.modal.custom-setup.adjunct.checking-compatibility": {
+		"defaultMessage": "正在检查兼容性……"
+	},
+	"creation-flow.modal.custom-setup.adjunct.compatibility-load-failed": {
+		"defaultMessage": "无法验证 {loader} 的兼容性。"
+	},
+	"creation-flow.modal.custom-setup.adjunct.label": {
+		"defaultMessage": "附加加载器"
+	},
+	"creation-flow.modal.custom-setup.adjunct.optifabric-load-failed": {
+		"defaultMessage": "无法验证 OptiFabric 兼容性。"
+	},
+	"creation-flow.modal.custom-setup.adjunct.optifabric-unsupported": {
+		"defaultMessage": "OptiFine 需要 OptiFabric，但当前游戏版本没有兼容版本。"
+	},
+	"creation-flow.modal.custom-setup.adjunct.primary-unsupported": {
+		"defaultMessage": "所选主加载器不支持当前游戏版本。"
+	},
+	"creation-flow.modal.custom-setup.adjunct.select-game-version": {
+		"defaultMessage": "请先选择游戏版本以检查兼容性。"
+	},
+	"creation-flow.modal.custom-setup.adjunct.unsupported": {
+		"defaultMessage": "{loader} 没有支持当前游戏版本的兼容版本。"
+	},
 	"creation-flow.modal.custom-setup.build-number.label": {
 		"defaultMessage": "构建编号"
 	},
@@ -1054,6 +1081,9 @@
 	},
 	"creation-flow.modal.custom-setup.loader-version.search-placeholder": {
 		"defaultMessage": "搜索加载器版本……"
+	},
+	"creation-flow.modal.custom-setup.loader.compatibility-load-failed": {
+		"defaultMessage": "无法验证加载器兼容性"
 	},
 	"creation-flow.modal.custom-setup.loader.label": {
 		"defaultMessage": "加载器"

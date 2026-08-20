@@ -232,7 +232,7 @@ import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
 import { applyContentItemUpdates, matchesContentItem } from '@/helpers/content-item-state'
 import { translateContentItemTitles } from '@/helpers/content-search'
-import { type CurseForgeFile,getCurseForgeChangelog } from '@/helpers/curseforge'
+import { type CurseForgeFile, getCurseForgeChangelog } from '@/helpers/curseforge'
 import {
 	type CurseForgeManualDownloadItem,
 	getCurseForgeManualDownloadUrl,
@@ -1083,6 +1083,17 @@ function parseCurseForgeProjectId(projectId: string): number | null {
 	return Number.isFinite(numeric) ? numeric : null
 }
 
+function getCurseForgeProjectIdForItem(item: ContentItem | null | undefined): number | null {
+	if (!item || item.origin_provider !== 'curseforge') return null
+
+	const reference = item.provider_refs?.find((ref) => ref.provider === 'curseforge')
+	if (reference) {
+		return reference.project_id
+	}
+
+	return item.project?.id ? parseCurseForgeProjectId(item.project.id) : null
+}
+
 function mapCurseForgeFileToUpdaterVersion(
 	file: {
 		id: number
@@ -1142,13 +1153,18 @@ function mapCurseForgeFileToUpdaterVersion(
 	} as unknown as Labrinth.Versions.v2.Version
 }
 
-async function getUpdaterProjectVersions(projectId: string, pinnedVersionId?: string) {
-	const curseForgeProjectId = parseCurseForgeProjectId(projectId)
-	if (
+async function getUpdaterProjectVersions(
+	projectId: string,
+	pinnedVersionId?: string,
+	item?: ContentItem | null,
+) {
+	const itemCurseForgeProjectId = getCurseForgeProjectIdForItem(item)
+	const curseForgeProjectId = itemCurseForgeProjectId ?? parseCurseForgeProjectId(projectId)
+	const useCurseForge =
+		item?.origin_provider === 'curseforge' ||
 		isCurseForgeLinkedModpack.value ||
-		projectId.startsWith('curseforge:') ||
-		(curseForgeProjectId != null && props.instance?.link?.type === 'curseforge_modpack')
-	) {
+		projectId.startsWith('curseforge:')
+	if (useCurseForge) {
 		if (curseForgeProjectId == null) return []
 		const { getCurseForgeFile, getCurseForgeFiles } = await import('@/helpers/curseforge')
 		const files: CurseForgeFile[] = []
@@ -1922,7 +1938,7 @@ async function handleUpdate(id: string) {
 	})
 	contentUpdaterModal.value?.show(initialVersionId)
 
-	const versions = await getUpdaterProjectVersions(item.project.id, initialVersionId)
+	const versions = await getUpdaterProjectVersions(item.project.id, initialVersionId, item)
 
 	if (!isActiveUpdateRequest(requestId) || getContentItemId(updatingProject.value) !== itemId)
 		return
@@ -1988,7 +2004,7 @@ async function handleSwitchVersion(item: ContentItem) {
 	const initialVersionId = item.version.id
 	contentUpdaterModal.value?.show(initialVersionId, { switchMode: true })
 
-	const versions = await getUpdaterProjectVersions(item.project.id, initialVersionId)
+	const versions = await getUpdaterProjectVersions(item.project.id, initialVersionId, item)
 
 	if (!isActiveUpdateRequest(requestId) || getContentItemId(updatingProject.value) !== itemId)
 		return
@@ -2170,10 +2186,11 @@ async function fetchAndSpliceCurseForgeVersion(
 	versionId: string,
 	requestId = activeUpdateRequestId.value,
 ) {
-	const rawProjectId =
-		updatingProject.value?.project?.id ??
-		(updatingModpack.value ? (props.instance?.link?.project_id ?? '') : '')
-	const projectId = parseCurseForgeProjectId(rawProjectId)
+	const projectId = updatingProject.value
+		? getCurseForgeProjectIdForItem(updatingProject.value)
+		: updatingModpack.value
+			? parseCurseForgeProjectId(props.instance?.link?.project_id ?? '')
+			: null
 	const fileId = Number(versionId)
 	if (projectId == null || !Number.isFinite(fileId)) return
 

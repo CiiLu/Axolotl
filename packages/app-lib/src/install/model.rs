@@ -223,6 +223,7 @@ mod tests {
             game_version: "1.21.1".to_string(),
             loader: ModLoader::Vanilla,
             loader_version: None,
+            adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
         })
@@ -359,6 +360,7 @@ mod tests {
                 link: InstanceLink::Unmanaged,
                 groups: Vec::new(),
                 launch_overrides: InstanceLaunchOverrides::empty(instance_id),
+                loader_components: Vec::new(),
             },
             install_stage: InstanceInstallStage::Installed,
             content: None,
@@ -856,6 +858,7 @@ mod tests {
             game_version: "1.20.1".to_string(),
             loader: ModLoader::Forge,
             loader_version: Some("latest".to_string()),
+            adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::CurseForgeModpack {
                 project_id: "123".to_string(),
@@ -1094,6 +1097,8 @@ pub enum InstallRequest {
         game_version: String,
         loader: ModLoader,
         loader_version: Option<String>,
+        #[serde(default)]
+        adjuncts: Vec<crate::state::LoaderComponent>,
         icon_path: Option<String>,
         link: InstanceLink,
     },

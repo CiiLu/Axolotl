@@ -1111,6 +1111,7 @@ export function createContentInstall(opts: {
 					)
 				: [],
 			alreadyInstalled: false,
+			required: dependency.required,
 		}))
 		const skipped = plan.skipped
 			.filter((item) => item.project_id)
@@ -1481,7 +1482,7 @@ export function createContentInstall(opts: {
 				dependency.selectionReason === 'sha1_verified_modrinth_fallback'
 					? formatMessage(sha1VerifiedModrinthFallbackMessage)
 					: undefined,
-			required: true,
+			required: dependency.required,
 		}))
 		for (const fallback of preview.modrinthFallbacks ?? []) {
 			dependencies.push({
@@ -1492,7 +1493,7 @@ export function createContentInstall(opts: {
 				requiredBy: [titleById.get(fallback.parentProjectId) ?? String(fallback.parentProjectId)],
 				alreadyInstalled: false,
 				selectionReason: formatMessage(sha1VerifiedModrinthFallbackMessage),
-				required: true,
+				required: fallback.required,
 			})
 		}
 		const skipped = preview.skipped.map((item) => ({
@@ -1533,10 +1534,16 @@ export function createContentInstall(opts: {
 			skipped,
 		})
 		if (approvedIds == null) return null
-		const approved = new Set(approvedIds.map(Number))
-		return preview.dependencies
+		const approved = new Set(approvedIds)
+		const excludedProjectIds = preview.dependencies
 			.map((dependency) => dependency.projectId)
-			.filter((projectId) => !approved.has(projectId))
+			.filter((projectId) => !approved.has(String(projectId)))
+		for (const fallback of preview.modrinthFallbacks ?? []) {
+			if (!approved.has(`modrinth:${fallback.versionId}`)) {
+				excludedProjectIds.push(fallback.parentProjectId)
+			}
+		}
+		return [...new Set(excludedProjectIds)]
 	}
 
 	async function queueCurrentCurseForgeVersion(
@@ -1564,7 +1571,7 @@ export function createContentInstall(opts: {
 			manualOperationKind: 'content_install' as const,
 			gameVersion: instance.game_version,
 			modLoaderType: curseForgeLoaderType(instance.loader),
-			installDependencies: themeStore.getFeatureFlag('auto_install_dependencies'),
+			installDependencies: true,
 		}
 		const excludedProjectIds =
 			precomputedExcludedProjectIds ??
@@ -1958,7 +1965,7 @@ export function createContentInstall(opts: {
 				manualOperationKind: 'content_install',
 				gameVersion: data.gameVersion,
 				modLoaderType: curseForgeLoaderType(data.loader),
-				installDependencies: themeStore.getFeatureFlag('auto_install_dependencies'),
+				installDependencies: true,
 			})
 			const result = await showCurseForgeInstallPreview(
 				{
