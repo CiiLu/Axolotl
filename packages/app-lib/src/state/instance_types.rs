@@ -71,14 +71,19 @@ impl LauncherFeatureVersion {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum ModLoader {
     Vanilla,
     Forge,
     Fabric,
     Quilt,
+    #[serde(rename = "neoforge", alias = "neo_forge", alias = "neo")]
     NeoForge,
+    #[serde(rename = "optifine", alias = "opti_fine")]
     OptiFine,
+    Cleanroom,
+    LiteLoader,
+    LegacyFabric,
 }
 
 impl ModLoader {
@@ -90,6 +95,9 @@ impl ModLoader {
             Self::Quilt => "quilt",
             Self::NeoForge => "neoforge",
             Self::OptiFine => "optifine",
+            Self::Cleanroom => "cleanroom",
+            Self::LiteLoader => "lite_loader",
+            Self::LegacyFabric => "legacy_fabric",
         }
     }
 
@@ -103,18 +111,27 @@ impl ModLoader {
             // OptiFine has no Daedalus metadata; versions resolve through
             // launcher::optifine instead of the meta server.
             Self::OptiFine => "optifine",
+            Self::Cleanroom => "cleanroom",
+            Self::LiteLoader => "lite_loader",
+            Self::LegacyFabric => "legacy_fabric",
         }
     }
 
-    pub fn from_string(val: &str) -> Self {
+    pub fn try_from_string(val: &str) -> crate::Result<Self> {
         match val {
-            "vanilla" => Self::Vanilla,
-            "forge" => Self::Forge,
-            "fabric" => Self::Fabric,
-            "quilt" => Self::Quilt,
-            "neoforge" => Self::NeoForge,
-            "optifine" => Self::OptiFine,
-            _ => Self::Vanilla,
+            "vanilla" => Ok(Self::Vanilla),
+            "forge" => Ok(Self::Forge),
+            "fabric" => Ok(Self::Fabric),
+            "quilt" => Ok(Self::Quilt),
+            "neoforge" | "neo_forge" | "neo" => Ok(Self::NeoForge),
+            "optifine" | "opti_fine" => Ok(Self::OptiFine),
+            "cleanroom" => Ok(Self::Cleanroom),
+            "lite_loader" | "liteloader" => Ok(Self::LiteLoader),
+            "legacy_fabric" | "legacyfabric" => Ok(Self::LegacyFabric),
+            other => Err(crate::ErrorKind::InputError(format!(
+                "Unsupported loader {other}"
+            ))
+            .into()),
         }
     }
 }
@@ -159,10 +176,18 @@ pub enum ProjectType {
 
 impl ProjectType {
     pub fn get_from_loaders(loaders: Vec<String>) -> Option<Self> {
-        if loaders
-            .iter()
-            .any(|x| ["fabric", "forge", "quilt", "neoforge"].contains(&&**x))
-        {
+        if loaders.iter().any(|x| {
+            [
+                "fabric",
+                "forge",
+                "quilt",
+                "neoforge",
+                "cleanroom",
+                "lite_loader",
+                "legacy_fabric",
+            ]
+            .contains(&&**x)
+        }) {
             Some(ProjectType::Mod)
         } else if loaders.iter().any(|x| x == "datapack") {
             Some(ProjectType::DataPack)

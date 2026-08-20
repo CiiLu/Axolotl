@@ -451,6 +451,7 @@ mod tests {
             },
             groups: vec!["Group A".to_string()],
             launch_overrides,
+            loader_components: Vec::new(),
         }
     }
 

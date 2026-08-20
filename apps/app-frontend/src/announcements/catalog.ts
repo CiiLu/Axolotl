@@ -41,6 +41,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.8.8',
 		},
 		changes: {
+			added: [
+				{
+					'en-US': 'Added LiteLoader, legacy Fabric, and Cleanroom support for Minecraft 1.8.8.',
+					'zh-CN': '为 Minecraft 1.8.8 新增 LiteLoader、旧版 Fabric 和 Cleanroom 支持。',
+				},
+			],
 			fixed: [
 				{
 					'en-US':
@@ -51,6 +57,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed unknown curseforge ID error when switching mods from curseforge source. (issue #320)',
 					'zh-CN': '修复了从 CurseForge 源切换模组时提示未知 CurseForge ID 的错误。(issue #320)',
+				},
+				{
+					'en-US':
+						'The icon picker will now use the icon of the loader by default when creating instance.',
+					'zh-CN': '当创建实例时，图标选择器现在会默认使用加载器的图标。',
 				},
 			],
 			changed: [

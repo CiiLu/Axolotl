@@ -26,6 +26,7 @@ import {
 	type BatchDropGroup,
 	type BatchDropItem,
 	type BatchDropPhase,
+	clientInstallableLoaders,
 	commonMessages,
 	ContentInstallModal,
 	ContentUpdaterModal,
@@ -310,6 +311,7 @@ const {
 	handleBrowseModpacks,
 	searchModpacks,
 	getProjectVersions,
+	hasCompatibleOptiFabric,
 	getLoaderManifest,
 	installModpackFromPath,
 	setModpackAlreadyInstalledModal,
@@ -3821,10 +3823,12 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		<CreationFlowModal
 			ref="installationModal"
 			type="instance"
+			:available-loaders="[...clientInstallableLoaders]"
 			show-snapshot-toggle
 			:fetch-existing-instance-names="fetchExistingInstanceNames"
 			:search-modpacks="searchModpacks"
 			:get-project-versions="getProjectVersions"
+			:has-compatible-opti-fabric="hasCompatibleOptiFabric"
 			:get-loader-manifest="getLoaderManifest"
 			:on-import-file-received="onImportFileReceived"
 			@create="handleCreate"

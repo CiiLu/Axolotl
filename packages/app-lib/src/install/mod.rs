@@ -27,8 +27,9 @@ pub use model::{
     InstallProgress, InstallProgressSecondary, InstallRequest,
 };
 pub use runner::{
-    cancel_job, clear_job_history, create_instance, create_modpack_instance,
-    dismiss_job, download_java, duplicate_instance, get_job, import_instance,
+    cancel_job, clear_job_history, create_instance,
+    create_instance_with_adjuncts, create_modpack_instance, dismiss_job,
+    download_java, duplicate_instance, get_job, import_instance,
     import_instance_with_path, import_instance_with_plan, install_content,
     install_curseforge_content, install_curseforge_world,
     install_existing_instance, install_pack_to_existing_instance,

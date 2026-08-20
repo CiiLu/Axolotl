@@ -1090,6 +1090,7 @@ mod tests {
             game_version: "1.21.1".to_string(),
             loader: ModLoader::Vanilla,
             loader_version: None,
+            adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
         });
@@ -1113,6 +1114,7 @@ mod tests {
             game_version: "1.21.1".to_string(),
             loader: ModLoader::Vanilla,
             loader_version: None,
+            adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
         });
@@ -1131,6 +1133,7 @@ mod tests {
             game_version: "1.21.1".to_string(),
             loader: ModLoader::Vanilla,
             loader_version: None,
+            adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
         });
@@ -1204,6 +1207,7 @@ mod tests {
             game_version: "1.21.1".to_string(),
             loader: ModLoader::Vanilla,
             loader_version: None,
+            adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
         });
@@ -1373,6 +1377,7 @@ mod tests {
             game_version: "1.12.2".to_string(),
             loader: ModLoader::Forge,
             loader_version: None,
+            adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::CurseForgeModpack {
                 project_id: "123".to_string(),

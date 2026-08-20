@@ -5930,57 +5930,6 @@
   "app.settings.resources.select-directory": {
     "message": "Select a new app directory"
   },
-  "app.settings.resources.proxy-settings": {
-    "message": "Proxy settings"
-  },
-  "app.settings.resources.proxy-settings-description": {
-    "message": "Configure how the launcher connects to the internet. System proxy follows your OS settings. Custom proxy lets you specify a URL with optional authentication."
-  },
-  "app.settings.resources.proxy-mode": {
-    "message": "Proxy mode"
-  },
-  "app.settings.resources.proxy-mode.none": {
-    "message": "No proxy (direct connection)"
-  },
-  "app.settings.resources.proxy-mode.system": {
-    "message": "Use system proxy"
-  },
-  "app.settings.resources.proxy-mode.custom": {
-    "message": "Custom proxy"
-  },
-  "app.settings.resources.proxy-url": {
-    "message": "Proxy URL"
-  },
-  "app.settings.resources.proxy-url-placeholder": {
-    "message": "http://127.0.0.1:7890 or socks5://127.0.0.1:1080"
-  },
-  "app.settings.resources.proxy-username": {
-    "message": "Username"
-  },
-  "app.settings.resources.proxy-username-placeholder": {
-    "message": "Username (optional)"
-  },
-  "app.settings.resources.proxy-password": {
-    "message": "Password"
-  },
-  "app.settings.resources.proxy-password-placeholder": {
-    "message": "Password (optional)"
-  },
-  "app.settings.resources.proxy-test": {
-    "message": "Test connection"
-  },
-  "app.settings.resources.proxy-testing": {
-    "message": "Testing..."
-  },
-  "app.settings.resources.proxy-test-success": {
-    "message": "Connection successful"
-  },
-  "app.settings.resources.proxy-test-success-latency": {
-    "message": "Connection successful ({latency} ms)"
-  },
-  "app.settings.resources.proxy-test-failed": {
-    "message": "Connection failed"
-  },
   "app.settings.resources.select-import-directory": {
     "message": "Select monitored folder"
   },
@@ -7606,5 +7555,65 @@
   },
   "unknown-pack-warning-modal.warning.title": {
     "message": "Unknown file warning"
+  },
+  "app.settings.resources.proxy-username-placeholder": {
+    "message": "Username (optional)"
+  },
+  "app.settings.resources.proxy-username": {
+    "message": "Username"
+  },
+  "app.settings.resources.proxy-url-placeholder": {
+    "message": "http://127.0.0.1:7890 or socks5://127.0.0.1:1080"
+  },
+  "app.settings.resources.proxy-url": {
+    "message": "Proxy URL"
+  },
+  "app.settings.resources.proxy-testing": {
+    "message": "Testing..."
+  },
+  "app.settings.resources.proxy-test-success-latency": {
+    "message": "Connection successful ({latency} ms)"
+  },
+  "app.settings.resources.proxy-test-success": {
+    "message": "Connection successful"
+  },
+  "app.settings.resources.proxy-test-failed": {
+    "message": "Connection failed"
+  },
+  "app.settings.resources.proxy-test": {
+    "message": "Test connection"
+  },
+  "app.settings.resources.proxy-settings-description": {
+    "message": "Configure how the launcher connects to the internet. System proxy follows your OS settings. Custom proxy lets you specify a URL with optional authentication."
+  },
+  "app.settings.resources.proxy-settings": {
+    "message": "Proxy settings"
+  },
+  "app.settings.resources.proxy-password-placeholder": {
+    "message": "Password (optional)"
+  },
+  "app.settings.resources.proxy-password": {
+    "message": "Password"
+  },
+  "app.settings.resources.proxy-mode.system": {
+    "message": "Use system proxy"
+  },
+  "app.settings.resources.proxy-mode.none": {
+    "message": "No proxy (direct connection)"
+  },
+  "app.settings.resources.proxy-mode.custom": {
+    "message": "Custom proxy"
+  },
+  "app.settings.resources.proxy-mode": {
+    "message": "Proxy mode"
+  },
+  "app.instance.icon-picker.icon.optifine": {
+    "message": "OptiFine"
+  },
+  "app.instance.icon-picker.icon.liteloader": {
+    "message": "LiteLoader"
+  },
+  "app.instance.icon-picker.icon.cleanroom": {
+    "message": "Cleanroom"
   }
 }

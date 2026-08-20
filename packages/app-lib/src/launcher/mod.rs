@@ -368,18 +368,61 @@ pub async fn get_java_version_from_launch_context(
             crate::api::jre::check_jre(std::path::PathBuf::from(java)).await;
 
         if let Ok(java) = java {
+            validate_loader_java_version(version_info, &java)?;
             return Ok(Some(java));
         }
     }
 
-    let key = version_info
-        .java_version
-        .as_ref()
-        .map_or(8, |it| it.major_version);
+    let key = required_java_major(version_info);
 
     let java_version = crate::api::jre::find_java_for_version(key).await?;
 
+    if let Some(java_version) = &java_version {
+        validate_loader_java_version(version_info, java_version)?;
+    }
+
     Ok(java_version)
+}
+
+fn required_java_major(version_info: &VersionInfo) -> u32 {
+    if version_uses_liteloader(version_info) {
+        8
+    } else {
+        version_info
+            .java_version
+            .as_ref()
+            .map_or(8, |java| java.major_version)
+    }
+}
+
+fn version_uses_liteloader(version_info: &VersionInfo) -> bool {
+    version_info
+        .libraries
+        .iter()
+        .any(|library| is_liteloader_library(&library.name))
+}
+
+fn is_liteloader_library(name: &str) -> bool {
+    let mut coordinates = name.split(':');
+    coordinates.next() == Some("com.mumfrey")
+        && coordinates.next() == Some("liteloader")
+        && coordinates.next().is_some()
+}
+
+fn validate_loader_java_version(
+    version_info: &VersionInfo,
+    java_version: &JavaVersion,
+) -> crate::Result<()> {
+    if version_uses_liteloader(version_info) && java_version.parsed_version != 8
+    {
+        return Err(crate::ErrorKind::LauncherError(format!(
+            "LiteLoader requires Java 8, but Java {} is selected",
+            java_version.parsed_version
+        ))
+        .into());
+    }
+
+    Ok(())
 }
 
 pub async fn get_loader_version_from_profile(
@@ -474,6 +517,9 @@ fn installed_offline_loader_version(
             | ModLoader::Forge
             | ModLoader::NeoForge
             | ModLoader::Quilt
+            | ModLoader::Cleanroom
+            | ModLoader::LiteLoader
+            | ModLoader::LegacyFabric
     ) {
         return None;
     }
@@ -775,10 +821,7 @@ async fn install_minecraft_with_local_source(
     )
     .await?;
 
-    let key = version_info
-        .java_version
-        .as_ref()
-        .map_or(8, |it| it.major_version);
+    let key = required_java_major(&version_info);
     if let Some(reporter) = &reporter {
         reporter
             .update(
@@ -840,6 +883,7 @@ async fn install_minecraft_with_local_source(
                 .await?;
         }
         let java_version = crate::api::jre::check_jre(java_path).await?;
+        validate_loader_java_version(&version_info, &java_version)?;
 
         if set_java {
             java_version.upsert(&state.pool).await?;
@@ -1423,10 +1467,7 @@ pub async fn launch_minecraft(
     {
         crate::api::jre::check_jre(std::path::PathBuf::from(java)).await?
     } else {
-        let key = version_info
-            .java_version
-            .as_ref()
-            .map_or(8, |it| it.major_version);
+        let key = required_java_major(&version_info);
 
         if let Some(java) = crate::api::jre::find_java_for_version(key).await? {
             java
@@ -1450,6 +1491,7 @@ pub async fn launch_minecraft(
     // Test jre version
     let java_version =
         crate::api::jre::check_jre(java_version.path.clone().into()).await?;
+    validate_loader_java_version(&version_info, &java_version)?;
 
     // Runtime-verify and fall back for GC arguments against the *actual* JVM
     // that will run Minecraft. The frontend supplies an ordered candidate
@@ -1658,7 +1700,7 @@ pub async fn launch_minecraft(
 
     // The java launcher code requires internal JDK code in Java 25+ in order to support JEP 512
     if java_version.parsed_version >= 25 {
-        command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
+        command.arg("--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED");
     }
 
     if let Some((agent_path, api_root, prefetched_metadata)) = yggdrasil_agent {
@@ -1919,6 +1961,15 @@ mod loader_resolution_tests {
             profile_source: Default::default(),
             fallback_url: None,
         }
+    }
+
+    #[test]
+    fn liteloader_runtime_detection_uses_the_maven_coordinate() {
+        assert!(is_liteloader_library(
+            "com.mumfrey:liteloader:1.12.2-SNAPSHOT"
+        ));
+        assert!(!is_liteloader_library("example:liteloader:1.12.2-SNAPSHOT"));
+        assert!(!is_liteloader_library("com.mumfrey:liteloader"));
     }
 
     #[test]

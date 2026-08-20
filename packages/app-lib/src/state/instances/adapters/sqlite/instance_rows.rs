@@ -278,10 +278,10 @@ impl InstanceMetadataRow {
             protocol_version: self
                 .content_set_protocol_version
                 .map(|value| value as u32),
-            loader: ModLoader::from_string(&required(
+            loader: ModLoader::try_from_string(&required(
                 self.content_set_loader,
                 "instance_content_sets.loader",
-            )?),
+            )?)?,
             loader_version: self.content_set_loader_version,
             revision: 0,
             created: timestamp(required_i64(
