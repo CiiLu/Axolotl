@@ -56,7 +56,7 @@ pub async fn update_instance_upgrade_resolution(
     let state = State::get().await?;
     let handle = stored_plan_handle(plan_id)?;
     let mut stored = handle.lock().await;
-    ensure_current_revision(&stored, &state).await?;
+    let source = ensure_current_revision(&stored, &state).await?;
     let mut plan = stored.clone();
     let item = plan
         .items
@@ -70,10 +70,11 @@ pub async fn update_instance_upgrade_resolution(
         })?;
     item.resolution = resolution;
     let (kind, constraints) = selected_kind_and_constraints(&plan);
-    crate::state::instances::commands::recompute_instance_upgrade_plan(
+    crate::state::instances::commands::recompute_instance_upgrade_plan_from_source(
         &mut plan,
         &constraints,
         kind,
+        source,
         &state,
     )
     .await?;
@@ -127,13 +128,14 @@ pub async fn resolve_custom_instance_upgrade_solution(
     let state = State::get().await?;
     let handle = stored_plan_handle(plan_id)?;
     let mut stored = handle.lock().await;
-    ensure_current_revision(&stored, &state).await?;
+    let source = ensure_current_revision(&stored, &state).await?;
     let mut plan = stored.clone();
     validate_fixed_constraints(&plan, &fixed_constraints)?;
-    crate::state::instances::commands::recompute_instance_upgrade_plan(
+    crate::state::instances::commands::recompute_instance_upgrade_plan_from_source(
         &mut plan,
         &fixed_constraints,
         InstanceUpgradeSolutionKind::Custom,
+        source,
         &state,
     )
     .await?;
@@ -157,7 +159,7 @@ fn stored_plan_handle(plan_id: &str) -> crate::Result<StoredUpgradePlan> {
 async fn ensure_current_revision(
     plan: &InstanceUpgradePlan,
     state: &State,
-) -> crate::Result<()> {
+) -> crate::Result<crate::state::instances::commands::ReadOnlyUpgradeSource> {
     let current_revision =
         content_rows::get_applied_content_set(&plan.instance_id, &state.pool)
             .await?
@@ -172,7 +174,10 @@ async fn ensure_current_revision(
     {
         return Err(error);
     }
-    Ok(())
+    crate::state::instances::commands::validate_instance_upgrade_plan_source(
+        plan, state,
+    )
+    .await
 }
 
 fn ensure_instance_upgrade_revision(
@@ -382,6 +387,7 @@ mod tests {
             id: "plan".to_string(),
             instance_id: "instance".to_string(),
             source_revision: 1,
+            source_files: Vec::new(),
             source_environment: environment.clone(),
             target_environment: environment,
             items: Vec::new(),

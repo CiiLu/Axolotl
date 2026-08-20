@@ -22,11 +22,13 @@ use crate::state::{
     InstanceUpgradeIssue, InstanceUpgradeIssueCode, InstanceUpgradeItem,
     InstanceUpgradeItemStatus, InstanceUpgradePlan, InstanceUpgradeResolution,
     InstanceUpgradeSelection, InstanceUpgradeSolution,
-    InstanceUpgradeSolutionKind, ModrinthProjectId, ModrinthVersionId,
-    ProjectType, ShaderRuntime, Version,
+    InstanceUpgradeSolutionKind, InstanceUpgradeSourceFile, ModrinthProjectId,
+    ModrinthVersionId, ProjectType, ShaderRuntime, Version,
 };
 
 const MAX_CANDIDATES_PER_PROJECT: usize = 6;
+// TODO(stage 3): Custom UI candidate listing needs an independent backend API.
+// This solver bound is not, and must not become, the UI version-list limit.
 const MAX_SEARCH_STATES: usize = 10_000;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -99,6 +101,7 @@ struct UpgradeCandidate {
 struct CandidatePool {
     candidates: Vec<UpgradeCandidate>,
     exploration_limited: bool,
+    has_target_game_version_release: bool,
 }
 
 type UpgradeCatalog = HashMap<NodeKey, CandidatePool>;
@@ -146,6 +149,7 @@ struct Requirement {
 #[derive(Clone, Debug)]
 struct SolverResult {
     assignments: HashMap<NodeKey, UpgradeCandidate>,
+    physical_assignments: HashMap<String, NodeKey>,
     preserved_unsafe: HashSet<NodeKey>,
 }
 
@@ -154,6 +158,71 @@ struct SearchState {
     visited: usize,
     limit_reached: bool,
     first_issue: Option<InstanceUpgradeIssue>,
+}
+
+#[derive(Clone)]
+pub(crate) struct ReadOnlyUpgradeSource {
+    snapshot: InstanceContentSnapshot,
+    source_files: Vec<InstanceUpgradeSourceFile>,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+enum PhysicalNodeIdentity {
+    Installed(String),
+    Project(NodeKey),
+}
+
+#[derive(Default)]
+struct InstalledAliasIndex {
+    content_id_by_alias: HashMap<NodeKey, String>,
+    aliases_by_content_id: HashMap<String, HashMap<NodeKey, String>>,
+}
+
+impl InstalledAliasIndex {
+    fn new(installed: &[InstalledNode]) -> Self {
+        let mut index = Self::default();
+        for node in installed {
+            for alias in &node.aliases {
+                index
+                    .content_id_by_alias
+                    .insert(alias.key.clone(), node.content_id.clone());
+                index
+                    .aliases_by_content_id
+                    .entry(node.content_id.clone())
+                    .or_default()
+                    .insert(
+                        alias.key.clone(),
+                        alias.current_release_id.clone(),
+                    );
+            }
+        }
+        index
+    }
+
+    fn content_id(&self, key: &NodeKey) -> Option<&str> {
+        self.content_id_by_alias.get(key).map(String::as_str)
+    }
+
+    fn same_physical_content(&self, left: &NodeKey, right: &NodeKey) -> bool {
+        self.content_id(left).is_some()
+            && self.content_id(left) == self.content_id(right)
+    }
+
+    fn current_release(&self, content_id: &str, key: &NodeKey) -> Option<&str> {
+        self.aliases_by_content_id
+            .get(content_id)
+            .and_then(|aliases| aliases.get(key))
+            .map(String::as_str)
+    }
+
+    fn physical_identity(&self, key: &NodeKey) -> PhysicalNodeIdentity {
+        self.content_id(key).map_or_else(
+            || PhysicalNodeIdentity::Project(key.clone()),
+            |content_id| {
+                PhysicalNodeIdentity::Installed(content_id.to_string())
+            },
+        )
+    }
 }
 
 pub(crate) async fn create_instance_upgrade_plan(
@@ -181,7 +250,8 @@ pub(crate) async fn create_instance_upgrade_plan(
         .into());
     }
 
-    let snapshot = read_only_upgrade_snapshot(instance_id, state).await?;
+    let source = read_only_upgrade_source(instance_id, state).await?;
+    let snapshot = source.snapshot;
     if snapshot.revision != metadata.applied_content_set.revision {
         return Err(crate::ErrorKind::InputError(
             "Instance content changed while the upgrade plan was being created; retry planning"
@@ -265,6 +335,7 @@ pub(crate) async fn create_instance_upgrade_plan(
         id: format!("instance-upgrade-plan:{}", uuid::Uuid::new_v4()),
         instance_id: instance_id.to_string(),
         source_revision: snapshot.revision,
+        source_files: source.source_files,
         source_environment,
         target_environment,
         items,
@@ -278,10 +349,10 @@ pub(crate) async fn create_instance_upgrade_plan(
     })
 }
 
-async fn read_only_upgrade_snapshot(
+async fn read_only_upgrade_source(
     instance_id: &str,
     state: &State,
-) -> crate::Result<InstanceContentSnapshot> {
+) -> crate::Result<ReadOnlyUpgradeSource> {
     let mut snapshot =
         super::get_content_snapshot(instance_id, false, state).await?;
     let instance = crate::state::instances::adapters::sqlite::instance_rows::get_instance_by_id(
@@ -297,11 +368,18 @@ async fn read_only_upgrade_snapshot(
         )?;
     let instance_dir = state.directories.instances_dir().join(&instance.path);
     let mut scanned_by_path = HashMap::new();
+    let mut source_files = Vec::new();
     for file in scanned {
         let (_, sha1) = crate::util::fetch::sha1_file_async(
             instance_dir.join(&file.relative_path),
         )
         .await?;
+        source_files.push(InstanceUpgradeSourceFile {
+            relative_path: file.relative_path.clone(),
+            sha1: sha1.clone(),
+            size: file.size,
+            enabled: file.enabled,
+        });
         scanned_by_path.insert(file.relative_path.clone(), (file, sha1));
     }
     snapshot.items.retain(|item| {
@@ -370,7 +448,39 @@ async fn read_only_upgrade_snapshot(
             dependency: None,
         });
     }
-    Ok(snapshot)
+    source_files
+        .sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
+    Ok(ReadOnlyUpgradeSource {
+        snapshot,
+        source_files,
+    })
+}
+
+pub(crate) async fn validate_instance_upgrade_plan_source(
+    plan: &InstanceUpgradePlan,
+    state: &State,
+) -> crate::Result<ReadOnlyUpgradeSource> {
+    let current = read_only_upgrade_source(&plan.instance_id, state).await?;
+    ensure_upgrade_source_files_match(
+        &plan.instance_id,
+        &plan.source_files,
+        &current.source_files,
+    )?;
+    Ok(current)
+}
+
+fn ensure_upgrade_source_files_match(
+    instance_id: &str,
+    planned: &[InstanceUpgradeSourceFile],
+    current: &[InstanceUpgradeSourceFile],
+) -> crate::Result<()> {
+    if current != planned {
+        return Err(crate::ErrorKind::StaleInstanceUpgradePlanSource {
+            instance_id: instance_id.to_string(),
+        }
+        .into());
+    }
+    Ok(())
 }
 
 fn source_shader_runtime(
@@ -537,15 +647,122 @@ fn is_world_datapack(path: &str) -> bool {
 struct SolveOutcome {
     solutions: Vec<SolverResult>,
     issues: Vec<InstanceUpgradeIssue>,
+    #[cfg(test)]
+    visited_states: usize,
 }
 
-pub(crate) async fn recompute_instance_upgrade_plan(
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SolveStrategy {
+    Newest,
+    MinimalChange,
+}
+
+#[derive(Clone, Debug)]
+struct RootCandidateOptions {
+    content_id: String,
+    key: NodeKey,
+    current_release_id: String,
+    fixed: bool,
+    exploration_limited: bool,
+    candidates: Vec<Option<UpgradeCandidate>>,
+}
+
+#[derive(Clone, Debug)]
+struct ConflictSet {
+    involved_root_content_ids: HashSet<String>,
+    involved_parent_projects: HashSet<NodeKey>,
+    dependency_project: Option<NodeKey>,
+    reason: InstanceUpgradeIssueCode,
+    candidate_limit_roots: HashSet<String>,
+}
+
+impl ConflictSet {
+    fn can_branch_root(&self, root: &RootCandidateOptions) -> bool {
+        let relevant_reason = matches!(
+            self.reason,
+            InstanceUpgradeIssueCode::DependencyConflict
+                | InstanceUpgradeIssueCode::IncompatibleDependency
+                | InstanceUpgradeIssueCode::MissingRequiredDependency
+                | InstanceUpgradeIssueCode::NoCompatibleRelease
+        );
+        let is_dependency_target_only = self.dependency_project.as_ref()
+            == Some(&root.key)
+            && !self.involved_root_content_ids.contains(&root.content_id)
+            && !self.involved_parent_projects.contains(&root.key);
+        relevant_reason
+            && !is_dependency_target_only
+            && (self.involved_root_content_ids.contains(&root.content_id)
+                || self.involved_parent_projects.contains(&root.key))
+    }
+
+    fn same_scope(&self, other: &Self) -> bool {
+        self.involved_root_content_ids == other.involved_root_content_ids
+            && self.involved_parent_projects == other.involved_parent_projects
+            && self.dependency_project == other.dependency_project
+            && self.reason == other.reason
+    }
+
+    fn merge_candidate_limit_evidence(&mut self, other: &Self) {
+        if self.same_scope(other) {
+            self.candidate_limit_roots
+                .extend(other.candidate_limit_roots.iter().cloned());
+        }
+    }
+
+    fn candidate_search_incomplete(&self) -> bool {
+        !self.candidate_limit_roots.is_empty()
+    }
+}
+
+#[derive(Clone, Debug)]
+struct ConflictFailure {
+    issue: InstanceUpgradeIssue,
+    conflict: ConflictSet,
+}
+
+fn retain_best_failure(
+    best_failure: &mut Option<ConflictFailure>,
+    failure: ConflictFailure,
+) {
+    let Some(best) = best_failure.as_mut() else {
+        *best_failure = Some(failure);
+        return;
+    };
+    if best.conflict.same_scope(&failure.conflict) {
+        best.conflict
+            .merge_candidate_limit_evidence(&failure.conflict);
+        if failure.issue.dependency_requirements.len()
+            > best.issue.dependency_requirements.len()
+        {
+            best.issue = failure.issue;
+        }
+    } else if best.conflict.candidate_search_incomplete()
+        && !failure.conflict.candidate_search_incomplete()
+    {
+        *best = failure;
+    }
+}
+
+struct StrategySolveOutcome {
+    solution: Option<SolverResult>,
+    issue: Option<InstanceUpgradeIssue>,
+    #[cfg(test)]
+    visited_states: usize,
+}
+
+pub(crate) async fn recompute_instance_upgrade_plan_from_source(
     plan: &mut InstanceUpgradePlan,
     fixed_constraints: &[InstanceUpgradeFixedConstraint],
     selected_kind: InstanceUpgradeSolutionKind,
+    source: ReadOnlyUpgradeSource,
     state: &State,
 ) -> crate::Result<()> {
-    let snapshot = read_only_upgrade_snapshot(&plan.instance_id, state).await?;
+    ensure_upgrade_source_files_match(
+        &plan.instance_id,
+        &plan.source_files,
+        &source.source_files,
+    )?;
+    let snapshot = source.snapshot;
     let (_, installed) = snapshot_upgrade_items(&snapshot);
     let root_types = installed
         .iter()
@@ -770,6 +987,12 @@ async fn load_modrinth_candidates(
     )
     .await?
     .unwrap_or_default();
+    let has_target_game_version_release = versions.iter().any(|version| {
+        version
+            .game_versions
+            .iter()
+            .any(|game_version| game_version == &target.game_version)
+    });
     versions.sort_by(compare_modrinth_version);
     let (mut selected, exploration_limited) =
         bounded_compatible_candidates(&versions, |version| {
@@ -897,6 +1120,7 @@ async fn load_modrinth_candidates(
     Ok(CandidatePool {
         candidates,
         exploration_limited,
+        has_target_game_version_release,
     })
 }
 
@@ -951,6 +1175,9 @@ async fn load_curseforge_candidates(
     )
     .await?
     .files;
+    let has_target_game_version_release = files.iter().any(|file| {
+        file.is_available && curseforge_game_version_matches(file, target)
+    });
     files.sort_by(|left, right| {
         curseforge_channel(right.release_type)
             .rank()
@@ -1077,6 +1304,7 @@ async fn load_curseforge_candidates(
     Ok(CandidatePool {
         candidates,
         exploration_limited,
+        has_target_game_version_release,
     })
 }
 
@@ -1182,14 +1410,7 @@ fn curseforge_file_matches(
     project_type: ProjectType,
     target: &InstanceUpgradeEnvironment,
 ) -> bool {
-    let game_version_matches = file
-        .game_versions
-        .iter()
-        .any(|value| value == &target.game_version)
-        || file.sortable_game_versions.iter().any(|value| {
-            value.game_version.as_deref() == Some(&target.game_version)
-                || value.game_version_name == target.game_version
-        });
+    let game_version_matches = curseforge_game_version_matches(file, target);
     if !game_version_matches {
         return false;
     }
@@ -1204,6 +1425,19 @@ fn curseforge_file_matches(
         ProjectType::DataPack | ProjectType::ResourcePack => true,
         ProjectType::Schematic | ProjectType::WorldSave => false,
     }
+}
+
+fn curseforge_game_version_matches(
+    file: &crate::api::curseforge::CurseForgeFile,
+    target: &InstanceUpgradeEnvironment,
+) -> bool {
+    file.game_versions
+        .iter()
+        .any(|value| value == &target.game_version)
+        || file.sortable_game_versions.iter().any(|value| {
+            value.game_version.as_deref() == Some(&target.game_version)
+                || value.game_version_name == target.game_version
+        })
 }
 
 fn shader_loader_matches<'a>(
@@ -1241,11 +1475,19 @@ fn classify_items(
                 ShaderRuntime::None => {
                     item.status =
                         InstanceUpgradeItemStatus::ShaderRuntimeMissing;
+                    if item.resolution.action == InstanceUpgradeAction::Upgrade
+                    {
+                        item.resolution.action = InstanceUpgradeAction::Keep;
+                    }
                     continue;
                 }
                 ShaderRuntime::Unknown => {
                     item.status =
                         InstanceUpgradeItemStatus::ShaderRuntimeUnknown;
+                    if item.resolution.action == InstanceUpgradeAction::Upgrade
+                    {
+                        item.resolution.action = InstanceUpgradeAction::Keep;
+                    }
                     continue;
                 }
                 ShaderRuntime::Iris | ShaderRuntime::OptiFine => {}
@@ -1257,10 +1499,9 @@ fn classify_items(
         else {
             continue;
         };
-        let candidates = catalog
-            .get(&node.key)
-            .map(|pool| pool.candidates.as_slice())
-            .unwrap_or(&[]);
+        let pool = catalog.get(&node.key);
+        let candidates =
+            pool.map(|pool| pool.candidates.as_slice()).unwrap_or(&[]);
         let compatible = candidates
             .iter()
             .filter(|candidate| candidate.compatible)
@@ -1283,7 +1524,9 @@ fn classify_items(
             }
         } else if !compatible.is_empty() {
             InstanceUpgradeItemStatus::PrereleaseOnly
-        } else if item.project_type == ProjectType::ShaderPack {
+        } else if item.project_type == ProjectType::ShaderPack
+            && pool.is_some_and(|pool| pool.has_target_game_version_release)
+        {
             InstanceUpgradeItemStatus::NoCompatibleShaderRuntime
         } else {
             InstanceUpgradeItemStatus::NoCompatibleRelease
@@ -1339,53 +1582,200 @@ fn solve_upgrade(
     fixed: &HashMap<NodeKey, String>,
     confirmed_prereleases: &HashSet<(NodeKey, String)>,
 ) -> SolveOutcome {
-    let mut requirements = roots
-        .iter()
-        .map(|root| Requirement {
-            key: root.key.clone(),
-            version_id: fixed.get(&root.key).cloned(),
-            explicit_prerelease: fixed.contains_key(&root.key),
-            preserve_unsafe: root.action != InstanceUpgradeAction::Upgrade,
-            root_content_id: root.content_id.clone(),
-            root_key: root.key.clone(),
-            origins: Vec::new(),
-        })
-        .collect::<Vec<_>>();
-    requirements.sort_by_key(|requirement| {
-        std::cmp::Reverse(requirement.preserve_unsafe)
-    });
-    let mut state = SearchState::default();
-    let mut solutions = Vec::new();
-    search_solutions(
-        requirements,
-        HashMap::new(),
-        HashMap::new(),
-        HashSet::new(),
+    let aliases = InstalledAliasIndex::new(installed);
+    let newest = solve_for_strategy(
+        SolveStrategy::Newest,
         roots,
         catalog,
+        fixed,
         confirmed_prereleases,
-        &mut state,
-        &mut solutions,
+        &aliases,
     );
-    let mut issues = Vec::new();
-    let candidate_limit_reached = solutions.is_empty()
-        && catalog.values().any(|pool| pool.exploration_limited);
-    if state.limit_reached || candidate_limit_reached {
-        issues.push(issue(
-            InstanceUpgradeIssueCode::SearchLimitReached,
-            if state.limit_reached {
-                "Upgrade dependency search reached its global state limit"
-            } else {
-                "Upgrade dependency search exhausted its bounded candidate exploration and cannot prove the plan is unsatisfiable"
-            },
-            None,
-            None,
-            None,
-        ));
+    let minimal = solve_for_strategy(
+        SolveStrategy::MinimalChange,
+        roots,
+        catalog,
+        fixed,
+        confirmed_prereleases,
+        &aliases,
+    );
+    let candidate_issues = [newest.issue.clone(), minimal.issue.clone()];
+    let mut solutions = Vec::new();
+    if fixed.is_empty() {
+        if let Some(solution) = newest.solution {
+            push_unique_solution(&mut solutions, solution);
+        }
+        if let Some(solution) = minimal.solution {
+            push_unique_solution(&mut solutions, solution);
+        }
+    } else {
+        if let Some(solution) = minimal.solution {
+            push_unique_solution(&mut solutions, solution);
+        }
+        if let Some(solution) = newest.solution {
+            push_unique_solution(&mut solutions, solution);
+        }
     }
-    if solutions.is_empty() && !state.limit_reached && !candidate_limit_reached
+    let issues = if solutions.is_empty() {
+        let issue = candidate_issues
+            .iter()
+            .cloned()
+            .into_iter()
+            .flatten()
+            .find(|issue| {
+                issue.code == InstanceUpgradeIssueCode::SearchLimitReached
+            })
+            .or_else(|| candidate_issues.into_iter().flatten().next())
+            .unwrap_or_else(|| {
+                issue(
+                    InstanceUpgradeIssueCode::DependencyConflict,
+                    "No globally compatible dependency solution exists",
+                    None,
+                    None,
+                    None,
+                )
+            });
+        vec![issue]
+    } else {
+        Vec::new()
+    };
+    SolveOutcome {
+        solutions,
+        issues,
+        #[cfg(test)]
+        visited_states: newest.visited_states + minimal.visited_states,
+    }
+}
+
+fn solve_for_strategy(
+    strategy: SolveStrategy,
+    roots: &[RootRequest],
+    catalog: &UpgradeCatalog,
+    fixed: &HashMap<NodeKey, String>,
+    confirmed_prereleases: &HashSet<(NodeKey, String)>,
+    aliases: &InstalledAliasIndex,
+) -> StrategySolveOutcome {
+    solve_for_strategy_with_limit(
+        strategy,
+        roots,
+        catalog,
+        fixed,
+        confirmed_prereleases,
+        aliases,
+        MAX_SEARCH_STATES,
+    )
+}
+
+fn solve_for_strategy_with_limit(
+    strategy: SolveStrategy,
+    roots: &[RootRequest],
+    catalog: &UpgradeCatalog,
+    fixed: &HashMap<NodeKey, String>,
+    confirmed_prereleases: &HashSet<(NodeKey, String)>,
+    aliases: &InstalledAliasIndex,
+    max_search_states: usize,
+) -> StrategySolveOutcome {
+    let options = roots
+        .iter()
+        .map(|root| {
+            root_candidate_options(
+                root,
+                strategy,
+                catalog,
+                fixed,
+                confirmed_prereleases,
+            )
+        })
+        .collect::<Vec<_>>();
+    if let Some((root, _)) = roots
+        .iter()
+        .zip(&options)
+        .find(|(_, options)| options.candidates.is_empty())
     {
-        issues.push(state.first_issue.unwrap_or_else(|| {
+        return StrategySolveOutcome {
+            solution: None,
+            issue: Some(unavailable_root_issue(root, catalog)),
+            #[cfg(test)]
+            visited_states: 0,
+        };
+    }
+
+    let initial = vec![0; options.len()];
+    let mut frontier = vec![initial.clone()];
+    let mut queued = HashSet::from([initial]);
+    let mut total_visited = 0;
+    let mut best_failure: Option<ConflictFailure> = None;
+
+    while !frontier.is_empty() {
+        let best_index = (0..frontier.len())
+            .max_by(|left, right| {
+                compare_root_candidate_states(
+                    &frontier[*left],
+                    &frontier[*right],
+                    &options,
+                    strategy,
+                )
+            })
+            .unwrap_or(0);
+        let selected = frontier.swap_remove(best_index);
+        let mut requirements = roots
+            .iter()
+            .zip(&options)
+            .zip(&selected)
+            .map(|((root, options), candidate_index)| Requirement {
+                key: root.key.clone(),
+                version_id: options.candidates[*candidate_index]
+                    .as_ref()
+                    .map(|candidate| candidate.version_id.clone()),
+                explicit_prerelease: options.fixed,
+                preserve_unsafe: root.action != InstanceUpgradeAction::Upgrade,
+                root_content_id: root.content_id.clone(),
+                root_key: root.key.clone(),
+                origins: Vec::new(),
+            })
+            .collect::<Vec<_>>();
+        requirements.sort_by_key(|requirement| {
+            std::cmp::Reverse(requirement.preserve_unsafe)
+        });
+        let mut state = SearchState {
+            visited: total_visited,
+            ..SearchState::default()
+        };
+        let mut solutions = Vec::new();
+        search_solutions(
+            requirements,
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashSet::new(),
+            HashSet::new(),
+            roots,
+            catalog,
+            confirmed_prereleases,
+            aliases,
+            strategy,
+            max_search_states,
+            &mut state,
+            &mut solutions,
+        );
+        total_visited = state.visited;
+        if let Some(solution) = solutions.into_iter().next() {
+            return StrategySolveOutcome {
+                solution: Some(solution),
+                issue: None,
+                #[cfg(test)]
+                visited_states: total_visited,
+            };
+        }
+        if state.limit_reached {
+            return StrategySolveOutcome {
+                solution: None,
+                issue: Some(search_limit_issue(true)),
+                #[cfg(test)]
+                visited_states: total_visited,
+            };
+        }
+        let branch_issue = state.first_issue.unwrap_or_else(|| {
             issue(
                 InstanceUpgradeIssueCode::DependencyConflict,
                 "No globally compatible dependency solution exists",
@@ -1393,82 +1783,456 @@ fn solve_upgrade(
                 None,
                 None,
             )
-        }));
+        });
+        let mut conflict = conflict_set_from_issue(&branch_issue, roots);
+        let mut branched = false;
+        for (index, root_options) in options.iter().enumerate() {
+            if root_options.fixed || !conflict.can_branch_root(root_options) {
+                continue;
+            }
+            let next_index = selected[index] + 1;
+            if next_index < root_options.candidates.len() {
+                let mut alternative = selected.clone();
+                alternative[index] = next_index;
+                if queued.insert(alternative.clone()) {
+                    frontier.push(alternative);
+                    branched = true;
+                }
+            } else if root_options.exploration_limited {
+                conflict
+                    .candidate_limit_roots
+                    .insert(root_options.content_id.clone());
+            }
+        }
+        retain_best_failure(
+            &mut best_failure,
+            ConflictFailure {
+                issue: branch_issue,
+                conflict,
+            },
+        );
+        if !branched && frontier.is_empty() {
+            break;
+        }
     }
-    let _ = installed;
-    SolveOutcome { solutions, issues }
+
+    StrategySolveOutcome {
+        solution: None,
+        issue: Some(match best_failure {
+            Some(failure) if failure.conflict.candidate_search_incomplete() => {
+                search_limit_issue(false)
+            }
+            Some(failure) => failure.issue,
+            None => issue(
+                InstanceUpgradeIssueCode::DependencyConflict,
+                "No globally compatible dependency solution exists",
+                None,
+                None,
+                None,
+            ),
+        }),
+        #[cfg(test)]
+        visited_states: total_visited,
+    }
+}
+
+fn unavailable_root_issue(
+    root: &RootRequest,
+    catalog: &UpgradeCatalog,
+) -> InstanceUpgradeIssue {
+    let prerelease_only = catalog
+        .get(&root.key)
+        .into_iter()
+        .flat_map(|pool| &pool.candidates)
+        .any(|candidate| {
+            candidate.compatible && candidate.channel.is_prerelease()
+        });
+    issue(
+        if prerelease_only {
+            InstanceUpgradeIssueCode::PrereleaseOnly
+        } else {
+            InstanceUpgradeIssueCode::NoCompatibleRelease
+        },
+        format!(
+            "No compatible release satisfies root project {}",
+            root.key.label()
+        ),
+        Some(&root.key),
+        Some(&root.key.project_id),
+        None,
+    )
+}
+
+fn root_candidate_options(
+    root: &RootRequest,
+    strategy: SolveStrategy,
+    catalog: &UpgradeCatalog,
+    fixed: &HashMap<NodeKey, String>,
+    confirmed_prereleases: &HashSet<(NodeKey, String)>,
+) -> RootCandidateOptions {
+    let requirement = Requirement {
+        key: root.key.clone(),
+        version_id: fixed.get(&root.key).cloned(),
+        explicit_prerelease: fixed.contains_key(&root.key),
+        preserve_unsafe: root.action != InstanceUpgradeAction::Upgrade,
+        root_content_id: root.content_id.clone(),
+        root_key: root.key.clone(),
+        origins: Vec::new(),
+    };
+    let mut candidates = candidates_for_requirement(
+        &requirement,
+        std::slice::from_ref(root),
+        catalog,
+        confirmed_prereleases,
+    )
+    .into_iter()
+    .cloned()
+    .map(Some)
+    .collect::<Vec<_>>();
+    if strategy == SolveStrategy::MinimalChange {
+        candidates.sort_by_key(|candidate| {
+            std::cmp::Reverse(candidate.as_ref().is_some_and(|candidate| {
+                candidate.version_id == root.current_release_id
+            }))
+        });
+    }
+    if candidates.is_empty() && requirement.preserve_unsafe {
+        candidates.push(None);
+    }
+    RootCandidateOptions {
+        content_id: root.content_id.clone(),
+        key: root.key.clone(),
+        current_release_id: root.current_release_id.clone(),
+        fixed: fixed.contains_key(&root.key),
+        exploration_limited: !requirement.preserve_unsafe
+            && requirement.version_id.is_none()
+            && catalog
+                .get(&root.key)
+                .is_some_and(|pool| pool.exploration_limited),
+        candidates,
+    }
+}
+
+fn compare_root_candidate_states(
+    left: &[usize],
+    right: &[usize],
+    options: &[RootCandidateOptions],
+    strategy: SolveStrategy,
+) -> Ordering {
+    let candidates = |state: &[usize]| {
+        options
+            .iter()
+            .zip(state)
+            .filter_map(|(options, index)| options.candidates[*index].as_ref())
+            .collect::<Vec<_>>()
+    };
+    let left_candidates = candidates(left);
+    let right_candidates = candidates(right);
+    match strategy {
+        SolveStrategy::Newest => {
+            let score = |candidates: &[&UpgradeCandidate]| {
+                (
+                    candidates
+                        .iter()
+                        .map(|candidate| candidate.channel.rank())
+                        .min()
+                        .unwrap_or(0),
+                    candidates
+                        .iter()
+                        .map(|candidate| candidate.published.timestamp())
+                        .sum::<i64>(),
+                )
+            };
+            score(&left_candidates)
+                .cmp(&score(&right_candidates))
+                .then_with(|| right.cmp(left))
+        }
+        SolveStrategy::MinimalChange => {
+            let score = |state: &[usize], candidates: &[&UpgradeCandidate]| {
+                let replacements = options
+                    .iter()
+                    .zip(state)
+                    .filter(|(options, index)| {
+                        options.candidates[**index].as_ref().is_some_and(
+                            |candidate| {
+                                candidate.version_id
+                                    != options.current_release_id
+                            },
+                        )
+                    })
+                    .count();
+                let freshness = candidates
+                    .iter()
+                    .map(|candidate| candidate.published.timestamp())
+                    .sum::<i64>();
+                (std::cmp::Reverse(replacements), freshness)
+            };
+            score(left, &left_candidates)
+                .cmp(&score(right, &right_candidates))
+                .then_with(|| right.cmp(left))
+        }
+    }
+}
+
+fn conflict_set_from_issue(
+    issue: &InstanceUpgradeIssue,
+    roots: &[RootRequest],
+) -> ConflictSet {
+    let mut involved_root_content_ids = issue
+        .dependency_requirements
+        .iter()
+        .filter(|requirement| is_causal_dependency_requirement(requirement))
+        .map(|requirement| requirement.root_content_id.clone())
+        .collect::<HashSet<_>>();
+    if let Some(content_id) = &issue.content_id {
+        involved_root_content_ids.insert(content_id.clone());
+    }
+    let involved_parent_projects = issue
+        .dependency_requirements
+        .iter()
+        .filter(|requirement| is_causal_dependency_requirement(requirement))
+        .map(|requirement| {
+            NodeKey::new(
+                requirement.parent_provider,
+                &requirement.parent_project_id,
+            )
+        })
+        .collect();
+    let dependency_project = issue
+        .provider
+        .zip(issue.project_id.as_ref())
+        .map(|(provider, project_id)| NodeKey::new(provider, project_id));
+    if involved_root_content_ids.is_empty() {
+        for root in roots {
+            if dependency_project.as_ref() == Some(&root.key)
+                || issue.project_id.as_deref()
+                    == Some(root.key.project_id.as_str())
+                || issue.conflicting_project_id.as_deref()
+                    == Some(root.key.project_id.as_str())
+            {
+                involved_root_content_ids.insert(root.content_id.clone());
+            }
+        }
+    }
+    ConflictSet {
+        involved_root_content_ids,
+        involved_parent_projects,
+        dependency_project,
+        reason: issue.code,
+        candidate_limit_roots: HashSet::new(),
+    }
+}
+
+fn is_causal_dependency_requirement(
+    requirement: &InstanceUpgradeDependencyRequirement,
+) -> bool {
+    requirement.parent_provider != requirement.dependency_provider
+        || requirement.parent_project_id != requirement.dependency_project_id
+}
+
+fn contradictory_exact_requirement_issue(
+    requirement: &Requirement,
+    requirements: &[Requirement],
+) -> Option<InstanceUpgradeIssue> {
+    if requirement.origins.is_empty() || requirement.version_id.is_none() {
+        return None;
+    }
+    let matching_requirements = std::iter::once(requirement)
+        .chain(requirements)
+        .filter(|exact_requirement| {
+            exact_requirement.key == requirement.key
+                && !exact_requirement.origins.is_empty()
+                && exact_requirement.version_id.is_some()
+        })
+        .collect::<Vec<_>>();
+    let has_safe_requirement = matching_requirements
+        .iter()
+        .any(|requirement| !requirement.preserve_unsafe);
+    let mut exact_versions = HashSet::new();
+    let mut details = Vec::new();
+    for exact_requirement in matching_requirements {
+        if has_safe_requirement && exact_requirement.preserve_unsafe {
+            continue;
+        }
+        let Some(version_id) = exact_requirement.version_id.as_ref() else {
+            continue;
+        };
+        exact_versions.insert(version_id.clone());
+        for origin in &exact_requirement.origins {
+            if !details.contains(origin) {
+                details.push(origin.clone());
+            }
+        }
+    }
+    if exact_versions.len() < 2 {
+        return None;
+    }
+    let mut exact_versions = exact_versions.into_iter().collect::<Vec<_>>();
+    exact_versions.sort();
+    Some(issue_with_requirements(
+        InstanceUpgradeIssueCode::DependencyConflict,
+        format!(
+            "Contradictory exact requirements for {}: {}",
+            requirement.key.label(),
+            exact_versions.join(", ")
+        ),
+        Some(&requirement.key),
+        Some(&requirement.key.project_id),
+        None,
+        details,
+    ))
+}
+
+fn search_limit_issue(global_limit: bool) -> InstanceUpgradeIssue {
+    issue(
+        InstanceUpgradeIssueCode::SearchLimitReached,
+        if global_limit {
+            "Upgrade dependency search reached its global state limit"
+        } else {
+            "Upgrade dependency search exhausted its bounded candidate exploration and cannot prove the plan is unsatisfiable"
+        },
+        None,
+        None,
+        None,
+    )
+}
+
+fn push_unique_solution(
+    solutions: &mut Vec<SolverResult>,
+    candidate: SolverResult,
+) {
+    let duplicate = solutions.iter().any(|solution| {
+        solution.assignments.len() == candidate.assignments.len()
+            && solution.assignments.iter().all(|(key, selected)| {
+                candidate.assignments.get(key).is_some_and(|other| {
+                    other.version_id == selected.version_id
+                })
+            })
+            && solution.preserved_unsafe == candidate.preserved_unsafe
+    });
+    if !duplicate {
+        solutions.push(candidate);
+    }
 }
 
 fn search_solutions(
     mut requirements: Vec<Requirement>,
     assignments: HashMap<NodeKey, UpgradeCandidate>,
+    physical_assignments: HashMap<String, NodeKey>,
     assignment_origins: HashMap<
         NodeKey,
         Vec<InstanceUpgradeDependencyRequirement>,
     >,
+    expanded_origins: HashSet<(PhysicalNodeIdentity, String)>,
     preserved_unsafe: HashSet<NodeKey>,
     roots: &[RootRequest],
     catalog: &UpgradeCatalog,
     confirmed_prereleases: &HashSet<(NodeKey, String)>,
+    aliases: &InstalledAliasIndex,
+    strategy: SolveStrategy,
+    max_search_states: usize,
     state: &mut SearchState,
     solutions: &mut Vec<SolverResult>,
 ) {
-    if state.visited >= MAX_SEARCH_STATES {
+    if !solutions.is_empty() {
+        return;
+    }
+    if state.visited >= max_search_states {
         state.limit_reached = true;
         return;
     }
     state.visited += 1;
-    let Some(requirement) = requirements.pop() else {
+    let Some(mut requirement) = requirements.pop() else {
         solutions.push(SolverResult {
             assignments,
+            physical_assignments,
             preserved_unsafe,
         });
         return;
     };
-    if let Some(selected) = assignments.get(&requirement.key) {
-        let exact_matches = requirement
-            .version_id
-            .as_ref()
-            .is_none_or(|version_id| version_id == &selected.version_id);
+    coalesce_requirement_origins(&mut requirement, &mut requirements, aliases);
+    if let Some(conflict) =
+        contradictory_exact_requirement_issue(&requirement, &requirements)
+    {
+        record_issue(state, conflict);
+        return;
+    }
+    if let Some(selected_key) = assigned_key_for_requirement(
+        &requirement.key,
+        &assignments,
+        &physical_assignments,
+        aliases,
+    ) {
+        let selected = &assignments[selected_key];
+        let exact_matches = exact_requirement_matches_assignment(
+            &requirement,
+            selected_key,
+            selected,
+            aliases,
+        );
         let safe_assignment_satisfies_unsafe = requirement.preserve_unsafe
-            && !preserved_unsafe.contains(&requirement.key);
+            && !preserved_unsafe.contains(selected_key);
         if exact_matches || safe_assignment_satisfies_unsafe {
             let mut next_origins = assignment_origins;
             next_origins
-                .entry(requirement.key.clone())
+                .entry(selected_key.clone())
                 .or_default()
-                .extend(requirement.origins);
+                .extend(requirement.origins.clone());
+            let mut next_expanded_origins = expanded_origins;
+            extend_required_requirements(
+                &mut requirements,
+                selected,
+                &requirement,
+                &mut next_expanded_origins,
+                aliases,
+            );
             search_solutions(
                 requirements,
                 assignments,
+                physical_assignments,
                 next_origins,
+                next_expanded_origins,
                 preserved_unsafe,
                 roots,
                 catalog,
                 confirmed_prereleases,
+                aliases,
+                strategy,
+                max_search_states,
                 state,
                 solutions,
             );
         } else {
             let mut details = assignment_origins
-                .get(&requirement.key)
+                .get(selected_key)
                 .cloned()
                 .unwrap_or_default();
             details.extend(requirement.origins.clone());
-            record_issue(
-                state,
-                issue_with_requirements(
-                    InstanceUpgradeIssueCode::DependencyConflict,
-                    format!(
-                        "{} requires conflicting exact dependency versions",
-                        requirement.key.label()
-                    ),
-                    Some(&requirement.key),
-                    Some(&requirement.key.project_id),
-                    None,
-                    details,
+            for detail in &mut details {
+                if detail.candidate_release_id.is_none() {
+                    detail.candidate_release_id =
+                        Some(selected.version_id.clone());
+                }
+            }
+            let selected_root = roots.iter().find(|root| {
+                &root.key == selected_key
+                    || aliases.same_physical_content(&root.key, selected_key)
+            });
+            let mut conflict = issue_with_requirements(
+                InstanceUpgradeIssueCode::DependencyConflict,
+                format!(
+                    "{} requires an exact provider release that cannot be proven equivalent to selected {}",
+                    requirement.key.label(),
+                    selected_key.label()
                 ),
+                Some(&requirement.key),
+                Some(&requirement.key.project_id),
+                None,
+                details,
             );
+            conflict.content_id =
+                selected_root.map(|root| root.content_id.clone());
+            record_issue(state, conflict);
         }
         return;
     }
@@ -1479,6 +2243,14 @@ fn search_solutions(
         catalog,
         confirmed_prereleases,
     );
+    let mut candidates = candidates;
+    if strategy == SolveStrategy::MinimalChange
+        && !roots.iter().any(|root| root.key == requirement.key)
+    {
+        candidates.sort_by_key(|candidate| {
+            std::cmp::Reverse(candidate.installed_current)
+        });
+    }
     if candidates.is_empty() {
         let prerelease_candidate = catalog
             .get(&requirement.key)
@@ -1495,11 +2267,16 @@ fn search_solutions(
             search_solutions(
                 requirements,
                 assignments,
+                physical_assignments,
                 assignment_origins,
+                expanded_origins,
                 preserved_unsafe,
                 roots,
                 catalog,
                 confirmed_prereleases,
+                aliases,
+                strategy,
+                max_search_states,
                 state,
                 solutions,
             );
@@ -1538,10 +2315,19 @@ fn search_solutions(
         return;
     }
     for candidate in candidates {
-        if let Some(conflict) =
-            incompatible_with_assignments(candidate, &assignments)
-        {
+        if let Some(conflict) = incompatible_with_assignments(
+            candidate,
+            &assignments,
+            &physical_assignments,
+            aliases,
+        ) {
             let mut details = requirement.origins.clone();
+            details.extend(
+                assignment_origins
+                    .get(&conflict)
+                    .cloned()
+                    .unwrap_or_default(),
+            );
             details.push(InstanceUpgradeDependencyRequirement {
                 root_content_id: requirement.root_content_id.clone(),
                 root_provider: requirement.root_key.provider,
@@ -1592,49 +2378,45 @@ fn search_solutions(
         }
         let mut next_assignments = assignments.clone();
         next_assignments.insert(candidate.key.clone(), candidate.clone());
+        let mut next_physical_assignments = physical_assignments.clone();
+        if let Some(content_id) = aliases.content_id(&candidate.key) {
+            next_physical_assignments
+                .insert(content_id.to_string(), candidate.key.clone());
+        }
         let mut next_origins = assignment_origins.clone();
         next_origins.insert(candidate.key.clone(), requirement.origins.clone());
+        let mut next_expanded_origins = expanded_origins.clone();
         let mut next_preserved = preserved_unsafe.clone();
         if requirement.preserve_unsafe {
             next_preserved.insert(candidate.key.clone());
         }
         let mut next_requirements = requirements.clone();
-        for dependency in &candidate.dependencies {
-            if dependency.kind == CandidateDependencyKind::Required {
-                let origin = InstanceUpgradeDependencyRequirement {
-                    root_content_id: requirement.root_content_id.clone(),
-                    root_provider: requirement.root_key.provider,
-                    root_project_id: requirement.root_key.project_id.clone(),
-                    parent_provider: candidate.key.provider,
-                    parent_project_id: candidate.key.project_id.clone(),
-                    parent_release_id: candidate.version_id.clone(),
-                    dependency_provider: dependency.key.provider,
-                    dependency_project_id: dependency.key.project_id.clone(),
-                    required_release_id: dependency.version_id.clone(),
-                    candidate_release_id: None,
-                };
-                next_requirements.push(Requirement {
-                    key: dependency.key.clone(),
-                    version_id: dependency.version_id.clone(),
-                    explicit_prerelease: false,
-                    preserve_unsafe: requirement.preserve_unsafe,
-                    root_content_id: requirement.root_content_id.clone(),
-                    root_key: requirement.root_key.clone(),
-                    origins: vec![origin],
-                });
-            }
-        }
+        extend_required_requirements(
+            &mut next_requirements,
+            candidate,
+            &requirement,
+            &mut next_expanded_origins,
+            aliases,
+        );
         search_solutions(
             next_requirements,
             next_assignments,
+            next_physical_assignments,
             next_origins,
+            next_expanded_origins,
             next_preserved,
             roots,
             catalog,
             confirmed_prereleases,
+            aliases,
+            strategy,
+            max_search_states,
             state,
             solutions,
         );
+        if !solutions.is_empty() {
+            return;
+        }
     }
 }
 
@@ -1689,29 +2471,193 @@ fn candidates_for_requirement<'a>(
     candidates
 }
 
+fn assigned_key_for_requirement<'a>(
+    key: &NodeKey,
+    assignments: &'a HashMap<NodeKey, UpgradeCandidate>,
+    physical_assignments: &'a HashMap<String, NodeKey>,
+    aliases: &InstalledAliasIndex,
+) -> Option<&'a NodeKey> {
+    if let Some((selected_key, _)) = assignments.get_key_value(key) {
+        return Some(selected_key);
+    }
+    aliases
+        .content_id(key)
+        .and_then(|content_id| physical_assignments.get(content_id))
+}
+
+fn exact_requirement_matches_assignment(
+    requirement: &Requirement,
+    selected_key: &NodeKey,
+    selected: &UpgradeCandidate,
+    aliases: &InstalledAliasIndex,
+) -> bool {
+    provider_constraint_matches_assignment(
+        &requirement.key,
+        requirement.version_id.as_deref(),
+        selected_key,
+        selected,
+        aliases,
+    )
+}
+
+fn provider_constraint_matches_assignment(
+    constraint_key: &NodeKey,
+    exact_version: Option<&str>,
+    assigned_key: &NodeKey,
+    assigned: &UpgradeCandidate,
+    aliases: &InstalledAliasIndex,
+) -> bool {
+    let Some(exact_version) = exact_version else {
+        return constraint_key == assigned_key
+            || aliases.same_physical_content(constraint_key, assigned_key);
+    };
+    if constraint_key == assigned_key {
+        return assigned.version_id == exact_version;
+    }
+    if !aliases.same_physical_content(constraint_key, assigned_key)
+        || !assigned.installed_current
+    {
+        return false;
+    }
+    let Some(content_id) = aliases.content_id(constraint_key) else {
+        return false;
+    };
+    aliases.current_release(content_id, constraint_key) == Some(exact_version)
+}
+
+fn coalesce_requirement_origins(
+    requirement: &mut Requirement,
+    requirements: &mut Vec<Requirement>,
+    aliases: &InstalledAliasIndex,
+) {
+    let mut index = 0;
+    while index < requirements.len() {
+        let other = &requirements[index];
+        let same_requirement = requirement.version_id == other.version_id
+            && (requirement.key == other.key
+                || requirement.version_id.is_none()
+                    && aliases
+                        .same_physical_content(&requirement.key, &other.key));
+        if !same_requirement {
+            index += 1;
+            continue;
+        }
+        let other = requirements.remove(index);
+        requirement.origins.extend(other.origins);
+        requirement.explicit_prerelease |= other.explicit_prerelease;
+        requirement.preserve_unsafe &= other.preserve_unsafe;
+    }
+}
+
+fn extend_required_requirements(
+    requirements: &mut Vec<Requirement>,
+    candidate: &UpgradeCandidate,
+    requirement: &Requirement,
+    expanded_origins: &mut HashSet<(PhysicalNodeIdentity, String)>,
+    aliases: &InstalledAliasIndex,
+) {
+    let root_origins = if requirement.origins.is_empty() {
+        vec![(
+            requirement.root_content_id.clone(),
+            requirement.root_key.clone(),
+        )]
+    } else {
+        requirement
+            .origins
+            .iter()
+            .map(|origin| {
+                (
+                    origin.root_content_id.clone(),
+                    NodeKey::new(origin.root_provider, &origin.root_project_id),
+                )
+            })
+            .collect::<Vec<_>>()
+    }
+    .into_iter()
+    .filter(|(root_content_id, _)| {
+        expanded_origins.insert((
+            aliases.physical_identity(&candidate.key),
+            root_content_id.clone(),
+        ))
+    })
+    .collect::<Vec<_>>();
+    if root_origins.is_empty() {
+        return;
+    }
+    for dependency in &candidate.dependencies {
+        if dependency.kind != CandidateDependencyKind::Required {
+            continue;
+        }
+        let origins = root_origins
+            .iter()
+            .map(|(root_content_id, root_key)| {
+                InstanceUpgradeDependencyRequirement {
+                    root_content_id: root_content_id.clone(),
+                    root_provider: root_key.provider,
+                    root_project_id: root_key.project_id.clone(),
+                    parent_provider: candidate.key.provider,
+                    parent_project_id: candidate.key.project_id.clone(),
+                    parent_release_id: candidate.version_id.clone(),
+                    dependency_provider: dependency.key.provider,
+                    dependency_project_id: dependency.key.project_id.clone(),
+                    required_release_id: dependency.version_id.clone(),
+                    candidate_release_id: None,
+                }
+            })
+            .collect::<Vec<_>>();
+        requirements.insert(
+            0,
+            Requirement {
+                key: dependency.key.clone(),
+                version_id: dependency.version_id.clone(),
+                explicit_prerelease: false,
+                preserve_unsafe: requirement.preserve_unsafe,
+                root_content_id: requirement.root_content_id.clone(),
+                root_key: requirement.root_key.clone(),
+                origins,
+            },
+        );
+    }
+}
+
 fn incompatible_with_assignments(
     candidate: &UpgradeCandidate,
     assignments: &HashMap<NodeKey, UpgradeCandidate>,
+    physical_assignments: &HashMap<String, NodeKey>,
+    aliases: &InstalledAliasIndex,
 ) -> Option<NodeKey> {
     for dependency in &candidate.dependencies {
+        let assigned_key = assigned_key_for_requirement(
+            &dependency.key,
+            assignments,
+            physical_assignments,
+            aliases,
+        );
         if dependency.kind == CandidateDependencyKind::Incompatible
-            && assignments.get(&dependency.key).is_some_and(|selected| {
-                dependency
-                    .version_id
-                    .as_ref()
-                    .is_none_or(|version_id| version_id == &selected.version_id)
+            && assigned_key.is_some_and(|assigned_key| {
+                let selected = &assignments[assigned_key];
+                provider_constraint_matches_assignment(
+                    &dependency.key,
+                    dependency.version_id.as_deref(),
+                    assigned_key,
+                    selected,
+                    aliases,
+                )
             })
         {
-            return Some(dependency.key.clone());
+            return assigned_key.cloned();
         }
     }
     assignments.values().find_map(|selected| {
         selected.dependencies.iter().find_map(|dependency| {
             if dependency.kind == CandidateDependencyKind::Incompatible
-                && dependency.key == candidate.key
-                && dependency.version_id.as_ref().is_none_or(|version_id| {
-                    version_id == &candidate.version_id
-                })
+                && provider_constraint_matches_assignment(
+                    &dependency.key,
+                    dependency.version_id.as_deref(),
+                    &candidate.key,
+                    candidate,
+                    aliases,
+                )
             {
                 Some(selected.key.clone())
             } else {
@@ -1871,11 +2817,12 @@ fn materialize_solution(
     roots: &[RootRequest],
     installed: &[InstalledNode],
 ) -> InstanceUpgradeSolution {
+    let aliases = InstalledAliasIndex::new(installed);
     let root_keys = roots
         .iter()
         .map(|root| root.key.clone())
         .collect::<HashSet<_>>();
-    let enabled = solution_enabled_nodes(solution, roots);
+    let enabled = solution_enabled_nodes(solution, roots, &aliases);
     let installed_by_key = installed
         .iter()
         .flat_map(|node| {
@@ -1929,12 +2876,15 @@ fn materialize_solution(
                 Some(_) => InstanceUpgradeDependencyChangeKind::Upgrade,
             };
             InstanceUpgradeDependencyChange {
+                existing_content_id: installed_by_key
+                    .get(key)
+                    .map(|(node, _)| node.content_id.clone()),
                 provider: key.provider,
                 project_id: key.project_id.clone(),
                 current_release_id,
                 target_release_id: Some(candidate.version_id.clone()),
                 kind,
-                enabled: enabled.contains(key),
+                enabled: key_is_enabled(key, &enabled, &aliases),
             }
         })
         .collect::<Vec<_>>();
@@ -1953,6 +2903,7 @@ fn materialize_solution(
             continue;
         }
         dependency_changes.push(InstanceUpgradeDependencyChange {
+            existing_content_id: Some(node.content_id.clone()),
             provider: node.key.provider,
             project_id: node.key.project_id.clone(),
             current_release_id: Some(node.current_release_id.clone()),
@@ -2040,6 +2991,7 @@ fn materialize_solution(
 fn solution_enabled_nodes(
     solution: &SolverResult,
     roots: &[RootRequest],
+    aliases: &InstalledAliasIndex,
 ) -> HashSet<NodeKey> {
     let mut enabled = HashSet::new();
     let mut queue = roots
@@ -2053,7 +3005,15 @@ fn solution_enabled_nodes(
         if !enabled.insert(key.clone()) {
             continue;
         }
-        if let Some(candidate) = solution.assignments.get(&key) {
+        let assigned_key = assigned_key_for_requirement(
+            &key,
+            &solution.assignments,
+            &solution.physical_assignments,
+            aliases,
+        );
+        if let Some(candidate) = assigned_key
+            .and_then(|assigned_key| solution.assignments.get(assigned_key))
+        {
             for dependency in &candidate.dependencies {
                 if dependency.kind == CandidateDependencyKind::Required {
                     queue.push_back(dependency.key.clone());
@@ -2062,6 +3022,21 @@ fn solution_enabled_nodes(
         }
     }
     enabled
+}
+
+fn key_is_enabled(
+    key: &NodeKey,
+    enabled: &HashSet<NodeKey>,
+    aliases: &InstalledAliasIndex,
+) -> bool {
+    enabled.contains(key)
+        || aliases.content_id(key).is_some_and(|content_id| {
+            aliases.aliases_by_content_id.get(content_id).is_some_and(
+                |physical_aliases| {
+                    physical_aliases.keys().any(|alias| enabled.contains(alias))
+                },
+            )
+        })
 }
 
 fn blocking_issue_for_item(
@@ -2131,6 +3106,18 @@ fn item_warnings_with_fixed(
                         != InstanceUpgradeAction::Upgrade =>
                 {
                     InstanceUpgradeIssueCode::KeepIncompatible
+                }
+                InstanceUpgradeItemStatus::ShaderRuntimeMissing
+                    if item.resolution.action
+                        == InstanceUpgradeAction::Keep =>
+                {
+                    InstanceUpgradeIssueCode::ShaderRuntimeMissing
+                }
+                InstanceUpgradeItemStatus::ShaderRuntimeUnknown
+                    if item.resolution.action
+                        == InstanceUpgradeAction::Keep =>
+                {
+                    InstanceUpgradeIssueCode::ShaderRuntimeUnknown
                 }
                 _ => return None,
             };
@@ -2271,6 +3258,22 @@ mod tests {
         }
     }
 
+    fn candidate_for_key(
+        key: &NodeKey,
+        version_id: &str,
+        published: i64,
+    ) -> UpgradeCandidate {
+        UpgradeCandidate {
+            key: key.clone(),
+            version_id: version_id.to_string(),
+            published: Utc.timestamp_opt(published, 0).single().unwrap(),
+            channel: CandidateChannel::Release,
+            compatible: true,
+            installed_current: false,
+            dependencies: Vec::new(),
+        }
+    }
+
     fn required(
         project_id: &str,
         version_id: Option<&str>,
@@ -2323,6 +3326,37 @@ mod tests {
         }
     }
 
+    fn installed_with_aliases(
+        content_id: &str,
+        primary_key: &NodeKey,
+        current: &str,
+        auto_dependency: bool,
+        user_owned: bool,
+        extra_aliases: Vec<(&NodeKey, &str)>,
+    ) -> InstalledNode {
+        let mut aliases = vec![InstalledAlias {
+            key: primary_key.clone(),
+            current_release_id: current.to_string(),
+        }];
+        aliases.extend(extra_aliases.into_iter().map(|(key, release)| {
+            InstalledAlias {
+                key: key.clone(),
+                current_release_id: release.to_string(),
+            }
+        }));
+        InstalledNode {
+            content_id: content_id.to_string(),
+            key: primary_key.clone(),
+            current_release_id: current.to_string(),
+            project_type: ProjectType::Mod,
+            enabled: true,
+            auto_dependency,
+            user_owned,
+            migratable: true,
+            aliases,
+        }
+    }
+
     fn catalog<const N: usize>(
         entries: [(NodeKey, Vec<UpgradeCandidate>); N],
     ) -> UpgradeCatalog {
@@ -2334,6 +3368,7 @@ mod tests {
                     CandidatePool {
                         candidates,
                         exploration_limited: false,
+                        has_target_game_version_release: true,
                     },
                 )
             })
@@ -2342,6 +3377,20 @@ mod tests {
 
     fn solve(roots: &[RootRequest], catalog: &UpgradeCatalog) -> SolveOutcome {
         solve_upgrade(roots, &[], catalog, &HashMap::new(), &HashSet::new())
+    }
+
+    fn solve_with_installed(
+        roots: &[RootRequest],
+        installed: &[InstalledNode],
+        catalog: &UpgradeCatalog,
+    ) -> SolveOutcome {
+        solve_upgrade(
+            roots,
+            installed,
+            catalog,
+            &HashMap::new(),
+            &HashSet::new(),
+        )
     }
 
     #[test]
@@ -2386,6 +3435,305 @@ mod tests {
             .max_by(|left, right| compare_newest(left, right, &roots))
             .unwrap();
         assert_eq!(newest.assignments[&key("a")].version_id, "a-new");
+    }
+
+    #[test]
+    fn twenty_independent_roots_do_not_form_cartesian_search() {
+        let mut roots = Vec::new();
+        let mut catalog = UpgradeCatalog::new();
+        for root_index in 0..20 {
+            let project_id = format!("root-{root_index}");
+            let current = format!("{project_id}-current");
+            roots.push(root(&project_id, &current, true));
+            let mut candidates = (0..5)
+                .map(|candidate_index| {
+                    candidate(
+                        &project_id,
+                        &format!("{project_id}-new-{candidate_index}"),
+                        100 - candidate_index,
+                    )
+                })
+                .collect::<Vec<_>>();
+            candidates.push(candidate(&project_id, &current, 1));
+            catalog.insert(
+                key(&project_id),
+                CandidatePool {
+                    candidates,
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            );
+        }
+
+        let outcome = solve(&roots, &catalog);
+        assert_eq!(outcome.solutions.len(), 2);
+        assert!(outcome.issues.is_empty());
+        assert!(outcome.visited_states < 100);
+        let newest = outcome
+            .solutions
+            .iter()
+            .max_by(|left, right| compare_newest(left, right, &roots))
+            .unwrap();
+        let minimal = outcome
+            .solutions
+            .iter()
+            .min_by(|left, right| compare_minimal(left, right, &roots, &[]))
+            .unwrap();
+        assert!(roots.iter().all(|root| {
+            newest.assignments[&root.key].version_id != root.current_release_id
+        }));
+        assert!(roots.iter().all(|root| {
+            minimal.assignments[&root.key].version_id == root.current_release_id
+        }));
+    }
+
+    #[test]
+    fn real_world_root_candidate_counts_solve_without_search_limit() {
+        let counts = [6, 6, 6, 6, 6, 6, 3];
+        let mut roots = Vec::new();
+        let mut catalog = UpgradeCatalog::new();
+        for (root_index, count) in counts.into_iter().enumerate() {
+            let project_id = format!("root-{root_index}");
+            roots.push(root(&project_id, "old", true));
+            let candidates = (0..count)
+                .map(|candidate_index| {
+                    candidate(
+                        &project_id,
+                        &format!("{project_id}-{candidate_index}"),
+                        100 - candidate_index as i64,
+                    )
+                })
+                .collect();
+            catalog.insert(
+                key(&project_id),
+                CandidatePool {
+                    candidates,
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            );
+        }
+
+        let outcome = solve(&roots, &catalog);
+        assert!(!outcome.solutions.is_empty());
+        assert!(outcome.issues.iter().all(|issue| {
+            issue.code != InstanceUpgradeIssueCode::SearchLimitReached
+        }));
+        assert!(outcome.visited_states < 50);
+    }
+
+    #[test]
+    fn duplicate_physical_shader_roots_remain_separate_without_cartesian_search()
+     {
+        let mut roots = (0..3)
+            .map(|index| RootRequest {
+                content_id: format!("shader-entry-{index}"),
+                key: key("shader"),
+                current_release_id: "shader-old".to_string(),
+                enabled: true,
+                action: InstanceUpgradeAction::Upgrade,
+                allow_prerelease: false,
+            })
+            .collect::<Vec<_>>();
+        roots[1].enabled = false;
+        let candidates = (0..6)
+            .map(|index| {
+                candidate("shader", &format!("shader-new-{index}"), 10 - index)
+            })
+            .collect();
+        let catalog = catalog([(key("shader"), candidates)]);
+
+        let outcome = solve(&roots, &catalog);
+        assert!(outcome.issues.is_empty());
+        assert!(outcome.visited_states < 20);
+        let materialized = materialize_solution(
+            InstanceUpgradeSolutionKind::Newest,
+            &outcome.solutions[0],
+            &roots,
+            &[],
+        );
+        assert_eq!(materialized.selections.len(), 3);
+        assert_eq!(
+            materialized
+                .selections
+                .iter()
+                .map(|selection| selection.content_id.as_str())
+                .collect::<HashSet<_>>()
+                .len(),
+            3
+        );
+    }
+
+    #[test]
+    fn conflict_fallback_does_not_change_independent_roots() {
+        let mut a_latest = candidate("a", "a-latest", 10);
+        a_latest.dependencies.push(required("x", Some("x-two")));
+        let mut a_previous = candidate("a", "a-previous", 9);
+        a_previous.dependencies.push(required("x", Some("x-three")));
+        let mut b_latest = candidate("b", "b-latest", 10);
+        b_latest.dependencies.push(required("x", Some("x-three")));
+        let roots = vec![
+            root("a", "a-old", true),
+            root("b", "b-old", true),
+            root("c", "c-old", true),
+            root("d", "d-old", true),
+            root("e", "e-old", true),
+        ];
+        let catalog = catalog([
+            (key("a"), vec![a_latest, a_previous]),
+            (key("b"), vec![b_latest]),
+            (key("c"), vec![candidate("c", "c-preferred", 5)]),
+            (key("d"), vec![candidate("d", "d-preferred", 5)]),
+            (key("e"), vec![candidate("e", "e-preferred", 5)]),
+            (
+                key("x"),
+                vec![candidate("x", "x-three", 3), candidate("x", "x-two", 2)],
+            ),
+        ]);
+
+        let outcome = solve(&roots, &catalog);
+        let newest = outcome
+            .solutions
+            .iter()
+            .max_by(|left, right| compare_newest(left, right, &roots))
+            .unwrap();
+        assert_eq!(newest.assignments[&key("a")].version_id, "a-previous");
+        assert_eq!(newest.assignments[&key("b")].version_id, "b-latest");
+        for project_id in ["c", "d", "e"] {
+            assert_eq!(
+                newest.assignments[&key(project_id)].version_id,
+                format!("{project_id}-preferred")
+            );
+        }
+    }
+
+    #[test]
+    fn minimal_change_keeps_many_compatible_current_roots_directly() {
+        let mut roots = Vec::new();
+        let mut catalog = UpgradeCatalog::new();
+        for index in 0..30 {
+            let project_id = format!("root-{index}");
+            let current = format!("{project_id}-current");
+            roots.push(root(&project_id, &current, true));
+            catalog.insert(
+                key(&project_id),
+                CandidatePool {
+                    candidates: vec![
+                        candidate(&project_id, &format!("{project_id}-new"), 2),
+                        candidate(&project_id, &current, 1),
+                    ],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            );
+        }
+
+        let outcome = solve(&roots, &catalog);
+        let minimal = outcome
+            .solutions
+            .iter()
+            .min_by(|left, right| compare_minimal(left, right, &roots, &[]))
+            .unwrap();
+        assert!(roots.iter().all(|root| {
+            minimal.assignments[&root.key].version_id == root.current_release_id
+        }));
+        assert!(outcome.visited_states < 150);
+    }
+
+    #[test]
+    fn custom_fixed_root_stays_fixed_when_other_roots_conflict() {
+        let mut b_latest = candidate("b", "b-latest", 5);
+        b_latest.dependencies.push(required("x", Some("x-two")));
+        let mut b_previous = candidate("b", "b-previous", 4);
+        b_previous.dependencies.push(required("x", Some("x-three")));
+        let mut c = candidate("c", "c-latest", 5);
+        c.dependencies.push(required("x", Some("x-three")));
+        let roots = vec![
+            root("a", "a-old", true),
+            root("b", "b-old", true),
+            root("c", "c-old", true),
+        ];
+        let catalog = catalog([
+            (
+                key("a"),
+                vec![
+                    candidate("a", "a-newest", 10),
+                    candidate("a", "a-fixed", 9),
+                ],
+            ),
+            (key("b"), vec![b_latest, b_previous]),
+            (key("c"), vec![c]),
+            (
+                key("x"),
+                vec![candidate("x", "x-three", 3), candidate("x", "x-two", 2)],
+            ),
+        ]);
+        let fixed = HashMap::from([(key("a"), "a-fixed".to_string())]);
+
+        let outcome =
+            solve_upgrade(&roots, &[], &catalog, &fixed, &HashSet::new());
+        assert!(!outcome.solutions.is_empty());
+        assert!(outcome.solutions.iter().all(|solution| {
+            solution.assignments[&key("a")].version_id == "a-fixed"
+        }));
+        assert!(outcome.solutions.iter().any(|solution| {
+            solution.assignments[&key("b")].version_id == "b-previous"
+                && solution.assignments[&key("c")].version_id == "c-latest"
+        }));
+    }
+
+    #[test]
+    fn complex_conflict_alternative_search_still_honors_state_limit() {
+        let roots = vec![root("a", "a-old", true), root("b", "b-old", true)];
+        let a_candidates = (0..6)
+            .map(|index| {
+                let mut candidate =
+                    candidate("a", &format!("a-{index}"), 20 - index);
+                candidate
+                    .dependencies
+                    .push(required("x", Some(&format!("x-a-{index}"))));
+                candidate
+            })
+            .collect::<Vec<_>>();
+        let b_candidates = (0..6)
+            .map(|index| {
+                let mut candidate =
+                    candidate("b", &format!("b-{index}"), 20 - index);
+                candidate
+                    .dependencies
+                    .push(required("x", Some(&format!("x-b-{index}"))));
+                candidate
+            })
+            .collect::<Vec<_>>();
+        let x_candidates = (0..6)
+            .flat_map(|index| {
+                [
+                    candidate("x", &format!("x-a-{index}"), 10 - index),
+                    candidate("x", &format!("x-b-{index}"), 10 - index),
+                ]
+            })
+            .collect::<Vec<_>>();
+        let catalog = catalog([
+            (key("a"), a_candidates),
+            (key("b"), b_candidates),
+            (key("x"), x_candidates),
+        ]);
+
+        let outcome = solve_for_strategy_with_limit(
+            SolveStrategy::Newest,
+            &roots,
+            &catalog,
+            &HashMap::new(),
+            &HashSet::new(),
+            &InstalledAliasIndex::default(),
+            20,
+        );
+        assert!(outcome.solution.is_none());
+        assert_eq!(outcome.visited_states, 20);
+        assert_eq!(
+            outcome.issue.unwrap().code,
+            InstanceUpgradeIssueCode::SearchLimitReached
+        );
     }
 
     #[test]
@@ -2436,6 +3784,30 @@ mod tests {
     }
 
     #[test]
+    fn required_dependency_cycle_terminates_with_solution() {
+        let roots = vec![root("a", "a-old", true)];
+        let mut a = candidate("a", "a-new", 2);
+        a.dependencies.push(required("b", None));
+        let mut b = candidate("b", "b-one", 1);
+        b.dependencies.push(required("a", None));
+        let catalog = catalog([(key("a"), vec![a]), (key("b"), vec![b])]);
+        let outcome = solve(&roots, &catalog);
+        assert_eq!(outcome.solutions.len(), 1);
+        assert!(outcome.issues.is_empty());
+    }
+
+    #[test]
+    fn self_required_dependency_cycle_terminates_with_solution() {
+        let roots = vec![root("a", "a-old", true)];
+        let mut a = candidate("a", "a-new", 1);
+        a.dependencies.push(required("a", None));
+        let catalog = catalog([(key("a"), vec![a])]);
+        let outcome = solve(&roots, &catalog);
+        assert_eq!(outcome.solutions.len(), 1);
+        assert!(outcome.issues.is_empty());
+    }
+
+    #[test]
     fn multiple_roots_share_one_dependency_assignment() {
         let roots = vec![root("a", "a-old", true), root("b", "b-old", true)];
         let mut a = candidate("a", "a-new", 3);
@@ -2477,6 +3849,161 @@ mod tests {
             (key("b"), vec![candidate("b", "b-one", 1)]),
         ]);
         assert!(solve(&roots, &catalog).solutions.is_empty());
+    }
+
+    fn shared_exact_root_fixture() -> (Vec<RootRequest>, UpgradeCatalog) {
+        let roots = vec![
+            root("a", "a-old", true),
+            root("b", "b-old", true),
+            root("x", "x-zero", true),
+        ];
+        let mut a = candidate("a", "a-one", 3);
+        a.dependencies.push(required("x", Some("x-one")));
+        let mut b = candidate("b", "b-one", 3);
+        b.dependencies.push(required("x", Some("x-one")));
+        let mut x_zero = candidate("x", "x-zero", 1);
+        x_zero.installed_current = true;
+        let x_one = candidate("x", "x-one", 2);
+        let catalog = catalog([
+            (key("a"), vec![a]),
+            (key("b"), vec![b]),
+            (key("x"), vec![x_one, x_zero]),
+        ]);
+        (roots, catalog)
+    }
+
+    #[test]
+    fn flexible_root_uses_shared_exact_dependency_assignment() {
+        let (roots, catalog) = shared_exact_root_fixture();
+        let outcome = solve(&roots, &catalog);
+
+        assert!(outcome.issues.is_empty());
+        assert!(outcome.solutions.iter().all(|solution| {
+            solution.assignments[&key("x")].version_id == "x-one"
+        }));
+    }
+
+    #[test]
+    fn minimal_change_obeys_shared_exact_dependency_assignment() {
+        let (roots, catalog) = shared_exact_root_fixture();
+        let outcome = solve_for_strategy(
+            SolveStrategy::MinimalChange,
+            &roots,
+            &catalog,
+            &HashMap::new(),
+            &HashSet::new(),
+            &InstalledAliasIndex::new(&[]),
+        );
+
+        assert!(outcome.issue.is_none());
+        assert_eq!(
+            outcome.solution.unwrap().assignments[&key("x")].version_id,
+            "x-one"
+        );
+    }
+
+    #[test]
+    fn fixed_root_conflicts_with_shared_exact_dependency_assignment() {
+        let (roots, catalog) = shared_exact_root_fixture();
+        let fixed = HashMap::from([(key("x"), "x-zero".to_string())]);
+        let outcome =
+            solve_upgrade(&roots, &[], &catalog, &fixed, &HashSet::new());
+
+        assert!(outcome.solutions.is_empty());
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::DependencyConflict
+        );
+        assert_eq!(outcome.issues[0].dependency_requirements.len(), 2);
+        assert!(outcome.issues[0].dependency_requirements.iter().all(
+            |detail| {
+                detail.parent_project_id != detail.dependency_project_id
+                    && detail.candidate_release_id.as_deref() == Some("x-zero")
+            }
+        ));
+    }
+
+    #[test]
+    fn kept_root_conflicts_with_shared_exact_dependency_assignment() {
+        let (mut roots, catalog) = shared_exact_root_fixture();
+        roots
+            .iter_mut()
+            .find(|root| root.key == key("x"))
+            .unwrap()
+            .action = InstanceUpgradeAction::Keep;
+        let outcome = solve(&roots, &catalog);
+
+        assert!(outcome.solutions.is_empty());
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::DependencyConflict
+        );
+        assert!(
+            outcome.issues[0]
+                .dependency_requirements
+                .iter()
+                .all(|detail| detail.parent_project_id != "x")
+        );
+    }
+
+    #[test]
+    fn root_assignment_follows_dependency_after_causal_parent_fallback() {
+        let roots = vec![
+            root("a", "a-old", true),
+            root("b", "b-old", true),
+            root("x", "x-zero", true),
+        ];
+        let mut a_latest = candidate("a", "a-latest", 5);
+        a_latest.dependencies.push(required("x", Some("x-two")));
+        let mut a_previous = candidate("a", "a-previous", 4);
+        a_previous.dependencies.push(required("x", Some("x-three")));
+        let mut b = candidate("b", "b-latest", 5);
+        b.dependencies.push(required("x", Some("x-three")));
+        let mut x_zero = candidate("x", "x-zero", 1);
+        x_zero.installed_current = true;
+        let catalog = catalog([
+            (key("a"), vec![a_latest, a_previous]),
+            (key("b"), vec![b]),
+            (
+                key("x"),
+                vec![
+                    candidate("x", "x-three", 3),
+                    candidate("x", "x-two", 2),
+                    x_zero,
+                ],
+            ),
+        ]);
+        let outcome = solve(&roots, &catalog);
+
+        assert!(outcome.issues.is_empty());
+        assert!(outcome.solutions.iter().all(|solution| {
+            solution.assignments[&key("a")].version_id == "a-previous"
+                && solution.assignments[&key("x")].version_id == "x-three"
+        }));
+    }
+
+    #[test]
+    fn reconciled_user_owned_root_is_not_materialized_as_dependency() {
+        let (roots, catalog) = shared_exact_root_fixture();
+        let installed = vec![installed("x", "x-zero", false, true)];
+        let outcome = solve_with_installed(&roots, &installed, &catalog);
+        let solution = materialize_solution(
+            InstanceUpgradeSolutionKind::MinimalChange,
+            &outcome.solutions[0],
+            &roots,
+            &installed,
+        );
+
+        let x_selection = solution
+            .selections
+            .iter()
+            .find(|selection| selection.project_id.as_deref() == Some("x"))
+            .unwrap();
+        assert_eq!(x_selection.target_release_id.as_deref(), Some("x-one"));
+        assert!(solution.dependency_changes.iter().all(|change| {
+            change.project_id != "x"
+                && change.existing_content_id.as_deref() != Some("entry-x")
+        }));
     }
 
     #[test]
@@ -2606,6 +4133,62 @@ mod tests {
     }
 
     #[test]
+    fn shader_without_target_minecraft_release_reports_no_release() {
+        assert_eq!(
+            classified_shader_status(ShaderRuntime::Iris, false),
+            InstanceUpgradeItemStatus::NoCompatibleRelease
+        );
+    }
+
+    #[test]
+    fn shader_with_target_minecraft_but_wrong_runtime_reports_runtime() {
+        assert_eq!(
+            classified_shader_status(ShaderRuntime::Iris, true),
+            InstanceUpgradeItemStatus::NoCompatibleShaderRuntime
+        );
+    }
+
+    #[test]
+    fn shader_without_target_runtime_reports_missing_only() {
+        let (item, roots) = classified_shader(ShaderRuntime::None, true);
+        assert_eq!(
+            item.status,
+            InstanceUpgradeItemStatus::ShaderRuntimeMissing
+        );
+        assert_eq!(roots[0].action, InstanceUpgradeAction::Keep);
+        assert!(solve(&roots, &HashMap::new()).issues.is_empty());
+        assert_eq!(
+            item_warnings(std::slice::from_ref(&item))[0].code,
+            InstanceUpgradeIssueCode::ShaderRuntimeMissing
+        );
+    }
+
+    #[test]
+    fn shader_with_unknown_target_runtime_reports_unknown_only() {
+        let (item, roots) = classified_shader(ShaderRuntime::Unknown, true);
+        assert_eq!(
+            item.status,
+            InstanceUpgradeItemStatus::ShaderRuntimeUnknown
+        );
+        assert_eq!(roots[0].action, InstanceUpgradeAction::Keep);
+        assert!(solve(&roots, &HashMap::new()).issues.is_empty());
+        assert_eq!(
+            item_warnings(std::slice::from_ref(&item))[0].code,
+            InstanceUpgradeIssueCode::ShaderRuntimeUnknown
+        );
+    }
+
+    #[test]
+    fn missing_shader_runtime_preserves_explicit_disable() {
+        assert_disabled_shader_selection(ShaderRuntime::None);
+    }
+
+    #[test]
+    fn unknown_shader_runtime_preserves_explicit_disable() {
+        assert_disabled_shader_selection(ShaderRuntime::Unknown);
+    }
+
+    #[test]
     fn source_shader_runtime_uses_trusted_modrinth_alias_for_curseforge_item() {
         let mut item = snapshot_item_for_test(
             Some(ContentProvider::CurseForge),
@@ -2667,6 +4250,40 @@ mod tests {
         assert_eq!(
             outcome.solutions[0].assignments[&key("a")].version_id,
             "one"
+        );
+    }
+
+    #[test]
+    fn custom_uses_minimal_order_for_unfixed_roots() {
+        let roots =
+            vec![root("a", "a-old", true), root("b", "b-current", true)];
+        let catalog = catalog([
+            (
+                key("a"),
+                vec![
+                    candidate("a", "a-newest", 3),
+                    candidate("a", "a-fixed", 2),
+                ],
+            ),
+            (
+                key("b"),
+                vec![
+                    candidate("b", "b-newest", 3),
+                    candidate("b", "b-current", 2),
+                ],
+            ),
+        ]);
+        let fixed = HashMap::from([(key("a"), "a-fixed".to_string())]);
+
+        let outcome =
+            solve_upgrade(&roots, &[], &catalog, &fixed, &HashSet::new());
+        assert_eq!(
+            outcome.solutions[0].assignments[&key("a")].version_id,
+            "a-fixed"
+        );
+        assert_eq!(
+            outcome.solutions[0].assignments[&key("b")].version_id,
+            "b-current"
         );
     }
 
@@ -2769,6 +4386,7 @@ mod tests {
         let mut pool = CandidatePool {
             candidates: vec![candidate("a", "one", 1)],
             exploration_limited: true,
+            has_target_game_version_release: true,
         };
         pool.candidates[0]
             .dependencies
@@ -2778,6 +4396,79 @@ mod tests {
         assert_eq!(
             outcome.issues[0].code,
             InstanceUpgradeIssueCode::SearchLimitReached
+        );
+    }
+
+    #[test]
+    fn failed_truncated_branch_does_not_block_valid_solution() {
+        let roots = vec![root("a", "old-a", true), root("b", "old-b", true)];
+        let mut conflicting = candidate("a", "a-conflict", 3);
+        conflicting.dependencies.push(incompatible("b"));
+        let catalog = HashMap::from([
+            (
+                key("a"),
+                CandidatePool {
+                    candidates: vec![conflicting, candidate("a", "a-valid", 2)],
+                    exploration_limited: true,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("b"),
+                CandidatePool {
+                    candidates: vec![candidate("b", "b-one", 1)],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+        ]);
+        let outcome = solve(&roots, &catalog);
+        assert!(!outcome.solutions.is_empty());
+        assert!(outcome.issues.iter().all(|issue| {
+            issue.code != InstanceUpgradeIssueCode::SearchLimitReached
+        }));
+    }
+
+    #[test]
+    fn exact_conflict_is_not_hidden_by_exact_pool_candidate_limit() {
+        let roots = vec![root("a", "old-a", true), root("b", "old-b", true)];
+        let mut a = candidate("a", "a-one", 2);
+        a.dependencies.push(required("x", Some("x-two")));
+        let mut b = candidate("b", "b-one", 2);
+        b.dependencies.push(required("x", Some("x-three")));
+        let catalog = HashMap::from([
+            (
+                key("a"),
+                CandidatePool {
+                    candidates: vec![a],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("b"),
+                CandidatePool {
+                    candidates: vec![b],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("x"),
+                CandidatePool {
+                    candidates: vec![
+                        candidate("x", "x-two", 1),
+                        candidate("x", "x-three", 1),
+                    ],
+                    exploration_limited: true,
+                    has_target_game_version_release: true,
+                },
+            ),
+        ]);
+        let outcome = solve(&roots, &catalog);
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::DependencyConflict
         );
     }
 
@@ -2818,6 +4509,388 @@ mod tests {
         }));
     }
 
+    fn fixed_exact_conflict_fixture(
+        target_exploration_limited: bool,
+    ) -> (Vec<RootRequest>, UpgradeCatalog, HashMap<NodeKey, String>) {
+        let roots = vec![
+            root("a", "a-old", true),
+            root("b", "b-old", true),
+            root("x", "x-old", true),
+        ];
+        let mut a = candidate("a", "a-fixed", 3);
+        a.dependencies.push(required("x", Some("x-one")));
+        let mut b = candidate("b", "b-fixed", 3);
+        b.dependencies.push(required("x", Some("x-two")));
+        let catalog = HashMap::from([
+            (
+                key("a"),
+                CandidatePool {
+                    candidates: vec![a],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("b"),
+                CandidatePool {
+                    candidates: vec![b],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("x"),
+                CandidatePool {
+                    candidates: vec![
+                        candidate("x", "x-one", 2),
+                        candidate("x", "x-two", 1),
+                    ],
+                    exploration_limited: target_exploration_limited,
+                    has_target_game_version_release: true,
+                },
+            ),
+        ]);
+        let fixed = HashMap::from([
+            (key("a"), "a-fixed".to_string()),
+            (key("b"), "b-fixed".to_string()),
+        ]);
+
+        (roots, catalog, fixed)
+    }
+
+    fn fixed_exact_conflict_with_flexible_target(
+        target_exploration_limited: bool,
+    ) -> SolveOutcome {
+        let (roots, catalog, fixed) =
+            fixed_exact_conflict_fixture(target_exploration_limited);
+        solve_upgrade(&roots, &[], &catalog, &fixed, &HashSet::new())
+    }
+
+    #[test]
+    fn fixed_exact_dependency_conflict_ignores_flexible_target_root() {
+        let outcome = fixed_exact_conflict_with_flexible_target(false);
+        assert!(outcome.solutions.is_empty());
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::DependencyConflict
+        );
+        let details = &outcome.issues[0].dependency_requirements;
+        assert_eq!(details.len(), 2);
+        assert!(details.iter().any(|detail| {
+            detail.root_project_id == "a"
+                && detail.parent_release_id == "a-fixed"
+                && detail.dependency_project_id == "x"
+                && detail.required_release_id.as_deref() == Some("x-one")
+        }));
+        assert!(details.iter().any(|detail| {
+            detail.root_project_id == "b"
+                && detail.parent_release_id == "b-fixed"
+                && detail.dependency_project_id == "x"
+                && detail.required_release_id.as_deref() == Some("x-two")
+        }));
+    }
+
+    #[test]
+    fn fixed_exact_dependency_conflict_ignores_truncated_target_root() {
+        let outcome = fixed_exact_conflict_with_flexible_target(true);
+        assert!(outcome.solutions.is_empty());
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::DependencyConflict
+        );
+        assert_eq!(outcome.issues[0].dependency_requirements.len(), 2);
+    }
+
+    #[test]
+    fn fixed_exact_dependency_conflict_is_identical_for_both_strategies() {
+        let (roots, catalog, fixed) = fixed_exact_conflict_fixture(false);
+        let aliases = InstalledAliasIndex::new(&[]);
+
+        for strategy in [SolveStrategy::Newest, SolveStrategy::MinimalChange] {
+            let outcome = solve_for_strategy(
+                strategy,
+                &roots,
+                &catalog,
+                &fixed,
+                &HashSet::new(),
+                &aliases,
+            );
+            let issue = outcome.issue.expect("strategy should report conflict");
+            assert!(outcome.solution.is_none());
+            assert_eq!(
+                issue.code,
+                InstanceUpgradeIssueCode::DependencyConflict
+            );
+            assert_eq!(issue.dependency_requirements.len(), 2);
+            assert!(issue.dependency_requirements.iter().any(|detail| {
+                detail.root_project_id == "a"
+                    && detail.parent_release_id == "a-fixed"
+                    && detail.dependency_project_id == "x"
+                    && detail.required_release_id.as_deref() == Some("x-one")
+            }));
+            assert!(issue.dependency_requirements.iter().any(|detail| {
+                detail.root_project_id == "b"
+                    && detail.parent_release_id == "b-fixed"
+                    && detail.dependency_project_id == "x"
+                    && detail.required_release_id.as_deref() == Some("x-two")
+            }));
+        }
+    }
+
+    #[test]
+    fn flexible_root_falls_back_to_fixed_roots_exact_dependency() {
+        let roots = vec![
+            root("a", "a-old", true),
+            root("b", "b-old", true),
+            root("x", "x-old", true),
+        ];
+        let mut a = candidate("a", "a-fixed", 4);
+        a.dependencies.push(required("x", Some("x-one")));
+        let mut b_latest = candidate("b", "b-latest", 4);
+        b_latest.dependencies.push(required("x", Some("x-two")));
+        let mut b_previous = candidate("b", "b-previous", 3);
+        b_previous.dependencies.push(required("x", Some("x-one")));
+        let catalog = catalog([
+            (key("a"), vec![a]),
+            (key("b"), vec![b_latest, b_previous]),
+            (
+                key("x"),
+                vec![candidate("x", "x-one", 2), candidate("x", "x-two", 1)],
+            ),
+        ]);
+        let fixed = HashMap::from([(key("a"), "a-fixed".to_string())]);
+
+        let outcome =
+            solve_upgrade(&roots, &[], &catalog, &fixed, &HashSet::new());
+        assert!(outcome.issues.is_empty());
+        assert_eq!(
+            outcome.solutions[0].assignments[&key("a")].version_id,
+            "a-fixed"
+        );
+        assert_eq!(
+            outcome.solutions[0].assignments[&key("b")].version_id,
+            "b-previous"
+        );
+    }
+
+    #[test]
+    fn truncated_flexible_conflict_root_reports_search_limit() {
+        let roots = vec![
+            root("a", "a-old", true),
+            root("b", "b-old", true),
+            root("x", "x-old", true),
+        ];
+        let mut a = candidate("a", "a-fixed", 10);
+        a.dependencies.push(required("x", Some("x-one")));
+        let b_candidates = (0..MAX_CANDIDATES_PER_PROJECT)
+            .map(|index| {
+                let mut candidate =
+                    candidate("b", &format!("b-{index}"), 9 - index as i64);
+                candidate.dependencies.push(required("x", Some("x-two")));
+                candidate
+            })
+            .collect::<Vec<_>>();
+        let catalog = HashMap::from([
+            (
+                key("a"),
+                CandidatePool {
+                    candidates: vec![a],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("b"),
+                CandidatePool {
+                    candidates: b_candidates,
+                    exploration_limited: true,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("x"),
+                CandidatePool {
+                    candidates: vec![
+                        candidate("x", "x-one", 2),
+                        candidate("x", "x-two", 1),
+                    ],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+        ]);
+        let fixed = HashMap::from([(key("a"), "a-fixed".to_string())]);
+
+        let outcome =
+            solve_upgrade(&roots, &[], &catalog, &fixed, &HashSet::new());
+        assert!(outcome.solutions.is_empty());
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::SearchLimitReached
+        );
+    }
+
+    fn conflict_scope(
+        dependency_project: &str,
+        causal_root: &str,
+        candidate_limit_root: Option<&str>,
+    ) -> ConflictSet {
+        ConflictSet {
+            involved_root_content_ids: HashSet::from([causal_root.to_string()]),
+            involved_parent_projects: HashSet::from([key(causal_root)]),
+            dependency_project: Some(key(dependency_project)),
+            reason: InstanceUpgradeIssueCode::DependencyConflict,
+            candidate_limit_roots: candidate_limit_root
+                .map(str::to_string)
+                .into_iter()
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn earlier_unrelated_candidate_limit_does_not_taint_best_conflict() {
+        let mut best = None;
+        retain_best_failure(
+            &mut best,
+            ConflictFailure {
+                issue: issue(
+                    InstanceUpgradeIssueCode::DependencyConflict,
+                    "earlier truncated conflict",
+                    None,
+                    None,
+                    None,
+                ),
+                conflict: conflict_scope("y", "c", Some("c")),
+            },
+        );
+        retain_best_failure(
+            &mut best,
+            ConflictFailure {
+                issue: issue(
+                    InstanceUpgradeIssueCode::DependencyConflict,
+                    "later fixed exact conflict",
+                    None,
+                    None,
+                    None,
+                ),
+                conflict: conflict_scope("x", "a", None),
+            },
+        );
+
+        let best = best.expect("best conflict should exist");
+        assert_eq!(best.conflict.dependency_project, Some(key("x")));
+        assert!(!best.conflict.candidate_search_incomplete());
+    }
+
+    #[test]
+    fn later_unrelated_candidate_limit_does_not_taint_best_conflict() {
+        let mut best = None;
+        retain_best_failure(
+            &mut best,
+            ConflictFailure {
+                issue: issue(
+                    InstanceUpgradeIssueCode::DependencyConflict,
+                    "earlier fixed exact conflict",
+                    None,
+                    None,
+                    None,
+                ),
+                conflict: conflict_scope("x", "a", None),
+            },
+        );
+        retain_best_failure(
+            &mut best,
+            ConflictFailure {
+                issue: issue(
+                    InstanceUpgradeIssueCode::DependencyConflict,
+                    "later truncated conflict",
+                    None,
+                    None,
+                    None,
+                ),
+                conflict: conflict_scope("y", "c", Some("c")),
+            },
+        );
+
+        let best = best.expect("best conflict should exist");
+        assert_eq!(best.conflict.dependency_project, Some(key("x")));
+        assert!(!best.conflict.candidate_search_incomplete());
+    }
+
+    #[test]
+    fn same_conflict_candidate_limit_marks_search_incomplete() {
+        let mut best = conflict_scope("x", "a", None);
+        let same_conflict = conflict_scope("x", "a", Some("a"));
+
+        best.merge_candidate_limit_evidence(&same_conflict);
+
+        assert!(best.candidate_search_incomplete());
+    }
+
+    #[test]
+    fn unrelated_truncated_root_does_not_hide_fixed_exact_conflict() {
+        let roots = vec![
+            root("a", "a-old", true),
+            root("b", "b-old", true),
+            root("c", "c-old", true),
+            root("x", "x-old", true),
+        ];
+        let mut a = candidate("a", "a-fixed", 4);
+        a.dependencies.push(required("x", Some("x-one")));
+        let mut b = candidate("b", "b-fixed", 4);
+        b.dependencies.push(required("x", Some("x-two")));
+        let catalog = HashMap::from([
+            (
+                key("a"),
+                CandidatePool {
+                    candidates: vec![a],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("b"),
+                CandidatePool {
+                    candidates: vec![b],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("c"),
+                CandidatePool {
+                    candidates: vec![candidate("c", "c-latest", 3)],
+                    exploration_limited: true,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("x"),
+                CandidatePool {
+                    candidates: vec![
+                        candidate("x", "x-one", 2),
+                        candidate("x", "x-two", 1),
+                    ],
+                    exploration_limited: true,
+                    has_target_game_version_release: true,
+                },
+            ),
+        ]);
+        let fixed = HashMap::from([
+            (key("a"), "a-fixed".to_string()),
+            (key("b"), "b-fixed".to_string()),
+        ]);
+
+        let outcome =
+            solve_upgrade(&roots, &[], &catalog, &fixed, &HashSet::new());
+        assert!(outcome.solutions.is_empty());
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::DependencyConflict
+        );
+        assert_eq!(outcome.issues[0].dependency_requirements.len(), 2);
+    }
+
     #[test]
     fn transitive_missing_dependency_reports_root_and_direct_parent() {
         let roots = vec![root("a", "old", true)];
@@ -2833,6 +4906,36 @@ mod tests {
         assert_eq!(detail.parent_project_id, "x");
         assert_eq!(detail.parent_release_id, "x-one");
         assert_eq!(detail.dependency_project_id, "missing");
+    }
+
+    #[test]
+    fn shared_transitive_missing_dependency_reports_every_root() {
+        let roots = vec![root("a", "old-a", true), root("b", "old-b", true)];
+        let mut a = candidate("a", "a-one", 4);
+        a.dependencies.push(required("x", None));
+        let mut b = candidate("b", "b-one", 4);
+        b.dependencies.push(required("x", None));
+        let mut x = candidate("x", "x-one", 3);
+        x.dependencies.push(required("y", Some("y-one")));
+        let catalog = catalog([
+            (key("a"), vec![a]),
+            (key("b"), vec![b]),
+            (key("x"), vec![x]),
+        ]);
+        let outcome = solve(&roots, &catalog);
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::MissingRequiredDependency
+        );
+        let details = &outcome.issues[0].dependency_requirements;
+        assert_eq!(details.len(), 2);
+        assert!(details.iter().any(|detail| detail.root_project_id == "a"));
+        assert!(details.iter().any(|detail| detail.root_project_id == "b"));
+        assert!(details.iter().all(|detail| {
+            detail.parent_project_id == "x"
+                && detail.parent_release_id == "x-one"
+                && detail.dependency_project_id == "y"
+        }));
     }
 
     #[test]
@@ -2854,6 +4957,87 @@ mod tests {
             (key("x"), vec![candidate("x", "x-two", 1)]),
         ]);
         assert!(solve(&roots, &incompatible_catalog).solutions.is_empty());
+    }
+
+    #[test]
+    fn exact_incompatible_matches_proven_current_cross_provider_alias() {
+        let mr_x = key("x-mr");
+        let cf_x = NodeKey::new(ContentProvider::CurseForge, "x-cf");
+        let installed_x = installed_with_aliases(
+            "entry-x",
+            &mr_x,
+            "current-mr",
+            false,
+            true,
+            vec![(&cf_x, "current-cf")],
+        );
+        let aliases = InstalledAliasIndex::new(&[installed_x]);
+        let mut current = candidate("x-mr", "current-mr", 1);
+        current.installed_current = true;
+        let mut incompatible_candidate = candidate("a", "a-one", 2);
+        incompatible_candidate
+            .dependencies
+            .push(CandidateDependency {
+                key: cf_x,
+                version_id: Some("current-cf".to_string()),
+                kind: CandidateDependencyKind::Incompatible,
+            });
+        let assignments = HashMap::from([(mr_x.clone(), current)]);
+        let physical_assignments =
+            HashMap::from([("entry-x".to_string(), mr_x.clone())]);
+        assert_eq!(
+            incompatible_with_assignments(
+                &incompatible_candidate,
+                &assignments,
+                &physical_assignments,
+                &aliases,
+            ),
+            Some(mr_x)
+        );
+    }
+
+    #[test]
+    fn reverse_exact_incompatible_matches_proven_current_alias_only() {
+        let mr_x = key("x-mr");
+        let cf_x = NodeKey::new(ContentProvider::CurseForge, "x-cf");
+        let installed_x = installed_with_aliases(
+            "entry-x",
+            &mr_x,
+            "current-mr",
+            false,
+            true,
+            vec![(&cf_x, "current-cf")],
+        );
+        let aliases = InstalledAliasIndex::new(&[installed_x]);
+        let mut selected = candidate("a", "a-one", 2);
+        selected.dependencies.push(CandidateDependency {
+            key: cf_x,
+            version_id: Some("current-cf".to_string()),
+            kind: CandidateDependencyKind::Incompatible,
+        });
+        let assignments = HashMap::from([(key("a"), selected)]);
+        let mut current = candidate("x-mr", "current-mr", 1);
+        current.installed_current = true;
+        assert_eq!(
+            incompatible_with_assignments(
+                &current,
+                &assignments,
+                &HashMap::new(),
+                &aliases,
+            ),
+            Some(key("a"))
+        );
+
+        let target = candidate("x-mr", "target-mr", 3);
+        assert_eq!(
+            incompatible_with_assignments(
+                &target,
+                &assignments,
+                &HashMap::new(),
+                &aliases,
+            ),
+            None
+        );
     }
 
     #[test]
@@ -3062,6 +5246,162 @@ mod tests {
     }
 
     #[test]
+    fn trusted_alias_root_and_cross_provider_requirement_share_one_assignment()
+    {
+        let mr_x = key("x-mr");
+        let cf_x = NodeKey::new(ContentProvider::CurseForge, "x-cf");
+        let cf_b = NodeKey::new(ContentProvider::CurseForge, "b-cf");
+        let roots = vec![
+            root("x-mr", "x-mr-old", true),
+            RootRequest {
+                content_id: "entry-b".to_string(),
+                key: cf_b.clone(),
+                current_release_id: "b-old".to_string(),
+                enabled: true,
+                action: InstanceUpgradeAction::Upgrade,
+                allow_prerelease: false,
+            },
+        ];
+        let mut b = candidate_for_key(&cf_b, "b-new", 3);
+        b.dependencies.push(CandidateDependency {
+            key: cf_x.clone(),
+            version_id: None,
+            kind: CandidateDependencyKind::Required,
+        });
+        let installed_x = installed_with_aliases(
+            "entry-x",
+            &mr_x,
+            "x-mr-old",
+            false,
+            true,
+            vec![(&cf_x, "x-cf-old")],
+        );
+        let catalog = catalog([
+            (mr_x.clone(), vec![candidate("x-mr", "x-mr-new", 4)]),
+            (cf_b, vec![b]),
+            (cf_x.clone(), vec![candidate_for_key(&cf_x, "x-cf-new", 2)]),
+        ]);
+        let outcome =
+            solve_with_installed(&roots, &[installed_x.clone()], &catalog);
+        let selected = &outcome.solutions[0];
+        assert!(selected.assignments.contains_key(&mr_x));
+        assert!(!selected.assignments.contains_key(&cf_x));
+        let solution = materialize_solution(
+            InstanceUpgradeSolutionKind::Newest,
+            selected,
+            &roots,
+            &[installed_x],
+        );
+        assert!(solution.dependency_changes.iter().all(|change| {
+            change.existing_content_id.as_deref() != Some("entry-x")
+        }));
+    }
+
+    #[test]
+    fn shared_auto_dependency_aliases_materialize_one_change() {
+        let mr_x = key("x-mr");
+        let cf_x = NodeKey::new(ContentProvider::CurseForge, "x-cf");
+        let cf_b = NodeKey::new(ContentProvider::CurseForge, "b-cf");
+        let mut a = candidate("a", "a-new", 4);
+        a.dependencies.push(required("x-mr", None));
+        let mut b = candidate_for_key(&cf_b, "b-new", 4);
+        b.dependencies.push(CandidateDependency {
+            key: cf_x.clone(),
+            version_id: None,
+            kind: CandidateDependencyKind::Required,
+        });
+        let roots = vec![
+            root("a", "a-old", true),
+            RootRequest {
+                content_id: "entry-b".to_string(),
+                key: cf_b.clone(),
+                current_release_id: "b-old".to_string(),
+                enabled: true,
+                action: InstanceUpgradeAction::Upgrade,
+                allow_prerelease: false,
+            },
+        ];
+        let installed_x = installed_with_aliases(
+            "entry-x",
+            &mr_x,
+            "x-mr-old",
+            true,
+            false,
+            vec![(&cf_x, "x-cf-old")],
+        );
+        let catalog = catalog([
+            (key("a"), vec![a]),
+            (cf_b, vec![b]),
+            (mr_x.clone(), vec![candidate("x-mr", "x-mr-new", 3)]),
+            (cf_x.clone(), vec![candidate_for_key(&cf_x, "x-cf-new", 2)]),
+        ]);
+        let outcome =
+            solve_with_installed(&roots, &[installed_x.clone()], &catalog);
+        let solution = materialize_solution(
+            InstanceUpgradeSolutionKind::Newest,
+            &outcome.solutions[0],
+            &roots,
+            &[installed_x],
+        );
+        let x_changes = solution
+            .dependency_changes
+            .iter()
+            .filter(|change| {
+                change.existing_content_id.as_deref() == Some("entry-x")
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(x_changes.len(), 1);
+    }
+
+    #[test]
+    fn cross_provider_exact_alias_requirement_is_not_guessed() {
+        let mr_x = key("x-mr");
+        let cf_x = NodeKey::new(ContentProvider::CurseForge, "x-cf");
+        let cf_b = NodeKey::new(ContentProvider::CurseForge, "b-cf");
+        let mut b = candidate_for_key(&cf_b, "b-new", 3);
+        b.dependencies.push(CandidateDependency {
+            key: cf_x.clone(),
+            version_id: Some("x-cf-new".to_string()),
+            kind: CandidateDependencyKind::Required,
+        });
+        let roots = vec![
+            root("x-mr", "x-mr-old", true),
+            RootRequest {
+                content_id: "entry-b".to_string(),
+                key: cf_b.clone(),
+                current_release_id: "b-old".to_string(),
+                enabled: true,
+                action: InstanceUpgradeAction::Upgrade,
+                allow_prerelease: false,
+            },
+        ];
+        let installed_x = installed_with_aliases(
+            "entry-x",
+            &mr_x,
+            "x-mr-old",
+            false,
+            true,
+            vec![(&cf_x, "x-cf-old")],
+        );
+        let catalog = catalog([
+            (mr_x, vec![candidate("x-mr", "x-mr-new", 4)]),
+            (cf_b, vec![b]),
+            (cf_x.clone(), vec![candidate_for_key(&cf_x, "x-cf-new", 2)]),
+        ]);
+        let outcome = solve_with_installed(&roots, &[installed_x], &catalog);
+        assert!(outcome.solutions.is_empty());
+        assert_eq!(
+            outcome.issues[0].code,
+            InstanceUpgradeIssueCode::DependencyConflict
+        );
+        assert!(
+            outcome.issues[0]
+                .message
+                .contains("cannot be proven equivalent")
+        );
+    }
+
+    #[test]
     fn planner_snapshot_analysis_does_not_mutate_instance_state() {
         let snapshot = InstanceContentSnapshot {
             instance_id: "instance".to_string(),
@@ -3094,6 +5434,30 @@ mod tests {
         let before = serde_json::to_value(&snapshot).unwrap();
         let _ = snapshot_upgrade_items(&snapshot);
         assert_eq!(serde_json::to_value(&snapshot).unwrap(), before);
+    }
+
+    #[test]
+    fn recompute_source_gate_rejects_identity_not_pinned_to_plan() {
+        let source_a = vec![InstanceUpgradeSourceFile {
+            relative_path: "mods/a.jar".to_string(),
+            sha1: "source-a".to_string(),
+            size: 1,
+            enabled: true,
+        }];
+        let source_b = vec![InstanceUpgradeSourceFile {
+            relative_path: "mods/a.jar".to_string(),
+            sha1: "source-b".to_string(),
+            size: 1,
+            enabled: true,
+        }];
+        let error =
+            ensure_upgrade_source_files_match("instance", &source_a, &source_b)
+                .unwrap_err();
+        assert!(matches!(
+            error.raw.as_ref(),
+            crate::ErrorKind::StaleInstanceUpgradePlanSource { instance_id }
+                if instance_id == "instance"
+        ));
     }
 
     #[derive(Debug, Eq, PartialEq)]
@@ -3173,6 +5537,43 @@ mod tests {
                 && item.status == InstanceUpgradeItemStatus::Unidentified
         }));
         assert_eq!(after, before);
+
+        validate_instance_upgrade_plan_source(&plan, &state)
+            .await
+            .unwrap();
+        std::fs::write(mods.join("new.jar"), b"replaced-on-disk").unwrap();
+        assert!(
+            validate_instance_upgrade_plan_source(&plan, &state)
+                .await
+                .is_err()
+        );
+        std::fs::write(mods.join("new.jar"), b"not-a-real-jar").unwrap();
+        validate_instance_upgrade_plan_source(&plan, &state)
+            .await
+            .unwrap();
+
+        std::fs::write(mods.join("added.jar"), b"added").unwrap();
+        assert!(
+            validate_instance_upgrade_plan_source(&plan, &state)
+                .await
+                .is_err()
+        );
+        std::fs::remove_file(mods.join("added.jar")).unwrap();
+        validate_instance_upgrade_plan_source(&plan, &state)
+            .await
+            .unwrap();
+
+        std::fs::remove_file(mods.join("new.jar")).unwrap();
+        assert!(
+            validate_instance_upgrade_plan_source(&plan, &state)
+                .await
+                .is_err()
+        );
+        let metadata = super::super::get_instance_metadata(&instance.id, &pool)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(metadata.applied_content_set.revision, plan.source_revision);
     }
 
     async fn planner_state_digest(
@@ -3339,6 +5740,86 @@ mod tests {
                 ..Default::default()
             }),
         }
+    }
+
+    fn classified_shader_status(
+        runtime: ShaderRuntime,
+        has_target_game_version_release: bool,
+    ) -> InstanceUpgradeItemStatus {
+        classified_shader(runtime, has_target_game_version_release)
+            .0
+            .status
+    }
+
+    fn classified_shader(
+        runtime: ShaderRuntime,
+        has_target_game_version_release: bool,
+    ) -> (InstanceUpgradeItem, Vec<RootRequest>) {
+        classified_shader_with_action(
+            runtime,
+            has_target_game_version_release,
+            InstanceUpgradeAction::Upgrade,
+        )
+    }
+
+    fn classified_shader_with_action(
+        runtime: ShaderRuntime,
+        has_target_game_version_release: bool,
+        action: InstanceUpgradeAction,
+    ) -> (InstanceUpgradeItem, Vec<RootRequest>) {
+        let mut item = test_item(InstanceUpgradeItemStatus::UpgradeAvailable);
+        item.content_id = "entry-shader".to_string();
+        item.relative_path = "shaderpacks/shader.zip".to_string();
+        item.project_type = ProjectType::ShaderPack;
+        item.provider = Some(ContentProvider::Modrinth);
+        item.project_id = Some("shader".to_string());
+        item.current_release_id = Some("shader-old".to_string());
+        item.resolution.content_id = item.content_id.clone();
+        item.resolution.action = action;
+        let mut node = installed("shader", "shader-old", false, true);
+        node.content_id = item.content_id.clone();
+        node.project_type = ProjectType::ShaderPack;
+        let catalog = HashMap::from([(
+            key("shader"),
+            CandidatePool {
+                candidates: Vec::new(),
+                exploration_limited: false,
+                has_target_game_version_release,
+            },
+        )]);
+        classify_items(
+            std::slice::from_mut(&mut item),
+            std::slice::from_ref(&node),
+            &catalog,
+            &test_environment(runtime),
+        );
+        let roots = roots_from_items(
+            std::slice::from_ref(&item),
+            std::slice::from_ref(&node),
+        );
+        (item, roots)
+    }
+
+    fn assert_disabled_shader_selection(runtime: ShaderRuntime) {
+        let (item, roots) = classified_shader_with_action(
+            runtime,
+            true,
+            InstanceUpgradeAction::Disable,
+        );
+        assert_eq!(item.resolution.action, InstanceUpgradeAction::Disable);
+        let outcome = solve(&roots, &HashMap::new());
+        assert!(outcome.issues.is_empty());
+        let solution = materialize_solution(
+            InstanceUpgradeSolutionKind::Newest,
+            &outcome.solutions[0],
+            &roots,
+            &[],
+        );
+        assert_eq!(
+            solution.selections[0].action,
+            InstanceUpgradeAction::Disable
+        );
+        assert!(!solution.selections[0].enabled);
     }
 
     fn test_environment(

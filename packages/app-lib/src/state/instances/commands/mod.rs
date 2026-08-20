@@ -48,7 +48,9 @@ mod check_content_updates;
 
 mod instance_upgrade;
 pub(crate) use self::instance_upgrade::{
-    create_instance_upgrade_plan, recompute_instance_upgrade_plan,
+    ReadOnlyUpgradeSource, create_instance_upgrade_plan,
+    recompute_instance_upgrade_plan_from_source,
+    validate_instance_upgrade_plan_source,
 };
 
 mod apply_content_update;

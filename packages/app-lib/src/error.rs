@@ -118,6 +118,11 @@ pub enum ErrorKind {
         current_revision: u64,
     },
 
+    #[error(
+        "The instance upgrade plan filesystem source is stale for instance {instance_id}"
+    )]
+    StaleInstanceUpgradePlanSource { instance_id: String },
+
     #[error("Join handle error: {0}")]
     JoinError(#[from] tokio::task::JoinError),
 

@@ -138,11 +138,23 @@ pub enum InstanceUpgradeDependencyChangeKind {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceUpgradeDependencyChange {
+    /// Existing physical ContentEntry targeted by this change, when present.
+    #[serde(default)]
+    pub existing_content_id: Option<String>,
     pub provider: ContentProvider,
     pub project_id: String,
     pub current_release_id: Option<String>,
     pub target_release_id: Option<String>,
     pub kind: InstanceUpgradeDependencyChangeKind,
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeSourceFile {
+    pub relative_path: String,
+    pub sha1: String,
+    pub size: u64,
     pub enabled: bool,
 }
 
@@ -197,6 +209,8 @@ pub struct InstanceUpgradePlan {
     pub id: String,
     pub instance_id: String,
     pub source_revision: u64,
+    #[serde(default)]
+    pub source_files: Vec<InstanceUpgradeSourceFile>,
     pub source_environment: InstanceUpgradeEnvironment,
     pub target_environment: InstanceUpgradeEnvironment,
     pub items: Vec<InstanceUpgradeItem>,
