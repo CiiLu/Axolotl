@@ -46,6 +46,11 @@ pub(crate) use self::apply_content_install::*;
 
 mod check_content_updates;
 
+mod instance_upgrade;
+pub(crate) use self::instance_upgrade::{
+    create_instance_upgrade_plan, recompute_instance_upgrade_plan,
+};
+
 mod apply_content_update;
 pub(crate) use self::apply_content_update::*;
 

@@ -110,6 +110,14 @@ pub enum ErrorKind {
     #[error("Invalid input: {0}")]
     InputError(String),
 
+    #[error(
+        "The instance upgrade plan is stale (planned revision {planned_revision}, current revision {current_revision})"
+    )]
+    StaleInstanceUpgradePlan {
+        planned_revision: u64,
+        current_revision: u64,
+    },
+
     #[error("Join handle error: {0}")]
     JoinError(#[from] tokio::task::JoinError),
 

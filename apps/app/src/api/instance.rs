@@ -37,6 +37,11 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_refresh_content,
             instance_plan_content_updates,
             instance_apply_content_update_plan,
+            instance_plan_upgrade,
+            instance_get_upgrade_plan,
+            instance_update_upgrade_resolution,
+            instance_select_upgrade_solution,
+            instance_resolve_custom_upgrade_solution,
             instance_get_dependencies_as_content_items,
             instance_get_linked_modpack_info,
             instance_get_linked_modpack_content,
@@ -581,6 +586,59 @@ pub async fn instance_apply_content_update_plan(
         theseus::instance::apply_content_update_plan(plan_id, resolutions)
             .await?,
     )
+}
+
+#[tauri::command]
+pub async fn instance_plan_upgrade(
+    instance_id: &str,
+    target_environment: theseus::data::InstanceUpgradeEnvironment,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::plan_instance_upgrade(
+        instance_id,
+        target_environment,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_get_upgrade_plan(
+    plan_id: &str,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::get_instance_upgrade_plan(plan_id).await?)
+}
+
+#[tauri::command]
+pub async fn instance_update_upgrade_resolution(
+    plan_id: &str,
+    resolution: theseus::data::InstanceUpgradeResolution,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::update_instance_upgrade_resolution(
+        plan_id, resolution,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_select_upgrade_solution(
+    plan_id: &str,
+    choice: theseus::data::InstanceUpgradeSolutionChoice,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(
+        theseus::instance::select_instance_upgrade_solution(plan_id, choice)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_resolve_custom_upgrade_solution(
+    plan_id: &str,
+    fixed_constraints: Vec<theseus::data::InstanceUpgradeFixedConstraint>,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::resolve_custom_instance_upgrade_solution(
+        plan_id,
+        fixed_constraints,
+    )
+    .await?)
 }
 
 #[tauri::command]
