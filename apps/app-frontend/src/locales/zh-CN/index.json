@@ -7557,10 +7557,13 @@
 		"message": "用户名"
 	},
 	"app.settings.resources.proxy-url-placeholder": {
-		"message": "http://127.0.0.1:7890 或 socks5://127.0.0.1:1080"
+		"message": "支持http、https或socks5"
 	},
 	"app.settings.resources.proxy-url": {
 		"message": "代理地址"
+	},
+	"app.settings.resources.proxy-url-required": {
+		"message": "请输入代理地址"
 	},
 	"app.settings.resources.proxy-testing": {
 		"message": "测试中..."

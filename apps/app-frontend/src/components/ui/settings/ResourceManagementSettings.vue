@@ -64,6 +64,10 @@ async function saveProxyConfig(silent = true) {
 }
 
 async function testProxy() {
+	if (proxyConfig.value.mode === 'custom' && !proxyConfig.value.url?.trim()) {
+		proxyTestResult.value = formatMessage(messages.proxyUrlRequired)
+		return
+	}
 	proxyTesting.value = true
 	proxyTestResult.value = ''
 	try {
@@ -77,7 +81,14 @@ async function testProxy() {
 			proxyTestResult.value = result.message || formatMessage(messages.proxyTestFailed)
 		}
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error)
+		const message =
+			error instanceof Error
+				? error.message
+				: typeof error === 'object' && error !== null && 'message' in error
+					? String(error.message)
+					: typeof error === 'string'
+						? error
+						: JSON.stringify(error)
 		proxyTestResult.value = message
 	} finally {
 		proxyTesting.value = false
@@ -274,9 +285,13 @@ const messages = defineMessages({
 		id: 'app.settings.resources.proxy-url',
 		defaultMessage: 'Proxy URL',
 	},
+	proxyUrlRequired: {
+		id: 'app.settings.resources.proxy-url-required',
+		defaultMessage: 'Proxy URL is required',
+	},
 	proxyUrlPlaceholder: {
 		id: 'app.settings.resources.proxy-url-placeholder',
-		defaultMessage: 'http://127.0.0.1:7890 or socks5://127.0.0.1:1080',
+		defaultMessage: 'http/https/socks5://ip:port',
 	},
 	proxyUsername: {
 		id: 'app.settings.resources.proxy-username',
@@ -831,7 +846,7 @@ function resetMissingContentImportDirectory() {
 					<div class="flex items-center gap-3">
 						<span v-if="proxyTestResult" class="text-sm text-secondary">{{ proxyTestResult }}</span>
 						<button
-							:disabled="proxyTesting || proxyConfig.mode === 'none'"
+							:disabled="proxyTesting || proxyConfig.mode === 'none' || (proxyConfig.mode === 'custom' && !proxyConfig.url?.trim())"
 							class="btn min-w-max"
 							@click="testProxy"
 						>

@@ -90,7 +90,13 @@ pub async fn proxy_set(config: ProxyConfig) -> Result<()> {
 
 #[tauri::command]
 pub async fn proxy_test(config: ProxyConfig) -> Result<ProxyTestResult> {
-    config.validate()?;
+    if let Err(e) = config.validate() {
+        return Ok(ProxyTestResult {
+            success: false,
+            latency_ms: None,
+            message: e.to_string(),
+        });
+    }
     let client = theseus::build_proxied_client(&config);
     let started = std::time::Instant::now();
     match client

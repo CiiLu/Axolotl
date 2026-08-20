@@ -7568,6 +7568,9 @@
   "app.settings.resources.proxy-url": {
     "message": "Proxy URL"
   },
+  "app.settings.resources.proxy-url-required": {
+    "message": "Proxy URL is required"
+  },
   "app.settings.resources.proxy-testing": {
     "message": "Testing..."
   },
