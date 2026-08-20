@@ -236,6 +236,7 @@ export interface CurseForgeInstallPreview {
 		iconUrl?: string | null
 		versionMismatch?: boolean
 		selectionReason?: 'native_strict_match' | 'sha1_verified_modrinth_fallback'
+		required?: boolean
 	}>
 	modrinthFallbacks?: Array<{
 		projectId: string
@@ -244,6 +245,7 @@ export interface CurseForgeInstallPreview {
 		versionNumber: string
 		parentProjectId: number
 		iconUrl?: string | null
+		required?: boolean
 	}>
 	skipped: Array<{
 		projectId: number

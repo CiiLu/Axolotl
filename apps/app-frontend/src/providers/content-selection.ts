@@ -529,6 +529,7 @@ export function createContentSelection({
 					: [item.title],
 				requiredByKeys: [item.key],
 				alreadyInstalled: false,
+				required: dependency.required,
 			})),
 			skipped: plan.skipped.map((skipped) => ({
 				id: `${item.key}:skipped:${skipped.project_id}`,
@@ -572,7 +573,7 @@ export function createContentSelection({
 			manualOperationKind: 'content_install',
 			gameVersion: instance.game_version,
 			modLoaderType: curseForgeLoaderType(instance.loader),
-			installDependencies: themeStore.getFeatureFlag('auto_install_dependencies'),
+			installDependencies: true,
 		})
 		const titleById = new Map<number, string>()
 		for (const candidate of [preview.primary, ...preview.dependencies]) {
@@ -600,7 +601,7 @@ export function createContentSelection({
 				requiredByKeys: [item.key],
 				alreadyInstalled: false,
 				versionMismatch: dependency.versionMismatch,
-				required: true,
+				required: dependency.required,
 			}),
 		)
 		for (const fallback of preview.modrinthFallbacks ?? []) {
@@ -612,7 +613,7 @@ export function createContentSelection({
 				requiredBy: [titleById.get(fallback.parentProjectId) ?? item.title],
 				requiredByKeys: [item.key],
 				alreadyInstalled: false,
-				required: true,
+				required: fallback.required,
 			})
 		}
 		const skipped: ContentInstallPreviewSkipped[] = preview.skipped.map((skippedItem) => ({
@@ -746,7 +747,7 @@ export function createContentSelection({
 				manualOperationKind: 'content_install',
 				gameVersion: instance.game_version,
 				modLoaderType: curseForgeLoaderType(instance.loader),
-				installDependencies: themeStore.getFeatureFlag('auto_install_dependencies'),
+				installDependencies: true,
 				excludedDependencyProjectIds: [...new Set(excludedDependencyProjectIds)],
 			},
 			{ title: selection.item.title, iconUrl: selection.item.iconUrl },

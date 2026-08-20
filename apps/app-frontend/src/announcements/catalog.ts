@@ -60,6 +60,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
+						'Fixed prerequisite selection so each resolved dependency can be enabled or disabled independently.',
+					'zh-CN': '修复前置解析完成后无法独立启用或禁用前置的问题。',
+				},
+				{
+					'en-US':
 						'The icon picker will now use the icon of the loader by default when creating instance.',
 					'zh-CN': '当创建实例时，图标选择器现在会默认使用加载器的图标。',
 				},

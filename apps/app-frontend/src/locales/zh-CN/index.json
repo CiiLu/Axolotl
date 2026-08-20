@@ -479,6 +479,12 @@
 	"app.content-install.preview.only-checked": {
 		"message": "只会安装勾选的前置。"
 	},
+	"app.content-install.preview.optional-dependencies-header": {
+		"message": "可选前置"
+	},
+	"app.content-install.preview.required-dependencies-header": {
+		"message": "必要前置"
+	},
 	"app.content-install.preview.required-by": {
 		"message": "被 {projects} 需要"
 	},
