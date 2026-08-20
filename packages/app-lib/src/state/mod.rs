@@ -597,7 +597,9 @@ impl State {
             .store(use_mirror, Ordering::Relaxed);
     }
 
-    pub async fn proxy_config(&self) -> crate::Result<crate::util::proxy::ProxyConfig> {
+    pub async fn proxy_config(
+        &self,
+    ) -> crate::Result<crate::util::proxy::ProxyConfig> {
         crate::state::proxy_settings::get(&self.pool).await
     }
 

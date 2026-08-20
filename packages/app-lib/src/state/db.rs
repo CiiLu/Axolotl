@@ -1490,20 +1490,18 @@ mod tests {
 
         MIGRATOR.run(&pool).await.unwrap();
 
-        let proxy_mode: String = sqlx::query_scalar(
-            "SELECT proxy_mode FROM settings WHERE id = 0",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+        let proxy_mode: String =
+            sqlx::query_scalar("SELECT proxy_mode FROM settings WHERE id = 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(proxy_mode, "system");
 
-        let proxy_url: String = sqlx::query_scalar(
-            "SELECT proxy_url FROM settings WHERE id = 0",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+        let proxy_url: String =
+            sqlx::query_scalar("SELECT proxy_url FROM settings WHERE id = 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(proxy_url, "");
 
         let proxy_username: String = sqlx::query_scalar(
@@ -1702,20 +1700,18 @@ mod tests {
 
         MIGRATOR.run(&pool).await.unwrap();
 
-        let proxy_mode: String = sqlx::query_scalar(
-            "SELECT proxy_mode FROM settings WHERE id = 0",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+        let proxy_mode: String =
+            sqlx::query_scalar("SELECT proxy_mode FROM settings WHERE id = 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(proxy_mode, "system");
 
-        let proxy_url: String = sqlx::query_scalar(
-            "SELECT proxy_url FROM settings WHERE id = 0",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+        let proxy_url: String =
+            sqlx::query_scalar("SELECT proxy_url FROM settings WHERE id = 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(proxy_url, "");
 
         let proxy_username: String = sqlx::query_scalar(

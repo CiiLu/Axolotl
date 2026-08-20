@@ -12,9 +12,7 @@ pub async fn get<'a, E>(exec: E) -> crate::Result<ProxyConfig>
 where
     E: Executor<'a, Database = Sqlite> + Copy,
 {
-    let row = sqlx::query(PROXY_COLUMNS_QUERY)
-        .fetch_one(exec)
-        .await?;
+    let row = sqlx::query(PROXY_COLUMNS_QUERY).fetch_one(exec).await?;
     Ok(ProxyConfig {
         mode: ProxyMode::from_string(&row.get::<String, _>("proxy_mode")),
         url: row.get::<String, _>("proxy_url"),

@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
 use tokio::sync::Mutex;
 
-use crate::{ErrorKind, State};
 use crate::util::proxy::ProxyConfig;
+use crate::{ErrorKind, State};
 
 // IP list source: Ponderfly/GoogleTranslateIpCheck, MIT License.
 // https://github.com/Ponderfly/GoogleTranslateIpCheck
@@ -66,11 +66,7 @@ static REFRESH_TASK: LazyLock<Mutex<Option<Arc<RefreshHandle>>>> =
 /// Returns a reqwest client pinned to the currently selected Google Translate
 /// IPv4 address.
 pub async fn google_translation_client() -> crate::Result<Client> {
-    let proxy = State::get()
-        .await?
-        .proxy_config()
-        .await
-        .unwrap_or_default();
+    let proxy = State::get().await?.proxy_config().await.unwrap_or_default();
     loop {
         let mut runtime = RUNTIME.lock().await;
         match runtime.as_mut() {
@@ -166,11 +162,7 @@ pub async fn ip_pool_size() -> usize {
 }
 
 async fn initialize() -> crate::Result<Client> {
-    let proxy = State::get()
-        .await?
-        .proxy_config()
-        .await
-        .unwrap_or_default();
+    let proxy = State::get().await?.proxy_config().await.unwrap_or_default();
     preload().await;
     {
         let mut runtime = RUNTIME.lock().await;
@@ -272,11 +264,7 @@ pub async fn preload() {
 }
 
 async fn refreshed_client() -> crate::Result<Client> {
-    let proxy = State::get()
-        .await?
-        .proxy_config()
-        .await
-        .unwrap_or_default();
+    let proxy = State::get().await?.proxy_config().await.unwrap_or_default();
     let mut runtime = RUNTIME.lock().await;
     if let Some(runtime) = runtime.as_mut()
         && let Some(ip) = runtime
@@ -512,7 +500,9 @@ async fn probe(ip: IpAddr) -> Option<u64> {
     let client = match proxy.apply(builder) {
         Ok(builder) => builder.build().ok()?,
         Err(_) => {
-            tracing::warn!("Failed to apply proxy config for probe, using direct");
+            tracing::warn!(
+                "Failed to apply proxy config for probe, using direct"
+            );
             Client::builder()
                 .resolve(GOOGLE_TRANSLATE_HOST, SocketAddr::new(ip, 443))
                 .connect_timeout(PROBE_CONNECT_TIMEOUT)
@@ -539,11 +529,7 @@ async fn probe(ip: IpAddr) -> Option<u64> {
 }
 
 async fn download_ip_list() -> crate::Result<Vec<IpAddr>> {
-    let proxy = State::get()
-        .await?
-        .proxy_config()
-        .await
-        .unwrap_or_default();
+    let proxy = State::get().await?.proxy_config().await.unwrap_or_default();
     tracing::info!(url = IP_LIST_URL, "Downloading Google Translate IP list");
     let builder = Client::builder()
         .timeout(DOWNLOAD_TIMEOUT)
