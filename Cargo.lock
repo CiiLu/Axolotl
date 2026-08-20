@@ -396,7 +396,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tao",
- "windows",
+ "windows 0.61.3",
  "wry",
 ]
 

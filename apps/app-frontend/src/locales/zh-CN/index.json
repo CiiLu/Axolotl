@@ -407,6 +407,12 @@
 	"app.browse.server-instance-content-warning": {
 		"message": "加入服务器时，添加内容可能会破坏兼容性。当更新服务器实例内容时，任何添加的内容也将丢失。"
 	},
+	"browse.selected-projects-floating-bar.hide-projects": {
+		"message": "隐藏已选择的项目"
+	},
+	"browse.selected-projects-floating-bar.show-projects": {
+		"message": "显示 {count, plural, one {# selected project} other {# selected projects}}"
+	},
 	"app.browse.server.installing": {
 		"message": "安装中"
 	},
@@ -7229,6 +7235,9 @@
 	"app.browse.add": {
 		"message": "添加"
 	},
+	"app.settings.resources.source.mcim": {
+		"message": "优先 MCIM"
+	},
 	"app.settings.resources.source.tianpao": {
 		"message": "优先 Tianpao"
 	},
@@ -7333,6 +7342,12 @@
 	},
 	"app.settings.storage.cache-data": {
 		"message": "缓存数据"
+	},
+	"app.settings.storage.collapse-action": {
+		"message": "折叠"
+	},
+	"app.settings.storage.expand-action": {
+		"message": "展开"
 	},
 	"app.settings.storage.meta-data": {
 		"message": "Meta 数据"
