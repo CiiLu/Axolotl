@@ -93,7 +93,11 @@ pub async fn proxy_test(config: ProxyConfig) -> Result<ProxyTestResult> {
     config.validate()?;
     let client = theseus::build_proxied_client(&config);
     let started = std::time::Instant::now();
-    match client.get("https://api.modrinth.com/_version").send().await {
+    match client
+        .get("http://connect.rom.miui.com/generate_204")
+        .send()
+        .await
+    {
         Ok(response) if response.status().is_success() => {
             let latency_ms = started.elapsed().as_millis() as u64;
             Ok(ProxyTestResult {

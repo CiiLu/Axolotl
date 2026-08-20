@@ -781,30 +781,43 @@ function resetMissingContentImportDirectory() {
 						<Combobox v-model="proxyConfig.mode" :options="proxyModeOptions" />
 					</div>
 				</div>
-				<div v-if="proxyConfig.mode === 'custom'" class="flex flex-col gap-2 pl-10">
-					<StyledInput
-						id="proxy-url"
-						v-model="proxyConfig.url"
-						type="text"
-						:placeholder="formatMessage(messages.proxyUrlPlaceholder)"
-						wrapper-class="w-full max-w-xs"
-						@blur="saveProxyConfig(false)"
-					/>
-					<div class="flex gap-4">
+				<div v-if="proxyConfig.mode === 'custom'" class="flex flex-col gap-3">
+					<div class="flex flex-col gap-1">
+						<h3 class="m-0 text-base font-semibold text-contrast">
+							{{ formatMessage(messages.proxyUrl) }}
+						</h3>
+						<StyledInput
+							id="proxy-url"
+							v-model="proxyConfig.url"
+							type="text"
+							:placeholder="formatMessage(messages.proxyUrlPlaceholder)"
+							wrapper-class="w-full"
+							@blur="saveProxyConfig(false)"
+						/>
+					</div>
+					<div class="flex flex-col gap-1">
+						<h3 class="m-0 text-base font-semibold text-contrast">
+							{{ formatMessage(messages.proxyUsername) }}
+						</h3>
 						<StyledInput
 							id="proxy-username"
 							v-model="proxyConfig.username"
 							type="text"
 							:placeholder="formatMessage(messages.proxyUsernamePlaceholder)"
-							wrapper-class="flex-1"
+							wrapper-class="w-full"
 							@blur="saveProxyConfig(false)"
 						/>
+					</div>
+					<div class="flex flex-col gap-1">
+						<h3 class="m-0 text-base font-semibold text-contrast">
+							{{ formatMessage(messages.proxyPassword) }}
+						</h3>
 						<StyledInput
 							id="proxy-password"
 							v-model="proxyConfig.password"
 							type="password"
 							:placeholder="formatMessage(messages.proxyPasswordPlaceholder)"
-							wrapper-class="flex-1"
+							wrapper-class="w-full"
 							@blur="saveProxyConfig(false)"
 						/>
 					</div>
@@ -815,7 +828,8 @@ function resetMissingContentImportDirectory() {
 							{{ formatMessage(messages.proxyTest) }}
 						</h3>
 					</div>
-					<div class="flex items-center gap-2">
+					<div class="flex items-center gap-3">
+						<span v-if="proxyTestResult" class="text-sm text-secondary">{{ proxyTestResult }}</span>
 						<button
 							:disabled="proxyTesting || proxyConfig.mode === 'none'"
 							class="btn min-w-max"
@@ -823,7 +837,6 @@ function resetMissingContentImportDirectory() {
 						>
 							{{ formatMessage(proxyTesting ? messages.proxyTesting : messages.proxyTest) }}
 						</button>
-						<span v-if="proxyTestResult" class="text-sm text-secondary">{{ proxyTestResult }}</span>
 					</div>
 				</div>
 			</div>
