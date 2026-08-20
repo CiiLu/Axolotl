@@ -6690,19 +6690,19 @@
 		"message": "Save as..."
 	},
 	"instance.files.studio.back-to-files": {
-		"message": "Back to files"
+		"message": "Exit"
 	},
-	"instance.files.studio.discard-changes": {
-		"message": "Discard changes"
+	"instance.files.studio.format": {
+		"message": "Format"
 	},
 	"instance.files.studio.editor-loading": {
 		"message": "Loading editor..."
 	},
 	"instance.files.studio.empty-description": {
-		"message": "Open a properties, TOML, YAML, or JSON file from the explorer."
+		"message": "Open a file from the explorer."
 	},
 	"instance.files.studio.empty-title": {
-		"message": "Select a configuration file"
+		"message": "Select a file"
 	},
 	"instance.files.studio.files": {
 		"message": "Explorer"
@@ -6712,6 +6712,48 @@
 	},
 	"instance.files.studio.load-file-failed": {
 		"message": "Could not open file"
+	},
+	"instance.files.studio.not-text-file": {
+		"message": "This file is not a text file and cannot be opened in Studio."
+	},
+	"instance.files.studio.non-text-file": {
+		"message": "This file is not a text file and cannot be opened."
+	},
+	"instance.files.studio.open-in-system": {
+		"message": "Open in system"
+	},
+	"instance.files.studio.open-path": {
+		"message": "Open path"
+	},
+	"instance.files.studio.copy": {
+		"message": "Copy"
+	},
+	"instance.files.studio.cut": {
+		"message": "Cut"
+	},
+	"instance.files.studio.paste": {
+		"message": "Paste"
+	},
+	"instance.files.studio.new-file": {
+		"message": "New file"
+	},
+	"instance.files.studio.new-folder": {
+		"message": "New folder"
+	},
+	"instance.files.studio.delete": {
+		"message": "Move to trash"
+	},
+	"instance.files.studio.create-item": {
+		"message": "Create item"
+	},
+	"instance.files.studio.item-name": {
+		"message": "Name"
+	},
+	"instance.files.studio.create": {
+		"message": "Create"
+	},
+	"instance.files.studio.operation-failed": {
+		"message": "File operation failed"
 	},
 	"instance.files.studio.loading-file": {
 		"message": "Loading file..."

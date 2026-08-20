@@ -3,20 +3,33 @@ import {
 	ChevronDownIcon,
 	ChevronRightIcon,
 	CodeIcon,
+	CopyIcon,
 	FileCodeIcon,
+	FilePlusIcon,
 	FolderIcon,
+	FolderOpenIcon,
 	SaveIcon,
-	XIcon,
+	TrashIcon,
 } from '@modrinth/assets'
 import {
 	ButtonStyled,
 	commonMessages,
 	defineMessages,
 	injectNotificationManager,
+	NewModal,
+	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
-import { readDir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { convertFileSrc } from '@tauri-apps/api/core'
+import {
+	copyFile,
+	mkdir,
+	readDir,
+	readTextFile,
+	rename,
+	writeTextFile,
+} from '@tauri-apps/plugin-fs'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 
 import StudioEditor from '@/components/instance/studio/StudioEditor.vue'
@@ -28,10 +41,13 @@ import {
 import { get_full_path } from '@/helpers/instance'
 import {
 	listenStudioFilesChanged,
+	readStudioText,
 	registerStudioWatcher,
+	trashStudioFile,
 	unregisterStudioWatcher,
 } from '@/helpers/studio'
 import type { GameInstance } from '@/helpers/types'
+import { highlightInFolder, openPath } from '@/helpers/utils'
 
 interface StudioTreeNode {
 	name: string
@@ -59,7 +75,11 @@ const messages = defineMessages({
 	},
 	backToFiles: {
 		id: 'instance.files.studio.back-to-files',
-		defaultMessage: 'Back to files',
+		defaultMessage: 'Exit',
+	},
+	format: {
+		id: 'instance.files.studio.format',
+		defaultMessage: 'Format',
 	},
 	emptyTitle: {
 		id: 'instance.files.studio.empty-title',
@@ -67,7 +87,7 @@ const messages = defineMessages({
 	},
 	emptyDescription: {
 		id: 'instance.files.studio.empty-description',
-		defaultMessage: 'Open a properties, TOML, YAML, or JSON file from the explorer.',
+		defaultMessage: 'Open any text file from the explorer.',
 	},
 	loadDirectoryFailed: {
 		id: 'instance.files.studio.load-directory-failed',
@@ -77,17 +97,42 @@ const messages = defineMessages({
 		id: 'instance.files.studio.load-file-failed',
 		defaultMessage: 'Could not open file',
 	},
+	notTextFile: {
+		id: 'instance.files.studio.not-text-file',
+		defaultMessage: 'This file is not a text file and cannot be opened in Studio.',
+	},
 	saveFailed: {
 		id: 'instance.files.studio.save-failed',
 		defaultMessage: 'Could not save file',
 	},
-	discardChanges: {
-		id: 'instance.files.studio.discard-changes',
-		defaultMessage: 'Discard changes',
-	},
 	loadingFile: {
 		id: 'instance.files.studio.loading-file',
 		defaultMessage: 'Loading file...',
+	},
+	copy: { id: 'instance.files.studio.copy', defaultMessage: 'Copy' },
+	cut: { id: 'instance.files.studio.cut', defaultMessage: 'Cut' },
+	paste: { id: 'instance.files.studio.paste', defaultMessage: 'Paste' },
+	newFile: { id: 'instance.files.studio.new-file', defaultMessage: 'New file' },
+	newFolder: { id: 'instance.files.studio.new-folder', defaultMessage: 'New folder' },
+	delete: { id: 'instance.files.studio.delete', defaultMessage: 'Move to trash' },
+	createItem: { id: 'instance.files.studio.create-item', defaultMessage: 'Create item' },
+	itemName: { id: 'instance.files.studio.item-name', defaultMessage: 'Name' },
+	create: { id: 'instance.files.studio.create', defaultMessage: 'Create' },
+	operationFailed: {
+		id: 'instance.files.studio.operation-failed',
+		defaultMessage: 'File operation failed',
+	},
+	nonTextFile: {
+		id: 'instance.files.studio.non-text-file',
+		defaultMessage: 'This file is not a text file and cannot be opened.',
+	},
+	openInSystem: {
+		id: 'instance.files.studio.open-in-system',
+		defaultMessage: 'Open in system',
+	},
+	openPath: {
+		id: 'instance.files.studio.open-path',
+		defaultMessage: 'Open path',
 	},
 })
 
@@ -99,6 +144,14 @@ const rootNodes = ref<StudioTreeNode[]>([])
 const treeLoading = ref(true)
 const fileLoading = ref(false)
 const treeScrollElement = ref<HTMLElement | null>(null)
+const contextMenu = ref<{ node: StudioTreeNode; x: number; y: number } | null>(null)
+const contextMenuElement = ref<HTMLElement | null>(null)
+const fileClipboard = ref<{ mode: 'copy' | 'cut'; node: StudioTreeNode } | null>(null)
+const createModal = ref<InstanceType<typeof NewModal> | null>(null)
+const createParentPath = ref('')
+const createType = ref<'file' | 'directory'>('file')
+const createName = ref('')
+const studioEditor = ref<InstanceType<typeof StudioEditor> | null>(null)
 let watcherRegistrationId: string | null = null
 let watcherInstanceId: string | null = null
 let unlistenStudioFiles: (() => void) | null = null
@@ -118,7 +171,6 @@ const {
 	saveActive: saveActiveFile,
 	saveAll: saveAllDocuments,
 	updateActiveContent,
-	discardActiveChanges: discardChanges,
 	reset: resetDocuments,
 } = useStudioDocuments(
 	(document, content) => writeTextFile(resolvePath(document.path), content),
@@ -131,19 +183,161 @@ const {
 	},
 )
 const selectedName = computed(() => activeDocument.value?.name ?? '')
+const selectedFilePath = computed(() => activeDocument.value?.path ?? '')
 const editorLanguage = computed(() => {
 	const extension = selectedName.value.split('.').pop()?.toLowerCase()
 	if (extension === 'yml') return 'yaml'
 	return extension ?? 'plaintext'
 })
-const breadcrumbSegments = computed(() => activePath.value.split('/').filter(Boolean))
+const breadcrumbSegments = computed(() => selectedFilePath.value.split('/').filter(Boolean))
+const visibleBreadcrumbSegments = ref<string[]>([])
+const breadcrumbOuter = ref<HTMLElement | null>(null)
+const breadcrumbMeasure = ref<HTMLElement | null>(null)
+let breadcrumbObserver: ResizeObserver | null = null
+
+function previewKind(name: string): StudioDocument['kind'] | null {
+	if (/\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(name)) return 'image'
+	if (/\.(mp4|webm|ogv|mov|m4v)$/i.test(name)) return 'video'
+	return null
+}
+
+const previewUrl = computed(() =>
+	activeDocument.value ? convertFileSrc(resolvePath(activeDocument.value.path)) : '',
+)
 
 function resolvePath(relativePath: string): string {
 	return relativePath ? `${instanceRoot.value}/${relativePath}` : instanceRoot.value
 }
 
-function isSupportedFile(name: string): boolean {
-	return /\.(properties|toml|ya?ml|json)$/i.test(name)
+function joinPath(parent: string, name: string): string {
+	return parent ? `${parent}/${name}` : name
+}
+
+function contextDestination(node: StudioTreeNode): string {
+	return node.type === 'directory' ? node.path : node.path.split('/').slice(0, -1).join('/')
+}
+
+async function showContextMenu(event: MouseEvent, node: StudioTreeNode) {
+	contextMenu.value = { node, x: event.clientX, y: event.clientY }
+	await nextTick()
+	if (!contextMenu.value || !contextMenuElement.value) return
+
+	const padding = 10
+	const rect = contextMenuElement.value.getBoundingClientRect()
+	contextMenu.value.x = Math.min(contextMenu.value.x, window.innerWidth - rect.width - padding)
+	if (rect.bottom > window.innerHeight - padding) {
+		contextMenu.value.y = Math.max(padding, event.clientY - rect.height)
+	}
+}
+
+function hideContextMenu() {
+	contextMenu.value = null
+}
+
+function handleContextMenuKeydown(event: KeyboardEvent) {
+	if (event.key === 'Escape') hideContextMenu()
+}
+
+function copyToClipboard(mode: 'copy' | 'cut') {
+	if (!contextMenu.value) return
+	fileClipboard.value = { mode, node: contextMenu.value.node }
+	hideContextMenu()
+}
+
+async function copyItem(source: StudioTreeNode, destination: string): Promise<void> {
+	if (source.type === 'file') {
+		await copyFile(resolvePath(source.path), resolvePath(destination))
+		return
+	}
+
+	await mkdir(resolvePath(destination), { recursive: true })
+	const children = await listDirectory(source.path, source.depth + 1)
+	await Promise.all(children.map((child) => copyItem(child, joinPath(destination, child.name))))
+}
+
+async function pasteClipboard() {
+	if (!contextMenu.value || !fileClipboard.value) return
+	const destinationParent = contextDestination(contextMenu.value.node)
+	const { mode, node } = fileClipboard.value
+	const destination = joinPath(destinationParent, node.name)
+	if (node.path === destination || destination.startsWith(`${node.path}/`)) return
+
+	try {
+		if (mode === 'copy') await copyItem(node, destination)
+		else {
+			await rename(resolvePath(node.path), resolvePath(destination))
+			fileClipboard.value = null
+		}
+		hideContextMenu()
+	} catch (error) {
+		addNotification({
+			title: formatMessage(messages.operationFailed),
+			text: error instanceof Error ? error.message : String(error),
+			type: 'error',
+		})
+	}
+}
+
+async function deleteItem() {
+	if (!contextMenu.value) return
+	try {
+		await trashStudioFile(props.instance.id, contextMenu.value.node.path)
+		if (activePath.value === contextMenu.value.node.path) await closeDocument(activePath.value)
+		hideContextMenu()
+	} catch (error) {
+		addNotification({
+			title: formatMessage(messages.operationFailed),
+			text: error instanceof Error ? error.message : String(error),
+			type: 'error',
+		})
+	}
+}
+
+function showCreateModal(type: 'file' | 'directory') {
+	if (!contextMenu.value) return
+	createParentPath.value = contextDestination(contextMenu.value.node)
+	createType.value = type
+	createName.value = ''
+	hideContextMenu()
+	createModal.value?.show()
+}
+
+async function createItem() {
+	const name = createName.value.trim()
+	if (!name || /[\\/]/.test(name)) return
+	const path = joinPath(createParentPath.value, name)
+	try {
+		if (createType.value === 'directory') await mkdir(resolvePath(path))
+		else await writeTextFile(resolvePath(path), '')
+		createModal.value?.hide()
+	} catch (error) {
+		addNotification({
+			title: formatMessage(messages.operationFailed),
+			text: error instanceof Error ? error.message : String(error),
+			type: 'error',
+		})
+	}
+}
+
+function updateVisibleBreadcrumbs() {
+	const segments = breadcrumbSegments.value
+	if (!breadcrumbOuter.value || !breadcrumbMeasure.value) {
+		visibleBreadcrumbSegments.value = segments
+		return
+	}
+
+	let start = 0
+	while (start < Math.max(segments.length - 2, 0)) {
+		const visible = start === 0 ? segments : ['...', ...segments.slice(start)]
+		breadcrumbMeasure.value.textContent = visible.join(' > ')
+		if (breadcrumbMeasure.value.scrollWidth <= breadcrumbOuter.value.clientWidth) {
+			visibleBreadcrumbSegments.value = visible
+			return
+		}
+		start += 1
+	}
+
+	visibleBreadcrumbSegments.value = segments.length > 1 ? ['...', segments.at(-1)!] : segments
 }
 
 async function listDirectory(path: string, depth: number): Promise<StudioTreeNode[]> {
@@ -229,7 +423,8 @@ async function loadRoot() {
 }
 
 async function reloadCleanDocument(document: StudioDocument) {
-	if (document.content !== document.savedContent || document.saving) return
+	if (document.kind !== 'text' || document.content !== document.savedContent || document.saving)
+		return
 	try {
 		const nextContent = await readTextFile(resolvePath(document.path))
 		if (document.content !== document.savedContent || document.saving) return
@@ -324,8 +519,23 @@ watch(activePath, async (path) => {
 	node?.scrollIntoView({ block: 'nearest' })
 })
 
+watch(breadcrumbSegments, () => nextTick(updateVisibleBreadcrumbs), { immediate: true })
+
+onMounted(() => {
+	breadcrumbObserver = new ResizeObserver(updateVisibleBreadcrumbs)
+	if (breadcrumbOuter.value) breadcrumbObserver.observe(breadcrumbOuter.value)
+	document.addEventListener('mousedown', hideContextMenu)
+	document.addEventListener('keydown', handleContextMenuKeydown)
+})
+
+onBeforeUnmount(() => {
+	breadcrumbObserver?.disconnect()
+	document.removeEventListener('mousedown', hideContextMenu)
+	document.removeEventListener('keydown', handleContextMenuKeydown)
+})
+
 async function openFile(node: StudioTreeNode) {
-	if (node.type !== 'file' || !isSupportedFile(node.name) || fileLoading.value) return
+	if (node.type !== 'file' || fileLoading.value) return
 
 	const existingDocument = documents.value.find((document) => document.path === node.path)
 	if (existingDocument) {
@@ -334,10 +544,24 @@ async function openFile(node: StudioTreeNode) {
 		return
 	}
 
+	const mediaKind = previewKind(node.name)
+	if (mediaKind) {
+		await openDocument({
+			kind: mediaKind,
+			path: node.path,
+			name: node.name,
+			content: '',
+			savedContent: '',
+			saving: false,
+		})
+		return
+	}
+
 	fileLoading.value = true
 	try {
-		const nextContent = await readTextFile(resolvePath(node.path))
+		const nextContent = await readStudioText(props.instance.id, node.path)
 		const document: StudioDocument = {
+			kind: 'text',
 			path: node.path,
 			name: node.name,
 			content: nextContent,
@@ -346,14 +570,39 @@ async function openFile(node: StudioTreeNode) {
 		}
 		await openDocument(document)
 	} catch (error) {
-		addNotification({
-			title: formatMessage(messages.loadFileFailed),
-			text: error instanceof Error ? error.message : String(error),
-			type: 'error',
+		await openDocument({
+			kind: 'unsupported',
+			path: node.path,
+			name: node.name,
+			content: '',
+			savedContent: '',
+			saving: false,
 		})
 	} finally {
 		fileLoading.value = false
 	}
+}
+
+async function activateTab(path: string) {
+	await activateDocument(path)
+}
+
+async function formatActiveDocument() {
+	await studioEditor.value?.formatDocument()
+}
+
+async function openInSystem(path: string) {
+	await openPath(resolvePath(path))
+}
+
+async function revealInSystem(path: string) {
+	await highlightInFolder(resolvePath(path))
+}
+
+async function revealContextMenuItem() {
+	if (!contextMenu.value) return
+	await revealInSystem(contextMenu.value.node.path)
+	hideContextMenu()
 }
 
 async function initialize() {
@@ -405,6 +654,19 @@ onBeforeRouteLeave(() => {
 		<section
 			class="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(13rem,22rem)_minmax(0,1fr)] overflow-hidden rounded-[20px] border border-solid border-surface-4 bg-surface-1 shadow-sm"
 		>
+			<NewModal ref="createModal" :header="formatMessage(messages.createItem)" max-width="420px">
+				<label class="flex flex-col gap-2 text-sm font-semibold text-contrast">
+					{{ formatMessage(messages.itemName) }}
+					<StyledInput v-model="createName" :input-attrs="{ autofocus: true }" />
+				</label>
+				<template #actions>
+					<ButtonStyled color="brand">
+						<button type="button" @click="createItem">
+							{{ formatMessage(messages.create) }}
+						</button>
+					</ButtonStyled>
+				</template>
+			</NewModal>
 			<aside
 				class="flex min-h-0 min-w-0 flex-col border-0 border-r border-solid border-surface-4 bg-surface-2"
 			>
@@ -412,16 +674,46 @@ onBeforeRouteLeave(() => {
 					class="flex h-12 shrink-0 items-center gap-2 border-0 border-b border-solid border-surface-4 bg-surface-3 px-3"
 				>
 					<CodeIcon class="size-5 text-brand" />
-					<h1 class="m-0 min-w-0 flex-1 truncate text-sm font-bold text-contrast">
+					<h1 class="m-0 min-w-0 truncate text-sm font-bold text-contrast">
 						{{ formatMessage(messages.title) }}
 					</h1>
+					<div class="ml-auto flex shrink-0 items-center gap-1">
+						<ButtonStyled v-if="activeDocument" size="small" color="brand">
+							<button
+								type="button"
+								:disabled="!hasUnsavedChanges || activeDocument.saving"
+								@click="saveActiveFile"
+							>
+								<SaveIcon class="size-4" />
+								{{ formatMessage(commonMessages.saveButton) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled v-if="activeDocument?.kind === 'text'" size="small" type="outlined">
+							<button type="button" @click="formatActiveDocument">
+								{{ formatMessage(messages.format) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled size="small" type="outlined">
+							<button
+								type="button"
+								@click="router.push({ name: 'Files', params: { id: instance.id } })"
+							>
+								{{ formatMessage(messages.backToFiles) }}
+							</button>
+						</ButtonStyled>
+					</div>
 				</header>
 				<div
 					class="flex h-9 shrink-0 items-center px-3 text-xs font-bold uppercase tracking-wide text-secondary"
 				>
 					{{ formatMessage(messages.files) }}
 				</div>
-				<div ref="treeScrollElement" class="min-h-0 flex-1 overflow-y-auto pb-3" role="tree">
+				<div
+					ref="treeScrollElement"
+					class="min-h-0 flex-1 pb-3"
+					:class="contextMenu ? 'overflow-y-hidden' : 'overflow-y-auto'"
+					role="tree"
+				>
 					<div v-if="treeLoading" class="px-4 py-3 text-sm text-secondary">
 						{{ formatMessage(messages.loadingFile) }}
 					</div>
@@ -432,11 +724,15 @@ onBeforeRouteLeave(() => {
 						role="treeitem"
 						:data-studio-path="node.path"
 						:aria-expanded="node.type === 'directory' ? node.expanded : undefined"
-						:disabled="node.type === 'file' && !isSupportedFile(node.name)"
-						class="flex h-8 w-full min-w-0 items-center gap-1 border-0 bg-transparent pr-3 text-left text-sm text-primary hover:bg-surface-3 disabled:cursor-default disabled:opacity-45"
-						:class="{ 'bg-brand-highlight !text-contrast': node.path === activeDocument?.path }"
+						class="flex h-8 w-full cursor-pointer items-center gap-1 border-0 bg-transparent pr-3 text-left text-sm text-primary hover:bg-surface-3"
+						:class="{
+							'bg-brand-highlight !text-contrast': node.path === selectedFilePath,
+							'!bg-surface-3':
+								node.path === contextMenu?.node.path && node.path !== selectedFilePath,
+						}"
 						:style="{ paddingLeft: `${node.depth * 16 + 8}px` }"
 						@click="node.type === 'directory' ? toggleDirectory(node) : openFile(node)"
+						@contextmenu.prevent.stop="showContextMenu($event, node)"
 					>
 						<template v-if="node.type === 'directory'">
 							<ChevronDownIcon v-if="node.expanded" class="size-4 shrink-0" />
@@ -452,57 +748,49 @@ onBeforeRouteLeave(() => {
 
 			<div class="flex min-h-0 min-w-0 flex-col bg-surface-2">
 				<header
-					class="flex h-12 shrink-0 items-center overflow-x-auto border-0 border-b border-solid border-surface-4 bg-surface-3"
+					class="flex h-12 shrink-0 items-center overflow-hidden border-0 border-b border-solid border-surface-4 bg-surface-3"
 				>
 					<StudioEditorTabs
 						:documents="documents"
 						:active-path="activePath"
-						@activate="activateDocument"
+						@activate="activateTab"
 						@close="closeDocument"
 					/>
-					<div class="ml-auto flex shrink-0 items-center gap-1 px-2">
-						<ButtonStyled v-if="hasUnsavedChanges" size="small" type="transparent">
-							<button type="button" @click="discardChanges">
-								<XIcon class="size-4" />
-								{{ formatMessage(messages.discardChanges) }}
-							</button>
-						</ButtonStyled>
-						<ButtonStyled v-if="activeDocument" size="small" color="brand">
-							<button
-								type="button"
-								:disabled="!hasUnsavedChanges || activeDocument.saving"
-								@click="saveActiveFile"
-							>
-								<SaveIcon class="size-4" />
-								{{ formatMessage(commonMessages.saveButton) }}
-							</button>
-						</ButtonStyled>
-						<ButtonStyled size="small" type="outlined">
-							<button
-								type="button"
-								@click="router.push({ name: 'Files', params: { id: instance.id } })"
-							>
-								{{ formatMessage(messages.backToFiles) }}
-							</button>
-						</ButtonStyled>
-					</div>
 				</header>
 				<nav
-					v-if="activeDocument"
-					class="flex h-8 shrink-0 items-center gap-1 overflow-x-auto border-0 border-b border-solid border-surface-4 bg-surface-2 px-3 text-xs text-secondary"
-					:aria-label="activeDocument.path"
+					v-if="selectedFilePath"
+					class="flex h-8 shrink-0 items-center gap-2 border-0 border-b border-solid border-surface-4 bg-surface-2 px-3 text-xs text-secondary"
+					:aria-label="selectedFilePath"
 				>
-					<template v-for="(segment, index) in breadcrumbSegments" :key="`${segment}-${index}`">
-						<ChevronRightIcon v-if="index > 0" class="size-3.5 shrink-0" />
-						<FolderIcon v-if="index < breadcrumbSegments.length - 1" class="size-3.5 shrink-0" />
-						<FileCodeIcon v-else class="size-3.5 shrink-0" />
-						<span
-							class="whitespace-nowrap"
-							:class="{ 'text-contrast': index === breadcrumbSegments.length - 1 }"
+					<div ref="breadcrumbOuter" class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+						<template
+							v-for="(segment, index) in visibleBreadcrumbSegments"
+							:key="`${segment}-${index}`"
 						>
-							{{ segment }}
-						</span>
-					</template>
+							<ChevronRightIcon v-if="index > 0" class="size-3.5 shrink-0" />
+							<FolderIcon
+								v-if="segment !== '...' && index < visibleBreadcrumbSegments.length - 1"
+								class="size-3.5 shrink-0"
+							/>
+							<FileCodeIcon v-else class="size-3.5 shrink-0" />
+							<span
+								class="min-w-0 truncate whitespace-nowrap"
+								:class="{ 'text-contrast': index === visibleBreadcrumbSegments.length - 1 }"
+							>
+								{{ segment }}
+							</span>
+						</template>
+					</div>
+					<ButtonStyled size="small" type="transparent">
+						<button type="button" @click="revealInSystem(selectedFilePath)">
+							{{ formatMessage(messages.openPath) }}
+						</button>
+					</ButtonStyled>
+					<span
+						ref="breadcrumbMeasure"
+						class="pointer-events-none absolute whitespace-nowrap opacity-0"
+						aria-hidden="true"
+					/>
 				</nav>
 
 				<div class="relative min-h-0 min-w-0 flex-1">
@@ -512,8 +800,40 @@ onBeforeRouteLeave(() => {
 					>
 						{{ formatMessage(messages.loadingFile) }}
 					</div>
+					<div
+						v-if="activeDocument?.kind === 'image'"
+						class="flex size-full items-center justify-center overflow-auto bg-surface-1 p-6"
+					>
+						<img
+							:src="previewUrl"
+							:alt="activeDocument.name"
+							class="max-h-full max-w-full object-contain"
+						/>
+					</div>
+					<div
+						v-else-if="activeDocument?.kind === 'video'"
+						class="flex size-full items-center justify-center bg-surface-1 p-6"
+					>
+						<video :src="previewUrl" controls class="max-h-full max-w-full" />
+					</div>
+					<div
+						v-else-if="activeDocument?.kind === 'unsupported'"
+						class="flex size-full items-center justify-center p-8 text-center"
+					>
+						<div class="flex flex-col items-center gap-3">
+							<p class="m-0 text-sm text-secondary">
+								{{ formatMessage(messages.nonTextFile) }}
+							</p>
+							<ButtonStyled type="outlined">
+								<button type="button" @click="openInSystem(activeDocument.path)">
+									{{ formatMessage(messages.openInSystem) }}
+								</button>
+							</ButtonStyled>
+						</div>
+					</div>
 					<StudioEditor
-						v-if="activeDocument"
+						v-else-if="activeDocument?.kind === 'text'"
+						ref="studioEditor"
 						:key="activeDocument.path"
 						:file-path="activeDocument.path"
 						:content="activeDocument.content"
@@ -536,6 +856,84 @@ onBeforeRouteLeave(() => {
 					</div>
 				</div>
 			</div>
+			<Teleport to="#teleports">
+				<div
+					v-if="contextMenu"
+					ref="contextMenuElement"
+					class="fixed z-[9999] flex min-w-48 flex-col gap-1 rounded-xl border border-solid border-surface-5 bg-surface-3 p-1.5 shadow-lg"
+					:style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
+					role="menu"
+					@mousedown.stop
+				>
+					<ButtonStyled size="small" type="transparent">
+						<button
+							type="button"
+							class="w-full !justify-start"
+							role="menuitem"
+							@click="copyToClipboard('copy')"
+						>
+							<CopyIcon class="size-4" /> {{ formatMessage(messages.copy) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled size="small" type="transparent">
+						<button
+							type="button"
+							class="w-full !justify-start"
+							role="menuitem"
+							@click="copyToClipboard('cut')"
+						>
+							<CopyIcon class="size-4" /> {{ formatMessage(messages.cut) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled v-if="fileClipboard" size="small" type="transparent">
+						<button
+							type="button"
+							class="w-full !justify-start"
+							role="menuitem"
+							@click="pasteClipboard"
+						>
+							<CopyIcon class="size-4" /> {{ formatMessage(messages.paste) }}
+						</button>
+					</ButtonStyled>
+					<div class="my-1 h-px bg-surface-5" />
+					<ButtonStyled size="small" type="transparent">
+						<button
+							type="button"
+							class="w-full !justify-start"
+							role="menuitem"
+							@click="showCreateModal('file')"
+						>
+							<FilePlusIcon class="size-4" /> {{ formatMessage(messages.newFile) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled size="small" type="transparent">
+						<button
+							type="button"
+							class="w-full !justify-start"
+							role="menuitem"
+							@click="showCreateModal('directory')"
+						>
+							<FolderOpenIcon class="size-4" /> {{ formatMessage(messages.newFolder) }}
+						</button>
+					</ButtonStyled>
+					<div class="my-1 h-px bg-surface-5" />
+					<ButtonStyled size="small" type="transparent">
+						<button
+							type="button"
+							class="w-full !justify-start"
+							role="menuitem"
+							@click="revealContextMenuItem"
+						>
+							<FolderOpenIcon class="size-4" /> {{ formatMessage(messages.openPath) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled size="small" color="red" type="transparent">
+						<button type="button" class="w-full !justify-start" role="menuitem" @click="deleteItem">
+							<TrashIcon class="size-4" /> {{ formatMessage(messages.delete) }}
+						</button>
+					</ButtonStyled>
+				</div>
+			</Teleport>
 		</section>
 	</div>
 </template>

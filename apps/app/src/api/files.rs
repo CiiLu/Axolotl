@@ -47,10 +47,68 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             file_save_as,
             file_read_dragged_file,
             screenshot_thumbnail,
+            studio_read_text,
+            studio_trash,
             studio_watch_register,
             studio_watch_unregister,
         ])
         .build()
+}
+
+#[tauri::command]
+pub async fn studio_trash(instance_id: &str, file_path: &str) -> Result<()> {
+    let base = get_full_path(instance_id).await?;
+    let source = tokio::fs::canonicalize(base.join(file_path)).await?;
+    let canonical_base = tokio::fs::canonicalize(&base).await?;
+    if !source.starts_with(&canonical_base) {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            "file_path escapes the instance directory".to_string(),
+        ))
+        .into());
+    }
+    tokio::task::spawn_blocking(move || trash::delete(source))
+        .await
+        .map_err(|error| {
+            theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+                "Failed to send file to trash: {error}"
+            )))
+        })?
+        .map_err(|error| {
+            theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+                "Failed to send file to trash: {error}"
+            )))
+        })?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn studio_read_text(
+    instance_id: &str,
+    file_path: &str,
+) -> Result<String> {
+    let base = get_full_path(instance_id).await?;
+    let source = tokio::fs::canonicalize(base.join(file_path)).await?;
+    let canonical_base = tokio::fs::canonicalize(&base).await?;
+    if !source.starts_with(&canonical_base) {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            "file_path escapes the instance directory".to_string(),
+        ))
+        .into());
+    }
+
+    let bytes = tokio::fs::read(source).await?;
+    if bytes.contains(&0) {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            "File is not a text file".to_string(),
+        ))
+        .into());
+    }
+    String::from_utf8(bytes).map_err(|_| {
+        theseus::Error::from(theseus::ErrorKind::OtherError(
+            "File is not a UTF-8 text file".to_string(),
+        ))
+        .into()
+    })
 }
 
 #[tauri::command]

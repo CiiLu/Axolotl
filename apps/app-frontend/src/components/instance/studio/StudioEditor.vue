@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { defineMessages, useVIntl } from '@modrinth/ui'
-import EditorWorker from '../../../../node_modules/monaco-editor/esm/vs/editor/editor.worker.js?worker'
-import JsonWorker from '../../../../node_modules/monaco-editor/esm/vs/language/json/json.worker.js?worker'
 import type * as Monaco from 'monaco-editor'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+
+declare global {
+	interface Window {
+		__axolotlMonacoRuntime?: Promise<typeof Monaco>
+		require?: {
+			config(config: Record<string, unknown>): void
+			(dependencies: string[], callback: (monaco: typeof Monaco) => void): void
+		}
+	}
+}
 
 const props = defineProps<{
 	content: string
@@ -37,6 +45,57 @@ let resizeObserver: ResizeObserver | null = null
 let themeObserver: MutationObserver | null = null
 let applyingExternalContent = false
 let disposed = false
+
+function loadCodiconStyles() {
+	if (document.querySelector('link[data-monaco-codicons]')) return
+	const stylesheet = document.createElement('link')
+	stylesheet.rel = 'stylesheet'
+	stylesheet.href = '/monaco/codicon/codicon.css'
+	stylesheet.dataset.monacoCodicons = 'true'
+	document.head.append(stylesheet)
+}
+
+function loadMonaco(): Promise<typeof Monaco> {
+	if (window.__axolotlMonacoRuntime) return window.__axolotlMonacoRuntime
+
+	window.__axolotlMonacoRuntime = new Promise((resolve, reject) => {
+		loadCodiconStyles()
+		const initialize = () => {
+			const require = window.require
+			if (!require) {
+				reject(new Error('Monaco loader did not initialize'))
+				return
+			}
+			require.config({ paths: { vs: '/monaco/vs' } })
+			require(['vs/editor/editor.main'], (loadedMonaco: typeof Monaco) => resolve(loadedMonaco))
+		}
+
+		if (window.require) {
+			initialize()
+			return
+		}
+
+		const existingLoader = document.querySelector<HTMLScriptElement>('script[data-monaco-loader]')
+		if (existingLoader) {
+			existingLoader.addEventListener('load', initialize, { once: true })
+			existingLoader.addEventListener(
+				'error',
+				() => reject(new Error('Failed to load Monaco editor')),
+				{ once: true },
+			)
+			return
+		}
+
+		const loader = document.createElement('script')
+		loader.src = '/monaco/vs/loader.js'
+		loader.dataset.monacoLoader = 'true'
+		loader.onload = initialize
+		loader.onerror = () => reject(new Error('Failed to load Monaco editor'))
+		document.head.append(loader)
+	})
+
+	return window.__axolotlMonacoRuntime
+}
 
 function cssVariable(name: string): string {
 	return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -114,14 +173,13 @@ function createModel() {
 }
 
 onMounted(async () => {
-	self.MonacoEnvironment = {
-		getWorker(_moduleId: string, label: string) {
-			return label === 'json' ? new JsonWorker() : new EditorWorker()
-		},
+	try {
+		monaco = await loadMonaco()
+	} catch (error) {
+		loading.value = false
+		console.error('Failed to load Monaco editor', error)
+		return
 	}
-
-	monaco = await import('monaco-editor')
-	await import('../../../../node_modules/monaco-editor/esm/vs/languages/definitions/yaml/register.js')
 	if (disposed) return
 	registerStudioLanguages()
 	applyTheme()
@@ -130,7 +188,7 @@ onMounted(async () => {
 	editor = monaco.editor.create(editorElement.value, {
 		automaticLayout: false,
 		fontSize: 14,
-		fontLigatures: true,
+		fontLigatures: false,
 		minimap: { enabled: true },
 		padding: { top: 12 },
 		readOnly: props.readOnly,
@@ -148,7 +206,6 @@ onMounted(async () => {
 	themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 	loading.value = false
 })
-
 watch(
 	() => props.filePath,
 	() => createModel(),
@@ -184,6 +241,12 @@ onBeforeUnmount(() => {
 	editor?.dispose()
 	model?.dispose()
 })
+
+async function formatDocument() {
+	await editor?.getAction('editor.action.formatDocument')?.run()
+}
+
+defineExpose({ formatDocument })
 </script>
 
 <template>

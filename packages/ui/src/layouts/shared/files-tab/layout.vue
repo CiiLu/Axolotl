@@ -66,7 +66,11 @@
 					@refresh="ctx.refresh"
 					@share="() => fileEditorRef?.shareLog()"
 					@find="() => fileEditorRef?.toggleFind()"
-				/>
+				>
+					<template #before-refresh>
+						<slot name="before-refresh" />
+					</template>
+				</FileNavbar>
 
 				<div v-if="!isEditing">
 					<div

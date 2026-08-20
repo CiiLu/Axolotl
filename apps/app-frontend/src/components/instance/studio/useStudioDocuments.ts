@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 
 export interface StudioDocument {
+	kind: 'text' | 'image' | 'video' | 'unsupported'
 	path: string
 	name: string
 	content: string
@@ -13,12 +14,11 @@ export function useStudioDocuments(
 	onSaveError: (error: unknown) => void,
 ) {
 	const documents = ref<StudioDocument[]>([])
-	const activePath = ref('')
+	const activeIndex = ref(-1)
 	const savePromises = new Map<string, Promise<boolean>>()
 
-	const activeDocument = computed(
-		() => documents.value.find((document) => document.path === activePath.value) ?? null,
-	)
+	const activeDocument = computed(() => documents.value[activeIndex.value] ?? null)
+	const activePath = computed(() => activeDocument.value?.path ?? '')
 	const hasUnsavedChanges = computed(
 		() =>
 			activeDocument.value !== null &&
@@ -29,7 +29,9 @@ export function useStudioDocuments(
 	)
 
 	function saveDocument(document: StudioDocument | null): Promise<boolean> {
-		if (!document || document.content === document.savedContent) return Promise.resolve(true)
+		if (!document || document.kind !== 'text' || document.content === document.savedContent) {
+			return Promise.resolve(true)
+		}
 
 		const existingPromise = savePromises.get(document.path)
 		if (existingPromise) return existingPromise
@@ -57,8 +59,9 @@ export function useStudioDocuments(
 	async function activate(path: string) {
 		if (path === activePath.value) return true
 		if (!(await saveDocument(activeDocument.value))) return false
-		if (!documents.value.some((document) => document.path === path)) return false
-		activePath.value = path
+		const nextIndex = documents.value.findIndex((document) => document.path === path)
+		if (nextIndex === -1) return false
+		activeIndex.value = nextIndex
 		return true
 	}
 
@@ -67,7 +70,7 @@ export function useStudioDocuments(
 		if (existing) return activate(existing.path)
 		if (!(await saveDocument(activeDocument.value))) return false
 		documents.value.push(document)
-		activePath.value = document.path
+		activeIndex.value = documents.value.length - 1
 		return true
 	}
 
@@ -76,10 +79,15 @@ export function useStudioDocuments(
 		if (index === -1) return false
 		if (!(await saveDocument(documents.value[index]))) return false
 
-		const wasActive = activePath.value === path
-		const fallbackPath = documents.value[index + 1]?.path ?? documents.value[index - 1]?.path ?? ''
+		const wasActive = activeIndex.value === index
 		documents.value.splice(index, 1)
-		if (wasActive) activePath.value = fallbackPath
+		if (documents.value.length === 0) {
+			activeIndex.value = -1
+		} else if (wasActive) {
+			activeIndex.value = Math.min(index, documents.value.length - 1)
+		} else if (index < activeIndex.value) {
+			activeIndex.value -= 1
+		}
 		return true
 	}
 
@@ -102,7 +110,7 @@ export function useStudioDocuments(
 
 	function reset() {
 		documents.value = []
-		activePath.value = ''
+		activeIndex.value = -1
 		savePromises.clear()
 	}
 

@@ -1,6 +1,14 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
+export function readStudioText(instanceId: string, filePath: string): Promise<string> {
+	return invoke('plugin:files|studio_read_text', { instanceId, filePath })
+}
+
+export function trashStudioFile(instanceId: string, filePath: string): Promise<void> {
+	return invoke('plugin:files|studio_trash', { instanceId, filePath })
+}
+
 export interface StudioFilesChangedEvent {
 	instanceId: string
 	registrationId: string

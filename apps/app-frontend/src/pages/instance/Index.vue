@@ -7,7 +7,7 @@
 		}"
 	>
 		<div
-			:class="['p-6 pr-2 pb-4', { 'shrink-0': isFixedRender }]"
+			:class="['p-6 pr-2 pb-4', { 'shrink-0': isFixedRender, hidden: isStudioMode }]"
 			@contextmenu.prevent.stop="(event) => handleRightClick(event)"
 		>
 			<ExportModal ref="exportModal" :instance="instance" />
@@ -264,7 +264,10 @@
 				</template>
 			</ContentPageHeader>
 		</div>
-		<div data-onboarding-id="instance-tabs" :class="['px-6', { 'shrink-0': isFixedRender }]">
+		<div
+			data-onboarding-id="instance-tabs"
+			:class="['px-6', { 'shrink-0': isFixedRender, hidden: isStudioMode }]"
+		>
 			<SymlinkInstanceWarning
 				v-if="instance?.symlink_target && !symlinkWarning.isHidden.value"
 				:symlink-target="instance.symlink_target"
@@ -646,6 +649,7 @@ const renderMode = computed<'scroll' | 'fixed'>(() =>
 	displayedInstanceRoute.value.meta.renderMode === 'fixed' ? 'fixed' : 'scroll',
 )
 const isFixedRender = computed(() => renderMode.value === 'fixed')
+const isStudioMode = computed(() => displayedInstanceRoute.value.name === 'FileStudio')
 const tabs = computed(() => [
 	{
 		label: formatMessage(messages.contentTab),

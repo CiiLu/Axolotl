@@ -514,6 +514,8 @@ fn main() {
                         "file_save_as",
                         "file_read_dragged_file",
                         "screenshot_thumbnail",
+                        "studio_read_text",
+                        "studio_trash",
                         "studio_watch_register",
                         "studio_watch_unregister",
                     ])

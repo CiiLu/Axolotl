@@ -333,19 +333,20 @@ provideFileManager({
 <template>
 	<ReadyTransition :pending="firstPaintPending">
 		<div class="flex flex-col gap-4">
-			<div class="flex justify-end">
-				<ButtonStyled color="brand">
-					<button
-						type="button"
-						class="!h-10"
-						@click="router.push({ name: 'FileStudio', params: { id: instance.id } })"
-					>
-						<CodeIcon class="size-5" />
-						{{ formatMessage(messages.openStudio) }}
-					</button>
-				</ButtonStyled>
-			</div>
-			<FilePageLayout :show-refresh-button="true" />
+			<FilePageLayout :show-refresh-button="true">
+				<template #before-refresh>
+					<ButtonStyled color="brand">
+						<button
+							type="button"
+							class="!h-10"
+							@click="router.push({ name: 'FileStudio', params: { id: instance.id } })"
+						>
+							<CodeIcon class="size-5" />
+							{{ formatMessage(messages.openStudio) }}
+						</button>
+					</ButtonStyled>
+				</template>
+			</FilePageLayout>
 		</div>
 	</ReadyTransition>
 </template>

@@ -3678,19 +3678,19 @@
 		"message": "保存为……"
 	},
 	"instance.files.studio.back-to-files": {
-		"message": "返回文件管理器"
+		"message": "退出"
 	},
-	"instance.files.studio.discard-changes": {
-		"message": "放弃更改"
+	"instance.files.studio.format": {
+		"message": "格式化"
 	},
 	"instance.files.studio.editor-loading": {
 		"message": "正在加载编辑器……"
 	},
 	"instance.files.studio.empty-description": {
-		"message": "从资源管理器打开 properties、TOML、YAML 或 JSON 文件。"
+		"message": "从资源管理器打开文件。"
 	},
 	"instance.files.studio.empty-title": {
-		"message": "选择配置文件"
+		"message": "选择文件"
 	},
 	"instance.files.studio.files": {
 		"message": "资源管理器"
@@ -3700,6 +3700,48 @@
 	},
 	"instance.files.studio.load-file-failed": {
 		"message": "无法打开文件"
+	},
+	"instance.files.studio.not-text-file": {
+		"message": "此文件不是文本文件，无法在 Studio 中打开。"
+	},
+	"instance.files.studio.non-text-file": {
+		"message": "此文件非文本文件，无法打开。"
+	},
+	"instance.files.studio.open-in-system": {
+		"message": "从系统中打开"
+	},
+	"instance.files.studio.open-path": {
+		"message": "打开路径"
+	},
+	"instance.files.studio.copy": {
+		"message": "复制"
+	},
+	"instance.files.studio.cut": {
+		"message": "剪切"
+	},
+	"instance.files.studio.paste": {
+		"message": "粘贴"
+	},
+	"instance.files.studio.new-file": {
+		"message": "新建文件"
+	},
+	"instance.files.studio.new-folder": {
+		"message": "新建文件夹"
+	},
+	"instance.files.studio.delete": {
+		"message": "移至回收站"
+	},
+	"instance.files.studio.create-item": {
+		"message": "新建项目"
+	},
+	"instance.files.studio.item-name": {
+		"message": "名称"
+	},
+	"instance.files.studio.create": {
+		"message": "创建"
+	},
+	"instance.files.studio.operation-failed": {
+		"message": "文件操作失败"
 	},
 	"instance.files.studio.loading-file": {
 		"message": "正在加载文件……"
