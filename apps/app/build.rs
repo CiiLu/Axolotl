@@ -100,6 +100,18 @@ fn main() {
                     ),
             )
             .plugin(
+                "content-favorites",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "content_favorites_list",
+                        "content_favorites_add",
+                        "content_favorites_remove",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "datapacks",
                 InlinedPlugin::new()
                     .commands(&[

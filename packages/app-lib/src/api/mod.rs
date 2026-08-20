@@ -1,6 +1,7 @@
 //! API for interacting with Theseus
 pub mod ai;
 pub mod cache;
+pub mod content_favorites;
 pub mod content_search;
 pub mod curseforge;
 pub mod drop_classifier;
@@ -32,10 +33,11 @@ pub mod worlds;
 pub mod data {
     pub use crate::state::{
         AppliedContentSetPatch, CacheBehaviour, CacheValueType, CachedEntry,
-        ContentFile, ContentItem, ContentItemCapabilities, ContentItemOwner,
-        ContentItemProject, ContentItemVersion, ContentOwnershipKind,
-        ContentProvider, ContentProviderRef, ContentUpdatePlan,
-        ContentUpdatePlanAction, ContentUpdateResolution,
+        ContentFavorite, ContentFavoriteInput, ContentFavoriteProvider,
+        ContentFavoriteType, ContentFile, ContentItem, ContentItemCapabilities,
+        ContentItemOwner, ContentItemProject, ContentItemVersion,
+        ContentOwnershipKind, ContentProvider, ContentProviderRef,
+        ContentUpdatePlan, ContentUpdatePlanAction, ContentUpdateResolution,
         ContentUpdateResolutionChoice, ContentUpdateScope, CreateInstance,
         Credentials, Dependency, DirectoryInfo, EditInstance, Hooks,
         InstanceContentPack, InstanceContentSnapshot,

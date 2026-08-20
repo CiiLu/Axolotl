@@ -121,7 +121,7 @@
 						</ButtonStyled>
 						<ButtonStyled size="large" circular type="transparent">
 							<OverflowMenu
-								:tooltip="`More options`"
+								:tooltip="formatMessage(commonMessages.moreOptionsButton)"
 								:options="[
 									{
 										id: 'open-in-browser',
@@ -219,12 +219,18 @@
 										tooltip: 'Coming soon',
 										action: () => {},
 									},
-									{
-										id: 'save',
-										disabled: true,
-										tooltip: 'Coming soon',
-										action: () => {},
-									},
+									...(favoriteSupported
+										? [
+												{
+													id: 'save',
+													disabled: favoritePending,
+													tooltip: formatMessage(
+														favoriteSaved ? messages.removeFromFavorites : messages.addToFavorites,
+													),
+													action: () => void toggleFavorite(),
+												},
+										]
+										: []),
 									{
 										id: 'open-in-browser',
 										link: `https://modrinth.com/${data.project_type}/${data.slug}`,
@@ -261,7 +267,18 @@
 								<template #follow>
 									<HeartIcon /> {{ formatMessage(commonMessages.followButton) }}
 								</template>
-								<template #save> <BookmarkIcon /> Save </template>
+								<template v-if="favoriteSupported" #save>
+									<BookmarkIcon :class="{ 'text-brand': favoriteSaved }" />
+									{{
+										formatMessage(
+											favoritePending
+												? messages.favoritesLoading
+												: favoriteSaved
+													? messages.removeFromFavorites
+													: messages.addToFavorites,
+											)
+									}}
+								</template>
 								<template #report> <ReportIcon /> Report </template>
 							</OverflowMenu>
 						</ButtonStyled>
@@ -400,6 +417,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { SwapIcon } from '@/assets/icons/index.js'
 import BrowseInstanceSelector from '@/components/browse/BrowseInstanceSelector.vue'
+import { useContentFavorites } from '@/composables/useContentFavorites'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import {
@@ -424,6 +442,7 @@ import {
 } from '@/helpers/instance'
 import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
+import { isFavoriteContentType } from '@/helpers/content-favorites'
 import { get_by_instance_id } from '@/helpers/process'
 import { createProjectBrowseLocation } from '@/helpers/project-links'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
@@ -454,6 +473,9 @@ const queryClient = useQueryClient()
 const breadcrumbs = useBreadcrumbs()
 const themeStore = useTheming()
 const { formatMessage } = useVIntl()
+const contentFavorites = useContentFavorites()
+
+void contentFavorites.load().catch(handleError)
 
 const messages = defineMessages({
 	backToBrowse: {
@@ -516,6 +538,18 @@ const messages = defineMessages({
 		id: 'app.translation.error.network',
 		defaultMessage: 'The translation service could not be reached. Check your network or proxy.',
 	},
+	addToFavorites: {
+		id: 'app.content-favorites.add',
+		defaultMessage: 'Add to favorites',
+	},
+	removeFromFavorites: {
+		id: 'app.content-favorites.remove',
+		defaultMessage: 'Remove from favorites',
+	},
+	favoritesLoading: {
+		id: 'app.content-favorites.loading',
+		defaultMessage: 'Updating favorites…',
+	},
 })
 
 const { installingServerProjects, playServerProject, showAddServerToInstanceModal } =
@@ -530,6 +564,25 @@ const categories = shallowRef([])
 const organization = shallowRef(null)
 const instance = ref(null)
 const instanceProjects = ref(null)
+
+const favoriteSupported = computed(() => isFavoriteContentType(data.value?.project_type ?? ''))
+const favoritePending = computed(() =>
+	data.value ? contentFavorites.isPending('modrinth', data.value.id) : false,
+)
+const favoriteSaved = computed(() =>
+	data.value ? contentFavorites.isFavorite('modrinth', data.value.id) : false,
+)
+
+async function toggleFavorite() {
+	if (!data.value || !favoriteSupported.value || favoritePending.value) return
+	await contentFavorites
+		.toggle({
+			provider: 'modrinth',
+			project_id: data.value.id,
+			content_type: data.value.project_type,
+		})
+		.catch(handleError)
+}
 
 function browseByProjectFilter(filter, value) {
 	const projectType = isServerProject.value ? 'server' : data.value?.project_type

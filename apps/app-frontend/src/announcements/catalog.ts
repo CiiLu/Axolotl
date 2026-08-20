@@ -43,6 +43,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 		changes: {
 			added: [
 				{
+					'en-US': 'Added Favorites.',
+					'zh-CN': '新增收藏夹功能。',
+				},
+				{
 					'en-US': 'Added LiteLoader, legacy Fabric, and Cleanroom support for Minecraft 1.8.8.',
 					'zh-CN': '为 Minecraft 1.8.8 新增 LiteLoader、旧版 Fabric 和 Cleanroom 支持。',
 				},

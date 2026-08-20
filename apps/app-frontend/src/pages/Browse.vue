@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
 import {
+	BookmarkIcon,
 	CheckIcon,
 	ChevronDownIcon,
 	ClipboardCopyIcon,
@@ -55,6 +56,7 @@ import BrowseInstanceSelector from '@/components/browse/BrowseInstanceSelector.v
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import InstanceIcon from '@/components/ui/InstanceIcon.vue'
 import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
+import { useContentFavorites } from '@/composables/useContentFavorites'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { useTranslationToggle } from '@/composables/useTranslationToggle'
 import {
@@ -63,6 +65,10 @@ import {
 	setBrowseFilterMemory,
 } from '@/helpers/browse-filter-memory'
 import { mergeProviderResults } from '@/helpers/browse-merge'
+import {
+	createBrowseProjectTabs,
+	getBrowseProjectTabOptions,
+} from '@/helpers/browse-project-tabs'
 import {
 	completeBrowseReturnNavigation,
 	consumeBrowseReturnSnapshot,
@@ -78,6 +84,10 @@ import {
 	get_version_many,
 } from '@/helpers/cache.js'
 import {
+	type FavoriteContentType,
+	isFavoriteContentType,
+} from '@/helpers/content-favorites'
+import {
 	bilingualTitle,
 	type ChineseSearchResolution,
 	type ChineseSearchTranslation,
@@ -87,9 +97,9 @@ import {
 } from '@/helpers/content-search'
 import {
 	type CurseForgeCategory,
-	getCurseForgeFiles,
 	getCurseForgeCapability,
 	getCurseForgeCategories,
+	getCurseForgeFiles,
 	getCurseForgeImageUrl,
 	searchCurseForgeProjects,
 	type UnifiedSearchHit,
@@ -145,10 +155,13 @@ const { installingServerProjects, playServerProject, showAddServerToInstanceModa
 	injectServerInstall()
 const { install: installVersion, installCurseForge } = injectContentInstall()
 const contentSelection = injectContentSelection()
+const contentFavorites = useContentFavorites()
 const queryClient = useQueryClient()
 const debugLog = useDebugLogger('Browse')
 const router = useRouter()
 const route = useRoute()
+
+void contentFavorites.load().catch(handleError)
 const projectType = ref<ProjectType>(route.params.projectType as ProjectType)
 const WORLD_BROWSE_PROJECT_TYPE = 'world' as ProjectType
 const isWorldMapBrowse = computed(() => projectType.value === WORLD_BROWSE_PROJECT_TYPE)
@@ -372,6 +385,8 @@ const instanceSelector = ref()
 const pendingRouteInstanceSwitch = ref<GameInstance | null>(null)
 const activeInstance = computed(() => contentSelection.targetInstance.value ?? instance.value)
 const installedProjectIds = ref<string[] | null>(null)
+const installedProjectIdsInstanceId = ref<string | null>(null)
+let installedProjectRequestId = 0
 const instanceHideInstalled = ref(false)
 const newlyInstalled = ref<string[]>([])
 const hiddenInstanceProjectIds = ref<Set<string>>(new Set())
@@ -387,13 +402,19 @@ if (isFromWorlds.value && route.params.projectType !== 'server') {
 
 enforceSetupModpackRoute(route.params.projectType as string | undefined)
 
+const scopedInstalledProjectIds = computed(() =>
+	installedProjectIdsInstanceId.value === activeInstance.value?.id
+		? (installedProjectIds.value ?? [])
+		: [],
+)
+
 const allInstalledIds = computed(
-	() => new Set([...newlyInstalled.value, ...(installedProjectIds.value ?? [])]),
+	() => new Set([...newlyInstalled.value, ...scopedInstalledProjectIds.value]),
 )
 
 function syncHiddenInstanceProjectIds() {
 	hiddenInstanceProjectIds.value = new Set([
-		...(installedProjectIds.value ?? []),
+		...scopedInstalledProjectIds.value,
 		...newlyInstalled.value,
 	])
 	hiddenInstanceProjectIdsInitialized.value = true
@@ -415,30 +436,50 @@ watchServerContextChanges()
 await initInstanceContext()
 
 async function refreshInstalledProjectIds() {
+	const requestId = ++installedProjectRequestId
 	const instanceId = activeInstance.value?.id
 	if (!instanceId) {
 		installedProjectIds.value = null
+		installedProjectIdsInstanceId.value = null
 		return
+	}
+	const requestInstanceId = instanceId
+	if (installedProjectIdsInstanceId.value !== requestInstanceId) {
+		installedProjectIds.value = null
+		installedProjectIdsInstanceId.value = null
+		hiddenInstanceProjectIds.value = new Set()
+		hiddenInstanceProjectIdsInitialized.value = false
 	}
 
 	if (route.query.from === 'worlds') {
-		const worlds = await get_instance_worlds(instanceId).catch(handleError)
+		const worlds = await get_instance_worlds(requestInstanceId).catch(handleError)
 		if (!worlds) return
+		if (
+			requestId !== installedProjectRequestId ||
+			activeInstance.value?.id !== requestInstanceId
+		)
+			return
 
 		const serverProjectIds = worlds
 			.filter((w) => w.type === 'server' && 'project_id' in w && w.project_id)
 			.map((w) => (w as { project_id: string }).project_id)
 		debugLog('installedServerProjectIds loaded', { count: serverProjectIds.length })
 		installedProjectIds.value = serverProjectIds
+		installedProjectIdsInstanceId.value = requestInstanceId
 		return
 	}
 
-	const ids = await getInstalledProjectIds(instanceId).catch(handleError)
-	if (ids) {
+	const ids = await getInstalledProjectIds(requestInstanceId).catch(handleError)
+	if (
+		ids &&
+		requestId === installedProjectRequestId &&
+		activeInstance.value?.id === requestInstanceId
+	) {
 		debugLog('installedProjectIds loaded', { count: ids.length })
 		installedProjectIds.value = ids
+		installedProjectIdsInstanceId.value = requestInstanceId
+		await contentSelection.refreshInstalledIdentities()
 	}
-	await contentSelection.refreshInstalledIdentities()
 }
 
 async function initInstanceContext() {
@@ -642,6 +683,14 @@ const messages = defineMessages({
 		id: 'app.browse.selected',
 		defaultMessage: 'Selected',
 	},
+	addToFavorites: {
+		id: 'app.content-favorites.add',
+		defaultMessage: 'Add to favorites',
+	},
+	removeFromFavorites: {
+		id: 'app.content-favorites.remove',
+		defaultMessage: 'Remove from favorites',
+	},
 	noCompatibleVersion: {
 		id: 'app.browse.no-compatible-version',
 		defaultMessage: 'No compatible version was found for the selected instance.',
@@ -738,6 +787,10 @@ const messages = defineMessages({
 	serversProjectType: {
 		id: 'app.browse.project-type.servers',
 		defaultMessage: 'Servers',
+	},
+	favoritesProjectType: {
+		id: 'app.browse.project-type.favorites',
+		defaultMessage: 'Favorites',
 	},
 	modLoaderProvidedByServer: {
 		id: 'search.filter.locked.server-loader.title',
@@ -879,7 +932,9 @@ function resetInstanceContext() {
 
 	debugLog('instance context removed, resetting')
 	instance.value = null
+	installedProjectRequestId += 1
 	installedProjectIds.value = null
+	installedProjectIdsInstanceId.value = null
 	instanceHideInstalled.value = false
 	newlyInstalled.value = []
 	hiddenInstanceProjectIds.value = new Set()
@@ -914,30 +969,6 @@ watch(
 )
 
 const selectableProjectTypes = computed(() => {
-	let dataPacks = false,
-		mods = false,
-		modpacks = false
-
-	if (activeInstance.value) {
-		if (
-			availableGameVersions.value &&
-			availableGameVersions.value.findIndex((x) => x.version === activeInstance.value?.game_version) <=
-				availableGameVersions.value.findIndex((x) => x.version === '1.13') &&
-			!isServerInstance.value
-		) {
-			dataPacks = true
-		}
-
-		if (activeInstance.value.loader !== 'vanilla') {
-			mods = true
-		}
-		modpacks = !instance.value
-	} else {
-		dataPacks = true
-		mods = true
-		modpacks = true
-	}
-
 	const params: LocationQuery = {}
 
 	if (route.query.i) params.i = route.query.i
@@ -956,7 +987,7 @@ const selectableProjectTypes = computed(() => {
 	}
 
 	if (isFromWorlds.value) {
-		return [{ label: 'Servers', href: `/browse/server${suffix}` }]
+		return [{ label: formatMessage(messages.serversProjectType), href: `/browse/server${suffix}` }]
 	}
 	if (isWorldMapContext.value) {
 		return [
@@ -967,33 +998,24 @@ const selectableProjectTypes = computed(() => {
 		]
 	}
 
-	return [
+	return createBrowseProjectTabs(
 		{
-			label: formatMessage(messages.modpacksProjectType),
-			href: `/browse/modpack${suffix}`,
-			shown: modpacks,
+			modpacks: formatMessage(messages.modpacksProjectType),
+			mods: formatMessage(messages.modsProjectType),
+			resourcepacks: formatMessage(messages.resourcepacksProjectType),
+			datapacks: formatMessage(messages.datapacksProjectType),
+			maps: formatMessage(messages.mapsProjectType),
+			shaders: formatMessage(messages.shadersProjectType),
+			servers: formatMessage(messages.serversProjectType),
+			favorites: formatMessage(messages.favoritesProjectType),
 		},
-		{ label: formatMessage(messages.modsProjectType), href: `/browse/mod${suffix}`, shown: mods },
-		{
-			label: formatMessage(messages.resourcepacksProjectType),
-			href: `/browse/resourcepack${suffix}`,
-		},
-		{
-			label: formatMessage(messages.datapacksProjectType),
-			href: `/browse/datapack${suffix}`,
-			shown: dataPacks,
-		},
-		{
-			label: formatMessage(messages.mapsProjectType),
-			href: `/browse/${WORLD_BROWSE_PROJECT_TYPE}${suffix}`,
-		},
-		{ label: formatMessage(messages.shadersProjectType), href: `/browse/shader${suffix}` },
-		{
-			label: formatMessage(messages.serversProjectType),
-			href: `/browse/server${suffix}`,
-			shown: !instance.value,
-		},
-	]
+		suffix,
+		getBrowseProjectTabOptions({
+			instance: activeInstance.value,
+			hasInstanceContext: !!instance.value,
+			isServerInstance: isServerInstance.value,
+		}),
+	)
 })
 
 const installContext = computed(() => {
@@ -1268,15 +1290,22 @@ function getCardActions(
 		contentSelection.isInstalling(selectionKey)
 	const isSelected = contentSelection.isSelected(selectionKey)
 	const isInstalled =
-		projectResult.installed ||
-		allInstalledIds.value.has(projectResult.project_id || '') ||
-		contentSelection.isInstalledIdentity(
-			projectResult.provider,
-			providerProjectId,
-			projectResult.slug,
-		) ||
-		serverContentProjectIds.value.has(projectResult.project_id || '') ||
-		serverContextServerData.value?.upstream?.project_id === projectResult.project_id
+		(isServerContext.value
+			? serverContentProjectIds.value.has(projectResult.project_id || '')
+			: !!activeInstance.value && allInstalledIds.value.has(projectResult.project_id || '')) ||
+		(!isServerContext.value &&
+			!!activeInstance.value &&
+			contentSelection.isInstalledIdentity(
+				projectResult.provider,
+				providerProjectId,
+				projectResult.slug,
+			)) ||
+		(isServerContext.value &&
+			serverContextServerData.value?.upstream?.project_id === projectResult.project_id)
+	const favoriteAction =
+		!isServerContext.value && isFavoriteContentType(currentProjectType)
+		? createFavoriteCardAction(projectResult, providerProjectId, currentProjectType)
+		: null
 
 	if (
 		isServerContext.value &&
@@ -1360,6 +1389,7 @@ function getCardActions(
 					}
 				},
 			},
+			...(favoriteAction ? [favoriteAction] : []),
 		]
 	}
 
@@ -1398,6 +1428,7 @@ function getCardActions(
 					}
 				},
 			},
+			...(favoriteAction ? [favoriteAction] : []),
 		]
 	}
 	const shouldUseInstallIcon = !!instance.value || isModpack
@@ -1424,6 +1455,7 @@ function getCardActions(
 			color: 'brand',
 			type: 'outlined',
 			onClick: async () => {
+				const installInstanceId = instance.value?.id ?? null
 				setProjectInstalling(projectResult.project_id, true)
 				try {
 					const selectedInstall =
@@ -1449,7 +1481,7 @@ function getCardActions(
 						'SearchCard',
 						(versionId, installedProjectIds) => {
 							setProjectInstalling(projectResult.project_id, false)
-							if (versionId) {
+							if (versionId && activeInstance.value?.id === installInstanceId) {
 								onSearchResultsInstalled(installedProjectIds ?? [projectResult.project_id])
 							}
 						},
@@ -1469,6 +1501,39 @@ function getCardActions(
 			},
 		},
 	]
+}
+
+function createFavoriteCardAction(
+	project: Labrinth.Search.v2.ResultSearchProject & {
+		provider: BrowseContentProvider
+	},
+	providerProjectId: string,
+	contentType: FavoriteContentType,
+): CardAction {
+	const favorite = contentFavorites.isFavorite(project.provider, providerProjectId)
+	const pending = contentFavorites.isPending(project.provider, providerProjectId)
+	return {
+		key: 'favorite',
+		label: formatMessage(favorite ? messages.removeFromFavorites : messages.addToFavorites),
+		icon: pending ? SpinnerIcon : BookmarkIcon,
+		iconClass: pending ? 'animate-spin' : undefined,
+		disabled: pending,
+		color: favorite ? 'brand' : undefined,
+		type: 'transparent',
+		circular: true,
+		tooltip: formatMessage(favorite ? messages.removeFromFavorites : messages.addToFavorites),
+		onClick: async () => {
+			try {
+				await contentFavorites.toggle({
+					provider: project.provider,
+					project_id: providerProjectId,
+					content_type: contentType,
+				})
+			} catch (error) {
+				handleError(error)
+			}
+		},
+	}
 }
 
 function onSearchResultInstalled(id: string) {
@@ -2024,7 +2089,7 @@ async function search(requestParams: string, signal: AbortSignal) {
 
 		if (activeInstance.value || isServerContext.value) {
 			const installedIds = activeInstance.value
-				? new Set([...newlyInstalled.value, ...(installedProjectIds.value ?? [])])
+				? allInstalledIds.value
 				: serverContentProjectIds.value
 			mapped.installed = installedIds.has(hit.project_id)
 		}
@@ -2040,7 +2105,7 @@ async function search(requestParams: string, signal: AbortSignal) {
 		.map((hit) => {
 			if (activeInstance.value || isServerContext.value) {
 				const installedIds = activeInstance.value
-					? new Set([...newlyInstalled.value, ...(installedProjectIds.value ?? [])])
+					? allInstalledIds.value
 					: serverContentProjectIds.value
 				hit.installed = installedIds.has(hit.project_id)
 			}

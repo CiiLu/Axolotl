@@ -52,6 +52,9 @@ pub mod minecraft_skins;
 mod cache;
 pub use self::cache::*;
 
+pub mod content_favorites;
+pub use self::content_favorites::*;
+
 mod friends;
 pub use self::friends::*;
 

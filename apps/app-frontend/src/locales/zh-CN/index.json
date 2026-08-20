@@ -7621,5 +7621,56 @@
 	},
 	"app.gc-notice.fallback": {
 		"message": "Java 没有接受 {preferred}; 将使用 {chosen}."
+	},
+	"app.browse.project-type.favorites": {
+		"message": "收藏夹"
+	},
+	"app.content-favorites.add": {
+		"message": "添加到收藏夹"
+	},
+	"app.content-favorites.empty-description": {
+		"message": "收藏模组、资源包、数据包和光影包，之后随时安装。"
+	},
+	"app.content-favorites.empty-title": {
+		"message": "暂无收藏"
+	},
+	"app.content-favorites.loading": {
+		"message": "正在更新收藏夹…"
+	},
+	"app.content-favorites.no-matches-description": {
+		"message": "换个搜索词或内容类型试试。"
+	},
+	"app.content-favorites.no-matches-title": {
+		"message": "没有匹配的收藏"
+	},
+	"app.content-favorites.remove": {
+		"message": "从收藏夹移除"
+	},
+	"app.content-favorites.search": {
+		"message": "搜索收藏夹"
+	},
+	"app.content-favorites.sort.recently-saved": {
+		"message": "最近收藏"
+	},
+	"app.content-favorites.title": {
+		"message": "收藏夹"
+	},
+	"app.content-favorites.type.all": {
+		"message": "全部内容类型"
+	},
+	"app.content-favorites.unavailable-description": {
+		"message": "该项目当前暂时不可用。你可以从收藏夹中移除它。"
+	},
+	"app.content-favorites.unavailable-title": {
+		"message": "{provider} 项目 {projectId}"
+	},
+	"app.onboarding.action.click-favorites": {
+		"message": "点击收藏夹，继续"
+	},
+	"app.onboarding.favorites.description": {
+		"message": "打开收藏夹，回看保存的模组、资源包、数据包和光影包。启动器会刷新项目详情；随后你可以选择实例，并把不同来源的内容加入同一个安装购物车。"
+	},
+	"app.onboarding.favorites.title": {
+		"message": "留个清单"
 	}
 }

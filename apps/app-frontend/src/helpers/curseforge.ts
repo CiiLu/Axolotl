@@ -346,8 +346,11 @@ export function getCurseForgeProject(projectId: number) {
 	return invoke<CurseForgeProject>('plugin:curseforge|curseforge_get_project', { projectId })
 }
 
-export function getCurseForgeProjects(projectIds: number[]) {
-	return invoke<CurseForgeProject[]>('plugin:curseforge|curseforge_get_projects', { projectIds })
+export function getCurseForgeProjects(projectIds: number[], cacheBehaviour?: CacheBehaviour) {
+	return invoke<CurseForgeProject[]>('plugin:curseforge|curseforge_get_projects', {
+		projectIds,
+		cacheBehaviour,
+	})
 }
 
 export function getCurseForgeChangelog(projectId: number, fileId: number) {

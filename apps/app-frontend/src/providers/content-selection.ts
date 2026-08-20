@@ -15,7 +15,7 @@ import type {
 	ContentInstallPreviewPrimary,
 	ContentInstallPreviewSkipped,
 } from '@/components/ui/ContentInstallPreviewModal.vue'
-import { get_project, get_project_many, get_version_many } from '@/helpers/cache.js'
+import { get_project_many, get_version_many } from '@/helpers/cache.js'
 import {
 	type CurseForgeInstallPreview,
 	getCurseForgeFile,
@@ -181,6 +181,7 @@ export function createContentSelection({
 	const installedIdentityCache = new Map<string, ContentIdentity[]>()
 	const installedIdentityKeys = ref<Set<string>>(new Set())
 	const installedIdentitySlugs = ref<Set<string>>(new Set())
+	let installedIdentityRequestId = 0
 	const heuristicOverrides = new Set<string>()
 	let previewModal: InstanceType<typeof ContentInstallPreviewModal> | null = null
 
@@ -205,6 +206,7 @@ export function createContentSelection({
 				? current
 				: (available.find((instance) => instance.id === requestedId) ?? null)
 		if (selected?.id !== targetInstance.value?.id) {
+			installedIdentityRequestId += 1
 			installedIdentityCache.clear()
 			installedIdentityKeys.value = new Set()
 			installedIdentitySlugs.value = new Set()
@@ -217,6 +219,7 @@ export function createContentSelection({
 
 	function setTarget(instance: GameInstance | null) {
 		if (instance?.id !== targetInstance.value?.id) {
+			installedIdentityRequestId += 1
 			installedIdentityCache.clear()
 			installedIdentityKeys.value = new Set()
 			installedIdentitySlugs.value = new Set()
@@ -254,14 +257,19 @@ export function createContentSelection({
 	async function getInstalledIdentities(instance: GameInstance) {
 		const cached = installedIdentityCache.get(instance.id)
 		if (cached) return cached
+		const requestId = ++installedIdentityRequestId
+		const canCommit = () =>
+			requestId === installedIdentityRequestId && targetInstance.value?.id === instance.id
 		const snapshot = await get_content_snapshot(instance.id).catch(() => null)
 		if (!snapshot) {
 			// A stale/offline instance snapshot must not turn an add operation into a
 			// false authoritative conflict. Provider-qualified cart de-duplication
 			// still applies while the failed lookup remains unknown.
 			installedIdentityCache.set(instance.id, [])
-			installedIdentityKeys.value = new Set()
-			installedIdentitySlugs.value = new Set()
+			if (canCommit()) {
+				installedIdentityKeys.value = new Set()
+				installedIdentitySlugs.value = new Set()
+			}
 			return []
 		}
 		const unresolvedInputs = contentIdentityInputsFromSnapshot(snapshot.items)
@@ -292,6 +300,7 @@ export function createContentSelection({
 		})
 		const identities = await resolveContentIdentities(inputs)
 		installedIdentityCache.set(instance.id, identities)
+		if (!canCommit()) return identities
 		const keys = new Set<string>()
 		const slugs = new Set<string>()
 		for (const identity of identities) {
@@ -448,6 +457,7 @@ export function createContentSelection({
 	function clear() {
 		items.value = new Map()
 		errorKeys.value = new Set()
+		installedIdentityRequestId += 1
 		installedIdentityCache.clear()
 		installedIdentityKeys.value = new Set()
 		installedIdentitySlugs.value = new Set()

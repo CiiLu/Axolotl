@@ -1003,6 +1003,13 @@ pub async fn get_project(project_id: u32) -> crate::Result<CurseForgeProject> {
 pub async fn get_projects(
     project_ids: Vec<u32>,
 ) -> crate::Result<Vec<CurseForgeProject>> {
+    get_projects_with_cache_behaviour(project_ids, None).await
+}
+
+pub async fn get_projects_with_cache_behaviour(
+    project_ids: Vec<u32>,
+    cache_behaviour: Option<CacheBehaviour>,
+) -> crate::Result<Vec<CurseForgeProject>> {
     let project_ids = project_ids
         .into_iter()
         .map(CurseForgeProjectId::new)
@@ -1010,7 +1017,7 @@ pub async fn get_projects(
     let state = State::get().await?;
     CachedEntry::get_curseforge_project_many(
         &project_ids,
-        None,
+        cache_behaviour,
         &state.pool,
         &state.api_semaphore,
     )

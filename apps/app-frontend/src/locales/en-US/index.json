@@ -7618,5 +7618,56 @@
   },
   "app.instance.icon-picker.icon.cleanroom": {
     "message": "Cleanroom"
+  },
+  "app.browse.project-type.favorites": {
+    "message": "Favorites"
+  },
+  "app.content-favorites.add": {
+    "message": "Add to favorites"
+  },
+  "app.content-favorites.empty-description": {
+    "message": "Bookmark mods, resource packs, data packs, and shaders to install them later."
+  },
+  "app.content-favorites.empty-title": {
+    "message": "No favorites yet"
+  },
+  "app.content-favorites.loading": {
+    "message": "Updating favorites…"
+  },
+  "app.content-favorites.no-matches-description": {
+    "message": "Try a different search or content type."
+  },
+  "app.content-favorites.no-matches-title": {
+    "message": "No matching favorites"
+  },
+  "app.content-favorites.remove": {
+    "message": "Remove from favorites"
+  },
+  "app.content-favorites.search": {
+    "message": "Search favorites"
+  },
+  "app.content-favorites.sort.recently-saved": {
+    "message": "Recently saved"
+  },
+  "app.content-favorites.title": {
+    "message": "Favorites"
+  },
+  "app.content-favorites.type.all": {
+    "message": "All content types"
+  },
+  "app.content-favorites.unavailable-description": {
+    "message": "This project is currently unavailable. You can remove it from favorites."
+  },
+  "app.content-favorites.unavailable-title": {
+    "message": "{provider} project {projectId}"
+  },
+  "app.onboarding.action.click-favorites": {
+    "message": "Click Favorites to continue"
+  },
+  "app.onboarding.favorites.description": {
+    "message": "Open Favorites to revisit saved mods, resource packs, data packs, and shaders. The launcher refreshes their project details, then you can choose an instance and add mixed sources to the same install cart."
+  },
+  "app.onboarding.favorites.title": {
+    "message": "Keep a short list"
   }
 }

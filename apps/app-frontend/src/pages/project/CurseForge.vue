@@ -86,10 +86,27 @@
 							}}
 						</button>
 					</ButtonStyled>
-					<ButtonStyled v-if="data.site_url || mcmodUrl" size="large" circular type="transparent">
+					<ButtonStyled
+						v-if="data.site_url || mcmodUrl || favoriteSupported"
+						size="large"
+						circular
+						type="transparent"
+					>
 						<OverflowMenu
 							:tooltip="formatMessage(commonMessages.moreOptionsButton)"
 							:options="[
+								...(favoriteSupported
+									? [
+											{
+												id: 'save',
+												disabled: favoritePending,
+												tooltip: formatMessage(
+													favoriteSaved ? messages.removeFromFavorites : messages.addToFavorites,
+												),
+												action: () => toggleFavorite(),
+											},
+										]
+									: []),
 								...(data.site_url
 									? [
 											{
@@ -115,9 +132,21 @@
 							<template #open-in-browser>
 								<ExternalIcon /> {{ formatMessage(commonMessages.openInBrowserButton) }}
 							</template>
-							<template #open-in-mcmod>
-								<BookOpenIcon /> {{ formatMessage(messages.openInMcmod) }}
-							</template>
+								<template #open-in-mcmod>
+									<BookOpenIcon /> {{ formatMessage(messages.openInMcmod) }}
+								</template>
+								<template v-if="favoriteSupported" #save>
+									<BookmarkIcon :class="{ 'text-brand': favoriteSaved }" />
+									{{
+										formatMessage(
+											favoritePending
+												? messages.favoritesLoading
+												: favoriteSaved
+													? messages.removeFromFavorites
+													: messages.addToFavorites,
+											)
+									}}
+								</template>
 						</OverflowMenu>
 					</ButtonStyled>
 				</template>
@@ -201,6 +230,7 @@
 <script setup lang="ts">
 import {
 	BookOpenIcon,
+	BookmarkIcon,
 	DownloadIcon,
 	ExternalIcon,
 	LanguagesIcon,
@@ -232,6 +262,8 @@ import { useRoute, useRouter } from 'vue-router'
 
 import BrowseInstanceSelector from '@/components/browse/BrowseInstanceSelector.vue'
 import TranslatedProjectDescription from '@/components/ui/TranslatedProjectDescription.vue'
+import { useContentFavorites } from '@/composables/useContentFavorites'
+import { isFavoriteContentType } from '@/helpers/content-favorites'
 import { resolveMcmodUrl } from '@/helpers/content-search'
 import {
 	type CurseForgeFile,
@@ -270,6 +302,9 @@ const { addNotification, handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 const { installCurseForge, installCurseForgeWorld } = injectContentInstall()
 const contentSelection = injectContentSelection()
+const contentFavorites = useContentFavorites()
+
+void contentFavorites.load().catch(handleError)
 
 const messages = defineMessages({
 	loading: {
@@ -344,6 +379,18 @@ const messages = defineMessages({
 		id: 'app.project.install-button.no-compatible-version',
 		defaultMessage: 'No compatible version was found for this instance.',
 	},
+	addToFavorites: {
+		id: 'app.content-favorites.add',
+		defaultMessage: 'Add to favorites',
+	},
+	removeFromFavorites: {
+		id: 'app.content-favorites.remove',
+		defaultMessage: 'Remove from favorites',
+	},
+	favoritesLoading: {
+		id: 'app.content-favorites.loading',
+		defaultMessage: 'Updating favorites…',
+	},
 })
 
 const loading = ref(true)
@@ -383,6 +430,30 @@ const projectType = computed(() => {
 			return 'mod'
 	}
 })
+
+const favoriteSupported = computed(() => isFavoriteContentType(projectType.value))
+const favoriteProjectId = computed(() => project.value?.id.toString() ?? '')
+const favoriteSaved = computed(() =>
+	favoriteProjectId.value
+		? contentFavorites.isFavorite('curseforge', favoriteProjectId.value)
+		: false,
+)
+const favoritePending = computed(() =>
+	favoriteProjectId.value
+		? contentFavorites.isPending('curseforge', favoriteProjectId.value)
+		: false,
+)
+
+function toggleFavorite() {
+	if (!favoriteSupported.value || !favoriteProjectId.value || favoritePending.value) return
+	void contentFavorites
+		.toggle({
+			provider: 'curseforge',
+			project_id: favoriteProjectId.value,
+			content_type: projectType.value,
+		})
+		.catch(handleError)
+}
 
 const managedProjectType = computed(() =>
 	['mod', 'resourcepack', 'shader', 'datapack', 'modpack'].includes(projectType.value),
