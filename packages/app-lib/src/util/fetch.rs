@@ -1437,6 +1437,25 @@ fn file_reqwest_client_builder() -> reqwest::ClientBuilder {
         .http2_keep_alive_interval(Some(time::Duration::from_secs(15)))
 }
 
+//// Fallback to direct connection on error.
+pub fn build_proxied_client(
+    proxy: &crate::util::proxy::ProxyConfig,
+) -> reqwest::Client {
+    let builder = reqwest_client_builder();
+    match proxy.apply(builder) {
+        Ok(builder) => builder
+            .build()
+            .expect("proxied client configuration should be valid"),
+        Err(e) => {
+            tracing::warn!(%e, "Failed to apply proxy config, using direct connection");
+            reqwest_client_builder()
+                .no_proxy()
+                .build()
+                .expect("fallback client configuration should be valid")
+        }
+    }
+}
+
 fn http1_file_reqwest_client_builder() -> reqwest::ClientBuilder {
     reqwest_client_builder().http1_only()
 }

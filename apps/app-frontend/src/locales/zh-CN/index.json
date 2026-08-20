@@ -2735,6 +2735,57 @@
   "app.settings.resources.select-directory": {
     "message": "选择新的应用目录"
   },
+  "app.settings.resources.proxy-settings": {
+    "message": "代理设置"
+  },
+  "app.settings.resources.proxy-settings-description": {
+    "message": "配置启动器连接互联网的方式。系统代理遵循操作系统设置。自定义代理允许指定代理地址及可选的认证信息。"
+  },
+  "app.settings.resources.proxy-mode": {
+    "message": "代理模式"
+  },
+  "app.settings.resources.proxy-mode.none": {
+    "message": "不使用代理（直连）"
+  },
+  "app.settings.resources.proxy-mode.system": {
+    "message": "使用系统代理"
+  },
+  "app.settings.resources.proxy-mode.custom": {
+    "message": "自定义代理"
+  },
+  "app.settings.resources.proxy-url": {
+    "message": "代理地址"
+  },
+  "app.settings.resources.proxy-url-placeholder": {
+    "message": "http://127.0.0.1:7890 或 socks5://127.0.0.1:1080"
+  },
+  "app.settings.resources.proxy-username": {
+    "message": "用户名"
+  },
+  "app.settings.resources.proxy-username-placeholder": {
+    "message": "用户名（可选）"
+  },
+  "app.settings.resources.proxy-password": {
+    "message": "密码"
+  },
+  "app.settings.resources.proxy-password-placeholder": {
+    "message": "密码（可选）"
+  },
+  "app.settings.resources.proxy-test": {
+    "message": "测试连接"
+  },
+  "app.settings.resources.proxy-testing": {
+    "message": "测试中..."
+  },
+  "app.settings.resources.proxy-test-success": {
+    "message": "连接成功"
+  },
+  "app.settings.resources.proxy-test-success-latency": {
+    "message": "连接成功（{latency} 毫秒）"
+  },
+  "app.settings.resources.proxy-test-failed": {
+    "message": "连接失败"
+  },
   "app.settings.tabs.updates": {
     "message": "更新"
   },

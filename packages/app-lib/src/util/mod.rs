@@ -10,6 +10,7 @@ pub mod jre;
 pub mod mojang;
 pub mod network;
 pub mod platform;
+pub mod proxy;
 pub mod protocol_version;
 pub mod resolve_shortcut;
 pub mod rpc;

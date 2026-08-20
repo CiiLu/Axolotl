@@ -50,6 +50,19 @@ export type DownloadSourceMode =
 	| 'official_preferred'
 export type DownloadEngine = 'legacy' | 'xmcl'
 
+export type ProxyMode = 'none' | 'system' | 'custom'
+export type ProxyConfig = {
+	mode: ProxyMode
+	url: string
+	username: string
+	password: string
+}
+export type ProxyTestResult = {
+	success: boolean
+	latency_ms: number | null
+	message: string
+}
+
 const UPDATE_SOURCE_STORAGE_KEY = 'axolotl-update-source'
 
 export function getUpdateSource(): UpdateSource {
@@ -262,4 +275,16 @@ export async function setTelemetryEnabled(enabled: boolean): Promise<PrivacySett
 
 export async function setDiscordRpcEnabled(enabled: boolean): Promise<PrivacySettings> {
 	return await invoke('plugin:settings|discord_rpc_set', { enabled })
+}
+
+export async function getProxyConfig(): Promise<ProxyConfig> {
+	return await invoke('plugin:settings|proxy_get')
+}
+
+export async function setProxyConfig(config: ProxyConfig): Promise<void> {
+	await invoke('plugin:settings|proxy_set', { config })
+}
+
+export async function testProxyConfig(config: ProxyConfig): Promise<ProxyTestResult> {
+	return await invoke('plugin:settings|proxy_test', { config })
 }

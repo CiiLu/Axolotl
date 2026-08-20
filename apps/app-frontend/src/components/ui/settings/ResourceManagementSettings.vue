@@ -3,12 +3,12 @@ import { BoxIcon, FolderOpenIcon, FolderSearchIcon, TrashIcon } from '@modrinth/
 import {
 	Combobox,
 	defineMessages,
+	IconButton,
 	injectNotificationManager,
 	Slider,
 	StyledInput,
 	Toggle,
 	useVIntl,
-	IconButton,
 } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -21,7 +21,7 @@ import {
 	getMissingContentScannerSettings,
 	setMissingContentScannerSettings,
 } from '@/helpers/downloads-scanner'
-import { get, set } from '@/helpers/settings.ts'
+import { get, getProxyConfig, set, setProxyConfig, testProxyConfig } from '@/helpers/settings.ts'
 import { showAppDbBackupsFolder } from '@/helpers/utils.js'
 import { useTheming } from '@/store/state'
 
@@ -38,6 +38,50 @@ try {
 	isPortable.value = await invoke('is_portable_mode')
 } catch (error) {
 	console.error('Failed to determine portable mode', error)
+}
+
+// Proxy settings
+/** @type {import('@/helpers/settings.ts').ProxyConfig} */
+const proxyConfig = ref({ mode: 'none', url: '', username: '', password: '' })
+const proxyTesting = ref(false)
+/** @type {import('vue').Ref<string>} */
+const proxyTestResult = ref('')
+
+try {
+	proxyConfig.value = await getProxyConfig()
+} catch (error) {
+	console.error('Failed to load proxy configuration', error)
+}
+
+async function saveProxyConfig(silent = true) {
+	try {
+		await setProxyConfig(proxyConfig.value)
+	} catch (error) {
+		if (!silent) {
+			handleError(error)
+		}
+	}
+}
+
+async function testProxy() {
+	proxyTesting.value = true
+	proxyTestResult.value = ''
+	try {
+		const result = await testProxyConfig(proxyConfig.value)
+		if (result.success) {
+			proxyTestResult.value =
+				result.latency_ms != null
+					? formatMessage(messages.proxyTestSuccessWithLatency, { latency: result.latency_ms })
+					: formatMessage(messages.proxyTestSuccess)
+		} else {
+			proxyTestResult.value = result.message || formatMessage(messages.proxyTestFailed)
+		}
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error)
+		proxyTestResult.value = message
+	} finally {
+		proxyTesting.value = false
+	}
 }
 
 const messages = defineMessages({
@@ -201,6 +245,75 @@ const messages = defineMessages({
 		defaultMessage:
 			'The maximum number of files the launcher can write to disk at once. Use a lower value if you frequently get I/O errors. An app restart is required.',
 	},
+	proxySettings: {
+		id: 'app.settings.resources.proxy-settings',
+		defaultMessage: 'Proxy settings',
+	},
+	proxySettingsDescription: {
+		id: 'app.settings.resources.proxy-settings-description',
+		defaultMessage:
+			'Configure how the launcher connects to the internet. System proxy follows your OS settings. Custom proxy lets you specify a URL with optional authentication.',
+	},
+	proxyMode: {
+		id: 'app.settings.resources.proxy-mode',
+		defaultMessage: 'Proxy mode',
+	},
+	proxyModeNone: {
+		id: 'app.settings.resources.proxy-mode.none',
+		defaultMessage: 'No proxy (direct connection)',
+	},
+	proxyModeSystem: {
+		id: 'app.settings.resources.proxy-mode.system',
+		defaultMessage: 'Use system proxy',
+	},
+	proxyModeCustom: {
+		id: 'app.settings.resources.proxy-mode.custom',
+		defaultMessage: 'Custom proxy',
+	},
+	proxyUrl: {
+		id: 'app.settings.resources.proxy-url',
+		defaultMessage: 'Proxy URL',
+	},
+	proxyUrlPlaceholder: {
+		id: 'app.settings.resources.proxy-url-placeholder',
+		defaultMessage: 'http://127.0.0.1:7890 or socks5://127.0.0.1:1080',
+	},
+	proxyUsername: {
+		id: 'app.settings.resources.proxy-username',
+		defaultMessage: 'Username',
+	},
+	proxyUsernamePlaceholder: {
+		id: 'app.settings.resources.proxy-username-placeholder',
+		defaultMessage: 'Username (optional)',
+	},
+	proxyPassword: {
+		id: 'app.settings.resources.proxy-password',
+		defaultMessage: 'Password',
+	},
+	proxyPasswordPlaceholder: {
+		id: 'app.settings.resources.proxy-password-placeholder',
+		defaultMessage: 'Password (optional)',
+	},
+	proxyTest: {
+		id: 'app.settings.resources.proxy-test',
+		defaultMessage: 'Test connection',
+	},
+	proxyTesting: {
+		id: 'app.settings.resources.proxy-testing',
+		defaultMessage: 'Testing...',
+	},
+	proxyTestSuccess: {
+		id: 'app.settings.resources.proxy-test-success',
+		defaultMessage: 'Connection successful',
+	},
+	proxyTestSuccessWithLatency: {
+		id: 'app.settings.resources.proxy-test-success-latency',
+		defaultMessage: 'Connection successful ({latency} ms)',
+	},
+	proxyTestFailed: {
+		id: 'app.settings.resources.proxy-test-failed',
+		defaultMessage: 'Connection failed',
+	},
 	missingContentAutoImport: {
 		id: 'app.settings.resources.missing-content-auto-import',
 		defaultMessage: 'Automatically import missing modpack files',
@@ -329,6 +442,21 @@ const downloadEngineOptions = computed(() => [
 	},
 ])
 
+const proxyModeOptions = computed(() => [
+	{
+		value: 'none',
+		label: formatMessage(messages.proxyModeNone),
+	},
+	{
+		value: 'system',
+		label: formatMessage(messages.proxyModeSystem),
+	},
+	{
+		value: 'custom',
+		label: formatMessage(messages.proxyModeCustom),
+	},
+])
+
 const appDirectoryDescriptionText = computed(() =>
 	isPortable.value
 		? formatMessage(messages.appDirectoryDescriptionPortable)
@@ -354,6 +482,14 @@ watch(
 	(value) => {
 		setMissingContentScannerSettings(value)
 		void configureCurseForgeManualDownloadWatcher(value.enabled, value.directory).catch(handleError)
+	},
+	{ deep: true },
+)
+
+watch(
+	proxyConfig,
+	async () => {
+		await saveProxyConfig(true)
 	},
 	{ deep: true },
 )
@@ -623,6 +759,74 @@ function resetMissingContentImportDirectory() {
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.maximumWritesDescription) }}
 			</p>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
+			<div>
+				<h2 class="m-0 text-lg font-semibold text-contrast mt-4">
+					{{ formatMessage(messages.proxySettings) }}
+				</h2>
+				<p class="m-0 leading-tight text-secondary">
+					{{ formatMessage(messages.proxySettingsDescription) }}
+				</p>
+			</div>
+			<div class="flex flex-col gap-3">
+				<div class="flex items-center justify-between gap-4">
+					<div class="flex flex-col gap-1">
+						<h3 class="m-0 text-base font-semibold text-contrast">
+							{{ formatMessage(messages.proxyMode) }}
+						</h3>
+					</div>
+					<div class="w-48 shrink-0">
+						<Combobox v-model="proxyConfig.mode" :options="proxyModeOptions" />
+					</div>
+				</div>
+				<div v-if="proxyConfig.mode === 'custom'" class="flex flex-col gap-2 pl-10">
+					<StyledInput
+						id="proxy-url"
+						v-model="proxyConfig.url"
+						type="text"
+						:placeholder="formatMessage(messages.proxyUrlPlaceholder)"
+						wrapper-class="w-full max-w-xs"
+						@blur="saveProxyConfig(false)"
+					/>
+					<div class="flex gap-4">
+						<StyledInput
+							id="proxy-username"
+							v-model="proxyConfig.username"
+							type="text"
+							:placeholder="formatMessage(messages.proxyUsernamePlaceholder)"
+							wrapper-class="flex-1"
+							@blur="saveProxyConfig(false)"
+						/>
+						<StyledInput
+							id="proxy-password"
+							v-model="proxyConfig.password"
+							type="password"
+							:placeholder="formatMessage(messages.proxyPasswordPlaceholder)"
+							wrapper-class="flex-1"
+							@blur="saveProxyConfig(false)"
+						/>
+					</div>
+				</div>
+				<div class="flex items-center justify-between gap-4 pt-2">
+					<div class="flex flex-col gap-1">
+						<h3 class="m-0 text-base font-semibold text-contrast">
+							{{ formatMessage(messages.proxyTest) }}
+						</h3>
+					</div>
+					<div class="flex items-center gap-2">
+						<button
+							:disabled="proxyTesting || proxyConfig.mode === 'none'"
+							class="btn min-w-max"
+							@click="testProxy"
+						>
+							{{ formatMessage(proxyTesting ? messages.proxyTesting : messages.proxyTest) }}
+						</button>
+						<span v-if="proxyTestResult" class="text-sm text-secondary">{{ proxyTestResult }}</span>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div class="flex flex-col gap-2.5">

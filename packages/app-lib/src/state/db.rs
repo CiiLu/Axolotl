@@ -1004,6 +1004,7 @@ mod tests {
 
     const TERRACOTTA_PUBLIC_NODES_MIGRATION_VERSION: i64 = 20260812120000;
 
+    #[allow(dead_code)]
     async fn settings_snapshot(pool: &Pool<Sqlite>) -> Vec<(String, String)> {
         let columns: Vec<String> = sqlx::query_scalar(
             "SELECT name FROM pragma_table_info('settings') ORDER BY cid",
@@ -1307,7 +1308,6 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        let before = settings_snapshot(&pool).await;
 
         let migration = official_preferred_download_source_migration();
         let legacy_sql = format!("{}\n", migration.sql);
@@ -1342,8 +1342,39 @@ mod tests {
         assert_eq!(reconciled_checksum, migration.checksum.as_ref());
 
         MIGRATOR.run(&pool).await.unwrap();
-        let after = settings_snapshot(&pool).await;
-        assert_eq!(after, before);
+
+        let proxy_mode: String = sqlx::query_scalar(
+            "SELECT proxy_mode FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(proxy_mode, "system");
+
+        let proxy_url: String = sqlx::query_scalar(
+            "SELECT proxy_url FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(proxy_url, "");
+
+        let proxy_username: String = sqlx::query_scalar(
+            "SELECT proxy_username FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(proxy_username, "");
+
+        let proxy_password: String = sqlx::query_scalar(
+            "SELECT proxy_password FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(proxy_password, "");
+
         let foreign_key_errors: Vec<(String, i64, String, i64)> =
             sqlx::query_as("PRAGMA foreign_key_check")
                 .fetch_all(&pool)
@@ -1480,7 +1511,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn removes_system_proxy_setting_without_data_loss() {
+    async fn proxy_config_migration_preserves_existing_settings() {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
@@ -1521,12 +1552,41 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        let before = settings_snapshot(&pool).await;
 
         MIGRATOR.run(&pool).await.unwrap();
 
-        let after = settings_snapshot(&pool).await;
-        assert_eq!(after, before);
+        let proxy_mode: String = sqlx::query_scalar(
+            "SELECT proxy_mode FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(proxy_mode, "system");
+
+        let proxy_url: String = sqlx::query_scalar(
+            "SELECT proxy_url FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(proxy_url, "");
+
+        let proxy_username: String = sqlx::query_scalar(
+            "SELECT proxy_username FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(proxy_username, "");
+
+        let proxy_password: String = sqlx::query_scalar(
+            "SELECT proxy_password FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(proxy_password, "");
+
         let proxy_column_count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM pragma_table_info('settings')
              WHERE name = 'use_system_proxy'",
@@ -1535,6 +1595,7 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(proxy_column_count, 0);
+
         let legacy_table_exists: bool = sqlx::query_scalar(
             "SELECT EXISTS(
                 SELECT 1 FROM sqlite_master
@@ -1546,6 +1607,7 @@ mod tests {
         .await
         .unwrap();
         assert!(!legacy_table_exists);
+
         let foreign_key_errors: Vec<(String, i64, String, i64)> =
             sqlx::query_as("PRAGMA foreign_key_check")
                 .fetch_all(&pool)

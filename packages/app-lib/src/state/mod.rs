@@ -28,6 +28,8 @@ pub use self::instances::*;
 mod settings;
 pub use self::settings::*;
 
+mod proxy_settings;
+
 mod installer_settings;
 
 mod process;
@@ -593,6 +595,17 @@ impl State {
     pub fn set_mojang_auth_use_mirror(&self, use_mirror: bool) {
         self.mojang_auth_use_mirror
             .store(use_mirror, Ordering::Relaxed);
+    }
+
+    pub async fn proxy_config(&self) -> crate::Result<crate::util::proxy::ProxyConfig> {
+        crate::state::proxy_settings::get(&self.pool).await
+    }
+
+    pub async fn update_proxy_config(
+        &self,
+        config: &crate::util::proxy::ProxyConfig,
+    ) -> crate::Result<()> {
+        crate::state::proxy_settings::set(&self.pool, config).await
     }
 
     pub(crate) fn auto_prefers_mirror(&self) -> bool {

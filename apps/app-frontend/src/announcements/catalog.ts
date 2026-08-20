@@ -59,6 +59,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '实例的模组安装页面的标题栏现在会模糊。',
 				},
 			],
+			added: [
+				{
+					'en-US': 'Added custom proxy config.',
+					'zh-CN': '现在支持为启动器配置自定义代理。',
+				},
+			],
 		},
 	},
 	{
