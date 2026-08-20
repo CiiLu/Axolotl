@@ -11,7 +11,6 @@ import {
 	setEulaAccepted,
 } from '@modrinth/server'
 import {
-	commonMessages,
 	createContext,
 	defineMessages,
 	type MultiStageModal,
@@ -22,7 +21,8 @@ import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { computed, markRaw, type Ref, ref } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
-import { auto_install_java, find_filtered_jres, get_max_memory } from '@/helpers/jre'
+import { refresh as refreshServerList } from '@/composables/useServers'
+import { find_filtered_jres, get_java_default_versions, get_max_memory } from '@/helpers/jre'
 import { get_game_versions, get_loader_versions } from '@/helpers/metadata'
 import {
 	serverEventListener,
@@ -45,7 +45,7 @@ export type InstallPhase =
 	| 'error'
 	| 'done'
 
-export interface JavaOption {
+export interface JavaSelection {
 	path: string
 	version: string
 }
@@ -70,11 +70,9 @@ export interface CreateServerFlowContext {
 	versionsError: Ref<string | null>
 
 	name: Ref<string>
-	javaOptions: Ref<JavaOption[]>
-	selectedJavaPath: Ref<string>
+	selectedJava: Ref<JavaSelection>
 	memoryMb: Ref<number>
 	maxMemoryMb: Ref<number>
-	isJavaLoading: Ref<boolean>
 
 	installPhase: Ref<InstallPhase>
 	downloadProgress: Ref<{ downloaded: number; total: number | null } | null>
@@ -89,7 +87,8 @@ export interface CreateServerFlowContext {
 	canContinueFromType: Ref<boolean>
 
 	loadVersions: () => Promise<void>
-	loadJavaOptions: () => Promise<void>
+	loadLoaderVersions: () => Promise<void>
+	loadDefaultJava: () => Promise<void>
 	beginInstall: () => Promise<void>
 	retryInstall: () => Promise<void>
 	acceptEula: () => Promise<void>
@@ -174,11 +173,9 @@ export function createCreateServerFlowContext(
 	const versionsError = ref<string | null>(null)
 
 	const name = ref('')
-	const javaOptions = ref<JavaOption[]>([])
-	const selectedJavaPath = ref('')
+	const selectedJava = ref<JavaSelection>({ path: '', version: '' })
 	const memoryMb = ref(2048)
 	const maxMemoryMb = ref(8192)
-	const isJavaLoading = ref(false)
 
 	const installPhase = ref<InstallPhase>('idle')
 	const downloadProgress = ref<{ downloaded: number; total: number | null } | null>(null)
@@ -233,18 +230,31 @@ export function createCreateServerFlowContext(
 		}
 	}
 
-	async function loadJavaOptions() {
-		isJavaLoading.value = true
+	/** Prefills the Java path from the instance-level defaults, falling back to a scan. */
+	async function loadDefaultJava() {
+		if (selectedJava.value.path !== '') return
+		const major = requiredJavaMajorVersion(selectedGameVersion.value || '1.21')
 		try {
-			const major = requiredJavaMajorVersion(selectedGameVersion.value || '1.21')
-			const all = (await find_filtered_jres(null)) as JavaOption[]
-			javaOptions.value = all
-			if (!selectedJavaPath.value) {
-				const compatible = (await find_filtered_jres(major)) as JavaOption[]
-				selectedJavaPath.value = compatible[0]?.path ?? all[0]?.path ?? ''
+			const defaults = (await get_java_default_versions()) as Array<{
+				parsed_version: number
+				version: string
+				path: string
+			}>
+			const match =
+				defaults.find((entry) => entry.parsed_version === major) ??
+				defaults.find((entry) => entry.parsed_version >= major)
+			if (match) {
+				selectedJava.value = { path: match.path, version: match.version }
+				return
 			}
-		} finally {
-			isJavaLoading.value = false
+		} catch {
+			// Fall through to a filtered scan
+		}
+		try {
+			const javas = (await find_filtered_jres(major)) as JavaSelection[]
+			if (javas.length > 0) selectedJava.value = javas[0]
+		} catch {
+			// Leave empty; the user picks manually in the setup stage
 		}
 	}
 
@@ -264,22 +274,12 @@ export function createCreateServerFlowContext(
 		installLog.value = []
 		downloadProgress.value = null
 		try {
-			let javaPath = selectedJavaPath.value
-			if (!javaPath) {
-				if (javaOptions.value.length > 0) {
-					javaPath = javaOptions.value[0].path
-				} else {
-					const major = requiredJavaMajorVersion(selectedGameVersion.value || '1.21')
-					javaPath = (await auto_install_java(major)) as string
-				}
-				selectedJavaPath.value = javaPath
-			}
 			const manifest = await servers.create({
 				name: name.value,
 				serverType: serverType.value,
 				gameVersion: selectedGameVersion.value,
 				loaderVersion: serverType.value === 'fabric' ? selectedLoaderVersion.value : undefined,
-				javaPath: javaPath || undefined,
+				javaPath: selectedJava.value.path || undefined,
 				memoryMb: memoryMb.value,
 			})
 			createdServer.value = manifest
@@ -369,6 +369,13 @@ export function createCreateServerFlowContext(
 		} catch (error) {
 			installPhase.value = 'error'
 			installError.value = toErrorMessage(error)
+			// A half-installed server must not linger in the list; retrying starts over.
+			if (createdServer.value) {
+				const failed = createdServer.value
+				createdServer.value = null
+				await servers.delete(failed.id).catch(() => {})
+				void refreshServerList()
+			}
 		}
 	}
 
@@ -402,7 +409,7 @@ export function createCreateServerFlowContext(
 		selectedLoaderVersion.value = ''
 		loaderVersions.value = []
 		name.value = ''
-		selectedJavaPath.value = ''
+		selectedJava.value = { path: '', version: '' }
 		memoryMb.value = 2048
 		installPhase.value = 'idle'
 		installLog.value = []
@@ -428,10 +435,6 @@ export function createCreateServerFlowContext(
 			stageContent: markRaw(TypeStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.typeStageTitle),
 			cannotNavigateForward: (ctx) => !ctx.canContinueFromType.value,
-			leftButtonConfig: (ctx) => ({
-				label: ctx.formatMessage(commonMessages.cancelButton),
-				onClick: () => ctx.modal.value?.hide(),
-			}),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.next),
 				disabled: !ctx.canContinueFromType.value,
@@ -443,15 +446,11 @@ export function createCreateServerFlowContext(
 			stageContent: markRaw(SetupStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.setupStageTitle),
 			cannotNavigateForward: (ctx) => ctx.name.value.trim() === '',
-			leftButtonConfig: (ctx) => ({
-				label: ctx.formatMessage(commonMessages.cancelButton),
-				onClick: () => ctx.modal.value?.hide(),
-			}),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.next),
 				disabled: ctx.name.value.trim() === '',
 				onClick: async () => {
-					await ctx.loadJavaOptions()
+					await ctx.loadDefaultJava()
 					ctx.modal.value?.nextStage()
 				},
 			}),
@@ -463,12 +462,6 @@ export function createCreateServerFlowContext(
 			cannotNavigateForward: (ctx) => ctx.installPhase.value !== 'done',
 			disableClose: (ctx) =>
 				ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
-			leftButtonConfig: (ctx) => ({
-				label: ctx.formatMessage(commonMessages.cancelButton),
-				disabled:
-					ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
-				onClick: () => ctx.modal.value?.hide(),
-			}),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(
 					ctx.installPhase.value === 'error' ? wizardMessages.retry : wizardMessages.next,
@@ -489,10 +482,6 @@ export function createCreateServerFlowContext(
 			id: 'configure',
 			stageContent: markRaw(ConfigureStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.configureStageTitle),
-			leftButtonConfig: (ctx) => ({
-				label: ctx.formatMessage(commonMessages.cancelButton),
-				onClick: () => ctx.modal.value?.hide(),
-			}),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.finish),
 				onClick: () => ctx.modal.value?.hide(),
@@ -513,11 +502,9 @@ export function createCreateServerFlowContext(
 		isVersionsLoading,
 		versionsError,
 		name,
-		javaOptions,
-		selectedJavaPath,
+		selectedJava,
 		memoryMb,
 		maxMemoryMb,
-		isJavaLoading,
 		installPhase,
 		downloadProgress,
 		installLog,
@@ -529,7 +516,8 @@ export function createCreateServerFlowContext(
 		typeSupported,
 		canContinueFromType,
 		loadVersions,
-		loadJavaOptions,
+		loadLoaderVersions,
+		loadDefaultJava,
 		beginInstall,
 		retryInstall,
 		acceptEula,

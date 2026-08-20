@@ -10,7 +10,7 @@ import {
 } from '@modrinth/assets'
 import { setEulaAccepted } from '@modrinth/server'
 import { ButtonStyled, defineMessages, NavTabs, TagItem, useVIntl } from '@modrinth/ui'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
@@ -52,12 +52,26 @@ const messages = defineMessages({
 	port: { id: 'app.servers.card.port', defaultMessage: 'Port {port}' },
 })
 
-onMounted(() => {
-	if (servers.value.length === 0) void refresh()
-})
-
 const server = computed(() => servers.value.find((entry) => entry.id === serverId))
 const statusMeta = computed(() => (server.value ? SERVER_STATUS_META[server.value.status] : null))
+
+const isLoaded = ref(false)
+const hasSeenServer = ref(false)
+
+onMounted(async () => {
+	if (servers.value.length === 0) await refresh().catch(() => {})
+	isLoaded.value = true
+})
+
+// A server disappearing after it was loaded means it was deleted: go back to the list
+// instead of showing a "no longer exists" dead end.
+watch([server, isLoaded], ([value, loaded]) => {
+	if (value) {
+		hasSeenServer.value = true
+		return
+	}
+	if (loaded && hasSeenServer.value) void router.replace('/multiplayer/servers')
+})
 
 const tabIndex = ref(0)
 const tabLinks = computed(() => [
@@ -114,7 +128,9 @@ async function shareOnline() {
 
 <template>
 	<div class="multiplayer-fixed-render flex min-h-0 w-full flex-1 flex-col gap-3">
-		<div v-if="!server" class="text-secondary">{{ formatMessage(messages.notFound) }}</div>
+		<div v-if="!server && isLoaded && !hasSeenServer" class="text-secondary">
+			{{ formatMessage(messages.notFound) }}
+		</div>
 
 		<template v-else>
 			<div class="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-3">

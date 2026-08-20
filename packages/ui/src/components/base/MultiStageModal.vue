@@ -85,7 +85,7 @@
 		<template #actions>
 			<div
 				class="flex flex-col justify-end gap-2 sm:flex-row"
-				:class="leftButtonConfig || rightButtonConfig ? 'mt-4' : ''"
+				:class="leftButtonConfig || rightButtonConfig || cancelButton ? 'mt-4' : ''"
 			>
 				<ButtonStyled v-if="leftButtonConfig" type="outlined">
 					<button
@@ -96,6 +96,11 @@
 					>
 						<component :is="leftButtonConfig.icon" />
 						{{ leftButtonConfig.label }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled v-if="cancelButton" type="outlined">
+					<button :disabled="cancelButton.disabled" @click="cancelButton.onClick">
+						{{ cancelButton.label }}
 					</button>
 				</ButtonStyled>
 				<ButtonStyled v-if="rightButtonConfig" :color="rightButtonConfig.color">
@@ -188,10 +193,17 @@ const props = withDefaults(
 		closeOnClickOutside?: boolean
 		/** Whether to show a back (previous stage) button at the left of the title. */
 		backButtonEnabled?: MaybeCtxFn<T, boolean>
+		/** Renders an extra outlined button at the bottom right, before the primary action. */
+		cancelButton?: {
+			label: string
+			disabled?: boolean
+			onClick: () => void
+		} | null
 	}>(),
 	{
 		closeOnClickOutside: false,
 		backButtonEnabled: (() => false) as () => boolean,
+		cancelButton: null,
 	},
 )
 

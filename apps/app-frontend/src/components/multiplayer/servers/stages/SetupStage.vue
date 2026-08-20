@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import { ServerIcon } from '@modrinth/assets'
-import {
-	Combobox,
-	type ComboboxOption,
-	defineMessages,
-	Slider,
-	StyledInput,
-	useVIntl,
-} from '@modrinth/ui'
+import { requiredJavaMajorVersion } from '@modrinth/server'
+import { defineMessages, Slider, StyledInput, useVIntl } from '@modrinth/ui'
 import { computed, onMounted } from 'vue'
+
+import JavaSelector from '@/components/ui/JavaSelector.vue'
 
 import { injectCreateServerFlow } from '../create-server-flow'
 
@@ -17,39 +13,18 @@ const ctx = injectCreateServerFlow()
 
 const messages = defineMessages({
 	name: { id: 'app.servers.wizard.name', defaultMessage: 'Server name' },
-	namePlaceholder: { id: 'app.servers.wizard.name-placeholder', defaultMessage: 'Survival' },
+	namePlaceholder: {
+		id: 'app.servers.wizard.name-placeholder',
+		defaultMessage: 'Survival server',
+	},
 	java: { id: 'app.servers.settings.java', defaultMessage: 'Java' },
-	javaPlaceholder: {
-		id: 'app.servers.wizard.java-placeholder',
-		defaultMessage: 'Select a Java version',
-	},
-	javaMissing: {
-		id: 'app.servers.wizard.java-missing',
-		defaultMessage: 'No Java installations found',
-	},
-	javaMissingHint: {
-		id: 'app.servers.wizard.java-missing-hint',
-		defaultMessage:
-			'No compatible Java found on your system. The required Java will be installed automatically in the next step.',
-	},
 	memory: { id: 'app.servers.settings.memory', defaultMessage: 'Memory' },
 	memoryValue: { id: 'app.servers.wizard.memory-value', defaultMessage: '{value} MB' },
 })
 
-const javaOptions = computed<ComboboxOption<string>[]>(() =>
-	ctx.javaOptions.value.map((java) => ({
-		value: java.path,
-		label: `Java ${java.version}`,
-		subLabel: java.path,
-	})),
+const requiredJava = computed(() =>
+	requiredJavaMajorVersion(ctx.selectedGameVersion.value || '1.21'),
 )
-
-const selectedJava = computed({
-	get: () => ctx.selectedJavaPath.value,
-	set: (value) => {
-		if (typeof value === 'string' && value !== '') ctx.selectedJavaPath.value = value
-	},
-})
 
 function suggestName() {
 	const type = ctx.serverType.value
@@ -62,7 +37,7 @@ function suggestName() {
 }
 
 onMounted(() => {
-	void ctx.loadJavaOptions()
+	void ctx.loadDefaultJava()
 	if (!ctx.name.value.trim() && ctx.selectedGameVersion.value) {
 		suggestName()
 	}
@@ -83,19 +58,12 @@ onMounted(() => {
 
 		<div class="flex min-w-0 flex-col gap-2">
 			<span class="font-semibold text-contrast">{{ formatMessage(messages.java) }}</span>
-			<Combobox
-				v-model="selectedJava"
-				:options="javaOptions"
-				:placeholder="formatMessage(messages.javaPlaceholder)"
-				:no-options-message="formatMessage(messages.javaMissing)"
-				:show-no-options-when-empty="!ctx.isJavaLoading.value"
+			<JavaSelector
+				id="wizard-java-selector"
+				v-model="ctx.selectedJava.value"
+				:version="requiredJava"
+				select-all-versions
 			/>
-			<p
-				v-if="ctx.javaOptions.value.length === 0 && !ctx.isJavaLoading.value"
-				class="m-0 text-sm text-secondary"
-			>
-				{{ formatMessage(messages.javaMissingHint) }}
-			</p>
 		</div>
 
 		<div class="flex min-w-0 flex-col gap-2">

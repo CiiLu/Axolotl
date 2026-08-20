@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { MultiStageModal } from '@modrinth/ui'
-import { useTemplateRef, watch } from 'vue'
+import { commonMessages, MultiStageModal } from '@modrinth/ui'
+import { computed, useTemplateRef, watch } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
 import {
@@ -18,6 +18,12 @@ const eulaModal = useTemplateRef<ComponentExposed<typeof EulaModal>>('eulaModal'
 
 const ctx = createCreateServerFlowContext(modal)
 provideCreateServerFlow(ctx)
+
+const cancelButton = computed(() => ({
+	label: ctx.formatMessage(commonMessages.cancelButton),
+	disabled: ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
+	onClick: () => modal.value?.hide(),
+}))
 
 watch(ctx.showEulaModal, (visible) => {
 	if (visible) eulaModal.value?.show()
@@ -46,6 +52,7 @@ defineExpose({ show, hide: () => modal.value?.hide() })
 			(flowCtx) =>
 				flowCtx.installPhase.value !== 'downloading' && flowCtx.installPhase.value !== 'first-run'
 		"
+		:cancel-button="cancelButton"
 		@hide="handleHide"
 	/>
 	<EulaModal
