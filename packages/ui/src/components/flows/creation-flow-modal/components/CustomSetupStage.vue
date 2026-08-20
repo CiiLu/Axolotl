@@ -2,7 +2,7 @@
 	<div class="space-y-6">
 		<!-- Instance-specific: Icon upload -->
 		<div v-if="ctx.flowType === 'instance'" class="flex items-center gap-4">
-			<Avatar :src="ctx.instanceIconUrl.value ?? undefined" size="5rem" />
+			<Avatar :src="ctx.instanceIconUrl.value ?? defaultInstanceIconUrl ?? undefined" size="5rem" />
 			<div class="flex flex-col gap-2">
 				<ButtonStyled type="outlined">
 					<button @click="triggerIconInput">
@@ -196,11 +196,7 @@ import Collapsible from '../../../base/Collapsible.vue'
 import Combobox, { type ComboboxOption } from '../../../base/Combobox.vue'
 import PaperChannelBadge from '../../../base/PaperChannelBadge.vue'
 import StyledInput from '../../../base/StyledInput.vue'
-import type {
-	AdjunctLoader,
-	LoaderVersionEntry,
-	LoaderVersionType,
-} from '../creation-flow-context'
+import type { AdjunctLoader, LoaderVersionEntry, LoaderVersionType } from '../creation-flow-context'
 import { injectCreationFlowContext } from '../creation-flow-context'
 import {
 	createLatestRequestGuard,
@@ -616,8 +612,7 @@ watch(
 
 		optiFabricMetadataStatus.value[gameVersion] = 'loading'
 		try {
-			optiFabricCompatibility.value[gameVersion] =
-				await ctx.hasCompatibleOptiFabric(gameVersion)
+			optiFabricCompatibility.value[gameVersion] = await ctx.hasCompatibleOptiFabric(gameVersion)
 			optiFabricMetadataStatus.value[gameVersion] = 'success'
 		} catch (error) {
 			optiFabricMetadataStatus.value[gameVersion] = 'error'
@@ -667,6 +662,11 @@ const isPaperLike = computed(
 
 // Icon upload handling
 const filePicker = injectFilePicker()
+const defaultInstanceIconUrl = computed(() =>
+	selectedLoader.value
+		? (filePicker.getLoaderInstanceIconUrl?.(selectedLoader.value) ?? null)
+		: null,
+)
 
 async function triggerIconInput() {
 	const picked = await (filePicker.pickInstanceIcon?.() ?? filePicker.pickImage())
