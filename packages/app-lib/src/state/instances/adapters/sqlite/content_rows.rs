@@ -94,7 +94,7 @@ impl TryFrom<ContentSetRow> for ContentSet {
             status: ContentSetStatus::from_str(&row.status)?,
             game_version: row.game_version,
             protocol_version: row.protocol_version.map(|value| value as u32),
-            loader: ModLoader::from_string(&row.loader),
+            loader: ModLoader::try_from_string(&row.loader)?,
             loader_version: row.loader_version,
             revision: unsigned(row.revision, "instance_content_sets.revision")?,
             created: timestamp(row.created),

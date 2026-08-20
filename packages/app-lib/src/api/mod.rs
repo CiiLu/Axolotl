@@ -42,13 +42,13 @@ pub mod data {
         InstanceContentSnapshotItem, InstanceContentWarning,
         InstanceInstallCandidate, InstanceInstallTarget,
         InstanceLaunchOverridesPatch, InstanceLink, InstanceMetadata,
-        JavaVersion, LinkedModpackInfo, ManualDownloadOperationKind,
-        ManualDownloadState, MemorySettings, ModLoader, ModrinthCredentials,
-        Organization, OwnerType, PackMemberMaterializationState,
-        PackMemberOverrideKind, PendingManualDownload, PrivacySettings,
-        ProcessMetadata, Project, ProjectType, ProjectV3, SearchResult,
-        SearchResults, SearchResultsV3, Settings, TeamMember, Theme, User,
-        UserFriend, Version, WindowSize,
+        JavaVersion, LinkedModpackInfo, LoaderComponent, LoaderComponentKind,
+        LoaderComponentRole, ManualDownloadOperationKind, ManualDownloadState,
+        MemorySettings, ModLoader, ModrinthCredentials, Organization,
+        OwnerType, PackMemberMaterializationState, PackMemberOverrideKind,
+        PendingManualDownload, PrivacySettings, ProcessMetadata, Project,
+        ProjectType, ProjectV3, SearchResult, SearchResults, SearchResultsV3,
+        Settings, TeamMember, Theme, User, UserFriend, Version, WindowSize,
     };
     pub use ariadne::users::UserStatus;
     pub use modrinth_content_management::{

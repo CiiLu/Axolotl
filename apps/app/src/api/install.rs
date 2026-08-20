@@ -55,6 +55,8 @@ pub struct InstallCreateInstanceRequest {
     pub game_version: String,
     pub loader: ModLoader,
     pub loader_version: Option<String>,
+    #[serde(default)]
+    pub adjuncts: Vec<theseus::data::LoaderComponent>,
     pub icon_path: Option<String>,
     pub link: Option<InstanceLink>,
 }
@@ -93,11 +95,12 @@ pub async fn install_get_modpack_preview(
 pub async fn install_create_instance(
     request: InstallCreateInstanceRequest,
 ) -> Result<InstallJobSnapshot> {
-    Ok(theseus::install::create_instance(
+    Ok(theseus::install::create_instance_with_adjuncts(
         request.name.trim().to_string(),
         request.game_version,
         request.loader,
         request.loader_version,
+        request.adjuncts,
         request.icon_path,
         match request.link {
             Some(link) => link.into_core()?,

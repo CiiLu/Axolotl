@@ -41,6 +41,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.8.8',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Added LiteLoader, legacy Fabric, and Cleanroom support for Minecraft 1.8.8.',
+					'zh-CN': '为 Minecraft 1.8.8 新增 LiteLoader、旧版 Fabric 和 Cleanroom 支持。',
+				},
+			],
 			fixed: [
 				{
 					'en-US':

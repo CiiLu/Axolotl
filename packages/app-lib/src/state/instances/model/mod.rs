@@ -45,6 +45,9 @@ pub use self::launch::*;
 mod link;
 pub use self::link::*;
 
+mod loader_component;
+pub use self::loader_component::*;
+
 mod manifest;
 
 mod update_check;

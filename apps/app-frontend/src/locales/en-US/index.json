@@ -2273,6 +2273,9 @@
 	"app.instance.icon-picker.icon.carrot": {
 		"message": "Carrot"
 	},
+	"app.instance.icon-picker.icon.cleanroom": {
+		"message": "Cleanroom"
+	},
 	"app.instance.icon-picker.icon.cooked-chicken": {
 		"message": "Cooked Chicken"
 	},
@@ -2315,6 +2318,9 @@
 	"app.instance.icon-picker.icon.item-frame": {
 		"message": "Item Frame"
 	},
+	"app.instance.icon-picker.icon.liteloader": {
+		"message": "LiteLoader"
+	},
 	"app.instance.icon-picker.icon.neoforge": {
 		"message": "NeoForge"
 	},
@@ -2323,6 +2329,9 @@
 	},
 	"app.instance.icon-picker.icon.oak-sapling": {
 		"message": "Oak Sapling"
+	},
+	"app.instance.icon-picker.icon.optifine": {
+		"message": "OptiFine"
 	},
 	"app.instance.icon-picker.icon.quilt": {
 		"message": "Quilt"

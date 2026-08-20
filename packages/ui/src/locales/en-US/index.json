@@ -998,6 +998,33 @@
   "creation-flow.button.setup-server": {
     "defaultMessage": "Setup server"
   },
+  "creation-flow.modal.custom-setup.adjunct.hint": {
+    "defaultMessage": "A compatible version will be selected before downloading."
+  },
+  "creation-flow.modal.custom-setup.adjunct.checking-compatibility": {
+    "defaultMessage": "Checking compatibility..."
+  },
+  "creation-flow.modal.custom-setup.adjunct.compatibility-load-failed": {
+    "defaultMessage": "Failed to verify {loader} compatibility."
+  },
+  "creation-flow.modal.custom-setup.adjunct.label": {
+    "defaultMessage": "Additional loaders"
+  },
+  "creation-flow.modal.custom-setup.adjunct.optifabric-load-failed": {
+    "defaultMessage": "Failed to verify OptiFabric compatibility."
+  },
+  "creation-flow.modal.custom-setup.adjunct.optifabric-unsupported": {
+    "defaultMessage": "OptiFine requires OptiFabric, but no compatible version is available."
+  },
+  "creation-flow.modal.custom-setup.adjunct.primary-unsupported": {
+    "defaultMessage": "The selected mod loader does not support this game version."
+  },
+  "creation-flow.modal.custom-setup.adjunct.select-game-version": {
+    "defaultMessage": "Select a game version to check compatibility."
+  },
+  "creation-flow.modal.custom-setup.adjunct.unsupported": {
+    "defaultMessage": "No compatible {loader} version is available for this game version."
+  },
   "creation-flow.modal.custom-setup.build-number.label": {
     "defaultMessage": "Build number"
   },
@@ -1054,6 +1081,9 @@
   },
   "creation-flow.modal.custom-setup.loader-version.search-placeholder": {
     "defaultMessage": "Search loader version..."
+  },
+  "creation-flow.modal.custom-setup.loader.compatibility-load-failed": {
+    "defaultMessage": "Failed to verify loader compatibility"
   },
   "creation-flow.modal.custom-setup.loader.label": {
     "defaultMessage": "Mod Loader"

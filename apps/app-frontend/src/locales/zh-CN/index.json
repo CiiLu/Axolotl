@@ -7549,5 +7549,14 @@
   },
   "app.drop.batch.completed-text": {
     "message": "已导入 {succeeded} / {total}（{failed} 失败，{skipped} 跳过）。"
+  },
+  "app.instance.icon-picker.icon.cleanroom": {
+    "message": "Cleanroom"
+  },
+  "app.instance.icon-picker.icon.liteloader": {
+    "message": "LiteLoader"
+  },
+  "app.instance.icon-picker.icon.optifine": {
+    "message": "OptiFine"
   }
 }

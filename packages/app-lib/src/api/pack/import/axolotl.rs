@@ -119,7 +119,7 @@ pub(crate) async fn import_axolotl(
     let source_kind =
         ContentSourceKind::from_str(&config.content_set.source_kind)
             .unwrap_or(ContentSourceKind::Local);
-    let loader = ModLoader::from_string(&config.content_set.loader);
+    let loader = ModLoader::try_from_string(&config.content_set.loader)?;
     let update_channel = ReleaseChannel::from_key(&config.update_channel);
 
     let state = State::get().await?;

@@ -14,6 +14,7 @@ export type GameInstance = {
 	protocol_version?: number
 	loader: InstanceLoader
 	loader_version?: string
+	loader_components: LoaderComponent[]
 
 	groups: string[]
 
@@ -101,10 +102,20 @@ export type InstanceLoader =
 	| 'fabric'
 	| 'quilt'
 	| 'neoforge'
+	| 'optifine'
 	| 'lite_loader'
-	| 'labymod'
 	| 'cleanroom'
 	| 'legacy_fabric'
+
+export type LoaderComponent = {
+	instanceId: string
+	kind:
+		| InstanceLoader
+		| 'optifabric'
+	version?: string | null
+	role: 'primary' | 'adjunct'
+	providerMetadata?: unknown
+}
 
 type ContentFile = {
 	enabled: boolean

@@ -4301,6 +4301,10 @@ pub(crate) async fn update_managed_modpack_with_reporter(
         .or_else(|| {
             Some(metadata.applied_content_set.loader.as_str().to_string())
         });
+    let content_set_loader = loader
+        .as_deref()
+        .map(crate::data::ModLoader::try_from_string)
+        .transpose()?;
     let installed_releases = members
         .iter()
         .filter(|member| {
@@ -4468,9 +4472,7 @@ pub(crate) async fn update_managed_modpack_with_reporter(
                 source_kind: Some(ContentSourceKind::CurseForge),
                 game_version: Some(game_version),
                 protocol_version: Some(None),
-                loader: loader
-                    .as_deref()
-                    .map(crate::data::ModLoader::from_string),
+                loader: content_set_loader,
                 loader_version: Some(None),
             }),
             ..EditInstance::default()
@@ -4824,7 +4826,18 @@ fn modpack_target(
     };
 
     let family = loader_family(&manifest_loader.id);
+    let manifest_loader_version = manifest_loader
+        .id
+        .strip_prefix(family)
+        .and_then(|version| version.strip_prefix('-'))
+        .filter(|version| !version.is_empty());
+    let disguised_cleanroom = family == "forge"
+        && manifest.minecraft.version == "1.12.2"
+        && manifest_loader_version
+            .is_some_and(|version| version.starts_with("0."));
     let loader = match family {
+        "cleanroom" => ModLoader::Cleanroom,
+        "forge" if disguised_cleanroom => ModLoader::Cleanroom,
         "forge" => ModLoader::Forge,
         "fabric" => ModLoader::Fabric,
         "quilt" => ModLoader::Quilt,
@@ -4837,11 +4850,8 @@ fn modpack_target(
             .into());
         }
     };
-    let loader_version = manifest_loader
-        .id
-        .strip_prefix(family)
-        .and_then(|version| version.strip_prefix('-'))
-        .filter(|version| !version.is_empty())
+    let loader_version = manifest_loader_version
+        .filter(|version| !disguised_cleanroom || version.starts_with("0."))
         .map(str::to_string);
 
     Ok(CurseForgeModpackTarget {
@@ -4880,7 +4890,7 @@ pub(crate) fn loader_family(loader_id: &str) -> &str {
 
 fn loader_type(loader: &str) -> Option<u32> {
     match loader {
-        "forge" => Some(1),
+        "forge" | "cleanroom" => Some(1),
         "fabric" => Some(4),
         "quilt" => Some(5),
         "neoforge" => Some(6),
@@ -10631,6 +10641,7 @@ mod tests {
     fn curseforge_loader_ids_map_to_instance_loaders() {
         assert_eq!(loader_family("forge-47.4.0"), "forge");
         assert_eq!(loader_family("fabric-0.16.10"), "fabric");
+        assert_eq!(loader_type("cleanroom"), Some(1));
         assert_eq!(loader_type("neoforge"), Some(6));
     }
 
@@ -10656,6 +10667,32 @@ mod tests {
                 game_version: "1.12.2".to_string(),
                 loader: ModLoader::Forge,
                 loader_version: Some("14.23.5.2860".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn modpack_target_recognizes_pcl_cleanroom_version_convention() {
+        let manifest = CurseForgeModpackManifest {
+            minecraft: CurseForgeManifestMinecraft {
+                version: "1.12.2".to_string(),
+                mod_loaders: vec![CurseForgeManifestLoader {
+                    id: "forge-0.3.0-alpha".to_string(),
+                    primary: true,
+                }],
+            },
+            files: Vec::new(),
+            overrides: "overrides".to_string(),
+            name: None,
+            version: None,
+        };
+
+        assert_eq!(
+            modpack_target(&manifest).unwrap(),
+            CurseForgeModpackTarget {
+                game_version: "1.12.2".to_string(),
+                loader: ModLoader::Cleanroom,
+                loader_version: Some("0.3.0-alpha".to_string()),
             }
         );
     }

@@ -29,6 +29,7 @@ export type SetupType = 'modpack' | 'custom' | 'vanilla'
 export type Gamemode = 'survival' | 'creative' | 'hardcore'
 export type Difficulty = 'peaceful' | 'easy' | 'normal' | 'hard'
 export type LoaderVersionType = 'stable' | 'latest' | 'other'
+export type AdjunctLoader = 'optifine' | 'lite_loader'
 export type GeneratorSettingsMode = 'default' | 'flat' | 'custom'
 export type LoaderManifest = LauncherMeta.Manifest.v0.Manifest
 export type LoaderManifestResolver = (
@@ -39,6 +40,14 @@ export interface LoaderVersionEntry {
 	id: string
 	stable: boolean
 }
+
+export interface ProjectVersionCompatibility {
+	id: string
+	game_versions?: string[]
+	loaders?: string[]
+}
+
+export type OptiFabricCompatibilityResolver = (gameVersion: string) => Promise<boolean>
 
 const LOADER_MANIFEST_STALE_TIME = 30 * 60 * 1000
 const paperSupportedVersionsQueryKey = ['creation-flow', 'paper', 'supported-versions'] as const
@@ -166,6 +175,7 @@ export interface CreationFlowContextValue {
 	selectedGameVersion: Ref<string | null>
 	loaderVersionType: Ref<LoaderVersionType>
 	selectedLoaderVersion: Ref<string | null>
+	selectedAdjuncts: Ref<AdjunctLoader[]>
 	hideLoaderChips: ComputedRef<boolean>
 	hideLoaderVersion: ComputedRef<boolean>
 	showSnapshots: Ref<boolean>
@@ -229,7 +239,8 @@ export interface CreationFlowContextValue {
 
 	// Platform-provided search
 	searchModpacks: (query: string, limit?: number) => Promise<ModpackSearchResult>
-	getProjectVersions: (projectId: string) => Promise<{ id: string }[]>
+	getProjectVersions: (projectId: string) => Promise<ProjectVersionCompatibility[]>
+	hasCompatibleOptiFabric: OptiFabricCompatibilityResolver
 	getLoaderManifest: LoaderManifestResolver | null
 }
 
@@ -249,7 +260,8 @@ export interface CreationFlowOptions {
 	fetchExistingInstanceNames?: () => Promise<string[]>
 	onBack?: () => void
 	searchModpacks?: (query: string, limit?: number) => Promise<ModpackSearchResult>
-	getProjectVersions?: (projectId: string) => Promise<{ id: string }[]>
+	getProjectVersions?: (projectId: string) => Promise<ProjectVersionCompatibility[]>
+	hasCompatibleOptiFabric?: OptiFabricCompatibilityResolver
 	getLoaderManifest?: LoaderManifestResolver
 	finishDisabled?: ComputedRef<boolean>
 	finishDisabledTooltip?: ComputedRef<string | undefined>
@@ -284,7 +296,13 @@ export function createCreationFlowContext(
 	const onBack = options.onBack ?? null
 	const onImportFileReceived = options.onImportFileReceived
 	const searchModpacks = options.searchModpacks!
-	const getProjectVersions = options.getProjectVersions!
+	const getProjectVersions =
+		options.getProjectVersions ??
+		((projectId: string) =>
+			client.labrinth.versions_v2.getProjectVersions(projectId, {
+				include_changelog: false,
+			}))
+	const hasCompatibleOptiFabric = options.hasCompatibleOptiFabric ?? (async () => false)
 	const getLoaderManifest = options.getLoaderManifest ?? null
 	const finishDisabled = options.finishDisabled ?? computed(() => false)
 	const finishDisabledTooltip = options.finishDisabledTooltip ?? computed(() => undefined)
@@ -319,6 +337,7 @@ export function createCreationFlowContext(
 	const selectedGameVersion = ref<string | null>(null)
 	const loaderVersionType = ref<LoaderVersionType>('stable')
 	const selectedLoaderVersion = ref<string | null>(null)
+	const selectedAdjuncts = ref<AdjunctLoader[]>([])
 	const showSnapshots = ref(false)
 	const loaderVersionsCache = ref<Record<string, LoaderManifest>>({})
 	const loaderMetadataStatus = ref<Record<string, LoaderMetadataStatus>>({})
@@ -488,6 +507,7 @@ export function createCreationFlowContext(
 		selectedGameVersion.value = null
 		loaderVersionType.value = 'stable'
 		selectedLoaderVersion.value = null
+		selectedAdjuncts.value = []
 		showSnapshots.value = false
 		modpackSelection.value = null
 		modpackFile.value = null
@@ -610,6 +630,7 @@ export function createCreationFlowContext(
 		selectedGameVersion,
 		loaderVersionType,
 		selectedLoaderVersion,
+		selectedAdjuncts,
 		hideLoaderChips,
 		hideLoaderVersion,
 		showSnapshots,
@@ -648,6 +669,7 @@ export function createCreationFlowContext(
 		prefetchLoaderMetadata,
 		searchModpacks,
 		getProjectVersions,
+		hasCompatibleOptiFabric,
 		getLoaderManifest,
 	}
 

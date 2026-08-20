@@ -124,6 +124,10 @@ export interface CurseForgeFile {
 	dependencies: Array<{ modId: number; relationType: number }>
 }
 
+export function hasCompatibleCurseForgeFile(files: CurseForgeFile[], gameVersion: string) {
+	return files.some((file) => file.isAvailable && file.gameVersions.includes(gameVersion))
+}
+
 export function getCurseForgeImageUrl(source?: string | null, width = 256): string | undefined {
 	if (!source) return undefined
 

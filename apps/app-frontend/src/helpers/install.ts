@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 
 import { install_job_listener } from './events'
-import type { InstanceLink, InstanceLoader } from './types'
+import type { InstanceLink, InstanceLoader, LoaderComponent } from './types'
 
 export interface PackLocationVersionId {
 	type: 'fromVersionId'
@@ -23,6 +23,7 @@ export interface InstallModpackPreview {
 	gameVersion: string
 	modloader: InstanceLoader
 	loaderVersion: string | null
+	adjuncts?: LoaderComponent[]
 	icon?: string | null
 	iconUrl?: string | null
 	link?: InstanceLink | null
@@ -34,6 +35,7 @@ export interface InstallCreateInstanceRequest {
 	gameVersion: string
 	loader: InstanceLoader
 	loaderVersion: string | null
+	adjuncts?: LoaderComponent[]
 	iconPath: string | null
 	link?: InstanceLink | null
 }
