@@ -83,13 +83,11 @@ pub async fn curseforge_get_projects(
     project_ids: Vec<u32>,
     cache_behaviour: Option<CacheBehaviour>,
 ) -> Result<Vec<CurseForgeProject>> {
-    Ok(
-        theseus::curseforge::get_projects_with_cache_behaviour(
-            project_ids,
-            cache_behaviour,
-        )
-        .await?,
+    Ok(theseus::curseforge::get_projects_with_cache_behaviour(
+        project_ids,
+        cache_behaviour,
     )
+    .await?)
 }
 
 #[tauri::command]

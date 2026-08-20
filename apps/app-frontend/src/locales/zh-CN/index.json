@@ -7568,6 +7568,9 @@
 	"app.settings.resources.proxy-url": {
 		"message": "代理地址"
 	},
+	"app.settings.resources.proxy-url-required": {
+		"message": "代理地址不能为空"
+	},
 	"app.settings.resources.proxy-testing": {
 		"message": "测试中..."
 	},
