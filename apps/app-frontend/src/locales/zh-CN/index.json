@@ -7926,7 +7926,7 @@
 		"message": "服务器设置已保存"
 	},
 	"app.servers.properties.title": {
-		"message": "server.properties"
+		"message": "服务器属性"
 	},
 	"app.servers.refresh": {
 		"message": "刷新"
@@ -8080,5 +8080,260 @@
 	},
 	"app.servers.console.not-running": {
 		"message": "服务器未运行"
+	},
+	"app.servers.properties.field.accepts-transfers": {
+		"message": "接受玩家转移"
+	},
+	"app.servers.properties.field.allow-end": {
+		"message": "允许末地"
+	},
+	"app.servers.properties.field.allow-flight": {
+		"message": "允许飞行"
+	},
+	"app.servers.properties.field.allow-nether": {
+		"message": "允许下界"
+	},
+	"app.servers.properties.field.announce-player-achievements": {
+		"message": "公告玩家成就"
+	},
+	"app.servers.properties.field.broadcast-console-to-ops": {
+		"message": "向管理员广播控制台消息"
+	},
+	"app.servers.properties.field.broadcast-rcon-to-ops": {
+		"message": "向管理员广播 RCON 消息"
+	},
+	"app.servers.properties.field.bug-report-link": {
+		"message": "Bug 报告链接"
+	},
+	"app.servers.properties.field.chat-spam-threshold-seconds": {
+		"message": "聊天刷屏阈值（秒）"
+	},
+	"app.servers.properties.field.command-spam-threshold-seconds": {
+		"message": "命令刷屏阈值（秒）"
+	},
+	"app.servers.properties.field.difficulty": {
+		"message": "难度"
+	},
+	"app.servers.properties.field.enable-code-of-conduct": {
+		"message": "启用行为准则"
+	},
+	"app.servers.properties.field.enable-command-block": {
+		"message": "启用命令方块"
+	},
+	"app.servers.properties.field.enable-jmx-monitoring": {
+		"message": "启用 JMX 监控"
+	},
+	"app.servers.properties.field.enable-lan": {
+		"message": "启用局域网"
+	},
+	"app.servers.properties.field.enable-query": {
+		"message": "启用查询"
+	},
+	"app.servers.properties.field.enable-rcon": {
+		"message": "启用 RCON"
+	},
+	"app.servers.properties.field.enable-status": {
+		"message": "启用服务器状态"
+	},
+	"app.servers.properties.field.enforce-secure-profile": {
+		"message": "强制安全档案"
+	},
+	"app.servers.properties.field.enforce-whitelist": {
+		"message": "强制白名单"
+	},
+	"app.servers.properties.field.entity-broadcast-range-percentage": {
+		"message": "实体广播范围百分比"
+	},
+	"app.servers.properties.field.force-gamemode": {
+		"message": "强制游戏模式"
+	},
+	"app.servers.properties.field.function-permission-level": {
+		"message": "函数权限等级"
+	},
+	"app.servers.properties.field.gamemode": {
+		"message": "游戏模式"
+	},
+	"app.servers.properties.field.generate-structures": {
+		"message": "生成结构"
+	},
+	"app.servers.properties.field.generator-settings": {
+		"message": "生成器设置"
+	},
+	"app.servers.properties.field.hardcore": {
+		"message": "极限模式"
+	},
+	"app.servers.properties.field.hide-online-players": {
+		"message": "隐藏在线玩家"
+	},
+	"app.servers.properties.field.initial-disabled-packs": {
+		"message": "初始禁用的数据包"
+	},
+	"app.servers.properties.field.initial-enabled-packs": {
+		"message": "初始启用的数据包"
+	},
+	"app.servers.properties.field.level-name": {
+		"message": "世界名称"
+	},
+	"app.servers.properties.field.level-seed": {
+		"message": "世界种子"
+	},
+	"app.servers.properties.field.level-type": {
+		"message": "世界类型"
+	},
+	"app.servers.properties.field.log-ips": {
+		"message": "记录 IP"
+	},
+	"app.servers.properties.field.management-server-allowed-origins": {
+		"message": "管理服务器允许的来源"
+	},
+	"app.servers.properties.field.management-server-enabled": {
+		"message": "启用管理服务器"
+	},
+	"app.servers.properties.field.management-server-host": {
+		"message": "管理服务器主机"
+	},
+	"app.servers.properties.field.management-server-port": {
+		"message": "管理服务器端口"
+	},
+	"app.servers.properties.field.management-server-secret": {
+		"message": "管理服务器密钥"
+	},
+	"app.servers.properties.field.management-server-tls-enabled": {
+		"message": "管理服务器启用 TLS"
+	},
+	"app.servers.properties.field.management-server-tls-keystore": {
+		"message": "管理服务器 TLS 密钥库"
+	},
+	"app.servers.properties.field.management-server-tls-keystore-password": {
+		"message": "管理服务器 TLS 密钥库密码"
+	},
+	"app.servers.properties.field.max-chained-neighbor-updates": {
+		"message": "最大链式邻居更新次数"
+	},
+	"app.servers.properties.field.max-players": {
+		"message": "最大玩家数"
+	},
+	"app.servers.properties.field.max-tick-time": {
+		"message": "最大单Tick时间"
+	},
+	"app.servers.properties.field.max-world-size": {
+		"message": "最大世界大小"
+	},
+	"app.servers.properties.field.motd": {
+		"message": "服务器标语（MOTD）"
+	},
+	"app.servers.properties.field.network-compression-threshold": {
+		"message": "网络压缩阈值"
+	},
+	"app.servers.properties.field.online-mode": {
+		"message": "正版验证"
+	},
+	"app.servers.properties.field.op-permission-level": {
+		"message": "管理员权限等级"
+	},
+	"app.servers.properties.field.pause-when-empty-seconds": {
+		"message": "空服暂停（秒）"
+	},
+	"app.servers.properties.field.player-idle-timeout": {
+		"message": "玩家挂机超时"
+	},
+	"app.servers.properties.field.prevent-proxy-connections": {
+		"message": "禁止代理连接"
+	},
+	"app.servers.properties.field.pvp": {
+		"message": "玩家对战（PvP）"
+	},
+	"app.servers.properties.field.query.port": {
+		"message": "查询端口"
+	},
+	"app.servers.properties.field.rate-limit": {
+		"message": "速率限制"
+	},
+	"app.servers.properties.field.rcon.password": {
+		"message": "RCON 密码"
+	},
+	"app.servers.properties.field.rcon.port": {
+		"message": "RCON 端口"
+	},
+	"app.servers.properties.field.region-file-compression": {
+		"message": "区域文件压缩方式"
+	},
+	"app.servers.properties.field.require-resource-pack": {
+		"message": "强制资源包"
+	},
+	"app.servers.properties.field.resource-pack": {
+		"message": "资源包"
+	},
+	"app.servers.properties.field.resource-pack-id": {
+		"message": "资源包 ID"
+	},
+	"app.servers.properties.field.resource-pack-prompt": {
+		"message": "资源包提示"
+	},
+	"app.servers.properties.field.resource-pack-sha1": {
+		"message": "资源包 SHA-1"
+	},
+	"app.servers.properties.field.server-ip": {
+		"message": "服务器 IP"
+	},
+	"app.servers.properties.field.server-port": {
+		"message": "服务器端口"
+	},
+	"app.servers.properties.field.simulation-distance": {
+		"message": "模拟距离"
+	},
+	"app.servers.properties.field.spawn-animals": {
+		"message": "生成动物"
+	},
+	"app.servers.properties.field.spawn-monsters": {
+		"message": "生成怪物"
+	},
+	"app.servers.properties.field.spawn-npcs": {
+		"message": "生成NPC"
+	},
+	"app.servers.properties.field.spawn-protection": {
+		"message": "出生点保护范围"
+	},
+	"app.servers.properties.field.status-heartbeat-interval": {
+		"message": "状态心跳间隔"
+	},
+	"app.servers.properties.field.sync-chunk-writes": {
+		"message": "同步区块写入"
+	},
+	"app.servers.properties.field.text-filtering-config": {
+		"message": "文本过滤配置"
+	},
+	"app.servers.properties.field.text-filtering-version": {
+		"message": "文本过滤版本"
+	},
+	"app.servers.properties.field.use-native-transport": {
+		"message": "使用原生传输"
+	},
+	"app.servers.properties.field.view-distance": {
+		"message": "视距"
+	},
+	"app.servers.properties.field.white-list": {
+		"message": "白名单"
+	},
+	"app.servers.properties.section.advanced": {
+		"message": "高级"
+	},
+	"app.servers.properties.section.content": {
+		"message": "资源与内容"
+	},
+	"app.servers.properties.section.gameplay": {
+		"message": "游戏玩法"
+	},
+	"app.servers.properties.section.network": {
+		"message": "网络与安全"
+	},
+	"app.servers.properties.section.others": {
+		"message": "其他"
+	},
+	"app.servers.properties.section.world": {
+		"message": "世界"
+	},
+	"app.servers.settings.cancel": {
+		"message": "取消"
 	}
 }

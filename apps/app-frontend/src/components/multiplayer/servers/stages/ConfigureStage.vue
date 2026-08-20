@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineMessages, useVIntl } from '@modrinth/ui'
-import { computed } from 'vue'
+import { computed, onMounted, useTemplateRef } from 'vue'
+import type { ComponentExposed } from 'vue-component-type-helpers'
 
 import ServerPropertiesEditor from '@/components/multiplayer/servers/ServerPropertiesEditor.vue'
 
@@ -16,6 +17,12 @@ const messages = defineMessages({
 	},
 })
 
+const editor = useTemplateRef<ComponentExposed<typeof ServerPropertiesEditor>>('editor')
+
+onMounted(() => {
+	ctx.saveServerProperties.value = () => editor.value?.save() ?? Promise.resolve(true)
+})
+
 const serverId = computed(() => ctx.createdServer.value?.id ?? '')
 </script>
 
@@ -26,7 +33,7 @@ const serverId = computed(() => ctx.createdServer.value?.id ?? '')
 		</p>
 
 		<div class="max-h-[28rem] overflow-y-auto pr-1">
-			<ServerPropertiesEditor v-if="serverId !== ''" :server-id="serverId" />
+			<ServerPropertiesEditor v-if="serverId !== ''" ref="editor" :server-id="serverId" />
 		</div>
 	</div>
 </template>

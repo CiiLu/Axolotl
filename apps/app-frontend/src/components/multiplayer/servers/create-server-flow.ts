@@ -82,6 +82,9 @@ export interface CreateServerFlowContext {
 	createdServer: Ref<ServerManifestData | null>
 	showEulaModal: Ref<boolean>
 
+	/** Registered by the configure stage to persist server.properties before finishing. */
+	saveServerProperties: Ref<(() => Promise<boolean>) | null>
+
 	needsLoaderVersion: Ref<boolean>
 	typeSupported: Ref<boolean>
 	canContinueFromType: Ref<boolean>
@@ -199,6 +202,7 @@ export function createCreateServerFlowContext(
 	const eulaText = ref('')
 	const createdServer = ref<ServerManifestData | null>(null)
 	const showEulaModal = ref(false)
+	const saveServerProperties = ref<(() => Promise<boolean>) | null>(null)
 
 	const needsLoaderVersion = computed(() => serverType.value === 'fabric')
 	const typeSupported = computed(() => isServerTypeSupported(serverType.value))
@@ -447,6 +451,7 @@ export function createCreateServerFlowContext(
 		eulaText.value = ''
 		createdServer.value = null
 		showEulaModal.value = false
+		saveServerProperties.value = null
 		void loadVersions()
 		void loadMaxMemory()
 	}
@@ -513,7 +518,10 @@ export function createCreateServerFlowContext(
 			title: (ctx) => ctx.formatMessage(wizardMessages.configureStageTitle),
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.finish),
-				onClick: () => ctx.modal.value?.hide(),
+				onClick: async () => {
+					const save = ctx.saveServerProperties.value
+					if (save === null || (await save())) ctx.modal.value?.hide()
+				},
 			}),
 		},
 	]
@@ -541,6 +549,7 @@ export function createCreateServerFlowContext(
 		eulaText,
 		createdServer,
 		showEulaModal,
+		saveServerProperties,
 		needsLoaderVersion,
 		typeSupported,
 		canContinueFromType,

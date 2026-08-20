@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SaveIcon, SpinnerIcon, TrashIcon } from '@modrinth/assets'
+import { SaveIcon, SpinnerIcon, TrashIcon, XIcon } from '@modrinth/assets'
 import { requiredJavaMajorVersion } from '@modrinth/server'
 import {
 	ButtonStyled,
@@ -40,6 +40,7 @@ const messages = defineMessages({
 	},
 	save: { id: 'app.servers.settings.save', defaultMessage: 'Save changes' },
 	saved: { id: 'app.servers.settings.saved', defaultMessage: 'Server settings saved' },
+	cancel: { id: 'app.servers.settings.cancel', defaultMessage: 'Cancel' },
 	deleteTitle: { id: 'app.servers.settings.delete', defaultMessage: 'Delete server' },
 	deleteHint: {
 		id: 'app.servers.settings.delete-hint',
@@ -53,7 +54,7 @@ const messages = defineMessages({
 	configFiles: { id: 'app.servers.settings.config', defaultMessage: 'Configuration' },
 })
 
-const { deleteServer } = useServers()
+const { deleteServer, refresh } = useServers()
 const { addNotification, handleError } = injectNotificationManager()
 
 const name = ref(props.server.name)
@@ -65,35 +66,82 @@ const memoryMb = ref(props.server.memoryMb ?? 2048)
 const jvmArgsText = ref((props.server.jvmArgs ?? []).join(' '))
 const isSaving = ref(false)
 const deleteModal = useTemplateRef<ComponentExposed<typeof ConfirmModal>>('deleteModal')
+const editor = useTemplateRef<ComponentExposed<typeof ServerPropertiesEditor>>('editor')
 
 const requiredJava = computed(() => requiredJavaMajorVersion(props.server.gameVersion))
+
+const baseline = ref({
+	name: props.server.name,
+	javaPath: props.server.javaPath ?? '',
+	javaVersion: '',
+	memoryMb: props.server.memoryMb ?? 2048,
+	jvmArgs: (props.server.jvmArgs ?? []).join(' '),
+})
 
 onMounted(async () => {
 	if (!javaSelection.value.path) return
 	try {
 		const jre = await get_jre(javaSelection.value.path)
-		if (jre) javaSelection.value.version = jre.version
+		if (jre) {
+			javaSelection.value.version = jre.version
+			baseline.value.javaVersion = jre.version
+		}
 	} catch {
 		// Keep the path; the selector validates against the required major version.
 	}
 })
 
+const generalDirty = computed(
+	() =>
+		name.value !== baseline.value.name ||
+		javaSelection.value.path !== baseline.value.javaPath ||
+		javaSelection.value.version !== baseline.value.javaVersion ||
+		memoryMb.value !== baseline.value.memoryMb ||
+		jvmArgsText.value !== baseline.value.jvmArgs,
+)
+
+const isDirty = computed(() => generalDirty.value || (editor.value?.isDirty ?? false))
+
 async function save() {
 	isSaving.value = true
 	try {
 		const jvmArgs = jvmArgsText.value.trim().split(/\s+/).filter(Boolean)
+		const parsedMemory = Number(memoryMb.value)
+		const memoryMbValue =
+			Number.isFinite(parsedMemory) && parsedMemory > 0 ? parsedMemory : baseline.value.memoryMb
 		await serversApi.updateSettings(props.server.id, {
 			name: name.value.trim(),
 			javaPath: javaSelection.value.path,
-			memoryMb: memoryMb.value,
+			memoryMb: memoryMbValue,
 			jvmArgs,
 		})
+		const propsSaved = (await editor.value?.save()) ?? true
+		if (!propsSaved) return
+		name.value = name.value.trim()
+		memoryMb.value = memoryMbValue
+		jvmArgsText.value = jvmArgs.join(' ')
+		baseline.value = {
+			name: name.value,
+			javaPath: javaSelection.value.path,
+			javaVersion: javaSelection.value.version,
+			memoryMb: memoryMbValue,
+			jvmArgs: jvmArgsText.value,
+		}
+		await refresh()
 		addNotification({ type: 'success', title: formatMessage(messages.saved) })
 	} catch (error) {
 		handleError(error)
 	} finally {
 		isSaving.value = false
 	}
+}
+
+function cancel() {
+	name.value = baseline.value.name
+	javaSelection.value = { path: baseline.value.javaPath, version: baseline.value.javaVersion }
+	memoryMb.value = baseline.value.memoryMb
+	jvmArgsText.value = baseline.value.jvmArgs
+	editor.value?.cancel()
 }
 
 async function confirmDelete() {
@@ -103,45 +151,96 @@ async function confirmDelete() {
 </script>
 
 <template>
-	<div class="flex flex-col gap-6">
-		<Card data-onboarding-id="server-settings" class="!m-0 max-w-3xl">
-			<div class="flex flex-col gap-4">
-				<h3 class="m-0 text-base font-semibold text-contrast">
-					{{ formatMessage(messages.general) }}
-				</h3>
+	<div class="flex min-h-full flex-col">
+		<div class="flex flex-col gap-6 pb-20">
+			<Card data-onboarding-id="server-settings" class="!m-0 max-w-3xl">
+				<div class="flex flex-col gap-4">
+					<h3 class="m-0 text-base font-semibold text-contrast">
+						{{ formatMessage(messages.general) }}
+					</h3>
 
-				<label class="flex min-w-0 flex-col gap-2" for="server-settings-name">
-					<span class="font-semibold text-contrast">{{ formatMessage(messages.name) }}</span>
-					<StyledInput id="server-settings-name" v-model="name" />
-				</label>
+					<label class="flex min-w-0 flex-col gap-2" for="server-settings-name">
+						<span class="font-semibold text-contrast">{{ formatMessage(messages.name) }}</span>
+						<StyledInput id="server-settings-name" v-model="name" />
+					</label>
 
-				<div class="flex min-w-0 flex-col gap-2">
-					<span class="font-semibold text-contrast">{{ formatMessage(messages.java) }}</span>
-					<JavaSelector
-						id="server-settings-java"
-						v-model="javaSelection"
-						:version="requiredJava"
-						select-all-versions
-					/>
+					<div class="flex min-w-0 flex-col gap-2">
+						<span class="font-semibold text-contrast">{{ formatMessage(messages.java) }}</span>
+						<JavaSelector
+							id="server-settings-java"
+							v-model="javaSelection"
+							:version="requiredJava"
+							select-all-versions
+						/>
+					</div>
+
+					<label class="flex min-w-0 flex-col gap-2" for="server-settings-memory">
+						<span class="font-semibold text-contrast">{{ formatMessage(messages.memory) }}</span>
+						<StyledInput
+							id="server-settings-memory"
+							v-model="memoryMb"
+							inputmode="numeric"
+							wrapper-class="max-w-40"
+						/>
+					</label>
+
+					<label class="flex min-w-0 flex-col gap-2" for="server-settings-jvm">
+						<span class="font-semibold text-contrast">{{ formatMessage(messages.jvmArgs) }}</span>
+						<StyledInput id="server-settings-jvm" v-model="jvmArgsText" />
+						<span class="text-xs text-secondary">{{ formatMessage(messages.jvmArgsHint) }}</span>
+					</label>
 				</div>
+			</Card>
 
-				<label class="flex min-w-0 flex-col gap-2" for="server-settings-memory">
-					<span class="font-semibold text-contrast">{{ formatMessage(messages.memory) }}</span>
-					<StyledInput
-						id="server-settings-memory"
-						v-model="memoryMb"
-						inputmode="numeric"
-						wrapper-class="max-w-40"
-					/>
-				</label>
+			<Card class="!m-0 max-w-3xl">
+				<ServerPropertiesEditor ref="editor" :server-id="server.id" />
+			</Card>
 
-				<label class="flex min-w-0 flex-col gap-2" for="server-settings-jvm">
-					<span class="font-semibold text-contrast">{{ formatMessage(messages.jvmArgs) }}</span>
-					<StyledInput id="server-settings-jvm" v-model="jvmArgsText" />
-					<span class="text-xs text-secondary">{{ formatMessage(messages.jvmArgsHint) }}</span>
-				</label>
+			<Card class="!m-0 max-w-3xl">
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<div class="flex min-w-0 items-start gap-3">
+						<div
+							class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-highlight text-red"
+						>
+							<TrashIcon class="size-4" />
+						</div>
+						<div class="min-w-0">
+							<h3 class="m-0 text-base font-semibold text-contrast">
+								{{ formatMessage(messages.deleteTitle) }}
+							</h3>
+							<p class="mb-0 mt-1 text-sm text-secondary">
+								{{ formatMessage(messages.deleteHint) }}
+							</p>
+						</div>
+					</div>
+					<ButtonStyled color="danger" type="outlined">
+						<button type="button" :disabled="server.running" @click="deleteModal?.show()">
+							<TrashIcon />
+							{{ formatMessage(messages.deleteTitle) }}
+						</button>
+					</ButtonStyled>
+				</div>
+			</Card>
+		</div>
 
-				<div class="flex justify-end">
+		<div
+			v-if="isDirty"
+			class="fixed bottom-4 z-50 flex"
+			:style="{
+				left: 'calc(var(--left-bar-width) + 1.5rem)',
+				width: 'calc(100% - var(--left-bar-width) - var(--right-bar-width) - 3rem)',
+			}"
+		>
+			<div class="flex w-full max-w-3xl items-center justify-end">
+				<div
+					class="flex items-center gap-2 rounded-xl border border-solid border-button-border bg-bg-raised px-3 py-2 shadow-lg"
+				>
+					<ButtonStyled type="outlined">
+						<button type="button" :disabled="isSaving" @click="cancel">
+							<XIcon />
+							{{ formatMessage(messages.cancel) }}
+						</button>
+					</ButtonStyled>
 					<ButtonStyled color="brand">
 						<button type="button" :disabled="isSaving" @click="save">
 							<SpinnerIcon v-if="isSaving" class="animate-spin" />
@@ -151,37 +250,7 @@ async function confirmDelete() {
 					</ButtonStyled>
 				</div>
 			</div>
-		</Card>
-
-		<Card class="!m-0 max-w-3xl">
-			<ServerPropertiesEditor :server-id="server.id" />
-		</Card>
-
-		<Card class="!m-0 max-w-3xl">
-			<div class="flex flex-wrap items-center justify-between gap-3">
-				<div class="flex min-w-0 items-start gap-3">
-					<div
-						class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-highlight text-red"
-					>
-						<TrashIcon class="size-4" />
-					</div>
-					<div class="min-w-0">
-						<h3 class="m-0 text-base font-semibold text-contrast">
-							{{ formatMessage(messages.deleteTitle) }}
-						</h3>
-						<p class="mb-0 mt-1 text-sm text-secondary">
-							{{ formatMessage(messages.deleteHint) }}
-						</p>
-					</div>
-				</div>
-				<ButtonStyled color="danger" type="outlined">
-					<button type="button" :disabled="server.running" @click="deleteModal?.show()">
-						<TrashIcon />
-						{{ formatMessage(messages.deleteTitle) }}
-					</button>
-				</ButtonStyled>
-			</div>
-		</Card>
+		</div>
 
 		<ConfirmModal
 			ref="deleteModal"
