@@ -48,6 +48,8 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             file_read_dragged_file,
             screenshot_thumbnail,
             studio_read_text,
+            studio_read_binary,
+            studio_write_binary,
             studio_trash,
             studio_watch_register,
             studio_watch_unregister,
@@ -109,6 +111,44 @@ pub async fn studio_read_text(
         ))
         .into()
     })
+}
+
+async fn studio_file_path(
+    instance_id: &str,
+    file_path: &str,
+) -> Result<PathBuf> {
+    let base = get_full_path(instance_id).await?;
+    let source = tokio::fs::canonicalize(base.join(file_path)).await?;
+    let canonical_base = tokio::fs::canonicalize(&base).await?;
+    if !source.starts_with(&canonical_base) {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            "file_path escapes the instance directory".to_string(),
+        ))
+        .into());
+    }
+    Ok(source)
+}
+
+#[tauri::command]
+pub async fn studio_read_binary(
+    instance_id: &str,
+    file_path: &str,
+) -> Result<tauri::ipc::Response> {
+    Ok(tauri::ipc::Response::new(
+        tokio::fs::read(studio_file_path(instance_id, file_path).await?)
+            .await?,
+    ))
+}
+
+#[tauri::command]
+pub async fn studio_write_binary(
+    instance_id: &str,
+    file_path: &str,
+    bytes: Vec<u8>,
+) -> Result<()> {
+    tokio::fs::write(studio_file_path(instance_id, file_path).await?, bytes)
+        .await?;
+    Ok(())
 }
 
 #[tauri::command]

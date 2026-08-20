@@ -153,6 +153,23 @@ function registerStudioLanguages() {
 			},
 		})
 	}
+
+	if (!monaco.languages.getLanguages().some(({ id }) => id === 'snbt')) {
+		monaco.languages.register({ id: 'snbt' })
+		monaco.languages.setMonarchTokensProvider('snbt', {
+			tokenizer: {
+				root: [
+					[/\/\/.*$/, 'comment'],
+					[/[{}[\],:]/, 'delimiter'],
+					[/(?:true|false)\b/, 'keyword'],
+					[/-?(?:\d+\.?\d*|\.\d+)(?:[bBsSlLfFdD])?\b/, 'number'],
+					[/'(?:[^'\\]|\\.)*'/, 'string'],
+					[/"(?:[^"\\]|\\.)*"/, 'string'],
+					[/[A-Za-z0-9_.+-]+(?=\s*:)/, 'key'],
+				],
+			},
+		})
+	}
 }
 
 function createModel() {

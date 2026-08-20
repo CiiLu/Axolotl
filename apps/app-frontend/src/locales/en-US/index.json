@@ -6713,6 +6713,30 @@
 	"instance.files.studio.load-file-failed": {
 		"message": "Could not open file"
 	},
+	"instance.files.studio.nbt-load-failed": {
+		"message": "Could not parse NBT file"
+	},
+	"instance.files.studio.nbt.tree": {
+		"message": "Tree"
+	},
+	"instance.files.studio.nbt.snbt": {
+		"message": "SNBT"
+	},
+	"instance.files.studio.nbt.collapse": {
+		"message": "Collapse node"
+	},
+	"instance.files.studio.nbt.expand": {
+		"message": "Expand node"
+	},
+	"instance.files.studio.nbt.add": {
+		"message": "Add child"
+	},
+	"instance.files.studio.nbt.remove": {
+		"message": "Remove node"
+	},
+	"instance.files.studio.nbt.add-placeholder": {
+		"message": "name:value"
+	},
 	"instance.files.studio.not-text-file": {
 		"message": "This file is not a text file and cannot be opened in Studio."
 	},

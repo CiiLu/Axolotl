@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 
 export interface StudioDocument {
-	kind: 'text' | 'image' | 'video' | 'unsupported'
+	kind: 'text' | 'nbt' | 'image' | 'video' | 'unsupported'
 	path: string
 	name: string
 	content: string
@@ -29,7 +29,11 @@ export function useStudioDocuments(
 	)
 
 	function saveDocument(document: StudioDocument | null): Promise<boolean> {
-		if (!document || document.kind !== 'text' || document.content === document.savedContent) {
+		if (
+			!document ||
+			(document.kind !== 'text' && document.kind !== 'nbt') ||
+			document.content === document.savedContent
+		) {
 			return Promise.resolve(true)
 		}
 

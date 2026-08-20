@@ -515,6 +515,8 @@ fn main() {
                         "file_read_dragged_file",
                         "screenshot_thumbnail",
                         "studio_read_text",
+                        "studio_read_binary",
+                        "studio_write_binary",
                         "studio_trash",
                         "studio_watch_register",
                         "studio_watch_unregister",

@@ -21,6 +21,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { convertFileSrc } from '@tauri-apps/api/core'
+import { NbtFile, NbtTag } from 'deepslate/nbt'
 import {
 	copyFile,
 	mkdir,
@@ -33,6 +34,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 
 import StudioEditor from '@/components/instance/studio/StudioEditor.vue'
+import NbtEditor from '@/components/instance/studio/NbtEditor.vue'
 import StudioEditorTabs from '@/components/instance/studio/StudioEditorTabs.vue'
 import {
 	type StudioDocument,
@@ -42,8 +44,10 @@ import { get_full_path } from '@/helpers/instance'
 import {
 	listenStudioFilesChanged,
 	readStudioText,
+	readStudioBinary,
 	registerStudioWatcher,
 	trashStudioFile,
+	writeStudioBinary,
 	unregisterStudioWatcher,
 } from '@/helpers/studio'
 import type { GameInstance } from '@/helpers/types'
@@ -96,6 +100,10 @@ const messages = defineMessages({
 	loadFileFailed: {
 		id: 'instance.files.studio.load-file-failed',
 		defaultMessage: 'Could not open file',
+	},
+	nbtLoadFailed: {
+		id: 'instance.files.studio.nbt-load-failed',
+		defaultMessage: 'Could not parse NBT file',
 	},
 	notTextFile: {
 		id: 'instance.files.studio.not-text-file',
@@ -151,7 +159,10 @@ const createModal = ref<InstanceType<typeof NewModal> | null>(null)
 const createParentPath = ref('')
 const createType = ref<'file' | 'directory'>('file')
 const createName = ref('')
-const studioEditor = ref<InstanceType<typeof StudioEditor> | null>(null)
+const studioEditor = ref<InstanceType<typeof StudioEditor> | InstanceType<typeof NbtEditor> | null>(
+	null,
+)
+const nbtFiles = new Map<string, NbtFile>()
 let watcherRegistrationId: string | null = null
 let watcherInstanceId: string | null = null
 let unlistenStudioFiles: (() => void) | null = null
@@ -168,12 +179,22 @@ const {
 	activate: activateDocument,
 	open: openDocument,
 	close: closeDocument,
-	saveActive: saveActiveFile,
+	saveActive: saveActiveDocument,
 	saveAll: saveAllDocuments,
 	updateActiveContent,
 	reset: resetDocuments,
 } = useStudioDocuments(
-	(document, content) => writeTextFile(resolvePath(document.path), content),
+	(document, content) => {
+		if (document.kind === 'nbt') {
+			const nbtFile = nbtFiles.get(document.path)
+			if (!nbtFile) throw new Error('NBT document metadata is unavailable')
+			const root = NbtTag.fromString(content)
+			if (!root.isCompound()) throw new Error('NBT root must be a compound')
+			nbtFile.root = root
+			return writeStudioBinary(props.instance.id, document.path, nbtFile.write())
+		}
+		return writeTextFile(resolvePath(document.path), content)
+	},
 	(error) => {
 		addNotification({
 			title: formatMessage(messages.saveFailed),
@@ -182,10 +203,18 @@ const {
 		})
 	},
 )
+
+async function saveActiveFile() {
+	const focusedElement = document.activeElement
+	if (focusedElement instanceof HTMLElement) focusedElement.blur()
+	return saveActiveDocument()
+}
+
 const selectedName = computed(() => activeDocument.value?.name ?? '')
 const selectedFilePath = computed(() => activeDocument.value?.path ?? '')
 const editorLanguage = computed(() => {
 	const extension = selectedName.value.split('.').pop()?.toLowerCase()
+	if (extension === 'dat' || extension === 'nbt') return 'json'
 	if (extension === 'yml') return 'yaml'
 	return extension ?? 'plaintext'
 })
@@ -207,6 +236,12 @@ const previewUrl = computed(() =>
 
 function resolvePath(relativePath: string): string {
 	return relativePath ? `${instanceRoot.value}/${relativePath}` : instanceRoot.value
+}
+
+function readNbtContent(bytes: Uint8Array, path: string): string {
+	const nbtFile = NbtFile.read(bytes)
+	nbtFiles.set(path, nbtFile)
+	return nbtFile.root.toPrettyString()
 }
 
 function joinPath(parent: string, name: string): string {
@@ -423,10 +458,17 @@ async function loadRoot() {
 }
 
 async function reloadCleanDocument(document: StudioDocument) {
-	if (document.kind !== 'text' || document.content !== document.savedContent || document.saving)
+	if (
+		(document.kind !== 'text' && document.kind !== 'nbt') ||
+		document.content !== document.savedContent ||
+		document.saving
+	)
 		return
 	try {
-		const nextContent = await readTextFile(resolvePath(document.path))
+		const nextContent =
+			document.kind === 'nbt'
+				? readNbtContent(await readStudioBinary(props.instance.id, document.path), document.path)
+				: await readTextFile(resolvePath(document.path))
 		if (document.content !== document.savedContent || document.saving) return
 		document.content = nextContent
 		document.savedContent = nextContent
@@ -559,6 +601,31 @@ async function openFile(node: StudioTreeNode) {
 
 	fileLoading.value = true
 	try {
+		if (/\.(dat|nbt)$/i.test(node.name)) {
+			let nextContent: string
+			try {
+				nextContent = readNbtContent(
+					await readStudioBinary(props.instance.id, node.path),
+					node.path,
+				)
+			} catch (error) {
+				addNotification({
+					title: formatMessage(messages.nbtLoadFailed),
+					text: error instanceof Error ? error.message : String(error),
+					type: 'error',
+				})
+				return
+			}
+			await openDocument({
+				kind: 'nbt',
+				path: node.path,
+				name: node.name,
+				content: nextContent,
+				savedContent: nextContent,
+				saving: false,
+			})
+			return
+		}
 		const nextContent = await readStudioText(props.instance.id, node.path)
 		const document: StudioDocument = {
 			kind: 'text',
@@ -679,16 +746,16 @@ onBeforeRouteLeave(() => {
 					</h1>
 					<div class="ml-auto flex shrink-0 items-center gap-1">
 						<ButtonStyled v-if="activeDocument" size="small" color="brand">
-							<button
-								type="button"
-								:disabled="!hasUnsavedChanges || activeDocument.saving"
-								@click="saveActiveFile"
-							>
+							<button type="button" :disabled="activeDocument.saving" @click="saveActiveFile">
 								<SaveIcon class="size-4" />
 								{{ formatMessage(commonMessages.saveButton) }}
 							</button>
 						</ButtonStyled>
-						<ButtonStyled v-if="activeDocument?.kind === 'text'" size="small" type="outlined">
+						<ButtonStyled
+							v-if="activeDocument?.kind === 'text' || activeDocument?.kind === 'nbt'"
+							size="small"
+							type="outlined"
+						>
 							<button type="button" @click="formatActiveDocument">
 								{{ formatMessage(messages.format) }}
 							</button>
@@ -832,7 +899,7 @@ onBeforeRouteLeave(() => {
 						</div>
 					</div>
 					<StudioEditor
-						v-else-if="activeDocument?.kind === 'text'"
+						v-if="activeDocument?.kind === 'text'"
 						ref="studioEditor"
 						:key="activeDocument.path"
 						:file-path="activeDocument.path"
@@ -842,6 +909,16 @@ onBeforeRouteLeave(() => {
 						@update:content="updateActiveContent"
 						@save="saveActiveFile"
 						@blur="saveActiveFile"
+					/>
+					<NbtEditor
+						v-else-if="activeDocument?.kind === 'nbt'"
+						ref="studioEditor"
+						:key="activeDocument.path"
+						:file-path="activeDocument.path"
+						:content="activeDocument.content"
+						:read-only="activeDocument.saving"
+						@update:content="updateActiveContent"
+						@save="saveActiveFile"
 					/>
 					<div v-else class="flex size-full items-center justify-center p-8 text-center">
 						<div class="flex max-w-md flex-col items-center gap-3">

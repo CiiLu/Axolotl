@@ -3701,6 +3701,30 @@
 	"instance.files.studio.load-file-failed": {
 		"message": "无法打开文件"
 	},
+	"instance.files.studio.nbt-load-failed": {
+		"message": "无法解析 NBT 文件"
+	},
+	"instance.files.studio.nbt.tree": {
+		"message": "树"
+	},
+	"instance.files.studio.nbt.snbt": {
+		"message": "SNBT 模式"
+	},
+	"instance.files.studio.nbt.collapse": {
+		"message": "折叠节点"
+	},
+	"instance.files.studio.nbt.expand": {
+		"message": "展开节点"
+	},
+	"instance.files.studio.nbt.add": {
+		"message": "添加子节点"
+	},
+	"instance.files.studio.nbt.remove": {
+		"message": "删除节点"
+	},
+	"instance.files.studio.nbt.add-placeholder": {
+		"message": "名称:值"
+	},
 	"instance.files.studio.not-text-file": {
 		"message": "此文件不是文本文件，无法在 Studio 中打开。"
 	},
