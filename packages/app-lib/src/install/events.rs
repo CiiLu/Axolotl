@@ -1053,7 +1053,8 @@ mod tests {
     use crate::install::model::{
         InstallJobEventKind, InstallJobExecutionMode, InstallJobKind,
         InstallJobStatus, InstallPauseReason, InstallPhaseDetails,
-        InstallPhaseId, InstallProgress, MissingModpackContentState,
+        InstallPhaseId, InstallProgress, InstallProgressSecondary,
+        MissingModpackContentState,
     };
     use crate::state::{InstanceLink, ModLoader};
 

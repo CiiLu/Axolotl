@@ -111,6 +111,8 @@
 					@update:model-value="$emit('update:searchQuery', $event)"
 				/>
 
+				<slot name="before-refresh" />
+
 				<ButtonStyled v-if="showRefreshButton" type="outlined">
 					<button
 						type="button"

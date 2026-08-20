@@ -529,6 +529,13 @@ fn main() {
                         "file_extract_zip",
                         "file_save_as",
                         "file_read_dragged_file",
+                        "screenshot_thumbnail",
+                        "studio_read_text",
+                        "studio_read_binary",
+                        "studio_write_binary",
+                        "studio_trash",
+                        "studio_watch_register",
+                        "studio_watch_unregister",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

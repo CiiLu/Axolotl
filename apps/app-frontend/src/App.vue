@@ -4007,6 +4007,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		class="app-contents"
 		:class="{
 			'sidebar-enabled': sidebarVisible,
+			'studio-mode': route.name === 'FileStudio',
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
 			'has-transparent-background': themeStore.transparentBackground,
@@ -4272,6 +4273,19 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	--top-bar-height: 3rem;
 	--left-bar-width: 4rem;
 	--right-bar-width: 300px;
+}
+
+.app-contents.studio-mode {
+	grid-template-columns: 1fr 0;
+
+	.app-sidebar {
+		display: none;
+	}
+}
+
+.app-contents.studio-mode {
+	top: var(--top-bar-height);
+	height: calc(100vh - var(--top-bar-height));
 }
 
 .app-grid-layout {
