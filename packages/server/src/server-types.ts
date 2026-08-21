@@ -67,7 +67,7 @@ export function fabricServerJarUrl(
 	loaderVersion: string,
 	installerVersion: string,
 ): string {
-	return `${FABRIC_META_URL}/versions/loader/${gameVersion}/${loaderVersion}/${installerVersion}/jar`
+	return `${FABRIC_META_URL}/versions/loader/${gameVersion}/${loaderVersion}/${installerVersion}/server/jar`
 }
 
 export function fabricInstallerVersionsUrl(): string {
@@ -102,10 +102,9 @@ export function resolveServerJar(
 			return { url: server.url, filename: 'server.jar', sha1: server.sha1, size: server.size }
 		}
 		case 'fabric': {
-			if (!input.loaderVersion) return null
-			const installer = input.installerVersion ?? 'latest'
+			if (!input.loaderVersion || !input.installerVersion) return null
 			return {
-				url: fabricServerJarUrl(input.gameVersion, input.loaderVersion, installer),
+				url: fabricServerJarUrl(input.gameVersion, input.loaderVersion, input.installerVersion),
 				filename: 'fabric-server.jar',
 			}
 		}
@@ -139,12 +138,16 @@ export function latestPaperBuild(response: PaperBuildsResponse): {
 	}
 }
 
-export interface FabricLoaderVersionsResponse {
-	loader: Array<{ version: string; stable: boolean }>
+export interface FabricInstallerVersionsResponse {
+	version: string
+	stable: boolean
 }
 
-export function pickFabricLoaderVersion(response: FabricLoaderVersionsResponse): string | null {
-	return response.loader?.[0]?.version ?? null
+/** The newest installer version from the `/v2/versions/installer` response (a top-level array). */
+export function pickFabricInstallerVersion(
+	response: FabricInstallerVersionsResponse[],
+): string | null {
+	return response?.[0]?.version ?? null
 }
 
 /** Minimum Java major version required to run a given game version. */

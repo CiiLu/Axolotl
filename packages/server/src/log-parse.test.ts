@@ -3,7 +3,11 @@ import { test } from 'node:test'
 
 import { classifyServerLogLine, summarizeServerExit } from './log-parse.ts'
 import { computeServerStatus } from './status.ts'
-import { requiredJavaMajorVersion, resolveServerJar } from './server-types.ts'
+import {
+	pickFabricInstallerVersion,
+	requiredJavaMajorVersion,
+	resolveServerJar,
+} from './server-types.ts'
 
 test('maps legacy game versions to their required Java major', () => {
 	assert.equal(requiredJavaMajorVersion('1.21.4'), 21)
@@ -75,7 +79,20 @@ test('resolves fabric server launcher url', () => {
 		loaderVersion: '0.16.9',
 		installerVersion: '1.0.3',
 	})
-	assert.equal(jar?.url, 'https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.16.9/1.0.3/jar')
+	assert.equal(
+		jar?.url,
+		'https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.16.9/1.0.3/server/jar',
+	)
+	assert.equal(jar?.filename, 'fabric-server.jar')
+})
+
+test('fabric server jar requires an installer version', () => {
+	assert.equal(resolveServerJar('fabric', { gameVersion: '1.21.4', loaderVersion: '0.16.9' }), null)
+})
+
+test('picks the newest fabric installer version', () => {
+	assert.equal(pickFabricInstallerVersion([{ version: '1.1.2', stable: true }]), '1.1.2')
+	assert.equal(pickFabricInstallerVersion([]), null)
 })
 
 test('installer-based types resolve to null until implemented', () => {

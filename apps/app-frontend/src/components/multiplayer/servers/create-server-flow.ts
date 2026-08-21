@@ -1,10 +1,11 @@
 import { RefreshCwIcon } from '@modrinth/assets'
 import {
 	fabricInstallerVersionsUrl,
-	type FabricLoaderVersionsResponse,
+	type FabricInstallerVersionsResponse,
 	isServerTypeSupported,
 	latestPaperBuild,
 	type PaperBuildsResponse,
+	pickFabricInstallerVersion,
 	requiredJavaMajorVersion,
 	resolveServerJar,
 	type ServerTypeId,
@@ -336,14 +337,13 @@ export function createCreateServerFlowContext(
 				filename = jar.filename
 				sha1 = jar.sha1
 			} else if (serverType.value === 'fabric') {
-				const installers = await fetchJson<FabricLoaderVersionsResponse>(
+				const installers = await fetchJson<FabricInstallerVersionsResponse[]>(
 					fabricInstallerVersionsUrl(),
 				)
-				const installerVersion = installers.loader?.[0]?.version
 				const jar = resolveServerJar('fabric', {
 					gameVersion: selectedGameVersion.value,
 					loaderVersion: selectedLoaderVersion.value,
-					installerVersion,
+					installerVersion: pickFabricInstallerVersion(installers) ?? undefined,
 				})
 				if (!jar) throw new Error('Fabric server launcher is unavailable for this version')
 				url = jar.url

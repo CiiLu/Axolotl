@@ -24,9 +24,29 @@ use crate::{ErrorKind, Result, State};
 
 const MANIFEST_FILE: &str = "axolotl-server.json";
 const DEFAULT_JAR_NAME: &str = "server.jar";
+/// Executable launcher jar downloaded from Fabric Meta; must match the
+/// filename used by the frontend's `resolveServerJar('fabric')`.
+const FABRIC_SERVER_JAR_NAME: &str = "fabric-server.jar";
 const DEFAULT_MEMORY_MB: u32 = 2048;
 const STOP_TIMEOUT_SECS: u64 = 60;
 const DOWNLOAD_PROGRESS_STEP: u64 = 512 * 1024;
+
+fn type_default_jar_name(server_type: &str) -> Option<String> {
+    match server_type {
+        "fabric" => Some(FABRIC_SERVER_JAR_NAME.to_string()),
+        _ => None,
+    }
+}
+
+/// Resolves the jar a server launches with: the manifest override, then the
+/// server type default, then the generic default.
+fn resolve_jar_name(manifest: &ServerManifest) -> String {
+    manifest
+        .jar_name
+        .clone()
+        .or_else(|| type_default_jar_name(&manifest.server_type))
+        .unwrap_or_else(|| DEFAULT_JAR_NAME.to_string())
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -142,7 +162,7 @@ pub async fn create(
         server_type: server_type.to_string(),
         game_version: game_version.to_string(),
         loader_version,
-        jar_name: None,
+        jar_name: type_default_jar_name(server_type),
         java_path,
         memory_mb,
         icon_path: None,
@@ -156,7 +176,10 @@ pub async fn create(
 }
 
 /// Sets or clears the server icon. `None` resets to the default icon.
-pub async fn set_icon(server_id: &str, icon_path: Option<String>) -> Result<ServerManifest> {
+pub async fn set_icon(
+    server_id: &str,
+    icon_path: Option<String>,
+) -> Result<ServerManifest> {
     let path = server_path(server_id).await?;
     let mut manifest = read_manifest(&path).await?;
     manifest.icon_path = icon_path;
@@ -317,10 +340,7 @@ pub async fn start(
 
     let dir = server_path(server_id).await?;
     let mut manifest = read_manifest(&dir).await?;
-    let jar_name = manifest
-        .jar_name
-        .clone()
-        .unwrap_or_else(|| DEFAULT_JAR_NAME.to_string());
+    let jar_name = resolve_jar_name(&manifest);
     let jar_path = dir.join(&jar_name);
     if !jar_path.exists() {
         return Err(ErrorKind::LauncherError(format!(
@@ -511,8 +531,10 @@ async fn force_terminate_pid(pid: u32) -> Result<()> {
         .output()
         .await
         .map_err(|e| {
-            ErrorKind::LauncherError(format!("Failed to terminate process {pid}: {e}"))
-                .as_error()
+            ErrorKind::LauncherError(format!(
+                "Failed to terminate process {pid}: {e}"
+            ))
+            .as_error()
         })?;
     if !output.status.success() {
         return Err(ErrorKind::LauncherError(format!(
@@ -553,12 +575,15 @@ async fn port_listener_pids(port: u16) -> Result<Vec<u32>> {
         .lines()
         .filter_map(|line| {
             let columns: Vec<&str> = line.split_whitespace().collect();
-            if columns.len() < 5 || !columns[3].eq_ignore_ascii_case("LISTENING") {
+            if columns.len() < 5
+                || !columns[3].eq_ignore_ascii_case("LISTENING")
+            {
                 return None;
             }
             let local_address = columns[1];
             let local_port = local_address.rsplit(':').next()?;
-            (local_port == port.to_string()).then(|| columns[4].parse::<u32>().ok())?
+            (local_port == port.to_string())
+                .then(|| columns[4].parse::<u32>().ok())?
         })
         .collect();
     pids.sort_unstable();
@@ -573,8 +598,10 @@ async fn force_terminate_pid(pid: u32) -> Result<()> {
         .output()
         .await
         .map_err(|e| {
-            ErrorKind::LauncherError(format!("Failed to terminate process {pid}: {e}"))
-                .as_error()
+            ErrorKind::LauncherError(format!(
+                "Failed to terminate process {pid}: {e}"
+            ))
+            .as_error()
         })?;
     if !output.status.success() {
         return Err(ErrorKind::LauncherError(format!(
@@ -588,13 +615,7 @@ async fn force_terminate_pid(pid: u32) -> Result<()> {
 #[cfg(target_os = "windows")]
 async fn process_name(pid: u32) -> Option<String> {
     let output = Command::new("tasklist")
-        .args([
-            "/FI",
-            &format!("PID eq {pid}"),
-            "/FO",
-            "CSV",
-            "/NH",
-        ])
+        .args(["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"])
         .output()
         .await
         .ok()?;
@@ -842,5 +863,31 @@ mod tests {
         let parsed: ServerManifest = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.id, manifest.id);
         assert_eq!(parsed.name, manifest.name);
+    }
+
+    #[test]
+    fn resolves_jar_name_from_type_then_manifest() {
+        let mut manifest = ServerManifest {
+            id: "test-12345678".to_string(),
+            name: "Test".to_string(),
+            server_type: "fabric".to_string(),
+            game_version: "26.2".to_string(),
+            loader_version: Some("0.19.3".to_string()),
+            jar_name: None,
+            java_path: None,
+            memory_mb: None,
+            icon_path: None,
+            jvm_args: Vec::new(),
+            created_at: Utc::now(),
+            last_started_at: None,
+            last_exit_crashed: false,
+        };
+        assert_eq!(resolve_jar_name(&manifest), FABRIC_SERVER_JAR_NAME);
+
+        manifest.server_type = "vanilla".to_string();
+        assert_eq!(resolve_jar_name(&manifest), DEFAULT_JAR_NAME);
+
+        manifest.jar_name = Some("custom.jar".to_string());
+        assert_eq!(resolve_jar_name(&manifest), "custom.jar");
     }
 }
