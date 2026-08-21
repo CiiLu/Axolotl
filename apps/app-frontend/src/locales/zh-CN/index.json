@@ -3065,6 +3065,24 @@
 	"app.translation-settings.provider.google": {
 		"message": "Google 翻译（可直接用）"
 	},
+	"app.translation-settings.provider.deepl": {
+		"message": "DeepL 翻译"
+	},
+	"app.translation-settings.deepl-api-endpoint": {
+		"message": "API 端点"
+	},
+	"app.translation-settings.deepl-api-endpoint-placeholder": {
+		"message": "https://api-free.deepl.com/v2/translate"
+	},
+	"app.translation-settings.deepl-api-key": {
+		"message": "API 密钥"
+	},
+	"app.translation-settings.deepl-api-key-placeholder": {
+		"message": "输入你的 DeepL API 密钥"
+	},
+	"app.translation-settings.deepl-api-key-hint": {
+		"message": "在 deepl.com/pro-api 免费获取密钥"
+	},
 	"app.translation-settings.provider.microsoft": {
 		"message": "Microsoft 翻译（不可用）"
 	},

@@ -6524,6 +6524,24 @@
 	"app.translation-settings.provider.google": {
 		"message": "Google Translate (free)"
 	},
+	"app.translation-settings.provider.deepl": {
+		"message": "DeepL"
+	},
+	"app.translation-settings.deepl-api-endpoint": {
+		"message": "API endpoint"
+	},
+	"app.translation-settings.deepl-api-endpoint-placeholder": {
+		"message": "https://api-free.deepl.com/v2/translate"
+	},
+	"app.translation-settings.deepl-api-key": {
+		"message": "API key"
+	},
+	"app.translation-settings.deepl-api-key-placeholder": {
+		"message": "Enter your DeepL API key"
+	},
+	"app.translation-settings.deepl-api-key-hint": {
+		"message": "Get a free key at deepl.com/pro-api"
+	},
 	"app.translation-settings.provider.microsoft": {
 		"message": "Microsoft Translate (unavailable)"
 	},

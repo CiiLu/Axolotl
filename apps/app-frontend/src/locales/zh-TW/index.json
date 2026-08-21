@@ -4130,6 +4130,24 @@
 	"app.translation-settings.provider.google": {
 		"message": "Google 翻譯（免費）"
 	},
+	"app.translation-settings.provider.deepl": {
+		"message": "DeepL 翻譯"
+	},
+	"app.translation-settings.deepl-api-endpoint": {
+		"message": "API 端點"
+	},
+	"app.translation-settings.deepl-api-endpoint-placeholder": {
+		"message": "https://api-free.deepl.com/v2/translate"
+	},
+	"app.translation-settings.deepl-api-key": {
+		"message": "API 金鑰"
+	},
+	"app.translation-settings.deepl-api-key-placeholder": {
+		"message": "輸入你的 DeepL API 金鑰"
+	},
+	"app.translation-settings.deepl-api-key-hint": {
+		"message": "在 deepl.com/pro-api 免費取得金鑰"
+	},
 	"app.translation-settings.provider.microsoft": {
 		"message": "Microsoft 翻譯（無法使用）"
 	},

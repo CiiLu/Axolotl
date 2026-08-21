@@ -58,6 +58,8 @@ export interface TranslationSettings {
 	ai_provider_id: string
 	ai_model_id: string
 	ai_system_prompt: string
+	deepl_api_endpoint: string
+	deepl_api_key: string | null
 }
 
 export async function translateInBatches(

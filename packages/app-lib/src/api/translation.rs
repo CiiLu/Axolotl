@@ -33,6 +33,7 @@ const AI_OUTPUT_CONTRACT: &str = "Return only JSON in the form {\"translations\"
 #[serde(rename_all = "kebab-case")]
 pub enum TranslationProvider {
     Google,
+    DeepL,
     Ai,
 }
 
@@ -40,14 +41,16 @@ impl TranslationProvider {
     fn as_str(self) -> &'static str {
         match self {
             Self::Google => "google",
+            Self::DeepL => "deepl",
             Self::Ai => "ai",
         }
     }
 
     fn from_str(value: &str) -> crate::Result<Self> {
         match value {
-            "microsoft" | "deepl" | "deeplx" => Ok(Self::Google),
+            "microsoft" | "deeplx" => Ok(Self::Google),
             "google" => Ok(Self::Google),
+            "deepl" => Ok(Self::DeepL),
             "ai" | "openai-compatible" => Ok(Self::Ai),
             _ => Err(ErrorKind::InputError(format!(
                 "Unknown translation provider: {value}"
@@ -140,6 +143,10 @@ pub struct TranslationSettings {
     pub ai_model_id: String,
     /// Feature-specific prompt; empty uses the built-in translation contract.
     pub ai_system_prompt: String,
+    /// DeepL API endpoint URL.
+    pub deepl_api_endpoint: String,
+    /// DeepL API key.
+    pub deepl_api_key: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -208,13 +215,14 @@ async fn load_settings(
 ) -> crate::Result<StoredTranslationSettings> {
     sqlx::query(
         "UPDATE translation_settings SET provider = 'google', deeplx_api_key = NULL \
-         WHERE id = 0 AND provider NOT IN ('google', 'ai')",
+         WHERE id = 0 AND provider NOT IN ('google', 'ai', 'deepl')",
     )
     .execute(pool)
     .await?;
     let row = sqlx::query(
         "SELECT provider, target_language, mode, auto_translate, style, \
-         ai_provider_id, ai_model_id, openai_system_prompt \
+         ai_provider_id, ai_model_id, openai_system_prompt, \
+         deepl_api_endpoint, deepl_api_key \
          FROM translation_settings WHERE id = 0",
     )
     .fetch_one(pool)
@@ -236,6 +244,8 @@ async fn load_settings(
             ai_provider_id: row.try_get("ai_provider_id")?,
             ai_model_id: row.try_get("ai_model_id")?,
             ai_system_prompt: row.try_get("openai_system_prompt")?,
+            deepl_api_endpoint: row.try_get("deepl_api_endpoint")?,
+            deepl_api_key: row.try_get("deepl_api_key")?,
         },
     })
 }
@@ -261,10 +271,16 @@ pub async fn update_settings(
     }
 
     let state = State::get().await?;
+    let endpoint = if settings.deepl_api_endpoint.trim().is_empty() {
+        "https://api-free.deepl.com/v2/translate"
+    } else {
+        settings.deepl_api_endpoint.trim()
+    };
     sqlx::query(
         "UPDATE translation_settings SET provider = ?, target_language = ?, \
          mode = ?, auto_translate = ?, style = ?, ai_provider_id = ?, \
-         ai_model_id = ?, openai_system_prompt = ? WHERE id = 0",
+         ai_model_id = ?, openai_system_prompt = ?, \
+         deepl_api_endpoint = ?, deepl_api_key = ? WHERE id = 0",
     )
     .bind(settings.provider.as_str())
     .bind(settings.target_language.trim())
@@ -274,6 +290,8 @@ pub async fn update_settings(
     .bind(settings.ai_provider_id.trim())
     .bind(settings.ai_model_id.trim())
     .bind(settings.ai_system_prompt)
+    .bind(endpoint)
+    .bind(settings.deepl_api_key.as_deref().map(str::trim))
     .execute(&state.pool)
     .await?;
     Ok(())
@@ -400,6 +418,15 @@ fn provider_language(locale: &str, provider: TranslationProvider) -> String {
             "zh-CN" => "zh".to_string(),
             value => value.to_string(),
         },
+        TranslationProvider::DeepL => match normalized.as_str() {
+            "zh-CN" => "ZH".to_string(),
+            "zh-TW" => "ZH".to_string(),
+            "en" | "en-US" => "EN-US".to_string(),
+            "en-GB" => "EN-GB".to_string(),
+            "pt" | "pt-BR" => "PT-BR".to_string(),
+            "pt-PT" => "PT-PT".to_string(),
+            value => value.to_uppercase(),
+        },
         TranslationProvider::Ai => normalized,
     }
 }
@@ -460,6 +487,66 @@ async fn google_translate(
             }
         }
     }
+}
+
+
+async fn deepl_translate(
+    segment: &TranslationSegment,
+    source_language: &str,
+    target_language: &str,
+    api_endpoint: &str,
+    api_key: &str,
+) -> crate::Result<String> {
+    let mut body = serde_json::Map::new();
+    body.insert(
+        "text".to_string(),
+        serde_json::Value::Array(vec![serde_json::Value::String(
+            segment.text.clone(),
+        )]),
+    );
+    body.insert(
+        "target_lang".to_string(),
+        serde_json::Value::String(target_language.to_string()),
+    );
+    if source_language != "auto" {
+        body.insert(
+            "source_lang".to_string(),
+            serde_json::Value::String(source_language.to_string()),
+        );
+    }
+    let client = crate::util::fetch::configured_client().await?;
+    let response = send_with_retry(|| {
+        client
+            .post(api_endpoint)
+            .header(
+                "Authorization",
+                format!("DeepL-Auth-Key {}", api_key),
+            )
+            .header("Content-Type", "application/json")
+            .json(&body)
+    })
+    .await?;
+    let value: Value = checked_json(response, "DeepL").await?;
+    let translations = value
+        .get("translations")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            ErrorKind::OtherError(
+                "DeepL returned an invalid translation response".to_string(),
+            )
+            .as_error()
+        })?;
+    let translated = translations
+        .first()
+        .and_then(|t| t.get("text"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            ErrorKind::OtherError(
+                "DeepL returned an empty translation".to_string(),
+            )
+            .as_error()
+        })?;
+    Ok(translated.to_string())
 }
 
 
@@ -620,6 +707,12 @@ fn cache_key(
         hasher.update(settings.settings.ai_model_id.as_bytes());
         hasher.update(settings.settings.ai_system_prompt.as_bytes());
     }
+    if settings.settings.provider == TranslationProvider::DeepL {
+        hasher.update(settings.settings.deepl_api_endpoint.as_bytes());
+        hasher.update(
+            settings.settings.deepl_api_key.as_deref().unwrap_or("").as_bytes(),
+        );
+    }
     format!("{:x}", hasher.finalize())
 }
 
@@ -664,6 +757,46 @@ async fn translate_uncached(
             .await
             .into_iter()
             .collect(),
+        TranslationProvider::DeepL => {
+            let api_endpoint = if settings.settings.deepl_api_endpoint.trim().is_empty() {
+                "https://api-free.deepl.com/v2/translate"
+            } else {
+                settings.settings.deepl_api_endpoint.trim()
+            };
+            let api_key = settings.settings.deepl_api_key.as_deref().unwrap_or("").trim();
+            if api_key.is_empty() {
+                return Err(ErrorKind::OtherError(
+                    "DeepL API key is not configured".to_string(),
+                )
+                .into());
+            }
+            stream::iter(segments.iter().cloned())
+                .map(|segment| {
+                    let source = &source;
+                    let target = &target;
+                    let api_endpoint = api_endpoint.to_string();
+                    let api_key = api_key.to_string();
+                    async move {
+                        let text = deepl_translate(
+                            &segment,
+                            source,
+                            target,
+                            &api_endpoint,
+                            &api_key,
+                        )
+                        .await?;
+                        Ok(TranslatedSegment {
+                            id: segment.id,
+                            text,
+                        })
+                    }
+                })
+                .buffer_unordered(4)
+                .collect::<Vec<crate::Result<TranslatedSegment>>>()
+                .await
+                .into_iter()
+                .collect()
+        }
         TranslationProvider::Ai => {
             ai_translate_with_fallback(segments, settings, request).await
         }
@@ -852,6 +985,8 @@ mod tests {
                 ai_provider_id: "openai".to_string(),
                 ai_model_id: "test-model".to_string(),
                 ai_system_prompt: String::new(),
+                deepl_api_endpoint: "https://api-free.deepl.com/v2/translate".to_string(),
+                deepl_api_key: Some("test-key".to_string()),
             },
         }
     }
@@ -921,10 +1056,10 @@ mod tests {
     }
 
     #[test]
-    fn settings_serialization_never_contains_secrets() {
+    fn settings_serialization_never_contains_ai_api_key() {
         let stored = stored_settings(TranslationProvider::Ai);
         let serialized = serde_json::to_string(&stored.settings).unwrap();
-        assert!(!serialized.contains("api_key"));
+        assert!(!serialized.contains("openai_api_key"));
         assert!(serialized.contains("ai_provider_id"));
     }
 
@@ -958,5 +1093,57 @@ mod tests {
 
         settings.settings.ai_system_prompt = "Translate formally".to_string();
         assert_ne!(initial, cache_key(&segment, &settings, &request));
+    }
+
+    #[test]
+    fn deepl_language_codes_are_uppercased() {
+        assert_eq!(
+            provider_language("zh-CN", TranslationProvider::DeepL),
+            "ZH"
+        );
+        assert_eq!(
+            provider_language("en-US", TranslationProvider::DeepL),
+            "EN-US"
+        );
+        assert_eq!(
+            provider_language("pt-BR", TranslationProvider::DeepL),
+            "PT-BR"
+        );
+        assert_eq!(
+            provider_language("ja", TranslationProvider::DeepL),
+            "JA"
+        );
+    }
+
+    #[test]
+    fn deepl_provider_from_str() {
+        assert_eq!(
+            TranslationProvider::from_str("deepl").unwrap(),
+            TranslationProvider::DeepL
+        );
+    }
+
+    #[test]
+    fn deepl_cache_key_changes_with_endpoint_and_key() {
+        let segment = segment("a", "Hello");
+        let mut settings = stored_settings(TranslationProvider::DeepL);
+        let req = request(vec![segment.clone()]);
+        let initial = cache_key(&segment, &settings, &req);
+
+        settings.settings.deepl_api_endpoint = "https://api.deepl.com/v2/translate".to_string();
+        assert_ne!(initial, cache_key(&segment, &settings, &req));
+
+        settings.settings.deepl_api_endpoint =
+            "https://api-free.deepl.com/v2/translate".to_string();
+        settings.settings.deepl_api_key = Some("different-key".to_string());
+        assert_ne!(initial, cache_key(&segment, &settings, &req));
+    }
+
+    #[test]
+    fn deepl_settings_serialization_contains_endpoint() {
+        let stored = stored_settings(TranslationProvider::DeepL);
+        let serialized = serde_json::to_string(&stored.settings).unwrap();
+        assert!(serialized.contains("deepl_api_endpoint"));
+        assert!(serialized.contains("api-free.deepl.com"));
     }
 }

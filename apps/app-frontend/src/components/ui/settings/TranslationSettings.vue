@@ -38,6 +38,8 @@ const settings = ref<TranslationSettingsState>({
 	ai_provider_id: '',
 	ai_model_id: '',
 	ai_system_prompt: '',
+	deepl_api_endpoint: 'https://api-free.deepl.com/v2/translate',
+	deepl_api_key: null,
 })
 const aiCatalog = ref<AIProviderDefinition[]>([])
 const loading = ref(true)
@@ -61,7 +63,27 @@ const messages = defineMessages({
 	},
 	deepl: {
 		id: 'app.translation-settings.provider.deepl',
-		defaultMessage: 'DeepL (unavailable now)',
+		defaultMessage: 'DeepL',
+	},
+	deeplApiEndpoint: {
+		id: 'app.translation-settings.deepl-api-endpoint',
+		defaultMessage: 'API endpoint',
+	},
+	deeplApiEndpointPlaceholder: {
+		id: 'app.translation-settings.deepl-api-endpoint-placeholder',
+		defaultMessage: 'https://api-free.deepl.com/v2/translate',
+	},
+	deeplApiKey: {
+		id: 'app.translation-settings.deepl-api-key',
+		defaultMessage: 'API key',
+	},
+	deeplApiKeyPlaceholder: {
+		id: 'app.translation-settings.deepl-api-key-placeholder',
+		defaultMessage: 'Enter your DeepL API key',
+	},
+	deeplApiKeyHint: {
+		id: 'app.translation-settings.deepl-api-key-hint',
+		defaultMessage: 'Get a free key at deepl.com/pro-api',
 	},
 	googleIpPool: {
 		id: 'app.translation-settings.google-ip-pool',
@@ -243,7 +265,6 @@ const providerOptions = computed(() =>
 	translationProviders.value.map((provider) => ({
 		value: provider,
 		label: providerName(provider),
-		disabled: provider === 'deepl',
 	})),
 )
 const languageOptions = computed(() =>
@@ -430,6 +451,27 @@ async function clearCache() {
 			<label class="flex flex-col gap-2 font-semibold text-contrast">
 				{{ formatMessage(messages.style) }}
 				<Combobox v-model="settings.style" :options="styleOptions" />
+			</label>
+		</div>
+
+		<div v-if="settings.provider === 'deepl'" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+			<label class="flex flex-col gap-2 font-semibold text-contrast md:col-span-2">
+				{{ formatMessage(messages.deeplApiEndpoint) }}
+				<StyledInput
+					v-model="settings.deepl_api_endpoint"
+					:placeholder="formatMessage(messages.deeplApiEndpointPlaceholder)"
+				/>
+			</label>
+			<label class="flex flex-col gap-1.5 font-semibold text-contrast md:col-span-2">
+				{{ formatMessage(messages.deeplApiKey) }}
+				<StyledInput
+					v-model="settings.deepl_api_key"
+					type="password"
+					:placeholder="formatMessage(messages.deeplApiKeyPlaceholder)"
+				/>
+				<span class="text-xs font-normal text-secondary">
+					{{ formatMessage(messages.deeplApiKeyHint) }}
+				</span>
 			</label>
 		</div>
 
