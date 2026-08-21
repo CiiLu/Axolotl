@@ -6524,24 +6524,6 @@
 	"app.translation-settings.provider.google": {
 		"message": "Google Translate (free)"
 	},
-	"app.translation-settings.provider.deepl": {
-		"message": "DeepL"
-	},
-	"app.translation-settings.deepl-api-endpoint": {
-		"message": "API endpoint"
-	},
-	"app.translation-settings.deepl-api-endpoint-placeholder": {
-		"message": "https://api-free.deepl.com/v2/translate"
-	},
-	"app.translation-settings.deepl-api-key": {
-		"message": "API key"
-	},
-	"app.translation-settings.deepl-api-key-placeholder": {
-		"message": "Enter your DeepL API key"
-	},
-	"app.translation-settings.deepl-api-key-hint": {
-		"message": "Get a free key at deepl.com/pro-api"
-	},
 	"app.translation-settings.provider.microsoft": {
 		"message": "Microsoft Translate (unavailable)"
 	},
@@ -7813,5 +7795,38 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "Unknown file warning"
+	},
+	"app.translation-settings.provider.deepl": {
+		"message": "DeepL"
+	},
+	"app.translation-settings.deepl-api-key-placeholder": {
+		"message": "Enter your DeepL API key"
+	},
+	"app.translation-settings.deepl-api-key-hint": {
+		"message": "Get a free key at deepl.com/pro-api"
+	},
+	"app.translation-settings.deepl-api-key": {
+		"message": "API key"
+	},
+	"app.translation-settings.deepl-api-endpoint-placeholder": {
+		"message": "https://api-free.deepl.com/v2/translate"
+	},
+	"app.translation-settings.deepl-api-endpoint": {
+		"message": "API endpoint"
+	},
+	"app.survey-promotion.title": {
+		"message": "Community survey"
+	},
+	"app.survey-promotion.reward": {
+		"message": "Lucky participants will be drawn to win a genuine Minecraft account (redeemable for cash)."
+	},
+	"app.survey-promotion.intro": {
+		"message": "To help us improve Axolotl Launcher, we have prepared a short survey and would love to hear your feedback."
+	},
+	"app.survey-promotion.fill-survey": {
+		"message": "Fill out the survey"
+	},
+	"app.survey-promotion.defer-hint": {
+		"message": "If you close this dialog, you can still find the survey later in Settings > About."
 	}
 }

@@ -3065,24 +3065,6 @@
 	"app.translation-settings.provider.google": {
 		"message": "Google 翻译（可直接用）"
 	},
-	"app.translation-settings.provider.deepl": {
-		"message": "DeepL 翻译"
-	},
-	"app.translation-settings.deepl-api-endpoint": {
-		"message": "API 端点"
-	},
-	"app.translation-settings.deepl-api-endpoint-placeholder": {
-		"message": "https://api-free.deepl.com/v2/translate"
-	},
-	"app.translation-settings.deepl-api-key": {
-		"message": "API 密钥"
-	},
-	"app.translation-settings.deepl-api-key-placeholder": {
-		"message": "输入你的 DeepL API 密钥"
-	},
-	"app.translation-settings.deepl-api-key-hint": {
-		"message": "在 deepl.com/pro-api 免费获取密钥"
-	},
 	"app.translation-settings.provider.microsoft": {
 		"message": "Microsoft 翻译（不可用）"
 	},
@@ -7828,5 +7810,38 @@
 	},
 	"app.library.view": {
 		"message": "视图"
+	},
+	"app.translation-settings.provider.deepl": {
+		"message": "DeepL 翻译"
+	},
+	"app.translation-settings.deepl-api-key-placeholder": {
+		"message": "输入你的 DeepL API 密钥"
+	},
+	"app.translation-settings.deepl-api-key-hint": {
+		"message": "在 deepl.com/pro-api 免费获取密钥"
+	},
+	"app.translation-settings.deepl-api-key": {
+		"message": "API 密钥"
+	},
+	"app.translation-settings.deepl-api-endpoint-placeholder": {
+		"message": "https://api-free.deepl.com/v2/translate"
+	},
+	"app.translation-settings.deepl-api-endpoint": {
+		"message": "API 端点"
+	},
+	"app.survey-promotion.title": {
+		"message": "调查问卷"
+	},
+	"app.survey-promotion.reward": {
+		"message": "我们将从填写问卷的用户中抽取幸运用户，赠送 Minecraft 正版账号（可折现）。"
+	},
+	"app.survey-promotion.intro": {
+		"message": "为了更好地改进 Axolotl Launcher，我们准备了一份简短的调查问卷，期待听到你的反馈。"
+	},
+	"app.survey-promotion.fill-survey": {
+		"message": "填写问卷"
+	},
+	"app.survey-promotion.defer-hint": {
+		"message": "关闭此弹窗后，你仍可以随时在“设置 → 关于”页面中找到并填写问卷。"
 	}
 }

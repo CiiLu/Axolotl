@@ -3362,9 +3362,6 @@
 	"app.downloads.source.tianpao": {
 		"message": "Tianpao 鏡像"
 	},
-	"app.downloads.source.alternate": {
-		"message": "備用來源"
-	},
 	"app.project.install-button.switch-version": {
 		"message": "切換版本"
 	},
@@ -3707,14 +3704,8 @@
 	"app.settings.resources.app-directory-description-portable": {
 		"message": "正在以便攜模式運行，所有數據已固定在程序目錄下，無法修改。"
 	},
-	"app.settings.resources.concurrency.manual": {
-		"message": "手動"
-	},
 	"app.settings.resources.curseforge-mirror": {
 		"message": "CurseForge 服務"
-	},
-	"app.settings.resources.curseforge-mirror-description": {
-		"message": "CurseForge 檔案下載。"
 	},
 	"app.settings.resources.database-backups": {
 		"message": "應用程式資料庫備份"
@@ -3739,9 +3730,6 @@
 	},
 	"app.settings.resources.download-mirrors-description": {
 		"message": "為每項服務選擇下載來源。當鏡像來源請求失敗時，將自動退回至官方來源。"
-	},
-	"app.settings.resources.maximum-downloads": {
-		"message": "最大同時下載數"
 	},
 	"app.settings.resources.maximum-downloads-description": {
 		"message": "啟動器同時下載檔案的最大數量。網路連線較差時請降低此值；變更需要重新啟動應用程式後生效。"
@@ -4129,24 +4117,6 @@
 	},
 	"app.translation-settings.provider.google": {
 		"message": "Google 翻譯（免費）"
-	},
-	"app.translation-settings.provider.deepl": {
-		"message": "DeepL 翻譯"
-	},
-	"app.translation-settings.deepl-api-endpoint": {
-		"message": "API 端點"
-	},
-	"app.translation-settings.deepl-api-endpoint-placeholder": {
-		"message": "https://api-free.deepl.com/v2/translate"
-	},
-	"app.translation-settings.deepl-api-key": {
-		"message": "API 金鑰"
-	},
-	"app.translation-settings.deepl-api-key-placeholder": {
-		"message": "輸入你的 DeepL API 金鑰"
-	},
-	"app.translation-settings.deepl-api-key-hint": {
-		"message": "在 deepl.com/pro-api 免費取得金鑰"
 	},
 	"app.translation-settings.provider.microsoft": {
 		"message": "Microsoft 翻譯（無法使用）"
@@ -4927,5 +4897,38 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "未知檔案警告"
+	},
+	"app.translation-settings.provider.deepl": {
+		"message": "DeepL 翻譯"
+	},
+	"app.translation-settings.deepl-api-key-placeholder": {
+		"message": "輸入你的 DeepL API 金鑰"
+	},
+	"app.translation-settings.deepl-api-key-hint": {
+		"message": "在 deepl.com/pro-api 免費取得金鑰"
+	},
+	"app.translation-settings.deepl-api-key": {
+		"message": "API 金鑰"
+	},
+	"app.translation-settings.deepl-api-endpoint-placeholder": {
+		"message": "https://api-free.deepl.com/v2/translate"
+	},
+	"app.translation-settings.deepl-api-endpoint": {
+		"message": "API 端點"
+	},
+	"app.survey-promotion.title": {
+		"message": "調查問卷"
+	},
+	"app.survey-promotion.reward": {
+		"message": "我們將從填寫問卷的使用者中抽取幸運使用者，贈送 Minecraft 正版帳號（可折現）。"
+	},
+	"app.survey-promotion.intro": {
+		"message": "為了更好地改進 Axolotl Launcher，我們準備了一份簡短的調查問卷，期待聽到你的回饋。"
+	},
+	"app.survey-promotion.fill-survey": {
+		"message": "填寫問卷"
+	},
+	"app.survey-promotion.defer-hint": {
+		"message": "關閉此彈窗後，你仍可以隨時在「設定 → 關於」頁面中找到並填寫問卷。"
 	}
 }
