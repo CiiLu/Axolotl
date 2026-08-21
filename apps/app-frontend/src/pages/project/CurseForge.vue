@@ -255,6 +255,7 @@ import {
 	ProjectSidebarLinks,
 	ProjectSidebarTags,
 	SelectedProjectsFloatingBar,
+	usesTargetGameVersion,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, ref, shallowRef, watch } from 'vue'
@@ -759,21 +760,25 @@ async function installSelected(fileId: string | null) {
 		}
 		const target = contentSelection.targetInstance.value
 		const expectedLoader = { forge: 1, fabric: 4, quilt: 5, neoforge: 6 }[target.loader]
-		const resolvedFileId =
-			fileId ??
-			project.value.latestFilesIndexes.find(
-				(index) =>
-					index.gameVersion === target.game_version &&
-					(projectType.value !== 'mod' ||
-						!expectedLoader ||
-						index.modLoader === expectedLoader),
-			)?.fileId ??
-			files.value.find(
-				(file) =>
-					file.gameVersions.includes(target.game_version) &&
-					(projectType.value !== 'mod' ||
-						getFilePlatforms(file).includes(target.loader)),
-			)?.id
+		let resolvedFileId: string | number | null = fileId
+		if (!resolvedFileId && !usesTargetGameVersion(projectType.value)) {
+			resolvedFileId = files.value.find((file) => file.isAvailable)?.id ?? null
+		} else if (!resolvedFileId) {
+			resolvedFileId =
+				project.value.latestFilesIndexes.find(
+					(index) =>
+						index.gameVersion === target.game_version &&
+						(projectType.value !== 'mod' ||
+							!expectedLoader ||
+							index.modLoader === expectedLoader),
+				)?.fileId ??
+				files.value.find(
+					(file) =>
+						file.gameVersions.includes(target.game_version) &&
+						(projectType.value !== 'mod' || getFilePlatforms(file).includes(target.loader)),
+				)?.id ??
+				null
+		}
 		if (!resolvedFileId) {
 			handleError(new Error(formatMessage(messages.noCompatibleVersion)))
 			return
@@ -789,7 +794,7 @@ async function installSelected(fileId: string | null) {
 			iconUrl: getCurseForgeImageUrl(project.value.logo?.thumbnailUrl),
 			slug: project.value.slug,
 			preferences: {
-				gameVersions: [target.game_version],
+				gameVersions: usesTargetGameVersion(projectType.value) ? [target.game_version] : [],
 				loaders: projectType.value === 'mod' ? [target.loader] : [],
 			},
 		})

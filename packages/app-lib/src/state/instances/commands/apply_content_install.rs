@@ -190,7 +190,11 @@ fn target_preferences(
     };
 
     ResolutionPreferences {
-        game_versions: vec![game_version],
+        game_versions: if content_type == ContentType::ResourcePack {
+            Vec::new()
+        } else {
+            vec![game_version]
+        },
         loaders: vec![loader],
     }
 }
@@ -3131,6 +3135,21 @@ mod tests {
     use super::*;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::time::Duration;
+
+    #[test]
+    fn resource_pack_target_preferences_ignore_game_version() {
+        assert_eq!(
+            target_preferences(
+                "26.2".to_string(),
+                ModLoader::NeoForge,
+                ContentType::ResourcePack,
+            ),
+            ResolutionPreferences {
+                game_versions: Vec::new(),
+                loaders: vec!["minecraft".to_string()],
+            },
+        );
+    }
 
     #[test]
     fn backup_relative_path_for_update_naming() {

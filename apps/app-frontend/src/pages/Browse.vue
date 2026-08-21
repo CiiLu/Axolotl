@@ -45,6 +45,7 @@ import {
 	stripServerRuntimeInstallOverrides,
 	useBrowseSearch,
 	useDebugLogger,
+	usesTargetGameVersion,
 	useVIntl,
 } from '@modrinth/ui'
 import { useQueryClient } from '@tanstack/vue-query'
@@ -546,7 +547,7 @@ const instanceFilters = computed(() => {
 
 	if (activeInstance.value) {
 		const gameVersion = activeInstance.value.game_version
-		if (gameVersion) {
+		if (gameVersion && usesTargetGameVersion(projectType.value)) {
 			filters.push({ type: 'game_version', option: gameVersion })
 		}
 
@@ -601,7 +602,9 @@ const serverContextFilters = computed(() => {
 
 	if (pt !== 'modpack') {
 		const gameVersion = serverContextServerData.value.mc_version
-		if (gameVersion) filters.push({ type: 'game_version', option: gameVersion })
+		if (gameVersion && usesTargetGameVersion(pt)) {
+			filters.push({ type: 'game_version', option: gameVersion })
+		}
 
 		const platform = serverContextServerData.value.loader?.toLowerCase()
 		if (platform && ['fabric', 'forge', 'quilt', 'neoforge'].includes(platform))
@@ -1158,7 +1161,7 @@ async function toggleContentSelection(
 					?.id ?? null
 		} else {
 			const files = await getCurseForgeFiles(Number(providerProjectId), {
-				gameVersion: target.game_version,
+				gameVersion: usesTargetGameVersion(contentType) ? target.game_version : undefined,
 				modLoaderType:
 					contentType === 'mod' ? curseForgeLoaderTypes[target.loader] : undefined,
 			})

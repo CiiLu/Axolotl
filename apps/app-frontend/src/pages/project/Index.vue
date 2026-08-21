@@ -406,6 +406,7 @@ import {
 	ProjectSidebarTags,
 	requestInstall,
 	SelectedProjectsFloatingBar,
+	usesTargetGameVersion,
 	useVIntl,
 } from '@modrinth/ui'
 import { useQueryClient } from '@tanstack/vue-query'
@@ -629,7 +630,10 @@ const instanceFilters = computed(() => {
 		}
 	}
 
-	return { l: loaders, g: instance.value.game_version }
+	return {
+		l: loaders,
+		g: usesTargetGameVersion(data.value.project_type) ? instance.value.game_version : undefined,
+	}
 })
 
 function buildProjectHref(path, extraQuery = {}) {

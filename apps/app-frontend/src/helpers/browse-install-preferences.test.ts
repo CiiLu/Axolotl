@@ -21,14 +21,14 @@ function version(
 	} as Labrinth.Versions.v2.Version
 }
 
-test('resource packs match the Minecraft loader rather than the target mod loader', () => {
+test('resource packs ignore the target game version and match the Minecraft loader', () => {
 	const preferences = getTargetInstallPreferences(
-		{ gameVersion: '1.21.1', loader: 'neoforge' },
+		{ gameVersion: '26.2', loader: 'neoforge' },
 		'resourcepack',
 	)
 
 	assert.deepEqual(preferences, {
-		gameVersions: ['1.21.1'],
+		gameVersions: [],
 		loaders: ['minecraft'],
 	})
 	assert.equal(

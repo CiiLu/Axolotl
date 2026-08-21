@@ -4,6 +4,7 @@ import {
 	type BrowseSelectedProject,
 	createContext,
 	defineMessages,
+	usesTargetGameVersion,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, type ComputedRef, type Ref, ref, watch } from 'vue'
@@ -581,7 +582,7 @@ export function createContentSelection({
 			projectType: item.contentType,
 			ownershipKind: 'user_added',
 			manualOperationKind: 'content_install',
-			gameVersion: instance.game_version,
+			gameVersion: usesTargetGameVersion(item.contentType) ? instance.game_version : undefined,
 			modLoaderType: curseForgeLoaderType(instance.loader),
 			installDependencies: true,
 		})
@@ -755,7 +756,9 @@ export function createContentSelection({
 				projectType: selection.item.contentType,
 				ownershipKind: 'user_added',
 				manualOperationKind: 'content_install',
-				gameVersion: instance.game_version,
+				gameVersion: usesTargetGameVersion(selection.item.contentType)
+					? instance.game_version
+					: undefined,
 				modLoaderType: curseForgeLoaderType(instance.loader),
 				installDependencies: true,
 				excludedDependencyProjectIds: [...new Set(excludedDependencyProjectIds)],

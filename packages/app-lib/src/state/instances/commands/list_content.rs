@@ -276,6 +276,10 @@ fn instance_matches_targets(
     loader: &str,
     targets: &[InstanceInstallTarget],
 ) -> bool {
+    if project_type == ProjectType::ResourcePack {
+        return !targets.is_empty();
+    }
+
     targets.iter().any(|target| {
         target.game_version == game_version
             && (project_type != ProjectType::Mod
@@ -2695,8 +2699,38 @@ fn sort_content_items(items: &mut [ContentItem]) {
 
 #[cfg(test)]
 mod tests {
-    use super::{linked_curseforge_modpack_ids, linked_modrinth_modpack_ids};
+    use super::{
+        InstanceInstallTarget, ProjectType, instance_matches_targets,
+        linked_curseforge_modpack_ids, linked_modrinth_modpack_ids,
+    };
     use crate::state::instances::InstanceLink;
+
+    #[test]
+    fn resource_pack_install_candidates_ignore_game_version() {
+        let targets = vec![InstanceInstallTarget {
+            game_version: "1.21.11".to_string(),
+            loader: "minecraft".to_string(),
+        }];
+
+        assert!(instance_matches_targets(
+            ProjectType::ResourcePack,
+            "26.2",
+            "vanilla",
+            &targets,
+        ));
+        assert!(!instance_matches_targets(
+            ProjectType::DataPack,
+            "26.2",
+            "vanilla",
+            &targets,
+        ));
+        assert!(!instance_matches_targets(
+            ProjectType::ResourcePack,
+            "26.2",
+            "vanilla",
+            &[],
+        ));
+    }
 
     #[test]
     fn linked_modpack_ids_stay_provider_qualified() {

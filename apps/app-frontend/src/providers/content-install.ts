@@ -1,6 +1,12 @@
 import type { Labrinth } from '@modrinth/api-client'
 import type { ContentInstallInstance, ContentInstallProjectInfo, ContentItem } from '@modrinth/ui'
-import { createContext, defineMessage, useDebugLogger, useVIntl } from '@modrinth/ui'
+import {
+	createContext,
+	defineMessage,
+	usesTargetGameVersion,
+	useDebugLogger,
+	useVIntl,
+} from '@modrinth/ui'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import dayjs from 'dayjs'
 import { nextTick, type Ref, ref } from 'vue'
@@ -284,6 +290,8 @@ function isVersionCompatible(
 	project: Labrinth.Projects.v2.Project,
 	instance: GameInstance,
 ) {
+	if (project.project_type === 'resourcepack') return true
+
 	return (
 		version.game_versions.includes(instance.game_version) &&
 		(project.project_type === 'mod'
@@ -298,6 +306,7 @@ function findPreferredVersion(
 	instance: GameInstance,
 ) {
 	const projectType = project.project_type ?? 'mod'
+	if (projectType === 'resourcepack') return versions[0]
 
 	return (
 		versions.find(
@@ -1398,7 +1407,9 @@ export function createContentInstall(opts: {
 				projectId: curseForgeProject.id,
 				fileId: file.id,
 				projectType: project.project_type,
-				gameVersion: instance.game_version,
+				gameVersion: usesTargetGameVersion(project.project_type)
+					? instance.game_version
+					: undefined,
 				modLoaderType: curseForgeLoaderType(instance.loader),
 				installDependencies,
 			})
@@ -1569,7 +1580,9 @@ export function createContentInstall(opts: {
 			projectType: project.project_type,
 			ownershipKind: 'user_added' as const,
 			manualOperationKind: 'content_install' as const,
-			gameVersion: instance.game_version,
+			gameVersion: usesTargetGameVersion(project.project_type)
+				? instance.game_version
+				: undefined,
 			modLoaderType: curseForgeLoaderType(instance.loader),
 			installDependencies: true,
 		}
