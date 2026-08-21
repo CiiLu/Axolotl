@@ -16,6 +16,7 @@ mod error;
 mod mod_translation;
 mod portable;
 mod seed_map;
+mod tray;
 
 #[cfg(target_os = "macos")]
 mod macos;
@@ -386,6 +387,7 @@ fn main() {
             window_state_builder.build()
         })
         .setup(|app| {
+            tray::init(&app.handle());
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(4)).await;
