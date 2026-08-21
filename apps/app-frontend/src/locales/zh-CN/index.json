@@ -7795,5 +7795,20 @@
 	},
 	"app.onboarding.favorites.title": {
 		"message": "留个清单"
+	},
+	"app.settings.about.survey-description": {
+		"message": "帮助我们改进 Axolotl Launcher"
+	},
+	"app.settings.about.survey": {
+		"message": "调查问卷"
+	},
+	"app.library.view.standard": {
+		"message": "标准网格"
+	},
+	"app.library.view.cards": {
+		"message": "实例库卡片"
+	},
+	"app.library.view": {
+		"message": "视图"
 	}
 }

@@ -5639,6 +5639,12 @@
 	"app.settings.about.repository": {
 		"message": "Source code"
 	},
+	"app.settings.about.survey": {
+		"message": "Community survey"
+	},
+	"app.settings.about.survey-description": {
+		"message": "Help us improve Axolotl Launcher"
+	},
 	"app.settings.about.test-error": {
 		"message": "Trigger test error"
 	},

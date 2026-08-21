@@ -33,6 +33,29 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.10',
+		version: '1.8.10',
+		publishedAt: '2026-08-21',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.10',
+			'zh-CN': 'Axolotl Launcher 1.8.10',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added a community survey entry on the About page.',
+					'zh-CN': '“关于”页面新增调查问卷入口。',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'The official QQ group is now 737601250.',
+					'zh-CN': '官方 QQ 群号变更为 737601250。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.9',
 		version: '1.8.9',
 		publishedAt: '2026-08-21',
@@ -41,6 +64,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.8.9',
 		},
 		changes: {
+			added: [
+				{
+					'zh-CN': '增加文件 Studio',
+					'en-US': 'Added file Studio',
+				},
+			],
 			fixed: [
 				{
 					'zh-CN': '修复添加了背景图的侧边栏无法正常跟随主题颜色并提供模糊效果的问题。',
@@ -51,6 +80,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '修复部分情况下无法正常切换背景图片的问题',
 					'en-US':
 						'Fixed a bug where the background image could not be switched normally in some cases.',
+				},
+				{
+					'en-US':
+						'Fixed Forge-based Minecraft instances closing before startup when their loader metadata reused JVM options.',
+					'zh-CN':
+						'修复 Forge 实例的加载器元数据重复使用 JVM 参数时，会在启动前直接退出的问题。',
+				},
+				{
+					'en-US':
+						'Fixed early Minecraft startup failures sometimes leaving an empty launcher log instead of the error output.',
+					'zh-CN':
+						'修复 Minecraft 启动早期失败时启动器日志有时为空、未记录错误输出的问题。',
 				},
 			],
 		},

@@ -3,6 +3,8 @@ import {
 	ClipboardCopyIcon,
 	EyeIcon,
 	FolderOpenIcon,
+	CollectionIcon,
+	GridIcon,
 	MoreVerticalIcon,
 	PinIcon,
 	PlayIcon,
@@ -22,6 +24,7 @@ import {
 	FloatingActionBar,
 	formatLoader,
 	injectNotificationManager,
+	PopoutMenu,
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
@@ -33,6 +36,7 @@ import BatchEditGroupsModal from '@/components/ui/modal/BatchEditGroupsModal.vue
 import ConfirmDeleteInstanceModal from '@/components/ui/modal/ConfirmDeleteInstanceModal.vue'
 import { UNGROUPED_GROUP_KEY, useGridGrouping } from '@/composables/useGridGrouping'
 import { install_duplicate_instance } from '@/helpers/install'
+import { getLastLibraryDisplayMode, setLastLibraryDisplayMode } from '@/helpers/library-display-mode'
 import { edit, remove, set_pinned } from '@/helpers/instance'
 
 const { handleError } = injectNotificationManager()
@@ -68,6 +72,9 @@ const messages = defineMessages({
 		id: 'app.instances.selected-count',
 		defaultMessage: '{count, plural, one {# selected} other {# selected}}',
 	},
+	view: { id: 'app.library.view', defaultMessage: 'View' },
+	standardView: { id: 'app.library.view.standard', defaultMessage: 'Standard grid' },
+	cardsView: { id: 'app.library.view.cards', defaultMessage: 'Library cards' },
 })
 
 const optionMessages = {
@@ -103,6 +110,21 @@ const currentDeleteInstance = ref(null)
 const batchDeleteCount = ref(0)
 const confirmModal = ref(null)
 const search = ref('')
+const displayMode = ref(getLastLibraryDisplayMode())
+
+const displayModeOptions = computed(() => [
+	{ id: 'standard', label: formatMessage(messages.standardView), icon: GridIcon },
+	{ id: 'cards', label: formatMessage(messages.cardsView), icon: CollectionIcon },
+])
+
+const currentDisplayMode = computed(() =>
+	displayModeOptions.value.find((option) => option.id === displayMode.value),
+)
+
+function setDisplayMode(mode) {
+	displayMode.value = mode
+	setLastLibraryDisplayMode(mode)
+}
 
 const filteredInstances = computed(() =>
 	props.instances.filter((instance) =>
@@ -334,6 +356,31 @@ function onBatchEditApplied() {
 			clearable
 			wrapper-class="flex-1"
 		/>
+		<PopoutMenu :tooltip="formatMessage(messages.view)" placement="bottom-end">
+			<ButtonStyled circular>
+				<button :aria-label="formatMessage(messages.view)">
+					<component :is="currentDisplayMode?.icon" />
+				</button>
+			</ButtonStyled>
+			<template #menu>
+				<div class="flex w-44 flex-col gap-1 p-1">
+					<ButtonStyled
+						v-for="option in displayModeOptions"
+						:key="option.id"
+						:type="displayMode === option.id ? 'filled' : 'transparent'"
+					>
+						<button
+							class="flex w-full items-center gap-2 !justify-start text-left"
+							:aria-pressed="displayMode === option.id"
+							@click="setDisplayMode(option.id)"
+						>
+							<component :is="option.icon" class="size-4" />
+							{{ option.label }}
+						</button>
+					</ButtonStyled>
+				</div>
+			</template>
+		</PopoutMenu>
 		<DropdownSelect
 			v-slot="{ selected }"
 			v-model="state.sortBy"
@@ -380,7 +427,7 @@ function onBatchEditApplied() {
 					: instanceSection.key
 			}}</span>
 		</template>
-		<section class="instances">
+		<section class="instances" :class="{ 'library-cards': displayMode === 'cards' }">
 			<div
 				v-for="instance in instanceSection.value"
 				:key="instance.id + instance.install_stage"
@@ -401,6 +448,7 @@ function onBatchEditApplied() {
 							ref="instanceComponents"
 							:instance="instance"
 							:disabled="selectMode"
+							:variant="displayMode === 'cards' ? 'library' : 'standard'"
 							:class="{ 'opacity-50': selectMode && !selectedInstanceIds.has(instance.id) }"
 							@contextmenu.prevent.stop="(event) => handleRightClick(event, instance.id)"
 						/>
@@ -510,5 +558,10 @@ function onBatchEditApplied() {
 	margin-right: auto;
 	scroll-behavior: smooth;
 	overflow-y: auto;
+
+	&.library-cards {
+		grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+		gap: 1rem;
+	}
 }
 </style>

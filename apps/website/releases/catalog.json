@@ -1,6 +1,41 @@
 {
-  "updated_at": "2026-08-20T13:45:39.373Z",
+  "updated_at": "2026-08-21T08:04:03.889Z",
   "announcements": [
+    {
+      "id": "launcher-1.8.9",
+      "version": "1.8.9",
+      "publishedAt": "2026-08-21",
+      "title": {
+        "en-US": "Axolotl Launcher 1.8.9",
+        "zh-CN": "Axolotl Launcher 1.8.9"
+      },
+      "changes": {
+        "added": [
+          {
+            "zh-CN": "增加文件 Studio",
+            "en-US": "Added file Studio"
+          }
+        ],
+        "fixed": [
+          {
+            "zh-CN": "修复添加了背景图的侧边栏无法正常跟随主题颜色并提供模糊效果的问题。",
+            "en-US": "Fixed a bug where the sidebar with a background image was unable to follow the theme color and provide a blurry effect."
+          },
+          {
+            "zh-CN": "修复部分情况下无法正常切换背景图片的问题",
+            "en-US": "Fixed a bug where the background image could not be switched normally in some cases."
+          },
+          {
+            "en-US": "Fixed Forge-based Minecraft instances closing before startup when their loader metadata reused JVM options.",
+            "zh-CN": "修复 Forge 实例的加载器元数据重复使用 JVM 参数时，会在启动前直接退出的问题。"
+          },
+          {
+            "en-US": "Fixed early Minecraft startup failures sometimes leaving an empty launcher log instead of the error output.",
+            "zh-CN": "修复 Minecraft 启动早期失败时启动器日志有时为空、未记录错误输出的问题。"
+          }
+        ]
+      }
+    },
     {
       "id": "launcher-1.8.8",
       "version": "1.8.8",
@@ -11,6 +46,14 @@
       },
       "changes": {
         "added": [
+          {
+            "en-US": "Added Favorites.",
+            "zh-CN": "新增收藏夹功能。"
+          },
+          {
+            "en-US": "Added LiteLoader, legacy Fabric, and Cleanroom support for Minecraft 1.8.8.",
+            "zh-CN": "为 Minecraft 1.8.8 新增 LiteLoader、旧版 Fabric 和 Cleanroom 支持。"
+          },
           {
             "en-US": "Added custom proxy config.",
             "zh-CN": "现在支持为启动器配置自定义代理。"
