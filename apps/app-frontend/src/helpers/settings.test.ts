@@ -7,10 +7,15 @@ import {
 	setLastBrowseContentDisplayMode,
 	setLastBrowseContentProjectType,
 } from './browse-display-mode.ts'
+import {
+	getLastLibraryDisplayMode,
+	setLastLibraryDisplayMode,
+} from './library-display-mode.ts'
 import { getSidebarExpanded, setSidebarExpanded } from './sidebar-state.ts'
 
 const storageKey = 'axolotl-browse-content-display-mode'
 const projectTypeStorageKey = 'axolotl-browse-content-project-type'
+const libraryDisplayModeStorageKey = 'axolotl-library-display-mode'
 const sidebarStorageKey = 'axolotl-right-sidebar-expanded'
 const originalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
 
@@ -67,6 +72,22 @@ test('browse project type persists content types and rejects non-content routes'
 
 		values.set(projectTypeStorageKey, 'server')
 		assert.equal(getLastBrowseContentProjectType(), 'modpack')
+	} finally {
+		restoreStorage()
+	}
+})
+
+test('library display mode persists cards and falls back to the standard grid', () => {
+	const values = installMemoryStorage()
+
+	try {
+		assert.equal(getLastLibraryDisplayMode(), 'standard')
+
+		setLastLibraryDisplayMode('cards')
+		assert.equal(getLastLibraryDisplayMode(), 'cards')
+
+		values.set(libraryDisplayModeStorageKey, 'invalid')
+		assert.equal(getLastLibraryDisplayMode(), 'standard')
 	} finally {
 		restoreStorage()
 	}

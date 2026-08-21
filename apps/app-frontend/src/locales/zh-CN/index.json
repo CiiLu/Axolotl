@@ -1757,6 +1757,15 @@
 	"app.library.title": {
 		"message": "实例库"
 	},
+	"app.library.view": {
+		"message": "视图"
+	},
+	"app.library.view.cards": {
+		"message": "实例库卡片"
+	},
+	"app.library.view.standard": {
+		"message": "标准网格"
+	},
 	"app.minecraft-auth.contact-support": {
 		"message": "联系支持"
 	},
