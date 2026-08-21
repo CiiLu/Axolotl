@@ -651,21 +651,58 @@ async fn stream_server_output(
             Ok(0) | Err(_) => break,
             Ok(_) => {
                 let trimmed = line.trim_end_matches(['\r', '\n']);
-                if trimmed.is_empty() {
+                let cleaned = strip_ansi(trimmed);
+                if cleaned.is_empty() {
                     continue;
                 }
-                push_log_line(&server_id, trimmed.to_string());
+                push_log_line(&server_id, cleaned.clone());
                 emit_server(
                     &server_id,
-                    ServerPayloadType::Log {
-                        line: trimmed.to_string(),
-                    },
+                    ServerPayloadType::Log { line: cleaned },
                 )
                 .await
                 .ok();
             }
         }
     }
+}
+
+/// Removes ANSI escape sequences (SGR colors, cursor control, OSC titles) that
+/// servers emit when they assume an interactive terminal is attached.
+fn strip_ansi(input: &str) -> String {
+    let mut output = String::with_capacity(input.len());
+    let mut chars = input.char_indices().peekable();
+    while let Some((_, character)) = chars.next() {
+        if character != '\u{1b}' {
+            output.push(character);
+            continue;
+        }
+        match chars.peek().map(|&(_, c)| c) {
+            // CSI sequence: parameter bytes, then a final byte in @..~
+            Some('[') => {
+                chars.next();
+                for (_, c) in chars.by_ref() {
+                    if ('\u{40}'..='\u{7e}').contains(&c) {
+                        break;
+                    }
+                }
+            }
+            // OSC sequence: terminated by BEL or ST (ESC \)
+            Some(']') => {
+                chars.next();
+                let mut saw_escape = false;
+                for (_, c) in chars.by_ref() {
+                    if c == '\u{7}' || (saw_escape && c == '\\') {
+                        break;
+                    }
+                    saw_escape = c == '\u{1b}';
+                }
+            }
+            // Stray escape byte without a recognized sequence
+            _ => {}
+        }
+    }
+    output
 }
 
 async fn monitor_server_process(
@@ -892,5 +929,19 @@ mod tests {
 
         manifest.jar_name = Some("custom.jar".to_string());
         assert_eq!(resolve_jar_name(&manifest), "custom.jar");
+    }
+
+    #[test]
+    fn strips_ansi_escape_sequences_from_server_output() {
+        let line = "[16:02:30 INFO]: \u{1b}[38;2;255;170;0m/mspt: \u{1b}[38;2;255;255;255mView server tick times\u{1b}[0m";
+        assert_eq!(
+            strip_ansi(line),
+            "[16:02:30 INFO]: /mspt: View server tick times"
+        );
+
+        assert_eq!(strip_ansi("\u{1b}]0;Server console\u{7}ready"), "ready");
+        assert_eq!(strip_ansi("\u{1b}]0;Server console\u{1b}\\done"), "done");
+        assert_eq!(strip_ansi("plain text stays"), "plain text stays");
+        assert_eq!(strip_ansi("h\u{e9}llo \u{1b}[31mred"), "h\u{e9}llo red");
     }
 }
