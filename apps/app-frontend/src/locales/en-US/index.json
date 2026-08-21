@@ -1602,7 +1602,7 @@
 		"message": "Unable to sign in to Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "To play this instance, create an account. If you do not have a Minecraft account, you can log in with an offline account on the right."
+		"message": "You are not logged in to any account. Please log in below. If you do not have a licensed account, you can create an offline account or log in with a third-party service in the sidebar."
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "Sign in to Minecraft"

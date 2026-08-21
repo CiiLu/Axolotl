@@ -990,7 +990,7 @@
 		"message": "无法登录 Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "要游玩此实例，请在下方使用 Microsoft 账号登录。如果没有 Minecraft 账号，可以在 Minecraft 官网购买游戏。"
+		"message": "您还未登陆任何账户，请在下方登录。如果您没有正版账户，可以在侧边栏中创建离线账户或第三方登陆。"
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "登录 Minecraft"
