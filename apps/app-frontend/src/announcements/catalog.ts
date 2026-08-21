@@ -41,6 +41,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.8.9',
 		},
 		changes: {
+			added: [
+				{
+					'zh-CN': '增加文件 Studio',
+					'en-US': 'Added file Studio',
+				},
+			],
 			fixed: [
 				{
 					'zh-CN': '修复添加了背景图的侧边栏无法正常跟随主题颜色并提供模糊效果的问题。',
