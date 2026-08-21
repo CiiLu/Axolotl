@@ -402,8 +402,9 @@ pub(crate) async fn generate_pack_from_version_id_with_reporter(
         .version_id(version_id.clone())
         .build();
     reporter.set_context(context).await?;
+    let item_path = pack_path.display().to_string();
     reporter
-        .update(
+        .update_with_events(
             InstallPhaseId::DownloadingPackFile,
             Some(InstallProgress {
                 current: 0,
@@ -411,6 +412,11 @@ pub(crate) async fn generate_pack_from_version_id_with_reporter(
                 secondary: None,
             }),
             details.clone(),
+            vec![InstallJobEventKind::ContentFileQueued {
+                path: item_path,
+                bytes_total: Some(pack_file.size as u64),
+                max_attempts: 5,
+            }],
         )
         .await?;
     reporter.persist().await?;

@@ -3160,8 +3160,19 @@ pub async fn install_modpack_with_reporter(
         title: Some(project.name.clone()),
     };
     if let Some(reporter) = reporter.as_ref() {
+        let state = State::get().await?;
+        let item_path = state
+            .directories
+            .caches_dir()
+            .join("curseforge")
+            .join("modpacks")
+            .join(request.project_id.to_string())
+            .join(request.file_id.to_string())
+            .join(&pack_file.file_name)
+            .display()
+            .to_string();
         reporter
-            .update(
+            .update_with_events(
                 InstallPhaseId::DownloadingPackFile,
                 Some(InstallProgress {
                     current: 0,
@@ -3169,6 +3180,11 @@ pub async fn install_modpack_with_reporter(
                     secondary: None,
                 }),
                 pack_details.clone(),
+                vec![InstallJobEventKind::ContentFileQueued {
+                    path: item_path,
+                    bytes_total: Some(pack_file.file_length),
+                    max_attempts: 5,
+                }],
             )
             .await?;
     }
