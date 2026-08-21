@@ -28,6 +28,7 @@ import {
 	SERVER_STATUS_META,
 } from '@/components/multiplayer/servers/server-status'
 import ServerConsole from '@/components/multiplayer/servers/ServerConsole.vue'
+import ServerFilesPanel from '@/components/multiplayer/servers/ServerFilesPanel.vue'
 import ServerIcon from '@/components/multiplayer/servers/ServerIcon.vue'
 import ServerSettingsPanel from '@/components/multiplayer/servers/ServerSettingsPanel.vue'
 import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
@@ -48,6 +49,7 @@ const eulaModalPending = ref('')
 
 const messages = defineMessages({
 	console: { id: 'app.servers.detail.console', defaultMessage: 'Console' },
+	files: { id: 'app.servers.detail.files', defaultMessage: 'Files' },
 	settings: { id: 'app.servers.detail.settings', defaultMessage: 'Settings' },
 	back: { id: 'app.servers.detail.back', defaultMessage: 'Servers' },
 	start: { id: 'app.servers.action.start', defaultMessage: 'Start' },
@@ -94,6 +96,7 @@ watch([server, isLoaded], ([value, loaded]) => {
 const tabIndex = ref(0)
 const tabLinks = computed(() => [
 	{ label: formatMessage(messages.console), href: 'console', icon: TerminalSquareIcon },
+	{ label: formatMessage(messages.files), href: 'files', icon: FolderOpenIcon },
 	{ label: formatMessage(messages.settings), href: 'settings', icon: WrenchIcon },
 ])
 
@@ -277,6 +280,9 @@ async function shareOnline() {
 
 			<div v-if="tabIndex === 0" class="max-h-[calc(100dvh-var(--top-bar-height))] min-h-0 flex-1">
 				<ServerConsole :server="server" />
+			</div>
+			<div v-else-if="tabIndex === 1" class="min-h-0 flex-1 overflow-y-auto pr-1">
+				<ServerFilesPanel :server="server" />
 			</div>
 			<div v-else class="min-h-0 flex-1 overflow-y-auto pr-1">
 				<ServerSettingsPanel :server="server" @deleted="router.push('/multiplayer/servers')" />

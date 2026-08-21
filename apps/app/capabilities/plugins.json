@@ -119,6 +119,24 @@
 				},
 				{
 					"path": "$CONFIG/profiles/**"
+				},
+				{
+					"path": "$APPDATA/servers"
+				},
+				{
+					"path": "$APPDATA/servers/**"
+				},
+				{
+					"path": "$APPCONFIG/servers"
+				},
+				{
+					"path": "$APPCONFIG/servers/**"
+				},
+				{
+					"path": "$CONFIG/servers"
+				},
+				{
+					"path": "$CONFIG/servers/**"
 				}
 			]
 		},

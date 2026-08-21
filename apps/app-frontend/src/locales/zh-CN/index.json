@@ -8335,5 +8335,8 @@
 	},
 	"app.servers.settings.cancel": {
 		"message": "取消"
+	},
+	"app.servers.detail.files": {
+		"message": "文件"
 	}
 }
