@@ -9,6 +9,7 @@ export interface ServerManifestData {
 	gameVersion: string
 	loaderVersion?: string
 	jarName?: string
+	iconPath?: string
 	javaPath?: string
 	memoryMb?: number
 	jvmArgs: string[]
@@ -53,6 +54,8 @@ export const servers = {
 			jvmArgs?: string[]
 		},
 	) => invoke<ServerManifestData>(command('servers_update_settings'), { serverId, ...options }),
+	setIcon: (serverId: string, iconPath: string | null) =>
+		invoke<ServerManifestData>(command('servers_set_icon'), { serverId, iconPath }),
 	delete: (serverId: string) => invoke<void>(command('servers_delete'), { serverId }),
 	readFile: (serverId: string, file: string) =>
 		invoke<string>(command('servers_read_file'), { serverId, file }),

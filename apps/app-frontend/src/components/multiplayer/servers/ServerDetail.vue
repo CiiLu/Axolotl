@@ -3,20 +3,32 @@ import {
 	ArrowLeftIcon,
 	FolderOpenIcon,
 	GlobeIcon,
+	MoreVerticalIcon,
 	PlayIcon,
 	StopCircleIcon,
 	TerminalSquareIcon,
 	WrenchIcon,
 } from '@modrinth/assets'
 import { setEulaAccepted } from '@modrinth/server'
-import { ButtonStyled, defineMessages, NavTabs, TagItem, useVIntl } from '@modrinth/ui'
+import {
+	ButtonStyled,
+	defineMessages,
+	injectFilePicker,
+	NavTabs,
+	OverflowMenu,
+	TagItem,
+	useVIntl,
+} from '@modrinth/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
-import { SERVER_STATUS_META } from '@/components/multiplayer/servers/server-status'
-import { SERVER_TYPE_META } from '@/components/multiplayer/servers/server-type'
+import {
+	isServerStatusVisible,
+	SERVER_STATUS_META,
+} from '@/components/multiplayer/servers/server-status'
 import ServerConsole from '@/components/multiplayer/servers/ServerConsole.vue'
+import ServerIcon from '@/components/multiplayer/servers/ServerIcon.vue'
 import ServerSettingsPanel from '@/components/multiplayer/servers/ServerSettingsPanel.vue'
 import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
 import { useServers } from '@/composables/useServers'
@@ -28,6 +40,7 @@ const router = useRouter()
 const serverId = route.params.id as string
 
 const { servers, refresh, startServer, stopServer } = useServers()
+const filePicker = injectFilePicker()
 const multiplayerSession = useMultiplayerSession()
 const { formatMessage } = useVIntl()
 const eulaModal = ref()
@@ -50,10 +63,15 @@ const messages = defineMessages({
 		defaultMessage: '{type} · {version}',
 	},
 	port: { id: 'app.servers.card.port', defaultMessage: 'Port {port}' },
+	editIcon: { id: 'app.servers.icon.edit', defaultMessage: 'Edit icon' },
+	removeIcon: { id: 'app.servers.icon.remove', defaultMessage: 'Remove icon' },
 })
 
 const server = computed(() => servers.value.find((entry) => entry.id === serverId))
 const statusMeta = computed(() => (server.value ? SERVER_STATUS_META[server.value.status] : null))
+const showStatus = computed(() =>
+	server.value ? isServerStatusVisible(server.value.status) : false,
+)
 
 const isLoaded = ref(false)
 const hasSeenServer = ref(false)
@@ -119,6 +137,28 @@ function onEulaDecline() {
 	eulaModal.value?.hide()
 }
 
+async function setServerIcon() {
+	if (!server.value) return
+	try {
+		const picked = await (filePicker.pickInstanceIcon?.() ?? filePicker.pickImage())
+		if (!picked?.path) return
+		await serversApi.setIcon(server.value.id, picked.path)
+		await refresh()
+	} catch (error) {
+		console.error(error)
+	}
+}
+
+async function resetServerIcon() {
+	if (!server.value?.iconPath) return
+	try {
+		await serversApi.setIcon(server.value.id, null)
+		await refresh()
+	} catch (error) {
+		console.error(error)
+	}
+}
+
 async function shareOnline() {
 	if (!server.value?.port) return
 	await router.push({ path: '/multiplayer/rooms' })
@@ -132,7 +172,7 @@ async function shareOnline() {
 			{{ formatMessage(messages.notFound) }}
 		</div>
 
-		<template v-else>
+		<template v-else-if="server">
 			<div class="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-3">
 				<div class="flex min-w-0 items-center gap-3">
 					<ButtonStyled type="transparent" circular>
@@ -144,22 +184,41 @@ async function shareOnline() {
 							<ArrowLeftIcon />
 						</button>
 					</ButtonStyled>
-					<div
-						class="flex size-11 shrink-0 items-center justify-center rounded-xl text-base font-bold"
-						:style="`--_color: ${SERVER_TYPE_META[server.serverType].colorVar}`"
-						:class="[
-							'text-[--_color,var(--color-brand)]',
-							'bg-[color-mix(in_srgb,var(--_color)_14%,transparent)]',
-						]"
-					>
-						{{ SERVER_TYPE_META[server.serverType].monogram }}
+					<div class="group relative shrink-0">
+						<button
+							v-tooltip="formatMessage(messages.editIcon)"
+							type="button"
+							class="cursor-pointer rounded-xl transition-transform group-active:scale-95"
+							:aria-label="formatMessage(messages.editIcon)"
+							@click="setServerIcon"
+						>
+							<ServerIcon
+								:icon-path="server.iconPath"
+								:server-type="server.serverType"
+								:server-id="server.id"
+								size="44px"
+							/>
+						</button>
+						<OverflowMenu
+							v-if="server.iconPath"
+							class="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-surface-4 text-secondary shadow-md transition-colors hover:text-contrast"
+							:options="[
+								{
+									id: 'remove',
+									color: 'danger',
+									action: () => resetServerIcon(),
+								},
+							]"
+						>
+							<MoreVerticalIcon class="size-3.5" />
+						</OverflowMenu>
 					</div>
 					<div class="min-w-0">
 						<div class="flex min-w-0 items-center gap-2">
 							<h2 class="m-0 truncate text-xl font-semibold text-contrast">
 								{{ server.name }}
 							</h2>
-							<TagItem v-if="statusMeta" class="shrink-0">
+							<TagItem v-if="showStatus && statusMeta" class="shrink-0">
 								<span :class="`font-semibold ${statusMeta.color}`">
 									{{ formatMessage(statusMeta.label) }}
 								</span>

@@ -636,6 +636,7 @@ fn main() {
                         "servers_get",
                         "servers_create",
                         "servers_update_settings",
+                        "servers_set_icon",
                         "servers_delete",
                         "servers_read_file",
                         "servers_write_file",

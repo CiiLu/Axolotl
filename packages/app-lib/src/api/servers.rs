@@ -43,6 +43,8 @@ pub struct ServerManifest {
     pub java_path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory_mb: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub jvm_args: Vec<String>,
     pub created_at: DateTime<Utc>,
@@ -143,12 +145,22 @@ pub async fn create(
         jar_name: None,
         java_path,
         memory_mb,
+        icon_path: None,
         jvm_args: Vec::new(),
         created_at: Utc::now(),
         last_started_at: None,
         last_exit_crashed: false,
     };
     write_manifest(&dir, &manifest).await?;
+    Ok(manifest)
+}
+
+/// Sets or clears the server icon. `None` resets to the default icon.
+pub async fn set_icon(server_id: &str, icon_path: Option<String>) -> Result<ServerManifest> {
+    let path = server_path(server_id).await?;
+    let mut manifest = read_manifest(&path).await?;
+    manifest.icon_path = icon_path;
+    write_manifest(&path, &manifest).await?;
     Ok(manifest)
 }
 
@@ -665,6 +677,7 @@ mod tests {
             jar_name: None,
             java_path: None,
             memory_mb: Some(2048),
+            icon_path: None,
             jvm_args: Vec::new(),
             created_at: Utc::now(),
             last_started_at: None,

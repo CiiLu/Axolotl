@@ -9,6 +9,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             servers_get,
             servers_create,
             servers_update_settings,
+            servers_set_icon,
             servers_delete,
             servers_read_file,
             servers_write_file,
@@ -65,6 +66,14 @@ pub async fn servers_update_settings(
         server_id, name, java_path, memory_mb, jvm_args,
     )
     .await?)
+}
+
+#[tauri::command]
+pub async fn servers_set_icon(
+    server_id: &str,
+    icon_path: Option<String>,
+) -> Result<servers::ServerManifest> {
+    Ok(servers::set_icon(server_id, icon_path).await?)
 }
 
 #[tauri::command]

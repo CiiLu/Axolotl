@@ -23,3 +23,8 @@ export const SERVER_STATUS_META: Record<ServerStatus, ServerStatusMeta> = {
 	running: { label: serverStatusMessages.running, color: 'text-green' },
 	crashed: { label: serverStatusMessages.crashed, color: 'text-red' },
 }
+
+/** Idle/closed states that should not render a status tag. */
+export function isServerStatusVisible(status: ServerStatus): boolean {
+	return status !== 'created' && status !== 'ready'
+}

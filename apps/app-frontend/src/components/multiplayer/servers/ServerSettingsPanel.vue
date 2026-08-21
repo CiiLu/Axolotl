@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { SaveIcon, SpinnerIcon, TrashIcon, XIcon } from '@modrinth/assets'
+import { ImageIcon, SaveIcon, SpinnerIcon, TrashIcon, XIcon } from '@modrinth/assets'
 import { requiredJavaMajorVersion } from '@modrinth/server'
 import {
 	ButtonStyled,
 	Card,
 	ConfirmModal,
 	defineMessages,
+	injectFilePicker,
 	injectNotificationManager,
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
+import ServerIcon from '@/components/multiplayer/servers/ServerIcon.vue'
 import ServerPropertiesEditor from '@/components/multiplayer/servers/ServerPropertiesEditor.vue'
 import JavaSelector from '@/components/ui/JavaSelector.vue'
 import { type ServerView, useServers } from '@/composables/useServers'
@@ -31,6 +33,10 @@ const { formatMessage } = useVIntl()
 const messages = defineMessages({
 	general: { id: 'app.servers.settings.general', defaultMessage: 'General' },
 	name: { id: 'app.servers.settings.name', defaultMessage: 'Server name' },
+	icon: { id: 'app.servers.settings.icon', defaultMessage: 'Icon' },
+	selectIcon: { id: 'app.servers.icon.select', defaultMessage: 'Select icon' },
+	changeIcon: { id: 'app.servers.icon.change', defaultMessage: 'Change icon' },
+	removeIcon: { id: 'app.servers.icon.remove', defaultMessage: 'Remove icon' },
 	java: { id: 'app.servers.settings.java', defaultMessage: 'Java' },
 	memory: { id: 'app.servers.settings.memory', defaultMessage: 'Memory (MB)' },
 	jvmArgs: { id: 'app.servers.settings.jvm-args', defaultMessage: 'JVM arguments' },
@@ -56,8 +62,10 @@ const messages = defineMessages({
 
 const { deleteServer, refresh } = useServers()
 const { addNotification, handleError } = injectNotificationManager()
+const filePicker = injectFilePicker()
 
 const name = ref(props.server.name)
+const iconPath = ref<string | null>(props.server.iconPath ?? null)
 const javaSelection = ref<{ path: string; version: string }>({
 	path: props.server.javaPath ?? '',
 	version: '',
@@ -72,6 +80,7 @@ const requiredJava = computed(() => requiredJavaMajorVersion(props.server.gameVe
 
 const baseline = ref({
 	name: props.server.name,
+	iconPath: props.server.iconPath ?? null,
 	javaPath: props.server.javaPath ?? '',
 	javaVersion: '',
 	memoryMb: props.server.memoryMb ?? 2048,
@@ -91,9 +100,19 @@ onMounted(async () => {
 	}
 })
 
+watch(
+	() => props.server.iconPath,
+	(value) => {
+		const synced = value ?? null
+		iconPath.value = synced
+		baseline.value.iconPath = synced
+	},
+)
+
 const generalDirty = computed(
 	() =>
 		name.value !== baseline.value.name ||
+		iconPath.value !== baseline.value.iconPath ||
 		javaSelection.value.path !== baseline.value.javaPath ||
 		javaSelection.value.version !== baseline.value.javaVersion ||
 		memoryMb.value !== baseline.value.memoryMb ||
@@ -115,6 +134,9 @@ async function save() {
 			memoryMb: memoryMbValue,
 			jvmArgs,
 		})
+		if (iconPath.value !== baseline.value.iconPath) {
+			await serversApi.setIcon(props.server.id, iconPath.value)
+		}
 		const propsSaved = (await editor.value?.save()) ?? true
 		if (!propsSaved) return
 		name.value = name.value.trim()
@@ -122,6 +144,7 @@ async function save() {
 		jvmArgsText.value = jvmArgs.join(' ')
 		baseline.value = {
 			name: name.value,
+			iconPath: iconPath.value,
 			javaPath: javaSelection.value.path,
 			javaVersion: javaSelection.value.version,
 			memoryMb: memoryMbValue,
@@ -138,10 +161,20 @@ async function save() {
 
 function cancel() {
 	name.value = baseline.value.name
+	iconPath.value = baseline.value.iconPath
 	javaSelection.value = { path: baseline.value.javaPath, version: baseline.value.javaVersion }
 	memoryMb.value = baseline.value.memoryMb
 	jvmArgsText.value = baseline.value.jvmArgs
 	editor.value?.cancel()
+}
+
+async function pickIcon() {
+	try {
+		const picked = await (filePicker.pickInstanceIcon?.() ?? filePicker.pickImage())
+		if (picked?.path) iconPath.value = picked.path
+	} catch (error) {
+		handleError(error)
+	}
 }
 
 async function confirmDelete() {
@@ -158,6 +191,36 @@ async function confirmDelete() {
 					<h3 class="m-0 text-base font-semibold text-contrast">
 						{{ formatMessage(messages.general) }}
 					</h3>
+
+					<div class="flex min-w-0 items-center gap-3">
+						<ServerIcon
+							:icon-path="iconPath"
+							:server-type="server.serverType"
+							:server-id="server.id"
+							size="48px"
+						/>
+						<div class="flex flex-col gap-1">
+							<span class="font-semibold text-contrast">{{ formatMessage(messages.icon) }}</span>
+							<div class="flex gap-2">
+								<ButtonStyled type="outlined" size="small">
+									<button type="button" @click="pickIcon">
+										<ImageIcon />
+										{{
+											iconPath
+												? formatMessage(messages.changeIcon)
+												: formatMessage(messages.selectIcon)
+										}}
+									</button>
+								</ButtonStyled>
+								<ButtonStyled v-if="iconPath" color="red" type="outlined" size="small">
+									<button type="button" @click="iconPath = null">
+										<TrashIcon />
+										{{ formatMessage(messages.removeIcon) }}
+									</button>
+								</ButtonStyled>
+							</div>
+						</div>
+					</div>
 
 					<label class="flex min-w-0 flex-col gap-2" for="server-settings-name">
 						<span class="font-semibold text-contrast">{{ formatMessage(messages.name) }}</span>
@@ -213,7 +276,7 @@ async function confirmDelete() {
 							</p>
 						</div>
 					</div>
-					<ButtonStyled color="danger" type="outlined">
+					<ButtonStyled color="red" type="outlined">
 						<button type="button" :disabled="server.running" @click="deleteModal?.show()">
 							<TrashIcon />
 							{{ formatMessage(messages.deleteTitle) }}
