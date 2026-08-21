@@ -32,6 +32,11 @@ export type ServerEventPayload =
 	| { event: 'started' }
 	| { event: 'stopped'; crashed: boolean }
 
+export interface PortProcessInfoData {
+	pid: number
+	name?: string | null
+}
+
 const command = (name: string) => `plugin:servers|${name}`
 
 export const servers = {
@@ -76,6 +81,9 @@ export const servers = {
 		invoke<void>(command('servers_send_command'), { serverId, command: commandText }),
 	stop: (serverId: string) => invoke<void>(command('servers_stop'), { serverId }),
 	kill: (serverId: string) => invoke<void>(command('servers_kill'), { serverId }),
+	killPortProcess: (port: number) => invoke<void>(command('servers_kill_port_process'), { port }),
+	portProcess: (port: number) =>
+		invoke<PortProcessInfoData | null>(command('servers_port_process'), { port }),
 	getLogBuffer: (serverId: string) =>
 		invoke<string[]>(command('servers_get_log_buffer'), { serverId }),
 	clearLog: (serverId: string) => invoke<void>(command('servers_clear_log'), { serverId }),

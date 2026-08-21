@@ -18,6 +18,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             servers_send_command,
             servers_stop,
             servers_kill,
+            servers_kill_port_process,
+            servers_port_process,
             servers_get_log_buffer,
             servers_clear_log,
         ])
@@ -131,6 +133,16 @@ pub async fn servers_stop(server_id: &str) -> Result<()> {
 #[tauri::command]
 pub async fn servers_kill(server_id: &str) -> Result<()> {
     Ok(servers::kill(server_id).await?)
+}
+
+#[tauri::command]
+pub async fn servers_kill_port_process(port: u16) -> Result<()> {
+    Ok(servers::kill_port_process(port).await?)
+}
+
+#[tauri::command]
+pub async fn servers_port_process(port: u16) -> Result<Option<servers::PortProcessInfo>> {
+    Ok(servers::port_process(port).await?)
 }
 
 #[tauri::command]

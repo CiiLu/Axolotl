@@ -3,23 +3,29 @@ import {
 	ArrowLeftIcon,
 	FolderOpenIcon,
 	GlobeIcon,
+	LoaderCircleIcon,
 	MoreVerticalIcon,
+	PencilIcon,
 	PlayIcon,
+	RefreshCwIcon,
+	ShieldIcon,
 	StopCircleIcon,
 	TerminalSquareIcon,
 	WrenchIcon,
 } from '@modrinth/assets'
 import { setEulaAccepted } from '@modrinth/server'
 import {
+	Admonition,
 	ButtonStyled,
 	defineMessages,
 	injectFilePicker,
+	injectNotificationManager,
 	NavTabs,
 	OverflowMenu,
 	TagItem,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
@@ -33,7 +39,7 @@ import ServerIcon from '@/components/multiplayer/servers/ServerIcon.vue'
 import ServerSettingsPanel from '@/components/multiplayer/servers/ServerSettingsPanel.vue'
 import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
 import { useServers } from '@/composables/useServers'
-import { servers as serversApi } from '@/helpers/servers'
+import { type PortProcessInfoData, servers as serversApi } from '@/helpers/servers'
 import { openPath } from '@/helpers/utils'
 
 const route = useRoute()
@@ -67,6 +73,35 @@ const messages = defineMessages({
 	port: { id: 'app.servers.card.port', defaultMessage: 'Port {port}' },
 	editIcon: { id: 'app.servers.icon.edit', defaultMessage: 'Edit icon' },
 	removeIcon: { id: 'app.servers.icon.remove', defaultMessage: 'Remove icon' },
+	portConflictTitle: {
+		id: 'app.servers.port.conflict-title',
+		defaultMessage: 'Port {port} is already in use',
+	},
+	portConflictDescription: {
+		id: 'app.servers.port.conflict-description',
+		defaultMessage:
+			'{process} is currently occupying this port, so the server cannot start. Change the server port, or force quit the process below.',
+	},
+	portUnknownProcess: {
+		id: 'app.servers.port.unknown-process',
+		defaultMessage: 'Unknown process (PID {pid})',
+	},
+	portForceQuit: {
+		id: 'app.servers.port.force-quit',
+		defaultMessage: 'Force quit process',
+	},
+	portChange: {
+		id: 'app.servers.port.change',
+		defaultMessage: 'Change port',
+	},
+	portRecheck: {
+		id: 'app.servers.port.recheck',
+		defaultMessage: 'Recheck',
+	},
+	portForceQuitFailed: {
+		id: 'app.servers.port.force-quit-failed',
+		defaultMessage: 'Failed to quit the process occupying the port',
+	},
 })
 
 const server = computed(() => servers.value.find((entry) => entry.id === serverId))
@@ -77,6 +112,94 @@ const showStatus = computed(() =>
 
 const isLoaded = ref(false)
 const hasSeenServer = ref(false)
+
+const DEFAULT_SERVER_PORT = 25565
+const PORT_CHECK_INTERVAL_MS = 10_000
+
+const { addNotification } = injectNotificationManager()
+
+const portProcess = ref<PortProcessInfoData | null>(null)
+const checkingPort = ref(false)
+const killingPortProcess = ref(false)
+let portCheckToken = 0
+
+const effectivePort = computed(() =>
+	server.value ? (server.value.port ?? DEFAULT_SERVER_PORT) : null,
+)
+const portConflict = computed(
+	() => !!server.value && server.value.status !== 'running' && !!portProcess.value,
+)
+const occupyingProcessLabel = computed(() => {
+	const info = portProcess.value
+	if (!info) return ''
+	return info.name
+		? `${info.name} (PID ${info.pid})`
+		: formatMessage(messages.portUnknownProcess, { pid: info.pid })
+})
+
+/** Polls whether something else is listening on the server's port. */
+async function checkPortOccupation(silent = true) {
+	const port = effectivePort.value
+	if (port == null || server.value?.status === 'running') {
+		portCheckToken++
+		portProcess.value = null
+		return
+	}
+	if (!silent) checkingPort.value = true
+	const token = ++portCheckToken
+	try {
+		const info = await serversApi.portProcess(port)
+		if (token === portCheckToken) portProcess.value = info
+	} catch {
+		if (token === portCheckToken) portProcess.value = null
+	} finally {
+		if (!silent) checkingPort.value = false
+	}
+}
+
+function recheckPort() {
+	void checkPortOccupation(false)
+}
+
+async function forceQuitPortProcess() {
+	const port = effectivePort.value
+	if (port == null || killingPortProcess.value) return
+	killingPortProcess.value = true
+	try {
+		await serversApi.killPortProcess(port)
+		await checkPortOccupation()
+	} catch (error) {
+		addNotification({
+			title: formatMessage(messages.portForceQuitFailed),
+			text: error instanceof Error ? error.message : String(error),
+			type: 'error',
+		})
+	} finally {
+		killingPortProcess.value = false
+	}
+}
+
+/** Opens the settings tab and focuses the port field once the properties editor has loaded. */
+async function goToPortSetting() {
+	tabIndex.value = 2
+	let portField: HTMLElement | null = null
+	for (let i = 0; i < 20 && !portField; i++) {
+		await nextTick()
+		portField = document.getElementById('server-prop-server-port')
+		if (!portField) await new Promise((resolve) => setTimeout(resolve, 100))
+	}
+	if (portField) {
+		portField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+		portField.focus({ preventScroll: true })
+	}
+}
+
+watch([() => server.value?.status, effectivePort], () => void checkPortOccupation(), {
+	immediate: true,
+})
+
+const portCheckTimer = setInterval(() => void checkPortOccupation(), PORT_CHECK_INTERVAL_MS)
+onUnmounted(() => clearInterval(portCheckTimer))
 
 onMounted(async () => {
 	if (servers.value.length === 0) await refresh().catch(() => {})
@@ -244,13 +367,13 @@ async function shareOnline() {
 				</div>
 
 				<div class="flex flex-wrap gap-2">
-					<ButtonStyled v-if="server.status !== 'running'" color="brand">
+					<ButtonStyled v-if="server.status !== 'running' && !portConflict" color="brand">
 						<button type="button" @click="toggleRunning">
 							<PlayIcon />
 							{{ formatMessage(messages.start) }}
 						</button>
 					</ButtonStyled>
-					<ButtonStyled v-else color="red" type="outlined">
+					<ButtonStyled v-else-if="server.status === 'running'" color="red" type="outlined">
 						<button type="button" @click="toggleRunning">
 							<StopCircleIcon />
 							{{ formatMessage(messages.stop) }}
@@ -270,6 +393,42 @@ async function shareOnline() {
 					</ButtonStyled>
 				</div>
 			</div>
+
+			<Admonition
+				v-if="portConflict && portProcess"
+				type="warning"
+				:header="formatMessage(messages.portConflictTitle, { port: effectivePort })"
+			>
+				{{
+					formatMessage(messages.portConflictDescription, {
+						process: occupyingProcessLabel,
+					})
+				}}
+				<template #actions>
+					<div class="flex flex-wrap items-center gap-2">
+						<ButtonStyled color="brand">
+							<button type="button" :disabled="killingPortProcess" @click="goToPortSetting">
+								<PencilIcon />
+								{{ formatMessage(messages.portChange) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled color="red">
+							<button type="button" :disabled="killingPortProcess" @click="forceQuitPortProcess">
+								<LoaderCircleIcon v-if="killingPortProcess" class="animate-spin" />
+								<ShieldIcon v-else />
+								{{ formatMessage(messages.portForceQuit) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled type="transparent">
+							<button type="button" :disabled="checkingPort" @click="recheckPort">
+								<LoaderCircleIcon v-if="checkingPort" class="animate-spin" />
+								<RefreshCwIcon v-else />
+								{{ formatMessage(messages.portRecheck) }}
+							</button>
+						</ButtonStyled>
+					</div>
+				</template>
+			</Admonition>
 
 			<NavTabs
 				mode="local"

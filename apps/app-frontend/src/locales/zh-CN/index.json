@@ -7905,7 +7905,7 @@
 		"message": "Minecraft EULA"
 	},
 	"app.servers.loading": {
-		"message": "正在加载服务器…"
+		"message": "加载中"
 	},
 	"app.servers.properties.load-failed": {
 		"message": "加载服务器配置失败。"
@@ -8338,5 +8338,26 @@
 	},
 	"app.servers.detail.files": {
 		"message": "文件"
+	},
+	"app.servers.port.change": {
+		"message": "修改端口"
+	},
+	"app.servers.port.conflict-description": {
+		"message": "{process} 正在占用该端口，服务器无法启动。建议修改服务器端口，也可以强制结束占用进程后再启动。"
+	},
+	"app.servers.port.conflict-title": {
+		"message": "端口 {port} 已被占用"
+	},
+	"app.servers.port.force-quit": {
+		"message": "强制结束占用进程"
+	},
+	"app.servers.port.force-quit-failed": {
+		"message": "结束占用端口的进程失败"
+	},
+	"app.servers.port.recheck": {
+		"message": "重新检测"
+	},
+	"app.servers.port.unknown-process": {
+		"message": "未知进程（PID {pid}）"
 	}
 }
