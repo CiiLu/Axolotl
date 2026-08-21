@@ -964,16 +964,6 @@ impl Process {
 
         let _ = state.discord_rpc.clear_to_default(true).await;
 
-        // If in tauri, window should show itself again after process exists if it was hidden
-        #[cfg(feature = "tauri")]
-        {
-            let window = crate::EventState::get_main_window().await?;
-            if let Some(window) = window {
-                window.unminimize()?;
-                window.set_focus()?;
-            }
-        }
-
         if mc_exit_status.success() {
             // We do not wait on the post exist command to finish running! We let it spawn + run on its own.
             // This behaviour may be changed in the future

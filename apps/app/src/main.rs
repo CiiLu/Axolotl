@@ -13,10 +13,10 @@ use theseus::prelude::*;
 
 mod api;
 mod error;
+mod lightweight_mode;
 mod mod_translation;
 mod portable;
 mod seed_map;
-mod tray;
 
 #[cfg(target_os = "macos")]
 mod macos;
@@ -387,7 +387,7 @@ fn main() {
             window_state_builder.build()
         })
         .setup(|app| {
-            tray::init(&app.handle());
+            lightweight_mode::init(&app.handle());
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(4)).await;
@@ -499,6 +499,8 @@ fn main() {
             check_symlink_capability,
             is_elevated,
             allow_symlink_target,
+            lightweight_mode::lightweight_mode_frontend_ready,
+            lightweight_mode::lightweight_mode_set_route,
         ]);
 
     tracing::info!("Initializing app...");

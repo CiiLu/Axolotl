@@ -59,7 +59,8 @@ features = [
   "devtools",
   "macos-private-api",
   "protocol-asset",
-  "tray-icon"
+  "tray-icon",
+  "unstable"
 ]
 
 [build-dependencies]

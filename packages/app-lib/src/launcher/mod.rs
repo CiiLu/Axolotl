@@ -1828,19 +1828,6 @@ pub async fn launch_minecraft(
     )
     .await?;
 
-    // If in tauri, and the 'minimize on launch' setting is enabled, minimize the window
-    #[cfg(feature = "tauri")]
-    {
-        use crate::EventState;
-
-        let window = EventState::get_main_window().await?;
-        if let Some(window) = window
-            && settings.hide_on_process_start
-        {
-            window.minimize()?;
-        }
-    }
-
     let _ = state
         .discord_rpc
         .set_activity(&format!("Playing {}", instance.name), true)
