@@ -291,21 +291,11 @@ fn client_for(ip: IpAddr, proxy: &ProxyConfig) -> Client {
         .resolve(GOOGLE_TRANSLATE_HOST, SocketAddr::new(ip, 443))
         .timeout(Duration::from_secs(20))
         .user_agent(crate::launcher_user_agent());
-    match proxy.apply(builder) {
-        Ok(builder) => builder
-            .build()
-            .expect("google translate client configuration should be valid"),
-        Err(e) => {
-            tracing::warn!(%e, "Failed to apply proxy config, using direct connection");
-            Client::builder()
-                .resolve(GOOGLE_TRANSLATE_HOST, SocketAddr::new(ip, 443))
-                .timeout(Duration::from_secs(20))
-                .user_agent(crate::launcher_user_agent())
-                .no_proxy()
-                .build()
-                .expect("fallback google translate client should be valid")
-        }
-    }
+    proxy
+        .apply(builder)
+        .expect("google translate proxy configuration should be valid")
+        .build()
+        .expect("google translate client configuration should be valid")
 }
 
 fn parse_ipv4(value: &str) -> Option<IpAddr> {

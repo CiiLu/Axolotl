@@ -1441,19 +1441,19 @@ fn file_reqwest_client_builder() -> reqwest::ClientBuilder {
 pub fn build_proxied_client(
     proxy: &crate::util::proxy::ProxyConfig,
 ) -> reqwest::Client {
-    let builder = reqwest_client_builder();
-    match proxy.apply(builder) {
-        Ok(builder) => builder
-            .build()
-            .expect("proxied client configuration should be valid"),
-        Err(e) => {
-            tracing::warn!(%e, "Failed to apply proxy config, using direct connection");
-            reqwest_client_builder()
-                .no_proxy()
-                .build()
-                .expect("fallback client configuration should be valid")
-        }
-    }
+    proxy
+        .apply(reqwest_client_builder())
+        .expect("proxy configuration should be valid")
+        .build()
+        .expect("proxied client configuration should be valid")
+}
+
+pub async fn configured_client() -> crate::Result<reqwest::Client> {
+    let proxy = crate::State::get().await?.proxy_config().await?;
+    proxy
+        .apply(reqwest_client_builder())?
+        .build()
+        .map_err(Into::into)
 }
 
 fn http1_file_reqwest_client_builder() -> reqwest::ClientBuilder {
@@ -1930,6 +1930,7 @@ pub async fn fetch_official(
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
 ) -> crate::Result<Bytes> {
+    let client = configured_client().await?;
     fetch_advanced_with_client_and_progress(
         Method::GET,
         url,
@@ -1941,7 +1942,7 @@ pub async fn fetch_official(
         uri_path,
         semaphore,
         exec,
-        &INSECURE_REQWEST_CLIENT,
+        &client,
         Some(crate::state::DownloadSourceMode::OfficialOnly),
         None,
         None,
@@ -1968,6 +1969,7 @@ where
             .map(|_| ())
             .map_err(Into::into)
     };
+    let client = configured_client().await?;
     let result = fetch_advanced_with_client_and_progress(
         method,
         url,
@@ -1979,7 +1981,7 @@ where
         uri_path,
         semaphore,
         exec,
-        &INSECURE_REQWEST_CLIENT,
+        &client,
         None,
         None,
         Some(&validate_json),
@@ -2020,6 +2022,7 @@ where
             .map(|_| ())
             .map_err(Into::into)
     };
+    let client = configured_client().await?;
     let result = fetch_advanced_with_client_and_progress(
         method,
         url,
@@ -2031,7 +2034,7 @@ where
         uri_path,
         semaphore,
         exec,
-        &INSECURE_REQWEST_CLIENT,
+        &client,
         None,
         None,
         Some(&validate_json),

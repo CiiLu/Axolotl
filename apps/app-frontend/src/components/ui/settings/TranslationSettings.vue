@@ -55,13 +55,13 @@ const messages = defineMessages({
 			'Translate Modrinth project titles, summaries, and descriptions while browsing content.',
 	},
 	provider: { id: 'app.translation-settings.provider', defaultMessage: 'Translation service' },
-	microsoft: {
-		id: 'app.translation-settings.provider.microsoft',
-		defaultMessage: 'Microsoft Translate (unavailable)',
-	},
 	google: {
 		id: 'app.translation-settings.provider.google',
 		defaultMessage: 'Google Translate (free)',
+	},
+	deepl: {
+		id: 'app.translation-settings.provider.deepl',
+		defaultMessage: 'DeepL (unavailable now)',
 	},
 	googleIpPool: {
 		id: 'app.translation-settings.google-ip-pool',
@@ -209,7 +209,7 @@ const targetLanguage = computed({
 
 function providerName(provider: TranslationProvider) {
 	return formatMessage(
-		{ microsoft: messages.microsoft, google: messages.google, ai: messages.ai }[provider],
+		{ google: messages.google, deepl: messages.deepl, ai: messages.ai }[provider],
 	)
 }
 
@@ -237,12 +237,13 @@ function styleName(style: TranslationStyle) {
 const translationProviders = computed<TranslationProvider[]>(() => [
 	'google',
 	...(aiAvailable.value ? (['ai'] as const) : []),
-	'microsoft',
+	'deepl',
 ])
 const providerOptions = computed(() =>
 	translationProviders.value.map((provider) => ({
 		value: provider,
 		label: providerName(provider),
+		disabled: provider === 'deepl',
 	})),
 )
 const languageOptions = computed(() =>

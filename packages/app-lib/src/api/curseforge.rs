@@ -707,8 +707,19 @@ pub(crate) async fn get_modpack_expected_members_with_reporter(
         title: Some(project.name.clone()),
     };
     if let Some(reporter) = reporter {
+        let state = State::get().await?;
+        let item_path = state
+            .directories
+            .caches_dir()
+            .join("curseforge")
+            .join("modpacks")
+            .join(project_id.to_string())
+            .join(file_id.to_string())
+            .join(&pack_file.file_name)
+            .display()
+            .to_string();
         reporter
-            .update(
+            .update_with_events(
                 InstallPhaseId::ResolvingPack,
                 Some(InstallProgress {
                     current: 0,
@@ -716,8 +727,14 @@ pub(crate) async fn get_modpack_expected_members_with_reporter(
                     secondary: None,
                 }),
                 pack_details.clone(),
+                vec![InstallJobEventKind::ContentFileQueued {
+                    path: item_path,
+                    bytes_total: Some(pack_file.file_length),
+                    max_attempts: 5,
+                }],
             )
             .await?;
+        reporter.persist().await?;
     }
     let progress_reporter = reporter.cloned();
     let mut last_downloaded = 0_u64;
@@ -758,7 +775,7 @@ pub(crate) async fn get_modpack_expected_members_with_reporter(
         &pack_file,
         &download_url,
         Some(&mut progress as &mut FetchProgressFn<'_>),
-        None,
+        reporter,
     )
     .await?;
     let archive_path = pack_download.path;
@@ -3187,6 +3204,7 @@ pub async fn install_modpack_with_reporter(
                 }],
             )
             .await?;
+        reporter.persist().await?;
     }
     let mut last_downloaded = 0_u64;
     let progress_reporter = reporter.clone();
