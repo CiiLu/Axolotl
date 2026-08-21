@@ -1227,6 +1227,7 @@ function syncDiscordActivity(to: RouteLocationNormalizedLoaded) {
 }
 
 router.afterEach((to, from, failure) => {
+	if (!failure) void invoke('lightweight_mode_set_route', { route: to.fullPath })
 	trackEvent('PageView', {
 		path: to.path,
 		fromPath: from.path,
@@ -1531,6 +1532,26 @@ onMounted(() => {
 	setServerAddServerToInstanceModal(addServerToInstanceModal.value)
 	setServerInstallToPlayModal(installToPlayModal.value)
 	setServerUpdateToPlayModal(updateToPlayModal.value)
+	void (async () => {
+		try {
+			const ready = await invoke<{
+				pending_crashes: { instance_id: string; uuid: string }[]
+				pending_commands: Parameters<typeof handleCommand>[0][]
+			}>('lightweight_mode_frontend_ready', { route: route.fullPath })
+			for (const pendingCrash of ready.pending_crashes) {
+				const instance = await getInstance(pendingCrash.instance_id).catch(() => null)
+				await minecraftCrashModal.value?.handleWarning({
+					message: `Instance ${instance?.name || 'Minecraft'} has crashed`,
+					kind: 'minecraft_crash',
+					instance_id: pendingCrash.instance_id,
+					instance_name: instance?.name || 'Minecraft',
+				})
+			}
+			for (const command of ready.pending_commands) await handleCommand(command)
+		} catch (error) {
+			handleError(error)
+		}
+	})()
 })
 
 const accounts = ref(null)

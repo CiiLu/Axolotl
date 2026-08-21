@@ -51,6 +51,7 @@ const allowedUntranslatedMessages = new Set([
 	'TNT',
 	'Java {version}',
 	'Studio',
+	'https://api-free.deepl.com/v2/translate',
 ])
 
 function messageText(value) {

@@ -230,6 +230,15 @@ const messages = defineMessages({
 		id: 'app.appearance-settings.minimize-launcher.description',
 		defaultMessage: 'Minimize the launcher when a Minecraft process starts.',
 	},
+	lightweightModeTitle: {
+		id: 'app.appearance-settings.lightweight-mode.title',
+		defaultMessage: 'Enter lightweight mode after launching a game',
+	},
+	lightweightModeDescription: {
+		id: 'app.appearance-settings.lightweight-mode.description',
+		defaultMessage:
+			'Closes the launcher webview after Minecraft starts to reduce memory use. Restore it from the system tray.',
+	},
 	defaultLandingPageTitle: {
 		id: 'app.appearance-settings.default-landing-page.title',
 		defaultMessage: 'Default landing page',
@@ -867,7 +876,31 @@ watch(
 			</h2>
 			<p class="m-0 mt-1">{{ formatMessage(messages.minimizeLauncherDescription) }}</p>
 		</div>
-		<Toggle id="minimize-launcher" v-model="settings.hide_on_process_start" />
+		<Toggle
+			id="minimize-launcher"
+			:model-value="settings.hide_on_process_start"
+			:disabled="settings.enter_lightweight_mode_on_game_launch"
+			@update:model-value="(value) => (settings.hide_on_process_start = !!value)"
+		/>
+	</div>
+
+	<div class="mt-6 flex items-center justify-between gap-4">
+		<div>
+			<h2 class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.lightweightModeTitle) }}
+			</h2>
+			<p class="m-0 mt-1">{{ formatMessage(messages.lightweightModeDescription) }}</p>
+		</div>
+		<Toggle
+			id="enter-lightweight-mode-on-game-launch"
+			:model-value="settings.enter_lightweight_mode_on_game_launch"
+			@update:model-value="
+				(value) => {
+					settings.enter_lightweight_mode_on_game_launch = !!value
+					if (value) settings.hide_on_process_start = false
+				}
+			"
+		/>
 	</div>
 
 	<div class="mt-6 flex items-center justify-between">

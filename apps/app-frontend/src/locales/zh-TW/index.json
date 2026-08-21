@@ -260,6 +260,12 @@
 	"app.appearance-settings.minimize-launcher.title": {
 		"message": "最小化啟動器"
 	},
+	"app.appearance-settings.lightweight-mode.description": {
+		"message": "Minecraft 啟動後關閉啟動器 Webview 以減少記憶體用量。可透過系統匣還原啟動器。"
+	},
+	"app.appearance-settings.lightweight-mode.title": {
+		"message": "啟動遊戲後進入輕量模式"
+	},
 	"app.appearance-settings.native-decorations.description": {
 		"message": "使用系統內建的視窗外框（需要重啟應用程式）。"
 	},

@@ -512,6 +512,12 @@
 	"app.appearance-settings.minimize-launcher.title": {
 		"message": "Minimize launcher"
 	},
+	"app.appearance-settings.lightweight-mode.description": {
+		"message": "Closes the launcher webview after Minecraft starts to reduce memory use. Restore it from the system tray."
+	},
+	"app.appearance-settings.lightweight-mode.title": {
+		"message": "Enter lightweight mode after launching a game"
+	},
 	"app.appearance-settings.native-decorations.description": {
 		"message": "Use system window frame (app restart required)."
 	},
