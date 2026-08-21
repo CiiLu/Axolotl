@@ -2,7 +2,9 @@
 	"identifier": "plugins",
 	"description": "",
 	"local": true,
-	"windows": ["main"],
+	"windows": [
+		"main"
+	],
 	"permissions": [
 		"dialog:allow-open",
 		"dialog:allow-confirm",
@@ -62,7 +64,7 @@
 					"url": "https://mod.mcimirror.top/*"
 				},
 				{
-					"url": "https://mod.tianpao.top/*"
+					"url": "https://mod.telepao.com/*"
 				}
 			]
 		},

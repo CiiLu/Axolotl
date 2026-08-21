@@ -39,8 +39,8 @@ pub const DOWNLOAD_META_HEADER: &str = "modrinth-download-meta";
 
 const BMCLAPI_BASE_URL: &str = "https://bmclapi2.bangbang93.com";
 const MCIM_BASE_URL: &str = "https://mod.mcimirror.top";
-pub(crate) const TIANPAO_HOST: &str = "mod.tianpao.top";
-const TIANPAO_BASE_URL: &str = "https://mod.tianpao.top";
+pub(crate) const TIANPAO_HOST: &str = "mod.telepao.com";
+const TIANPAO_BASE_URL: &str = "https://mod.telepao.com";
 pub(crate) const MODRINTH_CDN_OFFICIAL_HOST: &str = "cdn-alt.modrinth.com";
 const MODRINTH_CDN_LEGACY_HOST: &str = "cdn.modrinth.com";
 const METADATA_ATTEMPT_BUDGET: usize = 4;
@@ -923,7 +923,7 @@ fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
         .map_or(DownloadRouteSource::Official, |host| match host.as_str() {
             "bmclapi2.bangbang93.com" => DownloadRouteSource::Bmclapi,
             "mod.mcimirror.top" => DownloadRouteSource::Mcim,
-            "mod.tianpao.top" => DownloadRouteSource::Tianpao,
+            "mod.telepao.com" => DownloadRouteSource::Tianpao,
             _ => DownloadRouteSource::Official,
         });
     let is_mirror = matches!(
