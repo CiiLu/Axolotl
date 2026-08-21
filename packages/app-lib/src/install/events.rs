@@ -3,7 +3,7 @@ use super::model::{
     InstallErrorContext, InstallJobEventKind, InstallJobSnapshot,
     InstallJobState, InstallParallelProgress, InstallPauseReason,
     InstallPhaseDetails, InstallPhaseId, InstallProgress, InstallRollbackState,
-    MissingModpackContentState,
+    InstanceUpgradeResult, MissingModpackContentState,
 };
 use super::store;
 use chrono::Utc;
@@ -397,6 +397,20 @@ impl InstallProgressReporter {
         let mut state = self.state.lock().await;
         self.sync_latest(&mut state, &app_state).await?;
         state.job.missing_content = missing_content;
+        let record =
+            store::update_state(self.job_id, &state.job, &app_state).await?;
+        state.mark_persisted();
+        emit_install_job(&record.snapshot()).await
+    }
+
+    pub async fn set_upgrade_result(
+        &self,
+        result: InstanceUpgradeResult,
+    ) -> crate::Result<()> {
+        let app_state = crate::State::get().await?;
+        let mut state = self.state.lock().await;
+        self.sync_latest(&mut state, &app_state).await?;
+        state.job.upgrade_result = Some(result);
         let record =
             store::update_state(self.job_id, &state.job, &app_state).await?;
         state.mark_persisted();

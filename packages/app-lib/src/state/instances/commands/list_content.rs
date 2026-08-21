@@ -1698,7 +1698,10 @@ async fn content_files_to_content_items(
          INNER JOIN instance_content_entries entry ON entry.file_id = file.id
          INNER JOIN instance_content_provider_refs ref
             ON ref.content_entry_id = entry.id
-         WHERE file.instance_id = ?",
+         WHERE file.instance_id = ?
+         ORDER BY file.relative_path, ref.is_origin DESC, ref.provider,
+            ref.provider_project_id, ref.provider_release_id IS NULL,
+            ref.provider_release_id",
     )
     .bind(&instance.id)
     .fetch_all(&state.pool)
@@ -3000,6 +3003,104 @@ mod tests {
             .len(),
             2
         );
+    }
+
+    #[tokio::test]
+    async fn external_file_edit_invalidates_exact_provider_refs() {
+        let (_temp, state, resolved) = reconciliation_fixture().await;
+        let relative_path = "mods/lithium.jar";
+        let file = insert_test_file(
+            &resolved,
+            &state,
+            "file-lithium",
+            relative_path,
+            "official-sha1",
+            true,
+        )
+        .await;
+        let entry = insert_test_entry(&resolved, &state, &file, true).await;
+        let modrinth = ContentProviderRef::Modrinth {
+            project_id: ModrinthProjectId::new("gvQqBUqZ").unwrap(),
+            version_id: Some(ModrinthVersionId::new("Oqq8TOAV").unwrap()),
+        };
+        let curseforge = ContentProviderRef::CurseForge {
+            project_id: crate::state::CurseForgeProjectId::new(123).unwrap(),
+            file_id: Some(crate::state::CurseForgeFileId::new(456).unwrap()),
+        };
+        let mut tx = state.pool.begin().await.unwrap();
+        sqlite::content_rows::upsert_content_provider_ref_in_transaction(
+            &entry.id, &modrinth, true, &mut tx,
+        )
+        .await
+        .unwrap();
+        sqlite::content_rows::upsert_content_provider_ref_in_transaction(
+            &entry.id,
+            &curseforge,
+            false,
+            &mut tx,
+        )
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let mut tx = state.pool.begin().await.unwrap();
+        assert!(
+            sqlite::content_rows::invalidate_exact_provider_refs_for_file_in_transaction(
+                &resolved.content_set.id,
+                &file.id,
+                &mut tx,
+            )
+            .await
+            .unwrap()
+        );
+        sqlite::content_rows::bump_content_set_revision_in_transaction(
+            &resolved.content_set.id,
+            &mut tx,
+        )
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let refs = sqlite::content_rows::get_content_provider_refs_with_origin(
+            &entry.id,
+            &state.pool,
+        )
+        .await
+        .unwrap();
+        assert_eq!(refs.len(), 2);
+        assert!(refs.iter().any(|(reference, origin)| {
+            *origin
+                && matches!(
+                    reference,
+                    ContentProviderRef::Modrinth {
+                        project_id,
+                        version_id: None,
+                    } if project_id.as_str() == "gvQqBUqZ"
+                )
+        }));
+        assert!(refs.iter().any(|(reference, origin)| {
+            !origin
+                && matches!(
+                    reference,
+                    ContentProviderRef::CurseForge {
+                        project_id,
+                        file_id: None,
+                    } if project_id.get() == 123
+                )
+        }));
+        let snapshot = super::super::content_snapshot::get_content_snapshot(
+            &resolved.instance.id,
+            false,
+            &state,
+        )
+        .await
+        .unwrap();
+        let item = snapshot
+            .items
+            .iter()
+            .find(|item| item.entry_id.as_deref() == Some(&entry.id))
+            .unwrap();
+        assert_eq!(item.provider_project_id.as_deref(), Some("gvQqBUqZ"));
+        assert_eq!(item.provider_release_id, None);
     }
 
     #[tokio::test]

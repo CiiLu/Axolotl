@@ -503,6 +503,15 @@ pub(crate) async fn validate_instance_upgrade_plan_source(
     Ok(current)
 }
 
+pub(crate) async fn scan_instance_upgrade_source_files(
+    instance_id: &str,
+    state: &State,
+) -> crate::Result<Vec<InstanceUpgradeSourceFile>> {
+    Ok(read_only_upgrade_source(instance_id, state)
+        .await?
+        .source_files)
+}
+
 impl UpgradePlanRuntimeValidation {
     pub(crate) async fn new(
         source: ReadOnlyUpgradeSource,
@@ -761,7 +770,23 @@ fn snapshot_upgrade_items(
                 item.project_type,
                 ProjectType::Schematic | ProjectType::WorldSave
             );
-        let recognized = item.provider.zip(item.provider_project_id.clone());
+        let installed_identity = installed_identity(item);
+        let recognized = installed_identity
+            .as_ref()
+            .map(|(key, _, _)| (key.provider, key.project_id.clone()))
+            .or_else(|| item.provider.zip(item.provider_project_id.clone()));
+        let planner_provider = installed_identity
+            .as_ref()
+            .map(|(key, _, _)| key.provider)
+            .or(item.provider);
+        let planner_project_id = installed_identity
+            .as_ref()
+            .map(|(key, _, _)| key.project_id.clone())
+            .or_else(|| item.provider_project_id.clone());
+        let planner_release_id = installed_identity
+            .as_ref()
+            .map(|(_, release_id, _)| release_id.clone())
+            .or_else(|| item.provider_release_id.clone());
         let status = if unsupported {
             InstanceUpgradeItemStatus::UnsupportedContentType
         } else if recognized.is_none() {
@@ -778,9 +803,9 @@ fn snapshot_upgrade_items(
             content_id: content_id.clone(),
             relative_path: item.expected_relative_path.clone(),
             project_type: item.project_type,
-            provider: item.provider,
-            project_id: item.provider_project_id.clone(),
-            current_release_id: item.provider_release_id.clone(),
+            provider: planner_provider,
+            project_id: planner_project_id,
+            current_release_id: planner_release_id,
             current_enabled,
             auto_dependency,
             status,
@@ -792,12 +817,10 @@ fn snapshot_upgrade_items(
             },
             candidate_release_ids: Vec::new(),
         });
-        if let (Some((provider, project_id)), Some(current_release_id)) =
-            (recognized, item.provider_release_id.clone())
-        {
+        if let Some((key, current_release_id, aliases)) = installed_identity {
             installed.push(InstalledNode {
                 content_id,
-                key: NodeKey::new(provider, project_id.clone()),
+                key,
                 current_release_id: current_release_id.clone(),
                 project_type: item.project_type,
                 enabled: current_enabled,
@@ -806,46 +829,60 @@ fn snapshot_upgrade_items(
                     == ContentOwnershipKind::UserAdded
                     && !auto_dependency,
                 migratable: !unsupported,
-                aliases: installed_aliases(
-                    item,
-                    provider,
-                    &project_id,
-                    &current_release_id,
-                ),
+                aliases,
             });
         }
     }
     (items, installed)
 }
 
-fn installed_aliases(
+fn installed_identity(
     item: &InstanceContentSnapshotItem,
-    primary_provider: ContentProvider,
-    primary_project_id: &str,
-    primary_release_id: &str,
-) -> Vec<InstalledAlias> {
-    let mut aliases = vec![InstalledAlias {
-        key: NodeKey::new(primary_provider, primary_project_id),
-        current_release_id: primary_release_id.to_string(),
-    }];
-    if let Some(content) = item.content.as_ref() {
-        for reference in &content.provider_refs {
-            let Some(release_id) = reference.database_release_id() else {
-                continue;
-            };
-            let alias = InstalledAlias {
+) -> Option<(NodeKey, String, Vec<InstalledAlias>)> {
+    let mut aliases = item
+        .content
+        .as_ref()
+        .into_iter()
+        .flat_map(|content| &content.provider_refs)
+        .filter_map(|reference| {
+            Some(InstalledAlias {
                 key: NodeKey::new(
                     reference.provider(),
                     reference.database_project_id(),
                 ),
-                current_release_id: release_id,
-            };
-            if !aliases.iter().any(|existing| existing.key == alias.key) {
-                aliases.push(alias);
-            }
-        }
+                current_release_id: reference.database_release_id()?,
+            })
+        })
+        .collect::<Vec<_>>();
+    if let (Some(provider), Some(project_id), Some(release_id)) = (
+        item.provider,
+        item.provider_project_id.as_deref(),
+        item.provider_release_id.as_deref(),
+    ) {
+        let primary = InstalledAlias {
+            key: NodeKey::new(provider, project_id),
+            current_release_id: release_id.to_string(),
+        };
+        aliases.retain(|alias| alias.key != primary.key);
+        aliases.insert(0, primary);
     }
-    aliases
+    let mut seen = HashSet::new();
+    aliases.retain(|alias| seen.insert(alias.key.clone()));
+    let primary_index = item
+        .provider
+        .zip(item.provider_project_id.as_deref())
+        .and_then(|(provider, project_id)| {
+            aliases.iter().position(|alias| {
+                alias.key.provider == provider
+                    && alias.key.project_id == project_id
+            })
+        })
+        .unwrap_or(0);
+    let primary = aliases.get(primary_index)?.clone();
+    if primary_index != 0 {
+        aliases.swap(0, primary_index);
+    }
+    Some((primary.key, primary.current_release_id, aliases))
 }
 
 fn stable_content_id(item: &InstanceContentSnapshotItem) -> String {
@@ -4714,6 +4751,151 @@ mod tests {
             InstanceUpgradeItemStatus::UpgradeAvailable
         );
         assert_eq!(items[0].candidate_release_ids, vec!["wf4Vw5gN"]);
+    }
+
+    #[test]
+    fn exact_provider_ref_reconciles_existing_user_owned_dependency_root() {
+        let solution = reconciled_existing_dependency_solution(false, "old");
+        let fabric = solution
+            .selections
+            .iter()
+            .find(|selection| {
+                selection.project_id.as_deref() == Some("P7dR8mSH")
+            })
+            .unwrap();
+        assert_eq!(fabric.content_id, "fabric-entry");
+        assert_eq!(fabric.target_release_id.as_deref(), Some("new"));
+        assert_eq!(fabric.action, InstanceUpgradeAction::Upgrade);
+        assert!(solution.dependency_changes.iter().all(|change| {
+            change.project_id != "P7dR8mSH"
+                && change.existing_content_id.as_deref() != Some("fabric-entry")
+        }));
+    }
+
+    #[test]
+    fn exact_provider_ref_reconciles_existing_auto_dependency() {
+        let solution = reconciled_existing_dependency_solution(true, "old");
+        let changes = solution
+            .dependency_changes
+            .iter()
+            .filter(|change| change.project_id == "P7dR8mSH")
+            .collect::<Vec<_>>();
+        assert_eq!(changes.len(), 1);
+        assert_eq!(
+            changes[0].existing_content_id.as_deref(),
+            Some("fabric-entry")
+        );
+        assert_eq!(
+            changes[0].kind,
+            InstanceUpgradeDependencyChangeKind::Upgrade
+        );
+    }
+
+    #[test]
+    fn exact_provider_ref_reuses_matching_existing_dependency_release() {
+        let solution = reconciled_existing_dependency_solution(true, "new");
+        let changes = solution
+            .dependency_changes
+            .iter()
+            .filter(|change| change.project_id == "P7dR8mSH")
+            .collect::<Vec<_>>();
+        assert_eq!(changes.len(), 1);
+        assert_eq!(
+            changes[0].existing_content_id.as_deref(),
+            Some("fabric-entry")
+        );
+        assert_eq!(changes[0].kind, InstanceUpgradeDependencyChangeKind::Keep);
+    }
+
+    #[test]
+    fn shared_path_semantics_do_not_change_dependency_reconciliation() {
+        let local = reconciled_existing_dependency_solution(false, "old");
+        let shared_junction =
+            reconciled_existing_dependency_solution(false, "old");
+        assert_eq!(
+            serde_json::to_value(local).unwrap(),
+            serde_json::to_value(shared_junction).unwrap()
+        );
+    }
+
+    fn reconciled_existing_dependency_solution(
+        auto_dependency: bool,
+        current_release: &str,
+    ) -> InstanceUpgradeSolution {
+        let mut app = snapshot_item_for_test(
+            Some(ContentProvider::Modrinth),
+            Some("app"),
+            Some("app-old"),
+        );
+        app.entry_id = Some("app-entry".to_string());
+        app.file_id = Some("app-file".to_string());
+        app.expected_relative_path = "mods/app.jar".to_string();
+        let mut fabric = snapshot_item_for_test(
+            Some(ContentProvider::Modrinth),
+            Some("P7dR8mSH"),
+            None,
+        );
+        fabric.entry_id = Some("fabric-entry".to_string());
+        fabric.file_id = Some("fabric-file".to_string());
+        fabric.expected_relative_path = "mods/fabric-api.jar".to_string();
+        fabric.ownership_kind = if auto_dependency {
+            ContentOwnershipKind::LocalDiscovered
+        } else {
+            ContentOwnershipKind::UserAdded
+        };
+        fabric.dependency = Some(crate::state::ContentDependencyInfo {
+            auto_dependency,
+            ..Default::default()
+        });
+        fabric.content.as_mut().unwrap().provider_refs = vec![
+            ContentProviderRef::Modrinth {
+                project_id: ModrinthProjectId::new("P7dR8mSH").unwrap(),
+                version_id: None,
+            },
+            ContentProviderRef::Modrinth {
+                project_id: ModrinthProjectId::new("P7dR8mSH").unwrap(),
+                version_id: Some(
+                    ModrinthVersionId::new(current_release).unwrap(),
+                ),
+            },
+        ];
+        let snapshot = InstanceContentSnapshot {
+            instance_id: "instance".to_string(),
+            revision: 1,
+            pack: None,
+            items: vec![app, fabric],
+            pending_manual_downloads: Vec::new(),
+            warnings: Vec::new(),
+        };
+        let (items, installed) = snapshot_upgrade_items(&snapshot);
+        let roots = roots_from_items(&items, &installed);
+        let app_key = NodeKey::new(ContentProvider::Modrinth, "app");
+        let fabric_key = NodeKey::new(ContentProvider::Modrinth, "P7dR8mSH");
+        let mut app_candidate = candidate_for_key(&app_key, "app-new", 2);
+        app_candidate.dependencies.push(CandidateDependency {
+            key: fabric_key.clone(),
+            version_id: Some("new".to_string()),
+            kind: CandidateDependencyKind::Required,
+        });
+        let catalog = catalog([
+            (app_key, vec![app_candidate]),
+            (
+                fabric_key,
+                vec![candidate_for_key(
+                    &NodeKey::new(ContentProvider::Modrinth, "P7dR8mSH"),
+                    "new",
+                    2,
+                )],
+            ),
+        ]);
+        let outcome = solve_with_installed(&roots, &installed, &catalog);
+        assert!(outcome.issues.is_empty());
+        materialize_solution(
+            InstanceUpgradeSolutionKind::Newest,
+            &outcome.solutions[0],
+            &roots,
+            &installed,
+        )
     }
 
     #[test]

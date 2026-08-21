@@ -172,7 +172,9 @@ pub(crate) async fn get_content_snapshot(
          INNER JOIN instance_content_entries entry
             ON entry.id = ref.content_entry_id
          WHERE entry.content_set_id = ?
-         ORDER BY ref.content_entry_id, ref.provider",
+         ORDER BY ref.content_entry_id, ref.is_origin DESC, ref.provider,
+            ref.provider_project_id, ref.provider_release_id IS NULL,
+            ref.provider_release_id",
     )
     .bind(&content_set.id)
     .fetch_all(&state.pool)
@@ -1786,5 +1788,38 @@ mod tests {
         assert_eq!(item.provider, Some(ContentProvider::CurseForge));
         assert_eq!(item.provider_project_id.as_deref(), Some("123"));
         assert_eq!(item.provider_release_id.as_deref(), Some("456"));
+    }
+
+    #[test]
+    fn upgraded_origin_release_wins_over_stale_same_provider_ref() {
+        let item = snapshot_item(
+            Some("file".to_string()),
+            Some("entry".to_string()),
+            None,
+            ContentOwnershipKind::UserAdded,
+            crate::state::ProjectType::Mod,
+            "mods/[sodium] sodium-old-name.jar".to_string(),
+            Some(content_with_refs(
+                vec![
+                    ContentProviderRef::from_database(
+                        "modrinth",
+                        "AANobbMI",
+                        Some("vf7UgZpC"),
+                    )
+                    .unwrap(),
+                    ContentProviderRef::from_database(
+                        "modrinth",
+                        "AANobbMI",
+                        Some("7pwil2dy"),
+                    )
+                    .unwrap(),
+                ],
+                Some(ContentProvider::Modrinth),
+            )),
+        );
+
+        assert_eq!(item.provider, Some(ContentProvider::Modrinth));
+        assert_eq!(item.provider_project_id.as_deref(), Some("AANobbMI"));
+        assert_eq!(item.provider_release_id.as_deref(), Some("vf7UgZpC"));
     }
 }

@@ -323,6 +323,7 @@ fn main() {
                         "instance_update_upgrade_resolution",
                         "instance_select_upgrade_solution",
                         "instance_resolve_custom_upgrade_solution",
+                        "instance_execute_upgrade",
                         "instance_get_dependencies_as_content_items",
                         "instance_get_linked_modpack_info",
                         "instance_get_linked_modpack_content",

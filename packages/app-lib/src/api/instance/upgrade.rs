@@ -6,14 +6,20 @@ use tokio::sync::Mutex;
 
 use crate::state::instances::adapters::sqlite::content_rows;
 use crate::state::{
-    InstanceUpgradeFixedConstraint, InstanceUpgradePlan,
-    InstanceUpgradeResolution, InstanceUpgradeSolutionChoice,
-    InstanceUpgradeSolutionKind, State,
+    ContentSourceKind, InstanceLink, InstanceUpgradeFixedConstraint,
+    InstanceUpgradePlan, InstanceUpgradeResolution,
+    InstanceUpgradeSolutionChoice, InstanceUpgradeSolutionKind, State,
+};
+
+use crate::install::{
+    InstallJobSnapshot, InstanceUpgradeExecution, InstanceUpgradeWatchBaseline,
+    SharedUpgradeMode,
 };
 
 struct StoredUpgradePlanState {
     plan: InstanceUpgradePlan,
     validation: crate::state::instances::commands::UpgradePlanRuntimeValidation,
+    execution_started: bool,
 }
 
 type StoredUpgradePlan = Arc<Mutex<StoredUpgradePlanState>>;
@@ -49,6 +55,7 @@ pub async fn plan_instance_upgrade(
         Arc::new(Mutex::new(StoredUpgradePlanState {
             plan: plan.clone(),
             validation,
+            execution_started: false,
         })),
     );
     Ok(plan)
@@ -163,6 +170,227 @@ pub async fn resolve_custom_instance_upgrade_solution(
     plan.custom_constraints = fixed_constraints;
     stored.plan = plan.clone();
     Ok(plan)
+}
+
+#[tracing::instrument]
+pub async fn execute_instance_upgrade(
+    plan_id: &str,
+    create_full_backup: bool,
+    shared_upgrade_mode: SharedUpgradeMode,
+) -> crate::Result<InstallJobSnapshot> {
+    let state = State::get().await?;
+    let handle = stored_plan_handle(plan_id)?;
+    let mut stored = handle.lock().await;
+    if stored.execution_started {
+        return Err(crate::ErrorKind::InputError(
+            "Upgrade plan execution has already started".to_string(),
+        )
+        .into());
+    }
+    let _execution_guard =
+        state.lock_instance_content(&stored.plan.instance_id).await;
+    let current_revision = content_rows::get_applied_content_set(
+        &stored.plan.instance_id,
+        &state.pool,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "Instance has no applied content set".to_string(),
+        )
+    })?
+    .revision;
+    ensure_instance_upgrade_revision(
+        stored.plan.source_revision,
+        current_revision,
+    )?;
+    if !stored.plan.blocking_issues.is_empty() {
+        return Err(crate::ErrorKind::InputError(
+            "Upgrade plan still has blocking issues".to_string(),
+        )
+        .into());
+    }
+    let solution = stored.plan.selected_solution.clone().ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "Upgrade plan has no selected solution".to_string(),
+        )
+    })?;
+    let metadata = crate::state::instances::commands::get_instance_metadata(
+        &stored.plan.instance_id,
+        &state.pool,
+    )
+    .await?
+    .ok_or_else(|| {
+        crate::ErrorKind::InputError("Unknown instance".to_string())
+    })?;
+    if !matches!(metadata.link, InstanceLink::Unmanaged)
+        || metadata.applied_content_set.source_kind != ContentSourceKind::Local
+    {
+        return Err(crate::ErrorKind::InputError(
+            "Only Local unmanaged instances can use upgrade execution"
+                .to_string(),
+        )
+        .into());
+    }
+    if state
+        .process_manager
+        .get_all()
+        .iter()
+        .any(|process| process.instance_id == stored.plan.instance_id)
+    {
+        return Err(crate::ErrorKind::InputError(
+            "Instance is currently running".to_string(),
+        )
+        .into());
+    }
+    if stored.plan.target_environment.mod_loader
+        != crate::state::ModLoader::Vanilla
+        && crate::launcher::get_loader_version_from_profile(
+            &stored.plan.target_environment.game_version,
+            stored.plan.target_environment.mod_loader,
+            stored.plan.target_environment.mod_loader_version.as_deref(),
+        )
+        .await?
+        .is_none()
+    {
+        return Err(crate::ErrorKind::InputError(
+            "Target loader version is no longer available".to_string(),
+        )
+        .into());
+    }
+    ensure_upgrade_disk_space(
+        &metadata,
+        &stored.plan.source_files,
+        create_full_backup,
+        shared_upgrade_mode,
+        &state,
+    )?;
+    ensure_upgrade_target_writable(
+        &state
+            .directories
+            .instances_dir()
+            .join(&metadata.instance.path),
+    )
+    .await?;
+    crate::state::instances::commands::validate_instance_upgrade_plan_source(
+        &stored.plan,
+        &state,
+    )
+    .await?;
+    let source_watch = state
+        .file_watcher
+        .content_watch_snapshot(&stored.plan.instance_id)
+        .await
+        .map(|snapshot| InstanceUpgradeWatchBaseline {
+            epoch: snapshot.epoch,
+            generation: snapshot.generation,
+            dirty_paths: snapshot.dirty_paths.into_iter().collect(),
+        });
+    if crate::install::store::list(false, &state)
+        .await?
+        .into_iter()
+        .any(|job| {
+            !job.status.is_finished()
+                && job.instance_id.as_deref()
+                    == Some(stored.plan.instance_id.as_str())
+        })
+    {
+        return Err(crate::ErrorKind::InputError(
+            "Instance already has an active install job".to_string(),
+        )
+        .into());
+    }
+    let instance_id = stored.plan.instance_id.clone();
+    let execution = InstanceUpgradeExecution {
+        source_revision: stored.plan.source_revision,
+        source_files: stored.plan.source_files.clone(),
+        source_environment: stored.plan.source_environment.clone(),
+        target_environment: stored.plan.target_environment.clone(),
+        items: stored.plan.items.clone(),
+        solution,
+        warnings: stored.plan.warnings.clone(),
+        source_watch,
+    };
+    stored.execution_started = true;
+    let result = crate::install::upgrade_unmanaged_instance(
+        instance_id,
+        plan_id.to_string(),
+        execution,
+        create_full_backup,
+        shared_upgrade_mode,
+    )
+    .await;
+    if result.is_err() {
+        stored.execution_started = false;
+    }
+    result
+}
+
+fn ensure_upgrade_disk_space(
+    metadata: &crate::state::InstanceMetadata,
+    source_files: &[crate::state::InstanceUpgradeSourceFile],
+    create_full_backup: bool,
+    shared_upgrade_mode: SharedUpgradeMode,
+    state: &State,
+) -> crate::Result<()> {
+    let instance_path = state
+        .directories
+        .instances_dir()
+        .join(&metadata.instance.path);
+    let canonical = crate::util::io::canonicalize(&instance_path)?;
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+    let available = disks
+        .iter()
+        .filter(|disk| canonical.starts_with(disk.mount_point()))
+        .max_by_key(|disk| disk.mount_point().as_os_str().len())
+        .map(sysinfo::Disk::available_space);
+    let Some(available) = available else {
+        return Ok(());
+    };
+    let source_size = source_files
+        .iter()
+        .fold(0_u64, |total, file| total.saturating_add(file.size));
+    let copies = 1_u64
+        + u64::from(
+            create_full_backup
+                && shared_upgrade_mode == SharedUpgradeMode::Direct,
+        );
+    let required = source_size
+        .saturating_mul(copies)
+        .saturating_add(source_size / 10);
+    if available < required {
+        return Err(crate::ErrorKind::FSError(format!(
+            "Not enough free disk space for upgrade staging: need {required} bytes, have {available} bytes"
+        ))
+        .into());
+    }
+    Ok(())
+}
+
+async fn ensure_upgrade_target_writable(
+    path: &std::path::Path,
+) -> crate::Result<()> {
+    let probe = path.join(format!(
+        ".instance-upgrade-write-test-{}",
+        uuid::Uuid::new_v4()
+    ));
+    let file = tokio::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&probe)
+        .await
+        .map_err(|error| {
+            crate::ErrorKind::FSError(format!(
+                "Upgrade target is not writable: {error}"
+            ))
+        })?;
+    drop(file);
+    tokio::fs::remove_file(&probe).await.map_err(|error| {
+        crate::ErrorKind::FSError(format!(
+            "Upgrade write probe could not be removed: {error}"
+        ))
+        .into()
+    })
 }
 
 fn stored_plan_handle(plan_id: &str) -> crate::Result<StoredUpgradePlan> {

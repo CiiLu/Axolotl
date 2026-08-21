@@ -4,9 +4,11 @@ use crate::api::curseforge::{
 use crate::api::pack::import::ImportLauncherType;
 use crate::api::pack::install_from::{CreatePackInstance, CreatePackLocation};
 use crate::state::{
-    ContentEntry, ContentProviderRef, ContentUpdateCheck, InstanceFile,
-    InstanceInstallStage, InstanceLink, InstanceMetadata, ModLoader,
-    PackMember,
+    ContentDependencyEdge, ContentEntry, ContentProviderRef,
+    ContentUpdateCheck, InstanceFile, InstanceInstallStage, InstanceLink,
+    InstanceMetadata, InstanceUpgradeEnvironment, InstanceUpgradeIssue,
+    InstanceUpgradeItem, InstanceUpgradeSolution, InstanceUpgradeSourceFile,
+    ModLoader, PackMember,
 };
 use chrono::{DateTime, Utc};
 use modrinth_content_management::{ContentType, ResolutionPreferences};
@@ -59,6 +61,8 @@ pub struct InstallJobState {
     pub missing_content: Option<MissingModpackContentState>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub skipped_missing_content_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upgrade_result: Option<InstanceUpgradeResult>,
     /// Incrementally maintained download items, mirroring the replay of
     /// `events`. Skipped during (de)serialization because it is derivable
     /// from `events`; rebuilt lazily on first access after a load.
@@ -90,6 +94,7 @@ impl Clone for InstallJobState {
             skipped_missing_content_paths: self
                 .skipped_missing_content_paths
                 .clone(),
+            upgrade_result: self.upgrade_result.clone(),
             download_items_cache: std::sync::Mutex::new(None),
             summary_cache: std::sync::Mutex::new(None),
         }
@@ -129,6 +134,7 @@ impl InstallJobState {
             continuation: None,
             missing_content: None,
             skipped_missing_content_paths: Vec::new(),
+            upgrade_result: None,
             download_items_cache: std::sync::Mutex::new(None),
             summary_cache: std::sync::Mutex::new(None),
         }
@@ -962,6 +968,185 @@ mod tests {
         assert_eq!(items[0].status, DownloadItemStatus::Completed);
         assert_eq!(items[1].status, DownloadItemStatus::Failed);
     }
+
+    fn upgrade_execution() -> InstanceUpgradeExecution {
+        let environment = InstanceUpgradeEnvironment {
+            game_version: "1.21.1".to_string(),
+            mod_loader: ModLoader::Fabric,
+            mod_loader_version: Some("0.16.0".to_string()),
+            shader_runtime: crate::state::ShaderRuntime::Iris,
+        };
+        InstanceUpgradeExecution {
+            source_revision: 5,
+            source_files: Vec::new(),
+            source_environment: environment.clone(),
+            target_environment: environment,
+            items: Vec::new(),
+            solution: InstanceUpgradeSolution {
+                kind: crate::state::InstanceUpgradeSolutionKind::Custom,
+                selections: Vec::new(),
+                dependency_changes: Vec::new(),
+                warnings: Vec::new(),
+            },
+            warnings: Vec::new(),
+            source_watch: None,
+        }
+    }
+
+    fn upgrade_request(mode: SharedUpgradeMode) -> InstallRequest {
+        InstallRequest::UpgradeUnmanagedInstance {
+            instance_id: "source".to_string(),
+            plan_id: "plan".to_string(),
+            execution: upgrade_execution(),
+            create_full_backup: true,
+            shared_upgrade_mode: mode,
+        }
+    }
+
+    #[test]
+    fn instance_upgrade_direct_targets_existing_instance() {
+        assert_eq!(
+            upgrade_request(SharedUpgradeMode::Direct).target(),
+            InstallTarget::ExistingInstance {
+                instance_id: "source".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn instance_upgrade_direct_uses_technical_rollback() {
+        assert_eq!(
+            upgrade_request(SharedUpgradeMode::Direct).cleanup(),
+            InstallCleanup::RestoreExistingInstance {
+                instance_id: "source".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn instance_upgrade_copy_targets_new_physical_instance() {
+        assert_eq!(
+            upgrade_request(SharedUpgradeMode::CopyAndUpgrade).target(),
+            InstallTarget::NewInstance { instance_id: None }
+        );
+    }
+
+    #[test]
+    fn instance_upgrade_copy_failure_deletes_incomplete_copy() {
+        assert_eq!(
+            upgrade_request(SharedUpgradeMode::CopyAndUpgrade).cleanup(),
+            InstallCleanup::DeleteNewInstance { instance_id: None }
+        );
+    }
+
+    #[test]
+    fn instance_upgrade_is_persistent_install_job_kind() {
+        let request = upgrade_request(SharedUpgradeMode::Direct);
+        assert_eq!(request.kind(), InstallJobKind::UpgradeUnmanagedInstance);
+        assert_eq!(request.kind().as_str(), "upgrade_unmanaged_instance");
+        assert_eq!(
+            InstallJobKind::from_stored_str("upgrade_unmanaged_instance"),
+            InstallJobKind::UpgradeUnmanagedInstance
+        );
+    }
+
+    #[test]
+    fn instance_upgrade_completes_install_stage() {
+        assert!(
+            upgrade_request(SharedUpgradeMode::Direct)
+                .completes_instance_install_stage()
+        );
+    }
+
+    #[test]
+    fn instance_upgrade_request_round_trip_freezes_solution() {
+        let request = upgrade_request(SharedUpgradeMode::Direct);
+        let value = serde_json::to_value(&request).unwrap();
+        let restored: InstallRequest = serde_json::from_value(value).unwrap();
+        let InstallRequest::UpgradeUnmanagedInstance {
+            plan_id, execution, ..
+        } = restored
+        else {
+            panic!("wrong request variant");
+        };
+        assert_eq!(plan_id, "plan");
+        assert_eq!(execution.source_revision, 5);
+        assert_eq!(
+            execution.solution.kind,
+            crate::state::InstanceUpgradeSolutionKind::Custom
+        );
+    }
+
+    #[test]
+    fn instance_upgrade_progress_phases_round_trip() {
+        for phase in [
+            InstallPhaseId::CreatingBackup,
+            InstallPhaseId::StagingContent,
+            InstallPhaseId::DownloadingContent,
+            InstallPhaseId::ApplyingContent,
+            InstallPhaseId::UpdatingLoader,
+            InstallPhaseId::Verifying,
+            InstallPhaseId::Completed,
+        ] {
+            assert_eq!(
+                serde_json::from_value::<InstallPhaseId>(
+                    serde_json::to_value(phase).unwrap()
+                )
+                .unwrap(),
+                phase
+            );
+        }
+    }
+
+    #[test]
+    fn instance_upgrade_external_change_event_round_trip() {
+        let event = InstallJobEventKind::UpgradeExternalChange {
+            relative_path: "mods/user.jar".to_string(),
+            kind: InstanceUpgradeExternalChangeKind::Modified,
+        };
+        let restored: InstallJobEventKind =
+            serde_json::from_value(serde_json::to_value(&event).unwrap())
+                .unwrap();
+        assert!(matches!(
+            restored,
+            InstallJobEventKind::UpgradeExternalChange {
+                kind: InstanceUpgradeExternalChangeKind::Modified,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn instance_upgrade_result_round_trip_preserves_backup_and_skips() {
+        let result = InstanceUpgradeResult {
+            plan_id: "plan".to_string(),
+            source_instance_id: "source".to_string(),
+            target_instance_id: "target".to_string(),
+            backup_instance_id: Some("backup".to_string()),
+            solution: upgrade_execution().solution,
+            compatibility_warnings: Vec::new(),
+            external_changes: vec![InstanceUpgradeExternalChange {
+                relative_path: "mods/user.jar".to_string(),
+                kind: InstanceUpgradeExternalChangeKind::Added,
+            }],
+            skipped_due_to_external_conflict: vec!["mods/user.jar".to_string()],
+        };
+        let restored: InstanceUpgradeResult =
+            serde_json::from_value(serde_json::to_value(&result).unwrap())
+                .unwrap();
+        assert_eq!(restored.backup_instance_id.as_deref(), Some("backup"));
+        assert_eq!(restored.external_changes.len(), 1);
+        assert_eq!(restored.skipped_due_to_external_conflict.len(), 1);
+    }
+
+    #[test]
+    fn old_install_job_state_defaults_upgrade_result_to_none() {
+        let job = job_state();
+        let mut value = serde_json::to_value(job).unwrap();
+        value.as_object_mut().unwrap().remove("upgrade_result");
+        let restored: InstallJobState = serde_json::from_value(value).unwrap();
+        assert!(restored.upgrade_result.is_none());
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -1068,6 +1253,14 @@ pub enum InstallJobEventKind {
         source: String,
         fallback_count: u64,
     },
+    UpgradeExternalChange {
+        relative_path: String,
+        kind: InstanceUpgradeExternalChangeKind,
+    },
+    UpgradeItemSkipped {
+        relative_path: String,
+        reason: String,
+    },
     TargetInstanceDeleted {
         instance_id: String,
     },
@@ -1128,6 +1321,13 @@ pub enum InstallRequest {
     InstallExistingInstance {
         instance_id: String,
         force: bool,
+    },
+    UpgradeUnmanagedInstance {
+        instance_id: String,
+        plan_id: String,
+        execution: InstanceUpgradeExecution,
+        create_full_backup: bool,
+        shared_upgrade_mode: SharedUpgradeMode,
     },
     InstallPackToExistingInstance {
         instance_id: String,
@@ -1190,6 +1390,7 @@ impl InstallRequest {
             | Self::ImportInstance { .. }
             | Self::DuplicateInstance { .. }
             | Self::InstallExistingInstance { .. }
+            | Self::UpgradeUnmanagedInstance { .. }
             | Self::InstallPackToExistingInstance { .. }
             | Self::UpdateManagedCurseForgeModpack { .. } => true,
             Self::InstallContent { .. }
@@ -1210,6 +1411,9 @@ impl InstallRequest {
             Self::InstallExistingInstance { .. } => {
                 InstallJobKind::InstallExistingInstance
             }
+            Self::UpgradeUnmanagedInstance { .. } => {
+                InstallJobKind::UpgradeUnmanagedInstance
+            }
             Self::InstallPackToExistingInstance { .. } => {
                 InstallJobKind::InstallPackToExistingInstance
             }
@@ -1229,6 +1433,18 @@ impl InstallRequest {
 
     pub fn target(&self) -> InstallTarget {
         match self {
+            Self::UpgradeUnmanagedInstance {
+                instance_id,
+                shared_upgrade_mode,
+                ..
+            } => match shared_upgrade_mode {
+                SharedUpgradeMode::Direct => InstallTarget::ExistingInstance {
+                    instance_id: instance_id.clone(),
+                },
+                SharedUpgradeMode::CopyAndUpgrade => {
+                    InstallTarget::NewInstance { instance_id: None }
+                }
+            },
             Self::InstallExistingInstance { instance_id, .. }
             | Self::InstallPackToExistingInstance { instance_id, .. }
             | Self::UpdateManagedCurseForgeModpack { instance_id, .. }
@@ -1253,6 +1469,20 @@ impl InstallRequest {
 
     pub fn cleanup(&self) -> InstallCleanup {
         match self {
+            Self::UpgradeUnmanagedInstance {
+                instance_id,
+                shared_upgrade_mode,
+                ..
+            } => match shared_upgrade_mode {
+                SharedUpgradeMode::Direct => {
+                    InstallCleanup::RestoreExistingInstance {
+                        instance_id: instance_id.clone(),
+                    }
+                }
+                SharedUpgradeMode::CopyAndUpgrade => {
+                    InstallCleanup::DeleteNewInstance { instance_id: None }
+                }
+            },
             Self::InstallExistingInstance { instance_id, .. }
             | Self::InstallPackToExistingInstance { instance_id, .. }
             | Self::UpdateManagedCurseForgeModpack { instance_id, .. } => {
@@ -1276,6 +1506,7 @@ pub enum InstallJobKind {
     ImportInstance,
     DuplicateInstance,
     InstallExistingInstance,
+    UpgradeUnmanagedInstance,
     InstallPackToExistingInstance,
     InstallContent,
     DownloadJava,
@@ -1381,6 +1612,7 @@ impl InstallJobKind {
             Self::ImportInstance => "import_instance",
             Self::DuplicateInstance => "duplicate_instance",
             Self::InstallExistingInstance => "install_existing_instance",
+            Self::UpgradeUnmanagedInstance => "upgrade_unmanaged_instance",
             Self::InstallPackToExistingInstance => {
                 "install_pack_to_existing_instance"
             }
@@ -1395,6 +1627,7 @@ impl InstallJobKind {
             "import_instance" => Self::ImportInstance,
             "duplicate_instance" => Self::DuplicateInstance,
             "install_existing_instance" => Self::InstallExistingInstance,
+            "upgrade_unmanaged_instance" => Self::UpgradeUnmanagedInstance,
             "install_pack_to_existing_instance" => {
                 Self::InstallPackToExistingInstance
             }
@@ -1501,6 +1734,8 @@ pub struct InstallParallelProgress {
 #[serde(rename_all = "snake_case")]
 pub enum InstallPhaseId {
     PreparingInstance,
+    CreatingBackup,
+    StagingContent,
     ResolvingPack,
     DownloadingPackFile,
     ReadingPackManifest,
@@ -1511,7 +1746,11 @@ pub enum InstallPhaseId {
     PreparingJava,
     DownloadingMinecraft,
     RunningLoaderProcessors,
+    ApplyingContent,
+    UpdatingLoader,
+    Verifying,
     Finalizing,
+    Completed,
     RollingBack,
 }
 
@@ -1636,6 +1875,16 @@ pub struct InstallRollbackState {
     pub content: Option<InstallContentRollbackSnapshot>,
 }
 
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, PartialEq,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallContentRollbackScope {
+    #[default]
+    PackManaged,
+    AllContent,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum InstallContentRollbackStage {
@@ -1647,11 +1896,17 @@ pub enum InstallContentRollbackStage {
 pub struct InstallContentRollbackSnapshot {
     pub staging_id: String,
     pub stage: InstallContentRollbackStage,
+    #[serde(default)]
+    pub scope: InstallContentRollbackScope,
     pub files: Vec<InstallRollbackFile>,
     pub entries: Vec<InstallRollbackContentEntry>,
+    #[serde(default)]
+    pub dependency_edges: Vec<ContentDependencyEdge>,
     pub pack_members: Vec<PackMember>,
     #[serde(default)]
     pub replacement_paths: Vec<String>,
+    #[serde(default)]
+    pub protected_paths: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -1675,6 +1930,65 @@ pub struct InstallRollbackContentEntry {
 pub struct InstallRollbackProviderRef {
     pub provider_ref: ContentProviderRef,
     pub origin: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum SharedUpgradeMode {
+    Direct,
+    CopyAndUpgrade,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeExecution {
+    pub source_revision: u64,
+    pub source_files: Vec<InstanceUpgradeSourceFile>,
+    pub source_environment: InstanceUpgradeEnvironment,
+    pub target_environment: InstanceUpgradeEnvironment,
+    pub items: Vec<InstanceUpgradeItem>,
+    pub solution: InstanceUpgradeSolution,
+    pub warnings: Vec<InstanceUpgradeIssue>,
+    #[serde(default)]
+    pub source_watch: Option<InstanceUpgradeWatchBaseline>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeWatchBaseline {
+    pub epoch: u64,
+    pub generation: u64,
+    pub dirty_paths: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum InstanceUpgradeExternalChangeKind {
+    Added,
+    Removed,
+    Modified,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeExternalChange {
+    pub relative_path: String,
+    pub kind: InstanceUpgradeExternalChangeKind,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeResult {
+    pub plan_id: String,
+    pub source_instance_id: String,
+    pub target_instance_id: String,
+    pub backup_instance_id: Option<String>,
+    pub solution: InstanceUpgradeSolution,
+    pub compatibility_warnings: Vec<InstanceUpgradeIssue>,
+    #[serde(default)]
+    pub external_changes: Vec<InstanceUpgradeExternalChange>,
+    #[serde(default)]
+    pub skipped_due_to_external_conflict: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -1792,6 +2106,7 @@ pub struct InstallJobSnapshot {
     pub error: Option<InstallErrorView>,
     pub rollback_error: Option<InstallErrorView>,
     pub pause_reason: Option<InstallPauseReason>,
+    pub upgrade_result: Option<InstanceUpgradeResult>,
     pub created: DateTime<Utc>,
     pub modified: DateTime<Utc>,
     pub finished: Option<DateTime<Utc>>,
@@ -1869,6 +2184,9 @@ impl InstallJobState {
             },
             InstallRequest::InstallExistingInstance { .. } => {
                 InstallJobProvider::Minecraft
+            }
+            InstallRequest::UpgradeUnmanagedInstance { .. } => {
+                InstallJobProvider::Application
             }
             InstallRequest::InstallContent { .. } => {
                 InstallJobProvider::Modrinth

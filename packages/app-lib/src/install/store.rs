@@ -58,6 +58,7 @@ impl InstallJobRecord {
             error: self.state.error.clone(),
             rollback_error: self.state.rollback_error.clone(),
             pause_reason: self.state.pause_reason.clone(),
+            upgrade_result: self.state.upgrade_result.clone(),
             created: self.created,
             modified: self.modified,
             finished: self.finished,

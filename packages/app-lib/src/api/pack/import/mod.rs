@@ -1016,22 +1016,38 @@ async fn collect_dotminecraft_files(
     let skip_json = format!("{dirname}.json");
     let skip_jar = format!("{dirname}.jar");
 
-    Ok(files
-        .into_iter()
-        .filter_map(|abs_path| {
-            let rel = abs_path.strip_prefix(dotminecraft).ok()?.to_path_buf();
-            // Only filter at root level
-            if rel.parent().is_some_and(|p| !p.as_os_str().is_empty()) {
-                return Some((abs_path, rel));
-            }
-            let name = rel.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if name != skip_json && name != skip_jar {
-                Some((abs_path, rel))
-            } else {
-                None
-            }
-        })
-        .collect())
+    let mut collected = Vec::new();
+    for abs_path in files {
+        let metadata = tokio::fs::symlink_metadata(&abs_path)
+            .await
+            .map_err(|error| IOError::with_path(error, &abs_path))?;
+        if crate::util::io::is_symlink_or_reparse(&metadata) {
+            tracing::warn!(
+                path = %abs_path.display(),
+                "Skipping nested symlink or reparse point while copying an instance"
+            );
+            continue;
+        }
+        let Some(rel) = abs_path
+            .strip_prefix(dotminecraft)
+            .ok()
+            .map(Path::to_path_buf)
+        else {
+            continue;
+        };
+        if rel
+            .parent()
+            .is_some_and(|path| !path.as_os_str().is_empty())
+        {
+            collected.push((abs_path, rel));
+            continue;
+        }
+        let name = rel.file_name().and_then(|name| name.to_str()).unwrap_or("");
+        if name != skip_json && name != skip_jar {
+            collected.push((abs_path, rel));
+        }
+    }
+    Ok(collected)
 }
 
 /// Copies the collected files into the instance profile concurrently, bounded

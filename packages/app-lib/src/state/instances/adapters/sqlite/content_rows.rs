@@ -1309,7 +1309,8 @@ pub(crate) async fn get_content_provider_refs(
         "SELECT provider, provider_project_id, provider_release_id
          FROM instance_content_provider_refs
          WHERE content_entry_id = ?
-         ORDER BY provider ASC",
+         ORDER BY is_origin DESC, provider ASC, provider_project_id ASC,
+            provider_release_id IS NULL ASC, provider_release_id ASC",
     )
     .bind(content_entry_id)
     .fetch_all(pool)
@@ -1345,7 +1346,8 @@ pub(crate) async fn get_content_provider_refs_with_origin(
         "SELECT provider, provider_project_id, provider_release_id, is_origin
          FROM instance_content_provider_refs
          WHERE content_entry_id = ?
-         ORDER BY provider ASC, provider_project_id ASC",
+         ORDER BY is_origin DESC, provider ASC, provider_project_id ASC,
+            provider_release_id IS NULL ASC, provider_release_id ASC",
     )
     .bind(content_entry_id)
     .fetch_all(pool)
@@ -1366,6 +1368,60 @@ pub(crate) async fn get_content_provider_refs_with_origin(
             Ok((provider_ref, origin))
         })
         .collect()
+}
+
+pub(crate) async fn invalidate_exact_provider_refs_for_file_in_transaction(
+    content_set_id: &str,
+    file_id: &str,
+    tx: &mut Transaction<'_, Sqlite>,
+) -> crate::Result<bool> {
+    let rows = sqlx::query(
+        "SELECT ref.content_entry_id, ref.provider,
+            ref.provider_project_id, ref.is_origin
+         FROM instance_content_provider_refs ref
+         INNER JOIN instance_content_entries entry
+            ON entry.id = ref.content_entry_id
+         WHERE entry.content_set_id = ? AND entry.file_id = ?
+            AND ref.provider_release_id IS NOT NULL
+         ORDER BY ref.is_origin DESC, ref.provider,
+            ref.provider_project_id",
+    )
+    .bind(content_set_id)
+    .bind(file_id)
+    .fetch_all(&mut **tx)
+    .await?;
+    if rows.is_empty() {
+        return Ok(false);
+    }
+
+    for row in &rows {
+        let entry_id = row.try_get::<String, _>("content_entry_id")?;
+        let provider = row.try_get::<String, _>("provider")?;
+        let project_id = row.try_get::<String, _>("provider_project_id")?;
+        let origin = row.try_get::<i64, _>("is_origin")? != 0;
+        let project_ref =
+            ContentProviderRef::from_database(&provider, &project_id, None)?;
+        upsert_content_provider_ref_in_transaction(
+            &entry_id,
+            &project_ref,
+            origin,
+            tx,
+        )
+        .await?;
+    }
+    sqlx::query(
+        "DELETE FROM instance_content_provider_refs
+         WHERE content_entry_id IN (
+            SELECT id FROM instance_content_entries
+            WHERE content_set_id = ? AND file_id = ?
+         ) AND provider_release_id IS NOT NULL",
+    )
+    .bind(content_set_id)
+    .bind(file_id)
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(true)
 }
 
 pub(crate) async fn restore_content_entry_in_transaction(
@@ -2345,6 +2401,7 @@ fn unsigned(value: i64, column: &str) -> crate::Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::{ModrinthProjectId, ModrinthVersionId};
     use sqlx::sqlite::SqlitePoolOptions;
 
     async fn test_pool() -> SqlitePool {
@@ -2499,6 +2556,62 @@ mod tests {
         ensure_instance_exists("instance", &mut tx)
             .await
             .expect("existing instance passes");
+    }
+
+    #[tokio::test]
+    async fn in_place_upgrade_lists_new_origin_release_before_old_ref() {
+        let pool = test_pool().await;
+        sqlx::raw_sql(
+            "
+			CREATE TABLE instance_content_provider_refs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				content_entry_id TEXT NOT NULL,
+				provider TEXT NOT NULL,
+				provider_project_id TEXT NOT NULL,
+				provider_release_id TEXT NULL,
+				is_origin INTEGER NOT NULL DEFAULT 0
+			);
+			CREATE UNIQUE INDEX instance_content_provider_refs_identity
+				ON instance_content_provider_refs (
+					content_entry_id,
+					provider,
+					provider_project_id,
+					COALESCE(provider_release_id, '')
+				);
+			CREATE UNIQUE INDEX instance_content_provider_refs_origin
+				ON instance_content_provider_refs(content_entry_id)
+				WHERE is_origin = 1;
+			",
+        )
+        .execute(&pool)
+        .await
+        .expect("provider ref table");
+        let old = ContentProviderRef::Modrinth {
+            project_id: ModrinthProjectId::new("AANobbMI").unwrap(),
+            version_id: Some(ModrinthVersionId::new("7pwil2dy").unwrap()),
+        };
+        let target = ContentProviderRef::Modrinth {
+            project_id: ModrinthProjectId::new("AANobbMI").unwrap(),
+            version_id: Some(ModrinthVersionId::new("vf7UgZpC").unwrap()),
+        };
+
+        upsert_content_provider_ref("entry", &old, true, &pool)
+            .await
+            .unwrap();
+        upsert_content_provider_ref("entry", &target, true, &pool)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            get_content_provider_refs("entry", &pool).await.unwrap(),
+            vec![target.clone(), old.clone()]
+        );
+        assert_eq!(
+            get_content_provider_refs_with_origin("entry", &pool)
+                .await
+                .unwrap(),
+            vec![(target, true), (old, false)]
+        );
     }
 
     #[tokio::test]

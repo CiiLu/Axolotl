@@ -42,6 +42,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_update_upgrade_resolution,
             instance_select_upgrade_solution,
             instance_resolve_custom_upgrade_solution,
+            instance_execute_upgrade,
             instance_get_dependencies_as_content_items,
             instance_get_linked_modpack_info,
             instance_get_linked_modpack_content,
@@ -637,6 +638,20 @@ pub async fn instance_resolve_custom_upgrade_solution(
     Ok(theseus::instance::resolve_custom_instance_upgrade_solution(
         plan_id,
         fixed_constraints,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_execute_upgrade(
+    plan_id: &str,
+    create_full_backup: bool,
+    shared_upgrade_mode: theseus::install::SharedUpgradeMode,
+) -> Result<theseus::install::InstallJobSnapshot> {
+    Ok(theseus::instance::execute_instance_upgrade(
+        plan_id,
+        create_full_backup,
+        shared_upgrade_mode,
     )
     .await?)
 }
