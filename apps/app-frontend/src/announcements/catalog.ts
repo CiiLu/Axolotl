@@ -35,7 +35,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
 		id: 'launcher-1.8.10',
 		version: '1.8.10',
-		publishedAt: '2026-08-21',
+		publishedAt: '2026-08-22',
 		title: {
 			'en-US': 'Axolotl Launcher 1.8.10',
 			'zh-CN': 'Axolotl Launcher 1.8.10',

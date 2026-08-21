@@ -191,7 +191,9 @@ async fn check_compatible_mode(instances: &mut [ImportableInstance]) {
     let game_dir = match parent.parent() {
         Some(p) => p.to_path_buf(),
         None => {
-            tracing::debug!("check_compatible_mode: no game_dir parent, skipping");
+            tracing::debug!(
+                "check_compatible_mode: no game_dir parent, skipping"
+            );
             return;
         }
     };
@@ -261,7 +263,9 @@ async fn check_compatible_mode(instances: &mut [ImportableInstance]) {
         tracing::debug!("check_compatible_mode: setting compatible_mode=true");
         instances[0].compatible_mode = true;
     } else {
-        tracing::debug!("check_compatible_mode: compatible mode not applicable");
+        tracing::debug!(
+            "check_compatible_mode: compatible mode not applicable"
+        );
     }
 }
 
@@ -429,7 +433,8 @@ async fn get_generic_instances(
 
         // Derive version name and GameDir from the path using Path methods.
         let path = PathBuf::from(&instance.path);
-        let Some(version_name) = path.file_name().and_then(|n| n.to_str()) else {
+        let Some(version_name) = path.file_name().and_then(|n| n.to_str())
+        else {
             tracing::debug!("get_generic_instances: no file_name, skipping");
             return Ok(instances);
         };
@@ -447,7 +452,9 @@ async fn get_generic_instances(
         let game_dir = match parent.parent() {
             Some(p) => p.to_path_buf(),
             None => {
-                tracing::debug!("get_generic_instances: no game_dir parent, skipping");
+                tracing::debug!(
+                    "get_generic_instances: no game_dir parent, skipping"
+                );
                 return Ok(instances);
             }
         };
@@ -475,11 +482,7 @@ async fn get_generic_instances(
                 Err(_) => return false,
             };
             while let Ok(Some(entry)) = dir.next_entry().await {
-                if entry
-                    .path()
-                    .extension()
-                    .is_some_and(|ext| ext == "jar")
-                {
+                if entry.path().extension().is_some_and(|ext| ext == "jar") {
                     return true;
                 }
             }
@@ -488,8 +491,7 @@ async fn get_generic_instances(
         .await;
 
         let versions_subdir_count = async {
-            let mut dir = match tokio::fs::read_dir(&versions_dir).await
-            {
+            let mut dir = match tokio::fs::read_dir(&versions_dir).await {
                 Ok(d) => d,
                 Err(_) => return 0,
             };
@@ -503,10 +505,8 @@ async fn get_generic_instances(
         }
         .await;
 
-        let no_resourcepacks =
-            !version_dir.join("resourcepacks").is_dir();
-        let has_valid_json =
-            instance_json::detect(&version_dir).is_some();
+        let no_resourcepacks = !version_dir.join("resourcepacks").is_dir();
+        let has_valid_json = instance_json::detect(&version_dir).is_some();
 
         tracing::debug!(
             "get_generic_instances: has_mods={} versions_subdir_count={} no_resourcepacks={} has_valid_json={}",
@@ -521,10 +521,14 @@ async fn get_generic_instances(
             && no_resourcepacks
             && has_valid_json
         {
-            tracing::debug!("get_generic_instances: setting compatible_mode=true");
+            tracing::debug!(
+                "get_generic_instances: setting compatible_mode=true"
+            );
             instances[0].compatible_mode = true;
         } else {
-            tracing::debug!("get_generic_instances: compatible mode not applicable");
+            tracing::debug!(
+                "get_generic_instances: compatible mode not applicable"
+            );
         }
     }
 
@@ -663,9 +667,7 @@ async fn collect_launcher_instances(
     for (name, dir) in sources {
         let game_dir = PathBuf::from(&dir);
         let mut game_dir_instances = Vec::new();
-        for (iname, ipath) in
-            scan_instances_at(&game_dir, Some(&name)).await
-        {
+        for (iname, ipath) in scan_instances_at(&game_dir, Some(&name)).await {
             game_dir_instances.push(ImportableInstance {
                 name: iname,
                 path: ipath.to_string_lossy().to_string(),
