@@ -33,6 +33,29 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.10',
+		version: '1.8.10',
+		publishedAt: '2026-08-21',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.10',
+			'zh-CN': 'Axolotl Launcher 1.8.10',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added a community survey entry on the About page.',
+					'zh-CN': '“关于”页面新增调查问卷入口。',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'The official QQ group is now 737601250.',
+					'zh-CN': '官方 QQ 群号变更为 737601250。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.9',
 		version: '1.8.9',
 		publishedAt: '2026-08-21',
