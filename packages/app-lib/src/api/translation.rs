@@ -1098,9 +1098,16 @@ pub async fn test_provider(
 
     // Validate DeepL configuration before testing
     if provider == TranslationProvider::DeepL {
-        let api_key = settings.settings.deepl_api_key.as_deref().unwrap_or("").trim();
+        let api_key = settings
+            .settings
+            .deepl_api_key
+            .as_deref()
+            .unwrap_or("")
+            .trim();
         if api_key.is_empty() {
-            tracing::warn!("DeepL test requested but API key is not configured");
+            tracing::warn!(
+                "DeepL test requested but API key is not configured"
+            );
             return Err(ErrorKind::OtherError(
                 "DeepL API key is not configured. Please enter your API key in settings first.".to_string(),
             )
