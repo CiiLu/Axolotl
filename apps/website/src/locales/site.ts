@@ -62,6 +62,7 @@ export const siteLocaleMessages: Record<string, Record<string, string>> = {
 		'axolotl-marketing.download.links-failed': '暂时无法获取最新的下载链接。',
 		'axolotl-marketing.download.manual-fallback': '前往 GitHub Releases 手动下载',
 		'axolotl-marketing.download.cnb-releases': 'CNB Releases（国内推荐）',
+		'axolotl-marketing.download.lemwood-mirror': '柠泽镜像站（国内推荐）',
 		'app-marketing.hero.more-download-options': '更多下载选项',
 		'app-marketing.features.unlike-any-launcher': '与众不同的启动器',
 		'app-marketing.features.youve-used-before': '带来前所未有的体验',

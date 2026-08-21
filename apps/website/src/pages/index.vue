@@ -403,6 +403,10 @@ const messages = defineMessages({
 		id: 'axolotl-marketing.download.cnb-releases',
 		defaultMessage: 'CNB Releases (recommended in mainland China)',
 	},
+	lemwoodMirrorLink: {
+		id: 'axolotl-marketing.download.lemwood-mirror',
+		defaultMessage: 'lemwood Mirror (recommended in mainland China)',
+	},
 	moreDownloadOptions: {
 		id: 'app-marketing.hero.more-download-options',
 		defaultMessage: 'More Download Options',
@@ -1128,19 +1132,30 @@ useHead(() => ({
 				</div>
 			</div>
 			<div v-if="downloadState === 'error'" class="download-error-banner" role="alert">
-				<span>{{ formatMessage(messages.downloadLinksFailed) }}</span>
-				<span class="download-error-links">
-					<a href="https://cnb.cool/axlmc/Axolotl/-/releases" target="_blank" rel="noopener">
-						{{ formatMessage(messages.cnbReleasesLink) }}
-					</a>
-					<a
-						href="https://github.com/Mystic-Stars/Axolotl/releases/latest"
-						target="_blank"
-						rel="noopener"
-					>
-						{{ formatMessage(messages.manualDownloadFallback) }}
-					</a>
-				</span>
+			<span>{{ formatMessage(messages.downloadLinksFailed) }}</span>
+			<span class="download-error-links">
+				<a
+				href="https://cnb.cool/axlmc/Axolotl/-/releases"
+				target="_blank"
+				rel="noopener"
+				>
+				{{ formatMessage(messages.cnbReleasesLink) }}
+				</a>
+				<a
+				href="https://miawa.cn/files/axolotl"
+				target="_blank"
+				rel="noopener"
+				>
+				{{ formatMessage(messages.lemwoodMirrorLink) }}
+				</a>
+				<a
+				href="https://github.com/Mystic-Stars/Axolotl/releases/latest"
+				target="_blank"
+				rel="noopener"
+				>
+				{{ formatMessage(messages.manualDownloadFallback) }}
+				</a>
+			</span>
 			</div>
 			<p class="terms">
 				<IntlFormatted :message-id="messages.downloadTerms">
