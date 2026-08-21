@@ -41,6 +41,17 @@ const settings = ref<TranslationSettingsState>({
 	deepl_api_endpoint: 'https://api-free.deepl.com/v2/translate',
 	deepl_api_key: null,
 })
+
+// Debug logging helper
+function debugLog(area: string, message: string, data?: unknown) {
+	const timestamp = new Date().toISOString()
+	const prefix = `[Translation Debug ${timestamp}] [${area}]`
+	if (data !== undefined) {
+		console.log(prefix, message, data)
+	} else {
+		console.log(prefix, message)
+	}
+}
 const aiCatalog = ref<AIProviderDefinition[]>([])
 const loading = ref(true)
 const status = ref('')
@@ -330,7 +341,29 @@ watch(
 	{ immediate: true, deep: true },
 )
 
-function reportOperationError(error?: unknown) {
+function reportOperationError(error?: unknown, context?: string) {
+	const errorKind = error ? getTranslationErrorKind(error) : 'provider'
+	const errorMessage = error instanceof Error ? error.message : String(error)
+
+	debugLog('Error', `Operation failed${context ? ` (${context})` : ''}`, {
+		kind: errorKind,
+		message: errorMessage,
+		provider: settings.value.provider,
+		deeplApiKeySet: !!settings.value.deepl_api_key?.trim(),
+		deeplEndpoint: settings.value.deepl_api_endpoint,
+	})
+
+	// Don't show error notifications for DeepL when API key is not configured
+	// This prevents spam when user is still configuring
+	if (
+		settings.value.provider === 'deepl' &&
+		!settings.value.deepl_api_key?.trim() &&
+		errorMessage.includes('DeepL API key is not configured')
+	) {
+		debugLog('Error', 'Suppressing DeepL API key not configured error - user is still configuring')
+		return
+	}
+
 	const message = error
 		? {
 				'rate-limited': messages.rateLimited,
@@ -338,20 +371,66 @@ function reportOperationError(error?: unknown) {
 				'content-too-long': messages.contentTooLong,
 				network: messages.networkFailed,
 				provider: messages.operationFailed,
-			}[getTranslationErrorKind(error)]
+			}[errorKind]
 		: messages.operationFailed
 	handleError(new Error(formatMessage(message)))
 }
 
 watch(
 	settings,
-	() => {
-		if (loading.value) return
+	(newSettings, oldSettings) => {
+		if (loading.value) {
+			debugLog('Watch', 'Skipping save - still loading')
+			return
+		}
+
+		// Log what changed
+		if (oldSettings) {
+			const changes: string[] = []
+			if (newSettings.provider !== oldSettings.provider) changes.push(`provider: ${oldSettings.provider} -> ${newSettings.provider}`)
+			if (newSettings.target_language !== oldSettings.target_language) changes.push(`target_language: ${oldSettings.target_language} -> ${newSettings.target_language}`)
+			if (newSettings.deepl_api_endpoint !== oldSettings.deepl_api_endpoint) changes.push(`deepl_api_endpoint changed`)
+			if (newSettings.deepl_api_key !== oldSettings.deepl_api_key) changes.push(`deepl_api_key changed (set: ${!!newSettings.deepl_api_key?.trim()})`)
+			if (newSettings.ai_provider_id !== oldSettings.ai_provider_id) changes.push(`ai_provider_id: ${oldSettings.ai_provider_id} -> ${newSettings.ai_provider_id}`)
+			if (newSettings.ai_model_id !== oldSettings.ai_model_id) changes.push(`ai_model_id: ${oldSettings.ai_model_id} -> ${newSettings.ai_model_id}`)
+			if (newSettings.mode !== oldSettings.mode) changes.push(`mode: ${oldSettings.mode} -> ${newSettings.mode}`)
+			if (newSettings.style !== oldSettings.style) changes.push(`style: ${oldSettings.style} -> ${newSettings.style}`)
+			if (newSettings.auto_translate !== oldSettings.auto_translate) changes.push(`auto_translate: ${oldSettings.auto_translate} -> ${newSettings.auto_translate}`)
+
+			if (changes.length > 0) {
+				debugLog('Watch', 'Settings changed:', changes)
+			} else {
+				debugLog('Watch', 'Settings object reference changed but values are same')
+				return
+			}
+		}
+
 		clearTimeout(saveTimer)
-		saveTimer = setTimeout(
-			() => void updateTranslationSettings(settings.value).catch(reportOperationError),
-			250,
-		)
+		saveTimer = setTimeout(() => {
+			debugLog('Save', 'Saving settings to backend', {
+				provider: newSettings.provider,
+				deeplApiKeySet: !!newSettings.deepl_api_key?.trim(),
+				deeplEndpoint: newSettings.deepl_api_endpoint,
+				aiProviderId: newSettings.ai_provider_id,
+				aiModelId: newSettings.ai_model_id,
+			})
+
+			// Only save settings, don't show error notifications
+			// Errors during save should be silent - only test button shows errors
+			void updateTranslationSettings(settings.value)
+				.then(() => {
+					debugLog('Save', 'Settings saved successfully')
+				})
+				.catch((error) => {
+					// Log error but don't show notification to user
+					// Only the "Test" button should show errors
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					debugLog('Save', 'Settings save failed (silent)', {
+						error: errorMessage,
+						provider: newSettings.provider,
+					})
+				})
+		}, 300)
 	},
 	{ deep: true },
 )
@@ -383,32 +462,74 @@ onUnmounted(() => {
 })
 
 onMounted(async () => {
+	debugLog('Init', 'Loading translation settings...')
 	try {
 		const [loadedSettings, , loadedCatalog] = await Promise.all([
 			getTranslationSettings(),
 			getAIState(),
 			getAICatalog(),
 		])
+		debugLog('Init', 'Settings loaded from backend', {
+			provider: loadedSettings.provider,
+			deeplApiKeySet: !!loadedSettings.deepl_api_key?.trim(),
+			deeplEndpoint: loadedSettings.deepl_api_endpoint,
+			aiProviderId: loadedSettings.ai_provider_id,
+			aiModelId: loadedSettings.ai_model_id,
+			targetLanguage: loadedSettings.target_language,
+			mode: loadedSettings.mode,
+			autoTranslate: loadedSettings.auto_translate,
+		})
 		settings.value = loadedSettings
 		aiCatalog.value = loadedCatalog
 	} catch (error) {
-		reportOperationError(error)
+		debugLog('Init', 'Failed to load settings', error)
+		reportOperationError(error, 'load-settings')
 	} finally {
 		loading.value = false
+		debugLog('Init', 'Loading complete')
 	}
 })
 
 async function testProvider() {
+	debugLog('Test', 'Starting provider test', {
+		provider: settings.value.provider,
+		deeplApiKeySet: !!settings.value.deepl_api_key?.trim(),
+		deeplEndpoint: settings.value.deepl_api_endpoint,
+		aiProviderId: settings.value.ai_provider_id,
+		aiModelId: settings.value.ai_model_id,
+	})
+
 	testing.value = true
 	status.value = ''
+
+	// Validate DeepL configuration before testing
+	if (settings.value.provider === 'deepl') {
+		if (!settings.value.deepl_api_key?.trim()) {
+			debugLog('Test', 'DeepL API key is not configured')
+			reportOperationError(new Error('DeepL API key is not configured. Please enter your API key first.'), 'deepl-validation')
+			testing.value = false
+			return
+		}
+		if (!settings.value.deepl_api_endpoint?.trim()) {
+			debugLog('Test', 'DeepL API endpoint is not configured, using default')
+			settings.value.deepl_api_endpoint = 'https://api-free.deepl.com/v2/translate'
+		}
+	}
+
 	try {
+		debugLog('Test', 'Saving settings before test...')
 		await updateTranslationSettings(settings.value)
+		debugLog('Test', 'Settings saved, now testing provider...')
+
 		const result = await testTranslationProvider(settings.value.provider)
+		debugLog('Test', 'Test succeeded', { result })
 		status.value = formatMessage(messages.testSuccess, { translation: result })
 	} catch (error) {
-		reportOperationError(error)
+		debugLog('Test', 'Test failed', error)
+		reportOperationError(error, 'test-provider')
 	} finally {
 		testing.value = false
+		debugLog('Test', 'Test complete')
 	}
 }
 

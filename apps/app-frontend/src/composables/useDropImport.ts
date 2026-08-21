@@ -588,11 +588,17 @@ export function useDropImport(options: DropImportOptions) {
 		}
 
 		const single = results[0].instances[0]
-		// Handle both bare name ("1.12.2") and versions/-prefixed name
-		// ("versions/1.12.2") from the scanner.
-		const versionName = single.name.startsWith('versions/')
-			? single.name.slice('versions/'.length)
-			: single.name
+		// Instance names may carry a launcher prefix like
+		// ".minecraft:versions/1.12.2" or just "versions/1.12.2" or bare "1.12.2".
+		// Extract the bare version name, and derive GameDir from the path.
+		let versionName = single.name
+		const colonIdx = versionName.lastIndexOf(':')
+		if (colonIdx >= 0) {
+			versionName = versionName.slice(colonIdx + 1)
+		}
+		if (versionName.startsWith('versions/')) {
+			versionName = versionName.slice('versions/'.length)
+		}
 		dropDebug('checkForCompatibleMode', {
 			name: single.name,
 			versionName,
@@ -601,41 +607,23 @@ export function useDropImport(options: DropImportOptions) {
 			basePath,
 		})
 
-		if (single.compatibleMode) {
-			// The path ends with /versions/<versionName>
-			const nameSuffix = `/versions/${versionName}`
-			if (single.path.endsWith(nameSuffix)) {
-				const gameDir = single.path.slice(0, -nameSuffix.length)
-				dropDebug('checkForCompatibleMode: compatible mode candidate (backend-flagged)', {
-					gameDir,
-					versionName,
-				})
-				return {
-					basePath: gameDir,
-					versionName,
-					versionPath: single.path,
-					jsonPath: `${single.path}/${versionName}.json`,
-				}
-			}
-			dropDebug('checkForCompatibleMode: compatibleMode=true but path check failed', {
-				nameSuffix,
+		// Derive GameDir from the path: it ends with /versions/<versionName>
+		const versionsSuffix = `/versions/${versionName}`
+		if (!single.path.endsWith(versionsSuffix)) {
+			dropDebug('checkForCompatibleMode: path does not end with versions suffix', {
+				versionsSuffix,
 				path: single.path,
-			})
-		}
-
-		// Fallback: check path pattern even if backend didn't flag it
-		const expectedPath = `${basePath}/versions/${versionName}`
-		if (single.path !== expectedPath) {
-			dropDebug('checkForCompatibleMode: path mismatch', {
-				expectedPath,
-				actualPath: single.path,
 			})
 			return null
 		}
-
-		dropDebug('checkForCompatibleMode: fallback candidate', { basePath, versionName })
+		const gameDir = single.path.slice(0, -versionsSuffix.length)
+		dropDebug('checkForCompatibleMode: candidate', {
+			gameDir,
+			versionName,
+			compatibleMode: single.compatibleMode,
+		})
 		return {
-			basePath,
+			basePath: gameDir,
 			versionName,
 			versionPath: single.path,
 			jsonPath: `${single.path}/${versionName}.json`,
@@ -665,10 +653,16 @@ export function useDropImport(options: DropImportOptions) {
 		const launcherType = compatibleModeLauncherType.value
 		const scanResults = compatibleModeResults.value
 		const instanceName = scanResults?.[0]?.instances[0]?.name ?? ''
-		// Strip "versions/" prefix if present (from collect_child_instances)
-		const versionName = instanceName.startsWith('versions/')
-			? instanceName.slice('versions/'.length)
-			: instanceName
+		// Strip launcher prefix and "versions/" prefix if present
+		// (e.g. ".minecraft:versions/1.12.2" → "1.12.2")
+		let versionName = instanceName
+		const colonIdx = versionName.lastIndexOf(':')
+		if (colonIdx >= 0) {
+			versionName = versionName.slice(colonIdx + 1)
+		}
+		if (versionName.startsWith('versions/')) {
+			versionName = versionName.slice('versions/'.length)
+		}
 		dropDebug('handleCompatibleModeConfirm', {
 			choice,
 			gameDir,

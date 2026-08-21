@@ -257,14 +257,48 @@ pub async fn get_settings() -> crate::Result<TranslationSettings> {
 pub async fn update_settings(
     settings: TranslationSettings,
 ) -> crate::Result<()> {
+    tracing::debug!(
+        provider = ?settings.provider,
+        target_language = %settings.target_language,
+        mode = ?settings.mode,
+        auto_translate = %settings.auto_translate,
+        style = ?settings.style,
+        ai_provider_id = %settings.ai_provider_id,
+        ai_model_id = %settings.ai_model_id,
+        deepl_api_endpoint = %settings.deepl_api_endpoint,
+        deepl_api_key_set = %settings.deepl_api_key.is_some() && !settings.deepl_api_key.as_deref().unwrap_or("").trim().is_empty(),
+        "Updating translation settings"
+    );
+
     if settings.provider == TranslationProvider::Ai
         && (settings.ai_provider_id.trim().is_empty()
             || settings.ai_model_id.trim().is_empty())
     {
+        tracing::warn!(
+            ai_provider_id = %settings.ai_provider_id,
+            ai_model_id = %settings.ai_model_id,
+            "AI provider selected but provider or model is empty"
+        );
         return Err(ErrorKind::InputError(
             "Select an AI provider and model for AI translation".to_string(),
         )
         .into());
+    }
+
+    // Validate DeepL configuration if DeepL is selected
+    if settings.provider == TranslationProvider::DeepL {
+        let api_key = settings.deepl_api_key.as_deref().unwrap_or("").trim();
+        if api_key.is_empty() {
+            tracing::info!(
+                "DeepL provider selected but API key is not set - saving settings anyway"
+            );
+        } else {
+            tracing::debug!(
+                deepl_api_endpoint = %settings.deepl_api_endpoint,
+                deepl_api_key_len = %api_key.len(),
+                "DeepL configuration looks valid"
+            );
+        }
     }
 
     let state = State::get().await?;
@@ -273,6 +307,9 @@ pub async fn update_settings(
     } else {
         settings.deepl_api_endpoint.trim()
     };
+
+    tracing::debug!(endpoint = %endpoint, "Saving DeepL endpoint");
+
     sqlx::query(
         "UPDATE translation_settings SET provider = ?, target_language = ?, \
          mode = ?, auto_translate = ?, style = ?, ai_provider_id = ?, \
@@ -291,6 +328,12 @@ pub async fn update_settings(
     .bind(settings.deepl_api_key.as_deref().map(str::trim))
     .execute(&state.pool)
     .await?;
+
+    tracing::info!(
+        provider = ?settings.provider,
+        "Translation settings updated successfully"
+    );
+
     Ok(())
 }
 
@@ -491,6 +534,17 @@ async fn deepl_translate(
     api_endpoint: &str,
     api_key: &str,
 ) -> crate::Result<String> {
+    tracing::info!(
+        endpoint = %api_endpoint,
+        source = %source_language,
+        target = %target_language,
+        api_key_len = %api_key.len(),
+        api_key_prefix = %if api_key.len() > 4 { &api_key[..4] } else { "***" },
+        text_len = %segment.text.len(),
+        text_preview = %if segment.text.len() > 50 { &segment.text[..50] } else { &segment.text },
+        "Preparing DeepL translation request"
+    );
+
     let mut body = serde_json::Map::new();
     body.insert(
         "text".to_string(),
@@ -508,35 +562,81 @@ async fn deepl_translate(
             serde_json::Value::String(source_language.to_string()),
         );
     }
+
+    tracing::debug!(
+        request_body = %serde_json::to_string(&body).unwrap_or_default(),
+        "DeepL request body"
+    );
+
     let client = crate::util::fetch::configured_client().await?;
+    let auth_header = format!("DeepL-Auth-Key {}", api_key);
+    tracing::debug!(
+        auth_header_prefix = %if auth_header.len() > 20 { &auth_header[..20] } else { &auth_header },
+        "Authorization header"
+    );
+
     let response = send_with_retry(|| {
         client
             .post(api_endpoint)
-            .header("Authorization", format!("DeepL-Auth-Key {}", api_key))
+            .header("Authorization", &auth_header)
             .header("Content-Type", "application/json")
             .json(&body)
     })
     .await?;
-    let value: Value = checked_json(response, "DeepL").await?;
+
+    let status = response.status();
+    tracing::info!(status = %status, "DeepL response status");
+
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        tracing::error!(
+            status = %status,
+            error_body = %error_text,
+            "DeepL API error response"
+        );
+        return Err(ErrorKind::OtherError(format!(
+            "DeepL API error: HTTP {} - {}",
+            status, error_text
+        ))
+        .into());
+    }
+
+    let value: Value = response.json().await.map_err(|e| {
+        tracing::error!(error = %e, "Failed to parse DeepL response JSON");
+        ErrorKind::OtherError(format!("Failed to parse DeepL response: {}", e))
+    })?;
+
+    tracing::debug!(response = %value, "DeepL response body");
+
     let translations = value
         .get("translations")
         .and_then(Value::as_array)
         .ok_or_else(|| {
+            tracing::error!(response = %value, "DeepL response missing 'translations' array");
             ErrorKind::OtherError(
                 "DeepL returned an invalid translation response".to_string(),
             )
             .as_error()
         })?;
+
     let translated = translations
         .first()
         .and_then(|t| t.get("text"))
         .and_then(Value::as_str)
         .ok_or_else(|| {
+            tracing::error!(translations = %serde_json::to_string(translations).unwrap_or_default(), "DeepL translation text is empty");
             ErrorKind::OtherError(
                 "DeepL returned an empty translation".to_string(),
             )
             .as_error()
         })?;
+
+    tracing::info!(
+        translated_text_len = %translated.len(),
+        translated_preview = %if translated.len() > 50 { &translated[..50] } else { &translated },
+        "DeepL translation successful"
+    );
+
     Ok(translated.to_string())
 }
 
@@ -907,14 +1007,48 @@ pub async fn translate(
 pub async fn test_provider(
     provider: TranslationProvider,
 ) -> crate::Result<String> {
+    tracing::info!(provider = ?provider, "Starting translation provider test");
+
     let state = State::get().await?;
     let mut settings = load_settings(&state.pool).await?;
+
+    tracing::debug!(
+        loaded_provider = ?settings.settings.provider,
+        requested_provider = ?provider,
+        deepl_api_endpoint = %settings.settings.deepl_api_endpoint,
+        deepl_api_key_set = %settings.settings.deepl_api_key.is_some() && !settings.settings.deepl_api_key.as_deref().unwrap_or("").trim().is_empty(),
+        ai_provider_id = %settings.settings.ai_provider_id,
+        ai_model_id = %settings.settings.ai_model_id,
+        "Loaded settings for test"
+    );
+
     settings.settings.provider = provider;
     let target = if settings.settings.target_language.is_empty() {
-        crate::state::Settings::get(&state.pool).await?.locale
+        let locale = crate::state::Settings::get(&state.pool).await?.locale;
+        tracing::debug!(locale = %locale, "Using app locale as target language");
+        locale
     } else {
+        tracing::debug!(target_language = %settings.settings.target_language, "Using configured target language");
         settings.settings.target_language.clone()
     };
+
+    // Validate DeepL configuration before testing
+    if provider == TranslationProvider::DeepL {
+        let api_key = settings.settings.deepl_api_key.as_deref().unwrap_or("").trim();
+        if api_key.is_empty() {
+            tracing::warn!("DeepL test requested but API key is not configured");
+            return Err(ErrorKind::OtherError(
+                "DeepL API key is not configured. Please enter your API key in settings first.".to_string(),
+            )
+            .into());
+        }
+        tracing::debug!(
+            deepl_api_endpoint = %settings.settings.deepl_api_endpoint,
+            deepl_api_key_len = %api_key.len(),
+            "DeepL configuration validated"
+        );
+    }
+
     tracing::debug!(
         provider = ?provider,
         ai_provider = %settings.settings.ai_provider_id,
@@ -925,6 +1059,7 @@ pub async fn test_provider(
         system_prompt = %system_prompt(&settings),
         "Testing translation provider"
     );
+
     let request = TranslationRequest {
         source_language: "auto".to_string(),
         target_language: target,
@@ -935,20 +1070,27 @@ pub async fn test_provider(
             format: TranslationTextFormat::Plain,
         }],
     };
+
+    tracing::debug!("Sending test translation request...");
     let client = crate::util::fetch::configured_client().await?;
     let mut result =
         translate_uncached(&client, &request.segments, &settings, &request)
             .await?;
+
     let result = result.pop().map(|result| result.text).ok_or_else(|| {
+        tracing::error!("Translation provider returned no test result");
         ErrorKind::OtherError(
             "Translation provider returned no test result".to_string(),
         )
         .as_error()
     })?;
-    tracing::debug!(
+
+    tracing::info!(
         test_result = %result,
+        provider = ?provider,
         "Translation provider test succeeded"
     );
+
     Ok(result)
 }
 
