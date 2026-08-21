@@ -33,6 +33,23 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.9',
+		version: '1.8.9',
+		publishedAt: '2026-08-21',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.9',
+			'zh-CN': 'Axolotl Launcher 1.8.9',
+		},
+		changes: {
+			fixed: [
+				{
+					'zh-CN': '修复添加了背景图的侧边栏无法正常跟随主题颜色并提供模糊效果的问题。',
+					'en-US': 'Fixed a bug where the sidebar with a background image was unable to follow the theme color and provide a blurry effect.',
+				}
+			],
+		},
+	}
+	{
 		id: 'launcher-1.8.8',
 		version: '1.8.8',
 		publishedAt: '2026-08-19',
@@ -49,6 +66,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Added LiteLoader, legacy Fabric, and Cleanroom support for Minecraft 1.8.8.',
 					'zh-CN': '为 Minecraft 1.8.8 新增 LiteLoader、旧版 Fabric 和 Cleanroom 支持。',
+				},
+				{
+					'en-US': 'Added custom proxy config.',
+					'zh-CN': '现在支持为启动器配置自定义代理。',
 				},
 			],
 			fixed: [
@@ -77,12 +98,6 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US': 'Header for instance mod install page is now blurred.',
 					'zh-CN': '实例的模组安装页面的标题栏现在会模糊。',
-				},
-			],
-			added: [
-				{
-					'en-US': 'Added custom proxy config.',
-					'zh-CN': '现在支持为启动器配置自定义代理。',
 				},
 			],
 		},

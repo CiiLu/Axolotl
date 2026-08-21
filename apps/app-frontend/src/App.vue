@@ -4328,17 +4328,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		clip-path: inset(0 round 8px);
 		overflow: hidden;
 	}
-	background-color: transparent;
 
+	background-color: transparent;
+}
+
+.app-grid-layout.has-custom-background {
 	.app-grid-navbar,
 	.app-grid-statusbar {
-		background-color: color-mix(
-			in srgb,
-			var(--surface-3-opaque) var(--window-alpha-chrome),
-			transparent
-		) !important;
+		background-color: color-mix(in srgb, var(--color-raised-bg) 82%, transparent) !important;
 
 		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
 	}
 }
 
@@ -4414,6 +4414,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			var(--surface-3-opaque) var(--window-alpha-chrome),
 			transparent
 		) !important;
+
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
 	}
 
 	// Without native decorations or rounded corners the window edge dissolves
