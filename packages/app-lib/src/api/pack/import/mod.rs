@@ -46,6 +46,10 @@ pub mod pe_info;
 pub struct ImportableInstance {
     pub name: String,
     pub path: String,
+    /// Whether this instance qualifies for compatible mode import (single
+    /// version with a shared `mods/` directory and no version isolation).
+    #[serde(default)]
+    pub compatible_mode: bool,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -92,7 +96,7 @@ pub async fn get_importable_instances(
     launcher_type: ImportLauncherType,
     base_path: PathBuf,
 ) -> crate::Result<Vec<ImportableInstance>> {
-    match launcher_type {
+    let mut instances = match launcher_type {
         ImportLauncherType::Axolotl => get_axolotl_instances(&base_path).await,
         ImportLauncherType::ModrinthApp => {
             get_modrinth_app_instances(&base_path).await
@@ -129,6 +133,78 @@ pub async fn get_importable_instances(
         ImportLauncherType::Unknown => {
             get_unknown_launcher_instances(&base_path).await
         }
+    }?;
+
+    // For non-Generic launchers, check compatible mode by deriving the
+    // GameDir from the instance path.  Generic already computes this
+    // inside `get_generic_instances`.
+    if !matches!(launcher_type, ImportLauncherType::Generic) {
+        check_compatible_mode(&mut instances).await;
+    }
+
+    Ok(instances)
+}
+
+/// Checks whether the collected instances qualify for compatible mode.
+///
+/// Compatible mode applies when there is exactly one instance whose path
+/// follows the `<GameDir>/versions/<name>` pattern and the GameDir contains
+/// a `mods/` directory with JAR files, only one version subdirectory, no
+/// per-version `resourcepacks/`, and a valid version JSON.
+async fn check_compatible_mode(instances: &mut [ImportableInstance]) {
+    if instances.len() != 1 {
+        return;
+    }
+    let instance = &instances[0];
+    let name_sep = format!("/{}", instance.name);
+    let Some(versions_stripped) = instance.path.strip_suffix(&name_sep) else {
+        return;
+    };
+    let Some(game_dir) = versions_stripped.strip_suffix("/versions") else {
+        return;
+    };
+    let game_dir = PathBuf::from(game_dir);
+    let mods_dir = game_dir.join("mods");
+    let versions_dir = game_dir.join("versions");
+    let version_dir = versions_dir.join(&instance.name);
+
+    let has_mods = async {
+        if !mods_dir.is_dir() {
+            return false;
+        }
+        let mut dir = match tokio::fs::read_dir(&mods_dir).await {
+            Ok(d) => d,
+            Err(_) => return false,
+        };
+        while let Ok(Some(entry)) = dir.next_entry().await {
+            if entry.path().extension().is_some_and(|ext| ext == "jar") {
+                return true;
+            }
+        }
+        false
+    }
+    .await;
+
+    let versions_subdir_count = async {
+        let mut dir = match tokio::fs::read_dir(&versions_dir).await {
+            Ok(d) => d,
+            Err(_) => return 0,
+        };
+        let mut count = 0;
+        while let Ok(Some(entry)) = dir.next_entry().await {
+            if entry.path().is_dir() {
+                count += 1;
+            }
+        }
+        count
+    }
+    .await;
+
+    let no_resourcepacks = !version_dir.join("resourcepacks").is_dir();
+    let has_valid_json = instance_json::detect(&version_dir).is_some();
+
+    if has_mods && versions_subdir_count == 1 && no_resourcepacks && has_valid_json {
+        instances[0].compatible_mode = true;
     }
 }
 
@@ -161,6 +237,7 @@ async fn get_instances_subfolder_scan(
                 result.push(ImportableInstance {
                     path: path.to_string_lossy().to_string(),
                     name,
+                    compatible_mode: false,
                 });
             }
         }
@@ -179,6 +256,7 @@ async fn get_modrinth_app_instances(
         .map(|n| ImportableInstance {
             name: n.clone(),
             path: n,
+            compatible_mode: false,
         })
         .collect())
 }
@@ -232,6 +310,7 @@ async fn get_axolotl_instances(
         return Ok(vec![ImportableInstance {
             name,
             path: base_path.to_string_lossy().to_string(),
+            compatible_mode: false,
         }]);
     }
 
@@ -246,6 +325,7 @@ async fn get_axolotl_instances(
             instances.push(ImportableInstance {
                 name: name.to_string_lossy().to_string(),
                 path: path.to_string_lossy().to_string(),
+                compatible_mode: false,
             });
         }
     }
@@ -263,12 +343,62 @@ async fn get_generic_instances(
             .map(|(n, p)| ImportableInstance {
                 name: n,
                 path: p.to_string_lossy().to_string(),
+                compatible_mode: false,
             })
             .collect();
 
-    // PCL-style folders bundle sibling version folders, each its own
-    // instance root (root jar+json / version json / mods). When the base
-    // itself carries no instance markers, enumerate direct child folders.
+    // Check if the single instance qualifies for compatible mode (shared
+    // GameDir with mods/, no version isolation).
+    if instances.len() == 1 {
+        let instance = &instances[0];
+        if let Some(versions_stripped) = instance.path.strip_suffix(&format!("/{}", instance.name)) {
+            if let Some(game_dir) = versions_stripped.strip_suffix("/versions") {
+                let game_dir = PathBuf::from(game_dir);
+                let mods_dir = game_dir.join("mods");
+                let versions_dir = game_dir.join("versions");
+                let version_dir = versions_dir.join(&instance.name);
+
+                let has_mods = async {
+                    if !mods_dir.is_dir() {
+                        return false;
+                    }
+                    let mut dir = match tokio::fs::read_dir(&mods_dir).await {
+                        Ok(d) => d,
+                        Err(_) => return false,
+                    };
+                    while let Ok(Some(entry)) = dir.next_entry().await {
+                        if entry.path().extension().is_some_and(|ext| ext == "jar") {
+                            return true;
+                        }
+                    }
+                    false
+                }.await;
+
+                let versions_subdir_count = async {
+                    let mut dir = match tokio::fs::read_dir(&versions_dir).await {
+                        Ok(d) => d,
+                        Err(_) => return 0,
+                    };
+                    let mut count = 0;
+                    while let Ok(Some(entry)) = dir.next_entry().await {
+                        if entry.path().is_dir() {
+                            count += 1;
+                        }
+                    }
+                    count
+                }.await;
+
+                let no_resourcepacks = !version_dir.join("resourcepacks").is_dir();
+                let has_valid_json = instance_json::detect(&version_dir).is_some();
+
+                if has_mods && versions_subdir_count == 1 && no_resourcepacks && has_valid_json {
+                    instances[0].compatible_mode = true;
+                }
+            }
+        }
+    }
+
+
     if instances.is_empty() && base_path.is_dir() {
         let mut dir = io::read_dir(base_path).await?;
         while let Some(entry) = dir.next_entry().await? {
@@ -280,6 +410,7 @@ async fn get_generic_instances(
                 instances.push(ImportableInstance {
                     name: name.to_string_lossy().to_string(),
                     path: path.to_string_lossy().to_string(),
+                    compatible_mode: false,
                 });
             }
         }
@@ -340,6 +471,7 @@ async fn get_unknown_launcher_instances(
             collector.instances.push(ImportableInstance {
                 name,
                 path: path.to_string_lossy().to_string(),
+                compatible_mode: false,
             });
         }
     }
@@ -420,6 +552,7 @@ impl InstanceCollector {
             self.instances.push(ImportableInstance {
                 name,
                 path: path.to_string_lossy().to_string(),
+                compatible_mode: false,
             });
         }
     }
@@ -576,6 +709,7 @@ async fn import_configured_instance(
         details,
         job.symlink,
         &job.overrides,
+        None,
     )
     .await
 }
@@ -711,7 +845,6 @@ async fn import_via_launcher(
         }
         ImportLauncherType::PCL2 | ImportLauncherType::PCL2CE => {
             if let Some(path) = instance_path {
-                // Pre-resolved path from frontend scanning — skip re-resolution
                 generic::import_generic(
                     PathBuf::from(path),
                     instance_id,
@@ -719,6 +852,7 @@ async fn import_via_launcher(
                     details,
                     *symlink,
                     overrides,
+                    None,
                 )
                 .await
             } else {
@@ -750,6 +884,8 @@ async fn import_via_launcher(
         }
         ImportLauncherType::Generic => {
             let path = resolve_instance_path(base_path, instance_folder);
+            // Check if this is a compatible mode import (instance_path contains the version path)
+            let version_path = job.instance_path.as_ref().map(PathBuf::from);
             generic::import_generic(
                 path,
                 instance_id,
@@ -757,6 +893,7 @@ async fn import_via_launcher(
                 details,
                 *symlink,
                 overrides,
+                version_path,
             )
             .await
         }

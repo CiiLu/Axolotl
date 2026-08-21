@@ -2364,6 +2364,7 @@ async fn install_local_pack_file(
                 details,
                 false,
                 &crate::api::pack::import::ImportOverrides::default(),
+                None, // Not compatible mode
             )
             .await?;
         }

@@ -34,6 +34,7 @@ import {
 	defineMessages,
 	I18nDebugPanel,
 	LoadingBar,
+	NewModal,
 	NotificationPanel,
 	OverflowMenu,
 	PopupNotificationPanel,
@@ -53,6 +54,7 @@ import ConfirmDropTypeModal from '@modrinth/ui/src/components/flows/drop/Confirm
 import GenericContentInstallModal from '@modrinth/ui/src/components/flows/drop/GenericContentInstallModal.vue'
 import LauncherImportModal from '@modrinth/ui/src/components/flows/drop/LauncherImportModal.vue'
 import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMethodCards.vue'
+import { FolderOpenIcon, RotateCounterClockwiseIcon } from '@modrinth/assets'
 import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-context'
 import { useQuery } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
@@ -835,6 +837,28 @@ const messages = defineMessages({
 		defaultMessage:
 			'{file} targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader}).',
 	},
+
+	// Compatible mode (pre-version-isolation) import
+	dropCompatibleModeTitle: {
+		id: 'app.drop.compatible-mode-title',
+		defaultMessage: 'This appears to be a pre-version-isolation instance',
+	},
+	dropCompatibleModeDesc: {
+		id: 'app.drop.compatible-mode-desc',
+		defaultMessage: 'Would you like to import this as a compatible mode instance?',
+	},
+	dropCompatibleModeImport: {
+		id: 'app.drop.compatible-mode-import',
+		defaultMessage: 'Compatible Import',
+	},
+	dropCompatibleModeOldWay: {
+		id: 'app.drop.compatible-mode-old-way',
+		defaultMessage: 'Import as Old Version',
+	},
+	dropCompatibleModeCancel: {
+		id: 'app.drop.compatible-mode-cancel',
+		defaultMessage: 'Cancel',
+	},
 })
 
 function getErrorNotificationDetails(notification) {
@@ -1408,6 +1432,7 @@ const updateToPlayModal = ref()
 const modrinthLoginFlowWaitModal = ref()
 
 const confirmDropModal = ref<InstanceType<typeof ConfirmDropTypeModal> | null>(null)
+const compatibleModeConfirmModal = ref<InstanceType<typeof NewModal> | null>(null)
 const dropClassification = ref<ClassificationResult | null>(null)
 const dropFileName = ref('')
 const dropFilePath = ref('')
@@ -1439,9 +1464,19 @@ const pendingDropIncompatibility = ref<{
 	modrinthLookup: ModrinthLookupResult | null
 } | null>(null)
 const selectedInstances = ref<
-	Array<{ launcherType: string; basePath: string; name: string; path: string }>
+	Array<{
+		launcherType: string
+		basePath: string
+		name: string
+		path: string
+		compatibleMode?: boolean
+		versionPath?: string
+	}>
 >([])
 const currentImportContext = ref<{ launcherType: string; basePath: string } | null>(null)
+const compatibleModeResults = ref<ScanResult[] | null>(null)
+const compatibleModeGameDir = ref<string | null>(null)
+const compatibleModeLauncherType = ref<string>('Generic')
 const launcherZipTempDir = ref<string | null>(null)
 
 const dropDebug = useDebugLogger('DropFlow')
@@ -1603,6 +1638,132 @@ async function handleConfirmDropHelp() {
 		void cancelBatch('group-help')
 	}
 	await handleDropHelp()
+}
+
+interface CompatibleModeCandidate {
+	basePath: string
+	versionName: string
+	versionPath: string
+	jsonPath: string
+}
+
+function checkForCompatibleMode(
+	basePath: string,
+	results: ScanResult[],
+): CompatibleModeCandidate | null {
+	const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
+	if (totalInstances !== 1 || !results[0]?.instances[0]) {
+		return null
+	}
+
+	const single = results[0].instances[0]
+
+	// If the backend already flagged this instance as compatible mode,
+	// derive the GameDir from the instance path instead of relying on
+	// basePath matching (which only works for Generic / .minecraft drops).
+	if (single.compatibleMode) {
+		const nameSuffix = `/versions/${single.name}`
+		if (single.path.endsWith(nameSuffix)) {
+			const gameDir = single.path.slice(0, -nameSuffix.length)
+			return {
+				basePath: gameDir,
+				versionName: single.name,
+				versionPath: single.path,
+				jsonPath: `${single.path}/${single.name}.json`,
+			}
+		}
+	}
+
+	// Fallback: original path-based check for .minecraft drops where
+	// basePath IS the GameDir.
+	const expectedPath = `${basePath}/versions/${single.name}`
+	if (single.path !== expectedPath) {
+		return null
+	}
+
+	return {
+		basePath,
+		versionName: single.name,
+		versionPath: single.path,
+		jsonPath: `${single.path}/${single.name}.json`,
+	}
+}
+
+function showCompatibleModeModal(
+	candidate: CompatibleModeCandidate,
+	basePath: string,
+	results: ScanResult[],
+	launcherType = 'Generic',
+) {
+	dropDebug('showCompatibleModeModal', { candidate, basePath, launcherType })
+	compatibleModeResults.value = results
+	compatibleModeGameDir.value = candidate.basePath
+	compatibleModeLauncherType.value = launcherType
+	compatibleModeConfirmModal.value?.show()
+}
+
+async function handleCompatibleModeConfirm(choice: 'compatible' | 'old-way' | 'cancel') {
+	if (choice === 'cancel') {
+		currentImportContext.value = null
+		return
+	}
+
+	const gameDir = compatibleModeGameDir.value ?? dropFilePath.value!
+	const launcherType = compatibleModeLauncherType.value
+	const scanResults = compatibleModeResults.value
+	const instanceName = scanResults?.[0]?.instances[0]?.name ?? ''
+
+	if (choice === 'compatible') {
+		selectedInstances.value = [
+			{
+				launcherType,
+				basePath: gameDir,
+				name: 'Compatible Instance',
+				path: gameDir,
+				compatibleMode: true,
+				versionPath: `${gameDir}/versions/${instanceName}`,
+			},
+		]
+		const cap = await check_symlink_capability()
+		symlinkCardsModal.value?.show({
+			instances: [
+				{
+					name: 'Compatible Instance',
+					path: gameDir,
+					launcherType,
+					basePath: gameDir,
+					compatibleMode: true,
+				},
+			],
+			symlinkCapable: cap,
+		})
+	} else if (choice === 'old-way') {
+		const single = scanResults?.[0]?.instances[0]
+		if (!single) {
+			currentImportContext.value = null
+			return
+		}
+		selectedInstances.value = [
+			{
+				launcherType,
+				basePath: gameDir,
+				name: single.name,
+				path: single.path,
+			},
+		]
+		const cap = await check_symlink_capability()
+		symlinkCardsModal.value?.show({
+			instances: [
+				{
+					name: single.name,
+					path: single.path,
+					launcherType,
+					basePath: gameDir,
+				},
+			],
+			symlinkCapable: cap,
+		})
+	}
 }
 
 // ── Batch drag-and-drop import ─────────────────────────────────────────────
@@ -2367,6 +2528,14 @@ async function handleDropConfirm(type: string, innerBase?: string) {
 		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
 		dropDebug('handleDropConfirm: .minecraft scan result', { totalInstances, results })
 
+		// Check if this is a "no version isolation" instance (compatible mode candidate)
+		const compatibleModeCandidate = checkForCompatibleMode(dropFilePath.value, results)
+		if (compatibleModeCandidate) {
+			// Show compatible mode confirmation modal
+			showCompatibleModeModal(compatibleModeCandidate, dropFilePath.value, results)
+			return
+		}
+
 		if (totalInstances === 0) {
 			currentImportContext.value = null
 			dropDebug('handleDropConfirm: no instances found in .minecraft folder')
@@ -2477,6 +2646,18 @@ async function handleDropConfirm(type: string, innerBase?: string) {
 			dropDebug('handleDropConfirm: no instances found')
 			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
 			cleanupLauncherZipTemp()
+			return
+		}
+
+		// Check if this is a compatible mode candidate (single instance with
+		// shared GameDir — e.g. HMCL/PCL2 with a .minecraft-style layout).
+		const compatibleModeCandidate = checkForCompatibleMode(scanBasePath, results)
+		if (compatibleModeCandidate) {
+			dropDebug('handleDropConfirm: launcher compatible mode candidate', {
+				candidate: compatibleModeCandidate,
+				launcherType,
+			})
+			showCompatibleModeModal(compatibleModeCandidate, scanBasePath, results, launcherType)
 			return
 		}
 
@@ -3130,10 +3311,10 @@ async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean
 				ctx?.basePath ?? inst.path,
 				inst.name,
 				choice?.symlink ?? (Array.isArray(choices) ? false : choices),
-				undefined,
-				choice?.gameVersion,
-				choice?.loader,
-				choice?.loaderVersion,
+				inst.compatibleMode ? inst.versionPath : undefined,
+				inst.compatibleMode ? undefined : choice?.gameVersion,
+				inst.compatibleMode ? undefined : choice?.loader,
+				inst.compatibleMode ? undefined : choice?.loaderVersion,
 			)
 			await wait_for_install_job(job.job_id)
 			addNotification({
@@ -3193,10 +3374,10 @@ async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean
 				ctx?.basePath ?? inst.path,
 				inst.name,
 				choice?.symlink ?? (Array.isArray(choices) ? false : choices),
-				undefined,
-				choice?.gameVersion,
-				choice?.loader,
-				choice?.loaderVersion,
+				inst.compatibleMode ? inst.versionPath : undefined,
+				inst.compatibleMode ? undefined : choice?.gameVersion,
+				inst.compatibleMode ? undefined : choice?.loader,
+				inst.compatibleMode ? undefined : choice?.loaderVersion,
 			)
 			await wait_for_install_job(job.job_id)
 			completed++
@@ -4242,6 +4423,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		@confirm="onSymlinkMethodConfirmed"
 		@cancel="onSymlinkMethodCancelled"
 	/>
+
+	<NewModal ref="compatibleModeConfirmModal" max-width="560px" :closable="true">
+		<template #title>
+			<span class="text-contrast">{{ formatMessage(messages.dropCompatibleModeTitle) }}</span>
+		</template>
+		<div class="flex flex-col gap-4">
+			<span class="text-secondary text-sm">{{
+				formatMessage(messages.dropCompatibleModeDesc)
+			}}</span>
+			<div class="grid grid-cols-2 gap-3">
+				<BigOptionButton
+					:icon="FolderOpenIcon"
+					:title="formatMessage(messages.dropCompatibleModeImport)"
+					:description="formatMessage(messages.dropCompatibleModeImport)"
+					no-icon-border
+					@click="handleCompatibleModeConfirm('compatible')"
+				/>
+				<BigOptionButton
+					:icon="RotateCounterClockwiseIcon"
+					:title="formatMessage(messages.dropCompatibleModeOldWay)"
+					:description="formatMessage(messages.dropCompatibleModeOldWay)"
+					no-icon-border
+					@click="handleCompatibleModeConfirm('old-way')"
+				/>
+			</div>
+		</div>
+		<template #actions>
+			<div class="flex w-full items-center justify-end">
+				<ButtonStyled>
+					<button class="flex items-center gap-2" @click="handleCompatibleModeConfirm('cancel')">
+						{{ formatMessage(messages.dropCompatibleModeCancel) }}
+					</button>
+				</ButtonStyled>
+			</div>
+		</template>
+	</NewModal>
 
 	<!-- Batch drag-and-drop import UI -->
 	<BatchScanOverlay

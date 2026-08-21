@@ -81,6 +81,8 @@ export interface ScanInstance {
 	version: string
 	/** Mod loader, if known (e.g. "fabric", "forge"; empty string otherwise) */
 	loader: string
+	/** Whether this instance qualifies for compatible mode import */
+	compatibleMode?: boolean
 }
 
 /**
@@ -103,7 +105,7 @@ export async function scanLauncherInstances(
 	launcherType: string,
 	basePath: string,
 ): Promise<ScanResult[]> {
-	const instances: { name: string; path: string }[] = await invoke(
+	const instances: { name: string; path: string; compatibleMode?: boolean }[] = await invoke(
 		'plugin:drop|drop_scan_launcher_instances',
 		{
 			launcherType,
@@ -120,6 +122,7 @@ export async function scanLauncherInstances(
 				path: inst.path,
 				version: '',
 				loader: '',
+				compatibleMode: inst.compatibleMode,
 			})),
 		},
 	]

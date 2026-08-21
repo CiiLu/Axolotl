@@ -15,6 +15,8 @@ use tracing::{debug, info, warn};
 pub struct ScannedInstance {
     pub name: String,
     pub path: String,
+    #[serde(default)]
+    pub compatible_mode: bool,
 }
 
 /// One candidate inside a multi-candidate classification result.
@@ -480,6 +482,7 @@ pub async fn drop_scan_launcher_instances<R: tauri::Runtime>(
         .map(|i| ScannedInstance {
             name: i.name,
             path: i.path,
+            compatible_mode: i.compatible_mode,
         })
         .collect())
 }
