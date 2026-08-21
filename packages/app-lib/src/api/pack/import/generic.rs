@@ -29,7 +29,9 @@ pub async fn import_generic(
     overrides: &ImportOverrides,
     instance_path: Option<PathBuf>, // For compatible mode: path to versions/<version>/
 ) -> crate::Result<()> {
-    let (name, dotminecraft, json_path) = if let Some(ref inst_path) = instance_path {
+    let (name, dotminecraft, json_path) = if let Some(ref inst_path) =
+        instance_path
+    {
         let name = inst_path
             .file_name()
             .map(|n| n.to_string_lossy().to_string())

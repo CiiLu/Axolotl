@@ -2,8 +2,8 @@ use crate::State;
 use crate::api::pack::detect::detect_local_pack_sync;
 use crate::data::ModLoader;
 use crate::install::{
-	InstallErrorContext, InstallJobEventKind, InstallPhaseDetails,
-	InstallPhaseId, InstallProgress, InstallProgressReporter,
+    InstallErrorContext, InstallJobEventKind, InstallPhaseDetails,
+    InstallPhaseId, InstallProgress, InstallProgressReporter,
 };
 use crate::state::{
     AppliedContentSetPatch, CacheBehaviour, CachedEntry, ContentSourceKind,

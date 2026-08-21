@@ -203,7 +203,11 @@ async fn check_compatible_mode(instances: &mut [ImportableInstance]) {
     let no_resourcepacks = !version_dir.join("resourcepacks").is_dir();
     let has_valid_json = instance_json::detect(&version_dir).is_some();
 
-    if has_mods && versions_subdir_count == 1 && no_resourcepacks && has_valid_json {
+    if has_mods
+        && versions_subdir_count == 1
+        && no_resourcepacks
+        && has_valid_json
+    {
         instances[0].compatible_mode = true;
     }
 }
@@ -351,8 +355,11 @@ async fn get_generic_instances(
     // GameDir with mods/, no version isolation).
     if instances.len() == 1 {
         let instance = &instances[0];
-        if let Some(versions_stripped) = instance.path.strip_suffix(&format!("/{}", instance.name)) {
-            if let Some(game_dir) = versions_stripped.strip_suffix("/versions") {
+        if let Some(versions_stripped) =
+            instance.path.strip_suffix(&format!("/{}", instance.name))
+        {
+            if let Some(game_dir) = versions_stripped.strip_suffix("/versions")
+            {
                 let game_dir = PathBuf::from(game_dir);
                 let mods_dir = game_dir.join("mods");
                 let versions_dir = game_dir.join("versions");
@@ -367,15 +374,21 @@ async fn get_generic_instances(
                         Err(_) => return false,
                     };
                     while let Ok(Some(entry)) = dir.next_entry().await {
-                        if entry.path().extension().is_some_and(|ext| ext == "jar") {
+                        if entry
+                            .path()
+                            .extension()
+                            .is_some_and(|ext| ext == "jar")
+                        {
                             return true;
                         }
                     }
                     false
-                }.await;
+                }
+                .await;
 
                 let versions_subdir_count = async {
-                    let mut dir = match tokio::fs::read_dir(&versions_dir).await {
+                    let mut dir = match tokio::fs::read_dir(&versions_dir).await
+                    {
                         Ok(d) => d,
                         Err(_) => return 0,
                     };
@@ -386,18 +399,24 @@ async fn get_generic_instances(
                         }
                     }
                     count
-                }.await;
+                }
+                .await;
 
-                let no_resourcepacks = !version_dir.join("resourcepacks").is_dir();
-                let has_valid_json = instance_json::detect(&version_dir).is_some();
+                let no_resourcepacks =
+                    !version_dir.join("resourcepacks").is_dir();
+                let has_valid_json =
+                    instance_json::detect(&version_dir).is_some();
 
-                if has_mods && versions_subdir_count == 1 && no_resourcepacks && has_valid_json {
+                if has_mods
+                    && versions_subdir_count == 1
+                    && no_resourcepacks
+                    && has_valid_json
+                {
                     instances[0].compatible_mode = true;
                 }
             }
         }
     }
-
 
     if instances.is_empty() && base_path.is_dir() {
         let mut dir = io::read_dir(base_path).await?;
