@@ -17,6 +17,8 @@ pub struct ScannedInstance {
     pub path: String,
     #[serde(default)]
     pub compatible_mode: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version_path: Option<String>,
 }
 
 /// One candidate inside a multi-candidate classification result.
@@ -489,6 +491,7 @@ pub async fn drop_scan_launcher_instances<R: tauri::Runtime>(
             name: i.name,
             path: i.path,
             compatible_mode: i.compatible_mode,
+            version_path: i.version_path,
         })
         .collect())
 }

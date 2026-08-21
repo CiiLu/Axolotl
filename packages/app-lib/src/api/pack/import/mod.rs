@@ -42,7 +42,7 @@ pub use pcl::read_pcl_registry;
 pub mod pe_info;
 
 /// A scanned importable instance with its resolved filesystem path.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ImportableInstance {
     pub name: String,
     pub path: String,
@@ -50,6 +50,11 @@ pub struct ImportableInstance {
     /// version with a shared `mods/` directory and no version isolation).
     #[serde(default)]
     pub compatible_mode: bool,
+    /// For compatible mode: the original version subfolder path containing
+    /// the version JSON.  `path` is set to the GameDir, and `version_path`
+    /// records `<GameDir>/versions/<name>` so the importer can locate the JSON.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -290,6 +295,7 @@ async fn get_instances_subfolder_scan(
                     path: path.to_string_lossy().to_string(),
                     name,
                     compatible_mode: false,
+                    version_path: None,
                 });
             }
         }
@@ -309,6 +315,7 @@ async fn get_modrinth_app_instances(
             name: n.clone(),
             path: n,
             compatible_mode: false,
+            version_path: None,
         })
         .collect())
 }
@@ -367,6 +374,7 @@ async fn get_axolotl_instances(
             name,
             path: base_path.to_string_lossy().to_string(),
             compatible_mode: false,
+            version_path: None,
         }]);
     }
 
@@ -382,6 +390,7 @@ async fn get_axolotl_instances(
                 name: name.to_string_lossy().to_string(),
                 path: path.to_string_lossy().to_string(),
                 compatible_mode: false,
+                version_path: None,
             });
         }
     }
@@ -400,6 +409,7 @@ async fn get_generic_instances(
                 name: n,
                 path: p.to_string_lossy().to_string(),
                 compatible_mode: false,
+                version_path: None,
             })
             .collect();
 
@@ -530,6 +540,7 @@ async fn get_generic_instances(
                     name: name.to_string_lossy().to_string(),
                     path: path.to_string_lossy().to_string(),
                     compatible_mode: false,
+                    version_path: None,
                 });
             }
         }
@@ -598,6 +609,7 @@ async fn get_unknown_launcher_instances(
                 name,
                 path: path.to_string_lossy().to_string(),
                 compatible_mode: false,
+                version_path: None,
             });
         }
     }
@@ -658,6 +670,7 @@ async fn collect_launcher_instances(
                 name: iname,
                 path: ipath.to_string_lossy().to_string(),
                 compatible_mode: false,
+                version_path: None,
             });
         }
         // Check compatible mode per-GameDir, not on the merged list.
@@ -665,13 +678,21 @@ async fn collect_launcher_instances(
             check_compatible_mode(&mut game_dir_instances).await;
         }
         for mut inst in game_dir_instances {
-            // For compatible mode instances, clean up the display name.
-            // ".minecraft:versions/1.21-NeoForge" → "1.21-NeoForge"
             if inst.compatible_mode {
+                // Save original version subfolder path before changing to GameDir.
+                inst.version_path = Some(inst.path.clone());
+                // Clean up display name:
+                // ".minecraft:versions/1.21-NeoForge" → "1.21-NeoForge"
                 if let Some(pos) = inst.name.rfind(':') {
                     let bare = &inst.name[pos + 1..];
                     let clean = bare.strip_prefix("versions/").unwrap_or(bare);
                     inst.name = clean.to_string();
+                }
+                // Point path to GameDir instead of version subfolder.
+                // path is <GameDir>/versions/<name>, so parent().parent() = GameDir.
+                let p = PathBuf::from(&inst.path);
+                if let Some(game_dir) = p.parent().and_then(|v| v.parent()) {
+                    inst.path = game_dir.to_string_lossy().to_string();
                 }
             }
             collector.push_instance(inst);
@@ -700,6 +721,7 @@ impl InstanceCollector {
             name,
             path: path.to_string_lossy().to_string(),
             compatible_mode: false,
+            version_path: None,
         });
     }
 

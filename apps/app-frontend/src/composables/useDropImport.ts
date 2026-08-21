@@ -1392,7 +1392,7 @@ export function useDropImport(options: DropImportOptions) {
 		selections: Array<{
 			launcherType: string
 			launcherName: string
-			instances: Array<{ name: string; path: string }>
+			instances: Array<{ name: string; path: string; compatibleMode?: boolean; versionPath?: string }>
 		}>,
 	) {
 		const allSelected: SelectedInstance[] = []
@@ -1403,6 +1403,8 @@ export function useDropImport(options: DropImportOptions) {
 					basePath: '',
 					name: inst.name,
 					path: inst.path,
+					compatibleMode: inst.compatibleMode,
+					versionPath: inst.versionPath,
 				})
 			}
 		}

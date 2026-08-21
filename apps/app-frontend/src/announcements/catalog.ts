@@ -46,6 +46,14 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US': 'Added a community survey entry on the About page.',
 					'zh-CN': '“关于”页面新增调查问卷入口。',
 				},
+				{
+					'en-US': 'Added new translating source —— DeepL.',
+					'zh-CN': '新增DeepL翻译。',
+				},
+				{
+					'en-US': 'Add support for importing without version isolation enabled.',
+					'zh-CN': '新增未开启版本隔离的导入支持。',
+				},
 			],
 			changed: [
 				{
@@ -84,14 +92,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				{
 					'en-US':
 						'Fixed Forge-based Minecraft instances closing before startup when their loader metadata reused JVM options.',
-					'zh-CN':
-						'修复 Forge 实例的加载器元数据重复使用 JVM 参数时，会在启动前直接退出的问题。',
+					'zh-CN': '修复 Forge 实例的加载器元数据重复使用 JVM 参数时，会在启动前直接退出的问题。',
 				},
 				{
 					'en-US':
 						'Fixed early Minecraft startup failures sometimes leaving an empty launcher log instead of the error output.',
-					'zh-CN':
-						'修复 Minecraft 启动早期失败时启动器日志有时为空、未记录错误输出的问题。',
+					'zh-CN': '修复 Minecraft 启动早期失败时启动器日志有时为空、未记录错误输出的问题。',
 				},
 			],
 		},
