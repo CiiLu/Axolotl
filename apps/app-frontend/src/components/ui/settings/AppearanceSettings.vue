@@ -406,17 +406,24 @@ async function chooseCustomBackground() {
 	try {
 		const extension = selectedPath.split('.').pop()?.toLowerCase() ?? 'png'
 		const backgroundDirectory = await join(await appDataDir(), 'backgrounds')
-		const storedPath = await join(backgroundDirectory, `launcher-background.${extension}`)
+		const storedPath = await join(
+			backgroundDirectory,
+			`launcher-background-${Date.now()}.${extension}`,
+		)
 		const previousPath = settings.value.custom_background_path
 
 		await mkdir(backgroundDirectory, { recursive: true })
 		await writeFile(storedPath, await readFile(selectedPath))
 
-		if (previousPath && previousPath !== storedPath && (await exists(previousPath))) {
-			await remove(previousPath)
-		}
-
 		settings.value.custom_background_path = storedPath
+
+		if (previousPath && previousPath !== storedPath && (await exists(previousPath))) {
+			try {
+				await remove(previousPath)
+			} catch (error) {
+				console.warn('Failed to remove previous custom background', error)
+			}
+		}
 	} catch (error) {
 		handleError(error)
 	}

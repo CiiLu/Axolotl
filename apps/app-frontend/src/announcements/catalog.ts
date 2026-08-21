@@ -47,6 +47,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed a bug where the sidebar with a background image was unable to follow the theme color and provide a blurry effect.',
 				},
+				{
+					'zh-CN': '修复部分情况下无法正常切换背景图片的问题',
+					'en-US':
+						'Fixed a bug where the background image could not be switched normally in some cases.',
+				},
 			],
 		},
 	},
