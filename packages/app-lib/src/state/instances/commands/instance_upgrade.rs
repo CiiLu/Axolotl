@@ -295,10 +295,11 @@ pub(crate) async fn create_instance_upgrade_plan_with_source(
         .filter(|node| !node.auto_dependency && node.migratable)
         .map(|node| (node.key.clone(), node.project_type))
         .collect::<HashMap<_, _>>();
+    let fixed = FixedRootConstraints::default();
     let catalog = load_upgrade_catalog(
         &root_types,
         &installed,
-        &HashMap::new(),
+        &fixed,
         &target_environment,
         state,
     )
@@ -306,11 +307,11 @@ pub(crate) async fn create_instance_upgrade_plan_with_source(
     classify_items(&mut items, &installed, &catalog, &target_environment);
 
     let roots = roots_from_items(&items, &installed);
-    let outcome = solve_upgrade(
+    let outcome = solve_upgrade_with_fixed_roots(
         &roots,
         &installed,
         &catalog,
-        &HashMap::new(),
+        &fixed,
         &confirmed_prereleases(&items),
     );
     apply_solver_issues_to_items(&mut items, &outcome.issues);
@@ -890,6 +891,77 @@ struct RootCandidateOptions {
     candidates: Vec<Option<UpgradeCandidate>>,
 }
 
+#[derive(Clone, Debug, Default)]
+struct FixedRootConstraints {
+    by_content_id: HashMap<String, (NodeKey, String)>,
+    versions_by_project: HashMap<NodeKey, HashSet<String>>,
+}
+
+impl FixedRootConstraints {
+    fn from_constraints(
+        constraints: &[InstanceUpgradeFixedConstraint],
+    ) -> Self {
+        let mut fixed = Self::default();
+        for constraint in constraints {
+            let key = NodeKey::new(constraint.provider, &constraint.project_id);
+            fixed.by_content_id.insert(
+                constraint.content_id.clone(),
+                (key.clone(), constraint.version_id.clone()),
+            );
+            fixed
+                .versions_by_project
+                .entry(key)
+                .or_default()
+                .insert(constraint.version_id.clone());
+        }
+        fixed
+    }
+
+    #[cfg(test)]
+    fn from_project_versions(
+        roots: &[RootRequest],
+        versions: &HashMap<NodeKey, String>,
+    ) -> Self {
+        let constraints = roots
+            .iter()
+            .filter_map(|root| {
+                versions.get(&root.key).map(|version_id| {
+                    InstanceUpgradeFixedConstraint {
+                        content_id: root.content_id.clone(),
+                        provider: root.key.provider,
+                        project_id: root.key.project_id.clone(),
+                        version_id: version_id.clone(),
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+        Self::from_constraints(&constraints)
+    }
+
+    fn version_for_root<'a>(&'a self, root: &RootRequest) -> Option<&'a str> {
+        self.by_content_id
+            .get(&root.content_id)
+            .filter(|(key, _)| key == &root.key)
+            .map(|(_, version_id)| version_id.as_str())
+    }
+
+    fn is_fixed_root(&self, root: &RootRequest) -> bool {
+        self.version_for_root(root).is_some()
+    }
+
+    fn contains_content(&self, content_id: &str) -> bool {
+        self.by_content_id.contains_key(content_id)
+    }
+
+    fn versions_for_project(&self, key: &NodeKey) -> Option<&HashSet<String>> {
+        self.versions_by_project.get(key)
+    }
+
+    fn is_empty(&self) -> bool {
+        self.by_content_id.is_empty()
+    }
+}
+
 #[derive(Clone, Debug)]
 struct ConflictSet {
     involved_root_content_ids: HashSet<String>,
@@ -992,15 +1064,7 @@ pub(crate) async fn recompute_instance_upgrade_plan_from_source(
         .filter(|node| !node.auto_dependency && node.migratable)
         .map(|node| (node.key.clone(), node.project_type))
         .collect::<HashMap<_, _>>();
-    let fixed = fixed_constraints
-        .iter()
-        .map(|constraint| {
-            (
-                NodeKey::new(constraint.provider, &constraint.project_id),
-                constraint.version_id.clone(),
-            )
-        })
-        .collect::<HashMap<_, _>>();
+    let fixed = FixedRootConstraints::from_constraints(fixed_constraints);
     let catalog = load_upgrade_catalog(
         &root_types,
         &installed,
@@ -1016,7 +1080,7 @@ pub(crate) async fn recompute_instance_upgrade_plan_from_source(
         &plan.target_environment,
     );
     let roots = roots_from_items(&plan.items, &installed);
-    let outcome = solve_upgrade(
+    let outcome = solve_upgrade_with_fixed_roots(
         &roots,
         &installed,
         &catalog,
@@ -1026,18 +1090,16 @@ pub(crate) async fn recompute_instance_upgrade_plan_from_source(
     apply_solver_issues_to_items(&mut plan.items, &outcome.issues);
     let mut blocking_issues = outcome.issues;
     for item in &plan.items {
-        let fixed_prerelease = item
-            .provider
-            .zip(item.project_id.as_ref())
-            .is_some_and(|(provider, project_id)| {
-                fixed.contains_key(&NodeKey::new(provider, project_id))
-            });
+        let fixed_prerelease = fixed.contains_content(&item.content_id);
         if let Some(issue) = blocking_issue_for_item(item, fixed_prerelease) {
             blocking_issues.push(issue);
         }
     }
     deduplicate_issues(&mut blocking_issues);
-    plan.warnings = item_warnings_with_fixed(&plan.items, &fixed);
+    plan.warnings = item_warnings_with_fixed(
+        &plan.items,
+        &fixed.by_content_id.keys().cloned().collect::<HashSet<_>>(),
+    );
     plan.blocking_issues = blocking_issues;
     plan.newest_solution = outcome
         .solutions
@@ -1090,7 +1152,7 @@ pub(crate) async fn recompute_instance_upgrade_plan_from_source(
 async fn load_upgrade_catalog(
     root_types: &HashMap<NodeKey, ProjectType>,
     installed: &[InstalledNode],
-    fixed: &HashMap<NodeKey, String>,
+    fixed: &FixedRootConstraints,
     target: &InstanceUpgradeEnvironment,
     state: &State,
 ) -> crate::Result<UpgradeCatalog> {
@@ -1108,18 +1170,17 @@ async fn load_upgrade_catalog(
         .map(|(key, project_type)| (key.clone(), *project_type))
         .collect::<VecDeque<_>>();
     let mut seen = HashSet::new();
-    let mut exact_versions = fixed
-        .iter()
-        .map(|(key, version_id)| {
-            (key.clone(), HashSet::from([version_id.clone()]))
-        })
-        .collect::<HashMap<NodeKey, HashSet<String>>>();
+    let mut exact_versions = fixed.versions_by_project.clone();
     while let Some((key, project_type)) = queue.pop_front() {
         if !seen.insert(key.clone()) {
             continue;
         }
         let current = current_versions.get(&key).map(String::as_str);
         let exact = exact_versions.get(&key).cloned().unwrap_or_default();
+        let empty_fixed_versions = HashSet::new();
+        let custom_fixed_versions = fixed
+            .versions_for_project(&key)
+            .unwrap_or(&empty_fixed_versions);
         let candidates = match key.provider {
             ContentProvider::Modrinth => {
                 load_modrinth_candidates(
@@ -1127,7 +1188,7 @@ async fn load_upgrade_catalog(
                     project_type,
                     current,
                     &exact,
-                    fixed.get(&key).map(String::as_str),
+                    custom_fixed_versions,
                     target,
                     state,
                 )
@@ -1139,7 +1200,7 @@ async fn load_upgrade_catalog(
                     project_type,
                     current,
                     &exact,
-                    fixed.get(&key).map(String::as_str),
+                    custom_fixed_versions,
                     target,
                 )
                 .await?
@@ -1197,7 +1258,7 @@ async fn load_modrinth_candidates(
     project_type: ProjectType,
     current_release_id: Option<&str>,
     exact_versions: &HashSet<String>,
-    custom_fixed_version: Option<&str>,
+    custom_fixed_versions: &HashSet<String>,
     target: &InstanceUpgradeEnvironment,
     state: &State,
 ) -> crate::Result<CandidatePool> {
@@ -1244,9 +1305,7 @@ async fn load_modrinth_candidates(
     for exact_version in exact_versions {
         let already_selected =
             selected.iter().any(|version| version.id == *exact_version);
-        if already_selected
-            && custom_fixed_version != Some(exact_version.as_str())
-        {
+        if already_selected && !custom_fixed_versions.contains(exact_version) {
             continue;
         }
         let exact = selected
@@ -1267,7 +1326,7 @@ async fn load_modrinth_candidates(
             )
             .await?);
         if let Some(exact) = exact {
-            if custom_fixed_version == Some(exact_version.as_str()) {
+            if custom_fixed_versions.contains(exact_version) {
                 validate_modrinth_custom_fixed(
                     key,
                     &exact,
@@ -1280,7 +1339,7 @@ async fn load_modrinth_candidates(
             if !already_selected {
                 selected.push(exact);
             }
-        } else if custom_fixed_version == Some(exact_version.as_str()) {
+        } else if custom_fixed_versions.contains(exact_version) {
             return Err(crate::ErrorKind::InputError(format!(
                 "Unknown custom fixed Modrinth version {exact_version}"
             ))
@@ -1375,7 +1434,7 @@ async fn load_curseforge_candidates(
     project_type: ProjectType,
     current_release_id: Option<&str>,
     exact_versions: &HashSet<String>,
-    custom_fixed_version: Option<&str>,
+    custom_fixed_versions: &HashSet<String>,
     target: &InstanceUpgradeEnvironment,
 ) -> crate::Result<CandidatePool> {
     let project_id = key.project_id.parse::<u32>().map_err(|_| {
@@ -1437,9 +1496,7 @@ async fn load_curseforge_candidates(
         let already_selected = selected
             .iter()
             .any(|file| file.id.to_string() == *exact_version);
-        if already_selected
-            && custom_fixed_version != Some(exact_version.as_str())
-        {
+        if already_selected && !custom_fixed_versions.contains(exact_version) {
             continue;
         }
         let file_id = exact_version.parse::<u32>().map_err(|_| {
@@ -1467,7 +1524,7 @@ async fn load_curseforge_candidates(
             ))
             .into());
         }
-        if custom_fixed_version == Some(exact_version.as_str())
+        if custom_fixed_versions.contains(exact_version)
             && !curseforge_file_matches(&exact, project_type, target)
         {
             return Err(crate::ErrorKind::InputError(format!(
@@ -1798,6 +1855,7 @@ fn confirmed_prereleases(
         .collect()
 }
 
+#[cfg(test)]
 fn solve_upgrade(
     roots: &[RootRequest],
     installed: &[InstalledNode],
@@ -1805,8 +1863,25 @@ fn solve_upgrade(
     fixed: &HashMap<NodeKey, String>,
     confirmed_prereleases: &HashSet<(NodeKey, String)>,
 ) -> SolveOutcome {
+    let fixed = FixedRootConstraints::from_project_versions(roots, fixed);
+    solve_upgrade_with_fixed_roots(
+        roots,
+        installed,
+        catalog,
+        &fixed,
+        confirmed_prereleases,
+    )
+}
+
+fn solve_upgrade_with_fixed_roots(
+    roots: &[RootRequest],
+    installed: &[InstalledNode],
+    catalog: &UpgradeCatalog,
+    fixed: &FixedRootConstraints,
+    confirmed_prereleases: &HashSet<(NodeKey, String)>,
+) -> SolveOutcome {
     let aliases = InstalledAliasIndex::new(installed);
-    let newest = solve_for_strategy(
+    let newest = solve_for_strategy_with_fixed_roots(
         SolveStrategy::Newest,
         roots,
         catalog,
@@ -1814,7 +1889,7 @@ fn solve_upgrade(
         confirmed_prereleases,
         &aliases,
     );
-    let minimal = solve_for_strategy(
+    let minimal = solve_for_strategy_with_fixed_roots(
         SolveStrategy::MinimalChange,
         roots,
         catalog,
@@ -1840,25 +1915,7 @@ fn solve_upgrade(
         }
     }
     let issues = if solutions.is_empty() {
-        let issue = candidate_issues
-            .iter()
-            .cloned()
-            .into_iter()
-            .flatten()
-            .find(|issue| {
-                issue.code == InstanceUpgradeIssueCode::SearchLimitReached
-            })
-            .or_else(|| candidate_issues.into_iter().flatten().next())
-            .unwrap_or_else(|| {
-                issue(
-                    InstanceUpgradeIssueCode::DependencyConflict,
-                    "No globally compatible dependency solution exists",
-                    None,
-                    None,
-                    None,
-                )
-            });
-        vec![issue]
+        vec![select_upgrade_failure_issue(candidate_issues, fixed)]
     } else {
         Vec::new()
     };
@@ -1870,6 +1927,143 @@ fn solve_upgrade(
     }
 }
 
+fn select_upgrade_failure_issue(
+    candidate_issues: [Option<InstanceUpgradeIssue>; 2],
+    fixed: &FixedRootConstraints,
+) -> InstanceUpgradeIssue {
+    candidate_issues
+        .iter()
+        .flatten()
+        .find(|issue| proven_fixed_exact_conflict(issue, fixed))
+        .cloned()
+        .or_else(|| {
+            candidate_issues
+                .iter()
+                .flatten()
+                .find(|issue| {
+                    issue.code == InstanceUpgradeIssueCode::SearchLimitReached
+                })
+                .cloned()
+        })
+        .or_else(|| candidate_issues.into_iter().flatten().next())
+        .unwrap_or_else(|| {
+            issue(
+                InstanceUpgradeIssueCode::DependencyConflict,
+                "No globally compatible dependency solution exists",
+                None,
+                None,
+                None,
+            )
+        })
+}
+
+fn proven_fixed_exact_conflict(
+    issue: &InstanceUpgradeIssue,
+    fixed: &FixedRootConstraints,
+) -> bool {
+    if issue.code != InstanceUpgradeIssueCode::DependencyConflict {
+        return false;
+    }
+    let exact_requirements = issue
+        .dependency_requirements
+        .iter()
+        .filter(|requirement| requirement.required_release_id.is_some())
+        .collect::<Vec<_>>();
+    if exact_requirements.is_empty()
+        || exact_requirements.iter().any(|requirement| {
+            !fixed.contains_content(&requirement.root_content_id)
+        })
+    {
+        return false;
+    }
+    let mut versions_by_dependency = HashMap::<NodeKey, HashSet<&str>>::new();
+    for requirement in exact_requirements {
+        versions_by_dependency
+            .entry(NodeKey::new(
+                requirement.dependency_provider,
+                &requirement.dependency_project_id,
+            ))
+            .or_default()
+            .insert(requirement.required_release_id.as_deref().unwrap());
+    }
+    versions_by_dependency
+        .values()
+        .any(|versions| versions.len() > 1)
+}
+
+fn selected_root_exact_dependency_conflict(
+    roots: &[RootRequest],
+    options: &[RootCandidateOptions],
+    selected: &[usize],
+    fixed: &FixedRootConstraints,
+) -> Option<InstanceUpgradeIssue> {
+    let mut requirements_by_dependency =
+        HashMap::<NodeKey, Vec<InstanceUpgradeDependencyRequirement>>::new();
+    for ((root, options), candidate_index) in
+        roots.iter().zip(options).zip(selected)
+    {
+        let Some(candidate) = options.candidates[*candidate_index].as_ref()
+        else {
+            continue;
+        };
+        for dependency in &candidate.dependencies {
+            let Some(required_release_id) = dependency.version_id.clone()
+            else {
+                continue;
+            };
+            if dependency.kind != CandidateDependencyKind::Required {
+                continue;
+            }
+            requirements_by_dependency
+                .entry(dependency.key.clone())
+                .or_default()
+                .push(InstanceUpgradeDependencyRequirement {
+                    root_content_id: root.content_id.clone(),
+                    root_provider: root.key.provider,
+                    root_project_id: root.key.project_id.clone(),
+                    parent_provider: candidate.key.provider,
+                    parent_project_id: candidate.key.project_id.clone(),
+                    parent_release_id: candidate.version_id.clone(),
+                    dependency_provider: dependency.key.provider,
+                    dependency_project_id: dependency.key.project_id.clone(),
+                    required_release_id: Some(required_release_id),
+                    candidate_release_id: None,
+                });
+        }
+    }
+    for (dependency, requirements) in requirements_by_dependency {
+        let versions = requirements
+            .iter()
+            .filter_map(|requirement| requirement.required_release_id.as_ref())
+            .collect::<HashSet<_>>();
+        if versions.len() < 2 {
+            continue;
+        }
+        if requirements.iter().any(|requirement| {
+            !fixed.contains_content(&requirement.root_content_id)
+        }) {
+            continue;
+        }
+        let mut versions =
+            versions.into_iter().map(String::as_str).collect::<Vec<_>>();
+        versions.sort_unstable();
+        return Some(issue_with_requirements(
+            InstanceUpgradeIssueCode::DependencyConflict,
+            format!(
+                "Contradictory exact requirements for {}: {}",
+                dependency.label(),
+                versions.join(", ")
+            ),
+            Some(&dependency),
+            Some(&dependency.project_id),
+            None,
+            requirements,
+        ));
+    }
+    None
+}
+
+#[cfg(test)]
 fn solve_for_strategy(
     strategy: SolveStrategy,
     roots: &[RootRequest],
@@ -1878,7 +2072,26 @@ fn solve_for_strategy(
     confirmed_prereleases: &HashSet<(NodeKey, String)>,
     aliases: &InstalledAliasIndex,
 ) -> StrategySolveOutcome {
-    solve_for_strategy_with_limit(
+    let fixed = FixedRootConstraints::from_project_versions(roots, fixed);
+    solve_for_strategy_with_fixed_roots(
+        strategy,
+        roots,
+        catalog,
+        &fixed,
+        confirmed_prereleases,
+        aliases,
+    )
+}
+
+fn solve_for_strategy_with_fixed_roots(
+    strategy: SolveStrategy,
+    roots: &[RootRequest],
+    catalog: &UpgradeCatalog,
+    fixed: &FixedRootConstraints,
+    confirmed_prereleases: &HashSet<(NodeKey, String)>,
+    aliases: &InstalledAliasIndex,
+) -> StrategySolveOutcome {
+    solve_for_strategy_with_fixed_roots_and_limit(
         strategy,
         roots,
         catalog,
@@ -1889,11 +2102,33 @@ fn solve_for_strategy(
     )
 }
 
+#[cfg(test)]
 fn solve_for_strategy_with_limit(
     strategy: SolveStrategy,
     roots: &[RootRequest],
     catalog: &UpgradeCatalog,
     fixed: &HashMap<NodeKey, String>,
+    confirmed_prereleases: &HashSet<(NodeKey, String)>,
+    aliases: &InstalledAliasIndex,
+    max_search_states: usize,
+) -> StrategySolveOutcome {
+    let fixed = FixedRootConstraints::from_project_versions(roots, fixed);
+    solve_for_strategy_with_fixed_roots_and_limit(
+        strategy,
+        roots,
+        catalog,
+        &fixed,
+        confirmed_prereleases,
+        aliases,
+        max_search_states,
+    )
+}
+
+fn solve_for_strategy_with_fixed_roots_and_limit(
+    strategy: SolveStrategy,
+    roots: &[RootRequest],
+    catalog: &UpgradeCatalog,
+    fixed: &FixedRootConstraints,
     confirmed_prereleases: &HashSet<(NodeKey, String)>,
     aliases: &InstalledAliasIndex,
     max_search_states: usize,
@@ -1965,22 +2200,28 @@ fn solve_for_strategy_with_limit(
             ..SearchState::default()
         };
         let mut solutions = Vec::new();
-        search_solutions(
-            requirements,
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashSet::new(),
-            HashSet::new(),
-            roots,
-            catalog,
-            confirmed_prereleases,
-            aliases,
-            strategy,
-            max_search_states,
-            &mut state,
-            &mut solutions,
-        );
+        if let Some(conflict) = selected_root_exact_dependency_conflict(
+            roots, &options, &selected, fixed,
+        ) {
+            record_issue(&mut state, conflict);
+        } else {
+            search_solutions(
+                requirements,
+                HashMap::new(),
+                HashMap::new(),
+                HashMap::new(),
+                HashSet::new(),
+                HashSet::new(),
+                roots,
+                catalog,
+                confirmed_prereleases,
+                aliases,
+                strategy,
+                max_search_states,
+                &mut state,
+                &mut solutions,
+            );
+        }
         total_visited = state.visited;
         if let Some(solution) = solutions.into_iter().next() {
             return StrategySolveOutcome {
@@ -2090,13 +2331,13 @@ fn root_candidate_options(
     root: &RootRequest,
     strategy: SolveStrategy,
     catalog: &UpgradeCatalog,
-    fixed: &HashMap<NodeKey, String>,
+    fixed: &FixedRootConstraints,
     confirmed_prereleases: &HashSet<(NodeKey, String)>,
 ) -> RootCandidateOptions {
     let requirement = Requirement {
         key: root.key.clone(),
-        version_id: fixed.get(&root.key).cloned(),
-        explicit_prerelease: fixed.contains_key(&root.key),
+        version_id: fixed.version_for_root(root).map(str::to_string),
+        explicit_prerelease: fixed.is_fixed_root(root),
         preserve_unsafe: root.action != InstanceUpgradeAction::Upgrade,
         root_content_id: root.content_id.clone(),
         root_key: root.key.clone(),
@@ -2126,7 +2367,7 @@ fn root_candidate_options(
         content_id: root.content_id.clone(),
         key: root.key.clone(),
         current_release_id: root.current_release_id.clone(),
-        fixed: fixed.contains_key(&root.key),
+        fixed: fixed.is_fixed_root(root),
         exploration_limited: !requirement.preserve_unsafe
             && requirement.version_id.is_none()
             && catalog
@@ -3304,12 +3545,12 @@ fn blocking_issue_for_item(
 }
 
 fn item_warnings(items: &[InstanceUpgradeItem]) -> Vec<InstanceUpgradeIssue> {
-    item_warnings_with_fixed(items, &HashMap::new())
+    item_warnings_with_fixed(items, &HashSet::new())
 }
 
 fn item_warnings_with_fixed(
     items: &[InstanceUpgradeItem],
-    fixed: &HashMap<NodeKey, String>,
+    fixed_content_ids: &HashSet<String>,
 ) -> Vec<InstanceUpgradeIssue> {
     items
         .iter()
@@ -3347,14 +3588,7 @@ fn item_warnings_with_fixed(
             let message = match code {
                 InstanceUpgradeIssueCode::PrereleaseOnly
                     if item.resolution.allow_prerelease
-                        || item
-                            .provider
-                            .zip(item.project_id.as_ref())
-                            .is_some_and(|(provider, project_id)| {
-                                fixed.contains_key(&NodeKey::new(
-                                    provider, project_id,
-                                ))
-                            }) =>
+                        || fixed_content_ids.contains(&item.content_id) =>
                 {
                     format!(
                         "{} uses a confirmed prerelease",
@@ -4445,6 +4679,44 @@ mod tests {
     }
 
     #[test]
+    fn verified_persistent_identity_supplies_planner_target_candidates() {
+        let item = snapshot_item_for_test(
+            Some(ContentProvider::Modrinth),
+            Some("5LTBDHXu"),
+            Some("eKsF3BdO"),
+        );
+        let snapshot = InstanceContentSnapshot {
+            instance_id: "instance".to_string(),
+            revision: 2,
+            pack: None,
+            items: vec![item],
+            pending_manual_downloads: Vec::new(),
+            warnings: Vec::new(),
+        };
+        let (mut items, installed) = snapshot_upgrade_items(&snapshot);
+        let target = test_environment(ShaderRuntime::None);
+        let catalog = catalog([(
+            NodeKey::new(ContentProvider::Modrinth, "5LTBDHXu"),
+            vec![candidate_for_key(
+                &NodeKey::new(ContentProvider::Modrinth, "5LTBDHXu"),
+                "wf4Vw5gN",
+                2,
+            )],
+        )]);
+
+        classify_items(&mut items, &installed, &catalog, &target);
+
+        assert_eq!(items[0].provider, Some(ContentProvider::Modrinth));
+        assert_eq!(items[0].project_id.as_deref(), Some("5LTBDHXu"));
+        assert_eq!(items[0].current_release_id.as_deref(), Some("eKsF3BdO"));
+        assert_eq!(
+            items[0].status,
+            InstanceUpgradeItemStatus::UpgradeAvailable
+        );
+        assert_eq!(items[0].candidate_release_ids, vec!["wf4Vw5gN"]);
+    }
+
+    #[test]
     fn unverified_local_mod_makes_shader_runtime_unknown() {
         let snapshot = InstanceContentSnapshot {
             instance_id: "instance".to_string(),
@@ -4474,6 +4746,115 @@ mod tests {
             outcome.solutions[0].assignments[&key("a")].version_id,
             "one"
         );
+    }
+
+    #[test]
+    fn custom_fixed_constraint_binds_only_matching_physical_root() {
+        let mut first = root("duplicate", "first-old", true);
+        first.content_id = "physical-first".to_string();
+        let mut second = root("duplicate", "second-old", true);
+        second.content_id = "physical-second".to_string();
+        let roots = vec![first, second];
+        let catalog = catalog([(
+            key("duplicate"),
+            vec![
+                candidate("duplicate", "fixed", 2),
+                candidate("duplicate", "flexible", 1),
+            ],
+        )]);
+        let fixed = FixedRootConstraints::from_constraints(&[
+            InstanceUpgradeFixedConstraint {
+                content_id: "physical-first".to_string(),
+                provider: ContentProvider::Modrinth,
+                project_id: "duplicate".to_string(),
+                version_id: "fixed".to_string(),
+            },
+        ]);
+
+        let first_options = root_candidate_options(
+            &roots[0],
+            SolveStrategy::Newest,
+            &catalog,
+            &fixed,
+            &HashSet::new(),
+        );
+        let second_options = root_candidate_options(
+            &roots[1],
+            SolveStrategy::Newest,
+            &catalog,
+            &fixed,
+            &HashSet::new(),
+        );
+
+        assert!(first_options.fixed);
+        assert_eq!(first_options.candidates.len(), 1);
+        assert_eq!(
+            first_options.candidates[0]
+                .as_ref()
+                .map(|candidate| candidate.version_id.as_str()),
+            Some("fixed")
+        );
+        assert!(!second_options.fixed);
+        assert_eq!(second_options.candidates.len(), 2);
+    }
+
+    #[test]
+    fn proven_fixed_exact_conflict_takes_priority_over_search_limit() {
+        let fixed = FixedRootConstraints::from_constraints(&[
+            InstanceUpgradeFixedConstraint {
+                content_id: "entry-a".to_string(),
+                provider: ContentProvider::Modrinth,
+                project_id: "a".to_string(),
+                version_id: "a-fixed".to_string(),
+            },
+            InstanceUpgradeFixedConstraint {
+                content_id: "entry-b".to_string(),
+                provider: ContentProvider::Modrinth,
+                project_id: "b".to_string(),
+                version_id: "b-fixed".to_string(),
+            },
+        ]);
+        let exact_conflict = issue_with_requirements(
+            InstanceUpgradeIssueCode::DependencyConflict,
+            "fixed exact conflict",
+            Some(&key("x")),
+            Some("x"),
+            None,
+            vec![
+                InstanceUpgradeDependencyRequirement {
+                    root_content_id: "entry-a".to_string(),
+                    root_provider: ContentProvider::Modrinth,
+                    root_project_id: "a".to_string(),
+                    parent_provider: ContentProvider::Modrinth,
+                    parent_project_id: "a".to_string(),
+                    parent_release_id: "a-fixed".to_string(),
+                    dependency_provider: ContentProvider::Modrinth,
+                    dependency_project_id: "x".to_string(),
+                    required_release_id: Some("x-one".to_string()),
+                    candidate_release_id: None,
+                },
+                InstanceUpgradeDependencyRequirement {
+                    root_content_id: "entry-b".to_string(),
+                    root_provider: ContentProvider::Modrinth,
+                    root_project_id: "b".to_string(),
+                    parent_provider: ContentProvider::Modrinth,
+                    parent_project_id: "b".to_string(),
+                    parent_release_id: "b-fixed".to_string(),
+                    dependency_provider: ContentProvider::Modrinth,
+                    dependency_project_id: "x".to_string(),
+                    required_release_id: Some("x-two".to_string()),
+                    candidate_release_id: None,
+                },
+            ],
+        );
+
+        let selected = select_upgrade_failure_issue(
+            [Some(search_limit_issue(false)), Some(exact_conflict)],
+            &fixed,
+        );
+
+        assert_eq!(selected.code, InstanceUpgradeIssueCode::DependencyConflict);
+        assert_eq!(selected.dependency_requirements.len(), 2);
     }
 
     #[test]
@@ -4822,6 +5203,100 @@ mod tests {
             InstanceUpgradeIssueCode::DependencyConflict
         );
         assert_eq!(outcome.issues[0].dependency_requirements.len(), 2);
+    }
+
+    #[test]
+    fn custom_fixed_exact_conflict_does_not_branch_flexible_physical_target() {
+        let all_roots = [
+            root("iris", "iris-old", true),
+            root("voxy", "voxy-old", true),
+            root("sodium", "sodium-current", true),
+        ];
+        let mut iris = candidate("iris", "iris-fixed", 10);
+        iris.dependencies
+            .push(required("sodium", Some("sodium-for-iris")));
+        let mut voxy = candidate("voxy", "voxy-fixed", 9);
+        voxy.dependencies
+            .push(required("sodium", Some("sodium-for-voxy")));
+        let catalog = HashMap::from([
+            (
+                key("iris"),
+                CandidatePool {
+                    candidates: vec![iris],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("voxy"),
+                CandidatePool {
+                    candidates: vec![voxy],
+                    exploration_limited: false,
+                    has_target_game_version_release: true,
+                },
+            ),
+            (
+                key("sodium"),
+                CandidatePool {
+                    candidates: vec![
+                        candidate("sodium", "sodium-current", 8),
+                        candidate("sodium", "sodium-for-iris", 7),
+                        candidate("sodium", "sodium-for-voxy", 6),
+                        candidate("sodium", "sodium-other", 5),
+                    ],
+                    exploration_limited: true,
+                    has_target_game_version_release: true,
+                },
+            ),
+        ]);
+        let fixed = HashMap::from([
+            (key("iris"), "iris-fixed".to_string()),
+            (key("voxy"), "voxy-fixed".to_string()),
+        ]);
+
+        for order in [
+            [0, 1, 2],
+            [0, 2, 1],
+            [1, 0, 2],
+            [1, 2, 0],
+            [2, 0, 1],
+            [2, 1, 0],
+        ] {
+            let roots = order
+                .map(|index| all_roots[index].clone())
+                .into_iter()
+                .collect::<Vec<_>>();
+            let outcome =
+                solve_upgrade(&roots, &[], &catalog, &fixed, &HashSet::new());
+
+            assert!(outcome.solutions.is_empty(), "root order {order:?}");
+            assert_eq!(outcome.visited_states, 0, "root order {order:?}");
+            assert_eq!(outcome.issues.len(), 1, "root order {order:?}");
+            let issue = &outcome.issues[0];
+            assert_eq!(
+                issue.code,
+                InstanceUpgradeIssueCode::DependencyConflict,
+                "root order {order:?}"
+            );
+            assert_eq!(issue.project_id.as_deref(), Some("sodium"));
+            assert_eq!(issue.dependency_requirements.len(), 2);
+            assert!(issue.dependency_requirements.iter().any(|requirement| {
+                requirement.root_project_id == "iris"
+                    && requirement.parent_release_id == "iris-fixed"
+                    && requirement.required_release_id.as_deref()
+                        == Some("sodium-for-iris")
+            }));
+            assert!(issue.dependency_requirements.iter().any(|requirement| {
+                requirement.root_project_id == "voxy"
+                    && requirement.parent_release_id == "voxy-fixed"
+                    && requirement.required_release_id.as_deref()
+                        == Some("sodium-for-voxy")
+            }));
+            assert!(issue.dependency_requirements.iter().all(|requirement| {
+                requirement.root_project_id != "sodium"
+                    && requirement.parent_project_id != "sodium"
+            }));
+        }
     }
 
     #[test]

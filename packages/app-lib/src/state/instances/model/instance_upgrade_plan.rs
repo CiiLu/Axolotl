@@ -198,6 +198,7 @@ pub enum InstanceUpgradeSolutionChoice {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceUpgradeFixedConstraint {
+    pub content_id: String,
     pub provider: ContentProvider,
     pub project_id: String,
     pub version_id: String,

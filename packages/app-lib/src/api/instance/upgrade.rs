@@ -240,26 +240,27 @@ fn validate_fixed_constraints(
     let mut seen = HashMap::new();
     for constraint in constraints {
         if let Some(previous) = seen.insert(
-            (constraint.provider, constraint.project_id.as_str()),
+            constraint.content_id.as_str(),
             constraint.version_id.as_str(),
         ) && previous != constraint.version_id.as_str()
         {
             return Err(crate::ErrorKind::InputError(format!(
-                "Custom upgrade constraints select multiple versions for {}:{}",
-                constraint.provider.as_str(),
-                constraint.project_id
+                "Custom upgrade constraints select multiple versions for content {}",
+                constraint.content_id
             ))
             .into());
         }
         let root_exists = plan.items.iter().any(|item| {
             !item.auto_dependency
+                && item.content_id == constraint.content_id
                 && item.provider == Some(constraint.provider)
                 && item.project_id.as_deref()
                     == Some(constraint.project_id.as_str())
         });
         if !root_exists {
             return Err(crate::ErrorKind::InputError(format!(
-				"Custom upgrade constraint is not a root content project: {}:{}",
+				"Custom upgrade constraint does not match root content {} at {}:{}",
+				constraint.content_id,
 				constraint.provider.as_str(),
 				constraint.project_id
 			))
@@ -272,6 +273,22 @@ fn validate_fixed_constraints(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn custom_fixed_constraint_preserves_content_id_through_serde() {
+        let input = serde_json::json!({
+            "contentId": "physical-iris",
+            "provider": "modrinth",
+            "projectId": "YL57xq9U",
+            "versionId": "Rhzf61g1"
+        });
+
+        let constraint: InstanceUpgradeFixedConstraint =
+            serde_json::from_value(input).unwrap();
+        let output = serde_json::to_value(constraint).unwrap();
+
+        assert_eq!(output["contentId"], "physical-iris");
+    }
 
     #[test]
     fn duplicate_custom_constraints_are_rejected_before_provider_work() {
@@ -296,17 +313,29 @@ mod tests {
         });
         let constraints = vec![
             InstanceUpgradeFixedConstraint {
+                content_id: "root".to_string(),
                 provider: crate::state::ContentProvider::Modrinth,
                 project_id: "root".to_string(),
                 version_id: "one".to_string(),
             },
             InstanceUpgradeFixedConstraint {
+                content_id: "root".to_string(),
                 provider: crate::state::ContentProvider::Modrinth,
                 project_id: "root".to_string(),
                 version_id: "two".to_string(),
             },
         ];
         assert!(validate_fixed_constraints(&plan, &constraints).is_err());
+
+        let wrong_physical_root = vec![InstanceUpgradeFixedConstraint {
+            content_id: "different-root".to_string(),
+            provider: crate::state::ContentProvider::Modrinth,
+            project_id: "root".to_string(),
+            version_id: "one".to_string(),
+        }];
+        assert!(
+            validate_fixed_constraints(&plan, &wrong_physical_root).is_err()
+        );
     }
 
     #[test]
@@ -321,6 +350,7 @@ mod tests {
     fn custom_recompute_uses_only_explicitly_stored_constraints() {
         let mut plan = empty_plan();
         plan.custom_constraints = vec![InstanceUpgradeFixedConstraint {
+            content_id: "a".to_string(),
             provider: crate::state::ContentProvider::Modrinth,
             project_id: "a".to_string(),
             version_id: "a-fixed".to_string(),
@@ -372,6 +402,7 @@ mod tests {
             stored
                 .custom_constraints
                 .push(InstanceUpgradeFixedConstraint {
+                    content_id: "a".to_string(),
                     provider: crate::state::ContentProvider::Modrinth,
                     project_id: "a".to_string(),
                     version_id: "a-one".to_string(),
@@ -384,6 +415,7 @@ mod tests {
             stored
                 .custom_constraints
                 .push(InstanceUpgradeFixedConstraint {
+                    content_id: "b".to_string(),
                     provider: crate::state::ContentProvider::Modrinth,
                     project_id: "b".to_string(),
                     version_id: "b-one".to_string(),
