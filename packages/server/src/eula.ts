@@ -3,14 +3,17 @@ import { parseProperties, serializeProperties, type PropertiesEntry } from './pr
 const EULA_KEY = 'eula'
 
 export interface EulaDocument {
-	entries: PropertiesEntry
+	entries: PropertiesEntry[]
 	accepted: boolean
 }
 
 export function parseEula(text: string): EulaDocument {
 	const entries = parseProperties(text)
-	const value = entries.find((entry) => entry.type === 'pair' && entry.key === EULA_KEY)
-	return { entries, accepted: (value as { value?: string } | undefined)?.value === 'true' }
+	const value = entries.find(
+		(entry): entry is Extract<PropertiesEntry, { type: 'pair' }> =>
+			entry.type === 'pair' && entry.key === EULA_KEY,
+	)
+	return { entries, accepted: value?.value === 'true' }
 }
 
 export function setEulaAccepted(text: string, accepted: boolean): string {

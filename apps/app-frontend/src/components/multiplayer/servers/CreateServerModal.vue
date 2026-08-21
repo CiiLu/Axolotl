@@ -30,10 +30,10 @@ watch(ctx.showEulaModal, (visible) => {
 	else eulaModal.value?.hide()
 })
 
-function show(event?: MouseEvent) {
+function show() {
 	ctx.reset()
 	modal.value?.setStage(0)
-	modal.value?.show(event)
+	modal.value?.show()
 }
 
 function handleHide() {

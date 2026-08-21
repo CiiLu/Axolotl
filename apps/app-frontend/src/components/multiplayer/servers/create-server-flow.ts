@@ -109,7 +109,7 @@ interface VanillaVersionEntry {
 }
 
 interface VanillaVersionInfoJson {
-	downloads?: { server?: { sha1: string; size: number; url: string } }
+	downloads: { server?: { sha1: string; size: number; url: string } }
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -329,7 +329,7 @@ export function createCreateServerFlowContext(
 				const versionInfo = await fetchJson<VanillaVersionInfoJson>(entry.url)
 				const jar = resolveServerJar('vanilla', {
 					gameVersion: selectedGameVersion.value,
-					vanillaVersionInfo: { downloads: versionInfo.downloads },
+					vanillaVersionInfo: versionInfo,
 				})
 				if (!jar) throw new Error('This game version has no server download')
 				url = jar.url
@@ -412,9 +412,9 @@ export function createCreateServerFlowContext(
 		}
 	}
 
-	function retryInstall() {
+	function retryInstall(): Promise<void> {
 		installPhase.value = 'idle'
-		void beginInstall()
+		return beginInstall()
 	}
 
 	async function acceptEula() {
@@ -469,6 +469,7 @@ export function createCreateServerFlowContext(
 			stageContent: markRaw(TypeStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.typeStageTitle),
 			cannotNavigateForward: (ctx) => !ctx.canContinueFromType.value,
+			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.next),
 				disabled: !ctx.canContinueFromType.value,
@@ -480,6 +481,7 @@ export function createCreateServerFlowContext(
 			stageContent: markRaw(SetupStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.setupStageTitle),
 			cannotNavigateForward: (ctx) => ctx.name.value.trim() === '',
+			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.next),
 				disabled: ctx.name.value.trim() === '',
@@ -496,6 +498,7 @@ export function createCreateServerFlowContext(
 			cannotNavigateForward: (ctx) => ctx.installPhase.value !== 'done',
 			disableClose: (ctx) =>
 				ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
+			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(
 					ctx.installPhase.value === 'error' ? wizardMessages.retry : wizardMessages.next,
@@ -516,6 +519,7 @@ export function createCreateServerFlowContext(
 			id: 'configure',
 			stageContent: markRaw(ConfigureStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.configureStageTitle),
+			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.finish),
 				onClick: async () => {

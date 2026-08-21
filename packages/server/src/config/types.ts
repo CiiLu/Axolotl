@@ -64,11 +64,15 @@ export function configFieldLabel(key: string): string {
 
 export interface ConfigFileDocument {
 	definition: ConfigFileDefinition
-	entries: PropertiesEntry
+	entries: PropertiesEntry[]
 }
 
 export function getRawValue(document: ConfigFileDocument, key: string): string | undefined {
-	return document.entries.find((entry) => entry.type === 'pair' && entry.key === key)?.value
+	const entry = document.entries.find(
+		(entry): entry is Extract<PropertiesEntry, { type: 'pair' }> =>
+			entry.type === 'pair' && entry.key === key,
+	)
+	return entry?.value
 }
 
 export function setRawValue(document: ConfigFileDocument, key: string, value: string): void {

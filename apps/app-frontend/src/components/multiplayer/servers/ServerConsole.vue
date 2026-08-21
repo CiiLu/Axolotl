@@ -65,7 +65,7 @@ async function handleSendCommand(command: string) {
 
 provideConsoleManager({
 	logLines: consoleState.output,
-	sendCommand: (command) => void handleSendCommand(command),
+	sendCommand: (command: string) => void handleSendCommand(command),
 	showCommandInput: computed(() => props.server.running),
 	disableCommandInput: computed(() => !props.server.running),
 	disableCommandInputTooltip: computed(() => formatMessage(messages.notRunning)),

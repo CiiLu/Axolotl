@@ -116,7 +116,11 @@ export function serializeProperties(entries: PropertiesEntry[]): string {
 }
 
 export function getProperty(entries: PropertiesEntry[], key: string): string | undefined {
-	return entries.find((entry) => entry.type === 'pair' && entry.key === key)?.value
+	const entry = entries.find(
+		(entry): entry is Extract<PropertiesEntry, { type: 'pair' }> =>
+			entry.type === 'pair' && entry.key === key,
+	)
+	return entry?.value
 }
 
 export function setProperty(

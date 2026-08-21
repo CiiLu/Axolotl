@@ -639,7 +639,7 @@ function submitJoin() {
 						<ButtonStyled
 							v-for="option in providerOptions"
 							:key="option.id"
-							:type="selectedProvider === option.id ? 'filled' : 'transparent'"
+							:type="selectedProvider === option.id ? 'standard' : 'transparent'"
 						>
 							<button
 								type="button"
@@ -1290,7 +1290,7 @@ function submitJoin() {
 									nodes.length === 0 ||
 									isActionPending ||
 									isNodesLoading ||
-									(selectedNode && !selectedNode.reachable)
+									!!(selectedNode && !selectedNode.reachable)
 								"
 								@click="startHongshiTunnel"
 							>

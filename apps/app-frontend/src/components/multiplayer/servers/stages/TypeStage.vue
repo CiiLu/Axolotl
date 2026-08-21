@@ -95,7 +95,7 @@ function selectGameVersion(version: string) {
 					small
 					@update:model-value="
 						(value) => {
-							ctx.showSnapshots.value = value
+							ctx.showSnapshots.value = !!value
 							void ctx.loadVersions()
 						}
 					"
