@@ -2393,6 +2393,12 @@
 	"app.settings.about.repository": {
 		"message": "源代码"
 	},
+	"app.settings.about.survey": {
+		"message": "调查问卷"
+	},
+	"app.settings.about.survey-description": {
+		"message": "帮助我们改进 Axolotl Launcher"
+	},
 	"app.settings.about.test-error": {
 		"message": "触发测试错误"
 	},
