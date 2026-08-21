@@ -1,9 +1,9 @@
 <script setup>
 import {
 	ClipboardCopyIcon,
+	CollectionIcon,
 	EyeIcon,
 	FolderOpenIcon,
-	CollectionIcon,
 	GridIcon,
 	MoreVerticalIcon,
 	PinIcon,
@@ -36,8 +36,11 @@ import BatchEditGroupsModal from '@/components/ui/modal/BatchEditGroupsModal.vue
 import ConfirmDeleteInstanceModal from '@/components/ui/modal/ConfirmDeleteInstanceModal.vue'
 import { UNGROUPED_GROUP_KEY, useGridGrouping } from '@/composables/useGridGrouping'
 import { install_duplicate_instance } from '@/helpers/install'
-import { getLastLibraryDisplayMode, setLastLibraryDisplayMode } from '@/helpers/library-display-mode'
-import { edit, remove, set_pinned } from '@/helpers/instance'
+import { remove, set_pinned } from '@/helpers/instance'
+import {
+	getLastLibraryDisplayMode,
+	setLastLibraryDisplayMode,
+} from '@/helpers/library-display-mode'
 
 const { handleError } = injectNotificationManager()
 
@@ -252,7 +255,7 @@ function cancelLongPress() {
 	}
 }
 
-function handleCardClick(instanceId, event) {
+function handleCardClick(instanceId, _event) {
 	if (longPressTriggered) {
 		longPressTriggered = false
 		return

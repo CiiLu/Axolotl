@@ -5,7 +5,12 @@
  * modpack installs, content installation, and all related UI flows.
  */
 
-import type { BatchDropGroup, BatchDropItem, BatchDropPhase, SymlinkMethodChoice } from '@modrinth/ui'
+import type {
+	BatchDropGroup,
+	BatchDropItem,
+	BatchDropPhase,
+	SymlinkMethodChoice,
+} from '@modrinth/ui'
 import { useDebugLogger, useGlobalDrop, useVIntl } from '@modrinth/ui'
 import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-context'
 import { computed, type ComputedRef, nextTick, ref } from 'vue'
@@ -25,9 +30,7 @@ import {
 	type ScanResult,
 } from '@/helpers/drop'
 import { import_instance } from '@/helpers/import.js'
-import {
-	wait_for_install_job,
-} from '@/helpers/install'
+import { wait_for_install_job } from '@/helpers/install'
 import {
 	add_project_from_path,
 	check_symlink_capability,
@@ -42,13 +45,13 @@ import type { AppNotificationManager } from '@/providers/app-notifications'
 import type { AppPopupNotificationManager } from '@/providers/app-popup-notifications'
 
 // Re-export types for external use
-export type { ClassificationResult, ModrinthLookupResult,ScanResult }
+export type { ClassificationResult, ModrinthLookupResult, ScanResult }
 
 export type ContentFileProjectType =
 	| 'mod'
 	| 'resourcepack'
 	| 'datapack'
-	|'shaderpack'
+	| 'shaderpack'
 	| 'schematic'
 
 export interface PendingInstall {
@@ -211,12 +214,12 @@ export function useDropImport(options: DropImportOptions) {
 
 	// ── Content file project type map ────────────────────────────────────
 	const contentFileProjectTypeMap: Record<string, ContentFileProjectType | undefined> = {
-		mod:'mod',
-		resource_pack:'resourcepack',
+		mod: 'mod',
+		resource_pack: 'resourcepack',
 		data_pack: 'datapack',
-		shader_pack:'shaderpack',
-		litematic:'schematic',
-		schematic:'schematic',
+		shader_pack: 'shaderpack',
+		litematic: 'schematic',
+		schematic: 'schematic',
 	}
 
 	// ── Single-file drop state ───────────────────────────────────────────
@@ -554,10 +557,10 @@ export function useDropImport(options: DropImportOptions) {
 	async function classifyDropPath(path: string): Promise<ClassificationResult> {
 		lastDroppedPath.value = path
 		if (onSkinsPage.value) {
-			return { item_type: 'unknown' as const, file_path: path, reason:'skipped' }
+			return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
 		}
 		if (onSchematicWorkshopPage.value && isSchematicFile(path)) {
-			return { item_type: 'unknown' as const, file_path: path, reason:'skipped' }
+			return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
 		}
 		return classifyDroppedItem(path)
 	}
@@ -566,7 +569,7 @@ export function useDropImport(options: DropImportOptions) {
 		result: ClassificationResult,
 		depth = 0,
 	): ClassificationResult {
-		if (result.item_type ==='shortcut_resolved' && result.resolved_to && depth < 3) {
+		if (result.item_type === 'shortcut_resolved' && result.resolved_to && depth < 3) {
 			return resolveBatchClassification(result.resolved_to, depth + 1)
 		}
 		return result
@@ -579,7 +582,7 @@ export function useDropImport(options: DropImportOptions) {
 		results: ScanResult[],
 	): CompatibleModeCandidate | null {
 		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
-		if (totalInstances!== 1 ||!results[0]?.instances[0]) {
+		if (totalInstances !== 1 || !results[0]?.instances[0]) {
 			return null
 		}
 
@@ -599,7 +602,7 @@ export function useDropImport(options: DropImportOptions) {
 		}
 
 		const expectedPath = `${basePath}/versions/${single.name}`
-		if (single.path!== expectedPath) {
+		if (single.path !== expectedPath) {
 			return null
 		}
 
@@ -630,10 +633,10 @@ export function useDropImport(options: DropImportOptions) {
 			return
 		}
 
-		const gameDir = compatibleModeGameDir.value?? dropFilePath.value!
+		const gameDir = compatibleModeGameDir.value ?? dropFilePath.value!
 		const launcherType = compatibleModeLauncherType.value
 		const scanResults = compatibleModeResults.value
-		const instanceName = scanResults?.[0]?.instances[0]?.name?? ''
+		const instanceName = scanResults?.[0]?.instances[0]?.name ?? ''
 
 		if (choice === 'compatible') {
 			selectedInstances.value = [
@@ -734,16 +737,16 @@ export function useDropImport(options: DropImportOptions) {
 		const isLauncherImport =
 			classification?.item_type === 'launcher' || classification?.item_type === 'hmcl_launcher'
 
-		if (!isLauncherImport &&!classification?.file_path &&!dropFilePath.value) {
+		if (!isLauncherImport && !classification?.file_path && !dropFilePath.value) {
 			dropDebug(
 				'handleDropConfirm: no filePath available (classification and dropFilePath both empty), aborting',
 			)
 			return
 		}
 
-		const filePath = classification?.file_path?? dropFilePath.value
+		const filePath = classification?.file_path ?? dropFilePath.value
 		const fileName =
-			filePath?.split(/[/\\]/).pop()?? classification.base_path?.split(/[/\\]/).pop()?? 'file'
+			filePath?.split(/[/\\]/).pop() ?? classification.base_path?.split(/[/\\]/).pop() ?? 'file'
 		dropDebug('handleDropConfirm: routing decision', {
 			type,
 			isLauncherImport,
@@ -825,7 +828,7 @@ export function useDropImport(options: DropImportOptions) {
 
 		if (isLauncherImport && type === 'instance') {
 			const launcherType =
-				classification!.item_type === 'hmcl_launcher'? 'HMCL' : classification!.launcher_type!
+				classification!.item_type === 'hmcl_launcher' ? 'HMCL' : classification!.launcher_type!
 			const basePath =
 				classification!.item_type === 'hmcl_launcher'
 					? classification!.launcher_dir!
@@ -848,7 +851,7 @@ export function useDropImport(options: DropImportOptions) {
 					})
 				} catch (error) {
 					launcherZipTempDir.value = null
-					const errorDetail = error instanceof Error? error.message : String(error)
+					const errorDetail = error instanceof Error ? error.message : String(error)
 					console.error('[DropFlow] launcher zip extraction failed:', errorDetail, basePath)
 					dropDebug('handleDropConfirm: launcher zip extraction failed', error)
 					addNotification({
@@ -931,7 +934,7 @@ export function useDropImport(options: DropImportOptions) {
 			return
 		}
 
-		if (type ==='modpack') {
+		if (type === 'modpack') {
 			dropDebug('handleDropConfirm: modpack branch', { filePath, fileName })
 
 			if (!filePath) {
@@ -967,7 +970,7 @@ export function useDropImport(options: DropImportOptions) {
 		dropDebug('handleDropConfirm: content install branch', {
 			type,
 			isInInstance: isInInstance.value,
-			hasInstanceId:!!instanceId.value,
+			hasInstanceId: !!instanceId.value,
 		})
 
 		if (type === 'data_pack') {
@@ -975,7 +978,7 @@ export function useDropImport(options: DropImportOptions) {
 				filePath,
 			})
 			pendingInstall.value = { type, filePath, innerBase }
-			dataPackWorldModal.value?.show(isInInstance.value? instanceId.value : undefined)
+			dataPackWorldModal.value?.show(isInInstance.value ? instanceId.value : undefined)
 			return
 		}
 
@@ -1021,12 +1024,12 @@ export function useDropImport(options: DropImportOptions) {
 				addNotification({
 					title: formatMessage(messages.dropWorldImportedTitle),
 					text: formatMessage(messages.dropWorldImportedText),
-					type:'success',
+					type: 'success',
 				})
 				return
 			}
 
-			if (type ==='mod') {
+			if (type === 'mod') {
 				let meta: {
 					minecraft_version?: string
 					loader?: string
@@ -1038,7 +1041,7 @@ export function useDropImport(options: DropImportOptions) {
 				const metaStr = await extractModMetadata(filePath)
 				dropDebug('installContentDirectly: mod metadata extraction', {
 					filePath,
-					hasMeta:!!metaStr,
+					hasMeta: !!metaStr,
 				})
 
 				if (metaStr) {
@@ -1053,7 +1056,7 @@ export function useDropImport(options: DropImportOptions) {
 				try {
 					modrinthLookup = await lookupModHash(filePath)
 					dropDebug('installContentDirectly: modrinth hash lookup', {
-						found:!!modrinthLookup,
+						found: !!modrinthLookup,
 					})
 				} catch (e) {
 					dropDebug('installContentDirectly: hash lookup failed', { error: e })
@@ -1074,12 +1077,12 @@ export function useDropImport(options: DropImportOptions) {
 
 					let versionMismatch = false
 					if (modMcVersion && instVersion) {
-						versionMismatch =!isVersionInRange(instVersion, modMcVersion)
+						versionMismatch = !isVersionInRange(instVersion, modMcVersion)
 					}
 
 					let loaderMismatch = false
 					if (modLoader && instLoader) {
-						loaderMismatch =!areLoadersCompatible(modLoader, instLoader)
+						loaderMismatch = !areLoadersCompatible(modLoader, instLoader)
 					}
 
 					dropDebug('installContentDirectly: compatibility check', {
@@ -1103,16 +1106,16 @@ export function useDropImport(options: DropImportOptions) {
 						}
 						const warning = formatMessage(messages.dropInstallModWarning, {
 							file: filePath.split(/[/\\]/).pop() || filePath,
-							modVersion: modMcVersion?? 'any',
-							modLoader: modLoader?? 'any',
-							instVersion: instVersion?? 'any',
-							instLoader: instLoader?? 'none',
+							modVersion: modMcVersion ?? 'any',
+							modLoader: modLoader ?? 'any',
+							instVersion: instVersion ?? 'any',
+							instLoader: instLoader ?? 'none',
 						})
 						contentInstallIncompatibilityWarningVersions.value = []
-						contentInstallIncompatibilityWarningCurrentGameVersion.value = instVersion?? ''
-						contentInstallIncompatibilityWarningCurrentLoader.value = instLoader?? ''
-						contentInstallIncompatibilityWarningProjectType.value ='mod'
-						contentInstallIncompatibilityWarningProjectName.value = meta?.name?? 'Mod'
+						contentInstallIncompatibilityWarningCurrentGameVersion.value = instVersion ?? ''
+						contentInstallIncompatibilityWarningCurrentLoader.value = instLoader ?? ''
+						contentInstallIncompatibilityWarningProjectType.value = 'mod'
+						contentInstallIncompatibilityWarningProjectName.value = meta?.name ?? 'Mod'
 						contentInstallIncompatibilityWarningMessage.value = warning
 						contentInstallIncompatibilityWarningInstalling.value = false
 						incompatWarningKey.value++
@@ -1122,8 +1125,8 @@ export function useDropImport(options: DropImportOptions) {
 					}
 				} else {
 					dropDebug('installContentDirectly: skipping version check', {
-						hasInstance:!!inst,
-						hasModVersion:!!meta?.minecraft_version,
+						hasInstance: !!inst,
+						hasModVersion: !!meta?.minecraft_version,
 					})
 				}
 			}
@@ -1133,10 +1136,10 @@ export function useDropImport(options: DropImportOptions) {
 			addNotification({
 				title: formatMessage(messages.dropContentInstalledTitle),
 				text: formatMessage(messages.dropContentInstalledText),
-				type:'success',
+				type: 'success',
 			})
 		} catch (e) {
-			let errMsg = e instanceof Error? e.message : typeof e === 'string'? e : JSON.stringify(e)
+			let errMsg = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 			try {
 				const lockInfo = await detectFileLock(filePath)
 				if (lockInfo.length > 0) {
@@ -1203,7 +1206,7 @@ export function useDropImport(options: DropImportOptions) {
 							notificationManager.removeNotification(analyzingNotification.id)
 							addNotification({
 								title: formatMessage(messages.dropUnknownForceAnalysisFailedTitle),
-								text: e instanceof Error? e.message : String(e),
+								text: e instanceof Error ? e.message : String(e),
 								type: 'error',
 							})
 						}
@@ -1227,14 +1230,14 @@ export function useDropImport(options: DropImportOptions) {
 			return
 		}
 		dropClassification.value = result
-		dropFilePath.value = result.file_path?? result.base_path?? ''
+		dropFilePath.value = result.file_path ?? result.base_path ?? ''
 		dropFileName.value =
-			result.file_path?.split(/[/\\]/).pop()??
-			result.base_path?.split(/[/\\]/).pop()??
+			result.file_path?.split(/[/\\]/).pop() ??
+			result.base_path?.split(/[/\\]/).pop() ??
 			fallbackFileName
 
 		switch (result.item_type) {
-			case'modpack':
+			case 'modpack':
 				await handleDropConfirm('modpack')
 				break
 			case 'world_save':
@@ -1245,7 +1248,7 @@ export function useDropImport(options: DropImportOptions) {
 				await handleDropConfirm('instance')
 				break
 			default:
-				if (result.item_type ==='resource_pack' || result.item_type ==='multiple') {
+				if (result.item_type === 'resource_pack' || result.item_type === 'multiple') {
 					confirmDropModal.value?.show()
 					return
 				}
@@ -1263,7 +1266,7 @@ export function useDropImport(options: DropImportOptions) {
 			filePath,
 		})
 
-		const sizeBytes = Number(classification.reason?.match(/total (\d+) bytes/i)?.[1]?? 0)
+		const sizeBytes = Number(classification.reason?.match(/total (\d+) bytes/i)?.[1] ?? 0)
 		const sizeLabel =
 			sizeBytes > 0
 				? sizeBytes >= 1024 * 1024
@@ -1286,7 +1289,7 @@ export function useDropImport(options: DropImportOptions) {
 						} catch (e) {
 							addNotification({
 								title: formatMessage(messages.dropProcessFailedTitle),
-								text: e instanceof Error? e.message : String(e),
+								text: e instanceof Error ? e.message : String(e),
 								type: 'error',
 							})
 						}
@@ -1314,7 +1317,12 @@ export function useDropImport(options: DropImportOptions) {
 		pendingInstall.value = null
 		if (!pending) return
 
-		await installContentDirectly(pending.type, pending.filePath, targetInstanceId, pending.innerBase)
+		await installContentDirectly(
+			pending.type,
+			pending.filePath,
+			targetInstanceId,
+			pending.innerBase,
+		)
 	}
 
 	function handleGenericInstallCancel() {
@@ -1336,10 +1344,7 @@ export function useDropImport(options: DropImportOptions) {
 		router.push('/create')
 	}
 
-	async function handleDatapackWorldSelect(target: {
-		instanceId: string
-		worldPath: string
-	}) {
+	async function handleDatapackWorldSelect(target: { instanceId: string; worldPath: string }) {
 		const pending = pendingInstall.value
 		pendingInstall.value = null
 		if (!pending) return
@@ -1354,12 +1359,12 @@ export function useDropImport(options: DropImportOptions) {
 			addNotification({
 				title: formatMessage(messages.dropContentInstalledTitle),
 				text: formatMessage(messages.dropContentInstalledText),
-				type:'success',
+				type: 'success',
 			})
 		} catch (e) {
 			addNotification({
 				title: formatMessage(messages.dropInstallFailedTitle),
-				text: e instanceof Error? e.message : typeof e === 'string'? e : JSON.stringify(e),
+				text: e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e),
 				type: 'error',
 			})
 		}
@@ -1374,7 +1379,7 @@ export function useDropImport(options: DropImportOptions) {
 
 	function chooseImportMethod(options: {
 		instanceNames: string[]
-		symlinkCapable:'supported' | 'requires_admin' | 'unsupported'
+		symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
 	}): Promise<boolean> {
 		return new Promise((resolve) => {
 			symlinkChoiceResolve = resolve
@@ -1442,7 +1447,7 @@ export function useDropImport(options: DropImportOptions) {
 
 	async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean) {
 		if (symlinkChoiceResolve) {
-			symlinkChoiceResolve(Array.isArray(choices)? (choices[0]?.symlink?? false) : choices)
+			symlinkChoiceResolve(Array.isArray(choices) ? (choices[0]?.symlink ?? false) : choices)
 			symlinkChoiceResolve = null
 			return
 		}
@@ -1452,12 +1457,12 @@ export function useDropImport(options: DropImportOptions) {
 			batchSymlinkMode = false
 			symlinkCardsModal.value?.hide()
 			if (group) {
-				const choiceArray = Array.isArray(choices)? choices : []
+				const choiceArray = Array.isArray(choices) ? choices : []
 				for (const item of group.items) {
 					const choice = choiceArray.find(
 						(c) =>
 							c.instanceName === item.name &&
-							(c.instancePath?? undefined) === (item.instancePath?? undefined),
+							(c.instancePath ?? undefined) === (item.instancePath ?? undefined),
 					)
 					if (choice) {
 						item.symlink = choice.symlink
@@ -1487,25 +1492,25 @@ export function useDropImport(options: DropImportOptions) {
 				? choices.find(
 						(c) =>
 							c.instanceName === inst.name &&
-							(c.instancePath?? undefined) === (inst.path?? undefined),
+							(c.instancePath ?? undefined) === (inst.path ?? undefined),
 					)
 				: undefined
 			try {
 				const job = await import_instance(
-					ctx?.launcherType?? inst.launcherType,
-					ctx?.basePath?? inst.path,
+					ctx?.launcherType ?? inst.launcherType,
+					ctx?.basePath ?? inst.path,
 					inst.name,
-					choice?.symlink?? (Array.isArray(choices)? false : choices),
-					inst.compatibleMode? inst.versionPath : undefined,
-					inst.compatibleMode? undefined : choice?.gameVersion,
-					inst.compatibleMode? undefined : choice?.loader,
-					inst.compatibleMode? undefined : choice?.loaderVersion,
+					choice?.symlink ?? (Array.isArray(choices) ? false : choices),
+					inst.compatibleMode ? inst.versionPath : undefined,
+					inst.compatibleMode ? undefined : choice?.gameVersion,
+					inst.compatibleMode ? undefined : choice?.loader,
+					inst.compatibleMode ? undefined : choice?.loaderVersion,
 				)
 				await wait_for_install_job(job.job_id)
 				addNotification({
 					title: formatMessage(messages.dropInstanceImportedTitle),
 					text: formatMessage(messages.dropInstanceImportedText, { name: inst.name }),
-					type:'success',
+					type: 'success',
 				})
 			} catch (e) {
 				addNotification({
@@ -1539,7 +1544,7 @@ export function useDropImport(options: DropImportOptions) {
 				? choices.find(
 						(c) =>
 							c.instanceName === inst.name &&
-							(c.instancePath?? undefined) === (inst.path?? undefined),
+							(c.instancePath ?? undefined) === (inst.path ?? undefined),
 					)
 				: undefined
 
@@ -1556,14 +1561,14 @@ export function useDropImport(options: DropImportOptions) {
 
 			try {
 				const job = await import_instance(
-					ctx?.launcherType?? inst.launcherType,
-					ctx?.basePath?? inst.path,
+					ctx?.launcherType ?? inst.launcherType,
+					ctx?.basePath ?? inst.path,
 					inst.name,
-					choice?.symlink?? (Array.isArray(choices)? false : choices),
-					inst.compatibleMode? inst.versionPath : undefined,
-					inst.compatibleMode? undefined : choice?.gameVersion,
-					inst.compatibleMode? undefined : choice?.loader,
-					inst.compatibleMode? undefined : choice?.loaderVersion,
+					choice?.symlink ?? (Array.isArray(choices) ? false : choices),
+					inst.compatibleMode ? inst.versionPath : undefined,
+					inst.compatibleMode ? undefined : choice?.gameVersion,
+					inst.compatibleMode ? undefined : choice?.loader,
+					inst.compatibleMode ? undefined : choice?.loaderVersion,
 				)
 				await wait_for_install_job(job.job_id)
 				completed++
@@ -1587,7 +1592,7 @@ export function useDropImport(options: DropImportOptions) {
 			addNotification({
 				title: formatMessage(messages.dropImportCompletedTitle),
 				text: formatMessage(messages.dropImportCompletedText, { count: total }),
-				type:'success',
+				type: 'success',
 			})
 		} else {
 			addNotification({
@@ -1606,8 +1611,8 @@ export function useDropImport(options: DropImportOptions) {
 
 	async function startBatchImport(paths: string[]) {
 		console.log('[BatchDrop] startBatchImport paths=', paths.length, paths)
-		if (batchPhase.value!== 'idle') return
-		batchPhase.value ='scanning'
+		if (batchPhase.value !== 'idle') return
+		batchPhase.value = 'scanning'
 		batchOriginalCount.value = paths.length
 		batchScanDone.value = 0
 		batchScanCancelled = false
@@ -1642,14 +1647,14 @@ export function useDropImport(options: DropImportOptions) {
 				const index = cursor++
 				if (index >= total) return
 				const item = items[index]
-				item.scanState ='scanning'
+				item.scanState = 'scanning'
 				console.log(`[BatchDrop] scan start idx=${index} path=${item.sourcePath}`)
 				try {
 					const raw = await classifyDropPath(item.sourcePath)
 					const resolved = resolveBatchClassification(raw)
-					if (resolved.item_type ==='shortcut_resolved') {
-						item.scanState ='skipped'
-						item.reason ='shortcut-exceeded'
+					if (resolved.item_type === 'shortcut_resolved') {
+						item.scanState = 'skipped'
+						item.reason = 'shortcut-exceeded'
 					} else {
 						await applyBatchClassification(item, resolved)
 					}
@@ -1658,7 +1663,7 @@ export function useDropImport(options: DropImportOptions) {
 					)
 				} catch (error) {
 					item.scanState = 'error'
-					item.reason = error instanceof Error? error.message : String(error)
+					item.reason = error instanceof Error ? error.message : String(error)
 					console.log(`[BatchDrop] scan ERROR idx=${index}`, error)
 				} finally {
 					batchScanDone.value++
@@ -1681,8 +1686,8 @@ export function useDropImport(options: DropImportOptions) {
 			resolved.item_type,
 		)
 		if (resolved.item_type === 'unknown') {
-			item.scanState ='skipped'
-			item.reason = resolved.reason?? 'unknown'
+			item.scanState = 'skipped'
+			item.reason = resolved.reason ?? 'unknown'
 			return
 		}
 
@@ -1696,33 +1701,33 @@ export function useDropImport(options: DropImportOptions) {
 		item.innerBase = (resolved as { innerBase?: string }).innerBase
 
 		switch (resolved.item_type) {
-			case'mod':
-			case'shader_pack':
+			case 'mod':
+			case 'shader_pack':
 			case 'world_save':
 			case 'litematic':
 				item.itemType = resolved.item_type
 				break
-			case'modpack':
-				item.itemType ='modpack'
+			case 'modpack':
+				item.itemType = 'modpack'
 				break
-			case'resource_pack': {
-				const candidates = (resolved as { candidates?: string[] }).candidates?? []
+			case 'resource_pack': {
+				const candidates = (resolved as { candidates?: string[] }).candidates ?? []
 				if (candidates.length === 1) {
 					item.itemType = candidates[0]
 				} else if (candidates.length > 1) {
 					item.itemType = 'ambiguous'
 					item.candidates = candidates
 				} else {
-					item.itemType ='resource_pack'
+					item.itemType = 'resource_pack'
 				}
 				break
 			}
-			case'multiple':
+			case 'multiple':
 				item.itemType = 'ambiguous'
 				item.choices = (resolved as { choices?: Array<{ itemType: string }> }).choices
 				item.candidates = [
 					...new Set(
-						((resolved as { choices?: Array<{ itemType: string }> }).choices?? [])
+						((resolved as { choices?: Array<{ itemType: string }> }).choices ?? [])
 							.map((choice) => choice.itemType)
 							.filter(Boolean),
 					),
@@ -1735,14 +1740,14 @@ export function useDropImport(options: DropImportOptions) {
 		const launcherType =
 			resolved.item_type === 'hmcl_launcher'
 				? 'HMCL'
-				: ((resolved as { launcher_type?: string }).launcher_type?? 'Generic')
+				: ((resolved as { launcher_type?: string }).launcher_type ?? 'Generic')
 		const rawBasePath =
 			resolved.item_type === 'hmcl_launcher'
-				? ((resolved as { launcher_dir?: string }).launcher_dir?? '')
-				: ((resolved as { base_path?: string }).base_path?? '')
+				? ((resolved as { launcher_dir?: string }).launcher_dir ?? '')
+				: ((resolved as { base_path?: string }).base_path ?? '')
 
 		if (!rawBasePath) {
-			item.scanState ='skipped'
+			item.scanState = 'skipped'
 			item.reason = 'No launcher path'
 			return
 		}
@@ -1754,10 +1759,10 @@ export function useDropImport(options: DropImportOptions) {
 				const tempDir = await extractZipToTemp(rawBasePath)
 				batchTempDirs.value.push(tempDir)
 				const innerBase = (resolved as { innerBase?: string }).innerBase
-				scanBasePath = innerBase? `${tempDir}/${innerBase}` : tempDir
+				scanBasePath = innerBase ? `${tempDir}/${innerBase}` : tempDir
 			} catch (error) {
 				item.scanState = 'error'
-				item.reason = error instanceof Error? error.message : String(error)
+				item.reason = error instanceof Error ? error.message : String(error)
 				return
 			}
 		}
@@ -1769,7 +1774,7 @@ export function useDropImport(options: DropImportOptions) {
 				`[BatchDrop] expand launcher type=${launcherType} base=${scanBasePath} instances=${instances.length}`,
 			)
 			if (instances.length === 0) {
-				item.scanState ='skipped'
+				item.scanState = 'skipped'
 				item.reason = 'No importable instances found'
 				return
 			}
@@ -1793,14 +1798,14 @@ export function useDropImport(options: DropImportOptions) {
 			}
 		} catch (error) {
 			item.scanState = 'error'
-			item.reason = error instanceof Error? error.message : String(error)
+			item.reason = error instanceof Error ? error.message : String(error)
 		}
 	}
 
 	async function finishBatchScan() {
 		const hasImportable = batchItems.value.some(
 			(item) =>
-				item.itemType && item.itemType!== 'launcher_container' && item.scanState === 'done',
+				item.itemType && item.itemType !== 'launcher_container' && item.scanState === 'done',
 		)
 		console.log('[BatchDrop] finishBatchScan hasImportable=', hasImportable)
 		if (!hasImportable) {
@@ -1842,7 +1847,7 @@ export function useDropImport(options: DropImportOptions) {
 		const needsWorld = batchItems.value.some(
 			(item) =>
 				item.itemType === 'data_pack' ||
-				(item.itemType === 'ambiguous' && (item.candidates?? []).includes('data_pack')),
+				(item.itemType === 'ambiguous' && (item.candidates ?? []).includes('data_pack')),
 		)
 		if (needsWorld) {
 			batchPhase.value = 'picking-world'
@@ -1871,7 +1876,7 @@ export function useDropImport(options: DropImportOptions) {
 		}
 		await nextTick()
 		genericInstallModal.value?.show({
-			contentType:'mod',
+			contentType: 'mod',
 			fileName: formatMessage(messages.dropBatchTargetLabel),
 			instances: batchTargetInstances.value,
 		})
@@ -1920,10 +1925,10 @@ export function useDropImport(options: DropImportOptions) {
 		]
 		const byType = new Map<string, BatchDropItem[]>()
 		for (const item of batchItems.value) {
-			if (item.selected === false ||!item.itemType || item.itemType === 'launcher_container')
+			if (item.selected === false || !item.itemType || item.itemType === 'launcher_container')
 				continue
-			if (item.scanState!== 'done') continue
-			const list = byType.get(item.itemType)?? []
+			if (item.scanState !== 'done') continue
+			const list = byType.get(item.itemType) ?? []
 			list.push(item)
 			byType.set(item.itemType, list)
 		}
@@ -1989,14 +1994,13 @@ export function useDropImport(options: DropImportOptions) {
 				.flatMap((item) =>
 					item.choices?.length
 						? item.choices
-						: (item.candidates?? []).map((candidate) => ({ itemType: candidate })),
+						: (item.candidates ?? []).map((candidate) => ({ itemType: candidate })),
 				)
 				.filter(
-					(choice, index, all) =>
-						all.findIndex((c) => c.itemType === choice.itemType) === index,
+					(choice, index, all) => all.findIndex((c) => c.itemType === choice.itemType) === index,
 				)
 			classification = {
-				item_type:'multiple',
+				item_type: 'multiple',
 				file_path: group.items[0]?.sourcePath,
 				choices,
 			} as unknown as ClassificationResult
@@ -2021,7 +2025,7 @@ export function useDropImport(options: DropImportOptions) {
 			item.confirmedType = type
 			item.itemType = type
 			const choice = item.choices?.find((c) => c.itemType === type)
-			if (choice?.innerBase!== undefined) {
+			if (choice?.innerBase !== undefined) {
 				item.innerBase = choice.innerBase
 			}
 		}
@@ -2063,7 +2067,7 @@ export function useDropImport(options: DropImportOptions) {
 		console.error('[BatchDrop] batch failed', error)
 		addNotification({
 			title: formatMessage(messages.dropImportFailedTitle),
-			text: error instanceof Error? error.message : String(error),
+			text: error instanceof Error ? error.message : String(error),
 			type: 'error',
 		})
 		batchPhase.value = 'idle'
@@ -2122,13 +2126,12 @@ export function useDropImport(options: DropImportOptions) {
 		]
 		const queue = typeOrder.flatMap((type) =>
 			batchItems.value.filter(
-				(item) =>
-					item.selected!== false && item.scanState === 'done' && item.itemType === type,
+				(item) => item.selected !== false && item.scanState === 'done' && item.itemType === type,
 			),
 		)
 		for (const item of batchItems.value) {
 			if (
-				item.selected!== false &&
+				item.selected !== false &&
 				item.scanState === 'done' &&
 				item.itemType &&
 				!typeOrder.includes(item.itemType)
@@ -2158,16 +2161,16 @@ export function useDropImport(options: DropImportOptions) {
 						batchCompatResolve = resolve
 					})
 					if (installed) {
-						item.installState ='success'
+						item.installState = 'success'
 						succeeded++
 						console.log(`[BatchDrop] install SUCCESS (compat) name=${item.name}`)
 					} else {
-						item.installState ='skipped'
+						item.installState = 'skipped'
 						skipped++
 						console.log(`[BatchDrop] install SKIPPED (compat cancelled) name=${item.name}`)
 					}
 				} else {
-					item.installState ='success'
+					item.installState = 'success'
 					succeeded++
 					console.log(`[BatchDrop] install SUCCESS name=${item.name}`)
 				}
@@ -2189,7 +2192,7 @@ export function useDropImport(options: DropImportOptions) {
 				skipped,
 				total: queue.length,
 			}),
-			type: failed > 0 || skipped > 0? 'warning' :'success',
+			type: failed > 0 || skipped > 0 ? 'warning' : 'success',
 		})
 		await finishBatchImport()
 	}
@@ -2199,7 +2202,7 @@ export function useDropImport(options: DropImportOptions) {
 			`[BatchDrop] installBatchItem type=${item.itemType} name=${item.name} path=${item.sourcePath}`,
 		)
 		switch (item.itemType) {
-			case'modpack':
+			case 'modpack':
 				await installModpackFromPath(item.sourcePath, item.name, { persistUntilDone: false })
 				return
 			case 'instance': {
@@ -2207,17 +2210,17 @@ export function useDropImport(options: DropImportOptions) {
 					item.launcherType,
 					item.basePath,
 					item.instanceFolder,
-					item.symlink?? false,
+					item.symlink ?? false,
 					item.instancePath,
-					item.gameVersion?? undefined,
-					item.loader?? undefined,
-					item.loaderVersion?? undefined,
+					item.gameVersion ?? undefined,
+					item.loader ?? undefined,
+					item.loaderVersion ?? undefined,
 				)
 				await wait_for_install_job(job.job_id)
 				return
 			}
 			case 'data_pack':
-				if (!batchTargetInstanceId.value ||!batchWorldPath.value) {
+				if (!batchTargetInstanceId.value || !batchWorldPath.value) {
 					throw new Error('Missing target instance or world for datapack')
 				}
 				await install_datapack_to_world(
@@ -2227,12 +2230,12 @@ export function useDropImport(options: DropImportOptions) {
 					item.innerBase,
 				)
 				return
-			case'mod':
-			case'resource_pack':
-			case'shader_pack':
+			case 'mod':
+			case 'resource_pack':
+			case 'shader_pack':
 			case 'world_save':
 			case 'litematic':
-			case'schematic':
+			case 'schematic':
 				await installContentDirectly(
 					item.itemType,
 					item.sourcePath,
@@ -2269,12 +2272,12 @@ export function useDropImport(options: DropImportOptions) {
 				addNotification({
 					title: formatMessage(messages.dropContentInstalledTitle),
 					text: formatMessage(messages.dropContentInstalledText),
-					type:'success',
+					type: 'success',
 				})
 			} catch (e) {
 				addNotification({
 					title: formatMessage(messages.dropInstallFailedTitle),
-					text: e instanceof Error? e.message : typeof e === 'string'? e : JSON.stringify(e),
+					text: e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e),
 					type: 'error',
 				})
 			}
@@ -2300,7 +2303,7 @@ export function useDropImport(options: DropImportOptions) {
 		batchCompatResolve = null
 		const pending = pendingDropIncompatibility.value
 		if (!pending) return
-		const searchName = pending.meta?.name?? pending.meta?.mod_id?? 'mod'
+		const searchName = pending.meta?.name ?? pending.meta?.mod_id ?? 'mod'
 		const searchUrl = pending.modrinthLookup
 			? `/project/${pending.modrinthLookup.project_id}`
 			: `/browse/mod?q=${encodeURIComponent(searchName)}&i=${pending.instId}`
@@ -2324,13 +2327,13 @@ export function useDropImport(options: DropImportOptions) {
 				}).id
 			},
 			onImportStart: (type, classification) => {
-				if (type === 'unknown' && classification?.reason ==='skipped') return
+				if (type === 'unknown' && classification?.reason === 'skipped') return
 				dropClassification.value = classification
 				dropFilePath.value =
-					classification.file_path?? classification.base_path?? lastDroppedPath.value
+					classification.file_path ?? classification.base_path ?? lastDroppedPath.value
 				dropFileName.value =
-					classification.file_path?.split(/[/\\]/).pop()??
-					classification.base_path?.split(/[/\\]/).pop()??
+					classification.file_path?.split(/[/\\]/).pop() ??
+					classification.base_path?.split(/[/\\]/).pop() ??
 					(lastDroppedPath.value.split(/[/\\]/).pop() || 'file')
 
 				if (type === 'unknown' && classification?.reason?.toLowerCase().includes('nested')) {
@@ -2339,10 +2342,7 @@ export function useDropImport(options: DropImportOptions) {
 					return
 				}
 
-				if (
-					type === 'unknown' &&
-					classification?.reason?.toLowerCase().includes('extraction')
-				) {
+				if (type === 'unknown' && classification?.reason?.toLowerCase().includes('extraction')) {
 					clearDropProcessingNotification()
 					showForceAnalysisPrompt(classification)
 					return
@@ -2351,12 +2351,11 @@ export function useDropImport(options: DropImportOptions) {
 				if (type === 'unknown') {
 					clearDropProcessingNotification()
 					const unknownFile =
-						classification?.file_path?.split(/[/\\]/).pop()??
-						classification?.base_path?.split(/[/\\]/).pop()??
+						classification?.file_path?.split(/[/\\]/).pop() ??
+						classification?.base_path?.split(/[/\\]/).pop() ??
 						''
 
-					const isTempFile =
-						unknownFile.startsWith('.tmp') || unknownFile.startsWith('tmp')
+					const isTempFile = unknownFile.startsWith('.tmp') || unknownFile.startsWith('tmp')
 					if (isTempFile) {
 						addNotification({
 							title: formatMessage(messages.dropTemporaryFileTitle),
@@ -2390,7 +2389,7 @@ export function useDropImport(options: DropImportOptions) {
 						text: formatMessage(messages.dropMultipleFilesText),
 						type: 'error',
 					})
-				} else if (reason ==='shortcut-exceeded') {
+				} else if (reason === 'shortcut-exceeded') {
 					addNotification({
 						title: formatMessage(messages.dropShortcutFailedTitle),
 						text: formatMessage(messages.dropShortcutFailedText),

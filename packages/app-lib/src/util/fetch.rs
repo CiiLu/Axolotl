@@ -418,15 +418,14 @@ impl Drop for TaskProbeGuard {
             return;
         }
         let mut families = self.state.families.lock();
-        if let Some(entry) = families.get_mut(&self.family) {
-            if entry
+        if let Some(entry) = families.get_mut(&self.family)
+            && entry
                 .in_flight
                 .as_ref()
                 .is_some_and(|in_flight| Arc::ptr_eq(in_flight, &self.notify))
-            {
-                entry.in_flight = None;
-                entry.last_probed = None;
-            }
+        {
+            entry.in_flight = None;
+            entry.last_probed = None;
         }
     }
 }
@@ -933,7 +932,7 @@ fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
             | DownloadRouteSource::Tianpao
     );
     let route = route(
-        url.to_string(),
+        url.clone(),
         source,
         is_mirror,
         !matches!(resource, ResourceClass::Metadata),
@@ -1437,7 +1436,7 @@ fn file_reqwest_client_builder() -> reqwest::ClientBuilder {
         .http2_keep_alive_interval(Some(time::Duration::from_secs(15)))
 }
 
-//// Fallback to direct connection on error.
+/// Fallback to direct connection on error.
 pub fn build_proxied_client(
     proxy: &crate::util::proxy::ProxyConfig,
 ) -> reqwest::Client {
@@ -2570,13 +2569,12 @@ async fn fetch_advanced_with_client_and_progress(
                                     )?;
                                 }
 
-                                if let Some(progress) = progress.as_mut() {
-                                    if let Err(error) =
+                                if let Some(progress) = progress.as_mut()
+                                    && let Err(error) =
                                         progress(downloaded, total_size).await
                                     {
                                         tracing::warn!(%error, "Download progress callback failed");
                                     }
-                                }
                             }
 
                             Ok(Bytes::from(bytes))
@@ -3499,9 +3497,9 @@ async fn send_path_request_with_clients(
             .into());
         }
         current = Url::parse(&canonical_modrinth_cdn_url(
-            &repair_official_cdn_redirect(&original, &next, &location)
+            repair_official_cdn_redirect(&original, &next, &location)
                 .unwrap_or(next)
-                .to_string(),
+                .as_ref(),
         ))?;
     }
     unreachable!()
@@ -3779,13 +3777,19 @@ fn route_segmented_concurrency_cap(
 }
 
 fn configured_semaphore_limit(semaphore: &FetchSemaphore) -> usize {
-    if let Some(state) = crate::State::get_if_initialized() {
-        if std::ptr::eq(&state.fetch_semaphore.0, &semaphore.0)
-            || std::ptr::eq(&state.download_semaphore.0, &semaphore.0)
-            || std::ptr::eq(&state.api_semaphore.0, &semaphore.0)
-        {
-            return state.download_concurrency();
-        }
+    if let Some(state) = crate::State::get_if_initialized()
+        && (std::ptr::eq(
+            &raw const state.fetch_semaphore.0,
+            &raw const semaphore.0,
+        ) || std::ptr::eq(
+            &raw const state.download_semaphore.0,
+            &raw const semaphore.0,
+        ) || std::ptr::eq(
+            &raw const state.api_semaphore.0,
+            &raw const semaphore.0,
+        ))
+    {
+        return state.download_concurrency();
     }
     semaphore.0.available_permits().max(1)
 }
@@ -5135,8 +5139,7 @@ async fn try_segmented_download(
                 }
                 if last_expansion.elapsed() >= SEGMENT_EXPANSION_INTERVAL
                     && let Some(baseline) = expansion_baseline.take()
-                {
-                    if u128::from(snapshot.recent_average) * 100
+                    && u128::from(snapshot.recent_average) * 100
                         < u128::from(baseline) * 115
                     {
                         expansion_exhausted = true;
@@ -5148,7 +5151,6 @@ async fn try_segmented_download(
                         );
                         continue;
                     }
-                }
                 if let Some(reason) = expansion_block_reason(
                     snapshot,
                     active_ranges,

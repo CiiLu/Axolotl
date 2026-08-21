@@ -6,7 +6,8 @@ import {
 	DownloadIcon,
 	ExternalIcon,
 	FlaskConicalIcon,
-FolderOpenIcon, 	HomeIcon,
+	FolderOpenIcon,
+	HomeIcon,
 	LeftArrowIcon,
 	LibraryIcon,
 	LogInIcon,
@@ -14,12 +15,13 @@ FolderOpenIcon, 	HomeIcon,
 	PlusIcon,
 	RefreshCwIcon,
 	RightArrowIcon,
-RotateCounterClockwiseIcon, 
+	RotateCounterClockwiseIcon,
 	SettingsIcon,
 	SpinnerIcon,
 	UserIcon,
 	UsersIcon,
-	WorldIcon} from '@modrinth/assets'
+	WorldIcon,
+} from '@modrinth/assets'
 import {
 	Admonition,
 	Avatar,
@@ -102,23 +104,15 @@ import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
 import { configureCurseForgeManualDownloadWatcher } from '@/helpers/curseforge'
 import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
-import {
-	classifyDroppedItem,
-} from '@/helpers/drop'
+import { classifyDroppedItem } from '@/helpers/drop'
 import {
 	command_listener,
 	drop_classify_progress_listener,
 	java_download_confirmation_listener,
 	warning_listener,
 } from '@/helpers/events.js'
-import {
-	install_create_modpack_instance,
-	install_get_modpack_preview,
-} from '@/helpers/install'
-import {
-	get as getInstance,
-	run,
-} from '@/helpers/instance'
+import { install_create_modpack_instance, install_get_modpack_preview } from '@/helpers/install'
+import { get as getInstance, run } from '@/helpers/instance'
 import { reconcileMojangAuthSourceAtStartup } from '@/helpers/mojang-auth'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
@@ -401,6 +395,45 @@ const authUnreachable = computed(() => {
 	}
 	return false
 })
+
+const appUpdateDownload = {
+	progress: appUpdateState.progress,
+	version: ref(),
+}
+let unlistenUpdateDownload
+
+const {
+	metered,
+	finishedDownloading,
+	downloading,
+	restarting,
+	availableUpdate,
+	updateSize,
+	updatesEnabled,
+} = appUpdateState
+let delayedUpdatePopupTimeout = null
+
+async function checkUpdates() {
+	if (!(await areUpdatesEnabled())) {
+		console.log('Skipping update check as updates are disabled in this build or environment')
+		updatesEnabled.value = false
+
+		return
+	}
+
+	updatesEnabled.value = true
+	if (!offline.value) {
+		await performUpdateCheck().catch((error) => {
+			console.warn('Failed to check for launcher updates', error)
+		})
+	}
+	setTimeout(
+		() => {
+			checkUpdates()
+		},
+		5 /* min */ * 60 /* sec */ * 1000 /* ms */,
+	)
+}
 
 onMounted(async () => {
 	await useCheckDisableMouseover()
@@ -1124,7 +1157,6 @@ provide(
 )
 provide('previewMinecraftCrashModal', () => minecraftCrashModal.value?.showPreview())
 provide('previewPrivacyConsentModal', previewPrivacyConsentModal)
-provide('chooseImportMethod', chooseImportMethod)
 provide('previewUpdateAnnouncement', (version = null) => {
 	const previewVersion = version ?? pendingUpdateAnnouncementVersion.value
 	if (previewVersion) updateAnnouncementModal.value?.show(previewVersion)
@@ -1342,10 +1374,6 @@ const updateToPlayModal = ref()
 const modrinthLoginFlowWaitModal = ref()
 
 // ── Drop import system ──────────────────────────────────────────────────
-const onSkinsPage = computed(() => route.path === '/skins')
-const onSchematicWorkshopPage = computed(() => route.path === '/lab/schematic-preview')
-const isSchematicFile = (path: string) => /\.(litematic|schematic|schem)$/i.test(path)
-
 const dropImport = useDropImport({
 	notificationManager,
 	popupNotificationManager,
@@ -1374,14 +1402,6 @@ const {
 	dropFilePath,
 	dropProcessingNotificationId,
 	scanningInstances,
-	contentInstallIncompatibilityWarningVersions,
-	contentInstallIncompatibilityWarningCurrentGameVersion,
-	contentInstallIncompatibilityWarningCurrentLoader,
-	contentInstallIncompatibilityWarningProjectType,
-	contentInstallIncompatibilityWarningProjectIconUrl,
-	contentInstallIncompatibilityWarningProjectName,
-	contentInstallIncompatibilityWarningMessage,
-	contentInstallIncompatibilityWarningInstalling,
 	batchGroupKey,
 	incompatWarningKey,
 
@@ -1420,6 +1440,8 @@ const {
 	showForceAnalysisPrompt,
 	unknownReasonMessage,
 } = dropImport
+
+provide('chooseImportMethod', chooseImportMethod)
 
 watch(
 	dropIncompatibilityWarningModal,
@@ -1585,23 +1607,6 @@ async function handleCommand(e) {
 			.catch(handleError)
 	}
 }
-
-const appUpdateDownload = {
-	progress: appUpdateState.progress,
-	version: ref(),
-}
-let unlistenUpdateDownload
-
-const {
-	metered,
-	finishedDownloading,
-	downloading,
-	restarting,
-	availableUpdate,
-	updateSize,
-	updatesEnabled,
-} = appUpdateState
-let delayedUpdatePopupTimeout = null
 
 const updatePopupMessages = defineMessages({
 	updateAvailable: {
@@ -1800,28 +1805,6 @@ async function manualUpdateCheck() {
 	}
 
 	return await performUpdateCheck()
-}
-
-async function checkUpdates() {
-	if (!(await areUpdatesEnabled())) {
-		console.log('Skipping update check as updates are disabled in this build or environment')
-		updatesEnabled.value = false
-
-		return
-	}
-
-	updatesEnabled.value = true
-	if (!offline.value) {
-		await performUpdateCheck().catch((error) => {
-			console.warn('Failed to check for launcher updates', error)
-		})
-	}
-	setTimeout(
-		() => {
-			checkUpdates()
-		},
-		5 /* min */ * 60 /* sec */ * 1000 /* ms */,
-	)
 }
 
 async function downloadAvailableUpdate() {

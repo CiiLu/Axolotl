@@ -21,7 +21,6 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { convertFileSrc } from '@tauri-apps/api/core'
-import { NbtFile, NbtTag } from 'deepslate/nbt'
 import {
 	copyFile,
 	mkdir,
@@ -30,11 +29,12 @@ import {
 	rename,
 	writeTextFile,
 } from '@tauri-apps/plugin-fs'
+import { NbtFile, NbtTag } from 'deepslate/nbt'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 
-import StudioEditor from '@/components/instance/studio/StudioEditor.vue'
 import NbtEditor from '@/components/instance/studio/NbtEditor.vue'
+import StudioEditor from '@/components/instance/studio/StudioEditor.vue'
 import StudioEditorTabs from '@/components/instance/studio/StudioEditorTabs.vue'
 import {
 	type StudioDocument,
@@ -43,12 +43,12 @@ import {
 import { get_full_path } from '@/helpers/instance'
 import {
 	listenStudioFilesChanged,
-	readStudioText,
 	readStudioBinary,
+	readStudioText,
 	registerStudioWatcher,
 	trashStudioFile,
-	writeStudioBinary,
 	unregisterStudioWatcher,
+	writeStudioBinary,
 } from '@/helpers/studio'
 import type { GameInstance } from '@/helpers/types'
 import { highlightInFolder, openPath } from '@/helpers/utils'
@@ -174,7 +174,6 @@ const {
 	documents,
 	activeDocument,
 	activePath,
-	hasUnsavedChanges,
 	hasAnyUnsavedChanges,
 	activate: activateDocument,
 	open: openDocument,
@@ -636,7 +635,7 @@ async function openFile(node: StudioTreeNode) {
 			saving: false,
 		}
 		await openDocument(document)
-	} catch (error) {
+	} catch {
 		await openDocument({
 			kind: 'unsupported',
 			path: node.path,
