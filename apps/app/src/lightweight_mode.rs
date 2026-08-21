@@ -1,5 +1,8 @@
 use serde::Serialize;
-use std::{collections::VecDeque, sync::Mutex};
+use std::{
+    collections::{HashSet, VecDeque},
+    sync::Mutex,
+};
 use tauri::{
     AppHandle, Listener, Manager, WebviewUrl, WebviewWindowBuilder,
     menu::{
@@ -59,6 +62,8 @@ struct LightweightModeState {
     pending_commands: VecDeque<CommandPayload>,
     frontend_ready: bool,
     restoring: bool,
+    running_instance_ids: HashSet<String>,
+    tray_update_generation: u64,
 }
 
 impl Default for LightweightModeState {
@@ -71,6 +76,8 @@ impl Default for LightweightModeState {
             pending_commands: VecDeque::new(),
             frontend_ready: false,
             restoring: false,
+            running_instance_ids: HashSet::new(),
+            tray_update_generation: 0,
         }
     }
 }
@@ -115,7 +122,7 @@ impl LightweightMode {
             destroy_lightweight_host_window(app);
             return Err(error);
         }
-        update_tray_menu(app, true, true);
+        schedule_tray_menu_update(app);
         Ok(())
     }
 
@@ -141,19 +148,12 @@ impl LightweightMode {
         if let Ok(mut state) = self.0.lock() {
             state.active = false;
         }
-        update_tray_menu(app, false, self.has_running_processes());
+        schedule_tray_menu_update(app);
         Ok(())
     }
 
     fn is_active(&self) -> bool {
         self.0.lock().map(|state| state.active).unwrap_or(false)
-    }
-
-    fn has_running_processes(&self) -> bool {
-        self.0
-            .lock()
-            .map(|state| state.running_processes > 0)
-            .unwrap_or(false)
     }
 
     fn process_event(&self, app: &AppHandle, payload: ProcessEventPayload) {
@@ -174,11 +174,13 @@ impl LightweightMode {
             match payload.event.as_str() {
                 "launched" => {
                     state.running_processes += 1;
+                    state.running_instance_ids.insert(payload.instance_id);
                     None
                 }
                 "finished" => {
                     state.running_processes =
                         state.running_processes.saturating_sub(1);
+                    state.running_instance_ids.remove(&payload.instance_id);
                     let crashed = payload.crashed == Some(true);
                     if state.active && crashed {
                         state.pending_crashes.push_back(PendingCrash {
@@ -207,7 +209,7 @@ impl LightweightMode {
             }
         };
 
-        update_tray_menu(app, self.is_active(), self.has_running_processes());
+        schedule_tray_menu_update(app);
         match restore_window {
             Some((route, was_lightweight)) => {
                 let app = app.clone();
@@ -325,7 +327,7 @@ pub fn lightweight_mode_frontend_ready(
     let state = app.state::<LightweightMode>();
     state.set_route(route);
     let (pending_crashes, pending_commands) = state.mark_frontend_ready();
-    update_tray_menu(&app, state.is_active(), state.has_running_processes());
+    schedule_tray_menu_update(&app);
     Ok(FrontendReadyPayload {
         pending_crashes,
         pending_commands,
@@ -404,15 +406,40 @@ fn show_main_window(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn update_tray_menu(
-    app: &AppHandle,
-    active: bool,
-    has_running_processes: bool,
-) {
+fn schedule_tray_menu_update(app: &AppHandle) {
+    let generation = {
+        let state = app.state::<LightweightMode>();
+        let Ok(mut state) = state.0.lock() else {
+            return;
+        };
+        state.tray_update_generation =
+            state.tray_update_generation.wrapping_add(1);
+        state.tray_update_generation
+    };
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        if let Err(error) =
-            rebuild_tray_menu(&app, active, has_running_processes).await
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let (active, has_running_processes, running_instance_ids) = {
+            let state = app.state::<LightweightMode>();
+            let Ok(state) = state.0.lock() else {
+                return;
+            };
+            if state.tray_update_generation != generation {
+                return;
+            }
+            (
+                state.active,
+                state.running_processes > 0,
+                state.running_instance_ids.clone(),
+            )
+        };
+        if let Err(error) = rebuild_tray_menu(
+            &app,
+            active,
+            has_running_processes,
+            &running_instance_ids,
+        )
+        .await
         {
             tracing::warn!("Failed to update tray menu: {error}");
         }
@@ -423,6 +450,7 @@ async fn rebuild_tray_menu(
     app: &AppHandle,
     active: bool,
     has_running_processes: bool,
+    running_instance_ids: &HashSet<String>,
 ) -> Result<(), String> {
     let locale = theseus::settings::get()
         .await
@@ -457,15 +485,6 @@ async fn rebuild_tray_menu(
         Vec::new()
     });
     let mut instance_items = Vec::with_capacity(instances.len());
-    let running_instance_ids = theseus::process::get_all()
-        .await
-        .map(|processes| {
-            processes
-                .into_iter()
-                .map(|process| process.instance_id)
-                .collect::<std::collections::HashSet<_>>()
-        })
-        .unwrap_or_default();
     for instance in instances {
         let running = running_instance_ids.contains(&instance.instance.id);
         instance_items.push(
@@ -587,7 +606,7 @@ pub fn init(app: &AppHandle) {
         .build(app)
         .expect("failed to create system tray");
     let _tray = tray;
-    update_tray_menu(app, false, false);
+    schedule_tray_menu_update(app);
     let app_handle = app.clone();
     app.listen("process", move |event| {
         let Ok(payload) =
@@ -601,21 +620,11 @@ pub fn init(app: &AppHandle) {
     });
     let app_handle = app.clone();
     app.listen("instance", move |_| {
-        let state = app_handle.state::<LightweightMode>();
-        update_tray_menu(
-            &app_handle,
-            state.is_active(),
-            state.has_running_processes(),
-        );
+        schedule_tray_menu_update(&app_handle);
     });
     let app_handle = app.clone();
     app.listen("settings", move |_| {
-        let state = app_handle.state::<LightweightMode>();
-        update_tray_menu(
-            &app_handle,
-            state.is_active(),
-            state.has_running_processes(),
-        );
+        schedule_tray_menu_update(&app_handle);
     });
     let app_handle = app.clone();
     app.listen("command", move |event| {
