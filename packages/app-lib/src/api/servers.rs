@@ -265,7 +265,10 @@ pub async fn download_file(
     let destination = safe_join(&dir, filename)?;
     let partial = destination.with_extension("part");
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .user_agent(crate::launcher_user_agent())
+        .build()
+        .map_err(|e| ErrorKind::NetworkError(e.to_string()))?;
     let response = client
         .get(url)
         .send()

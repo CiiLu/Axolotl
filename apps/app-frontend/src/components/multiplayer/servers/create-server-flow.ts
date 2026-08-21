@@ -1,10 +1,11 @@
 import { RefreshCwIcon } from '@modrinth/assets'
 import {
-	fabricInstallerVersionsUrl,
 	type FabricInstallerVersionsResponse,
+	fabricInstallerVersionsUrl,
 	isServerTypeSupported,
-	latestPaperBuild,
+	latestStablePaperBuild,
 	type PaperBuildsResponse,
+	paperBuildsUrl,
 	pickFabricInstallerVersion,
 	requiredJavaMajorVersion,
 	resolveServerJar,
@@ -18,7 +19,9 @@ import {
 	type StageConfigInput,
 	useVIntl,
 } from '@modrinth/ui'
+import { getVersion } from '@tauri-apps/api/app'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
+import { type as osType } from '@tauri-apps/plugin-os'
 import { computed, markRaw, type Ref, ref } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
@@ -114,9 +117,28 @@ interface VanillaVersionInfoJson {
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-	const response = await tauriFetch(url)
+	const response = await tauriFetch(url, {
+		headers: { 'User-Agent': await launcherUserAgent() },
+	})
 	if (!response.ok) throw new Error('GET ' + url + ' failed: ' + response.status)
 	return (await response.json()) as T
+}
+
+let userAgentPromise: Promise<string> | null = null
+
+/**
+ * Identifying User-Agent, required by services like the PaperMC downloads API.
+ * Mirrors the format used by the Rust backend.
+ */
+function launcherUserAgent(): Promise<string> {
+	userAgentPromise ??= Promise.all([getVersion(), osType()]).then(
+		([version, platform]) =>
+			`garbage-human-studio/axolotl/${version} (${platform}; +https://www.ghs.red)`,
+	)
+	userAgentPromise = userAgentPromise.catch(
+		() => 'garbage-human-studio/axolotl (+https://www.ghs.red)',
+	)
+	return userAgentPromise
 }
 
 function toErrorMessage(error: unknown): string {
@@ -350,16 +372,13 @@ export function createCreateServerFlowContext(
 				filename = jar.filename
 			} else if (serverType.value === 'paper') {
 				const builds = await fetchJson<PaperBuildsResponse>(
-					'https://api.papermc.io/v2/projects/paper/versions/' +
-						encodeURIComponent(selectedGameVersion.value) +
-						'/builds',
+					paperBuildsUrl(selectedGameVersion.value),
 				)
-				const build = latestPaperBuild(builds)
 				const jar = resolveServerJar('paper', {
 					gameVersion: selectedGameVersion.value,
-					paperBuild: build ?? undefined,
+					paperBuild: latestStablePaperBuild(builds) ?? undefined,
 				})
-				if (!jar) throw new Error('Paper has no build for this game version')
+				if (!jar) throw new Error('Paper has no stable build for this game version')
 				url = jar.url
 				filename = jar.filename
 			}

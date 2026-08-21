@@ -7,6 +7,8 @@ import {
 	pickFabricInstallerVersion,
 	requiredJavaMajorVersion,
 	resolveServerJar,
+	type PaperBuildsResponse,
+	latestStablePaperBuild,
 } from './server-types.ts'
 
 test('maps legacy game versions to their required Java major', () => {
@@ -93,6 +95,42 @@ test('fabric server jar requires an installer version', () => {
 test('picks the newest fabric installer version', () => {
 	assert.equal(pickFabricInstallerVersion([{ version: '1.1.2', stable: true }]), '1.1.2')
 	assert.equal(pickFabricInstallerVersion([]), null)
+})
+
+test('resolves paper server jar from the newest stable fill build', () => {
+	const builds: PaperBuildsResponse = [
+		{
+			id: 112,
+			channel: 'STABLE',
+			downloads: {
+				'server:default': {
+					name: 'paper-26.2-112.jar',
+					url: 'https://fill-data.papermc.io/v1/objects/abc/paper-26.2-112.jar',
+				},
+			},
+		},
+		{
+			id: 113,
+			channel: 'EXPERIMENTAL',
+			downloads: {
+				'server:default': { name: 'paper-26.2-113.jar', url: 'https://fill-data.papermc.io/v3/x' },
+			},
+		},
+	]
+	const build = latestStablePaperBuild(builds)
+	assert.equal(build?.id, 112)
+	const jar = resolveServerJar('paper', { gameVersion: '26.2', paperBuild: build ?? undefined })
+	assert.equal(jar?.url, 'https://fill-data.papermc.io/v1/objects/abc/paper-26.2-112.jar')
+	assert.equal(jar?.filename, 'server.jar')
+
+	assert.equal(latestStablePaperBuild([]), null)
+	assert.equal(
+		resolveServerJar('paper', {
+			gameVersion: '26.2',
+			paperBuild: { id: 1, channel: 'STABLE', downloads: {} },
+		}),
+		null,
+	)
 })
 
 test('installer-based types resolve to null until implemented', () => {

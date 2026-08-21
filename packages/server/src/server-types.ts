@@ -1,4 +1,5 @@
 import type {
+	PaperBuild,
 	ResolveServerJarInput,
 	ServerJarDownload,
 	ServerTypeDefinition,
@@ -6,7 +7,7 @@ import type {
 } from './types.ts'
 
 const FABRIC_META_URL = 'https://meta.fabricmc.net/v2'
-const PAPER_API_URL = 'https://api.papermc.io/v2'
+const PAPER_API_URL = 'https://fill.papermc.io/v3'
 const PAPER_PROJECT = 'paper'
 
 /**
@@ -82,10 +83,6 @@ export function paperBuildsUrl(gameVersion: string): string {
 	return `${PAPER_API_URL}/projects/${PAPER_PROJECT}/versions/${gameVersion}/builds`
 }
 
-export function paperDownloadUrl(gameVersion: string, build: number, filename: string): string {
-	return `${PAPER_API_URL}/projects/${PAPER_PROJECT}/versions/${gameVersion}/builds/${build}/downloads/${filename}`
-}
-
 /**
  * Resolves the server jar download for a server type from metadata the caller
  * fetched. Returns null when the type needs an installer step or required
@@ -109,33 +106,20 @@ export function resolveServerJar(
 			}
 		}
 		case 'paper': {
-			if (!input.paperBuild) return null
-			return {
-				url: paperDownloadUrl(input.gameVersion, input.paperBuild.build, input.paperBuild.filename),
-				filename: 'server.jar',
-			}
+			const download = input.paperBuild?.downloads['server:default']
+			if (!download) return null
+			return { url: download.url, filename: 'server.jar' }
 		}
 		default:
 			return null
 	}
 }
 
-export interface PaperBuildsResponse {
-	builds: Array<{ build: number; downloads: { application: { name: string; sha256: string } } }>
-}
+export type PaperBuildsResponse = PaperBuild[]
 
-export function latestPaperBuild(response: PaperBuildsResponse): {
-	build: number
-	filename: string
-	sha256: string
-} | null {
-	const latest = response.builds?.[response.builds.length - 1]
-	if (!latest?.downloads?.application) return null
-	return {
-		build: latest.build,
-		filename: latest.downloads.application.name,
-		sha256: latest.downloads.application.sha256,
-	}
+/** The newest stable build from a Fill v3 builds response (builds are newest first). */
+export function latestStablePaperBuild(response: PaperBuildsResponse): PaperBuild | null {
+	return response?.find((build) => build.channel === 'STABLE') ?? null
 }
 
 export interface FabricInstallerVersionsResponse {

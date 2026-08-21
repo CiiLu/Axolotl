@@ -32,12 +32,26 @@ export interface VanillaVersionInfo {
 	downloads: { server?: VanillaVersionInfoDownload }
 }
 
+export interface PaperBuildDownload {
+	name: string
+	url: string
+	checksums?: { sha256?: string }
+	size?: number
+}
+
+/** A build from the PaperMC Fill v3 downloads service. */
+export interface PaperBuild {
+	id: number
+	channel: string
+	downloads: { 'server:default'?: PaperBuildDownload }
+}
+
 export interface ResolveServerJarInput {
 	gameVersion: string
 	loaderVersion?: string
 	installerVersion?: string
 	vanillaVersionInfo?: VanillaVersionInfo
-	paperBuild?: { build: number; filename: string; sha256: string }
+	paperBuild?: PaperBuild
 }
 
 export type ServerStatus = 'created' | 'eula_pending' | 'ready' | 'starting' | 'running' | 'crashed'
