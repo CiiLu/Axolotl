@@ -1,5 +1,5 @@
 use crate::api::Result;
-use tauri::Runtime;
+use tauri::{Emitter, Runtime};
 use theseus::prelude::*;
 use theseus::{ProxyConfig, ProxyTestResult};
 
@@ -32,8 +32,12 @@ pub async fn settings_get() -> Result<Settings> {
 // Set full settings
 // invoke('plugin:settings|settings_set', settings)
 #[tauri::command]
-pub async fn settings_set(settings: Settings) -> Result<()> {
+pub async fn settings_set(
+    app: tauri::AppHandle<impl Runtime>,
+    settings: Settings,
+) -> Result<()> {
     settings::set(settings).await?;
+    let _ = app.emit("settings", ());
     Ok(())
 }
 

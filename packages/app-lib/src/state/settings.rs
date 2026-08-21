@@ -169,6 +169,7 @@ pub struct Settings {
     pub force_fullscreen: bool,
     pub game_resolution: WindowSize,
     pub hide_on_process_start: bool,
+    pub enter_lightweight_mode_on_game_launch: bool,
     pub auto_set_java_high_performance_mode: bool,
     pub hooks: Hooks,
 
@@ -237,7 +238,7 @@ impl Settings {
 				discord_rpc, developer_mode, telemetry, telemetry_consent_version, personalized_ads,
                 onboarded, onboarding_version, onboarding_instance_tour_completed,
                 json(extra_launch_args) extra_launch_args, json(custom_env_vars) custom_env_vars,
-                mc_memory_max, mc_memory_auto, mc_force_fullscreen, mc_game_resolution_x, mc_game_resolution_y, hide_on_process_start,
+                mc_memory_max, mc_memory_auto, mc_force_fullscreen, mc_game_resolution_x, mc_game_resolution_y, hide_on_process_start, enter_lightweight_mode_on_game_launch,
                 auto_set_java_high_performance_mode,
                 hook_pre_launch, hook_wrapper, hook_post_exit,
                 custom_dir, prev_custom_dir, migrated, json(feature_flags) feature_flags, toggle_sidebar,
@@ -266,7 +267,6 @@ impl Settings {
         )
         .fetch_one(exec)
         .await?;
-
         let settings = Self {
             max_concurrent_downloads: res.max_concurrent_downloads as usize,
             max_concurrent_writes: res.max_concurrent_writes as usize,
@@ -355,6 +355,9 @@ impl Settings {
                 res.mc_game_resolution_y as u16,
             ),
             hide_on_process_start: res.hide_on_process_start == 1,
+            enter_lightweight_mode_on_game_launch: res
+                .enter_lightweight_mode_on_game_launch
+                == 1,
             auto_set_java_high_performance_mode: res
                 .auto_set_java_high_performance_mode
                 == 1,
@@ -561,6 +564,13 @@ impl Settings {
         )
         .execute(exec)
         .await?;
+
+        sqlx::query(
+			"UPDATE settings SET enter_lightweight_mode_on_game_launch = ? WHERE id = 0",
+		)
+		.bind(self.enter_lightweight_mode_on_game_launch)
+		.execute(exec)
+		.await?;
 
         sqlx::query("UPDATE settings SET download_engine = ? WHERE id = 0")
             .bind(self.download_engine.as_str())
@@ -1085,6 +1095,67 @@ mod tests {
 
         let reloaded = Settings::get(&pool).await.unwrap();
         assert!(reloaded.memory.optimize_before_launch);
+    }
+
+    #[tokio::test]
+    async fn lightweight_mode_setting_defaults_off_and_round_trips() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+
+        let mut settings = Settings::get(&pool).await.unwrap();
+        assert!(!settings.enter_lightweight_mode_on_game_launch);
+
+        settings.enter_lightweight_mode_on_game_launch = true;
+        settings.update(&pool).await.unwrap();
+
+        let reloaded = Settings::get(&pool).await.unwrap();
+        assert!(reloaded.enter_lightweight_mode_on_game_launch);
+    }
+
+    #[tokio::test]
+    async fn lightweight_mode_migration_upgrades_existing_settings_database() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK (id = 0))",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO settings (id) VALUES (0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        sqlx::raw_sql(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/migrations/20260821120000_lightweight-mode.sql"
+        )))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let enabled: i64 = sqlx::query_scalar(
+            "SELECT enter_lightweight_mode_on_game_launch FROM settings WHERE id = 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(enabled, 0);
+        assert!(
+            sqlx::query("PRAGMA foreign_key_check")
+                .fetch_all(&pool)
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[tokio::test]
