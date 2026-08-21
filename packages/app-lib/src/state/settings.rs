@@ -1136,7 +1136,7 @@ mod tests {
 
         sqlx::raw_sql(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/migrations/20260821120000_lightweight-mode.sql"
+            "/migrations/20260821120001_lightweight-mode.sql"
         )))
         .execute(&pool)
         .await
