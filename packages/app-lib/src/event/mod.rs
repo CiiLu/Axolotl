@@ -234,7 +234,7 @@ pub enum InstanceBulkUpdateProgressStage {
     Finishing,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "event")]
 pub enum CommandPayload {
     InstallMod {

@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::sync::Mutex;
+use std::{collections::VecDeque, sync::Mutex};
 use tauri::{
     AppHandle, Listener, Manager, WebviewUrl, WebviewWindowBuilder,
     menu::{
@@ -8,6 +8,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     window::WindowBuilder,
 };
+use theseus::prelude::CommandPayload;
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const LIGHTWEIGHT_HOST_WINDOW_LABEL: &str = "lightweight-host";
@@ -54,7 +55,10 @@ struct LightweightModeState {
     active: bool,
     route: String,
     running_processes: usize,
-    pending_crash: Option<PendingCrash>,
+    pending_crashes: VecDeque<PendingCrash>,
+    pending_commands: VecDeque<CommandPayload>,
+    frontend_ready: bool,
+    restoring: bool,
 }
 
 impl Default for LightweightModeState {
@@ -63,7 +67,10 @@ impl Default for LightweightModeState {
             active: false,
             route: "/".to_string(),
             running_processes: 0,
-            pending_crash: None,
+            pending_crashes: VecDeque::new(),
+            pending_commands: VecDeque::new(),
+            frontend_ready: false,
+            restoring: false,
         }
     }
 }
@@ -99,6 +106,7 @@ impl LightweightMode {
         }
 
         state.active = true;
+        state.frontend_ready = false;
         drop(state);
         if let Err(error) = destroy_main_window(app) {
             if let Ok(mut state) = self.0.lock() {
@@ -119,7 +127,16 @@ impl LightweightMode {
 
         let route = state.route.clone();
         drop(state);
-        create_main_window(app, &route)?;
+        if let Ok(mut state) = self.0.lock() {
+            state.frontend_ready = false;
+            state.restoring = true;
+        }
+        if let Err(error) = create_main_window(app, &route) {
+            if let Ok(mut state) = self.0.lock() {
+                state.restoring = false;
+            }
+            return Err(error);
+        }
         destroy_lightweight_host_window(app);
         if let Ok(mut state) = self.0.lock() {
             state.active = false;
@@ -164,7 +181,7 @@ impl LightweightMode {
                         state.running_processes.saturating_sub(1);
                     let crashed = payload.crashed == Some(true);
                     if state.active && crashed {
-                        state.pending_crash = Some(PendingCrash {
+                        state.pending_crashes.push_back(PendingCrash {
                             instance_id: payload.instance_id,
                             uuid: payload.uuid,
                         });
@@ -177,6 +194,10 @@ impl LightweightMode {
                     if should_restore {
                         let was_lightweight = state.active;
                         state.active = false;
+                        if was_lightweight {
+                            state.frontend_ready = false;
+                            state.restoring = true;
+                        }
                         Some((state.route.clone(), was_lightweight))
                     } else {
                         None
@@ -189,18 +210,28 @@ impl LightweightMode {
         update_tray_menu(app, self.is_active(), self.has_running_processes());
         match restore_window {
             Some((route, was_lightweight)) => {
-                let result = if was_lightweight {
-                    create_main_window(app, &route).map(|()| {
-                        destroy_lightweight_host_window(app);
-                    })
-                } else {
-                    show_main_window(app)
-                };
-                if let Err(error) = result {
-                    tracing::error!(
-                        "Failed to restore launcher after Minecraft exited: {error}"
-                    );
-                }
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    let result = if was_lightweight {
+                        create_main_window(&app, &route).map(|()| {
+                            destroy_lightweight_host_window(&app);
+                        })
+                    } else {
+                        show_main_window(&app)
+                    };
+                    if let Err(error) = result {
+                        if was_lightweight {
+                            if let Ok(mut state) =
+                                app.state::<LightweightMode>().0.lock()
+                            {
+                                state.restoring = false;
+                            }
+                        }
+                        tracing::error!(
+                            "Failed to restore launcher after Minecraft exited: {error}"
+                        );
+                    }
+                });
             }
             None if payload.event == "launched" => {
                 let app = app.clone();
@@ -244,11 +275,35 @@ impl LightweightMode {
         }
     }
 
-    fn take_pending_crash(&self) -> Option<PendingCrash> {
+    fn mark_frontend_ready(&self) -> (Vec<PendingCrash>, Vec<CommandPayload>) {
         self.0
             .lock()
-            .ok()
-            .and_then(|mut state| state.pending_crash.take())
+            .map(|mut state| {
+                state.frontend_ready = true;
+                state.restoring = false;
+                (
+                    state.pending_crashes.drain(..).collect(),
+                    state.pending_commands.drain(..).collect(),
+                )
+            })
+            .unwrap_or_else(|_| (Vec::new(), Vec::new()))
+    }
+
+    fn queue_command(&self, command: CommandPayload) {
+        if let Ok(mut state) = self.0.lock() {
+            state.pending_commands.push_back(command);
+        }
+    }
+
+    fn is_frontend_ready(&self) -> bool {
+        self.0
+            .lock()
+            .map(|state| state.frontend_ready)
+            .unwrap_or(false)
+    }
+
+    fn is_restoring(&self) -> bool {
+        self.0.lock().map(|state| state.restoring).unwrap_or(false)
     }
 }
 
@@ -266,12 +321,21 @@ struct ProcessEventPayload {
 pub fn lightweight_mode_frontend_ready(
     app: AppHandle,
     route: String,
-) -> Result<Option<PendingCrash>, String> {
+) -> Result<FrontendReadyPayload, String> {
     let state = app.state::<LightweightMode>();
     state.set_route(route);
-    let pending_crash = state.take_pending_crash();
+    let (pending_crashes, pending_commands) = state.mark_frontend_ready();
     update_tray_menu(&app, state.is_active(), state.has_running_processes());
-    Ok(pending_crash)
+    Ok(FrontendReadyPayload {
+        pending_crashes,
+        pending_commands,
+    })
+}
+
+#[derive(Serialize)]
+pub struct FrontendReadyPayload {
+    pub pending_crashes: Vec<PendingCrash>,
+    pub pending_commands: Vec<CommandPayload>,
 }
 
 #[tauri::command]
@@ -320,6 +384,7 @@ fn create_main_window(app: &AppHandle, route: &str) -> Result<(), String> {
         .min_inner_size(1100.0, 700.0)
         .resizable(true)
         .transparent(true)
+        .zoom_hotkeys_enabled(false)
         .visible(false);
         #[cfg(not(target_os = "macos"))]
         {
@@ -453,17 +518,23 @@ async fn rebuild_tray_menu(
 fn handle_menu_event(app: &AppHandle, id: &str) {
     match id {
         "show-launcher" => {
-            let _ = app.state::<LightweightMode>().exit(app);
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = app.state::<LightweightMode>().exit(&app);
+            });
         }
         "lightweight-mode" => {
-            let state = app.state::<LightweightMode>();
-            if state.is_active() {
-                let _ = state.exit(app);
-            } else if let Err(error) = state.enter(app) {
-                tracing::debug!(
-                    "Lightweight mode was not entered from tray: {error}"
-                );
-            }
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move {
+                let state = app.state::<LightweightMode>();
+                if state.is_active() {
+                    let _ = state.exit(&app);
+                } else if let Err(error) = state.enter(&app) {
+                    tracing::debug!(
+                        "Lightweight mode was not entered from tray: {error}"
+                    );
+                }
+            });
         }
         "quit" => app.exit(0),
         instance_id if instance_id.starts_with(LAUNCH_INSTANCE_PREFIX) => {
@@ -507,10 +578,10 @@ pub fn init(app: &AppHandle) {
                     ..
                 }
             ) {
-                let _ = tray
-                    .app_handle()
-                    .state::<LightweightMode>()
-                    .exit(&tray.app_handle());
+                let app = tray.app_handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let _ = app.state::<LightweightMode>().exit(&app);
+                });
             }
         })
         .build(app)
@@ -536,5 +607,36 @@ pub fn init(app: &AppHandle) {
             state.is_active(),
             state.has_running_processes(),
         );
+    });
+    let app_handle = app.clone();
+    app.listen("settings", move |_| {
+        let state = app_handle.state::<LightweightMode>();
+        update_tray_menu(
+            &app_handle,
+            state.is_active(),
+            state.has_running_processes(),
+        );
+    });
+    let app_handle = app.clone();
+    app.listen("command", move |event| {
+        let Ok(command) =
+            serde_json::from_str::<CommandPayload>(event.payload())
+        else {
+            return;
+        };
+        let state = app_handle.state::<LightweightMode>();
+        if state.is_frontend_ready()
+            || (!state.is_active() && !state.is_restoring())
+        {
+            return;
+        }
+        state.queue_command(command);
+        if !state.is_active() {
+            return;
+        }
+        let app = app_handle.clone();
+        tauri::async_runtime::spawn(async move {
+            let _ = app.state::<LightweightMode>().exit(&app);
+        });
     });
 }
