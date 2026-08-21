@@ -52,6 +52,18 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Fixed a bug where the background image could not be switched normally in some cases.',
 				},
+				{
+					'en-US':
+						'Fixed Forge-based Minecraft instances closing before startup when their loader metadata reused JVM options.',
+					'zh-CN':
+						'修复 Forge 实例的加载器元数据重复使用 JVM 参数时，会在启动前直接退出的问题。',
+				},
+				{
+					'en-US':
+						'Fixed early Minecraft startup failures sometimes leaving an empty launcher log instead of the error output.',
+					'zh-CN':
+						'修复 Minecraft 启动早期失败时启动器日志有时为空、未记录错误输出的问题。',
+				},
 			],
 		},
 	},

@@ -1005,7 +1005,9 @@ pub async fn download_version_info(
         .version_dir(&version_id)
         .join(format!("{version_id}.json"));
 
-    let res = if path.exists() && !force.unwrap_or(false) {
+    let cache_is_current =
+        loader.is_none() || derived_version_cache_is_current(&path).await;
+    let res = if path.exists() && !force.unwrap_or(false) && cache_is_current {
         let mut info: GameVersionInfo = io::read(&path)
             .err_into::<crate::Error>()
             .await
@@ -1156,6 +1158,9 @@ pub async fn download_version_info(
         info.id.clone_from(&version_id);
 
         write_version_info(&path, serde_json::to_vec(&info)?).await?;
+        if loader.is_some() {
+            write_derived_version_cache_marker(&path).await?;
+        }
         info
     };
 
@@ -1208,6 +1213,27 @@ async fn write_version_info(path: &Path, data: Vec<u8>) -> crate::Result<()> {
         io::create_dir_all(parent).await?;
     }
     io::write(path, data).await?;
+    Ok(())
+}
+
+const DERIVED_VERSION_CACHE_FORMAT: &str = "1";
+
+fn derived_version_cache_marker_path(path: &Path) -> PathBuf {
+    path.with_extension("json.axolotl-format")
+}
+
+async fn derived_version_cache_is_current(path: &Path) -> bool {
+    tokio::fs::read_to_string(derived_version_cache_marker_path(path))
+        .await
+        .is_ok_and(|format| format.trim() == DERIVED_VERSION_CACHE_FORMAT)
+}
+
+async fn write_derived_version_cache_marker(path: &Path) -> crate::Result<()> {
+    io::write(
+        derived_version_cache_marker_path(path),
+        DERIVED_VERSION_CACHE_FORMAT,
+    )
+    .await?;
     Ok(())
 }
 
@@ -2374,6 +2400,22 @@ mod tests {
             io::read(&path).await.unwrap(),
             br#"{"id":"1.21.11-21.11.44"}"#
         );
+    }
+
+    #[tokio::test]
+    async fn derived_version_cache_requires_current_format_marker() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("1.20.1-47.2.20.json");
+        write_version_info(&path, b"{}".to_vec()).await.unwrap();
+
+        assert!(!derived_version_cache_is_current(&path).await);
+        io::write(derived_version_cache_marker_path(&path), "0")
+            .await
+            .unwrap();
+        assert!(!derived_version_cache_is_current(&path).await);
+
+        write_derived_version_cache_marker(&path).await.unwrap();
+        assert!(derived_version_cache_is_current(&path).await);
     }
 
     #[test]
