@@ -44,11 +44,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'zh-CN': '修复添加了背景图的侧边栏无法正常跟随主题颜色并提供模糊效果的问题。',
-					'en-US': 'Fixed a bug where the sidebar with a background image was unable to follow the theme color and provide a blurry effect.',
-				}
+					'en-US':
+						'Fixed a bug where the sidebar with a background image was unable to follow the theme color and provide a blurry effect.',
+				},
 			],
 		},
-	}
+	},
 	{
 		id: 'launcher-1.8.8',
 		version: '1.8.8',
