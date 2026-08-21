@@ -664,7 +664,16 @@ async fn collect_launcher_instances(
         if game_dir_instances.len() == 1 {
             check_compatible_mode(&mut game_dir_instances).await;
         }
-        for inst in game_dir_instances {
+        for mut inst in game_dir_instances {
+            // For compatible mode instances, clean up the display name.
+            // ".minecraft:versions/1.21-NeoForge" → "1.21-NeoForge"
+            if inst.compatible_mode {
+                if let Some(pos) = inst.name.rfind(':') {
+                    let bare = &inst.name[pos + 1..];
+                    let clean = bare.strip_prefix("versions/").unwrap_or(bare);
+                    inst.name = clean.to_string();
+                }
+            }
             collector.push_instance(inst);
         }
     }

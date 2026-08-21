@@ -30,6 +30,7 @@ const AI_OUTPUT_CONTRACT: &str = "Return only JSON in the form {\"translations\"
 #[serde(rename_all = "kebab-case")]
 pub enum TranslationProvider {
     Google,
+    #[serde(rename = "deepl")]
     DeepL,
     Ai,
 }
@@ -546,11 +547,11 @@ async fn deepl_translate(
     );
 
     let mut body = serde_json::Map::new();
+    // Send text as a plain string — both the official DeepL API and
+    // community proxies (e.g. DeepLX) accept this format.
     body.insert(
         "text".to_string(),
-        serde_json::Value::Array(vec![serde_json::Value::String(
-            segment.text.clone(),
-        )]),
+        serde_json::Value::String(segment.text.clone()),
     );
     body.insert(
         "target_lang".to_string(),
@@ -569,25 +570,93 @@ async fn deepl_translate(
     );
 
     let client = crate::util::fetch::configured_client().await?;
-    let auth_header = format!("DeepL-Auth-Key {}", api_key);
+
+    // Official DeepL API only accepts DeepL-Auth-Key; custom/proxy endpoints
+    // are tried with Bearer first and fall back to DeepL-Auth-Key on auth failure.
+    let is_official_deepl = api_endpoint.contains("api-free.deepl.com")
+        || api_endpoint.contains("api.deepl.com");
+
+    let primary_auth = if is_official_deepl {
+        format!("DeepL-Auth-Key {}", api_key)
+    } else {
+        format!("Bearer {}", api_key)
+    };
+    let fallback_auth = if is_official_deepl {
+        None
+    } else {
+        Some(format!("DeepL-Auth-Key {}", api_key))
+    };
+
     tracing::debug!(
-        auth_header_prefix = %if auth_header.len() > 20 { &auth_header[..20] } else { &auth_header },
-        "Authorization header"
+        auth_format = %if is_official_deepl { "DeepL-Auth-Key" } else { "Bearer" },
+        has_fallback = %fallback_auth.is_some(),
+        "Authorization strategy"
     );
 
-    let response = send_with_retry(|| {
-        client
-            .post(api_endpoint)
-            .header("Authorization", &auth_header)
-            .header("Content-Type", "application/json")
-            .json(&body)
-    })
-    .await?;
+    let value: Value = 'translate: {
+        let response = send_with_retry(|| {
+            client
+                .post(api_endpoint)
+                .header("Authorization", &primary_auth)
+                .header("Content-Type", "application/json")
+                .json(&body)
+        })
+        .await?;
 
-    let status = response.status();
-    tracing::info!(status = %status, "DeepL response status");
+        let status = response.status();
+        tracing::info!(status = %status, "DeepL response status (primary attempt)");
 
-    if !status.is_success() {
+        // Primary succeeded — parse and return
+        if status.is_success() {
+            break 'translate response.json().await.map_err(|e| {
+                tracing::error!(error = %e, "Failed to parse DeepL response JSON");
+                ErrorKind::OtherError(format!("Failed to parse DeepL response: {}", e))
+            })?;
+        }
+
+        // 403 on a custom endpoint → try fallback auth format
+        if status == StatusCode::FORBIDDEN {
+            if let Some(ref fallback) = fallback_auth {
+                let error_text = response.text().await.unwrap_or_default();
+                tracing::warn!(
+                    error_body = %error_text,
+                    "DeepL primary auth rejected, retrying with DeepL-Auth-Key"
+                );
+
+                let retry = send_with_retry(|| {
+                    client
+                        .post(api_endpoint)
+                        .header("Authorization", fallback.as_str())
+                        .header("Content-Type", "application/json")
+                        .json(&body)
+                })
+                .await?;
+
+                let retry_status = retry.status();
+                tracing::info!(status = %retry_status, "DeepL response status (fallback attempt)");
+
+                if retry_status.is_success() {
+                    break 'translate retry.json().await.map_err(|e| {
+                        tracing::error!(error = %e, "Failed to parse DeepL fallback response JSON");
+                        ErrorKind::OtherError(format!("Failed to parse DeepL response: {}", e))
+                    })?;
+                }
+
+                let retry_error = retry.text().await.unwrap_or_default();
+                tracing::error!(
+                    status = %retry_status,
+                    error_body = %retry_error,
+                    "DeepL fallback also failed"
+                );
+                return Err(ErrorKind::OtherError(format!(
+                    "DeepL API error: HTTP {} - {}",
+                    retry_status, retry_error
+                ))
+                .into());
+            }
+        }
+
+        // Non-403 error or 403 without fallback
         let error_text = response.text().await.unwrap_or_default();
         tracing::error!(
             status = %status,
@@ -599,12 +668,7 @@ async fn deepl_translate(
             status, error_text
         ))
         .into());
-    }
-
-    let value: Value = response.json().await.map_err(|e| {
-        tracing::error!(error = %e, "Failed to parse DeepL response JSON");
-        ErrorKind::OtherError(format!("Failed to parse DeepL response: {}", e))
-    })?;
+    };
 
     tracing::debug!(response = %value, "DeepL response body");
 

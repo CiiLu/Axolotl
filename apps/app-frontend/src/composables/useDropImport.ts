@@ -581,53 +581,34 @@ export function useDropImport(options: DropImportOptions) {
 		basePath: string,
 		results: ScanResult[],
 	): CompatibleModeCandidate | null {
-		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
-		if (totalInstances !== 1 || !results[0]?.instances[0]) {
-			dropDebug('checkForCompatibleMode: no single instance', { totalInstances })
-			return null
-		}
+		// Find the first instance flagged as compatible mode by the backend.
+		for (const result of results) {
+			for (const inst of result.instances) {
+				if (!inst.compatibleMode) continue
 
-		const single = results[0].instances[0]
-		// Instance names may carry a launcher prefix like
-		// ".minecraft:versions/1.12.2" or just "versions/1.12.2" or bare "1.12.2".
-		// Extract the bare version name, and derive GameDir from the path.
-		let versionName = single.name
-		const colonIdx = versionName.lastIndexOf(':')
-		if (colonIdx >= 0) {
-			versionName = versionName.slice(colonIdx + 1)
-		}
-		if (versionName.startsWith('versions/')) {
-			versionName = versionName.slice('versions/'.length)
-		}
-		dropDebug('checkForCompatibleMode', {
-			name: single.name,
-			versionName,
-			path: single.path,
-			compatibleMode: single.compatibleMode,
-			basePath,
-		})
+				// Extract bare version name from path: .../versions/<name>
+				const pathParts = inst.path.replace(/\\/g, '/').split('/')
+				const versionsIdx = pathParts.lastIndexOf('versions')
+				if (versionsIdx < 0 || versionsIdx >= pathParts.length - 1) continue
 
-		// Derive GameDir from the path: it ends with /versions/<versionName>
-		const versionsSuffix = `/versions/${versionName}`
-		if (!single.path.endsWith(versionsSuffix)) {
-			dropDebug('checkForCompatibleMode: path does not end with versions suffix', {
-				versionsSuffix,
-				path: single.path,
-			})
-			return null
+				const versionName = pathParts[versionsIdx + 1]
+				const gameDir = pathParts.slice(0, versionsIdx).join('/')
+				dropDebug('checkForCompatibleMode: found compatible instance', {
+					name: inst.name,
+					versionName,
+					gameDir,
+					path: inst.path,
+				})
+				return {
+					basePath: gameDir,
+					versionName,
+					versionPath: inst.path,
+					jsonPath: `${inst.path}/${versionName}.json`,
+				}
+			}
 		}
-		const gameDir = single.path.slice(0, -versionsSuffix.length)
-		dropDebug('checkForCompatibleMode: candidate', {
-			gameDir,
-			versionName,
-			compatibleMode: single.compatibleMode,
-		})
-		return {
-			basePath: gameDir,
-			versionName,
-			versionPath: single.path,
-			jsonPath: `${single.path}/${versionName}.json`,
-		}
+		dropDebug('checkForCompatibleMode: no compatible instance found')
+		return null
 	}
 
 	function showCompatibleModeModal(
@@ -810,12 +791,6 @@ export function useDropImport(options: DropImportOptions) {
 			const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
 			dropDebug('handleDropConfirm:.minecraft scan result', { totalInstances, results })
 
-			const compatibleModeCandidate = checkForCompatibleMode(dropFilePath.value, results)
-			if (compatibleModeCandidate) {
-				showCompatibleModeModal(compatibleModeCandidate, dropFilePath.value, results)
-				return
-			}
-
 			if (totalInstances === 0) {
 				currentImportContext.value = null
 				dropDebug('handleDropConfirm: no instances found in.minecraft folder')
@@ -920,16 +895,6 @@ export function useDropImport(options: DropImportOptions) {
 				dropDebug('handleDropConfirm: no instances found')
 				addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
 				cleanupLauncherZipTemp()
-				return
-			}
-
-			const compatibleModeCandidate = checkForCompatibleMode(scanBasePath, results)
-			if (compatibleModeCandidate) {
-				dropDebug('handleDropConfirm: launcher compatible mode candidate', {
-					candidate: compatibleModeCandidate,
-					launcherType,
-				})
-				showCompatibleModeModal(compatibleModeCandidate, scanBasePath, results, launcherType)
 				return
 			}
 
