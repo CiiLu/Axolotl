@@ -96,7 +96,7 @@ pub async fn get_importable_instances(
     launcher_type: ImportLauncherType,
     base_path: PathBuf,
 ) -> crate::Result<Vec<ImportableInstance>> {
-    let mut instances = match launcher_type {
+    let instances = match launcher_type {
         ImportLauncherType::Axolotl => get_axolotl_instances(&base_path).await,
         ImportLauncherType::ModrinthApp => {
             get_modrinth_app_instances(&base_path).await
@@ -135,12 +135,11 @@ pub async fn get_importable_instances(
         }
     }?;
 
-    // For non-Generic launchers, check compatible mode by deriving the
-    // GameDir from the instance path.  Generic already computes this
-    // inside `get_generic_instances`.
-    if !matches!(launcher_type, ImportLauncherType::Generic) {
-        check_compatible_mode(&mut instances).await;
-    }
+    // For Generic, compatible mode is already checked inside
+    // `get_generic_instances`.  For launchers that use
+    // `collect_launcher_instances` (PCL2/PCL2CE, HMCL, MultiMC, etc.),
+    // compatible mode is checked per-GameDir inside that function.
+    // No global check needed here.
 
     Ok(instances)
 }
@@ -153,20 +152,61 @@ pub async fn get_importable_instances(
 /// per-version `resourcepacks/`, and a valid version JSON.
 async fn check_compatible_mode(instances: &mut [ImportableInstance]) {
     if instances.len() != 1 {
+        tracing::debug!(
+            "check_compatible_mode: skipping, instances.len()={}",
+            instances.len()
+        );
         return;
     }
     let instance = &instances[0];
+    tracing::debug!(
+        "check_compatible_mode: checking instance name={:?} path={:?}",
+        instance.name,
+        instance.path
+    );
+
+    // Handle both bare name ("1.12.2") and versions/-prefixed name
+    // ("versions/1.12.2") produced by `collect_child_instances`.
+    let version_name = instance
+        .name
+        .strip_prefix("versions/")
+        .unwrap_or(&instance.name);
+    tracing::debug!(
+        "check_compatible_mode: resolved version_name={:?}",
+        version_name
+    );
+
     let name_sep = format!("/{}", instance.name);
-    let Some(versions_stripped) = instance.path.strip_suffix(&name_sep) else {
+    let Some(game_dir_candidate) = instance.path.strip_suffix(&name_sep) else {
+        tracing::debug!(
+            "check_compatible_mode: path {:?} does not end with {:?}, skipping",
+            instance.path,
+            name_sep
+        );
         return;
     };
-    let Some(game_dir) = versions_stripped.strip_suffix("/versions") else {
-        return;
+    // If the name was bare (e.g. "1.12.2"), game_dir_candidate ends with
+    // "/versions" and we strip it.  If the name already included "versions/"
+    // (e.g. "versions/1.12.2"), game_dir_candidate IS the game directory
+    // directly.
+    let game_dir = if let Some(dir) = game_dir_candidate.strip_suffix("/versions") {
+        PathBuf::from(dir)
+    } else {
+        PathBuf::from(game_dir_candidate)
     };
-    let game_dir = PathBuf::from(game_dir);
+    tracing::debug!(
+        "check_compatible_mode: game_dir={:?}",
+        game_dir
+    );
     let mods_dir = game_dir.join("mods");
     let versions_dir = game_dir.join("versions");
-    let version_dir = versions_dir.join(&instance.name);
+    let version_dir = versions_dir.join(version_name);
+    tracing::debug!(
+        "check_compatible_mode: mods_dir={:?} versions_dir={:?} version_dir={:?}",
+        mods_dir,
+        versions_dir,
+        version_dir
+    );
 
     let has_mods = async {
         if !mods_dir.is_dir() {
@@ -203,12 +243,23 @@ async fn check_compatible_mode(instances: &mut [ImportableInstance]) {
     let no_resourcepacks = !version_dir.join("resourcepacks").is_dir();
     let has_valid_json = instance_json::detect(&version_dir).is_some();
 
+    tracing::debug!(
+        "check_compatible_mode: has_mods={} versions_subdir_count={} no_resourcepacks={} has_valid_json={}",
+        has_mods,
+        versions_subdir_count,
+        no_resourcepacks,
+        has_valid_json
+    );
+
     if has_mods
         && versions_subdir_count == 1
         && no_resourcepacks
         && has_valid_json
     {
+        tracing::debug!("check_compatible_mode: setting compatible_mode=true");
         instances[0].compatible_mode = true;
+    } else {
+        tracing::debug!("check_compatible_mode: compatible mode not applicable");
     }
 }
 
@@ -353,68 +404,119 @@ async fn get_generic_instances(
 
     // Check if the single instance qualifies for compatible mode (shared
     // GameDir with mods/, no version isolation).
+    tracing::debug!(
+        "get_generic_instances: found {} instances",
+        instances.len()
+    );
     if instances.len() == 1 {
         let instance = &instances[0];
-        if let Some(versions_stripped) =
+        tracing::debug!(
+            "get_generic_instances: single instance name={:?} path={:?}",
+            instance.name,
+            instance.path
+        );
+
+        // Handle both bare name ("1.12.2") and versions/-prefixed name
+        // ("versions/1.12.2") produced by `collect_child_instances`.
+        let version_name = instance
+            .name
+            .strip_prefix("versions/")
+            .unwrap_or(&instance.name);
+
+        if let Some(game_dir_candidate) =
             instance.path.strip_suffix(&format!("/{}", instance.name))
         {
-            if let Some(game_dir) = versions_stripped.strip_suffix("/versions")
+            // If the name was bare, game_dir_candidate ends with "/versions".
+            // If the name already had "versions/", game_dir_candidate IS the
+            // game directory directly.
+            let game_dir = if let Some(dir) =
+                game_dir_candidate.strip_suffix("/versions")
             {
-                let game_dir = PathBuf::from(game_dir);
-                let mods_dir = game_dir.join("mods");
-                let versions_dir = game_dir.join("versions");
-                let version_dir = versions_dir.join(&instance.name);
+                PathBuf::from(dir)
+            } else {
+                PathBuf::from(game_dir_candidate)
+            };
+            tracing::debug!(
+                "get_generic_instances: game_dir={:?} version_name={:?}",
+                game_dir,
+                version_name
+            );
+            let mods_dir = game_dir.join("mods");
+            let versions_dir = game_dir.join("versions");
+            let version_dir = versions_dir.join(version_name);
+            tracing::debug!(
+                "get_generic_instances: mods_dir={:?} versions_dir={:?} version_dir={:?}",
+                mods_dir,
+                versions_dir,
+                version_dir
+            );
 
-                let has_mods = async {
-                    if !mods_dir.is_dir() {
-                        return false;
-                    }
-                    let mut dir = match tokio::fs::read_dir(&mods_dir).await {
-                        Ok(d) => d,
-                        Err(_) => return false,
-                    };
-                    while let Ok(Some(entry)) = dir.next_entry().await {
-                        if entry
-                            .path()
-                            .extension()
-                            .is_some_and(|ext| ext == "jar")
-                        {
-                            return true;
-                        }
-                    }
-                    false
+            let has_mods = async {
+                if !mods_dir.is_dir() {
+                    return false;
                 }
-                .await;
-
-                let versions_subdir_count = async {
-                    let mut dir = match tokio::fs::read_dir(&versions_dir).await
+                let mut dir = match tokio::fs::read_dir(&mods_dir).await {
+                    Ok(d) => d,
+                    Err(_) => return false,
+                };
+                while let Ok(Some(entry)) = dir.next_entry().await {
+                    if entry
+                        .path()
+                        .extension()
+                        .is_some_and(|ext| ext == "jar")
                     {
-                        Ok(d) => d,
-                        Err(_) => return 0,
-                    };
-                    let mut count = 0;
-                    while let Ok(Some(entry)) = dir.next_entry().await {
-                        if entry.path().is_dir() {
-                            count += 1;
-                        }
+                        return true;
                     }
-                    count
                 }
-                .await;
-
-                let no_resourcepacks =
-                    !version_dir.join("resourcepacks").is_dir();
-                let has_valid_json =
-                    instance_json::detect(&version_dir).is_some();
-
-                if has_mods
-                    && versions_subdir_count == 1
-                    && no_resourcepacks
-                    && has_valid_json
-                {
-                    instances[0].compatible_mode = true;
-                }
+                false
             }
+            .await;
+
+            let versions_subdir_count = async {
+                let mut dir = match tokio::fs::read_dir(&versions_dir).await
+                {
+                    Ok(d) => d,
+                    Err(_) => return 0,
+                };
+                let mut count = 0;
+                while let Ok(Some(entry)) = dir.next_entry().await {
+                    if entry.path().is_dir() {
+                        count += 1;
+                    }
+                }
+                count
+            }
+            .await;
+
+            let no_resourcepacks =
+                !version_dir.join("resourcepacks").is_dir();
+            let has_valid_json =
+                instance_json::detect(&version_dir).is_some();
+
+            tracing::debug!(
+                "get_generic_instances: has_mods={} versions_subdir_count={} no_resourcepacks={} has_valid_json={}",
+                has_mods,
+                versions_subdir_count,
+                no_resourcepacks,
+                has_valid_json
+            );
+
+            if has_mods
+                && versions_subdir_count == 1
+                && no_resourcepacks
+                && has_valid_json
+            {
+                tracing::debug!("get_generic_instances: setting compatible_mode=true");
+                instances[0].compatible_mode = true;
+            } else {
+                tracing::debug!("get_generic_instances: compatible mode not applicable");
+            }
+        } else {
+            tracing::debug!(
+                "get_generic_instances: path {:?} does not end with /{}",
+                instance.path,
+                instance.name
+            );
         }
     }
 
@@ -542,10 +644,23 @@ async fn collect_launcher_instances(
     sources: Vec<(String, String)>,
 ) {
     for (name, dir) in sources {
+        let game_dir = PathBuf::from(&dir);
+        let mut game_dir_instances = Vec::new();
         for (iname, ipath) in
-            scan_instances_at(&PathBuf::from(dir), Some(&name)).await
+            scan_instances_at(&game_dir, Some(&name)).await
         {
-            collector.push(iname, ipath);
+            game_dir_instances.push(ImportableInstance {
+                name: iname,
+                path: ipath.to_string_lossy().to_string(),
+                compatible_mode: false,
+            });
+        }
+        // Check compatible mode per-GameDir, not on the merged list.
+        if game_dir_instances.len() == 1 {
+            check_compatible_mode(&mut game_dir_instances).await;
+        }
+        for inst in game_dir_instances {
+            collector.push_instance(inst);
         }
     }
 }
@@ -567,12 +682,19 @@ impl InstanceCollector {
     /// Pushes an instance unless a path with the same resolved path was
     /// already collected.
     fn push(&mut self, name: String, path: PathBuf) {
-        if self.seen.insert(path.clone()) {
-            self.instances.push(ImportableInstance {
-                name,
-                path: path.to_string_lossy().to_string(),
-                compatible_mode: false,
-            });
+        self.push_instance(ImportableInstance {
+            name,
+            path: path.to_string_lossy().to_string(),
+            compatible_mode: false,
+        });
+    }
+
+    /// Pushes a full instance unless a path with the same resolved path was
+    /// already collected.
+    fn push_instance(&mut self, instance: ImportableInstance) {
+        let path = PathBuf::from(&instance.path);
+        if self.seen.insert(path) {
+            self.instances.push(instance);
         }
     }
 }
@@ -902,9 +1024,22 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::Generic => {
-            let path = resolve_instance_path(base_path, instance_folder);
-            // Check if this is a compatible mode import (instance_path contains the version path)
+            // In compatible mode, instance_path is the version directory
+            // (e.g. .minecraft/versions/1.12.2) and the game directory is
+            // base_path itself.  Don't call resolve_instance_path because it
+            // would create a spurious base_path/instance_folder path.
             let version_path = job.instance_path.as_ref().map(PathBuf::from);
+            let path = if version_path.is_some() {
+                base_path.clone()
+            } else {
+                resolve_instance_path(base_path, instance_folder)
+            };
+            tracing::debug!(
+                "Generic import: path={} version_path={:?} symlink={}",
+                path.display(),
+                version_path,
+                *symlink
+            );
             generic::import_generic(
                 path,
                 instance_id,

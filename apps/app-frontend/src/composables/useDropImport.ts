@@ -583,34 +583,62 @@ export function useDropImport(options: DropImportOptions) {
 	): CompatibleModeCandidate | null {
 		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
 		if (totalInstances !== 1 || !results[0]?.instances[0]) {
+			dropDebug('checkForCompatibleMode: no single instance', { totalInstances })
 			return null
 		}
 
 		const single = results[0].instances[0]
+		// Handle both bare name ("1.12.2") and versions/-prefixed name
+		// ("versions/1.12.2") from the scanner.
+		const versionName = single.name.startsWith('versions/')
+			? single.name.slice('versions/'.length)
+			: single.name
+		dropDebug('checkForCompatibleMode', {
+			name: single.name,
+			versionName,
+			path: single.path,
+			compatibleMode: single.compatibleMode,
+			basePath,
+		})
 
 		if (single.compatibleMode) {
-			const nameSuffix = `/versions/${single.name}`
+			// The path ends with /versions/<versionName>
+			const nameSuffix = `/versions/${versionName}`
 			if (single.path.endsWith(nameSuffix)) {
 				const gameDir = single.path.slice(0, -nameSuffix.length)
+				dropDebug('checkForCompatibleMode: compatible mode candidate (backend-flagged)', {
+					gameDir,
+					versionName,
+				})
 				return {
 					basePath: gameDir,
-					versionName: single.name,
+					versionName,
 					versionPath: single.path,
-					jsonPath: `${single.path}/${single.name}.json`,
+					jsonPath: `${single.path}/${versionName}.json`,
 				}
 			}
+			dropDebug('checkForCompatibleMode: compatibleMode=true but path check failed', {
+				nameSuffix,
+				path: single.path,
+			})
 		}
 
-		const expectedPath = `${basePath}/versions/${single.name}`
+		// Fallback: check path pattern even if backend didn't flag it
+		const expectedPath = `${basePath}/versions/${versionName}`
 		if (single.path !== expectedPath) {
+			dropDebug('checkForCompatibleMode: path mismatch', {
+				expectedPath,
+				actualPath: single.path,
+			})
 			return null
 		}
 
+		dropDebug('checkForCompatibleMode: fallback candidate', { basePath, versionName })
 		return {
 			basePath,
-			versionName: single.name,
+			versionName,
 			versionPath: single.path,
-			jsonPath: `${single.path}/${single.name}.json`,
+			jsonPath: `${single.path}/${versionName}.json`,
 		}
 	}
 
@@ -637,23 +665,34 @@ export function useDropImport(options: DropImportOptions) {
 		const launcherType = compatibleModeLauncherType.value
 		const scanResults = compatibleModeResults.value
 		const instanceName = scanResults?.[0]?.instances[0]?.name ?? ''
+		// Strip "versions/" prefix if present (from collect_child_instances)
+		const versionName = instanceName.startsWith('versions/')
+			? instanceName.slice('versions/'.length)
+			: instanceName
+		dropDebug('handleCompatibleModeConfirm', {
+			choice,
+			gameDir,
+			instanceName,
+			versionName,
+			launcherType,
+		})
 
 		if (choice === 'compatible') {
 			selectedInstances.value = [
 				{
 					launcherType,
 					basePath: gameDir,
-					name: 'Compatible Instance',
+					name: versionName,
 					path: gameDir,
 					compatibleMode: true,
-					versionPath: `${gameDir}/versions/${instanceName}`,
+					versionPath: `${gameDir}/versions/${versionName}`,
 				},
 			]
 			const cap = await check_symlink_capability()
 			symlinkCardsModal.value?.show({
 				instances: [
 					{
-						name: 'Compatible Instance',
+						name: versionName,
 						path: gameDir,
 						launcherType,
 						basePath: gameDir,
@@ -668,7 +707,7 @@ export function useDropImport(options: DropImportOptions) {
 				{
 					launcherType,
 					basePath: gameDir,
-					name: single.name,
+					name: versionName,
 					path: single.path,
 				},
 			]
@@ -676,7 +715,7 @@ export function useDropImport(options: DropImportOptions) {
 			symlinkCardsModal.value?.show({
 				instances: [
 					{
-						name: single.name,
+						name: versionName,
 						path: single.path,
 						launcherType,
 						basePath: gameDir,
