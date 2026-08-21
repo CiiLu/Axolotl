@@ -1,6 +1,37 @@
 {
-  "updated_at": "2026-08-21T08:04:03.889Z",
+  "updated_at": "2026-08-21T17:16:17.613Z",
   "announcements": [
+    {
+      "id": "launcher-1.8.10",
+      "version": "1.8.10",
+      "publishedAt": "2026-08-21",
+      "title": {
+        "en-US": "Axolotl Launcher 1.8.10",
+        "zh-CN": "Axolotl Launcher 1.8.10"
+      },
+      "changes": {
+        "added": [
+          {
+            "en-US": "Added a community survey entry on the About page.",
+            "zh-CN": "“关于”页面新增调查问卷入口。"
+          },
+          {
+            "en-US": "Added new translating source —— DeepL.",
+            "zh-CN": "新增DeepL翻译。"
+          },
+          {
+            "en-US": "Add support for importing without version isolation enabled.",
+            "zh-CN": "新增未开启版本隔离的导入支持。"
+          }
+        ],
+        "changed": [
+          {
+            "en-US": "The official QQ group is now 737601250.",
+            "zh-CN": "官方 QQ 群号变更为 737601250。"
+          }
+        ]
+      }
+    },
     {
       "id": "launcher-1.8.9",
       "version": "1.8.9",
