@@ -6449,6 +6449,21 @@
 	"app.splash.updating-app-directory": {
 		"message": "Updating app directory..."
 	},
+	"app.survey-promotion.defer-hint": {
+		"message": "If you close this dialog, you can still find the survey later in Settings > About."
+	},
+	"app.survey-promotion.fill-survey": {
+		"message": "Fill out the survey"
+	},
+	"app.survey-promotion.intro": {
+		"message": "To help us improve Axolotl Launcher, we have prepared a short survey and would love to hear your feedback."
+	},
+	"app.survey-promotion.reward": {
+		"message": "Lucky participants will be drawn to win a genuine Minecraft account (redeemable for cash)."
+	},
+	"app.survey-promotion.title": {
+		"message": "Community survey"
+	},
 	"app.symlink-capability.unsupported": {
 		"message": "This system does not support creating symbolic links."
 	},

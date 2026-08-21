@@ -81,6 +81,7 @@ import MinecraftCrashModal from '@/components/ui/MinecraftCrashModal.vue'
 import AppSettingsModal from '@/components/ui/modal/AppSettingsModal.vue'
 import AuthGrantFlowWaitModal from '@/components/ui/modal/AuthGrantFlowWaitModal.vue'
 import CommunityAnnouncementModal from '@/components/ui/modal/CommunityAnnouncementModal.vue'
+import SurveyAnnouncementModal from '@/components/ui/modal/SurveyAnnouncementModal.vue'
 import CurseForgeManualDownloadsModal from '@/components/ui/modal/CurseForgeManualDownloadsModal.vue'
 import InstallToPlayModal from '@/components/ui/modal/InstallToPlayModal.vue'
 import InstanceIconPickerModal from '@/components/ui/modal/InstanceIconPickerModal.vue'
@@ -385,6 +386,7 @@ const stateInitialized = ref(false)
 const privacyConsentModal = ref<InstanceType<typeof PrivacyConsentModal>>()
 const privacyConsentPending = ref(false)
 const communityAnnouncementModal = ref()
+const surveyModal = ref()
 const updateAnnouncementModal = ref()
 const minecraftCrashModal = ref()
 const javaDownloadConfirmationModal = ref()
@@ -1075,6 +1077,7 @@ async function scheduleStartupDialogs() {
 	}
 
 	communityAnnouncementModal.value?.showIfNeeded()
+	surveyModal.value?.showIfNeeded()
 }
 
 async function handlePrivacyConsentSaved(privacy: PrivacySettings) {
@@ -4116,6 +4119,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<JavaDownloadConfirmationModal ref="javaDownloadConfirmationModal" />
 	<PrivacyConsentModal ref="privacyConsentModal" @saved="handlePrivacyConsentSaved" />
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
+	<SurveyAnnouncementModal ref="surveyModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
 	<ErrorModal ref="errorModal" />
 	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />

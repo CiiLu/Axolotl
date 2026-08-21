@@ -4064,6 +4064,21 @@
 	"app.splash.updating-app-directory": {
 		"message": "正在更新應用程式目錄……"
 	},
+	"app.survey-promotion.defer-hint": {
+		"message": "關閉此彈窗後，你仍可以隨時在「設定 → 關於」頁面中找到並填寫問卷。"
+	},
+	"app.survey-promotion.fill-survey": {
+		"message": "填寫問卷"
+	},
+	"app.survey-promotion.intro": {
+		"message": "為了更好地改進 Axolotl Launcher，我們準備了一份簡短的調查問卷，期待聽到你的回饋。"
+	},
+	"app.survey-promotion.reward": {
+		"message": "我們將從填寫問卷的使用者中抽取幸運使用者，贈送 Minecraft 正版帳號（可折現）。"
+	},
+	"app.survey-promotion.title": {
+		"message": "調查問卷"
+	},
 	"app.symlink-capability.unsupported": {
 		"message": "系統不支持軟連結。"
 	},

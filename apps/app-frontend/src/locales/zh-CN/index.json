@@ -4244,6 +4244,21 @@
 	"app.symlink-warning.shared-badge": {
 		"message": "共享"
 	},
+	"app.survey-promotion.defer-hint": {
+		"message": "关闭此弹窗后，你仍可以随时在“设置 → 关于”页面中找到并填写问卷。"
+	},
+	"app.survey-promotion.fill-survey": {
+		"message": "填写问卷"
+	},
+	"app.survey-promotion.intro": {
+		"message": "为了更好地改进 Axolotl Launcher，我们准备了一份简短的调查问卷，期待听到你的反馈。"
+	},
+	"app.survey-promotion.reward": {
+		"message": "我们将从填写问卷的用户中抽取幸运用户，赠送 Minecraft 正版账号（可折现）。"
+	},
+	"app.survey-promotion.title": {
+		"message": "调查问卷"
+	},
 	"app.symlink-capability.unsupported": {
 		"message": "系统不支持软链接。"
 	},
