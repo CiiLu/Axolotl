@@ -165,35 +165,32 @@ async fn check_compatible_mode(instances: &mut [ImportableInstance]) {
         instance.path
     );
 
-    // Handle both bare name ("1.12.2") and versions/-prefixed name
-    // ("versions/1.12.2") produced by `collect_child_instances`.
-    let version_name = instance
-        .name
-        .strip_prefix("versions/")
-        .unwrap_or(&instance.name);
+
+    let version_name = if let Some(after_colon) = instance.name.rsplit_once(':') {
+        after_colon.1
+            .strip_prefix("versions/")
+            .unwrap_or(after_colon.1)
+    } else {
+        instance.name
+            .strip_prefix("versions/")
+            .unwrap_or(&instance.name)
+    };
     tracing::debug!(
         "check_compatible_mode: resolved version_name={:?}",
         version_name
     );
 
-    let name_sep = format!("/{}", instance.name);
-    let Some(game_dir_candidate) = instance.path.strip_suffix(&name_sep) else {
+    // Derive GameDir from the path: the path ends with /versions/<version_name>.
+    let versions_suffix = format!("/versions/{}", version_name);
+    let Some(game_dir) = instance.path.strip_suffix(&versions_suffix) else {
         tracing::debug!(
             "check_compatible_mode: path {:?} does not end with {:?}, skipping",
             instance.path,
-            name_sep
+            versions_suffix
         );
         return;
     };
-    // If the name was bare (e.g. "1.12.2"), game_dir_candidate ends with
-    // "/versions" and we strip it.  If the name already included "versions/"
-    // (e.g. "versions/1.12.2"), game_dir_candidate IS the game directory
-    // directly.
-    let game_dir = if let Some(dir) = game_dir_candidate.strip_suffix("/versions") {
-        PathBuf::from(dir)
-    } else {
-        PathBuf::from(game_dir_candidate)
-    };
+    let game_dir = PathBuf::from(game_dir);
     tracing::debug!(
         "check_compatible_mode: game_dir={:?}",
         game_dir
@@ -335,6 +332,10 @@ async fn get_pcl_instances(
         collect_launcher_instances(&mut collector, pcl::get_pclce_instances())
             .await;
     }
+    // Also check for a .minecraft folder next to the launcher executable.
+    if let Some(entry) = pcl::get_local_dotminecraft(base_path) {
+        collect_launcher_instances(&mut collector, vec![entry]).await;
+    }
     Ok(collector.instances)
 }
 
@@ -416,31 +417,19 @@ async fn get_generic_instances(
             instance.path
         );
 
-        // Handle both bare name ("1.12.2") and versions/-prefixed name
-        // ("versions/1.12.2") produced by `collect_child_instances`.
-        let version_name = instance
-            .name
-            .strip_prefix("versions/")
-            .unwrap_or(&instance.name);
-
-        if let Some(game_dir_candidate) =
-            instance.path.strip_suffix(&format!("/{}", instance.name))
-        {
-            // If the name was bare, game_dir_candidate ends with "/versions".
-            // If the name already had "versions/", game_dir_candidate IS the
-            // game directory directly.
-            let game_dir = if let Some(dir) =
-                game_dir_candidate.strip_suffix("/versions")
-            {
-                PathBuf::from(dir)
-            } else {
-                PathBuf::from(game_dir_candidate)
-            };
+        // Derive version name and GameDir from the path alone, since
+        // the instance name may carry a prefix (e.g. "versions/1.12.2").
+        // The path always ends with /versions/<version_name>.
+        let path_str = &instance.path;
+        if let Some(versions_pos) = path_str.rfind("/versions/") {
+            let game_dir = &path_str[..versions_pos];
+            let version_name = &path_str[versions_pos + "/versions/".len()..];
             tracing::debug!(
                 "get_generic_instances: game_dir={:?} version_name={:?}",
                 game_dir,
                 version_name
             );
+            let game_dir = PathBuf::from(game_dir);
             let mods_dir = game_dir.join("mods");
             let versions_dir = game_dir.join("versions");
             let version_dir = versions_dir.join(version_name);
@@ -513,9 +502,8 @@ async fn get_generic_instances(
             }
         } else {
             tracing::debug!(
-                "get_generic_instances: path {:?} does not end with /{}",
-                instance.path,
-                instance.name
+                "get_generic_instances: path does not contain /versions/, skipping: {:?}",
+                instance.path
             );
         }
     }
@@ -561,6 +549,13 @@ async fn get_unknown_launcher_instances(
     {
         collect_launcher_instances(&mut collector, pcl::get_pclce_instances())
             .await;
+    }
+
+    // Also check for a .minecraft folder next to the launcher executable.
+    if pe_info::folder_has_product(base_path, "Plain Craft Launcher") {
+        if let Some(entry) = pcl::get_local_dotminecraft(base_path) {
+            collect_launcher_instances(&mut collector, vec![entry]).await;
+        }
     }
 
     // HMCL
