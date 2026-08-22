@@ -119,12 +119,12 @@ jobs:
         uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
 
       - name: Set up Rust compiler cache
-        if: runner.os == 'Windows' || runner.os == 'macOS'
+        if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
         uses: mozilla-actions/sccache-action@2df7dbab909c49ab7d3382d05da469f3f975c2d6 # v0.0.7
 
       - name: Check Rust compiler cache availability
         id: sccache
-        if: runner.os == 'Windows' || runner.os == 'macOS'
+        if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
         continue-on-error: true
         shell: bash
         env:
@@ -132,7 +132,7 @@ jobs:
         run: ${SCCACHE_PATH} rustc -vV
 
       - name: Enable Rust compiler cache
-        if: (runner.os == 'Windows' || runner.os == 'macOS') && steps.sccache.outcome == 'success'
+        if: (runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux') && steps.sccache.outcome == 'success'
         shell: bash
         run: |
           echo 'RUSTC_WRAPPER=sccache' >> "$GITHUB_ENV"
@@ -184,7 +184,7 @@ jobs:
           retryAttempts: 2
 
       - name: Show Rust compiler cache statistics
-        if: (runner.os == 'Windows' || runner.os == 'macOS') && steps.sccache.outcome == 'success' && always()
+        if: (runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux') && steps.sccache.outcome == 'success' && always()
         shell: bash
         run: ${SCCACHE_PATH} --show-stats
 
@@ -232,6 +232,29 @@ jobs:
             "${{ github.ref_name }}" \
             $modernInstallers[0].Name \
             --yes
+
+          pnpm --filter @modrinth/app tauri build --config tauri-release.conf.json
+
+          $nativeInstallers = @(Get-ChildItem $outDir -Filter '*-setup.exe' -File)
+          if ($nativeInstallers.Count -ne 1) {
+            throw "Expected one native NSIS installer, found $($nativeInstallers.Count)"
+          }
+
+          $nativeName = "Axolotl_Launcher_${version}_x64_nsis-setup.exe"
+          $nativePath = Join-Path $publishDir $nativeName
+          Copy-Item -Force $nativeInstallers[0].FullName $nativePath
+          gh release upload "${{ github.ref_name }}" $nativePath --clobber
+
+          $nativeSignature = "$($nativeInstallers[0].FullName).sig"
+          if (Test-Path $nativeSignature) {
+            $nativeSignaturePath = "$nativePath.sig"
+            Copy-Item -Force $nativeSignature $nativeSignaturePath
+            gh release upload \
+              "${{ github.ref_name }}" \
+              $nativeSignaturePath \
+              --clobber
+          }
+
           $appExe = "target/release/${appName}.exe"
           if (-not (Test-Path $appExe)) {
             throw "Binary not found at $appExe"
