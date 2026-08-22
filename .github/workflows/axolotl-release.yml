@@ -120,6 +120,7 @@ jobs:
 
       - name: Set up Rust compiler cache
         if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
+        continue-on-error: true
         uses: mozilla-actions/sccache-action@2df7dbab909c49ab7d3382d05da469f3f975c2d6 # v0.0.7
 
       - name: Check Rust compiler cache availability
@@ -129,7 +130,12 @@ jobs:
         shell: bash
         env:
           SCCACHE_GHA_ENABLED: 'true'
-        run: ${SCCACHE_PATH} rustc -vV
+        run: |
+          if [ -z "${SCCACHE_PATH:-}" ]; then
+            echo "sccache is not installed; skipping Rust compiler cache"
+            exit 1
+          fi
+          ${SCCACHE_PATH} rustc -vV
 
       - name: Enable Rust compiler cache
         if: (runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux') && steps.sccache.outcome == 'success'
@@ -197,6 +203,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+
           $version = "${{ github.ref_name }}" -replace '^v', ''
           $appName = "Axolotl Launcher"
           $outDir = "target/release/bundle/nsis"
@@ -205,34 +214,9 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
 
-          $modernInstallers = @(Get-ChildItem $outDir -Filter '*-setup.exe' -File)
-          if ($modernInstallers.Count -ne 1) {
-            throw "Expected one modern NSIS installer, found $($modernInstallers.Count)"
-          }
-
-          $modernName = "Axolotl_Launcher_${version}_x64_modern-setup.exe"
-          $modernPath = Join-Path $publishDir $modernName
-          Copy-Item -Force $modernInstallers[0].FullName $modernPath
-          gh release upload "${{ github.ref_name }}" $modernPath --clobber
-          # Modern NSIS signature
-          $modernSignature = "$($modernInstallers[0].FullName).sig"
-          if (Test-Path $modernSignature) {
-            $modernSignaturePath = "$modernPath.sig"
-            Copy-Item -Force $modernSignature $modernSignaturePath
-            gh release upload \
-              "${{ github.ref_name }}" \
-              $modernSignaturePath \
-              --clobber
-            gh release delete-asset \
-              "${{ github.ref_name }}" \
-              "$($modernInstallers[0].Name).sig" \
-              --yes
-          }
-          gh release delete-asset \
-            "${{ github.ref_name }}" \
-            $modernInstallers[0].Name \
-            --yes
-
+          # The modern NSIS installer keeps the name tauri-action uploaded
+          # (Axolotl.Launcher_<version>_x64-setup.exe); only the native
+          # variant is built and published here.
           pnpm --filter @modrinth/app tauri build --config tauri-release.conf.json
 
           $nativeInstallers = @(Get-ChildItem $outDir -Filter '*-setup.exe' -File)

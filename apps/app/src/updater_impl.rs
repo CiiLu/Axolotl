@@ -107,6 +107,30 @@ fn current_platform_key() -> &'static str {
     }
 }
 
+/// Compare two version strings, ignoring a leading `v`/`V` prefix and any
+/// pre-release / build suffix. Returns the ordering of `a` relative to `b`.
+fn compare_versions(a: &str, b: &str) -> std::cmp::Ordering {
+    let numeric_parts = |v: &str| -> Vec<u64> {
+        v.trim()
+            .trim_start_matches(['v', 'V'])
+            .split(|c: char| !c.is_ascii_digit() && c != '.')
+            .filter_map(|p| p.parse::<u64>().ok())
+            .collect()
+    };
+
+    let an = numeric_parts(a);
+    let bn = numeric_parts(b);
+
+    for (x, y) in an.iter().zip(bn.iter()) {
+        match x.cmp(y) {
+            std::cmp::Ordering::Equal => continue,
+            ord => return ord,
+        }
+    }
+
+    an.len().cmp(&bn.len())
+}
+
 // ── Miawa API helpers ────────────────────────────────────────────
 
 fn miawa_client() -> reqwest::Client {
@@ -177,15 +201,36 @@ async fn miawa_check_update(
         .ok_or_else(|| "Miawa returned empty axolotl list".to_string())?;
 
     let tag_name = &launcher.tag_name;
-    // Strip leading 'v' for version comparison
-    let remote_version = tag_name.strip_prefix('v').unwrap_or(tag_name);
-
-    if remote_version == current_version {
-        return Ok(None);
-    }
 
     // Step 2: fetch latest.json
     let manifest = miawa_get_latest_json(&client, tag_name).await?;
+
+    // Step 3: compare versions. Use the `version` field from latest.json
+    // (same semantics as tauri-plugin-updater), NOT the tag name.
+    // The Miawa mirror can lag behind by tens of minutes, so a mirror
+    // version that is OLDER than the installed version must be treated
+    // as a mirror problem (fall back to CNB), never as an update.
+    let ordering = compare_versions(&manifest.version, current_version);
+    tracing::info!(
+        current_version = %current_version,
+        mirror_version = %manifest.version,
+        ordering = ?ordering,
+        "Miawa version comparison result"
+    );
+    match ordering {
+        std::cmp::Ordering::Equal => {
+            tracing::info!("No update available via Miawa mirror (up to date)");
+            return Ok(None);
+        }
+        std::cmp::Ordering::Less => {
+            return Err(format!(
+                "Miawa mirror is behind the installed version (mirror: {}, installed: {})",
+                manifest.version, current_version
+            ));
+        }
+        std::cmp::Ordering::Greater => {}
+    }
+    tracing::info!("Miawa mirror reports a newer version");
 
     let platform_key = current_platform_key();
     let platform_entry =
@@ -195,17 +240,48 @@ async fn miawa_check_update(
             )
         })?;
 
-    // Step 3: extract filename from the download URL in latest.json
+    // Step 3: extract candidate filename from the download URL in latest.json
     let original_url = Url::parse(&platform_entry.url)
         .map_err(|e| format!("Failed to parse platform download URL: {e}"))?;
-    let filename = original_url
+    let url_filename = original_url
         .path_segments()
         .and_then(|s| s.last().filter(|s| !s.is_empty()))
         .ok_or_else(|| {
             "Could not extract filename from download URL".to_string()
         })?;
 
-    // Step 4: get mirror download URL for the actual installer
+    // Step 4: find the real asset name on the mirror. Prefer an exact
+    // match against the latest.json URL filename; on Windows fall back
+    // to the platform suffix match used by the reference script
+    // (e.g. "...x64-setup.exe"). This matters because the mirror may
+    // name files differently than the latest.json URLs.
+    let filename = launcher
+        .assets
+        .iter()
+        .map(|a| a.name.as_str())
+        .find(|name| *name == url_filename)
+        .or_else(|| {
+            if platform_key == "windows-x86_64" {
+                launcher
+                    .assets
+                    .iter()
+                    .map(|a| a.name.as_str())
+                    .find(|name| name.ends_with("x64-setup.exe"))
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| {
+            format!(
+                "Could not find a matching asset for platform {platform_key} on the Miawa mirror (candidate: {url_filename})"
+            )
+        })?;
+
+    tracing::info!(
+        "Miawa mirror asset resolved: {filename} (from latest.json URL: {url_filename})"
+    );
+
+    // Step 5: get mirror download URL for the actual installer
     let file_path = format!("axolotl/{tag_name}/{filename}");
     let prepare_resp: MiawaEnvelope<MiawaPrepare> = client
         .post(format!("{MIawa_API_BASE}/downloads/prepare"))
@@ -223,7 +299,7 @@ async fn miawa_check_update(
 
     let mirror_url = format!("{MIawa_HOST}{}", prepare_resp.data.download_url);
 
-    // Step 5: find matching asset size
+    // Step 6: find matching asset size
     let update_size = launcher
         .assets
         .iter()
@@ -281,6 +357,9 @@ async fn miawa_download_update(
     }
 
     let total_size = response.content_length().unwrap_or(0);
+    tracing::info!(
+        "Miawa mirror download starting (version {version}): {url} (content-length: {total_size})"
+    );
     let mut data = Vec::new();
     let mut downloaded = 0u64;
 
@@ -300,11 +379,114 @@ async fn miawa_download_update(
         }
     }
 
+    // Ensure the progress bar completes even when the server did not
+    // report a content length.
+    let _ = emit_loading(&progress, 1.0, None);
+
+    // Guard against truncated downloads.
+    if total_size > 0 && downloaded != total_size {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            format!(
+                "Miawa download truncated: received {downloaded} of {total_size} bytes"
+            ),
+        ))
+        .into());
+    }
+
+    validate_downloaded_update(&data)?;
+
     tracing::info!(
         "Downloaded update from Miawa mirror: {} bytes in total",
         data.len()
     );
     Ok(data)
+}
+
+/// Validate that a downloaded update payload looks like a real update
+/// package instead of an HTML error page or other bogus content.
+fn validate_downloaded_update(data: &[u8]) -> Result<()> {
+    let head = String::from_utf8_lossy(&data[..data.len().min(512)]).to_lowercase();
+    if head.trim_start().starts_with("<!doctype html")
+        || head.trim_start().starts_with("<html")
+        || head.trim_start().starts_with("<head")
+    {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            "Downloaded file looks like an HTML page instead of an update package"
+                .to_string(),
+        ))
+        .into());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // The mirror may deliver either a raw installer (MZ) or a zip
+        // archive (PK) wrapping the installer; anything else is bogus.
+        let ok = data.starts_with(b"MZ") || data.starts_with(b"PK");
+        if !ok {
+            let first_two = data
+                .iter()
+                .take(2)
+                .map(|b| format!("{b:02X}"))
+                .collect::<Vec<_>>()
+                .join(" ");
+            return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+                format!(
+                    "Downloaded file is not a valid Windows update payload (expected MZ or PK header, got [{first_two}], {} bytes received)",
+                    data.len()
+                ),
+            ))
+            .into());
+        }
+    }
+
+    Ok(())
+}
+
+/// Resolve the actual installer payload from downloaded bytes. The
+/// mirror may hand us the installer directly (MZ header) or wrapped in
+/// a zip archive (PK header); in the latter case the first `.exe` entry
+/// is extracted. Only used on Windows.
+#[cfg(target_os = "windows")]
+fn extract_installer_payload(data: &[u8]) -> Result<Vec<u8>> {
+    if !data.starts_with(b"PK") {
+        return Ok(data.to_vec());
+    }
+
+    use std::io::Read;
+
+    let cursor = std::io::Cursor::new(data);
+    let mut archive = zip::ZipArchive::new(cursor).map_err(|e| {
+        theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+            "Failed to open downloaded update archive: {e}"
+        )))
+    })?;
+
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| {
+            theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+                "Failed to read update archive entry: {e}"
+            )))
+        })?;
+        let name = entry.name().to_string();
+        if name.to_lowercase().ends_with(".exe") {
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf).map_err(|e| {
+                theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+                    "Failed to extract {name} from update archive: {e}"
+                )))
+            })?;
+            tracing::info!(
+                "Extracted installer from update archive: {name} ({} bytes)",
+                buf.len()
+            );
+            return Ok(buf);
+        }
+    }
+
+    Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+        "Downloaded update archive contains no .exe file".to_string(),
+    ))
+    .into())
 }
 
 // ── Updater plugin helpers ───────────────────────────────────────
@@ -400,6 +582,15 @@ async fn check_with_updater<R: Runtime>(
 // ── Install helper (for mirror downloads) ────────────────────────
 
 pub fn install_mirror_update(data: &[u8], version: &str) -> Result<()> {
+    // Resolve the actual installer payload. The mirror may deliver the
+    // exe directly (MZ) or wrapped in a zip archive (PK); a bogus
+    // payload must never be executed (it would produce errors like
+    // "unsupported 16-bit application" on Windows).
+    #[cfg(target_os = "windows")]
+    let payload = extract_installer_payload(data)?;
+    #[cfg(not(target_os = "windows"))]
+    let payload = data.to_vec();
+
     let temp_dir = std::env::temp_dir();
     let ext = if cfg!(target_os = "windows") {
         "exe"
@@ -410,7 +601,7 @@ pub fn install_mirror_update(data: &[u8], version: &str) -> Result<()> {
     };
     let temp_file = temp_dir.join(format!("axolotl-update-{version}.{ext}"));
 
-    std::fs::write(&temp_file, data).map_err(|e| {
+    std::fs::write(&temp_file, &payload).map_err(|e| {
         theseus::Error::from(theseus::ErrorKind::OtherError(format!(
             "Failed to write update to temp file: {e}"
         )))
