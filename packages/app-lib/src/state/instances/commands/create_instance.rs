@@ -80,6 +80,7 @@ pub(crate) async fn create_instance(
             name: input.name,
             icon_path,
             symlink_target: input.symlink_target,
+            game_dir_override: None,
             created: now,
             modified: now,
             last_played: None,

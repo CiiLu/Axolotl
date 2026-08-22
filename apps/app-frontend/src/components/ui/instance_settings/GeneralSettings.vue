@@ -124,6 +124,47 @@ async function setIcon() {
 	}
 }
 
+const gameDirOverride = ref(instance.value.game_dir_override)
+const savingGameDir = ref(false)
+
+watch(
+	() => instance.value.id,
+	() => {
+		gameDirOverride.value = instance.value.game_dir_override
+	},
+)
+
+async function pickGameDir() {
+	const picked = await filePicker.pickFolder()
+	if (!picked?.path) return
+
+	savingGameDir.value = true
+	const previousDir = gameDirOverride.value
+	gameDirOverride.value = picked.path
+	try {
+		await edit(instance.value.id, { game_dir_override: picked.path })
+	} catch (error) {
+		gameDirOverride.value = previousDir
+		handleError(error)
+	} finally {
+		savingGameDir.value = false
+	}
+}
+
+async function clearGameDir() {
+	savingGameDir.value = true
+	const previousDir = gameDirOverride.value
+	gameDirOverride.value = null
+	try {
+		await edit(instance.value.id, { game_dir_override: null })
+	} catch (error) {
+		gameDirOverride.value = previousDir
+		handleError(error)
+	} finally {
+		savingGameDir.value = false
+	}
+}
+
 const editInstanceObject = computed(() => ({
 	name: title.value.trim().substring(0, 32) ?? 'Instance',
 }))
@@ -191,6 +232,27 @@ const messages = defineMessages({
 	duplicateButton: {
 		id: 'instance.settings.tabs.general.duplicate-button',
 		defaultMessage: 'Duplicate',
+	},
+	gameDir: {
+		id: 'instance.settings.tabs.general.game-dir',
+		defaultMessage: 'Game directory',
+	},
+	gameDirDescription: {
+		id: 'instance.settings.tabs.general.game-dir.description',
+		defaultMessage:
+			'Uses a separate folder as the working directory for this instance. The game reads mods, saves, configs, and resource packs from that folder instead of the managed instance folder.',
+	},
+	gameDirCurrent: {
+		id: 'instance.settings.tabs.general.game-dir.current',
+		defaultMessage: 'Current directory',
+	},
+	gameDirSetButton: {
+		id: 'instance.settings.tabs.general.game-dir.set',
+		defaultMessage: 'Choose folder',
+	},
+	gameDirClearButton: {
+		id: 'instance.settings.tabs.general.game-dir.clear',
+		defaultMessage: 'Use managed folder',
 	},
 	updateChannel: {
 		id: 'instance.settings.tabs.general.update-channel',
@@ -328,6 +390,32 @@ const messages = defineMessages({
 				</p>
 			</div>
 		</template>
+		<div class="flex flex-col gap-2.5 mt-6">
+			<h2 class="m-0 text-lg font-semibold text-contrast block">
+				{{ formatMessage(messages.gameDir) }}
+			</h2>
+			<p class="m-0">
+				{{ formatMessage(messages.gameDirDescription) }}
+			</p>
+			<p v-if="gameDirOverride" class="m-0 text-secondary break-all">
+				{{ formatMessage(messages.gameDirCurrent) }}:
+				<code>{{ gameDirOverride }}</code>
+			</p>
+			<div class="flex gap-2">
+				<ButtonStyled>
+					<button :disabled="savingGameDir" class="w-max !shadow-none" @click="pickGameDir">
+						<EditIcon />
+						{{ formatMessage(messages.gameDirSetButton) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled v-if="gameDirOverride" color="red">
+					<button :disabled="savingGameDir" class="w-max !shadow-none" @click="clearGameDir">
+						<TrashIcon />
+						{{ formatMessage(messages.gameDirClearButton) }}
+					</button>
+				</ButtonStyled>
+			</div>
+		</div>
 		<div class="flex flex-col gap-2.5 mt-6">
 			<h2 class="m-0 text-lg font-semibold text-contrast block">
 				{{ formatMessage(messages.updateChannel) }}

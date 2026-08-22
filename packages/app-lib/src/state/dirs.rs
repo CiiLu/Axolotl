@@ -187,6 +187,22 @@ impl DirectoryInfo {
             .join("crash-reports")
     }
 
+    /// Resolve the game working directory for an instance: its override when
+    /// set (external / non-version-isolated folder), otherwise the managed
+    /// folder under the instances directory.
+    pub fn resolve_game_dir(
+        &self,
+        instance_path: &str,
+        game_dir_override: Option<&str>,
+    ) -> PathBuf {
+        match game_dir_override {
+            Some(override_dir) if !override_dir.is_empty() => {
+                PathBuf::from(override_dir)
+            }
+            _ => self.instances_dir().join(instance_path),
+        }
+    }
+
     #[inline]
     pub fn launcher_logs_dir(&self) -> Option<PathBuf> {
         self.get_initial_settings_dir()

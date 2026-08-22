@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[tracing::instrument]
 pub async fn get_full_path(instance_id: &str) -> crate::Result<PathBuf> {
     let state = State::get().await?;
-    let path =
+    let instance_path =
         crate::state::instances::adapters::sqlite::instance_rows::get_instance_path_by_id(
             instance_id,
             &state.pool,
@@ -14,10 +14,17 @@ pub async fn get_full_path(instance_id: &str) -> crate::Result<PathBuf> {
         .ok_or_else(|| {
             crate::ErrorKind::InputError("Unknown instance".to_string())
         })?;
+    let game_dir_override =
+        crate::state::instances::adapters::sqlite::instance_rows::get_game_dir_override_by_id(
+            instance_id,
+            &state.pool,
+        )
+        .await?;
 
-    Ok(io::canonicalize(
-        state.directories.instances_dir().join(path),
-    )?)
+    Ok(io::canonicalize(state.directories.resolve_game_dir(
+        &instance_path,
+        game_dir_override.as_deref(),
+    ))?)
 }
 
 #[tracing::instrument]

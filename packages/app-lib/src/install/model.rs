@@ -336,6 +336,7 @@ mod tests {
                     name: "Test".to_string(),
                     icon_path: None,
                     symlink_target: None,
+                    game_dir_override: None,
                     created: now,
                     modified: now,
                     last_played: None,

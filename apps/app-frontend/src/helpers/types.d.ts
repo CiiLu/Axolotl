@@ -9,6 +9,7 @@ export type GameInstance = {
 	name: string
 	icon_path?: string
 	symlink_target?: string | null
+	game_dir_override?: string | null
 
 	game_version: string
 	protocol_version?: number
@@ -109,9 +110,7 @@ export type InstanceLoader =
 
 export type LoaderComponent = {
 	instanceId: string
-	kind:
-		| InstanceLoader
-		| 'optifabric'
+	kind: InstanceLoader | 'optifabric'
 	version?: string | null
 	role: 'primary' | 'adjunct'
 	providerMetadata?: unknown

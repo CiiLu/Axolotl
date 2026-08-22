@@ -609,10 +609,16 @@ pub async fn resolve_minecraft_manifest_with_cache(
     Ok((refreshed, idx))
 }
 
-async fn get_instance_full_path(instance_path: &str) -> crate::Result<PathBuf> {
+async fn get_instance_full_path(
+    instance_path: &str,
+    game_dir_override: Option<&str>,
+) -> crate::Result<PathBuf> {
     let state = State::get().await?;
-    let instances_dir = state.directories.instances_dir();
-    let full_path = io::canonicalize(instances_dir.join(instance_path))?;
+    let full_path = io::canonicalize(
+        state
+            .directories
+            .resolve_game_dir(instance_path, game_dir_override),
+    )?;
     Ok(full_path)
 }
 
@@ -742,7 +748,11 @@ async fn install_minecraft_with_local_source(
     .await?;
     emit_instance(&instance.id, InstancePayloadType::Edited).await?;
 
-    let instance_path = get_instance_full_path(&instance.path).await?;
+    let instance_path = get_instance_full_path(
+        &instance.path,
+        instance.game_dir_override.as_deref(),
+    )
+    .await?;
     if let Some(reporter) = &reporter {
         reporter
             .update(
@@ -1351,7 +1361,11 @@ pub async fn launch_minecraft(
 
     let state = State::get().await?;
 
-    let instance_path = get_instance_full_path(&instance.path).await?;
+    let instance_path = get_instance_full_path(
+        &instance.path,
+        instance.game_dir_override.as_deref(),
+    )
+    .await?;
     let offline_skin_pack =
         crate::minecraft_skins::prepare_offline_skin_resource_pack(
             credentials,
