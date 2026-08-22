@@ -233,10 +233,7 @@ jobs:
           if (Test-Path $nativeSignature) {
             $nativeSignaturePath = "$nativePath.sig"
             Copy-Item -Force $nativeSignature $nativeSignaturePath
-            gh release upload \
-              "${{ github.ref_name }}" \
-              $nativeSignaturePath \
-              --clobber
+            gh release upload "${{ github.ref_name }}" $nativeSignaturePath --clobber
           }
 
           $appExe = "target/release/${appName}.exe"
@@ -244,22 +241,13 @@ jobs:
             throw "Binary not found at $appExe"
           }
           New-Item -ItemType Directory -Force -Path "$buildDir\Axolotl" | Out-Null
-          Copy-Item -Force \
-            $appExe \
-            "$buildDir\Axolotl\"
-          New-Item -ItemType Directory -Force \
-            -Path "$buildDir\Axolotl\.Axolotl" | Out-Null
+          Copy-Item -Force $appExe "$buildDir\Axolotl\"
+          New-Item -ItemType Directory -Force -Path "$buildDir\Axolotl\.Axolotl" | Out-Null
           $zipName = "Axolotl_Launcher_${version}_x64_portable.zip"
           $zipPath = Join-Path $publishDir $zipName
-          Compress-Archive \
-            -Path "$buildDir\Axolotl" \
-            -DestinationPath $zipPath \
-            -Force
+          Compress-Archive -Path "$buildDir\Axolotl" -DestinationPath $zipPath -Force
           Write-Output "Created portable zip: $zipPath"
-          gh release upload \
-            "${{ github.ref_name }}" \
-            "$zipPath" \
-            --clobber
+          gh release upload "${{ github.ref_name }}" "$zipPath" --clobber
 
   verify-and-publish:
     name: Verify and publish
