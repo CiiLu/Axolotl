@@ -75,7 +75,7 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.cache/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          key: sccache-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             sccache-${{ runner.os }}-
       - name: Enable Rust compiler cache
@@ -86,9 +86,14 @@ jobs:
             echo "sccache is not installed; skipping Rust compiler cache"
             exit 0
           fi
-          echo "SCCACHE_DIR=$HOME/.cache/sccache" >> "$GITHUB_ENV"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            sccache_dir="$(cygpath -w "$HOME")\.cache\sccache"
+          else
+            sccache_dir="$HOME/.cache/sccache"
+          fi
+          echo "SCCACHE_DIR=$sccache_dir" >> "$GITHUB_ENV"
           echo 'RUSTC_WRAPPER=sccache' >> "$GITHUB_ENV"
-          echo 'SCCACHE_CACHE_SIZE=4G' >> "$GITHUB_ENV"
+          echo 'SCCACHE_CACHE_SIZE=1G' >> "$GITHUB_ENV"
           echo 'CARGO_INCREMENTAL=0' >> "$GITHUB_ENV"
 
       - if: runner.os == 'Linux'
@@ -97,7 +102,7 @@ jobs:
       - name: Cache Turbo build cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: node_modules/.cache/turbo
+          path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             turbo-${{ runner.os }}-
