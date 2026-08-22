@@ -33,6 +33,23 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.12',
+		version: '1.8.12',
+		publishedAt: '2026-08-23',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.12',
+			'zh-CN': 'Axolotl Launcher 1.8.12',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US': 'Urgently fix the NSIS installer package issue.',
+					'zh-CN': '紧急修复nsis安装包问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.11',
 		version: '1.8.11',
 		publishedAt: '2026-08-22',

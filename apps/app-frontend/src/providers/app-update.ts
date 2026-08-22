@@ -8,8 +8,6 @@ export interface AppUpdate {
 	rid: number
 	version: string
 	currentVersion?: string
-	mirrorDownloadUrl?: string
-	updateSize?: number
 }
 
 interface UpdatePromptState {

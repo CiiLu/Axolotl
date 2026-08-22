@@ -541,7 +541,7 @@ fn main() {
                             s.restart_after_pending_update.load(Ordering::Relaxed)
                         })
                         .unwrap_or(false);
-                    if let Some(entry) = &*update_data.0.lock().unwrap()
+                    if let Some((update, data)) = &*update_data.0.lock().unwrap()
                     {
                         fn set_changelog_toast(version: Option<String>) {
                             let toast_result: theseus::Result<()> = tauri::async_runtime::block_on(async move {
@@ -557,48 +557,31 @@ fn main() {
                             }
                         }
 
-                        // Dispatch installation based on update source
-                        let install_result: std::result::Result<String, Box<dyn std::error::Error>> = match entry {
-                            PendingUpdateEntry::Plugin { update, data } => {
-                                let update = if should_restart {
-                                    (**update).clone()
-                                } else {
-                                    (**update).clone().restart_after_install(false)
-                                };
-                                let version = update.version.clone();
-                                update.install(data).map(|_| version).map_err(|e| e.into())
-                            }
-                            PendingUpdateEntry::Mirror { data, version, .. } => {
-                                updater_impl::install_mirror_update(data, version)
-                                    .map(|_| version.clone())
-                                    .map_err(|e| e.into())
-                            }
+                        let update = if should_restart {
+                            (**update).clone()
+                        } else {
+                            (**update).clone().restart_after_install(false)
                         };
-
-                        match install_result {
-                            Ok(version) => {
-                                set_changelog_toast(Some(version.clone()));
+                        match update.install(data) {
+                            Ok(()) => {
+                                set_changelog_toast(Some(update.version.clone()));
                                 if should_restart {
                                     tracing::info!(
                                         "Pending update installed successfully (version {}); restarting because user requested reload",
-                                        version
+                                        update.version
                                     );
                                     app.restart();
                                 } else {
                                     tracing::info!(
                                         "Pending update installed successfully (version {}); exiting without relaunch (user did not request reload)",
-                                        version
+                                        update.version
                                     );
                                 }
                             }
                             Err(e) => {
-                                let version_str = match entry {
-                                    PendingUpdateEntry::Plugin { update, .. } => &update.version,
-                                    PendingUpdateEntry::Mirror { version, .. } => version,
-                                };
                                 tracing::error!(
                                     "Pending update install failed (version {}): {e}",
-                                    version_str
+                                    update.version
                                 );
                                 set_changelog_toast(None);
 

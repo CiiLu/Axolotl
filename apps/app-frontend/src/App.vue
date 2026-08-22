@@ -1806,7 +1806,7 @@ async function performUpdateCheck() {
 		scheduleDelayedUpdatePopup()
 	}
 
-	getUpdateSize(update.rid, update.updateSize).then((size) => (updateSize.value = size))
+	getUpdateSize(update.rid).then((size) => (updateSize.value = size))
 	return 'available'
 }
 
@@ -1843,7 +1843,7 @@ async function downloadUpdate(versionToDownload) {
 	downloading.value = true
 
 	try {
-		enqueueUpdateForInstallation(versionToDownload.rid, versionToDownload.mirrorDownloadUrl)
+		enqueueUpdateForInstallation(versionToDownload.rid)
 			.then(() => {
 				downloading.value = false
 				finishedDownloading.value = true

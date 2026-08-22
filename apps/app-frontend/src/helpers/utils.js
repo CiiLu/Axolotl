@@ -19,18 +19,12 @@ export async function checkAppUpdate(source = 'cnb') {
 	return await invoke('check_app_update', { source })
 }
 
-export async function getUpdateSize(updateRid, updateSize) {
-	return await invoke('get_update_size', {
-		rid: updateRid || null,
-		updateSize: updateSize || null,
-	})
+export async function getUpdateSize(updateRid) {
+	return await invoke('get_update_size', { rid: updateRid })
 }
 
-export async function enqueueUpdateForInstallation(updateRid, mirrorDownloadUrl) {
-	return await invoke('enqueue_update_for_installation', {
-		rid: updateRid || null,
-		mirrorDownloadUrl: mirrorDownloadUrl || null,
-	})
+export async function enqueueUpdateForInstallation(updateRid) {
+	return await invoke('enqueue_update_for_installation', { rid: updateRid })
 }
 
 export async function removeEnqueuedUpdate() {
