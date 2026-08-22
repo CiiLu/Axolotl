@@ -13,7 +13,6 @@ import {
 	TerminalSquareIcon,
 	WrenchIcon,
 } from '@modrinth/assets'
-import { setEulaAccepted } from '@modrinth/server'
 import {
 	Admonition,
 	ButtonStyled,
@@ -39,6 +38,7 @@ import ServerIcon from '@/components/multiplayer/servers/ServerIcon.vue'
 import ServerSettingsPanel from '@/components/multiplayer/servers/ServerSettingsPanel.vue'
 import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
 import { useServers } from '@/composables/useServers'
+import { useServerLifecycle } from '@/composables/useServerLifecycle'
 import { type PortProcessInfoData, servers as serversApi } from '@/helpers/servers'
 import { openPath } from '@/helpers/utils'
 
@@ -46,12 +46,11 @@ const route = useRoute()
 const router = useRouter()
 const serverId = route.params.id as string
 
-const { servers, refresh, startServer, stopServer } = useServers()
+const { servers, refresh, stopServer } = useServers()
+const { eulaModal, eulaText, tryStartServer, acceptEula, declineEula } = useServerLifecycle()
 const filePicker = injectFilePicker()
 const multiplayerSession = useMultiplayerSession()
 const { formatMessage } = useVIntl()
-const eulaModal = ref()
-const eulaModalPending = ref('')
 
 const messages = defineMessages({
 	console: { id: 'app.servers.detail.console', defaultMessage: 'Console' },
@@ -228,39 +227,8 @@ async function toggleRunning() {
 	if (server.value.status === 'running') {
 		await stopServer(server.value.id)
 	} else {
-		await tryStartServer(server.value.id)
+		await tryStartServer(server.value)
 	}
-}
-
-/** Starts the server; if the EULA is unaccepted, shows the EULA modal first. */
-async function tryStartServer(id: string) {
-	if (!server.value) return
-	if (!server.value.eulaAccepted && server.value.eulaExists) {
-		try {
-			eulaModalPending.value = await serversApi.readFile(id, 'eula.txt')
-			eulaModal.value?.show()
-			return
-		} catch {
-			// No eula.txt: a fresh start will generate it
-		}
-	}
-	await startServer(id)
-}
-
-async function onEulaAccept() {
-	if (!server.value) return
-	try {
-		const updated = setEulaAccepted(eulaModalPending.value, true)
-		await serversApi.writeFile(server.value.id, 'eula.txt', updated)
-		eulaModal.value?.hide()
-		await startServer(server.value.id)
-	} catch (error) {
-		console.error(error)
-	}
-}
-
-function onEulaDecline() {
-	eulaModal.value?.hide()
 }
 
 async function setServerIcon() {
@@ -447,12 +415,7 @@ async function shareOnline() {
 				<ServerSettingsPanel :server="server" @deleted="router.push('/multiplayer/servers')" />
 			</div>
 
-			<EulaModal
-				ref="eulaModal"
-				:text="eulaModalPending"
-				@accept="onEulaAccept"
-				@decline="onEulaDecline"
-			/>
+			<EulaModal ref="eulaModal" :text="eulaText" @accept="acceptEula" @decline="declineEula" />
 		</template>
 	</div>
 </template>
