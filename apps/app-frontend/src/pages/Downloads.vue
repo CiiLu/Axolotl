@@ -90,7 +90,12 @@
 				/>
 			</Card>
 
-			<Card v-for="job in visibleJobs" :key="job.job_id" class="!p-0">
+			<Card
+				v-for="job in visibleJobs"
+				:key="job.job_id"
+				:data-install-job-id="job.job_id"
+				:class="['!p-0', focusedJobId === job.job_id ? 'ring-2 ring-brand' : '']"
+			>
 				<div class="flex flex-wrap items-center gap-4 p-4">
 					<img
 						v-if="job.display?.icon"
@@ -406,8 +411,8 @@ import {
 } from '@modrinth/ui'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import MissingModpackContentModal from '@/components/ui/modal/MissingModpackContentModal.vue'
 import { listPendingCurseForgeManualDownloads } from '@/helpers/curseforge'
@@ -428,10 +433,18 @@ import type { LoadingBar } from '@/helpers/state'
 import { injectContentInstall } from '@/providers/content-install'
 import { injectDownloadManager } from '@/providers/download-manager'
 
+import {
+	createDownloadFocusState,
+	focusedDownloadJobId,
+	reconcileDownloadFocus,
+	stopDownloadFocusAutoFollow,
+} from './download-focus'
+
 type DownloadItem = InstallJobSnapshot['items'][number]
 
 const manager = injectDownloadManager()
 const { showCurseForgeManualDownloads } = injectContentInstall()
+const route = useRoute()
 const router = useRouter()
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
@@ -444,6 +457,8 @@ const expanded = ref(new Set<string>())
 const busy = ref(new Set<string>())
 const clearHistoryModal = ref<InstanceType<typeof ConfirmModal>>()
 const missingContentModal = ref<InstanceType<typeof MissingModpackContentModal>>()
+const focusedJobId = computed(() => focusedDownloadJobId(route.query.job))
+const focusState = ref(createDownloadFocusState(focusedJobId.value))
 
 const messages = defineMessages({
 	newDownload: { id: 'app.downloads.new-download', defaultMessage: 'New download' },
@@ -1025,8 +1040,40 @@ function formatDate(value: string) {
 }
 
 function selectTab(index: number) {
+	focusState.value = stopDownloadFocusAutoFollow(focusState.value)
 	tab.value = index === 0 ? 'active' : 'history'
 }
+
+function focusedJobElement(jobId: string): HTMLElement | null {
+	return (
+		[...document.querySelectorAll<HTMLElement>('[data-install-job-id]')].find(
+			(element) => element.dataset.installJobId === jobId,
+		) ?? null
+	)
+}
+
+watch(
+	[focusedJobId, manager.jobs],
+	async ([jobId, jobs]) => {
+		if (focusState.value.jobId !== jobId) {
+			focusState.value = createDownloadFocusState(jobId)
+		}
+		const effect = reconcileDownloadFocus(
+			focusState.value,
+			jobId ? (jobs.find((job) => job.job_id === jobId) ?? null) : null,
+		)
+		focusState.value = effect.state
+		if (effect.tab) tab.value = effect.tab
+		if (effect.expand && jobId) {
+			expanded.value = new Set([...expanded.value, jobId])
+		}
+		if (effect.scroll && jobId) {
+			await nextTick()
+			focusedJobElement(jobId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+		}
+	},
+	{ immediate: true },
+)
 
 function toggleExpanded(jobId: string) {
 	const next = new Set(expanded.value)

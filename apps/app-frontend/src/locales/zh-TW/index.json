@@ -4770,7 +4770,10 @@
 		"message": "修改實際的外部目標資料夾，並保留現有連結。"
 	},
 	"instance.upgrade.confirm.shared.title": { "message": "共享實例處理方式" },
+	"instance.upgrade.confirm.active-job": { "message": "升級已在進行中" },
 	"instance.upgrade.confirm.start": { "message": "開始升級" },
+	"instance.upgrade.confirm.start-error": { "message": "無法開始升級" },
+	"instance.upgrade.confirm.starting": { "message": "正在開始升級..." },
 	"instance.upgrade.confirm.strategy": { "message": "升級策略" },
 	"instance.upgrade.confirm.strategy.custom": { "message": "自訂" },
 	"instance.upgrade.confirm.strategy.minimal": { "message": "盡可能少變更" },
@@ -4961,7 +4964,9 @@
 	"instance.upgrade.provider.local": { "message": "本機" },
 	"instance.upgrade.provider.modrinth": { "message": "Modrinth" },
 	"instance.upgrade.provider.unknown": { "message": "未知提供者" },
+	"instance.upgrade.progress.opening-downloads": { "message": "正在開啟下載任務..." },
 	"instance.upgrade.return": { "message": "返回實例升級" },
+	"instance.upgrade.select.automatic": { "message": "自動選擇" },
 	"instance.upgrade.select.check-compatibility": { "message": "檢查相容性" },
 	"instance.upgrade.select.current": { "message": "目前" },
 	"instance.upgrade.select.current-version-missing-body": {
@@ -4971,12 +4976,23 @@
 		"message": "中繼資料中找不到目前版本"
 	},
 	"instance.upgrade.select.description": { "message": "選擇此實例要升級至哪個 Minecraft 版本。" },
+	"instance.upgrade.select.fabric-version": { "message": "Fabric 版本" },
+	"instance.upgrade.select.fabric-versions-error": {
+		"message": "無法載入 Fabric 版本。仍可使用自動選擇。"
+	},
+	"instance.upgrade.select.loading-fabric-versions": { "message": "正在載入 Fabric 版本..." },
 	"instance.upgrade.select.loading-versions": { "message": "正在載入 Minecraft 版本..." },
+	"instance.upgrade.select.manual-fabric-version-unavailable": {
+		"message": "無法手動選擇 Fabric 版本。"
+	},
 	"instance.upgrade.select.metadata-error-body": { "message": "請檢查網路連線後再試一次。" },
 	"instance.upgrade.select.metadata-error-title": { "message": "無法載入 Minecraft 版本" },
 	"instance.upgrade.select.minecraft": { "message": "Minecraft 版本" },
 	"instance.upgrade.select.minecraft-version": { "message": "Minecraft {version}" },
 	"instance.upgrade.select.no-newer-release": { "message": "沒有更新的 Minecraft 穩定版。" },
+	"instance.upgrade.select.no-non-downgrade-fabric-version": {
+		"message": "此目標沒有可避免降級的 Fabric 版本。"
+	},
 	"instance.upgrade.select.planning-error-title": { "message": "相容性分析失敗" },
 	"instance.upgrade.select.planning-status": {
 		"message": "正在分析 {count} 個內容項目的相容性..."

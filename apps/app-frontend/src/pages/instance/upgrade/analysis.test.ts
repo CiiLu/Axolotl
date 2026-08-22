@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import type { InstanceUpgradePlan } from '@/helpers/instance-upgrade'
+import type {
+	InstanceUpgradePlan,
+	InstanceUpgradeTargetEnvironment,
+} from '@/helpers/instance-upgrade'
 
 import {
 	actionableWarningContentIds,
+	AUTOMATIC_FABRIC_LOADER_VERSION,
+	automaticFabricLoaderTargetAvailable,
 	availablePredefinedStrategies,
 	captureInitialUpgradeBlockingIssues,
+	commitUpgradePlanSelection,
 	compatibilitySummary,
 	confirmDependencyReleaseSlots,
 	confirmSelectionReleaseSlots,
@@ -16,10 +22,14 @@ import {
 	contentIdentityKeys,
 	customConstraintsEqual,
 	editableUpgradeRoots,
+	fabricLoaderVersionForTarget,
+	fabricUpgradeLoaderVersions,
 	groupUpgradeIssues,
 	inferShaderRuntime,
 	isSharedUpgradeInstance,
 	newerStableGameVersions,
+	preserveFabricLoaderSelection,
+	resolveConfirmDependencyReleases,
 	resolveUpgradePlanSelection,
 	sanitizeMinecraftDisplayTitle,
 	setFixedConstraint,
@@ -82,7 +92,7 @@ test('upgrade target equality uses semantic environment fields', () => {
 	const target = {
 		gameVersion: '26.2',
 		modLoader: 'fabric',
-		modLoaderVersion: null,
+		modLoaderVersion: '0.18.4',
 		shaderRuntime: 'iris',
 	} as const
 	assert.equal(upgradeTargetsEqual(target, { ...target }), true)
@@ -118,19 +128,19 @@ test('matching instance and semantic target reuse existing plan without replacin
 })
 
 test('plan selection skips planner for matching target and calls it once for a confirmed change', async () => {
-	const target = {
+	const target: InstanceUpgradeTargetEnvironment = {
 		gameVersion: '26.2',
 		modLoader: 'fabric',
-		modLoaderVersion: null,
+		modLoaderVersion: '0.18.4',
 		shaderRuntime: 'iris',
-	} as const
+	}
 	const existing = {
 		id: 'plan-one',
 		instanceId: 'instance-one',
 		targetEnvironment: target,
 	} as InstanceUpgradePlan
 	let calls = 0
-	const planner = async (_instanceId: string, nextTarget: typeof target) => {
+	const planner = async (_instanceId: string, nextTarget: InstanceUpgradeTargetEnvironment) => {
 		calls += 1
 		return {
 			...existing,
@@ -147,12 +157,72 @@ test('plan selection skips planner for matching target and calls it once for a c
 	const replanned = await resolveUpgradePlanSelection(
 		'instance-one',
 		existing,
-		{ ...target, gameVersion: '26.1' },
+		{ ...target, modLoaderVersion: '0.18.5' },
 		planner,
 	)
 	assert.equal(calls, 1)
 	assert.equal(replanned.plan.id, 'plan-two')
 	assert.equal(replanned.reused, false)
+})
+
+test('failed replan preserves existing plan and authoritative target', async () => {
+	const oldTarget = {
+		gameVersion: '26.1',
+		modLoader: 'fabric',
+		modLoaderVersion: '0.18.4',
+		shaderRuntime: 'iris',
+	} as const
+	const attemptedTarget = { ...oldTarget, gameVersion: '26.2', modLoaderVersion: '0.18.5' }
+	const oldPlan = {
+		id: 'old-plan',
+		instanceId: 'instance-one',
+		targetEnvironment: oldTarget,
+	} as InstanceUpgradePlan
+	let authoritativePlan = oldPlan
+	let authoritativeTarget = oldTarget
+
+	await assert.rejects(
+		commitUpgradePlanSelection(
+			'instance-one',
+			oldPlan,
+			attemptedTarget,
+			async () => {
+				throw new Error('planning failed')
+			},
+			(plan) => (authoritativePlan = plan),
+			(target) => (authoritativeTarget = target as typeof oldTarget),
+		),
+		/planning failed/,
+	)
+	assert.equal(authoritativePlan, oldPlan)
+	assert.equal(authoritativeTarget, oldTarget)
+})
+
+test('Fabric loader choices exclude downgrades using numeric semantic comparison', () => {
+	assert.deepEqual(
+		fabricUpgradeLoaderVersions('0.18.4', ['0.18.6', '0.18.5', '0.18.4', '0.18.3']),
+		['0.18.6', '0.18.5', '0.18.4'],
+	)
+	assert.deepEqual(fabricUpgradeLoaderVersions('0.18.9', ['0.18.10', '0.18.9']), [
+		'0.18.10',
+		'0.18.9',
+	])
+	assert.deepEqual(fabricUpgradeLoaderVersions('custom', ['0.19.0']), [])
+})
+
+test('Fabric loader pending selection preserves valid exact values and maps target values', () => {
+	assert.equal(preserveFabricLoaderSelection('0.18.5', ['0.18.5']), '0.18.5')
+	assert.equal(preserveFabricLoaderSelection('0.18.5', ['0.18.6']), AUTOMATIC_FABRIC_LOADER_VERSION)
+	assert.equal(
+		preserveFabricLoaderSelection(AUTOMATIC_FABRIC_LOADER_VERSION, []),
+		AUTOMATIC_FABRIC_LOADER_VERSION,
+	)
+	assert.equal(fabricLoaderVersionForTarget(AUTOMATIC_FABRIC_LOADER_VERSION), null)
+	assert.equal(fabricLoaderVersionForTarget('0.18.5'), '0.18.5')
+	assert.equal(automaticFabricLoaderTargetAvailable(true, true, []), false)
+	assert.equal(automaticFabricLoaderTargetAvailable(true, true, ['0.18.5']), true)
+	assert.equal(automaticFabricLoaderTargetAvailable(false, true, []), true)
+	assert.equal(automaticFabricLoaderTargetAvailable(true, false, []), true)
 })
 
 test('shared upgrade detection uses established link or external target metadata', () => {
@@ -371,6 +441,46 @@ test('confirm release slots keep current and target changelogs independent', () 
 		} as never),
 		{ currentReleaseId: 'current', targetReleaseId: 'target' },
 	)
+})
+
+test('dependency detail resolves deterministic current and target release slots', () => {
+	const cases = [
+		{
+			change: { kind: 'upgrade', currentReleaseId: 'old', targetReleaseId: 'new' },
+			expected: {
+				currentReleaseId: 'old',
+				targetReleaseId: 'new',
+				current: 'old-label',
+				target: 'new-label',
+			},
+		},
+		{
+			change: { kind: 'add', currentReleaseId: null, targetReleaseId: 'new' },
+			expected: {
+				currentReleaseId: null,
+				targetReleaseId: 'new',
+				current: null,
+				target: 'new-label',
+			},
+		},
+		{
+			change: { kind: 'remove', currentReleaseId: 'old', targetReleaseId: null },
+			expected: {
+				currentReleaseId: 'old',
+				targetReleaseId: null,
+				current: 'old-label',
+				target: null,
+			},
+		},
+	]
+	for (const { change, expected } of cases) {
+		assert.deepEqual(
+			resolveConfirmDependencyReleases(change as never, (releaseId) =>
+				releaseId ? `${releaseId}-label` : null,
+			),
+			expected,
+		)
+	}
 })
 
 test('confirm target loader label shows explicit version or honest automatic policy', () => {

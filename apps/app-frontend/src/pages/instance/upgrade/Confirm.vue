@@ -5,6 +5,10 @@
 			<p class="mb-0 mt-1 text-secondary">{{ formatMessage(messages.description) }}</p>
 		</header>
 
+		<Admonition v-if="executionError" type="critical" :header="formatMessage(messages.startError)">
+			{{ executionError }}
+		</Admonition>
+
 		<Admonition type="warning" :header="formatMessage(messages.worldTitle)">
 			<div class="flex flex-col gap-2">
 				<span>{{ formatMessage(messages.worldBody) }}</span>
@@ -187,8 +191,8 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useQuery } from '@tanstack/vue-query'
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import type { InstanceContentSnapshotItem } from '@/helpers/instance'
 import {
@@ -214,7 +218,6 @@ import {
 } from '@/helpers/upgrade-version-metadata'
 
 import {
-	confirmDependencyReleaseSlots,
 	confirmSelectionReleaseSlots,
 	confirmSolutionGroups,
 	confirmTargetLoaderLabel,
@@ -222,10 +225,12 @@ import {
 	contentIdentityKeys,
 	isSharedUpgradeInstance,
 	normalizeUpgradePath,
+	resolveConfirmDependencyReleases,
 	solutionSummary,
 	upgradeContentDisplayMetadata,
 } from './analysis'
-import { useInstanceUpgradeFlow } from './flow'
+import { attachUpgradeJobToFlow, useInstanceUpgradeFlow } from './flow'
+import { submitInstanceUpgrade } from './install-job'
 import UpgradeVersionChangelogPopout from './UpgradeVersionChangelogPopout.vue'
 
 const messages = defineMessages({
@@ -382,12 +387,24 @@ const messages = defineMessages({
 	},
 	back: { id: 'instance.upgrade.confirm.back', defaultMessage: 'Back' },
 	start: { id: 'instance.upgrade.confirm.start', defaultMessage: 'Start upgrade' },
+	starting: { id: 'instance.upgrade.confirm.starting', defaultMessage: 'Starting upgrade…' },
+	startError: {
+		id: 'instance.upgrade.confirm.start-error',
+		defaultMessage: 'Unable to start upgrade',
+	},
+	activeJob: {
+		id: 'instance.upgrade.confirm.active-job',
+		defaultMessage: 'An upgrade is already in progress',
+	},
 })
 
 const flow = useInstanceUpgradeFlow()
+const route = useRoute()
 const router = useRouter()
 const { formatMessage } = useVIntl()
 const datapackPath = 'saves/<world>/datapacks'
+const submissionLock = ref(false)
+const executionError = ref<string | null>(null)
 const plan = computed(() => flow.plan.value!)
 const solution = computed(() => plan.value.selectedSolution!)
 const sharedInstance = computed(() => isSharedUpgradeInstance(flow.instance.value))
@@ -399,7 +416,21 @@ const confirmOptions = computed(() =>
 	),
 )
 const effectiveMode = computed(() => confirmOptions.value.effectiveMode)
-const canStartUpgrade = computed(() => confirmOptions.value.canStart)
+const routeInstanceId = computed(() =>
+	Array.isArray(route.params.id) ? route.params.id[0] : route.params.id,
+)
+const submissionBusy = computed(() => flow.busy.value || submissionLock.value)
+const canStartUpgrade = computed(
+	() =>
+		flow.plan.value !== null &&
+		flow.plan.value.blockingIssues.length === 0 &&
+		flow.plan.value.selectedSolution !== null &&
+		!flow.busy.value &&
+		!submissionLock.value &&
+		flow.activeJobId.value === null &&
+		routeInstanceId.value === flow.instanceId.value &&
+		confirmOptions.value.canStart,
+)
 const summary = computed(() => solutionSummary(solution.value))
 const metrics = computed(() => [
 	{ label: formatMessage(messages.updated), value: summary.value.upgraded },
@@ -639,12 +670,13 @@ function dependencyDetail(change: InstanceUpgradeDependencyChange): ConfirmDetai
 		itemByProviderProject.value.get(`${change.provider}:${change.projectId}`)
 	const metadata = item ? contentMetadata(item) : null
 	const providerMetadata = projectMetadata(change.provider, change.projectId)
-	const releases = confirmDependencyReleaseSlots(change)
-	const current = releaseLabel(
-		change.provider,
-		change.projectId,
-		releases.currentReleaseId,
-		metadata?.currentVersion,
+	const releases = resolveConfirmDependencyReleases(change, (releaseId, slot) =>
+		releaseLabel(
+			change.provider,
+			change.projectId,
+			releaseId,
+			slot === 'current' ? metadata?.currentVersion : undefined,
+		),
 	)
 	return {
 		key: `${change.provider}:${change.projectId}:${change.existingContentId ?? 'new'}:${change.kind}`,
@@ -658,9 +690,13 @@ function dependencyDetail(change: InstanceUpgradeDependencyChange): ConfirmDetai
 		projectId: change.projectId,
 		projectPath: upgradeProjectPath(change.provider, change.projectId),
 		currentReleaseId: releases.currentReleaseId,
-		currentLabel: current ? formatMessage(messages.versionCurrent, { version: current }) : null,
+		currentLabel: releases.current
+			? formatMessage(messages.versionCurrent, { version: releases.current })
+			: null,
 		targetReleaseId: releases.targetReleaseId,
-		targetLabel: target ? formatMessage(messages.versionTarget, { version: target }) : null,
+		targetLabel: releases.target
+			? formatMessage(messages.versionTarget, { version: releases.target })
+			: null,
 		stateLabel: null,
 	}
 }
@@ -705,12 +741,42 @@ function modeClass(mode: SharedUpgradeMode) {
 		: 'border-surface-4 bg-surface-2 hover:bg-surface-3'
 }
 
+function errorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message
+	if (typeof error === 'string') return error
+	if (typeof error === 'object' && error && 'message' in error) return String(error.message)
+	return String(error)
+}
+
+async function startUpgrade() {
+	if (!canStartUpgrade.value || !flow.plan.value || !effectiveMode.value) return
+	flow.busy.value = true
+	executionError.value = null
+	try {
+		const submitted = await submitInstanceUpgrade(
+			{
+				instanceId: flow.instanceId.value,
+				planId: flow.plan.value.id,
+				createFullBackup: confirmOptions.value.createFullBackup,
+				sharedUpgradeMode: effectiveMode.value,
+			},
+			submissionLock,
+		)
+		if (!submitted) return
+		await router.replace(attachUpgradeJobToFlow(flow, submitted.job))
+	} catch (error) {
+		executionError.value = errorMessage(error)
+	} finally {
+		flow.busy.value = false
+	}
+}
+
 function registerControls() {
 	flow.registerStepControls({
-		canNext: false,
-		busy: false,
-		nextLabel: formatMessage(messages.start),
-		onNext: () => undefined,
+		canNext: canStartUpgrade,
+		busy: submissionBusy,
+		nextLabel: formatMessage(submissionBusy.value ? messages.starting : messages.start),
+		onNext: startUpgrade,
 		onBack: () =>
 			router.push(`/instance/${encodeURIComponent(flow.instanceId.value)}/upgrade/customize`),
 	})
@@ -723,6 +789,6 @@ onMounted(() => {
 	}
 	registerControls()
 })
-watch(canStartUpgrade, registerControls)
+watch([canStartUpgrade, submissionBusy], registerControls)
 onBeforeUnmount(() => flow.registerStepControls(null))
 </script>

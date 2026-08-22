@@ -7514,6 +7514,9 @@
 	"instance.upgrade.compatibility.warnings-description": {
 		"message": "Review these items before choosing an upgrade solution."
 	},
+	"instance.upgrade.confirm.active-job": {
+		"message": "An upgrade is already in progress"
+	},
 	"instance.upgrade.confirm.back": {
 		"message": "Back"
 	},
@@ -7624,6 +7627,12 @@
 	},
 	"instance.upgrade.confirm.start": {
 		"message": "Start upgrade"
+	},
+	"instance.upgrade.confirm.start-error": {
+		"message": "Unable to start upgrade"
+	},
+	"instance.upgrade.confirm.starting": {
+		"message": "Starting upgrade…"
 	},
 	"instance.upgrade.confirm.strategy": {
 		"message": "Upgrade strategy"
@@ -7892,6 +7901,9 @@
 	"instance.upgrade.issue.unsupported-content-type": {
 		"message": "This content type cannot be migrated automatically."
 	},
+	"instance.upgrade.progress.opening-downloads": {
+		"message": "Opening download task…"
+	},
 	"instance.upgrade.provider.curseforge": {
 		"message": "CurseForge"
 	},
@@ -7906,6 +7918,9 @@
 	},
 	"instance.upgrade.return": {
 		"message": "Return to instance upgrade"
+	},
+	"instance.upgrade.select.automatic": {
+		"message": "Automatic"
 	},
 	"instance.upgrade.select.check-compatibility": {
 		"message": "Check compatibility"
@@ -7922,8 +7937,20 @@
 	"instance.upgrade.select.description": {
 		"message": "Choose which Minecraft version this instance should be upgraded to."
 	},
+	"instance.upgrade.select.fabric-version": {
+		"message": "Fabric version"
+	},
+	"instance.upgrade.select.fabric-versions-error": {
+		"message": "Fabric versions could not be loaded. Automatic remains available."
+	},
+	"instance.upgrade.select.loading-fabric-versions": {
+		"message": "Loading Fabric versions…"
+	},
 	"instance.upgrade.select.loading-versions": {
 		"message": "Loading Minecraft versions…"
+	},
+	"instance.upgrade.select.manual-fabric-version-unavailable": {
+		"message": "Manual Fabric version selection is unavailable."
 	},
 	"instance.upgrade.select.metadata-error-body": {
 		"message": "Check your connection and try again."
@@ -7939,6 +7966,9 @@
 	},
 	"instance.upgrade.select.no-newer-release": {
 		"message": "No newer stable Minecraft release is available."
+	},
+	"instance.upgrade.select.no-non-downgrade-fabric-version": {
+		"message": "No Fabric version that avoids downgrading is available for this target."
 	},
 	"instance.upgrade.select.planning-error-title": {
 		"message": "Compatibility analysis failed"

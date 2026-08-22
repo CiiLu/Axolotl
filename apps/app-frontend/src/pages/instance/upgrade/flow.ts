@@ -1,6 +1,7 @@
 import type { ComputedRef, InjectionKey, MaybeRef, Ref } from 'vue'
 import { computed, inject, provide, ref } from 'vue'
 
+import type { InstallJobSnapshot } from '@/helpers/install'
 import type {
 	InstanceUpgradeIssue,
 	InstanceUpgradePlan,
@@ -12,6 +13,33 @@ import type {
 import type { GameInstance } from '@/helpers/types'
 
 export type UpgradeRouteRequirement = 'plan' | 'unblocked-plan' | 'selection' | 'job' | 'result'
+export type UpgradeJobRecoveryState = 'idle' | 'loading' | 'ready'
+
+export function upgradeDownloadsLocation(jobId: string) {
+	return { path: '/downloads', query: { job: jobId } } as const
+}
+
+export function upgradeProgressDestination(
+	recoveryState: UpgradeJobRecoveryState,
+	jobId: string | null,
+	instanceId: string,
+) {
+	if (recoveryState !== 'ready') return null
+	return jobId
+		? upgradeDownloadsLocation(jobId)
+		: { path: `/instance/${encodeURIComponent(instanceId)}/upgrade` }
+}
+
+export function attachUpgradeJobToFlow(
+	flow: Pick<InstanceUpgradeFlow, 'setJob' | 'setResult'>,
+	job: InstallJobSnapshot,
+) {
+	flow.setJob(job.job_id)
+	if (job.status === 'succeeded' && job.upgrade_result) {
+		flow.setResult(job.upgrade_result)
+	}
+	return upgradeDownloadsLocation(job.job_id)
+}
 
 export interface InstanceUpgradeFlow {
 	instance: Readonly<Ref<GameInstance>>
@@ -23,6 +51,7 @@ export interface InstanceUpgradeFlow {
 	directFullBackupPreference: Ref<boolean>
 	sharedUpgradeMode: Ref<SharedUpgradeMode | null>
 	activeJobId: Ref<string | null>
+	jobRecoveryState: Ref<UpgradeJobRecoveryState>
 	result: Ref<InstanceUpgradeResult | null>
 	initialBlockingPlanId: Ref<string | null>
 	initialBlockingIssues: Ref<Record<string, InstanceUpgradeIssue[]>>
@@ -34,6 +63,7 @@ export interface InstanceUpgradeFlow {
 	setTargetEnvironment: (environment: InstanceUpgradeTargetEnvironment | null) => void
 	setPlan: (plan: InstanceUpgradePlan | null) => void
 	setJob: (jobId: string | null) => void
+	setJobRecoveryState: (state: UpgradeJobRecoveryState) => void
 	setResult: (result: InstanceUpgradeResult | null) => void
 	hydrate: (snapshot: UpgradeFlowSnapshot) => void
 	controls: Ref<UpgradeStepControls | null>
@@ -81,6 +111,7 @@ export function provideInstanceUpgradeFlow(
 	const directFullBackupPreference = ref(true)
 	const sharedUpgradeMode = ref<SharedUpgradeMode | null>(null)
 	const activeJobId = ref<string | null>(null)
+	const jobRecoveryState = ref<UpgradeJobRecoveryState>('idle')
 	const result = ref<InstanceUpgradeResult | null>(null)
 	const initialBlockingPlanId = ref<string | null>(null)
 	const initialBlockingIssues = ref<Record<string, InstanceUpgradeIssue[]>>({})
@@ -133,6 +164,7 @@ export function provideInstanceUpgradeFlow(
 		directFullBackupPreference,
 		sharedUpgradeMode,
 		activeJobId,
+		jobRecoveryState,
 		result,
 		initialBlockingPlanId,
 		initialBlockingIssues,
@@ -154,6 +186,7 @@ export function provideInstanceUpgradeFlow(
 			plan.value = nextPlan
 		},
 		setJob: (jobId) => (activeJobId.value = jobId),
+		setJobRecoveryState: (state) => (jobRecoveryState.value = state),
 		setResult: (nextResult) => (result.value = nextResult),
 		hydrate,
 		controls,
@@ -161,6 +194,15 @@ export function provideInstanceUpgradeFlow(
 	}
 	provideUpgradeFlow(flow)
 	return flow
+}
+
+export function isUpgradeRouteRecoveryPending(
+	requirement: UpgradeRouteRequirement | undefined,
+	flow: InstanceUpgradeFlow,
+): boolean {
+	return (
+		(requirement === 'job' || requirement === 'result') && flow.jobRecoveryState.value === 'loading'
+	)
 }
 
 export function useInstanceUpgradeFlow(): InstanceUpgradeFlow {
@@ -179,7 +221,11 @@ export function isUpgradeRouteAvailable(
 		case 'unblocked-plan':
 			return flow.plan.value !== null && flow.plan.value.blockingIssues.length === 0
 		case 'selection':
-			return flow.plan.value?.selectedSolution != null
+			return (
+				flow.plan.value !== null &&
+				flow.plan.value.blockingIssues.length === 0 &&
+				flow.plan.value.selectedSolution !== null
+			)
 		case 'job':
 			return flow.activeJobId.value !== null
 		case 'result':

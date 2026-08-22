@@ -9,7 +9,7 @@
 			class="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3"
 		>
 			<div class="justify-self-start">
-				<ButtonStyled v-if="!progress.complete" type="outlined" size="small">
+				<ButtonStyled v-if="!progress.complete && controls" type="outlined" size="small">
 					<button :disabled="!controls" @click="controls?.onBack()">
 						<ArrowLeftIcon aria-hidden="true" />
 						<span class="bar-label">{{ formatMessage(messages.back) }}</span>
@@ -72,7 +72,7 @@
 					:title="showBlockerTooltip ? formatMessage(messages.resolveBlockers) : undefined"
 					:aria-label="showBlockerTooltip ? formatMessage(messages.resolveBlockers) : undefined"
 				>
-					<ButtonStyled v-if="!progress.complete" color="brand" size="small">
+					<ButtonStyled v-if="!progress.complete && controls" color="brand" size="small">
 						<button :disabled="!controls || !canNext || busy" @click="controls?.onNext()">
 							<SpinnerIcon v-if="busy" class="animate-spin" aria-hidden="true" />
 							<CircleArrowRightIcon v-else aria-hidden="true" />

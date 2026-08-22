@@ -14,6 +14,10 @@ import type {
 } from '@/helpers/instance-upgrade'
 import type { GameInstance } from '@/helpers/types'
 
+import { compareSemanticVersions } from '../../../helpers/version-compatibility.ts'
+
+export const AUTOMATIC_FABRIC_LOADER_VERSION = '__automatic__'
+
 export interface UpgradeVersionTargets {
 	currentFound: boolean
 	versions: string[]
@@ -52,6 +56,11 @@ export interface ConfirmUpgradeOptions {
 export interface ConfirmReleaseSlots {
 	currentReleaseId: string | null
 	targetReleaseId: string | null
+}
+
+export interface ConfirmResolvedReleaseSlots extends ConfirmReleaseSlots {
+	current: string | null
+	target: string | null
 }
 
 export interface UpgradeContentIssueGroup {
@@ -125,6 +134,56 @@ export async function resolveUpgradePlanSelection(
 		return { plan: existingPlan!, reused: true }
 	}
 	return { plan: await planUpgrade(instanceId, target), reused: false }
+}
+
+export async function commitUpgradePlanSelection(
+	instanceId: string,
+	existingPlan: InstanceUpgradePlan | null,
+	target: InstanceUpgradeTargetEnvironment,
+	planUpgrade: (
+		instanceId: string,
+		target: InstanceUpgradeTargetEnvironment,
+	) => Promise<InstanceUpgradePlan>,
+	commitPlan: (plan: InstanceUpgradePlan) => void,
+	commitTarget: (target: InstanceUpgradeTargetEnvironment) => void,
+): Promise<{ plan: InstanceUpgradePlan; reused: boolean }> {
+	const result = await resolveUpgradePlanSelection(instanceId, existingPlan, target, planUpgrade)
+	if (!result.reused) commitPlan(result.plan)
+	commitTarget(result.plan.targetEnvironment)
+	return result
+}
+
+export function fabricUpgradeLoaderVersions(
+	currentVersion: string | null | undefined,
+	availableVersions: readonly string[],
+): string[] {
+	if (!currentVersion || compareSemanticVersions(currentVersion, currentVersion) === null) return []
+	return availableVersions.filter((version) => {
+		const comparison = compareSemanticVersions(version, currentVersion)
+		return comparison !== null && comparison >= 0
+	})
+}
+
+export function preserveFabricLoaderSelection(
+	selectedVersion: string,
+	availableVersions: readonly string[],
+): string {
+	return selectedVersion === AUTOMATIC_FABRIC_LOADER_VERSION ||
+		availableVersions.includes(selectedVersion)
+		? selectedVersion
+		: AUTOMATIC_FABRIC_LOADER_VERSION
+}
+
+export function fabricLoaderVersionForTarget(selectedVersion: string): string | null {
+	return selectedVersion === AUTOMATIC_FABRIC_LOADER_VERSION ? null : selectedVersion
+}
+
+export function automaticFabricLoaderTargetAvailable(
+	metadataLoaded: boolean,
+	currentVersionComparable: boolean,
+	availableVersions: readonly string[],
+): boolean {
+	return !metadataLoaded || !currentVersionComparable || availableVersions.length > 0
 }
 
 export function isSharedUpgradeInstance(instance: GameInstance): boolean {
@@ -461,6 +520,18 @@ export function confirmDependencyReleaseSlots(
 		currentReleaseId: change.currentReleaseId,
 		targetReleaseId:
 			change.targetReleaseId !== change.currentReleaseId ? change.targetReleaseId : null,
+	}
+}
+
+export function resolveConfirmDependencyReleases(
+	change: InstanceUpgradeDependencyChange,
+	resolveLabel: (releaseId: string | null, slot: 'current' | 'target') => string | null,
+): ConfirmResolvedReleaseSlots {
+	const releases = confirmDependencyReleaseSlots(change)
+	return {
+		...releases,
+		current: resolveLabel(releases.currentReleaseId, 'current'),
+		target: resolveLabel(releases.targetReleaseId, 'target'),
 	}
 }
 
