@@ -1,11 +1,12 @@
 import Fuse from 'fuse.js'
-import type { Ref } from 'vue'
+import type { ComputedRef, Ref } from 'vue'
 import { computed, ref, shallowRef, watch } from 'vue'
 
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
 import { commonProjectTypeCategoryMessages, normalizeProjectType } from '#ui/utils/common-messages'
 
 import type { ContentItem } from '../types'
+import { type ContentFilterSelections, pruneContentFilterSelections } from './content-filter-state'
 import type { ContentFilterOption } from './content-filtering'
 import {
 	getClientWarningType,
@@ -41,6 +42,8 @@ export interface ContentPipelineConfig {
 	isPackLocked?: Ref<boolean>
 	memoryKey?: string
 	searchKeys?: string[]
+	initialFilters?: ContentFilterSelections
+	filterOptionsReady?: Ref<boolean> | ComputedRef<boolean>
 }
 
 interface PipelineResult {
@@ -93,12 +96,11 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 		showWarningsFilter = false,
 		memoryKey = '',
 		searchKeys = ['project.title', 'owner.name', 'file_name'],
+		initialFilters,
+		filterOptionsReady,
 	} = config
 
 	// ---- filter state ----
-
-	const selectedTypeFilter = ref<string[]>([])
-	const selectedStatusFilters = ref<string[]>([])
 
 	function normalizeTypeFilters(value: string | string[] | null | undefined): string[] {
 		if (!value) return []
@@ -106,9 +108,17 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 	}
 
 	const filterMemory = getMap<string, { type: string[]; status: string[] }>('filter')
+	const savedFilters = memoryKey ? filterMemory.get(memoryKey) : undefined
+	const selectedTypeFilter = ref<string[]>(
+		normalizeTypeFilters(initialFilters?.typeFilters ?? savedFilters?.type),
+	)
+	const selectedStatusFilters = ref<string[]>(
+		initialFilters?.statusFilters ?? savedFilters?.status ?? [],
+	)
 	watch(
 		() => memoryKey,
 		(key) => {
+			if (initialFilters) return
 			if (key) {
 				const entry = filterMemory.get(key)
 				selectedTypeFilter.value = normalizeTypeFilters(entry?.type)
@@ -157,6 +167,25 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 				update: null,
 			})),
 		)
+	})
+
+	const filterValidationOptions = computed(() => {
+		const type = new Set<string>()
+		const status = new Set<string>()
+		const allItems = [...modpackItemsNoUpdate.value, ...sortedItems.value]
+
+		for (const item of allItems) {
+			type.add(normalizeProjectType(item.project_type))
+			if (showUpdateFilter && item.update != null) status.add('updates')
+			if (showWarningsFilter && getClientWarningType(item) !== null) status.add('warnings')
+			if (isEnabledContentItem(item)) status.add('enabled')
+			if (isDisabledContentItem(item)) status.add('disabled')
+		}
+
+		return {
+			type: [...type],
+			status: [...status],
+		}
 	})
 
 	const modpackChildIdSet = computed(() => {
@@ -230,16 +259,11 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 		if (showWarningsFilter && typeFiltered.some((item) => getClientWarningType(item) !== null)) {
 			availableStatusFilters.add('warnings')
 		}
-		if (hasEnabled && hasDisabled) {
-			availableStatusFilters.add('enabled')
-			availableStatusFilters.add('disabled')
-		}
+		if (hasEnabled) availableStatusFilters.add('enabled')
+		if (hasDisabled) availableStatusFilters.add('disabled')
 		const effectiveStatusFilters = statusFilters.filter((filter) =>
 			availableStatusFilters.has(filter),
 		)
-		if (effectiveStatusFilters.length !== statusFilters.length) {
-			selectedStatusFilters.value = effectiveStatusFilters
-		}
 
 		let statusFiltered = searchedAllItems
 		if (effectiveStatusFilters.length > 0) {
@@ -411,16 +435,23 @@ export function useContentPipeline(config: ContentPipelineConfig) {
 	const totalCount = computed(() => result.value.totalCount)
 
 	// Clean up invalid selections when options change
-	const allFilterOptions = computed(() => [...row1FilterOptions.value, ...row2FilterOptions.value])
 	watch(
-		allFilterOptions,
+		[filterValidationOptions, () => filterOptionsReady?.value ?? true],
 		() => {
-			const validIds = new Set(allFilterOptions.value.map((opt) => opt.id))
-			const validTypeFilters = selectedTypeFilter.value.filter((id) => validIds.has(id))
-			if (validTypeFilters.length !== selectedTypeFilter.value.length) {
-				selectedTypeFilter.value = validTypeFilters
+			const pruned = pruneContentFilterSelections(
+				{
+					typeFilters: selectedTypeFilter.value,
+					statusFilters: selectedStatusFilters.value,
+				},
+				filterValidationOptions.value,
+				filterOptionsReady?.value ?? true,
+			)
+			if (pruned.typeFilters.length !== selectedTypeFilter.value.length) {
+				selectedTypeFilter.value = pruned.typeFilters
 			}
-			selectedStatusFilters.value = selectedStatusFilters.value.filter((f) => validIds.has(f))
+			if (pruned.statusFilters.length !== selectedStatusFilters.value.length) {
+				selectedStatusFilters.value = pruned.statusFilters
+			}
 		},
 		{ immediate: true },
 	)
