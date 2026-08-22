@@ -376,8 +376,14 @@ function reportOperationError(error?: unknown, context?: string) {
 				provider: messages.operationFailed,
 			}[errorKind]
 		: messages.operationFailed
-	handleError(new Error(formatMessage(message)))
-}
+	// Surface the underlying provider error (e.g. DeepL HTTP status, quota
+	// or endpoint mistakes) instead of a generic message, so users can fix
+	// the configuration themselves.
+	const displayMessage =
+		errorKind === 'provider' && errorMessage.includes('DeepL API error')
+			? errorMessage
+			: formatMessage(message)
+	handleError(new Error(displayMessage))
 
 watch(
 	settings,
