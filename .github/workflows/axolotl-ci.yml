@@ -70,25 +70,24 @@ jobs:
         if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
         continue-on-error: true
         uses: mozilla-actions/sccache-action@2df7dbab909c49ab7d3382d05da469f3f975c2d6 # v0.0.7
-      - name: Check Rust compiler cache availability
-        id: sccache
+      - name: Cache sccache directory
         if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
-        continue-on-error: true
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.cache/sccache
+          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            sccache-${{ runner.os }}-
+      - name: Enable Rust compiler cache
+        if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
         shell: bash
-        env:
-          SCCACHE_GHA_ENABLED: 'true'
         run: |
           if [ -z "${SCCACHE_PATH:-}" ]; then
             echo "sccache is not installed; skipping Rust compiler cache"
-            exit 1
+            exit 0
           fi
-          ${SCCACHE_PATH} rustc -vV
-      - name: Enable Rust compiler cache
-        if: (runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux') && steps.sccache.outcome == 'success'
-        shell: bash
-        run: |
+          echo "SCCACHE_DIR=$HOME/.cache/sccache" >> "$GITHUB_ENV"
           echo 'RUSTC_WRAPPER=sccache' >> "$GITHUB_ENV"
-          echo 'SCCACHE_GHA_ENABLED=true' >> "$GITHUB_ENV"
           echo 'SCCACHE_CACHE_SIZE=4G' >> "$GITHUB_ENV"
           echo 'CARGO_INCREMENTAL=0' >> "$GITHUB_ENV"
 
@@ -167,9 +166,12 @@ jobs:
           }
           Write-Output "Built native NSIS installer: $($installers[0].Name)"
       - name: Show Rust compiler cache statistics
-        if: (runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux') && steps.sccache.outcome == 'success' && always()
+        if: always()
         shell: bash
-        run: ${SCCACHE_PATH} --show-stats
+        run: |
+          if [ -n "${SCCACHE_PATH:-}" ]; then
+            ${SCCACHE_PATH} --show-stats
+          fi
 
   website:
     needs: guardrails
