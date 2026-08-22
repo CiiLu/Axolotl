@@ -35,6 +35,18 @@ function selectGameVersion(version: string) {
 	ctx.selectedGameVersion.value = version
 	void ctx.loadLoaderVersions()
 }
+
+// Inline styles instead of Tailwind arbitrary values: underscores inside
+// `var(--_color)` are converted to spaces by Tailwind's arbitrary-value
+// parsing, which generates invalid CSS and breaks the production build.
+const monogramStyles = computed<Record<string, string>>(() =>
+	Object.fromEntries(
+		serverTypeOptions.map((type) => [
+			type.id,
+			`color-mix(in srgb, ${SERVER_TYPE_META[type.id].colorVar} 14%, transparent)`,
+		]),
+	),
+)
 </script>
 
 <template>
@@ -60,11 +72,10 @@ function selectGameVersion(version: string) {
 			>
 				<span
 					class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold"
-					:style="`--_color: ${SERVER_TYPE_META[type.id].colorVar}`"
-					:class="[
-						'text-[--_color,var(--color-brand)]',
-						'bg-[color-mix(in_srgb,var(--_color)_14%,transparent)]',
-					]"
+					:style="{
+						color: SERVER_TYPE_META[type.id].colorVar,
+						backgroundColor: monogramStyles[type.id],
+					}"
 				>
 					{{ SERVER_TYPE_META[type.id].monogram }}
 				</span>

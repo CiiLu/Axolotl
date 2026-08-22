@@ -1,18 +1,24 @@
 <script setup lang="ts">
+import { setEulaAccepted } from '@modrinth/server'
 import { PlusIcon, RefreshCwIcon, ServerIcon, SpinnerIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, EmptyState, useVIntl } from '@modrinth/ui'
-import { onMounted, useTemplateRef } from 'vue'
+import { onMounted, ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 import { useRouter } from 'vue-router'
 
 import CreateServerModal from '@/components/multiplayer/servers/CreateServerModal.vue'
+import EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
 import ServerCard from '@/components/multiplayer/servers/ServerCard.vue'
-import { useServers } from '@/composables/useServers'
+import { type ServerView, useServers } from '@/composables/useServers'
+import { servers as serversApi } from '@/helpers/servers'
 
 const router = useRouter()
 const { formatMessage } = useVIntl()
 const { servers, isRefreshing, refresh, startServer, stopServer } = useServers()
 const createModal = useTemplateRef<ComponentExposed<typeof CreateServerModal>>('createModal')
+const eulaModal = useTemplateRef<ComponentExposed<typeof EulaModal>>('eulaModal')
+const eulaText = ref('')
+const eulaPendingId = ref('')
 
 const messages = defineMessages({
 	create: { id: 'app.servers.create.title', defaultMessage: 'Create server' },
@@ -40,9 +46,44 @@ function openServer(id: string) {
 	void router.push('/multiplayer/servers/' + encodeURIComponent(id))
 }
 
-async function toggleRunning(id: string, running: boolean) {
-	if (running) await stopServer(id)
-	else await startServer(id)
+async function toggleRunning(server: ServerView) {
+	if (server.status === 'running') {
+		await stopServer(server.id)
+	} else {
+		await tryStartServer(server)
+	}
+}
+
+/** Starts the server; if the EULA is unaccepted, shows the EULA modal first. */
+async function tryStartServer(server: ServerView) {
+	if (!server.eulaAccepted && server.eulaExists) {
+		try {
+			eulaText.value = await serversApi.readFile(server.id, 'eula.txt')
+			eulaPendingId.value = server.id
+			eulaModal.value?.show()
+			return
+		} catch {
+			// No eula.txt: a fresh start will generate it
+		}
+	}
+	await startServer(server.id)
+}
+
+async function onEulaAccept() {
+	const id = eulaPendingId.value
+	if (!id) return
+	try {
+		const updated = setEulaAccepted(eulaText.value, true)
+		await serversApi.writeFile(id, 'eula.txt', updated)
+		eulaModal.value?.hide()
+		await startServer(id)
+	} catch (error) {
+		console.error(error)
+	}
+}
+
+function onEulaDecline() {
+	eulaModal.value?.hide()
 }
 </script>
 
@@ -98,10 +139,11 @@ async function toggleRunning(id: string, running: boolean) {
 				:key="entry.id"
 				:server="entry"
 				@open="openServer(entry.id)"
-				@start-stop="toggleRunning(entry.id, entry.status === 'running')"
+				@start-stop="toggleRunning(entry)"
 			/>
 		</div>
 
 		<CreateServerModal ref="createModal" />
+		<EulaModal ref="eulaModal" :text="eulaText" @accept="onEulaAccept" @decline="onEulaDecline" />
 	</div>
 </template>

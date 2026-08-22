@@ -2,6 +2,7 @@
 import { ImageIcon, SaveIcon, SpinnerIcon, TrashIcon, XIcon } from '@modrinth/assets'
 import { requiredJavaMajorVersion } from '@modrinth/server'
 import {
+	Admonition,
 	ButtonStyled,
 	Card,
 	ConfirmModal,
@@ -58,6 +59,15 @@ const messages = defineMessages({
 	},
 	deleteProceed: { id: 'app.servers.settings.delete-proceed', defaultMessage: 'Delete' },
 	configFiles: { id: 'app.servers.settings.config', defaultMessage: 'Configuration' },
+	runningTitle: {
+		id: 'app.servers.settings.running-title',
+		defaultMessage: 'Server is running',
+	},
+	runningHint: {
+		id: 'app.servers.settings.running-hint',
+		defaultMessage:
+			'Stop the server before changing settings. The server rewrites its configuration on shutdown, so changes saved now can be lost.',
+	},
 })
 
 const { deleteServer, refresh } = useServers()
@@ -77,6 +87,10 @@ const deleteModal = useTemplateRef<ComponentExposed<typeof ConfirmModal>>('delet
 const editor = useTemplateRef<ComponentExposed<typeof ServerPropertiesEditor>>('editor')
 
 const requiredJava = computed(() => requiredJavaMajorVersion(props.server.gameVersion))
+
+// Same busy boundary as the files panel: a running server owns its
+// configuration files and overwrites server.properties on shutdown.
+const isRunning = computed(() => props.server.running)
 
 const baseline = ref({
 	name: props.server.name,
@@ -186,6 +200,10 @@ async function confirmDelete() {
 <template>
 	<div class="flex min-h-full flex-col">
 		<div class="flex flex-col gap-6 pb-20">
+			<Admonition v-if="isRunning" type="warning" :header="formatMessage(messages.runningTitle)">
+				{{ formatMessage(messages.runningHint) }}
+			</Admonition>
+
 			<Card data-onboarding-id="server-settings" class="!m-0 max-w-3xl">
 				<div class="flex flex-col gap-4">
 					<h3 class="m-0 text-base font-semibold text-contrast">
@@ -305,7 +323,7 @@ async function confirmDelete() {
 						</button>
 					</ButtonStyled>
 					<ButtonStyled color="brand">
-						<button type="button" :disabled="isSaving" @click="save">
+						<button type="button" :disabled="isSaving || isRunning" @click="save">
 							<SpinnerIcon v-if="isSaving" class="animate-spin" />
 							<SaveIcon v-else />
 							{{ formatMessage(messages.save) }}

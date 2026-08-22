@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use chrono::{DateTime, Utc};
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use sha1_smol::Sha1;
@@ -93,6 +93,11 @@ struct ServerProcess {
 
 static SERVER_PROCESSES: LazyLock<DashMap<String, Arc<ServerProcess>>> =
     LazyLock::new(DashMap::new);
+
+/// Synchronous start-in-flight guard. Reserving the slot before the first
+/// `.await` prevents concurrent `start` calls (e.g. double-clicks) from both
+/// passing the running check and spawning two JVMs on the same directory.
+static SERVER_STARTING: LazyLock<DashSet<String>> = LazyLock::new(DashSet::new);
 
 pub async fn list() -> Result<Vec<ServerInfo>> {
     let state = State::get().await?;
@@ -334,13 +339,25 @@ pub async fn start(
     memory_mb: Option<u32>,
     jvm_args: Option<Vec<String>>,
 ) -> Result<()> {
-    if SERVER_PROCESSES.contains_key(server_id) {
+    if SERVER_PROCESSES.contains_key(server_id)
+        || !SERVER_STARTING.insert(server_id.to_string())
+    {
         return Err(ErrorKind::InputError(
             "Server is already running".to_string(),
         )
         .as_error());
     }
+    let result = start_inner(server_id, java_path, memory_mb, jvm_args).await;
+    SERVER_STARTING.remove(server_id);
+    result
+}
 
+async fn start_inner(
+    server_id: &str,
+    java_path: Option<String>,
+    memory_mb: Option<u32>,
+    jvm_args: Option<Vec<String>>,
+) -> Result<()> {
     let dir = server_path(server_id).await?;
     let mut manifest = read_manifest(&dir).await?;
     let jar_name = resolve_jar_name(&manifest);
@@ -622,7 +639,8 @@ async fn process_name(pid: u32) -> Option<String> {
         .output()
         .await
         .ok()?;
-    let line = String::from_utf8_lossy(&output.stdout).lines().next()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout.lines().next()?;
     if line.starts_with("INFO") {
         return None;
     }

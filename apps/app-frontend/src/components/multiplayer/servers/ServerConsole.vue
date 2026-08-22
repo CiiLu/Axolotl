@@ -74,6 +74,9 @@ provideConsoleManager({
 	onClear: () => {
 		consoleState.clear()
 		consumedLines = 0
+		// Drop the shared frontend buffer too, otherwise the next incoming log
+		// line replays the entire pre-clear history back into the console.
+		logLines[props.server.id] = []
 		void servers.clearLog(props.server.id).catch(() => {})
 	},
 })
