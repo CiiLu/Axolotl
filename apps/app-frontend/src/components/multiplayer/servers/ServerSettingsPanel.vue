@@ -204,13 +204,13 @@ async function confirmDelete() {
 				{{ formatMessage(messages.runningHint) }}
 			</Admonition>
 
-			<Card data-onboarding-id="server-settings" class="!m-0 max-w-3xl">
-				<div class="flex flex-col gap-4">
-					<h3 class="m-0 text-base font-semibold text-contrast">
+			<Card data-onboarding-id="server-settings" class="!m-0">
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					<h3 class="m-0 col-span-full text-base font-semibold text-contrast">
 						{{ formatMessage(messages.general) }}
 					</h3>
 
-					<div class="flex min-w-0 items-center gap-3">
+					<div class="flex min-w-0 items-center gap-3 sm:col-span-2 xl:col-span-4">
 						<ServerIcon
 							:icon-path="iconPath"
 							:server-type="server.serverType"
@@ -245,16 +245,6 @@ async function confirmDelete() {
 						<StyledInput id="server-settings-name" v-model="name" />
 					</label>
 
-					<div class="flex min-w-0 flex-col gap-2">
-						<span class="font-semibold text-contrast">{{ formatMessage(messages.java) }}</span>
-						<JavaSelector
-							id="server-settings-java"
-							v-model="javaSelection"
-							:version="requiredJava"
-							select-all-versions
-						/>
-					</div>
-
 					<label class="flex min-w-0 flex-col gap-2" for="server-settings-memory">
 						<span class="font-semibold text-contrast">{{ formatMessage(messages.memory) }}</span>
 						<StyledInput
@@ -265,7 +255,20 @@ async function confirmDelete() {
 						/>
 					</label>
 
-					<label class="flex min-w-0 flex-col gap-2" for="server-settings-jvm">
+					<div class="flex min-w-0 flex-col gap-2 sm:col-span-2 xl:col-span-2">
+						<span class="font-semibold text-contrast">{{ formatMessage(messages.java) }}</span>
+						<JavaSelector
+							id="server-settings-java"
+							v-model="javaSelection"
+							:version="requiredJava"
+							select-all-versions
+						/>
+					</div>
+
+					<label
+						class="flex min-w-0 flex-col gap-2 sm:col-span-2 xl:col-span-4"
+						for="server-settings-jvm"
+					>
 						<span class="font-semibold text-contrast">{{ formatMessage(messages.jvmArgs) }}</span>
 						<StyledInput id="server-settings-jvm" v-model="jvmArgsText" />
 						<span class="text-xs text-secondary">{{ formatMessage(messages.jvmArgsHint) }}</span>
@@ -273,11 +276,11 @@ async function confirmDelete() {
 				</div>
 			</Card>
 
-			<Card class="!m-0 max-w-3xl">
+			<Card class="!m-0">
 				<ServerPropertiesEditor ref="editor" :server-id="server.id" />
 			</Card>
 
-			<Card class="!m-0 max-w-3xl">
+			<Card class="!m-0">
 				<div class="flex flex-wrap items-center justify-between gap-3">
 					<div class="flex min-w-0 items-start gap-3">
 						<div
@@ -312,7 +315,7 @@ async function confirmDelete() {
 				width: 'calc(100% - var(--left-bar-width) - var(--right-bar-width) - 3rem)',
 			}"
 		>
-			<div class="flex w-full max-w-3xl items-center justify-end">
+			<div class="flex w-full items-center justify-end">
 				<div
 					class="flex items-center gap-2 rounded-xl border border-solid border-button-border bg-bg-raised px-3 py-2 shadow-lg"
 				>

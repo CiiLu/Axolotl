@@ -98,7 +98,7 @@ async function toggleRunning(server: ServerView) {
 			</ButtonStyled>
 		</EmptyState>
 
-		<div v-else class="flex max-w-3xl flex-col gap-2">
+		<div v-else class="grid max-w-5xl grid-cols-1 items-start gap-2 xl:grid-cols-2">
 			<ServerCard
 				v-for="entry in servers"
 				:key="entry.id"

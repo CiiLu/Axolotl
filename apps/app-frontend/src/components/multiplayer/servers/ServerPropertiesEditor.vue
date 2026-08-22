@@ -659,7 +659,7 @@ defineExpose({ save, cancel, isDirty })
 						/>
 					</template>
 					<div
-						class="grid grid-cols-1 gap-px border-t border-solid border-surface-4 bg-surface-4 md:grid-cols-2"
+						class="grid grid-cols-1 gap-px border-t border-solid border-surface-4 bg-surface-4 md:grid-cols-2 xl:grid-cols-3"
 					>
 						<template v-for="item in section.fields" :key="item.key">
 							<div
