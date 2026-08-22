@@ -458,15 +458,32 @@ fn provider_language(locale: &str, provider: TranslationProvider) -> String {
             value => value.to_string(),
         },
         TranslationProvider::DeepL => match normalized.as_str() {
-            "zh-CN" => "ZH".to_string(),
-            "zh-TW" => "ZH".to_string(),
+            "zh-CN" | "zh" => "ZH".to_string(),
+            "zh-TW" => "ZH-HANT".to_string(),
             "en" | "en-US" => "EN-US".to_string(),
             "en-GB" => "EN-GB".to_string(),
             "pt" | "pt-BR" => "PT-BR".to_string(),
             "pt-PT" => "PT-PT".to_string(),
-            value => value.to_uppercase(),
+            "nb" | "nb-NO" | "no" | "no-NO" => "NB".to_string(),
+            value => value.split('-').next().unwrap_or(value).to_uppercase(),
         },
         TranslationProvider::Ai => normalized,
+    }
+}
+
+/// DeepL 的 source_lang 只接受基础语言码，ZH-HANT/ZH-HANS 仅可用于
+/// target_lang；显式指定繁体源时必须回退到 ZH。
+fn provider_source_language(
+    locale: &str,
+    provider: TranslationProvider,
+) -> String {
+    if provider == TranslationProvider::DeepL {
+        match provider_language(locale, provider).as_str() {
+            "ZH-HANT" | "ZH-HANS" => "ZH".to_string(),
+            mapped => mapped.to_string(),
+        }
+    } else {
+        provider_language(locale, provider)
     }
 }
 
@@ -925,7 +942,10 @@ async fn translate_uncached(
     let source = if request.source_language == "auto" {
         "auto".to_string()
     } else {
-        provider_language(&request.source_language, settings.settings.provider)
+        provider_source_language(
+            &request.source_language,
+            settings.settings.provider,
+        )
     };
     let target =
         provider_language(&request.target_language, settings.settings.provider);
@@ -1343,10 +1363,14 @@ mod tests {
     }
 
     #[test]
-    fn deepl_language_codes_are_uppercased() {
+    fn deepl_language_codes_are_normalized() {
         assert_eq!(
             provider_language("zh-CN", TranslationProvider::DeepL),
             "ZH"
+        );
+        assert_eq!(
+            provider_language("zh-TW", TranslationProvider::DeepL),
+            "ZH-HANT"
         );
         assert_eq!(
             provider_language("en-US", TranslationProvider::DeepL),
@@ -1357,6 +1381,38 @@ mod tests {
             "PT-BR"
         );
         assert_eq!(provider_language("ja", TranslationProvider::DeepL), "JA");
+        assert_eq!(
+            provider_language("ja-JP", TranslationProvider::DeepL),
+            "JA"
+        );
+        assert_eq!(
+            provider_language("de-DE", TranslationProvider::DeepL),
+            "DE"
+        );
+        assert_eq!(
+            provider_language("es-419", TranslationProvider::DeepL),
+            "ES"
+        );
+        assert_eq!(
+            provider_language("no-NO", TranslationProvider::DeepL),
+            "NB"
+        );
+    }
+
+    #[test]
+    fn deepl_source_language_uses_base_chinese_code() {
+        assert_eq!(
+            provider_source_language("zh-TW", TranslationProvider::DeepL),
+            "ZH"
+        );
+        assert_eq!(
+            provider_source_language("zh-CN", TranslationProvider::DeepL),
+            "ZH"
+        );
+        assert_eq!(
+            provider_source_language("ja-JP", TranslationProvider::DeepL),
+            "JA"
+        );
     }
 
     #[test]
