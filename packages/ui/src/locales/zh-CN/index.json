@@ -638,6 +638,9 @@
   "content.card.dependency-badge": {
     "defaultMessage": "前置"
   },
+  "content.card.duplicate-mod": {
+    "defaultMessage": "此模组已安装 {count, number} 次。"
+  },
   "content.card.group.hardcore": {
     "defaultMessage": "硬核模式"
   },
@@ -769,6 +772,9 @@
   },
   "content.filter.disabled": {
     "defaultMessage": "已禁用"
+  },
+  "content.filter.duplicates": {
+    "defaultMessage": "重复"
   },
   "content.filter.enabled": {
     "defaultMessage": "已启用"

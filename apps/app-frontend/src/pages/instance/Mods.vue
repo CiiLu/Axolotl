@@ -701,6 +701,38 @@ const displayedLinkedModpackContentItems = computed(() => [
 	...manualPendingItems.value,
 ])
 
+function duplicateModKey(item: ContentItem): string | null {
+	const projectId = item.project?.id
+	if (!projectId) return null
+	if (projectId.startsWith('local:')) {
+		return item.project?.slug ? `local:${item.project.slug}` : null
+	}
+
+	const provider = item.origin_provider ?? item.provider_refs[0]?.provider
+	if (!provider) return null
+	const normalizedProjectId =
+		provider === 'curseforge' && projectId.startsWith('curseforge:')
+			? projectId.slice('curseforge:'.length)
+			: projectId
+	return `${provider}:${normalizedProjectId}`
+}
+
+const duplicateModCounts = computed(() => {
+	const counts = new Map<string, number>()
+	for (const item of [...mergedProjects.value, ...displayedLinkedModpackContentItems.value]) {
+		const key = duplicateModKey(item)
+		if (key) counts.set(key, (counts.get(key) ?? 0) + 1)
+	}
+	return counts
+})
+
+const duplicateModItems = computed(() =>
+	[...mergedProjects.value, ...displayedLinkedModpackContentItems.value].filter((item) => {
+		const key = duplicateModKey(item)
+		return key != null && (duplicateModCounts.value.get(key) ?? 0) > 1
+	}),
+)
+
 let previousManualDownloadKeys = new Set<string>()
 watch(
 	skippedManualDownloads,
@@ -2584,6 +2616,7 @@ function dismissContentHint() {
 
 provideContentManager({
 	items: mergedProjects,
+	duplicateItems: duplicateModItems,
 	loading,
 	error: ref(null),
 	modpackItems: displayedLinkedModpackContentItems,
@@ -2761,6 +2794,10 @@ provideContentManager({
 
 		return {
 			id: getContentItemId(item),
+			duplicateCount: (() => {
+				const key = duplicateModKey(item)
+				return key ? duplicateModCounts.value.get(key) : undefined
+			})(),
 			project: item.project ?? {
 				id: item.file_name,
 				slug: null,

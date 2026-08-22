@@ -37,6 +37,8 @@ export interface ContentDependencyWarning {
 export interface ContentManagerContext {
 	// Data
 	items: Ref<ContentItem[]> | ComputedRef<ContentItem[]>
+	/** Items detected as duplicate content; rendered in a dedicated group when present. */
+	duplicateItems?: Ref<ContentItem[]> | ComputedRef<ContentItem[]>
 	loading: Ref<boolean>
 	error: Ref<Error | null>
 

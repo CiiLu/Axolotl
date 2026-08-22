@@ -51,6 +51,10 @@ const messages = defineMessages({
 		id: 'content.card.pending-manual-download',
 		defaultMessage: 'Manual download required',
 	},
+	duplicateMod: {
+		id: 'content.card.duplicate-mod',
+		defaultMessage: 'This mod is installed {count, number} times.',
+	},
 	rollbackTooltip: {
 		id: 'content.card.rollback-tooltip',
 		defaultMessage: 'Roll back to {fileName}',
@@ -82,6 +86,7 @@ interface Props {
 	enabled?: boolean
 	installing?: boolean
 	pendingManualDownload?: boolean
+	duplicateCount?: number
 	hasUpdate?: boolean
 	rollbackFileName?: string
 	isClientOnly?: boolean
@@ -126,6 +131,7 @@ const props = withDefaults(defineProps<Props>(), {
 	enabled: undefined,
 	installing: false,
 	pendingManualDownload: false,
+	duplicateCount: undefined,
 	hasUpdate: false,
 	rollbackFileName: undefined,
 	isClientOnly: false,
@@ -511,6 +517,12 @@ const deleteHovered = ref(false)
 						>
 							{{ project.title }}
 						</AutoLink>
+						<TriangleAlertIcon
+							v-if="duplicateCount && duplicateCount > 1"
+							v-tooltip="formatMessage(messages.duplicateMod, { count: duplicateCount })"
+							class="size-4 shrink-0 text-red"
+							aria-hidden="true"
+						/>
 						<span
 							v-if="dependencyBadge"
 							v-tooltip="

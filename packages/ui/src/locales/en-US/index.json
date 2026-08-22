@@ -662,6 +662,9 @@
   "content.card.dependency-badge": {
     "defaultMessage": "Dependency"
   },
+  "content.card.duplicate-mod": {
+    "defaultMessage": "This mod is installed {count, number} times."
+  },
   "content.card.group.hardcore": {
     "defaultMessage": "Hardcore mode"
   },
@@ -793,6 +796,9 @@
   },
   "content.filter.disabled": {
     "defaultMessage": "Disabled"
+  },
+  "content.filter.duplicates": {
+    "defaultMessage": "Duplicates"
   },
   "content.filter.enabled": {
     "defaultMessage": "Enabled"

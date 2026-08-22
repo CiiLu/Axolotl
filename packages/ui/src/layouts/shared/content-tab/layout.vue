@@ -229,6 +229,7 @@ const {
 } = useContentPipeline({
 	items: ctx.items,
 	modpackItems: ctx.modpackItems,
+	duplicateItems: ctx.duplicateItems,
 	sortItems,
 	getItemId,
 	showTypeFilters: true,
