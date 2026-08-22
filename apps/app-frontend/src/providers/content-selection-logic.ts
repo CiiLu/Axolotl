@@ -5,7 +5,6 @@ export interface AggregatedDependency {
 	requiredByKeys?: string[]
 	required?: boolean
 	requiredForKeys?: string[]
-	[key: string]: unknown
 }
 
 export interface DependencyAggregationInput<T extends AggregatedDependency> {

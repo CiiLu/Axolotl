@@ -621,7 +621,7 @@
     "defaultMessage": "欢迎使用 Modrinth 服务器！"
   },
   "console.empty.server-description": {
-    "defaultMessage": "点击绿色启动按钮即可启动服务器！"
+    "defaultMessage": "点击启动按钮即可启动服务器！"
   },
   "console.search.placeholder": {
     "defaultMessage": "搜索日志"

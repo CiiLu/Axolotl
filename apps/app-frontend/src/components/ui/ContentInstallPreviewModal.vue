@@ -274,7 +274,7 @@ function initialSelectedIds(value: ContentInstallPreviewData) {
 	)
 }
 
-function finish(result: string[] | ContentInstallBatchPreviewResult | null) {
+function finish(result: string[] | ContentInstallBatchPreviewResult | boolean | null) {
 	if (settled) return
 	settled = true
 	const resolve = resolveShow
@@ -329,7 +329,10 @@ function showBatch(
 	settled = false
 	modal.value?.show()
 	return new Promise<ContentInstallBatchPreviewResult | null>((resolve) => {
-		resolveShow = (result) => resolve(result && !Array.isArray(result) ? result : null)
+		resolveShow = (result) =>
+			resolve(
+				result && !Array.isArray(result) && typeof result !== 'boolean' ? result : null,
+			)
 	})
 }
 

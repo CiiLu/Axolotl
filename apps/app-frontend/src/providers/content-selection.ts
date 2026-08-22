@@ -157,6 +157,10 @@ function curseForgeLoaderType(loader: string): number | undefined {
 	return undefined
 }
 
+function toModrinthContentType(contentType: ContentSelectionType): Labrinth.Content.v3.ContentType {
+	return contentType as Labrinth.Content.v3.ContentType
+}
+
 function dependencyKey(provider: ContentSelectionProvider, projectId: string, versionId: string) {
 	return `${provider}:${projectId}:${versionId}`
 }
@@ -282,7 +286,9 @@ export function createContentSelection({
 			.map((input) => Number(input.projectId))
 			.filter((id) => Number.isSafeInteger(id))
 		const [modrinthProjects, curseForgeProjects] = await Promise.all([
-			get_project_many([...new Set(modrinthIds)]).catch(() => [] as Labrinth.Projects.v2.Project[]),
+			get_project_many([...new Set(modrinthIds)])
+				.catch(() => [])
+				.then((projects) => (projects ?? []) as Labrinth.Projects.v2.Project[]),
 			getCurseForgeProjects([...new Set(curseForgeIds)]).catch(() => []),
 		])
 		const inputs = contentIdentityInputsFromSnapshot(snapshot.items, {
@@ -372,7 +378,7 @@ export function createContentSelection({
 				},
 				existing: [
 					{
-						title: heuristicConflict.existing.title,
+						title: heuristicConflict.existing.title ?? '',
 						provider: heuristicConflict.existing.provider,
 						fileName: heuristicConflict.existing.fileName ?? undefined,
 					},
@@ -413,7 +419,7 @@ export function createContentSelection({
 				},
 				existing: [
 					{
-						title: heuristicConflict.existing.title,
+						title: heuristicConflict.existing.title ?? '',
 						provider: heuristicConflict.existing.provider,
 						fileName: heuristicConflict.existing.fileName ?? undefined,
 					},
@@ -480,7 +486,7 @@ export function createContentSelection({
 		const request = {
 			project_id: item.projectId,
 			version_id: item.versionId,
-			content_type: item.contentType,
+			content_type: toModrinthContentType(item.contentType),
 			selected: {
 				game_versions: item.preferences?.gameVersions ?? [],
 				loaders: item.preferences?.loaders ?? [],
@@ -504,8 +510,12 @@ export function createContentSelection({
 			),
 		]
 		const [projects, versions] = await Promise.all([
-			get_project_many(projectIds).catch(() => [] as Labrinth.Projects.v2.Project[]),
-			get_version_many(versionIds).catch(() => [] as Labrinth.Versions.v2.Version[]),
+			get_project_many(projectIds)
+				.catch(() => [])
+				.then((projects) => (projects ?? []) as Labrinth.Projects.v2.Project[]),
+			get_version_many(versionIds)
+				.catch(() => [])
+				.then((versions) => (versions ?? []) as Labrinth.Versions.v2.Version[]),
 		])
 		const projectsById = new Map(projects.map((project) => [project.id, project]))
 		const versionsById = new Map(versions.map((version) => [version.id, version]))
@@ -796,7 +806,7 @@ export function createContentSelection({
 				{
 					project_id: selection.item.projectId,
 					version_id: selection.item.versionId,
-					content_type: selection.item.contentType,
+					content_type: toModrinthContentType(selection.item.contentType),
 					selected: {
 						game_versions: selection.item.preferences?.gameVersions ?? [],
 						loaders: selection.item.preferences?.loaders ?? [],

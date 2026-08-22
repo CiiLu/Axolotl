@@ -438,7 +438,7 @@ function onBatchEditApplied() {
 			>
 				<div
 					class="relative cursor-pointer select-none rounded-lg transition-all hover:brightness-90 active:scale-[0.98]"
-					@click="handleCardClick(instance.id, $event)"
+					@click="handleCardClick(instance.id)"
 					@mousedown="!selectMode && startLongPress(instance.id)"
 					@mouseup="cancelLongPress"
 					@mouseleave="cancelLongPress"

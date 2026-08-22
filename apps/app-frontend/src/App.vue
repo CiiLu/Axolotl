@@ -2049,7 +2049,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				<NavButton
 					v-tooltip.right="formatMessage(messages.multiplayer)"
 					to="/multiplayer"
-					:is-primary="(r) => r.path === '/multiplayer'"
+					:is-primary="(r) => r.path.startsWith('/multiplayer')"
 				>
 					<UsersIcon />
 				</NavButton>
@@ -2187,7 +2187,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		class="app-contents"
 		:class="{
 			'sidebar-enabled': sidebarVisible,
-			'studio-mode': route.name === 'FileStudio',
+			'studio-mode': route.name === 'FileStudio' || route.name === 'MultiplayerServerFileStudio',
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
 			'has-transparent-background': themeStore.transparentBackground,
@@ -2712,7 +2712,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	*,
 	:deep(*) {
 		box-shadow: none !important;
-		--tw-drop-shadow:;
+		--tw-drop-shadow: initial;
 	}
 }
 
