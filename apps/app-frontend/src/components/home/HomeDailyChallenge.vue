@@ -37,7 +37,7 @@ const challengeText = computed(() => {
 	} else {
 		return lowerLocale.startsWith('zh')
 			? challenge.value.text['zh-CN']
-			: challenge.value.text['en-US'],
+			: challenge.value.text['en-US']
 	}
 })
 
