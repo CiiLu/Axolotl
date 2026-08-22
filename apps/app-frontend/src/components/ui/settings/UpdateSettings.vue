@@ -41,6 +41,10 @@ const messages = defineMessages({
 		id: 'app.settings.updates.description',
 		defaultMessage: 'Choose where Axolotl checks for launcher updates.',
 	},
+	miawa: {
+		id: 'app.settings.updates.miawa',
+		defaultMessage: 'LemwoodMirror',
+	},
 	cnb: {
 		id: 'app.settings.updates.cnb',
 		defaultMessage: 'CNB',
@@ -93,6 +97,7 @@ const messages = defineMessages({
 })
 
 const options: Array<{ value: UpdateSource; label: string }> = [
+	{ value: 'miawa', label: formatMessage(messages.miawa) },
 	{ value: 'cnb', label: formatMessage(messages.cnb) },
 	{ value: 'github', label: formatMessage(messages.github) },
 ]

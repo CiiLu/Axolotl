@@ -527,6 +527,26 @@ async fn google_translate(
         }
     }
 }
+fn summarize_error_body(body: &str) -> String {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return "(empty response)".to_string();
+    }
+    if trimmed.starts_with('<') {
+        if let Some(start) = trimmed.find("<title>") {
+            let after = &trimmed[start + 7..];
+            if let Some(end) = after.find("</title>") {
+                let title = after[..end].trim();
+                if !title.is_empty() {
+                    return format!("HTML error page: {title}");
+                }
+            }
+        }
+        "HTML error page (the server may be unreachable or misconfigured)".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
 
 async fn deepl_translate(
     segment: &TranslationSegment,
@@ -546,13 +566,27 @@ async fn deepl_translate(
         "Preparing DeepL translation request"
     );
 
+    // Official DeepL API only accepts DeepL-Auth-Key; custom/proxy endpoints
+    // are tried with Bearer first and fall back to DeepL-Auth-Key on auth failure.
+    let is_official_deepl = api_endpoint.contains("api-free.deepl.com")
+        || api_endpoint.contains("api.deepl.com");
+
     let mut body = serde_json::Map::new();
-    // Send text as a plain string — both the official DeepL API and
-    // community proxies (e.g. DeepLX) accept this format.
-    body.insert(
-        "text".to_string(),
-        serde_json::Value::String(segment.text.clone()),
-    );
+    // Official DeepL API requires `text` as a string array; community proxies
+    // (e.g. DeepLX) typically expect a plain string.
+    if is_official_deepl {
+        body.insert(
+            "text".to_string(),
+            serde_json::Value::Array(vec![serde_json::Value::String(
+                segment.text.clone(),
+            )]),
+        );
+    } else {
+        body.insert(
+            "text".to_string(),
+            serde_json::Value::String(segment.text.clone()),
+        );
+    }
     body.insert(
         "target_lang".to_string(),
         serde_json::Value::String(target_language.to_string()),
@@ -570,11 +604,6 @@ async fn deepl_translate(
     );
 
     let client = crate::util::fetch::configured_client().await?;
-
-    // Official DeepL API only accepts DeepL-Auth-Key; custom/proxy endpoints
-    // are tried with Bearer first and fall back to DeepL-Auth-Key on auth failure.
-    let is_official_deepl = api_endpoint.contains("api-free.deepl.com")
-        || api_endpoint.contains("api.deepl.com");
 
     let primary_auth = if is_official_deepl {
         format!("DeepL-Auth-Key {}", api_key)
@@ -650,7 +679,8 @@ async fn deepl_translate(
                 );
                 return Err(ErrorKind::OtherError(format!(
                     "DeepL API error: HTTP {} - {}",
-                    retry_status, retry_error
+                    retry_status,
+                    summarize_error_body(&retry_error)
                 ))
                 .into());
             }
@@ -665,7 +695,8 @@ async fn deepl_translate(
         );
         return Err(ErrorKind::OtherError(format!(
             "DeepL API error: HTTP {} - {}",
-            status, error_text
+            status,
+            summarize_error_body(&error_text)
         ))
         .into());
     };

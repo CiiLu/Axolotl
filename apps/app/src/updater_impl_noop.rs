@@ -4,6 +4,8 @@ use theseus::ErrorKind;
 #[derive(Default)]
 pub struct PendingUpdateData(());
 
+pub enum PendingUpdateEntry {}
+
 #[tauri::command]
 pub fn check_app_update() -> Result<()> {
     updates_are_disabled()

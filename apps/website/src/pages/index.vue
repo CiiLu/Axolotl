@@ -57,6 +57,7 @@ const resetHeroGlow = () => {
 }
 
 const { resolvedSource } = useDownloadSource()
+const MIAWA_RELEASE_BASE_URL = 'https://miawa.cn/download/axolotl'
 const CNB_RELEASE_BASE_URL = 'https://cnb.cool/axlmc/Axolotl/-/releases/download'
 const GITHUB_RELEASE_BASE_URL = 'https://github.com/Mystic-Stars/Axolotl/releases/download'
 
@@ -239,6 +240,10 @@ watch(
 				patterns.some((pattern) => pattern.test(name)),
 			)
 			if (!assetName) return null
+
+			if (resolvedSource.value === 'miawa') {
+				return `${MIAWA_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(assetName)}`
+			}
 
 			if (resolvedSource.value === 'cnb') {
 				return `${CNB_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(assetName)}`
@@ -1132,30 +1137,22 @@ useHead(() => ({
 				</div>
 			</div>
 			<div v-if="downloadState === 'error'" class="download-error-banner" role="alert">
-			<span>{{ formatMessage(messages.downloadLinksFailed) }}</span>
-			<span class="download-error-links">
-				<a
-				href="https://cnb.cool/axlmc/Axolotl/-/releases"
-				target="_blank"
-				rel="noopener"
-				>
-				{{ formatMessage(messages.cnbReleasesLink) }}
-				</a>
-				<a
-				href="https://miawa.cn/files/axolotl"
-				target="_blank"
-				rel="noopener"
-				>
-				{{ formatMessage(messages.lemwoodMirrorLink) }}
-				</a>
-				<a
-				href="https://github.com/Mystic-Stars/Axolotl/releases/latest"
-				target="_blank"
-				rel="noopener"
-				>
-				{{ formatMessage(messages.manualDownloadFallback) }}
-				</a>
-			</span>
+				<span>{{ formatMessage(messages.downloadLinksFailed) }}</span>
+				<span class="download-error-links">
+					<a href="https://cnb.cool/axlmc/Axolotl/-/releases" target="_blank" rel="noopener">
+						{{ formatMessage(messages.cnbReleasesLink) }}
+					</a>
+					<a href="https://miawa.cn/files/axolotl" target="_blank" rel="noopener">
+						{{ formatMessage(messages.lemwoodMirrorLink) }}
+					</a>
+					<a
+						href="https://github.com/Mystic-Stars/Axolotl/releases/latest"
+						target="_blank"
+						rel="noopener"
+					>
+						{{ formatMessage(messages.manualDownloadFallback) }}
+					</a>
+				</span>
 			</div>
 			<p class="terms">
 				<IntlFormatted :message-id="messages.downloadTerms">

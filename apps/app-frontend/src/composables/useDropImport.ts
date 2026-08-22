@@ -1400,9 +1400,9 @@ export function useDropImport(options: DropImportOptions) {
 			for (const inst of sel.instances) {
 				allSelected.push({
 					launcherType: sel.launcherType,
-					basePath: '',
+					basePath: inst.compatibleMode ? inst.path : '',
 					name: inst.name,
-					path: inst.path,
+					path: inst.compatibleMode ? (inst.versionPath ?? inst.path) : inst.path,
 					compatibleMode: inst.compatibleMode,
 					versionPath: inst.versionPath,
 				})
@@ -1498,7 +1498,7 @@ export function useDropImport(options: DropImportOptions) {
 			try {
 				const job = await import_instance(
 					ctx?.launcherType ?? inst.launcherType,
-					ctx?.basePath ?? inst.path,
+					inst.compatibleMode ? inst.basePath : (ctx?.basePath ?? inst.path),
 					inst.name,
 					choice?.symlink ?? (Array.isArray(choices) ? false : choices),
 					inst.compatibleMode ? inst.versionPath : undefined,
@@ -1562,7 +1562,7 @@ export function useDropImport(options: DropImportOptions) {
 			try {
 				const job = await import_instance(
 					ctx?.launcherType ?? inst.launcherType,
-					ctx?.basePath ?? inst.path,
+					inst.compatibleMode ? inst.basePath : (ctx?.basePath ?? inst.path),
 					inst.name,
 					choice?.symlink ?? (Array.isArray(choices) ? false : choices),
 					inst.compatibleMode ? inst.versionPath : undefined,
