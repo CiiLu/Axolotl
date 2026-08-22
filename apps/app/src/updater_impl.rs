@@ -7,13 +7,16 @@ use tauri::{Manager, ResourceId, Runtime, Webview};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_http::reqwest::ClientBuilder;
 use tauri_plugin_updater::{Error, Update, UpdaterExt};
-use theseus::{LoadingBarType, emit_loading, init_loading, launcher_user_agent};
+use theseus::{
+    LoadingBarType, emit_loading, init_loading, launcher_user_agent,
+};
 use tokio::time::Instant;
 use url::Url;
 
 const MIAWA_API_BASE: &str = "https://miawa.cn/api/v2";
 const MIAWA_HOST: &str = "https://miawa.cn";
-const MIAWA_API_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+const MIAWA_API_TIMEOUT: std::time::Duration =
+    std::time::Duration::from_secs(15);
 
 // ── Miawa API types ──────────────────────────────────────────────
 
@@ -118,12 +121,14 @@ async fn miawa_prepare_url(file_path: &str) -> Result<Url> {
             )))
         })?;
 
-    Url::parse(&format!("{MIAWA_HOST}{}", prepare.data.download_url)).map_err(|e| {
-        theseus::Error::from(theseus::ErrorKind::OtherError(format!(
-            "Failed to parse Miawa download URL: {e}"
-        )))
-        .into()
-    })
+    Url::parse(&format!("{MIAWA_HOST}{}", prepare.data.download_url)).map_err(
+        |e| {
+            theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+                "Failed to parse Miawa download URL: {e}"
+            )))
+            .into()
+        },
+    )
 }
 
 // ── Updater plugin helpers ───────────────────────────────────────
@@ -149,7 +154,10 @@ fn update_endpoints(source: &str) -> Result<Vec<Url>> {
         .into_iter()
         .map(|endpoint| {
             Url::parse(endpoint).map_err(|error| {
-                theseus::Error::from(theseus::ErrorKind::OtherError(error.to_string())).into()
+                theseus::Error::from(theseus::ErrorKind::OtherError(
+                    error.to_string(),
+                ))
+                .into()
             })
         })
         .collect()
@@ -218,15 +226,18 @@ async fn check_with_updater<R: Runtime>(
 /// URL as its endpoint, then redirect the plugin's download URL to the
 /// mirror. Everything else (version comparison, signature, unpacking,
 /// per-platform install) stays inside tauri-plugin-updater.
-async fn check_miawa<R: Runtime>(webview: &Webview<R>) -> Result<Option<UpdateMetadata>> {
+async fn check_miawa<R: Runtime>(
+    webview: &Webview<R>,
+) -> Result<Option<UpdateMetadata>> {
     let tag_name = miawa_latest_tag().await?;
 
-    let latest_url = miawa_prepare_url(&format!("axolotl/{tag_name}/latest.json")).await?;
-    tracing::info!(
-        "Miawa latest.json resolved (tag {tag_name}): {latest_url}"
-    );
+    let latest_url =
+        miawa_prepare_url(&format!("axolotl/{tag_name}/latest.json")).await?;
+    tracing::info!("Miawa latest.json resolved (tag {tag_name}): {latest_url}");
 
-    let Some(mut update) = check_with_endpoints(webview, vec![latest_url]).await? else {
+    let Some(mut update) =
+        check_with_endpoints(webview, vec![latest_url]).await?
+    else {
         return Ok(None);
     };
 
@@ -244,9 +255,7 @@ async fn check_miawa<R: Runtime>(webview: &Webview<R>) -> Result<Option<UpdateMe
 
     let mirror_url =
         miawa_prepare_url(&format!("axolotl/{tag_name}/{filename}")).await?;
-    tracing::info!(
-        "Miawa mirror download URL (file {filename}): {mirror_url}"
-    );
+    tracing::info!("Miawa mirror download URL (file {filename}): {mirror_url}");
     update.download_url = mirror_url;
 
     let metadata = UpdateMetadata {
@@ -284,7 +293,9 @@ pub async fn check_app_update<R: Runtime>(
                     return Ok(None);
                 }
                 Err(e) => {
-                    tracing::warn!("Miawa check failed, falling back to CNB: {e}");
+                    tracing::warn!(
+                        "Miawa check failed, falling back to CNB: {e}"
+                    );
                 }
             }
 
@@ -292,7 +303,9 @@ pub async fn check_app_update<R: Runtime>(
             match check_with_updater(&webview, "cnb").await {
                 Ok(result) => return Ok(result),
                 Err(e) => {
-                    tracing::warn!("CNB check failed, falling back to GitHub: {e}");
+                    tracing::warn!(
+                        "CNB check failed, falling back to GitHub: {e}"
+                    );
                 }
             }
 
@@ -304,7 +317,9 @@ pub async fn check_app_update<R: Runtime>(
             match check_with_updater(&webview, "cnb").await {
                 Ok(result) => return Ok(result),
                 Err(e) => {
-                    tracing::warn!("CNB check failed, falling back to GitHub: {e}");
+                    tracing::warn!(
+                        "CNB check failed, falling back to GitHub: {e}"
+                    );
                 }
             }
 
@@ -393,9 +408,14 @@ pub async fn enqueue_update_for_installation<R: Runtime>(
                 let Some(total_size) = total_size else {
                     return;
                 };
-                if let Err(e) = emit_loading(&progress, chunk_size as f64 / total_size as f64, None)
-                {
-                    tracing::error!("Failed to update download progress bar: {e}");
+                if let Err(e) = emit_loading(
+                    &progress,
+                    chunk_size as f64 / total_size as f64,
+                    None,
+                ) {
+                    tracing::error!(
+                        "Failed to update download progress bar: {e}"
+                    );
                 }
             },
             || {},
