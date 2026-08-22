@@ -431,7 +431,7 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
 		}
 
 		// 分批翻译，某批失败时保留已完成的批次，避免单个坏段拖垮整页
-		const translated: TranslationSegment[] = []
+		const translated: TranslationResponse['segments'] = []
 		let response: TranslationResponse
 		try {
 			response = await translateInBatches(request, (batch) => {
