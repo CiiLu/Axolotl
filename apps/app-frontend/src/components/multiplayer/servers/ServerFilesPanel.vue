@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { CodeIcon } from '@modrinth/assets'
 import type { EditingFile, FileItem } from '@modrinth/ui'
 import {
+	ButtonStyled,
 	commonMessages,
 	defineMessages,
 	FilePageLayout,
@@ -21,6 +23,7 @@ import {
 	writeTextFile,
 } from '@tauri-apps/plugin-fs'
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import type { ServerView } from '@/composables/useServers'
 import { highlightInFolder } from '@/helpers/utils'
@@ -31,6 +34,7 @@ const props = defineProps<{
 
 const { formatMessage } = useVIntl()
 const { addNotification } = injectNotificationManager()
+const router = useRouter()
 
 const messages = defineMessages({
 	saveAs: {
@@ -40,6 +44,10 @@ const messages = defineMessages({
 	busyTooltip: {
 		id: 'app.servers.files.busy-tooltip',
 		defaultMessage: 'Stop the server to modify files',
+	},
+	openStudio: {
+		id: 'app.servers.files.open-studio',
+		defaultMessage: 'Open Studio',
 	},
 })
 
@@ -229,6 +237,28 @@ provideFileManager({
 
 <template>
 	<div class="min-h-0 w-full">
-		<FilePageLayout :show-refresh-button="true" />
+		<FilePageLayout :show-refresh-button="true">
+			<template #before-refresh>
+				<ButtonStyled color="brand">
+					<button
+						v-tooltip="isBusy ? formatMessage(messages.busyTooltip) : undefined"
+						type="button"
+						class="!h-10"
+						:disabled="isBusy"
+						@click="router.push({ name: 'MultiplayerServerFileStudio', params: { id: server.id } })"
+					>
+						<CodeIcon class="size-5" />
+						<span class="inline-flex items-center gap-1">
+							{{ formatMessage(messages.openStudio) }}
+							<span
+								class="rounded bg-orange px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-contrast"
+							>
+								Beta
+							</span>
+						</span>
+					</button>
+				</ButtonStyled>
+			</template>
+		</FilePageLayout>
 	</div>
 </template>

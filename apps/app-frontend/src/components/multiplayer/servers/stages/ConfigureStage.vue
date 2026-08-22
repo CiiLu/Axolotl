@@ -28,11 +28,11 @@ const serverId = computed(() => ctx.createdServer.value?.id ?? '')
 
 <template>
 	<div class="flex flex-col gap-4">
-		<p class="m-0 text-secondary">
+		<p class="m-0 text-sm text-secondary">
 			{{ formatMessage(messages.heading) }}
 		</p>
 
-		<div class="max-h-[28rem] overflow-y-auto pr-1">
+		<div class="max-h-[32rem] overflow-y-auto pr-2">
 			<ServerPropertiesEditor v-if="serverId !== ''" ref="editor" :server-id="serverId" />
 		</div>
 	</div>

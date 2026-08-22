@@ -491,6 +491,7 @@ export function createCreateServerFlowContext(
 			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.next),
+				color: 'brand',
 				disabled: !ctx.canContinueFromType.value,
 				onClick: () => ctx.modal.value?.nextStage(),
 			}),
@@ -503,6 +504,7 @@ export function createCreateServerFlowContext(
 			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.next),
+				color: 'brand',
 				disabled: ctx.name.value.trim() === '',
 				onClick: async () => {
 					await ctx.loadDefaultJava()
@@ -522,6 +524,7 @@ export function createCreateServerFlowContext(
 				label: ctx.formatMessage(
 					ctx.installPhase.value === 'error' ? wizardMessages.retry : wizardMessages.next,
 				),
+				color: 'brand',
 				icon: ctx.installPhase.value === 'error' ? RefreshCwIcon : null,
 				iconPosition: 'after',
 				disabled: ctx.installPhase.value !== 'done' && ctx.installPhase.value !== 'error',
@@ -538,9 +541,11 @@ export function createCreateServerFlowContext(
 			id: 'configure',
 			stageContent: markRaw(ConfigureStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.configureStageTitle),
+			maxWidth: 'min(60rem, calc(95vw - 10rem))',
 			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(wizardMessages.finish),
+				color: 'brand',
 				onClick: async () => {
 					const save = ctx.saveServerProperties.value
 					if (save === null || (await save())) ctx.modal.value?.hide()

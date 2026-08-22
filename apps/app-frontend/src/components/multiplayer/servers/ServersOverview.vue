@@ -1,15 +1,26 @@
 <script setup lang="ts">
-import { PlusIcon, RefreshCwIcon, ServerIcon, SpinnerIcon } from '@modrinth/assets'
-import { ButtonStyled, defineMessages, EmptyState, useVIntl } from '@modrinth/ui'
-import { onMounted, useTemplateRef } from 'vue'
+import {
+	CollectionIcon,
+	GridIcon,
+	PlusIcon,
+	RefreshCwIcon,
+	ServerIcon,
+	SpinnerIcon,
+} from '@modrinth/assets'
+import { ButtonStyled, defineMessages, EmptyState, PopoutMenu, useVIntl } from '@modrinth/ui'
+import { computed, onMounted, ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 import { useRouter } from 'vue-router'
 
 import CreateServerModal from '@/components/multiplayer/servers/CreateServerModal.vue'
 import EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
 import ServerCard from '@/components/multiplayer/servers/ServerCard.vue'
-import { type ServerView, useServers } from '@/composables/useServers'
 import { useServerLifecycle } from '@/composables/useServerLifecycle'
+import { type ServerView, useServers } from '@/composables/useServers'
+import {
+	getLastLibraryDisplayMode,
+	setLastLibraryDisplayMode,
+} from '@/helpers/library-display-mode'
 
 const router = useRouter()
 const { formatMessage } = useVIntl()
@@ -33,7 +44,19 @@ const messages = defineMessages({
 		defaultMessage: '{count, plural, =0 {No servers yet} one {# server} other {# servers}}',
 	},
 	loading: { id: 'app.servers.loading', defaultMessage: 'Loading servers...' },
+	view: { id: 'app.library.view', defaultMessage: 'View' },
+	standardView: { id: 'app.library.view.standard', defaultMessage: 'Standard grid' },
+	cardsView: { id: 'app.library.view.cards', defaultMessage: 'Library cards' },
 })
+
+const displayMode = ref(getLastLibraryDisplayMode())
+const displayModeOptions = computed(() => [
+	{ id: 'standard' as const, label: formatMessage(messages.standardView), icon: GridIcon },
+	{ id: 'cards' as const, label: formatMessage(messages.cardsView), icon: CollectionIcon },
+])
+const currentDisplayMode = computed(() =>
+	displayModeOptions.value.find((option) => option.id === displayMode.value),
+)
 
 onMounted(() => {
 	void refresh()
@@ -41,6 +64,11 @@ onMounted(() => {
 
 function openServer(id: string) {
 	void router.push('/multiplayer/servers/' + encodeURIComponent(id))
+}
+
+function setDisplayMode(mode: 'standard' | 'cards') {
+	displayMode.value = mode
+	setLastLibraryDisplayMode(mode)
 }
 
 async function toggleRunning(server: ServerView) {
@@ -65,6 +93,32 @@ async function toggleRunning(server: ServerView) {
 				}}
 			</span>
 			<div class="flex gap-2">
+				<PopoutMenu :tooltip="formatMessage(messages.view)" placement="bottom-end">
+					<ButtonStyled circular>
+						<button type="button" :aria-label="formatMessage(messages.view)">
+							<component :is="currentDisplayMode?.icon" />
+						</button>
+					</ButtonStyled>
+					<template #menu>
+						<div class="flex w-44 flex-col gap-1 p-1">
+							<ButtonStyled
+								v-for="option in displayModeOptions"
+								:key="option.id"
+								:type="displayMode === option.id ? 'filled' : 'transparent'"
+							>
+								<button
+									type="button"
+									class="flex w-full items-center gap-2 !justify-start text-left"
+									:aria-pressed="displayMode === option.id"
+									@click="setDisplayMode(option.id)"
+								>
+									<component :is="option.icon" class="size-4" />
+									{{ option.label }}
+								</button>
+							</ButtonStyled>
+						</div>
+					</template>
+				</PopoutMenu>
 				<ButtonStyled type="outlined">
 					<button type="button" :disabled="isRefreshing" @click="refresh()">
 						<RefreshCwIcon :class="{ 'animate-spin': isRefreshing }" />
@@ -98,11 +152,12 @@ async function toggleRunning(server: ServerView) {
 			</ButtonStyled>
 		</EmptyState>
 
-		<div v-else class="grid max-w-5xl grid-cols-1 items-start gap-2 xl:grid-cols-2">
+		<div v-else class="server-grid" :class="{ 'library-cards': displayMode === 'cards' }">
 			<ServerCard
 				v-for="entry in servers"
 				:key="entry.id"
 				:server="entry"
+				:variant="displayMode === 'cards' ? 'library' : 'standard'"
 				@open="openServer(entry.id)"
 				@start-stop="toggleRunning(entry)"
 			/>
@@ -112,3 +167,18 @@ async function toggleRunning(server: ServerView) {
 		<EulaModal ref="eulaModal" :text="eulaText" @accept="acceptEula" @decline="declineEula" />
 	</div>
 </template>
+
+<style lang="scss" scoped>
+.server-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+	width: 100%;
+	max-width: 72rem;
+	gap: 0.75rem;
+
+	&.library-cards {
+		grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+		gap: 1rem;
+	}
+}
+</style>

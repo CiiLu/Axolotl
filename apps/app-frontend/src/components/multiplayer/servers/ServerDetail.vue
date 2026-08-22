@@ -37,8 +37,8 @@ import ServerFilesPanel from '@/components/multiplayer/servers/ServerFilesPanel.
 import ServerIcon from '@/components/multiplayer/servers/ServerIcon.vue'
 import ServerSettingsPanel from '@/components/multiplayer/servers/ServerSettingsPanel.vue'
 import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
-import { useServers } from '@/composables/useServers'
 import { useServerLifecycle } from '@/composables/useServerLifecycle'
+import { useServers } from '@/composables/useServers'
 import { type PortProcessInfoData, servers as serversApi } from '@/helpers/servers'
 import { openPath } from '@/helpers/utils'
 
@@ -215,7 +215,7 @@ watch([server, isLoaded], ([value, loaded]) => {
 	if (loaded && hasSeenServer.value) void router.replace('/multiplayer/servers')
 })
 
-const tabIndex = ref(0)
+const tabIndex = ref(route.query.tab === 'files' ? 1 : route.query.tab === 'settings' ? 2 : 0)
 const tabLinks = computed(() => [
 	{ label: formatMessage(messages.console), href: 'console', icon: TerminalSquareIcon },
 	{ label: formatMessage(messages.files), href: 'files', icon: FolderOpenIcon },

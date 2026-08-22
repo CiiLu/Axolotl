@@ -32,6 +32,7 @@ import {
 } from '@modrinth/ui'
 import { type Component, computed, onMounted, ref } from 'vue'
 
+import StudioEditor from '@/components/instance/studio/StudioEditor.vue'
 import { servers } from '@/helpers/servers'
 
 const props = defineProps<{
@@ -610,7 +611,7 @@ defineExpose({ save, cancel, isDirty })
 					<FileTextIcon class="size-4" />
 				</div>
 				<div class="min-w-0">
-					<h3 class="m-0 truncate font-mono text-base font-semibold text-contrast">
+					<h3 class="m-0 truncate text-base font-semibold text-contrast">
 						{{ formatMessage(messages.title) }}
 					</h3>
 				</div>
@@ -634,40 +635,41 @@ defineExpose({ save, cancel, isDirty })
 		</p>
 
 		<template v-else-if="mode === 'form'">
-			<div class="flex flex-col gap-2">
+			<div class="flex flex-col">
 				<Accordion
 					v-for="section in formSections"
 					:key="section.title.id"
 					:open-by-default="section.openByDefault"
-					:button-class="'flex w-full cursor-pointer items-center bg-transparent p-0 text-left'"
-					class="overflow-hidden rounded-xl border border-solid border-surface-4 bg-surface-2"
+					overflow-visible
+					:button-class="'group flex min-h-11 w-full cursor-pointer items-center gap-3 bg-transparent px-1 text-left'"
+					class="border-0 border-b border-solid border-surface-4 py-1 last:border-b-0"
 				>
 					<template #button="{ open }">
-						<span class="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-1">
+						<span class="flex min-w-0 flex-1 items-center gap-3">
 							<span
-								class="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-3 text-secondary transition-colors"
+								class="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-3 text-secondary transition-colors group-hover:text-primary"
 							>
 								<component :is="section.icon" class="size-4" />
 							</span>
-							<span class="min-w-0 flex-1 truncate text-sm font-semibold text-contrast">
+							<span class="min-w-0 flex-1 truncate text-sm font-semibold text-primary group-hover:text-contrast">
 								{{ formatMessage(section.title) }}
 							</span>
 						</span>
 						<DropdownIcon
-							class="ml-auto mr-4 size-4 shrink-0 text-secondary transition-transform duration-300"
+							class="ml-auto size-4 shrink-0 text-secondary transition-transform duration-300 group-hover:text-primary"
 							:class="open && 'rotate-180'"
 						/>
 					</template>
 					<div
-						class="grid grid-cols-1 gap-px border-t border-solid border-surface-4 bg-surface-4 md:grid-cols-2 xl:grid-cols-3"
+						class="grid grid-cols-1 gap-x-5 gap-y-3 px-1 pb-4 pt-1 sm:grid-cols-2 xl:grid-cols-3"
 					>
 						<template v-for="item in section.fields" :key="item.key">
 							<div
 								v-if="item.field.kind === 'boolean'"
-								class="flex min-w-0 items-center justify-between gap-3 bg-surface-2 px-3 py-2"
+								class="flex min-h-9 min-w-0 items-center justify-between gap-3"
 							>
 								<label
-									class="truncate text-xs font-medium text-secondary"
+									class="truncate text-sm font-medium text-primary"
 									:for="`server-prop-${item.key}`"
 								>
 									<span v-tooltip="item.key">{{ fieldLabel(item.key) }}</span>
@@ -680,9 +682,9 @@ defineExpose({ save, cancel, isDirty })
 								/>
 							</div>
 
-							<div v-else class="flex min-w-0 flex-col gap-1.5 bg-surface-2 px-3 py-2">
+							<div v-else class="flex min-w-0 flex-col gap-1.5">
 								<label
-									class="truncate text-xs font-medium text-secondary"
+									class="truncate text-sm font-medium text-primary"
 									:for="`server-prop-${item.key}`"
 								>
 									<span v-tooltip="item.key">{{ fieldLabel(item.key) }}</span>
@@ -721,11 +723,14 @@ defineExpose({ save, cancel, isDirty })
 			</div>
 		</template>
 
-		<textarea
-			v-else
-			v-model="rawText"
-			class="box-border min-h-72 w-full resize-y rounded-xl border border-solid border-surface-4 bg-surface-3 px-3 py-2 font-mono text-sm text-contrast outline-none transition-colors focus:border-brand"
-			spellcheck="false"
-		></textarea>
+		<div v-else class="h-[clamp(18rem,60vh,32rem)] overflow-hidden rounded-lg border border-solid border-surface-4">
+			<StudioEditor
+				file-path="server.properties"
+				language="properties"
+				:content="rawText"
+				:read-only="isSaving"
+				@update:content="rawText = $event"
+			/>
+		</div>
 	</section>
 </template>

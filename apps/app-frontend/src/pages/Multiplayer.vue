@@ -18,7 +18,10 @@ const activeTab = computed(() =>
 	route.path.startsWith('/multiplayer/rooms') ? 'rooms' : 'servers',
 )
 // 服务器详情页用固定高度布局：控制台内部滚动，命令输入框始终可见
-const isFixedRender = computed(() => route.name === 'MultiplayerServerDetail')
+const isStudioMode = computed(() => route.name === 'MultiplayerServerFileStudio')
+const isFixedRender = computed(
+	() => route.name === 'MultiplayerServerDetail' || route.name === 'MultiplayerServerFileStudio',
+)
 const tabLinks = computed(() => [
 	{ label: formatMessage(messages.serversTab), href: '/multiplayer/servers', icon: ServerIcon },
 	{ label: formatMessage(messages.roomsTab), href: '/multiplayer/rooms', icon: UsersIcon },
@@ -32,20 +35,24 @@ function handleTabClick(index: number) {
 <template>
 	<div
 		:class="
-			isFixedRender
+			isStudioMode
+				? 'flex h-full min-h-0 w-full flex-col'
+				: isFixedRender
 				? 'box-border flex h-full min-h-0 w-full flex-col gap-3 p-6'
 				: 'box-border flex min-h-full w-full flex-col gap-3 p-6'
 		"
 	>
-		<h1 class="m-0 shrink-0 text-2xl font-semibold text-contrast">
-			{{ formatMessage(messages.title) }}
-		</h1>
-		<NavTabs
-			mode="local"
-			:active-index="activeTab === 'rooms' ? 1 : 0"
-			:links="tabLinks"
-			@tab-click="handleTabClick"
-		/>
+		<template v-if="!isStudioMode">
+			<h1 class="m-0 shrink-0 text-2xl font-semibold text-contrast">
+				{{ formatMessage(messages.title) }}
+			</h1>
+			<NavTabs
+				mode="local"
+				:active-index="activeTab === 'rooms' ? 1 : 0"
+				:links="tabLinks"
+				@tab-click="handleTabClick"
+			/>
+		</template>
 
 		<RouterView />
 	</div>
