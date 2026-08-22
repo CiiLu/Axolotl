@@ -458,13 +458,14 @@ fn provider_language(locale: &str, provider: TranslationProvider) -> String {
             value => value.to_string(),
         },
         TranslationProvider::DeepL => match normalized.as_str() {
-            "zh-CN" => "ZH".to_string(),
-            "zh-TW" => "ZH".to_string(),
+            "zh-CN" | "zh" => "ZH".to_string(),
+            "zh-TW" => "ZH-HANT".to_string(),
             "en" | "en-US" => "EN-US".to_string(),
             "en-GB" => "EN-GB".to_string(),
             "pt" | "pt-BR" => "PT-BR".to_string(),
             "pt-PT" => "PT-PT".to_string(),
-            value => value.to_uppercase(),
+            "nb" | "nb-NO" | "no" | "no-NO" => "NB".to_string(),
+            value => value.split('-').next().unwrap_or(value).to_uppercase(),
         },
         TranslationProvider::Ai => normalized,
     }
@@ -1343,10 +1344,14 @@ mod tests {
     }
 
     #[test]
-    fn deepl_language_codes_are_uppercased() {
+    fn deepl_language_codes_are_normalized() {
         assert_eq!(
             provider_language("zh-CN", TranslationProvider::DeepL),
             "ZH"
+        );
+        assert_eq!(
+            provider_language("zh-TW", TranslationProvider::DeepL),
+            "ZH-HANT"
         );
         assert_eq!(
             provider_language("en-US", TranslationProvider::DeepL),
@@ -1357,6 +1362,22 @@ mod tests {
             "PT-BR"
         );
         assert_eq!(provider_language("ja", TranslationProvider::DeepL), "JA");
+        assert_eq!(
+            provider_language("ja-JP", TranslationProvider::DeepL),
+            "JA"
+        );
+        assert_eq!(
+            provider_language("de-DE", TranslationProvider::DeepL),
+            "DE"
+        );
+        assert_eq!(
+            provider_language("es-419", TranslationProvider::DeepL),
+            "ES"
+        );
+        assert_eq!(
+            provider_language("no-NO", TranslationProvider::DeepL),
+            "NB"
+        );
     }
 
     #[test]
