@@ -912,7 +912,7 @@
 		"message": "版本不相符"
 	},
 	"app.drop.mod-compatibility-warning": {
-		"message": "此模組目標版本為 {modVersion}（{modLoader}），但實例的版本是 {instVersion}（{instLoader}）。"
+		"message": "{file} 的目標版本為 {modVersion}（{modLoader}），但實例的版本是 {instVersion}（{instLoader}）。"
 	},
 	"app.drop.modpack-install-failed": {
 		"message": "整合包安裝失敗"

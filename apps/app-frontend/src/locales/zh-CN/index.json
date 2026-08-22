@@ -4431,7 +4431,7 @@
 		"message": "版本不匹配"
 	},
 	"app.drop.mod-compatibility-warning": {
-		"message": "此模组目标版本为 {modVersion}（{modLoader}），但实例的版本是 {instVersion}（{instLoader}）。"
+		"message": "{file} 的目标版本为 {modVersion}（{modLoader}），但实例的版本是 {instVersion}（{instLoader}）。"
 	},
 	"app.drop.unknown-force-analysis-title": {
 		"message": "无法识别文件类型"
