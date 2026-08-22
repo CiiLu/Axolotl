@@ -384,6 +384,7 @@ function reportOperationError(error?: unknown, context?: string) {
 			? errorMessage
 			: formatMessage(message)
 	handleError(new Error(displayMessage))
+}
 
 watch(
 	settings,
