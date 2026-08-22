@@ -415,19 +415,32 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
 	if (locale !== 'zh-CN') return hits
 
 	if (useServer) {
-		const response = await translate({
+		const segments: TranslationSegment[] = hits.map((hit) => ({
+			text: hit.description ?? hit.summary ?? '',
+			id: hit.project_id ?? hit.provider_project_id ?? '',
+			format: 'html',
+		}))
+		const request: TranslationRequest = {
 			target_language: 'zh-CN',
 			source_language: 'en',
-			segments: hits.map((hit) => ({
-				text: hit.description ?? hit.summary ?? '',
-				id: hit.project_id ?? hit.provider_project_id ?? '',
-				format: 'html',
-			})),
+			segments,
 			context: {
 				title: hits[0]?.title ?? '',
 				description: hits[0]?.description ?? hits[0]?.summary ?? '',
 			},
-		})
+		}
+
+		// 分批翻译，某批失败时保留已完成的批次，避免单个坏段拖垮整页
+		const translated: TranslationSegment[] = []
+		let response: TranslationResponse
+		try {
+			response = await translateInBatches(request, (batch) => {
+				translated.push(...batch.segments)
+			})
+		} catch (error) {
+			if (translated.length === 0) throw error
+			response = { segments: translated }
+		}
 
 		const translatedHits = hits.map((hit) => {
 			const segment = response.segments.find(
