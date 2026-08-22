@@ -47,6 +47,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added pinned Content tab views that remember each instance\'s sorting and filters between launcher restarts.',
 					'zh-CN': '内容页现可固定实例视图，在重启启动器后保留各实例的排序和筛选条件。',
 				},
+				{
+					'en-US': 'Added translation for titles and descriptions in project galleries.',
+					'zh-CN': '项目图库中的图片标题和说明现已支持翻译。',
+				},
 			],
 			changed: [
 				{
@@ -63,6 +67,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Project and version pages now return to the originating instance Content tab when opened from it.',
 					'zh-CN': '从内容页打开项目或版本页面后，现在会返回原来的实例内容页。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the Discover project gallery sidebar covering images in the image viewer.',
+					'zh-CN': '修复发现内容的项目图库查看器中侧边栏遮挡图片的问题。',
 				},
 			],
 		},

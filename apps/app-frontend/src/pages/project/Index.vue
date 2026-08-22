@@ -445,6 +445,7 @@ import {
 import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
 import { get_by_instance_id } from '@/helpers/process'
+import { projectGalleryTranslationSegments } from '@/helpers/project-gallery'
 import { createProjectBrowseLocation } from '@/helpers/project-links'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import {
@@ -964,6 +965,7 @@ async function translateProject() {
 		const allSegments = [
 			{ id: 'title', text: data.value.title ?? '', format: 'plain' },
 			{ id: 'description', text: data.value.description ?? '', format: 'plain' },
+			...projectGalleryTranslationSegments(data.value.gallery),
 			...prepared.segments,
 		]
 

@@ -187,7 +187,14 @@
 				]"
 			/>
 
-			<Gallery v-if="activeTab === 'gallery'" :project="data" />
+			<Gallery
+				v-if="activeTab === 'gallery'"
+				:project="data"
+				:translation-active="translationActive"
+				:translations="translations"
+				:translation-mode="translationMode"
+				:translation-style="translationStyle"
+			/>
 			<ProjectPageVersions
 				v-else-if="activeTab === 'versions'"
 				:loaders="allLoaders"
@@ -280,6 +287,7 @@ import {
 	getCurseForgeProject,
 } from '@/helpers/curseforge'
 import { createProjectBrowseLocation, type ProjectBrowseFilter } from '@/helpers/project-links'
+import { projectGalleryTranslationSegments } from '@/helpers/project-gallery'
 import { get_game_versions, get_loaders } from '@/helpers/tags'
 import {
 	getTranslationErrorKind,
@@ -903,6 +911,7 @@ async function translateProject() {
 		const allSegments = [
 			{ id: 'title', text: data.value.title, format: 'plain' },
 			{ id: 'description', text: data.value.description, format: 'plain' },
+			...projectGalleryTranslationSegments(data.value.gallery),
 			...prepared.segments,
 		]
 
