@@ -7,14 +7,18 @@ use tauri::{Manager, ResourceId, Runtime, Webview};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_http::reqwest::ClientBuilder;
 use tauri_plugin_updater::{Error, Update, UpdaterExt};
-use theseus::{LoadingBarType, emit_loading, init_loading, launcher_user_agent};
+use theseus::{
+    LoadingBarType, emit_loading, init_loading, launcher_user_agent,
+};
 use tokio::time::Instant;
 use url::Url;
 
 const MIawa_API_BASE: &str = "https://miawa.cn/api/v2";
 const MIawa_HOST: &str = "https://miawa.cn";
-const MIawa_API_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
-const MIawa_DOWNLOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
+const MIawa_API_TIMEOUT: std::time::Duration =
+    std::time::Duration::from_secs(15);
+const MIawa_DOWNLOAD_TIMEOUT: std::time::Duration =
+    std::time::Duration::from_secs(300);
 
 // ── Miawa API types ──────────────────────────────────────────────
 
@@ -161,7 +165,9 @@ async fn miawa_check_update(
         .map_err(|e| format!("Miawa launchers request failed: {e}"))?
         .json()
         .await
-        .map_err(|e| format!("Failed to parse Miawa launchers response: {e}"))?;
+        .map_err(|e| {
+            format!("Failed to parse Miawa launchers response: {e}")
+        })?;
 
     let launcher = launchers_resp
         .data
@@ -182,10 +188,12 @@ async fn miawa_check_update(
     let manifest = miawa_get_latest_json(&client, tag_name).await?;
 
     let platform_key = current_platform_key();
-    let platform_entry = manifest
-        .platforms
-        .get(platform_key)
-        .ok_or_else(|| format!("Miawa latest.json has no entry for platform {platform_key}"))?;
+    let platform_entry =
+        manifest.platforms.get(platform_key).ok_or_else(|| {
+            format!(
+                "Miawa latest.json has no entry for platform {platform_key}"
+            )
+        })?;
 
     // Step 3: extract filename from the download URL in latest.json
     let original_url = Url::parse(&platform_entry.url)
@@ -193,7 +201,9 @@ async fn miawa_check_update(
     let filename = original_url
         .path_segments()
         .and_then(|s| s.last().filter(|s| !s.is_empty()))
-        .ok_or_else(|| "Could not extract filename from download URL".to_string())?;
+        .ok_or_else(|| {
+            "Could not extract filename from download URL".to_string()
+        })?;
 
     // Step 4: get mirror download URL for the actual installer
     let file_path = format!("axolotl/{tag_name}/{filename}");
@@ -202,10 +212,14 @@ async fn miawa_check_update(
         .json(&serde_json::json!({ "file_path": file_path }))
         .send()
         .await
-        .map_err(|e| format!("Miawa prepare request for installer failed: {e}"))?
+        .map_err(|e| {
+            format!("Miawa prepare request for installer failed: {e}")
+        })?
         .json()
         .await
-        .map_err(|e| format!("Failed to parse Miawa prepare response for installer: {e}"))?;
+        .map_err(|e| {
+            format!("Failed to parse Miawa prepare response for installer: {e}")
+        })?;
 
     let mirror_url = format!("{MIawa_HOST}{}", prepare_resp.data.download_url);
 
@@ -216,8 +230,8 @@ async fn miawa_check_update(
         .find(|a| a.name == filename)
         .map(|a| a.size);
 
-    let raw_json = serde_json::to_value(&manifest)
-        .unwrap_or(serde_json::Value::Null);
+    let raw_json =
+        serde_json::to_value(&manifest).unwrap_or(serde_json::Value::Null);
 
     Ok(Some((
         current_version.to_string(),
@@ -278,7 +292,11 @@ async fn miawa_download_update(
         data.extend_from_slice(&chunk);
         downloaded += chunk.len() as u64;
         if total_size > 0 {
-            let _ = emit_loading(&progress, downloaded as f64 / total_size as f64, None);
+            let _ = emit_loading(
+                &progress,
+                downloaded as f64 / total_size as f64,
+                None,
+            );
         }
     }
 
@@ -312,7 +330,10 @@ fn update_endpoints(source: &str) -> Result<Vec<Url>> {
         .into_iter()
         .map(|endpoint| {
             Url::parse(endpoint).map_err(|error| {
-                theseus::Error::from(theseus::ErrorKind::OtherError(error.to_string())).into()
+                theseus::Error::from(theseus::ErrorKind::OtherError(
+                    error.to_string(),
+                ))
+                .into()
             })
         })
         .collect()
@@ -447,11 +468,8 @@ pub async fn check_app_update<R: Runtime>(
     webview: Webview<R>,
     source: String,
 ) -> Result<Option<UpdateMetadata>> {
-    let current_version = webview
-        .app_handle()
-        .package_info()
-        .version
-        .to_string();
+    let current_version =
+        webview.app_handle().package_info().version.to_string();
 
     match source.as_str() {
         "miawa" => {
@@ -478,7 +496,9 @@ pub async fn check_app_update<R: Runtime>(
                     return Ok(None);
                 }
                 Err(e) => {
-                    tracing::warn!("Miawa check failed, falling back to CNB: {e}");
+                    tracing::warn!(
+                        "Miawa check failed, falling back to CNB: {e}"
+                    );
                 }
             }
 
@@ -486,7 +506,9 @@ pub async fn check_app_update<R: Runtime>(
             match check_with_updater(&webview, "cnb").await {
                 Ok(result) => return Ok(result),
                 Err(e) => {
-                    tracing::warn!("CNB check failed, falling back to GitHub: {e}");
+                    tracing::warn!(
+                        "CNB check failed, falling back to GitHub: {e}"
+                    );
                 }
             }
 
@@ -498,7 +520,9 @@ pub async fn check_app_update<R: Runtime>(
             match check_with_updater(&webview, "cnb").await {
                 Ok(result) => return Ok(result),
                 Err(e) => {
-                    tracing::warn!("CNB check failed, falling back to GitHub: {e}");
+                    tracing::warn!(
+                        "CNB check failed, falling back to GitHub: {e}"
+                    );
                 }
             }
 
@@ -584,11 +608,8 @@ pub async fn enqueue_update_for_installation<R: Runtime>(
     if let Some(url) = mirror_download_url {
         // ── Path A: download from Miawa mirror ──
         // We need version info; extract from the URL or use app version
-        let current_version = webview
-            .app_handle()
-            .package_info()
-            .version
-            .to_string();
+        let current_version =
+            webview.app_handle().package_info().version.to_string();
 
         // Extract version from the URL path (axolotl/vX.Y.Z/filename)
         let version = url
@@ -598,7 +619,8 @@ pub async fn enqueue_update_for_installation<R: Runtime>(
             .unwrap_or("unknown")
             .to_string();
 
-        let data = miawa_download_update(&url, &version, &current_version).await?;
+        let data =
+            miawa_download_update(&url, &version, &current_version).await?;
 
         tracing::info!("Mirror update downloaded, storing for installation");
         pending_data
@@ -642,10 +664,14 @@ pub async fn enqueue_update_for_installation<R: Runtime>(
                 let Some(total_size) = total_size else {
                     return;
                 };
-                if let Err(e) =
-                    emit_loading(&progress, chunk_size as f64 / total_size as f64, None)
-                {
-                    tracing::error!("Failed to update download progress bar: {e}");
+                if let Err(e) = emit_loading(
+                    &progress,
+                    chunk_size as f64 / total_size as f64,
+                    None,
+                ) {
+                    tracing::error!(
+                        "Failed to update download progress bar: {e}"
+                    );
                 }
             },
             || {},

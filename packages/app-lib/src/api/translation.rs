@@ -542,7 +542,8 @@ fn summarize_error_body(body: &str) -> String {
                 }
             }
         }
-        "HTML error page (the server may be unreachable or misconfigured)".to_string()
+        "HTML error page (the server may be unreachable or misconfigured)"
+            .to_string()
     } else {
         trimmed.to_string()
     }
