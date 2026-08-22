@@ -473,7 +473,10 @@ fn provider_language(locale: &str, provider: TranslationProvider) -> String {
 
 /// DeepL 的 source_lang 只接受基础语言码，ZH-HANT/ZH-HANS 仅可用于
 /// target_lang；显式指定繁体源时必须回退到 ZH。
-fn provider_source_language(locale: &str, provider: TranslationProvider) -> String {
+fn provider_source_language(
+    locale: &str,
+    provider: TranslationProvider,
+) -> String {
     if provider == TranslationProvider::DeepL {
         match provider_language(locale, provider).as_str() {
             "ZH-HANT" | "ZH-HANS" => "ZH".to_string(),
@@ -939,7 +942,10 @@ async fn translate_uncached(
     let source = if request.source_language == "auto" {
         "auto".to_string()
     } else {
-        provider_source_language(&request.source_language, settings.settings.provider)
+        provider_source_language(
+            &request.source_language,
+            settings.settings.provider,
+        )
     };
     let target =
         provider_language(&request.target_language, settings.settings.provider);
