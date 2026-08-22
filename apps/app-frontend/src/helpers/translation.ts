@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 
 import {
+	createTranslationBatches,
 	translateInBatches as executeTranslationBatches,
 	type TranslationRequest,
 	type TranslationResponse,
@@ -430,17 +431,21 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
 			},
 		}
 
-		// 分批翻译，某批失败时保留已完成的批次，避免单个坏段拖垮整页
+		// 等所有批次结束（含失败批次）再决定：保留成功批次，全部失败才抛错
 		const translated: TranslationResponse['segments'] = []
-		let response: TranslationResponse
-		try {
-			response = await translateInBatches(request, (batch) => {
-				translated.push(...batch.segments)
-			})
-		} catch (error) {
-			if (translated.length === 0) throw error
-			response = { segments: translated }
+		const results = await Promise.allSettled(
+			createTranslationBatches(request.segments).map((batch) =>
+				translateInBatches(
+					{ ...request, segments: batch },
+					(batchResponse) => translated.push(...batchResponse.segments),
+				),
+			),
+		)
+		if (translated.length === 0) {
+			const failed = results.find((result) => result.status === 'rejected')
+			throw failed ? failed.reason : new Error('搜索描述翻译失败')
 		}
+		const response: TranslationResponse = { segments: translated }
 
 		const translatedHits = hits.map((hit) => {
 			const segment = response.segments.find(
