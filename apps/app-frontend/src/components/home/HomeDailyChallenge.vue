@@ -32,10 +32,10 @@ const challengeIndex = ref(dailyIndex)
 const challenge = computed(() => dailyChallenges[challengeIndex.value])
 const challengeText = computed(() => {
 	const lowerLocale = locale.value.toLowerCase()
-	if (lowerLocale == 'zh-TW') {
+	if (lowerLocale == 'zh-tw') {
 		return challenge.value.text['zh-TW']
 	} else {
-		return locale.value.toLowerCase().startsWith('zh')
+		return lowerLocale.startsWith('zh')
 			? challenge.value.text['zh-CN']
 			: challenge.value.text['en-US'],
 	}
