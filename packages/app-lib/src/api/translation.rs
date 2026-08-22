@@ -471,6 +471,19 @@ fn provider_language(locale: &str, provider: TranslationProvider) -> String {
     }
 }
 
+/// DeepL 的 source_lang 只接受基础语言码，ZH-HANT/ZH-HANS 仅可用于
+/// target_lang；显式指定繁体源时必须回退到 ZH。
+fn provider_source_language(locale: &str, provider: TranslationProvider) -> String {
+    if provider == TranslationProvider::DeepL {
+        match provider_language(locale, provider).as_str() {
+            "ZH-HANT" | "ZH-HANS" => "ZH".to_string(),
+            mapped => mapped.to_string(),
+        }
+    } else {
+        provider_language(locale, provider)
+    }
+}
+
 fn parse_google_response(
     value: &Value,
     format: TranslationTextFormat,
@@ -926,7 +939,7 @@ async fn translate_uncached(
     let source = if request.source_language == "auto" {
         "auto".to_string()
     } else {
-        provider_language(&request.source_language, settings.settings.provider)
+        provider_source_language(&request.source_language, settings.settings.provider)
     };
     let target =
         provider_language(&request.target_language, settings.settings.provider);
@@ -1377,6 +1390,22 @@ mod tests {
         assert_eq!(
             provider_language("no-NO", TranslationProvider::DeepL),
             "NB"
+        );
+    }
+
+    #[test]
+    fn deepl_source_language_uses_base_chinese_code() {
+        assert_eq!(
+            provider_source_language("zh-TW", TranslationProvider::DeepL),
+            "ZH"
+        );
+        assert_eq!(
+            provider_source_language("zh-CN", TranslationProvider::DeepL),
+            "ZH"
+        );
+        assert_eq!(
+            provider_source_language("ja-JP", TranslationProvider::DeepL),
+            "JA"
         );
     }
 
