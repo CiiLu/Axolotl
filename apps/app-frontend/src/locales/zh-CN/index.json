@@ -458,6 +458,9 @@
   "app.content-install.dependencies-skipped.notification-title": {
     "message": "部分前置已跳过"
   },
+  "app.content-install.preview.already-included": {
+    "message": "已包含"
+  },
   "app.content-install.preview.already-installed": {
     "message": "已安装"
   },
@@ -2522,6 +2525,9 @@
   "app.settings.feature-flags.reset-to-default": {
     "message": "恢复默认值"
   },
+  "settings.feature-flags.title": {
+    "message": "功能开关"
+  },
   "app.settings.java.auto-high-performance-mode": {
     "message": "自动为 Java 使用高性能显卡"
   },
@@ -2811,7 +2817,7 @@
     "message": "通用"
   },
   "app.settings.groups.minecraft": {
-    "message": "Minecraft"
+    "message": "我的世界"
   },
   "app.settings.groups.system": {
     "message": "系统"
@@ -7714,6 +7720,21 @@
   },
   "app.drop.batch.target-label": {
     "message": "为该批次选择目标实例"
+  },
+  "app.drop.compatible-mode-cancel": {
+    "message": "取消"
+  },
+  "app.drop.compatible-mode-desc": {
+    "message": "要以兼容模式导入此实例吗？"
+  },
+  "app.drop.compatible-mode-import": {
+    "message": "兼容模式导入"
+  },
+  "app.drop.compatible-mode-old-way": {
+    "message": "按旧版方式导入"
+  },
+  "app.drop.compatible-mode-title": {
+    "message": "这似乎是一个未启用版本隔离的实例"
   },
   "app.drop.batch.nothing-importable-title": {
     "message": "没有可导入的内容"
