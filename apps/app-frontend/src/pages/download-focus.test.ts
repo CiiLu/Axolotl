@@ -62,4 +62,20 @@ test('malformed or nonexistent focus leaves Downloads unchanged', () => {
 test('Downloads focus reuses global manager without another install job listener', () => {
 	const source = readFileSync(new URL('./Downloads.vue', import.meta.url), 'utf8')
 	assert.doesNotMatch(source, /install_job_listener/)
+	assert.doesNotMatch(source, /focusedJobId === job\.job_id/)
+	assert.doesNotMatch(source, /ring-brand/)
+})
+
+test('Downloads covers upgrade phases and safely falls back for unknown phases', () => {
+	const source = readFileSync(new URL('./Downloads.vue', import.meta.url), 'utf8')
+	const phaseMessages = source.slice(
+		source.indexOf('const phaseMessages ='),
+		source.indexOf('const legacyDownloads'),
+	)
+
+	for (const phase of ['applying_content', 'verifying', 'completed']) {
+		assert.match(phaseMessages, new RegExp(`\\b${phase}:`))
+	}
+	assert.match(phaseMessages, /satisfies Record<InstallPhaseId, MessageDescriptor>/)
+	assert.match(source, /message \?\? messages\.unknownPhase/)
 })

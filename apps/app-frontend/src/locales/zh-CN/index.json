@@ -842,6 +842,15 @@
 	"app.downloads.instance-deleted": {
 		"message": "实例已删除"
 	},
+	"app.downloads.phase.applying-content": {
+		"message": "正在应用内容"
+	},
+	"app.downloads.phase.completed": {
+		"message": "已完成"
+	},
+	"app.downloads.phase.creating-backup": {
+		"message": "正在创建备份"
+	},
 	"app.downloads.phase.downloading-content": {
 		"message": "正在下载内容"
 	},
@@ -883,6 +892,18 @@
 	},
 	"app.downloads.phase.running-loader-processors": {
 		"message": "正在安装加载器"
+	},
+	"app.downloads.phase.staging-content": {
+		"message": "正在暂存内容"
+	},
+	"app.downloads.phase.unknown": {
+		"message": "正在处理"
+	},
+	"app.downloads.phase.updating-loader": {
+		"message": "正在更新加载器"
+	},
+	"app.downloads.phase.verifying": {
+		"message": "正在验证"
 	},
 	"app.downloads.progress": {
 		"message": "进度"

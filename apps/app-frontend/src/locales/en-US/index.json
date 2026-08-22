@@ -1253,6 +1253,15 @@
 	"app.downloads.open-instance": {
 		"message": "Open instance"
 	},
+	"app.downloads.phase.applying-content": {
+		"message": "Applying content"
+	},
+	"app.downloads.phase.completed": {
+		"message": "Completed"
+	},
+	"app.downloads.phase.creating-backup": {
+		"message": "Creating backup"
+	},
 	"app.downloads.phase.downloading-content": {
 		"message": "Downloading content"
 	},
@@ -1291,6 +1300,18 @@
 	},
 	"app.downloads.phase.running-loader-processors": {
 		"message": "Installing loader"
+	},
+	"app.downloads.phase.staging-content": {
+		"message": "Staging content"
+	},
+	"app.downloads.phase.unknown": {
+		"message": "Working"
+	},
+	"app.downloads.phase.updating-loader": {
+		"message": "Updating loader"
+	},
+	"app.downloads.phase.verifying": {
+		"message": "Verifying"
 	},
 	"app.downloads.phase.verifying-downloaded-files": {
 		"message": "Verifying files and continuing installation"

@@ -94,7 +94,7 @@
 				v-for="job in visibleJobs"
 				:key="job.job_id"
 				:data-install-job-id="job.job_id"
-				:class="['!p-0', focusedJobId === job.job_id ? 'ring-2 ring-brand' : '']"
+				class="!p-0"
 			>
 				<div class="flex flex-wrap items-center gap-4 p-4">
 					<img
@@ -404,6 +404,7 @@ import {
 	ProgressBar,
 	StyledInput,
 	Table,
+	type MessageDescriptor,
 	type TableColumn,
 	TagItem,
 	useFormatBytes,
@@ -585,6 +586,7 @@ const messages = defineMessages({
 		id: 'app.downloads.more-active-requests',
 		defaultMessage: '+{count} active requests',
 	},
+	unknownPhase: { id: 'app.downloads.phase.unknown', defaultMessage: 'Working' },
 })
 
 const statusMessages = defineMessages({
@@ -645,9 +647,27 @@ const phaseMessages = defineMessages({
 		id: 'app.downloads.phase.running-loader-processors',
 		defaultMessage: 'Installing loader',
 	},
+	creating_backup: {
+		id: 'app.downloads.phase.creating-backup',
+		defaultMessage: 'Creating backup',
+	},
+	staging_content: {
+		id: 'app.downloads.phase.staging-content',
+		defaultMessage: 'Staging content',
+	},
+	applying_content: {
+		id: 'app.downloads.phase.applying-content',
+		defaultMessage: 'Applying content',
+	},
+	updating_loader: {
+		id: 'app.downloads.phase.updating-loader',
+		defaultMessage: 'Updating loader',
+	},
+	verifying: { id: 'app.downloads.phase.verifying', defaultMessage: 'Verifying' },
 	finalizing: { id: 'app.downloads.phase.finalizing', defaultMessage: 'Finalizing' },
+	completed: { id: 'app.downloads.phase.completed', defaultMessage: 'Completed' },
 	rolling_back: { id: 'app.downloads.phase.rolling-back', defaultMessage: 'Rolling back changes' },
-})
+} satisfies Record<InstallPhaseId, MessageDescriptor>)
 
 const legacyDownloads = manager.legacyDownloads
 const historyJobs = manager.historyJobs
@@ -753,7 +773,8 @@ function statusLabel(status: string) {
 }
 
 function phaseLabel(phase: InstallPhaseId) {
-	return formatMessage(phaseMessages[phase])
+	const message = (phaseMessages as Partial<Record<string, MessageDescriptor>>)[phase]
+	return formatMessage(message ?? messages.unknownPhase)
 }
 
 function isRecoveryValidation(job: InstallJobSnapshot) {

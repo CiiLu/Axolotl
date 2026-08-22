@@ -1187,6 +1187,18 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
                 }
                 return Ok(());
             };
+            if let Some(instance_id) = instance_id.as_ref()
+                && let Err(error) =
+                    emit_instance(instance_id, InstancePayloadType::Edited)
+                        .await
+            {
+                tracing::warn!(
+                    job_id = %job_id,
+                    instance_id,
+                    error = %error,
+                    "Install job succeeded, but its final instance event could not be emitted"
+                );
+            }
             if let Err(error) =
                 recovery::discard_content_rollback(&mut job_state, &state).await
             {
@@ -1201,18 +1213,6 @@ async fn run_job(job_id: Uuid) -> crate::Result<()> {
                     job_id = %job_id,
                     error = %error,
                     "Install job succeeded, but its final event could not be emitted"
-                );
-            }
-            if let Some(instance_id) = instance_id
-                && let Err(error) =
-                    emit_instance(&instance_id, InstancePayloadType::Edited)
-                        .await
-            {
-                tracing::warn!(
-                    job_id = %job_id,
-                    instance_id,
-                    error = %error,
-                    "Install job succeeded, but its final instance event could not be emitted"
                 );
             }
         }

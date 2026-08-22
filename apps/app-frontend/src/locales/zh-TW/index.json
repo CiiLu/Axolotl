@@ -743,6 +743,15 @@
 	"app.downloads.open-instance": {
 		"message": "開啟實例"
 	},
+	"app.downloads.phase.applying-content": {
+		"message": "正在套用內容"
+	},
+	"app.downloads.phase.completed": {
+		"message": "已完成"
+	},
+	"app.downloads.phase.creating-backup": {
+		"message": "正在建立備份"
+	},
 	"app.downloads.phase.downloading-content": {
 		"message": "正在下載內容"
 	},
@@ -781,6 +790,18 @@
 	},
 	"app.downloads.phase.running-loader-processors": {
 		"message": "正在安裝載入器"
+	},
+	"app.downloads.phase.staging-content": {
+		"message": "正在暫存內容"
+	},
+	"app.downloads.phase.unknown": {
+		"message": "正在處理"
+	},
+	"app.downloads.phase.updating-loader": {
+		"message": "正在更新載入器"
+	},
+	"app.downloads.phase.verifying": {
+		"message": "正在驗證"
 	},
 	"app.downloads.phase.verifying-downloaded-files": {
 		"message": "正在驗證並繼續安裝"
