@@ -387,6 +387,7 @@ export interface ResolveContentRequest {
 	content_type: Labrinth.Content.v3.ContentType
 	selected?: ResolutionPreferences
 	excluded_project_ids?: string[]
+	force_project_ids?: string[]
 }
 
 export interface ResolvedContent {
@@ -678,9 +679,7 @@ export interface InstanceRunResult {
 }
 
 export function gcReportFellBack(report: GcLaunchReport): boolean {
-	return (
-		report.chosen_strategy !== report.preferred_strategy || report.pruned_args.length > 0
-	)
+	return report.chosen_strategy !== report.preferred_strategy || report.pruned_args.length > 0
 }
 
 /**
@@ -712,10 +711,7 @@ function normalizeJvmToken(token: string): string {
 }
 
 function strategyTokenKeys(strategy: ResolvedGcStrategyId, context: GcContext): Set<string> {
-	const tokens = GC_STRATEGY_DEFINITIONS[strategy]
-		.buildArgs(context)
-		.split(/\s+/)
-		.filter(Boolean)
+	const tokens = GC_STRATEGY_DEFINITIONS[strategy].buildArgs(context).split(/\s+/).filter(Boolean)
 	return new Set(tokens.map(normalizeJvmToken))
 }
 

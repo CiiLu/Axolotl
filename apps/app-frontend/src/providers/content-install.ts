@@ -3,8 +3,8 @@ import type { ContentInstallInstance, ContentInstallProjectInfo, ContentItem } f
 import {
 	createContext,
 	defineMessage,
-	usesTargetGameVersion,
 	useDebugLogger,
+	usesTargetGameVersion,
 	useVIntl,
 } from '@modrinth/ui'
 import { openUrl } from '@tauri-apps/plugin-opener'

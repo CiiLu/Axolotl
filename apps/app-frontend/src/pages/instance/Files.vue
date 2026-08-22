@@ -2,8 +2,8 @@
 import { CodeIcon, FileArchiveIcon } from '@modrinth/assets'
 import type { EditingFile, FileContextMenuOption, FileItem } from '@modrinth/ui'
 import {
-	commonMessages,
 	ButtonStyled,
+	commonMessages,
 	defineMessages,
 	FilePageLayout,
 	injectNotificationManager,

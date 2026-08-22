@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { ChevronRightIcon } from '@modrinth/assets'
-import { defineMessages, useVIntl } from '@modrinth/ui'
+import { commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -98,6 +98,7 @@ const staticLabels = {
 	Multiplayer: messages.multiplayer,
 	Library: messages.library,
 	Downloads: messages.downloads,
+	Settings: commonMessages.settingsLabel,
 	Lab: messages.lab,
 	'Gradient text generator': messages.gradientText,
 	'Seed map': messages.seedMap,

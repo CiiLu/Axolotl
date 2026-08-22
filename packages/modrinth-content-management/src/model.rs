@@ -50,6 +50,8 @@ pub struct ResolveContentRequest {
     pub existing_project_ids: Vec<String>,
     #[serde(default)]
     pub excluded_project_ids: Vec<String>,
+    #[serde(default)]
+    pub force_project_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

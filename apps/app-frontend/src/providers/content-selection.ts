@@ -18,6 +18,14 @@ import type {
 } from '@/components/ui/ContentInstallPreviewModal.vue'
 import { get_project_many, get_version_many } from '@/helpers/cache.js'
 import {
+	compareContentIdentities,
+	type ContentIdentity,
+	contentIdentityFromInput,
+	type ContentIdentityInput,
+	contentIdentityInputsFromSnapshot,
+	resolveContentIdentities,
+} from '@/helpers/content-identity'
+import {
 	type CurseForgeInstallPreview,
 	getCurseForgeFile,
 	getCurseForgeProjects,
@@ -25,8 +33,6 @@ import {
 	queueCurseForgeFile,
 	queueCurseForgeWorld,
 } from '@/helpers/curseforge'
-import { getBrowseDefaultInstanceId, setBrowseDefaultInstanceId } from '@/helpers/settings'
-import type { GameInstance } from '@/helpers/types'
 import {
 	get_content_snapshot,
 	list as listInstances,
@@ -34,16 +40,10 @@ import {
 	queue_project_with_dependencies,
 	type ResolveContentPlan,
 } from '@/helpers/instance'
-import {
-	compareContentIdentities,
-	contentIdentityInputsFromSnapshot,
-	contentIdentityFromInput,
-	resolveContentIdentities,
-	type ContentIdentity,
-	type ContentIdentityInput,
-} from '@/helpers/content-identity'
-import type { DownloadManager } from '@/providers/download-manager'
+import { getBrowseDefaultInstanceId, setBrowseDefaultInstanceId } from '@/helpers/settings'
+import type { GameInstance } from '@/helpers/types'
 import { aggregateContentSelectionDependencies } from '@/providers/content-selection-logic'
+import type { DownloadManager } from '@/providers/download-manager'
 import { useTheming } from '@/store/state'
 
 export type ContentSelectionProvider = 'modrinth' | 'curseforge'
@@ -499,6 +499,7 @@ export function createContentSelection({
 				[
 					plan.primary.version_id,
 					...plan.dependencies.map((dependency) => dependency.version_id),
+					...plan.skipped.map((skipped) => skipped.version_id),
 				].filter((id): id is string => !!id),
 			),
 		]
@@ -510,11 +511,65 @@ export function createContentSelection({
 		const versionsById = new Map(versions.map((version) => [version.id, version]))
 		const primaryVersion = versionsById.get(plan.primary.version_id)
 		const titleByVersion = new Map(
-			[plan.primary, ...plan.dependencies].map((content) => [
-				content.version_id,
-				projectsById.get(content.project_id)?.title ?? content.project_id,
-			]),
+			[plan.primary, ...plan.dependencies, ...plan.skipped].flatMap((content) =>
+				content.version_id
+					? [
+							[
+								content.version_id,
+								projectsById.get(content.project_id)?.title ?? content.project_id,
+							],
+						]
+					: [],
+			),
 		)
+		const selectedProjectIds = new Set(
+			[...items.value.values()]
+				.filter((selected) => selected.key !== item.key && selected.provider === 'modrinth')
+				.map((selected) => selected.projectId),
+		)
+		const dependencies = plan.dependencies.map((dependency) => {
+			const included = selectedProjectIds.has(dependency.project_id)
+			return {
+				id: dependencyKey('modrinth', dependency.project_id, dependency.version_id),
+				title: projectsById.get(dependency.project_id)?.title ?? dependency.project_id,
+				iconUrl: projectsById.get(dependency.project_id)?.icon_url,
+				versionNumber: versionsById.get(dependency.version_id)?.version_number,
+				fileName: versionsById.get(dependency.version_id)?.files[0]?.filename,
+				requiredBy: dependency.dependent_on_version_id
+					? [titleByVersion.get(dependency.dependent_on_version_id)].filter(
+							(title): title is string => !!title,
+						)
+					: [item.title],
+				requiredByKeys: [item.key],
+				alreadyInstalled: included,
+				status: included ? ('included' as const) : undefined,
+				required: dependency.required,
+			}
+		})
+		for (const skipped of plan.skipped) {
+			if (skipped.reason !== 'already_installed') continue
+			const versionId = skipped.version_id ?? `skipped-${skipped.project_id}`
+			dependencies.push({
+				id: dependencyKey('modrinth', skipped.project_id, versionId),
+				title: projectsById.get(skipped.project_id)?.title ?? skipped.project_id,
+				iconUrl: projectsById.get(skipped.project_id)?.icon_url,
+				versionNumber: skipped.version_id
+					? versionsById.get(skipped.version_id)?.version_number
+					: undefined,
+				fileName: skipped.version_id
+					? versionsById.get(skipped.version_id)?.files[0]?.filename
+					: undefined,
+				requiredBy: skipped.dependent_on_version_id
+					? [titleByVersion.get(skipped.dependent_on_version_id)].filter(
+							(title): title is string => !!title,
+						)
+					: [item.title],
+				requiredByKeys: [item.key],
+				alreadyInstalled: true,
+				status: 'installed' as const,
+				required: true,
+			})
+		}
 
 		return {
 			item,
@@ -527,27 +582,15 @@ export function createContentSelection({
 				contentType: item.contentType,
 				removable: true,
 			},
-			dependencies: plan.dependencies.map((dependency) => ({
-				id: dependencyKey('modrinth', dependency.project_id, dependency.version_id),
-				title: projectsById.get(dependency.project_id)?.title ?? dependency.project_id,
-				iconUrl: projectsById.get(dependency.project_id)?.icon_url,
-				versionNumber: versionsById.get(dependency.version_id)?.version_number,
-				fileName: versionsById.get(dependency.version_id)?.files[0]?.filename,
-				requiredBy: dependency.dependent_on_version_id
-					? [titleByVersion.get(dependency.dependent_on_version_id)].filter(
-							(title): title is string => !!title,
-						)
-					: [item.title],
-				requiredByKeys: [item.key],
-				alreadyInstalled: false,
-				required: dependency.required,
-			})),
-			skipped: plan.skipped.map((skipped) => ({
-				id: `${item.key}:skipped:${skipped.project_id}`,
-				title: projectsById.get(skipped.project_id)?.title ?? skipped.project_id,
-				reason: skipped.reason.replaceAll('_', ' '),
-				requiredByKeys: [item.key],
-			})),
+			dependencies,
+			skipped: plan.skipped
+				.filter((skipped) => skipped.reason !== 'already_installed')
+				.map((skipped) => ({
+					id: `${item.key}:skipped:${skipped.project_id}`,
+					title: projectsById.get(skipped.project_id)?.title ?? skipped.project_id,
+					reason: skipped.reason.replaceAll('_', ' '),
+					requiredByKeys: [item.key],
+				})),
 			modrinthPlan: plan,
 		} satisfies PreparedSelection
 	}
@@ -600,22 +643,50 @@ export function createContentSelection({
 			for (const project of projects) titleById.set(project.id, project.name)
 		}
 		const dependencies: ContentInstallPreviewDependency[] = preview.dependencies.map(
-			(dependency) => ({
-				id: dependencyKey('curseforge', String(dependency.projectId), String(dependency.fileId)),
-				title: dependency.title,
-				iconUrl: dependency.iconUrl,
-				versionNumber: dependency.versionNumber,
-				fileName: dependency.fileName,
-				requiredBy: dependency.requiredByProjectIds
-					.map((id) => titleById.get(id))
-					.filter((title): title is string => !!title),
-				requiredByKeys: [item.key],
-				alreadyInstalled: false,
-				versionMismatch: dependency.versionMismatch,
-				required: dependency.required,
-			}),
+			(dependency) => {
+				const included = [...items.value.values()].some(
+					(selected) =>
+						selected.key !== item.key &&
+						selected.provider === 'curseforge' &&
+						selected.providerProjectId === String(dependency.projectId),
+				)
+				return {
+					id: dependencyKey('curseforge', String(dependency.projectId), String(dependency.fileId)),
+					title: dependency.title,
+					iconUrl: dependency.iconUrl,
+					versionNumber: dependency.versionNumber,
+					fileName: dependency.fileName,
+					requiredBy: dependency.requiredByProjectIds
+						.map((id) => titleById.get(id))
+						.filter((title): title is string => !!title),
+					requiredByKeys: [item.key],
+					alreadyInstalled: included,
+					status: included ? ('included' as const) : undefined,
+					versionMismatch: dependency.versionMismatch,
+					required: dependency.required,
+				}
+			},
 		)
+		for (const skippedItem of preview.skipped) {
+			if (skippedItem.reason !== 'already_installed') continue
+			const projectId = String(skippedItem.projectId)
+			dependencies.push({
+				id: dependencyKey('curseforge', projectId, String(skippedItem.fileId ?? 'skipped')),
+				title: titleById.get(skippedItem.projectId) ?? projectId,
+				requiredBy: [item.title],
+				requiredByKeys: [item.key],
+				alreadyInstalled: true,
+				status: 'installed',
+				required: true,
+			})
+		}
 		for (const fallback of preview.modrinthFallbacks ?? []) {
+			const included = [...items.value.values()].some(
+				(selected) =>
+					selected.key !== item.key &&
+					selected.provider === 'modrinth' &&
+					selected.projectId === fallback.projectId,
+			)
 			dependencies.push({
 				id: dependencyKey('modrinth', fallback.projectId, fallback.versionId),
 				title: fallback.title,
@@ -623,18 +694,21 @@ export function createContentSelection({
 				versionNumber: fallback.versionNumber,
 				requiredBy: [titleById.get(fallback.parentProjectId) ?? item.title],
 				requiredByKeys: [item.key],
-				alreadyInstalled: false,
+				alreadyInstalled: included,
+				status: included ? ('included' as const) : undefined,
 				required: fallback.required,
 			})
 		}
-		const skipped: ContentInstallPreviewSkipped[] = preview.skipped.map((skippedItem) => ({
-			id: `${item.key}:skipped:${skippedItem.projectId}`,
-			title:
-				titleById.get(skippedItem.projectId) ??
-				formatMessage(messages.unknownDependency, { id: skippedItem.projectId }),
-			reason: skippedItem.reason || formatMessage(messages.unknownReason),
-			requiredByKeys: [item.key],
-		}))
+		const skipped: ContentInstallPreviewSkipped[] = preview.skipped
+			.filter((skippedItem) => skippedItem.reason !== 'already_installed')
+			.map((skippedItem) => ({
+				id: `${item.key}:skipped:${skippedItem.projectId}`,
+				title:
+					titleById.get(skippedItem.projectId) ??
+					formatMessage(messages.unknownDependency, { id: skippedItem.projectId }),
+				reason: skippedItem.reason || formatMessage(messages.unknownReason),
+				requiredByKeys: [item.key],
+			}))
 		for (const projectId of preview.optionalDependencies) {
 			skipped.push({
 				id: `${item.key}:optional:${projectId}`,
@@ -709,6 +783,14 @@ export function createContentSelection({
 						),
 				)
 				.map((dependency) => dependency.project_id)
+			const forceProjectIds = plan.skipped
+				.filter(
+					(skipped) =>
+						skipped.reason === 'already_installed' &&
+						!!skipped.version_id &&
+						approvedIds.has(dependencyKey('modrinth', skipped.project_id, skipped.version_id)),
+				)
+				.map((skipped) => skipped.project_id)
 			return await queue_project_with_dependencies(
 				instance.id,
 				{
@@ -720,6 +802,7 @@ export function createContentSelection({
 						loaders: selection.item.preferences?.loaders ?? [],
 					},
 					excluded_project_ids: excludedProjectIds,
+					force_project_ids: forceProjectIds,
 				},
 				{ title: selection.item.title, iconUrl: selection.item.iconUrl },
 			)
@@ -743,6 +826,19 @@ export function createContentSelection({
 					),
 			)
 			.map((dependency) => dependency.projectId)
+		const forceDependencyProjectIds = preview.skipped
+			.filter(
+				(skipped) =>
+					skipped.reason === 'already_installed' &&
+					approvedIds.has(
+						dependencyKey(
+							'curseforge',
+							String(skipped.projectId),
+							String(skipped.fileId ?? 'skipped'),
+						),
+					),
+			)
+			.map((skipped) => skipped.projectId)
 		for (const fallback of preview.modrinthFallbacks ?? []) {
 			if (!approvedIds.has(dependencyKey('modrinth', fallback.projectId, fallback.versionId))) {
 				excludedDependencyProjectIds.push(fallback.parentProjectId)
@@ -762,6 +858,7 @@ export function createContentSelection({
 				modLoaderType: curseForgeLoaderType(instance.loader),
 				installDependencies: true,
 				excludedDependencyProjectIds: [...new Set(excludedDependencyProjectIds)],
+				forceDependencyProjectIds: [...new Set(forceDependencyProjectIds)],
 			},
 			{ title: selection.item.title, iconUrl: selection.item.iconUrl },
 		)

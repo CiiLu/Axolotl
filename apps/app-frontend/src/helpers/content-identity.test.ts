@@ -3,8 +3,8 @@ import test from 'node:test'
 
 import {
 	compareContentIdentities,
-	contentIdentityInputsFromSnapshot,
 	contentIdentityFromInput,
+	contentIdentityInputsFromSnapshot,
 	normalizeContentIdentityText,
 } from './content-identity.ts'
 

@@ -26,6 +26,8 @@ import {
 } from '@/helpers/translation'
 
 import AIIcon from './AIIcon.vue'
+import SettingsRow from './SettingsRow.vue'
+import SettingsSection from './SettingsSection.vue'
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
@@ -54,8 +56,9 @@ function debugLog(area: string, message: string, data?: unknown) {
 }
 const aiCatalog = ref<AIProviderDefinition[]>([])
 const loading = ref(true)
-const status = ref('')
+const cacheStatus = ref('')
 const testing = ref(false)
+const testStatus = ref('')
 const googleIpPoolSize = ref(0)
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 let poolTimer: ReturnType<typeof setInterval> | undefined
@@ -387,15 +390,30 @@ watch(
 		// Log what changed
 		if (oldSettings) {
 			const changes: string[] = []
-			if (newSettings.provider !== oldSettings.provider) changes.push(`provider: ${oldSettings.provider} -> ${newSettings.provider}`)
-			if (newSettings.target_language !== oldSettings.target_language) changes.push(`target_language: ${oldSettings.target_language} -> ${newSettings.target_language}`)
-			if (newSettings.deepl_api_endpoint !== oldSettings.deepl_api_endpoint) changes.push(`deepl_api_endpoint changed`)
-			if (newSettings.deepl_api_key !== oldSettings.deepl_api_key) changes.push(`deepl_api_key changed (set: ${!!newSettings.deepl_api_key?.trim()})`)
-			if (newSettings.ai_provider_id !== oldSettings.ai_provider_id) changes.push(`ai_provider_id: ${oldSettings.ai_provider_id} -> ${newSettings.ai_provider_id}`)
-			if (newSettings.ai_model_id !== oldSettings.ai_model_id) changes.push(`ai_model_id: ${oldSettings.ai_model_id} -> ${newSettings.ai_model_id}`)
-			if (newSettings.mode !== oldSettings.mode) changes.push(`mode: ${oldSettings.mode} -> ${newSettings.mode}`)
-			if (newSettings.style !== oldSettings.style) changes.push(`style: ${oldSettings.style} -> ${newSettings.style}`)
-			if (newSettings.auto_translate !== oldSettings.auto_translate) changes.push(`auto_translate: ${oldSettings.auto_translate} -> ${newSettings.auto_translate}`)
+			if (newSettings.provider !== oldSettings.provider)
+				changes.push(`provider: ${oldSettings.provider} -> ${newSettings.provider}`)
+			if (newSettings.target_language !== oldSettings.target_language)
+				changes.push(
+					`target_language: ${oldSettings.target_language} -> ${newSettings.target_language}`,
+				)
+			if (newSettings.deepl_api_endpoint !== oldSettings.deepl_api_endpoint)
+				changes.push(`deepl_api_endpoint changed`)
+			if (newSettings.deepl_api_key !== oldSettings.deepl_api_key)
+				changes.push(`deepl_api_key changed (set: ${!!newSettings.deepl_api_key?.trim()})`)
+			if (newSettings.ai_provider_id !== oldSettings.ai_provider_id)
+				changes.push(
+					`ai_provider_id: ${oldSettings.ai_provider_id} -> ${newSettings.ai_provider_id}`,
+				)
+			if (newSettings.ai_model_id !== oldSettings.ai_model_id)
+				changes.push(`ai_model_id: ${oldSettings.ai_model_id} -> ${newSettings.ai_model_id}`)
+			if (newSettings.mode !== oldSettings.mode)
+				changes.push(`mode: ${oldSettings.mode} -> ${newSettings.mode}`)
+			if (newSettings.style !== oldSettings.style)
+				changes.push(`style: ${oldSettings.style} -> ${newSettings.style}`)
+			if (newSettings.auto_translate !== oldSettings.auto_translate)
+				changes.push(
+					`auto_translate: ${oldSettings.auto_translate} -> ${newSettings.auto_translate}`,
+				)
 
 			if (changes.length > 0) {
 				debugLog('Watch', 'Settings changed:', changes)
@@ -500,13 +518,16 @@ async function testProvider() {
 	})
 
 	testing.value = true
-	status.value = ''
+	testStatus.value = ''
 
 	// Validate DeepL configuration before testing
 	if (settings.value.provider === 'deepl') {
 		if (!settings.value.deepl_api_key?.trim()) {
 			debugLog('Test', 'DeepL API key is not configured')
-			reportOperationError(new Error('DeepL API key is not configured. Please enter your API key first.'), 'deepl-validation')
+			reportOperationError(
+				new Error('DeepL API key is not configured. Please enter your API key first.'),
+				'deepl-validation',
+			)
 			testing.value = false
 			return
 		}
@@ -523,7 +544,7 @@ async function testProvider() {
 
 		const result = await testTranslationProvider(settings.value.provider)
 		debugLog('Test', 'Test succeeded', { result })
-		status.value = formatMessage(messages.testSuccess, { translation: result })
+		testStatus.value = formatMessage(messages.testSuccess, { translation: result })
 	} catch (error) {
 		debugLog('Test', 'Test failed', error)
 		reportOperationError(error, 'test-provider')
@@ -536,7 +557,7 @@ async function testProvider() {
 async function clearCache() {
 	try {
 		await clearTranslationCache()
-		status.value = formatMessage(messages.cacheCleared)
+		cacheStatus.value = formatMessage(messages.cacheCleared)
 	} catch (error) {
 		reportOperationError(error)
 	}
@@ -547,163 +568,206 @@ async function clearCache() {
 	<div v-if="loading" class="flex min-h-48 items-center justify-center">
 		<SpinnerIcon class="size-6 animate-spin text-secondary" />
 	</div>
-	<div v-else class="flex flex-col gap-6">
-		<div>
-			<h2 class="m-0 text-lg font-semibold text-contrast">{{ formatMessage(messages.title) }}</h2>
-			<p class="m-0 mt-2 text-secondary">{{ formatMessage(messages.description) }}</p>
-		</div>
-
-		<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-			<label class="flex flex-col gap-2 font-semibold text-contrast">
-				{{ formatMessage(messages.provider) }}
-				<Combobox v-model="settings.provider" :options="providerOptions" />
-				<span v-if="settings.provider === 'google'" class="text-xs font-normal text-secondary">
-					{{ formatMessage(messages.googleIpPool, { count: googleIpPoolSize }) }}
-				</span>
-			</label>
-			<label class="flex flex-col gap-2 font-semibold text-contrast">
-				{{ formatMessage(messages.targetLanguage) }}
-				<Combobox v-model="targetLanguage" :options="languageOptions" searchable />
-			</label>
-			<label class="flex flex-col gap-2 font-semibold text-contrast">
-				{{ formatMessage(messages.displayMode) }}
-				<Combobox v-model="settings.mode" :options="modeOptions" />
-			</label>
-			<label class="flex flex-col gap-2 font-semibold text-contrast">
-				{{ formatMessage(messages.style) }}
-				<Combobox v-model="settings.style" :options="styleOptions" />
-			</label>
-		</div>
-
-		<div v-if="settings.provider === 'deepl'" class="grid grid-cols-1 gap-4 md:grid-cols-2">
-			<label class="flex flex-col gap-2 font-semibold text-contrast md:col-span-2">
-				{{ formatMessage(messages.deeplApiEndpoint) }}
-				<StyledInput
-					v-model="settings.deepl_api_endpoint"
-					:placeholder="formatMessage(messages.deeplApiEndpointPlaceholder)"
-				/>
-			</label>
-			<label class="flex flex-col gap-1.5 font-semibold text-contrast md:col-span-2">
-				{{ formatMessage(messages.deeplApiKey) }}
-				<StyledInput
-					v-model="settings.deepl_api_key"
-					type="password"
-					:placeholder="formatMessage(messages.deeplApiKeyPlaceholder)"
-				/>
-				<span class="text-xs font-normal text-secondary">
-					{{ formatMessage(messages.deeplApiKeyHint) }}
-				</span>
-			</label>
-		</div>
-
-		<div
-			v-if="settings.provider === 'ai' && aiAvailable"
-			class="grid grid-cols-1 gap-4 md:grid-cols-2"
-		>
-			<label class="flex flex-col gap-2 font-semibold text-contrast">
-				{{ formatMessage(messages.aiProvider) }}
-				<Combobox v-model="selectedAIProvider" :options="aiProviderOptions">
-					<template #selected="{ label }">
-						<span class="inline-flex min-w-0 items-center gap-2">
-							<AIIcon kind="provider-avatar" :value="selectedAIProvider" :size="20" />
-							<span class="truncate">{{ label }}</span>
-						</span>
-					</template>
-					<template #option="{ item, isSelected }">
-						<div class="flex min-w-0 items-center gap-2.5">
-							<AIIcon kind="provider-avatar" :value="String(item.value)" :size="22" />
-							<span
-								class="truncate font-semibold leading-tight"
-								:class="isSelected ? 'text-brand' : 'text-primary'"
-							>
-								{{ item.label }}
-							</span>
-						</div>
-					</template>
-				</Combobox>
-			</label>
-			<label class="flex flex-col gap-2 font-semibold text-contrast">
-				{{ formatMessage(messages.aiModel) }}
-				<div class="translation-model-combobox" :class="{ 'has-model-icon': settings.ai_model_id }">
-					<AIIcon
-						v-if="settings.ai_model_id"
-						class="pointer-events-none absolute left-3 top-1/2 z-[2] -translate-y-1/2"
-						kind="model"
-						:value="settings.ai_model_id"
-						:size="20"
-					/>
-					<Combobox v-model="settings.ai_model_id" :options="aiModelOptions" searchable>
-						<template #option="{ item, isSelected }">
-							<div class="flex min-w-0 items-center gap-2.5">
-								<AIIcon kind="model" :value="String(item.value)" :size="22" />
-								<span
-									class="truncate font-semibold leading-tight"
-									:class="isSelected ? 'text-brand' : 'text-primary'"
-								>
-									{{ item.label }}
-								</span>
-							</div>
-						</template>
-					</Combobox>
+	<div v-else class="settings-page">
+		<SettingsSection>
+			<template #header>
+				<h2
+					id="settings-target-translation-service"
+					tabindex="-1"
+					class="m-0 text-lg font-semibold text-contrast"
+				>
+					{{ formatMessage(messages.title) }}
+				</h2>
+				<p class="m-0 mt-1 text-sm leading-relaxed text-secondary">
+					{{ formatMessage(messages.description) }}
+				</p>
+			</template>
+			<template #extra>
+				<div class="flex flex-wrap items-center justify-end gap-2">
+					<span v-if="testStatus" class="text-sm text-secondary">{{ testStatus }}</span>
+					<Button type="base" :disabled="testing" @click="testProvider">
+						<PlugIcon />{{ formatMessage(testing ? messages.testing : messages.test) }}
+					</Button>
 				</div>
-			</label>
-			<label class="flex flex-col gap-1.5 text-sm font-semibold text-contrast md:col-span-2">
-				{{ formatMessage(messages.systemPrompt) }}
-				<StyledInput
-					v-model="settings.ai_system_prompt"
-					multiline
-					:rows="3"
-					resize="vertical"
-					wrapper-class="w-full"
-				/>
-				<span class="font-normal text-secondary">
-					{{ formatMessage(messages.systemPromptDescription) }}
-				</span>
-			</label>
-		</div>
+			</template>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.provider) }}</template>
+				<template #description>
+					<span v-if="settings.provider === 'google'">
+						{{ formatMessage(messages.googleIpPool, { count: googleIpPoolSize }) }}
+					</span>
+				</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="settings.provider" :options="providerOptions" />
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow v-if="settings.provider === 'deepl'" stacked>
+				<template #label>{{ formatMessage(messages.deeplApiEndpoint) }}</template>
+				<template #control>
+					<StyledInput
+						v-model="settings.deepl_api_endpoint"
+						:placeholder="formatMessage(messages.deeplApiEndpointPlaceholder)"
+						wrapper-class="w-full"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow v-if="settings.provider === 'deepl'" stacked>
+				<template #label>{{ formatMessage(messages.deeplApiKey) }}</template>
+				<template #description>{{ formatMessage(messages.deeplApiKeyHint) }}</template>
+				<template #control>
+					<StyledInput
+						v-model="settings.deepl_api_key"
+						type="password"
+						:placeholder="formatMessage(messages.deeplApiKeyPlaceholder)"
+						wrapper-class="w-full"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow v-if="settings.provider === 'ai' && aiAvailable">
+				<template #label>{{ formatMessage(messages.aiProvider) }}</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="selectedAIProvider" :options="aiProviderOptions">
+							<template #selected="{ label }">
+								<span class="inline-flex min-w-0 items-center gap-2">
+									<AIIcon kind="provider-avatar" :value="selectedAIProvider" :size="20" />
+									<span class="truncate">{{ label }}</span>
+								</span>
+							</template>
+							<template #option="{ item, isSelected }">
+								<div class="flex min-w-0 items-center gap-2.5">
+									<AIIcon kind="provider-avatar" :value="String(item.value)" :size="22" />
+									<span
+										class="truncate font-semibold leading-tight"
+										:class="isSelected ? 'text-brand' : 'text-primary'"
+									>
+										{{ item.label }}
+									</span>
+								</div>
+							</template>
+						</Combobox>
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow v-if="settings.provider === 'ai' && aiAvailable">
+				<template #label>{{ formatMessage(messages.aiModel) }}</template>
+				<template #control>
+					<div
+						class="translation-model-combobox w-full"
+						:class="{ 'has-model-icon': settings.ai_model_id }"
+					>
+						<AIIcon
+							v-if="settings.ai_model_id"
+							class="pointer-events-none absolute left-3 top-1/2 z-[2] -translate-y-1/2"
+							kind="model"
+							:value="settings.ai_model_id"
+							:size="20"
+						/>
+						<Combobox v-model="settings.ai_model_id" :options="aiModelOptions" searchable>
+							<template #option="{ item, isSelected }">
+								<div class="flex min-w-0 items-center gap-2.5">
+									<AIIcon kind="model" :value="String(item.value)" :size="22" />
+									<span
+										class="truncate font-semibold leading-tight"
+										:class="isSelected ? 'text-brand' : 'text-primary'"
+									>
+										{{ item.label }}
+									</span>
+								</div>
+							</template>
+						</Combobox>
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow v-if="settings.provider === 'ai' && aiAvailable" stacked>
+				<template #label>{{ formatMessage(messages.systemPrompt) }}</template>
+				<template #description>{{ formatMessage(messages.systemPromptDescription) }}</template>
+				<template #control>
+					<StyledInput
+						v-model="settings.ai_system_prompt"
+						multiline
+						:rows="3"
+						resize="vertical"
+						wrapper-class="w-full"
+					/>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 
-		<div class="flex w-full flex-col gap-2 font-semibold text-contrast">
-			<span>{{ formatMessage(messages.stylePreview) }}</span>
-			<div class="translation-style-preview-container">
-				<p v-if="settings.mode === 'bilingual'" class="translation-style-preview-original m-0">
-					{{ formatMessage(messages.stylePreviewOriginalText) }}
-				</p>
-				<p class="translation-style-preview m-0" :class="stylePreviewClass">
-					{{ formatMessage(messages.stylePreviewText) }}
-				</p>
-			</div>
-		</div>
-
-		<div class="flex items-center justify-between gap-4">
-			<div>
-				<h3 class="m-0 text-base font-semibold text-contrast">
-					{{ formatMessage(messages.autoTranslate) }}
-				</h3>
-				<p class="m-0 mt-1 text-sm text-secondary">
-					{{ formatMessage(messages.autoTranslateDescription) }}
-				</p>
-			</div>
-			<Toggle id="translation-auto" v-model="settings.auto_translate" />
-		</div>
-
-		<div class="flex flex-wrap items-center gap-2">
-			<Button type="colored" color="brand" :disabled="testing" @click="testProvider">
-				<PlugIcon />{{ formatMessage(testing ? messages.testing : messages.test) }}
-			</Button>
-			<span v-if="status" class="text-sm text-secondary">{{ status }}</span>
-		</div>
-
-		<div class="flex flex-col gap-2">
-			<h3 class="m-0 text-base font-semibold text-contrast">{{ formatMessage(messages.cache) }}</h3>
-			<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.cacheDescription) }}</p>
-			<Button type="base" @click="clearCache"
-				><TrashIcon />{{ formatMessage(messages.clearCache) }}</Button
-			>
-		</div>
+		<SettingsSection>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.targetLanguage) }}</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="targetLanguage" :options="languageOptions" searchable />
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.displayMode) }}</template>
+				<template #control>
+					<div class="w-full"><Combobox v-model="settings.mode" :options="modeOptions" /></div>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.style) }}</template>
+				<template #control>
+					<div class="w-full"><Combobox v-model="settings.style" :options="styleOptions" /></div>
+				</template>
+			</SettingsRow>
+			<SettingsRow stacked>
+				<template #label>{{ formatMessage(messages.stylePreview) }}</template>
+				<template #control>
+					<div class="translation-style-preview-container">
+						<p v-if="settings.mode === 'bilingual'" class="translation-style-preview-original m-0">
+							{{ formatMessage(messages.stylePreviewOriginalText) }}
+						</p>
+						<p class="translation-style-preview m-0" :class="stylePreviewClass">
+							{{ formatMessage(messages.stylePreviewText) }}
+						</p>
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-translation-auto-translate" tabindex="-1">
+						{{ formatMessage(messages.autoTranslate) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.autoTranslateDescription) }}</template>
+				<template #control
+					><Toggle id="translation-auto" v-model="settings.auto_translate"
+				/></template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-translation-cache" tabindex="-1">
+						{{ formatMessage(messages.cache) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.cacheDescription) }}</template>
+				<template #control>
+					<div class="flex flex-wrap items-center justify-end gap-2">
+						<span v-if="cacheStatus" class="text-sm text-secondary">{{ cacheStatus }}</span>
+						<Button type="base" @click="clearCache">
+							<TrashIcon />{{ formatMessage(messages.clearCache) }}
+						</Button>
+					</div>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 	</div>
 </template>
 
 <style scoped>
+.settings-page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-xl);
+}
+
 .translation-model-combobox {
 	position: relative;
 }

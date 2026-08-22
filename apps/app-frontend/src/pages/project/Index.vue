@@ -418,13 +418,13 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { SwapIcon } from '@/assets/icons/index.js'
 import BrowseInstanceSelector from '@/components/browse/BrowseInstanceSelector.vue'
-import { useContentFavorites } from '@/composables/useContentFavorites'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import {
 	fetchCachedServerStatus,
 	getFreshCachedServerStatus,
 } from '@/composables/instances/use-server-status-query'
+import { useContentFavorites } from '@/composables/useContentFavorites'
 import {
 	get_organization,
 	get_project,
@@ -433,6 +433,7 @@ import {
 	get_version,
 	get_version_many,
 } from '@/helpers/cache.js'
+import { isFavoriteContentType } from '@/helpers/content-favorites'
 import { resolveMcmodUrl } from '@/helpers/content-search'
 import { process_listener } from '@/helpers/events'
 import {
@@ -443,7 +444,6 @@ import {
 } from '@/helpers/instance'
 import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
-import { isFavoriteContentType } from '@/helpers/content-favorites'
 import { get_by_instance_id } from '@/helpers/process'
 import { createProjectBrowseLocation } from '@/helpers/project-links'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'

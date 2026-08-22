@@ -3,12 +3,12 @@ import { SpinnerIcon, TrashIcon } from '@modrinth/assets'
 import {
 	commonMessages,
 	defineMessages,
+	IconButton,
 	injectNotificationManager,
+	NewButton as Button,
 	NewModal,
 	Table,
 	useVIntl,
-	IconButton,
-	NewButton as Button,
 } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 
@@ -149,7 +149,7 @@ defineExpose({ show })
 
 		<template #actions>
 			<div class="flex justify-end">
-				<Button type="outlined" @click="modal?.hide()" native-type="button">
+				<Button type="outlined" native-type="button" @click="modal?.hide()">
 					{{ formatMessage(commonMessages.closeButton) }}
 				</Button>
 			</div>

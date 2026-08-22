@@ -77,7 +77,6 @@ import AddServerToInstanceModal from '@/components/ui/install_flow/AddServerToIn
 import UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPackWarningModal.vue'
 import MinecraftAuthErrorModal from '@/components/ui/minecraft-auth-error-modal/MinecraftAuthErrorModal.vue'
 import MinecraftCrashModal from '@/components/ui/MinecraftCrashModal.vue'
-import AppSettingsModal from '@/components/ui/modal/AppSettingsModal.vue'
 import AuthGrantFlowWaitModal from '@/components/ui/modal/AuthGrantFlowWaitModal.vue'
 import CommunityAnnouncementModal from '@/components/ui/modal/CommunityAnnouncementModal.vue'
 import CurseForgeManualDownloadsModal from '@/components/ui/modal/CurseForgeManualDownloadsModal.vue'
@@ -300,7 +299,6 @@ const showOnboarding = ref(false)
 const onboardingMode = ref('main')
 const onboardingSettings = ref(null)
 const onboardingReplay = ref(false)
-const settingsModal = ref(null)
 const nativeDecorations = ref(false)
 
 const os = ref('')
@@ -1048,7 +1046,6 @@ function startOnboarding(mode = 'main') {
 async function replayOnboarding(mode) {
 	onboardingReplay.value = true
 	onboardingMode.value = mode
-	settingsModal.value?.hide()
 	if (mode === 'main') await router.replace('/')
 	showOnboarding.value = true
 }
@@ -1075,8 +1072,8 @@ async function skipOnboarding() {
 	await finishOnboarding()
 }
 
-function closeOnboardingSettings() {
-	settingsModal.value?.hide()
+async function closeOnboardingSettings() {
+	if (route.path === '/settings') await router.replace('/')
 }
 
 async function handleUpdateAnnouncementClosed(version) {
@@ -1104,7 +1101,6 @@ async function scheduleStartupDialogs() {
 
 	if (pendingUpdateAnnouncementVersion.value && updateAnnouncementModal.value) {
 		updateAnnouncementShowing.value = true
-		settingsModal.value?.hide()
 		await nextTick()
 		updateAnnouncementModal.value.show(pendingUpdateAnnouncementVersion.value)
 		return
@@ -2001,9 +1997,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			</div>
 		</Transition>
 		<Suspense>
-			<AppSettingsModal ref="settingsModal" />
-		</Suspense>
-		<Suspense>
 			<AuthGrantFlowWaitModal ref="modrinthLoginFlowWaitModal" @flow-cancel="cancelLogin" />
 		</Suspense>
 		<InstanceIconPickerModal ref="instanceIconPickerModal" />
@@ -2115,7 +2108,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			<NavButton
 				v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
 				data-onboarding-id="nav-settings"
-				:to="() => settingsModal?.show()"
+				to="/settings"
 			>
 				<SettingsIcon />
 			</NavButton>

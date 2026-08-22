@@ -2,8 +2,8 @@ import { defineMessage } from '@modrinth/ui'
 
 import { getResolvedStrategyName, resolveAutoGcStrategy } from '@/helpers/gc/auto-selector'
 import { GC_STRATEGY_DEFINITIONS } from '@/helpers/gc/strategies'
-import { AUTO_GC_PRESET_ARG } from '@/helpers/java-arguments'
 import type { GcContext, JavaArgumentPreset } from '@/helpers/gc/types'
+import { AUTO_GC_PRESET_ARG } from '@/helpers/java-arguments'
 
 const GC_WIKI_URL = 'https://docs.oracle.com/en/java/javase/21/gctuning/introduction.html'
 const G1GC_DOCS_URL =

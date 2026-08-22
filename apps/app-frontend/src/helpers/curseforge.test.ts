@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+	type CurseForgeFile,
 	getCurseForgeDownloadFailureDetails,
 	hasCompatibleCurseForgeFile,
-	type CurseForgeFile,
 } from './curseforge.ts'
 
 function curseForgeFile(

@@ -1575,6 +1575,7 @@ async fn run_request(
                     content_type,
                     selected,
                     excluded_project_ids,
+                    force_project_ids: Vec::new(),
                 },
                 state,
             )
@@ -2881,6 +2882,7 @@ pub(crate) async fn install_optifabric_file(
             world_name: None,
             install_dependencies: false,
             excluded_dependency_project_ids: Vec::new(),
+            force_dependency_project_ids: Vec::new(),
             dependency_plan_id: None,
         },
     )
