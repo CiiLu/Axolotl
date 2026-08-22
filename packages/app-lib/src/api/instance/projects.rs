@@ -20,10 +20,10 @@ pub struct InstallProjectWithDependenciesRequest {
     pub content_type: ContentType,
     #[serde(default)]
     pub selected: ResolutionPreferences,
-	#[serde(default)]
-	pub excluded_project_ids: Vec<String>,
-	#[serde(default)]
-	pub force_project_ids: Vec<String>,
+    #[serde(default)]
+    pub excluded_project_ids: Vec<String>,
+    #[serde(default)]
+    pub force_project_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -121,8 +121,8 @@ pub async fn install_project_with_dependencies(
             version_id: request.version_id,
             content_type: request.content_type,
             selected: request.selected,
-			excluded_project_ids: request.excluded_project_ids,
-			force_project_ids: request.force_project_ids,
+            excluded_project_ids: request.excluded_project_ids,
+            force_project_ids: request.force_project_ids,
         },
         &state,
     )
@@ -199,8 +199,8 @@ pub async fn preview_project_with_dependencies(
             version_id: request.version_id,
             content_type: request.content_type,
             selected: request.selected,
-			excluded_project_ids: request.excluded_project_ids,
-			force_project_ids: request.force_project_ids,
+            excluded_project_ids: request.excluded_project_ids,
+            force_project_ids: request.force_project_ids,
         },
         &state,
     )
@@ -220,8 +220,8 @@ pub async fn preview_project_with_dependencies_for_target(
             version_id: request.version_id,
             content_type: request.content_type,
             selected: request.selected,
-			excluded_project_ids: request.excluded_project_ids,
-			force_project_ids: request.force_project_ids,
+            excluded_project_ids: request.excluded_project_ids,
+            force_project_ids: request.force_project_ids,
         },
         game_version,
         loader,

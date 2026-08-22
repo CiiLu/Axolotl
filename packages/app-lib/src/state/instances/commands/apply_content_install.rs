@@ -77,8 +77,8 @@ pub(crate) struct InstanceInstallProjectRequest {
     pub version_id: Option<String>,
     pub content_type: ContentType,
     pub selected: ResolutionPreferences,
-	pub excluded_project_ids: Vec<String>,
-	pub force_project_ids: Vec<String>,
+    pub excluded_project_ids: Vec<String>,
+    pub force_project_ids: Vec<String>,
 }
 
 struct CachedEntryContentProvider<'a> {
@@ -236,8 +236,8 @@ pub(crate) async fn resolve_install_plan(
             content_type,
         ),
         existing_project_ids,
-		excluded_project_ids: request.excluded_project_ids,
-		force_project_ids: request.force_project_ids,
+        excluded_project_ids: request.excluded_project_ids,
+        force_project_ids: request.force_project_ids,
     };
 
     modrinth_content_management::resolve_content(provider, request)
@@ -263,8 +263,8 @@ pub(crate) async fn resolve_install_plan_for_target(
         selected: request.selected,
         target: target_preferences(game_version, loader, content_type),
         existing_project_ids: Vec::new(),
-		excluded_project_ids: request.excluded_project_ids,
-		force_project_ids: request.force_project_ids,
+        excluded_project_ids: request.excluded_project_ids,
+        force_project_ids: request.force_project_ids,
     };
 
     modrinth_content_management::resolve_content(provider, request)
@@ -410,8 +410,8 @@ pub(crate) async fn switch_project_version_with_dependencies(
             version_id: Some(version_id.to_string()),
             content_type,
             selected: ResolutionPreferences::default(),
-			excluded_project_ids: Vec::new(),
-			force_project_ids: Vec::new(),
+            excluded_project_ids: Vec::new(),
+            force_project_ids: Vec::new(),
         },
         state,
     )

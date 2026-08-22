@@ -446,9 +446,9 @@ pub struct CurseForgeInstallRequest {
     #[serde(default = "default_true")]
     pub install_dependencies: bool,
     #[serde(default)]
-	pub excluded_dependency_project_ids: Vec<u32>,
-	#[serde(default)]
-	pub force_dependency_project_ids: Vec<u32>,
+    pub excluded_dependency_project_ids: Vec<u32>,
+    #[serde(default)]
+    pub force_dependency_project_ids: Vec<u32>,
     /// The immutable dependency selection returned by preview. It is short
     /// lived and tied to the target instance revision.
     #[serde(default)]
