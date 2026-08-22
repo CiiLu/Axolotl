@@ -8,6 +8,7 @@ import {
 	FilePlusIcon,
 	FolderIcon,
 	FolderOpenIcon,
+	RefreshCwIcon,
 	SaveIcon,
 	TrashIcon,
 } from '@modrinth/assets'
@@ -25,8 +26,12 @@ import {
 	copyFile,
 	mkdir,
 	readDir,
+	readFile,
 	readTextFile,
+	remove,
 	rename,
+	watch as watchFiles,
+	writeFile,
 	writeTextFile,
 } from '@tauri-apps/plugin-fs'
 import { NbtFile, NbtTag } from 'deepslate/nbt'
@@ -40,6 +45,7 @@ import {
 	type StudioDocument,
 	useStudioDocuments,
 } from '@/components/instance/studio/useStudioDocuments'
+import type { ServerView } from '@/composables/useServers'
 import { get_full_path } from '@/helpers/instance'
 import {
 	listenStudioFilesChanged,
@@ -65,7 +71,8 @@ interface StudioTreeNode {
 }
 
 const props = defineProps<{
-	instance: GameInstance
+	instance?: GameInstance
+	server?: ServerView
 }>()
 
 const messages = defineMessages({
@@ -142,6 +149,10 @@ const messages = defineMessages({
 		id: 'instance.files.studio.open-path',
 		defaultMessage: 'Open path',
 	},
+	refresh: {
+		id: 'instance.files.studio.refresh',
+		defaultMessage: 'Refresh files',
+	},
 })
 
 const { formatMessage } = useVIntl()
@@ -166,6 +177,7 @@ const nbtFiles = new Map<string, NbtFile>()
 let watcherRegistrationId: string | null = null
 let watcherInstanceId: string | null = null
 let unlistenStudioFiles: (() => void) | null = null
+let unwatchWorkspaceFiles: (() => void) | null = null
 let watcherGeneration = 0
 let changedPaths = new Set<string>()
 let changeTimer: ReturnType<typeof setTimeout> | null = null
@@ -190,7 +202,7 @@ const {
 			const root = NbtTag.fromString(content)
 			if (!root.isCompound()) throw new Error('NBT root must be a compound')
 			nbtFile.root = root
-			return writeStudioBinary(props.instance.id, document.path, nbtFile.write())
+			return writeBinary(document.path, nbtFile.write())
 		}
 		return writeTextFile(resolvePath(document.path), content)
 	},
@@ -211,6 +223,9 @@ async function saveActiveFile() {
 
 const selectedName = computed(() => activeDocument.value?.name ?? '')
 const selectedFilePath = computed(() => activeDocument.value?.path ?? '')
+const deleteLabel = computed(() =>
+	formatMessage(props.instance ? messages.delete : commonMessages.deleteLabel),
+)
 const editorLanguage = computed(() => {
 	const extension = selectedName.value.split('.').pop()?.toLowerCase()
 	if (extension === 'dat' || extension === 'nbt') return 'json'
@@ -235,6 +250,48 @@ const previewUrl = computed(() =>
 
 function resolvePath(relativePath: string): string {
 	return relativePath ? `${instanceRoot.value}/${relativePath}` : instanceRoot.value
+}
+
+async function readText(path: string): Promise<string> {
+	if (props.instance) return readStudioText(props.instance.id, path)
+	return readTextFile(resolvePath(path))
+}
+
+async function readBinary(path: string): Promise<Uint8Array> {
+	if (props.instance) return readStudioBinary(props.instance.id, path)
+	return readFile(resolvePath(path))
+}
+
+async function writeBinary(path: string, bytes: Uint8Array): Promise<void> {
+	if (props.instance) return writeStudioBinary(props.instance.id, path, bytes)
+	return writeFile(resolvePath(path), bytes)
+}
+
+async function deleteStudioFile(path: string): Promise<void> {
+	if (props.instance) return trashStudioFile(props.instance.id, path)
+	return remove(resolvePath(path), { recursive: true })
+}
+
+function workspaceRelativePath(path: string): string | null {
+	const root = instanceRoot.value.replaceAll('\\', '/').replace(/\/+$/, '')
+	const normalized = path.replaceAll('\\', '/')
+	if (!root || normalized === root) return null
+	if (normalized.startsWith(`${root}/`)) return normalized.slice(root.length + 1)
+	return /^(?:[A-Za-z]:)?\//.test(normalized) ? null : normalized
+}
+
+function exitStudio() {
+	if (props.server) {
+		void router.push({
+			name: 'MultiplayerServerDetail',
+			params: { id: props.server.id },
+			query: { tab: 'files' },
+		})
+		return
+	}
+	if (props.instance) {
+		void router.push({ name: 'Files', params: { id: props.instance.id } })
+	}
 }
 
 function readNbtContent(bytes: Uint8Array, path: string): string {
@@ -302,6 +359,7 @@ async function pasteClipboard() {
 			await rename(resolvePath(node.path), resolvePath(destination))
 			fileClipboard.value = null
 		}
+		await refreshTree()
 		hideContextMenu()
 	} catch (error) {
 		addNotification({
@@ -315,8 +373,9 @@ async function pasteClipboard() {
 async function deleteItem() {
 	if (!contextMenu.value) return
 	try {
-		await trashStudioFile(props.instance.id, contextMenu.value.node.path)
+		await deleteStudioFile(contextMenu.value.node.path)
 		if (activePath.value === contextMenu.value.node.path) await closeDocument(activePath.value)
+		await refreshTree()
 		hideContextMenu()
 	} catch (error) {
 		addNotification({
@@ -343,6 +402,7 @@ async function createItem() {
 	try {
 		if (createType.value === 'directory') await mkdir(resolvePath(path))
 		else await writeTextFile(resolvePath(path), '')
+		await refreshTree()
 		createModal.value?.hide()
 	} catch (error) {
 		addNotification({
@@ -466,7 +526,7 @@ async function reloadCleanDocument(document: StudioDocument) {
 	try {
 		const nextContent =
 			document.kind === 'nbt'
-				? readNbtContent(await readStudioBinary(props.instance.id, document.path), document.path)
+				? readNbtContent(await readBinary(document.path), document.path)
 				: await readTextFile(resolvePath(document.path))
 		if (document.content !== document.savedContent || document.saving) return
 		document.content = nextContent
@@ -506,6 +566,8 @@ function scheduleFileChanges(paths: string[]) {
 }
 
 async function stopStudioWatcher() {
+	unwatchWorkspaceFiles?.()
+	unwatchWorkspaceFiles = null
 	const instanceId = watcherInstanceId
 	const registrationId = watcherRegistrationId
 	watcherInstanceId = null
@@ -518,6 +580,29 @@ async function stopStudioWatcher() {
 async function startStudioWatcher() {
 	const generation = ++watcherGeneration
 	await stopStudioWatcher()
+	if (props.server) {
+		try {
+			unwatchWorkspaceFiles = await watchFiles(
+				instanceRoot.value,
+				(event) => {
+					const paths = event.paths
+						.map(workspaceRelativePath)
+						.filter((path): path is string => path !== null)
+					if (paths.length > 0) scheduleFileChanges(paths)
+				},
+				{ recursive: true, delayMs: 150 },
+			)
+		} catch (error) {
+			console.warn('Failed to start server Studio file watcher', error)
+			return
+		}
+		if (generation !== watcherGeneration) {
+			unwatchWorkspaceFiles?.()
+			unwatchWorkspaceFiles = null
+		}
+		return
+	}
+	if (!props.instance) return
 	const instanceId = props.instance.id
 	const registrationId = await registerStudioWatcher(instanceId)
 	if (generation !== watcherGeneration) {
@@ -597,6 +682,17 @@ async function openFile(node: StudioTreeNode) {
 		})
 		return
 	}
+	if (/\.jar$/i.test(node.name)) {
+		await openDocument({
+			kind: 'unsupported',
+			path: node.path,
+			name: node.name,
+			content: '',
+			savedContent: '',
+			saving: false,
+		})
+		return
+	}
 
 	fileLoading.value = true
 	try {
@@ -604,7 +700,7 @@ async function openFile(node: StudioTreeNode) {
 			let nextContent: string
 			try {
 				nextContent = readNbtContent(
-					await readStudioBinary(props.instance.id, node.path),
+					await readBinary(node.path),
 					node.path,
 				)
 			} catch (error) {
@@ -625,7 +721,7 @@ async function openFile(node: StudioTreeNode) {
 			})
 			return
 		}
-		const nextContent = await readStudioText(props.instance.id, node.path)
+		const nextContent = await readText(node.path)
 		const document: StudioDocument = {
 			kind: 'text',
 			path: node.path,
@@ -672,23 +768,25 @@ async function revealContextMenuItem() {
 }
 
 async function initialize() {
-	instanceRoot.value = await get_full_path(props.instance.id)
+	instanceRoot.value = props.server?.path ?? (props.instance ? await get_full_path(props.instance.id) : '')
 	resetDocuments()
 	await loadRoot()
 }
 
 await initialize()
 
-unlistenStudioFiles = await listenStudioFilesChanged((event) => {
-	if (event.instanceId !== watcherInstanceId || event.registrationId !== watcherRegistrationId) {
-		return
-	}
-	scheduleFileChanges(event.paths)
-})
+if (props.instance) {
+	unlistenStudioFiles = await listenStudioFilesChanged((event) => {
+		if (event.instanceId !== watcherInstanceId || event.registrationId !== watcherRegistrationId) {
+			return
+		}
+		scheduleFileChanges(event.paths)
+	})
+}
 await startStudioWatcher()
 
 watch(
-	() => props.instance.id,
+	() => props.instance?.id ?? props.server?.id,
 	async () => {
 		await initialize()
 		await startStudioWatcher()
@@ -744,6 +842,16 @@ onBeforeRouteLeave(() => {
 						{{ formatMessage(messages.title) }}
 					</h1>
 					<div class="ml-auto flex shrink-0 items-center gap-1">
+						<ButtonStyled size="small" type="transparent" circular>
+							<button
+								v-tooltip="formatMessage(messages.refresh)"
+								type="button"
+								:aria-label="formatMessage(messages.refresh)"
+								@click="refreshTree"
+							>
+								<RefreshCwIcon class="size-4" />
+							</button>
+						</ButtonStyled>
 						<ButtonStyled v-if="activeDocument" size="small" color="brand">
 							<button type="button" :disabled="activeDocument.saving" @click="saveActiveFile">
 								<SaveIcon class="size-4" />
@@ -760,10 +868,7 @@ onBeforeRouteLeave(() => {
 							</button>
 						</ButtonStyled>
 						<ButtonStyled size="small" type="outlined">
-							<button
-								type="button"
-								@click="router.push({ name: 'Files', params: { id: instance.id } })"
-							>
+							<button type="button" @click="exitStudio">
 								{{ formatMessage(messages.backToFiles) }}
 							</button>
 						</ButtonStyled>
@@ -1005,7 +1110,7 @@ onBeforeRouteLeave(() => {
 					</ButtonStyled>
 					<ButtonStyled size="small" color="red" type="transparent">
 						<button type="button" class="w-full !justify-start" role="menuitem" @click="deleteItem">
-							<TrashIcon class="size-4" /> {{ formatMessage(messages.delete) }}
+							<TrashIcon class="size-4" /> {{ deleteLabel }}
 						</button>
 					</ButtonStyled>
 				</div>
