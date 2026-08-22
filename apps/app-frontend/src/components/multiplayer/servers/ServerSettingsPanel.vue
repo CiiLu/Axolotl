@@ -65,8 +65,7 @@ const messages = defineMessages({
 	},
 	runningHint: {
 		id: 'app.servers.settings.running-hint',
-		defaultMessage:
-			'Stop the server before changing settings. The server rewrites its configuration on shutdown, so changes saved now can be lost.',
+		defaultMessage: 'Your changes will take effect the next time the server starts.',
 	},
 })
 
@@ -88,8 +87,9 @@ const editor = useTemplateRef<ComponentExposed<typeof ServerPropertiesEditor>>('
 
 const requiredJava = computed(() => requiredJavaMajorVersion(props.server.gameVersion))
 
-// Same busy boundary as the files panel: a running server owns its
-// configuration files and overwrites server.properties on shutdown.
+// Same busy boundary as the files panel: a running server holds its
+// configuration in memory and may overwrite external edits, and
+// manifest changes only take effect after a restart anyway.
 const isRunning = computed(() => props.server.running)
 
 const baseline = ref({

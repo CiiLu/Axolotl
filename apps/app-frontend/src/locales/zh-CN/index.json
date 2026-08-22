@@ -7949,6 +7949,9 @@
 	"app.servers.settings.general": {
 		"message": "常规"
 	},
+	"app.servers.settings.icon": {
+		"message": "图标"
+	},
 	"app.servers.settings.java": {
 		"message": "Java"
 	},
@@ -7966,6 +7969,12 @@
 	},
 	"app.servers.settings.name": {
 		"message": "服务器名称"
+	},
+	"app.servers.settings.running-hint": {
+		"message": "您的更改在下次启动服务器时才会生效。"
+	},
+	"app.servers.settings.running-title": {
+		"message": "服务器正在运行"
 	},
 	"app.servers.settings.save": {
 		"message": "保存更改"
@@ -8338,6 +8347,24 @@
 	},
 	"app.servers.detail.files": {
 		"message": "文件"
+	},
+	"app.servers.files.busy-tooltip": {
+		"message": "停止服务器后才能修改文件"
+	},
+	"app.servers.files.save-as": {
+		"message": "另存为..."
+	},
+	"app.servers.icon.change": {
+		"message": "更换图标"
+	},
+	"app.servers.icon.edit": {
+		"message": "编辑图标"
+	},
+	"app.servers.icon.remove": {
+		"message": "移除图标"
+	},
+	"app.servers.icon.select": {
+		"message": "选择图标"
 	},
 	"app.servers.port.change": {
 		"message": "修改端口"

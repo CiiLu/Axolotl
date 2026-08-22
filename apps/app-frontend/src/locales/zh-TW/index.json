@@ -3497,6 +3497,24 @@
 	"app.servers.loading": {
 		"message": "載入中"
 	},
+	"app.servers.files.busy-tooltip": {
+		"message": "停止伺服器後才能修改檔案"
+	},
+	"app.servers.files.save-as": {
+		"message": "另存為..."
+	},
+	"app.servers.icon.change": {
+		"message": "變更圖示"
+	},
+	"app.servers.icon.edit": {
+		"message": "編輯圖示"
+	},
+	"app.servers.icon.remove": {
+		"message": "移除圖示"
+	},
+	"app.servers.icon.select": {
+		"message": "選擇圖示"
+	},
 	"app.servers.port.change": {
 		"message": "修改連接埠"
 	},
@@ -3815,6 +3833,9 @@
 	"app.servers.settings.general": {
 		"message": "一般"
 	},
+	"app.servers.settings.icon": {
+		"message": "圖示"
+	},
 	"app.servers.settings.java": {
 		"message": "Java"
 	},
@@ -3832,6 +3853,12 @@
 	},
 	"app.servers.settings.name": {
 		"message": "伺服器名稱"
+	},
+	"app.servers.settings.running-hint": {
+		"message": "您的變更在下次啟動伺服器後才會生效。"
+	},
+	"app.servers.settings.running-title": {
+		"message": "伺服器執行中"
 	},
 	"app.servers.settings.save": {
 		"message": "儲存變更"
