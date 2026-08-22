@@ -4700,6 +4700,291 @@
 	"instance.settings.tabs.window.width.enter": {
 		"message": "輸入寬度..."
 	},
+	"instance.upgrade.action.add-dependency": { "message": "新增相依項目" },
+	"instance.upgrade.action.disable": { "message": "停用" },
+	"instance.upgrade.action.keep": { "message": "保留" },
+	"instance.upgrade.action.remove-dependency": { "message": "移除相依項目" },
+	"instance.upgrade.action.update-dependency": { "message": "更新相依項目" },
+	"instance.upgrade.action.upgrade": { "message": "更新" },
+	"instance.upgrade.changelog.empty": { "message": "此版本未提供變更記錄。" },
+	"instance.upgrade.changelog.loading": { "message": "正在載入版本詳細資料..." },
+	"instance.upgrade.changelog.show-original": { "message": "顯示原文" },
+	"instance.upgrade.changelog.translate": { "message": "翻譯" },
+	"instance.upgrade.changelog.translation.authentication": { "message": "翻譯服務驗證失敗。" },
+	"instance.upgrade.changelog.translation.failed": { "message": "變更記錄翻譯失敗。" },
+	"instance.upgrade.changelog.translation.network": { "message": "翻譯網路請求失敗。" },
+	"instance.upgrade.changelog.translation.rate-limited": {
+		"message": "翻譯服務目前受到頻率限制。"
+	},
+	"instance.upgrade.changelog.translation.too-long": { "message": "此變更記錄過長，無法翻譯。" },
+	"instance.upgrade.changelog.unavailable": { "message": "無法取得版本詳細資料。" },
+	"instance.upgrade.confirm.back": { "message": "返回" },
+	"instance.upgrade.confirm.backup.copy-mode": {
+		"message": "原共享實例不會被修改，因此不會建立額外的完整備份。"
+	},
+	"instance.upgrade.confirm.backup.description": {
+		"message": "將建立獨立的實例副本，保留世界存檔和設定，以便日後還原。"
+	},
+	"instance.upgrade.confirm.backup.off-body": {
+		"message": "啟動升級後的遊戲後，世界存檔發生的變更可能無法復原。"
+	},
+	"instance.upgrade.confirm.backup.off-title": { "message": "不會建立完整備份" },
+	"instance.upgrade.confirm.backup.title": { "message": "完整備份" },
+	"instance.upgrade.confirm.backup.toggle": { "message": "升級前建立完整備份" },
+	"instance.upgrade.confirm.dependencies-added": { "message": "新增相依項目" },
+	"instance.upgrade.confirm.dependencies-removed": { "message": "移除相依項目" },
+	"instance.upgrade.confirm.dependencies-updated": { "message": "更新相依項目" },
+	"instance.upgrade.confirm.description": { "message": "升級前檢查變更與備份選項。" },
+	"instance.upgrade.confirm.details": { "message": "變更詳細資料" },
+	"instance.upgrade.confirm.details.content-item": { "message": "內容項目" },
+	"instance.upgrade.confirm.details.dependencies": { "message": "相依項目變更" },
+	"instance.upgrade.confirm.details.disabled": { "message": "停用的內容" },
+	"instance.upgrade.confirm.details.disabled-state": { "message": "已停用" },
+	"instance.upgrade.confirm.details.kept": { "message": "保留的內容" },
+	"instance.upgrade.confirm.details.new-dependency": { "message": "新的 {provider} 相依項目" },
+	"instance.upgrade.confirm.details.updated": { "message": "更新的內容" },
+	"instance.upgrade.confirm.details.version-current": { "message": "目前 {version}" },
+	"instance.upgrade.confirm.details.version-target": { "message": "目標 {version}" },
+	"instance.upgrade.confirm.disabled": { "message": "將停用" },
+	"instance.upgrade.confirm.environment": { "message": "執行環境" },
+	"instance.upgrade.confirm.kept": { "message": "將保留" },
+	"instance.upgrade.confirm.loader": { "message": "載入器" },
+	"instance.upgrade.confirm.loader.automatic": { "message": "自動選擇" },
+	"instance.upgrade.confirm.preserved.body": {
+		"message": "世界存檔、選項、伺服器和設定檔都會保留。模組、資源包和光影包依所選升級方案處理。"
+	},
+	"instance.upgrade.confirm.preserved.title": { "message": "保留的資料" },
+	"instance.upgrade.confirm.rollback.description": {
+		"message": "如果升級時檔案變更失敗，啟動器會自動回復本次操作。這與使用者可選的完整備份不同。"
+	},
+	"instance.upgrade.confirm.rollback.title": { "message": "自動技術回復" },
+	"instance.upgrade.confirm.shared.copy": { "message": "複製並升級" },
+	"instance.upgrade.confirm.shared.copy-description": {
+		"message": "建立並升級新的本機實例。原連結和外部目標保持不變。"
+	},
+	"instance.upgrade.confirm.shared.description": {
+		"message": "選擇修改外部目標，或升級一個獨立的本機副本。"
+	},
+	"instance.upgrade.confirm.shared.direct": { "message": "直接升級" },
+	"instance.upgrade.confirm.shared.direct-description": {
+		"message": "修改實際的外部目標資料夾，並保留現有連結。"
+	},
+	"instance.upgrade.confirm.shared.title": { "message": "共享實例處理方式" },
+	"instance.upgrade.confirm.start": { "message": "開始升級" },
+	"instance.upgrade.confirm.strategy": { "message": "升級策略" },
+	"instance.upgrade.confirm.strategy.custom": { "message": "自訂" },
+	"instance.upgrade.confirm.strategy.minimal": { "message": "盡可能少變更" },
+	"instance.upgrade.confirm.strategy.newest": { "message": "盡可能更新" },
+	"instance.upgrade.confirm.title": { "message": "確認升級" },
+	"instance.upgrade.confirm.updated": { "message": "將更新" },
+	"instance.upgrade.confirm.world.body": {
+		"message": "啟動升級後的實例可能會將世界存檔移轉到新格式。使用舊版 Minecraft 開啟已移轉的世界可能不安全或不受支援。強烈建議建立完整備份。"
+	},
+	"instance.upgrade.confirm.world.datapacks": {
+		"message": "{path} 中的資料包會保留，但不會自動升級。"
+	},
+	"instance.upgrade.confirm.world.title": { "message": "世界存檔可能發生不可逆移轉" },
+	"instance.upgrade.compatibility.allow-prerelease": { "message": "允許此內容使用預發行版" },
+	"instance.upgrade.compatibility.back": { "message": "返回" },
+	"instance.upgrade.compatibility.blockers": { "message": "阻擋問題" },
+	"instance.upgrade.compatibility.blocking-description": {
+		"message": "繼續升級前，必須處理這些項目。"
+	},
+	"instance.upgrade.compatibility.bulk-eligible": { "message": "{count} 個可處理項目" },
+	"instance.upgrade.compatibility.bulk-partial": {
+		"message": "已更新 {applied} 項；仍有 {remaining} 項需要檢查。"
+	},
+	"instance.upgrade.compatibility.bulk-progress": {
+		"message": "正在更新第 {current}/{total} 項..."
+	},
+	"instance.upgrade.compatibility.cancel": { "message": "取消" },
+	"instance.upgrade.compatibility.candidate-release": { "message": "候選版本：{version}" },
+	"instance.upgrade.compatibility.compatible": { "message": "相容或保留" },
+	"instance.upgrade.compatibility.confirm": { "message": "確認" },
+	"instance.upgrade.compatibility.confirm-disable-all": { "message": "停用 {count} 個警告項目？" },
+	"instance.upgrade.compatibility.content": { "message": "內容" },
+	"instance.upgrade.compatibility.content-count": { "message": "{count} 個項目" },
+	"instance.upgrade.compatibility.continue": { "message": "繼續" },
+	"instance.upgrade.compatibility.current-version-only": { "message": "目前版本：{current}" },
+	"instance.upgrade.compatibility.dependencies": { "message": "相依項目變更" },
+	"instance.upgrade.compatibility.dependency-changes": { "message": "相依項目變更" },
+	"instance.upgrade.compatibility.description": { "message": "繼續前請檢查內容變更並處理問題。" },
+	"instance.upgrade.compatibility.disable-all": { "message": "全部停用" },
+	"instance.upgrade.compatibility.disable-current": { "message": "停用目前內容" },
+	"instance.upgrade.compatibility.disabled": { "message": "目前已停用" },
+	"instance.upgrade.compatibility.disabled-count": { "message": "將停用" },
+	"instance.upgrade.compatibility.global-issue": { "message": "實例層級問題" },
+	"instance.upgrade.compatibility.keep-all": { "message": "全部保留" },
+	"instance.upgrade.compatibility.keep-current": { "message": "保留目前版本" },
+	"instance.upgrade.compatibility.loader": { "message": "載入器" },
+	"instance.upgrade.compatibility.minecraft": { "message": "Minecraft" },
+	"instance.upgrade.compatibility.needs-attention": { "message": "需要處理" },
+	"instance.upgrade.compatibility.no-compatible-explanation": {
+		"message": "找不到與目標 Minecraft 版本相容的發行版。保留它可能導致遊戲無法運作，也可暫時停用。"
+	},
+	"instance.upgrade.compatibility.no-issues": { "message": "沒有問題" },
+	"instance.upgrade.compatibility.prerelease-explanation": {
+		"message": "找不到相容的穩定版，但有可用的 Beta 或 Alpha 版。"
+	},
+	"instance.upgrade.compatibility.resolve-before-continue": { "message": "繼續前請處理阻擋問題。" },
+	"instance.upgrade.compatibility.title": { "message": "相容性" },
+	"instance.upgrade.compatibility.undo": { "message": "復原" },
+	"instance.upgrade.compatibility.unknown-version": { "message": "未知版本" },
+	"instance.upgrade.compatibility.updates": { "message": "將更新" },
+	"instance.upgrade.compatibility.version-change": { "message": "{current} → {target}" },
+	"instance.upgrade.compatibility.warnings": { "message": "警告" },
+	"instance.upgrade.compatibility.warnings-description": {
+		"message": "選擇升級方案前請檢查這些項目。"
+	},
+	"instance.upgrade.customize.apply-before-continue": { "message": "請先套用自訂選擇。" },
+	"instance.upgrade.customize.back": { "message": "返回" },
+	"instance.upgrade.customize.baseline-hint": {
+		"message": "目前選取的方案會顯示為基準。套用自訂選擇後重新計算。"
+	},
+	"instance.upgrade.customize.cancel": { "message": "取消" },
+	"instance.upgrade.customize.channel.alpha": { "message": "Alpha" },
+	"instance.upgrade.customize.channel.beta": { "message": "Beta" },
+	"instance.upgrade.customize.channel.release": { "message": "正式版" },
+	"instance.upgrade.customize.conflict.title": { "message": "自訂選擇發生衝突" },
+	"instance.upgrade.customize.continue": { "message": "繼續" },
+	"instance.upgrade.customize.current-version": { "message": "目前版本：{version}" },
+	"instance.upgrade.customize.currently-disabled": { "message": "目前已停用" },
+	"instance.upgrade.customize.custom.apply": { "message": "套用自訂選擇" },
+	"instance.upgrade.customize.custom.automatic": { "message": "自動" },
+	"instance.upgrade.customize.custom.choice": { "message": "目標版本" },
+	"instance.upgrade.customize.custom.choices": { "message": "自訂選擇" },
+	"instance.upgrade.customize.custom.choices-description": {
+		"message": "只能編輯使用者擁有的根內容，相依項目仍由求解器管理。"
+	},
+	"instance.upgrade.customize.custom.constraint-count": { "message": "{count} 個精確選擇" },
+	"instance.upgrade.customize.custom.description": {
+		"message": "為所選內容固定精確版本，其餘相依關係由 Axolotl 求解。"
+	},
+	"instance.upgrade.customize.custom.discard-switch": { "message": "捨棄並切換" },
+	"instance.upgrade.customize.custom.issues": { "message": "無法解析自訂選擇" },
+	"instance.upgrade.customize.custom.recalculate": { "message": "重新計算" },
+	"instance.upgrade.customize.custom.specific-version": { "message": "精確版本 {version}" },
+	"instance.upgrade.customize.custom.specific-version-channel": {
+		"message": "{version}（{channel}）"
+	},
+	"instance.upgrade.customize.custom.title": { "message": "自訂" },
+	"instance.upgrade.customize.custom.unapplied-body": {
+		"message": "套用這些選擇以計算全域相容方案。"
+	},
+	"instance.upgrade.customize.custom.unapplied-title": { "message": "尚未套用自訂選擇" },
+	"instance.upgrade.customize.custom.unsaved-body": { "message": "切換策略會捨棄尚未計算的變更。" },
+	"instance.upgrade.customize.custom.unsaved-title": { "message": "捨棄未套用的自訂選擇？" },
+	"instance.upgrade.customize.dependencies-title": { "message": "相依項目變更" },
+	"instance.upgrade.customize.dependency.add": { "message": "新增相依項目" },
+	"instance.upgrade.customize.dependency.keep": { "message": "保留相依項目" },
+	"instance.upgrade.customize.dependency.new": { "message": "新增內容：{target}" },
+	"instance.upgrade.customize.dependency.remove": { "message": "移除相依項目" },
+	"instance.upgrade.customize.dependency.reused": {
+		"message": "沿用現有內容：{current} 至 {target}"
+	},
+	"instance.upgrade.customize.dependency.upgrade": { "message": "更新相依項目" },
+	"instance.upgrade.customize.description": { "message": "選擇此實例中內容的更新幅度。" },
+	"instance.upgrade.customize.effective-changes": { "message": "實際變更" },
+	"instance.upgrade.customize.effective-target": { "message": "計算目標：{version}" },
+	"instance.upgrade.customize.effective-target-prefix": { "message": "計算目標：" },
+	"instance.upgrade.customize.metric.added": { "message": "新增相依項目" },
+	"instance.upgrade.customize.metric.dependency-updated": { "message": "更新相依項目" },
+	"instance.upgrade.customize.metric.disabled": { "message": "已停用" },
+	"instance.upgrade.customize.metric.kept": { "message": "已保留" },
+	"instance.upgrade.customize.metric.removed": { "message": "移除相依項目" },
+	"instance.upgrade.customize.metric.updated": { "message": "更新內容" },
+	"instance.upgrade.customize.minimal.description": {
+		"message": "保留仍相容的目前版本，並盡量減少已安裝內容變更。"
+	},
+	"instance.upgrade.customize.minimal.title": { "message": "盡可能少改動" },
+	"instance.upgrade.customize.newest.description": {
+		"message": "將相容內容更新至目標環境可用的最新版本。"
+	},
+	"instance.upgrade.customize.newest.title": { "message": "盡可能更新" },
+	"instance.upgrade.customize.no-target": { "message": "沒有目標版本" },
+	"instance.upgrade.customize.request-error-title": { "message": "無法更新策略" },
+	"instance.upgrade.customize.resolve-before-continue": { "message": "繼續前請處理自訂衝突。" },
+	"instance.upgrade.customize.search-limit.body": {
+		"message": "Axolotl 無法在搜尋上限內找到方案。請放寬一項自訂選擇。"
+	},
+	"instance.upgrade.customize.search-limit.title": { "message": "已達搜尋上限" },
+	"instance.upgrade.customize.summary.roots": {
+		"message": "更新 {updates} 項，保留 {kept} 項，停用 {disabled} 項，相依項目變更 {dependencies} 項"
+	},
+	"instance.upgrade.customize.title": { "message": "升級策略" },
+	"instance.upgrade.flow.aria": { "message": "實例升級導覽" },
+	"instance.upgrade.flow.back": { "message": "上一步" },
+	"instance.upgrade.flow.complete": { "message": "升級完成" },
+	"instance.upgrade.flow.confirm": { "message": "確認升級" },
+	"instance.upgrade.flow.issues": { "message": "處理衝突" },
+	"instance.upgrade.flow.next": { "message": "下一步" },
+	"instance.upgrade.flow.preferences": { "message": "升級偏好" },
+	"instance.upgrade.flow.progress": { "message": "正在升級" },
+	"instance.upgrade.flow.steps": { "message": "升級步驟" },
+	"instance.upgrade.flow.target": { "message": "升級目標" },
+	"instance.upgrade.compatibility.bulk-skipped": { "message": "已略過 {count} 項。" },
+	"instance.upgrade.compatibility.resolve-blockers-tooltip": {
+		"message": "請先解決所有阻塞問題。"
+	},
+	"instance.upgrade.compatibility.resolved": { "message": "已解決 {count}/{total}" },
+	"instance.upgrade.issue.dependency": { "message": "相依性衝突" },
+	"instance.upgrade.issue.generic": { "message": "相容性問題" },
+	"instance.upgrade.issue.keep-incompatible": {
+		"message": "保留此版本可能導致升級後的實例不相容。"
+	},
+	"instance.upgrade.issue.no-compatible-release": { "message": "沒有相容版本" },
+	"instance.upgrade.issue.no-compatible-release.description": {
+		"message": "找不到與 Minecraft {version} 相容的發行版。"
+	},
+	"instance.upgrade.issue.no-compatible-shader-runtime": {
+		"message": "沒有發行版同時支援目標 Minecraft 版本與光影執行環境。"
+	},
+	"instance.upgrade.issue.prerelease-only": { "message": "需要確認預發行版" },
+	"instance.upgrade.issue.prerelease-only.description": {
+		"message": "只有預發行版支援 Minecraft {version}。"
+	},
+	"instance.upgrade.issue.search-limit-reached": {
+		"message": "有限相容性搜尋無法證明存在有效方案。"
+	},
+	"instance.upgrade.issue.shader": { "message": "光影相容性問題" },
+	"instance.upgrade.issue.shader-runtime-missing": {
+		"message": "目標實例未規劃安裝光影執行環境。"
+	},
+	"instance.upgrade.issue.shader-runtime-unknown": { "message": "無法判定目標光影執行環境。" },
+	"instance.upgrade.issue.unidentified": {
+		"message": "無法將此本機檔案配對到已驗證的提供者專案。"
+	},
+	"instance.upgrade.issue.unsupported-content-type": {
+		"message": "無法自動移轉此內容類型。"
+	},
+	"instance.upgrade.provider.curseforge": { "message": "CurseForge" },
+	"instance.upgrade.provider.local": { "message": "本機" },
+	"instance.upgrade.provider.modrinth": { "message": "Modrinth" },
+	"instance.upgrade.provider.unknown": { "message": "未知提供者" },
+	"instance.upgrade.return": { "message": "返回實例升級" },
+	"instance.upgrade.select.check-compatibility": { "message": "檢查相容性" },
+	"instance.upgrade.select.current": { "message": "目前" },
+	"instance.upgrade.select.current-version-missing-body": {
+		"message": "穩定版會依中繼資料順序顯示，不猜測數字排序。"
+	},
+	"instance.upgrade.select.current-version-missing-title": {
+		"message": "中繼資料中找不到目前版本"
+	},
+	"instance.upgrade.select.description": { "message": "選擇此實例要升級至哪個 Minecraft 版本。" },
+	"instance.upgrade.select.loading-versions": { "message": "正在載入 Minecraft 版本..." },
+	"instance.upgrade.select.metadata-error-body": { "message": "請檢查網路連線後再試一次。" },
+	"instance.upgrade.select.metadata-error-title": { "message": "無法載入 Minecraft 版本" },
+	"instance.upgrade.select.minecraft": { "message": "Minecraft 版本" },
+	"instance.upgrade.select.minecraft-version": { "message": "Minecraft {version}" },
+	"instance.upgrade.select.no-newer-release": { "message": "沒有更新的 Minecraft 穩定版。" },
+	"instance.upgrade.select.planning-error-title": { "message": "相容性分析失敗" },
+	"instance.upgrade.select.planning-status": {
+		"message": "正在分析 {count} 個內容項目的相容性..."
+	},
+	"instance.upgrade.select.review-compatibility": { "message": "返回相容性檢查" },
+	"instance.upgrade.select.target": { "message": "目標" },
+	"instance.upgrade.select.target-version-input": { "message": "目標 Minecraft 版本" },
+	"instance.upgrade.select.title": { "message": "升級實例" },
 	"instance.worlds.a_minecraft_server": {
 		"message": "Minecraft 伺服器"
 	},

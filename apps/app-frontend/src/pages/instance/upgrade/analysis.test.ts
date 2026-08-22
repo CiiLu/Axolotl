@@ -6,16 +6,28 @@ import type { InstanceUpgradePlan } from '@/helpers/instance-upgrade'
 import {
 	actionableWarningContentIds,
 	availablePredefinedStrategies,
+	captureInitialUpgradeBlockingIssues,
 	compatibilitySummary,
+	confirmDependencyReleaseSlots,
+	confirmSelectionReleaseSlots,
+	confirmSolutionGroups,
+	confirmTargetLoaderLabel,
+	confirmUpgradeOptions,
+	contentIdentityKeys,
 	customConstraintsEqual,
 	editableUpgradeRoots,
 	groupUpgradeIssues,
-	contentIdentityKeys,
 	inferShaderRuntime,
+	isSharedUpgradeInstance,
 	newerStableGameVersions,
+	resolveUpgradePlanSelection,
+	sanitizeMinecraftDisplayTitle,
 	setFixedConstraint,
+	shouldReuseUpgradePlan,
 	solutionSummary,
 	upgradeContentDisplayMetadata,
+	upgradeResolutionPresentation,
+	upgradeTargetsEqual,
 } from './analysis.ts'
 
 function issue(code: string, contentId: string | null, projectId: string | null, message = code) {
@@ -64,6 +76,89 @@ test('newer stable versions follow metadata order without numeric parsing', () =
 	)
 
 	assert.deepEqual(result, { currentFound: true, versions: ['26.1.2', '26.1'] })
+})
+
+test('upgrade target equality uses semantic environment fields', () => {
+	const target = {
+		gameVersion: '26.2',
+		modLoader: 'fabric',
+		modLoaderVersion: null,
+		shaderRuntime: 'iris',
+	} as const
+	assert.equal(upgradeTargetsEqual(target, { ...target }), true)
+	assert.equal(upgradeTargetsEqual(target, { ...target, gameVersion: '26.1' }), false)
+	assert.equal(upgradeTargetsEqual(target, { ...target, modLoaderVersion: '1' }), false)
+})
+
+test('matching instance and semantic target reuse existing plan without replacing state', () => {
+	const target = {
+		gameVersion: '26.2',
+		modLoader: 'fabric',
+		modLoaderVersion: null,
+		shaderRuntime: 'iris',
+	} as const
+	const plan = {
+		id: 'plan-one',
+		instanceId: 'instance-one',
+		targetEnvironment: target,
+		items: [{ resolution: { action: 'keep' } }],
+		customConstraints: [{ contentId: 'root', versionId: 'fixed' }],
+	} as InstanceUpgradePlan
+
+	assert.equal(shouldReuseUpgradePlan('instance-one', plan, { ...target }), true)
+	assert.equal(plan.id, 'plan-one')
+	assert.equal(plan.items[0].resolution.action, 'keep')
+	assert.equal(plan.customConstraints[0].versionId, 'fixed')
+	assert.equal(
+		shouldReuseUpgradePlan('instance-one', plan, { ...target, gameVersion: '26.1' }),
+		false,
+	)
+	assert.equal(shouldReuseUpgradePlan('instance-two', plan, target), false)
+	assert.equal(shouldReuseUpgradePlan('instance-one', null, target), false)
+})
+
+test('plan selection skips planner for matching target and calls it once for a confirmed change', async () => {
+	const target = {
+		gameVersion: '26.2',
+		modLoader: 'fabric',
+		modLoaderVersion: null,
+		shaderRuntime: 'iris',
+	} as const
+	const existing = {
+		id: 'plan-one',
+		instanceId: 'instance-one',
+		targetEnvironment: target,
+	} as InstanceUpgradePlan
+	let calls = 0
+	const planner = async (_instanceId: string, nextTarget: typeof target) => {
+		calls += 1
+		return {
+			...existing,
+			id: 'plan-two',
+			targetEnvironment: nextTarget,
+		} as InstanceUpgradePlan
+	}
+
+	const reused = await resolveUpgradePlanSelection('instance-one', existing, { ...target }, planner)
+	assert.equal(calls, 0)
+	assert.equal(reused.plan, existing)
+	assert.equal(reused.reused, true)
+
+	const replanned = await resolveUpgradePlanSelection(
+		'instance-one',
+		existing,
+		{ ...target, gameVersion: '26.1' },
+		planner,
+	)
+	assert.equal(calls, 1)
+	assert.equal(replanned.plan.id, 'plan-two')
+	assert.equal(replanned.reused, false)
+})
+
+test('shared upgrade detection uses established link or external target metadata', () => {
+	assert.equal(isSharedUpgradeInstance({ link: { type: 'shared_instance' } } as never), true)
+	assert.equal(isSharedUpgradeInstance({ symlink_target: 'D:/Minecraft' } as never), true)
+	assert.equal(isSharedUpgradeInstance({ link: null, symlink_target: null } as never), false)
 })
 
 test('unknown current version exposes stable releases conservatively', () => {
@@ -197,6 +292,96 @@ test('solution summary separates root and dependency changes', () => {
 	})
 })
 
+test('confirm detail groups follow authoritative selection actions', () => {
+	const solution = {
+		kind: 'custom',
+		selections: [
+			{ contentId: 'update', action: 'upgrade', currentReleaseId: '1', targetReleaseId: '2' },
+			{ contentId: 'same', action: 'upgrade', currentReleaseId: '1', targetReleaseId: '1' },
+			{ contentId: 'keep', action: 'keep', currentReleaseId: '1', targetReleaseId: '1' },
+			{ contentId: 'disable', action: 'disable', currentReleaseId: '1', targetReleaseId: null },
+		],
+		dependencyChanges: [{ kind: 'add' }, { kind: 'upgrade' }, { kind: 'keep' }, { kind: 'remove' }],
+		warnings: [],
+	} as never
+	const groups = confirmSolutionGroups(solution)
+
+	assert.deepEqual(
+		groups.updated.map((item) => item.contentId),
+		['update'],
+	)
+	assert.deepEqual(
+		groups.kept.map((item) => item.contentId),
+		['same', 'keep'],
+	)
+	assert.deepEqual(
+		groups.disabled.map((item) => item.contentId),
+		['disable'],
+	)
+	assert.deepEqual(
+		groups.dependencyChanges.map((item) => item.kind),
+		['add', 'upgrade', 'remove'],
+	)
+})
+
+test('confirm upgrade options require shared mode and suppress redundant copy backup', () => {
+	assert.deepEqual(confirmUpgradeOptions(false, null, true), {
+		effectiveMode: 'direct',
+		createFullBackup: true,
+		canStart: true,
+	})
+	assert.deepEqual(confirmUpgradeOptions(true, null, true), {
+		effectiveMode: null,
+		createFullBackup: true,
+		canStart: false,
+	})
+	assert.deepEqual(confirmUpgradeOptions(true, 'direct', false), {
+		effectiveMode: 'direct',
+		createFullBackup: false,
+		canStart: true,
+	})
+	assert.deepEqual(confirmUpgradeOptions(true, 'copy_and_upgrade', true), {
+		effectiveMode: 'copy_and_upgrade',
+		createFullBackup: false,
+		canStart: true,
+	})
+})
+
+test('confirm release slots keep current and target changelogs independent', () => {
+	assert.deepEqual(
+		confirmSelectionReleaseSlots({
+			action: 'upgrade',
+			currentReleaseId: 'current',
+			targetReleaseId: 'target',
+		} as never),
+		{ currentReleaseId: 'current', targetReleaseId: 'target' },
+	)
+	assert.deepEqual(
+		confirmSelectionReleaseSlots({
+			action: 'keep',
+			currentReleaseId: 'current',
+			targetReleaseId: 'current',
+		} as never),
+		{ currentReleaseId: 'current', targetReleaseId: null },
+	)
+	assert.deepEqual(
+		confirmDependencyReleaseSlots({
+			currentReleaseId: 'current',
+			targetReleaseId: 'target',
+		} as never),
+		{ currentReleaseId: 'current', targetReleaseId: 'target' },
+	)
+})
+
+test('confirm target loader label shows explicit version or honest automatic policy', () => {
+	assert.equal(confirmTargetLoaderLabel('Fabric', 'fabric', '0.18.4', 'automatic'), 'Fabric 0.18.4')
+	assert.equal(
+		confirmTargetLoaderLabel('Fabric', 'fabric', null, 'automatic'),
+		'Fabric (automatic)',
+	)
+	assert.equal(confirmTargetLoaderLabel('Vanilla', 'vanilla', null, 'automatic'), 'Vanilla')
+})
+
 test('fixed constraints replace and remove by physical content without duplicates', () => {
 	const first = {
 		contentId: 'a',
@@ -267,6 +452,60 @@ test('issue grouping gives blocking precedence and includes every content once',
 			),
 		).size,
 		3,
+	)
+})
+
+test('initial blockers stay in blocking presentation without duplication after resolution', () => {
+	const initialPlan = {
+		items: [planItem('voxy'), planItem('clear')],
+		blockingIssues: [issue('prerelease_only', 'voxy', 'voxy')],
+		warnings: [],
+	} as InstanceUpgradePlan
+	const initial = captureInitialUpgradeBlockingIssues(initialPlan)
+	const resolvedPlan = {
+		...initialPlan,
+		blockingIssues: [],
+		warnings: [issue('keep_incompatible', 'voxy', 'voxy')],
+	} as InstanceUpgradePlan
+	const groups = groupUpgradeIssues(resolvedPlan, initial)
+
+	assert.deepEqual(
+		groups.blocking.map((group) => group.item.contentId),
+		['voxy'],
+	)
+	assert.equal(groups.blocking[0].currentlyBlocking, false)
+	assert.equal(groups.blocking[0].warnings.length, 2)
+	assert.equal(groups.warnings.length, 0)
+	assert.deepEqual(
+		groups.noIssues.map((group) => group.item.contentId),
+		['clear'],
+	)
+})
+
+test('resolution presentation follows authoritative plan resolution rules', () => {
+	const resolution = planItem('item').resolution
+	assert.deepEqual(upgradeResolutionPresentation('two-option', resolution), {
+		selectedAction: null,
+		showUndo: false,
+	})
+	assert.deepEqual(upgradeResolutionPresentation('two-option', { ...resolution, action: 'keep' }), {
+		selectedAction: 'keep',
+		showUndo: false,
+	})
+	assert.deepEqual(
+		upgradeResolutionPresentation('two-option', { ...resolution, action: 'disable' }),
+		{ selectedAction: 'disable', showUndo: false },
+	)
+	assert.deepEqual(upgradeResolutionPresentation('single-prerelease', resolution), {
+		selectedAction: null,
+		showUndo: false,
+	})
+	assert.deepEqual(
+		upgradeResolutionPresentation('single-prerelease', {
+			...resolution,
+			allowPrerelease: true,
+		}),
+		{ selectedAction: 'upgrade', showUndo: true },
 	)
 })
 
@@ -355,12 +594,21 @@ test('content display metadata prefers normalized content then snapshot then pla
 })
 
 test('local content identity joins by normalized path when entry ids are absent', () => {
-	assert.deepEqual(
-		contentIdentityKeys({ relativePath: 'resourcepacks\\pack.zip' }),
-		['resourcepacks/pack.zip'],
-	)
+	assert.deepEqual(contentIdentityKeys({ relativePath: 'resourcepacks\\pack.zip' }), [
+		'resourcepacks/pack.zip',
+	])
 	assert.deepEqual(
 		contentIdentityKeys({ instanceEntryId: 'entry', relativePath: 'resourcepacks/pack.zip' }),
 		['entry', 'resourcepacks/pack.zip'],
 	)
+})
+
+test('Minecraft formatting codes are removed from display title only', () => {
+	const item = planItem('identity')
+	item.relativePath = 'resourcepacks/§9§lExample §rPack.zip'
+	const originalPath = item.relativePath
+	assert.equal(sanitizeMinecraftDisplayTitle('§9§lExample §rPack'), 'Example Pack')
+	assert.equal(upgradeContentDisplayMetadata(item).title, 'Example Pack.zip')
+	assert.equal(item.relativePath, originalPath)
+	assert.equal(item.contentId, 'identity')
 })

@@ -5,31 +5,84 @@
 		hide-when-modal-open
 		allow-overflow
 	>
-		<div class="flex min-w-0 items-center gap-3">
-			<ButtonStyled type="outlined" size="small">
-				<button :disabled="!controls" @click="controls?.onBack()">
-					<ArrowLeftIcon aria-hidden="true" />
-					<span class="bar-label">{{ formatMessage(messages.back) }}</span>
-				</button>
-			</ButtonStyled>
-			<nav class="hidden min-w-0 select-none items-center gap-1 sm:flex" :aria-label="formatMessage(messages.steps)">
-				<template v-for="(step, index) in steps" :key="step.path">
-					<span class="flex select-none items-center gap-1" :class="stepClass(index)" :title="formatMessage(step.label)">
-						<CheckCircleIcon v-if="index < currentIndex" class="size-4 shrink-0" aria-hidden="true" />
-						<span v-else class="size-3 shrink-0 rounded-full border-2 border-current" :class="{ 'bg-current': index === currentIndex }" aria-hidden="true" />
-						<span class="bar-label">{{ formatMessage(step.label) }}</span>
-					</span>
-					<span v-if="index < steps.length - 1" class="mx-1 h-px min-w-3 flex-1 bg-surface-5" aria-hidden="true" />
-				</template>
-			</nav>
-			<span class="sm:hidden text-sm text-secondary">{{ currentIndex + 1 }} / {{ steps.length }}</span>
-			<ButtonStyled color="brand" size="small">
-				<button :disabled="!controls || !canNext || busy" @click="controls?.onNext()">
-					<SpinnerIcon v-if="busy" class="animate-spin" aria-hidden="true" />
-					<CircleArrowRightIcon v-else aria-hidden="true" />
-					<span class="bar-label">{{ controls?.nextLabel ?? formatMessage(messages.next) }}</span>
-				</button>
-			</ButtonStyled>
+		<div
+			class="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3"
+		>
+			<div class="justify-self-start">
+				<ButtonStyled v-if="!progress.complete" type="outlined" size="small">
+					<button :disabled="!controls" @click="controls?.onBack()">
+						<ArrowLeftIcon aria-hidden="true" />
+						<span class="bar-label">{{ formatMessage(messages.back) }}</span>
+					</button>
+				</ButtonStyled>
+			</div>
+
+			<span
+				class="relative min-w-0 flex-1 select-none"
+				tabindex="0"
+				:aria-label="formatMessage(messages.steps)"
+				@mouseenter="progressOpen = true"
+				@mouseleave="progressOpen = false"
+				@focus="progressOpen = true"
+				@blur="progressOpen = false"
+			>
+				<span
+					class="flex items-center justify-center gap-1.5 truncate text-center text-sm text-secondary"
+				>
+					<CheckCircleIcon
+						v-if="progress.complete"
+						class="size-4 shrink-0 text-green"
+						aria-hidden="true"
+					/>
+					<template v-if="progress.complete">{{ formatMessage(messages.complete) }}</template>
+					<template v-else>
+						{{ progress.currentIndex + 1 }} / {{ progress.steps.length }} ·
+						{{ formatMessage(stepLabels[progress.currentIndex]) }}
+					</template>
+				</span>
+				<div
+					v-if="progressOpen"
+					class="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-10 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-2 rounded-md border border-solid border-surface-5 bg-surface-3 px-3 py-2 text-sm shadow-lg"
+					style="background-color: var(--color-tooltip-bg)"
+				>
+					<div
+						v-for="(step, index) in progress.steps"
+						:key="step"
+						class="flex items-center gap-2 whitespace-nowrap"
+						:class="stepClass(index)"
+					>
+						<CheckCircleIcon
+							v-if="progress.complete || index < progress.currentIndex"
+							class="size-4 shrink-0"
+							aria-hidden="true"
+						/>
+						<span
+							v-else
+							class="size-3 shrink-0 rounded-full border-2 border-solid border-current"
+							:class="{ 'bg-current': index === progress.currentIndex }"
+							aria-hidden="true"
+						/>
+						{{ formatMessage(stepLabels[index]) }}
+					</div>
+				</div>
+			</span>
+
+			<div class="justify-self-end">
+				<span
+					:title="showBlockerTooltip ? formatMessage(messages.resolveBlockers) : undefined"
+					:aria-label="showBlockerTooltip ? formatMessage(messages.resolveBlockers) : undefined"
+				>
+					<ButtonStyled v-if="!progress.complete" color="brand" size="small">
+						<button :disabled="!controls || !canNext || busy" @click="controls?.onNext()">
+							<SpinnerIcon v-if="busy" class="animate-spin" aria-hidden="true" />
+							<CircleArrowRightIcon v-else aria-hidden="true" />
+							<span class="bar-label">{{
+								controls?.nextLabel ?? formatMessage(messages.next)
+							}}</span>
+						</button>
+					</ButtonStyled>
+				</span>
+			</div>
 		</div>
 	</FloatingActionBar>
 </template>
@@ -37,11 +90,11 @@
 <script setup lang="ts">
 import { ArrowLeftIcon, CheckCircleIcon, CircleArrowRightIcon, SpinnerIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, FloatingActionBar, useVIntl } from '@modrinth/ui'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { upgradeControlEnabled } from './flow-controls'
 import { useInstanceUpgradeFlow } from './flow'
+import { upgradeControlEnabled, upgradeProgressModel } from './flow-controls'
 
 const messages = defineMessages({
 	aria: { id: 'instance.upgrade.flow.aria', defaultMessage: 'Instance upgrade navigation' },
@@ -50,31 +103,40 @@ const messages = defineMessages({
 	steps: { id: 'instance.upgrade.flow.steps', defaultMessage: 'Upgrade steps' },
 	target: { id: 'instance.upgrade.flow.target', defaultMessage: 'Upgrade target' },
 	issues: { id: 'instance.upgrade.flow.issues', defaultMessage: 'Resolve issues' },
-	preferences: { id: 'instance.upgrade.flow.preferences', defaultMessage: 'Preferences' },
+	preferences: { id: 'instance.upgrade.flow.preferences', defaultMessage: 'Upgrade preferences' },
 	confirm: { id: 'instance.upgrade.flow.confirm', defaultMessage: 'Confirm upgrade' },
 	progress: { id: 'instance.upgrade.flow.progress', defaultMessage: 'Upgrading' },
-	complete: { id: 'instance.upgrade.flow.complete', defaultMessage: 'Complete' },
+	complete: { id: 'instance.upgrade.flow.complete', defaultMessage: 'Upgrade complete' },
+	resolveBlockers: {
+		id: 'instance.upgrade.compatibility.resolve-blockers-tooltip',
+		defaultMessage: 'Please resolve all blocking items before continuing.',
+	},
 })
 const flow = useInstanceUpgradeFlow()
 const route = useRoute()
 const { formatMessage } = useVIntl()
-const steps = [
-	{ path: 'upgrade', label: messages.target },
-	{ path: 'upgrade/compatibility', label: messages.issues },
-	{ path: 'upgrade/customize', label: messages.preferences },
-	{ path: 'upgrade/confirm', label: messages.confirm },
-	{ path: 'upgrade/progress', label: messages.progress },
-	{ path: 'upgrade/result', label: messages.complete },
+const progressOpen = ref(false)
+const stepLabels = [
+	messages.target,
+	messages.issues,
+	messages.preferences,
+	messages.confirm,
+	messages.progress,
 ]
-const currentIndex = computed(() => {
-	const path = route.path.replace(`/instance/${encodeURIComponent(flow.instanceId.value)}/`, '')
-	const index = steps.findIndex((step) => path.endsWith(step.path))
-	return index < 0 ? 0 : index
-})
+const progress = computed(() => upgradeProgressModel(route.path))
 const controls = computed(() => flow.controls.value)
 const canNext = computed(() => upgradeControlEnabled(flow.controls.value?.canNext))
 const busy = computed(() => upgradeControlEnabled(flow.controls.value?.busy))
+const showBlockerTooltip = computed(
+	() =>
+		route.path.endsWith('/upgrade/compatibility') &&
+		(flow.plan.value?.blockingIssues.length ?? 0) > 0 &&
+		!busy.value,
+)
+
 function stepClass(index: number) {
-	return index < currentIndex.value ? 'text-green' : index === currentIndex.value ? 'font-semibold text-brand' : 'text-secondary'
+	if (progress.value.complete || index < progress.value.currentIndex) return 'text-green'
+	if (index === progress.value.currentIndex) return 'font-semibold text-brand'
+	return 'text-secondary'
 }
 </script>

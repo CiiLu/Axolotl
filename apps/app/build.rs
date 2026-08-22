@@ -321,6 +321,8 @@ fn main() {
                         "instance_plan_upgrade",
                         "instance_get_upgrade_plan",
                         "instance_update_upgrade_resolution",
+                        "instance_update_upgrade_resolutions",
+                        "instance_reset_upgrade_resolution",
                         "instance_select_upgrade_solution",
                         "instance_resolve_custom_upgrade_solution",
                         "instance_execute_upgrade",

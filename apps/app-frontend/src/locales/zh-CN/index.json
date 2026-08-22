@@ -3878,6 +3878,285 @@
 	"instance.settings.tabs.window.width.enter": {
 		"message": "输入宽度……"
 	},
+	"instance.upgrade.action.add-dependency": { "message": "添加依赖" },
+	"instance.upgrade.action.disable": { "message": "禁用" },
+	"instance.upgrade.action.keep": { "message": "保留" },
+	"instance.upgrade.action.remove-dependency": { "message": "移除依赖" },
+	"instance.upgrade.action.update-dependency": { "message": "更新依赖" },
+	"instance.upgrade.action.upgrade": { "message": "更新" },
+	"instance.upgrade.changelog.empty": { "message": "此版本没有提供更新日志。" },
+	"instance.upgrade.changelog.loading": { "message": "正在加载版本详情……" },
+	"instance.upgrade.changelog.show-original": { "message": "显示原文" },
+	"instance.upgrade.changelog.translate": { "message": "翻译" },
+	"instance.upgrade.changelog.translation.authentication": { "message": "翻译服务身份验证失败。" },
+	"instance.upgrade.changelog.translation.failed": { "message": "更新日志翻译失败。" },
+	"instance.upgrade.changelog.translation.network": { "message": "翻译网络请求失败。" },
+	"instance.upgrade.changelog.translation.rate-limited": {
+		"message": "翻译服务暂时受到频率限制。"
+	},
+	"instance.upgrade.changelog.translation.too-long": { "message": "此更新日志过长，无法翻译。" },
+	"instance.upgrade.changelog.unavailable": { "message": "无法获取版本详情。" },
+	"instance.upgrade.confirm.back": { "message": "返回" },
+	"instance.upgrade.confirm.backup.copy-mode": {
+		"message": "原共享实例不会被修改，因此不会创建额外的完整备份。"
+	},
+	"instance.upgrade.confirm.backup.description": {
+		"message": "将创建独立的实例副本，保留世界存档和配置，以便日后恢复。"
+	},
+	"instance.upgrade.confirm.backup.off-body": {
+		"message": "启动升级后的游戏后，世界存档发生的变化可能无法撤销。"
+	},
+	"instance.upgrade.confirm.backup.off-title": { "message": "不会创建完整备份" },
+	"instance.upgrade.confirm.backup.title": { "message": "完整备份" },
+	"instance.upgrade.confirm.backup.toggle": { "message": "升级前创建完整备份" },
+	"instance.upgrade.confirm.dependencies-added": { "message": "新增依赖" },
+	"instance.upgrade.confirm.dependencies-removed": { "message": "移除依赖" },
+	"instance.upgrade.confirm.dependencies-updated": { "message": "更新依赖" },
+	"instance.upgrade.confirm.description": { "message": "升级前检查更改与备份选项。" },
+	"instance.upgrade.confirm.details": { "message": "更改详情" },
+	"instance.upgrade.confirm.details.content-item": { "message": "内容项目" },
+	"instance.upgrade.confirm.details.dependencies": { "message": "依赖更改" },
+	"instance.upgrade.confirm.details.disabled": { "message": "停用的内容" },
+	"instance.upgrade.confirm.details.disabled-state": { "message": "已停用" },
+	"instance.upgrade.confirm.details.kept": { "message": "保留的内容" },
+	"instance.upgrade.confirm.details.new-dependency": { "message": "新的 {provider} 依赖" },
+	"instance.upgrade.confirm.details.updated": { "message": "更新的内容" },
+	"instance.upgrade.confirm.details.version-current": { "message": "当前 {version}" },
+	"instance.upgrade.confirm.details.version-target": { "message": "目标 {version}" },
+	"instance.upgrade.confirm.disabled": { "message": "将停用" },
+	"instance.upgrade.confirm.environment": { "message": "运行环境" },
+	"instance.upgrade.confirm.kept": { "message": "将保留" },
+	"instance.upgrade.confirm.loader": { "message": "加载器" },
+	"instance.upgrade.confirm.loader.automatic": { "message": "自动选择" },
+	"instance.upgrade.confirm.preserved.body": {
+		"message": "世界存档、选项、服务器和配置文件都会保留。Mod、资源包和光影包按所选升级方案处理。"
+	},
+	"instance.upgrade.confirm.preserved.title": { "message": "保留的数据" },
+	"instance.upgrade.confirm.rollback.description": {
+		"message": "如果升级时文件更改失败，启动器会自动回滚本次操作。这与用户可选的完整备份不同。"
+	},
+	"instance.upgrade.confirm.rollback.title": { "message": "自动技术回滚" },
+	"instance.upgrade.confirm.shared.copy": { "message": "复制并升级" },
+	"instance.upgrade.confirm.shared.copy-description": {
+		"message": "创建并升级新的本地实例。原链接和外部目标保持不变。"
+	},
+	"instance.upgrade.confirm.shared.description": {
+		"message": "选择修改外部目标，或升级一个独立的本地副本。"
+	},
+	"instance.upgrade.confirm.shared.direct": { "message": "直接升级" },
+	"instance.upgrade.confirm.shared.direct-description": {
+		"message": "修改实际的外部目标文件夹，并保留现有链接。"
+	},
+	"instance.upgrade.confirm.shared.title": { "message": "共享实例处理方式" },
+	"instance.upgrade.confirm.start": { "message": "开始升级" },
+	"instance.upgrade.confirm.strategy": { "message": "升级策略" },
+	"instance.upgrade.confirm.strategy.custom": { "message": "自定义" },
+	"instance.upgrade.confirm.strategy.minimal": { "message": "尽可能少改动" },
+	"instance.upgrade.confirm.strategy.newest": { "message": "尽可能更新" },
+	"instance.upgrade.confirm.title": { "message": "确认升级" },
+	"instance.upgrade.confirm.updated": { "message": "将更新" },
+	"instance.upgrade.confirm.world.body": {
+		"message": "启动升级后的实例可能会把世界存档迁移到新格式。用旧版 Minecraft 打开已迁移的世界可能不安全或不受支持。强烈建议创建完整备份。"
+	},
+	"instance.upgrade.confirm.world.datapacks": {
+		"message": "{path} 中的数据包会保留，但不会自动升级。"
+	},
+	"instance.upgrade.confirm.world.title": { "message": "世界存档可能发生不可逆迁移" },
+	"instance.upgrade.compatibility.allow-prerelease": { "message": "允许此内容使用预发布版" },
+	"instance.upgrade.compatibility.back": { "message": "返回" },
+	"instance.upgrade.compatibility.blockers": { "message": "阻塞问题" },
+	"instance.upgrade.compatibility.blocking-description": {
+		"message": "继续升级前，需要为这些项目作出选择。"
+	},
+	"instance.upgrade.compatibility.bulk-eligible": { "message": "{count} 个可处理项目" },
+	"instance.upgrade.compatibility.bulk-partial": {
+		"message": "已更新 {applied} 项；仍有 {remaining} 项需要检查。"
+	},
+	"instance.upgrade.compatibility.bulk-progress": {
+		"message": "正在更新第 {current}/{total} 项……"
+	},
+	"instance.upgrade.compatibility.cancel": { "message": "取消" },
+	"instance.upgrade.compatibility.candidate-release": { "message": "候选版本：{version}" },
+	"instance.upgrade.compatibility.compatible": { "message": "兼容或保留" },
+	"instance.upgrade.compatibility.confirm": { "message": "确认" },
+	"instance.upgrade.compatibility.confirm-disable-all": { "message": "禁用 {count} 个警告项目？" },
+	"instance.upgrade.compatibility.content": { "message": "内容" },
+	"instance.upgrade.compatibility.content-count": { "message": "{count} 个项目" },
+	"instance.upgrade.compatibility.continue": { "message": "继续" },
+	"instance.upgrade.compatibility.current-version-only": { "message": "当前版本：{current}" },
+	"instance.upgrade.compatibility.dependencies": { "message": "依赖变更" },
+	"instance.upgrade.compatibility.dependency-changes": { "message": "依赖变更" },
+	"instance.upgrade.compatibility.description": { "message": "继续前检查内容变更并处理问题。" },
+	"instance.upgrade.compatibility.disable-all": { "message": "全部禁用" },
+	"instance.upgrade.compatibility.disable-current": { "message": "禁用当前内容" },
+	"instance.upgrade.compatibility.disabled": { "message": "当前已禁用" },
+	"instance.upgrade.compatibility.disabled-count": { "message": "将禁用" },
+	"instance.upgrade.compatibility.global-issue": { "message": "实例级问题" },
+	"instance.upgrade.compatibility.keep-all": { "message": "全部保留" },
+	"instance.upgrade.compatibility.keep-current": { "message": "保留当前版本" },
+	"instance.upgrade.compatibility.loader": { "message": "加载器" },
+	"instance.upgrade.compatibility.minecraft": { "message": "Minecraft 游戏" },
+	"instance.upgrade.compatibility.needs-attention": { "message": "需要处理" },
+	"instance.upgrade.compatibility.no-compatible-explanation": {
+		"message": "未找到兼容目标 Minecraft 版本的发布版。保留它可能导致游戏无法运行，也可暂时禁用。"
+	},
+	"instance.upgrade.compatibility.no-issues": { "message": "无问题" },
+	"instance.upgrade.compatibility.prerelease-explanation": {
+		"message": "未找到兼容的稳定版，但有可用的 Beta 或 Alpha 版。"
+	},
+	"instance.upgrade.compatibility.resolve-before-continue": { "message": "继续前请处理阻塞问题。" },
+	"instance.upgrade.compatibility.title": { "message": "兼容性" },
+	"instance.upgrade.compatibility.undo": { "message": "撤销" },
+	"instance.upgrade.compatibility.unknown-version": { "message": "未知版本" },
+	"instance.upgrade.compatibility.updates": { "message": "将更新" },
+	"instance.upgrade.compatibility.version-change": { "message": "从 {current} 升级至 {target}" },
+	"instance.upgrade.compatibility.warnings": { "message": "警告" },
+	"instance.upgrade.compatibility.warnings-description": {
+		"message": "选择升级方案前请检查这些项目。"
+	},
+	"instance.upgrade.customize.apply-before-continue": { "message": "请先应用自定义选择。" },
+	"instance.upgrade.customize.back": { "message": "返回" },
+	"instance.upgrade.customize.baseline-hint": {
+		"message": "当前已选方案作为基线显示。应用自定义选择后重新计算。"
+	},
+	"instance.upgrade.customize.cancel": { "message": "取消" },
+	"instance.upgrade.customize.channel.alpha": { "message": "Alpha 版" },
+	"instance.upgrade.customize.channel.beta": { "message": "Beta 版" },
+	"instance.upgrade.customize.channel.release": { "message": "正式版" },
+	"instance.upgrade.customize.conflict.title": { "message": "自定义选择存在冲突" },
+	"instance.upgrade.customize.continue": { "message": "继续" },
+	"instance.upgrade.customize.current-version": { "message": "当前版本：{version}" },
+	"instance.upgrade.customize.currently-disabled": { "message": "当前已禁用" },
+	"instance.upgrade.customize.custom.apply": { "message": "应用自定义选择" },
+	"instance.upgrade.customize.custom.automatic": { "message": "自动" },
+	"instance.upgrade.customize.custom.choice": { "message": "目标版本" },
+	"instance.upgrade.customize.custom.choices": { "message": "自定义选择" },
+	"instance.upgrade.customize.custom.choices-description": {
+		"message": "仅可编辑用户拥有的根内容，依赖仍由求解器管理。"
+	},
+	"instance.upgrade.customize.custom.constraint-count": { "message": "{count} 个精确选择" },
+	"instance.upgrade.customize.custom.description": {
+		"message": "为所选内容固定精确版本，其余依赖图由 Axolotl 求解。"
+	},
+	"instance.upgrade.customize.custom.discard-switch": { "message": "放弃并切换" },
+	"instance.upgrade.customize.custom.issues": { "message": "无法解析自定义选择" },
+	"instance.upgrade.customize.custom.recalculate": { "message": "重新计算" },
+	"instance.upgrade.customize.custom.specific-version": { "message": "精确版本 {version}" },
+	"instance.upgrade.customize.custom.specific-version-channel": {
+		"message": "{version}（{channel}）"
+	},
+	"instance.upgrade.customize.custom.title": { "message": "自定义" },
+	"instance.upgrade.customize.custom.unapplied-body": {
+		"message": "应用这些选择以计算全局兼容方案。"
+	},
+	"instance.upgrade.customize.custom.unapplied-title": { "message": "尚未应用自定义选择" },
+	"instance.upgrade.customize.custom.unsaved-body": { "message": "切换策略将放弃尚未计算的变更。" },
+	"instance.upgrade.customize.custom.unsaved-title": { "message": "放弃未应用的自定义选择？" },
+	"instance.upgrade.customize.dependencies-title": { "message": "依赖变更" },
+	"instance.upgrade.customize.dependency.add": { "message": "添加依赖" },
+	"instance.upgrade.customize.dependency.keep": { "message": "保留依赖" },
+	"instance.upgrade.customize.dependency.new": { "message": "新增内容：{target}" },
+	"instance.upgrade.customize.dependency.remove": { "message": "移除依赖" },
+	"instance.upgrade.customize.dependency.reused": {
+		"message": "复用现有内容：{current} 至 {target}"
+	},
+	"instance.upgrade.customize.dependency.upgrade": { "message": "更新依赖" },
+	"instance.upgrade.customize.description": { "message": "选择此实例中内容的更新程度。" },
+	"instance.upgrade.customize.effective-changes": { "message": "实际变更" },
+	"instance.upgrade.customize.effective-target": { "message": "计算目标：{version}" },
+	"instance.upgrade.customize.effective-target-prefix": { "message": "计算目标：" },
+	"instance.upgrade.customize.metric.added": { "message": "新增依赖" },
+	"instance.upgrade.customize.metric.dependency-updated": { "message": "更新依赖" },
+	"instance.upgrade.customize.metric.disabled": { "message": "已禁用" },
+	"instance.upgrade.customize.metric.kept": { "message": "已保留" },
+	"instance.upgrade.customize.metric.removed": { "message": "移除依赖" },
+	"instance.upgrade.customize.metric.updated": { "message": "更新内容" },
+	"instance.upgrade.customize.minimal.description": {
+		"message": "保留仍兼容的当前版本，并尽量减少已安装内容变更。"
+	},
+	"instance.upgrade.customize.minimal.title": { "message": "尽可能少改动" },
+	"instance.upgrade.customize.newest.description": {
+		"message": "将兼容内容更新至目标环境可用的最新版本。"
+	},
+	"instance.upgrade.customize.newest.title": { "message": "尽可能更新" },
+	"instance.upgrade.customize.no-target": { "message": "无目标版本" },
+	"instance.upgrade.customize.request-error-title": { "message": "无法更新策略" },
+	"instance.upgrade.customize.resolve-before-continue": { "message": "继续前请处理自定义冲突。" },
+	"instance.upgrade.customize.search-limit.body": {
+		"message": "Axolotl 未能在搜索上限内找到方案。请放宽一项自定义选择。"
+	},
+	"instance.upgrade.customize.search-limit.title": { "message": "已达到搜索上限" },
+	"instance.upgrade.customize.summary.roots": {
+		"message": "更新 {updates} 项，保留 {kept} 项，禁用 {disabled} 项，依赖变更 {dependencies} 项"
+	},
+	"instance.upgrade.customize.title": { "message": "升级策略" },
+	"instance.upgrade.flow.aria": { "message": "实例升级导航" },
+	"instance.upgrade.flow.back": { "message": "上一步" },
+	"instance.upgrade.flow.complete": { "message": "升级完成" },
+	"instance.upgrade.flow.confirm": { "message": "确认升级" },
+	"instance.upgrade.flow.issues": { "message": "处理冲突" },
+	"instance.upgrade.flow.next": { "message": "下一步" },
+	"instance.upgrade.flow.preferences": { "message": "升级偏好" },
+	"instance.upgrade.flow.progress": { "message": "正在升级" },
+	"instance.upgrade.flow.steps": { "message": "升级步骤" },
+	"instance.upgrade.flow.target": { "message": "升级目标" },
+	"instance.upgrade.compatibility.bulk-skipped": { "message": "已跳过 {count} 项。" },
+	"instance.upgrade.compatibility.resolve-blockers-tooltip": {
+		"message": "请先解决所有阻塞问题。"
+	},
+	"instance.upgrade.compatibility.resolved": { "message": "已解决 {count}/{total}" },
+	"instance.upgrade.issue.dependency": { "message": "依赖冲突" },
+	"instance.upgrade.issue.generic": { "message": "兼容性问题" },
+	"instance.upgrade.issue.keep-incompatible": {
+		"message": "保留此版本可能导致升级后的实例不兼容。"
+	},
+	"instance.upgrade.issue.no-compatible-release": { "message": "无兼容版本" },
+	"instance.upgrade.issue.no-compatible-release.description": {
+		"message": "未找到兼容 Minecraft {version} 的发布版。"
+	},
+	"instance.upgrade.issue.no-compatible-shader-runtime": {
+		"message": "没有发布版同时支持目标 Minecraft 版本和光影运行时。"
+	},
+	"instance.upgrade.issue.prerelease-only": { "message": "需要确认预发布版" },
+	"instance.upgrade.issue.prerelease-only.description": {
+		"message": "仅有预发布版支持 Minecraft {version}。"
+	},
+	"instance.upgrade.issue.search-limit-reached": {
+		"message": "有限兼容性搜索无法证明存在有效方案。"
+	},
+	"instance.upgrade.issue.shader": { "message": "光影兼容性问题" },
+	"instance.upgrade.issue.shader-runtime-missing": { "message": "目标实例未计划安装光影运行时。" },
+	"instance.upgrade.issue.shader-runtime-unknown": { "message": "无法确定目标光影运行时。" },
+	"instance.upgrade.issue.unidentified": {
+		"message": "无法将此本地文件匹配到已验证的提供方项目。"
+	},
+	"instance.upgrade.issue.unsupported-content-type": {
+		"message": "无法自动迁移此内容类型。"
+	},
+	"instance.upgrade.provider.curseforge": { "message": "CurseForge" },
+	"instance.upgrade.provider.local": { "message": "本地" },
+	"instance.upgrade.provider.modrinth": { "message": "Modrinth" },
+	"instance.upgrade.provider.unknown": { "message": "未知提供方" },
+	"instance.upgrade.return": { "message": "返回实例升级" },
+	"instance.upgrade.select.check-compatibility": { "message": "检查兼容性" },
+	"instance.upgrade.select.current": { "message": "当前" },
+	"instance.upgrade.select.current-version-missing-body": {
+		"message": "稳定版将按元数据顺序显示，不猜测数字排序。"
+	},
+	"instance.upgrade.select.current-version-missing-title": { "message": "元数据中找不到当前版本" },
+	"instance.upgrade.select.description": { "message": "选择此实例要升级到的 Minecraft 版本。" },
+	"instance.upgrade.select.loading-versions": { "message": "正在加载 Minecraft 版本……" },
+	"instance.upgrade.select.metadata-error-body": { "message": "请检查网络连接后重试。" },
+	"instance.upgrade.select.metadata-error-title": { "message": "无法加载 Minecraft 版本" },
+	"instance.upgrade.select.minecraft": { "message": "Minecraft 版本" },
+	"instance.upgrade.select.minecraft-version": { "message": "Minecraft 版本 {version}" },
+	"instance.upgrade.select.no-newer-release": { "message": "没有更新的 Minecraft 稳定版。" },
+	"instance.upgrade.select.planning-error-title": { "message": "兼容性分析失败" },
+	"instance.upgrade.select.planning-status": { "message": "正在分析 {count} 个内容项目的兼容性……" },
+	"instance.upgrade.select.review-compatibility": { "message": "返回兼容性检查" },
+	"instance.upgrade.select.target": { "message": "目标" },
+	"instance.upgrade.select.target-version-input": { "message": "目标 Minecraft 版本" },
+	"instance.upgrade.select.title": { "message": "升级实例" },
 	"instance.worlds.a_minecraft_server": {
 		"message": "Minecraft 服务器"
 	},

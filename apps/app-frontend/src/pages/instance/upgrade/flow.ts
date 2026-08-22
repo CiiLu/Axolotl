@@ -2,6 +2,7 @@ import type { ComputedRef, InjectionKey, MaybeRef, Ref } from 'vue'
 import { computed, inject, provide, ref } from 'vue'
 
 import type {
+	InstanceUpgradeIssue,
 	InstanceUpgradePlan,
 	InstanceUpgradeResult,
 	InstanceUpgradeSolutionKind,
@@ -19,9 +20,13 @@ export interface InstanceUpgradeFlow {
 	plan: Ref<InstanceUpgradePlan | null>
 	selectedSolutionKind: ComputedRef<InstanceUpgradeSolutionKind | null>
 	createFullBackup: Ref<boolean>
+	directFullBackupPreference: Ref<boolean>
 	sharedUpgradeMode: Ref<SharedUpgradeMode | null>
 	activeJobId: Ref<string | null>
 	result: Ref<InstanceUpgradeResult | null>
+	initialBlockingPlanId: Ref<string | null>
+	initialBlockingIssues: Ref<Record<string, InstanceUpgradeIssue[]>>
+	customizeActiveStrategy: Ref<InstanceUpgradeSolutionKind | null>
 	busy: Ref<boolean>
 	error: Ref<unknown | null>
 	reset: () => void
@@ -43,20 +48,24 @@ export interface UpgradeStepControls {
 	onBack: () => void | Promise<void>
 }
 
-
 export interface UpgradeFlowSnapshot {
 	instanceId: string
 	returnFullPath: string
 	targetEnvironment: InstanceUpgradeTargetEnvironment | null
 	plan: InstanceUpgradePlan | null
 	createFullBackup: boolean
+	directFullBackupPreference?: boolean
 	sharedUpgradeMode: SharedUpgradeMode | null
 	activeJobId: string | null
 	result: InstanceUpgradeResult | null
+	initialBlockingPlanId?: string | null
+	initialBlockingIssues?: Record<string, InstanceUpgradeIssue[]>
+	customizeActiveStrategy?: InstanceUpgradeSolutionKind | null
 	scrollTop?: number
 }
 
-export const INSTANCE_UPGRADE_FLOW_KEY: InjectionKey<InstanceUpgradeFlow> = Symbol('instance-upgrade-flow')
+export const INSTANCE_UPGRADE_FLOW_KEY: InjectionKey<InstanceUpgradeFlow> =
+	Symbol('instance-upgrade-flow')
 
 export function provideUpgradeFlow(flow: InstanceUpgradeFlow) {
 	provide(INSTANCE_UPGRADE_FLOW_KEY, flow)
@@ -69,9 +78,13 @@ export function provideInstanceUpgradeFlow(
 	const targetEnvironment = ref<InstanceUpgradeTargetEnvironment | null>(null)
 	const plan = ref<InstanceUpgradePlan | null>(null)
 	const createFullBackup = ref(true)
+	const directFullBackupPreference = ref(true)
 	const sharedUpgradeMode = ref<SharedUpgradeMode | null>(null)
 	const activeJobId = ref<string | null>(null)
 	const result = ref<InstanceUpgradeResult | null>(null)
+	const initialBlockingPlanId = ref<string | null>(null)
+	const initialBlockingIssues = ref<Record<string, InstanceUpgradeIssue[]>>({})
+	const customizeActiveStrategy = ref<InstanceUpgradeSolutionKind | null>(null)
 	const busy = ref(false)
 	const error = ref<unknown | null>(null)
 	const selectedSolutionKind = computed(() => plan.value?.selectedSolution?.kind ?? null)
@@ -79,6 +92,9 @@ export function provideInstanceUpgradeFlow(
 
 	function clearPlan() {
 		plan.value = null
+		initialBlockingPlanId.value = null
+		initialBlockingIssues.value = {}
+		customizeActiveStrategy.value = null
 		activeJobId.value = null
 		result.value = null
 	}
@@ -87,6 +103,7 @@ export function provideInstanceUpgradeFlow(
 		targetEnvironment.value = null
 		clearPlan()
 		createFullBackup.value = true
+		directFullBackupPreference.value = true
 		sharedUpgradeMode.value = null
 		busy.value = false
 		error.value = null
@@ -97,9 +114,13 @@ export function provideInstanceUpgradeFlow(
 		targetEnvironment.value = snapshot.targetEnvironment
 		plan.value = snapshot.plan
 		createFullBackup.value = snapshot.createFullBackup
+		directFullBackupPreference.value = snapshot.directFullBackupPreference ?? true
 		sharedUpgradeMode.value = snapshot.sharedUpgradeMode
 		activeJobId.value = snapshot.activeJobId
 		result.value = snapshot.result
+		initialBlockingPlanId.value = snapshot.initialBlockingPlanId ?? null
+		initialBlockingIssues.value = snapshot.initialBlockingIssues ?? {}
+		customizeActiveStrategy.value = snapshot.customizeActiveStrategy ?? null
 	}
 
 	const flow: InstanceUpgradeFlow = {
@@ -109,15 +130,29 @@ export function provideInstanceUpgradeFlow(
 		plan,
 		selectedSolutionKind,
 		createFullBackup,
+		directFullBackupPreference,
 		sharedUpgradeMode,
 		activeJobId,
 		result,
+		initialBlockingPlanId,
+		initialBlockingIssues,
+		customizeActiveStrategy,
 		busy,
 		error,
 		reset,
 		clearPlan,
 		setTargetEnvironment: (environment) => (targetEnvironment.value = environment),
-		setPlan: (nextPlan) => (plan.value = nextPlan),
+		setPlan: (nextPlan) => {
+			if (nextPlan?.id !== plan.value?.id) {
+				initialBlockingPlanId.value = null
+				initialBlockingIssues.value = {}
+				customizeActiveStrategy.value = null
+				sharedUpgradeMode.value = null
+				createFullBackup.value = true
+				directFullBackupPreference.value = true
+			}
+			plan.value = nextPlan
+		},
 		setJob: (jobId) => (activeJobId.value = jobId),
 		setResult: (nextResult) => (result.value = nextResult),
 		hydrate,

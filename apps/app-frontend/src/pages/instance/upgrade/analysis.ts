@@ -3,11 +3,13 @@ import type { GameVersionTag } from '@modrinth/utils'
 
 import type { InstanceContentSnapshot, InstanceContentSnapshotItem } from '@/helpers/instance'
 import type {
+	InstanceUpgradeDependencyChange,
 	InstanceUpgradeFixedConstraint,
 	InstanceUpgradeIssue,
 	InstanceUpgradePlan,
 	InstanceUpgradePlanItem,
 	InstanceUpgradeSolution,
+	InstanceUpgradeTargetEnvironment,
 	ShaderRuntime,
 } from '@/helpers/instance-upgrade'
 import type { GameInstance } from '@/helpers/types'
@@ -34,10 +36,30 @@ export interface SolutionSummary {
 	dependencyRemovals: number
 }
 
+export interface ConfirmSolutionGroups {
+	updated: InstanceUpgradeSolution['selections']
+	kept: InstanceUpgradeSolution['selections']
+	disabled: InstanceUpgradeSolution['selections']
+	dependencyChanges: InstanceUpgradeDependencyChange[]
+}
+
+export interface ConfirmUpgradeOptions {
+	effectiveMode: 'direct' | 'copy_and_upgrade' | null
+	createFullBackup: boolean
+	canStart: boolean
+}
+
+export interface ConfirmReleaseSlots {
+	currentReleaseId: string | null
+	targetReleaseId: string | null
+}
+
 export interface UpgradeContentIssueGroup {
 	item: InstanceUpgradePlanItem
 	blockingIssues: InstanceUpgradeIssue[]
 	warnings: InstanceUpgradeIssue[]
+	startedBlocking: boolean
+	currentlyBlocking: boolean
 }
 
 export interface UpgradeIssueGroups {
@@ -54,8 +76,59 @@ export interface UpgradeContentDisplayMetadata {
 	currentVersion: string | null
 }
 
+export type InitialUpgradeBlockingIssues = Record<string, InstanceUpgradeIssue[]>
+
+export interface UpgradeResolutionPresentation {
+	selectedAction: 'upgrade' | 'keep' | 'disable' | null
+	showUndo: boolean
+}
+
 export function normalizeUpgradePath(path: string): string {
 	return path.replaceAll('\\', '/').replace(/\/+/g, '/').replace(/^\.\//, '')
+}
+
+export function upgradeTargetsEqual(
+	left: InstanceUpgradeTargetEnvironment,
+	right: InstanceUpgradeTargetEnvironment,
+): boolean {
+	return (
+		left.gameVersion === right.gameVersion &&
+		left.modLoader === right.modLoader &&
+		left.modLoaderVersion === right.modLoaderVersion &&
+		left.shaderRuntime === right.shaderRuntime
+	)
+}
+
+export function shouldReuseUpgradePlan(
+	instanceId: string,
+	plan: InstanceUpgradePlan | null,
+	target: InstanceUpgradeTargetEnvironment | null,
+): boolean {
+	return (
+		plan !== null &&
+		target !== null &&
+		plan.instanceId === instanceId &&
+		upgradeTargetsEqual(plan.targetEnvironment, target)
+	)
+}
+
+export async function resolveUpgradePlanSelection(
+	instanceId: string,
+	existingPlan: InstanceUpgradePlan | null,
+	target: InstanceUpgradeTargetEnvironment,
+	planUpgrade: (
+		instanceId: string,
+		target: InstanceUpgradeTargetEnvironment,
+	) => Promise<InstanceUpgradePlan>,
+): Promise<{ plan: InstanceUpgradePlan; reused: boolean }> {
+	if (shouldReuseUpgradePlan(instanceId, existingPlan, target)) {
+		return { plan: existingPlan!, reused: true }
+	}
+	return { plan: await planUpgrade(instanceId, target), reused: false }
+}
+
+export function isSharedUpgradeInstance(instance: GameInstance): boolean {
+	return instance.link?.type === 'shared_instance' || Boolean(instance.symlink_target)
 }
 
 export function contentIdentityKeys(item: {
@@ -125,7 +198,18 @@ function issueContentId(
 	return itemsByProject.get(providerProject)?.contentId ?? null
 }
 
-export function groupUpgradeIssues(plan: InstanceUpgradePlan): UpgradeIssueGroups {
+export function captureInitialUpgradeBlockingIssues(
+	plan: InstanceUpgradePlan,
+): InitialUpgradeBlockingIssues {
+	return Object.fromEntries(
+		groupUpgradeIssues(plan).blocking.map((group) => [group.item.contentId, group.blockingIssues]),
+	)
+}
+
+export function groupUpgradeIssues(
+	plan: InstanceUpgradePlan,
+	initialBlockingIssues: InitialUpgradeBlockingIssues = {},
+): UpgradeIssueGroups {
 	const itemsById = new Map(plan.items.map((item) => [item.contentId, item]))
 	const itemsByProject = new Map<string, InstanceUpgradePlanItem | null>()
 	for (const item of plan.items) {
@@ -169,8 +253,24 @@ export function groupUpgradeIssues(plan: InstanceUpgradePlan): UpgradeIssueGroup
 		const itemWarnings = [...(warningByContent.get(item.contentId)?.values() ?? [])].filter(
 			(issue) => !blockingKeys.has(issueIdentity(issue)),
 		)
-		const group = { item, blockingIssues: itemBlocking, warnings: itemWarnings }
-		if (itemBlocking.length) blocking.push(group)
+		const initialIssues = initialBlockingIssues[item.contentId] ?? []
+		const startedBlocking = initialIssues.length > 0
+		const currentlyBlocking = itemBlocking.length > 0
+		const contextualWarnings = currentlyBlocking
+			? itemWarnings
+			: [
+					...new Map(
+						[...initialIssues, ...itemWarnings].map((issue) => [issueIdentity(issue), issue]),
+					).values(),
+				]
+		const group = {
+			item,
+			blockingIssues: itemBlocking,
+			warnings: contextualWarnings,
+			startedBlocking,
+			currentlyBlocking,
+		}
+		if (currentlyBlocking || startedBlocking) blocking.push(group)
 		else if (itemWarnings.length) warnings.push(group)
 		else noIssues.push(group)
 	}
@@ -192,12 +292,35 @@ export function upgradeContentDisplayMetadata(
 	const fallbackPath = snapshotItem?.expectedRelativePath ?? item.relativePath
 	const fallbackName = fallbackPath.split('/').pop() ?? fallbackPath
 	return {
-		title: contentItem?.project.title ?? snapshotItem?.content?.project.title ?? fallbackName,
+		title: sanitizeMinecraftDisplayTitle(
+			contentItem?.project.title ?? snapshotItem?.content?.project.title ?? fallbackName,
+		),
 		iconUrl: contentItem?.project.icon_url ?? snapshotItem?.content?.project.icon_url ?? null,
 		currentVersion:
 			contentItem?.version?.version_number ??
 			snapshotItem?.content?.version?.version_number ??
 			item.currentReleaseId,
+	}
+}
+
+export function sanitizeMinecraftDisplayTitle(title: string): string {
+	return title.replace(/§[0-9a-fk-or]/gi, '')
+}
+
+export function upgradeResolutionPresentation(
+	kind: 'two-option' | 'single-prerelease',
+	resolution: InstanceUpgradePlanItem['resolution'],
+): UpgradeResolutionPresentation {
+	if (kind === 'single-prerelease') {
+		return {
+			selectedAction: resolution.allowPrerelease ? 'upgrade' : null,
+			showUndo: resolution.allowPrerelease,
+		}
+	}
+	return {
+		selectedAction:
+			resolution.action === 'keep' || resolution.action === 'disable' ? resolution.action : null,
+		showUndo: false,
 	}
 }
 
@@ -284,6 +407,71 @@ export function solutionSummary(solution: InstanceUpgradeSolution): SolutionSumm
 		dependencyRemovals: solution.dependencyChanges.filter((change) => change.kind === 'remove')
 			.length,
 	}
+}
+
+export function confirmSolutionGroups(solution: InstanceUpgradeSolution): ConfirmSolutionGroups {
+	return {
+		updated: solution.selections.filter(
+			(selection) =>
+				selection.action === 'upgrade' &&
+				selection.targetReleaseId !== null &&
+				selection.targetReleaseId !== selection.currentReleaseId,
+		),
+		kept: solution.selections.filter(
+			(selection) =>
+				selection.action !== 'disable' &&
+				(selection.action !== 'upgrade' ||
+					selection.targetReleaseId === null ||
+					selection.targetReleaseId === selection.currentReleaseId),
+		),
+		disabled: solution.selections.filter((selection) => selection.action === 'disable'),
+		dependencyChanges: solution.dependencyChanges.filter((change) => change.kind !== 'keep'),
+	}
+}
+
+export function confirmUpgradeOptions(
+	sharedInstance: boolean,
+	sharedMode: 'direct' | 'copy_and_upgrade' | null,
+	directFullBackupPreference: boolean,
+): ConfirmUpgradeOptions {
+	const effectiveMode = sharedInstance ? sharedMode : 'direct'
+	return {
+		effectiveMode,
+		createFullBackup: effectiveMode === 'copy_and_upgrade' ? false : directFullBackupPreference,
+		canStart: !sharedInstance || sharedMode !== null,
+	}
+}
+
+export function confirmSelectionReleaseSlots(
+	selection: InstanceUpgradeSolution['selections'][number],
+): ConfirmReleaseSlots {
+	return {
+		currentReleaseId: selection.currentReleaseId,
+		targetReleaseId:
+			selection.action === 'upgrade' && selection.targetReleaseId !== selection.currentReleaseId
+				? selection.targetReleaseId
+				: null,
+	}
+}
+
+export function confirmDependencyReleaseSlots(
+	change: InstanceUpgradeDependencyChange,
+): ConfirmReleaseSlots {
+	return {
+		currentReleaseId: change.currentReleaseId,
+		targetReleaseId:
+			change.targetReleaseId !== change.currentReleaseId ? change.targetReleaseId : null,
+	}
+}
+
+export function confirmTargetLoaderLabel(
+	loaderLabel: string,
+	loader: InstanceUpgradeTargetEnvironment['modLoader'],
+	version: string | null,
+	automaticLabel: string,
+): string {
+	if (version) return `${loaderLabel} ${version}`
+	return loader === 'vanilla' ? loaderLabel : `${loaderLabel} (${automaticLabel})`
 }
 
 function normalizedConstraints(constraints: InstanceUpgradeFixedConstraint[]) {

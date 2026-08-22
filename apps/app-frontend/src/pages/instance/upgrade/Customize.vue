@@ -135,20 +135,16 @@
 					class="relative flex flex-col gap-3 border-0 border-b border-solid border-surface-4 bg-surface-2 p-3 first:rounded-t-lg last:rounded-b-lg last:border-b-0 focus-within:z-20 sm:flex-row sm:items-center"
 				>
 					<div class="flex min-w-0 flex-1 items-center gap-3">
-						<img
-							v-if="itemIcon(item)"
-							:src="itemIcon(item)"
-							alt=""
-							class="size-10 shrink-0 rounded object-cover"
-						/>
-						<div v-else class="size-10 shrink-0 rounded bg-surface-3" aria-hidden="true" />
+						<Avatar :src="itemIcon(item)" :tint-by="itemName(item)" size="2.5rem" no-shadow />
 						<div class="min-w-0">
 							<RouterLink
 								v-if="projectPath(item)"
 								:to="projectPath(item)!"
-								class="block truncate font-semibold text-contrast hover:text-brand focus-visible:underline"
+								class="inline-flex max-w-full items-center gap-1 font-semibold text-contrast hover:text-brand hover:underline focus-visible:underline"
 								@click="parkProjectReturn"
-							>{{ itemName(item) }}</RouterLink>
+								><span class="truncate">{{ itemName(item) }}</span
+								><ExternalIcon class="size-3 shrink-0" aria-hidden="true"
+							/></RouterLink>
 							<div v-else class="truncate font-semibold text-contrast">{{ itemName(item) }}</div>
 							<div class="flex flex-wrap gap-x-3 text-sm text-secondary">
 								<span>{{ providerLabel(item.provider) }}</span>
@@ -166,7 +162,17 @@
 									formatMessage(messages.currentlyDisabled)
 								}}</span>
 							</div>
-							<div class="mt-1 text-sm text-secondary">{{ effectiveTargetLabel(item) }}</div>
+							<div class="mt-1 text-sm text-secondary">
+								<span>{{ formatMessage(messages.effectiveTargetPrefix) }}</span>
+								<UpgradeVersionChangelogPopout
+									v-if="effectiveTargetRelease(item)"
+									:label="effectiveTargetVersion(item)"
+									:provider="item.provider"
+									:project-id="item.projectId"
+									:release-id="effectiveTargetRelease(item)"
+								/>
+								<span v-else>{{ formatMessage(messages.noTarget) }}</span>
+							</div>
 						</div>
 					</div>
 					<div class="min-w-0 w-full shrink-0 sm:w-72 sm:max-w-[45%]">
@@ -181,7 +187,7 @@
 							:model-value="draftChoice(item.contentId)"
 							:name="`custom-${item.contentId}`"
 							:options="constraintOptions(item)"
-							:display-name="(value) => constraintOptionLabel(String(value))"
+							:display-name="(value) => constraintOptionLabel(item, String(value))"
 							:disabled="requestBusy"
 							@update:model-value="setDraftChoice(item, String($event))"
 						/>
@@ -250,28 +256,31 @@
 				</div>
 			</div>
 		</section>
-
 	</section>
 </template>
 
 <script setup lang="ts">
-import type { Labrinth } from '@modrinth/api-client'
 import {
 	CheckIcon,
+	ExternalIcon,
 	MinimizeIcon,
 	RefreshCwIcon,
 	SettingsIcon,
 	SparklesIcon,
 	SpinnerIcon,
 } from '@modrinth/assets'
-import { Admonition, ButtonStyled, defineMessages, DropdownSelect, useVIntl } from '@modrinth/ui'
+import {
+	Admonition,
+	Avatar,
+	ButtonStyled,
+	defineMessages,
+	DropdownSelect,
+	useVIntl,
+} from '@modrinth/ui'
 import { useQuery } from '@tanstack/vue-query'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { get_version_many } from '@/helpers/cache'
-import { parkUpgradeFlow, upgradeProjectPath } from '@/helpers/upgrade-return-state'
-import UpgradeVersionChangelogPopout from './UpgradeVersionChangelogPopout.vue'
 import type { InstanceContentSnapshotItem } from '@/helpers/instance'
 import {
 	type InstanceContentData,
@@ -292,18 +301,27 @@ import {
 	resolve_custom_instance_upgrade_solution,
 	select_instance_upgrade_solution,
 } from '@/helpers/instance-upgrade'
+import { parkUpgradeFlow, upgradeProjectPath } from '@/helpers/upgrade-return-state'
+import {
+	loadUpgradeVersionDisplayMetadata,
+	type UpgradeReleaseIdentity,
+	upgradeVersionCacheKey,
+	upgradeVersionDisplayLabel,
+} from '@/helpers/upgrade-version-metadata'
 
 import {
 	availablePredefinedStrategies,
+	contentIdentityKeys,
 	customConstraintsEqual,
 	editableUpgradeRoots,
-	setFixedConstraint,
-	contentIdentityKeys,
 	normalizeUpgradePath,
+	setFixedConstraint,
 	solutionSummary,
 	upgradeContentDisplayMetadata,
 } from './analysis'
 import { useInstanceUpgradeFlow } from './flow'
+import { initialCustomizeStrategy } from './flow-controls'
+import UpgradeVersionChangelogPopout from './UpgradeVersionChangelogPopout.vue'
 
 const AUTOMATIC = '__automatic__'
 
@@ -453,6 +471,10 @@ const messages = defineMessages({
 		id: 'instance.upgrade.customize.effective-target',
 		defaultMessage: 'Calculated target: {version}',
 	},
+	effectiveTargetPrefix: {
+		id: 'instance.upgrade.customize.effective-target-prefix',
+		defaultMessage: 'Calculated target: ',
+	},
 	noTarget: { id: 'instance.upgrade.customize.no-target', defaultMessage: 'No target release' },
 	currentlyDisabled: {
 		id: 'instance.upgrade.customize.currently-disabled',
@@ -502,8 +524,13 @@ const router = useRouter()
 const { formatMessage } = useVIntl()
 const plan = computed(() => flow.plan.value!)
 const activeStrategy = ref<InstanceUpgradeSolutionKind>(
-	plan.value.selectedSolution?.kind ?? 'custom',
+	initialCustomizeStrategy(
+		flow.customizeActiveStrategy.value,
+		plan.value.selectedSolution?.kind,
+		'custom',
+	),
 )
+flow.customizeActiveStrategy.value = activeStrategy.value
 const draftConstraints = ref<InstanceUpgradeFixedConstraint[]>(
 	plan.value.customConstraints.map((item) => ({ ...item })),
 )
@@ -516,28 +543,41 @@ const contentDataQuery = useQuery({
 	queryFn: () => loadInstanceContentData(flow.instanceId.value),
 	staleTime: Number.POSITIVE_INFINITY,
 })
-const modrinthCandidateIds = computed(() => [
-	...new Set(
-		plan.value.items
-			.filter((item) => item.provider === 'modrinth' && !item.autoDependency)
-			.flatMap((item) => item.candidateReleaseIds),
-	),
-])
-const candidateVersionsQuery = useQuery({
+const releaseIdentities = computed(() => {
+	const identities: UpgradeReleaseIdentity[] = []
+	const add = (
+		provider: ContentProvider | null,
+		projectId: string | null,
+		releaseId: string | null,
+	) => {
+		if ((provider === 'modrinth' || provider === 'curseforge') && projectId && releaseId) {
+			identities.push({ provider, projectId, releaseId })
+		}
+	}
+	for (const item of plan.value.items) {
+		add(item.provider, item.projectId, item.currentReleaseId)
+		item.candidateReleaseIds.forEach((releaseId) => add(item.provider, item.projectId, releaseId))
+	}
+	for (const selection of plan.value.selectedSolution?.selections ?? []) {
+		add(selection.provider, selection.projectId, selection.targetReleaseId)
+	}
+	for (const change of plan.value.selectedSolution?.dependencyChanges ?? []) {
+		add(change.provider, change.projectId, change.currentReleaseId)
+		add(change.provider, change.projectId, change.targetReleaseId)
+	}
+	return identities
+})
+const versionMetadataQuery = useQuery({
 	queryKey: computed(() => [
 		'instance-upgrade',
-		'candidate-versions',
-		...modrinthCandidateIds.value,
+		'version-display',
+		...releaseIdentities.value.map((identity) =>
+			upgradeVersionCacheKey(identity.provider, identity.projectId, identity.releaseId),
+		),
 	]),
-	queryFn: () =>
-		get_version_many(modrinthCandidateIds.value) as Promise<Labrinth.Versions.v2.Version[]>,
-	enabled: computed(
-		() => activeStrategy.value === 'custom' && modrinthCandidateIds.value.length > 0,
-	),
+	queryFn: () => loadUpgradeVersionDisplayMetadata(releaseIdentities.value),
+	staleTime: Number.POSITIVE_INFINITY,
 })
-const candidateVersionById = computed(
-	() => new Map((candidateVersionsQuery.data.value ?? []).map((version) => [version.id, version])),
-)
 const snapshotByContentId = computed(() => {
 	const entries = (contentDataQuery.data.value?.snapshot.items ?? []).flatMap((item) =>
 		contentIdentityKeys({
@@ -599,14 +639,6 @@ const canContinue = computed(
 		plan.value.selectedSolution !== null &&
 		plan.value.selectedSolution.kind === activeStrategy.value,
 )
-const continueHint = computed(() => {
-	if (activeStrategy.value === 'custom' && (customDraftDirty.value || !customWasResolved.value))
-		return formatMessage(messages.applyBeforeContinue)
-	if (plan.value.blockingIssues.length || !plan.value.selectedSolution)
-		return formatMessage(messages.resolveBeforeContinue)
-	return null
-})
-
 function registerControls() {
 	flow.registerStepControls({
 		canNext: canContinue,
@@ -649,12 +681,15 @@ async function chooseStrategy(kind: InstanceUpgradeSolutionKind) {
 	requestError.value = null
 	if (kind === 'custom') {
 		activeStrategy.value = 'custom'
+		flow.customizeActiveStrategy.value = 'custom'
 		return
 	}
 	if (customDraftDirty.value) {
 		pendingStrategy.value = kind
 		return
 	}
+	activeStrategy.value = kind
+	flow.customizeActiveStrategy.value = kind
 	await selectPredefined(kind)
 }
 
@@ -669,6 +704,7 @@ async function discardAndSwitch() {
 async function selectPredefined(kind: Exclude<InstanceUpgradeSolutionKind, 'custom'>) {
 	if (plan.value.selectedSolution?.kind === kind) {
 		activeStrategy.value = kind
+		flow.customizeActiveStrategy.value = kind
 		return
 	}
 	requestBusy.value = true
@@ -676,6 +712,7 @@ async function selectPredefined(kind: Exclude<InstanceUpgradeSolutionKind, 'cust
 		const updatedPlan = await select_instance_upgrade_solution(plan.value.id, kind)
 		flow.setPlan(updatedPlan)
 		activeStrategy.value = kind
+		flow.customizeActiveStrategy.value = kind
 	} catch (error) {
 		requestError.value = errorMessage(error)
 	} finally {
@@ -686,8 +723,10 @@ async function selectPredefined(kind: Exclude<InstanceUpgradeSolutionKind, 'cust
 function contentMetadata(item: InstanceUpgradePlanItem) {
 	return upgradeContentDisplayMetadata(
 		item,
-		contentByContentId.value.get(item.contentId) ?? contentByContentId.value.get(normalizeUpgradePath(item.relativePath)),
-		snapshotByContentId.value.get(item.contentId) ?? snapshotByContentId.value.get(normalizeUpgradePath(item.relativePath)),
+		contentByContentId.value.get(item.contentId) ??
+			contentByContentId.value.get(normalizeUpgradePath(item.relativePath)),
+		snapshotByContentId.value.get(item.contentId) ??
+			snapshotByContentId.value.get(normalizeUpgradePath(item.relativePath)),
 	)
 }
 
@@ -706,9 +745,13 @@ function parkProjectReturn() {
 		targetEnvironment: flow.targetEnvironment.value,
 		plan: flow.plan.value,
 		createFullBackup: flow.createFullBackup.value,
+		directFullBackupPreference: flow.directFullBackupPreference.value,
 		sharedUpgradeMode: flow.sharedUpgradeMode.value,
 		activeJobId: flow.activeJobId.value,
 		result: flow.result.value,
+		initialBlockingPlanId: flow.initialBlockingPlanId.value,
+		initialBlockingIssues: flow.initialBlockingIssues.value,
+		customizeActiveStrategy: flow.customizeActiveStrategy.value,
 	})
 }
 
@@ -723,22 +766,39 @@ function providerLabel(provider: ContentProvider | null): string {
 }
 
 function currentVersionLabel(item: InstanceUpgradePlanItem): string {
-	const version = contentMetadata(item).currentVersion ?? formatMessage(messages.noTarget)
+	const version = releaseLabel(
+		item.provider,
+		item.projectId,
+		item.currentReleaseId,
+		contentMetadata(item).currentVersion,
+	)
 	return formatMessage(messages.currentVersion, { version })
 }
 
-function effectiveTargetLabel(item: InstanceUpgradePlanItem): string {
-	const selection = effectiveSolution.value?.selections.find(
-		(entry) => entry.contentId === item.contentId,
+function effectiveTargetRelease(item: InstanceUpgradePlanItem): string | null {
+	return (
+		effectiveSolution.value?.selections.find((entry) => entry.contentId === item.contentId)
+			?.targetReleaseId ?? null
 	)
-	return formatMessage(messages.effectiveTarget, {
-		version: releaseLabel(selection?.targetReleaseId),
-	})
 }
 
-function releaseLabel(versionId: string | null | undefined): string {
-	if (!versionId) return formatMessage(messages.noTarget)
-	return candidateVersionById.value.get(versionId)?.version_number ?? versionId
+function effectiveTargetVersion(item: InstanceUpgradePlanItem): string {
+	return releaseLabel(item.provider, item.projectId, effectiveTargetRelease(item))
+}
+
+function releaseLabel(
+	provider: ContentProvider | null,
+	projectId: string | null,
+	releaseId: string | null | undefined,
+	fallback?: string | null,
+): string {
+	if (!provider || !projectId || !releaseId) return fallback ?? formatMessage(messages.noTarget)
+	const resolved = upgradeVersionDisplayLabel(versionMetadataQuery.data.value, {
+		provider,
+		projectId,
+		releaseId,
+	})
+	return resolved === releaseId && fallback ? fallback : resolved
 }
 
 function draftChoice(contentId: string): string {
@@ -756,18 +816,26 @@ function constraintOptions(item: InstanceUpgradePlanItem): string[] {
 	]
 }
 
-function constraintOptionLabel(value: string): string {
+function constraintOptionLabel(item: InstanceUpgradePlanItem, value: string): string {
 	if (value === AUTOMATIC) return formatMessage(messages.automatic)
-	const version = candidateVersionById.value.get(value)
-	if (!version) return formatMessage(messages.specificVersion, { version: value })
+	const key =
+		item.provider && item.projectId
+			? upgradeVersionCacheKey(item.provider, item.projectId, value)
+			: null
+	const version = key ? versionMetadataQuery.data.value?.get(key) : null
+	if (!version) {
+		return formatMessage(messages.specificVersion, {
+			version: releaseLabel(item.provider, item.projectId, value),
+		})
+	}
 	const channel =
-		version.version_type === 'release'
+		version.channel === 'release' || version.channel === 1
 			? formatMessage(messages.channelRelease)
-			: version.version_type === 'beta'
+			: version.channel === 'beta' || version.channel === 2
 				? formatMessage(messages.channelBeta)
 				: formatMessage(messages.channelAlpha)
 	return formatMessage(messages.specificVersionWithChannel, {
-		version: version.version_number,
+		version: version.version,
 		channel,
 	})
 }
@@ -799,6 +867,7 @@ async function applyCustomChoices() {
 		flow.setPlan(updatedPlan)
 		draftConstraints.value = updatedPlan.customConstraints.map((item) => ({ ...item }))
 		activeStrategy.value = 'custom'
+		flow.customizeActiveStrategy.value = 'custom'
 	} catch (error) {
 		requestError.value = errorMessage(error)
 	} finally {
@@ -825,10 +894,10 @@ function dependencyActionLabel(kind: InstanceUpgradeDependencyChangeKind): strin
 }
 
 function dependencyChangeDescription(change: InstanceUpgradeDependencyChange): string {
-	const target = change.targetReleaseId ?? formatMessage(messages.noTarget)
+	const target = releaseLabel(change.provider, change.projectId, change.targetReleaseId)
 	return change.existingContentId
 		? formatMessage(messages.dependencyReused, {
-				current: change.currentReleaseId ?? formatMessage(messages.noTarget),
+				current: releaseLabel(change.provider, change.projectId, change.currentReleaseId),
 				target,
 			})
 		: formatMessage(messages.dependencyNew, { target })

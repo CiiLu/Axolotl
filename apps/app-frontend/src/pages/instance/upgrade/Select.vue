@@ -71,7 +71,6 @@
 			<SpinnerIcon class="size-5 animate-spin" aria-hidden="true" />
 			{{ formatMessage(messages.planningStatus, { count: snapshotItemCount }) }}
 		</div>
-
 	</section>
 </template>
 
@@ -94,7 +93,12 @@ import { loadInstanceContentData } from '@/helpers/instance-content'
 import { plan_instance_upgrade } from '@/helpers/instance-upgrade'
 import { get_game_versions } from '@/helpers/tags'
 
-import { inferShaderRuntime, newerStableGameVersions } from './analysis'
+import {
+	inferShaderRuntime,
+	newerStableGameVersions,
+	resolveUpgradePlanSelection,
+	shouldReuseUpgradePlan,
+} from './analysis'
 import { useInstanceUpgradeFlow } from './flow'
 
 const messages = defineMessages({
@@ -150,6 +154,10 @@ const messages = defineMessages({
 		id: 'instance.upgrade.select.check-compatibility',
 		defaultMessage: 'Check compatibility',
 	},
+	reviewCompatibility: {
+		id: 'instance.upgrade.select.review-compatibility',
+		defaultMessage: 'Review compatibility',
+	},
 })
 
 const flow = useInstanceUpgradeFlow()
@@ -198,24 +206,35 @@ watch(
 	{ immediate: true },
 )
 
-watch(selectedGameVersion, (version) => {
-	if (flow.plan.value && version !== flow.plan.value.targetEnvironment.gameVersion) {
-		flow.clearPlan()
-	}
-	flow.error.value = null
-})
+watch(selectedGameVersion, () => (flow.error.value = null))
+
+const requestedTargetEnvironment = computed(() =>
+	selectedGameVersion.value
+		? {
+				gameVersion: selectedGameVersion.value,
+				modLoader: instance.value.loader,
+				modLoaderVersion: null,
+				shaderRuntime: inferShaderRuntime(instance.value, contentDataQuery.data.value?.snapshot),
+			}
+		: null,
+)
+const reusesPlan = computed(() =>
+	shouldReuseUpgradePlan(flow.instanceId.value, flow.plan.value, requestedTargetEnvironment.value),
+)
 
 function registerControls() {
 	flow.registerStepControls({
 		canNext: canPlan,
 		busy: flow.busy,
-		nextLabel: formatMessage(messages.checkCompatibility),
+		nextLabel: formatMessage(
+			reusesPlan.value ? messages.reviewCompatibility : messages.checkCompatibility,
+		),
 		onNext: startPlanning,
 		onBack: () => router.push(`/instance/${encodeURIComponent(flow.instanceId.value)}`),
 	})
 }
 onMounted(registerControls)
-watch([canPlan, () => flow.busy.value], registerControls)
+watch([canPlan, reusesPlan, () => flow.busy.value], registerControls)
 onBeforeUnmount(() => flow.registerStepControls(null))
 
 function errorMessage(error: unknown): string {
@@ -228,24 +247,28 @@ function errorMessage(error: unknown): string {
 async function startPlanning() {
 	if (!canPlan.value || !selectedGameVersion.value) return
 
-	const targetEnvironment = {
-		gameVersion: selectedGameVersion.value,
-		modLoader: instance.value.loader,
-		modLoaderVersion: null,
-		shaderRuntime: inferShaderRuntime(instance.value, contentDataQuery.data.value?.snapshot),
-	}
-	flow.clearPlan()
+	const targetEnvironment = requestedTargetEnvironment.value!
 	flow.setTargetEnvironment(targetEnvironment)
 	flow.error.value = null
+	if (reusesPlan.value) {
+		await router.push(
+			`/instance/${encodeURIComponent(flow.instanceId.value)}/upgrade/compatibility`,
+		)
+		return
+	}
 	flow.busy.value = true
 	try {
-		const plan = await plan_instance_upgrade(flow.instanceId.value, targetEnvironment)
-		flow.setPlan(plan)
+		const result = await resolveUpgradePlanSelection(
+			flow.instanceId.value,
+			flow.plan.value,
+			targetEnvironment,
+			plan_instance_upgrade,
+		)
+		if (!result.reused) flow.setPlan(result.plan)
 		await router.push(
 			`/instance/${encodeURIComponent(flow.instanceId.value)}/upgrade/compatibility`,
 		)
 	} catch (error) {
-		flow.setPlan(null)
 		flow.error.value = error
 	} finally {
 		flow.busy.value = false
