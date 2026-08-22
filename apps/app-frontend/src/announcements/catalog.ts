@@ -44,12 +44,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
-						'Added pinned Content tab views that remember each instance\'s sorting and filters between launcher restarts.',
+						"Added pinned Content tab views that remember each instance's sorting and filters between launcher restarts.",
 					'zh-CN': '内容页现可固定实例视图，在重启启动器后保留各实例的排序和筛选条件。',
 				},
 				{
 					'en-US': 'Added translation for titles and descriptions in project galleries.',
 					'zh-CN': '项目图库中的图片标题和说明现已支持翻译。',
+				},
+				{
+					'en-US': 'Added direct links to matching MC Mod wiki pages in the Content tab mod menu.',
+					'zh-CN': '内容页的模组菜单现可直接打开匹配的 MC 百科页面。',
 				},
 			],
 			changed: [
