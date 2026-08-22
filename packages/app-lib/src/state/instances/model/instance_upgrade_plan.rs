@@ -57,6 +57,24 @@ pub struct InstanceUpgradeResolution {
         Vec<InstanceUpgradePrereleaseConfirmation>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeResolutionResult {
+    pub content_id: String,
+    pub code: Option<String>,
+    pub message: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeResolutionBatchResult {
+    pub plan: InstanceUpgradePlan,
+    pub requested_count: usize,
+    pub applied: Vec<InstanceUpgradeResolutionResult>,
+    pub skipped: Vec<InstanceUpgradeResolutionResult>,
+    pub failed: Vec<InstanceUpgradeResolutionResult>,
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceUpgradePrereleaseConfirmation {

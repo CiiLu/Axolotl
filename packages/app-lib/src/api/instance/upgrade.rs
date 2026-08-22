@@ -6,9 +6,11 @@ use tokio::sync::Mutex;
 
 use crate::state::instances::adapters::sqlite::content_rows;
 use crate::state::{
-    ContentSourceKind, InstanceLink, InstanceUpgradeFixedConstraint,
-    InstanceUpgradePlan, InstanceUpgradeResolution,
-    InstanceUpgradeSolutionChoice, InstanceUpgradeSolutionKind, State,
+    ContentSourceKind, InstanceLink, InstanceUpgradeAction,
+    InstanceUpgradeFixedConstraint, InstanceUpgradePlan,
+    InstanceUpgradeResolution, InstanceUpgradeResolutionBatchResult,
+    InstanceUpgradeResolutionResult, InstanceUpgradeSolutionChoice,
+    InstanceUpgradeSolutionKind, State,
 };
 
 use crate::install::{
@@ -108,6 +110,202 @@ pub async fn update_instance_upgrade_resolution(
     .await?;
     stored.plan = plan.clone();
     Ok(plan)
+}
+
+#[tracing::instrument(skip(resolutions))]
+pub async fn update_instance_upgrade_resolutions(
+    plan_id: &str,
+    resolutions: Vec<InstanceUpgradeResolution>,
+) -> crate::Result<InstanceUpgradeResolutionBatchResult> {
+    let state = State::get().await?;
+    let handle = stored_plan_handle(plan_id)?;
+    let mut stored = handle.lock().await;
+    let source = ensure_current_revision(&mut stored, &state).await?;
+    let requested_count = resolutions.len();
+    let (requests, mut skipped) = normalize_batch_resolutions(resolutions);
+    let mut working_plan = stored.plan.clone();
+    let mut applied = Vec::new();
+    let mut failed = Vec::new();
+    let mut pending = vec![requests];
+
+    while let Some(chunk) = pending.pop() {
+        let mut applicable = Vec::new();
+        for resolution in chunk {
+            if !resolution_is_applicable(&working_plan, &resolution) {
+                skipped.push(InstanceUpgradeResolutionResult {
+                    content_id: resolution.content_id,
+                    code: Some("no_longer_applicable".to_string()),
+                    message: Some(
+                        "Resolution is no longer applicable".to_string(),
+                    ),
+                });
+            } else {
+                applicable.push(resolution);
+            }
+        }
+        if applicable.is_empty() {
+            continue;
+        }
+
+        let mut trial = working_plan.clone();
+        apply_resolutions(&mut trial, &applicable)?;
+        let (kind, constraints) = selected_kind_and_constraints(&trial);
+        match crate::state::instances::commands::recompute_instance_upgrade_plan_from_source(
+            &mut trial,
+            &constraints,
+            kind,
+            source.clone(),
+            &state,
+        )
+        .await
+        {
+            Ok(()) => {
+                applied.extend(applicable.iter().map(|resolution| {
+                    InstanceUpgradeResolutionResult {
+                        content_id: resolution.content_id.clone(),
+                        code: None,
+                        message: None,
+                    }
+                }));
+                working_plan = trial;
+            }
+            Err(error) if applicable.len() == 1 => {
+                failed.push(InstanceUpgradeResolutionResult {
+                    content_id: applicable[0].content_id.clone(),
+                    code: Some("resolution_failed".to_string()),
+                    message: Some(error.to_string()),
+                });
+            }
+            Err(_) => {
+                let midpoint = applicable.len() / 2;
+                let right = applicable[midpoint..].to_vec();
+                let left = applicable[..midpoint].to_vec();
+                pending.push(right);
+                pending.push(left);
+            }
+        }
+    }
+
+    if !applied.is_empty() {
+        stored.plan = working_plan.clone();
+    }
+    Ok(InstanceUpgradeResolutionBatchResult {
+        plan: working_plan,
+        requested_count,
+        applied,
+        skipped,
+        failed,
+    })
+}
+
+#[tracing::instrument]
+pub async fn reset_instance_upgrade_resolution(
+    plan_id: &str,
+    content_id: &str,
+) -> crate::Result<InstanceUpgradePlan> {
+    let state = State::get().await?;
+    let handle = stored_plan_handle(plan_id)?;
+    let mut stored = handle.lock().await;
+    let source = ensure_current_revision(&mut stored, &state).await?;
+    let mut plan = stored.plan.clone();
+    let item = plan
+        .items
+        .iter_mut()
+        .find(|item| item.content_id == content_id)
+        .ok_or_else(|| {
+            crate::ErrorKind::InputError(format!(
+                "Upgrade plan has no content item {content_id}"
+            ))
+        })?;
+    item.resolution = automatic_resolution(item);
+    let (kind, constraints) = selected_kind_and_constraints(&plan);
+    crate::state::instances::commands::recompute_instance_upgrade_plan_from_source(
+        &mut plan,
+        &constraints,
+        kind,
+        source,
+        &state,
+    )
+    .await?;
+    stored.plan = plan.clone();
+    Ok(plan)
+}
+
+fn normalize_batch_resolutions(
+    resolutions: Vec<InstanceUpgradeResolution>,
+) -> (
+    Vec<InstanceUpgradeResolution>,
+    Vec<InstanceUpgradeResolutionResult>,
+) {
+    let mut by_content_id = HashMap::new();
+    let mut skipped = Vec::new();
+    for resolution in resolutions {
+        if by_content_id
+            .insert(resolution.content_id.clone(), resolution.clone())
+            .is_some()
+        {
+            skipped.push(InstanceUpgradeResolutionResult {
+                content_id: resolution.content_id,
+                code: Some("duplicate_request".to_string()),
+                message: Some(
+                    "Duplicate request replaced by its last value".to_string(),
+                ),
+            });
+        }
+    }
+    let mut normalized = by_content_id.into_values().collect::<Vec<_>>();
+    normalized.sort_by(|left, right| left.content_id.cmp(&right.content_id));
+    (normalized, skipped)
+}
+
+fn resolution_is_applicable(
+    plan: &InstanceUpgradePlan,
+    resolution: &InstanceUpgradeResolution,
+) -> bool {
+    plan.items.iter().any(|item| {
+        item.content_id == resolution.content_id
+            && item.resolution != *resolution
+    })
+}
+
+fn apply_resolutions(
+    plan: &mut InstanceUpgradePlan,
+    resolutions: &[InstanceUpgradeResolution],
+) -> crate::Result<()> {
+    for resolution in resolutions {
+        let item = plan
+            .items
+            .iter_mut()
+            .find(|item| item.content_id == resolution.content_id)
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(format!(
+                    "Upgrade plan has no content item {}",
+                    resolution.content_id
+                ))
+            })?;
+        item.resolution = resolution.clone();
+    }
+    Ok(())
+}
+
+fn automatic_resolution(
+    item: &crate::state::InstanceUpgradeItem,
+) -> InstanceUpgradeResolution {
+    let action = if matches!(
+        item.status,
+        crate::state::InstanceUpgradeItemStatus::Unidentified
+            | crate::state::InstanceUpgradeItemStatus::UnsupportedContentType
+    ) {
+        InstanceUpgradeAction::Keep
+    } else {
+        InstanceUpgradeAction::Upgrade
+    };
+    InstanceUpgradeResolution {
+        content_id: item.content_id.clone(),
+        action,
+        allow_prerelease: false,
+        confirmed_prerelease_dependencies: Vec::new(),
+    }
 }
 
 #[tracing::instrument]
@@ -613,6 +811,55 @@ mod tests {
         assert_eq!(constraints, plan.custom_constraints);
         assert_eq!(constraints.len(), 1);
         assert_eq!(constraints[0].project_id, "a");
+    }
+
+    #[test]
+    fn batch_requests_dedupe_by_content_with_last_value_and_stable_order() {
+        let request = |content_id: &str, action| InstanceUpgradeResolution {
+            content_id: content_id.to_string(),
+            action,
+            allow_prerelease: false,
+            confirmed_prerelease_dependencies: Vec::new(),
+        };
+        let (normalized, skipped) = normalize_batch_resolutions(vec![
+            request("b", InstanceUpgradeAction::Keep),
+            request("a", InstanceUpgradeAction::Disable),
+            request("b", InstanceUpgradeAction::Disable),
+        ]);
+        assert_eq!(
+            normalized
+                .iter()
+                .map(|item| item.content_id.as_str())
+                .collect::<Vec<_>>(),
+            ["a", "b"]
+        );
+        assert_eq!(normalized[1].action, InstanceUpgradeAction::Disable);
+        assert_eq!(skipped.len(), 1);
+    }
+
+    #[test]
+    fn batch_resolution_is_skipped_when_plan_already_has_requested_value() {
+        let mut plan = empty_plan();
+        plan.items.push(crate::state::InstanceUpgradeItem {
+            content_id: "root".to_string(),
+            relative_path: "mods/root.jar".to_string(),
+            project_type: crate::state::ProjectType::Mod,
+            provider: None,
+            project_id: None,
+            current_release_id: None,
+            current_enabled: true,
+            auto_dependency: false,
+            status: crate::state::InstanceUpgradeItemStatus::Unidentified,
+            resolution: InstanceUpgradeResolution {
+                content_id: "root".to_string(),
+                action: InstanceUpgradeAction::Keep,
+                allow_prerelease: false,
+                confirmed_prerelease_dependencies: Vec::new(),
+            },
+            candidate_release_ids: Vec::new(),
+        });
+        let request = plan.items[0].resolution.clone();
+        assert!(!resolution_is_applicable(&plan, &request));
     }
 
     #[tokio::test]

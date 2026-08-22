@@ -4,6 +4,7 @@
 		{{ formatMessage(messages.loading) }}
 	</div>
 	<div v-else-if="data">
+		<UpgradeProjectReturnBar />
 		<Teleport to="#sidebar-teleport-target">
 			<ProjectSidebarCompatibility
 				:project="data"
@@ -199,6 +200,7 @@
 </template>
 
 <script setup lang="ts">
+import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 import {
 	BookOpenIcon,
 	DownloadIcon,

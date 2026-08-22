@@ -40,6 +40,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_plan_upgrade,
             instance_get_upgrade_plan,
             instance_update_upgrade_resolution,
+            instance_update_upgrade_resolutions,
+            instance_reset_upgrade_resolution,
             instance_select_upgrade_solution,
             instance_resolve_custom_upgrade_solution,
             instance_execute_upgrade,
@@ -615,6 +617,29 @@ pub async fn instance_update_upgrade_resolution(
 ) -> Result<theseus::data::InstanceUpgradePlan> {
     Ok(theseus::instance::update_instance_upgrade_resolution(
         plan_id, resolution,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_update_upgrade_resolutions(
+    plan_id: &str,
+    resolutions: Vec<theseus::data::InstanceUpgradeResolution>,
+) -> Result<theseus::data::InstanceUpgradeResolutionBatchResult> {
+    Ok(theseus::instance::update_instance_upgrade_resolutions(
+        plan_id,
+        resolutions,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_reset_upgrade_resolution(
+    plan_id: &str,
+    content_id: &str,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::reset_instance_upgrade_resolution(
+        plan_id, content_id,
     )
     .await?)
 }

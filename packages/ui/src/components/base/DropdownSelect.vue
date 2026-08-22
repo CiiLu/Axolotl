@@ -204,6 +204,7 @@ const isChildOfDropdown = (element) => {
 <style lang="scss" scoped>
 .animated-dropdown {
 	width: 20rem;
+	max-width: 100%;
 	height: 40px;
 	position: relative;
 	display: inline-block;
@@ -230,6 +231,18 @@ const isChildOfDropdown = (element) => {
 			0 0 0 0 transparent;
 
 		transition: 0.05s;
+
+		> div {
+			min-width: 0;
+			overflow: hidden;
+		}
+
+		span {
+			display: block;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
 
 		&:not(.render-down):not(.render-up) {
 			transition-delay: 0.2s;
@@ -282,6 +295,8 @@ const isChildOfDropdown = (element) => {
 
 			> label {
 				cursor: pointer;
+				min-width: 0;
+				overflow-wrap: anywhere;
 			}
 
 			&:hover {
@@ -335,7 +350,7 @@ const isChildOfDropdown = (element) => {
 .options-wrapper {
 	position: absolute;
 	width: 100%;
-	overflow: auto;
+	overflow-x: hidden;
 	z-index: 9;
 
 	&.up {

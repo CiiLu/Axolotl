@@ -1,5 +1,6 @@
 <template>
 	<div v-if="data">
+		<UpgradeProjectReturnBar />
 		<Teleport to="#sidebar-teleport-target">
 			<ProjectSidebarCompatibility
 				v-if="!isServerProject"
@@ -350,6 +351,7 @@
 </template>
 
 <script setup>
+import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 import {
 	BookmarkIcon,
 	BookOpenIcon,

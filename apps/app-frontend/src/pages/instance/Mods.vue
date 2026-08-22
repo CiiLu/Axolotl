@@ -261,6 +261,7 @@ import {
 	type InstanceContentData,
 	isWorldSaveContentItem,
 	loadInstanceContentData,
+	localContentIconUrl,
 } from '@/helpers/instance-content'
 import type { CacheBehaviour, GameInstance } from '@/helpers/types'
 import { highlightModInInstance } from '@/helpers/utils.js'
@@ -656,11 +657,6 @@ async function restoreMissingPackMember(item: InstanceContentSnapshotItem) {
 	}
 }
 
-function localIconUrl(iconUrl?: string | null): string {
-	if (!iconUrl) return ''
-	return /^(https?:|data:|blob:|asset:|tauri:)/.test(iconUrl) ? iconUrl : convertFileSrc(iconUrl)
-}
-
 const {
 	worldDatapackItems,
 	isWorldDatapackItem,
@@ -681,7 +677,7 @@ const mergedProjects = computed<ContentItem[]>(() => {
 						...project,
 						project: {
 							...project.project,
-							icon_url: localIconUrl(project.project.icon_url),
+							icon_url: localContentIconUrl(project.project.icon_url),
 						},
 					}
 				: project
@@ -762,7 +758,7 @@ const displayedModpackProject = computed(() => {
 	if (!project) return undefined
 	return {
 		...project,
-		icon_url: localIconUrl(project.icon_url || fallbackProject?.icon_url),
+		icon_url: localContentIconUrl(project.icon_url || fallbackProject?.icon_url),
 	}
 })
 

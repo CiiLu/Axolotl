@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 
 import { install_job_listener } from './events'
+import type { InstanceUpgradeResult } from './instance-upgrade'
 import type { InstanceLink, InstanceLoader, LoaderComponent } from './types'
 
 export interface PackLocationVersionId {
@@ -68,7 +69,13 @@ export type InstallPhaseId =
 	| 'preparing_java'
 	| 'downloading_minecraft'
 	| 'running_loader_processors'
+	| 'creating_backup'
+	| 'staging_content'
+	| 'applying_content'
+	| 'updating_loader'
+	| 'verifying'
 	| 'finalizing'
+	| 'completed'
 	| 'rolling_back'
 
 export interface InstallProgress {
@@ -146,6 +153,7 @@ export interface InstallJobSnapshot {
 		| 'install_existing_instance'
 		| 'install_pack_to_existing_instance'
 		| 'install_content'
+		| 'upgrade_unmanaged_instance'
 		| 'download_java'
 	status: InstallJobStatus
 	execution_mode: 'normal' | 'recovery_validation'
@@ -172,6 +180,7 @@ export interface InstallJobSnapshot {
 	error?: InstallErrorView | null
 	rollback_error?: InstallErrorView | null
 	pause_reason?: InstallPauseReason | null
+	upgrade_result?: InstanceUpgradeResult | null
 	created: string
 	modified: string
 	finished?: string | null

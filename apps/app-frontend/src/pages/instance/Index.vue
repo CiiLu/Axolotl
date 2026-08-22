@@ -271,7 +271,7 @@
 				class="mb-3"
 				dismissible
 			/>
-			<NavTabs :links="tabs" />
+			<NavTabs v-if="!hideInstanceTabs" :links="tabs" />
 		</div>
 		<div :class="['p-6 pt-4', { 'min-h-0 flex-1 overflow-y-auto': isFixedRender }]">
 			<RouterView v-slot="{ Component }" :key="instance.id" :route="displayedInstanceRoute">
@@ -334,8 +334,10 @@
 </template>
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
-import { 	BoxesIcon,
-BoxIcon, 	CheckCircleIcon,
+import {
+	BoxesIcon,
+	BoxIcon,
+	CheckCircleIcon,
 	ClipboardCopyIcon,
 	DownloadIcon,
 	DropdownIcon,
@@ -343,7 +345,7 @@ BoxIcon, 	CheckCircleIcon,
 	ExternalIcon,
 	EyeIcon,
 	FolderOpenIcon,
-getLoaderIcon,
+	getLoaderIcon,
 	GlobeIcon,
 	HashIcon,
 	ImageIcon,
@@ -358,7 +360,8 @@ getLoaderIcon,
 	TerminalSquareIcon,
 	UpdatedIcon,
 	UserPlusIcon,
-	XIcon } from '@modrinth/assets'
+	XIcon,
+} from '@modrinth/assets'
 import {
 	Avatar,
 	ButtonStyled,
@@ -643,6 +646,9 @@ const renderMode = computed<'scroll' | 'fixed'>(() =>
 	displayedInstanceRoute.value.meta.renderMode === 'fixed' ? 'fixed' : 'scroll',
 )
 const isFixedRender = computed(() => renderMode.value === 'fixed')
+const hideInstanceTabs = computed(() =>
+	displayedInstanceRoute.value.matched.some((record) => record.meta.hideInstanceTabs === true),
+)
 const tabs = computed(() => [
 	{
 		label: formatMessage(messages.contentTab),
