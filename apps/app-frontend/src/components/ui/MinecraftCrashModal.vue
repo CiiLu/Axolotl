@@ -566,11 +566,14 @@ defineExpose({ handleLaunchError, handleWarning, isLaunchFailure, showPreview })
 						}}
 					</button>
 				</ButtonStyled>
+				<!--
+				LogShate AI分析暂不可用
 				<ButtonStyled color="brand">
 					<button @click="openAIAnalysis">
 						{{ formatMessage(messages.aiAnalyze) }}
 					</button>
 				</ButtonStyled>
+				-->
 			</div>
 		</template>
 	</NewModal>
