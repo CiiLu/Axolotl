@@ -42,6 +42,10 @@
 			<Teleport v-if="themeStore.featureFlags.project_background" to="#background-teleport-target">
 				<ProjectBackgroundGradient :project="data" />
 			</Teleport>
+			<BrowseInstallHeader
+				v-if="fromInstanceContent && cartInstallContext"
+				:install-context="cartInstallContext"
+			/>
 			<ProjectHeader
 				:project="data"
 				:show-followers="false"
@@ -183,7 +187,14 @@
 				]"
 			/>
 
-			<Gallery v-if="activeTab === 'gallery'" :project="data" />
+			<Gallery
+				v-if="activeTab === 'gallery'"
+				:project="data"
+				:translation-active="translationActive"
+				:translations="translations"
+				:translation-mode="translationMode"
+				:translation-style="translationStyle"
+			/>
 			<ProjectPageVersions
 				v-else-if="activeTab === 'versions'"
 				:loaders="allLoaders"
@@ -229,8 +240,8 @@
 
 <script setup lang="ts">
 import {
-	BookOpenIcon,
 	BookmarkIcon,
+	BookOpenIcon,
 	DownloadIcon,
 	ExternalIcon,
 	LanguagesIcon,
@@ -240,6 +251,7 @@ import {
 } from '@modrinth/assets'
 import {
 	ButtonStyled,
+	BrowseInstallHeader,
 	Card,
 	commonMessages,
 	defineMessages,
@@ -275,6 +287,7 @@ import {
 	getCurseForgeProject,
 } from '@/helpers/curseforge'
 import { createProjectBrowseLocation, type ProjectBrowseFilter } from '@/helpers/project-links'
+import { projectGalleryTranslationSegments } from '@/helpers/project-gallery'
 import { get_game_versions, get_loaders } from '@/helpers/tags'
 import {
 	getTranslationErrorKind,
@@ -380,6 +393,10 @@ const messages = defineMessages({
 		id: 'app.project.install-button.no-compatible-version',
 		defaultMessage: 'No compatible version was found for this instance.',
 	},
+	backToInstanceContent: {
+		id: 'app.project.install-context.back-to-instance-content',
+		defaultMessage: 'Back to instance content',
+	},
 	addToFavorites: {
 		id: 'app.content-favorites.add',
 		defaultMessage: 'Add to favorites',
@@ -464,9 +481,20 @@ const instanceId = computed(() => (typeof route.query.i === 'string' ? route.que
 const fromBrowse = computed(
 	() => typeof route.query.b === 'string' && route.query.b.startsWith('/browse/'),
 )
+const fromInstanceContent = computed(
+	() => route.query.from === 'instance-content' && instanceId.value !== null,
+)
+const instanceContentTarget = computed(() => {
+	if (!fromInstanceContent.value) return null
+	const target = contentSelection.targetInstance.value
+	return target?.id === instanceId.value ? target : null
+})
+const instanceContentBackUrl = computed(() =>
+	instanceContentTarget.value ? `/instance/${encodeURIComponent(instanceId.value!)}` : null,
+)
 const cartEligible = computed(
 	() =>
-		fromBrowse.value &&
+		(fromBrowse.value || instanceContentTarget.value !== null) &&
 		['mod', 'resourcepack', 'shader', 'datapack', 'world'].includes(projectType.value),
 )
 const cartProjectKey = computed(() =>
@@ -486,8 +514,12 @@ const cartInstallContext = computed(() => {
 		name: target.name,
 		loader: target.loader,
 		gameVersion: target.game_version,
-		backUrl: typeof route.query.b === 'string' ? route.query.b : `/browse/${projectType.value}`,
-		backLabel: '',
+		backUrl:
+			instanceContentBackUrl.value ??
+			(typeof route.query.b === 'string' ? route.query.b : `/browse/${projectType.value}`),
+		backLabel: fromInstanceContent.value
+			? formatMessage(messages.backToInstanceContent)
+			: '',
 		heading: '',
 		selectedProjects: contentSelection.selectedProjects.value,
 		isInstallingSelected: ['validating', 'reviewing', 'queueing'].includes(
@@ -739,9 +771,17 @@ watch(
 )
 
 watch(
-	[fromBrowse, instanceId],
-	async ([enabled, preferredInstanceId]) => {
-		if (enabled) await contentSelection.refreshInstances(preferredInstanceId)
+	[fromBrowse, fromInstanceContent, instanceId],
+	async ([fromBrowseEnabled, fromInstanceContentEnabled, preferredInstanceId]) => {
+		if (fromBrowseEnabled || fromInstanceContentEnabled) {
+			await contentSelection.refreshInstances(preferredInstanceId)
+			if (fromInstanceContentEnabled && preferredInstanceId) {
+				const preferredInstance = contentSelection.instances.value.find(
+					(instance) => instance.id === preferredInstanceId,
+				)
+				if (preferredInstance) contentSelection.setTarget(preferredInstance)
+			}
+		}
 	},
 	{ immediate: true },
 )
@@ -871,6 +911,7 @@ async function translateProject() {
 		const allSegments = [
 			{ id: 'title', text: data.value.title, format: 'plain' },
 			{ id: 'description', text: data.value.description, format: 'plain' },
+			...projectGalleryTranslationSegments(data.value.gallery),
 			...prepared.segments,
 		]
 

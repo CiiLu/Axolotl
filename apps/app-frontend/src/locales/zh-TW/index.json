@@ -912,7 +912,7 @@
 		"message": "版本不相符"
 	},
 	"app.drop.mod-compatibility-warning": {
-		"message": "此模組目標版本為 {modVersion}（{modLoader}），但實例的版本是 {instVersion}（{instLoader}）。"
+		"message": "{file} 的目標版本為 {modVersion}（{modLoader}），但實例的版本是 {instVersion}（{instLoader}）。"
 	},
 	"app.drop.modpack-install-failed": {
 		"message": "整合包安裝失敗"
@@ -1837,9 +1837,6 @@
 	},
 	"app.instances.edit-groups": {
 		"message": "編輯分組"
-	},
-	"app.instances.exit-select-mode": {
-		"message": "退出"
 	},
 	"app.instances.group-by": {
 		"message": "分組方式："
@@ -3063,7 +3060,7 @@
 		"message": "儲存節點"
 	},
 	"app.multiplayer.title": {
-		"message": "聯機"
+		"message": "多人遊戲"
 	},
 	"app.multiplayer.unknown-player-role": {
 		"message": "未知身份"
@@ -3090,7 +3087,7 @@
 		"message": "實例庫"
 	},
 	"app.navigation.multiplayer": {
-		"message": "聯機"
+		"message": "多人遊戲"
 	},
 	"app.navigation.skin-selector": {
 		"message": "外觀選擇器"
@@ -3794,9 +3791,6 @@
 	"app.settings.resources.source.automatic": {
 		"message": "自動（推薦）"
 	},
-	"app.settings.resources.source.mcim": {
-		"message": "MCIM 鏡像"
-	},
 	"app.settings.resources.source.official-only": {
 		"message": "僅原始來源（不使用鏡像）"
 	},
@@ -3808,33 +3802,6 @@
 	},
 	"app.settings.resources.system-downloads-directory": {
 		"message": "系統 Downloads 資料夾"
-	},
-	"app.settings.tabs.about": {
-		"message": "關於"
-	},
-	"app.settings.tabs.appearance": {
-		"message": "外觀"
-	},
-	"app.settings.tabs.default-instance-options": {
-		"message": "預設實例選項"
-	},
-	"app.settings.tabs.java-installations": {
-		"message": "Java 安裝"
-	},
-	"app.settings.tabs.language": {
-		"message": "語言"
-	},
-	"app.settings.tabs.multiplayer": {
-		"message": "多人聯機"
-	},
-	"app.settings.tabs.resource-management": {
-		"message": "資源管理"
-	},
-	"app.settings.tabs.translation": {
-		"message": "翻譯"
-	},
-	"app.settings.tabs.updates": {
-		"message": "更新"
 	},
 	"app.settings.updates.announcements.description": {
 		"message": "查看當前版本的更新內容和歷史版本公告。"
@@ -4123,9 +4090,6 @@
 	},
 	"app.translation-settings.provider.google": {
 		"message": "Google 翻譯（免費）"
-	},
-	"app.translation-settings.provider.microsoft": {
-		"message": "Microsoft 翻譯（無法使用）"
 	},
 	"app.translation-settings.style": {
 		"message": "譯文樣式"
@@ -4547,18 +4511,6 @@
 	"instance.settings.tabs.general.icon": {
 		"message": "圖示"
 	},
-	"instance.settings.tabs.general.library-groups": {
-		"message": "遊戲庫群組"
-	},
-	"instance.settings.tabs.general.library-groups.create": {
-		"message": "建立新的群組"
-	},
-	"instance.settings.tabs.general.library-groups.description": {
-		"message": "遊戲庫群組讓你可以將實例整理到遊戲庫中的不同分類。"
-	},
-	"instance.settings.tabs.general.library-groups.enter-name": {
-		"message": "輸入群組名稱"
-	},
 	"instance.settings.tabs.general.name": {
 		"message": "名稱"
 	},
@@ -4936,5 +4888,569 @@
 	},
 	"app.survey-promotion.defer-hint": {
 		"message": "關閉此彈窗後，你仍可以隨時在「設定 → 關於」頁面中找到並填寫問卷。"
+	},
+	"app.instances.exit-select-mode": {
+		"message": "退出"
+	},
+	"app.servers.action.open-folder": {
+		"message": "開啟資料夾"
+	},
+	"app.servers.action.share": {
+		"message": "分享至公開網路"
+	},
+	"app.servers.action.start": {
+		"message": "啟動"
+	},
+	"app.servers.action.stop": {
+		"message": "停止"
+	},
+	"app.servers.card.port": {
+		"message": "連接埠 {port}"
+	},
+	"app.servers.card.type": {
+		"message": "{type} · {version}"
+	},
+	"app.servers.console.command-echo": {
+		"message": "> {command}"
+	},
+	"app.servers.console.not-running": {
+		"message": "伺服器未執行"
+	},
+	"app.servers.count": {
+		"message": "{count, plural, =0 {還沒有伺服器} other {共 # 個伺服器}}"
+	},
+	"app.servers.create.title": {
+		"message": "建立伺服器"
+	},
+	"app.servers.detail.back": {
+		"message": "伺服器"
+	},
+	"app.servers.detail.console": {
+		"message": "主控台"
+	},
+	"app.servers.detail.files": {
+		"message": "檔案"
+	},
+	"app.servers.detail.not-found": {
+		"message": "該伺服器已不存在。"
+	},
+	"app.servers.detail.settings": {
+		"message": "設定"
+	},
+	"app.servers.empty.description": {
+		"message": "在啟動器中建立伺服器，與好友一起遊玩。"
+	},
+	"app.servers.empty.heading": {
+		"message": "還沒有伺服器"
+	},
+	"app.servers.eula.accept": {
+		"message": "同意並繼續"
+	},
+	"app.servers.eula.decline": {
+		"message": "取消"
+	},
+	"app.servers.eula.description": {
+		"message": "伺服器啟動前需要同意 Minecraft 最終使用者授權條款（EULA）。請查看以下內容："
+	},
+	"app.servers.eula.title": {
+		"message": "Minecraft EULA"
+	},
+	"app.servers.loading": {
+		"message": "載入中"
+	},
+	"app.servers.files.busy-tooltip": {
+		"message": "停止伺服器後才能修改檔案"
+	},
+	"app.servers.files.save-as": {
+		"message": "另存為..."
+	},
+	"app.servers.icon.change": {
+		"message": "變更圖示"
+	},
+	"app.servers.icon.edit": {
+		"message": "編輯圖示"
+	},
+	"app.servers.icon.remove": {
+		"message": "移除圖示"
+	},
+	"app.servers.icon.select": {
+		"message": "選擇圖示"
+	},
+	"app.servers.port.change": {
+		"message": "修改連接埠"
+	},
+	"app.servers.port.conflict-description": {
+		"message": "{process} 正在佔用此連接埠，伺服器無法啟動。建議修改伺服器連接埠，也可以強制結束佔用程序後再啟動。"
+	},
+	"app.servers.port.conflict-title": {
+		"message": "連接埠 {port} 已被佔用"
+	},
+	"app.servers.port.force-quit": {
+		"message": "強制結束佔用程序"
+	},
+	"app.servers.port.force-quit-failed": {
+		"message": "結束佔用連接埠的程序失敗"
+	},
+	"app.servers.port.recheck": {
+		"message": "重新偵測"
+	},
+	"app.servers.port.unknown-process": {
+		"message": "未知程序（PID {pid}）"
+	},
+	"app.servers.properties.field.accepts-transfers": {
+		"message": "接受玩家轉移"
+	},
+	"app.servers.properties.field.allow-end": {
+		"message": "允許終界"
+	},
+	"app.servers.properties.field.allow-flight": {
+		"message": "允許飛行"
+	},
+	"app.servers.properties.field.allow-nether": {
+		"message": "允許地獄"
+	},
+	"app.servers.properties.field.announce-player-achievements": {
+		"message": "廣播玩家成就"
+	},
+	"app.servers.properties.field.broadcast-console-to-ops": {
+		"message": "向管理員廣播主控台訊息"
+	},
+	"app.servers.properties.field.broadcast-rcon-to-ops": {
+		"message": "向管理員廣播 RCON 訊息"
+	},
+	"app.servers.properties.field.bug-report-link": {
+		"message": "Bug 回報連結"
+	},
+	"app.servers.properties.field.chat-spam-threshold-seconds": {
+		"message": "聊天洗版門檻（秒）"
+	},
+	"app.servers.properties.field.command-spam-threshold-seconds": {
+		"message": "指令洗版門檻（秒）"
+	},
+	"app.servers.properties.field.difficulty": {
+		"message": "難度"
+	},
+	"app.servers.properties.field.enable-code-of-conduct": {
+		"message": "啟用行為準則"
+	},
+	"app.servers.properties.field.enable-command-block": {
+		"message": "啟用指令方塊"
+	},
+	"app.servers.properties.field.enable-jmx-monitoring": {
+		"message": "啟用 JMX 監控"
+	},
+	"app.servers.properties.field.enable-lan": {
+		"message": "啟用區域網路"
+	},
+	"app.servers.properties.field.enable-query": {
+		"message": "啟用查詢"
+	},
+	"app.servers.properties.field.enable-rcon": {
+		"message": "啟用 RCON"
+	},
+	"app.servers.properties.field.enable-status": {
+		"message": "啟用伺服器狀態"
+	},
+	"app.servers.properties.field.enforce-secure-profile": {
+		"message": "強制安全設定檔"
+	},
+	"app.servers.properties.field.enforce-whitelist": {
+		"message": "強制白名單"
+	},
+	"app.servers.properties.field.entity-broadcast-range-percentage": {
+		"message": "實體廣播範圍百分比"
+	},
+	"app.servers.properties.field.force-gamemode": {
+		"message": "強制遊戲模式"
+	},
+	"app.servers.properties.field.function-permission-level": {
+		"message": "函式權限等級"
+	},
+	"app.servers.properties.field.gamemode": {
+		"message": "遊戲模式"
+	},
+	"app.servers.properties.field.generate-structures": {
+		"message": "生成結構"
+	},
+	"app.servers.properties.field.generator-settings": {
+		"message": "生成器設定"
+	},
+	"app.servers.properties.field.hardcore": {
+		"message": "核心模式"
+	},
+	"app.servers.properties.field.hide-online-players": {
+		"message": "隱藏線上玩家"
+	},
+	"app.servers.properties.field.initial-disabled-packs": {
+		"message": "初始停用的資料包"
+	},
+	"app.servers.properties.field.initial-enabled-packs": {
+		"message": "初始啟用的資料包"
+	},
+	"app.servers.properties.field.level-name": {
+		"message": "世界名稱"
+	},
+	"app.servers.properties.field.level-seed": {
+		"message": "世界種子"
+	},
+	"app.servers.properties.field.level-type": {
+		"message": "世界類型"
+	},
+	"app.servers.properties.field.log-ips": {
+		"message": "記錄 IP"
+	},
+	"app.servers.properties.field.management-server-allowed-origins": {
+		"message": "管理伺服器允許的來源"
+	},
+	"app.servers.properties.field.management-server-enabled": {
+		"message": "啟用管理伺服器"
+	},
+	"app.servers.properties.field.management-server-host": {
+		"message": "管理伺服器主機"
+	},
+	"app.servers.properties.field.management-server-port": {
+		"message": "管理伺服器連接埠"
+	},
+	"app.servers.properties.field.management-server-secret": {
+		"message": "管理伺服器金鑰"
+	},
+	"app.servers.properties.field.management-server-tls-enabled": {
+		"message": "管理伺服器啟用 TLS"
+	},
+	"app.servers.properties.field.management-server-tls-keystore": {
+		"message": "管理伺服器 TLS 金鑰儲存庫"
+	},
+	"app.servers.properties.field.management-server-tls-keystore-password": {
+		"message": "管理伺服器 TLS 金鑰儲存庫密碼"
+	},
+	"app.servers.properties.field.max-chained-neighbor-updates": {
+		"message": "最大連鎖鄰近更新次數"
+	},
+	"app.servers.properties.field.max-players": {
+		"message": "最大玩家數"
+	},
+	"app.servers.properties.field.max-tick-time": {
+		"message": "最大單 Tick 時間"
+	},
+	"app.servers.properties.field.max-world-size": {
+		"message": "最大世界大小"
+	},
+	"app.servers.properties.field.motd": {
+		"message": "伺服器標語（MOTD）"
+	},
+	"app.servers.properties.field.network-compression-threshold": {
+		"message": "網路壓縮門檻"
+	},
+	"app.servers.properties.field.online-mode": {
+		"message": "正版驗證"
+	},
+	"app.servers.properties.field.op-permission-level": {
+		"message": "管理員權限等級"
+	},
+	"app.servers.properties.field.pause-when-empty-seconds": {
+		"message": "空服暫停（秒）"
+	},
+	"app.servers.properties.field.player-idle-timeout": {
+		"message": "玩家閒置逾時"
+	},
+	"app.servers.properties.field.prevent-proxy-connections": {
+		"message": "禁止代理連線"
+	},
+	"app.servers.properties.field.pvp": {
+		"message": "玩家對戰（PvP）"
+	},
+	"app.servers.properties.field.query.port": {
+		"message": "查詢連接埠"
+	},
+	"app.servers.properties.field.rate-limit": {
+		"message": "頻率限制"
+	},
+	"app.servers.properties.field.rcon.password": {
+		"message": "RCON 密碼"
+	},
+	"app.servers.properties.field.rcon.port": {
+		"message": "RCON 連接埠"
+	},
+	"app.servers.properties.field.region-file-compression": {
+		"message": "區域檔案壓縮方式"
+	},
+	"app.servers.properties.field.require-resource-pack": {
+		"message": "強制資源包"
+	},
+	"app.servers.properties.field.resource-pack": {
+		"message": "資源包"
+	},
+	"app.servers.properties.field.resource-pack-id": {
+		"message": "資源包 ID"
+	},
+	"app.servers.properties.field.resource-pack-prompt": {
+		"message": "資源包提示"
+	},
+	"app.servers.properties.field.resource-pack-sha1": {
+		"message": "資源包 SHA-1"
+	},
+	"app.servers.properties.field.server-ip": {
+		"message": "伺服器 IP"
+	},
+	"app.servers.properties.field.server-port": {
+		"message": "伺服器連接埠"
+	},
+	"app.servers.properties.field.simulation-distance": {
+		"message": "模擬距離"
+	},
+	"app.servers.properties.field.spawn-animals": {
+		"message": "生成動物"
+	},
+	"app.servers.properties.field.spawn-monsters": {
+		"message": "生成怪物"
+	},
+	"app.servers.properties.field.spawn-npcs": {
+		"message": "生成 NPC"
+	},
+	"app.servers.properties.field.spawn-protection": {
+		"message": "重生點保護範圍"
+	},
+	"app.servers.properties.field.status-heartbeat-interval": {
+		"message": "狀態心跳間隔"
+	},
+	"app.servers.properties.field.sync-chunk-writes": {
+		"message": "同步區塊寫入"
+	},
+	"app.servers.properties.field.text-filtering-config": {
+		"message": "文字過濾設定"
+	},
+	"app.servers.properties.field.text-filtering-version": {
+		"message": "文字過濾版本"
+	},
+	"app.servers.properties.field.use-native-transport": {
+		"message": "使用原生傳輸"
+	},
+	"app.servers.properties.field.view-distance": {
+		"message": "繪製距離"
+	},
+	"app.servers.properties.field.white-list": {
+		"message": "白名單"
+	},
+	"app.servers.properties.load-failed": {
+		"message": "載入伺服器設定失敗。"
+	},
+	"app.servers.properties.missing": {
+		"message": "啟動一次伺服器即可產生此檔案。"
+	},
+	"app.servers.properties.mode.form": {
+		"message": "表單"
+	},
+	"app.servers.properties.mode.text": {
+		"message": "文字"
+	},
+	"app.servers.properties.save": {
+		"message": "儲存變更"
+	},
+	"app.servers.properties.saved": {
+		"message": "伺服器設定已儲存"
+	},
+	"app.servers.properties.section.advanced": {
+		"message": "進階"
+	},
+	"app.servers.properties.section.content": {
+		"message": "資源與內容"
+	},
+	"app.servers.properties.section.gameplay": {
+		"message": "遊戲玩法"
+	},
+	"app.servers.properties.section.network": {
+		"message": "網路與安全"
+	},
+	"app.servers.properties.section.others": {
+		"message": "其他"
+	},
+	"app.servers.properties.section.world": {
+		"message": "世界"
+	},
+	"app.servers.properties.title": {
+		"message": "伺服器屬性"
+	},
+	"app.servers.refresh": {
+		"message": "重新整理"
+	},
+	"app.servers.settings.cancel": {
+		"message": "取消"
+	},
+	"app.servers.settings.config": {
+		"message": "設定檔"
+	},
+	"app.servers.settings.delete": {
+		"message": "刪除伺服器"
+	},
+	"app.servers.settings.delete-confirm": {
+		"message": "刪除 {name} 及其所有檔案？此操作無法復原。"
+	},
+	"app.servers.settings.delete-hint": {
+		"message": "永久刪除該伺服器及其所有檔案。"
+	},
+	"app.servers.settings.delete-proceed": {
+		"message": "刪除"
+	},
+	"app.servers.settings.general": {
+		"message": "一般"
+	},
+	"app.servers.settings.icon": {
+		"message": "圖示"
+	},
+	"app.servers.settings.java": {
+		"message": "Java"
+	},
+	"app.servers.settings.java-none": {
+		"message": "系統預設"
+	},
+	"app.servers.settings.jvm-args": {
+		"message": "JVM 參數"
+	},
+	"app.servers.settings.jvm-args-hint": {
+		"message": "以空格分隔的參數，例如 -XX:+UseG1GC"
+	},
+	"app.servers.settings.memory": {
+		"message": "記憶體"
+	},
+	"app.servers.settings.name": {
+		"message": "伺服器名稱"
+	},
+	"app.servers.settings.running-hint": {
+		"message": "您的變更在下次啟動伺服器後才會生效。"
+	},
+	"app.servers.settings.running-title": {
+		"message": "伺服器執行中"
+	},
+	"app.servers.settings.save": {
+		"message": "儲存變更"
+	},
+	"app.servers.settings.saved": {
+		"message": "伺服器設定已儲存"
+	},
+	"app.servers.status.crashed": {
+		"message": "已崩潰"
+	},
+	"app.servers.status.created": {
+		"message": "未設定"
+	},
+	"app.servers.status.eula-pending": {
+		"message": "待同意 EULA"
+	},
+	"app.servers.status.ready": {
+		"message": "就緒"
+	},
+	"app.servers.status.running": {
+		"message": "執行中"
+	},
+	"app.servers.status.starting": {
+		"message": "啟動中"
+	},
+	"app.servers.wizard.configure-heading": {
+		"message": "調整伺服器設定，或直接完成，稍後再編輯。"
+	},
+	"app.servers.wizard.configure-title": {
+		"message": "設定"
+	},
+	"app.servers.wizard.done": {
+		"message": "伺服器已就緒"
+	},
+	"app.servers.wizard.downloading": {
+		"message": "正在下載伺服器端檔案…"
+	},
+	"app.servers.wizard.eula-wait": {
+		"message": "等待確認 EULA"
+	},
+	"app.servers.wizard.failed": {
+		"message": "建立失敗"
+	},
+	"app.servers.wizard.finish": {
+		"message": "完成"
+	},
+	"app.servers.wizard.first-run": {
+		"message": "正在首次啟動…"
+	},
+	"app.servers.wizard.game-version": {
+		"message": "遊戲版本"
+	},
+	"app.servers.wizard.install-title": {
+		"message": "安裝"
+	},
+	"app.servers.wizard.loader-version": {
+		"message": "載入器版本"
+	},
+	"app.servers.wizard.log": {
+		"message": "輸出"
+	},
+	"app.servers.wizard.memory-value": {
+		"message": "{value} MB"
+	},
+	"app.servers.wizard.name": {
+		"message": "伺服器名稱"
+	},
+	"app.servers.wizard.name-placeholder": {
+		"message": "生存服"
+	},
+	"app.servers.wizard.next": {
+		"message": "下一步"
+	},
+	"app.servers.wizard.retry": {
+		"message": "重試"
+	},
+	"app.servers.wizard.setup-title": {
+		"message": "設定"
+	},
+	"app.servers.wizard.show-snapshots": {
+		"message": "顯示快照版本"
+	},
+	"app.servers.wizard.type-heading": {
+		"message": "選擇伺服器端類型"
+	},
+	"app.servers.wizard.type-title": {
+		"message": "伺服器端類型"
+	},
+	"app.settings.resources.source.mcim": {
+		"message": "MCIM 鏡像"
+	},
+	"app.settings.tabs.about": {
+		"message": "關於"
+	},
+	"app.settings.tabs.appearance": {
+		"message": "外觀"
+	},
+	"app.settings.tabs.default-instance-options": {
+		"message": "預設實例選項"
+	},
+	"app.settings.tabs.java-installations": {
+		"message": "Java 安裝"
+	},
+	"app.settings.tabs.language": {
+		"message": "語言"
+	},
+	"app.settings.tabs.multiplayer": {
+		"message": "多人聯機"
+	},
+	"app.settings.tabs.resource-management": {
+		"message": "資源管理"
+	},
+	"app.settings.tabs.translation": {
+		"message": "翻譯"
+	},
+	"app.settings.tabs.updates": {
+		"message": "更新"
+	},
+	"app.translation-settings.provider.microsoft": {
+		"message": "Microsoft 翻譯（無法使用）"
+	},
+	"instance.settings.tabs.general.library-groups": {
+		"message": "遊戲庫群組"
+	},
+	"instance.settings.tabs.general.library-groups.create": {
+		"message": "建立新的群組"
+	},
+	"instance.settings.tabs.general.library-groups.description": {
+		"message": "遊戲庫群組讓你可以將實例整理到遊戲庫中的不同分類。"
+	},
+	"instance.settings.tabs.general.library-groups.enter-name": {
+		"message": "輸入群組名稱"
 	}
 }

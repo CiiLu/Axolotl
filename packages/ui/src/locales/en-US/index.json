@@ -2,6 +2,30 @@
   "action.no-permission": {
     "defaultMessage": "You do not have permission."
   },
+  "app.drop.batch.scan.cancel": {
+    "defaultMessage": "Cancel"
+  },
+  "app.drop.batch.scan.done": {
+    "defaultMessage": "Recognized"
+  },
+  "app.drop.batch.scan.error": {
+    "defaultMessage": "Failed"
+  },
+  "app.drop.batch.scan.pending": {
+    "defaultMessage": "Waiting"
+  },
+  "app.drop.batch.scan.scanning": {
+    "defaultMessage": "Scanning"
+  },
+  "app.drop.batch.scan.skipped": {
+    "defaultMessage": "Skipped"
+  },
+  "app.drop.batch.scan.subtitle": {
+    "defaultMessage": "Recognized {done} of {total}"
+  },
+  "app.drop.batch.scan.title": {
+    "defaultMessage": "Scanning {count, plural, one {# file} other {# files}}…"
+  },
   "app.symlink-warning.write.body": {
     "defaultMessage": "This instance is linked to \"{path}\". Changes will also affect the original files."
   },
@@ -38,11 +62,17 @@
   "browse.selected-projects-floating-bar.aria-label": {
     "defaultMessage": "Selected projects"
   },
+  "browse.selected-projects-floating-bar.hide-projects": {
+    "defaultMessage": "Hide selected projects"
+  },
   "browse.selected-projects-floating-bar.install": {
     "defaultMessage": "Install {count, plural, one {# project} other {# projects}}"
   },
   "browse.selected-projects-floating-bar.selected-count": {
     "defaultMessage": "{count, plural, one {# project selected} other {# projects selected}}"
+  },
+  "browse.selected-projects-floating-bar.show-projects": {
+    "defaultMessage": "Show {count, plural, one {# selected project} other {# selected projects}}"
   },
   "browse.selected-projects-leave-modal.admonition-body": {
     "defaultMessage": "You have selected {count, plural, one {# project} other {# projects}} to install. Install them now or go back without installing them."
@@ -632,6 +662,9 @@
   "content.card.dependency-badge": {
     "defaultMessage": "Dependency"
   },
+  "content.card.duplicate-mod": {
+    "defaultMessage": "This mod is installed {count, number} times."
+  },
   "content.card.group.hardcore": {
     "defaultMessage": "Hardcore mode"
   },
@@ -764,6 +797,9 @@
   "content.filter.disabled": {
     "defaultMessage": "Disabled"
   },
+  "content.filter.duplicates": {
+    "defaultMessage": "Duplicates"
+  },
   "content.filter.enabled": {
     "defaultMessage": "Enabled"
   },
@@ -872,6 +908,9 @@
   "content.metadata-filter.toggle": {
     "defaultMessage": "Filter"
   },
+  "content.metadata-filter.toggle-active": {
+    "defaultMessage": "Filter ({count, number} active)"
+  },
   "content.metadata-filter.unknown": {
     "defaultMessage": "Unknown"
   },
@@ -920,6 +959,12 @@
   "content.page-layout.sort.alphabetical": {
     "defaultMessage": "Alphabetical"
   },
+  "content.page-layout.sort.file-name-ascending": {
+    "defaultMessage": "File name A-Z"
+  },
+  "content.page-layout.sort.file-name-descending": {
+    "defaultMessage": "File name Z-A"
+  },
   "content.page-layout.sort.date-added-newest": {
     "defaultMessage": "Newest first"
   },
@@ -929,8 +974,26 @@
   "content.page-layout.sort.label": {
     "defaultMessage": "Sort by {mode}"
   },
+  "content.page-layout.sort.project-name-ascending": {
+    "defaultMessage": "Project name A-Z"
+  },
+  "content.page-layout.sort.project-name-descending": {
+    "defaultMessage": "Project name Z-A"
+  },
+  "content.page-layout.pin-view": {
+    "defaultMessage": "Pin current view"
+  },
+  "content.page-layout.reset-view": {
+    "defaultMessage": "Reset view"
+  },
+  "content.page-layout.unpin-view": {
+    "defaultMessage": "Unpin current view"
+  },
   "content.page-layout.update-all": {
     "defaultMessage": "Update all"
+  },
+  "content.page-layout.view-options": {
+    "defaultMessage": "View options"
   },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "All selected content is already disabled"
@@ -998,14 +1061,14 @@
   "creation-flow.button.setup-server": {
     "defaultMessage": "Setup server"
   },
-  "creation-flow.modal.custom-setup.adjunct.hint": {
-    "defaultMessage": "A compatible version will be selected before downloading."
-  },
   "creation-flow.modal.custom-setup.adjunct.checking-compatibility": {
     "defaultMessage": "Checking compatibility..."
   },
   "creation-flow.modal.custom-setup.adjunct.compatibility-load-failed": {
     "defaultMessage": "Failed to verify {loader} compatibility."
+  },
+  "creation-flow.modal.custom-setup.adjunct.hint": {
+    "defaultMessage": "A compatible version will be selected before downloading."
   },
   "creation-flow.modal.custom-setup.adjunct.label": {
     "defaultMessage": "Additional loaders"
@@ -1187,18 +1250,6 @@
   "drop.confirm.as-dot-minecraft-desc": {
     "defaultMessage": "Scan a .minecraft folder to create instances"
   },
-  "drop.confirm.compatible-mode-title": {
-    "defaultMessage": "This appears to be a pre-version-isolation instance"
-  },
-  "drop.confirm.compatible-mode-desc": {
-    "defaultMessage": "Would you like to import this as a compatible mode instance?"
-  },
-  "drop.confirm.compatible-mode-import": {
-    "defaultMessage": "Compatible Import"
-  },
-  "drop.confirm.old-way-import": {
-    "defaultMessage": "Import as Old Version"
-  },
   "drop.confirm.as-hmcl-launcher": {
     "defaultMessage": "HMCL Launcher"
   },
@@ -1276,30 +1327,6 @@
   },
   "drop.generic_install.title": {
     "defaultMessage": "Install {type}"
-  },
-  "app.drop.batch.scan.title": {
-    "defaultMessage": "Scanning {count, plural, one {# file} other {# files}}…"
-  },
-  "app.drop.batch.scan.subtitle": {
-    "defaultMessage": "Recognized {done} of {total}"
-  },
-  "app.drop.batch.scan.cancel": {
-    "defaultMessage": "Cancel"
-  },
-  "app.drop.batch.scan.pending": {
-    "defaultMessage": "Waiting"
-  },
-  "app.drop.batch.scan.scanning": {
-    "defaultMessage": "Scanning"
-  },
-  "app.drop.batch.scan.done": {
-    "defaultMessage": "Recognized"
-  },
-  "app.drop.batch.scan.skipped": {
-    "defaultMessage": "Skipped"
-  },
-  "app.drop.batch.scan.error": {
-    "defaultMessage": "Failed"
   },
   "drop.launcher_import.cancel": {
     "defaultMessage": "Cancel"

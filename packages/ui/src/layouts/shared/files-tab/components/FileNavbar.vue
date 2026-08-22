@@ -14,7 +14,7 @@
 				class="!h-10"
 				input-class="!h-10"
 				wrapper-class="flex-1 min-w-0"
-				@update:model-value="$emit('update:searchQuery', $event)"
+				@update:model-value="onSearchInput"
 			/>
 		</div>
 		<div class="flex items-center justify-between gap-2">
@@ -108,7 +108,7 @@
 					class="!h-10 hidden @[800px]:inline-flex"
 					input-class="!h-10"
 					wrapper-class="w-full sm:w-[280px]"
-					@update:model-value="$emit('update:searchQuery', $event)"
+					@update:model-value="onSearchInput"
 				/>
 
 				<slot name="before-refresh" />
@@ -316,6 +316,10 @@ const emit = defineEmits<{
 }>()
 
 const refreshing = ref(false)
+
+function onSearchInput(value: string | number | undefined) {
+	emit('update:searchQuery', String(value ?? ''))
+}
 
 function handleRefresh() {
 	emit('refresh')

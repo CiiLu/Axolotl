@@ -413,12 +413,6 @@
 	"app.browse.server-instance-content-warning": {
 		"message": "加入服务器时，添加内容可能会破坏兼容性。当更新服务器实例内容时，任何添加的内容也将丢失。"
 	},
-	"browse.selected-projects-floating-bar.hide-projects": {
-		"message": "隐藏已选择的项目"
-	},
-	"browse.selected-projects-floating-bar.show-projects": {
-		"message": "显示 {count, plural, one {# selected project} other {# selected projects}}"
-	},
 	"app.browse.server.installing": {
 		"message": "安装中"
 	},
@@ -463,6 +457,9 @@
 	},
 	"app.content-install.dependencies-skipped.notification-title": {
 		"message": "部分前置已跳过"
+	},
+	"app.content-install.preview.already-included": {
+		"message": "已包含"
 	},
 	"app.content-install.preview.already-installed": {
 		"message": "已安装"
@@ -2091,7 +2088,7 @@
 		"message": "带我逛逛"
 	},
 	"app.onboarding.appearance.description": {
-		"message": "主题、强调色、背景、主页布局和窗口行为都在这。让它更像你的启动器。"
+		"message": "主题、强调色、背景和窗口效果都在这里。把启动器调成你熟悉的样子。"
 	},
 	"app.onboarding.appearance.title": {
 		"message": "调成你的顺眼样子"
@@ -2202,13 +2199,13 @@
 		"message": "引导吉祥物"
 	},
 	"app.onboarding.resources.description": {
-		"message": "调节下载、储存和启动器资源。给风扇一点尊严。"
+		"message": "选择内容的下载与安装方式，包括下载源和安全确认。"
 	},
 	"app.onboarding.resources.title": {
 		"message": "别把电脑烤熟"
 	},
 	"app.onboarding.settings.description": {
-		"message": "外观、语言、翻译、AI 供应商、Java、存储和更新等常用设置都在这里。"
+		"message": "这里集中管理启动器偏好、游戏启动、内容下载和隐私设置。"
 	},
 	"app.onboarding.settings.title": {
 		"message": "按你的方式使用"
@@ -2263,6 +2260,9 @@
 	},
 	"app.project.install-context.back-to-browse": {
 		"message": "返回发现页"
+	},
+	"app.project.install-context.back-to-instance-content": {
+		"message": "返回实例内容"
 	},
 	"app.project.install-context.install-content-to-instance": {
 		"message": "将内容安装到实例中"
@@ -2528,6 +2528,9 @@
 	"app.settings.feature-flags.reset-to-default": {
 		"message": "恢复默认值"
 	},
+	"settings.feature-flags.title": {
+		"message": "功能开关"
+	},
 	"app.settings.java.auto-high-performance-mode": {
 		"message": "自动为 Java 使用高性能显卡"
 	},
@@ -2753,9 +2756,6 @@
 	"app.settings.resources.select-directory": {
 		"message": "选择新的应用目录"
 	},
-	"app.settings.tabs.updates": {
-		"message": "更新"
-	},
 	"app.settings.updates.available": {
 		"message": "发现可用更新。"
 	},
@@ -2816,6 +2816,90 @@
 	"app.settings.logs.provider.auto": {
 		"message": "自动（推荐）"
 	},
+	"app.settings.groups.common": {
+		"message": "通用"
+	},
+	"app.settings.groups.minecraft": {
+		"message": "我的世界"
+	},
+	"app.settings.groups.system": {
+		"message": "系统"
+	},
+	"app.settings.groups.launcher": {
+		"message": "启动器"
+	},
+	"app.settings.groups.game": {
+		"message": "游戏"
+	},
+	"app.settings.groups.data-privacy": {
+		"message": "数据与隐私"
+	},
+	"app.settings.groups.support": {
+		"message": "应用与支持"
+	},
+	"app.settings.groups.developer": {
+		"message": "开发者"
+	},
+	"app.settings.tabs.appearance": {
+		"message": "外观"
+	},
+	"app.settings.tabs.interface": {
+		"message": "界面与外观"
+	},
+	"app.settings.tabs.home-navigation": {
+		"message": "首页与导航"
+	},
+	"app.settings.tabs.language-translation": {
+		"message": "语言与翻译"
+	},
+	"app.settings.tabs.java-performance": {
+		"message": "Java 与性能"
+	},
+	"app.settings.tabs.launch-defaults": {
+		"message": "启动与实例默认值"
+	},
+	"app.settings.tabs.content-downloads": {
+		"message": "内容与下载"
+	},
+	"app.settings.tabs.network-multiplayer": {
+		"message": "网络与多人游戏"
+	},
+	"app.settings.tabs.storage-backups": {
+		"message": "存储与备份"
+	},
+	"app.settings.tabs.privacy-data": {
+		"message": "隐私与数据共享"
+	},
+	"app.settings.tabs.language": {
+		"message": "语言"
+	},
+	"app.settings.tabs.translation": {
+		"message": "翻译"
+	},
+	"app.settings.tabs.ai": {
+		"message": "AI"
+	},
+	"app.settings.tabs.privacy-security": {
+		"message": "隐私与安全"
+	},
+	"app.settings.tabs.java-installations": {
+		"message": "Java 安装"
+	},
+	"app.settings.tabs.default-instance-options": {
+		"message": "默认实例选项"
+	},
+	"app.settings.tabs.resource-management": {
+		"message": "资源管理"
+	},
+	"app.settings.tabs.multiplayer": {
+		"message": "多人游戏"
+	},
+	"app.settings.tabs.updates": {
+		"message": "更新"
+	},
+	"app.settings.tabs.about": {
+		"message": "关于"
+	},
 	"app.settings.logs.provider.auto-description": {
 		"message": "优先使用 LogShare.CN，不可用时自动切换到 mclo.gs。"
 	},
@@ -2834,26 +2918,29 @@
 	"app.settings.logs.title": {
 		"message": "日志分析服务"
 	},
-	"app.settings.tabs.about": {
-		"message": "关于"
+	"app.settings.search.clear": {
+		"message": "清除设置搜索"
 	},
-	"app.settings.tabs.appearance": {
-		"message": "外观"
+	"app.settings.search.empty": {
+		"message": "没有与搜索匹配的设置。"
 	},
-	"app.settings.tabs.default-instance-options": {
-		"message": "默认实例选项"
+	"app.settings.search.placeholder": {
+		"message": "搜索设置"
 	},
-	"app.settings.tabs.java-installations": {
-		"message": "Java 与内存管理"
+	"app.settings.search.results": {
+		"message": "搜索结果"
 	},
-	"app.settings.tabs.language": {
-		"message": "语言"
+	"app.settings.save-status.error": {
+		"message": "无法保存"
 	},
-	"app.settings.tabs.resource-management": {
-		"message": "资源管理"
+	"app.settings.save-status.retry": {
+		"message": "重试"
 	},
-	"app.settings.tabs.translation": {
-		"message": "翻译"
+	"app.settings.save-status.saved": {
+		"message": "已保存"
+	},
+	"app.settings.save-status.saving": {
+		"message": "正在保存…"
 	},
 	"app.sidebar.collapse": {
 		"message": "收起边栏"
@@ -3070,9 +3157,6 @@
 	},
 	"app.translation-settings.provider.google": {
 		"message": "Google 翻译（可直接用）"
-	},
-	"app.translation-settings.provider.microsoft": {
-		"message": "Microsoft 翻译（不可用）"
 	},
 	"app.translation-settings.style": {
 		"message": "译文样式"
@@ -3796,9 +3880,6 @@
 	},
 	"instance.files.studio.title": {
 		"message": "Studio"
-	},
-	"instance.files.studio.unsaved-switch-blocked": {
-		"message": "请先保存或放弃当前更改，再打开其他文件。"
 	},
 	"instance.server-modal.address": {
 		"message": "地址"
@@ -6099,10 +6180,10 @@
 		"message": "查看实例"
 	},
 	"app.navigation.multiplayer": {
-		"message": "联机"
+		"message": "多人游戏"
 	},
 	"app.multiplayer.title": {
-		"message": "联机"
+		"message": "多人游戏"
 	},
 	"app.multiplayer.host": {
 		"message": "创建房间"
@@ -6917,9 +6998,6 @@
 	"app.onboarding.ai.title": {
 		"message": "连接你的 AI 供应商"
 	},
-	"app.settings.tabs.ai": {
-		"message": "AI"
-	},
 	"app.translation-settings.ai-model": {
 		"message": "文本模型"
 	},
@@ -7100,9 +7178,6 @@
 	"app.downloads.item-status.failed": {
 		"message": "失败"
 	},
-	"app.settings.tabs.multiplayer": {
-		"message": "多人联机"
-	},
 	"app.multiplayer.hongshi.download": {
 		"message": "下载红石联机"
 	},
@@ -7175,9 +7250,6 @@
 	"app.settings.privacy.telemetry-description": {
 		"message": "发送匿名每日活跃信号和脱敏的启动器错误报告。绝不上传 Minecraft 日志或账户凭据。"
 	},
-	"app.settings.tabs.privacy-security": {
-		"message": "隐私与安全"
-	},
 	"app.curseforge.manual-downloads.state-changed": {
 		"message": "下载状态已被更改，正在等待同步。"
 	},
@@ -7240,9 +7312,6 @@
 	},
 	"app.browse.add": {
 		"message": "添加"
-	},
-	"app.settings.resources.source.mcim": {
-		"message": "优先 MCIM"
 	},
 	"app.settings.resources.source.tianpao": {
 		"message": "优先 Tianpao"
@@ -7348,12 +7417,6 @@
 	},
 	"app.settings.storage.cache-data": {
 		"message": "缓存数据"
-	},
-	"app.settings.storage.collapse-action": {
-		"message": "折叠"
-	},
-	"app.settings.storage.expand-action": {
-		"message": "展开"
 	},
 	"app.settings.storage.meta-data": {
 		"message": "Meta 数据"
@@ -7661,6 +7724,21 @@
 	"app.drop.batch.target-label": {
 		"message": "为该批次选择目标实例"
 	},
+	"app.drop.compatible-mode-cancel": {
+		"message": "取消"
+	},
+	"app.drop.compatible-mode-desc": {
+		"message": "要以兼容模式导入此实例吗？"
+	},
+	"app.drop.compatible-mode-import": {
+		"message": "兼容模式导入"
+	},
+	"app.drop.compatible-mode-old-way": {
+		"message": "按旧版方式导入"
+	},
+	"app.drop.compatible-mode-title": {
+		"message": "这似乎是一个未启用版本隔离的实例"
+	},
 	"app.drop.batch.nothing-importable-title": {
 		"message": "没有可导入的内容"
 	},
@@ -7737,7 +7815,7 @@
 		"message": "代理模式"
 	},
 	"app.java-arguments.presets.gc.auto.verified": {
-		"message": "上次启动: {chosen}"
+		"message": "上次启动：{chosen}"
 	},
 	"app.instance.icon-picker.icon.optifine": {
 		"message": "OptiFine"
@@ -7749,7 +7827,7 @@
 		"message": "Cleanroom"
 	},
 	"app.gc-notice.fallback": {
-		"message": "Java 没有接受 {preferred}; 将使用 {chosen}."
+		"message": "Java 不接受 {preferred}，已改用 {chosen}。"
 	},
 	"app.browse.project-type.favorites": {
 		"message": "收藏夹"
@@ -7849,5 +7927,563 @@
 	},
 	"app.survey-promotion.defer-hint": {
 		"message": "关闭此弹窗后，你仍可以随时在“设置 → 关于”页面中找到并填写问卷。"
+	},
+	"browse.selected-projects-floating-bar.hide-projects": {
+		"message": "隐藏已选择的项目"
+	},
+	"browse.selected-projects-floating-bar.show-projects": {
+		"message": "显示 {count, plural, one {# selected project} other {# selected projects}}"
+	},
+	"app.translation-settings.provider.microsoft": {
+		"message": "Microsoft 翻译（不可用）"
+	},
+	"instance.files.studio.unsaved-switch-blocked": {
+		"message": "请先保存或放弃当前更改，再打开其他文件。"
+	},
+	"app.settings.resources.source.mcim": {
+		"message": "优先 MCIM"
+	},
+	"app.settings.storage.collapse-action": {
+		"message": "折叠"
+	},
+	"app.settings.storage.expand-action": {
+		"message": "展开"
+	},
+	"app.multiplayer.tab.rooms": {
+		"message": "联机房间"
+	},
+	"app.multiplayer.tab.servers": {
+		"message": "服务器"
+	},
+	"app.servers.action.open-folder": {
+		"message": "打开目录"
+	},
+	"app.servers.action.share": {
+		"message": "分享到公网"
+	},
+	"app.servers.action.start": {
+		"message": "启动"
+	},
+	"app.servers.action.stop": {
+		"message": "停止"
+	},
+	"app.servers.card.port": {
+		"message": "端口 {port}"
+	},
+	"app.servers.card.type": {
+		"message": "{type} · {version}"
+	},
+	"app.servers.create.title": {
+		"message": "创建服务器"
+	},
+	"app.servers.count": {
+		"message": "{count, plural, =0 {还没有服务器} other {共 # 个服务器}}"
+	},
+	"app.servers.detail.back": {
+		"message": "服务器"
+	},
+	"app.servers.detail.console": {
+		"message": "控制台"
+	},
+	"app.servers.detail.not-found": {
+		"message": "该服务器已不存在。"
+	},
+	"app.servers.detail.settings": {
+		"message": "设置"
+	},
+	"app.servers.empty.description": {
+		"message": "在启动器中创建服务器，与好友一起游玩。"
+	},
+	"app.servers.empty.heading": {
+		"message": "还没有服务器"
+	},
+	"app.servers.eula.accept": {
+		"message": "同意并继续"
+	},
+	"app.servers.eula.decline": {
+		"message": "取消"
+	},
+	"app.servers.eula.description": {
+		"message": "服务器启动前需要同意 Minecraft 最终用户许可协议（EULA）。请查看以下内容："
+	},
+	"app.servers.eula.title": {
+		"message": "Minecraft EULA"
+	},
+	"app.servers.loading": {
+		"message": "加载中"
+	},
+	"app.servers.properties.load-failed": {
+		"message": "加载服务器配置失败。"
+	},
+	"app.servers.properties.missing": {
+		"message": "启动一次服务器即可生成此文件。"
+	},
+	"app.servers.properties.mode.form": {
+		"message": "表单"
+	},
+	"app.servers.properties.mode.text": {
+		"message": "文本"
+	},
+	"app.servers.properties.save": {
+		"message": "保存更改"
+	},
+	"app.servers.properties.saved": {
+		"message": "服务器设置已保存"
+	},
+	"app.servers.properties.title": {
+		"message": "服务器属性"
+	},
+	"app.servers.refresh": {
+		"message": "刷新"
+	},
+	"app.servers.settings.config": {
+		"message": "配置文件"
+	},
+	"app.servers.settings.delete": {
+		"message": "删除服务器"
+	},
+	"app.servers.settings.delete-confirm": {
+		"message": "删除 {name} 及其所有文件？此操作无法撤销。"
+	},
+	"app.servers.settings.delete-hint": {
+		"message": "永久删除该服务器及其所有文件。"
+	},
+	"app.servers.settings.delete-proceed": {
+		"message": "删除"
+	},
+	"app.servers.settings.general": {
+		"message": "常规"
+	},
+	"app.servers.settings.icon": {
+		"message": "图标"
+	},
+	"app.servers.settings.java": {
+		"message": "Java"
+	},
+	"app.servers.settings.java-none": {
+		"message": "系统默认"
+	},
+	"app.servers.settings.jvm-args": {
+		"message": "JVM 参数"
+	},
+	"app.servers.settings.jvm-args-hint": {
+		"message": "以空格分隔的参数，例如 -XX:+UseG1GC"
+	},
+	"app.servers.settings.memory": {
+		"message": "内存"
+	},
+	"app.servers.settings.name": {
+		"message": "服务器名称"
+	},
+	"app.servers.settings.running-hint": {
+		"message": "您的更改在下次启动服务器时才会生效。"
+	},
+	"app.servers.settings.running-title": {
+		"message": "服务器正在运行"
+	},
+	"app.servers.settings.save": {
+		"message": "保存更改"
+	},
+	"app.servers.settings.saved": {
+		"message": "服务器设置已保存"
+	},
+	"app.servers.status.crashed": {
+		"message": "已崩溃"
+	},
+	"app.servers.status.created": {
+		"message": "未配置"
+	},
+	"app.servers.status.eula-pending": {
+		"message": "待同意 EULA"
+	},
+	"app.servers.status.ready": {
+		"message": "就绪"
+	},
+	"app.servers.status.running": {
+		"message": "运行中"
+	},
+	"app.servers.status.starting": {
+		"message": "启动中"
+	},
+	"app.servers.wizard.configure-heading": {
+		"message": "调整服务器设置，或直接完成，稍后再编辑。"
+	},
+	"app.servers.wizard.configure-title": {
+		"message": "配置"
+	},
+	"app.servers.wizard.done": {
+		"message": "服务器已就绪"
+	},
+	"app.servers.wizard.downloading": {
+		"message": "正在下载服务端文件…"
+	},
+	"app.servers.wizard.eula-wait": {
+		"message": "等待确认 EULA"
+	},
+	"app.servers.wizard.failed": {
+		"message": "创建失败"
+	},
+	"app.servers.wizard.finish": {
+		"message": "完成"
+	},
+	"app.servers.wizard.first-run": {
+		"message": "正在首次启动…"
+	},
+	"app.servers.wizard.game-version": {
+		"message": "游戏版本"
+	},
+	"app.servers.wizard.install-java": {
+		"message": "安装 Java"
+	},
+	"app.servers.wizard.install-title": {
+		"message": "安装"
+	},
+	"app.servers.wizard.java-missing": {
+		"message": "未找到已安装的 Java。"
+	},
+	"app.servers.wizard.java-missing-hint": {
+		"message": "系统中未找到兼容的 Java,下一步将自动安装所需的 Java。"
+	},
+	"app.servers.wizard.java-placeholder": {
+		"message": "选择 Java 版本"
+	},
+	"app.servers.wizard.loader-version": {
+		"message": "加载器版本"
+	},
+	"app.servers.wizard.log": {
+		"message": "输出"
+	},
+	"app.servers.wizard.memory-value": {
+		"message": "{value} MB"
+	},
+	"app.servers.wizard.name": {
+		"message": "服务器名称"
+	},
+	"app.servers.wizard.name-placeholder": {
+		"message": "生存服"
+	},
+	"app.servers.wizard.next": {
+		"message": "下一步"
+	},
+	"app.servers.wizard.retry": {
+		"message": "重试"
+	},
+	"app.servers.wizard.setup-title": {
+		"message": "设置"
+	},
+	"app.servers.wizard.show-snapshots": {
+		"message": "显示快照版本"
+	},
+	"app.servers.wizard.type-coming-soon": {
+		"message": "即将支持"
+	},
+	"app.servers.wizard.type-heading": {
+		"message": "选择服务端类型"
+	},
+	"app.servers.wizard.type-title": {
+		"message": "服务端类型"
+	},
+	"app.servers.console.command-echo": {
+		"message": "> {command}"
+	},
+	"app.servers.console.not-running": {
+		"message": "服务器未运行"
+	},
+	"app.servers.properties.field.accepts-transfers": {
+		"message": "接受玩家转移"
+	},
+	"app.servers.properties.field.allow-end": {
+		"message": "允许末地"
+	},
+	"app.servers.properties.field.allow-flight": {
+		"message": "允许飞行"
+	},
+	"app.servers.properties.field.allow-nether": {
+		"message": "允许下界"
+	},
+	"app.servers.properties.field.announce-player-achievements": {
+		"message": "公告玩家成就"
+	},
+	"app.servers.properties.field.broadcast-console-to-ops": {
+		"message": "向管理员广播控制台消息"
+	},
+	"app.servers.properties.field.broadcast-rcon-to-ops": {
+		"message": "向管理员广播 RCON 消息"
+	},
+	"app.servers.properties.field.bug-report-link": {
+		"message": "Bug 报告链接"
+	},
+	"app.servers.properties.field.chat-spam-threshold-seconds": {
+		"message": "聊天刷屏阈值（秒）"
+	},
+	"app.servers.properties.field.command-spam-threshold-seconds": {
+		"message": "命令刷屏阈值（秒）"
+	},
+	"app.servers.properties.field.difficulty": {
+		"message": "难度"
+	},
+	"app.servers.properties.field.enable-code-of-conduct": {
+		"message": "启用行为准则"
+	},
+	"app.servers.properties.field.enable-command-block": {
+		"message": "启用命令方块"
+	},
+	"app.servers.properties.field.enable-jmx-monitoring": {
+		"message": "启用 JMX 监控"
+	},
+	"app.servers.properties.field.enable-lan": {
+		"message": "启用局域网"
+	},
+	"app.servers.properties.field.enable-query": {
+		"message": "启用查询"
+	},
+	"app.servers.properties.field.enable-rcon": {
+		"message": "启用 RCON"
+	},
+	"app.servers.properties.field.enable-status": {
+		"message": "启用服务器状态"
+	},
+	"app.servers.properties.field.enforce-secure-profile": {
+		"message": "强制安全档案"
+	},
+	"app.servers.properties.field.enforce-whitelist": {
+		"message": "强制白名单"
+	},
+	"app.servers.properties.field.entity-broadcast-range-percentage": {
+		"message": "实体广播范围百分比"
+	},
+	"app.servers.properties.field.force-gamemode": {
+		"message": "强制游戏模式"
+	},
+	"app.servers.properties.field.function-permission-level": {
+		"message": "函数权限等级"
+	},
+	"app.servers.properties.field.gamemode": {
+		"message": "游戏模式"
+	},
+	"app.servers.properties.field.generate-structures": {
+		"message": "生成结构"
+	},
+	"app.servers.properties.field.generator-settings": {
+		"message": "生成器设置"
+	},
+	"app.servers.properties.field.hardcore": {
+		"message": "极限模式"
+	},
+	"app.servers.properties.field.hide-online-players": {
+		"message": "隐藏在线玩家"
+	},
+	"app.servers.properties.field.initial-disabled-packs": {
+		"message": "初始禁用的数据包"
+	},
+	"app.servers.properties.field.initial-enabled-packs": {
+		"message": "初始启用的数据包"
+	},
+	"app.servers.properties.field.level-name": {
+		"message": "世界名称"
+	},
+	"app.servers.properties.field.level-seed": {
+		"message": "世界种子"
+	},
+	"app.servers.properties.field.level-type": {
+		"message": "世界类型"
+	},
+	"app.servers.properties.field.log-ips": {
+		"message": "记录 IP"
+	},
+	"app.servers.properties.field.management-server-allowed-origins": {
+		"message": "管理服务器允许的来源"
+	},
+	"app.servers.properties.field.management-server-enabled": {
+		"message": "启用管理服务器"
+	},
+	"app.servers.properties.field.management-server-host": {
+		"message": "管理服务器主机"
+	},
+	"app.servers.properties.field.management-server-port": {
+		"message": "管理服务器端口"
+	},
+	"app.servers.properties.field.management-server-secret": {
+		"message": "管理服务器密钥"
+	},
+	"app.servers.properties.field.management-server-tls-enabled": {
+		"message": "管理服务器启用 TLS"
+	},
+	"app.servers.properties.field.management-server-tls-keystore": {
+		"message": "管理服务器 TLS 密钥库"
+	},
+	"app.servers.properties.field.management-server-tls-keystore-password": {
+		"message": "管理服务器 TLS 密钥库密码"
+	},
+	"app.servers.properties.field.max-chained-neighbor-updates": {
+		"message": "最大链式邻居更新次数"
+	},
+	"app.servers.properties.field.max-players": {
+		"message": "最大玩家数"
+	},
+	"app.servers.properties.field.max-tick-time": {
+		"message": "最大单Tick时间"
+	},
+	"app.servers.properties.field.max-world-size": {
+		"message": "最大世界大小"
+	},
+	"app.servers.properties.field.motd": {
+		"message": "服务器标语（MOTD）"
+	},
+	"app.servers.properties.field.network-compression-threshold": {
+		"message": "网络压缩阈值"
+	},
+	"app.servers.properties.field.online-mode": {
+		"message": "正版验证"
+	},
+	"app.servers.properties.field.op-permission-level": {
+		"message": "管理员权限等级"
+	},
+	"app.servers.properties.field.pause-when-empty-seconds": {
+		"message": "空服暂停（秒）"
+	},
+	"app.servers.properties.field.player-idle-timeout": {
+		"message": "玩家挂机超时"
+	},
+	"app.servers.properties.field.prevent-proxy-connections": {
+		"message": "禁止代理连接"
+	},
+	"app.servers.properties.field.pvp": {
+		"message": "玩家对战（PvP）"
+	},
+	"app.servers.properties.field.query.port": {
+		"message": "查询端口"
+	},
+	"app.servers.properties.field.rate-limit": {
+		"message": "速率限制"
+	},
+	"app.servers.properties.field.rcon.password": {
+		"message": "RCON 密码"
+	},
+	"app.servers.properties.field.rcon.port": {
+		"message": "RCON 端口"
+	},
+	"app.servers.properties.field.region-file-compression": {
+		"message": "区域文件压缩方式"
+	},
+	"app.servers.properties.field.require-resource-pack": {
+		"message": "强制资源包"
+	},
+	"app.servers.properties.field.resource-pack": {
+		"message": "资源包"
+	},
+	"app.servers.properties.field.resource-pack-id": {
+		"message": "资源包 ID"
+	},
+	"app.servers.properties.field.resource-pack-prompt": {
+		"message": "资源包提示"
+	},
+	"app.servers.properties.field.resource-pack-sha1": {
+		"message": "资源包 SHA-1"
+	},
+	"app.servers.properties.field.server-ip": {
+		"message": "服务器 IP"
+	},
+	"app.servers.properties.field.server-port": {
+		"message": "服务器端口"
+	},
+	"app.servers.properties.field.simulation-distance": {
+		"message": "模拟距离"
+	},
+	"app.servers.properties.field.spawn-animals": {
+		"message": "生成动物"
+	},
+	"app.servers.properties.field.spawn-monsters": {
+		"message": "生成怪物"
+	},
+	"app.servers.properties.field.spawn-npcs": {
+		"message": "生成NPC"
+	},
+	"app.servers.properties.field.spawn-protection": {
+		"message": "出生点保护范围"
+	},
+	"app.servers.properties.field.status-heartbeat-interval": {
+		"message": "状态心跳间隔"
+	},
+	"app.servers.properties.field.sync-chunk-writes": {
+		"message": "同步区块写入"
+	},
+	"app.servers.properties.field.text-filtering-config": {
+		"message": "文本过滤配置"
+	},
+	"app.servers.properties.field.text-filtering-version": {
+		"message": "文本过滤版本"
+	},
+	"app.servers.properties.field.use-native-transport": {
+		"message": "使用原生传输"
+	},
+	"app.servers.properties.field.view-distance": {
+		"message": "视距"
+	},
+	"app.servers.properties.field.white-list": {
+		"message": "白名单"
+	},
+	"app.servers.properties.section.advanced": {
+		"message": "高级"
+	},
+	"app.servers.properties.section.content": {
+		"message": "资源与内容"
+	},
+	"app.servers.properties.section.gameplay": {
+		"message": "游戏玩法"
+	},
+	"app.servers.properties.section.network": {
+		"message": "网络与安全"
+	},
+	"app.servers.properties.section.others": {
+		"message": "其他"
+	},
+	"app.servers.properties.section.world": {
+		"message": "世界"
+	},
+	"app.servers.settings.cancel": {
+		"message": "取消"
+	},
+	"app.servers.detail.files": {
+		"message": "文件"
+	},
+	"app.servers.files.busy-tooltip": {
+		"message": "停止服务器后才能修改文件"
+	},
+	"app.servers.files.save-as": {
+		"message": "另存为..."
+	},
+	"app.servers.icon.change": {
+		"message": "更换图标"
+	},
+	"app.servers.icon.edit": {
+		"message": "编辑图标"
+	},
+	"app.servers.icon.remove": {
+		"message": "移除图标"
+	},
+	"app.servers.icon.select": {
+		"message": "选择图标"
+	},
+	"app.servers.port.change": {
+		"message": "修改端口"
+	},
+	"app.servers.port.conflict-description": {
+		"message": "{process} 正在占用该端口，服务器无法启动。建议修改服务器端口，也可以强制结束占用进程后再启动。"
+	},
+	"app.servers.port.conflict-title": {
+		"message": "端口 {port} 已被占用"
+	},
+	"app.servers.port.force-quit": {
+		"message": "强制结束占用进程"
+	},
+	"app.servers.port.force-quit-failed": {
+		"message": "结束占用端口的进程失败"
+	},
+	"app.servers.port.recheck": {
+		"message": "重新检测"
+	},
+	"app.servers.port.unknown-process": {
+		"message": "未知进程（PID {pid}）"
 	}
 }

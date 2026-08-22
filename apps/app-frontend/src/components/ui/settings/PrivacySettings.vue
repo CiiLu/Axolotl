@@ -13,12 +13,17 @@ import { computed, ref, watch } from 'vue'
 
 import { getPrivacySettings, setDiscordRpcEnabled, setTelemetryEnabled } from '@/helpers/settings'
 
+import SettingsRow from './SettingsRow.vue'
+import SettingsSaveStatus from './SettingsSaveStatus.vue'
+
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 const privacy = ref(await getPrivacySettings())
 const telemetrySaving = ref(false)
 const discordSaving = ref(false)
 const selectedProvider = ref<LogShareProvider>(getLogShareProvider())
+const lastSaveState = ref<'idle' | 'saved' | 'error'>('idle')
+const retrySave = ref<(() => void) | undefined>()
 
 const messages = defineMessages({
 	telemetry: {
@@ -101,6 +106,10 @@ const options = Object.entries(providerInfo).map(([value, info]) => ({
 }))
 
 const selectedInfo = computed(() => providerInfo[selectedProvider.value])
+const saveStatus = computed(() => {
+	if (telemetrySaving.value || discordSaving.value) return 'saving'
+	return lastSaveState.value
+})
 
 watch(selectedProvider, (provider) => {
 	setLogShareProvider(provider)
@@ -111,12 +120,17 @@ async function updateTelemetry(value: boolean) {
 	const previous = privacy.value.telemetry
 	privacy.value.telemetry = value
 	telemetrySaving.value = true
+	lastSaveState.value = 'idle'
+	retrySave.value = undefined
 	try {
 		const saved = await setTelemetryEnabled(value)
 		privacy.value.telemetry = saved.telemetry
 		privacy.value.consent_version = saved.consent_version
+		lastSaveState.value = 'saved'
 	} catch (error) {
 		privacy.value.telemetry = previous
+		retrySave.value = () => void updateTelemetry(value)
+		lastSaveState.value = 'error'
 		handleError(error)
 	} finally {
 		telemetrySaving.value = false
@@ -128,11 +142,16 @@ async function updateDiscordRpc(value: boolean) {
 	const previous = privacy.value.discord_rpc
 	privacy.value.discord_rpc = value
 	discordSaving.value = true
+	lastSaveState.value = 'idle'
+	retrySave.value = undefined
 	try {
 		const saved = await setDiscordRpcEnabled(value)
 		privacy.value.discord_rpc = saved.discord_rpc
+		lastSaveState.value = 'saved'
 	} catch (error) {
 		privacy.value.discord_rpc = previous
+		retrySave.value = () => void updateDiscordRpc(value)
+		lastSaveState.value = 'error'
 		handleError(error)
 	} finally {
 		discordSaving.value = false
@@ -141,66 +160,100 @@ async function updateDiscordRpc(value: boolean) {
 </script>
 
 <template>
-	<div class="flex max-w-3xl flex-col gap-6">
-		<div class="flex items-center justify-between gap-4">
-			<div class="flex min-w-0 flex-col gap-1">
-				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.telemetry) }}
-				</h3>
-				<p class="m-0 leading-tight text-secondary">
-					{{ formatMessage(messages.telemetryDescription) }}
-				</p>
-			</div>
-			<Toggle
-				id="privacy-telemetry"
-				:model-value="privacy.telemetry"
-				:disabled="telemetrySaving"
-				@update:model-value="(value) => updateTelemetry(!!value)"
-			/>
+	<div class="settings-page">
+		<header class="settings-page-header">
+			<SettingsSaveStatus :status="saveStatus" :retry="retrySave" />
+		</header>
+		<div class="settings-page-card">
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-privacy-telemetry" tabindex="-1">
+						{{ formatMessage(messages.telemetry) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.telemetryDescription) }}</template>
+				<template #control>
+					<Toggle
+						id="privacy-telemetry"
+						:model-value="privacy.telemetry"
+						:disabled="telemetrySaving"
+						@update:model-value="(value) => updateTelemetry(!!value)"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-privacy-discord-rpc" tabindex="-1">
+						{{ formatMessage(messages.discordRpc) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.discordRpcDescription) }}</template>
+				<template #control>
+					<Toggle
+						id="privacy-discord-rpc"
+						:model-value="privacy.discord_rpc"
+						:disabled="discordSaving"
+						@update:model-value="(value) => updateDiscordRpc(!!value)"
+					/>
+				</template>
+			</SettingsRow>
 		</div>
 
-		<div class="flex items-center justify-between gap-4">
-			<div class="flex min-w-0 flex-col gap-1">
-				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.discordRpc) }}
-				</h3>
-				<p class="m-0 leading-tight text-secondary">
-					{{ formatMessage(messages.discordRpcDescription) }}
-				</p>
-			</div>
-			<Toggle
-				id="privacy-discord-rpc"
-				:model-value="privacy.discord_rpc"
-				:disabled="discordSaving"
-				@update:model-value="(value) => updateDiscordRpc(!!value)"
-			/>
+		<p class="settings-page-note">{{ formatMessage(messages.dataHandling) }}</p>
+		<div class="settings-page-card">
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-privacy-log-analysis" tabindex="-1">
+						{{ formatMessage(messages.logAnalysisTitle) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.logAnalysisDescription) }}</template>
+				<template #control>
+					<Combobox
+						id="log-share-provider"
+						v-model="selectedProvider"
+						:name="formatMessage(messages.logAnalysisTitle)"
+						:options="options"
+					/>
+				</template>
+			</SettingsRow>
+			<p class="settings-page-note settings-page-note-inset">{{ selectedInfo.description }}</p>
 		</div>
-
-		<p class="m-0 text-sm leading-relaxed text-secondary">
-			{{ formatMessage(messages.dataHandling) }}
-		</p>
-
-		<div class="grid grid-cols-[minmax(0,1fr)_11rem] items-center gap-6">
-			<div class="flex min-w-0 flex-col gap-1">
-				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.logAnalysisTitle) }}
-				</h3>
-				<p class="m-0 leading-tight text-secondary">
-					{{ formatMessage(messages.logAnalysisDescription) }}
-				</p>
-			</div>
-			<div class="w-44">
-				<Combobox
-					id="log-share-provider"
-					v-model="selectedProvider"
-					name="Log analysis service"
-					:options="options"
-				/>
-			</div>
-		</div>
-
-		<p class="m-0 rounded-xl bg-surface-4 p-4 text-sm leading-tight text-secondary">
-			{{ selectedInfo.description }}
-		</p>
 	</div>
 </template>
+
+<style scoped>
+.settings-page {
+	display: flex;
+	width: 100%;
+	flex-direction: column;
+	gap: var(--gap-lg);
+}
+
+.settings-page-card {
+	overflow: hidden;
+	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border-radius: var(--radius-md);
+	background: var(--surface-2);
+}
+
+.settings-page-header {
+	display: flex;
+	min-height: 0;
+	justify-content: flex-end;
+}
+
+.settings-page-note {
+	margin: 0;
+	color: var(--color-secondary);
+	font-size: 0.8125rem;
+	line-height: 1.5;
+}
+
+.settings-page-note-inset {
+	margin: 0 var(--gap-lg) var(--gap-lg);
+	padding: var(--gap-md);
+	border-radius: var(--radius-sm);
+	background: var(--surface-3);
+}
+</style>

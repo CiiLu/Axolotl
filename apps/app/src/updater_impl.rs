@@ -51,7 +51,7 @@ struct MiawaPrepare {
 
 // ── latest.json types (same format as GitHub) ────────────────────
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct LatestManifest {
     version: String,
     notes: Option<String>,
@@ -59,7 +59,7 @@ struct LatestManifest {
     platforms: std::collections::HashMap<String, PlatformEntry>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct PlatformEntry {
     url: String,
 }
@@ -343,7 +343,12 @@ async fn check_with_updater<R: Runtime>(
     webview: &Webview<R>,
     source: &str,
 ) -> Result<Option<UpdateMetadata>> {
+    #[cfg(target_os = "windows")]
     let mut updater = webview
+        .updater_builder()
+        .endpoints(update_endpoints(source)?)?;
+    #[cfg(not(target_os = "windows"))]
+    let updater = webview
         .updater_builder()
         .endpoints(update_endpoints(source)?)?;
 
@@ -458,6 +463,7 @@ pub fn install_mirror_update(data: &[u8], version: &str) -> Result<()> {
         .into());
     }
 
+    #[cfg(target_os = "windows")]
     Ok(())
 }
 

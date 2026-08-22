@@ -4,7 +4,11 @@
  *  and deserialized into a usable JS object.
  */
 import type { Labrinth } from '@modrinth/api-client'
-import type { ContentItem, ContentOwner } from '@modrinth/ui'
+import {
+	clearPinnedContentViewPreferences,
+	type ContentItem,
+	type ContentOwner,
+} from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
 
 import { isOfflineMode } from '@/composables/useNetworkStatus'
@@ -28,8 +32,9 @@ import type {
 } from './types'
 
 export async function remove(instanceId: string): Promise<void> {
+	await invoke('plugin:instance|instance_remove', { instanceId })
 	removeInstanceCache(instanceId)
-	return await invoke('plugin:instance|instance_remove', { instanceId })
+	clearPinnedContentViewPreferences(instanceId)
 }
 
 export async function get(instanceId: string): Promise<GameInstance | null> {
@@ -387,6 +392,7 @@ export interface ResolveContentRequest {
 	content_type: Labrinth.Content.v3.ContentType
 	selected?: ResolutionPreferences
 	excluded_project_ids?: string[]
+	force_project_ids?: string[]
 }
 
 export interface ResolvedContent {
@@ -678,9 +684,7 @@ export interface InstanceRunResult {
 }
 
 export function gcReportFellBack(report: GcLaunchReport): boolean {
-	return (
-		report.chosen_strategy !== report.preferred_strategy || report.pruned_args.length > 0
-	)
+	return report.chosen_strategy !== report.preferred_strategy || report.pruned_args.length > 0
 }
 
 /**
@@ -712,10 +716,7 @@ function normalizeJvmToken(token: string): string {
 }
 
 function strategyTokenKeys(strategy: ResolvedGcStrategyId, context: GcContext): Set<string> {
-	const tokens = GC_STRATEGY_DEFINITIONS[strategy]
-		.buildArgs(context)
-		.split(/\s+/)
-		.filter(Boolean)
+	const tokens = GC_STRATEGY_DEFINITIONS[strategy].buildArgs(context).split(/\s+/).filter(Boolean)
 	return new Set(tokens.map(normalizeJvmToken))
 }
 

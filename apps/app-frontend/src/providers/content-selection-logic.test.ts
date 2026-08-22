@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
 	aggregateContentSelectionDependencies,
+	type AggregatedDependency,
 	getActiveDependencyConflictIdentities,
 } from './content-selection-logic.ts'
 
@@ -86,7 +87,7 @@ test('merges required owners for a shared dependency', () => {
 		...dependency('modrinth:shared:v1', 'Second', 'curseforge:second'),
 		required: true,
 	}
-	const result = aggregateContentSelectionDependencies(
+	const result = aggregateContentSelectionDependencies<AggregatedDependency>(
 		[
 			{ ownerKey: 'modrinth:first', dependencies: [optional] },
 			{ ownerKey: 'curseforge:second', dependencies: [required] },

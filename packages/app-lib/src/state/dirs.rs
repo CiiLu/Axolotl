@@ -12,6 +12,7 @@ use tokio::fs;
 pub const CACHES_FOLDER_NAME: &str = "caches";
 pub const LAUNCHER_LOGS_FOLDER_NAME: &str = "launcher_logs";
 pub const INSTANCES_FOLDER_NAME: &str = "profiles";
+pub const SERVERS_FOLDER_NAME: &str = "servers";
 pub const INSTALL_ROLLBACKS_FOLDER_NAME: &str = "install-rollbacks";
 pub const METADATA_FOLDER_NAME: &str = "meta";
 
@@ -153,6 +154,18 @@ impl DirectoryInfo {
     #[inline]
     pub fn instances_dir(&self) -> PathBuf {
         self.config_dir.join(INSTANCES_FOLDER_NAME)
+    }
+
+    /// Get the directory containing managed dedicated servers
+    #[inline]
+    pub fn servers_dir(&self) -> PathBuf {
+        self.config_dir.join(SERVERS_FOLDER_NAME)
+    }
+
+    /// Gets the directory of a managed dedicated server by id
+    #[inline]
+    pub fn server_dir(&self, server_id: &str) -> PathBuf {
+        self.servers_dir().join(server_id)
     }
 
     #[inline]

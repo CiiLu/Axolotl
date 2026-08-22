@@ -168,6 +168,7 @@ export interface CurseForgeInstallRequest {
 	worldName?: string
 	installDependencies?: boolean
 	excludedDependencyProjectIds?: number[]
+	forceDependencyProjectIds?: number[]
 	dependencyPlanId?: string
 }
 

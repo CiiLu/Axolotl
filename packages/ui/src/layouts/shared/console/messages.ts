@@ -22,7 +22,7 @@ export const consoleMessages = defineMessages({
 	},
 	emptyServerDescription: {
 		id: 'console.empty.server-description',
-		defaultMessage: 'Click the green start button to start the server!',
+		defaultMessage: 'Click the start button to start the server!',
 	},
 	shareLogs: { id: 'console.share-modal.title', defaultMessage: 'Share Logs' },
 	deleteLogFile: { id: 'console.delete-modal.title', defaultMessage: 'Delete log file' },
@@ -58,6 +58,10 @@ export const consoleMessages = defineMessages({
 	commandInputDisabled: {
 		id: 'console.command.disabled-placeholder',
 		defaultMessage: 'Command input disabled',
+	},
+	commandPlaceholder: {
+		id: 'console.command.placeholder',
+		defaultMessage: 'Send a command',
 	},
 	serverNotRunning: {
 		id: 'console.command.server-not-running-placeholder',

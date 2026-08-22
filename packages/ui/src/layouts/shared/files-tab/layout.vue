@@ -300,10 +300,14 @@ const { addNotification } = injectNotificationManager()
 const ctx = injectFileManager()
 
 const editorComponent = shallowRef<Component | null>(null)
-import('vue3-ace-editor').then(async (mod) => {
-	await Promise.all([import('#ui/utils/ace-theme'), import('#ui/utils/ace-mode-log.ts')])
-	editorComponent.value = mod.VAceEditor
-})
+import('vue3-ace-editor')
+	.then(async (mod) => {
+		await Promise.all([import('#ui/utils/ace-theme'), import('#ui/utils/ace-mode-log.ts')])
+		editorComponent.value = mod.VAceEditor
+	})
+	.catch((error) => {
+		console.error('Failed to load the code editor:', error)
+	})
 
 const baseId = `files-${Math.random().toString(36).slice(2, 9)}`
 

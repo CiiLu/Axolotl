@@ -1761,9 +1761,9 @@ onBeforeUnmount(() => {
 							<span>Y</span>
 						</span>
 						<input
+							v-model.number="layerMaximum"
 							class="schematic-layer-current"
 							type="number"
-							v-model.number="layerMaximum"
 							:min="layerFloor"
 							:max="layerCeiling"
 							step="1"

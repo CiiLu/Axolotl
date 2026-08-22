@@ -13,6 +13,7 @@ export interface ContentInstallPreviewDependency {
 	fileName?: string
 	requiredBy: string[]
 	alreadyInstalled: boolean
+	status?: 'installed' | 'included'
 	versionMismatch?: boolean
 	selectionReason?: string
 	required?: boolean
@@ -116,6 +117,10 @@ const messages = defineMessages({
 	alreadyInstalled: {
 		id: 'app.content-install.preview.already-installed',
 		defaultMessage: 'Already installed',
+	},
+	alreadyIncluded: {
+		id: 'app.content-install.preview.already-included',
+		defaultMessage: 'Already included',
 	},
 	versionMismatch: {
 		id: 'app.content-install.preview.version-mismatch',
@@ -222,9 +227,7 @@ const hasBlockingPrimary = computed(() =>
 	visiblePrimaries.value.some((primary) => !!primaryError(primary)),
 )
 
-const installableDependencies = computed(
-	() => visibleDependencies.value.filter((dependency) => !dependency.alreadyInstalled) ?? [],
-)
+const installableDependencies = computed(() => visibleDependencies.value)
 const dependencyGroups = computed(() =>
 	[
 		{
@@ -271,7 +274,7 @@ function initialSelectedIds(value: ContentInstallPreviewData) {
 	)
 }
 
-function finish(result: string[] | ContentInstallBatchPreviewResult | null) {
+function finish(result: string[] | ContentInstallBatchPreviewResult | boolean | null) {
 	if (settled) return
 	settled = true
 	const resolve = resolveShow
@@ -287,7 +290,7 @@ function confirm() {
 	}
 	if (hasBlockingPrimary.value || visiblePrimaries.value.length === 0) return
 	const approvedIds = visibleDependencies.value
-		.filter((dependency) => !dependency.alreadyInstalled && selectedIds.value.has(dependency.id))
+		.filter((dependency) => selectedIds.value.has(dependency.id))
 		.map((dependency) => dependency.id)
 	finish(batchMode ? { approvedIds, primaryKeys: visiblePrimaryKeys.value } : approvedIds)
 }
@@ -326,7 +329,10 @@ function showBatch(
 	settled = false
 	modal.value?.show()
 	return new Promise<ContentInstallBatchPreviewResult | null>((resolve) => {
-		resolveShow = (result) => resolve(result && !Array.isArray(result) ? result : null)
+		resolveShow = (result) =>
+			resolve(
+				result && !Array.isArray(result) && typeof result !== 'boolean' ? result : null,
+			)
 	})
 }
 
@@ -524,7 +530,6 @@ defineExpose({ show, showBatch, showConflict })
 						>
 							<Checkbox
 								:model-value="selectedIds.has(dependency.id)"
-								:disabled="dependency.alreadyInstalled"
 								class="mt-2 shrink-0"
 								@update:model-value="(value) => toggleDependency(dependency.id, value)"
 							/>
@@ -567,7 +572,13 @@ defineExpose({ show, showBatch, showConflict })
 										v-if="dependency.alreadyInstalled"
 										class="rounded-full bg-surface-4 px-2 py-0.5 text-xs font-medium text-secondary"
 									>
-										{{ formatMessage(messages.alreadyInstalled) }}
+										{{
+											formatMessage(
+												dependency.status === 'included'
+													? messages.alreadyIncluded
+													: messages.alreadyInstalled,
+											)
+										}}
 									</span>
 								</div>
 							</div>

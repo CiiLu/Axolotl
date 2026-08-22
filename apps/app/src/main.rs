@@ -480,6 +480,7 @@ fn main() {
         .plugin(api::terracotta::init())
         .plugin(api::multiplayer::init())
         .manage(api::files::StudioWatchers::default())
+        .plugin(api::servers::init())
         .manage(PendingUpdateData::default())
         .invoke_handler(tauri::generate_handler![
             initialize_state,

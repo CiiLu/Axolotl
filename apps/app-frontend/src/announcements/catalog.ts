@@ -33,6 +33,56 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.11',
+		version: '1.8.11',
+		publishedAt: '2026-08-22',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.11',
+			'zh-CN': 'Axolotl Launcher 1.8.11',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						"Added pinned Content tab views that remember each instance's sorting and filters between launcher restarts.",
+					'zh-CN': '内容页现可固定实例视图，在重启启动器后保留各实例的排序和筛选条件。',
+				},
+				{
+					'en-US': 'Added translation for titles and descriptions in project galleries.',
+					'zh-CN': '项目图库中的图片标题和说明现已支持翻译。',
+				},
+				{
+					'en-US': 'Added direct links to matching MC Mod wiki pages in the Content tab mod menu.',
+					'zh-CN': '内容页的模组菜单现可直接打开匹配的 MC 百科页面。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Redesigned Settings with clearer categories, search, and more consistent controls.',
+					'zh-CN': '重构设置界面，提供更清晰的分类、搜索和一致的操作控件。',
+				},
+				{
+					'en-US':
+						'Improved Content tab sorting with file name options and clearer active filter indicators.',
+					'zh-CN': '优化内容页排序，新增文件名排序选项并明确显示生效中的筛选条件。',
+				},
+				{
+					'en-US':
+						'Project and version pages now return to the originating instance Content tab when opened from it.',
+					'zh-CN': '从内容页打开项目或版本页面后，现在会返回原来的实例内容页。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the Discover project gallery sidebar covering images in the image viewer.',
+					'zh-CN': '修复发现内容的项目图库查看器中侧边栏遮挡图片的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.10',
 		version: '1.8.10',
 		publishedAt: '2026-08-22',

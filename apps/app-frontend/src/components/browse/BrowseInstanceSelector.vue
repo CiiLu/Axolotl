@@ -4,8 +4,8 @@ import { ButtonStyled, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
 import { nextTick, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import InstanceIcon from '@/components/ui/InstanceIcon.vue'
 import InstancePickerList from '@/components/ui/instance/InstancePickerList.vue'
+import InstanceIcon from '@/components/ui/InstanceIcon.vue'
 import type { GameInstance } from '@/helpers/types'
 
 const props = defineProps<{

@@ -121,9 +121,9 @@ const openActionLabel = computed(() => formatMessage(storageMessages.openAction)
 
 			<!-- 文件/文件夹按钮：打开位置（不展开树） -->
 			<button
+				v-tooltip="openActionLabel"
 				type="button"
 				class="node-type-btn"
-				v-tooltip="openActionLabel"
 				:aria-label="`${displayLabel}: ${openActionLabel}`"
 				@click.stop="emit('action', node)"
 			>
@@ -133,7 +133,7 @@ const openActionLabel = computed(() => formatMessage(storageMessages.openAction)
 			</button>
 
 			<!-- 节点名称 -->
-			<span class="node-name" v-tooltip="nameTooltip">
+			<span v-tooltip="nameTooltip" class="node-name">
 				{{ displayLabel }}
 			</span>
 
@@ -152,8 +152,8 @@ const openActionLabel = computed(() => formatMessage(storageMessages.openAction)
 			<div class="storage-percent">{{ percent }}%</div>
 
 			<progress
-				class="storage-progress"
 				v-tooltip="progressTooltip"
+				class="storage-progress"
 				:value="totalShare"
 				:max="1"
 				:aria-label="progressLabel"

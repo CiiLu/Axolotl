@@ -38,11 +38,17 @@
   "browse.selected-projects-floating-bar.aria-label": {
     "defaultMessage": "选定的项目"
   },
+  "browse.selected-projects-floating-bar.hide-projects": {
+    "defaultMessage": "隐藏已选项目"
+  },
   "browse.selected-projects-floating-bar.install": {
     "defaultMessage": "安装{count, plural, other {#个项目}}"
   },
   "browse.selected-projects-floating-bar.selected-count": {
     "defaultMessage": "{count, plural, other {#个已选择的项目}}"
+  },
+  "browse.selected-projects-floating-bar.show-projects": {
+    "defaultMessage": "显示{count, plural, other {#个已选项目}}"
   },
   "browse.selected-projects-leave-modal.admonition-body": {
     "defaultMessage": "你已经选择了{count, plural, other {#个}}要安装的项目。立即安装它们，或不安装并返回。"
@@ -615,7 +621,7 @@
     "defaultMessage": "欢迎使用 Modrinth 服务器！"
   },
   "console.empty.server-description": {
-    "defaultMessage": "点击绿色启动按钮即可启动服务器！"
+    "defaultMessage": "点击启动按钮即可启动服务器！"
   },
   "console.search.placeholder": {
     "defaultMessage": "搜索日志"
@@ -631,6 +637,9 @@
   },
   "content.card.dependency-badge": {
     "defaultMessage": "前置"
+  },
+  "content.card.duplicate-mod": {
+    "defaultMessage": "此模组已安装 {count, number} 次。"
   },
   "content.card.group.hardcore": {
     "defaultMessage": "硬核模式"
@@ -764,6 +773,9 @@
   "content.filter.disabled": {
     "defaultMessage": "已禁用"
   },
+  "content.filter.duplicates": {
+    "defaultMessage": "重复"
+  },
   "content.filter.enabled": {
     "defaultMessage": "已启用"
   },
@@ -872,6 +884,9 @@
   "content.metadata-filter.toggle": {
     "defaultMessage": "筛选"
   },
+  "content.metadata-filter.toggle-active": {
+    "defaultMessage": "筛选（已启用 {count, number} 项）"
+  },
   "content.metadata-filter.unknown": {
     "defaultMessage": "未知"
   },
@@ -920,6 +935,12 @@
   "content.page-layout.sort.alphabetical": {
     "defaultMessage": "按字母顺序"
   },
+  "content.page-layout.sort.file-name-ascending": {
+    "defaultMessage": "文件名 A-Z"
+  },
+  "content.page-layout.sort.file-name-descending": {
+    "defaultMessage": "文件名 Z-A"
+  },
   "content.page-layout.sort.date-added-newest": {
     "defaultMessage": "按从新到旧顺序"
   },
@@ -929,8 +950,26 @@
   "content.page-layout.sort.label": {
     "defaultMessage": "按{mode}排序"
   },
+  "content.page-layout.sort.project-name-ascending": {
+    "defaultMessage": "项目名称 A-Z"
+  },
+  "content.page-layout.sort.project-name-descending": {
+    "defaultMessage": "项目名称 Z-A"
+  },
+  "content.page-layout.pin-view": {
+    "defaultMessage": "固定当前视图"
+  },
+  "content.page-layout.reset-view": {
+    "defaultMessage": "重置视图"
+  },
+  "content.page-layout.unpin-view": {
+    "defaultMessage": "取消固定当前视图"
+  },
   "content.page-layout.update-all": {
     "defaultMessage": "更新所有"
+  },
+  "content.page-layout.view-options": {
+    "defaultMessage": "视图选项"
   },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "已禁用选择的所有内容"
@@ -4216,18 +4255,6 @@
   },
   "drop.confirm.as-dot-minecraft-desc": {
     "message": "扫描 .minecraft 文件夹以创建实例"
-  },
-  "drop.confirm.compatible-mode-title": {
-    "message": "这似乎是一个未开启版本隔离的实例"
-  },
-  "drop.confirm.compatible-mode-desc": {
-    "message": "是否要以兼容模式导入此实例？"
-  },
-  "drop.confirm.compatible-mode-import": {
-    "message": "兼容模式导入"
-  },
-  "drop.confirm.old-way-import": {
-    "message": "按旧方式导入"
   },
   "drop.confirm.as-launcher": {
     "message": "启动器"

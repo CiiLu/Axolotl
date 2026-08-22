@@ -418,13 +418,13 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { SwapIcon } from '@/assets/icons/index.js'
 import BrowseInstanceSelector from '@/components/browse/BrowseInstanceSelector.vue'
-import { useContentFavorites } from '@/composables/useContentFavorites'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import {
 	fetchCachedServerStatus,
 	getFreshCachedServerStatus,
 } from '@/composables/instances/use-server-status-query'
+import { useContentFavorites } from '@/composables/useContentFavorites'
 import {
 	get_organization,
 	get_project,
@@ -433,6 +433,7 @@ import {
 	get_version,
 	get_version_many,
 } from '@/helpers/cache.js'
+import { isFavoriteContentType } from '@/helpers/content-favorites'
 import { resolveMcmodUrl } from '@/helpers/content-search'
 import { process_listener } from '@/helpers/events'
 import {
@@ -443,8 +444,8 @@ import {
 } from '@/helpers/instance'
 import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
-import { isFavoriteContentType } from '@/helpers/content-favorites'
 import { get_by_instance_id } from '@/helpers/process'
+import { projectGalleryTranslationSegments } from '@/helpers/project-gallery'
 import { createProjectBrowseLocation } from '@/helpers/project-links'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import {
@@ -482,6 +483,10 @@ const messages = defineMessages({
 	backToBrowse: {
 		id: 'app.project.install-context.back-to-browse',
 		defaultMessage: 'Back to discover',
+	},
+	backToInstanceContent: {
+		id: 'app.project.install-context.back-to-instance-content',
+		defaultMessage: 'Back to instance content',
 	},
 	installContentToInstance: {
 		id: 'app.project.install-context.install-content-to-instance',
@@ -669,12 +674,21 @@ const versionsHref = computed(() =>
 )
 const projectGalleryHref = computed(() => buildProjectHref(`/project/${route.params.id}/gallery`))
 
+const instanceContentBackUrl = computed(() => {
+	if (route.query.from !== 'instance-content' || typeof route.query.i !== 'string') return null
+	if (instance.value?.id !== route.query.i) return null
+	return `/instance/${encodeURIComponent(route.query.i)}`
+})
 const projectBrowseBackUrl = computed(() => {
+	if (instanceContentBackUrl.value) return instanceContentBackUrl.value
 	const browsePath = route.query.b
 	if (typeof browsePath === 'string' && browsePath.startsWith('/browse/')) return browsePath
 	const type = data.value?.project_type ? `${data.value.project_type}` : 'mod'
 	return buildBrowseHref(`/browse/${type}`)
 })
+const projectBackLabel = computed(() =>
+	formatMessage(instanceContentBackUrl.value ? messages.backToInstanceContent : messages.backToBrowse),
+)
 const fromBrowse = computed(
 	() => typeof route.query.b === 'string' && route.query.b.startsWith('/browse/'),
 )
@@ -709,7 +723,7 @@ const projectInstallContext = computed(() => {
 			iconSrc: null,
 			isMedal: serverData.is_medal,
 			backUrl: projectBrowseBackUrl.value,
-			backLabel: formatMessage(messages.backToBrowse),
+			backLabel: projectBackLabel.value,
 			heading: serverInstallContent.serverBrowseHeading.value,
 			queuedCount: serverInstallContent.queuedServerInstallCount.value,
 			selectedProjects: serverInstallContent.selectedServerInstallProjects.value,
@@ -733,7 +747,7 @@ const projectInstallContext = computed(() => {
 			iconSrc: displayIcon.url,
 			iconFrameless: displayIcon.frameless,
 			backUrl: projectBrowseBackUrl.value,
-			backLabel: formatMessage(messages.backToBrowse),
+			backLabel: projectBackLabel.value,
 			heading: formatMessage(messages.installContentToInstance),
 			selectedProjects: contentSelection.selectedProjects.value,
 			isInstallingSelected: ['validating', 'reviewing', 'queueing'].includes(
@@ -753,7 +767,7 @@ const projectInstallContext = computed(() => {
 			iconSrc: displayIcon.url,
 			iconFrameless: displayIcon.frameless,
 			backUrl: projectBrowseBackUrl.value,
-			backLabel: formatMessage(messages.backToBrowse),
+			backLabel: projectBackLabel.value,
 			heading: formatMessage(messages.installContentToInstance),
 		}
 	}
@@ -951,6 +965,7 @@ async function translateProject() {
 		const allSegments = [
 			{ id: 'title', text: data.value.title ?? '', format: 'plain' },
 			{ id: 'description', text: data.value.description ?? '', format: 'plain' },
+			...projectGalleryTranslationSegments(data.value.gallery),
 			...prepared.segments,
 		]
 

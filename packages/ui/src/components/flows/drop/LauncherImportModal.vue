@@ -172,8 +172,14 @@ const selectedMap = ref<Map<string, Set<string>>>(new Map())
 const isConfirming = ref(false)
 
 const allInstances = computed(() => {
-	const items: Array<{ launcherType: string; launcherName: string; name: string; path: string; compatibleMode?: boolean; versionPath?: string }> =
-		[]
+	const items: Array<{
+		launcherType: string
+		launcherName: string
+		name: string
+		path: string
+		compatibleMode?: boolean
+		versionPath?: string
+	}> = []
 	for (const group of internalResults.value) {
 		for (const inst of group.instances) {
 			items.push({
@@ -254,7 +260,12 @@ function handleConfirm() {
 		if (!group) continue
 		const instances = group.instances
 			.filter((i) => names.has(i.name))
-			.map((i) => ({ name: i.name, path: i.path, compatibleMode: i.compatibleMode, versionPath: i.versionPath }))
+			.map((i) => ({
+				name: i.name,
+				path: i.path,
+				compatibleMode: i.compatibleMode,
+				versionPath: i.versionPath,
+			}))
 		if (instances.length > 0) {
 			selections.push({ launcherType, launcherName: group.launcherName, instances })
 		}
@@ -277,7 +288,14 @@ function show(results: LauncherInfo[]) {
 			{
 				launcherType: item.launcherType,
 				launcherName: item.launcherName,
-				instances: [{ name: item.name, path: item.path, compatibleMode: item.compatibleMode, versionPath: item.versionPath }],
+				instances: [
+					{
+						name: item.name,
+						path: item.path,
+						compatibleMode: item.compatibleMode,
+						versionPath: item.versionPath,
+					},
+				],
 			},
 		])
 		return

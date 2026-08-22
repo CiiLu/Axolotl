@@ -25,6 +25,18 @@ import { get, getProxyConfig, set, setProxyConfig, testProxyConfig } from '@/hel
 import { showAppDbBackupsFolder } from '@/helpers/utils.js'
 import { useTheming } from '@/store/state'
 
+import SettingsRow from './SettingsRow.vue'
+import SettingsSection from './SettingsSection.vue'
+
+const props = defineProps({
+	scope: {
+		type: String,
+		default: 'content-downloads',
+		validator: (value) =>
+			['content-downloads', 'network-multiplayer', 'storage-backups'].includes(value),
+	},
+})
+
 const { handleError } = injectNotificationManager()
 const themeStore = useTheming()
 const settings = ref(await get())
@@ -575,351 +587,363 @@ function resetMissingContentImportDirectory() {
 </script>
 
 <template>
-	<div class="flex flex-col gap-6">
-		<div class="flex flex-col gap-2.5">
-			<h2 class="m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.appDirectory) }}
-			</h2>
-			<StyledInput
-				id="appDir"
-				v-model="settings.custom_dir"
-				:icon="BoxIcon"
-				type="text"
-				:disabled="isPortable"
-				wrapper-class="w-full"
-			>
-				<template #right>
-					<IconButton
-						:label="formatMessage(messages.appDirectory)"
-						class="ml-1.5"
-						:disabled="isPortable"
-						@click="findLauncherDir"
-					>
-						<FolderSearchIcon />
-					</IconButton>
+	<div class="settings-page">
+		<ConfirmModalWrapper
+			ref="purgeCacheConfirmModal"
+			:title="formatMessage(messages.purgeConfirmTitle)"
+			:description="formatMessage(messages.purgeConfirmDescription)"
+			:has-to-type="false"
+			:proceed-label="formatMessage(messages.purgeCache)"
+			:show-ad-on-close="false"
+			@proceed="purgeCache"
+		/>
+
+		<SettingsSection v-if="props.scope === 'storage-backups'">
+			<SettingsRow stacked>
+				<template #label>
+					<span id="settings-target-storage-app-directory" tabindex="-1">
+						{{ formatMessage(messages.appDirectory) }}
+					</span>
 				</template>
-			</StyledInput>
-			<p class="m-0 leading-tight text-secondary">
-				{{ appDirectoryDescriptionText }}
-			</p>
-		</div>
+				<template #description>{{ appDirectoryDescriptionText }}</template>
+				<template #control>
+					<StyledInput
+						id="appDir"
+						v-model="settings.custom_dir"
+						:icon="BoxIcon"
+						type="text"
+						:disabled="isPortable"
+						wrapper-class="w-full"
+					>
+						<template #right>
+							<IconButton
+								:label="formatMessage(messages.appDirectory)"
+								class="ml-1.5"
+								:disabled="isPortable"
+								@click="findLauncherDir"
+							>
+								<FolderSearchIcon />
+							</IconButton>
+						</template>
+					</StyledInput>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-storage-cache" tabindex="-1">
+						{{ formatMessage(messages.appCache) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.appCacheDescription) }}</template>
+				<template #control>
+					<button id="purge-cache" class="btn min-w-max" @click="handlePurgeCacheClick">
+						<TrashIcon />
+						{{ formatMessage(messages.purgeCache) }}
+					</button>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-resources-database-backups" tabindex="-1">
+						{{ formatMessage(messages.databaseBackups) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.databaseBackupsDescription) }}</template>
+				<template #control>
+					<button id="open-db-backups-folder" class="btn min-w-max" @click="openDbBackupsFolder">
+						<FolderOpenIcon />
+						{{ formatMessage(messages.openBackupsFolder) }}
+					</button>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 
-		<div class="flex flex-col gap-2.5">
-			<ConfirmModalWrapper
-				ref="purgeCacheConfirmModal"
-				:title="formatMessage(messages.purgeConfirmTitle)"
-				:description="formatMessage(messages.purgeConfirmDescription)"
-				:has-to-type="false"
-				:proceed-label="formatMessage(messages.purgeCache)"
-				:show-ad-on-close="false"
-				@proceed="purgeCache"
-			/>
-			<h2 class="m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.appCache) }}
-			</h2>
-			<button id="purge-cache" class="btn min-w-max" @click="handlePurgeCacheClick">
-				<TrashIcon />
-				{{ formatMessage(messages.purgeCache) }}
-			</button>
-			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.appCacheDescription) }}
-			</p>
-		</div>
-
-		<div class="flex flex-col gap-3">
-			<div>
-				<h2 class="m-0 text-lg font-semibold text-contrast mt-4">
+		<SettingsSection v-if="props.scope === 'content-downloads'">
+			<template #header>
+				<h2
+					id="settings-target-resources-download-mirrors"
+					tabindex="-1"
+					class="m-0 text-lg font-semibold text-contrast"
+				>
 					{{ formatMessage(messages.downloadMirrors) }}
 				</h2>
-				<p class="m-0 leading-tight text-secondary">
+				<p class="m-0 mt-1 text-sm leading-relaxed text-secondary">
 					{{ formatMessage(messages.downloadMirrorsDescription) }}
 				</p>
-			</div>
+			</template>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.minecraftMetadataSource) }}</template>
+				<template #description>{{
+					formatMessage(messages.minecraftMetadataSourceDescription)
+				}}</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="minecraftMetadataSource" :options="minecraftSourceOptions" />
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.minecraftFileSource) }}</template>
+				<template #description>{{
+					formatMessage(messages.minecraftFileSourceDescription)
+				}}</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="minecraftFileSource" :options="minecraftSourceOptions" />
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.modrinthMirror) }}</template>
+				<template #description>{{ formatMessage(messages.modrinthMirrorDescription) }}</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="modrinthDownloadSource" :options="modrinthSourceOptions" />
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.curseforgeMirror) }}</template>
+				<template #description>{{ formatMessage(messages.curseforgeMirrorDescription) }}</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="curseforgeDownloadSource" :options="curseforgeSourceOptions" />
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.curseforgeRestrictionBypass) }}</template>
+				<template #description>
+					{{ formatMessage(messages.curseforgeRestrictionBypassDescription) }}
+				</template>
+				<template #control>
+					<Toggle
+						id="curseforge-restriction-bypass"
+						v-model="settings.bypass_curseforge_download_restrictions"
+					/>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.minecraftMetadataSource) }}
-					</h3>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.minecraftMetadataSourceDescription) }}
-					</p>
-				</div>
-				<div class="w-48 shrink-0">
-					<Combobox v-model="minecraftMetadataSource" :options="minecraftSourceOptions" />
-				</div>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.minecraftFileSource) }}
-					</h3>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.minecraftFileSourceDescription) }}
-					</p>
-				</div>
-				<div class="w-48 shrink-0">
-					<Combobox v-model="minecraftFileSource" :options="minecraftSourceOptions" />
-				</div>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.modrinthMirror) }}
-					</h3>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.modrinthMirrorDescription) }}
-					</p>
-				</div>
-				<div class="w-48 shrink-0">
-					<Combobox v-model="modrinthDownloadSource" :options="modrinthSourceOptions" />
-				</div>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.curseforgeMirror) }}
-					</h3>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.curseforgeMirrorDescription) }}
-					</p>
-				</div>
-				<div class="w-48 shrink-0">
-					<Combobox v-model="curseforgeDownloadSource" :options="curseforgeSourceOptions" />
-				</div>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.curseforgeRestrictionBypass) }}
-					</h3>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.curseforgeRestrictionBypassDescription) }}
-					</p>
-				</div>
-				<Toggle
-					id="curseforge-restriction-bypass"
-					v-model="settings.bypass_curseforge_download_restrictions"
-				/>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.mojangAuthService) }}
-					</h3>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.mojangAuthServiceDescription) }}
-					</p>
-				</div>
-				<div class="w-48 shrink-0">
-					<Combobox v-model="mojangAuthSource" :options="mojangAuthSourceOptions" />
-				</div>
-			</div>
-		</div>
-
-		<div class="flex flex-col gap-2.5">
-			<div class="flex items-center justify-between gap-4">
-				<div>
-					<h2 class="m-0 text-lg font-semibold text-contrast">
+		<SettingsSection v-if="props.scope === 'content-downloads'">
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-resources-download-engine" tabindex="-1">
 						{{ formatMessage(messages.downloadEngine) }}
-					</h2>
-					<p class="m-0 leading-tight text-secondary">
-						{{ formatMessage(messages.downloadEngineDescription) }}
-					</p>
-				</div>
-				<div class="w-48 shrink-0">
-					<Combobox v-model="downloadEngine" :options="downloadEngineOptions" />
-				</div>
-			</div>
-		</div>
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.downloadEngineDescription) }}</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="downloadEngine" :options="downloadEngineOptions" />
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow stacked>
+				<template #label>
+					<span id="settings-target-resources-maximum-downloads" tabindex="-1">
+						{{ formatMessage(messages.maximumDownloads) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.maximumDownloadsDescription) }}</template>
+				<template #control>
+					<div class="flex w-full flex-col gap-3">
+						<div class="w-48 max-w-full">
+							<Combobox v-model="downloadConcurrencyMode" :options="downloadConcurrencyOptions" />
+						</div>
+						<Slider
+							v-if="!settings.auto_concurrent_downloads"
+							id="max-downloads"
+							v-model="settings.max_concurrent_downloads"
+							:min="1"
+							:max="256"
+							:step="1"
+						/>
+					</div>
+				</template>
+			</SettingsRow>
+			<SettingsRow stacked>
+				<template #label>{{ formatMessage(messages.maximumWrites) }}</template>
+				<template #description>{{ formatMessage(messages.maximumWritesDescription) }}</template>
+				<template #control>
+					<div class="w-full">
+						<Slider
+							id="max-writes"
+							v-model="settings.max_concurrent_writes"
+							:min="1"
+							:max="50"
+							:step="1"
+						/>
+					</div>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 
-		<div class="flex flex-col gap-2.5">
-			<div class="flex items-center justify-between gap-4 mt-4">
-				<h2 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.maximumDownloads) }}
-				</h2>
-				<div class="w-48 shrink-0">
-					<Combobox v-model="downloadConcurrencyMode" :options="downloadConcurrencyOptions" />
-				</div>
-			</div>
-			<Slider
-				v-if="!settings.auto_concurrent_downloads"
-				id="max-downloads"
-				v-model="settings.max_concurrent_downloads"
-				:min="1"
-				:max="256"
-				:step="1"
-			/>
-			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.maximumDownloadsDescription) }}
-			</p>
-		</div>
+		<SettingsSection v-if="props.scope === 'network-multiplayer'">
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-network-mojang-auth-source" tabindex="-1">
+						{{ formatMessage(messages.mojangAuthService) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.mojangAuthServiceDescription) }}</template>
+				<template #control>
+					<div class="w-full">
+						<Combobox v-model="mojangAuthSource" :options="mojangAuthSourceOptions" />
+					</div>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 
-		<div class="flex flex-col gap-2.5">
-			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.maximumWrites) }}
-			</h2>
-			<Slider
-				id="max-writes"
-				v-model="settings.max_concurrent_writes"
-				:min="1"
-				:max="50"
-				:step="1"
-			/>
-			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.maximumWritesDescription) }}
-			</p>
-		</div>
-
-		<div class="flex flex-col gap-2.5">
-			<div>
-				<h2 class="m-0 text-lg font-semibold text-contrast mt-4">
+		<SettingsSection v-if="props.scope === 'network-multiplayer'">
+			<template #header>
+				<h2
+					id="settings-target-resources-proxy"
+					tabindex="-1"
+					class="m-0 text-lg font-semibold text-contrast"
+				>
 					{{ formatMessage(messages.proxySettings) }}
 				</h2>
-				<p class="m-0 leading-tight text-secondary">
+				<p class="m-0 mt-1 text-sm leading-relaxed text-secondary">
 					{{ formatMessage(messages.proxySettingsDescription) }}
 				</p>
-			</div>
-			<div class="flex flex-col gap-3">
-				<div class="flex items-center justify-between gap-4">
-					<div class="flex flex-col gap-1">
-						<h3 class="m-0 text-base font-semibold text-contrast">
-							{{ formatMessage(messages.proxyMode) }}
-						</h3>
-					</div>
-					<div class="w-48 shrink-0">
+			</template>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.proxyMode) }}</template>
+				<template #control>
+					<div class="w-full">
 						<Combobox v-model="proxyConfig.mode" :options="proxyModeOptions" />
 					</div>
-				</div>
-				<div v-if="proxyConfig.mode === 'custom'" class="flex flex-col gap-3">
-					<div class="flex flex-col gap-1">
-						<h3 class="m-0 text-base font-semibold text-contrast">
-							{{ formatMessage(messages.proxyUrl) }}
-						</h3>
-						<StyledInput
-							id="proxy-url"
-							v-model="proxyConfig.url"
-							type="text"
-							:placeholder="formatMessage(messages.proxyUrlPlaceholder)"
-							wrapper-class="w-full"
-							@blur="saveProxyConfig(false)"
-						/>
-					</div>
-					<div class="flex flex-col gap-1">
-						<h3 class="m-0 text-base font-semibold text-contrast">
-							{{ formatMessage(messages.proxyUsername) }}
-						</h3>
-						<StyledInput
-							id="proxy-username"
-							v-model="proxyConfig.username"
-							type="text"
-							:placeholder="formatMessage(messages.proxyUsernamePlaceholder)"
-							wrapper-class="w-full"
-							@blur="saveProxyConfig(false)"
-						/>
-					</div>
-					<div class="flex flex-col gap-1">
-						<h3 class="m-0 text-base font-semibold text-contrast">
-							{{ formatMessage(messages.proxyPassword) }}
-						</h3>
-						<StyledInput
-							id="proxy-password"
-							v-model="proxyConfig.password"
-							type="password"
-							:placeholder="formatMessage(messages.proxyPasswordPlaceholder)"
-							wrapper-class="w-full"
-							@blur="saveProxyConfig(false)"
-						/>
-					</div>
-				</div>
-				<div class="flex items-center justify-between gap-4 pt-2">
-					<div class="flex flex-col gap-1">
-						<h3 class="m-0 text-base font-semibold text-contrast">
-							{{ formatMessage(messages.proxyTest) }}
-						</h3>
-					</div>
-					<div class="flex items-center gap-3">
+				</template>
+			</SettingsRow>
+			<SettingsRow v-if="proxyConfig.mode === 'custom'" stacked>
+				<template #label>{{ formatMessage(messages.proxyUrl) }}</template>
+				<template #control>
+					<StyledInput
+						id="proxy-url"
+						v-model="proxyConfig.url"
+						type="text"
+						:placeholder="formatMessage(messages.proxyUrlPlaceholder)"
+						wrapper-class="w-full"
+						@blur="saveProxyConfig(false)"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow v-if="proxyConfig.mode === 'custom'" stacked>
+				<template #label>{{ formatMessage(messages.proxyUsername) }}</template>
+				<template #control>
+					<StyledInput
+						id="proxy-username"
+						v-model="proxyConfig.username"
+						type="text"
+						:placeholder="formatMessage(messages.proxyUsernamePlaceholder)"
+						wrapper-class="w-full"
+						@blur="saveProxyConfig(false)"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow v-if="proxyConfig.mode === 'custom'" stacked>
+				<template #label>{{ formatMessage(messages.proxyPassword) }}</template>
+				<template #control>
+					<StyledInput
+						id="proxy-password"
+						v-model="proxyConfig.password"
+						type="password"
+						:placeholder="formatMessage(messages.proxyPasswordPlaceholder)"
+						wrapper-class="w-full"
+						@blur="saveProxyConfig(false)"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow compact>
+				<template #label>{{ formatMessage(messages.proxyTest) }}</template>
+				<template #control>
+					<div class="flex flex-wrap items-center justify-end gap-3">
 						<span v-if="proxyTestResult" class="text-sm text-secondary">{{ proxyTestResult }}</span>
 						<button
-							:disabled="proxyTesting || proxyConfig.mode === 'none' || (proxyConfig.mode === 'custom' && !proxyConfig.url?.trim())"
+							:disabled="
+								proxyTesting ||
+								proxyConfig.mode === 'none' ||
+								(proxyConfig.mode === 'custom' && !proxyConfig.url?.trim())
+							"
 							class="btn min-w-max"
 							@click="testProxy"
 						>
 							{{ formatMessage(proxyTesting ? messages.proxyTesting : messages.proxyTest) }}
 						</button>
 					</div>
-				</div>
-			</div>
-		</div>
-
-		<div class="flex flex-col gap-2.5">
-			<div class="flex items-center justify-between gap-4">
-				<div>
-					<h2 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.missingContentAutoImport) }}
-					</h2>
-					<p class="m-0 mt-1 leading-tight text-secondary">
-						{{ formatMessage(messages.missingContentAutoImportDescription) }}
-					</p>
-				</div>
-				<Toggle id="missing-content-auto-import" v-model="missingContentScannerSettings.enabled" />
-			</div>
-
-			<h3 class="mb-0 mt-2 text-base font-semibold text-contrast">
-				{{ formatMessage(messages.missingContentImportDirectory) }}
-			</h3>
-			<StyledInput
-				id="missing-content-import-directory"
-				:model-value="
-					missingContentScannerSettings.directory ??
-					formatMessage(messages.systemDownloadsDirectory)
-				"
-				:icon="FolderOpenIcon"
-				type="text"
-				readonly
-				wrapper-class="w-full"
-			>
-				<template #right>
-					<IconButton
-						type="base"
-						:label="formatMessage(messages.selectImportDirectory)"
-						class="ml-1.5"
-						:disabled="!missingContentScannerSettings.enabled"
-						@click="findMissingContentImportDirectory"
-					>
-						<FolderSearchIcon />
-					</IconButton>
 				</template>
-			</StyledInput>
-			<button
-				v-if="missingContentScannerSettings.directory"
-				class="btn min-w-max"
-				:disabled="!missingContentScannerSettings.enabled"
-				@click="resetMissingContentImportDirectory"
-			>
-				{{ formatMessage(messages.resetImportDirectory) }}
-			</button>
-			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.missingContentImportDirectoryDescription) }}
-			</p>
-		</div>
+			</SettingsRow>
+		</SettingsSection>
 
-		<div class="flex flex-col gap-2.5">
-			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.databaseBackups) }}
-			</h2>
-			<button id="open-db-backups-folder" class="btn min-w-max" @click="openDbBackupsFolder">
-				<FolderOpenIcon />
-				{{ formatMessage(messages.openBackupsFolder) }}
-			</button>
-			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.databaseBackupsDescription) }}
-			</p>
-		</div>
+		<SettingsSection v-if="props.scope === 'content-downloads'">
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-resources-missing-content-import" tabindex="-1">
+						{{ formatMessage(messages.missingContentAutoImport) }}
+					</span>
+				</template>
+				<template #description>
+					{{ formatMessage(messages.missingContentAutoImportDescription) }}
+				</template>
+				<template #control>
+					<Toggle
+						id="missing-content-auto-import"
+						v-model="missingContentScannerSettings.enabled"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow stacked>
+				<template #label>{{ formatMessage(messages.missingContentImportDirectory) }}</template>
+				<template #description>
+					{{ formatMessage(messages.missingContentImportDirectoryDescription) }}
+				</template>
+				<template #control>
+					<div class="flex w-full flex-wrap items-center gap-2">
+						<div class="min-w-0 flex-1">
+							<StyledInput
+								id="missing-content-import-directory"
+								:model-value="
+									missingContentScannerSettings.directory ??
+									formatMessage(messages.systemDownloadsDirectory)
+								"
+								:icon="FolderOpenIcon"
+								type="text"
+								readonly
+								wrapper-class="w-full"
+							>
+								<template #right>
+									<IconButton
+										type="base"
+										:label="formatMessage(messages.selectImportDirectory)"
+										class="ml-1.5"
+										:disabled="!missingContentScannerSettings.enabled"
+										@click="findMissingContentImportDirectory"
+									>
+										<FolderSearchIcon />
+									</IconButton>
+								</template>
+							</StyledInput>
+						</div>
+						<button
+							v-if="missingContentScannerSettings.directory"
+							class="btn min-w-max"
+							:disabled="!missingContentScannerSettings.enabled"
+							@click="resetMissingContentImportDirectory"
+						>
+							{{ formatMessage(messages.resetImportDirectory) }}
+						</button>
+					</div>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 	</div>
 </template>
+
+<style scoped>
+.settings-page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-xl);
+}
+</style>

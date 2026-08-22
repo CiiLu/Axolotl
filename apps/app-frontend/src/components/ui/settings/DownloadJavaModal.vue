@@ -4,9 +4,9 @@ import {
 	commonMessages,
 	defineMessages,
 	injectNotificationManager,
+	NewButton as Button,
 	NewModal,
 	useVIntl,
-	NewButton as Button,
 } from '@modrinth/ui'
 import { ref } from 'vue'
 
@@ -163,8 +163,8 @@ async function downloadVersion(info) {
 						:key="vendor"
 						type="base"
 						class="!h-16 !w-full !min-w-0 !justify-start !gap-3 !rounded-lg !px-3 !py-2 !text-left !shadow-none"
-						@click="selectVendor(vendor)"
 						native-type="button"
+						@click="selectVendor(vendor)"
 					>
 						<span
 							class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md p-1"
@@ -230,8 +230,8 @@ async function downloadVersion(info) {
 						type="base"
 						class="!h-12 !w-full !min-w-0 !rounded-lg !px-3 !shadow-none"
 						:disabled="downloading !== null"
-						@click="downloadVersion(info)"
 						native-type="button"
+						@click="downloadVersion(info)"
 					>
 						<SpinnerIcon
 							v-if="downloading === info.major_version"
@@ -253,8 +253,8 @@ async function downloadVersion(info) {
 					v-if="selectedVendor"
 					type="outlined"
 					:disabled="downloading !== null"
-					@click="backToVendors"
 					native-type="button"
+					@click="backToVendors"
 				>
 					<ArrowLeftIcon aria-hidden="true" />
 					{{ formatMessage(messages.back) }}
@@ -262,8 +262,8 @@ async function downloadVersion(info) {
 				<Button
 					type="outlined"
 					:disabled="downloading !== null"
-					@click="modal?.hide()"
 					native-type="button"
+					@click="modal?.hide()"
 				>
 					<XIcon aria-hidden="true" />
 					{{ formatMessage(commonMessages.cancelButton) }}

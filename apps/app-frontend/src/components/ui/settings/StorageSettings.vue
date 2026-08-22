@@ -358,7 +358,7 @@ function formatDateTime(date: Date) {
 </script>
 
 <template>
-	<div class="storage-page">
+	<div id="settings-target-storage-overview" tabindex="-1" class="storage-page">
 		<div v-if="loading && !tree" class="storage-loading">
 			<SpinnerIcon class="size-8 animate-spin text-brand" />
 			<span>{{ formatMessage(storageMessages.scanning) }}</span>
@@ -444,7 +444,7 @@ function formatDateTime(date: Date) {
 
 			<!-- 实例树节点列表 -->
 			<section v-if="instancesCategory" class="storage-instance-section">
-				<div class="instance-help" v-tooltip="symlinkHelpTooltipOptions">
+				<div v-tooltip="symlinkHelpTooltipOptions" class="instance-help">
 					<HelpCircleIcon class="instance-help-icon" aria-hidden="true" />
 					<span>{{ formatMessage(storageMessages.symlinkHelp) }}</span>
 				</div>
@@ -496,11 +496,11 @@ function formatDateTime(date: Date) {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 2rem;
-	padding: 1.25rem 1.5rem;
-	border: 1px solid var(--surface-5);
-	border-radius: 0.75rem;
-	background: var(--surface-1, transparent);
+	gap: var(--gap-xl);
+	padding: var(--gap-lg);
+	border: 1px solid var(--surface-4);
+	border-radius: var(--radius-md);
+	background: var(--surface-2);
 	overflow: hidden;
 }
 

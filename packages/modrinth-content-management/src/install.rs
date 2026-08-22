@@ -120,6 +120,7 @@ struct InstallResolver<'a, P> {
     selected: &'a ResolutionPreferences,
     target: &'a ResolutionPreferences,
     existing_project_ids: HashSet<String>,
+    force_project_ids: HashSet<String>,
     excluded_project_ids: HashSet<String>,
     planned_project_versions: HashMap<String, String>,
     visited_versions: HashSet<String>,
@@ -142,6 +143,11 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
             target: &request.target,
             existing_project_ids: request
                 .existing_project_ids
+                .iter()
+                .cloned()
+                .collect(),
+            force_project_ids: request
+                .force_project_ids
                 .iter()
                 .cloned()
                 .collect(),
@@ -239,7 +245,9 @@ impl<'a, P: ContentMetadataProvider> InstallResolver<'a, P> {
                     continue;
                 }
 
-                if self.existing_project_ids.contains(&project_id) {
+                if self.existing_project_ids.contains(&project_id)
+                    && !self.force_project_ids.contains(&project_id)
+                {
                     self.skipped.push(SkippedContent {
                         project_id,
                         version_id: Some(dependency_version.id),

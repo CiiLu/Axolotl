@@ -63,6 +63,8 @@ export interface ContentCardTableItem {
 	clientWarning?: ClientWarningType | null
 	hideSwitchVersion?: boolean
 	pendingManualDownload?: boolean
+	/** Number of installed copies of this online project, when more than one is present. */
+	duplicateCount?: number
 	instanceFileId?: string
 	instanceEntryId?: string
 	instanceMemberId?: string
