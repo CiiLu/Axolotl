@@ -10,8 +10,7 @@ use crate::{ErrorKind, Result, State};
 use super::lifecycle::is_running;
 use super::manifest::{
     ServerInfo, ServerManifest, build_server_info, read_manifest,
-    sanitize_folder_name, server_path, type_default_jar_name,
-    write_manifest,
+    sanitize_folder_name, server_path, type_default_jar_name, write_manifest,
 };
 
 pub async fn list() -> Result<Vec<ServerInfo>> {

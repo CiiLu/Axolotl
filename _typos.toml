@@ -29,3 +29,7 @@ Cpy = "Cpy"
 relace = "relace"
 # Minecraft schematic file extension (Sponge schem format)
 schem = "schem"
+# tasklist.exe CSV output format flag
+FO = "FO"
+# short for "Forge" loader monogram
+Fo = "Fo"

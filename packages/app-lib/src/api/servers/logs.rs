@@ -2,10 +2,10 @@
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 
+use crate::Result;
 use crate::event::ServerPayloadType;
 use crate::event::emit::emit_server;
 use crate::state::{clear_log_buffer, push_log_line};
-use crate::Result;
 
 pub async fn get_log_buffer(server_id: &str) -> Result<Vec<String>> {
     Ok(crate::state::get_log_buffer(server_id))

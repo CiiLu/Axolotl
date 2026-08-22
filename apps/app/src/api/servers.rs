@@ -141,7 +141,9 @@ pub async fn servers_kill_port_process(port: u16) -> Result<()> {
 }
 
 #[tauri::command]
-pub async fn servers_port_process(port: u16) -> Result<Option<servers::PortProcessInfo>> {
+pub async fn servers_port_process(
+    port: u16,
+) -> Result<Option<servers::PortProcessInfo>> {
     Ok(servers::port_process(port).await?)
 }
 
