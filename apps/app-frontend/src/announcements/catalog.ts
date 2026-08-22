@@ -44,6 +44,26 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Added server management: create, configure, start, stop, monitor, and manage files for local Minecraft servers.',
+					'zh-CN':
+						'新增服务器管理功能，可创建、配置、启动、停止、监控和管理本地 Minecraft 服务器文件。',
+				},
+				{
+					'en-US':
+						'Added Lightweight Mode, which can be enabled in Appearance settings or automatically activated while Minecraft is running to reduce launcher resource use.',
+					'zh-CN': '新增轻量模式，可在 Minecraft 运行时自动开启以降低启动器资源占用。',
+				},
+				{
+					'en-US':
+						'Added Lemwood Mirror as a download source, with automatic selection for visitors in mainland China.',
+					'zh-CN': '新增柠泽镜像下载源，并会为中国大陆访客自动选择。',
+				},
+				{
+					'en-US': 'Added duplicate-content detection before installing content.',
+					'zh-CN': '新增内容安装前的重复内容检测。',
+				},
+				{
+					'en-US':
 						"Added pinned Content tab views that remember each instance's sorting and filters between launcher restarts.",
 					'zh-CN': '内容页现可固定实例视图，在重启启动器后保留各实例的排序和筛选条件。',
 				},
@@ -64,6 +84,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 				{
 					'en-US':
+						'Improved server setup with automatic Java selection, port-conflict detection, and a guided configuration flow.',
+					'zh-CN': '优化服务器创建流程，新增自动 Java 选择、端口冲突检测和引导式配置。',
+				},
+				{
+					'en-US':
 						'Improved Content tab sorting with file name options and clearer active filter indicators.',
 					'zh-CN': '优化内容页排序，新增文件名排序选项并明确显示生效中的筛选条件。',
 				},
@@ -74,6 +99,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			fixed: [
+				{
+					'en-US':
+						'Fixed server installation and management issues, including Fabric and Paper setup failures, terminal encoding, and server settings behavior.',
+					'zh-CN':
+						'修复服务器安装和管理中的问题，包括 Fabric 和 Paper 安装失败、终端编码及服务器设置行为。',
+				},
+				{
+					'en-US': 'Fixed mirror update manifests failing to serialize correctly.',
+					'zh-CN': '修复镜像更新清单无法正确序列化的问题。',
+				},
 				{
 					'en-US':
 						'Fixed the Discover project gallery sidebar covering images in the image viewer.',
