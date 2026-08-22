@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { NbtType, type NbtTag } from 'deepslate/nbt'
+import { defineMessages, useVIntl } from '@modrinth/ui'
+import { type NbtTag,NbtType } from 'deepslate/nbt'
 import { computed, ref } from 'vue'
 
-import { defineMessages, useVIntl } from '@modrinth/ui'
 import NbtTypeIcon from './NbtTypeIcon.vue'
 
 const props = defineProps<{

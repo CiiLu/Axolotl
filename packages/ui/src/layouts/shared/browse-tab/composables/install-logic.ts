@@ -556,7 +556,8 @@ export function getLatestMatchingInstallVersion(
 	return [...versions]
 		.filter((version) => versionMatchesPreferences(version, preferences))
 		.sort((a, b) => {
-			const channelDifference = versionChannelRank(a.version_type) - versionChannelRank(b.version_type)
+			const channelDifference =
+				versionChannelRank(a.version_type) - versionChannelRank(b.version_type)
 			if (channelDifference) return channelDifference
 			return new Date(b.date_published).getTime() - new Date(a.date_published).getTime()
 		})[0]

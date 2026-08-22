@@ -38,11 +38,17 @@
   "browse.selected-projects-floating-bar.aria-label": {
     "defaultMessage": "选定的项目"
   },
+  "browse.selected-projects-floating-bar.hide-projects": {
+    "defaultMessage": "隐藏已选项目"
+  },
   "browse.selected-projects-floating-bar.install": {
     "defaultMessage": "安装{count, plural, other {#个项目}}"
   },
   "browse.selected-projects-floating-bar.selected-count": {
     "defaultMessage": "{count, plural, other {#个已选择的项目}}"
+  },
+  "browse.selected-projects-floating-bar.show-projects": {
+    "defaultMessage": "显示{count, plural, other {#个已选项目}}"
   },
   "browse.selected-projects-leave-modal.admonition-body": {
     "defaultMessage": "你已经选择了{count, plural, other {#个}}要安装的项目。立即安装它们，或不安装并返回。"
@@ -4216,18 +4222,6 @@
   },
   "drop.confirm.as-dot-minecraft-desc": {
     "message": "扫描 .minecraft 文件夹以创建实例"
-  },
-  "drop.confirm.compatible-mode-title": {
-    "message": "这似乎是一个未开启版本隔离的实例"
-  },
-  "drop.confirm.compatible-mode-desc": {
-    "message": "是否要以兼容模式导入此实例？"
-  },
-  "drop.confirm.compatible-mode-import": {
-    "message": "兼容模式导入"
-  },
-  "drop.confirm.old-way-import": {
-    "message": "按旧方式导入"
   },
   "drop.confirm.as-launcher": {
     "message": "启动器"

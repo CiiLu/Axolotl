@@ -108,8 +108,8 @@ import {
 	defineMessage,
 	defineMessages,
 	injectNotificationManager,
-	NewModal,
 	type MessageDescriptor,
+	NewModal,
 	type PickedFile,
 	useVIntl,
 } from '@modrinth/ui'

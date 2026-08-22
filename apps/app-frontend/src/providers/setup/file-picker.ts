@@ -4,6 +4,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { readFile } from '@tauri-apps/plugin-fs'
 import { useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
+
 import { getLoaderInstanceIcon } from '@/helpers/instance-icons'
 
 function getFileName(path: string, fallback: string) {

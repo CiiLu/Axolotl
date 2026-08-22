@@ -2,12 +2,12 @@ import { computed, ref } from 'vue'
 
 import {
 	addContentFavorite,
-	contentFavoriteKey,
-	listContentFavorites,
-	removeContentFavorite,
 	type ContentFavorite,
 	type ContentFavoriteInput,
+	contentFavoriteKey,
 	type FavoriteProvider,
+	listContentFavorites,
+	removeContentFavorite,
 } from '../helpers/content-favorites.ts'
 
 export interface ContentFavoritesApi {

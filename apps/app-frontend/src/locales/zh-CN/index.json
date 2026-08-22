@@ -413,12 +413,6 @@
 	"app.browse.server-instance-content-warning": {
 		"message": "加入服务器时，添加内容可能会破坏兼容性。当更新服务器实例内容时，任何添加的内容也将丢失。"
 	},
-	"browse.selected-projects-floating-bar.hide-projects": {
-		"message": "隐藏已选择的项目"
-	},
-	"browse.selected-projects-floating-bar.show-projects": {
-		"message": "显示 {count, plural, one {# selected project} other {# selected projects}}"
-	},
 	"app.browse.server.installing": {
 		"message": "安装中"
 	},
@@ -463,6 +457,9 @@
 	},
 	"app.content-install.dependencies-skipped.notification-title": {
 		"message": "部分前置已跳过"
+	},
+	"app.content-install.preview.already-included": {
+		"message": "已包含"
 	},
 	"app.content-install.preview.already-installed": {
 		"message": "已安装"
@@ -996,7 +993,7 @@
 		"message": "无法登录 Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "要游玩此实例，请在下方使用 Microsoft 账号登录。如果没有 Minecraft 账号，可以在 Minecraft 官网购买游戏。"
+		"message": "您还未登陆任何账户，请在下方登录。如果您没有正版账户，可以在侧边栏中创建离线账户或第三方登陆。"
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "登录 Minecraft"
@@ -1200,7 +1197,7 @@
 		"message": "显示/隐藏未选项"
 	},
 	"app.instance.icon-picker.description": {
-		"message": "选择一个内置 Minecraft 图标，或上传自己的图片。"
+		"message": "组合背景和 Minecraft 元素，或上传自己的图片。"
 	},
 	"app.instance.icon-picker.icon.bread": {
 		"message": "面包"
@@ -1278,7 +1275,7 @@
 		"message": "无法加载内置图标。"
 	},
 	"app.instance.icon-picker.title": {
-		"message": "选择实例图标"
+		"message": "创建实例图标"
 	},
 	"app.instance.icon-picker.upload": {
 		"message": "上传图片"
@@ -2091,7 +2088,7 @@
 		"message": "带我逛逛"
 	},
 	"app.onboarding.appearance.description": {
-		"message": "主题、强调色、背景、主页布局和窗口行为都在这。让它更像你的启动器。"
+		"message": "主题、强调色、背景和窗口效果都在这里。把启动器调成你熟悉的样子。"
 	},
 	"app.onboarding.appearance.title": {
 		"message": "调成你的顺眼样子"
@@ -2202,13 +2199,13 @@
 		"message": "引导吉祥物"
 	},
 	"app.onboarding.resources.description": {
-		"message": "调节下载、储存和启动器资源。给风扇一点尊严。"
+		"message": "选择内容的下载与安装方式，包括下载源和安全确认。"
 	},
 	"app.onboarding.resources.title": {
 		"message": "别把电脑烤熟"
 	},
 	"app.onboarding.settings.description": {
-		"message": "外观、语言、翻译、AI 供应商、Java、存储和更新等常用设置都在这里。"
+		"message": "这里集中管理启动器偏好、游戏启动、内容下载和隐私设置。"
 	},
 	"app.onboarding.settings.title": {
 		"message": "按你的方式使用"
@@ -2528,6 +2525,9 @@
 	"app.settings.feature-flags.reset-to-default": {
 		"message": "恢复默认值"
 	},
+	"settings.feature-flags.title": {
+		"message": "功能开关"
+	},
 	"app.settings.java.auto-high-performance-mode": {
 		"message": "自动为 Java 使用高性能显卡"
 	},
@@ -2753,9 +2753,6 @@
 	"app.settings.resources.select-directory": {
 		"message": "选择新的应用目录"
 	},
-	"app.settings.tabs.updates": {
-		"message": "更新"
-	},
 	"app.settings.updates.available": {
 		"message": "发现可用更新。"
 	},
@@ -2816,6 +2813,90 @@
 	"app.settings.logs.provider.auto": {
 		"message": "自动（推荐）"
 	},
+	"app.settings.groups.common": {
+		"message": "通用"
+	},
+	"app.settings.groups.minecraft": {
+		"message": "我的世界"
+	},
+	"app.settings.groups.system": {
+		"message": "系统"
+	},
+	"app.settings.groups.launcher": {
+		"message": "启动器"
+	},
+	"app.settings.groups.game": {
+		"message": "游戏"
+	},
+	"app.settings.groups.data-privacy": {
+		"message": "数据与隐私"
+	},
+	"app.settings.groups.support": {
+		"message": "应用与支持"
+	},
+	"app.settings.groups.developer": {
+		"message": "开发者"
+	},
+	"app.settings.tabs.appearance": {
+		"message": "外观"
+	},
+	"app.settings.tabs.interface": {
+		"message": "界面与外观"
+	},
+	"app.settings.tabs.home-navigation": {
+		"message": "首页与导航"
+	},
+	"app.settings.tabs.language-translation": {
+		"message": "语言与翻译"
+	},
+	"app.settings.tabs.java-performance": {
+		"message": "Java 与性能"
+	},
+	"app.settings.tabs.launch-defaults": {
+		"message": "启动与实例默认值"
+	},
+	"app.settings.tabs.content-downloads": {
+		"message": "内容与下载"
+	},
+	"app.settings.tabs.network-multiplayer": {
+		"message": "网络与多人游戏"
+	},
+	"app.settings.tabs.storage-backups": {
+		"message": "存储与备份"
+	},
+	"app.settings.tabs.privacy-data": {
+		"message": "隐私与数据共享"
+	},
+	"app.settings.tabs.language": {
+		"message": "语言"
+	},
+	"app.settings.tabs.translation": {
+		"message": "翻译"
+	},
+	"app.settings.tabs.ai": {
+		"message": "AI"
+	},
+	"app.settings.tabs.privacy-security": {
+		"message": "隐私与安全"
+	},
+	"app.settings.tabs.java-installations": {
+		"message": "Java 安装"
+	},
+	"app.settings.tabs.default-instance-options": {
+		"message": "默认实例选项"
+	},
+	"app.settings.tabs.resource-management": {
+		"message": "资源管理"
+	},
+	"app.settings.tabs.multiplayer": {
+		"message": "多人游戏"
+	},
+	"app.settings.tabs.updates": {
+		"message": "更新"
+	},
+	"app.settings.tabs.about": {
+		"message": "关于"
+	},
 	"app.settings.logs.provider.auto-description": {
 		"message": "优先使用 LogShare.CN，不可用时自动切换到 mclo.gs。"
 	},
@@ -2834,26 +2915,29 @@
 	"app.settings.logs.title": {
 		"message": "日志分析服务"
 	},
-	"app.settings.tabs.about": {
-		"message": "关于"
+	"app.settings.search.clear": {
+		"message": "清除设置搜索"
 	},
-	"app.settings.tabs.appearance": {
-		"message": "外观"
+	"app.settings.search.empty": {
+		"message": "没有与搜索匹配的设置。"
 	},
-	"app.settings.tabs.default-instance-options": {
-		"message": "默认实例选项"
+	"app.settings.search.placeholder": {
+		"message": "搜索设置"
 	},
-	"app.settings.tabs.java-installations": {
-		"message": "Java 管理"
+	"app.settings.search.results": {
+		"message": "搜索结果"
 	},
-	"app.settings.tabs.language": {
-		"message": "语言"
+	"app.settings.save-status.error": {
+		"message": "无法保存"
 	},
-	"app.settings.tabs.resource-management": {
-		"message": "资源管理"
+	"app.settings.save-status.retry": {
+		"message": "重试"
 	},
-	"app.settings.tabs.translation": {
-		"message": "翻译"
+	"app.settings.save-status.saved": {
+		"message": "已保存"
+	},
+	"app.settings.save-status.saving": {
+		"message": "正在保存…"
 	},
 	"app.sidebar.collapse": {
 		"message": "收起边栏"
@@ -3070,9 +3154,6 @@
 	},
 	"app.translation-settings.provider.google": {
 		"message": "Google 翻译（可直接用）"
-	},
-	"app.translation-settings.provider.microsoft": {
-		"message": "Microsoft 翻译（不可用）"
 	},
 	"app.translation-settings.style": {
 		"message": "译文样式"
@@ -3796,9 +3877,6 @@
 	},
 	"instance.files.studio.title": {
 		"message": "Studio"
-	},
-	"instance.files.studio.unsaved-switch-blocked": {
-		"message": "请先保存或放弃当前更改，再打开其他文件。"
 	},
 	"instance.server-modal.address": {
 		"message": "地址"
@@ -6917,9 +6995,6 @@
 	"app.onboarding.ai.title": {
 		"message": "连接你的 AI 供应商"
 	},
-	"app.settings.tabs.ai": {
-		"message": "AI"
-	},
 	"app.translation-settings.ai-model": {
 		"message": "文本模型"
 	},
@@ -7100,9 +7175,6 @@
 	"app.downloads.item-status.failed": {
 		"message": "失败"
 	},
-	"app.settings.tabs.multiplayer": {
-		"message": "多人联机"
-	},
 	"app.multiplayer.hongshi.download": {
 		"message": "下载红石联机"
 	},
@@ -7175,9 +7247,6 @@
 	"app.settings.privacy.telemetry-description": {
 		"message": "发送匿名每日活跃信号和脱敏的启动器错误报告。绝不上传 Minecraft 日志或账户凭据。"
 	},
-	"app.settings.tabs.privacy-security": {
-		"message": "隐私与安全"
-	},
 	"app.curseforge.manual-downloads.state-changed": {
 		"message": "下载状态已被更改，正在等待同步。"
 	},
@@ -7240,9 +7309,6 @@
 	},
 	"app.browse.add": {
 		"message": "添加"
-	},
-	"app.settings.resources.source.mcim": {
-		"message": "优先 MCIM"
 	},
 	"app.settings.resources.source.tianpao": {
 		"message": "优先 Tianpao"
@@ -7348,12 +7414,6 @@
 	},
 	"app.settings.storage.cache-data": {
 		"message": "缓存数据"
-	},
-	"app.settings.storage.collapse-action": {
-		"message": "折叠"
-	},
-	"app.settings.storage.expand-action": {
-		"message": "展开"
 	},
 	"app.settings.storage.meta-data": {
 		"message": "Meta 数据"
@@ -7661,6 +7721,21 @@
 	"app.drop.batch.target-label": {
 		"message": "为该批次选择目标实例"
 	},
+	"app.drop.compatible-mode-cancel": {
+		"message": "取消"
+	},
+	"app.drop.compatible-mode-desc": {
+		"message": "要以兼容模式导入此实例吗？"
+	},
+	"app.drop.compatible-mode-import": {
+		"message": "兼容模式导入"
+	},
+	"app.drop.compatible-mode-old-way": {
+		"message": "按旧版方式导入"
+	},
+	"app.drop.compatible-mode-title": {
+		"message": "这似乎是一个未启用版本隔离的实例"
+	},
 	"app.drop.batch.nothing-importable-title": {
 		"message": "没有可导入的内容"
 	},
@@ -7736,6 +7811,9 @@
 	"app.settings.resources.proxy-mode": {
 		"message": "代理模式"
 	},
+	"app.java-arguments.presets.gc.auto.verified": {
+		"message": "上次启动：{chosen}"
+	},
 	"app.instance.icon-picker.icon.optifine": {
 		"message": "OptiFine"
 	},
@@ -7744,6 +7822,9 @@
 	},
 	"app.instance.icon-picker.icon.cleanroom": {
 		"message": "Cleanroom"
+	},
+	"app.gc-notice.fallback": {
+		"message": "Java 不接受 {preferred}，已改用 {chosen}。"
 	},
 	"app.browse.project-type.favorites": {
 		"message": "收藏夹"
@@ -7843,6 +7924,27 @@
 	},
 	"app.survey-promotion.defer-hint": {
 		"message": "关闭此弹窗后，你仍可以随时在“设置 → 关于”页面中找到并填写问卷。"
+	},
+	"browse.selected-projects-floating-bar.hide-projects": {
+		"message": "隐藏已选择的项目"
+	},
+	"browse.selected-projects-floating-bar.show-projects": {
+		"message": "显示 {count, plural, one {# selected project} other {# selected projects}}"
+	},
+	"app.translation-settings.provider.microsoft": {
+		"message": "Microsoft 翻译（不可用）"
+	},
+	"instance.files.studio.unsaved-switch-blocked": {
+		"message": "请先保存或放弃当前更改，再打开其他文件。"
+	},
+	"app.settings.resources.source.mcim": {
+		"message": "优先 MCIM"
+	},
+	"app.settings.storage.collapse-action": {
+		"message": "折叠"
+	},
+	"app.settings.storage.expand-action": {
+		"message": "展开"
 	},
 	"app.multiplayer.tab.rooms": {
 		"message": "联机房间"
@@ -8077,12 +8179,6 @@
 	},
 	"app.servers.wizard.type-title": {
 		"message": "服务端类型"
-	},
-	"app.gc-notice.fallback": {
-		"message": "Java 不接受 {preferred}，已改用 {chosen}。"
-	},
-	"app.java-arguments.presets.gc.auto.verified": {
-		"message": "上次启动：{chosen}"
 	},
 	"app.servers.console.command-echo": {
 		"message": "> {command}"

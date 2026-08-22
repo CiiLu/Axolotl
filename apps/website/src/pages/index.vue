@@ -1157,11 +1157,7 @@ useHead(() => ({
 			<p class="terms">
 				<IntlFormatted :message-id="messages.downloadTerms">
 					<template #terms-link="{ children }">
-						<a
-							href="https://github.com/Mystic-Stars/Axolotl/blob/main/LICENSE"
-							target="_blank"
-							rel="noopener"
-						>
+						<a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">
 							<component :is="() => children" />
 						</a>
 					</template>

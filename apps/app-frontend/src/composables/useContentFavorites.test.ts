@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import type { ContentFavorite, ContentFavoriteInput } from '../helpers/content-favorites.ts'
-
 import { createContentFavoritesStore } from './useContentFavorites.ts'
 
 function favorite(

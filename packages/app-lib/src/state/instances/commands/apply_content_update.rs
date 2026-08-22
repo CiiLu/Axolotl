@@ -136,6 +136,7 @@ async fn apply_content_update(
                     content_type,
                     selected: Default::default(),
                     excluded_project_ids: Vec::new(),
+                    force_project_ids: Vec::new(),
                 },
                 state,
             )

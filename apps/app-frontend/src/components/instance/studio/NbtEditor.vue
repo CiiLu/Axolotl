@@ -2,8 +2,9 @@
 import { defineMessages, useVIntl } from '@modrinth/ui'
 import { NbtString, NbtTag } from 'deepslate/nbt'
 import { computed, ref, watch } from 'vue'
-import StudioEditor from './StudioEditor.vue'
+
 import NbtTreeNode from './NbtTreeNode.vue'
+import StudioEditor from './StudioEditor.vue'
 
 const props = defineProps<{
 	content: string

@@ -229,8 +229,8 @@
 
 <script setup lang="ts">
 import {
-	BookOpenIcon,
 	BookmarkIcon,
+	BookOpenIcon,
 	DownloadIcon,
 	ExternalIcon,
 	LanguagesIcon,

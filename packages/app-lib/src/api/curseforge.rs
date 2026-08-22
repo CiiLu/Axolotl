@@ -447,6 +447,8 @@ pub struct CurseForgeInstallRequest {
     pub install_dependencies: bool,
     #[serde(default)]
     pub excluded_dependency_project_ids: Vec<u32>,
+    #[serde(default)]
+    pub force_dependency_project_ids: Vec<u32>,
     /// The immutable dependency selection returned by preview. It is short
     /// lived and tied to the target instance revision.
     #[serde(default)]
@@ -1563,7 +1565,10 @@ async fn install_file_with_metrics(
                         }
                         if installed_project_ids.contains(&format!(
                             "curseforge:{dependency_project_id}"
-                        )) {
+                        )) && !request
+                            .force_dependency_project_ids
+                            .contains(&dependency_project_id)
+                        {
                             result.skipped_dependencies.push(
                                 CurseForgeSkippedDependency {
                                     project_id: dependency_ref.mod_id,
@@ -2754,7 +2759,10 @@ pub async fn preview_install_file(
                         }
                         if installed_project_ids.contains(&format!(
                             "curseforge:{dependency_project_id}"
-                        )) {
+                        )) && !request
+                            .force_dependency_project_ids
+                            .contains(&dependency_project_id)
+                        {
                             skipped.push(CurseForgeSkippedDependency {
                                 project_id: dependency_project_id,
                                 file_id: None,
@@ -3563,6 +3571,7 @@ pub async fn install_modpack_with_reporter(
 							world_name: None,
 							install_dependencies: false,
 							excluded_dependency_project_ids: Vec::new(),
+							force_dependency_project_ids: Vec::new(),
 							dependency_plan_id: None,
                         },
                         download_metrics.as_deref(),
@@ -4161,6 +4170,7 @@ pub(crate) async fn install_local_manifest_files(
 							world_name: None,
 							install_dependencies: false,
 							excluded_dependency_project_ids: Vec::new(),
+							force_dependency_project_ids: Vec::new(),
 							dependency_plan_id: None,
                         },
                         Some(&download_metrics),
@@ -5197,6 +5207,7 @@ async fn install_selected_file(
         world_name: None,
         install_dependencies: true,
         excluded_dependency_project_ids: Vec::new(),
+        force_dependency_project_ids: Vec::new(),
         dependency_plan_id: None,
     })
     .await?;
@@ -6837,6 +6848,7 @@ async fn resolve_modrinth_fallback_plan(
             content_type: item_type.into(),
             selected: Default::default(),
             excluded_project_ids: Vec::new(),
+            force_project_ids: Vec::new(),
         },
         game_version.to_string(),
         loader,

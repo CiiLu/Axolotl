@@ -44,6 +44,15 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/settings',
+			name: 'Settings',
+			component: () => import('@/pages/Settings.vue'),
+			meta: {
+				breadcrumb: [{ name: 'Settings' }],
+				discordActivity: 'Idling...',
+			},
+		},
+		{
 			path: '/browse/favorites',
 			name: 'Favorites',
 			component: () => import('@/pages/Favorites.vue'),

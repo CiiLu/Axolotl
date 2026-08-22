@@ -295,7 +295,7 @@ async function onJavaDownloaded(job) {
 	<DownloadJavaModal ref="downloadJavaModal" @downloaded="onJavaDownloaded" />
 	<InstalledJavaModal ref="installedJavaModal" @changed="reloadDefaults" />
 
-	<div class="flex flex-col gap-6">
+	<div class="settings-page">
 		<div
 			v-for="(javaVersion, index) in supportedJavaVersions"
 			:key="`java-${javaVersion}`"
@@ -406,7 +406,11 @@ async function onJavaDownloaded(job) {
 
 		<div class="flex flex-col gap-6 border-0 border-t border-solid border-button-border pt-5">
 			<div class="flex flex-col gap-2.5">
-				<h2 class="m-0 text-lg font-semibold text-contrast">
+				<h2
+					id="settings-target-java-memory"
+					tabindex="-1"
+					class="m-0 text-lg font-semibold text-contrast"
+				>
 					{{ formatMessage(messages.memory) }}
 				</h2>
 
@@ -445,7 +449,11 @@ async function onJavaDownloaded(job) {
 			</div>
 
 			<div class="flex flex-col gap-2.5">
-				<h2 class="m-0 text-lg font-semibold text-contrast">
+				<h2
+					id="settings-target-java-arguments"
+					tabindex="-1"
+					class="m-0 text-lg font-semibold text-contrast"
+				>
 					{{ formatMessage(messages.javaArguments) }}
 				</h2>
 
@@ -459,3 +467,30 @@ async function onJavaDownloaded(job) {
 		</div>
 	</div>
 </template>
+
+<style scoped>
+.settings-page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-xl);
+}
+
+.settings-page > div {
+	padding: var(--gap-lg);
+	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border-radius: var(--radius-md);
+	background: var(--surface-2);
+}
+
+.settings-page > div:has(.border-warning) {
+	padding: var(--gap-md);
+	background: var(--color-orange-bg);
+}
+
+@media (max-width: 700px) {
+	.settings-page :deep(.flex.items-center.justify-between) {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+}
+</style>

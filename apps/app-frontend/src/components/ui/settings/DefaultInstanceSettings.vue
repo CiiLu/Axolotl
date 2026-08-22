@@ -4,6 +4,9 @@ import { ref, watch } from 'vue'
 
 import { get, set } from '@/helpers/settings.ts'
 
+import SettingsRow from './SettingsRow.vue'
+import SettingsSection from './SettingsSection.vue'
+
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
@@ -68,6 +71,23 @@ const messages = defineMessages({
 		id: 'app.settings.defaults.post-exit-description',
 		defaultMessage: 'Run after the game closes.',
 	},
+	lightweightMode: {
+		id: 'app.appearance-settings.lightweight-mode.title',
+		defaultMessage: 'Enter lightweight mode after launching a game',
+	},
+	lightweightModeDescription: {
+		id: 'app.appearance-settings.lightweight-mode.description',
+		defaultMessage:
+			'Closes the launcher webview after Minecraft starts to reduce memory use. Restore it from the system tray.',
+	},
+	minimizeLauncher: {
+		id: 'app.appearance-settings.minimize-launcher.title',
+		defaultMessage: 'Minimize launcher',
+	},
+	minimizeLauncherDescription: {
+		id: 'app.appearance-settings.minimize-launcher.description',
+		defaultMessage: 'Minimize the launcher when a Minecraft process starts.',
+	},
 })
 
 const fetchSettings = await get()
@@ -108,123 +128,161 @@ watch(
 </script>
 
 <template>
-	<div>
-		<div class="flex flex-col gap-6">
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-lg font-semibold text-contrast">
+	<div class="settings-page">
+		<SettingsSection>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-defaults-window" tabindex="-1">
 						{{ formatMessage(messages.fullscreen) }}
-					</h3>
-					<p class="m-0 leading-tight">
-						{{ formatMessage(messages.fullscreenDescription) }}
-					</p>
-				</div>
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.fullscreenDescription) }}</template>
+				<template #control><Toggle id="fullscreen" v-model="settings.force_fullscreen" /></template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.width) }}</template>
+				<template #description>{{ formatMessage(messages.widthDescription) }}</template>
+				<template #control>
+					<StyledInput
+						id="width"
+						v-model="settings.game_resolution[0]"
+						:disabled="settings.force_fullscreen"
+						autocomplete="off"
+						type="number"
+						:placeholder="formatMessage(messages.widthPlaceholder)"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.height) }}</template>
+				<template #description>{{ formatMessage(messages.heightDescription) }}</template>
+				<template #control>
+					<StyledInput
+						id="height"
+						v-model="settings.game_resolution[1]"
+						:disabled="settings.force_fullscreen"
+						autocomplete="off"
+						type="number"
+						:placeholder="formatMessage(messages.heightPlaceholder)"
+					/>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 
-				<Toggle id="fullscreen" v-model="settings.force_fullscreen" />
-			</div>
+		<SettingsSection>
+			<SettingsRow stacked>
+				<template #label>
+					<span id="settings-target-defaults-environment" tabindex="-1">
+						{{ formatMessage(messages.environmentVariables) }}
+					</span>
+				</template>
+				<template #control>
+					<StyledInput
+						id="env-vars"
+						v-model="settings.envVars"
+						autocomplete="off"
+						type="text"
+						:placeholder="formatMessage(messages.environmentVariablesPlaceholder)"
+						wrapper-class="w-full"
+					/>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.width) }}
-					</h3>
-					<p class="m-0 leading-tight">{{ formatMessage(messages.widthDescription) }}</p>
-				</div>
+		<SettingsSection>
+			<SettingsRow stacked>
+				<template #label>
+					<span id="settings-target-defaults-launch-hooks" tabindex="-1">
+						{{ formatMessage(messages.preLaunchHook) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.preLaunchDescription) }}</template>
+				<template #control>
+					<StyledInput
+						id="pre-launch"
+						v-model="settings.hooks.pre_launch"
+						autocomplete="off"
+						type="text"
+						:placeholder="formatMessage(messages.preLaunchPlaceholder)"
+						wrapper-class="w-full"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow stacked>
+				<template #label>{{ formatMessage(messages.wrapperHook) }}</template>
+				<template #description>{{ formatMessage(messages.wrapperDescription) }}</template>
+				<template #control>
+					<StyledInput
+						id="wrapper"
+						v-model="settings.hooks.wrapper"
+						autocomplete="off"
+						type="text"
+						:placeholder="formatMessage(messages.wrapperPlaceholder)"
+						wrapper-class="w-full"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow stacked>
+				<template #label>{{ formatMessage(messages.postExitHook) }}</template>
+				<template #description>{{ formatMessage(messages.postExitDescription) }}</template>
+				<template #control>
+					<StyledInput
+						id="post-exit"
+						v-model="settings.hooks.post_exit"
+						autocomplete="off"
+						type="text"
+						:placeholder="formatMessage(messages.postExitPlaceholder)"
+						wrapper-class="w-full"
+					/>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 
-				<StyledInput
-					id="width"
-					v-model="settings.game_resolution[0]"
-					:disabled="settings.force_fullscreen"
-					autocomplete="off"
-					type="number"
-					:placeholder="formatMessage(messages.widthPlaceholder)"
-				/>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex flex-col gap-1">
-					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.height) }}
-					</h3>
-					<p class="m-0 leading-tight">{{ formatMessage(messages.heightDescription) }}</p>
-				</div>
-
-				<StyledInput
-					id="height"
-					v-model="settings.game_resolution[1]"
-					:disabled="settings.force_fullscreen"
-					autocomplete="off"
-					type="number"
-					:placeholder="formatMessage(messages.heightPlaceholder)"
-				/>
-			</div>
-		</div>
-
-		<hr class="my-6 bg-button-border border-none h-[1px]" />
-
-		<div class="flex flex-col gap-6">
-			<div class="flex flex-col gap-2.5">
-				<h2 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.environmentVariables) }}
-				</h2>
-				<StyledInput
-					id="env-vars"
-					v-model="settings.envVars"
-					autocomplete="off"
-					type="text"
-					:placeholder="formatMessage(messages.environmentVariablesPlaceholder)"
-					wrapper-class="w-full"
-				/>
-			</div>
-		</div>
-
-		<hr class="my-6 bg-button-border border-none h-[1px]" />
-
-		<div class="flex flex-col gap-6">
-			<div class="flex flex-col gap-2.5">
-				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.preLaunchHook) }}
-				</h3>
-				<StyledInput
-					id="pre-launch"
-					v-model="settings.hooks.pre_launch"
-					autocomplete="off"
-					type="text"
-					:placeholder="formatMessage(messages.preLaunchPlaceholder)"
-					wrapper-class="w-full"
-				/>
-				<p class="m-0 leading-tight">{{ formatMessage(messages.preLaunchDescription) }}</p>
-			</div>
-
-			<div class="flex flex-col gap-2.5">
-				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.wrapperHook) }}
-				</h3>
-				<StyledInput
-					id="wrapper"
-					v-model="settings.hooks.wrapper"
-					autocomplete="off"
-					type="text"
-					:placeholder="formatMessage(messages.wrapperPlaceholder)"
-					wrapper-class="w-full"
-				/>
-				<p class="m-0 leading-tight">{{ formatMessage(messages.wrapperDescription) }}</p>
-			</div>
-
-			<div class="flex flex-col gap-2.5">
-				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.postExitHook) }}
-				</h3>
-				<StyledInput
-					id="post-exit"
-					v-model="settings.hooks.post_exit"
-					autocomplete="off"
-					type="text"
-					:placeholder="formatMessage(messages.postExitPlaceholder)"
-					wrapper-class="w-full"
-				/>
-				<p class="m-0 leading-tight">{{ formatMessage(messages.postExitDescription) }}</p>
-			</div>
-		</div>
+		<SettingsSection>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-launch-lightweight-mode" tabindex="-1">
+						{{ formatMessage(messages.lightweightMode) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.lightweightModeDescription) }}</template>
+				<template #control>
+					<Toggle
+						id="enter-lightweight-mode-on-game-launch"
+						:model-value="settings.enter_lightweight_mode_on_game_launch"
+						@update:model-value="
+							(value) => {
+								settings.enter_lightweight_mode_on_game_launch = !!value
+								if (value) settings.hide_on_process_start = false
+							}
+						"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-launch-minimize" tabindex="-1">
+						{{ formatMessage(messages.minimizeLauncher) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.minimizeLauncherDescription) }}</template>
+				<template #control>
+					<Toggle
+						id="minimize-launcher"
+						:model-value="settings.hide_on_process_start"
+						:disabled="settings.enter_lightweight_mode_on_game_launch"
+						@update:model-value="(value) => (settings.hide_on_process_start = !!value)"
+					/>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
 	</div>
 </template>
+
+<style scoped>
+.settings-page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-xl);
+}
+</style>
