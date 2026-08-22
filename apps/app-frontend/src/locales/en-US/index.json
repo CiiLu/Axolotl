@@ -5549,6 +5549,9 @@
   "app.project.install-context.back-to-browse": {
     "message": "Back to discover"
   },
+  "app.project.install-context.back-to-instance-content": {
+    "message": "Back to instance content"
+  },
   "app.project.install-context.install-content-to-instance": {
     "message": "Install content to instance"
   },

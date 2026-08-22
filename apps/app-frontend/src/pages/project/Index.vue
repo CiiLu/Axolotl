@@ -483,6 +483,10 @@ const messages = defineMessages({
 		id: 'app.project.install-context.back-to-browse',
 		defaultMessage: 'Back to discover',
 	},
+	backToInstanceContent: {
+		id: 'app.project.install-context.back-to-instance-content',
+		defaultMessage: 'Back to instance content',
+	},
 	installContentToInstance: {
 		id: 'app.project.install-context.install-content-to-instance',
 		defaultMessage: 'Install content to instance',
@@ -669,12 +673,21 @@ const versionsHref = computed(() =>
 )
 const projectGalleryHref = computed(() => buildProjectHref(`/project/${route.params.id}/gallery`))
 
+const instanceContentBackUrl = computed(() => {
+	if (route.query.from !== 'instance-content' || typeof route.query.i !== 'string') return null
+	if (instance.value?.id !== route.query.i) return null
+	return `/instance/${encodeURIComponent(route.query.i)}`
+})
 const projectBrowseBackUrl = computed(() => {
+	if (instanceContentBackUrl.value) return instanceContentBackUrl.value
 	const browsePath = route.query.b
 	if (typeof browsePath === 'string' && browsePath.startsWith('/browse/')) return browsePath
 	const type = data.value?.project_type ? `${data.value.project_type}` : 'mod'
 	return buildBrowseHref(`/browse/${type}`)
 })
+const projectBackLabel = computed(() =>
+	formatMessage(instanceContentBackUrl.value ? messages.backToInstanceContent : messages.backToBrowse),
+)
 const fromBrowse = computed(
 	() => typeof route.query.b === 'string' && route.query.b.startsWith('/browse/'),
 )
@@ -709,7 +722,7 @@ const projectInstallContext = computed(() => {
 			iconSrc: null,
 			isMedal: serverData.is_medal,
 			backUrl: projectBrowseBackUrl.value,
-			backLabel: formatMessage(messages.backToBrowse),
+			backLabel: projectBackLabel.value,
 			heading: serverInstallContent.serverBrowseHeading.value,
 			queuedCount: serverInstallContent.queuedServerInstallCount.value,
 			selectedProjects: serverInstallContent.selectedServerInstallProjects.value,
@@ -733,7 +746,7 @@ const projectInstallContext = computed(() => {
 			iconSrc: displayIcon.url,
 			iconFrameless: displayIcon.frameless,
 			backUrl: projectBrowseBackUrl.value,
-			backLabel: formatMessage(messages.backToBrowse),
+			backLabel: projectBackLabel.value,
 			heading: formatMessage(messages.installContentToInstance),
 			selectedProjects: contentSelection.selectedProjects.value,
 			isInstallingSelected: ['validating', 'reviewing', 'queueing'].includes(
@@ -753,7 +766,7 @@ const projectInstallContext = computed(() => {
 			iconSrc: displayIcon.url,
 			iconFrameless: displayIcon.frameless,
 			backUrl: projectBrowseBackUrl.value,
-			backLabel: formatMessage(messages.backToBrowse),
+			backLabel: projectBackLabel.value,
 			heading: formatMessage(messages.installContentToInstance),
 		}
 	}

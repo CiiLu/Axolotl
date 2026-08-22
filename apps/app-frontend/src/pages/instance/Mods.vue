@@ -2609,6 +2609,10 @@ provideAppBackup({
 
 const cachedHint = readInstanceCache(props.instance.id)
 const showContentHint = ref(cachedHint?.modpackHintDismissed !== true)
+const instanceContentProjectQuery = computed(() => ({
+	i: props.instance.id,
+	from: 'instance-content',
+}))
 function dismissContentHint() {
 	showContentHint.value = false
 	writeInstanceCache(props.instance.id, { modpackHintDismissed: true })
@@ -2619,6 +2623,11 @@ provideContentManager({
 	duplicateItems: duplicateModItems,
 	loading,
 	error: ref(null),
+	filterOptionsReady: computed(
+		() =>
+			!loading.value &&
+			mergedProjects.value.length + displayedLinkedModpackContentItems.value.length > 0,
+	),
 	modpackItems: displayedLinkedModpackContentItems,
 	modpack: computed(() => {
 		if (linkedModpackProject.value) {
@@ -2626,14 +2635,14 @@ provideContentManager({
 				project: displayedModpackProject.value ?? linkedModpackProject.value,
 				projectLink: {
 					path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}`,
-					query: { i: props.instance.id },
+					query: instanceContentProjectQuery.value,
 				},
 				version: linkedModpackVersion.value ?? undefined,
 				versionLink:
 					linkedModpackProject.value && linkedModpackVersion.value
 						? {
 								path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}/version/${linkedModpackVersion.value.id}`,
-								query: { i: props.instance.id },
+								query: instanceContentProjectQuery.value,
 							}
 						: undefined,
 				owner: linkedModpackOwner.value
@@ -2659,7 +2668,7 @@ provideContentManager({
 				project: curseForgeModpackFallbackProject.value,
 				projectLink: {
 					path: `/project/curseforge/${props.instance.link?.project_id}`,
-					query: { i: props.instance.id },
+					query: instanceContentProjectQuery.value,
 				},
 				categories: [],
 				hasUpdate: false,
@@ -2758,7 +2767,7 @@ provideContentManager({
 								: effectiveProvider === 'curseforge'
 									? `/project/curseforge/${item.project.id}`
 									: `/project/${item.project.id}`,
-						query: { i: props.instance.id },
+						query: instanceContentProjectQuery.value,
 					}
 				: undefined
 
@@ -2769,7 +2778,7 @@ provideContentManager({
 			item.version?.id
 				? {
 						path: `/project/${item.project.id}/version/${item.version.id}`,
-						query: { i: props.instance.id },
+						query: instanceContentProjectQuery.value,
 					}
 				: undefined
 

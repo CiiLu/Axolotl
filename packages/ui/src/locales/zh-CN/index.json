@@ -884,6 +884,9 @@
   "content.metadata-filter.toggle": {
     "defaultMessage": "筛选"
   },
+  "content.metadata-filter.toggle-active": {
+    "defaultMessage": "筛选（已启用 {count, number} 项）"
+  },
   "content.metadata-filter.unknown": {
     "defaultMessage": "未知"
   },
@@ -932,6 +935,12 @@
   "content.page-layout.sort.alphabetical": {
     "defaultMessage": "按字母顺序"
   },
+  "content.page-layout.sort.file-name-ascending": {
+    "defaultMessage": "文件名 A-Z"
+  },
+  "content.page-layout.sort.file-name-descending": {
+    "defaultMessage": "文件名 Z-A"
+  },
   "content.page-layout.sort.date-added-newest": {
     "defaultMessage": "按从新到旧顺序"
   },
@@ -941,8 +950,26 @@
   "content.page-layout.sort.label": {
     "defaultMessage": "按{mode}排序"
   },
+  "content.page-layout.sort.project-name-ascending": {
+    "defaultMessage": "项目名称 A-Z"
+  },
+  "content.page-layout.sort.project-name-descending": {
+    "defaultMessage": "项目名称 Z-A"
+  },
+  "content.page-layout.pin-view": {
+    "defaultMessage": "固定当前视图"
+  },
+  "content.page-layout.reset-view": {
+    "defaultMessage": "重置视图"
+  },
+  "content.page-layout.unpin-view": {
+    "defaultMessage": "取消固定当前视图"
+  },
   "content.page-layout.update-all": {
     "defaultMessage": "更新所有"
+  },
+  "content.page-layout.view-options": {
+    "defaultMessage": "视图选项"
   },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "已禁用选择的所有内容"
