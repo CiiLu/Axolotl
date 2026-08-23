@@ -842,6 +842,9 @@
   "creation-flow.modal.custom-setup.game-version-type.alpha": {
     "defaultMessage": "愚人節版"
   },
+  "creation-flow.modal.custom-setup.game-version-type.ancient": {
+    "defaultMessage": "遠古版"
+  },
   "creation-flow.modal.custom-setup.game-version-type.release": {
     "defaultMessage": "正式版"
   },
