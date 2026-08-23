@@ -1857,7 +1857,9 @@ pub async fn launch_minecraft(
             &instance.name,
             command,
             post_exit_hook,
-            state.directories.instance_logs_dir(&instance.path),
+            state
+                .directories
+                .game_logs_dir(&state.directories.instance_game_dir(&instance)),
             version_info.logging.is_some(),
             main_class_keep_alive,
             rpc_server,

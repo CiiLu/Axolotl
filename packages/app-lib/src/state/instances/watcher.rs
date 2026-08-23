@@ -280,20 +280,23 @@ pub(crate) async fn watch_instances_init(
     };
 
     for instance in instances {
-        watch_instance_folder(&instance.id, &instance.path, watcher, dirs)
-            .await;
+        watch_instance_folder(
+            &instance.id,
+            &instance.path,
+            &dirs.instance_game_dir(&instance),
+            watcher,
+        )
+        .await;
     }
 }
 
 pub(crate) async fn watch_instance_folder(
     instance_id: &str,
     instance_path: &str,
+    full_instance_path: &Path,
     watcher: &FileWatcher,
-    dirs: &DirectoryInfo,
 ) {
-    let full_instance_path = dirs.instances_dir().join(instance_path);
-
-    let Ok(metadata) = tokio::fs::metadata(&full_instance_path).await else {
+    let Ok(metadata) = tokio::fs::metadata(full_instance_path).await else {
         return;
     };
 
@@ -302,8 +305,8 @@ pub(crate) async fn watch_instance_folder(
     }
 
     let mut to_watch = Vec::new();
-    for full_path in instance_watch_paths(&full_instance_path) {
-        if full_path == full_instance_path {
+    for full_path in instance_watch_paths(full_instance_path) {
+        if &full_path == full_instance_path {
             // The root is watched non-recursively after the subfolders.
             continue;
         }
@@ -344,7 +347,7 @@ pub(crate) async fn watch_instance_folder(
 
     if let Err(e) = debouncer
         .watcher()
-        .watch(&full_instance_path, RecursiveMode::NonRecursive)
+        .watch(full_instance_path, RecursiveMode::NonRecursive)
     {
         tracing::error!(
             "Failed to watch root instance directory for watcher {full_instance_path:?}: {e}"
@@ -366,13 +369,11 @@ pub(crate) async fn watch_instance_folder(
 /// unwatched first and re-registered afterwards.
 pub(crate) async fn unwatch_instance_folder(
     instance_path: &str,
+    full_instance_path: &Path,
     watcher: &FileWatcher,
-    dirs: &DirectoryInfo,
 ) {
-    let full_instance_path = dirs.instances_dir().join(instance_path);
-
     let mut debouncer = watcher.watcher.write().await;
-    for full_path in instance_watch_paths(&full_instance_path) {
+    for full_path in instance_watch_paths(full_instance_path) {
         let _ = debouncer.watcher().unwatch(&full_path);
     }
 
@@ -451,8 +452,13 @@ mod tests {
         let full_path = dirs.instances_dir().join(instance_path);
         std::fs::create_dir_all(&full_path).unwrap();
 
-        watch_instance_folder("instance-1", instance_path, &watcher, &dirs)
-            .await;
+        watch_instance_folder(
+            "instance-1",
+            instance_path,
+            &full_path,
+            &watcher,
+        )
+        .await;
 
         // On Windows, an active watch keeps a directory handle open and blocks
         // renaming the instance folder (ERROR_ACCESS_DENIED). This is the
@@ -469,7 +475,7 @@ mod tests {
         // The import flow unwatches the folder first; after that the rename
         // must succeed (the watcher closes its handles asynchronously, so a
         // short retry window is needed).
-        unwatch_instance_folder(instance_path, &watcher, &dirs).await;
+        unwatch_instance_folder(instance_path, &full_path, &watcher).await;
 
         let mut renamed = false;
         for _ in 0..20 {

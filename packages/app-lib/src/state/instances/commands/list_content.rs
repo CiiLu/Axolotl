@@ -1767,7 +1767,7 @@ async fn content_files_to_content_items(
         &state.api_semaphore,
     )
     .await?;
-    let instance_path = state.directories.instances_dir().join(&instance.path);
+    let instance_path = state.directories.instance_game_dir(&instance);
     let paths = files
         .iter()
         .map(|(path, _)| instance_path.join(path))
@@ -1789,9 +1789,8 @@ async fn content_files_to_content_items(
         })
         .await?;
     let content_backups =
-        crate::state::instances::adapters::filesystem::scan_content_backups(
-            &state.directories.instances_dir(),
-            &instance.path,
+        crate::state::instances::adapters::filesystem::scan_content_backups_from(
+            &instance_path,
         )?;
     let mut items = files
         .iter()

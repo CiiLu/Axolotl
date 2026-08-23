@@ -137,8 +137,8 @@ pub(crate) async fn create_instance(
         crate::state::instances::watcher::watch_instance_folder(
             &instance.id,
             &instance.path,
+            &state.directories.instance_game_dir(&instance),
             &state.file_watcher,
-            &state.directories,
         )
         .await;
 

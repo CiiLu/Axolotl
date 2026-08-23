@@ -31,8 +31,8 @@ pub(crate) async fn sync_instance_content_files(
 ) -> crate::Result<Vec<InstanceFile>> {
     // Keep the filesystem snapshot stable until its database rows commit.
     let _instance_lock = state.lock_instance_content(&instance.id).await;
-    let scanned = filesystem::scan_content_files(
-        &state.directories.instances_dir(),
+    let scanned = filesystem::scan_content_files_from(
+        &state.directories.instance_game_dir(instance),
         &instance.path,
     )?;
     let scanned_paths = scanned
@@ -164,7 +164,7 @@ pub(crate) async fn sync_instance_content_files(
     // resource packs) for files that don't have them yet. This also backfills
     // rows created before these features existed; `icon_path` distinguishes
     // not-attempted (NULL), no-icon (empty string), and cached (path).
-    let instance_dir = state.directories.instances_dir().join(&instance.path);
+    let instance_dir = state.directories.instance_game_dir(instance);
     let icon_cache_dir = state.directories.caches_dir().join("icons");
     for file in &mut files {
         let Some(project_type) = project_type_for_file(file) else {

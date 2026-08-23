@@ -236,8 +236,7 @@ pub(crate) async fn prepare_existing_content_rollback(
     let content_set_id = rollback.instance.applied_content_set.id.clone();
     let instance_base = state
         .directories
-        .instances_dir()
-        .join(&rollback.instance.instance.path);
+        .instance_game_dir(&rollback.instance.instance);
     let _instance_lock = state.lock_instance_content(&instance_id).await;
 
     let all_entries =
@@ -428,8 +427,7 @@ async fn restore_existing_instance(
     }
     let instance_base = state
         .directories
-        .instances_dir()
-        .join(&rollback.instance.instance.path);
+        .instance_game_dir(&rollback.instance.instance);
     let _instance_lock = state.lock_instance_content(instance_id).await;
 
     if rollback.content.is_some() {

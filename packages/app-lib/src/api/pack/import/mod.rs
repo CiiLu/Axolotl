@@ -1469,8 +1469,8 @@ pub(crate) async fn finish_import(
             })?;
             unwatch_instance_folder(
                 &relative_path,
+                &instance_path,
                 &state.file_watcher,
-                &state.directories,
             )
             .await;
 
@@ -1498,8 +1498,8 @@ pub(crate) async fn finish_import(
                 watch_instance_folder(
                     instance_id,
                     &relative_path,
+                    &instance_path,
                     &state.file_watcher,
-                    &state.directories,
                 )
                 .await;
                 return Err(error.into());
@@ -1511,8 +1511,8 @@ pub(crate) async fn finish_import(
                 watch_instance_folder(
                     instance_id,
                     &relative_path,
+                    &instance_path,
                     &state.file_watcher,
-                    &state.directories,
                 )
                 .await;
                 return Err(error.into());
@@ -1521,8 +1521,8 @@ pub(crate) async fn finish_import(
             watch_instance_folder(
                 instance_id,
                 &relative_path,
+                &instance_path,
                 &state.file_watcher,
-                &state.directories,
             )
             .await;
         } else {

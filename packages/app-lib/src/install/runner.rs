@@ -2927,10 +2927,7 @@ async fn install_adjunct_components(
     let metadata = crate::api::instance::get(instance_id)
         .await?
         .ok_or_else(|| ErrorKind::InputError("Unknown instance".to_string()))?;
-    let instance_path = state
-        .directories
-        .instances_dir()
-        .join(&metadata.instance.path);
+    let instance_path = state.directories.instance_game_dir(&metadata.instance);
     let mut components = metadata.loader_components.clone();
 
     for adjunct in adjuncts {

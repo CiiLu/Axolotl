@@ -404,16 +404,17 @@ where
     Ok(path)
 }
 
-pub(crate) async fn get_game_dir_override_by_id<'e, E>(
+pub(crate) async fn get_instance_path_and_game_dir_override_by_id<'e, E>(
     id: &str,
     exec: E,
-) -> crate::Result<Option<String>>
+) -> crate::Result<Option<(String, Option<String>)>>
 where
     E: Executor<'e, Database = Sqlite>,
 {
     let row = sqlx::query!(
         "
-        SELECT game_dir_override AS \"game_dir_override?: String\"
+        SELECT path AS \"path!: String\",
+               game_dir_override AS \"game_dir_override?: String\"
         FROM instances
         WHERE id = ?
         ",
@@ -422,7 +423,7 @@ where
     .fetch_optional(exec)
     .await?;
 
-    Ok(row.and_then(|r| r.game_dir_override))
+    Ok(row.map(|r| (r.path, r.game_dir_override)))
 }
 
 pub(crate) async fn get_instance_display_info<'e, E>(

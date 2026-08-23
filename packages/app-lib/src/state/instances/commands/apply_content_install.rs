@@ -2934,7 +2934,7 @@ pub(crate) fn instance_full_path(
     state: &State,
     instance: &Instance,
 ) -> PathBuf {
-    state.directories.instances_dir().join(&instance.path)
+    state.directories.instance_game_dir(instance)
 }
 
 async fn index_existing_file(
