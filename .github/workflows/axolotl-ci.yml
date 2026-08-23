@@ -92,7 +92,12 @@ jobs:
             sccache_dir="$HOME/.cache/sccache"
           fi
           echo "SCCACHE_DIR=$sccache_dir" >> "$GITHUB_ENV"
-          echo 'RUSTC_WRAPPER=sccache' >> "$GITHUB_ENV"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            rustc_wrapper='sccache.exe'
+          else
+            rustc_wrapper='sccache'
+          fi
+          echo "RUSTC_WRAPPER=$rustc_wrapper" >> "$GITHUB_ENV"
           echo 'SCCACHE_CACHE_SIZE=1G' >> "$GITHUB_ENV"
           echo 'CARGO_INCREMENTAL=0' >> "$GITHUB_ENV"
 
