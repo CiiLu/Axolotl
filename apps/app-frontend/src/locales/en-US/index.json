@@ -6419,30 +6419,6 @@
   "app.settings.java.view-installed": {
     "message": "View installed Java"
   },
-  "app.settings.logs.description": {
-    "message": "Choose the service used to analyze and share Minecraft logs. LogShare.CN is preferred and mclo.gs is used as a fallback so sharing keeps working."
-  },
-  "app.settings.logs.provider.auto": {
-    "message": "Automatic (recommended)"
-  },
-  "app.settings.logs.provider.auto-description": {
-    "message": "Prefers LogShare.CN, automatically switching to mclo.gs when it is unavailable."
-  },
-  "app.settings.logs.provider.logshare": {
-    "message": "LogShare.CN"
-  },
-  "app.settings.logs.provider.logshare-description": {
-    "message": "Uses LogShare.CN for analysis and sharing, including AI analysis, falling back to mclo.gs when unavailable."
-  },
-  "app.settings.logs.provider.mclogs": {
-    "message": "mclo.gs"
-  },
-  "app.settings.logs.provider.mclogs-description": {
-    "message": "Uses mclo.gs for analysis and sharing. AI analysis is not available."
-  },
-  "app.settings.logs.title": {
-    "message": "Log analysis service"
-  },
   "app.settings.privacy.data-handling": {
     "message": "Telemetry uses a random installation identifier. Error context is sanitized and limited before it leaves this device. Turning telemetry off clears pending reports immediately."
   },

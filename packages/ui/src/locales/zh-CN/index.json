@@ -338,6 +338,15 @@
   "console.crash.finding.fallback-title": {
     "defaultMessage": "未知诊断：{finding}"
   },
+  "console.crash.finding.known-signature.title": { "defaultMessage": "检测到已知崩溃特征" },
+  "console.crash.finding.known-signature.action": { "defaultMessage": "结合证据以及 Minecraft、加载器、Java、显卡和模组版本检查后再修改实例。" },
+  "console.crash.mod-change": { "defaultMessage": "{kind}：{filename}" },
+  "console.crash.mod-changes.title": { "defaultMessage": "上次成功启动后 Mod 文件发生了变化" },
+  "console.crash.mod-changes.summary": { "defaultMessage": "新增 {added} 个，移除 {removed} 个，修改 {modified} 个" },
+  "console.crash.mod-change.added": { "defaultMessage": "新增" },
+  "console.crash.mod-change.removed": { "defaultMessage": "移除" },
+  "console.crash.mod-change.modified": { "defaultMessage": "修改" },
+  "console.crash.windows-events.title": { "defaultMessage": "相关 Windows 应用事件" },
   "console.crash.finding.forge-error.action": {
     "defaultMessage": "查看 Forge 故障证据，并在撤销近期更改后测试指出的模组。"
   },

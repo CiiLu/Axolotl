@@ -1892,6 +1892,35 @@
 	"app.minecraft-crash.no-log-content": {
 		"message": "没有找到可分享或分析的日志内容，请确认实例中有最近几分钟内生成的日志。"
 	},
+	"app.minecraft-crash.view-mod-changes": { "message": "查看 Mod 变化" },
+	"app.minecraft-crash.mod-changes-title": { "message": "可能的问题：上次成功启动后 Mod 文件发生了变化" },
+	"app.minecraft-crash.mod-changes-action": { "message": "请检查发生变化的 Mod；如果崩溃从这些变化后开始，可手动恢复之前的配置。" },
+	"app.minecraft-crash.mod-changes-modal.title": { "message": "上次成功启动后的 Mod 变化" },
+	"app.minecraft-crash.mod-changes-modal.description": { "message": "此比较不会自动恢复或修改任何文件。" },
+	"app.minecraft-crash.mod-changes-modal.added": { "message": "新增（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.removed": { "message": "移除（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.modified": { "message": "修改（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.empty": { "message": "没有检测到 Mod 文件变化。" },
+	"app.minecraft-crash.mod-changes-modal.close": { "message": "关闭" },
+	"app.minecraft-crash.mod-changes-modal.undo": { "message": "撤销新增 Mod" },
+	"app.minecraft-crash.mod-changes-modal.undone": { "message": "已移除新增 Mod" },
+	"app.minecraft-crash.mod-changes-modal.undo-confirm": { "message": "确定移除 {name} 吗？只会删除这个未被修改的文件。" },
+	"app.minecraft-crash.mod-changes-modal.undo-failed": { "message": "无法撤销此 Mod 变化" },
+	"app.crash-analysis.ai.action": { "message": "使用 AI 解释" },
+	"app.crash-analysis.ai.analyzing": { "message": "正在解释崩溃……" },
+	"app.crash-analysis.ai.close": { "message": "关闭" },
+	"app.crash-analysis.ai.copied": { "message": "AI 解释已复制到剪贴板" },
+	"app.crash-analysis.ai.copy": { "message": "复制解释" },
+	"app.crash-analysis.ai.disclaimer": { "message": "经过脱敏和裁剪的崩溃上下文会直接发送给本启动器中配置的 AI Provider。AI 输出可能不准确。" },
+	"app.crash-analysis.ai.error": { "message": "AI 解释失败：{message}" },
+	"app.crash-analysis.ai.settings.description": { "message": "可选：将经过脱敏和裁剪的崩溃上下文发送给 AI Providers 中配置的模型。" },
+	"app.crash-analysis.ai.settings.enabled": { "message": "启用 AI 解释" },
+	"app.crash-analysis.ai.settings.enabled-description": { "message": "不使用 AI 时，本地规则崩溃分析仍可用。" },
+	"app.crash-analysis.ai.settings.model": { "message": "文本模型" },
+	"app.crash-analysis.ai.settings.no-providers": { "message": "请先在上方启用 Provider 和文本模型，再使用 AI 崩溃解释。" },
+	"app.crash-analysis.ai.settings.provider": { "message": "AI Provider" },
+	"app.crash-analysis.ai.settings.title": { "message": "崩溃 AI 解释" },
+	"app.crash-analysis.ai.title": { "message": "AI 崩溃解释" },
 	"app.minecraft-crash.preparation-timed-out": {
 		"message": "启动准备在 60 秒内未能完成，现已取消。请检查 Java 路径、启动前命令、包装器命令和网络连接，然后重试。"
 	},
@@ -1901,6 +1930,12 @@
 	"app.minecraft-crash.share-copied": {
 		"message": "诊断链接已复制到剪贴板"
 	},
+	"app.minecraft-crash.share-ready": { "message": "诊断链接已准备好分享" },
+	"app.servers.files.open-studio": { "message": "打开 Studio" },
+	"app.servers.files.studio-running-title": { "message": "请先停止服务器再打开 Studio" },
+	"app.servers.wizard.java-too-old": { "message": "Java {selected} 无法运行此游戏版本；需要 Java {required} 或更高版本。" },
+	"app.settings.updates.miawa": { "message": "LemwoodMirror 镜像" },
+	"instance.files.studio.refresh": { "message": "刷新文件" },
 	"app.minecraft-crash.share-diagnostic": {
 		"message": "导出分享"
 	},
