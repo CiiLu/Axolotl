@@ -8650,6 +8650,7 @@ mod tests {
             None,
             InstanceLink::Unmanaged,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -10554,6 +10555,7 @@ mod tests {
             Some("14.23.5.2860".to_string()),
             None,
             InstanceLink::Unmanaged,
+            None,
             None,
         )
         .await

@@ -32,6 +32,57 @@
 			/>
 		</div>
 
+		<!-- Instance-specific: Game directory isolation -->
+		<div
+			v-if="ctx.flowType === 'instance'"
+			data-onboarding-id="creation-game-dir"
+			class="flex flex-col gap-2"
+		>
+			<span class="font-semibold text-contrast">{{ formatMessage(messages.gameDirLabel) }}</span>
+			<div class="flex flex-col gap-1.5">
+				<label class="flex cursor-pointer items-center gap-2 text-sm">
+					<input
+						type="radio"
+						name="game-dir-mode"
+						:checked="ctx.gameDirOverrideMode.value === 'isolated'"
+						@change="setGameDirMode('isolated')"
+					/>
+					<span>{{ formatMessage(messages.gameDirIsolated) }}</span>
+				</label>
+				<label class="flex cursor-pointer items-center gap-2 text-sm">
+					<input
+						type="radio"
+						name="game-dir-mode"
+						:checked="ctx.gameDirOverrideMode.value === 'not-isolated'"
+						@change="setGameDirMode('not-isolated')"
+					/>
+					<span>{{ formatMessage(messages.gameDirNotIsolated) }}</span>
+				</label>
+				<label class="flex cursor-pointer items-center gap-2 text-sm">
+					<input
+						type="radio"
+						name="game-dir-mode"
+						:checked="ctx.gameDirOverrideMode.value === 'custom'"
+						@change="setGameDirMode('custom')"
+					/>
+					<span>{{ formatMessage(messages.gameDirCustom) }}</span>
+				</label>
+			</div>
+			<div
+				v-if="ctx.gameDirOverrideMode.value !== 'isolated'"
+				class="flex items-center gap-2"
+			>
+				<ButtonStyled type="outlined">
+					<button @click="pickGameDir">
+						{{ formatMessage(messages.gameDirChooseFolder) }}
+					</button>
+				</ButtonStyled>
+				<span v-if="ctx.gameDirOverride.value" class="text-sm text-secondary break-all">
+					{{ ctx.gameDirOverride.value }}
+				</span>
+			</div>
+		</div>
+
 		<!-- Game version -->
 		<div data-onboarding-id="creation-game-version" class="flex flex-col gap-2">
 			<span class="font-semibold text-contrast">{{
@@ -196,7 +247,12 @@ import Collapsible from '../../../base/Collapsible.vue'
 import Combobox, { type ComboboxOption } from '../../../base/Combobox.vue'
 import PaperChannelBadge from '../../../base/PaperChannelBadge.vue'
 import StyledInput from '../../../base/StyledInput.vue'
-import type { AdjunctLoader, LoaderVersionEntry, LoaderVersionType } from '../creation-flow-context'
+import type {
+	AdjunctLoader,
+	GameDirOverrideMode,
+	LoaderVersionEntry,
+	LoaderVersionType,
+} from '../creation-flow-context'
 import { injectCreationFlowContext } from '../creation-flow-context'
 import {
 	createLatestRequestGuard,
@@ -237,6 +293,26 @@ const messages = defineMessages({
 	removeIcon: {
 		id: 'creation-flow.modal.custom-setup.icon.remove',
 		defaultMessage: 'Remove icon',
+	},
+	gameDirLabel: {
+		id: 'creation-flow.modal.custom-setup.game-dir.label',
+		defaultMessage: 'Game directory',
+	},
+	gameDirIsolated: {
+		id: 'creation-flow.modal.custom-setup.game-dir.isolated',
+		defaultMessage: 'Version isolated (stored in versions/<name>/)',
+	},
+	gameDirNotIsolated: {
+		id: 'creation-flow.modal.custom-setup.game-dir.not-isolated',
+		defaultMessage: 'Not isolated (shared .minecraft folder)',
+	},
+	gameDirCustom: {
+		id: 'creation-flow.modal.custom-setup.game-dir.custom',
+		defaultMessage: 'Custom',
+	},
+	gameDirChooseFolder: {
+		id: 'creation-flow.modal.custom-setup.game-dir.choose-folder',
+		defaultMessage: 'Choose folder',
 	},
 	nameLabel: {
 		id: 'creation-flow.modal.custom-setup.name.label',
@@ -681,6 +757,21 @@ function removeIcon() {
 	ctx.instanceIcon.value = null
 	ctx.instanceIconUrl.value = null
 	ctx.instanceIconPath.value = null
+}
+
+function setGameDirMode(mode: GameDirOverrideMode) {
+	ctx.gameDirOverrideMode.value = mode
+	// Keep only one of not-isolated / custom semantically distinct via the
+	// stored override path; switching back to isolated clears the override.
+	if (mode === 'isolated') {
+		ctx.gameDirOverride.value = null
+	}
+}
+
+async function pickGameDir() {
+	const picked = await filePicker.pickFolder()
+	if (!picked?.path) return
+	ctx.gameDirOverride.value = picked.path
 }
 
 const loaderVersionsLoading = ref(false)

@@ -253,6 +253,12 @@ export function setupCreationModal(
 				: (config.selectedLoaderVersion.value ?? config.loaderVersionType.value)
 			const iconPath = config.instanceIconPath.value ?? null
 			const name = config.instanceName.value.trim() || config.autoInstanceName.value
+			// Game directory isolation: pass the override path only when the user
+			// chose not-isolated or custom; isolated leaves it null (managed folder).
+			const gameDirOverride =
+				config.gameDirOverrideMode.value === 'isolated'
+					? null
+					: (config.gameDirOverride.value ?? null)
 
 			await install_create_instance({
 				name,
@@ -266,6 +272,7 @@ export function setupCreationModal(
 					role: 'adjunct',
 				})),
 				iconPath,
+				gameDirOverride,
 			}).catch(handleError)
 
 			trackEvent('InstanceCreate', {

@@ -59,6 +59,8 @@ pub struct InstallCreateInstanceRequest {
     pub adjuncts: Vec<theseus::data::LoaderComponent>,
     pub icon_path: Option<String>,
     pub link: Option<InstanceLink>,
+    #[serde(default)]
+    pub game_dir_override: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -106,6 +108,7 @@ pub async fn install_create_instance(
             Some(link) => link.into_core()?,
             None => theseus::data::InstanceLink::Unmanaged,
         },
+        request.game_dir_override,
     )
     .await?)
 }

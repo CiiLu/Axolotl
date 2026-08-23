@@ -569,6 +569,7 @@ mod tests {
             None,
             crate::state::InstanceLink::Unmanaged,
             None,
+            None,
         )
         .await
         .unwrap();

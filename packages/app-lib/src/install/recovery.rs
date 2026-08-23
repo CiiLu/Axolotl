@@ -901,6 +901,7 @@ mod tests {
             None,
             old_link.clone(),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -1248,6 +1249,7 @@ mod tests {
             None,
             None,
             InstanceLink::Unmanaged,
+            None,
             None,
         )
         .await

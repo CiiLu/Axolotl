@@ -1604,6 +1604,7 @@ mod tests {
             None,
             InstanceLink::Unmanaged,
             None,
+            None,
         )
         .await
         .unwrap();

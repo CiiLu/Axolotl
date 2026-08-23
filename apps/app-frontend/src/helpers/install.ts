@@ -38,6 +38,7 @@ export interface InstallCreateInstanceRequest {
 	adjuncts?: LoaderComponent[]
 	iconPath: string | null
 	link?: InstanceLink | null
+	gameDirOverride?: string | null
 }
 
 export interface InstallPostInstallEdit {

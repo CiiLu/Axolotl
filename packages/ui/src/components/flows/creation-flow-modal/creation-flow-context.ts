@@ -31,6 +31,7 @@ export type Difficulty = 'peaceful' | 'easy' | 'normal' | 'hard'
 export type LoaderVersionType = 'stable' | 'latest' | 'other'
 export type AdjunctLoader = 'optifine' | 'lite_loader'
 export type GeneratorSettingsMode = 'default' | 'flat' | 'custom'
+export type GameDirOverrideMode = 'isolated' | 'not-isolated' | 'custom'
 export type LoaderManifest = LauncherMeta.Manifest.v0.Manifest
 export type LoaderManifestResolver = (
 	loader: string,
@@ -169,6 +170,8 @@ export interface CreationFlowContextValue {
 	instanceIcon: Ref<File | null>
 	instanceIconUrl: Ref<string | null>
 	instanceIconPath: Ref<string | null>
+	gameDirOverrideMode: Ref<GameDirOverrideMode>
+	gameDirOverride: Ref<string | null>
 
 	// Loader/version state (custom setup)
 	selectedLoader: Ref<string | null>
@@ -325,6 +328,11 @@ export function createCreationFlowContext(
 	const instanceIcon = ref<File | null>(null)
 	const instanceIconUrl = ref<string | null>(null)
 	const instanceIconPath = ref<string | null>(null)
+
+	// Game directory isolation (instance flow only): how the instance's game
+	// working directory is laid out relative to a .minecraft root.
+	const gameDirOverrideMode = ref<GameDirOverrideMode>('isolated')
+	const gameDirOverride = ref<string | null>(null)
 
 	// Revoke old object URL when icon is cleared to avoid memory leaks
 	watch(instanceIconUrl, (_newUrl, oldUrl) => {
@@ -502,6 +510,8 @@ export function createCreationFlowContext(
 		instanceIconUrl.value = null
 		instanceIcon.value = null
 		instanceIconPath.value = null
+		gameDirOverrideMode.value = 'isolated'
+		gameDirOverride.value = null
 
 		selectedLoader.value = null
 		selectedGameVersion.value = null
@@ -626,6 +636,8 @@ export function createCreationFlowContext(
 		instanceIcon,
 		instanceIconUrl,
 		instanceIconPath,
+		gameDirOverrideMode,
+		gameDirOverride,
 		selectedLoader,
 		selectedGameVersion,
 		loaderVersionType,
