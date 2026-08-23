@@ -1103,6 +1103,9 @@
   "creation-flow.modal.custom-setup.game-version-type.alpha": {
     "defaultMessage": "April Fools"
   },
+  "creation-flow.modal.custom-setup.game-version-type.ancient": {
+    "defaultMessage": "Ancient"
+  },
   "creation-flow.modal.custom-setup.game-version-type.release": {
     "defaultMessage": "Release"
   },

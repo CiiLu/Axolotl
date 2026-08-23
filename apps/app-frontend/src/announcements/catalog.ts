@@ -33,6 +33,32 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.8.13',
+		version: '1.8.13',
+		publishedAt: '2026-08-23',
+		title: {
+			'en-US': 'Axolotl Launcher 1.8.13',
+			'zh-CN': 'Axolotl Launcher 1.8.13',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Added an Ancient version option beside April Fools in the new-instance version selector, showing historical Alpha, Beta, and legacy-tagged versions such as a1.2.3.',
+					'zh-CN':
+						'新增远古版选项，位于愚人节版本右侧，可在创建实例时选择历史 Alpha、Beta 及其他旧版标签版本，例如 a1.2.3。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'April Fools releases are now kept separate from snapshots and Ancient versions when filtering game versions.',
+					'zh-CN': '筛选游戏版本时，愚人节版本现在会与快照版和远古版保持独立。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.8.12',
 		version: '1.8.12',
 		publishedAt: '2026-08-23',

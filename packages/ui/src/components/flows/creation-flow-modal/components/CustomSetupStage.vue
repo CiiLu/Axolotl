@@ -374,6 +374,10 @@ const messages = defineMessages({
 		id: 'creation-flow.modal.custom-setup.game-version-type.alpha',
 		defaultMessage: 'April Fools',
 	},
+	ancientVersionType: {
+		id: 'creation-flow.modal.custom-setup.game-version-type.ancient',
+		defaultMessage: 'Ancient',
+	},
 })
 
 function formatLoaderVersionTypeLabel(type: LoaderVersionType): string {
@@ -390,7 +394,7 @@ function formatLoaderVersionTypeLabel(type: LoaderVersionType): string {
 // Version type selection
 const selectedVersionType = ref<GameVersionType>('release')
 
-const versionTypeItems: GameVersionType[] = ['release', 'snapshot', 'alpha']
+const versionTypeItems: GameVersionType[] = ['release', 'snapshot', 'alpha', 'ancient']
 
 function formatVersionTypeLabel(type: GameVersionType): string {
 	switch (type) {
@@ -400,6 +404,8 @@ function formatVersionTypeLabel(type: GameVersionType): string {
 			return formatMessage(messages.snapshotVersionType)
 		case 'alpha':
 			return formatMessage(messages.alphaVersionType)
+		case 'ancient':
+			return formatMessage(messages.ancientVersionType)
 	}
 }
 
