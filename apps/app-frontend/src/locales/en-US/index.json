@@ -7559,6 +7559,15 @@
   "instance.settings.tabs.general.game-dir.set": {
     "message": "Choose folder"
   },
+  "instance.settings.tabs.general.game-dir.isolated": {
+    "message": "Version isolated (stored in versions/<name>/)"
+  },
+  "instance.settings.tabs.general.game-dir.not-isolated": {
+    "message": "Not isolated (shared .minecraft folder)"
+  },
+  "instance.settings.tabs.general.game-dir.custom": {
+    "message": "Custom"
+  },
   "instance.settings.tabs.general.icon": {
     "message": "Icon"
   },

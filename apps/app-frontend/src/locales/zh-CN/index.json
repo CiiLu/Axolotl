@@ -3944,6 +3944,15 @@
 	"instance.settings.tabs.general.game-dir.set": {
 		"message": "选择文件夹"
 	},
+	"instance.settings.tabs.general.game-dir.isolated": {
+		"message": "版本隔离（存放于 versions/<名称>/）"
+	},
+	"instance.settings.tabs.general.game-dir.not-isolated": {
+		"message": "不隔离（共享 .minecraft 文件夹）"
+	},
+	"instance.settings.tabs.general.game-dir.custom": {
+		"message": "自定义"
+	},
 	"instance.settings.tabs.general.icon": {
 		"message": "图标"
 	},

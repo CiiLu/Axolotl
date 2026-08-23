@@ -165,6 +165,20 @@ async function clearGameDir() {
 	}
 }
 
+// The launcher stores a single override path, so "not isolated" and "custom"
+// both map to setting a path; "version isolated" maps to clearing it.
+const gameDirMode = computed<'isolated' | 'not-isolated' | 'custom'>(() =>
+	gameDirOverride.value ? 'not-isolated' : 'isolated',
+)
+
+async function setGameDirMode(mode: 'isolated' | 'not-isolated' | 'custom') {
+	if (mode === 'isolated') {
+		await clearGameDir()
+	} else {
+		await pickGameDir()
+	}
+}
+
 const editInstanceObject = computed(() => ({
 	name: title.value.trim().substring(0, 32) ?? 'Instance',
 }))
@@ -253,6 +267,18 @@ const messages = defineMessages({
 	gameDirClearButton: {
 		id: 'instance.settings.tabs.general.game-dir.clear',
 		defaultMessage: 'Use managed folder',
+	},
+	gameDirIsolated: {
+		id: 'instance.settings.tabs.general.game-dir.isolated',
+		defaultMessage: 'Version isolated (stored in versions/<name>/)',
+	},
+	gameDirNotIsolated: {
+		id: 'instance.settings.tabs.general.game-dir.not-isolated',
+		defaultMessage: 'Not isolated (shared .minecraft folder)',
+	},
+	gameDirCustom: {
+		id: 'instance.settings.tabs.general.game-dir.custom',
+		defaultMessage: 'Custom',
 	},
 	updateChannel: {
 		id: 'instance.settings.tabs.general.update-channel',
@@ -397,21 +423,58 @@ const messages = defineMessages({
 			<p class="m-0">
 				{{ formatMessage(messages.gameDirDescription) }}
 			</p>
+			<div class="flex flex-col gap-1.5">
+				<label class="flex cursor-pointer items-center gap-2 text-sm">
+					<input
+						type="radio"
+						name="game-dir-mode"
+						:checked="gameDirMode === 'isolated'"
+						@change="setGameDirMode('isolated')"
+					/>
+					<span>{{ formatMessage(messages.gameDirIsolated) }}</span>
+				</label>
+				<label class="flex cursor-pointer items-center gap-2 text-sm">
+					<input
+						type="radio"
+						name="game-dir-mode"
+						:checked="gameDirMode === 'not-isolated'"
+						@change="setGameDirMode('not-isolated')"
+					/>
+					<span>{{ formatMessage(messages.gameDirNotIsolated) }}</span>
+				</label>
+				<label class="flex cursor-pointer items-center gap-2 text-sm">
+					<input
+						type="radio"
+						name="game-dir-mode"
+						:checked="gameDirMode === 'custom'"
+						@change="setGameDirMode('custom')"
+					/>
+					<span>{{ formatMessage(messages.gameDirCustom) }}</span>
+				</label>
+			</div>
 			<p v-if="gameDirOverride" class="m-0 text-secondary break-all">
 				{{ formatMessage(messages.gameDirCurrent) }}:
 				<code>{{ gameDirOverride }}</code>
 			</p>
-			<div class="flex gap-2">
+			<div v-if="gameDirOverride" class="flex gap-2">
 				<ButtonStyled>
 					<button :disabled="savingGameDir" class="w-max !shadow-none" @click="pickGameDir">
 						<EditIcon />
 						{{ formatMessage(messages.gameDirSetButton) }}
 					</button>
 				</ButtonStyled>
-				<ButtonStyled v-if="gameDirOverride" color="red">
+				<ButtonStyled color="red">
 					<button :disabled="savingGameDir" class="w-max !shadow-none" @click="clearGameDir">
 						<TrashIcon />
 						{{ formatMessage(messages.gameDirClearButton) }}
+					</button>
+				</ButtonStyled>
+			</div>
+			<div v-else class="flex gap-2">
+				<ButtonStyled>
+					<button :disabled="savingGameDir" class="w-max !shadow-none" @click="pickGameDir">
+						<EditIcon />
+						{{ formatMessage(messages.gameDirSetButton) }}
 					</button>
 				</ButtonStyled>
 			</div>
