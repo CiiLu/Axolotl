@@ -9,6 +9,7 @@ import {
 import { computed, ref } from 'vue'
 
 import type { CrashAnalysisResult } from '@/composables/useCrashAnalysis'
+import { refresh_content } from '@/helpers/instance'
 import { undo_added_mod } from '@/helpers/logs'
 
 const modal = ref<InstanceType<typeof NewModal>>()
@@ -45,6 +46,10 @@ const messages = defineMessages({
 		id: 'app.minecraft-crash.mod-changes-modal.undone',
 		defaultMessage: 'Added Mod removed',
 	},
+	undoConfirm: {
+		id: 'app.minecraft-crash.mod-changes-modal.undo-confirm',
+		defaultMessage: 'Remove {name}? Only this unchanged file will be deleted.',
+	},
 	undoFailed: {
 		id: 'app.minecraft-crash.mod-changes-modal.undo-failed',
 		defaultMessage: 'Could not undo this Mod change',
@@ -70,10 +75,13 @@ function show(nextAnalysis: CrashAnalysisResult): void {
 
 async function undo(change: (typeof groups.value)[number]['items'][number]): Promise<void> {
 	if (change.kind !== 'added' || busy.value) return
+	const name = change.project_title || change.filename
+	if (!window.confirm(formatMessage(messages.undoConfirm, { name }))) return
 	busy.value = change.filename
 	try {
 		if (!change.current_sha256) return
 		await undo_added_mod(analysis.value.instance_id, change.filename, change.current_sha256)
+		await refresh_content(analysis.value.instance_id)
 		analysis.value.mod_changes = analysis.value.mod_changes.filter(
 			(item) => item.filename !== change.filename,
 		)
@@ -121,13 +129,7 @@ defineExpose({ show })
 								>
 									{{ change.project_title || change.filename }}
 								</div>
-								<div
-									class="truncate text-xs text-secondary"
-									:class="{
-										'font-sans text-sm text-contrast':
-											!change.project_title || change.project_title === change.filename,
-									}"
-								>
+								<div class="truncate text-xs text-secondary">
 									{{ change.version_number ? `v${change.version_number} · ` : ''
 									}}{{ change.filename }}
 								</div>

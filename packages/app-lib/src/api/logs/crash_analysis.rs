@@ -695,6 +695,7 @@ pub async fn save_successful_mod_snapshot(
         .instances_dir()
         .join(instance_path)
         .join("mods");
+    crate::state::sync_content_files(instance_id, &state).await?;
     let content =
         crate::state::list_content(instance_id, None, None, &state).await?;
     let snapshot = scan_mod_snapshot(&mods_path, &content).await;
@@ -780,6 +781,7 @@ async fn compare_mod_snapshot(
     if previous.is_empty() {
         return Ok(Vec::new());
     }
+    crate::state::sync_content_files(instance_id, &state).await?;
     let content =
         crate::state::list_content(instance_id, None, None, &state).await?;
     let current = scan_mod_snapshot(&instance_root.join("mods"), &[])
