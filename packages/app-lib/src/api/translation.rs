@@ -450,6 +450,13 @@ fn decode_basic_entities(value: &str) -> String {
         .replace("&amp;", "&")
 }
 
+/// Debug-log preview that never panics on multi-byte UTF-8 text (e.g. Chinese
+/// translations returned by DeepL): a byte-offset slice like `&text[..50]`
+/// panics when byte 50 lands inside a multi-byte character.
+fn truncate_preview(value: &str, max_chars: usize) -> String {
+    value.chars().take(max_chars).collect()
+}
+
 fn provider_language(locale: &str, provider: TranslationProvider) -> String {
     let normalized = locale.replace('_', "-");
     match provider {
@@ -578,9 +585,10 @@ async fn deepl_translate(
         source = %source_language,
         target = %target_language,
         api_key_len = %api_key.len(),
-        api_key_prefix = %if api_key.len() > 4 { &api_key[..4] } else { "***" },
+        api_key_prefix =
+            %if api_key.len() > 4 { truncate_preview(api_key, 4) } else { "***".to_string() },
         text_len = %segment.text.len(),
-        text_preview = %if segment.text.len() > 50 { &segment.text[..50] } else { &segment.text },
+        text_preview = %truncate_preview(&segment.text, 50),
         "Preparing DeepL translation request"
     );
 
@@ -746,7 +754,7 @@ async fn deepl_translate(
 
     tracing::info!(
         translated_text_len = %translated.len(),
-        translated_preview = %if translated.len() > 50 { &translated[..50] } else { &translated },
+        translated_preview = %truncate_preview(translated, 50),
         "DeepL translation successful"
     );
 
@@ -1308,6 +1316,18 @@ mod tests {
             strip_json_fence("<think>reasoning</think>```json\n{\"a\":1}\n```"),
             "{\"a\":1}"
         );
+    }
+
+    #[test]
+    fn truncate_preview_never_panics_on_multibyte_text() {
+        // U+6E2C is 3 bytes in UTF-8, so byte 50 sits inside a character.
+        let text = "\u{6e2c}".repeat(60);
+        assert!(text.len() > 50);
+        assert!(!text.is_char_boundary(50));
+        let preview = truncate_preview(&text, 50);
+        assert_eq!(preview.chars().count(), 50);
+        assert_eq!(preview, text.chars().take(50).collect::<String>());
+        assert_eq!(truncate_preview("hello", 50), "hello");
     }
 
     #[test]
