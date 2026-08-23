@@ -5759,12 +5759,6 @@
 	"app.settings.resources.source.mojang-official-preferred": {
 		"message": "優先官方源"
 	},
-	"app.settings.logs.description": {
-		"message": "選擇用於分析和分享 Minecraft 日誌的服務。優先使用 LogShare.CN，不可用時自動回退到 mclo.gs，確保分享始終可用。"
-	},
-	"app.settings.logs.provider.auto": {
-		"message": "自動（推薦）"
-	},
 	"app.settings.groups.common": {
 		"message": "通用"
 	},
@@ -5821,24 +5815,6 @@
 	},
 	"app.settings.tabs.privacy-security": {
 		"message": "隱私與安全"
-	},
-	"app.settings.logs.provider.auto-description": {
-		"message": "優先使用 LogShare.CN，不可用時自動切換到 mclo.gs。"
-	},
-	"app.settings.logs.provider.logshare": {
-		"message": "LogShare.CN"
-	},
-	"app.settings.logs.provider.logshare-description": {
-		"message": "使用 LogShare.CN 進行分析和分享（支援 AI 分析），不可用時回退到 mclo.gs。"
-	},
-	"app.settings.logs.provider.mclogs": {
-		"message": "mclo.gs"
-	},
-	"app.settings.logs.provider.mclogs-description": {
-		"message": "使用 mclo.gs 進行分析和分享，不支援 AI 分析。"
-	},
-	"app.settings.logs.title": {
-		"message": "日誌分析服務"
 	},
 	"app.settings.search.clear": {
 		"message": "清除設定搜尋"

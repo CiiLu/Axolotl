@@ -229,6 +229,10 @@ const messages = defineMessages({
 		id: 'app.minecraft-crash.share-copied',
 		defaultMessage: 'Diagnostic link copied to your clipboard',
 	},
+	shareReady: {
+		id: 'app.minecraft-crash.share-ready',
+		defaultMessage: 'Diagnostic link is ready to share',
+	},
 	copyLink: {
 		id: 'app.minecraft-crash.copy-link',
 		defaultMessage: 'Copy link',
@@ -418,11 +422,19 @@ async function shareDiagnostic(): Promise<void> {
 			})
 		}
 		shareUrl.value = result.url
-		await navigator.clipboard.writeText(result.url)
-		addNotification({
-			title: formatMessage(messages.shareCopied),
-			type: 'success',
-		})
+		try {
+			await navigator.clipboard.writeText(result.url)
+			addNotification({
+				title: formatMessage(messages.shareCopied),
+				type: 'success',
+			})
+		} catch (error) {
+			console.error('Failed to copy shared diagnostic URL', error)
+			addNotification({
+				title: formatMessage(messages.shareReady),
+				type: 'success',
+			})
+		}
 	} catch (error) {
 		console.error('Failed to share crash diagnostic', error)
 		addNotification({

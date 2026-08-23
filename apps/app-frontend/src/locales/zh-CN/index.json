@@ -2765,12 +2765,6 @@
 	"app.settings.updates.up-to-date": {
 		"message": "Axolotl 已是最新版本。"
 	},
-	"app.settings.logs.description": {
-		"message": "选择用于分析和分享 Minecraft 日志的服务。优先使用 LogShare.CN，不可用时自动回退到 mclo.gs，确保分享始终可用。"
-	},
-	"app.settings.logs.provider.auto": {
-		"message": "自动（推荐）"
-	},
 	"app.settings.groups.common": {
 		"message": "通用"
 	},
@@ -2854,24 +2848,6 @@
 	},
 	"app.settings.tabs.about": {
 		"message": "关于"
-	},
-	"app.settings.logs.provider.auto-description": {
-		"message": "优先使用 LogShare.CN，不可用时自动切换到 mclo.gs。"
-	},
-	"app.settings.logs.provider.logshare": {
-		"message": "LogShare.CN"
-	},
-	"app.settings.logs.provider.logshare-description": {
-		"message": "使用 LogShare.CN 进行分析和分享（支持 AI 分析），不可用时回退到 mclo.gs。"
-	},
-	"app.settings.logs.provider.mclogs": {
-		"message": "mclo.gs"
-	},
-	"app.settings.logs.provider.mclogs-description": {
-		"message": "使用 mclo.gs 进行分析和分享，不支持 AI 分析。"
-	},
-	"app.settings.logs.title": {
-		"message": "日志分析服务"
 	},
 	"app.settings.search.clear": {
 		"message": "清除设置搜索"

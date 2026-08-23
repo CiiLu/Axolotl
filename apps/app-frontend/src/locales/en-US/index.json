@@ -4841,6 +4841,9 @@
   "app.minecraft-crash.share-failed": {
     "message": "Failed to share the diagnostic"
   },
+  "app.minecraft-crash.share-ready": {
+    "message": "Diagnostic link is ready to share"
+  },
   "app.minecraft-crash.share-truncated": {
     "message": "The diagnostic log is too large, so only the last 9 MB was uploaded."
   },
