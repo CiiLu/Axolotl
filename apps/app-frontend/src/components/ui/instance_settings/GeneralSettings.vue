@@ -7,6 +7,7 @@ import {
 	injectFilePicker,
 	injectNotificationManager,
 	OverflowMenu,
+	RadioButtons,
 	StyledInput,
 	useVIntl,
 } from '@modrinth/ui'
@@ -168,6 +169,18 @@ async function clearGameDir() {
 // The launcher stores a single override path, so "not isolated" and "custom"
 // both map to setting a path; "version isolated" maps to clearing it.
 const gameDirMode = ref<'isolated' | 'not-isolated' | 'custom'>('isolated')
+const gameDirModeItems = ['isolated', 'not-isolated', 'custom'] as const
+
+function gameDirModeLabel(mode: (typeof gameDirModeItems)[number]) {
+	switch (mode) {
+		case 'not-isolated':
+			return messages.gameDirNotIsolated
+		case 'custom':
+			return messages.gameDirCustom
+		default:
+			return messages.gameDirIsolated
+	}
+}
 
 // Keep the radio selection in sync with the stored override: when a path is
 // present the instance is not isolated (or custom), otherwise version isolated.
@@ -438,36 +451,16 @@ const messages = defineMessages({
 				{{ formatMessage(messages.gameDirDescription) }}
 			</p>
 			<div class="flex flex-col gap-1.5">
-				<label class="flex cursor-pointer items-center gap-2 text-sm">
-					<input
-						type="radio"
-						name="game-dir-mode"
-						v-model="gameDirMode"
-						value="isolated"
-						@change="setGameDirMode('isolated')"
-					/>
-					<span>{{ formatMessage(messages.gameDirIsolated) }}</span>
-				</label>
-				<label class="flex cursor-pointer items-center gap-2 text-sm">
-					<input
-						type="radio"
-						name="game-dir-mode"
-						v-model="gameDirMode"
-						value="not-isolated"
-						@change="setGameDirMode('not-isolated')"
-					/>
-					<span>{{ formatMessage(messages.gameDirNotIsolated) }}</span>
-				</label>
-				<label class="flex cursor-pointer items-center gap-2 text-sm">
-					<input
-						type="radio"
-						name="game-dir-mode"
-						v-model="gameDirMode"
-						value="custom"
-						@change="setGameDirMode('custom')"
-					/>
-					<span>{{ formatMessage(messages.gameDirCustom) }}</span>
-				</label>
+				<RadioButtons
+					v-model="gameDirMode"
+					:items="gameDirModeItems"
+					force-selection
+					@update:model-value="setGameDirMode"
+				>
+					<template #default="{ item }">
+						{{ formatMessage(gameDirModeLabel(item)) }}
+					</template>
+				</RadioButtons>
 			</div>
 			<p v-if="gameDirOverride" class="m-0 text-secondary break-all">
 				{{ formatMessage(messages.gameDirCurrent) }}:

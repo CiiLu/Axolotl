@@ -39,35 +39,11 @@
 			class="flex flex-col gap-2"
 		>
 			<span class="font-semibold text-contrast">{{ formatMessage(messages.gameDirLabel) }}</span>
-			<div class="flex flex-col gap-1.5">
-				<label class="flex cursor-pointer items-center gap-2 text-sm">
-					<input
-						type="radio"
-						name="game-dir-mode"
-						v-model="gameDirMode"
-						value="isolated"
-					/>
-					<span>{{ formatMessage(messages.gameDirIsolated) }}</span>
-				</label>
-				<label class="flex cursor-pointer items-center gap-2 text-sm">
-					<input
-						type="radio"
-						name="game-dir-mode"
-						v-model="gameDirMode"
-						value="not-isolated"
-					/>
-					<span>{{ formatMessage(messages.gameDirNotIsolated) }}</span>
-				</label>
-				<label class="flex cursor-pointer items-center gap-2 text-sm">
-					<input
-						type="radio"
-						name="game-dir-mode"
-						v-model="gameDirMode"
-						value="custom"
-					/>
-					<span>{{ formatMessage(messages.gameDirCustom) }}</span>
-				</label>
-			</div>
+			<RadioButtons v-model="gameDirMode" :items="gameDirModeItems" force-selection>
+				<template #default="{ item }">
+					{{ formatMessage(gameDirModeLabel(item)) }}
+				</template>
+			</RadioButtons>
 			<div
 				v-if="gameDirMode !== 'isolated'"
 				class="flex items-center gap-2"
@@ -233,7 +209,7 @@
 <script setup lang="ts">
 import type { Paper } from '@modrinth/api-client'
 import { UploadIcon, XIcon } from '@modrinth/assets'
-import { commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
+import { commonMessages, defineMessages, RadioButtons, useVIntl } from '@modrinth/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import { useDebugLogger } from '#ui/composables/debug-logger'
@@ -770,6 +746,19 @@ function setGameDirMode(mode: GameDirOverrideMode) {
 	// stored override path; switching back to isolated clears the override.
 	if (mode === 'isolated') {
 		ctx.gameDirOverride.value = null
+	}
+}
+
+const gameDirModeItems: GameDirOverrideMode[] = ['isolated', 'not-isolated', 'custom']
+
+function gameDirModeLabel(mode: GameDirOverrideMode) {
+	switch (mode) {
+		case 'not-isolated':
+			return messages.gameDirNotIsolated
+		case 'custom':
+			return messages.gameDirCustom
+		default:
+			return messages.gameDirIsolated
 	}
 }
 
