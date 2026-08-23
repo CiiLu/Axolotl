@@ -5,6 +5,7 @@ use std::time::{Duration, SystemTime};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use super::{CensoredString, resolve_instance_path};
 use crate::{State, prelude::Credentials, util::io::IOError};
@@ -22,6 +23,15 @@ pub struct CrashAnalysis {
     pub findings: Vec<CrashAnalysisFinding>,
     pub mods: Vec<CrashAnalysisMod>,
     pub combined_log: CensoredString,
+    pub mod_changes: Vec<CrashModChange>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct CrashModChange {
+    pub kind: String,
+    pub filename: String,
+    pub previous_size: Option<u64>,
+    pub current_size: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -599,6 +609,7 @@ pub async fn analyze_crash(instance_id: &str) -> crate::Result<CrashAnalysis> {
     })
     .await
     .unwrap_or_default();
+    let mod_changes = compare_mod_snapshot(instance_id, &instance_root).await?;
     let credentials = Credentials::get_all(&state.pool)
         .await?
         .into_iter()
@@ -637,7 +648,121 @@ pub async fn analyze_crash(instance_id: &str) -> crate::Result<CrashAnalysis> {
         findings,
         mods,
         combined_log,
+        mod_changes,
     })
+}
+
+pub async fn save_successful_mod_snapshot(
+    instance_id: &str,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    let instance_path = resolve_instance_path(instance_id, &state).await?;
+    let mods_path = state
+        .directories
+        .instances_dir()
+        .join(instance_path)
+        .join("mods");
+    let snapshot = scan_mod_snapshot(&mods_path).await;
+    let mut transaction = state.pool.begin().await?;
+    sqlx::query(
+        "DELETE FROM crash_analysis_mod_snapshots WHERE instance_id = ?",
+    )
+    .bind(instance_id)
+    .execute(&mut *transaction)
+    .await?;
+    for (filename, size, sha256) in snapshot {
+        sqlx::query(
+            "INSERT INTO crash_analysis_mod_snapshots (instance_id, filename, size, sha256) VALUES (?, ?, ?, ?)",
+        )
+        .bind(instance_id)
+        .bind(filename)
+        .bind(size as i64)
+        .bind(sha256)
+        .execute(&mut *transaction)
+        .await?;
+    }
+    transaction.commit().await?;
+    Ok(())
+}
+
+async fn compare_mod_snapshot(
+    instance_id: &str,
+    instance_root: &Path,
+) -> crate::Result<Vec<CrashModChange>> {
+    let state = State::get().await?;
+    let previous = sqlx::query_as::<_, (String, u64, String)>(
+        "SELECT filename, size, sha256 FROM crash_analysis_mod_snapshots WHERE instance_id = ?",
+    )
+    .bind(instance_id)
+    .fetch_all(&state.pool)
+    .await?
+    .into_iter()
+    .map(|(filename, size, hash)| (filename, (size, hash)))
+    .collect::<std::collections::HashMap<_, _>>();
+    if previous.is_empty() {
+        return Ok(Vec::new());
+    }
+    let current = scan_mod_snapshot(&instance_root.join("mods"))
+        .await
+        .into_iter()
+        .map(|(filename, size, hash)| (filename, (size, hash)))
+        .collect::<std::collections::HashMap<_, _>>();
+    let mut changes = Vec::new();
+    for (filename, (size, hash)) in &current {
+        match previous.get(filename) {
+            None => changes.push(CrashModChange {
+                kind: "added".to_string(),
+                filename: filename.clone(),
+                previous_size: None,
+                current_size: Some(*size),
+            }),
+            Some((previous_size, previous_hash)) if previous_hash != hash => {
+                changes.push(CrashModChange {
+                    kind: "modified".to_string(),
+                    filename: filename.clone(),
+                    previous_size: Some(*previous_size),
+                    current_size: Some(*size),
+                })
+            }
+            Some(_) => {}
+        }
+    }
+    for (filename, (size, _)) in &previous {
+        if !current.contains_key(filename) {
+            changes.push(CrashModChange {
+                kind: "removed".to_string(),
+                filename: filename.clone(),
+                previous_size: Some(*size),
+                current_size: None,
+            });
+        }
+    }
+    changes.sort_by(|left, right| left.filename.cmp(&right.filename));
+    Ok(changes)
+}
+
+async fn scan_mod_snapshot(mods_path: &Path) -> Vec<(String, u64, String)> {
+    let Ok(mut entries) = tokio::fs::read_dir(mods_path).await else {
+        return Vec::new();
+    };
+    let mut snapshot = Vec::new();
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+        if path.extension().is_none_or(|extension| {
+            !extension.to_string_lossy().eq_ignore_ascii_case("jar")
+        }) {
+            continue;
+        }
+        let Ok(bytes) = tokio::fs::read(&path).await else {
+            continue;
+        };
+        snapshot.push((
+            entry.file_name().to_string_lossy().to_string(),
+            bytes.len() as u64,
+            format!("{:x}", Sha256::digest(&bytes)),
+        ));
+    }
+    snapshot
 }
 
 pub async fn get_crash_analysis_ai_settings()
@@ -770,9 +895,15 @@ fn build_ai_prompt(analysis: &CrashAnalysis) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n");
+    let mod_changes = analysis
+        .mod_changes
+        .iter()
+        .map(|change| format!("- {}: {}", change.kind, change.filename))
+        .collect::<Vec<_>>()
+        .join("\n");
     let log = truncate_ai_context(analysis.combined_log.as_str());
     format!(
-        "[Local findings]\n{}\n\n[Matched mods]\n{}\n\n[Sanitized crash context]\n{}",
+        "[Local findings]\n{}\n\n[Mod changes since the last successful launch]\n{}\n\n[Matched mods]\n{}\n\n[Sanitized crash context]\n{}",
         if findings.is_empty() {
             "No local rule matched."
         } else {
@@ -782,6 +913,11 @@ fn build_ai_prompt(analysis: &CrashAnalysis) -> String {
             "No mod JAR matched the stack trace."
         } else {
             &mods
+        },
+        if mod_changes.is_empty() {
+            "No previous successful Mod snapshot is available or no Mod files changed."
+        } else {
+            &mod_changes
         },
         log,
     )

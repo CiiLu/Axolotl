@@ -60,6 +60,10 @@ export const consoleMessages = defineMessages({
 		id: 'console.crash.finding.matched-mod',
 		defaultMessage: 'Matched Mod: {identity}{modId} - {fileName}',
 	},
+	modChange: {
+		id: 'console.crash.mod-change',
+		defaultMessage: 'Mod file {kind}: {filename}',
+	},
 	problemsDetected: {
 		id: 'console.crash.problems-detected',
 		defaultMessage: '{count, plural, one {# problem detected} other {# problems detected}}',

@@ -544,9 +544,15 @@ const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 				fileName: mod.file_name,
 			})
 		})
+		const modChanges = analysis.mod_changes.map((change) =>
+			formatMessage(consoleMessages.modChange, {
+				kind: change.kind,
+				filename: change.filename,
+			}),
+		)
 		return {
 			title,
-			descriptions: [action, ...mods, ...evidence],
+			descriptions: [action, ...modChanges, ...mods, ...evidence],
 		}
 	})
 })

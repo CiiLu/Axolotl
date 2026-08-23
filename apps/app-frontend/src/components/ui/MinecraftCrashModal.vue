@@ -119,6 +119,10 @@ const messages = defineMessages({
 		id: 'app.minecraft-crash.evidence',
 		defaultMessage: 'Reference evidence: {evidence}',
 	},
+	modChanges: {
+		id: 'app.minecraft-crash.mod-changes',
+		defaultMessage: 'Mod files changed since the last successful launch: {changes}',
+	},
 	jvmArgumentsTitle: {
 		id: 'app.minecraft-crash.diagnosis.jvm-arguments.title',
 		defaultMessage: 'Possible issue: the JVM arguments are invalid',
@@ -303,6 +307,7 @@ function applyAnalysis(
 		finding.id as keyof typeof diagnosisMessages
 	] ?? [messages.knownFailureTitle, messages.knownFailureAction]
 	const evidence = finding.evidence[0]
+	const modChanges = analysis?.mod_changes ?? []
 	return {
 		...modalPayload,
 		summary: formatMessage(titleMessage),
@@ -312,6 +317,19 @@ function applyAnalysis(
 					evidence: `${evidence.filename}:${evidence.line} - ${evidence.text}`,
 				})
 			: modalPayload.hint,
+		...(modChanges.length > 0
+			? {
+					hint: `${formatMessage(messages.modChanges, {
+						changes: modChanges.map((change) => `${change.kind}: ${change.filename}`).join('; '),
+					})}${
+						evidence
+							? ` ${formatMessage(messages.evidence, {
+									evidence: `${evidence.filename}:${evidence.line} - ${evidence.text}`,
+								})}`
+							: ''
+					}`,
+				}
+			: {}),
 	}
 }
 

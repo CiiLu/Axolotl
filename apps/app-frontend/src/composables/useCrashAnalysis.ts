@@ -21,6 +21,13 @@ export interface CrashAnalysisMod {
 	matched_class?: string
 }
 
+export interface CrashModChange {
+	kind: 'added' | 'removed' | 'modified'
+	filename: string
+	previous_size?: number
+	current_size?: number
+}
+
 export interface CrashAnalysisResult {
 	ruleset: string
 	crashed: boolean
@@ -34,6 +41,7 @@ export interface CrashAnalysisResult {
 	findings: CrashAnalysisFinding[]
 	mods: CrashAnalysisMod[]
 	combined_log: string
+	mod_changes: CrashModChange[]
 }
 
 interface CrashAnalysisState {

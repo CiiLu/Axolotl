@@ -19,8 +19,9 @@ mod crash_analysis;
 pub use crash_analysis::{
     CrashAnalysis, CrashAnalysisAiExplanation, CrashAnalysisAiSettings,
     CrashAnalysisEvidence, CrashAnalysisFinding, CrashAnalysisMod,
-    CrashAnalysisSource, analyze_crash, explain_crash_with_ai,
-    get_crash_analysis_ai_settings, update_crash_analysis_ai_settings,
+    CrashAnalysisSource, CrashModChange, analyze_crash, explain_crash_with_ai,
+    get_crash_analysis_ai_settings, save_successful_mod_snapshot,
+    update_crash_analysis_ai_settings,
 };
 
 #[derive(Serialize, Debug)]
