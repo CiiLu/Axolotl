@@ -581,4 +581,77 @@ mod tests {
             assert!(mods.join(name).is_file());
         }
     }
+
+    /// Regression probe: an instance whose `game_dir_override` points to an
+    /// external `.minecraft` root must have its content scanned from that root,
+    /// not from the (empty) managed instance folder. This is the split-brain
+    /// the content page empty-state used to hit.
+    #[tokio::test]
+    async fn content_scan_uses_game_dir_override() {
+        crate::event::EventState::init().await.unwrap();
+        let root = tempfile::tempdir().unwrap().keep();
+        let state =
+            crate::State::init_for_test(root.to_string_lossy().to_string())
+                .await
+                .unwrap();
+
+        // Create an external .minecraft root with a mod, outside the managed
+        // profiles dir.
+        let mc_root = tempfile::tempdir().unwrap();
+        let mods_dir = mc_root.path().join("mods");
+        fs::create_dir_all(&mods_dir).unwrap();
+        fs::write(mods_dir.join("my-mod.jar"), "mod").unwrap();
+
+        let created = crate::api::instance::create(
+            "Override Instance".to_string(),
+            "1.20.1".to_string(),
+            crate::state::ModLoader::Vanilla,
+            None,
+            None,
+            crate::state::InstanceLink::Unmanaged,
+            None,
+            Some(mc_root.path().to_string_lossy().to_string()),
+        )
+        .await
+        .unwrap();
+        crate::state::instances::commands::set_instance_install_stage(
+            &created.instance.id,
+            crate::state::InstanceInstallStage::Installed,
+            &state.pool,
+        )
+        .await
+        .unwrap();
+
+        let instance =
+            crate::state::instances::adapters::sqlite::instance_rows::get_instance_by_id(
+                &created.instance.id,
+                &state.pool,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            state.directories.instance_game_dir(&instance),
+            mc_root.path(),
+            "instance_game_dir must resolve to the override root"
+        );
+        let direct =
+            filesystem::scan_content_files_from(mc_root.path(), &instance.path)
+                .unwrap();
+        assert_eq!(
+            direct.len(),
+            1,
+            "direct scan of override root should find the mod"
+        );
+        let files = sync_instance_content_files(&instance, &state)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            files.len(),
+            1,
+            "expected the override-root mod to be scanned"
+        );
+        assert!(files[0].relative_path.ends_with("mods/my-mod.jar"));
+    }
 }

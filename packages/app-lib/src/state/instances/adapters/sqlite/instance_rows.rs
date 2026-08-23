@@ -426,6 +426,29 @@ where
     Ok(row.map(|r| (r.path, r.game_dir_override)))
 }
 
+/// Look up the game-dir override for an instance matched by its relative
+/// `path` (the file hash cache keys embed `instance.path`, not the instance id).
+pub(crate) async fn get_game_dir_override_by_path<'e, E>(
+    instance_path: &str,
+    exec: E,
+) -> crate::Result<Option<String>>
+where
+    E: Executor<'e, Database = Sqlite>,
+{
+    let row = sqlx::query!(
+        "
+        SELECT game_dir_override AS \"game_dir_override?: String\"
+        FROM instances
+        WHERE path = ?
+        ",
+        instance_path,
+    )
+    .fetch_optional(exec)
+    .await?;
+
+    Ok(row.and_then(|r| r.game_dir_override))
+}
+
 pub(crate) async fn get_instance_display_info<'e, E>(
     id: &str,
     exec: E,
