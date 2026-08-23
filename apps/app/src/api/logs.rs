@@ -32,6 +32,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             logs_get_crash_analysis_ai_settings,
             logs_update_crash_analysis_ai_settings,
             logs_explain_crash_with_ai,
+            logs_undo_added_mod,
             logs_export_crash_context,
         ])
         .build()
@@ -132,6 +133,15 @@ pub async fn logs_explain_crash_with_ai(
     instance_id: &str,
 ) -> Result<CrashAnalysisAiExplanation> {
     Ok(logs::explain_crash_with_ai(instance_id).await?)
+}
+
+#[tauri::command]
+pub async fn logs_undo_added_mod(
+    instance_id: &str,
+    filename: &str,
+    expected_hash: &str,
+) -> Result<()> {
+    Ok(logs::undo_added_mod(instance_id, filename, expected_hash).await?)
 }
 
 /// Export the latest run's censored diagnostic context as a ZIP archive.

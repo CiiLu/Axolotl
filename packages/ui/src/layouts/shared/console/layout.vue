@@ -548,32 +548,30 @@ const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 				fileName: mod.file_name,
 			})
 		})
-		const modChanges = analysis.mod_changes.map((change) =>
-			formatMessage(consoleMessages.modChange, {
-				kind: change.kind,
-				filename: change.filename,
-			}),
-		)
 		return {
 			title,
-			descriptions: [action, ...modChanges, ...mods, ...evidence],
+			descriptions: [action, ...mods, ...evidence],
 		}
 	})
-	if (items.length === 0 && analysis.mod_changes.length > 0) {
-		return [
-			{
-				title: formatMessage(consoleMessages.modChangesOnlyTitle),
-				descriptions: [
-					formatMessage(consoleMessages.modChangesOnlyAction),
-					...analysis.mod_changes.map((change) =>
-						formatMessage(consoleMessages.modChange, {
-							kind: change.kind,
-							filename: change.filename,
-						}),
-					),
-				],
-			},
-		]
+	if (analysis.mod_changes.length > 0) {
+		const counts = analysis.mod_change_counts
+		const changeKindMessages = {
+			added: consoleMessages.modChangeAdded,
+			removed: consoleMessages.modChangeRemoved,
+			modified: consoleMessages.modChangeModified,
+		} as const
+		items.push({
+			title: formatMessage(consoleMessages.modChangesTitle),
+			descriptions: [
+				formatMessage(consoleMessages.modChangesSummary, counts),
+				...analysis.mod_changes.map((change) =>
+					formatMessage(consoleMessages.modChange, {
+						kind: formatMessage(changeKindMessages[change.kind]),
+						filename: change.filename,
+					}),
+				),
+			],
+		})
 	}
 	return items
 })

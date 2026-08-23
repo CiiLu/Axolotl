@@ -213,6 +213,7 @@ fn main() {
                         "logs_get_crash_analysis_ai_settings",
                         "logs_update_crash_analysis_ai_settings",
                         "logs_explain_crash_with_ai",
+                        "logs_undo_added_mod",
                         "logs_export_crash_context",
                     ])
                     .default_permission(

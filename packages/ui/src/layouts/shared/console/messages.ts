@@ -62,16 +62,27 @@ export const consoleMessages = defineMessages({
 	},
 	modChange: {
 		id: 'console.crash.mod-change',
-		defaultMessage: 'Mod file {kind}: {filename}',
+		defaultMessage: '{kind}: {filename}',
 	},
-	modChangesOnlyTitle: {
-		id: 'console.crash.mod-changes-only.title',
-		defaultMessage: 'Mods changed since the last successful launch',
+	modChangesTitle: {
+		id: 'console.crash.mod-changes.title',
+		defaultMessage: 'Mod files changed since the last successful launch',
 	},
-	modChangesOnlyAction: {
-		id: 'console.crash.mod-changes-only.action',
-		defaultMessage:
-			'Review the changed Mod files and restore the previous setup manually if the crash started after those changes.',
+	modChangesSummary: {
+		id: 'console.crash.mod-changes.summary',
+		defaultMessage: '{added} added, {removed} removed, {modified} modified',
+	},
+	modChangeAdded: {
+		id: 'console.crash.mod-change.added',
+		defaultMessage: 'Added',
+	},
+	modChangeRemoved: {
+		id: 'console.crash.mod-change.removed',
+		defaultMessage: 'Removed',
+	},
+	modChangeModified: {
+		id: 'console.crash.mod-change.modified',
+		defaultMessage: 'Modified',
 	},
 	problemsDetected: {
 		id: 'console.crash.problems-detected',

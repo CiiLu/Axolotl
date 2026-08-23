@@ -17,6 +17,7 @@ const MAX_SOURCE_BYTES: u64 = 8 * 1024 * 1024;
 
 #[derive(Serialize, Debug)]
 pub struct CrashAnalysis {
+    pub instance_id: String,
     pub ruleset: &'static str,
     pub crashed: bool,
     pub sources: Vec<CrashAnalysisSource>,
@@ -24,6 +25,7 @@ pub struct CrashAnalysis {
     pub mods: Vec<CrashAnalysisMod>,
     pub combined_log: CensoredString,
     pub mod_changes: Vec<CrashModChange>,
+    pub mod_change_counts: CrashModChangeCounts,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -32,6 +34,19 @@ pub struct CrashModChange {
     pub filename: String,
     pub previous_size: Option<u64>,
     pub current_size: Option<u64>,
+    pub current_sha256: Option<String>,
+    pub project_id: Option<String>,
+    pub project_title: Option<String>,
+    pub icon_url: Option<String>,
+    pub version_id: Option<String>,
+    pub version_number: Option<String>,
+}
+
+#[derive(Serialize, Debug, Clone, Default)]
+pub struct CrashModChangeCounts {
+    pub added: usize,
+    pub removed: usize,
+    pub modified: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -610,6 +625,7 @@ pub async fn analyze_crash(instance_id: &str) -> crate::Result<CrashAnalysis> {
     .await
     .unwrap_or_default();
     let mod_changes = compare_mod_snapshot(instance_id, &instance_root).await?;
+    let mod_change_counts = count_mod_changes(&mod_changes);
     let credentials = Credentials::get_all(&state.pool)
         .await?
         .into_iter()
@@ -642,6 +658,7 @@ pub async fn analyze_crash(instance_id: &str) -> crate::Result<CrashAnalysis> {
         .collect();
 
     Ok(CrashAnalysis {
+        instance_id: instance_id.to_string(),
         ruleset: "PCL2 CrashAnalyzer (ModCrash.vb)",
         crashed,
         sources: public_sources,
@@ -649,7 +666,23 @@ pub async fn analyze_crash(instance_id: &str) -> crate::Result<CrashAnalysis> {
         mods,
         combined_log,
         mod_changes,
+        mod_change_counts,
     })
+}
+
+fn count_mod_changes(changes: &[CrashModChange]) -> CrashModChangeCounts {
+    changes.iter().fold(
+        CrashModChangeCounts::default(),
+        |mut counts, change| {
+            match change.kind.as_str() {
+                "added" => counts.added += 1,
+                "removed" => counts.removed += 1,
+                "modified" => counts.modified += 1,
+                _ => {}
+            }
+            counts
+        },
+    )
 }
 
 pub async fn save_successful_mod_snapshot(
@@ -662,7 +695,9 @@ pub async fn save_successful_mod_snapshot(
         .instances_dir()
         .join(instance_path)
         .join("mods");
-    let snapshot = scan_mod_snapshot(&mods_path).await;
+    let content =
+        crate::state::list_content(instance_id, None, None, &state).await?;
+    let snapshot = scan_mod_snapshot(&mods_path, &content).await;
     let mut transaction = state.pool.begin().await?;
     sqlx::query(
         "DELETE FROM crash_analysis_mod_snapshots WHERE instance_id = ?",
@@ -671,17 +706,60 @@ pub async fn save_successful_mod_snapshot(
     .execute(&mut *transaction)
     .await?;
     for (filename, size, sha256) in snapshot {
+        let item = content.iter().find(|item| item.file_name == filename);
+        let project = item.and_then(|item| item.project.as_ref());
+        let version = item.and_then(|item| item.version.as_ref());
         sqlx::query(
-            "INSERT INTO crash_analysis_mod_snapshots (instance_id, filename, size, sha256) VALUES (?, ?, ?, ?)",
+            "INSERT INTO crash_analysis_mod_snapshots (instance_id, filename, size, sha256, project_id, project_title, icon_url, version_id, version_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(instance_id)
-        .bind(filename)
+        .bind(&filename)
         .bind(size as i64)
         .bind(sha256)
+        .bind(project.map(|project| project.id.clone()))
+        .bind(project.map(|project| project.title.clone()))
+        .bind(project.and_then(|project| project.icon_url.clone()))
+        .bind(version.map(|version| version.id.clone()))
+        .bind(version.map(|version| version.version_number.clone()))
         .execute(&mut *transaction)
         .await?;
     }
     transaction.commit().await?;
+    Ok(())
+}
+
+pub async fn undo_added_mod(
+    instance_id: &str,
+    filename: &str,
+    expected_hash: &str,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    let instance_path = resolve_instance_path(instance_id, &state).await?;
+    let path = state
+        .directories
+        .instances_dir()
+        .join(instance_path)
+        .join("mods")
+        .join(filename);
+    if path.file_name().and_then(|name| name.to_str()) != Some(filename)
+        || path.extension().is_none_or(|extension| {
+            !extension.to_string_lossy().eq_ignore_ascii_case("jar")
+        })
+    {
+        return Err(crate::ErrorKind::InputError(
+            "Invalid Mod file name".to_string(),
+        )
+        .into());
+    }
+    let bytes = tokio::fs::read(&path).await?;
+    if format!("{:x}", Sha256::digest(&bytes)) != expected_hash {
+        return Err(crate::ErrorKind::InputError(
+            "Mod file changed since the snapshot; refusing to delete it"
+                .to_string(),
+        )
+        .into());
+    }
+    tokio::fs::remove_file(path).await?;
     Ok(())
 }
 
@@ -690,50 +768,102 @@ async fn compare_mod_snapshot(
     instance_root: &Path,
 ) -> crate::Result<Vec<CrashModChange>> {
     let state = State::get().await?;
-    let previous = sqlx::query_as::<_, (String, u64, String)>(
-        "SELECT filename, size, sha256 FROM crash_analysis_mod_snapshots WHERE instance_id = ?",
+    let previous = sqlx::query_as::<_, (String, u64, String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>)>(
+        "SELECT filename, size, sha256, project_id, project_title, icon_url, version_id, version_number FROM crash_analysis_mod_snapshots WHERE instance_id = ?",
     )
     .bind(instance_id)
     .fetch_all(&state.pool)
     .await?
     .into_iter()
-    .map(|(filename, size, hash)| (filename, (size, hash)))
+    .map(|(filename, size, hash, project_id, project_title, icon_url, version_id, version_number)| (filename, (size, hash, project_id, project_title, icon_url, version_id, version_number)))
     .collect::<std::collections::HashMap<_, _>>();
     if previous.is_empty() {
         return Ok(Vec::new());
     }
-    let current = scan_mod_snapshot(&instance_root.join("mods"))
+    let content =
+        crate::state::list_content(instance_id, None, None, &state).await?;
+    let current = scan_mod_snapshot(&instance_root.join("mods"), &[])
         .await
         .into_iter()
         .map(|(filename, size, hash)| (filename, (size, hash)))
         .collect::<std::collections::HashMap<_, _>>();
     let mut changes = Vec::new();
     for (filename, (size, hash)) in &current {
+        let item = content.iter().find(|item| item.file_name == *filename);
+        let project = item.and_then(|item| item.project.as_ref());
+        let version = item.and_then(|item| item.version.as_ref());
         match previous.get(filename) {
             None => changes.push(CrashModChange {
                 kind: "added".to_string(),
                 filename: filename.clone(),
                 previous_size: None,
                 current_size: Some(*size),
+                current_sha256: Some(hash.clone()),
+                project_id: project.map(|project| project.id.clone()),
+                project_title: project.map(|project| project.title.clone()),
+                icon_url: project.and_then(|project| project.icon_url.clone()),
+                version_id: version.map(|version| version.id.clone()),
+                version_number: version
+                    .map(|version| version.version_number.clone()),
             }),
-            Some((previous_size, previous_hash)) if previous_hash != hash => {
-                changes.push(CrashModChange {
-                    kind: "modified".to_string(),
-                    filename: filename.clone(),
-                    previous_size: Some(*previous_size),
-                    current_size: Some(*size),
-                })
-            }
+            Some((
+                previous_size,
+                previous_hash,
+                project_id,
+                project_title,
+                icon_url,
+                version_id,
+                version_number,
+            )) if previous_hash != hash => changes.push(CrashModChange {
+                kind: "modified".to_string(),
+                filename: filename.clone(),
+                previous_size: Some(*previous_size),
+                current_size: Some(*size),
+                current_sha256: Some(hash.clone()),
+                project_id: project_id
+                    .clone()
+                    .or_else(|| project.map(|project| project.id.clone())),
+                project_title: project_title
+                    .clone()
+                    .or_else(|| project.map(|project| project.title.clone())),
+                icon_url: icon_url.clone().or_else(|| {
+                    project.and_then(|project| project.icon_url.clone())
+                }),
+                version_id: version_id
+                    .clone()
+                    .or_else(|| version.map(|version| version.id.clone())),
+                version_number: version_number.clone().or_else(|| {
+                    version.map(|version| version.version_number.clone())
+                }),
+            }),
             Some(_) => {}
         }
     }
-    for (filename, (size, _)) in &previous {
+    for (
+        filename,
+        (
+            size,
+            _,
+            project_id,
+            project_title,
+            icon_url,
+            version_id,
+            version_number,
+        ),
+    ) in &previous
+    {
         if !current.contains_key(filename) {
             changes.push(CrashModChange {
                 kind: "removed".to_string(),
                 filename: filename.clone(),
                 previous_size: Some(*size),
                 current_size: None,
+                current_sha256: None,
+                project_id: project_id.clone(),
+                project_title: project_title.clone(),
+                icon_url: icon_url.clone(),
+                version_id: version_id.clone(),
+                version_number: version_number.clone(),
             });
         }
     }
@@ -741,7 +871,10 @@ async fn compare_mod_snapshot(
     Ok(changes)
 }
 
-async fn scan_mod_snapshot(mods_path: &Path) -> Vec<(String, u64, String)> {
+async fn scan_mod_snapshot(
+    mods_path: &Path,
+    _content: &[crate::state::ContentItem],
+) -> Vec<(String, u64, String)> {
     let Ok(mut entries) = tokio::fs::read_dir(mods_path).await else {
         return Vec::new();
     };

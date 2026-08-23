@@ -91,6 +91,10 @@ export async function explain_crash_with_ai(instanceId) {
 	return await invoke('plugin:logs|logs_explain_crash_with_ai', { instanceId })
 }
 
+export async function undo_added_mod(instanceId, filename, expectedHash) {
+	return await invoke('plugin:logs|logs_undo_added_mod', { instanceId, filename, expectedHash })
+}
+
 /// Export the censored files and local analysis from an instance's latest run.
 export async function export_crash_context(instanceId, instanceName) {
 	const timestamp = new Date().toISOString().replace(/[:.]/g, '-')

@@ -13,6 +13,7 @@ import {
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import CrashAIExplanationModal from '@/components/ui/CrashAIExplanationModal.vue'
+import CrashModChangesModal from '@/components/ui/CrashModChangesModal.vue'
 import {
 	clearCrashAnalysis,
 	type CrashAnalysisResult,
@@ -50,9 +51,11 @@ const client = injectModrinthClient()
 const { addNotification } = injectNotificationManager()
 const modal = ref<InstanceType<typeof NewModal>>()
 const aiModal = ref<InstanceType<typeof CrashAIExplanationModal>>()
+const modChangesModal = ref<InstanceType<typeof CrashModChangesModal>>()
 const payload = ref<Partial<CrashModalPayload>>({})
 const sharing = ref(false)
 let lastAnalysis: CrashAnalysisResult | null = null
+const modChangesAvailable = ref(false)
 const activeRuns = new Map<string, string>()
 const lastShownAt = new Map<string, number>()
 let unlistenProcess: Unlisten | undefined
@@ -119,9 +122,9 @@ const messages = defineMessages({
 		id: 'app.minecraft-crash.evidence',
 		defaultMessage: 'Reference evidence: {evidence}',
 	},
-	modChanges: {
-		id: 'app.minecraft-crash.mod-changes',
-		defaultMessage: 'Mod files changed since the last successful launch: {changes}',
+	viewModChanges: {
+		id: 'app.minecraft-crash.view-mod-changes',
+		defaultMessage: 'View Mod changes',
 	},
 	modChangesTitle: {
 		id: 'app.minecraft-crash.mod-changes-title',
@@ -332,7 +335,8 @@ function applyAnalysis(
 					evidence: `${evidence.filename}:${evidence.line} - ${evidence.text}`,
 				})
 			: modalPayload.hint,
-		...(modChanges.length > 0
+		/*
+		...(false
 			? {
 					hint: `${formatMessage(messages.modChanges, {
 						changes: modChanges.map((change) => `${change.kind}: ${change.filename}`).join('; '),
@@ -345,6 +349,7 @@ function applyAnalysis(
 					}`,
 				}
 			: {}),
+		*/
 	}
 }
 
@@ -359,6 +364,10 @@ function show(modalPayload: CrashModalPayload, isPreview = false): boolean {
 	payload.value = modalPayload
 	modal.value?.show()
 	return true
+}
+
+function openModChanges(): void {
+	if (lastAnalysis?.mod_changes.length) modChangesModal.value?.show(lastAnalysis)
 }
 
 function launchErrorText(error: unknown): string {
@@ -406,6 +415,7 @@ async function analyzeAndUpdate(
 		return null
 	})
 	lastAnalysis = analysis
+	modChangesAvailable.value = !!analysis?.mod_changes.length
 	if (mounted && version === analysisVersion) {
 		payload.value = applyAnalysis(modalPayload, analysis)
 		if (!analysis?.findings.length && fallbackHint) payload.value.hint = fallbackHint
@@ -538,6 +548,7 @@ async function handleProcessEvent(event: ProcessEvent): Promise<void> {
 	if (event.event === 'launched') {
 		activeRuns.set(event.instance_id, event.uuid)
 		clearCrashAnalysis(event.instance_id)
+		modChangesAvailable.value = false
 		return
 	}
 	if (event.event !== 'finished' || activeRuns.get(event.instance_id) !== event.uuid) return
@@ -555,6 +566,7 @@ async function handleProcessEvent(event: ProcessEvent): Promise<void> {
 			return null
 		})
 		lastAnalysis = analysis
+		modChangesAvailable.value = !!analysis?.mod_changes.length
 		if (!mounted) return
 
 		const instance = await getInstance(event.instance_id).catch(() => null)
@@ -639,8 +651,14 @@ defineExpose({ handleLaunchError, handleWarning, isLaunchFailure, showPreview })
 						{{ formatMessage(messages.aiAnalyze) }}
 					</button>
 				</ButtonStyled>
+				<ButtonStyled v-if="modChangesAvailable" type="outlined">
+					<button @click="openModChanges">
+						{{ formatMessage(messages.viewModChanges) }}
+					</button>
+				</ButtonStyled>
 			</div>
 		</template>
 	</NewModal>
 	<CrashAIExplanationModal ref="aiModal" />
+	<CrashModChangesModal ref="modChangesModal" />
 </template>

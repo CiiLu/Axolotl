@@ -23,7 +23,14 @@ export interface LocalCrashAnalysis {
 		filename: string
 		previous_size?: number
 		current_size?: number
+		current_sha256?: string
+		project_id?: string
+		project_title?: string
+		icon_url?: string
+		version_id?: string
+		version_number?: string
 	}>
+	mod_change_counts: { added: number; removed: number; modified: number }
 }
 
 export interface ConsoleManagerContext {
