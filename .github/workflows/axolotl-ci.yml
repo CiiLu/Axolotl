@@ -23,16 +23,19 @@ jobs:
   guardrails:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
 
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
+
       - run: pnpm install --frozen-lockfile --prefer-offline
+
       - name: Check immutable database migrations
         env:
           MIGRATION_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -40,6 +43,7 @@ jobs:
         run: |
           node scripts/axolotl/check-migrations.mjs --base "${MIGRATION_BASE_REF:-HEAD^}"
           node scripts/axolotl/check-migrations.mjs --release
+
       - run: node scripts/axolotl/brand-guard.mjs
       - run: node scripts/axolotl/i18n-check.mjs
       - run: cargo fmt --all --check
@@ -56,73 +60,23 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       SQLX_OFFLINE: true
-      SCCACHE_DIR: ${{ runner.temp }}/sccache
-      SCCACHE_CACHE_SIZE: 1G
-      SCCACHE_IDLE_TIMEOUT: 0
       CARGO_INCREMENTAL: 0
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-      - name: Set up Rust compiler cache
-        if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
-        continue-on-error: true
-        uses: mozilla-actions/sccache-action@2df7dbab909c49ab7d3382d05da469f3f975c2d6 # v0.0.7
-      - name: Cache sccache directory
-        if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            sccache-${{ runner.os }}-
-      - name: Enable Rust compiler cache
-        if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
-        shell: bash
-        run: |
-          if [ -z "${SCCACHE_PATH:-}" ]; then
-            echo "sccache is not installed; skipping Rust compiler cache"
-            exit 0
-          fi
-          sccache_wrapper="${SCCACHE_PATH//\\//}"
-          echo "RUSTC_WRAPPER=$sccache_wrapper" >> "$GITHUB_ENV"
-          mkdir -p "$CARGO_HOME"
-          printf '[build]\nrustc-wrapper = "%s"\n' "$sccache_wrapper" >> "$CARGO_HOME/config.toml"
-
-      - name: Diagnose sccache on Windows
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          echo "SCCACHE_PATH=$SCCACHE_PATH"
-          echo "SCCACHE_DIR=$SCCACHE_DIR"
-          echo "RUSTC_WRAPPER=$RUSTC_WRAPPER"
-          echo "CARGO_HOME=$CARGO_HOME"
-          echo "--- command -v ---"
-          command -v sccache || true
-          command -v sccache.exe || true
-          echo "--- cargo config ---"
-          cat "$CARGO_HOME/config.toml" 2>/dev/null || echo "no cargo config"
-          echo "--- sccache version ---"
-          "$RUSTC_WRAPPER" --version 2>&1 || true
-          echo "--- minimal cargo check through wrapper ---"
-          tmp="$(mktemp -d)"
-          cargo new --quiet "$tmp/sccache-diag"
-          cd "$tmp/sccache-diag"
-          cargo check --quiet
-          echo "--- sccache stats after minimal cargo check ---"
-          "$RUSTC_WRAPPER" --show-stats 2>&1 || true
-
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - run: pnpm install --frozen-lockfile --prefer-offline
       - name: Cache Turbo build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@v4
         with:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.run_id }}
@@ -192,21 +146,14 @@ jobs:
             throw "Expected one native NSIS installer, found $($installers.Count)"
           }
           Write-Output "Built native NSIS installer: $($installers[0].Name)"
-      - name: Show Rust compiler cache statistics
-        if: always()
-        shell: bash
-        run: |
-          if [ -n "${SCCACHE_PATH:-}" ]; then
-            ${SCCACHE_PATH} --show-stats
-          fi
 
   website:
     needs: guardrails
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
