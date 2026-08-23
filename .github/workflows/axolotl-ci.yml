@@ -56,6 +56,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       SQLX_OFFLINE: true
+      SCCACHE_DIR: ${{ runner.temp }}/sccache
+      SCCACHE_CACHE_SIZE: 1G
+      SCCACHE_IDLE_TIMEOUT: 0
+      CARGO_INCREMENTAL: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -74,8 +78,8 @@ jobs:
         if: runner.os == 'Windows' || runner.os == 'macOS' || runner.os == 'Linux'
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: ~/.cache/sccache
-          key: sccache-${{ runner.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/sccache
+          key: sccache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             sccache-${{ runner.os }}-
       - name: Enable Rust compiler cache
@@ -86,17 +90,8 @@ jobs:
             echo "sccache is not installed; skipping Rust compiler cache"
             exit 0
           fi
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            sccache_dir="$(cygpath -w "$HOME")\.cache\sccache"
-          else
-            sccache_dir="$HOME/.cache/sccache"
-          fi
-          echo "SCCACHE_DIR=$sccache_dir" >> "$GITHUB_ENV"
           sccache_wrapper="${SCCACHE_PATH//\\//}"
           echo "RUSTC_WRAPPER=$sccache_wrapper" >> "$GITHUB_ENV"
-          echo 'SCCACHE_CACHE_SIZE=1G' >> "$GITHUB_ENV"
-          echo 'SCCACHE_IDLE_TIMEOUT=0' >> "$GITHUB_ENV"
-          echo 'CARGO_INCREMENTAL=0' >> "$GITHUB_ENV"
           mkdir -p "$CARGO_HOME"
           printf '[build]\nrustc-wrapper = "%s"\n' "$sccache_wrapper" >> "$CARGO_HOME/config.toml"
 
@@ -122,7 +117,6 @@ jobs:
           cargo check --quiet
           echo "--- sccache stats after minimal cargo check ---"
           "$RUSTC_WRAPPER" --show-stats 2>&1 || true
-
 
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
