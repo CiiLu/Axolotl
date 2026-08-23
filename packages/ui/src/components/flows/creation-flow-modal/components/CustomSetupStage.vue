@@ -44,8 +44,8 @@
 					<input
 						type="radio"
 						name="game-dir-mode"
-						:checked="ctx.gameDirOverrideMode.value === 'isolated'"
-						@change="setGameDirMode('isolated')"
+						v-model="gameDirMode"
+						value="isolated"
 					/>
 					<span>{{ formatMessage(messages.gameDirIsolated) }}</span>
 				</label>
@@ -53,8 +53,8 @@
 					<input
 						type="radio"
 						name="game-dir-mode"
-						:checked="ctx.gameDirOverrideMode.value === 'not-isolated'"
-						@change="setGameDirMode('not-isolated')"
+						v-model="gameDirMode"
+						value="not-isolated"
 					/>
 					<span>{{ formatMessage(messages.gameDirNotIsolated) }}</span>
 				</label>
@@ -62,14 +62,14 @@
 					<input
 						type="radio"
 						name="game-dir-mode"
-						:checked="ctx.gameDirOverrideMode.value === 'custom'"
-						@change="setGameDirMode('custom')"
+						v-model="gameDirMode"
+						value="custom"
 					/>
 					<span>{{ formatMessage(messages.gameDirCustom) }}</span>
 				</label>
 			</div>
 			<div
-				v-if="ctx.gameDirOverrideMode.value !== 'isolated'"
+				v-if="gameDirMode !== 'isolated'"
 				class="flex items-center gap-2"
 			>
 				<ButtonStyled type="outlined">
@@ -758,6 +758,11 @@ function removeIcon() {
 	ctx.instanceIconUrl.value = null
 	ctx.instanceIconPath.value = null
 }
+
+const gameDirMode = computed<GameDirOverrideMode>({
+	get: () => ctx.gameDirOverrideMode.value,
+	set: (mode) => setGameDirMode(mode),
+})
 
 function setGameDirMode(mode: GameDirOverrideMode) {
 	ctx.gameDirOverrideMode.value = mode

@@ -167,15 +167,29 @@ async function clearGameDir() {
 
 // The launcher stores a single override path, so "not isolated" and "custom"
 // both map to setting a path; "version isolated" maps to clearing it.
-const gameDirMode = computed<'isolated' | 'not-isolated' | 'custom'>(() =>
-	gameDirOverride.value ? 'not-isolated' : 'isolated',
+const gameDirMode = ref<'isolated' | 'not-isolated' | 'custom'>('isolated')
+
+// Keep the radio selection in sync with the stored override: when a path is
+// present the instance is not isolated (or custom), otherwise version isolated.
+watch(
+	gameDirOverride,
+	(path) => {
+		gameDirMode.value = path ? 'not-isolated' : 'isolated'
+	},
+	{ immediate: true },
 )
 
 async function setGameDirMode(mode: 'isolated' | 'not-isolated' | 'custom') {
+	// v-model already updated gameDirMode; persist the override.
 	if (mode === 'isolated') {
 		await clearGameDir()
-	} else {
+	} else if (!gameDirOverride.value) {
+		// Not isolated / custom selected with no folder yet — open the picker.
+		// If the user cancels, revert the radio to the stored state.
 		await pickGameDir()
+		if (!gameDirOverride.value) {
+			gameDirMode.value = 'isolated'
+		}
 	}
 }
 
@@ -428,7 +442,8 @@ const messages = defineMessages({
 					<input
 						type="radio"
 						name="game-dir-mode"
-						:checked="gameDirMode === 'isolated'"
+						v-model="gameDirMode"
+						value="isolated"
 						@change="setGameDirMode('isolated')"
 					/>
 					<span>{{ formatMessage(messages.gameDirIsolated) }}</span>
@@ -437,7 +452,8 @@ const messages = defineMessages({
 					<input
 						type="radio"
 						name="game-dir-mode"
-						:checked="gameDirMode === 'not-isolated'"
+						v-model="gameDirMode"
+						value="not-isolated"
 						@change="setGameDirMode('not-isolated')"
 					/>
 					<span>{{ formatMessage(messages.gameDirNotIsolated) }}</span>
@@ -446,7 +462,8 @@ const messages = defineMessages({
 					<input
 						type="radio"
 						name="game-dir-mode"
-						:checked="gameDirMode === 'custom'"
+						v-model="gameDirMode"
+						value="custom"
 						@change="setGameDirMode('custom')"
 					/>
 					<span>{{ formatMessage(messages.gameDirCustom) }}</span>
