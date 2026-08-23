@@ -201,6 +201,13 @@ export const settingsSearchEntries: SettingsSearchEntry[] = [
 		keywords: [message('app.settings.tabs.ai', 'AI')],
 	},
 	{
+		id: 'crash-analysis-ai',
+		categoryId: 'launch-defaults',
+		targetId: 'settings-target-crash-analysis-ai',
+		label: message('app.crash-analysis.ai.settings.title', 'Crash AI explanation'),
+		keywords: [message('app.settings.tabs.launch-defaults', 'Launch & instance defaults')],
+	},
+	{
 		id: 'privacy-telemetry',
 		categoryId: 'privacy-data',
 		targetId: 'settings-target-privacy-telemetry',

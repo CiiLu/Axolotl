@@ -210,6 +210,9 @@ fn main() {
                         "logs_get_live_log_buffer",
                         "logs_clear_live_log_buffer",
                         "logs_analyze_crash",
+                        "logs_get_crash_analysis_ai_settings",
+                        "logs_update_crash_analysis_ai_settings",
+                        "logs_explain_crash_with_ai",
                         "logs_export_crash_context",
                     ])
                     .default_permission(

@@ -155,45 +155,6 @@
   "app.action-bar.view-logs": {
     "message": "View logs"
   },
-  "app.ai-log-analysis.analyzing": {
-    "message": "Analyzing your log with AI...It may take up to half a minute to complete."
-  },
-  "app.ai-log-analysis.cancel": {
-    "message": "Cancel"
-  },
-  "app.ai-log-analysis.close": {
-    "message": "Close"
-  },
-  "app.ai-log-analysis.copy-link": {
-    "message": "Copy link"
-  },
-  "app.ai-log-analysis.copy-result": {
-    "message": "Copy result"
-  },
-  "app.ai-log-analysis.error": {
-    "message": "AI analysis failed: {message}"
-  },
-  "app.ai-log-analysis.link-copied": {
-    "message": "Link copied to your clipboard"
-  },
-  "app.ai-log-analysis.logshare-unavailable": {
-    "message": "LogShare.CN is unavailable, so AI analysis cannot be used (mclo.gs does not support AI analysis). {message}"
-  },
-  "app.ai-log-analysis.privacy": {
-    "message": "Your log content will be uploaded and sent to a third-party AI service to be analyzed. Treat it as public information."
-  },
-  "app.ai-log-analysis.result-copied": {
-    "message": "Analysis copied to your clipboard"
-  },
-  "app.ai-log-analysis.title": {
-    "message": "AI log analysis"
-  },
-  "app.ai-log-analysis.upload-failed": {
-    "message": "Upload failed, analyzing the log content directly without a share link."
-  },
-  "app.ai-log-analysis.uploading": {
-    "message": "Uploading your log..."
-  },
   "app.ai-settings.add-model": {
     "message": "Add model"
   },
@@ -970,6 +931,51 @@
   },
   "app.content.install-content": {
     "message": "Install content"
+  },
+  "app.crash-analysis.ai.action": {
+    "message": "Use AI to explain"
+  },
+  "app.crash-analysis.ai.analyzing": {
+    "message": "Explaining the crash..."
+  },
+  "app.crash-analysis.ai.close": {
+    "message": "Close"
+  },
+  "app.crash-analysis.ai.copied": {
+    "message": "AI explanation copied to your clipboard"
+  },
+  "app.crash-analysis.ai.copy": {
+    "message": "Copy explanation"
+  },
+  "app.crash-analysis.ai.disclaimer": {
+    "message": "A sanitized and shortened crash context is sent directly to the AI provider configured in this launcher. AI output may be inaccurate."
+  },
+  "app.crash-analysis.ai.error": {
+    "message": "AI explanation failed: {message}"
+  },
+  "app.crash-analysis.ai.settings.description": {
+    "message": "Optionally send a sanitized and shortened crash context to a model configured in AI Providers."
+  },
+  "app.crash-analysis.ai.settings.enabled": {
+    "message": "Enable AI explanations"
+  },
+  "app.crash-analysis.ai.settings.enabled-description": {
+    "message": "Local rule-based crash analysis remains available without AI."
+  },
+  "app.crash-analysis.ai.settings.model": {
+    "message": "Text model"
+  },
+  "app.crash-analysis.ai.settings.no-providers": {
+    "message": "Enable a provider and a text model above before using AI crash explanations."
+  },
+  "app.crash-analysis.ai.settings.provider": {
+    "message": "AI provider"
+  },
+  "app.crash-analysis.ai.settings.title": {
+    "message": "Crash AI explanation"
+  },
+  "app.crash-analysis.ai.title": {
+    "message": "AI crash explanation"
   },
   "app.curseforge.automatic-downloads-failed.notification-body": {
     "message": "{failed, number} files failed after retrying ({list}). See Downloads for the recorded errors."
@@ -4730,12 +4736,6 @@
   "app.minecraft-auth.what-happened": {
     "message": "What we think happened"
   },
-  "app.minecraft-crash.ai-analyze": {
-    "message": "AI analysis"
-  },
-  "app.minecraft-crash.ai-unavailable": {
-    "message": "AI analysis is not supported by the current log service (mclo.gs). Switch to LogShare.CN in Settings to use it."
-  },
   "app.minecraft-crash.analyzing": {
     "message": "Analyzing the logs from this launch..."
   },
@@ -5143,6 +5143,12 @@
   },
   "app.multiplayer.switch-warning": {
     "message": "Switching services will disconnect the current multiplayer session. Continue?"
+  },
+  "app.multiplayer.tab.rooms": {
+    "message": "Rooms"
+  },
+  "app.multiplayer.tab.servers": {
+    "message": "Servers"
   },
   "app.multiplayer.terracotta.public-node-invalid": {
     "message": "Invalid node URI: {node}. Use http, https, tcp, tls, udp, ws, or wss."
@@ -5609,6 +5615,522 @@
   "app.server.search-instance": {
     "message": "Search for an instance"
   },
+  "app.servers.action.open-folder": {
+    "message": "Open folder"
+  },
+  "app.servers.action.share": {
+    "message": "Share online"
+  },
+  "app.servers.action.start": {
+    "message": "Start"
+  },
+  "app.servers.action.stop": {
+    "message": "Stop"
+  },
+  "app.servers.card.port": {
+    "message": "Port {port}"
+  },
+  "app.servers.card.type": {
+    "message": "{type} · {version}"
+  },
+  "app.servers.console.command-echo": {
+    "message": "> {command}"
+  },
+  "app.servers.console.not-running": {
+    "message": "The server is not running"
+  },
+  "app.servers.count": {
+    "message": "{count, plural, =0 {No servers yet} one {# server} other {# servers}}"
+  },
+  "app.servers.create.title": {
+    "message": "Create server"
+  },
+  "app.servers.detail.back": {
+    "message": "Servers"
+  },
+  "app.servers.detail.console": {
+    "message": "Console"
+  },
+  "app.servers.detail.files": {
+    "message": "Files"
+  },
+  "app.servers.detail.not-found": {
+    "message": "This server no longer exists."
+  },
+  "app.servers.detail.settings": {
+    "message": "Settings"
+  },
+  "app.servers.empty.description": {
+    "message": "Create a server to play with friends, right from the launcher."
+  },
+  "app.servers.empty.heading": {
+    "message": "No servers yet"
+  },
+  "app.servers.eula.accept": {
+    "message": "Accept and continue"
+  },
+  "app.servers.eula.decline": {
+    "message": "Cancel"
+  },
+  "app.servers.eula.description": {
+    "message": "The server must accept the Minecraft End User License Agreement before it can start. Review the notice below:"
+  },
+  "app.servers.eula.title": {
+    "message": "Minecraft EULA"
+  },
+  "app.servers.files.busy-tooltip": {
+    "message": "Stop the server to modify files"
+  },
+  "app.servers.files.open-studio": {
+    "message": "Open Studio"
+  },
+  "app.servers.files.save-as": {
+    "message": "Save as..."
+  },
+  "app.servers.files.studio-running-title": {
+    "message": "Stop the server before opening Studio"
+  },
+  "app.servers.icon.change": {
+    "message": "Change icon"
+  },
+  "app.servers.icon.edit": {
+    "message": "Edit icon"
+  },
+  "app.servers.icon.remove": {
+    "message": "Remove icon"
+  },
+  "app.servers.icon.select": {
+    "message": "Select icon"
+  },
+  "app.servers.loading": {
+    "message": "Loading servers..."
+  },
+  "app.servers.port.change": {
+    "message": "Change port"
+  },
+  "app.servers.port.conflict-description": {
+    "message": "{process} is currently occupying this port, so the server cannot start. Change the server port, or force quit the process below."
+  },
+  "app.servers.port.conflict-title": {
+    "message": "Port {port} is already in use"
+  },
+  "app.servers.port.force-quit": {
+    "message": "Force quit process"
+  },
+  "app.servers.port.force-quit-failed": {
+    "message": "Failed to quit the process occupying the port"
+  },
+  "app.servers.port.recheck": {
+    "message": "Recheck"
+  },
+  "app.servers.port.unknown-process": {
+    "message": "Unknown process (PID {pid})"
+  },
+  "app.servers.properties.field.accepts-transfers": {
+    "message": "Accept player transfers"
+  },
+  "app.servers.properties.field.allow-end": {
+    "message": "Allow the End"
+  },
+  "app.servers.properties.field.allow-flight": {
+    "message": "Allow flight"
+  },
+  "app.servers.properties.field.allow-nether": {
+    "message": "Allow the Nether"
+  },
+  "app.servers.properties.field.announce-player-achievements": {
+    "message": "Announce player achievements"
+  },
+  "app.servers.properties.field.broadcast-console-to-ops": {
+    "message": "Broadcast console to operators"
+  },
+  "app.servers.properties.field.broadcast-rcon-to-ops": {
+    "message": "Broadcast RCON to operators"
+  },
+  "app.servers.properties.field.bug-report-link": {
+    "message": "Bug report link"
+  },
+  "app.servers.properties.field.chat-spam-threshold-seconds": {
+    "message": "Chat spam threshold (seconds)"
+  },
+  "app.servers.properties.field.command-spam-threshold-seconds": {
+    "message": "Command spam threshold (seconds)"
+  },
+  "app.servers.properties.field.difficulty": {
+    "message": "Difficulty"
+  },
+  "app.servers.properties.field.enable-code-of-conduct": {
+    "message": "Enable code of conduct"
+  },
+  "app.servers.properties.field.enable-command-block": {
+    "message": "Enable command blocks"
+  },
+  "app.servers.properties.field.enable-jmx-monitoring": {
+    "message": "Enable JMX monitoring"
+  },
+  "app.servers.properties.field.enable-lan": {
+    "message": "Enable LAN"
+  },
+  "app.servers.properties.field.enable-query": {
+    "message": "Enable query"
+  },
+  "app.servers.properties.field.enable-rcon": {
+    "message": "Enable RCON"
+  },
+  "app.servers.properties.field.enable-status": {
+    "message": "Enable status"
+  },
+  "app.servers.properties.field.enforce-secure-profile": {
+    "message": "Enforce secure profile"
+  },
+  "app.servers.properties.field.enforce-whitelist": {
+    "message": "Enforce whitelist"
+  },
+  "app.servers.properties.field.entity-broadcast-range-percentage": {
+    "message": "Entity broadcast range percentage"
+  },
+  "app.servers.properties.field.force-gamemode": {
+    "message": "Force game mode"
+  },
+  "app.servers.properties.field.function-permission-level": {
+    "message": "Function permission level"
+  },
+  "app.servers.properties.field.gamemode": {
+    "message": "Game mode"
+  },
+  "app.servers.properties.field.generate-structures": {
+    "message": "Generate structures"
+  },
+  "app.servers.properties.field.generator-settings": {
+    "message": "Generator settings"
+  },
+  "app.servers.properties.field.hardcore": {
+    "message": "Hardcore"
+  },
+  "app.servers.properties.field.hide-online-players": {
+    "message": "Hide online players"
+  },
+  "app.servers.properties.field.initial-disabled-packs": {
+    "message": "Initial disabled packs"
+  },
+  "app.servers.properties.field.initial-enabled-packs": {
+    "message": "Initial enabled packs"
+  },
+  "app.servers.properties.field.level-name": {
+    "message": "Level name"
+  },
+  "app.servers.properties.field.level-seed": {
+    "message": "Level seed"
+  },
+  "app.servers.properties.field.level-type": {
+    "message": "Level type"
+  },
+  "app.servers.properties.field.log-ips": {
+    "message": "Log IP addresses"
+  },
+  "app.servers.properties.field.management-server-allowed-origins": {
+    "message": "Management server allowed origins"
+  },
+  "app.servers.properties.field.management-server-enabled": {
+    "message": "Enable management server"
+  },
+  "app.servers.properties.field.management-server-host": {
+    "message": "Management server host"
+  },
+  "app.servers.properties.field.management-server-port": {
+    "message": "Management server port"
+  },
+  "app.servers.properties.field.management-server-secret": {
+    "message": "Management server secret"
+  },
+  "app.servers.properties.field.management-server-tls-enabled": {
+    "message": "Enable management server TLS"
+  },
+  "app.servers.properties.field.management-server-tls-keystore": {
+    "message": "Management server TLS keystore"
+  },
+  "app.servers.properties.field.management-server-tls-keystore-password": {
+    "message": "Management server TLS keystore password"
+  },
+  "app.servers.properties.field.max-chained-neighbor-updates": {
+    "message": "Max chained neighbor updates"
+  },
+  "app.servers.properties.field.max-players": {
+    "message": "Max players"
+  },
+  "app.servers.properties.field.max-tick-time": {
+    "message": "Max tick time"
+  },
+  "app.servers.properties.field.max-world-size": {
+    "message": "Max world size"
+  },
+  "app.servers.properties.field.motd": {
+    "message": "Message of the day (MOTD)"
+  },
+  "app.servers.properties.field.network-compression-threshold": {
+    "message": "Network compression threshold"
+  },
+  "app.servers.properties.field.online-mode": {
+    "message": "Online mode"
+  },
+  "app.servers.properties.field.op-permission-level": {
+    "message": "OP permission level"
+  },
+  "app.servers.properties.field.pause-when-empty-seconds": {
+    "message": "Pause when empty (seconds)"
+  },
+  "app.servers.properties.field.player-idle-timeout": {
+    "message": "Player idle timeout"
+  },
+  "app.servers.properties.field.prevent-proxy-connections": {
+    "message": "Prevent proxy connections"
+  },
+  "app.servers.properties.field.pvp": {
+    "message": "Player versus player (PvP)"
+  },
+  "app.servers.properties.field.query.port": {
+    "message": "Query port"
+  },
+  "app.servers.properties.field.rate-limit": {
+    "message": "Rate limit"
+  },
+  "app.servers.properties.field.rcon.password": {
+    "message": "RCON password"
+  },
+  "app.servers.properties.field.rcon.port": {
+    "message": "RCON port"
+  },
+  "app.servers.properties.field.region-file-compression": {
+    "message": "Region file compression"
+  },
+  "app.servers.properties.field.require-resource-pack": {
+    "message": "Require resource pack"
+  },
+  "app.servers.properties.field.resource-pack": {
+    "message": "Resource pack"
+  },
+  "app.servers.properties.field.resource-pack-id": {
+    "message": "Resource pack ID"
+  },
+  "app.servers.properties.field.resource-pack-prompt": {
+    "message": "Resource pack prompt"
+  },
+  "app.servers.properties.field.resource-pack-sha1": {
+    "message": "Resource pack SHA-1"
+  },
+  "app.servers.properties.field.server-ip": {
+    "message": "Server IP"
+  },
+  "app.servers.properties.field.server-port": {
+    "message": "Server port"
+  },
+  "app.servers.properties.field.simulation-distance": {
+    "message": "Simulation distance"
+  },
+  "app.servers.properties.field.spawn-animals": {
+    "message": "Spawn animals"
+  },
+  "app.servers.properties.field.spawn-monsters": {
+    "message": "Spawn monsters"
+  },
+  "app.servers.properties.field.spawn-npcs": {
+    "message": "Spawn NPCs"
+  },
+  "app.servers.properties.field.spawn-protection": {
+    "message": "Spawn protection"
+  },
+  "app.servers.properties.field.status-heartbeat-interval": {
+    "message": "Status heartbeat interval"
+  },
+  "app.servers.properties.field.sync-chunk-writes": {
+    "message": "Sync chunk writes"
+  },
+  "app.servers.properties.field.text-filtering-config": {
+    "message": "Text filtering config"
+  },
+  "app.servers.properties.field.text-filtering-version": {
+    "message": "Text filtering version"
+  },
+  "app.servers.properties.field.use-native-transport": {
+    "message": "Use native transport"
+  },
+  "app.servers.properties.field.view-distance": {
+    "message": "View distance"
+  },
+  "app.servers.properties.field.white-list": {
+    "message": "Whitelist"
+  },
+  "app.servers.properties.load-failed": {
+    "message": "Failed to load the server configuration."
+  },
+  "app.servers.properties.missing": {
+    "message": "Start the server once to generate this file."
+  },
+  "app.servers.properties.mode.form": {
+    "message": "Form"
+  },
+  "app.servers.properties.mode.text": {
+    "message": "Text"
+  },
+  "app.servers.properties.section.advanced": {
+    "message": "Advanced"
+  },
+  "app.servers.properties.section.content": {
+    "message": "Content"
+  },
+  "app.servers.properties.section.gameplay": {
+    "message": "Gameplay"
+  },
+  "app.servers.properties.section.network": {
+    "message": "Network & Security"
+  },
+  "app.servers.properties.section.others": {
+    "message": "Other"
+  },
+  "app.servers.properties.section.world": {
+    "message": "World"
+  },
+  "app.servers.properties.title": {
+    "message": "Server properties"
+  },
+  "app.servers.refresh": {
+    "message": "Refresh"
+  },
+  "app.servers.settings.cancel": {
+    "message": "Cancel"
+  },
+  "app.servers.settings.config": {
+    "message": "Configuration"
+  },
+  "app.servers.settings.delete": {
+    "message": "Delete server"
+  },
+  "app.servers.settings.delete-confirm": {
+    "message": "Delete {name} and all of its files? This cannot be undone."
+  },
+  "app.servers.settings.delete-hint": {
+    "message": "Permanently remove this server and all of its files."
+  },
+  "app.servers.settings.delete-proceed": {
+    "message": "Delete"
+  },
+  "app.servers.settings.general": {
+    "message": "General"
+  },
+  "app.servers.settings.icon": {
+    "message": "Icon"
+  },
+  "app.servers.settings.java": {
+    "message": "Java"
+  },
+  "app.servers.settings.jvm-args": {
+    "message": "JVM arguments"
+  },
+  "app.servers.settings.jvm-args-hint": {
+    "message": "Space-separated arguments, e.g. -XX:+UseG1GC"
+  },
+  "app.servers.settings.memory": {
+    "message": "Memory"
+  },
+  "app.servers.settings.name": {
+    "message": "Server name"
+  },
+  "app.servers.settings.running-hint": {
+    "message": "Your changes will take effect the next time the server starts."
+  },
+  "app.servers.settings.running-title": {
+    "message": "Server is running"
+  },
+  "app.servers.settings.save": {
+    "message": "Save changes"
+  },
+  "app.servers.settings.saved": {
+    "message": "Server settings saved"
+  },
+  "app.servers.status.crashed": {
+    "message": "Crashed"
+  },
+  "app.servers.status.created": {
+    "message": "Not set up"
+  },
+  "app.servers.status.eula-pending": {
+    "message": "EULA pending"
+  },
+  "app.servers.status.ready": {
+    "message": "Ready"
+  },
+  "app.servers.status.running": {
+    "message": "Running"
+  },
+  "app.servers.status.starting": {
+    "message": "Starting"
+  },
+  "app.servers.wizard.configure-heading": {
+    "message": "Adjust the server settings, or finish to edit them later."
+  },
+  "app.servers.wizard.configure-title": {
+    "message": "Configure"
+  },
+  "app.servers.wizard.done": {
+    "message": "Server ready"
+  },
+  "app.servers.wizard.downloading": {
+    "message": "Downloading server files..."
+  },
+  "app.servers.wizard.eula-wait": {
+    "message": "Waiting for EULA confirmation"
+  },
+  "app.servers.wizard.failed": {
+    "message": "Setup failed"
+  },
+  "app.servers.wizard.finish": {
+    "message": "Finish"
+  },
+  "app.servers.wizard.first-run": {
+    "message": "Running first start..."
+  },
+  "app.servers.wizard.game-version": {
+    "message": "Game version"
+  },
+  "app.servers.wizard.install-title": {
+    "message": "Install"
+  },
+  "app.servers.wizard.java-too-old": {
+    "message": "Java {selected} cannot run this game version; Java {required} or newer is required."
+  },
+  "app.servers.wizard.loader-version": {
+    "message": "Loader version"
+  },
+  "app.servers.wizard.log": {
+    "message": "Output"
+  },
+  "app.servers.wizard.memory-value": {
+    "message": "{value} MB"
+  },
+  "app.servers.wizard.name": {
+    "message": "Server name"
+  },
+  "app.servers.wizard.name-placeholder": {
+    "message": "Survival server"
+  },
+  "app.servers.wizard.next": {
+    "message": "Next"
+  },
+  "app.servers.wizard.retry": {
+    "message": "Retry"
+  },
+  "app.servers.wizard.setup-title": {
+    "message": "Setup"
+  },
+  "app.servers.wizard.show-snapshots": {
+    "message": "Show snapshots"
+  },
+  "app.servers.wizard.type-heading": {
+    "message": "Choose a server type"
+  },
+  "app.servers.wizard.type-title": {
+    "message": "Server type"
+  },
   "app.settings.about.afdian": {
     "message": "Support on Afdian"
   },
@@ -5795,29 +6317,20 @@
   "app.settings.feature-flags.reset-to-default": {
     "message": "Reset to default"
   },
-  "app.settings.groups.common": {
-    "message": "Common"
+  "app.settings.groups.data-privacy": {
+    "message": "Data & privacy"
   },
-  "app.settings.groups.minecraft": {
-    "message": "Minecraft"
-  },
-  "app.settings.groups.system": {
-    "message": "System"
-  },
-  "app.settings.groups.launcher": {
-    "message": "Launcher"
+  "app.settings.groups.developer": {
+    "message": "Developer"
   },
   "app.settings.groups.game": {
     "message": "Game"
   },
-  "app.settings.groups.data-privacy": {
-    "message": "Data & privacy"
+  "app.settings.groups.launcher": {
+    "message": "Launcher"
   },
   "app.settings.groups.support": {
     "message": "App & support"
-  },
-  "app.settings.groups.developer": {
-    "message": "Developer"
   },
   "app.settings.java.auto-high-performance-mode": {
     "message": "Automatically use high-performance GPU for Java"
@@ -6266,68 +6779,8 @@
   "app.settings.storage.world": {
     "message": "World"
   },
-  "app.settings.tabs.about": {
-    "message": "About"
-  },
-  "app.settings.tabs.ai": {
-    "message": "AI"
-  },
-  "app.settings.tabs.appearance": {
-    "message": "Appearance"
-  },
-  "app.settings.tabs.interface": {
-    "message": "Interface & appearance"
-  },
-  "app.settings.tabs.home-navigation": {
-    "message": "Home & navigation"
-  },
-  "app.settings.tabs.language-translation": {
-    "message": "Language & translation"
-  },
-  "app.settings.tabs.java-performance": {
-    "message": "Java & performance"
-  },
-  "app.settings.tabs.launch-defaults": {
-    "message": "Launch & instance defaults"
-  },
-  "app.settings.tabs.content-downloads": {
-    "message": "Content & downloads"
-  },
-  "app.settings.tabs.network-multiplayer": {
-    "message": "Network & multiplayer"
-  },
-  "app.settings.tabs.storage-backups": {
-    "message": "Storage & backups"
-  },
-  "app.settings.tabs.privacy-data": {
-    "message": "Privacy & data sharing"
-  },
-  "app.settings.tabs.default-instance-options": {
-    "message": "Default instance options"
-  },
-  "app.settings.tabs.java-installations": {
-    "message": "Java installations"
-  },
-  "app.settings.tabs.language": {
-    "message": "Language"
-  },
-  "app.settings.tabs.multiplayer": {
-    "message": "Multiplayer"
-  },
-  "app.settings.tabs.privacy-security": {
-    "message": "Privacy & security"
-  },
-  "app.settings.tabs.resource-management": {
-    "message": "Resource management"
-  },
   "app.settings.tabs.storage": {
     "message": "Storage"
-  },
-  "app.settings.tabs.translation": {
-    "message": "Translation"
-  },
-  "app.settings.tabs.updates": {
-    "message": "Updates"
   },
   "app.settings.updates.announcements.description": {
     "message": "See what changed in this version and browse previous releases."
@@ -6364,6 +6817,9 @@
   },
   "app.settings.updates.github": {
     "message": "GitHub"
+  },
+  "app.settings.updates.miawa": {
+    "message": "LemwoodMirror"
   },
   "app.settings.updates.offline": {
     "message": "Connect to the internet to check for updates."
@@ -7478,6 +7934,9 @@
   "instance.files.studio.paste": {
     "message": "Paste"
   },
+  "instance.files.studio.refresh": {
+    "message": "Refresh files"
+  },
   "instance.files.studio.save-failed": {
     "message": "Could not save file"
   },
@@ -7903,9 +8362,6 @@
   },
   "search.filter.locked.server-loader.title": {
     "message": "Loader is provided by the server"
-  },
-  "settings.feature-flags.title": {
-    "message": "Feature flags"
   },
   "unknown-pack-warning-modal.body": {
     "message": "A file is only reviewed if it’s uploaded to Modrinth, regardless of its file format (including .mrpack)."

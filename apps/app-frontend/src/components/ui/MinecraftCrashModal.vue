@@ -6,22 +6,23 @@ import {
 	defineMessages,
 	injectModrinthClient,
 	injectNotificationManager,
-	isAIAnalysisAvailable,
 	NewModal,
 	shareLogs,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
-import AILogAnalysisModal from '@/components/ui/AILogAnalysisModal.vue'
+import CrashAIExplanationModal from '@/components/ui/CrashAIExplanationModal.vue'
 import {
 	clearCrashAnalysis,
 	type CrashAnalysisResult,
 	refreshCrashAnalysis,
 } from '@/composables/useCrashAnalysis'
 import type { MinecraftLaunchErrorPayload } from '@/composables/useMinecraftLaunchError'
+import { getAIState } from '@/helpers/ai'
 import { process_listener } from '@/helpers/events.js'
 import { get as getInstance } from '@/helpers/instance'
+import { get_crash_analysis_ai_settings } from '@/helpers/logs.js'
 import { shouldShowMinecraftCrash } from '@/helpers/process.js'
 
 interface CrashModalPayload extends MinecraftLaunchErrorPayload {
@@ -48,7 +49,7 @@ const { formatMessage } = useVIntl()
 const client = injectModrinthClient()
 const { addNotification } = injectNotificationManager()
 const modal = ref<InstanceType<typeof NewModal>>()
-const aiModal = ref<InstanceType<typeof AILogAnalysisModal>>()
+const aiModal = ref<InstanceType<typeof CrashAIExplanationModal>>()
 const payload = ref<Partial<CrashModalPayload>>({})
 const sharing = ref(false)
 let lastAnalysis: CrashAnalysisResult | null = null
@@ -57,6 +58,7 @@ const lastShownAt = new Map<string, number>()
 let unlistenProcess: Unlisten | undefined
 let mounted = false
 let analysisVersion = 0
+const aiAvailable = ref(false)
 
 const messages = defineMessages({
 	title: {
@@ -232,18 +234,13 @@ const messages = defineMessages({
 		defaultMessage: 'Copy link',
 	},
 	aiAnalyze: {
-		id: 'app.minecraft-crash.ai-analyze',
-		defaultMessage: 'AI analysis',
+		id: 'app.crash-analysis.ai.action',
+		defaultMessage: 'Use AI to explain',
 	},
 	noLogContent: {
 		id: 'app.minecraft-crash.no-log-content',
 		defaultMessage:
 			'No log content was found to share or analyze. Make sure the instance has logs generated in the last few minutes.',
-	},
-	aiUnavailable: {
-		id: 'app.minecraft-crash.ai-unavailable',
-		defaultMessage:
-			'AI analysis is not supported by the current log service (mclo.gs). Switch to LogShare.CN in Settings to use it.',
 	},
 })
 
@@ -396,7 +393,6 @@ function showPreview(): void {
 }
 
 const shareUrl = ref('')
-let lastShare: { id?: string; url?: string } | null = null
 
 function notifyNoLogContent(): void {
 	addNotification({
@@ -422,7 +418,6 @@ async function shareDiagnostic(): Promise<void> {
 			})
 		}
 		shareUrl.value = result.url
-		lastShare = result.id ? { id: result.id, url: result.url } : null
 		await navigator.clipboard.writeText(result.url)
 		addNotification({
 			title: formatMessage(messages.shareCopied),
@@ -457,14 +452,21 @@ function openAIAnalysis(): void {
 		notifyNoLogContent()
 		return
 	}
-	if (!isAIAnalysisAvailable()) {
-		addNotification({
-			title: formatMessage(messages.aiUnavailable),
-			type: 'warning',
-		})
-		return
+	aiModal.value?.show(payload.value.instance_id!)
+}
+
+async function refreshAIAvailability(): Promise<void> {
+	try {
+		const [settings, state] = await Promise.all([get_crash_analysis_ai_settings(), getAIState()])
+		const provider = state.providers.find((item) => item.provider_id === settings.provider_id)
+		aiAvailable.value =
+			settings.enabled &&
+			state.settings.enabled &&
+			!!provider?.enabled &&
+			provider.models.some((model) => model.id === settings.model_id && model.enabled)
+	} catch {
+		aiAvailable.value = false
 	}
-	aiModal.value?.show(lastAnalysis, lastShare)
 }
 
 async function handleProcessEvent(event: ProcessEvent): Promise<void> {
@@ -508,6 +510,7 @@ async function handleProcessEvent(event: ProcessEvent): Promise<void> {
 
 onMounted(async () => {
 	mounted = true
+	void refreshAIAvailability()
 	const unlisten = await process_listener((event: ProcessEvent) => void handleProcessEvent(event))
 	if (!mounted) {
 		unlisten()
@@ -566,16 +569,13 @@ defineExpose({ handleLaunchError, handleWarning, isLaunchFailure, showPreview })
 						}}
 					</button>
 				</ButtonStyled>
-				<!--
-				LogShate AI分析暂不可用
-				<ButtonStyled color="brand">
+				<ButtonStyled v-if="aiAvailable" color="brand">
 					<button @click="openAIAnalysis">
 						{{ formatMessage(messages.aiAnalyze) }}
 					</button>
 				</ButtonStyled>
-				-->
 			</div>
 		</template>
 	</NewModal>
-	<AILogAnalysisModal ref="aiModal" />
+	<CrashAIExplanationModal ref="aiModal" />
 </template>
