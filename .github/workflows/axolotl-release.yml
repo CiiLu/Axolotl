@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   preflight:
-    name: Release preflight
+    name: Release preflight & Frontend build
     runs-on: ubuntu-24.04
     env:
       SQLX_OFFLINE: true
@@ -49,6 +49,17 @@ jobs:
           node scripts/axolotl/brand-guard.mjs
           node scripts/axolotl/i18n-check.mjs
           cargo fmt --all --check
+      - name: Build Frontend
+        run: pnpm build
+
+      - name: Upload frontend assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: |
+            apps/app/dist
+            dist
+          retention-days: 1
 
       - name: Prepare draft release
         env:
@@ -141,6 +152,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
       - uses: ./.github/actions/replace-gradle-mirror
 
       - name: Set release version
@@ -157,6 +172,7 @@ jobs:
         with:
           projectPath: apps/app
           tauriScript: pnpm tauri
+          beforeBuildCommand: ''
           args: ${{ matrix.args }}
           tagName: ${{ github.ref_name }}
           releaseName: Axolotl Launcher ${{ github.ref_name }}
@@ -187,10 +203,7 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
 
-          # The modern NSIS installer keeps the name tauri-action uploaded
-          # (Axolotl.Launcher_<version>_x64-setup.exe); only the native
-          # variant is built and published here.
-          pnpm --filter @modrinth/app tauri build --config tauri-release.conf.json
+          pnpm --filter @modrinth/app tauri build --config tauri-release.conf.json --before-build-command ""
 
           $nativeInstallers = @(Get-ChildItem $outDir -Filter '*-setup.exe' -File)
           if ($nativeInstallers.Count -ne 1) {

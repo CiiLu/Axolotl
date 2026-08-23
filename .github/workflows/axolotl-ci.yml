@@ -48,8 +48,29 @@ jobs:
       - run: node scripts/axolotl/i18n-check.mjs
       - run: cargo fmt --all --check
 
-  desktop:
+  build-frontend:
     needs: guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build frontend
+        run: pnpm turbo run build --filter=@modrinth/app-frontend
+      - name: Upload frontend dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: apps/app-frontend/dist
+          retention-days: 1
+  desktop:
+    needs: [guardrails, build-frontend]
     strategy:
       fail-fast: false
       matrix:
@@ -75,51 +96,14 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Cache Turbo build cache
-        uses: actions/cache@v4
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
         with:
-          path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
+          name: frontend-dist
+          path: apps/app-frontend/dist
       - uses: ./.github/actions/replace-gradle-mirror
-      - name: Run frontend build and Rust check in parallel
-        shell: bash
-        run: |
-          set -u
-
-          frontend_log="$RUNNER_TEMP/frontend-build.log"
-          cargo_log="$RUNNER_TEMP/cargo-check.log"
-
-          pnpm turbo run build --filter=@modrinth/app-frontend > "$frontend_log" 2>&1 &
-          frontend_pid=$!
-
-          cargo check --package theseus_gui --features updater > "$cargo_log" 2>&1 &
-          cargo_pid=$!
-
-          frontend_status=0
-          cargo_status=0
-
-          wait "$frontend_pid" || frontend_status=$?
-          if [ "$frontend_status" -ne 0 ]; then
-            echo "===== Frontend build (failed) ====="
-            cat "$frontend_log"
-            echo "Frontend build failed with exit code $frontend_status"
-            exit "$frontend_status"
-          fi
-
-          wait "$cargo_pid" || cargo_status=$?
-
-          echo "===== Frontend build ====="
-          cat "$frontend_log"
-
-          echo "===== Cargo check ====="
-          cat "$cargo_log"
-
-          if [ "$cargo_status" -ne 0 ]; then
-            echo "Cargo check failed with exit code $cargo_status"
-            exit "$cargo_status"
-          fi
+      - name: Run cargo check
+        run: cargo check --package theseus_gui --features updater
       - name: Test version metadata writes
         run: cargo test --package theseus writing_version_info_creates_missing_parent_directory
       - name: Build modern Windows installer
