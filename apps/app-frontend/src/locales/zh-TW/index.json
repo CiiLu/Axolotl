@@ -5702,51 +5702,6 @@
 	"app.java-arguments.presets.use": {
 		"message": "使用預設"
 	},
-	"app.ai-log-analysis.analyzing": {
-		"message": "正在AI分析日誌……這可能需要等待半分鐘"
-	},
-	"app.ai-log-analysis.cancel": {
-		"message": "取消"
-	},
-	"app.ai-log-analysis.close": {
-		"message": "關閉"
-	},
-	"app.ai-log-analysis.copy-link": {
-		"message": "複製連結"
-	},
-	"app.ai-log-analysis.copy-result": {
-		"message": "複製結果"
-	},
-	"app.ai-log-analysis.error": {
-		"message": "AI 分析失敗：{message}"
-	},
-	"app.ai-log-analysis.link-copied": {
-		"message": "連結已複製到剪貼簿"
-	},
-	"app.ai-log-analysis.logshare-unavailable": {
-		"message": "LogShare.CN 無法訪問，AI 分析不可用（mclo.gs 不支援 AI 分析）。{message}"
-	},
-	"app.ai-log-analysis.privacy": {
-		"message": "你的日誌內容將被上傳第三方 AI 服務進行分析, 請勿上傳包含敏感資訊的日誌。\n 感謝logshare.cn提供的日誌分享與分析服務。"
-	},
-	"app.ai-log-analysis.result-copied": {
-		"message": "分析結果已複製到剪貼簿"
-	},
-	"app.ai-log-analysis.title": {
-		"message": "AI 日誌分析"
-	},
-	"app.ai-log-analysis.upload-failed": {
-		"message": "上傳失敗，正在直接分析日誌內容（無分享連結）。"
-	},
-	"app.ai-log-analysis.uploading": {
-		"message": "正在上傳日誌……"
-	},
-	"app.minecraft-crash.ai-analyze": {
-		"message": "AI 分析"
-	},
-	"app.minecraft-crash.ai-unavailable": {
-		"message": "當前日誌服務（mclo.gs）不支援 AI 分析，請在設定中切換到 LogShare.CN。"
-	},
 	"app.minecraft-crash.copy-link": {
 		"message": "複製連結"
 	},

@@ -1,4 +1,4 @@
-import type { AbstractModrinthClient, Logshare, Mclogs } from '@modrinth/api-client'
+import type { AbstractModrinthClient } from '@modrinth/api-client'
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
@@ -53,14 +53,6 @@ export function setLogShareProvider(provider: LogShareProvider): void {
 	localStorage.setItem(LOG_SHARE_PROVIDER_KEY, provider)
 }
 
-/**
- * Whether AI log analysis is available with the current provider setting.
- * AI is only supported by logshare.cn.
- */
-export function isAIAnalysisAvailable(): boolean {
-	return getLogShareProvider() !== 'mclogs'
-}
-
 function preferredProviders(): LogShareProvider[] {
 	const configured = getLogShareProvider()
 	if (configured === 'mclogs') return ['mclogs']
@@ -108,26 +100,4 @@ export async function shareLogs(
 		}
 	}
 	throw lastError ?? new Error('Failed to share logs')
-}
-
-/**
- * Run remote rule-based analysis on log content, preferring logshare.cn and
- * falling back to mclo.gs. Both providers return the mclogs insights shape.
- */
-export async function analyseLogs(
-	client: AbstractModrinthClient,
-	content: string,
-): Promise<Mclogs.Insights.v1.InsightsResponse | Logshare.Insights.v1.InsightsResponse> {
-	let lastError: unknown
-	for (const provider of preferredProviders()) {
-		try {
-			if (provider === 'logshare') {
-				return await client.logshare.insights_v1.analyse(content)
-			}
-			return await client.mclogs.insights_v1.analyse(content)
-		} catch (error) {
-			lastError = error
-		}
-	}
-	throw lastError ?? new Error('Failed to analyse logs')
 }

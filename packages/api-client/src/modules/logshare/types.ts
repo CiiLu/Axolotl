@@ -1,5 +1,3 @@
-import type { Mclogs } from '../mclogs/types'
-
 export namespace Logshare {
 	export namespace Logs {
 		export namespace v1 {
@@ -21,31 +19,6 @@ export namespace Logshare {
 			export type DeleteResponse = {
 				success: boolean
 				message?: string
-			}
-		}
-	}
-
-	export namespace Insights {
-		export namespace v1 {
-			// logshare.cn is mclogs-compatible ("McLogs Next"): /v1/analyse and
-			// /v1/insights/{id} return the exact mclogs insights response shape.
-			export type InsightsResponse = Mclogs.Insights.v1.InsightsResponse
-		}
-	}
-
-	export namespace AI {
-		export namespace v1 {
-			export type StreamError = {
-				success: boolean
-				message: string
-				code?: number
-				type?: string
-			}
-
-			export type StreamHandlers = {
-				onChunk?: (content: string) => void
-				onDone?: (fullContent: string) => void
-				onError?: (error: StreamError) => void
 			}
 		}
 	}

@@ -1796,56 +1796,11 @@
 	"app.minecraft-auth.unknown-error": {
 		"message": "未知错误"
 	},
-	"app.ai-log-analysis.analyzing": {
-		"message": "正在AI分析日志……这可能需要等待半分钟"
-	},
-	"app.ai-log-analysis.cancel": {
-		"message": "取消"
-	},
-	"app.ai-log-analysis.close": {
-		"message": "关闭"
-	},
-	"app.ai-log-analysis.copy-link": {
-		"message": "复制链接"
-	},
-	"app.ai-log-analysis.copy-result": {
-		"message": "复制结果"
-	},
-	"app.ai-log-analysis.error": {
-		"message": "AI 分析失败：{message}"
-	},
-	"app.ai-log-analysis.link-copied": {
-		"message": "链接已复制到剪贴板"
-	},
-	"app.ai-log-analysis.logshare-unavailable": {
-		"message": "LogShare.CN 无法访问，AI 分析不可用（mclo.gs 不支持 AI 分析）。{message}"
-	},
-	"app.ai-log-analysis.privacy": {
-		"message": "你的日志内容将被上传第三方 AI 服务进行分析, 请勿上传包含敏感信息的日志。\n 感谢logshare.cn提供的日志分享与分析服务。"
-	},
-	"app.ai-log-analysis.result-copied": {
-		"message": "分析结果已复制到剪贴板"
-	},
-	"app.ai-log-analysis.title": {
-		"message": "AI 日志分析"
-	},
-	"app.ai-log-analysis.upload-failed": {
-		"message": "上传失败，正在直接分析日志内容（无分享链接）。"
-	},
-	"app.ai-log-analysis.uploading": {
-		"message": "正在上传日志……"
-	},
 	"app.minecraft-auth.warning": {
 		"message": "无法登录你的 Microsoft 账号，原因可能是账号限制或地区限制。"
 	},
 	"app.minecraft-auth.what-happened": {
 		"message": "我们推测的原因"
-	},
-	"app.minecraft-crash.ai-analyze": {
-		"message": "AI 分析"
-	},
-	"app.minecraft-crash.ai-unavailable": {
-		"message": "当前日志服务（mclo.gs）不支持 AI 分析，请在设置中切换到 LogShare.CN。"
 	},
 	"app.minecraft-crash.analyzing": {
 		"message": "正在分析本次启动留下的日志……"

@@ -19,15 +19,6 @@
 				</ButtonStyled>
 			</div>
 		</div>
-		<CollapsibleAdmonition
-			v-if="ctx.crashAnalysis?.value && !isFullscreen"
-			type="critical"
-			:header="crashHeader"
-			:items="crashItems"
-			dismissible
-			@dismiss="ctx.onDismissCrash?.()"
-		/>
-
 		<div class="flex items-center gap-2">
 			<StyledInput
 				v-model="searchQuery"
@@ -422,20 +413,6 @@ const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 			descriptions: [action, ...mods, ...evidence],
 		}
 	})
-})
-
-const crashHeader = computed(() => {
-	const problems = ctx.crashAnalysis?.value?.analysis.problems ?? []
-	const count = problems.length
-	return formatMessage(consoleMessages.problemsDetected, { count })
-})
-
-const crashItems = computed<CollapsibleAdmonitionItem[]>(() => {
-	const problems = ctx.crashAnalysis?.value?.analysis.problems ?? []
-	return problems.map((p) => ({
-		title: p.message,
-		descriptions: p.solutions.map((s) => s.message),
-	}))
 })
 
 const viewportRef = ref<InstanceType<typeof LogViewport> | null>(null)
