@@ -54,6 +54,10 @@ const messages = defineMessages({
 		id: 'app.minecraft-crash.mod-changes-modal.undo-failed',
 		defaultMessage: 'Could not undo this Mod change',
 	},
+	refreshFailed: {
+		id: 'app.minecraft-crash.mod-changes-modal.refresh-failed',
+		defaultMessage: 'Mod removed, but the content list could not be refreshed.',
+	},
 })
 
 const groups = computed(() =>
@@ -75,14 +79,16 @@ function show(nextAnalysis: CrashAnalysisResult): void {
 
 async function undo(change: (typeof groups.value)[number]['items'][number]): Promise<void> {
 	if (change.kind !== 'added' || busy.value) return
+	const currentAnalysis = analysis.value
+	if (!currentAnalysis || !change.current_sha256) return
 	const name = change.project_title || change.filename
 	if (!window.confirm(formatMessage(messages.undoConfirm, { name }))) return
 	busy.value = change.filename
+	let removed = false
 	try {
-		if (!change.current_sha256) return
-		await undo_added_mod(analysis.value.instance_id, change.filename, change.current_sha256)
-		await refresh_content(analysis.value.instance_id)
-		analysis.value.mod_changes = analysis.value.mod_changes.filter(
+		await undo_added_mod(currentAnalysis.instance_id, change.filename, change.current_sha256)
+		removed = true
+		currentAnalysis.mod_changes = currentAnalysis.mod_changes.filter(
 			(item) => item.filename !== change.filename,
 		)
 		addNotification({ title: formatMessage(messages.undone), type: 'success' })
@@ -90,6 +96,12 @@ async function undo(change: (typeof groups.value)[number]['items'][number]): Pro
 		addNotification({ title: formatMessage(messages.undoFailed), type: 'error' })
 	} finally {
 		busy.value = null
+	}
+	if (!removed) return
+	try {
+		await refresh_content(currentAnalysis.instance_id)
+	} catch {
+		addNotification({ title: formatMessage(messages.refreshFailed), type: 'warning' })
 	}
 }
 

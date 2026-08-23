@@ -716,7 +716,7 @@ pub async fn save_successful_mod_snapshot(
     crate::state::sync_content_files(instance_id, &state).await?;
     let content =
         crate::state::list_content(instance_id, None, None, &state).await?;
-    let snapshot = scan_mod_snapshot(&mods_path, &content).await;
+    let snapshot = scan_mod_snapshot(&mods_path, &content).await?;
     let mut transaction = state.pool.begin().await?;
     sqlx::query(
         "DELETE FROM crash_analysis_mod_snapshots WHERE instance_id = ?",
@@ -803,7 +803,7 @@ async fn compare_mod_snapshot(
     let content =
         crate::state::list_content(instance_id, None, None, &state).await?;
     let current = scan_mod_snapshot(&instance_root.join("mods"), &[])
-        .await
+        .await?
         .into_iter()
         .map(|(filename, size, hash)| (filename, (size, hash)))
         .collect::<std::collections::HashMap<_, _>>();
@@ -894,10 +894,8 @@ async fn compare_mod_snapshot(
 async fn scan_mod_snapshot(
     mods_path: &Path,
     _content: &[crate::state::ContentItem],
-) -> Vec<(String, u64, String)> {
-    let Ok(mut entries) = tokio::fs::read_dir(mods_path).await else {
-        return Vec::new();
-    };
+) -> crate::Result<Vec<(String, u64, String)>> {
+    let mut entries = tokio::fs::read_dir(mods_path).await?;
     let mut snapshot = Vec::new();
     while let Ok(Some(entry)) = entries.next_entry().await {
         let path = entry.path();
@@ -906,16 +904,14 @@ async fn scan_mod_snapshot(
         }) {
             continue;
         }
-        let Ok(bytes) = tokio::fs::read(&path).await else {
-            continue;
-        };
+        let bytes = tokio::fs::read(&path).await?;
         snapshot.push((
             entry.file_name().to_string_lossy().to_string(),
             bytes.len() as u64,
             format!("{:x}", Sha256::digest(&bytes)),
         ));
     }
-    snapshot
+    Ok(snapshot)
 }
 
 #[cfg(windows)]
