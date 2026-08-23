@@ -111,7 +111,7 @@ defineExpose({ show })
 					<li
 						v-for="change in group.items"
 						:key="`${group.kind}:${change.filename}`"
-						class="rounded-md bg-surface-2 px-3 py-2 font-mono text-sm text-secondary"
+						class="rounded-md bg-surface-2 px-3 py-2 text-sm text-secondary"
 					>
 						<div class="flex min-w-0 items-center gap-2">
 							<div class="size-8 shrink-0 overflow-hidden rounded bg-surface-3">
