@@ -18,6 +18,12 @@ export interface LocalCrashAnalysis {
 		name?: string
 		matched_class?: string
 	}>
+	mod_changes: Array<{
+		kind: 'added' | 'removed' | 'modified'
+		filename: string
+		previous_size?: number
+		current_size?: number
+	}>
 }
 
 export interface ConsoleManagerContext {

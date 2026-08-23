@@ -6,7 +6,11 @@
 		"
 	>
 		<div
-			v-if="ctx.localCrashAnalysis?.value?.findings.length && !isFullscreen"
+			v-if="
+				(ctx.localCrashAnalysis?.value?.findings.length ||
+					ctx.localCrashAnalysis?.value?.mod_changes.length) &&
+				!isFullscreen
+			"
 			class="flex flex-col gap-2"
 		>
 			<CollapsibleAdmonition type="critical" :header="localCrashHeader" :items="localCrashItems" />
@@ -526,7 +530,7 @@ const localCrashHeader = computed(() => {
 const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 	const analysis = ctx.localCrashAnalysis?.value
 	if (!analysis) return []
-	return analysis.findings.map((finding) => {
+	const items = analysis.findings.map((finding) => {
 		const copy = localFindingCopy[finding.id as keyof typeof localFindingCopy]
 		const title = copy
 			? formatMessage(copy.title)
@@ -555,6 +559,23 @@ const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 			descriptions: [action, ...modChanges, ...mods, ...evidence],
 		}
 	})
+	if (items.length === 0 && analysis.mod_changes.length > 0) {
+		return [
+			{
+				title: formatMessage(consoleMessages.modChangesOnlyTitle),
+				descriptions: [
+					formatMessage(consoleMessages.modChangesOnlyAction),
+					...analysis.mod_changes.map((change) =>
+						formatMessage(consoleMessages.modChange, {
+							kind: change.kind,
+							filename: change.filename,
+						}),
+					),
+				],
+			},
+		]
+	}
+	return items
 })
 
 const viewportRef = ref<InstanceType<typeof LogViewport> | null>(null)

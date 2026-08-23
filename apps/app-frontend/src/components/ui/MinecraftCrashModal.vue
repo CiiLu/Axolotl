@@ -123,6 +123,15 @@ const messages = defineMessages({
 		id: 'app.minecraft-crash.mod-changes',
 		defaultMessage: 'Mod files changed since the last successful launch: {changes}',
 	},
+	modChangesTitle: {
+		id: 'app.minecraft-crash.mod-changes-title',
+		defaultMessage: 'Possible issue: Mod files changed since the last successful launch',
+	},
+	modChangesAction: {
+		id: 'app.minecraft-crash.mod-changes-action',
+		defaultMessage:
+			'Review the changed Mod files and restore the previous setup manually if the crash started after those changes.',
+	},
 	jvmArgumentsTitle: {
 		id: 'app.minecraft-crash.diagnosis.jvm-arguments.title',
 		defaultMessage: 'Possible issue: the JVM arguments are invalid',
@@ -301,17 +310,23 @@ function applyAnalysis(
 	analysis: CrashAnalysisResult | null,
 ): CrashModalPayload {
 	const finding = analysis?.findings[0]
-	if (!finding) return modalPayload
-
-	const [titleMessage, actionMessage] = diagnosisMessages[
-		finding.id as keyof typeof diagnosisMessages
-	] ?? [messages.knownFailureTitle, messages.knownFailureAction]
-	const evidence = finding.evidence[0]
 	const modChanges = analysis?.mod_changes ?? []
+	if (!finding && modChanges.length === 0) return modalPayload
+
+	const diagnosis = finding
+		? diagnosisMessages[finding.id as keyof typeof diagnosisMessages]
+		: undefined
+	const [titleMessage, actionMessage] = diagnosis ?? [
+		messages.knownFailureTitle,
+		messages.knownFailureAction,
+	]
+	const resolvedTitleMessage = finding ? titleMessage : messages.modChangesTitle
+	const resolvedActionMessage = finding ? actionMessage : messages.modChangesAction
+	const evidence = finding?.evidence[0]
 	return {
 		...modalPayload,
-		summary: formatMessage(titleMessage),
-		body: formatMessage(actionMessage),
+		summary: formatMessage(resolvedTitleMessage),
+		body: formatMessage(resolvedActionMessage),
 		hint: evidence
 			? formatMessage(messages.evidence, {
 					evidence: `${evidence.filename}:${evidence.line} - ${evidence.text}`,
