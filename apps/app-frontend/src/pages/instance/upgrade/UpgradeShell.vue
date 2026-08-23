@@ -36,19 +36,19 @@ const restoredSnapshot = restoreUpgradeFlow(props.instance.id, route.fullPath, f
 async function recoverUpgradeJob() {
 	const instanceId = props.instance.id
 	const requirement = route.meta.upgradeRequirement as UpgradeRouteRequirement | undefined
+	if (requirement === 'result') {
+		flow.setJobRecoveryState('ready')
+		return
+	}
 	flow.setJobRecoveryState('loading')
 	try {
 		const job = await recoverInstanceUpgradeJob(instanceId, {
 			knownJobId: flow.activeJobId.value,
-			continuation: requirement === 'job' || requirement === 'result',
+			continuation: requirement === 'job',
 		})
 		if (props.instance.id !== instanceId || !job) return
 		const downloadsLocation = attachUpgradeJobToFlow(flow, job)
-		if (
-			isRecoverableUpgradeStatus(job.status) &&
-			requirement !== 'job' &&
-			requirement !== 'result'
-		) {
+		if (isRecoverableUpgradeStatus(job.status) && requirement !== 'job') {
 			await router.replace(downloadsLocation)
 		}
 	} catch {
@@ -110,6 +110,7 @@ watch(
 	async () => {
 		if (!instanceMatchesRoute.value) return
 		const requirement = route.meta.upgradeRequirement as UpgradeRouteRequirement | undefined
+		if (requirement === 'result') return
 		if (isUpgradeRouteRecoveryPending(requirement, flow)) return
 		if (requirement === 'job' && route.name === 'InstanceUpgradeProgress') return
 		if (!isUpgradeRouteAvailable(requirement, flow)) {

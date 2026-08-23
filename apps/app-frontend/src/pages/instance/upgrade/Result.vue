@@ -1,10 +1,18 @@
 <template>
-	<UpgradeStepPlaceholder
-		title="Upgrade result"
-		description="Upgrade results will be added here."
-	/>
+	<div />
 </template>
 
 <script setup lang="ts">
-import UpgradeStepPlaceholder from './UpgradeStepPlaceholder.vue'
+import { onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+import { upgradeResultDownloadsLocation } from './result'
+
+const route = useRoute()
+const router = useRouter()
+
+onMounted(async () => {
+	const job = typeof route.query.job === 'string' ? route.query.job : null
+	await router.replace(job ? upgradeResultDownloadsLocation(job) : { path: '/downloads' })
+})
 </script>

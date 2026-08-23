@@ -50,7 +50,8 @@ export function isInstanceUpgradeJobWith(
 	instanceId: string,
 	instanceIdOf: InstallJobInstanceIdResolver,
 ): boolean {
-	return job.kind === 'upgrade_unmanaged_instance' && instanceIdOf(job) === instanceId
+	if (job.kind !== 'upgrade_unmanaged_instance') return false
+	return (job.source_instance_id ?? instanceIdOf(job)) === instanceId
 }
 
 function compareJobFreshness(a: InstallJobSnapshot, b: InstallJobSnapshot): number {

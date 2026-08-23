@@ -68,10 +68,7 @@
 			</span>
 
 			<div class="justify-self-end">
-				<span
-					:title="showBlockerTooltip ? formatMessage(messages.resolveBlockers) : undefined"
-					:aria-label="showBlockerTooltip ? formatMessage(messages.resolveBlockers) : undefined"
-				>
+				<span v-tooltip="blockerTooltip" tabindex="0" :aria-label="blockerTooltip">
 					<ButtonStyled v-if="!progress.complete && controls" color="brand" size="small">
 						<button :disabled="!controls || !canNext || busy" @click="controls?.onNext()">
 							<SpinnerIcon v-if="busy" class="animate-spin" aria-hidden="true" />
@@ -111,6 +108,10 @@ const messages = defineMessages({
 		id: 'instance.upgrade.compatibility.resolve-blockers-tooltip',
 		defaultMessage: 'Please resolve all blocking items before continuing.',
 	},
+	chooseSharedMode: {
+		id: 'instance.upgrade.confirm.choose-shared-mode-tooltip',
+		defaultMessage: 'Choose how this shared instance should be upgraded.',
+	},
 })
 const flow = useInstanceUpgradeFlow()
 const route = useRoute()
@@ -133,6 +134,18 @@ const showBlockerTooltip = computed(
 		(flow.plan.value?.blockingIssues.length ?? 0) > 0 &&
 		!busy.value,
 )
+const blockerTooltip = computed(() => {
+	if (
+		route.path.endsWith('/upgrade/confirm') &&
+		flow.instance.value &&
+		flow.sharedUpgradeMode.value === null &&
+		(flow.instance.value.link?.type === 'shared_instance' ||
+			Boolean(flow.instance.value.symlink_target))
+	) {
+		return formatMessage(messages.chooseSharedMode)
+	}
+	return showBlockerTooltip.value ? formatMessage(messages.resolveBlockers) : undefined
+})
 
 function stepClass(index: number) {
 	if (progress.value.complete || index < progress.value.currentIndex) return 'text-green'

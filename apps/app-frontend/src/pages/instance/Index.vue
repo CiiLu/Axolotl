@@ -240,6 +240,9 @@
 										id: 'create-shortcut',
 										action: () => createShortcut(),
 									},
+									...(canUpgradeInstance
+										? [{ id: 'upgrade-instance', action: () => openUpgrade() }]
+										: []),
 								]"
 							>
 								<MoreVerticalIcon />
@@ -257,6 +260,9 @@
 								</template>
 								<template #create-shortcut>
 									<ExternalIcon /> {{ formatMessage(messages.createShortcut) }}
+								</template>
+								<template #upgrade-instance>
+									<UpdatedIcon /> {{ formatMessage(messages.upgradeInstance) }}
 								</template>
 							</OverflowMenu>
 						</ButtonStyled>
@@ -402,7 +408,11 @@ import { useSymlinkWarningDismiss } from '@/composables/useSymlinkWarningDismiss
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_v3 } from '@/helpers/cache.js'
 import { instance_listener, process_listener } from '@/helpers/events'
-import { install_existing_instance, install_pack_to_existing_instance } from '@/helpers/install'
+import {
+	install_existing_instance,
+	install_job_list,
+	install_pack_to_existing_instance,
+} from '@/helpers/install'
 import {
 	allow_symlink_target,
 	gcReportFellBack,
@@ -418,6 +428,8 @@ import { refreshWorlds, type ServerStatus } from '@/helpers/worlds'
 import { injectServerInstall } from '@/providers/server-install'
 import { handleSevereError } from '@/store/error.js'
 import { useBreadcrumbs, useTheming } from '@/store/state'
+
+import { isActiveUpgradeJobForInstance, isUnmanagedUpgradeEligible } from './upgrade/entry'
 
 dayjs.extend(duration)
 dayjs.extend(relativeTime)
@@ -443,6 +455,7 @@ const messages = defineMessages({
 	createServer: { id: 'app.instance.create-server', defaultMessage: 'Create a server' },
 	exportModpack: { id: 'app.instance.export-modpack', defaultMessage: 'Export modpack' },
 	createShortcut: { id: 'app.instance.create-shortcut', defaultMessage: 'Create shortcut' },
+	upgradeInstance: { id: 'app.instance.upgrade-instance', defaultMessage: 'Upgrade instance' },
 	addContent: { id: 'app.instances.add-content', defaultMessage: 'Add content' },
 	copyPath: { id: 'app.instances.copy-path', defaultMessage: 'Copy path' },
 	copyNames: { id: 'app.instance.copy-names', defaultMessage: 'Copy names' },
@@ -498,6 +511,9 @@ useLoadingBarToken(subpagePending)
 const isServerInstance = ref(false)
 const linkedProjectV3 = ref<Labrinth.Projects.v3.Project>()
 const selected = ref<unknown[]>([])
+const canUpgradeInstance = computed(() =>
+	instance.value ? isUnmanagedUpgradeEligible(instance.value) : false,
+)
 
 const minecraftServer = computed(() => linkedProjectV3.value?.minecraft_server)
 const javaServerPingData = computed(() => linkedProjectV3.value?.minecraft_java_server?.ping?.data)
@@ -809,6 +825,18 @@ const createShortcut = async () => {
 			text: `${error}`,
 		})
 	}
+}
+
+const openUpgrade = async () => {
+	if (!instance.value) return
+	const active = (await install_job_list(true).catch(() => [])).find((job) =>
+		isActiveUpgradeJobForInstance(job, instance.value!.id),
+	)
+	if (active) {
+		await router.push({ path: '/downloads', query: { job: active.job_id } })
+		return
+	}
+	await router.push(`/instance/${encodeURIComponent(instance.value.id)}/upgrade`)
 }
 
 const handleRightClick = (event: MouseEvent) => {

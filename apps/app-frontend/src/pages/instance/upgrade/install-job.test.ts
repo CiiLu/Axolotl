@@ -16,6 +16,7 @@ function job(
 	status: InstallJobStatus,
 	options: {
 		instanceId?: string
+		sourceInstanceId?: string | null
 		kind?: InstallJobSnapshot['kind']
 		modified?: string
 		executionMode?: InstallJobSnapshot['execution_mode']
@@ -25,6 +26,7 @@ function job(
 	return {
 		job_id: jobId,
 		instance_id: options.instanceId ?? 'instance-a',
+		source_instance_id: options.sourceInstanceId,
 		kind: options.kind ?? 'upgrade_unmanaged_instance',
 		status,
 		execution_mode: options.executionMode ?? 'normal',
@@ -55,6 +57,23 @@ test('upgrade job ownership requires matching kind and instance identity', () =>
 	assert.equal(
 		isInstanceUpgradeJobWith(
 			job('wrong-instance', 'running', { instanceId: 'instance-b' }),
+			'instance-a',
+			instanceIdOf,
+		),
+		false,
+	)
+})
+
+test('copy upgrade ownership follows source instance, not target instance', () => {
+	const copy = job('copy', 'queued', {
+		instanceId: 'copy-target',
+		sourceInstanceId: 'instance-a',
+	})
+	assert.equal(isInstanceUpgradeJobWith(copy, 'instance-a', instanceIdOf), true)
+	assert.equal(isInstanceUpgradeJobWith(copy, 'copy-target', instanceIdOf), false)
+	assert.equal(
+		isInstanceUpgradeJobWith(
+			job('unrelated', 'queued', { sourceInstanceId: 'instance-c' }),
 			'instance-a',
 			instanceIdOf,
 		),
@@ -185,6 +204,29 @@ test('active preflight attaches without a second execution', async () => {
 	assert.equal(submitted?.attached, true)
 	assert.equal(submitted?.job.job_id, 'existing')
 	assert.equal(calls.length, 0)
+})
+
+test('copy execution result attaches by source identity despite different target', async () => {
+	const submitted = await submitInstanceUpgradeWith(
+		{
+			instanceId: 'instance-a',
+			planId: 'copy-plan',
+			createFullBackup: false,
+			sharedUpgradeMode: 'copy_and_upgrade',
+		},
+		{ value: false },
+		{
+			instanceIdOf,
+			listJobs: async () => [],
+			execute: async () =>
+				job('copy-job', 'queued', {
+					instanceId: 'copy-target',
+					sourceInstanceId: 'instance-a',
+				}),
+		},
+	)
+	assert.equal(submitted?.job.job_id, 'copy-job')
+	assert.equal(submitted?.attached, false)
 })
 
 test('submission failure releases lock', async () => {

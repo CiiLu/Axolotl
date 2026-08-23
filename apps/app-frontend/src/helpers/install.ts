@@ -144,6 +144,7 @@ export type InstallPauseReason = {
 export interface InstallJobSnapshot {
 	job_id: string
 	instance_id?: string | null
+	source_instance_id?: string | null
 	instance_deleted: boolean
 	kind:
 		| 'create_instance'

@@ -2228,6 +2228,9 @@
 	"app.instance.create-shortcut": {
 		"message": "Create shortcut"
 	},
+	"app.instance.upgrade-instance": {
+		"message": "Upgrade instance"
+	},
 	"app.instance.disable-selected": {
 		"message": "Disable selected"
 	},
@@ -8236,5 +8239,60 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "Unknown file warning"
-	}
+	},
+	"instance.upgrade.result.title": { "message": "Upgrade complete" },
+	"instance.upgrade.result.direct-description": {
+		"message": "This instance was upgraded successfully."
+	},
+	"instance.upgrade.result.copy-description": {
+		"message": "An upgraded copy was created successfully. The original shared instance was left unchanged."
+	},
+	"instance.upgrade.result.environment": { "message": "Environment" },
+	"instance.upgrade.result.minecraft": { "message": "Minecraft" },
+	"instance.upgrade.result.loader": { "message": "Loader" },
+	"instance.upgrade.result.unknown": { "message": "Unavailable" },
+	"instance.upgrade.result.automatic": { "message": "Automatic" },
+	"instance.upgrade.confirm.choose-shared-mode-tooltip": {
+		"message": "Choose how this shared instance should be upgraded."
+	},
+	"instance.upgrade.result.metrics": { "message": "Outcome" },
+	"instance.upgrade.result.updated": { "message": "Updated" },
+	"instance.upgrade.result.kept": { "message": "Kept" },
+	"instance.upgrade.result.disabled": { "message": "Disabled" },
+	"instance.upgrade.result.dependencies-added": { "message": "Dependencies added" },
+	"instance.upgrade.result.dependencies-updated": { "message": "Dependencies updated" },
+	"instance.upgrade.result.dependencies-removed": { "message": "Dependencies removed" },
+	"instance.upgrade.result.open-upgraded": { "message": "Open upgraded instance" },
+	"instance.upgrade.result.open-original": { "message": "Open original instance" },
+	"instance.upgrade.result.backup-title": { "message": "Backup created" },
+	"instance.upgrade.result.backup-description": {
+		"message": "A complete pre-upgrade copy was created separately from automatic technical rollback."
+	},
+	"instance.upgrade.result.open-backup": { "message": "Open backup" },
+	"instance.upgrade.result.no-backup-title": { "message": "No complete backup was created" },
+	"instance.upgrade.result.no-backup-description": {
+		"message": "Automatic technical rollback protected this operation while it was running; it is not a permanent backup."
+	},
+	"instance.upgrade.result.external-title": { "message": "Changes detected while upgrading" },
+	"instance.upgrade.result.external-description": {
+		"message": "Files changed outside the launcher were detected, and user changes were given priority where applicable."
+	},
+	"instance.upgrade.result.skipped-title": { "message": "Some planned changes were skipped" },
+	"instance.upgrade.result.skipped-description": {
+		"message": "These files changed while upgrading, so the user changes were preserved."
+	},
+	"instance.upgrade.result.warnings-title": { "message": "Compatibility warnings" },
+	"instance.upgrade.result.details-title": { "message": "Upgrade details" },
+	"instance.upgrade.result.action-add": { "message": "Added" },
+	"instance.upgrade.result.action-upgrade": { "message": "Updated" },
+	"instance.upgrade.result.action-keep": { "message": "Kept" },
+	"instance.upgrade.result.action-disable": { "message": "Disabled" },
+	"instance.upgrade.result.action-remove": { "message": "Removed" },
+	"instance.upgrade.result.change-added": { "message": "Added" },
+	"instance.upgrade.result.change-removed": { "message": "Removed" },
+	"instance.upgrade.result.change-modified": { "message": "Modified" },
+	"app.downloads.view-upgrade-result": { "message": "View upgrade result" },
+	"app.downloads.operation.upgrade": { "message": "Upgrade" },
+	"app.downloads.upgrade-details": { "message": "Upgrade details" },
+	"app.downloads.hide-upgrade-details": { "message": "Hide upgrade details" }
 }

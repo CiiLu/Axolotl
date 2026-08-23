@@ -1014,6 +1014,19 @@ mod tests {
     }
 
     #[test]
+    fn instance_upgrade_snapshot_source_identity_comes_from_request() {
+        let job = InstallJobState::new(upgrade_request(
+            SharedUpgradeMode::CopyAndUpgrade,
+        ));
+        assert_eq!(job.source_instance_id().as_deref(), Some("source"));
+        let other = InstallJobState::new(InstallRequest::DownloadJava {
+            vendor: "test".to_string(),
+            version: 21,
+        });
+        assert_eq!(other.source_instance_id(), None);
+    }
+
+    #[test]
     fn instance_upgrade_direct_uses_technical_rollback() {
         assert_eq!(
             upgrade_request(SharedUpgradeMode::Direct).cleanup(),
@@ -1118,12 +1131,15 @@ mod tests {
 
     #[test]
     fn instance_upgrade_result_round_trip_preserves_backup_and_skips() {
+        let execution = upgrade_execution();
         let result = InstanceUpgradeResult {
             plan_id: "plan".to_string(),
             source_instance_id: "source".to_string(),
             target_instance_id: "target".to_string(),
             backup_instance_id: Some("backup".to_string()),
-            solution: upgrade_execution().solution,
+            source_environment: Some(execution.source_environment.clone()),
+            target_environment: Some(execution.target_environment.clone()),
+            solution: execution.solution,
             compatibility_warnings: Vec::new(),
             external_changes: vec![InstanceUpgradeExternalChange {
                 relative_path: "mods/user.jar".to_string(),
@@ -1135,8 +1151,42 @@ mod tests {
             serde_json::from_value(serde_json::to_value(&result).unwrap())
                 .unwrap();
         assert_eq!(restored.backup_instance_id.as_deref(), Some("backup"));
+        assert_eq!(
+            restored.source_environment,
+            Some(execution.source_environment)
+        );
+        assert_eq!(
+            restored.target_environment,
+            Some(execution.target_environment)
+        );
         assert_eq!(restored.external_changes.len(), 1);
         assert_eq!(restored.skipped_due_to_external_conflict.len(), 1);
+    }
+
+    #[test]
+    fn old_instance_upgrade_result_defaults_environments_to_none() {
+        let execution = upgrade_execution();
+        let result = InstanceUpgradeResult {
+            plan_id: "plan".to_string(),
+            source_instance_id: "source".to_string(),
+            target_instance_id: "target".to_string(),
+            backup_instance_id: None,
+            source_environment: Some(execution.source_environment),
+            target_environment: Some(execution.target_environment),
+            solution: execution.solution,
+            compatibility_warnings: Vec::new(),
+            external_changes: Vec::new(),
+            skipped_due_to_external_conflict: Vec::new(),
+        };
+        let mut value = serde_json::to_value(result).unwrap();
+        let object = value.as_object_mut().unwrap();
+        object.remove("sourceEnvironment");
+        object.remove("targetEnvironment");
+
+        let restored: InstanceUpgradeResult =
+            serde_json::from_value(value).unwrap();
+        assert_eq!(restored.source_environment, None);
+        assert_eq!(restored.target_environment, None);
     }
 
     #[test]
@@ -1983,6 +2033,10 @@ pub struct InstanceUpgradeResult {
     pub source_instance_id: String,
     pub target_instance_id: String,
     pub backup_instance_id: Option<String>,
+    #[serde(default)]
+    pub source_environment: Option<InstanceUpgradeEnvironment>,
+    #[serde(default)]
+    pub target_environment: Option<InstanceUpgradeEnvironment>,
     pub solution: InstanceUpgradeSolution,
     pub compatibility_warnings: Vec<InstanceUpgradeIssue>,
     #[serde(default)]
@@ -2092,6 +2146,7 @@ impl InstallErrorView {
 pub struct InstallJobSnapshot {
     pub job_id: Uuid,
     pub instance_id: Option<String>,
+    pub source_instance_id: Option<String>,
     pub instance_deleted: bool,
     pub kind: InstallJobKind,
     pub status: InstallJobStatus,
@@ -2115,6 +2170,15 @@ pub struct InstallJobSnapshot {
 }
 
 impl InstallJobState {
+    pub fn source_instance_id(&self) -> Option<String> {
+        match &self.request {
+            InstallRequest::UpgradeUnmanagedInstance {
+                instance_id, ..
+            } => Some(instance_id.clone()),
+            _ => None,
+        }
+    }
+
     pub fn execution_mode(
         &self,
         status: InstallJobStatus,

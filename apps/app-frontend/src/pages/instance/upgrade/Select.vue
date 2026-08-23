@@ -121,7 +121,7 @@ import {
 import type { GameVersionTag } from '@modrinth/utils'
 import { useQuery } from '@tanstack/vue-query'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { loadInstanceContentData } from '@/helpers/instance-content'
 import { plan_instance_upgrade } from '@/helpers/instance-upgrade'
@@ -133,15 +133,16 @@ import { compareSemanticVersions } from '@/helpers/version-compatibility'
 import {
 	AUTOMATIC_FABRIC_LOADER_VERSION,
 	automaticFabricLoaderTargetAvailable,
-	commitUpgradePlanSelection,
 	fabricLoaderVersionForTarget,
 	fabricUpgradeLoaderVersions,
 	inferShaderRuntime,
 	newerStableGameVersions,
 	preserveFabricLoaderSelection,
+	resolveUpgradePlanSelection,
 	shouldReuseUpgradePlan,
 } from './analysis'
 import { useInstanceUpgradeFlow } from './flow'
+import { isCurrentUpgradeSelectPlanning } from './planning-navigation'
 
 const messages = defineMessages({
 	title: { id: 'instance.upgrade.select.title', defaultMessage: 'Upgrade instance' },
@@ -224,6 +225,7 @@ const messages = defineMessages({
 })
 
 const flow = useInstanceUpgradeFlow()
+const route = useRoute()
 const router = useRouter()
 const { formatMessage } = useVIntl()
 const instance = computed(() => flow.instance.value)
@@ -367,7 +369,14 @@ function registerControls() {
 }
 onMounted(registerControls)
 watch([canPlan, reusesPlan, () => flow.busy.value], registerControls)
-onBeforeUnmount(() => flow.registerStepControls(null))
+let planningGeneration = 0
+let disposed = false
+onBeforeUnmount(() => {
+	disposed = true
+	planningGeneration += 1
+	flow.busy.value = false
+	flow.registerStepControls(null)
+})
 
 function errorMessage(error: unknown): string {
 	if (error instanceof Error) return error.message
@@ -380,24 +389,36 @@ async function startPlanning() {
 	if (!canPlan.value || !selectedGameVersion.value) return
 
 	const targetEnvironment = requestedTargetEnvironment.value!
+	const instanceId = flow.instanceId.value
+	const generation = ++planningGeneration
 	flow.error.value = null
 	flow.busy.value = true
 	try {
-		await commitUpgradePlanSelection(
-			flow.instanceId.value,
+		const planned = await resolveUpgradePlanSelection(
+			instanceId,
 			flow.plan.value,
 			targetEnvironment,
 			plan_instance_upgrade,
-			flow.setPlan,
-			flow.setTargetEnvironment,
 		)
-		await router.push(
-			`/instance/${encodeURIComponent(flow.instanceId.value)}/upgrade/compatibility`,
+		const routeInstanceId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
+		if (
+			!isCurrentUpgradeSelectPlanning(
+				disposed,
+				generation,
+				planningGeneration,
+				route.name,
+				routeInstanceId,
+				instanceId,
+			)
 		)
+			return
+		if (!planned.reused) flow.setPlan(planned.plan)
+		flow.setTargetEnvironment(planned.plan.targetEnvironment)
+		await router.push(`/instance/${encodeURIComponent(instanceId)}/upgrade/compatibility`)
 	} catch (error) {
-		flow.error.value = error
+		if (!disposed && generation === planningGeneration) flow.error.value = error
 	} finally {
-		flow.busy.value = false
+		if (!disposed && generation === planningGeneration) flow.busy.value = false
 	}
 }
 </script>

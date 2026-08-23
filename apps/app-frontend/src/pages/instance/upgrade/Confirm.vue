@@ -48,7 +48,7 @@
 			</div>
 		</div>
 
-		<section v-if="sharedInstance" class="flex flex-col gap-3">
+		<section v-if="sharedInstance" class="order-first flex flex-col gap-3">
 			<div>
 				<h3 class="m-0 text-lg font-semibold text-contrast">
 					{{ formatMessage(messages.sharedTitle) }}

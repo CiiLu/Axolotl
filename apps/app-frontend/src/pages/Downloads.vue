@@ -115,8 +115,8 @@
 								{{ jobTitle(job) }}
 							</h2>
 							<TagItem>
-								<component :is="providerIcon(job.provider)" />
-								{{ providerLabel(job.provider) }}
+								<component :is="jobTypeIcon(job)" />
+								{{ jobTypeLabel(job) }}
 							</TagItem>
 							<Badge :color="statusColor(job.status)" :type="statusLabel(job.status)" />
 							<Badge
@@ -200,6 +200,21 @@
 						<ButtonStyled v-if="job.error" type="outlined" size="small">
 							<button :disabled="busy.has(job.job_id)" @click="copyDiagnostics(job)">
 								<ClipboardCopyIcon />{{ formatMessage(messages.copyDiagnostics) }}
+							</button>
+						</ButtonStyled>
+						<ButtonStyled
+							v-if="tab === 'history' && isSuccessfulUpgradeJob(job)"
+							color="brand"
+							size="small"
+						>
+							<button @click="toggleUpgradeResult(job.job_id)">
+								<CheckCircleIcon />{{
+									formatMessage(
+										resultExpanded.has(job.job_id)
+											? messages.hideUpgradeDetails
+											: messages.upgradeDetails,
+									)
+								}}
 							</button>
 						</ButtonStyled>
 						<ButtonStyled
@@ -346,6 +361,13 @@
 						:description="formatMessage(messages.noFileDetails)"
 					/>
 				</div>
+
+				<div
+					v-if="resultExpanded.has(job.job_id) && isSuccessfulUpgradeJob(job)"
+					class="border-0 border-t border-solid border-divider p-4"
+				>
+					<UpgradeResultDetails :result="job.upgrade_result!" />
+				</div>
 			</Card>
 		</div>
 
@@ -375,6 +397,7 @@
 <script setup lang="ts">
 import {
 	ArrowBigRightDashIcon,
+	CheckCircleIcon,
 	ChevronDownIcon,
 	ClipboardCopyIcon,
 	ClockIcon,
@@ -400,11 +423,11 @@ import {
 	DropdownSelect,
 	EmptyState,
 	injectNotificationManager,
+	type MessageDescriptor,
 	NavTabs,
 	ProgressBar,
 	StyledInput,
 	Table,
-	type MessageDescriptor,
 	type TableColumn,
 	TagItem,
 	useFormatBytes,
@@ -440,6 +463,8 @@ import {
 	reconcileDownloadFocus,
 	stopDownloadFocusAutoFollow,
 } from './download-focus'
+import { isSuccessfulUpgradeJob } from './instance/upgrade/result'
+import UpgradeResultDetails from './instance/upgrade/UpgradeResultDetails.vue'
 
 type DownloadItem = InstallJobSnapshot['items'][number]
 
@@ -455,6 +480,7 @@ const query = ref('')
 const provider = ref('all')
 const historyStatus = ref('all')
 const expanded = ref(new Set<string>())
+const resultExpanded = ref(new Set<string>())
 const busy = ref(new Set<string>())
 const clearHistoryModal = ref<InstanceType<typeof ConfirmModal>>()
 const missingContentModal = ref<InstanceType<typeof MissingModpackContentModal>>()
@@ -492,6 +518,15 @@ const messages = defineMessages({
 			'{completed} / {total} required files are ready. {missing, plural, one {# file still needs to be downloaded.} other {# files still need to be downloaded.}}',
 	},
 	copyDiagnostics: { id: 'app.downloads.copy-diagnostics', defaultMessage: 'Copy diagnostics' },
+	upgrade: { id: 'app.downloads.operation.upgrade', defaultMessage: 'Upgrade' },
+	upgradeDetails: {
+		id: 'app.downloads.upgrade-details',
+		defaultMessage: 'Upgrade details',
+	},
+	hideUpgradeDetails: {
+		id: 'app.downloads.hide-upgrade-details',
+		defaultMessage: 'Hide upgrade details',
+	},
 	openInstance: { id: 'app.downloads.open-instance', defaultMessage: 'Open instance' },
 	instanceDeleted: { id: 'app.downloads.instance-deleted', defaultMessage: 'Instance deleted' },
 	details: { id: 'app.downloads.details', defaultMessage: 'Details' },
@@ -751,6 +786,16 @@ function providerIcon(value: InstallJobSnapshot['provider']) {
 		: value === 'modrinth'
 			? ModrinthIcon
 			: DownloadIcon
+}
+
+function jobTypeLabel(job: InstallJobSnapshot) {
+	return job.kind === 'upgrade_unmanaged_instance'
+		? formatMessage(messages.upgrade)
+		: providerLabel(job.provider)
+}
+
+function jobTypeIcon(job: InstallJobSnapshot) {
+	return job.kind === 'upgrade_unmanaged_instance' ? UpdatedIcon : providerIcon(job.provider)
 }
 
 function legacyProvider(bar: LoadingBar): InstallJobSnapshot['provider'] {
@@ -1088,6 +1133,13 @@ watch(
 		if (effect.expand && jobId) {
 			expanded.value = new Set([...expanded.value, jobId])
 		}
+		if (
+			route.query.result === '1' &&
+			jobId &&
+			jobs.some((job) => job.job_id === jobId && isSuccessfulUpgradeJob(job))
+		) {
+			resultExpanded.value = new Set([...resultExpanded.value, jobId])
+		}
 		if (effect.scroll && jobId) {
 			await nextTick()
 			focusedJobElement(jobId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -1104,6 +1156,13 @@ function toggleExpanded(jobId: string) {
 		next.add(jobId)
 	}
 	expanded.value = next
+}
+
+function toggleUpgradeResult(jobId: string) {
+	const next = new Set(resultExpanded.value)
+	if (next.has(jobId)) next.delete(jobId)
+	else next.add(jobId)
+	resultExpanded.value = next
 }
 
 async function withBusy(jobId: string, action: () => Promise<void>) {

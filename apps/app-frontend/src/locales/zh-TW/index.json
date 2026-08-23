@@ -1457,6 +1457,9 @@
 	"app.instance.create-shortcut": {
 		"message": "建立捷徑"
 	},
+	"app.instance.upgrade-instance": {
+		"message": "升級實例"
+	},
 	"app.instance.disable-selected": {
 		"message": "停用所選項"
 	},
@@ -5225,5 +5228,58 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "未知檔案警告"
-	}
+	},
+	"instance.upgrade.result.title": { "message": "升級完成" },
+	"instance.upgrade.result.direct-description": { "message": "此實例已成功升級。" },
+	"instance.upgrade.result.copy-description": {
+		"message": "已成功建立升級副本。原共享實例未被修改。"
+	},
+	"instance.upgrade.result.environment": { "message": "環境" },
+	"instance.upgrade.result.minecraft": { "message": "Minecraft 版本" },
+	"instance.upgrade.result.loader": { "message": "載入器" },
+	"instance.upgrade.result.unknown": { "message": "無法使用" },
+	"instance.upgrade.result.automatic": { "message": "自動" },
+	"instance.upgrade.confirm.choose-shared-mode-tooltip": {
+		"message": "請選擇共享實例的升級方式。"
+	},
+	"instance.upgrade.result.metrics": { "message": "結果" },
+	"instance.upgrade.result.updated": { "message": "已更新" },
+	"instance.upgrade.result.kept": { "message": "已保留" },
+	"instance.upgrade.result.disabled": { "message": "已停用" },
+	"instance.upgrade.result.dependencies-added": { "message": "新增相依項目" },
+	"instance.upgrade.result.dependencies-updated": { "message": "更新相依項目" },
+	"instance.upgrade.result.dependencies-removed": { "message": "移除相依項目" },
+	"instance.upgrade.result.open-upgraded": { "message": "開啟升級後的實例" },
+	"instance.upgrade.result.open-original": { "message": "開啟原實例" },
+	"instance.upgrade.result.backup-title": { "message": "已建立備份" },
+	"instance.upgrade.result.backup-description": {
+		"message": "已另外建立升級前的完整副本，與自動技術復原分開。"
+	},
+	"instance.upgrade.result.open-backup": { "message": "開啟備份" },
+	"instance.upgrade.result.no-backup-title": { "message": "未建立完整備份" },
+	"instance.upgrade.result.no-backup-description": {
+		"message": "自動技術復原只在升級期間保護操作，不是永久備份。"
+	},
+	"instance.upgrade.result.external-title": { "message": "偵測到升級期間的檔案變更" },
+	"instance.upgrade.result.external-description": {
+		"message": "偵測到啟動器外的檔案變更；適用時已優先保留使用者變更。"
+	},
+	"instance.upgrade.result.skipped-title": { "message": "部分計畫變更已跳過" },
+	"instance.upgrade.result.skipped-description": {
+		"message": "這些檔案在升級期間發生變更，因此保留使用者變更。"
+	},
+	"instance.upgrade.result.warnings-title": { "message": "相容性警告" },
+	"instance.upgrade.result.details-title": { "message": "升級詳細資料" },
+	"instance.upgrade.result.action-add": { "message": "已新增" },
+	"instance.upgrade.result.action-upgrade": { "message": "已更新" },
+	"instance.upgrade.result.action-keep": { "message": "已保留" },
+	"instance.upgrade.result.action-disable": { "message": "已停用" },
+	"instance.upgrade.result.action-remove": { "message": "已移除" },
+	"instance.upgrade.result.change-added": { "message": "新增" },
+	"instance.upgrade.result.change-removed": { "message": "移除" },
+	"instance.upgrade.result.change-modified": { "message": "修改" },
+	"app.downloads.view-upgrade-result": { "message": "查看升級結果" },
+	"app.downloads.operation.upgrade": { "message": "升級" },
+	"app.downloads.upgrade-details": { "message": "升級詳情" },
+	"app.downloads.hide-upgrade-details": { "message": "收起升級詳情" }
 }

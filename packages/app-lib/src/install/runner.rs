@@ -28,7 +28,9 @@ use crate::state::{
     State,
 };
 use crate::util::fetch::DownloadReason;
+use futures::stream::{FuturesUnordered, StreamExt};
 use std::collections::{HashMap, HashSet};
+use std::future::Future;
 use std::path::PathBuf;
 use uuid::Uuid;
 
@@ -1989,11 +1991,22 @@ enum StagedUpgradeDownload {
 struct StagedUpgradeMutation {
     existing_path: Option<String>,
     target_path: String,
-    download_size: u64,
     ownership: crate::state::instances::ContentOwnershipKind,
     auto_dependency: bool,
     enabled: bool,
     download: StagedUpgradeDownload,
+}
+
+struct UpgradeStagingRequest {
+    index: usize,
+    provider: ContentProvider,
+    project_id: String,
+    release_id: String,
+    auto_dependency: bool,
+    enabled: bool,
+    existing_path: Option<String>,
+    ownership: crate::state::instances::ContentOwnershipKind,
+    project_type: Option<crate::state::ProjectType>,
 }
 
 struct AppliedUpgradeContent {
@@ -2083,6 +2096,8 @@ async fn run_instance_upgrade(
             source_instance_id: source_instance_id.to_string(),
             target_instance_id: target_instance_id.to_string(),
             backup_instance_id: backup_instance_id.clone(),
+            source_environment: Some(execution.source_environment.clone()),
+            target_environment: Some(execution.target_environment.clone()),
             solution: execution.solution.clone(),
             compatibility_warnings: execution.warnings.clone(),
             external_changes: Vec::new(),
@@ -2095,6 +2110,14 @@ async fn run_instance_upgrade(
         job_state,
         state,
         InstallPhaseId::StagingContent,
+        InstallPhaseDetails::Empty,
+    )
+    .await?;
+    update_progress(
+        job_id,
+        job_state,
+        state,
+        InstallPhaseId::DownloadingContent,
         InstallPhaseDetails::Empty,
     )
     .await?;
@@ -2299,6 +2322,8 @@ async fn run_instance_upgrade(
             source_instance_id: source_instance_id.to_string(),
             target_instance_id: target_instance_id.to_string(),
             backup_instance_id,
+            source_environment: Some(execution.source_environment),
+            target_environment: Some(execution.target_environment),
             solution: execution.solution,
             compatibility_warnings: execution.warnings,
             external_changes,
@@ -2679,58 +2704,118 @@ async fn stage_upgrade_content(
             release_id
         ))
     });
+    let contexts = requests
+        .into_iter()
+        .enumerate()
+        .map(
+            |(
+                index,
+                (
+                    content_id,
+                    provider,
+                    project_id,
+                    release_id,
+                    auto_dependency,
+                    enabled,
+                ),
+            )| {
+                let source_path = content_id
+                    .as_deref()
+                    .and_then(|content_id| item_paths.get(content_id).copied());
+                let existing_entry = content_id
+                    .as_deref()
+                    .and_then(|content_id| {
+                        entries.iter().find(|entry| entry.id == content_id)
+                    })
+                    .or_else(|| {
+                        source_path.and_then(|path| entries_by_path.get(path).copied())
+                    });
+                let existing_path = existing_entry
+                    .and_then(|entry| entry.file_id.as_deref())
+                    .and_then(|file_id| files_by_id.get(file_id).copied())
+                    .map(ToString::to_string)
+                    .or_else(|| source_path.map(ToString::to_string));
+                let ownership = existing_entry
+                    .map(|entry| entry.ownership_kind)
+                    .unwrap_or(
+                        crate::state::instances::ContentOwnershipKind::UserAdded,
+                    );
+                let project_type = existing_entry
+                    .map(|entry| entry.project_type)
+                    .or_else(|| {
+                        source_path.and_then(
+                            crate::state::instances::adapters::filesystem::project_type_from_relative_path,
+                        )
+                    });
+                UpgradeStagingRequest {
+                    index,
+                    provider,
+                    project_id,
+                    release_id,
+                    auto_dependency,
+                    enabled,
+                    existing_path,
+                    ownership,
+                    project_type,
+                }
+            },
+        )
+        .collect::<Vec<_>>();
     if let Some(reporter) = reporter.as_ref() {
         reporter
             .record_events(vec![InstallJobEventKind::ContentDownloadStarted {
-                files: requests.len() as u64,
+                files: contexts.len() as u64,
                 bytes: None,
             }])
             .await?;
     }
-    let mut staged = Vec::new();
-    for (
-        content_id,
-        provider,
-        project_id,
-        release_id,
-        auto_dependency,
-        enabled,
-    ) in requests
-    {
-        let source_path = content_id
-            .as_deref()
-            .and_then(|content_id| item_paths.get(content_id).copied());
-        let existing_entry = content_id
-            .as_deref()
-            .and_then(|content_id| {
-                entries.iter().find(|entry| entry.id == content_id)
-            })
-            .or_else(|| {
-                source_path.and_then(|path| entries_by_path.get(path).copied())
-            });
-        let existing_path = existing_entry
-            .and_then(|entry| entry.file_id.as_deref())
-            .and_then(|file_id| files_by_id.get(file_id).copied())
-            .map(ToString::to_string)
-            .or_else(|| source_path.map(ToString::to_string));
-        let ownership =
-            existing_entry.map(|entry| entry.ownership_kind).unwrap_or(
-                crate::state::instances::ContentOwnershipKind::UserAdded,
-            );
-        let project_type = existing_entry
-            .map(|entry| entry.project_type)
-            .or_else(|| {
-                source_path.and_then(
-                    crate::state::instances::adapters::filesystem::project_type_from_relative_path,
+    let mut downloads = contexts
+        .into_iter()
+        .map(|context| {
+            let reporter = reporter.clone();
+            async move {
+                let index = context.index;
+                let mutation = stage_one_upgrade_request(
+                    instance_id,
+                    context,
+                    reporter,
+                    state,
                 )
-            });
-        let download = match provider {
+                .await?;
+                Ok::<_, crate::Error>((index, mutation))
+            }
+        })
+        .collect::<FuturesUnordered<_>>();
+    collect_ordered_upgrade_staging(&mut downloads).await
+}
+
+async fn collect_ordered_upgrade_staging<F, T>(
+    downloads: &mut FuturesUnordered<F>,
+) -> crate::Result<Vec<T>>
+where
+    F: Future<Output = crate::Result<(usize, T)>>,
+{
+    let mut staged = Vec::with_capacity(downloads.len());
+    while let Some(result) = downloads.next().await {
+        staged.push(result?);
+    }
+    staged.sort_by_key(|(index, _)| *index);
+    Ok(staged.into_iter().map(|(_, mutation)| mutation).collect())
+}
+
+async fn stage_one_upgrade_request(
+    instance_id: &str,
+    context: UpgradeStagingRequest,
+    reporter: Option<InstallProgressReporter>,
+    state: &State,
+) -> crate::Result<StagedUpgradeMutation> {
+    let download = match context.provider {
             ContentProvider::Modrinth => StagedUpgradeDownload::Modrinth(
                 match reporter.as_ref() {
                     Some(reporter) => crate::state::instances::commands::download_project_version_with_reporter(
                         instance_id,
-                        &release_id,
-                        if auto_dependency {
+                        &context.release_id,
+                        if context.auto_dependency {
                             DownloadReason::Dependency
                         } else {
                             DownloadReason::Update
@@ -2742,8 +2827,8 @@ async fn stage_upgrade_content(
                     .await?,
                     None => crate::state::instances::commands::download_project_version(
                         instance_id,
-                        &release_id,
-                        if auto_dependency {
+                        &context.release_id,
+                        if context.auto_dependency {
                             DownloadReason::Dependency
                         } else {
                             DownloadReason::Update
@@ -2755,12 +2840,12 @@ async fn stage_upgrade_content(
                 },
             ),
             ContentProvider::CurseForge => {
-                let project_id = project_id.parse::<u32>().map_err(|_| {
+                let project_id = context.project_id.parse::<u32>().map_err(|_| {
                     crate::ErrorKind::InputError(
                         "CurseForge project id is invalid".to_string(),
                     )
                 })?;
-                let file_id = release_id.parse::<u32>().map_err(|_| {
+                let file_id = context.release_id.parse::<u32>().map_err(|_| {
                     crate::ErrorKind::InputError(
                         "CurseForge file id is invalid".to_string(),
                     )
@@ -2769,7 +2854,7 @@ async fn stage_upgrade_content(
                     crate::api::curseforge::stage_curseforge_upgrade_file(
                         project_id,
                         file_id,
-                        project_type,
+                        context.project_type,
                         reporter.as_ref(),
                     )
                     .await?,
@@ -2783,8 +2868,11 @@ async fn stage_upgrade_content(
                 .into());
             }
         };
-        let target_path =
-            existing_path.clone().unwrap_or_else(|| match &download {
+    let target_path =
+        context
+            .existing_path
+            .clone()
+            .unwrap_or_else(|| match &download {
                 StagedUpgradeDownload::Modrinth(download) => format!(
                     "{}/{}",
                     download.project_type.get_folder(),
@@ -2796,48 +2884,28 @@ async fn stage_upgrade_content(
                     download.file.file_name
                 ),
             });
-        let download_size = match &download {
-            StagedUpgradeDownload::Modrinth(download) => download.size,
-            StagedUpgradeDownload::CurseForge(download) => {
-                download.file.file_length
-            }
-        };
-        staged.push(StagedUpgradeMutation {
-            existing_path,
-            target_path,
-            download_size,
-            ownership,
-            auto_dependency,
-            enabled,
-            download,
-        });
-    }
+    let download_size = match &download {
+        StagedUpgradeDownload::Modrinth(download) => download.size,
+        StagedUpgradeDownload::CurseForge(download) => {
+            download.file.file_length
+        }
+    };
     if let Some(reporter) = reporter {
         reporter
-            .record_events(upgrade_staging_summary_events(&staged))
+            .record_events(vec![InstallJobEventKind::ContentFileCompleted {
+                path: target_path.clone(),
+                bytes: download_size,
+            }])
             .await?;
     }
-    Ok(staged)
-}
-
-fn upgrade_staging_summary_events(
-    staged: &[StagedUpgradeMutation],
-) -> Vec<InstallJobEventKind> {
-    let bytes = staged.iter().fold(0_u64, |total, mutation| {
-        total.saturating_add(mutation.download_size)
-    });
-    let mut events = Vec::with_capacity(staged.len() + 1);
-    events.push(InstallJobEventKind::ContentDownloadStarted {
-        files: staged.len() as u64,
-        bytes: Some(bytes),
-    });
-    events.extend(staged.iter().map(|mutation| {
-        InstallJobEventKind::ContentFileCompleted {
-            path: mutation.target_path.clone(),
-            bytes: mutation.download_size,
-        }
-    }));
-    events
+    Ok(StagedUpgradeMutation {
+        existing_path: context.existing_path,
+        target_path,
+        ownership: context.ownership,
+        auto_dependency: context.auto_dependency,
+        enabled: context.enabled,
+        download,
+    })
 }
 
 async fn apply_upgrade_content(
@@ -5762,7 +5830,6 @@ mod tests {
         StagedUpgradeMutation {
             existing_path: existing_path.map(ToString::to_string),
             target_path: target_path.to_string(),
-            download_size: 1,
             ownership: crate::state::instances::ContentOwnershipKind::UserAdded,
             auto_dependency: false,
             enabled: true,
@@ -5794,8 +5861,15 @@ mod tests {
             vendor: "test".to_string(),
             version: 21,
         });
-        for event in upgrade_staging_summary_events(&staged) {
-            job.record_event(event);
+        job.record_event(InstallJobEventKind::ContentDownloadStarted {
+            files: staged.len() as u64,
+            bytes: Some(staged.len() as u64),
+        });
+        for mutation in staged {
+            job.record_event(InstallJobEventKind::ContentFileCompleted {
+                path: mutation.target_path,
+                bytes: 1,
+            });
         }
 
         let persisted = serde_json::to_string(&job).unwrap();
@@ -5806,6 +5880,64 @@ mod tests {
         assert_eq!(summary.files_total, Some(27));
         assert_eq!(summary.bytes_downloaded, 27);
         assert_eq!(summary.bytes_total, Some(27));
+    }
+
+    #[tokio::test]
+    async fn upgrade_staging_scheduler_enters_requests_concurrently() {
+        use std::sync::Arc;
+        use tokio::sync::Barrier;
+
+        let barrier = Arc::new(Barrier::new(2));
+        let mut downloads = (0..2)
+            .map(|index| {
+                let barrier = barrier.clone();
+                async move {
+                    barrier.wait().await;
+                    Ok::<_, crate::Error>((index, index))
+                }
+            })
+            .collect::<FuturesUnordered<_>>();
+
+        assert_eq!(
+            collect_ordered_upgrade_staging(&mut downloads)
+                .await
+                .unwrap(),
+            vec![0, 1]
+        );
+    }
+
+    #[tokio::test]
+    async fn upgrade_staging_scheduler_restores_request_order() {
+        let mut downloads = [2_usize, 0, 1]
+            .into_iter()
+            .map(|index| async move {
+                Ok::<_, crate::Error>((index, format!("mutation-{index}")))
+            })
+            .collect::<FuturesUnordered<_>>();
+
+        assert_eq!(
+            collect_ordered_upgrade_staging(&mut downloads)
+                .await
+                .unwrap(),
+            vec!["mutation-0", "mutation-1", "mutation-2"]
+        );
+    }
+
+    #[tokio::test]
+    async fn upgrade_staging_scheduler_returns_first_error() {
+        let mut downloads = [
+            Ok((0, "first")),
+            Err(crate::ErrorKind::InputError("failed".into()).into()),
+        ]
+        .into_iter()
+        .map(std::future::ready)
+        .collect::<FuturesUnordered<_>>();
+
+        assert!(
+            collect_ordered_upgrade_staging(&mut downloads)
+                .await
+                .is_err()
+        );
     }
 
     #[cfg(debug_assertions)]

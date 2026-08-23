@@ -1190,6 +1190,9 @@
 	"app.instance.create-shortcut": {
 		"message": "创建快捷方式"
 	},
+	"app.instance.upgrade-instance": {
+		"message": "升级实例"
+	},
 	"app.instance.disable-selected": {
 		"message": "禁用所选项"
 	},
@@ -7880,5 +7883,58 @@
 	},
 	"app.java-arguments.presets.gc.auto.verified": {
 		"message": "上次启动: {chosen}"
-	}
+	},
+	"instance.upgrade.result.title": { "message": "升级完成" },
+	"instance.upgrade.result.direct-description": { "message": "此实例已成功升级。" },
+	"instance.upgrade.result.copy-description": {
+		"message": "已成功创建升级副本。原共享实例未被修改。"
+	},
+	"instance.upgrade.result.environment": { "message": "环境" },
+	"instance.upgrade.result.minecraft": { "message": "Minecraft 版本" },
+	"instance.upgrade.result.loader": { "message": "加载器" },
+	"instance.upgrade.result.unknown": { "message": "不可用" },
+	"instance.upgrade.result.automatic": { "message": "自动" },
+	"instance.upgrade.confirm.choose-shared-mode-tooltip": {
+		"message": "请选择共享实例的升级方式。"
+	},
+	"instance.upgrade.result.metrics": { "message": "结果" },
+	"instance.upgrade.result.updated": { "message": "已更新" },
+	"instance.upgrade.result.kept": { "message": "已保留" },
+	"instance.upgrade.result.disabled": { "message": "已禁用" },
+	"instance.upgrade.result.dependencies-added": { "message": "新增依赖" },
+	"instance.upgrade.result.dependencies-updated": { "message": "更新依赖" },
+	"instance.upgrade.result.dependencies-removed": { "message": "移除依赖" },
+	"instance.upgrade.result.open-upgraded": { "message": "打开升级后的实例" },
+	"instance.upgrade.result.open-original": { "message": "打开原实例" },
+	"instance.upgrade.result.backup-title": { "message": "已创建备份" },
+	"instance.upgrade.result.backup-description": {
+		"message": "已单独创建升级前的完整副本，与自动技术回滚分开。"
+	},
+	"instance.upgrade.result.open-backup": { "message": "打开备份" },
+	"instance.upgrade.result.no-backup-title": { "message": "未创建完整备份" },
+	"instance.upgrade.result.no-backup-description": {
+		"message": "自动技术回滚仅在升级期间保护操作，不是永久备份。"
+	},
+	"instance.upgrade.result.external-title": { "message": "检测到升级期间的文件变化" },
+	"instance.upgrade.result.external-description": {
+		"message": "检测到启动器之外的文件变化；在适用情况下已优先保留用户更改。"
+	},
+	"instance.upgrade.result.skipped-title": { "message": "部分计划更改已跳过" },
+	"instance.upgrade.result.skipped-description": {
+		"message": "这些文件在升级期间发生变化，因此保留了用户更改。"
+	},
+	"instance.upgrade.result.warnings-title": { "message": "兼容性警告" },
+	"instance.upgrade.result.details-title": { "message": "升级详情" },
+	"instance.upgrade.result.action-add": { "message": "已添加" },
+	"instance.upgrade.result.action-upgrade": { "message": "已更新" },
+	"instance.upgrade.result.action-keep": { "message": "已保留" },
+	"instance.upgrade.result.action-disable": { "message": "已禁用" },
+	"instance.upgrade.result.action-remove": { "message": "已移除" },
+	"instance.upgrade.result.change-added": { "message": "添加" },
+	"instance.upgrade.result.change-removed": { "message": "移除" },
+	"instance.upgrade.result.change-modified": { "message": "修改" },
+	"app.downloads.view-upgrade-result": { "message": "查看升级结果" },
+	"app.downloads.operation.upgrade": { "message": "升级" },
+	"app.downloads.upgrade-details": { "message": "升级详情" },
+	"app.downloads.hide-upgrade-details": { "message": "收起升级详情" }
 }

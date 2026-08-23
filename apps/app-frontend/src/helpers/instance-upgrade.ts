@@ -184,6 +184,8 @@ export interface InstanceUpgradeResult {
 	sourceInstanceId: string
 	targetInstanceId: string
 	backupInstanceId: string | null
+	sourceEnvironment?: InstanceUpgradeTargetEnvironment | null
+	targetEnvironment?: InstanceUpgradeTargetEnvironment | null
 	solution: InstanceUpgradeSolution
 	compatibilityWarnings: InstanceUpgradeIssue[]
 	externalChanges: InstanceUpgradeExternalChange[]

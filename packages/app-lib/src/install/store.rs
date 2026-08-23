@@ -44,6 +44,7 @@ impl InstallJobRecord {
         InstallJobSnapshot {
             job_id: self.id,
             instance_id: self.instance_id.clone().or(recorded_instance_id),
+            source_instance_id: self.state.source_instance_id(),
             instance_deleted,
             kind: self.kind,
             status: self.status,
