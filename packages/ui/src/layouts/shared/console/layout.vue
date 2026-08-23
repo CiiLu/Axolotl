@@ -573,6 +573,14 @@ const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 			],
 		})
 	}
+	if (analysis.windows_events.length > 0) {
+		items.push({
+			title: formatMessage(consoleMessages.windowsEventsTitle),
+			descriptions: analysis.windows_events.map(
+				(event) => `Event ${event.event_id} · ${event.provider}: ${event.message}`,
+			),
+		})
+	}
 	return items
 })
 

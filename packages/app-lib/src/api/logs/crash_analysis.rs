@@ -6,6 +6,7 @@ use std::time::{Duration, SystemTime};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use tokio::process::Command;
 
 use super::{CensoredString, resolve_instance_path};
 use crate::{State, prelude::Credentials, util::io::IOError};
@@ -26,6 +27,7 @@ pub struct CrashAnalysis {
     pub combined_log: CensoredString,
     pub mod_changes: Vec<CrashModChange>,
     pub mod_change_counts: CrashModChangeCounts,
+    pub windows_events: Vec<WindowsCrashEvent>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -47,6 +49,14 @@ pub struct CrashModChangeCounts {
     pub added: usize,
     pub removed: usize,
     pub modified: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WindowsCrashEvent {
+    pub event_id: u32,
+    pub provider: String,
+    pub time_created: String,
+    pub message: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -626,6 +636,13 @@ pub async fn analyze_crash(instance_id: &str) -> crate::Result<CrashAnalysis> {
     .unwrap_or_default();
     let mod_changes = compare_mod_snapshot(instance_id, &instance_root).await?;
     let mod_change_counts = count_mod_changes(&mod_changes);
+    let windows_events = collect_windows_crash_events(
+        sources
+            .iter()
+            .map(|source| system_time_seconds(source.modified))
+            .max(),
+    )
+    .await;
     let credentials = Credentials::get_all(&state.pool)
         .await?
         .into_iter()
@@ -667,6 +684,7 @@ pub async fn analyze_crash(instance_id: &str) -> crate::Result<CrashAnalysis> {
         combined_log,
         mod_changes,
         mod_change_counts,
+        windows_events,
     })
 }
 
@@ -898,6 +916,59 @@ async fn scan_mod_snapshot(
         ));
     }
     snapshot
+}
+
+#[cfg(windows)]
+async fn collect_windows_crash_events(
+    anchor: Option<u64>,
+) -> Vec<WindowsCrashEvent> {
+    let Some(anchor) = anchor else {
+        return Vec::new();
+    };
+    let start = anchor.saturating_sub(300);
+    let end = anchor.saturating_add(300);
+    let command = format!(
+        "$start=[DateTimeOffset]::FromUnixTimeSeconds({start}).UtcDateTime; $end=[DateTimeOffset]::FromUnixTimeSeconds({end}).UtcDateTime; Get-WinEvent -FilterHashtable @{{LogName='Application'; Id=1000,1001,1002,1005; StartTime=$start; EndTime=$end}} -MaxEvents 30 | ForEach-Object {{ [PSCustomObject]@{{ EventId=$_.Id; Provider=$_.ProviderName; TimeCreated=$_.TimeCreated.ToUniversalTime().ToString('o'); Message=$_.Message }} }} | ConvertTo-Json -Compress"
+    );
+    let output = Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &command])
+        .output()
+        .await;
+    let Ok(output) = output else {
+        return Vec::new();
+    };
+    if !output.status.success() {
+        return Vec::new();
+    }
+    let value =
+        serde_json::from_slice::<serde_json::Value>(&output.stdout).ok();
+    let entries = match value {
+        Some(serde_json::Value::Array(entries)) => entries,
+        Some(entry) => vec![entry],
+        None => return Vec::new(),
+    };
+    entries
+        .into_iter()
+        .filter_map(|entry| {
+            let event_id = entry.get("EventId")?.as_u64()? as u32;
+            let time_created = entry.get("TimeCreated")?.as_str()?.to_string();
+            let provider = entry.get("Provider")?.as_str()?.to_string();
+            let message = entry.get("Message")?.as_str()?.to_string();
+            Some(WindowsCrashEvent {
+                event_id,
+                provider,
+                time_created,
+                message,
+            })
+        })
+        .collect()
+}
+
+#[cfg(not(windows))]
+async fn collect_windows_crash_events(
+    _anchor: Option<u64>,
+) -> Vec<WindowsCrashEvent> {
+    Vec::new()
 }
 
 pub async fn get_crash_analysis_ai_settings()

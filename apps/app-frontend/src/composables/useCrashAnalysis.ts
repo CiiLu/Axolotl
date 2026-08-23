@@ -40,6 +40,13 @@ export interface CrashModChangeCounts {
 	modified: number
 }
 
+export interface WindowsCrashEvent {
+	event_id: number
+	provider: string
+	time_created: string
+	message: string
+}
+
 export interface CrashAnalysisResult {
   instance_id: string
 	ruleset: string
@@ -56,6 +63,7 @@ export interface CrashAnalysisResult {
 	combined_log: string
 	mod_changes: CrashModChange[]
 	mod_change_counts: CrashModChangeCounts
+	windows_events: WindowsCrashEvent[]
 }
 
 interface CrashAnalysisState {

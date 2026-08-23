@@ -31,6 +31,12 @@ export interface LocalCrashAnalysis {
 		version_number?: string
 	}>
 	mod_change_counts: { added: number; removed: number; modified: number }
+	windows_events: Array<{
+		event_id: number
+		provider: string
+		time_created: string
+		message: string
+	}>
 }
 
 export interface ConsoleManagerContext {

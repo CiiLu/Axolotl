@@ -84,6 +84,10 @@ export const consoleMessages = defineMessages({
 		id: 'console.crash.mod-change.modified',
 		defaultMessage: 'Modified',
 	},
+	windowsEventsTitle: {
+		id: 'console.crash.windows-events.title',
+		defaultMessage: 'Related Windows application events',
+	},
 	problemsDetected: {
 		id: 'console.crash.problems-detected',
 		defaultMessage: '{count, plural, one {# problem detected} other {# problems detected}}',
