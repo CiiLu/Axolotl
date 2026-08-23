@@ -92,11 +92,12 @@ async fn miawa_latest_version() -> Result<String> {
 }
 
 fn miawa_update_available(current: &Version, remote_tag: &str) -> Result<bool> {
-    let remote = Version::parse(remote_tag.trim_start_matches('v')).map_err(|e| {
-        theseus::Error::from(theseus::ErrorKind::OtherError(format!(
-            "Failed to parse Miawa latest version {remote_tag:?}: {e}"
-        )))
-    })?;
+    let remote =
+        Version::parse(remote_tag.trim_start_matches('v')).map_err(|e| {
+            theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+                "Failed to parse Miawa latest version {remote_tag:?}: {e}"
+            )))
+        })?;
 
     Ok(remote > *current)
 }
@@ -207,7 +208,8 @@ async fn check_with_updater<R: Runtime>(
     source: &str,
 ) -> Result<Option<UpdateMetadata>> {
     let endpoints = update_endpoints(source)?;
-    let Some(mut update) = check_with_endpoints(webview, endpoints).await? else {
+    let Some(mut update) = check_with_endpoints(webview, endpoints).await?
+    else {
         return Ok(None);
     };
     update.timeout = Some(UPDATE_DOWNLOAD_TIMEOUT);
@@ -223,7 +225,6 @@ async fn check_with_updater<R: Runtime>(
 
     Ok(Some(metadata))
 }
-
 
 async fn check_miawa<R: Runtime>(
     webview: &Webview<R>,
