@@ -200,6 +200,24 @@ const messages = defineMessages({
 		defaultMessage:
 			'You can try increasing the instance memory allocation, or removing memory-heavy Mods and resource packs.',
 	},
+	diskSpaceTitle: {
+		id: 'app.minecraft-crash.diagnosis.disk-space.title',
+		defaultMessage: 'Possible issue: the disk ran out of free space',
+	},
+	diskSpaceAction: {
+		id: 'app.minecraft-crash.diagnosis.disk-space.action',
+		defaultMessage:
+			'Free space on the drive containing this instance, then launch Minecraft again.',
+	},
+	fileInUseTitle: {
+		id: 'app.minecraft-crash.diagnosis.file-in-use.title',
+		defaultMessage: 'Possible issue: another process is using a required file',
+	},
+	fileInUseAction: {
+		id: 'app.minecraft-crash.diagnosis.file-in-use.action',
+		defaultMessage:
+			'Close the program named in the log, including other launchers, backup tools, or antivirus scans, then launch again.',
+	},
 	knownFailureTitle: {
 		id: 'app.minecraft-crash.diagnosis.known-failure.title',
 		defaultMessage: 'Possible issue: a specific launch problem was detected',
@@ -258,6 +276,8 @@ const diagnosisMessages = {
 	jdk_runtime: [messages.jdkRuntimeTitle, messages.jdkRuntimeAction],
 	forge_java_incompatible: [messages.forgeJavaTitle, messages.forgeJavaAction],
 	out_of_memory: [messages.outOfMemoryTitle, messages.outOfMemoryAction],
+	disk_space: [messages.diskSpaceTitle, messages.diskSpaceAction],
+	file_in_use: [messages.fileInUseTitle, messages.fileInUseAction],
 } as const
 
 const title = computed(

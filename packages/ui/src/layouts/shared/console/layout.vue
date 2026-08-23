@@ -254,6 +254,26 @@ const localFindingCopy = {
 		title: localFindingMessages.missingDependencyTitle,
 		action: localFindingMessages.missingDependencyAction,
 	},
+	disk_space: {
+		title: localFindingMessages.diskSpaceTitle,
+		action: localFindingMessages.diskSpaceAction,
+	},
+	file_in_use: {
+		title: localFindingMessages.fileInUseTitle,
+		action: localFindingMessages.fileInUseAction,
+	},
+	connector_incompatible_fabric_mods: {
+		title: localFindingMessages.connectorIncompatibleFabricModsTitle,
+		action: localFindingMessages.connectorIncompatibleFabricModsAction,
+	},
+	missing_embeddium: {
+		title: localFindingMessages.missingEmbeddiumTitle,
+		action: localFindingMessages.missingEmbeddiumAction,
+	},
+	missing_indium: {
+		title: localFindingMessages.missingIndiumTitle,
+		action: localFindingMessages.missingIndiumAction,
+	},
 	mod_id_limit: {
 		title: localFindingMessages.modIdLimitTitle,
 		action: localFindingMessages.modIdLimitAction,
@@ -377,6 +397,122 @@ const localFindingCopy = {
 	specific_entity: {
 		title: localFindingMessages.specificEntityTitle,
 		action: localFindingMessages.specificEntityAction,
+	},
+	hs_err_al_lib_alc_cleanup: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	hs_err_glfw_driver: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	hs_err_intel_driver: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	hs_err_java_too_high: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	hs_err_jvm: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	hs_err_openal: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	hs_err_macos_shader: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	hs_err_apple_jdk: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	hs_err_gpu_driver: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	create_addons: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	ctov_missing_lithostitched: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	curseforge_corrupted: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	epic_fight_addons: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	feature_order_cycle: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	ferrite_core_neighbor_table: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	geckolib_oculus_compat: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	groovy_mod_loader_ipv6: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	kubejs_datapack: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	language_provider_mismatch: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	legacy_too_many_ids: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	module_resolution: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	modernfix_watchdog: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	neoforge_1_20_1: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	resource_location: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	rubidium_deprecated: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	server_config_corrupted: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	version_1_21: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	used_by_another_process: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
+	},
+	windows_closed_process: {
+		title: consoleMessages.knownSignatureTitle,
+		action: consoleMessages.knownSignatureAction,
 	},
 } as const
 

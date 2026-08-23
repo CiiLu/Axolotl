@@ -47,6 +47,15 @@ export const consoleMessages = defineMessages({
 		id: 'console.crash.finding.fallback-title',
 		defaultMessage: 'Unknown diagnosis: {finding}',
 	},
+	knownSignatureTitle: {
+		id: 'console.crash.finding.known-signature.title',
+		defaultMessage: 'A known crash signature was detected',
+	},
+	knownSignatureAction: {
+		id: 'console.crash.finding.known-signature.action',
+		defaultMessage:
+			'Review the evidence and the related Minecraft, loader, Java, graphics, or Mod versions before changing the instance.',
+	},
 	matchedMod: {
 		id: 'console.crash.finding.matched-mod',
 		defaultMessage: 'Matched Mod: {identity}{modId} - {fileName}',
@@ -203,6 +212,51 @@ export const localFindingMessages = defineMessages({
 		id: 'console.crash.finding.missing-dependency.action',
 		defaultMessage:
 			'Install the required dependency version or use a Mod build matching this Minecraft version.',
+	},
+	diskSpaceTitle: {
+		id: 'console.crash.finding.disk-space.title',
+		defaultMessage: 'The disk ran out of free space',
+	},
+	diskSpaceAction: {
+		id: 'console.crash.finding.disk-space.action',
+		defaultMessage:
+			'Free space on the drive containing the instance, then retry the launch or installation.',
+	},
+	fileInUseTitle: {
+		id: 'console.crash.finding.file-in-use.title',
+		defaultMessage: 'Another process is using a required file',
+	},
+	fileInUseAction: {
+		id: 'console.crash.finding.file-in-use.action',
+		defaultMessage:
+			'Close the program named in the evidence, including other launchers, backup tools, or antivirus scans, then retry.',
+	},
+	connectorIncompatibleFabricModsTitle: {
+		id: 'console.crash.finding.connector-incompatible-fabric-mods.title',
+		defaultMessage: 'Sinytra Connector found incompatible Fabric Mods',
+	},
+	connectorIncompatibleFabricModsAction: {
+		id: 'console.crash.finding.connector-incompatible-fabric-mods.action',
+		defaultMessage:
+			'Remove or replace the Fabric Mods named in the Connector error with Forge-compatible alternatives.',
+	},
+	missingEmbeddiumTitle: {
+		id: 'console.crash.finding.missing-embeddium.title',
+		defaultMessage: 'Oculus requires Embeddium',
+	},
+	missingEmbeddiumAction: {
+		id: 'console.crash.finding.missing-embeddium.action',
+		defaultMessage:
+			'Install the Embeddium version required by Oculus for this Minecraft and Forge version.',
+	},
+	missingIndiumTitle: {
+		id: 'console.crash.finding.missing-indium.title',
+		defaultMessage: 'A Mod requires Indium',
+	},
+	missingIndiumAction: {
+		id: 'console.crash.finding.missing-indium.action',
+		defaultMessage:
+			'Install the Indium version compatible with the installed Fabric Loader and Sodium version.',
 	},
 	modIdLimitTitle: {
 		id: 'console.crash.finding.mod-id-limit.title',

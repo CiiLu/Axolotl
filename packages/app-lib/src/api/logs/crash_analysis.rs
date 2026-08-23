@@ -109,7 +109,53 @@ const RULES: &[Rule] = &[
             "The system is out of physical RAM or swap space",
             "Out of Memory Error",
             "Could not reserve enough space",
+            "InsufficientMemory",
         ],
+    },
+    Rule {
+        id: "hs_err_al_lib_alc_cleanup",
+        phase: 1,
+        patterns: &["AlLibAlcCleanup"],
+    },
+    Rule {
+        id: "hs_err_glfw_driver",
+        phase: 1,
+        patterns: &["glfw.dll", "libglfw.so"],
+    },
+    Rule {
+        id: "hs_err_intel_driver",
+        phase: 1,
+        patterns: &["ig7icd64.dll"],
+    },
+    Rule {
+        id: "hs_err_java_too_high",
+        phase: 1,
+        patterns: &["JavaTooHigh"],
+    },
+    Rule {
+        id: "hs_err_jvm",
+        phase: 1,
+        patterns: &["jvm.dll"],
+    },
+    Rule {
+        id: "hs_err_openal",
+        phase: 1,
+        patterns: &["libopenal.so"],
+    },
+    Rule {
+        id: "hs_err_macos_shader",
+        phase: 1,
+        patterns: &["libGLProgrammability.dylib"],
+    },
+    Rule {
+        id: "hs_err_apple_jdk",
+        phase: 1,
+        patterns: &["~StubRoutines::SafeFetch32"],
+    },
+    Rule {
+        id: "hs_err_gpu_driver",
+        phase: 1,
+        patterns: &["nglMultiDrawElementsBaseVertex", "0x0000"],
     },
     Rule {
         id: "opengl_unsupported",
@@ -151,6 +197,7 @@ const RULES: &[Rule] = &[
         patterns: &[
             "Unsupported class file major version",
             "UnsupportedClassVersionError",
+            "UnsupportedClassVersion",
             "Unsupported major.minor version",
         ],
     },
@@ -331,6 +378,139 @@ const RULES: &[Rule] = &[
         patterns: &["Missing or unsupported mandatory dependencies:"],
     },
     Rule {
+        id: "disk_space",
+        phase: 1,
+        patterns: &[
+            "No space left on device",
+            "There is not enough space on the disk",
+            "The disk is full",
+        ],
+    },
+    Rule {
+        id: "file_in_use",
+        phase: 1,
+        patterns: &[
+            "being used by another process",
+            "The process cannot access the file because it is being used",
+            "used by another process",
+        ],
+    },
+    Rule {
+        id: "connector_incompatible_fabric_mods",
+        phase: 1,
+        patterns: &["ConnectorIncompatibleFabricMods"],
+    },
+    Rule {
+        id: "missing_embeddium",
+        phase: 1,
+        patterns: &["Oculus requires Embeddium", "Missing Embeddium"],
+    },
+    Rule {
+        id: "missing_indium",
+        phase: 1,
+        patterns: &["requires Indium", "Indium is required"],
+    },
+    Rule {
+        id: "create_addons",
+        phase: 1,
+        patterns: &["Create6Addons"],
+    },
+    Rule {
+        id: "ctov_missing_lithostitched",
+        phase: 1,
+        patterns: &["CtovWithoutLithostitched"],
+    },
+    Rule {
+        id: "curseforge_corrupted",
+        phase: 1,
+        patterns: &["CurseForgeCorrupted"],
+    },
+    Rule {
+        id: "epic_fight_addons",
+        phase: 1,
+        patterns: &["EpicFightAddons"],
+    },
+    Rule {
+        id: "feature_order_cycle",
+        phase: 1,
+        patterns: &["FeatureOrderCycle"],
+    },
+    Rule {
+        id: "ferrite_core_neighbor_table",
+        phase: 1,
+        patterns: &["FerriteCoreNeighborTable"],
+    },
+    Rule {
+        id: "geckolib_oculus_compat",
+        phase: 1,
+        patterns: &["GeckoLibOculusCompat"],
+    },
+    Rule {
+        id: "groovy_mod_loader_ipv6",
+        phase: 1,
+        patterns: &["GroovyModLoaderIPv6"],
+    },
+    Rule {
+        id: "kubejs_datapack",
+        phase: 1,
+        patterns: &["KubeJSDataPack"],
+    },
+    Rule {
+        id: "language_provider_mismatch",
+        phase: 1,
+        patterns: &["LanguageProviderMismatch"],
+    },
+    Rule {
+        id: "legacy_too_many_ids",
+        phase: 1,
+        patterns: &["LegacyTooManyIds"],
+    },
+    Rule {
+        id: "module_resolution",
+        phase: 1,
+        patterns: &["ModuleFind", "ModuleResolution"],
+    },
+    Rule {
+        id: "modernfix_watchdog",
+        phase: 1,
+        patterns: &["ModernFixWatchDog"],
+    },
+    Rule {
+        id: "neoforge_1_20_1",
+        phase: 1,
+        patterns: &["NeoForgeVersion1_20_1"],
+    },
+    Rule {
+        id: "resource_location",
+        phase: 1,
+        patterns: &["ResourceLocationException"],
+    },
+    Rule {
+        id: "rubidium_deprecated",
+        phase: 1,
+        patterns: &["Rubidium"],
+    },
+    Rule {
+        id: "server_config_corrupted",
+        phase: 1,
+        patterns: &["ServerConfigCorrupted"],
+    },
+    Rule {
+        id: "version_1_21",
+        phase: 1,
+        patterns: &["Version1_21"],
+    },
+    Rule {
+        id: "used_by_another_process",
+        phase: 1,
+        patterns: &["UsedByAnotherProcess"],
+    },
+    Rule {
+        id: "windows_closed_process",
+        phase: 1,
+        patterns: &["WasClosedByWindows"],
+    },
+    Rule {
         id: "intel_driver",
         phase: 1,
         patterns: &["# C  [ig"],
@@ -338,12 +518,12 @@ const RULES: &[Rule] = &[
     Rule {
         id: "amd_driver",
         phase: 1,
-        patterns: &["# C  [atio"],
+        patterns: &["# C  [atio", "atio6axx.dll"],
     },
     Rule {
         id: "nvidia_driver",
         phase: 1,
-        patterns: &["# C  [nvoglv"],
+        patterns: &["# C  [nvoglv", "nvoglv64.dll"],
     },
     Rule {
         id: "mod_id_limit",
@@ -760,6 +940,19 @@ fn analyze_sources(sources: &[SourceText]) -> Vec<CrashAnalysisFinding> {
         .map(|source| source.content.as_str())
         .collect::<Vec<_>>()
         .join("\n");
+
+    // F3+C is an explicit user action. Do not replace that explanation with a
+    // native crash signature that happens to be present in the same log.
+    if combined.contains("Manually triggered debug crash") {
+        let evidence =
+            find_evidence(sources, &["Manually triggered debug crash"]);
+        return vec![CrashAnalysisFinding {
+            id: "manual_debug_crash".to_string(),
+            confidence: "high".to_string(),
+            evidence,
+        }];
+    }
+
     let mut matches = RULES
         .iter()
         .filter_map(|rule| {
@@ -1255,6 +1448,97 @@ mod tests {
             "EXCEPTION_ACCESS_VIOLATION\nProblematic frame:\n# C  [nvoglv64.dll+0x1234]",
         )]);
         assert!(findings.iter().any(|finding| finding.id == "nvidia_driver"));
+    }
+
+    #[test]
+    fn detects_issue_244_environment_failures() {
+        let cases = [
+            ("No space left on device", "disk_space"),
+            (
+                "The process cannot access the file because it is being used by another process",
+                "file_in_use",
+            ),
+            (
+                "ConnectorIncompatibleFabricMods",
+                "connector_incompatible_fabric_mods",
+            ),
+            ("Oculus requires Embeddium", "missing_embeddium"),
+            (
+                "A mod requires Indium to provide the Fabric Renderer API",
+                "missing_indium",
+            ),
+            (
+                "EXCEPTION_ACCESS_VIOLATION\n# C  [atio6axx.dll+0x1]",
+                "amd_driver",
+            ),
+            (
+                "EXCEPTION_ACCESS_VIOLATION\n# C  [nvoglv64.dll+0x1]",
+                "nvidia_driver",
+            ),
+        ];
+
+        for (content, expected) in cases {
+            let findings = analyze_sources(&[source("latest.log", content)]);
+            assert!(
+                findings.iter().any(|finding| finding.id == expected),
+                "expected {expected} for {content}"
+            );
+        }
+    }
+
+    #[test]
+    fn manual_debug_crash_takes_priority_over_native_crash_signatures() {
+        let findings = analyze_sources(&[source(
+            "launcher_log.txt",
+            "Manually triggered debug crash\nProblematic frame: jemalloc.dll",
+        )]);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].id, "manual_debug_crash");
+        assert_eq!(findings[0].confidence, "high");
+    }
+
+    #[test]
+    fn detects_all_issue_244_known_signatures() {
+        let cases = [
+            ("AlLibAlcCleanup", "hs_err_al_lib_alc_cleanup"),
+            ("glfw.dll", "hs_err_glfw_driver"),
+            ("ig7icd64.dll", "hs_err_intel_driver"),
+            ("JavaTooHigh", "hs_err_java_too_high"),
+            ("jvm.dll", "hs_err_jvm"),
+            ("libopenal.so", "hs_err_openal"),
+            ("libGLProgrammability.dylib", "hs_err_macos_shader"),
+            ("~StubRoutines::SafeFetch32", "hs_err_apple_jdk"),
+            ("nglMultiDrawElementsBaseVertex", "hs_err_gpu_driver"),
+            ("Create6Addons", "create_addons"),
+            ("CtovWithoutLithostitched", "ctov_missing_lithostitched"),
+            ("CurseForgeCorrupted", "curseforge_corrupted"),
+            ("EpicFightAddons", "epic_fight_addons"),
+            ("FeatureOrderCycle", "feature_order_cycle"),
+            ("FerriteCoreNeighborTable", "ferrite_core_neighbor_table"),
+            ("GeckoLibOculusCompat", "geckolib_oculus_compat"),
+            ("GroovyModLoaderIPv6", "groovy_mod_loader_ipv6"),
+            ("KubeJSDataPack", "kubejs_datapack"),
+            ("LanguageProviderMismatch", "language_provider_mismatch"),
+            ("LegacyTooManyIds", "legacy_too_many_ids"),
+            ("ModuleFind", "module_resolution"),
+            ("ModernFixWatchDog", "modernfix_watchdog"),
+            ("NeoForgeVersion1_20_1", "neoforge_1_20_1"),
+            ("ResourceLocationException", "resource_location"),
+            ("Rubidium", "rubidium_deprecated"),
+            ("ServerConfigCorrupted", "server_config_corrupted"),
+            ("UsedByAnotherProcess", "used_by_another_process"),
+            ("Version1_21", "version_1_21"),
+            ("WasClosedByWindows", "windows_closed_process"),
+        ];
+
+        for (content, expected) in cases {
+            let findings = analyze_sources(&[source("latest.log", content)]);
+            assert!(
+                findings.iter().any(|finding| finding.id == expected),
+                "expected {expected} for {content}"
+            );
+        }
     }
 
     #[test]
