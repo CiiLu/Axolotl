@@ -5702,51 +5702,6 @@
 	"app.java-arguments.presets.use": {
 		"message": "使用預設"
 	},
-	"app.ai-log-analysis.analyzing": {
-		"message": "正在AI分析日誌……這可能需要等待半分鐘"
-	},
-	"app.ai-log-analysis.cancel": {
-		"message": "取消"
-	},
-	"app.ai-log-analysis.close": {
-		"message": "關閉"
-	},
-	"app.ai-log-analysis.copy-link": {
-		"message": "複製連結"
-	},
-	"app.ai-log-analysis.copy-result": {
-		"message": "複製結果"
-	},
-	"app.ai-log-analysis.error": {
-		"message": "AI 分析失敗：{message}"
-	},
-	"app.ai-log-analysis.link-copied": {
-		"message": "連結已複製到剪貼簿"
-	},
-	"app.ai-log-analysis.logshare-unavailable": {
-		"message": "LogShare.CN 無法訪問，AI 分析不可用（mclo.gs 不支援 AI 分析）。{message}"
-	},
-	"app.ai-log-analysis.privacy": {
-		"message": "你的日誌內容將被上傳第三方 AI 服務進行分析, 請勿上傳包含敏感資訊的日誌。\n 感謝logshare.cn提供的日誌分享與分析服務。"
-	},
-	"app.ai-log-analysis.result-copied": {
-		"message": "分析結果已複製到剪貼簿"
-	},
-	"app.ai-log-analysis.title": {
-		"message": "AI 日誌分析"
-	},
-	"app.ai-log-analysis.upload-failed": {
-		"message": "上傳失敗，正在直接分析日誌內容（無分享連結）。"
-	},
-	"app.ai-log-analysis.uploading": {
-		"message": "正在上傳日誌……"
-	},
-	"app.minecraft-crash.ai-analyze": {
-		"message": "AI 分析"
-	},
-	"app.minecraft-crash.ai-unavailable": {
-		"message": "當前日誌服務（mclo.gs）不支援 AI 分析，請在設定中切換到 LogShare.CN。"
-	},
 	"app.minecraft-crash.copy-link": {
 		"message": "複製連結"
 	},
@@ -5756,6 +5711,36 @@
 	"app.minecraft-crash.share-copied": {
 		"message": "診斷連結已複製到剪貼簿"
 	},
+	"app.minecraft-crash.share-ready": { "message": "診斷連結已準備好分享" },
+	"app.minecraft-crash.view-mod-changes": { "message": "查看 Mod 變更" },
+	"app.minecraft-crash.mod-changes-title": { "message": "可能的問題：上次成功啟動後 Mod 檔案發生變更" },
+	"app.minecraft-crash.mod-changes-action": { "message": "請檢查變更的 Mod；如果崩潰從這些變更後開始，可以手動恢復先前的設定。" },
+	"app.minecraft-crash.mod-changes-modal.title": { "message": "上次成功啟動後的 Mod 變更" },
+	"app.minecraft-crash.mod-changes-modal.description": { "message": "此比較不會自動恢復或修改任何檔案。" },
+	"app.minecraft-crash.mod-changes-modal.added": { "message": "新增（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.removed": { "message": "移除（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.modified": { "message": "修改（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.empty": { "message": "沒有偵測到 Mod 檔案變更。" },
+	"app.minecraft-crash.mod-changes-modal.close": { "message": "關閉" },
+	"app.minecraft-crash.mod-changes-modal.undo": { "message": "撤銷新增 Mod" },
+	"app.minecraft-crash.mod-changes-modal.undone": { "message": "已移除新增 Mod" },
+	"app.minecraft-crash.mod-changes-modal.undo-confirm": { "message": "確定移除 {name} 嗎？只會刪除這個未被修改的檔案。" },
+	"app.minecraft-crash.mod-changes-modal.undo-failed": { "message": "無法撤銷此 Mod 變更" },
+	"app.crash-analysis.ai.action": { "message": "使用 AI 解釋" },
+	"app.crash-analysis.ai.analyzing": { "message": "正在解釋崩潰……" },
+	"app.crash-analysis.ai.close": { "message": "關閉" },
+	"app.crash-analysis.ai.copied": { "message": "AI 解釋已複製到剪貼簿" },
+	"app.crash-analysis.ai.copy": { "message": "複製解釋" },
+	"app.crash-analysis.ai.disclaimer": { "message": "經過脫敏和裁剪的崩潰內容會直接傳送給此啟動器中設定的 AI Provider。AI 輸出可能不準確。" },
+	"app.crash-analysis.ai.error": { "message": "AI 解釋失敗：{message}" },
+	"app.crash-analysis.ai.settings.description": { "message": "可選：將經過脫敏和裁剪的崩潰內容傳送給 AI Providers 中設定的模型。" },
+	"app.crash-analysis.ai.settings.enabled": { "message": "啟用 AI 解釋" },
+	"app.crash-analysis.ai.settings.enabled-description": { "message": "不使用 AI 時，本地規則崩潰分析仍可用。" },
+	"app.crash-analysis.ai.settings.model": { "message": "文字模型" },
+	"app.crash-analysis.ai.settings.no-providers": { "message": "請先在上方啟用 Provider 和文字模型，再使用 AI 崩潰解釋。" },
+	"app.crash-analysis.ai.settings.provider": { "message": "AI Provider" },
+	"app.crash-analysis.ai.settings.title": { "message": "崩潰 AI 解釋" },
+	"app.crash-analysis.ai.title": { "message": "AI 崩潰解釋" },
 	"app.minecraft-crash.share-diagnostic": {
 		"message": "匯出分享"
 	},
@@ -5803,12 +5788,6 @@
 	},
 	"app.settings.resources.source.mojang-official-preferred": {
 		"message": "優先官方源"
-	},
-	"app.settings.logs.description": {
-		"message": "選擇用於分析和分享 Minecraft 日誌的服務。優先使用 LogShare.CN，不可用時自動回退到 mclo.gs，確保分享始終可用。"
-	},
-	"app.settings.logs.provider.auto": {
-		"message": "自動（推薦）"
 	},
 	"app.settings.groups.common": {
 		"message": "通用"
@@ -5866,24 +5845,6 @@
 	},
 	"app.settings.tabs.privacy-security": {
 		"message": "隱私與安全"
-	},
-	"app.settings.logs.provider.auto-description": {
-		"message": "優先使用 LogShare.CN，不可用時自動切換到 mclo.gs。"
-	},
-	"app.settings.logs.provider.logshare": {
-		"message": "LogShare.CN"
-	},
-	"app.settings.logs.provider.logshare-description": {
-		"message": "使用 LogShare.CN 進行分析和分享（支援 AI 分析），不可用時回退到 mclo.gs。"
-	},
-	"app.settings.logs.provider.mclogs": {
-		"message": "mclo.gs"
-	},
-	"app.settings.logs.provider.mclogs-description": {
-		"message": "使用 mclo.gs 進行分析和分享，不支援 AI 分析。"
-	},
-	"app.settings.logs.title": {
-		"message": "日誌分析服務"
 	},
 	"app.settings.search.clear": {
 		"message": "清除設定搜尋"

@@ -1,6 +1,13 @@
 use tauri_build::{DefaultPermissionRule, InlinedPlugin};
 
 fn main() {
+    // Tauri validates frontendDist during Cargo metadata/check builds. The
+    // frontend build runs in parallel in CI, so create the directory before
+    // tauri-build reads the configuration. A real frontend build overwrites
+    // this directory with the actual assets before packaging.
+    std::fs::create_dir_all("../app-frontend/dist")
+        .expect("Failed to create the frontend distribution directory");
+
     let cubiomes_dir = std::path::Path::new("vendor/cubiomes");
     cc::Build::new()
         .include(cubiomes_dir)
@@ -210,6 +217,10 @@ fn main() {
                         "logs_get_live_log_buffer",
                         "logs_clear_live_log_buffer",
                         "logs_analyze_crash",
+                        "logs_get_crash_analysis_ai_settings",
+                        "logs_update_crash_analysis_ai_settings",
+                        "logs_explain_crash_with_ai",
+                        "logs_undo_added_mod",
                         "logs_export_crash_context",
                     ])
                     .default_permission(

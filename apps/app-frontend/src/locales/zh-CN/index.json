@@ -1796,56 +1796,11 @@
 	"app.minecraft-auth.unknown-error": {
 		"message": "未知错误"
 	},
-	"app.ai-log-analysis.analyzing": {
-		"message": "正在AI分析日志……这可能需要等待半分钟"
-	},
-	"app.ai-log-analysis.cancel": {
-		"message": "取消"
-	},
-	"app.ai-log-analysis.close": {
-		"message": "关闭"
-	},
-	"app.ai-log-analysis.copy-link": {
-		"message": "复制链接"
-	},
-	"app.ai-log-analysis.copy-result": {
-		"message": "复制结果"
-	},
-	"app.ai-log-analysis.error": {
-		"message": "AI 分析失败：{message}"
-	},
-	"app.ai-log-analysis.link-copied": {
-		"message": "链接已复制到剪贴板"
-	},
-	"app.ai-log-analysis.logshare-unavailable": {
-		"message": "LogShare.CN 无法访问，AI 分析不可用（mclo.gs 不支持 AI 分析）。{message}"
-	},
-	"app.ai-log-analysis.privacy": {
-		"message": "你的日志内容将被上传第三方 AI 服务进行分析, 请勿上传包含敏感信息的日志。\n 感谢logshare.cn提供的日志分享与分析服务。"
-	},
-	"app.ai-log-analysis.result-copied": {
-		"message": "分析结果已复制到剪贴板"
-	},
-	"app.ai-log-analysis.title": {
-		"message": "AI 日志分析"
-	},
-	"app.ai-log-analysis.upload-failed": {
-		"message": "上传失败，正在直接分析日志内容（无分享链接）。"
-	},
-	"app.ai-log-analysis.uploading": {
-		"message": "正在上传日志……"
-	},
 	"app.minecraft-auth.warning": {
 		"message": "无法登录你的 Microsoft 账号，原因可能是账号限制或地区限制。"
 	},
 	"app.minecraft-auth.what-happened": {
 		"message": "我们推测的原因"
-	},
-	"app.minecraft-crash.ai-analyze": {
-		"message": "AI 分析"
-	},
-	"app.minecraft-crash.ai-unavailable": {
-		"message": "当前日志服务（mclo.gs）不支持 AI 分析，请在设置中切换到 LogShare.CN。"
 	},
 	"app.minecraft-crash.analyzing": {
 		"message": "正在分析本次启动留下的日志……"
@@ -1937,6 +1892,35 @@
 	"app.minecraft-crash.no-log-content": {
 		"message": "没有找到可分享或分析的日志内容，请确认实例中有最近几分钟内生成的日志。"
 	},
+	"app.minecraft-crash.view-mod-changes": { "message": "查看 Mod 变化" },
+	"app.minecraft-crash.mod-changes-title": { "message": "可能的问题：上次成功启动后 Mod 文件发生了变化" },
+	"app.minecraft-crash.mod-changes-action": { "message": "请检查发生变化的 Mod；如果崩溃从这些变化后开始，可手动恢复之前的配置。" },
+	"app.minecraft-crash.mod-changes-modal.title": { "message": "上次成功启动后的 Mod 变化" },
+	"app.minecraft-crash.mod-changes-modal.description": { "message": "此比较不会自动恢复或修改任何文件。" },
+	"app.minecraft-crash.mod-changes-modal.added": { "message": "新增（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.removed": { "message": "移除（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.modified": { "message": "修改（{count}）" },
+	"app.minecraft-crash.mod-changes-modal.empty": { "message": "没有检测到 Mod 文件变化。" },
+	"app.minecraft-crash.mod-changes-modal.close": { "message": "关闭" },
+	"app.minecraft-crash.mod-changes-modal.undo": { "message": "撤销新增 Mod" },
+	"app.minecraft-crash.mod-changes-modal.undone": { "message": "已移除新增 Mod" },
+	"app.minecraft-crash.mod-changes-modal.undo-confirm": { "message": "确定移除 {name} 吗？只会删除这个未被修改的文件。" },
+	"app.minecraft-crash.mod-changes-modal.undo-failed": { "message": "无法撤销此 Mod 变化" },
+	"app.crash-analysis.ai.action": { "message": "使用 AI 解释" },
+	"app.crash-analysis.ai.analyzing": { "message": "正在解释崩溃……" },
+	"app.crash-analysis.ai.close": { "message": "关闭" },
+	"app.crash-analysis.ai.copied": { "message": "AI 解释已复制到剪贴板" },
+	"app.crash-analysis.ai.copy": { "message": "复制解释" },
+	"app.crash-analysis.ai.disclaimer": { "message": "经过脱敏和裁剪的崩溃上下文会直接发送给本启动器中配置的 AI Provider。AI 输出可能不准确。" },
+	"app.crash-analysis.ai.error": { "message": "AI 解释失败：{message}" },
+	"app.crash-analysis.ai.settings.description": { "message": "可选：将经过脱敏和裁剪的崩溃上下文发送给 AI Providers 中配置的模型。" },
+	"app.crash-analysis.ai.settings.enabled": { "message": "启用 AI 解释" },
+	"app.crash-analysis.ai.settings.enabled-description": { "message": "不使用 AI 时，本地规则崩溃分析仍可用。" },
+	"app.crash-analysis.ai.settings.model": { "message": "文本模型" },
+	"app.crash-analysis.ai.settings.no-providers": { "message": "请先在上方启用 Provider 和文本模型，再使用 AI 崩溃解释。" },
+	"app.crash-analysis.ai.settings.provider": { "message": "AI Provider" },
+	"app.crash-analysis.ai.settings.title": { "message": "崩溃 AI 解释" },
+	"app.crash-analysis.ai.title": { "message": "AI 崩溃解释" },
 	"app.minecraft-crash.preparation-timed-out": {
 		"message": "启动准备在 60 秒内未能完成，现已取消。请检查 Java 路径、启动前命令、包装器命令和网络连接，然后重试。"
 	},
@@ -1946,6 +1930,12 @@
 	"app.minecraft-crash.share-copied": {
 		"message": "诊断链接已复制到剪贴板"
 	},
+	"app.minecraft-crash.share-ready": { "message": "诊断链接已准备好分享" },
+	"app.servers.files.open-studio": { "message": "打开 Studio" },
+	"app.servers.files.studio-running-title": { "message": "请先停止服务器再打开 Studio" },
+	"app.servers.wizard.java-too-old": { "message": "Java {selected} 无法运行此游戏版本；需要 Java {required} 或更高版本。" },
+	"app.settings.updates.miawa": { "message": "LemwoodMirror 镜像" },
+	"instance.files.studio.refresh": { "message": "刷新文件" },
 	"app.minecraft-crash.share-diagnostic": {
 		"message": "导出分享"
 	},
@@ -2810,12 +2800,6 @@
 	"app.settings.updates.up-to-date": {
 		"message": "Axolotl 已是最新版本。"
 	},
-	"app.settings.logs.description": {
-		"message": "选择用于分析和分享 Minecraft 日志的服务。优先使用 LogShare.CN，不可用时自动回退到 mclo.gs，确保分享始终可用。"
-	},
-	"app.settings.logs.provider.auto": {
-		"message": "自动（推荐）"
-	},
 	"app.settings.groups.common": {
 		"message": "通用"
 	},
@@ -2899,24 +2883,6 @@
 	},
 	"app.settings.tabs.about": {
 		"message": "关于"
-	},
-	"app.settings.logs.provider.auto-description": {
-		"message": "优先使用 LogShare.CN，不可用时自动切换到 mclo.gs。"
-	},
-	"app.settings.logs.provider.logshare": {
-		"message": "LogShare.CN"
-	},
-	"app.settings.logs.provider.logshare-description": {
-		"message": "使用 LogShare.CN 进行分析和分享（支持 AI 分析），不可用时回退到 mclo.gs。"
-	},
-	"app.settings.logs.provider.mclogs": {
-		"message": "mclo.gs"
-	},
-	"app.settings.logs.provider.mclogs-description": {
-		"message": "使用 mclo.gs 进行分析和分享，不支持 AI 分析。"
-	},
-	"app.settings.logs.title": {
-		"message": "日志分析服务"
 	},
 	"app.settings.search.clear": {
 		"message": "清除设置搜索"
