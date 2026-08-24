@@ -509,10 +509,11 @@ pub async fn complete_running_job(
         transaction.rollback().await?;
         return Ok(None);
     }
-    if matches!(
-        state.request,
-        super::model::InstallRequest::UpgradeUnmanagedInstance { .. }
-    ) && let Some(upgrade_result) = state.upgrade_result.as_ref()
+    if let super::model::InstallRequest::UpgradeUnmanagedInstance {
+        execution,
+        ..
+    } = &state.request
+        && let Some(upgrade_result) = state.upgrade_result.as_ref()
         && let Some(target_environment) =
             upgrade_result.target_environment.as_ref()
     {
@@ -523,6 +524,7 @@ pub async fn complete_running_job(
             consecutive_clean_launches: 0,
             warnings: crate::state::instances::commands::post_upgrade_warnings_from_result(
                 upgrade_result,
+                execution,
             ),
         };
         tracing::debug!(

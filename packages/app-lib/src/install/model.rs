@@ -6,9 +6,9 @@ use crate::api::pack::install_from::{CreatePackInstance, CreatePackLocation};
 use crate::state::{
     ContentDependencyEdge, ContentEntry, ContentProvider, ContentProviderRef,
     ContentUpdateCheck, InstanceFile, InstanceInstallStage, InstanceLink,
-    InstanceMetadata, InstanceUpgradeEnvironment, InstanceUpgradeIssue,
-    InstanceUpgradeIssueCode, InstanceUpgradeItem, InstanceUpgradeSolution,
-    InstanceUpgradeSourceFile, ModLoader, PackMember,
+    InstanceMetadata, InstanceUpgradeAction, InstanceUpgradeEnvironment,
+    InstanceUpgradeIssue, InstanceUpgradeIssueCode, InstanceUpgradeItem,
+    InstanceUpgradeSolution, InstanceUpgradeSourceFile, ModLoader, PackMember,
 };
 use chrono::{DateTime, Utc};
 use modrinth_content_management::{ContentType, ResolutionPreferences};
@@ -2048,6 +2048,32 @@ pub struct InstanceUpgradeExecution {
     pub warnings: Vec<InstanceUpgradeIssue>,
     #[serde(default)]
     pub source_watch: Option<InstanceUpgradeWatchBaseline>,
+}
+
+impl InstanceUpgradeExecution {
+    pub(crate) fn final_physical_decision(
+        &self,
+        item: &InstanceUpgradeItem,
+    ) -> (InstanceUpgradeAction, bool) {
+        self.solution
+            .selections
+            .iter()
+            .find(|selection| selection.content_id == item.content_id)
+            .map(|selection| {
+                (
+                    selection.action,
+                    selection.action != InstanceUpgradeAction::Disable
+                        && selection.enabled,
+                )
+            })
+            .unwrap_or_else(|| {
+                (
+                    item.resolution.action,
+                    item.resolution.action != InstanceUpgradeAction::Disable
+                        && item.current_enabled,
+                )
+            })
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

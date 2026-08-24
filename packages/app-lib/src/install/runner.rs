@@ -3218,18 +3218,14 @@ async fn apply_upgrade_content(
         .iter()
         .map(|item| (item.content_id.as_str(), item.relative_path.as_str()))
         .collect::<HashMap<_, _>>();
-    for selection in &execution.solution.selections {
-        let Some(path) = item_paths.get(selection.content_id.as_str()).copied()
-        else {
-            continue;
-        };
+    for item in &execution.items {
+        let path = item.relative_path.as_str();
         if external_paths.contains(path)
             || source_file_changed(path, source_files, instance_id).await?
         {
             continue;
         }
-        let desired = selection.action != InstanceUpgradeAction::Disable
-            && selection.enabled;
+        let (_, desired) = execution.final_physical_decision(item);
         let final_path =
             set_upgrade_path_enabled(instance_id, path, desired, state).await?;
         record_launcher_expected_file(
@@ -3330,20 +3326,28 @@ async fn set_upgrade_path_enabled(
         &state.pool,
     )
     .await?
-        && entry.enabled != enabled
     {
-        let toggled = crate::state::instances::commands::toggle_content_entries(
-            instance_id,
-            &[entry.id],
-            Some(enabled),
-            state,
-        )
-        .await?;
-        if let Some(toggled) = toggled.first() {
-            return Ok(toggled.path.clone());
+        if entry.enabled != enabled {
+            let toggled = crate::state::instances::commands::toggle_content_entries(
+                instance_id,
+                &[entry.id],
+                Some(enabled),
+                state,
+            )
+            .await?;
+            if let Some(toggled) = toggled.first() {
+                return Ok(toggled.path.clone());
+            }
         }
+        return Ok(relative_path.to_string());
     }
-    Ok(relative_path.to_string())
+    crate::state::instances::commands::toggle_disable_project(
+        instance_id,
+        relative_path,
+        Some(enabled),
+        state,
+    )
+    .await
 }
 
 async fn collect_upgrade_external_changes(
@@ -4941,6 +4945,114 @@ fn modpack_details(location: &CreatePackLocation) -> InstallPhaseDetails {
 mod tests {
     use super::*;
 
+    fn physical_test_item(
+        content_id: &str,
+        relative_path: &str,
+        status: crate::state::InstanceUpgradeItemStatus,
+        action: InstanceUpgradeAction,
+        current_enabled: bool,
+    ) -> crate::state::InstanceUpgradeItem {
+        crate::state::InstanceUpgradeItem {
+            content_id: content_id.to_string(),
+            relative_path: relative_path.to_string(),
+            project_type: crate::state::ProjectType::Mod,
+            provider: None,
+            project_id: None,
+            current_release_id: None,
+            current_enabled,
+            auto_dependency: false,
+            status,
+            resolution: crate::state::InstanceUpgradeResolution {
+                content_id: content_id.to_string(),
+                action,
+                allow_prerelease: false,
+                confirmed_prerelease_dependencies: Vec::new(),
+            },
+            candidate_release_ids: Vec::new(),
+        }
+    }
+
+    fn physical_test_execution(
+        items: Vec<crate::state::InstanceUpgradeItem>,
+        selections: Vec<crate::state::InstanceUpgradeSelection>,
+    ) -> InstanceUpgradeExecution {
+        let environment = crate::state::InstanceUpgradeEnvironment {
+            game_version: "1.21.9".to_string(),
+            mod_loader: ModLoader::Fabric,
+            mod_loader_version: Some("0.18.5".to_string()),
+            shader_runtime: crate::state::ShaderRuntime::Iris,
+        };
+        InstanceUpgradeExecution {
+            source_revision: 1,
+            source_files: Vec::new(),
+            source_environment: environment.clone(),
+            target_environment: environment,
+            items,
+            solution: crate::state::InstanceUpgradeSolution {
+                kind: crate::state::InstanceUpgradeSolutionKind::Custom,
+                selections,
+                dependency_changes: Vec::new(),
+                warnings: Vec::new(),
+            },
+            warnings: Vec::new(),
+            source_watch: None,
+        }
+    }
+
+    #[test]
+    fn final_physical_decision_uses_solution_then_item_resolution() {
+        let solver_item = physical_test_item(
+            "solver",
+            "mods/solver.jar",
+            crate::state::InstanceUpgradeItemStatus::UpgradeAvailable,
+            InstanceUpgradeAction::Disable,
+            true,
+        );
+        let local_disable = physical_test_item(
+            "local-disable",
+            "mods/local-disable.jar",
+            crate::state::InstanceUpgradeItemStatus::Unidentified,
+            InstanceUpgradeAction::Disable,
+            true,
+        );
+        let local_keep_disabled = physical_test_item(
+            "local-keep",
+            "mods/local-keep.jar.disabled",
+            crate::state::InstanceUpgradeItemStatus::Unidentified,
+            InstanceUpgradeAction::Keep,
+            false,
+        );
+        let execution = physical_test_execution(
+            vec![
+                solver_item.clone(),
+                local_disable.clone(),
+                local_keep_disabled.clone(),
+            ],
+            vec![crate::state::InstanceUpgradeSelection {
+                content_id: "solver".to_string(),
+                provider: Some(ContentProvider::Modrinth),
+                project_id: Some("project".to_string()),
+                current_release_id: Some("old".to_string()),
+                target_release_id: None,
+                action: InstanceUpgradeAction::Keep,
+                enabled: true,
+            }],
+        );
+
+        assert_eq!(
+            execution.final_physical_decision(&solver_item),
+            (InstanceUpgradeAction::Keep, true)
+        );
+        assert_eq!(
+            execution.final_physical_decision(&local_disable),
+            (InstanceUpgradeAction::Disable, false)
+        );
+        assert_eq!(
+            execution.final_physical_decision(&local_keep_disabled),
+            (InstanceUpgradeAction::Keep, false)
+        );
+    }
+
     #[test]
     fn generated_upgrade_name_uses_exact_resolved_loader_version() {
         assert_eq!(
@@ -5973,6 +6085,287 @@ mod tests {
         assert_eq!(edges[0].child_entry_id, backup_lithium.id);
         assert_eq!(edges[0].parent_release_id, "7pwil2dy");
         assert_eq!(edges[0].child_release_id, "qxIL7Kb8");
+    }
+
+    #[cfg(not(feature = "tauri"))]
+    #[tokio::test]
+    async fn upgrade_applies_solver_and_non_solver_physical_actions() {
+        crate::event::EventState::init().await.unwrap();
+        let state = if State::initialized() {
+            State::get().await.unwrap()
+        } else {
+            let root = tempfile::tempdir().unwrap().keep();
+            State::init_for_test(root.to_string_lossy().to_string())
+                .await
+                .unwrap()
+        };
+        let instance = crate::api::instance::create(
+            format!("Upgrade physical actions {}", Uuid::new_v4()),
+            "1.21.8".to_string(),
+            ModLoader::Fabric,
+            Some("0.17.2".to_string()),
+            None,
+            InstanceLink::Unmanaged,
+            None,
+        )
+        .await
+        .unwrap();
+        let instance_id = instance.instance.id.clone();
+        let base = state
+            .directories
+            .instances_dir()
+            .join(&instance.instance.path);
+        crate::util::io::create_dir_all(base.join("mods"))
+            .await
+            .unwrap();
+
+        let recognized = [
+            (
+                "mods/solver-upgrade.jar",
+                b"old-upgrade".as_slice(),
+                "AANobbMI",
+                "7pwil2dy",
+            ),
+            (
+                "mods/solver-keep.jar",
+                b"old-keep".as_slice(),
+                "gvQqBUqZ",
+                "qxIL7Kb8",
+            ),
+            (
+                "mods/solver-disable.jar",
+                b"old-disable".as_slice(),
+                "mOgUt4GM",
+                "oldRelease",
+            ),
+        ];
+        for (relative_path, bytes, project_id, release_id) in recognized {
+            let path = base.join(relative_path);
+            crate::util::io::write(&path, bytes).await.unwrap();
+            let (_, sha1) =
+                crate::util::fetch::sha1_file_async(&path).await.unwrap();
+            crate::state::record_project_file_atomic(
+                &instance_id,
+                relative_path,
+                &sha1,
+                bytes.len() as u64,
+                crate::state::ProjectType::Mod,
+                crate::state::instances::ContentSourceKind::Local,
+                crate::state::instances::ContentOwnershipKind::UserAdded,
+                Some(&ContentProviderRef::Modrinth {
+                    project_id: crate::state::ModrinthProjectId::new(
+                        project_id,
+                    )
+                    .unwrap(),
+                    version_id: Some(
+                        crate::state::ModrinthVersionId::new(release_id)
+                            .unwrap(),
+                    ),
+                }),
+                true,
+                None,
+                &state,
+            )
+            .await
+            .unwrap();
+        }
+        for (relative_path, bytes) in [
+            ("mods/local-keep.jar.disabled", b"local-keep".as_slice()),
+            ("mods/local-disable.jar", b"local-disable".as_slice()),
+            (
+                "mods/unsupported-disable.jar",
+                b"unsupported-disable".as_slice(),
+            ),
+            (
+                "mods/external-disable.jar",
+                b"externally-modified".as_slice(),
+            ),
+        ] {
+            crate::util::io::write(&base.join(relative_path), bytes)
+                .await
+                .unwrap();
+        }
+
+        let entries = crate::state::instances::adapters::sqlite::content_rows::get_content_entries(
+            &instance.applied_content_set.id,
+            &state.pool,
+        )
+        .await
+        .unwrap();
+        let files = crate::state::instances::adapters::sqlite::content_rows::get_instance_files(
+            &instance_id,
+            &state.pool,
+        )
+        .await
+        .unwrap();
+        let paths = files
+            .iter()
+            .map(|file| (file.id.as_str(), file.relative_path.as_str()))
+            .collect::<HashMap<_, _>>();
+        let content_ids = entries
+            .iter()
+            .map(|entry| {
+                (
+                    paths[entry.file_id.as_deref().unwrap()].to_string(),
+                    entry.id.clone(),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let upgrade_id = content_ids["mods/solver-upgrade.jar"].clone();
+        let keep_id = content_ids["mods/solver-keep.jar"].clone();
+        let disable_id = content_ids["mods/solver-disable.jar"].clone();
+
+        let items = vec![
+            physical_test_item(
+                &upgrade_id,
+                "mods/solver-upgrade.jar",
+                crate::state::InstanceUpgradeItemStatus::UpgradeAvailable,
+                InstanceUpgradeAction::Upgrade,
+                true,
+            ),
+            physical_test_item(
+                &keep_id,
+                "mods/solver-keep.jar",
+                crate::state::InstanceUpgradeItemStatus::NoCompatibleRelease,
+                InstanceUpgradeAction::Keep,
+                true,
+            ),
+            physical_test_item(
+                &disable_id,
+                "mods/solver-disable.jar",
+                crate::state::InstanceUpgradeItemStatus::NoCompatibleRelease,
+                InstanceUpgradeAction::Disable,
+                true,
+            ),
+            physical_test_item(
+                "local-keep",
+                "mods/local-keep.jar.disabled",
+                crate::state::InstanceUpgradeItemStatus::Unidentified,
+                InstanceUpgradeAction::Keep,
+                false,
+            ),
+            physical_test_item(
+                "local-disable",
+                "mods/local-disable.jar",
+                crate::state::InstanceUpgradeItemStatus::Unidentified,
+                InstanceUpgradeAction::Disable,
+                true,
+            ),
+            physical_test_item(
+                "unsupported-disable",
+                "mods/unsupported-disable.jar",
+                crate::state::InstanceUpgradeItemStatus::UnsupportedContentType,
+                InstanceUpgradeAction::Disable,
+                true,
+            ),
+            physical_test_item(
+                "external-disable",
+                "mods/external-disable.jar",
+                crate::state::InstanceUpgradeItemStatus::Unidentified,
+                InstanceUpgradeAction::Disable,
+                true,
+            ),
+        ];
+        let selections = vec![
+            crate::state::InstanceUpgradeSelection {
+                content_id: upgrade_id,
+                provider: Some(ContentProvider::Modrinth),
+                project_id: Some("AANobbMI".to_string()),
+                current_release_id: Some("7pwil2dy".to_string()),
+                target_release_id: Some("vf7UgZpC".to_string()),
+                action: InstanceUpgradeAction::Upgrade,
+                enabled: true,
+            },
+            crate::state::InstanceUpgradeSelection {
+                content_id: keep_id,
+                provider: Some(ContentProvider::Modrinth),
+                project_id: Some("gvQqBUqZ".to_string()),
+                current_release_id: Some("qxIL7Kb8".to_string()),
+                target_release_id: None,
+                action: InstanceUpgradeAction::Keep,
+                enabled: true,
+            },
+            crate::state::InstanceUpgradeSelection {
+                content_id: disable_id,
+                provider: Some(ContentProvider::Modrinth),
+                project_id: Some("mOgUt4GM".to_string()),
+                current_release_id: Some("oldRelease".to_string()),
+                target_release_id: None,
+                action: InstanceUpgradeAction::Disable,
+                enabled: false,
+            },
+        ];
+        let execution = physical_test_execution(items, selections);
+        let staged_path = state
+            .directories
+            .caches_dir()
+            .join(format!("upgrade-test-{}.jar", Uuid::new_v4()));
+        crate::util::io::create_dir_all(
+            staged_path.parent().expect("staged path has parent"),
+        )
+        .await
+        .unwrap();
+        crate::util::io::write(&staged_path, b"target-upgrade")
+            .await
+            .unwrap();
+        let (_, staged_sha1) =
+            crate::util::fetch::sha1_file_async(&staged_path)
+                .await
+                .unwrap();
+        let staged = vec![StagedUpgradeMutation {
+            existing_path: Some("mods/solver-upgrade.jar".to_string()),
+            target_path: "mods/solver-upgrade.jar".to_string(),
+            ownership: crate::state::instances::ContentOwnershipKind::UserAdded,
+            auto_dependency: false,
+            enabled: true,
+            download: StagedUpgradeDownload::Modrinth(
+                crate::state::instances::commands::DownloadedProjectVersion {
+                    file_name: "solver-upgrade.jar".to_string(),
+                    path: staged_path,
+                    sha1: staged_sha1,
+                    size: b"target-upgrade".len() as u64,
+                    project_type: crate::state::ProjectType::Mod,
+                    project_id: "AANobbMI".to_string(),
+                    version_id: "vf7UgZpC".to_string(),
+                },
+            ),
+        }];
+
+        apply_upgrade_content(
+            &instance_id,
+            staged,
+            &execution,
+            &HashSet::from(["mods/external-disable.jar".to_string()]),
+            &[],
+            &state,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            tokio::fs::read(base.join("mods/solver-upgrade.jar"))
+                .await
+                .unwrap(),
+            b"target-upgrade"
+        );
+        assert_eq!(
+            tokio::fs::read(base.join("mods/solver-keep.jar"))
+                .await
+                .unwrap(),
+            b"old-keep"
+        );
+        assert!(base.join("mods/solver-disable.jar.disabled").exists());
+        assert!(base.join("mods/local-keep.jar.disabled").exists());
+        assert!(base.join("mods/local-disable.jar.disabled").exists());
+        assert!(base.join("mods/unsupported-disable.jar.disabled").exists());
+        assert!(base.join("mods/external-disable.jar").exists());
+        assert!(!base.join("mods/external-disable.jar.disabled").exists());
+        assert_eq!(
+            tokio::fs::read(base.join("mods/external-disable.jar"))
+                .await
+                .unwrap(),
+            b"externally-modified"
+        );
     }
 
     #[test]
