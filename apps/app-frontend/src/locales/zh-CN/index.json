@@ -2321,6 +2321,114 @@
   "app.instance.create-shortcut": {
     "message": "创建快捷方式"
   },
+  "app.instance.dependencies.all-sources": {
+    "message": "所有来源"
+  },
+  "app.instance.dependencies.all-statuses": {
+    "message": "所有状态"
+  },
+  "app.instance.dependencies.all-types": {
+    "message": "所有类型"
+  },
+  "app.instance.dependencies.cycle": {
+    "message": "循环依赖"
+  },
+  "app.instance.dependencies.cycle-reference": {
+    "message": "循环依赖在此继续"
+  },
+  "app.instance.dependencies.direct-dependencies": {
+    "message": "直接依赖"
+  },
+  "app.instance.dependencies.direct-dependents": {
+    "message": "直接被依赖"
+  },
+  "app.instance.dependencies.disabled": {
+    "message": "已禁用"
+  },
+  "app.instance.dependencies.file": {
+    "message": "文件 {file}"
+  },
+  "app.instance.dependencies.graph-view": {
+    "message": "关系图"
+  },
+  "app.instance.dependencies.header": {
+    "message": "依赖关系"
+  },
+  "app.instance.dependencies.local-discovered": {
+    "message": "本地发现"
+  },
+  "app.instance.dependencies.missing": {
+    "message": "缺失"
+  },
+  "app.instance.dependencies.no-content": {
+    "message": "没有可分析的内容。"
+  },
+  "app.instance.dependencies.no-dependencies": {
+    "message": "未发现依赖关系。"
+  },
+  "app.instance.dependencies.no-matches": {
+    "message": "没有依赖项符合这些筛选条件。"
+  },
+  "app.instance.dependencies.only-related": {
+    "message": "仅显示相关内容"
+  },
+  "app.instance.dependencies.orphaned": {
+    "message": "孤立"
+  },
+  "app.instance.dependencies.pack-managed": {
+    "message": "由整合包管理"
+  },
+  "app.instance.dependencies.reference": {
+    "message": "在其他位置被引用"
+  },
+  "app.instance.dependencies.required-by": {
+    "message": "被依赖项"
+  },
+  "app.instance.dependencies.requires": {
+    "message": "依赖项"
+  },
+  "app.instance.dependencies.reset-zoom": {
+    "message": "重置关系图视图"
+  },
+  "app.instance.dependencies.search": {
+    "message": "搜索依赖项……"
+  },
+  "app.instance.dependencies.show-all": {
+    "message": "显示全部内容"
+  },
+  "app.instance.dependencies.show-connected": {
+    "message": "显示关联内容"
+  },
+  "app.instance.dependencies.source": {
+    "message": "来源"
+  },
+  "app.instance.dependencies.stats": {
+    "message": "{nodes, number} 个项目，{edges, number} 个关系"
+  },
+  "app.instance.dependencies.status": {
+    "message": "状态"
+  },
+  "app.instance.dependencies.tree-view": {
+    "message": "依赖树"
+  },
+  "app.instance.dependencies.unresolved": {
+    "message": "未解析"
+  },
+  "app.instance.dependencies.unresolved-label": {
+    "message": "依赖详情不可用。"
+  },
+  "app.instance.dependencies.user-added": {
+    "message": "用户添加"
+  },
+  "app.instance.dependencies.version": {
+    "message": "版本 {version}"
+  },
+  "app.instance.dependencies.zoom-in": {
+    "message": "放大"
+  },
+  "app.instance.dependencies.zoom-out": {
+    "message": "缩小"
+  },
   "app.instance.disable-selected": {
     "message": "禁用所选项"
   },
@@ -4799,6 +4907,18 @@
   "app.minecraft-crash.copy-link": {
     "message": "复制链接"
   },
+  "app.minecraft-crash.diagnosis.disk-space.action": {
+    "message": "请释放实例所在磁盘的空间，然后重新启动 Minecraft。"
+  },
+  "app.minecraft-crash.diagnosis.disk-space.title": {
+    "message": "可能的问题：磁盘空间不足"
+  },
+  "app.minecraft-crash.diagnosis.file-in-use.action": {
+    "message": "请关闭日志中指出的程序，包括其他启动器、备份工具或杀毒扫描，然后重新启动。"
+  },
+  "app.minecraft-crash.diagnosis.file-in-use.title": {
+    "message": "可能的问题：另一个进程正在使用必需文件"
+  },
   "app.minecraft-crash.diagnosis.forge-java.action": {
     "message": "可以尝试使用此 Forge 版本所需的 Java，或更新 Forge。"
   },
@@ -4893,7 +5013,10 @@
     "message": "没有检测到 Mod 文件变化。"
   },
   "app.minecraft-crash.mod-changes-modal.modified": {
-    "message": "修改（{count}）"
+    "message": "已修改（{count}）"
+  },
+  "app.minecraft-crash.mod-changes-modal.refresh-failed": {
+    "message": "模组已移除，但无法刷新内容列表。"
   },
   "app.minecraft-crash.mod-changes-modal.removed": {
     "message": "移除（{count}）"
