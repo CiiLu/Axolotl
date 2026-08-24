@@ -108,18 +108,72 @@ pub(crate) async fn record_instance_post_upgrade_launch(
     }
 }
 
-pub(crate) fn post_upgrade_warnings_from_details(
-    details: &[crate::install::InstanceUpgradeCompatibilityWarning],
+pub(crate) fn post_upgrade_warnings_from_result(
+    result: &crate::install::InstanceUpgradeResult,
 ) -> Vec<InstancePostUpgradeWarning> {
-    details
+    use crate::state::{InstanceUpgradeAction, InstanceUpgradeIssueCode};
+
+    result
+        .compatibility_warning_details
         .iter()
-        .filter(|warning| {
-            warning.content_id.is_some() || warning.relative_path.is_some()
-        })
-        .map(|warning| InstancePostUpgradeWarning {
-            code: warning.code,
-            content_id: warning.content_id.clone(),
-            relative_path: warning.relative_path.clone(),
+        .filter_map(|warning| {
+            if warning.content_id.is_none() && warning.relative_path.is_none() {
+                return None;
+            }
+            let action = warning
+                .content_id
+                .as_ref()
+                .and_then(|content_id| {
+                    result
+                        .solution
+                        .selections
+                        .iter()
+                        .find(|selection| selection.content_id == *content_id)
+                })
+                .or_else(|| {
+                    let provider = warning.provider?;
+                    let project_id = warning.project_id.as_deref()?;
+                    let mut matches =
+                        result.solution.selections.iter().filter(|selection| {
+                            selection.provider == Some(provider)
+                                && selection.project_id.as_deref()
+                                    == Some(project_id)
+                        });
+                    let selection = matches.next()?;
+                    matches.next().is_none().then_some(selection)
+                })
+                .map(|selection| selection.action);
+            let code = match action {
+                Some(
+                    InstanceUpgradeAction::Upgrade
+                    | InstanceUpgradeAction::Disable,
+                ) => {
+                    return None;
+                }
+                Some(InstanceUpgradeAction::Keep) => match warning.code {
+                    InstanceUpgradeIssueCode::PrereleaseOnly
+                    | InstanceUpgradeIssueCode::DependencyConflict
+                    | InstanceUpgradeIssueCode::MissingRequiredDependency
+                    | InstanceUpgradeIssueCode::IncompatibleDependency
+                    | InstanceUpgradeIssueCode::SearchLimitReached => {
+                        InstanceUpgradeIssueCode::KeepIncompatible
+                    }
+                    code => code,
+                },
+                None => match warning.code {
+                    InstanceUpgradeIssueCode::Unidentified
+                    | InstanceUpgradeIssueCode::UnsupportedContentType
+                    | InstanceUpgradeIssueCode::KeepIncompatible => {
+                        warning.code
+                    }
+                    _ => return None,
+                },
+            };
+            Some(InstancePostUpgradeWarning {
+                code,
+                content_id: warning.content_id.clone(),
+                relative_path: warning.relative_path.clone(),
+            })
         })
         .collect()
 }
@@ -127,7 +181,68 @@ pub(crate) fn post_upgrade_warnings_from_details(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::InstanceUpgradeIssueCode;
+    use crate::install::{
+        InstanceUpgradeCompatibilityWarning, InstanceUpgradeResult,
+    };
+    use crate::state::{
+        InstanceUpgradeAction, InstanceUpgradeIssueCode,
+        InstanceUpgradeSelection, InstanceUpgradeSolution,
+        InstanceUpgradeSolutionKind,
+    };
+
+    fn upgrade_result(
+        entries: &[(
+            &str,
+            InstanceUpgradeIssueCode,
+            InstanceUpgradeAction,
+            Option<&str>,
+        )],
+    ) -> InstanceUpgradeResult {
+        InstanceUpgradeResult {
+            plan_id: "plan".to_string(),
+            source_instance_id: "instance".to_string(),
+            target_instance_id: "instance".to_string(),
+            backup_instance_id: None,
+            source_environment: None,
+            target_environment: None,
+            solution: InstanceUpgradeSolution {
+                kind: InstanceUpgradeSolutionKind::Custom,
+                selections: entries
+                    .iter()
+                    .map(|(content_id, _, action, target_release_id)| {
+                        InstanceUpgradeSelection {
+                            content_id: (*content_id).to_string(),
+                            provider: None,
+                            project_id: None,
+                            current_release_id: None,
+                            target_release_id: target_release_id
+                                .map(str::to_string),
+                            action: *action,
+                            enabled: *action != InstanceUpgradeAction::Disable,
+                        }
+                    })
+                    .collect(),
+                dependency_changes: Vec::new(),
+                warnings: Vec::new(),
+            },
+            compatibility_warnings: Vec::new(),
+            compatibility_warning_details: entries
+                .iter()
+                .map(|(content_id, code, _, _)| {
+                    InstanceUpgradeCompatibilityWarning {
+                        code: *code,
+                        relative_path: Some(format!("mods/{content_id}.jar")),
+                        content_id: Some((*content_id).to_string()),
+                        provider: None,
+                        project_id: None,
+                        conflicting_project_id: None,
+                    }
+                })
+                .collect(),
+            external_changes: Vec::new(),
+            skipped_due_to_external_conflict: Vec::new(),
+        }
+    }
 
     fn notice(clean_launches: u8) -> InstancePostUpgradeNotice {
         InstancePostUpgradeNotice {
@@ -156,6 +271,117 @@ mod tests {
         let reset = next_post_upgrade_notice_after_launch(notice(1), false)
             .expect("failed launch keeps notice");
         assert_eq!(reset.consecutive_clean_launches, 0);
+    }
+
+    #[test]
+    fn upgraded_prerelease_history_is_not_a_post_upgrade_risk() {
+        let result = upgrade_result(&[(
+            "voxy",
+            InstanceUpgradeIssueCode::PrereleaseOnly,
+            InstanceUpgradeAction::Upgrade,
+            Some("target-alpha"),
+        )]);
+
+        assert!(post_upgrade_warnings_from_result(&result).is_empty());
+        assert_eq!(result.compatibility_warning_details.len(), 1);
+    }
+
+    #[test]
+    fn kept_prerelease_is_reported_as_incompatible_preserved_content() {
+        let result = upgrade_result(&[(
+            "voxy",
+            InstanceUpgradeIssueCode::PrereleaseOnly,
+            InstanceUpgradeAction::Keep,
+            None,
+        )]);
+
+        let warnings = post_upgrade_warnings_from_result(&result);
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(
+            warnings[0].code,
+            InstanceUpgradeIssueCode::KeepIncompatible
+        );
+    }
+
+    #[test]
+    fn kept_no_release_and_unidentified_content_remain_risks() {
+        let result = upgrade_result(&[
+            (
+                "resource-pack",
+                InstanceUpgradeIssueCode::NoCompatibleRelease,
+                InstanceUpgradeAction::Keep,
+                None,
+            ),
+            (
+                "local-jar",
+                InstanceUpgradeIssueCode::Unidentified,
+                InstanceUpgradeAction::Keep,
+                None,
+            ),
+        ]);
+
+        let warnings = post_upgrade_warnings_from_result(&result);
+        assert_eq!(warnings.len(), 2);
+        assert!(warnings.iter().any(|warning| {
+            warning.code == InstanceUpgradeIssueCode::NoCompatibleRelease
+        }));
+        assert!(warnings.iter().any(|warning| {
+            warning.code == InstanceUpgradeIssueCode::Unidentified
+        }));
+    }
+
+    #[test]
+    fn disabled_content_is_not_a_post_upgrade_risk() {
+        let result = upgrade_result(&[(
+            "disabled",
+            InstanceUpgradeIssueCode::NoCompatibleRelease,
+            InstanceUpgradeAction::Disable,
+            None,
+        )]);
+
+        assert!(post_upgrade_warnings_from_result(&result).is_empty());
+    }
+
+    #[test]
+    fn global_history_warning_is_not_a_content_notice() {
+        let mut result = upgrade_result(&[(
+            "global",
+            InstanceUpgradeIssueCode::KeepIncompatible,
+            InstanceUpgradeAction::Keep,
+            None,
+        )]);
+        result.compatibility_warning_details[0].content_id = None;
+        result.compatibility_warning_details[0].relative_path = None;
+
+        assert!(post_upgrade_warnings_from_result(&result).is_empty());
+    }
+
+    #[test]
+    fn mixed_final_actions_only_report_kept_content() {
+        let result = upgrade_result(&[
+            (
+                "upgraded",
+                InstanceUpgradeIssueCode::PrereleaseOnly,
+                InstanceUpgradeAction::Upgrade,
+                Some("target-alpha"),
+            ),
+            (
+                "kept",
+                InstanceUpgradeIssueCode::NoCompatibleRelease,
+                InstanceUpgradeAction::Keep,
+                None,
+            ),
+            (
+                "disabled",
+                InstanceUpgradeIssueCode::NoCompatibleRelease,
+                InstanceUpgradeAction::Disable,
+                None,
+            ),
+        ]);
+
+        let warnings = post_upgrade_warnings_from_result(&result);
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].content_id.as_deref(), Some("kept"));
     }
 
     #[tokio::test]

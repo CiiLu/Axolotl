@@ -5079,10 +5079,10 @@ mod tests {
                 && detail.project_id.is_none()
         }));
         assert_eq!(
-            crate::state::instances::commands::post_upgrade_warnings_from_details(
-                &details,
-            )
-            .len(),
+            details
+                .iter()
+                .filter(|detail| detail.relative_path.is_some())
+                .count(),
             2
         );
     }

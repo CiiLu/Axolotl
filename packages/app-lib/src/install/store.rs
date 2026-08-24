@@ -521,8 +521,8 @@ pub async fn complete_running_job(
             upgrade_job_id: id_value.clone(),
             target_game_version: target_environment.game_version.clone(),
             consecutive_clean_launches: 0,
-            warnings: crate::state::instances::commands::post_upgrade_warnings_from_details(
-                &upgrade_result.compatibility_warning_details,
+            warnings: crate::state::instances::commands::post_upgrade_warnings_from_result(
+                upgrade_result,
             ),
         };
         tracing::debug!(
