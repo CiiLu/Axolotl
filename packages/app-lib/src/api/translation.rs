@@ -471,9 +471,13 @@ fn provider_language(locale: &str, provider: TranslationProvider) -> String {
     }
 }
 
-/// DeepL 的 `source_lang` 只接受基础语言码。地区变体（EN-US/EN-GB、PT-BR/PT-PT、
+/// DeepL 的 `source_lang` 只接受基础语言码：地区变体（EN-US/EN-GB、PT-BR/PT-PT、
 /// ZH-HANT/ZH-HANS）仅可用于 `target_lang`，官方 API 把变体当作源语言时会返回
 /// HTTP 400（"Value for 'source_lang' not supported."）。
+///
+/// 因此这里必须独立于 `provider_language`（target 方向）直接维护映射，而不是把
+/// locale 先转成 target 代码再"还原"成 source 代码：新增 target 变体时 source 侧
+/// 不会自动覆盖，同样的错误会再次出现。
 fn provider_source_language(
     locale: &str,
     provider: TranslationProvider,
@@ -481,11 +485,14 @@ fn provider_source_language(
     if provider != TranslationProvider::DeepL {
         return provider_language(locale, provider);
     }
-    match provider_language(locale, provider).as_str() {
-        "EN-US" | "EN-GB" => "EN".to_string(),
-        "PT-BR" | "PT-PT" => "PT".to_string(),
-        "ZH-HANT" | "ZH-HANS" => "ZH".to_string(),
-        mapped => mapped.to_string(),
+    let normalized = locale.replace('_', "-");
+    match normalized.as_str() {
+        "auto" => "auto".to_string(),
+        "zh" | "zh-CN" | "zh-TW" | "zh-HANS" | "zh-HANT" => "ZH".to_string(),
+        "en" | "en-US" | "en-GB" => "EN".to_string(),
+        "pt" | "pt-BR" | "pt-PT" => "PT".to_string(),
+        "nb" | "nb-NO" | "no" | "no-NO" => "NB".to_string(),
+        value => value.split('-').next().unwrap_or(value).to_uppercase(),
     }
 }
 
@@ -963,14 +970,10 @@ async fn translate_uncached(
     settings: &StoredTranslationSettings,
     request: &TranslationRequest,
 ) -> crate::Result<Vec<TranslatedSegment>> {
-    let source = if request.source_language == "auto" {
-        "auto".to_string()
-    } else {
-        provider_source_language(
-            &request.source_language,
-            settings.settings.provider,
-        )
-    };
+    let source = provider_source_language(
+        &request.source_language,
+        settings.settings.provider,
+    );
     let target =
         provider_language(&request.target_language, settings.settings.provider);
     match settings.settings.provider {
@@ -1425,6 +1428,11 @@ mod tests {
 
     #[test]
     fn deepl_source_language_uses_base_codes() {
+        // "auto" lets DeepL detect the source language itself.
+        assert_eq!(
+            provider_source_language("auto", TranslationProvider::DeepL),
+            "auto"
+        );
         // Chinese variants are only valid as target_lang.
         assert_eq!(
             provider_source_language("zh-TW", TranslationProvider::DeepL),
