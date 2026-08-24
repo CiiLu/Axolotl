@@ -179,6 +179,22 @@ export interface InstanceUpgradeExternalChange {
 	kind: InstanceUpgradeExternalChangeKind
 }
 
+export interface InstanceUpgradeCompatibilityWarning {
+	code: InstanceUpgradeIssueCode
+	relativePath: string | null
+	contentId: string | null
+	provider: ContentProvider | null
+	projectId: string | null
+	conflictingProjectId: string | null
+}
+
+export interface InstanceUpgradeDisplayNames {
+	backup: string | null
+	copy: string | null
+	upgradedTarget: string | null
+	shouldAutoRename: boolean
+}
+
 export interface InstanceUpgradeResult {
 	planId: string
 	sourceInstanceId: string
@@ -188,6 +204,7 @@ export interface InstanceUpgradeResult {
 	targetEnvironment?: InstanceUpgradeTargetEnvironment | null
 	solution: InstanceUpgradeSolution
 	compatibilityWarnings: InstanceUpgradeIssue[]
+	compatibilityWarningDetails?: InstanceUpgradeCompatibilityWarning[]
 	externalChanges: InstanceUpgradeExternalChange[]
 	skippedDueToExternalConflict: string[]
 }
@@ -247,10 +264,12 @@ export async function execute_instance_upgrade(
 	planId: string,
 	createFullBackup: boolean,
 	sharedUpgradeMode: SharedUpgradeMode,
+	displayNames: InstanceUpgradeDisplayNames,
 ): Promise<InstallJobSnapshot> {
 	return await invoke('plugin:instance|instance_execute_upgrade', {
 		planId,
 		createFullBackup,
 		sharedUpgradeMode,
+		displayNames,
 	})
 }

@@ -80,10 +80,10 @@ test('Downloads covers upgrade phases and safely falls back for unknown phases',
 	assert.match(source, /message \?\? messages\.unknownPhase/)
 })
 
-test('Downloads history exposes persisted inline upgrade details', () => {
+test('Downloads history links persisted upgrade result to standalone page', () => {
 	const source = readFileSync(new URL('./Downloads.vue', import.meta.url), 'utf8')
 	assert.match(source, /tab === 'history' && isSuccessfulUpgradeJob\(job\)/)
-	assert.match(source, /UpgradeResultDetails :result="job\.upgrade_result!"/)
-	assert.match(source, /messages\.upgradeDetails/)
-	assert.match(source, /route\.query\.result === '1'/)
+	assert.match(source, /router\.push\(upgradeResultLocation\(job\)\)/)
+	assert.match(source, /messages\.viewUpgradeResult/)
+	assert.doesNotMatch(source, /UpgradeResultDetails/)
 })

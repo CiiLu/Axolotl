@@ -184,6 +184,7 @@ import {
 	Accordion,
 	Admonition,
 	Avatar,
+	buildUpgradeDisplayNames,
 	Card,
 	Checkbox,
 	defineMessages,
@@ -396,6 +397,14 @@ const messages = defineMessages({
 		id: 'instance.upgrade.confirm.active-job',
 		defaultMessage: 'An upgrade is already in progress',
 	},
+	backupInstanceName: {
+		id: 'instance.upgrade.confirm.backup.instance-name',
+		defaultMessage: '{name} (Pre-upgrade backup)',
+	},
+	copyInstanceName: {
+		id: 'instance.upgrade.confirm.copy.instance-name',
+		defaultMessage: '{name} (Upgraded copy)',
+	},
 })
 
 const flow = useInstanceUpgradeFlow()
@@ -454,6 +463,21 @@ const targetLoader = computed(() =>
 		formatMessage(messages.automatic),
 	),
 )
+const displayNames = computed(() => {
+	const instance = flow.instance.value
+	if (!instance) return { backup: null, copy: null, upgradedTarget: null, shouldAutoRename: false }
+	return buildUpgradeDisplayNames({
+		sourceName: instance.name,
+		sourceLoader: instance.loader,
+		sourceGameVersion: instance.game_version,
+		sourceLoaderVersion: instance.loader_version ?? null,
+		targetLoader: plan.value.targetEnvironment.modLoader,
+		targetGameVersion: plan.value.targetEnvironment.gameVersion,
+		targetLoaderVersion: plan.value.targetEnvironment.modLoaderVersion,
+		backupName: formatMessage(messages.backupInstanceName, { name: instance.name }),
+		customCopyName: formatMessage(messages.copyInstanceName, { name: instance.name }),
+	})
+})
 const strategyLabel = computed(
 	() =>
 		({
@@ -759,6 +783,7 @@ async function startUpgrade() {
 				planId: flow.plan.value.id,
 				createFullBackup: confirmOptions.value.createFullBackup,
 				sharedUpgradeMode: effectiveMode.value,
+				displayNames: displayNames.value,
 			},
 			submissionLock,
 		)

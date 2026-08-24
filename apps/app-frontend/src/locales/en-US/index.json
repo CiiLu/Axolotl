@@ -8294,5 +8294,56 @@
 	"app.downloads.view-upgrade-result": { "message": "View upgrade result" },
 	"app.downloads.operation.upgrade": { "message": "Upgrade" },
 	"app.downloads.upgrade-details": { "message": "Upgrade details" },
-	"app.downloads.hide-upgrade-details": { "message": "Hide upgrade details" }
+	"app.downloads.hide-upgrade-details": { "message": "Hide upgrade details" },
+	"instance.upgrade.confirm.backup.instance-name": { "message": "{name} (Pre-upgrade backup)" },
+	"instance.upgrade.confirm.copy.instance-name": { "message": "{name} (Upgraded copy)" },
+	"instance.upgrade.result.unavailable": { "message": "Upgrade result unavailable" },
+	"instance.upgrade.result.missing": {
+		"message": "This persisted upgrade result could not be loaded."
+	},
+	"instance.upgrade.warning.prerelease-only": {
+		"message": "{path} only has prerelease builds for the target environment."
+	},
+	"instance.upgrade.warning.unidentified": {
+		"message": "{path} could not be identified and was preserved unchanged."
+	},
+	"instance.upgrade.warning.dependency-conflict": {
+		"message": "{path} has conflicting dependency requirements."
+	},
+	"instance.upgrade.warning.missing-required-dependency": {
+		"message": "{path} requires a dependency that could not be resolved."
+	},
+	"instance.upgrade.warning.incompatible-dependency": {
+		"message": "{path} has an incompatible dependency."
+	},
+	"instance.upgrade.warning.unsupported-content-type": {
+		"message": "{path} uses a content type that cannot be upgraded automatically."
+	},
+	"instance.upgrade.warning.no-compatible-release": {
+		"message": "{path} has no compatible release for the target environment."
+	},
+	"instance.upgrade.warning.no-compatible-shader-runtime": {
+		"message": "{path} has no release compatible with the target shader runtime."
+	},
+	"instance.upgrade.warning.shader-runtime-missing": {
+		"message": "{path} was preserved because no target shader runtime is configured."
+	},
+	"instance.upgrade.warning.shader-runtime-unknown": {
+		"message": "{path} was preserved because the target shader runtime is unknown."
+	},
+	"instance.upgrade.warning.search-limit-reached": {
+		"message": "{path} could not be resolved within the bounded compatibility search."
+	},
+	"instance.upgrade.warning.keep-incompatible": {
+		"message": "{path} was kept unchanged and may be incompatible with the upgraded instance."
+	},
+	"app.instance.mods.post-upgrade-notice.title": { "message": "Post-upgrade compatibility review" },
+	"app.instance.mods.post-upgrade-notice.body": {
+		"message": "Some preserved content may not support the current Minecraft version and should be reviewed manually."
+	},
+	"app.instance.mods.post-upgrade-notice.ignore-all": { "message": "Ignore all" },
+	"app.instance.mods.post-upgrade-notice.item-tooltip": {
+		"message": "This content was preserved during the instance upgrade without installing a new compatible version. It may be incompatible with the current Minecraft version."
+	},
+	"app.instance.post-upgrade-status": { "message": "Upgraded to {version}" }
 }

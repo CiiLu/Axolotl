@@ -51,8 +51,9 @@ pub use self::run::{
     try_update_playtime_by_instance_id,
 };
 pub use self::upgrade::{
-    execute_instance_upgrade, get_instance_upgrade_plan, plan_instance_upgrade,
-    reset_instance_upgrade_resolution,
+    dismiss_instance_post_upgrade_notice, execute_instance_upgrade,
+    get_instance_post_upgrade_notice, get_instance_upgrade_plan,
+    plan_instance_upgrade, reset_instance_upgrade_resolution,
     resolve_custom_instance_upgrade_solution, select_instance_upgrade_solution,
     update_instance_upgrade_resolution, update_instance_upgrade_resolutions,
 };

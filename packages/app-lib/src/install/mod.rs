@@ -25,6 +25,7 @@ pub use model::{
     InstallJobSnapshot, InstallJobStatus, InstallModpackPreview,
     InstallPhaseDetails, InstallPhaseId, InstallPostInstallEdit,
     InstallProgress, InstallProgressSecondary, InstallRequest,
+    InstanceUpgradeCompatibilityWarning, InstanceUpgradeDisplayNames,
     InstanceUpgradeExecution, InstanceUpgradeExternalChange,
     InstanceUpgradeExternalChangeKind, InstanceUpgradeResult,
     InstanceUpgradeWatchBaseline, SharedUpgradeMode,

@@ -121,11 +121,23 @@ function submissionDependencies(calls: unknown[][], jobs: InstallJobSnapshot[] =
 	return {
 		instanceIdOf,
 		listJobs: async () => jobs,
-		execute: async (planId: string, backup: boolean, mode: 'direct' | 'copy_and_upgrade') => {
-			calls.push([planId, backup, mode])
+		execute: async (
+			planId: string,
+			backup: boolean,
+			mode: 'direct' | 'copy_and_upgrade',
+			names: typeof displayNames,
+		) => {
+			calls.push([planId, backup, mode, names])
 			return job(`job-${calls.length}`, 'queued')
 		},
 	}
+}
+
+const displayNames = {
+	backup: 'Backup',
+	copy: 'Copy',
+	upgradedTarget: 'Target',
+	shouldAutoRename: false,
 }
 
 test('normal, shared direct, and copy submissions pass exact execution parameters', async () => {
@@ -137,26 +149,29 @@ test('normal, shared direct, and copy submissions pass exact execution parameter
 			planId: 'normal',
 			createFullBackup: true,
 			sharedUpgradeMode: 'direct' as const,
+			displayNames,
 		},
 		{
 			instanceId: 'instance-a',
 			planId: 'shared-direct',
 			createFullBackup: false,
 			sharedUpgradeMode: 'direct' as const,
+			displayNames,
 		},
 		{
 			instanceId: 'instance-a',
 			planId: 'copy',
 			createFullBackup: false,
 			sharedUpgradeMode: 'copy_and_upgrade' as const,
+			displayNames,
 		},
 	]) {
 		await submitInstanceUpgradeWith(request, { value: false }, dependencies)
 	}
 	assert.deepEqual(calls, [
-		['normal', true, 'direct'],
-		['shared-direct', false, 'direct'],
-		['copy', false, 'copy_and_upgrade'],
+		['normal', true, 'direct', displayNames],
+		['shared-direct', false, 'direct', displayNames],
+		['copy', false, 'copy_and_upgrade', displayNames],
 	])
 })
 
@@ -180,6 +195,7 @@ test('synchronous lock prevents double submission', async () => {
 		planId: 'plan-a',
 		createFullBackup: true,
 		sharedUpgradeMode: 'direct' as const,
+		displayNames,
 	}
 	const first = submitInstanceUpgradeWith(request, lock, dependencies)
 	const second = submitInstanceUpgradeWith(request, lock, dependencies)
@@ -197,6 +213,7 @@ test('active preflight attaches without a second execution', async () => {
 			planId: 'plan-a',
 			createFullBackup: true,
 			sharedUpgradeMode: 'direct',
+			displayNames,
 		},
 		{ value: false },
 		submissionDependencies(calls, [job('existing', 'running')]),
@@ -213,6 +230,7 @@ test('copy execution result attaches by source identity despite different target
 			planId: 'copy-plan',
 			createFullBackup: false,
 			sharedUpgradeMode: 'copy_and_upgrade',
+			displayNames,
 		},
 		{ value: false },
 		{
@@ -238,6 +256,7 @@ test('submission failure releases lock', async () => {
 				planId: 'plan-a',
 				createFullBackup: true,
 				sharedUpgradeMode: 'direct',
+				displayNames,
 			},
 			lock,
 			{

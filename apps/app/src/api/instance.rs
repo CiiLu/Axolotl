@@ -45,6 +45,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_select_upgrade_solution,
             instance_resolve_custom_upgrade_solution,
             instance_execute_upgrade,
+            instance_get_post_upgrade_notice,
+            instance_dismiss_post_upgrade_notice,
             instance_get_dependencies_as_content_items,
             instance_get_linked_modpack_info,
             instance_get_linked_modpack_content,
@@ -672,13 +674,35 @@ pub async fn instance_execute_upgrade(
     plan_id: &str,
     create_full_backup: bool,
     shared_upgrade_mode: theseus::install::SharedUpgradeMode,
+    display_names: Option<theseus::install::InstanceUpgradeDisplayNames>,
 ) -> Result<theseus::install::InstallJobSnapshot> {
     Ok(theseus::instance::execute_instance_upgrade(
         plan_id,
         create_full_backup,
         shared_upgrade_mode,
+        display_names.unwrap_or_default(),
     )
     .await?)
+}
+
+#[tauri::command]
+pub async fn instance_get_post_upgrade_notice(
+    instance_id: &str,
+) -> Result<Option<theseus::data::InstancePostUpgradeNotice>> {
+    Ok(
+        theseus::instance::get_instance_post_upgrade_notice(instance_id)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_dismiss_post_upgrade_notice(
+    instance_id: &str,
+) -> Result<()> {
+    Ok(
+        theseus::instance::dismiss_instance_post_upgrade_notice(instance_id)
+            .await?,
+    )
 }
 
 #[tauri::command]

@@ -54,6 +54,9 @@ pub(crate) use self::instance_upgrade::{
     scan_instance_upgrade_source_files, validate_instance_upgrade_plan_source,
 };
 
+mod post_upgrade_notice;
+pub(crate) use self::post_upgrade_notice::*;
+
 mod apply_content_update;
 pub(crate) use self::apply_content_update::*;
 

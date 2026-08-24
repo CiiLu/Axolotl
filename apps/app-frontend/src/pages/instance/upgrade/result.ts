@@ -37,6 +37,11 @@ export function summarizeUpgradeResult(solution: InstanceUpgradeSolution): Upgra
 	}
 }
 
-export function upgradeResultDownloadsLocation(jobId: string) {
-	return { path: '/downloads', query: { job: jobId, result: '1' } } as const
+export function upgradeResultLocation(job: InstallJobSnapshot) {
+	if (!isSuccessfulUpgradeJob(job))
+		return { path: '/downloads', query: { job: job.job_id } } as const
+	return {
+		path: `/instance/${encodeURIComponent(job.upgrade_result!.sourceInstanceId)}/upgrade/result`,
+		query: { job: job.job_id },
+	} as const
 }

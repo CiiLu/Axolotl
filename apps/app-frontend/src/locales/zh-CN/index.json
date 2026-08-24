@@ -7936,5 +7936,46 @@
 	"app.downloads.view-upgrade-result": { "message": "查看升级结果" },
 	"app.downloads.operation.upgrade": { "message": "升级" },
 	"app.downloads.upgrade-details": { "message": "升级详情" },
-	"app.downloads.hide-upgrade-details": { "message": "收起升级详情" }
+	"app.downloads.hide-upgrade-details": { "message": "收起升级详情" },
+	"instance.upgrade.confirm.backup.instance-name": { "message": "{name}（升级前备份）" },
+	"instance.upgrade.confirm.copy.instance-name": { "message": "{name}（升级副本）" },
+	"instance.upgrade.result.unavailable": { "message": "升级结果不可用" },
+	"instance.upgrade.result.missing": { "message": "无法加载此已保存的升级结果。" },
+	"instance.upgrade.warning.prerelease-only": { "message": "{path} 在目标环境中只有预发布版本。" },
+	"instance.upgrade.warning.unidentified": { "message": "无法识别 {path}，已原样保留。" },
+	"instance.upgrade.warning.dependency-conflict": { "message": "{path} 存在冲突的依赖要求。" },
+	"instance.upgrade.warning.missing-required-dependency": {
+		"message": "{path} 所需的依赖无法解析。"
+	},
+	"instance.upgrade.warning.incompatible-dependency": { "message": "{path} 存在不兼容的依赖。" },
+	"instance.upgrade.warning.unsupported-content-type": {
+		"message": "{path} 的内容类型无法自动升级。"
+	},
+	"instance.upgrade.warning.no-compatible-release": {
+		"message": "{path} 没有适用于目标环境的兼容版本。"
+	},
+	"instance.upgrade.warning.no-compatible-shader-runtime": {
+		"message": "{path} 没有适用于目标光影运行时的版本。"
+	},
+	"instance.upgrade.warning.shader-runtime-missing": {
+		"message": "未配置目标光影运行时，已保留 {path}。"
+	},
+	"instance.upgrade.warning.shader-runtime-unknown": {
+		"message": "目标光影运行时未知，已保留 {path}。"
+	},
+	"instance.upgrade.warning.search-limit-reached": {
+		"message": "在有限的兼容性搜索范围内无法解析 {path}。"
+	},
+	"instance.upgrade.warning.keep-incompatible": {
+		"message": "{path} 已原样保留，可能与升级后的实例不兼容。"
+	},
+	"app.instance.mods.post-upgrade-notice.title": { "message": "升级后兼容性提醒" },
+	"app.instance.mods.post-upgrade-notice.body": {
+		"message": "部分保留内容可能不支持当前 Minecraft 版本，请手动检查。"
+	},
+	"app.instance.mods.post-upgrade-notice.ignore-all": { "message": "忽略全部" },
+	"app.instance.mods.post-upgrade-notice.item-tooltip": {
+		"message": "此内容在实例升级时被保留，没有安装新的兼容版本。它可能与当前 Minecraft 版本不兼容。"
+	},
+	"app.instance.post-upgrade-status": { "message": "已升级至 {version}" }
 }

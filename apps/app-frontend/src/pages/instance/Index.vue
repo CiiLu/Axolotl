@@ -39,6 +39,15 @@
 								<BoxIcon class="h-4 w-4" />
 								{{ instance.game_version }}
 							</div>
+							<Badge
+								v-if="postUpgradeNotice"
+								color="green"
+								:type="
+									formatMessage(messages.upgradedTo, {
+										version: postUpgradeNotice.targetGameVersion,
+									})
+								"
+							/>
 
 							<div class="w-1.5 h-1.5 rounded-full bg-surface-5"></div>
 
@@ -370,6 +379,7 @@ import {
 } from '@modrinth/assets'
 import {
 	Avatar,
+	Badge,
 	ButtonStyled,
 	commonMessages,
 	ContentPageHeader,
@@ -404,6 +414,7 @@ import {
 import { useInstanceConsole } from '@/composables/useInstanceConsole'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
+import { postUpgradeNoticeQueryKey, usePostUpgradeNotice } from '@/composables/usePostUpgradeNotice'
 import { useSymlinkWarningDismiss } from '@/composables/useSymlinkWarningDismiss'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_v3 } from '@/helpers/cache.js'
@@ -445,6 +456,10 @@ const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
 	neverPlayed: { id: 'app.instance.never-played', defaultMessage: 'Never played' },
+	upgradedTo: {
+		id: 'app.instance.post-upgrade-status',
+		defaultMessage: 'Upgraded to {version}',
+	},
 	linkedTo: { id: 'app.instance.linked-to', defaultMessage: 'Linked to' },
 	stopping: { id: 'app.instance.stopping', defaultMessage: 'Stopping...' },
 	joinServer: { id: 'app.instance.join-server', defaultMessage: 'Join server' },
@@ -496,6 +511,8 @@ const { offline } = useNetworkStatus()
 
 const instance = ref<GameInstance>()
 const instanceId = computed(() => instance.value?.id)
+const postUpgradeNoticeQuery = usePostUpgradeNotice(() => instance.value?.id ?? props.id)
+const postUpgradeNotice = computed(() => postUpgradeNoticeQuery.data.value ?? null)
 const symlinkWarning = useSymlinkWarningDismiss(instanceId)
 const playing = ref(false)
 const loading = ref(false)
@@ -919,12 +936,14 @@ const unlistenInstances = await instance_listener(
 			linkedProjectV3.value = undefined
 			isServerInstance.value = false
 		}
+		void queryClient.invalidateQueries({ queryKey: postUpgradeNoticeQueryKey(props.id) })
 	},
 )
 
 const unlistenProcesses = await process_listener((e: { event: string; instance_id: string }) => {
 	if (e.event === 'finished' && e.instance_id === props.id) {
 		playing.value = false
+		void queryClient.invalidateQueries({ queryKey: postUpgradeNoticeQueryKey(props.id) })
 	}
 })
 

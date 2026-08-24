@@ -4,11 +4,11 @@ use crate::api::curseforge::{
 use crate::api::pack::import::ImportLauncherType;
 use crate::api::pack::install_from::{CreatePackInstance, CreatePackLocation};
 use crate::state::{
-    ContentDependencyEdge, ContentEntry, ContentProviderRef,
+    ContentDependencyEdge, ContentEntry, ContentProvider, ContentProviderRef,
     ContentUpdateCheck, InstanceFile, InstanceInstallStage, InstanceLink,
     InstanceMetadata, InstanceUpgradeEnvironment, InstanceUpgradeIssue,
-    InstanceUpgradeItem, InstanceUpgradeSolution, InstanceUpgradeSourceFile,
-    ModLoader, PackMember,
+    InstanceUpgradeIssueCode, InstanceUpgradeItem, InstanceUpgradeSolution,
+    InstanceUpgradeSourceFile, ModLoader, PackMember,
 };
 use chrono::{DateTime, Utc};
 use modrinth_content_management::{ContentType, ResolutionPreferences};
@@ -1000,6 +1000,7 @@ mod tests {
             execution: upgrade_execution(),
             create_full_backup: true,
             shared_upgrade_mode: mode,
+            display_names: InstanceUpgradeDisplayNames::default(),
         }
     }
 
@@ -1073,21 +1074,48 @@ mod tests {
 
     #[test]
     fn instance_upgrade_request_round_trip_freezes_solution() {
-        let request = upgrade_request(SharedUpgradeMode::Direct);
+        let mut request = upgrade_request(SharedUpgradeMode::Direct);
+        let InstallRequest::UpgradeUnmanagedInstance { display_names, .. } =
+            &mut request
+        else {
+            panic!("wrong request variant");
+        };
+        display_names.backup = Some("实例（升级前备份）".to_string());
+        display_names.should_auto_rename = true;
         let value = serde_json::to_value(&request).unwrap();
         let restored: InstallRequest = serde_json::from_value(value).unwrap();
         let InstallRequest::UpgradeUnmanagedInstance {
-            plan_id, execution, ..
+            plan_id,
+            execution,
+            display_names,
+            ..
         } = restored
         else {
             panic!("wrong request variant");
         };
         assert_eq!(plan_id, "plan");
         assert_eq!(execution.source_revision, 5);
+        assert_eq!(display_names.backup.as_deref(), Some("实例（升级前备份）"));
+        assert!(display_names.should_auto_rename);
         assert_eq!(
             execution.solution.kind,
             crate::state::InstanceUpgradeSolutionKind::Custom
         );
+    }
+
+    #[test]
+    fn old_instance_upgrade_request_defaults_display_names() {
+        let mut value =
+            serde_json::to_value(upgrade_request(SharedUpgradeMode::Direct))
+                .unwrap();
+        value.as_object_mut().unwrap().remove("display_names");
+        let restored: InstallRequest = serde_json::from_value(value).unwrap();
+        let InstallRequest::UpgradeUnmanagedInstance { display_names, .. } =
+            restored
+        else {
+            panic!("wrong request variant");
+        };
+        assert_eq!(display_names, InstanceUpgradeDisplayNames::default());
     }
 
     #[test]
@@ -1141,6 +1169,7 @@ mod tests {
             target_environment: Some(execution.target_environment.clone()),
             solution: execution.solution,
             compatibility_warnings: Vec::new(),
+            compatibility_warning_details: Vec::new(),
             external_changes: vec![InstanceUpgradeExternalChange {
                 relative_path: "mods/user.jar".to_string(),
                 kind: InstanceUpgradeExternalChangeKind::Added,
@@ -1164,7 +1193,7 @@ mod tests {
     }
 
     #[test]
-    fn old_instance_upgrade_result_defaults_environments_to_none() {
+    fn old_instance_upgrade_result_defaults_additive_fields() {
         let execution = upgrade_execution();
         let result = InstanceUpgradeResult {
             plan_id: "plan".to_string(),
@@ -1175,6 +1204,7 @@ mod tests {
             target_environment: Some(execution.target_environment),
             solution: execution.solution,
             compatibility_warnings: Vec::new(),
+            compatibility_warning_details: Vec::new(),
             external_changes: Vec::new(),
             skipped_due_to_external_conflict: Vec::new(),
         };
@@ -1182,11 +1212,13 @@ mod tests {
         let object = value.as_object_mut().unwrap();
         object.remove("sourceEnvironment");
         object.remove("targetEnvironment");
+        object.remove("compatibilityWarningDetails");
 
         let restored: InstanceUpgradeResult =
             serde_json::from_value(value).unwrap();
         assert_eq!(restored.source_environment, None);
         assert_eq!(restored.target_environment, None);
+        assert!(restored.compatibility_warning_details.is_empty());
     }
 
     #[test]
@@ -1378,6 +1410,8 @@ pub enum InstallRequest {
         execution: InstanceUpgradeExecution,
         create_full_backup: bool,
         shared_upgrade_mode: SharedUpgradeMode,
+        #[serde(default)]
+        display_names: InstanceUpgradeDisplayNames,
     },
     InstallPackToExistingInstance {
         instance_id: String,
@@ -1989,6 +2023,19 @@ pub enum SharedUpgradeMode {
     CopyAndUpgrade,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeDisplayNames {
+    #[serde(default)]
+    pub backup: Option<String>,
+    #[serde(default)]
+    pub copy: Option<String>,
+    #[serde(default)]
+    pub upgraded_target: Option<String>,
+    #[serde(default)]
+    pub should_auto_rename: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceUpgradeExecution {
@@ -2026,6 +2073,17 @@ pub struct InstanceUpgradeExternalChange {
     pub kind: InstanceUpgradeExternalChangeKind,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceUpgradeCompatibilityWarning {
+    pub code: InstanceUpgradeIssueCode,
+    pub relative_path: Option<String>,
+    pub content_id: Option<String>,
+    pub provider: Option<ContentProvider>,
+    pub project_id: Option<String>,
+    pub conflicting_project_id: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceUpgradeResult {
@@ -2039,6 +2097,8 @@ pub struct InstanceUpgradeResult {
     pub target_environment: Option<InstanceUpgradeEnvironment>,
     pub solution: InstanceUpgradeSolution,
     pub compatibility_warnings: Vec<InstanceUpgradeIssue>,
+    #[serde(default)]
+    pub compatibility_warning_details: Vec<InstanceUpgradeCompatibilityWarning>,
     #[serde(default)]
     pub external_changes: Vec<InstanceUpgradeExternalChange>,
     #[serde(default)]

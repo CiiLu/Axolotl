@@ -57,6 +57,11 @@
 					<ExternalIcon />{{ formatMessage(messages.openOriginal) }}
 				</button></ButtonStyled
 			>
+			<ButtonStyled v-if="result.backupInstanceId" type="outlined"
+				><button @click="router.push(`/instance/${encodeURIComponent(result.backupInstanceId!)}`)">
+					<FolderOpenIcon />{{ formatMessage(messages.openBackup) }}
+				</button></ButtonStyled
+			>
 		</div>
 
 		<Card v-if="result.backupInstanceId" class="!m-0 p-4">
@@ -66,11 +71,6 @@
 			<p class="mb-3 mt-1 text-sm text-secondary">
 				{{ formatMessage(messages.backupDescription) }}
 			</p>
-			<ButtonStyled type="outlined" size="small"
-				><button @click="router.push(`/instance/${encodeURIComponent(result.backupInstanceId!)}`)">
-					<FolderOpenIcon />{{ formatMessage(messages.openBackup) }}
-				</button></ButtonStyled
-			>
 		</Card>
 		<Admonition
 			v-else-if="mode === 'direct'"
@@ -103,20 +103,24 @@
 				</li>
 			</ul>
 		</Admonition>
-		<Admonition
-			v-if="result.compatibilityWarnings.length"
-			type="warning"
-			:header="formatMessage(messages.warningsTitle)"
-		>
-			<ul class="m-0 list-disc pl-5">
-				<li
-					v-for="(warning, index) in result.compatibilityWarnings"
-					:key="`${warning.code}:${index}`"
-				>
-					{{ warning.message || warning.code }}
-				</li>
-			</ul>
-		</Admonition>
+		<Card v-if="warningRows.length" class="!m-0 !p-0">
+			<Accordion
+				:open-by-default="warningsExpandedByDefault"
+				button-class="flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent p-4 text-left text-contrast hover:bg-surface-3"
+				content-class="border-0 border-t border-solid border-divider"
+			>
+				<template #title>
+					<TriangleAlertIcon class="size-5 shrink-0 text-orange" aria-hidden="true" />
+					<strong>{{ formatMessage(messages.warningsTitle) }}</strong>
+					<Badge color="orange" :type="String(warningRows.length)" />
+				</template>
+				<ul class="m-0 max-h-72 list-disc overflow-y-auto px-9 py-3">
+					<li v-for="warning in warningRows" :key="warning.key" class="py-1">
+						{{ warningLabel(warning) }}
+					</li>
+				</ul>
+			</Accordion>
+		</Card>
 
 		<details class="rounded-md border border-solid border-surface-4 bg-surface-2 p-4">
 			<summary class="cursor-pointer font-semibold text-contrast">
@@ -173,8 +177,9 @@
 </template>
 
 <script setup lang="ts">
-import { CheckCircleIcon, ExternalIcon, FolderOpenIcon } from '@modrinth/assets'
+import { CheckCircleIcon, ExternalIcon, FolderOpenIcon, TriangleAlertIcon } from '@modrinth/assets'
 import {
+	Accordion,
 	Admonition,
 	Badge,
 	ButtonStyled,
@@ -192,6 +197,7 @@ import type {
 	InstanceUpgradeExternalChangeKind,
 	InstanceUpgradeTargetEnvironment,
 } from '@/helpers/instance-upgrade'
+import { shouldExpandUpgradeWarningsByDefault } from '@/helpers/post-upgrade-notice'
 import { upgradeProjectPath } from '@/helpers/upgrade-return-state'
 import {
 	loadUpgradeProjectDisplayMetadata,
@@ -203,6 +209,7 @@ import {
 } from '@/helpers/upgrade-version-metadata'
 
 import { summarizeUpgradeResult, upgradeResultMode } from './result'
+import { upgradeResultWarningRows, type UpgradeWarningRow } from './upgrade-warning'
 import UpgradeVersionChangelogPopout from './UpgradeVersionChangelogPopout.vue'
 
 const messages = defineMessages({
@@ -279,6 +286,54 @@ const messages = defineMessages({
 		id: 'instance.upgrade.result.warnings-title',
 		defaultMessage: 'Compatibility warnings',
 	},
+	warningPrereleaseOnly: {
+		id: 'instance.upgrade.warning.prerelease-only',
+		defaultMessage: '{path} only has prerelease builds for the target environment.',
+	},
+	warningUnidentified: {
+		id: 'instance.upgrade.warning.unidentified',
+		defaultMessage: '{path} could not be identified and was preserved unchanged.',
+	},
+	warningDependencyConflict: {
+		id: 'instance.upgrade.warning.dependency-conflict',
+		defaultMessage: '{path} has conflicting dependency requirements.',
+	},
+	warningMissingDependency: {
+		id: 'instance.upgrade.warning.missing-required-dependency',
+		defaultMessage: '{path} requires a dependency that could not be resolved.',
+	},
+	warningIncompatibleDependency: {
+		id: 'instance.upgrade.warning.incompatible-dependency',
+		defaultMessage: '{path} has an incompatible dependency.',
+	},
+	warningUnsupportedType: {
+		id: 'instance.upgrade.warning.unsupported-content-type',
+		defaultMessage: '{path} uses a content type that cannot be upgraded automatically.',
+	},
+	warningNoRelease: {
+		id: 'instance.upgrade.warning.no-compatible-release',
+		defaultMessage: '{path} has no compatible release for the target environment.',
+	},
+	warningNoShaderRuntime: {
+		id: 'instance.upgrade.warning.no-compatible-shader-runtime',
+		defaultMessage: '{path} has no release compatible with the target shader runtime.',
+	},
+	warningShaderMissing: {
+		id: 'instance.upgrade.warning.shader-runtime-missing',
+		defaultMessage: '{path} was preserved because no target shader runtime is configured.',
+	},
+	warningShaderUnknown: {
+		id: 'instance.upgrade.warning.shader-runtime-unknown',
+		defaultMessage: '{path} was preserved because the target shader runtime is unknown.',
+	},
+	warningSearchLimit: {
+		id: 'instance.upgrade.warning.search-limit-reached',
+		defaultMessage: '{path} could not be resolved within the bounded compatibility search.',
+	},
+	warningKeepIncompatible: {
+		id: 'instance.upgrade.warning.keep-incompatible',
+		defaultMessage: '{path} was kept unchanged and may be incompatible with the upgraded instance.',
+	},
 	detailsTitle: { id: 'instance.upgrade.result.details-title', defaultMessage: 'Upgrade details' },
 	add: { id: 'instance.upgrade.result.action-add', defaultMessage: 'Added' },
 	upgrade: { id: 'instance.upgrade.result.action-upgrade', defaultMessage: 'Updated' },
@@ -331,6 +386,10 @@ const actualTargetEnvironment = computed<InstanceUpgradeTargetEnvironment | null
 		: targetEnvironment.value,
 )
 const summary = computed(() => summarizeUpgradeResult(result.value.solution))
+const warningRows = computed(() => upgradeResultWarningRows(result.value))
+const warningsExpandedByDefault = computed(() =>
+	shouldExpandUpgradeWarningsByDefault(warningRows.value.length),
+)
 const metrics = computed(() => [
 	{ label: formatMessage(messages.updated), value: summary.value.updated },
 	{ label: formatMessage(messages.kept), value: summary.value.kept },
@@ -458,5 +517,35 @@ function externalChangeLabel(kind: InstanceUpgradeExternalChangeKind) {
 			kind === 'added' ? 'changeAdded' : kind === 'removed' ? 'changeRemoved' : 'changeModified'
 		],
 	)
+}
+function warningLabel(warning: UpgradeWarningRow) {
+	if (warning.legacyMessage) return warning.legacyMessage
+	const descriptor =
+		warning.code === 'prerelease_only'
+			? messages.warningPrereleaseOnly
+			: warning.code === 'unidentified'
+				? messages.warningUnidentified
+				: warning.code === 'dependency_conflict'
+					? messages.warningDependencyConflict
+					: warning.code === 'missing_required_dependency'
+						? messages.warningMissingDependency
+						: warning.code === 'incompatible_dependency'
+							? messages.warningIncompatibleDependency
+							: warning.code === 'unsupported_content_type'
+								? messages.warningUnsupportedType
+								: warning.code === 'no_compatible_release'
+									? messages.warningNoRelease
+									: warning.code === 'no_compatible_shader_runtime'
+										? messages.warningNoShaderRuntime
+										: warning.code === 'shader_runtime_missing'
+											? messages.warningShaderMissing
+											: warning.code === 'shader_runtime_unknown'
+												? messages.warningShaderUnknown
+												: warning.code === 'search_limit_reached'
+													? messages.warningSearchLimit
+													: messages.warningKeepIncompatible
+	return formatMessage(descriptor, {
+		path: warning.relativePath ?? formatMessage(messages.unknown),
+	})
 }
 </script>

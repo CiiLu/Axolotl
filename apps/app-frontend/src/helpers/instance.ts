@@ -27,6 +27,30 @@ import type {
 	InstanceLoader,
 } from './types'
 
+export interface InstancePostUpgradeWarning {
+	code: import('./instance-upgrade').InstanceUpgradeIssueCode
+	contentId: string | null
+	relativePath: string | null
+}
+
+export interface InstancePostUpgradeNotice {
+	instanceId: string
+	upgradeJobId: string
+	targetGameVersion: string
+	consecutiveCleanLaunches: number
+	warnings: InstancePostUpgradeWarning[]
+}
+
+export async function get_post_upgrade_notice(
+	instanceId: string,
+): Promise<InstancePostUpgradeNotice | null> {
+	return await invoke('plugin:instance|instance_get_post_upgrade_notice', { instanceId })
+}
+
+export async function dismiss_post_upgrade_notice(instanceId: string): Promise<void> {
+	await invoke('plugin:instance|instance_dismiss_post_upgrade_notice', { instanceId })
+}
+
 export async function remove(instanceId: string): Promise<void> {
 	removeInstanceCache(instanceId)
 	return await invoke('plugin:instance|instance_remove', { instanceId })
@@ -677,9 +701,7 @@ export interface InstanceRunResult {
 }
 
 export function gcReportFellBack(report: GcLaunchReport): boolean {
-	return (
-		report.chosen_strategy !== report.preferred_strategy || report.pruned_args.length > 0
-	)
+	return report.chosen_strategy !== report.preferred_strategy || report.pruned_args.length > 0
 }
 
 /**
@@ -711,10 +733,7 @@ function normalizeJvmToken(token: string): string {
 }
 
 function strategyTokenKeys(strategy: ResolvedGcStrategyId, context: GcContext): Set<string> {
-	const tokens = GC_STRATEGY_DEFINITIONS[strategy]
-		.buildArgs(context)
-		.split(/\s+/)
-		.filter(Boolean)
+	const tokens = GC_STRATEGY_DEFINITIONS[strategy].buildArgs(context).split(/\s+/).filter(Boolean)
 	return new Set(tokens.map(normalizeJvmToken))
 }
 

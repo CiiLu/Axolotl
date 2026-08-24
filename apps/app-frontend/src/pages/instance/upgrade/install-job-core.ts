@@ -1,5 +1,5 @@
 import type { InstallJobSnapshot, InstallJobStatus } from '@/helpers/install'
-import type { SharedUpgradeMode } from '@/helpers/instance-upgrade'
+import type { InstanceUpgradeDisplayNames, SharedUpgradeMode } from '@/helpers/instance-upgrade'
 
 const RECOVERABLE_UPGRADE_STATUSES = new Set<InstallJobStatus>([
 	'queued',
@@ -20,6 +20,7 @@ export interface UpgradeSubmissionRequest {
 	planId: string
 	createFullBackup: boolean
 	sharedUpgradeMode: SharedUpgradeMode
+	displayNames: InstanceUpgradeDisplayNames
 }
 
 export interface UpgradeSubmissionLock {
@@ -37,6 +38,7 @@ export interface UpgradeSubmissionDependencies {
 		planId: string,
 		createFullBackup: boolean,
 		sharedUpgradeMode: SharedUpgradeMode,
+		displayNames: InstanceUpgradeDisplayNames,
 	) => Promise<InstallJobSnapshot>
 	instanceIdOf: InstallJobInstanceIdResolver
 }
@@ -106,6 +108,7 @@ export async function submitInstanceUpgradeWith(
 			request.planId,
 			request.createFullBackup,
 			request.sharedUpgradeMode,
+			request.displayNames,
 		)
 		if (!isInstanceUpgradeJobWith(job, request.instanceId, dependencies.instanceIdOf)) {
 			throw new Error(

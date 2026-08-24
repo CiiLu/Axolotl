@@ -7,7 +7,7 @@ import type { InstanceUpgradeResult, InstanceUpgradeSolution } from '@/helpers/i
 import {
 	isSuccessfulUpgradeJob,
 	summarizeUpgradeResult,
-	upgradeResultDownloadsLocation,
+	upgradeResultLocation,
 	upgradeResultMode,
 } from './result.ts'
 
@@ -45,10 +45,10 @@ test('successful upgrade result identifies copy and direct modes', () => {
 	assert.equal(upgradeResultMode(result('same', 'same')), 'direct')
 })
 
-test('legacy Result deep link redirects to focused inline Downloads result', () => {
-	assert.deepEqual(upgradeResultDownloadsLocation('job/a'), {
-		path: '/downloads',
-		query: { job: 'job/a', result: '1' },
+test('successful result links to persisted standalone source-instance page', () => {
+	assert.deepEqual(upgradeResultLocation(job('succeeded', result('source/a', 'target/b'))), {
+		path: '/instance/source%2Fa/upgrade/result',
+		query: { job: 'job/a' },
 	})
 })
 

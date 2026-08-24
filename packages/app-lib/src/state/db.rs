@@ -1004,6 +1004,53 @@ mod tests {
 
     const TERRACOTTA_PUBLIC_NODES_MIGRATION_VERSION: i64 = 20260812120000;
     const INSTANCE_LOADER_COMPONENTS_MIGRATION_VERSION: i64 = 20260819120000;
+    const INSTANCE_POST_UPGRADE_NOTICES_MIGRATION_VERSION: i64 = 20260824000000;
+
+    #[tokio::test]
+    async fn post_upgrade_notices_migrate_fresh_and_existing_databases() {
+        for previous_schema in [false, true] {
+            let pool = SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect("sqlite::memory:")
+                .await
+                .unwrap();
+            sqlx::query("PRAGMA foreign_keys = ON")
+                .execute(&pool)
+                .await
+                .unwrap();
+            if previous_schema {
+                let previous_migrator = Migrator {
+                    migrations: std::borrow::Cow::Owned(
+                        MIGRATOR
+                            .iter()
+                            .filter(|migration| {
+                                migration.version
+                                    < INSTANCE_POST_UPGRADE_NOTICES_MIGRATION_VERSION
+                            })
+                            .cloned()
+                            .collect(),
+                    ),
+                    ..Migrator::DEFAULT
+                };
+                previous_migrator.run(&pool).await.unwrap();
+            }
+            MIGRATOR.run(&pool).await.unwrap();
+
+            let table_exists: bool = sqlx::query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'instance_post_upgrade_notices')",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            assert!(table_exists);
+            let foreign_key_errors: Vec<(String, i64, String, i64)> =
+                sqlx::query_as("PRAGMA foreign_key_check")
+                    .fetch_all(&pool)
+                    .await
+                    .unwrap();
+            assert!(foreign_key_errors.is_empty());
+        }
+    }
 
     #[tokio::test]
     async fn loader_components_migrate_fresh_and_existing_instances() {

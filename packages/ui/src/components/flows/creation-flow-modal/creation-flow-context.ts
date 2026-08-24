@@ -10,7 +10,7 @@ import {
 	useVIntl,
 	type VIntlFormatters,
 } from '#ui/composables/i18n'
-import { formatLoaderLabel } from '#ui/utils/loaders'
+import { defaultInstanceName } from '#ui/utils/loaders'
 
 import { createContext, injectModrinthClient } from '../../../providers'
 import type { ImportableLauncher } from '../../../providers/instance-import'
@@ -349,8 +349,7 @@ export function createCreationFlowContext(
 		const version = selectedGameVersion.value
 		if (!version) return ''
 
-		const loaderName = loader ? formatLoaderLabel(loader) : 'Vanilla'
-		const baseName = `${loaderName} ${version}`
+		const baseName = defaultInstanceName(loader, version, selectedLoaderVersion.value)
 
 		const names = new Set(existingInstanceNames.value)
 		if (!names.has(baseName)) return baseName

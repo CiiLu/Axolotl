@@ -375,6 +375,7 @@ pub async fn execute_instance_upgrade(
     plan_id: &str,
     create_full_backup: bool,
     shared_upgrade_mode: SharedUpgradeMode,
+    display_names: crate::install::InstanceUpgradeDisplayNames,
 ) -> crate::Result<InstallJobSnapshot> {
     let state = State::get().await?;
     let handle = stored_plan_handle(plan_id)?;
@@ -441,15 +442,16 @@ pub async fn execute_instance_upgrade(
         )
         .into());
     }
-    if stored.plan.target_environment.mod_loader
-        != crate::state::ModLoader::Vanilla
-        && crate::launcher::get_loader_version_from_profile(
+    let resolved_target_loader =
+        crate::launcher::get_loader_version_from_profile(
             &stored.plan.target_environment.game_version,
             stored.plan.target_environment.mod_loader,
             stored.plan.target_environment.mod_loader_version.as_deref(),
         )
-        .await?
-        .is_none()
+        .await?;
+    if stored.plan.target_environment.mod_loader
+        != crate::state::ModLoader::Vanilla
+        && resolved_target_loader.is_none()
     {
         return Err(crate::ErrorKind::InputError(
             "Target loader version is no longer available".to_string(),
@@ -499,14 +501,24 @@ pub async fn execute_instance_upgrade(
         .into());
     }
     let instance_id = stored.plan.instance_id.clone();
+    let mut target_environment = stored.plan.target_environment.clone();
+    if let Some(loader) = resolved_target_loader {
+        target_environment.mod_loader_version = Some(loader.id);
+    }
+    let mut warnings = stored.plan.warnings.clone();
+    for warning in &solution.warnings {
+        if !warnings.contains(warning) {
+            warnings.push(warning.clone());
+        }
+    }
     let execution = InstanceUpgradeExecution {
         source_revision: stored.plan.source_revision,
         source_files: stored.plan.source_files.clone(),
         source_environment: stored.plan.source_environment.clone(),
-        target_environment: stored.plan.target_environment.clone(),
+        target_environment,
         items: stored.plan.items.clone(),
         solution,
-        warnings: stored.plan.warnings.clone(),
+        warnings,
         source_watch,
     };
     stored.execution_started = true;
@@ -516,12 +528,35 @@ pub async fn execute_instance_upgrade(
         execution,
         create_full_backup,
         shared_upgrade_mode,
+        display_names,
     )
     .await;
     if result.is_err() {
         stored.execution_started = false;
     }
     result
+}
+
+pub async fn get_instance_post_upgrade_notice(
+    instance_id: &str,
+) -> crate::Result<Option<crate::state::InstancePostUpgradeNotice>> {
+    let state = State::get().await?;
+    crate::state::instances::commands::get_instance_post_upgrade_notice(
+        instance_id,
+        &state.pool,
+    )
+    .await
+}
+
+pub async fn dismiss_instance_post_upgrade_notice(
+    instance_id: &str,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    crate::state::instances::commands::dismiss_instance_post_upgrade_notice(
+        instance_id,
+        &state.pool,
+    )
+    .await
 }
 
 fn ensure_upgrade_disk_space(

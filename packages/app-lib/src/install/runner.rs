@@ -5,6 +5,7 @@ use super::model::{
     InstallJobSnapshot, InstallJobState, InstallJobStatus, InstallPauseReason,
     InstallPhaseDetails, InstallPhaseId, InstallPostInstallEdit,
     InstallProgress, InstallRequest, InstallRollbackState, InstallTarget,
+    InstanceUpgradeCompatibilityWarning, InstanceUpgradeDisplayNames,
     InstanceUpgradeExecution, InstanceUpgradeExternalChange,
     InstanceUpgradeExternalChangeKind, InstanceUpgradeResult,
     InstanceUpgradeWatchBaseline, SharedUpgradeMode,
@@ -175,6 +176,7 @@ pub async fn upgrade_unmanaged_instance(
     execution: InstanceUpgradeExecution,
     create_full_backup: bool,
     shared_upgrade_mode: SharedUpgradeMode,
+    display_names: InstanceUpgradeDisplayNames,
 ) -> crate::Result<InstallJobSnapshot> {
     start(InstallRequest::UpgradeUnmanagedInstance {
         instance_id,
@@ -182,6 +184,7 @@ pub async fn upgrade_unmanaged_instance(
         execution,
         create_full_backup,
         shared_upgrade_mode,
+        display_names,
     })
     .await
 }
@@ -911,6 +914,7 @@ async fn prepare_initial_instance(
         InstallRequest::UpgradeUnmanagedInstance {
             instance_id,
             shared_upgrade_mode,
+            display_names,
             ..
         } => {
             let metadata =
@@ -933,7 +937,12 @@ async fn prepare_initial_instance(
                 }
                 SharedUpgradeMode::CopyAndUpgrade => {
                     let created = crate::api::instance::create(
-                        format!("{} (Upgraded Copy)", metadata.instance.name),
+                        display_names.copy.unwrap_or_else(|| {
+                            format!(
+                                "{} (Upgraded Copy)",
+                                metadata.instance.name
+                            )
+                        }),
                         metadata.applied_content_set.game_version.clone(),
                         metadata.applied_content_set.loader,
                         metadata.applied_content_set.loader_version.clone(),
@@ -1601,6 +1610,7 @@ async fn run_request(
             execution,
             create_full_backup,
             shared_upgrade_mode,
+            display_names,
         } => {
             let target_instance_id = current_instance_id(job_state)
                 .ok_or_else(|| {
@@ -1619,6 +1629,7 @@ async fn run_request(
                 execution,
                 create_full_backup,
                 shared_upgrade_mode,
+                display_names,
             )
             .await?;
             Ok(InstallExecutionOutcome::Completed(Some(target_instance_id)))
@@ -2026,7 +2037,10 @@ async fn run_instance_upgrade(
     execution: InstanceUpgradeExecution,
     create_full_backup: bool,
     shared_upgrade_mode: SharedUpgradeMode,
+    display_names: InstanceUpgradeDisplayNames,
 ) -> crate::Result<()> {
+    let compatibility_warning_details =
+        upgrade_compatibility_warning_details(&execution);
     let (upgrade_source_files, upgrade_watch) = if shared_upgrade_mode
         == SharedUpgradeMode::CopyAndUpgrade
     {
@@ -2084,8 +2098,14 @@ async fn run_instance_upgrade(
         )
         .await?;
         Some(
-            create_upgrade_backup(job_id, job_state, state, source_instance_id)
-                .await?,
+            create_upgrade_backup(
+                job_id,
+                job_state,
+                state,
+                source_instance_id,
+                display_names.backup.as_deref(),
+            )
+            .await?,
         )
     } else {
         None
@@ -2100,6 +2120,8 @@ async fn run_instance_upgrade(
             target_environment: Some(execution.target_environment.clone()),
             solution: execution.solution.clone(),
             compatibility_warnings: execution.warnings.clone(),
+            compatibility_warning_details: compatibility_warning_details
+                .clone(),
             external_changes: Vec::new(),
             skipped_due_to_external_conflict: Vec::new(),
         })
@@ -2229,9 +2251,14 @@ async fn run_instance_upgrade(
         },
     )
     .await?;
+    let upgraded_target_name = display_names
+        .should_auto_rename
+        .then(|| default_upgrade_instance_name(&execution.target_environment))
+        .or(display_names.upgraded_target.clone());
     crate::state::edit_instance(
         target_instance_id,
         crate::state::EditInstance {
+            name: upgraded_target_name,
             content_set_patch: Some(crate::state::AppliedContentSetPatch {
                 source_kind: Some(
                     crate::state::instances::ContentSourceKind::Local,
@@ -2326,11 +2353,158 @@ async fn run_instance_upgrade(
             target_environment: Some(execution.target_environment),
             solution: execution.solution,
             compatibility_warnings: execution.warnings,
+            compatibility_warning_details: compatibility_warning_details
+                .clone(),
             external_changes,
             skipped_due_to_external_conflict: applied.skipped,
         })
         .await?;
     Ok(())
+}
+
+fn default_upgrade_instance_name(
+    environment: &crate::state::InstanceUpgradeEnvironment,
+) -> String {
+    let loader = match environment.mod_loader {
+        ModLoader::Vanilla => "Vanilla",
+        ModLoader::Forge => "Forge",
+        ModLoader::Fabric => "Fabric",
+        ModLoader::Quilt => "Quilt",
+        ModLoader::NeoForge => "NeoForge",
+        ModLoader::OptiFine => "OptiFine",
+        ModLoader::Cleanroom => "Cleanroom",
+        ModLoader::LiteLoader => "LiteLoader",
+        ModLoader::LegacyFabric => "Legacy Fabric",
+    };
+    let loader_version = environment
+        .mod_loader_version
+        .as_deref()
+        .filter(|version| !matches!(*version, "latest" | "stable"))
+        .map(|version| format!(" {version}"))
+        .unwrap_or_default();
+    format!("{}-{loader}{loader_version}", environment.game_version)
+}
+
+fn upgrade_compatibility_warning_details(
+    execution: &InstanceUpgradeExecution,
+) -> Vec<InstanceUpgradeCompatibilityWarning> {
+    let physical_details = execution
+        .items
+        .iter()
+        .filter_map(|item| {
+            let code = physical_upgrade_warning_code(execution, item)?;
+            execution
+                .warnings
+                .iter()
+                .any(|warning| warning.code == code)
+                .then(|| InstanceUpgradeCompatibilityWarning {
+                    code,
+                    relative_path: Some(item.relative_path.clone()),
+                    content_id: Some(item.content_id.clone()),
+                    provider: item.provider,
+                    project_id: item.project_id.clone(),
+                    conflicting_project_id: None,
+                })
+        })
+        .collect::<Vec<_>>();
+    let mut details = execution
+        .warnings
+        .iter()
+        .filter_map(|warning| {
+            let item = warning
+                .content_id
+                .as_ref()
+                .and_then(|content_id| {
+                    execution
+                        .items
+                        .iter()
+                        .find(|item| item.content_id == *content_id)
+                })
+                .or_else(|| {
+                    let mut matches = execution.items.iter().filter(|item| {
+                        item.provider == warning.provider
+                            && item.project_id == warning.project_id
+                    });
+                    let item = matches.next()?;
+                    matches.next().is_none().then_some(item)
+                });
+            if item.is_none()
+                && physical_details
+                    .iter()
+                    .any(|detail| detail.code == warning.code)
+            {
+                return None;
+            }
+            Some(InstanceUpgradeCompatibilityWarning {
+                code: warning.code,
+                relative_path: item.map(|item| item.relative_path.clone()),
+                content_id: item
+                    .map(|item| item.content_id.clone())
+                    .or_else(|| warning.content_id.clone()),
+                provider: warning.provider,
+                project_id: warning.project_id.clone(),
+                conflicting_project_id: warning.conflicting_project_id.clone(),
+            })
+        })
+        .collect::<Vec<_>>();
+    for detail in physical_details {
+        if !details.iter().any(|existing| {
+            existing.code == detail.code
+                && existing.content_id == detail.content_id
+                && existing.relative_path == detail.relative_path
+        }) {
+            details.push(detail);
+        }
+    }
+    details
+}
+
+fn physical_upgrade_warning_code(
+    execution: &InstanceUpgradeExecution,
+    item: &crate::state::InstanceUpgradeItem,
+) -> Option<crate::state::InstanceUpgradeIssueCode> {
+    use crate::state::{
+        InstanceUpgradeAction, InstanceUpgradeIssueCode,
+        InstanceUpgradeItemStatus,
+    };
+
+    let action = execution
+        .solution
+        .selections
+        .iter()
+        .find(|selection| selection.content_id == item.content_id)
+        .map(|selection| selection.action)
+        .unwrap_or(item.resolution.action);
+    match item.status {
+        InstanceUpgradeItemStatus::Unidentified => {
+            Some(InstanceUpgradeIssueCode::Unidentified)
+        }
+        InstanceUpgradeItemStatus::UnsupportedContentType => {
+            Some(InstanceUpgradeIssueCode::UnsupportedContentType)
+        }
+        InstanceUpgradeItemStatus::NoCompatibleRelease
+        | InstanceUpgradeItemStatus::UpgradeAvailable
+            if action == InstanceUpgradeAction::Keep =>
+        {
+            Some(InstanceUpgradeIssueCode::KeepIncompatible)
+        }
+        InstanceUpgradeItemStatus::NoCompatibleShaderRuntime
+            if action == InstanceUpgradeAction::Keep =>
+        {
+            Some(InstanceUpgradeIssueCode::NoCompatibleShaderRuntime)
+        }
+        InstanceUpgradeItemStatus::ShaderRuntimeMissing
+            if action == InstanceUpgradeAction::Keep =>
+        {
+            Some(InstanceUpgradeIssueCode::ShaderRuntimeMissing)
+        }
+        InstanceUpgradeItemStatus::ShaderRuntimeUnknown
+            if action == InstanceUpgradeAction::Keep =>
+        {
+            Some(InstanceUpgradeIssueCode::ShaderRuntimeUnknown)
+        }
+        _ => None,
+    }
 }
 
 async fn copy_physical_instance_contents(
@@ -2360,6 +2534,7 @@ async fn create_upgrade_backup(
     job_state: &InstallJobState,
     state: &State,
     source_instance_id: &str,
+    backup_name: Option<&str>,
 ) -> crate::Result<String> {
     let source = crate::state::get_instance(source_instance_id, &state.pool)
         .await?
@@ -2367,7 +2542,9 @@ async fn create_upgrade_backup(
             crate::ErrorKind::InputError("Unknown upgrade source".to_string())
         })?;
     let backup = crate::api::instance::create(
-        format!("{} (Upgrade Backup)", source.instance.name),
+        backup_name.map(str::to_string).unwrap_or_else(|| {
+            format!("{} (Upgrade Backup)", source.instance.name)
+        }),
         source.applied_content_set.game_version.clone(),
         source.applied_content_set.loader,
         source.applied_content_set.loader_version.clone(),
@@ -4764,6 +4941,152 @@ fn modpack_details(location: &CreatePackLocation) -> InstallPhaseDetails {
 mod tests {
     use super::*;
 
+    #[test]
+    fn generated_upgrade_name_uses_exact_resolved_loader_version() {
+        assert_eq!(
+            default_upgrade_instance_name(
+                &crate::state::InstanceUpgradeEnvironment {
+                    game_version: "1.21.9".to_string(),
+                    mod_loader: ModLoader::Fabric,
+                    mod_loader_version: Some("0.18.5".to_string()),
+                    shader_runtime: crate::state::ShaderRuntime::Iris,
+                },
+            ),
+            "1.21.9-Fabric 0.18.5"
+        );
+    }
+
+    #[test]
+    fn compatibility_warning_details_recover_unique_exact_content_identity() {
+        let environment = crate::state::InstanceUpgradeEnvironment {
+            game_version: "1.21.9".to_string(),
+            mod_loader: ModLoader::Fabric,
+            mod_loader_version: Some("0.18.5".to_string()),
+            shader_runtime: crate::state::ShaderRuntime::Iris,
+        };
+        let execution = InstanceUpgradeExecution {
+            source_revision: 1,
+            source_files: Vec::new(),
+            source_environment: environment.clone(),
+            target_environment: environment,
+            items: vec![crate::state::InstanceUpgradeItem {
+                content_id: "content".to_string(),
+                relative_path: "resourcepacks/foo.zip".to_string(),
+                project_type: crate::state::ProjectType::ResourcePack,
+                provider: Some(crate::state::ContentProvider::Modrinth),
+                project_id: Some("project".to_string()),
+                current_release_id: Some("release".to_string()),
+                current_enabled: true,
+                auto_dependency: false,
+                status:
+                    crate::state::InstanceUpgradeItemStatus::NoCompatibleRelease,
+                resolution: crate::state::InstanceUpgradeResolution {
+                    content_id: "content".to_string(),
+                    action: crate::state::InstanceUpgradeAction::Keep,
+                    allow_prerelease: false,
+                    confirmed_prerelease_dependencies: Vec::new(),
+                },
+                candidate_release_ids: Vec::new(),
+            }],
+            solution: crate::state::InstanceUpgradeSolution {
+                kind: crate::state::InstanceUpgradeSolutionKind::Custom,
+                selections: Vec::new(),
+                dependency_changes: Vec::new(),
+                warnings: Vec::new(),
+            },
+            warnings: vec![crate::state::InstanceUpgradeIssue {
+                code: crate::state::InstanceUpgradeIssueCode::KeepIncompatible,
+                message: "preserved".to_string(),
+                content_id: None,
+                provider: Some(crate::state::ContentProvider::Modrinth),
+                project_id: Some("project".to_string()),
+                conflicting_project_id: None,
+                dependency_requirements: Vec::new(),
+            }],
+            source_watch: None,
+        };
+
+        let details = upgrade_compatibility_warning_details(&execution);
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].content_id.as_deref(), Some("content"));
+        assert_eq!(
+            details[0].relative_path.as_deref(),
+            Some("resourcepacks/foo.zip")
+        );
+    }
+
+    #[test]
+    fn local_path_only_preserve_warnings_create_physical_notice_details() {
+        let environment = crate::state::InstanceUpgradeEnvironment {
+            game_version: "1.21.9".to_string(),
+            mod_loader: ModLoader::Fabric,
+            mod_loader_version: Some("0.18.5".to_string()),
+            shader_runtime: crate::state::ShaderRuntime::Iris,
+        };
+        let item = |content_id: &str, relative_path: &str| {
+            crate::state::InstanceUpgradeItem {
+                content_id: content_id.to_string(),
+                relative_path: relative_path.to_string(),
+                project_type: crate::state::ProjectType::ResourcePack,
+                provider: None,
+                project_id: None,
+                current_release_id: None,
+                current_enabled: true,
+                auto_dependency: false,
+                status:
+                    crate::state::InstanceUpgradeItemStatus::NoCompatibleRelease,
+                resolution: crate::state::InstanceUpgradeResolution {
+                    content_id: content_id.to_string(),
+                    action: crate::state::InstanceUpgradeAction::Keep,
+                    allow_prerelease: false,
+                    confirmed_prerelease_dependencies: Vec::new(),
+                },
+                candidate_release_ids: Vec::new(),
+            }
+        };
+        let execution = InstanceUpgradeExecution {
+            source_revision: 1,
+            source_files: Vec::new(),
+            source_environment: environment.clone(),
+            target_environment: environment,
+            items: vec![
+                item("resource-pack", "resourcepacks/foo.zip"),
+                item("shader-pack", "shaderpacks/bar.zip"),
+            ],
+            solution: crate::state::InstanceUpgradeSolution {
+                kind: crate::state::InstanceUpgradeSolutionKind::Custom,
+                selections: Vec::new(),
+                dependency_changes: Vec::new(),
+                warnings: Vec::new(),
+            },
+            warnings: vec![crate::state::InstanceUpgradeIssue {
+                code: crate::state::InstanceUpgradeIssueCode::KeepIncompatible,
+                message: "local content preserved".to_string(),
+                content_id: None,
+                provider: None,
+                project_id: None,
+                conflicting_project_id: None,
+                dependency_requirements: Vec::new(),
+            }],
+            source_watch: None,
+        };
+
+        let details = upgrade_compatibility_warning_details(&execution);
+        assert_eq!(details.len(), 2);
+        assert!(details.iter().any(|detail| {
+            detail.relative_path.as_deref() == Some("resourcepacks/foo.zip")
+                && detail.provider.is_none()
+                && detail.project_id.is_none()
+        }));
+        assert_eq!(
+            crate::state::instances::commands::post_upgrade_warnings_from_details(
+                &details,
+            )
+            .len(),
+            2
+        );
+    }
+
     fn upgrade_job_state() -> InstallJobState {
         let environment = crate::state::InstanceUpgradeEnvironment {
             game_version: "1.21.1".to_string(),
@@ -4791,6 +5114,7 @@ mod tests {
             },
             create_full_backup: false,
             shared_upgrade_mode: SharedUpgradeMode::Direct,
+            display_names: InstanceUpgradeDisplayNames::default(),
         })
     }
 
@@ -5534,7 +5858,7 @@ mod tests {
             .unwrap();
 
         let backup_id =
-            create_upgrade_backup(job_id, &job_state, &state, &source_id)
+            create_upgrade_backup(job_id, &job_state, &state, &source_id, None)
                 .await
                 .unwrap();
         let snapshot = crate::state::instances::commands::get_content_snapshot(
