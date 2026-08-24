@@ -103,85 +103,17 @@
 				</li>
 			</ul>
 		</Admonition>
-		<Card v-if="warningRows.length" class="!m-0 !p-0">
-			<Accordion
-				:open-by-default="warningsExpandedByDefault"
-				button-class="flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent p-4 text-left text-contrast hover:bg-surface-3"
-				content-class="border-0 border-t border-solid border-divider"
-			>
-				<template #title>
-					<TriangleAlertIcon class="size-5 shrink-0 text-orange" aria-hidden="true" />
-					<strong>{{ formatMessage(messages.warningsTitle) }}</strong>
-					<Badge color="orange" :type="String(warningRows.length)" />
-				</template>
-				<ul class="m-0 max-h-72 list-disc overflow-y-auto px-9 py-3">
-					<li v-for="warning in warningRows" :key="warning.key" class="py-1">
-						{{ warningLabel(warning) }}
-					</li>
-				</ul>
-			</Accordion>
-		</Card>
-
-		<details class="rounded-md border border-solid border-surface-4 bg-surface-2 p-4">
-			<summary class="cursor-pointer font-semibold text-contrast">
-				{{ formatMessage(messages.detailsTitle) }}
-			</summary>
-			<div class="mt-3 flex flex-col gap-2">
-				<div
-					v-for="item in selectionDetails"
-					:key="item.key"
-					class="flex items-center justify-between gap-3 text-sm"
-				>
-					<div class="min-w-0">
-						<RouterLink
-							v-if="item.path"
-							:to="item.path"
-							class="font-medium text-contrast hover:text-brand hover:underline"
-							>{{ item.title }}
-							<ExternalIcon class="inline size-3" aria-hidden="true" /></RouterLink
-						><span v-else class="text-contrast">{{ item.title }}</span>
-						<div class="flex flex-wrap items-center gap-x-2 text-secondary">
-							<UpgradeVersionChangelogPopout
-								v-if="item.currentReleaseId"
-								:label="item.current"
-								:provider="item.provider"
-								:project-id="item.projectId"
-								:release-id="item.currentReleaseId"
-							/><span v-else>{{ item.current }}</span
-							><span v-if="item.target" aria-hidden="true">→</span
-							><UpgradeVersionChangelogPopout
-								v-if="item.targetReleaseId"
-								:label="item.target"
-								:provider="item.provider"
-								:project-id="item.projectId"
-								:release-id="item.targetReleaseId"
-							/><span v-else-if="item.target">{{ item.target }}</span>
-						</div>
-					</div>
-					<Badge
-						:color="item.action === 'disable' ? 'gray' : item.action === 'keep' ? 'blue' : 'green'"
-						:type="item.actionLabel"
-					/>
-				</div>
-				<div
-					v-for="change in result.solution.dependencyChanges"
-					:key="`${change.provider}:${change.projectId}:${change.kind}:${change.targetReleaseId}`"
-					class="flex items-center justify-between gap-3 border-0 border-t border-solid border-divider pt-2 text-sm"
-				>
-					<span class="text-contrast">{{ projectTitle(change.provider, change.projectId) }}</span
-					><span class="text-secondary">{{ dependencyKindLabel(change.kind) }}</span>
-				</div>
-			</div>
-		</details>
+		<UpgradeResultCollections
+			:result="result"
+			:target-version="targetEnvironment?.gameVersion ?? null"
+		/>
 	</section>
 </template>
 
 <script setup lang="ts">
-import { CheckCircleIcon, ExternalIcon, FolderOpenIcon, TriangleAlertIcon } from '@modrinth/assets'
+import { CheckCircleIcon, ExternalIcon, FolderOpenIcon } from '@modrinth/assets'
 import {
-	Accordion,
 	Admonition,
-	Badge,
 	ButtonStyled,
 	Card,
 	defineMessages,
@@ -197,20 +129,9 @@ import type {
 	InstanceUpgradeExternalChangeKind,
 	InstanceUpgradeTargetEnvironment,
 } from '@/helpers/instance-upgrade'
-import { shouldExpandUpgradeWarningsByDefault } from '@/helpers/post-upgrade-notice'
-import { upgradeProjectPath } from '@/helpers/upgrade-return-state'
-import {
-	loadUpgradeProjectDisplayMetadata,
-	loadUpgradeVersionDisplayMetadata,
-	upgradeProjectDisplayCacheKey,
-	type UpgradeProjectIdentity,
-	type UpgradeReleaseIdentity,
-	upgradeVersionDisplayLabel,
-} from '@/helpers/upgrade-version-metadata'
 
 import { summarizeUpgradeResult, upgradeResultMode } from './result'
-import { upgradeResultWarningRows, type UpgradeWarningRow } from './upgrade-warning'
-import UpgradeVersionChangelogPopout from './UpgradeVersionChangelogPopout.vue'
+import UpgradeResultCollections from './UpgradeResultCollections.vue'
 
 const messages = defineMessages({
 	title: { id: 'instance.upgrade.result.title', defaultMessage: 'Upgrade complete' },
@@ -386,10 +307,6 @@ const actualTargetEnvironment = computed<InstanceUpgradeTargetEnvironment | null
 		: targetEnvironment.value,
 )
 const summary = computed(() => summarizeUpgradeResult(result.value.solution))
-const warningRows = computed(() => upgradeResultWarningRows(result.value))
-const warningsExpandedByDefault = computed(() =>
-	shouldExpandUpgradeWarningsByDefault(warningRows.value.length),
-)
 const metrics = computed(() => [
 	{ label: formatMessage(messages.updated), value: summary.value.updated },
 	{ label: formatMessage(messages.kept), value: summary.value.kept },
@@ -398,92 +315,6 @@ const metrics = computed(() => [
 	{ label: formatMessage(messages.dependencyUpdated), value: summary.value.dependencyUpdated },
 	{ label: formatMessage(messages.removed), value: summary.value.dependencyRemoved },
 ])
-const releaseIdentities = computed<UpgradeReleaseIdentity[]>(() =>
-	result.value.solution.selections
-		.flatMap((selection) =>
-			[selection.currentReleaseId, selection.targetReleaseId].flatMap((releaseId) =>
-				selection.provider && selection.projectId && releaseId
-					? [{ provider: selection.provider, projectId: selection.projectId, releaseId }]
-					: [],
-			),
-		)
-		.concat(
-			result.value.solution.dependencyChanges.flatMap((change) =>
-				[change.currentReleaseId, change.targetReleaseId].flatMap((releaseId) =>
-					releaseId ? [{ provider: change.provider, projectId: change.projectId, releaseId }] : [],
-				),
-			),
-		),
-)
-const versionMetadataQuery = useQuery({
-	queryKey: computed(() => [
-		'instance-upgrade',
-		'result-versions',
-		...releaseIdentities.value.map(
-			(identity) => `${identity.provider}:${identity.projectId}:${identity.releaseId}`,
-		),
-	]),
-	queryFn: () => loadUpgradeVersionDisplayMetadata(releaseIdentities.value),
-	staleTime: Number.POSITIVE_INFINITY,
-})
-const projectIdentities = computed<UpgradeProjectIdentity[]>(() => {
-	const identities = new Map<string, UpgradeProjectIdentity>()
-	for (const entry of [
-		...result.value.solution.selections,
-		...result.value.solution.dependencyChanges,
-	]) {
-		if (entry.provider && entry.projectId) {
-			identities.set(`${entry.provider}:${entry.projectId}`, {
-				provider: entry.provider,
-				projectId: entry.projectId,
-			})
-		}
-	}
-	return [...identities.values()]
-})
-const projectMetadataQuery = useQuery({
-	queryKey: computed(() => [
-		'instance-upgrade',
-		'result-projects',
-		...projectIdentities.value.map((identity) => `${identity.provider}:${identity.projectId}`),
-	]),
-	queryFn: () => loadUpgradeProjectDisplayMetadata(projectIdentities.value),
-	staleTime: Number.POSITIVE_INFINITY,
-})
-const selectionDetails = computed(() =>
-	result.value.solution.selections.map((selection) => {
-		const key =
-			selection.provider && selection.projectId
-				? upgradeProjectDisplayCacheKey(selection.provider, selection.projectId)
-				: null
-		const metadata = key ? projectMetadataQuery.data.value?.get(key) : null
-		return {
-			key: selection.contentId,
-			title: metadata?.title ?? selection.projectId ?? formatMessage(messages.unknown),
-			path: upgradeProjectPath(selection.provider, selection.projectId),
-			provider: selection.provider,
-			projectId: selection.projectId,
-			currentReleaseId: selection.currentReleaseId,
-			targetReleaseId: selection.targetReleaseId,
-			current: selection.currentReleaseId
-				? upgradeVersionDisplayLabel(versionMetadataQuery.data.value, {
-						provider: selection.provider,
-						projectId: selection.projectId,
-						releaseId: selection.currentReleaseId,
-					})
-				: formatMessage(messages.unknown),
-			target: selection.targetReleaseId
-				? upgradeVersionDisplayLabel(versionMetadataQuery.data.value, {
-						provider: selection.provider,
-						projectId: selection.projectId,
-						releaseId: selection.targetReleaseId,
-					})
-				: null,
-			action: selection.action,
-			actionLabel: formatMessage(messages[selection.action]),
-		}
-	}),
-)
 
 function loaderLabel(environment: InstanceUpgradeTargetEnvironment | null) {
 	if (!environment) return formatMessage(messages.unknown)
@@ -492,60 +323,11 @@ function loaderLabel(environment: InstanceUpgradeTargetEnvironment | null) {
 		? `${label} ${environment.modLoaderVersion}`
 		: `${label} (${formatMessage(messages.automatic)})`
 }
-function projectTitle(provider: string, projectId: string) {
-	return (
-		projectMetadataQuery.data.value?.get(upgradeProjectDisplayCacheKey(provider, projectId))
-			?.title ?? projectId
-	)
-}
-function dependencyKindLabel(kind: string) {
-	return formatMessage(
-		messages[
-			kind === 'add'
-				? 'add'
-				: kind === 'upgrade'
-					? 'upgrade'
-					: kind === 'remove'
-						? 'remove'
-						: 'keep'
-		],
-	)
-}
 function externalChangeLabel(kind: InstanceUpgradeExternalChangeKind) {
 	return formatMessage(
 		messages[
 			kind === 'added' ? 'changeAdded' : kind === 'removed' ? 'changeRemoved' : 'changeModified'
 		],
 	)
-}
-function warningLabel(warning: UpgradeWarningRow) {
-	if (warning.legacyMessage) return warning.legacyMessage
-	const descriptor =
-		warning.code === 'prerelease_only'
-			? messages.warningPrereleaseOnly
-			: warning.code === 'unidentified'
-				? messages.warningUnidentified
-				: warning.code === 'dependency_conflict'
-					? messages.warningDependencyConflict
-					: warning.code === 'missing_required_dependency'
-						? messages.warningMissingDependency
-						: warning.code === 'incompatible_dependency'
-							? messages.warningIncompatibleDependency
-							: warning.code === 'unsupported_content_type'
-								? messages.warningUnsupportedType
-								: warning.code === 'no_compatible_release'
-									? messages.warningNoRelease
-									: warning.code === 'no_compatible_shader_runtime'
-										? messages.warningNoShaderRuntime
-										: warning.code === 'shader_runtime_missing'
-											? messages.warningShaderMissing
-											: warning.code === 'shader_runtime_unknown'
-												? messages.warningShaderUnknown
-												: warning.code === 'search_limit_reached'
-													? messages.warningSearchLimit
-													: messages.warningKeepIncompatible
-	return formatMessage(descriptor, {
-		path: warning.relativePath ?? formatMessage(messages.unknown),
-	})
 }
 </script>

@@ -7977,5 +7977,99 @@
 	"app.instance.mods.post-upgrade-notice.item-tooltip": {
 		"message": "此内容在实例升级时被保留，没有安装新的兼容版本。它可能与当前 Minecraft 版本不兼容。"
 	},
-	"app.instance.post-upgrade-status": { "message": "已升级至 {version}" }
+	"app.instance.post-upgrade-status": { "message": "已升级至 {version}" },
+	"instance.upgrade.result.warning-summary-local": { "message": "{count} 个本地内容无法识别" },
+	"instance.upgrade.result.warning-summary-kept": { "message": "{count} 个内容保留了原版本" },
+	"instance.upgrade.result.warning-summary-fallback": {
+		"message": "{count} 个内容采用了其他兼容方案"
+	},
+	"instance.upgrade.result.warning-reassurance": {
+		"message": "这些警告没有导致升级失败。如果升级后的实例运行正常，无需立即处理。"
+	},
+	"instance.upgrade.result.warning-unidentified-headline": {
+		"message": "此内容在升级时被原样保留"
+	},
+	"instance.upgrade.result.warning-unidentified-description": {
+		"message": "启动器无法确认它是否支持 Minecraft {targetVersion}。如果升级后出现问题，可以尝试暂时禁用它。"
+	},
+	"instance.upgrade.result.warning-unsupported-headline": { "message": "此类型的内容被原样保留" },
+	"instance.upgrade.result.warning-unsupported-description": {
+		"message": "启动器无法自动升级此类内容。如果出现问题，请手动更新或禁用它。"
+	},
+	"instance.upgrade.result.warning-kept-headline": { "message": "已保留原版本" },
+	"instance.upgrade.result.warning-kept-description": {
+		"message": "未选择经过验证的兼容替代版本。如果游戏出现问题，请手动更新或禁用它。"
+	},
+	"instance.upgrade.result.warning-prerelease-headline": { "message": "使用了预发布版本" },
+	"instance.upgrade.result.warning-prerelease-description": {
+		"message": "目标环境没有稳定版本，因此此内容使用了 alpha、beta 或候选发布版本。"
+	},
+	"instance.upgrade.result.warning-shader-headline": { "message": "无法确认光影兼容性" },
+	"instance.upgrade.result.warning-shader-description": {
+		"message": "此光影已被保留，但无法确认目标光影运行时是否兼容。如果出现渲染问题，请禁用它。"
+	},
+	"instance.upgrade.result.warning-dependency-headline": { "message": "依赖项采用了兼容回退方案" },
+	"instance.upgrade.result.warning-dependency-description": {
+		"message": "升级已完成，但此依赖项未能按常规方式验证。如果游戏无法启动，请检查它。"
+	},
+	"instance.upgrade.result.warning-legacy-headline": { "message": "兼容性需要注意" },
+	"instance.upgrade.result.technical-details": { "message": "技术详情" },
+	"instance.upgrade.result.relative-path": { "message": "相对路径" },
+	"instance.upgrade.result.warning-code": { "message": "警告代码" },
+	"instance.upgrade.result.provider-identity": { "message": "提供方标识" },
+	"instance.upgrade.result.local-content": { "message": "本地内容" },
+	"instance.upgrade.result.content-kind-content": { "message": "内容" },
+	"instance.upgrade.result.content-kind-mod": { "message": "模组" },
+	"instance.upgrade.result.content-kind-resourcepack": { "message": "资源包" },
+	"instance.upgrade.result.content-kind-shaderpack": { "message": "光影包" },
+	"instance.upgrade.result.content-kind-datapack": { "message": "数据包" },
+	"instance.upgrade.result.search-details": { "message": "搜索升级详情" },
+	"instance.upgrade.result.filters": { "message": "筛选升级详情" },
+	"instance.upgrade.result.filter-all": { "message": "全部" },
+	"instance.upgrade.result.filter-updated": { "message": "已更新" },
+	"instance.upgrade.result.filter-kept": { "message": "已保留" },
+	"instance.upgrade.result.filter-disabled": { "message": "已禁用" },
+	"instance.upgrade.result.filter-dependencies": { "message": "依赖项" },
+	"instance.upgrade.result.showing": { "message": "显示 {start}–{end} / {total}" },
+	"instance.upgrade.result.previous": { "message": "上一页" },
+	"instance.upgrade.result.next": { "message": "下一页" },
+	"instance.upgrade.result.no-matching-items": { "message": "没有匹配的升级项目。" },
+	"instance.upgrade.result.dependency": { "message": "依赖项" },
+	"instance.upgrade.result.dependency-added": { "message": "新增依赖" },
+	"instance.upgrade.result.dependency-updated-status": { "message": "已更新依赖" },
+	"instance.upgrade.result.dependency-kept": { "message": "已保留依赖" },
+	"instance.upgrade.result.dependency-removed-status": { "message": "已移除依赖" },
+	"instance.upgrade.result.warning-conflict-headline": { "message": "部分依赖要求发生冲突" },
+	"instance.upgrade.result.warning-conflict-description": {
+		"message": "此内容要求的依赖版本无法同时使用。如果游戏无法启动，请检查其依赖项。"
+	},
+	"instance.upgrade.result.warning-missing-dependency-headline": {
+		"message": "找不到必要的依赖项"
+	},
+	"instance.upgrade.result.warning-missing-dependency-description": {
+		"message": "提供方没有适用于目标环境的必要依赖。如有需要，请手动安装兼容依赖。"
+	},
+	"instance.upgrade.result.warning-incompatible-dependency-headline": {
+		"message": "依赖项可能不兼容"
+	},
+	"instance.upgrade.result.warning-incompatible-dependency-description": {
+		"message": "某个依赖无法满足已选版本。如果游戏出现问题，请检查或禁用受影响的内容。"
+	},
+	"instance.upgrade.result.warning-search-limit-headline": { "message": "无法完整验证兼容性" },
+	"instance.upgrade.result.warning-search-limit-description": {
+		"message": "有限的兼容性搜索未能确认完整结果。如果游戏出现问题，请检查此内容。"
+	},
+	"instance.upgrade.result.warning-resolved-headline": { "message": "已采用兼容回退方案" },
+	"instance.upgrade.result.warning-resolved-description": {
+		"message": "此警告出现在规划过程中，但内容已成功升级，无需立即处理。"
+	},
+	"instance.upgrade.result.warning-search": { "message": "搜索兼容性提醒" },
+	"instance.upgrade.result.warning-filters": { "message": "筛选兼容性提醒" },
+	"instance.upgrade.result.warning-filter-unidentified": { "message": "无法识别" },
+	"instance.upgrade.result.warning-filter-fallback": { "message": "兼容回退" },
+	"instance.upgrade.result.no-matching-warnings": { "message": "未找到匹配的兼容性提醒" },
+	"instance.upgrade.result.warning-disabled-headline": { "message": "此内容已被禁用" },
+	"instance.upgrade.result.warning-disabled-description": {
+		"message": "此内容仍保留在磁盘上，但已被禁用，不会影响升级后的实例。"
+	}
 }

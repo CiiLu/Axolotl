@@ -8345,5 +8345,119 @@
 	"app.instance.mods.post-upgrade-notice.item-tooltip": {
 		"message": "This content was preserved during the instance upgrade without installing a new compatible version. It may be incompatible with the current Minecraft version."
 	},
-	"app.instance.post-upgrade-status": { "message": "Upgraded to {version}" }
+	"app.instance.post-upgrade-status": { "message": "Upgraded to {version}" },
+	"instance.upgrade.result.warning-summary-local": {
+		"message": "{count, plural, one {# local item could not be identified} other {# local items could not be identified}}"
+	},
+	"instance.upgrade.result.warning-summary-kept": {
+		"message": "{count, plural, one {# item kept its previous version} other {# items kept their previous version}}"
+	},
+	"instance.upgrade.result.warning-summary-fallback": {
+		"message": "{count, plural, one {# item used another compatibility fallback} other {# items used another compatibility fallback}}"
+	},
+	"instance.upgrade.result.warning-reassurance": {
+		"message": "These warnings did not prevent the upgrade from completing. If the upgraded instance runs normally, no immediate action is required."
+	},
+	"instance.upgrade.result.warning-unidentified-headline": {
+		"message": "This content was kept unchanged"
+	},
+	"instance.upgrade.result.warning-unidentified-description": {
+		"message": "The launcher could not confirm whether it supports Minecraft {targetVersion}. If you notice problems, try disabling it temporarily."
+	},
+	"instance.upgrade.result.warning-unsupported-headline": {
+		"message": "This content type was kept unchanged"
+	},
+	"instance.upgrade.result.warning-unsupported-description": {
+		"message": "This content type cannot be upgraded automatically. Check for a manual update if problems occur."
+	},
+	"instance.upgrade.result.warning-kept-headline": { "message": "The previous version was kept" },
+	"instance.upgrade.result.warning-kept-description": {
+		"message": "No verified compatible replacement was selected. Update it manually or disable it if the game has problems."
+	},
+	"instance.upgrade.result.warning-prerelease-headline": {
+		"message": "A prerelease version was used"
+	},
+	"instance.upgrade.result.warning-prerelease-description": {
+		"message": "This item used an alpha, beta, or release-candidate build because no stable target build was available."
+	},
+	"instance.upgrade.result.warning-shader-headline": {
+		"message": "Shader compatibility could not be confirmed"
+	},
+	"instance.upgrade.result.warning-shader-description": {
+		"message": "The shader was preserved, but compatibility with the target shader runtime is unknown. Disable it if rendering problems occur."
+	},
+	"instance.upgrade.result.warning-dependency-headline": {
+		"message": "A dependency needed a compatibility fallback"
+	},
+	"instance.upgrade.result.warning-dependency-description": {
+		"message": "The upgrade completed, but this dependency could not be verified normally. Review it if the game fails to start."
+	},
+	"instance.upgrade.result.warning-legacy-headline": { "message": "Compatibility needs attention" },
+	"instance.upgrade.result.technical-details": { "message": "Technical details" },
+	"instance.upgrade.result.relative-path": { "message": "Relative path" },
+	"instance.upgrade.result.warning-code": { "message": "Warning" },
+	"instance.upgrade.result.provider-identity": { "message": "Provider identity" },
+	"instance.upgrade.result.local-content": { "message": "Local content" },
+	"instance.upgrade.result.content-kind-content": { "message": "Content" },
+	"instance.upgrade.result.content-kind-mod": { "message": "Mod" },
+	"instance.upgrade.result.content-kind-resourcepack": { "message": "Resource pack" },
+	"instance.upgrade.result.content-kind-shaderpack": { "message": "Shader pack" },
+	"instance.upgrade.result.content-kind-datapack": { "message": "Data pack" },
+	"instance.upgrade.result.search-details": { "message": "Search upgrade details" },
+	"instance.upgrade.result.filters": { "message": "Filter upgrade details" },
+	"instance.upgrade.result.filter-all": { "message": "All" },
+	"instance.upgrade.result.filter-updated": { "message": "Updated" },
+	"instance.upgrade.result.filter-kept": { "message": "Kept" },
+	"instance.upgrade.result.filter-disabled": { "message": "Disabled" },
+	"instance.upgrade.result.filter-dependencies": { "message": "Dependencies" },
+	"instance.upgrade.result.showing": { "message": "Showing {start}–{end} of {total}" },
+	"instance.upgrade.result.previous": { "message": "Previous" },
+	"instance.upgrade.result.next": { "message": "Next" },
+	"instance.upgrade.result.no-matching-items": { "message": "No matching upgrade items." },
+	"instance.upgrade.result.dependency": { "message": "Dependency" },
+	"instance.upgrade.result.dependency-added": { "message": "Dependency added" },
+	"instance.upgrade.result.dependency-updated-status": { "message": "Dependency updated" },
+	"instance.upgrade.result.dependency-kept": { "message": "Dependency kept" },
+	"instance.upgrade.result.dependency-removed-status": { "message": "Dependency removed" },
+	"instance.upgrade.result.warning-conflict-headline": {
+		"message": "Some dependency requirements conflicted"
+	},
+	"instance.upgrade.result.warning-conflict-description": {
+		"message": "This content requested dependency versions that could not all be used together. Review its dependencies if the game fails to start."
+	},
+	"instance.upgrade.result.warning-missing-dependency-headline": {
+		"message": "A required dependency could not be found"
+	},
+	"instance.upgrade.result.warning-missing-dependency-description": {
+		"message": "The provider did not offer a required dependency for the target environment. Install a compatible dependency manually if needed."
+	},
+	"instance.upgrade.result.warning-incompatible-dependency-headline": {
+		"message": "A dependency may be incompatible"
+	},
+	"instance.upgrade.result.warning-incompatible-dependency-description": {
+		"message": "A dependency could not satisfy the selected versions. Review or disable the affected content if the game has problems."
+	},
+	"instance.upgrade.result.warning-search-limit-headline": {
+		"message": "Compatibility could not be fully verified"
+	},
+	"instance.upgrade.result.warning-search-limit-description": {
+		"message": "The bounded compatibility search could not prove a complete result. Review this content if the game has problems."
+	},
+	"instance.upgrade.result.warning-resolved-headline": {
+		"message": "A compatibility fallback was applied"
+	},
+	"instance.upgrade.result.warning-resolved-description": {
+		"message": "This warning occurred while planning, but the content was upgraded successfully. No immediate action is required."
+	},
+	"instance.upgrade.result.warning-search": { "message": "Search compatibility warnings" },
+	"instance.upgrade.result.warning-filters": { "message": "Filter compatibility warnings" },
+	"instance.upgrade.result.warning-filter-unidentified": { "message": "Unidentified" },
+	"instance.upgrade.result.warning-filter-fallback": { "message": "Compatibility fallback" },
+	"instance.upgrade.result.no-matching-warnings": {
+		"message": "No matching compatibility warnings."
+	},
+	"instance.upgrade.result.warning-disabled-headline": { "message": "This content was disabled" },
+	"instance.upgrade.result.warning-disabled-description": {
+		"message": "The content was preserved on disk but disabled to avoid affecting the upgraded instance."
+	}
 }
