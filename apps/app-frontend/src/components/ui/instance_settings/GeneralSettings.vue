@@ -297,7 +297,7 @@ const messages = defineMessages({
 	},
 	gameDirIsolated: {
 		id: 'instance.settings.tabs.general.game-dir.isolated',
-		defaultMessage: 'Version isolated (stored in versions/<name>/)',
+		defaultMessage: 'Version isolated (stored in versions/)',
 	},
 	gameDirNotIsolated: {
 		id: 'instance.settings.tabs.general.game-dir.not-isolated',

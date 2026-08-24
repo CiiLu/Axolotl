@@ -3,6 +3,7 @@ import type {
 	AbstractWebNotificationManager,
 	CreationFlowContextValue,
 	CreationFlowModal,
+	SymlinkMethodChoice,
 } from '@modrinth/ui'
 import { defineMessages, useVIntl } from '@modrinth/ui'
 import { inject, provide, ref, useTemplateRef } from 'vue'
@@ -203,21 +204,30 @@ export function setupCreationModal(
 				const chooseImportMethod: (options: {
 					instanceNames: string[]
 					symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
-				}) => Promise<boolean> = inject('chooseImportMethod')!
+				}) => Promise<SymlinkMethodChoice[]> = inject('chooseImportMethod')!
 
-				const useSymlink = await chooseImportMethod({
+				const choices = await chooseImportMethod({
 					instanceNames: instanceEntries.map((e) => e.instanceName),
 					symlinkCapable: capability,
 				})
 
+				if (choices.length === 0) return
+
+				const choiceByInstanceName = new Map(choices.map((choice) => [choice.instanceName, choice]))
+
 				for (const entry of instanceEntries) {
+					const choice = choiceByInstanceName.get(entry.instanceName)
 					try {
 						const job = await import_instance(
 							entry.launcherType,
 							entry.path,
 							entry.instanceName,
-							useSymlink,
+							choice?.symlink ?? false,
 							entry.instancePath,
+							undefined,
+							undefined,
+							undefined,
+							choice?.gameDirOverride ?? null,
 						)
 						await wait_for_install_job(job.job_id)
 					} catch (error) {

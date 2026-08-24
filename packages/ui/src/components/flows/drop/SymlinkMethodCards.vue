@@ -58,25 +58,6 @@
 					</div>
 
 					<div class="flex flex-col gap-2">
-						<span class="text-sm font-semibold text-contrast">
-							{{ formatMessage(messages.gameDirLabel) }}
-						</span>
-						<RadioButtons v-model="gameDirMode" :items="gameDirModeItems">
-							<template #default="{ item }">
-								{{ formatMessage(gameDirModeLabel(item)) }}
-							</template>
-						</RadioButtons>
-						<ButtonStyled v-if="gameDirMode !== 'isolated'" type="outlined">
-							<button @click="pickGameDir">
-								{{ formatMessage(messages.gameDirChooseFolder) }}
-							</button>
-						</ButtonStyled>
-						<span v-if="gameDirOverride" class="text-sm text-secondary break-all">
-							{{ gameDirOverride }}
-						</span>
-					</div>
-
-					<div class="flex flex-col gap-2">
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-semibold text-contrast">
 								{{ formatMessage(messages.statsLabel) }}
@@ -295,6 +276,25 @@
 									</template>
 								</StyledInput>
 							</div>
+						</div>
+
+						<div class="flex flex-col gap-2">
+							<span class="text-sm font-semibold text-contrast">
+								{{ formatMessage(messages.gameDirLabel) }}
+							</span>
+							<RadioButtons v-model="gameDirMode" :items="gameDirModeItems">
+								<template #default="{ item }">
+									{{ formatMessage(gameDirModeLabel(item)) }}
+								</template>
+							</RadioButtons>
+							<ButtonStyled v-if="gameDirMode !== 'isolated'" type="outlined">
+								<button @click="pickGameDir">
+									{{ formatMessage(messages.gameDirChooseFolder) }}
+								</button>
+							</ButtonStyled>
+							<span v-if="gameDirOverride" class="text-sm text-secondary break-all">
+								{{ gameDirOverride }}
+							</span>
 						</div>
 
 						<div v-if="planError" class="text-xs text-danger">{{ planError }}</div>

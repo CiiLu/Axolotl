@@ -308,6 +308,9 @@
   "console.command.disabled-placeholder": {
     "defaultMessage": "Command input disabled"
   },
+  "console.command.placeholder": {
+    "defaultMessage": "Send a command"
+  },
   "console.command.server-not-running-placeholder": {
     "defaultMessage": "Server is not running"
   },
@@ -615,7 +618,7 @@
     "defaultMessage": "No logs yet"
   },
   "console.empty.server-description": {
-    "defaultMessage": "Click the green start button to start the server!"
+    "defaultMessage": "Click the start button to start the server!"
   },
   "console.empty.server-title": {
     "defaultMessage": "Welcome to your Modrinth server!"
@@ -1073,6 +1076,21 @@
   "creation-flow.modal.custom-setup.content-loader.label": {
     "defaultMessage": "Content loader"
   },
+  "creation-flow.modal.custom-setup.game-dir.choose-folder": {
+    "defaultMessage": "Choose folder"
+  },
+  "creation-flow.modal.custom-setup.game-dir.custom": {
+    "defaultMessage": "Custom"
+  },
+  "creation-flow.modal.custom-setup.game-dir.isolated": {
+    "defaultMessage": "Version isolated (stored in versions/)"
+  },
+  "creation-flow.modal.custom-setup.game-dir.label": {
+    "defaultMessage": "Game directory"
+  },
+  "creation-flow.modal.custom-setup.game-dir.not-isolated": {
+    "defaultMessage": "Not isolated (shared .minecraft folder)"
+  },
   "creation-flow.modal.custom-setup.game-version-type.alpha": {
     "defaultMessage": "April Fools"
   },
@@ -1346,6 +1364,21 @@
   "drop.symlink_method.detecting": {
     "defaultMessage": "Detecting..."
   },
+  "drop.symlink_method.game-dir.choose-folder": {
+    "defaultMessage": "Choose folder"
+  },
+  "drop.symlink_method.game-dir.custom": {
+    "defaultMessage": "Custom"
+  },
+  "drop.symlink_method.game-dir.isolated": {
+    "defaultMessage": "Version isolated"
+  },
+  "drop.symlink_method.game-dir.label": {
+    "defaultMessage": "Game directory"
+  },
+  "drop.symlink_method.game-dir.not-isolated": {
+    "defaultMessage": "Not isolated (shared .minecraft folder)"
+  },
   "drop.symlink_method.game_version": {
     "defaultMessage": "Game version"
   },
@@ -1546,6 +1579,9 @@
   },
   "files.delete-modal.warning.folder": {
     "defaultMessage": "This folder and all its contents will be permanently deleted. This action cannot be undone."
+  },
+  "files.editor.editor-unavailable-placeholder": {
+    "defaultMessage": "Code editor unavailable"
   },
   "files.editor.failed-to-open-text": {
     "defaultMessage": "Could not load file contents."
@@ -1761,7 +1797,7 @@
     "defaultMessage": "Unsaved changes"
   },
   "files.validation.name-invalid-directory": {
-    "defaultMessage": "Name must contain only alphanumeric characters, dashes, underscores, or spaces."
+    "defaultMessage": "Name must contain only alphanumeric characters, dashes, underscores, dots, or spaces."
   },
   "files.validation.name-invalid-file": {
     "defaultMessage": "Name must contain only alphanumeric characters, dashes, underscores, dots, or spaces."

@@ -44,10 +44,7 @@
 					{{ formatMessage(gameDirModeLabel(item)) }}
 				</template>
 			</RadioButtons>
-			<div
-				v-if="gameDirMode !== 'isolated'"
-				class="flex items-center gap-2"
-			>
+			<div v-if="gameDirMode !== 'isolated'" class="flex items-center gap-2">
 				<ButtonStyled type="outlined">
 					<button @click="pickGameDir">
 						{{ formatMessage(messages.gameDirChooseFolder) }}
@@ -276,7 +273,7 @@ const messages = defineMessages({
 	},
 	gameDirIsolated: {
 		id: 'creation-flow.modal.custom-setup.game-dir.isolated',
-		defaultMessage: 'Version isolated (stored in versions/<name>/)',
+		defaultMessage: 'Version isolated (stored in versions/)',
 	},
 	gameDirNotIsolated: {
 		id: 'creation-flow.modal.custom-setup.game-dir.not-isolated',
