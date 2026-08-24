@@ -1908,6 +1908,7 @@ async fn install_file_from_resolution_plan(
                 .is_some_and(|project_id| {
                     excluded_project_ids.contains(&project_id)
                 }),
+            ContentProviderRef::McArchive { .. } => false,
         };
         if excluded {
             result
@@ -2051,6 +2052,16 @@ async fn install_file_from_resolution_plan(
                             false
                         }
                     }
+                }
+                ContentProviderRef::McArchive { .. } => {
+                    result.skipped_dependencies.push(
+                        CurseForgeSkippedDependency {
+                            project_id: 0,
+                            file_id: None,
+                            reason: "unsupported_provider".to_string(),
+                        },
+                    );
+                    false
                 }
             };
             if installed_node {
@@ -2277,6 +2288,7 @@ fn curseforge_project_id(reference: &ContentProviderRef) -> Option<u32> {
             Some(project_id.get())
         }
         ContentProviderRef::Modrinth { .. } => None,
+        ContentProviderRef::McArchive { .. } => None,
     }
 }
 
@@ -2286,6 +2298,7 @@ fn curseforge_file_id(reference: &ContentProviderRef) -> Option<u32> {
             file_id.map(CurseForgeFileId::get)
         }
         ContentProviderRef::Modrinth { .. } => None,
+        ContentProviderRef::McArchive { .. } => None,
     }
 }
 

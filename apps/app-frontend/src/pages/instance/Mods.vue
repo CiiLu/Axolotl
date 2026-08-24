@@ -183,6 +183,7 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
 import {
+	BookOpenIcon,
 	ClipboardCopyIcon,
 	ExternalIcon,
 	FileIcon,
@@ -231,7 +232,7 @@ import { useWorldDatapacks } from '@/composables/useWorldDatapacks'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
 import { applyContentItemUpdates, matchesContentItem } from '@/helpers/content-item-state'
-import { translateContentItemTitles } from '@/helpers/content-search'
+import { lookupContentWikiIds, translateContentItemTitles } from '@/helpers/content-search'
 import { type CurseForgeFile, getCurseForgeChangelog } from '@/helpers/curseforge'
 import {
 	type CurseForgeManualDownloadItem,
@@ -403,6 +404,10 @@ const messages = defineMessages({
 		id: 'app.instance.mods.pack-member-removed',
 		defaultMessage: 'This modpack file was removed locally',
 	},
+	openInMcmod: {
+		id: 'app.project.open-in-mcmod',
+		defaultMessage: 'Open in MC Mod',
+	},
 })
 
 let savedModalState: ModpackContentModalState | null = null
@@ -447,9 +452,12 @@ const loading = ref(!hasPreloadedContent(props.preloadedContent))
 const contentSnapshot = ref<InstanceContentData['snapshot'] | null>(null)
 const projects = ref<ContentItem[]>([])
 const linkedModpackContentItems = ref<ContentItem[]>([])
+const mcmodUrls = ref(new Map<string, string>())
 const visibleMetadataRequestedPaths = new Set<string>()
 const visibleMetadataPendingPaths = new Set<string>()
 let visibleMetadataRefreshRunning = false
+let mcmodLookupVersion = 0
+let isUnmounted = false
 const contentWarnings = computed(() => contentSnapshot.value?.warnings ?? [])
 const contentWarningExpanded = ref(true)
 
@@ -487,6 +495,69 @@ watch(projects, (newProjects) => {
 		installingBuffer.value = []
 	}
 })
+
+function getMcmodLookup(item: ContentItem) {
+	const provider = item.origin_provider ?? item.provider_refs[0]?.provider
+	const slug = item.project?.slug
+	if (!slug || (provider !== 'modrinth' && provider !== 'curseforge')) return null
+
+	return { provider, slug }
+}
+
+function getMcmodLookupKey(provider: 'modrinth' | 'curseforge', slug: string) {
+	return `${provider}:${slug}`
+}
+
+function getMcmodUrl(item: ContentItem) {
+	const lookup = getMcmodLookup(item)
+	return lookup ? mcmodUrls.value.get(getMcmodLookupKey(lookup.provider, lookup.slug)) : undefined
+}
+
+async function refreshMcmodUrls(items: ContentItem[]) {
+	const lookupVersion = ++mcmodLookupVersion
+	const modrinthSlugs = new Set<string>()
+	const curseForgeSlugs = new Set<string>()
+
+	for (const item of items) {
+		const lookup = getMcmodLookup(item)
+		if (!lookup) continue
+		if (lookup.provider === 'modrinth') modrinthSlugs.add(lookup.slug)
+		else curseForgeSlugs.add(lookup.slug)
+	}
+
+	if (modrinthSlugs.size === 0 && curseForgeSlugs.size === 0) {
+		mcmodUrls.value = new Map()
+		return
+	}
+
+	const wikiIds = await lookupContentWikiIds([...modrinthSlugs], [...curseForgeSlugs]).catch(
+		() => null,
+	)
+	if (isUnmounted || lookupVersion !== mcmodLookupVersion) return
+
+	const urls = new Map<string, string>()
+	for (const slug of modrinthSlugs) {
+		const wikiId = wikiIds?.modrinth[slug]
+		if (wikiId) {
+			urls.set(getMcmodLookupKey('modrinth', slug), `https://www.mcmod.cn/class/${wikiId}.html`)
+		}
+	}
+	for (const slug of curseForgeSlugs) {
+		const wikiId = wikiIds?.curseforge[slug]
+		if (wikiId) {
+			urls.set(getMcmodLookupKey('curseforge', slug), `https://www.mcmod.cn/class/${wikiId}.html`)
+		}
+	}
+	mcmodUrls.value = urls
+}
+
+watch(
+	[projects, linkedModpackContentItems],
+	([contentItems, linkedContentItems]) => {
+		void refreshMcmodUrls([...contentItems, ...linkedContentItems])
+	},
+	{ immediate: true },
+)
 
 const manualDownloadCandidates = computed<CurseForgeManualDownloadItem[]>(() => {
 	const stored = (contentSnapshot.value?.pendingManualDownloads ?? [])
@@ -812,7 +883,6 @@ const isModpackUpdating = ref(false)
 const isBulkOperating = ref(false)
 const isInstanceBusy = computed(() => props.instance?.install_stage !== 'installed')
 let contentRequestGeneration = 0
-let isUnmounted = false
 
 function isCurrentContentRequest(instanceId: string, generation: number) {
 	return (
@@ -2446,6 +2516,15 @@ function getOverflowOptions(item: ContentItem): OverflowMenuOption[] {
 		})
 	}
 
+	const mcmodUrl = getMcmodUrl(item)
+	if (mcmodUrl) {
+		options.push({
+			id: formatMessage(messages.openInMcmod),
+			icon: BookOpenIcon,
+			action: () => void openUrl(mcmodUrl),
+		})
+	}
+
 	return options
 }
 
@@ -2609,6 +2688,10 @@ provideAppBackup({
 
 const cachedHint = readInstanceCache(props.instance.id)
 const showContentHint = ref(cachedHint?.modpackHintDismissed !== true)
+const instanceContentProjectQuery = computed(() => ({
+	i: props.instance.id,
+	from: 'instance-content',
+}))
 function dismissContentHint() {
 	showContentHint.value = false
 	writeInstanceCache(props.instance.id, { modpackHintDismissed: true })
@@ -2619,6 +2702,11 @@ provideContentManager({
 	duplicateItems: duplicateModItems,
 	loading,
 	error: ref(null),
+	filterOptionsReady: computed(
+		() =>
+			!loading.value &&
+			mergedProjects.value.length + displayedLinkedModpackContentItems.value.length > 0,
+	),
 	modpackItems: displayedLinkedModpackContentItems,
 	modpack: computed(() => {
 		if (linkedModpackProject.value) {
@@ -2626,14 +2714,14 @@ provideContentManager({
 				project: displayedModpackProject.value ?? linkedModpackProject.value,
 				projectLink: {
 					path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}`,
-					query: { i: props.instance.id },
+					query: instanceContentProjectQuery.value,
 				},
 				version: linkedModpackVersion.value ?? undefined,
 				versionLink:
 					linkedModpackProject.value && linkedModpackVersion.value
 						? {
 								path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}/version/${linkedModpackVersion.value.id}`,
-								query: { i: props.instance.id },
+								query: instanceContentProjectQuery.value,
 							}
 						: undefined,
 				owner: linkedModpackOwner.value
@@ -2659,7 +2747,7 @@ provideContentManager({
 				project: curseForgeModpackFallbackProject.value,
 				projectLink: {
 					path: `/project/curseforge/${props.instance.link?.project_id}`,
-					query: { i: props.instance.id },
+					query: instanceContentProjectQuery.value,
 				},
 				categories: [],
 				hasUpdate: false,
@@ -2758,7 +2846,7 @@ provideContentManager({
 								: effectiveProvider === 'curseforge'
 									? `/project/curseforge/${item.project.id}`
 									: `/project/${item.project.id}`,
-						query: { i: props.instance.id },
+						query: instanceContentProjectQuery.value,
 					}
 				: undefined
 
@@ -2769,7 +2857,7 @@ provideContentManager({
 			item.version?.id
 				? {
 						path: `/project/${item.project.id}/version/${item.version.id}`,
-						query: { i: props.instance.id },
+						query: instanceContentProjectQuery.value,
 					}
 				: undefined
 

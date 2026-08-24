@@ -155,45 +155,6 @@
   "app.action-bar.view-logs": {
     "message": "View logs"
   },
-  "app.ai-log-analysis.analyzing": {
-    "message": "Analyzing your log with AI...It may take up to half a minute to complete."
-  },
-  "app.ai-log-analysis.cancel": {
-    "message": "Cancel"
-  },
-  "app.ai-log-analysis.close": {
-    "message": "Close"
-  },
-  "app.ai-log-analysis.copy-link": {
-    "message": "Copy link"
-  },
-  "app.ai-log-analysis.copy-result": {
-    "message": "Copy result"
-  },
-  "app.ai-log-analysis.error": {
-    "message": "AI analysis failed: {message}"
-  },
-  "app.ai-log-analysis.link-copied": {
-    "message": "Link copied to your clipboard"
-  },
-  "app.ai-log-analysis.logshare-unavailable": {
-    "message": "LogShare.CN is unavailable, so AI analysis cannot be used (mclo.gs does not support AI analysis). {message}"
-  },
-  "app.ai-log-analysis.privacy": {
-    "message": "Your log content will be uploaded and sent to a third-party AI service to be analyzed. Treat it as public information."
-  },
-  "app.ai-log-analysis.result-copied": {
-    "message": "Analysis copied to your clipboard"
-  },
-  "app.ai-log-analysis.title": {
-    "message": "AI log analysis"
-  },
-  "app.ai-log-analysis.upload-failed": {
-    "message": "Upload failed, analyzing the log content directly without a share link."
-  },
-  "app.ai-log-analysis.uploading": {
-    "message": "Uploading your log..."
-  },
   "app.ai-settings.add-model": {
     "message": "Add model"
   },
@@ -743,8 +704,14 @@
   "app.browse.source.curseforge": {
     "message": "CurseForge"
   },
+  "app.browse.source.mcarchive": {
+    "message": "MCArchive"
+  },
   "app.browse.source.modrinth": {
     "message": "Modrinth"
+  },
+  "app.browse.source.planet-minecraft": {
+    "message": "Planet Minecraft"
   },
   "app.community-announcement.feedback-middle": {
     "message": ", or share them with us through "
@@ -970,6 +937,51 @@
   },
   "app.content.install-content": {
     "message": "Install content"
+  },
+  "app.crash-analysis.ai.action": {
+    "message": "Use AI to explain"
+  },
+  "app.crash-analysis.ai.analyzing": {
+    "message": "Explaining the crash..."
+  },
+  "app.crash-analysis.ai.close": {
+    "message": "Close"
+  },
+  "app.crash-analysis.ai.copied": {
+    "message": "AI explanation copied to your clipboard"
+  },
+  "app.crash-analysis.ai.copy": {
+    "message": "Copy explanation"
+  },
+  "app.crash-analysis.ai.disclaimer": {
+    "message": "A sanitized and shortened crash context is sent directly to the AI provider configured in this launcher. AI output may be inaccurate."
+  },
+  "app.crash-analysis.ai.error": {
+    "message": "AI explanation failed: {message}"
+  },
+  "app.crash-analysis.ai.settings.description": {
+    "message": "Optionally send a sanitized and shortened crash context to a model configured in AI Providers."
+  },
+  "app.crash-analysis.ai.settings.enabled": {
+    "message": "Enable AI explanations"
+  },
+  "app.crash-analysis.ai.settings.enabled-description": {
+    "message": "Local rule-based crash analysis remains available without AI."
+  },
+  "app.crash-analysis.ai.settings.model": {
+    "message": "Text model"
+  },
+  "app.crash-analysis.ai.settings.no-providers": {
+    "message": "Enable a provider and a text model above before using AI crash explanations."
+  },
+  "app.crash-analysis.ai.settings.provider": {
+    "message": "AI provider"
+  },
+  "app.crash-analysis.ai.settings.title": {
+    "message": "Crash AI explanation"
+  },
+  "app.crash-analysis.ai.title": {
+    "message": "AI crash explanation"
   },
   "app.curseforge.automatic-downloads-failed.notification-body": {
     "message": "{failed, number} files failed after retrying ({list}). See Downloads for the recorded errors."
@@ -4730,12 +4742,6 @@
   "app.minecraft-auth.what-happened": {
     "message": "What we think happened"
   },
-  "app.minecraft-crash.ai-analyze": {
-    "message": "AI analysis"
-  },
-  "app.minecraft-crash.ai-unavailable": {
-    "message": "AI analysis is not supported by the current log service (mclo.gs). Switch to LogShare.CN in Settings to use it."
-  },
   "app.minecraft-crash.analyzing": {
     "message": "Analyzing the logs from this launch..."
   },
@@ -4840,6 +4846,9 @@
   },
   "app.minecraft-crash.share-failed": {
     "message": "Failed to share the diagnostic"
+  },
+  "app.minecraft-crash.share-ready": {
+    "message": "Diagnostic link is ready to share"
   },
   "app.minecraft-crash.share-truncated": {
     "message": "The diagnostic log is too large, so only the last 9 MB was uploaded."
@@ -5555,11 +5564,86 @@
   "app.project.install-context.back-to-browse": {
     "message": "Back to discover"
   },
+  "app.project.install-context.back-to-instance-content": {
+    "message": "Back to instance content"
+  },
   "app.project.install-context.install-content-to-instance": {
     "message": "Install content to instance"
   },
+  "app.project.mcarchive.install": {
+    "message": "Install"
+  },
+  "app.project.mcarchive.installed": {
+    "message": "Installed {fileName}"
+  },
+  "app.project.mcarchive.loading": {
+    "message": "Loading MCArchive project…"
+  },
+  "app.project.mcarchive.manual.archive-filter": {
+    "message": "Minecraft archives"
+  },
+  "app.project.mcarchive.manual.description": {
+    "message": "{fileName} has no verifiable direct download. Download it from the source page, then import the downloaded file."
+  },
+  "app.project.mcarchive.manual.import-file": {
+    "message": "Import downloaded file"
+  },
+  "app.project.mcarchive.manual.open-source": {
+    "message": "Open source page"
+  },
+  "app.project.mcarchive.manual.pick-file": {
+    "message": "Choose downloaded archive"
+  },
+  "app.project.mcarchive.manual.title": {
+    "message": "Manual download required"
+  },
+  "app.project.mcarchive.no-files": {
+    "message": "No files are available for this release."
+  },
+  "app.project.mcarchive.sha256": {
+    "message": "SHA-256"
+  },
+  "app.project.mcarchive.source": {
+    "message": "MCArchive source"
+  },
+  "app.project.mcarchive.versions": {
+    "message": "Versions"
+  },
   "app.project.open-in-mcmod": {
     "message": "Open in MC Mod"
+  },
+  "app.project.planet-minecraft.install": {
+    "message": "Install"
+  },
+  "app.project.planet-minecraft.installed": {
+    "message": "Installed {fileName}"
+  },
+  "app.project.planet-minecraft.loading": {
+    "message": "Loading Planet Minecraft project…"
+  },
+  "app.project.planet-minecraft.manual.archive-filter": {
+    "message": "Minecraft archives"
+  },
+  "app.project.planet-minecraft.manual.description": {
+    "message": "{fileName} must be downloaded from Planet Minecraft, then imported here."
+  },
+  "app.project.planet-minecraft.manual.import-file": {
+    "message": "Import downloaded file"
+  },
+  "app.project.planet-minecraft.manual.open-source": {
+    "message": "Open source page"
+  },
+  "app.project.planet-minecraft.manual.pick-file": {
+    "message": "Choose downloaded archive"
+  },
+  "app.project.planet-minecraft.manual.title": {
+    "message": "Manual download required"
+  },
+  "app.project.planet-minecraft.unknown-file": {
+    "message": "Downloaded file"
+  },
+  "app.project.planet-minecraft.versions": {
+    "message": "Downloads"
   },
   "app.project.translation.failed": {
     "message": "Translation failed. The original content was kept. Try again."
@@ -6412,30 +6496,6 @@
   },
   "app.settings.java.view-installed": {
     "message": "View installed Java"
-  },
-  "app.settings.logs.description": {
-    "message": "Choose the service used to analyze and share Minecraft logs. LogShare.CN is preferred and mclo.gs is used as a fallback so sharing keeps working."
-  },
-  "app.settings.logs.provider.auto": {
-    "message": "Automatic (recommended)"
-  },
-  "app.settings.logs.provider.auto-description": {
-    "message": "Prefers LogShare.CN, automatically switching to mclo.gs when it is unavailable."
-  },
-  "app.settings.logs.provider.logshare": {
-    "message": "LogShare.CN"
-  },
-  "app.settings.logs.provider.logshare-description": {
-    "message": "Uses LogShare.CN for analysis and sharing, including AI analysis, falling back to mclo.gs when unavailable."
-  },
-  "app.settings.logs.provider.mclogs": {
-    "message": "mclo.gs"
-  },
-  "app.settings.logs.provider.mclogs-description": {
-    "message": "Uses mclo.gs for analysis and sharing. AI analysis is not available."
-  },
-  "app.settings.logs.title": {
-    "message": "Log analysis service"
   },
   "app.settings.privacy.data-handling": {
     "message": "Telemetry uses a random installation identifier. Error context is sanitized and limited before it leaves this device. Turning telemetry off clears pending reports immediately."
@@ -7964,6 +8024,81 @@
   "instance.server-modal.resource-pack": {
     "message": "Resource pack"
   },
+  "instance.settings.tabs.core-components": {
+    "message": "Core components"
+  },
+  "instance.settings.tabs.core-components.add": {
+    "message": "Add to Minecraft.jar"
+  },
+  "instance.settings.tabs.core-components.failure": {
+    "message": "Failure"
+  },
+  "instance.settings.tabs.core-components.import-modloader": {
+    "message": "Import verified ModLoader archive"
+  },
+  "instance.settings.tabs.core-components.jar-filter": {
+    "message": "Minecraft archives"
+  },
+  "instance.settings.tabs.core-components.jar-mod": {
+    "message": "JAR mod"
+  },
+  "instance.settings.tabs.core-components.modloader": {
+    "message": "Install ModLoader"
+  },
+  "instance.settings.tabs.core-components.modloader-installed": {
+    "message": "Installed ModLoader {fileName}"
+  },
+  "instance.settings.tabs.core-components.modloader-manual": {
+    "message": "{fileName} needs a manual download. Download it from the source page, then import the verified archive here."
+  },
+  "instance.settings.tabs.core-components.move-down": {
+    "message": "Move down"
+  },
+  "instance.settings.tabs.core-components.move-up": {
+    "message": "Move up"
+  },
+  "instance.settings.tabs.core-components.open-source": {
+    "message": "Open source page"
+  },
+  "instance.settings.tabs.core-components.pick-jar": {
+    "message": "Choose core archive"
+  },
+  "instance.settings.tabs.core-components.pick-modloader": {
+    "message": "Choose downloaded ModLoader archive"
+  },
+  "instance.settings.tabs.core-components.preview": {
+    "message": "Preview assembled JAR"
+  },
+  "instance.settings.tabs.core-components.previewed": {
+    "message": "Assembled {components} components into {entries} entries"
+  },
+  "instance.settings.tabs.core-components.remove": {
+    "message": "Remove"
+  },
+  "instance.settings.tabs.core-components.replace": {
+    "message": "Replace Minecraft.jar"
+  },
+  "instance.settings.tabs.core-components.replacement": {
+    "message": "Replacement JAR"
+  },
+  "instance.settings.tabs.core-components.restore": {
+    "message": "Restore"
+  },
+  "instance.settings.tabs.core-components.sha1": {
+    "message": "SHA-1"
+  },
+  "instance.settings.tabs.core-components.sha256": {
+    "message": "SHA-256"
+  },
+  "instance.settings.tabs.core-components.source": {
+    "message": "Source"
+  },
+  "instance.settings.tabs.core-components.target-version": {
+    "message": "Target Minecraft version"
+  },
+  "instance.settings.tabs.core-components.title": {
+    "message": "Core components"
+  },
   "instance.settings.tabs.general": {
     "message": "General"
   },
@@ -8350,6 +8485,15 @@
   },
   "minecraft-account.third-party-profile.title": {
     "message": "Select a profile"
+  },
+  "project.actions.view-dependents": {
+    "message": "View dependents"
+  },
+  "project.actions.view-modpacks": {
+    "message": "View modpacks"
+  },
+  "project.actions.view-project-type-dependents": {
+    "message": "View {projectType} dependents"
   },
   "project.description.title": {
     "message": "Description"

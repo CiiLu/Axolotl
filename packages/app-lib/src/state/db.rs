@@ -1004,6 +1004,7 @@ mod tests {
 
     const TERRACOTTA_PUBLIC_NODES_MIGRATION_VERSION: i64 = 20260812120000;
     const INSTANCE_LOADER_COMPONENTS_MIGRATION_VERSION: i64 = 20260819120000;
+    const MCARCHIVE_PROVIDER_FILE_ID_MIGRATION_VERSION: i64 = 20260823020000;
 
     #[tokio::test]
     async fn loader_components_migrate_fresh_and_existing_instances() {
@@ -1149,6 +1150,178 @@ mod tests {
                 .await
                 .unwrap();
         assert!(upgraded_foreign_key_errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn mcarchive_provider_file_ids_migrate_fresh_and_preserve_existing_references()
+     {
+        let fresh = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&fresh)
+            .await
+            .unwrap();
+        MIGRATOR.run(&fresh).await.unwrap();
+        let fresh_has_file_id: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+                SELECT 1 FROM pragma_table_info('instance_content_provider_refs')
+                WHERE name = 'provider_file_id'
+            )",
+        )
+        .fetch_one(&fresh)
+        .await
+        .unwrap();
+        assert!(fresh_has_file_id);
+
+        let upgraded = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&upgraded)
+            .await
+            .unwrap();
+        let previous_migrator = Migrator {
+            migrations: std::borrow::Cow::Owned(
+                MIGRATOR
+                    .iter()
+                    .filter(|migration| {
+                        migration.version
+                            < MCARCHIVE_PROVIDER_FILE_ID_MIGRATION_VERSION
+                    })
+                    .cloned()
+                    .collect(),
+            ),
+            ..Migrator::DEFAULT
+        };
+        previous_migrator.run(&upgraded).await.unwrap();
+        sqlx::raw_sql(
+            r#"
+            INSERT INTO instances (
+                id, path, applied_content_set_id, install_stage,
+                launcher_feature_version, name, created, modified
+            ) VALUES
+                ('mcarchive-migration-instance', 'mcarchive-migration-instance',
+                    'mcarchive-migration-set', 'installed', '1',
+                    'MCArchive migration', 1, 1);
+
+            INSERT INTO instance_content_sets (
+                id, instance_id, name, source_kind, status, game_version,
+                loader, created, modified
+            ) VALUES
+                ('mcarchive-migration-set', 'mcarchive-migration-instance',
+                    'Default', 'local', 'available', '1.6.2', 'vanilla', 1, 1);
+
+            UPDATE instances
+            SET applied_content_set_id = 'mcarchive-migration-set'
+            WHERE id = 'mcarchive-migration-instance';
+
+            INSERT INTO instance_content_entries (
+                id, instance_id, content_set_id, file_id, project_type,
+                source_kind, server_requirement, client_requirement,
+                enabled, added_at, modified_at
+            ) VALUES
+                ('modrinth-reference', 'mcarchive-migration-instance',
+                    'mcarchive-migration-set', NULL, 'mod', 'local',
+                    'required', 'required', 1, 1, 1),
+                ('curseforge-reference', 'mcarchive-migration-instance',
+                    'mcarchive-migration-set', NULL, 'mod', 'local',
+                    'required', 'required', 1, 1, 1),
+                ('mcarchive-reference', 'mcarchive-migration-instance',
+                    'mcarchive-migration-set', NULL, 'mod', 'mcarchive',
+                    'required', 'required', 1, 1, 1);
+
+            INSERT INTO instance_content_provider_refs (
+                content_entry_id, provider, provider_project_id,
+                provider_release_id, is_origin
+            ) VALUES
+                ('modrinth-reference', 'modrinth', 'modrinth-project',
+                    'modrinth-version', 1),
+                ('curseforge-reference', 'curseforge', '42', '7', 1),
+                ('mcarchive-reference', 'mcarchive', 'project-uuid',
+                    'version-uuid', 1);
+            "#,
+        )
+        .execute(&upgraded)
+        .await
+        .unwrap();
+
+        MIGRATOR.run(&upgraded).await.unwrap();
+
+        let references: Vec<(String, String, Option<String>, Option<String>)> =
+            sqlx::query_as(
+                "SELECT provider, provider_project_id, provider_release_id, provider_file_id
+                 FROM instance_content_provider_refs
+                 ORDER BY provider",
+            )
+            .fetch_all(&upgraded)
+            .await
+            .unwrap();
+        assert_eq!(
+            references,
+            vec![
+                (
+                    "curseforge".to_string(),
+                    "42".to_string(),
+                    Some("7".to_string()),
+                    Some("7".to_string()),
+                ),
+                (
+                    "mcarchive".to_string(),
+                    "project-uuid".to_string(),
+                    Some("version-uuid".to_string()),
+                    None,
+                ),
+                (
+                    "modrinth".to_string(),
+                    "modrinth-project".to_string(),
+                    Some("modrinth-version".to_string()),
+                    None,
+                ),
+            ]
+        );
+
+        sqlx::query(
+            "INSERT INTO instance_content_provider_refs (
+                content_entry_id, provider, provider_project_id,
+                provider_release_id, provider_file_id, is_origin
+            ) VALUES (?, 'mcarchive', 'project-uuid', 'version-uuid', 'file-uuid', 0)",
+        )
+        .bind("mcarchive-reference")
+        .execute(&upgraded)
+        .await
+        .unwrap();
+        let mcarchive_file_id: Option<String> = sqlx::query_scalar(
+            "SELECT provider_file_id FROM instance_content_provider_refs
+             WHERE content_entry_id = 'mcarchive-reference'
+               AND provider_file_id = 'file-uuid'",
+        )
+        .fetch_one(&upgraded)
+        .await
+        .unwrap();
+        assert_eq!(mcarchive_file_id.as_deref(), Some("file-uuid"));
+
+        let old_table_exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+                SELECT 1 FROM sqlite_master
+                WHERE type = 'table'
+                    AND name = 'instance_content_provider_refs_old'
+            )",
+        )
+        .fetch_one(&upgraded)
+        .await
+        .unwrap();
+        assert!(!old_table_exists);
+        let foreign_key_errors: Vec<(String, i64, String, i64)> =
+            sqlx::query_as("PRAGMA foreign_key_check")
+                .fetch_all(&upgraded)
+                .await
+                .unwrap();
+        assert!(foreign_key_errors.is_empty());
     }
 
     #[allow(dead_code)]

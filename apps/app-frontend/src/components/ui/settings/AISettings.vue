@@ -1424,7 +1424,8 @@ onMounted(async () => {
 	min-width: 0;
 	flex-direction: column;
 	overflow: hidden;
-	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border: 1px solid
+		var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
 	border-radius: var(--radius-md);
 	background: var(--surface-2);
 	transition:
@@ -1595,7 +1596,8 @@ onMounted(async () => {
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.75rem;
-	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border: 1px solid
+		var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
 	border-radius: var(--radius-sm);
 	background: var(--surface-2);
 }

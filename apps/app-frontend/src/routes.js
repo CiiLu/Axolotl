@@ -107,26 +107,20 @@ export default new createRouter({
 				{
 					path: 'servers',
 					name: 'MultiplayerServers',
-					component: () =>
-						import('@/components/multiplayer/servers/ServersOverview.vue'),
+					component: () => import('@/components/multiplayer/servers/ServersOverview.vue'),
 				},
 				{
 					path: 'servers/:id',
 					name: 'MultiplayerServerDetail',
-					component: () =>
-						import('@/components/multiplayer/servers/ServerDetail.vue'),
+					component: () => import('@/components/multiplayer/servers/ServerDetail.vue'),
 				},
 				{
 					path: 'servers/:id/studio',
 					name: 'MultiplayerServerFileStudio',
-					component: () =>
-						import('@/components/multiplayer/servers/ServerFileStudio.vue'),
+					component: () => import('@/components/multiplayer/servers/ServerFileStudio.vue'),
 					meta: {
 						renderMode: 'fixed',
-						breadcrumb: [
-							{ name: 'Multiplayer', link: '/multiplayer/servers' },
-							{ name: 'Studio' },
-						],
+						breadcrumb: [{ name: 'Multiplayer', link: '/multiplayer/servers' }, { name: 'Studio' }],
 					},
 				},
 				{
@@ -271,6 +265,30 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/project/mcarchive/:slug',
+			name: 'McArchiveProject',
+			component: () => import('@/pages/project/McArchive.vue'),
+			props: true,
+			meta: {
+				useContext: true,
+				breadcrumb: [{ name: '?Project' }],
+				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'mcarchive-project',
+			},
+		},
+		{
+			path: '/project/planet-minecraft/:id',
+			name: 'PlanetMinecraftProject',
+			component: () => import('@/pages/project/PlanetMinecraft.vue'),
+			props: true,
+			meta: {
+				useContext: true,
+				breadcrumb: [{ name: '?Project' }],
+				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'planet-minecraft-project',
+			},
+		},
+		{
 			path: '/project/:id',
 			name: 'Project',
 			component: () => import('@/pages/project/Index.vue'),
@@ -339,7 +357,6 @@ export default new createRouter({
 				//   component: Instance.Overview,
 				//   meta: {
 				//     useRootContext: true,
-				//     breadcrumb: [{ name: '?Instance' }],
 				//   },
 				// },
 				{
@@ -348,7 +365,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Worlds.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Worlds' }],
+						breadcrumb: [{ name: 'Worlds' }],
 					},
 				},
 				{
@@ -358,7 +375,6 @@ export default new createRouter({
 					meta: {
 						useRootContext: true,
 						breadcrumb: [
-							{ name: '?Instance', link: '/instance/{id}/' },
 							{ name: 'Worlds', link: '/instance/{id}/worlds' },
 							{ name: 'Edit world' },
 						],
@@ -370,7 +386,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Screenshots.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Screenshots' }],
+						breadcrumb: [{ name: 'Screenshots' }],
 					},
 				},
 				{
@@ -379,7 +395,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Mods.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Content' }],
+						breadcrumb: [{ name: 'Content' }],
 					},
 				},
 				{
@@ -388,7 +404,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Mods.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Content' }],
+						breadcrumb: [{ name: 'Content' }],
 					},
 				},
 				{
@@ -397,7 +413,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Files.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Files' }],
+						breadcrumb: [{ name: 'Files' }],
 					},
 				},
 				{
@@ -408,7 +424,6 @@ export default new createRouter({
 						renderMode: 'fixed',
 						useRootContext: true,
 						breadcrumb: [
-							{ name: '?Instance', link: '/instance/{id}/' },
 							{ name: 'Files', link: '/instance/{id}/files' },
 							{ name: 'Studio' },
 						],
@@ -421,7 +436,7 @@ export default new createRouter({
 					meta: {
 						renderMode: 'fixed',
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Logs' }],
+						breadcrumb: [{ name: 'Logs' }],
 					},
 				},
 			],

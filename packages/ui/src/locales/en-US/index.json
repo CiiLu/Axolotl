@@ -911,6 +911,9 @@
   "content.metadata-filter.toggle": {
     "defaultMessage": "Filter"
   },
+  "content.metadata-filter.toggle-active": {
+    "defaultMessage": "Filter ({count, number} active)"
+  },
   "content.metadata-filter.unknown": {
     "defaultMessage": "Unknown"
   },
@@ -937,6 +940,12 @@
   },
   "content.page-layout.no-content-found": {
     "defaultMessage": "No content found."
+  },
+  "content.page-layout.pin-view": {
+    "defaultMessage": "Pin current view"
+  },
+  "content.page-layout.reset-view": {
+    "defaultMessage": "Reset view"
   },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Search {count, number} {contentType}..."
@@ -965,11 +974,29 @@
   "content.page-layout.sort.date-added-oldest": {
     "defaultMessage": "Oldest first"
   },
+  "content.page-layout.sort.file-name-ascending": {
+    "defaultMessage": "File name A-Z"
+  },
+  "content.page-layout.sort.file-name-descending": {
+    "defaultMessage": "File name Z-A"
+  },
   "content.page-layout.sort.label": {
     "defaultMessage": "Sort by {mode}"
   },
+  "content.page-layout.sort.project-name-ascending": {
+    "defaultMessage": "Project name A-Z"
+  },
+  "content.page-layout.sort.project-name-descending": {
+    "defaultMessage": "Project name Z-A"
+  },
+  "content.page-layout.unpin-view": {
+    "defaultMessage": "Unpin current view"
+  },
   "content.page-layout.update-all": {
     "defaultMessage": "Update all"
+  },
+  "content.page-layout.view-options": {
+    "defaultMessage": "View options"
   },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "All selected content is already disabled"
@@ -1096,6 +1123,9 @@
   },
   "creation-flow.modal.custom-setup.game-version-type.alpha": {
     "defaultMessage": "April Fools"
+  },
+  "creation-flow.modal.custom-setup.game-version-type.ancient": {
+    "defaultMessage": "Ancient"
   },
   "creation-flow.modal.custom-setup.game-version-type.release": {
     "defaultMessage": "Release"

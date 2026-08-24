@@ -9,6 +9,7 @@ export type {
 	SetupType,
 } from './creation-flow-modal/creation-flow-context'
 export { default as CreationFlowModal } from './creation-flow-modal/index.vue'
+export { aprilFoolsVersions, isVersionTypeMatch } from './creation-flow-modal/shared'
 export {
 	type LoaderMetadataStatus,
 	loaderSupportState,

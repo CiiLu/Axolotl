@@ -13,6 +13,7 @@ pub mod instance;
 pub mod jre;
 pub(crate) mod loader_metadata;
 pub mod logs;
+pub mod mcarchive;
 pub mod memory;
 pub mod metadata;
 pub mod minecraft_auth;
@@ -21,6 +22,7 @@ pub mod minecraft_skins;
 pub mod mr_auth;
 pub mod multiplayer;
 pub mod pack;
+pub mod planet_minecraft;
 pub mod process;
 pub mod server_address;
 pub mod servers;
@@ -32,6 +34,7 @@ pub mod translation;
 pub mod worlds;
 
 pub mod data {
+    pub use crate::instance::McArchiveCoreInstallResult;
     pub use crate::state::{
         AppliedContentSetPatch, CacheBehaviour, CacheValueType, CachedEntry,
         ContentFavorite, ContentFavoriteInput, ContentFavoriteProvider,
@@ -39,7 +42,8 @@ pub mod data {
         ContentItemOwner, ContentItemProject, ContentItemVersion,
         ContentOwnershipKind, ContentProvider, ContentProviderRef,
         ContentUpdatePlan, ContentUpdatePlanAction, ContentUpdateResolution,
-        ContentUpdateResolutionChoice, ContentUpdateScope, CreateInstance,
+        ContentUpdateResolutionChoice, ContentUpdateScope, CoreComponent,
+        CoreComponentKind, CoreComponentSource, CoreJarPreview, CreateInstance,
         Credentials, Dependency, DirectoryInfo, EditInstance, Hooks,
         InstanceContentPack, InstanceContentSnapshot,
         InstanceContentSnapshotItem, InstanceContentWarning,

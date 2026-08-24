@@ -41,6 +41,7 @@ export interface ContentManagerContext {
 	duplicateItems?: Ref<ContentItem[]> | ComputedRef<ContentItem[]>
 	loading: Ref<boolean>
 	error: Ref<Error | null>
+	filterOptionsReady?: Ref<boolean> | ComputedRef<boolean>
 
 	// Modpack
 	modpack: Ref<ContentModpackData | null> | ComputedRef<ContentModpackData | null>

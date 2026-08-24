@@ -7,6 +7,7 @@ import {
 	ClipboardCopyIcon,
 	CurseForgeIcon,
 	ExternalIcon,
+	FileArchiveIcon,
 	GenericListIcon,
 	GlobeIcon,
 	GridIcon,
@@ -37,6 +38,7 @@ import {
 	getSelectedInstallPreferences,
 	getTargetInstallPreferences,
 	injectNotificationManager,
+	isVersionTypeMatch,
 	PopoutMenu,
 	preferencesDiffer,
 	provideBrowseManager,
@@ -66,10 +68,7 @@ import {
 	setBrowseFilterMemory,
 } from '@/helpers/browse-filter-memory'
 import { mergeProviderResults } from '@/helpers/browse-merge'
-import {
-	createBrowseProjectTabs,
-	getBrowseProjectTabOptions,
-} from '@/helpers/browse-project-tabs'
+import { createBrowseProjectTabs, getBrowseProjectTabOptions } from '@/helpers/browse-project-tabs'
 import {
 	completeBrowseReturnNavigation,
 	consumeBrowseReturnSnapshot,
@@ -84,10 +83,7 @@ import {
 	get_search_results_v3,
 	get_version_many,
 } from '@/helpers/cache.js'
-import {
-	type FavoriteContentType,
-	isFavoriteContentType,
-} from '@/helpers/content-favorites'
+import { type FavoriteContentType, isFavoriteContentType } from '@/helpers/content-favorites'
 import {
 	bilingualTitle,
 	type ChineseSearchResolution,
@@ -120,7 +116,18 @@ import {
 	get_installed_project_ids as getInstalledProjectIds,
 } from '@/helpers/instance'
 import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
+import {
+	getMcArchiveGameVersions,
+	type McArchiveGameVersion,
+	type McArchiveMod,
+	searchMcArchiveMods,
+} from '@/helpers/mcarchive'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
+import {
+	planetMinecraftConnectorAvailable,
+	type PlanetMinecraftProject,
+	searchPlanetMinecraftProjects,
+} from '@/helpers/planet-minecraft'
 import {
 	type BrowseContentSource,
 	get as getSettings,
@@ -138,10 +145,7 @@ import type { GameInstance } from '@/helpers/types'
 import { get_instance_worlds } from '@/helpers/worlds'
 import i18n from '@/i18n.config'
 import { injectContentInstall } from '@/providers/content-install'
-import {
-	injectContentSelection,
-	makeContentSelectionKey,
-} from '@/providers/content-selection'
+import { injectContentSelection, makeContentSelectionKey } from '@/providers/content-selection'
 import { injectServerInstall } from '@/providers/server-install'
 import {
 	createServerInstallContent,
@@ -205,11 +209,22 @@ const curseForgeCapability = ref(
 		configured: false,
 	})),
 )
+const planetMinecraftAvailable = ref(await planetMinecraftConnectorAvailable().catch(() => false))
 const rememberedContentSource = getLastBrowseContentSource()
 
 function resolveInitialContentSource(): BrowseContentSource {
 	if (route.params.projectType === WORLD_BROWSE_PROJECT_TYPE) {
 		return 'curseforge'
+	}
+	if (route.params.projectType === 'mod' && route.query.source === 'mcarchive') {
+		return 'mcarchive'
+	}
+	if (
+		route.params.projectType === 'mod' &&
+		route.query.source === 'planet_minecraft' &&
+		planetMinecraftAvailable.value
+	) {
+		return 'planet_minecraft'
 	}
 	if (curseForgeCapability.value.configured && route.query.source === 'curseforge') {
 		return 'curseforge'
@@ -222,6 +237,16 @@ function resolveInitialContentSource(): BrowseContentSource {
 	}
 	if (rememberedContentSource === 'modrinth') {
 		return 'modrinth'
+	}
+	if (rememberedContentSource === 'mcarchive' && route.params.projectType === 'mod') {
+		return 'mcarchive'
+	}
+	if (
+		rememberedContentSource === 'planet_minecraft' &&
+		route.params.projectType === 'mod' &&
+		planetMinecraftAvailable.value
+	) {
+		return 'planet_minecraft'
 	}
 	return curseForgeCapability.value.configured ? 'all' : 'modrinth'
 }
@@ -293,8 +318,9 @@ debugLog('fetching tags (categories, loaders, gameVersions)')
 let categories: Ref<Labrinth.Tags.v2.Category[]> = ref([])
 let loaders: Ref<Labrinth.Tags.v2.Loader[]> = ref([])
 let availableGameVersions: Ref<Labrinth.Tags.v2.GameVersion[]> = ref([])
+const mcArchiveGameVersions = ref<McArchiveGameVersion[]>([])
 if (!isWorldMapBrowse.value) {
-	[categories, loaders, availableGameVersions] = await Promise.all([
+	;[categories, loaders, availableGameVersions] = await Promise.all([
 		get_categories()
 			.catch(handleError)
 			.then(ref<Labrinth.Tags.v2.Category[]>),
@@ -306,6 +332,16 @@ if (!isWorldMapBrowse.value) {
 			.then(ref<Labrinth.Tags.v2.GameVersion[]>),
 	])
 }
+
+async function refreshMcArchiveGameVersions() {
+	if (mcArchiveGameVersions.value.length > 0) return
+	mcArchiveGameVersions.value = await getMcArchiveGameVersions().catch((error) => {
+		handleError(error)
+		return []
+	})
+}
+
+if (contentSource.value === 'mcarchive') await refreshMcArchiveGameVersions()
 
 const curseForgeCategoryTags = computed(() => {
 	const classId = curseForgeClassIds[projectType.value]
@@ -371,20 +407,39 @@ const allSourceCategoryTags = computed(() => {
 })
 
 const tags: Ref<Tags> = computed(() => ({
-	gameVersions: availableGameVersions.value ?? [],
-	loaders: loaders.value ?? [],
+	gameVersions:
+		contentSource.value === 'mcarchive'
+			? mcArchiveGameVersions.value.map((version) => ({
+					version: version.name,
+					version_type: version.versionType ?? 'release',
+					date: '',
+					major: false,
+				}))
+			: (availableGameVersions.value ?? []),
+	loaders:
+		contentSource.value === 'mcarchive' || contentSource.value === 'planet_minecraft'
+			? []
+			: (loaders.value ?? []),
 	categories:
-		contentSource.value === 'curseforge'
-			? curseForgeCategoryTags.value
-			: contentSource.value === 'all'
-				? allSourceCategoryTags.value
-				: (categories.value ?? []),
+		contentSource.value === 'mcarchive' || contentSource.value === 'planet_minecraft'
+			? []
+			: contentSource.value === 'curseforge'
+				? curseForgeCategoryTags.value
+				: contentSource.value === 'all'
+					? allSourceCategoryTags.value
+					: (categories.value ?? []),
 }))
 
 const instance = ref<GameInstance | null>(null)
 const instanceSelector = ref()
 const pendingRouteInstanceSwitch = ref<GameInstance | null>(null)
 const activeInstance = computed(() => contentSelection.targetInstance.value ?? instance.value)
+const mcArchiveAvailable = computed(() => {
+	const gameVersion = activeInstance.value?.game_version
+	if (!gameVersion) return false
+	const metadata = availableGameVersions.value.find((version) => version.version === gameVersion)
+	return metadata ? isVersionTypeMatch(metadata.version_type, gameVersion, 'ancient') : false
+})
 const installedProjectIds = ref<string[] | null>(null)
 const installedProjectIdsInstanceId = ref<string | null>(null)
 let installedProjectRequestId = 0
@@ -455,10 +510,7 @@ async function refreshInstalledProjectIds() {
 	if (route.query.from === 'worlds') {
 		const worlds = await get_instance_worlds(requestInstanceId).catch(handleError)
 		if (!worlds) return
-		if (
-			requestId !== installedProjectRequestId ||
-			activeInstance.value?.id !== requestInstanceId
-		)
+		if (requestId !== installedProjectRequestId || activeInstance.value?.id !== requestInstanceId)
 			return
 
 		const serverProjectIds = worlds
@@ -638,6 +690,7 @@ const serverContextFilters = computed(() => {
 })
 
 const combinedProvidedFilters = computed(() => {
+	if (contentSource.value === 'mcarchive') return []
 	if (isServerContext.value) return serverContextFilters.value
 	if (projectType.value === 'modpack' || projectType.value === 'server') return []
 	return instanceFilters.value
@@ -839,6 +892,14 @@ const messages = defineMessages({
 		id: 'app.browse.source.curseforge',
 		defaultMessage: 'CurseForge',
 	},
+	mcArchiveSource: {
+		id: 'app.browse.source.mcarchive',
+		defaultMessage: 'MCArchive',
+	},
+	planetMinecraftSource: {
+		id: 'app.browse.source.planet-minecraft',
+		defaultMessage: 'Planet Minecraft',
+	},
 	translateProject: {
 		id: 'app.project.translation.translate',
 		defaultMessage: 'Translate',
@@ -854,11 +915,18 @@ const messages = defineMessages({
 })
 
 const sourceIcon = computed(() => {
+	if (!sourceOptions.value.some((option) => option.id === contentSource.value)) {
+		return GlobeIcon
+	}
 	switch (contentSource.value) {
 		case 'modrinth':
 			return ModrinthIcon
 		case 'curseforge':
 			return CurseForgeIcon
+		case 'mcarchive':
+			return FileArchiveIcon
+		case 'planet_minecraft':
+			return GlobeIcon
 		default:
 			return GlobeIcon
 	}
@@ -870,7 +938,22 @@ const sourceOptions = computed(() =>
 		: [
 				{ id: 'all' as const, label: messages.allSources, icon: GlobeIcon },
 				{ id: 'modrinth' as const, label: messages.modrinthSource, icon: ModrinthIcon },
-				{ id: 'curseforge' as const, label: messages.curseForgeSource, icon: CurseForgeIcon },
+				...(curseForgeCapability.value.configured
+					? [{ id: 'curseforge' as const, label: messages.curseForgeSource, icon: CurseForgeIcon }]
+					: []),
+				...(projectType.value === 'mod'
+					&& mcArchiveAvailable.value
+					? [{ id: 'mcarchive' as const, label: messages.mcArchiveSource, icon: FileArchiveIcon }]
+					: []),
+				...(projectType.value === 'mod' && planetMinecraftAvailable.value
+					? [
+							{
+								id: 'planet_minecraft' as const,
+								label: messages.planetMinecraftSource,
+								icon: GlobeIcon,
+							},
+						]
+					: []),
 			],
 )
 
@@ -890,15 +973,14 @@ const browseTitle = computed(() =>
 	),
 )
 breadcrumbs.setName('BrowseTitle', browseTitle.value)
-if (instance.value) {
-	const instanceLink = `/instance/${encodeURIComponent(instance.value.id)}`
-	breadcrumbs.setContext({
-		name: instance.value.name,
-		link:
-			isFromWorlds.value || isWorldMapContext.value
-				? `${instanceLink}/worlds`
-				: instanceLink,
-	})
+	if (instance.value) {
+		const instanceLink = `/instance/${encodeURIComponent(instance.value.id)}`
+		const instanceIcon = getDisplayInstanceIcon(instance.value.icon_path, instance.value.loader).url
+		breadcrumbs.setContext({
+			name: instance.value.name,
+			link: isFromWorlds.value || isWorldMapContext.value ? `${instanceLink}/worlds` : instanceLink,
+			iconUrl: instanceIcon,
+		})
 } else {
 	breadcrumbs.setContext(null)
 }
@@ -924,7 +1006,7 @@ onBeforeRouteLeave((to) => {
 	}
 
 	breadcrumbs.setContext({
-		name: browseTitle.value,
+		name: '?BrowseTitle',
 		link: `/browse/${projectType.value}`,
 		query: route.query,
 	})
@@ -1049,7 +1131,9 @@ const installContext = computed(() => {
 	if (activeInstance.value) {
 		const target = activeInstance.value
 		const displayIcon = getDisplayInstanceIcon(target.icon_path, target.loader)
-		const processing = ['validating', 'reviewing', 'queueing'].includes(contentSelection.state.value)
+		const processing = ['validating', 'reviewing', 'queueing'].includes(
+			contentSelection.state.value,
+		)
 		return {
 			showInstallHeader: !!instance.value,
 			name: target.name,
@@ -1062,9 +1146,7 @@ const installContext = computed(() => {
 				: route.fullPath,
 			backLabel: formatMessage(messages.backToInstance),
 			heading: formatMessage(
-				isFromWorlds.value
-					? messages.addServersToInstance
-					: commonMessages.installingContentLabel,
+				isFromWorlds.value ? messages.addServersToInstance : commonMessages.installingContentLabel,
 			),
 			warning:
 				isServerInstance.value && !isFromWorlds.value
@@ -1111,6 +1193,7 @@ async function selectTargetInstance(target: GameInstance) {
 		breadcrumbs.setContext({
 			name: target.name,
 			link: `/instance/${encodeURIComponent(target.id)}`,
+			iconUrl: getDisplayInstanceIcon(target.icon_path, target.loader).url,
 		})
 	}
 	await refreshInstalledProjectIds()
@@ -1125,6 +1208,7 @@ async function cancelTargetInstanceSwitch() {
 	breadcrumbs.setContext({
 		name: target.name,
 		link: `/instance/${encodeURIComponent(target.id)}`,
+		iconUrl: getDisplayInstanceIcon(target.icon_path, target.loader).url,
 	})
 }
 
@@ -1157,13 +1241,14 @@ async function toggleContentSelection(
 		let versionId = project.latest_version || null
 		if (project.provider === 'modrinth') {
 			versionId =
-				getLatestMatchingInstallVersion(await getInstallProjectVersions(project.project_id), preferences)
-					?.id ?? null
+				getLatestMatchingInstallVersion(
+					await getInstallProjectVersions(project.project_id),
+					preferences,
+				)?.id ?? null
 		} else {
 			const files = await getCurseForgeFiles(Number(providerProjectId), {
 				gameVersion: usesTargetGameVersion(contentType) ? target.game_version : undefined,
-				modLoaderType:
-					contentType === 'mod' ? curseForgeLoaderTypes[target.loader] : undefined,
+				modLoaderType: contentType === 'mod' ? curseForgeLoaderTypes[target.loader] : undefined,
 			})
 			versionId = files.files.find((file) => file.isAvailable)?.id.toString() ?? null
 		}
@@ -1260,10 +1345,15 @@ async function chooseInstanceInstallVersion(
 	return { versionId: selectedVersion.id }
 }
 
-type BrowseContentProvider = 'modrinth' | 'curseforge'
+type BrowseContentProvider = 'modrinth' | 'curseforge' | 'mcarchive' | 'planet_minecraft'
 
 function isBrowseContentProvider(provider: unknown): provider is BrowseContentProvider {
-	return provider === 'modrinth' || provider === 'curseforge'
+	return (
+		provider === 'modrinth' ||
+		provider === 'curseforge' ||
+		provider === 'mcarchive' ||
+		provider === 'planet_minecraft'
+	)
 }
 
 function getCardActions(
@@ -1283,6 +1373,8 @@ function getCardActions(
 		provider_project_id?: string
 	}
 	if (!isBrowseContentProvider(projectResult.provider)) return []
+	if (projectResult.provider === 'mcarchive' || projectResult.provider === 'planet_minecraft')
+		return []
 	const providerProjectId =
 		projectResult.provider === 'curseforge'
 			? (projectResult.provider_project_id ?? projectResult.project_id.replace(/^curseforge:/, ''))
@@ -1307,8 +1399,8 @@ function getCardActions(
 			serverContextServerData.value?.upstream?.project_id === projectResult.project_id)
 	const favoriteAction =
 		!isServerContext.value && isFavoriteContentType(currentProjectType)
-		? createFavoriteCardAction(projectResult, providerProjectId, currentProjectType)
-		: null
+			? createFavoriteCardAction(projectResult, providerProjectId, currentProjectType)
+			: null
 
 	if (
 		isServerContext.value &&
@@ -1399,7 +1491,10 @@ function getCardActions(
 	const isModpack =
 		projectResult.project_types?.includes('modpack') || projectResult.project_type === 'modpack'
 	if (CART_CONTENT_TYPES.has(currentProjectType)) {
-		if (currentProjectType === WORLD_BROWSE_PROJECT_TYPE && projectResult.provider !== 'curseforge') {
+		if (
+			currentProjectType === WORLD_BROWSE_PROJECT_TYPE &&
+			projectResult.provider !== 'curseforge'
+		) {
 			return []
 		}
 		return [
@@ -1443,9 +1538,7 @@ function getCardActions(
 				? commonMessages.installButton
 				: messages.addToAnInstance
 	const compactInstallLabel =
-		!isInstalling && !isInstalled && !shouldUseInstallIcon
-			? formatMessage(messages.add)
-			: undefined
+		!isInstalling && !isInstalled && !shouldUseInstallIcon ? formatMessage(messages.add) : undefined
 
 	return [
 		{
@@ -1730,6 +1823,78 @@ type ChineseSearchHit = Labrinth.Search.v2.ResultSearchProject & {
 	chinese_search_score?: number
 }
 
+type McArchiveSearchHit = Labrinth.Search.v2.ResultSearchProject & {
+	provider: 'mcarchive'
+	provider_project_id: string
+}
+
+function mapMcArchiveHit(project: McArchiveMod): McArchiveSearchHit {
+	const versions = Array.from(
+		new Set(
+			project.modVersions.flatMap((version) =>
+				version.gameVersions.map((gameVersion) => gameVersion.name),
+			),
+		),
+	)
+	return {
+		project_id: `mcarchive:${project.uuid}`,
+		provider_project_id: project.uuid,
+		provider: 'mcarchive',
+		project_type: 'mod',
+		project_types: ['mod'],
+		slug: project.slug,
+		author: '',
+		title: project.name,
+		description: project.summary ?? project.description ?? '',
+		categories: [],
+		display_categories: [],
+		versions,
+		downloads: 0,
+		follows: 0,
+		icon_url: '',
+		date_created: '',
+		date_modified: '',
+		latest_version: '',
+		license: '',
+		client_side: 'unknown',
+		server_side: 'unknown',
+		gallery: [],
+		featured_gallery: null,
+		color: null,
+	} as McArchiveSearchHit
+}
+
+function mapPlanetMinecraftHit(project: PlanetMinecraftProject) {
+	return {
+		project_id: `planet_minecraft:${project.id}`,
+		provider_project_id: project.id,
+		provider: 'planet_minecraft' as const,
+		project_type: 'mod',
+		slug: project.id,
+		author: '',
+		title: project.title,
+		description: project.summary ?? '',
+		categories: [],
+		display_categories: [],
+		versions: Array.from(new Set(project.versions.flatMap((version) => version.gameVersions))),
+		downloads: 0,
+		follows: 0,
+		icon_url: '',
+		date_created: '',
+		date_modified: '',
+		latest_version: '',
+		license: '',
+		client_side: 'unknown',
+		server_side: 'unknown',
+		gallery: [],
+		featured_gallery: null,
+		color: null,
+	} as Labrinth.Search.v2.ResultSearchProject & {
+		provider: 'planet_minecraft'
+		provider_project_id: string
+	}
+}
+
 interface DirectModrinthProject {
 	id: string
 	slug?: string
@@ -1895,6 +2060,55 @@ async function search(requestParams: string, signal: AbortSignal) {
 	const limit = Math.min(Number(params.get('limit') ?? 20), 50)
 	const offset = Number(params.get('offset') ?? 0)
 	const rawQuery = params.get('query') ?? ''
+	const filters = params.get('new_filters') ?? ''
+	const gameVersion = getFirstSearchFilter(filters, 'game_versions')
+	const isMcArchiveBrowse =
+		mcArchiveAvailable.value &&
+		(contentSource.value === 'mcarchive' || route.query.source === 'mcarchive')
+	if (isMcArchiveBrowse) {
+		if (projectType.value !== 'mod') {
+			return {
+				projectHits: [],
+				serverHits: [],
+				total_hits: 0,
+				per_page: limit,
+			}
+		}
+		const projects = await searchMcArchiveMods(rawQuery, gameVersion).catch((error) => {
+			debugLog('mcarchive search failed', error)
+			throw error
+		})
+		signal.throwIfAborted()
+		// The MCArchive list endpoint deliberately returns project summaries. It does
+		// not include modVersions, so applying the selected Minecraft version here
+		// would discard every result. Version compatibility is resolved after opening
+		// the project detail, where the full release list is available.
+		const hits = projects.map(mapMcArchiveHit)
+		const safeOffset = offset < hits.length ? offset : 0
+		return {
+			projectHits: hits.slice(safeOffset, safeOffset + limit),
+			serverHits: [],
+			total_hits: hits.length,
+			per_page: limit,
+		}
+	}
+	if (contentSource.value === 'planet_minecraft') {
+		if (projectType.value !== 'mod' || !planetMinecraftAvailable.value) {
+			return { projectHits: [], serverHits: [], total_hits: 0, per_page: limit }
+		}
+		const projects = await searchPlanetMinecraftProjects(rawQuery, gameVersion).catch((error) => {
+			debugLog('planet minecraft search failed', error)
+			throw error
+		})
+		signal.throwIfAborted()
+		const hits = projects.map(mapPlanetMinecraftHit)
+		return {
+			projectHits: hits.slice(offset, offset + limit),
+			serverHits: [],
+			total_hits: hits.length,
+			per_page: limit,
+		}
+	}
 	let chineseResolution: ChineseSearchResolution | null = null
 	if (!isWorldMapBrowse.value && containsChineseSearchText(rawQuery)) {
 		chineseResolution = await resolveChineseContentSearch(rawQuery).catch((error) => {
@@ -1902,7 +2116,6 @@ async function search(requestParams: string, signal: AbortSignal) {
 			return null
 		})
 	}
-	const filters = params.get('new_filters') ?? ''
 	const categoryValues = getSearchFilterValues(filters, 'categories')
 	const hasOnlyCurseForgeExclusiveCategories =
 		categoryValues.length > 0 &&
@@ -1925,7 +2138,6 @@ async function search(requestParams: string, signal: AbortSignal) {
 		await ensureCurseForgeCategories(projectType.value).catch(handleError)
 	}
 
-	const gameVersion = getFirstSearchFilter(filters, 'game_versions')
 	const loader = categoryValues.find((value) => curseForgeLoaderTypes[value] !== undefined)
 	const nonLoaderCategoryValues = categoryValues.filter(
 		(value) => curseForgeLoaderTypes[value] === undefined,
@@ -2087,7 +2299,7 @@ async function search(requestParams: string, signal: AbortSignal) {
 			provider: 'modrinth' as const,
 		} as unknown as Labrinth.Search.v2.ResultSearchProject & {
 			installed?: boolean
-			provider: 'modrinth' | 'curseforge'
+			provider: 'modrinth' | 'curseforge' | 'mcarchive' | 'planet_minecraft'
 		}
 
 		if (activeInstance.value || isServerContext.value) {
@@ -2265,9 +2477,7 @@ function applyRememberedFilters(type: ProjectType, resetWhenMissing: boolean) {
 	}
 
 	const filterTypeIds = new Set(searchState.filters.value.map((filter) => filter.id))
-	searchState.currentFilters.value = memory
-		? availableRememberedFilters(type, memory.filters)
-		: []
+	searchState.currentFilters.value = memory ? availableRememberedFilters(type, memory.filters) : []
 	searchState.toggledGroups.value = memory ? [...memory.toggledGroups] : []
 	searchState.overriddenProvidedFilterTypes.value = memory
 		? memory.overriddenProvidedFilterTypes.filter((filterType) => filterTypeIds.has(filterType))
@@ -2292,9 +2502,7 @@ watch(
 	() => {
 		const isServer = projectType.value === 'server'
 		setBrowseFilterMemory(projectType.value, {
-			filters: isServer
-				? searchState.serverCurrentFilters.value
-				: searchState.currentFilters.value,
+			filters: isServer ? searchState.serverCurrentFilters.value : searchState.currentFilters.value,
 			toggledGroups: isServer
 				? searchState.serverToggledGroups.value
 				: searchState.toggledGroups.value,
@@ -2434,10 +2642,18 @@ watch(contentSource, async (source) => {
 	if (source === 'curseforge' || source === 'all') {
 		await ensureCurseForgeCategories(projectType.value).catch(handleError)
 	}
+	if (source === 'mcarchive') await refreshMcArchiveGameVersions()
 	await searchState.refreshSearch()
 })
 
 watch(projectType, async (type) => {
+	if (
+		type !== 'mod' &&
+		(contentSource.value === 'mcarchive' || contentSource.value === 'planet_minecraft')
+	) {
+		contentSource.value = 'all'
+		setLastBrowseContentSource('all')
+	}
 	if (type === WORLD_BROWSE_PROJECT_TYPE && contentSource.value !== 'curseforge') {
 		contentSource.value = 'curseforge'
 		return
@@ -2447,9 +2663,26 @@ watch(projectType, async (type) => {
 	}
 })
 
+watch(
+	mcArchiveAvailable,
+	(available) => {
+		if (!available && contentSource.value === 'mcarchive') {
+			contentSource.value = 'all'
+			setLastBrowseContentSource('all')
+		}
+	},
+	{ immediate: !route.query.i },
+)
+
 function selectContentSource(source: string) {
 	if (isWorldMapBrowse.value) return
-	if (source === 'all' || source === 'modrinth' || source === 'curseforge') {
+	if (
+		source === 'all' ||
+		source === 'modrinth' ||
+		source === 'curseforge' ||
+		(source === 'mcarchive' && projectType.value === 'mod' && mcArchiveAvailable.value) ||
+		(source === 'planet_minecraft' && projectType.value === 'mod' && planetMinecraftAvailable.value)
+	) {
 		contentSource.value = source
 		setLastBrowseContentSource(source)
 	}
@@ -2478,7 +2711,7 @@ watch(queuedServerInstallCount, (count) => {
 	}
 })
 
-if (!browseReturnSnapshot) {
+if (!browseReturnSnapshot || contentSource.value === 'mcarchive') {
 	void searchState.refreshSearch()
 }
 
@@ -2561,16 +2794,20 @@ provideBrowseManager({
 	advancedFiltersCollapsed,
 	getProjectLink: (
 		result: Labrinth.Search.v2.ResultSearchProject & {
-			provider: 'modrinth' | 'curseforge'
+			provider: 'modrinth' | 'curseforge' | 'mcarchive' | 'planet_minecraft'
 			provider_project_id?: string
 		},
 	) => ({
 		path:
 			result.provider === 'curseforge'
 				? `/project/curseforge/${result.provider_project_id}`
-				: result.provider === 'modrinth'
-					? `/project/${result.project_id ?? result.slug}`
-					: route.path,
+				: result.provider === 'mcarchive'
+					? `/project/mcarchive/${result.slug}`
+					: result.provider === 'planet_minecraft'
+						? `/project/planet-minecraft/${result.provider_project_id}`
+						: result.provider === 'modrinth'
+							? `/project/${result.project_id ?? result.slug}`
+							: route.path,
 		query: getProjectBrowseQuery(),
 	}),
 	getServerProjectLink: (result: Labrinth.Search.v3.ResultSearchProject) => ({
@@ -2677,10 +2914,7 @@ provideBrowseManager({
 						</span>
 					</button>
 				</ButtonStyled>
-				<PopoutMenu
-					v-if="curseForgeCapability.configured && projectType !== 'server' && !isWorldMapBrowse"
-					placement="bottom-end"
-				>
+				<PopoutMenu v-if="projectType !== 'server' && !isWorldMapBrowse" placement="bottom-end">
 					<ButtonStyled size="standard" type="standard">
 						<button class="flex items-center gap-2">
 							<component :is="sourceIcon" class="h-5 w-5" />

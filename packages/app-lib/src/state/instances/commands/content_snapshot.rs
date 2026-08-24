@@ -167,6 +167,7 @@ pub(crate) async fn get_content_snapshot(
     let provider_rows = sqlx::query(
         "SELECT ref.content_entry_id, ref.provider,
                 ref.provider_project_id, ref.provider_release_id,
+				ref.provider_file_id,
                 ref.is_origin
          FROM instance_content_provider_refs ref
          INNER JOIN instance_content_entries entry
@@ -184,10 +185,13 @@ pub(crate) async fn get_content_snapshot(
             row.try_get::<String, _>("provider_project_id")?;
         let provider_release_id =
             row.try_get::<Option<String>, _>("provider_release_id")?;
+        let provider_file_id =
+            row.try_get::<Option<String>, _>("provider_file_id")?;
         let reference = ContentProviderRef::from_database(
             &provider,
             &provider_project_id,
             provider_release_id.as_deref(),
+            provider_file_id.as_deref(),
         )?;
         refs_by_entry
             .entry(entry_id.clone())

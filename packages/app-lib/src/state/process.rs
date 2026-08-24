@@ -965,6 +965,19 @@ impl Process {
             tracing::warn!("Failed to write exit status to log file: {}", e);
         }
 
+        if mc_exit_status.success()
+            && !manually_killed
+            && let Err(error) =
+                crate::api::logs::save_successful_mod_snapshot(&instance_id)
+                    .await
+        {
+            tracing::warn!(
+                %error,
+                instance = %instance_id,
+                "Failed to save successful launch Mod snapshot"
+            );
+        }
+
         emit_process(
             &instance_id,
             uuid,

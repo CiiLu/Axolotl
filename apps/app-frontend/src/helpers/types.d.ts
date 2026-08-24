@@ -107,6 +107,7 @@ export type InstanceLoader =
 	| 'lite_loader'
 	| 'cleanroom'
 	| 'legacy_fabric'
+	| 'babric'
 
 export type LoaderComponent = {
 	instanceId: string
@@ -123,12 +124,12 @@ type ContentFile = {
 		version_id: string
 	}
 	provider_refs: Array<{
-		provider: 'modrinth' | 'curseforge'
+		provider: 'modrinth' | 'curseforge' | 'mcarchive'
 		project_id: string | number
 		version_id?: string | null
-		file_id?: number | null
+		file_id?: string | number | null
 	}>
-	origin_provider: 'modrinth' | 'curseforge' | null
+	origin_provider: 'modrinth' | 'curseforge' | 'mcarchive' | null
 }
 
 type ContentFileProjectType = 'mod' | 'datapack' | 'resourcepack' | 'shaderpack' | 'schematic'

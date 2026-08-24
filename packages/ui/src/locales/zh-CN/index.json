@@ -284,6 +284,9 @@
   "console.command.disabled-placeholder": {
     "defaultMessage": "命令输入已禁用"
   },
+  "console.command.placeholder": {
+    "defaultMessage": "发送命令"
+  },
   "console.command.server-not-running-placeholder": {
     "defaultMessage": "服务器未运行"
   },
@@ -338,6 +341,15 @@
   "console.crash.finding.fallback-title": {
     "defaultMessage": "未知诊断：{finding}"
   },
+  "console.crash.finding.known-signature.title": { "defaultMessage": "检测到已知崩溃特征" },
+  "console.crash.finding.known-signature.action": { "defaultMessage": "结合证据以及 Minecraft、加载器、Java、显卡和模组版本检查后再修改实例。" },
+  "console.crash.mod-change": { "defaultMessage": "{kind}：{filename}" },
+  "console.crash.mod-changes.title": { "defaultMessage": "上次成功启动后 Mod 文件发生了变化" },
+  "console.crash.mod-changes.summary": { "defaultMessage": "新增 {added} 个，移除 {removed} 个，修改 {modified} 个" },
+  "console.crash.mod-change.added": { "defaultMessage": "新增" },
+  "console.crash.mod-change.removed": { "defaultMessage": "移除" },
+  "console.crash.mod-change.modified": { "defaultMessage": "修改" },
+  "console.crash.windows-events.title": { "defaultMessage": "相关 Windows 应用事件" },
   "console.crash.finding.forge-error.action": {
     "defaultMessage": "查看 Forge 故障证据，并在撤销近期更改后测试指出的模组。"
   },
@@ -884,6 +896,9 @@
   "content.metadata-filter.toggle": {
     "defaultMessage": "筛选"
   },
+  "content.metadata-filter.toggle-active": {
+    "defaultMessage": "筛选（已启用 {count, number} 项）"
+  },
   "content.metadata-filter.unknown": {
     "defaultMessage": "未知"
   },
@@ -932,6 +947,12 @@
   "content.page-layout.sort.alphabetical": {
     "defaultMessage": "按字母顺序"
   },
+  "content.page-layout.sort.file-name-ascending": {
+    "defaultMessage": "文件名 A-Z"
+  },
+  "content.page-layout.sort.file-name-descending": {
+    "defaultMessage": "文件名 Z-A"
+  },
   "content.page-layout.sort.date-added-newest": {
     "defaultMessage": "按从新到旧顺序"
   },
@@ -941,8 +962,26 @@
   "content.page-layout.sort.label": {
     "defaultMessage": "按{mode}排序"
   },
+  "content.page-layout.sort.project-name-ascending": {
+    "defaultMessage": "项目名称 A-Z"
+  },
+  "content.page-layout.sort.project-name-descending": {
+    "defaultMessage": "项目名称 Z-A"
+  },
+  "content.page-layout.pin-view": {
+    "defaultMessage": "固定当前视图"
+  },
+  "content.page-layout.reset-view": {
+    "defaultMessage": "重置视图"
+  },
+  "content.page-layout.unpin-view": {
+    "defaultMessage": "取消固定当前视图"
+  },
   "content.page-layout.update-all": {
     "defaultMessage": "更新所有"
+  },
+  "content.page-layout.view-options": {
+    "defaultMessage": "视图选项"
   },
   "content.selection-bar.all-already-disabled": {
     "defaultMessage": "已禁用选择的所有内容"
@@ -1081,6 +1120,9 @@
   },
   "creation-flow.modal.custom-setup.game-version-type.alpha": {
     "defaultMessage": "愚人节版"
+  },
+  "creation-flow.modal.custom-setup.game-version-type.ancient": {
+    "defaultMessage": "远古版"
   },
   "creation-flow.modal.custom-setup.game-version-type.release": {
     "defaultMessage": "正式版"
@@ -1273,6 +1315,9 @@
   },
   "files.delete-modal.warning.folder": {
     "defaultMessage": "该文件夹以及文件夹以下的所有内容将被永久删除。此操作无法被撤销。"
+  },
+  "files.editor.editor-unavailable-placeholder": {
+    "defaultMessage": "代码编辑器不可用"
   },
   "files.editor.failed-to-open-text": {
     "defaultMessage": "无法加载文件内容。"

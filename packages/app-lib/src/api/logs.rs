@@ -18,8 +18,12 @@ use crate::{
 
 mod crash_analysis;
 pub use crash_analysis::{
-    CrashAnalysis, CrashAnalysisEvidence, CrashAnalysisFinding,
-    CrashAnalysisMod, CrashAnalysisSource, analyze_crash,
+    CrashAnalysis, CrashAnalysisAiExplanation, CrashAnalysisAiSettings,
+    CrashAnalysisEvidence, CrashAnalysisFinding, CrashAnalysisMod,
+    CrashAnalysisSource, CrashModChange, CrashModChangeCounts, analyze_crash,
+    explain_crash_with_ai, get_crash_analysis_ai_settings,
+    save_successful_mod_snapshot, undo_added_mod,
+    update_crash_analysis_ai_settings,
 };
 
 #[derive(Serialize, Debug)]

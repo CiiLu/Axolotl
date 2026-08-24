@@ -1,6 +1,13 @@
 use tauri_build::{DefaultPermissionRule, InlinedPlugin};
 
 fn main() {
+    // Tauri validates frontendDist during Cargo metadata/check builds. The
+    // frontend build runs in parallel in CI, so create the directory before
+    // tauri-build reads the configuration. A real frontend build overwrites
+    // this directory with the actual assets before packaging.
+    std::fs::create_dir_all("../app-frontend/dist")
+        .expect("Failed to create the frontend distribution directory");
+
     let cubiomes_dir = std::path::Path::new("vendor/cubiomes");
     cc::Build::new()
         .include(cubiomes_dir)
@@ -157,6 +164,20 @@ fn main() {
                     ),
             )
             .plugin(
+                "mcarchive",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "mcarchive_get_game_versions",
+                        "mcarchive_search_mods",
+                        "mcarchive_get_mod_by_slug",
+                        "mcarchive_get_file_by_filename",
+                        "mcarchive_get_file_by_sha256",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "import",
                 InlinedPlugin::new()
                     .commands(&[
@@ -210,6 +231,10 @@ fn main() {
                         "logs_get_live_log_buffer",
                         "logs_clear_live_log_buffer",
                         "logs_analyze_crash",
+                        "logs_get_crash_analysis_ai_settings",
+                        "logs_update_crash_analysis_ai_settings",
+                        "logs_explain_crash_with_ai",
+                        "logs_undo_added_mod",
                         "logs_export_crash_context",
                     ])
                     .default_permission(
@@ -314,6 +339,18 @@ fn main() {
                     ),
             )
             .plugin(
+                "planet-minecraft",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "planet_minecraft_connector_available",
+                        "planet_minecraft_search_projects",
+                        "planet_minecraft_get_project",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "instance",
                 InlinedPlugin::new()
                     .commands(&[
@@ -334,6 +371,20 @@ fn main() {
                         "instance_get_linked_modpack_info",
                         "instance_get_linked_modpack_content",
                         "instance_get_optimal_jre_key",
+                        "instance_list_core_components",
+                        "instance_add_core_jar_mod",
+                        "instance_replace_core_jar",
+                        "instance_move_core_component",
+                        "instance_set_core_component_enabled",
+                        "instance_remove_core_component",
+                        "instance_restore_core_component",
+                        "instance_preview_core_jar",
+                        "instance_install_mcarchive_modloader",
+                        "instance_import_mcarchive_modloader",
+                        "instance_install_mcarchive_content",
+                        "instance_import_mcarchive_content",
+                        "instance_install_planet_minecraft_content",
+                        "instance_import_planet_minecraft_content",
                         "instance_get_full_path",
                         "instance_get_mod_full_path",
                         "instance_list",
