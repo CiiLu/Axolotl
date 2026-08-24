@@ -710,11 +710,11 @@ pub async fn save_successful_mod_snapshot(
     instance_id: &str,
 ) -> crate::Result<()> {
     let state = State::get().await?;
-    let instance_path = resolve_instance_path(instance_id, &state).await?;
+    let (instance_path, game_dir_override) =
+        resolve_instance_path(instance_id, &state).await?;
     let mods_path = state
         .directories
-        .instances_dir()
-        .join(instance_path)
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref())
         .join("mods");
     crate::state::sync_content_files(instance_id, &state).await?;
     let content =
@@ -756,11 +756,11 @@ pub async fn undo_added_mod(
     expected_hash: &str,
 ) -> crate::Result<()> {
     let state = State::get().await?;
-    let instance_path = resolve_instance_path(instance_id, &state).await?;
+    let (instance_path, game_dir_override) =
+        resolve_instance_path(instance_id, &state).await?;
     let path = state
         .directories
-        .instances_dir()
-        .join(instance_path)
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref())
         .join("mods")
         .join(filename);
     if path.file_name().and_then(|name| name.to_str()) != Some(filename)
