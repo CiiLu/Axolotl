@@ -48,7 +48,7 @@ export interface WindowsCrashEvent {
 }
 
 export interface CrashAnalysisResult {
-  instance_id: string
+	instance_id: string
 	ruleset: string
 	crashed: boolean
 	sources: Array<{

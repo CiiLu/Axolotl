@@ -439,9 +439,8 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
 		const translated: TranslationResponse['segments'] = []
 		const results = await Promise.allSettled(
 			createTranslationBatches(request.segments).map((batch) =>
-				translateInBatches(
-					{ ...request, segments: batch },
-					(batchResponse) => translated.push(...batchResponse.segments),
+				translateInBatches({ ...request, segments: batch }, (batchResponse) =>
+					translated.push(...batchResponse.segments),
 				),
 			),
 		)

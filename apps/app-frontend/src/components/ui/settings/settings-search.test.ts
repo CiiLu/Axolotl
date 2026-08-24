@@ -95,7 +95,10 @@ test('tolerates small spelling errors and limits the result set', () => {
 		item: index,
 		text: `Setting ${index}`,
 	}))
-	assert.equal(filterSettingsSearchDocuments('setting', documents).length, MAX_SETTINGS_SEARCH_RESULTS)
+	assert.equal(
+		filterSettingsSearchDocuments('setting', documents).length,
+		MAX_SETTINGS_SEARCH_RESULTS,
+	)
 })
 
 test('settings search index has unique entries with categories', () => {

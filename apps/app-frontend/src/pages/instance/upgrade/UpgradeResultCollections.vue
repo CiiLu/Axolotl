@@ -267,10 +267,10 @@ import {
 	paginateUpgradeWarnings,
 	summarizeUpgradeWarnings,
 	upgradeResultWarningRows,
-	upgradeWarningContentKind,
-	upgradeWarningCategory,
-	upgradeWarningDisplayName,
 	type UpgradeWarningCategory,
+	upgradeWarningCategory,
+	upgradeWarningContentKind,
+	upgradeWarningDisplayName,
 	type UpgradeWarningFilter,
 	type UpgradeWarningRow,
 } from './upgrade-warning'

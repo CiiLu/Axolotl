@@ -242,7 +242,6 @@
 </template>
 
 <script setup lang="ts">
-import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 import {
 	BookmarkIcon,
 	BookOpenIcon,
@@ -308,6 +307,7 @@ import { useBreadcrumbs } from '@/store/breadcrumbs'
 import { useTheming } from '@/store/state.js'
 
 import Gallery from './Gallery.vue'
+import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -1,1 +1,5 @@
-define("vs/json.worker-BizpAl9O", ["require", "exports"], (function(require, r){"use strict";const e=""+new URL(require.toUrl("./assets/json.worker-CoJx_OPf.js"),document.baseURI).href;r.__worker_url_0__=e}));
+define('vs/json.worker-BizpAl9O', ['require', 'exports'], function (require, r) {
+	'use strict'
+	const e = '' + new URL(require.toUrl('./assets/json.worker-CoJx_OPf.js'), document.baseURI).href
+	r.__worker_url_0__ = e
+})
