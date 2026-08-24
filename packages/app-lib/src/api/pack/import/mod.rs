@@ -1438,6 +1438,45 @@ async fn copy_files_with_progress(
     Ok(())
 }
 
+/// Determines the real game working directory for an import whose source is a
+/// `versions/<name>` folder. If that folder's `.minecraft` root (or any
+/// ancestor) actually carries the game content (`mods/*.jar`), the game root is
+/// that ancestor; otherwise it is the source folder itself (version-isolated).
+fn resolve_import_game_root(source: &Path) -> PathBuf {
+    if source.is_dir() && dir_has_mod_jars(source) {
+        return source.to_path_buf();
+    }
+
+    // Walk up looking for a `.minecraft` root that carries the content.
+    let mut cursor = source.parent();
+    let mut best: Option<PathBuf> = None;
+    while let Some(dir) = cursor {
+        if dir_has_mod_jars(dir) {
+            best = Some(dir.to_path_buf());
+        }
+        // Stop once we've passed the `.minecraft` root (parent of `versions`).
+        if dir.file_name().and_then(|n| n.to_str()) == Some(".minecraft") {
+            break;
+        }
+        cursor = dir.parent();
+    }
+    best.unwrap_or_else(|| source.to_path_buf())
+}
+
+/// True if the directory contains at least one `.jar` directly under `mods/`.
+fn dir_has_mod_jars(root: &Path) -> bool {
+    let mods = root.join("mods");
+    let Ok(entries) = std::fs::read_dir(&mods) else {
+        return false;
+    };
+    for entry in entries.flatten() {
+        if entry.path().extension().is_some_and(|ext| ext == "jar") {
+            return true;
+        }
+    }
+    false
+}
+
 pub(crate) async fn finish_import(
     instance_id: &str,
     dotminecraft: PathBuf,
@@ -1447,6 +1486,25 @@ pub(crate) async fn finish_import(
     symlink: bool,
 ) -> crate::Result<()> {
     let local_source = LocalRuntimeSource::discover(&dotminecraft);
+
+    // For a non-version-isolated import the game content (mods, saves, config)
+    // lives in the `.minecraft` root, not in the detected `versions/<name>`
+    // subfolder. Detect that and record the override so the instance uses the
+    // real game root directly instead of an empty version subfolder.
+    let game_root = resolve_import_game_root(&dotminecraft);
+    if game_root != dotminecraft {
+        crate::state::edit_instance(
+            instance_id,
+            crate::state::EditInstance {
+                game_dir_override: Some(Some(
+                    game_root.to_string_lossy().to_string(),
+                )),
+                ..Default::default()
+            },
+            &crate::state::State::get().await?.pool,
+        )
+        .await?;
+    }
 
     if symlink {
         let instance_path =
@@ -1667,4 +1725,59 @@ pub async fn get_all_subfiles(
     }
 
     Ok(files)
+}
+
+#[cfg(test)]
+mod import_game_root_tests {
+    use super::{dir_has_mod_jars, resolve_import_game_root};
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn resolves_minecraft_root_when_content_is_there() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let versions = mc.join("versions");
+        let version = versions.join("My Pack");
+        fs::create_dir_all(version.join("mods")).unwrap();
+        fs::create_dir_all(mc.join("mods")).unwrap();
+        // Content lives in the .minecraft root, not the version subfolder.
+        fs::write(mc.join("mods/mod-a.jar"), "a").unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, mc);
+    }
+
+    #[test]
+    fn keeps_version_dir_when_it_has_the_content() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let version = mc.join("versions").join("My Pack");
+        fs::create_dir_all(version.join("mods")).unwrap();
+        fs::write(version.join("mods/mod-a.jar"), "a").unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, version);
+    }
+
+    #[test]
+    fn no_mods_falls_back_to_source() {
+        let root = tempdir().unwrap();
+        let version = root.path().join(".minecraft/versions/My Pack");
+        fs::create_dir_all(version.join("mods")).unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, version);
+    }
+
+    #[test]
+    fn detects_jar_in_mods() {
+        let root = tempdir().unwrap();
+        let mods = root.path().join("mods");
+        fs::create_dir_all(&mods).unwrap();
+        assert!(!dir_has_mod_jars(root.path()));
+
+        fs::write(mods.join("mod.jar"), "a").unwrap();
+        assert!(dir_has_mod_jars(root.path()));
+    }
 }
