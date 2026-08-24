@@ -2720,6 +2720,9 @@
   "app.instance.played": {
     "message": "Played {time}"
   },
+  "app.instance.post-upgrade-status": {
+    "message": "Upgraded to {version}"
+  },
   "app.instance.screenshots.action-failed": {
     "message": "Screenshot action failed"
   },
