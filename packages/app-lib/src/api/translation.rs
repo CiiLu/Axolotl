@@ -575,6 +575,17 @@ fn truncate_preview(value: &str, max_chars: usize) -> String {
     value.chars().take(max_chars).collect()
 }
 
+/// Byte-bounded log prefix for sensitive credentials. Unlike `truncate_preview`,
+/// a multi-byte key must never log more raw bytes than the previous byte-limit
+/// allowed; the byte budget is only ever reduced to stay on a char boundary.
+fn credential_prefix(value: &str, max_bytes: usize) -> String {
+    let mut end = max_bytes.min(value.len());
+    while !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    value[..end].to_string()
+}
+
 async fn deepl_translate(
     segment: &TranslationSegment,
     source_language: &str,
@@ -588,7 +599,7 @@ async fn deepl_translate(
         target = %target_language,
         api_key_len = %api_key.len(),
         api_key_prefix =
-            %if api_key.len() > 4 { truncate_preview(api_key, 4) } else { "***".to_string() },
+            %if api_key.len() > 4 { credential_prefix(api_key, 4) } else { "***".to_string() },
         text_len = %segment.text.len(),
         text_preview = %truncate_preview(&segment.text, 50),
         "Preparing DeepL translation request"
@@ -1467,6 +1478,19 @@ mod tests {
         assert_eq!(preview.chars().count(), 50);
         assert_eq!(preview, text.chars().take(50).collect::<String>());
         assert_eq!(truncate_preview("hello", 50), "hello");
+    }
+
+    #[test]
+    fn credential_prefix_stays_within_byte_budget() {
+        // ASCII keys keep the original byte-based behaviour.
+        assert_eq!(credential_prefix("abc12345", 4), "abc1");
+        // Byte budget never grows: a multi-byte key logs at most 4 bytes and
+        // always ends at a char boundary (may be shorter, never panics).
+        let key = "\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}";
+        let prefix = credential_prefix(key, 4);
+        assert!(prefix.len() <= 4);
+        assert!(key.is_char_boundary(prefix.len()));
+        assert_eq!(credential_prefix("ab", 4), "ab");
     }
 
     #[test]
