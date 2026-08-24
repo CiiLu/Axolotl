@@ -4767,8 +4767,8 @@
 	"instance.upgrade.confirm.details.kept": { "message": "保留的內容" },
 	"instance.upgrade.confirm.details.new-dependency": { "message": "新的 {provider} 相依項目" },
 	"instance.upgrade.confirm.details.updated": { "message": "更新的內容" },
-	"instance.upgrade.confirm.details.version-current": { "message": "目前 {version}" },
-	"instance.upgrade.confirm.details.version-target": { "message": "目標 {version}" },
+	"instance.upgrade.confirm.details.version-current": { "message": "目前：{version}" },
+	"instance.upgrade.confirm.details.version-target": { "message": "目標：{version}" },
 	"instance.upgrade.confirm.disabled": { "message": "將停用" },
 	"instance.upgrade.confirm.environment": { "message": "執行環境" },
 	"instance.upgrade.confirm.kept": { "message": "將保留" },
@@ -4779,9 +4779,9 @@
 	},
 	"instance.upgrade.confirm.preserved.title": { "message": "保留的資料" },
 	"instance.upgrade.confirm.rollback.description": {
-		"message": "如果升級時檔案變更失敗，啟動器會自動回復本次操作。這與使用者可選的完整備份不同。"
+		"message": "如果升級時檔案變更失敗，啟動器會自動復原本次操作。這個復原不能取代完整備份！"
 	},
-	"instance.upgrade.confirm.rollback.title": { "message": "自動技術回復" },
+	"instance.upgrade.confirm.rollback.title": { "message": "自動復原" },
 	"instance.upgrade.confirm.shared.copy": { "message": "複製並升級" },
 	"instance.upgrade.confirm.shared.copy-description": {
 		"message": "建立並升級新的本機實例。原連結和外部目標保持不變。"
@@ -5253,12 +5253,12 @@
 	"instance.upgrade.result.open-original": { "message": "開啟原實例" },
 	"instance.upgrade.result.backup-title": { "message": "已建立備份" },
 	"instance.upgrade.result.backup-description": {
-		"message": "已另外建立升級前的完整副本，與自動技術復原分開。"
+		"message": "已另外建立升級前的完整備份，你可以在實例庫中找到。"
 	},
 	"instance.upgrade.result.open-backup": { "message": "開啟備份" },
 	"instance.upgrade.result.no-backup-title": { "message": "未建立完整備份" },
 	"instance.upgrade.result.no-backup-description": {
-		"message": "自動技術復原只在升級期間保護操作，不是永久備份。"
+		"message": "自動復原只在升級期間保護操作，不是永久備份。"
 	},
 	"instance.upgrade.result.external-title": { "message": "偵測到升級期間的檔案變更" },
 	"instance.upgrade.result.external-description": {
@@ -5362,10 +5362,10 @@
 		"message": "升級已完成，但此相依項目未能按一般方式驗證。如果遊戲無法啟動，請檢查它。"
 	},
 	"instance.upgrade.result.warning-legacy-headline": { "message": "相容性需要注意" },
-	"instance.upgrade.result.technical-details": { "message": "技術詳情" },
+	"instance.upgrade.result.technical-details": { "message": "詳情" },
 	"instance.upgrade.result.relative-path": { "message": "相對路徑" },
-	"instance.upgrade.result.warning-code": { "message": "警告代碼" },
-	"instance.upgrade.result.provider-identity": { "message": "提供方識別" },
+	"instance.upgrade.result.warning-code": { "message": "警告資訊" },
+	"instance.upgrade.result.provider-identity": { "message": "提供方" },
 	"instance.upgrade.result.local-content": { "message": "本機內容" },
 	"instance.upgrade.result.content-kind-content": { "message": "內容" },
 	"instance.upgrade.result.content-kind-mod": { "message": "模組" },

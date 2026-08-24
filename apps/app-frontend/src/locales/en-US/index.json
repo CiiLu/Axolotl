@@ -7599,10 +7599,10 @@
 		"message": "Updated content"
 	},
 	"instance.upgrade.confirm.details.version-current": {
-		"message": "Current {version}"
+		"message": "Current: {version}"
 	},
 	"instance.upgrade.confirm.details.version-target": {
-		"message": "Target {version}"
+		"message": "Target: {version}"
 	},
 	"instance.upgrade.confirm.disabled": {
 		"message": "Will disable"
@@ -7626,10 +7626,10 @@
 		"message": "Preserved data"
 	},
 	"instance.upgrade.confirm.rollback.description": {
-		"message": "If file changes fail during the upgrade, the launcher automatically rolls back the operation. This is separate from a full user backup."
+		"message": "If file changes fail during the upgrade, the launcher automatically rolls back the operation. This rollback is not a substitute for a full backup!"
 	},
 	"instance.upgrade.confirm.rollback.title": {
-		"message": "Automatic technical rollback"
+		"message": "Automatic rollback"
 	},
 	"instance.upgrade.confirm.shared.copy": {
 		"message": "Copy and upgrade"
@@ -8266,12 +8266,12 @@
 	"instance.upgrade.result.open-original": { "message": "Open original instance" },
 	"instance.upgrade.result.backup-title": { "message": "Backup created" },
 	"instance.upgrade.result.backup-description": {
-		"message": "A complete pre-upgrade copy was created separately from automatic technical rollback."
+		"message": "A complete pre-upgrade backup was created separately and is available in your instance library."
 	},
 	"instance.upgrade.result.open-backup": { "message": "Open backup" },
 	"instance.upgrade.result.no-backup-title": { "message": "No complete backup was created" },
 	"instance.upgrade.result.no-backup-description": {
-		"message": "Automatic technical rollback protected this operation while it was running; it is not a permanent backup."
+		"message": "Automatic rollback protected this operation while it was running; it is not a permanent backup."
 	},
 	"instance.upgrade.result.external-title": { "message": "Changes detected while upgrading" },
 	"instance.upgrade.result.external-description": {
@@ -8393,10 +8393,10 @@
 		"message": "The upgrade completed, but this dependency could not be verified normally. Review it if the game fails to start."
 	},
 	"instance.upgrade.result.warning-legacy-headline": { "message": "Compatibility needs attention" },
-	"instance.upgrade.result.technical-details": { "message": "Technical details" },
+	"instance.upgrade.result.technical-details": { "message": "Details" },
 	"instance.upgrade.result.relative-path": { "message": "Relative path" },
-	"instance.upgrade.result.warning-code": { "message": "Warning" },
-	"instance.upgrade.result.provider-identity": { "message": "Provider identity" },
+	"instance.upgrade.result.warning-code": { "message": "Warning details" },
+	"instance.upgrade.result.provider-identity": { "message": "Provider" },
 	"instance.upgrade.result.local-content": { "message": "Local content" },
 	"instance.upgrade.result.content-kind-content": { "message": "Content" },
 	"instance.upgrade.result.content-kind-mod": { "message": "Mod" },

@@ -3945,8 +3945,8 @@
 	"instance.upgrade.confirm.details.kept": { "message": "保留的内容" },
 	"instance.upgrade.confirm.details.new-dependency": { "message": "新的 {provider} 依赖" },
 	"instance.upgrade.confirm.details.updated": { "message": "更新的内容" },
-	"instance.upgrade.confirm.details.version-current": { "message": "当前 {version}" },
-	"instance.upgrade.confirm.details.version-target": { "message": "目标 {version}" },
+	"instance.upgrade.confirm.details.version-current": { "message": "当前: {version}" },
+	"instance.upgrade.confirm.details.version-target": { "message": "目标: {version}" },
 	"instance.upgrade.confirm.disabled": { "message": "将停用" },
 	"instance.upgrade.confirm.environment": { "message": "运行环境" },
 	"instance.upgrade.confirm.kept": { "message": "将保留" },
@@ -3957,9 +3957,9 @@
 	},
 	"instance.upgrade.confirm.preserved.title": { "message": "保留的数据" },
 	"instance.upgrade.confirm.rollback.description": {
-		"message": "如果升级时文件更改失败，启动器会自动回滚本次操作。这与用户可选的完整备份不同。"
+		"message": "如果升级时文件更改失败，启动器会自动回滚本次操作。这个回滚不能替代完整备份！"
 	},
-	"instance.upgrade.confirm.rollback.title": { "message": "自动技术回滚" },
+	"instance.upgrade.confirm.rollback.title": { "message": "自动回滚" },
 	"instance.upgrade.confirm.shared.copy": { "message": "复制并升级" },
 	"instance.upgrade.confirm.shared.copy-description": {
 		"message": "创建并升级新的本地实例。原链接和外部目标保持不变。"
@@ -7908,12 +7908,12 @@
 	"instance.upgrade.result.open-original": { "message": "打开原实例" },
 	"instance.upgrade.result.backup-title": { "message": "已创建备份" },
 	"instance.upgrade.result.backup-description": {
-		"message": "已单独创建升级前的完整副本，与自动技术回滚分开。"
+		"message": "已单独创建升级前的完整备份，你可以在实例库中找到。"
 	},
 	"instance.upgrade.result.open-backup": { "message": "打开备份" },
 	"instance.upgrade.result.no-backup-title": { "message": "未创建完整备份" },
 	"instance.upgrade.result.no-backup-description": {
-		"message": "自动技术回滚仅在升级期间保护操作，不是永久备份。"
+		"message": "自动回滚仅在升级期间保护操作，不是永久备份。"
 	},
 	"instance.upgrade.result.external-title": { "message": "检测到升级期间的文件变化" },
 	"instance.upgrade.result.external-description": {
@@ -8013,10 +8013,10 @@
 		"message": "升级已完成，但此依赖项未能按常规方式验证。如果游戏无法启动，请检查它。"
 	},
 	"instance.upgrade.result.warning-legacy-headline": { "message": "兼容性需要注意" },
-	"instance.upgrade.result.technical-details": { "message": "技术详情" },
+	"instance.upgrade.result.technical-details": { "message": "详情" },
 	"instance.upgrade.result.relative-path": { "message": "相对路径" },
-	"instance.upgrade.result.warning-code": { "message": "警告代码" },
-	"instance.upgrade.result.provider-identity": { "message": "提供方标识" },
+	"instance.upgrade.result.warning-code": { "message": "警告信息" },
+	"instance.upgrade.result.provider-identity": { "message": "提供方" },
 	"instance.upgrade.result.local-content": { "message": "本地内容" },
 	"instance.upgrade.result.content-kind-content": { "message": "内容" },
 	"instance.upgrade.result.content-kind-mod": { "message": "模组" },

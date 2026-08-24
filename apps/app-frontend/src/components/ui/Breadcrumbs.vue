@@ -46,6 +46,7 @@ import { defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
+import { resolveBreadcrumbLabel } from '@/helpers/breadcrumb-label'
 import { useBreadcrumbs } from '@/store/breadcrumbs'
 
 interface Breadcrumb {
@@ -87,6 +88,7 @@ const messages = defineMessages({
 	files: { id: 'app.instance.tabs.files', defaultMessage: 'Files' },
 	logs: { id: 'app.instance.tabs.logs', defaultMessage: 'Logs' },
 	editWorld: { id: 'app.navigation.edit-world', defaultMessage: 'Edit world' },
+	upgradeInstance: { id: 'app.instance.upgrade-instance', defaultMessage: 'Upgrade instance' },
 })
 
 const staticLabels = {
@@ -106,6 +108,7 @@ const staticLabels = {
 	Files: messages.files,
 	Logs: messages.logs,
 	'Edit world': messages.editWorld,
+	Upgrade: messages.upgradeInstance,
 }
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {
@@ -120,10 +123,12 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
 })
 
 function resolveLabel(name: string): string {
-	if (name.charAt(0) === '?') return breadcrumbData.getName(name.slice(1))
-
-	const label = staticLabels[name as keyof typeof staticLabels]
-	return label ? formatMessage(label) : name
+	return resolveBreadcrumbLabel(
+		name,
+		(key) => breadcrumbData.getName(key),
+		staticLabels,
+		(message) => formatMessage(message),
+	)
 }
 
 // Overflow detection
