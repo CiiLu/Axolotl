@@ -357,7 +357,6 @@ export default new createRouter({
 				//   component: Instance.Overview,
 				//   meta: {
 				//     useRootContext: true,
-				//     breadcrumb: [{ name: '?Instance' }],
 				//   },
 				// },
 				{
@@ -366,7 +365,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Worlds.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Worlds' }],
+						breadcrumb: [{ name: 'Worlds' }],
 					},
 				},
 				{
@@ -376,7 +375,6 @@ export default new createRouter({
 					meta: {
 						useRootContext: true,
 						breadcrumb: [
-							{ name: '?Instance', link: '/instance/{id}/' },
 							{ name: 'Worlds', link: '/instance/{id}/worlds' },
 							{ name: 'Edit world' },
 						],
@@ -388,7 +386,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Screenshots.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Screenshots' }],
+						breadcrumb: [{ name: 'Screenshots' }],
 					},
 				},
 				{
@@ -397,7 +395,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Mods.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Content' }],
+						breadcrumb: [{ name: 'Content' }],
 					},
 				},
 				{
@@ -406,7 +404,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Mods.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Content' }],
+						breadcrumb: [{ name: 'Content' }],
 					},
 				},
 				{
@@ -415,7 +413,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/Files.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Files' }],
+						breadcrumb: [{ name: 'Files' }],
 					},
 				},
 				{
@@ -426,7 +424,6 @@ export default new createRouter({
 						renderMode: 'fixed',
 						useRootContext: true,
 						breadcrumb: [
-							{ name: '?Instance', link: '/instance/{id}/' },
 							{ name: 'Files', link: '/instance/{id}/files' },
 							{ name: 'Studio' },
 						],
@@ -439,7 +436,7 @@ export default new createRouter({
 					meta: {
 						renderMode: 'fixed',
 						useRootContext: true,
-						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Logs' }],
+						breadcrumb: [{ name: 'Logs' }],
 					},
 				},
 			],

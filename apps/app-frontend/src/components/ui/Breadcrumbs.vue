@@ -15,7 +15,6 @@
 			:class="{ 'breadcrumbs-scroll': isAnimating }"
 			@animationiteration="onAnimationIteration"
 		>
-			{{ breadcrumbData.resetToNames(breadcrumbs) }}
 			<template v-for="breadcrumb in breadcrumbs" :key="breadcrumb.name">
 				<router-link
 					v-if="breadcrumb.link"
@@ -23,15 +22,45 @@
 						path: breadcrumb.link.replace('{id}', encodeURIComponent($route.params.id as string)),
 						query: breadcrumb.query,
 					}"
-					class="shrink-0 whitespace-nowrap text-primary"
+					class="flex shrink-0 items-center gap-1 whitespace-nowrap text-primary"
 				>
+					<Avatar
+						v-if="resolveIconUrl(breadcrumb)"
+						:src="resolveIconUrl(breadcrumb)"
+						:alt="resolveLabel(breadcrumb.name)"
+						size="20px"
+						no-shadow
+						raised
+						class="shrink-0 !rounded-md"
+					/>
+					<component
+						:is="resolveIcon(breadcrumb)"
+						v-else-if="resolveIcon(breadcrumb)"
+						class="size-5 shrink-0 text-primary"
+						aria-hidden="true"
+					/>
 					{{ resolveLabel(breadcrumb.name) }}
 				</router-link>
 				<span
 					v-else
 					data-tauri-drag-region
-					class="shrink-0 whitespace-nowrap text-contrast font-semibold cursor-default select-none"
+					class="flex shrink-0 items-center gap-1 whitespace-nowrap text-contrast font-semibold cursor-default select-none"
 				>
+					<Avatar
+						v-if="resolveIconUrl(breadcrumb)"
+						:src="resolveIconUrl(breadcrumb)"
+						:alt="resolveLabel(breadcrumb.name)"
+						size="20px"
+						no-shadow
+						raised
+						class="shrink-0 !rounded-md"
+					/>
+					<component
+						:is="resolveIcon(breadcrumb)"
+						v-else-if="resolveIcon(breadcrumb)"
+						class="size-5 shrink-0 text-primary"
+						aria-hidden="true"
+					/>
 					{{ resolveLabel(breadcrumb.name) }}
 				</span>
 				<ChevronRightIcon v-if="breadcrumb.link" data-tauri-drag-region class="w-5 h-5 shrink-0" />
@@ -41,9 +70,28 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronRightIcon } from '@modrinth/assets'
-import { commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+	ChangeSkinIcon,
+	ChevronRightIcon,
+	CodeIcon,
+	CompassIcon,
+	DownloadIcon,
+	FileTextIcon,
+	FlaskConicalIcon,
+	FolderIcon,
+	GlobeIcon,
+	HeartIcon,
+	HomeIcon,
+	ImagesIcon,
+	LibraryIcon,
+	MapIcon,
+	PackageIcon,
+	PencilIcon,
+	ServerIcon,
+	SettingsIcon,
+} from '@modrinth/assets'
+import { Avatar, commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { useBreadcrumbs } from '@/store/breadcrumbs'
@@ -52,6 +100,7 @@ interface Breadcrumb {
 	name: string
 	link?: string
 	query?: Record<string, string>
+	iconUrl?: string | null
 }
 
 const route = useRoute()
@@ -111,6 +160,39 @@ const staticLabels = {
 	'Edit world': messages.editWorld,
 }
 
+const staticIcons: Record<string, Component> = {
+	Home: HomeIcon,
+	Worlds: GlobeIcon,
+	'Discover content': CompassIcon,
+	'Skin selector': ChangeSkinIcon,
+	Multiplayer: ServerIcon,
+	Library: LibraryIcon,
+	Downloads: DownloadIcon,
+	Settings: SettingsIcon,
+	Lab: FlaskConicalIcon,
+	'Gradient text generator': FlaskConicalIcon,
+	'Seed map': MapIcon,
+	'Schematic workshop': CodeIcon,
+	'Mod translation': CodeIcon,
+	Content: PackageIcon,
+	Files: FolderIcon,
+	Studio: CodeIcon,
+	Logs: FileTextIcon,
+	'Edit world': PencilIcon,
+	Favorites: HeartIcon,
+	Versions: PackageIcon,
+	Gallery: ImagesIcon,
+	Screenshots: ImagesIcon,
+	'Drop help': FileTextIcon,
+	'Recipe generator': FlaskConicalIcon,
+	Downloaded: DownloadIcon,
+	Modpacks: PackageIcon,
+	LibraryServers: ServerIcon,
+	Custom: PackageIcon,
+	Shared: PackageIcon,
+	Saved: HeartIcon,
+}
+
 const breadcrumbs = computed<Breadcrumb[]>(() => {
 	const additionalContext =
 		route.meta.useContext === true
@@ -127,6 +209,26 @@ function resolveLabel(name: string): string {
 
 	const label = staticLabels[name as keyof typeof staticLabels]
 	return label ? formatMessage(label) : name
+}
+
+function resolveIcon(breadcrumb: Breadcrumb): Component | undefined {
+	if (breadcrumb.iconUrl || breadcrumbData.getIcon(breadcrumb.name.slice(1))) return undefined
+	const dynamicIcons: Record<string, Component> = {
+		'?Project': PackageIcon,
+		'?Version': PackageIcon,
+		'?BrowseTitle': CompassIcon,
+		'?FavoritesTitle': HeartIcon,
+	}
+	if (dynamicIcons[breadcrumb.name]) return dynamicIcons[breadcrumb.name]
+	const key = breadcrumb.name.startsWith('?') ? resolveLabel(breadcrumb.name) : breadcrumb.name
+	return staticIcons[key]
+}
+
+function resolveIconUrl(breadcrumb: Breadcrumb): string | null {
+	return (
+		breadcrumb.iconUrl ??
+		(breadcrumb.name.startsWith('?') ? breadcrumbData.getIcon(breadcrumb.name.slice(1)) : null)
+	)
 }
 
 // Overflow detection
@@ -181,9 +283,14 @@ onBeforeUnmount(() => {
 	resizeObserver?.disconnect()
 })
 
-watch(breadcrumbs, () => {
-	requestAnimationFrame(checkOverflow)
-})
+watch(
+	breadcrumbs,
+	() => {
+		breadcrumbData.resetToNames(breadcrumbs.value)
+		requestAnimationFrame(checkOverflow)
+	},
+	{ immediate: true },
+)
 </script>
 
 <style scoped>

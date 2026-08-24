@@ -406,6 +406,7 @@ import { trackEvent } from '@/helpers/analytics'
 import { get_project_v3 } from '@/helpers/cache.js'
 import { instance_listener, process_listener } from '@/helpers/events'
 import { install_existing_instance, install_pack_to_existing_instance } from '@/helpers/install'
+import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import {
 	allow_symlink_target,
 	gcReportFellBack,
@@ -680,16 +681,11 @@ const tabs = computed(() => [
 
 function updateBreadcrumbs() {
 	if (instance.value) {
-		breadcrumbs.setName(
-			'Instance',
-			instance.value.name.length > 40
-				? instance.value.name.substring(0, 40) + '...'
-				: instance.value.name,
-		)
-		breadcrumbs.setContext({
+		breadcrumbs.setRootContext({
 			name: instance.value.name,
 			link: displayedInstanceRoute.value.path,
 			query: displayedInstanceRoute.value.query,
+			iconUrl: getDisplayInstanceIcon(instance.value.icon_path, instance.value.loader).url,
 		})
 	}
 }

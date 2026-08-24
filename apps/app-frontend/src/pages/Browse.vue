@@ -973,12 +973,14 @@ const browseTitle = computed(() =>
 	),
 )
 breadcrumbs.setName('BrowseTitle', browseTitle.value)
-if (instance.value) {
-	const instanceLink = `/instance/${encodeURIComponent(instance.value.id)}`
-	breadcrumbs.setContext({
-		name: instance.value.name,
-		link: isFromWorlds.value || isWorldMapContext.value ? `${instanceLink}/worlds` : instanceLink,
-	})
+	if (instance.value) {
+		const instanceLink = `/instance/${encodeURIComponent(instance.value.id)}`
+		const instanceIcon = getDisplayInstanceIcon(instance.value.icon_path, instance.value.loader).url
+		breadcrumbs.setContext({
+			name: instance.value.name,
+			link: isFromWorlds.value || isWorldMapContext.value ? `${instanceLink}/worlds` : instanceLink,
+			iconUrl: instanceIcon,
+		})
 } else {
 	breadcrumbs.setContext(null)
 }
@@ -1004,7 +1006,7 @@ onBeforeRouteLeave((to) => {
 	}
 
 	breadcrumbs.setContext({
-		name: browseTitle.value,
+		name: '?BrowseTitle',
 		link: `/browse/${projectType.value}`,
 		query: route.query,
 	})
@@ -1191,6 +1193,7 @@ async function selectTargetInstance(target: GameInstance) {
 		breadcrumbs.setContext({
 			name: target.name,
 			link: `/instance/${encodeURIComponent(target.id)}`,
+			iconUrl: getDisplayInstanceIcon(target.icon_path, target.loader).url,
 		})
 	}
 	await refreshInstalledProjectIds()
@@ -1205,6 +1208,7 @@ async function cancelTargetInstanceSwitch() {
 	breadcrumbs.setContext({
 		name: target.name,
 		link: `/instance/${encodeURIComponent(target.id)}`,
+		iconUrl: getDisplayInstanceIcon(target.icon_path, target.loader).url,
 	})
 }
 

@@ -8462,6 +8462,15 @@
   "minecraft-account.third-party-profile.title": {
     "message": "Select a profile"
   },
+  "project.actions.view-dependents": {
+    "message": "View dependents"
+  },
+  "project.actions.view-modpacks": {
+    "message": "View modpacks"
+  },
+  "project.actions.view-project-type-dependents": {
+    "message": "View {projectType} dependents"
+  },
   "project.description.title": {
     "message": "Description"
   },

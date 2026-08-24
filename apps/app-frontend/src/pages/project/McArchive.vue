@@ -198,6 +198,7 @@ watch(
 		try {
 			project.value = await getMcArchiveModBySlug(slug)
 			breadcrumbs.setName('Project', project.value.name)
+			breadcrumbs.setNameIcon('Project', project.value.icon_url ?? project.value.iconUrl ?? null)
 		} catch (error) {
 			handleError(error)
 		} finally {
