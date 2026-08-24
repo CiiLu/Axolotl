@@ -471,19 +471,21 @@ fn provider_language(locale: &str, provider: TranslationProvider) -> String {
     }
 }
 
-/// DeepL 的 source_lang 只接受基础语言码，ZH-HANT/ZH-HANS 仅可用于
-/// target_lang；显式指定繁体源时必须回退到 ZH。
+/// DeepL 的 `source_lang` 只接受基础语言码。地区变体（EN-US/EN-GB、PT-BR/PT-PT、
+/// ZH-HANT/ZH-HANS）仅可用于 `target_lang`，官方 API 把变体当作源语言时会返回
+/// HTTP 400（"Value for 'source_lang' not supported."）。
 fn provider_source_language(
     locale: &str,
     provider: TranslationProvider,
 ) -> String {
-    if provider == TranslationProvider::DeepL {
-        match provider_language(locale, provider).as_str() {
-            "ZH-HANT" | "ZH-HANS" => "ZH".to_string(),
-            mapped => mapped.to_string(),
-        }
-    } else {
-        provider_language(locale, provider)
+    if provider != TranslationProvider::DeepL {
+        return provider_language(locale, provider);
+    }
+    match provider_language(locale, provider).as_str() {
+        "EN-US" | "EN-GB" => "EN".to_string(),
+        "PT-BR" | "PT-PT" => "PT".to_string(),
+        "ZH-HANT" | "ZH-HANS" => "ZH".to_string(),
+        mapped => mapped.to_string(),
     }
 }
 
@@ -566,6 +568,13 @@ fn summarize_error_body(body: &str) -> String {
     }
 }
 
+/// Log preview truncated by character count, never by byte offset. Byte slicing
+/// like `&text[..50]` panics when byte 50 lands inside a multi-byte UTF-8
+/// character, which happens routinely with CJK translations.
+fn truncate_preview(value: &str, max_chars: usize) -> String {
+    value.chars().take(max_chars).collect()
+}
+
 async fn deepl_translate(
     segment: &TranslationSegment,
     source_language: &str,
@@ -578,9 +587,10 @@ async fn deepl_translate(
         source = %source_language,
         target = %target_language,
         api_key_len = %api_key.len(),
-        api_key_prefix = %if api_key.len() > 4 { &api_key[..4] } else { "***" },
+        api_key_prefix =
+            %if api_key.len() > 4 { truncate_preview(api_key, 4) } else { "***".to_string() },
         text_len = %segment.text.len(),
-        text_preview = %if segment.text.len() > 50 { &segment.text[..50] } else { &segment.text },
+        text_preview = %truncate_preview(&segment.text, 50),
         "Preparing DeepL translation request"
     );
 
@@ -746,7 +756,7 @@ async fn deepl_translate(
 
     tracing::info!(
         translated_text_len = %translated.len(),
-        translated_preview = %if translated.len() > 50 { &translated[..50] } else { &translated },
+        translated_preview = %truncate_preview(translated, 50),
         "DeepL translation successful"
     );
 
@@ -1400,7 +1410,8 @@ mod tests {
     }
 
     #[test]
-    fn deepl_source_language_uses_base_chinese_code() {
+    fn deepl_source_language_uses_base_codes() {
+        // Chinese variants are only valid as target_lang.
         assert_eq!(
             provider_source_language("zh-TW", TranslationProvider::DeepL),
             "ZH"
@@ -1409,10 +1420,53 @@ mod tests {
             provider_source_language("zh-CN", TranslationProvider::DeepL),
             "ZH"
         );
+        // English and Portuguese regional variants are rejected by source_lang.
+        assert_eq!(
+            provider_source_language("en", TranslationProvider::DeepL),
+            "EN"
+        );
+        assert_eq!(
+            provider_source_language("en-US", TranslationProvider::DeepL),
+            "EN"
+        );
+        assert_eq!(
+            provider_source_language("en-GB", TranslationProvider::DeepL),
+            "EN"
+        );
+        assert_eq!(
+            provider_source_language("pt-BR", TranslationProvider::DeepL),
+            "PT"
+        );
+        assert_eq!(
+            provider_source_language("pt-PT", TranslationProvider::DeepL),
+            "PT"
+        );
+        // Other locales keep their base code, including Norwegian (NB).
         assert_eq!(
             provider_source_language("ja-JP", TranslationProvider::DeepL),
             "JA"
         );
+        assert_eq!(
+            provider_source_language("no-NO", TranslationProvider::DeepL),
+            "NB"
+        );
+        // Non-DeepL providers keep their existing passthrough behaviour.
+        assert_eq!(
+            provider_source_language("en-US", TranslationProvider::Google),
+            "en-US"
+        );
+    }
+
+    #[test]
+    fn truncate_preview_never_panics_on_multibyte_text() {
+        // U+6E2C is 3 bytes in UTF-8, so byte 50 lands inside a character.
+        let text = "\u{6e2c}".repeat(60);
+        assert!(text.len() > 50);
+        assert!(!text.is_char_boundary(50));
+        let preview = truncate_preview(&text, 50);
+        assert_eq!(preview.chars().count(), 50);
+        assert_eq!(preview, text.chars().take(50).collect::<String>());
+        assert_eq!(truncate_preview("hello", 50), "hello");
     }
 
     #[test]
