@@ -230,8 +230,9 @@
 													),
 													action: () => void toggleFavorite(),
 												},
-										]
+											]
 										: []),
+									...getDependentSearchActions(),
 									{
 										id: 'open-in-browser',
 										link: `https://modrinth.com/${data.project_type}/${data.slug}`,
@@ -277,7 +278,7 @@
 												: favoriteSaved
 													? messages.removeFromFavorites
 													: messages.addToFavorites,
-											)
+										)
 									}}
 								</template>
 								<template #report> <ReportIcon /> Report </template>
@@ -380,9 +381,11 @@ import {
 	HeartIcon,
 	LanguagesIcon,
 	MoreVerticalIcon,
+	PackageIcon,
 	PlayIcon,
 	PlusIcon,
 	ReportIcon,
+	SearchIcon,
 	SpinnerIcon,
 	StopCircleIcon,
 } from '@modrinth/assets'
@@ -393,6 +396,8 @@ import {
 	commonProjectSettingsMessages,
 	CreationFlowModal,
 	defineMessages,
+	formatDependencyProjectFilterOption,
+	formatProjectTypeSentence,
 	getLatestMatchingInstallVersion,
 	getTargetInstallPreferences,
 	injectNotificationManager,
@@ -558,6 +563,18 @@ const messages = defineMessages({
 		id: 'app.content-favorites.loading',
 		defaultMessage: 'Updating favorites…',
 	},
+	viewDependents: {
+		id: 'project.actions.view-dependents',
+		defaultMessage: 'View dependents',
+	},
+	viewProjectTypeDependents: {
+		id: 'project.actions.view-project-type-dependents',
+		defaultMessage: 'View {projectType} dependents',
+	},
+	viewModpacks: {
+		id: 'project.actions.view-modpacks',
+		defaultMessage: 'View modpacks',
+	},
 })
 
 const { installingServerProjects, playServerProject, showAddServerToInstanceModal } =
@@ -689,7 +706,9 @@ const projectBrowseBackUrl = computed(() => {
 	return buildBrowseHref(`/browse/${type}`)
 })
 const projectBackLabel = computed(() =>
-	formatMessage(instanceContentBackUrl.value ? messages.backToInstanceContent : messages.backToBrowse),
+	formatMessage(
+		instanceContentBackUrl.value ? messages.backToInstanceContent : messages.backToBrowse,
+	),
 )
 const fromBrowse = computed(
 	() => typeof route.query.b === 'string' && route.query.b.startsWith('/browse/'),
@@ -826,6 +845,44 @@ const installButtonTooltip = computed(() => {
 const showSwitchVersion = computed(() => !!instance.value && installed.value)
 const onVersionsPage = computed(() => route.name === 'Versions')
 
+function getDependentSearchTypes() {
+	if (!data.value) return []
+	if (data.value.project_type !== 'mod')
+		return [isServerProject.value ? 'server' : data.value.project_type]
+	const loaders = data.value.loaders ?? []
+	const types = []
+	if (loaders.some((loader) => ['fabric', 'forge', 'neoforge', 'quilt'].includes(loader)))
+		types.push('mod')
+	if (loaders.some((loader) => ['paper', 'purpur', 'spigot', 'folia'].includes(loader)))
+		types.push('plugin')
+	if (loaders.some((loader) => ['datapack'].includes(loader))) types.push('datapack')
+	return types.length ? types : ['mod']
+}
+
+function getDependentSearchActions() {
+	if (!data.value) return []
+	const types = getDependentSearchTypes()
+	return [
+		...types.map((projectType) => ({
+			id: formatMessage(
+				types.length === 1 ? messages.viewDependents : messages.viewProjectTypeDependents,
+				{ projectType: formatProjectTypeSentence(formatMessage, projectType) },
+			),
+			icon: SearchIcon,
+			link: `/browse/${projectType}?dep=${encodeURIComponent(formatDependencyProjectFilterOption(data.value.id, ['required']))}`,
+		})),
+		...(data.value.project_type !== 'modpack' && types.length !== 1
+			? [
+					{
+						id: formatMessage(messages.viewModpacks),
+						icon: PackageIcon,
+						link: `/browse/modpack?dep=${encodeURIComponent(formatDependencyProjectFilterOption(data.value.id, ['required']))}`,
+					},
+				]
+			: []),
+	]
+}
+
 function goToVersions() {
 	router.push(versionsHref.value)
 }
@@ -926,6 +983,7 @@ async function fetchProjectData() {
 	serverStatusOnline.value = !!projectV3.value?.minecraft_java_server?.ping?.data
 
 	breadcrumbs.setName('Project', data.value.title)
+	breadcrumbs.setNameIcon('Project', data.value.icon_url)
 
 	fetchDeferredServerData(project)
 	void maybeAutoTranslate()

@@ -734,6 +734,10 @@ async function loadProject(projectId: number) {
 		if (requestVersion !== projectRequestVersion) return
 		project.value = projectData
 		breadcrumbs.setName('Project', projectData.name)
+		breadcrumbs.setNameIcon(
+			'Project',
+			projectData.logo?.thumbnailUrl ?? projectData.logo?.url ?? null,
+		)
 		loading.value = false
 		void resolveMcmodUrl(projectData.slug, 'curseforge').then((url) => {
 			if (requestVersion === projectRequestVersion) mcmodUrl.value = url

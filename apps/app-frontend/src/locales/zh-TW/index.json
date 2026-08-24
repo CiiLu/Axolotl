@@ -4805,6 +4805,15 @@
 	"minecraft-account.third-party-profile.title": {
 		"message": "選擇角色"
 	},
+	"project.actions.view-dependents": {
+		"message": "查看依賴項目"
+	},
+	"project.actions.view-modpacks": {
+		"message": "查看整合包"
+	},
+	"project.actions.view-project-type-dependents": {
+		"message": "查看依賴此項目的{projectType}"
+	},
 	"project.description.title": {
 		"message": "簡介"
 	},

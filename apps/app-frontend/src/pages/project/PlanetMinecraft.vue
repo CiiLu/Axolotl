@@ -150,6 +150,7 @@ watch(
 		try {
 			project.value = await getPlanetMinecraftProject(id)
 			breadcrumbs.setName('Project', project.value.title)
+			breadcrumbs.setNameIcon('Project', project.value.icon_url ?? project.value.iconUrl ?? null)
 		} catch (error) {
 			handleError(error)
 		} finally {
