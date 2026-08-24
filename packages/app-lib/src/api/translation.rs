@@ -575,9 +575,12 @@ fn truncate_preview(value: &str, max_chars: usize) -> String {
     value.chars().take(max_chars).collect()
 }
 
-/// Byte-bounded log prefix for sensitive credentials. Unlike `truncate_preview`,
-/// a multi-byte key must never log more raw bytes than the previous byte-limit
-/// allowed; the byte budget is only ever reduced to stay on a char boundary.
+/// Byte-bounded log prefix for sensitive credentials. `max_bytes` is a strict
+/// upper bound: for ASCII credentials (all real DeepL keys) the prefix is
+/// exactly `max_bytes` bytes, matching the historical behaviour; for multi-byte
+/// credentials it can only be shorter (never longer) because the budget is
+/// walked back to a char boundary instead of splitting a character. This is
+/// strictly more conservative than the byte slice it replaces and never panics.
 fn credential_prefix(value: &str, max_bytes: usize) -> String {
     let mut end = max_bytes.min(value.len());
     while !value.is_char_boundary(end) {
@@ -1491,6 +1494,24 @@ mod tests {
         assert!(prefix.len() <= 4);
         assert!(key.is_char_boundary(prefix.len()));
         assert_eq!(credential_prefix("ab", 4), "ab");
+    }
+
+    #[test]
+    fn credential_prefix_never_exceeds_byte_budget() {
+        // Even with an adversarial byte budget, the prefix never leaks more
+        // than the requested budget and always ends on a char boundary.
+        let samples = [
+            "abcd1234",
+            "\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}",
+            "a\u{6e2c}b\u{6e2c}",
+        ];
+        for text in samples {
+            for budget in 0..=8 {
+                let prefix = credential_prefix(text, budget);
+                assert!(prefix.len() <= budget);
+                assert!(text.is_char_boundary(prefix.len()));
+            }
+        }
     }
 
     #[test]
