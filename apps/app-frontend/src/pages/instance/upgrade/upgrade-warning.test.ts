@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 import type { InstanceUpgradeResult } from '@/helpers/instance-upgrade'
-import { shouldExpandUpgradeWarningsByDefault } from '../../../helpers/post-upgrade-notice.ts'
 
+import { shouldExpandUpgradeWarningsByDefault } from '../../../helpers/post-upgrade-notice.ts'
 import {
 	filterUpgradeWarnings,
 	paginateUpgradeWarnings,

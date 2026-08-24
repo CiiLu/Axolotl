@@ -39,15 +39,6 @@
 								<BoxIcon class="h-4 w-4" />
 								{{ instance.game_version }}
 							</div>
-							<Badge
-								v-if="postUpgradeNotice"
-								color="green"
-								:type="
-									formatMessage(messages.upgradedTo, {
-										version: postUpgradeNotice.targetGameVersion,
-									})
-								"
-							/>
 
 							<div class="w-1.5 h-1.5 rounded-full bg-surface-5"></div>
 
@@ -249,9 +240,6 @@
 										id: 'create-shortcut',
 										action: () => createShortcut(),
 									},
-									...(canUpgradeInstance
-										? [{ id: 'upgrade-instance', action: () => openUpgrade() }]
-										: []),
 								]"
 							>
 								<MoreVerticalIcon />
@@ -270,9 +258,6 @@
 								<template #create-shortcut>
 									<ExternalIcon /> {{ formatMessage(messages.createShortcut) }}
 								</template>
-								<template #upgrade-instance>
-									<UpdatedIcon /> {{ formatMessage(messages.upgradeInstance) }}
-								</template>
 							</OverflowMenu>
 						</ButtonStyled>
 					</div>
@@ -289,7 +274,7 @@
 				class="mb-3"
 				dismissible
 			/>
-			<NavTabs v-if="!hideInstanceTabs" :links="tabs" />
+			<NavTabs :links="tabs" />
 		</div>
 		<div :class="['p-6 pt-4', { 'flex min-h-0 flex-1 flex-col overflow-hidden': isFixedRender }]">
 			<RouterView v-slot="{ Component }" :key="instance.id" :route="displayedInstanceRoute">
@@ -382,7 +367,6 @@ import {
 } from '@modrinth/assets'
 import {
 	Avatar,
-	Badge,
 	ButtonStyled,
 	commonMessages,
 	ContentPageHeader,
@@ -417,17 +401,11 @@ import {
 import { useInstanceConsole } from '@/composables/useInstanceConsole'
 import { useMinecraftLaunchError } from '@/composables/useMinecraftLaunchError'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
-import { postUpgradeNoticeQueryKey, usePostUpgradeNotice } from '@/composables/usePostUpgradeNotice'
 import { useSymlinkWarningDismiss } from '@/composables/useSymlinkWarningDismiss'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_v3 } from '@/helpers/cache.js'
 import { instance_listener, process_listener } from '@/helpers/events'
-import {
-	install_existing_instance,
-	install_job_list,
-	install_pack_to_existing_instance,
-} from '@/helpers/install'
-import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
+import { install_existing_instance, install_pack_to_existing_instance } from '@/helpers/install'
 import {
 	allow_symlink_target,
 	gcReportFellBack,
@@ -436,6 +414,7 @@ import {
 	kill,
 	run,
 } from '@/helpers/instance'
+import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { get_by_instance_id } from '@/helpers/process'
 import type { GameInstance } from '@/helpers/types'
 import { createInstanceShortcut, showInstanceInFolder } from '@/helpers/utils.js'
@@ -443,8 +422,6 @@ import { refreshWorlds, type ServerStatus } from '@/helpers/worlds'
 import { injectServerInstall } from '@/providers/server-install'
 import { handleSevereError } from '@/store/error.js'
 import { useBreadcrumbs, useTheming } from '@/store/state'
-
-import { isActiveUpgradeJobForInstance, isUnmanagedUpgradeEligible } from './upgrade/entry'
 
 dayjs.extend(duration)
 dayjs.extend(relativeTime)
@@ -460,10 +437,6 @@ const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
 	neverPlayed: { id: 'app.instance.never-played', defaultMessage: 'Never played' },
-	upgradedTo: {
-		id: 'app.instance.post-upgrade-status',
-		defaultMessage: 'Upgraded to {version}',
-	},
 	linkedTo: { id: 'app.instance.linked-to', defaultMessage: 'Linked to' },
 	stopping: { id: 'app.instance.stopping', defaultMessage: 'Stopping...' },
 	joinServer: { id: 'app.instance.join-server', defaultMessage: 'Join server' },
@@ -474,7 +447,6 @@ const messages = defineMessages({
 	createServer: { id: 'app.instance.create-server', defaultMessage: 'Create a server' },
 	exportModpack: { id: 'app.instance.export-modpack', defaultMessage: 'Export modpack' },
 	createShortcut: { id: 'app.instance.create-shortcut', defaultMessage: 'Create shortcut' },
-	upgradeInstance: { id: 'app.instance.upgrade-instance', defaultMessage: 'Upgrade instance' },
 	addContent: { id: 'app.instances.add-content', defaultMessage: 'Add content' },
 	copyPath: { id: 'app.instances.copy-path', defaultMessage: 'Copy path' },
 	copyNames: { id: 'app.instance.copy-names', defaultMessage: 'Copy names' },
@@ -515,8 +487,6 @@ const { offline } = useNetworkStatus()
 
 const instance = ref<GameInstance>()
 const instanceId = computed(() => instance.value?.id)
-const postUpgradeNoticeQuery = usePostUpgradeNotice(() => instance.value?.id ?? props.id)
-const postUpgradeNotice = computed(() => postUpgradeNoticeQuery.data.value ?? null)
 const symlinkWarning = useSymlinkWarningDismiss(instanceId)
 const playing = ref(false)
 const loading = ref(false)
@@ -532,9 +502,6 @@ useLoadingBarToken(subpagePending)
 const isServerInstance = ref(false)
 const linkedProjectV3 = ref<Labrinth.Projects.v3.Project>()
 const selected = ref<unknown[]>([])
-const canUpgradeInstance = computed(() =>
-	instance.value ? isUnmanagedUpgradeEligible(instance.value) : false,
-)
 
 const minecraftServer = computed(() => linkedProjectV3.value?.minecraft_server)
 const javaServerPingData = computed(() => linkedProjectV3.value?.minecraft_java_server?.ping?.data)
@@ -683,9 +650,6 @@ const renderMode = computed<'scroll' | 'fixed'>(() =>
 	displayedInstanceRoute.value.meta.renderMode === 'fixed' ? 'fixed' : 'scroll',
 )
 const isFixedRender = computed(() => renderMode.value === 'fixed')
-const hideInstanceTabs = computed(() =>
-	displayedInstanceRoute.value.matched.some((record) => record.meta.hideInstanceTabs === true),
-)
 const isStudioMode = computed(() => displayedInstanceRoute.value.name === 'FileStudio')
 const tabs = computed(() => [
 	{
@@ -844,18 +808,6 @@ const createShortcut = async () => {
 	}
 }
 
-const openUpgrade = async () => {
-	if (!instance.value) return
-	const active = (await install_job_list(true).catch(() => [])).find((job) =>
-		isActiveUpgradeJobForInstance(job, instance.value!.id),
-	)
-	if (active) {
-		await router.push({ path: '/downloads', query: { job: active.job_id } })
-		return
-	}
-	await router.push(`/instance/${encodeURIComponent(instance.value.id)}/upgrade`)
-}
-
 const handleRightClick = (event: MouseEvent) => {
 	const baseOptions = [
 		{ name: 'add_content' },
@@ -936,14 +888,12 @@ const unlistenInstances = await instance_listener(
 			linkedProjectV3.value = undefined
 			isServerInstance.value = false
 		}
-		void queryClient.invalidateQueries({ queryKey: postUpgradeNoticeQueryKey(props.id) })
 	},
 )
 
 const unlistenProcesses = await process_listener((e: { event: string; instance_id: string }) => {
 	if (e.event === 'finished' && e.instance_id === props.id) {
 		playing.value = false
-		void queryClient.invalidateQueries({ queryKey: postUpgradeNoticeQueryKey(props.id) })
 	}
 })
 

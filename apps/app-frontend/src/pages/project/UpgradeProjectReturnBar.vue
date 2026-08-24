@@ -1,5 +1,10 @@
 <template>
-	<FloatingActionBar v-if="snapshot" :shown="true" aria-label="Return to instance upgrade" hide-when-modal-open>
+	<FloatingActionBar
+		v-if="snapshot"
+		:shown="true"
+		aria-label="Return to instance upgrade"
+		hide-when-modal-open
+	>
 		<ButtonStyled color="brand" size="large">
 			<button @click="returnToUpgrade">
 				<ArrowLeftIcon aria-hidden="true" />
@@ -13,14 +18,13 @@
 import { ArrowLeftIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, FloatingActionBar, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 
 import { peekUpgradeFlow } from '@/helpers/upgrade-return-state'
 
 const messages = defineMessages({
 	returnAction: { id: 'instance.upgrade.return', defaultMessage: 'Return to instance upgrade' },
 })
-const route = useRoute()
 const router = useRouter()
 const { formatMessage } = useVIntl()
 const snapshot = computed(() => peekUpgradeFlow())

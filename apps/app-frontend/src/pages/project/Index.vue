@@ -369,7 +369,6 @@
 </template>
 
 <script setup>
-import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 import {
 	BookmarkIcon,
 	BookOpenIcon,
@@ -470,6 +469,8 @@ import { injectServerInstall } from '@/providers/server-install'
 import { createServerInstallContent } from '@/providers/setup/server-install-content'
 import { useBreadcrumbs } from '@/store/breadcrumbs'
 import { useTheming } from '@/store/state.js'
+
+import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 
 dayjs.extend(relativeTime)
 

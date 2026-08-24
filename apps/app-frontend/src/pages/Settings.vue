@@ -284,7 +284,9 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 						<span class="settings-search-result-copy">
 							<span class="settings-search-result-label">
 								<template v-for="segment in searchMatchSegments(result.label)" :key="segment.text">
-									<mark v-if="segment.matched" class="settings-search-match">{{ segment.text }}</mark>
+									<mark v-if="segment.matched" class="settings-search-match">{{
+										segment.text
+									}}</mark>
 									<span v-else>{{ segment.text }}</span>
 								</template>
 							</span>

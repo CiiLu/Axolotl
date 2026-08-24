@@ -96,7 +96,7 @@ import {
 	SettingsIcon,
 } from '@modrinth/assets'
 import { Avatar, commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
-import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
+import { type Component, computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { resolveBreadcrumbLabel } from '@/helpers/breadcrumb-label'
