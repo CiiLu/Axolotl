@@ -13,6 +13,7 @@ use theseus::prelude::*;
 
 mod api;
 mod error;
+mod lightweight_mode;
 mod mod_translation;
 mod portable;
 mod seed_map;
@@ -386,6 +387,7 @@ fn main() {
             window_state_builder.build()
         })
         .setup(|app| {
+            lightweight_mode::init(&app.handle());
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(4)).await;
@@ -454,9 +456,11 @@ fn main() {
         .plugin(api::logs::init())
         .plugin(api::jre::init())
         .plugin(api::metadata::init())
+        .plugin(api::mcarchive::init())
         .plugin(api::minecraft_skins::init())
         .plugin(api::mod_translation::init())
         .plugin(api::process::init())
+        .plugin(api::planet_minecraft::init())
         .plugin(api::settings::init())
         .plugin(api::storage::init())
         .plugin(api::seed_map::init())
@@ -467,6 +471,7 @@ fn main() {
         .plugin(api::translation::init())
         .plugin(api::utils::init())
         .plugin(api::cache::init())
+        .plugin(api::content_favorites::init())
         .plugin(api::content_search::init())
         .plugin(api::curseforge::init())
         .plugin(api::datapacks::init())
@@ -476,6 +481,8 @@ fn main() {
         .plugin(api::worlds::init())
         .plugin(api::terracotta::init())
         .plugin(api::multiplayer::init())
+        .manage(api::files::StudioWatchers::default())
+        .plugin(api::servers::init())
         .manage(PendingUpdateData::default())
         .invoke_handler(tauri::generate_handler![
             initialize_state,
@@ -495,6 +502,8 @@ fn main() {
             check_symlink_capability,
             is_elevated,
             allow_symlink_target,
+            lightweight_mode::lightweight_mode_frontend_ready,
+            lightweight_mode::lightweight_mode_set_route,
         ]);
 
     tracing::info!("Initializing app...");

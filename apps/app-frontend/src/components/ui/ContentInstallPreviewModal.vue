@@ -13,11 +13,11 @@ export interface ContentInstallPreviewDependency {
 	fileName?: string
 	requiredBy: string[]
 	alreadyInstalled: boolean
+	status?: 'installed' | 'included'
 	versionMismatch?: boolean
 	selectionReason?: string
 	required?: boolean
 	requiredByKeys?: string[]
-	requiredForKeys?: string[]
 }
 
 export interface ContentInstallPreviewSkipped {
@@ -102,6 +102,14 @@ const messages = defineMessages({
 		id: 'app.content-install.preview.dependencies-count',
 		defaultMessage: '{count, plural, one {# dependency} other {# dependencies}}',
 	},
+	requiredDependenciesHeader: {
+		id: 'app.content-install.preview.required-dependencies-header',
+		defaultMessage: 'Required dependencies',
+	},
+	optionalDependenciesHeader: {
+		id: 'app.content-install.preview.optional-dependencies-header',
+		defaultMessage: 'Optional dependencies',
+	},
 	requiredBy: {
 		id: 'app.content-install.preview.required-by',
 		defaultMessage: 'Required by {projects}',
@@ -109,6 +117,10 @@ const messages = defineMessages({
 	alreadyInstalled: {
 		id: 'app.content-install.preview.already-installed',
 		defaultMessage: 'Already installed',
+	},
+	alreadyIncluded: {
+		id: 'app.content-install.preview.already-included',
+		defaultMessage: 'Already included',
 	},
 	versionMismatch: {
 		id: 'app.content-install.preview.version-mismatch',
@@ -203,13 +215,6 @@ function primaryError(primary: ContentInstallPreviewPrimary) {
 		? primary.error
 		: null
 }
-function dependencyRequired(dependency: ContentInstallPreviewDependency) {
-	if (!dependency.required) return false
-	return (
-		!dependency.requiredForKeys?.length ||
-		dependency.requiredForKeys.some((key) => visiblePrimaryKeySet.value.has(key))
-	)
-}
 const visibleSkipped = computed(
 	() =>
 		data.value?.skipped.filter(
@@ -222,11 +227,20 @@ const hasBlockingPrimary = computed(() =>
 	visiblePrimaries.value.some((primary) => !!primaryError(primary)),
 )
 
-const installableDependencies = computed(
-	() =>
-		visibleDependencies.value.filter(
-			(dependency) => !dependency.alreadyInstalled && !dependencyRequired(dependency),
-		) ?? [],
+const installableDependencies = computed(() => visibleDependencies.value)
+const dependencyGroups = computed(() =>
+	[
+		{
+			id: 'required',
+			header: messages.requiredDependenciesHeader,
+			dependencies: visibleDependencies.value.filter((dependency) => dependency.required !== false),
+		},
+		{
+			id: 'optional',
+			header: messages.optionalDependenciesHeader,
+			dependencies: visibleDependencies.value.filter((dependency) => dependency.required === false),
+		},
+	].filter((group) => group.dependencies.length > 0),
 )
 const selectedInstallableCount = computed(
 	() =>
@@ -251,7 +265,16 @@ function toggleAll(value: boolean) {
 	selectedIds.value = next
 }
 
-function finish(result: string[] | ContentInstallBatchPreviewResult | null) {
+function initialSelectedIds(value: ContentInstallPreviewData) {
+	if (!value.installDependencies) return new Set<string>()
+	return new Set(
+		value.dependencies
+			.filter((dependency) => !dependency.alreadyInstalled && dependency.required !== false)
+			.map((dependency) => dependency.id),
+	)
+}
+
+function finish(result: string[] | ContentInstallBatchPreviewResult | boolean | null) {
 	if (settled) return
 	settled = true
 	const resolve = resolveShow
@@ -267,11 +290,7 @@ function confirm() {
 	}
 	if (hasBlockingPrimary.value || visiblePrimaries.value.length === 0) return
 	const approvedIds = visibleDependencies.value
-		.filter(
-			(dependency) =>
-				!dependency.alreadyInstalled &&
-				(dependencyRequired(dependency) || selectedIds.value.has(dependency.id)),
-		)
+		.filter((dependency) => selectedIds.value.has(dependency.id))
 		.map((dependency) => dependency.id)
 	finish(batchMode ? { approvedIds, primaryKeys: visiblePrimaryKeys.value } : approvedIds)
 }
@@ -288,13 +307,7 @@ function show(value: ContentInstallPreviewData): Promise<string[] | null> {
 	conflictMode = false
 	conflictPrompt.value = null
 	removedPrimaryKeys.value = new Set()
-	selectedIds.value = new Set(
-		value.installDependencies
-			? value.dependencies
-					.filter((dependency) => !dependency.alreadyInstalled)
-					.map((dependency) => dependency.id)
-			: [],
-	)
+	selectedIds.value = initialSelectedIds(value)
 	settled = false
 	modal.value?.show()
 	return new Promise<string[] | null>((resolve) => {
@@ -312,17 +325,14 @@ function showBatch(
 	conflictMode = false
 	conflictPrompt.value = null
 	removedPrimaryKeys.value = new Set()
-	selectedIds.value = new Set(
-		value.installDependencies
-			? value.dependencies
-					.filter((dependency) => !dependency.alreadyInstalled)
-					.map((dependency) => dependency.id)
-			: [],
-	)
+	selectedIds.value = initialSelectedIds(value)
 	settled = false
 	modal.value?.show()
 	return new Promise<ContentInstallBatchPreviewResult | null>((resolve) => {
-		resolveShow = (result) => resolve(result && !Array.isArray(result) ? result : null)
+		resolveShow = (result) =>
+			resolve(
+				result && !Array.isArray(result) && typeof result !== 'boolean' ? result : null,
+			)
 	})
 }
 
@@ -468,7 +478,7 @@ defineExpose({ show, showBatch, showConflict })
 								instance: data.instanceName,
 							})
 						: formatMessage(messages.description, {
-								count: visibleDependencies.length,
+								count: selectedInstallableCount,
 								project: visiblePrimaries[0]?.title ?? '',
 								instance: data.instanceName,
 							})
@@ -496,55 +506,84 @@ defineExpose({ show, showBatch, showConflict })
 					</ButtonStyled>
 				</div>
 				<div
-					v-for="dependency in visibleDependencies"
-					:key="dependency.id"
-					class="flex items-center gap-3 rounded-xl border border-solid border-surface-4 bg-surface-2 p-3"
-					:class="{ 'opacity-60': dependency.alreadyInstalled }"
+					class="grid grid-cols-1 gap-3"
+					:class="{ 'sm:grid-cols-2': dependencyGroups.length > 1 }"
 				>
-					<Checkbox
-						:model-value="dependencyRequired(dependency) || selectedIds.has(dependency.id)"
-						:disabled="dependency.alreadyInstalled || dependencyRequired(dependency)"
-						class="shrink-0"
-						@update:model-value="(value) => toggleDependency(dependency.id, value)"
-					/>
-					<Avatar
-						:src="dependency.iconUrl"
-						:alt="dependency.title"
-						size="2.5rem"
-						:tint-by="dependency.title"
-						no-shadow
-					/>
-					<div class="flex min-w-0 flex-1 flex-col gap-0.5">
-						<span class="truncate font-semibold text-contrast">{{ dependency.title }}</span>
-						<span v-if="dependency.versionNumber" class="truncate text-sm text-secondary">
-							{{ dependency.versionNumber }}
+					<div
+						v-for="group in dependencyGroups"
+						:key="group.id"
+						class="flex min-w-0 flex-col gap-2"
+					>
+						<span class="flex items-center gap-2 font-semibold text-contrast">
+							{{ formatMessage(group.header) }}
+							<span
+								class="rounded-full bg-surface-4 px-2 py-0.5 text-xs font-medium tabular-nums text-secondary"
+							>
+								{{ group.dependencies.length }}
+							</span>
 						</span>
-						<span v-if="dependency.requiredBy.length > 0" class="truncate text-sm text-secondary">
-							{{
-								formatMessage(messages.requiredBy, {
-									projects: dependency.requiredBy.join(', '),
-								})
-							}}
-						</span>
+						<div
+							v-for="dependency in group.dependencies"
+							:key="dependency.id"
+							class="flex items-start gap-3 rounded-xl border border-solid border-surface-4 bg-surface-2 p-3"
+							:class="{ 'opacity-60': dependency.alreadyInstalled }"
+						>
+							<Checkbox
+								:model-value="selectedIds.has(dependency.id)"
+								class="mt-2 shrink-0"
+								@update:model-value="(value) => toggleDependency(dependency.id, value)"
+							/>
+							<Avatar
+								:src="dependency.iconUrl"
+								:alt="dependency.title"
+								size="2.5rem"
+								:tint-by="dependency.title"
+								no-shadow
+							/>
+							<div class="flex min-w-0 flex-1 flex-col gap-0.5">
+								<span class="truncate font-semibold text-contrast">{{ dependency.title }}</span>
+								<span v-if="dependency.versionNumber" class="truncate text-sm text-secondary">
+									{{ dependency.versionNumber }}
+								</span>
+								<span
+									v-if="dependency.requiredBy.length > 0"
+									class="truncate text-sm text-secondary"
+								>
+									{{
+										formatMessage(messages.requiredBy, {
+											projects: dependency.requiredBy.join(', '),
+										})
+									}}
+								</span>
+								<div class="flex flex-wrap gap-1 pt-1">
+									<span
+										v-if="dependency.versionMismatch"
+										class="rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text"
+									>
+										{{ formatMessage(messages.versionMismatch) }}
+									</span>
+									<span
+										v-if="dependency.selectionReason"
+										class="rounded-full bg-surface-4 px-2 py-0.5 text-xs font-medium text-secondary"
+									>
+										{{ dependency.selectionReason }}
+									</span>
+									<span
+										v-if="dependency.alreadyInstalled"
+										class="rounded-full bg-surface-4 px-2 py-0.5 text-xs font-medium text-secondary"
+									>
+										{{
+											formatMessage(
+												dependency.status === 'included'
+													? messages.alreadyIncluded
+													: messages.alreadyInstalled,
+											)
+										}}
+									</span>
+								</div>
+							</div>
+						</div>
 					</div>
-					<span
-						v-if="dependency.versionMismatch"
-						class="shrink-0 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text"
-					>
-						{{ formatMessage(messages.versionMismatch) }}
-					</span>
-					<span
-						v-if="dependency.selectionReason"
-						class="shrink-0 rounded-full bg-surface-4 px-2 py-0.5 text-xs font-medium text-secondary"
-					>
-						{{ dependency.selectionReason }}
-					</span>
-					<span
-						v-if="dependency.alreadyInstalled"
-						class="shrink-0 rounded-full bg-surface-4 px-2 py-0.5 text-xs font-medium text-secondary"
-					>
-						{{ formatMessage(messages.alreadyInstalled) }}
-					</span>
 				</div>
 				<span class="text-sm text-secondary">{{ formatMessage(messages.onlyChecked) }}</span>
 			</div>

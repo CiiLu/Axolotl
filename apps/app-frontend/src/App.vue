@@ -6,6 +6,7 @@ import {
 	DownloadIcon,
 	ExternalIcon,
 	FlaskConicalIcon,
+	FolderOpenIcon,
 	HomeIcon,
 	LeftArrowIcon,
 	LibraryIcon,
@@ -14,6 +15,7 @@ import {
 	PlusIcon,
 	RefreshCwIcon,
 	RightArrowIcon,
+	RotateCounterClockwiseIcon,
 	SettingsIcon,
 	SpinnerIcon,
 	UserIcon,
@@ -23,9 +25,8 @@ import {
 import {
 	Admonition,
 	Avatar,
-	type BatchDropGroup,
-	type BatchDropItem,
-	type BatchDropPhase,
+	BigOptionButton,
+	ButtonStyled,
 	clientInstallableLoaders,
 	commonMessages,
 	ContentInstallModal,
@@ -34,6 +35,7 @@ import {
 	defineMessages,
 	I18nDebugPanel,
 	LoadingBar,
+	NewModal,
 	NotificationPanel,
 	OverflowMenu,
 	PopupNotificationPanel,
@@ -42,10 +44,8 @@ import {
 	provideNotificationManager,
 	providePageContext,
 	providePopupNotificationManager,
-	type SymlinkMethodChoice,
 	useDebugLogger,
 	useFormatBytes,
-	useGlobalDrop,
 	useVIntl,
 } from '@modrinth/ui'
 import BatchScanOverlay from '@modrinth/ui/src/components/flows/drop/BatchScanOverlay.vue'
@@ -53,7 +53,6 @@ import ConfirmDropTypeModal from '@modrinth/ui/src/components/flows/drop/Confirm
 import GenericContentInstallModal from '@modrinth/ui/src/components/flows/drop/GenericContentInstallModal.vue'
 import LauncherImportModal from '@modrinth/ui/src/components/flows/drop/LauncherImportModal.vue'
 import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMethodCards.vue'
-import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-context'
 import { useQuery } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
@@ -78,7 +77,6 @@ import AddServerToInstanceModal from '@/components/ui/install_flow/AddServerToIn
 import UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPackWarningModal.vue'
 import MinecraftAuthErrorModal from '@/components/ui/minecraft-auth-error-modal/MinecraftAuthErrorModal.vue'
 import MinecraftCrashModal from '@/components/ui/MinecraftCrashModal.vue'
-import AppSettingsModal from '@/components/ui/modal/AppSettingsModal.vue'
 import AuthGrantFlowWaitModal from '@/components/ui/modal/AuthGrantFlowWaitModal.vue'
 import CommunityAnnouncementModal from '@/components/ui/modal/CommunityAnnouncementModal.vue'
 import CurseForgeManualDownloadsModal from '@/components/ui/modal/CurseForgeManualDownloadsModal.vue'
@@ -87,6 +85,7 @@ import InstanceIconPickerModal from '@/components/ui/modal/InstanceIconPickerMod
 import JavaDownloadConfirmationModal from '@/components/ui/modal/JavaDownloadConfirmationModal.vue'
 import ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
 import PrivacyConsentModal from '@/components/ui/modal/PrivacyConsentModal.vue'
+import SurveyAnnouncementModal from '@/components/ui/modal/SurveyAnnouncementModal.vue'
 import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
 import NavRail from '@/components/ui/NavRail.vue'
@@ -95,6 +94,7 @@ import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
 import WindowControls from '@/components/ui/WindowControls.vue'
 import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
+import { useDropImport } from '@/composables/useDropImport'
 import { minecraftLaunchErrorKey } from '@/composables/useMinecraftLaunchError'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { AxolotlBrandConfig, config, getOfficialLabrinthBaseUrl } from '@/config'
@@ -103,41 +103,15 @@ import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
 import { configureCurseForgeManualDownloadWatcher } from '@/helpers/curseforge'
 import { getMissingContentScannerSettings } from '@/helpers/downloads-scanner'
-import {
-	type ClassificationResult,
-	classifyDroppedItem,
-	classifyDroppedItemWithExtraction,
-	detectFileLock,
-	extractModMetadata,
-	extractZipToTemp,
-	lookupModHash,
-	type ModrinthLookupResult,
-	removeTempDir,
-	scanLauncherInstances,
-	type ScanResult,
-} from '@/helpers/drop'
+import { classifyDroppedItem } from '@/helpers/drop'
 import {
 	command_listener,
 	drop_classify_progress_listener,
 	java_download_confirmation_listener,
 	warning_listener,
 } from '@/helpers/events.js'
-import { import_instance } from '@/helpers/import.js'
-import {
-	install_create_modpack_instance,
-	install_get_modpack_preview,
-	wait_for_install_job,
-} from '@/helpers/install'
-import {
-	add_project_from_path,
-	check_symlink_capability,
-	get as getInstance,
-	import_world_save,
-	install_datapack_to_world,
-	list as listInstances,
-	run,
-} from '@/helpers/instance'
-import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
+import { install_create_modpack_instance, install_get_modpack_preview } from '@/helpers/install'
+import { get as getInstance, run } from '@/helpers/instance'
 import { reconcileMojangAuthSourceAtStartup } from '@/helpers/mojang-auth'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
@@ -165,7 +139,6 @@ import {
 	isNetworkMetered,
 	setRestartAfterPendingUpdate,
 } from '@/helpers/utils.js'
-import { areLoadersCompatible, isVersionInRange } from '@/helpers/version-compatibility'
 import { start_join_server, start_join_singleplayer_world } from '@/helpers/worlds.ts'
 import i18n, { resolveInitialLocale } from '@/i18n.config'
 import {
@@ -326,7 +299,6 @@ const showOnboarding = ref(false)
 const onboardingMode = ref('main')
 const onboardingSettings = ref(null)
 const onboardingReplay = ref(false)
-const settingsModal = ref(null)
 const nativeDecorations = ref(false)
 
 const os = ref('')
@@ -385,6 +357,7 @@ const stateInitialized = ref(false)
 const privacyConsentModal = ref<InstanceType<typeof PrivacyConsentModal>>()
 const privacyConsentPending = ref(false)
 const communityAnnouncementModal = ref()
+const surveyModal = ref()
 const updateAnnouncementModal = ref()
 const minecraftCrashModal = ref()
 const javaDownloadConfirmationModal = ref()
@@ -420,6 +393,45 @@ const authUnreachable = computed(() => {
 	}
 	return false
 })
+
+const appUpdateDownload = {
+	progress: appUpdateState.progress,
+	version: ref(),
+}
+let unlistenUpdateDownload
+
+const {
+	metered,
+	finishedDownloading,
+	downloading,
+	restarting,
+	availableUpdate,
+	updateSize,
+	updatesEnabled,
+} = appUpdateState
+let delayedUpdatePopupTimeout = null
+
+async function checkUpdates() {
+	if (!(await areUpdatesEnabled())) {
+		console.log('Skipping update check as updates are disabled in this build or environment')
+		updatesEnabled.value = false
+
+		return
+	}
+
+	updatesEnabled.value = true
+	if (!offline.value) {
+		await performUpdateCheck().catch((error) => {
+			console.warn('Failed to check for launcher updates', error)
+		})
+	}
+	setTimeout(
+		() => {
+			checkUpdates()
+		},
+		5 /* min */ * 60 /* sec */ * 1000 /* ms */,
+	)
+}
 
 onMounted(async () => {
 	await useCheckDisableMouseover()
@@ -835,6 +847,28 @@ const messages = defineMessages({
 		defaultMessage:
 			'{file} targets {modVersion} ({modLoader}), but the instance is {instVersion} ({instLoader}).',
 	},
+
+	// Compatible mode (pre-version-isolation) import
+	dropCompatibleModeTitle: {
+		id: 'app.drop.compatible-mode-title',
+		defaultMessage: 'This appears to be a pre-version-isolation instance',
+	},
+	dropCompatibleModeDesc: {
+		id: 'app.drop.compatible-mode-desc',
+		defaultMessage: 'Would you like to import this as a compatible mode instance?',
+	},
+	dropCompatibleModeImport: {
+		id: 'app.drop.compatible-mode-import',
+		defaultMessage: 'Compatible Import',
+	},
+	dropCompatibleModeOldWay: {
+		id: 'app.drop.compatible-mode-old-way',
+		defaultMessage: 'Import as Old Version',
+	},
+	dropCompatibleModeCancel: {
+		id: 'app.drop.compatible-mode-cancel',
+		defaultMessage: 'Cancel',
+	},
 })
 
 function getErrorNotificationDetails(notification) {
@@ -1012,7 +1046,6 @@ function startOnboarding(mode = 'main') {
 async function replayOnboarding(mode) {
 	onboardingReplay.value = true
 	onboardingMode.value = mode
-	settingsModal.value?.hide()
 	if (mode === 'main') await router.replace('/')
 	showOnboarding.value = true
 }
@@ -1039,8 +1072,8 @@ async function skipOnboarding() {
 	await finishOnboarding()
 }
 
-function closeOnboardingSettings() {
-	settingsModal.value?.hide()
+async function closeOnboardingSettings() {
+	if (route.path === '/settings') await router.replace('/')
 }
 
 async function handleUpdateAnnouncementClosed(version) {
@@ -1068,13 +1101,13 @@ async function scheduleStartupDialogs() {
 
 	if (pendingUpdateAnnouncementVersion.value && updateAnnouncementModal.value) {
 		updateAnnouncementShowing.value = true
-		settingsModal.value?.hide()
 		await nextTick()
 		updateAnnouncementModal.value.show(pendingUpdateAnnouncementVersion.value)
 		return
 	}
 
 	communityAnnouncementModal.value?.showIfNeeded()
+	surveyModal.value?.showIfNeeded()
 }
 
 async function handlePrivacyConsentSaved(privacy: PrivacySettings) {
@@ -1120,7 +1153,6 @@ provide(
 )
 provide('previewMinecraftCrashModal', () => minecraftCrashModal.value?.showPreview())
 provide('previewPrivacyConsentModal', previewPrivacyConsentModal)
-provide('chooseImportMethod', chooseImportMethod)
 provide('previewUpdateAnnouncement', (version = null) => {
 	const previewVersion = version ?? pendingUpdateAnnouncementVersion.value
 	if (previewVersion) updateAnnouncementModal.value?.show(previewVersion)
@@ -1191,6 +1223,7 @@ function syncDiscordActivity(to: RouteLocationNormalizedLoaded) {
 }
 
 router.afterEach((to, from, failure) => {
+	if (!failure) void invoke('lightweight_mode_set_route', { route: to.fullPath })
 	trackEvent('PageView', {
 		path: to.path,
 		fromPath: from.path,
@@ -1313,77 +1346,7 @@ const {
 	incompatibilityWarningProjectName: contentInstallIncompatibilityWarningProjectName,
 	incompatibilityWarningMessage: contentInstallIncompatibilityWarningMessage,
 	incompatibilityWarningInstalling: contentInstallIncompatibilityWarningInstalling,
-	handleIncompatibilityWarningInstall: handleContentInstallIncompatibilityWarningInstall,
-	handleIncompatibilityWarningCancel: handleContentInstallIncompatibilityWarningCancel,
 } = contentInstall
-
-/**
- * Handles @update from ContentUpdaterModal (incompatibility-warning mode).
- * In drag & drop mode (pendingDropIncompatibility set), installs the local file.
- * In normal content-install mode, delegates to the provider handler.
- */
-async function handleIncompatibilityWarningUpdate(
-	version: Labrinth.Versions.v2.Version,
-	event: MouseEvent,
-) {
-	const decision = batchCompatResolve
-	batchCompatResolve = null
-	const pending = pendingDropIncompatibility.value
-	if (pending) {
-		pendingDropIncompatibility.value = null
-		const projectType = contentFileProjectTypeMap[pending.type]
-		try {
-			await add_project_from_path(pending.instId, pending.filePath, projectType)
-			addNotification({
-				title: formatMessage(messages.dropContentInstalledTitle),
-				text: formatMessage(messages.dropContentInstalledText),
-				type: 'success',
-			})
-		} catch (e) {
-			addNotification({
-				title: formatMessage(messages.dropInstallFailedTitle),
-				text: e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e),
-				type: 'error',
-			})
-		}
-		decision?.(true)
-		return
-	}
-	await handleContentInstallIncompatibilityWarningInstall(version, event)
-}
-
-/**
- * Handles @cancel from ContentUpdaterModal. Clears drag & drop state if set.
- */
-function handleIncompatibilityWarningCancel() {
-	const decision = batchCompatResolve
-	batchCompatResolve = null
-	pendingDropIncompatibility.value = null
-	if (decision) {
-		// In batch mode cancelling the warning only skips this one mod.
-		decision(false)
-		return
-	}
-	handleContentInstallIncompatibilityWarningCancel()
-}
-
-/**
- * Handles @searchCompat from ContentUpdaterModal simplified warning mode.
- * Navigates to the Modrinth project page or browse/search page.
- */
-function handleDropInstallSearchCompat() {
-	const decision = batchCompatResolve
-	batchCompatResolve = null
-	const pending = pendingDropIncompatibility.value
-	if (!pending) return
-	const searchName = pending.meta?.name ?? pending.meta?.mod_id ?? 'mod'
-	const searchUrl = pending.modrinthLookup
-		? `/project/${pending.modrinthLookup.project_id}`
-		: `/browse/mod?q=${encodeURIComponent(searchName)}&i=${pending.instId}`
-	pendingDropIncompatibility.value = null
-	decision?.(false)
-	router.push(searchUrl)
-}
 
 const serverInstall = createServerInstall({ router, handleError, popupNotificationManager })
 provideServerInstall(serverInstall)
@@ -1407,1839 +1370,78 @@ const updateToPlayModal = ref()
 
 const modrinthLoginFlowWaitModal = ref()
 
-const confirmDropModal = ref<InstanceType<typeof ConfirmDropTypeModal> | null>(null)
-const dropClassification = ref<ClassificationResult | null>(null)
-const dropFileName = ref('')
-const dropFilePath = ref('')
-const lastDroppedPath = ref('')
-
-const { isInInstance, instanceId } = useInstanceContext()
-const genericInstallModal = ref<InstanceType<typeof GenericContentInstallModal> | null>(null)
-const launcherImportModal = ref<InstanceType<typeof LauncherImportModal> | null>(null)
-const symlinkCardsModal = ref<InstanceType<typeof SymlinkMethodCards> | null>(null)
-const dataPackWorldModal = ref<InstanceType<typeof InstanceExportModal> | null>(null)
-const contentFileProjectTypeMap: Record<string, ContentFileProjectType | undefined> = {
-	mod: 'mod',
-	resource_pack: 'resourcepack',
-	data_pack: 'datapack',
-	shader_pack: 'shaderpack',
-	litematic: 'schematic',
-	schematic: 'schematic',
-}
-
-const scanningInstances = ref(false)
-const pendingInstall = ref<{ type: string; filePath: string; innerBase?: string } | null>(null)
-const pendingDropIncompatibility = ref<{
-	filePath: string
-	instId: string
-	type: string
-	instVersion: string | undefined
-	instLoader: string | undefined
-	meta: { name?: string; mod_id?: string } | null
-	modrinthLookup: ModrinthLookupResult | null
-} | null>(null)
-const selectedInstances = ref<
-	Array<{ launcherType: string; basePath: string; name: string; path: string }>
->([])
-const currentImportContext = ref<{ launcherType: string; basePath: string } | null>(null)
-const launcherZipTempDir = ref<string | null>(null)
-
-const dropDebug = useDebugLogger('DropFlow')
-
-const dropProcessingNotificationId = ref<number | null>(null)
-
-async function classifyDropPath(path: string): Promise<ClassificationResult> {
-	lastDroppedPath.value = path
-	if (onSkinsPage.value) {
-		return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
-	}
-	if (onSchematicWorkshopPage.value && isSchematicFile(path)) {
-		return { item_type: 'unknown' as const, file_path: path, reason: 'skipped' }
-	}
-	return classifyDroppedItem(path)
-}
-
-const { isDragging, isProcessing, finishBatch } = useGlobalDrop(
-	{
-		classifyFile: classifyDropPath,
-		onClassifyStart: (fileName) => {
-			if (onSkinsPage.value) return
-			if (onSchematicWorkshopPage.value && isSchematicFile(fileName)) return
-			// Immediate feedback when a file is dropped — show a notification
-			// with the file name before classification even begins.
-			dropProcessingNotificationId.value = addNotification({
-				title: formatMessage(messages.dropProcessing, { name: fileName }),
-				type: 'info',
-				autoCloseMs: null,
-			}).id
-		},
-		onImportStart: (type, classification) => {
-			if (type === 'unknown' && classification?.reason === 'skipped') return
-			dropClassification.value = classification
-			// Unknown results carry no file_path; fall back to the raw dropped
-			// path so force-analysis / nested-unpack prompts can still act.
-			dropFilePath.value =
-				classification.file_path ?? classification.base_path ?? lastDroppedPath.value
-			dropFileName.value =
-				classification.file_path?.split(/[/\\]/).pop() ??
-				classification.base_path?.split(/[/\\]/).pop() ??
-				(lastDroppedPath.value.split(/[/\\]/).pop() || 'file')
-
-			if (type === 'unknown' && classification?.reason?.toLowerCase().includes('nested')) {
-				clearDropProcessingNotification()
-				showNestedUnpackPrompt(classification)
-				return
-			}
-
-			if (type === 'unknown' && classification?.reason?.toLowerCase().includes('extraction')) {
-				clearDropProcessingNotification()
-				showForceAnalysisPrompt(classification)
-				return
-			}
-
-			if (type === 'unknown') {
-				clearDropProcessingNotification()
-				const unknownFile =
-					classification?.file_path?.split(/[/\\]/).pop() ??
-					classification?.base_path?.split(/[/\\]/).pop() ??
-					''
-
-				// .tmp files are OS-level temp copies from drag-and-drop (browser, archive, etc.)
-				const isTempFile = unknownFile.startsWith('.tmp') || unknownFile.startsWith('tmp')
-				if (isTempFile) {
-					addNotification({
-						title: formatMessage(messages.dropTemporaryFileTitle),
-						text: formatMessage(messages.dropTemporaryFileText, {
-							file: unknownFile,
-						}),
-						type: 'warning',
-					})
-				} else {
-					addNotification({
-						title: formatMessage(messages.dropUnknownTitle),
-						text: unknownReasonMessage(classification?.reason),
-						type: 'error',
-					})
-				}
-				return
-			}
-
-			confirmDropModal.value?.show()
-		},
-		onImportEnd: () => {},
-		onBatchStart: (paths) => {
-			void startBatchImport(paths)
-		},
-		onError: (reason) => {
-			clearDropProcessingNotification()
-
-			if (reason === 'multiple-files') {
-				addNotification({
-					title: formatMessage(messages.dropMultipleFilesTitle),
-					text: formatMessage(messages.dropMultipleFilesText),
-					type: 'error',
-				})
-			} else if (reason === 'shortcut-exceeded') {
-				addNotification({
-					title: formatMessage(messages.dropShortcutFailedTitle),
-					text: formatMessage(messages.dropShortcutFailedText),
-					type: 'error',
-				})
-			} else if (reason === 'unknown') {
-				addNotification({
-					title: formatMessage(messages.dropUnknownTitle),
-					text: formatMessage(messages.dropUnknownText),
-					type: 'error',
-				})
-			} else {
-				addNotification({
-					title: formatMessage(messages.dropErrorTitle),
-					text: reason,
-					type: 'error',
-				})
-			}
-		},
-	},
+// ── Drop import system ──────────────────────────────────────────────────
+const dropImport = useDropImport({
+	notificationManager,
+	popupNotificationManager,
+	installModpackFromPath,
+	contentInstall,
 	fileDrop,
-)
-
-function clearDropProcessingNotification() {
-	if (dropProcessingNotificationId.value !== null) {
-		notificationManager.removeNotification(dropProcessingNotificationId.value)
-		dropProcessingNotificationId.value = null
-	}
-}
-
-function handleDropCancel() {
-	clearDropProcessingNotification()
-	dropClassification.value = null
-}
-
-// ConfirmDropTypeModal event routing shared by single-file and batch group flows.
-function handleConfirmDropCancel() {
-	if (batchGroupMode) {
-		batchGroupMode = false
-		confirmDropModal.value?.hide()
-		void cancelBatch('group-cancel')
-		return
-	}
-	handleDropCancel()
-}
-
-async function handleConfirmDropConfirm(type: string, innerBase?: string) {
-	if (batchGroupMode) {
-		batchGroupMode = false
-		confirmDropModal.value?.hide()
-		onBatchGroupConfirm(type)
-		return
-	}
-	await handleDropConfirm(type, innerBase)
-}
-
-async function handleConfirmDropHelp() {
-	if (batchGroupMode) {
-		batchGroupMode = false
-		confirmDropModal.value?.hide()
-		void cancelBatch('group-help')
-	}
-	await handleDropHelp()
-}
-
-// ── Batch drag-and-drop import ─────────────────────────────────────────────
-
-const batchPhase = ref<BatchDropPhase>('idle')
-const batchActive = computed(() => batchPhase.value !== 'idle')
-const batchItems = ref<BatchDropItem[]>([])
-const batchOriginalCount = ref(0)
-const batchScanDone = ref(0)
-const batchGroups = ref<BatchDropGroup[]>([])
-const batchCurrentGroup = ref<BatchDropGroup | null>(null)
-const batchTargetInstances = ref<BatchTargetInstanceInfo[]>([])
-const batchTargetInstanceId = ref('')
-const batchWorldPath = ref('')
-const batchTempDirs = ref<string[]>([])
-
-interface BatchTargetInstanceInfo {
-	id: string
-	name: string
-	iconUrl?: string | null
-	gameVersion?: string | null
-	loader?: string | null
-}
-
-let batchScanCancelled = false
-let batchInstallCancelled = false
-let batchConfirmIndex = 0
-let batchSymlinkMode = false
-/** When true, GenericContentInstallModal is being used as the batch target picker. */
-let batchTargetPickMode = false
-/** When true, InstanceExportModal is being used as the batch world picker. */
-let batchWorldMode = false
-/** When true, ConfirmDropTypeModal is being used for a merged batch group. */
-let batchGroupMode = false
-/** Forces ConfirmDropTypeModal to remount for each batch group so a pending
- *  hide from the previous group cannot close the next group's modal. */
-const batchGroupKey = ref(0)
-/** Forces ContentUpdaterModal to remount for each compatibility warning so a
- *  pending hide from the previous warning cannot close the next warning. */
-const incompatWarningKey = ref(0)
-/** Resolves the per-item compatibility decision during batch install. */
-let batchCompatResolve: ((installed: boolean) => void) | null = null
-
-function resolveBatchClassification(result: ClassificationResult, depth = 0): ClassificationResult {
-	if (result.item_type === 'shortcut_resolved' && result.resolved_to && depth < 3) {
-		return resolveBatchClassification(result.resolved_to, depth + 1)
-	}
-	return result
-}
-
-async function startBatchImport(paths: string[]) {
-	console.log('[BatchDrop] startBatchImport paths=', paths.length, paths)
-	if (batchPhase.value !== 'idle') return
-	batchPhase.value = 'scanning'
-	batchOriginalCount.value = paths.length
-	batchScanDone.value = 0
-	batchScanCancelled = false
-	batchInstallCancelled = false
-	batchConfirmIndex = 0
-	batchTempDirs.value = []
-	batchTargetInstanceId.value = ''
-	batchWorldPath.value = ''
-	batchGroups.value = []
-	batchCurrentGroup.value = null
-	batchItems.value = paths.map((path, index) => ({
-		id: `batch-${Date.now()}-${index}`,
-		sourcePath: path,
-		name: path.split(/[/\\]/).pop() || path,
-		scanState: 'pending',
-		selected: true,
-	}))
-	try {
-		await runBatchScan()
-	} catch (error) {
-		await failBatch(error)
-	}
-}
-
-async function runBatchScan() {
-	const items = batchItems.value
-	const total = items.length
-	let cursor = 0
-	console.log(`[BatchDrop] runBatchScan total=${total}`)
-	const workers = Array.from({ length: Math.min(3, total) }, async () => {
-		while (!batchScanCancelled) {
-			const index = cursor++
-			if (index >= total) return
-			const item = items[index]
-			item.scanState = 'scanning'
-			console.log(`[BatchDrop] scan start idx=${index} path=${item.sourcePath}`)
-			try {
-				const raw = await classifyDropPath(item.sourcePath)
-				const resolved = resolveBatchClassification(raw)
-				if (resolved.item_type === 'shortcut_resolved') {
-					item.scanState = 'skipped'
-					item.reason = 'shortcut-exceeded'
-				} else {
-					await applyBatchClassification(item, resolved)
-				}
-				console.log(
-					`[BatchDrop] scan done idx=${index} type=${item.itemType} state=${item.scanState}`,
-				)
-			} catch (error) {
-				item.scanState = 'error'
-				item.reason = error instanceof Error ? error.message : String(error)
-				console.log(`[BatchDrop] scan ERROR idx=${index}`, error)
-			} finally {
-				batchScanDone.value++
-			}
-		}
-	})
-	await Promise.all(workers)
-	if (batchScanCancelled) {
-		await cancelBatch('scan-cancelled-flag')
-		return
-	}
-	await finishBatchScan()
-}
-
-async function applyBatchClassification(item: BatchDropItem, resolved: ClassificationResult) {
-	console.log(
-		'[BatchDrop] applyBatchClassification item=',
-		item.name,
-		'resolved=',
-		resolved.item_type,
-	)
-	if (resolved.item_type === 'unknown') {
-		item.scanState = 'skipped'
-		item.reason = resolved.reason ?? 'unknown'
-		return
-	}
-
-	if (resolved.item_type === 'launcher' || resolved.item_type === 'hmcl_launcher') {
-		await expandBatchLauncher(item, resolved)
-		return
-	}
-
-	item.scanState = 'done'
-	item.classification = resolved
-	item.innerBase = (resolved as { innerBase?: string }).innerBase
-
-	switch (resolved.item_type) {
-		case 'mod':
-		case 'shader_pack':
-		case 'world_save':
-		case 'litematic':
-			item.itemType = resolved.item_type
-			break
-		case 'modpack':
-			item.itemType = 'modpack'
-			break
-		case 'resource_pack': {
-			const candidates = resolved.candidates ?? []
-			if (candidates.length === 1) {
-				item.itemType = candidates[0]
-			} else if (candidates.length > 1) {
-				item.itemType = 'ambiguous'
-				item.candidates = candidates
-			} else {
-				item.itemType = 'resource_pack'
-			}
-			break
-		}
-		case 'multiple':
-			item.itemType = 'ambiguous'
-			item.choices = resolved.choices
-			item.candidates = [
-				...new Set((resolved.choices ?? []).map((choice) => choice.itemType).filter(Boolean)),
-			]
-			break
-	}
-}
-
-async function expandBatchLauncher(item: BatchDropItem, resolved: ClassificationResult) {
-	const launcherType =
-		resolved.item_type === 'hmcl_launcher'
-			? 'HMCL'
-			: ((resolved as { launcher_type?: string }).launcher_type ?? 'Generic')
-	const rawBasePath =
-		resolved.item_type === 'hmcl_launcher'
-			? ((resolved as { launcher_dir?: string }).launcher_dir ?? '')
-			: ((resolved as { base_path?: string }).base_path ?? '')
-
-	if (!rawBasePath) {
-		item.scanState = 'skipped'
-		item.reason = 'No launcher path'
-		return
-	}
-
-	let scanBasePath = rawBasePath
-	const fromZip = isZipPath(rawBasePath)
-	if (fromZip) {
-		try {
-			const tempDir = await extractZipToTemp(rawBasePath)
-			batchTempDirs.value.push(tempDir)
-			const innerBase = (resolved as { innerBase?: string }).innerBase
-			scanBasePath = innerBase ? `${tempDir}/${innerBase}` : tempDir
-		} catch (error) {
-			item.scanState = 'error'
-			item.reason = error instanceof Error ? error.message : String(error)
-			return
-		}
-	}
-
-	try {
-		const results = await scanLauncherInstances(launcherType, scanBasePath)
-		const instances = results.flatMap((result) => result.instances)
-		console.log(
-			`[BatchDrop] expand launcher type=${launcherType} base=${scanBasePath} instances=${instances.length}`,
-		)
-		if (instances.length === 0) {
-			item.scanState = 'skipped'
-			item.reason = 'No importable instances found'
-			return
-		}
-		item.scanState = 'done'
-		item.itemType = 'launcher_container'
-		for (const inst of instances) {
-			batchItems.value.push({
-				id: `batch-${Date.now()}-${batchItems.value.length}`,
-				sourcePath: item.sourcePath,
-				name: inst.name,
-				sourceLabel: item.name,
-				scanState: 'done',
-				itemType: 'instance',
-				launcherType,
-				basePath: scanBasePath,
-				instanceFolder: inst.name,
-				instancePath: inst.path,
-				fromZip: fromZip || undefined,
-				selected: true,
-			})
-		}
-	} catch (error) {
-		item.scanState = 'error'
-		item.reason = error instanceof Error ? error.message : String(error)
-	}
-}
-
-async function finishBatchScan() {
-	const hasImportable = batchItems.value.some(
-		(item) => item.itemType && item.itemType !== 'launcher_container' && item.scanState === 'done',
-	)
-	console.log('[BatchDrop] finishBatchScan hasImportable=', hasImportable)
-	if (!hasImportable) {
-		await showBatchSummaryFromScan()
-		return
-	}
-
-	const needsInstance = batchItems.value.some(
-		(item) =>
-			item.itemType &&
-			[
-				'mod',
-				'resource_pack',
-				'shader_pack',
-				'world_save',
-				'litematic',
-				'data_pack',
-				'ambiguous',
-			].includes(item.itemType),
-	)
-	if (needsInstance) {
-		// Reuse the single-file flow's in-instance shortcut: when we are on an
-		// instance page, install straight into the current instance instead of
-		// asking for a target.
-		if (isInInstance.value && instanceId.value) {
-			console.log('[BatchDrop] in-instance context, using current instance directly')
-			await proceedBatchWithTargetInstance(instanceId.value)
-			return
-		}
-		console.log('[BatchDrop] finishBatchScan needsInstance=true (show target instance picker)')
-		batchPhase.value = 'picking-instance'
-		await loadBatchTargetInstances()
-		return
-	}
-
-	console.log('[BatchDrop] finishBatchScan needsInstance=false (go to group confirms)')
-	await startBatchGroupConfirms()
-}
-
-/** Applies a shared target instance and continues with world/group confirmation. */
-async function proceedBatchWithTargetInstance(instanceId: string) {
-	batchTargetInstanceId.value = instanceId
-	const needsWorld = batchItems.value.some(
-		(item) =>
-			item.itemType === 'data_pack' ||
-			(item.itemType === 'ambiguous' && (item.candidates ?? []).includes('data_pack')),
-	)
-	if (needsWorld) {
-		// Reuse the existing world picker (InstanceExportModal), pre-opened on
-		// the target instance's worlds.
-		batchPhase.value = 'picking-world'
-		batchWorldMode = true
-		dataPackWorldModal.value?.show(instanceId)
-		console.log('[BatchDrop] dataPackWorldModal.show (batch world) called')
-	} else {
-		await startBatchGroupConfirms()
-	}
-}
-
-async function loadBatchTargetInstances() {
-	try {
-		const all = await listInstances()
-		batchTargetInstances.value = all.map((inst) => ({
-			id: inst.id,
-			name: inst.name,
-			iconUrl: getDisplayInstanceIcon(inst.icon_path, inst.loader).url,
-			gameVersion: inst.game_version || null,
-			loader: inst.loader || null,
-		}))
-		console.log('[BatchDrop] loadBatchTargetInstances count=', batchTargetInstances.value.length)
-	} catch (error) {
-		batchTargetInstances.value = []
-		console.log('[BatchDrop] loadBatchTargetInstances ERROR', error)
-	}
-	// Reuse the existing instance picker (GenericContentInstallModal).
-	await nextTick()
-	genericInstallModal.value?.show({
-		contentType: 'mod',
-		fileName: formatMessage(messages.dropBatchTargetLabel),
-		instances: batchTargetInstances.value,
-	})
-	// Set the mode after show() so any hide/cancel emitted synchronously while
-	// opening the modal does not cancel the batch.
-	batchTargetPickMode = true
-	console.log('[BatchDrop] genericInstallModal.show (batch target) called')
-}
-
-async function handleBatchOrDatapackWorldSelect(target: { instanceId: string; worldPath: string }) {
-	if (batchWorldMode) {
-		batchWorldMode = false
-		batchTargetInstanceId.value = target.instanceId
-		batchWorldPath.value = target.worldPath
-		console.log('[BatchDrop] batch world selected world=', target.worldPath)
-		try {
-			await startBatchGroupConfirms()
-		} catch (error) {
-			await failBatch(error)
-		}
-		return
-	}
-	await handleDatapackWorldSelect(target)
-}
-
-function handleBatchWorldAfterHide() {
-	// InstanceExportModal was dismissed without picking a world.
-	if (batchWorldMode) {
-		batchWorldMode = false
-		void cancelBatch('world-cancel')
-	}
-}
-
-async function startBatchGroupConfirms() {
-	const groups: BatchDropGroup[] = []
-	const typeOrder = [
-		'modpack',
-		'ambiguous',
-		'mod',
-		'resource_pack',
-		'shader_pack',
-		'world_save',
-		'litematic',
-		'data_pack',
-		'instance',
-	]
-	const byType = new Map<string, BatchDropItem[]>()
-	for (const item of batchItems.value) {
-		if (item.selected === false || !item.itemType || item.itemType === 'launcher_container')
-			continue
-		if (item.scanState !== 'done') continue
-		const list = byType.get(item.itemType) ?? []
-		list.push(item)
-		byType.set(item.itemType, list)
-	}
-	for (const type of typeOrder) {
-		const list = byType.get(type)
-		if (list?.length) groups.push({ id: type, type, items: list })
-	}
-	batchGroups.value = groups
-	batchConfirmIndex = 0
-	batchPhase.value = 'confirming'
-	console.log(
-		'[BatchDrop] startBatchGroupConfirms groups=',
-		groups.map((g) => `${g.type}:${g.items.length}`),
-	)
-	await showNextBatchGroup()
-}
-
-async function showNextBatchGroup() {
-	try {
-		if (batchConfirmIndex >= batchGroups.value.length) {
-			console.log('[BatchDrop] showNextBatchGroup done all groups, run install')
-			await runBatchInstall()
-			return
-		}
-		const group = batchGroups.value[batchConfirmIndex]
-		batchCurrentGroup.value = group
-		console.log(
-			`[BatchDrop] showNextBatchGroup idx=${batchConfirmIndex} type=${group.type} count=${group.items.length}`,
-		)
-		if (group.type === 'instance') {
-			// Instances extracted from a compressed launcher live in a temporary
-			// directory that is deleted after the import, so symlinking is never
-			// an option — import as copies, matching the single-file flow.
-			if (group.items.some((item) => item.fromZip)) {
-				for (const item of group.items) item.symlink = false
-				batchConfirmIndex++
-				await showNextBatchGroup()
-				return
-			}
-			const cap = await check_symlink_capability()
-			batchSymlinkMode = true
-			symlinkCardsModal.value?.show({
-				instances: group.items.map((item) => ({
-					name: item.name,
-					path: item.instancePath,
-					launcherType: item.launcherType,
-					basePath: item.basePath,
-				})),
-				symlinkCapable: cap,
-			})
-		} else {
-			await showBatchGroupConfirmModal(group)
-		}
-	} catch (error) {
-		await failBatch(error)
-	}
-}
-
-async function showBatchGroupConfirmModal(group: BatchDropGroup) {
-	// Remount ConfirmDropTypeModal so any pending hide from the previous group
-	// is discarded instead of closing this newly opened modal.
-	batchGroupKey.value++
-	await nextTick()
-
-	// Reuse the single-file ConfirmDropTypeModal by feeding it a synthetic
-	// classification that only exposes the option(s) for this merged group.
-	let classification: ClassificationResult
-	if (group.type === 'ambiguous') {
-		const choices = group.items
-			.flatMap((item) =>
-				item.choices?.length
-					? item.choices
-					: (item.candidates ?? []).map((candidate) => ({ itemType: candidate })),
-			)
-			.filter(
-				(choice, index, all) => all.findIndex((c) => c.itemType === choice.itemType) === index,
-			)
-		classification = { item_type: 'multiple', file_path: group.items[0]?.sourcePath, choices }
-	} else {
-		classification = { item_type: group.type } as unknown as ClassificationResult
-	}
-	dropClassification.value = classification
-	dropFileName.value = formatMessage(messages.dropBatchGroupFileLabel, {
-		count: group.items.length,
-		names: group.items.map((item) => item.name).join(', '),
-	})
-	batchGroupMode = true
-	confirmDropModal.value?.show()
-}
-
-function onBatchGroupConfirm(type: string) {
-	const group = batchCurrentGroup.value
-	if (!group) return
-	console.log('[BatchDrop] onBatchGroupConfirm group=', group.type, 'type=', type)
-	for (const item of group.items) {
-		item.selected = true
-		item.confirmedType = type
-		item.itemType = type
-		// Multi-candidate sources carry per-candidate inner paths; keep the
-		// one that matches the chosen type so installs target the right folder.
-		const choice = item.choices?.find((c) => c.itemType === type)
-		if (choice?.innerBase !== undefined) {
-			item.innerBase = choice.innerBase
-		}
-	}
-	batchConfirmIndex++
-	void showNextBatchGroup()
-}
-
-function cancelBatchScan() {
-	console.log('[BatchDrop] cancelBatchScan clicked')
-	batchScanCancelled = true
-	void cancelBatch('scan-button')
-}
-
-async function cancelBatch(source = 'unknown') {
-	console.log(
-		`[BatchDrop] cancelBatch INVOKED source=${source} phase=${batchPhase.value}`,
-		new Error(source).stack,
-	)
-	if (batchPhase.value === 'idle' || batchPhase.value === 'cancelled') return
-	batchScanCancelled = true
-	batchInstallCancelled = true
-	batchSymlinkMode = false
-	batchTargetPickMode = false
-	batchWorldMode = false
-	batchGroupMode = false
-	confirmDropModal.value?.hide()
-	symlinkCardsModal.value?.hide()
-	// GenericContentInstallModal and InstanceExportModal are hidden by their own
-	// flows; calling hide() here can re-enter their onHide/cancel handlers.
-	await cleanupBatchTempDirs()
-	addNotification({
-		title: formatMessage(messages.dropImportCancelledTitle),
-		text: formatMessage(messages.dropImportCancelledText),
-		type: 'info',
-	})
-	finishBatch()
-	batchPhase.value = 'idle'
-}
-
-/** Cleans up after an unexpected batch error so no overlay stays stuck. */
-async function failBatch(error: unknown) {
-	console.error('[BatchDrop] batch failed', error)
-	addNotification({
-		title: formatMessage(messages.dropImportFailedTitle),
-		text: error instanceof Error ? error.message : String(error),
-		type: 'error',
-	})
-	batchPhase.value = 'idle'
-	batchScanCancelled = true
-	batchInstallCancelled = true
-	batchTargetPickMode = false
-	batchWorldMode = false
-	batchGroupMode = false
-	confirmDropModal.value?.hide()
-	symlinkCardsModal.value?.hide()
-	await cleanupBatchTempDirs()
-	finishBatch()
-}
-
-async function cleanupBatchTempDirs() {
-	const dirs = [...batchTempDirs.value]
-	batchTempDirs.value = []
-	for (const dir of dirs) {
-		try {
-			await removeTempDir(dir)
-		} catch {
-			// Best-effort cleanup; stale dirs are swept by the backend.
-		}
-	}
-}
-
-async function showBatchSummaryFromScan() {
-	const skipped = batchItems.value.filter(
-		(item) => item.scanState === 'skipped' || item.scanState === 'error',
-	)
-	if (skipped.length > 0) {
-		addNotification({
-			title: formatMessage(messages.dropBatchNothingImportableTitle),
-			text: formatMessage(messages.dropBatchNothingImportableText, {
-				count: skipped.length,
-			}),
-			type: 'warning',
-		})
-	}
-	await finishBatchImport()
-}
-
-async function runBatchInstall() {
-	batchPhase.value = 'installing'
-	batchInstallCancelled = false
-	console.log('[BatchDrop] runBatchInstall start')
-	const typeOrder = [
-		'modpack',
-		'instance',
-		'mod',
-		'resource_pack',
-		'shader_pack',
-		'world_save',
-		'litematic',
-		'data_pack',
-	]
-	const queue = typeOrder.flatMap((type) =>
-		batchItems.value.filter(
-			(item) => item.selected !== false && item.scanState === 'done' && item.itemType === type,
-		),
-	)
-	for (const item of batchItems.value) {
-		if (
-			item.selected !== false &&
-			item.scanState === 'done' &&
-			item.itemType &&
-			!typeOrder.includes(item.itemType)
-		) {
-			queue.push(item)
-		}
-	}
-
-	let succeeded = 0
-	let failed = 0
-	let skipped = 0
-	for (const item of queue) {
-		if (batchInstallCancelled) {
-			addNotification({
-				title: formatMessage(messages.dropImportCancelledTitle),
-				text: formatMessage(messages.dropImportCancelledText),
-				type: 'info',
-			})
-			break
-		}
-		item.installState = 'processing'
-		console.log(`[BatchDrop] install start type=${item.itemType} name=${item.name}`)
-		try {
-			await installBatchItem(item)
-			if (pendingDropIncompatibility.value) {
-				// A compatibility warning opened and install did not finish;
-				// wait for the user to install anyway or skip this one mod.
-				const installed = await new Promise<boolean>((resolve) => {
-					batchCompatResolve = resolve
-				})
-				if (installed) {
-					item.installState = 'success'
-					succeeded++
-					console.log(`[BatchDrop] install SUCCESS (compat) name=${item.name}`)
-				} else {
-					item.installState = 'skipped'
-					skipped++
-					console.log(`[BatchDrop] install SKIPPED (compat cancelled) name=${item.name}`)
-				}
-			} else {
-				item.installState = 'success'
-				succeeded++
-				console.log(`[BatchDrop] install SUCCESS name=${item.name}`)
-			}
-		} catch (error) {
-			item.installState = 'failed'
-			failed++
-			console.log(`[BatchDrop] install FAILED name=${item.name}`, error)
-		}
-	}
-	console.log(
-		`[BatchDrop] runBatchInstall finished queue=${queue.length} success=${succeeded} failed=${failed} skipped=${skipped}`,
-	)
-
-	addNotification({
-		title: formatMessage(messages.dropBatchCompletedTitle),
-		text: formatMessage(messages.dropBatchCompletedText, {
-			succeeded,
-			failed,
-			skipped,
-			total: queue.length,
-		}),
-		type: failed > 0 || skipped > 0 ? 'warning' : 'success',
-	})
-	await finishBatchImport()
-}
-
-async function installBatchItem(item: BatchDropItem) {
-	console.log(
-		`[BatchDrop] installBatchItem type=${item.itemType} name=${item.name} path=${item.sourcePath}`,
-	)
-	switch (item.itemType) {
-		case 'modpack':
-			await installModpackFromPath(item.sourcePath, item.name, { persistUntilDone: false })
-			return
-		case 'instance': {
-			const job = await import_instance(
-				item.launcherType,
-				item.basePath,
-				item.instanceFolder,
-				item.symlink ?? false,
-				item.instancePath,
-				item.gameVersion ?? undefined,
-				item.loader ?? undefined,
-				item.loaderVersion ?? undefined,
-			)
-			await wait_for_install_job(job.job_id)
-			return
-		}
-		case 'data_pack':
-			if (!batchTargetInstanceId.value || !batchWorldPath.value) {
-				throw new Error('Missing target instance or world for datapack')
-			}
-			await install_datapack_to_world(
-				batchTargetInstanceId.value,
-				batchWorldPath.value,
-				item.sourcePath,
-				item.innerBase,
-			)
-			return
-		case 'mod':
-		case 'resource_pack':
-		case 'shader_pack':
-		case 'world_save':
-		case 'litematic':
-		case 'schematic':
-			await installContentDirectly(
-				item.itemType,
-				item.sourcePath,
-				batchTargetInstanceId.value,
-				item.innerBase,
-			)
-			return
-		default:
-			throw new Error(`Unsupported batch item type: ${item.itemType}`)
-	}
-}
-
-async function finishBatchImport() {
-	await cleanupBatchTempDirs()
-	batchPhase.value = 'idle'
-	batchItems.value = []
-	finishBatch()
-}
-
-async function handleDropConfirm(type: string, innerBase?: string) {
-	const classification = dropClassification.value
-	dropClassification.value = null
-	confirmDropModal.value?.hide()
-
-	dropDebug('handleDropConfirm: entry', {
-		type,
-		classification_item_type: classification?.item_type,
-		file_path: classification?.file_path,
-	})
-
-	const isLauncherImport =
-		classification?.item_type === 'launcher' || classification?.item_type === 'hmcl_launcher'
-
-	if (!isLauncherImport && !classification?.file_path && !dropFilePath.value) {
-		dropDebug(
-			'handleDropConfirm: no filePath available (classification and dropFilePath both empty), aborting',
-		)
-		return
-	}
-
-	const filePath = classification?.file_path ?? dropFilePath.value
-	const fileName =
-		filePath?.split(/[/\\]/).pop() ?? classification.base_path?.split(/[/\\]/).pop() ?? 'file'
-	dropDebug('handleDropConfirm: routing decision', {
-		type,
-		isLauncherImport,
-		item_type: classification?.item_type,
-	})
-
-	if (type === 'dot_minecraft') {
-		dropDebug('handleDropConfirm: .minecraft folder branch', {
-			dropFilePath: dropFilePath.value,
-		})
-		if (!dropFilePath.value) {
-			dropDebug('handleDropConfirm: dot_minecraft — no dropFilePath, aborting')
-			return
-		}
-		// Treat the .minecraft folder path as a vanilla-style instance source
-		// and scan it for importable instances
-		currentImportContext.value = { launcherType: 'Generic', basePath: dropFilePath.value }
-		scanningInstances.value = true
-		let results: ScanResult[]
-		try {
-			results = await scanLauncherInstances('Generic', dropFilePath.value)
-		} catch (error) {
-			currentImportContext.value = null
-			dropDebug('handleDropConfirm: .minecraft scan failed', error)
-			addNotification({ title: formatMessage(messages.dropScanFailed), type: 'error' })
-			return
-		} finally {
-			scanningInstances.value = false
-		}
-		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
-		dropDebug('handleDropConfirm: .minecraft scan result', { totalInstances, results })
-
-		if (totalInstances === 0) {
-			currentImportContext.value = null
-			dropDebug('handleDropConfirm: no instances found in .minecraft folder')
-			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
-			return
-		}
-
-		if (totalInstances === 1 && results[0]?.instances[0]) {
-			const single = results[0].instances[0]
-			dropDebug('handleDropConfirm: single instance from .minecraft, showing symlink modal', {
-				name: single.name,
-				path: single.path,
-			})
-			selectedInstances.value = [
-				{
-					launcherType: 'Generic',
-					basePath: dropFilePath.value,
-					name: single.name,
-					path: single.path,
-				},
-			]
-			const cap = await check_symlink_capability()
-			symlinkCardsModal.value?.show({
-				instances: [
-					{
-						name: single.name,
-						path: single.path,
-						launcherType: 'Generic',
-						basePath: dropFilePath.value,
-					},
-				],
-				symlinkCapable: cap,
-			})
-			return
-		}
-
-		// Multiple instances → show selection modal
-		dropDebug(
-			'handleDropConfirm: multiple instances from .minecraft, showing launcher import modal',
-		)
-		launcherImportModal.value?.show(results)
-		return
-	}
-
-	// Compressed launcher folders (a zipped `.minecraft`, single instance
-	// folder or launcher directory) are extracted once to a temp dir; the
-	// scan and the import both operate on that extraction so the archive is
-	// unpacked a single time. The temp dir is removed on every terminal path
-	// (success, failure, or cancel).
-	if (isLauncherImport && type === 'instance') {
-		const launcherType =
-			classification!.item_type === 'hmcl_launcher' ? 'HMCL' : classification!.launcher_type!
-		const basePath =
-			classification!.item_type === 'hmcl_launcher'
-				? classification!.launcher_dir!
-				: classification!.base_path!
-		dropDebug('handleDropConfirm: launcher import branch', { launcherType, basePath })
-
-		let scanBasePath = basePath
-		if (isZipPath(basePath)) {
-			scanningInstances.value = true
-			try {
-				const tempDir = await extractZipToTemp(basePath)
-				launcherZipTempDir.value = tempDir
-				scanBasePath = classification!.innerBase
-					? `${tempDir}/${classification!.innerBase}`
-					: tempDir
-				dropDebug('handleDropConfirm: extracted launcher zip', {
-					tempDir,
-					innerBase: classification!.innerBase,
-					scanBasePath,
-				})
-			} catch (error) {
-				launcherZipTempDir.value = null
-				const errorDetail = error instanceof Error ? error.message : String(error)
-				console.error('[DropFlow] launcher zip extraction failed:', errorDetail, basePath)
-				dropDebug('handleDropConfirm: launcher zip extraction failed', error)
-				addNotification({
-					title: formatMessage(messages.dropExtractFailed),
-					text: errorDetail,
-					type: 'error',
-				})
-				return
-			} finally {
-				scanningInstances.value = false
-			}
-		}
-
-		currentImportContext.value = { launcherType, basePath: scanBasePath }
-		scanningInstances.value = true
-		let results: ScanResult[]
-		try {
-			results = await scanLauncherInstances(launcherType, scanBasePath)
-		} catch (error) {
-			currentImportContext.value = null
-			dropDebug('handleDropConfirm: launcher scan failed', error)
-			addNotification({ title: formatMessage(messages.dropScanFailed), type: 'error' })
-			cleanupLauncherZipTemp()
-			return
-		} finally {
-			scanningInstances.value = false
-		}
-		const totalInstances = results.reduce((s, r) => s + r.instances.length, 0)
-		dropDebug('handleDropConfirm: launcher scan result', { totalInstances, results })
-
-		if (totalInstances === 0) {
-			currentImportContext.value = null
-			dropDebug('handleDropConfirm: no instances found')
-			addNotification({ title: formatMessage(messages.dropNoInstances), type: 'warning' })
-			cleanupLauncherZipTemp()
-			return
-		}
-
-		if (totalInstances === 1 && results[0]?.instances[0]) {
-			// Single instance → go directly to symlink method selection
-			const single = results[0].instances[0]
-			dropDebug('handleDropConfirm: single instance, showing symlink modal', {
-				name: single.name,
-				path: single.path,
-			})
-			selectedInstances.value = [
-				{ launcherType, basePath: scanBasePath, name: single.name, path: single.path },
-			]
-			if (launcherZipTempDir.value) {
-				// Compressed sources live in a temporary extraction that is
-				// deleted after the import, so symlink is never an option.
-				dropDebug('handleDropConfirm: zip source, importing as copy')
-				await onSymlinkMethodConfirmed(false)
-				return
-			}
-			const cap = await check_symlink_capability()
-			symlinkCardsModal.value?.show({
-				instances: [
-					{
-						name: single.name,
-						path: single.path,
-						launcherType,
-						basePath: scanBasePath,
-					},
-				],
-				symlinkCapable: cap,
-			})
-			return
-		}
-
-		// Multiple instances → show selection modal
-		dropDebug('handleDropConfirm: multiple instances, showing launcher import modal')
-		launcherImportModal.value?.show(results)
-		return
-	}
-
-	if (type === 'modpack') {
-		dropDebug('handleDropConfirm: modpack branch', { filePath, fileName })
-
-		if (!filePath) {
-			dropDebug('handleDropConfirm: modpack — no filePath, aborting')
-			addNotification({ title: formatMessage(messages.dropModpackInstallFailed), type: 'error' })
-			return
-		}
-
-		// ── Replace "Processing..." with "Installing..." immediately (pure frontend) ──
-		clearDropProcessingNotification()
-		await installModpackFromPath(filePath, fileName, { persistUntilDone: true })
-		trackEvent('InstanceCreate', { source: 'DropConfirmModpack' })
-		await router.push('/library')
-		return
-	}
-
-	// Content types that can be installed
-	const contentTypes = [
-		'mod',
-		'resource_pack',
-		'data_pack',
-		'shader_pack',
-		'world_save',
-		'litematic',
-		'schematic',
-	]
-	if (!contentTypes.includes(type)) {
-		dropDebug('handleDropConfirm: type not in contentTypes — FALLTHROUGH, no handler!', {
-			type,
-			contentTypes,
-		})
-		return
-	}
-
-	dropDebug('handleDropConfirm: content install branch', {
-		type,
-		isInInstance: isInInstance.value,
-		hasInstanceId: !!instanceId.value,
-	})
-
-	if (type === 'data_pack') {
-		dropDebug('handleDropConfirm: data pack requires a world target', {
-			filePath,
-		})
-		pendingInstall.value = { type, filePath, innerBase }
-		dataPackWorldModal.value?.show(isInInstance.value ? instanceId.value : undefined)
-		return
-	}
-
-	if (isInInstance.value && instanceId.value) {
-		dropDebug('handleDropConfirm: installing directly to current instance', {
-			instanceId: instanceId.value,
-		})
-		await installContentDirectly(type, filePath, instanceId.value, innerBase)
-	} else {
-		// Store pending install info for when an instance is selected
-		dropDebug('handleDropConfirm: storing pending install, showing instance selection modal')
-		pendingInstall.value = { type, filePath, innerBase }
-
-		// Load all instances for the selection modal
-		let instances: {
-			id: string
-			name: string
-			iconUrl?: string | null
-			gameVersion?: string | null
-			loader?: string | null
-		}[] = []
-		try {
-			const allInstances = await listInstances()
-			instances = allInstances.map((inst) => ({
-				id: inst.id,
-				name: inst.name,
-				iconUrl: getDisplayInstanceIcon(inst.icon_path, inst.loader).url,
-				gameVersion: inst.game_version || null,
-				loader: inst.loader || null,
-			}))
-		} catch {
-			// If listing fails, show empty list
-		}
-		genericInstallModal.value?.show({
-			contentType: type,
-			fileName,
-			instances,
-		})
-	}
-}
-
-async function installContentDirectly(
-	type: string,
-	filePath: string,
-	instId: string,
-	innerBase?: string,
-) {
-	try {
-		if (type === 'world_save') {
-			await import_world_save(instId, filePath, innerBase)
-			addNotification({
-				title: formatMessage(messages.dropWorldImportedTitle),
-				text: formatMessage(messages.dropWorldImportedText),
-				type: 'success',
-			})
-			return
-		}
-
-		if (type === 'mod') {
-			let meta: {
-				minecraft_version?: string
-				loader?: string
-				name?: string
-				mod_id?: string
-			} | null = null
-			let modrinthLookup: ModrinthLookupResult | null = null
-
-			const metaStr = await extractModMetadata(filePath)
-			dropDebug('installContentDirectly: mod metadata extraction', { filePath, hasMeta: !!metaStr })
-
-			if (metaStr) {
-				try {
-					meta = JSON.parse(metaStr)
-					dropDebug('installContentDirectly: parsed mod metadata', { meta })
-				} catch (e) {
-					dropDebug('installContentDirectly: failed to parse mod metadata', { error: e })
-				}
-			}
-
-			try {
-				modrinthLookup = await lookupModHash(filePath)
-				dropDebug('installContentDirectly: modrinth hash lookup', { found: !!modrinthLookup })
-			} catch (e) {
-				dropDebug('installContentDirectly: hash lookup failed', { error: e })
-			}
-
-			const inst = await getInstance(instId)
-			dropDebug('installContentDirectly: instance details', {
-				inst: inst?.id,
-				game_version: inst?.game_version,
-				loader: inst?.loader,
-			})
-
-			if (inst && meta?.minecraft_version) {
-				const instVersion = inst.game_version
-				const instLoader = inst.loader
-				const modMcVersion = meta.minecraft_version
-				const modLoader = meta.loader
-
-				let versionMismatch = false
-				if (modMcVersion && instVersion) {
-					versionMismatch = !isVersionInRange(instVersion, modMcVersion)
-				}
-
-				let loaderMismatch = false
-				if (modLoader && instLoader) {
-					loaderMismatch = !areLoadersCompatible(modLoader, instLoader)
-				}
-
-				dropDebug('installContentDirectly: compatibility check', {
-					versionMismatch,
-					loaderMismatch,
-					modMcVersion,
-					instVersion,
-					modLoader,
-					instLoader,
-				})
-
-				if (versionMismatch || loaderMismatch) {
-					pendingDropIncompatibility.value = {
-						filePath,
-						instId,
-						type,
-						instVersion,
-						instLoader,
-						meta,
-						modrinthLookup,
-					}
-					const warning = formatMessage(messages.dropInstallModWarning, {
-						file: filePath.split(/[/\\]/).pop() || filePath,
-						modVersion: modMcVersion ?? 'any',
-						modLoader: modLoader ?? 'any',
-						instVersion: instVersion ?? 'any',
-						instLoader: instLoader ?? 'none',
-					})
-					contentInstallIncompatibilityWarningVersions.value = []
-					contentInstallIncompatibilityWarningCurrentGameVersion.value = instVersion ?? ''
-					contentInstallIncompatibilityWarningCurrentLoader.value = instLoader ?? ''
-					contentInstallIncompatibilityWarningProjectType.value = 'mod'
-					contentInstallIncompatibilityWarningProjectName.value = meta?.name ?? 'Mod'
-					contentInstallIncompatibilityWarningMessage.value = warning
-					contentInstallIncompatibilityWarningInstalling.value = false
-					// Remount so a previous warning's 300 ms hide cannot race the
-					// next warning when several incompatible mods are imported.
-					incompatWarningKey.value++
-					await nextTick()
-					incompatibilityWarningModal.value?.show()
-					return
-				}
-			} else {
-				dropDebug('installContentDirectly: skipping version check', {
-					hasInstance: !!inst,
-					hasModVersion: !!meta?.minecraft_version,
-				})
-			}
-		}
-
-		const projectType = contentFileProjectTypeMap[type]
-		await add_project_from_path(instId, filePath, projectType, innerBase)
-		addNotification({
-			title: formatMessage(messages.dropContentInstalledTitle),
-			text: formatMessage(messages.dropContentInstalledText),
-			type: 'success',
-		})
-	} catch (e) {
-		let errMsg = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
-		try {
-			const lockInfo = await detectFileLock(filePath)
-			if (lockInfo.length > 0) {
-				const lockLines = lockInfo.map((p) => `  PID ${p.pid}: ${p.name} (${p.path})`).join('\n')
-				errMsg += `\n\nFile locked by:\n${lockLines}`
-			}
-		} catch {
-			// Lock detection is best-effort
-		}
-		addNotification({
-			title: formatMessage(messages.dropInstallFailedTitle),
-			text: errMsg,
-			type: 'error',
-		})
-	}
-}
-
-/**
- * Show a popup notification asking the user to confirm force-analysis
- * (extraction + classification) of a ZIP archive that couldn't be identified
- * from entry names alone.
- */
-function showForceAnalysisPrompt(classification: ClassificationResult) {
-	const filePath = dropFilePath.value
-	if (!filePath) return
-
-	dropDebug('showForceAnalysisPrompt: showing force-analysis prompt', {
-		reason: classification.reason,
-		filePath,
-	})
-
-	addPopupNotification({
-		title: formatMessage(messages.dropUnknownForceAnalysisTitle),
-		text: formatMessage(messages.dropUnknownForceAnalysisText),
-		type: 'info',
-		autoCloseMs: null,
-		buttons: [
-			{
-				label: formatMessage(messages.dropUnknownForceAnalysisButton),
-				action: async () => {
-					const analyzingNotification = addNotification({
-						title: formatMessage(messages.dropUnknownForceAnalyzing),
-						type: 'info',
-						autoCloseMs: null,
-					})
-
-					try {
-						const result = await classifyDroppedItemWithExtraction(filePath)
-						notificationManager.removeNotification(analyzingNotification.id)
-
-						if (result.item_type === 'unknown') {
-							addNotification({
-								title: formatMessage(messages.dropUnknownForceAnalysisFailedTitle),
-								text: formatMessage(messages.dropUnknownForceAnalysisFailedText),
-								type: 'error',
-							})
-							return
-						}
-
-						// Success — the user already confirmed the unpack.
-						await continueWithClassification(result, filePath)
-					} catch (e) {
-						notificationManager.removeNotification(analyzingNotification.id)
-						addNotification({
-							title: formatMessage(messages.dropUnknownForceAnalysisFailedTitle),
-							text: e instanceof Error ? e.message : String(e),
-							type: 'error',
-						})
-					}
-				},
-				color: 'brand',
-			},
-		],
-	})
-}
-
-/**
- * Route an already-confirmed classification result through the same confirm
- * flow used by a normal drop. Unknown results surface an error notification.
- */
-async function continueWithClassification(result: ClassificationResult, fallbackFileName: string) {
-	if (result.item_type === 'unknown') {
-		addNotification({
-			title: formatMessage(messages.dropUnknownTitle),
-			text: unknownReasonMessage(result.reason),
-			type: 'error',
-		})
-		return
-	}
-	dropClassification.value = result
-	dropFilePath.value = result.file_path ?? result.base_path ?? ''
-	dropFileName.value =
-		result.file_path?.split(/[/\\]/).pop() ??
-		result.base_path?.split(/[/\\]/).pop() ??
-		fallbackFileName
-
-	switch (result.item_type) {
-		case 'modpack':
-			await handleDropConfirm('modpack')
-			break
-		case 'world_save':
-			await handleDropConfirm('world_save')
-			break
-		case 'launcher':
-		case 'hmcl_launcher':
-			await handleDropConfirm('instance')
-			break
-		default:
-			if (result.item_type === 'resource_pack' || result.item_type === 'multiple') {
-				confirmDropModal.value?.show()
-				return
-			}
-			// mod, shader_pack, litematic to content install
-			await handleDropConfirm(result.item_type)
-			break
-	}
-}
-
-/**
- * Show a popup asking the user to confirm unpacking nested archives before
- * the classifier stages them, reporting their total size. On confirmation
- * the archive is re-classified with nested unpacking allowed.
- */
-function showNestedUnpackPrompt(classification: ClassificationResult) {
-	const filePath = dropFilePath.value
-	if (!filePath) return
-
-	dropDebug('showNestedUnpackPrompt: nested archives need unpacking', {
-		reason: classification.reason,
-		filePath,
-	})
-
-	const sizeBytes = Number(classification.reason?.match(/total (\d+) bytes/i)?.[1] ?? 0)
-	const sizeLabel =
-		sizeBytes > 0
-			? sizeBytes >= 1024 * 1024
-				? `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
-				: `${Math.max(1, Math.round(sizeBytes / 1024))} KB`
-			: '?'
-
-	addPopupNotification({
-		title: formatMessage(messages.dropNestedUnpackTitle),
-		text: formatMessage(messages.dropNestedUnpackText, { size: sizeLabel }),
-		type: 'info',
-		autoCloseMs: null,
-		buttons: [
-			{
-				label: formatMessage(messages.dropNestedUnpackButton),
-				action: async () => {
-					try {
-						const result = await classifyDroppedItem(filePath, true)
-						await continueWithClassification(result, dropFileName.value || 'file')
-					} catch (e) {
-						addNotification({
-							title: formatMessage(messages.dropProcessFailedTitle),
-							text: e instanceof Error ? e.message : String(e),
-							type: 'error',
-						})
-					}
-				},
-			},
-		],
-	})
-}
-
-/**
- * Map a backend Unknown reason to a user-facing message. Depth-limit and
- * encryption failures have dedicated copy; anything else falls back to the
- * raw reason so technical details stay visible.
- */
-function unknownReasonMessage(reason: string | undefined): string {
-	const normalized = reason?.toLowerCase() ?? ''
-	if (normalized.includes('too deep') || normalized.includes('nesting')) {
-		return formatMessage(messages.dropUnknownDepthText)
-	}
-	if (normalized.includes('encrypted')) {
-		return formatMessage(messages.dropUnknownEncryptedText)
-	}
-	return reason ? reason : formatMessage(messages.dropUnknownText)
-}
-
-async function handleGenericInstall(instanceId: string) {
-	// Batch mode: the shared target-instance picker (reusing this modal).
-	if (batchTargetPickMode) {
-		batchTargetPickMode = false
-		genericInstallModal.value?.hide()
-		try {
-			await proceedBatchWithTargetInstance(instanceId)
-		} catch (error) {
-			await failBatch(error)
-		}
-		return
-	}
-	genericInstallModal.value?.hide()
-	const pending = pendingInstall.value
-	pendingInstall.value = null
-	if (!pending) return
-
-	await installContentDirectly(pending.type, pending.filePath, instanceId, pending.innerBase)
-}
-
-function handleGenericInstallCancel() {
-	if (batchTargetPickMode) {
-		batchTargetPickMode = false
-		genericInstallModal.value?.hide()
-		void cancelBatch('target-instance-cancel')
-		return
-	}
-	dropClassification.value = null
-}
-
-async function handleGenericInstallNavigateCreate() {
-	if (batchTargetPickMode) {
-		batchTargetPickMode = false
-		genericInstallModal.value?.hide()
-		void cancelBatch('target-instance-navigate-create')
-	}
-	router.push('/create')
-}
-
-async function handleDatapackWorldSelect(target: { instanceId: string; worldPath: string }) {
-	const pending = pendingInstall.value
-	pendingInstall.value = null
-	if (!pending) return
-	clearDropProcessingNotification()
-	try {
-		await install_datapack_to_world(
-			target.instanceId,
-			target.worldPath,
-			pending.filePath,
-			pending.innerBase,
-		)
-		addNotification({
-			title: formatMessage(messages.dropContentInstalledTitle),
-			text: formatMessage(messages.dropContentInstalledText),
-			type: 'success',
-		})
-	} catch (e) {
-		addNotification({
-			title: formatMessage(messages.dropInstallFailedTitle),
-			text: e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e),
-			type: 'error',
-		})
-	}
-}
-
-let symlinkChoiceResolve: ((symlink: boolean) => void) | null = null
-
-function isZipPath(path: string): boolean {
-	return /\.zip$/i.test(path)
-}
-
-async function cleanupLauncherZipTemp() {
-	const tempDir = launcherZipTempDir.value
-	if (!tempDir) return
-	launcherZipTempDir.value = null
-	try {
-		await removeTempDir(tempDir)
-		dropDebug('handleDropConfirm: launcher zip temp cleaned', { tempDir })
-	} catch (error) {
-		dropDebug('handleDropConfirm: launcher zip temp cleanup failed', error)
-	}
-}
-
-function onLauncherImportCancelled() {
-	launcherImportModal.value?.hide()
-	cleanupLauncherZipTemp()
-}
-
-function chooseImportMethod(options: {
-	instanceNames: string[]
-	symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
-}): Promise<boolean> {
-	return new Promise((resolve) => {
-		symlinkChoiceResolve = resolve
-		symlinkCardsModal.value?.show({
-			instances: options.instanceNames.map((name) => ({ name })),
-			symlinkCapable: options.symlinkCapable,
-		})
-	})
-}
-
-async function onImportSelected(
-	selections: Array<{
-		launcherType: string
-		launcherName: string
-		instances: Array<{ name: string; path: string }>
-	}>,
-) {
-	const allSelected: Array<{ launcherType: string; basePath: string; name: string; path: string }> =
-		[]
-	for (const sel of selections) {
-		for (const inst of sel.instances) {
-			allSelected.push({
-				launcherType: sel.launcherType,
-				basePath: '',
-				name: inst.name,
-				path: inst.path,
-			})
-		}
-	}
-	if (allSelected.length === 0) return
-	selectedInstances.value = allSelected
-
-	if (launcherZipTempDir.value) {
-		// Compressed sources are temporary extractions; import as copy.
-		dropDebug('onImportSelected: zip source, importing as copy', {
-			count: allSelected.length,
-		})
-		await onSymlinkMethodConfirmed(false)
-		return
-	}
-
-	const cap = await check_symlink_capability()
-	symlinkCardsModal.value?.show({
-		instances: allSelected.map((i) => ({
-			name: i.name,
-			path: i.path,
-			launcherType: i.launcherType,
-			basePath: i.basePath || i.path,
-		})),
-		symlinkCapable: cap,
-	})
-}
-
-function onSymlinkMethodCancelled() {
-	if (symlinkChoiceResolve) {
-		symlinkChoiceResolve(false)
-		symlinkChoiceResolve = null
-	}
-	symlinkCardsModal.value?.hide()
-	if (batchSymlinkMode) {
-		batchSymlinkMode = false
-		void cancelBatch('symlink-cancel')
-		return
-	}
-	cleanupLauncherZipTemp()
-}
-
-async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean) {
-	// Resolve the promise-based chooser first (if called from creation-modal flow)
-	if (symlinkChoiceResolve) {
-		symlinkChoiceResolve(Array.isArray(choices) ? (choices[0]?.symlink ?? false) : choices)
-		symlinkChoiceResolve = null
-		return
-	}
-
-	// Batch drop import: store per-instance choices and advance to the next group.
-	if (batchSymlinkMode) {
-		const group = batchCurrentGroup.value
-		batchSymlinkMode = false
-		symlinkCardsModal.value?.hide()
-		if (group) {
-			const choiceArray = Array.isArray(choices) ? choices : []
-			for (const item of group.items) {
-				const choice = choiceArray.find(
-					(c) =>
-						c.instanceName === item.name &&
-						(c.instancePath ?? undefined) === (item.instancePath ?? undefined),
-				)
-				if (choice) {
-					item.symlink = choice.symlink
-					item.gameVersion = choice.gameVersion
-					item.loader = choice.loader
-					item.loaderVersion = choice.loaderVersion
-				}
-			}
-		}
-		batchConfirmIndex++
-		void showNextBatchGroup()
-		return
-	}
-
-	// Otherwise handle the drop import flow directly
-	const instances = selectedInstances.value
-	selectedInstances.value = []
-	const ctx = currentImportContext.value
-	currentImportContext.value = null
-	if (instances.length === 0) {
-		cleanupLauncherZipTemp()
-		return
-	}
-
-	// Single instance: simple notification (no progress overlay needed)
-	if (instances.length === 1) {
-		const inst = instances[0]
-		const choice = Array.isArray(choices)
-			? choices.find(
-					(c) =>
-						c.instanceName === inst.name &&
-						(c.instancePath ?? undefined) === (inst.path ?? undefined),
-				)
-			: undefined
-		try {
-			const job = await import_instance(
-				ctx?.launcherType ?? inst.launcherType,
-				ctx?.basePath ?? inst.path,
-				inst.name,
-				choice?.symlink ?? (Array.isArray(choices) ? false : choices),
-				undefined,
-				choice?.gameVersion,
-				choice?.loader,
-				choice?.loaderVersion,
-			)
-			await wait_for_install_job(job.job_id)
-			addNotification({
-				title: formatMessage(messages.dropInstanceImportedTitle),
-				text: formatMessage(messages.dropInstanceImportedText, { name: inst.name }),
-				type: 'success',
-			})
-		} catch (e) {
-			addNotification({
-				title: formatMessage(messages.dropImportFailedTitle),
-				text: formatMessage(messages.dropImportFailedText, { name: inst.name, error: String(e) }),
-				type: 'error',
-			})
-		} finally {
-			cleanupLauncherZipTemp()
-		}
-		return
-	}
-
-	// Multiple instances: show cumulative progress
-	const total = instances.length
-	let completed = 0
-	let failedCount = 0
-
-	let progressNotif = addNotification({
-		title: formatMessage(messages.dropImportProgressTitle),
-		text: formatMessage(messages.dropImportProgressText, { current: 0, total }),
-		type: 'info',
-		autoCloseMs: null,
-	})
-
-	for (let i = 0; i < instances.length; i++) {
-		const inst = instances[i]
-		const choice = Array.isArray(choices)
-			? choices.find(
-					(c) =>
-						c.instanceName === inst.name &&
-						(c.instancePath ?? undefined) === (inst.path ?? undefined),
-				)
-			: undefined
-
-		// Update progress notification
-		notificationManager.removeNotification(progressNotif.id)
-		progressNotif = addNotification({
-			title: formatMessage(messages.dropImportProgressTitle),
-			text: formatMessage(messages.dropImportProgressText, {
-				current: i + 1,
-				total,
-			}),
-			type: 'info',
-			autoCloseMs: null,
-		})
-
-		try {
-			const job = await import_instance(
-				ctx?.launcherType ?? inst.launcherType,
-				ctx?.basePath ?? inst.path,
-				inst.name,
-				choice?.symlink ?? (Array.isArray(choices) ? false : choices),
-				undefined,
-				choice?.gameVersion,
-				choice?.loader,
-				choice?.loaderVersion,
-			)
-			await wait_for_install_job(job.job_id)
-			completed++
-		} catch (e) {
-			failedCount++
-			addNotification({
-				title: formatMessage(messages.dropImportFailedTitle),
-				text: formatMessage(messages.dropImportFailedText, { name: inst.name, error: String(e) }),
-				type: 'error',
-			})
-		}
-	}
-
-	cleanupLauncherZipTemp()
-
-	// Final summary — replace progress notification
-	notificationManager.removeNotification(progressNotif.id)
-	if (failedCount === 0) {
-		addNotification({
-			title: formatMessage(messages.dropImportCompletedTitle),
-			text: formatMessage(messages.dropImportCompletedText, { count: total }),
-			type: 'success',
-		})
-	} else {
-		addNotification({
-			title: formatMessage(messages.dropImportCompletedTitle),
-			text: formatMessage(messages.dropImportCompletedPartialText, {
-				completed,
-				failed: failedCount,
-				total,
-			}),
-			type: 'warning',
-		})
-	}
-}
-
-async function handleDropHelp() {
-	await router.push('/help/drop')
-	await confirmDropModal.value?.hide()
-}
+	onSkinsPage,
+	onSchematicWorkshopPage,
+	isSchematicFile,
+	trackEvent,
+	router,
+})
+
+// Destructure what we need from dropImport
+const {
+	// State
+	isDragging,
+	isProcessing,
+	batchActive,
+	batchPhase,
+	batchItems,
+	batchOriginalCount,
+	batchScanDone,
+	dropClassification,
+	dropFileName,
+	dropFilePath,
+	dropProcessingNotificationId,
+	scanningInstances,
+	batchGroupKey,
+	incompatWarningKey,
+
+	// Modal refs
+	confirmDropModal,
+	genericInstallModal,
+	launcherImportModal,
+	symlinkCardsModal,
+	dataPackWorldModal,
+	compatibleModeConfirmModal,
+	incompatibilityWarningModal: dropIncompatibilityWarningModal,
+
+	// Handlers
+	handleConfirmDropCancel,
+	handleConfirmDropConfirm,
+	handleConfirmDropHelp,
+	handleCompatibleModeConfirm,
+	handleGenericInstall,
+	handleGenericInstallCancel,
+	handleGenericInstallNavigateCreate,
+	handleBatchOrDatapackWorldSelect,
+	handleBatchWorldAfterHide,
+	onLauncherImportCancelled,
+	onImportSelected,
+	onSymlinkMethodCancelled,
+	onSymlinkMethodConfirmed,
+	chooseImportMethod,
+	cancelBatchScan,
+	handleIncompatibilityWarningUpdate,
+	handleIncompatibilityWarningCancel,
+	handleDropInstallSearchCompat,
+
+	// Utility
+	clearDropProcessingNotification,
+	showNestedUnpackPrompt,
+	showForceAnalysisPrompt,
+	unknownReasonMessage,
+} = dropImport
+
+provide('chooseImportMethod', chooseImportMethod)
 
 watch(
-	incompatibilityWarningModal,
+	dropIncompatibilityWarningModal,
 	(modal) => {
 		if (modal) {
 			setContentIncompatibilityWarningModal(modal)
@@ -3326,6 +1528,26 @@ onMounted(() => {
 	setServerAddServerToInstanceModal(addServerToInstanceModal.value)
 	setServerInstallToPlayModal(installToPlayModal.value)
 	setServerUpdateToPlayModal(updateToPlayModal.value)
+	void (async () => {
+		try {
+			const ready = await invoke<{
+				pending_crashes: { instance_id: string; uuid: string }[]
+				pending_commands: Parameters<typeof handleCommand>[0][]
+			}>('lightweight_mode_frontend_ready', { route: route.fullPath })
+			for (const pendingCrash of ready.pending_crashes) {
+				const instance = await getInstance(pendingCrash.instance_id).catch(() => null)
+				await minecraftCrashModal.value?.handleWarning({
+					message: `Instance ${instance?.name || 'Minecraft'} has crashed`,
+					kind: 'minecraft_crash',
+					instance_id: pendingCrash.instance_id,
+					instance_name: instance?.name || 'Minecraft',
+				})
+			}
+			for (const command of ready.pending_commands) await handleCommand(command)
+		} catch (error) {
+			handleError(error)
+		}
+	})()
 })
 
 const accounts = ref(null)
@@ -3402,23 +1624,6 @@ async function handleCommand(e) {
 			.catch(handleError)
 	}
 }
-
-const appUpdateDownload = {
-	progress: appUpdateState.progress,
-	version: ref(),
-}
-let unlistenUpdateDownload
-
-const {
-	metered,
-	finishedDownloading,
-	downloading,
-	restarting,
-	availableUpdate,
-	updateSize,
-	updatesEnabled,
-} = appUpdateState
-let delayedUpdatePopupTimeout = null
 
 const updatePopupMessages = defineMessages({
 	updateAvailable: {
@@ -3601,7 +1806,9 @@ async function performUpdateCheck() {
 		scheduleDelayedUpdatePopup()
 	}
 
-	getUpdateSize(update.rid).then((size) => (updateSize.value = size))
+	getUpdateSize(update.rid)
+		.then((size) => (updateSize.value = size))
+		.catch((error) => console.warn('Failed to fetch update size', error))
 	return 'available'
 }
 
@@ -3619,33 +1826,13 @@ async function manualUpdateCheck() {
 	return await performUpdateCheck()
 }
 
-async function checkUpdates() {
-	if (!(await areUpdatesEnabled())) {
-		console.log('Skipping update check as updates are disabled in this build or environment')
-		updatesEnabled.value = false
-
-		return
-	}
-
-	updatesEnabled.value = true
-	if (!offline.value) {
-		await performUpdateCheck().catch((error) => {
-			console.warn('Failed to check for launcher updates', error)
-		})
-	}
-	setTimeout(
-		() => {
-			checkUpdates()
-		},
-		5 /* min */ * 60 /* sec */ * 1000 /* ms */,
-	)
-}
-
 async function downloadAvailableUpdate() {
 	return downloadUpdate(availableUpdate.value)
 }
 
-async function downloadUpdate(versionToDownload) {
+const UPDATE_SOURCE_ORDER = ['miawa', 'cnb', 'github']
+
+async function downloadUpdate(versionToDownload, source = getUpdateSource()) {
 	if (!versionToDownload) {
 		handleError(`Failed to download update: no version available`)
 		return
@@ -3656,7 +1843,7 @@ async function downloadUpdate(versionToDownload) {
 		return
 	}
 
-	console.log(`Downloading update ${versionToDownload.version}`)
+	console.log(`Downloading update ${versionToDownload.version} from ${source}`)
 	downloading.value = true
 
 	try {
@@ -3671,20 +1858,56 @@ async function downloadUpdate(versionToDownload) {
 				markAppUpdateActionable(versionToDownload.version, 'downloaded')
 				scheduleDelayedUpdatePopup()
 			})
-			.catch((e) => {
+			.catch((error) => {
 				downloading.value = false
 				appUpdateDownload.progress.value = 0
-				handleError(e)
+				unlistenUpdateDownload?.().then(() => {
+					unlistenUpdateDownload = null
+				})
+				retryUpdateFromNextSource(source, error)
 			})
 		unlistenUpdateDownload = await subscribeToDownloadProgress(
 			appUpdateDownload,
 			versionToDownload.version,
 		)
-	} catch (e) {
+	} catch (error) {
 		downloading.value = false
 		appUpdateDownload.progress.value = 0
-		handleError(e)
+		retryUpdateFromNextSource(source, error)
 	}
+}
+
+// Any download failure falls back to the next update source in line
+// (miawa → cnb → github): re-check there and download its installer, so a
+// broken mirror never strands users on an outdated build.
+async function retryUpdateFromNextSource(failedSource, originalError) {
+	const startIndex = UPDATE_SOURCE_ORDER.indexOf(failedSource)
+	const remaining = startIndex >= 0 ? UPDATE_SOURCE_ORDER.slice(startIndex + 1) : []
+
+	for (const next of remaining) {
+		console.warn(
+			`Update download failed via ${failedSource}; retrying via ${next}`,
+			originalError,
+		)
+		try {
+			const fallbackUpdate = await checkAppUpdate(next)
+			if (!fallbackUpdate) {
+				console.warn(`No update available via ${next}`)
+				continue
+			}
+			availableUpdate.value = fallbackUpdate
+			updateSize.value = null
+			getUpdateSize(fallbackUpdate.rid)
+				.then((size) => (updateSize.value = size))
+				.catch((error) => console.warn('Failed to fetch update size', error))
+			await downloadUpdate(fallbackUpdate, next)
+			return
+		} catch (error) {
+			console.warn(`Update check via ${next} failed`, error)
+		}
+	}
+
+	handleError(originalError)
 }
 
 async function installUpdate() {
@@ -3814,9 +2037,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			</div>
 		</Transition>
 		<Suspense>
-			<AppSettingsModal ref="settingsModal" />
-		</Suspense>
-		<Suspense>
 			<AuthGrantFlowWaitModal ref="modrinthLoginFlowWaitModal" @flow-cancel="cancelLogin" />
 		</Suspense>
 		<InstanceIconPickerModal ref="instanceIconPickerModal" />
@@ -3869,7 +2089,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				<NavButton
 					v-tooltip.right="formatMessage(messages.multiplayer)"
 					to="/multiplayer"
-					:is-primary="(r) => r.path === '/multiplayer'"
+					:is-primary="(r) => r.path.startsWith('/multiplayer')"
 				>
 					<UsersIcon />
 				</NavButton>
@@ -3928,7 +2148,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			<NavButton
 				v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
 				data-onboarding-id="nav-settings"
-				:to="() => settingsModal?.show()"
+				to="/settings"
 			>
 				<SettingsIcon />
 			</NavButton>
@@ -4007,6 +2227,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		class="app-contents"
 		:class="{
 			'sidebar-enabled': sidebarVisible,
+			'studio-mode': route.name === 'FileStudio' || route.name === 'MultiplayerServerFileStudio',
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 			'has-custom-background': themeStore.customBackgroundPath && !themeStore.transparentBackground,
 			'has-transparent-background': themeStore.transparentBackground,
@@ -4115,6 +2336,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<JavaDownloadConfirmationModal ref="javaDownloadConfirmationModal" />
 	<PrivacyConsentModal ref="privacyConsentModal" @saved="handlePrivacyConsentSaved" />
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
+	<SurveyAnnouncementModal ref="surveyModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
 	<ErrorModal ref="errorModal" />
 	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
@@ -4242,6 +2464,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		@cancel="onSymlinkMethodCancelled"
 	/>
 
+	<NewModal ref="compatibleModeConfirmModal" max-width="560px" :closable="true">
+		<template #title>
+			<span class="text-contrast">{{ formatMessage(messages.dropCompatibleModeTitle) }}</span>
+		</template>
+		<div class="flex flex-col gap-4">
+			<span class="text-secondary text-sm">{{
+				formatMessage(messages.dropCompatibleModeDesc)
+			}}</span>
+			<div class="grid grid-cols-2 gap-3">
+				<BigOptionButton
+					:icon="FolderOpenIcon"
+					:title="formatMessage(messages.dropCompatibleModeImport)"
+					:description="formatMessage(messages.dropCompatibleModeImport)"
+					no-icon-border
+					@click="handleCompatibleModeConfirm('compatible')"
+				/>
+				<BigOptionButton
+					:icon="RotateCounterClockwiseIcon"
+					:title="formatMessage(messages.dropCompatibleModeOldWay)"
+					:description="formatMessage(messages.dropCompatibleModeOldWay)"
+					no-icon-border
+					@click="handleCompatibleModeConfirm('old-way')"
+				/>
+			</div>
+		</div>
+		<template #actions>
+			<div class="flex w-full items-center justify-end">
+				<ButtonStyled>
+					<button class="flex items-center gap-2" @click="handleCompatibleModeConfirm('cancel')">
+						{{ formatMessage(messages.dropCompatibleModeCancel) }}
+					</button>
+				</ButtonStyled>
+			</div>
+		</template>
+	</NewModal>
+
 	<!-- Batch drag-and-drop import UI -->
 	<BatchScanOverlay
 		v-if="batchPhase === 'scanning'"
@@ -4272,6 +2530,19 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	--top-bar-height: 3rem;
 	--left-bar-width: 4rem;
 	--right-bar-width: 300px;
+}
+
+.app-contents.studio-mode {
+	grid-template-columns: 1fr 0;
+
+	.app-sidebar {
+		display: none;
+	}
+}
+
+.app-contents.studio-mode {
+	top: var(--top-bar-height);
+	height: calc(100vh - var(--top-bar-height));
 }
 
 .app-grid-layout {
@@ -4314,17 +2585,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		clip-path: inset(0 round 8px);
 		overflow: hidden;
 	}
-	background-color: transparent;
 
+	background-color: transparent;
+}
+
+.app-grid-layout.has-custom-background {
 	.app-grid-navbar,
 	.app-grid-statusbar {
-		background-color: color-mix(
-			in srgb,
-			var(--surface-3-opaque) var(--window-alpha-chrome),
-			transparent
-		) !important;
+		background-color: color-mix(in srgb, var(--color-raised-bg) 82%, transparent) !important;
 
 		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
 	}
 }
 
@@ -4400,6 +2671,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			var(--surface-3-opaque) var(--window-alpha-chrome),
 			transparent
 		) !important;
+
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
 	}
 
 	// Without native decorations or rounded corners the window edge dissolves
@@ -4478,7 +2752,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	*,
 	:deep(*) {
 		box-shadow: none !important;
-		--tw-drop-shadow:;
+		--tw-drop-shadow: initial;
 	}
 }
 

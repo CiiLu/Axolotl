@@ -45,31 +45,6 @@ const XMCL_OTHER_CONCURRENCY: usize = 16;
 static AUTHORITY_SEMAPHORES: LazyLock<Mutex<HashMap<String, Arc<Semaphore>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static GLOBAL_SPEED_BPS: AtomicU64 = AtomicU64::new(0);
-static XMCL_SINGLE_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(20))
-        .read_timeout(Duration::from_secs(10))
-        .tcp_keepalive(Some(Duration::from_secs(10)))
-        .tcp_nodelay(true)
-        .pool_max_idle_per_host(64)
-        .user_agent(crate::launcher_user_agent())
-        .build()
-        .expect("XMCL single-stream client configuration should be valid")
-});
-static XMCL_SEGMENT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(20))
-        .read_timeout(Duration::from_secs(10))
-        .tcp_keepalive(Some(Duration::from_secs(10)))
-        .tcp_nodelay(true)
-        .pool_max_idle_per_host(16)
-        .http1_only()
-        .redirect(reqwest::redirect::Policy::limited(5))
-        .user_agent(crate::launcher_user_agent())
-        .build()
-        .expect("XMCL segment client configuration should be valid")
-});
-
 const CB_THRESHOLD: u32 = 16;
 const CB_COOLDOWN: Duration = Duration::from_secs(30);
 const CB_PROBE_EVERY: u32 = 24;
@@ -428,11 +403,12 @@ async fn download_attempt(
     let _activity = crate::State::get_if_initialized()
         .map(|state| state.begin_download_connection());
 
-    let client = if range_end.is_some() {
-        &XMCL_SEGMENT_CLIENT
-    } else {
-        &XMCL_SINGLE_CLIENT
-    };
+    let client = fetch::configured_client().await.map_err(|error| {
+        AttemptError::Http {
+            error,
+            offset: resume_offset,
+        }
+    })?;
     let mut http_request = client.get(url);
     if let Some(end) = range_end {
         http_request = http_request

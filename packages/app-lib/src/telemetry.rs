@@ -228,13 +228,15 @@ pub(crate) fn start(state: Arc<State>) {
     let (wake_tx, mut wake_rx) = tokio::sync::mpsc::channel(1);
     let _ = WAKE_TX.set(wake_tx);
     tokio::spawn(async move {
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
-            .user_agent(crate::launcher_user_agent())
-            .build()
-            .unwrap_or_default();
-
         loop {
+            let client = match crate::util::fetch::configured_client().await {
+                Ok(client) => client,
+                Err(error) => {
+                    tracing::debug!(target: "theseus::telemetry", %error, "Telemetry client configuration failed");
+                    tokio::time::sleep(Duration::from_secs(60)).await;
+                    continue;
+                }
+            };
             if let Err(error) = run_cycle(&state, &client).await {
                 tracing::debug!(target: "theseus::telemetry", %error, "Telemetry cycle failed");
             }

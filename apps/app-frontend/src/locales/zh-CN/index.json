@@ -260,6 +260,12 @@
 	"app.appearance-settings.minimize-launcher.title": {
 		"message": "最小化启动器"
 	},
+	"app.appearance-settings.lightweight-mode.description": {
+		"message": "Minecraft 启动后关闭启动器 Webview 以减少内存占用。可通过系统托盘恢复启动器。"
+	},
+	"app.appearance-settings.lightweight-mode.title": {
+		"message": "启动游戏后进入轻量模式"
+	},
 	"app.appearance-settings.native-decorations.description": {
 		"message": "使用系统窗口边框（需要重启应用）。"
 	},
@@ -452,6 +458,9 @@
 	"app.content-install.dependencies-skipped.notification-title": {
 		"message": "部分前置已跳过"
 	},
+	"app.content-install.preview.already-included": {
+		"message": "已包含"
+	},
 	"app.content-install.preview.already-installed": {
 		"message": "已安装"
 	},
@@ -478,6 +487,12 @@
 	},
 	"app.content-install.preview.only-checked": {
 		"message": "只会安装勾选的前置。"
+	},
+	"app.content-install.preview.optional-dependencies-header": {
+		"message": "可选前置"
+	},
+	"app.content-install.preview.required-dependencies-header": {
+		"message": "必要前置"
 	},
 	"app.content-install.preview.required-by": {
 		"message": "被 {projects} 需要"
@@ -842,15 +857,6 @@
 	"app.downloads.instance-deleted": {
 		"message": "实例已删除"
 	},
-	"app.downloads.phase.applying-content": {
-		"message": "正在应用内容"
-	},
-	"app.downloads.phase.completed": {
-		"message": "已完成"
-	},
-	"app.downloads.phase.creating-backup": {
-		"message": "正在创建备份"
-	},
 	"app.downloads.phase.downloading-content": {
 		"message": "正在下载内容"
 	},
@@ -892,18 +898,6 @@
 	},
 	"app.downloads.phase.running-loader-processors": {
 		"message": "正在安装加载器"
-	},
-	"app.downloads.phase.staging-content": {
-		"message": "正在暂存内容"
-	},
-	"app.downloads.phase.unknown": {
-		"message": "正在处理"
-	},
-	"app.downloads.phase.updating-loader": {
-		"message": "正在更新加载器"
-	},
-	"app.downloads.phase.verifying": {
-		"message": "正在验证"
 	},
 	"app.downloads.progress": {
 		"message": "进度"
@@ -999,7 +993,7 @@
 		"message": "无法登录 Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "要游玩此实例，请在下方使用 Microsoft 账号登录。如果没有 Minecraft 账号，可以在 Minecraft 官网购买游戏。"
+		"message": "您还未登陆任何账户，请在下方登录。如果您没有正版账户，可以在侧边栏中创建离线账户或第三方登陆。"
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "登录 Minecraft"
@@ -1189,9 +1183,6 @@
 	},
 	"app.instance.create-shortcut": {
 		"message": "创建快捷方式"
-	},
-	"app.instance.upgrade-instance": {
-		"message": "升级实例"
 	},
 	"app.instance.disable-selected": {
 		"message": "禁用所选项"
@@ -1805,56 +1796,11 @@
 	"app.minecraft-auth.unknown-error": {
 		"message": "未知错误"
 	},
-	"app.ai-log-analysis.analyzing": {
-		"message": "正在AI分析日志……这可能需要等待半分钟"
-	},
-	"app.ai-log-analysis.cancel": {
-		"message": "取消"
-	},
-	"app.ai-log-analysis.close": {
-		"message": "关闭"
-	},
-	"app.ai-log-analysis.copy-link": {
-		"message": "复制链接"
-	},
-	"app.ai-log-analysis.copy-result": {
-		"message": "复制结果"
-	},
-	"app.ai-log-analysis.error": {
-		"message": "AI 分析失败：{message}"
-	},
-	"app.ai-log-analysis.link-copied": {
-		"message": "链接已复制到剪贴板"
-	},
-	"app.ai-log-analysis.logshare-unavailable": {
-		"message": "LogShare.CN 无法访问，AI 分析不可用（mclo.gs 不支持 AI 分析）。{message}"
-	},
-	"app.ai-log-analysis.privacy": {
-		"message": "你的日志内容将被上传第三方 AI 服务进行分析, 请勿上传包含敏感信息的日志。\n 感谢logshare.cn提供的日志分享与分析服务。"
-	},
-	"app.ai-log-analysis.result-copied": {
-		"message": "分析结果已复制到剪贴板"
-	},
-	"app.ai-log-analysis.title": {
-		"message": "AI 日志分析"
-	},
-	"app.ai-log-analysis.upload-failed": {
-		"message": "上传失败，正在直接分析日志内容（无分享链接）。"
-	},
-	"app.ai-log-analysis.uploading": {
-		"message": "正在上传日志……"
-	},
 	"app.minecraft-auth.warning": {
 		"message": "无法登录你的 Microsoft 账号，原因可能是账号限制或地区限制。"
 	},
 	"app.minecraft-auth.what-happened": {
 		"message": "我们推测的原因"
-	},
-	"app.minecraft-crash.ai-analyze": {
-		"message": "AI 分析"
-	},
-	"app.minecraft-crash.ai-unavailable": {
-		"message": "当前日志服务（mclo.gs）不支持 AI 分析，请在设置中切换到 LogShare.CN。"
 	},
 	"app.minecraft-crash.analyzing": {
 		"message": "正在分析本次启动留下的日志……"
@@ -1946,6 +1892,93 @@
 	"app.minecraft-crash.no-log-content": {
 		"message": "没有找到可分享或分析的日志内容，请确认实例中有最近几分钟内生成的日志。"
 	},
+	"app.minecraft-crash.view-mod-changes": {
+		"message": "查看 Mod 变化"
+	},
+	"app.minecraft-crash.mod-changes-title": {
+		"message": "可能的问题：上次成功启动后 Mod 文件发生了变化"
+	},
+	"app.minecraft-crash.mod-changes-action": {
+		"message": "请检查发生变化的 Mod；如果崩溃从这些变化后开始，可手动恢复之前的配置。"
+	},
+	"app.minecraft-crash.mod-changes-modal.title": {
+		"message": "上次成功启动后的 Mod 变化"
+	},
+	"app.minecraft-crash.mod-changes-modal.description": {
+		"message": "此比较不会自动恢复或修改任何文件。"
+	},
+	"app.minecraft-crash.mod-changes-modal.added": {
+		"message": "新增（{count}）"
+	},
+	"app.minecraft-crash.mod-changes-modal.removed": {
+		"message": "移除（{count}）"
+	},
+	"app.minecraft-crash.mod-changes-modal.modified": {
+		"message": "修改（{count}）"
+	},
+	"app.minecraft-crash.mod-changes-modal.empty": {
+		"message": "没有检测到 Mod 文件变化。"
+	},
+	"app.minecraft-crash.mod-changes-modal.close": {
+		"message": "关闭"
+	},
+	"app.minecraft-crash.mod-changes-modal.undo": {
+		"message": "撤销新增 Mod"
+	},
+	"app.minecraft-crash.mod-changes-modal.undone": {
+		"message": "已移除新增 Mod"
+	},
+	"app.minecraft-crash.mod-changes-modal.undo-confirm": {
+		"message": "确定移除 {name} 吗？只会删除这个未被修改的文件。"
+	},
+	"app.minecraft-crash.mod-changes-modal.undo-failed": {
+		"message": "无法撤销此 Mod 变化"
+	},
+	"app.crash-analysis.ai.action": {
+		"message": "使用 AI 解释"
+	},
+	"app.crash-analysis.ai.analyzing": {
+		"message": "正在解释崩溃……"
+	},
+	"app.crash-analysis.ai.close": {
+		"message": "关闭"
+	},
+	"app.crash-analysis.ai.copied": {
+		"message": "AI 解释已复制到剪贴板"
+	},
+	"app.crash-analysis.ai.copy": {
+		"message": "复制解释"
+	},
+	"app.crash-analysis.ai.disclaimer": {
+		"message": "经过脱敏和裁剪的崩溃上下文会直接发送给本启动器中配置的 AI Provider。AI 输出可能不准确。"
+	},
+	"app.crash-analysis.ai.error": {
+		"message": "AI 解释失败：{message}"
+	},
+	"app.crash-analysis.ai.settings.description": {
+		"message": "可选：将经过脱敏和裁剪的崩溃上下文发送给 AI Providers 中配置的模型。"
+	},
+	"app.crash-analysis.ai.settings.enabled": {
+		"message": "启用 AI 解释"
+	},
+	"app.crash-analysis.ai.settings.enabled-description": {
+		"message": "不使用 AI 时，本地规则崩溃分析仍可用。"
+	},
+	"app.crash-analysis.ai.settings.model": {
+		"message": "文本模型"
+	},
+	"app.crash-analysis.ai.settings.no-providers": {
+		"message": "请先在上方启用 Provider 和文本模型，再使用 AI 崩溃解释。"
+	},
+	"app.crash-analysis.ai.settings.provider": {
+		"message": "AI Provider"
+	},
+	"app.crash-analysis.ai.settings.title": {
+		"message": "崩溃 AI 解释"
+	},
+	"app.crash-analysis.ai.title": {
+		"message": "AI 崩溃解释"
+	},
 	"app.minecraft-crash.preparation-timed-out": {
 		"message": "启动准备在 60 秒内未能完成，现已取消。请检查 Java 路径、启动前命令、包装器命令和网络连接，然后重试。"
 	},
@@ -1954,6 +1987,24 @@
 	},
 	"app.minecraft-crash.share-copied": {
 		"message": "诊断链接已复制到剪贴板"
+	},
+	"app.minecraft-crash.share-ready": {
+		"message": "诊断链接已准备好分享"
+	},
+	"app.servers.files.open-studio": {
+		"message": "打开 Studio"
+	},
+	"app.servers.files.studio-running-title": {
+		"message": "请先停止服务器再打开 Studio"
+	},
+	"app.servers.wizard.java-too-old": {
+		"message": "Java {selected} 无法运行此游戏版本；需要 Java {required} 或更高版本。"
+	},
+	"app.settings.updates.miawa": {
+		"message": "LemwoodMirror 镜像"
+	},
+	"instance.files.studio.refresh": {
+		"message": "刷新文件"
 	},
 	"app.minecraft-crash.share-diagnostic": {
 		"message": "导出分享"
@@ -2097,7 +2148,7 @@
 		"message": "带我逛逛"
 	},
 	"app.onboarding.appearance.description": {
-		"message": "主题、强调色、背景、主页布局和窗口行为都在这。让它更像你的启动器。"
+		"message": "主题、强调色、背景和窗口效果都在这里。把启动器调成你熟悉的样子。"
 	},
 	"app.onboarding.appearance.title": {
 		"message": "调成你的顺眼样子"
@@ -2208,13 +2259,13 @@
 		"message": "引导吉祥物"
 	},
 	"app.onboarding.resources.description": {
-		"message": "调节下载、储存和启动器资源。给风扇一点尊严。"
+		"message": "选择内容的下载与安装方式，包括下载源和安全确认。"
 	},
 	"app.onboarding.resources.title": {
 		"message": "别把电脑烤熟"
 	},
 	"app.onboarding.settings.description": {
-		"message": "外观、语言、翻译、AI 供应商、Java、存储和更新等常用设置都在这里。"
+		"message": "这里集中管理启动器偏好、游戏启动、内容下载和隐私设置。"
 	},
 	"app.onboarding.settings.title": {
 		"message": "按你的方式使用"
@@ -2269,6 +2320,9 @@
 	},
 	"app.project.install-context.back-to-browse": {
 		"message": "返回发现页"
+	},
+	"app.project.install-context.back-to-instance-content": {
+		"message": "返回实例内容"
 	},
 	"app.project.install-context.install-content-to-instance": {
 		"message": "将内容安装到实例中"
@@ -2534,6 +2588,9 @@
 	"app.settings.feature-flags.reset-to-default": {
 		"message": "恢复默认值"
 	},
+	"settings.feature-flags.title": {
+		"message": "功能开关"
+	},
 	"app.settings.java.auto-high-performance-mode": {
 		"message": "自动为 Java 使用高性能显卡"
 	},
@@ -2759,9 +2816,6 @@
 	"app.settings.resources.select-directory": {
 		"message": "选择新的应用目录"
 	},
-	"app.settings.tabs.updates": {
-		"message": "更新"
-	},
 	"app.settings.updates.available": {
 		"message": "发现可用更新。"
 	},
@@ -2816,50 +2870,113 @@
 	"app.settings.updates.up-to-date": {
 		"message": "Axolotl 已是最新版本。"
 	},
-	"app.settings.logs.description": {
-		"message": "选择用于分析和分享 Minecraft 日志的服务。优先使用 LogShare.CN，不可用时自动回退到 mclo.gs，确保分享始终可用。"
+	"app.settings.groups.common": {
+		"message": "通用"
 	},
-	"app.settings.logs.provider.auto": {
-		"message": "自动（推荐）"
+	"app.settings.groups.minecraft": {
+		"message": "我的世界"
 	},
-	"app.settings.logs.provider.auto-description": {
-		"message": "优先使用 LogShare.CN，不可用时自动切换到 mclo.gs。"
+	"app.settings.groups.system": {
+		"message": "系统"
 	},
-	"app.settings.logs.provider.logshare": {
-		"message": "LogShare.CN"
+	"app.settings.groups.launcher": {
+		"message": "启动器"
 	},
-	"app.settings.logs.provider.logshare-description": {
-		"message": "使用 LogShare.CN 进行分析和分享（支持 AI 分析），不可用时回退到 mclo.gs。"
+	"app.settings.groups.game": {
+		"message": "游戏"
 	},
-	"app.settings.logs.provider.mclogs": {
-		"message": "mclo.gs"
+	"app.settings.groups.data-privacy": {
+		"message": "数据与隐私"
 	},
-	"app.settings.logs.provider.mclogs-description": {
-		"message": "使用 mclo.gs 进行分析和分享，不支持 AI 分析。"
+	"app.settings.groups.support": {
+		"message": "应用与支持"
 	},
-	"app.settings.logs.title": {
-		"message": "日志分析服务"
-	},
-	"app.settings.tabs.about": {
-		"message": "关于"
+	"app.settings.groups.developer": {
+		"message": "开发者"
 	},
 	"app.settings.tabs.appearance": {
 		"message": "外观"
 	},
-	"app.settings.tabs.default-instance-options": {
-		"message": "默认实例选项"
+	"app.settings.tabs.interface": {
+		"message": "界面与外观"
 	},
-	"app.settings.tabs.java-installations": {
-		"message": "Java 与内存管理"
+	"app.settings.tabs.home-navigation": {
+		"message": "首页与导航"
+	},
+	"app.settings.tabs.language-translation": {
+		"message": "语言与翻译"
+	},
+	"app.settings.tabs.java-performance": {
+		"message": "Java 与性能"
+	},
+	"app.settings.tabs.launch-defaults": {
+		"message": "启动与实例默认值"
+	},
+	"app.settings.tabs.content-downloads": {
+		"message": "内容与下载"
+	},
+	"app.settings.tabs.network-multiplayer": {
+		"message": "网络与多人游戏"
+	},
+	"app.settings.tabs.storage-backups": {
+		"message": "存储与备份"
+	},
+	"app.settings.tabs.privacy-data": {
+		"message": "隐私与数据共享"
 	},
 	"app.settings.tabs.language": {
 		"message": "语言"
 	},
+	"app.settings.tabs.translation": {
+		"message": "翻译"
+	},
+	"app.settings.tabs.ai": {
+		"message": "AI"
+	},
+	"app.settings.tabs.privacy-security": {
+		"message": "隐私与安全"
+	},
+	"app.settings.tabs.java-installations": {
+		"message": "Java 安装"
+	},
+	"app.settings.tabs.default-instance-options": {
+		"message": "默认实例选项"
+	},
 	"app.settings.tabs.resource-management": {
 		"message": "资源管理"
 	},
-	"app.settings.tabs.translation": {
-		"message": "翻译"
+	"app.settings.tabs.multiplayer": {
+		"message": "多人游戏"
+	},
+	"app.settings.tabs.updates": {
+		"message": "更新"
+	},
+	"app.settings.tabs.about": {
+		"message": "关于"
+	},
+	"app.settings.search.clear": {
+		"message": "清除设置搜索"
+	},
+	"app.settings.search.empty": {
+		"message": "没有与搜索匹配的设置。"
+	},
+	"app.settings.search.placeholder": {
+		"message": "搜索设置"
+	},
+	"app.settings.search.results": {
+		"message": "搜索结果"
+	},
+	"app.settings.save-status.error": {
+		"message": "无法保存"
+	},
+	"app.settings.save-status.retry": {
+		"message": "重试"
+	},
+	"app.settings.save-status.saved": {
+		"message": "已保存"
+	},
+	"app.settings.save-status.saving": {
+		"message": "正在保存…"
 	},
 	"app.sidebar.collapse": {
 		"message": "收起边栏"
@@ -3075,10 +3192,7 @@
 		"message": "翻译服务"
 	},
 	"app.translation-settings.provider.google": {
-		"message": "Google 翻译（免费）"
-	},
-	"app.translation-settings.provider.microsoft": {
-		"message": "Microsoft 翻译（不可用）"
+		"message": "Google 翻译（可直接用）"
 	},
 	"app.translation-settings.style": {
 		"message": "译文样式"
@@ -3698,8 +3812,110 @@
 	"instance.files.adding-files": {
 		"message": "正在添加文件（{completed}/{total}）"
 	},
+	"instance.files.open-studio": {
+		"message": "打开 Studio"
+	},
 	"instance.files.save-as": {
 		"message": "保存为……"
+	},
+	"instance.files.studio.back-to-files": {
+		"message": "退出"
+	},
+	"instance.files.studio.format": {
+		"message": "格式化"
+	},
+	"instance.files.studio.editor-loading": {
+		"message": "正在加载编辑器……"
+	},
+	"instance.files.studio.empty-description": {
+		"message": "从资源管理器打开文件。"
+	},
+	"instance.files.studio.empty-title": {
+		"message": "选择文件"
+	},
+	"instance.files.studio.files": {
+		"message": "资源管理器"
+	},
+	"instance.files.studio.load-directory-failed": {
+		"message": "无法加载目录"
+	},
+	"instance.files.studio.load-file-failed": {
+		"message": "无法打开文件"
+	},
+	"instance.files.studio.nbt-load-failed": {
+		"message": "无法解析 NBT 文件"
+	},
+	"instance.files.studio.nbt.tree": {
+		"message": "树"
+	},
+	"instance.files.studio.nbt.snbt": {
+		"message": "SNBT 模式"
+	},
+	"instance.files.studio.nbt.collapse": {
+		"message": "折叠节点"
+	},
+	"instance.files.studio.nbt.expand": {
+		"message": "展开节点"
+	},
+	"instance.files.studio.nbt.add": {
+		"message": "添加子节点"
+	},
+	"instance.files.studio.nbt.remove": {
+		"message": "删除节点"
+	},
+	"instance.files.studio.nbt.add-placeholder": {
+		"message": "名称:值"
+	},
+	"instance.files.studio.not-text-file": {
+		"message": "此文件不是文本文件，无法在 Studio 中打开。"
+	},
+	"instance.files.studio.non-text-file": {
+		"message": "此文件非文本文件，无法打开。"
+	},
+	"instance.files.studio.open-in-system": {
+		"message": "从系统中打开"
+	},
+	"instance.files.studio.open-path": {
+		"message": "打开路径"
+	},
+	"instance.files.studio.copy": {
+		"message": "复制"
+	},
+	"instance.files.studio.cut": {
+		"message": "剪切"
+	},
+	"instance.files.studio.paste": {
+		"message": "粘贴"
+	},
+	"instance.files.studio.new-file": {
+		"message": "新建文件"
+	},
+	"instance.files.studio.new-folder": {
+		"message": "新建文件夹"
+	},
+	"instance.files.studio.delete": {
+		"message": "移至回收站"
+	},
+	"instance.files.studio.create-item": {
+		"message": "新建项目"
+	},
+	"instance.files.studio.item-name": {
+		"message": "名称"
+	},
+	"instance.files.studio.create": {
+		"message": "创建"
+	},
+	"instance.files.studio.operation-failed": {
+		"message": "文件操作失败"
+	},
+	"instance.files.studio.loading-file": {
+		"message": "正在加载文件……"
+	},
+	"instance.files.studio.save-failed": {
+		"message": "无法保存文件"
+	},
+	"instance.files.studio.title": {
+		"message": "Studio"
 	},
 	"instance.server-modal.address": {
 		"message": "地址"
@@ -3902,301 +4118,6 @@
 	"instance.settings.tabs.window.width.enter": {
 		"message": "输入宽度……"
 	},
-	"instance.upgrade.action.add-dependency": { "message": "添加依赖" },
-	"instance.upgrade.action.disable": { "message": "禁用" },
-	"instance.upgrade.action.keep": { "message": "保留" },
-	"instance.upgrade.action.remove-dependency": { "message": "移除依赖" },
-	"instance.upgrade.action.update-dependency": { "message": "更新依赖" },
-	"instance.upgrade.action.upgrade": { "message": "更新" },
-	"instance.upgrade.changelog.empty": { "message": "此版本没有提供更新日志。" },
-	"instance.upgrade.changelog.loading": { "message": "正在加载版本详情……" },
-	"instance.upgrade.changelog.show-original": { "message": "显示原文" },
-	"instance.upgrade.changelog.translate": { "message": "翻译" },
-	"instance.upgrade.changelog.translation.authentication": { "message": "翻译服务身份验证失败。" },
-	"instance.upgrade.changelog.translation.failed": { "message": "更新日志翻译失败。" },
-	"instance.upgrade.changelog.translation.network": { "message": "翻译网络请求失败。" },
-	"instance.upgrade.changelog.translation.rate-limited": {
-		"message": "翻译服务暂时受到频率限制。"
-	},
-	"instance.upgrade.changelog.translation.too-long": { "message": "此更新日志过长，无法翻译。" },
-	"instance.upgrade.changelog.unavailable": { "message": "无法获取版本详情。" },
-	"instance.upgrade.confirm.back": { "message": "返回" },
-	"instance.upgrade.confirm.backup.copy-mode": {
-		"message": "原共享实例不会被修改，因此不会创建额外的完整备份。"
-	},
-	"instance.upgrade.confirm.backup.description": {
-		"message": "将创建独立的实例副本，保留世界存档和配置，以便日后恢复。"
-	},
-	"instance.upgrade.confirm.backup.off-body": {
-		"message": "启动升级后的游戏后，世界存档发生的变化可能无法撤销。"
-	},
-	"instance.upgrade.confirm.backup.off-title": { "message": "不会创建完整备份" },
-	"instance.upgrade.confirm.backup.title": { "message": "完整备份" },
-	"instance.upgrade.confirm.backup.toggle": { "message": "升级前创建完整备份" },
-	"instance.upgrade.confirm.dependencies-added": { "message": "新增依赖" },
-	"instance.upgrade.confirm.dependencies-removed": { "message": "移除依赖" },
-	"instance.upgrade.confirm.dependencies-updated": { "message": "更新依赖" },
-	"instance.upgrade.confirm.description": { "message": "升级前检查更改与备份选项。" },
-	"instance.upgrade.confirm.details": { "message": "更改详情" },
-	"instance.upgrade.confirm.details.content-item": { "message": "内容项目" },
-	"instance.upgrade.confirm.details.dependencies": { "message": "依赖更改" },
-	"instance.upgrade.confirm.details.disabled": { "message": "停用的内容" },
-	"instance.upgrade.confirm.details.disabled-state": { "message": "已停用" },
-	"instance.upgrade.confirm.details.kept": { "message": "保留的内容" },
-	"instance.upgrade.confirm.details.new-dependency": { "message": "新的 {provider} 依赖" },
-	"instance.upgrade.confirm.details.updated": { "message": "更新的内容" },
-	"instance.upgrade.confirm.details.version-current": { "message": "当前: {version}" },
-	"instance.upgrade.confirm.details.version-target": { "message": "目标: {version}" },
-	"instance.upgrade.confirm.disabled": { "message": "将停用" },
-	"instance.upgrade.confirm.environment": { "message": "运行环境" },
-	"instance.upgrade.confirm.kept": { "message": "将保留" },
-	"instance.upgrade.confirm.loader": { "message": "加载器" },
-	"instance.upgrade.confirm.loader.automatic": { "message": "自动选择" },
-	"instance.upgrade.confirm.preserved.body": {
-		"message": "世界存档、选项、服务器和配置文件都会保留。Mod、资源包和光影包按所选升级方案处理。"
-	},
-	"instance.upgrade.confirm.preserved.title": { "message": "保留的数据" },
-	"instance.upgrade.confirm.rollback.description": {
-		"message": "如果升级时文件更改失败，启动器会自动回滚本次操作。这个回滚不能替代完整备份！"
-	},
-	"instance.upgrade.confirm.rollback.title": { "message": "自动回滚" },
-	"instance.upgrade.confirm.shared.copy": { "message": "复制并升级" },
-	"instance.upgrade.confirm.shared.copy-description": {
-		"message": "创建并升级新的本地实例。原链接和外部目标保持不变。"
-	},
-	"instance.upgrade.confirm.shared.description": {
-		"message": "选择修改外部目标，或升级一个独立的本地副本。"
-	},
-	"instance.upgrade.confirm.shared.direct": { "message": "直接升级" },
-	"instance.upgrade.confirm.shared.direct-description": {
-		"message": "修改实际的外部目标文件夹，并保留现有链接。"
-	},
-	"instance.upgrade.confirm.shared.title": { "message": "共享实例处理方式" },
-	"instance.upgrade.confirm.active-job": { "message": "升级已在进行中" },
-	"instance.upgrade.confirm.start": { "message": "开始升级" },
-	"instance.upgrade.confirm.start-error": { "message": "无法开始升级" },
-	"instance.upgrade.confirm.starting": { "message": "正在开始升级……" },
-	"instance.upgrade.confirm.strategy": { "message": "升级策略" },
-	"instance.upgrade.confirm.strategy.custom": { "message": "自定义" },
-	"instance.upgrade.confirm.strategy.minimal": { "message": "尽可能少改动" },
-	"instance.upgrade.confirm.strategy.newest": { "message": "尽可能更新" },
-	"instance.upgrade.confirm.title": { "message": "确认升级" },
-	"instance.upgrade.confirm.updated": { "message": "将更新" },
-	"instance.upgrade.confirm.world.body": {
-		"message": "启动升级后的实例可能会把世界存档迁移到新格式。用旧版 Minecraft 打开已迁移的世界可能不安全或不受支持。强烈建议创建完整备份。"
-	},
-	"instance.upgrade.confirm.world.datapacks": {
-		"message": "{path} 中的数据包会保留，但不会自动升级。"
-	},
-	"instance.upgrade.confirm.world.title": { "message": "世界存档可能发生不可逆迁移" },
-	"instance.upgrade.compatibility.allow-prerelease": { "message": "允许此内容使用预发布版" },
-	"instance.upgrade.compatibility.back": { "message": "返回" },
-	"instance.upgrade.compatibility.blockers": { "message": "阻塞问题" },
-	"instance.upgrade.compatibility.blocking-description": {
-		"message": "继续升级前，需要为这些项目作出选择。"
-	},
-	"instance.upgrade.compatibility.bulk-eligible": { "message": "{count} 个可处理项目" },
-	"instance.upgrade.compatibility.bulk-partial": {
-		"message": "已更新 {applied} 项；仍有 {remaining} 项需要检查。"
-	},
-	"instance.upgrade.compatibility.bulk-progress": {
-		"message": "正在更新第 {current}/{total} 项……"
-	},
-	"instance.upgrade.compatibility.cancel": { "message": "取消" },
-	"instance.upgrade.compatibility.candidate-release": { "message": "候选版本：{version}" },
-	"instance.upgrade.compatibility.compatible": { "message": "兼容或保留" },
-	"instance.upgrade.compatibility.confirm": { "message": "确认" },
-	"instance.upgrade.compatibility.confirm-disable-all": { "message": "禁用 {count} 个警告项目？" },
-	"instance.upgrade.compatibility.content": { "message": "内容" },
-	"instance.upgrade.compatibility.content-count": { "message": "{count} 个项目" },
-	"instance.upgrade.compatibility.continue": { "message": "继续" },
-	"instance.upgrade.compatibility.current-version-only": { "message": "当前版本：{current}" },
-	"instance.upgrade.compatibility.dependencies": { "message": "依赖变更" },
-	"instance.upgrade.compatibility.dependency-changes": { "message": "依赖变更" },
-	"instance.upgrade.compatibility.description": { "message": "继续前检查内容变更并处理问题。" },
-	"instance.upgrade.compatibility.disable-all": { "message": "全部禁用" },
-	"instance.upgrade.compatibility.disable-current": { "message": "禁用当前内容" },
-	"instance.upgrade.compatibility.disabled": { "message": "当前已禁用" },
-	"instance.upgrade.compatibility.disabled-count": { "message": "将禁用" },
-	"instance.upgrade.compatibility.global-issue": { "message": "实例级问题" },
-	"instance.upgrade.compatibility.keep-all": { "message": "全部保留" },
-	"instance.upgrade.compatibility.keep-current": { "message": "保留当前版本" },
-	"instance.upgrade.compatibility.loader": { "message": "加载器" },
-	"instance.upgrade.compatibility.minecraft": { "message": "Minecraft 游戏" },
-	"instance.upgrade.compatibility.needs-attention": { "message": "需要处理" },
-	"instance.upgrade.compatibility.no-compatible-explanation": {
-		"message": "未找到兼容目标 Minecraft 版本的发布版。保留它可能导致游戏无法运行，也可暂时禁用。"
-	},
-	"instance.upgrade.compatibility.no-issues": { "message": "无问题" },
-	"instance.upgrade.compatibility.prerelease-explanation": {
-		"message": "未找到兼容的稳定版，但有可用的 Beta 或 Alpha 版。"
-	},
-	"instance.upgrade.compatibility.resolve-before-continue": { "message": "继续前请处理阻塞问题。" },
-	"instance.upgrade.compatibility.title": { "message": "兼容性" },
-	"instance.upgrade.compatibility.undo": { "message": "撤销" },
-	"instance.upgrade.compatibility.unknown-version": { "message": "未知版本" },
-	"instance.upgrade.compatibility.updates": { "message": "将更新" },
-	"instance.upgrade.compatibility.version-change": { "message": "从 {current} 升级至 {target}" },
-	"instance.upgrade.compatibility.warnings": { "message": "警告" },
-	"instance.upgrade.compatibility.warnings-description": {
-		"message": "选择升级方案前请检查这些项目。"
-	},
-	"instance.upgrade.customize.apply-before-continue": { "message": "请先应用自定义选择。" },
-	"instance.upgrade.customize.back": { "message": "返回" },
-	"instance.upgrade.customize.baseline-hint": {
-		"message": "当前已选方案作为基线显示。应用自定义选择后重新计算。"
-	},
-	"instance.upgrade.customize.cancel": { "message": "取消" },
-	"instance.upgrade.customize.channel.alpha": { "message": "Alpha 版" },
-	"instance.upgrade.customize.channel.beta": { "message": "Beta 版" },
-	"instance.upgrade.customize.channel.release": { "message": "正式版" },
-	"instance.upgrade.customize.conflict.title": { "message": "自定义选择存在冲突" },
-	"instance.upgrade.customize.continue": { "message": "继续" },
-	"instance.upgrade.customize.current-version": { "message": "当前版本：{version}" },
-	"instance.upgrade.customize.currently-disabled": { "message": "当前已禁用" },
-	"instance.upgrade.customize.custom.apply": { "message": "应用自定义选择" },
-	"instance.upgrade.customize.custom.automatic": { "message": "自动" },
-	"instance.upgrade.customize.custom.choice": { "message": "目标版本" },
-	"instance.upgrade.customize.custom.choices": { "message": "自定义选择" },
-	"instance.upgrade.customize.custom.choices-description": {
-		"message": "仅可编辑用户拥有的根内容，依赖仍由求解器管理。"
-	},
-	"instance.upgrade.customize.custom.constraint-count": { "message": "{count} 个精确选择" },
-	"instance.upgrade.customize.custom.description": {
-		"message": "为所选内容固定精确版本，其余依赖图由 Axolotl 求解。"
-	},
-	"instance.upgrade.customize.custom.discard-switch": { "message": "放弃并切换" },
-	"instance.upgrade.customize.custom.issues": { "message": "无法解析自定义选择" },
-	"instance.upgrade.customize.custom.recalculate": { "message": "重新计算" },
-	"instance.upgrade.customize.custom.specific-version": { "message": "精确版本 {version}" },
-	"instance.upgrade.customize.custom.specific-version-channel": {
-		"message": "{version}（{channel}）"
-	},
-	"instance.upgrade.customize.custom.title": { "message": "自定义" },
-	"instance.upgrade.customize.custom.unapplied-body": {
-		"message": "应用这些选择以计算全局兼容方案。"
-	},
-	"instance.upgrade.customize.custom.unapplied-title": { "message": "尚未应用自定义选择" },
-	"instance.upgrade.customize.custom.unsaved-body": { "message": "切换策略将放弃尚未计算的变更。" },
-	"instance.upgrade.customize.custom.unsaved-title": { "message": "放弃未应用的自定义选择？" },
-	"instance.upgrade.customize.dependencies-title": { "message": "依赖变更" },
-	"instance.upgrade.customize.dependency.add": { "message": "添加依赖" },
-	"instance.upgrade.customize.dependency.keep": { "message": "保留依赖" },
-	"instance.upgrade.customize.dependency.new": { "message": "新增内容：{target}" },
-	"instance.upgrade.customize.dependency.remove": { "message": "移除依赖" },
-	"instance.upgrade.customize.dependency.reused": {
-		"message": "复用现有内容：{current} 至 {target}"
-	},
-	"instance.upgrade.customize.dependency.upgrade": { "message": "更新依赖" },
-	"instance.upgrade.customize.description": { "message": "选择此实例中内容的更新程度。" },
-	"instance.upgrade.customize.effective-changes": { "message": "实际变更" },
-	"instance.upgrade.customize.effective-target": { "message": "计算目标：{version}" },
-	"instance.upgrade.customize.effective-target-prefix": { "message": "计算目标：" },
-	"instance.upgrade.customize.metric.added": { "message": "新增依赖" },
-	"instance.upgrade.customize.metric.dependency-updated": { "message": "更新依赖" },
-	"instance.upgrade.customize.metric.disabled": { "message": "已禁用" },
-	"instance.upgrade.customize.metric.kept": { "message": "已保留" },
-	"instance.upgrade.customize.metric.removed": { "message": "移除依赖" },
-	"instance.upgrade.customize.metric.updated": { "message": "更新内容" },
-	"instance.upgrade.customize.minimal.description": {
-		"message": "保留仍兼容的当前版本，并尽量减少已安装内容变更。"
-	},
-	"instance.upgrade.customize.minimal.title": { "message": "尽可能少改动" },
-	"instance.upgrade.customize.newest.description": {
-		"message": "将兼容内容更新至目标环境可用的最新版本。"
-	},
-	"instance.upgrade.customize.newest.title": { "message": "尽可能更新" },
-	"instance.upgrade.customize.no-target": { "message": "无目标版本" },
-	"instance.upgrade.customize.request-error-title": { "message": "无法更新策略" },
-	"instance.upgrade.customize.resolve-before-continue": { "message": "继续前请处理自定义冲突。" },
-	"instance.upgrade.customize.search-limit.body": {
-		"message": "Axolotl 未能在搜索上限内找到方案。请放宽一项自定义选择。"
-	},
-	"instance.upgrade.customize.search-limit.title": { "message": "已达到搜索上限" },
-	"instance.upgrade.customize.summary.roots": {
-		"message": "更新 {updates} 项，保留 {kept} 项，禁用 {disabled} 项，依赖变更 {dependencies} 项"
-	},
-	"instance.upgrade.customize.title": { "message": "升级策略" },
-	"instance.upgrade.flow.aria": { "message": "实例升级导航" },
-	"instance.upgrade.flow.back": { "message": "上一步" },
-	"instance.upgrade.flow.complete": { "message": "升级完成" },
-	"instance.upgrade.flow.confirm": { "message": "确认升级" },
-	"instance.upgrade.flow.issues": { "message": "处理冲突" },
-	"instance.upgrade.flow.next": { "message": "下一步" },
-	"instance.upgrade.flow.preferences": { "message": "升级偏好" },
-	"instance.upgrade.flow.progress": { "message": "正在升级" },
-	"instance.upgrade.flow.steps": { "message": "升级步骤" },
-	"instance.upgrade.flow.target": { "message": "升级目标" },
-	"instance.upgrade.compatibility.bulk-skipped": { "message": "已跳过 {count} 项。" },
-	"instance.upgrade.compatibility.resolve-blockers-tooltip": {
-		"message": "请先解决所有阻塞问题。"
-	},
-	"instance.upgrade.compatibility.resolved": { "message": "已解决 {count}/{total}" },
-	"instance.upgrade.issue.dependency": { "message": "依赖冲突" },
-	"instance.upgrade.issue.generic": { "message": "兼容性问题" },
-	"instance.upgrade.issue.keep-incompatible": {
-		"message": "保留此版本可能导致升级后的实例不兼容。"
-	},
-	"instance.upgrade.issue.no-compatible-release": { "message": "无兼容版本" },
-	"instance.upgrade.issue.no-compatible-release.description": {
-		"message": "未找到兼容 Minecraft {version} 的发布版。"
-	},
-	"instance.upgrade.issue.no-compatible-shader-runtime": {
-		"message": "没有发布版同时支持目标 Minecraft 版本和光影运行时。"
-	},
-	"instance.upgrade.issue.prerelease-only": { "message": "需要确认预发布版" },
-	"instance.upgrade.issue.prerelease-only.description": {
-		"message": "仅有预发布版支持 Minecraft {version}。"
-	},
-	"instance.upgrade.issue.search-limit-reached": {
-		"message": "有限兼容性搜索无法证明存在有效方案。"
-	},
-	"instance.upgrade.issue.shader": { "message": "光影兼容性问题" },
-	"instance.upgrade.issue.shader-runtime-missing": { "message": "目标实例未计划安装光影运行时。" },
-	"instance.upgrade.issue.shader-runtime-unknown": { "message": "无法确定目标光影运行时。" },
-	"instance.upgrade.issue.unidentified": {
-		"message": "无法将此本地文件匹配到已验证的提供方项目。"
-	},
-	"instance.upgrade.issue.unsupported-content-type": {
-		"message": "无法自动迁移此内容类型。"
-	},
-	"instance.upgrade.provider.curseforge": { "message": "CurseForge" },
-	"instance.upgrade.provider.local": { "message": "本地" },
-	"instance.upgrade.provider.modrinth": { "message": "Modrinth" },
-	"instance.upgrade.provider.unknown": { "message": "未知提供方" },
-	"instance.upgrade.progress.opening-downloads": { "message": "正在打开下载任务……" },
-	"instance.upgrade.return": { "message": "返回实例升级" },
-	"instance.upgrade.select.automatic": { "message": "自动选择" },
-	"instance.upgrade.select.check-compatibility": { "message": "检查兼容性" },
-	"instance.upgrade.select.current": { "message": "当前" },
-	"instance.upgrade.select.current-version-missing-body": {
-		"message": "稳定版将按元数据顺序显示，不猜测数字排序。"
-	},
-	"instance.upgrade.select.current-version-missing-title": { "message": "元数据中找不到当前版本" },
-	"instance.upgrade.select.description": { "message": "选择此实例要升级到的 Minecraft 版本。" },
-	"instance.upgrade.select.fabric-version": { "message": "Fabric 版本" },
-	"instance.upgrade.select.fabric-versions-error": {
-		"message": "无法加载 Fabric 版本。仍可使用自动选择。"
-	},
-	"instance.upgrade.select.loading-fabric-versions": { "message": "正在加载 Fabric 版本……" },
-	"instance.upgrade.select.loading-versions": { "message": "正在加载 Minecraft 版本……" },
-	"instance.upgrade.select.manual-fabric-version-unavailable": {
-		"message": "无法手动选择 Fabric 版本。"
-	},
-	"instance.upgrade.select.metadata-error-body": { "message": "请检查网络连接后重试。" },
-	"instance.upgrade.select.metadata-error-title": { "message": "无法加载 Minecraft 版本" },
-	"instance.upgrade.select.minecraft": { "message": "Minecraft 版本" },
-	"instance.upgrade.select.minecraft-version": { "message": "Minecraft 版本 {version}" },
-	"instance.upgrade.select.no-newer-release": { "message": "没有更新的 Minecraft 稳定版。" },
-	"instance.upgrade.select.no-non-downgrade-fabric-version": {
-		"message": "此目标没有可避免降级的 Fabric 版本。"
-	},
-	"instance.upgrade.select.planning-error-title": { "message": "兼容性分析失败" },
-	"instance.upgrade.select.planning-status": { "message": "正在分析 {count} 个内容项目的兼容性……" },
-	"instance.upgrade.select.review-compatibility": { "message": "返回兼容性检查" },
-	"instance.upgrade.select.target": { "message": "目标" },
-	"instance.upgrade.select.target-version-input": { "message": "目标 Minecraft 版本" },
-	"instance.upgrade.select.title": { "message": "升级实例" },
 	"instance.worlds.a_minecraft_server": {
 		"message": "Minecraft 服务器"
 	},
@@ -6295,10 +6216,10 @@
 		"message": "查看实例"
 	},
 	"app.navigation.multiplayer": {
-		"message": "联机"
+		"message": "多人游戏"
 	},
 	"app.multiplayer.title": {
-		"message": "联机"
+		"message": "多人游戏"
 	},
 	"app.multiplayer.host": {
 		"message": "创建房间"
@@ -7113,9 +7034,6 @@
 	"app.onboarding.ai.title": {
 		"message": "连接你的 AI 供应商"
 	},
-	"app.settings.tabs.ai": {
-		"message": "AI"
-	},
 	"app.translation-settings.ai-model": {
 		"message": "文本模型"
 	},
@@ -7296,9 +7214,6 @@
 	"app.downloads.item-status.failed": {
 		"message": "失败"
 	},
-	"app.settings.tabs.multiplayer": {
-		"message": "多人联机"
-	},
 	"app.multiplayer.hongshi.download": {
 		"message": "下载红石联机"
 	},
@@ -7370,9 +7285,6 @@
 	},
 	"app.settings.privacy.telemetry-description": {
 		"message": "发送匿名每日活跃信号和脱敏的启动器错误报告。绝不上传 Minecraft 日志或账户凭据。"
-	},
-	"app.settings.tabs.privacy-security": {
-		"message": "隐私与安全"
 	},
 	"app.curseforge.manual-downloads.state-changed": {
 		"message": "下载状态已被更改，正在等待同步。"
@@ -7848,6 +7760,21 @@
 	"app.drop.batch.target-label": {
 		"message": "为该批次选择目标实例"
 	},
+	"app.drop.compatible-mode-cancel": {
+		"message": "取消"
+	},
+	"app.drop.compatible-mode-desc": {
+		"message": "要以兼容模式导入此实例吗？"
+	},
+	"app.drop.compatible-mode-import": {
+		"message": "兼容模式导入"
+	},
+	"app.drop.compatible-mode-old-way": {
+		"message": "按旧版方式导入"
+	},
+	"app.drop.compatible-mode-title": {
+		"message": "这似乎是一个未启用版本隔离的实例"
+	},
 	"app.drop.batch.nothing-importable-title": {
 		"message": "没有可导入的内容"
 	},
@@ -7869,85 +7796,1710 @@
 	"app.drop.batch.completed-text": {
 		"message": "已导入 {succeeded} / {total}（{failed} 失败，{skipped} 跳过）。"
 	},
-	"app.instance.icon-picker.icon.cleanroom": {
-		"message": "Cleanroom"
+	"app.settings.resources.proxy-username-placeholder": {
+		"message": "用户名（可选）"
 	},
-	"app.instance.icon-picker.icon.liteloader": {
-		"message": "LiteLoader"
+	"app.settings.resources.proxy-username": {
+		"message": "用户名"
+	},
+	"app.settings.resources.proxy-url-placeholder": {
+		"message": "支持http、https或socks5，eg: socks5://localhost:1080"
+	},
+	"app.settings.resources.proxy-url": {
+		"message": "代理地址"
+	},
+	"app.settings.resources.proxy-url-required": {
+		"message": "代理地址不能为空"
+	},
+	"app.settings.resources.proxy-testing": {
+		"message": "测试中..."
+	},
+	"app.settings.resources.proxy-test-success-latency": {
+		"message": "连接成功（{latency} 毫秒）"
+	},
+	"app.settings.resources.proxy-test-success": {
+		"message": "连接成功"
+	},
+	"app.settings.resources.proxy-test-failed": {
+		"message": "连接失败"
+	},
+	"app.settings.resources.proxy-test": {
+		"message": "测试连接"
+	},
+	"app.settings.resources.proxy-settings-description": {
+		"message": "配置启动器连接互联网的方式。系统代理遵循操作系统设置。自定义代理允许指定代理地址及可选的认证信息。"
+	},
+	"app.settings.resources.proxy-settings": {
+		"message": "代理设置"
+	},
+	"app.settings.resources.proxy-password-placeholder": {
+		"message": "密码（可选）"
+	},
+	"app.settings.resources.proxy-password": {
+		"message": "密码"
+	},
+	"app.settings.resources.proxy-mode.system": {
+		"message": "使用系统代理"
+	},
+	"app.settings.resources.proxy-mode.none": {
+		"message": "不使用代理（直连）"
+	},
+	"app.settings.resources.proxy-mode.custom": {
+		"message": "自定义代理"
+	},
+	"app.settings.resources.proxy-mode": {
+		"message": "代理模式"
+	},
+	"app.java-arguments.presets.gc.auto.verified": {
+		"message": "上次启动：{chosen}"
 	},
 	"app.instance.icon-picker.icon.optifine": {
 		"message": "OptiFine"
 	},
+	"app.instance.icon-picker.icon.liteloader": {
+		"message": "LiteLoader"
+	},
+	"app.instance.icon-picker.icon.cleanroom": {
+		"message": "Cleanroom"
+	},
 	"app.gc-notice.fallback": {
-		"message": "Java 没有接受 {preferred}; 将使用 {chosen}."
+		"message": "Java 不接受 {preferred}，已改用 {chosen}。"
 	},
-	"app.java-arguments.presets.gc.auto.verified": {
-		"message": "上次启动: {chosen}"
+	"app.browse.project-type.favorites": {
+		"message": "收藏夹"
 	},
-	"instance.upgrade.result.title": { "message": "升级完成" },
-	"instance.upgrade.result.direct-description": { "message": "此实例已成功升级。" },
+	"app.content-favorites.add": {
+		"message": "添加到收藏夹"
+	},
+	"app.content-favorites.empty-description": {
+		"message": "收藏模组、资源包、数据包和光影包，之后随时安装。"
+	},
+	"app.content-favorites.empty-title": {
+		"message": "暂无收藏"
+	},
+	"app.content-favorites.loading": {
+		"message": "正在更新收藏夹…"
+	},
+	"app.content-favorites.no-matches-description": {
+		"message": "换个搜索词或内容类型试试。"
+	},
+	"app.content-favorites.no-matches-title": {
+		"message": "没有匹配的收藏"
+	},
+	"app.content-favorites.remove": {
+		"message": "从收藏夹移除"
+	},
+	"app.content-favorites.search": {
+		"message": "搜索收藏夹"
+	},
+	"app.content-favorites.sort.recently-saved": {
+		"message": "最近收藏"
+	},
+	"app.content-favorites.title": {
+		"message": "收藏夹"
+	},
+	"app.content-favorites.type.all": {
+		"message": "全部内容类型"
+	},
+	"app.content-favorites.unavailable-description": {
+		"message": "该项目当前暂时不可用。你可以从收藏夹中移除它。"
+	},
+	"app.content-favorites.unavailable-title": {
+		"message": "{provider} 项目 {projectId}"
+	},
+	"app.onboarding.action.click-favorites": {
+		"message": "点击收藏夹，继续"
+	},
+	"app.onboarding.favorites.description": {
+		"message": "打开收藏夹，回看保存的模组、资源包、数据包和光影包。启动器会刷新项目详情；随后你可以选择实例，并把不同来源的内容加入同一个安装购物车。"
+	},
+	"app.onboarding.favorites.title": {
+		"message": "留个清单"
+	},
+	"app.settings.about.survey-description": {
+		"message": "帮助我们改进 Axolotl Launcher"
+	},
+	"app.settings.about.survey": {
+		"message": "调查问卷"
+	},
+	"app.library.view.standard": {
+		"message": "标准网格"
+	},
+	"app.library.view.cards": {
+		"message": "实例库卡片"
+	},
+	"app.library.view": {
+		"message": "视图"
+	},
+	"app.translation-settings.provider.deepl": {
+		"message": "DeepL 翻译"
+	},
+	"app.translation-settings.deepl-api-key-placeholder": {
+		"message": "输入你的 DeepL API 密钥"
+	},
+	"app.translation-settings.deepl-api-key-hint": {
+		"message": "在 deepl.com/pro-api 免费获取密钥"
+	},
+	"app.translation-settings.deepl-api-key": {
+		"message": "API 密钥"
+	},
+	"app.translation-settings.deepl-api-endpoint-placeholder": {
+		"message": "https://api-free.deepl.com/v2/translate"
+	},
+	"app.translation-settings.deepl-api-endpoint": {
+		"message": "API 端点"
+	},
+	"app.survey-promotion.title": {
+		"message": "调查问卷"
+	},
+	"app.survey-promotion.reward": {
+		"message": "我们将从填写问卷的用户中抽取幸运用户，赠送 Minecraft 正版账号（可折现）。"
+	},
+	"app.survey-promotion.intro": {
+		"message": "为了更好地改进 Axolotl Launcher，我们准备了一份简短的调查问卷，期待听到你的反馈。"
+	},
+	"app.survey-promotion.fill-survey": {
+		"message": "填写问卷"
+	},
+	"app.survey-promotion.defer-hint": {
+		"message": "关闭此弹窗后，你仍可以随时在“设置 → 关于”页面中找到并填写问卷。"
+	},
+	"browse.selected-projects-floating-bar.hide-projects": {
+		"message": "隐藏已选择的项目"
+	},
+	"browse.selected-projects-floating-bar.show-projects": {
+		"message": "显示 {count, plural, one {# selected project} other {# selected projects}}"
+	},
+	"app.translation-settings.provider.microsoft": {
+		"message": "Microsoft 翻译（不可用）"
+	},
+	"instance.files.studio.unsaved-switch-blocked": {
+		"message": "请先保存或放弃当前更改，再打开其他文件。"
+	},
+	"app.settings.resources.source.mcim": {
+		"message": "优先 MCIM"
+	},
+	"app.settings.storage.collapse-action": {
+		"message": "折叠"
+	},
+	"app.settings.storage.expand-action": {
+		"message": "展开"
+	},
+	"app.multiplayer.tab.rooms": {
+		"message": "联机房间"
+	},
+	"app.multiplayer.tab.servers": {
+		"message": "服务器"
+	},
+	"app.servers.action.open-folder": {
+		"message": "打开目录"
+	},
+	"app.servers.action.share": {
+		"message": "分享到公网"
+	},
+	"app.servers.action.start": {
+		"message": "启动"
+	},
+	"app.servers.action.stop": {
+		"message": "停止"
+	},
+	"app.servers.card.port": {
+		"message": "端口 {port}"
+	},
+	"app.servers.card.type": {
+		"message": "{type} · {version}"
+	},
+	"app.servers.create.title": {
+		"message": "创建服务器"
+	},
+	"app.servers.count": {
+		"message": "{count, plural, =0 {还没有服务器} other {共 # 个服务器}}"
+	},
+	"app.servers.detail.back": {
+		"message": "服务器"
+	},
+	"app.servers.detail.console": {
+		"message": "控制台"
+	},
+	"app.servers.detail.not-found": {
+		"message": "该服务器已不存在。"
+	},
+	"app.servers.detail.settings": {
+		"message": "设置"
+	},
+	"app.servers.empty.description": {
+		"message": "在启动器中创建服务器，与好友一起游玩。"
+	},
+	"app.servers.empty.heading": {
+		"message": "还没有服务器"
+	},
+	"app.servers.eula.accept": {
+		"message": "同意并继续"
+	},
+	"app.servers.eula.decline": {
+		"message": "取消"
+	},
+	"app.servers.eula.description": {
+		"message": "服务器启动前需要同意 Minecraft 最终用户许可协议（EULA）。请查看以下内容："
+	},
+	"app.servers.eula.title": {
+		"message": "Minecraft EULA"
+	},
+	"app.servers.loading": {
+		"message": "加载中"
+	},
+	"app.servers.properties.load-failed": {
+		"message": "加载服务器配置失败。"
+	},
+	"app.servers.properties.missing": {
+		"message": "启动一次服务器即可生成此文件。"
+	},
+	"app.servers.properties.mode.form": {
+		"message": "表单"
+	},
+	"app.servers.properties.mode.text": {
+		"message": "文本"
+	},
+	"app.servers.properties.save": {
+		"message": "保存更改"
+	},
+	"app.servers.properties.saved": {
+		"message": "服务器设置已保存"
+	},
+	"app.servers.properties.title": {
+		"message": "服务器属性"
+	},
+	"app.servers.refresh": {
+		"message": "刷新"
+	},
+	"app.servers.settings.config": {
+		"message": "配置文件"
+	},
+	"app.servers.settings.delete": {
+		"message": "删除服务器"
+	},
+	"app.servers.settings.delete-confirm": {
+		"message": "删除 {name} 及其所有文件？此操作无法撤销。"
+	},
+	"app.servers.settings.delete-hint": {
+		"message": "永久删除该服务器及其所有文件。"
+	},
+	"app.servers.settings.delete-proceed": {
+		"message": "删除"
+	},
+	"app.servers.settings.general": {
+		"message": "常规"
+	},
+	"app.servers.settings.icon": {
+		"message": "图标"
+	},
+	"app.servers.settings.java": {
+		"message": "Java"
+	},
+	"app.servers.settings.java-none": {
+		"message": "系统默认"
+	},
+	"app.servers.settings.jvm-args": {
+		"message": "JVM 参数"
+	},
+	"app.servers.settings.jvm-args-hint": {
+		"message": "以空格分隔的参数，例如 -XX:+UseG1GC"
+	},
+	"app.servers.settings.memory": {
+		"message": "内存"
+	},
+	"app.servers.settings.name": {
+		"message": "服务器名称"
+	},
+	"app.servers.settings.running-hint": {
+		"message": "您的更改在下次启动服务器时才会生效。"
+	},
+	"app.servers.settings.running-title": {
+		"message": "服务器正在运行"
+	},
+	"app.servers.settings.save": {
+		"message": "保存更改"
+	},
+	"app.servers.settings.saved": {
+		"message": "服务器设置已保存"
+	},
+	"app.servers.status.crashed": {
+		"message": "已崩溃"
+	},
+	"app.servers.status.created": {
+		"message": "未配置"
+	},
+	"app.servers.status.eula-pending": {
+		"message": "待同意 EULA"
+	},
+	"app.servers.status.ready": {
+		"message": "就绪"
+	},
+	"app.servers.status.running": {
+		"message": "运行中"
+	},
+	"app.servers.status.starting": {
+		"message": "启动中"
+	},
+	"app.servers.wizard.configure-heading": {
+		"message": "调整服务器设置，或直接完成，稍后再编辑。"
+	},
+	"app.servers.wizard.configure-title": {
+		"message": "配置"
+	},
+	"app.servers.wizard.done": {
+		"message": "服务器已就绪"
+	},
+	"app.servers.wizard.downloading": {
+		"message": "正在下载服务端文件…"
+	},
+	"app.servers.wizard.eula-wait": {
+		"message": "等待确认 EULA"
+	},
+	"app.servers.wizard.failed": {
+		"message": "创建失败"
+	},
+	"app.servers.wizard.finish": {
+		"message": "完成"
+	},
+	"app.servers.wizard.first-run": {
+		"message": "正在首次启动…"
+	},
+	"app.servers.wizard.game-version": {
+		"message": "游戏版本"
+	},
+	"app.servers.wizard.install-java": {
+		"message": "安装 Java"
+	},
+	"app.servers.wizard.install-title": {
+		"message": "安装"
+	},
+	"app.servers.wizard.java-missing": {
+		"message": "未找到已安装的 Java。"
+	},
+	"app.servers.wizard.java-missing-hint": {
+		"message": "系统中未找到兼容的 Java,下一步将自动安装所需的 Java。"
+	},
+	"app.servers.wizard.java-placeholder": {
+		"message": "选择 Java 版本"
+	},
+	"app.servers.wizard.loader-version": {
+		"message": "加载器版本"
+	},
+	"app.servers.wizard.log": {
+		"message": "输出"
+	},
+	"app.servers.wizard.memory-value": {
+		"message": "{value} MB"
+	},
+	"app.servers.wizard.name": {
+		"message": "服务器名称"
+	},
+	"app.servers.wizard.name-placeholder": {
+		"message": "生存服"
+	},
+	"app.servers.wizard.next": {
+		"message": "下一步"
+	},
+	"app.servers.wizard.retry": {
+		"message": "重试"
+	},
+	"app.servers.wizard.setup-title": {
+		"message": "设置"
+	},
+	"app.servers.wizard.show-snapshots": {
+		"message": "显示快照版本"
+	},
+	"app.servers.wizard.type-coming-soon": {
+		"message": "即将支持"
+	},
+	"app.servers.wizard.type-heading": {
+		"message": "选择服务端类型"
+	},
+	"app.servers.wizard.type-title": {
+		"message": "服务端类型"
+	},
+	"app.servers.console.command-echo": {
+		"message": "> {command}"
+	},
+	"app.servers.console.not-running": {
+		"message": "服务器未运行"
+	},
+	"app.servers.properties.field.accepts-transfers": {
+		"message": "接受玩家转移"
+	},
+	"app.servers.properties.field.allow-end": {
+		"message": "允许末地"
+	},
+	"app.servers.properties.field.allow-flight": {
+		"message": "允许飞行"
+	},
+	"app.servers.properties.field.allow-nether": {
+		"message": "允许下界"
+	},
+	"app.servers.properties.field.announce-player-achievements": {
+		"message": "公告玩家成就"
+	},
+	"app.servers.properties.field.broadcast-console-to-ops": {
+		"message": "向管理员广播控制台消息"
+	},
+	"app.servers.properties.field.broadcast-rcon-to-ops": {
+		"message": "向管理员广播 RCON 消息"
+	},
+	"app.servers.properties.field.bug-report-link": {
+		"message": "Bug 报告链接"
+	},
+	"app.servers.properties.field.chat-spam-threshold-seconds": {
+		"message": "聊天刷屏阈值（秒）"
+	},
+	"app.servers.properties.field.command-spam-threshold-seconds": {
+		"message": "命令刷屏阈值（秒）"
+	},
+	"app.servers.properties.field.difficulty": {
+		"message": "难度"
+	},
+	"app.servers.properties.field.enable-code-of-conduct": {
+		"message": "启用行为准则"
+	},
+	"app.servers.properties.field.enable-command-block": {
+		"message": "启用命令方块"
+	},
+	"app.servers.properties.field.enable-jmx-monitoring": {
+		"message": "启用 JMX 监控"
+	},
+	"app.servers.properties.field.enable-lan": {
+		"message": "启用局域网"
+	},
+	"app.servers.properties.field.enable-query": {
+		"message": "启用查询"
+	},
+	"app.servers.properties.field.enable-rcon": {
+		"message": "启用 RCON"
+	},
+	"app.servers.properties.field.enable-status": {
+		"message": "启用服务器状态"
+	},
+	"app.servers.properties.field.enforce-secure-profile": {
+		"message": "强制安全档案"
+	},
+	"app.servers.properties.field.enforce-whitelist": {
+		"message": "强制白名单"
+	},
+	"app.servers.properties.field.entity-broadcast-range-percentage": {
+		"message": "实体广播范围百分比"
+	},
+	"app.servers.properties.field.force-gamemode": {
+		"message": "强制游戏模式"
+	},
+	"app.servers.properties.field.function-permission-level": {
+		"message": "函数权限等级"
+	},
+	"app.servers.properties.field.gamemode": {
+		"message": "游戏模式"
+	},
+	"app.servers.properties.field.generate-structures": {
+		"message": "生成结构"
+	},
+	"app.servers.properties.field.generator-settings": {
+		"message": "生成器设置"
+	},
+	"app.servers.properties.field.hardcore": {
+		"message": "极限模式"
+	},
+	"app.servers.properties.field.hide-online-players": {
+		"message": "隐藏在线玩家"
+	},
+	"app.servers.properties.field.initial-disabled-packs": {
+		"message": "初始禁用的数据包"
+	},
+	"app.servers.properties.field.initial-enabled-packs": {
+		"message": "初始启用的数据包"
+	},
+	"app.servers.properties.field.level-name": {
+		"message": "世界名称"
+	},
+	"app.servers.properties.field.level-seed": {
+		"message": "世界种子"
+	},
+	"app.servers.properties.field.level-type": {
+		"message": "世界类型"
+	},
+	"app.servers.properties.field.log-ips": {
+		"message": "记录 IP"
+	},
+	"app.servers.properties.field.management-server-allowed-origins": {
+		"message": "管理服务器允许的来源"
+	},
+	"app.servers.properties.field.management-server-enabled": {
+		"message": "启用管理服务器"
+	},
+	"app.servers.properties.field.management-server-host": {
+		"message": "管理服务器主机"
+	},
+	"app.servers.properties.field.management-server-port": {
+		"message": "管理服务器端口"
+	},
+	"app.servers.properties.field.management-server-secret": {
+		"message": "管理服务器密钥"
+	},
+	"app.servers.properties.field.management-server-tls-enabled": {
+		"message": "管理服务器启用 TLS"
+	},
+	"app.servers.properties.field.management-server-tls-keystore": {
+		"message": "管理服务器 TLS 密钥库"
+	},
+	"app.servers.properties.field.management-server-tls-keystore-password": {
+		"message": "管理服务器 TLS 密钥库密码"
+	},
+	"app.servers.properties.field.max-chained-neighbor-updates": {
+		"message": "最大链式邻居更新次数"
+	},
+	"app.servers.properties.field.max-players": {
+		"message": "最大玩家数"
+	},
+	"app.servers.properties.field.max-tick-time": {
+		"message": "最大单Tick时间"
+	},
+	"app.servers.properties.field.max-world-size": {
+		"message": "最大世界大小"
+	},
+	"app.servers.properties.field.motd": {
+		"message": "服务器标语（MOTD）"
+	},
+	"app.servers.properties.field.network-compression-threshold": {
+		"message": "网络压缩阈值"
+	},
+	"app.servers.properties.field.online-mode": {
+		"message": "正版验证"
+	},
+	"app.servers.properties.field.op-permission-level": {
+		"message": "管理员权限等级"
+	},
+	"app.servers.properties.field.pause-when-empty-seconds": {
+		"message": "空服暂停（秒）"
+	},
+	"app.servers.properties.field.player-idle-timeout": {
+		"message": "玩家挂机超时"
+	},
+	"app.servers.properties.field.prevent-proxy-connections": {
+		"message": "禁止代理连接"
+	},
+	"app.servers.properties.field.pvp": {
+		"message": "玩家对战（PvP）"
+	},
+	"app.servers.properties.field.query.port": {
+		"message": "查询端口"
+	},
+	"app.servers.properties.field.rate-limit": {
+		"message": "速率限制"
+	},
+	"app.servers.properties.field.rcon.password": {
+		"message": "RCON 密码"
+	},
+	"app.servers.properties.field.rcon.port": {
+		"message": "RCON 端口"
+	},
+	"app.servers.properties.field.region-file-compression": {
+		"message": "区域文件压缩方式"
+	},
+	"app.servers.properties.field.require-resource-pack": {
+		"message": "强制资源包"
+	},
+	"app.servers.properties.field.resource-pack": {
+		"message": "资源包"
+	},
+	"app.servers.properties.field.resource-pack-id": {
+		"message": "资源包 ID"
+	},
+	"app.servers.properties.field.resource-pack-prompt": {
+		"message": "资源包提示"
+	},
+	"app.servers.properties.field.resource-pack-sha1": {
+		"message": "资源包 SHA-1"
+	},
+	"app.servers.properties.field.server-ip": {
+		"message": "服务器 IP"
+	},
+	"app.servers.properties.field.server-port": {
+		"message": "服务器端口"
+	},
+	"app.servers.properties.field.simulation-distance": {
+		"message": "模拟距离"
+	},
+	"app.servers.properties.field.spawn-animals": {
+		"message": "生成动物"
+	},
+	"app.servers.properties.field.spawn-monsters": {
+		"message": "生成怪物"
+	},
+	"app.servers.properties.field.spawn-npcs": {
+		"message": "生成NPC"
+	},
+	"app.servers.properties.field.spawn-protection": {
+		"message": "出生点保护范围"
+	},
+	"app.servers.properties.field.status-heartbeat-interval": {
+		"message": "状态心跳间隔"
+	},
+	"app.servers.properties.field.sync-chunk-writes": {
+		"message": "同步区块写入"
+	},
+	"app.servers.properties.field.text-filtering-config": {
+		"message": "文本过滤配置"
+	},
+	"app.servers.properties.field.text-filtering-version": {
+		"message": "文本过滤版本"
+	},
+	"app.servers.properties.field.use-native-transport": {
+		"message": "使用原生传输"
+	},
+	"app.servers.properties.field.view-distance": {
+		"message": "视距"
+	},
+	"app.servers.properties.field.white-list": {
+		"message": "白名单"
+	},
+	"app.servers.properties.section.advanced": {
+		"message": "高级"
+	},
+	"app.servers.properties.section.content": {
+		"message": "资源与内容"
+	},
+	"app.servers.properties.section.gameplay": {
+		"message": "游戏玩法"
+	},
+	"app.servers.properties.section.network": {
+		"message": "网络与安全"
+	},
+	"app.servers.properties.section.others": {
+		"message": "其他"
+	},
+	"app.servers.properties.section.world": {
+		"message": "世界"
+	},
+	"app.servers.settings.cancel": {
+		"message": "取消"
+	},
+	"app.servers.detail.files": {
+		"message": "文件"
+	},
+	"app.servers.files.busy-tooltip": {
+		"message": "停止服务器后才能修改文件"
+	},
+	"app.servers.files.save-as": {
+		"message": "另存为..."
+	},
+	"app.servers.icon.change": {
+		"message": "更换图标"
+	},
+	"app.servers.icon.edit": {
+		"message": "编辑图标"
+	},
+	"app.servers.icon.remove": {
+		"message": "移除图标"
+	},
+	"app.servers.icon.select": {
+		"message": "选择图标"
+	},
+	"app.servers.port.change": {
+		"message": "修改端口"
+	},
+	"app.servers.port.conflict-description": {
+		"message": "{process} 正在占用该端口，服务器无法启动。建议修改服务器端口，也可以强制结束占用进程后再启动。"
+	},
+	"app.servers.port.conflict-title": {
+		"message": "端口 {port} 已被占用"
+	},
+	"app.servers.port.force-quit": {
+		"message": "强制结束占用进程"
+	},
+	"app.servers.port.force-quit-failed": {
+		"message": "结束占用端口的进程失败"
+	},
+	"app.servers.port.recheck": {
+		"message": "重新检测"
+	},
+	"app.servers.port.unknown-process": {
+		"message": "未知进程（PID {pid}）"
+	},
+	"app.browse.source.mcarchive": {
+		"message": "MCArchive 来源"
+	},
+	"app.browse.source.planet-minecraft": {
+		"message": "Planet Minecraft 来源"
+	},
+	"app.project.mcarchive.install": {
+		"message": "安装"
+	},
+	"app.project.mcarchive.installed": {
+		"message": "已安装 {fileName}"
+	},
+	"app.project.mcarchive.loading": {
+		"message": "正在加载 MCArchive 项目…"
+	},
+	"app.project.mcarchive.manual.archive-filter": {
+		"message": "Minecraft 压缩包"
+	},
+	"app.project.mcarchive.manual.description": {
+		"message": "{fileName} 没有可验证的直接下载链接。请从来源页面下载，然后导入下载的文件。"
+	},
+	"app.project.mcarchive.manual.import-file": {
+		"message": "导入下载的文件"
+	},
+	"app.project.mcarchive.manual.open-source": {
+		"message": "打开来源页面"
+	},
+	"app.project.mcarchive.manual.pick-file": {
+		"message": "选择下载的压缩包"
+	},
+	"app.project.mcarchive.manual.title": {
+		"message": "需要手动下载"
+	},
+	"app.project.mcarchive.no-files": {
+		"message": "此版本没有可用文件。"
+	},
+	"app.project.mcarchive.sha256": {
+		"message": "SHA-256 哈希"
+	},
+	"app.project.mcarchive.source": {
+		"message": "MCArchive 来源"
+	},
+	"app.project.mcarchive.versions": {
+		"message": "版本"
+	},
+	"app.project.planet-minecraft.install": {
+		"message": "安装"
+	},
+	"app.project.planet-minecraft.installed": {
+		"message": "已安装 {fileName}"
+	},
+	"app.project.planet-minecraft.loading": {
+		"message": "正在加载 Planet Minecraft 项目…"
+	},
+	"app.project.planet-minecraft.manual.archive-filter": {
+		"message": "Minecraft 压缩包"
+	},
+	"app.project.planet-minecraft.manual.description": {
+		"message": "{fileName} 必须从 Planet Minecraft 下载，然后在此导入。"
+	},
+	"app.project.planet-minecraft.manual.import-file": {
+		"message": "导入下载的文件"
+	},
+	"app.project.planet-minecraft.manual.open-source": {
+		"message": "打开来源页面"
+	},
+	"app.project.planet-minecraft.manual.pick-file": {
+		"message": "选择下载的压缩包"
+	},
+	"app.project.planet-minecraft.manual.title": {
+		"message": "需要手动下载"
+	},
+	"app.project.planet-minecraft.unknown-file": {
+		"message": "下载的文件"
+	},
+	"app.project.planet-minecraft.versions": {
+		"message": "下载"
+	},
+	"instance.settings.tabs.core-components": {
+		"message": "核心组件"
+	},
+	"instance.settings.tabs.core-components.add": {
+		"message": "添加到 Minecraft.jar"
+	},
+	"instance.settings.tabs.core-components.failure": {
+		"message": "失败"
+	},
+	"instance.settings.tabs.core-components.import-modloader": {
+		"message": "导入已验证的 ModLoader 压缩包"
+	},
+	"instance.settings.tabs.core-components.jar-filter": {
+		"message": "Minecraft 压缩包"
+	},
+	"instance.settings.tabs.core-components.jar-mod": {
+		"message": "JAR 模组"
+	},
+	"instance.settings.tabs.core-components.modloader": {
+		"message": "安装 ModLoader"
+	},
+	"instance.settings.tabs.core-components.modloader-installed": {
+		"message": "已安装 ModLoader {fileName}"
+	},
+	"instance.settings.tabs.core-components.modloader-manual": {
+		"message": "{fileName} 需要手动下载。请从来源页面下载，然后在此导入已验证的压缩包。"
+	},
+	"instance.settings.tabs.core-components.move-down": {
+		"message": "下移"
+	},
+	"instance.settings.tabs.core-components.move-up": {
+		"message": "上移"
+	},
+	"instance.settings.tabs.core-components.open-source": {
+		"message": "打开来源页面"
+	},
+	"instance.settings.tabs.core-components.pick-jar": {
+		"message": "选择核心压缩包"
+	},
+	"instance.settings.tabs.core-components.pick-modloader": {
+		"message": "选择已下载的 ModLoader 压缩包"
+	},
+	"instance.settings.tabs.core-components.preview": {
+		"message": "预览组装后的 JAR"
+	},
+	"instance.settings.tabs.core-components.previewed": {
+		"message": "已将 {components} 个组件组装为包含 {entries} 个条目的 JAR"
+	},
+	"instance.settings.tabs.core-components.remove": {
+		"message": "移除"
+	},
+	"instance.settings.tabs.core-components.replace": {
+		"message": "替换 Minecraft.jar"
+	},
+	"instance.settings.tabs.core-components.replacement": {
+		"message": "替换 JAR"
+	},
+	"instance.settings.tabs.core-components.restore": {
+		"message": "恢复"
+	},
+	"instance.settings.tabs.core-components.sha1": {
+		"message": "SHA-1 哈希"
+	},
+	"instance.settings.tabs.core-components.sha256": {
+		"message": "SHA-256 哈希"
+	},
+	"instance.settings.tabs.core-components.source": {
+		"message": "来源"
+	},
+	"instance.settings.tabs.core-components.target-version": {
+		"message": "目标 Minecraft 版本"
+	},
+	"instance.settings.tabs.core-components.title": {
+		"message": "核心组件"
+	},
+	"app.downloads.phase.applying-content": {
+		"message": "正在应用内容"
+	},
+	"app.downloads.phase.completed": {
+		"message": "已完成"
+	},
+	"app.downloads.phase.creating-backup": {
+		"message": "正在创建备份"
+	},
+	"app.downloads.phase.staging-content": {
+		"message": "正在暂存内容"
+	},
+	"app.downloads.phase.unknown": {
+		"message": "正在处理"
+	},
+	"app.downloads.phase.updating-loader": {
+		"message": "正在更新加载器"
+	},
+	"app.downloads.phase.verifying": {
+		"message": "正在验证"
+	},
+	"app.instance.upgrade-instance": {
+		"message": "升级实例"
+	},
+	"instance.upgrade.action.add-dependency": {
+		"message": "添加依赖"
+	},
+	"instance.upgrade.action.disable": {
+		"message": "禁用"
+	},
+	"instance.upgrade.action.keep": {
+		"message": "保留"
+	},
+	"instance.upgrade.action.remove-dependency": {
+		"message": "移除依赖"
+	},
+	"instance.upgrade.action.update-dependency": {
+		"message": "更新依赖"
+	},
+	"instance.upgrade.action.upgrade": {
+		"message": "更新"
+	},
+	"instance.upgrade.changelog.empty": {
+		"message": "此版本没有提供更新日志。"
+	},
+	"instance.upgrade.changelog.loading": {
+		"message": "正在加载版本详情……"
+	},
+	"instance.upgrade.changelog.show-original": {
+		"message": "显示原文"
+	},
+	"instance.upgrade.changelog.translate": {
+		"message": "翻译"
+	},
+	"instance.upgrade.changelog.translation.authentication": {
+		"message": "翻译服务身份验证失败。"
+	},
+	"instance.upgrade.changelog.translation.failed": {
+		"message": "更新日志翻译失败。"
+	},
+	"instance.upgrade.changelog.translation.network": {
+		"message": "翻译网络请求失败。"
+	},
+	"instance.upgrade.changelog.translation.rate-limited": {
+		"message": "翻译服务暂时受到频率限制。"
+	},
+	"instance.upgrade.changelog.translation.too-long": {
+		"message": "此更新日志过长，无法翻译。"
+	},
+	"instance.upgrade.changelog.unavailable": {
+		"message": "无法获取版本详情。"
+	},
+	"instance.upgrade.confirm.back": {
+		"message": "返回"
+	},
+	"instance.upgrade.confirm.backup.copy-mode": {
+		"message": "原共享实例不会被修改，因此不会创建额外的完整备份。"
+	},
+	"instance.upgrade.confirm.backup.description": {
+		"message": "将创建独立的实例副本，保留世界存档和配置，以便日后恢复。"
+	},
+	"instance.upgrade.confirm.backup.off-body": {
+		"message": "启动升级后的游戏后，世界存档发生的变化可能无法撤销。"
+	},
+	"instance.upgrade.confirm.backup.off-title": {
+		"message": "不会创建完整备份"
+	},
+	"instance.upgrade.confirm.backup.title": {
+		"message": "完整备份"
+	},
+	"instance.upgrade.confirm.backup.toggle": {
+		"message": "升级前创建完整备份"
+	},
+	"instance.upgrade.confirm.dependencies-added": {
+		"message": "新增依赖"
+	},
+	"instance.upgrade.confirm.dependencies-removed": {
+		"message": "移除依赖"
+	},
+	"instance.upgrade.confirm.dependencies-updated": {
+		"message": "更新依赖"
+	},
+	"instance.upgrade.confirm.description": {
+		"message": "升级前检查更改与备份选项。"
+	},
+	"instance.upgrade.confirm.details": {
+		"message": "更改详情"
+	},
+	"instance.upgrade.confirm.details.content-item": {
+		"message": "内容项目"
+	},
+	"instance.upgrade.confirm.details.dependencies": {
+		"message": "依赖更改"
+	},
+	"instance.upgrade.confirm.details.disabled": {
+		"message": "停用的内容"
+	},
+	"instance.upgrade.confirm.details.disabled-state": {
+		"message": "已停用"
+	},
+	"instance.upgrade.confirm.details.kept": {
+		"message": "保留的内容"
+	},
+	"instance.upgrade.confirm.details.new-dependency": {
+		"message": "新的 {provider} 依赖"
+	},
+	"instance.upgrade.confirm.details.updated": {
+		"message": "更新的内容"
+	},
+	"instance.upgrade.confirm.details.version-current": {
+		"message": "当前: {version}"
+	},
+	"instance.upgrade.confirm.details.version-target": {
+		"message": "目标: {version}"
+	},
+	"instance.upgrade.confirm.disabled": {
+		"message": "将停用"
+	},
+	"instance.upgrade.confirm.environment": {
+		"message": "运行环境"
+	},
+	"instance.upgrade.confirm.kept": {
+		"message": "将保留"
+	},
+	"instance.upgrade.confirm.loader": {
+		"message": "加载器"
+	},
+	"instance.upgrade.confirm.loader.automatic": {
+		"message": "自动选择"
+	},
+	"instance.upgrade.confirm.preserved.body": {
+		"message": "世界存档、选项、服务器和配置文件都会保留。Mod、资源包和光影包按所选升级方案处理。"
+	},
+	"instance.upgrade.confirm.preserved.title": {
+		"message": "保留的数据"
+	},
+	"instance.upgrade.confirm.rollback.description": {
+		"message": "如果升级时文件更改失败，启动器会自动回滚本次操作。这个回滚不能替代完整备份！"
+	},
+	"instance.upgrade.confirm.rollback.title": {
+		"message": "自动回滚"
+	},
+	"instance.upgrade.confirm.shared.copy": {
+		"message": "复制并升级"
+	},
+	"instance.upgrade.confirm.shared.copy-description": {
+		"message": "创建并升级新的本地实例。原链接和外部目标保持不变。"
+	},
+	"instance.upgrade.confirm.shared.description": {
+		"message": "选择修改外部目标，或升级一个独立的本地副本。"
+	},
+	"instance.upgrade.confirm.shared.direct": {
+		"message": "直接升级"
+	},
+	"instance.upgrade.confirm.shared.direct-description": {
+		"message": "修改实际的外部目标文件夹，并保留现有链接。"
+	},
+	"instance.upgrade.confirm.shared.title": {
+		"message": "共享实例处理方式"
+	},
+	"instance.upgrade.confirm.active-job": {
+		"message": "升级已在进行中"
+	},
+	"instance.upgrade.confirm.start": {
+		"message": "开始升级"
+	},
+	"instance.upgrade.confirm.start-error": {
+		"message": "无法开始升级"
+	},
+	"instance.upgrade.confirm.starting": {
+		"message": "正在开始升级……"
+	},
+	"instance.upgrade.confirm.strategy": {
+		"message": "升级策略"
+	},
+	"instance.upgrade.confirm.strategy.custom": {
+		"message": "自定义"
+	},
+	"instance.upgrade.confirm.strategy.minimal": {
+		"message": "尽可能少改动"
+	},
+	"instance.upgrade.confirm.strategy.newest": {
+		"message": "尽可能更新"
+	},
+	"instance.upgrade.confirm.title": {
+		"message": "确认升级"
+	},
+	"instance.upgrade.confirm.updated": {
+		"message": "将更新"
+	},
+	"instance.upgrade.confirm.world.body": {
+		"message": "启动升级后的实例可能会把世界存档迁移到新格式。用旧版 Minecraft 打开已迁移的世界可能不安全或不受支持。强烈建议创建完整备份。"
+	},
+	"instance.upgrade.confirm.world.datapacks": {
+		"message": "{path} 中的数据包会保留，但不会自动升级。"
+	},
+	"instance.upgrade.confirm.world.title": {
+		"message": "世界存档可能发生不可逆迁移"
+	},
+	"instance.upgrade.compatibility.allow-prerelease": {
+		"message": "允许此内容使用预发布版"
+	},
+	"instance.upgrade.compatibility.back": {
+		"message": "返回"
+	},
+	"instance.upgrade.compatibility.blockers": {
+		"message": "阻塞问题"
+	},
+	"instance.upgrade.compatibility.blocking-description": {
+		"message": "继续升级前，需要为这些项目作出选择。"
+	},
+	"instance.upgrade.compatibility.bulk-eligible": {
+		"message": "{count} 个可处理项目"
+	},
+	"instance.upgrade.compatibility.bulk-partial": {
+		"message": "已更新 {applied} 项；仍有 {remaining} 项需要检查。"
+	},
+	"instance.upgrade.compatibility.bulk-progress": {
+		"message": "正在更新第 {current}/{total} 项……"
+	},
+	"instance.upgrade.compatibility.cancel": {
+		"message": "取消"
+	},
+	"instance.upgrade.compatibility.candidate-release": {
+		"message": "候选版本：{version}"
+	},
+	"instance.upgrade.compatibility.compatible": {
+		"message": "兼容或保留"
+	},
+	"instance.upgrade.compatibility.confirm": {
+		"message": "确认"
+	},
+	"instance.upgrade.compatibility.confirm-disable-all": {
+		"message": "禁用 {count} 个警告项目？"
+	},
+	"instance.upgrade.compatibility.content": {
+		"message": "内容"
+	},
+	"instance.upgrade.compatibility.content-count": {
+		"message": "{count} 个项目"
+	},
+	"instance.upgrade.compatibility.continue": {
+		"message": "继续"
+	},
+	"instance.upgrade.compatibility.current-version-only": {
+		"message": "当前版本：{current}"
+	},
+	"instance.upgrade.compatibility.dependencies": {
+		"message": "依赖变更"
+	},
+	"instance.upgrade.compatibility.dependency-changes": {
+		"message": "依赖变更"
+	},
+	"instance.upgrade.compatibility.description": {
+		"message": "继续前检查内容变更并处理问题。"
+	},
+	"instance.upgrade.compatibility.disable-all": {
+		"message": "全部禁用"
+	},
+	"instance.upgrade.compatibility.disable-current": {
+		"message": "禁用当前内容"
+	},
+	"instance.upgrade.compatibility.disabled": {
+		"message": "当前已禁用"
+	},
+	"instance.upgrade.compatibility.disabled-count": {
+		"message": "将禁用"
+	},
+	"instance.upgrade.compatibility.global-issue": {
+		"message": "实例级问题"
+	},
+	"instance.upgrade.compatibility.keep-all": {
+		"message": "全部保留"
+	},
+	"instance.upgrade.compatibility.keep-current": {
+		"message": "保留当前版本"
+	},
+	"instance.upgrade.compatibility.loader": {
+		"message": "加载器"
+	},
+	"instance.upgrade.compatibility.minecraft": {
+		"message": "Minecraft 游戏"
+	},
+	"instance.upgrade.compatibility.needs-attention": {
+		"message": "需要处理"
+	},
+	"instance.upgrade.compatibility.no-compatible-explanation": {
+		"message": "未找到兼容目标 Minecraft 版本的发布版。保留它可能导致游戏无法运行，也可暂时禁用。"
+	},
+	"instance.upgrade.compatibility.no-issues": {
+		"message": "无问题"
+	},
+	"instance.upgrade.compatibility.prerelease-explanation": {
+		"message": "未找到兼容的稳定版，但有可用的 Beta 或 Alpha 版。"
+	},
+	"instance.upgrade.compatibility.resolve-before-continue": {
+		"message": "继续前请处理阻塞问题。"
+	},
+	"instance.upgrade.compatibility.title": {
+		"message": "兼容性"
+	},
+	"instance.upgrade.compatibility.undo": {
+		"message": "撤销"
+	},
+	"instance.upgrade.compatibility.unknown-version": {
+		"message": "未知版本"
+	},
+	"instance.upgrade.compatibility.updates": {
+		"message": "将更新"
+	},
+	"instance.upgrade.compatibility.version-change": {
+		"message": "从 {current} 升级至 {target}"
+	},
+	"instance.upgrade.compatibility.warnings": {
+		"message": "警告"
+	},
+	"instance.upgrade.compatibility.warnings-description": {
+		"message": "选择升级方案前请检查这些项目。"
+	},
+	"instance.upgrade.customize.apply-before-continue": {
+		"message": "请先应用自定义选择。"
+	},
+	"instance.upgrade.customize.back": {
+		"message": "返回"
+	},
+	"instance.upgrade.customize.baseline-hint": {
+		"message": "当前已选方案作为基线显示。应用自定义选择后重新计算。"
+	},
+	"instance.upgrade.customize.cancel": {
+		"message": "取消"
+	},
+	"instance.upgrade.customize.channel.alpha": {
+		"message": "Alpha 版"
+	},
+	"instance.upgrade.customize.channel.beta": {
+		"message": "Beta 版"
+	},
+	"instance.upgrade.customize.channel.release": {
+		"message": "正式版"
+	},
+	"instance.upgrade.customize.conflict.title": {
+		"message": "自定义选择存在冲突"
+	},
+	"instance.upgrade.customize.continue": {
+		"message": "继续"
+	},
+	"instance.upgrade.customize.current-version": {
+		"message": "当前版本：{version}"
+	},
+	"instance.upgrade.customize.currently-disabled": {
+		"message": "当前已禁用"
+	},
+	"instance.upgrade.customize.custom.apply": {
+		"message": "应用自定义选择"
+	},
+	"instance.upgrade.customize.custom.automatic": {
+		"message": "自动"
+	},
+	"instance.upgrade.customize.custom.choice": {
+		"message": "目标版本"
+	},
+	"instance.upgrade.customize.custom.choices": {
+		"message": "自定义选择"
+	},
+	"instance.upgrade.customize.custom.choices-description": {
+		"message": "仅可编辑用户拥有的根内容，依赖仍由求解器管理。"
+	},
+	"instance.upgrade.customize.custom.constraint-count": {
+		"message": "{count} 个精确选择"
+	},
+	"instance.upgrade.customize.custom.description": {
+		"message": "为所选内容固定精确版本，其余依赖图由 Axolotl 求解。"
+	},
+	"instance.upgrade.customize.custom.discard-switch": {
+		"message": "放弃并切换"
+	},
+	"instance.upgrade.customize.custom.issues": {
+		"message": "无法解析自定义选择"
+	},
+	"instance.upgrade.customize.custom.recalculate": {
+		"message": "重新计算"
+	},
+	"instance.upgrade.customize.custom.specific-version": {
+		"message": "精确版本 {version}"
+	},
+	"instance.upgrade.customize.custom.specific-version-channel": {
+		"message": "{version}（{channel}）"
+	},
+	"instance.upgrade.customize.custom.title": {
+		"message": "自定义"
+	},
+	"instance.upgrade.customize.custom.unapplied-body": {
+		"message": "应用这些选择以计算全局兼容方案。"
+	},
+	"instance.upgrade.customize.custom.unapplied-title": {
+		"message": "尚未应用自定义选择"
+	},
+	"instance.upgrade.customize.custom.unsaved-body": {
+		"message": "切换策略将放弃尚未计算的变更。"
+	},
+	"instance.upgrade.customize.custom.unsaved-title": {
+		"message": "放弃未应用的自定义选择？"
+	},
+	"instance.upgrade.customize.dependencies-title": {
+		"message": "依赖变更"
+	},
+	"instance.upgrade.customize.dependency.add": {
+		"message": "添加依赖"
+	},
+	"instance.upgrade.customize.dependency.keep": {
+		"message": "保留依赖"
+	},
+	"instance.upgrade.customize.dependency.new": {
+		"message": "新增内容：{target}"
+	},
+	"instance.upgrade.customize.dependency.remove": {
+		"message": "移除依赖"
+	},
+	"instance.upgrade.customize.dependency.reused": {
+		"message": "复用现有内容：{current} 至 {target}"
+	},
+	"instance.upgrade.customize.dependency.upgrade": {
+		"message": "更新依赖"
+	},
+	"instance.upgrade.customize.description": {
+		"message": "选择此实例中内容的更新程度。"
+	},
+	"instance.upgrade.customize.effective-changes": {
+		"message": "实际变更"
+	},
+	"instance.upgrade.customize.effective-target": {
+		"message": "计算目标：{version}"
+	},
+	"instance.upgrade.customize.effective-target-prefix": {
+		"message": "计算目标："
+	},
+	"instance.upgrade.customize.metric.added": {
+		"message": "新增依赖"
+	},
+	"instance.upgrade.customize.metric.dependency-updated": {
+		"message": "更新依赖"
+	},
+	"instance.upgrade.customize.metric.disabled": {
+		"message": "已禁用"
+	},
+	"instance.upgrade.customize.metric.kept": {
+		"message": "已保留"
+	},
+	"instance.upgrade.customize.metric.removed": {
+		"message": "移除依赖"
+	},
+	"instance.upgrade.customize.metric.updated": {
+		"message": "更新内容"
+	},
+	"instance.upgrade.customize.minimal.description": {
+		"message": "保留仍兼容的当前版本，并尽量减少已安装内容变更。"
+	},
+	"instance.upgrade.customize.minimal.title": {
+		"message": "尽可能少改动"
+	},
+	"instance.upgrade.customize.newest.description": {
+		"message": "将兼容内容更新至目标环境可用的最新版本。"
+	},
+	"instance.upgrade.customize.newest.title": {
+		"message": "尽可能更新"
+	},
+	"instance.upgrade.customize.no-target": {
+		"message": "无目标版本"
+	},
+	"instance.upgrade.customize.request-error-title": {
+		"message": "无法更新策略"
+	},
+	"instance.upgrade.customize.resolve-before-continue": {
+		"message": "继续前请处理自定义冲突。"
+	},
+	"instance.upgrade.customize.search-limit.body": {
+		"message": "Axolotl 未能在搜索上限内找到方案。请放宽一项自定义选择。"
+	},
+	"instance.upgrade.customize.search-limit.title": {
+		"message": "已达到搜索上限"
+	},
+	"instance.upgrade.customize.summary.roots": {
+		"message": "更新 {updates} 项，保留 {kept} 项，禁用 {disabled} 项，依赖变更 {dependencies} 项"
+	},
+	"instance.upgrade.customize.title": {
+		"message": "升级策略"
+	},
+	"instance.upgrade.flow.aria": {
+		"message": "实例升级导航"
+	},
+	"instance.upgrade.flow.back": {
+		"message": "上一步"
+	},
+	"instance.upgrade.flow.complete": {
+		"message": "升级完成"
+	},
+	"instance.upgrade.flow.confirm": {
+		"message": "确认升级"
+	},
+	"instance.upgrade.flow.issues": {
+		"message": "处理冲突"
+	},
+	"instance.upgrade.flow.next": {
+		"message": "下一步"
+	},
+	"instance.upgrade.flow.preferences": {
+		"message": "升级偏好"
+	},
+	"instance.upgrade.flow.progress": {
+		"message": "正在升级"
+	},
+	"instance.upgrade.flow.steps": {
+		"message": "升级步骤"
+	},
+	"instance.upgrade.flow.target": {
+		"message": "升级目标"
+	},
+	"instance.upgrade.compatibility.bulk-skipped": {
+		"message": "已跳过 {count} 项。"
+	},
+	"instance.upgrade.compatibility.resolve-blockers-tooltip": {
+		"message": "请先解决所有阻塞问题。"
+	},
+	"instance.upgrade.compatibility.resolved": {
+		"message": "已解决 {count}/{total}"
+	},
+	"instance.upgrade.issue.dependency": {
+		"message": "依赖冲突"
+	},
+	"instance.upgrade.issue.generic": {
+		"message": "兼容性问题"
+	},
+	"instance.upgrade.issue.keep-incompatible": {
+		"message": "保留此版本可能导致升级后的实例不兼容。"
+	},
+	"instance.upgrade.issue.no-compatible-release": {
+		"message": "无兼容版本"
+	},
+	"instance.upgrade.issue.no-compatible-release.description": {
+		"message": "未找到兼容 Minecraft {version} 的发布版。"
+	},
+	"instance.upgrade.issue.no-compatible-shader-runtime": {
+		"message": "没有发布版同时支持目标 Minecraft 版本和光影运行时。"
+	},
+	"instance.upgrade.issue.prerelease-only": {
+		"message": "需要确认预发布版"
+	},
+	"instance.upgrade.issue.prerelease-only.description": {
+		"message": "仅有预发布版支持 Minecraft {version}。"
+	},
+	"instance.upgrade.issue.search-limit-reached": {
+		"message": "有限兼容性搜索无法证明存在有效方案。"
+	},
+	"instance.upgrade.issue.shader": {
+		"message": "光影兼容性问题"
+	},
+	"instance.upgrade.issue.shader-runtime-missing": {
+		"message": "目标实例未计划安装光影运行时。"
+	},
+	"instance.upgrade.issue.shader-runtime-unknown": {
+		"message": "无法确定目标光影运行时。"
+	},
+	"instance.upgrade.issue.unidentified": {
+		"message": "无法将此本地文件匹配到已验证的提供方项目。"
+	},
+	"instance.upgrade.issue.unsupported-content-type": {
+		"message": "无法自动迁移此内容类型。"
+	},
+	"instance.upgrade.provider.curseforge": {
+		"message": "CurseForge"
+	},
+	"instance.upgrade.provider.local": {
+		"message": "本地"
+	},
+	"instance.upgrade.provider.modrinth": {
+		"message": "Modrinth"
+	},
+	"instance.upgrade.provider.unknown": {
+		"message": "未知提供方"
+	},
+	"instance.upgrade.progress.opening-downloads": {
+		"message": "正在打开下载任务……"
+	},
+	"instance.upgrade.return": {
+		"message": "返回实例升级"
+	},
+	"instance.upgrade.select.automatic": {
+		"message": "自动选择"
+	},
+	"instance.upgrade.select.check-compatibility": {
+		"message": "检查兼容性"
+	},
+	"instance.upgrade.select.current": {
+		"message": "当前"
+	},
+	"instance.upgrade.select.current-version-missing-body": {
+		"message": "稳定版将按元数据顺序显示，不猜测数字排序。"
+	},
+	"instance.upgrade.select.current-version-missing-title": {
+		"message": "元数据中找不到当前版本"
+	},
+	"instance.upgrade.select.description": {
+		"message": "选择此实例要升级到的 Minecraft 版本。"
+	},
+	"instance.upgrade.select.fabric-version": {
+		"message": "Fabric 版本"
+	},
+	"instance.upgrade.select.fabric-versions-error": {
+		"message": "无法加载 Fabric 版本。仍可使用自动选择。"
+	},
+	"instance.upgrade.select.loading-fabric-versions": {
+		"message": "正在加载 Fabric 版本……"
+	},
+	"instance.upgrade.select.loading-versions": {
+		"message": "正在加载 Minecraft 版本……"
+	},
+	"instance.upgrade.select.manual-fabric-version-unavailable": {
+		"message": "无法手动选择 Fabric 版本。"
+	},
+	"instance.upgrade.select.metadata-error-body": {
+		"message": "请检查网络连接后重试。"
+	},
+	"instance.upgrade.select.metadata-error-title": {
+		"message": "无法加载 Minecraft 版本"
+	},
+	"instance.upgrade.select.minecraft": {
+		"message": "Minecraft 版本"
+	},
+	"instance.upgrade.select.minecraft-version": {
+		"message": "Minecraft 版本 {version}"
+	},
+	"instance.upgrade.select.no-newer-release": {
+		"message": "没有更新的 Minecraft 稳定版。"
+	},
+	"instance.upgrade.select.no-non-downgrade-fabric-version": {
+		"message": "此目标没有可避免降级的 Fabric 版本。"
+	},
+	"instance.upgrade.select.planning-error-title": {
+		"message": "兼容性分析失败"
+	},
+	"instance.upgrade.select.planning-status": {
+		"message": "正在分析 {count} 个内容项目的兼容性……"
+	},
+	"instance.upgrade.select.review-compatibility": {
+		"message": "返回兼容性检查"
+	},
+	"instance.upgrade.select.target": {
+		"message": "目标"
+	},
+	"instance.upgrade.select.target-version-input": {
+		"message": "目标 Minecraft 版本"
+	},
+	"instance.upgrade.select.title": {
+		"message": "升级实例"
+	},
+	"instance.upgrade.result.title": {
+		"message": "升级完成"
+	},
+	"instance.upgrade.result.direct-description": {
+		"message": "此实例已成功升级。"
+	},
 	"instance.upgrade.result.copy-description": {
 		"message": "已成功创建升级副本。原共享实例未被修改。"
 	},
-	"instance.upgrade.result.environment": { "message": "环境" },
-	"instance.upgrade.result.minecraft": { "message": "Minecraft 版本" },
-	"instance.upgrade.result.loader": { "message": "加载器" },
-	"instance.upgrade.result.unknown": { "message": "不可用" },
-	"instance.upgrade.result.automatic": { "message": "自动" },
+	"instance.upgrade.result.environment": {
+		"message": "环境"
+	},
+	"instance.upgrade.result.minecraft": {
+		"message": "Minecraft 版本"
+	},
+	"instance.upgrade.result.loader": {
+		"message": "加载器"
+	},
+	"instance.upgrade.result.unknown": {
+		"message": "不可用"
+	},
+	"instance.upgrade.result.automatic": {
+		"message": "自动"
+	},
 	"instance.upgrade.confirm.choose-shared-mode-tooltip": {
 		"message": "请选择共享实例的升级方式。"
 	},
-	"instance.upgrade.result.metrics": { "message": "结果" },
-	"instance.upgrade.result.updated": { "message": "已更新" },
-	"instance.upgrade.result.kept": { "message": "已保留" },
-	"instance.upgrade.result.disabled": { "message": "已禁用" },
-	"instance.upgrade.result.dependencies-added": { "message": "新增依赖" },
-	"instance.upgrade.result.dependencies-updated": { "message": "更新依赖" },
-	"instance.upgrade.result.dependencies-removed": { "message": "移除依赖" },
-	"instance.upgrade.result.open-upgraded": { "message": "打开升级后的实例" },
-	"instance.upgrade.result.open-original": { "message": "打开原实例" },
-	"instance.upgrade.result.backup-title": { "message": "已创建备份" },
+	"instance.upgrade.result.metrics": {
+		"message": "结果"
+	},
+	"instance.upgrade.result.updated": {
+		"message": "已更新"
+	},
+	"instance.upgrade.result.kept": {
+		"message": "已保留"
+	},
+	"instance.upgrade.result.disabled": {
+		"message": "已禁用"
+	},
+	"instance.upgrade.result.dependencies-added": {
+		"message": "新增依赖"
+	},
+	"instance.upgrade.result.dependencies-updated": {
+		"message": "更新依赖"
+	},
+	"instance.upgrade.result.dependencies-removed": {
+		"message": "移除依赖"
+	},
+	"instance.upgrade.result.open-upgraded": {
+		"message": "打开升级后的实例"
+	},
+	"instance.upgrade.result.open-original": {
+		"message": "打开原实例"
+	},
+	"instance.upgrade.result.backup-title": {
+		"message": "已创建备份"
+	},
 	"instance.upgrade.result.backup-description": {
 		"message": "已单独创建升级前的完整备份，你可以在实例库中找到。"
 	},
-	"instance.upgrade.result.open-backup": { "message": "打开备份" },
-	"instance.upgrade.result.no-backup-title": { "message": "未创建完整备份" },
+	"instance.upgrade.result.open-backup": {
+		"message": "打开备份"
+	},
+	"instance.upgrade.result.no-backup-title": {
+		"message": "未创建完整备份"
+	},
 	"instance.upgrade.result.no-backup-description": {
 		"message": "自动回滚仅在升级期间保护操作，不是永久备份。"
 	},
-	"instance.upgrade.result.external-title": { "message": "检测到升级期间的文件变化" },
+	"instance.upgrade.result.external-title": {
+		"message": "检测到升级期间的文件变化"
+	},
 	"instance.upgrade.result.external-description": {
 		"message": "检测到启动器之外的文件变化；在适用情况下已优先保留用户更改。"
 	},
-	"instance.upgrade.result.skipped-title": { "message": "部分计划更改已跳过" },
+	"instance.upgrade.result.skipped-title": {
+		"message": "部分计划更改已跳过"
+	},
 	"instance.upgrade.result.skipped-description": {
 		"message": "这些文件在升级期间发生变化，因此保留了用户更改。"
 	},
-	"instance.upgrade.result.warnings-title": { "message": "兼容性警告" },
-	"instance.upgrade.result.details-title": { "message": "升级详情" },
-	"instance.upgrade.result.action-add": { "message": "已添加" },
-	"instance.upgrade.result.action-upgrade": { "message": "已更新" },
-	"instance.upgrade.result.action-keep": { "message": "已保留" },
-	"instance.upgrade.result.action-disable": { "message": "已禁用" },
-	"instance.upgrade.result.action-remove": { "message": "已移除" },
-	"instance.upgrade.result.change-added": { "message": "添加" },
-	"instance.upgrade.result.change-removed": { "message": "移除" },
-	"instance.upgrade.result.change-modified": { "message": "修改" },
-	"app.downloads.view-upgrade-result": { "message": "查看升级结果" },
-	"app.downloads.operation.upgrade": { "message": "升级" },
-	"app.downloads.upgrade-details": { "message": "升级详情" },
-	"app.downloads.hide-upgrade-details": { "message": "收起升级详情" },
-	"instance.upgrade.confirm.backup.instance-name": { "message": "{name}（升级前备份）" },
-	"instance.upgrade.confirm.copy.instance-name": { "message": "{name}（升级副本）" },
-	"instance.upgrade.result.unavailable": { "message": "升级结果不可用" },
-	"instance.upgrade.result.missing": { "message": "无法加载此已保存的升级结果。" },
-	"instance.upgrade.warning.prerelease-only": { "message": "{path} 在目标环境中只有预发布版本。" },
-	"instance.upgrade.warning.unidentified": { "message": "无法识别 {path}，已原样保留。" },
-	"instance.upgrade.warning.dependency-conflict": { "message": "{path} 存在冲突的依赖要求。" },
+	"instance.upgrade.result.warnings-title": {
+		"message": "兼容性警告"
+	},
+	"instance.upgrade.result.details-title": {
+		"message": "升级详情"
+	},
+	"instance.upgrade.result.action-add": {
+		"message": "已添加"
+	},
+	"instance.upgrade.result.action-upgrade": {
+		"message": "已更新"
+	},
+	"instance.upgrade.result.action-keep": {
+		"message": "已保留"
+	},
+	"instance.upgrade.result.action-disable": {
+		"message": "已禁用"
+	},
+	"instance.upgrade.result.action-remove": {
+		"message": "已移除"
+	},
+	"instance.upgrade.result.change-added": {
+		"message": "添加"
+	},
+	"instance.upgrade.result.change-removed": {
+		"message": "移除"
+	},
+	"instance.upgrade.result.change-modified": {
+		"message": "修改"
+	},
+	"app.downloads.view-upgrade-result": {
+		"message": "查看升级结果"
+	},
+	"app.downloads.operation.upgrade": {
+		"message": "升级"
+	},
+	"app.downloads.upgrade-details": {
+		"message": "升级详情"
+	},
+	"app.downloads.hide-upgrade-details": {
+		"message": "收起升级详情"
+	},
+	"instance.upgrade.confirm.backup.instance-name": {
+		"message": "{name}（升级前备份）"
+	},
+	"instance.upgrade.confirm.copy.instance-name": {
+		"message": "{name}（升级副本）"
+	},
+	"instance.upgrade.result.unavailable": {
+		"message": "升级结果不可用"
+	},
+	"instance.upgrade.result.missing": {
+		"message": "无法加载此已保存的升级结果。"
+	},
+	"instance.upgrade.warning.prerelease-only": {
+		"message": "{path} 在目标环境中只有预发布版本。"
+	},
+	"instance.upgrade.warning.unidentified": {
+		"message": "无法识别 {path}，已原样保留。"
+	},
+	"instance.upgrade.warning.dependency-conflict": {
+		"message": "{path} 存在冲突的依赖要求。"
+	},
 	"instance.upgrade.warning.missing-required-dependency": {
 		"message": "{path} 所需的依赖无法解析。"
 	},
-	"instance.upgrade.warning.incompatible-dependency": { "message": "{path} 存在不兼容的依赖。" },
+	"instance.upgrade.warning.incompatible-dependency": {
+		"message": "{path} 存在不兼容的依赖。"
+	},
 	"instance.upgrade.warning.unsupported-content-type": {
 		"message": "{path} 的内容类型无法自动升级。"
 	},
@@ -7969,17 +9521,27 @@
 	"instance.upgrade.warning.keep-incompatible": {
 		"message": "{path} 已原样保留，可能与升级后的实例不兼容。"
 	},
-	"app.instance.mods.post-upgrade-notice.title": { "message": "升级后兼容性提醒" },
+	"app.instance.mods.post-upgrade-notice.title": {
+		"message": "升级后兼容性提醒"
+	},
 	"app.instance.mods.post-upgrade-notice.body": {
 		"message": "部分保留内容可能不支持当前 Minecraft 版本，请手动检查。"
 	},
-	"app.instance.mods.post-upgrade-notice.ignore-all": { "message": "忽略全部" },
+	"app.instance.mods.post-upgrade-notice.ignore-all": {
+		"message": "忽略全部"
+	},
 	"app.instance.mods.post-upgrade-notice.item-tooltip": {
 		"message": "此内容在实例升级时被保留，没有安装新的兼容版本。它可能与当前 Minecraft 版本不兼容。"
 	},
-	"app.instance.post-upgrade-status": { "message": "已升级至 {version}" },
-	"instance.upgrade.result.warning-summary-local": { "message": "{count} 个本地内容无法识别" },
-	"instance.upgrade.result.warning-summary-kept": { "message": "{count} 个内容保留了原版本" },
+	"app.instance.post-upgrade-status": {
+		"message": "已升级至 {version}"
+	},
+	"instance.upgrade.result.warning-summary-local": {
+		"message": "{count} 个本地内容无法识别"
+	},
+	"instance.upgrade.result.warning-summary-kept": {
+		"message": "{count} 个内容保留了原版本"
+	},
 	"instance.upgrade.result.warning-summary-fallback": {
 		"message": "{count} 个内容采用了其他兼容方案"
 	},
@@ -7992,54 +9554,120 @@
 	"instance.upgrade.result.warning-unidentified-description": {
 		"message": "启动器无法确认它是否支持 Minecraft {targetVersion}。如果升级后出现问题，可以尝试暂时禁用它。"
 	},
-	"instance.upgrade.result.warning-unsupported-headline": { "message": "此类型的内容被原样保留" },
+	"instance.upgrade.result.warning-unsupported-headline": {
+		"message": "此类型的内容被原样保留"
+	},
 	"instance.upgrade.result.warning-unsupported-description": {
 		"message": "启动器无法自动升级此类内容。如果出现问题，请手动更新或禁用它。"
 	},
-	"instance.upgrade.result.warning-kept-headline": { "message": "已保留原版本" },
+	"instance.upgrade.result.warning-kept-headline": {
+		"message": "已保留原版本"
+	},
 	"instance.upgrade.result.warning-kept-description": {
 		"message": "未选择经过验证的兼容替代版本。如果游戏出现问题，请手动更新或禁用它。"
 	},
-	"instance.upgrade.result.warning-prerelease-headline": { "message": "使用了预发布版本" },
+	"instance.upgrade.result.warning-prerelease-headline": {
+		"message": "使用了预发布版本"
+	},
 	"instance.upgrade.result.warning-prerelease-description": {
 		"message": "目标环境没有稳定版本，因此此内容使用了 alpha、beta 或候选发布版本。"
 	},
-	"instance.upgrade.result.warning-shader-headline": { "message": "无法确认光影兼容性" },
+	"instance.upgrade.result.warning-shader-headline": {
+		"message": "无法确认光影兼容性"
+	},
 	"instance.upgrade.result.warning-shader-description": {
 		"message": "此光影已被保留，但无法确认目标光影运行时是否兼容。如果出现渲染问题，请禁用它。"
 	},
-	"instance.upgrade.result.warning-dependency-headline": { "message": "依赖项采用了兼容回退方案" },
+	"instance.upgrade.result.warning-dependency-headline": {
+		"message": "依赖项采用了兼容回退方案"
+	},
 	"instance.upgrade.result.warning-dependency-description": {
 		"message": "升级已完成，但此依赖项未能按常规方式验证。如果游戏无法启动，请检查它。"
 	},
-	"instance.upgrade.result.warning-legacy-headline": { "message": "兼容性需要注意" },
-	"instance.upgrade.result.technical-details": { "message": "详情" },
-	"instance.upgrade.result.relative-path": { "message": "相对路径" },
-	"instance.upgrade.result.warning-code": { "message": "警告信息" },
-	"instance.upgrade.result.provider-identity": { "message": "提供方" },
-	"instance.upgrade.result.local-content": { "message": "本地内容" },
-	"instance.upgrade.result.content-kind-content": { "message": "内容" },
-	"instance.upgrade.result.content-kind-mod": { "message": "模组" },
-	"instance.upgrade.result.content-kind-resourcepack": { "message": "资源包" },
-	"instance.upgrade.result.content-kind-shaderpack": { "message": "光影包" },
-	"instance.upgrade.result.content-kind-datapack": { "message": "数据包" },
-	"instance.upgrade.result.search-details": { "message": "搜索升级详情" },
-	"instance.upgrade.result.filters": { "message": "筛选升级详情" },
-	"instance.upgrade.result.filter-all": { "message": "全部" },
-	"instance.upgrade.result.filter-updated": { "message": "已更新" },
-	"instance.upgrade.result.filter-kept": { "message": "已保留" },
-	"instance.upgrade.result.filter-disabled": { "message": "已禁用" },
-	"instance.upgrade.result.filter-dependencies": { "message": "依赖项" },
-	"instance.upgrade.result.showing": { "message": "显示 {start}–{end} / {total}" },
-	"instance.upgrade.result.previous": { "message": "上一页" },
-	"instance.upgrade.result.next": { "message": "下一页" },
-	"instance.upgrade.result.no-matching-items": { "message": "没有匹配的升级项目。" },
-	"instance.upgrade.result.dependency": { "message": "依赖项" },
-	"instance.upgrade.result.dependency-added": { "message": "新增依赖" },
-	"instance.upgrade.result.dependency-updated-status": { "message": "已更新依赖" },
-	"instance.upgrade.result.dependency-kept": { "message": "已保留依赖" },
-	"instance.upgrade.result.dependency-removed-status": { "message": "已移除依赖" },
-	"instance.upgrade.result.warning-conflict-headline": { "message": "部分依赖要求发生冲突" },
+	"instance.upgrade.result.warning-legacy-headline": {
+		"message": "兼容性需要注意"
+	},
+	"instance.upgrade.result.technical-details": {
+		"message": "详情"
+	},
+	"instance.upgrade.result.relative-path": {
+		"message": "相对路径"
+	},
+	"instance.upgrade.result.warning-code": {
+		"message": "警告信息"
+	},
+	"instance.upgrade.result.provider-identity": {
+		"message": "提供方"
+	},
+	"instance.upgrade.result.local-content": {
+		"message": "本地内容"
+	},
+	"instance.upgrade.result.content-kind-content": {
+		"message": "内容"
+	},
+	"instance.upgrade.result.content-kind-mod": {
+		"message": "模组"
+	},
+	"instance.upgrade.result.content-kind-resourcepack": {
+		"message": "资源包"
+	},
+	"instance.upgrade.result.content-kind-shaderpack": {
+		"message": "光影包"
+	},
+	"instance.upgrade.result.content-kind-datapack": {
+		"message": "数据包"
+	},
+	"instance.upgrade.result.search-details": {
+		"message": "搜索升级详情"
+	},
+	"instance.upgrade.result.filters": {
+		"message": "筛选升级详情"
+	},
+	"instance.upgrade.result.filter-all": {
+		"message": "全部"
+	},
+	"instance.upgrade.result.filter-updated": {
+		"message": "已更新"
+	},
+	"instance.upgrade.result.filter-kept": {
+		"message": "已保留"
+	},
+	"instance.upgrade.result.filter-disabled": {
+		"message": "已禁用"
+	},
+	"instance.upgrade.result.filter-dependencies": {
+		"message": "依赖项"
+	},
+	"instance.upgrade.result.showing": {
+		"message": "显示 {start}–{end} / {total}"
+	},
+	"instance.upgrade.result.previous": {
+		"message": "上一页"
+	},
+	"instance.upgrade.result.next": {
+		"message": "下一页"
+	},
+	"instance.upgrade.result.no-matching-items": {
+		"message": "没有匹配的升级项目。"
+	},
+	"instance.upgrade.result.dependency": {
+		"message": "依赖项"
+	},
+	"instance.upgrade.result.dependency-added": {
+		"message": "新增依赖"
+	},
+	"instance.upgrade.result.dependency-updated-status": {
+		"message": "已更新依赖"
+	},
+	"instance.upgrade.result.dependency-kept": {
+		"message": "已保留依赖"
+	},
+	"instance.upgrade.result.dependency-removed-status": {
+		"message": "已移除依赖"
+	},
+	"instance.upgrade.result.warning-conflict-headline": {
+		"message": "部分依赖要求发生冲突"
+	},
 	"instance.upgrade.result.warning-conflict-description": {
 		"message": "此内容要求的依赖版本无法同时使用。如果游戏无法启动，请检查其依赖项。"
 	},
@@ -8055,20 +9683,36 @@
 	"instance.upgrade.result.warning-incompatible-dependency-description": {
 		"message": "某个依赖无法满足已选版本。如果游戏出现问题，请检查或禁用受影响的内容。"
 	},
-	"instance.upgrade.result.warning-search-limit-headline": { "message": "无法完整验证兼容性" },
+	"instance.upgrade.result.warning-search-limit-headline": {
+		"message": "无法完整验证兼容性"
+	},
 	"instance.upgrade.result.warning-search-limit-description": {
 		"message": "有限的兼容性搜索未能确认完整结果。如果游戏出现问题，请检查此内容。"
 	},
-	"instance.upgrade.result.warning-resolved-headline": { "message": "已采用兼容回退方案" },
+	"instance.upgrade.result.warning-resolved-headline": {
+		"message": "已采用兼容回退方案"
+	},
 	"instance.upgrade.result.warning-resolved-description": {
 		"message": "此警告出现在规划过程中，但内容已成功升级，无需立即处理。"
 	},
-	"instance.upgrade.result.warning-search": { "message": "搜索兼容性提醒" },
-	"instance.upgrade.result.warning-filters": { "message": "筛选兼容性提醒" },
-	"instance.upgrade.result.warning-filter-unidentified": { "message": "无法识别" },
-	"instance.upgrade.result.warning-filter-fallback": { "message": "兼容回退" },
-	"instance.upgrade.result.no-matching-warnings": { "message": "未找到匹配的兼容性提醒" },
-	"instance.upgrade.result.warning-disabled-headline": { "message": "此内容已被禁用" },
+	"instance.upgrade.result.warning-search": {
+		"message": "搜索兼容性提醒"
+	},
+	"instance.upgrade.result.warning-filters": {
+		"message": "筛选兼容性提醒"
+	},
+	"instance.upgrade.result.warning-filter-unidentified": {
+		"message": "无法识别"
+	},
+	"instance.upgrade.result.warning-filter-fallback": {
+		"message": "兼容回退"
+	},
+	"instance.upgrade.result.no-matching-warnings": {
+		"message": "未找到匹配的兼容性提醒"
+	},
+	"instance.upgrade.result.warning-disabled-headline": {
+		"message": "此内容已被禁用"
+	},
 	"instance.upgrade.result.warning-disabled-description": {
 		"message": "此内容仍保留在磁盘上，但已被禁用，不会影响升级后的实例。"
 	}

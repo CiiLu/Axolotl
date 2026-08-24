@@ -42,7 +42,7 @@ Memorysettings {
 
 */
 
-export type UpdateSource = 'cnb' | 'github'
+export type UpdateSource = 'miawa' | 'cnb' | 'github'
 export type DownloadSourceMode =
 	| 'auto'
 	| 'official_only'
@@ -50,29 +50,51 @@ export type DownloadSourceMode =
 	| 'official_preferred'
 export type DownloadEngine = 'legacy' | 'xmcl'
 
-const UPDATE_SOURCE_STORAGE_KEY = 'axolotl-update-source'
+export type ProxyMode = 'none' | 'system' | 'custom'
+export type ProxyConfig = {
+	mode: ProxyMode
+	url: string
+	username: string
+	password: string
+}
+export type ProxyTestResult = {
+	success: boolean
+	latency_ms: number | null
+	message: string
+}
+
+const UPDATE_SOURCE_STORAGE_KEY = 'axolotl-update-source-v2'
 
 export function getUpdateSource(): UpdateSource {
 	const value = localStorage.getItem(UPDATE_SOURCE_STORAGE_KEY)
-	const source = value === 'github' || value === 'official' ? 'github' : 'cnb'
-	if (value !== source) {
-		localStorage.setItem(UPDATE_SOURCE_STORAGE_KEY, source)
-	}
-	return source
+	if (value === 'cnb') return 'cnb'
+	if (value === 'github' || value === 'official') return 'github'
+	return 'miawa'
 }
 
 export function setUpdateSource(source: UpdateSource) {
 	localStorage.setItem(UPDATE_SOURCE_STORAGE_KEY, source)
 }
 
-export type BrowseContentSource = 'all' | 'modrinth' | 'curseforge'
+export type BrowseContentSource =
+	| 'all'
+	| 'modrinth'
+	| 'curseforge'
+	| 'mcarchive'
+	| 'planet_minecraft'
 
 const BROWSE_CONTENT_SOURCE_STORAGE_KEY = 'axolotl-browse-content-source'
 const BROWSE_DEFAULT_INSTANCE_STORAGE_KEY = 'axolotl-browse-default-instance'
 
 export function getLastBrowseContentSource(): BrowseContentSource | null {
 	const value = localStorage.getItem(BROWSE_CONTENT_SOURCE_STORAGE_KEY)
-	return value === 'all' || value === 'modrinth' || value === 'curseforge' ? value : null
+	return value === 'all' ||
+		value === 'modrinth' ||
+		value === 'curseforge' ||
+		value === 'mcarchive' ||
+		value === 'planet_minecraft'
+		? value
+		: null
 }
 
 export function setLastBrowseContentSource(source: BrowseContentSource) {
@@ -138,6 +160,7 @@ export type AppSettings = {
 	force_fullscreen: boolean
 	game_resolution: [number, number]
 	hide_on_process_start: boolean
+	enter_lightweight_mode_on_game_launch: boolean
 	auto_set_java_high_performance_mode: boolean
 	hooks: Hooks
 
@@ -262,4 +285,16 @@ export async function setTelemetryEnabled(enabled: boolean): Promise<PrivacySett
 
 export async function setDiscordRpcEnabled(enabled: boolean): Promise<PrivacySettings> {
 	return await invoke('plugin:settings|discord_rpc_set', { enabled })
+}
+
+export async function getProxyConfig(): Promise<ProxyConfig> {
+	return await invoke('plugin:settings|proxy_get')
+}
+
+export async function setProxyConfig(config: ProxyConfig): Promise<void> {
+	await invoke('plugin:settings|proxy_set', { config })
+}
+
+export async function testProxyConfig(config: ProxyConfig): Promise<ProxyTestResult> {
+	return await invoke('plugin:settings|proxy_test', { config })
 }

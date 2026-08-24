@@ -15,6 +15,10 @@ use tracing::{debug, info, warn};
 pub struct ScannedInstance {
     pub name: String,
     pub path: String,
+    #[serde(default)]
+    pub compatible_mode: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version_path: Option<String>,
 }
 
 /// One candidate inside a multi-candidate classification result.
@@ -466,6 +470,12 @@ pub async fn drop_scan_launcher_instances<R: tauri::Runtime>(
         .await
         .map_err(|e| e.to_string())?;
     info!("Scan complete — found {} instance(s)", instances.len());
+    for inst in &instances {
+        debug!(
+            "Scanned instance: name={:?} path={:?} compatible_mode={}",
+            inst.name, inst.path, inst.compatible_mode
+        );
+    }
     let _ = app.emit(
         "drop_classify_progress",
         serde_json::json!({
@@ -480,6 +490,8 @@ pub async fn drop_scan_launcher_instances<R: tauri::Runtime>(
         .map(|i| ScannedInstance {
             name: i.name,
             path: i.path,
+            compatible_mode: i.compatible_mode,
+            version_path: i.version_path,
         })
         .collect())
 }

@@ -24,7 +24,7 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use chrono::Utc;
 use daedalus as d;
-use daedalus::minecraft::{LoggingSide, RuleAction, VersionInfo};
+use daedalus::minecraft::{LoggingSide, VersionInfo};
 use daedalus::modded::{LoaderVersion, Manifest};
 use regex::Regex;
 use serde::Deserialize;
@@ -163,19 +163,16 @@ pub fn parse_rules(
     quick_play_type: &QuickPlayType,
     minecraft_updated: bool,
 ) -> bool {
-    let mut x = rules
+    if rules.is_empty() {
+        return true;
+    }
+
+    let x = rules
         .iter()
         .map(|x| {
             parse_rule(x, java_version, quick_play_type, minecraft_updated)
         })
         .collect::<Vec<Option<bool>>>();
-
-    if rules
-        .iter()
-        .all(|x| matches!(x.action, RuleAction::Disallow))
-    {
-        x.push(Some(true))
-    }
 
     !(x.iter().any(|x| x == &Some(false)) || x.iter().all(|x| x.is_none()))
 }
@@ -213,7 +210,10 @@ pub fn parse_rule(
                     && matches!(quick_play_type, QuickPlayType::Server(..)))
                 || !features.is_quick_play_realms.unwrap_or(true)
         }
-        _ => return Some(true),
+        _ => match rule.action {
+            RuleAction::Allow => return Some(true),
+            RuleAction::Disallow => return Some(false),
+        },
     };
 
     match rule.action {
@@ -221,7 +221,7 @@ pub fn parse_rule(
             if res {
                 Some(true)
             } else {
-                Some(false)
+                None
             }
         }
         RuleAction::Disallow => {
@@ -520,6 +520,7 @@ fn installed_offline_loader_version(
             | ModLoader::Cleanroom
             | ModLoader::LiteLoader
             | ModLoader::LegacyFabric
+            | ModLoader::Babric
     ) {
         return None;
     }
@@ -1548,10 +1549,20 @@ pub async fn launch_minecraft(
             Vec::new()
         };
 
-    let client_path = state
+    let vanilla_client_path = state
         .directories
         .version_dir(&version_jar)
         .join(format!("{version_jar}.jar"));
+    let client_path = match crate::api::instance::assemble_for_launch(
+        &instance_path,
+        &content_set.game_version,
+        &vanilla_client_path,
+    )
+    .await?
+    {
+        Some(assembled) => assembled,
+        None => vanilla_client_path,
+    };
 
     let args = version_info.arguments.clone().unwrap_or_default();
     let mut command = match wrapper {
@@ -1828,19 +1839,6 @@ pub async fn launch_minecraft(
     )
     .await?;
 
-    // If in tauri, and the 'minimize on launch' setting is enabled, minimize the window
-    #[cfg(feature = "tauri")]
-    {
-        use crate::EventState;
-
-        let window = EventState::get_main_window().await?;
-        if let Some(window) = window
-            && settings.hide_on_process_start
-        {
-            window.minimize()?;
-        }
-    }
-
     let _ = state
         .discord_rpc
         .set_activity(&format!("Playing {}", instance.name), true)
@@ -1952,6 +1950,19 @@ fn update_offline_skin_resource_pack_option(
 #[cfg(test)]
 mod loader_resolution_tests {
     use super::*;
+    use daedalus::minecraft::RuleAction;
+
+    #[test]
+    fn disallow_only_library_rules_are_not_downloaded() {
+        let rules = [d::minecraft::Rule {
+            action: RuleAction::Disallow,
+            os: None,
+            features: None,
+        }];
+
+        assert!(!parse_rules(&rules, "8", &QuickPlayType::None, false,));
+        assert!(parse_rules(&[], "8", &QuickPlayType::None, false,));
+    }
 
     fn loader_version(id: &str, stable: bool) -> LoaderVersion {
         LoaderVersion {

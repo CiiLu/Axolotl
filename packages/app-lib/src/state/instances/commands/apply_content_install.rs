@@ -78,6 +78,7 @@ pub(crate) struct InstanceInstallProjectRequest {
     pub content_type: ContentType,
     pub selected: ResolutionPreferences,
     pub excluded_project_ids: Vec<String>,
+    pub force_project_ids: Vec<String>,
 }
 
 struct CachedEntryContentProvider<'a> {
@@ -190,7 +191,11 @@ fn target_preferences(
     };
 
     ResolutionPreferences {
-        game_versions: vec![game_version],
+        game_versions: if content_type == ContentType::ResourcePack {
+            Vec::new()
+        } else {
+            vec![game_version]
+        },
         loaders: vec![loader],
     }
 }
@@ -232,6 +237,7 @@ pub(crate) async fn resolve_install_plan(
         ),
         existing_project_ids,
         excluded_project_ids: request.excluded_project_ids,
+        force_project_ids: request.force_project_ids,
     };
 
     modrinth_content_management::resolve_content(provider, request)
@@ -258,6 +264,7 @@ pub(crate) async fn resolve_install_plan_for_target(
         target: target_preferences(game_version, loader, content_type),
         existing_project_ids: Vec::new(),
         excluded_project_ids: request.excluded_project_ids,
+        force_project_ids: request.force_project_ids,
     };
 
     modrinth_content_management::resolve_content(provider, request)
@@ -404,6 +411,7 @@ pub(crate) async fn switch_project_version_with_dependencies(
             content_type,
             selected: ResolutionPreferences::default(),
             excluded_project_ids: Vec::new(),
+            force_project_ids: Vec::new(),
         },
         state,
     )
@@ -1736,9 +1744,57 @@ pub(crate) async fn add_project_bytes(
     source_kind: ContentSourceKind,
     state: &State,
 ) -> crate::Result<String> {
+    add_project_bytes_with_provider(
+        instance_id,
+        file_name,
+        bytes,
+        hash,
+        project_type,
+        source_kind,
+        None,
+        state,
+    )
+    .await
+}
+
+pub(crate) async fn add_project_bytes_from_provider(
+    instance_id: &str,
+    file_name: &str,
+    bytes: Bytes,
+    hash: Option<&str>,
+    project_type: ProjectType,
+    source_kind: ContentSourceKind,
+    provider_ref: &ContentProviderRef,
+    state: &State,
+) -> crate::Result<String> {
+    add_project_bytes_with_provider(
+        instance_id,
+        file_name,
+        bytes,
+        hash,
+        Some(project_type),
+        source_kind,
+        Some(provider_ref),
+        state,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn add_project_bytes_with_provider(
+    instance_id: &str,
+    file_name: &str,
+    bytes: Bytes,
+    hash: Option<&str>,
+    project_type: Option<ProjectType>,
+    source_kind: ContentSourceKind,
+    provider_ref: Option<&ContentProviderRef>,
+    state: &State,
+) -> crate::Result<String> {
     let _instance_lock = state.lock_instance_content(instance_id).await;
 
     let scope = resolve_content_scope(instance_id, None, state).await?;
+    let file_name = sanitize_file_name(file_name);
     let project_type = match project_type {
         Some(project_type) => project_type,
         None => infer_project_type(&bytes)?,
@@ -1748,6 +1804,13 @@ pub(crate) async fn add_project_bytes(
     // in one folder; extract the pack folder(s) directly so the result is
     // usable as-is — no re-packing, no recompression.
     if let Some(plan) = wrapped_pack_plan(&bytes, project_type) {
+        if provider_ref.is_some() {
+            return Err(crate::ErrorKind::InputError(
+                "Provider-managed wrapped archives are not supported"
+                    .to_string(),
+            )
+            .into());
+        }
         let install_path = install_wrapped_pack(
             &bytes,
             &plan,
@@ -1795,7 +1858,7 @@ pub(crate) async fn add_project_bytes(
         content_rows::UpsertInstanceFile {
             instance_id: &scope.instance.id,
             relative_path: &relative_path,
-            file_name,
+            file_name: &file_name,
             enabled: !relative_path.ends_with(".disabled"),
             sha1: &sha1,
             size: bytes.len() as u64,
@@ -1812,8 +1875,8 @@ pub(crate) async fn add_project_bytes(
         project_type,
         source_kind,
         ContentOwnershipKind::UserAdded,
-        None,
-        false,
+        provider_ref,
+        provider_ref.is_some(),
         state,
     )
     .await?;
@@ -3235,6 +3298,21 @@ mod tests {
     use super::*;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::time::Duration;
+
+    #[test]
+    fn resource_pack_target_preferences_ignore_game_version() {
+        assert_eq!(
+            target_preferences(
+                "26.2".to_string(),
+                ModLoader::NeoForge,
+                ContentType::ResourcePack,
+            ),
+            ResolutionPreferences {
+                game_versions: Vec::new(),
+                loaders: vec!["minecraft".to_string()],
+            },
+        );
+    }
 
     #[test]
     fn backup_relative_path_for_update_naming() {

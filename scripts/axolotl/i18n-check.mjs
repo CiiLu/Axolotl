@@ -50,6 +50,14 @@ const allowedUntranslatedMessages = new Set([
 	'TrChat',
 	'TNT',
 	'Java {version}',
+	'Studio',
+	'https://api-free.deepl.com/v2/translate',
+	'Java',
+	'Minecraft EULA',
+	'server.properties',
+	'{type} · {version}',
+	'{value} MB',
+	'> {command}',
 ])
 
 function messageText(value) {

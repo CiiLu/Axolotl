@@ -22,6 +22,8 @@ pub struct InstallProjectWithDependenciesRequest {
     pub selected: ResolutionPreferences,
     #[serde(default)]
     pub excluded_project_ids: Vec<String>,
+    #[serde(default)]
+    pub force_project_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -120,6 +122,7 @@ pub async fn install_project_with_dependencies(
             content_type: request.content_type,
             selected: request.selected,
             excluded_project_ids: request.excluded_project_ids,
+            force_project_ids: request.force_project_ids,
         },
         &state,
     )
@@ -197,6 +200,7 @@ pub async fn preview_project_with_dependencies(
             content_type: request.content_type,
             selected: request.selected,
             excluded_project_ids: request.excluded_project_ids,
+            force_project_ids: request.force_project_ids,
         },
         &state,
     )
@@ -217,6 +221,7 @@ pub async fn preview_project_with_dependencies_for_target(
             content_type: request.content_type,
             selected: request.selected,
             excluded_project_ids: request.excluded_project_ids,
+            force_project_ids: request.force_project_ids,
         },
         game_version,
         loader,
@@ -532,6 +537,11 @@ pub async fn update_content_entry(
             emit_content_changed(instance_id).await?;
             Ok(updated_path)
         }
+        Some(ContentProvider::McArchive) => Err(crate::ErrorKind::InputError(
+            "MCArchive content updates require selecting a file manually"
+                .to_string(),
+        )
+        .into()),
         _ => update_project(instance_id, &path, None).await,
     }
 }
@@ -569,6 +579,11 @@ pub async fn switch_content_entry_version(
             emit_content_changed(instance_id).await?;
             Ok(updated_path)
         }
+		Some(ContentProvider::McArchive) => Err(crate::ErrorKind::InputError(
+			"MCArchive content version changes require selecting a file manually"
+				.to_string(),
+		)
+		.into()),
         _ => {
             switch_project_version_with_dependencies(
                 instance_id,
@@ -699,6 +714,7 @@ pub async fn restore_pack_member_default(
 					world_name: None,
 					install_dependencies: false,
 					excluded_dependency_project_ids: Vec::new(),
+					force_dependency_project_ids: Vec::new(),
 					dependency_plan_id: None,
 				},
 			)
@@ -727,6 +743,13 @@ pub async fn restore_pack_member_default(
         Some(ContentProvider::Local) => {
             return Err(crate::ErrorKind::InputError(
                 "This pack member has no managed provider".to_string(),
+            )
+            .into());
+        }
+        Some(ContentProvider::McArchive) => {
+            return Err(crate::ErrorKind::InputError(
+                "MCArchive pack members must be restored from an imported file"
+                    .to_string(),
             )
             .into());
         }

@@ -27,9 +27,28 @@ pub async fn import_generic(
     details: InstallPhaseDetails,
     symlink: bool,
     overrides: &ImportOverrides,
+    instance_path: Option<PathBuf>, // For compatible mode: path to versions/<version>/
 ) -> crate::Result<()> {
-    let (name, dotminecraft) = resolve_dotminecraft(&instance_folder);
-    let info = detect_instance_info(&dotminecraft, overrides).await?;
+    let (name, dotminecraft, json_path) = if let Some(ref inst_path) =
+        instance_path
+    {
+        let name = inst_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "imported".to_string());
+        tracing::debug!(
+            "import_generic: compatible mode - dotminecraft={}, json_path={}",
+            instance_folder.display(),
+            inst_path.display()
+        );
+        (name, instance_folder.to_path_buf(), inst_path.to_path_buf())
+    } else {
+        let (name, dotminecraft) = resolve_dotminecraft(&instance_folder);
+        let json_path = dotminecraft.clone(); // JSON detection will scan dotminecraft
+        (name, dotminecraft, json_path)
+    };
+
+    let info = detect_instance_info(&json_path, overrides).await?;
     register_instance(instance_id, &name, &info).await?;
     copy_instance_files(instance_id, &dotminecraft, reporter, details, symlink)
         .await

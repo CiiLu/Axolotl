@@ -50,6 +50,8 @@ pub struct ResolveContentRequest {
     pub existing_project_ids: Vec<String>,
     #[serde(default)]
     pub excluded_project_ids: Vec<String>,
+    #[serde(default)]
+    pub force_project_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -64,6 +66,12 @@ pub struct ResolvedContent {
     pub project_id: String,
     pub version_id: String,
     pub dependent_on_version_id: Option<String>,
+    #[serde(default = "default_true")]
+    pub required: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

@@ -155,45 +155,6 @@
 	"app.action-bar.view-logs": {
 		"message": "View logs"
 	},
-	"app.ai-log-analysis.analyzing": {
-		"message": "Analyzing your log with AI...It may take up to half a minute to complete."
-	},
-	"app.ai-log-analysis.cancel": {
-		"message": "Cancel"
-	},
-	"app.ai-log-analysis.close": {
-		"message": "Close"
-	},
-	"app.ai-log-analysis.copy-link": {
-		"message": "Copy link"
-	},
-	"app.ai-log-analysis.copy-result": {
-		"message": "Copy result"
-	},
-	"app.ai-log-analysis.error": {
-		"message": "AI analysis failed: {message}"
-	},
-	"app.ai-log-analysis.link-copied": {
-		"message": "Link copied to your clipboard"
-	},
-	"app.ai-log-analysis.logshare-unavailable": {
-		"message": "LogShare.CN is unavailable, so AI analysis cannot be used (mclo.gs does not support AI analysis). {message}"
-	},
-	"app.ai-log-analysis.privacy": {
-		"message": "Your log content will be uploaded and sent to a third-party AI service to be analyzed. Treat it as public information."
-	},
-	"app.ai-log-analysis.result-copied": {
-		"message": "Analysis copied to your clipboard"
-	},
-	"app.ai-log-analysis.title": {
-		"message": "AI log analysis"
-	},
-	"app.ai-log-analysis.upload-failed": {
-		"message": "Upload failed, analyzing the log content directly without a share link."
-	},
-	"app.ai-log-analysis.uploading": {
-		"message": "Uploading your log..."
-	},
 	"app.ai-settings.add-model": {
 		"message": "Add model"
 	},
@@ -506,6 +467,12 @@
 	"app.appearance-settings.home-layout.title": {
 		"message": "Home layout"
 	},
+	"app.appearance-settings.lightweight-mode.description": {
+		"message": "Closes the launcher webview after Minecraft starts to reduce memory use. Restore it from the system tray."
+	},
+	"app.appearance-settings.lightweight-mode.title": {
+		"message": "Enter lightweight mode after launching a game"
+	},
 	"app.appearance-settings.minimize-launcher.description": {
 		"message": "Minimize the launcher when a Minecraft process starts."
 	},
@@ -701,6 +668,9 @@
 	"app.browse.project-type.datapacks": {
 		"message": "Data Packs"
 	},
+	"app.browse.project-type.favorites": {
+		"message": "Favorites"
+	},
 	"app.browse.project-type.maps": {
 		"message": "Maps"
 	},
@@ -734,8 +704,14 @@
 	"app.browse.source.curseforge": {
 		"message": "CurseForge"
 	},
+	"app.browse.source.mcarchive": {
+		"message": "MCArchive"
+	},
 	"app.browse.source.modrinth": {
 		"message": "Modrinth"
+	},
+	"app.browse.source.planet-minecraft": {
+		"message": "Planet Minecraft"
 	},
 	"app.community-announcement.feedback-middle": {
 		"message": ", or share them with us through "
@@ -755,6 +731,45 @@
 	"app.community-announcement.title": {
 		"message": "To all our users"
 	},
+	"app.content-favorites.add": {
+		"message": "Add to favorites"
+	},
+	"app.content-favorites.empty-description": {
+		"message": "Bookmark mods, resource packs, data packs, and shaders to install them later."
+	},
+	"app.content-favorites.empty-title": {
+		"message": "No favorites yet"
+	},
+	"app.content-favorites.loading": {
+		"message": "Updating favorites…"
+	},
+	"app.content-favorites.no-matches-description": {
+		"message": "Try a different search or content type."
+	},
+	"app.content-favorites.no-matches-title": {
+		"message": "No matching favorites"
+	},
+	"app.content-favorites.remove": {
+		"message": "Remove from favorites"
+	},
+	"app.content-favorites.search": {
+		"message": "Search favorites"
+	},
+	"app.content-favorites.sort.recently-saved": {
+		"message": "Recently saved"
+	},
+	"app.content-favorites.title": {
+		"message": "Favorites"
+	},
+	"app.content-favorites.type.all": {
+		"message": "All content types"
+	},
+	"app.content-favorites.unavailable-description": {
+		"message": "This project is currently unavailable. You can remove it from favorites."
+	},
+	"app.content-favorites.unavailable-title": {
+		"message": "{provider} project {projectId}"
+	},
 	"app.content-install.dependencies-installed.notification-body": {
 		"message": "Installed {count, plural, one {# dependency} other {# dependencies}} automatically: {list}"
 	},
@@ -769,6 +784,9 @@
 	},
 	"app.content-install.no-compatible-versions": {
 		"message": "No available versions match {compatibilityLabel}. Select a version to install anyway. Matching dependencies will still be installed."
+	},
+	"app.content-install.preview.already-included": {
+		"message": "Already included"
 	},
 	"app.content-install.preview.already-installed": {
 		"message": "Already installed"
@@ -815,11 +833,17 @@
 	"app.content-install.preview.only-checked": {
 		"message": "Only checked dependencies will be installed."
 	},
+	"app.content-install.preview.optional-dependencies-header": {
+		"message": "Optional dependencies"
+	},
 	"app.content-install.preview.remove-project": {
 		"message": "Remove {project} from this installation"
 	},
 	"app.content-install.preview.required-by": {
 		"message": "Required by {projects}"
+	},
+	"app.content-install.preview.required-dependencies-header": {
+		"message": "Required dependencies"
 	},
 	"app.content-install.preview.select-all": {
 		"message": "Select all"
@@ -913,6 +937,51 @@
 	},
 	"app.content.install-content": {
 		"message": "Install content"
+	},
+	"app.crash-analysis.ai.action": {
+		"message": "Use AI to explain"
+	},
+	"app.crash-analysis.ai.analyzing": {
+		"message": "Explaining the crash..."
+	},
+	"app.crash-analysis.ai.close": {
+		"message": "Close"
+	},
+	"app.crash-analysis.ai.copied": {
+		"message": "AI explanation copied to your clipboard"
+	},
+	"app.crash-analysis.ai.copy": {
+		"message": "Copy explanation"
+	},
+	"app.crash-analysis.ai.disclaimer": {
+		"message": "A sanitized and shortened crash context is sent directly to the AI provider configured in this launcher. AI output may be inaccurate."
+	},
+	"app.crash-analysis.ai.error": {
+		"message": "AI explanation failed: {message}"
+	},
+	"app.crash-analysis.ai.settings.description": {
+		"message": "Optionally send a sanitized and shortened crash context to a model configured in AI Providers."
+	},
+	"app.crash-analysis.ai.settings.enabled": {
+		"message": "Enable AI explanations"
+	},
+	"app.crash-analysis.ai.settings.enabled-description": {
+		"message": "Local rule-based crash analysis remains available without AI."
+	},
+	"app.crash-analysis.ai.settings.model": {
+		"message": "Text model"
+	},
+	"app.crash-analysis.ai.settings.no-providers": {
+		"message": "Enable a provider and a text model above before using AI crash explanations."
+	},
+	"app.crash-analysis.ai.settings.provider": {
+		"message": "AI provider"
+	},
+	"app.crash-analysis.ai.settings.title": {
+		"message": "Crash AI explanation"
+	},
+	"app.crash-analysis.ai.title": {
+		"message": "AI crash explanation"
 	},
 	"app.curseforge.automatic-downloads-failed.notification-body": {
 		"message": "{failed, number} files failed after retrying ({list}). See Downloads for the recorded errors."
@@ -1253,15 +1322,6 @@
 	"app.downloads.open-instance": {
 		"message": "Open instance"
 	},
-	"app.downloads.phase.applying-content": {
-		"message": "Applying content"
-	},
-	"app.downloads.phase.completed": {
-		"message": "Completed"
-	},
-	"app.downloads.phase.creating-backup": {
-		"message": "Creating backup"
-	},
 	"app.downloads.phase.downloading-content": {
 		"message": "Downloading content"
 	},
@@ -1300,18 +1360,6 @@
 	},
 	"app.downloads.phase.running-loader-processors": {
 		"message": "Installing loader"
-	},
-	"app.downloads.phase.staging-content": {
-		"message": "Staging content"
-	},
-	"app.downloads.phase.unknown": {
-		"message": "Working"
-	},
-	"app.downloads.phase.updating-loader": {
-		"message": "Updating loader"
-	},
-	"app.downloads.phase.verifying": {
-		"message": "Verifying"
 	},
 	"app.downloads.phase.verifying-downloaded-files": {
 		"message": "Verifying files and continuing installation"
@@ -1390,6 +1438,21 @@
 	},
 	"app.drop.batch.target-label": {
 		"message": "Select target instance for this batch"
+	},
+	"app.drop.compatible-mode-cancel": {
+		"message": "Cancel"
+	},
+	"app.drop.compatible-mode-desc": {
+		"message": "Would you like to import this as a compatible mode instance?"
+	},
+	"app.drop.compatible-mode-import": {
+		"message": "Compatible Import"
+	},
+	"app.drop.compatible-mode-old-way": {
+		"message": "Import as Old Version"
+	},
+	"app.drop.compatible-mode-title": {
+		"message": "This appears to be a pre-version-isolation instance"
 	},
 	"app.drop.content-installed-text": {
 		"message": "File has been installed to the instance."
@@ -1581,7 +1644,7 @@
 		"message": "Unable to sign in to Minecraft"
 	},
 	"app.error.minecraft-required": {
-		"message": "To play this instance, create an account. If you do not have a Minecraft account, you can log in with an offline account on the right."
+		"message": "You are not logged in to any account. Please log in below. If you do not have a licensed account, you can create an offline account or log in with a third-party service in the sidebar."
 	},
 	"app.error.minecraft-sign-in-title": {
 		"message": "Sign in to Minecraft"
@@ -2227,9 +2290,6 @@
 	},
 	"app.instance.create-shortcut": {
 		"message": "Create shortcut"
-	},
-	"app.instance.upgrade-instance": {
-		"message": "Upgrade instance"
 	},
 	"app.instance.disable-selected": {
 		"message": "Disable selected"
@@ -4601,6 +4661,15 @@
 	"app.library.title": {
 		"message": "Library"
 	},
+	"app.library.view": {
+		"message": "View"
+	},
+	"app.library.view.cards": {
+		"message": "Library cards"
+	},
+	"app.library.view.standard": {
+		"message": "Standard grid"
+	},
 	"app.memory-display.available": {
 		"message": "{memory} available"
 	},
@@ -4672,12 +4741,6 @@
 	},
 	"app.minecraft-auth.what-happened": {
 		"message": "What we think happened"
-	},
-	"app.minecraft-crash.ai-analyze": {
-		"message": "AI analysis"
-	},
-	"app.minecraft-crash.ai-unavailable": {
-		"message": "AI analysis is not supported by the current log service (mclo.gs). Switch to LogShare.CN in Settings to use it."
 	},
 	"app.minecraft-crash.analyzing": {
 		"message": "Analyzing the logs from this launch..."
@@ -4783,6 +4846,9 @@
 	},
 	"app.minecraft-crash.share-failed": {
 		"message": "Failed to share the diagnostic"
+	},
+	"app.minecraft-crash.share-ready": {
+		"message": "Diagnostic link is ready to share"
 	},
 	"app.minecraft-crash.share-truncated": {
 		"message": "The diagnostic log is too large, so only the last 9 MB was uploaded."
@@ -5087,6 +5153,12 @@
 	"app.multiplayer.switch-warning": {
 		"message": "Switching services will disconnect the current multiplayer session. Continue?"
 	},
+	"app.multiplayer.tab.rooms": {
+		"message": "Rooms"
+	},
+	"app.multiplayer.tab.servers": {
+		"message": "Servers"
+	},
 	"app.multiplayer.terracotta.public-node-invalid": {
 		"message": "Invalid node URI: {node}. Use http, https, tcp, tls, udp, ws, or wss."
 	},
@@ -5174,6 +5246,9 @@
 	"app.onboarding.action.click-downloads": {
 		"message": "Click Downloads to continue"
 	},
+	"app.onboarding.action.click-favorites": {
+		"message": "Click Favorites to continue"
+	},
 	"app.onboarding.action.click-lab": {
 		"message": "Click Lab to continue"
 	},
@@ -5223,7 +5298,7 @@
 		"message": "Bring your own AI provider"
 	},
 	"app.onboarding.appearance.description": {
-		"message": "Theme, accent, background, Home layout, and window behavior. Make this launcher look familiar."
+		"message": "Theme, accent, backgrounds, and window effects all live here. Make the launcher feel familiar."
 	},
 	"app.onboarding.appearance.title": {
 		"message": "Set the vibe"
@@ -5293,6 +5368,12 @@
 	},
 	"app.onboarding.downloads.title": {
 		"message": "Download control room"
+	},
+	"app.onboarding.favorites.description": {
+		"message": "Open Favorites to revisit saved mods, resource packs, data packs, and shaders. The launcher refreshes their project details, then you can choose an instance and add mixed sources to the same install cart."
+	},
+	"app.onboarding.favorites.title": {
+		"message": "Keep a short list"
 	},
 	"app.onboarding.home-customize.description": {
 		"message": "Use the bottom-right edit control to add, resize, and configure widgets. While editing, switch between an automatically packed grid and a free grid that preserves empty cells."
@@ -5394,13 +5475,13 @@
 		"message": "Your data, your call"
 	},
 	"app.onboarding.resources.description": {
-		"message": "Tune downloads, storage, and app resources. Give the fan a little dignity."
+		"message": "Choose how content downloads and installs, from download sources to safety checks."
 	},
 	"app.onboarding.resources.title": {
 		"message": "Do not cook the computer"
 	},
 	"app.onboarding.settings.description": {
-		"message": "The useful knobs live here: appearance, language, translation, AI providers, Java, storage, and updates."
+		"message": "The useful controls live here: launcher preferences, game launch behavior, content downloads, and privacy."
 	},
 	"app.onboarding.settings.title": {
 		"message": "Make it yours"
@@ -5483,11 +5564,86 @@
 	"app.project.install-context.back-to-browse": {
 		"message": "Back to discover"
 	},
+	"app.project.install-context.back-to-instance-content": {
+		"message": "Back to instance content"
+	},
 	"app.project.install-context.install-content-to-instance": {
 		"message": "Install content to instance"
 	},
+	"app.project.mcarchive.install": {
+		"message": "Install"
+	},
+	"app.project.mcarchive.installed": {
+		"message": "Installed {fileName}"
+	},
+	"app.project.mcarchive.loading": {
+		"message": "Loading MCArchive project…"
+	},
+	"app.project.mcarchive.manual.archive-filter": {
+		"message": "Minecraft archives"
+	},
+	"app.project.mcarchive.manual.description": {
+		"message": "{fileName} has no verifiable direct download. Download it from the source page, then import the downloaded file."
+	},
+	"app.project.mcarchive.manual.import-file": {
+		"message": "Import downloaded file"
+	},
+	"app.project.mcarchive.manual.open-source": {
+		"message": "Open source page"
+	},
+	"app.project.mcarchive.manual.pick-file": {
+		"message": "Choose downloaded archive"
+	},
+	"app.project.mcarchive.manual.title": {
+		"message": "Manual download required"
+	},
+	"app.project.mcarchive.no-files": {
+		"message": "No files are available for this release."
+	},
+	"app.project.mcarchive.sha256": {
+		"message": "SHA-256"
+	},
+	"app.project.mcarchive.source": {
+		"message": "MCArchive source"
+	},
+	"app.project.mcarchive.versions": {
+		"message": "Versions"
+	},
 	"app.project.open-in-mcmod": {
 		"message": "Open in MC Mod"
+	},
+	"app.project.planet-minecraft.install": {
+		"message": "Install"
+	},
+	"app.project.planet-minecraft.installed": {
+		"message": "Installed {fileName}"
+	},
+	"app.project.planet-minecraft.loading": {
+		"message": "Loading Planet Minecraft project…"
+	},
+	"app.project.planet-minecraft.manual.archive-filter": {
+		"message": "Minecraft archives"
+	},
+	"app.project.planet-minecraft.manual.description": {
+		"message": "{fileName} must be downloaded from Planet Minecraft, then imported here."
+	},
+	"app.project.planet-minecraft.manual.import-file": {
+		"message": "Import downloaded file"
+	},
+	"app.project.planet-minecraft.manual.open-source": {
+		"message": "Open source page"
+	},
+	"app.project.planet-minecraft.manual.pick-file": {
+		"message": "Choose downloaded archive"
+	},
+	"app.project.planet-minecraft.manual.title": {
+		"message": "Manual download required"
+	},
+	"app.project.planet-minecraft.unknown-file": {
+		"message": "Downloaded file"
+	},
+	"app.project.planet-minecraft.versions": {
+		"message": "Downloads"
 	},
 	"app.project.translation.failed": {
 		"message": "Translation failed. The original content was kept. Try again."
@@ -5539,6 +5695,522 @@
 	},
 	"app.server.search-instance": {
 		"message": "Search for an instance"
+	},
+	"app.servers.action.open-folder": {
+		"message": "Open folder"
+	},
+	"app.servers.action.share": {
+		"message": "Share online"
+	},
+	"app.servers.action.start": {
+		"message": "Start"
+	},
+	"app.servers.action.stop": {
+		"message": "Stop"
+	},
+	"app.servers.card.port": {
+		"message": "Port {port}"
+	},
+	"app.servers.card.type": {
+		"message": "{type} · {version}"
+	},
+	"app.servers.console.command-echo": {
+		"message": "> {command}"
+	},
+	"app.servers.console.not-running": {
+		"message": "The server is not running"
+	},
+	"app.servers.count": {
+		"message": "{count, plural, =0 {No servers yet} one {# server} other {# servers}}"
+	},
+	"app.servers.create.title": {
+		"message": "Create server"
+	},
+	"app.servers.detail.back": {
+		"message": "Servers"
+	},
+	"app.servers.detail.console": {
+		"message": "Console"
+	},
+	"app.servers.detail.files": {
+		"message": "Files"
+	},
+	"app.servers.detail.not-found": {
+		"message": "This server no longer exists."
+	},
+	"app.servers.detail.settings": {
+		"message": "Settings"
+	},
+	"app.servers.empty.description": {
+		"message": "Create a server to play with friends, right from the launcher."
+	},
+	"app.servers.empty.heading": {
+		"message": "No servers yet"
+	},
+	"app.servers.eula.accept": {
+		"message": "Accept and continue"
+	},
+	"app.servers.eula.decline": {
+		"message": "Cancel"
+	},
+	"app.servers.eula.description": {
+		"message": "The server must accept the Minecraft End User License Agreement before it can start. Review the notice below:"
+	},
+	"app.servers.eula.title": {
+		"message": "Minecraft EULA"
+	},
+	"app.servers.files.busy-tooltip": {
+		"message": "Stop the server to modify files"
+	},
+	"app.servers.files.open-studio": {
+		"message": "Open Studio"
+	},
+	"app.servers.files.save-as": {
+		"message": "Save as..."
+	},
+	"app.servers.files.studio-running-title": {
+		"message": "Stop the server before opening Studio"
+	},
+	"app.servers.icon.change": {
+		"message": "Change icon"
+	},
+	"app.servers.icon.edit": {
+		"message": "Edit icon"
+	},
+	"app.servers.icon.remove": {
+		"message": "Remove icon"
+	},
+	"app.servers.icon.select": {
+		"message": "Select icon"
+	},
+	"app.servers.loading": {
+		"message": "Loading servers..."
+	},
+	"app.servers.port.change": {
+		"message": "Change port"
+	},
+	"app.servers.port.conflict-description": {
+		"message": "{process} is currently occupying this port, so the server cannot start. Change the server port, or force quit the process below."
+	},
+	"app.servers.port.conflict-title": {
+		"message": "Port {port} is already in use"
+	},
+	"app.servers.port.force-quit": {
+		"message": "Force quit process"
+	},
+	"app.servers.port.force-quit-failed": {
+		"message": "Failed to quit the process occupying the port"
+	},
+	"app.servers.port.recheck": {
+		"message": "Recheck"
+	},
+	"app.servers.port.unknown-process": {
+		"message": "Unknown process (PID {pid})"
+	},
+	"app.servers.properties.field.accepts-transfers": {
+		"message": "Accept player transfers"
+	},
+	"app.servers.properties.field.allow-end": {
+		"message": "Allow the End"
+	},
+	"app.servers.properties.field.allow-flight": {
+		"message": "Allow flight"
+	},
+	"app.servers.properties.field.allow-nether": {
+		"message": "Allow the Nether"
+	},
+	"app.servers.properties.field.announce-player-achievements": {
+		"message": "Announce player achievements"
+	},
+	"app.servers.properties.field.broadcast-console-to-ops": {
+		"message": "Broadcast console to operators"
+	},
+	"app.servers.properties.field.broadcast-rcon-to-ops": {
+		"message": "Broadcast RCON to operators"
+	},
+	"app.servers.properties.field.bug-report-link": {
+		"message": "Bug report link"
+	},
+	"app.servers.properties.field.chat-spam-threshold-seconds": {
+		"message": "Chat spam threshold (seconds)"
+	},
+	"app.servers.properties.field.command-spam-threshold-seconds": {
+		"message": "Command spam threshold (seconds)"
+	},
+	"app.servers.properties.field.difficulty": {
+		"message": "Difficulty"
+	},
+	"app.servers.properties.field.enable-code-of-conduct": {
+		"message": "Enable code of conduct"
+	},
+	"app.servers.properties.field.enable-command-block": {
+		"message": "Enable command blocks"
+	},
+	"app.servers.properties.field.enable-jmx-monitoring": {
+		"message": "Enable JMX monitoring"
+	},
+	"app.servers.properties.field.enable-lan": {
+		"message": "Enable LAN"
+	},
+	"app.servers.properties.field.enable-query": {
+		"message": "Enable query"
+	},
+	"app.servers.properties.field.enable-rcon": {
+		"message": "Enable RCON"
+	},
+	"app.servers.properties.field.enable-status": {
+		"message": "Enable status"
+	},
+	"app.servers.properties.field.enforce-secure-profile": {
+		"message": "Enforce secure profile"
+	},
+	"app.servers.properties.field.enforce-whitelist": {
+		"message": "Enforce whitelist"
+	},
+	"app.servers.properties.field.entity-broadcast-range-percentage": {
+		"message": "Entity broadcast range percentage"
+	},
+	"app.servers.properties.field.force-gamemode": {
+		"message": "Force game mode"
+	},
+	"app.servers.properties.field.function-permission-level": {
+		"message": "Function permission level"
+	},
+	"app.servers.properties.field.gamemode": {
+		"message": "Game mode"
+	},
+	"app.servers.properties.field.generate-structures": {
+		"message": "Generate structures"
+	},
+	"app.servers.properties.field.generator-settings": {
+		"message": "Generator settings"
+	},
+	"app.servers.properties.field.hardcore": {
+		"message": "Hardcore"
+	},
+	"app.servers.properties.field.hide-online-players": {
+		"message": "Hide online players"
+	},
+	"app.servers.properties.field.initial-disabled-packs": {
+		"message": "Initial disabled packs"
+	},
+	"app.servers.properties.field.initial-enabled-packs": {
+		"message": "Initial enabled packs"
+	},
+	"app.servers.properties.field.level-name": {
+		"message": "Level name"
+	},
+	"app.servers.properties.field.level-seed": {
+		"message": "Level seed"
+	},
+	"app.servers.properties.field.level-type": {
+		"message": "Level type"
+	},
+	"app.servers.properties.field.log-ips": {
+		"message": "Log IP addresses"
+	},
+	"app.servers.properties.field.management-server-allowed-origins": {
+		"message": "Management server allowed origins"
+	},
+	"app.servers.properties.field.management-server-enabled": {
+		"message": "Enable management server"
+	},
+	"app.servers.properties.field.management-server-host": {
+		"message": "Management server host"
+	},
+	"app.servers.properties.field.management-server-port": {
+		"message": "Management server port"
+	},
+	"app.servers.properties.field.management-server-secret": {
+		"message": "Management server secret"
+	},
+	"app.servers.properties.field.management-server-tls-enabled": {
+		"message": "Enable management server TLS"
+	},
+	"app.servers.properties.field.management-server-tls-keystore": {
+		"message": "Management server TLS keystore"
+	},
+	"app.servers.properties.field.management-server-tls-keystore-password": {
+		"message": "Management server TLS keystore password"
+	},
+	"app.servers.properties.field.max-chained-neighbor-updates": {
+		"message": "Max chained neighbor updates"
+	},
+	"app.servers.properties.field.max-players": {
+		"message": "Max players"
+	},
+	"app.servers.properties.field.max-tick-time": {
+		"message": "Max tick time"
+	},
+	"app.servers.properties.field.max-world-size": {
+		"message": "Max world size"
+	},
+	"app.servers.properties.field.motd": {
+		"message": "Message of the day (MOTD)"
+	},
+	"app.servers.properties.field.network-compression-threshold": {
+		"message": "Network compression threshold"
+	},
+	"app.servers.properties.field.online-mode": {
+		"message": "Online mode"
+	},
+	"app.servers.properties.field.op-permission-level": {
+		"message": "OP permission level"
+	},
+	"app.servers.properties.field.pause-when-empty-seconds": {
+		"message": "Pause when empty (seconds)"
+	},
+	"app.servers.properties.field.player-idle-timeout": {
+		"message": "Player idle timeout"
+	},
+	"app.servers.properties.field.prevent-proxy-connections": {
+		"message": "Prevent proxy connections"
+	},
+	"app.servers.properties.field.pvp": {
+		"message": "Player versus player (PvP)"
+	},
+	"app.servers.properties.field.query.port": {
+		"message": "Query port"
+	},
+	"app.servers.properties.field.rate-limit": {
+		"message": "Rate limit"
+	},
+	"app.servers.properties.field.rcon.password": {
+		"message": "RCON password"
+	},
+	"app.servers.properties.field.rcon.port": {
+		"message": "RCON port"
+	},
+	"app.servers.properties.field.region-file-compression": {
+		"message": "Region file compression"
+	},
+	"app.servers.properties.field.require-resource-pack": {
+		"message": "Require resource pack"
+	},
+	"app.servers.properties.field.resource-pack": {
+		"message": "Resource pack"
+	},
+	"app.servers.properties.field.resource-pack-id": {
+		"message": "Resource pack ID"
+	},
+	"app.servers.properties.field.resource-pack-prompt": {
+		"message": "Resource pack prompt"
+	},
+	"app.servers.properties.field.resource-pack-sha1": {
+		"message": "Resource pack SHA-1"
+	},
+	"app.servers.properties.field.server-ip": {
+		"message": "Server IP"
+	},
+	"app.servers.properties.field.server-port": {
+		"message": "Server port"
+	},
+	"app.servers.properties.field.simulation-distance": {
+		"message": "Simulation distance"
+	},
+	"app.servers.properties.field.spawn-animals": {
+		"message": "Spawn animals"
+	},
+	"app.servers.properties.field.spawn-monsters": {
+		"message": "Spawn monsters"
+	},
+	"app.servers.properties.field.spawn-npcs": {
+		"message": "Spawn NPCs"
+	},
+	"app.servers.properties.field.spawn-protection": {
+		"message": "Spawn protection"
+	},
+	"app.servers.properties.field.status-heartbeat-interval": {
+		"message": "Status heartbeat interval"
+	},
+	"app.servers.properties.field.sync-chunk-writes": {
+		"message": "Sync chunk writes"
+	},
+	"app.servers.properties.field.text-filtering-config": {
+		"message": "Text filtering config"
+	},
+	"app.servers.properties.field.text-filtering-version": {
+		"message": "Text filtering version"
+	},
+	"app.servers.properties.field.use-native-transport": {
+		"message": "Use native transport"
+	},
+	"app.servers.properties.field.view-distance": {
+		"message": "View distance"
+	},
+	"app.servers.properties.field.white-list": {
+		"message": "Whitelist"
+	},
+	"app.servers.properties.load-failed": {
+		"message": "Failed to load the server configuration."
+	},
+	"app.servers.properties.missing": {
+		"message": "Start the server once to generate this file."
+	},
+	"app.servers.properties.mode.form": {
+		"message": "Form"
+	},
+	"app.servers.properties.mode.text": {
+		"message": "Text"
+	},
+	"app.servers.properties.section.advanced": {
+		"message": "Advanced"
+	},
+	"app.servers.properties.section.content": {
+		"message": "Content"
+	},
+	"app.servers.properties.section.gameplay": {
+		"message": "Gameplay"
+	},
+	"app.servers.properties.section.network": {
+		"message": "Network & Security"
+	},
+	"app.servers.properties.section.others": {
+		"message": "Other"
+	},
+	"app.servers.properties.section.world": {
+		"message": "World"
+	},
+	"app.servers.properties.title": {
+		"message": "Server properties"
+	},
+	"app.servers.refresh": {
+		"message": "Refresh"
+	},
+	"app.servers.settings.cancel": {
+		"message": "Cancel"
+	},
+	"app.servers.settings.config": {
+		"message": "Configuration"
+	},
+	"app.servers.settings.delete": {
+		"message": "Delete server"
+	},
+	"app.servers.settings.delete-confirm": {
+		"message": "Delete {name} and all of its files? This cannot be undone."
+	},
+	"app.servers.settings.delete-hint": {
+		"message": "Permanently remove this server and all of its files."
+	},
+	"app.servers.settings.delete-proceed": {
+		"message": "Delete"
+	},
+	"app.servers.settings.general": {
+		"message": "General"
+	},
+	"app.servers.settings.icon": {
+		"message": "Icon"
+	},
+	"app.servers.settings.java": {
+		"message": "Java"
+	},
+	"app.servers.settings.jvm-args": {
+		"message": "JVM arguments"
+	},
+	"app.servers.settings.jvm-args-hint": {
+		"message": "Space-separated arguments, e.g. -XX:+UseG1GC"
+	},
+	"app.servers.settings.memory": {
+		"message": "Memory"
+	},
+	"app.servers.settings.name": {
+		"message": "Server name"
+	},
+	"app.servers.settings.running-hint": {
+		"message": "Your changes will take effect the next time the server starts."
+	},
+	"app.servers.settings.running-title": {
+		"message": "Server is running"
+	},
+	"app.servers.settings.save": {
+		"message": "Save changes"
+	},
+	"app.servers.settings.saved": {
+		"message": "Server settings saved"
+	},
+	"app.servers.status.crashed": {
+		"message": "Crashed"
+	},
+	"app.servers.status.created": {
+		"message": "Not set up"
+	},
+	"app.servers.status.eula-pending": {
+		"message": "EULA pending"
+	},
+	"app.servers.status.ready": {
+		"message": "Ready"
+	},
+	"app.servers.status.running": {
+		"message": "Running"
+	},
+	"app.servers.status.starting": {
+		"message": "Starting"
+	},
+	"app.servers.wizard.configure-heading": {
+		"message": "Adjust the server settings, or finish to edit them later."
+	},
+	"app.servers.wizard.configure-title": {
+		"message": "Configure"
+	},
+	"app.servers.wizard.done": {
+		"message": "Server ready"
+	},
+	"app.servers.wizard.downloading": {
+		"message": "Downloading server files..."
+	},
+	"app.servers.wizard.eula-wait": {
+		"message": "Waiting for EULA confirmation"
+	},
+	"app.servers.wizard.failed": {
+		"message": "Setup failed"
+	},
+	"app.servers.wizard.finish": {
+		"message": "Finish"
+	},
+	"app.servers.wizard.first-run": {
+		"message": "Running first start..."
+	},
+	"app.servers.wizard.game-version": {
+		"message": "Game version"
+	},
+	"app.servers.wizard.install-title": {
+		"message": "Install"
+	},
+	"app.servers.wizard.java-too-old": {
+		"message": "Java {selected} cannot run this game version; Java {required} or newer is required."
+	},
+	"app.servers.wizard.loader-version": {
+		"message": "Loader version"
+	},
+	"app.servers.wizard.log": {
+		"message": "Output"
+	},
+	"app.servers.wizard.memory-value": {
+		"message": "{value} MB"
+	},
+	"app.servers.wizard.name": {
+		"message": "Server name"
+	},
+	"app.servers.wizard.name-placeholder": {
+		"message": "Survival server"
+	},
+	"app.servers.wizard.next": {
+		"message": "Next"
+	},
+	"app.servers.wizard.retry": {
+		"message": "Retry"
+	},
+	"app.servers.wizard.setup-title": {
+		"message": "Setup"
+	},
+	"app.servers.wizard.show-snapshots": {
+		"message": "Show snapshots"
+	},
+	"app.servers.wizard.type-heading": {
+		"message": "Choose a server type"
+	},
+	"app.servers.wizard.type-title": {
+		"message": "Server type"
 	},
 	"app.settings.about.afdian": {
 		"message": "Support on Afdian"
@@ -5611,6 +6283,12 @@
 	},
 	"app.settings.about.repository": {
 		"message": "Source code"
+	},
+	"app.settings.about.survey": {
+		"message": "Community survey"
+	},
+	"app.settings.about.survey-description": {
+		"message": "Help us improve Axolotl Launcher"
 	},
 	"app.settings.about.test-error": {
 		"message": "Trigger test error"
@@ -5720,6 +6398,21 @@
 	"app.settings.feature-flags.reset-to-default": {
 		"message": "Reset to default"
 	},
+	"app.settings.groups.data-privacy": {
+		"message": "Data & privacy"
+	},
+	"app.settings.groups.developer": {
+		"message": "Developer"
+	},
+	"app.settings.groups.game": {
+		"message": "Game"
+	},
+	"app.settings.groups.launcher": {
+		"message": "Launcher"
+	},
+	"app.settings.groups.support": {
+		"message": "App & support"
+	},
 	"app.settings.java.auto-high-performance-mode": {
 		"message": "Automatically use high-performance GPU for Java"
 	},
@@ -5803,30 +6496,6 @@
 	},
 	"app.settings.java.view-installed": {
 		"message": "View installed Java"
-	},
-	"app.settings.logs.description": {
-		"message": "Choose the service used to analyze and share Minecraft logs. LogShare.CN is preferred and mclo.gs is used as a fallback so sharing keeps working."
-	},
-	"app.settings.logs.provider.auto": {
-		"message": "Automatic (recommended)"
-	},
-	"app.settings.logs.provider.auto-description": {
-		"message": "Prefers LogShare.CN, automatically switching to mclo.gs when it is unavailable."
-	},
-	"app.settings.logs.provider.logshare": {
-		"message": "LogShare.CN"
-	},
-	"app.settings.logs.provider.logshare-description": {
-		"message": "Uses LogShare.CN for analysis and sharing, including AI analysis, falling back to mclo.gs when unavailable."
-	},
-	"app.settings.logs.provider.mclogs": {
-		"message": "mclo.gs"
-	},
-	"app.settings.logs.provider.mclogs-description": {
-		"message": "Uses mclo.gs for analysis and sharing. AI analysis is not available."
-	},
-	"app.settings.logs.title": {
-		"message": "Log analysis service"
 	},
 	"app.settings.privacy.data-handling": {
 		"message": "Telemetry uses a random installation identifier. Error context is sanitized and limited before it leaves this device. Turning telemetry off clears pending reports immediately."
@@ -5948,6 +6617,60 @@
 	"app.settings.resources.open-backups-folder": {
 		"message": "Open backups folder"
 	},
+	"app.settings.resources.proxy-mode": {
+		"message": "Proxy mode"
+	},
+	"app.settings.resources.proxy-mode.custom": {
+		"message": "Custom proxy"
+	},
+	"app.settings.resources.proxy-mode.none": {
+		"message": "No proxy (direct connection)"
+	},
+	"app.settings.resources.proxy-mode.system": {
+		"message": "Use system proxy"
+	},
+	"app.settings.resources.proxy-password": {
+		"message": "Password"
+	},
+	"app.settings.resources.proxy-password-placeholder": {
+		"message": "Password (optional)"
+	},
+	"app.settings.resources.proxy-settings": {
+		"message": "Proxy settings"
+	},
+	"app.settings.resources.proxy-settings-description": {
+		"message": "Configure how the launcher connects to the internet. System proxy follows your OS settings. Custom proxy lets you specify a URL with optional authentication."
+	},
+	"app.settings.resources.proxy-test": {
+		"message": "Test connection"
+	},
+	"app.settings.resources.proxy-test-failed": {
+		"message": "Connection failed"
+	},
+	"app.settings.resources.proxy-test-success": {
+		"message": "Connection successful"
+	},
+	"app.settings.resources.proxy-test-success-latency": {
+		"message": "Connection successful ({latency} ms)"
+	},
+	"app.settings.resources.proxy-testing": {
+		"message": "Testing..."
+	},
+	"app.settings.resources.proxy-url": {
+		"message": "Proxy URL"
+	},
+	"app.settings.resources.proxy-url-placeholder": {
+		"message": "http/https/socks5://ip:port"
+	},
+	"app.settings.resources.proxy-url-required": {
+		"message": "Proxy URL is required"
+	},
+	"app.settings.resources.proxy-username": {
+		"message": "Username"
+	},
+	"app.settings.resources.proxy-username-placeholder": {
+		"message": "Username (optional)"
+	},
 	"app.settings.resources.purge-cache": {
 		"message": "Purge cache"
 	},
@@ -5992,6 +6715,30 @@
 	},
 	"app.settings.resources.system-downloads-directory": {
 		"message": "System Downloads folder"
+	},
+	"app.settings.save-status.error": {
+		"message": "Could not save"
+	},
+	"app.settings.save-status.retry": {
+		"message": "Retry"
+	},
+	"app.settings.save-status.saved": {
+		"message": "Saved"
+	},
+	"app.settings.save-status.saving": {
+		"message": "Saving…"
+	},
+	"app.settings.search.clear": {
+		"message": "Clear settings search"
+	},
+	"app.settings.search.empty": {
+		"message": "No settings match your search."
+	},
+	"app.settings.search.placeholder": {
+		"message": "Search settings"
+	},
+	"app.settings.search.results": {
+		"message": "Search results"
 	},
 	"app.settings.storage.actual-size-tooltip": {
 		"message": "Actual size: {size}"
@@ -6089,41 +6836,8 @@
 	"app.settings.storage.world": {
 		"message": "World"
 	},
-	"app.settings.tabs.about": {
-		"message": "About"
-	},
-	"app.settings.tabs.ai": {
-		"message": "AI"
-	},
-	"app.settings.tabs.appearance": {
-		"message": "Appearance"
-	},
-	"app.settings.tabs.default-instance-options": {
-		"message": "Default instance options"
-	},
-	"app.settings.tabs.java-installations": {
-		"message": "Java installations"
-	},
-	"app.settings.tabs.language": {
-		"message": "Language"
-	},
-	"app.settings.tabs.multiplayer": {
-		"message": "Multiplayer"
-	},
-	"app.settings.tabs.privacy-security": {
-		"message": "Privacy & security"
-	},
-	"app.settings.tabs.resource-management": {
-		"message": "Resource management"
-	},
 	"app.settings.tabs.storage": {
 		"message": "Storage"
-	},
-	"app.settings.tabs.translation": {
-		"message": "Translation"
-	},
-	"app.settings.tabs.updates": {
-		"message": "Updates"
 	},
 	"app.settings.updates.announcements.description": {
 		"message": "See what changed in this version and browse previous releases."
@@ -6160,6 +6874,9 @@
 	},
 	"app.settings.updates.github": {
 		"message": "GitHub"
+	},
+	"app.settings.updates.miawa": {
+		"message": "LemwoodMirror"
 	},
 	"app.settings.updates.offline": {
 		"message": "Connect to the internet to check for updates."
@@ -6353,6 +7070,21 @@
 	"app.splash.updating-app-directory": {
 		"message": "Updating app directory..."
 	},
+	"app.survey-promotion.defer-hint": {
+		"message": "If you close this dialog, you can still find the survey later in Settings > About."
+	},
+	"app.survey-promotion.fill-survey": {
+		"message": "Fill out the survey"
+	},
+	"app.survey-promotion.intro": {
+		"message": "To help us improve Axolotl Launcher, we have prepared a short survey and would love to hear your feedback."
+	},
+	"app.survey-promotion.reward": {
+		"message": "Lucky participants will be drawn to win a genuine Minecraft account (redeemable for cash)."
+	},
+	"app.survey-promotion.title": {
+		"message": "Community survey"
+	},
 	"app.symlink-capability.unsupported": {
 		"message": "This system does not support creating symbolic links."
 	},
@@ -6401,6 +7133,21 @@
 	"app.translation-settings.clear-cache": {
 		"message": "Clear translation cache"
 	},
+	"app.translation-settings.deepl-api-endpoint": {
+		"message": "API endpoint"
+	},
+	"app.translation-settings.deepl-api-endpoint-placeholder": {
+		"message": "https://api-free.deepl.com/v2/translate"
+	},
+	"app.translation-settings.deepl-api-key": {
+		"message": "API key"
+	},
+	"app.translation-settings.deepl-api-key-hint": {
+		"message": "Get a free key at deepl.com/pro-api"
+	},
+	"app.translation-settings.deepl-api-key-placeholder": {
+		"message": "Enter your DeepL API key"
+	},
 	"app.translation-settings.description": {
 		"message": "Translate Modrinth project titles, summaries, and descriptions while browsing content."
 	},
@@ -6425,11 +7172,11 @@
 	"app.translation-settings.provider.ai": {
 		"message": "AI model"
 	},
+	"app.translation-settings.provider.deepl": {
+		"message": "DeepL"
+	},
 	"app.translation-settings.provider.google": {
 		"message": "Google Translate (free)"
-	},
-	"app.translation-settings.provider.microsoft": {
-		"message": "Microsoft Translate (unavailable)"
 	},
 	"app.translation-settings.style": {
 		"message": "Translation style"
@@ -7145,8 +7892,113 @@
 	"instance.files.open-in-schematic-workshop": {
 		"message": "Open in schematic workshop"
 	},
+	"instance.files.open-studio": {
+		"message": "Open Studio"
+	},
 	"instance.files.save-as": {
 		"message": "Save as..."
+	},
+	"instance.files.studio.back-to-files": {
+		"message": "Exit"
+	},
+	"instance.files.studio.copy": {
+		"message": "Copy"
+	},
+	"instance.files.studio.create": {
+		"message": "Create"
+	},
+	"instance.files.studio.create-item": {
+		"message": "Create item"
+	},
+	"instance.files.studio.cut": {
+		"message": "Cut"
+	},
+	"instance.files.studio.delete": {
+		"message": "Move to trash"
+	},
+	"instance.files.studio.editor-loading": {
+		"message": "Loading editor..."
+	},
+	"instance.files.studio.empty-description": {
+		"message": "Open any text file from the explorer."
+	},
+	"instance.files.studio.empty-title": {
+		"message": "Select a configuration file"
+	},
+	"instance.files.studio.files": {
+		"message": "Explorer"
+	},
+	"instance.files.studio.format": {
+		"message": "Format"
+	},
+	"instance.files.studio.item-name": {
+		"message": "Name"
+	},
+	"instance.files.studio.load-directory-failed": {
+		"message": "Could not load directory"
+	},
+	"instance.files.studio.load-file-failed": {
+		"message": "Could not open file"
+	},
+	"instance.files.studio.loading-file": {
+		"message": "Loading file..."
+	},
+	"instance.files.studio.nbt-load-failed": {
+		"message": "Could not parse NBT file"
+	},
+	"instance.files.studio.nbt.add": {
+		"message": "Add child"
+	},
+	"instance.files.studio.nbt.add-placeholder": {
+		"message": "name:value"
+	},
+	"instance.files.studio.nbt.collapse": {
+		"message": "Collapse node"
+	},
+	"instance.files.studio.nbt.expand": {
+		"message": "Expand node"
+	},
+	"instance.files.studio.nbt.remove": {
+		"message": "Remove node"
+	},
+	"instance.files.studio.nbt.snbt": {
+		"message": "SNBT"
+	},
+	"instance.files.studio.nbt.tree": {
+		"message": "Tree"
+	},
+	"instance.files.studio.new-file": {
+		"message": "New file"
+	},
+	"instance.files.studio.new-folder": {
+		"message": "New folder"
+	},
+	"instance.files.studio.non-text-file": {
+		"message": "This file is not a text file and cannot be opened."
+	},
+	"instance.files.studio.not-text-file": {
+		"message": "This file is not a text file and cannot be opened in Studio."
+	},
+	"instance.files.studio.open-in-system": {
+		"message": "Open in system"
+	},
+	"instance.files.studio.open-path": {
+		"message": "Open path"
+	},
+	"instance.files.studio.operation-failed": {
+		"message": "File operation failed"
+	},
+	"instance.files.studio.paste": {
+		"message": "Paste"
+	},
+	"instance.files.studio.refresh": {
+		"message": "Refresh files"
+	},
+	"instance.files.studio.save-failed": {
+		"message": "Could not save file"
+	},
+	"instance.files.studio.title": {
+		"message": "Studio"
 	},
 	"instance.logs.delete.latest-running": {
 		"message": "Cannot delete latest.log while the instance is running"
@@ -7171,6 +8023,81 @@
 	},
 	"instance.server-modal.resource-pack": {
 		"message": "Resource pack"
+	},
+	"instance.settings.tabs.core-components": {
+		"message": "Core components"
+	},
+	"instance.settings.tabs.core-components.add": {
+		"message": "Add to Minecraft.jar"
+	},
+	"instance.settings.tabs.core-components.failure": {
+		"message": "Failure"
+	},
+	"instance.settings.tabs.core-components.import-modloader": {
+		"message": "Import verified ModLoader archive"
+	},
+	"instance.settings.tabs.core-components.jar-filter": {
+		"message": "Minecraft archives"
+	},
+	"instance.settings.tabs.core-components.jar-mod": {
+		"message": "JAR mod"
+	},
+	"instance.settings.tabs.core-components.modloader": {
+		"message": "Install ModLoader"
+	},
+	"instance.settings.tabs.core-components.modloader-installed": {
+		"message": "Installed ModLoader {fileName}"
+	},
+	"instance.settings.tabs.core-components.modloader-manual": {
+		"message": "{fileName} needs a manual download. Download it from the source page, then import the verified archive here."
+	},
+	"instance.settings.tabs.core-components.move-down": {
+		"message": "Move down"
+	},
+	"instance.settings.tabs.core-components.move-up": {
+		"message": "Move up"
+	},
+	"instance.settings.tabs.core-components.open-source": {
+		"message": "Open source page"
+	},
+	"instance.settings.tabs.core-components.pick-jar": {
+		"message": "Choose core archive"
+	},
+	"instance.settings.tabs.core-components.pick-modloader": {
+		"message": "Choose downloaded ModLoader archive"
+	},
+	"instance.settings.tabs.core-components.preview": {
+		"message": "Preview assembled JAR"
+	},
+	"instance.settings.tabs.core-components.previewed": {
+		"message": "Assembled {components} components into {entries} entries"
+	},
+	"instance.settings.tabs.core-components.remove": {
+		"message": "Remove"
+	},
+	"instance.settings.tabs.core-components.replace": {
+		"message": "Replace Minecraft.jar"
+	},
+	"instance.settings.tabs.core-components.replacement": {
+		"message": "Replacement JAR"
+	},
+	"instance.settings.tabs.core-components.restore": {
+		"message": "Restore"
+	},
+	"instance.settings.tabs.core-components.sha1": {
+		"message": "SHA-1"
+	},
+	"instance.settings.tabs.core-components.sha256": {
+		"message": "SHA-256"
+	},
+	"instance.settings.tabs.core-components.source": {
+		"message": "Source"
+	},
+	"instance.settings.tabs.core-components.target-version": {
+		"message": "Target Minecraft version"
+	},
+	"instance.settings.tabs.core-components.title": {
+		"message": "Core components"
 	},
 	"instance.settings.tabs.general": {
 		"message": "General"
@@ -7360,6 +8287,258 @@
 	},
 	"instance.settings.tabs.window.width.enter": {
 		"message": "Enter width..."
+	},
+	"instance.worlds.a_minecraft_server": {
+		"message": "A Minecraft Server"
+	},
+	"instance.worlds.cant_connect": {
+		"message": "Can't connect to server"
+	},
+	"instance.worlds.copy_address": {
+		"message": "Copy address"
+	},
+	"instance.worlds.create_shortcut": {
+		"message": "Create shortcut"
+	},
+	"instance.worlds.game_already_open": {
+		"message": "Instance is already open"
+	},
+	"instance.worlds.hardcore": {
+		"message": "Hardcore mode"
+	},
+	"instance.worlds.incompatible_server": {
+		"message": "Server is incompatible"
+	},
+	"instance.worlds.linked_server": {
+		"message": "Managed by server project"
+	},
+	"instance.worlds.no_contact": {
+		"message": "Server couldn't be contacted"
+	},
+	"instance.worlds.no_server_quick_play": {
+		"message": "You can only jump straight into servers on Minecraft Alpha 1.0.5+"
+	},
+	"instance.worlds.no_singleplayer_quick_play": {
+		"message": "You can only jump straight into singleplayer worlds on Minecraft 1.20+"
+	},
+	"instance.worlds.play_instance": {
+		"message": "Play instance"
+	},
+	"instance.worlds.view_instance": {
+		"message": "View instance"
+	},
+	"instance.worlds.world_in_use": {
+		"message": "World is in use"
+	},
+	"minecraft-account.add-microsoft-account": {
+		"message": "Add Microsoft account"
+	},
+	"minecraft-account.add-offline-account": {
+		"message": "Add offline account"
+	},
+	"minecraft-account.add-third-party-account": {
+		"message": "Add third-party account"
+	},
+	"minecraft-account.copy-uuid": {
+		"message": "Copy UUID"
+	},
+	"minecraft-account.label": {
+		"message": "Minecraft account"
+	},
+	"minecraft-account.not-signed-in": {
+		"message": "Not signed in"
+	},
+	"minecraft-account.official-badge": {
+		"message": "Official"
+	},
+	"minecraft-account.offline-account": {
+		"message": "Offline Minecraft account"
+	},
+	"minecraft-account.offline-badge": {
+		"message": "Offline"
+	},
+	"minecraft-account.offline-modal.chinese-username-warning": {
+		"message": "Minecraft 1.18 and newer may reject Chinese usernames when entering singleplayer worlds or servers. Use this account with an older version, or choose an English username for newer versions."
+	},
+	"minecraft-account.offline-modal.create": {
+		"message": "Create account"
+	},
+	"minecraft-account.offline-modal.custom-uuid": {
+		"message": "Custom UUID"
+	},
+	"minecraft-account.offline-modal.custom-uuid-duplicate": {
+		"message": "An account with this UUID already exists. Please use a different UUID."
+	},
+	"minecraft-account.offline-modal.custom-uuid-input-label": {
+		"message": "UUID"
+	},
+	"minecraft-account.offline-modal.custom-uuid-placeholder": {
+		"message": "00000000-0000-0000-0000-000000000000"
+	},
+	"minecraft-account.offline-modal.custom-uuid-validation": {
+		"message": "Use 32 hexadecimal characters. Hyphens are optional."
+	},
+	"minecraft-account.offline-modal.custom-uuid-warning": {
+		"message": "If you don't understand what this is, do not enable this feature."
+	},
+	"minecraft-account.offline-modal.description": {
+		"message": "Choose the username used in offline games. This account can only join servers that allow offline players."
+	},
+	"minecraft-account.offline-modal.title": {
+		"message": "Add offline account"
+	},
+	"minecraft-account.offline-modal.username-label": {
+		"message": "Minecraft username"
+	},
+	"minecraft-account.offline-modal.username-placeholder": {
+		"message": "Enter a username"
+	},
+	"minecraft-account.offline-modal.username-validation": {
+		"message": "Use 1–16 letters, numbers, or underscores, including Chinese characters."
+	},
+	"minecraft-account.offline-mode": {
+		"message": "Offline mode"
+	},
+	"minecraft-account.offline-mode.description": {
+		"message": "Only offline accounts are available. You can launch fully downloaded instances."
+	},
+	"minecraft-account.offline-mode.refresh": {
+		"message": "Refresh connection status"
+	},
+	"minecraft-account.remove-account": {
+		"message": "Remove account"
+	},
+	"minecraft-account.select-account": {
+		"message": "Select account"
+	},
+	"minecraft-account.sign-in": {
+		"message": "Sign in to Minecraft"
+	},
+	"minecraft-account.third-party-account": {
+		"message": "Third-party Minecraft account"
+	},
+	"minecraft-account.third-party-badge": {
+		"message": "Third-party"
+	},
+	"minecraft-account.third-party-modal.account": {
+		"message": "Account or email"
+	},
+	"minecraft-account.third-party-modal.account-placeholder": {
+		"message": "Enter your account or email"
+	},
+	"minecraft-account.third-party-modal.api-root": {
+		"message": "Yggdrasil API address"
+	},
+	"minecraft-account.third-party-modal.api-root-placeholder": {
+		"message": "https://example.com/api/yggdrasil"
+	},
+	"minecraft-account.third-party-modal.description": {
+		"message": "Use LittleSkin or another compatible Yggdrasil authentication service."
+	},
+	"minecraft-account.third-party-modal.littleskin": {
+		"message": "Use LittleSkin"
+	},
+	"minecraft-account.third-party-modal.password": {
+		"message": "Password"
+	},
+	"minecraft-account.third-party-modal.remember-password": {
+		"message": "Save this login on this device"
+	},
+	"minecraft-account.third-party-modal.remove-saved-login": {
+		"message": "Remove saved login"
+	},
+	"minecraft-account.third-party-modal.saved-logins": {
+		"message": "Saved logins"
+	},
+	"minecraft-account.third-party-modal.sign-in": {
+		"message": "Sign in"
+	},
+	"minecraft-account.third-party-modal.title": {
+		"message": "Sign in with a third-party service"
+	},
+	"minecraft-account.third-party-profile.description": {
+		"message": "Choose the Minecraft profile to use with this account."
+	},
+	"minecraft-account.third-party-profile.title": {
+		"message": "Select a profile"
+	},
+	"project.description.title": {
+		"message": "Description"
+	},
+	"project.gallery.title": {
+		"message": "Gallery"
+	},
+	"project.versions.title": {
+		"message": "Versions"
+	},
+	"search.filter.locked.instance": {
+		"message": "Provided by the instance"
+	},
+	"search.filter.locked.instance-game-version.title": {
+		"message": "Game version is provided by the instance"
+	},
+	"search.filter.locked.instance-loader.title": {
+		"message": "Loader is provided by the instance"
+	},
+	"search.filter.locked.instance.sync": {
+		"message": "Sync with instance"
+	},
+	"search.filter.locked.server": {
+		"message": "Provided by the server"
+	},
+	"search.filter.locked.server-environment.title": {
+		"message": "Only client-side mods can be added to the server instance"
+	},
+	"search.filter.locked.server-game-version.title": {
+		"message": "Game version is provided by the server"
+	},
+	"search.filter.locked.server-loader.title": {
+		"message": "Loader is provided by the server"
+	},
+	"unknown-pack-warning-modal.body": {
+		"message": "A file is only reviewed if it’s uploaded to Modrinth, regardless of its file format (including .mrpack)."
+	},
+	"unknown-pack-warning-modal.dont-show-again": {
+		"message": "Don't show this warning again"
+	},
+	"unknown-pack-warning-modal.header": {
+		"message": "Confirm installation"
+	},
+	"unknown-pack-warning-modal.install-anyway": {
+		"message": "Install anyway"
+	},
+	"unknown-pack-warning-modal.malware-statement": {
+		"message": "Malware is often distributed through modpack files by sharing them on platforms like Discord."
+	},
+	"unknown-pack-warning-modal.warning.body": {
+		"message": "We couldn't find this file on Modrinth. We strongly recommend only installing files from sources you trust."
+	},
+	"unknown-pack-warning-modal.warning.title": {
+		"message": "Unknown file warning"
+	},
+	"app.downloads.phase.applying-content": {
+		"message": "Applying content"
+	},
+	"app.downloads.phase.completed": {
+		"message": "Completed"
+	},
+	"app.downloads.phase.creating-backup": {
+		"message": "Creating backup"
+	},
+	"app.downloads.phase.staging-content": {
+		"message": "Staging content"
+	},
+	"app.downloads.phase.unknown": {
+		"message": "Working"
+	},
+	"app.downloads.phase.updating-loader": {
+		"message": "Updating loader"
+	},
+	"app.downloads.phase.verifying": {
+		"message": "Verifying"
+	},
+	"app.instance.upgrade-instance": {
+		"message": "Upgrade instance"
 	},
 	"instance.upgrade.action.add-dependency": {
 		"message": "Add dependency"
@@ -8012,292 +9191,138 @@
 	"instance.upgrade.select.title": {
 		"message": "Upgrade instance"
 	},
-	"instance.worlds.a_minecraft_server": {
-		"message": "A Minecraft Server"
+	"instance.upgrade.result.title": {
+		"message": "Upgrade complete"
 	},
-	"instance.worlds.cant_connect": {
-		"message": "Can't connect to server"
-	},
-	"instance.worlds.copy_address": {
-		"message": "Copy address"
-	},
-	"instance.worlds.create_shortcut": {
-		"message": "Create shortcut"
-	},
-	"instance.worlds.game_already_open": {
-		"message": "Instance is already open"
-	},
-	"instance.worlds.hardcore": {
-		"message": "Hardcore mode"
-	},
-	"instance.worlds.incompatible_server": {
-		"message": "Server is incompatible"
-	},
-	"instance.worlds.linked_server": {
-		"message": "Managed by server project"
-	},
-	"instance.worlds.no_contact": {
-		"message": "Server couldn't be contacted"
-	},
-	"instance.worlds.no_server_quick_play": {
-		"message": "You can only jump straight into servers on Minecraft Alpha 1.0.5+"
-	},
-	"instance.worlds.no_singleplayer_quick_play": {
-		"message": "You can only jump straight into singleplayer worlds on Minecraft 1.20+"
-	},
-	"instance.worlds.play_instance": {
-		"message": "Play instance"
-	},
-	"instance.worlds.view_instance": {
-		"message": "View instance"
-	},
-	"instance.worlds.world_in_use": {
-		"message": "World is in use"
-	},
-	"minecraft-account.add-microsoft-account": {
-		"message": "Add Microsoft account"
-	},
-	"minecraft-account.add-offline-account": {
-		"message": "Add offline account"
-	},
-	"minecraft-account.add-third-party-account": {
-		"message": "Add third-party account"
-	},
-	"minecraft-account.copy-uuid": {
-		"message": "Copy UUID"
-	},
-	"minecraft-account.label": {
-		"message": "Minecraft account"
-	},
-	"minecraft-account.not-signed-in": {
-		"message": "Not signed in"
-	},
-	"minecraft-account.official-badge": {
-		"message": "Official"
-	},
-	"minecraft-account.offline-account": {
-		"message": "Offline Minecraft account"
-	},
-	"minecraft-account.offline-badge": {
-		"message": "Offline"
-	},
-	"minecraft-account.offline-modal.chinese-username-warning": {
-		"message": "Minecraft 1.18 and newer may reject Chinese usernames when entering singleplayer worlds or servers. Use this account with an older version, or choose an English username for newer versions."
-	},
-	"minecraft-account.offline-modal.create": {
-		"message": "Create account"
-	},
-	"minecraft-account.offline-modal.custom-uuid": {
-		"message": "Custom UUID"
-	},
-	"minecraft-account.offline-modal.custom-uuid-duplicate": {
-		"message": "An account with this UUID already exists. Please use a different UUID."
-	},
-	"minecraft-account.offline-modal.custom-uuid-input-label": {
-		"message": "UUID"
-	},
-	"minecraft-account.offline-modal.custom-uuid-placeholder": {
-		"message": "00000000-0000-0000-0000-000000000000"
-	},
-	"minecraft-account.offline-modal.custom-uuid-validation": {
-		"message": "Use 32 hexadecimal characters. Hyphens are optional."
-	},
-	"minecraft-account.offline-modal.custom-uuid-warning": {
-		"message": "If you don't understand what this is, do not enable this feature."
-	},
-	"minecraft-account.offline-modal.description": {
-		"message": "Choose the username used in offline games. This account can only join servers that allow offline players."
-	},
-	"minecraft-account.offline-modal.title": {
-		"message": "Add offline account"
-	},
-	"minecraft-account.offline-modal.username-label": {
-		"message": "Minecraft username"
-	},
-	"minecraft-account.offline-modal.username-placeholder": {
-		"message": "Enter a username"
-	},
-	"minecraft-account.offline-modal.username-validation": {
-		"message": "Use 1–16 letters, numbers, or underscores, including Chinese characters."
-	},
-	"minecraft-account.offline-mode": {
-		"message": "Offline mode"
-	},
-	"minecraft-account.offline-mode.description": {
-		"message": "Only offline accounts are available. You can launch fully downloaded instances."
-	},
-	"minecraft-account.offline-mode.refresh": {
-		"message": "Refresh connection status"
-	},
-	"minecraft-account.remove-account": {
-		"message": "Remove account"
-	},
-	"minecraft-account.select-account": {
-		"message": "Select account"
-	},
-	"minecraft-account.sign-in": {
-		"message": "Sign in to Minecraft"
-	},
-	"minecraft-account.third-party-account": {
-		"message": "Third-party Minecraft account"
-	},
-	"minecraft-account.third-party-badge": {
-		"message": "Third-party"
-	},
-	"minecraft-account.third-party-modal.account": {
-		"message": "Account or email"
-	},
-	"minecraft-account.third-party-modal.account-placeholder": {
-		"message": "Enter your account or email"
-	},
-	"minecraft-account.third-party-modal.api-root": {
-		"message": "Yggdrasil API address"
-	},
-	"minecraft-account.third-party-modal.api-root-placeholder": {
-		"message": "https://example.com/api/yggdrasil"
-	},
-	"minecraft-account.third-party-modal.description": {
-		"message": "Use LittleSkin or another compatible Yggdrasil authentication service."
-	},
-	"minecraft-account.third-party-modal.littleskin": {
-		"message": "Use LittleSkin"
-	},
-	"minecraft-account.third-party-modal.password": {
-		"message": "Password"
-	},
-	"minecraft-account.third-party-modal.remember-password": {
-		"message": "Save this login on this device"
-	},
-	"minecraft-account.third-party-modal.remove-saved-login": {
-		"message": "Remove saved login"
-	},
-	"minecraft-account.third-party-modal.saved-logins": {
-		"message": "Saved logins"
-	},
-	"minecraft-account.third-party-modal.sign-in": {
-		"message": "Sign in"
-	},
-	"minecraft-account.third-party-modal.title": {
-		"message": "Sign in with a third-party service"
-	},
-	"minecraft-account.third-party-profile.description": {
-		"message": "Choose the Minecraft profile to use with this account."
-	},
-	"minecraft-account.third-party-profile.title": {
-		"message": "Select a profile"
-	},
-	"project.description.title": {
-		"message": "Description"
-	},
-	"project.gallery.title": {
-		"message": "Gallery"
-	},
-	"project.versions.title": {
-		"message": "Versions"
-	},
-	"search.filter.locked.instance": {
-		"message": "Provided by the instance"
-	},
-	"search.filter.locked.instance-game-version.title": {
-		"message": "Game version is provided by the instance"
-	},
-	"search.filter.locked.instance-loader.title": {
-		"message": "Loader is provided by the instance"
-	},
-	"search.filter.locked.instance.sync": {
-		"message": "Sync with instance"
-	},
-	"search.filter.locked.server": {
-		"message": "Provided by the server"
-	},
-	"search.filter.locked.server-environment.title": {
-		"message": "Only client-side mods can be added to the server instance"
-	},
-	"search.filter.locked.server-game-version.title": {
-		"message": "Game version is provided by the server"
-	},
-	"search.filter.locked.server-loader.title": {
-		"message": "Loader is provided by the server"
-	},
-	"unknown-pack-warning-modal.body": {
-		"message": "A file is only reviewed if it’s uploaded to Modrinth, regardless of its file format (including .mrpack)."
-	},
-	"unknown-pack-warning-modal.dont-show-again": {
-		"message": "Don't show this warning again"
-	},
-	"unknown-pack-warning-modal.header": {
-		"message": "Confirm installation"
-	},
-	"unknown-pack-warning-modal.install-anyway": {
-		"message": "Install anyway"
-	},
-	"unknown-pack-warning-modal.malware-statement": {
-		"message": "Malware is often distributed through modpack files by sharing them on platforms like Discord."
-	},
-	"unknown-pack-warning-modal.warning.body": {
-		"message": "We couldn't find this file on Modrinth. We strongly recommend only installing files from sources you trust."
-	},
-	"unknown-pack-warning-modal.warning.title": {
-		"message": "Unknown file warning"
-	},
-	"instance.upgrade.result.title": { "message": "Upgrade complete" },
 	"instance.upgrade.result.direct-description": {
 		"message": "This instance was upgraded successfully."
 	},
 	"instance.upgrade.result.copy-description": {
 		"message": "An upgraded copy was created successfully. The original shared instance was left unchanged."
 	},
-	"instance.upgrade.result.environment": { "message": "Environment" },
-	"instance.upgrade.result.minecraft": { "message": "Minecraft" },
-	"instance.upgrade.result.loader": { "message": "Loader" },
-	"instance.upgrade.result.unknown": { "message": "Unavailable" },
-	"instance.upgrade.result.automatic": { "message": "Automatic" },
+	"instance.upgrade.result.environment": {
+		"message": "Environment"
+	},
+	"instance.upgrade.result.minecraft": {
+		"message": "Minecraft"
+	},
+	"instance.upgrade.result.loader": {
+		"message": "Loader"
+	},
+	"instance.upgrade.result.unknown": {
+		"message": "Unavailable"
+	},
+	"instance.upgrade.result.automatic": {
+		"message": "Automatic"
+	},
 	"instance.upgrade.confirm.choose-shared-mode-tooltip": {
 		"message": "Choose how this shared instance should be upgraded."
 	},
-	"instance.upgrade.result.metrics": { "message": "Outcome" },
-	"instance.upgrade.result.updated": { "message": "Updated" },
-	"instance.upgrade.result.kept": { "message": "Kept" },
-	"instance.upgrade.result.disabled": { "message": "Disabled" },
-	"instance.upgrade.result.dependencies-added": { "message": "Dependencies added" },
-	"instance.upgrade.result.dependencies-updated": { "message": "Dependencies updated" },
-	"instance.upgrade.result.dependencies-removed": { "message": "Dependencies removed" },
-	"instance.upgrade.result.open-upgraded": { "message": "Open upgraded instance" },
-	"instance.upgrade.result.open-original": { "message": "Open original instance" },
-	"instance.upgrade.result.backup-title": { "message": "Backup created" },
+	"instance.upgrade.result.metrics": {
+		"message": "Outcome"
+	},
+	"instance.upgrade.result.updated": {
+		"message": "Updated"
+	},
+	"instance.upgrade.result.kept": {
+		"message": "Kept"
+	},
+	"instance.upgrade.result.disabled": {
+		"message": "Disabled"
+	},
+	"instance.upgrade.result.dependencies-added": {
+		"message": "Dependencies added"
+	},
+	"instance.upgrade.result.dependencies-updated": {
+		"message": "Dependencies updated"
+	},
+	"instance.upgrade.result.dependencies-removed": {
+		"message": "Dependencies removed"
+	},
+	"instance.upgrade.result.open-upgraded": {
+		"message": "Open upgraded instance"
+	},
+	"instance.upgrade.result.open-original": {
+		"message": "Open original instance"
+	},
+	"instance.upgrade.result.backup-title": {
+		"message": "Backup created"
+	},
 	"instance.upgrade.result.backup-description": {
 		"message": "A complete pre-upgrade backup was created separately and is available in your instance library."
 	},
-	"instance.upgrade.result.open-backup": { "message": "Open backup" },
-	"instance.upgrade.result.no-backup-title": { "message": "No complete backup was created" },
+	"instance.upgrade.result.open-backup": {
+		"message": "Open backup"
+	},
+	"instance.upgrade.result.no-backup-title": {
+		"message": "No complete backup was created"
+	},
 	"instance.upgrade.result.no-backup-description": {
 		"message": "Automatic rollback protected this operation while it was running; it is not a permanent backup."
 	},
-	"instance.upgrade.result.external-title": { "message": "Changes detected while upgrading" },
+	"instance.upgrade.result.external-title": {
+		"message": "Changes detected while upgrading"
+	},
 	"instance.upgrade.result.external-description": {
 		"message": "Files changed outside the launcher were detected, and user changes were given priority where applicable."
 	},
-	"instance.upgrade.result.skipped-title": { "message": "Some planned changes were skipped" },
+	"instance.upgrade.result.skipped-title": {
+		"message": "Some planned changes were skipped"
+	},
 	"instance.upgrade.result.skipped-description": {
 		"message": "These files changed while upgrading, so the user changes were preserved."
 	},
-	"instance.upgrade.result.warnings-title": { "message": "Compatibility warnings" },
-	"instance.upgrade.result.details-title": { "message": "Upgrade details" },
-	"instance.upgrade.result.action-add": { "message": "Added" },
-	"instance.upgrade.result.action-upgrade": { "message": "Updated" },
-	"instance.upgrade.result.action-keep": { "message": "Kept" },
-	"instance.upgrade.result.action-disable": { "message": "Disabled" },
-	"instance.upgrade.result.action-remove": { "message": "Removed" },
-	"instance.upgrade.result.change-added": { "message": "Added" },
-	"instance.upgrade.result.change-removed": { "message": "Removed" },
-	"instance.upgrade.result.change-modified": { "message": "Modified" },
-	"app.downloads.view-upgrade-result": { "message": "View upgrade result" },
-	"app.downloads.operation.upgrade": { "message": "Upgrade" },
-	"app.downloads.upgrade-details": { "message": "Upgrade details" },
-	"app.downloads.hide-upgrade-details": { "message": "Hide upgrade details" },
-	"instance.upgrade.confirm.backup.instance-name": { "message": "{name} (Pre-upgrade backup)" },
-	"instance.upgrade.confirm.copy.instance-name": { "message": "{name} (Upgraded copy)" },
-	"instance.upgrade.result.unavailable": { "message": "Upgrade result unavailable" },
+	"instance.upgrade.result.warnings-title": {
+		"message": "Compatibility warnings"
+	},
+	"instance.upgrade.result.details-title": {
+		"message": "Upgrade details"
+	},
+	"instance.upgrade.result.action-add": {
+		"message": "Added"
+	},
+	"instance.upgrade.result.action-upgrade": {
+		"message": "Updated"
+	},
+	"instance.upgrade.result.action-keep": {
+		"message": "Kept"
+	},
+	"instance.upgrade.result.action-disable": {
+		"message": "Disabled"
+	},
+	"instance.upgrade.result.action-remove": {
+		"message": "Removed"
+	},
+	"instance.upgrade.result.change-added": {
+		"message": "Added"
+	},
+	"instance.upgrade.result.change-removed": {
+		"message": "Removed"
+	},
+	"instance.upgrade.result.change-modified": {
+		"message": "Modified"
+	},
+	"app.downloads.view-upgrade-result": {
+		"message": "View upgrade result"
+	},
+	"app.downloads.operation.upgrade": {
+		"message": "Upgrade"
+	},
+	"app.downloads.upgrade-details": {
+		"message": "Upgrade details"
+	},
+	"app.downloads.hide-upgrade-details": {
+		"message": "Hide upgrade details"
+	},
+	"instance.upgrade.confirm.backup.instance-name": {
+		"message": "{name} (Pre-upgrade backup)"
+	},
+	"instance.upgrade.confirm.copy.instance-name": {
+		"message": "{name} (Upgraded copy)"
+	},
+	"instance.upgrade.result.unavailable": {
+		"message": "Upgrade result unavailable"
+	},
 	"instance.upgrade.result.missing": {
 		"message": "This persisted upgrade result could not be loaded."
 	},
@@ -8337,15 +9362,21 @@
 	"instance.upgrade.warning.keep-incompatible": {
 		"message": "{path} was kept unchanged and may be incompatible with the upgraded instance."
 	},
-	"app.instance.mods.post-upgrade-notice.title": { "message": "Post-upgrade compatibility review" },
+	"app.instance.mods.post-upgrade-notice.title": {
+		"message": "Post-upgrade compatibility review"
+	},
 	"app.instance.mods.post-upgrade-notice.body": {
 		"message": "Some preserved content may not support the current Minecraft version and should be reviewed manually."
 	},
-	"app.instance.mods.post-upgrade-notice.ignore-all": { "message": "Ignore all" },
+	"app.instance.mods.post-upgrade-notice.ignore-all": {
+		"message": "Ignore all"
+	},
 	"app.instance.mods.post-upgrade-notice.item-tooltip": {
 		"message": "This content was preserved during the instance upgrade without installing a new compatible version. It may be incompatible with the current Minecraft version."
 	},
-	"app.instance.post-upgrade-status": { "message": "Upgraded to {version}" },
+	"app.instance.post-upgrade-status": {
+		"message": "Upgraded to {version}"
+	},
 	"instance.upgrade.result.warning-summary-local": {
 		"message": "{count, plural, one {# local item could not be identified} other {# local items could not be identified}}"
 	},
@@ -8370,7 +9401,9 @@
 	"instance.upgrade.result.warning-unsupported-description": {
 		"message": "This content type cannot be upgraded automatically. Check for a manual update if problems occur."
 	},
-	"instance.upgrade.result.warning-kept-headline": { "message": "The previous version was kept" },
+	"instance.upgrade.result.warning-kept-headline": {
+		"message": "The previous version was kept"
+	},
 	"instance.upgrade.result.warning-kept-description": {
 		"message": "No verified compatible replacement was selected. Update it manually or disable it if the game has problems."
 	},
@@ -8392,33 +9425,87 @@
 	"instance.upgrade.result.warning-dependency-description": {
 		"message": "The upgrade completed, but this dependency could not be verified normally. Review it if the game fails to start."
 	},
-	"instance.upgrade.result.warning-legacy-headline": { "message": "Compatibility needs attention" },
-	"instance.upgrade.result.technical-details": { "message": "Details" },
-	"instance.upgrade.result.relative-path": { "message": "Relative path" },
-	"instance.upgrade.result.warning-code": { "message": "Warning details" },
-	"instance.upgrade.result.provider-identity": { "message": "Provider" },
-	"instance.upgrade.result.local-content": { "message": "Local content" },
-	"instance.upgrade.result.content-kind-content": { "message": "Content" },
-	"instance.upgrade.result.content-kind-mod": { "message": "Mod" },
-	"instance.upgrade.result.content-kind-resourcepack": { "message": "Resource pack" },
-	"instance.upgrade.result.content-kind-shaderpack": { "message": "Shader pack" },
-	"instance.upgrade.result.content-kind-datapack": { "message": "Data pack" },
-	"instance.upgrade.result.search-details": { "message": "Search upgrade details" },
-	"instance.upgrade.result.filters": { "message": "Filter upgrade details" },
-	"instance.upgrade.result.filter-all": { "message": "All" },
-	"instance.upgrade.result.filter-updated": { "message": "Updated" },
-	"instance.upgrade.result.filter-kept": { "message": "Kept" },
-	"instance.upgrade.result.filter-disabled": { "message": "Disabled" },
-	"instance.upgrade.result.filter-dependencies": { "message": "Dependencies" },
-	"instance.upgrade.result.showing": { "message": "Showing {start}–{end} of {total}" },
-	"instance.upgrade.result.previous": { "message": "Previous" },
-	"instance.upgrade.result.next": { "message": "Next" },
-	"instance.upgrade.result.no-matching-items": { "message": "No matching upgrade items." },
-	"instance.upgrade.result.dependency": { "message": "Dependency" },
-	"instance.upgrade.result.dependency-added": { "message": "Dependency added" },
-	"instance.upgrade.result.dependency-updated-status": { "message": "Dependency updated" },
-	"instance.upgrade.result.dependency-kept": { "message": "Dependency kept" },
-	"instance.upgrade.result.dependency-removed-status": { "message": "Dependency removed" },
+	"instance.upgrade.result.warning-legacy-headline": {
+		"message": "Compatibility needs attention"
+	},
+	"instance.upgrade.result.technical-details": {
+		"message": "Details"
+	},
+	"instance.upgrade.result.relative-path": {
+		"message": "Relative path"
+	},
+	"instance.upgrade.result.warning-code": {
+		"message": "Warning details"
+	},
+	"instance.upgrade.result.provider-identity": {
+		"message": "Provider"
+	},
+	"instance.upgrade.result.local-content": {
+		"message": "Local content"
+	},
+	"instance.upgrade.result.content-kind-content": {
+		"message": "Content"
+	},
+	"instance.upgrade.result.content-kind-mod": {
+		"message": "Mod"
+	},
+	"instance.upgrade.result.content-kind-resourcepack": {
+		"message": "Resource pack"
+	},
+	"instance.upgrade.result.content-kind-shaderpack": {
+		"message": "Shader pack"
+	},
+	"instance.upgrade.result.content-kind-datapack": {
+		"message": "Data pack"
+	},
+	"instance.upgrade.result.search-details": {
+		"message": "Search upgrade details"
+	},
+	"instance.upgrade.result.filters": {
+		"message": "Filter upgrade details"
+	},
+	"instance.upgrade.result.filter-all": {
+		"message": "All"
+	},
+	"instance.upgrade.result.filter-updated": {
+		"message": "Updated"
+	},
+	"instance.upgrade.result.filter-kept": {
+		"message": "Kept"
+	},
+	"instance.upgrade.result.filter-disabled": {
+		"message": "Disabled"
+	},
+	"instance.upgrade.result.filter-dependencies": {
+		"message": "Dependencies"
+	},
+	"instance.upgrade.result.showing": {
+		"message": "Showing {start}–{end} of {total}"
+	},
+	"instance.upgrade.result.previous": {
+		"message": "Previous"
+	},
+	"instance.upgrade.result.next": {
+		"message": "Next"
+	},
+	"instance.upgrade.result.no-matching-items": {
+		"message": "No matching upgrade items."
+	},
+	"instance.upgrade.result.dependency": {
+		"message": "Dependency"
+	},
+	"instance.upgrade.result.dependency-added": {
+		"message": "Dependency added"
+	},
+	"instance.upgrade.result.dependency-updated-status": {
+		"message": "Dependency updated"
+	},
+	"instance.upgrade.result.dependency-kept": {
+		"message": "Dependency kept"
+	},
+	"instance.upgrade.result.dependency-removed-status": {
+		"message": "Dependency removed"
+	},
 	"instance.upgrade.result.warning-conflict-headline": {
 		"message": "Some dependency requirements conflicted"
 	},
@@ -8449,14 +9536,24 @@
 	"instance.upgrade.result.warning-resolved-description": {
 		"message": "This warning occurred while planning, but the content was upgraded successfully. No immediate action is required."
 	},
-	"instance.upgrade.result.warning-search": { "message": "Search compatibility warnings" },
-	"instance.upgrade.result.warning-filters": { "message": "Filter compatibility warnings" },
-	"instance.upgrade.result.warning-filter-unidentified": { "message": "Unidentified" },
-	"instance.upgrade.result.warning-filter-fallback": { "message": "Compatibility fallback" },
+	"instance.upgrade.result.warning-search": {
+		"message": "Search compatibility warnings"
+	},
+	"instance.upgrade.result.warning-filters": {
+		"message": "Filter compatibility warnings"
+	},
+	"instance.upgrade.result.warning-filter-unidentified": {
+		"message": "Unidentified"
+	},
+	"instance.upgrade.result.warning-filter-fallback": {
+		"message": "Compatibility fallback"
+	},
 	"instance.upgrade.result.no-matching-warnings": {
 		"message": "No matching compatibility warnings."
 	},
-	"instance.upgrade.result.warning-disabled-headline": { "message": "This content was disabled" },
+	"instance.upgrade.result.warning-disabled-headline": {
+		"message": "This content was disabled"
+	},
 	"instance.upgrade.result.warning-disabled-description": {
 		"message": "The content was preserved on disk but disabled to avoid affecting the upgraded instance."
 	}

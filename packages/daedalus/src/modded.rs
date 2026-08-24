@@ -21,6 +21,8 @@ pub const CURRENT_CLEANROOM_FORMAT_VERSION: usize = 1;
 pub const CURRENT_LITELOADER_FORMAT_VERSION: usize = 2;
 /// Current Legacy Fabric manifest cache format.
 pub const CURRENT_LEGACY_FABRIC_FORMAT_VERSION: usize = 1;
+/// Current Babric manifest cache format.
+pub const CURRENT_BABRIC_FORMAT_VERSION: usize = 2;
 
 /// Metadata for locating and caching a loader manifest.
 #[derive(Debug, Clone)]
@@ -105,6 +107,7 @@ fn current_loader_manifest_format_version(loader: &str) -> usize {
         "cleanroom" => CURRENT_CLEANROOM_FORMAT_VERSION,
         "lite_loader" => CURRENT_LITELOADER_FORMAT_VERSION,
         "legacy_fabric" => CURRENT_LEGACY_FABRIC_FORMAT_VERSION,
+        "babric" => CURRENT_BABRIC_FORMAT_VERSION,
         _ => 0,
     }
 }
@@ -300,16 +303,34 @@ pub fn merge_partial_version(
         }
     }
 
-    let mut arguments = if let Some(partial_args) = partial.arguments {
+    let arguments = if let Some(partial_args) = partial.arguments {
         if let Some(merge_args) = merge.arguments {
             let mut new_map = HashMap::new();
+
+            fn argument_key(argument: &Argument) -> String {
+                serde_json::to_string(argument)
+                    .unwrap_or_else(|_| format!("{argument:?}"))
+            }
 
             fn add_keys(
                 new_map: &mut HashMap<ArgumentType, Vec<Argument>>,
                 args: HashMap<ArgumentType, Vec<Argument>>,
             ) {
                 for (type_, arguments) in args {
-                    new_map.entry(type_).or_default().extend(arguments);
+                    let existing = new_map.entry(type_).or_default();
+                    let max_overlap = existing.len().min(arguments.len());
+                    let overlap = (1..=max_overlap)
+                        .rev()
+                        .find(|&length| {
+                            existing[existing.len() - length..]
+                                .iter()
+                                .map(argument_key)
+                                .eq(arguments[..length]
+                                    .iter()
+                                    .map(argument_key))
+                        })
+                        .unwrap_or(0);
+                    existing.extend(arguments.into_iter().skip(overlap));
                 }
             }
 
@@ -323,18 +344,6 @@ pub fn merge_partial_version(
     } else {
         merge.arguments
     };
-    if let Some(arguments) = &mut arguments {
-        for values in arguments.values_mut() {
-            let mut seen = HashSet::new();
-            values.retain(|argument| {
-                seen.insert(
-                    serde_json::to_string(argument)
-                        .unwrap_or_else(|_| format!("{argument:?}")),
-                )
-            });
-        }
-    }
-
     let mut libraries = libraries
         .into_iter()
         .chain(partial.libraries)
@@ -483,6 +492,58 @@ mod merge_tests {
             ["--demo", "--tweakClass", "example.Tweaker"]
         );
     }
+
+    #[test]
+    fn merge_partial_version_preserves_repeated_jvm_options() {
+        let now = Utc::now();
+        let mut minecraft = version_info();
+        minecraft.arguments = Some(HashMap::from([(
+            ArgumentType::Jvm,
+            vec![Argument::Normal("-cp".to_string())],
+        )]));
+        let partial = PartialVersionInfo {
+            id: "1.20.1-forge".to_string(),
+            inherits_from: "1.20.1".to_string(),
+            release_time: now,
+            time: now,
+            main_class: Some(
+                "cpw.mods.bootstraplauncher.BootstrapLauncher".to_string(),
+            ),
+            minecraft_arguments: None,
+            arguments: Some(HashMap::from([(
+                ArgumentType::Jvm,
+                vec![
+                    Argument::Normal("--add-opens".to_string()),
+                    Argument::Normal(
+                        "java.base/java.util.jar=cpw.mods.securejarhandler"
+                            .to_string(),
+                    ),
+                    Argument::Normal("--add-opens".to_string()),
+                    Argument::Normal(
+                        "java.base/java.lang.invoke=cpw.mods.securejarhandler"
+                            .to_string(),
+                    ),
+                ],
+            )])),
+            libraries: Vec::new(),
+            java_version: None,
+            type_: VersionType::Release,
+            data: None,
+            processors: None,
+        };
+
+        let merged = merge_partial_version(partial, minecraft);
+        let arguments = &merged.arguments.unwrap()[&ArgumentType::Jvm];
+        assert_eq!(
+            arguments
+                .iter()
+                .filter(|argument| {
+                    matches!(argument, Argument::Normal(value) if value == "--add-opens")
+                })
+                .count(),
+            2
+        );
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -551,6 +612,8 @@ pub enum LoaderProfileSource {
     Installer,
     /// A profile synthesized from the LiteLoader versions manifest.
     LiteLoader,
+    /// A profile synthesized from Babric's Glass Maven metadata and legacy profile.
+    Babric,
 }
 
 fn is_json_profile_source(source: &LoaderProfileSource) -> bool {
@@ -587,6 +650,8 @@ mod tests {
         assert_eq!(loader_manifest_metadata("quilt").format_version, 2);
         assert_eq!(loader_manifest_metadata("forge").format_version, 3);
         assert_eq!(loader_manifest_metadata("neo").format_version, 1);
+        assert_eq!(loader_manifest_metadata("babric").format_version, 2);
+        assert_eq!(loader_manifest_metadata("babric").cache_key, "babric-v2");
         assert_eq!(
             loader_manifest_metadata("quilt").path,
             "quilt/v1/manifest.json"

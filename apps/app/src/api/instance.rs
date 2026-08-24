@@ -51,6 +51,20 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_get_linked_modpack_info,
             instance_get_linked_modpack_content,
             instance_get_optimal_jre_key,
+            instance_list_core_components,
+            instance_add_core_jar_mod,
+            instance_replace_core_jar,
+            instance_move_core_component,
+            instance_set_core_component_enabled,
+            instance_remove_core_component,
+            instance_restore_core_component,
+            instance_preview_core_jar,
+            instance_install_mcarchive_modloader,
+            instance_import_mcarchive_modloader,
+            instance_install_mcarchive_content,
+            instance_import_mcarchive_content,
+            instance_install_planet_minecraft_content,
+            instance_import_planet_minecraft_content,
             instance_get_full_path,
             instance_get_mod_full_path,
             instance_check_installed,
@@ -764,6 +778,177 @@ pub async fn instance_get_optimal_jre_key(
 }
 
 #[tauri::command]
+pub async fn instance_list_core_components(
+    instance_id: &str,
+) -> Result<Vec<theseus::data::CoreComponent>> {
+    Ok(theseus::instance::list_core_components(instance_id).await?)
+}
+
+#[tauri::command]
+pub async fn instance_add_core_jar_mod(
+    instance_id: &str,
+    source_path: PathBuf,
+    target_game_version: String,
+    source: Option<theseus::data::CoreComponentSource>,
+) -> Result<theseus::data::CoreComponent> {
+    Ok(theseus::instance::add_core_jar_mod(
+        instance_id,
+        source_path,
+        target_game_version,
+        source,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_replace_core_jar(
+    instance_id: &str,
+    source_path: PathBuf,
+    target_game_version: String,
+    source: Option<theseus::data::CoreComponentSource>,
+) -> Result<theseus::data::CoreComponent> {
+    Ok(theseus::instance::replace_core_jar(
+        instance_id,
+        source_path,
+        target_game_version,
+        source,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_move_core_component(
+    instance_id: &str,
+    component_id: &str,
+    direction: i32,
+) -> Result<Vec<theseus::data::CoreComponent>> {
+    Ok(theseus::instance::move_core_component(
+        instance_id,
+        component_id,
+        direction,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_set_core_component_enabled(
+    instance_id: &str,
+    component_id: &str,
+    enabled: bool,
+) -> Result<theseus::data::CoreComponent> {
+    Ok(theseus::instance::set_core_component_enabled(
+        instance_id,
+        component_id,
+        enabled,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_remove_core_component(
+    instance_id: &str,
+    component_id: &str,
+) -> Result<()> {
+    theseus::instance::remove_core_component(instance_id, component_id).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_restore_core_component(
+    instance_id: &str,
+    component_id: &str,
+) -> Result<theseus::data::CoreComponent> {
+    Ok(
+        theseus::instance::restore_core_component(instance_id, component_id)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_preview_core_jar(
+    instance_id: &str,
+) -> Result<Option<theseus::data::CoreJarPreview>> {
+    Ok(theseus::instance::preview_core_jar(instance_id).await?)
+}
+
+#[tauri::command]
+pub async fn instance_install_mcarchive_modloader(
+    instance_id: &str,
+    game_version: &str,
+) -> Result<theseus::instance::McArchiveCoreInstallResult> {
+    Ok(theseus::instance::install_mcarchive_modloader(
+        instance_id,
+        game_version,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_import_mcarchive_modloader(
+    instance_id: &str,
+    game_version: &str,
+    source_path: PathBuf,
+) -> Result<theseus::instance::McArchiveCoreInstallResult> {
+    Ok(theseus::instance::import_mcarchive_modloader(
+        instance_id,
+        game_version,
+        source_path,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_install_mcarchive_content(
+    instance_id: &str,
+    request: theseus::instance::McArchiveContentInstallRequest,
+) -> Result<theseus::instance::McArchiveContentInstallResult> {
+    Ok(
+        theseus::instance::install_mcarchive_content(instance_id, request)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_import_mcarchive_content(
+    instance_id: &str,
+    request: theseus::instance::McArchiveContentInstallRequest,
+    source_path: PathBuf,
+) -> Result<theseus::instance::McArchiveContentInstallResult> {
+    Ok(theseus::instance::import_mcarchive_content(
+        instance_id,
+        request,
+        source_path,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_install_planet_minecraft_content(
+    instance_id: &str,
+    request: theseus::instance::PlanetMinecraftContentInstallRequest,
+) -> Result<theseus::instance::PlanetMinecraftContentInstallResult> {
+    Ok(theseus::instance::install_planet_minecraft_content(
+        instance_id,
+        request,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_import_planet_minecraft_content(
+    instance_id: &str,
+    request: theseus::instance::PlanetMinecraftContentInstallRequest,
+    source_path: PathBuf,
+) -> Result<theseus::instance::PlanetMinecraftContentInstallResult> {
+    Ok(theseus::instance::import_planet_minecraft_content(
+        instance_id,
+        request,
+        source_path,
+    )
+    .await?)
+}
+
+#[tauri::command]
 pub async fn instance_check_installed(
     instance_id: &str,
     project_id: &str,
@@ -784,6 +969,10 @@ pub async fn instance_check_installed(
                         project_id: id,
                         ..
                     } => project_id == format!("curseforge:{}", id.get()),
+                    theseus::data::ContentProviderRef::McArchive {
+                        project_id: id,
+                        ..
+                    } => project_id == format!("mcarchive:{id}"),
                 })
         }))
     } else {

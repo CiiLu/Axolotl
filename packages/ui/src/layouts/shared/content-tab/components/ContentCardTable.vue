@@ -142,6 +142,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 
 <template>
 	<div
+		data-content-card-table
 		role="table"
 		class="@container border border-solid border-surface-4 shadow-sm overflow-clip"
 		:class="[flat ? '' : 'rounded-[20px]', isStuck || hideHeader ? 'border-t-0' : '']"
@@ -237,6 +238,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 					v-for="(item, idx) in visibleItems"
 					:key="item.id"
 					data-content-card-item
+					:data-content-card-item-id="item.id"
 					:project="item.project"
 					:project-link="item.projectLink"
 					:version="item.version"
@@ -245,6 +247,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 					:enabled="item.enabled"
 					:installing="item.installing"
 					:pending-manual-download="item.pendingManualDownload"
+					:duplicate-count="item.duplicateCount"
 					:has-update="item.hasUpdate"
 					:rollback-file-name="item.rollbackFileName"
 					:is-client-only="item.isClientOnly"
@@ -326,6 +329,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 				v-for="(item, index) in items"
 				:key="item.id"
 				data-content-card-item
+				:data-content-card-item-id="item.id"
 				:project="item.project"
 				:project-link="item.projectLink"
 				:version="item.version"
@@ -334,6 +338,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 				:enabled="item.enabled"
 				:installing="item.installing"
 				:pending-manual-download="item.pendingManualDownload"
+				:duplicate-count="item.duplicateCount"
 				:has-update="item.hasUpdate"
 				:rollback-file-name="item.rollbackFileName"
 				:is-client-only="item.isClientOnly"

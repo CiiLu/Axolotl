@@ -43,6 +43,10 @@
 			<Teleport v-if="themeStore.featureFlags.project_background" to="#background-teleport-target">
 				<ProjectBackgroundGradient :project="data" />
 			</Teleport>
+			<BrowseInstallHeader
+				v-if="fromInstanceContent && cartInstallContext"
+				:install-context="cartInstallContext"
+			/>
 			<ProjectHeader
 				:project="data"
 				:show-followers="false"
@@ -78,19 +82,36 @@
 										? commonMessages.installingLabel
 										: cartProjectSelected
 											? commonMessages.selectedLabel
-										: isWorldMap
-											? instanceId
-												? commonMessages.installButton
-												: messages.addToAnInstance
-											: commonMessages.installButton,
+											: isWorldMap
+												? instanceId
+													? commonMessages.installButton
+													: messages.addToAnInstance
+												: commonMessages.installButton,
 								)
 							}}
 						</button>
 					</ButtonStyled>
-					<ButtonStyled v-if="data.site_url || mcmodUrl" size="large" circular type="transparent">
+					<ButtonStyled
+						v-if="data.site_url || mcmodUrl || favoriteSupported"
+						size="large"
+						circular
+						type="transparent"
+					>
 						<OverflowMenu
 							:tooltip="formatMessage(commonMessages.moreOptionsButton)"
 							:options="[
+								...(favoriteSupported
+									? [
+											{
+												id: 'save',
+												disabled: favoritePending,
+												tooltip: formatMessage(
+													favoriteSaved ? messages.removeFromFavorites : messages.addToFavorites,
+												),
+												action: () => toggleFavorite(),
+											},
+										]
+									: []),
 								...(data.site_url
 									? [
 											{
@@ -118,6 +139,18 @@
 							</template>
 							<template #open-in-mcmod>
 								<BookOpenIcon /> {{ formatMessage(messages.openInMcmod) }}
+							</template>
+							<template v-if="favoriteSupported" #save>
+								<BookmarkIcon :class="{ 'text-brand': favoriteSaved }" />
+								{{
+									formatMessage(
+										favoritePending
+											? messages.favoritesLoading
+											: favoriteSaved
+												? messages.removeFromFavorites
+												: messages.addToFavorites,
+									)
+								}}
 							</template>
 						</OverflowMenu>
 					</ButtonStyled>
@@ -155,7 +188,14 @@
 				]"
 			/>
 
-			<Gallery v-if="activeTab === 'gallery'" :project="data" />
+			<Gallery
+				v-if="activeTab === 'gallery'"
+				:project="data"
+				:translation-active="translationActive"
+				:translations="translations"
+				:translation-mode="translationMode"
+				:translation-style="translationStyle"
+			/>
 			<ProjectPageVersions
 				v-else-if="activeTab === 'versions'"
 				:loaders="allLoaders"
@@ -167,7 +207,9 @@
 				<template #actions="{ version }">
 					<ButtonStyled circular type="transparent" :color="isWorldMap ? 'brand' : 'green'">
 						<button
-							v-tooltip="formatMessage(isWorldMap ? messages.addToAnInstance : commonMessages.installButton)"
+							v-tooltip="
+								formatMessage(isWorldMap ? messages.addToAnInstance : commonMessages.installButton)
+							"
 							:disabled="installing"
 							@click.stop="installSelected(version.id)"
 						>
@@ -202,6 +244,7 @@
 <script setup lang="ts">
 import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 import {
+	BookmarkIcon,
 	BookOpenIcon,
 	DownloadIcon,
 	ExternalIcon,
@@ -211,6 +254,7 @@ import {
 	SpinnerIcon,
 } from '@modrinth/assets'
 import {
+	BrowseInstallHeader,
 	ButtonStyled,
 	Card,
 	commonMessages,
@@ -227,6 +271,7 @@ import {
 	ProjectSidebarLinks,
 	ProjectSidebarTags,
 	SelectedProjectsFloatingBar,
+	usesTargetGameVersion,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, ref, shallowRef, watch } from 'vue'
@@ -234,6 +279,8 @@ import { useRoute, useRouter } from 'vue-router'
 
 import BrowseInstanceSelector from '@/components/browse/BrowseInstanceSelector.vue'
 import TranslatedProjectDescription from '@/components/ui/TranslatedProjectDescription.vue'
+import { useContentFavorites } from '@/composables/useContentFavorites'
+import { isFavoriteContentType } from '@/helpers/content-favorites'
 import { resolveMcmodUrl } from '@/helpers/content-search'
 import {
 	type CurseForgeFile,
@@ -243,6 +290,7 @@ import {
 	getCurseForgeImageUrl,
 	getCurseForgeProject,
 } from '@/helpers/curseforge'
+import { projectGalleryTranslationSegments } from '@/helpers/project-gallery'
 import { createProjectBrowseLocation, type ProjectBrowseFilter } from '@/helpers/project-links'
 import { get_game_versions, get_loaders } from '@/helpers/tags'
 import {
@@ -255,10 +303,7 @@ import {
 } from '@/helpers/translation'
 import i18n from '@/i18n.config'
 import { injectContentInstall } from '@/providers/content-install'
-import {
-	injectContentSelection,
-	makeContentSelectionKey,
-} from '@/providers/content-selection'
+import { injectContentSelection, makeContentSelectionKey } from '@/providers/content-selection'
 import { useBreadcrumbs } from '@/store/breadcrumbs'
 import { useTheming } from '@/store/state.js'
 
@@ -272,6 +317,9 @@ const { addNotification, handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 const { installCurseForge, installCurseForgeWorld } = injectContentInstall()
 const contentSelection = injectContentSelection()
+const contentFavorites = useContentFavorites()
+
+void contentFavorites.load().catch(handleError)
 
 const messages = defineMessages({
 	loading: {
@@ -346,6 +394,22 @@ const messages = defineMessages({
 		id: 'app.project.install-button.no-compatible-version',
 		defaultMessage: 'No compatible version was found for this instance.',
 	},
+	backToInstanceContent: {
+		id: 'app.project.install-context.back-to-instance-content',
+		defaultMessage: 'Back to instance content',
+	},
+	addToFavorites: {
+		id: 'app.content-favorites.add',
+		defaultMessage: 'Add to favorites',
+	},
+	removeFromFavorites: {
+		id: 'app.content-favorites.remove',
+		defaultMessage: 'Remove from favorites',
+	},
+	favoritesLoading: {
+		id: 'app.content-favorites.loading',
+		defaultMessage: 'Updating favorites…',
+	},
 })
 
 const loading = ref(true)
@@ -386,6 +450,30 @@ const projectType = computed(() => {
 	}
 })
 
+const favoriteSupported = computed(() => isFavoriteContentType(projectType.value))
+const favoriteProjectId = computed(() => project.value?.id.toString() ?? '')
+const favoriteSaved = computed(() =>
+	favoriteProjectId.value
+		? contentFavorites.isFavorite('curseforge', favoriteProjectId.value)
+		: false,
+)
+const favoritePending = computed(() =>
+	favoriteProjectId.value
+		? contentFavorites.isPending('curseforge', favoriteProjectId.value)
+		: false,
+)
+
+function toggleFavorite() {
+	if (!favoriteSupported.value || !favoriteProjectId.value || favoritePending.value) return
+	void contentFavorites
+		.toggle({
+			provider: 'curseforge',
+			project_id: favoriteProjectId.value,
+			content_type: projectType.value,
+		})
+		.catch(handleError)
+}
+
 const managedProjectType = computed(() =>
 	['mod', 'resourcepack', 'shader', 'datapack', 'modpack'].includes(projectType.value),
 )
@@ -394,9 +482,20 @@ const instanceId = computed(() => (typeof route.query.i === 'string' ? route.que
 const fromBrowse = computed(
 	() => typeof route.query.b === 'string' && route.query.b.startsWith('/browse/'),
 )
+const fromInstanceContent = computed(
+	() => route.query.from === 'instance-content' && instanceId.value !== null,
+)
+const instanceContentTarget = computed(() => {
+	if (!fromInstanceContent.value) return null
+	const target = contentSelection.targetInstance.value
+	return target?.id === instanceId.value ? target : null
+})
+const instanceContentBackUrl = computed(() =>
+	instanceContentTarget.value ? `/instance/${encodeURIComponent(instanceId.value!)}` : null,
+)
 const cartEligible = computed(
 	() =>
-		fromBrowse.value &&
+		(fromBrowse.value || instanceContentTarget.value !== null) &&
 		['mod', 'resourcepack', 'shader', 'datapack', 'world'].includes(projectType.value),
 )
 const cartProjectKey = computed(() =>
@@ -416,8 +515,10 @@ const cartInstallContext = computed(() => {
 		name: target.name,
 		loader: target.loader,
 		gameVersion: target.game_version,
-		backUrl: typeof route.query.b === 'string' ? route.query.b : `/browse/${projectType.value}`,
-		backLabel: '',
+		backUrl:
+			instanceContentBackUrl.value ??
+			(typeof route.query.b === 'string' ? route.query.b : `/browse/${projectType.value}`),
+		backLabel: fromInstanceContent.value ? formatMessage(messages.backToInstanceContent) : '',
 		heading: '',
 		selectedProjects: contentSelection.selectedProjects.value,
 		isInstallingSelected: ['validating', 'reviewing', 'queueing'].includes(
@@ -669,9 +770,17 @@ watch(
 )
 
 watch(
-	[fromBrowse, instanceId],
-	async ([enabled, preferredInstanceId]) => {
-		if (enabled) await contentSelection.refreshInstances(preferredInstanceId)
+	[fromBrowse, fromInstanceContent, instanceId],
+	async ([fromBrowseEnabled, fromInstanceContentEnabled, preferredInstanceId]) => {
+		if (fromBrowseEnabled || fromInstanceContentEnabled) {
+			await contentSelection.refreshInstances(preferredInstanceId)
+			if (fromInstanceContentEnabled && preferredInstanceId) {
+				const preferredInstance = contentSelection.instances.value.find(
+					(instance) => instance.id === preferredInstanceId,
+				)
+				if (preferredInstance) contentSelection.setTarget(preferredInstance)
+			}
+		}
 	},
 	{ immediate: true },
 )
@@ -690,21 +799,23 @@ async function installSelected(fileId: string | null) {
 		}
 		const target = contentSelection.targetInstance.value
 		const expectedLoader = { forge: 1, fabric: 4, quilt: 5, neoforge: 6 }[target.loader]
-		const resolvedFileId =
-			fileId ??
-			project.value.latestFilesIndexes.find(
-				(index) =>
-					index.gameVersion === target.game_version &&
-					(projectType.value !== 'mod' ||
-						!expectedLoader ||
-						index.modLoader === expectedLoader),
-			)?.fileId ??
-			files.value.find(
-				(file) =>
-					file.gameVersions.includes(target.game_version) &&
-					(projectType.value !== 'mod' ||
-						getFilePlatforms(file).includes(target.loader)),
-			)?.id
+		let resolvedFileId: string | number | null = fileId
+		if (!resolvedFileId && !usesTargetGameVersion(projectType.value)) {
+			resolvedFileId = files.value.find((file) => file.isAvailable)?.id ?? null
+		} else if (!resolvedFileId) {
+			resolvedFileId =
+				project.value.latestFilesIndexes.find(
+					(index) =>
+						index.gameVersion === target.game_version &&
+						(projectType.value !== 'mod' || !expectedLoader || index.modLoader === expectedLoader),
+				)?.fileId ??
+				files.value.find(
+					(file) =>
+						file.gameVersions.includes(target.game_version) &&
+						(projectType.value !== 'mod' || getFilePlatforms(file).includes(target.loader)),
+				)?.id ??
+				null
+		}
 		if (!resolvedFileId) {
 			handleError(new Error(formatMessage(messages.noCompatibleVersion)))
 			return
@@ -720,7 +831,7 @@ async function installSelected(fileId: string | null) {
 			iconUrl: getCurseForgeImageUrl(project.value.logo?.thumbnailUrl),
 			slug: project.value.slug,
 			preferences: {
-				gameVersions: [target.game_version],
+				gameVersions: usesTargetGameVersion(projectType.value) ? [target.game_version] : [],
 				loaders: projectType.value === 'mod' ? [target.loader] : [],
 			},
 		})
@@ -728,15 +839,9 @@ async function installSelected(fileId: string | null) {
 	}
 	if (isWorldMap.value) {
 		installing.value = true
-		await installCurseForgeWorld(
-			project.value.id,
-			fileId,
-			instanceId.value,
-			'ProjectPage',
-			() => {
-				installing.value = false
-			},
-		).catch((error) => {
+		await installCurseForgeWorld(project.value.id, fileId, instanceId.value, 'ProjectPage', () => {
+			installing.value = false
+		}).catch((error) => {
 			installing.value = false
 			handleError(error)
 		})
@@ -797,6 +902,7 @@ async function translateProject() {
 		const allSegments = [
 			{ id: 'title', text: data.value.title, format: 'plain' },
 			{ id: 'description', text: data.value.description, format: 'plain' },
+			...projectGalleryTranslationSegments(data.value.gallery),
 			...prepared.segments,
 		]
 

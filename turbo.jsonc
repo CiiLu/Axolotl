@@ -34,8 +34,6 @@
 			"outputs": [".nuxt/**", "dist/**", ".output/**"],
 			"env": [
 				"NODE_ENV",
-				"GITHUB_TOKEN",
-				"AXOLOTL_GITHUB_TOKEN",
 				"SITE_URL",
 				"BASE_URL",
 				"PREVIEW",

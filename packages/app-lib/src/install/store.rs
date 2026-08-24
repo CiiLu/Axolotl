@@ -633,6 +633,7 @@ mod tests {
                 world_name: None,
                 install_dependencies: false,
                 excluded_dependency_project_ids: Vec::new(),
+                force_dependency_project_ids: Vec::new(),
                 dependency_plan_id: None,
             },
             display_title: "CurseForge content".to_string(),

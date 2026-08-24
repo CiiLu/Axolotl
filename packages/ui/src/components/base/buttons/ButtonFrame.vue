@@ -34,11 +34,11 @@ const sizeClasses: Record<ButtonSize, string> = {
 }
 
 const iconOnlySizeClasses: Record<ButtonSize, string> = {
-	xs: 'w-7 !px-0',
-	sm: 'w-8 !px-0',
-	md: 'w-9 !px-0',
-	lg: 'w-10 !px-0',
-	xl: 'w-12 !px-0',
+	xs: 'min-w-7 w-7 !px-0',
+	sm: 'min-w-8 w-8 !px-0',
+	md: 'min-w-9 w-9 !px-0',
+	lg: 'min-w-10 w-10 !px-0',
+	xl: 'min-w-12 w-12 !px-0',
 }
 
 const typeClasses: Record<ButtonType, string> = {

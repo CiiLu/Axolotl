@@ -37,6 +37,10 @@ export interface BrowseInstallTarget {
 	loader?: string | null
 }
 
+export function usesTargetGameVersion(contentType?: string) {
+	return contentType !== 'modpack' && contentType !== 'resourcepack'
+}
+
 /**
  * Minimal project shape needed by shared install resolution.
  */
@@ -473,10 +477,11 @@ export function getTargetInstallPreferences(
 ): BrowseInstallPreferences {
 	const gameVersion = target.gameVersion?.trim()
 	const loader = target.loader?.trim()
-	const shouldUseTargetRuntime = contentType !== 'modpack'
+	const shouldUseTargetLoader = contentType !== 'modpack'
+	const shouldUseTargetGameVersion = usesTargetGameVersion(contentType)
 
 	return normalizeInstallPreferences({
-		gameVersions: gameVersion && shouldUseTargetRuntime ? [gameVersion] : undefined,
+		gameVersions: gameVersion && shouldUseTargetGameVersion ? [gameVersion] : undefined,
 		loaders:
 			contentType === 'datapack'
 				? ['datapack']
@@ -484,7 +489,7 @@ export function getTargetInstallPreferences(
 					? ['minecraft']
 					: contentType === 'shader'
 						? ['iris']
-						: loader && shouldUseTargetRuntime
+						: loader && shouldUseTargetLoader
 							? [loader]
 							: undefined,
 	})
@@ -551,7 +556,8 @@ export function getLatestMatchingInstallVersion(
 	return [...versions]
 		.filter((version) => versionMatchesPreferences(version, preferences))
 		.sort((a, b) => {
-			const channelDifference = versionChannelRank(a.version_type) - versionChannelRank(b.version_type)
+			const channelDifference =
+				versionChannelRank(a.version_type) - versionChannelRank(b.version_type)
 			if (channelDifference) return channelDifference
 			return new Date(b.date_published).getTime() - new Date(a.date_published).getTime()
 		})[0]

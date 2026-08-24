@@ -388,7 +388,8 @@ pub(crate) fn installed_modrinth_version_id(
         ContentProviderRef::Modrinth { version_id, .. } => {
             version_id.as_ref().cloned()
         }
-        ContentProviderRef::CurseForge { .. } => None,
+        ContentProviderRef::CurseForge { .. }
+        | ContentProviderRef::McArchive { .. } => None,
     })
 }
 
@@ -442,9 +443,9 @@ pub(crate) fn modrinth_update_enabled(
 ) -> bool {
     match origin_provider {
         Some(ContentProvider::Modrinth) => true,
-        Some(ContentProvider::CurseForge) | Some(ContentProvider::Local) => {
-            false
-        }
+        Some(ContentProvider::CurseForge)
+        | Some(ContentProvider::McArchive)
+        | Some(ContentProvider::Local) => false,
         None => provider_refs.iter().all(|reference| {
             matches!(reference, ContentProviderRef::Modrinth { .. })
         }),

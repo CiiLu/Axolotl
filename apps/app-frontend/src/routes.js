@@ -45,6 +45,26 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/settings',
+			name: 'Settings',
+			component: () => import('@/pages/Settings.vue'),
+			meta: {
+				breadcrumb: [{ name: 'Settings' }],
+				discordActivity: 'Idling...',
+			},
+		},
+		{
+			path: '/browse/favorites',
+			name: 'Favorites',
+			component: () => import('@/pages/Favorites.vue'),
+			meta: {
+				useContext: true,
+				breadcrumb: [{ name: '?FavoritesTitle' }],
+				discordActivity: 'Browsing favorites...',
+				pageTransitionGroup: 'browse',
+			},
+		},
+		{
 			path: '/browse/:projectType',
 			name: 'Discover content',
 			component: () => import('@/pages/Browse.vue'),
@@ -80,6 +100,36 @@ export default new createRouter({
 				breadcrumb: [{ name: 'Multiplayer' }],
 				discordActivity: 'Idling...',
 			},
+			children: [
+				{
+					path: '',
+					redirect: { name: 'MultiplayerServers' },
+				},
+				{
+					path: 'servers',
+					name: 'MultiplayerServers',
+					component: () => import('@/components/multiplayer/servers/ServersOverview.vue'),
+				},
+				{
+					path: 'servers/:id',
+					name: 'MultiplayerServerDetail',
+					component: () => import('@/components/multiplayer/servers/ServerDetail.vue'),
+				},
+				{
+					path: 'servers/:id/studio',
+					name: 'MultiplayerServerFileStudio',
+					component: () => import('@/components/multiplayer/servers/ServerFileStudio.vue'),
+					meta: {
+						renderMode: 'fixed',
+						breadcrumb: [{ name: 'Multiplayer', link: '/multiplayer/servers' }, { name: 'Studio' }],
+					},
+				},
+				{
+					path: 'rooms',
+					name: 'MultiplayerRooms',
+					component: () => import('@/components/multiplayer/MultiplayerRooms.vue'),
+				},
+			],
 		},
 		{
 			path: '/lab',
@@ -213,6 +263,30 @@ export default new createRouter({
 				breadcrumb: [{ name: '?Project', link: '/project/curseforge/{id}' }, { name: 'Gallery' }],
 				discordActivity: 'Browsing mods...',
 				pageTransitionGroup: 'curseforge-project',
+			},
+		},
+		{
+			path: '/project/mcarchive/:slug',
+			name: 'McArchiveProject',
+			component: () => import('@/pages/project/McArchive.vue'),
+			props: true,
+			meta: {
+				useContext: true,
+				breadcrumb: [{ name: '?Project' }],
+				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'mcarchive-project',
+			},
+		},
+		{
+			path: '/project/planet-minecraft/:id',
+			name: 'PlanetMinecraftProject',
+			component: () => import('@/pages/project/PlanetMinecraft.vue'),
+			props: true,
+			meta: {
+				useContext: true,
+				breadcrumb: [{ name: '?Project' }],
+				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'planet-minecraft-project',
 			},
 		},
 		{
@@ -389,6 +463,20 @@ export default new createRouter({
 					meta: {
 						useRootContext: true,
 						breadcrumb: [{ name: '?Instance', link: '/instance/{id}/' }, { name: 'Files' }],
+					},
+				},
+				{
+					path: 'files/studio',
+					name: 'FileStudio',
+					component: () => import('@/pages/instance/FileStudio.vue'),
+					meta: {
+						renderMode: 'fixed',
+						useRootContext: true,
+						breadcrumb: [
+							{ name: '?Instance', link: '/instance/{id}/' },
+							{ name: 'Files', link: '/instance/{id}/files' },
+							{ name: 'Studio' },
+						],
 					},
 				},
 				{

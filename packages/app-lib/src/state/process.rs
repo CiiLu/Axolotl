@@ -219,6 +219,7 @@ impl ProcessManager {
             },
             child: mc_proc,
             manually_killed: false,
+            output_tasks: Vec::new(),
             rpc_server,
             _main_class_keep_alive: main_class_keep_alive,
         };
@@ -263,7 +264,7 @@ impl ProcessManager {
             let instance_path = metadata.instance_path.clone();
             let instance_name = metadata.instance_name.clone();
             let process_id = metadata.uuid.to_string();
-            tokio::spawn(async move {
+            process.output_tasks.push(tokio::spawn(async move {
                 Process::process_output(
                     &instance_id,
                     &instance_path,
@@ -274,7 +275,7 @@ impl ProcessManager {
                     xml_logging,
                 )
                 .await;
-            });
+            }));
         }
 
         if let Some(stderr) = stderr {
@@ -284,7 +285,7 @@ impl ProcessManager {
             let instance_path = metadata.instance_path.clone();
             let instance_name = metadata.instance_name.clone();
             let process_id = metadata.uuid.to_string();
-            tokio::spawn(async move {
+            process.output_tasks.push(tokio::spawn(async move {
                 Process::process_output(
                     &instance_id,
                     &instance_path,
@@ -295,7 +296,7 @@ impl ProcessManager {
                     xml_logging,
                 )
                 .await;
-            });
+            }));
         }
 
         let initialization_result = {
@@ -310,7 +311,11 @@ impl ProcessManager {
                 result = &mut initialization => result,
                 exit_status = process.child.wait() => {
                     let exit_status = exit_status.map_err(IOError::from)?;
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    for output_task in process.output_tasks.drain(..) {
+                        if let Err(error) = output_task.await {
+                            tracing::warn!(%error, "Minecraft output task failed");
+                        }
+                    }
                     let _ = Process::append_to_log_file(
                         &log_path,
                         &format!("\n# Process exited with status: {exit_status}\n"),
@@ -421,8 +426,8 @@ impl ProcessManager {
         Ok(())
     }
 
-    fn remove(&self, id: Uuid) {
-        self.processes.remove(&id);
+    fn remove(&self, id: Uuid) -> Option<Process> {
+        self.processes.remove(&id).map(|(_, process)| process)
     }
 
     fn was_manually_killed(&self, id: Uuid) -> bool {
@@ -446,6 +451,7 @@ struct Process {
     metadata: ProcessMetadata,
     child: Child,
     manually_killed: bool,
+    output_tasks: Vec<tokio::task::JoinHandle<()>>,
     _main_class_keep_alive: TempDir,
     rpc_server: RpcServer,
 }
@@ -1020,7 +1026,13 @@ impl Process {
         }
 
         let manually_killed = state.process_manager.was_manually_killed(uuid);
-        state.process_manager.remove(uuid);
+        if let Some(mut process) = state.process_manager.remove(uuid) {
+            for output_task in process.output_tasks.drain(..) {
+                if let Err(error) = output_task.await {
+                    tracing::warn!(%error, "Minecraft output task failed");
+                }
+            }
+        }
         crate::api::multiplayer::minecraft_process_finished(&instance_id).await;
 
         // Now fully complete- update playtime one last time
@@ -1070,6 +1082,19 @@ impl Process {
             tracing::warn!("Failed to write exit status to log file: {}", e);
         }
 
+        if mc_exit_status.success()
+            && !manually_killed
+            && let Err(error) =
+                crate::api::logs::save_successful_mod_snapshot(&instance_id)
+                    .await
+        {
+            tracing::warn!(
+                %error,
+                instance = %instance_id,
+                "Failed to save successful launch Mod snapshot"
+            );
+        }
+
         emit_process(
             &instance_id,
             uuid,
@@ -1080,16 +1105,6 @@ impl Process {
         .await?;
 
         let _ = state.discord_rpc.clear_to_default(true).await;
-
-        // If in tauri, window should show itself again after process exists if it was hidden
-        #[cfg(feature = "tauri")]
-        {
-            let window = crate::EventState::get_main_window().await?;
-            if let Some(window) = window {
-                window.unminimize()?;
-                window.set_focus()?;
-            }
-        }
 
         if mc_exit_status.success() {
             // We do not wait on the post exist command to finish running! We let it spawn + run on its own.

@@ -19,10 +19,9 @@
 					:aria-controls="projectPreviewId"
 					:aria-expanded="projectPreviewOpen"
 					:aria-label="
-						formatMessage(
-							projectPreviewOpen ? messages.hideProjects : messages.showProjects,
-							{ count: selectedCount },
-						)
+						formatMessage(projectPreviewOpen ? messages.hideProjects : messages.showProjects, {
+							count: selectedCount,
+						})
 					"
 					@focus="openProjectPreview"
 					@blur="scheduleProjectPreviewClose"
@@ -178,9 +177,10 @@ const iconStackWidth = computed(() => {
 const selectedCountText = computed(() =>
 	formatMessage(messages.selectedCount, { count: selectedCount.value }),
 )
-const installButtonText = computed(() =>
-	installContext.value?.installButtonLabel ??
-	formatMessage(messages.installButton, { count: selectedCount.value }),
+const installButtonText = computed(
+	() =>
+		installContext.value?.installButtonLabel ??
+		formatMessage(messages.installButton, { count: selectedCount.value }),
 )
 const actionButtonText = computed(() =>
 	isInstallingSelected.value

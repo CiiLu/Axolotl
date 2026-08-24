@@ -11,6 +11,7 @@ export const clientInstallableLoaders = [
 	'cleanroom',
 	'lite_loader',
 	'legacy_fabric',
+	'babric',
 ] as const
 
 export const instanceInstallablePlatforms = ['vanilla', ...clientInstallableLoaders] as const
@@ -29,6 +30,7 @@ export const loaderDisplayNames: Record<string, string> = {
 	lite_loader: 'LiteLoader',
 	cleanroom: 'Cleanroom',
 	legacy_fabric: 'Legacy Fabric',
+	babric: 'Babric',
 	optifine: 'OptiFine',
 }
 

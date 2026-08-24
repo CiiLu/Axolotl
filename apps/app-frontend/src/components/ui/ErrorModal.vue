@@ -125,7 +125,7 @@ const messages = defineMessages({
 	minecraftRequired: {
 		id: 'app.error.minecraft-required',
 		defaultMessage:
-			'To play this instance, create an account. If you do not have a Minecraft account, you can log in with an offline account on the right.',
+			'You are not logged in to any account. Please log in below. If you do not have a licensed account, you can create an offline account or log in with a third-party service in the sidebar.',
 	},
 	stateDescription: {
 		id: 'app.error.state-description',

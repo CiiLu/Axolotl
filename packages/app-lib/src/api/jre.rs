@@ -1495,7 +1495,7 @@ async fn fetch_jdk_feed() -> crate::Result<JdkFeed> {
     }
 
     // Download feed
-    let client = reqwest::Client::new();
+    let client = crate::util::fetch::configured_client().await?;
     let response = client.get(JDK_FEED_URL).send().await?;
     let bytes = response.bytes().await?;
 

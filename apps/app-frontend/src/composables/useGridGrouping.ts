@@ -19,7 +19,7 @@ export interface GridDisplayState {
 	collapsedGroups: string[]
 }
 
-export function useGridGrouping<T extends Record<string, any>>(
+export function useGridGrouping<T extends Record<string, unknown>>(
 	label: string,
 	instances: Ref<T[]>,
 	options: {

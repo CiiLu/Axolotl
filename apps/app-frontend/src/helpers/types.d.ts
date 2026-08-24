@@ -106,12 +106,11 @@ export type InstanceLoader =
 	| 'lite_loader'
 	| 'cleanroom'
 	| 'legacy_fabric'
+	| 'babric'
 
 export type LoaderComponent = {
 	instanceId: string
-	kind:
-		| InstanceLoader
-		| 'optifabric'
+	kind: InstanceLoader | 'optifabric'
 	version?: string | null
 	role: 'primary' | 'adjunct'
 	providerMetadata?: unknown
@@ -124,12 +123,12 @@ type ContentFile = {
 		version_id: string
 	}
 	provider_refs: Array<{
-		provider: 'modrinth' | 'curseforge'
+		provider: 'modrinth' | 'curseforge' | 'mcarchive'
 		project_id: string | number
 		version_id?: string | null
-		file_id?: number | null
+		file_id?: string | number | null
 	}>
-	origin_provider: 'modrinth' | 'curseforge' | null
+	origin_provider: 'modrinth' | 'curseforge' | 'mcarchive' | null
 }
 
 type ContentFileProjectType = 'mod' | 'datapack' | 'resourcepack' | 'shaderpack' | 'schematic'
@@ -221,6 +220,7 @@ type AppSettings = {
 	force_fullscreen: boolean
 	game_resolution: [number, number]
 	hide_on_process_start: boolean
+	enter_lightweight_mode_on_game_launch: boolean
 	auto_set_java_high_performance_mode: boolean
 	hooks: Hooks
 	mojang_auth_source: 'auto' | 'official_only' | 'mirror_preferred' | 'official_preferred'

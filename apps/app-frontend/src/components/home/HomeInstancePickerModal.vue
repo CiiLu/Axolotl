@@ -6,7 +6,7 @@ import { nextTick, ref } from 'vue'
 import InstancePickerList from '@/components/ui/instance/InstancePickerList.vue'
 import type { GameInstance } from '@/helpers/types'
 
-const props = defineProps<{
+defineProps<{
 	instances: GameInstance[]
 	selectedInstanceId?: string | null
 }>()

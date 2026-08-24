@@ -1242,7 +1242,9 @@ async fn load_upgrade_catalog(
                 )
                 .await?
             }
-            ContentProvider::Local => CandidatePool::default(),
+            ContentProvider::McArchive | ContentProvider::Local => {
+                CandidatePool::default()
+            }
         };
         for candidate in &candidates.candidates {
             for dependency in &candidate.dependencies {
@@ -4690,12 +4692,18 @@ mod tests {
             Some("123"),
         );
         item.content.as_mut().unwrap().provider_refs = vec![
-            ContentProviderRef::from_database("curseforge", "123", Some("123"))
-                .unwrap(),
+            ContentProviderRef::from_database(
+                "curseforge",
+                "123",
+                Some("123"),
+                None,
+            )
+            .unwrap(),
             ContentProviderRef::from_database(
                 "modrinth",
                 "YL57xq9U",
                 Some("iris-version"),
+                None,
             )
             .unwrap(),
         ];

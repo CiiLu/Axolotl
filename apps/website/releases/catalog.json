@@ -1,6 +1,211 @@
 {
-  "updated_at": "2026-08-19T07:49:28.902Z",
+  "updated_at": "2026-08-22T19:09:10.297Z",
   "announcements": [
+    {
+      "id": "launcher-1.8.12",
+      "version": "1.8.12",
+      "publishedAt": "2026-08-23",
+      "title": {
+        "en-US": "Axolotl Launcher 1.8.12",
+        "zh-CN": "Axolotl Launcher 1.8.12"
+      },
+      "changes": {
+        "fixed": [
+          {
+            "en-US": "Urgently fix the NSIS installer package issue.",
+            "zh-CN": "紧急修复nsis安装包问题。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "launcher-1.8.11",
+      "version": "1.8.11",
+      "publishedAt": "2026-08-22",
+      "title": {
+        "en-US": "Axolotl Launcher 1.8.11",
+        "zh-CN": "Axolotl Launcher 1.8.11"
+      },
+      "changes": {
+        "added": [
+          {
+            "en-US": "Added server management: create, configure, start, stop, monitor, and manage files for local Minecraft servers.",
+            "zh-CN": "新增服务器管理功能，可创建、配置、启动、停止、监控和管理本地 Minecraft 服务器文件。"
+          },
+          {
+            "en-US": "Added Lightweight Mode, which can be enabled in Appearance settings or automatically activated while Minecraft is running to reduce launcher resource use.",
+            "zh-CN": "新增轻量模式，可在 Minecraft 运行时自动开启以降低启动器资源占用。"
+          },
+          {
+            "en-US": "Added Lemwood Mirror as a download source, with automatic selection for visitors in mainland China.",
+            "zh-CN": "新增柠泽镜像下载源，并会为中国大陆访客自动选择。"
+          },
+          {
+            "en-US": "Added duplicate-content detection before installing content.",
+            "zh-CN": "新增内容安装前的重复内容检测。"
+          },
+          {
+            "en-US": "Added pinned Content tab views that remember each instance's sorting and filters between launcher restarts.",
+            "zh-CN": "内容页现可固定实例视图，在重启启动器后保留各实例的排序和筛选条件。"
+          },
+          {
+            "en-US": "Added translation for titles and descriptions in project galleries.",
+            "zh-CN": "项目图库中的图片标题和说明现已支持翻译。"
+          },
+          {
+            "en-US": "Added direct links to matching MC Mod wiki pages in the Content tab mod menu.",
+            "zh-CN": "内容页的模组菜单现可直接打开匹配的 MC 百科页面。"
+          }
+        ],
+        "changed": [
+          {
+            "en-US": "Redesigned Settings with clearer categories, search, and more consistent controls.",
+            "zh-CN": "重构设置界面，提供更清晰的分类、搜索和一致的操作控件。"
+          },
+          {
+            "en-US": "Improved server setup with automatic Java selection, port-conflict detection, and a guided configuration flow.",
+            "zh-CN": "优化服务器创建流程，新增自动 Java 选择、端口冲突检测和引导式配置。"
+          },
+          {
+            "en-US": "Improved Content tab sorting with file name options and clearer active filter indicators.",
+            "zh-CN": "优化内容页排序，新增文件名排序选项并明确显示生效中的筛选条件。"
+          },
+          {
+            "en-US": "Project and version pages now return to the originating instance Content tab when opened from it.",
+            "zh-CN": "从内容页打开项目或版本页面后，现在会返回原来的实例内容页。"
+          }
+        ],
+        "fixed": [
+          {
+            "en-US": "Fixed server installation and management issues, including Fabric and Paper setup failures, terminal encoding, and server settings behavior.",
+            "zh-CN": "修复服务器安装和管理中的问题，包括 Fabric 和 Paper 安装失败、终端编码及服务器设置行为。"
+          },
+          {
+            "en-US": "Fixed mirror update manifests failing to serialize correctly.",
+            "zh-CN": "修复镜像更新清单无法正确序列化的问题。"
+          },
+          {
+            "en-US": "Fixed the Discover project gallery sidebar covering images in the image viewer.",
+            "zh-CN": "修复发现内容的项目图库查看器中侧边栏遮挡图片的问题。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "launcher-1.8.10",
+      "version": "1.8.10",
+      "publishedAt": "2026-08-22",
+      "title": {
+        "en-US": "Axolotl Launcher 1.8.10",
+        "zh-CN": "Axolotl Launcher 1.8.10"
+      },
+      "changes": {
+        "added": [
+          {
+            "en-US": "Added a community survey entry on the About page.",
+            "zh-CN": "“关于”页面新增调查问卷入口。"
+          },
+          {
+            "en-US": "Added new translating source —— DeepL.",
+            "zh-CN": "新增DeepL翻译。"
+          },
+          {
+            "en-US": "Add support for importing without version isolation enabled.",
+            "zh-CN": "新增未开启版本隔离的导入支持。"
+          }
+        ],
+        "changed": [
+          {
+            "en-US": "The official QQ group is now 737601250.",
+            "zh-CN": "官方 QQ 群号变更为 737601250。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "launcher-1.8.9",
+      "version": "1.8.9",
+      "publishedAt": "2026-08-21",
+      "title": {
+        "en-US": "Axolotl Launcher 1.8.9",
+        "zh-CN": "Axolotl Launcher 1.8.9"
+      },
+      "changes": {
+        "added": [
+          {
+            "zh-CN": "增加文件 Studio",
+            "en-US": "Added file Studio"
+          }
+        ],
+        "fixed": [
+          {
+            "zh-CN": "修复添加了背景图的侧边栏无法正常跟随主题颜色并提供模糊效果的问题。",
+            "en-US": "Fixed a bug where the sidebar with a background image was unable to follow the theme color and provide a blurry effect."
+          },
+          {
+            "zh-CN": "修复部分情况下无法正常切换背景图片的问题",
+            "en-US": "Fixed a bug where the background image could not be switched normally in some cases."
+          },
+          {
+            "en-US": "Fixed Forge-based Minecraft instances closing before startup when their loader metadata reused JVM options.",
+            "zh-CN": "修复 Forge 实例的加载器元数据重复使用 JVM 参数时，会在启动前直接退出的问题。"
+          },
+          {
+            "en-US": "Fixed early Minecraft startup failures sometimes leaving an empty launcher log instead of the error output.",
+            "zh-CN": "修复 Minecraft 启动早期失败时启动器日志有时为空、未记录错误输出的问题。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "launcher-1.8.8",
+      "version": "1.8.8",
+      "publishedAt": "2026-08-19",
+      "title": {
+        "en-US": "Axolotl Launcher 1.8.8",
+        "zh-CN": "Axolotl Launcher 1.8.8"
+      },
+      "changes": {
+        "added": [
+          {
+            "en-US": "Added Favorites.",
+            "zh-CN": "新增收藏夹功能。"
+          },
+          {
+            "en-US": "Added LiteLoader, legacy Fabric, and Cleanroom support for Minecraft 1.8.8.",
+            "zh-CN": "为 Minecraft 1.8.8 新增 LiteLoader、旧版 Fabric 和 Cleanroom 支持。"
+          },
+          {
+            "en-US": "Added custom proxy config.",
+            "zh-CN": "现在支持为启动器配置自定义代理。"
+          }
+        ],
+        "fixed": [
+          {
+            "en-US": "Fixed when hovering links in browse page will trigger a flashing element behind the left nav bar.",
+            "zh-CN": "修复浏览页面悬停链接时会触发左侧导航栏后面的闪烁元素的问题。"
+          },
+          {
+            "en-US": "Fixed unknown curseforge ID error when switching mods from curseforge source. (issue #320)",
+            "zh-CN": "修复了从 CurseForge 源切换模组时提示未知 CurseForge ID 的错误。(issue #320)"
+          },
+          {
+            "en-US": "Fixed prerequisite selection so each resolved dependency can be enabled or disabled independently.",
+            "zh-CN": "修复前置解析完成后无法独立启用或禁用前置的问题。"
+          },
+          {
+            "en-US": "The icon picker will now use the icon of the loader by default when creating instance.",
+            "zh-CN": "当创建实例时，图标选择器现在会默认使用加载器的图标。"
+          }
+        ],
+        "changed": [
+          {
+            "en-US": "Header for instance mod install page is now blurred.",
+            "zh-CN": "实例的模组安装页面的标题栏现在会模糊。"
+          }
+        ]
+      }
+    },
     {
       "id": "launcher-1.8.7",
       "version": "1.8.7",

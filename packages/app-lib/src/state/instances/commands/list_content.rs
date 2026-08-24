@@ -276,6 +276,10 @@ fn instance_matches_targets(
     loader: &str,
     targets: &[InstanceInstallTarget],
 ) -> bool {
+    if project_type == ProjectType::ResourcePack {
+        return !targets.is_empty();
+    }
+
     targets.iter().any(|target| {
         target.game_version == game_version
             && (project_type != ProjectType::Mod
@@ -1426,6 +1430,7 @@ async fn content_projects_for_files(
                                 project_id, ..
                             } => Some(project_id.as_str()),
                             ContentProviderRef::CurseForge { .. } => None,
+                            ContentProviderRef::McArchive { .. } => None,
                         },
                     ),
                 ) {
@@ -1463,6 +1468,7 @@ async fn content_projects_for_files(
                                 project_id, ..
                             } => Some(project_id.as_str()),
                             ContentProviderRef::CurseForge { .. } => None,
+                            ContentProviderRef::McArchive { .. } => None,
                         },
                     ),
                 ) {
@@ -1693,7 +1699,7 @@ async fn content_files_to_content_items(
     let mut source_kind_by_path = HashMap::<String, ContentSourceKind>::new();
     let provider_rows = sqlx::query(
         "SELECT file.relative_path, ref.provider, ref.provider_project_id,
-                ref.provider_release_id, ref.is_origin, entry.source_kind
+                ref.provider_release_id, ref.provider_file_id, ref.is_origin, entry.source_kind
          FROM instance_files file
          INNER JOIN instance_content_entries entry ON entry.file_id = file.id
          INNER JOIN instance_content_provider_refs ref
@@ -1716,6 +1722,8 @@ async fn content_files_to_content_items(
                 row.try_get("provider_project_id")?,
                 row.try_get::<Option<String>, _>("provider_release_id")?
                     .as_deref(),
+                row.try_get::<Option<String>, _>("provider_file_id")?
+                    .as_deref(),
             )?);
         if row.try_get::<i64, _>("is_origin")? != 0 {
             origin_provider_by_path
@@ -1737,6 +1745,7 @@ async fn content_files_to_content_items(
                 Some(project_id.get())
             }
             ContentProviderRef::Modrinth { .. } => None,
+            ContentProviderRef::McArchive { .. } => None,
         })
         .collect::<HashSet<_>>();
     let curseforge_projects = if cache_behaviour
@@ -2835,6 +2844,33 @@ mod tests {
         .unwrap();
         tx.commit().await.unwrap();
         entry
+    }
+
+    #[test]
+    fn resource_pack_install_candidates_ignore_game_version() {
+        let targets = vec![InstanceInstallTarget {
+            game_version: "1.21.11".to_string(),
+            loader: "minecraft".to_string(),
+        }];
+
+        assert!(instance_matches_targets(
+            ProjectType::ResourcePack,
+            "26.2",
+            "vanilla",
+            &targets,
+        ));
+        assert!(!instance_matches_targets(
+            ProjectType::DataPack,
+            "26.2",
+            "vanilla",
+            &targets,
+        ));
+        assert!(!instance_matches_targets(
+            ProjectType::ResourcePack,
+            "26.2",
+            "vanilla",
+            &[],
+        ));
     }
 
     #[test]

@@ -54,7 +54,8 @@ const messages = defineMessages({
 	},
 	downloadSourceDescription: {
 		id: 'axolotl-settings.download-source.description',
-		defaultMessage: 'Automatic selection uses CNB in mainland China and GitHub elsewhere.',
+		defaultMessage:
+			'Automatic selection uses Lemwood Mirror in mainland China and GitHub elsewhere.',
 	},
 	downloadSourceAuto: {
 		id: 'axolotl-settings.download-source.auto',
@@ -64,13 +65,21 @@ const messages = defineMessages({
 		id: 'axolotl-settings.download-source.auto.description',
 		defaultMessage: 'Choose a source from your browser language and timezone.',
 	},
+	downloadSourceMiawa: {
+		id: 'axolotl-settings.download-source.miawa',
+		defaultMessage: 'Lemwood Mirror',
+	},
+	downloadSourceMiawaDescription: {
+		id: 'axolotl-settings.download-source.miawa.description',
+		defaultMessage: 'Recommended for visitors in mainland China.',
+	},
 	downloadSourceCnb: {
 		id: 'axolotl-settings.download-source.cnb',
 		defaultMessage: 'CNB',
 	},
 	downloadSourceCnbDescription: {
 		id: 'axolotl-settings.download-source.cnb.description',
-		defaultMessage: 'Recommended for visitors in mainland China.',
+		defaultMessage: 'Alternative source for mainland China.',
 	},
 	downloadSourceGithub: {
 		id: 'axolotl-settings.download-source.github',
@@ -130,6 +139,11 @@ const downloadSourceOptions = computed<
 		subLabel: formatMessage(messages.downloadSourceAutoDescription),
 	},
 	{
+		value: 'miawa',
+		label: formatMessage(messages.downloadSourceMiawa),
+		subLabel: formatMessage(messages.downloadSourceMiawaDescription),
+	},
+	{
 		value: 'cnb',
 		label: formatMessage(messages.downloadSourceCnb),
 		subLabel: formatMessage(messages.downloadSourceCnbDescription),
@@ -141,11 +155,11 @@ const downloadSourceOptions = computed<
 	},
 ])
 
-const resolvedDownloadSourceLabel = computed(() =>
-	formatMessage(
-		resolvedSource.value === 'cnb' ? messages.downloadSourceCnb : messages.downloadSourceGithub,
-	),
-)
+const resolvedDownloadSourceLabel = computed(() => {
+	if (resolvedSource.value === 'miawa') return formatMessage(messages.downloadSourceMiawa)
+	if (resolvedSource.value === 'cnb') return formatMessage(messages.downloadSourceCnb)
+	return formatMessage(messages.downloadSourceGithub)
+})
 
 let systemThemeQuery: MediaQueryList | undefined
 

@@ -1746,6 +1746,7 @@ async fn run_request(
                     content_type,
                     selected,
                     excluded_project_ids,
+                    force_project_ids: Vec::new(),
                 },
                 state,
             )
@@ -2375,6 +2376,7 @@ fn default_upgrade_instance_name(
         ModLoader::Cleanroom => "Cleanroom",
         ModLoader::LiteLoader => "LiteLoader",
         ModLoader::LegacyFabric => "Legacy Fabric",
+        ModLoader::Babric => "Babric",
     };
     let loader_version = environment
         .mod_loader_version
@@ -3036,6 +3038,13 @@ async fn stage_one_upgrade_request(
                     )
                     .await?,
                 )
+            }
+            ContentProvider::McArchive => {
+                return Err(crate::ErrorKind::InputError(
+                    "MCArchive content cannot be downloaded by upgrade execution"
+                        .to_string(),
+                )
+                .into());
             }
             ContentProvider::Local => {
                 return Err(crate::ErrorKind::InputError(
@@ -3699,6 +3708,7 @@ async fn remove_existing_pack_content(
                             Some(project_id.to_string())
                         }
                         ContentProviderRef::CurseForge { .. } => None,
+                        ContentProviderRef::McArchive { .. } => None,
                     })
             })?
         })
@@ -4187,6 +4197,7 @@ async fn install_local_pack_file(
                 details,
                 false,
                 &crate::api::pack::import::ImportOverrides::default(),
+                None, // Not compatible mode
             )
             .await?;
         }
@@ -4709,6 +4720,7 @@ pub(crate) async fn install_optifabric_file(
             world_name: None,
             install_dependencies: false,
             excluded_dependency_project_ids: Vec::new(),
+            force_dependency_project_ids: Vec::new(),
             dependency_plan_id: None,
         },
     )

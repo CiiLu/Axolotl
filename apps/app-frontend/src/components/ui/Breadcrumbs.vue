@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { ChevronRightIcon } from '@modrinth/assets'
-import { defineMessages, useVIntl } from '@modrinth/ui'
+import { commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -86,6 +86,7 @@ const messages = defineMessages({
 	},
 	content: { id: 'app.instance.tabs.content', defaultMessage: 'Content' },
 	files: { id: 'app.instance.tabs.files', defaultMessage: 'Files' },
+	studio: { id: 'instance.files.studio.title', defaultMessage: 'Studio' },
 	logs: { id: 'app.instance.tabs.logs', defaultMessage: 'Logs' },
 	editWorld: { id: 'app.navigation.edit-world', defaultMessage: 'Edit world' },
 	upgradeInstance: { id: 'app.instance.upgrade-instance', defaultMessage: 'Upgrade instance' },
@@ -99,6 +100,7 @@ const staticLabels = {
 	Multiplayer: messages.multiplayer,
 	Library: messages.library,
 	Downloads: messages.downloads,
+	Settings: commonMessages.settingsLabel,
 	Lab: messages.lab,
 	'Gradient text generator': messages.gradientText,
 	'Seed map': messages.seedMap,
@@ -106,6 +108,7 @@ const staticLabels = {
 	'Mod translation': messages.modTranslation,
 	Content: messages.content,
 	Files: messages.files,
+	Studio: messages.studio,
 	Logs: messages.logs,
 	'Edit world': messages.editWorld,
 	Upgrade: messages.upgradeInstance,

@@ -57,6 +57,7 @@ const resetHeroGlow = () => {
 }
 
 const { resolvedSource } = useDownloadSource()
+const MIAWA_RELEASE_BASE_URL = 'https://miawa.cn/download/axolotl'
 const CNB_RELEASE_BASE_URL = 'https://cnb.cool/axlmc/Axolotl/-/releases/download'
 const GITHUB_RELEASE_BASE_URL = 'https://github.com/Mystic-Stars/Axolotl/releases/download'
 
@@ -240,6 +241,10 @@ watch(
 			)
 			if (!assetName) return null
 
+			if (resolvedSource.value === 'miawa') {
+				return `${MIAWA_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(assetName)}`
+			}
+
 			if (resolvedSource.value === 'cnb') {
 				return `${CNB_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(assetName)}`
 			}
@@ -402,6 +407,10 @@ const messages = defineMessages({
 	cnbReleasesLink: {
 		id: 'axolotl-marketing.download.cnb-releases',
 		defaultMessage: 'CNB Releases (recommended in mainland China)',
+	},
+	lemwoodMirrorLink: {
+		id: 'axolotl-marketing.download.lemwood-mirror',
+		defaultMessage: 'lemwood Mirror (recommended in mainland China)',
 	},
 	moreDownloadOptions: {
 		id: 'app-marketing.hero.more-download-options',
@@ -1133,6 +1142,9 @@ useHead(() => ({
 					<a href="https://cnb.cool/axlmc/Axolotl/-/releases" target="_blank" rel="noopener">
 						{{ formatMessage(messages.cnbReleasesLink) }}
 					</a>
+					<a href="https://miawa.cn/files/axolotl" target="_blank" rel="noopener">
+						{{ formatMessage(messages.lemwoodMirrorLink) }}
+					</a>
 					<a
 						href="https://github.com/Mystic-Stars/Axolotl/releases/latest"
 						target="_blank"
@@ -1145,11 +1157,7 @@ useHead(() => ({
 			<p class="terms">
 				<IntlFormatted :message-id="messages.downloadTerms">
 					<template #terms-link="{ children }">
-						<a
-							href="https://github.com/Mystic-Stars/Axolotl/blob/main/LICENSE"
-							target="_blank"
-							rel="noopener"
-						>
+						<a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">
 							<component :is="() => children" />
 						</a>
 					</template>
