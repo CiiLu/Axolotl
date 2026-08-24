@@ -36,11 +36,13 @@ export interface ServerInfoData extends ServerManifestData {
 	port: number | null
 }
 
+export type ServerExitReason = 'eula'
+
 export type ServerEventPayload =
 	| { event: 'log'; line: string }
 	| { event: 'download_progress'; downloaded: number; total?: number }
 	| { event: 'started' }
-	| { event: 'stopped'; crashed: boolean }
+	| { event: 'stopped'; crashed: boolean; reason?: ServerExitReason }
 
 export interface PortProcessInfoData {
 	pid: number
