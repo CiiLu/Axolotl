@@ -1061,6 +1061,9 @@
   "creation-flow.modal.custom-setup.game-dir.label": {
     "defaultMessage": "游戏目录"
   },
+  "creation-flow.modal.custom-setup.game-dir.managed": {
+    "defaultMessage": "Axolotl 目录"
+  },
   "creation-flow.modal.custom-setup.game-dir.not-isolated": {
     "defaultMessage": "不隔离（共享 .minecraft 文件夹）"
   },

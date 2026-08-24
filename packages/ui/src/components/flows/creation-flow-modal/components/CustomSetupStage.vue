@@ -283,6 +283,10 @@ const messages = defineMessages({
 		id: 'creation-flow.modal.custom-setup.game-dir.custom',
 		defaultMessage: 'Custom',
 	},
+	gameDirManaged: {
+		id: 'creation-flow.modal.custom-setup.game-dir.managed',
+		defaultMessage: 'Axolotl directory',
+	},
 	gameDirChooseFolder: {
 		id: 'creation-flow.modal.custom-setup.game-dir.choose-folder',
 		defaultMessage: 'Choose folder',
@@ -746,16 +750,14 @@ function setGameDirMode(mode: GameDirOverrideMode) {
 	}
 }
 
-const gameDirModeItems: GameDirOverrideMode[] = ['isolated', 'not-isolated', 'custom']
+const gameDirModeItems: GameDirOverrideMode[] = ['isolated', 'custom']
 
 function gameDirModeLabel(mode: GameDirOverrideMode) {
 	switch (mode) {
-		case 'not-isolated':
-			return messages.gameDirNotIsolated
 		case 'custom':
 			return messages.gameDirCustom
 		default:
-			return messages.gameDirIsolated
+			return messages.gameDirManaged
 	}
 }
 

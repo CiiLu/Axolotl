@@ -1088,6 +1088,9 @@
   "creation-flow.modal.custom-setup.game-dir.label": {
     "defaultMessage": "Game directory"
   },
+  "creation-flow.modal.custom-setup.game-dir.managed": {
+    "defaultMessage": "Axolotl directory"
+  },
   "creation-flow.modal.custom-setup.game-dir.not-isolated": {
     "defaultMessage": "Not isolated (shared .minecraft folder)"
   },
