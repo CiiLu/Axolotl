@@ -15,7 +15,7 @@
 			:class="{ 'breadcrumbs-scroll': isAnimating }"
 			@animationiteration="onAnimationIteration"
 		>
-			<template v-for="breadcrumb in breadcrumbs" :key="breadcrumb.name">
+			<template v-for="(breadcrumb, index) in breadcrumbs" :key="breadcrumb.name">
 				<router-link
 					v-if="breadcrumb.link"
 					:to="{
@@ -63,7 +63,11 @@
 					/>
 					{{ resolveLabel(breadcrumb.name) }}
 				</span>
-				<ChevronRightIcon v-if="breadcrumb.link" data-tauri-drag-region class="w-5 h-5 shrink-0" />
+				<ChevronRightIcon
+					v-if="index < breadcrumbs.length - 1"
+					data-tauri-drag-region
+					class="w-5 h-5 shrink-0"
+				/>
 			</template>
 		</div>
 	</div>
@@ -71,6 +75,7 @@
 
 <script setup lang="ts">
 import {
+	ArrowBigUpDashIcon,
 	ChangeSkinIcon,
 	ChevronRightIcon,
 	CodeIcon,
@@ -94,6 +99,7 @@ import { Avatar, commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 
+import { resolveBreadcrumbLabel } from '@/helpers/breadcrumb-label'
 import { useBreadcrumbs } from '@/store/breadcrumbs'
 
 interface Breadcrumb {
@@ -137,6 +143,7 @@ const messages = defineMessages({
 	studio: { id: 'instance.files.studio.title', defaultMessage: 'Studio' },
 	logs: { id: 'app.instance.tabs.logs', defaultMessage: 'Logs' },
 	editWorld: { id: 'app.navigation.edit-world', defaultMessage: 'Edit world' },
+	upgradeInstance: { id: 'app.instance.upgrade-instance', defaultMessage: 'Upgrade instance' },
 })
 
 const staticLabels = {
@@ -158,6 +165,7 @@ const staticLabels = {
 	Studio: messages.studio,
 	Logs: messages.logs,
 	'Edit world': messages.editWorld,
+	Upgrade: messages.upgradeInstance,
 }
 
 const staticIcons: Record<string, Component> = {
@@ -179,6 +187,7 @@ const staticIcons: Record<string, Component> = {
 	Studio: CodeIcon,
 	Logs: FileTextIcon,
 	'Edit world': PencilIcon,
+	Upgrade: ArrowBigUpDashIcon,
 	Favorites: HeartIcon,
 	Versions: PackageIcon,
 	Gallery: ImagesIcon,
@@ -205,10 +214,12 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
 })
 
 function resolveLabel(name: string): string {
-	if (name.charAt(0) === '?') return breadcrumbData.getName(name.slice(1))
-
-	const label = staticLabels[name as keyof typeof staticLabels]
-	return label ? formatMessage(label) : name
+	return resolveBreadcrumbLabel(
+		name,
+		(key) => breadcrumbData.getName(key),
+		staticLabels,
+		(message) => formatMessage(message),
+	)
 }
 
 function resolveIcon(breadcrumb: Breadcrumb): Component | undefined {

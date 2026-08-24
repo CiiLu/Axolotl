@@ -24,7 +24,7 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use chrono::Utc;
 use daedalus as d;
-use daedalus::minecraft::{LoggingSide, RuleAction, VersionInfo};
+use daedalus::minecraft::{LoggingSide, VersionInfo};
 use daedalus::modded::{LoaderVersion, Manifest};
 use regex::Regex;
 use serde::Deserialize;
@@ -1950,6 +1950,7 @@ fn update_offline_skin_resource_pack_option(
 #[cfg(test)]
 mod loader_resolution_tests {
     use super::*;
+    use daedalus::minecraft::RuleAction;
 
     #[test]
     fn disallow_only_library_rules_are_not_downloaded() {

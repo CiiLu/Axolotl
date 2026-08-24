@@ -37,6 +37,16 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_refresh_content,
             instance_plan_content_updates,
             instance_apply_content_update_plan,
+            instance_plan_upgrade,
+            instance_get_upgrade_plan,
+            instance_update_upgrade_resolution,
+            instance_update_upgrade_resolutions,
+            instance_reset_upgrade_resolution,
+            instance_select_upgrade_solution,
+            instance_resolve_custom_upgrade_solution,
+            instance_execute_upgrade,
+            instance_get_post_upgrade_notice,
+            instance_dismiss_post_upgrade_notice,
             instance_get_dependencies_as_content_items,
             instance_get_linked_modpack_info,
             instance_get_linked_modpack_content,
@@ -593,6 +603,118 @@ pub async fn instance_apply_content_update_plan(
 ) -> Result<theseus::data::InstanceContentSnapshot> {
     Ok(
         theseus::instance::apply_content_update_plan(plan_id, resolutions)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_plan_upgrade(
+    instance_id: &str,
+    target_environment: theseus::data::InstanceUpgradeEnvironment,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::plan_instance_upgrade(
+        instance_id,
+        target_environment,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_get_upgrade_plan(
+    plan_id: &str,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::get_instance_upgrade_plan(plan_id).await?)
+}
+
+#[tauri::command]
+pub async fn instance_update_upgrade_resolution(
+    plan_id: &str,
+    resolution: theseus::data::InstanceUpgradeResolution,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::update_instance_upgrade_resolution(
+        plan_id, resolution,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_update_upgrade_resolutions(
+    plan_id: &str,
+    resolutions: Vec<theseus::data::InstanceUpgradeResolution>,
+) -> Result<theseus::data::InstanceUpgradeResolutionBatchResult> {
+    Ok(theseus::instance::update_instance_upgrade_resolutions(
+        plan_id,
+        resolutions,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_reset_upgrade_resolution(
+    plan_id: &str,
+    content_id: &str,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::reset_instance_upgrade_resolution(
+        plan_id, content_id,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_select_upgrade_solution(
+    plan_id: &str,
+    choice: theseus::data::InstanceUpgradeSolutionChoice,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(
+        theseus::instance::select_instance_upgrade_solution(plan_id, choice)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_resolve_custom_upgrade_solution(
+    plan_id: &str,
+    fixed_constraints: Vec<theseus::data::InstanceUpgradeFixedConstraint>,
+) -> Result<theseus::data::InstanceUpgradePlan> {
+    Ok(theseus::instance::resolve_custom_instance_upgrade_solution(
+        plan_id,
+        fixed_constraints,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_execute_upgrade(
+    plan_id: &str,
+    create_full_backup: bool,
+    shared_upgrade_mode: theseus::install::SharedUpgradeMode,
+    display_names: Option<theseus::install::InstanceUpgradeDisplayNames>,
+) -> Result<theseus::install::InstallJobSnapshot> {
+    Ok(theseus::instance::execute_instance_upgrade(
+        plan_id,
+        create_full_backup,
+        shared_upgrade_mode,
+        display_names.unwrap_or_default(),
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_get_post_upgrade_notice(
+    instance_id: &str,
+) -> Result<Option<theseus::data::InstancePostUpgradeNotice>> {
+    Ok(
+        theseus::instance::get_instance_post_upgrade_notice(instance_id)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn instance_dismiss_post_upgrade_notice(
+    instance_id: &str,
+) -> Result<()> {
+    Ok(
+        theseus::instance::dismiss_instance_post_upgrade_notice(instance_id)
             .await?,
     )
 }

@@ -58,6 +58,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'新增远古版选项，位于愚人节版本右侧，可在创建实例时选择历史 Alpha、Beta 及其他旧版标签版本，例如 a1.2.3。',
 				},
+				{
+					'zh-CN': '添加实例一键升级功能',
+					'en-US': 'Added instance upgrade feature',
+				},
 			],
 			changed: [
 				{

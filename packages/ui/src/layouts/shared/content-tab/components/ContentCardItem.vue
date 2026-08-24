@@ -96,6 +96,7 @@ interface Props {
 	inlineActions?: ContentRowInlineAction[]
 	disabled?: boolean
 	disabledTooltip?: string | null
+	postUpgradeWarningTooltip?: string | null
 	toggleDisabled?: boolean
 	toggleDisabledTooltip?: string | null
 	dependencyBadge?: {
@@ -141,6 +142,7 @@ const props = withDefaults(defineProps<Props>(), {
 	inlineActions: undefined,
 	disabled: false,
 	disabledTooltip: undefined,
+	postUpgradeWarningTooltip: undefined,
 	toggleDisabled: false,
 	toggleDisabledTooltip: undefined,
 	dependencyBadge: null,
@@ -249,6 +251,12 @@ const deleteHovered = ref(false)
 				/>
 				<div class="flex min-w-0 flex-col gap-0.5">
 					<div class="flex min-w-0 items-center gap-1">
+						<TriangleAlertIcon
+							v-if="postUpgradeWarningTooltip"
+							v-tooltip="postUpgradeWarningTooltip"
+							class="size-4 shrink-0 text-brand-orange"
+							aria-hidden="true"
+						/>
 						<AutoLink
 							:target="
 								typeof projectLink === 'string' && projectLink.startsWith('http')
@@ -505,6 +513,12 @@ const deleteHovered = ref(false)
 				</div>
 				<div class="flex min-w-0 flex-col gap-0.5">
 					<div class="flex min-w-0 items-center gap-1">
+						<TriangleAlertIcon
+							v-if="postUpgradeWarningTooltip"
+							v-tooltip="postUpgradeWarningTooltip"
+							class="size-4 shrink-0 text-brand-orange"
+							aria-hidden="true"
+						/>
 						<AutoLink
 							:target="
 								typeof projectLink === 'string' && projectLink.startsWith('http')

@@ -941,8 +941,7 @@ const sourceOptions = computed(() =>
 				...(curseForgeCapability.value.configured
 					? [{ id: 'curseforge' as const, label: messages.curseForgeSource, icon: CurseForgeIcon }]
 					: []),
-				...(projectType.value === 'mod'
-					&& mcArchiveAvailable.value
+				...(projectType.value === 'mod' && mcArchiveAvailable.value
 					? [{ id: 'mcarchive' as const, label: messages.mcArchiveSource, icon: FileArchiveIcon }]
 					: []),
 				...(projectType.value === 'mod' && planetMinecraftAvailable.value
@@ -973,14 +972,14 @@ const browseTitle = computed(() =>
 	),
 )
 breadcrumbs.setName('BrowseTitle', browseTitle.value)
-	if (instance.value) {
-		const instanceLink = `/instance/${encodeURIComponent(instance.value.id)}`
-		const instanceIcon = getDisplayInstanceIcon(instance.value.icon_path, instance.value.loader).url
-		breadcrumbs.setContext({
-			name: instance.value.name,
-			link: isFromWorlds.value || isWorldMapContext.value ? `${instanceLink}/worlds` : instanceLink,
-			iconUrl: instanceIcon,
-		})
+if (instance.value) {
+	const instanceLink = `/instance/${encodeURIComponent(instance.value.id)}`
+	const instanceIcon = getDisplayInstanceIcon(instance.value.icon_path, instance.value.loader).url
+	breadcrumbs.setContext({
+		name: instance.value.name,
+		link: isFromWorlds.value || isWorldMapContext.value ? `${instanceLink}/worlds` : instanceLink,
+		iconUrl: instanceIcon,
+	})
 } else {
 	breadcrumbs.setContext(null)
 }
