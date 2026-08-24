@@ -102,6 +102,7 @@ pub async fn import_instance(
         game_version: None,
         loader: None,
         loader_version: None,
+        game_dir_override: None,
     })
     .await
 }
@@ -125,6 +126,7 @@ pub async fn import_instance_with_path(
         game_version: None,
         loader: None,
         loader_version: None,
+        game_dir_override: None,
     })
     .await
 }
@@ -138,6 +140,7 @@ pub async fn import_instance_with_plan(
     game_version: Option<String>,
     loader: Option<crate::state::ModLoader>,
     loader_version: Option<String>,
+    game_dir_override: Option<String>,
 ) -> crate::Result<InstallJobSnapshot> {
     start(InstallRequest::ImportInstance {
         launcher_type,
@@ -148,6 +151,7 @@ pub async fn import_instance_with_plan(
         game_version,
         loader,
         loader_version,
+        game_dir_override,
     })
     .await
 }
@@ -824,6 +828,7 @@ async fn prepare_initial_instance(
             instance_folder,
             symlink: _,
             base_path: _,
+            game_dir_override,
             ..
         } => {
             let metadata = crate::api::instance::create(
@@ -834,7 +839,7 @@ async fn prepare_initial_instance(
                 None,
                 InstanceLink::Unmanaged,
                 None,
-                None,
+                game_dir_override,
             )
             .await?;
             set_display(
@@ -1373,6 +1378,7 @@ async fn run_request(
             game_version,
             loader,
             loader_version,
+            game_dir_override: _,
         } => {
             tracing::debug!(
                 "InstallRequest::ImportInstance: launcher_type={launcher_type} base_path={} instance_folder={instance_folder} symlink={symlink}",

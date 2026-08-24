@@ -1508,18 +1508,17 @@ pub(crate) async fn finish_import(
 
     if symlink {
         let state = State::get().await?;
-        let relative_path = instance_rows::get_instance_path_by_id(
-            instance_id,
-            &state.pool,
-        )
-        .await?
-        .ok_or_else(|| {
-            crate::ErrorKind::InputError("Unknown instance".to_string())
-        })?;
+        let relative_path =
+            instance_rows::get_instance_path_by_id(instance_id, &state.pool)
+                .await?
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError("Unknown instance".to_string())
+                })?;
         // The instance's managed folder lives at instances_dir/<path>. This is
         // where the symlink is created; it must NOT go through the game-dir
         // override (which points at the external .minecraft root).
-        let instance_path = state.directories.instances_dir().join(&relative_path);
+        let instance_path =
+            state.directories.instances_dir().join(&relative_path);
 
         if instance_path.exists() {
             // The instance folder is registered with the file watcher as soon

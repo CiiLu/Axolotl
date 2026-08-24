@@ -1126,6 +1126,8 @@ pub enum InstallRequest {
         loader: Option<ModLoader>,
         #[serde(default)]
         loader_version: Option<String>,
+        #[serde(default)]
+        game_dir_override: Option<String>,
     },
     DuplicateInstance {
         source_instance_id: String,

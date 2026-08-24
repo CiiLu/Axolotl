@@ -58,6 +58,25 @@
 					</div>
 
 					<div class="flex flex-col gap-2">
+						<span class="text-sm font-semibold text-contrast">
+							{{ formatMessage(messages.gameDirLabel) }}
+						</span>
+						<RadioButtons v-model="gameDirMode" :items="gameDirModeItems">
+							<template #default="{ item }">
+								{{ formatMessage(gameDirModeLabel(item)) }}
+							</template>
+						</RadioButtons>
+						<ButtonStyled v-if="gameDirMode !== 'isolated'" type="outlined">
+							<button @click="pickGameDir">
+								{{ formatMessage(messages.gameDirChooseFolder) }}
+							</button>
+						</ButtonStyled>
+						<span v-if="gameDirOverride" class="text-sm text-secondary break-all">
+							{{ gameDirOverride }}
+						</span>
+					</div>
+
+					<div class="flex flex-col gap-2">
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-semibold text-contrast">
 								{{ formatMessage(messages.statsLabel) }}
@@ -361,6 +380,7 @@ import Chips from '#ui/components/base/Chips.vue'
 import Combobox, { type ComboboxOption } from '#ui/components/base/Combobox.vue'
 import HorizontalRule from '#ui/components/base/HorizontalRule.vue'
 import ProgressBar from '#ui/components/base/ProgressBar.vue'
+import RadioButtons from '#ui/components/base/RadioButtons.vue'
 import StyledInput from '#ui/components/base/StyledInput.vue'
 import TagItem from '#ui/components/base/TagItem.vue'
 import NewModal from '#ui/components/modal/NewModal.vue'
@@ -398,6 +418,26 @@ const messages = defineMessages({
 	method: {
 		id: 'drop.symlink_method.method',
 		defaultMessage: 'Import method',
+	},
+	gameDirLabel: {
+		id: 'drop.symlink_method.game-dir.label',
+		defaultMessage: 'Game directory',
+	},
+	gameDirIsolated: {
+		id: 'drop.symlink_method.game-dir.isolated',
+		defaultMessage: 'Version isolated',
+	},
+	gameDirNotIsolated: {
+		id: 'drop.symlink_method.game-dir.not-isolated',
+		defaultMessage: 'Not isolated (shared .minecraft folder)',
+	},
+	gameDirCustom: {
+		id: 'drop.symlink_method.game-dir.custom',
+		defaultMessage: 'Custom',
+	},
+	gameDirChooseFolder: {
+		id: 'drop.symlink_method.game-dir.choose-folder',
+		defaultMessage: 'Choose folder',
 	},
 	instance: {
 		id: 'drop.symlink_method.instance',
@@ -605,6 +645,8 @@ const instances = ref<SymlinkMethodInstance[]>([])
 const symlinkCapable = ref<'supported' | 'requires_admin' | 'unsupported'>('supported')
 const activeIndex = ref(0)
 const method = ref<'copy' | 'symlink' | null>(null)
+const gameDirMode = ref<'isolated' | 'not-isolated' | 'custom'>('isolated')
+const gameDirOverride = ref<string | null>(null)
 const methodSectionRef = ref<HTMLElement | null>(null)
 const methodShake = ref(false)
 const gameVersion = ref('')
@@ -745,6 +787,26 @@ const canReset = computed(
 
 function selectMethod(value: 'copy' | 'symlink') {
 	method.value = value
+}
+
+async function pickGameDir() {
+	const path = await instanceImport.selectDirectory()
+	if (!path) return
+	gameDirOverride.value = path
+	gameDirMode.value = 'custom'
+}
+
+const gameDirModeItems = ['isolated', 'not-isolated', 'custom'] as const
+
+function gameDirModeLabel(mode: (typeof gameDirModeItems)[number]) {
+	switch (mode) {
+		case 'not-isolated':
+			return messages.gameDirNotIsolated
+		case 'custom':
+			return messages.gameDirCustom
+		default:
+			return messages.gameDirIsolated
+	}
 }
 
 function resetChanges() {
@@ -1156,6 +1218,7 @@ function handleConfirm() {
 			loader: saved?.loader || importPlanDefaultLoader(snapshot?.loader) || null,
 			loaderVersion:
 				saved?.loaderVersion || importPlanDefaultLoaderVersion(snapshot?.loaderVersion) || null,
+			gameDirOverride: gameDirOverride.value,
 		}
 	})
 
@@ -1211,6 +1274,8 @@ function show(options: {
 	pageAnim.value = null
 	internalUpdating.value = true
 	activeIndex.value = 0
+	gameDirMode.value = 'isolated'
+	gameDirOverride.value = null
 	resetActiveFields()
 	internalUpdating.value = false
 	isOpen.value = true

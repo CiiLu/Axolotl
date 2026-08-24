@@ -129,9 +129,9 @@ const gameDirOverride = ref(instance.value.game_dir_override)
 const savingGameDir = ref(false)
 
 watch(
-	() => instance.value.id,
-	() => {
-		gameDirOverride.value = instance.value.game_dir_override
+	() => instance.value.game_dir_override,
+	(path) => {
+		gameDirOverride.value = path
 	},
 )
 
