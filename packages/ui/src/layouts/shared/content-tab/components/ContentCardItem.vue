@@ -513,12 +513,6 @@ const deleteHovered = ref(false)
 				</div>
 				<div class="flex min-w-0 flex-col gap-0.5">
 					<div class="flex min-w-0 items-center gap-1">
-						<TriangleAlertIcon
-							v-if="postUpgradeWarningTooltip"
-							v-tooltip="postUpgradeWarningTooltip"
-							class="size-4 shrink-0 text-brand-orange"
-							aria-hidden="true"
-						/>
 						<AutoLink
 							:target="
 								typeof projectLink === 'string' && projectLink.startsWith('http')
@@ -531,6 +525,12 @@ const deleteHovered = ref(false)
 						>
 							{{ project.title }}
 						</AutoLink>
+						<TriangleAlertIcon
+							v-if="postUpgradeWarningTooltip"
+							v-tooltip="postUpgradeWarningTooltip"
+							class="size-4 shrink-0 text-brand-orange"
+							aria-hidden="true"
+						/>
 						<TriangleAlertIcon
 							v-if="duplicateCount && duplicateCount > 1"
 							v-tooltip="formatMessage(messages.duplicateMod, { count: duplicateCount })"
