@@ -480,7 +480,7 @@ const messages = defineMessages({
 					</button>
 				</ButtonStyled>
 			</div>
-			<div v-else class="flex gap-2">
+			<div v-else-if="gameDirMode !== 'isolated'" class="flex gap-2">
 				<ButtonStyled>
 					<button :disabled="savingGameDir" class="w-max !shadow-none" @click="pickGameDir">
 						<EditIcon />

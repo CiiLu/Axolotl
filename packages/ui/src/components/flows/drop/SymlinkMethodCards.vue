@@ -282,7 +282,11 @@
 							<span class="text-sm font-semibold text-contrast">
 								{{ formatMessage(messages.gameDirLabel) }}
 							</span>
-							<RadioButtons v-model="gameDirMode" :items="gameDirModeItems">
+							<RadioButtons
+								v-model="gameDirMode"
+								:items="gameDirModeItems"
+								@update:model-value="setGameDirMode"
+							>
 								<template #default="{ item }">
 									{{ formatMessage(gameDirModeLabel(item)) }}
 								</template>
@@ -806,6 +810,15 @@ function gameDirModeLabel(mode: (typeof gameDirModeItems)[number]) {
 			return messages.gameDirCustom
 		default:
 			return messages.gameDirIsolated
+	}
+}
+
+function setGameDirMode(mode: (typeof gameDirModeItems)[number]) {
+	gameDirMode.value = mode
+	// Switching back to version isolation means the managed folder is used;
+	// drop any previously chosen override so it is not silently retained.
+	if (mode === 'isolated') {
+		gameDirOverride.value = null
 	}
 }
 
