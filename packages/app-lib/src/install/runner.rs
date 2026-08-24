@@ -1877,6 +1877,7 @@ async fn remove_existing_pack_content(
                             Some(project_id.to_string())
                         }
                         ContentProviderRef::CurseForge { .. } => None,
+                        ContentProviderRef::McArchive { .. } => None,
                     })
             })?
         })

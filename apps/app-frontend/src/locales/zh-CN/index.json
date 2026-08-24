@@ -1892,35 +1892,93 @@
 	"app.minecraft-crash.no-log-content": {
 		"message": "没有找到可分享或分析的日志内容，请确认实例中有最近几分钟内生成的日志。"
 	},
-	"app.minecraft-crash.view-mod-changes": { "message": "查看 Mod 变化" },
-	"app.minecraft-crash.mod-changes-title": { "message": "可能的问题：上次成功启动后 Mod 文件发生了变化" },
-	"app.minecraft-crash.mod-changes-action": { "message": "请检查发生变化的 Mod；如果崩溃从这些变化后开始，可手动恢复之前的配置。" },
-	"app.minecraft-crash.mod-changes-modal.title": { "message": "上次成功启动后的 Mod 变化" },
-	"app.minecraft-crash.mod-changes-modal.description": { "message": "此比较不会自动恢复或修改任何文件。" },
-	"app.minecraft-crash.mod-changes-modal.added": { "message": "新增（{count}）" },
-	"app.minecraft-crash.mod-changes-modal.removed": { "message": "移除（{count}）" },
-	"app.minecraft-crash.mod-changes-modal.modified": { "message": "修改（{count}）" },
-	"app.minecraft-crash.mod-changes-modal.empty": { "message": "没有检测到 Mod 文件变化。" },
-	"app.minecraft-crash.mod-changes-modal.close": { "message": "关闭" },
-	"app.minecraft-crash.mod-changes-modal.undo": { "message": "撤销新增 Mod" },
-	"app.minecraft-crash.mod-changes-modal.undone": { "message": "已移除新增 Mod" },
-	"app.minecraft-crash.mod-changes-modal.undo-confirm": { "message": "确定移除 {name} 吗？只会删除这个未被修改的文件。" },
-	"app.minecraft-crash.mod-changes-modal.undo-failed": { "message": "无法撤销此 Mod 变化" },
-	"app.crash-analysis.ai.action": { "message": "使用 AI 解释" },
-	"app.crash-analysis.ai.analyzing": { "message": "正在解释崩溃……" },
-	"app.crash-analysis.ai.close": { "message": "关闭" },
-	"app.crash-analysis.ai.copied": { "message": "AI 解释已复制到剪贴板" },
-	"app.crash-analysis.ai.copy": { "message": "复制解释" },
-	"app.crash-analysis.ai.disclaimer": { "message": "经过脱敏和裁剪的崩溃上下文会直接发送给本启动器中配置的 AI Provider。AI 输出可能不准确。" },
-	"app.crash-analysis.ai.error": { "message": "AI 解释失败：{message}" },
-	"app.crash-analysis.ai.settings.description": { "message": "可选：将经过脱敏和裁剪的崩溃上下文发送给 AI Providers 中配置的模型。" },
-	"app.crash-analysis.ai.settings.enabled": { "message": "启用 AI 解释" },
-	"app.crash-analysis.ai.settings.enabled-description": { "message": "不使用 AI 时，本地规则崩溃分析仍可用。" },
-	"app.crash-analysis.ai.settings.model": { "message": "文本模型" },
-	"app.crash-analysis.ai.settings.no-providers": { "message": "请先在上方启用 Provider 和文本模型，再使用 AI 崩溃解释。" },
-	"app.crash-analysis.ai.settings.provider": { "message": "AI Provider" },
-	"app.crash-analysis.ai.settings.title": { "message": "崩溃 AI 解释" },
-	"app.crash-analysis.ai.title": { "message": "AI 崩溃解释" },
+	"app.minecraft-crash.view-mod-changes": {
+		"message": "查看 Mod 变化"
+	},
+	"app.minecraft-crash.mod-changes-title": {
+		"message": "可能的问题：上次成功启动后 Mod 文件发生了变化"
+	},
+	"app.minecraft-crash.mod-changes-action": {
+		"message": "请检查发生变化的 Mod；如果崩溃从这些变化后开始，可手动恢复之前的配置。"
+	},
+	"app.minecraft-crash.mod-changes-modal.title": {
+		"message": "上次成功启动后的 Mod 变化"
+	},
+	"app.minecraft-crash.mod-changes-modal.description": {
+		"message": "此比较不会自动恢复或修改任何文件。"
+	},
+	"app.minecraft-crash.mod-changes-modal.added": {
+		"message": "新增（{count}）"
+	},
+	"app.minecraft-crash.mod-changes-modal.removed": {
+		"message": "移除（{count}）"
+	},
+	"app.minecraft-crash.mod-changes-modal.modified": {
+		"message": "修改（{count}）"
+	},
+	"app.minecraft-crash.mod-changes-modal.empty": {
+		"message": "没有检测到 Mod 文件变化。"
+	},
+	"app.minecraft-crash.mod-changes-modal.close": {
+		"message": "关闭"
+	},
+	"app.minecraft-crash.mod-changes-modal.undo": {
+		"message": "撤销新增 Mod"
+	},
+	"app.minecraft-crash.mod-changes-modal.undone": {
+		"message": "已移除新增 Mod"
+	},
+	"app.minecraft-crash.mod-changes-modal.undo-confirm": {
+		"message": "确定移除 {name} 吗？只会删除这个未被修改的文件。"
+	},
+	"app.minecraft-crash.mod-changes-modal.undo-failed": {
+		"message": "无法撤销此 Mod 变化"
+	},
+	"app.crash-analysis.ai.action": {
+		"message": "使用 AI 解释"
+	},
+	"app.crash-analysis.ai.analyzing": {
+		"message": "正在解释崩溃……"
+	},
+	"app.crash-analysis.ai.close": {
+		"message": "关闭"
+	},
+	"app.crash-analysis.ai.copied": {
+		"message": "AI 解释已复制到剪贴板"
+	},
+	"app.crash-analysis.ai.copy": {
+		"message": "复制解释"
+	},
+	"app.crash-analysis.ai.disclaimer": {
+		"message": "经过脱敏和裁剪的崩溃上下文会直接发送给本启动器中配置的 AI Provider。AI 输出可能不准确。"
+	},
+	"app.crash-analysis.ai.error": {
+		"message": "AI 解释失败：{message}"
+	},
+	"app.crash-analysis.ai.settings.description": {
+		"message": "可选：将经过脱敏和裁剪的崩溃上下文发送给 AI Providers 中配置的模型。"
+	},
+	"app.crash-analysis.ai.settings.enabled": {
+		"message": "启用 AI 解释"
+	},
+	"app.crash-analysis.ai.settings.enabled-description": {
+		"message": "不使用 AI 时，本地规则崩溃分析仍可用。"
+	},
+	"app.crash-analysis.ai.settings.model": {
+		"message": "文本模型"
+	},
+	"app.crash-analysis.ai.settings.no-providers": {
+		"message": "请先在上方启用 Provider 和文本模型，再使用 AI 崩溃解释。"
+	},
+	"app.crash-analysis.ai.settings.provider": {
+		"message": "AI Provider"
+	},
+	"app.crash-analysis.ai.settings.title": {
+		"message": "崩溃 AI 解释"
+	},
+	"app.crash-analysis.ai.title": {
+		"message": "AI 崩溃解释"
+	},
 	"app.minecraft-crash.preparation-timed-out": {
 		"message": "启动准备在 60 秒内未能完成，现已取消。请检查 Java 路径、启动前命令、包装器命令和网络连接，然后重试。"
 	},
@@ -1930,12 +1988,24 @@
 	"app.minecraft-crash.share-copied": {
 		"message": "诊断链接已复制到剪贴板"
 	},
-	"app.minecraft-crash.share-ready": { "message": "诊断链接已准备好分享" },
-	"app.servers.files.open-studio": { "message": "打开 Studio" },
-	"app.servers.files.studio-running-title": { "message": "请先停止服务器再打开 Studio" },
-	"app.servers.wizard.java-too-old": { "message": "Java {selected} 无法运行此游戏版本；需要 Java {required} 或更高版本。" },
-	"app.settings.updates.miawa": { "message": "LemwoodMirror 镜像" },
-	"instance.files.studio.refresh": { "message": "刷新文件" },
+	"app.minecraft-crash.share-ready": {
+		"message": "诊断链接已准备好分享"
+	},
+	"app.servers.files.open-studio": {
+		"message": "打开 Studio"
+	},
+	"app.servers.files.studio-running-title": {
+		"message": "请先停止服务器再打开 Studio"
+	},
+	"app.servers.wizard.java-too-old": {
+		"message": "Java {selected} 无法运行此游戏版本；需要 Java {required} 或更高版本。"
+	},
+	"app.settings.updates.miawa": {
+		"message": "LemwoodMirror 镜像"
+	},
+	"instance.files.studio.refresh": {
+		"message": "刷新文件"
+	},
 	"app.minecraft-crash.share-diagnostic": {
 		"message": "导出分享"
 	},
@@ -8451,5 +8521,158 @@
 	},
 	"app.servers.port.unknown-process": {
 		"message": "未知进程（PID {pid}）"
+	},
+	"app.browse.source.mcarchive": {
+		"message": "MCArchive 来源"
+	},
+	"app.browse.source.planet-minecraft": {
+		"message": "Planet Minecraft 来源"
+	},
+	"app.project.mcarchive.install": {
+		"message": "安装"
+	},
+	"app.project.mcarchive.installed": {
+		"message": "已安装 {fileName}"
+	},
+	"app.project.mcarchive.loading": {
+		"message": "正在加载 MCArchive 项目…"
+	},
+	"app.project.mcarchive.manual.archive-filter": {
+		"message": "Minecraft 压缩包"
+	},
+	"app.project.mcarchive.manual.description": {
+		"message": "{fileName} 没有可验证的直接下载链接。请从来源页面下载，然后导入下载的文件。"
+	},
+	"app.project.mcarchive.manual.import-file": {
+		"message": "导入下载的文件"
+	},
+	"app.project.mcarchive.manual.open-source": {
+		"message": "打开来源页面"
+	},
+	"app.project.mcarchive.manual.pick-file": {
+		"message": "选择下载的压缩包"
+	},
+	"app.project.mcarchive.manual.title": {
+		"message": "需要手动下载"
+	},
+	"app.project.mcarchive.no-files": {
+		"message": "此版本没有可用文件。"
+	},
+	"app.project.mcarchive.sha256": {
+		"message": "SHA-256 哈希"
+	},
+	"app.project.mcarchive.source": {
+		"message": "MCArchive 来源"
+	},
+	"app.project.mcarchive.versions": {
+		"message": "版本"
+	},
+	"app.project.planet-minecraft.install": {
+		"message": "安装"
+	},
+	"app.project.planet-minecraft.installed": {
+		"message": "已安装 {fileName}"
+	},
+	"app.project.planet-minecraft.loading": {
+		"message": "正在加载 Planet Minecraft 项目…"
+	},
+	"app.project.planet-minecraft.manual.archive-filter": {
+		"message": "Minecraft 压缩包"
+	},
+	"app.project.planet-minecraft.manual.description": {
+		"message": "{fileName} 必须从 Planet Minecraft 下载，然后在此导入。"
+	},
+	"app.project.planet-minecraft.manual.import-file": {
+		"message": "导入下载的文件"
+	},
+	"app.project.planet-minecraft.manual.open-source": {
+		"message": "打开来源页面"
+	},
+	"app.project.planet-minecraft.manual.pick-file": {
+		"message": "选择下载的压缩包"
+	},
+	"app.project.planet-minecraft.manual.title": {
+		"message": "需要手动下载"
+	},
+	"app.project.planet-minecraft.unknown-file": {
+		"message": "下载的文件"
+	},
+	"app.project.planet-minecraft.versions": {
+		"message": "下载"
+	},
+	"instance.settings.tabs.core-components": {
+		"message": "核心组件"
+	},
+	"instance.settings.tabs.core-components.add": {
+		"message": "添加到 Minecraft.jar"
+	},
+	"instance.settings.tabs.core-components.failure": {
+		"message": "失败"
+	},
+	"instance.settings.tabs.core-components.import-modloader": {
+		"message": "导入已验证的 ModLoader 压缩包"
+	},
+	"instance.settings.tabs.core-components.jar-filter": {
+		"message": "Minecraft 压缩包"
+	},
+	"instance.settings.tabs.core-components.jar-mod": {
+		"message": "JAR 模组"
+	},
+	"instance.settings.tabs.core-components.modloader": {
+		"message": "安装 ModLoader"
+	},
+	"instance.settings.tabs.core-components.modloader-installed": {
+		"message": "已安装 ModLoader {fileName}"
+	},
+	"instance.settings.tabs.core-components.modloader-manual": {
+		"message": "{fileName} 需要手动下载。请从来源页面下载，然后在此导入已验证的压缩包。"
+	},
+	"instance.settings.tabs.core-components.move-down": {
+		"message": "下移"
+	},
+	"instance.settings.tabs.core-components.move-up": {
+		"message": "上移"
+	},
+	"instance.settings.tabs.core-components.open-source": {
+		"message": "打开来源页面"
+	},
+	"instance.settings.tabs.core-components.pick-jar": {
+		"message": "选择核心压缩包"
+	},
+	"instance.settings.tabs.core-components.pick-modloader": {
+		"message": "选择已下载的 ModLoader 压缩包"
+	},
+	"instance.settings.tabs.core-components.preview": {
+		"message": "预览组装后的 JAR"
+	},
+	"instance.settings.tabs.core-components.previewed": {
+		"message": "已将 {components} 个组件组装为包含 {entries} 个条目的 JAR"
+	},
+	"instance.settings.tabs.core-components.remove": {
+		"message": "移除"
+	},
+	"instance.settings.tabs.core-components.replace": {
+		"message": "替换 Minecraft.jar"
+	},
+	"instance.settings.tabs.core-components.replacement": {
+		"message": "替换 JAR"
+	},
+	"instance.settings.tabs.core-components.restore": {
+		"message": "恢复"
+	},
+	"instance.settings.tabs.core-components.sha1": {
+		"message": "SHA-1 哈希"
+	},
+	"instance.settings.tabs.core-components.sha256": {
+		"message": "SHA-256 哈希"
+	},
+	"instance.settings.tabs.core-components.source": {
+		"message": "来源"
+	},
+	"instance.settings.tabs.core-components.target-version": {
+		"message": "目标 Minecraft 版本"
+	},
+	"instance.settings.tabs.core-components.title": {
+		"message": "核心组件"
 	}
 }

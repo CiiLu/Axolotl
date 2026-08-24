@@ -284,6 +284,9 @@
   "console.command.disabled-placeholder": {
     "defaultMessage": "命令输入已禁用"
   },
+  "console.command.placeholder": {
+    "defaultMessage": "发送命令"
+  },
   "console.command.server-not-running-placeholder": {
     "defaultMessage": "服务器未运行"
   },
@@ -1294,6 +1297,9 @@
   },
   "files.delete-modal.warning.folder": {
     "defaultMessage": "该文件夹以及文件夹以下的所有内容将被永久删除。此操作无法被撤销。"
+  },
+  "files.editor.editor-unavailable-placeholder": {
+    "defaultMessage": "代码编辑器不可用"
   },
   "files.editor.failed-to-open-text": {
     "defaultMessage": "无法加载文件内容。"
@@ -4510,7 +4516,5 @@
   },
   "drop.confirm.as-data-pack-desc": {
     "defaultMessage": "将数据包安装到存档"
-  },
-  "app.translation-settings.provider.deepl": "DeepL 翻译",
-  "app.settings.updates.miawa": "柠泽镜像"
+  }
 }

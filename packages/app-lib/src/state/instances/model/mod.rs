@@ -30,6 +30,9 @@ pub use self::content_set_remote_ref::*;
 mod content_set_sync_state;
 pub use self::content_set_sync_state::*;
 
+mod core_component;
+pub use self::core_component::*;
+
 mod file;
 pub use self::file::*;
 

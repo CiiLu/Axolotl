@@ -164,6 +164,20 @@ fn main() {
                     ),
             )
             .plugin(
+                "mcarchive",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "mcarchive_get_game_versions",
+                        "mcarchive_search_mods",
+                        "mcarchive_get_mod_by_slug",
+                        "mcarchive_get_file_by_filename",
+                        "mcarchive_get_file_by_sha256",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "import",
                 InlinedPlugin::new()
                     .commands(&[
@@ -325,6 +339,18 @@ fn main() {
                     ),
             )
             .plugin(
+                "planet-minecraft",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "planet_minecraft_connector_available",
+                        "planet_minecraft_search_projects",
+                        "planet_minecraft_get_project",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "instance",
                 InlinedPlugin::new()
                     .commands(&[
@@ -345,6 +371,20 @@ fn main() {
                         "instance_get_linked_modpack_info",
                         "instance_get_linked_modpack_content",
                         "instance_get_optimal_jre_key",
+                        "instance_list_core_components",
+                        "instance_add_core_jar_mod",
+                        "instance_replace_core_jar",
+                        "instance_move_core_component",
+                        "instance_set_core_component_enabled",
+                        "instance_remove_core_component",
+                        "instance_restore_core_component",
+                        "instance_preview_core_jar",
+                        "instance_install_mcarchive_modloader",
+                        "instance_import_mcarchive_modloader",
+                        "instance_install_mcarchive_content",
+                        "instance_import_mcarchive_content",
+                        "instance_install_planet_minecraft_content",
+                        "instance_import_planet_minecraft_content",
                         "instance_get_full_path",
                         "instance_get_mod_full_path",
                         "instance_list",

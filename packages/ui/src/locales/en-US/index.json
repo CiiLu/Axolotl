@@ -308,6 +308,9 @@
   "console.command.disabled-placeholder": {
     "defaultMessage": "Command input disabled"
   },
+  "console.command.placeholder": {
+    "defaultMessage": "Send a command"
+  },
   "console.command.server-not-running-placeholder": {
     "defaultMessage": "Server is not running"
   },
@@ -615,7 +618,7 @@
     "defaultMessage": "No logs yet"
   },
   "console.empty.server-description": {
-    "defaultMessage": "Click the green start button to start the server!"
+    "defaultMessage": "Click the start button to start the server!"
   },
   "console.empty.server-title": {
     "defaultMessage": "Welcome to your Modrinth server!"
@@ -938,6 +941,12 @@
   "content.page-layout.no-content-found": {
     "defaultMessage": "No content found."
   },
+  "content.page-layout.pin-view": {
+    "defaultMessage": "Pin current view"
+  },
+  "content.page-layout.reset-view": {
+    "defaultMessage": "Reset view"
+  },
   "content.page-layout.search-placeholder": {
     "defaultMessage": "Search {count, number} {contentType}..."
   },
@@ -959,17 +968,17 @@
   "content.page-layout.sort.alphabetical": {
     "defaultMessage": "Alphabetical"
   },
-  "content.page-layout.sort.file-name-ascending": {
-    "defaultMessage": "File name A-Z"
-  },
-  "content.page-layout.sort.file-name-descending": {
-    "defaultMessage": "File name Z-A"
-  },
   "content.page-layout.sort.date-added-newest": {
     "defaultMessage": "Newest first"
   },
   "content.page-layout.sort.date-added-oldest": {
     "defaultMessage": "Oldest first"
+  },
+  "content.page-layout.sort.file-name-ascending": {
+    "defaultMessage": "File name A-Z"
+  },
+  "content.page-layout.sort.file-name-descending": {
+    "defaultMessage": "File name Z-A"
   },
   "content.page-layout.sort.label": {
     "defaultMessage": "Sort by {mode}"
@@ -979,12 +988,6 @@
   },
   "content.page-layout.sort.project-name-descending": {
     "defaultMessage": "Project name Z-A"
-  },
-  "content.page-layout.pin-view": {
-    "defaultMessage": "Pin current view"
-  },
-  "content.page-layout.reset-view": {
-    "defaultMessage": "Reset view"
   },
   "content.page-layout.unpin-view": {
     "defaultMessage": "Unpin current view"
@@ -1577,6 +1580,9 @@
   "files.delete-modal.warning.folder": {
     "defaultMessage": "This folder and all its contents will be permanently deleted. This action cannot be undone."
   },
+  "files.editor.editor-unavailable-placeholder": {
+    "defaultMessage": "Code editor unavailable"
+  },
   "files.editor.failed-to-open-text": {
     "defaultMessage": "Could not load file contents."
   },
@@ -1791,7 +1797,7 @@
     "defaultMessage": "Unsaved changes"
   },
   "files.validation.name-invalid-directory": {
-    "defaultMessage": "Name must contain only alphanumeric characters, dashes, underscores, or spaces."
+    "defaultMessage": "Name must contain only alphanumeric characters, dashes, underscores, dots, or spaces."
   },
   "files.validation.name-invalid-file": {
     "defaultMessage": "Name must contain only alphanumeric characters, dashes, underscores, dots, or spaces."

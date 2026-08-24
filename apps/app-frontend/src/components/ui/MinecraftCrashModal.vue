@@ -522,7 +522,7 @@ async function copyShareUrl(): Promise<void> {
 	}
 }
 
-function openAIAnalysis(): void {
+function _openAIAnalysis(): void {
 	if (!lastAnalysis?.combined_log) {
 		notifyNoLogContent()
 		return

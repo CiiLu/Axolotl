@@ -704,8 +704,14 @@
   "app.browse.source.curseforge": {
     "message": "CurseForge"
   },
+  "app.browse.source.mcarchive": {
+    "message": "MCArchive"
+  },
   "app.browse.source.modrinth": {
     "message": "Modrinth"
+  },
+  "app.browse.source.planet-minecraft": {
+    "message": "Planet Minecraft"
   },
   "app.community-announcement.feedback-middle": {
     "message": ", or share them with us through "
@@ -5564,8 +5570,80 @@
   "app.project.install-context.install-content-to-instance": {
     "message": "Install content to instance"
   },
+  "app.project.mcarchive.install": {
+    "message": "Install"
+  },
+  "app.project.mcarchive.installed": {
+    "message": "Installed {fileName}"
+  },
+  "app.project.mcarchive.loading": {
+    "message": "Loading MCArchive project…"
+  },
+  "app.project.mcarchive.manual.archive-filter": {
+    "message": "Minecraft archives"
+  },
+  "app.project.mcarchive.manual.description": {
+    "message": "{fileName} has no verifiable direct download. Download it from the source page, then import the downloaded file."
+  },
+  "app.project.mcarchive.manual.import-file": {
+    "message": "Import downloaded file"
+  },
+  "app.project.mcarchive.manual.open-source": {
+    "message": "Open source page"
+  },
+  "app.project.mcarchive.manual.pick-file": {
+    "message": "Choose downloaded archive"
+  },
+  "app.project.mcarchive.manual.title": {
+    "message": "Manual download required"
+  },
+  "app.project.mcarchive.no-files": {
+    "message": "No files are available for this release."
+  },
+  "app.project.mcarchive.sha256": {
+    "message": "SHA-256"
+  },
+  "app.project.mcarchive.source": {
+    "message": "MCArchive source"
+  },
+  "app.project.mcarchive.versions": {
+    "message": "Versions"
+  },
   "app.project.open-in-mcmod": {
     "message": "Open in MC Mod"
+  },
+  "app.project.planet-minecraft.install": {
+    "message": "Install"
+  },
+  "app.project.planet-minecraft.installed": {
+    "message": "Installed {fileName}"
+  },
+  "app.project.planet-minecraft.loading": {
+    "message": "Loading Planet Minecraft project…"
+  },
+  "app.project.planet-minecraft.manual.archive-filter": {
+    "message": "Minecraft archives"
+  },
+  "app.project.planet-minecraft.manual.description": {
+    "message": "{fileName} must be downloaded from Planet Minecraft, then imported here."
+  },
+  "app.project.planet-minecraft.manual.import-file": {
+    "message": "Import downloaded file"
+  },
+  "app.project.planet-minecraft.manual.open-source": {
+    "message": "Open source page"
+  },
+  "app.project.planet-minecraft.manual.pick-file": {
+    "message": "Choose downloaded archive"
+  },
+  "app.project.planet-minecraft.manual.title": {
+    "message": "Manual download required"
+  },
+  "app.project.planet-minecraft.unknown-file": {
+    "message": "Downloaded file"
+  },
+  "app.project.planet-minecraft.versions": {
+    "message": "Downloads"
   },
   "app.project.translation.failed": {
     "message": "Translation failed. The original content was kept. Try again."
@@ -7945,6 +8023,81 @@
   },
   "instance.server-modal.resource-pack": {
     "message": "Resource pack"
+  },
+  "instance.settings.tabs.core-components": {
+    "message": "Core components"
+  },
+  "instance.settings.tabs.core-components.add": {
+    "message": "Add to Minecraft.jar"
+  },
+  "instance.settings.tabs.core-components.failure": {
+    "message": "Failure"
+  },
+  "instance.settings.tabs.core-components.import-modloader": {
+    "message": "Import verified ModLoader archive"
+  },
+  "instance.settings.tabs.core-components.jar-filter": {
+    "message": "Minecraft archives"
+  },
+  "instance.settings.tabs.core-components.jar-mod": {
+    "message": "JAR mod"
+  },
+  "instance.settings.tabs.core-components.modloader": {
+    "message": "Install ModLoader"
+  },
+  "instance.settings.tabs.core-components.modloader-installed": {
+    "message": "Installed ModLoader {fileName}"
+  },
+  "instance.settings.tabs.core-components.modloader-manual": {
+    "message": "{fileName} needs a manual download. Download it from the source page, then import the verified archive here."
+  },
+  "instance.settings.tabs.core-components.move-down": {
+    "message": "Move down"
+  },
+  "instance.settings.tabs.core-components.move-up": {
+    "message": "Move up"
+  },
+  "instance.settings.tabs.core-components.open-source": {
+    "message": "Open source page"
+  },
+  "instance.settings.tabs.core-components.pick-jar": {
+    "message": "Choose core archive"
+  },
+  "instance.settings.tabs.core-components.pick-modloader": {
+    "message": "Choose downloaded ModLoader archive"
+  },
+  "instance.settings.tabs.core-components.preview": {
+    "message": "Preview assembled JAR"
+  },
+  "instance.settings.tabs.core-components.previewed": {
+    "message": "Assembled {components} components into {entries} entries"
+  },
+  "instance.settings.tabs.core-components.remove": {
+    "message": "Remove"
+  },
+  "instance.settings.tabs.core-components.replace": {
+    "message": "Replace Minecraft.jar"
+  },
+  "instance.settings.tabs.core-components.replacement": {
+    "message": "Replacement JAR"
+  },
+  "instance.settings.tabs.core-components.restore": {
+    "message": "Restore"
+  },
+  "instance.settings.tabs.core-components.sha1": {
+    "message": "SHA-1"
+  },
+  "instance.settings.tabs.core-components.sha256": {
+    "message": "SHA-256"
+  },
+  "instance.settings.tabs.core-components.source": {
+    "message": "Source"
+  },
+  "instance.settings.tabs.core-components.target-version": {
+    "message": "Target Minecraft version"
+  },
+  "instance.settings.tabs.core-components.title": {
+    "message": "Core components"
   },
   "instance.settings.tabs.general": {
     "message": "General"

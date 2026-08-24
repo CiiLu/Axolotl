@@ -107,26 +107,20 @@ export default new createRouter({
 				{
 					path: 'servers',
 					name: 'MultiplayerServers',
-					component: () =>
-						import('@/components/multiplayer/servers/ServersOverview.vue'),
+					component: () => import('@/components/multiplayer/servers/ServersOverview.vue'),
 				},
 				{
 					path: 'servers/:id',
 					name: 'MultiplayerServerDetail',
-					component: () =>
-						import('@/components/multiplayer/servers/ServerDetail.vue'),
+					component: () => import('@/components/multiplayer/servers/ServerDetail.vue'),
 				},
 				{
 					path: 'servers/:id/studio',
 					name: 'MultiplayerServerFileStudio',
-					component: () =>
-						import('@/components/multiplayer/servers/ServerFileStudio.vue'),
+					component: () => import('@/components/multiplayer/servers/ServerFileStudio.vue'),
 					meta: {
 						renderMode: 'fixed',
-						breadcrumb: [
-							{ name: 'Multiplayer', link: '/multiplayer/servers' },
-							{ name: 'Studio' },
-						],
+						breadcrumb: [{ name: 'Multiplayer', link: '/multiplayer/servers' }, { name: 'Studio' }],
 					},
 				},
 				{
@@ -268,6 +262,30 @@ export default new createRouter({
 				breadcrumb: [{ name: '?Project', link: '/project/curseforge/{id}' }, { name: 'Gallery' }],
 				discordActivity: 'Browsing mods...',
 				pageTransitionGroup: 'curseforge-project',
+			},
+		},
+		{
+			path: '/project/mcarchive/:slug',
+			name: 'McArchiveProject',
+			component: () => import('@/pages/project/McArchive.vue'),
+			props: true,
+			meta: {
+				useContext: true,
+				breadcrumb: [{ name: '?Project' }],
+				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'mcarchive-project',
+			},
+		},
+		{
+			path: '/project/planet-minecraft/:id',
+			name: 'PlanetMinecraftProject',
+			component: () => import('@/pages/project/PlanetMinecraft.vue'),
+			props: true,
+			meta: {
+				useContext: true,
+				breadcrumb: [{ name: '?Project' }],
+				discordActivity: 'Browsing mods...',
+				pageTransitionGroup: 'planet-minecraft-project',
 			},
 		},
 		{

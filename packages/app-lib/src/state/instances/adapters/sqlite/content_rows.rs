@@ -1251,6 +1251,7 @@ pub(crate) async fn upsert_content_provider_ref_in_transaction(
     let provider = provider_ref.provider().as_str();
     let project_id = provider_ref.database_project_id();
     let release_id = provider_ref.database_release_id();
+    let file_id = provider_ref.database_file_id();
 
     if origin {
         sqlx::query(
@@ -1269,13 +1270,15 @@ pub(crate) async fn upsert_content_provider_ref_in_transaction(
          WHERE content_entry_id = ?
            AND provider = ?
            AND provider_project_id = ?
-           AND provider_release_id IS ?",
+           AND provider_release_id IS ?
+           AND provider_file_id IS ?",
     )
     .bind(i64::from(origin))
     .bind(content_entry_id)
     .bind(provider)
     .bind(&project_id)
     .bind(&release_id)
+    .bind(&file_id)
     .execute(&mut **tx)
     .await?;
 
@@ -1286,13 +1289,15 @@ pub(crate) async fn upsert_content_provider_ref_in_transaction(
                 provider,
                 provider_project_id,
                 provider_release_id,
+				provider_file_id,
                 is_origin
-             ) VALUES (?, ?, ?, ?, ?)",
+             ) VALUES (?, ?, ?, ?, ?, ?)",
         )
         .bind(content_entry_id)
         .bind(provider)
         .bind(project_id)
         .bind(release_id)
+        .bind(file_id)
         .bind(i64::from(origin))
         .execute(&mut **tx)
         .await?;
@@ -1306,7 +1311,7 @@ pub(crate) async fn get_content_provider_refs(
     pool: &SqlitePool,
 ) -> crate::Result<Vec<ContentProviderRef>> {
     let rows = sqlx::query(
-        "SELECT provider, provider_project_id, provider_release_id
+        "SELECT provider, provider_project_id, provider_release_id, provider_file_id
          FROM instance_content_provider_refs
          WHERE content_entry_id = ?
          ORDER BY provider ASC",
@@ -1321,10 +1326,12 @@ pub(crate) async fn get_content_provider_refs(
         let project_id = row.try_get::<String, _>("provider_project_id")?;
         let release_id =
             row.try_get::<Option<String>, _>("provider_release_id")?;
+        let file_id = row.try_get::<Option<String>, _>("provider_file_id")?;
         let provider_ref = ContentProviderRef::from_database(
             &provider,
             &project_id,
             release_id.as_deref(),
+			file_id.as_deref(),
         )
         .map_err(|error| {
             crate::ErrorKind::InputError(format!(
@@ -1342,7 +1349,7 @@ pub(crate) async fn get_content_provider_refs_with_origin(
     pool: &SqlitePool,
 ) -> crate::Result<Vec<(ContentProviderRef, bool)>> {
     let rows = sqlx::query(
-        "SELECT provider, provider_project_id, provider_release_id, is_origin
+        "SELECT provider, provider_project_id, provider_release_id, provider_file_id, is_origin
          FROM instance_content_provider_refs
          WHERE content_entry_id = ?
          ORDER BY provider ASC, provider_project_id ASC",
@@ -1357,11 +1364,14 @@ pub(crate) async fn get_content_provider_refs_with_origin(
             let project_id = row.try_get::<String, _>("provider_project_id")?;
             let release_id =
                 row.try_get::<Option<String>, _>("provider_release_id")?;
+            let file_id =
+                row.try_get::<Option<String>, _>("provider_file_id")?;
             let origin = row.try_get::<i64, _>("is_origin")? != 0;
             let provider_ref = ContentProviderRef::from_database(
                 &provider,
                 &project_id,
                 release_id.as_deref(),
+                file_id.as_deref(),
             )?;
             Ok((provider_ref, origin))
         })

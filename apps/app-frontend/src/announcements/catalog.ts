@@ -44,6 +44,16 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Added an instance core editor for managing loader components and custom core JAR files.',
+					'zh-CN': '新增实例核心编辑功能，可管理加载器组件和自定义核心 JAR 文件。',
+				},
+				{
+					'en-US':
+						'Added MCArchive as a content source for browsing and importing archived Minecraft releases.',
+					'zh-CN': '新增 MCArchive 内容源，支持浏览和导入 Minecraft 历史版本资源。',
+				},
+				{
+					'en-US':
 						'Added an Ancient version option beside April Fools in the new-instance version selector, showing historical Alpha, Beta, and legacy-tagged versions such as a1.2.3.',
 					'zh-CN':
 						'新增远古版选项，位于愚人节版本右侧，可在创建实例时选择历史 Alpha、Beta 及其他旧版标签版本，例如 a1.2.3。',
