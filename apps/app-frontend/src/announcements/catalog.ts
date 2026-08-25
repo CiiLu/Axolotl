@@ -89,6 +89,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复了点击 CurseForge 整合包标题进入整合包信息页时，启动器会显示Error loading project的问题。(issue #405)',
 				},
+				{
+					'zh-CN': '实例名含非 ASCII 字符（™）导致启动崩溃InvalidPathException(issue #397)',
+					'en-US':
+						'Fixed the issue of instance name containing non-ASCII characters (™) causing the launcher to crash with InvalidPathException(issue #397)',
+				},
 			],
 		},
 	},
