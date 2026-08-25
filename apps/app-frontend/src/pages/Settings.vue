@@ -277,7 +277,7 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 						v-for="result in searchResults"
 						:key="searchResultKey(result)"
 						type="button"
-						class="settings-search-result"
+						class="settings-search-result items-center gap-2 p-2 hover:bg-surface-3 hover:text-contrast"
 						@click="selectSearchResult(result)"
 					>
 						<component :is="result.category.icon" class="size-4 shrink-0 text-secondary" />
@@ -302,7 +302,7 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 					<section v-for="group in visibleGroups" :key="group.id" class="settings-nav-group">
 						<button
 							type="button"
-							class="settings-group-button"
+							class="settings-group-button hover:bg-surface-3 hover:text-contrast"
 							:aria-expanded="expandedGroups[group.id]"
 							@click="toggleGroup(group.id)"
 						>
@@ -319,7 +319,7 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 								:key="category.id"
 								type="button"
 								:data-onboarding-id="category.onboardingId"
-								class="settings-category-button"
+								class="settings-category-button hover:bg-surface-3 hover:text-contrast"
 								:class="{ 'is-active': activeCategory?.id === category.id }"
 								@click="selectCategory(category.id)"
 							>
@@ -366,7 +366,7 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 				</header>
 				<div
 					ref="contentContainer"
-					class="settings-content-scroll"
+					class="settings-content-scroll min-h-0 flex-1"
 					:class="activeCategory?.flushContent ? 'overflow-hidden' : 'overflow-y-auto'"
 				>
 					<div
@@ -449,11 +449,6 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 		color 120ms ease;
 }
 
-.settings-group-button:hover {
-	background: var(--surface-3);
-	color: var(--color-contrast);
-}
-
 .settings-category-button,
 .settings-search-result {
 	display: flex;
@@ -479,21 +474,9 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 	font-weight: 600;
 }
 
-.settings-category-button:hover,
-.settings-search-result:hover {
-	background: var(--surface-3);
-	color: var(--color-contrast);
-}
-
 .settings-category-button.is-active {
 	background: var(--color-button-bg-selected);
 	color: var(--color-button-text-selected);
-}
-
-.settings-search-result {
-	align-items: center;
-	gap: var(--gap-sm);
-	padding: var(--gap-sm);
 }
 
 .settings-search-result-copy {
@@ -533,11 +516,6 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 	align-items: center;
 	gap: var(--gap-md);
 	padding: var(--gap-xs) var(--gap-xl) var(--gap-lg);
-}
-
-.settings-content-scroll {
-	min-height: 0;
-	flex: 1;
 }
 
 .settings-content-scroll :deep([id^='settings-target-']),

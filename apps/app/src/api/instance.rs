@@ -1,4 +1,5 @@
 use crate::api::Result;
+use crate::api::files::local_instance_icon_path;
 use chrono::NaiveDate;
 use dashmap::DashMap;
 use path_util::SafeRelativeUtf8UnixPathBuf;
@@ -430,6 +431,25 @@ fn edit_to_core(edit_instance: EditInstance) -> Result<CoreEditInstance> {
     })
 }
 
+const LOCAL_INSTANCE_ICON_MAX_DIMENSION: u32 = 256;
+
+async fn instance_from_metadata(
+    metadata: InstanceMetadata,
+) -> Result<Instance> {
+    let mut instance = Instance::from(metadata);
+    if instance.icon_path.is_none() {
+        if let Ok(Some(local_icon)) = local_instance_icon_path(
+            &instance.id,
+            LOCAL_INSTANCE_ICON_MAX_DIMENSION,
+        )
+        .await
+        {
+            instance.icon_path = Some(local_icon);
+        }
+    }
+    Ok(instance)
+}
+
 #[tauri::command]
 pub async fn instance_remove(instance_id: &str) -> Result<()> {
     theseus::instance::remove(instance_id).await?;
@@ -438,9 +458,10 @@ pub async fn instance_remove(instance_id: &str) -> Result<()> {
 
 #[tauri::command]
 pub async fn instance_get(instance_id: &str) -> Result<Option<Instance>> {
-    Ok(theseus::instance::get(instance_id)
-        .await?
-        .map(Instance::from))
+    let Some(metadata) = theseus::instance::get(instance_id).await? else {
+        return Ok(None);
+    };
+    Ok(Some(instance_from_metadata(metadata).await?))
 }
 
 #[tauri::command]
@@ -448,20 +469,20 @@ pub async fn instance_get_many(
     instance_ids: Vec<String>,
 ) -> Result<Vec<Instance>> {
     let ids = instance_ids.iter().map(|x| &**x).collect::<Vec<&str>>();
-    Ok(theseus::instance::get_many(&ids)
-        .await?
-        .into_iter()
-        .map(Instance::from)
-        .collect())
+    let mut instances = Vec::with_capacity(ids.len());
+    for metadata in theseus::instance::get_many(&ids).await? {
+        instances.push(instance_from_metadata(metadata).await?);
+    }
+    Ok(instances)
 }
 
 #[tauri::command]
 pub async fn instance_list() -> Result<Vec<Instance>> {
-    Ok(theseus::instance::list()
-        .await?
-        .into_iter()
-        .map(Instance::from)
-        .collect())
+    let mut instances = Vec::new();
+    for metadata in theseus::instance::list().await? {
+        instances.push(instance_from_metadata(metadata).await?);
+    }
+    Ok(instances)
 }
 
 #[tauri::command]
@@ -469,9 +490,8 @@ pub async fn instance_set_pinned(
     instance_id: String,
     pinned: bool,
 ) -> Result<Instance> {
-    Ok(Instance::from(
-        theseus::instance::set_pinned(&instance_id, pinned).await?,
-    ))
+    let metadata = theseus::instance::set_pinned(&instance_id, pinned).await?;
+    instance_from_metadata(metadata).await
 }
 
 #[tauri::command]

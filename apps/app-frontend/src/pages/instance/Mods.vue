@@ -142,6 +142,13 @@
 		<ContentPageLayout @visible-items="handleVisibleItems">
 			<template #modals>
 				<ContentToggleDependenciesModal ref="toggleDependenciesModal" />
+				<DependencyGraphModal
+					ref="dependencyGraphModal"
+					:instance-id="props.instance.id"
+					:instance-name="props.instance.name"
+					:instance-icon-url="localContentIconUrl(props.instance.icon_path)"
+				/>
+
 				<ShareModalWrapper
 					ref="shareModal"
 					:share-title="formatMessage(messages.shareTitle)"
@@ -251,6 +258,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import DependencyGraphModal from '@/components/instance/dependencies/DependencyGraphModal.vue'
 import ExportModal from '@/components/ui/ExportModal.vue'
 import ContentToggleDependenciesModal from '@/components/ui/modal/ContentToggleDependenciesModal.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
@@ -979,13 +987,28 @@ const shareModal = ref<InstanceType<typeof ShareModalWrapper> | null>()
 const exportModal = ref(null)
 const contentUpdaterModal = ref<InstanceType<typeof ContentUpdaterModal> | null>()
 const modpackContentModal = ref<InstanceType<typeof ModpackContentModal> | null>()
+const dependencyGraphModal = ref<InstanceType<typeof DependencyGraphModal> | null>()
 const modpackUpdateConfirmModal = ref<InstanceType<typeof ConfirmModpackUpdateModal> | null>()
+
+function allDependencyGraphItems() {
+	const itemsById = new Map<string, ContentItem>()
+	for (const item of [...mergedProjects.value, ...displayedLinkedModpackContentItems.value]) {
+		const id = getContentItemId(item)
+		if (id) itemsById.set(id, item)
+	}
+	return [...itemsById.values()]
+}
+
+function handleViewDependencies() {
+	dependencyGraphModal.value?.show(allDependencyGraphItems())
+}
 
 async function loadLinkedModpackContentItems(
 	cacheBehaviour?: CacheBehaviour,
 ): Promise<ContentItem[]> {
 	await initProjects(cacheBehaviour ?? 'bypass')
 	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
+	dependencyGraphModal.value?.setItems(allDependencyGraphItems())
 	return displayedLinkedModpackContentItems.value
 }
 
@@ -1057,6 +1080,7 @@ function mergeVisibleMetadataItems(refreshedItems: ContentItem[]) {
 	linkedModpackContentItems.value = mergeItems(linkedModpackContentItems.value)
 
 	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
+	dependencyGraphModal.value?.setItems(allDependencyGraphItems())
 }
 
 async function flushVisibleMetadataRefresh() {
@@ -2685,6 +2709,7 @@ function applyContentData(contentData: InstanceContentData) {
 	projects.value = contentItems
 	linkedModpackContentItems.value = linkedContentItems
 	modpackContentModal.value?.setItems(displayedLinkedModpackContentItems.value)
+	dependencyGraphModal.value?.setItems(allDependencyGraphItems())
 
 	if (contentData.modpack) {
 		linkedModpackProject.value = contentData.modpack.project
@@ -2766,17 +2791,23 @@ provideContentManager({
 	modpackItems: displayedLinkedModpackContentItems,
 	modpack: computed(() => {
 		if (linkedModpackProject.value) {
+			const instanceLink = props.instance.link
+			const projectPath =
+				instanceLink?.type === 'curseforge_modpack'
+				? `/project/curseforge/${instanceLink.project_id}`
+				: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}`
+
 			return {
 				project: displayedModpackProject.value ?? linkedModpackProject.value,
 				projectLink: {
-					path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}`,
+					path: projectPath,
 					query: instanceContentProjectQuery.value,
 				},
 				version: linkedModpackVersion.value ?? undefined,
 				versionLink:
-					linkedModpackProject.value && linkedModpackVersion.value
+					instanceLink?.type !== 'curseforge_modpack' && linkedModpackVersion.value
 						? {
-								path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}/version/${linkedModpackVersion.value.id}`,
+								path: `${projectPath}/version/${linkedModpackVersion.value.id}`,
 								query: instanceContentProjectQuery.value,
 							}
 						: undefined,
@@ -2870,7 +2901,9 @@ provideContentManager({
 	bulkUpdateItem: updateProject,
 	updateModpack: props.isServerInstance ? undefined : handleModpackUpdate,
 	viewModpackContent: handleModpackContent,
+	viewDependencies: handleViewDependencies,
 	unlinkModpack: unpairInstance,
+
 	openSettings: props.openSettings,
 	switchVersion: handleSwitchVersion,
 	getOverflowOptions,
