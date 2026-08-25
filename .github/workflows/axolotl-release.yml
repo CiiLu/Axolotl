@@ -40,6 +40,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Blockbench skin editor dependencies
+        run: npm ci
+        working-directory: third-party/blockbench
+
       - name: Run release guardrails
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -148,6 +152,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Blockbench skin editor dependencies
+        run: npm ci
+        working-directory: third-party/blockbench
 
       - uses: ./.github/actions/replace-gradle-mirror
 

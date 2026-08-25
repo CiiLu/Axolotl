@@ -89,6 +89,7 @@ target/*
 *.sqlite3
 
 plugins-workspace/*
+apps/app/resources/blockbench-skin/
 
 # Oh My OpenCode
 .omo/
