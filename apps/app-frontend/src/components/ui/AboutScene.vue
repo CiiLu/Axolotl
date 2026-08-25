@@ -88,7 +88,7 @@ void main() {
     height = clamp(height, -1.0, 1.0);
     height = height * 0.8 + 0.6;
 
-    float thickness = 0.01;
+    float thickness = 0.008;
     if(vUv.y < height - thickness) {
         float scalar = 1.0 - height + vUv.y;
         scalar = scalar * scalar * scalar * 0.6;
@@ -184,13 +184,14 @@ function main() {
 	const scene = new THREE.Scene()
 
 	const camera = new THREE.PerspectiveCamera(30, canvasSize.x / canvasSize.y, 1, 3000)
+	camera.fov *= 0.7
 	camera.position.set(-10, 5, 30)
-	camera.lookAt(0, 0, 0)
+	camera.lookAt(-3.17, 0, 0)
 
 	const ambientLight = new THREE.AmbientLight(0xffffff)
 	scene.add(ambientLight)
 
-	const dirLight = new THREE.DirectionalLight(0xffffff, 5.0)
+	const dirLight = new THREE.DirectionalLight(0xffffff, 4.0)
 	dirLight.position.set(-30, 30, 28)
 	scene.add(dirLight)
 
@@ -236,7 +237,7 @@ function main() {
 				originAxlModelPosition.y + Math.sin(elapsedTime),
 				originAxlModelPosition.z,
 			)
-			axlModel.rotation.y = Math.sin(elapsedTime * 0.3) * 0.2 + Math.PI / 2
+			axlModel.rotation.y = Math.sin(elapsedTime * 0.3) * 0.2 + (Math.PI * 100) / 180
 			mixer.update(deltaTime)
 		}
 	}
