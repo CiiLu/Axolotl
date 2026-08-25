@@ -2767,6 +2767,7 @@ mod tests {
                 icon_path: None,
                 link: InstanceLink::Unmanaged,
                 symlink_target: None,
+                game_dir_override: None,
             },
             &state,
         )

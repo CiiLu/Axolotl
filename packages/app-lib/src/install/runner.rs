@@ -5852,6 +5852,7 @@ mod tests {
             None,
             InstanceLink::Unmanaged,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -6134,6 +6135,7 @@ mod tests {
             Some("0.17.2".to_string()),
             None,
             InstanceLink::Unmanaged,
+            None,
             None,
         )
         .await
