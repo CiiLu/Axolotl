@@ -8373,7 +8373,7 @@
     "message": "Switching isolation only updates the launcher path. Move the mods, saves, and config folders yourself to match."
   },
   "instance.settings.tabs.general.game-dir.not-isolated": {
-    "message": "Not isolated (shared .minecraft folder)"
+    "message": "Version shared (.minecraft/)"
   },
   "instance.settings.tabs.general.icon": {
     "message": "Icon"

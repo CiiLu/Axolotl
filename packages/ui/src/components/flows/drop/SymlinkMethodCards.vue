@@ -428,7 +428,7 @@ const messages = defineMessages({
 	},
 	gameDirNotIsolated: {
 		id: 'drop.symlink_method.game-dir.not-isolated',
-		defaultMessage: 'Not isolated (shared .minecraft folder)',
+		defaultMessage: 'Version shared (.minecraft/)',
 	},
 	instance: {
 		id: 'drop.symlink_method.instance',

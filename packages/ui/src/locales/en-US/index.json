@@ -1461,7 +1461,7 @@
     "defaultMessage": "Game directory"
   },
   "drop.symlink_method.game-dir.not-isolated": {
-    "defaultMessage": "Not isolated (shared .minecraft folder)"
+    "defaultMessage": "Version shared (.minecraft/)"
   },
   "drop.symlink_method.game_version": {
     "defaultMessage": "Game version"

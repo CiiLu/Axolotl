@@ -271,7 +271,7 @@ const messages = defineMessages({
 	},
 	gameDirNotIsolated: {
 		id: 'instance.settings.tabs.general.game-dir.not-isolated',
-		defaultMessage: 'Not isolated (shared .minecraft folder)',
+		defaultMessage: 'Version shared (.minecraft/)',
 	},
 	gameDirMoveNote: {
 		id: 'instance.settings.tabs.general.game-dir.move-note',

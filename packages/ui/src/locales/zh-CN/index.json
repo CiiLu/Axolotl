@@ -4494,7 +4494,7 @@
     "message": "游戏目录"
   },
   "drop.symlink_method.game-dir.not-isolated": {
-    "message": "不隔离（共享 .minecraft 文件夹）"
+    "message": "版本共享（.minecraft/）"
   },
   "drop.symlink_method.game_version": {
     "message": "游戏版本"
