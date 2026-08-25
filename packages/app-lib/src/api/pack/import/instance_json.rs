@@ -223,10 +223,12 @@ pub(crate) fn normalize_imported_loader_version(
                 .unwrap_or(without_family);
             // Legacy Forge (e.g. 1.7.10) embeds the MC version as a trailing
             // suffix: `1.7.10-10.13.4.1614-1.7.10` -> `10.13.4.1614`. Strip it so
-            // the id matches the metadata manifest.
+            // the id matches the metadata manifest. When the suffix is absent
+            // (modern `1.20.1-47.4.22`), keep the already prefix-stripped
+            // version rather than reverting to the raw detected value.
             stripped
                 .strip_suffix(&format!("-{game_version}"))
-                .unwrap_or(without_family)
+                .unwrap_or(stripped)
                 .to_string()
         }
         _ => without_family.to_string(),
