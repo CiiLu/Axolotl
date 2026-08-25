@@ -72,6 +72,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复投影工坊全屏不生效的问题（按钮和 F11 均无效）：进入全屏后 3D 视图铺满屏幕并隐藏周边界面，原位置保留退出全屏按钮。',
 				},
+				{
+					'en-US':
+						'Fixed the post-update announcement not showing on Windows after the launcher updates — it now appears after the updated launcher relaunches.',
+					'zh-CN':
+						'修复 Windows 端更新启动器后不弹出更新公告的问题，更新并重启后现在会正常显示更新公告。',
+				},
 			],
 		},
 	},
