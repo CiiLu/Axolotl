@@ -169,19 +169,18 @@ const projectLinks = [
 </script>
 
 <template>
-	<div class="flex flex-col gap-6">
-		<section class="rounded-xl bg-surface-4">
-			<div
-				class="m-0 w-full overflow-hidden h-200 rounded-xl"
-				style="
-					mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-					-webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-				"
-			>
-				<AboutScene />
-			</div>
-			<div class="flex items-center gap-4 m-5">
-				<img class="size-20 object-contain" src="@/assets/axolotl.png" alt="" />
+	<div class="about-page flex flex-col gap-6">
+		<section id="settings-target-about-product" tabindex="-1" class="about-panel">
+			<div class="flex items-center gap-4">
+          <div
+				  class="m-0 w-full overflow-hidden h-200 rounded-xl"
+				  style="
+					  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+					  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+				  "
+			  >
+				  <AboutScene />
+			  </div>
 				<div class="min-w-0">
 					<h2 class="m-0 text-xl font-semibold text-contrast">
 						{{
@@ -414,12 +413,6 @@ const projectLinks = [
 </template>
 
 <style scoped>
-.about-page {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-xl);
-}
-
 .about-settings-details {
 	border-top: 1px solid
 		var(--settings-divider, color-mix(in srgb, var(--surface-4) 55%, transparent));

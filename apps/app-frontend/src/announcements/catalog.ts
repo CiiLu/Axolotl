@@ -64,8 +64,22 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Opening the Settings page now automatically collapses the sidebar to give the settings panel more room.',
 					'zh-CN': '打开设置页面时自动收起侧边栏，为设置面板留出更多空间。',
 				},
+				{
+					'zh-CN': '自定义背景下实例内容页面悬停折叠项的ui透明度现在被调高。',
+					'en-US':
+						'Custom background now has higher opacity for hoverable folded items on instance content page.',
+				},
 			],
 			fixed: [
+				{
+					'en-US':
+						'Fixed an issue where instances with version isolation disabled could not be imported correctly.',
+					'zh-CN': '修复未开启版本隔离的实例无法正常导入的问题。',
+				},
+				{
+					'en-US': 'Fixed an issue where modpack unlinking was not complete.',
+					'zh-CN': '修复了整合包解除关联不彻底的问题。',
+				},
 				{
 					'en-US':
 						'Fixed the fullscreen toggle in the Schematic Workshop (button and F11) not taking effect — entering fullscreen now expands the 3D view to fill the screen, hides the surrounding interface, and leaves the exit-fullscreen button in place.',
@@ -77,6 +91,17 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the post-update announcement not showing on Windows after the launcher updates — it now appears after the updated launcher relaunches.',
 					'zh-CN':
 						'修复 Windows 端更新启动器后不弹出更新公告的问题，更新并重启后现在会正常显示更新公告。',
+				},
+				{
+					'en-US':
+						'Fixed the issue of when clicking curseforge modpack title to enter modpack information page, the launcher will show Error loading project. (issue #405)',
+					'zh-CN':
+						'修复了点击 CurseForge 整合包标题进入整合包信息页时，启动器会显示Error loading project的问题。(issue #405)',
+				},
+				{
+					'zh-CN': '实例名含非 ASCII 字符（™）导致启动崩溃InvalidPathException(issue #397)',
+					'en-US':
+						'Fixed the issue of instance name containing non-ASCII characters (™) causing the launcher to crash with InvalidPathException(issue #397)',
 				},
 			],
 		},

@@ -47,6 +47,19 @@ pub mod language;
 pub mod optifine;
 pub mod quick_play_version;
 
+const UTF8_GAME_ARGUMENT_PREFIX: &str = "__THESEUS_UTF8__:";
+
+fn encode_game_argument(argument: String) -> String {
+    if argument.is_ascii() && !argument.starts_with(UTF8_GAME_ARGUMENT_PREFIX) {
+        argument
+    } else {
+        format!(
+            "{UTF8_GAME_ARGUMENT_PREFIX}{}",
+            BASE64_STANDARD.encode(argument.as_bytes())
+        )
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn set_high_performance_gpu_preference(
     executable: impl AsRef<std::path::Path>,
@@ -1746,7 +1759,8 @@ pub async fn launch_minecraft(
                 quick_play_version,
             )
             .await?
-            .into_iter(),
+            .into_iter()
+            .map(encode_game_argument),
         )
         .current_dir(instance_path.clone());
 
@@ -1889,6 +1903,46 @@ pub async fn launch_minecraft(
             },
         )
         .await
+}
+
+#[cfg(test)]
+mod game_argument_encoding_tests {
+    use super::*;
+
+    #[test]
+    fn ascii_game_argument_stays_unchanged() {
+        assert_eq!(
+            encode_game_argument("--username".to_string()),
+            "--username"
+        );
+    }
+
+    #[test]
+    fn non_ascii_game_argument_uses_ascii_transport() {
+        let original = r"E:\Games\Minecraft\profiles\Prominence™ II";
+        let encoded = encode_game_argument(original.to_string());
+
+        assert!(encoded.is_ascii());
+        let payload = encoded
+            .strip_prefix(UTF8_GAME_ARGUMENT_PREFIX)
+            .expect("non-ASCII argument should be encoded");
+        assert_eq!(
+            BASE64_STANDARD.decode(payload).unwrap(),
+            original.as_bytes()
+        );
+    }
+
+    #[test]
+    fn reserved_prefix_is_escaped() {
+        let original = format!("{UTF8_GAME_ARGUMENT_PREFIX}literal");
+        let encoded = encode_game_argument(original.clone());
+        let payload = encoded.strip_prefix(UTF8_GAME_ARGUMENT_PREFIX).unwrap();
+
+        assert_eq!(
+            BASE64_STANDARD.decode(payload).unwrap(),
+            original.as_bytes()
+        );
+    }
 }
 
 fn update_offline_skin_resource_pack_option(
