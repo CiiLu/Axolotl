@@ -1499,7 +1499,7 @@ onBeforeUnmount(() => {
 				<p v-if="error" class="m-0 max-w-2xl text-center text-sm text-brand-red">{{ error }}</p>
 			</section>
 
-			<section v-if="recent.length" class="schematic-recent">
+			<section v-if="recent.length" class="schematic-recent w-[min(52rem,calc(100%-3rem))] mx-auto mb-8">
 				<header class="flex items-center justify-between gap-3">
 					<h2 class="m-0 text-base text-contrast">{{ formatMessage(messages.recent) }}</h2>
 					<ButtonStyled size="small" type="transparent">
@@ -1508,8 +1508,8 @@ onBeforeUnmount(() => {
 						</button>
 					</ButtonStyled>
 				</header>
-				<ul class="schematic-recent-list">
-					<li v-for="record in recent" :key="record.id" class="schematic-recent-row">
+				<ul class="schematic-recent-list m-0 list-none p-0">
+					<li v-for="record in recent" :key="record.id" class="schematic-recent-row flex min-w-0 items-center gap-3 py-2">
 						<FileArchiveIcon class="size-5 shrink-0 text-secondary" />
 						<button
 							class="min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left"
@@ -1556,7 +1556,7 @@ onBeforeUnmount(() => {
 						{{ formatMessage(messages.blocks).toLocaleLowerCase(locale) }}
 					</p>
 				</div>
-				<div class="schematic-toolbar-actions">
+				<div class="schematic-toolbar-actions flex shrink-0 items-center gap-2">
 					<div class="schematic-command-group">
 						<ButtonStyled circular type="transparent">
 							<button
@@ -1583,7 +1583,7 @@ onBeforeUnmount(() => {
 					</div>
 					<ButtonStyled type="outlined">
 						<OverflowMenu
-							class="schematic-command-button"
+							class="schematic-command-button min-w-0"
 							:options="openMenuOptions"
 							:aria-label="formatMessage(messages.open)"
 						>
@@ -1600,7 +1600,7 @@ onBeforeUnmount(() => {
 					</ButtonStyled>
 					<ButtonStyled color="brand">
 						<OverflowMenu
-							class="schematic-command-button"
+							class="schematic-command-button min-w-0"
 							:options="exportMenuOptions"
 							:aria-label="formatMessage(messages.exportSchematic)"
 						>
@@ -1742,7 +1742,7 @@ onBeforeUnmount(() => {
 					</div>
 					<div
 						v-else-if="viewMode === 'orbit' && workspaceTool === 'measure' && measurementStart"
-						class="schematic-tool-context schematic-measurement-readout"
+						class="schematic-tool-context schematic-measurement-readout w-[min(42rem,calc(100%-1.5rem))]"
 					>
 						<div class="min-w-0 flex-1">
 							<div class="truncate text-xs text-secondary">
@@ -1929,25 +1929,25 @@ onBeforeUnmount(() => {
 				</section>
 
 				<aside
-					class="schematic-inspector"
+					class="schematic-inspector flex min-h-0 flex-col border-l-0 bg-surface-2"
 					:class="{ 'schematic-inspector-collapsed': !inspectorOpen }"
 				>
 					<button
 						type="button"
-						class="schematic-inspector-toggle"
+						class="schematic-inspector-toggle hidden"
 						@click="inspectorOpen = !inspectorOpen"
 					>
 						<strong>{{ formatMessage(messages.inspector) }}</strong
 						><ChevronDownIcon :class="{ 'rotate-180': inspectorOpen }" />
 					</button>
-					<div class="schematic-inspector-body">
+					<div class="schematic-inspector-body flex min-h-0 flex-1 flex-col gap-3 p-3">
 						<Tabs v-if="viewMode === 'orbit'" v-model:value="inspectorTab" :tabs="inspectorTabs" />
 
 						<div
 							v-if="viewMode === 'orbit' && inspectorTab === 'edit'"
 							class="schematic-inspector-scroll"
 						>
-							<section class="inspector-section">
+							<section class="inspector-section flex flex-col gap-2 border-t border-surface-5 pt-3">
 								<h2><BoxesIcon />{{ formatMessage(messages.selectedBlock) }}</h2>
 								<div class="selection-summary">
 									<strong>{{
@@ -2000,7 +2000,7 @@ onBeforeUnmount(() => {
 								</div>
 							</section>
 
-							<section class="inspector-section">
+							<section class="inspector-section flex flex-col gap-2 border-t border-surface-5 pt-3">
 								<h2><EyeIcon />{{ formatMessage(messages.visibility) }}</h2>
 								<div class="editor-action-grid">
 									<ButtonStyled type="outlined">
@@ -2042,7 +2042,7 @@ onBeforeUnmount(() => {
 								</div>
 							</section>
 
-							<section class="inspector-section">
+							<section class="inspector-section flex flex-col gap-2 border-t border-surface-5 pt-3">
 								<h2><EditIcon />{{ formatMessage(messages.edit) }}</h2>
 								<div class="editor-action-grid">
 									<ButtonStyled color="brand">
@@ -2062,7 +2062,7 @@ onBeforeUnmount(() => {
 								</div>
 							</section>
 
-							<section class="inspector-section">
+							<section class="inspector-section flex flex-col gap-2 border-t border-surface-5 pt-3">
 								<h2><RotateClockwiseIcon />{{ formatMessage(messages.transform) }}</h2>
 								<div class="editor-action-grid">
 									<ButtonStyled type="outlined">
@@ -2144,7 +2144,7 @@ onBeforeUnmount(() => {
 							>
 								{{ formatMessage(messages.noMaterials) }}
 							</p>
-							<ul v-else class="material-list">
+							<ul v-else class="material-list flex flex-col gap-0.5 list-none m-0 p-0">
 								<li v-for="material in visibleMaterials" :key="material.name">
 									<button
 										type="button"
@@ -2244,25 +2244,6 @@ onBeforeUnmount(() => {
 	padding: 2rem;
 }
 
-.schematic-recent {
-	width: min(52rem, calc(100% - 3rem));
-	margin: 0 auto 2rem;
-}
-
-.schematic-recent-list {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.schematic-recent-row {
-	display: flex;
-	min-width: 0;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 0.5rem 0;
-}
-
 .schematic-toolbar {
 	display: flex;
 	min-height: 4.25rem;
@@ -2272,13 +2253,6 @@ onBeforeUnmount(() => {
 	border-bottom: 1px solid var(--surface-5);
 	padding: 0.65rem 1rem;
 	background: var(--surface-2);
-}
-
-.schematic-toolbar-actions {
-	display: flex;
-	flex-shrink: 0;
-	align-items: center;
-	gap: 0.5rem;
 }
 
 .schematic-command-group {
@@ -2294,10 +2268,6 @@ onBeforeUnmount(() => {
 .schematic-canvas-controls :deep(.button-outer) {
 	width: 2.25rem;
 	height: 2.25rem;
-}
-
-.schematic-command-button {
-	min-width: 0;
 }
 
 .schematic-command-chevron {
@@ -2431,10 +2401,6 @@ onBeforeUnmount(() => {
 	width: 1rem;
 	height: 1rem;
 	color: var(--color-brand);
-}
-
-.schematic-measurement-readout {
-	width: min(42rem, calc(100% - 1.5rem));
 }
 
 .schematic-canvas-controls {
@@ -2670,27 +2636,6 @@ onBeforeUnmount(() => {
 	backdrop-filter: blur(8px);
 }
 
-.schematic-inspector {
-	display: flex;
-	min-height: 0;
-	flex-direction: column;
-	border-left: 0;
-	background: var(--surface-2);
-}
-
-.schematic-inspector-toggle {
-	display: none;
-}
-
-.schematic-inspector-body {
-	display: flex;
-	min-height: 0;
-	flex: 1;
-	flex-direction: column;
-	gap: 0.75rem;
-	padding: 0.75rem;
-}
-
 .selection-summary {
 	display: flex;
 	min-width: 0;
@@ -2741,14 +2686,6 @@ onBeforeUnmount(() => {
 	padding-right: 0.15rem;
 }
 
-.inspector-section {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	border-top: 1px solid var(--surface-5);
-	padding-top: 0.75rem;
-}
-
 .inspector-section:first-child {
 	border-top: 0;
 	padding-top: 0;
@@ -2766,15 +2703,6 @@ onBeforeUnmount(() => {
 .inspector-section h2 svg {
 	width: 1rem;
 	height: 1rem;
-}
-
-.material-list {
-	display: flex;
-	margin: 0;
-	flex-direction: column;
-	gap: 0.2rem;
-	padding: 0;
-	list-style: none;
 }
 
 .material-list li {

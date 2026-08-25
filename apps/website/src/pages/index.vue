@@ -827,16 +827,16 @@ useHead(() => ({
 		>
 			<div class="hero-grid" aria-hidden="true" />
 			<div class="hero-content">
-				<div class="hero-meta">
+				<div class="flex items-center gap-3">
 					<div class="hero-kicker">
 						{{ formatMessage(messages.openSourceBadge) }}
 					</div>
 				</div>
-				<h1 class="main-header">{{ formatMessage(messages.downloadAxolotl) }}</h1>
+				<h1 class="main-header max-w-[52rem] mt-4 mb-8 text-[var(--color-contrast)] text-[5.25rem] font-semibold leading-none text-balance">{{ formatMessage(messages.downloadAxolotl) }}</h1>
 				<p class="main-subheader">
 					{{ formatMessage(messages.description) }}
 				</p>
-				<div class="button-group">
+				<div class="button-group flex flex-wrap gap-2 mt-3 justify-end">
 					<ButtonStyled v-if="os" color="brand" size="large">
 						<button
 							class="hero-download-button"
@@ -863,7 +863,7 @@ useHead(() => ({
 			</div>
 			<div class="hero-product">
 				<img
-					class="hero-screenshot"
+					class="block w-full h-auto rounded"
 					src="/showcase/launcher-home.webp"
 					:alt="formatMessage(messages.heroScreenshotAlt)"
 					width="2560"
@@ -877,7 +877,7 @@ useHead(() => ({
 		</div>
 		<section id="features" class="axolotl-highlights" aria-labelledby="axolotl-highlights-title">
 			<div class="highlights-intro">
-				<span class="section-eyebrow">{{ formatMessage(messages.builtOnModrinth) }}</span>
+				<span class="text-xs font-extrabold uppercase tracking-[0.1em] text-brand">{{ formatMessage(messages.builtOnModrinth) }}</span>
 				<h2 id="axolotl-highlights-title">
 					{{ formatMessage(messages.highlightsTitle) }}<br />
 					{{ formatMessage(messages.highlightsTitleSecond) }}
@@ -886,29 +886,31 @@ useHead(() => ({
 			</div>
 
 			<div class="modrinth-feature-grid">
-				<article class="feature gradient-border promise-card" data-number="01">
+				<article class="feature gradient-border promise-card col-span-2 min-h-[12.5rem] p-6" data-number="01">
 					<div class="promise-meta"><GitGraphIcon /><span>01</span></div>
 					<h3>{{ formatMessage(messages.adFree) }}</h3>
 					<p>{{ formatMessage(messages.adFreeDescription) }}</p>
 				</article>
-				<article class="feature gradient-border promise-card" data-number="02">
+				<article class="feature gradient-border promise-card col-span-2 min-h-[12.5rem] p-6" data-number="02">
 					<div class="promise-meta"><BoxesIcon /><span>02</span></div>
 					<h3>{{ formatMessage(messages.localized) }}</h3>
 					<p>{{ formatMessage(messages.localizedDescription) }}</p>
 				</article>
-				<article class="feature gradient-border promise-card" data-number="03">
+				<article class="feature gradient-border promise-card col-span-2 min-h-[12.5rem] p-6" data-number="03">
 					<div class="promise-meta"><GaugeIcon /><span>03</span></div>
 					<h3>{{ formatMessage(messages.performant) }}</h3>
 					<p>{{ formatMessage(messages.performantDescription) }}</p>
 				</article>
-				<article class="feature gradient-border showcase-card showcase-card-wide">
-					<div class="showcase-copy">
+				<article
+					class="feature gradient-border showcase-card flex col-span-3 min-w-0 flex-col overflow-hidden p-0 showcase-card-wide"
+				>
+					<div class="showcase-copy px-7 pt-7 pb-6">
 						<span>{{ formatMessage(messages.offlineLabel) }}</span>
 						<h3>{{ formatMessage(messages.offlineAccounts) }}</h3>
 						<p>{{ formatMessage(messages.offlineAccountsDescription) }}</p>
 					</div>
 					<img
-						class="showcase-image"
+						class="block w-full h-auto"
 						src="/showcase/account-login.png"
 						:alt="formatMessage(messages.offlineScreenshotAlt)"
 						width="3104"
@@ -918,14 +920,14 @@ useHead(() => ({
 					/>
 				</article>
 
-				<article class="feature gradient-border showcase-card">
-					<div class="showcase-copy">
+				<article class="feature gradient-border showcase-card flex col-span-3 min-w-0 flex-col overflow-hidden p-0">
+					<div class="showcase-copy px-7 pt-7 pb-6">
 						<span>{{ formatMessage(messages.personalizeLabel) }}</span>
 						<h3>{{ formatMessage(messages.themes) }}</h3>
 						<p>{{ formatMessage(messages.themesDescription) }}</p>
 					</div>
 					<img
-						class="showcase-image"
+						class="block w-full h-auto"
 						src="/showcase/theme-accent.png"
 						:alt="formatMessage(messages.themesScreenshotAlt)"
 						width="3104"
@@ -935,14 +937,14 @@ useHead(() => ({
 					/>
 				</article>
 
-				<article class="feature gradient-border showcase-card">
-					<div class="showcase-copy">
+				<article class="feature gradient-border showcase-card flex col-span-3 min-w-0 flex-col overflow-hidden p-0">
+					<div class="showcase-copy px-7 pt-7 pb-6">
 						<span>{{ formatMessage(messages.translateLabel) }}</span>
 						<h3>{{ formatMessage(messages.translation) }}</h3>
 						<p>{{ formatMessage(messages.translationDescription) }}</p>
 					</div>
 					<img
-						class="showcase-image"
+						class="block w-full h-auto"
 						src="/showcase/axolotl-lab.png"
 						:alt="formatMessage(messages.translationScreenshotAlt)"
 						width="3104"
@@ -960,7 +962,7 @@ useHead(() => ({
 							<div class="search">{{ formatMessage(messages.searchMods) }}</div>
 						</div>
 					</div>
-					<div class="header row">
+					<div class="row select-none hover:cursor-default">
 						<div />
 						<div class="cell">{{ formatMessage(messages.name) }}</div>
 						<div class="cell">{{ formatMessage(messages.version) }}</div>
@@ -1037,19 +1039,27 @@ useHead(() => ({
 		</section>
 		<section id="faq" class="faq-section" aria-labelledby="faq-title">
 			<div class="faq-intro">
-				<span class="section-eyebrow">{{ formatMessage(messages.faqEyebrow) }}</span>
+				<span class="text-xs font-extrabold uppercase tracking-[0.1em] text-brand">{{ formatMessage(messages.faqEyebrow) }}</span>
 				<h2 id="faq-title">{{ formatMessage(messages.faqTitle) }}</h2>
 				<p>{{ formatMessage(messages.faqDescription) }}</p>
 			</div>
-			<div class="faq-list">
-				<details v-for="item in faqItems" :key="item.question" class="faq-item">
+			<div class="faq-list flex flex-col gap-3">
+				<details
+					v-for="item in faqItems"
+					:key="item.question"
+					class="faq-item border border-divider rounded-2xl bg-surface-2"
+				>
 					<summary>{{ item.question }}</summary>
 					<p>{{ item.answer }}</p>
 				</details>
 			</div>
 		</section>
 		<CommunitySection />
-		<div id="download" ref="downloadSection" class="footer">
+		<div
+			id="download"
+			ref="downloadSection"
+			class="footer relative overflow-hidden py-[clamp(4rem,8vw,7rem)] px-6 bg-[var(--color-accent-contrast)] text-[var(--color-contrast)] text-center flex flex-col gap-6 justify-center items-center"
+		>
 			<div class="section-badge">{{ formatMessage(messages.downloadOptions) }}</div>
 			<div class="section-subheader">
 				<div class="section-subheader-title">
@@ -1223,17 +1233,7 @@ useHead(() => ({
 	}
 }
 
-.faq-list {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-}
-
 .faq-item {
-	border: 1px solid var(--color-divider);
-	border-radius: 1rem;
-	background: var(--surface-2);
-
 	summary {
 		padding: 1.15rem 1.25rem;
 		color: var(--color-contrast);
@@ -1326,12 +1326,6 @@ useHead(() => ({
 	text-align: center;
 }
 
-.hero-meta {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
 .hero-kicker {
 	display: inline-flex;
 	align-items: center;
@@ -1347,17 +1341,6 @@ useHead(() => ({
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
 	box-shadow: 0 0.75rem 2.5rem color-mix(in srgb, var(--color-brand) 12%, transparent);
-}
-
-.main-header {
-	max-width: 52rem;
-	margin: 1rem 0 2rem;
-	color: var(--color-contrast);
-	font-size: 5.25rem;
-	font-weight: 600;
-	letter-spacing: 0;
-	line-height: 100%;
-	text-wrap: balance;
 }
 
 .landing-hero .main-subheader {
@@ -1390,13 +1373,6 @@ useHead(() => ({
 	position: relative;
 	width: min(79rem, 112%);
 	margin-top: clamp(3.25rem, 7vw, 5.5rem);
-}
-
-.hero-screenshot {
-	display: block;
-	width: 100%;
-	height: auto;
-	border-radius: 0.25rem;
 }
 
 .hero-scroll-mark {
@@ -1468,14 +1444,6 @@ useHead(() => ({
 	}
 }
 
-.section-eyebrow {
-	color: var(--color-brand);
-	font-size: 0.75rem;
-	font-weight: 800;
-	letter-spacing: 0.1em;
-	text-transform: uppercase;
-}
-
 .modrinth-feature-grid {
 	width: min(100%, 68.5rem);
 	margin: 0 auto;
@@ -1501,10 +1469,6 @@ useHead(() => ({
 }
 
 .promise-card {
-	grid-column: span 2;
-	min-height: 12.5rem;
-	padding: 1.5rem;
-
 	.promise-meta {
 		display: flex;
 		align-items: center;
@@ -1551,15 +1515,6 @@ useHead(() => ({
 	}
 }
 
-.showcase-card {
-	display: flex;
-	grid-column: span 3;
-	min-width: 0;
-	flex-direction: column;
-	overflow: hidden;
-	padding: 0;
-}
-
 .showcase-card-wide {
 	grid-column: 1 / -1;
 	display: grid;
@@ -1568,8 +1523,6 @@ useHead(() => ({
 }
 
 .showcase-copy {
-	padding: 1.75rem 1.75rem 1.5rem;
-
 	span {
 		color: var(--color-brand);
 		font-size: 0.72rem;
@@ -1594,12 +1547,6 @@ useHead(() => ({
 	}
 }
 
-.showcase-image {
-	display: block;
-	width: 100%;
-	height: auto;
-}
-
 :global(html.light-mode) .axolotl-highlights {
 	background: #f8f7f8;
 }
@@ -1614,9 +1561,6 @@ useHead(() => ({
 
 .mods,
 .website {
-	grid-column: span 3;
-	z-index: 1;
-
 	h3,
 	p {
 		margin: 0;
@@ -1820,35 +1764,7 @@ useHead(() => ({
 	user-select: text;
 }
 
-.header {
-	user-select: none;
-
-	&:hover {
-		cursor: default;
-	}
-}
-
-.export-card {
-	user-select: none;
-
-	&:hover {
-		cursor: default;
-	}
-}
-
 .footer {
-	position: relative;
-	overflow: hidden;
-	padding: clamp(4rem, 8vw, 7rem) var(--gap-xl);
-	background: var(--color-accent-contrast);
-	color: var(--color-contrast);
-	text-align: center;
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-xl);
-	justify-content: center;
-	align-items: center;
-
 	&::before {
 		position: absolute;
 		top: 0;
@@ -2205,10 +2121,6 @@ useHead(() => ({
 
 	.table {
 		background: white;
-	}
-
-	.export-card {
-		background: white !important;
 	}
 }
 </style>
