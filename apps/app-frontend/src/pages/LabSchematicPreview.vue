@@ -6,6 +6,7 @@ import {
 	BoxIcon,
 	CheckIcon,
 	ChevronDownIcon,
+	ContractIcon,
 	CopyIcon,
 	CubeIcon,
 	DownloadIcon,
@@ -168,6 +169,7 @@ const { formatMessage, locale } = useVIntl()
 const route = useRoute()
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
 const workspace = useTemplateRef<HTMLElement>('workspace')
+const viewport = useTemplateRef<HTMLElement>('viewport')
 const instancePicker =
 	useTemplateRef<InstanceType<typeof SchematicInstancePickerModal>>('instancePicker')
 const blockPicker = useTemplateRef<InstanceType<typeof SchematicBlockPickerModal>>('blockPicker')
@@ -209,6 +211,7 @@ const showBounds = ref(true)
 const showTranslucent = ref(true)
 const seamlessGlass = ref(true)
 const inspectorOpen = ref(true)
+const isFullscreen = ref(false)
 const dragging = ref(false)
 const contextLost = ref(false)
 const loadingStage = ref<LoadingStage>()
@@ -274,6 +277,10 @@ const messages = defineMessages({
 	walkView: { id: 'app.lab.schematic-preview.walk-view', defaultMessage: 'Walk view' },
 	orbitView: { id: 'app.lab.schematic-preview.orbit-view', defaultMessage: 'Orbit view' },
 	fullscreen: { id: 'app.lab.schematic-preview.fullscreen', defaultMessage: 'Toggle fullscreen' },
+	exitFullscreen: {
+		id: 'app.lab.schematic-preview.exit-fullscreen',
+		defaultMessage: 'Exit fullscreen',
+	},
 	grid: { id: 'app.lab.schematic-preview.grid', defaultMessage: 'Show grid' },
 	bounds: { id: 'app.lab.schematic-preview.bounds', defaultMessage: 'Show region boundaries' },
 	translucent: {
@@ -1301,8 +1308,16 @@ function toggleViewMode() {
 }
 
 async function toggleFullscreen() {
-	const window = getCurrentWindow()
-	await window.setFullscreen(!(await window.isFullscreen()))
+	try {
+		if (document.fullscreenElement) await document.exitFullscreen()
+		else await viewport.value?.requestFullscreen()
+	} catch (error) {
+		handleError(error)
+	}
+}
+
+function onFullscreenChange() {
+	isFullscreen.value = document.fullscreenElement === viewport.value
 }
 
 async function copySelectedCoordinates() {
@@ -1418,6 +1433,7 @@ watch(seamlessGlass, rebuildMeshes)
 onMounted(async () => {
 	await loadInstances()
 	window.addEventListener('keydown', handleKeydown)
+	document.addEventListener('fullscreenchange', onFullscreenChange)
 	await setupNativeDrop().catch(() => undefined)
 
 	const instanceId = typeof route.query.instance === 'string' ? route.query.instance : ''
@@ -1437,6 +1453,7 @@ onBeforeUnmount(() => {
 	if (activeOpenRequestId) void cancelSchematicPreview(activeOpenRequestId)
 	terminateWorkers()
 	window.removeEventListener('keydown', handleKeydown)
+	document.removeEventListener('fullscreenchange', onFullscreenChange)
 	unlistenNativeDrop?.()
 	scene?.dispose()
 	resources.value?.texture.dispose()
@@ -1640,7 +1657,7 @@ onBeforeUnmount(() => {
 			</header>
 
 			<div class="schematic-workbench">
-				<section class="schematic-viewport">
+				<section ref="viewport" class="schematic-viewport">
 					<canvas
 						ref="canvas"
 						class="block size-full"
@@ -1877,14 +1894,16 @@ onBeforeUnmount(() => {
 							>
 								<EyeIcon /></button
 						></ButtonStyled>
-						<ButtonStyled circular size="small" type="outlined"
+						<ButtonStyled circular size="small" :type="isFullscreen ? 'standard' : 'outlined'"
 							><button
-								v-tooltip.top="`${formatMessage(messages.fullscreen)} (F11)`"
+								v-tooltip.top="`${formatMessage(isFullscreen ? messages.exitFullscreen : messages.fullscreen)} (F11)`"
 								type="button"
-								:aria-label="formatMessage(messages.fullscreen)"
+								:aria-label="
+									formatMessage(isFullscreen ? messages.exitFullscreen : messages.fullscreen)
+								"
 								@click="toggleFullscreen"
 							>
-								<MaximizeIcon /></button
+								<ContractIcon v-if="isFullscreen" /><MaximizeIcon v-else /></button
 						></ButtonStyled>
 					</div>
 					<div v-if="loadingStage" class="schematic-loading-status">
@@ -2337,6 +2356,12 @@ onBeforeUnmount(() => {
 	border-right: 1px solid rgb(255 255 255 / 7%);
 	background: #0a0a0a;
 	box-shadow: inset 0 0 0 1px rgb(255 255 255 / 3%);
+}
+
+.schematic-viewport:fullscreen {
+	height: 100vh;
+	border-right: none;
+	box-shadow: none;
 }
 
 .schematic-mode-toolbar,
