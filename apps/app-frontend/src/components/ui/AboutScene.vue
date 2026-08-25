@@ -33,7 +33,7 @@ function createWaterMaterial(): THREE.ShaderMaterial {
 	return new THREE.ShaderMaterial({
 		uniforms: {
 			time: { value: 0 },
-			seed: { value: Math.random() + 10 },
+			seed: { value: Math.random() * 83 + 17 },
 			color: { value: new THREE.Color(0.3, 0.3, 1.0) },
 		},
 		transparent: true,
@@ -81,16 +81,18 @@ float perlinNoise(vec2 p) {
 
 void main() {
     float height = 0.0;
-    height += perlinNoise(vec2(vUv.x * 10.0, time * 0.8)) * 0.2;
-    height += perlinNoise(vec2(vUv.x * 5.0, time * 0.4)) * 0.3;
-    height += perlinNoise(vec2(vUv.x * 2.5, time * 0.2)) * 0.3;
+    height += perlinNoise(vec2(vUv.x * 10.0, time * 0.8)) * 0.3;
+    height += perlinNoise(vec2(vUv.x * 5.0, time * 0.4)) * 0.35;
+    height += perlinNoise(vec2(vUv.x * 2.5, time * 0.2)) * 0.15;
     height += perlinNoise(vec2(vUv.x * 2.0, time * 0.2)) * 0.2;
     height = clamp(height, -1.0, 1.0);
-    height = height * 0.5 + 0.8;
+    height = height * 0.8 + 0.6;
 
     float thickness = 0.01;
     if(vUv.y < height - thickness) {
-        gl_FragColor = vec4(color, 0.8);
+        float scalar = 1.0 - height + vUv.y;
+        scalar = scalar * scalar * scalar * 0.6;
+        gl_FragColor = vec4(color, scalar);
     } else if(vUv.y > height + thickness) {
         gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
     } else {
@@ -100,11 +102,61 @@ void main() {
 	})
 }
 
-function createWater(material: THREE.ShaderMaterial, x: number, y: number, z: number) {
-	const waterGeometry = new THREE.PlaneGeometry(70, 16)
-	const waterMesh = new THREE.Mesh(waterGeometry, material)
-	waterMesh.position.add(new THREE.Vector3(x, y, z))
+function createWater(material: THREE.ShaderMaterial, position: THREE.Vector3) {
+	const geometry = new THREE.PlaneGeometry(120, 16)
+	const waterMesh = new THREE.Mesh(geometry, material)
+	waterMesh.position.copy(position)
 	return waterMesh
+}
+
+function createCircleMaterial(): THREE.ShaderMaterial {
+	return new THREE.ShaderMaterial({
+		uniforms: {
+			color: { value: new THREE.Color(0.3, 0.3, 1.0) },
+		},
+		transparent: true,
+		vertexShader: `#define CIRCLE_VERT
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`,
+		fragmentShader: `#define CIRCLE_FRAG
+varying vec2 vUv;
+uniform vec3 color;
+float remap(float v, float inMin, float inMax, float outMin, float outMax) {
+  float t = (v - inMin) / (inMax - inMin);
+  return outMin + (outMax - outMin) * t;
+}
+void main() {
+    float dis = distance(vUv, vec2(0.5));
+    float thickness = 0.05;
+
+    gl_FragColor = vec4(0.0);
+    if(dis <= 0.35 && dis >= 0.35 - thickness) {
+        gl_FragColor = vec4(color, 0.8);
+    } else {
+        // emissive
+        float scalar = 0.0;
+        if(dis >= 0.35) {
+            scalar = clamp(0.5 - dis, 0.0, 0.15);
+            scalar = remap(scalar, 0.0, 0.15, 0.0, 1.0);
+        } else {
+            scalar = clamp(0.35 - dis, 0.0, 0.5);
+            scalar = remap(scalar, 0.0, 0.35, 1.0, 0.0);
+        }
+        scalar = clamp(scalar * scalar * scalar, 0.0, 1.0);
+        gl_FragColor = vec4(color, scalar);
+    }
+}`,
+	})
+}
+
+function createCircle(material: THREE.ShaderMaterial, position: THREE.Vector3) {
+	const geometry = new THREE.PlaneGeometry(0.6, 0.6)
+	const mesh = new THREE.Mesh(geometry, material)
+	mesh.position.copy(position)
+	return mesh
 }
 
 function main() {
@@ -145,14 +197,15 @@ function main() {
 	scene.add(createTip(dirLight.position, 0xffff00))
 	scene.add(createTip(camera.position))
 
-	const waterMaterial = createWaterMaterial()
-	scene.add(createWater(waterMaterial, 0, -6.5, 4))
-	scene.add(createWater(waterMaterial, -1, -8, -4))
-
 	const accentColor =
 		getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() || '#4444ff'
 
-	waterMaterial.uniforms.color.value = new THREE.Color(accentColor).multiplyScalar(0.8)
+	const waterMaterial = createWaterMaterial()
+	waterMaterial.uniforms.color.value = new THREE.Color(accentColor).multiplyScalar(0.6)
+
+	scene.add(createWater(waterMaterial, new THREE.Vector3(0, -6.5, 4)))
+	scene.add(createWater(waterMaterial, new THREE.Vector3(2, -8, -10)))
+	scene.add(createWater(waterMaterial, new THREE.Vector3(16, -8, -26)))
 
 	async function load() {
 		const axlGLTF = await loadGLTF('/models/axolotl.gltf')
@@ -168,12 +221,12 @@ function main() {
 		if (!axlSwimAnim) return console.error('Missing animation swim')
 		mixer.clipAction(axlSwimAnim).play()
 
-		const axlLabelGLTF = await loadGLTF('/models/axl_label.glb')
-		const axlLabel = axlLabelGLTF.scene
-		axlLabel.scale.multiplyScalar(8)
-		axlLabel.rotateY(-Math.PI / 2)
-		axlLabel.position.set(0, 5.2, 0)
-
+		// // Axl Label
+		// const axlLabelGLTF = await loadGLTF('/models/axl_label.glb')
+		// const axlLabel = axlLabelGLTF.scene
+		// axlLabel.scale.multiplyScalar(8)
+		// axlLabel.rotateY(-Math.PI / 2)
+		// axlLabel.position.set(0, 5.2, 0)
 		// scene.add(axlLabel)
 
 		const originAxlModelPosition = axlModel.position.clone()
@@ -185,13 +238,38 @@ function main() {
 			)
 			axlModel.rotation.y = Math.sin(elapsedTime * 0.3) * 0.2 + Math.PI / 2
 			mixer.update(deltaTime)
-			// console.log(timer.getDelta() * 1000)
 		}
 	}
 	let updateGLTF = (deltaTime: number, elapsedTime: number) => {}
 	load().then((updateFn) => {
 		if (updateFn) updateGLTF = updateFn
 	})
+
+	const circleMaterial = createCircleMaterial()
+	circleMaterial.uniforms.color.value = new THREE.Color(accentColor).multiplyScalar(1.2)
+
+	var circleMeshList: THREE.Mesh[] = []
+	var nextCircleCreateTime = 0.0
+	function updateCircle(deltaTime: number, elapsedTime: number) {
+		circleMeshList = circleMeshList.filter((m) => {
+			m.position.y += deltaTime * 2.0
+			if (m.position.y >= 32) {
+				scene.remove(m)
+				return false
+			}
+			return true
+		})
+
+		if (elapsedTime >= nextCircleCreateTime) {
+			nextCircleCreateTime = elapsedTime + Math.random() * 0.8
+			const circle = createCircle(
+				circleMaterial,
+				new THREE.Vector3(Math.random() * 64 - 32 - 12, -20, Math.random() * 6 + 1),
+			)
+			scene.add(circle)
+			circleMeshList.push(circle)
+		}
+	}
 
 	function animate(time: number) {
 		requestAnimationFrame(animate)
@@ -201,6 +279,8 @@ function main() {
 
 		updateGLTF(deltaTime, elapsedTime)
 		waterMaterial.uniforms.time.value = elapsedTime
+
+		updateCircle(deltaTime, elapsedTime)
 
 		renderer.render(scene, camera)
 	}
@@ -245,6 +325,15 @@ function main() {
 		renderer.dispose()
 	})
 }
-// main();
+
 onMounted(main)
 </script>
+<style>
+#about_scene {
+	background: linear-gradient(
+		to bottom,
+		color-mix(in srgb, var(--color-brand-shadow) 60%, rgb(0, 0, 0) 80%),
+		#00000000 40%
+	);
+}
+</style>
