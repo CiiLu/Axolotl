@@ -359,9 +359,6 @@
   "app.appearance-settings.accent-color.custom-hue": {
     "message": "色相"
   },
-  "app.appearance-settings.accent-color.custom-palette": {
-    "message": "预设色板"
-  },
   "app.appearance-settings.accent-color.custom-preview-dark": {
     "message": "深色主题"
   },
@@ -6269,12 +6266,6 @@
   "app.servers.properties.mode.text": {
     "message": "文本"
   },
-  "app.servers.properties.save": {
-    "message": "保存更改"
-  },
-  "app.servers.properties.saved": {
-    "message": "服务器设置已保存"
-  },
   "app.servers.properties.section.advanced": {
     "message": "高级"
   },
@@ -6325,9 +6316,6 @@
   },
   "app.servers.settings.java": {
     "message": "Java"
-  },
-  "app.servers.settings.java-none": {
-    "message": "系统默认"
   },
   "app.servers.settings.jvm-args": {
     "message": "JVM 参数"
@@ -6398,20 +6386,8 @@
   "app.servers.wizard.game-version": {
     "message": "游戏版本"
   },
-  "app.servers.wizard.install-java": {
-    "message": "安装 Java"
-  },
   "app.servers.wizard.install-title": {
     "message": "安装"
-  },
-  "app.servers.wizard.java-missing": {
-    "message": "未找到已安装的 Java。"
-  },
-  "app.servers.wizard.java-missing-hint": {
-    "message": "系统中未找到兼容的 Java,下一步将自动安装所需的 Java。"
-  },
-  "app.servers.wizard.java-placeholder": {
-    "message": "选择 Java 版本"
   },
   "app.servers.wizard.java-too-old": {
     "message": "Java {selected} 无法运行此游戏版本；需要 Java {required} 或更高版本。"
@@ -6442,9 +6418,6 @@
   },
   "app.servers.wizard.show-snapshots": {
     "message": "显示快照版本"
-  },
-  "app.servers.wizard.type-coming-soon": {
-    "message": "即将支持"
   },
   "app.servers.wizard.type-heading": {
     "message": "选择服务端类型"
@@ -6638,9 +6611,6 @@
   "app.settings.feature-flags.reset-to-default": {
     "message": "恢复默认值"
   },
-  "app.settings.groups.common": {
-    "message": "通用"
-  },
   "app.settings.groups.data-privacy": {
     "message": "数据与隐私"
   },
@@ -6653,14 +6623,8 @@
   "app.settings.groups.launcher": {
     "message": "启动器"
   },
-  "app.settings.groups.minecraft": {
-    "message": "我的世界"
-  },
   "app.settings.groups.support": {
     "message": "应用与支持"
-  },
-  "app.settings.groups.system": {
-    "message": "系统"
   },
   "app.settings.java.auto-high-performance-mode": {
     "message": "自动为 Java 使用高性能显卡"
@@ -6941,9 +6905,6 @@
   "app.settings.resources.source.automatic": {
     "message": "自动（推荐）"
   },
-  "app.settings.resources.source.mcim": {
-    "message": "优先 MCIM"
-  },
   "app.settings.resources.source.mojang-mirror-preferred": {
     "message": "优先 Fallen Proxy"
   },
@@ -6998,9 +6959,6 @@
   "app.settings.storage.cache-data": {
     "message": "缓存数据"
   },
-  "app.settings.storage.collapse-action": {
-    "message": "折叠"
-  },
   "app.settings.storage.database": {
     "message": "数据库"
   },
@@ -7012,9 +6970,6 @@
   },
   "app.settings.storage.distant-horizons": {
     "message": "虚拟视距缓存"
-  },
-  "app.settings.storage.expand-action": {
-    "message": "展开"
   },
   "app.settings.storage.instance": {
     "message": "实例"
@@ -7100,9 +7055,6 @@
   "app.settings.tabs.ai": {
     "message": "AI"
   },
-  "app.settings.tabs.appearance": {
-    "message": "外观"
-  },
   "app.settings.tabs.content-downloads": {
     "message": "内容与下载"
   },
@@ -7130,17 +7082,11 @@
   "app.settings.tabs.launch-defaults": {
     "message": "启动与实例默认值"
   },
-  "app.settings.tabs.multiplayer": {
-    "message": "多人游戏"
-  },
   "app.settings.tabs.network-multiplayer": {
     "message": "网络与多人游戏"
   },
   "app.settings.tabs.privacy-data": {
     "message": "隐私与数据共享"
-  },
-  "app.settings.tabs.privacy-security": {
-    "message": "隐私与安全"
   },
   "app.settings.tabs.resource-management": {
     "message": "资源管理"
@@ -7150,9 +7096,6 @@
   },
   "app.settings.tabs.storage-backups": {
     "message": "存储与备份"
-  },
-  "app.settings.tabs.translation": {
-    "message": "翻译"
   },
   "app.settings.tabs.updates": {
     "message": "更新"
@@ -7495,9 +7438,6 @@
   },
   "app.translation-settings.provider.google": {
     "message": "Google 翻译（可直接用）"
-  },
-  "app.translation-settings.provider.microsoft": {
-    "message": "Microsoft 翻译（不可用）"
   },
   "app.translation-settings.style": {
     "message": "译文样式"
@@ -8006,12 +7946,6 @@
   "app.worlds.title": {
     "message": "世界"
   },
-  "browse.selected-projects-floating-bar.hide-projects": {
-    "message": "隐藏已选择的项目"
-  },
-  "browse.selected-projects-floating-bar.show-projects": {
-    "message": "显示 {count, plural, one {# selected project} other {# selected projects}}"
-  },
   "create.back": {
     "message": "返回库"
   },
@@ -8327,9 +8261,6 @@
   "instance.files.studio.title": {
     "message": "Studio"
   },
-  "instance.files.studio.unsaved-switch-blocked": {
-    "message": "请先保存或放弃当前更改，再打开其他文件。"
-  },
   "instance.logs.delete.latest-running": {
     "message": "实例运行时无法删除 latest.log"
   },
@@ -8469,28 +8400,28 @@
     "message": "选择图标"
   },
   "instance.settings.tabs.general.game-dir": {
-    "message": "游戏目录"
+  	"message": "游戏目录"
   },
   "instance.settings.tabs.general.game-dir.clear": {
-    "message": "使用托管目录"
+  	"message": "使用托管目录"
   },
   "instance.settings.tabs.general.game-dir.current": {
-    "message": "当前目录"
+  	"message": "当前目录"
   },
   "instance.settings.tabs.general.game-dir.custom": {
-    "message": "自定义"
+  	"message": "自定义"
   },
   "instance.settings.tabs.general.game-dir.description": {
-    "message": "将一个独立的文件夹作为此实例的工作目录。游戏会从该文件夹读取模组、存档、配置和资源包，而不是托管的实例文件夹。适用于共用 .minecraft 目录的非版本隔离实例。"
+  	"message": "将一个独立的文件夹作为此实例的工作目录。游戏会从该文件夹读取模组、存档、配置和资源包，而不是托管的实例文件夹。适用于共用 .minecraft 目录的非版本隔离实例。"
   },
   "instance.settings.tabs.general.game-dir.isolated": {
-    "message": "版本隔离（存放于 versions/）"
+  	"message": "版本隔离（存放于 versions/）"
   },
   "instance.settings.tabs.general.game-dir.not-isolated": {
-    "message": "不隔离（共享 .minecraft 文件夹）"
+  	"message": "不隔离（共享 .minecraft 文件夹）"
   },
   "instance.settings.tabs.general.game-dir.set": {
-    "message": "选择文件夹"
+  	"message": "选择文件夹"
   },
   "instance.settings.tabs.general.icon": {
     "message": "图标"
