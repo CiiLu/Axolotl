@@ -47,6 +47,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added a dependency relationship graph to the Content tab for exploring installed content and its dependencies.',
 					'zh-CN': '内容页新增依赖关系图，可查看已安装内容及其依赖关系。',
 				},
+				{
+					'en-US':
+						'Added a dependency relationship graph to the Content tab for exploring installed content and its dependencies.',
+					'zh-CN': '当实例文件夹下有icon.png/jpg/jpeg/webp时 优先应用此图标。',
+				},
 			],
 		},
 	},
