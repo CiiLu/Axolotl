@@ -45,6 +45,10 @@ async fn initialize_state(app: tauri::AppHandle) -> api::Result<()> {
         .allow_directory(state.directories.instances_dir(), true)?;
     app.fs_scope()
         .allow_directory(state.directories.instances_dir(), true)?;
+    app.asset_protocol_scope()
+        .allow_directory(state.directories.servers_dir(), true)?;
+    app.fs_scope()
+        .allow_directory(state.directories.servers_dir(), true)?;
 
     Ok(())
 }
