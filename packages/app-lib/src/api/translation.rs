@@ -465,7 +465,9 @@ fn truncate_preview(value: &str, max_chars: usize) -> String {
 /// strictly more conservative than the byte slice it replaces and never panics.
 fn credential_prefix(value: &str, max_bytes: usize) -> String {
     let mut end = max_bytes.min(value.len());
-    while !value.is_char_boundary(end) {
+    // Always stop on a char boundary, and clamp end to > 0 so usize cannot
+    // underflow: 0 is always a char boundary, but we do not rely on that fact.
+    while end > 0 && !value.is_char_boundary(end) {
         end -= 1;
     }
     value[..end].to_string()
@@ -1365,14 +1367,22 @@ mod tests {
     #[test]
     fn credential_prefix_never_exceeds_byte_budget() {
         // Even with an adversarial byte budget, the prefix never leaks more
-        // than the requested budget and always ends on a char boundary.
+        // than the requested budget, always ends on a char boundary, and never
+        // panics - including budget 0 on multi-byte input.
         let samples = [
+            "",
             "abcd1234",
+            "\u{6e2c}",
             "\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}",
             "a\u{6e2c}b\u{6e2c}",
         ];
         for text in samples {
-            for budget in 0..=8 {
+            // budget 0 must return empty without panicking (regression for the
+            // former end -= 1 underflow exposure).
+            let empty = credential_prefix(text, 0);
+            assert_eq!(empty, "");
+            assert!(text.is_char_boundary(empty.len()));
+            for budget in 1..=8 {
                 let prefix = credential_prefix(text, budget);
                 assert!(prefix.len() <= budget);
                 assert!(text.is_char_boundary(prefix.len()));
