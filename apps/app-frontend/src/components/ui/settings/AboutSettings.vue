@@ -170,9 +170,9 @@ const projectLinks = [
 
 <template>
 	<div class="flex flex-col gap-6">
-		<section class="rounded-xl bg-surface-4 p-5">
+		<section class="rounded-xl bg-surface-4">
 			<div
-				class="m-0 w-full overflow-hidden h-200"
+				class="m-0 w-full overflow-hidden h-200 rounded-xl"
 				style="
 					mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 					-webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
@@ -180,7 +180,7 @@ const projectLinks = [
 			>
 				<AboutScene />
 			</div>
-			<div class="flex items-center gap-4">
+			<div class="flex items-center gap-4 m-5">
 				<img class="size-20 object-contain" src="@/assets/axolotl.png" alt="" />
 				<div class="min-w-0">
 					<h2 class="m-0 text-xl font-semibold text-contrast">
