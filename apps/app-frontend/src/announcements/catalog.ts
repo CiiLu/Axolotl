@@ -44,6 +44,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Dependencies in the install confirmation dialog can now be expanded inline to view their description and open the project page.',
+					'zh-CN': '确认安装弹窗中的依赖项支持展开查看简介，并可打开项目页面。',
+				},
+				{
+					'en-US':
 						'Added a dependency relationship graph to the Content tab for exploring installed content and its dependencies.',
 					'zh-CN': '内容页新增依赖关系图，可查看已安装内容及其依赖关系。',
 				},
