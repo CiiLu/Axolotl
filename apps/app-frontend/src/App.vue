@@ -1885,10 +1885,7 @@ async function retryUpdateFromNextSource(failedSource, originalError) {
 	const remaining = startIndex >= 0 ? UPDATE_SOURCE_ORDER.slice(startIndex + 1) : []
 
 	for (const next of remaining) {
-		console.warn(
-			`Update download failed via ${failedSource}; retrying via ${next}`,
-			originalError,
-		)
+		console.warn(`Update download failed via ${failedSource}; retrying via ${next}`, originalError)
 		try {
 			const fallbackUpdate = await checkAppUpdate(next)
 			if (!fallbackUpdate) {

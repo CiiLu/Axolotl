@@ -45,6 +45,10 @@ async fn initialize_state(app: tauri::AppHandle) -> api::Result<()> {
         .allow_directory(state.directories.instances_dir(), true)?;
     app.fs_scope()
         .allow_directory(state.directories.instances_dir(), true)?;
+    app.asset_protocol_scope()
+        .allow_directory(state.directories.servers_dir(), true)?;
+    app.fs_scope()
+        .allow_directory(state.directories.servers_dir(), true)?;
 
     Ok(())
 }
@@ -456,9 +460,11 @@ fn main() {
         .plugin(api::logs::init())
         .plugin(api::jre::init())
         .plugin(api::metadata::init())
+        .plugin(api::mcarchive::init())
         .plugin(api::minecraft_skins::init())
         .plugin(api::mod_translation::init())
         .plugin(api::process::init())
+        .plugin(api::planet_minecraft::init())
         .plugin(api::settings::init())
         .plugin(api::storage::init())
         .plugin(api::seed_map::init())

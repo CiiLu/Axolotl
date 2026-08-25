@@ -319,6 +319,7 @@ async fn run_credentials(
                     | crate::state::ModLoader::Cleanroom
                     | crate::state::ModLoader::LiteLoader
                     | crate::state::ModLoader::LegacyFabric
+                    | crate::state::ModLoader::Babric
             ),
         );
         tracing::info!(

@@ -4,6 +4,31 @@
 			<LoadingIndicator class="pt-4" />
 		</template>
 		<CollapsibleAdmonition
+			v-if="postUpgradeNotice?.warnings.length"
+			v-model="postUpgradeNoticeExpanded"
+			type="warning"
+			class="mb-4"
+		>
+			<template #header>
+				<span class="inline-flex items-center gap-2">
+					{{ formatMessage(messages.postUpgradeNoticeTitle) }}
+					<span class="rounded-full bg-brand-orange/20 px-2 py-0.5 text-sm tabular-nums">{{
+						postUpgradeNotice.warnings.length
+					}}</span>
+				</span>
+			</template>
+			<div class="border-0 border-t border-solid border-brand-orange/60 bg-bg-orange p-4">
+				<p class="m-0">{{ formatMessage(messages.postUpgradeNoticeBody) }}</p>
+				<div class="mt-3 flex justify-end">
+					<ButtonStyled color="orange" size="small">
+						<button type="button" @click="dismissPostUpgradeNotice">
+							{{ formatMessage(messages.ignoreAllPostUpgradeWarnings) }}
+						</button>
+					</ButtonStyled>
+				</div>
+			</div>
+		</CollapsibleAdmonition>
+		<CollapsibleAdmonition
 			v-if="skippedManualDownloads.length > 0"
 			v-model="manualWarningExpanded"
 			type="warning"
@@ -219,6 +244,7 @@ import {
 	useVIntl,
 	versionChangesGameVersion,
 } from '@modrinth/ui'
+import { useQueryClient } from '@tanstack/vue-query'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { openUrl } from '@tauri-apps/plugin-opener'
@@ -228,6 +254,7 @@ import { useRouter } from 'vue-router'
 import ExportModal from '@/components/ui/ExportModal.vue'
 import ContentToggleDependenciesModal from '@/components/ui/modal/ContentToggleDependenciesModal.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
+import { postUpgradeNoticeQueryKey, usePostUpgradeNotice } from '@/composables/usePostUpgradeNotice'
 import { useWorldDatapacks } from '@/composables/useWorldDatapacks'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project_versions, get_version, get_version_many } from '@/helpers/cache.js'
@@ -244,6 +271,7 @@ import { install_duplicate_instance, installJobInstanceId } from '@/helpers/inst
 import {
 	add_project_from_path,
 	apply_content_update_plan,
+	dismiss_post_upgrade_notice,
 	edit,
 	get_content_items_by_paths,
 	type InstanceContentSnapshotItem,
@@ -262,7 +290,9 @@ import {
 	type InstanceContentData,
 	isWorldSaveContentItem,
 	loadInstanceContentData,
+	localContentIconUrl,
 } from '@/helpers/instance-content'
+import { postUpgradeWarningForContent } from '@/helpers/post-upgrade-notice'
 import type { CacheBehaviour, GameInstance } from '@/helpers/types'
 import { highlightModInInstance } from '@/helpers/utils.js'
 import i18n from '@/i18n.config'
@@ -404,6 +434,24 @@ const messages = defineMessages({
 		id: 'app.instance.mods.pack-member-removed',
 		defaultMessage: 'This modpack file was removed locally',
 	},
+	postUpgradeNoticeTitle: {
+		id: 'app.instance.mods.post-upgrade-notice.title',
+		defaultMessage: 'Post-upgrade compatibility review',
+	},
+	postUpgradeNoticeBody: {
+		id: 'app.instance.mods.post-upgrade-notice.body',
+		defaultMessage:
+			'Some preserved content may not support the current Minecraft version and should be reviewed manually.',
+	},
+	ignoreAllPostUpgradeWarnings: {
+		id: 'app.instance.mods.post-upgrade-notice.ignore-all',
+		defaultMessage: 'Ignore all',
+	},
+	postUpgradeWarningTooltip: {
+		id: 'app.instance.mods.post-upgrade-notice.item-tooltip',
+		defaultMessage:
+			'This content was preserved during the instance upgrade without installing a new compatible version. It may be incompatible with the current Minecraft version.',
+	},
 	openInMcmod: {
 		id: 'app.project.open-in-mcmod',
 		defaultMessage: 'Open in MC Mod',
@@ -438,6 +486,19 @@ const props = defineProps<{
 	openSettings?: () => void
 	preloadedContent?: InstanceContentData | null
 }>()
+const queryClient = useQueryClient()
+const postUpgradeNoticeQuery = usePostUpgradeNotice(() => props.instance.id)
+const postUpgradeNotice = computed(() => postUpgradeNoticeQuery.data.value ?? null)
+const postUpgradeNoticeExpanded = ref(false)
+
+async function dismissPostUpgradeNotice() {
+	try {
+		await dismiss_post_upgrade_notice(props.instance.id)
+		queryClient.setQueryData(postUpgradeNoticeQueryKey(props.instance.id), null)
+	} catch (error) {
+		handleError(error as Error)
+	}
+}
 
 defineEmits<{
 	play: []
@@ -727,11 +788,6 @@ async function restoreMissingPackMember(item: InstanceContentSnapshotItem) {
 	}
 }
 
-function localIconUrl(iconUrl?: string | null): string {
-	if (!iconUrl) return ''
-	return /^(https?:|data:|blob:|asset:|tauri:)/.test(iconUrl) ? iconUrl : convertFileSrc(iconUrl)
-}
-
 const {
 	worldDatapackItems,
 	isWorldDatapackItem,
@@ -752,7 +808,7 @@ const mergedProjects = computed<ContentItem[]>(() => {
 						...project,
 						project: {
 							...project.project,
-							icon_url: localIconUrl(project.project.icon_url),
+							icon_url: localContentIconUrl(project.project.icon_url),
 						},
 					}
 				: project
@@ -865,7 +921,7 @@ const displayedModpackProject = computed(() => {
 	if (!project) return undefined
 	return {
 		...project,
-		icon_url: localIconUrl(project.icon_url || fallbackProject?.icon_url),
+		icon_url: localContentIconUrl(project.icon_url || fallbackProject?.icon_url),
 	}
 })
 
@@ -2825,6 +2881,11 @@ provideContentManager({
 	getItemId: getContentItemId,
 	instanceId: props.instance.id,
 	mapToTableItem: (item: ContentItem) => {
+		const postUpgradeWarning = postUpgradeWarningForContent(
+			postUpgradeNotice.value?.warnings ?? [],
+			item.instanceEntryId,
+			item.file_path,
+		)
 		const effectiveProvider = item.origin_provider ?? item.provider_refs?.[0]?.provider ?? null
 
 		const curseForgeProjectId =
@@ -2900,6 +2961,9 @@ provideContentManager({
 			},
 			versionLink,
 			owner: ownerLink,
+			postUpgradeWarningTooltip: postUpgradeWarning
+				? formatMessage(messages.postUpgradeWarningTooltip)
+				: null,
 			enabled: item.enabled,
 			disabledTooltip:
 				item.instanceMaterializationState === 'missing'

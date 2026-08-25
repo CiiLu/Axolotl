@@ -12,12 +12,7 @@ import {
 	ScaleIcon,
 	UsersIcon,
 } from '@modrinth/assets'
-import {
-	Avatar,
-	defineMessages,
-	NewButton as Button,
-	useVIntl,
-} from '@modrinth/ui'
+import { Avatar, defineMessages, NewButton as Button, useVIntl } from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
 import { inject, ref } from 'vue'
 
@@ -170,7 +165,6 @@ const projectLinks = [
 		icon: QqChannelIcon,
 	},
 ]
-
 </script>
 
 <template>
@@ -406,7 +400,6 @@ const projectLinks = [
 				{{ formatMessage(messages.replayOnboarding) }}
 			</Button>
 		</div>
-
 	</div>
 </template>
 
@@ -424,7 +417,8 @@ const projectLinks = [
 
 .about-panel {
 	padding: 1.25rem;
-	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border: 1px solid
+		var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
 	border-radius: var(--radius-md);
 	background: var(--surface-2);
 }
@@ -434,7 +428,8 @@ const projectLinks = [
 }
 
 .about-page :deep(.rounded-xl.bg-surface-4) {
-	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border: 1px solid
+		var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
 	border-radius: var(--radius-md);
 	background: var(--surface-2);
 }
