@@ -29,6 +29,10 @@ const messages = defineMessages({
 		id: 'app.servers.modpack.current-file',
 		defaultMessage: 'Now installing {file}',
 	},
+	backgroundHint: {
+		id: 'app.servers.modpack.background-hint',
+		defaultMessage: 'You can close this window — the download continues in the background.',
+	},
 })
 
 onMounted(() => {
@@ -102,6 +106,13 @@ const isBusy = computed(
 			class="m-0 -mt-2 truncate text-xs font-medium text-secondary"
 		>
 			{{ formatMessage(messages.currentFile, { file: currentFile }) }}
+		</p>
+
+		<p
+			v-if="ctx.installPhase.value === 'downloading'"
+			class="m-0 text-xs font-medium text-secondary"
+		>
+			{{ formatMessage(messages.backgroundHint) }}
 		</p>
 
 		<Admonition

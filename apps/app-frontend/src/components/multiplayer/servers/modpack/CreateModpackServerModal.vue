@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
-import { commonMessages, MultiStageModal } from '@modrinth/ui'
+import { commonMessages, defineMessages, MultiStageModal } from '@modrinth/ui'
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
@@ -22,17 +22,35 @@ const ctx = createModpackServerFlowContext(modal)
 provideCreateServerFlow(ctx)
 provideModpackServerFlow(ctx)
 
+const messages = defineMessages({
+	downloadInBackground: {
+		id: 'app.servers.modpack.download-in-background',
+		defaultMessage: 'Download in background',
+	},
+})
+
+const wizardShown = ref(false)
 const wasHiddenDuringInstall = ref(false)
+const creationReported = ref(false)
 
 const cancelButton = computed(() => ({
-	label: ctx.formatMessage(commonMessages.cancelButton),
-	disabled: ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
+	label: ctx.formatMessage(
+		ctx.installPhase.value === 'downloading'
+			? messages.downloadInBackground
+			: commonMessages.cancelButton,
+	),
+	disabled: ctx.installPhase.value === 'first-run',
 	onClick: () => modal.value?.hide(),
 }))
 
 watch(ctx.showEulaModal, (visible) => {
-	if (visible) eulaModal.value?.show()
-	else eulaModal.value?.hide()
+	if (visible) {
+		// When the setup finished in the background, don't pop a EULA dialog over
+		// whatever page the user is on; starting the server gates on it instead.
+		if (wizardShown.value) eulaModal.value?.show()
+	} else {
+		eulaModal.value?.hide()
+	}
 })
 
 // The download keeps running in the background even if the wizard is closed.
@@ -40,14 +58,18 @@ watch(ctx.showEulaModal, (visible) => {
 watch(
 	() => ctx.installPhase.value,
 	(phase) => {
-		if (phase === 'done' && wasHiddenDuringInstall.value && ctx.createdServer.value) {
+		if (!wasHiddenDuringInstall.value || creationReported.value) return
+		if ((phase === 'done' || phase === 'eula') && ctx.createdServer.value) {
+			creationReported.value = true
 			emit('created', ctx.createdServer.value.id)
 		}
 	},
 )
 
 function show(project: Labrinth.Projects.v2.Project, version: Labrinth.Versions.v2.Version) {
+	wizardShown.value = true
 	wasHiddenDuringInstall.value = false
+	creationReported.value = false
 	ctx.reset()
 	ctx.setPack(project, version)
 	modal.value?.setStage(0)
@@ -55,8 +77,18 @@ function show(project: Labrinth.Projects.v2.Project, version: Labrinth.Versions.
 }
 
 function handleHide() {
-	if (ctx.createdServer.value) emit('created', ctx.createdServer.value.id)
-	else wasHiddenDuringInstall.value = true
+	wizardShown.value = false
+	if (
+		ctx.createdServer.value &&
+		(ctx.installPhase.value === 'done' || ctx.installPhase.value === 'eula')
+	) {
+		if (!creationReported.value) {
+			creationReported.value = true
+			emit('created', ctx.createdServer.value.id)
+		}
+	} else {
+		wasHiddenDuringInstall.value = true
+	}
 }
 
 defineExpose({ show, hide: () => modal.value?.hide() })

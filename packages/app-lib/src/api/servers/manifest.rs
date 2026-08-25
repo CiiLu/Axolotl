@@ -59,6 +59,10 @@ pub struct ServerManifest {
     pub icon_path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modpack: Option<ModpackInfo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_state: Option<InstallState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_error: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub jvm_args: Vec<String>,
     pub created_at: DateTime<Utc>,
@@ -66,6 +70,17 @@ pub struct ServerManifest {
     pub last_started_at: Option<DateTime<Utc>>,
     #[serde(default)]
     pub last_exit_crashed: bool,
+}
+
+/// Tracks whether a modpack server has finished materializing. `Incomplete`
+/// is written when an install starts (and left behind if the app exits
+/// mid-download); `Failed` records an install error so the UI can offer a
+/// retry. Both clear once the install succeeds.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallState {
+    Incomplete,
+    Failed,
 }
 
 /// Identifies a modpack a server was created from. Populated by
@@ -206,6 +221,8 @@ mod tests {
             memory_mb: Some(2048),
             icon_path: None,
             modpack: None,
+            install_state: None,
+            install_error: None,
             jvm_args: Vec::new(),
             created_at: Utc::now(),
             last_started_at: None,
@@ -230,6 +247,8 @@ mod tests {
             memory_mb: None,
             icon_path: None,
             modpack: None,
+            install_state: None,
+            install_error: None,
             jvm_args: Vec::new(),
             created_at: Utc::now(),
             last_started_at: None,

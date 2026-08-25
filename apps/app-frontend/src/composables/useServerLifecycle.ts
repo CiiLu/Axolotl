@@ -104,5 +104,5 @@ export function useServerLifecycle() {
 		}
 	}
 
-	return { eulaModal, eulaText, tryStartServer, acceptEula, declineEula, resumeInstall }
+	return { eulaModal, eulaText, tryStartServer, acceptEula, declineEula, resumeInstall, offerEulaAfterExit }
 }

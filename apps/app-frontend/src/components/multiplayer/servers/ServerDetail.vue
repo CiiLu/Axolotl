@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
 	ArrowLeftIcon,
+	DownloadIcon,
 	FolderOpenIcon,
 	GlobeIcon,
 	LoaderCircleIcon,
@@ -39,6 +40,7 @@ import ServerSettingsPanel from '@/components/multiplayer/servers/ServerSettings
 import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
 import { useServerLifecycle } from '@/composables/useServerLifecycle'
 import { useServers } from '@/composables/useServers'
+import { serverSetupStatus } from '@/composables/useServerInstalls'
 import { type PortProcessInfoData, servers as serversApi } from '@/helpers/servers'
 import { openPath } from '@/helpers/utils'
 
@@ -47,7 +49,8 @@ const router = useRouter()
 const serverId = route.params.id as string
 
 const { servers, refresh, stopServer } = useServers()
-const { eulaModal, eulaText, tryStartServer, acceptEula, declineEula } = useServerLifecycle()
+const { eulaModal, eulaText, tryStartServer, acceptEula, declineEula, resumeInstall } =
+	useServerLifecycle()
 const filePicker = injectFilePicker()
 const multiplayerSession = useMultiplayerSession()
 const { formatMessage } = useVIntl()
@@ -59,6 +62,17 @@ const messages = defineMessages({
 	back: { id: 'app.servers.detail.back', defaultMessage: 'Servers' },
 	start: { id: 'app.servers.action.start', defaultMessage: 'Start' },
 	stop: { id: 'app.servers.action.stop', defaultMessage: 'Stop' },
+	continueDownload: {
+		id: 'app.servers.action.continue-download',
+		defaultMessage: 'Continue download',
+	},
+	retryDownload: { id: 'app.servers.action.retry-download', defaultMessage: 'Retry download' },
+	downloading: { id: 'app.servers.status.downloading', defaultMessage: 'Downloading' },
+	downloadInterrupted: {
+		id: 'app.servers.status.download-interrupted',
+		defaultMessage: 'Download interrupted',
+	},
+	downloadFailed: { id: 'app.servers.status.download-failed', defaultMessage: 'Download failed' },
 	openFolder: { id: 'app.servers.action.open-folder', defaultMessage: 'Open folder' },
 	share: { id: 'app.servers.action.share', defaultMessage: 'Share online' },
 	notFound: {
@@ -108,6 +122,24 @@ const statusMeta = computed(() => (server.value ? SERVER_STATUS_META[server.valu
 const showStatus = computed(() =>
 	server.value ? isServerStatusVisible(server.value.status) : false,
 )
+
+const setupStatus = computed(() => (server.value ? serverSetupStatus(server.value) : null))
+
+/** Setup states take precedence over the runtime status tag. */
+const displayTag = computed(() => {
+	switch (setupStatus.value) {
+		case 'installing':
+			return { label: messages.downloading, color: 'text-orange' }
+		case 'interrupted':
+			return { label: messages.downloadInterrupted, color: 'text-orange' }
+		case 'failed':
+			return { label: messages.downloadFailed, color: 'text-red' }
+		default:
+			return showStatus.value && statusMeta.value
+				? { label: statusMeta.value.label, color: statusMeta.value.color }
+				: null
+	}
+})
 
 const isLoaded = ref(false)
 const hasSeenServer = ref(false)
@@ -312,9 +344,9 @@ async function shareOnline() {
 							<h2 class="m-0 truncate text-xl font-semibold text-contrast">
 								{{ server.name }}
 							</h2>
-							<TagItem v-if="showStatus && statusMeta" class="shrink-0">
-								<span :class="`font-semibold ${statusMeta.color}`">
-									{{ formatMessage(statusMeta.label) }}
+							<TagItem v-if="displayTag" class="shrink-0">
+								<span :class="`font-semibold ${displayTag.color}`">
+									{{ formatMessage(displayTag.label) }}
 								</span>
 							</TagItem>
 						</div>
@@ -335,16 +367,34 @@ async function shareOnline() {
 				</div>
 
 				<div class="flex flex-wrap gap-2">
-					<ButtonStyled v-if="server.status !== 'running' && !portConflict" color="brand">
-						<button type="button" @click="toggleRunning">
-							<PlayIcon />
-							{{ formatMessage(messages.start) }}
-						</button>
-					</ButtonStyled>
-					<ButtonStyled v-else-if="server.status === 'running'" color="red" type="outlined">
+					<ButtonStyled v-if="server.status === 'running'" color="red" type="outlined">
 						<button type="button" @click="toggleRunning">
 							<StopCircleIcon />
 							{{ formatMessage(messages.stop) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled v-else-if="setupStatus === 'installing'" type="outlined">
+						<button type="button" disabled>
+							<LoaderCircleIcon class="animate-spin" />
+							{{ formatMessage(messages.downloading) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled v-else-if="setupStatus === 'interrupted'" color="brand">
+						<button type="button" @click="resumeInstall(server)">
+							<DownloadIcon />
+							{{ formatMessage(messages.continueDownload) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled v-else-if="setupStatus === 'failed'" color="brand">
+						<button type="button" @click="resumeInstall(server)">
+							<RefreshCwIcon />
+							{{ formatMessage(messages.retryDownload) }}
+						</button>
+					</ButtonStyled>
+					<ButtonStyled v-else-if="!portConflict" color="brand">
+						<button type="button" @click="toggleRunning">
+							<PlayIcon />
+							{{ formatMessage(messages.start) }}
 						</button>
 					</ButtonStyled>
 					<ButtonStyled v-if="server.status === 'running' && server.port" type="outlined">
@@ -396,6 +446,14 @@ async function shareOnline() {
 						</ButtonStyled>
 					</div>
 				</template>
+			</Admonition>
+
+			<Admonition
+				v-if="setupStatus === 'failed' && server.installError"
+				type="warning"
+				:header="formatMessage(messages.downloadFailed)"
+			>
+				{{ server.installError }}
 			</Admonition>
 
 			<NavTabs

@@ -12,6 +12,7 @@ import { computed, markRaw, type Ref, ref } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
 import { refresh as refreshServerList } from '@/composables/useServers'
+import { startModpackServerInstall } from '@/composables/useServerInstalls'
 import { find_filtered_jres, get_java_default_versions, get_max_memory } from '@/helpers/jre'
 import { get_loader_versions } from '@/helpers/metadata'
 import { serverEventListener, type ServerManifestData, servers } from '@/helpers/servers'
@@ -121,6 +122,7 @@ export function createModpackServerFlowContext(
 	const createdServer = ref<ServerManifestData | null>(null)
 	const showEulaModal = ref(false)
 	const saveServerProperties = ref<(() => Promise<boolean>) | null>(null)
+	let installSession = 0
 
 	const modpackTitle = ref('')
 	const modpackVersionNumber = ref('')
@@ -221,12 +223,19 @@ export function createModpackServerFlowContext(
 		if (!project.value || !version.value) return
 		if (!loaderSupported.value) return
 
+		// A closed wizard leaves its install promise running in the background.
+		// Reopening the wizard starts a fresh session; stale sessions must stop
+		// touching the shared state once their token is superseded.
+		const session = ++installSession
+		const isStale = () => installSession !== session
+
 		installPhase.value = 'preparing'
 		installError.value = null
 		installLog.value = []
 		downloadProgress.value = null
 		try {
 			await loadLoaderVersions()
+			if (isStale()) return
 
 			const requiredJava = javaMajorFromVersion(selectedGameVersion.value) ?? 21
 			const selectedMajor = javaMajorFromVersion(selectedJava.value.version)
@@ -243,49 +252,66 @@ export function createModpackServerFlowContext(
 				)
 			}
 
-			const manifest = await servers.create({
-				name: name.value,
-				serverType: serverType.value,
-				gameVersion: selectedGameVersion.value,
-				loaderVersion: needsLoaderVersion.value ? selectedLoaderVersion.value : undefined,
-				javaPath: selectedJava.value.path || undefined,
-				memoryMb: memoryMb.value,
-			})
-			createdServer.value = manifest
-
-			const jar = await resolveServerLauncher(
-				serverType.value,
-				selectedGameVersion.value,
-				selectedLoaderVersion.value,
-			)
-			if (!jar) {
-				throw new Error(
-					`No server launcher available for ${loaderLabel.value} on ${selectedGameVersion.value}`,
-				)
-			}
-
-			const primaryFile = version.value.files.find((file) => file.primary) ?? version.value.files[0]
-			if (!primaryFile?.url) {
-				throw new Error('Modpack has no downloadable file')
-			}
-
-			installPhase.value = 'downloading'
-			const unlistenProgress = await serverEventListener((serverId, payload) => {
-				if (serverId !== manifest.id || payload.event !== 'download_progress') return
-				downloadProgress.value = {
-					downloaded: payload.downloaded,
-					total: payload.total ?? null,
+			if (!createdServer.value) {
+				const manifest = await servers.create({
+					name: name.value,
+					serverType: serverType.value,
+					gameVersion: selectedGameVersion.value,
+					loaderVersion: needsLoaderVersion.value ? selectedLoaderVersion.value : undefined,
+					javaPath: selectedJava.value.path || undefined,
+					memoryMb: memoryMb.value,
+				})
+				if (isStale()) {
+					await servers.delete(manifest.id).catch(() => {})
+					void refreshServerList()
+					return
 				}
-			})
-			const unlistenLogs = await serverEventListener((serverId, payload) => {
-				if (serverId !== manifest.id || payload.event !== 'log') return
-				installLog.value.push(payload.line)
-				if (installLog.value.length > 500) {
-					installLog.value.splice(0, installLog.value.length - 500)
+				createdServer.value = manifest
+			}
+			const serverId = createdServer.value.id
+
+			// Past this point the server directory exists and the backend tracks
+			// install state on its manifest, so failures leave a retryable entry
+			// instead of being cleaned up. Only pre-install resolution errors
+			// (no launcher, no pack file) still remove the stub.
+			let dispatched = false
+			const unlistenEvents = await serverEventListener((id, payload) => {
+				if (id !== serverId || isStale()) return
+				if (payload.event === 'download_progress') {
+					downloadProgress.value = {
+						downloaded: payload.downloaded,
+						total: payload.total ?? null,
+					}
+				} else if (payload.event === 'log') {
+					installLog.value.push(payload.line)
+					if (installLog.value.length > 500) {
+						installLog.value.splice(0, installLog.value.length - 500)
+					}
 				}
 			})
 			try {
-				await servers.installModpack(manifest.id, {
+				const jar = await resolveServerLauncher(
+					serverType.value,
+					selectedGameVersion.value,
+					selectedLoaderVersion.value,
+				)
+				if (!jar) {
+					throw new Error(
+						`No server launcher available for ${loaderLabel.value} on ${selectedGameVersion.value}`,
+					)
+				}
+
+				const primaryFile =
+					version.value.files.find((file) => file.primary) ?? version.value.files[0]
+				if (!primaryFile?.url) {
+					throw new Error('Modpack has no downloadable file')
+				}
+
+				// The download runs through the shared background runner, so closing
+				// the wizard keeps it going; progress renders from the shared registry.
+				dispatched = true
+				installPhase.value = 'downloading'
+				await startModpackServerInstall(serverId, {
 					mrpackUrl: primaryFile.url,
 					mrpackSha1: primaryFile.hashes?.sha1,
 					jarUrl: jar.url,
@@ -296,47 +322,38 @@ export function createModpackServerFlowContext(
 					modpackTitle: modpackTitle.value,
 					modpackIconUrl: modpackIconUrl.value,
 				})
-			} finally {
-				unlistenProgress()
-				unlistenLogs()
-			}
+				if (isStale()) return
 
-			installPhase.value = 'first-run'
-			const unlistenFirstRunLogs = await serverEventListener((serverId, payload) => {
-				if (serverId !== manifest.id || payload.event !== 'log') return
-				installLog.value.push(payload.line)
-				if (installLog.value.length > 500) {
-					installLog.value.splice(0, installLog.value.length - 500)
-				}
-			})
-			try {
-				await servers.start(manifest.id)
-				const stopped = await waitForServerStop(manifest.id)
+				installPhase.value = 'first-run'
+				await servers.start(serverId)
+				const stopped = await waitForServerStop(serverId)
+				if (isStale()) return
 				if (stopped?.event === 'stopped' && stopped.crashed) {
 					throw new Error(formatMessage(wizardMessages.firstRunCrashed))
 				}
-			} finally {
-				unlistenFirstRunLogs()
-			}
 
-			const eula = await servers.readFile(manifest.id, 'eula.txt').catch(() => null)
-			if (eula !== null && !eula.includes('eula=true')) {
-				eulaText.value = eula
-				showEulaModal.value = true
-				installPhase.value = 'eula'
-				return
+				const eula = await servers.readFile(serverId, 'eula.txt').catch(() => null)
+				if (eula !== null && !eula.includes('eula=true')) {
+					eulaText.value = eula
+					showEulaModal.value = true
+					installPhase.value = 'eula'
+					return
+				}
+				installPhase.value = 'done'
+			} catch (error) {
+				if (!dispatched && createdServer.value) {
+					const failed = createdServer.value
+					createdServer.value = null
+					await servers.delete(failed.id).catch(() => {})
+					void refreshServerList()
+				}
+				throw error
+			} finally {
+				unlistenEvents()
 			}
-			installPhase.value = 'done'
 		} catch (error) {
 			installPhase.value = 'error'
 			installError.value = toErrorMessage(error)
-			// A half-installed server must not linger in the list; retrying starts over.
-			if (createdServer.value) {
-				const failed = createdServer.value
-				createdServer.value = null
-				await servers.delete(failed.id).catch(() => {})
-				void refreshServerList()
-			}
 		}
 	}
 
@@ -365,10 +382,10 @@ export function createModpackServerFlowContext(
 	}
 
 	function reset() {
+		installSession++
 		installPhase.value = 'idle'
 		installLog.value = []
 		installError.value = null
-		downloadProgress.value = null
 		eulaText.value = ''
 		createdServer.value = null
 		showEulaModal.value = false
@@ -401,8 +418,9 @@ export function createModpackServerFlowContext(
 			stageContent: markRaw(ModpackInstallStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.installTitle),
 			cannotNavigateForward: (ctx) => ctx.installPhase.value !== 'done',
-			disableClose: (ctx) =>
-				ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
+			// Downloads continue in the background once the wizard closes; only
+			// the first-run boot locks closing.
+			disableClose: (ctx) => ctx.installPhase.value === 'first-run',
 			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(

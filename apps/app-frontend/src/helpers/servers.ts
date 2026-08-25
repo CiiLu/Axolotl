@@ -3,10 +3,10 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
 export interface ModpackInfoData {
-	project_id: string
-	version_id: string
+	projectId: string
+	versionId: string
 	title: string
-	icon_url?: string
+	iconUrl?: string
 }
 
 export interface ServerManifestData {
@@ -18,6 +18,8 @@ export interface ServerManifestData {
 	jarName?: string
 	iconPath?: string
 	modpack?: ModpackInfoData
+	installState?: 'incomplete' | 'failed' | null
+	installError?: string | null
 	javaPath?: string
 	memoryMb?: number
 	jvmArgs: string[]

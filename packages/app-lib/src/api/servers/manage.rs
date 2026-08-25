@@ -86,6 +86,8 @@ pub async fn create(
         memory_mb,
         icon_path: None,
         modpack: None,
+        install_state: None,
+        install_error: None,
         jvm_args: Vec::new(),
         created_at: Utc::now(),
         last_started_at: None,

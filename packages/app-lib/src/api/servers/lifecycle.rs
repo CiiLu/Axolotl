@@ -89,9 +89,22 @@ async fn start_inner(
     for arg in jvm_args.unwrap_or_else(|| manifest.jvm_args.clone()) {
         command.arg(arg);
     }
-    command.arg("-jar").arg(&jar_name).arg("nogui");
-    command.current_dir(&dir);
-    command.stdout(std::process::Stdio::piped());
+	command.arg("-jar").arg(&jar_name).arg("nogui");
+	command.current_dir(&dir);
+	// Dynamic-loader injection variables (Steam overlays, debugging tools,
+	// stale shell exports) lengthen every dyld failure message the JVM
+	// produces, which is exactly what trips the JNA < 5.13 macOS assertion;
+	// they have no business affecting a managed server either.
+	for variable in [
+		"DYLD_LIBRARY_PATH",
+		"DYLD_FALLBACK_LIBRARY_PATH",
+		"DYLD_FRAMEWORK_PATH",
+		"DYLD_FALLBACK_FRAMEWORK_PATH",
+		"DYLD_INSERT_LIBRARIES",
+	] {
+		command.env_remove(variable);
+	}
+	command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
     command.stdin(std::process::Stdio::piped());
     command.kill_on_drop(true);

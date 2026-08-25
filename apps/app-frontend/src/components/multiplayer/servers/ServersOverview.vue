@@ -25,7 +25,8 @@ import {
 const router = useRouter()
 const { formatMessage } = useVIntl()
 const { servers, isRefreshing, refresh, stopServer } = useServers()
-const { eulaModal, eulaText, tryStartServer, acceptEula, declineEula } = useServerLifecycle()
+const { eulaModal, eulaText, tryStartServer, acceptEula, declineEula, resumeInstall } =
+	useServerLifecycle()
 const createModal = useTemplateRef<ComponentExposed<typeof CreateServerModal>>('createModal')
 
 const messages = defineMessages({
@@ -166,6 +167,7 @@ async function toggleRunning(server: ServerView) {
 				:variant="displayMode === 'cards' ? 'library' : 'standard'"
 				@open="openServer(entry.id)"
 				@start-stop="toggleRunning(entry)"
+				@resume="resumeInstall(entry)"
 			/>
 		</div>
 
