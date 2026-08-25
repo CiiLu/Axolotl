@@ -1453,6 +1453,12 @@ pub(crate) async fn add_project_from_path(
     inner_base: Option<&str>,
     state: &State,
 ) -> crate::Result<String> {
+    tracing::debug!(
+        "state::add_project_from_path: start instance_id={} path={} inner_base={:?}",
+        instance_id,
+        path.display(),
+        inner_base,
+    );
     if let Some(inner_base) = inner_base {
         let temp_dir = if is_zip_path(path) {
             Some(tempfile::tempdir().map_err(|e| {
@@ -1510,14 +1516,17 @@ pub(crate) async fn add_project_from_path(
         return result;
     }
 
+    tracing::debug!("state::add_project_from_path: reading file");
     let file = io::read(path).await?;
+    tracing::debug!("state::add_project_from_path: file read complete");
     let file_name = path
         .file_name()
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
 
-    add_project_bytes(
+    tracing::debug!("state::add_project_from_path: calling add_project_bytes");
+    let result = add_project_bytes(
         instance_id,
         &file_name,
         Bytes::from(file),
@@ -1526,7 +1535,12 @@ pub(crate) async fn add_project_from_path(
         ContentSourceKind::Local,
         state,
     )
-    .await
+    .await;
+    tracing::debug!(
+        "state::add_project_from_path: add_project_bytes returned: {:?}",
+        result.as_ref().map(String::as_str)
+    );
+    result
 }
 
 fn is_zip_path(path: &Path) -> bool {
@@ -1791,9 +1805,12 @@ async fn add_project_bytes_with_provider(
     provider_ref: Option<&ContentProviderRef>,
     state: &State,
 ) -> crate::Result<String> {
+    tracing::debug!("add_project_bytes: start");
     let _instance_lock = state.lock_instance_content(instance_id).await;
+    tracing::debug!("add_project_bytes: instance content lock acquired");
 
     let scope = resolve_content_scope(instance_id, None, state).await?;
+    tracing::debug!("add_project_bytes: content scope resolved");
     let file_name = sanitize_file_name(file_name);
     let project_type = match project_type {
         Some(project_type) => project_type,
@@ -1834,6 +1851,7 @@ async fn add_project_bytes_with_provider(
         Some(hash) => hash.to_string(),
         None => fetch::sha1_async(bytes.clone()).await?,
     };
+    tracing::debug!("add_project_bytes: sha1 ready");
 
     cache_file_hash(
         bytes.clone(),
@@ -1845,7 +1863,9 @@ async fn add_project_bytes_with_provider(
         &state.pool,
     )
     .await?;
+    tracing::debug!("add_project_bytes: file hash cached");
     fetch::write(&full_path, &bytes, &state.io_semaphore).await?;
+    tracing::debug!("add_project_bytes: file written to {}", full_path.display());
 
     let local_mod_data = if project_type == ProjectType::Mod {
         crate::mod_metadata::extract_mod_metadata(&bytes)
@@ -1853,6 +1873,7 @@ async fn add_project_bytes_with_provider(
     } else {
         None
     };
+    tracing::debug!("add_project_bytes: local mod data extracted");
 
     let file = content_rows::upsert_instance_file_from_parts(
         content_rows::UpsertInstanceFile {
@@ -1869,6 +1890,7 @@ async fn add_project_bytes_with_provider(
         &state.pool,
     )
     .await?;
+    tracing::debug!("add_project_bytes: instance file upserted");
     upsert_entry_for_file(
         &scope,
         &file,
@@ -1880,6 +1902,7 @@ async fn add_project_bytes_with_provider(
         state,
     )
     .await?;
+    tracing::debug!("add_project_bytes: content entry upserted");
 
     Ok(relative_path)
 }

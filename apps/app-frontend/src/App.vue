@@ -1465,6 +1465,14 @@ watch(
 	{ flush: 'post' },
 )
 
+watch(
+	incompatibilityWarningModal,
+	(modal) => {
+		dropIncompatibilityWarningModal.value = modal
+	},
+	{ flush: 'post' },
+)
+
 setupAuthProvider(credentials, async (_redirectPath) => {
 	if (AxolotlBrandConfig.capabilities.privateModrinthServices) await signIn()
 })
@@ -1532,6 +1540,7 @@ onMounted(() => {
 	error.setMinecraftAuthErrorModal(minecraftAuthErrorModal.value)
 
 	setContentIncompatibilityWarningModal(incompatibilityWarningModal.value)
+	dropIncompatibilityWarningModal.value = incompatibilityWarningModal.value
 	setContentInstallModal(modInstallModal.value)
 	setContentInstallPreviewModal(contentInstallPreviewModal.value)
 	contentSelection.setPreviewModal(contentInstallPreviewModal.value)
