@@ -1301,31 +1301,48 @@ async fn copy_files_with_progress(
 }
 
 /// Determines the real game working directory for an import whose source is a
-/// `versions/<name>` folder. A real game root always carries the game body at
-/// `versions/<name>/<name>.jar` (regardless of whether mods are installed), so
-/// we detect the root by that jar — not by `mods/*.jar`, which would miss
-/// vanilla / mod-less instances. If that `.minecraft` root (or any ancestor)
-/// carries the game body, it is the game root; otherwise the source folder is
-/// used as-is.
+/// `versions/<name>` folder.
+///
+/// The game body jar always lives at `<root>/versions/<name>/<name>.jar`
+/// regardless of version isolation (that layout has been stable since 1.6), so
+/// the jar alone cannot tell the two layouts apart — `dir_has_game_body` only
+/// proves "this is a Minecraft game root". The discriminator is where the game
+/// *content* (mods/saves/config/…) actually sits:
+///
+/// - inside the source folder → version-isolated: the version folder itself is
+///   the game dir (`<root>/versions/<name>` with its own mods/saves/config);
+/// - at an ancestor (normally the `.minecraft` root) → shared install: the
+///   `.minecraft` root is the game dir.
+///
+/// A source with no content anywhere (a fresh, never-launched instance) falls
+/// back to the source folder itself: the game creates the content folders
+/// there on first run, and for imports the user's explicit game-dir choice
+/// (or no override, i.e. the managed symlink) decides the rest.
 fn resolve_import_game_root(source: &Path) -> PathBuf {
-    if source.is_dir() && dir_has_game_body(source) {
+    // The source is itself the game root: either a whole Minecraft folder that
+    // carries a game body, or any folder that already holds game content
+    // (a version-isolated `versions/<name>` with mods/saves/config inside).
+    if source.is_dir()
+        && (dir_has_game_content(source) || dir_has_game_body(source))
+    {
         return source.to_path_buf();
     }
 
-    // Walk up looking for a `.minecraft` root that carries the game body.
+    // Otherwise the source is a `versions/<name>` subfolder of a shared
+    // install: resolve to the nearest ancestor holding the game content
+    // (normally the `.minecraft` root). Never climb past `.minecraft`.
     let mut cursor = source.parent();
-    let mut best: Option<PathBuf> = None;
     while let Some(dir) = cursor {
-        if dir_has_game_body(dir) {
-            best = Some(dir.to_path_buf());
+        if dir_has_game_content(dir) {
+            return dir.to_path_buf();
         }
-        // Stop once we've passed the `.minecraft` root (parent of `versions`).
         if dir.file_name().and_then(|n| n.to_str()) == Some(".minecraft") {
             break;
         }
         cursor = dir.parent();
     }
-    best.unwrap_or_else(|| source.to_path_buf())
+
+    source.to_path_buf()
 }
 
 /// True if `root` is a Minecraft game root: it has at least one `.jar` game body
@@ -1349,6 +1366,29 @@ fn dir_has_game_body(root: &Path) -> bool {
         }
     }
     false
+}
+
+/// True if `root` directly holds game *content* — the folders/files the running
+/// game creates and writes in its working directory (mods, saves, config,
+/// resourcepacks, …). Unlike the game body jar (which sits at
+/// `<root>/versions/<name>/<name>.jar` in every layout), content appears only in
+/// the folder that actually acts as the game dir, so this is what distinguishes
+/// a version-isolated `versions/<name>` folder from a shared `.minecraft` root.
+fn dir_has_game_content(root: &Path) -> bool {
+    [
+        "mods",
+        "saves",
+        "config",
+        "resourcepacks",
+        "datapacks",
+        "shaderpacks",
+        "logs",
+        "crash-reports",
+    ]
+    .iter()
+    .any(|dir| root.join(dir).is_dir())
+        || root.join("options.txt").is_file()
+        || root.join("servers.dat").is_file()
 }
 
 pub(crate) async fn finish_import(
@@ -1634,13 +1674,58 @@ mod import_game_root_tests {
         let root = tempdir().unwrap();
         let mc = root.path().join(".minecraft");
         let version = mc.join("versions").join("My Pack");
-        // Game body is under the `.minecraft` root; a mod-less / vanilla
-        // instance has no `mods/*.jar`, so this must be detected by the jar.
+        // Shared install, played as vanilla: game body under the `.minecraft`
+        // root and content (saves) there too — a mod-less instance has no
+        // `mods/*.jar`, so the content location is what resolves the root.
         write_game_body(&mc, "My Pack");
         fs::create_dir_all(mc.join("saves")).unwrap();
 
         let resolved = resolve_import_game_root(&version);
         assert_eq!(resolved, mc);
+    }
+
+    #[test]
+    fn keeps_version_dir_when_it_has_the_content() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let version = mc.join("versions").join("My Pack");
+        // Version-isolated instance: the game body jar ALSO lives under the
+        // `.minecraft` root, but the content (mods) is inside the version
+        // folder — that folder is the real game dir.
+        write_game_body(&mc, "My Pack");
+        fs::create_dir_all(version.join("mods")).unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, version);
+    }
+
+    #[test]
+    fn resolves_minecraft_root_for_shared_mods() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let version = mc.join("versions").join("My Pack");
+        write_game_body(&mc, "My Pack");
+        // Shared install with mods at the `.minecraft` root only.
+        fs::create_dir_all(mc.join("mods")).unwrap();
+        fs::write(mc.join("mods/mod-a.jar"), "a").unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, mc);
+    }
+
+    #[test]
+    fn keeps_version_dir_for_fresh_isolated_instance() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let version = mc.join("versions").join("My Pack");
+        // Fresh instance, never launched: only the game body exists, no content
+        // folders anywhere. The jar's location is ambiguous (shared vs
+        // isolated), so fall back to the innermost folder — the launcher will
+        // create content there on first run.
+        write_game_body(&mc, "My Pack");
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, version);
     }
 
     #[test]
